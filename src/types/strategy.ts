@@ -1,82 +1,196 @@
-// テクニカル指標の定義
+/**
+ * トレーディング戦略関連の型定義
+ *
+ * このファイルには、バックテストシステムで使用される
+ * 全ての型定義が含まれています。
+ *
+ * @author Trdinger Development Team
+ * @version 1.0.0
+ */
+
+/**
+ * テクニカル指標の定義
+ *
+ * 各種テクニカル指標（SMA、EMA、RSI等）の設定を表現します。
+ *
+ * @example
+ * ```typescript
+ * const smaIndicator: TechnicalIndicator = {
+ *   name: 'SMA',
+ *   params: { period: 20 }
+ * }
+ * ```
+ */
 export interface TechnicalIndicator {
+  /** 指標名（SMA、EMA、RSI、MACD等） */
   name: string;
+  /** 指標のパラメータ（期間、標準偏差等） */
   params: Record<string, number | string>;
 }
 
-// 売買条件の定義
+/**
+ * 売買条件の定義
+ *
+ * エントリーやエグジットの条件を文字列で表現します。
+ *
+ * @example
+ * ```typescript
+ * const entryCondition: TradingCondition = {
+ *   condition: 'close > SMA(close, 20)',
+ *   description: '終値が20期間移動平均を上回る'
+ * }
+ * ```
+ */
 export interface TradingCondition {
+  /** 条件式（例: "close > SMA(close, 20)"） */
   condition: string;
+  /** 条件の説明（オプション） */
   description?: string;
 }
 
-// 戦略の定義
+/**
+ * トレーディング戦略の定義
+ *
+ * 完全なトレーディング戦略の設定を表現します。
+ * テクニカル指標、エントリー・エグジット条件を含みます。
+ */
 export interface TradingStrategy {
+  /** 戦略の一意識別子（オプション） */
   id?: string;
+  /** 戦略名 */
   strategy_name: string;
+  /** 対象通貨ペア（例: "BTC/USD"） */
   target_pair: string;
+  /** 時間足（例: "1h", "1d"） */
   timeframe: string;
+  /** 使用するテクニカル指標のリスト */
   indicators: TechnicalIndicator[];
+  /** エントリー条件のリスト（AND条件） */
   entry_rules: TradingCondition[];
+  /** エグジット条件のリスト（OR条件） */
   exit_rules: TradingCondition[];
+  /** 作成日時（オプション） */
   created_at?: Date;
+  /** 更新日時（オプション） */
   updated_at?: Date;
 }
 
-// バックテストの設定
+/**
+ * バックテストの設定
+ *
+ * バックテスト実行時のパラメータを定義します。
+ * 戦略、期間、初期資金、手数料等を含みます。
+ */
 export interface BacktestConfig {
+  /** バックテストする戦略 */
   strategy: TradingStrategy;
+  /** バックテスト開始日（ISO形式） */
   start_date: string;
+  /** バックテスト終了日（ISO形式） */
   end_date: string;
+  /** 初期資金（USD） */
   initial_capital: number;
+  /** 手数料率（デフォルト: 0.001 = 0.1%） */
   commission_rate?: number;
+  /** スリッパージ率（オプション） */
   slippage_rate?: number;
 }
 
-// バックテストの結果
+/**
+ * バックテストの結果
+ *
+ * バックテスト実行後の詳細な結果とパフォーマンス指標を含みます。
+ */
 export interface BacktestResult {
+  /** 結果の一意識別子（オプション） */
   id?: string;
+  /** 戦略ID */
   strategy_id: string;
+  /** バックテスト設定 */
   config: BacktestConfig;
+  /** 総リターン（投資期間全体の収益率） */
   total_return: number;
+  /** シャープレシオ（リスク調整後リターン） */
   sharpe_ratio: number;
+  /** 最大ドローダウン（最大下落率） */
   max_drawdown: number;
+  /** 勝率（勝ち取引の割合） */
   win_rate: number;
+  /** プロフィットファクター（総利益/総损失） */
   profit_factor: number;
+  /** 総取引数 */
   total_trades: number;
+  /** 勝ち取引数 */
   winning_trades: number;
+  /** 負け取引数 */
   losing_trades: number;
+  /** 平均利益（勝ち取引あたり） */
   avg_win: number;
+  /** 平均损失（負け取引あたり） */
   avg_loss: number;
+  /** 損益曲線データ */
   equity_curve: EquityPoint[];
+  /** 取引履歴 */
   trade_history: Trade[];
+  /** 結果作成日時 */
   created_at: Date;
 }
 
-// 損益曲線のポイント
+/**
+ * 損益曲線のポイント
+ *
+ * 特定の時点での資産価値とドローダウンを表現します。
+ * グラフ表示やパフォーマンス分析に使用されます。
+ */
 export interface EquityPoint {
+  /** タイムスタンプ（ISO形式） */
   timestamp: string;
+  /** 総資産価値（USD） */
   equity: number;
+  /** ドローダウン率（ピークからの下落率） */
   drawdown: number;
 }
 
-// 取引履歴
+/**
+ * 取引履歴
+ *
+ * 個々の売買取引の詳細情報を表現します。
+ * バックテスト結果の分析やデバッグに使用されます。
+ */
 export interface Trade {
+  /** 取引の一意識別子 */
   id: string;
+  /** 取引実行時刻（ISO形式） */
   timestamp: string;
+  /** 取引タイプ（買いまたは売り） */
   type: 'buy' | 'sell';
+  /** 取引価格（USD） */
   price: number;
+  /** 取引数量 */
   quantity: number;
+  /** 手数料（USD） */
   commission: number;
+  /** 損益（USD、売り取引のみ） */
   pnl?: number;
 }
 
-// 価格データ
+/**
+ * 価格データ（OHLCV）
+ *
+ * 仮想通貨の価格データを表現します。
+ * バックテストの入力データとして使用されます。
+ */
 export interface PriceData {
+  /** タイムスタンプ（ISO形式） */
   timestamp: string;
+  /** 始値（USD） */
   open: number;
+  /** 高値（USD） */
   high: number;
+  /** 安値（USD） */
   low: number;
+  /** 終値（USD） */
   close: number;
+  /** 出来高 */
   volume: number;
 }

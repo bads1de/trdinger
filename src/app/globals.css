@@ -1,23 +1,45 @@
+/**
+ * Trdinger グローバルCSS
+ *
+ * アプリケーション全体のスタイルとTailwind CSSの設定を定義します。
+ * ライトモードとダークモードの対応、グラデーション背景を含みます。
+ */
+
+/* Tailwind CSSのベーススタイルをインポート */
 @tailwind base;
+/* Tailwind CSSのコンポーネントスタイルをインポート */
 @tailwind components;
+/* Tailwind CSSのユーティリティスタイルをインポート */
 @tailwind utilities;
 
+/* CSSカスタムプロパティの定義（ライトモード） */
 :root {
+  /* テキストの色（黒） */
   --foreground-rgb: 0, 0, 0;
+  /* 背景グラデーションの開始色（明るいグレー） */
   --background-start-rgb: 214, 219, 220;
+  /* 背景グラデーションの終了色（白） */
   --background-end-rgb: 255, 255, 255;
 }
 
+/* ダークモードの設定（ユーザーのシステム設定に基づく） */
 @media (prefers-color-scheme: dark) {
   :root {
+    /* テキストの色（白） */
     --foreground-rgb: 255, 255, 255;
+    /* 背景グラデーションの開始色（黒） */
     --background-start-rgb: 0, 0, 0;
+    /* 背景グラデーションの終了色（黒） */
     --background-end-rgb: 0, 0, 0;
   }
 }
 
+/* メインボディのスタイル */
 body {
+  /* テキスト色をCSS変数から設定 */
   color: rgb(var(--foreground-rgb));
+  /* 縦方向のグラデーション背景 */
+  /* 上部は透明、下部は終了色に向かってグラデーション */
   background: linear-gradient(
       to bottom,
       transparent,
