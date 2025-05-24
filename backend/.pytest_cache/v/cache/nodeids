@@ -1,0 +1,19 @@
+[
+  "tests/test_indicators.py::TestTechnicalIndicators::test_bollinger_bands_calculation",
+  "tests/test_indicators.py::TestTechnicalIndicators::test_calculate_indicator_macd",
+  "tests/test_indicators.py::TestTechnicalIndicators::test_calculate_indicator_rsi",
+  "tests/test_indicators.py::TestTechnicalIndicators::test_calculate_indicator_sma",
+  "tests/test_indicators.py::TestTechnicalIndicators::test_macd_calculation",
+  "tests/test_indicators.py::TestTechnicalIndicators::test_rsi_calculation",
+  "tests/test_indicators.py::TestTechnicalIndicators::test_sma_calculation",
+  "tests/test_indicators.py::TestTechnicalIndicators::test_unsupported_indicator",
+  "tests/test_strategy_executor.py::TestStrategyExecutor::test_calculate_indicators",
+  "tests/test_strategy_executor.py::TestStrategyExecutor::test_evaluate_simple_condition",
+  "tests/test_strategy_executor.py::TestStrategyExecutor::test_execute_buy_trade",
+  "tests/test_strategy_executor.py::TestStrategyExecutor::test_execute_sell_trade",
+  "tests/test_strategy_executor.py::TestStrategyExecutor::test_initialization",
+  "tests/test_strategy_executor.py::TestStrategyExecutor::test_performance_metrics_calculation",
+  "tests/test_strategy_executor.py::TestStrategyExecutor::test_reset",
+  "tests/test_strategy_executor.py::TestStrategyExecutor::test_simple_strategy_backtest",
+  "tests/test_strategy_executor.py::TestStrategyExecutor::test_update_equity"
+]
