@@ -9,10 +9,8 @@
 const nextConfig = {
   // 実験的機能の設定
   experimental: {
-    // App Routerを有効化（Next.js 13+の新しいルーティングシステム）
-    // ファイルベースルーティングとレイアウト機能を提供
-    appDir: true,
+    // ... existing code ...
   },
-}
+};
 
-module.exports = nextConfig
+module.exports = nextConfig;
