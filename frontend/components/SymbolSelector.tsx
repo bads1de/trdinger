@@ -40,62 +40,64 @@ const SymbolSelector: React.FC<SymbolSelectorProps> = ({
   disabled = false,
 }) => {
   return (
-    <div className="flex flex-col sm:flex-row sm:items-center gap-2">
-      <label 
+    <div className="space-y-3">
+      <label
         htmlFor="symbol-select"
-        className="text-sm font-medium text-gray-700 dark:text-gray-300"
+        className="label-enterprise flex items-center gap-2"
       >
-        通貨ペア:
+        <svg className="w-4 h-4 text-primary-600 dark:text-primary-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />
+        </svg>
+        通貨ペア選択
+        {loading && (
+          <div className="animate-spin rounded-full h-3 w-3 border-b border-primary-600"></div>
+        )}
       </label>
-      
-      <div className="relative">
+
+      <div className="relative group">
         <select
           id="symbol-select"
           value={selectedSymbol}
           onChange={(e) => onSymbolChange(e.target.value)}
           disabled={disabled || loading}
           className={`
-            block w-full px-3 py-2 text-sm
-            bg-white dark:bg-gray-800
-            border border-gray-300 dark:border-gray-600
-            rounded-md shadow-sm
-            text-gray-900 dark:text-gray-100
-            focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500
+            select-enterprise min-w-[280px]
             ${
               disabled || loading
                 ? 'opacity-50 cursor-not-allowed'
-                : 'cursor-pointer hover:border-gray-400 dark:hover:border-gray-500'
+                : 'hover:border-primary-400 dark:hover:border-primary-500 group-hover:shadow-enterprise-md'
             }
+            transition-all duration-200
           `}
         >
           {loading ? (
-            <option value="">読み込み中...</option>
+            <option value="">🔄 データを読み込み中...</option>
           ) : (
             <>
               {symbols.length === 0 && (
-                <option value="">利用可能な通貨ペアがありません</option>
+                <option value="">⚠️ 利用可能な通貨ペアがありません</option>
               )}
               {symbols.map((symbol) => (
                 <option key={symbol.symbol} value={symbol.symbol}>
-                  {symbol.symbol} - {symbol.name}
+                  💰 {symbol.symbol} - {symbol.name}
                 </option>
               ))}
             </>
           )}
         </select>
-        
+
         {/* ローディングスピナー */}
         {loading && (
-          <div className="absolute right-8 top-1/2 transform -translate-y-1/2">
-            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+          <div className="absolute right-10 top-1/2 transform -translate-y-1/2">
+            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary-600"></div>
           </div>
         )}
-        
-        {/* ドロップダウンアイコン */}
+
+        {/* エンタープライズドロップダウンアイコン */}
         {!loading && (
-          <div className="absolute right-3 top-1/2 transform -translate-y-1/2 pointer-events-none">
+          <div className="absolute right-3 top-1/2 transform -translate-y-1/2 pointer-events-none transition-transform duration-200 group-hover:scale-110">
             <svg
-              className="h-4 w-4 text-gray-400"
+              className="h-5 w-5 text-secondary-400 dark:text-secondary-500"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -109,7 +111,18 @@ const SymbolSelector: React.FC<SymbolSelectorProps> = ({
             </svg>
           </div>
         )}
+
+        {/* フォーカスインジケーター */}
+        <div className="absolute inset-0 rounded-enterprise border-2 border-transparent group-focus-within:border-primary-500 pointer-events-none transition-colors duration-200"></div>
       </div>
+
+      {/* ヘルプテキスト */}
+      <p className="text-xs text-secondary-500 dark:text-secondary-400 flex items-center gap-1">
+        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+        分析したい仮想通貨ペアを選択してください
+      </p>
     </div>
   );
 };

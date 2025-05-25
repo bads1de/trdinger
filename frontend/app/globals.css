@@ -1,9 +1,13 @@
 /**
- * Trdinger グローバルCSS
+ * Trdinger エンタープライズグローバルCSS
  *
- * アプリケーション全体のスタイルとTailwind CSSの設定を定義します。
- * ライトモードとダークモードの対応、グラデーション背景を含みます。
+ * エンタープライズレベルのモダンなデザインシステムを実現するための
+ * グローバルスタイルとTailwind CSSの設定を定義します。
  */
+
+/* Google Fonts - Inter フォントファミリーのインポート */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@100;200;300;400;500;600;700;800;900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@100;200;300;400;500;600;700;800&display=swap');
 
 /* Tailwind CSSのベーススタイルをインポート */
 @tailwind base;
@@ -12,38 +16,231 @@
 /* Tailwind CSSのユーティリティスタイルをインポート */
 @tailwind utilities;
 
-/* CSSカスタムプロパティの定義（ライトモード） */
+/* エンタープライズデザインシステムのCSS変数定義 */
 :root {
-  /* テキストの色（黒） */
-  --foreground-rgb: 0, 0, 0;
-  /* 背景グラデーションの開始色（明るいグレー） */
-  --background-start-rgb: 214, 219, 220;
-  /* 背景グラデーションの終了色（白） */
-  --background-end-rgb: 255, 255, 255;
+  /* ライトモードのカラーシステム */
+  --color-background: 248, 250, 252;
+  --color-surface: 255, 255, 255;
+  --color-surface-secondary: 248, 250, 252;
+  --color-border: 226, 232, 240;
+  --color-border-secondary: 241, 245, 249;
+  --color-text-primary: 15, 23, 42;
+  --color-text-secondary: 71, 85, 105;
+  --color-text-tertiary: 148, 163, 184;
+
+  /* ブランドカラー */
+  --color-primary: 37, 99, 235;
+  --color-primary-hover: 29, 78, 216;
+  --color-accent: 16, 185, 129;
+  --color-accent-hover: 5, 150, 105;
+
+  /* 状態カラー */
+  --color-success: 34, 197, 94;
+  --color-warning: 245, 158, 11;
+  --color-error: 239, 68, 68;
+  --color-info: 59, 130, 246;
+
+  /* シャドウとエフェクト */
+  --shadow-enterprise: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+  --shadow-enterprise-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+
+  /* アニメーション */
+  --transition-base: 150ms ease-in-out;
+  --transition-slow: 300ms ease-in-out;
 }
 
-/* ダークモードの設定（ユーザーのシステム設定に基づく） */
-@media (prefers-color-scheme: dark) {
-  :root {
-    /* テキストの色（白） */
-    --foreground-rgb: 255, 255, 255;
-    /* 背景グラデーションの開始色（黒） */
-    --background-start-rgb: 0, 0, 0;
-    /* 背景グラデーションの終了色（黒） */
-    --background-end-rgb: 0, 0, 0;
+/* ダークモードのカラーシステム */
+.dark {
+  --color-background: 2, 6, 23;
+  --color-surface: 15, 23, 42;
+  --color-surface-secondary: 30, 41, 59;
+  --color-border: 51, 65, 85;
+  --color-border-secondary: 30, 41, 59;
+  --color-text-primary: 248, 250, 252;
+  --color-text-secondary: 203, 213, 225;
+  --color-text-tertiary: 148, 163, 184;
+
+  /* ダークモード用シャドウ */
+  --shadow-enterprise: 0 1px 3px 0 rgba(0, 0, 0, 0.3), 0 1px 2px 0 rgba(0, 0, 0, 0.2);
+  --shadow-enterprise-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.3), 0 4px 6px -2px rgba(0, 0, 0, 0.2);
+}
+
+/* ベーススタイルの設定 */
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  html {
+    @apply scroll-smooth;
+  }
+
+  body {
+    @apply bg-secondary-50 dark:bg-secondary-950 text-secondary-900 dark:text-secondary-100;
+    @apply font-sans antialiased;
+    @apply transition-colors duration-300;
+    font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
+  }
+
+  /* フォーカス可能な要素の共通スタイル */
+  button,
+  [role="button"],
+  input,
+  select,
+  textarea {
+    @apply focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2;
+    @apply dark:focus:ring-offset-secondary-900;
+  }
+
+  /* スクロールバーのスタイリング */
+  ::-webkit-scrollbar {
+    @apply w-2 h-2;
+  }
+
+  ::-webkit-scrollbar-track {
+    @apply bg-secondary-100 dark:bg-secondary-800;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    @apply bg-secondary-300 dark:bg-secondary-600 rounded-full;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-secondary-400 dark:bg-secondary-500;
   }
 }
 
-/* メインボディのスタイル */
-body {
-  /* テキスト色をCSS変数から設定 */
-  color: rgb(var(--foreground-rgb));
-  /* 縦方向のグラデーション背景 */
-  /* 上部は透明、下部は終了色に向かってグラデーション */
-  background: linear-gradient(
-      to bottom,
-      transparent,
-      rgb(var(--background-end-rgb))
-    )
-    rgb(var(--background-start-rgb));
+/* エンタープライズコンポーネントスタイル */
+@layer components {
+  /* エンタープライズカード */
+  .enterprise-card {
+    @apply bg-white dark:bg-secondary-800;
+    @apply border border-secondary-200 dark:border-secondary-700;
+    @apply rounded-enterprise-lg shadow-enterprise;
+    @apply transition-all duration-200;
+  }
+
+  .enterprise-card:hover {
+    @apply shadow-enterprise-lg;
+    @apply border-secondary-300 dark:border-secondary-600;
+  }
+
+  /* エンタープライズボタン - プライマリ */
+  .btn-primary {
+    @apply inline-flex items-center justify-center;
+    @apply px-4 py-2 text-sm font-medium;
+    @apply bg-primary-600 hover:bg-primary-700;
+    @apply text-white;
+    @apply border border-transparent;
+    @apply rounded-enterprise shadow-enterprise-sm;
+    @apply transition-all duration-200;
+    @apply focus:ring-2 focus:ring-primary-500 focus:ring-offset-2;
+    @apply disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+
+  /* エンタープライズボタン - セカンダリ */
+  .btn-secondary {
+    @apply inline-flex items-center justify-center;
+    @apply px-4 py-2 text-sm font-medium;
+    @apply bg-white dark:bg-secondary-800;
+    @apply text-secondary-700 dark:text-secondary-200;
+    @apply border border-secondary-300 dark:border-secondary-600;
+    @apply rounded-enterprise shadow-enterprise-sm;
+    @apply transition-all duration-200;
+    @apply hover:bg-secondary-50 dark:hover:bg-secondary-700;
+    @apply focus:ring-2 focus:ring-primary-500 focus:ring-offset-2;
+    @apply disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+
+  /* エンタープライズ入力フィールド */
+  .input-enterprise {
+    @apply block w-full px-3 py-2;
+    @apply bg-white dark:bg-secondary-800;
+    @apply border border-secondary-300 dark:border-secondary-600;
+    @apply rounded-enterprise shadow-enterprise-sm;
+    @apply text-secondary-900 dark:text-secondary-100;
+    @apply placeholder-secondary-400 dark:placeholder-secondary-500;
+    @apply transition-all duration-200;
+    @apply focus:ring-2 focus:ring-primary-500 focus:border-primary-500;
+    @apply disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+
+  /* エンタープライズセレクト */
+  .select-enterprise {
+    @apply input-enterprise;
+    @apply pr-10 cursor-pointer;
+    @apply appearance-none;
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='m6 8 4 4 4-4'/%3e%3c/svg%3e");
+    background-position: right 0.5rem center;
+    background-repeat: no-repeat;
+    background-size: 1.5em 1.5em;
+  }
+
+  /* エンタープライズラベル */
+  .label-enterprise {
+    @apply block text-sm font-medium;
+    @apply text-secondary-700 dark:text-secondary-300;
+    @apply mb-2;
+  }
+
+  /* エンタープライズバッジ */
+  .badge-primary {
+    @apply inline-flex items-center px-2.5 py-0.5;
+    @apply text-xs font-medium;
+    @apply bg-primary-100 text-primary-800;
+    @apply dark:bg-primary-900 dark:text-primary-200;
+    @apply rounded-full;
+  }
+
+  .badge-success {
+    @apply inline-flex items-center px-2.5 py-0.5;
+    @apply text-xs font-medium;
+    @apply bg-success-100 text-success-800;
+    @apply dark:bg-success-900 dark:text-success-200;
+    @apply rounded-full;
+  }
+
+  .badge-warning {
+    @apply inline-flex items-center px-2.5 py-0.5;
+    @apply text-xs font-medium;
+    @apply bg-warning-100 text-warning-800;
+    @apply dark:bg-warning-900 dark:text-warning-200;
+    @apply rounded-full;
+  }
+
+  .badge-error {
+    @apply inline-flex items-center px-2.5 py-0.5;
+    @apply text-xs font-medium;
+    @apply bg-error-100 text-error-800;
+    @apply dark:bg-error-900 dark:text-error-200;
+    @apply rounded-full;
+  }
+}
+
+/* エンタープライズユーティリティ */
+@layer utilities {
+  /* グラスモーフィズム効果 */
+  .glass-effect {
+    @apply backdrop-blur-sm bg-white/80 dark:bg-secondary-900/80;
+    @apply border border-white/20 dark:border-secondary-700/50;
+  }
+
+  /* テキストグラデーション */
+  .text-gradient {
+    @apply bg-gradient-to-r from-primary-600 to-accent-600;
+    @apply bg-clip-text text-transparent;
+  }
+
+  /* アニメーション */
+  .animate-fade-in {
+    animation: fadeIn 0.5s ease-in-out;
+  }
+
+  .animate-slide-up {
+    animation: slideUp 0.3s ease-out;
+  }
+
+  .animate-scale-in {
+    animation: scaleIn 0.2s ease-out;
+  }
 }
