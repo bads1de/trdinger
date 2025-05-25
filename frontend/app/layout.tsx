@@ -8,20 +8,20 @@
  * @version 1.0.0
  */
 
-import type { Metadata } from 'next'
-import { Inter } from 'next/font/google'
-import './globals.css'
+import type { Metadata } from "next";
+import { Inter } from "next/font/google";
+import "./globals.css";
 
 // Google Fontsからインポートしたフォント設定
 // ラテン文字セットのみを読み込んでパフォーマンスを最適化
-const inter = Inter({ subsets: ['latin'] })
+const inter = Inter({ subsets: ["latin"] });
 
 // アプリケーションのメタデータ設定
 // SEOとソーシャルメディア共有に重要
 export const metadata: Metadata = {
-  title: 'Trdinger - Trading Strategy Backtest',
-  description: 'A trading strategy backtesting service for cryptocurrency',
-}
+  title: "Trdinger - Trading Strategy Backtest",
+  description: "A trading strategy backtesting service for cryptocurrency",
+};
 
 /**
  * ルートレイアウトコンポーネント
@@ -33,11 +33,11 @@ export const metadata: Metadata = {
 export default function RootLayout({
   children,
 }: {
-  children: React.ReactNode
+  children: React.ReactNode;
 }) {
   return (
-    <html lang="ja">
+    <html lang="ja" className="dark">
       <body className={inter.className}>{children}</body>
     </html>
-  )
+  );
 }
