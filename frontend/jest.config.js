@@ -24,8 +24,8 @@ const customJestConfig = {
 
   // モジュールパスのエイリアス設定
   moduleNameMapper: {
-    // @/でsrc/を参照するエイリアス（tsconfig.jsonのpaths設定と連動）
-    "^@/(.*)$": "<rootDir>/src/$1",
+    // @/でルートディレクトリを参照するエイリアス（tsconfig.jsonのpaths設定と連動）
+    "^@/(.*)$": "<rootDir>/$1",
   },
 
   // テスト実行環境（jsdomでブラウザ環境をシミュレート）

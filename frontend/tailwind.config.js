@@ -11,9 +11,9 @@ module.exports = {
   // Tailwindがスキャンするファイルパスの指定
   // これらのファイル内のTailwindクラスが最終的なCSSに含まれる
   content: [
-    './src/pages/**/*.{js,ts,jsx,tsx,mdx}',     // Pages Routerファイル
-    './src/components/**/*.{js,ts,jsx,tsx,mdx}', // コンポーネントファイル
-    './src/app/**/*.{js,ts,jsx,tsx,mdx}',       // App Routerファイル
+    './pages/**/*.{js,ts,jsx,tsx,mdx}',     // Pages Routerファイル
+    './components/**/*.{js,ts,jsx,tsx,mdx}', // コンポーネントファイル
+    './app/**/*.{js,ts,jsx,tsx,mdx}',       // App Routerファイル
   ],
 
   // テーマのカスタマイズ
