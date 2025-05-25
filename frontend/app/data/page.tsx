@@ -14,11 +14,11 @@ import React, { useState, useEffect } from 'react';
 import CandlestickChart from '@/components/CandlestickChart';
 import TimeFrameSelector from '@/components/TimeFrameSelector';
 import SymbolSelector from '@/components/SymbolSelector';
-import { 
-  CandlestickData, 
-  TimeFrame, 
-  TradingPair, 
-  CandlestickResponse 
+import {
+  CandlestickData,
+  TimeFrame,
+  TradingPair,
+  CandlestickResponse
 } from '@/types/strategy';
 
 /**
@@ -42,7 +42,7 @@ const DataPage: React.FC = () => {
       setSymbolsLoading(true);
       const response = await fetch('/api/data/symbols');
       const result = await response.json();
-      
+
       if (result.success) {
         setSymbols(result.data);
       } else {
@@ -63,16 +63,16 @@ const DataPage: React.FC = () => {
     try {
       setLoading(true);
       setError('');
-      
+
       const params = new URLSearchParams({
         symbol: selectedSymbol,
         timeframe: selectedTimeFrame,
         limit: '100',
       });
-      
+
       const response = await fetch(`/api/data/candlesticks?${params}`);
       const result: CandlestickResponse = await response.json();
-      
+
       if (result.success) {
         setCandlestickData(result.data.candlesticks);
       } else {
@@ -120,113 +120,245 @@ const DataPage: React.FC = () => {
   }, [selectedSymbol, selectedTimeFrame]);
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-      {/* ヘッダー */}
-      <div className="bg-white dark:bg-gray-800 shadow-sm border-b border-gray-200 dark:border-gray-700">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-                チャートデータ
+    <div className="min-h-screen bg-secondary-50 dark:bg-secondary-950 animate-fade-in">
+      {/* エンタープライズヘッダー */}
+      <div className="enterprise-card border-0 rounded-none border-b border-secondary-200 dark:border-secondary-700 shadow-enterprise-sm">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div className="animate-slide-up">
+              <h1 className="text-3xl font-bold text-gradient">
+                📊 チャートデータ
               </h1>
-              <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
-                仮想通貨のローソク足チャートを表示します
+              <p className="mt-2 text-base text-secondary-600 dark:text-secondary-400">
+                エンタープライズレベルの仮想通貨ローソク足チャート分析
               </p>
+              <div className="mt-2 flex items-center gap-2">
+                <span className="badge-primary">リアルタイム</span>
+                <span className="badge-success">高精度データ</span>
+              </div>
             </div>
-            
-            <button
-              onClick={handleRefresh}
-              disabled={loading}
-              className={`
-                px-4 py-2 text-sm font-medium rounded-md transition-colors duration-200
-                ${
-                  loading
-                    ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                    : 'bg-blue-600 text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2'
-                }
-              `}
-            >
-              {loading ? '更新中...' : 'データ更新'}
-            </button>
+
+            <div className="flex items-center gap-3 animate-slide-up">
+              {/* ステータスインジケーター */}
+              <div className="flex items-center gap-2">
+                <div className={`w-2 h-2 rounded-full ${
+                  loading ? 'bg-warning-500 animate-pulse' :
+                  error ? 'bg-error-500' : 'bg-success-500'
+                }`}></div>
+                <span className="text-sm text-secondary-600 dark:text-secondary-400">
+                  {loading ? '更新中' : error ? 'エラー' : '接続中'}
+                </span>
+              </div>
+
+              <button
+                onClick={handleRefresh}
+                disabled={loading}
+                className="btn-primary group"
+              >
+                <svg
+                  className={`w-4 h-4 mr-2 transition-transform duration-200 ${
+                    loading ? 'animate-spin' : 'group-hover:rotate-180'
+                  }`}
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                  />
+                </svg>
+                {loading ? '更新中...' : 'データ更新'}
+              </button>
+            </div>
           </div>
         </div>
       </div>
 
-      {/* メインコンテンツ */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      {/* メインコンテンツエリア */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+        {/* エラー表示 */}
+        {error && (
+          <div className="enterprise-card border-error-200 dark:border-error-800 bg-error-50 dark:bg-error-900/20 animate-slide-down">
+            <div className="p-4">
+              <div className="flex items-center">
+                <svg className="w-5 h-5 text-error-500 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <h3 className="text-sm font-medium text-error-800 dark:text-error-200">
+                  データ取得エラー
+                </h3>
+              </div>
+              <p className="mt-2 text-sm text-error-700 dark:text-error-300">{error}</p>
+            </div>
+          </div>
+        )}
+
         {/* コントロールパネル */}
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6 mb-6">
-          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-            {/* 通貨ペア選択 */}
-            <SymbolSelector
-              symbols={symbols}
-              selectedSymbol={selectedSymbol}
-              onSymbolChange={handleSymbolChange}
-              loading={symbolsLoading}
-              disabled={loading}
-            />
-            
-            {/* 時間軸選択 */}
-            <TimeFrameSelector
-              selectedTimeFrame={selectedTimeFrame}
-              onTimeFrameChange={handleTimeFrameChange}
-              disabled={loading}
-            />
+        <div className="enterprise-card animate-slide-up">
+          <div className="p-6">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-xl font-semibold text-secondary-900 dark:text-secondary-100">
+                📈 チャート設定
+              </h2>
+              <span className="text-sm text-secondary-500 dark:text-secondary-400">
+                表示パラメータを調整
+              </span>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* 通貨ペア選択 */}
+              <div className="space-y-2">
+                <SymbolSelector
+                  symbols={symbols}
+                  selectedSymbol={selectedSymbol}
+                  onSymbolChange={handleSymbolChange}
+                  loading={symbolsLoading}
+                  disabled={loading}
+                />
+              </div>
+
+              {/* 時間軸選択 */}
+              <div className="space-y-2">
+                <TimeFrameSelector
+                  selectedTimeFrame={selectedTimeFrame}
+                  onTimeFrameChange={handleTimeFrameChange}
+                  disabled={loading}
+                />
+              </div>
+            </div>
           </div>
         </div>
 
         {/* チャート表示エリア */}
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
-          <div className="mb-4">
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-              {selectedSymbol} - {selectedTimeFrame}足チャート
-            </h2>
-            <p className="text-sm text-gray-600 dark:text-gray-400">
+        <div className="enterprise-card animate-slide-up">
+          <div className="p-6">
+            <div className="flex items-center justify-between mb-6">
+              <div>
+                <h2 className="text-xl font-semibold text-secondary-900 dark:text-secondary-100">
+                  📊 {selectedSymbol} - {selectedTimeFrame}足チャート
+                </h2>
+                <p className="text-sm text-secondary-600 dark:text-secondary-400 mt-1">
+                  {candlestickData.length > 0 && !loading && (
+                    `${candlestickData.length}件のデータポイントを表示中`
+                  )}
+                </p>
+              </div>
+
+              {/* チャート情報バッジ */}
               {candlestickData.length > 0 && !loading && (
-                `${candlestickData.length}件のデータを表示中`
+                <div className="flex items-center gap-2">
+                  <span className="badge-primary">
+                    {candlestickData.length}件
+                  </span>
+                  <span className="badge-success">
+                    最新: ${candlestickData[candlestickData.length - 1]?.close.toFixed(2)}
+                  </span>
+                </div>
               )}
-            </p>
+            </div>
+
+            <div className="relative">
+              <CandlestickChart
+                data={candlestickData}
+                height={600}
+                loading={loading}
+                error={error}
+              />
+
+              {/* ローディングオーバーレイ */}
+              {loading && (
+                <div className="absolute inset-0 glass-effect rounded-enterprise-lg flex items-center justify-center">
+                  <div className="text-center">
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mx-auto mb-4"></div>
+                    <p className="text-sm font-medium text-secondary-700 dark:text-secondary-300">
+                      チャートデータを読み込み中...
+                    </p>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
-          
-          <CandlestickChart
-            data={candlestickData}
-            height={500}
-            loading={loading}
-            error={error}
-          />
         </div>
 
-        {/* データ情報 */}
+        {/* データ統計情報 */}
         {candlestickData.length > 0 && !loading && !error && (
-          <div className="mt-6 bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
-              データ概要
-            </h3>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-              <div>
-                <span className="text-gray-600 dark:text-gray-400">データ期間:</span>
-                <p className="font-medium text-gray-900 dark:text-gray-100">
-                  {new Date(candlestickData[0]?.timestamp).toLocaleDateString('ja-JP')} - {' '}
-                  {new Date(candlestickData[candlestickData.length - 1]?.timestamp).toLocaleDateString('ja-JP')}
-                </p>
+          <div className="enterprise-card animate-slide-up">
+            <div className="p-6">
+              <div className="flex items-center justify-between mb-6">
+                <h3 className="text-xl font-semibold text-secondary-900 dark:text-secondary-100">
+                  📈 データ統計
+                </h3>
+                <span className="text-sm text-secondary-500 dark:text-secondary-400">
+                  期間: {new Date(candlestickData[0]?.timestamp).toLocaleDateString('ja-JP')} - {new Date(candlestickData[candlestickData.length - 1]?.timestamp).toLocaleDateString('ja-JP')}
+                </span>
               </div>
-              <div>
-                <span className="text-gray-600 dark:text-gray-400">最新価格:</span>
-                <p className="font-medium text-gray-900 dark:text-gray-100">
-                  ${candlestickData[candlestickData.length - 1]?.close.toFixed(2)}
-                </p>
+
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+                <div className="text-center p-4 bg-secondary-50 dark:bg-secondary-800/50 rounded-enterprise border border-secondary-200 dark:border-secondary-700">
+                  <div className="text-2xl font-bold text-primary-600 dark:text-primary-400">
+                    ${candlestickData[candlestickData.length - 1]?.close.toFixed(2)}
+                  </div>
+                  <div className="text-sm text-secondary-600 dark:text-secondary-400 mt-1">
+                    最新価格
+                  </div>
+                </div>
+
+                <div className="text-center p-4 bg-secondary-50 dark:bg-secondary-800/50 rounded-enterprise border border-secondary-200 dark:border-secondary-700">
+                  <div className="text-2xl font-bold text-success-600 dark:text-success-400">
+                    ${Math.max(...candlestickData.map(d => d.high)).toFixed(2)}
+                  </div>
+                  <div className="text-sm text-secondary-600 dark:text-secondary-400 mt-1">
+                    期間最高値
+                  </div>
+                </div>
+
+                <div className="text-center p-4 bg-secondary-50 dark:bg-secondary-800/50 rounded-enterprise border border-secondary-200 dark:border-secondary-700">
+                  <div className="text-2xl font-bold text-error-600 dark:text-error-400">
+                    ${Math.min(...candlestickData.map(d => d.low)).toFixed(2)}
+                  </div>
+                  <div className="text-sm text-secondary-600 dark:text-secondary-400 mt-1">
+                    期間最安値
+                  </div>
+                </div>
+
+                <div className="text-center p-4 bg-secondary-50 dark:bg-secondary-800/50 rounded-enterprise border border-secondary-200 dark:border-secondary-700">
+                  <div className="text-2xl font-bold text-accent-600 dark:text-accent-400">
+                    {((
+                      (candlestickData[candlestickData.length - 1]?.close - candlestickData[0]?.open) /
+                      candlestickData[0]?.open * 100
+                    ) || 0).toFixed(2)}%
+                  </div>
+                  <div className="text-sm text-secondary-600 dark:text-secondary-400 mt-1">
+                    期間変動率
+                  </div>
+                </div>
               </div>
-              <div>
-                <span className="text-gray-600 dark:text-gray-400">最高値:</span>
-                <p className="font-medium text-gray-900 dark:text-gray-100">
-                  ${Math.max(...candlestickData.map(d => d.high)).toFixed(2)}
-                </p>
-              </div>
-              <div>
-                <span className="text-gray-600 dark:text-gray-400">最安値:</span>
-                <p className="font-medium text-gray-900 dark:text-gray-100">
-                  ${Math.min(...candlestickData.map(d => d.low)).toFixed(2)}
-                </p>
+
+              {/* 追加統計情報 */}
+              <div className="mt-6 pt-6 border-t border-secondary-200 dark:border-secondary-700">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-secondary-600 dark:text-secondary-400">平均価格:</span>
+                    <span className="font-medium text-secondary-900 dark:text-secondary-100">
+                      ${(candlestickData.reduce((sum, d) => sum + d.close, 0) / candlestickData.length).toFixed(2)}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-secondary-600 dark:text-secondary-400">データポイント:</span>
+                    <span className="font-medium text-secondary-900 dark:text-secondary-100">
+                      {candlestickData.length.toLocaleString()}件
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-secondary-600 dark:text-secondary-400">最終更新:</span>
+                    <span className="font-medium text-secondary-900 dark:text-secondary-100">
+                      {new Date().toLocaleTimeString('ja-JP')}
+                    </span>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
