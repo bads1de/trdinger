@@ -1,66 +1,49 @@
 /**
  * 通貨ペア一覧取得API
  *
- * システムで利用可能な通貨ペアの一覧を取得するAPIエンドポイントです。
+ * Bybit取引所でサポートされている通貨ペアの一覧を取得するAPIエンドポイントです。
+ * CCXT ライブラリを使用してリアルタイムデータを提供します。
  *
  * @author Trdinger Development Team
- * @version 1.0.0
+ * @version 2.0.0
  */
 
-import { NextResponse } from 'next/server';
-import { TradingPair } from '@/types/strategy';
+import { NextResponse } from "next/server";
+import { TradingPair } from "@/types/strategy";
 
 /**
- * 利用可能な通貨ペアのマスターデータ
+ * Bybitでサポートされている通貨ペアのマスターデータ
  */
 const TRADING_PAIRS: TradingPair[] = [
   {
-    symbol: 'BTC/USD',
-    name: 'Bitcoin / US Dollar',
-    base: 'BTC',
-    quote: 'USD',
+    symbol: "BTC/USD",
+    name: "Bitcoin / US Dollar (Futures)",
+    base: "BTC",
+    quote: "USD",
   },
   {
-    symbol: 'ETH/USD',
-    name: 'Ethereum / US Dollar',
-    base: 'ETH',
-    quote: 'USD',
+    symbol: "BTCUSD",
+    name: "Bitcoin / US Dollar (Alternative)",
+    base: "BTC",
+    quote: "USD",
   },
   {
-    symbol: 'BNB/USD',
-    name: 'Binance Coin / US Dollar',
-    base: 'BNB',
-    quote: 'USD',
+    symbol: "BTC/USDT",
+    name: "Bitcoin / Tether USD (Spot)",
+    base: "BTC",
+    quote: "USDT",
   },
   {
-    symbol: 'ADA/USD',
-    name: 'Cardano / US Dollar',
-    base: 'ADA',
-    quote: 'USD',
+    symbol: "ETH/USD",
+    name: "Ethereum / US Dollar (Futures)",
+    base: "ETH",
+    quote: "USD",
   },
   {
-    symbol: 'SOL/USD',
-    name: 'Solana / US Dollar',
-    base: 'SOL',
-    quote: 'USD',
-  },
-  {
-    symbol: 'MATIC/USD',
-    name: 'Polygon / US Dollar',
-    base: 'MATIC',
-    quote: 'USD',
-  },
-  {
-    symbol: 'DOT/USD',
-    name: 'Polkadot / US Dollar',
-    base: 'DOT',
-    quote: 'USD',
-  },
-  {
-    symbol: 'AVAX/USD',
-    name: 'Avalanche / US Dollar',
-    base: 'AVAX',
-    quote: 'USD',
+    symbol: "ETH/USDT",
+    name: "Ethereum / Tether USD (Spot)",
+    base: "ETH",
+    quote: "USDT",
   },
 ];
 
@@ -74,16 +57,16 @@ export async function GET() {
     return NextResponse.json({
       success: true,
       data: TRADING_PAIRS,
-      message: '通貨ペア一覧を取得しました',
+      message: "通貨ペア一覧を取得しました",
       timestamp: new Date().toISOString(),
     });
   } catch (error) {
-    console.error('通貨ペア一覧取得エラー:', error);
-    
+    console.error("通貨ペア一覧取得エラー:", error);
+
     return NextResponse.json(
       {
         success: false,
-        message: 'サーバー内部エラーが発生しました',
+        message: "サーバー内部エラーが発生しました",
         timestamp: new Date().toISOString(),
       },
       { status: 500 }

@@ -8,18 +8,18 @@
  * @version 1.0.0
  */
 
-'use client';
+"use client";
 
-import React, { useState, useEffect } from 'react';
-import CandlestickChart from '@/components/CandlestickChart';
-import TimeFrameSelector from '@/components/TimeFrameSelector';
-import SymbolSelector from '@/components/SymbolSelector';
+import React, { useState, useEffect } from "react";
+import CandlestickChart from "@/components/CandlestickChart";
+import TimeFrameSelector from "@/components/TimeFrameSelector";
+import SymbolSelector from "@/components/SymbolSelector";
 import {
   CandlestickData,
   TimeFrame,
   TradingPair,
-  CandlestickResponse
-} from '@/types/strategy';
+  CandlestickResponse,
+} from "@/types/strategy";
 
 /**
  * データページコンポーネント
@@ -27,11 +27,11 @@ import {
 const DataPage: React.FC = () => {
   // 状態管理
   const [symbols, setSymbols] = useState<TradingPair[]>([]);
-  const [selectedSymbol, setSelectedSymbol] = useState<string>('BTC/USD');
-  const [selectedTimeFrame, setSelectedTimeFrame] = useState<TimeFrame>('1d');
+  const [selectedSymbol, setSelectedSymbol] = useState<string>("BTC/USD");
+  const [selectedTimeFrame, setSelectedTimeFrame] = useState<TimeFrame>("1d");
   const [candlestickData, setCandlestickData] = useState<CandlestickData[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
-  const [error, setError] = useState<string>('');
+  const [error, setError] = useState<string>("");
   const [symbolsLoading, setSymbolsLoading] = useState<boolean>(true);
 
   /**
@@ -40,17 +40,17 @@ const DataPage: React.FC = () => {
   const fetchSymbols = async () => {
     try {
       setSymbolsLoading(true);
-      const response = await fetch('/api/data/symbols');
+      const response = await fetch("/api/data/symbols");
       const result = await response.json();
 
       if (result.success) {
         setSymbols(result.data);
       } else {
-        setError('通貨ペア一覧の取得に失敗しました');
+        setError("通貨ペア一覧の取得に失敗しました");
       }
     } catch (err) {
-      setError('通貨ペア一覧の取得中にエラーが発生しました');
-      console.error('通貨ペア取得エラー:', err);
+      setError("通貨ペア一覧の取得中にエラーが発生しました");
+      console.error("通貨ペア取得エラー:", err);
     } finally {
       setSymbolsLoading(false);
     }
@@ -62,12 +62,12 @@ const DataPage: React.FC = () => {
   const fetchCandlestickData = async () => {
     try {
       setLoading(true);
-      setError('');
+      setError("");
 
       const params = new URLSearchParams({
         symbol: selectedSymbol,
         timeframe: selectedTimeFrame,
-        limit: '100',
+        limit: "100",
       });
 
       const response = await fetch(`/api/data/candlesticks?${params}`);
@@ -76,11 +76,11 @@ const DataPage: React.FC = () => {
       if (result.success) {
         setCandlestickData(result.data.candlesticks);
       } else {
-        setError(result.message || 'データの取得に失敗しました');
+        setError(result.message || "データの取得に失敗しました");
       }
     } catch (err) {
-      setError('データの取得中にエラーが発生しました');
-      console.error('ローソク足データ取得エラー:', err);
+      setError("データの取得中にエラーが発生しました");
+      console.error("ローソク足データ取得エラー:", err);
     } finally {
       setLoading(false);
     }
@@ -141,12 +141,17 @@ const DataPage: React.FC = () => {
             <div className="flex items-center gap-3 animate-slide-up">
               {/* ステータスインジケーター */}
               <div className="flex items-center gap-2">
-                <div className={`w-2 h-2 rounded-full ${
-                  loading ? 'bg-warning-500 animate-pulse' :
-                  error ? 'bg-error-500' : 'bg-success-500'
-                }`}></div>
+                <div
+                  className={`w-2 h-2 rounded-full ${
+                    loading
+                      ? "bg-warning-500 animate-pulse"
+                      : error
+                      ? "bg-error-500"
+                      : "bg-success-500"
+                  }`}
+                ></div>
                 <span className="text-sm text-secondary-600 dark:text-secondary-400">
-                  {loading ? '更新中' : error ? 'エラー' : '接続中'}
+                  {loading ? "更新中" : error ? "エラー" : "接続中"}
                 </span>
               </div>
 
@@ -157,7 +162,7 @@ const DataPage: React.FC = () => {
               >
                 <svg
                   className={`w-4 h-4 mr-2 transition-transform duration-200 ${
-                    loading ? 'animate-spin' : 'group-hover:rotate-180'
+                    loading ? "animate-spin" : "group-hover:rotate-180"
                   }`}
                   fill="none"
                   stroke="currentColor"
@@ -170,7 +175,7 @@ const DataPage: React.FC = () => {
                     d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
                   />
                 </svg>
-                {loading ? '更新中...' : 'データ更新'}
+                {loading ? "更新中..." : "データ更新"}
               </button>
             </div>
           </div>
@@ -184,14 +189,26 @@ const DataPage: React.FC = () => {
           <div className="enterprise-card border-error-200 dark:border-error-800 bg-error-50 dark:bg-error-900/20 animate-slide-down">
             <div className="p-4">
               <div className="flex items-center">
-                <svg className="w-5 h-5 text-error-500 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                <svg
+                  className="w-5 h-5 text-error-500 mr-3"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                  />
                 </svg>
                 <h3 className="text-sm font-medium text-error-800 dark:text-error-200">
                   データ取得エラー
                 </h3>
               </div>
-              <p className="mt-2 text-sm text-error-700 dark:text-error-300">{error}</p>
+              <p className="mt-2 text-sm text-error-700 dark:text-error-300">
+                {error}
+              </p>
             </div>
           </div>
         )}
@@ -241,9 +258,9 @@ const DataPage: React.FC = () => {
                   📊 {selectedSymbol} - {selectedTimeFrame}足チャート
                 </h2>
                 <p className="text-sm text-secondary-600 dark:text-secondary-400 mt-1">
-                  {candlestickData.length > 0 && !loading && (
-                    `${candlestickData.length}件のデータポイントを表示中`
-                  )}
+                  {candlestickData.length > 0 &&
+                    !loading &&
+                    `${candlestickData.length}件のデータポイントを表示中`}
                 </p>
               </div>
 
@@ -254,7 +271,10 @@ const DataPage: React.FC = () => {
                     {candlestickData.length}件
                   </span>
                   <span className="badge-success">
-                    最新: ${candlestickData[candlestickData.length - 1]?.close.toFixed(2)}
+                    最新: $
+                    {candlestickData[candlestickData.length - 1]?.close.toFixed(
+                      2
+                    )}
                   </span>
                 </div>
               )}
@@ -292,14 +312,24 @@ const DataPage: React.FC = () => {
                   📈 データ統計
                 </h3>
                 <span className="text-sm text-secondary-500 dark:text-secondary-400">
-                  期間: {new Date(candlestickData[0]?.timestamp).toLocaleDateString('ja-JP')} - {new Date(candlestickData[candlestickData.length - 1]?.timestamp).toLocaleDateString('ja-JP')}
+                  期間:{" "}
+                  {new Date(candlestickData[0]?.timestamp).toLocaleDateString(
+                    "ja-JP"
+                  )}{" "}
+                  -{" "}
+                  {new Date(
+                    candlestickData[candlestickData.length - 1]?.timestamp
+                  ).toLocaleDateString("ja-JP")}
                 </span>
               </div>
 
               <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
                 <div className="text-center p-4 bg-secondary-50 dark:bg-secondary-800/50 rounded-enterprise border border-secondary-200 dark:border-secondary-700">
                   <div className="text-2xl font-bold text-primary-600 dark:text-primary-400">
-                    ${candlestickData[candlestickData.length - 1]?.close.toFixed(2)}
+                    $
+                    {candlestickData[candlestickData.length - 1]?.close.toFixed(
+                      2
+                    )}
                   </div>
                   <div className="text-sm text-secondary-600 dark:text-secondary-400 mt-1">
                     最新価格
@@ -308,7 +338,8 @@ const DataPage: React.FC = () => {
 
                 <div className="text-center p-4 bg-secondary-50 dark:bg-secondary-800/50 rounded-enterprise border border-secondary-200 dark:border-secondary-700">
                   <div className="text-2xl font-bold text-success-600 dark:text-success-400">
-                    ${Math.max(...candlestickData.map(d => d.high)).toFixed(2)}
+                    $
+                    {Math.max(...candlestickData.map((d) => d.high)).toFixed(2)}
                   </div>
                   <div className="text-sm text-secondary-600 dark:text-secondary-400 mt-1">
                     期間最高値
@@ -317,7 +348,7 @@ const DataPage: React.FC = () => {
 
                 <div className="text-center p-4 bg-secondary-50 dark:bg-secondary-800/50 rounded-enterprise border border-secondary-200 dark:border-secondary-700">
                   <div className="text-2xl font-bold text-error-600 dark:text-error-400">
-                    ${Math.min(...candlestickData.map(d => d.low)).toFixed(2)}
+                    ${Math.min(...candlestickData.map((d) => d.low)).toFixed(2)}
                   </div>
                   <div className="text-sm text-secondary-600 dark:text-secondary-400 mt-1">
                     期間最安値
@@ -326,10 +357,13 @@ const DataPage: React.FC = () => {
 
                 <div className="text-center p-4 bg-secondary-50 dark:bg-secondary-800/50 rounded-enterprise border border-secondary-200 dark:border-secondary-700">
                   <div className="text-2xl font-bold text-accent-600 dark:text-accent-400">
-                    {((
-                      (candlestickData[candlestickData.length - 1]?.close - candlestickData[0]?.open) /
-                      candlestickData[0]?.open * 100
-                    ) || 0).toFixed(2)}%
+                    {(
+                      ((candlestickData[candlestickData.length - 1]?.close -
+                        candlestickData[0]?.open) /
+                        candlestickData[0]?.open) *
+                        100 || 0
+                    ).toFixed(2)}
+                    %
                   </div>
                   <div className="text-sm text-secondary-600 dark:text-secondary-400 mt-1">
                     期間変動率
@@ -341,21 +375,31 @@ const DataPage: React.FC = () => {
               <div className="mt-6 pt-6 border-t border-secondary-200 dark:border-secondary-700">
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
                   <div className="flex justify-between">
-                    <span className="text-secondary-600 dark:text-secondary-400">平均価格:</span>
+                    <span className="text-secondary-600 dark:text-secondary-400">
+                      平均価格:
+                    </span>
                     <span className="font-medium text-secondary-900 dark:text-secondary-100">
-                      ${(candlestickData.reduce((sum, d) => sum + d.close, 0) / candlestickData.length).toFixed(2)}
+                      $
+                      {(
+                        candlestickData.reduce((sum, d) => sum + d.close, 0) /
+                        candlestickData.length
+                      ).toFixed(2)}
                     </span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-secondary-600 dark:text-secondary-400">データポイント:</span>
+                    <span className="text-secondary-600 dark:text-secondary-400">
+                      データポイント:
+                    </span>
                     <span className="font-medium text-secondary-900 dark:text-secondary-100">
                       {candlestickData.length.toLocaleString()}件
                     </span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-secondary-600 dark:text-secondary-400">最終更新:</span>
+                    <span className="text-secondary-600 dark:text-secondary-400">
+                      最終更新:
+                    </span>
                     <span className="font-medium text-secondary-900 dark:text-secondary-100">
-                      {new Date().toLocaleTimeString('ja-JP')}
+                      {new Date().toLocaleTimeString("ja-JP")}
                     </span>
                   </div>
                 </div>
