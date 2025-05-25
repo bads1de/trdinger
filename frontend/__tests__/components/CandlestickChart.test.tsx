@@ -43,47 +43,103 @@ const createMockCandlestickData = (count: number = 5): CandlestickData[] => {
   return data;
 };
 
-// Rechartsのモック
-jest.mock("recharts", () => ({
-  ResponsiveContainer: ({ children }: { children: React.ReactNode }) => (
-    <div data-testid="responsive-container">{children}</div>
-  ),
-  LineChart: ({ children }: { children: React.ReactNode }) => (
-    <div data-testid="line-chart">{children}</div>
-  ),
-  Line: () => <div data-testid="line" />,
-  XAxis: () => <div data-testid="x-axis" />,
-  YAxis: () => <div data-testid="y-axis" />,
-  CartesianGrid: () => <div data-testid="cartesian-grid" />,
-  Tooltip: () => <div data-testid="tooltip" />,
-}));
+// ApexChartsのモック
+jest.mock("react-apexcharts", () => {
+  return {
+    __esModule: true,
+    default: ({ options, series, type, height }: any) => (
+      <div
+        data-testid="apex-chart"
+        data-chart-type={type}
+        data-chart-height={height}
+        data-chart-options={JSON.stringify(options)}
+        data-chart-series={JSON.stringify(series)}
+      >
+        ApexChart Mock
+      </div>
+    ),
+  };
+});
+
+// Next.js dynamic importのモック
+jest.mock("next/dynamic", () => {
+  return (importFunc: any) => {
+    const Component = ({ options, series, type, height }: any) => (
+      <div
+        data-testid="apex-chart"
+        data-chart-type={type}
+        data-chart-height={height}
+        data-chart-options={JSON.stringify(options)}
+        data-chart-series={JSON.stringify(series)}
+      >
+        ApexChart Mock
+      </div>
+    );
+    Component.displayName = "MockedDynamicChart";
+    return Component;
+  };
+});
 
 describe("CandlestickChart", () => {
-  describe("正常系テスト", () => {
-    test("有効なデータでチャートが正常にレンダリングされる", () => {
+  describe("ApexCharts実装テスト", () => {
+    test("ApexChartsのcandlestickチャートが正常にレンダリングされる", () => {
       const mockData = createMockCandlestickData(10);
 
       render(<CandlestickChart data={mockData} />);
 
-      expect(screen.getByTestId("responsive-container")).toBeInTheDocument();
-      expect(screen.getByTestId("line-chart")).toBeInTheDocument();
-      expect(screen.getAllByTestId("line")).toHaveLength(3); // close, high, low
-      expect(screen.getByTestId("x-axis")).toBeInTheDocument();
-      expect(screen.getByTestId("y-axis")).toBeInTheDocument();
-      expect(screen.getByTestId("cartesian-grid")).toBeInTheDocument();
-      expect(screen.getByTestId("tooltip")).toBeInTheDocument();
+      const apexChart = screen.getByTestId("apex-chart");
+      expect(apexChart).toBeInTheDocument();
+      expect(apexChart).toHaveAttribute("data-chart-type", "candlestick");
+    });
+
+    test("ローソク足の色が正しく設定される（陽線=白、陰線=グレー）", () => {
+      const mockData = createMockCandlestickData(5);
+
+      render(<CandlestickChart data={mockData} />);
+
+      const apexChart = screen.getByTestId("apex-chart");
+      const options = JSON.parse(
+        apexChart.getAttribute("data-chart-options") || "{}"
+      );
+
+      expect(options.plotOptions?.candlestick?.colors?.upward).toBe("#ffffff");
+      expect(options.plotOptions?.candlestick?.colors?.downward).toBe(
+        "#808080"
+      );
+    });
+
+    test("OHLCデータが正しい形式でApexChartsに渡される", () => {
+      const mockData = createMockCandlestickData(3);
+
+      render(<CandlestickChart data={mockData} />);
+
+      const apexChart = screen.getByTestId("apex-chart");
+      const series = JSON.parse(
+        apexChart.getAttribute("data-chart-series") || "[]"
+      );
+
+      expect(series).toHaveLength(1);
+      expect(series[0].data).toHaveLength(3);
+
+      // 各データポイントがOHLC形式であることを確認
+      series[0].data.forEach((point: any) => {
+        expect(point).toHaveProperty("x");
+        expect(point).toHaveProperty("y");
+        expect(point.y).toHaveLength(4); // [open, high, low, close]
+      });
     });
 
     test("カスタムの高さが適用される", () => {
       const mockData = createMockCandlestickData(5);
       const customHeight = 600;
 
-      const { container } = render(
-        <CandlestickChart data={mockData} height={customHeight} />
-      );
+      render(<CandlestickChart data={mockData} height={customHeight} />);
 
-      const responsiveContainer = screen.getByTestId("responsive-container");
-      expect(responsiveContainer).toBeInTheDocument();
+      const apexChart = screen.getByTestId("apex-chart");
+      expect(apexChart).toHaveAttribute(
+        "data-chart-height",
+        customHeight.toString()
+      );
     });
 
     test("空のデータ配列でも正常にレンダリングされる", () => {
@@ -104,7 +160,7 @@ describe("CandlestickChart", () => {
       expect(
         screen.getByText("チャートデータを読み込み中...")
       ).toBeInTheDocument();
-      expect(screen.queryByTestId("line-chart")).not.toBeInTheDocument();
+      expect(screen.queryByTestId("apex-chart")).not.toBeInTheDocument();
     });
 
     test("ローディング状態でスピナーが表示される", () => {
@@ -130,7 +186,7 @@ describe("CandlestickChart", () => {
         screen.getByText("チャートの読み込みに失敗しました")
       ).toBeInTheDocument();
       expect(screen.getByText(errorMessage)).toBeInTheDocument();
-      expect(screen.queryByTestId("line-chart")).not.toBeInTheDocument();
+      expect(screen.queryByTestId("apex-chart")).not.toBeInTheDocument();
     });
 
     test("エラー状態でチャートが表示されない", () => {
@@ -138,10 +194,7 @@ describe("CandlestickChart", () => {
 
       render(<CandlestickChart data={mockData} error="エラーが発生しました" />);
 
-      expect(
-        screen.queryByTestId("responsive-container")
-      ).not.toBeInTheDocument();
-      expect(screen.queryByTestId("line-chart")).not.toBeInTheDocument();
+      expect(screen.queryByTestId("apex-chart")).not.toBeInTheDocument();
     });
   });
 
@@ -169,8 +222,8 @@ describe("CandlestickChart", () => {
 
       render(<CandlestickChart data={mockData} />);
 
-      // ResponsiveContainerが存在することを確認
-      expect(screen.getByTestId("responsive-container")).toBeInTheDocument();
+      // ApexChartが存在することを確認
+      expect(screen.getByTestId("apex-chart")).toBeInTheDocument();
     });
 
     test("loadingとerrorが同時に指定された場合、errorが優先される", () => {
