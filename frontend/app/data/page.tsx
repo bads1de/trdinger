@@ -20,6 +20,7 @@ import {
   TradingPair,
   CandlestickResponse,
 } from "@/types/strategy";
+import { BACKEND_API_URL } from "@/constants";
 
 /**
  * データページコンポーネント
@@ -118,7 +119,7 @@ const DataPage: React.FC = () => {
       setError("");
 
       const response = await fetch(
-        `http://127.0.0.1:8000/api/v1/data-collection/update?symbol=${selectedSymbol}&timeframe=${selectedTimeFrame}`, // ポート番号を8001から8000に変更
+        `${BACKEND_API_URL}/api/v1/data-collection/update?symbol=${selectedSymbol}&timeframe=${selectedTimeFrame}`,
         {
           method: "POST",
         }
@@ -146,7 +147,7 @@ const DataPage: React.FC = () => {
    */
   const fetchDataStatus = async () => {
     try {
-      const url = `http://127.0.0.1:8000/api/v1/data-collection/status/${selectedSymbol}/${selectedTimeFrame}`; // ポート番号を8001から8000に変更
+      const url = `${BACKEND_API_URL}/api/v1/data-collection/status/${selectedSymbol}/${selectedTimeFrame}`;
       console.log("Requesting data status from:", url); // ★ログ追加
       const response = await fetch(url);
       const result = await response.json();

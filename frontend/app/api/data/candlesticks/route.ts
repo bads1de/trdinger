@@ -10,11 +10,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { CandlestickData, TimeFrame } from "@/types/strategy";
-
-/**
- * バックエンドAPIのベースURL
- */
-const BACKEND_API_URL = "http://127.0.0.1:8000";
+import { BACKEND_API_URL } from "@/constants";
 
 /**
  * 利用可能な時間軸の定義
