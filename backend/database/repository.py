@@ -362,6 +362,32 @@ class OHLCVRepository:
             logger.error(f"利用可能シンボル取得エラー: {e}")
             raise
 
+    def get_oldest_timestamp(self, symbol: str, timeframe: str) -> Optional[datetime]:
+        """
+        指定されたシンボル・時間軸の最古タイムスタンプを取得
+
+        Args:
+            symbol: 取引ペア
+            timeframe: 時間軸
+
+        Returns:
+            最古のタイムスタンプ（データがない場合はNone）
+        """
+        try:
+            result = (
+                self.db.query(func.min(OHLCVData.timestamp))
+                .filter(
+                    and_(OHLCVData.symbol == symbol, OHLCVData.timeframe == timeframe)
+                )
+                .scalar()
+            )
+
+            return result
+
+        except Exception as e:
+            logger.error(f"最古タイムスタンプ取得エラー: {e}")
+            raise
+
     def get_date_range(
         self, symbol: str, timeframe: str
     ) -> Tuple[Optional[datetime], Optional[datetime]]:

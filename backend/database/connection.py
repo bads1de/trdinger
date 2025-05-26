@@ -1,8 +1,9 @@
 """
 データベース接続管理
 """
+
 import os
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, text
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import QueuePool
@@ -12,8 +13,7 @@ logger = logging.getLogger(__name__)
 
 # データベース設定
 DATABASE_URL = os.getenv(
-    "DATABASE_URL", 
-    "postgresql://postgres:password@localhost:5432/trdinger"
+    "DATABASE_URL", "sqlite:///./trdinger.db"  # 開発環境用にSQLiteを使用
 )
 
 # SQLAlchemy エンジンの作成
@@ -23,7 +23,7 @@ engine = create_engine(
     pool_size=10,
     max_overflow=20,
     pool_pre_ping=True,
-    echo=False  # SQLログを出力する場合はTrue
+    echo=False,  # SQLログを出力する場合はTrue
 )
 
 # セッションファクトリの作成
@@ -36,7 +36,7 @@ Base = declarative_base()
 def get_db():
     """
     データベースセッションを取得
-    
+
     Yields:
         Session: データベースセッション
     """
@@ -63,13 +63,13 @@ def init_db():
 def test_connection():
     """
     データベース接続をテスト
-    
+
     Returns:
         bool: 接続成功の場合True
     """
     try:
         with engine.connect() as connection:
-            result = connection.execute("SELECT 1")
+            result = connection.execute(text("SELECT 1"))
             logger.info("データベース接続テスト成功")
             return True
     except Exception as e:

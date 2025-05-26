@@ -52,6 +52,7 @@
   "tests/test_strategy_executor.py::TestStrategyExecutor::test_reset",
   "tests/test_strategy_executor.py::TestStrategyExecutor::test_simple_strategy_backtest",
   "tests/test_strategy_executor.py::TestStrategyExecutor::test_update_equity",
+  "tests/unit/test_historical_data_service.py::TestHistoricalDataService::test_collect_historical_data_success",
   "tests/unit/test_indicators.py::TestTechnicalIndicators::test_bollinger_bands_calculation",
   "tests/unit/test_indicators.py::TestTechnicalIndicators::test_calculate_indicator_macd",
   "tests/unit/test_indicators.py::TestTechnicalIndicators::test_calculate_indicator_rsi",

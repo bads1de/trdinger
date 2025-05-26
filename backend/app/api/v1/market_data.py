@@ -1,21 +1,22 @@
 """
 市場データAPIルーター
 
-CCXT ライブラリを使用したBybit取引所からのOHLCVデータ取得APIエンドポイントです。
-リアルタイムの市場データを提供し、適切なエラーハンドリングとバリデーションを含みます。
+データベースからのOHLCVデータ取得APIエンドポイントです。
+バックテスト用に保存されたデータを提供し、適切なエラーハンドリングとバリデーションを含みます。
 
 @author Trdinger Development Team
-@version 1.0.0
+@version 2.0.0
 """
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Query, Depends
 from typing import List, Optional
 from datetime import datetime
+from sqlalchemy.orm import Session
 import logging
 
-from app.core.services.market_data_service import get_market_data_service
 from app.config.market_config import MarketDataConfig
-import ccxt
+from database.connection import get_db
+from database.repository import OHLCVRepository
 
 
 # ログ設定
@@ -27,7 +28,7 @@ router = APIRouter(prefix="/market-data", tags=["market-data"])
 
 @router.get("/ohlcv")
 async def get_ohlcv_data(
-    symbol: str = Query(..., description="取引ペアシンボル（例: BTC/USD:BTC, BTCUSD）"),
+    symbol: str = Query(..., description="取引ペアシンボル（例: BTC/USDT）"),
     timeframe: str = Query(
         MarketDataConfig.DEFAULT_TIMEFRAME,
         description="時間軸（1m, 5m, 15m, 30m, 1h, 4h, 1d）",
@@ -38,46 +39,80 @@ async def get_ohlcv_data(
         le=MarketDataConfig.MAX_LIMIT,
         description=f"取得するデータ数（{MarketDataConfig.MIN_LIMIT}-{MarketDataConfig.MAX_LIMIT}）",
     ),
+    start_date: Optional[str] = Query(None, description="開始日時（ISO形式）"),
+    end_date: Optional[str] = Query(None, description="終了日時（ISO形式）"),
+    db: Session = Depends(get_db),
 ):
     """
     OHLCVデータを取得します
 
-    Bybit取引所からリアルタイムのOHLCV（Open, High, Low, Close, Volume）データを取得します。
+    データベースに保存されたOHLCV（Open, High, Low, Close, Volume）データを取得します。
 
     Args:
-        symbol: 取引ペアシンボル（例: 'BTC/USD:BTC', 'BTCUSD'）
+        symbol: 取引ペアシンボル（例: 'BTC/USDT'）
         timeframe: 時間軸（例: '1h', '1d'）
         limit: 取得するデータ数（1-1000）
+        start_date: 開始日時（ISO形式）
+        end_date: 終了日時（ISO形式）
+        db: データベースセッション
 
     Returns:
         OHLCVデータを含むJSONレスポンス
 
     Raises:
-        HTTPException: パラメータが無効な場合やAPI呼び出しでエラーが発生した場合
+        HTTPException: パラメータが無効な場合やデータベースエラーが発生した場合
     """
     try:
         logger.info(
             f"OHLCVデータ取得リクエスト: symbol={symbol}, timeframe={timeframe}, limit={limit}"
         )
 
-        # 市場データサービスを取得
-        service = get_market_data_service()
+        # データベースリポジトリを作成
+        repository = OHLCVRepository(db)
 
-        # OHLCVデータを取得
-        ohlcv_data = await service.fetch_ohlcv_data(symbol, timeframe, limit)
+        # 日付パラメータの変換
+        start_time = None
+        end_time = None
 
-        # シンボルを正規化（レスポンスで使用）
-        normalized_symbol = service.normalize_symbol(symbol)
+        if start_date:
+            start_time = datetime.fromisoformat(start_date.replace("Z", "+00:00"))
+        if end_date:
+            end_time = datetime.fromisoformat(end_date.replace("Z", "+00:00"))
+
+        # データベースからOHLCVデータを取得
+        ohlcv_records = repository.get_ohlcv_data(
+            symbol=symbol,
+            timeframe=timeframe,
+            start_time=start_time,
+            end_time=end_time,
+            limit=limit,
+        )
+
+        # データをAPIレスポンス形式に変換
+        ohlcv_data = []
+        for record in ohlcv_records:
+            ohlcv_data.append(
+                [
+                    int(
+                        record.timestamp.timestamp() * 1000
+                    ),  # タイムスタンプ（ミリ秒）
+                    record.open,
+                    record.high,
+                    record.low,
+                    record.close,
+                    record.volume,
+                ]
+            )
 
         logger.info(f"OHLCVデータ取得成功: {len(ohlcv_data)}件")
 
         return {
             "success": True,
             "data": ohlcv_data,
-            "symbol": normalized_symbol,
+            "symbol": symbol,
             "timeframe": timeframe,
-            "message": f"{normalized_symbol} の {timeframe} OHLCVデータを取得しました",
-            "timestamp": datetime.utcnow().isoformat() + "Z",
+            "message": f"{symbol} の {timeframe} OHLCVデータを取得しました",
+            "timestamp": datetime.now().isoformat(),
         }
 
     except ValueError as e:
@@ -85,60 +120,18 @@ async def get_ohlcv_data(
         error_response = {
             "success": False,
             "message": str(e),
-            "timestamp": datetime.utcnow().isoformat() + "Z",
+            "timestamp": datetime.now().isoformat(),
         }
         raise HTTPException(status_code=400, detail=error_response)
-
-    except ccxt.BadSymbol as e:
-        logger.error(f"無効なシンボル: {e}")
-        error_response = {
-            "success": False,
-            "message": f"無効なシンボルです: {symbol}",
-            "timestamp": datetime.utcnow().isoformat() + "Z",
-        }
-        raise HTTPException(status_code=400, detail=error_response)
-
-    except ccxt.NetworkError as e:
-        logger.error(f"ネットワークエラー: {e}")
-        raise HTTPException(
-            status_code=503,
-            detail={
-                "success": False,
-                "message": "取引所への接続でエラーが発生しました。しばらく後に再試行してください。",
-                "timestamp": datetime.utcnow().isoformat() + "Z",
-            },
-        )
-
-    except ccxt.RateLimitExceeded as e:
-        logger.error(f"レート制限エラー: {e}")
-        raise HTTPException(
-            status_code=429,
-            detail={
-                "success": False,
-                "message": "リクエスト制限に達しました。しばらく後に再試行してください。",
-                "timestamp": datetime.utcnow().isoformat() + "Z",
-            },
-        )
-
-    except ccxt.ExchangeError as e:
-        logger.error(f"取引所エラー: {e}")
-        raise HTTPException(
-            status_code=502,
-            detail={
-                "success": False,
-                "message": "取引所でエラーが発生しました。",
-                "timestamp": datetime.utcnow().isoformat() + "Z",
-            },
-        )
 
     except Exception as e:
-        logger.error(f"予期しないエラー: {e}")
+        logger.error(f"データベースエラー: {e}")
         raise HTTPException(
             status_code=500,
             detail={
                 "success": False,
-                "message": "内部サーバーエラーが発生しました。",
-                "timestamp": datetime.utcnow().isoformat() + "Z",
+                "message": "データベースエラーが発生しました。",
+                "timestamp": datetime.now().isoformat(),
             },
         )
 

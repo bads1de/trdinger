@@ -27,12 +27,14 @@ import {
 const DataPage: React.FC = () => {
   // 状態管理
   const [symbols, setSymbols] = useState<TradingPair[]>([]);
-  const [selectedSymbol, setSelectedSymbol] = useState<string>("BTC/USD");
+  const [selectedSymbol, setSelectedSymbol] = useState<string>("BTC/USDT");
   const [selectedTimeFrame, setSelectedTimeFrame] = useState<TimeFrame>("1d");
   const [candlestickData, setCandlestickData] = useState<CandlestickData[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string>("");
   const [symbolsLoading, setSymbolsLoading] = useState<boolean>(true);
+  const [updating, setUpdating] = useState<boolean>(false);
+  const [dataStatus, setDataStatus] = useState<any>(null);
 
   /**
    * 通貨ペア一覧を取得
@@ -107,6 +109,56 @@ const DataPage: React.FC = () => {
     fetchCandlestickData();
   };
 
+  /**
+   * 差分データ更新
+   */
+  const handleIncrementalUpdate = async () => {
+    try {
+      setUpdating(true);
+      setError("");
+
+      const response = await fetch(
+        `http://127.0.0.1:8000/api/v1/data-collection/update?symbol=${selectedSymbol}&timeframe=${selectedTimeFrame}`, // ポート番号を8001から8000に変更
+        {
+          method: "POST",
+        }
+      );
+
+      const result = await response.json();
+
+      if (result.success) {
+        // 更新後にデータを再取得
+        await fetchCandlestickData();
+        console.log(`差分更新完了: ${result.saved_count}件`);
+      } else {
+        setError(result.message || "差分更新に失敗しました");
+      }
+    } catch (err) {
+      setError("差分更新中にエラーが発生しました");
+      console.error("差分更新エラー:", err);
+    } finally {
+      setUpdating(false);
+    }
+  };
+
+  /**
+   * データ収集状況を取得
+   */
+  const fetchDataStatus = async () => {
+    try {
+      const url = `http://127.0.0.1:8000/api/v1/data-collection/status/${selectedSymbol}/${selectedTimeFrame}`; // ポート番号を8001から8000に変更
+      console.log("Requesting data status from:", url); // ★ログ追加
+      const response = await fetch(url);
+      const result = await response.json();
+
+      if (result.success) {
+        setDataStatus(result);
+      }
+    } catch (err) {
+      console.error("データ状況取得エラー詳細:", err); // ★エラーオブジェクト全体をログに出力
+    }
+  };
+
   // 初期データ取得
   useEffect(() => {
     fetchSymbols();
@@ -116,6 +168,7 @@ const DataPage: React.FC = () => {
   useEffect(() => {
     if (selectedSymbol && selectedTimeFrame) {
       fetchCandlestickData();
+      fetchDataStatus();
     }
   }, [selectedSymbol, selectedTimeFrame]);
 
@@ -155,28 +208,53 @@ const DataPage: React.FC = () => {
                 </span>
               </div>
 
-              <button
-                onClick={handleRefresh}
-                disabled={loading}
-                className="btn-primary group"
-              >
-                <svg
-                  className={`w-4 h-4 mr-2 transition-transform duration-200 ${
-                    loading ? "animate-spin" : "group-hover:rotate-180"
-                  }`}
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
+              <div className="flex gap-2">
+                <button
+                  onClick={handleRefresh}
+                  disabled={loading || updating}
+                  className="btn-primary group"
                 >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-                  />
-                </svg>
-                {loading ? "更新中..." : "データ更新"}
-              </button>
+                  <svg
+                    className={`w-4 h-4 mr-2 transition-transform duration-200 ${
+                      loading ? "animate-spin" : "group-hover:rotate-180"
+                    }`}
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                    />
+                  </svg>
+                  {loading ? "更新中..." : "データ更新"}
+                </button>
+
+                <button
+                  onClick={handleIncrementalUpdate}
+                  disabled={loading || updating}
+                  className="btn-secondary group"
+                >
+                  <svg
+                    className={`w-4 h-4 mr-2 transition-transform duration-200 ${
+                      updating ? "animate-spin" : "group-hover:scale-110"
+                    }`}
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M12 4v16m8-8H4"
+                    />
+                  </svg>
+                  {updating ? "差分更新中..." : "差分更新"}
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -209,6 +287,56 @@ const DataPage: React.FC = () => {
               <p className="mt-2 text-sm text-error-700 dark:text-error-300">
                 {error}
               </p>
+            </div>
+          </div>
+        )}
+
+        {/* データ状況表示 */}
+        {dataStatus && (
+          <div className="enterprise-card animate-slide-up">
+            <div className="p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-xl font-semibold text-secondary-900 dark:text-secondary-100">
+                  📊 データベース状況
+                </h2>
+                <span className="badge-primary">
+                  {dataStatus.data_count?.toLocaleString()}件
+                </span>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-secondary-600 dark:text-secondary-400">
+                    データ件数:
+                  </span>
+                  <span className="font-medium text-secondary-900 dark:text-secondary-100">
+                    {dataStatus.data_count?.toLocaleString()}件
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-secondary-600 dark:text-secondary-400">
+                    最新データ:
+                  </span>
+                  <span className="font-medium text-secondary-900 dark:text-secondary-100">
+                    {dataStatus.latest_timestamp
+                      ? new Date(dataStatus.latest_timestamp).toLocaleString(
+                          "ja-JP"
+                        )
+                      : "なし"}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-secondary-600 dark:text-secondary-400">
+                    最古データ:
+                  </span>
+                  <span className="font-medium text-secondary-900 dark:text-secondary-100">
+                    {dataStatus.oldest_timestamp
+                      ? new Date(dataStatus.oldest_timestamp).toLocaleString(
+                          "ja-JP"
+                        )
+                      : "なし"}
+                  </span>
+                </div>
+              </div>
             </div>
           </div>
         )}

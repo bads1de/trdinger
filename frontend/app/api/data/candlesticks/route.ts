@@ -1,11 +1,11 @@
 /**
  * ローソク足データ取得API
  *
- * CCXT ライブラリを使用してBybit取引所からリアルタイムの
- * 仮想通貨ローソク足データ（OHLCV）を取得するAPIエンドポイントです。
+ * データベースに保存されたOHLCVデータを取得するAPIエンドポイントです。
+ * バックテスト用のデータを提供します。
  *
  * @author Trdinger Development Team
- * @version 2.0.0
+ * @version 3.0.0
  */
 
 import { NextRequest, NextResponse } from "next/server";
@@ -14,7 +14,7 @@ import { CandlestickData, TimeFrame } from "@/types/strategy";
 /**
  * バックエンドAPIのベースURL
  */
-const BACKEND_API_URL = process.env.BACKEND_API_URL || "http://127.0.0.1:8001";
+const BACKEND_API_URL = "http://127.0.0.1:8000";
 
 /**
  * 利用可能な時間軸の定義
@@ -30,152 +30,88 @@ const VALID_TIMEFRAMES: TimeFrame[] = [
 ];
 
 /**
- * 利用可能な通貨ペア（Bybit対応）
+ * 利用可能な通貨ペア（ベータ版：ビットコインのみ）
  */
-const VALID_SYMBOLS = ["BTC/USD", "BTCUSD", "BTC/USDT", "ETH/USD", "ETH/USDT"];
+const VALID_SYMBOLS = ["BTC/USDT"];
 
 /**
  * バックエンドAPIからOHLCVデータを取得する関数
  *
- * CCXT ライブラリを使用してBybit取引所からリアルタイムの
- * OHLCVデータを取得します。
+ * データベースに保存されたOHLCVデータを取得します。
  *
  * @param symbol 通貨ペア
  * @param timeframe 時間軸
  * @param limit データ件数
+ * @param startDate 開始日時
+ * @param endDate 終了日時
  * @returns ローソク足データの配列
  */
-async function fetchRealOHLCVData(
+async function fetchDatabaseOHLCVData(
   symbol: string,
   timeframe: TimeFrame,
-  limit: number = 100
+  limit: number = 100,
+  startDate?: string,
+  endDate?: string
 ): Promise<CandlestickData[]> {
-  try {
-    // バックエンドAPIのURLを構築
-    const apiUrl = new URL("/api/market-data/ohlcv", BACKEND_API_URL);
-    apiUrl.searchParams.set("symbol", symbol);
-    apiUrl.searchParams.set("timeframe", timeframe);
-    apiUrl.searchParams.set("limit", limit.toString());
+  // バックエンドAPIのURLを構築
+  const apiUrl = new URL("/api/v1/market-data/ohlcv", BACKEND_API_URL);
+  apiUrl.searchParams.set("symbol", symbol);
+  apiUrl.searchParams.set("timeframe", timeframe);
+  apiUrl.searchParams.set("limit", limit.toString());
 
-    console.log(`バックエンドAPI呼び出し: ${apiUrl.toString()}`);
-
-    // バックエンドAPIを呼び出し
-    const response = await fetch(apiUrl.toString(), {
-      method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      // タイムアウトを設定（30秒）
-      signal: AbortSignal.timeout(30000),
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      throw new Error(
-        `バックエンドAPIエラー: ${response.status} ${response.statusText} - ${
-          errorData.detail?.message || errorData.message || "Unknown error"
-        }`
-      );
-    }
-
-    const backendData = await response.json();
-
-    if (!backendData.success) {
-      throw new Error(
-        backendData.message || "バックエンドAPIからエラーレスポンス"
-      );
-    }
-
-    // バックエンドのOHLCVデータをフロントエンド形式に変換
-    const ohlcvData = backendData.data;
-    const candlesticks: CandlestickData[] = ohlcvData.map(
-      (candle: number[]) => {
-        const [timestamp, open, high, low, close, volume] = candle;
-
-        return {
-          timestamp: new Date(timestamp).toISOString(),
-          open: Number(open.toFixed(2)),
-          high: Number(high.toFixed(2)),
-          low: Number(low.toFixed(2)),
-          close: Number(close.toFixed(2)),
-          volume: Number(volume.toFixed(2)),
-        };
-      }
-    );
-
-    console.log(`取得したデータ件数: ${candlesticks.length}`);
-    return candlesticks;
-  } catch (error) {
-    console.error("バックエンドAPI呼び出しエラー:", error);
-
-    // エラーの場合はフォールバック（モックデータ）を返す
-    console.log("フォールバックとしてモックデータを生成します");
-    return generateFallbackData(symbol, timeframe, limit);
+  if (startDate) {
+    apiUrl.searchParams.set("start_date", startDate);
   }
-}
+  if (endDate) {
+    apiUrl.searchParams.set("end_date", endDate);
+  }
 
-/**
- * フォールバック用のモックデータ生成関数
- */
-function generateFallbackData(
-  symbol: string,
-  timeframe: TimeFrame,
-  limit: number
-): CandlestickData[] {
-  const data: CandlestickData[] = [];
-  const now = new Date();
+  console.log(`データベースAPI呼び出し: ${apiUrl.toString()}`);
 
-  // 時間軸に応じた間隔（ミリ秒）
-  const intervals: Record<TimeFrame, number> = {
-    "1m": 60 * 1000,
-    "5m": 5 * 60 * 1000,
-    "15m": 15 * 60 * 1000,
-    "30m": 30 * 60 * 1000,
-    "1h": 60 * 60 * 1000,
-    "4h": 4 * 60 * 60 * 1000,
-    "1d": 24 * 60 * 60 * 1000,
-  };
+  // バックエンドAPIを呼び出し
+  const response = await fetch(apiUrl.toString(), {
+    method: "GET",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    // タイムアウトを設定（30秒）
+    signal: AbortSignal.timeout(30000),
+  });
 
-  const interval = intervals[timeframe];
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(
+      `データベースAPIエラー: ${response.status} ${response.statusText} - ${
+        errorData.detail?.message || errorData.message || "Unknown error"
+      }`
+    );
+  }
 
-  // 基準価格（通貨ペアに応じて設定）
-  const basePrices: Record<string, number> = {
-    "BTC/USD": 107000, // 現実的な価格に更新
-    BTCUSD: 107000,
-    "BTC/USDT": 107000,
-    "ETH/USD": 4000,
-    "ETH/USDT": 4000,
-  };
+  const backendData = await response.json();
 
-  let basePrice = basePrices[symbol] || 50000;
+  if (!backendData.success) {
+    throw new Error(
+      backendData.message || "データベースAPIからエラーレスポンス"
+    );
+  }
 
-  // 過去のデータから現在に向かって生成
-  for (let i = limit - 1; i >= 0; i--) {
-    const timestamp = new Date(now.getTime() - i * interval);
+  // バックエンドのOHLCVデータをフロントエンド形式に変換
+  const ohlcvData = backendData.data;
+  const candlesticks: CandlestickData[] = ohlcvData.map((candle: number[]) => {
+    const [timestamp, open, high, low, close, volume] = candle;
 
-    // ランダムな価格変動を生成
-    const volatility = 0.01; // 1%の変動率
-    const change = (Math.random() - 0.5) * volatility;
-
-    const open = basePrice;
-    const close = open * (1 + change);
-    const high = Math.max(open, close) * (1 + Math.random() * 0.005);
-    const low = Math.min(open, close) * (1 - Math.random() * 0.005);
-    const volume = Math.random() * 500 + 50;
-
-    data.push({
-      timestamp: timestamp.toISOString(),
+    return {
+      timestamp: new Date(timestamp).toISOString(),
       open: Number(open.toFixed(2)),
       high: Number(high.toFixed(2)),
       low: Number(low.toFixed(2)),
       close: Number(close.toFixed(2)),
       volume: Number(volume.toFixed(2)),
-    });
+    };
+  });
 
-    basePrice = close;
-  }
-
-  return data;
+  console.log(`取得したデータ件数: ${candlesticks.length}`);
+  return candlesticks;
 }
 
 /**
@@ -261,18 +197,25 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // 実際のAPIからデータを取得
-    const candlesticks = await fetchRealOHLCVData(symbol, timeframe, limit);
+    // データベースからデータを取得
+    const candlesticks = await fetchDatabaseOHLCVData(
+      symbol,
+      timeframe,
+      limit,
+      startDate || undefined,
+      endDate || undefined
+    );
 
-    // 日付フィルタリング（指定されている場合）
-    let filteredData = candlesticks;
-    if (startDate || endDate) {
-      filteredData = candlesticks.filter((candle) => {
-        const candleTime = new Date(candle.timestamp);
-        if (startDate && candleTime < new Date(startDate)) return false;
-        if (endDate && candleTime > new Date(endDate)) return false;
-        return true;
-      });
+    // データが取得できない場合のエラーハンドリング
+    if (!candlesticks || candlesticks.length === 0) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: "データが見つかりません。データ収集を実行してください。",
+          timestamp: new Date().toISOString(),
+        },
+        { status: 404 }
+      );
     }
 
     // レスポンスの返却
@@ -281,9 +224,9 @@ export async function GET(request: NextRequest) {
       data: {
         symbol,
         timeframe,
-        candlesticks: filteredData,
+        candlesticks: candlesticks,
       },
-      message: `${symbol} の ${timeframe} ローソク足データを取得しました`,
+      message: `${symbol} の ${timeframe} ローソク足データを取得しました（${candlesticks.length}件）`,
       timestamp: new Date().toISOString(),
     });
   } catch (error) {
