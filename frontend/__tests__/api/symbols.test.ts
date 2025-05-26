@@ -8,30 +8,6 @@
  * @version 1.0.0
  */
 
-// Web APIのモック
-Object.defineProperty(global, "Request", {
-  value: class MockRequest {
-    constructor(url: string) {
-      this.url = url;
-    }
-    url: string;
-  },
-});
-
-Object.defineProperty(global, "Response", {
-  value: class MockResponse {
-    constructor(body: any, init?: ResponseInit) {
-      this.body = body;
-      this.status = init?.status || 200;
-    }
-    body: any;
-    status: number;
-    json() {
-      return Promise.resolve(JSON.parse(this.body));
-    }
-  },
-});
-
 import { GET } from "@/app/api/data/symbols/route";
 
 describe("/api/data/symbols", () => {
@@ -66,13 +42,18 @@ describe("/api/data/symbols", () => {
         expect(typeof pair.base).toBe("string");
         expect(typeof pair.quote).toBe("string");
 
-        // シンボル形式の検証（BASE/QUOTE形式）
-        expect(pair.symbol).toMatch(/^[A-Z]+\/[A-Z]+$/);
+        // シンボル形式の検証（BASE/QUOTE形式またはBASEQUOTE形式）
+        expect(pair.symbol).toMatch(/^[A-Z]+(\/[A-Z]+|[A-Z]+)$/);
 
         // ベース通貨とクォート通貨がシンボルと一致することを確認
-        const [expectedBase, expectedQuote] = pair.symbol.split("/");
-        expect(pair.base).toBe(expectedBase);
-        expect(pair.quote).toBe(expectedQuote);
+        if (pair.symbol.includes("/")) {
+          const [expectedBase, expectedQuote] = pair.symbol.split("/");
+          expect(pair.base).toBe(expectedBase);
+          expect(pair.quote).toBe(expectedQuote);
+        } else {
+          // BTCUSDのような形式の場合
+          expect(pair.symbol).toBe(pair.base + pair.quote);
+        }
       });
     });
 
@@ -87,6 +68,11 @@ describe("/api/data/symbols", () => {
       // 主要な通貨ペアが含まれていることを確認
       expect(symbols).toContain("BTC/USD");
       expect(symbols).toContain("ETH/USD");
+      expect(symbols).toContain("BTC/USDT");
+      expect(symbols).toContain("ETH/USDT");
+      expect(symbols).toContain("ETH/BTC");
+      expect(symbols).toContain("BTCUSD");
+      expect(symbols).toContain("ETHUSD");
     });
 
     test("重複する通貨ペアがない", async () => {
@@ -122,15 +108,15 @@ describe("/api/data/symbols", () => {
   });
 
   describe("データ整合性テスト", () => {
-    test("すべての通貨ペアがUSDクォートである", async () => {
+    test("サポートされているクォート通貨が正しい", async () => {
       const response = await GET();
       const data = await response.json();
 
       expect(response.status).toBe(200);
 
+      const validQuotes = ["USD", "USDT", "BTC"];
       data.data.forEach((pair: any) => {
-        expect(pair.quote).toBe("USD");
-        expect(pair.symbol).toMatch(/\/USD$/);
+        expect(validQuotes).toContain(pair.quote);
       });
     });
 
@@ -143,7 +129,8 @@ describe("/api/data/symbols", () => {
       data.data.forEach((pair: any) => {
         // 名前が "Base Currency / Quote Currency" 形式であることを確認
         expect(pair.name).toMatch(/.+ \/ .+/);
-        expect(pair.name).toContain("US Dollar");
+        // USD, USDT, BTCのいずれかが含まれていることを確認
+        expect(pair.name).toMatch(/(US Dollar|Tether USD|Bitcoin)/);
       });
     });
 
@@ -159,9 +146,11 @@ describe("/api/data/symbols", () => {
         "BNB",
         "ADA",
         "SOL",
-        "MATIC",
+        "XRP",
         "DOT",
         "AVAX",
+        "LTC",
+        "UNI",
       ];
 
       data.data.forEach((pair: any) => {

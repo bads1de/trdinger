@@ -19,10 +19,20 @@ class MarketDataConfig:
     # サポートされている取引所
     SUPPORTED_EXCHANGES = ["bybit"]
 
-    # サポートされているシンボル（Bybit形式）- 主要10銘柄
+    # サポートされているシンボル（Bybit形式）- 主要銘柄 + 先物 + イーサリアム
     SUPPORTED_SYMBOLS = [
+        # Bitcoin 関連
         "BTC/USDT",  # Bitcoin スポット
+        "BTC/USD",   # Bitcoin 先物（永続契約）
+        "BTCUSD",    # Bitcoin 先物（代替表記）
+
+        # Ethereum 関連
         "ETH/USDT",  # Ethereum スポット
+        "ETH/USD",   # Ethereum 先物（永続契約）
+        "ETH/BTC",   # Ethereum/Bitcoin ペア
+        "ETHUSD",    # Ethereum 先物（代替表記）
+
+        # その他主要アルトコイン
         "BNB/USDT",  # Binance Coin スポット
         "ADA/USDT",  # Cardano スポット
         "SOL/USDT",  # Solana スポット
@@ -94,8 +104,21 @@ class MarketDataConfig:
 
     # シンボル正規化マッピング
     SYMBOL_MAPPING = {
-        "BTCUSD": "BTC/USDT",
-        "ETHUSD": "ETH/USDT",
+        # Bitcoin マッピング
+        "BTCUSD": "BTCUSD",      # 先物はそのまま
+        "BTC-USD": "BTC/USD",    # 先物（永続契約）
+        "BTCUSDT": "BTC/USDT",   # スポット
+        "BTC-USDT": "BTC/USDT",  # スポット（代替表記）
+
+        # Ethereum マッピング
+        "ETHUSD": "ETHUSD",      # 先物はそのまま
+        "ETH-USD": "ETH/USD",    # 先物（永続契約）
+        "ETHUSDT": "ETH/USDT",   # スポット
+        "ETH-USDT": "ETH/USDT",  # スポット（代替表記）
+        "ETHBTC": "ETH/BTC",     # ETH/BTC ペア
+        "ETH-BTC": "ETH/BTC",    # ETH/BTC ペア（代替表記）
+
+        # その他のマッピング
         "BNBUSD": "BNB/USDT",
         "ADAUSD": "ADA/USDT",
         "SOLUSD": "SOL/USDT",
@@ -104,10 +127,6 @@ class MarketDataConfig:
         "AVAXUSD": "AVAX/USDT",
         "LTCUSD": "LTC/USDT",
         "UNIUSD": "UNI/USDT",
-        "BTC/USD": "BTC/USDT",
-        "ETH/USD": "ETH/USDT",
-        "BTC-USD": "BTC/USDT",
-        "ETH-USD": "ETH/USDT",
     }
 
     @classmethod
