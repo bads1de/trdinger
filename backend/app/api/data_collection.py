@@ -219,8 +219,8 @@ async def get_collection_status(
                     "status": "no_data",
                     "message": f"{normalized_symbol} {timeframe} のデータが存在しません。新規収集が必要です。",
                     "suggestion": {
-                        "manual_fetch": f"/api/v1/data-collection/historical?symbol={normalized_symbol}&timeframe={timeframe}",
-                        "auto_fetch": f"/api/v1/data-collection/status/{symbol}/{timeframe}?auto_fetch=true",
+                        "manual_fetch": f"/api/data-collection/historical?symbol={normalized_symbol}&timeframe={timeframe}",
+                        "auto_fetch": f"/api/data-collection/status/{symbol}/{timeframe}?auto_fetch=true",
                     },
                 }
 

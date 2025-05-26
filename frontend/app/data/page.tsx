@@ -119,7 +119,7 @@ const DataPage: React.FC = () => {
       setError("");
 
       const response = await fetch(
-        `${BACKEND_API_URL}/api/v1/data-collection/update?symbol=${selectedSymbol}&timeframe=${selectedTimeFrame}`,
+        `${BACKEND_API_URL}/api/data-collection/update?symbol=${selectedSymbol}&timeframe=${selectedTimeFrame}`,
         {
           method: "POST",
         }
@@ -147,7 +147,7 @@ const DataPage: React.FC = () => {
    */
   const fetchDataStatus = async () => {
     try {
-      const url = `${BACKEND_API_URL}/api/v1/data-collection/status/${selectedSymbol}/${selectedTimeFrame}`;
+      const url = `${BACKEND_API_URL}/api/data-collection/status/${selectedSymbol}/${selectedTimeFrame}`;
       console.log("Requesting data status from:", url); // ★ログ追加
       const response = await fetch(url);
       const result = await response.json();
