@@ -9,8 +9,8 @@ from fastapi.middleware.cors import CORSMiddleware
 import logging
 
 from app.config.settings import settings
-from app.api.v1.market_data import router as market_data_router
-from app.api.v1.data_collection import router as data_collection_router
+from app.api.market_data import router as market_data_router
+from app.api.data_collection import router as data_collection_router
 
 
 def setup_logging():
@@ -44,8 +44,8 @@ def create_app() -> FastAPI:
     )
 
     # ルーター追加
-    app.include_router(market_data_router, prefix="/api/v1")
-    app.include_router(data_collection_router, prefix="/api/v1")
+    app.include_router(market_data_router, prefix="/api")
+    app.include_router(data_collection_router, prefix="/api")
 
     # ヘルスチェックエンドポイント
     @app.get("/health")

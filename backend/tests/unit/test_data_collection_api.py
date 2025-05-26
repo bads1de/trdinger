@@ -43,15 +43,15 @@ class TestDataCollectionAPI:
         mock_repository.get_oldest_timestamp.return_value = None
 
         with (
-            patch("app.api.v1.data_collection.get_db", return_value=mock_db),
+            patch("app.api.data_collection.get_db", return_value=mock_db),
             patch(
-                "app.api.v1.data_collection.OHLCVRepository",
+                "app.api.data_collection.OHLCVRepository",
                 return_value=mock_repository,
             ),
         ):
 
             # When: SOL/USDTのステータスを確認
-            response = client.get("/api/v1/data-collection/status/SOL/USDT/1d")
+            response = client.get("/api/data-collection/status/SOL/USDT/1d")
 
             # Then: 正常にレスポンスが返される
             assert response.status_code == 200
@@ -73,15 +73,15 @@ class TestDataCollectionAPI:
         mock_repository.get_data_count.return_value = 0
 
         with (
-            patch("app.api.v1.data_collection.get_db", return_value=mock_db),
+            patch("app.api.data_collection.get_db", return_value=mock_db),
             patch(
-                "app.api.v1.data_collection.OHLCVRepository",
+                "app.api.data_collection.OHLCVRepository",
                 return_value=mock_repository,
             ),
         ):
 
             # When: LTC/USDTのステータスを確認（auto_fetch=false）
-            response = client.get("/api/v1/data-collection/status/LTC/USDT/1h")
+            response = client.get("/api/data-collection/status/LTC/USDT/1h")
 
             # Then: データなしの提案レスポンスが返される
             assert response.status_code == 200
@@ -103,19 +103,19 @@ class TestDataCollectionAPI:
         mock_repository.get_data_count.return_value = 0
 
         with (
-            patch("app.api.v1.data_collection.get_db", return_value=mock_db),
+            patch("app.api.data_collection.get_db", return_value=mock_db),
             patch(
-                "app.api.v1.data_collection.OHLCVRepository",
+                "app.api.data_collection.OHLCVRepository",
                 return_value=mock_repository,
             ),
             patch(
-                "app.api.v1.data_collection._collect_historical_background"
+                "app.api.data_collection._collect_historical_background"
             ) as mock_background,
         ):
 
             # When: UNI/USDTのステータスを確認（auto_fetch=true）
             response = client.get(
-                "/api/v1/data-collection/status/UNI/USDT/1d?auto_fetch=true"
+                "/api/data-collection/status/UNI/USDT/1d?auto_fetch=true"
             )
 
             # Then: 自動フェッチ開始レスポンスが返される
@@ -131,7 +131,7 @@ class TestDataCollectionAPI:
         無効なシンボルのテスト
         """
         # When: サポートされていないシンボルでリクエスト
-        response = client.get("/api/v1/data-collection/status/INVALID/SYMBOL/1d")
+        response = client.get("/api/data-collection/status/INVALID/SYMBOL/1d")
 
         # Then: 400エラーが返される
         assert response.status_code == 400
@@ -143,7 +143,7 @@ class TestDataCollectionAPI:
         無効な時間軸のテスト
         """
         # When: サポートされていない時間軸でリクエスト
-        response = client.get("/api/v1/data-collection/status/BTC/USDT/invalid")
+        response = client.get("/api/data-collection/status/BTC/USDT/invalid")
 
         # Then: 400エラーが返される
         assert response.status_code == 400
@@ -155,7 +155,7 @@ class TestDataCollectionAPI:
         サポートされているシンボル一覧の取得をテスト
         """
         # When: サポートシンボル一覧を取得
-        response = client.get("/api/v1/data-collection/supported-symbols")
+        response = client.get("/api/data-collection/supported-symbols")
 
         # Then: 正常にレスポンスが返される
         assert response.status_code == 200
@@ -180,15 +180,15 @@ class TestDataCollectionAPI:
         mock_repository.get_oldest_timestamp.return_value = None
 
         with (
-            patch("app.api.v1.data_collection.get_db", return_value=mock_db),
+            patch("app.api.data_collection.get_db", return_value=mock_db),
             patch(
-                "app.api.v1.data_collection.OHLCVRepository",
+                "app.api.data_collection.OHLCVRepository",
                 return_value=mock_repository,
             ),
         ):
 
             # When: ETHUSDのステータスを確認
-            response = client.get("/api/v1/data-collection/status/ETHUSD/1d")
+            response = client.get("/api/data-collection/status/ETHUSD/1d")
 
             # Then: 正常にレスポンスが返される
             assert response.status_code == 200

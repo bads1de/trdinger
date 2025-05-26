@@ -45,7 +45,7 @@ async function fetchDatabaseOHLCVData(
   endDate?: string
 ): Promise<CandlestickData[]> {
   // バックエンドAPIのURLを構築
-  const apiUrl = new URL("/api/v1/market-data/ohlcv", BACKEND_API_URL);
+  const apiUrl = new URL("/api/market-data/ohlcv", BACKEND_API_URL);
   apiUrl.searchParams.set("symbol", symbol);
   apiUrl.searchParams.set("timeframe", timeframe);
   apiUrl.searchParams.set("limit", limit.toString());
