@@ -30,11 +30,6 @@ const VALID_TIMEFRAMES: TimeFrame[] = [
 ];
 
 /**
- * 利用可能な通貨ペア（ベータ版：ビットコインのみ）
- */
-const VALID_SYMBOLS = ["BTC/USDT"];
-
-/**
  * バックエンドAPIからOHLCVデータを取得する関数
  *
  * データベースに保存されたOHLCVデータを取得します。
@@ -154,19 +149,6 @@ export async function GET(request: NextRequest) {
         {
           success: false,
           message: "timeframe パラメータは必須です",
-          timestamp: new Date().toISOString(),
-        },
-        { status: 400 }
-      );
-    }
-
-    if (!VALID_SYMBOLS.includes(symbol)) {
-      return NextResponse.json(
-        {
-          success: false,
-          message: `サポートされていない通貨ペアです。利用可能: ${VALID_SYMBOLS.join(
-            ", "
-          )}`,
           timestamp: new Date().toISOString(),
         },
         { status: 400 }
