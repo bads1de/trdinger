@@ -44,8 +44,8 @@ class TestBybitMarketDataService:
         データ形式と内容を検証します。
         """
         # テスト実行
-        symbol = 'BTC/USD:BTC'
-        timeframe = '1h'
+        symbol = "BTC/USD:BTC"
+        timeframe = "1h"
         limit = 10
 
         result = await service.fetch_ohlcv_data(symbol, timeframe, limit)
@@ -88,7 +88,7 @@ class TestBybitMarketDataService:
         無効なシンボルでのエラーハンドリングテスト
         """
         with pytest.raises((ValueError, ccxt.BadSymbol)):
-            await service.fetch_ohlcv_data('INVALID/SYMBOL', '1h', 10)
+            await service.fetch_ohlcv_data("INVALID/SYMBOL", "1h", 10)
 
     @pytest.mark.asyncio
     async def test_fetch_ohlcv_data_invalid_timeframe(self, service):
@@ -96,7 +96,7 @@ class TestBybitMarketDataService:
         無効な時間軸でのエラーハンドリングテスト
         """
         with pytest.raises(ValueError):
-            await service.fetch_ohlcv_data('BTC/USD:BTC', 'invalid', 10)
+            await service.fetch_ohlcv_data("BTC/USD:BTC", "invalid", 10)
 
     @pytest.mark.asyncio
     async def test_fetch_ohlcv_data_invalid_limit(self, service):
@@ -105,11 +105,11 @@ class TestBybitMarketDataService:
         """
         # 制限値が小さすぎる場合
         with pytest.raises(ValueError):
-            await service.fetch_ohlcv_data('BTC/USD:BTC', '1h', 0)
+            await service.fetch_ohlcv_data("BTC/USD:BTC", "1h", 0)
 
         # 制限値が大きすぎる場合
         with pytest.raises(ValueError):
-            await service.fetch_ohlcv_data('BTC/USD:BTC', '1h', 2000)
+            await service.fetch_ohlcv_data("BTC/USD:BTC", "1h", 2000)
 
     @pytest.mark.asyncio
     async def test_symbol_normalization(self, service):
@@ -118,10 +118,10 @@ class TestBybitMarketDataService:
         """
         # 様々な形式のシンボルが正規化されることを確認
         test_cases = [
-            ('BTCUSD', 'BTC/USD:BTC'),
-            ('BTC/USD', 'BTC/USD:BTC'),
-            ('btc/usd', 'BTC/USD:BTC'),
-            ('BTC-USD', 'BTC/USD:BTC'),
+            ("BTCUSD", "BTC/USDT"),
+            ("BTC/USD", "BTC/USDT"),
+            ("btc/usdt", "BTC/USDT"),
+            ("BTC-USD", "BTC/USDT"),
         ]
 
         for input_symbol, expected in test_cases:
@@ -136,7 +136,7 @@ class TestBybitMarketDataService:
 
         最新のデータが取得されていることを確認します。
         """
-        result = await service.fetch_ohlcv_data('BTC/USD:BTC', '1h', 5)
+        result = await service.fetch_ohlcv_data("BTC/USDT", "1h", 5)
 
         # 最新のローソク足のタイムスタンプを確認
         latest_candle = result[-1]
@@ -153,7 +153,7 @@ class TestBybitMarketDataService:
         サービスの初期化テスト
         """
         assert service is not None
-        assert hasattr(service, 'exchange')
+        assert hasattr(service, "exchange")
         assert service.exchange is not None
         assert isinstance(service.exchange, ccxt.bybit)
 
@@ -167,11 +167,11 @@ class TestBybitMarketDataService:
         """
         # 無効なURLを設定してネットワークエラーを発生させる
         original_urls = service.exchange.urls
-        service.exchange.urls = {'api': {'public': 'https://invalid-url.example.com'}}
+        service.exchange.urls = {"api": {"public": "https://invalid-url.example.com"}}
 
         try:
             with pytest.raises(ccxt.NetworkError):
-                await service.fetch_ohlcv_data('BTC/USD:BTC', '1h', 10)
+                await service.fetch_ohlcv_data("BTC/USDT", "1h", 10)
         finally:
             # 元のURLを復元
             service.exchange.urls = original_urls
@@ -180,29 +180,58 @@ class TestBybitMarketDataService:
 class TestMarketDataConfig:
     """設定クラスのテストクラス"""
 
+    def test_supported_symbols_contains_major_pairs(self):
+        """主要10銘柄がサポートされているかテスト"""
+        from app.config.market_config import MarketDataConfig
+
+        expected_symbols = [
+            "BTC/USDT",
+            "ETH/USDT",
+            "BNB/USDT",
+            "ADA/USDT",
+            "SOL/USDT",
+            "XRP/USDT",
+            "DOT/USDT",
+            "AVAX/USDT",
+            "LTC/USDT",
+            "UNI/USDT",
+        ]
+
+        for symbol in expected_symbols:
+            assert symbol in MarketDataConfig.SUPPORTED_SYMBOLS
+
+    def test_default_symbol_is_btc_usdt(self):
+        """デフォルトシンボルがBTC/USDTかテスト"""
+        from app.config.market_config import MarketDataConfig
+
+        assert MarketDataConfig.DEFAULT_SYMBOL == "BTC/USDT"
+
     def test_symbol_normalization(self):
         """シンボル正規化のテスト"""
         from app.config.market_config import MarketDataConfig
 
         # 正常なケース
-        assert MarketDataConfig.normalize_symbol('BTCUSD') == 'BTC/USD:BTC'
-        assert MarketDataConfig.normalize_symbol('BTC/USD') == 'BTC/USD:BTC'
-        assert MarketDataConfig.normalize_symbol('btc/usd') == 'BTC/USD:BTC'
+        assert MarketDataConfig.normalize_symbol("BTCUSD") == "BTC/USDT"
+        assert MarketDataConfig.normalize_symbol("ETHUSD") == "ETH/USDT"
+        assert MarketDataConfig.normalize_symbol("BTC/USDT") == "BTC/USDT"
+        assert MarketDataConfig.normalize_symbol(" btc/usdt ") == "BTC/USDT"
 
         # 無効なシンボル
         with pytest.raises(ValueError):
-            MarketDataConfig.normalize_symbol('INVALID')
+            MarketDataConfig.normalize_symbol("INVALID")
 
     def test_timeframe_validation(self):
         """時間軸バリデーションのテスト"""
         from app.config.market_config import MarketDataConfig
 
         # 有効な時間軸
-        assert MarketDataConfig.validate_timeframe('1h') is True
-        assert MarketDataConfig.validate_timeframe('1d') is True
+        assert MarketDataConfig.validate_timeframe("1h") is True
+        assert MarketDataConfig.validate_timeframe("1d") is True
+        assert MarketDataConfig.validate_timeframe("1m") is True
 
         # 無効な時間軸
-        assert MarketDataConfig.validate_timeframe('invalid') is False
+        assert MarketDataConfig.validate_timeframe("invalid") is False
+        assert MarketDataConfig.validate_timeframe("2h") is False
 
     def test_limit_validation(self):
         """制限値バリデーションのテスト"""
@@ -216,3 +245,60 @@ class TestMarketDataConfig:
         # 無効な制限値
         assert MarketDataConfig.validate_limit(0) is False
         assert MarketDataConfig.validate_limit(2000) is False
+
+
+class TestBybitMarketDataServiceDatabaseIntegration:
+    """データベース統合機能のテスト（TDD - 失敗するテスト）"""
+
+    @pytest.fixture
+    def service(self):
+        """テスト用のサービスインスタンスを作成"""
+        if BybitMarketDataService is None:
+            pytest.skip("BybitMarketDataService が実装されていません")
+        return BybitMarketDataService()
+
+    @pytest.mark.asyncio
+    async def test_fetch_and_save_ohlcv_data_with_mock_repository(self, service):
+        """OHLCVデータ取得・保存機能のテスト（モックリポジトリ使用）"""
+        from unittest.mock import Mock, AsyncMock
+
+        # Given: 有効なパラメータとモックリポジトリ
+        symbol = "BTC/USDT"
+        timeframe = "1h"
+        limit = 5
+
+        # モックリポジトリの設定
+        mock_repository = Mock()
+        mock_repository.insert_ohlcv_data = Mock(return_value=5)
+
+        # When: データを取得・保存
+        result = await service.fetch_and_save_ohlcv_data(
+            symbol, timeframe, limit, mock_repository
+        )
+
+        # Then: 正常な結果が返される
+        assert result["success"] is True
+        assert result["symbol"] == symbol
+        assert result["timeframe"] == timeframe
+        assert result["saved_count"] == 5
+        mock_repository.insert_ohlcv_data.assert_called_once()
+
+    def test_validate_symbol_implemented(self, service):
+        """シンボル検証機能のテスト"""
+        # Given: 有効なシンボル
+        valid_symbol = "BTC/USDT"
+        invalid_symbol = "INVALID/SYMBOL"
+
+        # When & Then: 検証が正しく動作する
+        assert service.validate_symbol(valid_symbol) is True
+        assert service.validate_symbol(invalid_symbol) is False
+
+    def test_validate_timeframe_implemented(self, service):
+        """時間軸検証機能のテスト"""
+        # Given: 有効な時間軸と無効な時間軸
+        valid_timeframe = "1h"
+        invalid_timeframe = "invalid"
+
+        # When & Then: 検証が正しく動作する
+        assert service.validate_timeframe(valid_timeframe) is True
+        assert service.validate_timeframe(invalid_timeframe) is False

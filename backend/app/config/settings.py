@@ -24,8 +24,7 @@ class Settings(BaseSettings):
 
     # CORS設定
     cors_origins: list[str] = Field(
-        default=["http://localhost:3000"],
-        env="CORS_ORIGINS"
+        default=["http://localhost:3000"], env="CORS_ORIGINS"
     )
 
     # データベース設定
@@ -39,8 +38,7 @@ class Settings(BaseSettings):
     # ログ設定
     log_level: str = Field(default="INFO", env="LOG_LEVEL")
     log_format: str = Field(
-        default="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-        env="LOG_FORMAT"
+        default="%(asctime)s - %(name)s - %(levelname)s - %(message)s", env="LOG_FORMAT"
     )
 
     # セキュリティ設定
@@ -59,6 +57,7 @@ class Settings(BaseSettings):
     class Config:
         env_file = ".env"
         env_file_encoding = "utf-8"
+        extra = "ignore"  # 追加の環境変数を無視
 
 
 # 設定のシングルトンインスタンス

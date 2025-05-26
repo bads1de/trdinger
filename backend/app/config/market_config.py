@@ -15,103 +15,154 @@ from dataclasses import dataclass
 @dataclass
 class MarketDataConfig:
     """市場データサービスの設定クラス"""
-    
+
     # サポートされている取引所
-    SUPPORTED_EXCHANGES = ['bybit']
-    
-    # サポートされているシンボル（Bybit形式）
+    SUPPORTED_EXCHANGES = ["bybit"]
+
+    # サポートされているシンボル（Bybit形式）- 主要10銘柄
     SUPPORTED_SYMBOLS = [
-        'BTC/USD:BTC',  # BTC無期限先物
-        'BTC/USDT',     # BTCスポット
-        'ETH/USD:ETH',  # ETH無期限先物
-        'ETH/USDT',     # ETHスポット
+        "BTC/USDT",  # Bitcoin スポット
+        "ETH/USDT",  # Ethereum スポット
+        "BNB/USDT",  # Binance Coin スポット
+        "ADA/USDT",  # Cardano スポット
+        "SOL/USDT",  # Solana スポット
+        "XRP/USDT",  # Ripple スポット
+        "DOT/USDT",  # Polkadot スポット
+        "AVAX/USDT",  # Avalanche スポット
+        "LTC/USDT",  # Litecoin スポット
+        "UNI/USDT",  # Uniswap スポット
     ]
-    
+
     # サポートされている時間軸
-    SUPPORTED_TIMEFRAMES = [
-        '1m', '5m', '15m', '30m', 
-        '1h', '4h', '1d'
-    ]
-    
+    SUPPORTED_TIMEFRAMES = ["1m", "5m", "15m", "30m", "1h", "4h", "1d"]
+
     # デフォルト設定
-    DEFAULT_EXCHANGE = 'bybit'
-    DEFAULT_SYMBOL = 'BTC/USD:BTC'
-    DEFAULT_TIMEFRAME = '1h'
+    DEFAULT_EXCHANGE = "bybit"
+    DEFAULT_SYMBOL = "BTC/USDT"
+    DEFAULT_TIMEFRAME = "1h"
     DEFAULT_LIMIT = 100
-    
+
     # 制限値
     MIN_LIMIT = 1
     MAX_LIMIT = 1000
-    
+
     # Bybit固有の設定
     BYBIT_CONFIG = {
-        'sandbox': False,  # 本番環境を使用
-        'enableRateLimit': True,  # レート制限を有効化
-        'timeout': 30000,  # タイムアウト（ミリ秒）
+        "sandbox": False,  # 本番環境を使用
+        "enableRateLimit": True,  # レート制限を有効化
+        "timeout": 30000,  # タイムアウト（ミリ秒）
     }
-    
+
+    @classmethod
+    def validate_symbol(cls, symbol: str) -> bool:
+        """
+        シンボルが有効かどうかを検証します
+
+        Args:
+            symbol: 検証するシンボル
+
+        Returns:
+            有効な場合True、無効な場合False
+        """
+        return symbol in cls.SUPPORTED_SYMBOLS
+
+    @classmethod
+    def validate_timeframe(cls, timeframe: str) -> bool:
+        """
+        時間軸が有効かどうかを検証します
+
+        Args:
+            timeframe: 検証する時間軸
+
+        Returns:
+            有効な場合True、無効な場合False
+        """
+        return timeframe in cls.SUPPORTED_TIMEFRAMES
+
+    @classmethod
+    def validate_limit(cls, limit: int) -> bool:
+        """
+        制限値が有効かどうかを検証します
+
+        Args:
+            limit: 検証する制限値
+
+        Returns:
+            有効な場合True、無効な場合False
+        """
+        return cls.MIN_LIMIT <= limit <= cls.MAX_LIMIT
+
     # シンボル正規化マッピング
     SYMBOL_MAPPING = {
-        'BTCUSD': 'BTC/USD:BTC',
-        'BTC/USD': 'BTC/USD:BTC',
-        'BTCUSDT': 'BTC/USDT',
-        'BTC-USD': 'BTC/USD:BTC',
-        'BTC-USDT': 'BTC/USDT',
+        "BTCUSD": "BTC/USDT",
+        "ETHUSD": "ETH/USDT",
+        "BNBUSD": "BNB/USDT",
+        "ADAUSD": "ADA/USDT",
+        "SOLUSD": "SOL/USDT",
+        "XRPUSD": "XRP/USDT",
+        "DOTUSD": "DOT/USDT",
+        "AVAXUSD": "AVAX/USDT",
+        "LTCUSD": "LTC/USDT",
+        "UNIUSD": "UNI/USDT",
+        "BTC/USD": "BTC/USDT",
+        "ETH/USD": "ETH/USDT",
+        "BTC-USD": "BTC/USDT",
+        "ETH-USD": "ETH/USDT",
     }
-    
+
     @classmethod
     def normalize_symbol(cls, symbol: str) -> str:
         """
         シンボルを正規化します
-        
+
         Args:
             symbol: 正規化するシンボル
-            
+
         Returns:
             正規化されたシンボル
-            
+
         Raises:
             ValueError: サポートされていないシンボルの場合
         """
-        # 大文字に変換
-        symbol = symbol.upper()
-        
+        # 大文字に変換し、空白を除去
+        symbol = symbol.strip().upper()
+
         # マッピングテーブルから検索
         if symbol in cls.SYMBOL_MAPPING:
             normalized = cls.SYMBOL_MAPPING[symbol]
         else:
             normalized = symbol
-            
+
         # サポートされているシンボルかチェック
         if normalized not in cls.SUPPORTED_SYMBOLS:
             raise ValueError(
                 f"サポートされていないシンボルです: {symbol}. "
                 f"サポート対象: {', '.join(cls.SUPPORTED_SYMBOLS)}"
             )
-            
+
         return normalized
-    
+
     @classmethod
     def validate_timeframe(cls, timeframe: str) -> bool:
         """
         時間軸が有効かチェックします
-        
+
         Args:
             timeframe: チェックする時間軸
-            
+
         Returns:
             有効な場合True
         """
         return timeframe in cls.SUPPORTED_TIMEFRAMES
-    
+
     @classmethod
     def validate_limit(cls, limit: int) -> bool:
         """
         制限値が有効かチェックします
-        
+
         Args:
             limit: チェックする制限値
-            
+
         Returns:
             有効な場合True
         """

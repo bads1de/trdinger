@@ -15,6 +15,8 @@ from datetime import datetime, timezone
 import logging
 
 from app.config.market_config import MarketDataConfig
+from database.repository import OHLCVRepository
+from database.connection import SessionLocal
 
 
 # ログ設定
@@ -102,6 +104,130 @@ class BybitMarketDataService:
         except Exception as e:
             logger.error(f"予期しないエラー: {e}")
             raise ccxt.ExchangeError(f"データ取得中にエラーが発生しました: {e}") from e
+
+    async def fetch_and_save_ohlcv_data(
+        self,
+        symbol: str,
+        timeframe: str = "1h",
+        limit: int = 100,
+        repository: Optional[OHLCVRepository] = None,
+    ) -> dict:
+        """
+        OHLCVデータを取得してデータベースに保存します
+
+        Args:
+            symbol: 取引ペアシンボル（例: 'BTC/USDT'）
+            timeframe: 時間軸（例: '1h', '1d'）
+            limit: 取得するデータ数（1-1000）
+            repository: OHLCVリポジトリ（テスト用）
+
+        Returns:
+            保存結果を含む辞書
+
+        Raises:
+            ValueError: パラメータが無効な場合
+            Exception: データベースエラーの場合
+        """
+        try:
+            # OHLCVデータを取得
+            ohlcv_data = await self.fetch_ohlcv_data(symbol, timeframe, limit)
+
+            # データベースに保存
+            if repository is None:
+                # 実際のデータベースセッションを使用
+                db = SessionLocal()
+                try:
+                    repository = OHLCVRepository(db)
+                    saved_count = await self._save_ohlcv_to_database(
+                        ohlcv_data, symbol, timeframe, repository
+                    )
+                    db.close()
+                except Exception as e:
+                    db.close()
+                    raise
+            else:
+                # テスト用のリポジトリを使用
+                saved_count = await self._save_ohlcv_to_database(
+                    ohlcv_data, symbol, timeframe, repository
+                )
+
+            return {
+                "symbol": symbol,
+                "timeframe": timeframe,
+                "fetched_count": len(ohlcv_data),
+                "saved_count": saved_count,
+                "success": True,
+            }
+
+        except Exception as e:
+            logger.error(f"OHLCVデータ取得・保存エラー: {e}")
+            raise
+
+    async def _save_ohlcv_to_database(
+        self,
+        ohlcv_data: List[List],
+        symbol: str,
+        timeframe: str,
+        repository: OHLCVRepository,
+    ) -> int:
+        """
+        OHLCVデータをデータベースに保存します（内部メソッド）
+
+        Args:
+            ohlcv_data: OHLCVデータのリスト
+            symbol: 取引ペアシンボル
+            timeframe: 時間軸
+            repository: OHLCVリポジトリ
+
+        Returns:
+            保存された件数
+        """
+        # OHLCVデータを辞書形式に変換
+        records = []
+        for candle in ohlcv_data:
+            timestamp, open_price, high, low, close, volume = candle
+
+            # タイムスタンプをdatetimeに変換
+            dt = datetime.fromtimestamp(timestamp / 1000, tz=timezone.utc)
+
+            record = {
+                "symbol": symbol,
+                "timeframe": timeframe,
+                "timestamp": dt,
+                "open": float(open_price),
+                "high": float(high),
+                "low": float(low),
+                "close": float(close),
+                "volume": float(volume),
+            }
+            records.append(record)
+
+        # データベースに挿入
+        return repository.insert_ohlcv_data(records)
+
+    def validate_symbol(self, symbol: str) -> bool:
+        """
+        シンボルが有効かどうかを検証します
+
+        Args:
+            symbol: 検証するシンボル
+
+        Returns:
+            有効な場合True、無効な場合False
+        """
+        return symbol in MarketDataConfig.SUPPORTED_SYMBOLS
+
+    def validate_timeframe(self, timeframe: str) -> bool:
+        """
+        時間軸が有効かどうかを検証します
+
+        Args:
+            timeframe: 検証する時間軸
+
+        Returns:
+            有効な場合True、無効な場合False
+        """
+        return timeframe in MarketDataConfig.SUPPORTED_TIMEFRAMES
 
     def normalize_symbol(self, symbol: str) -> str:
         """
