@@ -14,7 +14,7 @@ from typing import List, Optional
 from datetime import datetime, timezone
 import logging
 
-from config import MarketDataConfig
+from app.config.market_config import MarketDataConfig
 
 
 # ログ設定

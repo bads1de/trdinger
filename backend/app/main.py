@@ -1,0 +1,62 @@
+"""
+FastAPI メインアプリケーション
+
+Trdinger Trading API のエントリーポイント
+"""
+
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+import logging
+
+from app.config.settings import settings
+from app.api.v1.market_data import router as market_data_router
+
+
+def setup_logging():
+    """ログ設定を初期化"""
+    logging.basicConfig(
+        level=getattr(logging, settings.log_level.upper()),
+        format=settings.log_format
+    )
+
+
+def create_app() -> FastAPI:
+    """FastAPIアプリケーションを作成"""
+    
+    # ログ設定
+    setup_logging()
+    
+    # FastAPIアプリケーション作成
+    app = FastAPI(
+        title=settings.app_name,
+        description="CCXT ライブラリを使用した仮想通貨取引データAPI",
+        version=settings.app_version,
+        debug=settings.debug,
+    )
+    
+    # CORS設定
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=settings.cors_origins,
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
+    
+    # ルーター追加
+    app.include_router(market_data_router, prefix="/api/v1")
+    
+    # ヘルスチェックエンドポイント
+    @app.get("/health")
+    async def health_check():
+        return {
+            "status": "ok",
+            "app_name": settings.app_name,
+            "version": settings.app_version
+        }
+    
+    return app
+
+
+# アプリケーションインスタンス
+app = create_app()

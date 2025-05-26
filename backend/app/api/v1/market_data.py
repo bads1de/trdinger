@@ -13,8 +13,8 @@ from typing import List, Optional
 from datetime import datetime
 import logging
 
-from market_data_service import get_market_data_service
-from config import MarketDataConfig
+from app.core.services.market_data_service import get_market_data_service
+from app.config.market_config import MarketDataConfig
 import ccxt
 
 
@@ -22,7 +22,7 @@ import ccxt
 logger = logging.getLogger(__name__)
 
 # ルーター作成
-router = APIRouter(prefix="/api/market-data", tags=["market-data"])
+router = APIRouter(prefix="/market-data", tags=["market-data"])
 
 
 @router.get("/ohlcv")

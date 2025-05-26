@@ -8,7 +8,7 @@ import json
 import pandas as pd
 import numpy as np
 from datetime import datetime, timedelta
-from backtest_engine.strategy_executor import StrategyExecutor
+from backtest.engine.strategy_executor import StrategyExecutor
 from database.connection import SessionLocal
 from database.repository import OHLCVRepository
 
