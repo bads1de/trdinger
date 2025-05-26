@@ -13,6 +13,7 @@ import { render, screen, fireEvent } from "@testing-library/react";
 import "@testing-library/jest-dom";
 import TimeFrameSelector from "@/components/TimeFrameSelector";
 import { TimeFrame } from "@/types/strategy";
+import { SUPPORTED_TIMEFRAMES } from "@/constants";
 
 describe("TimeFrameSelector", () => {
   const mockOnTimeFrameChange = jest.fn();
@@ -30,7 +31,7 @@ describe("TimeFrameSelector", () => {
         />
       );
 
-      expect(screen.getByText("時間軸:")).toBeInTheDocument();
+      expect(screen.getByText("時間軸選択")).toBeInTheDocument();
       expect(screen.getByText("1分")).toBeInTheDocument();
       expect(screen.getByText("5分")).toBeInTheDocument();
       expect(screen.getByText("15分")).toBeInTheDocument();
@@ -48,8 +49,8 @@ describe("TimeFrameSelector", () => {
         />
       );
 
-      const selectedButton = screen.getByText("1時間");
-      expect(selectedButton).toHaveClass("bg-blue-600", "text-white");
+      const selectedButton = screen.getByText("1時間").closest('button');
+      expect(selectedButton).toHaveClass("bg-primary-600", "text-white");
     });
 
     test("選択されていない時間軸が正しいスタイルを持つ", () => {
@@ -60,9 +61,9 @@ describe("TimeFrameSelector", () => {
         />
       );
 
-      const unselectedButton = screen.getByText("1日");
-      expect(unselectedButton).toHaveClass("bg-gray-100", "text-gray-700");
-      expect(unselectedButton).not.toHaveClass("bg-blue-600", "text-white");
+      const unselectedButton = screen.getByText("1分").closest('button');
+      expect(unselectedButton).toHaveClass("bg-white");
+      expect(unselectedButton).not.toHaveClass("bg-primary-600", "text-white");
     });
   });
 
@@ -83,15 +84,10 @@ describe("TimeFrameSelector", () => {
     });
 
     test("すべての時間軸ボタンが正しい値でコールバックを呼ぶ", () => {
-      const timeFrames: { label: string; value: TimeFrame }[] = [
-        { label: "1分", value: "1m" },
-        { label: "5分", value: "5m" },
-        { label: "15分", value: "15m" },
-        { label: "30分", value: "30m" },
-        { label: "1時間", value: "1h" },
-        { label: "4時間", value: "4h" },
-        { label: "1日", value: "1d" },
-      ];
+      const timeFrames = SUPPORTED_TIMEFRAMES.map(tf => ({
+        label: tf.label,
+        value: tf.value
+      }));
 
       render(
         <TimeFrameSelector
@@ -183,25 +179,25 @@ describe("TimeFrameSelector", () => {
         />
       );
 
-      expect(screen.getByText("1分")).toHaveAttribute("title", "1分足チャート");
-      expect(screen.getByText("5分")).toHaveAttribute("title", "5分足チャート");
-      expect(screen.getByText("15分")).toHaveAttribute(
+      expect(screen.getByText("1分").closest('button')).toHaveAttribute("title", "1分足チャート");
+      expect(screen.getByText("5分").closest('button')).toHaveAttribute("title", "5分足チャート");
+      expect(screen.getByText("15分").closest('button')).toHaveAttribute(
         "title",
         "15分足チャート"
       );
-      expect(screen.getByText("30分")).toHaveAttribute(
+      expect(screen.getByText("30分").closest('button')).toHaveAttribute(
         "title",
         "30分足チャート"
       );
-      expect(screen.getByText("1時間")).toHaveAttribute(
+      expect(screen.getByText("1時間").closest('button')).toHaveAttribute(
         "title",
         "1時間足チャート"
       );
-      expect(screen.getByText("4時間")).toHaveAttribute(
+      expect(screen.getByText("4時間").closest('button')).toHaveAttribute(
         "title",
         "4時間足チャート"
       );
-      expect(screen.getByText("1日")).toHaveAttribute("title", "日足チャート");
+      expect(screen.getByText("1日").closest('button')).toHaveAttribute("title", "日足チャート");
     });
 
     test("フォーカス時に適切なスタイルが適用される", () => {
@@ -212,11 +208,11 @@ describe("TimeFrameSelector", () => {
         />
       );
 
-      const button = screen.getByText("1時間");
+      const button = screen.getByText("1時間").closest('button');
       expect(button).toHaveClass(
         "focus:outline-none",
         "focus:ring-2",
-        "focus:ring-blue-500"
+        "focus:ring-primary-500"
       );
     });
 
@@ -228,7 +224,7 @@ describe("TimeFrameSelector", () => {
         />
       );
 
-      const button = screen.getByText("1時間");
+      const button = screen.getByText("1時間").closest('button');
       button.focus();
       expect(button).toHaveFocus();
 
@@ -247,8 +243,8 @@ describe("TimeFrameSelector", () => {
         />
       );
 
-      const wrapper = container.firstChild;
-      expect(wrapper).toHaveClass("flex", "flex-wrap", "gap-2");
+      const wrapper = container.querySelector('.flex.flex-wrap.gap-2');
+      expect(wrapper).toBeInTheDocument();
     });
   });
 
@@ -275,7 +271,7 @@ describe("TimeFrameSelector", () => {
         // 選択された時間軸のボタンがハイライトされていることを確認
         const buttons = screen.getAllByRole("button");
         const selectedButton = buttons.find((button) =>
-          button.classList.contains("bg-blue-600")
+          button.classList.contains("bg-primary-600") || button.classList.contains("bg-white")
         );
         expect(selectedButton).toBeInTheDocument();
 

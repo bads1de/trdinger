@@ -11,7 +11,8 @@
 'use client';
 
 import React from 'react';
-import { TimeFrame, TimeFrameInfo } from '@/types/strategy';
+import { TimeFrame } from '@/types/strategy';
+import { SUPPORTED_TIMEFRAMES } from '@/constants';
 
 /**
  * 時間軸選択コンポーネントのプロパティ
@@ -25,46 +26,7 @@ interface TimeFrameSelectorProps {
   disabled?: boolean;
 }
 
-/**
- * 利用可能な時間軸の定義
- */
-const TIME_FRAMES: TimeFrameInfo[] = [
-  {
-    value: '1m',
-    label: '1分',
-    description: '1分足チャート',
-  },
-  {
-    value: '5m',
-    label: '5分',
-    description: '5分足チャート',
-  },
-  {
-    value: '15m',
-    label: '15分',
-    description: '15分足チャート',
-  },
-  {
-    value: '30m',
-    label: '30分',
-    description: '30分足チャート',
-  },
-  {
-    value: '1h',
-    label: '1時間',
-    description: '1時間足チャート',
-  },
-  {
-    value: '4h',
-    label: '4時間',
-    description: '4時間足チャート',
-  },
-  {
-    value: '1d',
-    label: '1日',
-    description: '日足チャート',
-  },
-];
+
 
 /**
  * 時間軸選択コンポーネント
@@ -84,7 +46,7 @@ const TimeFrameSelector: React.FC<TimeFrameSelectorProps> = ({
       </label>
 
       <div className="flex flex-wrap gap-2">
-        {TIME_FRAMES.map((timeFrame) => {
+        {SUPPORTED_TIMEFRAMES.map((timeFrame) => {
           const isSelected = selectedTimeFrame === timeFrame.value;
 
           return (
@@ -135,7 +97,7 @@ const TimeFrameSelector: React.FC<TimeFrameSelectorProps> = ({
         <div className="flex items-center gap-2">
           <div className="w-2 h-2 bg-primary-500 rounded-full animate-pulse"></div>
           <span className="text-sm font-medium text-secondary-700 dark:text-secondary-300">
-            選択中: {TIME_FRAMES.find(tf => tf.value === selectedTimeFrame)?.description}
+            選択中: {SUPPORTED_TIMEFRAMES.find(tf => tf.value === selectedTimeFrame)?.description}
           </span>
         </div>
         <p className="text-xs text-secondary-500 dark:text-secondary-400 mt-1 ml-4">
