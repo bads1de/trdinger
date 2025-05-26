@@ -6,11 +6,7 @@ import pandas as pd
 import numpy as np
 from datetime import datetime, timedelta
 
-import sys
-import os
-sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
-
-from backtest_engine.indicators import TechnicalIndicators
+from backtest.engine.indicators import TechnicalIndicators
 
 
 class TestTechnicalIndicators:

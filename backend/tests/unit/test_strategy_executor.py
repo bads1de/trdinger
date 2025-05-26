@@ -6,11 +6,7 @@ import pandas as pd
 import numpy as np
 from datetime import datetime, timedelta
 
-import sys
-import os
-sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
-
-from backtest_engine.strategy_executor import StrategyExecutor, Trade, Position
+from backtest.engine.strategy_executor import StrategyExecutor, Trade, Position
 
 
 class TestStrategyExecutor:
@@ -77,10 +73,10 @@ class TestStrategyExecutor:
 
         indicators = executor.calculate_indicators(sample_data, indicators_config)
 
-        assert 'SMA' in indicators
-        assert 'RSI' in indicators
-        assert len(indicators['SMA']) == len(sample_data)
-        assert len(indicators['RSI']) == len(sample_data)
+        assert 'SMA_10' in indicators
+        assert 'RSI_14' in indicators
+        assert len(indicators['SMA_10']) == len(sample_data)
+        assert len(indicators['RSI_14']) == len(sample_data)
 
     def test_execute_buy_trade(self, executor):
         """買い取引のテスト"""

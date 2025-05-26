@@ -9,7 +9,7 @@ from datetime import datetime, timedelta
 # SQLite用の設定
 os.environ["DATABASE_URL"] = "sqlite:///./trdinger_test.db"
 
-from backtest_runner import run_backtest
+from backtest.runner import run_backtest
 
 def test_backtest_with_real_data():
     """
