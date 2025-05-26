@@ -19,28 +19,30 @@ class MarketDataConfig:
     # サポートされている取引所
     SUPPORTED_EXCHANGES = ["bybit"]
 
-    # サポートされているシンボル（Bybit形式）- 主要銘柄 + 先物 + イーサリアム
+    # サポートされているシンボル（Bybit形式）- 実際に確認済みのペア
     SUPPORTED_SYMBOLS = [
         # Bitcoin 関連
-        "BTC/USDT",  # Bitcoin スポット
-        "BTC/USD",   # Bitcoin 先物（永続契約）
-        "BTCUSD",    # Bitcoin 先物（代替表記）
+        "BTC/USDT",         # Bitcoin スポット
+        "BTC/USDT:USDT",    # Bitcoin USDT永続契約
+        "BTCUSD",           # Bitcoin USD永続契約
 
         # Ethereum 関連
-        "ETH/USDT",  # Ethereum スポット
-        "ETH/USD",   # Ethereum 先物（永続契約）
-        "ETH/BTC",   # Ethereum/Bitcoin ペア
-        "ETHUSD",    # Ethereum 先物（代替表記）
+        "ETH/USDT",         # Ethereum スポット
+        "ETH/USDT:USDT",    # Ethereum USDT永続契約
+        "ETH/BTC",          # Ethereum/Bitcoin ペア
+        "ETHUSD",           # Ethereum USD永続契約
 
-        # その他主要アルトコイン
-        "BNB/USDT",  # Binance Coin スポット
-        "ADA/USDT",  # Cardano スポット
-        "SOL/USDT",  # Solana スポット
-        "XRP/USDT",  # Ripple スポット
-        "DOT/USDT",  # Polkadot スポット
-        "AVAX/USDT",  # Avalanche スポット
-        "LTC/USDT",  # Litecoin スポット
-        "UNI/USDT",  # Uniswap スポット
+        # XRP 関連
+        "XRP/USDT",         # XRP スポット
+        "XRP/USDT:USDT",    # XRP USDT永続契約
+
+        # BNB 関連
+        "BNB/USDT",         # BNB スポット
+        "BNB/USDT:USDT",    # BNB USDT永続契約
+
+        # SOL 関連
+        "SOL/USDT",         # SOL スポット
+        "SOL/USDT:USDT",    # SOL USDT永続契約
     ]
 
     # サポートされている時間軸
@@ -102,31 +104,36 @@ class MarketDataConfig:
         """
         return cls.MIN_LIMIT <= limit <= cls.MAX_LIMIT
 
-    # シンボル正規化マッピング
+    # シンボル正規化マッピング（実際に確認済みのペアのみ）
     SYMBOL_MAPPING = {
         # Bitcoin マッピング
-        "BTCUSD": "BTCUSD",      # 先物はそのまま
-        "BTC-USD": "BTC/USD",    # 先物（永続契約）
-        "BTCUSDT": "BTC/USDT",   # スポット
-        "BTC-USDT": "BTC/USDT",  # スポット（代替表記）
+        "BTCUSD": "BTCUSD",             # USD永続契約
+        "BTCUSDT": "BTC/USDT:USDT",     # USDT永続契約
+        "BTC-USDT": "BTC/USDT",         # スポット
+        "BTC/USDT:USDT": "BTC/USDT:USDT", # 永続契約正規化
 
         # Ethereum マッピング
-        "ETHUSD": "ETHUSD",      # 先物はそのまま
-        "ETH-USD": "ETH/USD",    # 先物（永続契約）
-        "ETHUSDT": "ETH/USDT",   # スポット
-        "ETH-USDT": "ETH/USDT",  # スポット（代替表記）
-        "ETHBTC": "ETH/BTC",     # ETH/BTC ペア
-        "ETH-BTC": "ETH/BTC",    # ETH/BTC ペア（代替表記）
+        "ETHUSD": "ETHUSD",             # USD永続契約
+        "ETHUSDT": "ETH/USDT:USDT",     # USDT永続契約
+        "ETH-USDT": "ETH/USDT",         # スポット
+        "ETHBTC": "ETH/BTC",            # ETH/BTC ペア
+        "ETH-BTC": "ETH/BTC",           # ETH/BTC ペア
+        "ETH/USDT:USDT": "ETH/USDT:USDT", # 永続契約正規化
 
-        # その他のマッピング
-        "BNBUSD": "BNB/USDT",
-        "ADAUSD": "ADA/USDT",
-        "SOLUSD": "SOL/USDT",
-        "XRPUSD": "XRP/USDT",
-        "DOTUSD": "DOT/USDT",
-        "AVAXUSD": "AVAX/USDT",
-        "LTCUSD": "LTC/USDT",
-        "UNIUSD": "UNI/USDT",
+        # XRP マッピング
+        "XRPUSDT": "XRP/USDT:USDT",     # USDT永続契約
+        "XRP-USDT": "XRP/USDT",         # スポット
+        "XRP/USDT:USDT": "XRP/USDT:USDT", # 永続契約正規化
+
+        # BNB マッピング
+        "BNBUSDT": "BNB/USDT:USDT",     # USDT永続契約
+        "BNB-USDT": "BNB/USDT",         # スポット
+        "BNB/USDT:USDT": "BNB/USDT:USDT", # 永続契約正規化
+
+        # SOL マッピング
+        "SOLUSDT": "SOL/USDT:USDT",     # USDT永続契約
+        "SOL-USDT": "SOL/USDT",         # スポット
+        "SOL/USDT:USDT": "SOL/USDT:USDT", # 永続契約正規化
     }
 
     @classmethod
