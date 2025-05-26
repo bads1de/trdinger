@@ -14,6 +14,7 @@ import React, { useState, useEffect } from "react";
 import CandlestickChart from "@/components/CandlestickChart";
 import TimeFrameSelector from "@/components/TimeFrameSelector";
 import SymbolSelector from "@/components/SymbolSelector";
+import SaveOHLCVButton from "@/components/SaveOHLCVButton";
 import {
   CandlestickData,
   TimeFrame,
@@ -278,6 +279,19 @@ const DataPage: React.FC = () => {
                   </span>
                 </div>
               )}
+            </div>
+
+            {/* OHLCVデータ保存ボタン */}
+            <div className="mb-6">
+              <SaveOHLCVButton
+                symbol={selectedSymbol}
+                timeframe={selectedTimeFrame}
+                limit={100}
+                disabled={loading}
+                onSaveComplete={(result) => {
+                  console.log('保存完了:', result);
+                }}
+              />
             </div>
 
             <div className="relative">

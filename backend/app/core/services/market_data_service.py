@@ -15,6 +15,8 @@ from datetime import datetime, timezone
 import logging
 
 from app.config.market_config import MarketDataConfig
+from database.repository import OHLCVRepository
+from database.connection import get_db
 
 
 # ログ設定
@@ -193,6 +195,63 @@ class BybitMarketDataService:
                 raise ValueError(
                     f"ローソク足データ[{i}]に負の出来高が含まれています: {candle}"
                 )
+
+    async def save_ohlcv_to_database(
+        self, ohlcv_data: List[List], symbol: str, timeframe: str
+    ) -> int:
+        """
+        OHLCVデータをデータベースに保存します
+
+        Args:
+            ohlcv_data: CCXT形式のOHLCVデータ
+            symbol: 取引ペアシンボル
+            timeframe: 時間軸
+
+        Returns:
+            保存された件数
+
+        Raises:
+            Exception: データベースエラーの場合
+        """
+        try:
+            # データベース接続を取得
+            db = next(get_db())
+            repository = OHLCVRepository(db)
+
+            # CCXT形式のデータをデータベース形式に変換
+            db_records = []
+            for candle in ohlcv_data:
+                timestamp_ms, open_price, high, low, close, volume = candle
+
+                # タイムスタンプをdatetimeに変換（ミリ秒からUTC）
+                timestamp = datetime.fromtimestamp(
+                    timestamp_ms / 1000, tz=timezone.utc
+                )
+
+                db_record = {
+                    'symbol': symbol,
+                    'timeframe': timeframe,
+                    'timestamp': timestamp,
+                    'open': float(open_price),
+                    'high': float(high),
+                    'low': float(low),
+                    'close': float(close),
+                    'volume': float(volume)
+                }
+                db_records.append(db_record)
+
+            # データベースに一括挿入
+            records_saved = repository.insert_ohlcv_data(db_records)
+
+            logger.info(
+                f"OHLCVデータをデータベースに保存: {symbol} {timeframe} - {records_saved}件"
+            )
+
+            return records_saved
+
+        except Exception as e:
+            logger.error(f"データベース保存エラー: {e}")
+            raise
 
 
 # サービスのシングルトンインスタンス

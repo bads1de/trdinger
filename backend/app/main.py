@@ -10,6 +10,7 @@ import logging
 
 from app.config.settings import settings
 from app.api.v1.market_data import router as market_data_router
+from app.api.v1.data_management import router as data_management_router
 
 
 def setup_logging():
@@ -22,10 +23,10 @@ def setup_logging():
 
 def create_app() -> FastAPI:
     """FastAPIアプリケーションを作成"""
-    
+
     # ログ設定
     setup_logging()
-    
+
     # FastAPIアプリケーション作成
     app = FastAPI(
         title=settings.app_name,
@@ -33,7 +34,7 @@ def create_app() -> FastAPI:
         version=settings.app_version,
         debug=settings.debug,
     )
-    
+
     # CORS設定
     app.add_middleware(
         CORSMiddleware,
@@ -42,10 +43,11 @@ def create_app() -> FastAPI:
         allow_methods=["*"],
         allow_headers=["*"],
     )
-    
+
     # ルーター追加
     app.include_router(market_data_router, prefix="/api/v1")
-    
+    app.include_router(data_management_router, prefix="/api/v1")
+
     # ヘルスチェックエンドポイント
     @app.get("/health")
     async def health_check():
@@ -54,7 +56,7 @@ def create_app() -> FastAPI:
             "app_name": settings.app_name,
             "version": settings.app_version
         }
-    
+
     return app
 
 
