@@ -11,7 +11,7 @@ import pandas as pd
 import logging
 
 from .models import OHLCVData, DataCollectionLog
-from .connection import get_db
+from .connection import get_db, ensure_db_initialized
 
 logger = logging.getLogger(__name__)
 
@@ -36,16 +36,32 @@ class OHLCVRepository:
             return 0
 
         try:
-            # PostgreSQL の ON CONFLICT を使用して重複を無視
-            stmt = insert(OHLCVData).values(ohlcv_records)
-            stmt = stmt.on_conflict_do_nothing(
-                index_elements=["symbol", "timeframe", "timestamp"]
-            )
+            # データベースタイプに応じて重複処理を切り替え
+            from database.connection import DATABASE_URL
 
-            result = self.db.execute(stmt)
-            self.db.commit()
+            if "sqlite" in DATABASE_URL.lower():
+                # SQLiteの場合は一件ずつINSERT OR IGNOREで処理
+                inserted_count = 0
+                for record in ohlcv_records:
+                    try:
+                        ohlcv_obj = OHLCVData(**record)
+                        self.db.add(ohlcv_obj)
+                        self.db.commit()
+                        inserted_count += 1
+                    except Exception:
+                        # 重複エラーの場合はロールバックして続行
+                        self.db.rollback()
+                        continue
+            else:
+                # PostgreSQL の ON CONFLICT を使用して重複を無視
+                stmt = insert(OHLCVData).values(ohlcv_records)
+                stmt = stmt.on_conflict_do_nothing(
+                    index_elements=["symbol", "timeframe", "timestamp"]
+                )
+                result = self.db.execute(stmt)
+                self.db.commit()
+                inserted_count = result.rowcount
 
-            inserted_count = result.rowcount
             logger.info(f"OHLCV データを {inserted_count} 件挿入しました")
             return inserted_count
 

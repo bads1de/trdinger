@@ -7,7 +7,7 @@ from typing import List, Optional
 from datetime import datetime, timezone, timedelta
 import logging
 
-from database.connection import SessionLocal
+from database.connection import SessionLocal, ensure_db_initialized
 from database.repository import OHLCVRepository, DataCollectionLogRepository
 from app.core.services.market_data_service import BybitMarketDataService
 from app.config.market_config import MarketDataConfig
@@ -23,6 +23,10 @@ class DataCollector:
     """
 
     def __init__(self):
+        # データベース初期化確認
+        if not ensure_db_initialized():
+            raise RuntimeError("データベースの初期化に失敗しました")
+
         self.market_service = BybitMarketDataService()
 
     async def collect_historical_data(
