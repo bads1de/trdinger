@@ -27,7 +27,7 @@ export const SUPPORTED_TRADING_PAIRS: TradingPair[] = [
     quote: "USDT",
   },
   {
-    symbol: "BTC/USDT:USDT",
+    symbol: "BTC/USDT:PERP",
     name: "Bitcoin / USDT Perpetual",
     base: "BTC",
     quote: "USDT",
@@ -53,7 +53,7 @@ export const SUPPORTED_TRADING_PAIRS: TradingPair[] = [
     quote: "BTC",
   },
   {
-    symbol: "ETH/USDT:USDT",
+    symbol: "ETH/USDT:PERP",
     name: "Ethereum / USDT Perpetual",
     base: "ETH",
     quote: "USDT",
@@ -143,7 +143,7 @@ export function getTradingPairIcon(symbol: string): string {
  * 通貨ペアの市場タイプを取得する関数
  */
 export function getMarketType(symbol: string): string {
-  if (symbol.includes(":")) return "USDT永続契約";
+  if (symbol.includes(":PERP")) return "USDT永続契約";
   if (symbol.endsWith("USD")) return "USD永続契約";
   return "スポット";
 }
