@@ -5,7 +5,7 @@
 import asyncio
 import logging
 from database.connection import init_db, test_connection
-# from data_collector.collector import collect_btc_daily_data  # 必要に応じてコメントアウト
+from data_collector.collector import collect_btc_daily_data
 
 # ログ設定
 logging.basicConfig(
