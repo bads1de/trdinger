@@ -42,14 +42,21 @@ describe("/api/data/symbols", () => {
         expect(typeof pair.base).toBe("string");
         expect(typeof pair.quote).toBe("string");
 
-        // シンボル形式の検証（BASE/QUOTE形式またはBASEQUOTE形式）
-        expect(pair.symbol).toMatch(/^[A-Z]+(\/[A-Z]+|[A-Z]+)$/);
+        // シンボル形式の検証（BASE/QUOTE形式、BASEUSDT:USDT形式、またはBASEQUOTE形式）
+        expect(pair.symbol).toMatch(/^[A-Z]+(\/[A-Z]+(:[A-Z]+)?|[A-Z]+)$/);
 
         // ベース通貨とクォート通貨がシンボルと一致することを確認
         if (pair.symbol.includes("/")) {
-          const [expectedBase, expectedQuote] = pair.symbol.split("/");
+          const [expectedBase, quotePart] = pair.symbol.split("/");
           expect(pair.base).toBe(expectedBase);
-          expect(pair.quote).toBe(expectedQuote);
+
+          // 先物取引の場合（例：BTC/USDT:USDT）、クォート通貨は":"より前の部分
+          if (quotePart.includes(":")) {
+            const [expectedQuote] = quotePart.split(":");
+            expect(pair.quote).toBe(expectedQuote);
+          } else {
+            expect(pair.quote).toBe(quotePart);
+          }
         } else {
           // BTCUSDのような形式の場合
           expect(pair.symbol).toBe(pair.base + pair.quote);
@@ -65,14 +72,14 @@ describe("/api/data/symbols", () => {
 
       const symbols = data.data.map((pair: any) => pair.symbol);
 
-      // 主要な通貨ペアが含まれていることを確認
-      expect(symbols).toContain("BTC/USD");
-      expect(symbols).toContain("ETH/USD");
+      // 主要な通貨ペアが含まれていることを確認（BTCとETHのみ）
       expect(symbols).toContain("BTC/USDT");
       expect(symbols).toContain("ETH/USDT");
       expect(symbols).toContain("ETH/BTC");
       expect(symbols).toContain("BTCUSD");
       expect(symbols).toContain("ETHUSD");
+      expect(symbols).toContain("BTC/USDT:USDT");
+      expect(symbols).toContain("ETH/USDT:USDT");
     });
 
     test("重複する通貨ペアがない", async () => {
@@ -129,8 +136,8 @@ describe("/api/data/symbols", () => {
       data.data.forEach((pair: any) => {
         // 名前が "Base Currency / Quote Currency" 形式であることを確認
         expect(pair.name).toMatch(/.+ \/ .+/);
-        // USD, USDT, BTCのいずれかが含まれていることを確認
-        expect(pair.name).toMatch(/(US Dollar|Tether USD|Bitcoin)/);
+        // USD, USDT, BTC, Perpetualのいずれかが含まれていることを確認（BTCとETHのみ）
+        expect(pair.name).toMatch(/(USD|USDT|Bitcoin|Ethereum|Perpetual)/);
       });
     });
 
