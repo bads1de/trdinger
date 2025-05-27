@@ -114,7 +114,7 @@ describe("/api/data/candlesticks", () => {
     });
 
     test("すべての利用可能な時間軸でデータを取得できる", async () => {
-      const timeframes = ["1m", "5m", "15m", "30m", "1h", "4h", "1d"];
+      const timeframes = ["15m", "30m", "1h", "4h", "1d"];
 
       for (const timeframe of timeframes) {
         const request = createMockRequest({

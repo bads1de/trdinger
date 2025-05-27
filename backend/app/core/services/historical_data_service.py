@@ -22,7 +22,7 @@ class HistoricalDataService:
         self.market_service = market_service or BybitMarketDataService()
 
         # ビットコインの対応時間軸
-        self.timeframes = ["1m", "5m", "15m", "30m", "1h", "4h", "1d"]
+        self.timeframes = ["15m", "30m", "1h", "4h", "1d"]
 
         # APIレート制限対応（リクエスト間隔）
         self.request_delay = 0.1  # 100ms
@@ -252,8 +252,6 @@ class HistoricalDataService:
     def _get_timeframe_ms(self, timeframe: str) -> int:
         """時間軸をミリ秒に変換"""
         timeframe_ms = {
-            "1m": 60 * 1000,
-            "5m": 5 * 60 * 1000,
             "15m": 15 * 60 * 1000,
             "30m": 30 * 60 * 1000,
             "1h": 60 * 60 * 1000,

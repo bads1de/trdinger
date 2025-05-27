@@ -32,8 +32,6 @@ describe("TimeFrameSelector", () => {
       );
 
       expect(screen.getByText("時間軸選択")).toBeInTheDocument();
-      expect(screen.getByText("1分")).toBeInTheDocument();
-      expect(screen.getByText("5分")).toBeInTheDocument();
       expect(screen.getByText("15分")).toBeInTheDocument();
       expect(screen.getByText("30分")).toBeInTheDocument();
       expect(screen.getByText("1時間")).toBeInTheDocument();
@@ -49,7 +47,7 @@ describe("TimeFrameSelector", () => {
         />
       );
 
-      const selectedButton = screen.getByText("1時間").closest('button');
+      const selectedButton = screen.getByText("1時間").closest("button");
       expect(selectedButton).toHaveClass("bg-primary-600", "text-white");
     });
 
@@ -61,7 +59,7 @@ describe("TimeFrameSelector", () => {
         />
       );
 
-      const unselectedButton = screen.getByText("1分").closest('button');
+      const unselectedButton = screen.getByText("15分").closest("button");
       expect(unselectedButton).toHaveClass("bg-white");
       expect(unselectedButton).not.toHaveClass("bg-primary-600", "text-white");
     });
@@ -84,9 +82,9 @@ describe("TimeFrameSelector", () => {
     });
 
     test("すべての時間軸ボタンが正しい値でコールバックを呼ぶ", () => {
-      const timeFrames = SUPPORTED_TIMEFRAMES.map(tf => ({
+      const timeFrames = SUPPORTED_TIMEFRAMES.map((tf) => ({
         label: tf.label,
-        value: tf.value
+        value: tf.value,
       }));
 
       render(
@@ -179,25 +177,26 @@ describe("TimeFrameSelector", () => {
         />
       );
 
-      expect(screen.getByText("1分").closest('button')).toHaveAttribute("title", "1分足チャート");
-      expect(screen.getByText("5分").closest('button')).toHaveAttribute("title", "5分足チャート");
-      expect(screen.getByText("15分").closest('button')).toHaveAttribute(
+      expect(screen.getByText("15分").closest("button")).toHaveAttribute(
         "title",
         "15分足チャート"
       );
-      expect(screen.getByText("30分").closest('button')).toHaveAttribute(
+      expect(screen.getByText("30分").closest("button")).toHaveAttribute(
         "title",
         "30分足チャート"
       );
-      expect(screen.getByText("1時間").closest('button')).toHaveAttribute(
+      expect(screen.getByText("1時間").closest("button")).toHaveAttribute(
         "title",
         "1時間足チャート"
       );
-      expect(screen.getByText("4時間").closest('button')).toHaveAttribute(
+      expect(screen.getByText("4時間").closest("button")).toHaveAttribute(
         "title",
         "4時間足チャート"
       );
-      expect(screen.getByText("1日").closest('button')).toHaveAttribute("title", "日足チャート");
+      expect(screen.getByText("1日").closest("button")).toHaveAttribute(
+        "title",
+        "日足チャート"
+      );
     });
 
     test("フォーカス時に適切なスタイルが適用される", () => {
@@ -208,7 +207,7 @@ describe("TimeFrameSelector", () => {
         />
       );
 
-      const button = screen.getByText("1時間").closest('button');
+      const button = screen.getByText("1時間").closest("button");
       expect(button).toHaveClass(
         "focus:outline-none",
         "focus:ring-2",
@@ -224,12 +223,12 @@ describe("TimeFrameSelector", () => {
         />
       );
 
-      const button = screen.getByText("1時間").closest('button');
-      button.focus();
+      const button = screen.getByText("1時間").closest("button");
+      button!.focus();
       expect(button).toHaveFocus();
 
       // Enterキーではなく、クリックイベントをテスト
-      fireEvent.click(button);
+      fireEvent.click(button!);
       expect(mockOnTimeFrameChange).toHaveBeenCalledWith("1h");
     });
   });
@@ -243,22 +242,14 @@ describe("TimeFrameSelector", () => {
         />
       );
 
-      const wrapper = container.querySelector('.flex.flex-wrap.gap-2');
+      const wrapper = container.querySelector(".flex.flex-wrap.gap-2");
       expect(wrapper).toBeInTheDocument();
     });
   });
 
   describe("プロパティテスト", () => {
     test("異なる選択状態で正しくレンダリングされる", () => {
-      const timeFrames: TimeFrame[] = [
-        "1m",
-        "5m",
-        "15m",
-        "30m",
-        "1h",
-        "4h",
-        "1d",
-      ];
+      const timeFrames: TimeFrame[] = ["15m", "30m", "1h", "4h", "1d"];
 
       timeFrames.forEach((selectedTimeFrame) => {
         const { rerender } = render(
@@ -270,8 +261,10 @@ describe("TimeFrameSelector", () => {
 
         // 選択された時間軸のボタンがハイライトされていることを確認
         const buttons = screen.getAllByRole("button");
-        const selectedButton = buttons.find((button) =>
-          button.classList.contains("bg-primary-600") || button.classList.contains("bg-white")
+        const selectedButton = buttons.find(
+          (button) =>
+            button.classList.contains("bg-primary-600") ||
+            button.classList.contains("bg-white")
         );
         expect(selectedButton).toBeInTheDocument();
 

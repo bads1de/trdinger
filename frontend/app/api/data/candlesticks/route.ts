@@ -15,15 +15,7 @@ import { BACKEND_API_URL } from "@/constants";
 /**
  * 利用可能な時間軸の定義
  */
-const VALID_TIMEFRAMES: TimeFrame[] = [
-  "1m",
-  "5m",
-  "15m",
-  "30m",
-  "1h",
-  "4h",
-  "1d",
-];
+const VALID_TIMEFRAMES: TimeFrame[] = ["15m", "30m", "1h", "4h", "1d"];
 
 /**
  * バックエンドAPIからOHLCVデータを取得する関数

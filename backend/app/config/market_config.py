@@ -22,19 +22,18 @@ class MarketDataConfig:
     # サポートされているシンボル（Bybit形式）- BTCとETHのみに制限
     SUPPORTED_SYMBOLS = [
         # Bitcoin 関連
-        "BTC/USDT",         # Bitcoin スポット
-        "BTC/USDT:USDT",    # Bitcoin USDT永続契約
-        "BTCUSD",           # Bitcoin USD永続契約
-
+        "BTC/USDT",  # Bitcoin スポット
+        "BTC/USDT:USDT",  # Bitcoin USDT永続契約
+        "BTCUSD",  # Bitcoin USD永続契約
         # Ethereum 関連
-        "ETH/USDT",         # Ethereum スポット
-        "ETH/USDT:USDT",    # Ethereum USDT永続契約
-        "ETH/BTC",          # Ethereum/Bitcoin ペア
-        "ETHUSD",           # Ethereum USD永続契約
+        "ETH/USDT",  # Ethereum スポット
+        "ETH/USDT:USDT",  # Ethereum USDT永続契約
+        "ETH/BTC",  # Ethereum/Bitcoin ペア
+        "ETHUSD",  # Ethereum USD永続契約
     ]
 
     # サポートされている時間軸
-    SUPPORTED_TIMEFRAMES = ["1m", "5m", "15m", "30m", "1h", "4h", "1d"]
+    SUPPORTED_TIMEFRAMES = ["15m", "30m", "1h", "4h", "1d"]
 
     # デフォルト設定
     DEFAULT_EXCHANGE = "bybit"
@@ -95,18 +94,17 @@ class MarketDataConfig:
     # シンボル正規化マッピング（BTCとETHのみ）
     SYMBOL_MAPPING = {
         # Bitcoin マッピング
-        "BTCUSD": "BTCUSD",             # USD永続契約
-        "BTCUSDT": "BTC/USDT:USDT",     # USDT永続契約
-        "BTC-USDT": "BTC/USDT",         # スポット
-        "BTC/USDT:USDT": "BTC/USDT:USDT", # 永続契約正規化
-
+        "BTCUSD": "BTCUSD",  # USD永続契約
+        "BTCUSDT": "BTC/USDT:USDT",  # USDT永続契約
+        "BTC-USDT": "BTC/USDT",  # スポット
+        "BTC/USDT:USDT": "BTC/USDT:USDT",  # 永続契約正規化
         # Ethereum マッピング
-        "ETHUSD": "ETHUSD",             # USD永続契約
-        "ETHUSDT": "ETH/USDT:USDT",     # USDT永続契約
-        "ETH-USDT": "ETH/USDT",         # スポット
-        "ETHBTC": "ETH/BTC",            # ETH/BTC ペア
-        "ETH-BTC": "ETH/BTC",           # ETH/BTC ペア
-        "ETH/USDT:USDT": "ETH/USDT:USDT", # 永続契約正規化
+        "ETHUSD": "ETHUSD",  # USD永続契約
+        "ETHUSDT": "ETH/USDT:USDT",  # USDT永続契約
+        "ETH-USDT": "ETH/USDT",  # スポット
+        "ETHBTC": "ETH/BTC",  # ETH/BTC ペア
+        "ETH-BTC": "ETH/BTC",  # ETH/BTC ペア
+        "ETH/USDT:USDT": "ETH/USDT:USDT",  # 永続契約正規化
     }
 
     @classmethod
