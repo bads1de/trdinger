@@ -14,14 +14,12 @@ import React, { useState, useEffect } from "react";
 import CandlestickChart from "@/components/CandlestickChart";
 import TimeFrameSelector from "@/components/TimeFrameSelector";
 import SymbolSelector from "@/components/SymbolSelector";
-import OHLCVDataCollectionButton from "@/components/OHLCVDataCollectionButton";
-import BulkOHLCVDataCollectionButton from "@/components/BulkOHLCVDataCollectionButton";
+import OHLCVDataCollectionButton from "@/components/BulkOHLCVDataCollectionButton";
 import {
   CandlestickData,
   TimeFrame,
   TradingPair,
   CandlestickResponse,
-  OHLCVCollectionResult,
   BulkOHLCVCollectionResult,
 } from "@/types/strategy";
 import { BACKEND_API_URL } from "@/constants";
@@ -40,7 +38,6 @@ const DataPage: React.FC = () => {
   const [symbolsLoading, setSymbolsLoading] = useState<boolean>(true);
   const [updating, setUpdating] = useState<boolean>(false);
   const [dataStatus, setDataStatus] = useState<any>(null);
-  const [collectionMessage, setCollectionMessage] = useState<string>("");
   const [bulkCollectionMessage, setBulkCollectionMessage] =
     useState<string>("");
 
@@ -167,25 +164,7 @@ const DataPage: React.FC = () => {
     }
   };
 
-  /**
-   * OHLCVデータ収集完了時のコールバック
-   */
-  const handleCollectionComplete = (result: OHLCVCollectionResult) => {
-    setCollectionMessage(`✅ ${result.message}`);
-    // データ状況を更新
-    fetchDataStatus();
-    // 3秒後にメッセージをクリア
-    setTimeout(() => setCollectionMessage(""), 3000);
-  };
 
-  /**
-   * OHLCVデータ収集エラー時のコールバック
-   */
-  const handleCollectionError = (errorMessage: string) => {
-    setCollectionMessage(`❌ ${errorMessage}`);
-    // 5秒後にメッセージをクリア
-    setTimeout(() => setCollectionMessage(""), 5000);
-  };
 
   /**
    * 一括OHLCVデータ収集開始時のコールバック
@@ -428,45 +407,19 @@ const DataPage: React.FC = () => {
             {/* OHLCVデータ収集ボタン */}
             <div className="mt-6 pt-6 border-t border-secondary-200 dark:border-secondary-700">
               <div className="flex flex-col gap-6">
-                {/* 個別データ収集 */}
-                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                {/* 一括データ収集 */}
+                <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
                   <div>
                     <h3 className="text-lg font-medium text-secondary-900 dark:text-secondary-100">
-                      📥 個別データ収集
+                      🚀 OHLCVデータ一括収集
                     </h3>
                     <p className="text-sm text-secondary-600 dark:text-secondary-400 mt-1">
-                      選択した取引ペアと時間軸のOHLCVデータを取得
+                      全ての取引ペアと全ての時間軸でOHLCVデータを一括取得・保存します
                     </p>
                   </div>
                   <div className="flex flex-col gap-2">
                     <OHLCVDataCollectionButton
-                      selectedSymbol={selectedSymbol}
-                      timeframe={selectedTimeFrame}
-                      onCollectionComplete={handleCollectionComplete}
-                      onCollectionError={handleCollectionError}
-                      disabled={loading || updating}
-                    />
-                    {collectionMessage && (
-                      <div className="text-sm text-secondary-600 dark:text-secondary-400">
-                        {collectionMessage}
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                {/* 一括データ収集 */}
-                <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 pt-6 border-t border-secondary-200 dark:border-secondary-700">
-                  <div>
-                    <h3 className="text-lg font-medium text-secondary-900 dark:text-secondary-100">
-                      🚀 一括データ収集
-                    </h3>
-                    <p className="text-sm text-secondary-600 dark:text-secondary-400 mt-1">
-                      全ての取引ペアと全ての時間軸でOHLCVデータを一括取得
-                    </p>
-                  </div>
-                  <div className="flex flex-col gap-2">
-                    <BulkOHLCVDataCollectionButton
-                      onCollectionStart={handleBulkCollectionStart}
+                      onBulkCollectionStart={handleBulkCollectionStart}
                       onCollectionError={handleBulkCollectionError}
                       disabled={loading || updating}
                     />
