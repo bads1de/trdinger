@@ -32,8 +32,6 @@ describe("TimeFrameSelector", () => {
       );
 
       expect(screen.getByText("時間軸選択")).toBeInTheDocument();
-      expect(screen.getByText("1分")).toBeInTheDocument();
-      expect(screen.getByText("5分")).toBeInTheDocument();
       expect(screen.getByText("15分")).toBeInTheDocument();
       expect(screen.getByText("30分")).toBeInTheDocument();
       expect(screen.getByText("1時間")).toBeInTheDocument();
@@ -61,7 +59,7 @@ describe("TimeFrameSelector", () => {
         />
       );
 
-      const unselectedButton = screen.getByText("1分").closest('button');
+      const unselectedButton = screen.getByText("15分").closest('button');
       expect(unselectedButton).toHaveClass("bg-white");
       expect(unselectedButton).not.toHaveClass("bg-primary-600", "text-white");
     });
@@ -179,8 +177,6 @@ describe("TimeFrameSelector", () => {
         />
       );
 
-      expect(screen.getByText("1分").closest('button')).toHaveAttribute("title", "1分足チャート");
-      expect(screen.getByText("5分").closest('button')).toHaveAttribute("title", "5分足チャート");
       expect(screen.getByText("15分").closest('button')).toHaveAttribute(
         "title",
         "15分足チャート"
@@ -251,8 +247,6 @@ describe("TimeFrameSelector", () => {
   describe("プロパティテスト", () => {
     test("異なる選択状態で正しくレンダリングされる", () => {
       const timeFrames: TimeFrame[] = [
-        "1m",
-        "5m",
         "15m",
         "30m",
         "1h",

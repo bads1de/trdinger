@@ -21,7 +21,7 @@ class OHLCVData(Base):
     # 取引ペア（例: BTC/USD:BTC）
     symbol = Column(String(50), nullable=False, index=True)
 
-    # 時間軸（例: 1d, 1h, 1m）
+    # 時間軸（例: 1d, 4h, 1h, 30m, 15m）
     timeframe = Column(String(10), nullable=False, index=True)
 
     # タイムスタンプ（UTC）

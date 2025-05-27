@@ -71,16 +71,6 @@ export const SUPPORTED_TRADING_PAIRS: TradingPair[] = [
  */
 export const SUPPORTED_TIMEFRAMES: TimeFrameInfo[] = [
   {
-    value: "1m",
-    label: "1分",
-    description: "1分足チャート"
-  },
-  {
-    value: "5m",
-    label: "5分",
-    description: "5分足チャート"
-  },
-  {
     value: "15m",
     label: "15分",
     description: "15分足チャート"

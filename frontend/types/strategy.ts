@@ -310,7 +310,7 @@ export interface CandlestickData {
  *
  * チャートで使用可能な時間軸を定義します。
  */
-export type TimeFrame = "1m" | "5m" | "15m" | "30m" | "1h" | "4h" | "1d";
+export type TimeFrame = "15m" | "30m" | "1h" | "4h" | "1d";
 
 /**
  * 時間軸の表示情報

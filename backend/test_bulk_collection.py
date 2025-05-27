@@ -18,7 +18,7 @@ from app.config.market_config import MarketDataConfig
 
 async def test_bulk_collection_logic():
     """修正された一括収集ロジックをテスト"""
-    
+
     # サポートされている取引ペアと時間軸
     symbols = [
         "BTC/USDT", "BTC/USDT:USDT", "BTCUSD",
@@ -27,15 +27,15 @@ async def test_bulk_collection_logic():
         "BNB/USDT", "BNB/USDT:USDT",
         "SOL/USDT", "SOL/USDT:USDT"
     ]
-    timeframes = ["1m", "5m", "15m", "30m", "1h", "4h", "1d"]
+    timeframes = ["15m", "30m", "1h", "4h", "1d"]
 
     total_combinations = len(symbols) * len(timeframes)
     started_at = datetime.now(timezone.utc).isoformat()
-    
+
     db = SessionLocal()
     try:
         repository = OHLCVRepository(db)
-        
+
         # 既存データをチェックして、実際に収集が必要なタスクを特定
         tasks_to_execute = []
         skipped_tasks = []
@@ -48,10 +48,10 @@ async def test_bulk_collection_logic():
                 try:
                     # シンボルの正規化
                     normalized_symbol = MarketDataConfig.normalize_symbol(symbol)
-                    
+
                     # 既存データをチェック
                     data_exists = repository.get_data_count(normalized_symbol, timeframe) > 0
-                    
+
                     if data_exists:
                         skipped_tasks.append({
                             "symbol": normalized_symbol,
@@ -104,16 +104,16 @@ async def test_bulk_collection_logic():
                 "failed": failed_tasks
             }
         }
-        
+
         print(f"\n期待されるAPIレスポンス:")
         print(f"  success: {result['success']}")
         print(f"  message: {result['message']}")
         print(f"  total_combinations: {result['total_combinations']}")
         print(f"  actual_tasks: {result['actual_tasks']}")
         print(f"  skipped_tasks: {result['skipped_tasks']}")
-        
+
         return result
-        
+
     finally:
         db.close()
 

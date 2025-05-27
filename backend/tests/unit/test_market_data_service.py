@@ -220,11 +220,15 @@ class TestMarketDataConfig:
         # 有効な時間軸
         assert MarketDataConfig.validate_timeframe("1h") is True
         assert MarketDataConfig.validate_timeframe("1d") is True
-        assert MarketDataConfig.validate_timeframe("1m") is True
+        assert MarketDataConfig.validate_timeframe("15m") is True
+        assert MarketDataConfig.validate_timeframe("30m") is True
+        assert MarketDataConfig.validate_timeframe("4h") is True
 
         # 無効な時間軸
         assert MarketDataConfig.validate_timeframe("invalid") is False
         assert MarketDataConfig.validate_timeframe("2h") is False
+        assert MarketDataConfig.validate_timeframe("1m") is False
+        assert MarketDataConfig.validate_timeframe("5m") is False
 
     def test_limit_validation(self):
         """制限値バリデーションのテスト"""

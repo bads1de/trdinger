@@ -130,7 +130,7 @@ async def collect_bitcoin_full_data(
     """
     try:
         # 全時間軸でビットコインデータを収集
-        timeframes = ["1m", "5m", "15m", "30m", "1h", "4h", "1d"]
+        timeframes = ["15m", "30m", "1h", "4h", "1d"]
 
         for timeframe in timeframes:
             background_tasks.add_task(
@@ -178,7 +178,7 @@ async def collect_bulk_historical_data(
             "ETH/USDT:USDT",
             "ETHUSD",
         ]
-        timeframes = ["1m", "5m", "15m", "30m", "1h", "4h", "1d"]
+        timeframes = ["15m", "30m", "1h", "4h", "1d"]
 
         total_combinations = len(symbols) * len(timeframes)
         started_at = datetime.now(timezone.utc).isoformat()

@@ -34,7 +34,7 @@ class MarketDataConfig:
     ]
 
     # サポートされている時間軸
-    SUPPORTED_TIMEFRAMES = ["1m", "5m", "15m", "30m", "1h", "4h", "1d"]
+    SUPPORTED_TIMEFRAMES = ["15m", "30m", "1h", "4h", "1d"]
 
     # デフォルト設定
     DEFAULT_EXCHANGE = "bybit"

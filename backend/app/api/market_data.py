@@ -31,7 +31,7 @@ async def get_ohlcv_data(
     symbol: str = Query(..., description="取引ペアシンボル（例: BTC/USDT）"),
     timeframe: str = Query(
         MarketDataConfig.DEFAULT_TIMEFRAME,
-        description="時間軸（1m, 5m, 15m, 30m, 1h, 4h, 1d）",
+        description="時間軸（15m, 30m, 1h, 4h, 1d）",
     ),
     limit: int = Query(
         MarketDataConfig.DEFAULT_LIMIT,
