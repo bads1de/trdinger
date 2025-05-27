@@ -19,7 +19,7 @@ class MarketDataConfig:
     # サポートされている取引所
     SUPPORTED_EXCHANGES = ["bybit"]
 
-    # サポートされているシンボル（Bybit形式）- 実際に確認済みのペア
+    # サポートされているシンボル（Bybit形式）- BTCとETHのみに制限
     SUPPORTED_SYMBOLS = [
         # Bitcoin 関連
         "BTC/USDT",         # Bitcoin スポット
@@ -31,18 +31,6 @@ class MarketDataConfig:
         "ETH/USDT:USDT",    # Ethereum USDT永続契約
         "ETH/BTC",          # Ethereum/Bitcoin ペア
         "ETHUSD",           # Ethereum USD永続契約
-
-        # XRP 関連
-        "XRP/USDT",         # XRP スポット
-        "XRP/USDT:USDT",    # XRP USDT永続契約
-
-        # BNB 関連
-        "BNB/USDT",         # BNB スポット
-        "BNB/USDT:USDT",    # BNB USDT永続契約
-
-        # SOL 関連
-        "SOL/USDT",         # SOL スポット
-        "SOL/USDT:USDT",    # SOL USDT永続契約
     ]
 
     # サポートされている時間軸
@@ -104,7 +92,7 @@ class MarketDataConfig:
         """
         return cls.MIN_LIMIT <= limit <= cls.MAX_LIMIT
 
-    # シンボル正規化マッピング（実際に確認済みのペアのみ）
+    # シンボル正規化マッピング（BTCとETHのみ）
     SYMBOL_MAPPING = {
         # Bitcoin マッピング
         "BTCUSD": "BTCUSD",             # USD永続契約
@@ -119,21 +107,6 @@ class MarketDataConfig:
         "ETHBTC": "ETH/BTC",            # ETH/BTC ペア
         "ETH-BTC": "ETH/BTC",           # ETH/BTC ペア
         "ETH/USDT:USDT": "ETH/USDT:USDT", # 永続契約正規化
-
-        # XRP マッピング
-        "XRPUSDT": "XRP/USDT:USDT",     # USDT永続契約
-        "XRP-USDT": "XRP/USDT",         # スポット
-        "XRP/USDT:USDT": "XRP/USDT:USDT", # 永続契約正規化
-
-        # BNB マッピング
-        "BNBUSDT": "BNB/USDT:USDT",     # USDT永続契約
-        "BNB-USDT": "BNB/USDT",         # スポット
-        "BNB/USDT:USDT": "BNB/USDT:USDT", # 永続契約正規化
-
-        # SOL マッピング
-        "SOLUSDT": "SOL/USDT:USDT",     # USDT永続契約
-        "SOL-USDT": "SOL/USDT",         # スポット
-        "SOL/USDT:USDT": "SOL/USDT:USDT", # 永続契約正規化
     }
 
     @classmethod

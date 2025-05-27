@@ -118,10 +118,10 @@ class TestBybitMarketDataService:
         """
         # 様々な形式のシンボルが正規化されることを確認
         test_cases = [
-            ("BTCUSD", "BTC/USDT"),
-            ("BTC/USD", "BTC/USDT"),
+            ("BTCUSD", "BTCUSD"),  # USD永続契約はそのまま
+            ("ETHUSD", "ETHUSD"),  # USD永続契約はそのまま
             ("btc/usdt", "BTC/USDT"),
-            ("BTC-USD", "BTC/USDT"),
+            ("BTC-USDT", "BTC/USDT"),
         ]
 
         for input_symbol, expected in test_cases:
@@ -181,20 +181,13 @@ class TestMarketDataConfig:
     """設定クラスのテストクラス"""
 
     def test_supported_symbols_contains_major_pairs(self):
-        """主要10銘柄がサポートされているかテスト"""
+        """主要ペアがサポートされているかテスト（BTCとETHのみ）"""
         from app.config.market_config import MarketDataConfig
 
         expected_symbols = [
             "BTC/USDT",
             "ETH/USDT",
-            "BNB/USDT",
-            "ADA/USDT",
-            "SOL/USDT",
-            "XRP/USDT",
-            "DOT/USDT",
-            "AVAX/USDT",
-            "LTC/USDT",
-            "UNI/USDT",
+            "ETH/BTC",
         ]
 
         for symbol in expected_symbols:
@@ -207,12 +200,12 @@ class TestMarketDataConfig:
         assert MarketDataConfig.DEFAULT_SYMBOL == "BTC/USDT"
 
     def test_symbol_normalization(self):
-        """シンボル正規化のテスト"""
+        """シンボル正規化のテスト（BTCとETHのみ）"""
         from app.config.market_config import MarketDataConfig
 
         # 正常なケース
-        assert MarketDataConfig.normalize_symbol("BTCUSD") == "BTC/USDT"
-        assert MarketDataConfig.normalize_symbol("ETHUSD") == "ETH/USDT"
+        assert MarketDataConfig.normalize_symbol("BTCUSD") == "BTCUSD"  # USD永続契約はそのまま
+        assert MarketDataConfig.normalize_symbol("ETHUSD") == "ETHUSD"  # USD永続契約はそのまま
         assert MarketDataConfig.normalize_symbol("BTC/USDT") == "BTC/USDT"
         assert MarketDataConfig.normalize_symbol(" btc/usdt ") == "BTC/USDT"
 

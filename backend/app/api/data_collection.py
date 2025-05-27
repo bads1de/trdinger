@@ -168,7 +168,7 @@ async def collect_bulk_historical_data(
     try:
         from datetime import datetime, timezone
 
-        # サポートされている取引ペアと時間軸
+        # サポートされている取引ペアと時間軸（BTCとETHのみに制限）
         symbols = [
             "BTC/USDT",
             "BTC/USDT:USDT",
@@ -177,12 +177,6 @@ async def collect_bulk_historical_data(
             "ETH/BTC",
             "ETH/USDT:USDT",
             "ETHUSD",
-            "XRP/USDT",
-            "XRP/USDT:USDT",
-            "BNB/USDT",
-            "BNB/USDT:USDT",
-            "SOL/USDT",
-            "SOL/USDT:USDT",
         ]
         timeframes = ["1m", "5m", "15m", "30m", "1h", "4h", "1d"]
 

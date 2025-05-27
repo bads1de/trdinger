@@ -13,7 +13,7 @@ import { TradingPair, TimeFrameInfo } from '@/types/strategy';
 export const BACKEND_API_URL = "http://127.0.0.1:8000";
 
 /**
- * サポートされている取引ペア（実際にBybitで確認済み）
+ * サポートされている取引ペア（BTCとETHのみに制限）
  *
  * 各ペアは実際にBybitで利用可能であることが確認されています。
  * スポット市場と先物市場（永続契約）の両方を含みます。
@@ -63,48 +63,6 @@ export const SUPPORTED_TRADING_PAIRS: TradingPair[] = [
     name: "Ethereum / USD Perpetual",
     base: "ETH",
     quote: "USD"
-  },
-
-  // XRP ペア
-  {
-    symbol: "XRP/USDT",
-    name: "XRP / Tether USD (Spot)",
-    base: "XRP",
-    quote: "USDT"
-  },
-  {
-    symbol: "XRP/USDT:USDT",
-    name: "XRP / USDT Perpetual",
-    base: "XRP",
-    quote: "USDT"
-  },
-
-  // BNB ペア
-  {
-    symbol: "BNB/USDT",
-    name: "Binance Coin / Tether USD (Spot)",
-    base: "BNB",
-    quote: "USDT"
-  },
-  {
-    symbol: "BNB/USDT:USDT",
-    name: "Binance Coin / USDT Perpetual",
-    base: "BNB",
-    quote: "USDT"
-  },
-
-  // SOL ペア
-  {
-    symbol: "SOL/USDT",
-    name: "Solana / Tether USD (Spot)",
-    base: "SOL",
-    quote: "USDT"
-  },
-  {
-    symbol: "SOL/USDT:USDT",
-    name: "Solana / USDT Perpetual",
-    base: "SOL",
-    quote: "USDT"
   },
 ];
 
@@ -179,14 +137,11 @@ export function categorizeTradingPairs(pairs: TradingPair[]) {
 }
 
 /**
- * 通貨ペアの表示用アイコンを取得する関数
+ * 通貨ペアの表示用アイコンを取得する関数（BTCとETHのみ）
  */
 export function getTradingPairIcon(symbol: string): string {
   if (symbol.includes('BTC')) return '₿';
   if (symbol.includes('ETH')) return 'Ξ';
-  if (symbol.includes('XRP')) return '◉';
-  if (symbol.includes('BNB')) return '🔶';
-  if (symbol.includes('SOL')) return '◎';
   return '💰';
 }
 
