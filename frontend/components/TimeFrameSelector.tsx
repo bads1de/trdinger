@@ -60,7 +60,7 @@ const TimeFrameSelector: React.FC<TimeFrameSelectorProps> = ({
                 ${
                   isSelected
                     ? 'bg-primary-600 text-white shadow-enterprise border border-primary-600 scale-105'
-                    : 'bg-white dark:bg-secondary-800 text-secondary-700 dark:text-secondary-300 border border-secondary-300 dark:border-secondary-600 hover:border-primary-400 dark:hover:border-primary-500 hover:bg-primary-50 dark:hover:bg-primary-900/20'
+                    : 'bg-gray-900 dark:bg-gray-900 text-gray-300 dark:text-gray-300 border border-gray-700 dark:border-gray-700 hover:border-primary-400 dark:hover:border-primary-500 hover:bg-primary-900/20 dark:hover:bg-primary-900/20'
                 }
                 ${
                   disabled
@@ -73,7 +73,7 @@ const TimeFrameSelector: React.FC<TimeFrameSelectorProps> = ({
             >
               {/* アクティブインジケーター */}
               {isSelected && (
-                <div className="absolute -top-1 -right-1 w-3 h-3 bg-accent-500 rounded-full border-2 border-white dark:border-secondary-800 animate-pulse"></div>
+                <div className="absolute -top-1 -right-1 w-3 h-3 bg-accent-500 rounded-full border-2 border-gray-900 dark:border-gray-900 animate-pulse"></div>
               )}
 
               {/* ホバーエフェクト */}
@@ -93,20 +93,20 @@ const TimeFrameSelector: React.FC<TimeFrameSelectorProps> = ({
       </div>
 
       {/* 選択中の時間軸情報 */}
-      <div className="mt-3 p-3 bg-secondary-50 dark:bg-secondary-800/50 rounded-enterprise border border-secondary-200 dark:border-secondary-700">
+      <div className="mt-3 p-3 bg-gray-900 dark:bg-gray-900 rounded-enterprise border border-gray-700 dark:border-gray-700">
         <div className="flex items-center gap-2">
           <div className="w-2 h-2 bg-primary-500 rounded-full animate-pulse"></div>
-          <span className="text-sm font-medium text-secondary-700 dark:text-secondary-300">
+          <span className="text-sm font-medium text-gray-300 dark:text-gray-300">
             選択中: {SUPPORTED_TIMEFRAMES.find(tf => tf.value === selectedTimeFrame)?.description}
           </span>
         </div>
-        <p className="text-xs text-secondary-500 dark:text-secondary-400 mt-1 ml-4">
+        <p className="text-xs text-gray-400 dark:text-gray-400 mt-1 ml-4">
           この時間軸でチャートデータを表示します
         </p>
       </div>
 
       {/* ヘルプテキスト */}
-      <p className="text-xs text-secondary-500 dark:text-secondary-400 flex items-center gap-1">
+      <p className="text-xs text-gray-400 dark:text-gray-400 flex items-center gap-1">
         <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
         </svg>

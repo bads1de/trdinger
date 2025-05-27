@@ -37,7 +37,7 @@ module.exports = {
           900: "#1e3a8a",
           950: "#172554",
         },
-        // セカンダリーカラー（グレー系）
+        // セカンダリーカラー（より深い黒系グレー）
         secondary: {
           50: "#f8fafc",
           100: "#f1f5f9",
@@ -46,10 +46,10 @@ module.exports = {
           400: "#94a3b8",
           500: "#64748b",
           600: "#475569",
-          700: "#334155",
-          800: "#1e293b",
-          900: "#0f172a",
-          950: "#020617",
+          700: "#1a1a1a",
+          800: "#0d0d0d",
+          900: "#050505",
+          950: "#000000",
         },
         // アクセントカラー（エメラルド系）
         accent: {
@@ -128,19 +128,19 @@ module.exports = {
         ],
       },
 
-      // エンタープライズシャドウシステム
+      // エンタープライズシャドウシステム - より深い黒色用
       boxShadow: {
-        "enterprise-sm": "0 1px 2px 0 rgba(0, 0, 0, 0.05)",
+        "enterprise-sm": "0 1px 2px 0 rgba(0, 0, 0, 0.3)",
         enterprise:
-          "0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06)",
+          "0 1px 3px 0 rgba(0, 0, 0, 0.4), 0 1px 2px 0 rgba(0, 0, 0, 0.3)",
         "enterprise-md":
-          "0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)",
+          "0 4px 6px -1px rgba(0, 0, 0, 0.4), 0 2px 4px -1px rgba(0, 0, 0, 0.3)",
         "enterprise-lg":
-          "0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)",
+          "0 10px 15px -3px rgba(0, 0, 0, 0.4), 0 4px 6px -2px rgba(0, 0, 0, 0.3)",
         "enterprise-xl":
-          "0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)",
-        "enterprise-2xl": "0 25px 50px -12px rgba(0, 0, 0, 0.25)",
-        "enterprise-inner": "inset 0 2px 4px 0 rgba(0, 0, 0, 0.06)",
+          "0 20px 25px -5px rgba(0, 0, 0, 0.4), 0 10px 10px -5px rgba(0, 0, 0, 0.3)",
+        "enterprise-2xl": "0 25px 50px -12px rgba(0, 0, 0, 0.6)",
+        "enterprise-inner": "inset 0 2px 4px 0 rgba(0, 0, 0, 0.3)",
       },
 
       // エンタープライズボーダーラディウス
