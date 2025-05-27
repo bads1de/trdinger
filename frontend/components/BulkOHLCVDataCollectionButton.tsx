@@ -246,7 +246,7 @@ const OHLCVDataCollectionButton: React.FC<OHLCVDataCollectionButtonProps> = ({
       </button>
 
       {/* 説明テキスト */}
-      <div className="text-sm text-secondary-600 dark:text-secondary-400">
+      <div className="text-sm text-gray-400 dark:text-gray-400">
         <div className="flex items-center gap-2 mb-1">
           <span className="inline-block w-2 h-2 bg-primary-500 rounded-full"></span>
           <span>全ての取引ペア: {SUPPORTED_TRADING_PAIRS.length}個</span>
@@ -263,7 +263,7 @@ const OHLCVDataCollectionButton: React.FC<OHLCVDataCollectionButtonProps> = ({
 
       {/* 結果メッセージ表示 */}
       {lastResult && buttonState === 'success' && (
-        <div className="text-sm text-success-600 dark:text-success-400 bg-success-50 dark:bg-success-900/20 p-3 rounded-lg border border-success-200 dark:border-success-800">
+        <div className="text-sm text-success-400 dark:text-success-400 bg-gray-900 dark:bg-gray-900 p-3 rounded-lg border border-gray-700 dark:border-gray-700">
           <div className="font-medium mb-1">{lastResult.message}</div>
           <div className="text-xs">
             {lastResult.total_tasks}個のタスクを開始しました

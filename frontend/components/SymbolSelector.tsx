@@ -80,8 +80,8 @@ const SymbolSelector: React.FC<SymbolSelectorProps> = ({
             onClick={() => setIsOpen(!isOpen)}
             disabled={disabled || loading}
             className={`
-              w-full min-w-[320px] px-4 py-3 text-left bg-white dark:bg-gray-800
-              border border-gray-300 dark:border-gray-600 rounded-enterprise
+              w-full min-w-[320px] px-4 py-3 text-left bg-gray-900 dark:bg-gray-900
+              border border-gray-700 dark:border-gray-700 rounded-enterprise
               flex items-center justify-between gap-3
               ${
                 disabled || loading
@@ -121,11 +121,11 @@ const SymbolSelector: React.FC<SymbolSelectorProps> = ({
 
           {/* ドロップダウンメニュー */}
           {isOpen && !loading && (
-            <div className="absolute z-50 w-full mt-1 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-enterprise shadow-enterprise-lg max-h-80 overflow-y-auto">
+            <div className="absolute z-50 w-full mt-1 bg-gray-900 dark:bg-gray-900 border border-gray-700 dark:border-gray-700 rounded-enterprise shadow-enterprise-lg max-h-80 overflow-y-auto">
               {/* スポットペア */}
               {categorizedPairs.spot.length > 0 && (
                 <div>
-                  <div className="px-4 py-2 text-xs font-semibold text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-700 border-b border-gray-200 dark:border-gray-600">
+                  <div className="px-4 py-2 text-xs font-semibold text-gray-400 dark:text-gray-400 bg-gray-800 dark:bg-gray-800 border-b border-gray-700 dark:border-gray-700">
                     💰 スポット取引
                   </div>
                   {categorizedPairs.spot.map((pair) => (
@@ -133,12 +133,12 @@ const SymbolSelector: React.FC<SymbolSelectorProps> = ({
                       key={pair.symbol}
                       onClick={() => handleSymbolSelect(pair.symbol)}
                       className={`
-                        w-full px-4 py-3 text-left hover:bg-gray-50 dark:hover:bg-gray-700
+                        w-full px-4 py-3 text-left hover:bg-gray-800 dark:hover:bg-gray-800
                         flex items-center gap-3 transition-colors duration-150
                         ${
                           selectedSymbol === pair.symbol
-                            ? 'bg-primary-50 dark:bg-primary-900/20 text-primary-700 dark:text-primary-300'
-                            : 'text-gray-900 dark:text-gray-100'
+                            ? 'bg-primary-900/20 dark:bg-primary-900/20 text-primary-300 dark:text-primary-300'
+                            : 'text-gray-100 dark:text-gray-100'
                         }
                       `}
                     >
@@ -160,7 +160,7 @@ const SymbolSelector: React.FC<SymbolSelectorProps> = ({
               {/* 永続契約 */}
               {categorizedPairs.perpetual.length > 0 && (
                 <div>
-                  <div className="px-4 py-2 text-xs font-semibold text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-700 border-b border-gray-200 dark:border-gray-600">
+                  <div className="px-4 py-2 text-xs font-semibold text-gray-400 dark:text-gray-400 bg-gray-800 dark:bg-gray-800 border-b border-gray-700 dark:border-gray-700">
                     ⚡ 永続契約
                   </div>
                   {categorizedPairs.perpetual.map((pair) => (
@@ -168,12 +168,12 @@ const SymbolSelector: React.FC<SymbolSelectorProps> = ({
                       key={pair.symbol}
                       onClick={() => handleSymbolSelect(pair.symbol)}
                       className={`
-                        w-full px-4 py-3 text-left hover:bg-gray-50 dark:hover:bg-gray-700
+                        w-full px-4 py-3 text-left hover:bg-gray-800 dark:hover:bg-gray-800
                         flex items-center gap-3 transition-colors duration-150
                         ${
                           selectedSymbol === pair.symbol
-                            ? 'bg-primary-50 dark:bg-primary-900/20 text-primary-700 dark:text-primary-300'
-                            : 'text-gray-900 dark:text-gray-100'
+                            ? 'bg-primary-900/20 dark:bg-primary-900/20 text-primary-300 dark:text-primary-300'
+                            : 'text-gray-100 dark:text-gray-100'
                         }
                       `}
                     >
@@ -196,7 +196,7 @@ const SymbolSelector: React.FC<SymbolSelectorProps> = ({
         </div>
 
         {/* ヘルプテキスト */}
-        <div className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
+        <div className="flex items-center justify-between text-xs text-gray-400 dark:text-gray-400">
           <div className="flex items-center gap-1">
             <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />

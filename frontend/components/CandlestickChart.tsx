@@ -136,11 +136,11 @@ const CandlestickChart: React.FC<CandlestickChartProps> = ({
   if (error) {
     return (
       <div
-        className="flex items-center justify-center bg-error-50 dark:bg-error-900/20 rounded-enterprise-lg border border-error-200 dark:border-error-800"
+        className="flex items-center justify-center bg-gray-900 dark:bg-gray-900 rounded-enterprise-lg border border-gray-700 dark:border-gray-700"
         style={{ height }}
       >
         <div className="text-center p-8">
-          <div className="w-16 h-16 mx-auto mb-4 bg-error-100 dark:bg-error-900/50 rounded-full flex items-center justify-center">
+          <div className="w-16 h-16 mx-auto mb-4 bg-gray-800 dark:bg-gray-800 rounded-full flex items-center justify-center">
             <svg
               className="w-8 h-8 text-error-600 dark:text-error-400"
               fill="none"
@@ -173,14 +173,14 @@ const CandlestickChart: React.FC<CandlestickChartProps> = ({
   if (loading) {
     return (
       <div
-        className="flex items-center justify-center bg-secondary-50 dark:bg-secondary-900/50 rounded-enterprise-lg border border-secondary-200 dark:border-secondary-700"
+        className="flex items-center justify-center bg-gray-900 dark:bg-gray-900 rounded-enterprise-lg border border-gray-700 dark:border-gray-700"
         style={{ height }}
       >
         <div className="text-center p-8">
           <div className="relative w-16 h-16 mx-auto mb-4">
-            <div className="absolute inset-0 border-4 border-secondary-200 dark:border-secondary-700 rounded-full"></div>
+            <div className="absolute inset-0 border-4 border-gray-700 dark:border-gray-700 rounded-full"></div>
             <div className="absolute inset-0 border-4 border-primary-600 border-t-transparent rounded-full animate-spin"></div>
-            <div className="absolute inset-2 bg-primary-100 dark:bg-primary-900/50 rounded-full flex items-center justify-center">
+            <div className="absolute inset-2 bg-gray-800 dark:bg-gray-800 rounded-full flex items-center justify-center">
               <svg
                 className="w-6 h-6 text-primary-600 dark:text-primary-400"
                 fill="none"
@@ -196,10 +196,10 @@ const CandlestickChart: React.FC<CandlestickChartProps> = ({
               </svg>
             </div>
           </div>
-          <h3 className="text-lg font-semibold text-secondary-800 dark:text-secondary-200 mb-2">
+          <h3 className="text-lg font-semibold text-gray-200 dark:text-gray-200 mb-2">
             📈 チャートデータを読み込み中
           </h3>
-          <p className="text-sm text-secondary-600 dark:text-secondary-400">
+          <p className="text-sm text-gray-400 dark:text-gray-400">
             高精度なローソク足データを取得しています...
           </p>
           <div className="mt-4">
@@ -214,13 +214,13 @@ const CandlestickChart: React.FC<CandlestickChartProps> = ({
   if (!data || data.length === 0) {
     return (
       <div
-        className="flex items-center justify-center bg-secondary-50 dark:bg-secondary-900/50 rounded-enterprise-lg border border-secondary-200 dark:border-secondary-700"
+        className="flex items-center justify-center bg-gray-900 dark:bg-gray-900 rounded-enterprise-lg border border-gray-700 dark:border-gray-700"
         style={{ height }}
       >
         <div className="text-center p-8">
-          <div className="w-16 h-16 mx-auto mb-4 bg-secondary-100 dark:bg-secondary-800 rounded-full flex items-center justify-center">
+          <div className="w-16 h-16 mx-auto mb-4 bg-gray-800 dark:bg-gray-800 rounded-full flex items-center justify-center">
             <svg
-              className="w-8 h-8 text-secondary-500 dark:text-secondary-400"
+              className="w-8 h-8 text-gray-400 dark:text-gray-400"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -236,7 +236,7 @@ const CandlestickChart: React.FC<CandlestickChartProps> = ({
           <h3 className="text-lg font-semibold text-secondary-700 dark:text-secondary-300 mb-2">
             📊 データがありません
           </h3>
-          <p className="text-sm text-secondary-600 dark:text-secondary-400">
+          <p className="text-sm text-gray-400 dark:text-gray-400">
             選択した通貨ペアと時間軸の組み合わせでは、表示できるデータがありません
           </p>
           <div className="mt-4">
@@ -250,7 +250,7 @@ const CandlestickChart: React.FC<CandlestickChartProps> = ({
   return (
     <div className="w-full relative">
       {/* チャートコンテナ */}
-      <div className="bg-white dark:bg-secondary-900 rounded-enterprise-lg border border-secondary-200 dark:border-secondary-700 overflow-hidden">
+      <div className="bg-gray-900 dark:bg-gray-900 rounded-enterprise-lg border border-gray-700 dark:border-gray-700 overflow-hidden">
         <Chart
           options={chartOptions}
           series={chartSeries}

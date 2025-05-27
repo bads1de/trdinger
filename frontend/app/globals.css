@@ -18,12 +18,12 @@
 
 /* エンタープライズデザインシステムのCSS変数定義 - ダークモードオンリー */
 :root {
-  /* ダークモードのカラーシステム */
-  --color-background: 2, 6, 23;
-  --color-surface: 15, 23, 42;
-  --color-surface-secondary: 30, 41, 59;
-  --color-border: 51, 65, 85;
-  --color-border-secondary: 30, 41, 59;
+  /* ダークモードのカラーシステム - より深い黒色 */
+  --color-background: 0, 0, 0;
+  --color-surface: 8, 8, 8;
+  --color-surface-secondary: 16, 16, 16;
+  --color-border: 32, 32, 32;
+  --color-border-secondary: 24, 24, 24;
   --color-text-primary: 248, 250, 252;
   --color-text-secondary: 203, 213, 225;
   --color-text-tertiary: 148, 163, 184;
@@ -40,11 +40,11 @@
   --color-error: 239, 68, 68;
   --color-info: 59, 130, 246;
 
-  /* ダークモード用シャドウ */
-  --shadow-enterprise: 0 1px 3px 0 rgba(0, 0, 0, 0.3),
-    0 1px 2px 0 rgba(0, 0, 0, 0.2);
-  --shadow-enterprise-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.3),
-    0 4px 6px -2px rgba(0, 0, 0, 0.2);
+  /* ダークモード用シャドウ - より深い黒色用 */
+  --shadow-enterprise: 0 1px 3px 0 rgba(0, 0, 0, 0.5),
+    0 1px 2px 0 rgba(0, 0, 0, 0.4);
+  --shadow-enterprise-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.5),
+    0 4px 6px -2px rgba(0, 0, 0, 0.4);
 
   /* アニメーション */
   --transition-base: 150ms ease-in-out;
@@ -62,7 +62,7 @@
   }
 
   body {
-    @apply bg-secondary-950 text-secondary-100;
+    @apply bg-black text-secondary-100;
     @apply font-sans antialiased;
     @apply transition-colors duration-300;
     font-feature-settings: "cv02", "cv03", "cv04", "cv11";
@@ -84,15 +84,15 @@
   }
 
   ::-webkit-scrollbar-track {
-    @apply bg-secondary-800;
+    @apply bg-gray-900;
   }
 
   ::-webkit-scrollbar-thumb {
-    @apply bg-secondary-600 rounded-full;
+    @apply bg-gray-600 rounded-full;
   }
 
   ::-webkit-scrollbar-thumb:hover {
-    @apply bg-secondary-500;
+    @apply bg-gray-500;
   }
 }
 
@@ -100,15 +100,15 @@
 @layer components {
   /* エンタープライズカード */
   .enterprise-card {
-    @apply bg-secondary-800;
-    @apply border border-secondary-700;
+    @apply bg-gray-900;
+    @apply border border-gray-800;
     @apply rounded-enterprise-lg shadow-enterprise;
     @apply transition-all duration-200;
   }
 
   .enterprise-card:hover {
     @apply shadow-enterprise-lg;
-    @apply border-secondary-600;
+    @apply border-gray-700;
   }
 
   /* エンタープライズボタン - プライマリ */
@@ -128,12 +128,12 @@
   .btn-secondary {
     @apply inline-flex items-center justify-center;
     @apply px-4 py-2 text-sm font-medium;
-    @apply bg-secondary-800;
-    @apply text-secondary-200;
-    @apply border border-secondary-600;
+    @apply bg-gray-900;
+    @apply text-gray-200;
+    @apply border border-gray-700;
     @apply rounded-enterprise shadow-enterprise-sm;
     @apply transition-all duration-200;
-    @apply hover:bg-secondary-700;
+    @apply hover:bg-gray-800;
     @apply focus:ring-2 focus:ring-primary-500 focus:ring-offset-2;
     @apply disabled:opacity-50 disabled:cursor-not-allowed;
   }
@@ -141,11 +141,11 @@
   /* エンタープライズ入力フィールド */
   .input-enterprise {
     @apply block w-full px-3 py-2;
-    @apply bg-secondary-800;
-    @apply border border-secondary-600;
+    @apply bg-gray-900;
+    @apply border border-gray-700;
     @apply rounded-enterprise shadow-enterprise-sm;
-    @apply text-secondary-100;
-    @apply placeholder-secondary-500;
+    @apply text-gray-100;
+    @apply placeholder-gray-500;
     @apply transition-all duration-200;
     @apply focus:ring-2 focus:ring-primary-500 focus:border-primary-500;
     @apply disabled:opacity-50 disabled:cursor-not-allowed;
@@ -203,8 +203,8 @@
 @layer utilities {
   /* グラスモーフィズム効果 */
   .glass-effect {
-    @apply backdrop-blur-sm bg-secondary-900/80;
-    @apply border border-secondary-700/50;
+    @apply backdrop-blur-sm bg-black/80;
+    @apply border border-gray-800/50;
   }
 
   /* テキストグラデーション */
