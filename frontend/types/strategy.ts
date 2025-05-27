@@ -9,6 +9,95 @@
  */
 
 /**
+ * OHLCVデータ収集結果
+ */
+export interface OHLCVCollectionResult {
+  /** 処理成功フラグ */
+  success: boolean;
+  /** 結果メッセージ */
+  message: string;
+  /** 保存された件数 */
+  saved_count?: number;
+  /** スキップされた件数（重複） */
+  skipped_count?: number;
+  /** 処理ステータス */
+  status?: "started" | "exists" | "completed" | "error";
+}
+
+/**
+ * OHLCVデータ収集リクエスト
+ */
+export interface OHLCVCollectionRequest {
+  /** 取引ペアシンボル */
+  symbol: string;
+  /** 時間軸 */
+  timeframe: string;
+}
+
+/**
+ * 一括OHLCVデータ収集結果
+ */
+export interface BulkOHLCVCollectionResult {
+  /** 処理成功フラグ */
+  success: boolean;
+  /** 結果メッセージ */
+  message: string;
+  /** 処理開始時刻 */
+  started_at: string;
+  /** 処理ステータス */
+  status: "started" | "in_progress" | "completed" | "error";
+  /** 総組み合わせ数 */
+  total_combinations?: number;
+  /** 実際に実行されるタスク数 */
+  actual_tasks?: number;
+  /** スキップされたタスク数 */
+  skipped_tasks?: number;
+  /** 失敗したタスク数 */
+  failed_tasks?: number;
+  /** 処理対象の総数（後方互換性のため） */
+  total_tasks?: number;
+  /** 処理済みの数（後方互換性のため） */
+  completed_tasks?: number;
+  /** 成功した数（後方互換性のため） */
+  successful_tasks?: number;
+  /** 対象シンボル一覧 */
+  symbols?: string[];
+  /** 対象時間軸一覧 */
+  timeframes?: string[];
+  /** タスクの詳細情報 */
+  task_details?: {
+    /** 実行中のタスク */
+    executing: Array<{
+      symbol: string;
+      original_symbol: string;
+      timeframe: string;
+    }>;
+    /** スキップされたタスク */
+    skipped: Array<{
+      symbol: string;
+      original_symbol: string;
+      timeframe: string;
+      reason: string;
+    }>;
+    /** 失敗したタスク */
+    failed: Array<{
+      symbol: string;
+      timeframe: string;
+      error: string;
+    }>;
+  };
+  /** 個別タスクの結果（後方互換性のため） */
+  task_results?: Array<{
+    symbol: string;
+    timeframe: string;
+    success: boolean;
+    message: string;
+    saved_count?: number;
+    skipped_count?: number;
+  }>;
+}
+
+/**
  * テクニカル指標の定義
  *
  * 各種テクニカル指標（SMA、EMA、RSI等）の設定を表現します。

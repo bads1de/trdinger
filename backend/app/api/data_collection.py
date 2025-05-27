@@ -149,6 +149,143 @@ async def collect_bitcoin_full_data(
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@router.post("/bulk-historical")
+async def collect_bulk_historical_data(
+    background_tasks: BackgroundTasks, db: Session = Depends(get_db)
+) -> Dict:
+    """
+    全ての取引ペアと全ての時間軸でOHLCVデータを一括収集
+
+    既存データをチェックし、データが存在しない組み合わせのみ収集を実行します。
+
+    Args:
+        background_tasks: バックグラウンドタスク
+        db: データベースセッション
+
+    Returns:
+        一括収集開始レスポンス
+    """
+    try:
+        from datetime import datetime, timezone
+
+        # サポートされている取引ペアと時間軸
+        symbols = [
+            "BTC/USDT",
+            "BTC/USDT:USDT",
+            "BTCUSD",
+            "ETH/USDT",
+            "ETH/BTC",
+            "ETH/USDT:USDT",
+            "ETHUSD",
+            "XRP/USDT",
+            "XRP/USDT:USDT",
+            "BNB/USDT",
+            "BNB/USDT:USDT",
+            "SOL/USDT",
+            "SOL/USDT:USDT",
+        ]
+        timeframes = ["1m", "5m", "15m", "30m", "1h", "4h", "1d"]
+
+        total_combinations = len(symbols) * len(timeframes)
+        started_at = datetime.now(timezone.utc).isoformat()
+
+        repository = OHLCVRepository(db)
+
+        # 既存データをチェックして、実際に収集が必要なタスクを特定
+        tasks_to_execute = []
+        skipped_tasks = []
+        failed_tasks = []
+
+        logger.info(
+            f"[修正版] 一括データ収集開始: {len(symbols)}個のシンボル × {len(timeframes)}個の時間軸 = {total_combinations}組み合わせを確認"
+        )
+
+        for symbol in symbols:
+            for timeframe in timeframes:
+                try:
+                    # シンボルの正規化
+                    normalized_symbol = MarketDataConfig.normalize_symbol(symbol)
+
+                    # 既存データをチェック
+                    data_exists = (
+                        repository.get_data_count(normalized_symbol, timeframe) > 0
+                    )
+
+                    if data_exists:
+                        skipped_tasks.append(
+                            {
+                                "symbol": normalized_symbol,
+                                "original_symbol": symbol,
+                                "timeframe": timeframe,
+                                "reason": "data_exists",
+                            }
+                        )
+                        logger.debug(
+                            f"スキップ: {normalized_symbol} {timeframe} - データが既に存在"
+                        )
+                    else:
+                        # データが存在しない場合のみバックグラウンドタスクとして追加
+                        background_tasks.add_task(
+                            _collect_historical_background,
+                            normalized_symbol,
+                            timeframe,
+                            db,
+                        )
+                        tasks_to_execute.append(
+                            {
+                                "symbol": normalized_symbol,
+                                "original_symbol": symbol,
+                                "timeframe": timeframe,
+                            }
+                        )
+                        logger.info(f"タスク追加: {normalized_symbol} {timeframe}")
+
+                except Exception as task_error:
+                    logger.warning(
+                        f"タスク処理エラー {symbol} {timeframe}: {task_error}"
+                    )
+                    failed_tasks.append(
+                        {
+                            "symbol": symbol,
+                            "timeframe": timeframe,
+                            "error": str(task_error),
+                        }
+                    )
+                    continue
+
+        actual_tasks = len(tasks_to_execute)
+        skipped_count = len(skipped_tasks)
+        failed_count = len(failed_tasks)
+
+        logger.info(f"一括データ収集タスク分析完了:")
+        logger.info(f"  - 総組み合わせ数: {total_combinations}")
+        logger.info(f"  - 実行タスク数: {actual_tasks}")
+        logger.info(f"  - スキップ数: {skipped_count} (既存データ)")
+        logger.info(f"  - 失敗数: {failed_count}")
+
+        return {
+            "success": True,
+            "message": f"一括データ収集を開始しました（{actual_tasks}タスク実行、{skipped_count}タスクスキップ）",
+            "status": "started",
+            "total_combinations": total_combinations,
+            "actual_tasks": actual_tasks,
+            "skipped_tasks": skipped_count,
+            "failed_tasks": failed_count,
+            "started_at": started_at,
+            "symbols": symbols,
+            "timeframes": timeframes,
+            "task_details": {
+                "executing": tasks_to_execute,
+                "skipped": skipped_tasks,
+                "failed": failed_tasks,
+            },
+        }
+
+    except Exception as e:
+        logger.error(f"一括データ収集開始エラー: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @router.get("/status/{symbol:path}/{timeframe}")
 async def get_collection_status(
     symbol: str,
@@ -271,6 +408,19 @@ async def get_supported_symbols() -> Dict:
     except Exception as e:
         logger.error(f"サポートシンボル一覧取得エラー: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/test-modified")
+async def test_modified_code() -> Dict:
+    """
+    修正されたコードが動作しているかをテスト
+    """
+    logger.info("テストエンドポイントが呼び出されました - 修正版コードが動作中")
+    return {
+        "success": True,
+        "message": "修正されたコードが正常に動作しています",
+        "version": "modified_2025_05_27",
+    }
 
 
 async def _collect_historical_background(symbol: str, timeframe: str, db: Session):
