@@ -9,7 +9,7 @@ from sqlalchemy.orm import Session
 from typing import Dict
 
 from app.core.services.historical_data_service import HistoricalDataService
-from database.connection import get_db
+from database.connection import get_db, ensure_db_initialized
 from database.repository import OHLCVRepository
 from app.config.market_config import MarketDataConfig  # 追加
 import logging
@@ -39,6 +39,13 @@ async def collect_historical_data(
         収集開始レスポンスまたは既存データ情報
     """
     try:
+        # データベース初期化確認
+        if not ensure_db_initialized():
+            logger.error("データベースの初期化に失敗しました")
+            raise HTTPException(
+                status_code=500, detail="データベースの初期化に失敗しました"
+            )
+
         # シンボルと時間軸のバリデーション (market_config を使用)
         try:
             normalized_symbol = MarketDataConfig.normalize_symbol(symbol)
@@ -166,6 +173,13 @@ async def collect_bulk_historical_data(
         一括収集開始レスポンス
     """
     try:
+        # データベース初期化確認
+        if not ensure_db_initialized():
+            logger.error("データベースの初期化に失敗しました")
+            raise HTTPException(
+                status_code=500, detail="データベースの初期化に失敗しました"
+            )
+
         from datetime import datetime, timezone
 
         # サポートされている取引ペアと時間軸（BTCとETHのみに制限）
@@ -302,6 +316,13 @@ async def get_collection_status(
         データ収集状況
     """
     try:
+        # データベース初期化確認
+        if not ensure_db_initialized():
+            logger.error("データベースの初期化に失敗しました")
+            raise HTTPException(
+                status_code=500, detail="データベースの初期化に失敗しました"
+            )
+
         # シンボルと時間軸のバリデーション
         try:
             normalized_symbol = MarketDataConfig.normalize_symbol(symbol)

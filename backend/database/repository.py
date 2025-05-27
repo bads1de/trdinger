@@ -166,6 +166,45 @@ class OHLCVRepository:
             logger.error(f"レコード数カウントエラー: {e}")
             raise
 
+    def get_data_count(self, symbol: str, timeframe: str) -> int:
+        """
+        指定されたシンボルと時間軸のデータ件数を取得
+
+        Args:
+            symbol: 取引ペア
+            timeframe: 時間軸
+
+        Returns:
+            データ件数
+        """
+        return self.count_records(symbol, timeframe)
+
+    def get_oldest_timestamp(self, symbol: str, timeframe: str) -> Optional[datetime]:
+        """
+        指定されたシンボルと時間軸の最古タイムスタンプを取得
+
+        Args:
+            symbol: 取引ペア
+            timeframe: 時間軸
+
+        Returns:
+            最古のタイムスタンプ、データが存在しない場合はNone
+        """
+        try:
+            result = (
+                self.db.query(func.min(OHLCVData.timestamp))
+                .filter(
+                    and_(OHLCVData.symbol == symbol, OHLCVData.timeframe == timeframe)
+                )
+                .scalar()
+            )
+
+            return result
+
+        except Exception as e:
+            logger.error(f"最古タイムスタンプ取得エラー: {e}")
+            raise
+
     def validate_ohlcv_data(self, ohlcv_records: List[dict]) -> bool:
         """
         OHLCVデータの妥当性を検証
