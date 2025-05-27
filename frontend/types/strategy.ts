@@ -8,31 +8,7 @@
  * @version 1.0.0
  */
 
-/**
- * OHLCVデータ収集結果
- */
-export interface OHLCVCollectionResult {
-  /** 処理成功フラグ */
-  success: boolean;
-  /** 結果メッセージ */
-  message: string;
-  /** 保存された件数 */
-  saved_count?: number;
-  /** スキップされた件数（重複） */
-  skipped_count?: number;
-  /** 処理ステータス */
-  status?: "started" | "exists" | "completed" | "error";
-}
 
-/**
- * OHLCVデータ収集リクエスト
- */
-export interface OHLCVCollectionRequest {
-  /** 取引ペアシンボル */
-  symbol: string;
-  /** 時間軸 */
-  timeframe: string;
-}
 
 /**
  * 一括OHLCVデータ収集結果

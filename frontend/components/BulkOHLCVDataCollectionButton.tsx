@@ -1,11 +1,11 @@
 /**
- * 一括OHLCVデータ取得・保存ボタンコンポーネント
+ * OHLCVデータ一括取得・保存ボタンコンポーネント
  *
  * 全ての取引ペアと全ての時間軸でOHLCVデータを一括取得し、データベースに保存するためのUIコンポーネントです。
  * ダークモード対応、状態管理、エラーハンドリング、確認ダイアログを含みます。
  *
  * @author Trdinger Development Team
- * @version 1.0.0
+ * @version 2.0.0
  */
 
 'use client';
@@ -15,11 +15,11 @@ import { BulkOHLCVCollectionResult } from '@/types/strategy';
 import { SUPPORTED_TRADING_PAIRS, SUPPORTED_TIMEFRAMES } from '@/constants';
 
 /**
- * BulkOHLCVDataCollectionButtonコンポーネントのプロパティ
+ * OHLCVDataCollectionButtonコンポーネントのプロパティ
  */
-interface BulkOHLCVDataCollectionButtonProps {
+interface OHLCVDataCollectionButtonProps {
   /** データ収集開始時のコールバック */
-  onCollectionStart?: (result: BulkOHLCVCollectionResult) => void;
+  onBulkCollectionStart?: (result: BulkOHLCVCollectionResult) => void;
   /** データ収集エラー時のコールバック */
   onCollectionError?: (error: string) => void;
   /** ボタンの無効化フラグ */
@@ -34,10 +34,10 @@ interface BulkOHLCVDataCollectionButtonProps {
 type ButtonState = 'idle' | 'loading' | 'success' | 'error';
 
 /**
- * 一括OHLCVデータ取得・保存ボタンコンポーネント
+ * OHLCVデータ一括取得・保存ボタンコンポーネント
  */
-const BulkOHLCVDataCollectionButton: React.FC<BulkOHLCVDataCollectionButtonProps> = ({
-  onCollectionStart,
+const OHLCVDataCollectionButton: React.FC<OHLCVDataCollectionButtonProps> = ({
+  onBulkCollectionStart,
   onCollectionError,
   disabled = false,
   className = '',
@@ -49,9 +49,9 @@ const BulkOHLCVDataCollectionButton: React.FC<BulkOHLCVDataCollectionButtonProps
   const totalTasks = SUPPORTED_TRADING_PAIRS.length * SUPPORTED_TIMEFRAMES.length;
 
   /**
-   * 一括OHLCVデータ収集を実行
+   * OHLCVデータ一括収集を実行
    */
-  const handleBulkCollectData = async () => {
+  const handleCollectData = async () => {
     // 確認ダイアログ
     const confirmed = window.confirm(
       `全ての取引ペア（${SUPPORTED_TRADING_PAIRS.length}個）と全ての時間軸（${SUPPORTED_TIMEFRAMES.length}個）でOHLCVデータを取得します。\n` +
@@ -80,8 +80,8 @@ const BulkOHLCVDataCollectionButton: React.FC<BulkOHLCVDataCollectionButtonProps
       if (response.ok && result.success) {
         setButtonState('success');
         setLastResult(result);
-        onCollectionStart?.(result);
-        
+        onBulkCollectionStart?.(result);
+
         // 10秒後に通常状態に戻す
         setTimeout(() => {
           setButtonState('idle');
@@ -90,7 +90,7 @@ const BulkOHLCVDataCollectionButton: React.FC<BulkOHLCVDataCollectionButtonProps
         setButtonState('error');
         const errorMessage = result.message || '一括データ収集に失敗しました';
         onCollectionError?.(errorMessage);
-        
+
         // 10秒後に通常状態に戻す
         setTimeout(() => {
           setButtonState('idle');
@@ -100,13 +100,15 @@ const BulkOHLCVDataCollectionButton: React.FC<BulkOHLCVDataCollectionButtonProps
       setButtonState('error');
       const errorMessage = '一括データ収集中にエラーが発生しました';
       onCollectionError?.(errorMessage);
-      
+
       // 10秒後に通常状態に戻す
       setTimeout(() => {
         setButtonState('idle');
       }, 10000);
     }
   };
+
+
 
   /**
    * ボタンのテキストを取得
@@ -131,58 +133,58 @@ const BulkOHLCVDataCollectionButton: React.FC<BulkOHLCVDataCollectionButtonProps
     switch (buttonState) {
       case 'loading':
         return (
-          <div 
+          <div
             className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"
             data-testid="loading-spinner"
           />
         );
       case 'success':
         return (
-          <svg 
-            className="w-5 h-5" 
-            fill="none" 
-            stroke="currentColor" 
+          <svg
+            className="w-5 h-5"
+            fill="none"
+            stroke="currentColor"
             viewBox="0 0 24 24"
             data-testid="success-icon"
           >
-            <path 
-              strokeLinecap="round" 
-              strokeLinejoin="round" 
-              strokeWidth={2} 
-              d="M5 13l4 4L19 7" 
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M5 13l4 4L19 7"
             />
           </svg>
         );
       case 'error':
         return (
-          <svg 
-            className="w-5 h-5" 
-            fill="none" 
-            stroke="currentColor" 
+          <svg
+            className="w-5 h-5"
+            fill="none"
+            stroke="currentColor"
             viewBox="0 0 24 24"
             data-testid="error-icon"
           >
-            <path 
-              strokeLinecap="round" 
-              strokeLinejoin="round" 
-              strokeWidth={2} 
-              d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" 
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
             />
           </svg>
         );
       default:
         return (
-          <svg 
-            className="w-5 h-5" 
-            fill="none" 
-            stroke="currentColor" 
+          <svg
+            className="w-5 h-5"
+            fill="none"
+            stroke="currentColor"
             viewBox="0 0 24 24"
           >
-            <path 
-              strokeLinecap="round" 
-              strokeLinejoin="round" 
-              strokeWidth={2} 
-              d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" 
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"
             />
           </svg>
         );
@@ -203,7 +205,7 @@ const BulkOHLCVDataCollectionButton: React.FC<BulkOHLCVDataCollectionButtonProps
 
     switch (buttonState) {
       case 'loading':
-        return `${baseClasses} 
+        return `${baseClasses}
           bg-primary-600 dark:bg-primary-600 text-white
           cursor-not-allowed
         `;
@@ -219,7 +221,7 @@ const BulkOHLCVDataCollectionButton: React.FC<BulkOHLCVDataCollectionButtonProps
         `;
       default:
         return `${baseClasses}
-          bg-gradient-to-r from-primary-600 to-primary-700 
+          bg-gradient-to-r from-primary-600 to-primary-700
           dark:from-primary-600 dark:to-primary-700 text-white
           hover:from-primary-700 hover:to-primary-800
           dark:hover:from-primary-700 dark:hover:to-primary-800
@@ -234,7 +236,7 @@ const BulkOHLCVDataCollectionButton: React.FC<BulkOHLCVDataCollectionButtonProps
     <div className={`flex flex-col gap-3 ${className}`}>
       {/* メインボタン */}
       <button
-        onClick={handleBulkCollectData}
+        onClick={handleCollectData}
         disabled={isButtonDisabled}
         className={getButtonClasses()}
         title={`全ての取引ペア（${SUPPORTED_TRADING_PAIRS.length}個）と全ての時間軸（${SUPPORTED_TIMEFRAMES.length}個）のOHLCVデータを一括取得・保存`}
@@ -258,7 +260,7 @@ const BulkOHLCVDataCollectionButton: React.FC<BulkOHLCVDataCollectionButtonProps
           <span className="font-medium">合計タスク数: {totalTasks}個</span>
         </div>
       </div>
-      
+
       {/* 結果メッセージ表示 */}
       {lastResult && buttonState === 'success' && (
         <div className="text-sm text-success-600 dark:text-success-400 bg-success-50 dark:bg-success-900/20 p-3 rounded-lg border border-success-200 dark:border-success-800">
@@ -272,4 +274,4 @@ const BulkOHLCVDataCollectionButton: React.FC<BulkOHLCVDataCollectionButtonProps
   );
 };
 
-export default BulkOHLCVDataCollectionButton;
+export default OHLCVDataCollectionButton;
