@@ -1,28 +1,32 @@
 /**
  * データページコンポーネント
  *
- * ローソク足チャートを表示し、通貨ペアと時間軸を選択できるページです。
- * リアルタイムでチャートデータを取得・表示します。
+ * OHLCVデータとファンディングレートデータを表形式で表示するページです。
+ * リアルタイムでデータを取得・表示します。
  *
  * @author Trdinger Development Team
- * @version 1.0.0
+ * @version 2.0.0
  */
 
 "use client";
 
 import React, { useState, useEffect } from "react";
-import CandlestickChart from "@/components/CandlestickChart";
+import OHLCVDataTable from "@/components/OHLCVDataTable";
+import FundingRateDataTable from "@/components/FundingRateDataTable";
 import TimeFrameSelector from "@/components/TimeFrameSelector";
 import SymbolSelector from "@/components/SymbolSelector";
 import OHLCVDataCollectionButton from "@/components/BulkOHLCVDataCollectionButton";
 import FundingRateCollectionButton from "@/components/FundingRateCollectionButton";
 import {
-  CandlestickData,
+  PriceData,
+  FundingRateData,
   TimeFrame,
   TradingPair,
-  CandlestickResponse,
+  OHLCVResponse,
+  FundingRateResponse,
   BulkOHLCVCollectionResult,
   BulkFundingRateCollectionResult,
+  FundingRateCollectionResult,
 } from "@/types/strategy";
 import { BACKEND_API_URL } from "@/constants";
 
@@ -34,9 +38,13 @@ const DataPage: React.FC = () => {
   const [symbols, setSymbols] = useState<TradingPair[]>([]);
   const [selectedSymbol, setSelectedSymbol] = useState<string>("BTC/USDT");
   const [selectedTimeFrame, setSelectedTimeFrame] = useState<TimeFrame>("1d");
-  const [candlestickData, setCandlestickData] = useState<CandlestickData[]>([]);
+  const [ohlcvData, setOhlcvData] = useState<PriceData[]>([]);
+  const [fundingRateData, setFundingRateData] = useState<FundingRateData[]>([]);
+  const [activeTab, setActiveTab] = useState<"ohlcv" | "funding">("ohlcv");
   const [loading, setLoading] = useState<boolean>(false);
+  const [fundingLoading, setFundingLoading] = useState<boolean>(false);
   const [error, setError] = useState<string>("");
+  const [fundingError, setFundingError] = useState<string>("");
   const [symbolsLoading, setSymbolsLoading] = useState<boolean>(true);
   const [updating, setUpdating] = useState<boolean>(false);
   const [dataStatus, setDataStatus] = useState<any>(null);
@@ -68,9 +76,9 @@ const DataPage: React.FC = () => {
   };
 
   /**
-   * ローソク足データを取得
+   * OHLCVデータを取得
    */
-  const fetchCandlestickData = async () => {
+  const fetchOHLCVData = async () => {
     try {
       setLoading(true);
       setError("");
@@ -82,18 +90,51 @@ const DataPage: React.FC = () => {
       });
 
       const response = await fetch(`/api/data/candlesticks?${params}`);
-      const result: CandlestickResponse = await response.json();
+      const result: OHLCVResponse = await response.json();
 
       if (result.success) {
-        setCandlestickData(result.data.candlesticks);
+        setOhlcvData(result.data.ohlcv);
       } else {
         setError(result.message || "データの取得に失敗しました");
       }
     } catch (err) {
       setError("データの取得中にエラーが発生しました");
-      console.error("ローソク足データ取得エラー:", err);
+      console.error("OHLCVデータ取得エラー:", err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  /**
+   * ファンディングレートデータを取得
+   */
+  const fetchFundingRateData = async () => {
+    try {
+      setFundingLoading(true);
+      setFundingError("");
+
+      const params = new URLSearchParams({
+        symbol: selectedSymbol,
+        limit: "100",
+      });
+
+      const response = await fetch(`/api/data/funding-rates?${params}`);
+      const result: FundingRateResponse = await response.json();
+
+      if (result.success) {
+        setFundingRateData(result.data.funding_rates);
+      } else {
+        setFundingError(
+          result.message || "ファンディングレートデータの取得に失敗しました"
+        );
+      }
+    } catch (err) {
+      setFundingError(
+        "ファンディングレートデータの取得中にエラーが発生しました"
+      );
+      console.error("ファンディングレートデータ取得エラー:", err);
+    } finally {
+      setFundingLoading(false);
     }
   };
 
@@ -115,7 +156,11 @@ const DataPage: React.FC = () => {
    * データ更新ハンドラ
    */
   const handleRefresh = () => {
-    fetchCandlestickData();
+    if (activeTab === "ohlcv") {
+      fetchOHLCVData();
+    } else {
+      fetchFundingRateData();
+    }
   };
 
   /**
@@ -137,7 +182,7 @@ const DataPage: React.FC = () => {
 
       if (result.success) {
         // 更新後にデータを再取得
-        await fetchCandlestickData();
+        await fetchOHLCVData();
         console.log(`差分更新完了: ${result.saved_count}件`);
       } else {
         setError(result.message || "差分更新に失敗しました");
@@ -194,11 +239,21 @@ const DataPage: React.FC = () => {
    * ファンディングレートデータ収集開始時のコールバック
    */
   const handleFundingRateCollectionStart = (
-    result: BulkFundingRateCollectionResult
+    result: BulkFundingRateCollectionResult | FundingRateCollectionResult
   ) => {
-    setFundingRateCollectionMessage(
-      `🚀 ${result.message} (${result.successful_symbols}/${result.total_symbols}シンボル成功)`
-    );
+    if ("total_symbols" in result) {
+      // BulkFundingRateCollectionResult
+      const bulkResult = result as BulkFundingRateCollectionResult;
+      setFundingRateCollectionMessage(
+        `🚀 ${bulkResult.message} (${bulkResult.successful_symbols}/${bulkResult.total_symbols}シンボル成功)`
+      );
+    } else {
+      // FundingRateCollectionResult
+      const singleResult = result as FundingRateCollectionResult;
+      setFundingRateCollectionMessage(
+        `🚀 ${singleResult.symbol}のファンディングレートデータ収集完了 (${singleResult.saved_count}件保存)`
+      );
+    }
     // 10秒後にメッセージをクリア
     setTimeout(() => setFundingRateCollectionMessage(""), 10000);
   };
@@ -220,7 +275,8 @@ const DataPage: React.FC = () => {
   // 通貨ペアまたは時間軸変更時にデータを再取得
   useEffect(() => {
     if (selectedSymbol && selectedTimeFrame) {
-      fetchCandlestickData();
+      fetchOHLCVData();
+      fetchFundingRateData();
       fetchDataStatus();
     }
   }, [selectedSymbol, selectedTimeFrame]);
@@ -484,164 +540,86 @@ const DataPage: React.FC = () => {
           </div>
         </div>
 
-        {/* チャート表示エリア */}
+        {/* データ表示エリア */}
         <div className="enterprise-card animate-slide-up">
           <div className="p-6">
+            {/* タブヘッダー */}
             <div className="flex items-center justify-between mb-6">
-              <div>
+              <div className="flex items-center gap-4">
                 <h2 className="text-xl font-semibold text-secondary-900 dark:text-secondary-100">
-                  📊 {selectedSymbol} - {selectedTimeFrame}足チャート
+                  📊 {selectedSymbol} - データテーブル
                 </h2>
-                <p className="text-sm text-secondary-600 dark:text-secondary-400 mt-1">
-                  {candlestickData.length > 0 &&
-                    !loading &&
-                    `${candlestickData.length}件のデータポイントを表示中`}
-                </p>
+                <div className="flex bg-gray-800 dark:bg-gray-800 rounded-lg p-1">
+                  <button
+                    onClick={() => setActiveTab("ohlcv")}
+                    className={`px-4 py-2 text-sm font-medium rounded-md transition-colors duration-200 ${
+                      activeTab === "ohlcv"
+                        ? "bg-primary-600 text-white"
+                        : "text-gray-400 hover:text-gray-100"
+                    }`}
+                  >
+                    OHLCV
+                  </button>
+                  <button
+                    onClick={() => setActiveTab("funding")}
+                    className={`px-4 py-2 text-sm font-medium rounded-md transition-colors duration-200 ${
+                      activeTab === "funding"
+                        ? "bg-primary-600 text-white"
+                        : "text-gray-400 hover:text-gray-100"
+                    }`}
+                  >
+                    ファンディングレート
+                  </button>
+                </div>
               </div>
 
-              {/* チャート情報バッジ */}
-              {candlestickData.length > 0 && !loading && (
-                <div className="flex items-center gap-2">
-                  <span className="badge-primary">
-                    {candlestickData.length}件
-                  </span>
-                  <span className="badge-success">
-                    最新: $
-                    {candlestickData[candlestickData.length - 1]?.close.toFixed(
-                      2
-                    )}
-                  </span>
-                </div>
-              )}
+              {/* データ情報バッジ */}
+              <div className="flex items-center gap-2">
+                {activeTab === "ohlcv" && ohlcvData.length > 0 && !loading && (
+                  <>
+                    <span className="badge-primary">{ohlcvData.length}件</span>
+                    <span className="badge-success">
+                      最新: ${ohlcvData[ohlcvData.length - 1]?.close.toFixed(2)}
+                    </span>
+                  </>
+                )}
+                {activeTab === "funding" &&
+                  fundingRateData.length > 0 &&
+                  !fundingLoading && (
+                    <>
+                      <span className="badge-primary">
+                        {fundingRateData.length}件
+                      </span>
+                      <span className="badge-info">
+                        最新レート:{" "}
+                        {(fundingRateData[0]?.funding_rate * 100).toFixed(4)}%
+                      </span>
+                    </>
+                  )}
+              </div>
             </div>
 
+            {/* タブコンテンツ */}
             <div className="relative">
-              <CandlestickChart
-                data={candlestickData}
-                height={600}
-                loading={loading}
-                error={error}
-              />
-
-              {/* ローディングオーバーレイ */}
-              {loading && (
-                <div className="absolute inset-0 glass-effect rounded-enterprise-lg flex items-center justify-center">
-                  <div className="text-center">
-                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mx-auto mb-4"></div>
-                    <p className="text-sm font-medium text-secondary-700 dark:text-secondary-300">
-                      チャートデータを読み込み中...
-                    </p>
-                  </div>
-                </div>
+              {activeTab === "ohlcv" && (
+                <OHLCVDataTable
+                  data={ohlcvData}
+                  symbol={selectedSymbol}
+                  timeframe={selectedTimeFrame}
+                  loading={loading}
+                  error={error}
+                />
+              )}
+              {activeTab === "funding" && (
+                <FundingRateDataTable
+                  data={fundingRateData}
+                  loading={fundingLoading}
+                  error={fundingError}
+                />
               )}
             </div>
           </div>
         </div>
-
-        {/* データ統計情報 */}
-        {candlestickData.length > 0 && !loading && !error && (
-          <div className="enterprise-card animate-slide-up">
-            <div className="p-6">
-              <div className="flex items-center justify-between mb-6">
-                <h3 className="text-xl font-semibold text-secondary-900 dark:text-secondary-100">
-                  📈 データ統計
-                </h3>
-                <span className="text-sm text-secondary-500 dark:text-secondary-400">
-                  期間:{" "}
-                  {new Date(candlestickData[0]?.timestamp).toLocaleDateString(
-                    "ja-JP"
-                  )}{" "}
-                  -{" "}
-                  {new Date(
-                    candlestickData[candlestickData.length - 1]?.timestamp
-                  ).toLocaleDateString("ja-JP")}
-                </span>
-              </div>
-
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-                <div className="text-center p-4 bg-secondary-50 dark:bg-secondary-800/50 rounded-enterprise border border-secondary-200 dark:border-secondary-700">
-                  <div className="text-2xl font-bold text-primary-600 dark:text-primary-400">
-                    $
-                    {candlestickData[candlestickData.length - 1]?.close.toFixed(
-                      2
-                    )}
-                  </div>
-                  <div className="text-sm text-secondary-600 dark:text-secondary-400 mt-1">
-                    最新価格
-                  </div>
-                </div>
-
-                <div className="text-center p-4 bg-secondary-50 dark:bg-secondary-800/50 rounded-enterprise border border-secondary-200 dark:border-secondary-700">
-                  <div className="text-2xl font-bold text-success-600 dark:text-success-400">
-                    $
-                    {Math.max(...candlestickData.map((d) => d.high)).toFixed(2)}
-                  </div>
-                  <div className="text-sm text-secondary-600 dark:text-secondary-400 mt-1">
-                    期間最高値
-                  </div>
-                </div>
-
-                <div className="text-center p-4 bg-secondary-50 dark:bg-secondary-800/50 rounded-enterprise border border-secondary-200 dark:border-secondary-700">
-                  <div className="text-2xl font-bold text-error-600 dark:text-error-400">
-                    ${Math.min(...candlestickData.map((d) => d.low)).toFixed(2)}
-                  </div>
-                  <div className="text-sm text-secondary-600 dark:text-secondary-400 mt-1">
-                    期間最安値
-                  </div>
-                </div>
-
-                <div className="text-center p-4 bg-secondary-50 dark:bg-secondary-800/50 rounded-enterprise border border-secondary-200 dark:border-secondary-700">
-                  <div className="text-2xl font-bold text-accent-600 dark:text-accent-400">
-                    {(
-                      ((candlestickData[candlestickData.length - 1]?.close -
-                        candlestickData[0]?.open) /
-                        candlestickData[0]?.open) *
-                        100 || 0
-                    ).toFixed(2)}
-                    %
-                  </div>
-                  <div className="text-sm text-secondary-600 dark:text-secondary-400 mt-1">
-                    期間変動率
-                  </div>
-                </div>
-              </div>
-
-              {/* 追加統計情報 */}
-              <div className="mt-6 pt-6 border-t border-secondary-200 dark:border-secondary-700">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-                  <div className="flex justify-between">
-                    <span className="text-secondary-600 dark:text-secondary-400">
-                      平均価格:
-                    </span>
-                    <span className="font-medium text-secondary-900 dark:text-secondary-100">
-                      $
-                      {(
-                        candlestickData.reduce((sum, d) => sum + d.close, 0) /
-                        candlestickData.length
-                      ).toFixed(2)}
-                    </span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-secondary-600 dark:text-secondary-400">
-                      データポイント:
-                    </span>
-                    <span className="font-medium text-secondary-900 dark:text-secondary-100">
-                      {candlestickData.length.toLocaleString()}件
-                    </span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-secondary-600 dark:text-secondary-400">
-                      最終更新:
-                    </span>
-                    <span className="font-medium text-secondary-900 dark:text-secondary-100">
-                      {new Date().toLocaleTimeString("ja-JP")}
-                    </span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
       </div>
     </div>
   );

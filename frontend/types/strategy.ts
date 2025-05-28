@@ -259,30 +259,9 @@ export interface PriceData {
 }
 
 /**
- * ローソク足データ
- *
- * チャート表示用のローソク足データを表現します。
- * PriceDataと同じ構造ですが、チャート専用の型として定義。
- */
-export interface CandlestickData {
-  /** タイムスタンプ（ISO形式） */
-  timestamp: string;
-  /** 始値（USD） */
-  open: number;
-  /** 高値（USD） */
-  high: number;
-  /** 安値（USD） */
-  low: number;
-  /** 終値（USD） */
-  close: number;
-  /** 出来高 */
-  volume: number;
-}
-
-/**
  * 時間軸の定義
  *
- * チャートで使用可能な時間軸を定義します。
+ * データ表示で使用可能な時間軸を定義します。
  */
 export type TimeFrame = "15m" | "30m" | "1h" | "4h" | "1d";
 
@@ -301,29 +280,11 @@ export interface TimeFrameInfo {
 }
 
 /**
- * チャート設定
+ * OHLCVデータのAPIレスポンス
  *
- * ローソク足チャートの表示設定を定義します。
+ * APIから返されるOHLCVデータの形式を定義します。
  */
-export interface ChartConfig {
-  /** 通貨ペア */
-  symbol: string;
-  /** 時間軸 */
-  timeframe: TimeFrame;
-  /** 開始日時 */
-  startDate?: string;
-  /** 終了日時 */
-  endDate?: string;
-  /** 取得件数制限 */
-  limit?: number;
-}
-
-/**
- * ローソク足データのAPIレスポンス
- *
- * APIから返されるローソク足データの形式を定義します。
- */
-export interface CandlestickResponse {
+export interface OHLCVResponse {
   /** 成功フラグ */
   success: boolean;
   /** データ */
@@ -332,8 +293,8 @@ export interface CandlestickResponse {
     symbol: string;
     /** 時間軸 */
     timeframe: TimeFrame;
-    /** ローソク足データの配列 */
-    candlesticks: CandlestickData[];
+    /** OHLCVデータの配列 */
+    ohlcv: PriceData[];
   };
   /** メッセージ */
   message?: string;

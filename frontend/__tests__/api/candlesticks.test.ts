@@ -1,11 +1,11 @@
 /**
- * ローソク足データAPI テスト
+ * OHLCVデータAPI テスト
  *
  * /api/data/candlesticks エンドポイントのテストケースです。
  * 正常系・異常系の両方をテストします。
  *
  * @author Trdinger Development Team
- * @version 1.0.0
+ * @version 2.0.0
  */
 
 // Web APIのモック
@@ -47,7 +47,7 @@ function createMockRequest(searchParams: Record<string, string>): NextRequest {
 
 describe("/api/data/candlesticks", () => {
   describe("正常系テスト", () => {
-    test("有効なパラメータでローソク足データを取得できる", async () => {
+    test("有効なパラメータでOHLCVデータを取得できる", async () => {
       const request = createMockRequest({
         symbol: "BTC/USD",
         timeframe: "1d",
@@ -62,8 +62,8 @@ describe("/api/data/candlesticks", () => {
       expect(data.data).toBeDefined();
       expect(data.data.symbol).toBe("BTC/USD");
       expect(data.data.timeframe).toBe("1d");
-      expect(data.data.candlesticks).toBeInstanceOf(Array);
-      expect(data.data.candlesticks).toHaveLength(50);
+      expect(data.data.ohlcv).toBeInstanceOf(Array);
+      expect(data.data.ohlcv).toHaveLength(50);
       expect(data.timestamp).toBeDefined();
     });
 
@@ -78,10 +78,10 @@ describe("/api/data/candlesticks", () => {
 
       expect(response.status).toBe(200);
       expect(data.success).toBe(true);
-      expect(data.data.candlesticks).toHaveLength(100);
+      expect(data.data.ohlcv).toHaveLength(100);
     });
 
-    test("各ローソク足データが正しい形式を持つ", async () => {
+    test("各OHLCVデータが正しい形式を持つ", async () => {
       const request = createMockRequest({
         symbol: "BTC/USD",
         timeframe: "1d",
@@ -93,24 +93,24 @@ describe("/api/data/candlesticks", () => {
 
       expect(response.status).toBe(200);
 
-      const candlestick = data.data.candlesticks[0];
-      expect(candlestick).toHaveProperty("timestamp");
-      expect(candlestick).toHaveProperty("open");
-      expect(candlestick).toHaveProperty("high");
-      expect(candlestick).toHaveProperty("low");
-      expect(candlestick).toHaveProperty("close");
-      expect(candlestick).toHaveProperty("volume");
+      const ohlcv = data.data.ohlcv[0];
+      expect(ohlcv).toHaveProperty("timestamp");
+      expect(ohlcv).toHaveProperty("open");
+      expect(ohlcv).toHaveProperty("high");
+      expect(ohlcv).toHaveProperty("low");
+      expect(ohlcv).toHaveProperty("close");
+      expect(ohlcv).toHaveProperty("volume");
 
       // 数値型の検証
-      expect(typeof candlestick.open).toBe("number");
-      expect(typeof candlestick.high).toBe("number");
-      expect(typeof candlestick.low).toBe("number");
-      expect(typeof candlestick.close).toBe("number");
-      expect(typeof candlestick.volume).toBe("number");
+      expect(typeof ohlcv.open).toBe("number");
+      expect(typeof ohlcv.high).toBe("number");
+      expect(typeof ohlcv.low).toBe("number");
+      expect(typeof ohlcv.close).toBe("number");
+      expect(typeof ohlcv.volume).toBe("number");
 
       // 日時形式の検証
-      expect(new Date(candlestick.timestamp)).toBeInstanceOf(Date);
-      expect(new Date(candlestick.timestamp).getTime()).not.toBeNaN();
+      expect(new Date(ohlcv.timestamp)).toBeInstanceOf(Date);
+      expect(new Date(ohlcv.timestamp).getTime()).not.toBeNaN();
     });
 
     test("すべての利用可能な時間軸でデータを取得できる", async () => {
@@ -224,7 +224,7 @@ describe("/api/data/candlesticks", () => {
   });
 
   describe("データ整合性テスト", () => {
-    test("ローソク足データの価格関係が正しい（high >= low, high >= open, high >= close, low <= open, low <= close）", async () => {
+    test("OHLCVデータの価格関係が正しい（high >= low, high >= open, high >= close, low <= open, low <= close）", async () => {
       const request = createMockRequest({
         symbol: "BTC/USD",
         timeframe: "1d",
@@ -236,12 +236,12 @@ describe("/api/data/candlesticks", () => {
 
       expect(response.status).toBe(200);
 
-      data.data.candlesticks.forEach((candle: any) => {
-        expect(candle.high).toBeGreaterThanOrEqual(candle.low);
-        expect(candle.high).toBeGreaterThanOrEqual(candle.open);
-        expect(candle.high).toBeGreaterThanOrEqual(candle.close);
-        expect(candle.low).toBeLessThanOrEqual(candle.open);
-        expect(candle.low).toBeLessThanOrEqual(candle.close);
+      data.data.ohlcv.forEach((ohlcv: any) => {
+        expect(ohlcv.high).toBeGreaterThanOrEqual(ohlcv.low);
+        expect(ohlcv.high).toBeGreaterThanOrEqual(ohlcv.open);
+        expect(ohlcv.high).toBeGreaterThanOrEqual(ohlcv.close);
+        expect(ohlcv.low).toBeLessThanOrEqual(ohlcv.open);
+        expect(ohlcv.low).toBeLessThanOrEqual(ohlcv.close);
       });
     });
 
@@ -257,8 +257,8 @@ describe("/api/data/candlesticks", () => {
 
       expect(response.status).toBe(200);
 
-      const timestamps = data.data.candlesticks.map((candle: any) =>
-        new Date(candle.timestamp).getTime()
+      const timestamps = data.data.ohlcv.map((ohlcv: any) =>
+        new Date(ohlcv.timestamp).getTime()
       );
 
       for (let i = 1; i < timestamps.length; i++) {
