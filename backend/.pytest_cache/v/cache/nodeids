@@ -12,6 +12,8 @@
   "tests/integration/test_bybit_api_integration.py::TestBybitDatabaseIntegration::test_database_connection_not_implemented",
   "tests/integration/test_bybit_api_integration.py::TestBybitDatabaseIntegration::test_fetch_and_save_to_database_not_implemented",
   "tests/integration/test_data_collection.py::test_data_collection",
+  "tests/integration/test_funding_rate_api.py::TestBybitFundingRateAPI::test_bulk_funding_rate_collection_btc_eth",
+  "tests/integration/test_funding_rate_api.py::TestBybitFundingRateAPI::test_eth_funding_rate_service_pagination",
   "tests/integration/test_funding_rate_api.py::TestBybitFundingRateAPI::test_fetch_current_funding_rate",
   "tests/integration/test_funding_rate_api.py::TestBybitFundingRateAPI::test_fetch_funding_rate_history",
   "tests/integration/test_funding_rate_api.py::TestBybitFundingRateAPI::test_funding_rate_data_structure_validation",
