@@ -23,13 +23,19 @@ export async function POST(request: NextRequest) {
 
     // URLパラメータを取得
     const { searchParams } = new URL(request.url);
-    const symbol = searchParams.get('symbol') || 'BTC/USDT';
-    const limit = searchParams.get('limit') || '100';
+    const symbol = searchParams.get("symbol") || "BTC/USDT";
+    const limit = searchParams.get("limit") || "100";
+    const fetchAll = searchParams.get("fetch_all") === "true";
 
-    console.log(`収集対象: ${symbol}, 件数: ${limit}`);
+    console.log(`収集対象: ${symbol}, 件数: ${limit}, 全期間取得: ${fetchAll}`);
 
     // バックエンドAPIに転送
-    const backendUrl = `${BACKEND_API_URL}/api/funding-rates/collect?symbol=${encodeURIComponent(symbol)}&limit=${limit}`;
+    let backendUrl = `${BACKEND_API_URL}/api/funding-rates/collect?symbol=${encodeURIComponent(
+      symbol
+    )}&limit=${limit}`;
+    if (fetchAll) {
+      backendUrl += "&fetch_all=true";
+    }
 
     try {
       const backendResponse = await fetch(backendUrl, {
@@ -37,16 +43,16 @@ export async function POST(request: NextRequest) {
         headers: {
           "Content-Type": "application/json",
         },
-        // タイムアウトを設定（30秒）
-        signal: AbortSignal.timeout(30000),
+        // タイムアウトを設定（全期間取得の場合は5分、通常は30秒）
+        signal: AbortSignal.timeout(fetchAll ? 300000 : 30000),
       });
 
       if (!backendResponse.ok) {
         const errorData = await backendResponse.json().catch(() => ({}));
         throw new Error(
-          `バックエンドAPIエラー: ${backendResponse.status} ${backendResponse.statusText} - ${
-            errorData.detail || errorData.message || "Unknown error"
-          }`
+          `バックエンドAPIエラー: ${backendResponse.status} ${
+            backendResponse.statusText
+          } - ${errorData.detail || errorData.message || "Unknown error"}`
         );
       }
 
@@ -68,28 +74,29 @@ export async function POST(request: NextRequest) {
       };
 
       return NextResponse.json(response);
-
     } catch (fetchError) {
       console.error("バックエンドAPI呼び出しエラー:", fetchError);
-      
+
       // バックエンドAPIエラーの詳細なハンドリング
       if (fetchError instanceof Error) {
-        if (fetchError.name === 'TimeoutError') {
+        if (fetchError.name === "TimeoutError") {
           return NextResponse.json(
             {
               success: false,
-              message: "ファンディングレートデータ収集がタイムアウトしました。しばらく待ってから再試行してください。",
+              message:
+                "ファンディングレートデータ収集がタイムアウトしました。しばらく待ってから再試行してください。",
               error: "TIMEOUT_ERROR",
             },
             { status: 408 }
           );
         }
 
-        if (fetchError.message.includes('ECONNREFUSED')) {
+        if (fetchError.message.includes("ECONNREFUSED")) {
           return NextResponse.json(
             {
               success: false,
-              message: "バックエンドサーバーに接続できません。サーバーが起動しているか確認してください。",
+              message:
+                "バックエンドサーバーに接続できません。サーバーが起動しているか確認してください。",
               error: "CONNECTION_ERROR",
             },
             { status: 503 }
@@ -100,20 +107,23 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         {
           success: false,
-          message: `ファンディングレートデータ収集中にエラーが発生しました: ${fetchError instanceof Error ? fetchError.message : 'Unknown error'}`,
+          message: `ファンディングレートデータ収集中にエラーが発生しました: ${
+            fetchError instanceof Error ? fetchError.message : "Unknown error"
+          }`,
           error: "BACKEND_API_ERROR",
         },
         { status: 500 }
       );
     }
-
   } catch (error) {
     console.error("ファンディングレートデータ収集API内部エラー:", error);
 
     return NextResponse.json(
       {
         success: false,
-        message: `内部エラーが発生しました: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        message: `内部エラーが発生しました: ${
+          error instanceof Error ? error.message : "Unknown error"
+        }`,
         error: "INTERNAL_ERROR",
       },
       { status: 500 }
