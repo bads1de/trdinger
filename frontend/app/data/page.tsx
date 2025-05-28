@@ -15,12 +15,14 @@ import CandlestickChart from "@/components/CandlestickChart";
 import TimeFrameSelector from "@/components/TimeFrameSelector";
 import SymbolSelector from "@/components/SymbolSelector";
 import OHLCVDataCollectionButton from "@/components/BulkOHLCVDataCollectionButton";
+import FundingRateCollectionButton from "@/components/FundingRateCollectionButton";
 import {
   CandlestickData,
   TimeFrame,
   TradingPair,
   CandlestickResponse,
   BulkOHLCVCollectionResult,
+  BulkFundingRateCollectionResult,
 } from "@/types/strategy";
 import { BACKEND_API_URL } from "@/constants";
 
@@ -39,6 +41,8 @@ const DataPage: React.FC = () => {
   const [updating, setUpdating] = useState<boolean>(false);
   const [dataStatus, setDataStatus] = useState<any>(null);
   const [bulkCollectionMessage, setBulkCollectionMessage] =
+    useState<string>("");
+  const [fundingRateCollectionMessage, setFundingRateCollectionMessage] =
     useState<string>("");
 
   /**
@@ -164,8 +168,6 @@ const DataPage: React.FC = () => {
     }
   };
 
-
-
   /**
    * 一括OHLCVデータ収集開始時のコールバック
    */
@@ -186,6 +188,28 @@ const DataPage: React.FC = () => {
     setBulkCollectionMessage(`❌ ${errorMessage}`);
     // 10秒後にメッセージをクリア
     setTimeout(() => setBulkCollectionMessage(""), 10000);
+  };
+
+  /**
+   * ファンディングレートデータ収集開始時のコールバック
+   */
+  const handleFundingRateCollectionStart = (
+    result: BulkFundingRateCollectionResult
+  ) => {
+    setFundingRateCollectionMessage(
+      `🚀 ${result.message} (${result.successful_symbols}/${result.total_symbols}シンボル成功)`
+    );
+    // 10秒後にメッセージをクリア
+    setTimeout(() => setFundingRateCollectionMessage(""), 10000);
+  };
+
+  /**
+   * ファンディングレートデータ収集エラー時のコールバック
+   */
+  const handleFundingRateCollectionError = (errorMessage: string) => {
+    setFundingRateCollectionMessage(`❌ ${errorMessage}`);
+    // 10秒後にメッセージをクリア
+    setTimeout(() => setFundingRateCollectionMessage(""), 10000);
   };
 
   // 初期データ取得
@@ -404,10 +428,10 @@ const DataPage: React.FC = () => {
               </div>
             </div>
 
-            {/* OHLCVデータ収集ボタン */}
+            {/* データ収集ボタン */}
             <div className="mt-6 pt-6 border-t border-secondary-200 dark:border-secondary-700">
               <div className="flex flex-col gap-6">
-                {/* 一括データ収集 */}
+                {/* OHLCVデータ一括収集 */}
                 <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
                   <div>
                     <h3 className="text-lg font-medium text-secondary-900 dark:text-secondary-100">
@@ -426,6 +450,31 @@ const DataPage: React.FC = () => {
                     {bulkCollectionMessage && (
                       <div className="text-sm text-secondary-600 dark:text-secondary-400">
                         {bulkCollectionMessage}
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* ファンディングレートデータ一括収集 */}
+                <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+                  <div>
+                    <h3 className="text-lg font-medium text-secondary-900 dark:text-secondary-100">
+                      📊 BTCファンディングレートデータ収集
+                    </h3>
+                    <p className="text-sm text-secondary-600 dark:text-secondary-400 mt-1">
+                      BTCの無期限契約のファンディングレートデータを取得・保存します
+                    </p>
+                  </div>
+                  <div className="flex flex-col gap-2">
+                    <FundingRateCollectionButton
+                      mode="bulk"
+                      onCollectionStart={handleFundingRateCollectionStart}
+                      onCollectionError={handleFundingRateCollectionError}
+                      disabled={loading || updating}
+                    />
+                    {fundingRateCollectionMessage && (
+                      <div className="text-sm text-secondary-600 dark:text-secondary-400">
+                        {fundingRateCollectionMessage}
                       </div>
                     )}
                   </div>

@@ -27,7 +27,7 @@ export const SUPPORTED_TRADING_PAIRS: TradingPair[] = [
     quote: "USDT",
   },
   {
-    symbol: "BTC/USDT:PERP",
+    symbol: "BTC/USDT:USDT",
     name: "Bitcoin / USDT Perpetual",
     base: "BTC",
     quote: "USDT",
@@ -53,7 +53,7 @@ export const SUPPORTED_TRADING_PAIRS: TradingPair[] = [
     quote: "BTC",
   },
   {
-    symbol: "ETH/USDT:PERP",
+    symbol: "ETH/USDT:USDT",
     name: "Ethereum / USDT Perpetual",
     base: "ETH",
     quote: "USDT",

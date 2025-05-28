@@ -15,7 +15,11 @@ import { BACKEND_API_URL } from "@/constants";
 /**
  * POST /api/data/ohlcv/bulk
  *
- * 全ての取引ペアと全ての時間軸でOHLCVデータの一括収集を開始します。
+ * 全ての取引ペアでOHLCVデータの一括収集を開始します。
+ * 現在は処理時間短縮のため日足（1d）のみ収集します。
+ *
+ * 注意: 全時間軸での収集を有効にするには、バックエンドAPIの
+ * data_collection.py の timeframes 設定を変更してください。
  */
 export async function POST(request: NextRequest) {
   try {

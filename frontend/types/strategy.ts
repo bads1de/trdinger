@@ -8,8 +8,6 @@
  * @version 1.0.0
  */
 
-
-
 /**
  * 一括OHLCVデータ収集結果
  */
@@ -357,4 +355,144 @@ export interface TradingPair {
   base: string;
   /** クォート通貨（例: "USD"） */
   quote: string;
+}
+
+/**
+ * ファンディングレートデータ
+ *
+ * 無期限契約のファンディングレート情報を表現します。
+ */
+export interface FundingRateData {
+  /** 通貨ペアシンボル（例: "BTC/USDT:USDT"） */
+  symbol: string;
+  /** ファンディングレート（例: -0.00015708） */
+  funding_rate: number;
+  /** ファンディング時刻（ISO形式） */
+  funding_timestamp: string;
+  /** データ取得時刻（ISO形式） */
+  timestamp: string;
+  /** 次回ファンディング時刻（ISO形式、オプション） */
+  next_funding_timestamp?: string | null;
+  /** マーク価格（オプション） */
+  mark_price?: number | null;
+  /** インデックス価格（オプション） */
+  index_price?: number | null;
+}
+
+/**
+ * 現在のファンディングレートデータ
+ *
+ * リアルタイムのファンディングレート情報を表現します。
+ */
+export interface CurrentFundingRateData {
+  /** 通貨ペアシンボル（例: "BTC/USDT:USDT"） */
+  symbol: string;
+  /** ファンディングレート（例: -0.00015708） */
+  funding_rate: number;
+  /** ファンディング時刻（ISO形式） */
+  funding_timestamp?: string | null;
+  /** 次回ファンディング時刻（ISO形式） */
+  next_funding_timestamp?: string | null;
+  /** マーク価格 */
+  mark_price?: number | null;
+  /** インデックス価格 */
+  index_price?: number | null;
+  /** データ取得時刻（ISO形式） */
+  timestamp?: string | null;
+}
+
+/**
+ * ファンディングレートAPIレスポンス
+ *
+ * APIから返されるファンディングレートデータの形式を定義します。
+ */
+export interface FundingRateResponse {
+  /** 成功フラグ */
+  success: boolean;
+  /** データ */
+  data: {
+    /** 通貨ペア */
+    symbol: string;
+    /** データ件数 */
+    count: number;
+    /** ファンディングレートデータの配列 */
+    funding_rates: FundingRateData[];
+  };
+  /** メッセージ */
+  message?: string;
+}
+
+/**
+ * 現在のファンディングレートAPIレスポンス
+ *
+ * 現在のファンディングレート取得APIのレスポンス形式を定義します。
+ */
+export interface CurrentFundingRateResponse {
+  /** 成功フラグ */
+  success: boolean;
+  /** データ */
+  data: CurrentFundingRateData;
+  /** メッセージ */
+  message?: string;
+}
+
+/**
+ * ファンディングレート収集結果
+ *
+ * ファンディングレートデータ収集の結果を表現します。
+ */
+export interface FundingRateCollectionResult {
+  /** 通貨ペア */
+  symbol: string;
+  /** 取得件数 */
+  fetched_count: number;
+  /** 保存件数 */
+  saved_count: number;
+  /** 成功フラグ */
+  success: boolean;
+}
+
+/**
+ * ファンディングレート収集APIレスポンス
+ *
+ * ファンディングレート収集APIのレスポンス形式を定義します。
+ */
+export interface FundingRateCollectionResponse {
+  /** 成功フラグ */
+  success: boolean;
+  /** データ */
+  data: FundingRateCollectionResult;
+  /** メッセージ */
+  message?: string;
+}
+
+/**
+ * 一括ファンディングレート収集結果
+ *
+ * 複数シンボルのファンディングレートデータ一括収集の結果を表現します。
+ */
+export interface BulkFundingRateCollectionResult {
+  /** 処理成功フラグ */
+  success: boolean;
+  /** 結果メッセージ */
+  message: string;
+  /** 処理開始時刻 */
+  started_at?: string;
+  /** 処理ステータス */
+  status?: "started" | "in_progress" | "completed" | "error";
+  /** 総シンボル数 */
+  total_symbols: number;
+  /** 成功したシンボル数 */
+  successful_symbols: number;
+  /** 失敗したシンボル数 */
+  failed_symbols: number;
+  /** 総保存レコード数 */
+  total_saved_records: number;
+  /** 個別結果 */
+  results: FundingRateCollectionResult[];
+  /** 失敗したシンボルの詳細 */
+  failures: Array<{
+    symbol: string;
+    error: string;
+  }>;
 }

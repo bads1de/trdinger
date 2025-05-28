@@ -1,9 +1,9 @@
 """
 データベースモデル定義
 """
-from sqlalchemy import Column, Integer, String, Float, DateTime, Index, BigInteger
+
+from sqlalchemy import Column, Integer, String, Float, DateTime, Index
 from sqlalchemy.sql import func
-from datetime import datetime
 from .connection import Base
 
 
@@ -13,6 +13,7 @@ class OHLCVData(Base):
 
     TimescaleDBのハイパーテーブルとして最適化されています。
     """
+
     __tablename__ = "ohlcv_data"
 
     # 主キー（複合キー: symbol + timeframe + timestamp）
@@ -36,35 +37,110 @@ class OHLCVData(Base):
 
     # メタデータ
     created_at = Column(DateTime(timezone=True), server_default=func.now())
-    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+    updated_at = Column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
 
     # インデックス定義
     __table_args__ = (
         # 複合インデックス（クエリ最適化）
-        Index('idx_symbol_timeframe_timestamp', 'symbol', 'timeframe', 'timestamp'),
-        Index('idx_timestamp_symbol', 'timestamp', 'symbol'),
+        Index("idx_symbol_timeframe_timestamp", "symbol", "timeframe", "timestamp"),
+        Index("idx_timestamp_symbol", "timestamp", "symbol"),
         # ユニーク制約（重複データ防止）
-        Index('uq_symbol_timeframe_timestamp', 'symbol', 'timeframe', 'timestamp', unique=True),
+        Index(
+            "uq_symbol_timeframe_timestamp",
+            "symbol",
+            "timeframe",
+            "timestamp",
+            unique=True,
+        ),
     )
 
     def __repr__(self):
-        return (f"<OHLCVData(symbol='{self.symbol}', timeframe='{self.timeframe}', "
-                f"timestamp='{self.timestamp}', close={self.close})>")
+        return (
+            f"<OHLCVData(symbol='{self.symbol}', timeframe='{self.timeframe}', "
+            f"timestamp='{self.timestamp}', close={self.close})>"
+        )
+
+
+class FundingRateData(Base):
+    """
+    ファンディングレートデータテーブル
+
+    無期限契約のファンディングレート履歴を保存します。
+    TimescaleDBのハイパーテーブルとして最適化されています。
+    """
+
+    __tablename__ = "funding_rate_data"
+
+    # 主キー
+    id = Column(Integer, primary_key=True, autoincrement=True)
+
+    # 取引ペア（例: BTC/USDT:USDT）
+    symbol = Column(String(50), nullable=False, index=True)
+
+    # ファンディングレート
+    funding_rate = Column(Float, nullable=False)
+
+    # ファンディング時刻（UTC）
+    funding_timestamp = Column(DateTime(timezone=True), nullable=False, index=True)
+
+    # データ取得時刻（UTC）
+    timestamp = Column(DateTime(timezone=True), nullable=False, index=True)
+
+    # 次回ファンディング時刻（UTC）
+    next_funding_timestamp = Column(DateTime(timezone=True), nullable=True)
+
+    # マーク価格（参考情報）
+    mark_price = Column(Float, nullable=True)
+
+    # インデックス価格（参考情報）
+    index_price = Column(Float, nullable=True)
+
+    # メタデータ
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
+
+    # インデックス定義
+    __table_args__ = (
+        # 複合インデックス（クエリ最適化）
+        Index("idx_funding_symbol_timestamp", "symbol", "funding_timestamp"),
+        Index("idx_funding_timestamp_symbol", "funding_timestamp", "symbol"),
+        Index("idx_funding_symbol_created", "symbol", "created_at"),
+        # ユニーク制約（重複データ防止）
+        Index(
+            "uq_symbol_funding_timestamp", "symbol", "funding_timestamp", unique=True
+        ),
+    )
+
+    def __repr__(self):
+        return (
+            f"<FundingRateData(symbol='{self.symbol}', "
+            f"funding_timestamp='{self.funding_timestamp}', "
+            f"funding_rate={self.funding_rate})>"
+        )
 
     def to_dict(self):
         """辞書形式に変換"""
         return {
-            'id': self.id,
-            'symbol': self.symbol,
-            'timeframe': self.timeframe,
-            'timestamp': self.timestamp.isoformat() if self.timestamp else None,
-            'open': self.open,
-            'high': self.high,
-            'low': self.low,
-            'close': self.close,
-            'volume': self.volume,
-            'created_at': self.created_at.isoformat() if self.created_at else None,
-            'updated_at': self.updated_at.isoformat() if self.updated_at else None,
+            "id": self.id,
+            "symbol": self.symbol,
+            "funding_rate": self.funding_rate,
+            "funding_timestamp": (
+                self.funding_timestamp.isoformat() if self.funding_timestamp else None
+            ),
+            "timestamp": self.timestamp.isoformat() if self.timestamp else None,
+            "next_funding_timestamp": (
+                self.next_funding_timestamp.isoformat()
+                if self.next_funding_timestamp
+                else None
+            ),
+            "mark_price": self.mark_price,
+            "index_price": self.index_price,
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+            "updated_at": self.updated_at.isoformat() if self.updated_at else None,
         }
 
 
@@ -74,6 +150,7 @@ class DataCollectionLog(Base):
 
     データ収集の履歴と状態を管理します。
     """
+
     __tablename__ = "data_collection_log"
 
     id = Column(Integer, primary_key=True, autoincrement=True)
@@ -95,5 +172,7 @@ class DataCollectionLog(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
     def __repr__(self):
-        return (f"<DataCollectionLog(symbol='{self.symbol}', timeframe='{self.timeframe}', "
-                f"status='{self.status}', records={self.records_collected})>")
+        return (
+            f"<DataCollectionLog(symbol='{self.symbol}', timeframe='{self.timeframe}', "
+            f"status='{self.status}', records={self.records_collected})>"
+        )

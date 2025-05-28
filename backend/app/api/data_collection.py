@@ -192,7 +192,11 @@ async def collect_bulk_historical_data(
             "ETH/USDT:USDT",
             "ETHUSD",
         ]
-        timeframes = ["1m", "5m", "15m", "30m", "1h", "4h", "1d"]
+
+        # 時間軸設定（処理時間短縮のため現在は日足のみ）
+        # 全時間軸を有効にする場合は以下のコメントアウトを解除してください
+        # timeframes = ["1m", "5m", "15m", "30m", "1h", "4h", "1d"]
+        timeframes = ["1d"]  # 日足のみ（高速処理用）
 
         total_combinations = len(symbols) * len(timeframes)
         started_at = datetime.now(timezone.utc).isoformat()
