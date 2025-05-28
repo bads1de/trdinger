@@ -59,8 +59,8 @@ const FundingRateCollectionButton: React.FC<
     FundingRateCollectionResult | BulkFundingRateCollectionResult | null
   >(null);
 
-  // BTCの無期限契約シンボル（USDTのみ）
-  const supportedSymbols = ["BTC/USDT:USDT"];
+  // BTC・ETHの無期限契約シンボル（USDTのみ）
+  const supportedSymbols = ["BTC/USDT:USDT", "ETH/USDT:USDT"];
 
   /**
    * ファンディングレートデータを収集
@@ -69,8 +69,8 @@ const FundingRateCollectionButton: React.FC<
     if (mode === "bulk") {
       // 確認ダイアログ
       const confirmed = window.confirm(
-        `BTCのファンディングレートデータを取得します。\n\n` +
-          "この処理には時間がかかる場合があります。続行しますか？"
+        `BTC・ETHの全期間ファンディングレートデータを取得します。\n\n` +
+          "この処理には数分かかる場合があります。続行しますか？"
       );
 
       if (!confirmed) {
@@ -87,7 +87,7 @@ const FundingRateCollectionButton: React.FC<
 
       if (mode === "bulk") {
         // 一括収集
-        apiUrl = "/api/data/funding-rates/bulk";
+        apiUrl = "/api/data/funding-rates/bulk-collect";
         requestOptions = {
           method: "POST",
           headers: {
@@ -95,10 +95,10 @@ const FundingRateCollectionButton: React.FC<
           },
         };
       } else {
-        // 単一収集
+        // 単一収集（全期間取得）
         apiUrl = `/api/data/funding-rates/collect?symbol=${encodeURIComponent(
           symbol
-        )}&limit=100`;
+        )}&fetch_all=true`;
         requestOptions = {
           method: "POST",
           headers: {
@@ -162,7 +162,7 @@ const FundingRateCollectionButton: React.FC<
         return "エラーが発生しました";
       default:
         return mode === "bulk"
-          ? "BTCファンディングレート収集・保存"
+          ? "BTC・ETHファンディングレート収集・保存"
           : "ファンディングレート収集・保存";
     }
   };
@@ -257,7 +257,7 @@ const FundingRateCollectionButton: React.FC<
         className={getButtonClasses()}
         title={
           mode === "bulk"
-            ? `BTCのファンディングレートデータを収集・保存`
+            ? `BTC・ETHの全期間ファンディングレートデータを収集・保存`
             : `${symbol}のファンディングレートデータを収集・保存`
         }
       >
@@ -269,7 +269,7 @@ const FundingRateCollectionButton: React.FC<
       <div className="text-xs text-secondary-500 dark:text-secondary-500">
         {mode === "bulk" ? (
           <>
-            BTCのファンディングレートデータを
+            BTC・ETHの全期間ファンディングレートデータを
             <br />
             取得・保存します
           </>

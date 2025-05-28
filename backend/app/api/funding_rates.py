@@ -116,7 +116,8 @@ async def get_funding_rates(
 @router.post("/funding-rates/collect")
 async def collect_funding_rate_data(
     symbol: str = Query(..., description="取引ペアシンボル（例: 'BTC/USDT'）"),
-    limit: Optional[int] = Query(100, description="取得するデータ数（1-1000）"),
+    limit: Optional[int] = Query(100, description="取得するデータ数（1-1000、fetch_all=trueの場合は無視）"),
+    fetch_all: bool = Query(False, description="全期間のデータを取得するかどうか"),
     db: Session = Depends(get_db),
 ):
     """
@@ -126,7 +127,8 @@ async def collect_funding_rate_data(
 
     Args:
         symbol: 取引ペアシンボル（例: 'BTC/USDT'）
-        limit: 取得するデータ数（1-1000）
+        limit: 取得するデータ数（1-1000、fetch_all=trueの場合は無視）
+        fetch_all: 全期間のデータを取得するかどうか
         db: データベースセッション
 
     Returns:
@@ -137,7 +139,7 @@ async def collect_funding_rate_data(
     """
     try:
         logger.info(
-            f"ファンディングレートデータ収集開始: symbol={symbol}, limit={limit}"
+            f"ファンディングレートデータ収集開始: symbol={symbol}, fetch_all={fetch_all}"
         )
 
         # データベース初期化確認
@@ -158,6 +160,7 @@ async def collect_funding_rate_data(
             symbol=symbol,
             limit=limit,
             repository=repository,
+            fetch_all=fetch_all,
         )
 
         logger.info(f"ファンディングレートデータ収集完了: {result}")
@@ -229,18 +232,14 @@ async def get_current_funding_rate(
 
 @router.post("/funding-rates/bulk-collect")
 async def bulk_collect_funding_rates(
-    limit: Optional[int] = Query(
-        100, description="各シンボルで取得するデータ数（1-1000）"
-    ),
     db: Session = Depends(get_db),
 ):
     """
-    全ての主要シンボルのファンディングレートデータを一括収集します
+    BTC・ETHシンボルのファンディングレートデータを一括収集します
 
-    主要な無期限契約シンボルのファンディングレートデータを一括で取得・保存します。
+    BTC・ETHの無期限契約シンボルの全期間ファンディングレートデータを一括で取得・保存します。
 
     Args:
-        limit: 各シンボルで取得するデータ数（1-1000）
         db: データベースセッション
 
     Returns:
@@ -250,7 +249,7 @@ async def bulk_collect_funding_rates(
         HTTPException: データベースエラーが発生した場合
     """
     try:
-        logger.info(f"ファンディングレート一括収集開始: limit={limit}")
+        logger.info("ファンディングレート一括収集開始: BTC・ETH全期間データ")
 
         # データベース初期化確認
         if not ensure_db_initialized():
@@ -259,9 +258,10 @@ async def bulk_collect_funding_rates(
                 status_code=500, detail="データベースの初期化に失敗しました"
             )
 
-        # BTCの無期限契約シンボル（USDTのみ）
+        # BTC・ETHの無期限契約シンボル（USDTのみ）
         symbols = [
             "BTC/USDT:USDT",
+            "ETH/USDT:USDT",
         ]
 
         # ファンディングレートサービスを作成
@@ -278,8 +278,8 @@ async def bulk_collect_funding_rates(
             try:
                 result = await service.fetch_and_save_funding_rate_data(
                     symbol=symbol,
-                    limit=limit,
                     repository=repository,
+                    fetch_all=True,  # 全期間のデータを取得
                 )
                 results.append(result)
                 total_saved += result["saved_count"]
