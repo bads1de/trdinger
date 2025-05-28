@@ -13,10 +13,9 @@
 import React, { useState, useEffect } from "react";
 import OHLCVDataTable from "@/components/OHLCVDataTable";
 import FundingRateDataTable from "@/components/FundingRateDataTable";
-import TimeFrameSelector from "@/components/TimeFrameSelector";
-import SymbolSelector from "@/components/SymbolSelector";
-import OHLCVDataCollectionButton from "@/components/BulkOHLCVDataCollectionButton";
-import FundingRateCollectionButton from "@/components/FundingRateCollectionButton";
+import CompactSymbolSelector from "@/components/CompactSymbolSelector";
+import CompactTimeFrameSelector from "@/components/CompactTimeFrameSelector";
+import CompactDataCollectionButtons from "@/components/CompactDataCollectionButtons";
 import {
   PriceData,
   FundingRateData,
@@ -450,93 +449,74 @@ const DataPage: React.FC = () => {
           </div>
         )}
 
-        {/* コントロールパネル */}
+        {/* コンパクトデータ設定 */}
         <div className="enterprise-card animate-slide-up">
-          <div className="p-6">
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-xl font-semibold text-secondary-900 dark:text-secondary-100">
-                📈 データ設定
-              </h2>
-              <span className="text-sm text-secondary-500 dark:text-secondary-400">
-                表示パラメータを調整
-              </span>
-            </div>
-
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {/* 通貨ペア選択 */}
-              <div className="space-y-2">
-                <SymbolSelector
-                  symbols={symbols}
-                  selectedSymbol={selectedSymbol}
-                  onSymbolChange={handleSymbolChange}
-                  loading={symbolsLoading}
-                  disabled={loading}
-                />
+          <div className="p-4">
+            <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+              <div className="flex items-center gap-2">
+                <h2 className="text-lg font-semibold text-secondary-900 dark:text-secondary-100">
+                  📈 データ設定
+                </h2>
               </div>
 
-              {/* 時間軸選択 */}
-              <div className="space-y-2">
-                <TimeFrameSelector
-                  selectedTimeFrame={selectedTimeFrame}
-                  onTimeFrameChange={handleTimeFrameChange}
-                  disabled={loading}
-                />
-              </div>
-            </div>
-
-            {/* データ収集ボタン */}
-            <div className="mt-6 pt-6 border-t border-secondary-200 dark:border-secondary-700">
-              <div className="flex flex-col gap-6">
-                {/* OHLCVデータ一括収集 */}
-                <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
-                  <div>
-                    <h3 className="text-lg font-medium text-secondary-900 dark:text-secondary-100">
-                      🚀 OHLCVデータ一括収集
-                    </h3>
-                    <p className="text-sm text-secondary-600 dark:text-secondary-400 mt-1">
-                      全ての取引ペアと全ての時間軸でOHLCVデータを一括取得・保存します
-                    </p>
-                  </div>
-                  <div className="flex flex-col gap-2">
-                    <OHLCVDataCollectionButton
-                      onBulkCollectionStart={handleBulkCollectionStart}
-                      onCollectionError={handleBulkCollectionError}
-                      disabled={loading || updating}
-                    />
-                    {bulkCollectionMessage && (
-                      <div className="text-sm text-secondary-600 dark:text-secondary-400">
-                        {bulkCollectionMessage}
-                      </div>
-                    )}
-                  </div>
+              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+                {/* 通貨ペア選択 */}
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-secondary-600 dark:text-secondary-400 whitespace-nowrap">
+                    通貨ペア:
+                  </span>
+                  <CompactSymbolSelector
+                    symbols={symbols}
+                    selectedSymbol={selectedSymbol}
+                    onSymbolChange={handleSymbolChange}
+                    loading={symbolsLoading}
+                    disabled={loading}
+                  />
                 </div>
 
-                {/* ファンディングレートデータ一括収集 */}
-                <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
-                  <div>
-                    <h3 className="text-lg font-medium text-secondary-900 dark:text-secondary-100">
-                      📊 BTCファンディングレートデータ収集
-                    </h3>
-                    <p className="text-sm text-secondary-600 dark:text-secondary-400 mt-1">
-                      BTCの無期限契約のファンディングレートデータを取得・保存します
-                    </p>
-                  </div>
-                  <div className="flex flex-col gap-2">
-                    <FundingRateCollectionButton
-                      mode="bulk"
-                      onCollectionStart={handleFundingRateCollectionStart}
-                      onCollectionError={handleFundingRateCollectionError}
-                      disabled={loading || updating}
-                    />
-                    {fundingRateCollectionMessage && (
-                      <div className="text-sm text-secondary-600 dark:text-secondary-400">
-                        {fundingRateCollectionMessage}
-                      </div>
-                    )}
-                  </div>
+                {/* 時間軸選択 */}
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-secondary-600 dark:text-secondary-400 whitespace-nowrap">
+                    時間軸:
+                  </span>
+                  <CompactTimeFrameSelector
+                    selectedTimeFrame={selectedTimeFrame}
+                    onTimeFrameChange={handleTimeFrameChange}
+                    disabled={loading}
+                  />
+                </div>
+
+                {/* データ収集ボタン */}
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-secondary-600 dark:text-secondary-400 whitespace-nowrap">
+                    データ収集:
+                  </span>
+                  <CompactDataCollectionButtons
+                    onBulkCollectionStart={handleBulkCollectionStart}
+                    onBulkCollectionError={handleBulkCollectionError}
+                    onFundingRateCollectionStart={handleFundingRateCollectionStart}
+                    onFundingRateCollectionError={handleFundingRateCollectionError}
+                    disabled={loading || updating}
+                  />
                 </div>
               </div>
             </div>
+
+            {/* ステータスメッセージ */}
+            {(bulkCollectionMessage || fundingRateCollectionMessage) && (
+              <div className="mt-3 pt-3 border-t border-secondary-200 dark:border-secondary-700">
+                {bulkCollectionMessage && (
+                  <div className="text-sm text-secondary-600 dark:text-secondary-400 mb-1">
+                    {bulkCollectionMessage}
+                  </div>
+                )}
+                {fundingRateCollectionMessage && (
+                  <div className="text-sm text-secondary-600 dark:text-secondary-400">
+                    {fundingRateCollectionMessage}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </div>
 
