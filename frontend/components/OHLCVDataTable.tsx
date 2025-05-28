@@ -98,6 +98,7 @@ const OHLCVDataTable: React.FC<OHLCVDataTableProps> = ({
   className = "",
 }) => {
   // テーブルカラムの定義
+  // 注意: 変動率カラムは計算機能未実装のため一時的に削除済み
   const columns: TableColumn<PriceData>[] = [
     {
       key: "timestamp",
