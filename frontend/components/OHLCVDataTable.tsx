@@ -98,6 +98,7 @@ const OHLCVDataTable: React.FC<OHLCVDataTableProps> = ({
   className = "",
 }) => {
   // テーブルカラムの定義
+  // 注意: 変動率カラムは計算機能未実装のため一時的に削除済み
   const columns: TableColumn<PriceData>[] = [
     {
       key: "timestamp",
@@ -169,29 +170,6 @@ const OHLCVDataTable: React.FC<OHLCVDataTableProps> = ({
           {formatVolume(value)}
         </span>
       ),
-      cellClassName: "text-right",
-    },
-    {
-      key: "change",
-      header: "変動率",
-      width: "100px",
-      sortable: false,
-      formatter: (value: number, row: PriceData) => {
-        const change = ((value - row.open) / row.open) * 100;
-        const changeColor =
-          change > 0
-            ? "text-green-400"
-            : change < 0
-            ? "text-red-400"
-            : "text-gray-100";
-        const changeSign = change > 0 ? "+" : "";
-        return (
-          <span className={`font-mono text-sm font-semibold ${changeColor}`}>
-            {changeSign}
-            {change.toFixed(2)}%
-          </span>
-        );
-      },
       cellClassName: "text-right",
     },
   ];
