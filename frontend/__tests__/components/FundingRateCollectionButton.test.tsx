@@ -23,7 +23,7 @@ describe("FundingRateCollectionButton", () => {
 
       expect(screen.getByRole("button")).toBeInTheDocument();
       expect(
-        screen.getByText("BTCファンディングレート収集・保存")
+        screen.getByText("BTC・ETHファンディングレート収集・保存")
       ).toBeInTheDocument();
     });
 
@@ -149,7 +149,7 @@ describe("FundingRateCollectionButton", () => {
 
       await waitFor(() => {
         expect(fetch).toHaveBeenCalledWith(
-          "/api/data/funding-rates/collect?symbol=BTC%2FUSDT&limit=100",
+          "/api/data/funding-rates/collect?symbol=BTC%2FUSDT&fetch_all=true",
           expect.objectContaining({
             method: "POST",
             headers: {

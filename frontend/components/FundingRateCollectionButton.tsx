@@ -59,9 +59,6 @@ const FundingRateCollectionButton: React.FC<
     FundingRateCollectionResult | BulkFundingRateCollectionResult | null
   >(null);
 
-  // BTC・ETHの無期限契約シンボル（USDTのみ）
-  const supportedSymbols = ["BTC/USDT:USDT", "ETH/USDT:USDT"];
-
   /**
    * ファンディングレートデータを収集
    */
@@ -87,7 +84,7 @@ const FundingRateCollectionButton: React.FC<
 
       if (mode === "bulk") {
         // 一括収集
-        apiUrl = "/api/data/funding-rates/bulk-collect";
+        apiUrl = "/api/data/funding-rates/bulk";
         requestOptions = {
           method: "POST",
           headers: {
