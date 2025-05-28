@@ -1,15 +1,15 @@
 /**
- * ローソク足データ取得API
+ * OHLCVデータ取得API
  *
  * データベースに保存されたOHLCVデータを取得するAPIエンドポイントです。
- * バックテスト用のデータを提供します。
+ * データテーブル表示用のデータを提供します。
  *
  * @author Trdinger Development Team
- * @version 3.0.0
+ * @version 4.0.0
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { CandlestickData, TimeFrame } from "@/types/strategy";
+import { PriceData, TimeFrame } from "@/types/strategy";
 import { BACKEND_API_URL } from "@/constants";
 
 /**
@@ -27,7 +27,7 @@ const VALID_TIMEFRAMES: TimeFrame[] = ["15m", "30m", "1h", "4h", "1d"];
  * @param limit データ件数
  * @param startDate 開始日時
  * @param endDate 終了日時
- * @returns ローソク足データの配列
+ * @returns OHLCVデータの配列
  */
 async function fetchDatabaseOHLCVData(
   symbol: string,
@@ -35,7 +35,7 @@ async function fetchDatabaseOHLCVData(
   limit: number = 100,
   startDate?: string,
   endDate?: string
-): Promise<CandlestickData[]> {
+): Promise<PriceData[]> {
   // バックエンドAPIのURLを構築
   const apiUrl = new URL("/api/market-data/ohlcv", BACKEND_API_URL);
   apiUrl.searchParams.set("symbol", symbol);
@@ -80,7 +80,7 @@ async function fetchDatabaseOHLCVData(
 
   // バックエンドのOHLCVデータをフロントエンド形式に変換
   const ohlcvData = backendData.data;
-  const candlesticks: CandlestickData[] = ohlcvData.map((candle: number[]) => {
+  const priceData: PriceData[] = ohlcvData.map((candle: number[]) => {
     const [timestamp, open, high, low, close, volume] = candle;
 
     return {
@@ -93,14 +93,14 @@ async function fetchDatabaseOHLCVData(
     };
   });
 
-  console.log(`取得したデータ件数: ${candlesticks.length}`);
-  return candlesticks;
+  console.log(`取得したデータ件数: ${priceData.length}`);
+  return priceData;
 }
 
 /**
  * GET /api/data/candlesticks
  *
- * ローソク足データを取得します。
+ * OHLCVデータを取得します。
  *
  * クエリパラメータ:
  * - symbol: 通貨ペア (必須)
@@ -168,7 +168,7 @@ export async function GET(request: NextRequest) {
     }
 
     // データベースからデータを取得
-    const candlesticks = await fetchDatabaseOHLCVData(
+    const ohlcvData = await fetchDatabaseOHLCVData(
       symbol,
       timeframe,
       limit,
@@ -177,7 +177,7 @@ export async function GET(request: NextRequest) {
     );
 
     // データが取得できない場合のエラーハンドリング
-    if (!candlesticks || candlesticks.length === 0) {
+    if (!ohlcvData || ohlcvData.length === 0) {
       return NextResponse.json(
         {
           success: false,
@@ -194,13 +194,13 @@ export async function GET(request: NextRequest) {
       data: {
         symbol,
         timeframe,
-        candlesticks: candlesticks,
+        ohlcv: ohlcvData,
       },
-      message: `${symbol} の ${timeframe} ローソク足データを取得しました（${candlesticks.length}件）`,
+      message: `${symbol} の ${timeframe} OHLCVデータを取得しました（${ohlcvData.length}件）`,
       timestamp: new Date().toISOString(),
     });
   } catch (error) {
-    console.error("ローソク足データ取得エラー:", error);
+    console.error("OHLCVデータ取得エラー:", error);
 
     return NextResponse.json(
       {

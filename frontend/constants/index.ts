@@ -73,27 +73,27 @@ export const SUPPORTED_TIMEFRAMES: TimeFrameInfo[] = [
   {
     value: "15m",
     label: "15分",
-    description: "15分足チャート",
+    description: "15分足データ",
   },
   {
     value: "30m",
     label: "30分",
-    description: "30分足チャート",
+    description: "30分足データ",
   },
   {
     value: "1h",
     label: "1時間",
-    description: "1時間足チャート",
+    description: "1時間足データ",
   },
   {
     value: "4h",
     label: "4時間",
-    description: "4時間足チャート",
+    description: "4時間足データ",
   },
   {
     value: "1d",
     label: "1日",
-    description: "日足チャート",
+    description: "日足データ",
   },
 ];
 

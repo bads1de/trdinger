@@ -124,7 +124,9 @@ const OHLCVDataTable: React.FC<OHLCVDataTableProps> = ({
       width: "120px",
       sortable: true,
       formatter: (value: number) => (
-        <span className="font-mono text-sm text-green-400">{formatCurrency(value)}</span>
+        <span className="font-mono text-sm text-green-400">
+          {formatCurrency(value)}
+        </span>
       ),
       cellClassName: "text-right",
     },
@@ -134,7 +136,9 @@ const OHLCVDataTable: React.FC<OHLCVDataTableProps> = ({
       width: "120px",
       sortable: true,
       formatter: (value: number) => (
-        <span className="font-mono text-sm text-red-400">{formatCurrency(value)}</span>
+        <span className="font-mono text-sm text-red-400">
+          {formatCurrency(value)}
+        </span>
       ),
       cellClassName: "text-right",
     },
@@ -144,7 +148,12 @@ const OHLCVDataTable: React.FC<OHLCVDataTableProps> = ({
       width: "120px",
       sortable: true,
       formatter: (value: number, row: PriceData) => (
-        <span className={`font-mono text-sm font-semibold ${getPriceChangeColor(row.open, value)}`}>
+        <span
+          className={`font-mono text-sm font-semibold ${getPriceChangeColor(
+            row.open,
+            value
+          )}`}
+        >
           {formatCurrency(value)}
         </span>
       ),
@@ -156,22 +165,30 @@ const OHLCVDataTable: React.FC<OHLCVDataTableProps> = ({
       width: "100px",
       sortable: true,
       formatter: (value: number) => (
-        <span className="font-mono text-sm text-blue-400">{formatVolume(value)}</span>
+        <span className="font-mono text-sm text-blue-400">
+          {formatVolume(value)}
+        </span>
       ),
       cellClassName: "text-right",
     },
     {
-      key: "close",
+      key: "change",
       header: "変動率",
       width: "100px",
       sortable: false,
       formatter: (value: number, row: PriceData) => {
         const change = ((value - row.open) / row.open) * 100;
-        const changeColor = change > 0 ? "text-green-400" : change < 0 ? "text-red-400" : "text-gray-100";
+        const changeColor =
+          change > 0
+            ? "text-green-400"
+            : change < 0
+            ? "text-red-400"
+            : "text-gray-100";
         const changeSign = change > 0 ? "+" : "";
         return (
           <span className={`font-mono text-sm font-semibold ${changeColor}`}>
-            {changeSign}{change.toFixed(2)}%
+            {changeSign}
+            {change.toFixed(2)}%
           </span>
         );
       },
@@ -183,7 +200,7 @@ const OHLCVDataTable: React.FC<OHLCVDataTableProps> = ({
     <DataTable
       data={data}
       columns={columns}
-      title={`📊 ${symbol} - ${timeframe}足 OHLCVデータ`}
+      title={`📊 ${symbol} - ${timeframe} OHLCVデータ`}
       loading={loading}
       error={error}
       pageSize={50}

@@ -289,10 +289,10 @@ const DataPage: React.FC = () => {
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div className="animate-slide-up">
               <h1 className="text-3xl font-bold text-gradient">
-                📊 チャートデータ
+                📊 データテーブル
               </h1>
               <p className="mt-2 text-base text-secondary-600 dark:text-secondary-400">
-                エンタープライズレベルの仮想通貨ローソク足チャート分析
+                エンタープライズレベルの仮想通貨データ分析・表示
               </p>
               <div className="mt-2 flex items-center gap-2">
                 <span className="badge-primary">リアルタイム</span>
@@ -455,7 +455,7 @@ const DataPage: React.FC = () => {
           <div className="p-6">
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-xl font-semibold text-secondary-900 dark:text-secondary-100">
-                📈 チャート設定
+                📈 データ設定
               </h2>
               <span className="text-sm text-secondary-500 dark:text-secondary-400">
                 表示パラメータを調整
