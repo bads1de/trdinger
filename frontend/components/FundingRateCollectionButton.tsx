@@ -1,7 +1,7 @@
 /**
- * ファンディングレートデータ収集ボタンコンポーネント
+ * FRデータ収集ボタンコンポーネント
  *
- * ファンディングレートデータを取得し、データベースに保存するためのUIコンポーネントです。
+ * FRデータを取得し、データベースに保存するためのUIコンポーネントです。
  * ダークモード対応、状態管理、エラーハンドリング、確認ダイアログを含みます。
  *
  * @author Trdinger Development Team
@@ -17,7 +17,7 @@ import {
 } from "@/types/strategy";
 
 /**
- * ファンディングレート収集ボタンコンポーネントのプロパティ
+ * FR収集ボタンコンポーネントのプロパティ
  */
 interface FundingRateCollectionButtonProps {
   /** データ収集開始時のコールバック */
@@ -42,7 +42,7 @@ interface FundingRateCollectionButtonProps {
 type ButtonState = "idle" | "loading" | "success" | "error";
 
 /**
- * ファンディングレートデータ収集ボタンコンポーネント
+ * FRデータ収集ボタンコンポーネント
  */
 const FundingRateCollectionButton: React.FC<
   FundingRateCollectionButtonProps
@@ -60,13 +60,13 @@ const FundingRateCollectionButton: React.FC<
   >(null);
 
   /**
-   * ファンディングレートデータを収集
+   * FRデータを収集
    */
   const handleCollectData = async () => {
     if (mode === "bulk") {
       // 確認ダイアログ
       const confirmed = window.confirm(
-        `BTC・ETHの全期間ファンディングレートデータを取得します。\n\n` +
+        `BTC・ETHの全期間FRデータを取得します。\n\n` +
           "この処理には数分かかる場合があります。続行しますか？"
       );
 
@@ -117,17 +117,15 @@ const FundingRateCollectionButton: React.FC<
           setButtonState("idle");
         }, 3000);
       } else {
-        throw new Error(
-          result.message || "ファンディングレートデータの収集に失敗しました"
-        );
+        throw new Error(result.message || "FRデータの収集に失敗しました");
       }
     } catch (error) {
-      console.error("ファンディングレートデータ収集エラー:", error);
+      console.error("FRデータ収集エラー:", error);
       setButtonState("error");
       const errorMessage =
         error instanceof Error
           ? error.message
-          : "ファンディングレートデータの収集中にエラーが発生しました";
+          : "FRデータの収集中にエラーが発生しました";
       onCollectionError?.(errorMessage);
 
       // 5秒後にアイドル状態に戻す
@@ -148,19 +146,13 @@ const FundingRateCollectionButton: React.FC<
   const getButtonText = () => {
     switch (buttonState) {
       case "loading":
-        return mode === "bulk"
-          ? "ファンディングレート一括収集中..."
-          : "ファンディングレート収集中...";
+        return mode === "bulk" ? "FR一括収集中..." : "FR収集中...";
       case "success":
-        return mode === "bulk"
-          ? "ファンディングレート一括収集完了"
-          : "ファンディングレート収集完了";
+        return mode === "bulk" ? "FR一括収集完了" : "FR収集完了";
       case "error":
         return "エラーが発生しました";
       default:
-        return mode === "bulk"
-          ? "BTC・ETHファンディングレート収集・保存"
-          : "ファンディングレート収集・保存";
+        return mode === "bulk" ? "BTC・ETHFR収集・保存" : "FR収集・保存";
     }
   };
 
@@ -237,7 +229,7 @@ const FundingRateCollectionButton: React.FC<
       const singleResult = lastResult as FundingRateCollectionResult;
       return (
         <div className="text-sm text-secondary-600 dark:text-secondary-400">
-          {singleResult.saved_count}件のファンディングレートデータを保存しました
+          {singleResult.saved_count}件のFRデータを保存しました
         </div>
       );
     }
@@ -254,8 +246,8 @@ const FundingRateCollectionButton: React.FC<
         className={getButtonClasses()}
         title={
           mode === "bulk"
-            ? `BTC・ETHの全期間ファンディングレートデータを収集・保存`
-            : `${symbol}のファンディングレートデータを収集・保存`
+            ? `BTC・ETHの全期間FRデータを収集・保存`
+            : `${symbol}のFRデータを収集・保存`
         }
       >
         {getButtonIcon()}
@@ -266,13 +258,13 @@ const FundingRateCollectionButton: React.FC<
       <div className="text-xs text-secondary-500 dark:text-secondary-500">
         {mode === "bulk" ? (
           <>
-            BTC・ETHの全期間ファンディングレートデータを
+            BTC・ETHの全期間FRデータを
             <br />
             取得・保存します
           </>
         ) : (
           <>
-            {symbol}のファンディングレートデータを
+            {symbol}のFRデータを
             <br />
             取得・保存します
           </>

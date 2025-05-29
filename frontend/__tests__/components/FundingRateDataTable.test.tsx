@@ -1,5 +1,5 @@
 /**
- * ファンディングレートデータテーブルコンポーネント テスト
+ * FRデータテーブルコンポーネント テスト
  *
  * FundingRateDataTableコンポーネントのテストケースです。
  * 表示、ソート、ページネーション、CSVエクスポート機能をテストします。
@@ -19,9 +19,15 @@ const createMockFundingRateData = (count: number): FundingRateData[] => {
   return Array.from({ length: count }, (_, index) => ({
     symbol: index % 2 === 0 ? "BTC/USDT:USDT" : "ETH/USDT:USDT",
     funding_rate: (Math.random() - 0.5) * 0.001, // -0.0005 to 0.0005
-    funding_timestamp: new Date(Date.now() - (count - index) * 8 * 60 * 60 * 1000).toISOString(),
-    timestamp: new Date(Date.now() - (count - index) * 8 * 60 * 60 * 1000).toISOString(),
-    next_funding_timestamp: new Date(Date.now() + 8 * 60 * 60 * 1000).toISOString(),
+    funding_timestamp: new Date(
+      Date.now() - (count - index) * 8 * 60 * 60 * 1000
+    ).toISOString(),
+    timestamp: new Date(
+      Date.now() - (count - index) * 8 * 60 * 60 * 1000
+    ).toISOString(),
+    next_funding_timestamp: new Date(
+      Date.now() + 8 * 60 * 60 * 1000
+    ).toISOString(),
     mark_price: 50000 + Math.random() * 1000,
     index_price: 50000 + Math.random() * 1000,
   }));
@@ -65,15 +71,15 @@ describe("FundingRateDataTable", () => {
   });
 
   describe("基本表示テスト", () => {
-    test("ファンディングレートデータが正しく表示される", () => {
+    test("FRデータが正しく表示される", () => {
       render(<FundingRateDataTable {...defaultProps} />);
 
       // タイトルの確認
-      expect(screen.getByText("📊 ファンディングレートデータ")).toBeInTheDocument();
+      expect(screen.getByText("📊 FRデータ")).toBeInTheDocument();
 
       // テーブルヘッダーの確認
       expect(screen.getByText("通貨ペア")).toBeInTheDocument();
-      expect(screen.getByText("ファンディングレート")).toBeInTheDocument();
+      expect(screen.getByText("FR")).toBeInTheDocument();
       expect(screen.getByText("ファンディング時刻")).toBeInTheDocument();
       expect(screen.getByText("マーク価格")).toBeInTheDocument();
       expect(screen.getByText("インデックス価格")).toBeInTheDocument();
@@ -93,7 +99,9 @@ describe("FundingRateDataTable", () => {
     test("エラー状態が正しく表示される", () => {
       render(<FundingRateDataTable {...defaultProps} error="テストエラー" />);
 
-      expect(screen.getByText("📊 データの読み込みに失敗しました")).toBeInTheDocument();
+      expect(
+        screen.getByText("📊 データの読み込みに失敗しました")
+      ).toBeInTheDocument();
       expect(screen.getByText("テストエラー")).toBeInTheDocument();
     });
 
@@ -105,7 +113,7 @@ describe("FundingRateDataTable", () => {
   });
 
   describe("データフォーマット表示テスト", () => {
-    test("ファンディングレートがパーセント形式で表示される", () => {
+    test("FRがパーセント形式で表示される", () => {
       const testData = createMockFundingRateData(1);
       testData[0].funding_rate = 0.0001; // 0.01%
 
@@ -114,7 +122,7 @@ describe("FundingRateDataTable", () => {
       expect(screen.getByText("+0.010000%")).toBeInTheDocument();
     });
 
-    test("負のファンディングレートが正しく表示される", () => {
+    test("負のFRが正しく表示される", () => {
       const testData = createMockFundingRateData(1);
       testData[0].funding_rate = -0.0002; // -0.02%
 
@@ -169,10 +177,10 @@ describe("FundingRateDataTable", () => {
       });
     });
 
-    test("ファンディングレートカラムでソートできる", async () => {
+    test("FRカラムでソートできる", async () => {
       render(<FundingRateDataTable {...defaultProps} />);
 
-      const rateHeader = screen.getByText("ファンディングレート");
+      const rateHeader = screen.getByText("FR");
       fireEvent.click(rateHeader);
 
       await waitFor(() => {
@@ -202,8 +210,14 @@ describe("FundingRateDataTable", () => {
 
     test("通貨ペアで検索できる", async () => {
       const mixedData = [
-        ...createMockFundingRateData(5).map(d => ({ ...d, symbol: "BTC/USDT:USDT" })),
-        ...createMockFundingRateData(5).map(d => ({ ...d, symbol: "ETH/USDT:USDT" })),
+        ...createMockFundingRateData(5).map((d) => ({
+          ...d,
+          symbol: "BTC/USDT:USDT",
+        })),
+        ...createMockFundingRateData(5).map((d) => ({
+          ...d,
+          symbol: "ETH/USDT:USDT",
+        })),
       ];
 
       render(<FundingRateDataTable {...defaultProps} data={mixedData} />);

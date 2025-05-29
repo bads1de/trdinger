@@ -1,7 +1,7 @@
 /**
- * オープンインタレストデータ収集API
+ * OIデータ収集API
  *
- * バックエンドAPIを呼び出してオープンインタレストデータを収集し、
+ * バックエンドAPIを呼び出してOIデータを収集し、
  * データベースに保存するAPIエンドポイントです。
  *
  * @author Trdinger Development Team
@@ -14,11 +14,11 @@ import { BACKEND_API_URL } from "@/constants";
 /**
  * POST /api/data/open-interest/collect
  *
- * 指定されたシンボルのオープンインタレストデータを収集します。
+ * 指定されたシンボルのOIデータを収集します。
  */
 export async function POST(request: NextRequest) {
   try {
-    console.log("オープンインタレストデータ収集リクエスト開始");
+    console.log("OIデータ収集リクエスト開始");
 
     // URLパラメータを取得
     const { searchParams } = new URL(request.url);
@@ -46,7 +46,9 @@ export async function POST(request: NextRequest) {
     });
 
     if (!response.ok) {
-      console.error(`バックエンドAPIエラー: ${response.status} ${response.statusText}`);
+      console.error(
+        `バックエンドAPIエラー: ${response.status} ${response.statusText}`
+      );
       return NextResponse.json(
         {
           success: false,
@@ -57,15 +59,15 @@ export async function POST(request: NextRequest) {
     }
 
     const data = await response.json();
-    console.log(`オープンインタレストデータ収集成功: ${data.data?.saved_count || 0}件保存`);
+    console.log(`OIデータ収集成功: ${data.data?.saved_count || 0}件保存`);
 
     return NextResponse.json(data);
   } catch (error) {
-    console.error("オープンインタレストデータ収集エラー:", error);
+    console.error("OIデータ収集エラー:", error);
     return NextResponse.json(
       {
         success: false,
-        message: "オープンインタレストデータの収集中にエラーが発生しました",
+        message: "OIデータの収集中にエラーが発生しました",
         error: error instanceof Error ? error.message : "Unknown error",
       },
       { status: 500 }

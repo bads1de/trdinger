@@ -1,7 +1,7 @@
 /**
- * ファンディングレートデータ取得API
+ * FRデータ取得API
  *
- * データベースに保存されたファンディングレートデータを取得するAPIエンドポイントです。
+ * データベースに保存されたFRデータを取得するAPIエンドポイントです。
  *
  * @author Trdinger Development Team
  * @version 1.0.0
@@ -12,15 +12,15 @@ import { BACKEND_API_URL } from "@/constants";
 import { FundingRateData, FundingRateResponse } from "@/types/strategy";
 
 /**
- * バックエンドAPIからファンディングレートデータを取得する関数
+ * バックエンドAPIからFRデータを取得する関数
  *
- * データベースに保存されたファンディングレートデータを取得します。
+ * データベースに保存されたFRデータを取得します。
  *
  * @param symbol 通貨ペア
  * @param limit データ件数
  * @param startDate 開始日時
  * @param endDate 終了日時
- * @returns ファンディングレートデータの配列
+ * @returns FRデータの配列
  */
 async function fetchDatabaseFundingRateData(
   symbol: string,
@@ -65,7 +65,7 @@ async function fetchDatabaseFundingRateData(
     throw new Error(backendData.message || "データの取得に失敗しました");
   }
 
-  // バックエンドのファンディングレートデータをフロントエンド形式に変換
+  // バックエンドのFRデータをフロントエンド形式に変換
   const fundingRateData = backendData.data.funding_rates;
   const fundingRates: FundingRateData[] = fundingRateData.map((rate: any) => ({
     symbol: rate.symbol,
@@ -77,18 +77,18 @@ async function fetchDatabaseFundingRateData(
     index_price: rate.index_price ? Number(rate.index_price) : null,
   }));
 
-  console.log(`取得したファンディングレートデータ件数: ${fundingRates.length}`);
+  console.log(`取得したFRデータ件数: ${fundingRates.length}`);
   return fundingRates;
 }
 
 /**
  * GET /api/data/funding-rates
  *
- * ファンディングレートデータを取得します。
+ * FRデータを取得します。
  */
 export async function GET(request: NextRequest) {
   try {
-    console.log("ファンディングレートデータ取得リクエスト開始");
+    console.log("FRデータ取得リクエスト開始");
 
     // URLパラメータを取得
     const { searchParams } = new URL(request.url);
@@ -115,7 +115,7 @@ export async function GET(request: NextRequest) {
       `取得パラメータ: symbol=${symbol}, limit=${limit}, startDate=${startDate}, endDate=${endDate}`
     );
 
-    // データベースからファンディングレートデータを取得
+    // データベースからFRデータを取得
     const fundingRates = await fetchDatabaseFundingRateData(
       symbol,
       limit,
@@ -143,12 +143,12 @@ export async function GET(request: NextRequest) {
         count: fundingRates.length,
         funding_rates: fundingRates,
       },
-      message: `${symbol} のファンディングレートデータを取得しました（${fundingRates.length}件）`,
+      message: `${symbol} のFRデータを取得しました（${fundingRates.length}件）`,
     };
 
     return NextResponse.json(response);
   } catch (error) {
-    console.error("ファンディングレートデータ取得エラー:", error);
+    console.error("FRデータ取得エラー:", error);
 
     return NextResponse.json(
       {

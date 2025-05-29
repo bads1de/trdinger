@@ -1,7 +1,7 @@
 /**
- * オープンインタレストデータ取得API
+ * OIデータ取得API
  *
- * バックエンドAPIからオープンインタレストデータを取得し、
+ * バックエンドAPIからOIデータを取得し、
  * フロントエンドに返すAPIエンドポイントです。
  *
  * @author Trdinger Development Team
@@ -14,11 +14,11 @@ import { BACKEND_API_URL } from "@/constants";
 /**
  * GET /api/data/open-interest
  *
- * 指定されたシンボルのオープンインタレストデータを取得します。
+ * 指定されたシンボルのOIデータを取得します。
  */
 export async function GET(request: NextRequest) {
   try {
-    console.log("オープンインタレストデータ取得リクエスト開始");
+    console.log("OIデータ取得リクエスト開始");
 
     // URLパラメータを取得
     const { searchParams } = new URL(request.url);
@@ -51,7 +51,9 @@ export async function GET(request: NextRequest) {
     });
 
     if (!response.ok) {
-      console.error(`バックエンドAPIエラー: ${response.status} ${response.statusText}`);
+      console.error(
+        `バックエンドAPIエラー: ${response.status} ${response.statusText}`
+      );
       return NextResponse.json(
         {
           success: false,
@@ -62,15 +64,15 @@ export async function GET(request: NextRequest) {
     }
 
     const data = await response.json();
-    console.log(`オープンインタレストデータ取得成功: ${data.data?.count || 0}件`);
+    console.log(`OIデータ取得成功: ${data.data?.count || 0}件`);
 
     return NextResponse.json(data);
   } catch (error) {
-    console.error("オープンインタレストデータ取得エラー:", error);
+    console.error("OIデータ取得エラー:", error);
     return NextResponse.json(
       {
         success: false,
-        message: "オープンインタレストデータの取得中にエラーが発生しました",
+        message: "OIデータの取得中にエラーが発生しました",
         error: error instanceof Error ? error.message : "Unknown error",
       },
       { status: 500 }

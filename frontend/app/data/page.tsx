@@ -1,7 +1,7 @@
 /**
  * データページコンポーネント
  *
- * OHLCVデータとファンディングレートデータを表形式で表示するページです。
+ * OHLCVデータとFRデータを表形式で表示するページです。
  * リアルタイムでデータを取得・表示します。
  *
  * @author Trdinger Development Team
@@ -15,6 +15,7 @@ import OHLCVDataTable from "@/components/OHLCVDataTable";
 import FundingRateDataTable from "@/components/FundingRateDataTable";
 import OpenInterestDataTable from "@/components/OpenInterestDataTable";
 import OpenInterestCollectionButton from "@/components/OpenInterestCollectionButton";
+import AllDataCollectionButton from "@/components/AllDataCollectionButton";
 import CompactSymbolSelector from "@/components/CompactSymbolSelector";
 import CompactTimeFrameSelector from "@/components/CompactTimeFrameSelector";
 import CompactDataCollectionButtons from "@/components/CompactDataCollectionButtons";
@@ -32,6 +33,7 @@ import {
   FundingRateCollectionResult,
   OpenInterestCollectionResult,
   BulkOpenInterestCollectionResult,
+  AllDataCollectionResult,
 } from "@/types/strategy";
 import { BACKEND_API_URL } from "@/constants";
 
@@ -66,6 +68,8 @@ const DataPage: React.FC = () => {
   const [fundingRateCollectionMessage, setFundingRateCollectionMessage] =
     useState<string>("");
   const [openInterestCollectionMessage, setOpenInterestCollectionMessage] =
+    useState<string>("");
+  const [allDataCollectionMessage, setAllDataCollectionMessage] =
     useState<string>("");
 
   /**
@@ -121,7 +125,7 @@ const DataPage: React.FC = () => {
   };
 
   /**
-   * ファンディングレートデータを取得
+   * FRデータを取得
    */
   const fetchFundingRateData = async () => {
     try {
@@ -139,22 +143,18 @@ const DataPage: React.FC = () => {
       if (result.success) {
         setFundingRateData(result.data.funding_rates);
       } else {
-        setFundingError(
-          result.message || "ファンディングレートデータの取得に失敗しました"
-        );
+        setFundingError(result.message || "FRデータの取得に失敗しました");
       }
     } catch (err) {
-      setFundingError(
-        "ファンディングレートデータの取得中にエラーが発生しました"
-      );
-      console.error("ファンディングレートデータ取得エラー:", err);
+      setFundingError("FRデータの取得中にエラーが発生しました");
+      console.error("FRデータ取得エラー:", err);
     } finally {
       setFundingLoading(false);
     }
   };
 
   /**
-   * オープンインタレストデータを取得
+   * OIデータを取得
    */
   const fetchOpenInterestData = async () => {
     try {
@@ -172,15 +172,11 @@ const DataPage: React.FC = () => {
       if (result.success) {
         setOpenInterestData(result.data.open_interest);
       } else {
-        setOpenInterestError(
-          result.message || "オープンインタレストデータの取得に失敗しました"
-        );
+        setOpenInterestError(result.message || "OIデータの取得に失敗しました");
       }
     } catch (err) {
-      setOpenInterestError(
-        "オープンインタレストデータの取得中にエラーが発生しました"
-      );
-      console.error("オープンインタレストデータ取得エラー:", err);
+      setOpenInterestError("OIデータの取得中にエラーが発生しました");
+      console.error("OIデータ取得エラー:", err);
     } finally {
       setOpenInterestLoading(false);
     }
@@ -286,7 +282,7 @@ const DataPage: React.FC = () => {
   };
 
   /**
-   * ファンディングレートデータ収集開始時のコールバック
+   * FRデータ収集開始時のコールバック
    */
   const handleFundingRateCollectionStart = (
     result: BulkFundingRateCollectionResult | FundingRateCollectionResult
@@ -301,7 +297,7 @@ const DataPage: React.FC = () => {
       // FundingRateCollectionResult
       const singleResult = result as FundingRateCollectionResult;
       setFundingRateCollectionMessage(
-        `🚀 ${singleResult.symbol}のファンディングレートデータ収集完了 (${singleResult.saved_count}件保存)`
+        `🚀 ${singleResult.symbol}のFRデータ収集完了 (${singleResult.saved_count}件保存)`
       );
     }
     // 10秒後にメッセージをクリア
@@ -309,7 +305,7 @@ const DataPage: React.FC = () => {
   };
 
   /**
-   * ファンディングレートデータ収集エラー時のコールバック
+   * FRデータ収集エラー時のコールバック
    */
   const handleFundingRateCollectionError = (errorMessage: string) => {
     setFundingRateCollectionMessage(`❌ ${errorMessage}`);
@@ -318,7 +314,7 @@ const DataPage: React.FC = () => {
   };
 
   /**
-   * オープンインタレストデータ収集開始時のコールバック
+   * OIデータ収集開始時のコールバック
    */
   const handleOpenInterestCollectionStart = (
     result: BulkOpenInterestCollectionResult | OpenInterestCollectionResult
@@ -333,7 +329,7 @@ const DataPage: React.FC = () => {
       // OpenInterestCollectionResult
       const singleResult = result as OpenInterestCollectionResult;
       setOpenInterestCollectionMessage(
-        `🚀 ${singleResult.symbol}のオープンインタレストデータ収集完了 (${singleResult.saved_count}件保存)`
+        `🚀 ${singleResult.symbol}のOIデータ収集完了 (${singleResult.saved_count}件保存)`
       );
     }
     // 10秒後にメッセージをクリア
@@ -341,12 +337,46 @@ const DataPage: React.FC = () => {
   };
 
   /**
-   * オープンインタレストデータ収集エラー時のコールバック
+   * OIデータ収集エラー時のコールバック
    */
   const handleOpenInterestCollectionError = (errorMessage: string) => {
     setOpenInterestCollectionMessage(`❌ ${errorMessage}`);
     // 10秒後にメッセージをクリア
     setTimeout(() => setOpenInterestCollectionMessage(""), 10000);
+  };
+
+  /**
+   * 全データ一括収集開始時のコールバック
+   */
+  const handleAllDataCollectionStart = (result: AllDataCollectionResult) => {
+    if (result.status === "completed") {
+      const ohlcvCount = result.ohlcv_result?.total_tasks || 0;
+      const fundingCount = result.funding_rate_result?.total_saved_records || 0;
+      const openInterestCount =
+        result.open_interest_result?.total_saved_records || 0;
+
+      setAllDataCollectionMessage(
+        `🚀 全データ収集完了！ OHLCV:${ohlcvCount}タスク, FR:${fundingCount}件, OI:${openInterestCount}件`
+      );
+    } else {
+      setAllDataCollectionMessage(
+        `🔄 ${result.message} (${result.completed_steps}/${result.total_steps})`
+      );
+    }
+
+    // データ状況を更新
+    fetchDataStatus();
+    // 15秒後にメッセージをクリア
+    setTimeout(() => setAllDataCollectionMessage(""), 15000);
+  };
+
+  /**
+   * 全データ一括収集エラー時のコールバック
+   */
+  const handleAllDataCollectionError = (errorMessage: string) => {
+    setAllDataCollectionMessage(`❌ ${errorMessage}`);
+    // 15秒後にメッセージをクリア
+    setTimeout(() => setAllDataCollectionMessage(""), 15000);
   };
 
   // 初期データ取得
@@ -576,6 +606,13 @@ const DataPage: React.FC = () => {
                     データ収集:
                   </span>
                   <div className="flex gap-2">
+                    {/* 全データ一括収集ボタン */}
+                    <AllDataCollectionButton
+                      onCollectionStart={handleAllDataCollectionStart}
+                      onCollectionError={handleAllDataCollectionError}
+                      disabled={loading || updating}
+                      className="text-xs px-3 py-2"
+                    />
                     <CompactDataCollectionButtons
                       onBulkCollectionStart={handleBulkCollectionStart}
                       onBulkCollectionError={handleBulkCollectionError}
@@ -602,8 +639,14 @@ const DataPage: React.FC = () => {
             {/* ステータスメッセージ */}
             {(bulkCollectionMessage ||
               fundingRateCollectionMessage ||
-              openInterestCollectionMessage) && (
+              openInterestCollectionMessage ||
+              allDataCollectionMessage) && (
               <div className="mt-3 pt-3 border-t border-secondary-200 dark:border-secondary-700">
+                {allDataCollectionMessage && (
+                  <div className="text-sm text-secondary-600 dark:text-secondary-400 mb-1 font-medium">
+                    {allDataCollectionMessage}
+                  </div>
+                )}
                 {bulkCollectionMessage && (
                   <div className="text-sm text-secondary-600 dark:text-secondary-400 mb-1">
                     {bulkCollectionMessage}
@@ -652,7 +695,7 @@ const DataPage: React.FC = () => {
                         : "text-gray-400 hover:text-gray-100"
                     }`}
                   >
-                    ファンディングレート
+                    FR
                   </button>
                   <button
                     onClick={() => setActiveTab("openinterest")}
@@ -662,7 +705,7 @@ const DataPage: React.FC = () => {
                         : "text-gray-400 hover:text-gray-100"
                     }`}
                   >
-                    オープンインタレスト
+                    OI
                   </button>
                 </div>
               </div>

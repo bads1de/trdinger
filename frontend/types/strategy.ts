@@ -319,14 +319,14 @@ export interface TradingPair {
 }
 
 /**
- * ファンディングレートデータ
+ * FRデータ
  *
- * 無期限契約のファンディングレート情報を表現します。
+ * 無期限契約のFR情報を表現します。
  */
 export interface FundingRateData {
   /** 通貨ペアシンボル（例: "BTC/USDT:USDT"） */
   symbol: string;
-  /** ファンディングレート（例: -0.00015708） */
+  /** FR（例: -0.00015708） */
   funding_rate: number;
   /** ファンディング時刻（ISO形式） */
   funding_timestamp: string;
@@ -341,14 +341,14 @@ export interface FundingRateData {
 }
 
 /**
- * 現在のファンディングレートデータ
+ * 現在のFRデータ
  *
- * リアルタイムのファンディングレート情報を表現します。
+ * リアルタイムのFR情報を表現します。
  */
 export interface CurrentFundingRateData {
   /** 通貨ペアシンボル（例: "BTC/USDT:USDT"） */
   symbol: string;
-  /** ファンディングレート（例: -0.00015708） */
+  /** FR（例: -0.00015708） */
   funding_rate: number;
   /** ファンディング時刻（ISO形式） */
   funding_timestamp?: string | null;
@@ -363,9 +363,9 @@ export interface CurrentFundingRateData {
 }
 
 /**
- * ファンディングレートAPIレスポンス
+ * FRAPIレスポンス
  *
- * APIから返されるファンディングレートデータの形式を定義します。
+ * APIから返されるFRデータの形式を定義します。
  */
 export interface FundingRateResponse {
   /** 成功フラグ */
@@ -376,7 +376,7 @@ export interface FundingRateResponse {
     symbol: string;
     /** データ件数 */
     count: number;
-    /** ファンディングレートデータの配列 */
+    /** FRデータの配列 */
     funding_rates: FundingRateData[];
   };
   /** メッセージ */
@@ -384,9 +384,9 @@ export interface FundingRateResponse {
 }
 
 /**
- * 現在のファンディングレートAPIレスポンス
+ * 現在のFRAPIレスポンス
  *
- * 現在のファンディングレート取得APIのレスポンス形式を定義します。
+ * 現在のFR取得APIのレスポンス形式を定義します。
  */
 export interface CurrentFundingRateResponse {
   /** 成功フラグ */
@@ -398,9 +398,9 @@ export interface CurrentFundingRateResponse {
 }
 
 /**
- * ファンディングレート収集結果
+ * FR収集結果
  *
- * ファンディングレートデータ収集の結果を表現します。
+ * FRデータ収集の結果を表現します。
  */
 export interface FundingRateCollectionResult {
   /** 通貨ペア */
@@ -414,9 +414,9 @@ export interface FundingRateCollectionResult {
 }
 
 /**
- * ファンディングレート収集APIレスポンス
+ * FR収集APIレスポンス
  *
- * ファンディングレート収集APIのレスポンス形式を定義します。
+ * FR収集APIのレスポンス形式を定義します。
  */
 export interface FundingRateCollectionResponse {
   /** 成功フラグ */
@@ -428,9 +428,9 @@ export interface FundingRateCollectionResponse {
 }
 
 /**
- * 一括ファンディングレート収集結果
+ * 一括FR収集結果
  *
- * 複数シンボルのファンディングレートデータ一括収集の結果を表現します。
+ * 複数シンボルのFRデータ一括収集の結果を表現します。
  */
 export interface BulkFundingRateCollectionResult {
   /** 処理成功フラグ */
@@ -459,16 +459,16 @@ export interface BulkFundingRateCollectionResult {
 }
 
 /**
- * オープンインタレストデータ
+ * OIデータ
  *
- * 無期限契約のオープンインタレスト（建玉残高）情報を表現します。
+ * 無期限契約のOI（建玉残高）情報を表現します。
  */
 export interface OpenInterestData {
   /** 通貨ペアシンボル（例: "BTC/USDT:USDT"） */
   symbol: string;
-  /** オープンインタレスト値（USD建て） */
+  /** OI値（USD建て） */
   open_interest_value: number;
-  /** オープンインタレスト量（コイン建て） */
+  /** OI量（コイン建て） */
   open_interest_amount: number;
   /** データ時刻（ISO形式） */
   data_timestamp: string;
@@ -477,9 +477,9 @@ export interface OpenInterestData {
 }
 
 /**
- * オープンインタレストAPIレスポンス
+ * OIAPIレスポンス
  *
- * APIから返されるオープンインタレストデータの形式を定義します。
+ * APIから返されるOIデータの形式を定義します。
  */
 export interface OpenInterestResponse {
   /** 成功フラグ */
@@ -490,7 +490,7 @@ export interface OpenInterestResponse {
     symbol: string;
     /** データ件数 */
     count: number;
-    /** オープンインタレストデータの配列 */
+    /** OIデータの配列 */
     open_interest: OpenInterestData[];
   };
   /** メッセージ */
@@ -498,9 +498,9 @@ export interface OpenInterestResponse {
 }
 
 /**
- * オープンインタレスト収集結果
+ * OI収集結果
  *
- * オープンインタレストデータ収集の結果を表現します。
+ * OIデータ収集の結果を表現します。
  */
 export interface OpenInterestCollectionResult {
   /** 通貨ペア */
@@ -514,9 +514,9 @@ export interface OpenInterestCollectionResult {
 }
 
 /**
- * オープンインタレスト収集APIレスポンス
+ * OI収集APIレスポンス
  *
- * オープンインタレスト収集APIのレスポンス形式を定義します。
+ * OI収集APIのレスポンス形式を定義します。
  */
 export interface OpenInterestCollectionResponse {
   /** 成功フラグ */
@@ -528,9 +528,9 @@ export interface OpenInterestCollectionResponse {
 }
 
 /**
- * 一括オープンインタレスト収集結果
+ * 一括OI収集結果
  *
- * 複数シンボルのオープンインタレストデータ一括収集の結果を表現します。
+ * 複数シンボルのOIデータ一括収集の結果を表現します。
  */
 export interface BulkOpenInterestCollectionResult {
   /** 処理成功フラグ */
@@ -556,4 +556,37 @@ export interface BulkOpenInterestCollectionResult {
     symbol: string;
     error: string;
   }>;
+}
+
+/**
+ * 全データ一括収集結果
+ *
+ * OHLCV、FR、OIの
+ * 全データタイプを一括収集した結果を表現します。
+ */
+export interface AllDataCollectionResult {
+  /** 成功フラグ */
+  success: boolean;
+  /** メッセージ */
+  message: string;
+  /** 処理状況 */
+  status: "started" | "in_progress" | "completed" | "error";
+  /** 総ステップ数 */
+  total_steps: number;
+  /** 完了したステップ数 */
+  completed_steps: number;
+  /** 現在のステップ */
+  current_step?: "ohlcv" | "funding_rate" | "open_interest";
+  /** OHLCVデータ収集結果 */
+  ohlcv_result?: BulkOHLCVCollectionResult;
+  /** FRデータ収集結果 */
+  funding_rate_result?: BulkFundingRateCollectionResult;
+  /** OIデータ収集結果 */
+  open_interest_result?: BulkOpenInterestCollectionResult;
+  /** 開始時刻 */
+  started_at: string;
+  /** 完了時刻 */
+  completed_at?: string;
+  /** エラー詳細（エラー時のみ） */
+  error_details?: string;
 }

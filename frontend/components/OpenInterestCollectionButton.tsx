@@ -1,7 +1,7 @@
 /**
- * オープンインタレストデータ収集ボタンコンポーネント
+ * OIデータ収集ボタンコンポーネント
  *
- * オープンインタレストデータを取得し、データベースに保存するためのUIコンポーネントです。
+ * OIデータを取得し、データベースに保存するためのUIコンポーネントです。
  * ダークモード対応、状態管理、エラーハンドリング、確認ダイアログを含みます。
  *
  * @author Trdinger Development Team
@@ -17,7 +17,7 @@ import {
 } from "@/types/strategy";
 
 /**
- * オープンインタレスト収集ボタンコンポーネントのプロパティ
+ * OI収集ボタンコンポーネントのプロパティ
  */
 interface OpenInterestCollectionButtonProps {
   /** データ収集開始時のコールバック */
@@ -42,7 +42,7 @@ interface OpenInterestCollectionButtonProps {
 type ButtonState = "idle" | "loading" | "success" | "error";
 
 /**
- * オープンインタレストデータ収集ボタンコンポーネント
+ * OIデータ収集ボタンコンポーネント
  */
 const OpenInterestCollectionButton: React.FC<
   OpenInterestCollectionButtonProps
@@ -60,13 +60,13 @@ const OpenInterestCollectionButton: React.FC<
   >(null);
 
   /**
-   * オープンインタレストデータを収集
+   * OIデータを収集
    */
   const handleCollectData = async () => {
     if (mode === "bulk") {
       // 確認ダイアログ
       const confirmed = window.confirm(
-        `BTC・ETHの全期間オープンインタレストデータを取得します。\n\n` +
+        `BTC・ETHの全期間OIデータを取得します。\n\n` +
           "この処理には数分かかる場合があります。続行しますか？"
       );
 
@@ -88,7 +88,7 @@ const OpenInterestCollectionButton: React.FC<
         )}&fetch_all=true`;
       }
 
-      console.log(`オープンインタレストデータ収集開始: ${apiUrl}`);
+      console.log(`OIデータ収集開始: ${apiUrl}`);
 
       const response = await fetch(apiUrl, {
         method: "POST",
@@ -129,7 +129,7 @@ const OpenInterestCollectionButton: React.FC<
         throw new Error(result.message || "データ収集に失敗しました");
       }
     } catch (error) {
-      console.error("オープンインタレストデータ収集エラー:", error);
+      console.error("OIデータ収集エラー:", error);
       setButtonState("error");
       const errorMessage =
         error instanceof Error ? error.message : "不明なエラーが発生しました";
@@ -201,8 +201,8 @@ const OpenInterestCollectionButton: React.FC<
       className={`${getButtonStyle()} ${className}`}
       title={
         mode === "bulk"
-          ? "BTC・ETHの全期間オープンインタレストデータを一括収集"
-          : `${symbol}のオープンインタレストデータを収集`
+          ? "BTC・ETHの全期間OIデータを一括収集"
+          : `${symbol}のOIデータを収集`
       }
     >
       {getLoadingIcon()}

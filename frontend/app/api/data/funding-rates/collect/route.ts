@@ -1,8 +1,8 @@
 /**
- * ファンディングレートデータ収集API
+ * FRデータ収集API
  *
- * フロントエンドからのファンディングレートデータ収集リクエストを受け取り、
- * バックエンドAPIに転送してファンディングレートデータの収集を実行するAPIエンドポイントです。
+ * フロントエンドからのFRデータ収集リクエストを受け取り、
+ * バックエンドAPIに転送してFRデータの収集を実行するAPIエンドポイントです。
  *
  * @author Trdinger Development Team
  * @version 1.0.0
@@ -15,11 +15,11 @@ import { BACKEND_API_URL } from "@/constants";
 /**
  * POST /api/data/funding-rates/collect
  *
- * 指定されたシンボルのファンディングレートデータを収集します。
+ * 指定されたシンボルのFRデータを収集します。
  */
 export async function POST(request: NextRequest) {
   try {
-    console.log("ファンディングレートデータ収集リクエスト開始");
+    console.log("FRデータ収集リクエスト開始");
 
     // URLパラメータを取得
     const { searchParams } = new URL(request.url);
@@ -64,7 +64,7 @@ export async function POST(request: NextRequest) {
         );
       }
 
-      console.log("ファンディングレートデータ収集成功:", backendData);
+      console.log("FRデータ収集成功:", backendData);
 
       // 成功レスポンス
       const response: FundingRateCollectionResponse = {
@@ -84,7 +84,7 @@ export async function POST(request: NextRequest) {
             {
               success: false,
               message:
-                "ファンディングレートデータ収集がタイムアウトしました。しばらく待ってから再試行してください。",
+                "FRデータ収集がタイムアウトしました。しばらく待ってから再試行してください。",
               error: "TIMEOUT_ERROR",
             },
             { status: 408 }
@@ -107,7 +107,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         {
           success: false,
-          message: `ファンディングレートデータ収集中にエラーが発生しました: ${
+          message: `FRデータ収集中にエラーが発生しました: ${
             fetchError instanceof Error ? fetchError.message : "Unknown error"
           }`,
           error: "BACKEND_API_ERROR",
@@ -116,7 +116,7 @@ export async function POST(request: NextRequest) {
       );
     }
   } catch (error) {
-    console.error("ファンディングレートデータ収集API内部エラー:", error);
+    console.error("FRデータ収集API内部エラー:", error);
 
     return NextResponse.json(
       {

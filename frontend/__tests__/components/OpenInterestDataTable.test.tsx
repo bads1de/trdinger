@@ -1,5 +1,5 @@
 /**
- * オープンインタレストデータテーブルコンポーネント テスト
+ * OIデータテーブルコンポーネント テスト
  *
  * OpenInterestDataTableコンポーネントのテストケースです。
  * 表示、ソート、ページネーション、CSVエクスポート機能をテストします。
@@ -97,11 +97,11 @@ const defaultProps = {
 
 describe("OpenInterestDataTable", () => {
   describe("基本表示テスト", () => {
-    test("オープンインタレストデータが正しく表示される", () => {
+    test("OIデータが正しく表示される", () => {
       render(<OpenInterestDataTable {...defaultProps} />);
 
       // タイトルの確認
-      expect(screen.getByText("📈 オープンインタレストデータ")).toBeInTheDocument();
+      expect(screen.getByText("📈 OIデータ")).toBeInTheDocument();
 
       // テーブルヘッダーの確認
       expect(screen.getByText("通貨ペア")).toBeInTheDocument();
@@ -122,7 +122,7 @@ describe("OpenInterestDataTable", () => {
       expect(screen.getAllByText("ETH/USDT")).toHaveLength(5);
     });
 
-    test("オープンインタレスト値が通貨形式で表示される", () => {
+    test("OI値が通貨形式で表示される", () => {
       render(<OpenInterestDataTable {...defaultProps} />);
 
       // 通貨形式での表示を確認
@@ -130,7 +130,7 @@ describe("OpenInterestDataTable", () => {
       expect(screen.getByText("$8,000,000,000")).toBeInTheDocument();
     });
 
-    test("オープンインタレスト量がコンパクト形式で表示される", () => {
+    test("OI量がコンパクト形式で表示される", () => {
       render(<OpenInterestDataTable {...defaultProps} />);
 
       // コンパクト形式での表示を確認

@@ -1,7 +1,7 @@
 /**
- * オープンインタレストデータ一括収集API
+ * OIデータ一括収集API
  *
- * バックエンドAPIを呼び出してBTC・ETHのオープンインタレストデータを
+ * バックエンドAPIを呼び出してBTC・ETHのOIデータを
  * 一括で収集し、データベースに保存するAPIエンドポイントです。
  *
  * @author Trdinger Development Team
@@ -14,11 +14,11 @@ import { BACKEND_API_URL } from "@/constants";
 /**
  * POST /api/data/open-interest/bulk-collect
  *
- * BTC・ETHシンボルのオープンインタレストデータを一括収集します。
+ * BTC・ETHシンボルのOIデータを一括収集します。
  */
 export async function POST(request: NextRequest) {
   try {
-    console.log("オープンインタレストデータ一括収集リクエスト開始");
+    console.log("OIデータ一括収集リクエスト開始");
 
     // バックエンドAPIに転送
     const backendUrl = `${BACKEND_API_URL}/api/open-interest/bulk-collect`;
@@ -33,7 +33,9 @@ export async function POST(request: NextRequest) {
     });
 
     if (!response.ok) {
-      console.error(`バックエンドAPIエラー: ${response.status} ${response.statusText}`);
+      console.error(
+        `バックエンドAPIエラー: ${response.status} ${response.statusText}`
+      );
       return NextResponse.json(
         {
           success: false,
@@ -45,16 +47,16 @@ export async function POST(request: NextRequest) {
 
     const data = await response.json();
     console.log(
-      `オープンインタレストデータ一括収集成功: ${data.data?.summary?.total_saved || 0}件保存`
+      `OIデータ一括収集成功: ${data.data?.summary?.total_saved || 0}件保存`
     );
 
     return NextResponse.json(data);
   } catch (error) {
-    console.error("オープンインタレストデータ一括収集エラー:", error);
+    console.error("OIデータ一括収集エラー:", error);
     return NextResponse.json(
       {
         success: false,
-        message: "オープンインタレストデータの一括収集中にエラーが発生しました",
+        message: "OIデータの一括収集中にエラーが発生しました",
         error: error instanceof Error ? error.message : "Unknown error",
       },
       { status: 500 }

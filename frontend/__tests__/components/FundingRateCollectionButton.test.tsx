@@ -1,7 +1,7 @@
 /**
  * FundingRateCollectionButton コンポーネントのテスト
  *
- * ファンディングレート収集ボタンの動作をテストします。
+ * FR収集ボタンの動作をテストします。
  */
 
 import React from "react";
@@ -22,18 +22,14 @@ describe("FundingRateCollectionButton", () => {
       render(<FundingRateCollectionButton mode="bulk" />);
 
       expect(screen.getByRole("button")).toBeInTheDocument();
-      expect(
-        screen.getByText("BTC・ETHファンディングレート収集・保存")
-      ).toBeInTheDocument();
+      expect(screen.getByText("BTC・ETHFR収集・保存")).toBeInTheDocument();
     });
 
     it("単一収集ボタンが正しくレンダリングされる", () => {
       render(<FundingRateCollectionButton mode="single" symbol="BTC/USDT" />);
 
       expect(screen.getByRole("button")).toBeInTheDocument();
-      expect(
-        screen.getByText("ファンディングレート収集・保存")
-      ).toBeInTheDocument();
+      expect(screen.getByText("FR収集・保存")).toBeInTheDocument();
     });
 
     it("ボタンが有効状態である", () => {
@@ -52,9 +48,7 @@ describe("FundingRateCollectionButton", () => {
     it("説明テキストが表示されている", () => {
       render(<FundingRateCollectionButton mode="bulk" />);
 
-      expect(
-        screen.getByText(/BTCのファンディングレートデータ/)
-      ).toBeInTheDocument();
+      expect(screen.getByText(/BTCのFRデータ/)).toBeInTheDocument();
       expect(screen.getByText(/取得・保存します/)).toBeInTheDocument();
     });
   });
@@ -70,7 +64,7 @@ describe("FundingRateCollectionButton", () => {
       fireEvent.click(button);
 
       expect(mockConfirm).toHaveBeenCalledWith(
-        expect.stringContaining("BTCのファンディングレートデータを取得します")
+        expect.stringContaining("BTCのFRデータを取得します")
       );
 
       mockConfirm.mockRestore();
@@ -99,7 +93,7 @@ describe("FundingRateCollectionButton", () => {
             success: true,
             data: {
               success: true,
-              message: "ファンディングレート一括収集完了",
+              message: "FR一括収集完了",
               total_symbols: 10,
               successful_symbols: 8,
               failed_symbols: 2,
@@ -116,9 +110,7 @@ describe("FundingRateCollectionButton", () => {
       fireEvent.click(button);
 
       await waitFor(() => {
-        expect(
-          screen.getByText("ファンディングレート一括収集完了")
-        ).toBeInTheDocument();
+        expect(screen.getByText("FR一括収集完了")).toBeInTheDocument();
         expect(screen.getByTestId("success-icon")).toBeInTheDocument();
       });
 
@@ -177,7 +169,7 @@ describe("FundingRateCollectionButton", () => {
                       success: true,
                       data: {
                         success: true,
-                        message: "ファンディングレート収集完了",
+                        message: "FR収集完了",
                         total_symbols: 10,
                         successful_symbols: 10,
                         failed_symbols: 0,
@@ -198,9 +190,7 @@ describe("FundingRateCollectionButton", () => {
       fireEvent.click(button);
 
       expect(button).toBeDisabled();
-      expect(
-        screen.getByText("ファンディングレート一括収集中...")
-      ).toBeInTheDocument();
+      expect(screen.getByText("FR一括収集中...")).toBeInTheDocument();
       expect(screen.getByTestId("loading-spinner")).toBeInTheDocument();
 
       mockConfirm.mockRestore();
@@ -299,7 +289,7 @@ describe("FundingRateCollectionButton", () => {
             success: true,
             data: {
               success: true,
-              message: "ファンディングレート収集完了",
+              message: "FR収集完了",
               total_symbols: 10,
               successful_symbols: 10,
               failed_symbols: 0,

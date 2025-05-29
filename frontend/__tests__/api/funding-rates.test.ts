@@ -1,5 +1,5 @@
 /**
- * ファンディングレートデータAPI テスト
+ * FRデータAPI テスト
  *
  * /api/data/funding-rates エンドポイントのテストケースです。
  * 正常系・異常系の両方をテストします。
@@ -47,7 +47,7 @@ function createMockRequest(searchParams: Record<string, string>): NextRequest {
 
 describe("/api/data/funding-rates", () => {
   describe("正常系テスト", () => {
-    test("有効なパラメータでファンディングレートデータを取得できる", async () => {
+    test("有効なパラメータでFRデータを取得できる", async () => {
       const request = createMockRequest({
         symbol: "BTC/USDT",
         limit: "50",
@@ -78,7 +78,7 @@ describe("/api/data/funding-rates", () => {
       expect(data.data.funding_rates).toHaveLength(100);
     });
 
-    test("各ファンディングレートデータが正しい形式を持つ", async () => {
+    test("各FRデータが正しい形式を持つ", async () => {
       const request = createMockRequest({
         symbol: "BTC/USDT",
         limit: "5",
@@ -174,7 +174,7 @@ describe("/api/data/funding-rates", () => {
   });
 
   describe("データ整合性テスト", () => {
-    test("ファンディングレートが数値範囲内にある", async () => {
+    test("FRが数値範囲内にある", async () => {
       const request = createMockRequest({
         symbol: "BTC/USDT",
         limit: "20",
@@ -186,7 +186,7 @@ describe("/api/data/funding-rates", () => {
       expect(response.status).toBe(200);
 
       data.data.funding_rates.forEach((rate: any) => {
-        // ファンディングレートは通常 -1% から +1% の範囲内
+        // FRは通常 -1% から +1% の範囲内
         expect(rate.funding_rate).toBeGreaterThanOrEqual(-0.01);
         expect(rate.funding_rate).toBeLessThanOrEqual(0.01);
       });

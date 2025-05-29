@@ -1,7 +1,7 @@
 /**
- * オープンインタレストデータテーブルコンポーネント
+ * OIデータテーブルコンポーネント
  *
- * オープンインタレストデータを表形式で表示するコンポーネントです。
+ * OIデータを表形式で表示するコンポーネントです。
  * ソート、ページネーション、CSVエクスポート機能を提供します。
  *
  * @author Trdinger Development Team
@@ -15,10 +15,10 @@ import DataTable, { TableColumn } from "./DataTable";
 import { OpenInterestData } from "@/types/strategy";
 
 /**
- * オープンインタレストデータテーブルのプロパティ
+ * OIデータテーブルのプロパティ
  */
 interface OpenInterestDataTableProps {
-  /** オープンインタレストデータ */
+  /** OIデータ */
   data: OpenInterestData[];
   /** ローディング状態 */
   loading?: boolean;
@@ -74,7 +74,7 @@ const formatDateTime = (dateString: string): string => {
 };
 
 /**
- * オープンインタレストデータテーブルコンポーネント
+ * OIデータテーブルコンポーネント
  */
 const OpenInterestDataTable: React.FC<OpenInterestDataTableProps> = ({
   data,
@@ -90,7 +90,9 @@ const OpenInterestDataTable: React.FC<OpenInterestDataTableProps> = ({
       width: "120px",
       sortable: true,
       formatter: (value: string) => (
-        <span className="font-semibold text-primary-400">{formatSymbol(value)}</span>
+        <span className="font-semibold text-primary-400">
+          {formatSymbol(value)}
+        </span>
       ),
     },
     {
@@ -134,7 +136,9 @@ const OpenInterestDataTable: React.FC<OpenInterestDataTableProps> = ({
       width: "180px",
       sortable: true,
       formatter: (value: string) => (
-        <span className="font-mono text-xs text-gray-500">{formatDateTime(value)}</span>
+        <span className="font-mono text-xs text-gray-500">
+          {formatDateTime(value)}
+        </span>
       ),
     },
   ];
@@ -143,7 +147,7 @@ const OpenInterestDataTable: React.FC<OpenInterestDataTableProps> = ({
     <DataTable
       data={data}
       columns={columns}
-      title="📈 オープンインタレストデータ"
+      title="📈 OIデータ"
       loading={loading}
       error={error}
       pageSize={50}

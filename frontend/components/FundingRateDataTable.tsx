@@ -1,7 +1,7 @@
 /**
- * ファンディングレートデータテーブルコンポーネント
+ * FRデータテーブルコンポーネント
  *
- * ファンディングレートデータを表形式で表示するコンポーネントです。
+ * FRデータを表形式で表示するコンポーネントです。
  * ソート、ページネーション、CSVエクスポート機能を提供します。
  *
  * @author Trdinger Development Team
@@ -15,10 +15,10 @@ import DataTable, { TableColumn } from "./DataTable";
 import { FundingRateData } from "@/types/strategy";
 
 /**
- * ファンディングレートデータテーブルのプロパティ
+ * FRデータテーブルのプロパティ
  */
 interface FundingRateDataTableProps {
-  /** ファンディングレートデータ */
+  /** FRデータ */
   data: FundingRateData[];
   /** ローディング状態 */
   loading?: boolean;
@@ -29,7 +29,7 @@ interface FundingRateDataTableProps {
 }
 
 /**
- * ファンディングレートをパーセント形式でフォーマットする関数
+ * FRをパーセント形式でフォーマットする関数
  */
 const formatFundingRate = (rate: number): string => {
   const percentage = rate * 100;
@@ -38,13 +38,13 @@ const formatFundingRate = (rate: number): string => {
 };
 
 /**
- * ファンディングレートの色を取得する関数
+ * FRの色を取得する関数
  */
 const getFundingRateColor = (rate: number): string => {
   if (rate > 0) {
-    return "text-red-400"; // 正のファンディングレート（ロングが支払い）
+    return "text-red-400"; // 正のFR（ロングが支払い）
   } else if (rate < 0) {
-    return "text-green-400"; // 負のファンディングレート（ショートが支払い）
+    return "text-green-400"; // 負のFR（ショートが支払い）
   }
   return "text-gray-100"; // ゼロ
 };
@@ -89,7 +89,7 @@ const formatSymbol = (symbol: string): string => {
 };
 
 /**
- * ファンディングレートデータテーブルコンポーネント
+ * FRデータテーブルコンポーネント
  */
 const FundingRateDataTable: React.FC<FundingRateDataTableProps> = ({
   data,
@@ -105,16 +105,22 @@ const FundingRateDataTable: React.FC<FundingRateDataTableProps> = ({
       width: "120px",
       sortable: true,
       formatter: (value: string) => (
-        <span className="font-semibold text-primary-400">{formatSymbol(value)}</span>
+        <span className="font-semibold text-primary-400">
+          {formatSymbol(value)}
+        </span>
       ),
     },
     {
       key: "funding_rate",
-      header: "ファンディングレート",
+      header: "FR",
       width: "150px",
       sortable: true,
       formatter: (value: number) => (
-        <span className={`font-mono text-sm font-semibold ${getFundingRateColor(value)}`}>
+        <span
+          className={`font-mono text-sm font-semibold ${getFundingRateColor(
+            value
+          )}`}
+        >
           {formatFundingRate(value)}
         </span>
       ),
@@ -135,7 +141,9 @@ const FundingRateDataTable: React.FC<FundingRateDataTableProps> = ({
       width: "120px",
       sortable: true,
       formatter: (value: number | null) => (
-        <span className="font-mono text-sm text-blue-400">{formatPrice(value)}</span>
+        <span className="font-mono text-sm text-blue-400">
+          {formatPrice(value)}
+        </span>
       ),
       cellClassName: "text-right",
     },
@@ -145,7 +153,9 @@ const FundingRateDataTable: React.FC<FundingRateDataTableProps> = ({
       width: "120px",
       sortable: true,
       formatter: (value: number | null) => (
-        <span className="font-mono text-sm text-purple-400">{formatPrice(value)}</span>
+        <span className="font-mono text-sm text-purple-400">
+          {formatPrice(value)}
+        </span>
       ),
       cellClassName: "text-right",
     },
@@ -166,7 +176,9 @@ const FundingRateDataTable: React.FC<FundingRateDataTableProps> = ({
       width: "180px",
       sortable: true,
       formatter: (value: string) => (
-        <span className="font-mono text-xs text-gray-500">{formatDateTime(value)}</span>
+        <span className="font-mono text-xs text-gray-500">
+          {formatDateTime(value)}
+        </span>
       ),
     },
   ];
@@ -175,7 +187,7 @@ const FundingRateDataTable: React.FC<FundingRateDataTableProps> = ({
     <DataTable
       data={data}
       columns={columns}
-      title="📊 ファンディングレートデータ"
+      title="📊 FRデータ"
       loading={loading}
       error={error}
       pageSize={50}
