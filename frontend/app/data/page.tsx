@@ -565,73 +565,73 @@ const DataPage: React.FC = () => {
 
         {/* コンパクトデータ設定 */}
         <div className="enterprise-card animate-slide-up">
-          <div className="p-4">
-            <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-              <div className="flex items-center gap-2">
-                <h2 className="text-lg font-semibold text-secondary-900 dark:text-secondary-100">
-                  📈 データ設定
-                </h2>
+          <div className="p-6">
+            {/* セクションヘッダー */}
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-lg font-semibold text-secondary-900 dark:text-secondary-100">
+                📈 データ設定
+              </h2>
+            </div>
+
+            {/* 設定コントロールグリッド */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              {/* 通貨ペア選択グループ */}
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-secondary-600 dark:text-secondary-400">
+                  通貨ペア
+                </label>
+                <CompactSymbolSelector
+                  symbols={symbols}
+                  selectedSymbol={selectedSymbol}
+                  onSymbolChange={handleSymbolChange}
+                  loading={symbolsLoading}
+                  disabled={loading}
+                />
               </div>
 
-              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
-                {/* 通貨ペア選択 */}
-                <div className="flex items-center gap-2">
-                  <span className="text-sm text-secondary-600 dark:text-secondary-400 whitespace-nowrap">
-                    通貨ペア:
-                  </span>
-                  <CompactSymbolSelector
-                    symbols={symbols}
-                    selectedSymbol={selectedSymbol}
-                    onSymbolChange={handleSymbolChange}
-                    loading={symbolsLoading}
-                    disabled={loading}
-                  />
-                </div>
+              {/* 時間軸選択グループ */}
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-secondary-600 dark:text-secondary-400">
+                  時間軸
+                </label>
+                <CompactTimeFrameSelector
+                  selectedTimeFrame={selectedTimeFrame}
+                  onTimeFrameChange={handleTimeFrameChange}
+                  disabled={loading}
+                />
+              </div>
 
-                {/* 時間軸選択 */}
-                <div className="flex items-center gap-2">
-                  <span className="text-sm text-secondary-600 dark:text-secondary-400 whitespace-nowrap">
-                    時間軸:
-                  </span>
-                  <CompactTimeFrameSelector
-                    selectedTimeFrame={selectedTimeFrame}
-                    onTimeFrameChange={handleTimeFrameChange}
-                    disabled={loading}
+              {/* データ収集アクショングループ */}
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-secondary-600 dark:text-secondary-400">
+                  データ収集
+                </label>
+                <div className="flex flex-wrap gap-2">
+                  {/* 全データ一括収集ボタン */}
+                  <AllDataCollectionButton
+                    onCollectionStart={handleAllDataCollectionStart}
+                    onCollectionError={handleAllDataCollectionError}
+                    disabled={loading || updating}
+                    className="text-xs px-3 py-2"
                   />
-                </div>
-
-                {/* データ収集ボタン */}
-                <div className="flex items-center gap-2">
-                  <span className="text-sm text-secondary-600 dark:text-secondary-400 whitespace-nowrap">
-                    データ収集:
-                  </span>
-                  <div className="flex gap-2">
-                    {/* 全データ一括収集ボタン */}
-                    <AllDataCollectionButton
-                      onCollectionStart={handleAllDataCollectionStart}
-                      onCollectionError={handleAllDataCollectionError}
-                      disabled={loading || updating}
-                      className="text-xs px-3 py-2"
-                    />
-                    <CompactDataCollectionButtons
-                      onBulkCollectionStart={handleBulkCollectionStart}
-                      onBulkCollectionError={handleBulkCollectionError}
-                      onFundingRateCollectionStart={
-                        handleFundingRateCollectionStart
-                      }
-                      onFundingRateCollectionError={
-                        handleFundingRateCollectionError
-                      }
-                      disabled={loading || updating}
-                    />
-                    <OpenInterestCollectionButton
-                      mode="bulk"
-                      onCollectionStart={handleOpenInterestCollectionStart}
-                      onCollectionError={handleOpenInterestCollectionError}
-                      disabled={loading || updating}
-                      className="text-xs px-3 py-2"
-                    />
-                  </div>
+                  <CompactDataCollectionButtons
+                    onBulkCollectionStart={handleBulkCollectionStart}
+                    onBulkCollectionError={handleBulkCollectionError}
+                    onFundingRateCollectionStart={
+                      handleFundingRateCollectionStart
+                    }
+                    onFundingRateCollectionError={
+                      handleFundingRateCollectionError
+                    }
+                    disabled={loading || updating}
+                  />
+                  <OpenInterestCollectionButton
+                    mode="bulk"
+                    onCollectionStart={handleOpenInterestCollectionStart}
+                    onCollectionError={handleOpenInterestCollectionError}
+                    disabled={loading || updating}
+                    className="text-xs px-3 py-2"
+                  />
                 </div>
               </div>
             </div>
@@ -641,27 +641,29 @@ const DataPage: React.FC = () => {
               fundingRateCollectionMessage ||
               openInterestCollectionMessage ||
               allDataCollectionMessage) && (
-              <div className="mt-3 pt-3 border-t border-secondary-200 dark:border-secondary-700">
-                {allDataCollectionMessage && (
-                  <div className="text-sm text-secondary-600 dark:text-secondary-400 mb-1 font-medium">
-                    {allDataCollectionMessage}
-                  </div>
-                )}
-                {bulkCollectionMessage && (
-                  <div className="text-sm text-secondary-600 dark:text-secondary-400 mb-1">
-                    {bulkCollectionMessage}
-                  </div>
-                )}
-                {fundingRateCollectionMessage && (
-                  <div className="text-sm text-secondary-600 dark:text-secondary-400 mb-1">
-                    {fundingRateCollectionMessage}
-                  </div>
-                )}
-                {openInterestCollectionMessage && (
-                  <div className="text-sm text-secondary-600 dark:text-secondary-400">
-                    {openInterestCollectionMessage}
-                  </div>
-                )}
+              <div className="mt-6 pt-4 border-t border-secondary-200 dark:border-secondary-700">
+                <div className="space-y-2">
+                  {allDataCollectionMessage && (
+                    <div className="text-sm text-secondary-600 dark:text-secondary-400 font-medium">
+                      {allDataCollectionMessage}
+                    </div>
+                  )}
+                  {bulkCollectionMessage && (
+                    <div className="text-sm text-secondary-600 dark:text-secondary-400">
+                      {bulkCollectionMessage}
+                    </div>
+                  )}
+                  {fundingRateCollectionMessage && (
+                    <div className="text-sm text-secondary-600 dark:text-secondary-400">
+                      {fundingRateCollectionMessage}
+                    </div>
+                  )}
+                  {openInterestCollectionMessage && (
+                    <div className="text-sm text-secondary-600 dark:text-secondary-400">
+                      {openInterestCollectionMessage}
+                    </div>
+                  )}
+                </div>
               </div>
             )}
           </div>
@@ -676,7 +678,7 @@ const DataPage: React.FC = () => {
                 <h2 className="text-xl font-semibold text-secondary-900 dark:text-secondary-100">
                   📊 {selectedSymbol} - データテーブル
                 </h2>
-                <div className="flex bg-gray-800 dark:bg-gray-800 rounded-lg p-1">
+                <div className="flex bg-gray-800 rounded-lg p-1">
                   <button
                     onClick={() => setActiveTab("ohlcv")}
                     className={`px-4 py-2 text-sm font-medium rounded-md transition-colors duration-200 ${

@@ -177,7 +177,7 @@ const OpenInterestCollectionButton: React.FC<
         return "❌ エラー";
       default:
         return mode === "bulk"
-          ? "📈 OI一括収集 (BTC・ETH)"
+          ? "📈 OI収集 (BTC・ETH)"
           : `📈 OI収集 (${symbol})`;
     }
   };
