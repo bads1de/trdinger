@@ -141,20 +141,18 @@ const DataCollectionButton: React.FC<DataCollectionButtonProps> = ({
    */
   const getButtonIcon = () => {
     const icons = config.buttonIcon;
-    
+
     switch (buttonState) {
       case "loading":
-        return icons?.loading || (
-          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
+        return (
+          icons?.loading || (
+            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
+          )
         );
       case "success":
-        return icons?.success || (
-          <span className="text-green-400">✅</span>
-        );
+        return icons?.success || <span className="text-green-400">✅</span>;
       case "error":
-        return icons?.error || (
-          <span className="text-red-400">❌</span>
-        );
+        return icons?.error || <span className="text-red-400">❌</span>;
       default:
         return icons?.idle || null;
     }
@@ -171,8 +169,12 @@ const DataCollectionButton: React.FC<DataCollectionButtonProps> = ({
    * ボタンのスタイルクラスを取得
    */
   const getButtonClasses = () => {
-    const baseClasses = "flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-900 min-w-[160px]";
-    
+    // classNameにh-10が含まれているかチェック
+    const hasHeightClass =
+      className.includes("h-10") || className.includes("h-12");
+    const heightClass = hasHeightClass ? "" : "h-12";
+    const baseClasses = `flex items-center justify-center gap-2 px-4 text-sm font-medium rounded-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-900 min-w-[120px] ${heightClass}`;
+
     if (isButtonDisabled) {
       return `${baseClasses} bg-gray-600 text-gray-400 cursor-not-allowed`;
     }
@@ -190,25 +192,15 @@ const DataCollectionButton: React.FC<DataCollectionButtonProps> = ({
   };
 
   return (
-    <div className={`flex flex-col gap-3 ${className}`}>
-      {/* メインボタン */}
-      <button
-        onClick={handleCollectData}
-        disabled={isButtonDisabled}
-        className={getButtonClasses()}
-        title={config.description}
-      >
-        {getButtonIcon()}
-        <span>{getButtonText()}</span>
-      </button>
-
-      {/* 説明テキスト */}
-      {config.description && (
-        <div className="text-xs text-gray-400">
-          {config.description}
-        </div>
-      )}
-    </div>
+    <button
+      onClick={handleCollectData}
+      disabled={isButtonDisabled}
+      className={getButtonClasses()}
+      title={config.description}
+    >
+      {getButtonIcon()}
+      <span>{getButtonText()}</span>
+    </button>
   );
 };
 

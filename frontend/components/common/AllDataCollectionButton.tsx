@@ -44,14 +44,19 @@ const AllDataCollectionButton: React.FC<AllDataCollectionButtonProps> = ({
       "全データ（OHLCV・FR・OI）を一括取得します。\n\n" +
       "この処理には数分から十数分かかる場合があります。続行しますか？",
     buttonText: {
-      idle: "全データ一括取得",
-      loading: "全データ収集中...",
-      success: "全データ収集完了",
-      error: "収集エラー",
+      idle: "全データ取得",
+      loading: "収集中...",
+      success: "✅ 完了",
+      error: "❌ エラー",
     },
     buttonIcon: {
       idle: (
-        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <svg
+          className="w-4 h-4"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
           <path
             strokeLinecap="round"
             strokeLinejoin="round"

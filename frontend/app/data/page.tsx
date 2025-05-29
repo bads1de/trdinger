@@ -18,7 +18,7 @@ import OpenInterestCollectionButton from "@/components/common/OpenInterestCollec
 import AllDataCollectionButton from "@/components/common/AllDataCollectionButton";
 import SymbolSelector from "@/components/common/SymbolSelector";
 import TimeFrameSelector from "@/components/common/TimeFrameSelector";
-import CompactDataCollectionButtons from "@/components/CompactDataCollectionButtons";
+
 import {
   PriceData,
   FundingRateData,
@@ -571,10 +571,11 @@ const DataPage: React.FC = () => {
               </h2>
             </div>
 
-            {/* 設定コントロールグリッド */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              {/* 通貨ペア選択グループ */}
-              <div className="space-y-2">
+            {/* 設定コントロール */}
+            <div className="space-y-6">
+              {/* 上段：基本設定 */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* 通貨ペア選択 */}
                 <SymbolSelector
                   symbols={symbols}
                   selectedSymbol={selectedSymbol}
@@ -585,10 +586,8 @@ const DataPage: React.FC = () => {
                   showCategories={false}
                   enableSearch={false}
                 />
-              </div>
 
-              {/* 時間軸選択グループ */}
-              <div className="space-y-2">
+                {/* 時間軸選択 */}
                 <TimeFrameSelector
                   selectedTimeFrame={selectedTimeFrame}
                   onTimeFrameChange={handleTimeFrameChange}
@@ -597,36 +596,97 @@ const DataPage: React.FC = () => {
                 />
               </div>
 
-              {/* データ収集アクショングループ */}
-              <div className="space-y-2">
+              {/* 下段：データ収集ボタン */}
+              <div className="space-y-3">
                 <label className="block text-sm font-medium text-secondary-600 dark:text-secondary-400">
                   データ収集
                 </label>
-                <div className="flex flex-wrap gap-2">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
                   {/* 全データ一括収集ボタン */}
                   <AllDataCollectionButton
                     onCollectionStart={handleAllDataCollectionStart}
                     onCollectionError={handleAllDataCollectionError}
                     disabled={loading || updating}
-                    className="text-xs px-3 py-2"
+                    className="h-10 text-sm"
                   />
-                  <CompactDataCollectionButtons
-                    onBulkCollectionStart={handleBulkCollectionStart}
-                    onBulkCollectionError={handleBulkCollectionError}
-                    onFundingRateCollectionStart={
-                      handleFundingRateCollectionStart
-                    }
-                    onFundingRateCollectionError={
-                      handleFundingRateCollectionError
-                    }
+
+                  {/* OHLCV収集ボタン（CompactDataCollectionButtonsから分離） */}
+                  <button
+                    onClick={async () => {
+                      if (
+                        !confirm(
+                          "全ペア・全時間軸でOHLCVデータを収集しますか？"
+                        )
+                      )
+                        return;
+
+                      try {
+                        const response = await fetch("/api/data/ohlcv/bulk", {
+                          method: "POST",
+                          headers: { "Content-Type": "application/json" },
+                        });
+                        const result = await response.json();
+
+                        if (response.ok && result.success) {
+                          handleBulkCollectionStart?.(result);
+                        } else {
+                          handleBulkCollectionError?.(
+                            result.message || "OHLCV収集に失敗しました"
+                          );
+                        }
+                      } catch (error) {
+                        handleBulkCollectionError?.(
+                          "OHLCV収集中にエラーが発生しました"
+                        );
+                      }
+                    }}
                     disabled={loading || updating}
-                  />
+                    className="h-10 px-4 text-sm font-medium rounded-lg bg-blue-600 text-white hover:bg-blue-700 disabled:bg-gray-700 disabled:text-gray-400 disabled:cursor-not-allowed transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1"
+                  >
+                    <span>OHLCV収集</span>
+                  </button>
+
+                  {/* FR収集ボタン（CompactDataCollectionButtonsから分離） */}
+                  <button
+                    onClick={async () => {
+                      if (!confirm("FRデータを収集しますか？")) return;
+
+                      try {
+                        const response = await fetch(
+                          "/api/data/funding-rates/bulk",
+                          {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                          }
+                        );
+                        const result = await response.json();
+
+                        if (response.ok && result.success) {
+                          handleFundingRateCollectionStart?.(result);
+                        } else {
+                          handleFundingRateCollectionError?.(
+                            result.message || "FR収集に失敗しました"
+                          );
+                        }
+                      } catch (error) {
+                        handleFundingRateCollectionError?.(
+                          "FR収集中にエラーが発生しました"
+                        );
+                      }
+                    }}
+                    disabled={loading || updating}
+                    className="h-10 px-4 text-sm font-medium rounded-lg bg-green-600 text-white hover:bg-green-700 disabled:bg-gray-700 disabled:text-gray-400 disabled:cursor-not-allowed transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-1"
+                  >
+                    <span>FR収集</span>
+                  </button>
+
+                  {/* OI収集ボタン */}
                   <OpenInterestCollectionButton
                     mode="bulk"
                     onCollectionStart={handleOpenInterestCollectionStart}
                     onCollectionError={handleOpenInterestCollectionError}
                     disabled={loading || updating}
-                    className="text-xs px-3 py-2"
+                    className="h-10 text-sm"
                   />
                 </div>
               </div>

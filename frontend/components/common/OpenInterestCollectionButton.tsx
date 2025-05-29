@@ -34,7 +34,9 @@ interface OpenInterestCollectionButtonProps {
 /**
  * OIデータ収集ボタンコンポーネント（共通化版）
  */
-const OpenInterestCollectionButton: React.FC<OpenInterestCollectionButtonProps> = ({
+const OpenInterestCollectionButton: React.FC<
+  OpenInterestCollectionButtonProps
+> = ({
   onCollectionStart,
   onCollectionError,
   disabled = false,
@@ -44,22 +46,27 @@ const OpenInterestCollectionButton: React.FC<OpenInterestCollectionButtonProps> 
 }) => {
   // 設定を作成
   const config: DataCollectionConfig = {
-    apiEndpoint: mode === "bulk" 
-      ? "/api/data/open-interest/bulk-collect"
-      : `/api/data/open-interest/collect?symbol=${encodeURIComponent(symbol)}&fetch_all=true`,
+    apiEndpoint:
+      mode === "bulk"
+        ? "/api/data/open-interest/bulk-collect"
+        : `/api/data/open-interest/collect?symbol=${encodeURIComponent(
+            symbol
+          )}&fetch_all=true`,
     method: "POST",
-    confirmMessage: mode === "bulk"
-      ? "BTC・ETHの全期間OIデータを取得します。\n\nこの処理には数分かかる場合があります。続行しますか？"
-      : undefined,
+    confirmMessage:
+      mode === "bulk"
+        ? "BTC・ETHの全期間OIデータを取得します。\n\nこの処理には数分かかる場合があります。続行しますか？"
+        : undefined,
     buttonText: {
-      idle: mode === "bulk" ? "📈 OI収集 (BTC・ETH)" : `📈 OI収集 (${symbol})`,
+      idle: mode === "bulk" ? "OI収集" : `OI収集 (${symbol})`,
       loading: "収集中...",
       success: "✅ 完了",
       error: "❌ エラー",
     },
-    description: mode === "bulk" 
-      ? "BTC・ETHの全期間OIデータを一括収集"
-      : `${symbol}のOIデータを収集`,
+    description:
+      mode === "bulk"
+        ? "BTC・ETHの全期間OIデータを一括収集"
+        : `${symbol}のOIデータを収集`,
     successResetTime: 3000,
     errorResetTime: 5000,
   };
