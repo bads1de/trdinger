@@ -13,6 +13,12 @@
 import React from "react";
 import DataTable, { TableColumn } from "./DataTable";
 import { PriceData } from "@/types/strategy";
+import {
+  formatDateTime,
+  formatCurrency,
+  formatVolume,
+  getPriceChangeColor,
+} from "@/utils/formatters";
 
 /**
  * OHLCVデータテーブルのプロパティ
@@ -31,60 +37,6 @@ interface OHLCVDataTableProps {
   /** テーブルのクラス名 */
   className?: string;
 }
-
-/**
- * 数値を通貨形式でフォーマットする関数
- */
-const formatCurrency = (value: number): string => {
-  return new Intl.NumberFormat("ja-JP", {
-    style: "currency",
-    currency: "USD",
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 8,
-  }).format(value);
-};
-
-/**
- * 出来高を読みやすい形式でフォーマットする関数
- */
-const formatVolume = (value: number): string => {
-  if (value >= 1e9) {
-    return `${(value / 1e9).toFixed(2)}B`;
-  } else if (value >= 1e6) {
-    return `${(value / 1e6).toFixed(2)}M`;
-  } else if (value >= 1e3) {
-    return `${(value / 1e3).toFixed(2)}K`;
-  }
-  return value.toFixed(2);
-};
-
-/**
- * 日時を読みやすい形式でフォーマットする関数
- */
-const formatDateTime = (timestamp: string): string => {
-  const date = new Date(timestamp);
-  return new Intl.DateTimeFormat("ja-JP", {
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit",
-    timeZone: "Asia/Tokyo",
-  }).format(date);
-};
-
-/**
- * 価格変動の色を取得する関数
- */
-const getPriceChangeColor = (open: number, close: number): string => {
-  if (close > open) {
-    return "text-green-400"; // 上昇（陽線）
-  } else if (close < open) {
-    return "text-red-400"; // 下降（陰線）
-  }
-  return "text-gray-100"; // 変化なし
-};
 
 /**
  * OHLCVデータテーブルコンポーネント

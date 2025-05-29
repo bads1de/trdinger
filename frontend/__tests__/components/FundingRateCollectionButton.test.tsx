@@ -7,7 +7,7 @@
 import React from "react";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import "@testing-library/jest-dom";
-import FundingRateCollectionButton from "@/components/FundingRateCollectionButton";
+import FundingRateCollectionButton from "@/components/common/FundingRateCollectionButton";
 
 // fetch をモック
 global.fetch = jest.fn();

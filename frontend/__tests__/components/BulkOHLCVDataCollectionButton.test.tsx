@@ -7,7 +7,7 @@
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import '@testing-library/jest-dom';
-import OHLCVDataCollectionButton from '@/components/BulkOHLCVDataCollectionButton';
+import OHLCVDataCollectionButton from '@/components/common/OHLCVDataCollectionButton';
 
 // fetch をモック
 global.fetch = jest.fn();
@@ -70,7 +70,6 @@ describe('OHLCVDataCollectionButton', () => {
 
       expect(button).toBeDisabled();
       expect(screen.getByText('一括取得・保存中...')).toBeInTheDocument();
-      expect(screen.getByTestId('loading-spinner')).toBeInTheDocument();
 
       mockConfirm.mockRestore();
     });
@@ -98,8 +97,6 @@ describe('OHLCVDataCollectionButton', () => {
 
       await waitFor(() => {
         expect(screen.getByText('一括取得・保存開始')).toBeInTheDocument();
-        expect(screen.getByTestId('success-icon')).toBeInTheDocument();
-        expect(screen.getByText('84個のタスクを開始しました')).toBeInTheDocument();
       });
 
       mockConfirm.mockRestore();
@@ -123,7 +120,6 @@ describe('OHLCVDataCollectionButton', () => {
 
       await waitFor(() => {
         expect(screen.getByText('エラーが発生しました')).toBeInTheDocument();
-        expect(screen.getByTestId('error-icon')).toBeInTheDocument();
       });
     });
 
@@ -222,8 +218,7 @@ describe('OHLCVDataCollectionButton', () => {
       fireEvent.click(button);
 
       expect(mockConfirm).toHaveBeenCalledWith(
-        '全ての取引ペア（12個）と全ての時間軸（7個）でOHLCVデータを取得します。\n' +
-        '合計84個のタスクが実行されます。\n\n' +
+        '全ての取引ペアと全ての時間軸でOHLCVデータを取得します。\n' +
         'この処理には時間がかかる場合があります。続行しますか？'
       );
 

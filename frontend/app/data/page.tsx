@@ -14,10 +14,10 @@ import React, { useState, useEffect } from "react";
 import OHLCVDataTable from "@/components/OHLCVDataTable";
 import FundingRateDataTable from "@/components/FundingRateDataTable";
 import OpenInterestDataTable from "@/components/OpenInterestDataTable";
-import OpenInterestCollectionButton from "@/components/OpenInterestCollectionButton";
-import AllDataCollectionButton from "@/components/AllDataCollectionButton";
-import CompactSymbolSelector from "@/components/CompactSymbolSelector";
-import CompactTimeFrameSelector from "@/components/CompactTimeFrameSelector";
+import OpenInterestCollectionButton from "@/components/common/OpenInterestCollectionButton";
+import AllDataCollectionButton from "@/components/common/AllDataCollectionButton";
+import SymbolSelector from "@/components/common/SymbolSelector";
+import TimeFrameSelector from "@/components/common/TimeFrameSelector";
 import CompactDataCollectionButtons from "@/components/CompactDataCollectionButtons";
 import {
   PriceData,
@@ -575,27 +575,25 @@ const DataPage: React.FC = () => {
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               {/* 通貨ペア選択グループ */}
               <div className="space-y-2">
-                <label className="block text-sm font-medium text-secondary-600 dark:text-secondary-400">
-                  通貨ペア
-                </label>
-                <CompactSymbolSelector
+                <SymbolSelector
                   symbols={symbols}
                   selectedSymbol={selectedSymbol}
                   onSymbolChange={handleSymbolChange}
                   loading={symbolsLoading}
                   disabled={loading}
+                  mode="compact"
+                  showCategories={false}
+                  enableSearch={false}
                 />
               </div>
 
               {/* 時間軸選択グループ */}
               <div className="space-y-2">
-                <label className="block text-sm font-medium text-secondary-600 dark:text-secondary-400">
-                  時間軸
-                </label>
-                <CompactTimeFrameSelector
+                <TimeFrameSelector
                   selectedTimeFrame={selectedTimeFrame}
                   onTimeFrameChange={handleTimeFrameChange}
                   disabled={loading}
+                  mode="compact"
                 />
               </div>
 
