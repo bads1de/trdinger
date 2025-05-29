@@ -18,15 +18,11 @@ import { BACKEND_API_URL } from "@/constants";
  */
 export async function POST(request: NextRequest) {
   try {
-    console.log("OIデータ収集リクエスト開始");
-
     // URLパラメータを取得
     const { searchParams } = new URL(request.url);
     const symbol = searchParams.get("symbol") || "BTC/USDT";
     const limit = searchParams.get("limit") || "100";
     const fetchAll = searchParams.get("fetch_all") === "true";
-
-    console.log(`収集対象: ${symbol}, 件数: ${limit}, 全期間取得: ${fetchAll}`);
 
     // バックエンドAPIに転送
     let backendUrl = `${BACKEND_API_URL}/api/open-interest/collect?symbol=${encodeURIComponent(
@@ -35,8 +31,6 @@ export async function POST(request: NextRequest) {
     if (fetchAll) {
       backendUrl += "&fetch_all=true";
     }
-
-    console.log(`バックエンドURL: ${backendUrl}`);
 
     const response = await fetch(backendUrl, {
       method: "POST",
@@ -59,7 +53,6 @@ export async function POST(request: NextRequest) {
     }
 
     const data = await response.json();
-    console.log(`OIデータ収集成功: ${data.data?.saved_count || 0}件保存`);
 
     return NextResponse.json(data);
   } catch (error) {

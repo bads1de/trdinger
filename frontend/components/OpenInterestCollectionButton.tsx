@@ -88,8 +88,6 @@ const OpenInterestCollectionButton: React.FC<
         )}&fetch_all=true`;
       }
 
-      console.log(`OIデータ収集開始: ${apiUrl}`);
-
       const response = await fetch(apiUrl, {
         method: "POST",
         headers: {

@@ -19,15 +19,11 @@ import { BACKEND_API_URL } from "@/constants";
  */
 export async function POST(request: NextRequest) {
   try {
-    console.log("FRデータ収集リクエスト開始");
-
     // URLパラメータを取得
     const { searchParams } = new URL(request.url);
     const symbol = searchParams.get("symbol") || "BTC/USDT";
     const limit = searchParams.get("limit") || "100";
     const fetchAll = searchParams.get("fetch_all") === "true";
-
-    console.log(`収集対象: ${symbol}, 件数: ${limit}, 全期間取得: ${fetchAll}`);
 
     // バックエンドAPIに転送
     let backendUrl = `${BACKEND_API_URL}/api/funding-rates/collect?symbol=${encodeURIComponent(
@@ -63,8 +59,6 @@ export async function POST(request: NextRequest) {
           backendData.message || "バックエンドAPIからエラーレスポンス"
         );
       }
-
-      console.log("FRデータ収集成功:", backendData);
 
       // 成功レスポンス
       const response: FundingRateCollectionResponse = {

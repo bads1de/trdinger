@@ -19,13 +19,9 @@ import { BACKEND_API_URL } from "@/constants";
  */
 export async function POST(request: NextRequest) {
   try {
-    console.log("一括FRデータ収集リクエスト開始");
-
     // URLパラメータを取得
     const { searchParams } = new URL(request.url);
     const limit = searchParams.get("limit") || "100";
-
-    console.log(`一括収集開始: 各シンボルあたり${limit}件`);
 
     // バックエンドAPIに転送
     const backendUrl = `${BACKEND_API_URL}/api/funding-rates/bulk-collect?limit=${limit}`;
@@ -56,8 +52,6 @@ export async function POST(request: NextRequest) {
           backendData.message || "バックエンドAPIからエラーレスポンス"
         );
       }
-
-      console.log("一括FRデータ収集成功:", backendData);
 
       // 成功レスポンス
       const response: {

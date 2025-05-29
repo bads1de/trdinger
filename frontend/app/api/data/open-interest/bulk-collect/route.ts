@@ -18,12 +18,8 @@ import { BACKEND_API_URL } from "@/constants";
  */
 export async function POST(request: NextRequest) {
   try {
-    console.log("OIデータ一括収集リクエスト開始");
-
     // バックエンドAPIに転送
     const backendUrl = `${BACKEND_API_URL}/api/open-interest/bulk-collect`;
-
-    console.log(`バックエンドURL: ${backendUrl}`);
 
     const response = await fetch(backendUrl, {
       method: "POST",
@@ -46,9 +42,6 @@ export async function POST(request: NextRequest) {
     }
 
     const data = await response.json();
-    console.log(
-      `OIデータ一括収集成功: ${data.data?.summary?.total_saved || 0}件保存`
-    );
 
     return NextResponse.json(data);
   } catch (error) {

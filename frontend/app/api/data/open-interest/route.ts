@@ -18,16 +18,12 @@ import { BACKEND_API_URL } from "@/constants";
  */
 export async function GET(request: NextRequest) {
   try {
-    console.log("OIデータ取得リクエスト開始");
-
     // URLパラメータを取得
     const { searchParams } = new URL(request.url);
     const symbol = searchParams.get("symbol") || "BTC/USDT";
     const startDate = searchParams.get("start_date");
     const endDate = searchParams.get("end_date");
     const limit = searchParams.get("limit") || "1000";
-
-    console.log(`取得対象: ${symbol}, 件数: ${limit}`);
 
     // バックエンドAPIに転送
     let backendUrl = `${BACKEND_API_URL}/api/open-interest?symbol=${encodeURIComponent(
@@ -40,8 +36,6 @@ export async function GET(request: NextRequest) {
     if (endDate) {
       backendUrl += `&end_date=${encodeURIComponent(endDate)}`;
     }
-
-    console.log(`バックエンドURL: ${backendUrl}`);
 
     const response = await fetch(backendUrl, {
       method: "GET",
@@ -64,7 +58,6 @@ export async function GET(request: NextRequest) {
     }
 
     const data = await response.json();
-    console.log(`OIデータ取得成功: ${data.data?.count || 0}件`);
 
     return NextResponse.json(data);
   } catch (error) {

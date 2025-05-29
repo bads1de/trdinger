@@ -23,8 +23,6 @@ import { BACKEND_API_URL } from "@/constants";
  */
 export async function POST(request: NextRequest) {
   try {
-    console.log("一括OHLCVデータ収集リクエスト開始");
-
     // バックエンドAPIに転送
     const backendUrl = `${BACKEND_API_URL}/api/data-collection/bulk-historical`;
 
@@ -59,8 +57,6 @@ export async function POST(request: NextRequest) {
           successful_tasks: backendResult.successful_tasks,
           task_results: backendResult.task_results,
         };
-
-        console.log(`一括OHLCVデータ収集成功: ${result.total_tasks}タスク開始`);
 
         return NextResponse.json(result, { status: 200 });
       } else {
