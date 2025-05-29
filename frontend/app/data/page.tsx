@@ -229,7 +229,6 @@ const DataPage: React.FC = () => {
       if (result.success) {
         // 更新後にデータを再取得
         await fetchOHLCVData();
-        console.log(`差分更新完了: ${result.saved_count}件`);
       } else {
         setError(result.message || "差分更新に失敗しました");
       }
@@ -247,7 +246,6 @@ const DataPage: React.FC = () => {
   const fetchDataStatus = async () => {
     try {
       const url = `${BACKEND_API_URL}/api/data-collection/status/${selectedSymbol}/${selectedTimeFrame}`;
-      console.log("Requesting data status from:", url); // ★ログ追加
       const response = await fetch(url);
       const result = await response.json();
 
@@ -255,7 +253,7 @@ const DataPage: React.FC = () => {
         setDataStatus(result);
       }
     } catch (err) {
-      console.error("データ状況取得エラー詳細:", err); // ★エラーオブジェクト全体をログに出力
+      console.error("データ状況取得エラー:", err);
     }
   };
 

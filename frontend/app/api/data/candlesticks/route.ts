@@ -49,8 +49,6 @@ async function fetchDatabaseOHLCVData(
     apiUrl.searchParams.set("end_date", endDate);
   }
 
-  console.log(`データベースAPI呼び出し: ${apiUrl.toString()}`);
-
   // バックエンドAPIを呼び出し
   const response = await fetch(apiUrl.toString(), {
     method: "GET",
@@ -93,7 +91,6 @@ async function fetchDatabaseOHLCVData(
     };
   });
 
-  console.log(`取得したデータ件数: ${priceData.length}`);
   return priceData;
 }
 

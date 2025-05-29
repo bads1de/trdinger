@@ -40,8 +40,6 @@ async function fetchDatabaseFundingRateData(
     apiUrl.searchParams.set("end_date", endDate);
   }
 
-  console.log(`バックエンドAPI呼び出し: ${apiUrl.toString()}`);
-
   // バックエンドAPIを呼び出し
   const response = await fetch(apiUrl.toString(), {
     method: "GET",
@@ -59,7 +57,6 @@ async function fetchDatabaseFundingRateData(
   }
 
   const backendData = await response.json();
-  console.log(`バックエンドレスポンス:`, backendData);
 
   if (!backendData.success) {
     throw new Error(backendData.message || "データの取得に失敗しました");
@@ -77,7 +74,6 @@ async function fetchDatabaseFundingRateData(
     index_price: rate.index_price ? Number(rate.index_price) : null,
   }));
 
-  console.log(`取得したFRデータ件数: ${fundingRates.length}`);
   return fundingRates;
 }
 
@@ -88,8 +84,6 @@ async function fetchDatabaseFundingRateData(
  */
 export async function GET(request: NextRequest) {
   try {
-    console.log("FRデータ取得リクエスト開始");
-
     // URLパラメータを取得
     const { searchParams } = new URL(request.url);
     const symbol = searchParams.get("symbol") || "BTC/USDT";
@@ -110,10 +104,6 @@ export async function GET(request: NextRequest) {
         { status: 400 }
       );
     }
-
-    console.log(
-      `取得パラメータ: symbol=${symbol}, limit=${limit}, startDate=${startDate}, endDate=${endDate}`
-    );
 
     // データベースからFRデータを取得
     const fundingRates = await fetchDatabaseFundingRateData(
