@@ -11,7 +11,7 @@
 import React from "react";
 import { render, screen, fireEvent } from "@testing-library/react";
 import "@testing-library/jest-dom";
-import TimeFrameSelector from "@/components/TimeFrameSelector";
+import TimeFrameSelector from "@/components/common/TimeFrameSelector";
 import { TimeFrame } from "@/types/strategy";
 import { SUPPORTED_TIMEFRAMES } from "@/constants";
 

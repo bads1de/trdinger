@@ -13,6 +13,13 @@
 import React from "react";
 import DataTable, { TableColumn } from "./DataTable";
 import { FundingRateData } from "@/types/strategy";
+import {
+  formatDateTime,
+  formatPrice,
+  formatSymbol,
+  formatFundingRate,
+  getFundingRateColor,
+} from "@/utils/formatters";
 
 /**
  * FRデータテーブルのプロパティ
@@ -27,66 +34,6 @@ interface FundingRateDataTableProps {
   /** テーブルのクラス名 */
   className?: string;
 }
-
-/**
- * FRをパーセント形式でフォーマットする関数
- */
-const formatFundingRate = (rate: number): string => {
-  const percentage = rate * 100;
-  const sign = percentage >= 0 ? "+" : "";
-  return `${sign}${percentage.toFixed(6)}%`;
-};
-
-/**
- * FRの色を取得する関数
- */
-const getFundingRateColor = (rate: number): string => {
-  if (rate > 0) {
-    return "text-red-400"; // 正のFR（ロングが支払い）
-  } else if (rate < 0) {
-    return "text-green-400"; // 負のFR（ショートが支払い）
-  }
-  return "text-gray-100"; // ゼロ
-};
-
-/**
- * 価格を通貨形式でフォーマットする関数
- */
-const formatPrice = (value: number | null): string => {
-  if (value === null || value === undefined) {
-    return "-";
-  }
-  return new Intl.NumberFormat("ja-JP", {
-    style: "currency",
-    currency: "USD",
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 8,
-  }).format(value);
-};
-
-/**
- * 日時を読みやすい形式でフォーマットする関数
- */
-const formatDateTime = (timestamp: string): string => {
-  const date = new Date(timestamp);
-  return new Intl.DateTimeFormat("ja-JP", {
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit",
-    timeZone: "Asia/Tokyo",
-  }).format(date);
-};
-
-/**
- * シンボルを短縮表示する関数
- */
-const formatSymbol = (symbol: string): string => {
-  // "BTC/USDT:USDT" -> "BTC/USDT"
-  return symbol.split(":")[0];
-};
 
 /**
  * FRデータテーブルコンポーネント

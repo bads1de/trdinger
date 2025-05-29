@@ -11,7 +11,7 @@
 import React from "react";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import "@testing-library/jest-dom";
-import SymbolSelector from "@/components/SymbolSelector";
+import SymbolSelector from "@/components/common/SymbolSelector";
 import { SUPPORTED_TRADING_PAIRS } from "@/constants";
 
 describe("SymbolSelector", () => {
