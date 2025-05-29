@@ -12,7 +12,8 @@ from sqlalchemy.orm import sessionmaker
 os.environ["DATABASE_URL"] = "sqlite:///./trdinger_test.db"
 
 from database.connection import Base
-from database.repository import OHLCVRepository, DataCollectionLogRepository
+from database.repositories.ohlcv_repository import OHLCVRepository
+from database.repositories.data_collection_log_repository import DataCollectionLogRepository
 from data_collector.collector import DataCollector
 
 # ログ設定

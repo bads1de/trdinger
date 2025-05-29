@@ -12,7 +12,7 @@ from datetime import datetime, timezone
 sys.path.append('.')
 
 from database.connection import SessionLocal
-from database.repository import OHLCVRepository
+from database.repositories.ohlcv_repository import OHLCVRepository
 from app.config.market_config import MarketDataConfig
 
 

@@ -15,8 +15,9 @@ from datetime import datetime, timezone
 import logging
 
 from app.config.market_config import MarketDataConfig
-from database.repository import OHLCVRepository
+from database.repositories.ohlcv_repository import OHLCVRepository
 from database.connection import SessionLocal
+from app.core.utils.data_converter import OHLCVDataConverter
 
 
 # ログ設定
@@ -183,24 +184,7 @@ class BybitMarketDataService:
             保存された件数
         """
         # OHLCVデータを辞書形式に変換
-        records = []
-        for candle in ohlcv_data:
-            timestamp, open_price, high, low, close, volume = candle
-
-            # タイムスタンプをdatetimeに変換
-            dt = datetime.fromtimestamp(timestamp / 1000, tz=timezone.utc)
-
-            record = {
-                "symbol": symbol,
-                "timeframe": timeframe,
-                "timestamp": dt,
-                "open": float(open_price),
-                "high": float(high),
-                "low": float(low),
-                "close": float(close),
-                "volume": float(volume),
-            }
-            records.append(record)
+        records = OHLCVDataConverter.ccxt_to_db_format(ohlcv_data, symbol, timeframe)
 
         # データベースに挿入
         return repository.insert_ohlcv_data(records)

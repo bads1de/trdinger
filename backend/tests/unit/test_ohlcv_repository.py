@@ -13,7 +13,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
 
 from database.models import OHLCVData
-from database.repository import OHLCVRepository
+from database.repositories.ohlcv_repository import OHLCVRepository
 
 
 class TestOHLCVRepository:

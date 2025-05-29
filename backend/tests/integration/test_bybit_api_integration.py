@@ -14,7 +14,7 @@ import os
 from app.core.services.market_data_service import BybitMarketDataService
 from app.config.market_config import MarketDataConfig
 from database.models import OHLCVData
-from database.repository import OHLCVRepository
+from database.repositories.ohlcv_repository import OHLCVRepository
 from database.connection import get_db
 
 

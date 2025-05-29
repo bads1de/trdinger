@@ -14,7 +14,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from app.core.services.historical_data_service import HistoricalDataService
 from database.connection import SessionLocal, init_db
-from database.repository import OHLCVRepository
+from database.repositories.ohlcv_repository import OHLCVRepository
 
 # ログ設定
 logging.basicConfig(
