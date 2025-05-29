@@ -10,7 +10,7 @@ from unittest.mock import Mock, patch
 from sqlalchemy.orm import Session
 
 from app.main import app
-from database.repository import OHLCVRepository
+from database.repositories.ohlcv_repository import OHLCVRepository
 
 
 class TestDataCollectionAPI:

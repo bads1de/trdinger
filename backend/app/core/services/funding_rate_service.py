@@ -12,7 +12,8 @@ from typing import List, Dict, Any, Optional
 import logging
 
 from database.connection import SessionLocal
-from database.repository import FundingRateRepository
+from database.repositories.funding_rate_repository import FundingRateRepository
+from app.core.utils.data_converter import FundingRateDataConverter
 
 logger = logging.getLogger(__name__)
 
@@ -443,26 +444,10 @@ class BybitFundingRateService:
             保存された件数
         """
         # ファンディングレートデータを辞書形式に変換
-        records = []
-        for rate_data in funding_history:
-            # タイムスタンプをdatetimeに変換
-            funding_timestamp = datetime.fromtimestamp(
-                rate_data["timestamp"] / 1000, tz=timezone.utc
-            )
-
-            # データ取得時刻
-            current_timestamp = datetime.now(timezone.utc)
-
-            record = {
-                "symbol": self.normalize_symbol(symbol),
-                "funding_rate": float(rate_data["fundingRate"]),
-                "funding_timestamp": funding_timestamp,
-                "timestamp": current_timestamp,
-                "next_funding_timestamp": None,  # 履歴データには含まれない
-                "mark_price": None,  # 履歴データには含まれない場合がある
-                "index_price": None,  # 履歴データには含まれない場合がある
-            }
-            records.append(record)
+        records = FundingRateDataConverter.ccxt_to_db_format(
+            funding_history,
+            self.normalize_symbol(symbol)
+        )
 
         # データベースに挿入
         return repository.insert_funding_rate_data(records)

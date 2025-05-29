@@ -10,7 +10,7 @@ from datetime import datetime, timezone, timedelta
 from typing import Dict, List, Optional
 
 from app.core.services.market_data_service import BybitMarketDataService
-from database.repository import OHLCVRepository
+from database.repositories.ohlcv_repository import OHLCVRepository
 
 logger = logging.getLogger(__name__)
 

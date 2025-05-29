@@ -14,7 +14,8 @@ import ccxt
 from database.connection import SessionLocal
 
 # OpenInterestDataは循環インポートを避けるため、必要時にインポート
-from database.repository import OpenInterestRepository
+from database.repositories.open_interest_repository import OpenInterestRepository
+from app.core.utils.data_converter import OpenInterestDataConverter
 
 logger = logging.getLogger(__name__)
 
@@ -519,53 +520,10 @@ class BybitOpenInterestService:
             保存された件数
         """
         # オープンインタレストデータを辞書形式に変換
-        records = []
-        logger.info(
-            f"オープンインタレストデータ変換開始: {len(open_interest_history)}件"
+        records = OpenInterestDataConverter.ccxt_to_db_format(
+            open_interest_history,
+            self.normalize_symbol(symbol)
         )
-        for oi_data in open_interest_history:
-            # タイムスタンプをdatetimeに変換
-            data_timestamp = datetime.fromtimestamp(
-                oi_data["timestamp"] / 1000, tz=timezone.utc
-            )
-
-            # データ取得時刻
-            current_timestamp = datetime.now(timezone.utc)
-
-            # オープンインタレスト値の取得（openInterestValueを優先）
-            open_interest_value = oi_data.get("openInterestValue")
-            open_interest_amount = oi_data.get("openInterestAmount")
-
-            # openInterestValueがNoneの場合、infoから取得を試行
-            if open_interest_value is None and "info" in oi_data:
-                info_data = oi_data["info"]
-                if "openInterest" in info_data:
-                    try:
-                        open_interest_value = float(info_data["openInterest"])
-                    except (ValueError, TypeError):
-                        pass
-
-            # 値が取得できない場合はスキップ
-            if open_interest_value is None:
-                logger.warning(f"オープンインタレスト値が取得できません: {oi_data}")
-                continue
-
-            logger.info(
-                f"オープンインタレストデータ変換: {oi_data} -> value={open_interest_value}"
-            )
-
-            record = {
-                "symbol": self.normalize_symbol(symbol),
-                "open_interest_value": float(open_interest_value),
-                "open_interest_amount": (
-                    float(open_interest_amount)
-                    if open_interest_amount is not None
-                    else None
-                ),
-                "data_timestamp": data_timestamp,
-                "timestamp": current_timestamp,
-            }
-            records.append(record)
 
         # データベースに挿入
         return repository.insert_open_interest_data(records)

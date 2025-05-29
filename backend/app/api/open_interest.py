@@ -14,7 +14,7 @@ from sqlalchemy.orm import Session
 
 from app.core.services.open_interest_service import BybitOpenInterestService
 from database.connection import get_db, ensure_db_initialized
-from database.repository import OpenInterestRepository
+from database.repositories.open_interest_repository import OpenInterestRepository
 
 # ログ設定
 logger = logging.getLogger(__name__)

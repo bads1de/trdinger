@@ -11,7 +11,7 @@ from datetime import datetime, timezone, timedelta
 from typing import List, Dict, Any
 
 from app.core.services.funding_rate_service import BybitFundingRateService
-from database.repository import FundingRateRepository
+from database.repositories.funding_rate_repository import FundingRateRepository
 
 
 class TestBybitFundingRateService:

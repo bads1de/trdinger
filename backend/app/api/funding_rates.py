@@ -11,7 +11,7 @@ from typing import Optional, List
 import logging
 
 from database.connection import get_db, ensure_db_initialized
-from database.repository import FundingRateRepository
+from database.repositories.funding_rate_repository import FundingRateRepository
 from app.core.services.funding_rate_service import BybitFundingRateService
 
 logger = logging.getLogger(__name__)

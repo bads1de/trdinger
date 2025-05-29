@@ -10,7 +10,7 @@ import numpy as np
 from datetime import datetime, timedelta
 from backtest.engine.strategy_executor import StrategyExecutor
 from database.connection import SessionLocal
-from database.repository import OHLCVRepository
+from database.repositories.ohlcv_repository import OHLCVRepository
 
 
 def generate_sample_data(start_date: str, end_date: str, symbol: str = "BTC/USD") -> pd.DataFrame:

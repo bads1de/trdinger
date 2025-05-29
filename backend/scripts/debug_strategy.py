@@ -10,7 +10,7 @@ from datetime import datetime, timedelta
 os.environ["DATABASE_URL"] = "sqlite:///./trdinger_test.db"
 
 from database.connection import SessionLocal
-from database.repository import OHLCVRepository
+from database.repositories.ohlcv_repository import OHLCVRepository
 from backtest_engine.strategy_executor import StrategyExecutor
 
 def debug_strategy_execution():

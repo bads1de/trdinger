@@ -11,7 +11,7 @@ from typing import List, Dict, Any
 
 from app.core.services.open_interest_service import BybitOpenInterestService
 from database.connection import get_db, init_db
-from database.repository import OpenInterestRepository
+from database.repositories.open_interest_repository import OpenInterestRepository
 
 
 class TestBybitOpenInterestService:

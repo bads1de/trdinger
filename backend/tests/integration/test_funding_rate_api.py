@@ -583,7 +583,7 @@ class TestBybitFundingRateAPI:
         logger.info("=== BTC・ETH一括ファンディングレート収集テスト ===")
 
         from app.core.services.funding_rate_service import BybitFundingRateService
-        from database.repository import FundingRateRepository
+        from database.repositories.funding_rate_repository import FundingRateRepository
         from database.connection import SessionLocal
 
         try:

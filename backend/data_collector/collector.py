@@ -8,9 +8,11 @@ from datetime import datetime, timezone, timedelta
 import logging
 
 from database.connection import SessionLocal, ensure_db_initialized
-from database.repository import OHLCVRepository, DataCollectionLogRepository
+from database.repositories.ohlcv_repository import OHLCVRepository
+from database.repositories.data_collection_log_repository import DataCollectionLogRepository
 from app.core.services.market_data_service import BybitMarketDataService
 from app.config.market_config import MarketDataConfig
+from app.core.utils.data_converter import OHLCVDataConverter
 
 logger = logging.getLogger(__name__)
 
@@ -99,7 +101,7 @@ class DataCollector:
                         break
 
                     # データベース形式に変換
-                    db_records = self._convert_to_db_format(
+                    db_records = OHLCVDataConverter.ccxt_to_db_format(
                         ohlcv_data,
                         normalized_symbol,
                         timeframe
@@ -195,7 +197,7 @@ class DataCollector:
                 return 0
 
             # データベース形式に変換
-            db_records = self._convert_to_db_format(
+            db_records = OHLCVDataConverter.ccxt_to_db_format(
                 ohlcv_data,
                 normalized_symbol,
                 timeframe
@@ -237,45 +239,7 @@ class DataCollector:
         finally:
             db.close()
 
-    def _convert_to_db_format(
-        self,
-        ohlcv_data: List[List],
-        symbol: str,
-        timeframe: str
-    ) -> List[dict]:
-        """
-        CCXT形式のOHLCVデータをデータベース形式に変換
-
-        Args:
-            ohlcv_data: CCXT形式のOHLCVデータ
-            symbol: シンボル
-            timeframe: 時間軸
-
-        Returns:
-            データベース挿入用の辞書リスト
-        """
-        db_records = []
-
-        for candle in ohlcv_data:
-            timestamp_ms, open_price, high, low, close, volume = candle
-
-            # ミリ秒タイムスタンプをdatetimeに変換
-            timestamp = datetime.fromtimestamp(timestamp_ms / 1000, tz=timezone.utc)
-
-            db_record = {
-                'symbol': symbol,
-                'timeframe': timeframe,
-                'timestamp': timestamp,
-                'open': float(open_price),
-                'high': float(high),
-                'low': float(low),
-                'close': float(close),
-                'volume': float(volume)
-            }
-
-            db_records.append(db_record)
-
-        return db_records
+# _convert_to_db_format メソッドは OHLCVDataConverter.ccxt_to_db_format に移動されました
 
 
 # 便利関数
