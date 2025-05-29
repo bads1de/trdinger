@@ -10,7 +10,7 @@ from sqlalchemy.dialects.postgresql import insert
 import pandas as pd
 import logging
 
-from .models import OHLCVData, DataCollectionLog, FundingRateData
+from .models import OHLCVData, DataCollectionLog, FundingRateData, OpenInterestData
 from .connection import get_db, ensure_db_initialized
 
 logger = logging.getLogger(__name__)
@@ -692,6 +692,150 @@ class FundingRateRepository:
 
         except Exception as e:
             logger.error(f"ファンディングレートデータ件数取得エラー: {e}")
+            raise
+
+
+class OpenInterestRepository:
+    """オープンインタレストデータのリポジトリクラス"""
+
+    def __init__(self, db: Session):
+        self.db = db
+
+    def insert_open_interest_data(self, open_interest_records: List[dict]) -> int:
+        """
+        オープンインタレストデータを一括挿入
+
+        Args:
+            open_interest_records: オープンインタレストデータのリスト
+
+        Returns:
+            挿入された件数
+        """
+        if not open_interest_records:
+            logger.warning("挿入するオープンインタレストデータがありません")
+            return 0
+
+        try:
+            # データベースタイプに応じて重複処理を切り替え
+            from database.connection import DATABASE_URL
+
+            if "sqlite" in DATABASE_URL.lower():
+                # SQLiteの場合は一件ずつINSERT OR IGNOREで処理
+                inserted_count = 0
+                for record in open_interest_records:
+                    try:
+                        open_interest_obj = OpenInterestData(**record)
+                        self.db.add(open_interest_obj)
+                        self.db.commit()
+                        inserted_count += 1
+                    except Exception:
+                        # 重複エラーの場合はロールバックして続行
+                        self.db.rollback()
+                        continue
+            else:
+                # PostgreSQL の ON CONFLICT を使用して重複を無視
+                stmt = insert(OpenInterestData).values(open_interest_records)
+                stmt = stmt.on_conflict_do_nothing(
+                    index_elements=["symbol", "data_timestamp"]
+                )
+                result = self.db.execute(stmt)
+                self.db.commit()
+                inserted_count = result.rowcount
+
+            logger.info(f"オープンインタレストデータを {inserted_count} 件挿入しました")
+            return inserted_count
+
+        except Exception as e:
+            self.db.rollback()
+            logger.error(f"オープンインタレストデータ挿入エラー: {e}")
+            raise
+
+    def get_open_interest_data(
+        self,
+        symbol: str,
+        start_time: Optional[datetime] = None,
+        end_time: Optional[datetime] = None,
+        limit: Optional[int] = None,
+    ) -> List[OpenInterestData]:
+        """
+        オープンインタレストデータを取得
+
+        Args:
+            symbol: 取引ペア
+            start_time: 開始時刻
+            end_time: 終了時刻
+            limit: 取得件数制限
+
+        Returns:
+            オープンインタレストデータのリスト
+        """
+        try:
+            query = self.db.query(OpenInterestData).filter(
+                OpenInterestData.symbol == symbol
+            )
+
+            if start_time:
+                query = query.filter(OpenInterestData.data_timestamp >= start_time)
+
+            if end_time:
+                query = query.filter(OpenInterestData.data_timestamp <= end_time)
+
+            # 時系列順でソート
+            query = query.order_by(asc(OpenInterestData.data_timestamp))
+
+            if limit:
+                query = query.limit(limit)
+
+            return query.all()
+
+        except Exception as e:
+            logger.error(f"オープンインタレストデータ取得エラー: {e}")
+            raise
+
+    def get_latest_open_interest_timestamp(self, symbol: str) -> Optional[datetime]:
+        """
+        指定されたシンボルの最新オープンインタレストタイムスタンプを取得
+
+        Args:
+            symbol: 取引ペア
+
+        Returns:
+            最新のデータタイムスタンプ（データがない場合はNone）
+        """
+        try:
+            result = (
+                self.db.query(func.max(OpenInterestData.data_timestamp))
+                .filter(OpenInterestData.symbol == symbol)
+                .scalar()
+            )
+
+            return result
+
+        except Exception as e:
+            logger.error(f"最新オープンインタレストタイムスタンプ取得エラー: {e}")
+            raise
+
+    def get_open_interest_count(self, symbol: str) -> int:
+        """
+        指定されたシンボルのオープンインタレストデータ件数を取得
+
+        Args:
+            symbol: 取引ペア
+
+        Returns:
+            データ件数
+        """
+        try:
+            count = (
+                self.db.query(OpenInterestData)
+                .filter(OpenInterestData.symbol == symbol)
+                .count()
+            )
+
+            return count
+
+        except Exception as e:
+            logger.error(f"オープンインタレストデータ件数取得エラー: {e}")
             raise
 
     def get_available_funding_symbols(self) -> List[str]:

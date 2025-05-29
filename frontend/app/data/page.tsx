@@ -13,19 +13,25 @@
 import React, { useState, useEffect } from "react";
 import OHLCVDataTable from "@/components/OHLCVDataTable";
 import FundingRateDataTable from "@/components/FundingRateDataTable";
+import OpenInterestDataTable from "@/components/OpenInterestDataTable";
+import OpenInterestCollectionButton from "@/components/OpenInterestCollectionButton";
 import CompactSymbolSelector from "@/components/CompactSymbolSelector";
 import CompactTimeFrameSelector from "@/components/CompactTimeFrameSelector";
 import CompactDataCollectionButtons from "@/components/CompactDataCollectionButtons";
 import {
   PriceData,
   FundingRateData,
+  OpenInterestData,
   TimeFrame,
   TradingPair,
   OHLCVResponse,
   FundingRateResponse,
+  OpenInterestResponse,
   BulkOHLCVCollectionResult,
   BulkFundingRateCollectionResult,
   FundingRateCollectionResult,
+  OpenInterestCollectionResult,
+  BulkOpenInterestCollectionResult,
 } from "@/types/strategy";
 import { BACKEND_API_URL } from "@/constants";
 
@@ -39,17 +45,27 @@ const DataPage: React.FC = () => {
   const [selectedTimeFrame, setSelectedTimeFrame] = useState<TimeFrame>("1d");
   const [ohlcvData, setOhlcvData] = useState<PriceData[]>([]);
   const [fundingRateData, setFundingRateData] = useState<FundingRateData[]>([]);
-  const [activeTab, setActiveTab] = useState<"ohlcv" | "funding">("ohlcv");
+  const [openInterestData, setOpenInterestData] = useState<OpenInterestData[]>(
+    []
+  );
+  const [activeTab, setActiveTab] = useState<
+    "ohlcv" | "funding" | "openinterest"
+  >("ohlcv");
   const [loading, setLoading] = useState<boolean>(false);
   const [fundingLoading, setFundingLoading] = useState<boolean>(false);
+  const [openInterestLoading, setOpenInterestLoading] =
+    useState<boolean>(false);
   const [error, setError] = useState<string>("");
   const [fundingError, setFundingError] = useState<string>("");
+  const [openInterestError, setOpenInterestError] = useState<string>("");
   const [symbolsLoading, setSymbolsLoading] = useState<boolean>(true);
   const [updating, setUpdating] = useState<boolean>(false);
   const [dataStatus, setDataStatus] = useState<any>(null);
   const [bulkCollectionMessage, setBulkCollectionMessage] =
     useState<string>("");
   const [fundingRateCollectionMessage, setFundingRateCollectionMessage] =
+    useState<string>("");
+  const [openInterestCollectionMessage, setOpenInterestCollectionMessage] =
     useState<string>("");
 
   /**
@@ -138,6 +154,39 @@ const DataPage: React.FC = () => {
   };
 
   /**
+   * オープンインタレストデータを取得
+   */
+  const fetchOpenInterestData = async () => {
+    try {
+      setOpenInterestLoading(true);
+      setOpenInterestError("");
+
+      const params = new URLSearchParams({
+        symbol: selectedSymbol,
+        limit: "100",
+      });
+
+      const response = await fetch(`/api/data/open-interest?${params}`);
+      const result: OpenInterestResponse = await response.json();
+
+      if (result.success) {
+        setOpenInterestData(result.data.open_interest);
+      } else {
+        setOpenInterestError(
+          result.message || "オープンインタレストデータの取得に失敗しました"
+        );
+      }
+    } catch (err) {
+      setOpenInterestError(
+        "オープンインタレストデータの取得中にエラーが発生しました"
+      );
+      console.error("オープンインタレストデータ取得エラー:", err);
+    } finally {
+      setOpenInterestLoading(false);
+    }
+  };
+
+  /**
    * 通貨ペア変更ハンドラ
    */
   const handleSymbolChange = (symbol: string) => {
@@ -157,8 +206,10 @@ const DataPage: React.FC = () => {
   const handleRefresh = () => {
     if (activeTab === "ohlcv") {
       fetchOHLCVData();
-    } else {
+    } else if (activeTab === "funding") {
       fetchFundingRateData();
+    } else if (activeTab === "openinterest") {
+      fetchOpenInterestData();
     }
   };
 
@@ -266,6 +317,38 @@ const DataPage: React.FC = () => {
     setTimeout(() => setFundingRateCollectionMessage(""), 10000);
   };
 
+  /**
+   * オープンインタレストデータ収集開始時のコールバック
+   */
+  const handleOpenInterestCollectionStart = (
+    result: BulkOpenInterestCollectionResult | OpenInterestCollectionResult
+  ) => {
+    if ("total_symbols" in result) {
+      // BulkOpenInterestCollectionResult
+      const bulkResult = result as BulkOpenInterestCollectionResult;
+      setOpenInterestCollectionMessage(
+        `🚀 ${bulkResult.message} (${bulkResult.successful_symbols}/${bulkResult.total_symbols}シンボル成功)`
+      );
+    } else {
+      // OpenInterestCollectionResult
+      const singleResult = result as OpenInterestCollectionResult;
+      setOpenInterestCollectionMessage(
+        `🚀 ${singleResult.symbol}のオープンインタレストデータ収集完了 (${singleResult.saved_count}件保存)`
+      );
+    }
+    // 10秒後にメッセージをクリア
+    setTimeout(() => setOpenInterestCollectionMessage(""), 10000);
+  };
+
+  /**
+   * オープンインタレストデータ収集エラー時のコールバック
+   */
+  const handleOpenInterestCollectionError = (errorMessage: string) => {
+    setOpenInterestCollectionMessage(`❌ ${errorMessage}`);
+    // 10秒後にメッセージをクリア
+    setTimeout(() => setOpenInterestCollectionMessage(""), 10000);
+  };
+
   // 初期データ取得
   useEffect(() => {
     fetchSymbols();
@@ -276,6 +359,7 @@ const DataPage: React.FC = () => {
     if (selectedSymbol && selectedTimeFrame) {
       fetchOHLCVData();
       fetchFundingRateData();
+      fetchOpenInterestData();
       fetchDataStatus();
     }
   }, [selectedSymbol, selectedTimeFrame]);
@@ -491,19 +575,34 @@ const DataPage: React.FC = () => {
                   <span className="text-sm text-secondary-600 dark:text-secondary-400 whitespace-nowrap">
                     データ収集:
                   </span>
-                  <CompactDataCollectionButtons
-                    onBulkCollectionStart={handleBulkCollectionStart}
-                    onBulkCollectionError={handleBulkCollectionError}
-                    onFundingRateCollectionStart={handleFundingRateCollectionStart}
-                    onFundingRateCollectionError={handleFundingRateCollectionError}
-                    disabled={loading || updating}
-                  />
+                  <div className="flex gap-2">
+                    <CompactDataCollectionButtons
+                      onBulkCollectionStart={handleBulkCollectionStart}
+                      onBulkCollectionError={handleBulkCollectionError}
+                      onFundingRateCollectionStart={
+                        handleFundingRateCollectionStart
+                      }
+                      onFundingRateCollectionError={
+                        handleFundingRateCollectionError
+                      }
+                      disabled={loading || updating}
+                    />
+                    <OpenInterestCollectionButton
+                      mode="bulk"
+                      onCollectionStart={handleOpenInterestCollectionStart}
+                      onCollectionError={handleOpenInterestCollectionError}
+                      disabled={loading || updating}
+                      className="text-xs px-3 py-2"
+                    />
+                  </div>
                 </div>
               </div>
             </div>
 
             {/* ステータスメッセージ */}
-            {(bulkCollectionMessage || fundingRateCollectionMessage) && (
+            {(bulkCollectionMessage ||
+              fundingRateCollectionMessage ||
+              openInterestCollectionMessage) && (
               <div className="mt-3 pt-3 border-t border-secondary-200 dark:border-secondary-700">
                 {bulkCollectionMessage && (
                   <div className="text-sm text-secondary-600 dark:text-secondary-400 mb-1">
@@ -511,8 +610,13 @@ const DataPage: React.FC = () => {
                   </div>
                 )}
                 {fundingRateCollectionMessage && (
-                  <div className="text-sm text-secondary-600 dark:text-secondary-400">
+                  <div className="text-sm text-secondary-600 dark:text-secondary-400 mb-1">
                     {fundingRateCollectionMessage}
+                  </div>
+                )}
+                {openInterestCollectionMessage && (
+                  <div className="text-sm text-secondary-600 dark:text-secondary-400">
+                    {openInterestCollectionMessage}
                   </div>
                 )}
               </div>
@@ -550,6 +654,16 @@ const DataPage: React.FC = () => {
                   >
                     ファンディングレート
                   </button>
+                  <button
+                    onClick={() => setActiveTab("openinterest")}
+                    className={`px-4 py-2 text-sm font-medium rounded-md transition-colors duration-200 ${
+                      activeTab === "openinterest"
+                        ? "bg-primary-600 text-white"
+                        : "text-gray-400 hover:text-gray-100"
+                    }`}
+                  >
+                    オープンインタレスト
+                  </button>
                 </div>
               </div>
 
@@ -576,6 +690,26 @@ const DataPage: React.FC = () => {
                       </span>
                     </>
                   )}
+                {activeTab === "openinterest" &&
+                  openInterestData.length > 0 &&
+                  !openInterestLoading && (
+                    <>
+                      <span className="badge-primary">
+                        {openInterestData.length}件
+                      </span>
+                      <span className="badge-warning">
+                        最新OI:{" "}
+                        {new Intl.NumberFormat("en-US", {
+                          style: "currency",
+                          currency: "USD",
+                          notation: "compact",
+                          maximumFractionDigits: 1,
+                        }).format(
+                          openInterestData[0]?.open_interest_value || 0
+                        )}
+                      </span>
+                    </>
+                  )}
               </div>
             </div>
 
@@ -595,6 +729,13 @@ const DataPage: React.FC = () => {
                   data={fundingRateData}
                   loading={fundingLoading}
                   error={fundingError}
+                />
+              )}
+              {activeTab === "openinterest" && (
+                <OpenInterestDataTable
+                  data={openInterestData}
+                  loading={openInterestLoading}
+                  error={openInterestError}
                 />
               )}
             </div>

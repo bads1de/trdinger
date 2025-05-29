@@ -122,6 +122,58 @@ class FundingRateData(Base):
             f"funding_rate={self.funding_rate})>"
         )
 
+
+class OpenInterestData(Base):
+    """
+    オープンインタレスト（建玉残高）データテーブル
+
+    無期限契約のオープンインタレスト履歴を保存します。
+    TimescaleDBのハイパーテーブルとして最適化されています。
+    """
+
+    __tablename__ = "open_interest_data"
+
+    # 主キー
+    id = Column(Integer, primary_key=True, autoincrement=True)
+
+    # 取引ペア（例: BTC/USDT:USDT）
+    symbol = Column(String(50), nullable=False, index=True)
+
+    # オープンインタレスト値（USD建て）
+    open_interest_value = Column(Float, nullable=False)
+
+    # オープンインタレスト量（ベース通貨建て、利用可能な場合）
+    open_interest_amount = Column(Float, nullable=True)
+
+    # データ時刻（UTC）
+    data_timestamp = Column(DateTime(timezone=True), nullable=False, index=True)
+
+    # データ取得時刻（UTC）
+    timestamp = Column(DateTime(timezone=True), nullable=False, index=True)
+
+    # メタデータ
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
+
+    # インデックス定義
+    __table_args__ = (
+        # 複合インデックス（クエリ最適化）
+        Index("idx_oi_symbol_data_timestamp", "symbol", "data_timestamp"),
+        Index("idx_oi_data_timestamp_symbol", "data_timestamp", "symbol"),
+        Index("idx_oi_symbol_created", "symbol", "created_at"),
+        # ユニーク制約（重複データ防止）
+        Index("uq_symbol_data_timestamp", "symbol", "data_timestamp", unique=True),
+    )
+
+    def __repr__(self):
+        return (
+            f"<OpenInterestData(symbol='{self.symbol}', "
+            f"data_timestamp='{self.data_timestamp}', "
+            f"open_interest_value={self.open_interest_value})>"
+        )
+
     def to_dict(self):
         """辞書形式に変換"""
         return {

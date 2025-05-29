@@ -12,6 +12,7 @@ from app.config.settings import settings
 from app.api.market_data import router as market_data_router
 from app.api.data_collection import router as data_collection_router
 from app.api.funding_rates import router as funding_rates_router
+from app.api.open_interest import router as open_interest_router
 
 
 def setup_logging():
@@ -48,6 +49,7 @@ def create_app() -> FastAPI:
     app.include_router(market_data_router, prefix="/api")
     app.include_router(data_collection_router, prefix="/api")
     app.include_router(funding_rates_router, prefix="/api")
+    app.include_router(open_interest_router, prefix="/api")
 
     # ヘルスチェックエンドポイント
     @app.get("/health")
