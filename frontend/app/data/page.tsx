@@ -83,6 +83,8 @@ const DataPage: React.FC = () => {
     useState<string>("");
   const [allDataCollectionMessage, setAllDataCollectionMessage] =
     useState<string>("");
+  const [technicalIndicatorCalculationMessage, setTechnicalIndicatorCalculationMessage] =
+    useState<string>("");
 
   /**
    * 通貨ペア一覧を取得
@@ -425,6 +427,32 @@ const DataPage: React.FC = () => {
     setTimeout(() => setAllDataCollectionMessage(""), 15000);
   };
 
+  /**
+   * TI一括計算開始時のコールバック
+   */
+  const handleTechnicalIndicatorCalculationStart = (result: BulkTechnicalIndicatorCalculationResult) => {
+    setTechnicalIndicatorCalculationMessage(
+      `🚀 ${result.symbol} ${result.timeframe}のTI一括計算完了 (${result.total_calculated}件計算完了)`
+    );
+    // データ状況を更新
+    fetchDataStatus();
+    // 計算完了後にテクニカル指標データを再取得
+    setTimeout(() => {
+      fetchTechnicalIndicatorData();
+    }, 2000);
+    // 10秒後にメッセージをクリア
+    setTimeout(() => setTechnicalIndicatorCalculationMessage(""), 10000);
+  };
+
+  /**
+   * TI一括計算エラー時のコールバック
+   */
+  const handleTechnicalIndicatorCalculationError = (errorMessage: string) => {
+    setTechnicalIndicatorCalculationMessage(`❌ ${errorMessage}`);
+    // 10秒後にメッセージをクリア
+    setTimeout(() => setTechnicalIndicatorCalculationMessage(""), 10000);
+  };
+
   // 初期データ取得
   useEffect(() => {
     fetchSymbols();
@@ -650,7 +678,7 @@ const DataPage: React.FC = () => {
                 <label className="block text-sm font-medium text-secondary-600 dark:text-secondary-400">
                   データ収集
                 </label>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
                   {/* 全データ一括収集ボタン */}
                   <AllDataCollectionButton
                     onCollectionStart={handleAllDataCollectionStart}
@@ -737,6 +765,17 @@ const DataPage: React.FC = () => {
                     disabled={loading || updating}
                     className="h-10 text-sm"
                   />
+
+                  {/* TI一括計算ボタン */}
+                  <TechnicalIndicatorCalculationButton
+                    mode="bulk"
+                    symbol={selectedSymbol}
+                    timeframe={selectedTimeFrame}
+                    onCalculationStart={handleTechnicalIndicatorCalculationStart}
+                    onCalculationError={handleTechnicalIndicatorCalculationError}
+                    disabled={loading || updating}
+                    className="h-10 text-sm"
+                  />
                 </div>
               </div>
             </div>
@@ -745,7 +784,8 @@ const DataPage: React.FC = () => {
             {(bulkCollectionMessage ||
               fundingRateCollectionMessage ||
               openInterestCollectionMessage ||
-              allDataCollectionMessage) && (
+              allDataCollectionMessage ||
+              technicalIndicatorCalculationMessage) && (
               <div className="mt-6 pt-4 border-t border-secondary-200 dark:border-secondary-700">
                 <div className="space-y-2">
                   {allDataCollectionMessage && (
@@ -766,6 +806,11 @@ const DataPage: React.FC = () => {
                   {openInterestCollectionMessage && (
                     <div className="text-sm text-secondary-600 dark:text-secondary-400">
                       {openInterestCollectionMessage}
+                    </div>
+                  )}
+                  {technicalIndicatorCalculationMessage && (
+                    <div className="text-sm text-secondary-600 dark:text-secondary-400">
+                      {technicalIndicatorCalculationMessage}
                     </div>
                   )}
                 </div>
@@ -918,35 +963,11 @@ const DataPage: React.FC = () => {
                 />
               )}
               {activeTab === "technical" && (
-                <div className="space-y-6">
-                  {/* テクニカル指標計算ボタン */}
-                  <div className="flex flex-wrap gap-4 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
-                    <TechnicalIndicatorCalculationButton
-                      mode="bulk"
-                      symbol={selectedSymbol}
-                      timeframe={selectedTimeFrame}
-                      onCalculationStart={(result) => {
-                        console.log("テクニカル指標計算開始:", result);
-                        // 計算完了後にデータを再取得
-                        setTimeout(() => {
-                          fetchTechnicalIndicatorData();
-                        }, 2000);
-                      }}
-                      onCalculationError={(error) => {
-                        console.error("テクニカル指標計算エラー:", error);
-                        setTechnicalIndicatorError(error);
-                      }}
-                      className="flex-1 min-w-[200px]"
-                    />
-                  </div>
-
-                  {/* テクニカル指標データテーブル */}
-                  <TechnicalIndicatorDataTable
-                    data={technicalIndicatorData}
-                    loading={technicalIndicatorLoading}
-                    error={technicalIndicatorError}
-                  />
-                </div>
+                <TechnicalIndicatorDataTable
+                  data={technicalIndicatorData}
+                  loading={technicalIndicatorLoading}
+                  error={technicalIndicatorError}
+                />
               )}
             </div>
           </div>
