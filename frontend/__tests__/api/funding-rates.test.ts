@@ -8,44 +8,50 @@
  * @version 1.0.0
  */
 
-// Web APIのモック
-Object.defineProperty(global, "Request", {
-  value: class MockRequest {
-    constructor(url: string) {
-      this.url = url;
-    }
-    url: string;
-  },
-});
 
-Object.defineProperty(global, "Response", {
-  value: class MockResponse {
-    constructor(body: any, init?: ResponseInit) {
-      this.body = body;
-      this.status = init?.status || 200;
-    }
-    body: any;
-    status: number;
-    json() {
-      return Promise.resolve(JSON.parse(this.body));
-    }
-  },
-});
 
-import { NextRequest } from "next/server";
 import { GET } from "@/app/api/data/funding-rates/route";
 
+// データベース関数をモック
+jest.mock("@/lib/database/funding-rates", () => ({
+  fetchDatabaseFundingRateData: jest.fn(),
+}));
+
+import { fetchDatabaseFundingRateData } from "@/lib/database/funding-rates";
+
 // モックのNextRequestを作成するヘルパー関数
-function createMockRequest(searchParams: Record<string, string>): NextRequest {
+function createMockRequest(searchParams: Record<string, string>) {
   const url = new URL("http://localhost:3000/api/data/funding-rates");
   Object.entries(searchParams).forEach(([key, value]) => {
     url.searchParams.set(key, value);
   });
 
-  return new NextRequest(url);
+  return {
+    url: url.toString(),
+    nextUrl: {
+      searchParams: url.searchParams,
+    },
+  } as any;
 }
 
 describe("/api/data/funding-rates", () => {
+  beforeEach(() => {
+    // モック関数をリセット
+    jest.clearAllMocks();
+
+    // デフォルトのモックデータを設定
+    (fetchDatabaseFundingRateData as jest.Mock).mockResolvedValue([
+      {
+        symbol: "BTC/USDT",
+        funding_rate: 0.0001,
+        funding_timestamp: "2024-01-01T00:00:00Z",
+        mark_price: 50000,
+        index_price: 50001,
+        next_funding_timestamp: "2024-01-01T08:00:00Z",
+      },
+    ]);
+  });
+
   describe("正常系テスト", () => {
     test("有効なパラメータでFRデータを取得できる", async () => {
       const request = createMockRequest({
