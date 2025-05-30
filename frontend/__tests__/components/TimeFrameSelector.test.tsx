@@ -23,11 +23,29 @@ describe("TimeFrameSelector", () => {
   });
 
   describe("レンダリングテスト", () => {
-    test("すべての時間軸ボタンが表示される", () => {
+    test("すべての時間軸オプションが表示される（compactモード）", () => {
+      render(
+        <TimeFrameSelector
+          selectedTimeFrame="1h"
+          onTimeFrameChange={mockOnTimeFrameChange}
+          mode="compact"
+        />
+      );
+
+      expect(screen.getByText("時間軸")).toBeInTheDocument();
+      expect(screen.getByText("15分")).toBeInTheDocument();
+      expect(screen.getByText("30分")).toBeInTheDocument();
+      expect(screen.getByText("1時間")).toBeInTheDocument();
+      expect(screen.getByText("4時間")).toBeInTheDocument();
+      expect(screen.getByText("1日")).toBeInTheDocument();
+    });
+
+    test("すべての時間軸ボタンが表示される（buttonsモード）", () => {
       render(
         <TimeFrameSelector
           selectedTimeFrame="1d"
           onTimeFrameChange={mockOnTimeFrameChange}
+          mode="buttons"
         />
       );
 
@@ -39,11 +57,12 @@ describe("TimeFrameSelector", () => {
       expect(screen.getByText("1日")).toBeInTheDocument();
     });
 
-    test("選択された時間軸が正しくハイライトされる", () => {
+    test("選択された時間軸が正しくハイライトされる（buttonsモード）", () => {
       render(
         <TimeFrameSelector
           selectedTimeFrame="1h"
           onTimeFrameChange={mockOnTimeFrameChange}
+          mode="buttons"
         />
       );
 
@@ -51,26 +70,41 @@ describe("TimeFrameSelector", () => {
       expect(selectedButton).toHaveClass("bg-primary-600", "text-white");
     });
 
-    test("選択されていない時間軸が正しいスタイルを持つ", () => {
+    test("選択されていない時間軸が正しいスタイルを持つ（buttonsモード）", () => {
       render(
         <TimeFrameSelector
           selectedTimeFrame="1h"
           onTimeFrameChange={mockOnTimeFrameChange}
+          mode="buttons"
         />
       );
 
       const unselectedButton = screen.getByText("15分").closest("button");
-      expect(unselectedButton).toHaveClass("bg-white");
+      expect(unselectedButton).toHaveClass("bg-gray-800");
       expect(unselectedButton).not.toHaveClass("bg-primary-600", "text-white");
+    });
+
+    test("compactモードでselectが正しく動作する", () => {
+      render(
+        <TimeFrameSelector
+          selectedTimeFrame="1h"
+          onTimeFrameChange={mockOnTimeFrameChange}
+          mode="compact"
+        />
+      );
+
+      const select = screen.getByRole("combobox");
+      expect(select).toHaveValue("1h");
     });
   });
 
   describe("ユーザーインタラクションテスト", () => {
-    test("時間軸ボタンをクリックするとコールバックが呼ばれる", () => {
+    test("時間軸ボタンをクリックするとコールバックが呼ばれる（buttonsモード）", () => {
       render(
         <TimeFrameSelector
           selectedTimeFrame="1d"
           onTimeFrameChange={mockOnTimeFrameChange}
+          mode="buttons"
         />
       );
 
@@ -81,7 +115,23 @@ describe("TimeFrameSelector", () => {
       expect(mockOnTimeFrameChange).toHaveBeenCalledWith("1h");
     });
 
-    test("すべての時間軸ボタンが正しい値でコールバックを呼ぶ", () => {
+    test("selectで時間軸を変更するとコールバックが呼ばれる（compactモード）", () => {
+      render(
+        <TimeFrameSelector
+          selectedTimeFrame="1d"
+          onTimeFrameChange={mockOnTimeFrameChange}
+          mode="compact"
+        />
+      );
+
+      const select = screen.getByRole("combobox");
+      fireEvent.change(select, { target: { value: "1h" } });
+
+      expect(mockOnTimeFrameChange).toHaveBeenCalledTimes(1);
+      expect(mockOnTimeFrameChange).toHaveBeenCalledWith("1h");
+    });
+
+    test("すべての時間軸ボタンが正しい値でコールバックを呼ぶ（buttonsモード）", () => {
       const timeFrames = SUPPORTED_TIMEFRAMES.map((tf) => ({
         label: tf.label,
         value: tf.value,
@@ -91,6 +141,7 @@ describe("TimeFrameSelector", () => {
         <TimeFrameSelector
           selectedTimeFrame="1d"
           onTimeFrameChange={mockOnTimeFrameChange}
+          mode="buttons"
         />
       );
 
@@ -103,11 +154,12 @@ describe("TimeFrameSelector", () => {
       expect(mockOnTimeFrameChange).toHaveBeenCalledTimes(timeFrames.length);
     });
 
-    test("選択済みの時間軸をクリックしてもコールバックが呼ばれる", () => {
+    test("選択済みの時間軸をクリックしてもコールバックが呼ばれる（buttonsモード）", () => {
       render(
         <TimeFrameSelector
           selectedTimeFrame="1h"
           onTimeFrameChange={mockOnTimeFrameChange}
+          mode="buttons"
         />
       );
 
@@ -120,12 +172,13 @@ describe("TimeFrameSelector", () => {
   });
 
   describe("無効化状態テスト", () => {
-    test("disabled=trueの場合、すべてのボタンが無効化される", () => {
+    test("disabled=trueの場合、すべてのボタンが無効化される（buttonsモード）", () => {
       render(
         <TimeFrameSelector
           selectedTimeFrame="1d"
           onTimeFrameChange={mockOnTimeFrameChange}
           disabled={true}
+          mode="buttons"
         />
       );
 
@@ -136,12 +189,27 @@ describe("TimeFrameSelector", () => {
       });
     });
 
-    test("disabled=trueの場合、ボタンクリックでコールバックが呼ばれない", () => {
+    test("disabled=trueの場合、selectが無効化される（compactモード）", () => {
       render(
         <TimeFrameSelector
           selectedTimeFrame="1d"
           onTimeFrameChange={mockOnTimeFrameChange}
           disabled={true}
+          mode="compact"
+        />
+      );
+
+      const select = screen.getByRole("combobox");
+      expect(select).toBeDisabled();
+    });
+
+    test("disabled=trueの場合、ボタンクリックでコールバックが呼ばれない（buttonsモード）", () => {
+      render(
+        <TimeFrameSelector
+          selectedTimeFrame="1d"
+          onTimeFrameChange={mockOnTimeFrameChange}
+          disabled={true}
+          mode="buttons"
         />
       );
 
@@ -151,12 +219,13 @@ describe("TimeFrameSelector", () => {
       expect(mockOnTimeFrameChange).not.toHaveBeenCalled();
     });
 
-    test("disabled=falseの場合、ボタンが有効化される", () => {
+    test("disabled=falseの場合、ボタンが有効化される（buttonsモード）", () => {
       render(
         <TimeFrameSelector
           selectedTimeFrame="1d"
           onTimeFrameChange={mockOnTimeFrameChange}
           disabled={false}
+          mode="buttons"
         />
       );
 
@@ -169,41 +238,43 @@ describe("TimeFrameSelector", () => {
   });
 
   describe("アクセシビリティテスト", () => {
-    test("各ボタンに適切なtitle属性が設定される", () => {
+    test("各ボタンに適切なtitle属性が設定される（buttonsモード）", () => {
       render(
         <TimeFrameSelector
           selectedTimeFrame="1d"
           onTimeFrameChange={mockOnTimeFrameChange}
+          mode="buttons"
         />
       );
 
       expect(screen.getByText("15分").closest("button")).toHaveAttribute(
         "title",
-        "15分足チャート"
+        "15分足データ"
       );
       expect(screen.getByText("30分").closest("button")).toHaveAttribute(
         "title",
-        "30分足チャート"
+        "30分足データ"
       );
       expect(screen.getByText("1時間").closest("button")).toHaveAttribute(
         "title",
-        "1時間足チャート"
+        "1時間足データ"
       );
       expect(screen.getByText("4時間").closest("button")).toHaveAttribute(
         "title",
-        "4時間足チャート"
+        "4時間足データ"
       );
       expect(screen.getByText("1日").closest("button")).toHaveAttribute(
         "title",
-        "日足チャート"
+        "日足データ"
       );
     });
 
-    test("フォーカス時に適切なスタイルが適用される", () => {
+    test("フォーカス時に適切なスタイルが適用される（buttonsモード）", () => {
       render(
         <TimeFrameSelector
           selectedTimeFrame="1d"
           onTimeFrameChange={mockOnTimeFrameChange}
+          mode="buttons"
         />
       );
 
@@ -215,11 +286,12 @@ describe("TimeFrameSelector", () => {
       );
     });
 
-    test("ボタンがキーボードでアクセス可能である", () => {
+    test("ボタンがキーボードでアクセス可能である（buttonsモード）", () => {
       render(
         <TimeFrameSelector
           selectedTimeFrame="1d"
           onTimeFrameChange={mockOnTimeFrameChange}
+          mode="buttons"
         />
       );
 
@@ -234,11 +306,12 @@ describe("TimeFrameSelector", () => {
   });
 
   describe("レスポンシブデザインテスト", () => {
-    test("flex-wrapクラスが適用されている", () => {
+    test("flex-wrapクラスが適用されている（buttonsモード）", () => {
       const { container } = render(
         <TimeFrameSelector
           selectedTimeFrame="1d"
           onTimeFrameChange={mockOnTimeFrameChange}
+          mode="buttons"
         />
       );
 
@@ -248,7 +321,7 @@ describe("TimeFrameSelector", () => {
   });
 
   describe("プロパティテスト", () => {
-    test("異なる選択状態で正しくレンダリングされる", () => {
+    test("異なる選択状態で正しくレンダリングされる（buttonsモード）", () => {
       const timeFrames: TimeFrame[] = ["15m", "30m", "1h", "4h", "1d"];
 
       timeFrames.forEach((selectedTimeFrame) => {
@@ -256,6 +329,7 @@ describe("TimeFrameSelector", () => {
           <TimeFrameSelector
             selectedTimeFrame={selectedTimeFrame}
             onTimeFrameChange={mockOnTimeFrameChange}
+            mode="buttons"
           />
         );
 
@@ -263,10 +337,28 @@ describe("TimeFrameSelector", () => {
         const buttons = screen.getAllByRole("button");
         const selectedButton = buttons.find(
           (button) =>
-            button.classList.contains("bg-primary-600") ||
-            button.classList.contains("bg-white")
+            button.classList.contains("bg-primary-600")
         );
         expect(selectedButton).toBeInTheDocument();
+
+        rerender(<div />); // クリーンアップ
+      });
+    });
+
+    test("compactモードで正しい値が選択される", () => {
+      const timeFrames: TimeFrame[] = ["15m", "30m", "1h", "4h", "1d"];
+
+      timeFrames.forEach((selectedTimeFrame) => {
+        const { rerender } = render(
+          <TimeFrameSelector
+            selectedTimeFrame={selectedTimeFrame}
+            onTimeFrameChange={mockOnTimeFrameChange}
+            mode="compact"
+          />
+        );
+
+        const select = screen.getByRole("combobox");
+        expect(select).toHaveValue(selectedTimeFrame);
 
         rerender(<div />); // クリーンアップ
       });

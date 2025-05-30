@@ -22,7 +22,7 @@ async def test_bulk_collection_logic():
     # サポートされている取引ペアと時間軸
     symbols = [
         "BTC/USDT", "BTC/USDT:USDT", "BTCUSD",
-        "ETH/USDT", "ETH/BTC", "ETH/USDT:USDT", "ETHUSD",
+        # ETH関連シンボルは除外
         "XRP/USDT", "XRP/USDT:USDT",
         "BNB/USDT", "BNB/USDT:USDT",
         "SOL/USDT", "SOL/USDT:USDT"

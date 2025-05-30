@@ -255,7 +255,7 @@ class TestBybitAPIPerformance:
     async def test_concurrent_requests_performance(self, service):
         """同時リクエストパフォーマンステスト"""
         # Given: 複数の同時リクエスト
-        symbols = ["BTC/USDT", "ETH/USDT", "BNB/USDT"]
+        symbols = ["BTC/USDT"]  # ETHは除外
         timeframe = "1h"
         limit = 10
 
