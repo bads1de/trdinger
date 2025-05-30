@@ -11,7 +11,7 @@
 
 import React from "react";
 import { useApiCall } from "@/hooks/useApiCall";
-import ApiButton from "./ApiButton";
+import ApiButton from "../common/ApiButton";
 
 /**
  * テクニカル指標計算ボタンコンポーネントのプロパティ

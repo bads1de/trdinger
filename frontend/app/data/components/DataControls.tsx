@@ -1,9 +1,9 @@
 import React from "react";
 import SymbolSelector from "@/components/common/SymbolSelector";
 import TimeFrameSelector from "@/components/common/TimeFrameSelector";
-import AllDataCollectionButton from "@/components/common/AllDataCollectionButton";
-import OpenInterestCollectionButton from "@/components/common/OpenInterestCollectionButton";
-import TechnicalIndicatorCalculationButton from "@/components/common/TechnicalIndicatorCalculationButton";
+import AllDataCollectionButton from "@/components/button/AllDataCollectionButton";
+
+import TechnicalIndicatorCalculationButton from "@/components/button/TechnicalIndicatorCalculationButton";
 import { useDataCollection } from "@/hooks/useDataCollection";
 import ApiButton from "@/components/common/ApiButton";
 import { DownloadIcon, ChartIcon } from "@/components/common/Icons";
@@ -18,6 +18,7 @@ import {
   BulkOpenInterestCollectionResult,
   BulkTechnicalIndicatorCalculationResult,
 } from "@/types/strategy";
+import OpenInterestCollectionButton from "@/components/button/OpenInterestCollectionButton";
 
 interface DataControlsProps {
   symbols: TradingPair[];

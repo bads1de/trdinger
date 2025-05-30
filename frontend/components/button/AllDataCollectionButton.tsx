@@ -11,7 +11,7 @@
 
 import React from "react";
 import { useApiCall } from "@/hooks/useApiCall";
-import ApiButton from "./ApiButton";
+import ApiButton from "../common/ApiButton";
 
 /**
  * 全データ一括収集ボタンコンポーネントのプロパティ

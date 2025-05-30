@@ -11,15 +11,6 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import OHLCVDataTable from "@/components/OHLCVDataTable";
-import FundingRateDataTable from "@/components/FundingRateDataTable";
-import OpenInterestDataTable from "@/components/OpenInterestDataTable";
-import TechnicalIndicatorDataTable from "@/components/TechnicalIndicatorDataTable";
-import OpenInterestCollectionButton from "@/components/common/OpenInterestCollectionButton";
-import AllDataCollectionButton from "@/components/common/AllDataCollectionButton";
-import TechnicalIndicatorCalculationButton from "@/components/common/TechnicalIndicatorCalculationButton";
-import SymbolSelector from "@/components/common/SymbolSelector";
-import TimeFrameSelector from "@/components/common/TimeFrameSelector";
 import DataHeader from "./components/DataHeader";
 import DataStatusPanel from "./components/DataStatusPanel";
 import DataControls from "./components/DataControls";
