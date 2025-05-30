@@ -4,6 +4,9 @@ import TimeFrameSelector from "@/components/common/TimeFrameSelector";
 import AllDataCollectionButton from "@/components/common/AllDataCollectionButton";
 import OpenInterestCollectionButton from "@/components/common/OpenInterestCollectionButton";
 import TechnicalIndicatorCalculationButton from "@/components/common/TechnicalIndicatorCalculationButton";
+import { useDataCollection } from "@/hooks/useDataCollection";
+import ApiButton from "@/components/common/ApiButton";
+import { DownloadIcon, ChartIcon } from "@/components/common/Icons";
 import {
   TradingPair,
   TimeFrame,
@@ -73,6 +76,7 @@ const DataControls: React.FC<DataControlsProps> = ({
   allDataCollectionMessage,
   technicalIndicatorCalculationMessage,
 }) => {
+  const dataCollection = useDataCollection();
   return (
     <div className="enterprise-card animate-slide-up">
       <div className="p-6">
@@ -122,71 +126,45 @@ const DataControls: React.FC<DataControlsProps> = ({
                 className="h-10 text-sm"
               />
 
-              {/* OHLCV収集ボタン（CompactDataCollectionButtonsから分離） */}
-              <button
+              {/* OHLCV収集ボタン */}
+              <ApiButton
                 onClick={async () => {
-                  if (!confirm("全ペア・全時間軸でOHLCVデータを収集しますか？"))
-                    return;
-
-                  try {
-                    const response = await fetch("/api/data/ohlcv/bulk", {
-                      method: "POST",
-                      headers: { "Content-Type": "application/json" },
-                    });
-                    const result = await response.json();
-
-                    if (response.ok && result.success) {
-                      handleBulkCollectionStart?.(result);
-                    } else {
-                      handleBulkCollectionError?.(
-                        result.message || "OHLCV収集に失敗しました"
-                      );
-                    }
-                  } catch (error) {
-                    handleBulkCollectionError?.(
-                      "OHLCV収集中にエラーが発生しました"
-                    );
-                  }
+                  await dataCollection.ohlcv.collect(
+                    handleBulkCollectionStart,
+                    handleBulkCollectionError
+                  );
                 }}
-                disabled={loading || updating}
-                className="h-10 px-4 text-sm font-medium rounded-lg bg-blue-600 text-white hover:bg-blue-700 disabled:bg-gray-700 disabled:text-gray-400 disabled:cursor-not-allowed transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1"
+                loading={dataCollection.ohlcv.loading}
+                disabled={loading || updating || dataCollection.isAnyLoading}
+                variant="primary"
+                size="sm"
+                loadingText="収集中..."
+                className="h-10 bg-blue-600 hover:bg-blue-700 focus:ring-blue-500"
+                icon={<DownloadIcon />}
+                fixedWidth={false}
               >
-                <span>OHLCV収集</span>
-              </button>
+                OHLCV収集
+              </ApiButton>
 
-              {/* FR収集ボタン（CompactDataCollectionButtonsから分離） */}
-              <button
+              {/* FR収集ボタン */}
+              <ApiButton
                 onClick={async () => {
-                  if (!confirm("FRデータを収集しますか？")) return;
-
-                  try {
-                    const response = await fetch(
-                      "/api/data/funding-rates/bulk",
-                      {
-                        method: "POST",
-                        headers: { "Content-Type": "application/json" },
-                      }
-                    );
-                    const result = await response.json();
-
-                    if (response.ok && result.success) {
-                      handleFundingRateCollectionStart?.(result);
-                    } else {
-                      handleFundingRateCollectionError?.(
-                        result.message || "FR収集に失敗しました"
-                      );
-                    }
-                  } catch (error) {
-                    handleFundingRateCollectionError?.(
-                      "FR収集中にエラーが発生しました"
-                    );
-                  }
+                  await dataCollection.fundingRate.collect(
+                    handleFundingRateCollectionStart,
+                    handleFundingRateCollectionError
+                  );
                 }}
-                disabled={loading || updating}
-                className="h-10 px-4 text-sm font-medium rounded-lg bg-green-600 text-white hover:bg-green-700 disabled:bg-gray-700 disabled:text-gray-400 disabled:cursor-not-allowed transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-1"
+                loading={dataCollection.fundingRate.loading}
+                disabled={loading || updating || dataCollection.isAnyLoading}
+                variant="success"
+                size="sm"
+                loadingText="収集中..."
+                className="h-10 bg-green-600 hover:bg-green-700 focus:ring-green-500"
+                icon={<ChartIcon />}
+                fixedWidth={false}
               >
-                <span>FR収集</span>
-              </button>
+                FR収集
+              </ApiButton>
 
               {/* OI収集ボタン */}
               <OpenInterestCollectionButton

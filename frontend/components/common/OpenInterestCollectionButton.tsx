@@ -10,8 +10,8 @@
 "use client";
 
 import React from "react";
-import DataCollectionButton from "./DataCollectionButton";
-import type { DataCollectionConfig } from "./DataCollectionButton";
+import { useApiCall } from "@/hooks/useApiCall";
+import ApiButton from "./ApiButton";
 
 /**
  * OI収集ボタンコンポーネントのプロパティ
@@ -44,41 +44,35 @@ const OpenInterestCollectionButton: React.FC<
   mode = "bulk",
   symbol = "BTC/USDT",
 }) => {
-  // 設定を作成
-  const config: DataCollectionConfig = {
-    apiEndpoint:
-      mode === "bulk"
-        ? "/api/data/open-interest/bulk-collect"
-        : `/api/data/open-interest/collect?symbol=${encodeURIComponent(
-            symbol
-          )}&fetch_all=true`,
-    method: "POST",
-    confirmMessage:
-      mode === "bulk"
+  const apiCall = useApiCall();
+
+  const handleClick = async () => {
+    const endpoint = mode === "bulk"
+      ? "/api/data/open-interest/bulk-collect"
+      : `/api/data/open-interest/collect?symbol=${encodeURIComponent(symbol)}&fetch_all=true`;
+
+    await apiCall.execute(endpoint, {
+      method: "POST",
+      confirmMessage: mode === "bulk"
         ? "BTC・ETHの全期間OIデータを取得します。\n\nこの処理には数分かかる場合があります。続行しますか？"
         : undefined,
-    buttonText: {
-      idle: mode === "bulk" ? "OI収集" : `OI収集 (${symbol})`,
-      loading: "収集中...",
-      success: "✅ 完了",
-      error: "❌ エラー",
-    },
-    description:
-      mode === "bulk"
-        ? "BTC・ETHの全期間OIデータを一括収集"
-        : `${symbol}のOIデータを収集`,
-    successResetTime: 3000,
-    errorResetTime: 5000,
+      onSuccess: onCollectionStart,
+      onError: onCollectionError,
+    });
   };
 
   return (
-    <DataCollectionButton
-      config={config}
-      onCollectionStart={onCollectionStart}
-      onCollectionError={onCollectionError}
+    <ApiButton
+      onClick={handleClick}
+      loading={apiCall.loading}
       disabled={disabled}
+      variant="warning"
+      size="sm"
+      loadingText="収集中..."
       className={className}
-    />
+    >
+      {mode === "bulk" ? "OI収集" : `OI収集 (${symbol})`}
+    </ApiButton>
   );
 };
 
