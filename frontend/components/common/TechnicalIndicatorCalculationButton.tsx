@@ -12,7 +12,6 @@
 import React from "react";
 import { useApiCall } from "@/hooks/useApiCall";
 import ApiButton from "./ApiButton";
-import { CalculateIcon } from "./Icons";
 
 /**
  * テクニカル指標計算ボタンコンポーネントのプロパティ
@@ -57,15 +56,25 @@ const TechnicalIndicatorCalculationButton: React.FC<
   const apiCall = useApiCall();
 
   const handleClick = async () => {
-    const endpoint = mode === "bulk"
-      ? `/api/data/technical-indicators/bulk-calculate?symbol=${encodeURIComponent(symbol)}&timeframe=${encodeURIComponent(timeframe)}`
-      : `/api/data/technical-indicators/calculate?symbol=${encodeURIComponent(symbol)}&timeframe=${encodeURIComponent(timeframe)}&indicator_type=${encodeURIComponent(indicatorType)}&period=${period}`;
+    const endpoint =
+      mode === "bulk"
+        ? `/api/data/technical-indicators/bulk-calculate?symbol=${encodeURIComponent(
+            symbol
+          )}&timeframe=${encodeURIComponent(timeframe)}`
+        : `/api/data/technical-indicators/calculate?symbol=${encodeURIComponent(
+            symbol
+          )}&timeframe=${encodeURIComponent(
+            timeframe
+          )}&indicator_type=${encodeURIComponent(
+            indicatorType
+          )}&period=${period}`;
 
     await apiCall.execute(endpoint, {
       method: "POST",
-      confirmMessage: mode === "bulk"
-        ? `${symbol} ${timeframe}のデフォルトテクニカル指標を一括計算します。\n\nこの処理には時間がかかる場合があります。続行しますか？`
-        : `${symbol} ${timeframe}の${indicatorType}(${period})を計算します。続行しますか？`,
+      confirmMessage:
+        mode === "bulk"
+          ? `${symbol} ${timeframe}のデフォルトテクニカル指標を一括計算します。\n\nこの処理には時間がかかる場合があります。続行しますか？`
+          : `${symbol} ${timeframe}の${indicatorType}(${period})を計算します。続行しますか？`,
       onSuccess: onCalculationStart,
       onError: onCalculationError,
     });
@@ -80,7 +89,6 @@ const TechnicalIndicatorCalculationButton: React.FC<
       size="sm"
       loadingText="計算中..."
       className={className}
-      icon={<CalculateIcon />}
     >
       {mode === "bulk" ? "TI一括計算" : `${indicatorType}(${period})計算`}
     </ApiButton>

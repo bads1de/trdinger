@@ -59,21 +59,6 @@ const AllDataCollectionButton: React.FC<AllDataCollectionButtonProps> = ({
       size="sm"
       loadingText="収集中..."
       className={className}
-      icon={
-        <svg
-          className="w-4 h-4"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={2}
-            d="M4 7v10c0 2.21 1.79 4 4 4h8c2.21 0 4-1.79 4-4V7M4 7l8-4 8 4M4 7l8 4 8-4"
-          />
-        </svg>
-      }
     >
       全データ取得
     </ApiButton>

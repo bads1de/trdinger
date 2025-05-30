@@ -140,7 +140,6 @@ const DataControls: React.FC<DataControlsProps> = ({
                 size="sm"
                 loadingText="収集中..."
                 className="h-10 bg-blue-600 hover:bg-blue-700 focus:ring-blue-500"
-                icon={<DownloadIcon />}
                 fixedWidth={false}
               >
                 OHLCV収集
@@ -160,7 +159,6 @@ const DataControls: React.FC<DataControlsProps> = ({
                 size="sm"
                 loadingText="収集中..."
                 className="h-10 bg-green-600 hover:bg-green-700 focus:ring-green-500"
-                icon={<ChartIcon />}
                 fixedWidth={false}
               >
                 FR収集
@@ -172,7 +170,7 @@ const DataControls: React.FC<DataControlsProps> = ({
                 onCollectionStart={handleOpenInterestCollectionStart}
                 onCollectionError={handleOpenInterestCollectionError}
                 disabled={loading || updating}
-                className="h-10 text-sm"
+                className="h-10 bg-green-600 hover:bg-green-700 focus:ring-green-500"
               />
 
               {/* TI一括計算ボタン */}
@@ -183,7 +181,7 @@ const DataControls: React.FC<DataControlsProps> = ({
                 onCalculationStart={handleTechnicalIndicatorCalculationStart}
                 onCalculationError={handleTechnicalIndicatorCalculationError}
                 disabled={loading || updating}
-                className="h-10 text-sm"
+                className="h-10 bg-green-600 hover:bg-green-700 focus:ring-green-500"
               />
             </div>
           </div>
