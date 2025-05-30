@@ -85,7 +85,6 @@ async def get_open_interest_data(
                 {
                     "symbol": record.symbol,
                     "open_interest_value": record.open_interest_value,
-                    "open_interest_amount": record.open_interest_amount,
                     "data_timestamp": record.data_timestamp.isoformat(),
                     "timestamp": record.timestamp.isoformat(),
                 }
@@ -114,7 +113,9 @@ async def get_open_interest_data(
 @router.post("/open-interest/collect")
 async def collect_open_interest_data(
     symbol: str = Query(..., description="取引ペアシンボル（例: 'BTC/USDT'）"),
-    limit: Optional[int] = Query(100, description="取得するデータ数（1-1000、fetch_all=trueの場合は無視）"),
+    limit: Optional[int] = Query(
+        100, description="取得するデータ数（1-1000、fetch_all=trueの場合は無視）"
+    ),
     fetch_all: bool = Query(False, description="全期間のデータを取得するかどうか"),
     db: Session = Depends(get_db),
 ):

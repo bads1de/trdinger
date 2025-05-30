@@ -142,9 +142,6 @@ class OpenInterestData(Base):
     # オープンインタレスト値（USD建て）
     open_interest_value = Column(Float, nullable=False)
 
-    # オープンインタレスト量（ベース通貨建て、利用可能な場合）
-    open_interest_amount = Column(Float, nullable=True)
-
     # データ時刻（UTC）
     data_timestamp = Column(DateTime(timezone=True), nullable=False, index=True)
 
@@ -179,18 +176,11 @@ class OpenInterestData(Base):
         return {
             "id": self.id,
             "symbol": self.symbol,
-            "funding_rate": self.funding_rate,
-            "funding_timestamp": (
-                self.funding_timestamp.isoformat() if self.funding_timestamp else None
+            "open_interest_value": self.open_interest_value,
+            "data_timestamp": (
+                self.data_timestamp.isoformat() if self.data_timestamp else None
             ),
             "timestamp": self.timestamp.isoformat() if self.timestamp else None,
-            "next_funding_timestamp": (
-                self.next_funding_timestamp.isoformat()
-                if self.next_funding_timestamp
-                else None
-            ),
-            "mark_price": self.mark_price,
-            "index_price": self.index_price,
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "updated_at": self.updated_at.isoformat() if self.updated_at else None,
         }

@@ -468,8 +468,6 @@ export interface OpenInterestData {
   symbol: string;
   /** OI値（USD建て） */
   open_interest_value: number;
-  /** OI量（コイン建て） */
-  open_interest_amount: number;
   /** データ時刻（ISO形式） */
   data_timestamp: string;
   /** データ取得時刻（ISO形式） */
@@ -576,7 +574,11 @@ export interface AllDataCollectionResult {
   /** 完了したステップ数 */
   completed_steps?: number;
   /** 現在のステップ */
-  current_step?: "ohlcv" | "funding_rate" | "open_interest" | "technical_indicators";
+  current_step?:
+    | "ohlcv"
+    | "funding_rate"
+    | "open_interest"
+    | "technical_indicators";
   /** OHLCVデータ収集結果 */
   ohlcv_result?: BulkOHLCVCollectionResult;
   /** FRデータ収集結果 */

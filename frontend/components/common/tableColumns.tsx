@@ -25,7 +25,7 @@ import {
   formatCurrency,
   formatVolume,
   getPriceChangeColor,
-  formatCompactNumber,
+  formatLargeNumber,
 } from "@/utils/formatters";
 import { TableColumn } from "../table/DataTable";
 
@@ -213,26 +213,14 @@ export const openInterestColumns: TableColumn<OpenInterestData>[] = [
   {
     key: "open_interest_value",
     header: "OI値 (USD)",
-    width: "150px",
+    width: "180px",
     sortable: true,
     formatter: (value: number) => (
       <span className="font-mono text-sm font-semibold text-green-400">
-        {formatCurrency(value)}
+        ${formatLargeNumber(value)}
       </span>
     ),
-    cellClassName: "text-right",
-  },
-  {
-    key: "open_interest_amount",
-    header: "OI量",
-    width: "120px",
-    sortable: true,
-    formatter: (value: number) => (
-      <span className="font-mono text-sm text-blue-400">
-        {formatCompactNumber(value)}
-      </span>
-    ),
-    cellClassName: "text-right",
+    cellClassName: "text-left",
   },
   {
     key: "data_timestamp",

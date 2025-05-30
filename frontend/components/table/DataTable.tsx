@@ -274,7 +274,7 @@ const DataTable = <T extends Record<string, any>>({
 
       {/* テーブル */}
       <div className="overflow-x-auto">
-        <table className="w-full">
+        <table className="w-full table-fixed">
           <thead className="bg-gray-800 dark:bg-gray-800">
             <tr>
               {columns.map((column) => (
