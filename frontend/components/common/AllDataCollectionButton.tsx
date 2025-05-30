@@ -10,8 +10,8 @@
 "use client";
 
 import React from "react";
-import DataCollectionButton from "./DataCollectionButton";
-import type { DataCollectionConfig } from "./DataCollectionButton";
+import { useApiCall } from "@/hooks/useApiCall";
+import ApiButton from "./ApiButton";
 
 /**
  * 全データ一括収集ボタンコンポーネントのプロパティ
@@ -36,22 +36,30 @@ const AllDataCollectionButton: React.FC<AllDataCollectionButtonProps> = ({
   disabled = false,
   className = "",
 }) => {
-  // 設定を作成
-  const config: DataCollectionConfig = {
-    apiEndpoint: "/api/data/all/bulk-collect",
-    method: "POST",
-    confirmMessage:
-      "全データ（OHLCV・FR・OI・TI）を一括取得します。\n\n" +
-      "この処理には数分から十数分かかる場合があります。\n" +
-      "テクニカル指標も自動計算されます。続行しますか？",
-    buttonText: {
-      idle: "全データ取得",
-      loading: "収集中...",
-      success: "✅ 完了",
-      error: "❌ エラー",
-    },
-    buttonIcon: {
-      idle: (
+  const apiCall = useApiCall();
+
+  const handleClick = async () => {
+    await apiCall.execute("/api/data/all/bulk-collect", {
+      method: "POST",
+      confirmMessage:
+        "全データ（OHLCV・FR・OI・TI）を一括取得します。\n\n" +
+        "この処理には数分から十数分かかる場合があります。\n" +
+        "テクニカル指標も自動計算されます。続行しますか？",
+      onSuccess: onCollectionStart,
+      onError: onCollectionError,
+    });
+  };
+
+  return (
+    <ApiButton
+      onClick={handleClick}
+      loading={apiCall.loading}
+      disabled={disabled}
+      variant="primary"
+      size="sm"
+      loadingText="収集中..."
+      className={className}
+      icon={
         <svg
           className="w-4 h-4"
           fill="none"
@@ -65,21 +73,10 @@ const AllDataCollectionButton: React.FC<AllDataCollectionButtonProps> = ({
             d="M4 7v10c0 2.21 1.79 4 4 4h8c2.21 0 4-1.79 4-4V7M4 7l8-4 8 4M4 7l8 4 8-4"
           />
         </svg>
-      ),
-    },
-    description: "OHLCV・FR・OI・TIの全データを一括収集",
-    successResetTime: 10000,
-    errorResetTime: 10000,
-  };
-
-  return (
-    <DataCollectionButton
-      config={config}
-      onCollectionStart={onCollectionStart}
-      onCollectionError={onCollectionError}
-      disabled={disabled}
-      className={className}
-    />
+      }
+    >
+      全データ取得
+    </ApiButton>
   );
 };
 

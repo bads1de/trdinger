@@ -10,6 +10,7 @@
 "use client";
 
 import React, { useState, useMemo } from "react";
+import { SearchIcon, ExportIcon, ErrorIcon, SortAscIcon, SortDescIcon, SortNeutralIcon } from "./common/Icons";
 
 /**
  * テーブルカラムの定義
@@ -179,21 +180,13 @@ const DataTable = <T extends Record<string, any>>({
   // ソートアイコン
   const getSortIcon = (key: keyof T) => {
     if (sortKey !== key) {
-      return (
-        <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
-        </svg>
-      );
+      return <SortNeutralIcon className="text-gray-400" />;
     }
 
     return sortDirection === "asc" ? (
-      <svg className="w-4 h-4 text-primary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
-      </svg>
+      <SortAscIcon className="text-primary-600" />
     ) : (
-      <svg className="w-4 h-4 text-primary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-      </svg>
+      <SortDescIcon className="text-primary-600" />
     );
   };
 
@@ -202,9 +195,7 @@ const DataTable = <T extends Record<string, any>>({
       <div className="bg-gray-900 dark:bg-gray-900 rounded-enterprise-lg border border-gray-700 dark:border-gray-700 p-8">
         <div className="text-center">
           <div className="w-16 h-16 mx-auto mb-4 bg-gray-800 dark:bg-gray-800 rounded-full flex items-center justify-center">
-            <svg className="w-8 h-8 text-error-600 dark:text-error-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
+            <ErrorIcon size="xl" className="text-error-600 dark:text-error-400" />
           </div>
           <h3 className="text-lg font-semibold text-error-800 dark:text-error-200 mb-2">
             📊 データの読み込みに失敗しました
@@ -245,9 +236,7 @@ const DataTable = <T extends Record<string, any>>({
                   }}
                   className="w-48 px-3 py-2 bg-gray-800 dark:bg-gray-800 border border-gray-600 dark:border-gray-600 rounded-lg text-gray-100 dark:text-gray-100 text-sm focus:outline-none focus:ring-2 focus:ring-primary-600 focus:border-transparent"
                 />
-                <svg className="absolute right-3 top-2.5 w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                </svg>
+                <SearchIcon className="absolute right-3 top-2.5 text-gray-400" />
               </div>
             )}
 
@@ -258,9 +247,7 @@ const DataTable = <T extends Record<string, any>>({
                 disabled={loading || sortedData.length === 0}
                 className="px-4 py-2 bg-primary-600 hover:bg-primary-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white text-sm font-medium rounded-lg transition-colors duration-200 flex items-center gap-2"
               >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                </svg>
+                <ExportIcon />
                 CSV出力
               </button>
             )}

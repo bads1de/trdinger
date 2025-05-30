@@ -10,8 +10,9 @@
 "use client";
 
 import React from "react";
-import DataCollectionButton from "./DataCollectionButton";
-import type { DataCollectionConfig } from "./DataCollectionButton";
+import { useApiCall } from "@/hooks/useApiCall";
+import ApiButton from "./ApiButton";
+import { CalculateIcon } from "./Icons";
 
 /**
  * テクニカル指標計算ボタンコンポーネントのプロパティ
@@ -53,53 +54,36 @@ const TechnicalIndicatorCalculationButton: React.FC<
   indicatorType = "SMA",
   period = 20,
 }) => {
-  // 設定を作成
-  const config: DataCollectionConfig = {
-    apiEndpoint:
-      mode === "bulk"
-        ? `/api/data/technical-indicators/bulk-calculate?symbol=${encodeURIComponent(
-            symbol
-          )}&timeframe=${encodeURIComponent(timeframe)}`
-        : `/api/data/technical-indicators/calculate?symbol=${encodeURIComponent(
-            symbol
-          )}&timeframe=${encodeURIComponent(
-            timeframe
-          )}&indicator_type=${encodeURIComponent(
-            indicatorType
-          )}&period=${period}`,
-    method: "POST",
-    confirmMessage:
-      mode === "bulk"
+  const apiCall = useApiCall();
+
+  const handleClick = async () => {
+    const endpoint = mode === "bulk"
+      ? `/api/data/technical-indicators/bulk-calculate?symbol=${encodeURIComponent(symbol)}&timeframe=${encodeURIComponent(timeframe)}`
+      : `/api/data/technical-indicators/calculate?symbol=${encodeURIComponent(symbol)}&timeframe=${encodeURIComponent(timeframe)}&indicator_type=${encodeURIComponent(indicatorType)}&period=${period}`;
+
+    await apiCall.execute(endpoint, {
+      method: "POST",
+      confirmMessage: mode === "bulk"
         ? `${symbol} ${timeframe}のデフォルトテクニカル指標を一括計算します。\n\nこの処理には時間がかかる場合があります。続行しますか？`
         : `${symbol} ${timeframe}の${indicatorType}(${period})を計算します。続行しますか？`,
-    buttonText: {
-      idle:
-        mode === "bulk"
-          ? "TI一括計算"
-          : `${indicatorType}(${period})計算`,
-      loading: "計算中...",
-      success: "✅ 完了",
-      error: "❌ エラー",
-    },
-    buttonIcon: {
-      idle: <span className="text-purple-400">📈</span>,
-    },
-    description:
-      mode === "bulk"
-        ? `${symbol} ${timeframe}のデフォルトテクニカル指標を一括計算・保存します`
-        : `${symbol} ${timeframe}の${indicatorType}(${period})を計算・保存します`,
-    successResetTime: 3000,
-    errorResetTime: 5000,
+      onSuccess: onCalculationStart,
+      onError: onCalculationError,
+    });
   };
 
   return (
-    <DataCollectionButton
-      config={config}
-      onCollectionStart={onCalculationStart}
-      onCollectionError={onCalculationError}
+    <ApiButton
+      onClick={handleClick}
+      loading={apiCall.loading}
       disabled={disabled}
+      variant="secondary"
+      size="sm"
+      loadingText="計算中..."
       className={className}
-    />
+      icon={<CalculateIcon />}
+    >
+      {mode === "bulk" ? "TI一括計算" : `${indicatorType}(${period})計算`}
+    </ApiButton>
   );
 };
 
