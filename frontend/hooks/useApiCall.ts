@@ -49,59 +49,66 @@ export const useApiCall = <T = any>(): ApiCallResult<T> => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const execute = useCallback(async (
-    url: string,
-    options: ApiCallOptions = {}
-  ): Promise<T | null> => {
-    const {
-      method = "GET",
-      headers = { "Content-Type": "application/json" },
-      body,
-      confirmMessage,
-      onSuccess,
-      onError,
-    } = options;
+  const execute = useCallback(
+    async (url: string, options: ApiCallOptions = {}): Promise<T | null> => {
+      const {
+        method = "GET",
+        headers = { "Content-Type": "application/json" },
+        body,
+        confirmMessage,
+        onSuccess,
+        onError,
+      } = options;
 
-    // 確認ダイアログがある場合は表示
-    if (confirmMessage && !confirm(confirmMessage)) {
-      return null;
-    }
-
-    try {
-      setLoading(true);
-      setError(null);
-
-      const requestOptions: RequestInit = {
-        method,
-        headers,
-      };
-
-      // ボディがある場合は追加
-      if (body && method !== "GET") {
-        requestOptions.body = typeof body === "string" ? body : JSON.stringify(body);
-      }
-
-      const response = await fetch(url, requestOptions);
-      const result = await response.json();
-
-      if (response.ok && result.success) {
-        onSuccess?.(result);
-        return result;
-      } else {
-        const errorMessage = result.message || `API呼び出しに失敗しました (${response.status})`;
-        setError(errorMessage);
-        onError?.(errorMessage);
+      // 確認ダイアログがある場合は表示
+      if (confirmMessage && !confirm(confirmMessage)) {
         return null;
       }
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : "API呼び出し中にエラーが発生しました";
-      setError(errorMessage);
-      onError?.(errorMessage);
-      return null;
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+
+      try {
+        setLoading(true);
+        setError(null);
+
+        const requestOptions: RequestInit = {
+          method,
+          headers,
+        };
+
+        // ボディがある場合は追加
+        if (body && method !== "GET") {
+          requestOptions.body =
+            typeof body === "string" ? body : JSON.stringify(body);
+        }
+
+        const response = await fetch(url, requestOptions);
+        const result = await response.json();
+
+        if (response.ok && result.success) {
+          onSuccess?.(result);
+          return result;
+        } else {
+          const errorMessage =
+            result.message || `API呼び出しに失敗しました (${response.status})`;
+          setError(errorMessage);
+          onError?.(errorMessage);
+          return null;
+        }
+      } catch (err) {
+        const errorMessage =
+          err instanceof Error
+            ? err.message
+            : "API呼び出し中にエラーが発生しました";
+
+        setError(errorMessage);
+        onError?.(errorMessage);
+
+        return null;
+      } finally {
+        setLoading(false);
+      }
+    },
+    []
+  );
 
   const reset = useCallback(() => {
     setLoading(false);
