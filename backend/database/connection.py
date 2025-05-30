@@ -52,6 +52,15 @@ def init_db():
     データベースを初期化
     """
     try:
+        # モデルクラスをインポートしてメタデータに登録
+        from .models import (
+            OHLCVData,
+            FundingRateData,
+            OpenInterestData,
+            DataCollectionLog,
+            TechnicalIndicatorData,
+        )
+
         # テーブルを作成
         Base.metadata.create_all(bind=engine)
         logger.info("データベースの初期化が完了しました")
@@ -90,7 +99,9 @@ def check_db_initialized():
             if "sqlite" in DATABASE_URL.lower():
                 # SQLite用クエリ
                 result = connection.execute(
-                    text("SELECT name FROM sqlite_master WHERE type='table' AND name='ohlcv_data'")
+                    text(
+                        "SELECT name FROM sqlite_master WHERE type='table' AND name='ohlcv_data'"
+                    )
                 )
             else:
                 # PostgreSQL用クエリ

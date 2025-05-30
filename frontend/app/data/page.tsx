@@ -14,8 +14,10 @@ import React, { useState, useEffect } from "react";
 import OHLCVDataTable from "@/components/OHLCVDataTable";
 import FundingRateDataTable from "@/components/FundingRateDataTable";
 import OpenInterestDataTable from "@/components/OpenInterestDataTable";
+import TechnicalIndicatorDataTable from "@/components/TechnicalIndicatorDataTable";
 import OpenInterestCollectionButton from "@/components/common/OpenInterestCollectionButton";
 import AllDataCollectionButton from "@/components/common/AllDataCollectionButton";
+import TechnicalIndicatorCalculationButton from "@/components/common/TechnicalIndicatorCalculationButton";
 import SymbolSelector from "@/components/common/SymbolSelector";
 import TimeFrameSelector from "@/components/common/TimeFrameSelector";
 
@@ -23,16 +25,19 @@ import {
   PriceData,
   FundingRateData,
   OpenInterestData,
+  TechnicalIndicatorData,
   TimeFrame,
   TradingPair,
   OHLCVResponse,
   FundingRateResponse,
   OpenInterestResponse,
+  TechnicalIndicatorResponse,
   BulkOHLCVCollectionResult,
   BulkFundingRateCollectionResult,
   FundingRateCollectionResult,
   OpenInterestCollectionResult,
   BulkOpenInterestCollectionResult,
+  BulkTechnicalIndicatorCalculationResult,
   AllDataCollectionResult,
 } from "@/types/strategy";
 import { BACKEND_API_URL } from "@/constants";
@@ -50,16 +55,23 @@ const DataPage: React.FC = () => {
   const [openInterestData, setOpenInterestData] = useState<OpenInterestData[]>(
     []
   );
+  const [technicalIndicatorData, setTechnicalIndicatorData] = useState<
+    TechnicalIndicatorData[]
+  >([]);
   const [activeTab, setActiveTab] = useState<
-    "ohlcv" | "funding" | "openinterest"
+    "ohlcv" | "funding" | "openinterest" | "technical"
   >("ohlcv");
   const [loading, setLoading] = useState<boolean>(false);
   const [fundingLoading, setFundingLoading] = useState<boolean>(false);
   const [openInterestLoading, setOpenInterestLoading] =
     useState<boolean>(false);
+  const [technicalIndicatorLoading, setTechnicalIndicatorLoading] =
+    useState<boolean>(false);
   const [error, setError] = useState<string>("");
   const [fundingError, setFundingError] = useState<string>("");
   const [openInterestError, setOpenInterestError] = useState<string>("");
+  const [technicalIndicatorError, setTechnicalIndicatorError] =
+    useState<string>("");
   const [symbolsLoading, setSymbolsLoading] = useState<boolean>(true);
   const [updating, setUpdating] = useState<boolean>(false);
   const [dataStatus, setDataStatus] = useState<any>(null);
@@ -183,6 +195,40 @@ const DataPage: React.FC = () => {
   };
 
   /**
+   * テクニカル指標データを取得
+   */
+  const fetchTechnicalIndicatorData = async () => {
+    try {
+      setTechnicalIndicatorLoading(true);
+      setTechnicalIndicatorError("");
+
+      const params = new URLSearchParams({
+        symbol: selectedSymbol,
+        timeframe: selectedTimeFrame,
+        limit: "100",
+      });
+
+      const response = await fetch(`/api/data/technical-indicators?${params}`);
+      const result: TechnicalIndicatorResponse = await response.json();
+
+      if (result.success) {
+        setTechnicalIndicatorData(result.data.technical_indicators);
+      } else {
+        setTechnicalIndicatorError(
+          result.message || "テクニカル指標データの取得に失敗しました"
+        );
+      }
+    } catch (err) {
+      setTechnicalIndicatorError(
+        "テクニカル指標データの取得中にエラーが発生しました"
+      );
+      console.error("テクニカル指標データ取得エラー:", err);
+    } finally {
+      setTechnicalIndicatorLoading(false);
+    }
+  };
+
+  /**
    * 通貨ペア変更ハンドラ
    */
   const handleSymbolChange = (symbol: string) => {
@@ -206,6 +252,8 @@ const DataPage: React.FC = () => {
       fetchFundingRateData();
     } else if (activeTab === "openinterest") {
       fetchOpenInterestData();
+    } else if (activeTab === "technical") {
+      fetchTechnicalIndicatorData();
     }
   };
 
@@ -388,6 +436,7 @@ const DataPage: React.FC = () => {
       fetchOHLCVData();
       fetchFundingRateData();
       fetchOpenInterestData();
+      fetchTechnicalIndicatorData();
       fetchDataStatus();
     }
   }, [selectedSymbol, selectedTimeFrame]);
@@ -765,6 +814,16 @@ const DataPage: React.FC = () => {
                   >
                     OI
                   </button>
+                  <button
+                    onClick={() => setActiveTab("technical")}
+                    className={`px-4 py-2 text-sm font-medium rounded-md transition-colors duration-200 ${
+                      activeTab === "technical"
+                        ? "bg-primary-600 text-white"
+                        : "text-gray-400 hover:text-gray-100"
+                    }`}
+                  >
+                    TI
+                  </button>
                 </div>
               </div>
 
@@ -811,6 +870,25 @@ const DataPage: React.FC = () => {
                       </span>
                     </>
                   )}
+                {activeTab === "technical" &&
+                  technicalIndicatorData.length > 0 &&
+                  !technicalIndicatorLoading && (
+                    <>
+                      <span className="badge-primary">
+                        {technicalIndicatorData.length}件
+                      </span>
+                      <span className="badge-info">
+                        指標数:{" "}
+                        {
+                          new Set(
+                            technicalIndicatorData.map(
+                              (item) => `${item.indicator_type}(${item.period})`
+                            )
+                          ).size
+                        }
+                      </span>
+                    </>
+                  )}
               </div>
             </div>
 
@@ -838,6 +916,37 @@ const DataPage: React.FC = () => {
                   loading={openInterestLoading}
                   error={openInterestError}
                 />
+              )}
+              {activeTab === "technical" && (
+                <div className="space-y-6">
+                  {/* テクニカル指標計算ボタン */}
+                  <div className="flex flex-wrap gap-4 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                    <TechnicalIndicatorCalculationButton
+                      mode="bulk"
+                      symbol={selectedSymbol}
+                      timeframe={selectedTimeFrame}
+                      onCalculationStart={(result) => {
+                        console.log("テクニカル指標計算開始:", result);
+                        // 計算完了後にデータを再取得
+                        setTimeout(() => {
+                          fetchTechnicalIndicatorData();
+                        }, 2000);
+                      }}
+                      onCalculationError={(error) => {
+                        console.error("テクニカル指標計算エラー:", error);
+                        setTechnicalIndicatorError(error);
+                      }}
+                      className="flex-1 min-w-[200px]"
+                    />
+                  </div>
+
+                  {/* テクニカル指標データテーブル */}
+                  <TechnicalIndicatorDataTable
+                    data={technicalIndicatorData}
+                    loading={technicalIndicatorLoading}
+                    error={technicalIndicatorError}
+                  />
+                </div>
               )}
             </div>
           </div>
