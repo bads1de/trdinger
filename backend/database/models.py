@@ -264,6 +264,12 @@ class TechnicalIndicatorData(Base):
     # ヒストグラム（MACDのヒストグラム等）
     histogram_value = Column(Float, nullable=True)
 
+    # ボリンジャーバンド上限（Bollinger Bands Upper Band）
+    upper_band = Column(Float, nullable=True)
+
+    # ボリンジャーバンド下限（Bollinger Bands Lower Band）
+    lower_band = Column(Float, nullable=True)
+
     # データ時刻（UTC）
     timestamp = Column(DateTime(timezone=True), nullable=False, index=True)
 
@@ -310,6 +316,8 @@ class TechnicalIndicatorData(Base):
             "value": self.value,
             "signal_value": self.signal_value,
             "histogram_value": self.histogram_value,
+            "upper_band": self.upper_band,
+            "lower_band": self.lower_band,
             "timestamp": self.timestamp.isoformat() if self.timestamp else None,
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "updated_at": self.updated_at.isoformat() if self.updated_at else None,
