@@ -58,7 +58,7 @@ const OpenInterestCollectionButton: React.FC<
       method: "POST",
       confirmMessage:
         mode === "bulk"
-          ? "BTC・ETHの全期間OIデータを取得します。\n\nこの処理には数分かかる場合があります。続行しますか？"
+          ? "BTCの全期間OIデータを取得します。\n\nこの処理には数分かかる場合があります。続行しますか？"
           : undefined,
       onSuccess: onCollectionStart,
       onError: onCollectionError,

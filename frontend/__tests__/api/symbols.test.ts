@@ -72,14 +72,10 @@ describe("/api/data/symbols", () => {
 
       const symbols = data.data.map((pair: any) => pair.symbol);
 
-      // 主要な通貨ペアが含まれていることを確認（BTCとETHのみ）
+      // 主要な通貨ペアが含まれていることを確認（BTCのみ）
       expect(symbols).toContain("BTC/USDT");
-      expect(symbols).toContain("ETH/USDT");
-      expect(symbols).toContain("ETH/BTC");
       expect(symbols).toContain("BTCUSD");
-      expect(symbols).toContain("ETHUSD");
       expect(symbols).toContain("BTC/USDT:USDT");
-      expect(symbols).toContain("ETH/USDT:USDT");
     });
 
     test("重複する通貨ペアがない", async () => {
@@ -136,8 +132,8 @@ describe("/api/data/symbols", () => {
       data.data.forEach((pair: any) => {
         // 名前が "Base Currency / Quote Currency" 形式であることを確認
         expect(pair.name).toMatch(/.+ \/ .+/);
-        // USD, USDT, BTC, Perpetualのいずれかが含まれていることを確認（BTCとETHのみ）
-        expect(pair.name).toMatch(/(USD|USDT|Bitcoin|Ethereum|Perpetual)/);
+        // USD, USDT, BTC, Perpetualのいずれかが含まれていることを確認（BTCのみ）
+        expect(pair.name).toMatch(/(USD|USDT|Bitcoin|Perpetual)/);
       });
     });
 
@@ -147,18 +143,7 @@ describe("/api/data/symbols", () => {
 
       expect(response.status).toBe(200);
 
-      const validBaseCurrencies = [
-        "BTC",
-        "ETH",
-        "BNB",
-        "ADA",
-        "SOL",
-        "XRP",
-        "DOT",
-        "AVAX",
-        "LTC",
-        "UNI",
-      ];
+      const validBaseCurrencies = ["BTC"];
 
       data.data.forEach((pair: any) => {
         expect(validBaseCurrencies).toContain(pair.base);

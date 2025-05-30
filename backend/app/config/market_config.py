@@ -19,17 +19,12 @@ class MarketDataConfig:
     # サポートされている取引所
     SUPPORTED_EXCHANGES = ["bybit"]
 
-    # サポートされているシンボル（Bybit形式）- BTCとETHのみに制限
+    # サポートされているシンボル（Bybit形式）- BTCのみに制限
     SUPPORTED_SYMBOLS = [
         # Bitcoin 関連
         "BTC/USDT",  # Bitcoin スポット
         "BTC/USDT:USDT",  # Bitcoin USDT永続契約
         "BTCUSD",  # Bitcoin USD永続契約
-        # Ethereum 関連
-        "ETH/USDT",  # Ethereum スポット
-        "ETH/USDT:USDT",  # Ethereum USDT永続契約
-        "ETH/BTC",  # Ethereum/Bitcoin ペア
-        "ETHUSD",  # Ethereum USD永続契約
     ]
 
     # サポートされている時間軸
@@ -91,20 +86,13 @@ class MarketDataConfig:
         """
         return cls.MIN_LIMIT <= limit <= cls.MAX_LIMIT
 
-    # シンボル正規化マッピング（BTCとETHのみ）
+    # シンボル正規化マッピング（BTCのみ）
     SYMBOL_MAPPING = {
         # Bitcoin マッピング
         "BTCUSD": "BTCUSD",  # USD永続契約
         "BTCUSDT": "BTC/USDT:USDT",  # USDT永続契約
         "BTC-USDT": "BTC/USDT",  # スポット
         "BTC/USDT:USDT": "BTC/USDT:USDT",  # 永続契約正規化
-        # Ethereum マッピング
-        "ETHUSD": "ETHUSD",  # USD永続契約
-        "ETHUSDT": "ETH/USDT:USDT",  # USDT永続契約
-        "ETH-USDT": "ETH/USDT",  # スポット
-        "ETHBTC": "ETH/BTC",  # ETH/BTC ペア
-        "ETH-BTC": "ETH/BTC",  # ETH/BTC ペア
-        "ETH/USDT:USDT": "ETH/USDT:USDT",  # 永続契約正規化
     }
 
     @classmethod

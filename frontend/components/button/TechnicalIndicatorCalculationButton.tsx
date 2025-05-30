@@ -90,7 +90,7 @@ const TechnicalIndicatorCalculationButton: React.FC<
       loadingText="計算中..."
       className={className}
     >
-      {mode === "bulk" ? "TI一括計算" : `${indicatorType}(${period})計算`}
+      {mode === "bulk" ? "TI計算" : `${indicatorType}(${period})計算`}
     </ApiButton>
   );
 };

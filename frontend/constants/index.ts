@@ -13,7 +13,7 @@ import { TradingPair, TimeFrameInfo } from "@/types/strategy";
 export const BACKEND_API_URL = "http://127.0.0.1:8000";
 
 /**
- * サポートされている取引ペア（BTCとETHのみに制限）
+ * サポートされている取引ペア（BTCのみに制限）
  *
  * 各ペアは実際にBybitで利用可能であることが確認されています。
  * スポット市場と先物市場（永続契約）の両方を含みます。
@@ -36,32 +36,6 @@ export const SUPPORTED_TRADING_PAIRS: TradingPair[] = [
     symbol: "BTCUSD",
     name: "Bitcoin / USD Perpetual",
     base: "BTC",
-    quote: "USD",
-  },
-
-  // Ethereum ペア
-  {
-    symbol: "ETH/USDT",
-    name: "Ethereum / Tether USD (Spot)",
-    base: "ETH",
-    quote: "USDT",
-  },
-  {
-    symbol: "ETH/BTC",
-    name: "Ethereum / Bitcoin (Spot)",
-    base: "ETH",
-    quote: "BTC",
-  },
-  {
-    symbol: "ETH/USDT:USDT",
-    name: "Ethereum / USDT Perpetual",
-    base: "ETH",
-    quote: "USDT",
-  },
-  {
-    symbol: "ETHUSD",
-    name: "Ethereum / USD Perpetual",
-    base: "ETH",
     quote: "USD",
   },
 ];
@@ -131,11 +105,10 @@ export function categorizeTradingPairs(pairs: TradingPair[]) {
 }
 
 /**
- * 通貨ペアの表示用アイコンを取得する関数（BTCとETHのみ）
+ * 通貨ペアの表示用アイコンを取得する関数（BTCのみ）
  */
 export function getTradingPairIcon(symbol: string): string {
   if (symbol.includes("BTC")) return "₿";
-  if (symbol.includes("ETH")) return "Ξ";
   return "💰";
 }
 

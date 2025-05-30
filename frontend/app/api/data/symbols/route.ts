@@ -14,7 +14,7 @@ import { SUPPORTED_TRADING_PAIRS } from "@/constants";
 
 /**
  * Bybitでサポートされている通貨ペアのマスターデータ
- * 先物とイーサリアム関連銘柄を追加
+ * BTCのスポットと先物ペアを提供
  */
 
 /**
