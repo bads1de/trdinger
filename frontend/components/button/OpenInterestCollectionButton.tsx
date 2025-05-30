@@ -47,15 +47,19 @@ const OpenInterestCollectionButton: React.FC<
   const apiCall = useApiCall();
 
   const handleClick = async () => {
-    const endpoint = mode === "bulk"
-      ? "/api/data/open-interest/bulk-collect"
-      : `/api/data/open-interest/collect?symbol=${encodeURIComponent(symbol)}&fetch_all=true`;
+    const endpoint =
+      mode === "bulk"
+        ? "/api/data/open-interest/bulk-collect"
+        : `/api/data/open-interest/collect?symbol=${encodeURIComponent(
+            symbol
+          )}&fetch_all=true`;
 
     await apiCall.execute(endpoint, {
       method: "POST",
-      confirmMessage: mode === "bulk"
-        ? "BTC・ETHの全期間OIデータを取得します。\n\nこの処理には数分かかる場合があります。続行しますか？"
-        : undefined,
+      confirmMessage:
+        mode === "bulk"
+          ? "BTC・ETHの全期間OIデータを取得します。\n\nこの処理には数分かかる場合があります。続行しますか？"
+          : undefined,
       onSuccess: onCollectionStart,
       onError: onCollectionError,
     });

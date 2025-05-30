@@ -13,7 +13,7 @@
 import React from "react";
 import DataTable from "./DataTable";
 import { PriceData } from "@/types/strategy";
-import { ohlcvColumns } from "@/config/tableColumns";
+import { ohlcvColumns } from "@/components/common/tableColumns";
 
 /**
  * OHLCVデータテーブルのプロパティ
@@ -44,7 +44,6 @@ const OHLCVDataTable: React.FC<OHLCVDataTableProps> = ({
   error,
   className = "",
 }) => {
-
   return (
     <DataTable
       data={data}

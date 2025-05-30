@@ -2,11 +2,9 @@ import React from "react";
 import SymbolSelector from "@/components/common/SymbolSelector";
 import TimeFrameSelector from "@/components/common/TimeFrameSelector";
 import AllDataCollectionButton from "@/components/button/AllDataCollectionButton";
-
+import OHLCVCollectionButton from "@/components/button/OHLCVCollectionButton";
+import FundingRateCollectionButton from "@/components/button/FundingRateCollectionButton";
 import TechnicalIndicatorCalculationButton from "@/components/button/TechnicalIndicatorCalculationButton";
-import { useDataCollection } from "@/hooks/useDataCollection";
-import ApiButton from "@/components/common/ApiButton";
-import { DownloadIcon, ChartIcon } from "@/components/common/Icons";
 import {
   TradingPair,
   TimeFrame,
@@ -77,7 +75,6 @@ const DataControls: React.FC<DataControlsProps> = ({
   allDataCollectionMessage,
   technicalIndicatorCalculationMessage,
 }) => {
-  const dataCollection = useDataCollection();
   return (
     <div className="enterprise-card animate-slide-up">
       <div className="p-6">
@@ -128,42 +125,20 @@ const DataControls: React.FC<DataControlsProps> = ({
               />
 
               {/* OHLCV収集ボタン */}
-              <ApiButton
-                onClick={async () => {
-                  await dataCollection.ohlcv.collect(
-                    handleBulkCollectionStart,
-                    handleBulkCollectionError
-                  );
-                }}
-                loading={dataCollection.ohlcv.loading}
-                disabled={loading || updating || dataCollection.isAnyLoading}
-                variant="primary"
-                size="sm"
-                loadingText="収集中..."
-                className="h-10 bg-blue-600 hover:bg-blue-700 focus:ring-blue-500"
-                fixedWidth={false}
-              >
-                OHLCV収集
-              </ApiButton>
+              <OHLCVCollectionButton
+                onCollectionStart={handleBulkCollectionStart}
+                onCollectionError={handleBulkCollectionError}
+                disabled={loading || updating}
+                className="h-10"
+              />
 
               {/* FR収集ボタン */}
-              <ApiButton
-                onClick={async () => {
-                  await dataCollection.fundingRate.collect(
-                    handleFundingRateCollectionStart,
-                    handleFundingRateCollectionError
-                  );
-                }}
-                loading={dataCollection.fundingRate.loading}
-                disabled={loading || updating || dataCollection.isAnyLoading}
-                variant="success"
-                size="sm"
-                loadingText="収集中..."
-                className="h-10 bg-green-600 hover:bg-green-700 focus:ring-green-500"
-                fixedWidth={false}
-              >
-                FR収集
-              </ApiButton>
+              <FundingRateCollectionButton
+                onCollectionStart={handleFundingRateCollectionStart}
+                onCollectionError={handleFundingRateCollectionError}
+                disabled={loading || updating}
+                className="h-10"
+              />
 
               {/* OI収集ボタン */}
               <OpenInterestCollectionButton

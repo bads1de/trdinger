@@ -13,7 +13,7 @@
 import React from "react";
 import DataTable from "./DataTable";
 import { TechnicalIndicatorData } from "@/types/strategy";
-import { technicalIndicatorColumns } from "@/config/tableColumns";
+import { technicalIndicatorColumns } from "@/components/common/tableColumns";
 
 /**
  * テクニカル指標データテーブルのプロパティ
@@ -32,13 +32,9 @@ interface TechnicalIndicatorDataTableProps {
 /**
  * テクニカル指標データテーブルコンポーネント
  */
-const TechnicalIndicatorDataTable: React.FC<TechnicalIndicatorDataTableProps> = ({
-  data,
-  loading = false,
-  error,
-  className = "",
-}) => {
-
+const TechnicalIndicatorDataTable: React.FC<
+  TechnicalIndicatorDataTableProps
+> = ({ data, loading = false, error, className = "" }) => {
   return (
     <DataTable
       data={data}

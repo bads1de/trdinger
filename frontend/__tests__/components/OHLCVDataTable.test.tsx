@@ -11,13 +11,15 @@
 import React from "react";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import "@testing-library/jest-dom";
-import OHLCVDataTable from "@/components/OHLCVDataTable";
+import OHLCVDataTable from "@/components/table/OHLCVDataTable";
 import { PriceData } from "@/types/strategy";
 
 // モックデータの作成
 const createMockOHLCVData = (count: number): PriceData[] => {
   return Array.from({ length: count }, (_, index) => ({
-    timestamp: new Date(Date.now() - (count - index) * 24 * 60 * 60 * 1000).toISOString(),
+    timestamp: new Date(
+      Date.now() - (count - index) * 24 * 60 * 60 * 1000
+    ).toISOString(),
     open: 50000 + Math.random() * 1000,
     high: 51000 + Math.random() * 1000,
     low: 49000 + Math.random() * 1000,
@@ -70,7 +72,9 @@ describe("OHLCVDataTable", () => {
       render(<OHLCVDataTable {...defaultProps} />);
 
       // タイトルの確認
-      expect(screen.getByText("📊 BTC/USDT - 1d足 OHLCVデータ")).toBeInTheDocument();
+      expect(
+        screen.getByText("📊 BTC/USDT - 1d足 OHLCVデータ")
+      ).toBeInTheDocument();
 
       // テーブルヘッダーの確認
       expect(screen.getByText("日時")).toBeInTheDocument();
@@ -94,7 +98,9 @@ describe("OHLCVDataTable", () => {
     test("エラー状態が正しく表示される", () => {
       render(<OHLCVDataTable {...defaultProps} error="テストエラー" />);
 
-      expect(screen.getByText("📊 データの読み込みに失敗しました")).toBeInTheDocument();
+      expect(
+        screen.getByText("📊 データの読み込みに失敗しました")
+      ).toBeInTheDocument();
       expect(screen.getByText("テストエラー")).toBeInTheDocument();
     });
 

@@ -1,8 +1,8 @@
 import React from "react";
-import OHLCVDataTable from "@/components/OHLCVDataTable";
-import FundingRateDataTable from "@/components/FundingRateDataTable";
-import OpenInterestDataTable from "@/components/OpenInterestDataTable";
-import TechnicalIndicatorDataTable from "@/components/TechnicalIndicatorDataTable";
+import OHLCVDataTable from "@/components/table/OHLCVDataTable";
+import FundingRateDataTable from "@/components/table/FundingRateDataTable";
+import OpenInterestDataTable from "@/components/table/OpenInterestDataTable";
+import TechnicalIndicatorDataTable from "@/components/table/TechnicalIndicatorDataTable";
 import {
   PriceData,
   FundingRateData,

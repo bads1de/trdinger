@@ -1,7 +1,7 @@
 /**
- * OIデータテーブルコンポーネント
+ * FRデータテーブルコンポーネント
  *
- * OIデータを表形式で表示するコンポーネントです。
+ * FRデータを表形式で表示するコンポーネントです。
  * ソート、ページネーション、CSVエクスポート機能を提供します。
  *
  * @author Trdinger Development Team
@@ -12,15 +12,15 @@
 
 import React from "react";
 import DataTable from "./DataTable";
-import { OpenInterestData } from "@/types/strategy";
-import { openInterestColumns } from "@/config/tableColumns";
+import { FundingRateData } from "@/types/strategy";
+import { fundingRateColumns } from "@/components/common/tableColumns";
 
 /**
- * OIデータテーブルのプロパティ
+ * FRデータテーブルのプロパティ
  */
-interface OpenInterestDataTableProps {
-  /** OIデータ */
-  data: OpenInterestData[];
+interface FundingRateDataTableProps {
+  /** FRデータ */
+  data: FundingRateData[];
   /** ローディング状態 */
   loading?: boolean;
   /** エラーメッセージ */
@@ -30,20 +30,19 @@ interface OpenInterestDataTableProps {
 }
 
 /**
- * OIデータテーブルコンポーネント
+ * FRデータテーブルコンポーネント
  */
-const OpenInterestDataTable: React.FC<OpenInterestDataTableProps> = ({
+const FundingRateDataTable: React.FC<FundingRateDataTableProps> = ({
   data,
   loading = false,
   error,
   className = "",
 }) => {
-
   return (
     <DataTable
       data={data}
-      columns={openInterestColumns}
-      title="📈 OIデータ"
+      columns={fundingRateColumns}
+      title="📊 FRデータ"
       loading={loading}
       error={error}
       pageSize={50}
@@ -55,4 +54,4 @@ const OpenInterestDataTable: React.FC<OpenInterestDataTableProps> = ({
   );
 };
 
-export default OpenInterestDataTable;
+export default FundingRateDataTable;

@@ -11,7 +11,7 @@
 import React from "react";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import "@testing-library/jest-dom";
-import OpenInterestDataTable from "@/components/OpenInterestDataTable";
+import OpenInterestDataTable from "@/components/table/OpenInterestDataTable";
 import { OpenInterestData } from "@/types/strategy";
 
 // モックデータ
