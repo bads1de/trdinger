@@ -20,6 +20,11 @@ import AllDataCollectionButton from "@/components/common/AllDataCollectionButton
 import TechnicalIndicatorCalculationButton from "@/components/common/TechnicalIndicatorCalculationButton";
 import SymbolSelector from "@/components/common/SymbolSelector";
 import TimeFrameSelector from "@/components/common/TimeFrameSelector";
+import DataHeader from "./components/DataHeader";
+import DataStatusPanel from "./components/DataStatusPanel";
+import DataControls from "./components/DataControls";
+
+import DataTableContainer from "./components/DataTableContainer";
 
 import {
   PriceData,
@@ -83,8 +88,10 @@ const DataPage: React.FC = () => {
     useState<string>("");
   const [allDataCollectionMessage, setAllDataCollectionMessage] =
     useState<string>("");
-  const [technicalIndicatorCalculationMessage, setTechnicalIndicatorCalculationMessage] =
-    useState<string>("");
+  const [
+    technicalIndicatorCalculationMessage,
+    setTechnicalIndicatorCalculationMessage,
+  ] = useState<string>("");
 
   /**
    * 通貨ペア一覧を取得
@@ -407,9 +414,7 @@ const DataPage: React.FC = () => {
         `🚀 全データ収集完了！ OHLCV:${ohlcvCount}タスク, FR:${fundingCount}件, OI:${openInterestCount}件, TI:自動計算済み`
       );
     } else {
-      setAllDataCollectionMessage(
-        `🔄 ${result.message} (実行中...)`
-      );
+      setAllDataCollectionMessage(`🔄 ${result.message} (実行中...)`);
     }
 
     // データ状況を更新
@@ -439,7 +444,9 @@ const DataPage: React.FC = () => {
   /**
    * TI一括計算開始時のコールバック
    */
-  const handleTechnicalIndicatorCalculationStart = (result: BulkTechnicalIndicatorCalculationResult) => {
+  const handleTechnicalIndicatorCalculationStart = (
+    result: BulkTechnicalIndicatorCalculationResult
+  ) => {
     setTechnicalIndicatorCalculationMessage(
       `🚀 ${result.symbol} ${result.timeframe}のTI一括計算完了 (${result.total_calculated}件計算完了)`
     );
@@ -480,91 +487,13 @@ const DataPage: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-secondary-50 dark:bg-secondary-950 animate-fade-in">
-      {/* エンタープライズヘッダー */}
-      <div className="enterprise-card border-0 rounded-none border-b border-secondary-200 dark:border-secondary-700 shadow-enterprise-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-            <div className="animate-slide-up">
-              <h1 className="text-3xl font-bold text-gradient">
-                📊 データテーブル
-              </h1>
-              <p className="mt-2 text-base text-secondary-600 dark:text-secondary-400">
-                エンタープライズレベルの仮想通貨データ分析・表示
-              </p>
-              <div className="mt-2 flex items-center gap-2">
-                <span className="badge-primary">リアルタイム</span>
-                <span className="badge-success">高精度データ</span>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-3 animate-slide-up">
-              {/* ステータスインジケーター */}
-              <div className="flex items-center gap-2">
-                <div
-                  className={`w-2 h-2 rounded-full ${
-                    loading
-                      ? "bg-warning-500 animate-pulse"
-                      : error
-                      ? "bg-error-500"
-                      : "bg-success-500"
-                  }`}
-                ></div>
-                <span className="text-sm text-secondary-600 dark:text-secondary-400">
-                  {loading ? "更新中" : error ? "エラー" : "接続中"}
-                </span>
-              </div>
-
-              <div className="flex gap-2">
-                <button
-                  onClick={handleRefresh}
-                  disabled={loading || updating}
-                  className="btn-primary group"
-                >
-                  <svg
-                    className={`w-4 h-4 mr-2 transition-transform duration-200 ${
-                      loading ? "animate-spin" : "group-hover:rotate-180"
-                    }`}
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-                    />
-                  </svg>
-                  {loading ? "更新中..." : "データ更新"}
-                </button>
-
-                <button
-                  onClick={handleIncrementalUpdate}
-                  disabled={loading || updating}
-                  className="btn-secondary group"
-                >
-                  <svg
-                    className={`w-4 h-4 mr-2 transition-transform duration-200 ${
-                      updating ? "animate-spin" : "group-hover:scale-110"
-                    }`}
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M12 4v16m8-8H4"
-                    />
-                  </svg>
-                  {updating ? "差分更新中..." : "差分更新"}
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
+      <DataHeader
+        loading={loading}
+        error={error}
+        updating={updating}
+        handleRefresh={handleRefresh}
+        handleIncrementalUpdate={handleIncrementalUpdate}
+      />
 
       {/* メインコンテンツエリア */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
@@ -598,389 +527,58 @@ const DataPage: React.FC = () => {
         )}
 
         {/* データ状況表示 */}
-        {dataStatus && (
-          <div className="enterprise-card animate-slide-up">
-            <div className="p-6">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-xl font-semibold text-secondary-900 dark:text-secondary-100">
-                  📊 データベース状況
-                </h2>
-                <span className="badge-primary">
-                  {dataStatus.data_count?.toLocaleString()}件
-                </span>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-                <div className="flex justify-between">
-                  <span className="text-secondary-600 dark:text-secondary-400">
-                    データ件数:
-                  </span>
-                  <span className="font-medium text-secondary-900 dark:text-secondary-100">
-                    {dataStatus.data_count?.toLocaleString()}件
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-secondary-600 dark:text-secondary-400">
-                    最新データ:
-                  </span>
-                  <span className="font-medium text-secondary-900 dark:text-secondary-100">
-                    {dataStatus.latest_timestamp
-                      ? new Date(dataStatus.latest_timestamp).toLocaleString(
-                          "ja-JP"
-                        )
-                      : "なし"}
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-secondary-600 dark:text-secondary-400">
-                    最古データ:
-                  </span>
-                  <span className="font-medium text-secondary-900 dark:text-secondary-100">
-                    {dataStatus.oldest_timestamp
-                      ? new Date(dataStatus.oldest_timestamp).toLocaleString(
-                          "ja-JP"
-                        )
-                      : "なし"}
-                  </span>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
+        <DataStatusPanel dataStatus={dataStatus} />
 
-        {/* コンパクトデータ設定 */}
-        <div className="enterprise-card animate-slide-up">
-          <div className="p-6">
-            {/* セクションヘッダー */}
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-lg font-semibold text-secondary-900 dark:text-secondary-100">
-                📈 データ設定
-              </h2>
-            </div>
+        <DataControls
+          symbols={symbols}
+          selectedSymbol={selectedSymbol}
+          handleSymbolChange={handleSymbolChange}
+          symbolsLoading={symbolsLoading}
+          loading={loading}
+          selectedTimeFrame={selectedTimeFrame}
+          handleTimeFrameChange={handleTimeFrameChange}
+          updating={updating}
+          handleAllDataCollectionStart={handleAllDataCollectionStart}
+          handleAllDataCollectionError={handleAllDataCollectionError}
+          handleBulkCollectionStart={handleBulkCollectionStart}
+          handleBulkCollectionError={handleBulkCollectionError}
+          handleFundingRateCollectionStart={handleFundingRateCollectionStart}
+          handleFundingRateCollectionError={handleFundingRateCollectionError}
+          handleOpenInterestCollectionStart={handleOpenInterestCollectionStart}
+          handleOpenInterestCollectionError={handleOpenInterestCollectionError}
+          handleTechnicalIndicatorCalculationStart={
+            handleTechnicalIndicatorCalculationStart
+          }
+          handleTechnicalIndicatorCalculationError={
+            handleTechnicalIndicatorCalculationError
+          }
+          bulkCollectionMessage={bulkCollectionMessage}
+          fundingRateCollectionMessage={fundingRateCollectionMessage}
+          openInterestCollectionMessage={openInterestCollectionMessage}
+          allDataCollectionMessage={allDataCollectionMessage}
+          technicalIndicatorCalculationMessage={
+            technicalIndicatorCalculationMessage
+          }
+        />
 
-            {/* 設定コントロール */}
-            <div className="space-y-6">
-              {/* 上段：基本設定 */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {/* 通貨ペア選択 */}
-                <SymbolSelector
-                  symbols={symbols}
-                  selectedSymbol={selectedSymbol}
-                  onSymbolChange={handleSymbolChange}
-                  loading={symbolsLoading}
-                  disabled={loading}
-                  mode="compact"
-                  showCategories={false}
-                  enableSearch={false}
-                />
-
-                {/* 時間軸選択 */}
-                <TimeFrameSelector
-                  selectedTimeFrame={selectedTimeFrame}
-                  onTimeFrameChange={handleTimeFrameChange}
-                  disabled={loading}
-                  mode="compact"
-                />
-              </div>
-
-              {/* 下段：データ収集ボタン */}
-              <div className="space-y-3">
-                <label className="block text-sm font-medium text-secondary-600 dark:text-secondary-400">
-                  データ収集
-                </label>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
-                  {/* 全データ一括収集ボタン */}
-                  <AllDataCollectionButton
-                    onCollectionStart={handleAllDataCollectionStart}
-                    onCollectionError={handleAllDataCollectionError}
-                    disabled={loading || updating}
-                    className="h-10 text-sm"
-                  />
-
-                  {/* OHLCV収集ボタン（CompactDataCollectionButtonsから分離） */}
-                  <button
-                    onClick={async () => {
-                      if (
-                        !confirm(
-                          "全ペア・全時間軸でOHLCVデータを収集しますか？"
-                        )
-                      )
-                        return;
-
-                      try {
-                        const response = await fetch("/api/data/ohlcv/bulk", {
-                          method: "POST",
-                          headers: { "Content-Type": "application/json" },
-                        });
-                        const result = await response.json();
-
-                        if (response.ok && result.success) {
-                          handleBulkCollectionStart?.(result);
-                        } else {
-                          handleBulkCollectionError?.(
-                            result.message || "OHLCV収集に失敗しました"
-                          );
-                        }
-                      } catch (error) {
-                        handleBulkCollectionError?.(
-                          "OHLCV収集中にエラーが発生しました"
-                        );
-                      }
-                    }}
-                    disabled={loading || updating}
-                    className="h-10 px-4 text-sm font-medium rounded-lg bg-blue-600 text-white hover:bg-blue-700 disabled:bg-gray-700 disabled:text-gray-400 disabled:cursor-not-allowed transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1"
-                  >
-                    <span>OHLCV収集</span>
-                  </button>
-
-                  {/* FR収集ボタン（CompactDataCollectionButtonsから分離） */}
-                  <button
-                    onClick={async () => {
-                      if (!confirm("FRデータを収集しますか？")) return;
-
-                      try {
-                        const response = await fetch(
-                          "/api/data/funding-rates/bulk",
-                          {
-                            method: "POST",
-                            headers: { "Content-Type": "application/json" },
-                          }
-                        );
-                        const result = await response.json();
-
-                        if (response.ok && result.success) {
-                          handleFundingRateCollectionStart?.(result);
-                        } else {
-                          handleFundingRateCollectionError?.(
-                            result.message || "FR収集に失敗しました"
-                          );
-                        }
-                      } catch (error) {
-                        handleFundingRateCollectionError?.(
-                          "FR収集中にエラーが発生しました"
-                        );
-                      }
-                    }}
-                    disabled={loading || updating}
-                    className="h-10 px-4 text-sm font-medium rounded-lg bg-green-600 text-white hover:bg-green-700 disabled:bg-gray-700 disabled:text-gray-400 disabled:cursor-not-allowed transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-1"
-                  >
-                    <span>FR収集</span>
-                  </button>
-
-                  {/* OI収集ボタン */}
-                  <OpenInterestCollectionButton
-                    mode="bulk"
-                    onCollectionStart={handleOpenInterestCollectionStart}
-                    onCollectionError={handleOpenInterestCollectionError}
-                    disabled={loading || updating}
-                    className="h-10 text-sm"
-                  />
-
-                  {/* TI一括計算ボタン */}
-                  <TechnicalIndicatorCalculationButton
-                    mode="bulk"
-                    symbol={selectedSymbol}
-                    timeframe={selectedTimeFrame}
-                    onCalculationStart={handleTechnicalIndicatorCalculationStart}
-                    onCalculationError={handleTechnicalIndicatorCalculationError}
-                    disabled={loading || updating}
-                    className="h-10 text-sm"
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* ステータスメッセージ */}
-            {(bulkCollectionMessage ||
-              fundingRateCollectionMessage ||
-              openInterestCollectionMessage ||
-              allDataCollectionMessage ||
-              technicalIndicatorCalculationMessage) && (
-              <div className="mt-6 pt-4 border-t border-secondary-200 dark:border-secondary-700">
-                <div className="space-y-2">
-                  {allDataCollectionMessage && (
-                    <div className="text-sm text-secondary-600 dark:text-secondary-400 font-medium">
-                      {allDataCollectionMessage}
-                    </div>
-                  )}
-                  {bulkCollectionMessage && (
-                    <div className="text-sm text-secondary-600 dark:text-secondary-400">
-                      {bulkCollectionMessage}
-                    </div>
-                  )}
-                  {fundingRateCollectionMessage && (
-                    <div className="text-sm text-secondary-600 dark:text-secondary-400">
-                      {fundingRateCollectionMessage}
-                    </div>
-                  )}
-                  {openInterestCollectionMessage && (
-                    <div className="text-sm text-secondary-600 dark:text-secondary-400">
-                      {openInterestCollectionMessage}
-                    </div>
-                  )}
-                  {technicalIndicatorCalculationMessage && (
-                    <div className="text-sm text-secondary-600 dark:text-secondary-400">
-                      {technicalIndicatorCalculationMessage}
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* データ表示エリア */}
-        <div className="enterprise-card animate-slide-up">
-          <div className="p-6">
-            {/* タブヘッダー */}
-            <div className="flex items-center justify-between mb-6">
-              <div className="flex items-center gap-4">
-                <h2 className="text-xl font-semibold text-secondary-900 dark:text-secondary-100">
-                  📊 {selectedSymbol} - データテーブル
-                </h2>
-                <div className="flex bg-gray-800 rounded-lg p-1">
-                  <button
-                    onClick={() => setActiveTab("ohlcv")}
-                    className={`px-4 py-2 text-sm font-medium rounded-md transition-colors duration-200 ${
-                      activeTab === "ohlcv"
-                        ? "bg-primary-600 text-white"
-                        : "text-gray-400 hover:text-gray-100"
-                    }`}
-                  >
-                    OHLCV
-                  </button>
-                  <button
-                    onClick={() => setActiveTab("funding")}
-                    className={`px-4 py-2 text-sm font-medium rounded-md transition-colors duration-200 ${
-                      activeTab === "funding"
-                        ? "bg-primary-600 text-white"
-                        : "text-gray-400 hover:text-gray-100"
-                    }`}
-                  >
-                    FR
-                  </button>
-                  <button
-                    onClick={() => setActiveTab("openinterest")}
-                    className={`px-4 py-2 text-sm font-medium rounded-md transition-colors duration-200 ${
-                      activeTab === "openinterest"
-                        ? "bg-primary-600 text-white"
-                        : "text-gray-400 hover:text-gray-100"
-                    }`}
-                  >
-                    OI
-                  </button>
-                  <button
-                    onClick={() => setActiveTab("technical")}
-                    className={`px-4 py-2 text-sm font-medium rounded-md transition-colors duration-200 ${
-                      activeTab === "technical"
-                        ? "bg-primary-600 text-white"
-                        : "text-gray-400 hover:text-gray-100"
-                    }`}
-                  >
-                    TI
-                  </button>
-                </div>
-              </div>
-
-              {/* データ情報バッジ */}
-              <div className="flex items-center gap-2">
-                {activeTab === "ohlcv" && ohlcvData.length > 0 && !loading && (
-                  <>
-                    <span className="badge-primary">{ohlcvData.length}件</span>
-                    <span className="badge-success">
-                      最新: ${ohlcvData[ohlcvData.length - 1]?.close.toFixed(2)}
-                    </span>
-                  </>
-                )}
-                {activeTab === "funding" &&
-                  fundingRateData.length > 0 &&
-                  !fundingLoading && (
-                    <>
-                      <span className="badge-primary">
-                        {fundingRateData.length}件
-                      </span>
-                      <span className="badge-info">
-                        最新レート:{" "}
-                        {(fundingRateData[0]?.funding_rate * 100).toFixed(4)}%
-                      </span>
-                    </>
-                  )}
-                {activeTab === "openinterest" &&
-                  openInterestData.length > 0 &&
-                  !openInterestLoading && (
-                    <>
-                      <span className="badge-primary">
-                        {openInterestData.length}件
-                      </span>
-                      <span className="badge-warning">
-                        最新OI:{" "}
-                        {new Intl.NumberFormat("en-US", {
-                          style: "currency",
-                          currency: "USD",
-                          notation: "compact",
-                          maximumFractionDigits: 1,
-                        }).format(
-                          openInterestData[0]?.open_interest_value || 0
-                        )}
-                      </span>
-                    </>
-                  )}
-                {activeTab === "technical" &&
-                  technicalIndicatorData.length > 0 &&
-                  !technicalIndicatorLoading && (
-                    <>
-                      <span className="badge-primary">
-                        {technicalIndicatorData.length}件
-                      </span>
-                      <span className="badge-info">
-                        指標数:{" "}
-                        {
-                          new Set(
-                            technicalIndicatorData.map(
-                              (item) => `${item.indicator_type}(${item.period})`
-                            )
-                          ).size
-                        }
-                      </span>
-                    </>
-                  )}
-              </div>
-            </div>
-
-            {/* タブコンテンツ */}
-            <div className="relative">
-              {activeTab === "ohlcv" && (
-                <OHLCVDataTable
-                  data={ohlcvData}
-                  symbol={selectedSymbol}
-                  timeframe={selectedTimeFrame}
-                  loading={loading}
-                  error={error}
-                />
-              )}
-              {activeTab === "funding" && (
-                <FundingRateDataTable
-                  data={fundingRateData}
-                  loading={fundingLoading}
-                  error={fundingError}
-                />
-              )}
-              {activeTab === "openinterest" && (
-                <OpenInterestDataTable
-                  data={openInterestData}
-                  loading={openInterestLoading}
-                  error={openInterestError}
-                />
-              )}
-              {activeTab === "technical" && (
-                <TechnicalIndicatorDataTable
-                  data={technicalIndicatorData}
-                  loading={technicalIndicatorLoading}
-                  error={technicalIndicatorError}
-                />
-              )}
-            </div>
-          </div>
-        </div>
+        <DataTableContainer
+          selectedSymbol={selectedSymbol}
+          selectedTimeFrame={selectedTimeFrame}
+          activeTab={activeTab}
+          setActiveTab={setActiveTab}
+          ohlcvData={ohlcvData}
+          loading={loading}
+          error={error}
+          fundingRateData={fundingRateData}
+          fundingLoading={fundingLoading}
+          fundingError={fundingError}
+          openInterestData={openInterestData}
+          openInterestLoading={openInterestLoading}
+          openInterestError={openInterestError}
+          technicalIndicatorData={technicalIndicatorData}
+          technicalIndicatorLoading={technicalIndicatorLoading}
+          technicalIndicatorError={technicalIndicatorError}
+        />
       </div>
     </div>
   );
