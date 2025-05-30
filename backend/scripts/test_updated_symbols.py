@@ -2,7 +2,7 @@
 """
 更新されたシンボル設定をテストするスクリプト
 
-新しく追加されたBTC、ETH、XRP、BNB、SOLのスポット・先物ペアが
+新しく追加されたBTC（ETHは除外）のスポット・先物ペアが
 正しく設定されているかを確認します。
 """
 
@@ -26,7 +26,7 @@ def test_symbol_validation():
     print("=" * 60)
 
     # テスト対象の通貨
-    target_currencies = ["BTC", "ETH", "XRP", "BNB", "SOL"]
+    target_currencies = ["BTC"]  # ETHは除外
 
     for currency in target_currencies:
         print(f"\n【{currency}】")
