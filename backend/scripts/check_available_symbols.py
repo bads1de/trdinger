@@ -78,12 +78,11 @@ class SymbolChecker:
         Returns:
             関連するペアの場合True
         """
-        # 主要なスポットペアのパターン
+        # 主要なスポットペアのパターン（ETHは除外）
         relevant_patterns = [
             f"{currency}/USDT",
             f"{currency}/USD",
             f"{currency}/BTC",
-            f"{currency}/ETH",
         ]
 
         return any(pattern in symbol for pattern in relevant_patterns)

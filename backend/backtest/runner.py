@@ -25,7 +25,7 @@ def generate_sample_data(start_date: str, end_date: str, symbol: str = "BTC/USD"
 
     # ランダムウォークで価格データを生成
     np.random.seed(42)  # 再現性のため
-    base_price = 50000 if symbol.startswith('BTC') else 3000  # BTC or ETH
+    base_price = 50000 if symbol.startswith('BTC') else 50000  # BTC only (ETH excluded)
 
     # より現実的な価格変動を生成
     returns = np.random.normal(0, 0.001, len(date_range))  # 0.1%の標準偏差

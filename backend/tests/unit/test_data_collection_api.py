@@ -167,34 +167,7 @@ class TestDataCollectionAPI:
         assert "SOL/USDT" in data["symbols"]
         assert "LTC/USDT" in data["symbols"]
         assert "UNI/USDT" in data["symbols"]
-        assert "ETH/USDT" in data["symbols"]
+        # ETH/USDTは除外されているため、アサーションから削除
         assert "1d" in data["timeframes"]
 
-    def test_ethusd_symbol_handling(self, client, mock_db, mock_repository):
-        """
-        ETHUSD（先物）シンボルの処理をテスト
-        """
-        # Given: ETHUSDデータが存在する場合
-        mock_repository.get_data_count.return_value = 50
-        mock_repository.get_latest_timestamp.return_value = None
-        mock_repository.get_oldest_timestamp.return_value = None
-
-        with (
-            patch("app.api.data_collection.get_db", return_value=mock_db),
-            patch(
-                "app.api.data_collection.OHLCVRepository",
-                return_value=mock_repository,
-            ),
-        ):
-
-            # When: ETHUSDのステータスを確認
-            response = client.get("/api/data-collection/status/ETHUSD/1d")
-
-            # Then: 正常にレスポンスが返される
-            assert response.status_code == 200
-            data = response.json()
-            assert data["success"] is True
-            assert data["symbol"] == "ETHUSD"  # 正規化されたシンボル
-            assert data["original_symbol"] == "ETHUSD"
-            assert data["data_count"] == 50
-            assert data["status"] == "data_exists"
+    # ETHUSDテストは削除（ETHは分析対象から除外）

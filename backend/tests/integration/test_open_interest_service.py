@@ -41,7 +41,7 @@ class TestBybitOpenInterestService:
         test_cases = [
             ("BTC/USDT", "BTC/USDT:USDT"),
             ("BTC/USDT:USDT", "BTC/USDT:USDT"),
-            ("ETH/USDT", "ETH/USDT:USDT"),
+
             ("BTC/USD", "BTC/USD:USD"),
             ("INVALID", "INVALID:USDT"),  # デフォルト
         ]

@@ -66,12 +66,12 @@ class TestBybitFundingRateService:
         """シンボル正規化のテスト"""
         # スポット形式から無期限契約形式への変換
         assert funding_rate_service.normalize_symbol('BTC/USDT') == 'BTC/USDT:USDT'
-        assert funding_rate_service.normalize_symbol('ETH/USDT') == 'ETH/USDT:USDT'
+        # ETH/USDTは除外されているため、テストから削除
         assert funding_rate_service.normalize_symbol('BTC/USD') == 'BTC/USD:USD'
         
         # 既に無期限契約形式の場合はそのまま
         assert funding_rate_service.normalize_symbol('BTC/USDT:USDT') == 'BTC/USDT:USDT'
-        assert funding_rate_service.normalize_symbol('ETH/USDT:USDT') == 'ETH/USDT:USDT'
+        # ETH/USDT:USDTは除外されているため、テストから削除
         
         # その他の形式はデフォルトでUSDT無期限契約
         assert funding_rate_service.normalize_symbol('BTCUSDT') == 'BTCUSDT:USDT'

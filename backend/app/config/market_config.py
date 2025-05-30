@@ -21,7 +21,7 @@ class MarketDataConfig:
 
     # サポートされているシンボル（Bybit形式）- BTCのみに制限
     SUPPORTED_SYMBOLS = [
-        # Bitcoin 関連
+        # Bitcoin 関連のみ（ETHは除外）
         "BTC/USDT",  # Bitcoin スポット
         "BTC/USDT:USDT",  # Bitcoin USDT永続契約
         "BTCUSD",  # Bitcoin USD永続契約

@@ -134,13 +134,9 @@ class TestBybitFundingRateAPI:
         """
         logger.info("=== 複数シンボルファンディングレート取得テスト ===")
 
-        # テスト対象シンボル（主要な無期限契約）
+        # テスト対象シンボル（BTCのみ、ETHは除外）
         symbols = [
             "BTC/USDT:USDT",
-            "ETH/USDT:USDT",
-            "SOL/USDT:USDT",
-            "ADA/USDT:USDT",
-            "DOT/USDT:USDT",
         ]
 
         results = {}
@@ -500,87 +496,17 @@ class TestBybitFundingRateAPI:
             # 統合テストのエラーは実装の問題を示す
             pytest.fail(f"統合テストに失敗: {e}")
 
-    @pytest.mark.asyncio
-    async def test_eth_funding_rate_service_pagination(self):
-        """
-        ETHファンディングレートサービスのページネーション機能テスト
 
-        ETHでも改善されたページネーション機能が正常に動作することを確認します。
-        """
-        logger.info("=== ETHファンディングレートサービステスト ===")
-
-        from app.core.services.funding_rate_service import BybitFundingRateService
-
-        try:
-            # 改善されたサービスを作成
-            service = BybitFundingRateService()
-            symbol = "ETH/USDT"
-
-            logger.info(f"ETHサービスで {symbol} の全期間データを取得中...")
-
-            # 改善されたfetch_all_funding_rate_historyメソッドを使用
-            all_funding_history = await service.fetch_all_funding_rate_history(symbol)
-
-            logger.info(f"ETHサービス取得結果: {len(all_funding_history)}件")
-
-            # 基本的な検証
-            assert len(all_funding_history) > 0, "ETHデータが取得できませんでした"
-
-            # 200件を超えるデータが取得できるかテスト
-            if len(all_funding_history) > 200:
-                logger.info(f"✅ ETH 200件制限を突破: {len(all_funding_history)}件取得")
-
-                # データの一意性確認
-                timestamps = [item["timestamp"] for item in all_funding_history]
-                unique_timestamps = set(timestamps)
-                assert len(timestamps) == len(
-                    unique_timestamps
-                ), "ETHデータに重複が含まれています"
-
-                # データの時系列順序確認（古い順）
-                sorted_timestamps = sorted(timestamps)
-                assert (
-                    timestamps == sorted_timestamps
-                ), "ETHデータが時系列順に並んでいません"
-
-                logger.info("✅ ETHデータの整合性確認完了")
-            else:
-                logger.warning(
-                    f"⚠️ ETH 200件制限内のデータ: {len(all_funding_history)}件"
-                )
-
-            # データ構造の確認
-            if all_funding_history:
-                sample_data = all_funding_history[0]
-                required_fields = ["symbol", "fundingRate", "timestamp", "datetime"]
-
-                for field in required_fields:
-                    assert (
-                        field in sample_data
-                    ), f"ETHデータの必須フィールド '{field}' が見つかりません"
-
-                # ETHシンボルの確認
-                assert (
-                    "ETH" in sample_data["symbol"]
-                ), f"ETHシンボルが正しくありません: {sample_data['symbol']}"
-
-                logger.info("✅ ETHデータ構造確認完了")
-
-            logger.info("✅ ETHファンディングレートサービステスト完了")
-
-        except Exception as e:
-            logger.error(f"❌ ETHサービステストエラー: {e}")
-            # ETHサービスのテストなので、エラーは実装の問題を示す
-            pytest.fail(f"ETHサービステストに失敗: {e}")
 
     @pytest.mark.asyncio
-    async def test_bulk_funding_rate_collection_btc_eth(self):
+    async def test_bulk_funding_rate_collection_btc(self):
         """
-        BTC・ETH一括ファンディングレート収集テスト
+        BTC一括ファンディングレート収集テスト
 
-        一括収集機能でBTCとETHの両方が正常に取得できることを確認します。
+        一括収集機能でBTCが正常に取得できることを確認します。
+        ETHは分析対象から除外されています。
         """
-        logger.info("=== BTC・ETH一括ファンディングレート収集テスト ===")
+        logger.info("=== BTC一括ファンディングレート収集テスト ===")
 
         from app.core.services.funding_rate_service import BybitFundingRateService
         from database.repositories.funding_rate_repository import FundingRateRepository
@@ -592,8 +518,8 @@ class TestBybitFundingRateAPI:
             db = SessionLocal()
             repository = FundingRateRepository(db)
 
-            # BTC・ETHシンボル
-            symbols = ["BTC/USDT", "ETH/USDT"]
+            # BTCシンボルのみ（ETHは除外）
+            symbols = ["BTC/USDT"]
             results = {}
 
             for symbol in symbols:
@@ -647,15 +573,15 @@ class TestBybitFundingRateAPI:
             # 少なくとも1つは成功することを期待
             assert len(successful_symbols) > 0, "全てのシンボルで一括収集に失敗"
 
-            # BTCとETHの両方が成功することを期待
+            # BTCが成功することを期待
             if len(successful_symbols) == len(symbols):
-                logger.info("✅ BTC・ETH両方の一括収集成功")
+                logger.info("✅ BTC一括収集成功")
             else:
                 logger.warning(
                     f"⚠️ 一部のシンボルで失敗: {[s for s in symbols if s not in successful_symbols]}"
                 )
 
-            logger.info("✅ BTC・ETH一括ファンディングレート収集テスト完了")
+            logger.info("✅ BTC一括ファンディングレート収集テスト完了")
 
         except Exception as e:
             logger.error(f"❌ 一括収集テストエラー: {e}")

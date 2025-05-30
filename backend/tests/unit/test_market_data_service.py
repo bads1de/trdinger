@@ -212,7 +212,8 @@ class TestMarketDataConfig:
         with pytest.raises(ValueError):
             MarketDataConfig.normalize_symbol("INVALID")
         with pytest.raises(ValueError):
-            MarketDataConfig.normalize_symbol("ETHUSD")  # ETHは除外
+            # ETHは除外されているため、無効なシンボルとしてテスト
+            MarketDataConfig.normalize_symbol("ETHUSD")
 
     def test_timeframe_validation(self):
         """時間軸バリデーションのテスト"""
