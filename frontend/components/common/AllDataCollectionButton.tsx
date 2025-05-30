@@ -41,8 +41,9 @@ const AllDataCollectionButton: React.FC<AllDataCollectionButtonProps> = ({
     apiEndpoint: "/api/data/all/bulk-collect",
     method: "POST",
     confirmMessage:
-      "全データ（OHLCV・FR・OI）を一括取得します。\n\n" +
-      "この処理には数分から十数分かかる場合があります。続行しますか？",
+      "全データ（OHLCV・FR・OI・TI）を一括取得します。\n\n" +
+      "この処理には数分から十数分かかる場合があります。\n" +
+      "テクニカル指標も自動計算されます。続行しますか？",
     buttonText: {
       idle: "全データ取得",
       loading: "収集中...",
@@ -66,7 +67,7 @@ const AllDataCollectionButton: React.FC<AllDataCollectionButtonProps> = ({
         </svg>
       ),
     },
-    description: "OHLCV・FR・OIの全データを一括収集",
+    description: "OHLCV・FR・OI・TIの全データを一括収集",
     successResetTime: 10000,
     errorResetTime: 10000,
   };

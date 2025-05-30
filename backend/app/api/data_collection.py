@@ -429,6 +429,147 @@ async def get_supported_symbols() -> Dict:
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@router.post("/all/bulk-collect")
+async def collect_all_data_bulk(
+    background_tasks: BackgroundTasks, db: Session = Depends(get_db)
+) -> Dict:
+    """
+    全データ（OHLCV・Funding Rate・Open Interest・Technical Indicators）を一括収集
+
+    既存データをチェックし、データが存在しない組み合わせのみ収集を実行します。
+    OHLCVデータ収集後にテクニカル指標も自動計算します。
+
+    Args:
+        background_tasks: バックグラウンドタスク
+        db: データベースセッション
+
+    Returns:
+        全データ一括収集開始レスポンス
+    """
+    try:
+        # データベース初期化確認
+        if not ensure_db_initialized():
+            logger.error("データベースの初期化に失敗しました")
+            raise HTTPException(
+                status_code=500, detail="データベースの初期化に失敗しました"
+            )
+
+        from datetime import datetime, timezone
+
+        # サポートされている取引ペアと時間軸（BTCとETHのみに制限）
+        symbols = [
+            "BTC/USDT",
+            "BTC/USDT:USDT",
+            "BTCUSD",
+            "ETH/USDT",
+            "ETH/BTC",
+            "ETH/USDT:USDT",
+            "ETHUSD",
+        ]
+
+        # 時間軸設定（処理時間短縮のため現在は日足のみ）
+        timeframes = ["1d"]  # 日足のみ（高速処理用）
+
+        total_combinations = len(symbols) * len(timeframes)
+        started_at = datetime.now(timezone.utc).isoformat()
+
+        repository = OHLCVRepository(db)
+
+        # 既存データをチェックして、実際に収集が必要なタスクを特定
+        tasks_to_execute = []
+        skipped_tasks = []
+        failed_tasks = []
+
+        logger.info(
+            f"全データ一括収集開始: {len(symbols)}個のシンボル × {len(timeframes)}個の時間軸 = {total_combinations}組み合わせを確認"
+        )
+
+        for symbol in symbols:
+            for timeframe in timeframes:
+                try:
+                    # シンボルの正規化
+                    normalized_symbol = MarketDataConfig.normalize_symbol(symbol)
+
+                    # 既存データをチェック
+                    data_exists = (
+                        repository.get_data_count(normalized_symbol, timeframe) > 0
+                    )
+
+                    if data_exists:
+                        skipped_tasks.append(
+                            {
+                                "symbol": normalized_symbol,
+                                "original_symbol": symbol,
+                                "timeframe": timeframe,
+                                "reason": "data_exists",
+                            }
+                        )
+                        logger.debug(
+                            f"スキップ: {normalized_symbol} {timeframe} - データが既に存在"
+                        )
+                    else:
+                        # データが存在しない場合のみバックグラウンドタスクとして追加
+                        background_tasks.add_task(
+                            _collect_all_data_background,
+                            normalized_symbol,
+                            timeframe,
+                            db,
+                        )
+                        tasks_to_execute.append(
+                            {
+                                "symbol": normalized_symbol,
+                                "original_symbol": symbol,
+                                "timeframe": timeframe,
+                            }
+                        )
+                        logger.info(f"全データタスク追加: {normalized_symbol} {timeframe}")
+
+                except Exception as task_error:
+                    logger.warning(
+                        f"タスク処理エラー {symbol} {timeframe}: {task_error}"
+                    )
+                    failed_tasks.append(
+                        {
+                            "symbol": symbol,
+                            "timeframe": timeframe,
+                            "error": str(task_error),
+                        }
+                    )
+                    continue
+
+        actual_tasks = len(tasks_to_execute)
+        skipped_count = len(skipped_tasks)
+        failed_count = len(failed_tasks)
+
+        logger.info(f"全データ一括収集タスク分析完了:")
+        logger.info(f"  - 総組み合わせ数: {total_combinations}")
+        logger.info(f"  - 実行タスク数: {actual_tasks}")
+        logger.info(f"  - スキップ数: {skipped_count} (既存データ)")
+        logger.info(f"  - 失敗数: {failed_count}")
+
+        return {
+            "success": True,
+            "message": f"全データ一括収集を開始しました（{actual_tasks}タスク実行、{skipped_count}タスクスキップ）",
+            "status": "started",
+            "total_combinations": total_combinations,
+            "actual_tasks": actual_tasks,
+            "skipped_tasks": skipped_count,
+            "failed_tasks": failed_count,
+            "started_at": started_at,
+            "symbols": symbols,
+            "timeframes": timeframes,
+            "task_details": {
+                "executing": tasks_to_execute,
+                "skipped": skipped_tasks,
+                "failed": failed_tasks,
+            },
+        }
+
+    except Exception as e:
+        logger.error(f"全データ一括収集開始エラー: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @router.get("/test-modified")
 async def test_modified_code() -> Dict:
     """
@@ -440,6 +581,109 @@ async def test_modified_code() -> Dict:
         "message": "修正されたコードが正常に動作しています",
         "version": "modified_2025_05_27",
     }
+
+
+async def _collect_all_data_background(symbol: str, timeframe: str, db: Session):
+    """バックグラウンドでの全データ収集（OHLCV・FR・OI・TI）"""
+    try:
+        logger.info(f"全データ収集開始: {symbol} {timeframe}")
+
+        # 1. OHLCVデータ収集
+        logger.info(f"OHLCV収集開始: {symbol} {timeframe}")
+        historical_service = HistoricalDataService()
+        ohlcv_repository = OHLCVRepository(db)
+
+        ohlcv_result = await historical_service.collect_historical_data(
+            symbol, timeframe, ohlcv_repository
+        )
+
+        if not ohlcv_result["success"]:
+            logger.error(f"OHLCV収集失敗: {symbol} {timeframe} - {ohlcv_result.get('message')}")
+            return
+
+        logger.info(f"OHLCV収集完了: {symbol} {timeframe} - {ohlcv_result['saved_count']}件保存")
+
+        # 2. Funding Rate収集
+        try:
+            logger.info(f"Funding Rate収集開始: {symbol} {timeframe}")
+            from app.core.services.funding_rate_service import BybitFundingRateService
+            from database.repositories.funding_rate_repository import FundingRateRepository
+
+            funding_service = BybitFundingRateService()
+            funding_repository = FundingRateRepository(db)
+
+            funding_result = await funding_service.fetch_and_save_funding_rate_data(
+                symbol=symbol,
+                repository=funding_repository,
+                fetch_all=True
+            )
+
+            if funding_result["success"]:
+                logger.info(f"Funding Rate収集完了: {symbol} - {funding_result['saved_count']}件保存")
+            else:
+                logger.warning(f"Funding Rate収集失敗: {symbol} - {funding_result.get('message')}")
+
+        except Exception as funding_error:
+            logger.warning(f"Funding Rate収集エラー: {symbol} - {funding_error}")
+
+        # 3. Open Interest収集
+        try:
+            logger.info(f"Open Interest収集開始: {symbol} {timeframe}")
+            from app.core.services.open_interest_service import BybitOpenInterestService
+            from database.repositories.open_interest_repository import OpenInterestRepository
+
+            oi_service = BybitOpenInterestService()
+            oi_repository = OpenInterestRepository(db)
+
+            oi_result = await oi_service.fetch_and_save_open_interest_data(
+                symbol=symbol,
+                repository=oi_repository,
+                fetch_all=True,
+                interval=timeframe
+            )
+
+            if oi_result["success"]:
+                logger.info(f"Open Interest収集完了: {symbol} {timeframe} - {oi_result['saved_count']}件保存")
+            else:
+                logger.warning(f"Open Interest収集失敗: {symbol} {timeframe} - {oi_result.get('message')}")
+
+        except Exception as oi_error:
+            logger.warning(f"Open Interest収集エラー: {symbol} {timeframe} - {oi_error}")
+
+        # 4. テクニカル指標計算
+        try:
+            logger.info(f"テクニカル指標計算開始: {symbol} {timeframe}")
+            from app.core.services.technical_indicator_service import TechnicalIndicatorService
+            from database.repositories.technical_indicator_repository import TechnicalIndicatorRepository
+
+            ti_service = TechnicalIndicatorService()
+            ti_repository = TechnicalIndicatorRepository(db)
+
+            # デフォルト指標セットを取得
+            indicators = ti_service.get_default_indicators()
+
+            ti_result = await ti_service.calculate_and_save_multiple_indicators(
+                symbol=symbol,
+                timeframe=timeframe,
+                indicators=indicators,
+                repository=ti_repository,
+                limit=None  # 全データを使用
+            )
+
+            if ti_result["successful_indicators"] > 0:
+                logger.info(f"テクニカル指標計算完了: {symbol} {timeframe} - {ti_result['total_saved']}件保存")
+            else:
+                logger.warning(f"テクニカル指標計算失敗: {symbol} {timeframe}")
+
+        except Exception as ti_error:
+            logger.warning(f"テクニカル指標計算エラー: {symbol} {timeframe} - {ti_error}")
+
+        logger.info(f"全データ収集完了: {symbol} {timeframe}")
+
+    except Exception as e:
+        logger.error(f"全データ収集エラー: {symbol} {timeframe} - {e}")
+    finally:
+        db.close()
 
 
 async def _collect_historical_background(symbol: str, timeframe: str, db: Session):
