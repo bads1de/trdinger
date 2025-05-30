@@ -93,9 +93,9 @@ class TestBybitOpenInterestAPI:
     @pytest.mark.integration
     def test_fetch_open_interest_multiple_symbols(self, bybit_exchange):
         """複数シンボルのオープンインタレスト取得テスト"""
-        # Given: 複数の無期限契約シンボル
+        # Given: BTCの無期限契約シンボル（ETHは除外）
         exchange = bybit_exchange
-        symbols = ["BTC/USDT:USDT", "ETH/USDT:USDT"]
+        symbols = ["BTC/USDT:USDT"]
 
         # When & Then: 各シンボルでオープンインタレストを取得
         for symbol in symbols:

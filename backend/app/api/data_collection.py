@@ -182,15 +182,11 @@ async def collect_bulk_historical_data(
 
         from datetime import datetime, timezone
 
-        # サポートされている取引ペアと時間軸（BTCとETHのみに制限）
+        # サポートされている取引ペアと時間軸（BTCのみに制限、ETHは除外）
         symbols = [
             "BTC/USDT",
             "BTC/USDT:USDT",
             "BTCUSD",
-            "ETH/USDT",
-            "ETH/BTC",
-            "ETH/USDT:USDT",
-            "ETHUSD",
         ]
 
         # 時間軸設定（処理時間短縮のため現在は日足のみ）
@@ -456,15 +452,11 @@ async def collect_all_data_bulk(
 
         from datetime import datetime, timezone
 
-        # サポートされている取引ペアと時間軸（BTCとETHのみに制限）
+        # サポートされている取引ペアと時間軸（BTCのみに制限、ETHは除外）
         symbols = [
             "BTC/USDT",
             "BTC/USDT:USDT",
             "BTCUSD",
-            "ETH/USDT",
-            "ETH/BTC",
-            "ETH/USDT:USDT",
-            "ETHUSD",
         ]
 
         # 時間軸設定（処理時間短縮のため現在は日足のみ）

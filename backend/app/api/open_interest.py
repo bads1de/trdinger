@@ -225,9 +225,10 @@ async def bulk_collect_open_interest(
     db: Session = Depends(get_db),
 ):
     """
-    BTC・ETHシンボルのオープンインタレストデータを一括収集します
+    BTCシンボルのオープンインタレストデータを一括収集します
 
-    BTC・ETHの無期限契約シンボルの全期間オープンインタレストデータを一括で取得・保存します。
+    BTCの無期限契約シンボルの全期間オープンインタレストデータを一括で取得・保存します。
+    ETHは分析対象から除外されています。
 
     Args:
         db: データベースセッション
@@ -239,7 +240,7 @@ async def bulk_collect_open_interest(
         HTTPException: データベースエラーが発生した場合
     """
     try:
-        logger.info("オープンインタレスト一括収集開始: BTC・ETH全期間データ")
+        logger.info("オープンインタレスト一括収集開始: BTC全期間データ")
 
         # データベース初期化確認
         if not ensure_db_initialized():
@@ -248,10 +249,9 @@ async def bulk_collect_open_interest(
                 status_code=500, detail="データベースの初期化に失敗しました"
             )
 
-        # BTC・ETHの無期限契約シンボル（USDTのみ）
+        # BTCの無期限契約シンボル（USDTのみ、ETHは除外）
         symbols = [
             "BTC/USDT:USDT",
-            "ETH/USDT:USDT",
         ]
 
         # オープンインタレストサービスを作成
@@ -302,7 +302,7 @@ async def bulk_collect_open_interest(
                 },
                 "failed_symbols": failed_symbols,
             },
-            "message": f"{successful_symbols}/{len(symbols)}シンボルで合計{total_saved}件のオープンインタレストデータを保存しました",
+            "message": f"{successful_symbols}/{len(symbols)}シンボル（BTC）で合計{total_saved}件のオープンインタレストデータを保存しました",
         }
 
     except Exception as e:
