@@ -572,23 +572,33 @@ export interface AllDataCollectionResult {
   /** 処理状況 */
   status: "started" | "in_progress" | "completed" | "error";
   /** 総ステップ数 */
-  total_steps: number;
+  total_steps?: number;
   /** 完了したステップ数 */
-  completed_steps: number;
+  completed_steps?: number;
   /** 現在のステップ */
-  current_step?: "ohlcv" | "funding_rate" | "open_interest";
+  current_step?: "ohlcv" | "funding_rate" | "open_interest" | "technical_indicators";
   /** OHLCVデータ収集結果 */
   ohlcv_result?: BulkOHLCVCollectionResult;
   /** FRデータ収集結果 */
   funding_rate_result?: BulkFundingRateCollectionResult;
   /** OIデータ収集結果 */
   open_interest_result?: BulkOpenInterestCollectionResult;
+  /** テクニカル指標計算結果 */
+  technical_indicator_result?: BulkTechnicalIndicatorCalculationResult;
   /** 開始時刻 */
-  started_at: string;
+  started_at?: string;
   /** 完了時刻 */
   completed_at?: string;
   /** エラー詳細（エラー時のみ） */
   error_details?: string;
+  /** 実行タスク数 */
+  actual_tasks?: number;
+  /** スキップタスク数 */
+  skipped_tasks?: number;
+  /** 失敗タスク数 */
+  failed_tasks?: number;
+  /** 総組み合わせ数 */
+  total_combinations?: number;
 }
 
 /**

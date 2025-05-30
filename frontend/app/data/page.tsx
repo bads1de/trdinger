@@ -404,16 +404,25 @@ const DataPage: React.FC = () => {
         result.open_interest_result?.total_saved_records || 0;
 
       setAllDataCollectionMessage(
-        `🚀 全データ収集完了！ OHLCV:${ohlcvCount}タスク, FR:${fundingCount}件, OI:${openInterestCount}件`
+        `🚀 全データ収集完了！ OHLCV:${ohlcvCount}タスク, FR:${fundingCount}件, OI:${openInterestCount}件, TI:自動計算済み`
       );
     } else {
       setAllDataCollectionMessage(
-        `🔄 ${result.message} (${result.completed_steps}/${result.total_steps})`
+        `🔄 ${result.message} (実行中...)`
       );
     }
 
     // データ状況を更新
     fetchDataStatus();
+
+    // 全データ収集完了後に全てのデータを再取得
+    setTimeout(() => {
+      fetchOHLCVData();
+      fetchFundingRateData();
+      fetchOpenInterestData();
+      fetchTechnicalIndicatorData();
+    }, 3000);
+
     // 15秒後にメッセージをクリア
     setTimeout(() => setAllDataCollectionMessage(""), 15000);
   };
