@@ -28,7 +28,7 @@ class MarketDataConfig:
     ]
 
     # サポートされている時間軸
-    SUPPORTED_TIMEFRAMES = ["15m", "30m", "1h", "4h", "1d"]
+    SUPPORTED_TIMEFRAMES = ["1m", "15m", "30m", "1h", "4h", "1d"]
 
     # デフォルト設定
     DEFAULT_EXCHANGE = "bybit"
@@ -127,31 +127,7 @@ class MarketDataConfig:
 
         return normalized
 
-    @classmethod
-    def validate_timeframe(cls, timeframe: str) -> bool:
-        """
-        時間軸が有効かチェックします
 
-        Args:
-            timeframe: チェックする時間軸
-
-        Returns:
-            有効な場合True
-        """
-        return timeframe in cls.SUPPORTED_TIMEFRAMES
-
-    @classmethod
-    def validate_limit(cls, limit: int) -> bool:
-        """
-        制限値が有効かチェックします
-
-        Args:
-            limit: チェックする制限値
-
-        Returns:
-            有効な場合True
-        """
-        return cls.MIN_LIMIT <= limit <= cls.MAX_LIMIT
 
 
 # 設定のインスタンス

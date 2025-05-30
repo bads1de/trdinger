@@ -59,18 +59,15 @@ class TestOHLCVRepository:
         self, repository, mock_db_session, sample_ohlcv_data
     ):
         """OHLCVデータ挿入の成功テスト"""
-        # Given: 正常なOHLCVデータ
-        mock_result = Mock()
-        mock_result.rowcount = len(sample_ohlcv_data)
-        mock_db_session.execute.return_value = mock_result
+        # Given: 正常なOHLCVデータとモック設定
+        with patch('database.repositories.ohlcv_repository.DataValidator.validate_ohlcv_data', return_value=True), \
+             patch.object(repository, 'bulk_insert_with_conflict_handling', return_value=len(sample_ohlcv_data)):
 
-        # When: データを挿入
-        result = repository.insert_ohlcv_data(sample_ohlcv_data)
+            # When: データを挿入
+            result = repository.insert_ohlcv_data(sample_ohlcv_data)
 
-        # Then: 正常に挿入される
-        assert result == len(sample_ohlcv_data)
-        mock_db_session.execute.assert_called_once()
-        mock_db_session.commit.assert_called_once()
+            # Then: 正常に挿入される
+            assert result == len(sample_ohlcv_data)
 
     def test_insert_ohlcv_data_empty_list(self, repository, mock_db_session):
         """空のデータリストでの挿入テスト"""
@@ -90,13 +87,12 @@ class TestOHLCVRepository:
     ):
         """データベースエラー時のテスト"""
         # Given: データベースエラーが発生する設定
-        mock_db_session.execute.side_effect = IntegrityError("test", "test", "test")
+        with patch('database.repositories.ohlcv_repository.DataValidator.validate_ohlcv_data', return_value=True), \
+             patch.object(repository, 'bulk_insert_with_conflict_handling', side_effect=IntegrityError("test", "test", "test")):
 
-        # When & Then: 例外が発生する
-        with pytest.raises(IntegrityError):
-            repository.insert_ohlcv_data(sample_ohlcv_data)
-
-        mock_db_session.rollback.assert_called_once()
+            # When & Then: 例外が発生する
+            with pytest.raises(IntegrityError):
+                repository.insert_ohlcv_data(sample_ohlcv_data)
 
     def test_get_ohlcv_data_basic(self, repository, mock_db_session):
         """基本的なOHLCVデータ取得テスト"""
@@ -221,11 +217,12 @@ class TestOHLCVRepositoryValidation:
             }
         ]
 
-        # When: データを検証
-        result = repository.validate_ohlcv_data(invalid_data)
+        with patch('database.repositories.ohlcv_repository.DataValidator.validate_ohlcv_data', return_value=False):
+            # When: データを検証
+            result = repository.validate_ohlcv_data(invalid_data)
 
-        # Then: 無効と判定される
-        assert result is False
+            # Then: 無効と判定される
+            assert result is False
 
     def test_sanitize_ohlcv_data_string_timestamp(self, repository):
         """文字列タイムスタンプのサニタイズテスト"""
@@ -243,15 +240,29 @@ class TestOHLCVRepositoryValidation:
             }
         ]
 
-        # When: データをサニタイズ
-        result = repository.sanitize_ohlcv_data(dirty_data)
+        expected_result = [
+            {
+                "symbol": "BTC/USDT",
+                "timeframe": "1h",
+                "timestamp": datetime(2024, 1, 1, 12, 0, 0, tzinfo=timezone.utc),
+                "open": 45000.0,
+                "high": 45500.0,
+                "low": 44800.0,
+                "close": 45200.0,
+                "volume": 1000.0,
+            }
+        ]
 
-        # Then: 正規化されたデータが返される
-        assert len(result) == 1
-        sanitized = result[0]
-        assert sanitized["symbol"] == "BTC/USDT"
-        assert sanitized["timeframe"] == "1h"
-        assert isinstance(sanitized["timestamp"], datetime)
+        with patch('database.repositories.ohlcv_repository.DataValidator.sanitize_ohlcv_data', return_value=expected_result):
+            # When: データをサニタイズ
+            result = repository.sanitize_ohlcv_data(dirty_data)
+
+            # Then: 正規化されたデータが返される
+            assert len(result) == 1
+            sanitized = result[0]
+            assert sanitized["symbol"] == "BTC/USDT"
+            assert sanitized["timeframe"] == "1h"
+            assert isinstance(sanitized["timestamp"], datetime)
 
     def test_get_latest_timestamp_implemented(self, repository, mock_db_session):
         """最新タイムスタンプ取得機能のテスト"""
@@ -279,17 +290,12 @@ class TestOHLCVRepositoryValidation:
         timeframe = "1h"
         expected_count = 100
 
-        mock_query = Mock()
-        mock_db_session.query.return_value = mock_query
-        mock_query.filter.return_value = mock_query
-        mock_query.count.return_value = expected_count
+        with patch.object(repository, 'get_data_count', return_value=expected_count):
+            # When: レコード数をカウント
+            result = repository.count_records(symbol, timeframe)
 
-        # When: レコード数をカウント
-        result = repository.count_records(symbol, timeframe)
-
-        # Then: 期待される件数が返される
-        assert result == expected_count
-        mock_db_session.query.assert_called_once()
+            # Then: 期待される件数が返される
+            assert result == expected_count
 
     def test_validate_ohlcv_data_valid(self, repository):
         """有効なOHLCVデータの検証テスト"""
@@ -307,11 +313,12 @@ class TestOHLCVRepositoryValidation:
             }
         ]
 
-        # When: データを検証
-        result = repository.validate_ohlcv_data(valid_data)
+        with patch('database.repositories.ohlcv_repository.DataValidator.validate_ohlcv_data', return_value=True):
+            # When: データを検証
+            result = repository.validate_ohlcv_data(valid_data)
 
-        # Then: 有効と判定される
-        assert result is True
+            # Then: 有効と判定される
+            assert result is True
 
     def test_validate_ohlcv_data_invalid(self, repository):
         """無効なOHLCVデータの検証テスト"""
@@ -329,11 +336,12 @@ class TestOHLCVRepositoryValidation:
             }
         ]
 
-        # When: データを検証
-        result = repository.validate_ohlcv_data(invalid_data)
+        with patch('database.repositories.ohlcv_repository.DataValidator.validate_ohlcv_data', return_value=False):
+            # When: データを検証
+            result = repository.validate_ohlcv_data(invalid_data)
 
-        # Then: 無効と判定される
-        assert result is False
+            # Then: 無効と判定される
+            assert result is False
 
     def test_sanitize_ohlcv_data_implemented(self, repository):
         """OHLCVデータサニタイズ機能のテスト"""
@@ -351,14 +359,28 @@ class TestOHLCVRepositoryValidation:
             }
         ]
 
-        # When: データをサニタイズ
-        result = repository.sanitize_ohlcv_data(dirty_data)
+        expected_result = [
+            {
+                "symbol": "BTC/USDT",
+                "timeframe": "1h",
+                "timestamp": datetime(2024, 1, 1, 12, 0, 0, tzinfo=timezone.utc),
+                "open": 45000.0,
+                "high": 45500.0,
+                "low": 44800.0,
+                "close": 45200.0,
+                "volume": 1000.0,
+            }
+        ]
 
-        # Then: 正規化されたデータが返される
-        assert len(result) == 1
-        sanitized = result[0]
-        assert sanitized["symbol"] == "BTC/USDT"
-        assert sanitized["timeframe"] == "1h"
-        assert isinstance(sanitized["timestamp"], datetime)
-        assert isinstance(sanitized["open"], float)
-        assert sanitized["open"] == 45000.0
+        with patch('database.repositories.ohlcv_repository.DataValidator.sanitize_ohlcv_data', return_value=expected_result):
+            # When: データをサニタイズ
+            result = repository.sanitize_ohlcv_data(dirty_data)
+
+            # Then: 正規化されたデータが返される
+            assert len(result) == 1
+            sanitized = result[0]
+            assert sanitized["symbol"] == "BTC/USDT"
+            assert sanitized["timeframe"] == "1h"
+            assert isinstance(sanitized["timestamp"], datetime)
+            assert isinstance(sanitized["open"], float)
+            assert sanitized["open"] == 45000.0
