@@ -65,6 +65,22 @@ const getIndicatorTypeColor = (indicatorType: string): string => {
       return "text-purple-400";
     case "MACD":
       return "text-orange-400";
+    case "BB":
+      return "text-cyan-400";
+    case "ATR":
+      return "text-yellow-400";
+    case "STOCH":
+      return "text-pink-400";
+    case "CCI":
+      return "text-indigo-400";
+    case "WILLR":
+      return "text-red-400";
+    case "MOM":
+      return "text-lime-400";
+    case "ROC":
+      return "text-emerald-400";
+    case "PSAR":
+      return "text-violet-400";
     default:
       return "text-gray-400";
   }
@@ -189,6 +205,42 @@ const TechnicalIndicatorDataTable: React.FC<TechnicalIndicatorDataTableProps> = 
         const colorClass = value >= 0 ? "text-green-400" : "text-red-400";
         return (
           <span className={`font-mono text-sm ${colorClass}`}>
+            {formattedValue}
+          </span>
+        );
+      },
+      cellClassName: "text-right",
+    },
+    {
+      key: "upper_band",
+      header: "上限",
+      width: "100px",
+      sortable: true,
+      formatter: (value: number | null, row: TechnicalIndicatorData) => {
+        if (value === null || value === undefined) {
+          return <span className="text-gray-500">-</span>;
+        }
+        const formattedValue = formatIndicatorValue(value, row.indicator_type);
+        return (
+          <span className="font-mono text-sm text-red-400">
+            {formattedValue}
+          </span>
+        );
+      },
+      cellClassName: "text-right",
+    },
+    {
+      key: "lower_band",
+      header: "下限",
+      width: "100px",
+      sortable: true,
+      formatter: (value: number | null, row: TechnicalIndicatorData) => {
+        if (value === null || value === undefined) {
+          return <span className="text-gray-500">-</span>;
+        }
+        const formattedValue = formatIndicatorValue(value, row.indicator_type);
+        return (
+          <span className="font-mono text-sm text-blue-400">
             {formattedValue}
           </span>
         );

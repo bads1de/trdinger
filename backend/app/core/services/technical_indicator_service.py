@@ -36,6 +36,15 @@ class TechnicalIndicatorService:
                 "function": self._calculate_ema,
             },
             "RSI": {"periods": [14, 21, 30], "function": self._calculate_rsi},
+            "MACD": {"periods": [12], "function": self._calculate_macd},
+            "BB": {"periods": [20], "function": self._calculate_bollinger_bands},
+            "ATR": {"periods": [14, 21], "function": self._calculate_atr},
+            "STOCH": {"periods": [14], "function": self._calculate_stochastic},
+            "CCI": {"periods": [20], "function": self._calculate_cci},
+            "WILLR": {"periods": [14], "function": self._calculate_williams_r},
+            "MOM": {"periods": [10, 14], "function": self._calculate_momentum},
+            "ROC": {"periods": [10, 14], "function": self._calculate_roc},
+            "PSAR": {"periods": [1], "function": self._calculate_psar},
         }
 
     def _validate_parameters(
@@ -182,6 +191,289 @@ class TechnicalIndicatorService:
 
         return rsi
 
+    def _calculate_macd(self, df: pd.DataFrame, period: int) -> pd.DataFrame:
+        """
+        MACD（Moving Average Convergence Divergence）を計算
+
+        Args:
+            df: OHLCVデータのDataFrame
+            period: 期間（通常12、26、9の組み合わせ）
+
+        Returns:
+            MACD値を含むDataFrame（macd_line, signal_line, histogram）
+        """
+        close = df["close"]
+
+        # EMA12とEMA26を計算
+        ema12 = close.ewm(span=12, adjust=False).mean()
+        ema26 = close.ewm(span=26, adjust=False).mean()
+
+        # MACD線 = EMA12 - EMA26
+        macd_line = ema12 - ema26
+
+        # シグナル線 = MACD線のEMA9
+        signal_line = macd_line.ewm(span=9, adjust=False).mean()
+
+        # ヒストグラム = MACD線 - シグナル線
+        histogram = macd_line - signal_line
+
+        # 結果をDataFrameで返す
+        result = pd.DataFrame({
+            'macd_line': macd_line,
+            'signal_line': signal_line,
+            'histogram': histogram
+        })
+
+        return result
+
+    def _calculate_bollinger_bands(self, df: pd.DataFrame, period: int) -> pd.DataFrame:
+        """
+        ボリンジャーバンド（Bollinger Bands）を計算
+
+        Args:
+            df: OHLCVデータのDataFrame
+            period: 期間（通常20）
+
+        Returns:
+            ボリンジャーバンド値を含むDataFrame（middle, upper, lower）
+        """
+        close = df["close"]
+
+        # 中央線（SMA）
+        middle = close.rolling(window=period, min_periods=period).mean()
+
+        # 標準偏差
+        std = close.rolling(window=period, min_periods=period).std()
+
+        # 上限・下限（標準偏差の2倍）
+        upper = middle + (std * 2)
+        lower = middle - (std * 2)
+
+        # 結果をDataFrameで返す
+        result = pd.DataFrame({
+            'middle': middle,
+            'upper': upper,
+            'lower': lower
+        })
+
+        return result
+
+    def _calculate_atr(self, df: pd.DataFrame, period: int) -> pd.Series:
+        """
+        ATR（Average True Range）を計算
+
+        Args:
+            df: OHLCVデータのDataFrame
+            period: 期間（通常14）
+
+        Returns:
+            ATR値のSeries
+        """
+        high = df["high"]
+        low = df["low"]
+        close = df["close"]
+
+        # 前日終値
+        prev_close = close.shift(1)
+
+        # True Range = max(high-low, abs(high-prev_close), abs(low-prev_close))
+        tr1 = high - low
+        tr2 = (high - prev_close).abs()
+        tr3 = (low - prev_close).abs()
+
+        true_range = pd.concat([tr1, tr2, tr3], axis=1).max(axis=1)
+
+        # ATR = True Rangeの移動平均
+        atr = true_range.rolling(window=period, min_periods=period).mean()
+
+        return atr
+
+    def _calculate_stochastic(self, df: pd.DataFrame, period: int) -> pd.DataFrame:
+        """
+        ストキャスティクス（Stochastic Oscillator）を計算
+
+        Args:
+            df: OHLCVデータのDataFrame
+            period: 期間（通常14）
+
+        Returns:
+            ストキャスティクス値を含むDataFrame（%K, %D）
+        """
+        high = df["high"]
+        low = df["low"]
+        close = df["close"]
+
+        # 指定期間の最高値・最安値
+        highest_high = high.rolling(window=period, min_periods=period).max()
+        lowest_low = low.rolling(window=period, min_periods=period).min()
+
+        # %K = ((close - lowest_low) / (highest_high - lowest_low)) * 100
+        k_percent = ((close - lowest_low) / (highest_high - lowest_low)) * 100
+
+        # %D = %Kの3期間移動平均
+        d_percent = k_percent.rolling(window=3, min_periods=3).mean()
+
+        # 結果をDataFrameで返す
+        result = pd.DataFrame({
+            'k_percent': k_percent,
+            'd_percent': d_percent
+        })
+
+        return result
+
+    def _calculate_cci(self, df: pd.DataFrame, period: int) -> pd.Series:
+        """
+        CCI（Commodity Channel Index）を計算
+
+        Args:
+            df: OHLCVデータのDataFrame
+            period: 期間（通常20）
+
+        Returns:
+            CCI値のSeries
+        """
+        high = df["high"]
+        low = df["low"]
+        close = df["close"]
+
+        # Typical Price = (high + low + close) / 3
+        typical_price = (high + low + close) / 3
+
+        # Typical Priceの移動平均
+        sma_tp = typical_price.rolling(window=period, min_periods=period).mean()
+
+        # Mean Deviation = Typical Priceと移動平均の差の絶対値の移動平均
+        mean_deviation = (typical_price - sma_tp).abs().rolling(window=period, min_periods=period).mean()
+
+        # CCI = (Typical Price - SMA) / (0.015 * Mean Deviation)
+        cci = (typical_price - sma_tp) / (0.015 * mean_deviation)
+
+        return cci
+
+    def _calculate_williams_r(self, df: pd.DataFrame, period: int) -> pd.Series:
+        """
+        Williams %R を計算
+
+        Args:
+            df: OHLCVデータのDataFrame
+            period: 期間（通常14）
+
+        Returns:
+            Williams %R値のSeries
+        """
+        high = df["high"]
+        low = df["low"]
+        close = df["close"]
+
+        # 指定期間の最高値・最安値
+        highest_high = high.rolling(window=period, min_periods=period).max()
+        lowest_low = low.rolling(window=period, min_periods=period).min()
+
+        # Williams %R = ((highest_high - close) / (highest_high - lowest_low)) * -100
+        williams_r = ((highest_high - close) / (highest_high - lowest_low)) * -100
+
+        return williams_r
+
+    def _calculate_momentum(self, df: pd.DataFrame, period: int) -> pd.Series:
+        """
+        モメンタム（Momentum）を計算
+
+        Args:
+            df: OHLCVデータのDataFrame
+            period: 期間（通常10または14）
+
+        Returns:
+            モメンタム値のSeries
+        """
+        close = df["close"]
+
+        # Momentum = 現在の終値 - N期間前の終値
+        momentum = close - close.shift(period)
+
+        return momentum
+
+    def _calculate_roc(self, df: pd.DataFrame, period: int) -> pd.Series:
+        """
+        ROC（Rate of Change）を計算
+
+        Args:
+            df: OHLCVデータのDataFrame
+            period: 期間（通常10または14）
+
+        Returns:
+            ROC値のSeries
+        """
+        close = df["close"]
+
+        # ROC = ((現在の終値 - N期間前の終値) / N期間前の終値) * 100
+        prev_close = close.shift(period)
+        roc = ((close - prev_close) / prev_close) * 100
+
+        return roc
+
+    def _calculate_psar(self, df: pd.DataFrame, period: int) -> pd.Series:
+        """
+        PSAR（Parabolic SAR）を計算
+
+        Args:
+            df: OHLCVデータのDataFrame
+            period: 期間（通常1、PSARは期間に依存しない）
+
+        Returns:
+            PSAR値のSeries
+        """
+        high = df["high"]
+        low = df["low"]
+        close = df["close"]
+
+        # PSARの初期設定
+        af = 0.02  # 加速因子の初期値
+        max_af = 0.20  # 加速因子の最大値
+
+        # 結果を格納するSeries
+        psar = pd.Series(index=df.index, dtype=float)
+
+        if len(df) < 2:
+            return psar
+
+        # 初期値設定
+        psar.iloc[0] = low.iloc[0]
+        trend = 1  # 1: 上昇トレンド, -1: 下降トレンド
+        ep = high.iloc[0]  # Extreme Point
+        current_af = af
+
+        for i in range(1, len(df)):
+            if trend == 1:  # 上昇トレンド
+                psar.iloc[i] = psar.iloc[i-1] + current_af * (ep - psar.iloc[i-1])
+
+                # PSARが前日または当日の安値を上回った場合、トレンド転換
+                if psar.iloc[i] > low.iloc[i] or psar.iloc[i] > low.iloc[i-1]:
+                    trend = -1
+                    psar.iloc[i] = ep
+                    ep = low.iloc[i]
+                    current_af = af
+                else:
+                    # 新しい高値更新
+                    if high.iloc[i] > ep:
+                        ep = high.iloc[i]
+                        current_af = min(current_af + af, max_af)
+            else:  # 下降トレンド
+                psar.iloc[i] = psar.iloc[i-1] + current_af * (ep - psar.iloc[i-1])
+
+                # PSARが前日または当日の高値を下回った場合、トレンド転換
+                if psar.iloc[i] < high.iloc[i] or psar.iloc[i] < high.iloc[i-1]:
+                    trend = 1
+                    psar.iloc[i] = ep
+                    ep = high.iloc[i]
+                    current_af = af
+                else:
+                    # 新しい安値更新
+                    if low.iloc[i] < ep:
+                        ep = low.iloc[i]
+                        current_af = min(current_af + af, max_af)
+
+        return psar
+
     async def calculate_technical_indicator(
         self,
         symbol: str,
@@ -220,14 +512,76 @@ class TechnicalIndicatorService:
 
             # 指標を計算
             calculate_func = self.supported_indicators[indicator_type]["function"]
-            indicator_series = calculate_func(df, period)
+            indicator_result = calculate_func(df, period)
 
             # 結果をリストに変換
             results = []
-            for timestamp, value in indicator_series.items():
-                if pd.notna(value):  # NaN値をスキップ
-                    results.append(
-                        {
+
+            # 複数値を返す指標（MACD、ボリンジャーバンド）の処理
+            if indicator_type == "MACD":
+                for timestamp in indicator_result.index:
+                    macd_line = indicator_result.loc[timestamp, 'macd_line']
+                    signal_line = indicator_result.loc[timestamp, 'signal_line']
+                    histogram = indicator_result.loc[timestamp, 'histogram']
+
+                    if pd.notna(macd_line) and pd.notna(signal_line):
+                        results.append({
+                            "symbol": symbol,
+                            "timeframe": timeframe,
+                            "indicator_type": indicator_type,
+                            "period": period,
+                            "value": float(macd_line),
+                            "signal_value": float(signal_line),
+                            "histogram_value": float(histogram),
+                            "upper_band": None,
+                            "lower_band": None,
+                            "timestamp": timestamp,
+                        })
+
+            elif indicator_type == "BB":
+                for timestamp in indicator_result.index:
+                    middle = indicator_result.loc[timestamp, 'middle']
+                    upper = indicator_result.loc[timestamp, 'upper']
+                    lower = indicator_result.loc[timestamp, 'lower']
+
+                    if pd.notna(middle) and pd.notna(upper) and pd.notna(lower):
+                        results.append({
+                            "symbol": symbol,
+                            "timeframe": timeframe,
+                            "indicator_type": indicator_type,
+                            "period": period,
+                            "value": float(middle),
+                            "signal_value": None,
+                            "histogram_value": None,
+                            "upper_band": float(upper),
+                            "lower_band": float(lower),
+                            "timestamp": timestamp,
+                        })
+
+            elif indicator_type == "STOCH":
+                for timestamp in indicator_result.index:
+                    k_percent = indicator_result.loc[timestamp, 'k_percent']
+                    d_percent = indicator_result.loc[timestamp, 'd_percent']
+
+                    if pd.notna(k_percent) and pd.notna(d_percent):
+                        results.append({
+                            "symbol": symbol,
+                            "timeframe": timeframe,
+                            "indicator_type": indicator_type,
+                            "period": period,
+                            "value": float(k_percent),
+                            "signal_value": float(d_percent),
+                            "histogram_value": None,
+                            "upper_band": None,
+                            "lower_band": None,
+                            "timestamp": timestamp,
+                        })
+
+            else:
+                # 単一値を返す指標（SMA、EMA、RSI、ATR、CCI、WILLR）の処理
+                for timestamp, value in indicator_result.items():
+                    if pd.notna(value):  # NaN値をスキップ
+                        results.append({
                             "symbol": symbol,
                             "timeframe": timeframe,
                             "indicator_type": indicator_type,
@@ -235,9 +589,10 @@ class TechnicalIndicatorService:
                             "value": float(value),
                             "signal_value": None,
                             "histogram_value": None,
+                            "upper_band": None,
+                            "lower_band": None,
                             "timestamp": timestamp,
-                        }
-                    )
+                        })
 
             logger.info(
                 f"テクニカル指標計算完了: {len(results)}件 "
@@ -456,6 +811,33 @@ class TechnicalIndicatorService:
         # RSI: 14期間
         default_indicators.append({"type": "RSI", "period": 14})
 
+        # MACD: 12期間（標準設定）
+        default_indicators.append({"type": "MACD", "period": 12})
+
+        # ボリンジャーバンド: 20期間
+        default_indicators.append({"type": "BB", "period": 20})
+
+        # ATR: 14期間
+        default_indicators.append({"type": "ATR", "period": 14})
+
+        # ストキャスティクス: 14期間
+        default_indicators.append({"type": "STOCH", "period": 14})
+
+        # CCI: 20期間
+        default_indicators.append({"type": "CCI", "period": 20})
+
+        # Williams %R: 14期間
+        default_indicators.append({"type": "WILLR", "period": 14})
+
+        # モメンタム: 10期間
+        default_indicators.append({"type": "MOM", "period": 10})
+
+        # ROC: 10期間
+        default_indicators.append({"type": "ROC", "period": 10})
+
+        # PSAR: 1期間（固定）
+        default_indicators.append({"type": "PSAR", "period": 1})
+
         return default_indicators
 
     def get_supported_indicators(self) -> Dict[str, Any]:
@@ -487,5 +869,14 @@ class TechnicalIndicatorService:
             "SMA": "単純移動平均 - 指定期間の終値の平均値",
             "EMA": "指数移動平均 - 直近の価格により重みを置いた移動平均",
             "RSI": "相対力指数 - 買われすぎ・売られすぎを示すオシレーター（0-100）",
+            "MACD": "MACD - トレンドの方向性と強さを示すオシレーター",
+            "BB": "ボリンジャーバンド - ボラティリティとサポート・レジスタンスを示す",
+            "ATR": "ATR - 平均真の値幅、ボラティリティを測定する指標",
+            "STOCH": "ストキャスティクス - 買われすぎ・売られすぎを示すオシレーター（0-100）",
+            "CCI": "CCI - 商品チャネル指数、トレンドの強さを測定",
+            "WILLR": "Williams %R - 逆張りシグナルに有効なオシレーター（-100-0）",
+            "MOM": "モメンタム - 価格変化の勢いを測定する指標",
+            "ROC": "ROC - 変化率、価格の変化をパーセンテージで表示",
+            "PSAR": "PSAR - パラボリックSAR、トレンド転換点を示す",
         }
         return descriptions.get(indicator_type, "説明なし")

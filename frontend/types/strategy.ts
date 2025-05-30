@@ -623,6 +623,10 @@ export interface TechnicalIndicatorData {
   signal_value?: number | null;
   /** ヒストグラム（MACDのヒストグラム等） */
   histogram_value?: number | null;
+  /** ボリンジャーバンド上限 */
+  upper_band?: number | null;
+  /** ボリンジャーバンド下限 */
+  lower_band?: number | null;
   /** データ時刻（ISO形式） */
   timestamp: string;
   /** 作成時刻（ISO形式） */
