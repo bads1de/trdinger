@@ -203,4 +203,41 @@ class OHLCVRepository(BaseRepository):
         df.set_index("timestamp", inplace=True)
         return df
 
+    def validate_ohlcv_data(self, ohlcv_data: List[dict]) -> bool:
+        """
+        OHLCV データの妥当性を検証
+
+        Args:
+            ohlcv_data: 検証するOHLCVデータのリスト
+
+        Returns:
+            有効な場合True、無効な場合False
+        """
+        return DataValidator.validate_ohlcv_data(ohlcv_data)
+
+    def sanitize_ohlcv_data(self, ohlcv_data: List[dict]) -> List[dict]:
+        """
+        OHLCV データをサニタイズ
+
+        Args:
+            ohlcv_data: サニタイズするOHLCVデータのリスト
+
+        Returns:
+            サニタイズされたOHLCVデータのリスト
+        """
+        return DataValidator.sanitize_ohlcv_data(ohlcv_data)
+
+    def count_records(self, symbol: str, timeframe: str) -> int:
+        """
+        指定されたシンボルと時間軸のレコード数を取得
+
+        Args:
+            symbol: 取引ペア
+            timeframe: 時間軸
+
+        Returns:
+            レコード数
+        """
+        return self.get_data_count(symbol, timeframe)
+
 # sanitize_ohlcv_data メソッドは app.core.utils.data_converter.DataValidator に移動されました

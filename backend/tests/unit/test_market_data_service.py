@@ -12,6 +12,7 @@ import pytest
 import asyncio
 from datetime import datetime, timezone
 from typing import List
+from unittest.mock import patch
 import ccxt
 
 # テスト対象のモジュール
@@ -266,17 +267,25 @@ class TestBybitMarketDataServiceDatabaseIntegration:
         mock_repository = Mock()
         mock_repository.insert_ohlcv_data = Mock(return_value=5)
 
-        # When: データを取得・保存
-        result = await service.fetch_and_save_ohlcv_data(
-            symbol, timeframe, limit, mock_repository
-        )
+        # モックOHLCVデータ（CCXT形式: [timestamp, open, high, low, close, volume]）
+        timestamp_ms = int(datetime.now(timezone.utc).timestamp() * 1000)
+        mock_ohlcv_data = [
+            [timestamp_ms, 45000.0, 45500.0, 44800.0, 45200.0, 1000.0]
+        ] * 5
 
-        # Then: 正常な結果が返される
-        assert result["success"] is True
-        assert result["symbol"] == symbol
-        assert result["timeframe"] == timeframe
-        assert result["saved_count"] == 5
-        mock_repository.insert_ohlcv_data.assert_called_once()
+        # fetch_ohlcv_dataメソッドをモック
+        with patch.object(service, 'fetch_ohlcv_data', return_value=mock_ohlcv_data):
+            # When: データを取得・保存
+            result = await service.fetch_and_save_ohlcv_data(
+                symbol, timeframe, limit, mock_repository
+            )
+
+            # Then: 正常な結果が返される
+            assert result["success"] is True
+            assert result["symbol"] == symbol
+            assert result["timeframe"] == timeframe
+            assert result["saved_count"] == 5
+            mock_repository.insert_ohlcv_data.assert_called_once()
 
     def test_validate_symbol_implemented(self, service):
         """シンボル検証機能のテスト"""
