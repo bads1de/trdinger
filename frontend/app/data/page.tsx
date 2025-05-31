@@ -12,7 +12,6 @@
 
 import React, { useState, useEffect } from "react";
 import DataHeader from "./components/DataHeader";
-import DataStatusPanel from "./components/DataStatusPanel";
 import DataControls from "./components/DataControls";
 
 import DataTableContainer from "./components/DataTableContainer";
@@ -517,10 +516,8 @@ const DataPage: React.FC = () => {
           </div>
         )}
 
-        {/* データ状況表示 */}
-        <DataStatusPanel dataStatus={dataStatus} />
-
         <DataControls
+          dataStatus={dataStatus}
           symbols={symbols}
           selectedSymbol={selectedSymbol}
           handleSymbolChange={handleSymbolChange}
