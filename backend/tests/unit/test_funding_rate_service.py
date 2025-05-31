@@ -82,17 +82,17 @@ class TestBybitFundingRateService:
         funding_rate_service._validate_parameters('BTC/USDT', 100)
         
         # 無効なシンボル
-        with pytest.raises(ValueError, match="シンボルが指定されていません"):
+        with pytest.raises(ValueError, match="シンボルは有効な文字列である必要があります"):
             funding_rate_service._validate_parameters('', 100)
-        
-        with pytest.raises(ValueError, match="シンボルが指定されていません"):
+
+        with pytest.raises(ValueError, match="シンボルは有効な文字列である必要があります"):
             funding_rate_service._validate_parameters(None, 100)
-        
+
         # 無効なlimit
-        with pytest.raises(ValueError, match="limitは1-1000の範囲で指定してください"):
+        with pytest.raises(ValueError, match="limitは1から1000の間の整数である必要があります"):
             funding_rate_service._validate_parameters('BTC/USDT', 0)
-        
-        with pytest.raises(ValueError, match="limitは1-1000の範囲で指定してください"):
+
+        with pytest.raises(ValueError, match="limitは1から1000の間の整数である必要があります"):
             funding_rate_service._validate_parameters('BTC/USDT', 1001)
 
     @pytest.mark.asyncio

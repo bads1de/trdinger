@@ -8,7 +8,7 @@ Bybitオープンインタレストサービス
 import asyncio
 import logging
 from datetime import datetime, timezone
-from typing import Dict, List, Optional, Any
+from typing import Dict, List, Optional, Any, Callable
 
 import ccxt
 from database.connection import SessionLocal
@@ -16,65 +16,17 @@ from database.connection import SessionLocal
 # OpenInterestDataは循環インポートを避けるため、必要時にインポート
 from database.repositories.open_interest_repository import OpenInterestRepository
 from app.core.utils.data_converter import OpenInterestDataConverter
+from app.core.services.base_bybit_service import BaseBybitService
 
 logger = logging.getLogger(__name__)
 
 
-class BybitOpenInterestService:
+class BybitOpenInterestService(BaseBybitService):
     """Bybitオープンインタレストサービス"""
 
     def __init__(self):
         """サービスを初期化"""
-        self.exchange = ccxt.bybit(
-            {
-                "sandbox": False,  # 本番環境を使用（読み取り専用）
-                "enableRateLimit": True,
-                "options": {
-                    "defaultType": "linear",  # 無期限契約市場を使用
-                },
-            }
-        )
-
-    def normalize_symbol(self, symbol: str) -> str:
-        """
-        シンボルを正規化（無期限契約形式に変換）
-
-        Args:
-            symbol: 入力シンボル（例: 'BTC/USDT' または 'BTC/USDT:USDT'）
-
-        Returns:
-            正規化されたシンボル（例: 'BTC/USDT:USDT'）
-        """
-        # 既に無期限契約形式の場合はそのまま返す
-        if ":" in symbol:
-            return symbol
-
-        # スポット形式を無期限契約形式に変換
-        if symbol.endswith("/USDT"):
-            return f"{symbol}:USDT"
-        elif symbol.endswith("/USD"):
-            return f"{symbol}:USD"
-        else:
-            # デフォルトはUSDT無期限契約
-            return f"{symbol}:USDT"
-
-    def _validate_parameters(self, symbol: str, limit: Optional[int] = None):
-        """
-        パラメータの検証
-
-        Args:
-            symbol: 取引ペアシンボル
-            limit: 取得件数制限
-
-        Raises:
-            ValueError: パラメータが無効な場合
-        """
-        if not symbol or not isinstance(symbol, str):
-            raise ValueError("シンボルは有効な文字列である必要があります")
-
-        if limit is not None:
-            if not isinstance(limit, int) or limit <= 0 or limit > 1000:
-                raise ValueError("limitは1から1000の間の整数である必要があります")
+        super().__init__()  # BaseBybitServiceの初期化を呼び出し
 
     async def fetch_current_open_interest(self, symbol: str) -> Dict[str, Any]:
         """
@@ -94,31 +46,12 @@ class BybitOpenInterestService:
         # シンボルの正規化
         normalized_symbol = self.normalize_symbol(symbol)
 
-        try:
-            logger.info(f"現在のオープンインタレストを取得中: {normalized_symbol}")
-
-            # 非同期でオープンインタレストを取得
-            open_interest = await asyncio.get_event_loop().run_in_executor(
-                None, self.exchange.fetch_open_interest, normalized_symbol
-            )
-
-            logger.info(f"現在のオープンインタレスト取得成功: {normalized_symbol}")
-            return open_interest
-
-        except ccxt.BadSymbol as e:
-            logger.error(f"無効なシンボル: {normalized_symbol}")
-            raise ccxt.BadSymbol(f"無効なシンボル: {normalized_symbol}") from e
-        except ccxt.NetworkError as e:
-            logger.error(f"ネットワークエラー: {e}")
-            raise
-        except ccxt.ExchangeError as e:
-            logger.error(f"取引所エラー: {e}")
-            raise
-        except Exception as e:
-            logger.error(f"予期しないエラー: {e}")
-            raise ccxt.ExchangeError(
-                f"オープンインタレスト取得中にエラーが発生しました: {e}"
-            ) from e
+        # 基底クラスの共通エラーハンドリングを使用
+        return await self._handle_ccxt_errors(
+            f"現在のオープンインタレスト取得: {normalized_symbol}",
+            self.exchange.fetch_open_interest,
+            normalized_symbol
+        )
 
     async def fetch_open_interest_history(
         self, symbol: str, limit: int = 100, since: Optional[int] = None
@@ -145,39 +78,13 @@ class BybitOpenInterestService:
         # シンボルの正規化
         normalized_symbol = self.normalize_symbol(symbol)
 
-        try:
-            logger.info(
-                f"オープンインタレスト履歴を取得中: {normalized_symbol}, limit={limit}"
+        # 基底クラスの共通エラーハンドリングを使用
+        return await self._handle_ccxt_errors(
+            f"オープンインタレスト履歴取得: {normalized_symbol}, limit={limit}",
+            lambda: self.exchange.fetch_open_interest_history(
+                normalized_symbol, since=since, limit=limit
             )
-
-            # 非同期でオープンインタレスト履歴を取得
-            # CCXTのfetch_open_interest_historyの引数順序: symbol, since=None, limit=None, params={}
-            open_interest_history = await asyncio.get_event_loop().run_in_executor(
-                None,
-                lambda: self.exchange.fetch_open_interest_history(
-                    normalized_symbol, since=since, limit=limit
-                ),
-            )
-
-            logger.info(
-                f"オープンインタレスト履歴取得成功: {len(open_interest_history)}件"
-            )
-            return open_interest_history
-
-        except ccxt.BadSymbol as e:
-            logger.error(f"無効なシンボル: {normalized_symbol}")
-            raise ccxt.BadSymbol(f"無効なシンボル: {normalized_symbol}") from e
-        except ccxt.NetworkError as e:
-            logger.error(f"ネットワークエラー: {e}")
-            raise
-        except ccxt.ExchangeError as e:
-            logger.error(f"取引所エラー: {e}")
-            raise
-        except Exception as e:
-            logger.error(f"予期しないエラー: {e}")
-            raise ccxt.ExchangeError(
-                f"オープンインタレスト履歴取得中にエラーが発生しました: {e}"
-            ) from e
+        )
 
     async def fetch_all_open_interest_history(
         self, symbol: str, interval: str = "1h"
