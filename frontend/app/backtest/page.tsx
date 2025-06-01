@@ -62,7 +62,6 @@ interface BacktestResult {
 }
 
 export default function BacktestPage() {
-  const [activeTab, setActiveTab] = useState<"form" | "results">("form");
   const [latestResult, setLatestResult] = useState<BacktestResult | null>(null);
   const [results, setResults] = useState<BacktestResult[]>([]);
   const [selectedResult, setSelectedResult] = useState<BacktestResult | null>(
@@ -98,7 +97,6 @@ export default function BacktestPage() {
       body: config,
       onSuccess: (data) => {
         setLatestResult(data.result);
-        setActiveTab("results");
         loadResults(); // 結果一覧を更新
       },
       onError: (error) => {
@@ -142,92 +140,61 @@ export default function BacktestPage() {
           </p>
         </div>
 
-        {/* タブナビゲーション */}
-        <div className="mb-6">
-          <div className="border-b border-gray-700">
-            <nav className="-mb-px flex space-x-8">
-              <button
-                onClick={() => setActiveTab("form")}
-                className={`py-2 px-1 border-b-2 font-medium text-sm ${
-                  activeTab === "form"
-                    ? "border-blue-500 text-blue-400"
-                    : "border-transparent text-gray-400 hover:text-gray-300 hover:border-gray-300"
-                }`}
-              >
-                バックテスト設定
-              </button>
-              <button
-                onClick={() => setActiveTab("results")}
-                className={`py-2 px-1 border-b-2 font-medium text-sm ${
-                  activeTab === "results"
-                    ? "border-blue-500 text-blue-400"
-                    : "border-transparent text-gray-400 hover:text-gray-300 hover:border-gray-300"
-                }`}
-              >
-                結果一覧
-              </button>
-            </nav>
+        {/* メインコンテンツ - 2カラムレイアウト */}
+        <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+          {/* 左側: バックテスト設定フォーム */}
+          <div className="space-y-6">
+            <div className="bg-gray-800 rounded-lg p-6">
+              <h2 className="text-xl font-semibold mb-4">バックテスト設定</h2>
+              <BacktestForm
+                onSubmit={handleRunBacktest}
+                isLoading={backtestLoading}
+              />
+            </div>
+
+            {/* 最新結果のプレビュー */}
+            {latestResult && (
+              <div className="bg-gray-800 rounded-lg p-6">
+                <h2 className="text-xl font-semibold mb-4">最新結果</h2>
+                <PerformanceMetrics result={latestResult} />
+              </div>
+            )}
           </div>
-        </div>
 
-        {/* コンテンツ */}
-        <div className="space-y-6">
-          {activeTab === "form" && (
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {/* バックテスト設定フォーム */}
-              <div className="bg-gray-800 rounded-lg p-6">
-                <h2 className="text-xl font-semibold mb-4">バックテスト設定</h2>
-                <BacktestForm
-                  onSubmit={handleRunBacktest}
-                  isLoading={backtestLoading}
-                />
+          {/* 右側: 結果一覧と詳細 */}
+          <div className="space-y-6">
+            {/* 結果一覧テーブル */}
+            <div className="bg-gray-800 rounded-lg p-6">
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-xl font-semibold">
+                  バックテスト結果一覧
+                </h2>
+                <button
+                  onClick={loadResults}
+                  disabled={resultsLoading}
+                  className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50"
+                >
+                  {resultsLoading ? "読み込み中..." : "更新"}
+                </button>
               </div>
-
-              {/* 最新結果のプレビュー */}
-              {latestResult && (
-                <div className="bg-gray-800 rounded-lg p-6">
-                  <h2 className="text-xl font-semibold mb-4">最新結果</h2>
-                  <PerformanceMetrics result={latestResult} />
-                </div>
-              )}
+              <BacktestResultsTable
+                results={results}
+                loading={resultsLoading}
+                onResultSelect={handleResultSelect}
+                onDelete={handleDeleteResult}
+              />
             </div>
-          )}
 
-          {activeTab === "results" && (
-            <div className="space-y-6">
-              {/* 結果一覧テーブル */}
+            {/* 選択された結果の詳細 */}
+            {selectedResult && (
               <div className="bg-gray-800 rounded-lg p-6">
-                <div className="flex justify-between items-center mb-4">
-                  <h2 className="text-xl font-semibold">
-                    バックテスト結果一覧
-                  </h2>
-                  <button
-                    onClick={loadResults}
-                    disabled={resultsLoading}
-                    className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50"
-                  >
-                    {resultsLoading ? "読み込み中..." : "更新"}
-                  </button>
-                </div>
-                <BacktestResultsTable
-                  results={results}
-                  loading={resultsLoading}
-                  onResultSelect={handleResultSelect}
-                  onDelete={handleDeleteResult}
-                />
+                <h2 className="text-xl font-semibold mb-4">
+                  結果詳細 - {selectedResult.strategy_name}
+                </h2>
+                <PerformanceMetrics result={selectedResult} />
               </div>
-
-              {/* 選択された結果の詳細 */}
-              {selectedResult && (
-                <div className="bg-gray-800 rounded-lg p-6">
-                  <h2 className="text-xl font-semibold mb-4">
-                    結果詳細 - {selectedResult.strategy_name}
-                  </h2>
-                  <PerformanceMetrics result={selectedResult} />
-                </div>
-              )}
-            </div>
-          )}
+            )}
+          </div>
         </div>
 
         {/* ローディング状態 */}
