@@ -1,12 +1,12 @@
 /**
  * バックテスト結果テーブルコンポーネント
- * 
+ *
  * バックテスト結果の一覧を表形式で表示します。
  */
 
-'use client';
+"use client";
 
-import React from 'react';
+import React from "react";
 
 interface BacktestResult {
   id: string;
@@ -36,21 +36,22 @@ interface BacktestResultsTableProps {
   results: BacktestResult[];
   loading?: boolean;
   onResultSelect?: (result: BacktestResult) => void;
+  onDelete?: (result: BacktestResult) => void;
 }
 
-export default function BacktestResultsTable({ 
-  results, 
-  loading = false, 
-  onResultSelect 
+export default function BacktestResultsTable({
+  results,
+  loading = false,
+  onResultSelect,
+  onDelete,
 }: BacktestResultsTableProps) {
-  
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('ja-JP', {
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit'
+    return new Date(dateString).toLocaleDateString("ja-JP", {
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
     });
   };
 
@@ -63,9 +64,9 @@ export default function BacktestResultsTable({
   };
 
   const getReturnColor = (value: number) => {
-    if (value > 0) return 'text-green-400';
-    if (value < 0) return 'text-red-400';
-    return 'text-gray-400';
+    if (value > 0) return "text-green-400";
+    if (value < 0) return "text-red-400";
+    return "text-gray-400";
   };
 
   if (loading) {
@@ -120,6 +121,9 @@ export default function BacktestResultsTable({
             <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
               実行日時
             </th>
+            <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+              操作
+            </th>
           </tr>
         </thead>
         <tbody className="bg-gray-800 divide-y divide-gray-700">
@@ -135,17 +139,17 @@ export default function BacktestResultsTable({
                 </div>
               </td>
               <td className="px-6 py-4 whitespace-nowrap">
-                <div className="text-sm text-gray-300">
-                  {result.symbol}
-                </div>
+                <div className="text-sm text-gray-300">{result.symbol}</div>
               </td>
               <td className="px-6 py-4 whitespace-nowrap">
-                <div className="text-sm text-gray-300">
-                  {result.timeframe}
-                </div>
+                <div className="text-sm text-gray-300">{result.timeframe}</div>
               </td>
               <td className="px-6 py-4 whitespace-nowrap">
-                <div className={`text-sm font-medium ${getReturnColor(result.performance_metrics.total_return)}`}>
+                <div
+                  className={`text-sm font-medium ${getReturnColor(
+                    result.performance_metrics.total_return
+                  )}`}
+                >
                   {formatPercentage(result.performance_metrics.total_return)}
                 </div>
               </td>
@@ -173,6 +177,30 @@ export default function BacktestResultsTable({
                 <div className="text-sm text-gray-400">
                   {formatDate(result.created_at)}
                 </div>
+              </td>
+              <td className="px-6 py-4 whitespace-nowrap">
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation(); // 行クリックイベントを防ぐ
+                    onDelete?.(result);
+                  }}
+                  className="text-red-400 hover:text-red-300 transition-colors p-1 rounded hover:bg-red-900/20"
+                  title="削除"
+                >
+                  <svg
+                    className="w-4 h-4"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                    />
+                  </svg>
+                </button>
               </td>
             </tr>
           ))}

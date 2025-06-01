@@ -1,16 +1,16 @@
 /**
  * バックテストページ
- * 
+ *
  * バックテストの設定、実行、結果表示を行うメインページです。
  */
 
-'use client';
+"use client";
 
-import React, { useState, useEffect } from 'react';
-import BacktestForm from '@/components/backtest/BacktestForm';
-import BacktestResultsTable from '@/components/backtest/BacktestResultsTable';
-import PerformanceMetrics from '@/components/backtest/PerformanceMetrics';
-import { useApiCall } from '@/hooks/useApiCall';
+import React, { useState, useEffect } from "react";
+import BacktestForm from "@/components/backtest/BacktestForm";
+import BacktestResultsTable from "@/components/backtest/BacktestResultsTable";
+import PerformanceMetrics from "@/components/backtest/PerformanceMetrics";
+import { useApiCall } from "@/hooks/useApiCall";
 
 interface BacktestConfig {
   strategy_name: string;
@@ -53,7 +53,7 @@ interface BacktestResult {
   }>;
   trade_history: Array<{
     timestamp: string;
-    type: 'buy' | 'sell';
+    type: "buy" | "sell";
     price: number;
     quantity: number;
     pnl?: number;
@@ -62,17 +62,25 @@ interface BacktestResult {
 }
 
 export default function BacktestPage() {
-  const [activeTab, setActiveTab] = useState<'form' | 'results'>('form');
+  const [activeTab, setActiveTab] = useState<"form" | "results">("form");
   const [latestResult, setLatestResult] = useState<BacktestResult | null>(null);
   const [results, setResults] = useState<BacktestResult[]>([]);
-  const [selectedResult, setSelectedResult] = useState<BacktestResult | null>(null);
+  const [selectedResult, setSelectedResult] = useState<BacktestResult | null>(
+    null
+  );
 
-  const { execute: runBacktest, loading: backtestLoading } = useApiCall<{ result: BacktestResult }>();
-  const { execute: fetchResults, loading: resultsLoading } = useApiCall<{ results: BacktestResult[]; total: number }>();
+  const { execute: runBacktest, loading: backtestLoading } = useApiCall<{
+    result: BacktestResult;
+  }>();
+  const { execute: fetchResults, loading: resultsLoading } = useApiCall<{
+    results: BacktestResult[];
+    total: number;
+  }>();
+  const { execute: deleteResult, loading: deleteLoading } = useApiCall();
 
   // 結果一覧を取得
   const loadResults = async () => {
-    const response = await fetchResults('/api/backtest/results?limit=20');
+    const response = await fetchResults("/api/backtest/results?limit=20");
     if (response?.success) {
       setResults(response.results);
     }
@@ -85,23 +93,42 @@ export default function BacktestPage() {
 
   // バックテスト実行
   const handleRunBacktest = async (config: BacktestConfig) => {
-    const response = await runBacktest('/api/backtest/run', {
-      method: 'POST',
+    const response = await runBacktest("/api/backtest/run", {
+      method: "POST",
       body: config,
       onSuccess: (data) => {
         setLatestResult(data.result);
-        setActiveTab('results');
+        setActiveTab("results");
         loadResults(); // 結果一覧を更新
       },
       onError: (error) => {
-        console.error('Backtest failed:', error);
-      }
+        console.error("Backtest failed:", error);
+      },
     });
   };
 
   // 結果選択
   const handleResultSelect = (result: BacktestResult) => {
     setSelectedResult(result);
+  };
+
+  // 結果削除
+  const handleDeleteResult = async (result: BacktestResult) => {
+    const response = await deleteResult(`/api/backtest/results/${result.id}`, {
+      method: "DELETE",
+      confirmMessage: `バックテスト結果「${result.strategy_name}」を削除しますか？\nこの操作は取り消せません。`,
+      onSuccess: () => {
+        // 削除成功時は一覧を更新
+        loadResults();
+        // 選択中の結果が削除された場合はクリア
+        if (selectedResult?.id === result.id) {
+          setSelectedResult(null);
+        }
+      },
+      onError: (error) => {
+        console.error("Delete failed:", error);
+      },
+    });
   };
 
   return (
@@ -120,21 +147,21 @@ export default function BacktestPage() {
           <div className="border-b border-gray-700">
             <nav className="-mb-px flex space-x-8">
               <button
-                onClick={() => setActiveTab('form')}
+                onClick={() => setActiveTab("form")}
                 className={`py-2 px-1 border-b-2 font-medium text-sm ${
-                  activeTab === 'form'
-                    ? 'border-blue-500 text-blue-400'
-                    : 'border-transparent text-gray-400 hover:text-gray-300 hover:border-gray-300'
+                  activeTab === "form"
+                    ? "border-blue-500 text-blue-400"
+                    : "border-transparent text-gray-400 hover:text-gray-300 hover:border-gray-300"
                 }`}
               >
                 バックテスト設定
               </button>
               <button
-                onClick={() => setActiveTab('results')}
+                onClick={() => setActiveTab("results")}
                 className={`py-2 px-1 border-b-2 font-medium text-sm ${
-                  activeTab === 'results'
-                    ? 'border-blue-500 text-blue-400'
-                    : 'border-transparent text-gray-400 hover:text-gray-300 hover:border-gray-300'
+                  activeTab === "results"
+                    ? "border-blue-500 text-blue-400"
+                    : "border-transparent text-gray-400 hover:text-gray-300 hover:border-gray-300"
                 }`}
               >
                 結果一覧
@@ -145,12 +172,12 @@ export default function BacktestPage() {
 
         {/* コンテンツ */}
         <div className="space-y-6">
-          {activeTab === 'form' && (
+          {activeTab === "form" && (
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               {/* バックテスト設定フォーム */}
               <div className="bg-gray-800 rounded-lg p-6">
                 <h2 className="text-xl font-semibold mb-4">バックテスト設定</h2>
-                <BacktestForm 
+                <BacktestForm
                   onSubmit={handleRunBacktest}
                   isLoading={backtestLoading}
                 />
@@ -166,24 +193,27 @@ export default function BacktestPage() {
             </div>
           )}
 
-          {activeTab === 'results' && (
+          {activeTab === "results" && (
             <div className="space-y-6">
               {/* 結果一覧テーブル */}
               <div className="bg-gray-800 rounded-lg p-6">
                 <div className="flex justify-between items-center mb-4">
-                  <h2 className="text-xl font-semibold">バックテスト結果一覧</h2>
+                  <h2 className="text-xl font-semibold">
+                    バックテスト結果一覧
+                  </h2>
                   <button
                     onClick={loadResults}
                     disabled={resultsLoading}
                     className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50"
                   >
-                    {resultsLoading ? '読み込み中...' : '更新'}
+                    {resultsLoading ? "読み込み中..." : "更新"}
                   </button>
                 </div>
-                <BacktestResultsTable 
+                <BacktestResultsTable
                   results={results}
                   loading={resultsLoading}
                   onResultSelect={handleResultSelect}
+                  onDelete={handleDeleteResult}
                 />
               </div>
 
