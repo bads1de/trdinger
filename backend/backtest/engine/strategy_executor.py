@@ -34,9 +34,36 @@ class StrategyExecutor:
     """戦略実行クラス"""
 
     def __init__(self, initial_capital: float = 100000, commission_rate: float = 0.001):
+        # バリデーション
+        self._validate_parameters(initial_capital, commission_rate)
+
         self.initial_capital = initial_capital
         self.commission_rate = commission_rate
         self.reset()
+
+    def _validate_parameters(self, initial_capital: float, commission_rate: float):
+        """パラメータのバリデーション"""
+        # 型チェックを先に実行
+        if not isinstance(initial_capital, (int, float)):
+            raise TypeError("Initial capital must be a number")
+
+        if not isinstance(commission_rate, (int, float)):
+            raise TypeError("Commission rate must be a number")
+
+        # 値の範囲チェック
+        if initial_capital <= 0:
+            raise ValueError("Initial capital must be positive")
+
+        if commission_rate < 0 or commission_rate > 1:
+            raise ValueError("Commission rate must be between 0 and 1")
+
+    def _get_price_from_data(self, data: pd.Series, price_type: str) -> float:
+        """データから価格を取得（大文字・小文字を自動判定）"""
+        for col_name in [price_type.lower(), price_type.capitalize(), price_type.upper()]:
+            if col_name in data.index:
+                return float(data[col_name])
+        # デフォルトで大文字を試す
+        return float(data.get(price_type.capitalize(), 0))
 
     def reset(self):
         """状態をリセット"""
@@ -106,11 +133,19 @@ class StrategyExecutor:
 
     def _parse_condition(self, condition: str, current_index: int, current_data: pd.Series) -> str:
         """条件文字列を評価可能な形に変換"""
-        # 価格データの置換 (close, open, high, low)
-        condition = re.sub(r'\bclose\b', str(current_data['close']), condition)
-        condition = re.sub(r'\bopen\b', str(current_data['open']), condition)
-        condition = re.sub(r'\bhigh\b', str(current_data['high']), condition)
-        condition = re.sub(r'\blow\b', str(current_data['low']), condition)
+        # 価格データの置換 (close, open, high, low) - 大文字・小文字両方に対応
+        def get_price_value(price_type: str) -> str:
+            """価格データを取得（大文字・小文字を自動判定）"""
+            for col_name in [price_type.lower(), price_type.capitalize(), price_type.upper()]:
+                if col_name in current_data.index:
+                    return str(current_data[col_name])
+            # デフォルトで大文字を試す
+            return str(current_data.get(price_type.capitalize(), 0))
+
+        condition = re.sub(r'\bclose\b', get_price_value('close'), condition)
+        condition = re.sub(r'\bopen\b', get_price_value('open'), condition)
+        condition = re.sub(r'\bhigh\b', get_price_value('high'), condition)
+        condition = re.sub(r'\blow\b', get_price_value('low'), condition)
 
         # 指標の置換 (例: SMA(close, 20) -> cached_sma_value)
         # SMA, EMA, RSI などの単純な指標
@@ -180,7 +215,9 @@ class StrategyExecutor:
         elif trade_type == 'sell' and self.position.quantity > 0:
             # ポジション決済
             proceeds = price * quantity - commission
-            pnl = (price - self.position.avg_price) * quantity - commission
+            # PnLは売値と買値の差額から手数料を引く（買い時の手数料も考慮）
+            buy_commission = self.position.avg_price * quantity * self.commission_rate
+            pnl = (price - self.position.avg_price) * quantity - commission - buy_commission
 
             self.capital += proceeds
             self.position.quantity -= quantity
@@ -235,7 +272,8 @@ class StrategyExecutor:
         for i in range(len(data)):
             current_data = data.iloc[i]
             timestamp = current_data.name
-            current_price = current_data['close']
+            # 列名の大文字・小文字を自動判定
+            current_price = self._get_price_from_data(current_data, 'close')
 
             # エントリー条件をチェック
             if self.position.quantity == 0:  # ポジションなし
@@ -262,7 +300,8 @@ class StrategyExecutor:
 
         # 最終的にポジションが残っている場合は決済
         if self.position.quantity > 0:
-            final_price = data.iloc[-1]['close']
+            final_data = data.iloc[-1]
+            final_price = self._get_price_from_data(final_data, 'close')
             final_timestamp = data.index[-1]
             self.execute_trade('sell', final_price, final_timestamp)
 
