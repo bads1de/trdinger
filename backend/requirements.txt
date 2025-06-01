@@ -13,3 +13,6 @@ pytest-asyncio==0.21.1
 httpx
 sqlalchemy==2.0.23
 alembic==1.13.1
+
+# Backtesting library
+backtesting==0.6.4

@@ -2,7 +2,17 @@
 データベースモデル定義
 """
 
-from sqlalchemy import Column, Integer, String, Float, DateTime, Index
+from sqlalchemy import (
+    Column,
+    Integer,
+    String,
+    Float,
+    DateTime,
+    Index,
+    Boolean,
+    Text,
+    JSON,
+)
 from sqlalchemy.sql import func
 from .connection import Base
 
@@ -311,4 +321,150 @@ class TechnicalIndicatorData(Base):
             "timestamp": self.timestamp.isoformat() if self.timestamp else None,
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "updated_at": self.updated_at.isoformat() if self.updated_at else None,
+        }
+
+
+class BacktestResult(Base):
+    """
+    バックテスト結果テーブル
+
+    backtesting.pyライブラリを使用したバックテスト結果を保存します。
+    """
+
+    __tablename__ = "backtest_results"
+
+    # 主キー
+    id = Column(Integer, primary_key=True, autoincrement=True)
+
+    # 戦略名
+    strategy_name = Column(String(100), nullable=False)
+
+    # 取引ペア（例: BTC/USDT）
+    symbol = Column(String(50), nullable=False, index=True)
+
+    # 時間軸（例: 1h, 4h, 1d）
+    timeframe = Column(String(10), nullable=False, index=True)
+
+    # バックテスト期間
+    start_date = Column(DateTime(timezone=True), nullable=False)
+    end_date = Column(DateTime(timezone=True), nullable=False)
+
+    # 初期資金
+    initial_capital = Column(Float, nullable=False)
+
+    # 手数料率
+    commission_rate = Column(Float, nullable=True, default=0.001)
+
+    # 戦略設定（JSON形式）
+    config_json = Column(JSON, nullable=False)
+
+    # パフォーマンス指標（JSON形式）
+    performance_metrics = Column(JSON, nullable=False)
+
+    # 資産曲線データ（JSON形式）
+    equity_curve = Column(JSON, nullable=False)
+
+    # 取引履歴（JSON形式）
+    trade_history = Column(JSON, nullable=False)
+
+    # 実行時間（秒）
+    execution_time = Column(Float, nullable=True)
+
+    # ステータス
+    status = Column(String(20), nullable=False, default="completed")
+
+    # エラーメッセージ
+    error_message = Column(Text, nullable=True)
+
+    # メタデータ
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
+
+    # インデックス定義
+    __table_args__ = (
+        Index("idx_backtest_symbol_timeframe", "symbol", "timeframe"),
+        Index("idx_backtest_strategy_created", "strategy_name", "created_at"),
+        Index("idx_backtest_created_at", "created_at"),
+    )
+
+    def __repr__(self):
+        return (
+            f"<BacktestResult(strategy='{self.strategy_name}', "
+            f"symbol='{self.symbol}', timeframe='{self.timeframe}', "
+            f"created_at='{self.created_at}')>"
+        )
+
+    def to_dict(self):
+        """辞書形式に変換"""
+        return {
+            "id": self.id,
+            "strategy_name": self.strategy_name,
+            "symbol": self.symbol,
+            "timeframe": self.timeframe,
+            "start_date": self.start_date.isoformat() if self.start_date else None,
+            "end_date": self.end_date.isoformat() if self.end_date else None,
+            "initial_capital": self.initial_capital,
+            "config_json": self.config_json,
+            "performance_metrics": self.performance_metrics,
+            "equity_curve": self.equity_curve,
+            "trade_history": self.trade_history,
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+        }
+
+
+class StrategyTemplate(Base):
+    """
+    戦略テンプレートテーブル
+
+    再利用可能な戦略設定を保存します。
+    """
+
+    __tablename__ = "strategy_templates"
+
+    # 主キー
+    id = Column(Integer, primary_key=True, autoincrement=True)
+
+    # テンプレート名（一意）
+    name = Column(String(100), nullable=False, unique=True)
+
+    # 説明
+    description = Column(Text, nullable=True)
+
+    # カテゴリ（例: trend_following, mean_reversion）
+    category = Column(String(50), nullable=True)
+
+    # 戦略設定（JSON形式）
+    config_json = Column(JSON, nullable=False)
+
+    # 公開フラグ
+    is_public = Column(Boolean, default=False)
+
+    # メタデータ
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    # インデックス定義
+    __table_args__ = (
+        Index("idx_template_category", "category"),
+        Index("idx_template_public", "is_public"),
+        Index("idx_template_created", "created_at"),
+    )
+
+    def __repr__(self):
+        return (
+            f"<StrategyTemplate(name='{self.name}', "
+            f"category='{self.category}', is_public={self.is_public})>"
+        )
+
+    def to_dict(self):
+        """辞書形式に変換"""
+        return {
+            "id": self.id,
+            "name": self.name,
+            "description": self.description,
+            "category": self.category,
+            "config_json": self.config_json,
+            "is_public": self.is_public,
+            "created_at": self.created_at.isoformat() if self.created_at else None,
         }

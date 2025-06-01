@@ -57,11 +57,22 @@ addopts = [
     "-v",
     "--tb=short",
     "--strict-markers",
+    "--strict-config",
+    "--color=yes",
+    "--durations=10",
 ]
 markers = [
     "unit: Unit tests",
     "integration: Integration tests",
-    "slow: Slow tests",
+    "slow: Slow tests (may take more than 10 seconds)",
+    "backtest: Backtest related tests",
+    "performance: Performance tests",
+    "error_handling: Error handling tests",
+]
+filterwarnings = [
+    "ignore::DeprecationWarning",
+    "ignore::PendingDeprecationWarning",
+    "ignore::UserWarning:backtesting.*",
 ]
 
 [tool.black]
