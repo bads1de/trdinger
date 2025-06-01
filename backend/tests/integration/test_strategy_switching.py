@@ -1,12 +1,19 @@
 """
-戦略切り替え機能の包括的テスト
+注意: このテストは独自実装のStrategyExecutorに依存していましたが、
+backtesting.pyライブラリへの統一により無効化されました。
 
-このファイルは以下をテストします：
-- 複数の異なる戦略の順次実行
-- 同一データセットでの異なる戦略の結果比較
-- 戦略パラメータ変更時の結果変化検証
-- 戦略切り替え時のメモリリークやデータ汚染の確認
+新しいテストは以下を参照してください:
+- backend/tests/unit/test_backtest_service.py
+- backend/tests/integration/test_unified_backtest_system.py
 """
+
+import pytest
+
+# 独自実装が削除されたため、このテストファイルは無効化
+pytestmark = pytest.mark.skip(
+    reason="StrategyExecutor was removed in favor of backtesting.py library"
+)
+
 
 import pytest
 import pandas as pd
@@ -17,8 +24,8 @@ import psutil
 import os
 from unittest.mock import Mock
 
-from backtest.engine.strategy_executor import StrategyExecutor
-from backtest.engine.indicators import TechnicalIndicators
+# from backtest.engine.strategy_executor import StrategyExecutor
+# from backtest.engine.indicators import TechnicalIndicators
 
 
 @pytest.mark.integration

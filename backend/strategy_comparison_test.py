@@ -2,13 +2,28 @@
 """
 戦略比較テスト実行スクリプト
 
-複数の戦略を同一データで実行し、結果を比較します。
+注意: このスクリプトは独自実装のStrategyExecutorに依存していましたが、
+backtesting.pyライブラリへの統一により無効化されました。
+
+新しい戦略比較テストは以下を参照してください:
+- backend/tests/accuracy/test_backtest_accuracy.py
+- backend/tests/integration/test_strategy_switching.py
+
+このファイルは参考用として残されています。
 """
 
+import sys
+print("このスクリプトは無効化されました。")
+print("新しいバックテストシステムについては以下を参照してください:")
+print("- backend/tests/accuracy/test_backtest_accuracy.py")
+print("- backend/tests/integration/test_strategy_switching.py")
+sys.exit(0)
+
+# 以下は無効化されたコード（参考用）
 import pandas as pd
 import numpy as np
 from datetime import datetime, timedelta
-from backtest.engine.strategy_executor import StrategyExecutor
+# from backtest.engine.strategy_executor import StrategyExecutor  # 削除済み
 
 def create_btc_data():
     """BTCテストデータの作成"""

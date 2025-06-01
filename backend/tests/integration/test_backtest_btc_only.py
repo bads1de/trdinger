@@ -1,12 +1,19 @@
 """
-BTC専用バックテスト統合テスト
+注意: このテストは独自実装のStrategyExecutorに依存していましたが、
+backtesting.pyライブラリへの統一により無効化されました。
 
-このファイルは以下をテストします：
-- BTCスポット・先物データでのバックテスト実行
-- ETHデータの除外確認
-- 実際のデータベースとの連携
-- funding rate実装パターンに従った処理
+新しいテストは以下を参照してください:
+- backend/tests/unit/test_backtest_service.py
+- backend/tests/integration/test_unified_backtest_system.py
 """
+
+import pytest
+
+# 独自実装が削除されたため、このテストファイルは無効化
+pytestmark = pytest.mark.skip(
+    reason="StrategyExecutor was removed in favor of backtesting.py library"
+)
+
 
 import pytest
 import pandas as pd
@@ -14,7 +21,7 @@ import numpy as np
 from datetime import datetime, timedelta
 from unittest.mock import Mock, patch, AsyncMock
 
-from backtest.engine.strategy_executor import StrategyExecutor
+# from backtest.engine.strategy_executor import StrategyExecutor
 from app.core.services.backtest_service import BacktestService
 from database.models import OHLCVData
 

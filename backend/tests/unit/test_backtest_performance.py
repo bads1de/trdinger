@@ -1,8 +1,19 @@
 """
-バックテストパフォーマンステスト
+注意: このテストは独自実装のStrategyExecutorに依存していましたが、
+backtesting.pyライブラリへの統一により無効化されました。
 
-バックテスト実行の性能とメモリ使用量をテストします。
+新しいテストは以下を参照してください:
+- backend/tests/unit/test_backtest_service.py
+- backend/tests/integration/test_unified_backtest_system.py
 """
+
+import pytest
+
+# 独自実装が削除されたため、このテストファイルは無効化
+pytestmark = pytest.mark.skip(
+    reason="StrategyExecutor was removed in favor of backtesting.py library"
+)
+
 
 import pytest
 import pandas as pd
@@ -19,7 +30,7 @@ try:
 except ImportError:
     HAS_PSUTIL = False
 
-from backtest.engine.strategy_executor import StrategyExecutor
+# from backtest.engine.strategy_executor import StrategyExecutor
 from app.core.strategies.sma_cross_strategy import SMACrossStrategy
 from app.core.services.backtest_service import BacktestService
 
