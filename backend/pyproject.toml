@@ -68,6 +68,9 @@ markers = [
     "backtest: Backtest related tests",
     "performance: Performance tests",
     "error_handling: Error handling tests",
+    "edge_cases: Edge case tests",
+    "accuracy: Accuracy and precision tests",
+    "strategy_switching: Strategy switching tests",
 ]
 filterwarnings = [
     "ignore::DeprecationWarning",

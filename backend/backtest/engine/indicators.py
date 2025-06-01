@@ -68,6 +68,56 @@ class TechnicalIndicators:
         return atr
 
     @staticmethod
+    def _normalize_column_names(data: pd.DataFrame) -> pd.DataFrame:
+        """
+        データフレームの列名を正規化（大文字・小文字の統一）
+
+        Args:
+            data: 入力データフレーム
+
+        Returns:
+            列名が正規化されたデータフレーム
+        """
+        # 列名のマッピング（小文字 → 大文字）
+        column_mapping = {
+            'open': 'Open',
+            'high': 'High',
+            'low': 'Low',
+            'close': 'Close',
+            'volume': 'Volume'
+        }
+
+        # 現在の列名を確認して適切にマッピング
+        normalized_data = data.copy()
+        for old_name, new_name in column_mapping.items():
+            if old_name in normalized_data.columns:
+                normalized_data = normalized_data.rename(columns={old_name: new_name})
+
+        return normalized_data
+
+    @staticmethod
+    def _get_price_column(data: pd.DataFrame, column_type: str) -> pd.Series:
+        """
+        価格列を取得（列名の大文字・小文字を自動判定）
+
+        Args:
+            data: データフレーム
+            column_type: 'close', 'open', 'high', 'low', 'volume'
+
+        Returns:
+            価格データのSeries
+        """
+        # 正規化されたデータを使用
+        normalized_data = TechnicalIndicators._normalize_column_names(data)
+
+        # 大文字の列名で取得
+        column_name = column_type.capitalize()
+        if column_name in normalized_data.columns:
+            return normalized_data[column_name]
+        else:
+            raise KeyError(f"Column '{column_name}' not found in data. Available columns: {list(normalized_data.columns)}")
+
+    @staticmethod
     def calculate_indicator(data: pd.DataFrame, indicator_name: str, params: dict) -> pd.Series:
         """
         指標名とパラメータに基づいて指標を計算する汎用メソッド
@@ -82,18 +132,30 @@ class TechnicalIndicators:
         """
         indicator_name = indicator_name.upper()
 
+        # データの列名を正規化
+        normalized_data = TechnicalIndicators._normalize_column_names(data)
+
         if indicator_name == 'SMA':
-            return TechnicalIndicators.sma(data['close'], params.get('period', 20))
+            return TechnicalIndicators.sma(
+                TechnicalIndicators._get_price_column(data, 'close'),
+                params.get('period', 20)
+            )
 
         elif indicator_name == 'EMA':
-            return TechnicalIndicators.ema(data['close'], params.get('period', 20))
+            return TechnicalIndicators.ema(
+                TechnicalIndicators._get_price_column(data, 'close'),
+                params.get('period', 20)
+            )
 
         elif indicator_name == 'RSI':
-            return TechnicalIndicators.rsi(data['close'], params.get('period', 14))
+            return TechnicalIndicators.rsi(
+                TechnicalIndicators._get_price_column(data, 'close'),
+                params.get('period', 14)
+            )
 
         elif indicator_name == 'MACD':
             macd_line, macd_signal, macd_histogram = TechnicalIndicators.macd(
-                data['close'],
+                TechnicalIndicators._get_price_column(data, 'close'),
                 params.get('fast_period', 12),
                 params.get('slow_period', 26),
                 params.get('signal_period', 9)
@@ -107,7 +169,7 @@ class TechnicalIndicators:
 
         elif indicator_name == 'BB' or indicator_name == 'BOLLINGER_BANDS':
             upper, middle, lower = TechnicalIndicators.bollinger_bands(
-                data['close'],
+                TechnicalIndicators._get_price_column(data, 'close'),
                 params.get('period', 20),
                 params.get('std_dev', 2.0)
             )
@@ -119,9 +181,9 @@ class TechnicalIndicators:
 
         elif indicator_name == 'STOCH' or indicator_name == 'STOCHASTIC':
             slowk, slowd = TechnicalIndicators.stochastic(
-                data['high'],
-                data['low'],
-                data['close'],
+                TechnicalIndicators._get_price_column(data, 'high'),
+                TechnicalIndicators._get_price_column(data, 'low'),
+                TechnicalIndicators._get_price_column(data, 'close'),
                 params.get('k_period', 14),
                 params.get('d_period', 3)
             )
@@ -132,9 +194,9 @@ class TechnicalIndicators:
 
         elif indicator_name == 'ATR':
             return TechnicalIndicators.atr(
-                data['high'],
-                data['low'],
-                data['close'],
+                TechnicalIndicators._get_price_column(data, 'high'),
+                TechnicalIndicators._get_price_column(data, 'low'),
+                TechnicalIndicators._get_price_column(data, 'close'),
                 params.get('period', 14)
             )
 
