@@ -2,16 +2,37 @@
 
 ## 📋 概要
 
-backtesting.pyライブラリを使用したバックテスト最適化機能の包括的な実装ガイドです。
-現在の実装を拡張し、より高度な最適化機能を提供します。
+**backtesting.pyライブラリの内蔵最適化機能**を使用したバックテスト最適化の包括的な実装ガイドです。
+scipyなどの外部最適化ライブラリは不要で、backtesting.py単体で高度な最適化が可能です。
+
+### 🎯 **なぜbacktesting.pyの最適化機能を使うべきか**
+
+- ✅ **完全統合**: バックテストエンジンと最適化が一体化
+- ✅ **効率性**: SAMBO最適化による高速な収束
+- ✅ **簡潔性**: 数行のコードで高度な最適化
+- ✅ **可視化**: ヒートマップの自動生成
+- ✅ **保守性**: 外部依存なし、単一ライブラリで完結
+- ✅ **実績**: 多くのクオンツファンドで使用されている信頼性
+
+## 🚀 **backtesting.py vs 外部最適化ライブラリ比較**
+
+| 特徴 | backtesting.py | scipy.optimize | その他ライブラリ |
+|------|----------------|----------------|------------------|
+| **統合性** | ✅ 完全統合 | ❌ 別途実装必要 | ❌ 複雑な統合 |
+| **使いやすさ** | ✅ 1行で実行 | ❌ 数十行必要 | ❌ 学習コスト高 |
+| **最適化手法** | Grid, SAMBO, Random | 多数の手法 | 手法による |
+| **制約条件** | ✅ 簡単設定 | ✅ サポート | ライブラリ依存 |
+| **ヒートマップ** | ✅ 自動生成 | ❌ 別途実装 | ❌ 別途実装 |
+| **パフォーマンス** | ✅ 最適化済み | ⚠️ 実装次第 | ⚠️ 実装次第 |
+| **保守性** | ✅ 単一依存 | ❌ 複数依存 | ❌ 複数依存 |
 
 ---
 
-## 🎯 利用可能な最適化機能
+## 🎯 backtesting.py内蔵の最適化機能
 
 ### 1. **Grid Search（グリッドサーチ）**
 ```python
-# 基本的なグリッドサーチ
+# 基本的なグリッドサーチ - 全組み合わせを試行
 stats = bt.optimize(
     n1=range(10, 50, 5),
     n2=range(50, 200, 10),
@@ -21,19 +42,19 @@ stats = bt.optimize(
 
 ### 2. **SAMBO（Sequential Model-Based Optimization）**
 ```python
-# 効率的なモデルベース最適化
+# 効率的なベイズ最適化 - 推奨手法
 stats = bt.optimize(
     n1=range(10, 100),
     n2=range(50, 300),
-    method='sambo',
-    max_tries=200,
+    method='sambo',        # ベイズ最適化
+    max_tries=200,         # 効率的な探索
     maximize='Sharpe Ratio'
 )
 ```
 
-### 3. **ランダムサーチ**
+### 3. **Random Search（ランダムサーチ）**
 ```python
-# ランダムサンプリング
+# ランダムサンプリング - 大規模パラメータ空間用
 stats = bt.optimize(
     n1=range(5, 100),
     n2=range(20, 300),
@@ -79,9 +100,17 @@ stats = bt.optimize(
 
 ### **method オプション**
 ```python
-method='grid'    # グリッドサーチ（デフォルト）
-method='sambo'   # SAMBO最適化
+method='grid'    # グリッドサーチ（デフォルト）- 小規模パラメータ空間用
+method='sambo'   # SAMBO最適化（推奨）- 効率的なベイズ最適化
 ```
+
+### **🎯 最適化手法の選択指針**
+
+| パラメータ空間サイズ | 推奨手法 | 理由 |
+|---------------------|----------|------|
+| < 1,000組み合わせ | `grid` | 全探索が現実的 |
+| 1,000 - 10,000 | `sambo` | 効率的な探索 |
+| > 10,000 | `sambo` + `max_tries` | 計算時間の制限 |
 
 ### **max_tries オプション**
 ```python
@@ -143,31 +172,36 @@ stats = bt.optimize(
 
 ## 🚀 実装例
 
-### **1. 基本的な最適化実装**
+### **1. backtesting.py内蔵最適化の基本実装**
 
 ```python
 class EnhancedBacktestService(BacktestService):
-    """拡張されたバックテストサービス"""
-    
+    """
+    backtesting.pyの内蔵最適化機能を活用した拡張サービス
+    scipyなどの外部ライブラリは不要
+    """
+
     def optimize_strategy_enhanced(
-        self, 
-        config: Dict[str, Any], 
+        self,
+        config: Dict[str, Any],
         optimization_params: Dict[str, Any]
     ) -> Dict[str, Any]:
         """
-        拡張された戦略最適化
-        
+        backtesting.py内蔵最適化機能を使用した戦略最適化
+
         Args:
             config: 基本バックテスト設定
             optimization_params: 最適化パラメータ
-                - method: 'grid' | 'sambo'
+                - method: 'grid' | 'sambo' (推奨: sambo)
                 - max_tries: int | float | None
                 - maximize: str | callable
                 - constraint: callable | None
-                - return_heatmap: bool
-                - return_optimization: bool
+                - return_heatmap: bool (自動ヒートマップ生成)
+                - return_optimization: bool (SAMBO詳細結果)
                 - random_state: int | None
                 - parameters: Dict[str, range]
+
+        Note: scipyなどの外部ライブラリは不要
         """
         # データ取得
         data = self._get_backtest_data(config)
@@ -202,10 +236,10 @@ class EnhancedBacktestService(BacktestService):
         for param_name, param_range in optimization_params["parameters"].items():
             optimize_kwargs[param_name] = param_range
         
-        # 最適化実行
+        # backtesting.py内蔵最適化の実行
         result = bt.optimize(**optimize_kwargs)
-        
-        # 結果の処理
+
+        # 結果の処理（backtesting.pyが自動的に最適化）
         if optimization_params.get('return_heatmap', False):
             if optimization_params.get('return_optimization', False):
                 stats, heatmap, optimization_result = result
@@ -221,7 +255,7 @@ class EnhancedBacktestService(BacktestService):
             return self._process_optimization_results(stats, config)
 ```
 
-### **2. ヒートマップ可視化機能**
+### **2. backtesting.py内蔵ヒートマップ可視化**
 
 ```python
 def generate_heatmap_visualization(
@@ -230,24 +264,26 @@ def generate_heatmap_visualization(
     output_path: str = "optimization_heatmap.html"
 ) -> str:
     """
-    最適化結果のヒートマップを生成
-    
+    backtesting.py内蔵のヒートマップ生成機能
+    外部ライブラリ不要で美しいヒートマップを自動生成
+
     Args:
-        heatmap_data: 最適化結果のヒートマップデータ
+        heatmap_data: backtesting.pyが生成したヒートマップデータ
         output_path: 出力ファイルパス
-    
+
     Returns:
         生成されたHTMLファイルのパス
     """
     from backtesting.lib import plot_heatmaps
-    
+
+    # backtesting.py内蔵の高品質ヒートマップ生成
     plot_heatmaps(
         heatmap_data,
         agg='mean',
         filename=output_path,
         open_browser=False
     )
-    
+
     return output_path
 ```
 
@@ -922,9 +958,9 @@ def _calculate_individual_scores(
 
 ---
 
-## 💻 実装コード
+## 💻 backtesting.py内蔵最適化の完全実装コード
 
-### **1. 拡張BacktestServiceの完全実装**
+### **1. backtesting.py統合BacktestServiceの完全実装**
 
 ```python
 import pandas as pd
@@ -936,8 +972,8 @@ from backtesting.lib import plot_heatmaps
 
 class EnhancedBacktestService(BacktestService):
     """
-    拡張されたバックテストサービス
-    高度な最適化機能とヒートマップ可視化を提供
+    backtesting.py内蔵最適化機能を活用した拡張サービス
+    scipyなどの外部ライブラリは不要で、高度な最適化機能を提供
     """
 
     def __init__(self, data_service=None):
@@ -1737,29 +1773,49 @@ def save_optimization_results(result: Dict[str, Any], filename: str):
 
 ## 🔗 参考資料
 
+### **backtesting.py 公式リソース**
 - [backtesting.py 公式ドキュメント](https://kernc.github.io/backtesting.py/)
 - [Parameter Heatmap & Optimization](https://kernc.github.io/backtesting.py/doc/examples/Parameter%20Heatmap%20&%20Optimization.html)
+- [backtesting.py GitHub Repository](https://github.com/kernc/backtesting.py)
+
+### **最適化手法の詳細**
 - [SAMBO Optimization](https://sambo-optimization.github.io/)
-- [Scipy Optimize Documentation](https://docs.scipy.org/doc/scipy/reference/optimize.html)
+- [Bayesian Optimization Explained](https://distill.pub/2020/bayesian-optimization/)
+
+### **注意**: scipyなどの外部最適化ライブラリは不要
+backtesting.pyの内蔵最適化機能で十分に高度な最適化が可能です。
 
 ---
 
 ## 📝 まとめ
 
-このガイドでは、backtesting.pyライブラリの最適化機能を最大限活用するための包括的な実装方法を提供しました。
+このガイドでは、**backtesting.pyライブラリの内蔵最適化機能**を最大限活用するための包括的な実装方法を提供しました。
 
-### **主要な機能**
+### **🎯 重要なポイント**
+- ✅ **scipyは不要**: backtesting.py単体で高度な最適化が可能
+- ✅ **SAMBO推奨**: 効率的なベイズ最適化で高速収束
+- ✅ **完全統合**: バックテストと最適化が一体化
+- ✅ **簡潔実装**: 数行のコードで実現
+
+### **🚀 実装された機能**
 - ✅ Grid Search & SAMBO最適化
-- ✅ ヒートマップ可視化
+- ✅ ヒートマップ自動可視化
 - ✅ マルチ指標最適化
 - ✅ ロバストネステスト
 - ✅ 詳細な結果分析
 - ✅ パフォーマンス監視
 
-### **次のステップ**
+### **📈 backtesting.pyの優位性**
+1. **統合性**: 外部ライブラリ不要の完全統合
+2. **効率性**: SAMBO最適化による高速収束
+3. **簡潔性**: 複雑な実装が不要
+4. **信頼性**: 多くのプロダクション環境で実績
+5. **保守性**: 単一依存で管理が容易
+
+### **🔧 次のステップ**
 1. 現在のBacktestServiceに拡張機能を統合
-2. 実際のデータでテスト実行
+2. SAMBO最適化での実際のテスト実行
 3. 結果の検証と改善
 4. 本番環境での運用開始
 
-この実装により、より効率的で信頼性の高いバックテスト最適化が可能になります。
+**結論**: scipyなどの外部最適化ライブラリは不要です。backtesting.pyの内蔵最適化機能で、より効率的で信頼性の高いバックテスト最適化が実現できます。
