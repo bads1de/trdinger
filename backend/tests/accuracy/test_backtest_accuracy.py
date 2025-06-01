@@ -1,13 +1,19 @@
 """
-バックテスト結果精度検証テスト
+注意: このテストは独自実装のStrategyExecutorに依存していましたが、
+backtesting.pyライブラリへの統一により無効化されました。
 
-このファイルは以下をテストします：
-- 利益計算の正確性
-- 手数料計算の正確性
-- ポジション管理の正確性
-- パフォーマンス指標の数学的正確性
-- 数値の丸め誤差や累積誤差の検証
+新しいテストは以下を参照してください:
+- backend/tests/unit/test_backtest_service.py
+- backend/tests/integration/test_unified_backtest_system.py
 """
+
+import pytest
+
+# 独自実装が削除されたため、このテストファイルは無効化
+pytestmark = pytest.mark.skip(
+    reason="StrategyExecutor was removed in favor of backtesting.py library"
+)
+
 
 import pytest
 import pandas as pd
@@ -16,7 +22,7 @@ from datetime import datetime, timedelta
 from decimal import Decimal, getcontext
 import math
 
-from backtest.engine.strategy_executor import StrategyExecutor
+# from backtest.engine.strategy_executor import StrategyExecutor
 from unittest.mock import Mock
 
 # 高精度計算のための設定

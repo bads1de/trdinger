@@ -1,17 +1,20 @@
 """
 バックテスト戦略のテスト
 
-各種戦略の動作とパラメータバリデーションをテストします。
+注意: このテストは独自実装のStrategyExecutorに依存していましたが、
+backtesting.pyライブラリへの統一により無効化されました。
+
+新しい戦略テストは以下を参照してください:
+- backend/tests/unit/test_backtest_service.py
+- backend/tests/integration/test_unified_backtest_system.py
 """
 
 import pytest
-import pandas as pd
-import numpy as np
-from datetime import datetime, timezone, timedelta
-from unittest.mock import Mock, patch
 
-from app.core.strategies.sma_cross_strategy import SMACrossStrategy
-from backtest.engine.strategy_executor import StrategyExecutor
+# 独自実装が削除されたため、このテストファイルは無効化
+pytestmark = pytest.mark.skip(
+    reason="StrategyExecutor was removed in favor of backtesting.py library"
+)
 
 
 @pytest.mark.unit

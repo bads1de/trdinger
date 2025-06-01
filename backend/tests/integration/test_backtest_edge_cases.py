@@ -1,13 +1,19 @@
 """
-バックテスト機能のエッジケーステスト
+注意: このテストは独自実装のStrategyExecutorに依存していましたが、
+backtesting.pyライブラリへの統一により無効化されました。
 
-このファイルは以下をテストします：
-- 空データでの処理
-- 不正な日付範囲
-- 極端なパラメータ値
-- データ不足の状況
-- 異常な市場条件
+新しいテストは以下を参照してください:
+- backend/tests/unit/test_backtest_service.py
+- backend/tests/integration/test_unified_backtest_system.py
 """
+
+import pytest
+
+# 独自実装が削除されたため、このテストファイルは無効化
+pytestmark = pytest.mark.skip(
+    reason="StrategyExecutor was removed in favor of backtesting.py library"
+)
+
 
 import pytest
 import pandas as pd
@@ -15,8 +21,8 @@ import numpy as np
 from datetime import datetime, timedelta
 from unittest.mock import Mock
 
-from backtest.engine.strategy_executor import StrategyExecutor
-from backtest.engine.indicators import TechnicalIndicators
+# from backtest.engine.strategy_executor import StrategyExecutor
+# from backtest.engine.indicators import TechnicalIndicators
 
 
 @pytest.mark.integration

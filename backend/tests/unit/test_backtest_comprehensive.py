@@ -1,22 +1,29 @@
 """
-バックテスト機能の包括的な単体テスト
+注意: このテストは独自実装のStrategyExecutorに依存していましたが、
+backtesting.pyライブラリへの統一により無効化されました。
 
-このファイルは以下をテストします：
-- StrategyExecutorの全機能
-- TechnicalIndicatorsの全指標
-- エラーハンドリング
-- バリデーション機能
-- エッジケース
+新しいテストは以下を参照してください:
+- backend/tests/unit/test_backtest_service.py
+- backend/tests/integration/test_unified_backtest_system.py
 """
 
 import pytest
-import pandas as pd
-import numpy as np
-from datetime import datetime, timedelta
-from unittest.mock import Mock, patch
 
-from backtest.engine.strategy_executor import StrategyExecutor, Trade, Position
-from backtest.engine.indicators import TechnicalIndicators
+# 独自実装が削除されたため、このテストファイルは無効化
+pytestmark = pytest.mark.skip(
+    reason="StrategyExecutor was removed in favor of backtesting.py library"
+)
+
+
+# 以下は無効化されたコード（参考用）
+# import pytest
+# import pandas as pd
+# import numpy as np
+# from datetime import datetime, timedelta
+# from unittest.mock import Mock, patch
+
+# from backtest.engine.strategy_executor import StrategyExecutor, Trade, Position  # 削除済み
+# from backtest.engine.indicators import TechnicalIndicators  # 削除済み
 
 
 class TestStrategyExecutorValidation:
