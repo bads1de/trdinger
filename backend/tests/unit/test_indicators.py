@@ -1,12 +1,18 @@
 """
 テクニカル指標のテスト
-"""
-import pytest
-import pandas as pd
-import numpy as np
-from datetime import datetime, timedelta
 
-from backtest.engine.indicators import TechnicalIndicators
+注意: このテストは独自実装のTechnicalIndicatorsに依存していましたが、
+backtesting.pyライブラリへの統一により無効化されました。
+
+新しい指標テストはTA-Libまたはpandas-taを使用したテストを参照してください。
+"""
+
+import pytest
+
+# 独自実装が削除されたため、このテストファイルは無効化
+pytestmark = pytest.mark.skip(
+    reason="TechnicalIndicators was removed in favor of TA-Lib/pandas-ta"
+)
 
 
 class TestTechnicalIndicators:
@@ -15,44 +21,47 @@ class TestTechnicalIndicators:
     @pytest.fixture
     def sample_data(self):
         """テスト用のサンプルデータを生成"""
-        dates = pd.date_range(start='2023-01-01', periods=100, freq='D')
+        dates = pd.date_range(start="2023-01-01", periods=100, freq="D")
         np.random.seed(42)  # 再現性のため
 
         # 簡単なランダムウォークで価格データを生成
         prices = 100 + np.cumsum(np.random.randn(100) * 0.5)
 
-        data = pd.DataFrame({
-            'open': prices + np.random.randn(100) * 0.1,
-            'high': prices + np.abs(np.random.randn(100) * 0.3),
-            'low': prices - np.abs(np.random.randn(100) * 0.3),
-            'close': prices,
-            'volume': np.random.randint(1000, 10000, 100)
-        }, index=dates)
+        data = pd.DataFrame(
+            {
+                "open": prices + np.random.randn(100) * 0.1,
+                "high": prices + np.abs(np.random.randn(100) * 0.3),
+                "low": prices - np.abs(np.random.randn(100) * 0.3),
+                "close": prices,
+                "volume": np.random.randint(1000, 10000, 100),
+            },
+            index=dates,
+        )
 
         return data
 
     def test_sma_calculation(self, sample_data):
         """SMA計算のテスト"""
         period = 20
-        sma = TechnicalIndicators.sma(sample_data['close'], period)
+        sma = TechnicalIndicators.sma(sample_data["close"], period)
 
         # 結果の長さが正しいか
         assert len(sma) == len(sample_data)
 
         # 最初のperiod-1個はNaNであるべき
-        assert np.isnan(sma[:period-1]).all()
+        assert np.isnan(sma[: period - 1]).all()
 
         # period番目以降は値が入っているべき
-        assert not np.isnan(sma[period-1:]).any()
+        assert not np.isnan(sma[period - 1 :]).any()
 
         # 手動計算との比較（最初の有効な値）
-        expected_first_sma = sample_data['close'][:period].mean()
-        assert abs(sma[period-1] - expected_first_sma) < 1e-10
+        expected_first_sma = sample_data["close"][:period].mean()
+        assert abs(sma[period - 1] - expected_first_sma) < 1e-10
 
     def test_rsi_calculation(self, sample_data):
         """RSI計算のテスト"""
         period = 14
-        rsi = TechnicalIndicators.rsi(sample_data['close'], period)
+        rsi = TechnicalIndicators.rsi(sample_data["close"], period)
 
         # 結果の長さが正しいか
         assert len(rsi) == len(sample_data)
@@ -64,7 +73,9 @@ class TestTechnicalIndicators:
 
     def test_macd_calculation(self, sample_data):
         """MACD計算のテスト"""
-        macd_line, macd_signal, macd_histogram = TechnicalIndicators.macd(sample_data['close'])
+        macd_line, macd_signal, macd_histogram = TechnicalIndicators.macd(
+            sample_data["close"]
+        )
 
         # 結果の長さが正しいか
         assert len(macd_line) == len(sample_data)
@@ -75,12 +86,12 @@ class TestTechnicalIndicators:
         valid_indices = ~(np.isnan(macd_line) | np.isnan(macd_signal))
         np.testing.assert_array_almost_equal(
             macd_histogram[valid_indices],
-            macd_line[valid_indices] - macd_signal[valid_indices]
+            macd_line[valid_indices] - macd_signal[valid_indices],
         )
 
     def test_bollinger_bands_calculation(self, sample_data):
         """ボリンジャーバンド計算のテスト"""
-        upper, middle, lower = TechnicalIndicators.bollinger_bands(sample_data['close'])
+        upper, middle, lower = TechnicalIndicators.bollinger_bands(sample_data["close"])
 
         # 結果の長さが正しいか
         assert len(upper) == len(sample_data)
@@ -95,40 +106,38 @@ class TestTechnicalIndicators:
     def test_calculate_indicator_sma(self, sample_data):
         """汎用指標計算メソッドのテスト（SMA）"""
         result = TechnicalIndicators.calculate_indicator(
-            sample_data, 'SMA', {'period': 20}
+            sample_data, "SMA", {"period": 20}
         )
 
         # 直接計算との比較
-        expected = TechnicalIndicators.sma(sample_data['close'], 20)
+        expected = TechnicalIndicators.sma(sample_data["close"], 20)
         np.testing.assert_array_equal(result, expected)
 
     def test_calculate_indicator_rsi(self, sample_data):
         """汎用指標計算メソッドのテスト（RSI）"""
         result = TechnicalIndicators.calculate_indicator(
-            sample_data, 'RSI', {'period': 14}
+            sample_data, "RSI", {"period": 14}
         )
 
         # 直接計算との比較
-        expected = TechnicalIndicators.rsi(sample_data['close'], 14)
+        expected = TechnicalIndicators.rsi(sample_data["close"], 14)
         np.testing.assert_array_equal(result, expected)
 
     def test_calculate_indicator_macd(self, sample_data):
         """汎用指標計算メソッドのテスト（MACD）"""
-        result = TechnicalIndicators.calculate_indicator(
-            sample_data, 'MACD', {}
-        )
+        result = TechnicalIndicators.calculate_indicator(sample_data, "MACD", {})
 
         # 結果が辞書であることを確認
         assert isinstance(result, dict)
-        assert 'macd' in result
-        assert 'signal' in result
-        assert 'histogram' in result
+        assert "macd" in result
+        assert "signal" in result
+        assert "histogram" in result
 
     def test_unsupported_indicator(self, sample_data):
         """サポートされていない指標のテスト"""
         with pytest.raises(ValueError, match="Unsupported indicator"):
             TechnicalIndicators.calculate_indicator(
-                sample_data, 'UNKNOWN_INDICATOR', {}
+                sample_data, "UNKNOWN_INDICATOR", {}
             )
 
 

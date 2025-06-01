@@ -2,30 +2,34 @@
 """
 バックテスト実行スクリプト
 Next.js API Routeから呼び出される
+
+backtesting.pyライブラリを使用した統一実装
 """
 import sys
 import json
 import pandas as pd
 import numpy as np
 from datetime import datetime, timedelta
-from backtest.engine.strategy_executor import StrategyExecutor
+from app.core.services.backtest_service import BacktestService
 from database.connection import SessionLocal
 from database.repositories.ohlcv_repository import OHLCVRepository
 
 
-def generate_sample_data(start_date: str, end_date: str, symbol: str = "BTC/USD") -> pd.DataFrame:
+def generate_sample_data(
+    start_date: str, end_date: str, symbol: str = "BTC/USD"
+) -> pd.DataFrame:
     """
     サンプルデータを生成（実際の実装では外部APIやデータベースから取得）
     """
-    start = datetime.fromisoformat(start_date.replace('Z', '+00:00'))
-    end = datetime.fromisoformat(end_date.replace('Z', '+00:00'))
+    start = datetime.fromisoformat(start_date.replace("Z", "+00:00"))
+    end = datetime.fromisoformat(end_date.replace("Z", "+00:00"))
 
     # 1分足データを生成
-    date_range = pd.date_range(start=start, end=end, freq='1min')
+    date_range = pd.date_range(start=start, end=end, freq="1min")
 
     # ランダムウォークで価格データを生成
     np.random.seed(42)  # 再現性のため
-    base_price = 50000 if symbol.startswith('BTC') else 50000  # BTC only (ETH excluded)
+    base_price = 50000 if symbol.startswith("BTC") else 50000  # BTC only (ETH excluded)
 
     # より現実的な価格変動を生成
     returns = np.random.normal(0, 0.001, len(date_range))  # 0.1%の標準偏差
@@ -43,28 +47,32 @@ def generate_sample_data(start_date: str, end_date: str, symbol: str = "BTC/USD"
         close_price = price
         volume = np.random.randint(100, 1000)
 
-        data.append({
-            'timestamp': timestamp,
-            'open': open_price,
-            'high': max(open_price, high, close_price),
-            'low': min(open_price, low, close_price),
-            'close': close_price,
-            'volume': volume
-        })
+        data.append(
+            {
+                "timestamp": timestamp,
+                "Open": open_price,  # backtesting.py標準形式
+                "High": max(open_price, high, close_price),
+                "Low": min(open_price, low, close_price),
+                "Close": close_price,
+                "Volume": volume,
+            }
+        )
 
     df = pd.DataFrame(data)
-    df.set_index('timestamp', inplace=True)
+    df.set_index("timestamp", inplace=True)
     return df
 
 
-def get_real_data(symbol: str, start_date: str, end_date: str, timeframe: str = "1d") -> pd.DataFrame:
+def get_real_data(
+    symbol: str, start_date: str, end_date: str, timeframe: str = "1d"
+) -> pd.DataFrame:
     """
     データベースから実際のOHLCVデータを取得
     """
     try:
         # 日付文字列をdatetimeに変換
-        start_dt = datetime.fromisoformat(start_date.replace('Z', '+00:00'))
-        end_dt = datetime.fromisoformat(end_date.replace('Z', '+00:00'))
+        start_dt = datetime.fromisoformat(start_date.replace("Z", "+00:00"))
+        end_dt = datetime.fromisoformat(end_date.replace("Z", "+00:00"))
 
         # データベースセッション
         db = SessionLocal()
@@ -73,14 +81,13 @@ def get_real_data(symbol: str, start_date: str, end_date: str, timeframe: str = 
 
             # データを取得
             df = ohlcv_repo.get_ohlcv_dataframe(
-                symbol=symbol,
-                timeframe=timeframe,
-                start_time=start_dt,
-                end_time=end_dt
+                symbol=symbol, timeframe=timeframe, start_time=start_dt, end_time=end_dt
             )
 
             if df.empty:
-                print(f"警告: データベースにデータが見つかりません。サンプルデータを使用します。")
+                print(
+                    f"警告: データベースにデータが見つかりません。サンプルデータを使用します。"
+                )
                 return generate_sample_data(start_date, end_date, symbol)
 
             print(f"データベースから{len(df)}件のデータを取得しました")
@@ -102,62 +109,49 @@ def run_backtest(config: dict) -> dict:
     try:
         # データを取得（まずデータベースから、なければサンプルデータ）
         data = get_real_data(
-            config['strategy']['target_pair'],
-            config['start_date'],
-            config['end_date'],
-            config.get('timeframe', '1d')
+            config["strategy"]["target_pair"],
+            config["start_date"],
+            config["end_date"],
+            config.get("timeframe", "1d"),
         )
 
-        # 戦略実行エンジンを初期化
-        executor = StrategyExecutor(
-            initial_capital=config.get('initial_capital', 100000),
-            commission_rate=config.get('commission_rate', 0.001)
-        )
+        # BacktestServiceを使用した新しい実装
+        backtest_service = BacktestService()
 
-        # 戦略設定を準備
-        strategy_config = {
-            'indicators': config['strategy']['indicators'],
-            'entry_rules': config['strategy']['entry_rules'],
-            'exit_rules': config['strategy']['exit_rules']
+        # 設定をBacktestService形式に変換
+        backtest_config = {
+            "strategy_name": config["strategy"].get("name", "SMA_CROSS"),
+            "symbol": config["strategy"]["target_pair"],
+            "timeframe": config.get("timeframe", "1d"),
+            "start_date": config["start_date"],
+            "end_date": config["end_date"],
+            "initial_capital": config.get("initial_capital", 100000),
+            "commission_rate": config.get("commission_rate", 0.001),
+            "strategy_config": {
+                "strategy_type": "SMA_CROSS",
+                "parameters": {"n1": 20, "n2": 50},  # デフォルト値  # デフォルト値
+            },
         }
 
         # バックテストを実行
-        result = executor.run_backtest(data, strategy_config)
+        result = backtest_service.run_backtest(backtest_config)
 
-        # 結果を整形
-        backtest_result = {
-            'id': str(int(datetime.now().timestamp())),
-            'strategy_id': config['strategy'].get('id', 'unknown'),
-            'config': config,
-            'total_return': result['total_return'],
-            'sharpe_ratio': result['sharpe_ratio'],
-            'max_drawdown': result['max_drawdown'],
-            'win_rate': result['win_rate'],
-            'profit_factor': result['profit_factor'],
-            'total_trades': result['total_trades'],
-            'winning_trades': result['winning_trades'],
-            'losing_trades': result['losing_trades'],
-            'avg_win': result['avg_win'],
-            'avg_loss': result['avg_loss'],
-            'equity_curve': [
-                {
-                    'timestamp': point['timestamp'].isoformat() if hasattr(point['timestamp'], 'isoformat') else str(point['timestamp']),
-                    'equity': point['equity'],
-                    'drawdown': (point['equity'] - result['final_equity']) / result['final_equity'] if result['final_equity'] > 0 else 0
-                }
-                for point in result['equity_curve']
-            ],
-            'trade_history': result['trades'],
-            'created_at': datetime.now().isoformat()
-        }
+        # BacktestServiceの結果は既に適切な形式なので、そのまま返す
+        # 必要に応じて追加のフィールドを設定
+        backtest_result = result.copy()
+        backtest_result.update(
+            {
+                "id": str(int(datetime.now().timestamp())),
+                "strategy_id": config["strategy"].get("id", "unknown"),
+                "config": config,
+                "created_at": datetime.now().isoformat(),
+            }
+        )
 
         return backtest_result
 
     except Exception as e:
-        return {
-            'error': str(e),
-            'traceback': str(e.__traceback__)
-        }
+        return {"error": str(e), "traceback": str(e.__traceback__)}
 
 
 def main():
@@ -177,12 +171,12 @@ def main():
 
     except Exception as e:
         error_result = {
-            'error': f'バックテスト実行エラー: {str(e)}',
-            'type': type(e).__name__
+            "error": f"バックテスト実行エラー: {str(e)}",
+            "type": type(e).__name__,
         }
         print(json.dumps(error_result, ensure_ascii=False))
         sys.exit(1)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
