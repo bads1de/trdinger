@@ -524,6 +524,8 @@ class BacktestService:
             config["symbol"],
             config["timeframe"],
             config["initial_capital"],
+            config.get("start_date"),
+            config.get("end_date"),
         )
 
         # 最適化されたパラメータを追加

@@ -42,8 +42,7 @@ class OHLCVRepository(BaseRepository):
 
             # 重複処理付き一括挿入
             inserted_count = self.bulk_insert_with_conflict_handling(
-                ohlcv_records,
-                ["symbol", "timeframe", "timestamp"]
+                ohlcv_records, ["symbol", "timeframe", "timestamp"]
             )
 
             logger.info(f"OHLCV データを {inserted_count} 件挿入しました")
@@ -109,8 +108,7 @@ class OHLCVRepository(BaseRepository):
             最新のタイムスタンプ、データが存在しない場合はNone
         """
         return super().get_latest_timestamp(
-            "timestamp",
-            {"symbol": symbol, "timeframe": timeframe}
+            "timestamp", {"symbol": symbol, "timeframe": timeframe}
         )
 
     def get_oldest_timestamp(self, symbol: str, timeframe: str) -> Optional[datetime]:
@@ -125,8 +123,7 @@ class OHLCVRepository(BaseRepository):
             最古のタイムスタンプ、データが存在しない場合はNone
         """
         return super().get_oldest_timestamp(
-            "timestamp",
-            {"symbol": symbol, "timeframe": timeframe}
+            "timestamp", {"symbol": symbol, "timeframe": timeframe}
         )
 
     def get_data_count(self, symbol: str, timeframe: str) -> int:
@@ -154,8 +151,7 @@ class OHLCVRepository(BaseRepository):
             (最古のタイムスタンプ, 最新のタイムスタンプ)
         """
         return super().get_date_range(
-            "timestamp",
-            {"symbol": symbol, "timeframe": timeframe}
+            "timestamp", {"symbol": symbol, "timeframe": timeframe}
         )
 
     def get_ohlcv_dataframe(
@@ -239,5 +235,6 @@ class OHLCVRepository(BaseRepository):
             レコード数
         """
         return self.get_data_count(symbol, timeframe)
+
 
 # sanitize_ohlcv_data メソッドは app.core.utils.data_converter.DataValidator に移動されました

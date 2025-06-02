@@ -80,8 +80,43 @@ export const useApiCall = <T = any>(): ApiCallResult<T> => {
             typeof body === "string" ? body : JSON.stringify(body);
         }
 
+        console.log("API Request:", { url, method, headers, body });
+
         const response = await fetch(url, requestOptions);
-        const result = await response.json();
+
+        console.log(
+          "API Response Status:",
+          response.status,
+          response.statusText
+        );
+        console.log(
+          "API Response Headers:",
+          Object.fromEntries(response.headers.entries())
+        );
+
+        const responseText = await response.text();
+        console.log("API Response Text:", responseText);
+
+        let result;
+        try {
+          result = JSON.parse(responseText);
+        } catch (parseError) {
+          console.error("JSON Parse Error:", parseError);
+          console.error("Response was not valid JSON:", responseText);
+          setError(
+            `レスポンスが無効なJSON形式です: ${responseText.substring(
+              0,
+              100
+            )}...`
+          );
+          onError?.(
+            `レスポンスが無効なJSON形式です: ${responseText.substring(
+              0,
+              100
+            )}...`
+          );
+          return null;
+        }
 
         if (response.ok && result.success) {
           onSuccess?.(result);
@@ -93,9 +128,12 @@ export const useApiCall = <T = any>(): ApiCallResult<T> => {
             `API呼び出しに失敗しました (${response.status})`;
           console.error("API Call Error:", {
             url,
+            method,
             status: response.status,
+            statusText: response.statusText,
             result,
             errorMessage,
+            responseText,
           });
           setError(errorMessage);
           onError?.(errorMessage);

@@ -96,6 +96,7 @@ class EnhancedBacktestService(BacktestService):
 
             # マルチプロセシングを無効化
             import multiprocessing
+
             original_cpu_count = multiprocessing.cpu_count
             multiprocessing.cpu_count = lambda: 1
 
@@ -272,6 +273,8 @@ class EnhancedBacktestService(BacktestService):
             config["symbol"],
             config["timeframe"],
             config["initial_capital"],
+            config.get("start_date"),
+            config.get("end_date"),
         )
 
         # 最適化されたパラメータを追加
