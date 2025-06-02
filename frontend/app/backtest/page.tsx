@@ -205,7 +205,7 @@ export default function BacktestPage() {
     robustnessTestLoading;
 
   return (
-    <div className="min-h-screen bg-gray-900 text-white">
+    <div className="min-h-screen bg-black text-white">
       <div className="container mx-auto px-4 py-8">
         {/* ヘッダー */}
         <div className="mb-8">
@@ -221,7 +221,7 @@ export default function BacktestPage() {
               className={`px-6 py-3 text-sm font-medium rounded-t-lg transition-colors ${
                 activeTab === "backtest"
                   ? "bg-blue-600 text-white border-b-2 border-blue-600"
-                  : "bg-gray-700 text-gray-300 hover:bg-gray-600"
+                  : "bg-gray-800 text-gray-300 hover:bg-gray-700"
               }`}
             >
               基本バックテスト
@@ -231,7 +231,7 @@ export default function BacktestPage() {
               className={`px-6 py-3 text-sm font-medium rounded-t-lg transition-colors ${
                 activeTab === "optimization"
                   ? "bg-blue-600 text-white border-b-2 border-blue-600"
-                  : "bg-gray-700 text-gray-300 hover:bg-gray-600"
+                  : "bg-gray-800 text-gray-300 hover:bg-gray-700"
               }`}
             >
               最適化
@@ -244,7 +244,7 @@ export default function BacktestPage() {
           <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
             {/* 左側: バックテスト設定フォーム */}
             <div className="space-y-6">
-              <div className="bg-gray-800 rounded-lg p-6">
+              <div className="bg-gray-900 rounded-lg p-6">
                 <h2 className="text-xl font-semibold mb-4">バックテスト設定</h2>
                 <BacktestForm
                   onSubmit={handleRunBacktest}
@@ -254,7 +254,7 @@ export default function BacktestPage() {
 
               {/* 最新結果のプレビュー */}
               {latestResult && (
-                <div className="bg-gray-800 rounded-lg p-6">
+                <div className="bg-gray-900 rounded-lg p-6">
                   <h2 className="text-xl font-semibold mb-4">最新結果</h2>
                   <PerformanceMetrics result={latestResult} />
                 </div>
@@ -264,7 +264,7 @@ export default function BacktestPage() {
             {/* 右側: 結果一覧と詳細 */}
             <div className="space-y-6">
               {/* 結果一覧テーブル */}
-              <div className="bg-gray-800 rounded-lg p-6">
+              <div className="bg-gray-900 rounded-lg p-6">
                 <div className="flex justify-between items-center mb-4">
                   <h2 className="text-xl font-semibold">
                     バックテスト結果一覧
@@ -287,7 +287,7 @@ export default function BacktestPage() {
 
               {/* 選択された結果の詳細 */}
               {selectedResult && (
-                <div className="bg-gray-800 rounded-lg p-6">
+                <div className="bg-gray-900 rounded-lg p-6">
                   <h2 className="text-xl font-semibold mb-4">
                     結果詳細 - {selectedResult.strategy_name}
                   </h2>
@@ -321,7 +321,7 @@ export default function BacktestPage() {
               )}
 
               {!optimizationResult && (
-                <div className="bg-gray-800 rounded-lg p-6">
+                <div className="bg-gray-900 rounded-lg p-6">
                   <h2 className="text-xl font-semibold mb-4">最適化結果</h2>
                   <p className="text-gray-400 text-center py-8">
                     最適化を実行すると結果がここに表示されます
@@ -335,7 +335,7 @@ export default function BacktestPage() {
         {/* ローディング状態 */}
         {backtestLoading && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-gray-800 rounded-lg p-6 text-center">
+            <div className="bg-gray-900 rounded-lg p-6 text-center">
               <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
               <p className="text-lg font-medium">バックテスト実行中...</p>
               <p className="text-gray-400 text-sm mt-2">
@@ -348,7 +348,7 @@ export default function BacktestPage() {
         {/* 最適化ローディング状態 */}
         {isOptimizationLoading && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-gray-800 rounded-lg p-6 text-center">
+            <div className="bg-gray-900 rounded-lg p-6 text-center">
               <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-500 mx-auto mb-4"></div>
               <p className="text-lg font-medium">
                 {enhancedOptimizationLoading && "拡張最適化実行中..."}

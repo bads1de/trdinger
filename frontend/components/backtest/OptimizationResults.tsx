@@ -97,7 +97,7 @@ export default function OptimizationResults({
 
   if (!result) {
     return (
-      <div className="bg-gray-800 rounded-lg p-6">
+      <div className="bg-gray-900 rounded-lg p-6">
         <p className="text-gray-400 text-center">最適化結果がありません</p>
       </div>
     );
@@ -166,7 +166,7 @@ export default function OptimizationResults({
   );
 
   return (
-    <div className="bg-gray-800 rounded-lg p-6">
+    <div className="bg-gray-900 rounded-lg p-6">
       <div className="flex justify-between items-center mb-4">
         <h2 className="text-xl font-semibold">
           {resultType === "enhanced" && "拡張最適化結果"}

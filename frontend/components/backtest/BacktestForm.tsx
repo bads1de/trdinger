@@ -1,7 +1,7 @@
-'use client';
+"use client";
 
-import React, { useState, useEffect } from 'react';
-import { useApiCall } from '@/hooks/useApiCall';
+import React, { useState, useEffect } from "react";
+import { useApiCall } from "@/hooks/useApiCall";
 
 interface StrategyParameter {
   type: string;
@@ -37,21 +37,24 @@ interface BacktestFormProps {
   isLoading?: boolean;
 }
 
-export default function BacktestForm({ onSubmit, isLoading = false }: BacktestFormProps) {
+export default function BacktestForm({
+  onSubmit,
+  isLoading = false,
+}: BacktestFormProps) {
   const [strategies, setStrategies] = useState<Record<string, Strategy>>({});
-  const [selectedStrategy, setSelectedStrategy] = useState<string>('');
+  const [selectedStrategy, setSelectedStrategy] = useState<string>("");
   const [config, setConfig] = useState<BacktestConfig>({
-    strategy_name: '',
-    symbol: 'BTC/USDT',
-    timeframe: '1h',
-    start_date: '2024-01-01',
-    end_date: '2024-12-31',
+    strategy_name: "",
+    symbol: "BTC/USDT",
+    timeframe: "1h",
+    start_date: "2024-01-01",
+    end_date: "2024-12-31",
     initial_capital: 100000,
     commission_rate: 0.001,
     strategy_config: {
-      strategy_type: '',
-      parameters: {}
-    }
+      strategy_type: "",
+      parameters: {},
+    },
   });
 
   const { execute: fetchStrategies } = useApiCall();
@@ -59,7 +62,7 @@ export default function BacktestForm({ onSubmit, isLoading = false }: BacktestFo
   useEffect(() => {
     const loadStrategies = async () => {
       try {
-        const response = await fetchStrategies('/api/backtest/strategies');
+        const response = await fetchStrategies("/api/backtest/strategies");
         if (response?.success) {
           setStrategies(response.strategies);
           // デフォルトで最初の戦略を選択
@@ -70,41 +73,47 @@ export default function BacktestForm({ onSubmit, isLoading = false }: BacktestFo
           }
         }
       } catch (error) {
-        console.error('Failed to load strategies:', error);
+        console.error("Failed to load strategies:", error);
       }
     };
 
     loadStrategies();
   }, []);
 
-  const handleStrategyChange = (strategyKey: string, strategiesData?: Record<string, Strategy>) => {
+  const handleStrategyChange = (
+    strategyKey: string,
+    strategiesData?: Record<string, Strategy>
+  ) => {
     const strategiesSource = strategiesData || strategies;
     const strategy = strategiesSource[strategyKey];
-    
+
     if (strategy) {
-      setConfig(prev => ({
+      setConfig((prev) => ({
         ...prev,
         strategy_name: strategyKey,
         strategy_config: {
           strategy_type: strategyKey,
           parameters: Object.fromEntries(
-            Object.entries(strategy.parameters).map(([key, param]) => [key, param.default])
-          )
-        }
+            Object.entries(strategy.parameters).map(([key, param]) => [
+              key,
+              param.default,
+            ])
+          ),
+        },
       }));
     }
   };
 
   const handleParameterChange = (paramName: string, value: number) => {
-    setConfig(prev => ({
+    setConfig((prev) => ({
       ...prev,
       strategy_config: {
         ...prev.strategy_config,
         parameters: {
           ...prev.strategy_config.parameters,
-          [paramName]: value
-        }
-      }
+          [paramName]: value,
+        },
+      },
     }));
   };
 
@@ -129,7 +138,7 @@ export default function BacktestForm({ onSubmit, isLoading = false }: BacktestFo
               setSelectedStrategy(e.target.value);
               handleStrategyChange(e.target.value);
             }}
-            className="w-full p-3 bg-gray-700 border border-gray-600 text-white rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="w-full p-3 bg-gray-800 border border-gray-700 text-white rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             required
           >
             <option value="">戦略を選択してください</option>
@@ -154,8 +163,10 @@ export default function BacktestForm({ onSubmit, isLoading = false }: BacktestFo
             </label>
             <select
               value={config.symbol}
-              onChange={(e) => setConfig(prev => ({ ...prev, symbol: e.target.value }))}
-              className="w-full p-3 bg-gray-700 border border-gray-600 text-white rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              onChange={(e) =>
+                setConfig((prev) => ({ ...prev, symbol: e.target.value }))
+              }
+              className="w-full p-3 bg-gray-800 border border-gray-700 text-white rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               required
             >
               <option value="BTC/USDT">BTC/USDT</option>
@@ -168,8 +179,10 @@ export default function BacktestForm({ onSubmit, isLoading = false }: BacktestFo
             </label>
             <select
               value={config.timeframe}
-              onChange={(e) => setConfig(prev => ({ ...prev, timeframe: e.target.value }))}
-              className="w-full p-3 bg-gray-700 border border-gray-600 text-white rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              onChange={(e) =>
+                setConfig((prev) => ({ ...prev, timeframe: e.target.value }))
+              }
+              className="w-full p-3 bg-gray-800 border border-gray-700 text-white rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               required
             >
               <option value="1h">1時間</option>
@@ -188,8 +201,10 @@ export default function BacktestForm({ onSubmit, isLoading = false }: BacktestFo
             <input
               type="date"
               value={config.start_date}
-              onChange={(e) => setConfig(prev => ({ ...prev, start_date: e.target.value }))}
-              className="w-full p-3 bg-gray-700 border border-gray-600 text-white rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              onChange={(e) =>
+                setConfig((prev) => ({ ...prev, start_date: e.target.value }))
+              }
+              className="w-full p-3 bg-gray-800 border border-gray-700 text-white rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               required
             />
           </div>
@@ -201,8 +216,10 @@ export default function BacktestForm({ onSubmit, isLoading = false }: BacktestFo
             <input
               type="date"
               value={config.end_date}
-              onChange={(e) => setConfig(prev => ({ ...prev, end_date: e.target.value }))}
-              className="w-full p-3 bg-gray-700 border border-gray-600 text-white rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              onChange={(e) =>
+                setConfig((prev) => ({ ...prev, end_date: e.target.value }))
+              }
+              className="w-full p-3 bg-gray-800 border border-gray-700 text-white rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               required
             />
           </div>
@@ -217,8 +234,13 @@ export default function BacktestForm({ onSubmit, isLoading = false }: BacktestFo
             <input
               type="number"
               value={config.initial_capital}
-              onChange={(e) => setConfig(prev => ({ ...prev, initial_capital: Number(e.target.value) }))}
-              className="w-full p-3 bg-gray-700 border border-gray-600 text-white rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              onChange={(e) =>
+                setConfig((prev) => ({
+                  ...prev,
+                  initial_capital: Number(e.target.value),
+                }))
+              }
+              className="w-full p-3 bg-gray-800 border border-gray-700 text-white rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               min="1000"
               step="1000"
               required
@@ -232,8 +254,13 @@ export default function BacktestForm({ onSubmit, isLoading = false }: BacktestFo
             <input
               type="number"
               value={config.commission_rate * 100}
-              onChange={(e) => setConfig(prev => ({ ...prev, commission_rate: Number(e.target.value) / 100 }))}
-              className="w-full p-3 bg-gray-700 border border-gray-600 text-white rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              onChange={(e) =>
+                setConfig((prev) => ({
+                  ...prev,
+                  commission_rate: Number(e.target.value) / 100,
+                }))
+              }
+              className="w-full p-3 bg-gray-800 border border-gray-700 text-white rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               min="0"
               max="1"
               step="0.01"
@@ -245,34 +272,45 @@ export default function BacktestForm({ onSubmit, isLoading = false }: BacktestFo
         {/* 戦略パラメータ */}
         {selectedStrategyData && (
           <div>
-            <h3 className="text-lg font-medium text-white mb-4">戦略パラメータ</h3>
+            <h3 className="text-lg font-medium text-white mb-4">
+              戦略パラメータ
+            </h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {Object.entries(selectedStrategyData.parameters).map(([paramName, param]) => (
-                <div key={paramName}>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">
-                    {paramName} - {param.description}
-                  </label>
-                  <input
-                    type="number"
-                    value={config.strategy_config.parameters[paramName] || param.default}
-                    onChange={(e) => handleParameterChange(paramName, Number(e.target.value))}
-                    className="w-full p-3 bg-gray-700 border border-gray-600 text-white rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    min={param.min}
-                    max={param.max}
-                    required
-                  />
-                  {param.min !== undefined && param.max !== undefined && (
-                    <p className="mt-1 text-xs text-gray-400">
-                      範囲: {param.min} - {param.max}
-                    </p>
-                  )}
-                </div>
-              ))}
+              {Object.entries(selectedStrategyData.parameters).map(
+                ([paramName, param]) => (
+                  <div key={paramName}>
+                    <label className="block text-sm font-medium text-gray-300 mb-2">
+                      {paramName} - {param.description}
+                    </label>
+                    <input
+                      type="number"
+                      value={
+                        config.strategy_config.parameters[paramName] ||
+                        param.default
+                      }
+                      onChange={(e) =>
+                        handleParameterChange(paramName, Number(e.target.value))
+                      }
+                      className="w-full p-3 bg-gray-800 border border-gray-700 text-white rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      min={param.min}
+                      max={param.max}
+                      required
+                    />
+                    {param.min !== undefined && param.max !== undefined && (
+                      <p className="mt-1 text-xs text-gray-400">
+                        範囲: {param.min} - {param.max}
+                      </p>
+                    )}
+                  </div>
+                )
+              )}
             </div>
-            
+
             {selectedStrategyData.constraints && (
               <div className="mt-4 p-3 bg-yellow-900/20 border border-yellow-600/30 rounded-md">
-                <h4 className="text-sm font-medium text-yellow-400 mb-2">制約条件:</h4>
+                <h4 className="text-sm font-medium text-yellow-400 mb-2">
+                  制約条件:
+                </h4>
                 <ul className="text-sm text-yellow-300">
                   {selectedStrategyData.constraints.map((constraint, index) => (
                     <li key={index}>• {constraint}</li>
@@ -290,11 +328,11 @@ export default function BacktestForm({ onSubmit, isLoading = false }: BacktestFo
             disabled={isLoading || !selectedStrategy}
             className={`w-full py-3 px-4 rounded-md font-medium text-white transition-colors ${
               isLoading || !selectedStrategy
-                ? 'bg-gray-600 cursor-not-allowed'
-                : 'bg-blue-600 hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2'
+                ? "bg-gray-700 cursor-not-allowed"
+                : "bg-blue-600 hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
             }`}
           >
-            {isLoading ? 'バックテスト実行中...' : 'バックテストを実行'}
+            {isLoading ? "バックテスト実行中..." : "バックテストを実行"}
           </button>
         </div>
       </form>

@@ -67,7 +67,7 @@ function MetricCard({
     red: "bg-red-900/20 border-red-500/30 text-red-400",
     blue: "bg-blue-900/20 border-blue-500/30 text-blue-400",
     yellow: "bg-yellow-900/20 border-yellow-500/30 text-yellow-400",
-    gray: "bg-gray-700/50 border-gray-600/30 text-gray-300",
+    gray: "bg-gray-800/50 border-gray-700/30 text-gray-300",
   };
 
   return (
@@ -145,7 +145,7 @@ export default function PerformanceMetrics({
   return (
     <div className="space-y-6">
       {/* 基本情報 */}
-      <div className="bg-gray-700/30 rounded-lg p-4">
+      <div className="bg-gray-800/30 rounded-lg p-4">
         <h3 className="text-lg font-semibold mb-3 text-white">基本情報</h3>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
           <div>
@@ -316,7 +316,7 @@ export default function PerformanceMetrics({
       </div>
 
       {/* 期間情報 */}
-      <div className="bg-gray-700/30 rounded-lg p-4">
+      <div className="bg-gray-800/30 rounded-lg p-4">
         <h3 className="text-lg font-semibold mb-3 text-white">
           バックテスト期間
         </h3>

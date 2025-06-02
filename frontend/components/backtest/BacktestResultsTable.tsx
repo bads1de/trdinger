@@ -102,8 +102,8 @@ export default function BacktestResultsTable({
 
   return (
     <div className="overflow-x-auto">
-      <table className="min-w-full divide-y divide-gray-700">
-        <thead className="bg-gray-700">
+      <table className="min-w-full divide-y divide-gray-800">
+        <thead className="bg-gray-800">
           <tr>
             <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
               戦略名
@@ -137,12 +137,12 @@ export default function BacktestResultsTable({
             </th>
           </tr>
         </thead>
-        <tbody className="bg-gray-800 divide-y divide-gray-700">
+        <tbody className="bg-gray-900 divide-y divide-gray-800">
           {results.map((result) => (
             <tr
               key={result.id}
               onClick={() => onResultSelect?.(result)}
-              className="hover:bg-gray-700 cursor-pointer transition-colors"
+              className="hover:bg-gray-800 cursor-pointer transition-colors"
             >
               <td className="px-6 py-4 whitespace-nowrap">
                 <div className="text-sm font-medium text-white">
