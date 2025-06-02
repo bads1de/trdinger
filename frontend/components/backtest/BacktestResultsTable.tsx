@@ -29,6 +29,19 @@ interface BacktestResult {
     avg_win: number | null;
     avg_loss: number | null;
   };
+  equity_curve?: Array<{
+    // オプショナルとして追加
+    timestamp: string;
+    equity: number;
+  }>;
+  trade_history?: Array<{
+    // オプショナルとして追加
+    timestamp: string;
+    type: "buy" | "sell";
+    price: number;
+    quantity: number;
+    pnl?: number;
+  }>;
   created_at: string;
 }
 
@@ -36,7 +49,7 @@ interface BacktestResultsTableProps {
   results: BacktestResult[];
   loading?: boolean;
   onResultSelect?: (result: BacktestResult) => void;
-  onDelete?: (result: BacktestResult) => void;
+  onDelete?: (result: BacktestResult) => Promise<void> | void; // Promise<void> も許容
 }
 
 export default function BacktestResultsTable({

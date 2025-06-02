@@ -51,9 +51,9 @@ interface MultiObjectiveConfig {
       parameters: Record<string, number>;
     };
   };
-  objectives: string[];
-  weights?: number[];
-  optimization_params?: {
+  optimization_params: {
+    objectives: string[];
+    weights: number[]; // weights も必須に変更
     method: "grid" | "sambo";
     max_tries?: number;
     parameters: Record<string, number[]>;
@@ -242,9 +242,9 @@ export default function OptimizationForm({
           parameters: {},
         },
       },
-      objectives: multiConfig.objectives,
-      weights: multiConfig.weights,
       optimization_params: {
+        objectives: multiConfig.objectives,
+        weights: multiConfig.weights || [], // multiConfig.weights が undefined の場合のフォールバックを提供
         method: multiConfig.method,
         ...(multiConfig.method === "sambo" && {
           max_tries: multiConfig.max_tries,
