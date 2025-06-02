@@ -64,7 +64,6 @@ interface BacktestResult {
 }
 
 export default function BacktestPage() {
-  const [latestResult, setLatestResult] = useState<BacktestResult | null>(null);
   const [results, setResults] = useState<BacktestResult[]>([]);
   const [selectedResult, setSelectedResult] = useState<BacktestResult | null>(
     null
@@ -113,7 +112,6 @@ export default function BacktestPage() {
       method: "POST",
       body: config,
       onSuccess: (data) => {
-        setLatestResult(data.result);
         loadResults(); // 結果一覧を更新
       },
       onError: (error) => {
@@ -236,14 +234,6 @@ export default function BacktestPage() {
                 isLoading={backtestLoading}
               />
             </div>
-
-            {/* 最新結果のプレビュー */}
-            {latestResult && (
-              <div className="bg-gray-900 rounded-lg p-6">
-                <h2 className="text-xl font-semibold mb-4">最新結果</h2>
-                <PerformanceMetrics result={latestResult} />
-              </div>
-            )}
 
             {/* 最適化結果 */}
             {optimizationResult && (
