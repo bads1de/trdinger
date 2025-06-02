@@ -10,8 +10,8 @@ import React, { useState, useEffect } from "react";
 import BacktestForm from "@/components/backtest/BacktestForm";
 import BacktestResultsTable from "@/components/backtest/BacktestResultsTable";
 import PerformanceMetrics from "@/components/backtest/PerformanceMetrics";
-import OptimizationForm from "@/components/backtest/OptimizationForm";
 import OptimizationResults from "@/components/backtest/OptimizationResults";
+import OptimizationModal from "@/components/backtest/OptimizationModal";
 import { useApiCall } from "@/hooks/useApiCall";
 
 interface BacktestConfig {
@@ -64,9 +64,6 @@ interface BacktestResult {
 }
 
 export default function BacktestPage() {
-  const [activeTab, setActiveTab] = useState<"backtest" | "optimization">(
-    "backtest"
-  );
   const [latestResult, setLatestResult] = useState<BacktestResult | null>(null);
   const [results, setResults] = useState<BacktestResult[]>([]);
   const [selectedResult, setSelectedResult] = useState<BacktestResult | null>(
@@ -76,6 +73,7 @@ export default function BacktestPage() {
   const [optimizationType, setOptimizationType] = useState<
     "enhanced" | "multi" | "robustness"
   >("enhanced");
+  const [isOptimizationModalOpen, setIsOptimizationModalOpen] = useState(false);
 
   const { execute: runBacktest, loading: backtestLoading } = useApiCall<{
     result: BacktestResult;
@@ -209,128 +207,113 @@ export default function BacktestPage() {
       <div className="container mx-auto px-4 py-8">
         {/* ヘッダー */}
         <div className="mb-8">
-          <h1 className="text-3xl font-bold mb-2">バックテスト</h1>
-          <p className="text-gray-400">
-            過去データを使用して戦略の有効性を検証します
-          </p>
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div>
+              <h1 className="text-3xl font-bold mb-2">バックテスト</h1>
+              <p className="text-gray-400">
+                過去データを使用して戦略の有効性を検証します
+              </p>
+            </div>
 
-          {/* タブナビゲーション */}
-          <div className="flex space-x-1 mt-6">
+            {/* 最適化ボタン */}
             <button
-              onClick={() => setActiveTab("backtest")}
-              className={`px-6 py-3 text-sm font-medium rounded-t-lg transition-colors ${
-                activeTab === "backtest"
-                  ? "bg-blue-600 text-white border-b-2 border-blue-600"
-                  : "bg-gray-800 text-gray-300 hover:bg-gray-700"
-              }`}
+              onClick={() => setIsOptimizationModalOpen(true)}
+              className="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium"
             >
-              基本バックテスト
-            </button>
-            <button
-              onClick={() => setActiveTab("optimization")}
-              className={`px-6 py-3 text-sm font-medium rounded-t-lg transition-colors ${
-                activeTab === "optimization"
-                  ? "bg-blue-600 text-white border-b-2 border-blue-600"
-                  : "bg-gray-800 text-gray-300 hover:bg-gray-700"
-              }`}
-            >
-              最適化
+              🔧 最適化設定
             </button>
           </div>
         </div>
 
-        {/* 基本バックテストタブ */}
-        {activeTab === "backtest" && (
-          <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-            {/* 左側: バックテスト設定フォーム */}
-            <div className="space-y-6">
-              <div className="bg-gray-900 rounded-lg p-6">
-                <h2 className="text-xl font-semibold mb-4">バックテスト設定</h2>
-                <BacktestForm
-                  onSubmit={handleRunBacktest}
-                  isLoading={backtestLoading}
-                />
-              </div>
-
-              {/* 最新結果のプレビュー */}
-              {latestResult && (
-                <div className="bg-gray-900 rounded-lg p-6">
-                  <h2 className="text-xl font-semibold mb-4">最新結果</h2>
-                  <PerformanceMetrics result={latestResult} />
-                </div>
-              )}
-            </div>
-
-            {/* 右側: 結果一覧と詳細 */}
-            <div className="space-y-6">
-              {/* 結果一覧テーブル */}
-              <div className="bg-gray-900 rounded-lg p-6">
-                <div className="flex justify-between items-center mb-4">
-                  <h2 className="text-xl font-semibold">
-                    バックテスト結果一覧
-                  </h2>
-                  <button
-                    onClick={loadResults}
-                    disabled={resultsLoading}
-                    className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50"
-                  >
-                    {resultsLoading ? "読み込み中..." : "更新"}
-                  </button>
-                </div>
-                <BacktestResultsTable
-                  results={results}
-                  loading={resultsLoading}
-                  onResultSelect={handleResultSelect}
-                  onDelete={handleDeleteResult}
-                />
-              </div>
-
-              {/* 選択された結果の詳細 */}
-              {selectedResult && (
-                <div className="bg-gray-900 rounded-lg p-6">
-                  <h2 className="text-xl font-semibold mb-4">
-                    結果詳細 - {selectedResult.strategy_name}
-                  </h2>
-                  <PerformanceMetrics result={selectedResult} />
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-
-        {/* 最適化タブ */}
-        {activeTab === "optimization" && (
-          <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-            {/* 左側: 最適化設定フォーム */}
-            <div className="space-y-6">
-              <OptimizationForm
-                onEnhancedOptimization={handleEnhancedOptimization}
-                onMultiObjectiveOptimization={handleMultiObjectiveOptimization}
-                onRobustnessTest={handleRobustnessTest}
-                isLoading={isOptimizationLoading}
+        {/* メインコンテンツ */}
+        <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+          {/* 左側: バックテスト設定フォーム */}
+          <div className="space-y-6">
+            <div className="bg-gray-900 rounded-lg p-6">
+              <h2 className="text-xl font-semibold mb-4">バックテスト設定</h2>
+              <BacktestForm
+                onSubmit={handleRunBacktest}
+                isLoading={backtestLoading}
               />
             </div>
 
-            {/* 右側: 最適化結果 */}
-            <div className="space-y-6">
-              {optimizationResult && (
+            {/* 最新結果のプレビュー */}
+            {latestResult && (
+              <div className="bg-gray-900 rounded-lg p-6">
+                <h2 className="text-xl font-semibold mb-4">最新結果</h2>
+                <PerformanceMetrics result={latestResult} />
+              </div>
+            )}
+
+            {/* 最適化結果 */}
+            {optimizationResult && (
+              <div className="bg-gray-900 rounded-lg p-6">
+                <h2 className="text-xl font-semibold mb-4">
+                  {optimizationType === "enhanced" && "拡張最適化結果"}
+                  {optimizationType === "multi" && "マルチ目的最適化結果"}
+                  {optimizationType === "robustness" &&
+                    "ロバストネステスト結果"}
+                </h2>
                 <OptimizationResults
                   result={optimizationResult}
                   resultType={optimizationType}
                 />
-              )}
-
-              {!optimizationResult && (
-                <div className="bg-gray-900 rounded-lg p-6">
-                  <h2 className="text-xl font-semibold mb-4">最適化結果</h2>
-                  <p className="text-gray-400 text-center py-8">
-                    最適化を実行すると結果がここに表示されます
-                  </p>
-                </div>
-              )}
-            </div>
+              </div>
+            )}
           </div>
-        )}
+
+          {/* 右側: 結果一覧と詳細 */}
+          <div className="space-y-6">
+            {/* 結果一覧テーブル */}
+            <div className="bg-gray-900 rounded-lg p-6">
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-xl font-semibold">バックテスト結果一覧</h2>
+                <button
+                  onClick={loadResults}
+                  disabled={resultsLoading}
+                  className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50"
+                >
+                  {resultsLoading ? "読み込み中..." : "更新"}
+                </button>
+              </div>
+              <BacktestResultsTable
+                results={results}
+                loading={resultsLoading}
+                onResultSelect={handleResultSelect}
+                onDelete={handleDeleteResult}
+              />
+            </div>
+
+            {/* 選択された結果の詳細 */}
+            {selectedResult && (
+              <div className="bg-gray-900 rounded-lg p-6">
+                <div className="flex justify-between items-center mb-4">
+                  <h2 className="text-xl font-semibold">
+                    結果詳細 - {selectedResult.strategy_name}
+                  </h2>
+                  <button
+                    onClick={() => setIsOptimizationModalOpen(true)}
+                    className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors font-medium text-sm"
+                  >
+                    🔧 この戦略を最適化
+                  </button>
+                </div>
+                <PerformanceMetrics result={selectedResult} />
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* 最適化設定モーダル */}
+        <OptimizationModal
+          isOpen={isOptimizationModalOpen}
+          onClose={() => setIsOptimizationModalOpen(false)}
+          onEnhancedOptimization={handleEnhancedOptimization}
+          onMultiObjectiveOptimization={handleMultiObjectiveOptimization}
+          onRobustnessTest={handleRobustnessTest}
+          isLoading={isOptimizationLoading}
+          selectedResult={selectedResult}
+        />
 
         {/* ローディング状態 */}
         {backtestLoading && (

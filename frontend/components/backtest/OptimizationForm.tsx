@@ -81,11 +81,23 @@ interface RobustnessConfig {
   };
 }
 
+interface BacktestResult {
+  id: string;
+  strategy_name: string;
+  symbol: string;
+  timeframe: string;
+  start_date: string;
+  end_date: string;
+  initial_capital: number;
+  commission_rate: number;
+}
+
 interface OptimizationFormProps {
   onEnhancedOptimization: (config: OptimizationConfig) => void;
   onMultiObjectiveOptimization: (config: MultiObjectiveConfig) => void;
   onRobustnessTest: (config: RobustnessConfig) => void;
   isLoading?: boolean;
+  initialConfig?: BacktestResult | null;
 }
 
 export default function OptimizationForm({
@@ -93,6 +105,7 @@ export default function OptimizationForm({
   onMultiObjectiveOptimization,
   onRobustnessTest,
   isLoading = false,
+  initialConfig = null,
 }: OptimizationFormProps) {
   const [activeTab, setActiveTab] = useState<
     "enhanced" | "multi" | "robustness"
@@ -165,6 +178,21 @@ export default function OptimizationForm({
 
     loadStrategies();
   }, []);
+
+  // 初期設定が渡された場合、基本設定を自動入力
+  useEffect(() => {
+    if (initialConfig) {
+      setBaseConfig({
+        strategy_name: `${initialConfig.strategy_name}_OPTIMIZED`,
+        symbol: initialConfig.symbol,
+        timeframe: initialConfig.timeframe,
+        start_date: initialConfig.start_date,
+        end_date: initialConfig.end_date,
+        initial_capital: initialConfig.initial_capital,
+        commission_rate: initialConfig.commission_rate,
+      });
+    }
+  }, [initialConfig]);
 
   const createParameterRange = (rangeConfig: number[]) => {
     const [start, end, step] = rangeConfig;
@@ -343,7 +371,7 @@ export default function OptimizationForm({
   );
 
   return (
-    <div className="bg-gray-900 rounded-lg p-6">
+    <div className="space-y-6">
       <h2 className="text-xl font-semibold mb-4">最適化設定</h2>
 
       {/* タブナビゲーション */}

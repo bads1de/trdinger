@@ -163,9 +163,11 @@ module.exports = {
       // エンタープライズアニメーション
       animation: {
         "fade-in": "fadeIn 0.5s ease-in-out",
+        "fade-out": "fadeOut 0.3s ease-in-out",
         "slide-up": "slideUp 0.3s ease-out",
         "slide-down": "slideDown 0.3s ease-out",
         "scale-in": "scaleIn 0.2s ease-out",
+        "scale-out": "scaleOut 0.2s ease-in",
         "pulse-slow": "pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite",
       },
 
@@ -174,6 +176,10 @@ module.exports = {
         fadeIn: {
           "0%": { opacity: "0" },
           "100%": { opacity: "1" },
+        },
+        fadeOut: {
+          "0%": { opacity: "1" },
+          "100%": { opacity: "0" },
         },
         slideUp: {
           "0%": { transform: "translateY(10px)", opacity: "0" },
@@ -186,6 +192,10 @@ module.exports = {
         scaleIn: {
           "0%": { transform: "scale(0.95)", opacity: "0" },
           "100%": { transform: "scale(1)", opacity: "1" },
+        },
+        scaleOut: {
+          "0%": { transform: "scale(1)", opacity: "1" },
+          "100%": { transform: "scale(0.95)", opacity: "0" },
         },
       },
 
