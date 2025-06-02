@@ -83,13 +83,6 @@ export const useApiCall = <T = any>(): ApiCallResult<T> => {
         const response = await fetch(url, requestOptions);
         const result = await response.json();
 
-        console.log("API Call Response:", {
-          url,
-          status: response.status,
-          ok: response.ok,
-          result,
-        });
-
         if (response.ok && result.success) {
           onSuccess?.(result);
           return result;

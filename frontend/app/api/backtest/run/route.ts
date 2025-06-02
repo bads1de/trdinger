@@ -38,7 +38,6 @@ export async function POST(request: NextRequest) {
     }
 
     // バックエンドAPIを呼び出し
-    console.log("Calling backend API with config:", body);
     const response = await fetch(`${BACKEND_API_URL}/api/backtest/run`, {
       method: "POST",
       headers: {
@@ -47,9 +46,7 @@ export async function POST(request: NextRequest) {
       body: JSON.stringify(body),
     });
 
-    console.log("Backend response status:", response.status);
     const data = await response.json();
-    console.log("Backend response data:", data);
 
     if (!response.ok) {
       console.error("Backend API error:", {
