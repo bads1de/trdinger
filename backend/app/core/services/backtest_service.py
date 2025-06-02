@@ -11,6 +11,8 @@ from backtesting import Backtest, Strategy
 
 from .backtest_data_service import BacktestDataService
 from ..strategies.sma_cross_strategy import SMACrossStrategy
+from ..strategies.rsi_strategy import RSIStrategy
+from ..strategies.macd_strategy import MACDStrategy
 from database.repositories.ohlcv_repository import OHLCVRepository
 from database.connection import SessionLocal
 
@@ -176,6 +178,36 @@ class BacktestService:
 
             return CustomSMACrossStrategy
 
+        elif strategy_type == "RSI":
+            # RSI戦略のカスタムクラスを作成
+            class CustomRSIStrategy(RSIStrategy):
+                pass
+
+            # パラメータを動的に設定
+            if "period" in parameters:
+                CustomRSIStrategy.period = parameters["period"]
+            if "oversold" in parameters:
+                CustomRSIStrategy.oversold = parameters["oversold"]
+            if "overbought" in parameters:
+                CustomRSIStrategy.overbought = parameters["overbought"]
+
+            return CustomRSIStrategy
+
+        elif strategy_type == "MACD":
+            # MACD戦略のカスタムクラスを作成
+            class CustomMACDStrategy(MACDStrategy):
+                pass
+
+            # パラメータを動的に設定
+            if "fast_period" in parameters:
+                CustomMACDStrategy.fast_period = parameters["fast_period"]
+            if "slow_period" in parameters:
+                CustomMACDStrategy.slow_period = parameters["slow_period"]
+            if "signal_period" in parameters:
+                CustomMACDStrategy.signal_period = parameters["signal_period"]
+
+            return CustomMACDStrategy
+
         else:
             raise ValueError(f"Unsupported strategy type: {strategy_type}")
 
@@ -302,6 +334,62 @@ class BacktestService:
                     },
                 },
                 "constraints": ["n1 < n2"],
+            },
+            "RSI": {
+                "name": "RSI Strategy",
+                "description": "Relative Strength Index Oscillator Strategy",
+                "parameters": {
+                    "period": {
+                        "type": "int",
+                        "default": 14,
+                        "min": 5,
+                        "max": 50,
+                        "description": "RSI calculation period",
+                    },
+                    "oversold": {
+                        "type": "int",
+                        "default": 30,
+                        "min": 10,
+                        "max": 40,
+                        "description": "Oversold threshold",
+                    },
+                    "overbought": {
+                        "type": "int",
+                        "default": 70,
+                        "min": 60,
+                        "max": 90,
+                        "description": "Overbought threshold",
+                    },
+                },
+                "constraints": ["oversold < overbought"],
+            },
+            "MACD": {
+                "name": "MACD Strategy",
+                "description": "Moving Average Convergence Divergence Strategy",
+                "parameters": {
+                    "fast_period": {
+                        "type": "int",
+                        "default": 12,
+                        "min": 5,
+                        "max": 20,
+                        "description": "Fast EMA period",
+                    },
+                    "slow_period": {
+                        "type": "int",
+                        "default": 26,
+                        "min": 20,
+                        "max": 50,
+                        "description": "Slow EMA period",
+                    },
+                    "signal_period": {
+                        "type": "int",
+                        "default": 9,
+                        "min": 5,
+                        "max": 15,
+                        "description": "Signal line period",
+                    },
+                },
+                "constraints": ["fast_period < slow_period"],
             }
         }
 

@@ -245,7 +245,7 @@ class DataCollector:
 # 便利関数
 async def collect_btc_daily_data(days_back: int = 365) -> int:
     """
-    BTC/USD日足データを収集
+    BTC/USDT日足データを収集
 
     Args:
         days_back: 何日前まで取得するか
@@ -255,7 +255,7 @@ async def collect_btc_daily_data(days_back: int = 365) -> int:
     """
     collector = DataCollector()
     return await collector.collect_historical_data(
-        symbol="BTC/USD:BTC",
+        symbol="BTC/USDT",
         timeframe="1d",
         days_back=days_back
     )
