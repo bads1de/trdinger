@@ -18,16 +18,16 @@ interface BacktestResult {
   initial_capital: number;
   commission_rate: number;
   performance_metrics: {
-    total_return: number;
-    sharpe_ratio: number;
-    max_drawdown: number;
-    win_rate: number;
-    profit_factor: number;
-    total_trades: number;
-    winning_trades: number;
-    losing_trades: number;
-    avg_win: number;
-    avg_loss: number;
+    total_return: number | null;
+    sharpe_ratio: number | null;
+    max_drawdown: number | null;
+    win_rate: number | null;
+    profit_factor: number | null;
+    total_trades: number | null;
+    winning_trades: number | null;
+    losing_trades: number | null;
+    avg_win: number | null;
+    avg_loss: number | null;
   };
   created_at: string;
 }
@@ -55,15 +55,26 @@ export default function BacktestResultsTable({
     });
   };
 
-  const formatPercentage = (value: number) => {
+  const formatPercentage = (value: number | undefined | null) => {
+    if (value === undefined || value === null || isNaN(value)) {
+      return "N/A";
+    }
     return `${(value * 100).toFixed(2)}%`;
   };
 
-  const formatNumber = (value: number, decimals: number = 2) => {
+  const formatNumber = (
+    value: number | undefined | null,
+    decimals: number = 2
+  ) => {
+    if (value === undefined || value === null || isNaN(value)) {
+      return "N/A";
+    }
     return value.toFixed(decimals);
   };
 
-  const getReturnColor = (value: number) => {
+  const getReturnColor = (value: number | undefined | null) => {
+    if (value === undefined || value === null || isNaN(value))
+      return "text-gray-400";
     if (value > 0) return "text-green-400";
     if (value < 0) return "text-red-400";
     return "text-gray-400";
