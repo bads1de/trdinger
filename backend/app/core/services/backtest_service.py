@@ -55,51 +55,110 @@ class BacktestService:
         Raises:
             ValueError: 設定が無効な場合
         """
-        # 1. 設定の検証
-        self._validate_config(config)
+        import logging
 
-        # 2. データサービスの初期化（必要に応じて）
-        if self.data_service is None:
-            db = SessionLocal()
-            try:
-                ohlcv_repo = OHLCVRepository(db)
-                self.data_service = BacktestDataService(ohlcv_repo)
-            finally:
-                db.close()
+        logger = logging.getLogger(__name__)
 
-        # 3. データ取得
-        data = self.data_service.get_ohlcv_for_backtest(
-            symbol=config["symbol"],
-            timeframe=config["timeframe"],
-            start_date=config["start_date"],
-            end_date=config["end_date"],
-        )
+        try:
+            logger.info(f"Starting backtest with config: {config}")
 
-        # 4. 戦略クラス動的生成
-        strategy_class = self._create_strategy_class(config["strategy_config"])
+            # 1. 設定の検証
+            self._validate_config(config)
+            logger.info("Config validation passed")
 
-        # 5. backtesting.py実行
-        bt = Backtest(
-            data,
-            strategy_class,
-            cash=config["initial_capital"],
-            commission=config["commission_rate"],
-            exclusive_orders=True,  # 推奨設定
-            trade_on_close=True,  # 終値で取引
-        )
+            # 2. データサービスの初期化（必要に応じて）
+            if self.data_service is None:
+                db = SessionLocal()
+                try:
+                    ohlcv_repo = OHLCVRepository(db)
+                    self.data_service = BacktestDataService(ohlcv_repo)
+                    logger.info("Data service initialized")
+                finally:
+                    db.close()
 
-        stats = bt.run()
+            # 3. データ取得
+            logger.info(
+                f"Fetching OHLCV data for {config['symbol']} {config['timeframe']} from {config['start_date']} to {config['end_date']}"
+            )
 
-        # 6. 結果をデータベース形式に変換
-        result = self._convert_backtest_results(
-            stats,
-            config["strategy_name"],
-            config["symbol"],
-            config["timeframe"],
-            config["initial_capital"],
-        )
+            # 日付文字列をdatetimeオブジェクトに変換
+            from datetime import datetime
 
-        return result
+            start_date = (
+                datetime.fromisoformat(config["start_date"])
+                if isinstance(config["start_date"], str)
+                else config["start_date"]
+            )
+            end_date = (
+                datetime.fromisoformat(config["end_date"])
+                if isinstance(config["end_date"], str)
+                else config["end_date"]
+            )
+
+            data = self.data_service.get_ohlcv_for_backtest(
+                symbol=config["symbol"],
+                timeframe=config["timeframe"],
+                start_date=start_date,
+                end_date=end_date,
+            )
+
+            if data is None or data.empty:
+                raise ValueError(
+                    f"No OHLCV data found for {config['symbol']} {config['timeframe']} from {config['start_date']} to {config['end_date']}"
+                )
+
+            logger.info(f"Retrieved {len(data)} data points")
+
+            # 4. 戦略クラス動的生成
+            logger.info(
+                f"Creating strategy class for {config['strategy_config']['strategy_type']}"
+            )
+            strategy_class = self._create_strategy_class(config["strategy_config"])
+
+            # 5. backtesting.py実行
+            logger.info("Running backtest...")
+            logger.info(f"Data shape: {data.shape}")
+            logger.info(f"Data columns: {data.columns.tolist()}")
+            logger.info(f"Data index range: {data.index.min()} to {data.index.max()}")
+
+            bt = Backtest(
+                data,
+                strategy_class,
+                cash=config["initial_capital"],
+                commission=config["commission_rate"],
+                exclusive_orders=True,  # 推奨設定
+                trade_on_close=True,  # 終値で取引
+            )
+
+            # バックテストを実行（時間計測付き）
+            import time
+
+            start_time = time.time()
+            logger.info("Starting backtest execution...")
+            stats = bt.run()
+            execution_time = time.time() - start_time
+            logger.info(
+                f"Backtest completed successfully in {execution_time:.2f} seconds"
+            )
+
+            # 6. 結果をデータベース形式に変換
+            logger.info("Converting results...")
+            result = self._convert_backtest_results(
+                stats,
+                config["strategy_name"],
+                config["symbol"],
+                config["timeframe"],
+                config["initial_capital"],
+                config["start_date"],
+                config["end_date"],
+            )
+
+            logger.info("Backtest result conversion completed")
+            return result
+
+        except Exception as e:
+            logger.error(f"Backtest failed: {str(e)}", exc_info=True)
+            raise
 
     def _validate_config(self, config: Dict[str, Any]) -> bool:
         """
@@ -218,6 +277,8 @@ class BacktestService:
         symbol: str,
         timeframe: str,
         initial_capital: float,
+        start_date: str = None,
+        end_date: str = None,
     ) -> Dict[str, Any]:
         """
         backtesting.pyの結果をデータベース保存用の形式に変換
@@ -295,6 +356,8 @@ class BacktestService:
             "strategy_name": strategy_name,
             "symbol": symbol,
             "timeframe": timeframe,
+            "start_date": start_date,
+            "end_date": end_date,
             "initial_capital": initial_capital,
             "commission_rate": 0.001,  # デフォルト値を追加
             "performance_metrics": performance_metrics,
@@ -390,7 +453,7 @@ class BacktestService:
                     },
                 },
                 "constraints": ["fast_period < slow_period"],
-            }
+            },
         }
 
     def optimize_strategy(

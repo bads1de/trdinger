@@ -30,9 +30,17 @@ class BacktestResultRepository(BaseRepository):
             保存されたバックテスト結果（ID付き）
         """
         try:
+            import logging
+
+            logger = logging.getLogger(__name__)
+            logger.info(f"Saving backtest result with data: {result_data}")
+
             # 日付の処理
             start_date = result_data.get("start_date")
             end_date = result_data.get("end_date")
+            logger.info(
+                f"Original dates - start_date: {start_date}, end_date: {end_date}"
+            )
 
             # datetimeオブジェクトの場合はそのまま使用、文字列の場合は変換
             if isinstance(start_date, str):
@@ -41,11 +49,16 @@ class BacktestResultRepository(BaseRepository):
                 end_date = datetime.fromisoformat(end_date)
 
             # パフォーマンス指標の構築
-            performance_metrics = result_data.get("results_json", {}).get(
-                "performance_metrics", {}
-            )
+            performance_metrics = result_data.get("performance_metrics", {})
+
+            # 後方互換性のため、results_jsonからも取得を試行
             if not performance_metrics:
-                # 個別フィールドからパフォーマンス指標を構築
+                performance_metrics = result_data.get("results_json", {}).get(
+                    "performance_metrics", {}
+                )
+
+            # さらに後方互換性のため、個別フィールドからも取得
+            if not performance_metrics:
                 performance_metrics = {
                     "total_return": result_data.get("total_return", 0.0),
                     "sharpe_ratio": result_data.get("sharpe_ratio", 0.0),
@@ -66,11 +79,13 @@ class BacktestResultRepository(BaseRepository):
                 commission_rate=result_data.get("commission_rate", 0.001),
                 config_json=result_data.get("config_json", {}),
                 performance_metrics=performance_metrics,
-                equity_curve=result_data.get("results_json", {}).get(
-                    "equity_curve", []
+                equity_curve=result_data.get(
+                    "equity_curve",
+                    result_data.get("results_json", {}).get("equity_curve", []),
                 ),
-                trade_history=result_data.get("results_json", {}).get(
-                    "trade_history", []
+                trade_history=result_data.get(
+                    "trade_history",
+                    result_data.get("results_json", {}).get("trade_history", []),
                 ),
                 execution_time=result_data.get("execution_time"),
                 status=result_data.get("status", "completed"),
@@ -82,8 +97,8 @@ class BacktestResultRepository(BaseRepository):
             self.db.commit()
             self.db.refresh(backtest_result)
 
-            # BacktestResultオブジェクトを返す（to_dictメソッドがない場合に備えて）
-            return backtest_result
+            # 辞書形式で返す
+            return self._result_to_dict(backtest_result)
 
         except Exception as e:
             self.db.rollback()

@@ -38,6 +38,7 @@ export async function POST(request: NextRequest) {
     }
 
     // バックエンドAPIを呼び出し
+    console.log("Calling backend API with config:", body);
     const response = await fetch(`${BACKEND_API_URL}/api/backtest/run`, {
       method: "POST",
       headers: {
@@ -46,9 +47,16 @@ export async function POST(request: NextRequest) {
       body: JSON.stringify(body),
     });
 
+    console.log("Backend response status:", response.status);
     const data = await response.json();
+    console.log("Backend response data:", data);
 
     if (!response.ok) {
+      console.error("Backend API error:", {
+        status: response.status,
+        statusText: response.statusText,
+        data: data,
+      });
       throw new Error(data.detail || `Backend API error: ${response.status}`);
     }
 
@@ -61,6 +69,15 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error("Error running backtest:", error);
 
+    // より詳細なエラー情報をログに出力
+    if (error instanceof Error) {
+      console.error("Error details:", {
+        name: error.name,
+        message: error.message,
+        stack: error.stack,
+      });
+    }
+
     return NextResponse.json(
       {
         success: false,
@@ -68,6 +85,13 @@ export async function POST(request: NextRequest) {
           error instanceof Error ? error.message : "Unknown error occurred",
         message: "Failed to run backtest",
         timestamp: new Date().toISOString(),
+        details:
+          error instanceof Error
+            ? {
+                name: error.name,
+                stack: error.stack,
+              }
+            : null,
       },
       { status: 500 }
     );

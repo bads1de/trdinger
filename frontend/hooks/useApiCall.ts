@@ -83,12 +83,27 @@ export const useApiCall = <T = any>(): ApiCallResult<T> => {
         const response = await fetch(url, requestOptions);
         const result = await response.json();
 
+        console.log("API Call Response:", {
+          url,
+          status: response.status,
+          ok: response.ok,
+          result,
+        });
+
         if (response.ok && result.success) {
           onSuccess?.(result);
           return result;
         } else {
           const errorMessage =
-            result.message || `API呼び出しに失敗しました (${response.status})`;
+            result.message ||
+            result.error ||
+            `API呼び出しに失敗しました (${response.status})`;
+          console.error("API Call Error:", {
+            url,
+            status: response.status,
+            result,
+            errorMessage,
+          });
           setError(errorMessage);
           onError?.(errorMessage);
           return null;
