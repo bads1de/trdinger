@@ -35,8 +35,8 @@ async def main():
         logger.info("データベースを初期化中...")
         init_db()
 
-        # 3. BTC/USD日足データを収集
-        logger.info("BTC/USD日足データを収集中...")
+        # 3. BTC/USDT日足データを収集
+        logger.info("BTC/USDT日足データを収集中...")
         collected_count = await collect_btc_daily_data(days_back=365)
 
         logger.info(f"=== 初期化完了 ===")
