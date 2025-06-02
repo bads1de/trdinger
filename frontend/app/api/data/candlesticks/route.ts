@@ -4,8 +4,6 @@
  * データベースに保存されたOHLCVデータを取得するAPIエンドポイントです。
  * データテーブル表示用のデータを提供します。
  *
- * @author Trdinger Development Team
- * @version 4.0.0
  */
 
 import { NextRequest, NextResponse } from "next/server";

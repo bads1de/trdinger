@@ -3,8 +3,6 @@
  *
  * データベースに保存されたFRデータを取得するAPIエンドポイントです。
  *
- * @author Trdinger Development Team
- * @version 1.0.0
  */
 
 import { NextRequest, NextResponse } from "next/server";

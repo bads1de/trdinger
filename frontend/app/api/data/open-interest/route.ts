@@ -4,8 +4,6 @@
  * バックエンドAPIからOIデータを取得し、
  * フロントエンドに返すAPIエンドポイントです。
  *
- * @author Trdinger Development Team
- * @version 1.0.0
  */
 
 import { NextRequest, NextResponse } from "next/server";

@@ -4,8 +4,6 @@
  * バックエンドAPIを呼び出してBTC・ETHのOIデータを
  * 一括で収集し、データベースに保存するAPIエンドポイントです。
  *
- * @author Trdinger Development Team
- * @version 1.0.0
  */
 
 import { NextRequest, NextResponse } from "next/server";

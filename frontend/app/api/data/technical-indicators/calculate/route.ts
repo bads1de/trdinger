@@ -6,9 +6,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { TechnicalIndicatorCalculationResponse } from "@/types/strategy";
-
-// バックエンドAPIのベースURL
-const BACKEND_API_URL = process.env.BACKEND_API_URL || "http://localhost:8000";
+import { BACKEND_API_URL } from "@/constants";
 
 /**
  * POST /api/data/technical-indicators/calculate

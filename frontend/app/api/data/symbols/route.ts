@@ -4,8 +4,6 @@
  * Bybit取引所でサポートされている通貨ペアの一覧を取得するAPIエンドポイントです。
  * CCXT ライブラリを使用してリアルタイムデータを提供します。
  *
- * @author Trdinger Development Team
- * @version 2.0.0
  */
 
 import { NextResponse } from "next/server";

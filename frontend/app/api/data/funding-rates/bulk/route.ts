@@ -4,8 +4,6 @@
  * フロントエンドからの一括FRデータ収集リクエストを受け取り、
  * バックエンドAPIに転送して全データの一括収集を実行するAPIエンドポイントです。
  *
- * @author Trdinger Development Team
- * @version 1.0.0
  */
 
 import { NextRequest, NextResponse } from "next/server";

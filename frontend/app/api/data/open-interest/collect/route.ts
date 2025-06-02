@@ -4,8 +4,6 @@
  * バックエンドAPIを呼び出してOIデータを収集し、
  * データベースに保存するAPIエンドポイントです。
  *
- * @author Trdinger Development Team
- * @version 1.0.0
  */
 
 import { NextRequest, NextResponse } from "next/server";
