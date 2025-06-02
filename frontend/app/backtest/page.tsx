@@ -212,14 +212,6 @@ export default function BacktestPage() {
                 過去データを使用して戦略の有効性を検証します
               </p>
             </div>
-
-            {/* 最適化ボタン */}
-            <button
-              onClick={() => setIsOptimizationModalOpen(true)}
-              className="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium"
-            >
-              🔧 最適化設定
-            </button>
           </div>
         </div>
 
