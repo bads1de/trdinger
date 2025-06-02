@@ -12,7 +12,7 @@ export async function DELETE(
   { params }: { params: { id: string } }
 ) {
   try {
-    const { id } = params;
+    const { id } = await params;
 
     // IDの検証
     if (!id || isNaN(Number(id))) {
