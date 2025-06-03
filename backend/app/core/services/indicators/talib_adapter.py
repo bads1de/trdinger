@@ -417,6 +417,456 @@ class TALibAdapter:
             raise TALibCalculationError(f"Williams %R計算失敗: {e}")
 
     @staticmethod
+    def adx(
+        high: pd.Series, low: pd.Series, close: pd.Series, period: int = 14
+    ) -> pd.Series:
+        """
+        Average Directional Movement Index (ADX) を計算
+
+        Args:
+            high: 高値データ（pandas Series）
+            low: 安値データ（pandas Series）
+            close: 終値データ（pandas Series）
+            period: ADXの期間（デフォルト: 14）
+
+        Returns:
+            ADX値のpandas Series（0-100の範囲）
+
+        Raises:
+            TALibCalculationError: 計算エラーの場合
+        """
+        if not (len(high) == len(low) == len(close)):
+            raise TALibCalculationError("高値、安値、終値のデータ長が一致しません")
+
+        TALibAdapter._validate_input(close, period)
+
+        try:
+            result = TALibAdapter._safe_talib_calculation(
+                talib.ADX, high.values, low.values, close.values, timeperiod=period
+            )
+
+            return pd.Series(result, index=close.index, name=f"ADX_{period}")
+
+        except TALibCalculationError:
+            raise
+        except Exception as e:
+            logger.error(f"ADX計算でエラー: {e}")
+            raise TALibCalculationError(f"ADX計算失敗: {e}")
+
+    @staticmethod
+    def aroon(
+        high: pd.Series, low: pd.Series, period: int = 14
+    ) -> Dict[str, pd.Series]:
+        """
+        Aroon (アルーン) を計算
+
+        Args:
+            high: 高値データ（pandas Series）
+            low: 安値データ（pandas Series）
+            period: アルーンの期間（デフォルト: 14）
+
+        Returns:
+            アルーン値を含む辞書（aroon_down, aroon_up）
+
+        Raises:
+            TALibCalculationError: 計算エラーの場合
+        """
+        if not (len(high) == len(low)):
+            raise TALibCalculationError("高値、安値のデータ長が一致しません")
+
+        TALibAdapter._validate_input(high, period)
+
+        try:
+            aroon_down, aroon_up = TALibAdapter._safe_talib_calculation(
+                talib.AROON, high.values, low.values, timeperiod=period
+            )
+
+            return {
+                "aroon_down": pd.Series(
+                    aroon_down, index=high.index, name=f"AROON_DOWN_{period}"
+                ),
+                "aroon_up": pd.Series(
+                    aroon_up, index=high.index, name=f"AROON_UP_{period}"
+                ),
+            }
+
+        except TALibCalculationError:
+            raise
+        except Exception as e:
+            logger.error(f"AROON計算でエラー: {e}")
+            raise TALibCalculationError(f"AROON計算失敗: {e}")
+
+    @staticmethod
+    def mfi(
+        high: pd.Series,
+        low: pd.Series,
+        close: pd.Series,
+        volume: pd.Series,
+        period: int = 14,
+    ) -> pd.Series:
+        """
+        Money Flow Index (MFI) を計算
+
+        Args:
+            high: 高値データ（pandas Series）
+            low: 安値データ（pandas Series）
+            close: 終値データ（pandas Series）
+            volume: 出来高データ（pandas Series）
+            period: MFIの期間（デフォルト: 14）
+
+        Returns:
+            MFI値のpandas Series（0-100の範囲）
+
+        Raises:
+            TALibCalculationError: 計算エラーの場合
+        """
+        if not (len(high) == len(low) == len(close) == len(volume)):
+            raise TALibCalculationError(
+                "高値、安値、終値、出来高のデータ長が一致しません"
+            )
+
+        TALibAdapter._validate_input(close, period)
+
+        try:
+            result = TALibAdapter._safe_talib_calculation(
+                talib.MFI,
+                high.values,
+                low.values,
+                close.values,
+                volume.values,
+                timeperiod=period,
+            )
+
+            return pd.Series(result, index=close.index, name=f"MFI_{period}")
+
+        except TALibCalculationError:
+            raise
+        except Exception as e:
+            logger.error(f"MFI計算でエラー: {e}")
+            raise TALibCalculationError(f"MFI計算失敗: {e}")
+
+    @staticmethod
+    def obv(close: pd.Series, volume: pd.Series) -> pd.Series:
+        """
+        On Balance Volume (OBV) を計算
+
+        Args:
+            close: 終値データ（pandas Series）
+            volume: 出来高データ（pandas Series）
+
+        Returns:
+            OBV値のpandas Series
+
+        Raises:
+            TALibCalculationError: 計算エラーの場合
+        """
+        if not (len(close) == len(volume)):
+            raise TALibCalculationError("終値、出来高のデータ長が一致しません")
+
+        if len(close) == 0:
+            raise TALibCalculationError("入力データが空です")
+
+        try:
+            result = TALibAdapter._safe_talib_calculation(
+                talib.OBV, close.values, volume.values
+            )
+
+            return pd.Series(result, index=close.index, name="OBV")
+
+        except TALibCalculationError:
+            raise
+        except Exception as e:
+            logger.error(f"OBV計算でエラー: {e}")
+            raise TALibCalculationError(f"OBV計算失敗: {e}")
+
+    @staticmethod
+    def ad(
+        high: pd.Series, low: pd.Series, close: pd.Series, volume: pd.Series
+    ) -> pd.Series:
+        """
+        Chaikin A/D Line (Accumulation/Distribution Line) を計算
+
+        Args:
+            high: 高値データ（pandas Series）
+            low: 安値データ（pandas Series）
+            close: 終値データ（pandas Series）
+            volume: 出来高データ（pandas Series）
+
+        Returns:
+            A/D Line値のpandas Series
+
+        Raises:
+            TALibCalculationError: 計算エラーの場合
+        """
+        if not (len(high) == len(low) == len(close) == len(volume)):
+            raise TALibCalculationError(
+                "高値、安値、終値、出来高のデータ長が一致しません"
+            )
+
+        if len(close) == 0:
+            raise TALibCalculationError("入力データが空です")
+
+        try:
+            result = TALibAdapter._safe_talib_calculation(
+                talib.AD, high.values, low.values, close.values, volume.values
+            )
+
+            return pd.Series(result, index=close.index, name="AD")
+
+        except TALibCalculationError:
+            raise
+        except Exception as e:
+            logger.error(f"A/D Line計算でエラー: {e}")
+            raise TALibCalculationError(f"A/D Line計算失敗: {e}")
+
+    @staticmethod
+    def adosc(
+        high: pd.Series,
+        low: pd.Series,
+        close: pd.Series,
+        volume: pd.Series,
+        fast_period: int = 3,
+        slow_period: int = 10,
+    ) -> pd.Series:
+        """
+        Chaikin A/D Oscillator (ADOSC) を計算
+
+        Args:
+            high: 高値データ（pandas Series）
+            low: 安値データ（pandas Series）
+            close: 終値データ（pandas Series）
+            volume: 出来高データ（pandas Series）
+            fast_period: 高速期間（デフォルト: 3）
+            slow_period: 低速期間（デフォルト: 10）
+
+        Returns:
+            ADOSC値のpandas Series
+
+        Raises:
+            TALibCalculationError: 計算エラーの場合
+        """
+        if not (len(high) == len(low) == len(close) == len(volume)):
+            raise TALibCalculationError(
+                "高値、安値、終値、出来高のデータ長が一致しません"
+            )
+
+        TALibAdapter._validate_input(close, slow_period)
+
+        try:
+            result = TALibAdapter._safe_talib_calculation(
+                talib.ADOSC,
+                high.values,
+                low.values,
+                close.values,
+                volume.values,
+                fastperiod=fast_period,
+                slowperiod=slow_period,
+            )
+
+            return pd.Series(
+                result, index=close.index, name=f"ADOSC_{fast_period}_{slow_period}"
+            )
+
+        except TALibCalculationError:
+            raise
+        except Exception as e:
+            logger.error(f"ADOSC計算でエラー: {e}")
+            raise TALibCalculationError(f"ADOSC計算失敗: {e}")
+
+    @staticmethod
+    def kama(data: pd.Series, period: int = 30) -> pd.Series:
+        """
+        Kaufman Adaptive Moving Average (KAMA) を計算
+
+        Args:
+            data: 価格データ（pandas Series）
+            period: KAMAの期間（デフォルト: 30）
+
+        Returns:
+            KAMA値のpandas Series
+
+        Raises:
+            TALibCalculationError: 計算エラーの場合
+        """
+        TALibAdapter._validate_input(data, period)
+
+        try:
+            result = TALibAdapter._safe_talib_calculation(
+                talib.KAMA, data.values, timeperiod=period
+            )
+
+            return pd.Series(result, index=data.index, name=f"KAMA_{period}")
+
+        except TALibCalculationError:
+            raise
+        except Exception as e:
+            logger.error(f"KAMA計算でエラー: {e}")
+            raise TALibCalculationError(f"KAMA計算失敗: {e}")
+
+    @staticmethod
+    def t3(data: pd.Series, period: int = 5, vfactor: float = 0.7) -> pd.Series:
+        """
+        Triple Exponential Moving Average (T3) を計算
+
+        Args:
+            data: 価格データ（pandas Series）
+            period: T3の期間（デフォルト: 5）
+            vfactor: ボリュームファクター（デフォルト: 0.7）
+
+        Returns:
+            T3値のpandas Series
+
+        Raises:
+            TALibCalculationError: 計算エラーの場合
+        """
+        TALibAdapter._validate_input(data, period)
+
+        try:
+            result = TALibAdapter._safe_talib_calculation(
+                talib.T3, data.values, timeperiod=period, vfactor=vfactor
+            )
+
+            return pd.Series(result, index=data.index, name=f"T3_{period}")
+
+        except TALibCalculationError:
+            raise
+        except Exception as e:
+            logger.error(f"T3計算でエラー: {e}")
+            raise TALibCalculationError(f"T3計算失敗: {e}")
+
+    @staticmethod
+    def tema(data: pd.Series, period: int = 30) -> pd.Series:
+        """
+        Triple Exponential Moving Average (TEMA) を計算
+
+        Args:
+            data: 価格データ（pandas Series）
+            period: TEMAの期間（デフォルト: 30）
+
+        Returns:
+            TEMA値のpandas Series
+
+        Raises:
+            TALibCalculationError: 計算エラーの場合
+        """
+        TALibAdapter._validate_input(data, period)
+
+        try:
+            result = TALibAdapter._safe_talib_calculation(
+                talib.TEMA, data.values, timeperiod=period
+            )
+
+            return pd.Series(result, index=data.index, name=f"TEMA_{period}")
+
+        except TALibCalculationError:
+            raise
+        except Exception as e:
+            logger.error(f"TEMA計算でエラー: {e}")
+            raise TALibCalculationError(f"TEMA計算失敗: {e}")
+
+    @staticmethod
+    def dema(data: pd.Series, period: int = 30) -> pd.Series:
+        """
+        Double Exponential Moving Average (DEMA) を計算
+
+        Args:
+            data: 価格データ（pandas Series）
+            period: DEMAの期間（デフォルト: 30）
+
+        Returns:
+            DEMA値のpandas Series
+
+        Raises:
+            TALibCalculationError: 計算エラーの場合
+        """
+        TALibAdapter._validate_input(data, period)
+
+        try:
+            result = TALibAdapter._safe_talib_calculation(
+                talib.DEMA, data.values, timeperiod=period
+            )
+
+            return pd.Series(result, index=data.index, name=f"DEMA_{period}")
+
+        except TALibCalculationError:
+            raise
+        except Exception as e:
+            logger.error(f"DEMA計算でエラー: {e}")
+            raise TALibCalculationError(f"DEMA計算失敗: {e}")
+
+    @staticmethod
+    def natr(
+        high: pd.Series, low: pd.Series, close: pd.Series, period: int = 14
+    ) -> pd.Series:
+        """
+        Normalized Average True Range (NATR) を計算
+
+        Args:
+            high: 高値データ（pandas Series）
+            low: 安値データ（pandas Series）
+            close: 終値データ（pandas Series）
+            period: NATRの期間（デフォルト: 14）
+
+        Returns:
+            NATR値のpandas Series（パーセンテージ）
+
+        Raises:
+            TALibCalculationError: 計算エラーの場合
+        """
+        if not (len(high) == len(low) == len(close)):
+            raise TALibCalculationError("高値、安値、終値のデータ長が一致しません")
+
+        TALibAdapter._validate_input(close, period)
+
+        try:
+            result = TALibAdapter._safe_talib_calculation(
+                talib.NATR, high.values, low.values, close.values, timeperiod=period
+            )
+
+            return pd.Series(result, index=close.index, name=f"NATR_{period}")
+
+        except TALibCalculationError:
+            raise
+        except Exception as e:
+            logger.error(f"NATR計算でエラー: {e}")
+            raise TALibCalculationError(f"NATR計算失敗: {e}")
+
+    @staticmethod
+    def trange(high: pd.Series, low: pd.Series, close: pd.Series) -> pd.Series:
+        """
+        True Range (TRANGE) を計算
+
+        Args:
+            high: 高値データ（pandas Series）
+            low: 安値データ（pandas Series）
+            close: 終値データ（pandas Series）
+
+        Returns:
+            True Range値のpandas Series
+
+        Raises:
+            TALibCalculationError: 計算エラーの場合
+        """
+        if not (len(high) == len(low) == len(close)):
+            raise TALibCalculationError("高値、安値、終値のデータ長が一致しません")
+
+        if len(close) == 0:
+            raise TALibCalculationError("入力データが空です")
+
+        try:
+            result = TALibAdapter._safe_talib_calculation(
+                talib.TRANGE, high.values, low.values, close.values
+            )
+
+            return pd.Series(result, index=close.index, name="TRANGE")
+
+        except TALibCalculationError:
+            raise
+        except Exception as e:
+            logger.error(f"TRANGE計算でエラー: {e}")
+            raise TALibCalculationError(f"TRANGE計算失敗: {e}")
+
+    @staticmethod
     def momentum(data: pd.Series, period: int = 10) -> pd.Series:
         """
         Momentum (モメンタム) を計算

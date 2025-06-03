@@ -213,13 +213,140 @@ class ROCIndicator(BaseIndicator):
         return "ROC - 変化率、価格の変化をパーセンテージで表示"
 
 
+class ADXIndicator(BaseIndicator):
+    """ADX（Average Directional Movement Index）指標"""
+
+    def __init__(self):
+        super().__init__(indicator_type="ADX", supported_periods=[14, 21])
+
+    def calculate(self, df: pd.DataFrame, period: int, **kwargs) -> pd.Series:
+        """
+        ADX（Average Directional Movement Index）を計算（TA-Lib使用）
+
+        Args:
+            df: OHLCVデータのDataFrame
+            period: 期間（通常14または21）
+
+        Returns:
+            ADX値のSeries（0-100の範囲）
+        """
+        # TA-Libを使用した高速計算
+        return TALibAdapter.adx(df["high"], df["low"], df["close"], period)
+
+    def get_description(self) -> str:
+        """指標の説明を取得"""
+        return "ADX - 平均方向性指数、トレンドの強さを測定（0-100）"
+
+
+class AroonIndicator(BaseIndicator):
+    """Aroon（アルーン）指標"""
+
+    def __init__(self):
+        super().__init__(indicator_type="AROON", supported_periods=[14, 25])
+
+    def calculate(self, df: pd.DataFrame, period: int, **kwargs) -> pd.DataFrame:
+        """
+        Aroon（アルーン）を計算（TA-Lib使用）
+
+        Args:
+            df: OHLCVデータのDataFrame
+            period: 期間（通常14または25）
+
+        Returns:
+            Aroon値を含むDataFrame（aroon_down, aroon_up）
+        """
+        # TA-Libを使用した高速計算
+        aroon_result = TALibAdapter.aroon(df["high"], df["low"], period)
+
+        # DataFrameに変換して返す
+        result = pd.DataFrame(
+            {
+                "aroon_down": aroon_result["aroon_down"],
+                "aroon_up": aroon_result["aroon_up"],
+            }
+        )
+
+        return result
+
+    async def calculate_and_format(
+        self,
+        symbol: str,
+        timeframe: str,
+        period: int,
+        limit: Optional[int] = None,
+        **kwargs,
+    ) -> List[Dict[str, Any]]:
+        """
+        Aroon指標を計算してフォーマットされた結果を返す（オーバーライド）
+        """
+        try:
+            # パラメータ検証
+            self.validate_parameters(period, **kwargs)
+
+            # OHLCVデータを取得
+            df = await self.get_ohlcv_data(symbol, timeframe, limit)
+
+            # データ検証
+            self.validate_data(df, period)
+
+            # 指標を計算
+            result = self.calculate(df, period, **kwargs)
+
+            # Aroon専用のフォーマット
+            value_columns = {"value": "aroon_up", "signal_value": "aroon_down"}
+
+            formatted_result = self.format_multi_value_result(
+                result, symbol, timeframe, period, value_columns
+            )
+
+            return formatted_result
+
+        except Exception as e:
+            raise
+
+    def get_description(self) -> str:
+        """指標の説明を取得"""
+        return "Aroon - アルーン、トレンドの変化を検出（0-100）"
+
+
+class MFIIndicator(BaseIndicator):
+    """MFI（Money Flow Index）指標"""
+
+    def __init__(self):
+        super().__init__(indicator_type="MFI", supported_periods=[14, 21])
+
+    def calculate(self, df: pd.DataFrame, period: int, **kwargs) -> pd.Series:
+        """
+        MFI（Money Flow Index）を計算（TA-Lib使用）
+
+        Args:
+            df: OHLCVデータのDataFrame
+            period: 期間（通常14または21）
+
+        Returns:
+            MFI値のSeries（0-100の範囲）
+        """
+        # 出来高データの存在確認
+        if "volume" not in df.columns:
+            raise ValueError("MFI計算には出来高データが必要です")
+
+        # TA-Libを使用した高速計算
+        return TALibAdapter.mfi(
+            df["high"], df["low"], df["close"], df["volume"], period
+        )
+
+    def get_description(self) -> str:
+        """指標の説明を取得"""
+        return "MFI - マネーフローインデックス、出来高を考慮したRSI（0-100）"
+
+
 # 指標インスタンスのファクトリー関数
 def get_momentum_indicator(indicator_type: str) -> BaseIndicator:
     """
     モメンタム系指標のインスタンスを取得
 
     Args:
-        indicator_type: 指標タイプ（'RSI', 'STOCH', 'CCI', 'WILLR', 'MOM', 'ROC'）
+        indicator_type: 指標タイプ（'RSI', 'STOCH', 'CCI', 'WILLR', 'MOM', 'ROC', 'ADX', 'AROON', 'MFI'）
 
     Returns:
         指標インスタンス
@@ -234,6 +361,9 @@ def get_momentum_indicator(indicator_type: str) -> BaseIndicator:
         "WILLR": WilliamsRIndicator,
         "MOM": MomentumIndicator,
         "ROC": ROCIndicator,
+        "ADX": ADXIndicator,
+        "AROON": AroonIndicator,
+        "MFI": MFIIndicator,
     }
 
     if indicator_type not in indicators:
@@ -275,6 +405,21 @@ MOMENTUM_INDICATORS_INFO = {
     "ROC": {
         "periods": [10, 14],
         "description": "ROC - 変化率、価格の変化をパーセンテージで表示",
+        "category": "momentum",
+    },
+    "ADX": {
+        "periods": [14, 21],
+        "description": "ADX - 平均方向性指数、トレンドの強さを測定（0-100）",
+        "category": "momentum",
+    },
+    "AROON": {
+        "periods": [14, 25],
+        "description": "Aroon - アルーン、トレンドの変化を検出（0-100）",
+        "category": "momentum",
+    },
+    "MFI": {
+        "periods": [14, 21],
+        "description": "MFI - マネーフローインデックス、出来高を考慮したRSI（0-100）",
         "category": "momentum",
     },
 }

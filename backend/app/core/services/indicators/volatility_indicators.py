@@ -128,13 +128,65 @@ class ATRIndicator(BaseIndicator):
         return "ATR - 平均真の値幅、ボラティリティを測定する指標"
 
 
+class NATRIndicator(BaseIndicator):
+    """NATR（Normalized Average True Range）指標"""
+
+    def __init__(self):
+        super().__init__(indicator_type="NATR", supported_periods=[14, 21])
+
+    def calculate(self, df: pd.DataFrame, period: int, **kwargs) -> pd.Series:
+        """
+        NATR（Normalized Average True Range）を計算（TA-Lib使用）
+
+        Args:
+            df: OHLCVデータのDataFrame
+            period: 期間（通常14または21）
+
+        Returns:
+            NATR値のSeries（パーセンテージ）
+        """
+        # TA-Libを使用した高速計算
+        return TALibAdapter.natr(df["high"], df["low"], df["close"], period)
+
+    def get_description(self) -> str:
+        """指標の説明を取得"""
+        return "NATR - 正規化平均真の値幅、価格に対する相対的なボラティリティ（%）"
+
+
+class TRANGEIndicator(BaseIndicator):
+    """TRANGE（True Range）指標"""
+
+    def __init__(self):
+        super().__init__(
+            indicator_type="TRANGE", supported_periods=[1]
+        )  # TRANGEは期間を使用しない
+
+    def calculate(self, df: pd.DataFrame, period: int = 1, **kwargs) -> pd.Series:
+        """
+        TRANGE（True Range）を計算（TA-Lib使用）
+
+        Args:
+            df: OHLCVデータのDataFrame
+            period: 期間（TRANGEでは使用しないが、インターフェース統一のため）
+
+        Returns:
+            True Range値のSeries
+        """
+        # TA-Libを使用した高速計算
+        return TALibAdapter.trange(df["high"], df["low"], df["close"])
+
+    def get_description(self) -> str:
+        """指標の説明を取得"""
+        return "TRANGE - 真の値幅、各期間の実際の価格変動幅"
+
+
 # 指標インスタンスのファクトリー関数
 def get_volatility_indicator(indicator_type: str) -> BaseIndicator:
     """
     ボラティリティ系指標のインスタンスを取得
 
     Args:
-        indicator_type: 指標タイプ（'BB', 'ATR'）
+        indicator_type: 指標タイプ（'BB', 'ATR', 'NATR', 'TRANGE'）
 
     Returns:
         指標インスタンス
@@ -145,6 +197,8 @@ def get_volatility_indicator(indicator_type: str) -> BaseIndicator:
     indicators = {
         "BB": BollingerBandsIndicator,
         "ATR": ATRIndicator,
+        "NATR": NATRIndicator,
+        "TRANGE": TRANGEIndicator,
     }
 
     if indicator_type not in indicators:
@@ -166,6 +220,16 @@ VOLATILITY_INDICATORS_INFO = {
     "ATR": {
         "periods": [14, 21],
         "description": "ATR - 平均真の値幅、ボラティリティを測定する指標",
+        "category": "volatility",
+    },
+    "NATR": {
+        "periods": [14, 21],
+        "description": "NATR - 正規化平均真の値幅、価格に対する相対的なボラティリティ（%）",
+        "category": "volatility",
+    },
+    "TRANGE": {
+        "periods": [1],
+        "description": "TRANGE - 真の値幅、各期間の実際の価格変動幅",
         "category": "volatility",
     },
 }
