@@ -9,8 +9,8 @@ import numpy as np
 from typing import List, Dict, Any, Optional, Union
 import logging
 
-from .base_indicator import BaseIndicator
-from .talib_adapter import TALibAdapter, TALibCalculationError
+from .abstract_indicator import BaseIndicator
+from .adapters import VolumeAdapter, TALibCalculationError
 
 logger = logging.getLogger(__name__)
 
@@ -19,7 +19,9 @@ class OBVIndicator(BaseIndicator):
     """OBV（On Balance Volume）指標"""
 
     def __init__(self):
-        super().__init__(indicator_type="OBV", supported_periods=[1])  # OBVは期間を使用しない
+        super().__init__(
+            indicator_type="OBV", supported_periods=[1]
+        )  # OBVは期間を使用しない
 
     def calculate(self, df: pd.DataFrame, period: int = 1, **kwargs) -> pd.Series:
         """
@@ -37,7 +39,7 @@ class OBVIndicator(BaseIndicator):
             raise ValueError("OBV計算には出来高データが必要です")
 
         # TA-Libを使用した高速計算
-        return TALibAdapter.obv(df["close"], df["volume"])
+        return VolumeAdapter.obv(df["close"], df["volume"])
 
     def get_description(self) -> str:
         """指標の説明を取得"""
@@ -48,7 +50,9 @@ class ADIndicator(BaseIndicator):
     """AD（Chaikin A/D Line）指標"""
 
     def __init__(self):
-        super().__init__(indicator_type="AD", supported_periods=[1])  # A/D Lineは期間を使用しない
+        super().__init__(
+            indicator_type="AD", supported_periods=[1]
+        )  # A/D Lineは期間を使用しない
 
     def calculate(self, df: pd.DataFrame, period: int = 1, **kwargs) -> pd.Series:
         """
@@ -66,7 +70,7 @@ class ADIndicator(BaseIndicator):
             raise ValueError("A/D Line計算には出来高データが必要です")
 
         # TA-Libを使用した高速計算
-        return TALibAdapter.ad(df["high"], df["low"], df["close"], df["volume"])
+        return VolumeAdapter.ad(df["high"], df["low"], df["close"], df["volume"])
 
     def get_description(self) -> str:
         """指標の説明を取得"""
@@ -77,7 +81,9 @@ class ADOSCIndicator(BaseIndicator):
     """ADOSC（Chaikin A/D Oscillator）指標"""
 
     def __init__(self):
-        super().__init__(indicator_type="ADOSC", supported_periods=[3, 10])  # 高速期間と低速期間
+        super().__init__(
+            indicator_type="ADOSC", supported_periods=[3, 10]
+        )  # 高速期間と低速期間
 
     def calculate(self, df: pd.DataFrame, period: int = 3, **kwargs) -> pd.Series:
         """
@@ -101,7 +107,7 @@ class ADOSCIndicator(BaseIndicator):
         slow_period = kwargs.get("slow_period", 10)
 
         # TA-Libを使用した高速計算
-        return TALibAdapter.adosc(
+        return VolumeAdapter.adosc(
             df["high"], df["low"], df["close"], df["volume"], fast_period, slow_period
         )
 

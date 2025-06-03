@@ -8,7 +8,7 @@ import pandas as pd
 import numpy as np
 from typing import List, Dict, Any, Optional, Union
 
-from .base_indicator import BaseIndicator
+from .abstract_indicator import BaseIndicator
 
 
 class PSARIndicator(BaseIndicator):
@@ -16,8 +16,7 @@ class PSARIndicator(BaseIndicator):
 
     def __init__(self):
         super().__init__(
-            indicator_type="PSAR",
-            supported_periods=[1]  # PSARは期間に依存しない
+            indicator_type="PSAR", supported_periods=[1]  # PSARは期間に依存しない
         )
 
     def calculate(self, df: pd.DataFrame, period: int, **kwargs) -> pd.Series:
@@ -53,10 +52,10 @@ class PSARIndicator(BaseIndicator):
 
         for i in range(1, len(df)):
             if trend == 1:  # 上昇トレンド
-                psar.iloc[i] = psar.iloc[i-1] + current_af * (ep - psar.iloc[i-1])
+                psar.iloc[i] = psar.iloc[i - 1] + current_af * (ep - psar.iloc[i - 1])
 
                 # PSARが前日または当日の安値を上回った場合、トレンド転換
-                if psar.iloc[i] > low.iloc[i] or psar.iloc[i] > low.iloc[i-1]:
+                if psar.iloc[i] > low.iloc[i] or psar.iloc[i] > low.iloc[i - 1]:
                     trend = -1
                     psar.iloc[i] = ep
                     ep = low.iloc[i]
@@ -67,10 +66,10 @@ class PSARIndicator(BaseIndicator):
                         ep = high.iloc[i]
                         current_af = min(current_af + af, max_af)
             else:  # 下降トレンド
-                psar.iloc[i] = psar.iloc[i-1] + current_af * (ep - psar.iloc[i-1])
+                psar.iloc[i] = psar.iloc[i - 1] + current_af * (ep - psar.iloc[i - 1])
 
                 # PSARが前日または当日の高値を下回った場合、トレンド転換
-                if psar.iloc[i] < high.iloc[i] or psar.iloc[i] < high.iloc[i-1]:
+                if psar.iloc[i] < high.iloc[i] or psar.iloc[i] < high.iloc[i - 1]:
                     trend = 1
                     psar.iloc[i] = ep
                     ep = high.iloc[i]
@@ -120,6 +119,6 @@ OTHER_INDICATORS_INFO = {
     "PSAR": {
         "periods": [1],
         "description": "PSAR - パラボリックSAR、トレンド転換点を示す",
-        "category": "other"
+        "category": "other",
     },
 }

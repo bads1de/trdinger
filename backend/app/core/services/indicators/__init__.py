@@ -6,8 +6,8 @@
 
 from typing import Dict, Any
 
-from .indicator_service import TechnicalIndicatorService
-from .base_indicator import BaseIndicator
+from .indicator_orchestrator import TechnicalIndicatorService
+from .abstract_indicator import BaseIndicator
 
 # 各カテゴリの指標
 from .trend_indicators import (

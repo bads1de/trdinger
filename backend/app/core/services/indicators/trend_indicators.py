@@ -9,8 +9,8 @@ import numpy as np
 from typing import List, Dict, Any, Optional, Union
 import logging
 
-from .base_indicator import BaseIndicator
-from .talib_adapter import TALibAdapter, TALibCalculationError
+from .abstract_indicator import BaseIndicator
+from .adapters import TrendAdapter, MomentumAdapter, TALibCalculationError
 
 logger = logging.getLogger(__name__)
 
@@ -38,7 +38,7 @@ class SMAIndicator(BaseIndicator):
             TALibCalculationError: TA-Lib計算エラーの場合
         """
         # TA-Libを使用した高速計算
-        return TALibAdapter.sma(df["close"], period)
+        return TrendAdapter.sma(df["close"], period)
 
     def get_description(self) -> str:
         """指標の説明を取得"""
@@ -68,7 +68,7 @@ class EMAIndicator(BaseIndicator):
             TALibCalculationError: TA-Lib計算エラーの場合
         """
         # TA-Libを使用した高速計算
-        return TALibAdapter.ema(df["close"], period)
+        return TrendAdapter.ema(df["close"], period)
 
     def get_description(self) -> str:
         """指標の説明を取得"""
@@ -93,7 +93,7 @@ class MACDIndicator(BaseIndicator):
             MACD値を含むDataFrame（macd_line, signal_line, histogram）
         """
         # TA-Libを使用した高速計算
-        macd_result = TALibAdapter.macd(df["close"], fast=12, slow=26, signal=9)
+        macd_result = MomentumAdapter.macd(df["close"], fast=12, slow=26, signal=9)
 
         # DataFrameに変換して返す
         result = pd.DataFrame(
@@ -179,7 +179,7 @@ class KAMAIndicator(BaseIndicator):
             KAMA値のSeries
         """
         # TA-Libを使用した高速計算
-        return TALibAdapter.kama(df["close"], period)
+        return TrendAdapter.kama(df["close"], period)
 
     def get_description(self) -> str:
         """指標の説明を取得"""
@@ -209,7 +209,7 @@ class T3Indicator(BaseIndicator):
         vfactor = kwargs.get("vfactor", 0.7)
 
         # TA-Libを使用した高速計算
-        return TALibAdapter.t3(df["close"], period, vfactor)
+        return TrendAdapter.t3(df["close"], period, vfactor)
 
     def get_description(self) -> str:
         """指標の説明を取得"""
@@ -234,7 +234,7 @@ class TEMAIndicator(BaseIndicator):
             TEMA値のSeries
         """
         # TA-Libを使用した高速計算
-        return TALibAdapter.tema(df["close"], period)
+        return TrendAdapter.tema(df["close"], period)
 
     def get_description(self) -> str:
         """指標の説明を取得"""
@@ -259,7 +259,7 @@ class DEMAIndicator(BaseIndicator):
             DEMA値のSeries
         """
         # TA-Libを使用した高速計算
-        return TALibAdapter.dema(df["close"], period)
+        return TrendAdapter.dema(df["close"], period)
 
     def get_description(self) -> str:
         """指標の説明を取得"""

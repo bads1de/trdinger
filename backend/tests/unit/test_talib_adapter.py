@@ -1,7 +1,8 @@
 """
-TALibAdapterクラスのテスト
+TA-Libアダプタークラスの包括的テスト
 
 TDDアプローチでTA-Libアダプターの機能をテストします。
+現在の実装に合わせて、機能別アダプタークラスをテストします。
 """
 
 import pytest
@@ -10,14 +11,18 @@ import numpy as np
 from unittest.mock import patch, MagicMock
 
 # テスト対象のインポート
-from app.core.services.indicators.talib_adapter import (
-    TALibAdapter,
+from app.core.services.indicators.adapters import (
+    BaseAdapter,
     TALibCalculationError,
+    TrendAdapter,
+    MomentumAdapter,
+    VolatilityAdapter,
+    VolumeAdapter,
 )
 
 
-class TestTALibAdapter:
-    """TALibAdapterクラスのテストクラス"""
+class TestBaseAdapter:
+    """BaseAdapterクラスのテストクラス"""
 
     @pytest.fixture
     def sample_price_data(self):
@@ -56,9 +61,64 @@ class TestTALibAdapter:
 
         return data
 
+    def test_ensure_series_with_series(self, sample_price_data):
+        """pandas.Seriesの変換テスト"""
+        result = BaseAdapter._ensure_series(sample_price_data)
+        assert isinstance(result, pd.Series)
+        assert result.equals(sample_price_data)
+
+    def test_ensure_series_with_list(self):
+        """リストからpandas.Seriesへの変換テスト"""
+        test_list = [1.0, 2.0, 3.0, 4.0, 5.0]
+        result = BaseAdapter._ensure_series(test_list)
+        assert isinstance(result, pd.Series)
+        assert list(result.values) == test_list
+
+    def test_ensure_series_with_numpy_array(self):
+        """numpy配列からpandas.Seriesへの変換テスト"""
+        test_array = np.array([1.0, 2.0, 3.0, 4.0, 5.0])
+        result = BaseAdapter._ensure_series(test_array)
+        assert isinstance(result, pd.Series)
+        np.testing.assert_array_equal(result.values, test_array)
+
+    def test_ensure_series_with_invalid_type(self):
+        """サポートされていないデータ型のテスト"""
+        with pytest.raises(TALibCalculationError):
+            BaseAdapter._ensure_series("invalid_type")
+
+    def test_create_series_result(self):
+        """計算結果のSeries変換テスト"""
+        test_data = np.array([1.0, 2.0, 3.0, 4.0, 5.0])
+        test_index = pd.date_range("2024-01-01", periods=5, freq="D")
+        test_name = "TEST_INDICATOR"
+
+        result = BaseAdapter._create_series_result(test_data, test_index, test_name)
+
+        assert isinstance(result, pd.Series)
+        assert result.name == test_name
+        assert result.index.equals(test_index)
+        np.testing.assert_array_equal(result.values, test_data)
+
+
+class TestTrendAdapter:
+    """TrendAdapterクラスのテストクラス"""
+
+    @pytest.fixture
+    def sample_price_data(self):
+        """テスト用の価格データ"""
+        dates = pd.date_range("2024-01-01", periods=100, freq="D")
+        np.random.seed(42)  # 再現性のため
+
+        # 現実的な価格データを生成
+        base_price = 50000
+        returns = np.random.normal(0, 0.02, 100)
+        prices = base_price * np.exp(np.cumsum(returns))
+
+        return pd.Series(prices, index=dates, name="close")
+
     def test_sma_calculation(self, sample_price_data):
         """SMA計算のテスト"""
-        result = TALibAdapter.sma(sample_price_data, period=20)
+        result = TrendAdapter.sma(sample_price_data, period=20)
 
         assert isinstance(result, pd.Series)
         assert len(result) == len(sample_price_data)
@@ -69,16 +129,69 @@ class TestTALibAdapter:
 
     def test_ema_calculation(self, sample_price_data):
         """EMA計算のテスト"""
-        result = TALibAdapter.ema(sample_price_data, period=20)
+        result = TrendAdapter.ema(sample_price_data, period=20)
 
         assert isinstance(result, pd.Series)
         assert len(result) == len(sample_price_data)
         assert result.index.equals(sample_price_data.index)
         assert result.name == "EMA_20"
 
+    def test_tema_calculation(self, sample_price_data):
+        """TEMA計算のテスト"""
+        result = TrendAdapter.tema(sample_price_data, period=30)
+
+        assert isinstance(result, pd.Series)
+        assert len(result) == len(sample_price_data)
+        assert result.index.equals(sample_price_data.index)
+        assert result.name == "TEMA_30"
+
+    def test_dema_calculation(self, sample_price_data):
+        """DEMA計算のテスト"""
+        result = TrendAdapter.dema(sample_price_data, period=30)
+
+        assert isinstance(result, pd.Series)
+        assert len(result) == len(sample_price_data)
+        assert result.index.equals(sample_price_data.index)
+        assert result.name == "DEMA_30"
+
+    def test_t3_calculation(self, sample_price_data):
+        """T3計算のテスト"""
+        result = TrendAdapter.t3(sample_price_data, period=5, vfactor=0.7)
+
+        assert isinstance(result, pd.Series)
+        assert len(result) == len(sample_price_data)
+        assert result.index.equals(sample_price_data.index)
+        assert result.name == "T3_5"
+
+    def test_wma_calculation(self, sample_price_data):
+        """WMA計算のテスト"""
+        result = TrendAdapter.wma(sample_price_data, period=20)
+
+        assert isinstance(result, pd.Series)
+        assert len(result) == len(sample_price_data)
+        assert result.index.equals(sample_price_data.index)
+        assert result.name == "WMA_20"
+
+
+class TestMomentumAdapter:
+    """MomentumAdapterクラスのテストクラス"""
+
+    @pytest.fixture
+    def sample_price_data(self):
+        """テスト用の価格データ"""
+        dates = pd.date_range("2024-01-01", periods=100, freq="D")
+        np.random.seed(42)  # 再現性のため
+
+        # 現実的な価格データを生成
+        base_price = 50000
+        returns = np.random.normal(0, 0.02, 100)
+        prices = base_price * np.exp(np.cumsum(returns))
+
+        return pd.Series(prices, index=dates, name="close")
+
     def test_rsi_calculation(self, sample_price_data):
         """RSI計算のテスト"""
-        result = TALibAdapter.rsi(sample_price_data, period=14)
+        result = MomentumAdapter.rsi(sample_price_data, period=14)
 
         assert isinstance(result, pd.Series)
         assert len(result) == len(sample_price_data)
@@ -90,147 +203,241 @@ class TestTALibAdapter:
         assert (valid_values >= 0).all()
         assert (valid_values <= 100).all()
 
-    def test_macd_calculation(self, sample_price_data):
-        """MACD計算のテスト"""
-        result = TALibAdapter.macd(sample_price_data, fast=12, slow=26, signal=9)
+    def test_momentum_calculation(self, sample_price_data):
+        """モメンタム計算のテスト"""
+        result = MomentumAdapter.momentum(sample_price_data, period=10)
 
-        assert isinstance(result, dict)
-        assert "macd_line" in result
-        assert "signal_line" in result
-        assert "histogram" in result
+        assert isinstance(result, pd.Series)
+        assert len(result) == len(sample_price_data)
+        assert result.index.equals(sample_price_data.index)
+        assert result.name == "MOM_10"
 
-        for key, series in result.items():
-            assert isinstance(series, pd.Series)
-            assert len(series) == len(sample_price_data)
-            assert series.index.equals(sample_price_data.index)
 
-    def test_bollinger_bands_calculation(self, sample_price_data):
-        """ボリンジャーバンド計算のテスト"""
-        pytest.skip("TALibAdapter実装前のため、テストをスキップ")
+class TestVolatilityAdapter:
+    """VolatilityAdapterクラスのテストクラス"""
 
-        # 期待される動作：
-        # result = TALibAdapter.bollinger_bands(sample_price_data, period=20, std_dev=2)
-        #
-        # assert isinstance(result, dict)
-        # assert 'upper' in result
-        # assert 'middle' in result
-        # assert 'lower' in result
+    @pytest.fixture
+    def sample_ohlcv_data(self):
+        """テスト用のOHLCVデータ"""
+        dates = pd.date_range("2024-01-01", periods=100, freq="D")
+        np.random.seed(42)
+
+        base_price = 50000
+        returns = np.random.normal(0, 0.02, 100)
+        close_prices = base_price * np.exp(np.cumsum(returns))
+
+        # OHLCV データを生成
+        data = pd.DataFrame(
+            {
+                "open": close_prices * (1 + np.random.normal(0, 0.001, 100)),
+                "high": close_prices * (1 + np.abs(np.random.normal(0, 0.01, 100))),
+                "low": close_prices * (1 - np.abs(np.random.normal(0, 0.01, 100))),
+                "close": close_prices,
+                "volume": np.random.randint(1000, 10000, 100),
+            },
+            index=dates,
+        )
+
+        return data
 
     def test_atr_calculation(self, sample_ohlcv_data):
         """ATR計算のテスト"""
-        pytest.skip("TALibAdapter実装前のため、テストをスキップ")
+        result = VolatilityAdapter.atr(
+            sample_ohlcv_data["high"],
+            sample_ohlcv_data["low"],
+            sample_ohlcv_data["close"],
+            period=14,
+        )
 
-        # 期待される動作：
-        # result = TALibAdapter.atr(
-        #     sample_ohlcv_data['high'],
-        #     sample_ohlcv_data['low'],
-        #     sample_ohlcv_data['close'],
-        #     period=14
-        # )
-        #
-        # assert isinstance(result, pd.Series)
-        # assert len(result) == len(sample_ohlcv_data)
+        assert isinstance(result, pd.Series)
+        assert len(result) == len(sample_ohlcv_data)
+        assert result.name == "ATR_14"
 
-    def test_invalid_input_handling(self):
-        """不正な入力のハンドリングテスト"""
+
+class TestVolumeAdapter:
+    """VolumeAdapterクラスのテストクラス"""
+
+    @pytest.fixture
+    def sample_ohlcv_data(self):
+        """テスト用のOHLCVデータ"""
+        dates = pd.date_range("2024-01-01", periods=100, freq="D")
+        np.random.seed(42)
+
+        base_price = 50000
+        returns = np.random.normal(0, 0.02, 100)
+        close_prices = base_price * np.exp(np.cumsum(returns))
+
+        # OHLCV データを生成
+        data = pd.DataFrame(
+            {
+                "open": close_prices * (1 + np.random.normal(0, 0.001, 100)),
+                "high": close_prices * (1 + np.abs(np.random.normal(0, 0.01, 100))),
+                "low": close_prices * (1 - np.abs(np.random.normal(0, 0.01, 100))),
+                "close": close_prices,
+                "volume": np.random.randint(1000, 10000, 100),
+            },
+            index=dates,
+        )
+
+        return data
+
+    def test_ad_calculation(self, sample_ohlcv_data):
+        """A/D Line計算のテスト"""
+        result = VolumeAdapter.ad(
+            sample_ohlcv_data["high"],
+            sample_ohlcv_data["low"],
+            sample_ohlcv_data["close"],
+            sample_ohlcv_data["volume"],
+        )
+
+        assert isinstance(result, pd.Series)
+        assert len(result) == len(sample_ohlcv_data)
+
+
+class TestErrorHandling:
+    """エラーハンドリングのテスト"""
+
+    def test_invalid_input_handling_trend(self):
+        """TrendAdapterの不正な入力のハンドリングテスト"""
         # 空のSeriesでエラーが発生することを確認
         empty_series = pd.Series([], dtype=float)
         with pytest.raises(TALibCalculationError):
-            TALibAdapter.sma(empty_series, period=20)
+            TrendAdapter.sma(empty_series, period=20)
 
         # 期間が不正な場合
         valid_series = pd.Series([1, 2, 3, 4, 5])
         with pytest.raises(TALibCalculationError):
-            TALibAdapter.sma(valid_series, period=0)
+            TrendAdapter.sma(valid_series, period=0)
 
         with pytest.raises(TALibCalculationError):
-            TALibAdapter.sma(valid_series, period=-1)
+            TrendAdapter.sma(valid_series, period=-1)
 
         # データ長が期間より短い場合
         with pytest.raises(TALibCalculationError):
-            TALibAdapter.sma(valid_series, period=10)
+            TrendAdapter.sma(valid_series, period=10)
 
-    def test_nan_handling(self, sample_price_data):
-        """NaN値のハンドリングテスト"""
-        pytest.skip("TALibAdapter実装前のため、テストをスキップ")
+    def test_invalid_input_handling_momentum(self):
+        """MomentumAdapterの不正な入力のハンドリングテスト"""
+        # 空のSeriesでエラーが発生することを確認
+        empty_series = pd.Series([], dtype=float)
+        with pytest.raises(TALibCalculationError):
+            MomentumAdapter.rsi(empty_series, period=14)
 
-        # 期待される動作：
-        # # データにNaNを含む場合の処理
-        # data_with_nan = sample_price_data.copy()
-        # data_with_nan.iloc[50:55] = np.nan
-        #
-        # result = TALibAdapter.sma(data_with_nan, period=20)
-        #
-        # # 結果がSeriesであることを確認
-        # assert isinstance(result, pd.Series)
-        # assert len(result) == len(data_with_nan)
+        # 期間が不正な場合
+        valid_series = pd.Series([1, 2, 3, 4, 5])
+        with pytest.raises(TALibCalculationError):
+            MomentumAdapter.rsi(valid_series, period=0)
 
-    def test_performance_comparison(self, sample_price_data):
+
+class TestPerformanceAndAccuracy:
+    """パフォーマンスと精度のテスト"""
+
+    @pytest.fixture
+    def large_price_data(self):
+        """大きなテスト用価格データ"""
+        dates = pd.date_range("2020-01-01", periods=1000, freq="D")
+        np.random.seed(42)
+
+        base_price = 50000
+        returns = np.random.normal(0, 0.02, 1000)
+        prices = base_price * np.exp(np.cumsum(returns))
+
+        return pd.Series(prices, index=dates, name="close")
+
+    def test_performance_comparison(self, large_price_data):
         """パフォーマンス比較テスト"""
-        pytest.skip("TALibAdapter実装前のため、テストをスキップ")
+        import time
 
-        # 期待される動作：
-        # import time
-        #
-        # # TA-Libでの計算時間
-        # start_time = time.time()
-        # talib_result = TALibAdapter.sma(sample_price_data, period=20)
-        # talib_time = time.time() - start_time
-        #
-        # # pandasでの計算時間
-        # start_time = time.time()
-        # pandas_result = sample_price_data.rolling(window=20).mean()
-        # pandas_time = time.time() - start_time
-        #
-        # print(f"TA-Lib時間: {talib_time:.4f}秒")
-        # print(f"pandas時間: {pandas_time:.4f}秒")
-        #
-        # # 結果の精度比較（小数点以下6桁まで）
-        # pd.testing.assert_series_equal(
-        #     talib_result.round(6),
-        #     pandas_result.round(6),
-        #     check_names=False
-        # )
+        # TA-Libでの計算時間
+        start_time = time.time()
+        talib_result = TrendAdapter.sma(large_price_data, period=20)
+        talib_time = time.time() - start_time
+
+        # pandasでの計算時間
+        start_time = time.time()
+        pandas_result = large_price_data.rolling(window=20).mean()
+        pandas_time = time.time() - start_time
+
+        print(f"TA-Lib時間: {talib_time:.4f}秒")
+        print(f"pandas時間: {pandas_time:.4f}秒")
+
+        # 結果の精度比較（小数点以下6桁まで）
+        # NaN値を除外して比較
+        talib_clean = talib_result.dropna()
+        pandas_clean = pandas_result.dropna()
+
+        # インデックスを合わせる
+        common_index = talib_clean.index.intersection(pandas_clean.index)
+
+        pd.testing.assert_series_equal(
+            talib_clean.loc[common_index].round(6),
+            pandas_clean.loc[common_index].round(6),
+            check_names=False,
+        )
 
     def test_data_type_conversion(self):
         """データ型変換のテスト"""
-        pytest.skip("TALibAdapter実装前のため、テストをスキップ")
+        # リストからの変換
+        list_data = [1.0, 2.0, 3.0, 4.0, 5.0] * 20
+        result = TrendAdapter.sma(pd.Series(list_data), period=5)
+        assert isinstance(result, pd.Series)
 
-        # 期待される動作：
-        # # リストからの変換
-        # list_data = [1.0, 2.0, 3.0, 4.0, 5.0] * 20
-        # result = TALibAdapter.sma(pd.Series(list_data), period=5)
-        # assert isinstance(result, pd.Series)
-        #
-        # # numpy配列からの変換
-        # array_data = np.array(list_data)
-        # result = TALibAdapter.sma(pd.Series(array_data), period=5)
-        # assert isinstance(result, pd.Series)
+        # numpy配列からの変換
+        array_data = np.array(list_data)
+        result = TrendAdapter.sma(pd.Series(array_data), period=5)
+        assert isinstance(result, pd.Series)
+
+    def test_nan_handling(self):
+        """NaN値のハンドリングテスト"""
+        # データにNaNを含む場合の処理
+        dates = pd.date_range("2024-01-01", periods=50, freq="D")
+        data = pd.Series(range(50), index=dates, dtype=float)
+        data.iloc[20:25] = np.nan
+
+        result = TrendAdapter.sma(data, period=10)
+
+        # 結果がSeriesであることを確認
+        assert isinstance(result, pd.Series)
+        assert len(result) == len(data)
 
 
-class TestTALibAdapterIntegration:
-    """TALibAdapterの統合テスト"""
+class TestIntegration:
+    """統合テスト"""
 
-    def test_integration_with_existing_indicators(self):
-        """既存指標クラスとの統合テスト"""
-        pytest.skip("統合テスト実装前のため、テストをスキップ")
+    def test_adapter_consistency(self):
+        """アダプター間の一貫性テスト"""
+        dates = pd.date_range("2024-01-01", periods=100, freq="D")
+        np.random.seed(42)
 
-        # 期待される動作：
-        # # 既存のSMAIndicatorクラスがTALibAdapterを使用することを確認
-        # from app.core.services.indicators.trend_indicators import SMAIndicator
-        #
-        # indicator = SMAIndicator()
-        # # テストデータでの計算確認
-        # # ...
+        base_price = 50000
+        returns = np.random.normal(0, 0.02, 100)
+        prices = base_price * np.exp(np.cumsum(returns))
+        data = pd.Series(prices, index=dates, name="close")
 
-    def test_backward_compatibility(self):
-        """後方互換性のテスト"""
-        pytest.skip("後方互換性テスト実装前のため、テストをスキップ")
+        # 各アダプターが同じ形式の結果を返すことを確認
+        sma_result = TrendAdapter.sma(data, period=20)
+        ema_result = TrendAdapter.ema(data, period=20)
+        rsi_result = MomentumAdapter.rsi(data, period=14)
 
-        # 期待される動作：
-        # # 既存のAPIが変更されていないことを確認
-        # # 既存のテストケースが全て通ることを確認
-        # # ...
+        # 全て同じ長さとインデックスを持つことを確認
+        assert len(sma_result) == len(data)
+        assert len(ema_result) == len(data)
+        assert len(rsi_result) == len(data)
+
+        assert sma_result.index.equals(data.index)
+        assert ema_result.index.equals(data.index)
+        assert rsi_result.index.equals(data.index)
+
+    def test_error_propagation(self):
+        """エラー伝播のテスト"""
+        # 全てのアダプターが同じエラーハンドリングを行うことを確認
+        empty_series = pd.Series([], dtype=float)
+
+        with pytest.raises(TALibCalculationError):
+            TrendAdapter.sma(empty_series, period=20)
+
+        with pytest.raises(TALibCalculationError):
+            MomentumAdapter.rsi(empty_series, period=14)
 
 
 if __name__ == "__main__":

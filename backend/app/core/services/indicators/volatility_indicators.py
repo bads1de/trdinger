@@ -9,8 +9,8 @@ import numpy as np
 from typing import List, Dict, Any, Optional, Union
 import logging
 
-from .base_indicator import BaseIndicator
-from .talib_adapter import TALibAdapter, TALibCalculationError
+from .abstract_indicator import BaseIndicator
+from .adapters import VolatilityAdapter, TALibCalculationError
 
 logger = logging.getLogger(__name__)
 
@@ -33,7 +33,7 @@ class BollingerBandsIndicator(BaseIndicator):
             ボリンジャーバンド値を含むDataFrame（middle, upper, lower）
         """
         # TA-Libを使用した高速計算
-        bb_result = TALibAdapter.bollinger_bands(
+        bb_result = VolatilityAdapter.bollinger_bands(
             df["close"], period=period, std_dev=2.0
         )
 
@@ -121,7 +121,7 @@ class ATRIndicator(BaseIndicator):
             ATR値のSeries
         """
         # TA-Libを使用した高速計算
-        return TALibAdapter.atr(df["high"], df["low"], df["close"], period)
+        return VolatilityAdapter.atr(df["high"], df["low"], df["close"], period)
 
     def get_description(self) -> str:
         """指標の説明を取得"""
@@ -146,7 +146,7 @@ class NATRIndicator(BaseIndicator):
             NATR値のSeries（パーセンテージ）
         """
         # TA-Libを使用した高速計算
-        return TALibAdapter.natr(df["high"], df["low"], df["close"], period)
+        return VolatilityAdapter.natr(df["high"], df["low"], df["close"], period)
 
     def get_description(self) -> str:
         """指標の説明を取得"""
@@ -173,7 +173,7 @@ class TRANGEIndicator(BaseIndicator):
             True Range値のSeries
         """
         # TA-Libを使用した高速計算
-        return TALibAdapter.trange(df["high"], df["low"], df["close"])
+        return VolatilityAdapter.trange(df["high"], df["low"], df["close"])
 
     def get_description(self) -> str:
         """指標の説明を取得"""
