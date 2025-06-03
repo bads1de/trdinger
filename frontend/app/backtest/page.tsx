@@ -54,11 +54,13 @@ interface BacktestResult {
     equity: number;
   }>;
   trade_history?: Array<{
-    timestamp: string;
-    type: "buy" | "sell";
-    price: number;
-    quantity: number;
-    pnl?: number;
+    size: number;
+    entry_price: number;
+    exit_price: number;
+    pnl: number;
+    return_pct: number;
+    entry_time: string;
+    exit_time: string;
   }>;
   created_at: string;
 }
