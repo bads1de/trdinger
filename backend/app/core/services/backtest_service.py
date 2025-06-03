@@ -210,7 +210,7 @@ class BacktestService:
 
     def _create_strategy_class(self, strategy_config: Dict[str, Any]) -> Type[Strategy]:
         """
-        戦略設定から動的に戦略クラスを生成
+        戦略設定から戦略クラスを取得し、パラメータを設定
 
         Args:
             strategy_config: 戦略設定
@@ -225,47 +225,32 @@ class BacktestService:
         parameters = strategy_config.get("parameters", {})
 
         if strategy_type == "SMA_CROSS":
-            # SMAクロス戦略のカスタムクラスを作成
-            class CustomSMACrossStrategy(SMACrossStrategy):
-                pass
-
-            # パラメータを動的に設定
+            # パラメータをクラス変数として設定
             if "n1" in parameters:
-                CustomSMACrossStrategy.n1 = parameters["n1"]
+                SMACrossStrategy.n1 = parameters["n1"]
             if "n2" in parameters:
-                CustomSMACrossStrategy.n2 = parameters["n2"]
-
-            return CustomSMACrossStrategy
+                SMACrossStrategy.n2 = parameters["n2"]
+            return SMACrossStrategy
 
         elif strategy_type == "RSI":
-            # RSI戦略のカスタムクラスを作成
-            class CustomRSIStrategy(RSIStrategy):
-                pass
-
-            # パラメータを動的に設定
+            # パラメータをクラス変数として設定
             if "period" in parameters:
-                CustomRSIStrategy.period = parameters["period"]
+                RSIStrategy.period = parameters["period"]
             if "oversold" in parameters:
-                CustomRSIStrategy.oversold = parameters["oversold"]
+                RSIStrategy.oversold = parameters["oversold"]
             if "overbought" in parameters:
-                CustomRSIStrategy.overbought = parameters["overbought"]
-
-            return CustomRSIStrategy
+                RSIStrategy.overbought = parameters["overbought"]
+            return RSIStrategy
 
         elif strategy_type == "MACD":
-            # MACD戦略のカスタムクラスを作成
-            class CustomMACDStrategy(MACDStrategy):
-                pass
-
-            # パラメータを動的に設定
+            # パラメータをクラス変数として設定
             if "fast_period" in parameters:
-                CustomMACDStrategy.fast_period = parameters["fast_period"]
+                MACDStrategy.fast_period = parameters["fast_period"]
             if "slow_period" in parameters:
-                CustomMACDStrategy.slow_period = parameters["slow_period"]
+                MACDStrategy.slow_period = parameters["slow_period"]
             if "signal_period" in parameters:
-                CustomMACDStrategy.signal_period = parameters["signal_period"]
-
-            return CustomMACDStrategy
+                MACDStrategy.signal_period = parameters["signal_period"]
+            return MACDStrategy
 
         else:
             raise ValueError(f"Unsupported strategy type: {strategy_type}")

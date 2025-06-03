@@ -91,20 +91,11 @@ class EnhancedBacktestService(BacktestService):
             # 最適化パラメータの構築
             optimize_kwargs = self._build_optimize_kwargs(optimization_params)
 
-            # 最適化実行（マルチプロセシングを無効化してpickleエラーを回避）
+            # 最適化実行（マルチプロセシング有効）
             print(f"最適化開始: {optimization_params.get('method', 'grid')} method")
+            print("マルチプロセシング: 有効")
 
-            # マルチプロセシングを無効化
-            import multiprocessing
-
-            original_cpu_count = multiprocessing.cpu_count
-            multiprocessing.cpu_count = lambda: 1
-
-            try:
-                result = bt.optimize(**optimize_kwargs)
-            finally:
-                # 元の設定を復元
-                multiprocessing.cpu_count = original_cpu_count
+            result = bt.optimize(**optimize_kwargs)
 
             # 結果の処理
             processed_result = self._process_optimization_results(
