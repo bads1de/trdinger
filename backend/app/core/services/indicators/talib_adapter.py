@@ -9,7 +9,7 @@ pandas SeriesとTA-Lib間のデータ変換、エラーハンドリング、
 import talib
 import pandas as pd
 import numpy as np
-from typing import Union, Dict, Any, Optional
+from typing import Union, Dict
 import logging
 
 logger = logging.getLogger(__name__)
@@ -23,6 +23,24 @@ class TALibCalculationError(Exception):
 
 class TALibAdapter:
     """TA-Libと既存システムの橋渡しクラス"""
+
+    @staticmethod
+    def _ensure_series(data: Union[pd.Series, list, np.ndarray]) -> pd.Series:
+        """
+        データをpandas.Seriesに変換
+
+        Args:
+            data: 入力データ（pandas.Series, list, numpy.ndarray）
+
+        Returns:
+            pandas.Series
+        """
+        if isinstance(data, pd.Series):
+            return data
+        elif isinstance(data, (list, np.ndarray)):
+            return pd.Series(data)
+        else:
+            raise TALibCalculationError(f"サポートされていないデータ型: {type(data)}")
 
     @staticmethod
     def _validate_input(data: pd.Series, period: int) -> None:

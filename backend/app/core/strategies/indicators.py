@@ -39,10 +39,7 @@ def SMA(data: Union[pd.Series, List, np.ndarray], period: int) -> pd.Series:
     if not TALIB_AVAILABLE:
         raise ImportError("TA-Libが利用できません。TA-Libをインストールしてください。")
 
-    if isinstance(data, (list, np.ndarray)):
-        data = pd.Series(data)
-
-    return TALibAdapter.sma(data, period)
+    return TALibAdapter.sma(TALibAdapter._ensure_series(data), period)
 
 
 def EMA(data: Union[pd.Series, List, np.ndarray], period: int) -> pd.Series:
@@ -63,10 +60,7 @@ def EMA(data: Union[pd.Series, List, np.ndarray], period: int) -> pd.Series:
     if not TALIB_AVAILABLE:
         raise ImportError("TA-Libが利用できません。TA-Libをインストールしてください。")
 
-    if isinstance(data, (list, np.ndarray)):
-        data = pd.Series(data)
-
-    return TALibAdapter.ema(data, period)
+    return TALibAdapter.ema(TALibAdapter._ensure_series(data), period)
 
 
 def RSI(data: Union[pd.Series, List, np.ndarray], period: int = 14) -> pd.Series:
@@ -87,10 +81,7 @@ def RSI(data: Union[pd.Series, List, np.ndarray], period: int = 14) -> pd.Series
     if not TALIB_AVAILABLE:
         raise ImportError("TA-Libが利用できません。TA-Libをインストールしてください。")
 
-    if isinstance(data, (list, np.ndarray)):
-        data = pd.Series(data)
-
-    return TALibAdapter.rsi(data, period)
+    return TALibAdapter.rsi(TALibAdapter._ensure_series(data), period)
 
 
 def MACD(
@@ -118,11 +109,10 @@ def MACD(
     if not TALIB_AVAILABLE:
         raise ImportError("TA-Libが利用できません。TA-Libをインストールしてください。")
 
-    if isinstance(data, (list, np.ndarray)):
-        data = pd.Series(data)
-
     # TA-LibでMACDを計算（辞書で返される）
-    macd_result = TALibAdapter.macd(data, fast_period, slow_period, signal_period)
+    macd_result = TALibAdapter.macd(
+        TALibAdapter._ensure_series(data), fast_period, slow_period, signal_period
+    )
 
     # 既存のAPIに合わせてtupleで返す
     return (
@@ -153,11 +143,10 @@ def BollingerBands(
     if not TALIB_AVAILABLE:
         raise ImportError("TA-Libが利用できません。TA-Libをインストールしてください。")
 
-    if isinstance(data, (list, np.ndarray)):
-        data = pd.Series(data)
-
     # TA-LibでBollinger Bandsを計算（辞書で返される）
-    bb_result = TALibAdapter.bollinger_bands(data, period, std_dev)
+    bb_result = TALibAdapter.bollinger_bands(
+        TALibAdapter._ensure_series(data), period, std_dev
+    )
 
     # 既存のAPIに合わせてtupleで返す
     return bb_result["upper"], bb_result["middle"], bb_result["lower"]
@@ -190,15 +179,14 @@ def Stochastic(
     if not TALIB_AVAILABLE:
         raise ImportError("TA-Libが利用できません。TA-Libをインストールしてください。")
 
-    if isinstance(high, (list, np.ndarray)):
-        high = pd.Series(high)
-    if isinstance(low, (list, np.ndarray)):
-        low = pd.Series(low)
-    if isinstance(close, (list, np.ndarray)):
-        close = pd.Series(close)
-
     # TA-LibでStochasticを計算（辞書で返される）
-    stoch_result = TALibAdapter.stochastic(high, low, close, k_period, d_period)
+    stoch_result = TALibAdapter.stochastic(
+        TALibAdapter._ensure_series(high),
+        TALibAdapter._ensure_series(low),
+        TALibAdapter._ensure_series(close),
+        k_period,
+        d_period,
+    )
 
     # 既存のAPIに合わせてtupleで返す
     return stoch_result["k_percent"], stoch_result["d_percent"]
@@ -229,11 +217,9 @@ def ATR(
     if not TALIB_AVAILABLE:
         raise ImportError("TA-Libが利用できません。TA-Libをインストールしてください。")
 
-    if isinstance(high, (list, np.ndarray)):
-        high = pd.Series(high)
-    if isinstance(low, (list, np.ndarray)):
-        low = pd.Series(low)
-    if isinstance(close, (list, np.ndarray)):
-        close = pd.Series(close)
-
-    return TALibAdapter.atr(high, low, close, period)
+    return TALibAdapter.atr(
+        TALibAdapter._ensure_series(high),
+        TALibAdapter._ensure_series(low),
+        TALibAdapter._ensure_series(close),
+        period,
+    )
