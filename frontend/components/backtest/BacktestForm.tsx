@@ -34,11 +34,13 @@ interface BacktestConfig {
 
 interface BacktestFormProps {
   onSubmit: (config: BacktestConfig) => void;
+  onConfigChange?: (config: BacktestConfig) => void;
   isLoading?: boolean;
 }
 
 export default function BacktestForm({
   onSubmit,
+  onConfigChange,
   isLoading = false,
 }: BacktestFormProps) {
   const [strategies, setStrategies] = useState<Record<string, Strategy>>({});
@@ -58,6 +60,13 @@ export default function BacktestForm({
   });
 
   const { execute: fetchStrategies } = useApiCall();
+
+  // 設定更新用のヘルパー関数
+  const updateConfig = (updates: Partial<BacktestConfig>) => {
+    const newConfig = { ...config, ...updates };
+    setConfig(newConfig);
+    onConfigChange?.(newConfig);
+  };
 
   useEffect(() => {
     const loadStrategies = async () => {
@@ -88,8 +97,8 @@ export default function BacktestForm({
     const strategy = strategiesSource[strategyKey];
 
     if (strategy) {
-      setConfig((prev) => ({
-        ...prev,
+      const newConfig = {
+        ...config,
         strategy_name: strategyKey,
         strategy_config: {
           strategy_type: strategyKey,
@@ -100,21 +109,25 @@ export default function BacktestForm({
             ])
           ),
         },
-      }));
+      };
+      setConfig(newConfig);
+      onConfigChange?.(newConfig);
     }
   };
 
   const handleParameterChange = (paramName: string, value: number) => {
-    setConfig((prev) => ({
-      ...prev,
+    const newConfig = {
+      ...config,
       strategy_config: {
-        ...prev.strategy_config,
+        ...config.strategy_config,
         parameters: {
-          ...prev.strategy_config.parameters,
+          ...config.strategy_config.parameters,
           [paramName]: value,
         },
       },
-    }));
+    };
+    setConfig(newConfig);
+    onConfigChange?.(newConfig);
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -163,9 +176,7 @@ export default function BacktestForm({
             </label>
             <select
               value={config.symbol}
-              onChange={(e) =>
-                setConfig((prev) => ({ ...prev, symbol: e.target.value }))
-              }
+              onChange={(e) => updateConfig({ symbol: e.target.value })}
               className="w-full p-3 bg-gray-800 border border-gray-700 text-white rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               required
             >
@@ -179,9 +190,7 @@ export default function BacktestForm({
             </label>
             <select
               value={config.timeframe}
-              onChange={(e) =>
-                setConfig((prev) => ({ ...prev, timeframe: e.target.value }))
-              }
+              onChange={(e) => updateConfig({ timeframe: e.target.value })}
               className="w-full p-3 bg-gray-800 border border-gray-700 text-white rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               required
             >
@@ -201,9 +210,7 @@ export default function BacktestForm({
             <input
               type="date"
               value={config.start_date}
-              onChange={(e) =>
-                setConfig((prev) => ({ ...prev, start_date: e.target.value }))
-              }
+              onChange={(e) => updateConfig({ start_date: e.target.value })}
               className="w-full p-3 bg-gray-800 border border-gray-700 text-white rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               required
             />
@@ -216,9 +223,7 @@ export default function BacktestForm({
             <input
               type="date"
               value={config.end_date}
-              onChange={(e) =>
-                setConfig((prev) => ({ ...prev, end_date: e.target.value }))
-              }
+              onChange={(e) => updateConfig({ end_date: e.target.value })}
               className="w-full p-3 bg-gray-800 border border-gray-700 text-white rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               required
             />
@@ -235,10 +240,7 @@ export default function BacktestForm({
               type="number"
               value={config.initial_capital}
               onChange={(e) =>
-                setConfig((prev) => ({
-                  ...prev,
-                  initial_capital: Number(e.target.value),
-                }))
+                updateConfig({ initial_capital: Number(e.target.value) })
               }
               className="w-full p-3 bg-gray-800 border border-gray-700 text-white rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               min="1000"
@@ -255,10 +257,7 @@ export default function BacktestForm({
               type="number"
               value={config.commission_rate * 100}
               onChange={(e) =>
-                setConfig((prev) => ({
-                  ...prev,
-                  commission_rate: Number(e.target.value) / 100,
-                }))
+                updateConfig({ commission_rate: Number(e.target.value) / 100 })
               }
               className="w-full p-3 bg-gray-800 border border-gray-700 text-white rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               min="0"

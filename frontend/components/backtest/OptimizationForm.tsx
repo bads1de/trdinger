@@ -92,12 +92,27 @@ interface BacktestResult {
   commission_rate: number;
 }
 
+interface BacktestConfig {
+  strategy_name: string;
+  symbol: string;
+  timeframe: string;
+  start_date: string;
+  end_date: string;
+  initial_capital: number;
+  commission_rate: number;
+  strategy_config: {
+    strategy_type: string;
+    parameters: Record<string, number>;
+  };
+}
+
 interface OptimizationFormProps {
   onEnhancedOptimization: (config: OptimizationConfig) => void;
   onMultiObjectiveOptimization: (config: MultiObjectiveConfig) => void;
   onRobustnessTest: (config: RobustnessConfig) => void;
   isLoading?: boolean;
   initialConfig?: BacktestResult | null;
+  currentBacktestConfig?: BacktestConfig | null;
 }
 
 export default function OptimizationForm({
@@ -106,6 +121,7 @@ export default function OptimizationForm({
   onRobustnessTest,
   isLoading = false,
   initialConfig = null,
+  currentBacktestConfig = null,
 }: OptimizationFormProps) {
   const [activeTab, setActiveTab] = useState<
     "enhanced" | "multi" | "robustness"
@@ -179,9 +195,21 @@ export default function OptimizationForm({
     loadStrategies();
   }, []);
 
-  // 初期設定が渡された場合、基本設定を自動入力
+  // 現在のバックテスト設定から基本設定を自動入力（優先）
   useEffect(() => {
-    if (initialConfig) {
+    if (currentBacktestConfig) {
+      setBaseConfig({
+        strategy_name: `${currentBacktestConfig.strategy_name}_OPTIMIZED`,
+        symbol: currentBacktestConfig.symbol,
+        timeframe: currentBacktestConfig.timeframe,
+        start_date: currentBacktestConfig.start_date,
+        end_date: currentBacktestConfig.end_date,
+        initial_capital: currentBacktestConfig.initial_capital,
+        commission_rate: currentBacktestConfig.commission_rate,
+      });
+      setSelectedStrategy(currentBacktestConfig.strategy_config.strategy_type);
+    } else if (initialConfig) {
+      // フォールバック: 選択されたバックテスト結果から設定を引き継ぎ
       setBaseConfig({
         strategy_name: `${initialConfig.strategy_name}_OPTIMIZED`,
         symbol: initialConfig.symbol,
@@ -192,7 +220,7 @@ export default function OptimizationForm({
         commission_rate: initialConfig.commission_rate,
       });
     }
-  }, [initialConfig]);
+  }, [currentBacktestConfig, initialConfig]);
 
   const createParameterRange = (rangeConfig: number[]) => {
     const [start, end, step] = rangeConfig;
@@ -204,12 +232,16 @@ export default function OptimizationForm({
   };
 
   const handleEnhancedSubmit = () => {
+    // 現在のバックテスト設定から戦略パラメータを引き継ぐ
+    const strategyParameters =
+      currentBacktestConfig?.strategy_config?.parameters || {};
+
     const config: OptimizationConfig = {
       base_config: {
         ...baseConfig,
         strategy_config: {
           strategy_type: selectedStrategy,
-          parameters: {},
+          parameters: strategyParameters,
         },
       },
       optimization_params: {
@@ -234,12 +266,16 @@ export default function OptimizationForm({
   };
 
   const handleMultiObjectiveSubmit = () => {
+    // 現在のバックテスト設定から戦略パラメータを引き継ぐ
+    const strategyParameters =
+      currentBacktestConfig?.strategy_config?.parameters || {};
+
     const config: MultiObjectiveConfig = {
       base_config: {
         ...baseConfig,
         strategy_config: {
           strategy_type: selectedStrategy,
-          parameters: {},
+          parameters: strategyParameters,
         },
       },
       optimization_params: {
@@ -259,6 +295,10 @@ export default function OptimizationForm({
   };
 
   const handleRobustnessSubmit = () => {
+    // 現在のバックテスト設定から戦略パラメータを引き継ぐ
+    const strategyParameters =
+      currentBacktestConfig?.strategy_config?.parameters || {};
+
     const config: RobustnessConfig = {
       base_config: {
         strategy_name: baseConfig.strategy_name,
@@ -268,7 +308,7 @@ export default function OptimizationForm({
         commission_rate: baseConfig.commission_rate,
         strategy_config: {
           strategy_type: selectedStrategy,
-          parameters: {},
+          parameters: strategyParameters,
         },
       },
       test_periods: robustnessConfig.test_periods,
@@ -400,6 +440,22 @@ export default function OptimizationForm({
       <div className="mb-6 p-4 bg-gray-700 rounded-lg">
         <h3 className="text-lg font-medium mb-3">基本設定</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <SelectField
+            label="戦略タイプ"
+            value={selectedStrategy}
+            onChange={(value) => {
+              setSelectedStrategy(value);
+              // 戦略変更時に戦略名も更新
+              setBaseConfig({
+                ...baseConfig,
+                strategy_name: `${value}_OPTIMIZED`,
+              });
+            }}
+            options={Object.entries(strategies).map(([key, strategy]) => ({
+              value: key,
+              label: strategy.name || key,
+            }))}
+          />
           <InputField
             label="戦略名"
             value={baseConfig.strategy_name}
@@ -452,6 +508,17 @@ export default function OptimizationForm({
             type="number"
             min={1000000}
             step={1000000}
+          />
+          <InputField
+            label="手数料率 (%)"
+            value={baseConfig.commission_rate * 100}
+            onChange={(value) =>
+              setBaseConfig({ ...baseConfig, commission_rate: value / 100 })
+            }
+            type="number"
+            min={0}
+            max={1}
+            step={0.01}
           />
         </div>
       </div>

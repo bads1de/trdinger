@@ -73,6 +73,8 @@ export default function BacktestPage() {
     "enhanced" | "multi" | "robustness"
   >("enhanced");
   const [isOptimizationModalOpen, setIsOptimizationModalOpen] = useState(false);
+  const [currentBacktestConfig, setCurrentBacktestConfig] =
+    useState<BacktestConfig | null>(null);
 
   const { execute: runBacktest, loading: backtestLoading } = useApiCall<{
     result: BacktestResult;
@@ -223,6 +225,7 @@ export default function BacktestPage() {
               <h2 className="text-xl font-semibold mb-4">バックテスト設定</h2>
               <BacktestForm
                 onSubmit={handleRunBacktest}
+                onConfigChange={setCurrentBacktestConfig}
                 isLoading={backtestLoading}
               />
             </div>
@@ -295,6 +298,7 @@ export default function BacktestPage() {
           onRobustnessTest={handleRobustnessTest}
           isLoading={isOptimizationLoading}
           selectedResult={selectedResult}
+          currentBacktestConfig={currentBacktestConfig}
         />
 
         {/* ローディング状態 */}

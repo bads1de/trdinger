@@ -114,6 +114,23 @@ interface BacktestResult {
 }
 
 /**
+ * バックテスト設定の型定義（現在の設定を引き継ぐため）
+ */
+interface BacktestConfig {
+  strategy_name: string;
+  symbol: string;
+  timeframe: string;
+  start_date: string;
+  end_date: string;
+  initial_capital: number;
+  commission_rate: number;
+  strategy_config: {
+    strategy_type: string;
+    parameters: Record<string, number>;
+  };
+}
+
+/**
  * 最適化モーダルのプロパティ
  */
 interface OptimizationModalProps {
@@ -131,6 +148,8 @@ interface OptimizationModalProps {
   isLoading?: boolean;
   /** 選択されたバックテスト結果（設定を引き継ぐため） */
   selectedResult?: BacktestResult | null;
+  /** 現在のバックテスト設定（基本設定を引き継ぐため） */
+  currentBacktestConfig?: BacktestConfig | null;
 }
 
 /**
@@ -144,6 +163,7 @@ const OptimizationModal: React.FC<OptimizationModalProps> = ({
   onRobustnessTest,
   isLoading = false,
   selectedResult = null,
+  currentBacktestConfig = null,
 }) => {
   // 最適化実行後にモーダルを閉じる処理を追加
   const handleEnhancedOptimization = (config: OptimizationConfig) => {
@@ -179,6 +199,7 @@ const OptimizationModal: React.FC<OptimizationModalProps> = ({
           onRobustnessTest={handleRobustnessTest}
           isLoading={isLoading}
           initialConfig={selectedResult}
+          currentBacktestConfig={currentBacktestConfig}
         />
       </div>
     </Modal>
