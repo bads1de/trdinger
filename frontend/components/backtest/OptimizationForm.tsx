@@ -137,7 +137,7 @@ export default function OptimizationForm({
     start_date: "2024-01-01",
     end_date: "2024-12-31",
     initial_capital: 10000000,
-    commission_rate: 0.001,
+    commission_rate: 0.00055,
   });
 
   // 拡張最適化設定
@@ -517,8 +517,8 @@ export default function OptimizationForm({
             }
             type="number"
             min={0}
-            max={1}
-            step={0.01}
+            max={100}
+            step={0.001}
           />
         </div>
       </div>

@@ -37,7 +37,7 @@ class BacktestRequest(BaseModel):
     start_date: datetime = Field(..., description="開始日時")
     end_date: datetime = Field(..., description="終了日時")
     initial_capital: float = Field(..., gt=0, description="初期資金")
-    commission_rate: float = Field(default=0.001, ge=0, le=1, description="手数料率")
+    commission_rate: float = Field(default=0.00055, ge=0, le=1, description="手数料率")
     strategy_config: StrategyConfig = Field(..., description="戦略設定")
 
 

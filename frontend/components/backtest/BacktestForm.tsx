@@ -52,7 +52,7 @@ export default function BacktestForm({
     start_date: "2024-01-01",
     end_date: "2024-12-31",
     initial_capital: 100000,
-    commission_rate: 0.001,
+    commission_rate: 0.00055,
     strategy_config: {
       strategy_type: "",
       parameters: {},
@@ -261,8 +261,8 @@ export default function BacktestForm({
               }
               className="w-full p-3 bg-gray-800 border border-gray-700 text-white rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               min="0"
-              max="1"
-              step="0.01"
+              max="100"
+              step="0.001"
               required
             />
           </div>

@@ -153,7 +153,7 @@ export interface BacktestConfig {
   end_date: string;
   /** 初期資金（USD） */
   initial_capital: number;
-  /** 手数料率（デフォルト: 0.001 = 0.1%） */
+  /** 手数料率（デフォルト: 0.00055 = 0.055%） */
   commission_rate?: number;
   /** スリッパージ率（オプション） */
   slippage_rate?: number;
