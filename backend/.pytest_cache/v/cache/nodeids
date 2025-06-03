@@ -135,6 +135,8 @@
   "tests/performance/test_backtest_performance_with_real_data.py::TestBacktestPerformanceWithRealData::test_memory_leak_detection",
   "tests/performance/test_backtest_performance_with_real_data.py::TestBacktestPerformanceWithRealData::test_optimization_performance",
   "tests/performance/test_backtest_performance_with_real_data.py::TestBacktestPerformanceWithRealData::test_small_dataset_performance",
+  "tests/talib_migration/test_talib_basic.py::test_performance_comparison",
+  "tests/talib_migration/test_talib_basic.py::test_talib_adapter",
   "tests/test_indicators.py::TestTechnicalIndicators::test_bollinger_bands_calculation",
   "tests/test_indicators.py::TestTechnicalIndicators::test_calculate_indicator_macd",
   "tests/test_indicators.py::TestTechnicalIndicators::test_calculate_indicator_rsi",
@@ -369,5 +371,6 @@
   "tests/unit/test_strategy_executor.py::TestStrategyExecutor::test_performance_metrics_calculation",
   "tests/unit/test_strategy_executor.py::TestStrategyExecutor::test_reset",
   "tests/unit/test_strategy_executor.py::TestStrategyExecutor::test_simple_strategy_backtest",
-  "tests/unit/test_strategy_executor.py::TestStrategyExecutor::test_update_equity"
+  "tests/unit/test_strategy_executor.py::TestStrategyExecutor::test_update_equity",
+  "tests/unit/test_talib_adapter.py::TestTALibAdapter::test_sma_calculation"
 ]

@@ -7,18 +7,19 @@
 import pandas as pd
 import numpy as np
 from typing import List, Dict, Any, Optional, Union
+import logging
 
 from .base_indicator import BaseIndicator
+from .talib_adapter import TALibAdapter, TALibCalculationError
+
+logger = logging.getLogger(__name__)
 
 
 class BollingerBandsIndicator(BaseIndicator):
     """ボリンジャーバンド（Bollinger Bands）指標"""
 
     def __init__(self):
-        super().__init__(
-            indicator_type="BB",
-            supported_periods=[20]
-        )
+        super().__init__(indicator_type="BB", supported_periods=[20])
 
     def calculate(self, df: pd.DataFrame, period: int, **kwargs) -> pd.DataFrame:
         """
@@ -31,24 +32,19 @@ class BollingerBandsIndicator(BaseIndicator):
         Returns:
             ボリンジャーバンド値を含むDataFrame（middle, upper, lower）
         """
-        close = df["close"]
+        # TA-Libを使用した高速計算
+        bb_result = TALibAdapter.bollinger_bands(
+            df["close"], period=period, std_dev=2.0
+        )
 
-        # 中央線（SMA）
-        middle = close.rolling(window=period, min_periods=period).mean()
-
-        # 標準偏差
-        std = close.rolling(window=period, min_periods=period).std()
-
-        # 上限・下限（標準偏差の2倍）
-        upper = middle + (std * 2)
-        lower = middle - (std * 2)
-
-        # 結果をDataFrameで返す
-        result = pd.DataFrame({
-            'middle': middle,
-            'upper': upper,
-            'lower': lower
-        })
+        # DataFrameに変換して返す
+        result = pd.DataFrame(
+            {
+                "middle": bb_result["middle"],
+                "upper": bb_result["upper"],
+                "lower": bb_result["lower"],
+            }
+        )
 
         return result
 
@@ -58,7 +54,7 @@ class BollingerBandsIndicator(BaseIndicator):
         timeframe: str,
         period: int,
         limit: Optional[int] = None,
-        **kwargs
+        **kwargs,
     ) -> List[Dict[str, Any]]:
         """
         ボリンジャーバンド指標を計算してフォーマットされた結果を返す（オーバーライド）
@@ -90,7 +86,7 @@ class BollingerBandsIndicator(BaseIndicator):
             value_columns = {
                 "value": "middle",
                 "upper_band": "upper",
-                "lower_band": "lower"
+                "lower_band": "lower",
             }
 
             formatted_result = self.format_multi_value_result(
@@ -111,14 +107,11 @@ class ATRIndicator(BaseIndicator):
     """ATR（Average True Range）指標"""
 
     def __init__(self):
-        super().__init__(
-            indicator_type="ATR",
-            supported_periods=[14, 21]
-        )
+        super().__init__(indicator_type="ATR", supported_periods=[14, 21])
 
     def calculate(self, df: pd.DataFrame, period: int, **kwargs) -> pd.Series:
         """
-        ATR（Average True Range）を計算
+        ATR（Average True Range）を計算（TA-Lib使用）
 
         Args:
             df: OHLCVデータのDataFrame
@@ -127,24 +120,8 @@ class ATRIndicator(BaseIndicator):
         Returns:
             ATR値のSeries
         """
-        high = df["high"]
-        low = df["low"]
-        close = df["close"]
-
-        # 前日終値
-        prev_close = close.shift(1)
-
-        # True Range = max(high-low, abs(high-prev_close), abs(low-prev_close))
-        tr1 = high - low
-        tr2 = (high - prev_close).abs()
-        tr3 = (low - prev_close).abs()
-
-        true_range = pd.concat([tr1, tr2, tr3], axis=1).max(axis=1)
-
-        # ATR = True Rangeの移動平均
-        atr = true_range.rolling(window=period, min_periods=period).mean()
-
-        return atr
+        # TA-Libを使用した高速計算
+        return TALibAdapter.atr(df["high"], df["low"], df["close"], period)
 
     def get_description(self) -> str:
         """指標の説明を取得"""
@@ -184,11 +161,11 @@ VOLATILITY_INDICATORS_INFO = {
     "BB": {
         "periods": [20],
         "description": "ボリンジャーバンド - ボラティリティとサポート・レジスタンスを示す",
-        "category": "volatility"
+        "category": "volatility",
     },
     "ATR": {
         "periods": [14, 21],
         "description": "ATR - 平均真の値幅、ボラティリティを測定する指標",
-        "category": "volatility"
+        "category": "volatility",
     },
 }

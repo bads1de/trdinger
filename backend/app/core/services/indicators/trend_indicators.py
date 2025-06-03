@@ -7,8 +7,12 @@ SMA（単純移動平均）、EMA（指数移動平均）、MACD の実装を提
 import pandas as pd
 import numpy as np
 from typing import List, Dict, Any, Optional, Union
+import logging
 
 from .base_indicator import BaseIndicator
+from .talib_adapter import TALibAdapter, TALibCalculationError
+
+logger = logging.getLogger(__name__)
 
 
 class SMAIndicator(BaseIndicator):
@@ -16,13 +20,12 @@ class SMAIndicator(BaseIndicator):
 
     def __init__(self):
         super().__init__(
-            indicator_type="SMA",
-            supported_periods=[5, 10, 20, 50, 100, 200]
+            indicator_type="SMA", supported_periods=[5, 10, 20, 50, 100, 200]
         )
 
     def calculate(self, df: pd.DataFrame, period: int, **kwargs) -> pd.Series:
         """
-        単純移動平均（SMA）を計算
+        単純移動平均（SMA）を計算（TA-Lib使用）
 
         Args:
             df: OHLCVデータのDataFrame
@@ -30,8 +33,12 @@ class SMAIndicator(BaseIndicator):
 
         Returns:
             SMA値のSeries
+
+        Raises:
+            TALibCalculationError: TA-Lib計算エラーの場合
         """
-        return df["close"].rolling(window=period, min_periods=period).mean()
+        # TA-Libを使用した高速計算
+        return TALibAdapter.sma(df["close"], period)
 
     def get_description(self) -> str:
         """指標の説明を取得"""
@@ -43,13 +50,12 @@ class EMAIndicator(BaseIndicator):
 
     def __init__(self):
         super().__init__(
-            indicator_type="EMA",
-            supported_periods=[5, 10, 20, 50, 100, 200]
+            indicator_type="EMA", supported_periods=[5, 10, 20, 50, 100, 200]
         )
 
     def calculate(self, df: pd.DataFrame, period: int, **kwargs) -> pd.Series:
         """
-        指数移動平均（EMA）を計算
+        指数移動平均（EMA）を計算（TA-Lib使用）
 
         Args:
             df: OHLCVデータのDataFrame
@@ -57,8 +63,12 @@ class EMAIndicator(BaseIndicator):
 
         Returns:
             EMA値のSeries
+
+        Raises:
+            TALibCalculationError: TA-Lib計算エラーの場合
         """
-        return df["close"].ewm(span=period, adjust=False).mean()
+        # TA-Libを使用した高速計算
+        return TALibAdapter.ema(df["close"], period)
 
     def get_description(self) -> str:
         """指標の説明を取得"""
@@ -69,14 +79,11 @@ class MACDIndicator(BaseIndicator):
     """MACD（Moving Average Convergence Divergence）指標"""
 
     def __init__(self):
-        super().__init__(
-            indicator_type="MACD",
-            supported_periods=[12]  # 標準的な設定
-        )
+        super().__init__(indicator_type="MACD", supported_periods=[12])  # 標準的な設定
 
     def calculate(self, df: pd.DataFrame, period: int, **kwargs) -> pd.DataFrame:
         """
-        MACD（Moving Average Convergence Divergence）を計算
+        MACD（Moving Average Convergence Divergence）を計算（TA-Lib使用）
 
         Args:
             df: OHLCVデータのDataFrame
@@ -85,27 +92,17 @@ class MACDIndicator(BaseIndicator):
         Returns:
             MACD値を含むDataFrame（macd_line, signal_line, histogram）
         """
-        close = df["close"]
+        # TA-Libを使用した高速計算
+        macd_result = TALibAdapter.macd(df["close"], fast=12, slow=26, signal=9)
 
-        # EMA12とEMA26を計算
-        ema12 = close.ewm(span=12, adjust=False).mean()
-        ema26 = close.ewm(span=26, adjust=False).mean()
-
-        # MACD線 = EMA12 - EMA26
-        macd_line = ema12 - ema26
-
-        # シグナル線 = MACD線のEMA9
-        signal_line = macd_line.ewm(span=9, adjust=False).mean()
-
-        # ヒストグラム = MACD線 - シグナル線
-        histogram = macd_line - signal_line
-
-        # 結果をDataFrameで返す
-        result = pd.DataFrame({
-            'macd_line': macd_line,
-            'signal_line': signal_line,
-            'histogram': histogram
-        })
+        # DataFrameに変換して返す
+        result = pd.DataFrame(
+            {
+                "macd_line": macd_result["macd_line"],
+                "signal_line": macd_result["signal_line"],
+                "histogram": macd_result["histogram"],
+            }
+        )
 
         return result
 
@@ -115,7 +112,7 @@ class MACDIndicator(BaseIndicator):
         timeframe: str,
         period: int,
         limit: Optional[int] = None,
-        **kwargs
+        **kwargs,
     ) -> List[Dict[str, Any]]:
         """
         MACD指標を計算してフォーマットされた結果を返す（オーバーライド）
@@ -146,8 +143,8 @@ class MACDIndicator(BaseIndicator):
             # MACD専用のフォーマット
             value_columns = {
                 "value": "macd_line",
-                "signal_value": "signal_line", 
-                "histogram_value": "histogram"
+                "signal_value": "signal_line",
+                "histogram_value": "histogram",
             }
 
             formatted_result = self.format_multi_value_result(
@@ -198,16 +195,16 @@ TREND_INDICATORS_INFO = {
     "SMA": {
         "periods": [5, 10, 20, 50, 100, 200],
         "description": "単純移動平均 - 指定期間の終値の平均値",
-        "category": "trend"
+        "category": "trend",
     },
     "EMA": {
         "periods": [5, 10, 20, 50, 100, 200],
         "description": "指数移動平均 - 直近の価格により重みを置いた移動平均",
-        "category": "trend"
+        "category": "trend",
     },
     "MACD": {
         "periods": [12],
         "description": "MACD - トレンドの方向性と強さを示すオシレーター",
-        "category": "trend"
+        "category": "trend",
     },
 }
