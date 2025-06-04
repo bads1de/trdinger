@@ -282,7 +282,7 @@ export default function BacktestPage() {
                     onClick={() => setIsOptimizationModalOpen(true)}
                     className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors font-medium text-sm"
                   >
-                    🔧 この戦略を最適化
+                    🔧 最適化
                   </button>
                 </div>
                 <PerformanceMetrics result={selectedResult} />
