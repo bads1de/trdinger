@@ -120,7 +120,9 @@ export default function PerformanceMetrics({
 
   const formatPercentage = (value: number | undefined | null) => {
     if (value === undefined || value === null || isNaN(value)) {
-      return "N/A";
+      // 勝率がnullまたはundefinedの場合、"0.00%"として表示する
+      // もしくは、より明確な表示「データなし」などを検討することも可能
+      return "0.00%";
     }
     return `${(value * 100).toFixed(2)}%`;
   };

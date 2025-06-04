@@ -124,7 +124,9 @@ const EquityCurveChart: React.FC<EquityCurveChartProps> = ({
     if (showBuyHold && buyHoldReturn !== undefined) {
       return sampledData.map((point, index) => {
         const progress = index / (sampledData.length - 1);
-        const buyHoldEquity = initialCapital * (1 + buyHoldReturn * progress);
+        // buyHoldReturnはパーセンテージ形式なので100で割って小数に変換
+        const buyHoldEquity =
+          initialCapital * (1 + (buyHoldReturn / 100) * progress);
 
         return {
           ...point,
@@ -155,8 +157,16 @@ const EquityCurveChart: React.FC<EquityCurveChartProps> = ({
     // 5%のマージンを追加
     const margin = (maxValue - minValue) * 0.05;
 
-    return [Math.max(0, minValue - margin), maxValue + margin];
-  }, [processedData, showBuyHold, buyHoldReturn]);
+    // Y軸の最小値が0未満になることを許容するように修正
+    // これにより、総リターンがマイナスの場合でも正確に表示される
+    const yMin = minValue - margin;
+    const yMax = maxValue + margin;
+
+    // グラフが扁平になるのを防ぐため、最小の表示範囲を設けることも検討できる
+    // 例: if (yMax - yMin < initialCapital * 0.1) { ... }
+
+    return [yMin, yMax];
+  }, [processedData, showBuyHold, buyHoldReturn, initialCapital]);
 
   return (
     <ChartContainer

@@ -16,7 +16,6 @@ import EquityCurveChart from "./EquityCurveChart";
 import DrawdownChart from "./DrawdownChart";
 import TradeScatterChart from "./TradeScatterChart";
 import ReturnsDistributionChart from "./ReturnsDistributionChart";
-import MonthlyReturnsHeatmap from "./MonthlyReturnsHeatmap";
 
 interface ChartModalProps {
   /** モーダルの表示状態 */
@@ -43,11 +42,6 @@ const tabs: TabConfig[] = [
     id: "distribution",
     label: "リターン分布",
     description: "取引リターンの統計分布",
-  },
-  {
-    id: "heatmap",
-    label: "月次ヒートマップ",
-    description: "月別パフォーマンスの季節性",
   },
 ];
 
@@ -233,15 +227,6 @@ const ChartModal: React.FC<ChartModalProps> = ({ isOpen, onClose, result }) => {
               data={result.trade_history || []}
               title="リターン分布"
               subtitle="取引リターンの統計分布と正規性の検証"
-              height={500}
-            />
-          )}
-
-          {activeTab === "heatmap" && (
-            <MonthlyReturnsHeatmap
-              data={result.equity_curve || []}
-              title="月次リターンヒートマップ"
-              subtitle="月別パフォーマンスの季節性分析"
               height={500}
             />
           )}
