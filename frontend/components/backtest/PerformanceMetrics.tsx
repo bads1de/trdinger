@@ -8,6 +8,7 @@
 
 import React, { useState } from "react";
 import TradeHistoryTable from "./TradeHistoryTable";
+import ChartModal from "./charts/ChartModal";
 
 interface BacktestResult {
   id?: string;
@@ -115,6 +116,7 @@ export default function PerformanceMetrics({
 }: PerformanceMetricsProps) {
   const { performance_metrics: metrics } = result;
   const [activeTab, setActiveTab] = useState<"overview" | "trades">("overview");
+  const [isChartModalOpen, setIsChartModalOpen] = useState(false);
 
   const formatPercentage = (value: number | undefined | null) => {
     if (value === undefined || value === null || isNaN(value)) {
@@ -172,19 +174,43 @@ export default function PerformanceMetrics({
   return (
     <div className="space-y-6">
       {/* タブナビゲーション */}
-      <div className="flex space-x-1 mb-6">
-        <TabButton
-          id="overview"
-          label="概要"
-          isActive={activeTab === "overview"}
-          onClick={() => setActiveTab("overview")}
-        />
-        <TabButton
-          id="trades"
-          label="取引履歴"
-          isActive={activeTab === "trades"}
-          onClick={() => setActiveTab("trades")}
-        />
+      <div className="flex items-center justify-between mb-6">
+        <div className="flex space-x-1">
+          <TabButton
+            id="overview"
+            label="概要"
+            isActive={activeTab === "overview"}
+            onClick={() => setActiveTab("overview")}
+          />
+          <TabButton
+            id="trades"
+            label="取引履歴"
+            isActive={activeTab === "trades"}
+            onClick={() => setActiveTab("trades")}
+          />
+        </div>
+
+        {/* チャート表示ボタン */}
+        <button
+          onClick={() => setIsChartModalOpen(true)}
+          className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors flex items-center space-x-2"
+          title="チャート分析を表示"
+        >
+          <svg
+            className="w-4 h-4"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
+            />
+          </svg>
+          <span>チャート表示</span>
+        </button>
       </div>
 
       {/* タブコンテンツ */}
@@ -411,6 +437,13 @@ export default function PerformanceMetrics({
           </div>
         </div>
       )}
+
+      {/* チャートモーダル */}
+      <ChartModal
+        isOpen={isChartModalOpen}
+        onClose={() => setIsChartModalOpen(false)}
+        result={result}
+      />
     </div>
   );
 }
