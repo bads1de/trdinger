@@ -25,14 +25,11 @@ def calculate_position_size(self, price: float, risk_percent: float = 1.0) -> fl
 
 #### 高度なポジションサイジング手法
 
-- Kelly Criterion（ケリー基準）
-- Risk Parity（リスクパリティ）
 - 動的ポジションサイジング
 - 相関を考慮した資金配分
 
 #### リスク管理機能
 
-- 最大ドローダウン制限
 - ポジション制限（単一ポジション・総ポジション）
 - VaR（Value at Risk）計算
 - ポートフォリオレベルでのリスク管理
@@ -49,52 +46,26 @@ def calculate_position_size(self, price: float, risk_percent: float = 1.0) -> fl
 
 #### 1. 固定金額ポジションサイジング
 
-- **説明**: 各取引で固定金額を投資
+- **説明**: 各取引で固定金額を投資します。
 - **実装難易度**: 低
-- **適用場面**: 初心者向け、リスク制御重視
+- **適用場面**: 初心者向け、またはリスクを一定額に固定したい場合。
 
 #### 2. 固定比率ポジションサイジング
 
-- **説明**: 総資産の固定比率を投資
+- **説明**: 総資産の固定比率（デフォルト 100%）を投資します。100%の場合、利用可能な全資金を意味します。
 - **実装難易度**: 低
-- **適用場面**: 一般的な戦略
+- **適用場面**: 資産の成長/減少に合わせて投資額をスケールさせたい一般的な戦略。
 
-#### 3. Kelly Criterion（ケリー基準）
+#### 3. ボラティリティベースポジションサイジング
 
-- **説明**: 数学的に最適なポジションサイズを計算
-- **計算式**: f\* = (bp - q) / b
-  - f\*: 最適投資比率
-  - b: 勝率時の利益率
-  - p: 勝率
-  - q: 負率 (1-p)
+- **説明**: 市場のボラティリティに基づいてポジションサイズを調整します。ボラティリティが高い場合はポジションサイズを小さくし、ボラティリティが低い場合はポジションサイズを大きくします。
+- **計算例**: `ポジションサイズ = (基準リスク額 / (ATR * 価格))`, `基準リスク額 = 資本 × リスク許容度`
 - **実装難易度**: 中
-- **適用場面**: 統計的優位性がある戦略
-- **注意**: フルケリーは非常にアグレッシブ
-
-#### 4. Half Kelly（ハーフケリー）
-
-- **説明**: Kelly Criterion の 50%を使用する保守的なアプローチ
-- **計算式**: f\* = 0.5 × (bp - q) / b
-- **実装難易度**: 中
-- **適用場面**: リスクを抑えつつ成長を狙う戦略
-- **メリット**:
-  - ドローダウンリスクの大幅削減
-  - より安定した成長曲線
-  - 実用的なリスクレベル
+- **適用場面**: リスクを市場環境に適応させたい戦略。ATR（Average True Range）などのボラティリティ指標を利用します。
 
 ### 2.2 Phase 2: 高度なリスク管理
 
-#### 1. Risk Parity（リスクパリティ）
-
-- **説明**: リスク寄与度を均等にする資金配分
-- **実装難易度**: 高
-- **適用場面**: 複数戦略・複数資産のポートフォリオ
-
-#### 2. 最大ドローダウン制限
-
-- **説明**: ドローダウンが閾値を超えた場合の取引停止
-- **実装難易度**: 中
-- **適用場面**: 全戦略共通
+(このセクションは現在、具体的な項目がありません。将来的に他の高度なリスク管理機能が追加される可能性があります。)
 
 ## 3. 段階的実装計画
 
@@ -111,12 +82,9 @@ backend/app/core/services/money_management/
 │   ├── base_calculator.py          # 基底クラス
 │   ├── fixed_amount.py             # 固定金額
 │   ├── fixed_ratio.py              # 固定比率
-│   ├── kelly_criterion.py          # ケリー基準（フル）
-│   ├── half_kelly.py               # ハーフケリー
-│   └── risk_parity.py              # リスクパリティ
+│   └── volatility_based.py         # ボラティリティベース
 ├── risk_management/
 │   ├── __init__.py
-│   ├── drawdown_manager.py         # ドローダウン管理
 │   ├── position_limits.py          # ポジション制限
 │   └── var_calculator.py           # VaR計算
 └── portfolio_manager.py            # ポートフォリオ管理
@@ -131,9 +99,8 @@ class MoneyManagementSettings(Base):
 
     id = Column(Integer, primary_key=True)
     strategy_id = Column(String, nullable=False)
-    position_sizing_method = Column(String, nullable=False)  # 'fixed_amount', 'fixed_ratio', 'kelly', 'half_kelly', 'risk_parity'
+    position_sizing_method = Column(String, nullable=False)  # 'fixed_amount', 'fixed_ratio', 'volatility_based'
     position_sizing_params = Column(JSON, nullable=False)
-    max_drawdown_limit = Column(Float, nullable=True)
     max_position_size = Column(Float, nullable=True)
     risk_budget = Column(Float, nullable=True)
     created_at = Column(DateTime, server_default=func.now())
@@ -145,63 +112,78 @@ class MoneyManagementSettings(Base):
 #### 2.1 ポジションサイジング計算器
 
 ```python
+# 各ポジションサイジング手法の基底クラス
+class BasePositionSizingCalculator(ABC):
+    @abstractmethod
+    def calculate(self, current_equity: float, price: float, **kwargs) -> float:
+        pass
+
+class FixedAmountCalculator(BasePositionSizingCalculator):
+    def calculate(self, current_equity: float, price: float, amount: float) -> float:
+        # amount は固定投資額
+        return amount / price
+
+class FixedRatioCalculator(BasePositionSizingCalculator):
+    def calculate(self, current_equity: float, price: float, ratio: float) -> float:
+        # ratio は投資比率 (例: 0.01 = 1%)
+        position_value = current_equity * ratio
+        return position_value / price
+
+class VolatilityBasedCalculator(BasePositionSizingCalculator):
+    def calculate(self, current_equity: float, price: float, atr: float, risk_percentage: float) -> float:
+        # atr: Average True Range
+        # risk_percentage: 許容するリスク割合 (例: 0.02 = 資本の2%)
+        risk_amount_per_share = atr
+        value_at_risk = current_equity * risk_percentage
+        if risk_amount_per_share == 0: # ATRが0の場合のフォールバック
+            return (current_equity * 0.01) / price # 例として資本の1%
+        position_size = value_at_risk / (risk_amount_per_share * price) # 修正: priceを乗算
+        return position_size
+
 class PositionSizingCalculator:
     def __init__(self, method: str, params: Dict[str, Any]):
         self.method = method
         self.params = params
         self.calculator = self._create_calculator()
 
-    def calculate(self,
-                 current_equity: float,
-                 price: float,
-                 historical_returns: List[float] = None,
-                 win_rate: float = None,
-                 avg_win: float = None,
-                 avg_loss: float = None) -> float:
-        return self.calculator.calculate(
-            current_equity, price, historical_returns, win_rate, avg_win, avg_loss
-        )
-```
+    def _create_calculator(self) -> BasePositionSizingCalculator:
+        if self.method == "fixed_amount":
+            return FixedAmountCalculator()
+        elif self.method == "fixed_ratio":
+            return FixedRatioCalculator()
+        elif self.method == "volatility_based":
+            return VolatilityBasedCalculator()
+        else:
+            raise ValueError(f"Unknown position sizing method: {self.method}")
 
-#### 2.2 Kelly Criterion & Half Kelly 実装
-
-```python
-class KellyCriterionCalculator(BasePositionSizingCalculator):
-    def __init__(self, kelly_multiplier: float = 1.0):
+    def calculate(self, current_equity: float, price: float, **kwargs) -> float:
         """
-        Args:
-            kelly_multiplier: Kelly fractionの乗数
-                            1.0 = Full Kelly
-                            0.5 = Half Kelly
-                            0.25 = Quarter Kelly
+        選択された手法に基づいてポジションサイズを計算します。
+        kwargs には各手法が必要とする追加パラメータが含まれます。
+        例:
+        - fixed_amount: amount (固定額)
+        - fixed_ratio: ratio (比率)
+        - volatility_based: atr (ATR値), risk_percentage (リスク許容度)
         """
-        self.kelly_multiplier = kelly_multiplier
+        # 必要なパラメータをkwargsから取得し、calculatorに渡す
+        # 各calculatorのcalculateメソッドのシグネチャに合わせてparamsを渡す必要がある
+        if self.method == "fixed_amount":
+            return self.calculator.calculate(current_equity, price, amount=self.params.get("fixedAmount"))
+        elif self.method == "fixed_ratio":
+            # デフォルト100% (ratio=1.0)
+            ratio = self.params.get("fixedRatio", 1.0)
+            return self.calculator.calculate(current_equity, price, ratio=ratio)
+        elif self.method == "volatility_based":
+            # atrとrisk_percentageはAPI経由または内部で計算/設定される想定
+            atr = kwargs.get("atr") # APIリクエストや内部計算から渡される
+            risk_percentage = self.params.get("volatilityRiskPercentage")
+            if atr is None or risk_percentage is None:
+                raise ValueError("ATR and volatilityRiskPercentage are required for volatility_based sizing.")
+            return self.calculator.calculate(current_equity, price, atr=atr, risk_percentage=risk_percentage)
+        else:
+            # _create_calculatorでエラーになるはずだが念のため
+            raise ValueError(f"Unknown position sizing method: {self.method}")
 
-    def calculate(self, current_equity: float, price: float,
-                 win_rate: float, avg_win: float, avg_loss: float) -> float:
-        if win_rate is None or avg_win is None or avg_loss is None:
-            raise ValueError("Kelly Criterion requires win_rate, avg_win, and avg_loss")
-
-        # Kelly formula: f* = (bp - q) / b
-        b = avg_win / abs(avg_loss)  # odds
-        p = win_rate
-        q = 1 - p
-
-        kelly_fraction = (b * p - q) / b
-
-        # Kelly fractionにmultiplierを適用
-        adjusted_kelly = kelly_fraction * self.kelly_multiplier
-
-        # 安全制限（最大25%）
-        adjusted_kelly = max(0, min(adjusted_kelly, 0.25))
-
-        position_value = current_equity * adjusted_kelly
-        return position_value / price
-
-class HalfKellyCalculator(KellyCriterionCalculator):
-    """Half Kelly専用クラス（使いやすさのため）"""
-    def __init__(self):
-        super().__init__(kelly_multiplier=0.5)
 ```
 
 ### Phase 3: UI/UX 実装（1-2 週間）
@@ -210,22 +192,15 @@ class HalfKellyCalculator(KellyCriterionCalculator):
 
 ```typescript
 interface MoneyManagementSettings {
-  positionSizingMethod:
-    | "fixed_amount"
-    | "fixed_ratio"
-    | "kelly"
-    | "half_kelly"
-    | "risk_parity";
+  positionSizingMethod: "fixed_amount" | "fixed_ratio" | "volatility_based";
   positionSizingParams: {
-    fixedAmount?: number;
-    fixedRatio?: number;
-    kellyMultiplier?: number; // 1.0 = Full Kelly, 0.5 = Half Kelly, 0.25 = Quarter Kelly
-    riskBudget?: number;
+    fixedAmount?: number; // 固定金額
+    fixedRatio?: number; // 固定比率 (例: 0.01 = 1%, デフォルト 1.0 = 100%)
+    volatilityRiskPercentage?: number; // ボラティリティベースのリスク許容度 (例: 0.02 = 資本の2%)
+    atrPeriod?: number; // ATR計算期間 (ボラティリティベース用)
   };
   riskManagement: {
-    maxDrawdownLimit?: number;
     maxPositionSize?: number;
-    stopTradingOnDrawdown?: boolean;
   };
 }
 ```
@@ -247,8 +222,8 @@ interface MoneyManagementSettings {
 
 ```
 backend/tests/unit/money_management/
-├── test_position_sizing_calculators.py
-├── test_kelly_criterion.py
+├── test_position_sizing_calculators.py # 固定金額・固定比率のテストを含む
+├── test_volatility_based_sizing.py
 ├── test_risk_management.py
 └── test_money_management_service.py
 
@@ -265,6 +240,18 @@ POST /api/money-management/settings          # 設定保存
 GET  /api/money-management/settings/{id}     # 設定取得
 PUT  /api/money-management/settings/{id}     # 設定更新
 POST /api/money-management/calculate-position # ポジションサイズ計算
+  # Request Body Example (volatility_based の場合):
+  # {
+  #   "method": "volatility_based",
+  #   "params": { "volatilityRiskPercentage": 0.02, "atrPeriod": 14 },
+  #   "current_equity": 100000,
+  #   "price": 50000,
+  #   "symbol": "BTC/USDT", // ATR計算に必要なら
+  #   "timeframe": "1d"     // ATR計算に必要なら
+  # }
+  # Response Body Example:
+  # { "position_size": 0.002 }
+
 GET  /api/money-management/methods           # 利用可能な手法一覧
 ```
 
@@ -325,6 +312,7 @@ class BacktestRequest(BaseModel):
 
 ### 7.1 高度な機能
 
+- Risk Parity（リスクパリティ）
 - 機械学習ベースのポジションサイジング
 - リアルタイムリスク監視
 - 複数戦略の自動リバランシング
