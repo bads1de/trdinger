@@ -323,36 +323,47 @@ class StrategyFactory:
             def _apply_risk_management(self):
                 """リスク管理を適用"""
                 try:
-                    if not self.position:
+                    if not self.position or not self.trades:
                         return
 
                     risk_config = gene.risk_management
                     current_price = self.data.Close[-1]
-                    entry_price = self.position.entry_price
+
+                    # アクティブな取引から平均エントリー価格を計算
+                    total_value = 0
+                    total_size = 0
+                    for trade in self.trades:
+                        total_value += abs(trade.size) * trade.entry_price
+                        total_size += abs(trade.size)
+
+                    if total_size == 0:
+                        return
+
+                    avg_entry_price = total_value / total_size
 
                     # ストップロス
                     if "stop_loss" in risk_config:
                         stop_loss_pct = risk_config["stop_loss"]
                         if self.position.is_long:
-                            stop_price = entry_price * (1 - stop_loss_pct)
+                            stop_price = avg_entry_price * (1 - stop_loss_pct)
                             if current_price <= stop_price:
-                                self.sell()
+                                self.position.close()
                         else:
-                            stop_price = entry_price * (1 + stop_loss_pct)
+                            stop_price = avg_entry_price * (1 + stop_loss_pct)
                             if current_price >= stop_price:
-                                self.buy()
+                                self.position.close()
 
                     # テイクプロフィット
                     if "take_profit" in risk_config:
                         take_profit_pct = risk_config["take_profit"]
                         if self.position.is_long:
-                            take_price = entry_price * (1 + take_profit_pct)
+                            take_price = avg_entry_price * (1 + take_profit_pct)
                             if current_price >= take_price:
-                                self.sell()
+                                self.position.close()
                         else:
-                            take_price = entry_price * (1 - take_profit_pct)
+                            take_price = avg_entry_price * (1 - take_profit_pct)
                             if current_price <= take_price:
-                                self.buy()
+                                self.position.close()
 
                 except Exception as e:
                     logger.error(f"リスク管理エラー: {e}")
