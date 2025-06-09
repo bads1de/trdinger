@@ -10,6 +10,9 @@
 import React, { useState, useEffect } from "react";
 import ApiButton from "@/components/button/ApiButton";
 import { useApiCall } from "@/hooks/useApiCall";
+import GAConfigForm from "./GAConfigForm";
+import GAProgressDisplay from "./GAProgressDisplay";
+import { useGAExecution } from "@/hooks/useGAProgress";
 
 interface OptimizationConfig {
   base_config: {
@@ -106,10 +109,43 @@ interface BacktestConfig {
   };
 }
 
+interface GAConfig {
+  experiment_name: string;
+  base_config: {
+    symbol: string;
+    timeframe: string;
+    start_date: string;
+    end_date: string;
+    initial_capital: number;
+    commission_rate: number;
+  };
+  ga_config: {
+    population_size: number;
+    generations: number;
+    crossover_rate: number;
+    mutation_rate: number;
+    elite_size: number;
+    max_indicators: number;
+    allowed_indicators: string[];
+    fitness_weights: {
+      total_return: number;
+      sharpe_ratio: number;
+      max_drawdown: number;
+      win_rate: number;
+    };
+    fitness_constraints: {
+      min_trades: number;
+      max_drawdown_limit: number;
+      min_sharpe_ratio: number;
+    };
+  };
+}
+
 interface OptimizationFormProps {
   onEnhancedOptimization: (config: OptimizationConfig) => void;
   onMultiObjectiveOptimization: (config: MultiObjectiveConfig) => void;
   onRobustnessTest: (config: RobustnessConfig) => void;
+  onGAGeneration?: (config: GAConfig) => void;
   isLoading?: boolean;
   initialConfig?: BacktestResult | null;
   currentBacktestConfig?: BacktestConfig | null;
@@ -119,12 +155,13 @@ export default function OptimizationForm({
   onEnhancedOptimization,
   onMultiObjectiveOptimization,
   onRobustnessTest,
+  onGAGeneration,
   isLoading = false,
   initialConfig = null,
   currentBacktestConfig = null,
 }: OptimizationFormProps) {
   const [activeTab, setActiveTab] = useState<
-    "enhanced" | "multi" | "robustness"
+    "enhanced" | "multi" | "robustness" | "ga"
   >("enhanced");
   const [strategies, setStrategies] = useState<Record<string, any>>({});
   const [selectedStrategy, setSelectedStrategy] = useState<string>("SMA_CROSS");
@@ -179,6 +216,9 @@ export default function OptimizationForm({
   });
 
   const { execute: fetchStrategies } = useApiCall();
+
+  // GA実行管理
+  const gaExecution = useGAExecution();
 
   useEffect(() => {
     const loadStrategies = async () => {
@@ -327,6 +367,18 @@ export default function OptimizationForm({
     onRobustnessTest(config);
   };
 
+  // GA実行ハンドラー
+  const handleGASubmit = async (config: GAConfig) => {
+    try {
+      await gaExecution.executeGA(config);
+      if (onGAGeneration) {
+        onGAGeneration(config);
+      }
+    } catch (error) {
+      console.error("GA execution failed:", error);
+    }
+  };
+
   const TabButton = ({
     id,
     label,
@@ -433,6 +485,12 @@ export default function OptimizationForm({
           label="ロバストネステスト"
           isActive={activeTab === "robustness"}
           onClick={() => setActiveTab("robustness")}
+        />
+        <TabButton
+          id="ga"
+          label="自動生成 (GA)"
+          isActive={activeTab === "ga"}
+          onClick={() => setActiveTab("ga")}
         />
       </div>
 
@@ -1184,6 +1242,46 @@ export default function OptimizationForm({
               ロバストネステストを実行
             </ApiButton>
           </div>
+        </div>
+      )}
+
+      {/* GA自動生成タブ */}
+      {activeTab === "ga" && (
+        <div className="space-y-6">
+          {!gaExecution.isExecuting && !gaExecution.experimentId ? (
+            // GA設定フォーム
+            <GAConfigForm
+              onSubmit={handleGASubmit}
+              isLoading={gaExecution.isExecuting}
+              currentBacktestConfig={currentBacktestConfig}
+            />
+          ) : (
+            // GA進捗表示
+            <div className="space-y-6">
+              {gaExecution.experimentId && (
+                <GAProgressDisplay
+                  experimentId={gaExecution.experimentId}
+                  onComplete={(result) => {
+                    console.log("GA completed:", result);
+                    // 結果処理のロジックをここに追加
+                  }}
+                  onError={(error) => {
+                    console.error("GA error:", error);
+                  }}
+                />
+              )}
+
+              {/* リセットボタン */}
+              <div className="flex justify-center">
+                <button
+                  onClick={gaExecution.reset}
+                  className="px-6 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700"
+                >
+                  新しいGA実験を開始
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>

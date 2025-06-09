@@ -199,6 +199,12 @@ export default function BacktestPage() {
     });
   };
 
+  // GA戦略生成実行
+  const handleGAGeneration = async (config: any) => {
+    console.log("GA戦略生成開始:", config);
+    // GA実行は別途進捗表示で管理されるため、ここでは設定のログ出力のみ
+  };
+
   const isOptimizationLoading =
     enhancedOptimizationLoading ||
     multiOptimizationLoading ||
@@ -298,6 +304,7 @@ export default function BacktestPage() {
           onEnhancedOptimization={handleEnhancedOptimization}
           onMultiObjectiveOptimization={handleMultiObjectiveOptimization}
           onRobustnessTest={handleRobustnessTest}
+          onGAGeneration={handleGAGeneration}
           isLoading={isOptimizationLoading}
           selectedResult={selectedResult}
           currentBacktestConfig={currentBacktestConfig}

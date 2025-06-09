@@ -12,7 +12,9 @@ from sqlalchemy import (
     Boolean,
     Text,
     JSON,
+    ForeignKey,
 )
+from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from .connection import Base
 
@@ -394,6 +396,111 @@ class BacktestResult(Base):
             f"<BacktestResult(strategy='{self.strategy_name}', "
             f"symbol='{self.symbol}', timeframe='{self.timeframe}', "
             f"created_at='{self.created_at}')>"
+        )
+
+
+class GAExperiment(Base):
+    """
+    GA実験テーブル
+
+    遺伝的アルゴリズムによる戦略生成実験の情報を保存します。
+    """
+
+    __tablename__ = "ga_experiments"
+
+    # 主キー
+    id = Column(Integer, primary_key=True, autoincrement=True)
+
+    # 実験名
+    name = Column(String(255), nullable=False)
+
+    # GA設定（JSON形式）
+    config = Column(JSON, nullable=False)
+
+    # 実行状態
+    status = Column(String(20), nullable=False, default="running")
+
+    # 進捗率（0.0-1.0）
+    progress = Column(Float, nullable=False, default=0.0)
+
+    # 最高フィットネス
+    best_fitness = Column(Float, nullable=True)
+
+    # 総世代数
+    total_generations = Column(Integer, nullable=True)
+
+    # 現在の世代数
+    current_generation = Column(Integer, nullable=False, default=0)
+
+    # メタデータ
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    completed_at = Column(DateTime(timezone=True), nullable=True)
+
+    # インデックス定義
+    __table_args__ = (
+        Index("idx_ga_experiments_status", "status"),
+        Index("idx_ga_experiments_created", "created_at"),
+    )
+
+    def __repr__(self):
+        return (
+            f"<GAExperiment(name='{self.name}', "
+            f"status='{self.status}', "
+            f"progress={self.progress:.2f})>"
+        )
+
+
+class GeneratedStrategy(Base):
+    """
+    生成された戦略テーブル
+
+    GAによって生成された戦略の遺伝子情報を保存します。
+    """
+
+    __tablename__ = "generated_strategies"
+
+    # 主キー
+    id = Column(Integer, primary_key=True, autoincrement=True)
+
+    # 実験ID（外部キー）
+    experiment_id = Column(Integer, ForeignKey("ga_experiments.id"), nullable=False)
+
+    # 戦略遺伝子データ（JSON形式）
+    gene_data = Column(JSON, nullable=False)
+
+    # 世代数
+    generation = Column(Integer, nullable=False)
+
+    # フィットネススコア
+    fitness_score = Column(Float, nullable=True)
+
+    # 親戦略のID（JSON配列）
+    parent_ids = Column(JSON, nullable=True)
+
+    # バックテスト結果ID（外部キー）
+    backtest_result_id = Column(
+        Integer, ForeignKey("backtest_results.id"), nullable=True
+    )
+
+    # メタデータ
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    # リレーション
+    experiment = relationship("GAExperiment", backref="strategies")
+    backtest_result = relationship("BacktestResult", backref="generated_strategy")
+
+    # インデックス定義
+    __table_args__ = (
+        Index("idx_generated_strategies_experiment", "experiment_id"),
+        Index("idx_generated_strategies_fitness", "fitness_score"),
+        Index("idx_generated_strategies_generation", "generation"),
+    )
+
+    def __repr__(self):
+        return (
+            f"<GeneratedStrategy(experiment_id={self.experiment_id}, "
+            f"generation={self.generation}, "
+            f"fitness={self.fitness_score:.4f if self.fitness_score else 'None'})>"
         )
 
     def to_dict(self):

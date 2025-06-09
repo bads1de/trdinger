@@ -87,6 +87,38 @@ interface RobustnessConfig {
   };
 }
 
+interface GAConfig {
+  experiment_name: string;
+  base_config: {
+    symbol: string;
+    timeframe: string;
+    start_date: string;
+    end_date: string;
+    initial_capital: number;
+    commission_rate: number;
+  };
+  ga_config: {
+    population_size: number;
+    generations: number;
+    crossover_rate: number;
+    mutation_rate: number;
+    elite_size: number;
+    max_indicators: number;
+    allowed_indicators: string[];
+    fitness_weights: {
+      total_return: number;
+      sharpe_ratio: number;
+      max_drawdown: number;
+      win_rate: number;
+    };
+    fitness_constraints: {
+      min_trades: number;
+      max_drawdown_limit: number;
+      min_sharpe_ratio: number;
+    };
+  };
+}
+
 /**
  * バックテスト結果の型定義（選択された結果から設定を取得するため）
  */
@@ -144,6 +176,8 @@ interface OptimizationModalProps {
   onMultiObjectiveOptimization: (config: MultiObjectiveConfig) => void;
   /** ロバストネステスト実行時のコールバック */
   onRobustnessTest: (config: RobustnessConfig) => void;
+  /** GA戦略生成実行時のコールバック */
+  onGAGeneration?: (config: GAConfig) => void;
   /** 最適化実行中かどうか */
   isLoading?: boolean;
   /** 選択されたバックテスト結果（設定を引き継ぐため） */
@@ -161,6 +195,7 @@ const OptimizationModal: React.FC<OptimizationModalProps> = ({
   onEnhancedOptimization,
   onMultiObjectiveOptimization,
   onRobustnessTest,
+  onGAGeneration,
   isLoading = false,
   selectedResult = null,
   currentBacktestConfig = null,
@@ -181,6 +216,13 @@ const OptimizationModal: React.FC<OptimizationModalProps> = ({
     onClose();
   };
 
+  const handleGAGeneration = (config: GAConfig) => {
+    if (onGAGeneration) {
+      onGAGeneration(config);
+    }
+    // GAの場合はモーダルを閉じない（進捗表示のため）
+  };
+
   return (
     <Modal
       isOpen={isOpen}
@@ -197,6 +239,7 @@ const OptimizationModal: React.FC<OptimizationModalProps> = ({
           onEnhancedOptimization={handleEnhancedOptimization}
           onMultiObjectiveOptimization={handleMultiObjectiveOptimization}
           onRobustnessTest={handleRobustnessTest}
+          onGAGeneration={handleGAGeneration}
           isLoading={isLoading}
           initialConfig={selectedResult}
           currentBacktestConfig={currentBacktestConfig}
