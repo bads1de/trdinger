@@ -59,6 +59,8 @@ def init_db():
             OpenInterestData,
             DataCollectionLog,
             TechnicalIndicatorData,
+            GAExperiment,
+            GeneratedStrategy,
         )
 
         # テーブルを作成

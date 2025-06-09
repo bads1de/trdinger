@@ -17,6 +17,10 @@ from ..factories.strategy_factory import StrategyFactory
 from app.core.services.backtest_service import BacktestService
 from app.core.services.backtest_data_service import BacktestDataService
 from database.repositories.ohlcv_repository import OHLCVRepository
+from database.repositories.ga_experiment_repository import GAExperimentRepository
+from database.repositories.generated_strategy_repository import (
+    GeneratedStrategyRepository,
+)
 from database.connection import SessionLocal
 
 logger = logging.getLogger(__name__)
@@ -39,6 +43,10 @@ class AutoStrategyService:
         self.backtest_service = None
         self.ga_engine = None
 
+        # リポジトリの初期化
+        self.ga_experiment_repo = None
+        self.generated_strategy_repo = None
+
         self._init_services()
 
     def _init_services(self):
@@ -47,7 +55,12 @@ class AutoStrategyService:
             # データベースセッション
             db = SessionLocal()
             try:
+                # リポジトリの初期化
                 ohlcv_repo = OHLCVRepository(db)
+                self.ga_experiment_repo = GAExperimentRepository(db)
+                self.generated_strategy_repo = GeneratedStrategyRepository(db)
+
+                # サービスの初期化
                 data_service = BacktestDataService(ohlcv_repo)
                 self.backtest_service = BacktestService(data_service)
 
@@ -93,9 +106,24 @@ class AutoStrategyService:
             if not is_valid:
                 raise ValueError(f"Invalid GA config: {', '.join(errors)}")
 
+            # データベースに実験を保存
+            db = SessionLocal()
+            try:
+                ga_experiment_repo = GAExperimentRepository(db)
+                db_experiment = ga_experiment_repo.create_experiment(
+                    name=experiment_name,
+                    config=ga_config.to_dict(),
+                    total_generations=ga_config.generations,
+                    status="starting",
+                )
+                db_experiment_id = db_experiment.id
+            finally:
+                db.close()
+
             # 実験情報を記録
             experiment_info = {
                 "id": experiment_id,
+                "db_id": db_experiment_id,
                 "name": experiment_name,
                 "ga_config": ga_config,
                 "backtest_config": backtest_config,
@@ -109,6 +137,23 @@ class AutoStrategyService:
             # 進捗コールバックの設定
             def combined_callback(progress: GAProgress):
                 self.progress_data[experiment_id] = progress
+
+                # データベースに進捗を保存
+                try:
+                    db = SessionLocal()
+                    try:
+                        ga_experiment_repo = GAExperimentRepository(db)
+                        ga_experiment_repo.update_experiment_progress(
+                            experiment_id=db_experiment_id,
+                            current_generation=progress.current_generation,
+                            progress=progress.progress_percentage / 100.0,
+                            best_fitness=progress.best_fitness,
+                        )
+                    finally:
+                        db.close()
+                except Exception as e:
+                    logger.error(f"進捗保存エラー: {e}")
+
                 if progress_callback:
                     progress_callback(progress)
 
@@ -164,6 +209,21 @@ class AutoStrategyService:
             experiment_info["end_time"] = time.time()
             experiment_info["result"] = result
 
+            # データベースで実験を完了状態にする
+            try:
+                db = SessionLocal()
+                try:
+                    ga_experiment_repo = GAExperimentRepository(db)
+                    ga_experiment_repo.complete_experiment(
+                        experiment_id=experiment_info["db_id"],
+                        best_fitness=result["best_fitness"],
+                        final_generation=ga_config.generations,
+                    )
+                finally:
+                    db.close()
+            except Exception as e:
+                logger.error(f"実験完了状態更新エラー: {e}")
+
             # 最終進捗更新
             final_progress = GAProgress(
                 experiment_id=experiment_id,
@@ -187,6 +247,22 @@ class AutoStrategyService:
             if experiment_id in self.running_experiments:
                 self.running_experiments[experiment_id]["status"] = "error"
                 self.running_experiments[experiment_id]["error"] = str(e)
+
+                # データベースでエラー状態を更新
+                try:
+                    db = SessionLocal()
+                    try:
+                        ga_experiment_repo = GAExperimentRepository(db)
+                        ga_experiment_repo.update_experiment_status(
+                            experiment_id=self.running_experiments[experiment_id][
+                                "db_id"
+                            ],
+                            status="error",
+                        )
+                    finally:
+                        db.close()
+                except Exception as db_error:
+                    logger.error(f"エラー状態DB更新エラー: {db_error}")
 
             # エラー進捗更新
             error_progress = GAProgress(
@@ -299,24 +375,73 @@ class AutoStrategyService:
             backtest_config: バックテスト設定
         """
         try:
-            # TODO: データベース保存の実装
-            # 現在は簡略化してログ出力のみ
+            experiment_info = self.running_experiments.get(experiment_id)
+            if not experiment_info:
+                logger.error(f"実験情報が見つかりません: {experiment_id}")
+                return
 
+            db_experiment_id = experiment_info["db_id"]
             best_strategy = result["best_strategy"]
             best_fitness = result["best_fitness"]
+            all_strategies = result.get("all_strategies", [])
 
-            logger.info(f"実験結果保存: {experiment_id}")
+            logger.info(f"実験結果保存開始: {experiment_id}")
             logger.info(f"最高フィットネス: {best_fitness:.4f}")
             logger.info(f"最良戦略ID: {best_strategy.id}")
             logger.info(f"使用指標数: {len(best_strategy.indicators)}")
+            logger.info(f"保存対象戦略数: {len(all_strategies)}")
 
-            # TODO: 以下を実装
-            # 1. ga_experiments テーブルに実験情報を保存
-            # 2. generated_strategies テーブルに生成された戦略を保存
-            # 3. バックテスト結果の保存
+            # データベースに戦略を保存
+            db = SessionLocal()
+            try:
+                generated_strategy_repo = GeneratedStrategyRepository(db)
+
+                # 最良戦略を保存
+                best_strategy_record = generated_strategy_repo.save_strategy(
+                    experiment_id=db_experiment_id,
+                    gene_data=best_strategy.to_dict(),
+                    generation=ga_config.generations,
+                    fitness_score=best_fitness,
+                )
+
+                logger.info(f"最良戦略を保存しました: DB ID {best_strategy_record.id}")
+
+                # 全戦略を一括保存（オプション）
+                if all_strategies and len(all_strategies) > 1:
+                    strategies_data = []
+                    for i, strategy in enumerate(
+                        all_strategies[:100]
+                    ):  # 最大100戦略まで保存
+                        if strategy != best_strategy:  # 最良戦略は既に保存済み
+                            strategies_data.append(
+                                {
+                                    "experiment_id": db_experiment_id,
+                                    "gene_data": strategy.to_dict(),
+                                    "generation": ga_config.generations,
+                                    "fitness_score": result.get(
+                                        "fitness_scores", [0.0] * len(all_strategies)
+                                    )[i],
+                                }
+                            )
+
+                    if strategies_data:
+                        saved_strategies = (
+                            generated_strategy_repo.save_strategies_batch(
+                                strategies_data
+                            )
+                        )
+                        logger.info(
+                            f"追加戦略を一括保存しました: {len(saved_strategies)} 件"
+                        )
+
+            finally:
+                db.close()
+
+            logger.info(f"実験結果保存完了: {experiment_id}")
 
         except Exception as e:
             logger.error(f"実験結果保存エラー: {e}")
+            raise
 
     def validate_strategy_gene(self, gene: StrategyGene) -> tuple[bool, List[str]]:
         """
