@@ -19,9 +19,10 @@ class IndicatorGene:
     指標遺伝子
 
     単一のテクニカル指標の設定を表現します。
+    v2拡張: OI/FRベースの指標を含む
     """
 
-    type: str  # "SMA", "EMA", "RSI", "MACD", etc.
+    type: str  # "SMA", "EMA", "RSI", "MACD", "OpenInterest", "FundingRate", etc.
     parameters: Dict[str, float]  # {"period": 20, "source": "close"}
     enabled: bool = True  # 使用するかどうか
 
@@ -31,6 +32,46 @@ class IndicatorGene:
             return False
         if not isinstance(self.parameters, dict):
             return False
+
+        # 有効な指標タイプの確認
+        valid_indicator_types = [
+            # 従来のテクニカル指標（価格・出来高ベース）
+            "SMA",
+            "EMA",
+            "RSI",
+            "MACD",
+            "BB",
+            "STOCH",
+            "CCI",
+            "WILLIAMS",
+            "ADX",
+            "AROON",
+            "MFI",
+            "MOMENTUM",
+            "ROC",
+            "ATR",
+            "NATR",
+            "TRANGE",
+            "OBV",
+            "AD",
+            "ADOSC",
+            "TEMA",
+            "DEMA",
+            "T3",
+            "WMA",
+            "KAMA",
+            # 注意: OpenInterest, FundingRateは指標ではなく判断材料として条件で使用
+        ]
+
+        if self.type not in valid_indicator_types:
+            return False
+
+        # パラメータの妥当性確認
+        if "period" in self.parameters:
+            period = self.parameters["period"]
+            if not isinstance(period, (int, float)) or period <= 0:
+                return False
+
         return True
 
 
@@ -39,17 +80,92 @@ class Condition:
     """
     売買条件
 
-    v1仕様: 単純な比較条件のみ（指標A > 指標B）
+    v2拡張: Open Interest (OI) と Funding Rate (FR) データソースを含む
     """
 
-    left_operand: str  # "SMA_20", "RSI_14", "price"
+    left_operand: str  # "SMA_20", "RSI_14", "price", "OpenInterest", "FundingRate"
     operator: str  # ">", "<", "cross_above", "cross_below"
-    right_operand: Union[str, float]  # "SMA_50", 70, etc.
+    right_operand: Union[
+        str, float
+    ]  # "SMA_50", 70, "OpenInterest", "FundingRate", etc.
 
     def validate(self) -> bool:
         """条件の妥当性を検証"""
         valid_operators = [">", "<", ">=", "<=", "==", "cross_above", "cross_below"]
-        return self.operator in valid_operators
+        valid_data_sources = [
+            "close",
+            "open",
+            "high",
+            "low",
+            "volume",  # 基本OHLCV
+            "OpenInterest",
+            "FundingRate",  # 新規追加データソース
+        ]
+
+        # オペレーターの検証
+        if self.operator not in valid_operators:
+            return False
+
+        # オペランドの検証（指標名またはデータソース名）
+        if isinstance(self.left_operand, str):
+            # 指標名（例: "SMA_20"）またはデータソース名の場合
+            if not (
+                self._is_indicator_name(self.left_operand)
+                or self.left_operand in valid_data_sources
+            ):
+                return False
+
+        if isinstance(self.right_operand, str):
+            # 指標名（例: "SMA_20"）またはデータソース名の場合
+            if not (
+                self._is_indicator_name(self.right_operand)
+                or self.right_operand in valid_data_sources
+            ):
+                return False
+
+        return True
+
+    def _is_indicator_name(self, name: str) -> bool:
+        """指標名かどうかを判定"""
+        # 指標名のパターン: "TYPE_PERIOD" (例: "SMA_20", "RSI_14")
+        # または複合指標名: "OI_SMA_10", "FR_EMA_5"
+        parts = name.split("_")
+        if len(parts) >= 2:
+            # 通常の指標: "SMA_20"
+            if len(parts) == 2:
+                indicator_type = parts[0]
+                valid_indicators = [
+                    "SMA",
+                    "EMA",
+                    "RSI",
+                    "MACD",
+                    "BB",
+                    "STOCH",
+                    "CCI",
+                    "WILLIAMS",
+                    "ADX",
+                    "AROON",
+                    "MFI",
+                    "MOMENTUM",
+                    "ROC",
+                    "ATR",
+                    "NATR",
+                    "TRANGE",
+                    "OBV",
+                    "AD",
+                    "ADOSC",
+                    "TEMA",
+                    "DEMA",
+                    "T3",
+                    "WMA",
+                    "KAMA",
+                ]
+                return indicator_type in valid_indicators
+
+            # 注意: OI/FRベースの複合指標は使用しない
+            # OI/FRは生の値として判断材料に使用
+
+        return False
 
 
 @dataclass

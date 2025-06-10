@@ -17,6 +17,8 @@ from ..factories.strategy_factory import StrategyFactory
 from app.core.services.backtest_service import BacktestService
 from app.core.services.backtest_data_service import BacktestDataService
 from database.repositories.ohlcv_repository import OHLCVRepository
+from database.repositories.open_interest_repository import OpenInterestRepository
+from database.repositories.funding_rate_repository import FundingRateRepository
 from database.repositories.ga_experiment_repository import GAExperimentRepository
 from database.repositories.generated_strategy_repository import (
     GeneratedStrategyRepository,
@@ -57,11 +59,15 @@ class AutoStrategyService:
             try:
                 # リポジトリの初期化
                 ohlcv_repo = OHLCVRepository(db)
+                oi_repo = OpenInterestRepository(db)
+                fr_repo = FundingRateRepository(db)
                 self.ga_experiment_repo = GAExperimentRepository(db)
                 self.generated_strategy_repo = GeneratedStrategyRepository(db)
 
-                # サービスの初期化
-                data_service = BacktestDataService(ohlcv_repo)
+                # サービスの初期化（拡張されたBacktestDataService）
+                data_service = BacktestDataService(
+                    ohlcv_repo=ohlcv_repo, oi_repo=oi_repo, fr_repo=fr_repo
+                )
                 self.backtest_service = BacktestService(data_service)
 
                 # GAエンジンの初期化
@@ -69,7 +75,7 @@ class AutoStrategyService:
                     self.backtest_service, self.strategy_factory
                 )
 
-                logger.info("自動戦略生成サービス初期化完了")
+                logger.info("自動戦略生成サービス初期化完了（OI/FR統合版）")
 
             finally:
                 db.close()

@@ -21,6 +21,7 @@ from ..models.strategy_gene import (
 )
 from ..models.ga_config import GAConfig, GAProgress
 from ..factories.strategy_factory import StrategyFactory
+from ..generators.random_gene_generator import RandomGeneGenerator
 from app.core.services.backtest_service import BacktestService
 
 logger = logging.getLogger(__name__)
@@ -47,6 +48,9 @@ class GeneticAlgorithmEngine:
         self.strategy_factory = strategy_factory
         self.toolbox = None
         self.progress_callback: Optional[Callable] = None
+
+        # 新しいランダム遺伝子生成器
+        self.gene_generator = RandomGeneGenerator()
 
         # 統計情報
         self.stats = None
@@ -78,28 +82,39 @@ class GeneticAlgorithmEngine:
         # 遺伝子長の計算（v1仕様: 5指標×2 + エントリー条件3 + イグジット条件3 = 16）
         gene_length = config.max_indicators * 2 + 6
 
-        # 個体生成関数（指標が確実に生成されるように修正）
+        # 個体生成関数（新しいランダム遺伝子生成器を使用）
         def create_individual():
-            """有効な指標を持つ個体を生成"""
-            individual = []
+            """新しいランダム遺伝子生成器を使用して個体を生成"""
+            try:
+                # ランダム遺伝子生成器で戦略遺伝子を生成
+                gene = self.gene_generator.generate_random_gene()
 
-            # 指標部分（最低1個の指標を保証）
-            for i in range(config.max_indicators):
-                if i == 0:
-                    # 最初の指標は必ず有効にする
-                    indicator_id = random.uniform(0.1, 0.9)  # 0を避ける
-                else:
-                    # 他の指標は50%の確率で有効
-                    indicator_id = random.uniform(0.0, 1.0)
+                # 戦略遺伝子を数値リストにエンコード
+                individual = encode_gene_to_list(gene)
 
-                param_val = random.uniform(0.0, 1.0)
-                individual.extend([indicator_id, param_val])
+                return creator.Individual(individual)
+            except Exception as e:
+                logger.warning(f"新しい遺伝子生成に失敗、フォールバックを使用: {e}")
+                # フォールバック: 従来の方法
+                individual = []
 
-            # 条件部分
-            for _ in range(6):  # エントリー3 + エグジット3
-                individual.append(random.uniform(0.0, 1.0))
+                # 指標部分（最低1個の指標を保証）
+                for i in range(config.max_indicators):
+                    if i == 0:
+                        # 最初の指標は必ず有効にする
+                        indicator_id = random.uniform(0.1, 0.9)  # 0を避ける
+                    else:
+                        # 他の指標は50%の確率で有効
+                        indicator_id = random.uniform(0.0, 1.0)
 
-            return creator.Individual(individual)
+                    param_val = random.uniform(0.0, 1.0)
+                    individual.extend([indicator_id, param_val])
+
+                # 条件部分
+                for _ in range(6):  # エントリー3 + エグジット3
+                    individual.append(random.uniform(0.0, 1.0))
+
+                return creator.Individual(individual)
 
         self.toolbox.register("individual", create_individual)
         self.toolbox.register(
@@ -369,28 +384,44 @@ class GeneticAlgorithmEngine:
             if sharpe_ratio < constraints.get("min_sharpe_ratio", -1.0):
                 return 0.0
 
-            # 重み付きフィットネス計算
+            # 強化されたフィットネス計算（GA真の目的に特化）
             fitness = 0.0
             weights = config.fitness_weights
 
-            # 各指標を正規化して重み付き合計
+            # 主要指標の取得
             total_return = metrics.get("total_return", 0.0)
-            win_rate = metrics.get("win_rate", 0.0)
+            win_rate = (
+                metrics.get("win_rate", 0.0) / 100.0
+            )  # パーセンテージを小数に変換
 
-            # 正規化（0-1範囲）
-            normalized_return = max(
-                0, min(1, (total_return + 1) / 2)
-            )  # -100%〜+100% → 0〜1
-            normalized_sharpe = max(0, min(1, sharpe_ratio / 3))  # 0〜3 → 0〜1
-            normalized_drawdown = max(0, 1 - max_drawdown)  # 逆転（小さいほど良い）
-            normalized_win_rate = max(0, min(1, win_rate))  # 0〜1
+            # 正規化（より実用的な範囲設定）
+            # 1. リターン正規化: -50%〜+200% → 0〜1
+            normalized_return = max(0, min(1, (total_return + 50) / 250))
 
+            # 2. シャープレシオ正規化: -2〜+4 → 0〜1 (優秀な戦略は2以上)
+            normalized_sharpe = max(0, min(1, (sharpe_ratio + 2) / 6))
+
+            # 3. ドローダウン正規化: 0〜50% → 1〜0 (低いほど良い)
+            normalized_drawdown = max(0, min(1, 1 - (max_drawdown / 0.5)))
+
+            # 4. 勝率正規化: 0〜100% → 0〜1
+            normalized_win_rate = max(0, min(1, win_rate))
+
+            # 重み付き合計（GA真の目的に重点）
             fitness = (
-                weights.get("total_return", 0.3) * normalized_return
-                + weights.get("sharpe_ratio", 0.4) * normalized_sharpe
-                + weights.get("max_drawdown", 0.2) * normalized_drawdown
-                + weights.get("win_rate", 0.1) * normalized_win_rate
+                weights.get("total_return", 0.35) * normalized_return  # リターン重視
+                + weights.get("sharpe_ratio", 0.35)
+                * normalized_sharpe  # シャープレシオ重視
+                + weights.get("max_drawdown", 0.25)
+                * normalized_drawdown  # ドローダウン重視
+                + weights.get("win_rate", 0.05) * normalized_win_rate  # 勝率は参考程度
             )
+
+            # ボーナス: 優秀な戦略への追加評価
+            if total_return > 20 and sharpe_ratio > 1.5 and max_drawdown < 0.15:
+                fitness *= 1.2  # 20%ボーナス
+            elif total_return > 50 and sharpe_ratio > 2.0 and max_drawdown < 0.10:
+                fitness *= 1.5  # 50%ボーナス（非常に優秀）
 
             return fitness
 

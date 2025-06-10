@@ -95,12 +95,24 @@ class BacktestService:
                 else config["end_date"]
             )
 
-            data = self.data_service.get_ohlcv_for_backtest(
-                symbol=config["symbol"],
-                timeframe=config["timeframe"],
-                start_date=start_date,
-                end_date=end_date,
-            )
+            # 新しい統合データ取得メソッドを使用（OI/FR含む）
+            try:
+                data = self.data_service.get_data_for_backtest(
+                    symbol=config["symbol"],
+                    timeframe=config["timeframe"],
+                    start_date=start_date,
+                    end_date=end_date,
+                )
+                logger.info("Using extended data with OI/FR integration")
+            except AttributeError:
+                # 後方互換性のため、古いメソッドにフォールバック
+                logger.warning("Falling back to OHLCV-only data")
+                data = self.data_service.get_ohlcv_for_backtest(
+                    symbol=config["symbol"],
+                    timeframe=config["timeframe"],
+                    start_date=start_date,
+                    end_date=end_date,
+                )
 
             if data is None or data.empty:
                 raise ValueError(
@@ -489,13 +501,22 @@ class BacktestService:
             finally:
                 db.close()
 
-        # データ取得
-        data = self.data_service.get_ohlcv_for_backtest(
-            symbol=config["symbol"],
-            timeframe=config["timeframe"],
-            start_date=config["start_date"],
-            end_date=config["end_date"],
-        )
+        # データ取得（統合データを優先）
+        try:
+            data = self.data_service.get_data_for_backtest(
+                symbol=config["symbol"],
+                timeframe=config["timeframe"],
+                start_date=config["start_date"],
+                end_date=config["end_date"],
+            )
+        except AttributeError:
+            # 後方互換性のため、古いメソッドにフォールバック
+            data = self.data_service.get_ohlcv_for_backtest(
+                symbol=config["symbol"],
+                timeframe=config["timeframe"],
+                start_date=config["start_date"],
+                end_date=config["end_date"],
+            )
 
         # 戦略クラス取得
         strategy_class = self._create_strategy_class(config["strategy_config"])
