@@ -31,15 +31,15 @@ export default function Home() {
         </h1>
       </div>
 
-      {/* 機能ナビゲーショングリッド - 4つの主要機能へのリンク */}
-      <div className="mb-32 grid text-center lg:max-w-5xl lg:w-full lg:mb-0 lg:grid-cols-4 lg:text-left">
+      {/* 機能ナビゲーショングリッド - 5つの主要機能へのリンク */}
+      <div className="mb-32 grid text-center lg:max-w-5xl lg:w-full lg:mb-0 lg:grid-cols-5 lg:text-left">
         {/* 戦略定義ページへのリンク */}
         <a
           href="/strategy"
           className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-600 hover:bg-gray-800 hover:dark:border-gray-600 hover:dark:bg-gray-800/30"
         >
           <h2 className={`mb-3 text-2xl font-semibold`}>
-            戦略定義{' '}
+            戦略定義{" "}
             <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
               -&gt;
             </span>
@@ -55,7 +55,7 @@ export default function Home() {
           className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-600 hover:bg-gray-800 hover:dark:border-gray-600 hover:dark:bg-gray-800/30"
         >
           <h2 className={`mb-3 text-2xl font-semibold`}>
-            バックテスト{' '}
+            バックテスト{" "}
             <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
               -&gt;
             </span>
@@ -71,7 +71,7 @@ export default function Home() {
           className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-600 hover:bg-gray-800 hover:dark:border-gray-600 hover:dark:bg-gray-800/30"
         >
           <h2 className={`mb-3 text-2xl font-semibold`}>
-            結果分析{' '}
+            結果分析{" "}
             <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
               -&gt;
             </span>
@@ -81,13 +81,29 @@ export default function Home() {
           </p>
         </a>
 
+        {/* 戦略ショーケースページへのリンク */}
+        <a
+          href="/strategies"
+          className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-600 hover:bg-gray-800 hover:dark:border-gray-600 hover:dark:bg-gray-800/30"
+        >
+          <h2 className={`mb-3 text-2xl font-semibold`}>
+            戦略ショーケース{" "}
+            <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
+              -&gt;
+            </span>
+          </h2>
+          <p className={`m-0 max-w-[30ch] text-sm opacity-50`}>
+            AI生成による30種類の投資戦略を比較・検討
+          </p>
+        </a>
+
         {/* データ管理ページへのリンク */}
         <a
           href="/data"
           className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-600 hover:bg-gray-800 hover:dark:border-gray-600 hover:dark:bg-gray-800/30"
         >
           <h2 className={`mb-3 text-2xl font-semibold`}>
-            データ管理{' '}
+            データ管理{" "}
             <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
               -&gt;
             </span>
@@ -98,5 +114,5 @@ export default function Home() {
         </a>
       </div>
     </main>
-  )
+  );
 }

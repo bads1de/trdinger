@@ -16,6 +16,7 @@ from app.api.open_interest import router as open_interest_router
 from app.api.technical_indicators import router as technical_indicators_router
 from app.api.backtest import router as backtest_router
 from app.api.auto_strategy import router as auto_strategy_router
+from app.api.strategy_showcase import router as strategy_showcase_router
 
 
 def setup_logging():
@@ -56,6 +57,7 @@ def create_app() -> FastAPI:
     app.include_router(technical_indicators_router, prefix="/api")
     app.include_router(backtest_router)
     app.include_router(auto_strategy_router)
+    app.include_router(strategy_showcase_router)
 
     # ヘルスチェックエンドポイント
     @app.get("/health")

@@ -176,14 +176,11 @@ class TestOIFRStrategyFactory(unittest.TestCase):
                 Condition(
                     left_operand="FundingRate", operator=">", right_operand=0.0005
                 ),
-                Condition(
-                    left_operand="OpenInterest", operator=">", right_operand=10000000
-                ),
             ],
             exit_conditions=[
                 Condition(
-                    left_operand="close", operator="<", right_operand=95
-                ),  # 基本的なイグジット条件
+                    left_operand="OpenInterest", operator=">", right_operand=10000000
+                ),
             ],
         )
 

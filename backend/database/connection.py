@@ -61,6 +61,7 @@ def init_db():
             TechnicalIndicatorData,
             GAExperiment,
             GeneratedStrategy,
+            StrategyShowcase,
         )
 
         # テーブルを作成
