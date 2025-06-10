@@ -524,7 +524,7 @@ def _decode_condition(encoded: List[float]) -> Condition:
     """数値リストから条件にデコード（実用的な条件を生成）"""
     import random
 
-    # 実用的な条件パターンを生成
+    # 実用的な条件パターンを生成（OI/FR対応版）
     patterns = [
         # RSI条件
         Condition(
@@ -547,6 +547,19 @@ def _decode_condition(encoded: List[float]) -> Condition:
         Condition(
             left_operand="close", operator="<", right_operand="SMA_20"
         ),  # Price below SMA
+        # OI/FR条件（新規追加）
+        Condition(
+            left_operand="FundingRate", operator=">", right_operand=0.0005
+        ),  # Funding rate bullish sentiment
+        Condition(
+            left_operand="FundingRate", operator="<", right_operand=-0.0005
+        ),  # Funding rate bearish sentiment
+        Condition(
+            left_operand="OpenInterest", operator=">", right_operand=10000000
+        ),  # High open interest
+        Condition(
+            left_operand="OpenInterest", operator="<", right_operand=5000000
+        ),  # Low open interest
     ]
 
     # ランダムに条件を選択
