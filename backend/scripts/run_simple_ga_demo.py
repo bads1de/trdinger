@@ -13,7 +13,7 @@ import json
 import time
 import random
 from dataclasses import dataclass
-from typing import List, Dict, Union, Any
+from typing import List, Dict, Union
 import uuid
 
 # プロジェクトルートをパスに追加

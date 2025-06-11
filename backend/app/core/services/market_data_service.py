@@ -11,7 +11,6 @@ CCXT ライブラリを使用してBybit取引所からOHLCVデータを取得�
 import asyncio
 import ccxt
 from typing import List, Optional
-from datetime import datetime, timezone
 import logging
 
 from app.config.market_config import MarketDataConfig

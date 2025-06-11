@@ -8,9 +8,8 @@ Bybitオープンインタレストサービス
 import asyncio
 import logging
 from datetime import datetime, timezone
-from typing import Dict, List, Optional, Any, Callable
+from typing import Dict, List, Optional, Any
 
-import ccxt
 from database.connection import SessionLocal
 
 # OpenInterestDataは循環インポートを避けるため、必要時にインポート

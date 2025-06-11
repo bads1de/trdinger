@@ -9,7 +9,7 @@ pandas SeriesとTA-Lib間のデータ変換、エラーハンドリング、
 import talib
 import pandas as pd
 import numpy as np
-from typing import Union, Dict, Any, Optional, List
+from typing import Union, Dict
 import logging
 
 logger = logging.getLogger(__name__)
@@ -18,7 +18,6 @@ logger = logging.getLogger(__name__)
 class TALibCalculationError(Exception):
     """TA-Lib計算エラー"""
 
-    pass
 
 
 class TALibAdapter:

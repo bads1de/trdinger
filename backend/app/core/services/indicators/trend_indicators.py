@@ -5,12 +5,11 @@ SMA（単純移動平均）、EMA（指数移動平均）、MACD の実装を提
 """
 
 import pandas as pd
-import numpy as np
-from typing import List, Dict, Any, Optional, Union
+from typing import List, Dict, Any, Optional
 import logging
 
 from .abstract_indicator import BaseIndicator
-from .adapters import TrendAdapter, MomentumAdapter, TALibCalculationError
+from .adapters import TrendAdapter, MomentumAdapter
 
 logger = logging.getLogger(__name__)
 

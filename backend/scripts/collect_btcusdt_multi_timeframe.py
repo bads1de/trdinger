@@ -9,7 +9,6 @@ import asyncio
 import logging
 import sys
 import os
-from datetime import datetime, timezone, timedelta
 from typing import List
 
 # プロジェクトルートをパスに追加
@@ -18,7 +17,6 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from database.connection import SessionLocal, init_db
 from database.repositories.ohlcv_repository import OHLCVRepository
 from data_collector.collector import DataCollector
-from app.core.services.market_data_service import BybitMarketDataService
 from app.config.market_config import MarketDataConfig
 
 # ログ設定

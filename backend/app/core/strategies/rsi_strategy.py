@@ -7,7 +7,6 @@ RSIの過買い・過売りレベルを利用した逆張り戦略
 
 from backtesting import Strategy
 from .indicators import RSI
-from .base_strategy import BaseStrategy
 
 
 class RSIStrategy(Strategy):

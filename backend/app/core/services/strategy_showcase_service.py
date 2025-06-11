@@ -5,12 +5,10 @@
 """
 
 import logging
-import random
 from typing import List, Dict, Any, Optional
-from sqlalchemy.orm import Session
-from datetime import datetime, timedelta
+from datetime import datetime
 
-from database.models import StrategyShowcase, BacktestResult
+from database.models import StrategyShowcase
 from database.connection import get_db
 
 logger = logging.getLogger(__name__)

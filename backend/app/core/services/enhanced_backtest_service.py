@@ -8,8 +8,8 @@ scipyなどの外部ライブラリは不要で、backtesting.py単体で高度�
 import pandas as pd
 import numpy as np
 from datetime import datetime
-from typing import Dict, Any, List, Tuple, Callable, Optional, Union
-from backtesting import Backtest, Strategy
+from typing import Dict, Any, List, Tuple, Callable, Union
+from backtesting import Backtest
 from backtesting.lib import plot_heatmaps
 
 from .backtest_service import BacktestService

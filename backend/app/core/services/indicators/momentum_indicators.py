@@ -5,12 +5,11 @@ RSI、ストキャスティクス、CCI、Williams %R、モメンタム、ROC �
 """
 
 import pandas as pd
-import numpy as np
-from typing import List, Dict, Any, Optional, Union
+from typing import List, Dict, Any, Optional
 import logging
 
 from .abstract_indicator import BaseIndicator
-from .adapters import MomentumAdapter, TALibCalculationError
+from .adapters import MomentumAdapter
 
 logger = logging.getLogger(__name__)
 

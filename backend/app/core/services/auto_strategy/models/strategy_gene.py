@@ -6,7 +6,7 @@ v1仕様: 最大5指標、単純比較条件のみ
 """
 
 from dataclasses import dataclass, field
-from typing import List, Dict, Any, Union, Optional
+from typing import List, Dict, Any, Union
 import json
 import logging
 

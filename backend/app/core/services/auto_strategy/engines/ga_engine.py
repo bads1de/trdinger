@@ -12,10 +12,9 @@ from typing import List, Dict, Any, Callable, Optional, Tuple
 import logging
 import numpy as np
 
-from deap import base, creator, tools, algorithms
+from deap import base, creator, tools
 
 from ..models.strategy_gene import (
-    StrategyGene,
     encode_gene_to_list,
     decode_list_to_gene,
 )

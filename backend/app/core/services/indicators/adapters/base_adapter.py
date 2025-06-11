@@ -5,7 +5,6 @@ TA-Lib アダプター基底クラス
 データ変換、入力検証、エラーハンドリングなどの共通処理を担当します。
 """
 
-import talib
 import pandas as pd
 import numpy as np
 from typing import Union
@@ -17,7 +16,6 @@ logger = logging.getLogger(__name__)
 class TALibCalculationError(Exception):
     """TA-Lib計算エラー"""
 
-    pass
 
 
 class BaseAdapter:
