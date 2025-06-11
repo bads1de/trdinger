@@ -536,6 +536,8 @@ export default function OptimizationForm({
               setBaseConfig({ ...baseConfig, timeframe: value })
             }
             options={[
+              { value: "15m", label: "15分" },
+              { value: "30m", label: "30分" },
               { value: "1h", label: "1時間" },
               { value: "4h", label: "4時間" },
               { value: "1d", label: "1日" },

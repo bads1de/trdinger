@@ -132,8 +132,8 @@ def test_timeframe_validation():
     print("時間軸検証テスト")
     print("=" * 60)
 
-    valid_timeframes = ["1m", "5m", "15m", "30m", "1h", "4h", "1d"]
-    invalid_timeframes = ["2m", "3h", "1w", "1M"]
+    valid_timeframes = ["15m", "30m", "1h", "4h", "1d"]
+    invalid_timeframes = ["1m", "5m", "2m", "3h", "1w", "1M"]
 
     print("有効な時間軸:")
     for tf in valid_timeframes:

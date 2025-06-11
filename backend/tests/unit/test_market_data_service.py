@@ -223,7 +223,7 @@ class TestMarketDataConfig:
         # 有効な時間軸
         assert MarketDataConfig.validate_timeframe("1h") is True
         assert MarketDataConfig.validate_timeframe("1d") is True
-        assert MarketDataConfig.validate_timeframe("1m") is True
+        assert MarketDataConfig.validate_timeframe("15m") is True
 
         # 無効な時間軸
         assert MarketDataConfig.validate_timeframe("invalid") is False
@@ -274,7 +274,7 @@ class TestBybitMarketDataServiceDatabaseIntegration:
         ] * 5
 
         # fetch_ohlcv_dataメソッドをモック
-        with patch.object(service, 'fetch_ohlcv_data', return_value=mock_ohlcv_data):
+        with patch.object(service, "fetch_ohlcv_data", return_value=mock_ohlcv_data):
             # When: データを取得・保存
             result = await service.fetch_and_save_ohlcv_data(
                 symbol, timeframe, limit, mock_repository

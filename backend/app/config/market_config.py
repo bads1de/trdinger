@@ -23,8 +23,8 @@ class MarketDataConfig:
         "BTC/USDT:USDT",  # Bitcoin USDT無期限先物のみ
     ]
 
-    # サポートされている時間軸
-    SUPPORTED_TIMEFRAMES = ["1m", "15m", "30m", "1h", "4h", "1d"]
+    # サポートされている時間軸（要求された5つの時間足のみ）
+    SUPPORTED_TIMEFRAMES = ["15m", "30m", "1h", "4h", "1d"]
 
     # デフォルト設定
     DEFAULT_EXCHANGE = "bybit"

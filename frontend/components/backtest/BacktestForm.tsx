@@ -194,6 +194,8 @@ export default function BacktestForm({
               className="w-full p-3 bg-gray-800 border border-gray-700 text-white rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               required
             >
+              <option value="15m">15分</option>
+              <option value="30m">30分</option>
               <option value="1h">1時間</option>
               <option value="4h">4時間</option>
               <option value="1d">1日</option>

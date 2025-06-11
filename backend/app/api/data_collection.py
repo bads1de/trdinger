@@ -136,12 +136,12 @@ async def collect_bitcoin_full_data(
         収集開始レスポンス
     """
     try:
-        # 全時間軸でビットコインデータを収集
-        timeframes = ["1m", "5m", "15m", "30m", "1h", "4h", "1d"]
+        # 全時間軸でビットコインデータを収集（要求された5つの時間足のみ）
+        timeframes = ["15m", "30m", "1h", "4h", "1d"]
 
         for timeframe in timeframes:
             background_tasks.add_task(
-                _collect_historical_background, "BTC/USDT", timeframe, db
+                _collect_historical_background, "BTC/USDT:USDT", timeframe, db
             )
 
         return {
@@ -182,17 +182,13 @@ async def collect_bulk_historical_data(
 
         from datetime import datetime, timezone
 
-        # サポートされている取引ペアと時間軸（BTCのみに制限、ETHは除外）
+        # サポートされている取引ペアと時間軸（BTC/USDT:USDTのみ）
         symbols = [
-            "BTC/USDT",
             "BTC/USDT:USDT",
-            "BTCUSD",
         ]
 
-        # 時間軸設定（処理時間短縮のため現在は日足のみ）
-        # 全時間軸を有効にする場合は以下のコメントアウトを解除してください
-        # timeframes = ["1m", "5m", "15m", "30m", "1h", "4h", "1d"]
-        timeframes = ["1d"]  # 日足のみ（高速処理用）
+        # 時間軸設定（要求された全ての時間足を収集）
+        timeframes = ["15m", "30m", "1h", "4h", "1d"]
 
         total_combinations = len(symbols) * len(timeframes)
         started_at = datetime.now(timezone.utc).isoformat()
@@ -451,15 +447,13 @@ async def collect_all_data_bulk(
 
         from datetime import datetime, timezone
 
-        # サポートされている取引ペアと時間軸（BTCのみに制限、ETHは除外）
+        # サポートされている取引ペアと時間軸（BTC/USDT:USDTのみ）
         symbols = [
-            "BTC/USDT",
             "BTC/USDT:USDT",
-            "BTCUSD",
         ]
 
-        # 時間軸設定（処理時間短縮のため現在は日足のみ）
-        timeframes = ["1d"]  # 日足のみ（高速処理用）
+        # 時間軸設定（要求された全ての時間足を収集）
+        timeframes = ["15m", "30m", "1h", "4h", "1d"]
 
         total_combinations = len(symbols) * len(timeframes)
         started_at = datetime.now(timezone.utc).isoformat()

@@ -73,8 +73,8 @@ class HistoricalDataService:
             # 過去のデータを段階的に取得
             oldest_timestamp = min(candle[0] for candle in ohlcv_data)
 
-            # 最大10回まで過去データを取得
-            for i in range(10):
+            # 全期間のデータを取得（最大100回まで、約10万件のデータ）
+            for i in range(100):
                 await asyncio.sleep(self.request_delay)
 
                 # より古いデータを取得
@@ -87,8 +87,9 @@ class HistoricalDataService:
                         symbol, timeframe, since_timestamp, max_limit
                     )
 
-                    if not historical_data or len(historical_data) < 100:
-                        # データが少なくなったら終了
+                    if not historical_data or len(historical_data) < 10:
+                        # データがほとんどなくなったら終了（全期間取得完了）
+                        logger.info(f"全期間データ取得完了: バッチ{i+1}でデータ終了")
                         break
 
                     if repository:

@@ -39,15 +39,17 @@ class TestBybitAPIIntegration:
         for symbol in symbols:
             try:
                 result = await service.fetch_ohlcv_data(symbol, timeframe, limit)
-                
+
                 # データ形式の検証
                 assert isinstance(result, list)
                 assert len(result) <= limit
-                
+
                 if result:  # データが存在する場合
                     # OHLCV形式の検証
-                    assert len(result[0]) == 6  # [timestamp, open, high, low, close, volume]
-                    
+                    assert (
+                        len(result[0]) == 6
+                    )  # [timestamp, open, high, low, close, volume]
+
                     # データ型の検証
                     timestamp, open_price, high, low, close, volume = result[0]
                     assert isinstance(timestamp, (int, float))
@@ -56,7 +58,7 @@ class TestBybitAPIIntegration:
                     assert isinstance(low, (int, float))
                     assert isinstance(close, (int, float))
                     assert isinstance(volume, (int, float))
-                    
+
                     # 価格関係の検証
                     assert high >= max(open_price, close)
                     assert low <= min(open_price, close)
@@ -64,9 +66,9 @@ class TestBybitAPIIntegration:
                     assert open_price > 0
                     assert close > 0
                     assert volume >= 0
-                    
+
                 print(f"✓ {symbol}: {len(result)} records fetched")
-                
+
             except Exception as e:
                 pytest.fail(f"Failed to fetch data for {symbol}: {e}")
 
@@ -76,22 +78,22 @@ class TestBybitAPIIntegration:
         """実際のBybit APIを使用した異なる時間軸でのデータ取得テスト"""
         # Given: BTC/USDTと異なる時間軸
         symbol = "BTC/USDT"
-        timeframes = ["1m", "5m", "1h", "1d"]
+        timeframes = ["15m", "30m", "1h", "1d"]
         limit = 3
 
         # When & Then: 各時間軸でデータが取得できる
         for timeframe in timeframes:
             try:
                 result = await service.fetch_ohlcv_data(symbol, timeframe, limit)
-                
+
                 assert isinstance(result, list)
                 assert len(result) <= limit
-                
+
                 if result:
                     assert len(result[0]) == 6
-                    
+
                 print(f"✓ {symbol} {timeframe}: {len(result)} records fetched")
-                
+
             except Exception as e:
                 pytest.fail(f"Failed to fetch {timeframe} data for {symbol}: {e}")
 
@@ -111,7 +113,7 @@ class TestBybitAPIIntegration:
 
         # Then: データの一貫性を確認
         assert len(result1) == len(result2)
-        
+
         # 最新のローソク足以外は同じデータであることを確認
         if len(result1) > 1:
             for i in range(len(result1) - 1):
@@ -262,8 +264,7 @@ class TestBybitAPIPerformance:
         # When: 同時にリクエストを実行
         start_time = datetime.now()
         tasks = [
-            service.fetch_ohlcv_data(symbol, timeframe, limit)
-            for symbol in symbols
+            service.fetch_ohlcv_data(symbol, timeframe, limit) for symbol in symbols
         ]
         results = await asyncio.gather(*tasks, return_exceptions=True)
         end_time = datetime.now()
@@ -271,7 +272,7 @@ class TestBybitAPIPerformance:
         # Then: 妥当な時間内で完了し、エラーが少ない
         total_time = (end_time - start_time).total_seconds()
         assert total_time < 15.0, f"Concurrent requests too slow: {total_time}s"
-        
+
         # 成功したリクエストの数を確認
         successful_results = [r for r in results if not isinstance(r, Exception)]
         assert len(successful_results) >= len(symbols) // 2, "Too many failed requests"
