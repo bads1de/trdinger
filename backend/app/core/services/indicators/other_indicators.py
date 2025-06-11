@@ -5,8 +5,6 @@ PSAR（Parabolic SAR）の実装を提供します。
 """
 
 import pandas as pd
-import numpy as np
-from typing import List, Dict, Any, Optional, Union
 
 from .abstract_indicator import BaseIndicator
 

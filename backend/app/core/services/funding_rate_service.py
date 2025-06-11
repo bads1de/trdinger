@@ -5,13 +5,9 @@ CCXTライブラリを使用してBybitからファンディングレートデ�
 データベースに保存する機能を提供します。
 """
 
-import asyncio
-import ccxt
-from datetime import datetime, timezone, timedelta
 from typing import List, Dict, Any, Optional, Callable
 import logging
 
-from database.connection import SessionLocal
 from database.repositories.funding_rate_repository import FundingRateRepository
 from app.core.utils.data_converter import FundingRateDataConverter
 from app.core.services.base_bybit_service import BaseBybitService

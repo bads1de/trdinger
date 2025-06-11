@@ -5,14 +5,13 @@ StrategyGeneから動的にbacktesting.py互換のStrategy継承クラスを生�
 既存のTALibAdapterとの統合を重視した実装です。
 """
 
-from typing import Type, Dict, Any, List, Tuple
+from typing import Type, List, Tuple
 import logging
 import pandas as pd
 import numpy as np
 from backtesting import Strategy
 
 from ..models.strategy_gene import StrategyGene, IndicatorGene, Condition
-from app.core.services.indicators.talib_adapter import TALibAdapter
 from app.core.services.indicators.adapters.trend_adapter import TrendAdapter
 from app.core.services.indicators.adapters.momentum_adapter import MomentumAdapter
 from app.core.services.indicators.adapters.volatility_adapter import VolatilityAdapter

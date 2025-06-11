@@ -5,9 +5,7 @@
 """
 
 import pandas as pd
-import numpy as np
 from abc import ABC, abstractmethod
-from datetime import datetime, timezone
 from typing import List, Dict, Any, Optional, Union
 import logging
 
@@ -44,7 +42,6 @@ class BaseIndicator(ABC):
         Returns:
             計算結果（Series または DataFrame）
         """
-        pass
 
     def validate_data(self, df: pd.DataFrame, min_periods: int) -> None:
         """

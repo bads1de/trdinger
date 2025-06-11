@@ -4,12 +4,9 @@
 分割されたテクニカル指標クラスを統合し、既存APIとの互換性を維持します。
 """
 
-import asyncio
 import logging
 from typing import List, Dict, Any, Optional
-from datetime import datetime, timezone
 
-from database.connection import SessionLocal
 
 
 from .trend_indicators import get_trend_indicator, TREND_INDICATORS_INFO

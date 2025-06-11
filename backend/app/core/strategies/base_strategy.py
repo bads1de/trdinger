@@ -31,7 +31,6 @@ class BaseStrategy(Strategy, ABC):
         戦略で使用するテクニカル指標を初期化します。
         各戦略で実装が必要です。
         """
-        pass
 
     @abstractmethod
     def next(self):
@@ -41,7 +40,6 @@ class BaseStrategy(Strategy, ABC):
         各バーで実行される売買判定ロジックです。
         各戦略で実装が必要です。
         """
-        pass
 
     def get_strategy_info(self) -> Dict[str, Any]:
         """

@@ -4,7 +4,7 @@
 backtesting.pyの組み込みSL/TP機能を活用したMixinクラス
 """
 
-from typing import Optional, Dict, Any, Union
+from typing import Optional, Dict, Any
 import logging
 from .calculators import RiskCalculator, calculate_sl_tp_prices
 from .validators import validate_risk_parameters

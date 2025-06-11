@@ -8,7 +8,6 @@ MACDラインとシグナルラインのクロスオーバーを利用したト�
 from backtesting import Strategy
 from backtesting.lib import crossover
 from .indicators import MACD, SMA
-from .base_strategy import BaseStrategy
 
 
 class MACDStrategy(Strategy):

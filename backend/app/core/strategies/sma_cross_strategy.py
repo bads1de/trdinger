@@ -8,7 +8,6 @@ Simple Moving Average Crossover Strategy
 from backtesting import Strategy
 from backtesting.lib import crossover
 from .indicators import SMA
-from .base_strategy import BaseStrategy
 
 
 class SMACrossStrategy(Strategy):

@@ -5,12 +5,11 @@ OBV、Chaikin A/D Line、Chaikin A/D Oscillator の実装を提供します。
 """
 
 import pandas as pd
-import numpy as np
-from typing import List, Dict, Any, Optional, Union
+from typing import List, Dict, Any, Optional
 import logging
 
 from .abstract_indicator import BaseIndicator
-from .adapters import VolumeAdapter, TALibCalculationError
+from .adapters import VolumeAdapter
 
 logger = logging.getLogger(__name__)
 

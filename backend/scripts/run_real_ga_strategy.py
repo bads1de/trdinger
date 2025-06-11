@@ -21,7 +21,6 @@ from database.repositories.open_interest_repository import OpenInterestRepositor
 from database.repositories.funding_rate_repository import FundingRateRepository
 from app.core.services.backtest_data_service import BacktestDataService
 from app.core.services.auto_strategy.generators.random_gene_generator import RandomGeneGenerator
-from app.core.services.auto_strategy.models.strategy_gene import StrategyGene
 
 # ログ設定
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')

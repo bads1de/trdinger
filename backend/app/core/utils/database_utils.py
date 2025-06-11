@@ -2,10 +2,9 @@
 データベース操作の共通ユーティリティ
 """
 
-from typing import List, Any, Type
+from typing import List, Type
 from sqlalchemy.orm import Session
 from sqlalchemy.dialects.postgresql import insert
-from sqlalchemy import Table
 import logging
 
 logger = logging.getLogger(__name__)

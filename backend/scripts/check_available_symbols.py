@@ -9,7 +9,7 @@ Bybitで利用可能なシンボルを確認するスクリプト
 import asyncio
 import ccxt
 import logging
-from typing import Dict, List, Set
+from typing import Dict, List
 from app.config.market_config import MarketDataConfig
 
 # ログ設定

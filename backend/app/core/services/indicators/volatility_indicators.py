@@ -5,12 +5,11 @@
 """
 
 import pandas as pd
-import numpy as np
-from typing import List, Dict, Any, Optional, Union
+from typing import List, Dict, Any, Optional
 import logging
 
 from .abstract_indicator import BaseIndicator
-from .adapters import VolatilityAdapter, TALibCalculationError
+from .adapters import VolatilityAdapter
 
 logger = logging.getLogger(__name__)
 
