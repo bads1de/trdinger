@@ -85,7 +85,7 @@ describe("/api/data/symbols", () => {
       expect(response.status).toBe(200);
 
       const symbols = data.data.map((pair: any) => pair.symbol);
-      const uniqueSymbols = [...new Set(symbols)];
+      const uniqueSymbols = Array.from(new Set(symbols));
 
       expect(symbols.length).toBe(uniqueSymbols.length);
     });

@@ -2,22 +2,18 @@ import React from "react";
 import OHLCVDataTable from "@/components/table/OHLCVDataTable";
 import FundingRateDataTable from "@/components/table/FundingRateDataTable";
 import OpenInterestDataTable from "@/components/table/OpenInterestDataTable";
-import TechnicalIndicatorDataTable from "@/components/table/TechnicalIndicatorDataTable";
 import {
   PriceData,
   FundingRateData,
   OpenInterestData,
-  TechnicalIndicatorData,
   TimeFrame, // selectedTimeFrame を OHLCVDataTable に渡すために必要
 } from "@/types/strategy";
 
 interface DataTableContainerProps {
   selectedSymbol: string;
   selectedTimeFrame: TimeFrame; // OHLCVDataTable に渡すために追加
-  activeTab: "ohlcv" | "funding" | "openinterest" | "technical";
-  setActiveTab: (
-    tab: "ohlcv" | "funding" | "openinterest" | "technical"
-  ) => void;
+  activeTab: "ohlcv" | "funding" | "openinterest";
+  setActiveTab: (tab: "ohlcv" | "funding" | "openinterest") => void;
   ohlcvData: PriceData[];
   loading: boolean;
   error: string;
@@ -27,9 +23,6 @@ interface DataTableContainerProps {
   openInterestData: OpenInterestData[];
   openInterestLoading: boolean;
   openInterestError: string;
-  technicalIndicatorData: TechnicalIndicatorData[];
-  technicalIndicatorLoading: boolean;
-  technicalIndicatorError: string;
 }
 
 const DataTableContainer: React.FC<DataTableContainerProps> = ({
@@ -46,9 +39,6 @@ const DataTableContainer: React.FC<DataTableContainerProps> = ({
   openInterestData,
   openInterestLoading,
   openInterestError,
-  technicalIndicatorData,
-  technicalIndicatorLoading,
-  technicalIndicatorError,
 }) => {
   return (
     <div className="enterprise-card animate-slide-up">
@@ -89,16 +79,6 @@ const DataTableContainer: React.FC<DataTableContainerProps> = ({
                 }`}
               >
                 OI
-              </button>
-              <button
-                onClick={() => setActiveTab("technical")}
-                className={`px-4 py-2 text-sm font-medium rounded-md transition-colors duration-200 ${
-                  activeTab === "technical"
-                    ? "bg-primary-600 text-white"
-                    : "text-gray-400 hover:text-gray-100"
-                }`}
-              >
-                TI
               </button>
             </div>
           </div>
@@ -144,25 +124,6 @@ const DataTableContainer: React.FC<DataTableContainerProps> = ({
                   </span>
                 </>
               )}
-            {activeTab === "technical" &&
-              technicalIndicatorData.length > 0 &&
-              !technicalIndicatorLoading && (
-                <>
-                  <span className="badge-primary">
-                    {technicalIndicatorData.length}件
-                  </span>
-                  <span className="badge-info">
-                    指標数:{" "}
-                    {
-                      new Set(
-                        technicalIndicatorData.map(
-                          (item) => `${item.indicator_type}(${item.period})`
-                        )
-                      ).size
-                    }
-                  </span>
-                </>
-              )}
           </div>
         </div>
 
@@ -189,13 +150,6 @@ const DataTableContainer: React.FC<DataTableContainerProps> = ({
               data={openInterestData}
               loading={openInterestLoading}
               error={openInterestError}
-            />
-          )}
-          {activeTab === "technical" && (
-            <TechnicalIndicatorDataTable
-              data={technicalIndicatorData}
-              loading={technicalIndicatorLoading}
-              error={technicalIndicatorError}
             />
           )}
         </div>

@@ -430,10 +430,9 @@ async def collect_all_data_bulk(
     background_tasks: BackgroundTasks, db: Session = Depends(get_db)
 ) -> Dict:
     """
-    全データ（OHLCV・Funding Rate・Open Interest・Technical Indicators）を一括収集
+    全データ（OHLCV・Funding Rate・Open Interest）を一括収集
 
     既存データをチェックし、データが存在しない組み合わせのみ収集を実行します。
-    OHLCVデータ収集後にテクニカル指標も自動計算します。
 
     Args:
         background_tasks: バックグラウンドタスク
@@ -514,7 +513,9 @@ async def collect_all_data_bulk(
                                 "timeframe": timeframe,
                             }
                         )
-                        logger.info(f"全データタスク追加: {normalized_symbol} {timeframe}")
+                        logger.info(
+                            f"全データタスク追加: {normalized_symbol} {timeframe}"
+                        )
 
                 except Exception as task_error:
                     logger.warning(
@@ -590,30 +591,38 @@ async def _collect_all_data_background(symbol: str, timeframe: str, db: Session)
         )
 
         if not ohlcv_result["success"]:
-            logger.error(f"OHLCV収集失敗: {symbol} {timeframe} - {ohlcv_result.get('message')}")
+            logger.error(
+                f"OHLCV収集失敗: {symbol} {timeframe} - {ohlcv_result.get('message')}"
+            )
             return
 
-        logger.info(f"OHLCV収集完了: {symbol} {timeframe} - {ohlcv_result['saved_count']}件保存")
+        logger.info(
+            f"OHLCV収集完了: {symbol} {timeframe} - {ohlcv_result['saved_count']}件保存"
+        )
 
         # 2. Funding Rate収集
         try:
             logger.info(f"Funding Rate収集開始: {symbol} {timeframe}")
             from app.core.services.funding_rate_service import BybitFundingRateService
-            from database.repositories.funding_rate_repository import FundingRateRepository
+            from database.repositories.funding_rate_repository import (
+                FundingRateRepository,
+            )
 
             funding_service = BybitFundingRateService()
             funding_repository = FundingRateRepository(db)
 
             funding_result = await funding_service.fetch_and_save_funding_rate_data(
-                symbol=symbol,
-                repository=funding_repository,
-                fetch_all=True
+                symbol=symbol, repository=funding_repository, fetch_all=True
             )
 
             if funding_result["success"]:
-                logger.info(f"Funding Rate収集完了: {symbol} - {funding_result['saved_count']}件保存")
+                logger.info(
+                    f"Funding Rate収集完了: {symbol} - {funding_result['saved_count']}件保存"
+                )
             else:
-                logger.warning(f"Funding Rate収集失敗: {symbol} - {funding_result.get('message')}")
+                logger.warning(
+                    f"Funding Rate収集失敗: {symbol} - {funding_result.get('message')}"
+                )
 
         except Exception as funding_error:
             logger.warning(f"Funding Rate収集エラー: {symbol} - {funding_error}")
@@ -622,7 +631,9 @@ async def _collect_all_data_background(symbol: str, timeframe: str, db: Session)
         try:
             logger.info(f"Open Interest収集開始: {symbol} {timeframe}")
             from app.core.services.open_interest_service import BybitOpenInterestService
-            from database.repositories.open_interest_repository import OpenInterestRepository
+            from database.repositories.open_interest_repository import (
+                OpenInterestRepository,
+            )
 
             oi_service = BybitOpenInterestService()
             oi_repository = OpenInterestRepository(db)
@@ -631,44 +642,22 @@ async def _collect_all_data_background(symbol: str, timeframe: str, db: Session)
                 symbol=symbol,
                 repository=oi_repository,
                 fetch_all=True,
-                interval=timeframe
+                interval=timeframe,
             )
 
             if oi_result["success"]:
-                logger.info(f"Open Interest収集完了: {symbol} {timeframe} - {oi_result['saved_count']}件保存")
+                logger.info(
+                    f"Open Interest収集完了: {symbol} {timeframe} - {oi_result['saved_count']}件保存"
+                )
             else:
-                logger.warning(f"Open Interest収集失敗: {symbol} {timeframe} - {oi_result.get('message')}")
+                logger.warning(
+                    f"Open Interest収集失敗: {symbol} {timeframe} - {oi_result.get('message')}"
+                )
 
         except Exception as oi_error:
-            logger.warning(f"Open Interest収集エラー: {symbol} {timeframe} - {oi_error}")
-
-        # 4. テクニカル指標計算
-        try:
-            logger.info(f"テクニカル指標計算開始: {symbol} {timeframe}")
-            from app.core.services.technical_indicator_service import TechnicalIndicatorService
-            from database.repositories.technical_indicator_repository import TechnicalIndicatorRepository
-
-            ti_service = TechnicalIndicatorService()
-            ti_repository = TechnicalIndicatorRepository(db)
-
-            # デフォルト指標セットを取得
-            indicators = ti_service.get_default_indicators()
-
-            ti_result = await ti_service.calculate_and_save_multiple_indicators(
-                symbol=symbol,
-                timeframe=timeframe,
-                indicators=indicators,
-                repository=ti_repository,
-                limit=None  # 全データを使用
+            logger.warning(
+                f"Open Interest収集エラー: {symbol} {timeframe} - {oi_error}"
             )
-
-            if ti_result["successful_indicators"] > 0:
-                logger.info(f"テクニカル指標計算完了: {symbol} {timeframe} - {ti_result['total_saved']}件保存")
-            else:
-                logger.warning(f"テクニカル指標計算失敗: {symbol} {timeframe}")
-
-        except Exception as ti_error:
-            logger.warning(f"テクニカル指標計算エラー: {symbol} {timeframe} - {ti_error}")
 
         logger.info(f"全データ収集完了: {symbol} {timeframe}")
 

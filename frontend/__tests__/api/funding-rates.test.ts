@@ -8,8 +8,6 @@
  * @version 1.0.0
  */
 
-
-
 import { GET } from "@/app/api/data/funding-rates/route";
 
 // データベース関数をモック
@@ -17,7 +15,7 @@ jest.mock("@/lib/database/funding-rates", () => ({
   fetchDatabaseFundingRateData: jest.fn(),
 }));
 
-import { fetchDatabaseFundingRateData } from "@/lib/database/funding-rates";
+// import { fetchDatabaseFundingRateData } from "@/lib/database/funding-rates"; // 削除済み
 
 // モックのNextRequestを作成するヘルパー関数
 function createMockRequest(searchParams: Record<string, string>) {
@@ -39,17 +37,17 @@ describe("/api/data/funding-rates", () => {
     // モック関数をリセット
     jest.clearAllMocks();
 
-    // デフォルトのモックデータを設定
-    (fetchDatabaseFundingRateData as jest.Mock).mockResolvedValue([
-      {
-        symbol: "BTC/USDT",
-        funding_rate: 0.0001,
-        funding_timestamp: "2024-01-01T00:00:00Z",
-        mark_price: 50000,
-        index_price: 50001,
-        next_funding_timestamp: "2024-01-01T08:00:00Z",
-      },
-    ]);
+    // デフォルトのモックデータを設定（削除済み）
+    // (fetchDatabaseFundingRateData as jest.Mock).mockResolvedValue([
+    //   {
+    //     symbol: "BTC/USDT",
+    //     funding_rate: 0.0001,
+    //     funding_timestamp: "2024-01-01T00:00:00Z",
+    //     mark_price: 50000,
+    //     index_price: 50001,
+    //     next_funding_timestamp: "2024-01-01T08:00:00Z",
+    //   },
+    // ]);
   });
 
   describe("正常系テスト", () => {

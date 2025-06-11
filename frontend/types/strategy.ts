@@ -72,26 +72,6 @@ export interface BulkOHLCVCollectionResult {
 }
 
 /**
- * テクニカル指標の定義
- *
- * 各種テクニカル指標（SMA、EMA、RSI等）の設定を表現します。
- *
- * @example
- * ```typescript
- * const smaIndicator: TechnicalIndicator = {
- *   name: 'SMA',
- *   params: { period: 20 }
- * }
- * ```
- */
-export interface TechnicalIndicator {
-  /** 指標名（SMA、EMA、RSI、MACD等） */
-  name: string;
-  /** 指標のパラメータ（期間、標準偏差等） */
-  params: Record<string, number | string>;
-}
-
-/**
  * 売買条件の定義
  *
  * エントリーやエグジットの条件を文字列で表現します。
@@ -126,8 +106,8 @@ export interface TradingStrategy {
   target_pair: string;
   /** 時間足（例: "1h", "1d"） */
   timeframe: string;
-  /** 使用するテクニカル指標のリスト */
-  indicators: TechnicalIndicator[];
+  /** 使用するテクニカル指標のリスト（削除済み） */
+  // indicators: TechnicalIndicator[];
   /** エントリー条件のリスト（AND条件） */
   entry_rules: TradingCondition[];
   /** エグジット条件のリスト（OR条件） */
@@ -585,8 +565,8 @@ export interface AllDataCollectionResult {
   funding_rate_result?: BulkFundingRateCollectionResult;
   /** OIデータ収集結果 */
   open_interest_result?: BulkOpenInterestCollectionResult;
-  /** テクニカル指標計算結果 */
-  technical_indicator_result?: BulkTechnicalIndicatorCalculationResult;
+  /** テクニカル指標計算結果（削除済み） */
+  // technical_indicator_result?: BulkTechnicalIndicatorCalculationResult;
   /** 開始時刻 */
   started_at?: string;
   /** 完了時刻 */
@@ -601,211 +581,4 @@ export interface AllDataCollectionResult {
   failed_tasks?: number;
   /** 総組み合わせ数 */
   total_combinations?: number;
-}
-
-/**
- * テクニカル指標データ
- *
- * 計算されたテクニカル指標の情報を表現します。
- */
-export interface TechnicalIndicatorData {
-  /** ID */
-  id?: number;
-  /** 通貨ペアシンボル（例: "BTC/USDT"） */
-  symbol: string;
-  /** 時間枠（例: "1h", "4h", "1d"） */
-  timeframe: string;
-  /** 指標タイプ（例: "SMA", "EMA", "RSI"） */
-  indicator_type: string;
-  /** 期間（例: 14, 20, 50） */
-  period: number;
-  /** メイン値 */
-  value: number;
-  /** シグナル線（MACDのシグナルライン等） */
-  signal_value?: number | null;
-  /** ヒストグラム（MACDのヒストグラム等） */
-  histogram_value?: number | null;
-  /** ボリンジャーバンド上限 */
-  upper_band?: number | null;
-  /** ボリンジャーバンド下限 */
-  lower_band?: number | null;
-  /** データ時刻（ISO形式） */
-  timestamp: string;
-  /** 作成時刻（ISO形式） */
-  created_at?: string | null;
-  /** 更新時刻（ISO形式） */
-  updated_at?: string | null;
-}
-
-/**
- * テクニカル指標APIレスポンス
- *
- * APIから返されるテクニカル指標データの形式を定義します。
- */
-export interface TechnicalIndicatorResponse {
-  /** 成功フラグ */
-  success: boolean;
-  /** データ */
-  data: {
-    /** 通貨ペア */
-    symbol: string;
-    /** 時間枠 */
-    timeframe: string;
-    /** 指標タイプ */
-    indicator_type?: string | null;
-    /** 期間 */
-    period?: number | null;
-    /** データ件数 */
-    count: number;
-    /** テクニカル指標データの配列 */
-    technical_indicators: TechnicalIndicatorData[];
-  };
-  /** メッセージ */
-  message?: string;
-}
-
-/**
- * テクニカル指標計算結果
- *
- * テクニカル指標計算の結果を表現します。
- */
-export interface TechnicalIndicatorCalculationResult {
-  /** 通貨ペア */
-  symbol: string;
-  /** 時間枠 */
-  timeframe: string;
-  /** 指標タイプ */
-  indicator_type: string;
-  /** 期間 */
-  period: number;
-  /** 計算件数 */
-  calculated_count: number;
-  /** 保存件数 */
-  saved_count: number;
-  /** 成功フラグ */
-  success: boolean;
-}
-
-/**
- * テクニカル指標計算APIレスポンス
- *
- * テクニカル指標計算APIのレスポンス形式を定義します。
- */
-export interface TechnicalIndicatorCalculationResponse {
-  /** 成功フラグ */
-  success: boolean;
-  /** データ */
-  data: TechnicalIndicatorCalculationResult;
-  /** メッセージ */
-  message?: string;
-}
-
-/**
- * 一括テクニカル指標計算結果
- *
- * 複数のテクニカル指標を一括計算した結果を表現します。
- */
-export interface BulkTechnicalIndicatorCalculationResult {
-  /** 通貨ペア */
-  symbol: string;
-  /** 時間枠 */
-  timeframe: string;
-  /** 総指標数 */
-  total_indicators: number;
-  /** 成功した指標数 */
-  successful_indicators: number;
-  /** 失敗した指標数 */
-  failed_indicators: number;
-  /** 総計算件数 */
-  total_calculated: number;
-  /** 総保存件数 */
-  total_saved: number;
-  /** 個別結果 */
-  results: TechnicalIndicatorCalculationResult[];
-  /** 失敗した指標の詳細 */
-  failures: Array<{
-    indicator: {
-      type: string;
-      period: number;
-    };
-    error: string;
-  }>;
-  /** 成功フラグ */
-  success: boolean;
-}
-
-/**
- * 現在のテクニカル指標値レスポンス
- *
- * 現在のテクニカル指標値APIのレスポンス形式を定義します。
- */
-export interface CurrentTechnicalIndicatorResponse {
-  /** 成功フラグ */
-  success: boolean;
-  /** データ */
-  data: {
-    /** 通貨ペア */
-    symbol: string;
-    /** 時間枠 */
-    timeframe: string;
-    /** データ件数 */
-    count: number;
-    /** 現在のテクニカル指標値の配列 */
-    current_values: TechnicalIndicatorData[];
-  };
-  /** メッセージ */
-  message?: string;
-}
-
-/**
- * サポートされているテクニカル指標情報
- */
-export interface SupportedIndicatorInfo {
-  /** サポートされている期間の配列 */
-  periods: number[];
-  /** 指標の説明 */
-  description: string;
-}
-
-/**
- * サポートされているテクニカル指標レスポンス
- */
-export interface SupportedTechnicalIndicatorsResponse {
-  /** 成功フラグ */
-  success: boolean;
-  /** データ */
-  data: {
-    /** サポートされている指標の情報 */
-    supported_indicators: Record<string, SupportedIndicatorInfo>;
-    /** デフォルト指標設定 */
-    default_indicators: Array<{
-      type: string;
-      period: number;
-    }>;
-  };
-  /** メッセージ */
-  message?: string;
-}
-
-/**
- * 利用可能なテクニカル指標レスポンス
- */
-export interface AvailableTechnicalIndicatorsResponse {
-  /** 成功フラグ */
-  success: boolean;
-  /** データ */
-  data: {
-    /** 通貨ペア */
-    symbol: string;
-    /** データ件数 */
-    count: number;
-    /** 利用可能な指標の配列 */
-    available_indicators: Array<{
-      indicator_type: string;
-      period: number;
-      timeframe: string;
-    }>;
-  };
-  /** メッセージ */
-  message?: string;
 }

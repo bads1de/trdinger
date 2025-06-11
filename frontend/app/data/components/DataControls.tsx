@@ -4,7 +4,7 @@ import TimeFrameSelector from "@/components/common/TimeFrameSelector";
 import AllDataCollectionButton from "@/components/button/AllDataCollectionButton";
 import OHLCVCollectionButton from "@/components/button/OHLCVCollectionButton";
 import FundingRateCollectionButton from "@/components/button/FundingRateCollectionButton";
-import TechnicalIndicatorCalculationButton from "@/components/button/TechnicalIndicatorCalculationButton";
+
 import {
   TradingPair,
   TimeFrame,
@@ -14,7 +14,6 @@ import {
   FundingRateCollectionResult,
   OpenInterestCollectionResult,
   BulkOpenInterestCollectionResult,
-  BulkTechnicalIndicatorCalculationResult,
 } from "@/types/strategy";
 import OpenInterestCollectionButton from "@/components/button/OpenInterestCollectionButton";
 
@@ -39,15 +38,10 @@ interface DataControlsProps {
     result: BulkOpenInterestCollectionResult | OpenInterestCollectionResult
   ) => void;
   handleOpenInterestCollectionError: (errorMessage: string) => void;
-  handleTechnicalIndicatorCalculationStart: (
-    result: BulkTechnicalIndicatorCalculationResult
-  ) => void;
-  handleTechnicalIndicatorCalculationError: (errorMessage: string) => void;
   bulkCollectionMessage: string;
   fundingRateCollectionMessage: string;
   openInterestCollectionMessage: string;
   allDataCollectionMessage: string;
-  technicalIndicatorCalculationMessage: string;
   dataStatus: any; // TODO: より具体的な型を指定する
 }
 
@@ -68,13 +62,10 @@ const DataControls: React.FC<DataControlsProps> = ({
   handleFundingRateCollectionError,
   handleOpenInterestCollectionStart,
   handleOpenInterestCollectionError,
-  handleTechnicalIndicatorCalculationStart,
-  handleTechnicalIndicatorCalculationError,
   bulkCollectionMessage,
   fundingRateCollectionMessage,
   openInterestCollectionMessage,
   allDataCollectionMessage,
-  technicalIndicatorCalculationMessage,
   dataStatus,
 }) => {
   return (
@@ -198,17 +189,6 @@ const DataControls: React.FC<DataControlsProps> = ({
                 disabled={loading || updating}
                 className="h-10 bg-green-600 hover:bg-green-700 focus:ring-green-500"
               />
-
-              {/* TI一括計算ボタン */}
-              <TechnicalIndicatorCalculationButton
-                mode="bulk"
-                symbol={selectedSymbol}
-                timeframe={selectedTimeFrame}
-                onCalculationStart={handleTechnicalIndicatorCalculationStart}
-                onCalculationError={handleTechnicalIndicatorCalculationError}
-                disabled={loading || updating}
-                className="h-10 bg-green-600 hover:bg-green-700 focus:ring-green-500"
-              />
             </div>
           </div>
         </div>
@@ -217,8 +197,7 @@ const DataControls: React.FC<DataControlsProps> = ({
         {(bulkCollectionMessage ||
           fundingRateCollectionMessage ||
           openInterestCollectionMessage ||
-          allDataCollectionMessage ||
-          technicalIndicatorCalculationMessage) && (
+          allDataCollectionMessage) && (
           <div className="mt-6 pt-4 border-t border-secondary-200 dark:border-secondary-700">
             <div className="space-y-2">
               {allDataCollectionMessage && (
@@ -239,11 +218,6 @@ const DataControls: React.FC<DataControlsProps> = ({
               {openInterestCollectionMessage && (
                 <div className="text-sm text-secondary-600 dark:text-secondary-400">
                   {openInterestCollectionMessage}
-                </div>
-              )}
-              {technicalIndicatorCalculationMessage && (
-                <div className="text-sm text-secondary-600 dark:text-secondary-400">
-                  {technicalIndicatorCalculationMessage}
                 </div>
               )}
             </div>

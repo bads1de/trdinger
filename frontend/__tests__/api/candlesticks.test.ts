@@ -8,8 +8,6 @@
  * @version 2.0.0
  */
 
-
-
 import { GET } from "@/app/api/data/candlesticks/route";
 
 // データベース関数をモック
@@ -17,7 +15,7 @@ jest.mock("@/lib/database/ohlcv", () => ({
   fetchDatabaseOHLCVData: jest.fn(),
 }));
 
-import { fetchDatabaseOHLCVData } from "@/lib/database/ohlcv";
+// import { fetchDatabaseOHLCVData } from "@/lib/database/ohlcv"; // 削除済み
 
 // モックのNextRequestを作成するヘルパー関数
 function createMockRequest(searchParams: Record<string, string>) {
@@ -39,17 +37,17 @@ describe("/api/data/candlesticks", () => {
     // モック関数をリセット
     jest.clearAllMocks();
 
-    // デフォルトのモックデータを設定
-    (fetchDatabaseOHLCVData as jest.Mock).mockResolvedValue([
-      {
-        timestamp: "2024-01-01T00:00:00Z",
-        open: 50000,
-        high: 51000,
-        low: 49000,
-        close: 50500,
-        volume: 1000000,
-      },
-    ]);
+    // デフォルトのモックデータを設定（削除済み）
+    // (fetchDatabaseOHLCVData as jest.Mock).mockResolvedValue([
+    //   {
+    //     timestamp: "2024-01-01T00:00:00Z",
+    //     open: 50000,
+    //     high: 51000,
+    //     low: 49000,
+    //     close: 50500,
+    //     volume: 1000000,
+    //   },
+    // ]);
   });
 
   describe("正常系テスト", () => {

@@ -20,19 +20,16 @@ import {
   PriceData,
   FundingRateData,
   OpenInterestData,
-  TechnicalIndicatorData,
   TimeFrame,
   TradingPair,
   OHLCVResponse,
   FundingRateResponse,
   OpenInterestResponse,
-  TechnicalIndicatorResponse,
   BulkOHLCVCollectionResult,
   BulkFundingRateCollectionResult,
   FundingRateCollectionResult,
   OpenInterestCollectionResult,
   BulkOpenInterestCollectionResult,
-  BulkTechnicalIndicatorCalculationResult,
   AllDataCollectionResult,
 } from "@/types/strategy";
 import { BACKEND_API_URL } from "@/constants";
@@ -50,23 +47,16 @@ const DataPage: React.FC = () => {
   const [openInterestData, setOpenInterestData] = useState<OpenInterestData[]>(
     []
   );
-  const [technicalIndicatorData, setTechnicalIndicatorData] = useState<
-    TechnicalIndicatorData[]
-  >([]);
   const [activeTab, setActiveTab] = useState<
-    "ohlcv" | "funding" | "openinterest" | "technical"
+    "ohlcv" | "funding" | "openinterest"
   >("ohlcv");
   const [loading, setLoading] = useState<boolean>(false);
   const [fundingLoading, setFundingLoading] = useState<boolean>(false);
   const [openInterestLoading, setOpenInterestLoading] =
     useState<boolean>(false);
-  const [technicalIndicatorLoading, setTechnicalIndicatorLoading] =
-    useState<boolean>(false);
   const [error, setError] = useState<string>("");
   const [fundingError, setFundingError] = useState<string>("");
   const [openInterestError, setOpenInterestError] = useState<string>("");
-  const [technicalIndicatorError, setTechnicalIndicatorError] =
-    useState<string>("");
   const [symbolsLoading, setSymbolsLoading] = useState<boolean>(true);
   const [updating, setUpdating] = useState<boolean>(false);
   const [dataStatus, setDataStatus] = useState<any>(null);
@@ -78,10 +68,6 @@ const DataPage: React.FC = () => {
     useState<string>("");
   const [allDataCollectionMessage, setAllDataCollectionMessage] =
     useState<string>("");
-  const [
-    technicalIndicatorCalculationMessage,
-    setTechnicalIndicatorCalculationMessage,
-  ] = useState<string>("");
 
   /**
    * 通貨ペア一覧を取得
@@ -194,40 +180,6 @@ const DataPage: React.FC = () => {
   };
 
   /**
-   * テクニカル指標データを取得
-   */
-  const fetchTechnicalIndicatorData = async () => {
-    try {
-      setTechnicalIndicatorLoading(true);
-      setTechnicalIndicatorError("");
-
-      const params = new URLSearchParams({
-        symbol: selectedSymbol,
-        timeframe: selectedTimeFrame,
-        limit: "100",
-      });
-
-      const response = await fetch(`/api/data/technical-indicators?${params}`);
-      const result: TechnicalIndicatorResponse = await response.json();
-
-      if (result.success) {
-        setTechnicalIndicatorData(result.data.technical_indicators);
-      } else {
-        setTechnicalIndicatorError(
-          result.message || "テクニカル指標データの取得に失敗しました"
-        );
-      }
-    } catch (err) {
-      setTechnicalIndicatorError(
-        "テクニカル指標データの取得中にエラーが発生しました"
-      );
-      console.error("テクニカル指標データ取得エラー:", err);
-    } finally {
-      setTechnicalIndicatorLoading(false);
-    }
-  };
-
-  /**
    * 通貨ペア変更ハンドラ
    */
   const handleSymbolChange = (symbol: string) => {
@@ -251,8 +203,6 @@ const DataPage: React.FC = () => {
       fetchFundingRateData();
     } else if (activeTab === "openinterest") {
       fetchOpenInterestData();
-    } else if (activeTab === "technical") {
-      fetchTechnicalIndicatorData();
     }
   };
 
@@ -415,7 +365,6 @@ const DataPage: React.FC = () => {
       fetchOHLCVData();
       fetchFundingRateData();
       fetchOpenInterestData();
-      fetchTechnicalIndicatorData();
     }, 3000);
 
     // 15秒後にメッセージをクリア
@@ -431,34 +380,6 @@ const DataPage: React.FC = () => {
     setTimeout(() => setAllDataCollectionMessage(""), 15000);
   };
 
-  /**
-   * TI一括計算開始時のコールバック
-   */
-  const handleTechnicalIndicatorCalculationStart = (
-    result: BulkTechnicalIndicatorCalculationResult
-  ) => {
-    setTechnicalIndicatorCalculationMessage(
-      `🚀 ${result.symbol} ${result.timeframe}のTI一括計算完了 (${result.total_calculated}件計算完了)`
-    );
-    // データ状況を更新
-    fetchDataStatus();
-    // 計算完了後にテクニカル指標データを再取得
-    setTimeout(() => {
-      fetchTechnicalIndicatorData();
-    }, 2000);
-    // 10秒後にメッセージをクリア
-    setTimeout(() => setTechnicalIndicatorCalculationMessage(""), 10000);
-  };
-
-  /**
-   * TI一括計算エラー時のコールバック
-   */
-  const handleTechnicalIndicatorCalculationError = (errorMessage: string) => {
-    setTechnicalIndicatorCalculationMessage(`❌ ${errorMessage}`);
-    // 10秒後にメッセージをクリア
-    setTimeout(() => setTechnicalIndicatorCalculationMessage(""), 10000);
-  };
-
   // 初期データ取得
   useEffect(() => {
     fetchSymbols();
@@ -470,7 +391,6 @@ const DataPage: React.FC = () => {
       fetchOHLCVData();
       fetchFundingRateData();
       fetchOpenInterestData();
-      fetchTechnicalIndicatorData();
       fetchDataStatus();
     }
   }, [selectedSymbol, selectedTimeFrame]);
@@ -534,19 +454,10 @@ const DataPage: React.FC = () => {
           handleFundingRateCollectionError={handleFundingRateCollectionError}
           handleOpenInterestCollectionStart={handleOpenInterestCollectionStart}
           handleOpenInterestCollectionError={handleOpenInterestCollectionError}
-          handleTechnicalIndicatorCalculationStart={
-            handleTechnicalIndicatorCalculationStart
-          }
-          handleTechnicalIndicatorCalculationError={
-            handleTechnicalIndicatorCalculationError
-          }
           bulkCollectionMessage={bulkCollectionMessage}
           fundingRateCollectionMessage={fundingRateCollectionMessage}
           openInterestCollectionMessage={openInterestCollectionMessage}
           allDataCollectionMessage={allDataCollectionMessage}
-          technicalIndicatorCalculationMessage={
-            technicalIndicatorCalculationMessage
-          }
         />
 
         <DataTableContainer
@@ -563,9 +474,6 @@ const DataPage: React.FC = () => {
           openInterestData={openInterestData}
           openInterestLoading={openInterestLoading}
           openInterestError={openInterestError}
-          technicalIndicatorData={technicalIndicatorData}
-          technicalIndicatorLoading={technicalIndicatorLoading}
-          technicalIndicatorError={technicalIndicatorError}
         />
       </div>
     </div>

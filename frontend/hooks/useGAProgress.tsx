@@ -1,6 +1,6 @@
 /**
  * GA進捗監視カスタムフック
- * 
+ *
  * 遺伝的アルゴリズムの進捗をリアルタイムで監視し、
  * 状態管理とコールバック処理を提供します。
  */
@@ -71,7 +71,9 @@ interface UseGAProgressReturn {
 /**
  * GA進捗監視フック
  */
-export const useGAProgress = (options: UseGAProgressOptions = {}): UseGAProgressReturn => {
+export const useGAProgress = (
+  options: UseGAProgressOptions = {}
+): UseGAProgressReturn => {
   const {
     pollingInterval = 5000,
     autoStart = true,
@@ -86,7 +88,9 @@ export const useGAProgress = (options: UseGAProgressOptions = {}): UseGAProgress
   const [error, setError] = useState<string | null>(null);
   const [isPolling, setIsPolling] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [currentExperimentId, setCurrentExperimentId] = useState<string | null>(null);
+  const [currentExperimentId, setCurrentExperimentId] = useState<string | null>(
+    null
+  );
 
   // ポーリング制御用のref
   const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null);
@@ -108,95 +112,105 @@ export const useGAProgress = (options: UseGAProgressOptions = {}): UseGAProgress
   }, []);
 
   // 進捗取得
-  const fetchProgressData = useCallback(async (experimentId: string) => {
-    if (!isPollingRef.current) return;
+  const fetchProgressData = useCallback(
+    async (experimentId: string) => {
+      if (!isPollingRef.current) return;
 
-    try {
-      setIsLoading(true);
-      const response = await fetchProgress(`/api/auto-strategy/experiments/${experimentId}/progress`);
-      
-      if (response?.success && response.progress) {
-        const progressData = response.progress as GAProgress;
-        setProgress(progressData);
-        setError(null);
+      try {
+        setIsLoading(true);
+        const response = await fetchProgress(
+          `/api/auto-strategy/experiments/${experimentId}/progress`
+        );
 
-        // 進捗コールバック
-        if (onProgress) {
-          onProgress(progressData);
-        }
+        if (response?.success && response.progress) {
+          const progressData = response.progress as GAProgress;
+          setProgress(progressData);
+          setError(null);
 
-        // 完了時の処理
-        if (progressData.status === "completed") {
-          stopPolling();
-          
-          try {
-            const resultResponse = await fetchResult(`/api/auto-strategy/experiments/${experimentId}/results`);
-            if (resultResponse?.success && resultResponse.result) {
-              const resultData = resultResponse.result as GAResult;
-              setResult(resultData);
-              
-              if (onComplete) {
-                onComplete(resultData);
+          // 進捗コールバック
+          if (onProgress) {
+            onProgress(progressData);
+          }
+
+          // 完了時の処理
+          if (progressData.status === "completed") {
+            stopPolling();
+
+            try {
+              const resultResponse = await fetchResult(
+                `/api/auto-strategy/experiments/${experimentId}/results`
+              );
+              if (resultResponse?.success && resultResponse.result) {
+                const resultData = resultResponse.result as GAResult;
+                setResult(resultData);
+
+                if (onComplete) {
+                  onComplete(resultData);
+                }
+              }
+            } catch (resultError) {
+              console.error("Failed to fetch result:", resultError);
+              const errorMsg = "結果取得に失敗しました";
+              setError(errorMsg);
+              if (onError) {
+                onError(errorMsg);
               }
             }
-          } catch (resultError) {
-            console.error("Failed to fetch result:", resultError);
-            const errorMsg = "結果取得に失敗しました";
+          }
+          // エラー時の処理
+          else if (progressData.status === "error") {
+            stopPolling();
+            const errorMsg = "GA実行中にエラーが発生しました";
             setError(errorMsg);
             if (onError) {
               onError(errorMsg);
             }
           }
+        } else {
+          throw new Error("Invalid progress response");
         }
-        // エラー時の処理
-        else if (progressData.status === "error") {
-          stopPolling();
-          const errorMsg = "GA実行中にエラーが発生しました";
-          setError(errorMsg);
-          if (onError) {
-            onError(errorMsg);
-          }
+      } catch (err) {
+        console.error("Failed to fetch progress:", err);
+        const errorMsg = "進捗取得に失敗しました";
+        setError(errorMsg);
+        stopPolling();
+
+        if (onError) {
+          onError(errorMsg);
         }
-      } else {
-        throw new Error("Invalid progress response");
+      } finally {
+        setIsLoading(false);
       }
-    } catch (err) {
-      console.error("Failed to fetch progress:", err);
-      const errorMsg = "進捗取得に失敗しました";
-      setError(errorMsg);
-      stopPolling();
-      
-      if (onError) {
-        onError(errorMsg);
-      }
-    } finally {
-      setIsLoading(false);
-    }
-  }, [fetchProgress, fetchResult, onProgress, onComplete, onError, stopPolling]);
+    },
+    [fetchProgress, fetchResult, onProgress, onComplete, onError, stopPolling]
+  );
 
   // ポーリング開始
-  const startPolling = useCallback((experimentId: string) => {
-    // 既存のポーリングを停止
-    stopPolling();
-    
-    // 状態リセット
-    setProgress(null);
-    setResult(null);
-    setError(null);
-    setCurrentExperimentId(experimentId);
-    
-    // ポーリング開始
-    isPollingRef.current = true;
-    setIsPolling(true);
-    
-    // 初回実行
-    fetchProgressData(experimentId);
-    
-    // 定期ポーリング
-    pollingIntervalRef.current = setInterval(() => {
+  const startPolling = useCallback(
+    (experimentId: string) => {
+      // 既存のポーリングを停止
+      stopPolling();
+
+      // 状態リセット
+      setProgress(null);
+      setResult(null);
+      setError(null);
+      setCurrentExperimentId(experimentId);
+
+      // ポーリング開始
+      isPollingRef.current = true;
+      setIsPolling(true);
+
+      // 初回実行
       fetchProgressData(experimentId);
-    }, pollingInterval);
-  }, [fetchProgressData, pollingInterval, stopPolling]);
+
+      // 定期ポーリング
+      pollingIntervalRef.current = setInterval(() => {
+        fetchProgressData(experimentId);
+      }, pollingInterval);
+    },
+    [fetchProgressData, pollingInterval, stopPolling]
+  );
 
   // 実験停止
   const stopExperiment = useCallback(async (): Promise<boolean> => {
@@ -207,10 +221,10 @@ export const useGAProgress = (options: UseGAProgressOptions = {}): UseGAProgress
         `/api/auto-strategy/experiments/${currentExperimentId}/stop`,
         { method: "POST" }
       );
-      
+
       if (response?.success) {
         stopPolling();
-        setProgress(prev => prev ? { ...prev, status: "error" } : null);
+        setProgress((prev) => (prev ? { ...prev, status: "error" } : null));
         return true;
       }
       return false;
@@ -251,15 +265,15 @@ export const useGAProgress = (options: UseGAProgressOptions = {}): UseGAProgress
 
 /**
  * GA実行管理フック
- * 
+ *
  * GA実行の開始から完了まで一連の流れを管理します。
  */
 export const useGAExecution = () => {
   const [isExecuting, setIsExecuting] = useState(false);
   const [experimentId, setExperimentId] = useState<string | null>(null);
-  
+
   const { execute: startGA } = useApiCall();
-  
+
   const gaProgress = useGAProgress({
     onComplete: (result) => {
       setIsExecuting(false);
@@ -272,28 +286,31 @@ export const useGAExecution = () => {
   });
 
   // GA実行開始
-  const executeGA = useCallback(async (config: any) => {
-    try {
-      setIsExecuting(true);
-      
-      const response = await startGA("/api/auto-strategy/generate", {
-        method: "POST",
-        body: config,
-      });
-      
-      if (response?.success && response.experiment_id) {
-        const expId = response.experiment_id;
-        setExperimentId(expId);
-        gaProgress.startPolling(expId);
-        return expId;
-      } else {
-        throw new Error(response?.message || "GA実行開始に失敗しました");
+  const executeGA = useCallback(
+    async (config: any) => {
+      try {
+        setIsExecuting(true);
+
+        const response = await startGA("/api/auto-strategy/generate", {
+          method: "POST",
+          body: config,
+        });
+
+        if (response?.success && response.experiment_id) {
+          const expId = response.experiment_id;
+          setExperimentId(expId);
+          gaProgress.startPolling(expId);
+          return expId;
+        } else {
+          throw new Error(response?.message || "GA実行開始に失敗しました");
+        }
+      } catch (error) {
+        setIsExecuting(false);
+        throw error;
       }
-    } catch (error) {
-      setIsExecuting(false);
-      throw error;
-    }
-  }, [startGA, gaProgress]);
+    },
+    [startGA, gaProgress]
+  );
 
   // リセット
   const reset = useCallback(() => {
@@ -306,7 +323,7 @@ export const useGAExecution = () => {
     isExecuting,
     experimentId,
     executeGA,
-    reset,
     ...gaProgress,
+    reset, // ローカルのresetを最後に配置して優先
   };
 };
