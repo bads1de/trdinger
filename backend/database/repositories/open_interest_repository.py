@@ -37,8 +37,7 @@ class OpenInterestRepository(BaseRepository):
         try:
             # 重複処理付き一括挿入
             inserted_count = self.bulk_insert_with_conflict_handling(
-                open_interest_records,
-                ["symbol", "data_timestamp"]
+                open_interest_records, ["symbol", "data_timestamp"]
             )
 
             logger.info(f"オープンインタレストデータを {inserted_count} 件挿入しました")
@@ -100,10 +99,7 @@ class OpenInterestRepository(BaseRepository):
         Returns:
             最新のデータタイムスタンプ（データがない場合はNone）
         """
-        return super().get_latest_timestamp(
-            "data_timestamp",
-            {"symbol": symbol}
-        )
+        return super().get_latest_timestamp("data_timestamp", {"symbol": symbol})
 
     def get_open_interest_count(self, symbol: str) -> int:
         """
@@ -116,3 +112,63 @@ class OpenInterestRepository(BaseRepository):
             データ件数
         """
         return super().get_record_count({"symbol": symbol})
+
+    def clear_all_open_interest_data(self) -> int:
+        """
+        全てのオープンインタレストデータを削除
+
+        Returns:
+            削除された件数
+        """
+        try:
+            # 削除前の件数を取得
+            count_before = self.db.query(OpenInterestData).count()
+
+            # 全てのオープンインタレストデータを削除
+            deleted_count = self.db.query(OpenInterestData).delete()
+
+            # コミット
+            self.db.commit()
+
+            logger.info(
+                f"全てのオープンインタレストデータを削除しました: {deleted_count}件"
+            )
+            return deleted_count
+
+        except Exception as e:
+            self.db.rollback()
+            logger.error(f"オープンインタレストデータ全削除エラー: {e}")
+            raise
+
+    def clear_open_interest_data_by_symbol(self, symbol: str) -> int:
+        """
+        指定されたシンボルのオープンインタレストデータを削除
+
+        Args:
+            symbol: 削除対象のシンボル
+
+        Returns:
+            削除された件数
+        """
+        try:
+            # 指定シンボルのデータを削除
+            deleted_count = (
+                self.db.query(OpenInterestData)
+                .filter(OpenInterestData.symbol == symbol)
+                .delete()
+            )
+
+            # コミット
+            self.db.commit()
+
+            logger.info(
+                f"シンボル '{symbol}' のオープンインタレストデータを削除しました: {deleted_count}件"
+            )
+            return deleted_count
+
+        except Exception as e:
+            self.db.rollback()
+            logger.error(
+                f"シンボル '{symbol}' のオープンインタレストデータ削除エラー: {e}"
+            )
+            raise

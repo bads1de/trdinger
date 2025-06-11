@@ -9,7 +9,7 @@ import asyncio
 import ccxt
 import logging
 from datetime import datetime, timezone
-from typing import Dict, List, Any, Optional, Callable, Union
+from typing import Dict, List, Any, Optional, Callable
 from abc import ABC
 
 from database.connection import SessionLocal
@@ -97,11 +97,7 @@ class BaseBybitService(ABC):
         self._validate_limit(limit)
 
     async def _handle_ccxt_errors(
-        self, 
-        operation_name: str, 
-        func: Callable, 
-        *args, 
-        **kwargs
+        self, operation_name: str, func: Callable, *args, **kwargs
     ) -> Any:
         """
         CCXT操作の共通エラーハンドリング
@@ -122,12 +118,12 @@ class BaseBybitService(ABC):
         """
         try:
             logger.info(f"{operation_name}を実行中...")
-            
+
             # 非同期で実行
             result = await asyncio.get_event_loop().run_in_executor(
                 None, func, *args, **kwargs
             )
-            
+
             logger.info(f"{operation_name}実行成功")
             return result
 
@@ -153,7 +149,7 @@ class BaseBybitService(ABC):
         page_limit: int = 200,
         max_pages: int = 50,
         latest_existing_timestamp: Optional[int] = None,
-        **fetch_kwargs
+        **fetch_kwargs,
     ) -> List[Dict[str, Any]]:
         """
         ページネーション処理で全期間データを取得
@@ -170,7 +166,7 @@ class BaseBybitService(ABC):
             全期間のデータリスト
         """
         logger.info(f"全期間データ取得開始: {symbol}")
-        
+
         all_data = []
         page_count = 0
         current_time = int(datetime.now(timezone.utc).timestamp() * 1000)
@@ -197,19 +193,23 @@ class BaseBybitService(ABC):
                 # 重複チェック（タイムスタンプベース）
                 existing_timestamps = {item["timestamp"] for item in all_data}
                 new_items = [
-                    item for item in page_data 
+                    item
+                    for item in page_data
                     if item["timestamp"] not in existing_timestamps
                 ]
 
                 # 差分更新: 既存データより古いデータのみ追加
                 if latest_existing_timestamp:
                     new_items = [
-                        item for item in new_items 
+                        item
+                        for item in new_items
                         if item["timestamp"] < latest_existing_timestamp
                     ]
 
                     if not new_items:
-                        logger.info(f"ページ {page_count}: 既存データに到達。差分更新完了")
+                        logger.info(
+                            f"ページ {page_count}: 既存データに到達。差分更新完了"
+                        )
                         break
 
                 all_data.extend(new_items)
@@ -245,12 +245,7 @@ class BaseBybitService(ABC):
         return all_data
 
     async def _fetch_page_data(
-        self,
-        fetch_func: Callable,
-        symbol: str,
-        end_time: int,
-        limit: int,
-        **kwargs
+        self, fetch_func: Callable, symbol: str, end_time: int, limit: int, **kwargs
     ) -> List[Dict[str, Any]]:
         """
         1ページ分のデータを取得（サブクラスでオーバーライド可能）
@@ -272,7 +267,7 @@ class BaseBybitService(ABC):
             symbol,
             None,  # since
             limit,
-            **kwargs
+            **kwargs,
         )
 
     def _get_database_session(self):

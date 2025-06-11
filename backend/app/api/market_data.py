@@ -8,9 +8,8 @@
 @version 2.0.0
 """
 
-from fastapi import APIRouter, HTTPException, Query, Depends
-from typing import List, Optional
-from datetime import datetime
+from fastapi import APIRouter, Query, Depends
+from typing import Optional
 from sqlalchemy.orm import Session
 import logging
 
@@ -98,10 +97,7 @@ async def get_ohlcv_data(
         return APIResponseHelper.success_response(
             data=ohlcv_data,
             message=f"{symbol} の {timeframe} OHLCVデータを取得しました",
-            additional_fields={
-                "symbol": symbol,
-                "timeframe": timeframe
-            }
+            additional_fields={"symbol": symbol, "timeframe": timeframe},
         )
 
     except ValueError as e:
@@ -125,7 +121,7 @@ async def get_supported_symbols():
                 "symbols": MarketDataConfig.SUPPORTED_SYMBOLS,
                 "symbol_mapping": MarketDataConfig.SYMBOL_MAPPING,
             },
-            message="サポートされているシンボル一覧を取得しました"
+            message="サポートされているシンボル一覧を取得しました",
         )
     except Exception as e:
         raise APIErrorHandler.handle_generic_error(e, "シンボル一覧取得")
@@ -145,7 +141,7 @@ async def get_supported_timeframes():
                 "timeframes": MarketDataConfig.SUPPORTED_TIMEFRAMES,
                 "default": MarketDataConfig.DEFAULT_TIMEFRAME,
             },
-            message="サポートされている時間軸一覧を取得しました"
+            message="サポートされている時間軸一覧を取得しました",
         )
     except Exception as e:
         raise APIErrorHandler.handle_generic_error(e, "時間軸一覧取得")

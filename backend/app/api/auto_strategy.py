@@ -11,7 +11,7 @@ from pydantic import BaseModel, Field
 import logging
 
 from app.core.services.auto_strategy import AutoStrategyService
-from app.core.services.auto_strategy.models.ga_config import GAConfig, GAProgress
+from app.core.services.auto_strategy.models.ga_config import GAConfig
 from app.core.services.auto_strategy.models.strategy_gene import StrategyGene
 from database.connection import get_db
 
@@ -25,12 +25,14 @@ auto_strategy_service = AutoStrategyService()
 
 # リクエスト・レスポンスモデル
 
+
 class GAGenerationRequest(BaseModel):
     """GA戦略生成リクエスト"""
+
     experiment_name: str = Field(..., description="実験名")
     base_config: Dict[str, Any] = Field(..., description="基本バックテスト設定")
     ga_config: Dict[str, Any] = Field(..., description="GA設定")
-    
+
     class Config:
         schema_extra = {
             "example": {
@@ -41,7 +43,7 @@ class GAGenerationRequest(BaseModel):
                     "start_date": "2024-01-01",
                     "end_date": "2024-12-19",
                     "initial_capital": 100000,
-                    "commission_rate": 0.00055
+                    "commission_rate": 0.00055,
                 },
                 "ga_config": {
                     "population_size": 50,
@@ -50,14 +52,15 @@ class GAGenerationRequest(BaseModel):
                     "mutation_rate": 0.1,
                     "elite_size": 5,
                     "max_indicators": 5,
-                    "allowed_indicators": ["SMA", "EMA", "RSI", "MACD", "BB"]
-                }
+                    "allowed_indicators": ["SMA", "EMA", "RSI", "MACD", "BB"],
+                },
             }
         }
 
 
 class GAGenerationResponse(BaseModel):
     """GA戦略生成レスポンス"""
+
     success: bool
     experiment_id: str
     message: str
@@ -65,6 +68,7 @@ class GAGenerationResponse(BaseModel):
 
 class GAProgressResponse(BaseModel):
     """GA進捗レスポンス"""
+
     success: bool
     progress: Optional[Dict[str, Any]] = None
     message: str
@@ -72,6 +76,7 @@ class GAProgressResponse(BaseModel):
 
 class GAResultResponse(BaseModel):
     """GA結果レスポンス"""
+
     success: bool
     result: Optional[Dict[str, Any]] = None
     message: str
@@ -79,12 +84,14 @@ class GAResultResponse(BaseModel):
 
 class StrategyTestRequest(BaseModel):
     """戦略テストリクエスト"""
+
     strategy_gene: Dict[str, Any] = Field(..., description="戦略遺伝子")
     backtest_config: Dict[str, Any] = Field(..., description="バックテスト設定")
 
 
 class StrategyTestResponse(BaseModel):
     """戦略テストレスポンス"""
+
     success: bool
     result: Optional[Dict[str, Any]] = None
     errors: Optional[List[str]] = None
@@ -93,45 +100,45 @@ class StrategyTestResponse(BaseModel):
 
 # APIエンドポイント
 
+
 @router.post("/generate", response_model=GAGenerationResponse)
 async def generate_strategy(
     request: GAGenerationRequest,
     background_tasks: BackgroundTasks,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     """
     GA戦略生成を開始
-    
+
     遺伝的アルゴリズムを使用して取引戦略を自動生成します。
     バックグラウンドで実行され、進捗は別のエンドポイントで確認できます。
     """
     try:
         logger.info(f"GA戦略生成開始: {request.experiment_name}")
-        
+
         # GA設定の構築
         ga_config = GAConfig.from_dict(request.ga_config)
-        
+
         # 設定の検証
         is_valid, errors = ga_config.validate()
         if not is_valid:
             raise HTTPException(
-                status_code=400,
-                detail=f"Invalid GA configuration: {', '.join(errors)}"
+                status_code=400, detail=f"Invalid GA configuration: {', '.join(errors)}"
             )
-        
+
         # 戦略生成を開始（バックグラウンド実行）
         experiment_id = auto_strategy_service.start_strategy_generation(
             experiment_name=request.experiment_name,
             ga_config=ga_config,
-            backtest_config=request.base_config
+            backtest_config=request.base_config,
         )
-        
+
         return GAGenerationResponse(
             success=True,
             experiment_id=experiment_id,
-            message=f"戦略生成を開始しました。実験ID: {experiment_id}"
+            message=f"戦略生成を開始しました。実験ID: {experiment_id}",
         )
-        
+
     except ValueError as e:
         logger.error(f"設定エラー: {e}")
         raise HTTPException(status_code=400, detail=str(e))
@@ -144,24 +151,21 @@ async def generate_strategy(
 async def get_experiment_progress(experiment_id: str):
     """
     実験の進捗を取得
-    
+
     指定された実験IDの進捗状況をリアルタイムで取得します。
     """
     try:
         progress = auto_strategy_service.get_experiment_progress(experiment_id)
-        
+
         if progress is None:
             raise HTTPException(
-                status_code=404,
-                detail=f"Experiment not found: {experiment_id}"
+                status_code=404, detail=f"Experiment not found: {experiment_id}"
             )
-        
+
         return GAProgressResponse(
-            success=True,
-            progress=progress.to_dict(),
-            message="進捗情報を取得しました"
+            success=True, progress=progress.to_dict(), message="進捗情報を取得しました"
         )
-        
+
     except HTTPException:
         raise
     except Exception as e:
@@ -173,26 +177,24 @@ async def get_experiment_progress(experiment_id: str):
 async def get_experiment_results(experiment_id: str):
     """
     実験結果を取得
-    
+
     完了した実験の結果を取得します。
     """
     try:
         result = auto_strategy_service.get_experiment_result(experiment_id)
-        
+
         if result is None:
             # 実験が存在するか確認
             progress = auto_strategy_service.get_experiment_progress(experiment_id)
             if progress is None:
                 raise HTTPException(
-                    status_code=404,
-                    detail=f"Experiment not found: {experiment_id}"
+                    status_code=404, detail=f"Experiment not found: {experiment_id}"
                 )
             else:
                 raise HTTPException(
-                    status_code=202,
-                    detail="実験はまだ完了していません"
+                    status_code=202, detail="実験はまだ完了していません"
                 )
-        
+
         # 結果を整形
         formatted_result = {
             "experiment_id": experiment_id,
@@ -200,15 +202,13 @@ async def get_experiment_results(experiment_id: str):
             "best_fitness": result["best_fitness"],
             "execution_time": result["execution_time"],
             "generations_completed": result["generations_completed"],
-            "final_population_size": result["final_population_size"]
+            "final_population_size": result["final_population_size"],
         }
-        
+
         return GAResultResponse(
-            success=True,
-            result=formatted_result,
-            message="実験結果を取得しました"
+            success=True, result=formatted_result, message="実験結果を取得しました"
         )
-        
+
     except HTTPException:
         raise
     except Exception as e:
@@ -220,13 +220,13 @@ async def get_experiment_results(experiment_id: str):
 async def list_experiments():
     """
     実験一覧を取得
-    
+
     実行中・完了済みの全実験の一覧を取得します。
     """
     try:
         experiments = auto_strategy_service.list_experiments()
         return experiments
-        
+
     except Exception as e:
         logger.error(f"実験一覧取得エラー: {e}")
         raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
@@ -236,20 +236,20 @@ async def list_experiments():
 async def stop_experiment(experiment_id: str):
     """
     実験を停止
-    
+
     実行中の実験を停止します。
     """
     try:
         success = auto_strategy_service.stop_experiment(experiment_id)
-        
+
         if not success:
             raise HTTPException(
                 status_code=400,
-                detail="実験を停止できませんでした（存在しないか、既に完了している可能性があります）"
+                detail="実験を停止できませんでした（存在しないか、既に完了している可能性があります）",
             )
-        
+
         return {"success": True, "message": "実験を停止しました"}
-        
+
     except HTTPException:
         raise
     except Exception as e:
@@ -261,39 +261,36 @@ async def stop_experiment(experiment_id: str):
 async def test_strategy(request: StrategyTestRequest):
     """
     単一戦略のテスト実行
-    
+
     指定された戦略遺伝子から戦略を生成し、バックテストを実行します。
     GA実行前の戦略検証に使用できます。
     """
     try:
         # 戦略遺伝子の復元
         strategy_gene = StrategyGene.from_dict(request.strategy_gene)
-        
+
         # テスト実行
         result = auto_strategy_service.test_strategy_generation(
-            strategy_gene, 
-            request.backtest_config
+            strategy_gene, request.backtest_config
         )
-        
+
         if result["success"]:
             return StrategyTestResponse(
-                success=True,
-                result=result,
-                message="戦略テストが完了しました"
+                success=True, result=result, message="戦略テストが完了しました"
             )
         else:
             return StrategyTestResponse(
                 success=False,
                 errors=result.get("errors", [result.get("error", "Unknown error")]),
-                message="戦略テストに失敗しました"
+                message="戦略テストに失敗しました",
             )
-        
+
     except Exception as e:
         logger.error(f"戦略テストエラー: {e}")
         return StrategyTestResponse(
             success=False,
             errors=[str(e)],
-            message="戦略テスト実行中にエラーが発生しました"
+            message="戦略テスト実行中にエラーが発生しました",
         )
 
 
@@ -301,7 +298,7 @@ async def test_strategy(request: StrategyTestRequest):
 async def get_default_config():
     """
     デフォルトGA設定を取得
-    
+
     推奨されるGA設定のデフォルト値を返します。
     """
     try:
@@ -309,9 +306,9 @@ async def get_default_config():
         return {
             "success": True,
             "config": default_config.to_dict(),
-            "message": "デフォルト設定を取得しました"
+            "message": "デフォルト設定を取得しました",
         }
-        
+
     except Exception as e:
         logger.error(f"デフォルト設定取得エラー: {e}")
         raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
@@ -321,22 +318,22 @@ async def get_default_config():
 async def get_config_presets():
     """
     GA設定プリセットを取得
-    
+
     用途別のGA設定プリセット（高速、標準、徹底）を返します。
     """
     try:
         presets = {
             "fast": GAConfig.create_fast().to_dict(),
             "default": GAConfig.create_default().to_dict(),
-            "thorough": GAConfig.create_thorough().to_dict()
+            "thorough": GAConfig.create_thorough().to_dict(),
         }
-        
+
         return {
             "success": True,
             "presets": presets,
-            "message": "設定プリセットを取得しました"
+            "message": "設定プリセットを取得しました",
         }
-        
+
     except Exception as e:
         logger.error(f"プリセット取得エラー: {e}")
         raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")

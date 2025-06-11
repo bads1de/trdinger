@@ -38,8 +38,7 @@ class FundingRateRepository(BaseRepository):
         try:
             # 重複処理付き一括挿入
             inserted_count = self.bulk_insert_with_conflict_handling(
-                funding_rate_records,
-                ["symbol", "funding_timestamp"]
+                funding_rate_records, ["symbol", "funding_timestamp"]
             )
 
             logger.info(f"ファンディングレートデータを {inserted_count} 件挿入しました")
@@ -101,10 +100,7 @@ class FundingRateRepository(BaseRepository):
         Returns:
             最新のファンディングタイムスタンプ（データがない場合はNone）
         """
-        return super().get_latest_timestamp(
-            "funding_timestamp",
-            {"symbol": symbol}
-        )
+        return super().get_latest_timestamp("funding_timestamp", {"symbol": symbol})
 
     def get_funding_rate_count(self, symbol: str) -> int:
         """
@@ -117,6 +113,66 @@ class FundingRateRepository(BaseRepository):
             データ件数
         """
         return super().get_record_count({"symbol": symbol})
+
+    def clear_all_funding_rate_data(self) -> int:
+        """
+        全てのファンディングレートデータを削除
+
+        Returns:
+            削除された件数
+        """
+        try:
+            # 削除前の件数を取得
+            count_before = self.db.query(FundingRateData).count()
+
+            # 全てのファンディングレートデータを削除
+            deleted_count = self.db.query(FundingRateData).delete()
+
+            # コミット
+            self.db.commit()
+
+            logger.info(
+                f"全てのファンディングレートデータを削除しました: {deleted_count}件"
+            )
+            return deleted_count
+
+        except Exception as e:
+            self.db.rollback()
+            logger.error(f"ファンディングレートデータ全削除エラー: {e}")
+            raise
+
+    def clear_funding_rate_data_by_symbol(self, symbol: str) -> int:
+        """
+        指定されたシンボルのファンディングレートデータを削除
+
+        Args:
+            symbol: 削除対象のシンボル
+
+        Returns:
+            削除された件数
+        """
+        try:
+            # 指定シンボルのデータを削除
+            deleted_count = (
+                self.db.query(FundingRateData)
+                .filter(FundingRateData.symbol == symbol)
+                .delete()
+            )
+
+            # コミット
+            self.db.commit()
+
+            logger.info(
+                f"シンボル '{symbol}' のファンディングレートデータを削除しました: {deleted_count}件"
+            )
+            return deleted_count
+
+        except Exception as e:
+            self.db.rollback()
+            logger.error(
+                f"シンボル '{symbol}' のファンディングレートデータ削除エラー: {e}"
+            )
+            raise
 
     def get_funding_rate_dataframe(
         self,

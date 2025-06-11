@@ -4,7 +4,6 @@
 環境変数とアプリケーション設定を管理します。
 """
 
-import os
 from typing import Optional
 from pydantic import Field
 from pydantic_settings import BaseSettings

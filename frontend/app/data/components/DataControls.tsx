@@ -1,9 +1,10 @@
-import React from "react";
+import React, { useState } from "react";
 import SymbolSelector from "@/components/common/SymbolSelector";
 import TimeFrameSelector from "@/components/common/TimeFrameSelector";
 import AllDataCollectionButton from "@/components/button/AllDataCollectionButton";
 import OHLCVCollectionButton from "@/components/button/OHLCVCollectionButton";
 import FundingRateCollectionButton from "@/components/button/FundingRateCollectionButton";
+import DataResetPanel from "@/components/common/DataResetPanel";
 
 import {
   TradingPair,
@@ -68,6 +69,7 @@ const DataControls: React.FC<DataControlsProps> = ({
   allDataCollectionMessage,
   dataStatus,
 }) => {
+  const [showResetPanel, setShowResetPanel] = useState(false);
   return (
     <div className="enterprise-card animate-slide-up">
       <div className="p-6">
@@ -153,9 +155,19 @@ const DataControls: React.FC<DataControlsProps> = ({
 
           {/* 下段：データ収集ボタン */}
           <div className="space-y-3">
-            <label className="block text-sm font-medium text-secondary-600 dark:text-secondary-400">
-              データ収集
-            </label>
+            <div className="flex items-center justify-between">
+              <label className="block text-sm font-medium text-secondary-600 dark:text-secondary-400">
+                データ収集
+              </label>
+              <button
+                onClick={() => setShowResetPanel(!showResetPanel)}
+                className="text-sm text-warning-600 hover:text-warning-800 dark:text-warning-400 dark:hover:text-warning-200 font-medium"
+              >
+                {showResetPanel
+                  ? "🔼 リセット機能を閉じる"
+                  : "🗑️ データリセット"}
+              </button>
+            </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
               {/* 全データ一括収集ボタン */}
               <AllDataCollectionButton
@@ -224,6 +236,17 @@ const DataControls: React.FC<DataControlsProps> = ({
           </div>
         )}
       </div>
+
+      {/* データリセットパネル */}
+      {showResetPanel && (
+        <div className="mt-4">
+          <DataResetPanel
+            selectedSymbol={selectedSymbol}
+            isVisible={showResetPanel}
+            onClose={() => setShowResetPanel(false)}
+          />
+        </div>
+      )}
     </div>
   );
 };

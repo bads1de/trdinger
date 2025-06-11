@@ -6,8 +6,8 @@
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
-from datetime import datetime, timezone, timedelta
-from typing import Optional, List
+from datetime import datetime
+from typing import Optional
 import logging
 
 from database.connection import get_db, ensure_db_initialized
@@ -116,7 +116,9 @@ async def get_funding_rates(
 @router.post("/funding-rates/collect")
 async def collect_funding_rate_data(
     symbol: str = Query(..., description="取引ペアシンボル（例: 'BTC/USDT'）"),
-    limit: Optional[int] = Query(100, description="取得するデータ数（1-1000、fetch_all=trueの場合は無視）"),
+    limit: Optional[int] = Query(
+        100, description="取得するデータ数（1-1000、fetch_all=trueの場合は無視）"
+    ),
     fetch_all: bool = Query(False, description="全期間のデータを取得するかどうか"),
     db: Session = Depends(get_db),
 ):

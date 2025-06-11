@@ -8,7 +8,6 @@
 @version 1.0.0
 """
 
-from typing import List, Dict
 from dataclasses import dataclass
 
 

@@ -11,7 +11,7 @@ from typing import Dict
 from app.core.services.historical_data_service import HistoricalDataService
 from database.connection import get_db, ensure_db_initialized
 from database.repositories.ohlcv_repository import OHLCVRepository
-from app.config.market_config import MarketDataConfig  # 追加
+from app.config.market_config import MarketDataConfig
 import logging
 
 logger = logging.getLogger(__name__)
