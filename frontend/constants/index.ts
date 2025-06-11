@@ -13,30 +13,17 @@ import { TradingPair, TimeFrameInfo } from "@/types/strategy";
 export const BACKEND_API_URL = "http://127.0.0.1:8000";
 
 /**
- * サポートされている取引ペア（BTCのみに制限）
+ * サポートされている取引ペア（BTC/USDT:USDT無期限先物のみ）
  *
- * 各ペアは実際にBybitで利用可能であることが確認されています。
- * スポット市場と先物市場（永続契約）の両方を含みます。
+ * 要件に従い、BTC/USDT:USDTの無期限先物のみをサポートします。
  */
 export const SUPPORTED_TRADING_PAIRS: TradingPair[] = [
-  // Bitcoin ペア
-  {
-    symbol: "BTC/USDT",
-    name: "Bitcoin / Tether USD (Spot)",
-    base: "BTC",
-    quote: "USDT",
-  },
+  // Bitcoin USDT無期限先物のみ
   {
     symbol: "BTC/USDT:USDT",
     name: "Bitcoin / USDT Perpetual",
     base: "BTC",
     quote: "USDT",
-  },
-  {
-    symbol: "BTCUSD",
-    name: "Bitcoin / USD Perpetual",
-    base: "BTC",
-    quote: "USD",
   },
 ];
 
@@ -74,7 +61,7 @@ export const SUPPORTED_TIMEFRAMES: TimeFrameInfo[] = [
 /**
  * デフォルトの取引ペア
  */
-export const DEFAULT_TRADING_PAIR = "BTC/USDT";
+export const DEFAULT_TRADING_PAIR = "BTC/USDT:USDT";
 
 /**
  * デフォルトの時間軸

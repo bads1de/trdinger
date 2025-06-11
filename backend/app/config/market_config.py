@@ -19,12 +19,9 @@ class MarketDataConfig:
     # サポートされている取引所
     SUPPORTED_EXCHANGES = ["bybit"]
 
-    # サポートされているシンボル（Bybit形式）- BTCのみに制限
+    # サポートされているシンボル（Bybit形式）- BTCUSDT無期限先物のみ
     SUPPORTED_SYMBOLS = [
-        # Bitcoin 関連のみ（ETHは除外）
-        "BTC/USDT",  # Bitcoin スポット
-        "BTC/USDT:USDT",  # Bitcoin USDT永続契約
-        "BTCUSD",  # Bitcoin USD永続契約
+        "BTC/USDT:USDT",  # Bitcoin USDT無期限先物のみ
     ]
 
     # サポートされている時間軸
@@ -32,7 +29,7 @@ class MarketDataConfig:
 
     # デフォルト設定
     DEFAULT_EXCHANGE = "bybit"
-    DEFAULT_SYMBOL = "BTC/USDT"
+    DEFAULT_SYMBOL = "BTC/USDT:USDT"
     DEFAULT_TIMEFRAME = "1h"
     DEFAULT_LIMIT = 100
 
@@ -88,11 +85,11 @@ class MarketDataConfig:
 
     # シンボル正規化マッピング（BTCのみ）
     SYMBOL_MAPPING = {
-        # Bitcoin マッピング
-        "BTCUSD": "BTCUSD",  # USD永続契約
+        # Bitcoin マッピング - 全てBTC/USDT:USDTに正規化
         "BTCUSDT": "BTC/USDT:USDT",  # USDT永続契約
-        "BTC-USDT": "BTC/USDT",  # スポット
+        "BTC-USDT": "BTC/USDT:USDT",  # 様々な表記からUSDT永続契約へ
         "BTC/USDT:USDT": "BTC/USDT:USDT",  # 永続契約正規化
+        "BTCUSDT_PERP": "BTC/USDT:USDT",  # 永続契約表記
     }
 
     @classmethod
@@ -126,8 +123,6 @@ class MarketDataConfig:
             )
 
         return normalized
-
-
 
 
 # 設定のインスタンス

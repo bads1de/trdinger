@@ -40,8 +40,8 @@ import { BACKEND_API_URL } from "@/constants";
 const DataPage: React.FC = () => {
   // 状態管理
   const [symbols, setSymbols] = useState<TradingPair[]>([]);
-  const [selectedSymbol, setSelectedSymbol] = useState<string>("BTC/USDT");
-  const [selectedTimeFrame, setSelectedTimeFrame] = useState<TimeFrame>("1d");
+  const [selectedSymbol, setSelectedSymbol] = useState<string>("BTC/USDT:USDT");
+  const [selectedTimeFrame, setSelectedTimeFrame] = useState<TimeFrame>("1h");
   const [ohlcvData, setOhlcvData] = useState<PriceData[]>([]);
   const [fundingRateData, setFundingRateData] = useState<FundingRateData[]>([]);
   const [openInterestData, setOpenInterestData] = useState<OpenInterestData[]>(

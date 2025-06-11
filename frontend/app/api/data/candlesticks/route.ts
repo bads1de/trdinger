@@ -9,6 +9,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { PriceData, TimeFrame } from "@/types/strategy";
 import { BACKEND_API_URL } from "@/constants";
+import {
+  validateSymbol,
+  validateTimeframe,
+  createSymbolValidationError,
+  createTimeframeValidationError,
+} from "@/lib/validation";
 
 /**
  * 利用可能な時間軸の定義
@@ -127,6 +133,13 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    // シンボルバリデーション
+    if (!validateSymbol(symbol)) {
+      return NextResponse.json(createSymbolValidationError(symbol), {
+        status: 400,
+      });
+    }
+
     if (!timeframe) {
       return NextResponse.json(
         {
@@ -138,17 +151,11 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    if (!VALID_TIMEFRAMES.includes(timeframe)) {
-      return NextResponse.json(
-        {
-          success: false,
-          message: `サポートされていない時間軸です。利用可能: ${VALID_TIMEFRAMES.join(
-            ", "
-          )}`,
-          timestamp: new Date().toISOString(),
-        },
-        { status: 400 }
-      );
+    // 時間足バリデーション
+    if (!validateTimeframe(timeframe)) {
+      return NextResponse.json(createTimeframeValidationError(timeframe), {
+        status: 400,
+      });
     }
 
     if (limit < 1 || limit > 1000) {

@@ -1,43 +1,54 @@
 /**
- * FRデータ収集API
+ * OHLCVデータ収集API
  *
- * フロントエンドからのFRデータ収集リクエストを受け取り、
- * バックエンドAPIに転送してFRデータの収集を実行するAPIエンドポイントです。
+ * フロントエンドからのOHLCVデータ収集リクエストを受け取り、
+ * バックエンドAPIに転送してOHLCVデータの収集を実行するAPIエンドポイントです。
  *
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { FundingRateCollectionResponse } from "@/types/strategy";
 import { BACKEND_API_URL } from "@/constants";
-import { validateSymbol, createSymbolValidationError } from "@/lib/validation";
+import { 
+  validateSymbol, 
+  validateTimeframe,
+  createSymbolValidationError,
+  createTimeframeValidationError 
+} from "@/lib/validation";
 
 /**
- * POST /api/data/funding-rates/collect
+ * POST /api/data/ohlcv/collect
  *
- * 指定されたシンボルのFRデータを収集します。
+ * 指定されたシンボルと時間足のOHLCVデータを収集します。
  */
 export async function POST(request: NextRequest) {
   try {
     // URLパラメータを取得
     const { searchParams } = new URL(request.url);
     const symbol = searchParams.get("symbol") || "BTC/USDT:USDT";
+    const timeframe = searchParams.get("timeframe") || "1h";
     const limit = searchParams.get("limit") || "100";
-    const fetchAll = searchParams.get("fetch_all") === "true";
+    const daysBack = searchParams.get("days_back") || "30";
 
     // シンボルバリデーション
     if (!validateSymbol(symbol)) {
-      return NextResponse.json(createSymbolValidationError(symbol), {
-        status: 400,
-      });
+      return NextResponse.json(
+        createSymbolValidationError(symbol),
+        { status: 400 }
+      );
+    }
+
+    // 時間足バリデーション
+    if (!validateTimeframe(timeframe)) {
+      return NextResponse.json(
+        createTimeframeValidationError(timeframe),
+        { status: 400 }
+      );
     }
 
     // バックエンドAPIに転送
-    let backendUrl = `${BACKEND_API_URL}/api/funding-rates/collect?symbol=${encodeURIComponent(
+    const backendUrl = `${BACKEND_API_URL}/api/data-collection/ohlcv/collect?symbol=${encodeURIComponent(
       symbol
-    )}&limit=${limit}`;
-    if (fetchAll) {
-      backendUrl += "&fetch_all=true";
-    }
+    )}&timeframe=${timeframe}&limit=${limit}&days_back=${daysBack}`;
 
     try {
       const backendResponse = await fetch(backendUrl, {
@@ -45,8 +56,8 @@ export async function POST(request: NextRequest) {
         headers: {
           "Content-Type": "application/json",
         },
-        // タイムアウトを設定（全期間取得の場合は5分、通常は30秒）
-        signal: AbortSignal.timeout(fetchAll ? 300000 : 30000),
+        // タイムアウトを設定（2分）
+        signal: AbortSignal.timeout(120000),
       });
 
       if (!backendResponse.ok) {
@@ -67,13 +78,13 @@ export async function POST(request: NextRequest) {
       }
 
       // 成功レスポンス
-      const response: FundingRateCollectionResponse = {
+      return NextResponse.json({
         success: true,
         data: backendData.data,
-        message: backendData.message,
-      };
+        message: backendData.message || `${symbol} ${timeframe} OHLCVデータの収集が完了しました`,
+        timestamp: new Date().toISOString(),
+      });
 
-      return NextResponse.json(response);
     } catch (fetchError) {
       console.error("バックエンドAPI呼び出しエラー:", fetchError);
 
@@ -84,8 +95,9 @@ export async function POST(request: NextRequest) {
             {
               success: false,
               message:
-                "FRデータ収集がタイムアウトしました。しばらく待ってから再試行してください。",
+                "OHLCVデータ収集がタイムアウトしました。しばらく待ってから再試行してください。",
               error: "TIMEOUT_ERROR",
+              timestamp: new Date().toISOString(),
             },
             { status: 408 }
           );
@@ -98,6 +110,7 @@ export async function POST(request: NextRequest) {
               message:
                 "バックエンドサーバーに接続できません。サーバーが起動しているか確認してください。",
               error: "CONNECTION_ERROR",
+              timestamp: new Date().toISOString(),
             },
             { status: 503 }
           );
@@ -107,16 +120,17 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         {
           success: false,
-          message: `FRデータ収集中にエラーが発生しました: ${
+          message: `OHLCVデータ収集中にエラーが発生しました: ${
             fetchError instanceof Error ? fetchError.message : "Unknown error"
           }`,
           error: "BACKEND_API_ERROR",
+          timestamp: new Date().toISOString(),
         },
         { status: 500 }
       );
     }
   } catch (error) {
-    console.error("FRデータ収集API内部エラー:", error);
+    console.error("OHLCVデータ収集API内部エラー:", error);
 
     return NextResponse.json(
       {
@@ -125,6 +139,7 @@ export async function POST(request: NextRequest) {
           error instanceof Error ? error.message : "Unknown error"
         }`,
         error: "INTERNAL_ERROR",
+        timestamp: new Date().toISOString(),
       },
       { status: 500 }
     );

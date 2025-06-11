@@ -13,11 +13,10 @@ import { BACKEND_API_URL } from "@/constants";
 /**
  * POST /api/data/ohlcv/bulk
  *
- * 全ての取引ペアでOHLCVデータの一括収集を開始します。
- * 現在は処理時間短縮のため日足（1d）のみ収集します。
+ * BTC/USDT:USDT無期限先物の複数時間足でOHLCVデータの一括収集を開始します。
+ * 対象時間足: 15m, 30m, 1h, 4h, 1d
  *
- * 注意: 全時間軸での収集を有効にするには、バックエンドAPIの
- * data_collection.py の timeframes 設定を変更してください。
+ * 注意: BTC/USDT:USDTのみをサポートします。
  */
 export async function POST(request: NextRequest) {
   try {

@@ -58,7 +58,6 @@ def init_db():
             FundingRateData,
             OpenInterestData,
             DataCollectionLog,
-            TechnicalIndicatorData,
             GAExperiment,
             GeneratedStrategy,
             StrategyShowcase,

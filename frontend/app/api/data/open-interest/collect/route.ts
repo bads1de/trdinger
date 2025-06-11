@@ -8,6 +8,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { BACKEND_API_URL } from "@/constants";
+import { validateSymbol, createSymbolValidationError } from "@/lib/validation";
 
 /**
  * POST /api/data/open-interest/collect
@@ -18,9 +19,16 @@ export async function POST(request: NextRequest) {
   try {
     // URLパラメータを取得
     const { searchParams } = new URL(request.url);
-    const symbol = searchParams.get("symbol") || "BTC/USDT";
+    const symbol = searchParams.get("symbol") || "BTC/USDT:USDT";
     const limit = searchParams.get("limit") || "100";
     const fetchAll = searchParams.get("fetch_all") === "true";
+
+    // シンボルバリデーション
+    if (!validateSymbol(symbol)) {
+      return NextResponse.json(createSymbolValidationError(symbol), {
+        status: 400,
+      });
+    }
 
     // バックエンドAPIに転送
     let backendUrl = `${BACKEND_API_URL}/api/open-interest/collect?symbol=${encodeURIComponent(
