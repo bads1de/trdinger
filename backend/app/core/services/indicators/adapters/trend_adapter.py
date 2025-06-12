@@ -578,3 +578,101 @@ class TrendAdapter(BaseAdapter):
         except Exception as e:
             TrendAdapter._log_calculation_error("MAMA", e)
             raise TALibCalculationError(f"MAMA計算失敗: {e}")
+
+    @staticmethod
+    def midpoint(data: pd.Series, period: int) -> pd.Series:
+        """
+        MidPoint over period (期間中の中点) を計算
+
+        Args:
+            data: 価格データ（pandas Series）
+            period: 期間
+
+        Returns:
+            MIDPOINT値のpandas Series
+
+        Raises:
+            TALibCalculationError: 計算エラーの場合
+        """
+        TrendAdapter._validate_input(data, period)
+        TrendAdapter._log_calculation_start("MIDPOINT", period=period)
+
+        try:
+            result = TrendAdapter._safe_talib_calculation(
+                talib.MIDPOINT, data.values, timeperiod=period
+            )
+            return TrendAdapter._create_series_result(
+                result, data.index, f"MIDPOINT_{period}"
+            )
+
+        except TALibCalculationError:
+            raise
+        except Exception as e:
+            TrendAdapter._log_calculation_error("MIDPOINT", e)
+            raise TALibCalculationError(f"MIDPOINT計算失敗: {e}")
+
+    @staticmethod
+    def midprice(high: pd.Series, low: pd.Series, period: int) -> pd.Series:
+        """
+        Midpoint Price over period (期間中の価格中点) を計算
+
+        Args:
+            high: 高値データ（pandas Series）
+            low: 安値データ（pandas Series）
+            period: 期間
+
+        Returns:
+            MIDPRICE値のpandas Series
+
+        Raises:
+            TALibCalculationError: 計算エラーの場合
+        """
+        TrendAdapter._validate_multi_input(high, low)
+        TrendAdapter._validate_input(high, period)
+        TrendAdapter._log_calculation_start("MIDPRICE", period=period)
+
+        try:
+            result = TrendAdapter._safe_talib_calculation(
+                talib.MIDPRICE, high.values, low.values, timeperiod=period
+            )
+            return TrendAdapter._create_series_result(
+                result, high.index, f"MIDPRICE_{period}"
+            )
+
+        except TALibCalculationError:
+            raise
+        except Exception as e:
+            TrendAdapter._log_calculation_error("MIDPRICE", e)
+            raise TALibCalculationError(f"MIDPRICE計算失敗: {e}")
+
+    @staticmethod
+    def trima(data: pd.Series, period: int) -> pd.Series:
+        """
+        Triangular Moving Average (三角移動平均) を計算
+
+        Args:
+            data: 価格データ（pandas Series）
+            period: 期間
+
+        Returns:
+            TRIMA値のpandas Series
+
+        Raises:
+            TALibCalculationError: 計算エラーの場合
+        """
+        TrendAdapter._validate_input(data, period)
+        TrendAdapter._log_calculation_start("TRIMA", period=period)
+
+        try:
+            result = TrendAdapter._safe_talib_calculation(
+                talib.TRIMA, data.values, timeperiod=period
+            )
+            return TrendAdapter._create_series_result(
+                result, data.index, f"TRIMA_{period}"
+            )
+
+        except TALibCalculationError:
+            raise
+        except Exception as e:
+            TrendAdapter._log_calculation_error("TRIMA", e)
+            raise TALibCalculationError(f"TRIMA計算失敗: {e}")

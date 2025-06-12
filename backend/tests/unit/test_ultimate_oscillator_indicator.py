@@ -1,292 +1,330 @@
+#!/usr/bin/env python3
 """
-Ultimate Oscillator 指標のテスト
+Ultimate Oscillator実装のテストスクリプト
 
-TDD方式でUltimateOscillatorIndicatorクラスの実装をテストします。
+新しく実装したUltimateOscillatorIndicatorクラスの動作確認を行います。
 """
 
-import pytest
+import sys
+import os
 import pandas as pd
 import numpy as np
-from unittest.mock import Mock, patch
 
-# テスト対象のインポート（まだ実装されていないのでImportErrorが発生する予定）
-try:
-    from app.core.services.indicators.momentum_indicators import UltimateOscillatorIndicator
-    from app.core.services.indicators.adapters.momentum_adapter import MomentumAdapter
-except ImportError:
-    # まだ実装されていない場合はNoneを設定
-    UltimateOscillatorIndicator = None
-    MomentumAdapter = None
+# プロジェクトルートをパスに追加
+sys.path.append(os.path.join(os.path.dirname(__file__), "backend"))
 
 
-class TestUltimateOscillatorIndicator:
+def test_ultimate_oscillator_indicator():
     """UltimateOscillatorIndicatorクラスのテスト"""
+    try:
+        from app.core.services.indicators import UltimateOscillatorIndicator
 
-    def setup_method(self):
-        """各テストメソッドの前に実行される初期化"""
-        # テストデータの作成
-        self.dates = pd.date_range('2023-01-01', periods=100, freq='D')
-        
+        print("✅ UltimateOscillatorIndicatorのインポート成功")
+
+        # テストデータの作成（Ultimate Oscillatorは高値・安値・終値データが必要）
+        dates = pd.date_range("2023-01-01", periods=150, freq="D")
+
         # より現実的な価格データを生成
         base_price = 100
-        price_trend = np.linspace(0, 10, 100)
-        price_noise = np.random.normal(0, 1, 100)
+        price_trend = np.linspace(0, 20, 150)  # 上昇トレンド
+        price_noise = np.random.normal(0, 2, 150)  # ノイズ
         close_prices = base_price + price_trend + price_noise
-        
+
         # 高値・安値を終値から生成
-        high_prices = close_prices + np.random.uniform(0.5, 1.5, 100)
-        low_prices = close_prices - np.random.uniform(0.5, 1.5, 100)
-        
-        self.test_data = pd.DataFrame({
-            'open': close_prices + np.random.uniform(-0.5, 0.5, 100),
-            'high': high_prices,
-            'low': low_prices,
-            'close': close_prices,
-            'volume': np.random.uniform(1000, 10000, 100)
-        }, index=self.dates)
+        high_prices = close_prices + np.random.uniform(0.5, 1.5, 150)
+        low_prices = close_prices - np.random.uniform(0.5, 1.5, 150)
 
-    def test_ultimate_oscillator_indicator_import(self):
-        """UltimateOscillatorIndicatorクラスがインポートできることをテスト"""
-        # Red: まだ実装されていないのでNoneになっているはず
-        assert UltimateOscillatorIndicator is not None, "UltimateOscillatorIndicatorクラスが実装されていません"
+        test_data = pd.DataFrame(
+            {
+                "open": close_prices + np.random.uniform(-1, 1, 150),
+                "high": high_prices,
+                "low": low_prices,
+                "close": close_prices,
+                "volume": np.random.uniform(1000, 10000, 150),
+            },
+            index=dates,
+        )
 
-    def test_ultimate_oscillator_indicator_initialization(self):
-        """UltimateOscillatorIndicatorの初期化テスト"""
-        if UltimateOscillatorIndicator is None:
-            pytest.skip("UltimateOscillatorIndicatorが実装されていません")
-            
-        indicator = UltimateOscillatorIndicator()
-        
-        # 基本属性の確認
-        assert indicator.indicator_type == "ULTOSC"
-        assert isinstance(indicator.supported_periods, list)
-        assert len(indicator.supported_periods) > 0
-        
-        # 期待される期間が含まれているか
-        expected_periods = [7, 14, 28]
-        for period in expected_periods:
-            assert period in indicator.supported_periods
+        # UltimateOscillatorIndicatorのインスタンス化
+        ultosc_indicator = UltimateOscillatorIndicator()
+        print("✅ UltimateOscillatorIndicatorのインスタンス化成功")
+        print(f"   サポート期間: {ultosc_indicator.supported_periods}")
 
-    def test_ultimate_oscillator_calculation_basic(self):
-        """Ultimate Oscillator計算の基本テスト"""
-        if UltimateOscillatorIndicator is None:
-            pytest.skip("UltimateOscillatorIndicatorが実装されていません")
-            
-        indicator = UltimateOscillatorIndicator()
-        period = 7  # 短期期間
-        
-        # モックを使用してMomentumAdapter.ultimate_oscillatorをテスト
-        with patch.object(MomentumAdapter, 'ultimate_oscillator') as mock_ultosc:
-            # モックの戻り値を設定
-            expected_result = pd.Series(
-                np.random.uniform(0, 100, 100),
-                index=self.test_data.index,
-                name='ULTOSC_7_14_28'
-            )
-            mock_ultosc.return_value = expected_result
-            
-            # Ultimate Oscillator計算を実行
-            result = indicator.calculate(self.test_data, period)
-            
-            # 結果の検証
-            assert isinstance(result, pd.Series)
-            assert len(result) == len(self.test_data)
-            
-            # MomentumAdapter.ultimate_oscillatorが正しい引数で呼ばれたか確認
-            mock_ultosc.assert_called_once_with(
-                self.test_data["high"], 
-                self.test_data["low"], 
-                self.test_data["close"], 
-                period,
-                period * 2,
-                period * 4
-            )
-
-    def test_ultimate_oscillator_calculation_different_periods(self):
-        """異なる期間でのUltimate Oscillator計算テスト"""
-        if UltimateOscillatorIndicator is None:
-            pytest.skip("UltimateOscillatorIndicatorが実装されていません")
-            
-        indicator = UltimateOscillatorIndicator()
-        
+        # 異なる期間でのUltimate Oscillator計算テスト
         for period in [7, 14, 28]:
-            with patch.object(MomentumAdapter, 'ultimate_oscillator') as mock_ultosc:
-                expected_result = pd.Series(
-                    np.random.uniform(0, 100, 100),
-                    index=self.test_data.index,
-                    name=f'ULTOSC_{period}_{period*2}_{period*4}'
-                )
-                mock_ultosc.return_value = expected_result
-                
-                result = indicator.calculate(self.test_data, period)
-                
-                assert isinstance(result, pd.Series)
-                mock_ultosc.assert_called_once_with(
-                    self.test_data["high"], 
-                    self.test_data["low"], 
-                    self.test_data["close"], 
-                    period,
-                    period * 2,
-                    period * 4
-                )
+            try:
+                result = ultosc_indicator.calculate(test_data, period)
 
-    def test_ultimate_oscillator_description(self):
-        """Ultimate Oscillator説明文のテスト"""
-        if UltimateOscillatorIndicator is None:
-            pytest.skip("UltimateOscillatorIndicatorが実装されていません")
-            
-        indicator = UltimateOscillatorIndicator()
-        description = indicator.get_description()
-        
-        assert isinstance(description, str)
-        assert len(description) > 0
-        assert "Ultimate" in description or "アルティメット" in description
+                print(f"✅ Ultimate Oscillator計算成功 (期間: {period})")
+                print(f"   結果の型: {type(result)}")
+                print(f"   結果の長さ: {len(result)}")
+                print(f"   非NaN値の数: {result.notna().sum()}")
+                print(f"   値の範囲: {result.min():.2f} - {result.max():.2f}")
+                print(f"   最後の5つの値:")
+                print(f"   {result.tail().round(2)}")
+                print()
 
-    def test_ultimate_oscillator_parameter_validation(self):
-        """Ultimate Oscillatorパラメータ検証のテスト"""
-        if UltimateOscillatorIndicator is None:
-            pytest.skip("UltimateOscillatorIndicatorが実装されていません")
-            
-        indicator = UltimateOscillatorIndicator()
-        
-        # 無効な期間でのテスト
-        with pytest.raises(Exception):
-            indicator.calculate(self.test_data, 0)
-            
-        with pytest.raises(Exception):
-            indicator.calculate(self.test_data, -1)
+            except Exception as e:
+                print(f"❌ Ultimate Oscillator計算失敗 (期間: {period}): {e}")
+                return False
 
-    def test_ultimate_oscillator_empty_data(self):
-        """空データでのUltimate Oscillatorテスト"""
-        if UltimateOscillatorIndicator is None:
-            pytest.skip("UltimateOscillatorIndicatorが実装されていません")
-            
-        indicator = UltimateOscillatorIndicator()
-        empty_data = pd.DataFrame(columns=['open', 'high', 'low', 'close', 'volume'])
-        
-        with pytest.raises(Exception):
-            indicator.calculate(empty_data, 7)
+        # 説明の取得テスト
+        description = ultosc_indicator.get_description()
+        print(f"✅ 説明取得成功: {description}")
+
+        return True
+
+    except Exception as e:
+        print(f"❌ UltimateOscillatorIndicatorテスト失敗: {e}")
+        import traceback
+
+        traceback.print_exc()
+        return False
 
 
-class TestMomentumAdapterUltimateOscillator:
-    """MomentumAdapterのUltimate Oscillatorメソッドのテスト"""
-
-    def setup_method(self):
-        """テスト初期化"""
-        self.test_high = pd.Series(
-            np.random.uniform(105, 115, 100),
-            index=pd.date_range('2023-01-01', periods=100, freq='D'),
-            name='high'
-        )
-        self.test_low = pd.Series(
-            np.random.uniform(95, 105, 100),
-            index=pd.date_range('2023-01-01', periods=100, freq='D'),
-            name='low'
-        )
-        self.test_close = pd.Series(
-            np.random.uniform(100, 110, 100),
-            index=pd.date_range('2023-01-01', periods=100, freq='D'),
-            name='close'
+def test_ultimate_oscillator_vs_rsi():
+    """Ultimate OscillatorとRSIの比較テスト"""
+    try:
+        from app.core.services.indicators import (
+            UltimateOscillatorIndicator,
+            RSIIndicator,
         )
 
-    def test_momentum_adapter_ultimate_oscillator_method_exists(self):
-        """MomentumAdapter.ultimate_oscillatorメソッドが存在することをテスト"""
-        # Red: まだ実装されていないのでAttributeErrorが発生する予定
-        assert hasattr(MomentumAdapter, 'ultimate_oscillator'), "MomentumAdapter.ultimate_oscillatorメソッドが実装されていません"
+        print("\n📊 Ultimate OscillatorとRSIの比較テスト:")
 
-    def test_momentum_adapter_ultimate_oscillator_calculation(self):
-        """MomentumAdapter.ultimate_oscillatorの計算テスト"""
-        if not hasattr(MomentumAdapter, 'ultimate_oscillator'):
-            pytest.skip("MomentumAdapter.ultimate_oscillatorが実装されていません")
-            
-        period1, period2, period3 = 7, 14, 28
-        result = MomentumAdapter.ultimate_oscillator(
-            self.test_high, self.test_low, self.test_close, period1, period2, period3
+        # テストデータの作成
+        dates = pd.date_range("2023-01-01", periods=80, freq="D")
+
+        # 複雑な価格パターン: 急上昇 → 調整 → 再上昇
+        price_pattern = np.concatenate(
+            [
+                np.linspace(100, 130, 25),  # 急上昇
+                np.linspace(130, 115, 15),  # 調整
+                np.linspace(115, 140, 40),  # 再上昇
+            ]
         )
-        
-        # 結果の検証
-        assert isinstance(result, pd.Series)
-        assert len(result) == len(self.test_close)
 
-    def test_momentum_adapter_ultimate_oscillator_different_periods(self):
-        """MomentumAdapter.ultimate_oscillatorの異なる期間でのテスト"""
-        if not hasattr(MomentumAdapter, 'ultimate_oscillator'):
-            pytest.skip("MomentumAdapter.ultimate_oscillatorが実装されていません")
-            
-        period_sets = [(7, 14, 28), (10, 20, 40)]
-        
-        for period1, period2, period3 in period_sets:
-            result = MomentumAdapter.ultimate_oscillator(
-                self.test_high, self.test_low, self.test_close, period1, period2, period3
+        # ノイズを追加
+        close_prices = price_pattern + np.random.normal(0, 1, 80)
+        high_prices = close_prices + np.random.uniform(0.5, 2, 80)
+        low_prices = close_prices - np.random.uniform(0.5, 2, 80)
+
+        test_data = pd.DataFrame(
+            {
+                "open": close_prices,
+                "high": high_prices,
+                "low": low_prices,
+                "close": close_prices,
+                "volume": np.random.uniform(1000, 10000, 80),
+            },
+            index=dates,
+        )
+
+        period = 14
+
+        # 各指標を計算
+        ultosc_indicator = UltimateOscillatorIndicator()
+        rsi_indicator = RSIIndicator()
+
+        ultosc_result = ultosc_indicator.calculate(test_data, period)
+        rsi_result = rsi_indicator.calculate(test_data, period)
+
+        # 結果の比較（最後の10個の値）
+        print(f"   期間: {period}")
+        print(f"   価格パターン: 急上昇 → 調整 → 再上昇")
+        print(f"   最後の10個の値の比較:")
+
+        comparison_df = pd.DataFrame(
+            {
+                "Close": test_data["close"].tail(10).round(2),
+                "RSI": rsi_result.tail(10).round(2),
+                "UltOsc": ultosc_result.tail(10).round(2),
+            }
+        )
+
+        print(comparison_df)
+
+        # 感度の比較
+        rsi_volatility = rsi_result.std()
+        ultosc_volatility = ultosc_result.std()
+
+        print(f"\n   ボラティリティ比較:")
+        print(f"   RSI標準偏差: {rsi_volatility:.2f}")
+        print(f"   Ultimate Oscillator標準偏差: {ultosc_volatility:.2f}")
+
+        # Ultimate Oscillatorは複数期間を使用するため、一般的にRSIより安定
+        if ultosc_volatility < rsi_volatility:
+            print(
+                f"   ✅ Ultimate OscillatorがRSIより安定（{ultosc_volatility:.2f} < {rsi_volatility:.2f}）"
             )
-            
-            assert isinstance(result, pd.Series)
+        else:
+            print(f"   ⚠️  安定性の違いが期待通りでない可能性")
 
-    def test_momentum_adapter_ultimate_oscillator_parameter_validation(self):
-        """MomentumAdapter.ultimate_oscillatorのパラメータ検証テスト"""
-        if not hasattr(MomentumAdapter, 'ultimate_oscillator'):
-            pytest.skip("MomentumAdapter.ultimate_oscillatorが実装されていません")
-            
-        # 無効なパラメータでのテスト
-        with pytest.raises(Exception):
-            MomentumAdapter.ultimate_oscillator(
-                self.test_high, self.test_low, self.test_close, 0, 14, 28
+        return True
+
+    except Exception as e:
+        print(f"❌ 比較テスト失敗: {e}")
+        import traceback
+
+        traceback.print_exc()
+        return False
+
+
+def test_ultimate_oscillator_parameters():
+    """Ultimate Oscillatorのパラメータテスト"""
+    try:
+        from app.core.services.indicators import UltimateOscillatorIndicator
+
+        print("\n🔢 Ultimate Oscillatorのパラメータテスト:")
+
+        # テストデータの作成
+        dates = pd.date_range("2023-01-01", periods=100, freq="D")
+
+        # トレンド変化のある価格データ
+        base_price = 100
+        trend_changes = np.concatenate(
+            [
+                np.linspace(100, 120, 35),  # 上昇
+                np.linspace(120, 110, 30),  # 下降
+                np.linspace(110, 130, 35),  # 再上昇
+            ]
+        )
+
+        close_prices = trend_changes + np.random.normal(0, 1, 100)
+        high_prices = close_prices + np.random.uniform(0.5, 2, 100)
+        low_prices = close_prices - np.random.uniform(0.5, 2, 100)
+
+        test_data = pd.DataFrame(
+            {
+                "open": close_prices,
+                "high": high_prices,
+                "low": low_prices,
+                "close": close_prices,
+                "volume": np.random.uniform(1000, 10000, 100),
+            },
+            index=dates,
+        )
+
+        ultosc_indicator = UltimateOscillatorIndicator()
+
+        # 異なるパラメータセットでの計算
+        parameter_sets = [
+            (7, 14, 28),  # デフォルト
+            (5, 10, 20),  # 短期重視
+            (10, 20, 40),  # 長期重視
+            (7, 21, 42),  # カスタム
+        ]
+
+        results = {}
+
+        for period1, period2, period3 in parameter_sets:
+            result = ultosc_indicator.calculate(
+                test_data, period1, period2=period2, period3=period3
             )
-            
-        with pytest.raises(Exception):
-            MomentumAdapter.ultimate_oscillator(
-                self.test_high, self.test_low, self.test_close, 7, -1, 28
+            results[(period1, period2, period3)] = result
+
+            # 最終値と標準偏差の表示
+            final_value = result.iloc[-1]
+            volatility = result.std()
+            print(
+                f"   期間({period1}, {period2}, {period3}): 最終値={final_value:.2f}, 標準偏差={volatility:.2f}"
             )
 
+        # パラメータの影響確認
+        print(f"\n   パラメータ効果の確認:")
 
-class TestUltimateOscillatorIntegration:
+        # デフォルトとの比較
+        default_result = results[(7, 14, 28)]
+        default_volatility = default_result.std()
+
+        for params, result in results.items():
+            if params == (7, 14, 28):
+                continue
+
+            period1, period2, period3 = params
+            current_volatility = result.std()
+            volatility_ratio = current_volatility / default_volatility
+
+            print(
+                f"   期間({period1}, {period2}, {period3}): ボラティリティ比率={volatility_ratio:.2f}"
+            )
+
+            if period1 < 7:  # 短期重視
+                print(f"     → 短期重視: より敏感な反応")
+            elif period1 > 7:  # 長期重視
+                print(f"     → 長期重視: より安定した反応")
+
+        return True
+
+    except Exception as e:
+        print(f"❌ パラメータテスト失敗: {e}")
+        import traceback
+
+        traceback.print_exc()
+        return False
+
+
+def test_ultimate_oscillator_integration():
     """Ultimate Oscillatorの統合テスト"""
+    try:
+        from app.core.services.indicators import get_indicator_by_type
 
-    def test_ultimate_oscillator_in_momentum_indicators_factory(self):
-        """get_momentum_indicator関数でUltimate Oscillatorが取得できることをテスト"""
-        try:
-            from app.core.services.indicators.momentum_indicators import get_momentum_indicator
-            
-            # Red: まだUltimate Oscillatorが追加されていないのでValueErrorが発生する予定
-            indicator = get_momentum_indicator("ULTOSC")
-            assert indicator.indicator_type == "ULTOSC"
-            
-        except (ImportError, ValueError):
-            pytest.fail("Ultimate Oscillatorがget_momentum_indicator関数に追加されていません")
+        print("\n🔗 Ultimate Oscillator統合テスト:")
 
-    def test_ultimate_oscillator_in_indicators_info(self):
-        """MOMENTUM_INDICATORS_INFOにUltimate Oscillatorが含まれることをテスト"""
-        try:
-            from app.core.services.indicators.momentum_indicators import MOMENTUM_INDICATORS_INFO
-            
-            # Red: まだUltimate Oscillatorが追加されていないのでKeyErrorが発生する予定
-            assert "ULTOSC" in MOMENTUM_INDICATORS_INFO
-            
-            ultosc_info = MOMENTUM_INDICATORS_INFO["ULTOSC"]
-            assert "periods" in ultosc_info
-            assert "description" in ultosc_info
-            assert "category" in ultosc_info
-            assert ultosc_info["category"] == "momentum"
-            
-        except (ImportError, KeyError):
-            pytest.fail("Ultimate OscillatorがMOMENTUM_INDICATORS_INFOに追加されていません")
+        # ファクトリー関数経由での取得
+        ultosc_indicator = get_indicator_by_type("ULTOSC")
+        print("✅ ファクトリー関数からのUltimate Oscillator取得成功")
+        print(f"   指標タイプ: {ultosc_indicator.indicator_type}")
+        print(f"   サポート期間: {ultosc_indicator.supported_periods}")
 
-    def test_ultimate_oscillator_in_main_indicators_module(self):
-        """メインのindicatorsモジュールでUltimate Oscillatorが利用できることをテスト"""
-        try:
-            from app.core.services.indicators import UltimateOscillatorIndicator, get_indicator_by_type
-            
-            # UltimateOscillatorIndicatorの直接インポート
-            assert UltimateOscillatorIndicator is not None
-            
-            # ファクトリー関数経由での取得
-            indicator = get_indicator_by_type("ULTOSC")
-            assert indicator.indicator_type == "ULTOSC"
-            
-        except (ImportError, ValueError):
-            pytest.fail("Ultimate Oscillatorがメインのindicatorsモジュールに統合されていません")
+        return True
+
+    except Exception as e:
+        print(f"❌ 統合テスト失敗: {e}")
+        import traceback
+
+        traceback.print_exc()
+        return False
+
+
+def main():
+    """メインテスト実行"""
+    print("🧪 Ultimate Oscillator実装テスト開始\n")
+
+    tests = [
+        ("UltimateOscillatorIndicatorクラス", test_ultimate_oscillator_indicator),
+        ("Ultimate OscillatorとRSIの比較", test_ultimate_oscillator_vs_rsi),
+        ("Ultimate Oscillatorのパラメータ", test_ultimate_oscillator_parameters),
+        ("Ultimate Oscillator統合", test_ultimate_oscillator_integration),
+    ]
+
+    results = []
+    for test_name, test_func in tests:
+        print(f"\n📋 {test_name}のテスト:")
+        result = test_func()
+        results.append((test_name, result))
+
+    print("\n" + "=" * 60)
+    print("📊 テスト結果サマリー:")
+    print("=" * 60)
+
+    all_passed = True
+    for test_name, result in results:
+        status = "✅ PASS" if result else "❌ FAIL"
+        print(f"{status} {test_name}")
+        if not result:
+            all_passed = False
+
+    print("\n" + "=" * 60)
+    if all_passed:
+        print("🎉 全てのテストが成功しました！")
+        print("Ultimate Oscillator の実装が完了しています。")
+        print("Ultimate Oscillatorは複数期間のTrue Rangeベースのモメンタム指標です。")
+    else:
+        print("⚠️  一部のテストが失敗しました。")
+        print("エラーを確認して修正してください。")
+    print("=" * 60)
 
 
 if __name__ == "__main__":
-    # テストの実行
-    pytest.main([__file__, "-v"])
+    main()

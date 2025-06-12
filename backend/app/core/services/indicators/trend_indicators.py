@@ -419,13 +419,102 @@ class MAMAIndicator(BaseIndicator):
         return "MAMA - MESA適応型移動平均、市場の効率性に応じて自動調整される移動平均"
 
 
+class MIDPOINTIndicator(BaseIndicator):
+    """MIDPOINT（MidPoint over period）指標"""
+
+    def __init__(self):
+        super().__init__(indicator_type="MIDPOINT", supported_periods=[14, 20, 30])
+
+    def calculate(self, df: pd.DataFrame, period: int, **kwargs) -> pd.Series:
+        """
+        MIDPOINT（MidPoint over period）を計算
+
+        Args:
+            df: OHLCVデータのDataFrame
+            period: 期間
+
+        Returns:
+            MIDPOINT値のSeries
+
+        Raises:
+            TALibCalculationError: TA-Lib計算エラーの場合
+        """
+        # TrendAdapterを使用したMIDPOINT計算
+        return TrendAdapter.midpoint(df["close"], period)
+
+    def get_description(self) -> str:
+        """指標の説明を取得"""
+        return "MIDPOINT - MidPoint over period、指定期間の最高値と最安値の中点"
+
+
+class MIDPRICEIndicator(BaseIndicator):
+    """MIDPRICE（Midpoint Price over period）指標"""
+
+    def __init__(self):
+        super().__init__(indicator_type="MIDPRICE", supported_periods=[14, 20, 30])
+
+    def calculate(self, df: pd.DataFrame, period: int, **kwargs) -> pd.Series:
+        """
+        MIDPRICE（Midpoint Price over period）を計算
+
+        Args:
+            df: OHLCVデータのDataFrame
+            period: 期間
+
+        Returns:
+            MIDPRICE値のSeries
+
+        Raises:
+            TALibCalculationError: TA-Lib計算エラーの場合
+            ValueError: 高値・安値データが存在しない場合
+        """
+        # 高値・安値データの存在確認
+        if "high" not in df.columns or "low" not in df.columns:
+            raise ValueError("MIDPRICE計算には高値・安値データが必要です")
+
+        # TrendAdapterを使用したMIDPRICE計算
+        return TrendAdapter.midprice(df["high"], df["low"], period)
+
+    def get_description(self) -> str:
+        """指標の説明を取得"""
+        return "MIDPRICE - Midpoint Price over period、指定期間の高値と安値の中点価格"
+
+
+class TRIMAIndicator(BaseIndicator):
+    """TRIMA（Triangular Moving Average）指標"""
+
+    def __init__(self):
+        super().__init__(indicator_type="TRIMA", supported_periods=[14, 20, 30, 50])
+
+    def calculate(self, df: pd.DataFrame, period: int, **kwargs) -> pd.Series:
+        """
+        TRIMA（Triangular Moving Average）を計算
+
+        Args:
+            df: OHLCVデータのDataFrame
+            period: 期間
+
+        Returns:
+            TRIMA値のSeries
+
+        Raises:
+            TALibCalculationError: TA-Lib計算エラーの場合
+        """
+        # TrendAdapterを使用したTRIMA計算
+        return TrendAdapter.trima(df["close"], period)
+
+    def get_description(self) -> str:
+        """指標の説明を取得"""
+        return "TRIMA - Triangular Moving Average、三角移動平均、より滑らかでノイズの少ない移動平均"
+
+
 # 指標インスタンスのファクトリー関数
 def get_trend_indicator(indicator_type: str) -> BaseIndicator:
     """
     トレンド系指標のインスタンスを取得
 
     Args:
-        indicator_type: 指標タイプ（'SMA', 'EMA', 'MACD', 'KAMA', 'T3', 'TEMA', 'DEMA', 'WMA', 'HMA', 'VWMA', 'ZLEMA', 'MAMA'）
+        indicator_type: 指標タイプ（'SMA', 'EMA', 'MACD', 'KAMA', 'T3', 'TEMA', 'DEMA', 'WMA', 'HMA', 'VWMA', 'ZLEMA', 'MAMA', 'MIDPOINT', 'MIDPRICE', 'TRIMA'）
 
     Returns:
         指標インスタンス
@@ -446,6 +535,9 @@ def get_trend_indicator(indicator_type: str) -> BaseIndicator:
         "VWMA": VWMAIndicator,
         "ZLEMA": ZLEMAIndicator,
         "MAMA": MAMAIndicator,
+        "MIDPOINT": MIDPOINTIndicator,
+        "MIDPRICE": MIDPRICEIndicator,
+        "TRIMA": TRIMAIndicator,
     }
 
     if indicator_type not in indicators:
@@ -517,6 +609,21 @@ TREND_INDICATORS_INFO = {
     "MAMA": {
         "periods": [20, 30, 50],
         "description": "MAMA - MESA適応型移動平均、市場の効率性に応じて自動調整される移動平均",
+        "category": "trend",
+    },
+    "MIDPOINT": {
+        "periods": [14, 20, 30],
+        "description": "MIDPOINT - MidPoint over period、指定期間の最高値と最安値の中点",
+        "category": "trend",
+    },
+    "MIDPRICE": {
+        "periods": [14, 20, 30],
+        "description": "MIDPRICE - Midpoint Price over period、指定期間の高値と安値の中点価格",
+        "category": "trend",
+    },
+    "TRIMA": {
+        "periods": [14, 20, 30, 50],
+        "description": "TRIMA - Triangular Moving Average、三角移動平均、より滑らかでノイズの少ない移動平均",
         "category": "trend",
     },
 }

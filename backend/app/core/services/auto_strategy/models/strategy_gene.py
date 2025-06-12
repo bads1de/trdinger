@@ -60,6 +60,12 @@ class IndicatorGene:
             "T3",
             "WMA",
             "KAMA",
+            # Phase 3 新規追加指標
+            "BOP",
+            "PPO",
+            "MIDPOINT",
+            "MIDPRICE",
+            "TRIMA",
             # 注意: OpenInterest, FundingRateは指標ではなく判断材料として条件で使用
         ]
 
@@ -127,6 +133,22 @@ class Condition:
 
     def _is_indicator_name(self, name: str) -> bool:
         """指標名かどうかを判定"""
+        # 特別な指標名パターン
+        if name == "BOP":
+            # BOPは期間を使用しない
+            return True
+
+        # PPOの複数パラメータパターン: "PPO_12_26"
+        if name.startswith("PPO_") and len(name.split("_")) == 3:
+            parts = name.split("_")
+            try:
+                # 数値パラメータかチェック
+                int(parts[1])  # fastperiod
+                int(parts[2])  # slowperiod
+                return True
+            except ValueError:
+                pass
+
         # 指標名のパターン: "TYPE_PERIOD" (例: "SMA_20", "RSI_14")
         # または複合指標名: "OI_SMA_10", "FR_EMA_5"
         parts = name.split("_")
@@ -159,6 +181,10 @@ class Condition:
                     "T3",
                     "WMA",
                     "KAMA",
+                    # Phase 3 新規追加指標
+                    "MIDPOINT",
+                    "MIDPRICE",
+                    "TRIMA",
                 ]
                 return indicator_type in valid_indicators
 

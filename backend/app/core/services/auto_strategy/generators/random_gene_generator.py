@@ -86,6 +86,9 @@ class RandomGeneGenerator:
             "MEDPRICE",  # 新規追加: Median Price
             "TYPPRICE",  # 新規追加: Typical Price
             "WCLPRICE",  # 新規追加: Weighted Close Price
+            "MIDPOINT",  # 新規追加: MidPoint over period
+            "MIDPRICE",  # 新規追加: Midpoint Price over period
+            "TRIMA",  # 新規追加: Triangular Moving Average
         ]
 
         # 利用可能なデータソース
@@ -292,6 +295,18 @@ class RandomGeneGenerator:
             # Price Transform indicators
             parameters["period"] = 1  # Price Transform指標は期間を使用しない
 
+        elif indicator_type == "MIDPOINT":
+            # MidPoint over period
+            parameters["period"] = random.randint(14, 30)
+
+        elif indicator_type == "MIDPRICE":
+            # Midpoint Price over period
+            parameters["period"] = random.randint(14, 30)
+
+        elif indicator_type == "TRIMA":
+            # Triangular Moving Average
+            parameters["period"] = random.randint(14, 50)
+
         return parameters
 
     def _generate_random_conditions(
@@ -486,6 +501,17 @@ class RandomGeneGenerator:
             for price_type in ["AVGPRICE", "MEDPRICE", "TYPPRICE", "WCLPRICE"]
         ):
             # Price Transform indicators: 価格レベルでの比較
+            # 現在価格に対する相対的な閾値
+            if condition_type == "entry":
+                return random.uniform(0.98, 1.0)  # 価格下落時のエントリー
+            else:
+                return random.uniform(1.0, 1.02)  # 価格上昇時のエグジット
+
+        elif any(
+            indicator_type in operand
+            for indicator_type in ["MIDPOINT", "MIDPRICE", "TRIMA"]
+        ):
+            # MIDPOINT, MIDPRICE, TRIMA: 価格レベルでの比較
             # 現在価格に対する相対的な閾値
             if condition_type == "entry":
                 return random.uniform(0.98, 1.0)  # 価格下落時のエントリー

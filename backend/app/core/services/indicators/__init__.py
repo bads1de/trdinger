@@ -22,6 +22,9 @@ from .trend_indicators import (
     HMAIndicator,
     VWMAIndicator,
     ZLEMAIndicator,
+    MIDPOINTIndicator,
+    MIDPRICEIndicator,
+    TRIMAIndicator,
     get_trend_indicator,
     TREND_INDICATORS_INFO,
 )
@@ -38,6 +41,8 @@ from .momentum_indicators import (
     MFIIndicator,
     StochasticRSIIndicator,
     UltimateOscillatorIndicator,
+    BOPIndicator,
+    PPOIndicator,
     get_momentum_indicator,
     MOMENTUM_INDICATORS_INFO,
 )
@@ -93,6 +98,9 @@ __all__ = [
     "HMAIndicator",
     "VWMAIndicator",
     "ZLEMAIndicator",
+    "MIDPOINTIndicator",
+    "MIDPRICEIndicator",
+    "TRIMAIndicator",
     "get_trend_indicator",
     "TREND_INDICATORS_INFO",
     # モメンタム系指標
@@ -107,6 +115,8 @@ __all__ = [
     "MFIIndicator",
     "StochasticRSIIndicator",
     "UltimateOscillatorIndicator",
+    "BOPIndicator",
+    "PPOIndicator",
     "get_momentum_indicator",
     "MOMENTUM_INDICATORS_INFO",
     # ボラティリティ系指標

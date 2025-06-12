@@ -41,6 +41,9 @@ class StrategyFactory:
             "T3": TrendAdapter.t3,
             "WMA": TrendAdapter.wma,
             "KAMA": TrendAdapter.kama,
+            "MIDPOINT": TrendAdapter.midpoint,
+            "MIDPRICE": TrendAdapter.midprice,
+            "TRIMA": TrendAdapter.trima,
             # モメンタム系
             "RSI": MomentumAdapter.rsi,
             "STOCH": MomentumAdapter.stochastic,
@@ -51,6 +54,8 @@ class StrategyFactory:
             "MFI": MomentumAdapter.mfi,
             "MOMENTUM": MomentumAdapter.momentum,
             "ROC": MomentumAdapter.roc,
+            "BOP": MomentumAdapter.bop,
+            "PPO": MomentumAdapter.ppo,
             # ボラティリティ系
             "ATR": VolatilityAdapter.atr,
             "NATR": VolatilityAdapter.natr,
@@ -154,6 +159,26 @@ class StrategyFactory:
                             result = self.factory.indicator_adapters[indicator_type](
                                 high_data, low_data, close_data, period
                             )
+                        elif indicator_type == "MIDPRICE":
+                            # MIDPRICEはHigh, Lowが必要
+                            period = int(parameters.get("period", 14))
+                            result = self.factory.indicator_adapters[indicator_type](
+                                high_data, low_data, period
+                            )
+                        elif indicator_type == "BOP":
+                            # BOPはOpen, High, Low, Closeが必要
+                            open_data = self._convert_to_series(self.data.Open)
+                            result = self.factory.indicator_adapters[indicator_type](
+                                open_data, high_data, low_data, close_data
+                            )
+                        elif indicator_type == "PPO":
+                            # PPOは複数パラメータが必要
+                            fastperiod = int(parameters.get("period", 12))
+                            slowperiod = int(parameters.get("slow_period", 26))
+                            matype = int(parameters.get("matype", 0))
+                            result = self.factory.indicator_adapters[indicator_type](
+                                close_data, fastperiod, slowperiod, matype
+                            )
                         elif indicator_type in ["STOCH"]:
                             # Stochasticは特別な処理
                             period = int(parameters.get("period", 14))
@@ -168,9 +193,19 @@ class StrategyFactory:
                             )
 
                         # 指標をbacktesting.pyのインジケーターとして登録
-                        indicator_name = (
-                            f"{indicator_type}_{parameters.get('period', '')}"
-                        )
+                        if indicator_type == "BOP":
+                            # BOPは期間を使用しない
+                            indicator_name = "BOP"
+                        elif indicator_type == "PPO":
+                            # PPOは複数パラメータを使用
+                            fastperiod = int(parameters.get("period", 12))
+                            slowperiod = int(parameters.get("slow_period", 26))
+                            indicator_name = f"PPO_{fastperiod}_{slowperiod}"
+                        else:
+                            # 通常の指標
+                            indicator_name = (
+                                f"{indicator_type}_{parameters.get('period', '')}"
+                            )
 
                         # resultがSeriesの場合は値のみを取得
                         if hasattr(result, "values"):
@@ -473,11 +508,22 @@ class StrategyFactory:
                 errors.append(f"未対応の指標: {indicator.type}")
 
         # 条件の参照整合性チェック
-        available_indicators = [
-            f"{ind.type}_{ind.parameters.get('period', '')}"
-            for ind in gene.indicators
-            if ind.enabled
-        ]
+        available_indicators = []
+        for ind in gene.indicators:
+            if ind.enabled:
+                if ind.type == "BOP":
+                    # BOPは期間を使用しない
+                    available_indicators.append("BOP")
+                elif ind.type == "PPO":
+                    # PPOは複数パラメータを使用
+                    fastperiod = int(ind.parameters.get("period", 12))
+                    slowperiod = int(ind.parameters.get("slow_period", 26))
+                    available_indicators.append(f"PPO_{fastperiod}_{slowperiod}")
+                else:
+                    # 通常の指標
+                    available_indicators.append(
+                        f"{ind.type}_{ind.parameters.get('period', '')}"
+                    )
 
         # 有効なデータソース（OI/FR対応版）
         valid_data_sources = [
