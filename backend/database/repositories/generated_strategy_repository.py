@@ -6,7 +6,7 @@ GAによって生成された戦略の永続化処理を管理します。
 
 from typing import List, Optional, Dict, Any
 from sqlalchemy.orm import Session
-from sqlalchemy import desc, asc, and_, or_
+from sqlalchemy import desc, and_
 import logging
 
 from .base_repository import BaseRepository

@@ -7,7 +7,7 @@ GA実験リポジトリ
 from typing import List, Optional, Dict, Any
 from datetime import datetime
 from sqlalchemy.orm import Session
-from sqlalchemy import desc, asc, and_, or_
+from sqlalchemy import desc
 import logging
 
 from .base_repository import BaseRepository
@@ -27,7 +27,7 @@ class GAExperimentRepository(BaseRepository):
         name: str,
         config: Dict[str, Any],
         total_generations: int,
-        status: str = "running"
+        status: str = "running",
     ) -> GAExperiment:
         """
         新しいGA実験を作成
@@ -48,7 +48,7 @@ class GAExperimentRepository(BaseRepository):
                 status=status,
                 total_generations=total_generations,
                 current_generation=0,
-                progress=0.0
+                progress=0.0,
             )
 
             self.db.add(experiment)
@@ -68,7 +68,7 @@ class GAExperimentRepository(BaseRepository):
         experiment_id: int,
         current_generation: int,
         progress: float,
-        best_fitness: Optional[float] = None
+        best_fitness: Optional[float] = None,
     ) -> bool:
         """
         実験の進捗を更新
@@ -83,9 +83,11 @@ class GAExperimentRepository(BaseRepository):
             更新成功フラグ
         """
         try:
-            experiment = self.db.query(GAExperiment).filter(
-                GAExperiment.id == experiment_id
-            ).first()
+            experiment = (
+                self.db.query(GAExperiment)
+                .filter(GAExperiment.id == experiment_id)
+                .first()
+            )
 
             if not experiment:
                 logger.warning(f"実験が見つかりません: {experiment_id}")
@@ -98,7 +100,9 @@ class GAExperimentRepository(BaseRepository):
                 experiment.best_fitness = best_fitness
 
             self.db.commit()
-            logger.debug(f"実験進捗を更新: {experiment_id} (世代: {current_generation}, 進捗: {progress:.2%})")
+            logger.debug(
+                f"実験進捗を更新: {experiment_id} (世代: {current_generation}, 進捗: {progress:.2%})"
+            )
             return True
 
         except Exception as e:
@@ -107,10 +111,7 @@ class GAExperimentRepository(BaseRepository):
             return False
 
     def update_experiment_status(
-        self,
-        experiment_id: int,
-        status: str,
-        completed_at: Optional[datetime] = None
+        self, experiment_id: int, status: str, completed_at: Optional[datetime] = None
     ) -> bool:
         """
         実験のステータスを更新
@@ -124,9 +125,11 @@ class GAExperimentRepository(BaseRepository):
             更新成功フラグ
         """
         try:
-            experiment = self.db.query(GAExperiment).filter(
-                GAExperiment.id == experiment_id
-            ).first()
+            experiment = (
+                self.db.query(GAExperiment)
+                .filter(GAExperiment.id == experiment_id)
+                .first()
+            )
 
             if not experiment:
                 logger.warning(f"実験が見つかりません: {experiment_id}")
@@ -159,18 +162,18 @@ class GAExperimentRepository(BaseRepository):
             GA実験（存在しない場合はNone）
         """
         try:
-            return self.db.query(GAExperiment).filter(
-                GAExperiment.id == experiment_id
-            ).first()
+            return (
+                self.db.query(GAExperiment)
+                .filter(GAExperiment.id == experiment_id)
+                .first()
+            )
 
         except Exception as e:
             logger.error(f"実験取得エラー: {e}")
             return None
 
     def get_experiments_by_status(
-        self,
-        status: str,
-        limit: Optional[int] = None
+        self, status: str, limit: Optional[int] = None
     ) -> List[GAExperiment]:
         """
         ステータス別で実験を取得
@@ -183,9 +186,11 @@ class GAExperimentRepository(BaseRepository):
             GA実験のリスト
         """
         try:
-            query = self.db.query(GAExperiment).filter(
-                GAExperiment.status == status
-            ).order_by(desc(GAExperiment.created_at))
+            query = (
+                self.db.query(GAExperiment)
+                .filter(GAExperiment.status == status)
+                .order_by(desc(GAExperiment.created_at))
+            )
 
             if limit:
                 query = query.limit(limit)
@@ -207,19 +212,19 @@ class GAExperimentRepository(BaseRepository):
             GA実験のリスト
         """
         try:
-            return self.db.query(GAExperiment).order_by(
-                desc(GAExperiment.created_at)
-            ).limit(limit).all()
+            return (
+                self.db.query(GAExperiment)
+                .order_by(desc(GAExperiment.created_at))
+                .limit(limit)
+                .all()
+            )
 
         except Exception as e:
             logger.error(f"最近の実験取得エラー: {e}")
             return []
 
     def complete_experiment(
-        self,
-        experiment_id: int,
-        best_fitness: float,
-        final_generation: int
+        self, experiment_id: int, best_fitness: float, final_generation: int
     ) -> bool:
         """
         実験を完了状態にする
@@ -233,9 +238,11 @@ class GAExperimentRepository(BaseRepository):
             完了処理成功フラグ
         """
         try:
-            experiment = self.db.query(GAExperiment).filter(
-                GAExperiment.id == experiment_id
-            ).first()
+            experiment = (
+                self.db.query(GAExperiment)
+                .filter(GAExperiment.id == experiment_id)
+                .first()
+            )
 
             if not experiment:
                 logger.warning(f"実験が見つかりません: {experiment_id}")
@@ -248,7 +255,9 @@ class GAExperimentRepository(BaseRepository):
             experiment.completed_at = datetime.utcnow()
 
             self.db.commit()
-            logger.info(f"実験を完了しました: {experiment_id} (フィットネス: {best_fitness:.4f})")
+            logger.info(
+                f"実験を完了しました: {experiment_id} (フィットネス: {best_fitness:.4f})"
+            )
             return True
 
         except Exception as e:
@@ -265,31 +274,42 @@ class GAExperimentRepository(BaseRepository):
         """
         try:
             total_experiments = self.db.query(GAExperiment).count()
-            
-            running_experiments = self.db.query(GAExperiment).filter(
-                GAExperiment.status == "running"
-            ).count()
-            
-            completed_experiments = self.db.query(GAExperiment).filter(
-                GAExperiment.status == "completed"
-            ).count()
-            
-            error_experiments = self.db.query(GAExperiment).filter(
-                GAExperiment.status == "error"
-            ).count()
+
+            running_experiments = (
+                self.db.query(GAExperiment)
+                .filter(GAExperiment.status == "running")
+                .count()
+            )
+
+            completed_experiments = (
+                self.db.query(GAExperiment)
+                .filter(GAExperiment.status == "completed")
+                .count()
+            )
+
+            error_experiments = (
+                self.db.query(GAExperiment)
+                .filter(GAExperiment.status == "error")
+                .count()
+            )
 
             # 最高フィットネスの実験
-            best_experiment = self.db.query(GAExperiment).filter(
-                GAExperiment.best_fitness.isnot(None)
-            ).order_by(desc(GAExperiment.best_fitness)).first()
+            best_experiment = (
+                self.db.query(GAExperiment)
+                .filter(GAExperiment.best_fitness.isnot(None))
+                .order_by(desc(GAExperiment.best_fitness))
+                .first()
+            )
 
             return {
                 "total_experiments": total_experiments,
                 "running_experiments": running_experiments,
                 "completed_experiments": completed_experiments,
                 "error_experiments": error_experiments,
-                "best_fitness": best_experiment.best_fitness if best_experiment else None,
-                "best_experiment_id": best_experiment.id if best_experiment else None
+                "best_fitness": (
+                    best_experiment.best_fitness if best_experiment else None
+                ),
+                "best_experiment_id": best_experiment.id if best_experiment else None,
             }
 
         except Exception as e:

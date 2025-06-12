@@ -1,15 +1,16 @@
 """
 データ収集メインモジュール
 """
+
 import asyncio
-import ccxt
-from typing import List, Optional
 from datetime import datetime, timezone, timedelta
 import logging
 
 from database.connection import SessionLocal, ensure_db_initialized
 from database.repositories.ohlcv_repository import OHLCVRepository
-from database.repositories.data_collection_log_repository import DataCollectionLogRepository
+from database.repositories.data_collection_log_repository import (
+    DataCollectionLogRepository,
+)
 from app.core.services.market_data_service import BybitMarketDataService
 from app.config.market_config import MarketDataConfig
 from app.core.utils.data_converter import OHLCVDataConverter
@@ -36,7 +37,7 @@ class DataCollector:
         symbol: str,
         timeframe: str = "1d",
         days_back: int = 365,
-        batch_size: int = 1000
+        batch_size: int = 1000,
     ) -> int:
         """
         過去データを収集
@@ -65,13 +66,29 @@ class DataCollector:
             normalized_symbol = MarketDataConfig.normalize_symbol(symbol)
 
             # 既存データの最新タイムスタンプを確認
-            latest_timestamp = ohlcv_repo.get_latest_timestamp(normalized_symbol, timeframe)
+            latest_timestamp = ohlcv_repo.get_latest_timestamp(
+                normalized_symbol, timeframe
+            )
 
             if latest_timestamp:
                 logger.info(f"既存データの最新タイムスタンプ: {latest_timestamp}")
-                # 最新データから開始
-                end_time = datetime.now(timezone.utc)
-                start_time_data = latest_timestamp + timedelta(days=1)
+                # タイムゾーンを統一
+                if latest_timestamp.tzinfo is None:
+                    latest_timestamp = latest_timestamp.replace(tzinfo=timezone.utc)
+                # 既存データより古いデータを取得するため、最古データから遡る
+                oldest_timestamp = ohlcv_repo.get_oldest_timestamp(
+                    normalized_symbol, timeframe
+                )
+                if oldest_timestamp:
+                    if oldest_timestamp.tzinfo is None:
+                        oldest_timestamp = oldest_timestamp.replace(tzinfo=timezone.utc)
+                    # 最古データより古いデータを取得
+                    end_time = oldest_timestamp
+                    start_time_data = end_time - timedelta(days=days_back)
+                else:
+                    # 最新データより新しいデータを取得
+                    start_time_data = latest_timestamp + timedelta(minutes=1)
+                    end_time = datetime.now(timezone.utc)
             else:
                 # 指定日数前から開始
                 end_time = datetime.now(timezone.utc)
@@ -91,20 +108,18 @@ class DataCollector:
 
                     # OHLCVデータを取得
                     ohlcv_data = await self.market_service.fetch_ohlcv_data(
-                        normalized_symbol,
-                        timeframe,
-                        limit=batch_size
+                        normalized_symbol, timeframe, limit=batch_size
                     )
 
                     if not ohlcv_data:
-                        logger.warning(f"データが取得できませんでした: {normalized_symbol} {timeframe}")
+                        logger.warning(
+                            f"データが取得できませんでした: {normalized_symbol} {timeframe}"
+                        )
                         break
 
                     # データベース形式に変換
                     db_records = OHLCVDataConverter.ccxt_to_db_format(
-                        ohlcv_data,
-                        normalized_symbol,
-                        timeframe
+                        ohlcv_data, normalized_symbol, timeframe
                     )
 
                     # データベースに挿入
@@ -129,7 +144,7 @@ class DataCollector:
                         batch_end,
                         0,
                         "error",
-                        str(e)
+                        str(e),
                     )
                     break
 
@@ -141,7 +156,7 @@ class DataCollector:
                 start_time_data,
                 end_time_actual,
                 total_collected,
-                "success"
+                "success",
             )
 
             logger.info(f"過去データ収集完了: 総 {total_collected} 件")
@@ -154,11 +169,11 @@ class DataCollector:
             log_repo.log_collection(
                 normalized_symbol,
                 timeframe,
-                start_time_data if 'start_time_data' in locals() else start_time,
+                start_time_data if "start_time_data" in locals() else start_time,
                 end_time_actual,
                 total_collected,
                 "error",
-                str(e)
+                str(e),
             )
             raise
         finally:
@@ -187,9 +202,7 @@ class DataCollector:
 
             # 最新のOHLCVデータを取得
             ohlcv_data = await self.market_service.fetch_ohlcv_data(
-                normalized_symbol,
-                timeframe,
-                limit=100  # 最新100件
+                normalized_symbol, timeframe, limit=100  # 最新100件
             )
 
             if not ohlcv_data:
@@ -198,9 +211,7 @@ class DataCollector:
 
             # データベース形式に変換
             db_records = OHLCVDataConverter.ccxt_to_db_format(
-                ohlcv_data,
-                normalized_symbol,
-                timeframe
+                ohlcv_data, normalized_symbol, timeframe
             )
 
             # データベースに挿入（重複は無視）
@@ -215,7 +226,7 @@ class DataCollector:
                 start_time,
                 end_time,
                 inserted_count,
-                "success"
+                "success",
             )
 
             logger.info(f"最新データ収集完了: {inserted_count} 件")
@@ -227,17 +238,12 @@ class DataCollector:
             start_time = datetime.now(timezone.utc) - timedelta(hours=1)
             end_time = datetime.now(timezone.utc)
             log_repo.log_collection(
-                normalized_symbol,
-                timeframe,
-                start_time,
-                end_time,
-                0,
-                "error",
-                str(e)
+                normalized_symbol, timeframe, start_time, end_time, 0, "error", str(e)
             )
             raise
         finally:
             db.close()
+
 
 # _convert_to_db_format メソッドは OHLCVDataConverter.ccxt_to_db_format に移動されました
 
@@ -255,7 +261,5 @@ async def collect_btc_daily_data(days_back: int = 365) -> int:
     """
     collector = DataCollector()
     return await collector.collect_historical_data(
-        symbol="BTC/USDT",
-        timeframe="1d",
-        days_back=days_back
+        symbol="BTC/USDT", timeframe="1d", days_back=days_back
     )

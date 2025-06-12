@@ -9,7 +9,7 @@ import sys
 import json
 import pandas as pd
 import numpy as np
-from datetime import datetime, timedelta
+from datetime import datetime
 from app.core.services.backtest_service import BacktestService
 from database.connection import SessionLocal
 from database.repositories.ohlcv_repository import OHLCVRepository
@@ -86,7 +86,7 @@ def get_real_data(
 
             if df.empty:
                 print(
-                    f"警告: データベースにデータが見つかりません。サンプルデータを使用します。"
+                    "警告: データベースにデータが見つかりません。サンプルデータを使用します。"
                 )
                 return generate_sample_data(start_date, end_date, symbol)
 
@@ -108,7 +108,7 @@ def run_backtest(config: dict) -> dict:
     """
     try:
         # データを取得（まずデータベースから、なければサンプルデータ）
-        data = get_real_data(
+        get_real_data(
             config["strategy"]["target_pair"],
             config["start_date"],
             config["end_date"],
