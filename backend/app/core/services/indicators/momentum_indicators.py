@@ -471,6 +471,181 @@ class TRIXIndicator(BaseIndicator):
         return "TRIX - 三重平滑化されたモメンタム指標、ノイズを除去したトレンド分析"
 
 
+class BOPIndicator(BaseIndicator):
+    """BOP（Balance Of Power）指標"""
+
+    def __init__(self):
+        super().__init__(indicator_type="BOP", supported_periods=[1])
+
+    def calculate(self, df: pd.DataFrame, period: int, **kwargs) -> pd.Series:
+        """
+        BOP（Balance Of Power）を計算
+
+        Args:
+            df: OHLCVデータのDataFrame
+            period: 期間（BOPは期間を使用しないが、統一性のため）
+
+        Returns:
+            BOP値のSeries
+
+        Raises:
+            TALibCalculationError: TA-Lib計算エラーの場合
+            ValueError: 必要なデータが存在しない場合
+        """
+        # 必要なデータの存在確認
+        required_columns = ["open", "high", "low", "close"]
+        for col in required_columns:
+            if col not in df.columns:
+                raise ValueError(f"BOP計算には{col}データが必要です")
+
+        # MomentumAdapterを使用したBOP計算
+        return MomentumAdapter.bop(df["open"], df["high"], df["low"], df["close"])
+
+    def get_description(self) -> str:
+        """指標の説明を取得"""
+        return "BOP - Balance Of Power、買い圧力と売り圧力のバランスを測定"
+
+
+class APOIndicator(BaseIndicator):
+    """APO（Absolute Price Oscillator）指標"""
+
+    def __init__(self):
+        super().__init__(indicator_type="APO", supported_periods=[12, 26])
+
+    def calculate(self, df: pd.DataFrame, period: int, **kwargs) -> pd.Series:
+        """
+        APO（Absolute Price Oscillator）を計算
+
+        Args:
+            df: OHLCVデータのDataFrame
+            period: 期間（短期期間として使用）
+            **kwargs: 追加パラメータ
+                - slow_period: 長期期間（デフォルト: period * 2）
+                - matype: 移動平均タイプ（デフォルト: 0 = SMA）
+
+        Returns:
+            APO値のSeries
+
+        Raises:
+            TALibCalculationError: TA-Lib計算エラーの場合
+        """
+        # パラメータの取得
+        slow_period = kwargs.get("slow_period", period * 2)
+        matype = kwargs.get("matype", 0)
+
+        # MomentumAdapterを使用したAPO計算
+        return MomentumAdapter.apo(df["close"], period, slow_period, matype)
+
+    def get_description(self) -> str:
+        """指標の説明を取得"""
+        return "APO - Absolute Price Oscillator、短期と長期移動平均の絶対差"
+
+
+class PPOIndicator(BaseIndicator):
+    """PPO（Percentage Price Oscillator）指標"""
+
+    def __init__(self):
+        super().__init__(indicator_type="PPO", supported_periods=[12, 26])
+
+    def calculate(self, df: pd.DataFrame, period: int, **kwargs) -> pd.Series:
+        """
+        PPO（Percentage Price Oscillator）を計算
+
+        Args:
+            df: OHLCVデータのDataFrame
+            period: 期間（短期期間として使用）
+            **kwargs: 追加パラメータ
+                - slow_period: 長期期間（デフォルト: period * 2）
+                - matype: 移動平均タイプ（デフォルト: 0 = SMA）
+
+        Returns:
+            PPO値のSeries
+
+        Raises:
+            TALibCalculationError: TA-Lib計算エラーの場合
+        """
+        # パラメータの取得
+        slow_period = kwargs.get("slow_period", period * 2)
+        matype = kwargs.get("matype", 0)
+
+        # MomentumAdapterを使用したPPO計算
+        return MomentumAdapter.ppo(df["close"], period, slow_period, matype)
+
+    def get_description(self) -> str:
+        """指標の説明を取得"""
+        return "PPO - Percentage Price Oscillator、短期と長期移動平均のパーセンテージ差"
+
+
+class AROONOSCIndicator(BaseIndicator):
+    """AROONOSC（Aroon Oscillator）指標"""
+
+    def __init__(self):
+        super().__init__(indicator_type="AROONOSC", supported_periods=[14, 25])
+
+    def calculate(self, df: pd.DataFrame, period: int, **kwargs) -> pd.Series:
+        """
+        AROONOSC（Aroon Oscillator）を計算
+
+        Args:
+            df: OHLCVデータのDataFrame
+            period: 期間
+
+        Returns:
+            AROONOSC値のSeries
+
+        Raises:
+            TALibCalculationError: TA-Lib計算エラーの場合
+            ValueError: 必要なデータが存在しない場合
+        """
+        # 必要なデータの存在確認
+        required_columns = ["high", "low"]
+        for col in required_columns:
+            if col not in df.columns:
+                raise ValueError(f"AROONOSC計算には{col}データが必要です")
+
+        # MomentumAdapterを使用したAROONOSC計算
+        return MomentumAdapter.aroonosc(df["high"], df["low"], period)
+
+    def get_description(self) -> str:
+        """指標の説明を取得"""
+        return "AROONOSC - Aroon Oscillator、Aroon UpとAroon Downの差"
+
+
+class DXIndicator(BaseIndicator):
+    """DX（Directional Movement Index）指標"""
+
+    def __init__(self):
+        super().__init__(indicator_type="DX", supported_periods=[14, 21])
+
+    def calculate(self, df: pd.DataFrame, period: int, **kwargs) -> pd.Series:
+        """
+        DX（Directional Movement Index）を計算
+
+        Args:
+            df: OHLCVデータのDataFrame
+            period: 期間
+
+        Returns:
+            DX値のSeries
+
+        Raises:
+            TALibCalculationError: TA-Lib計算エラーの場合
+            ValueError: 必要なデータが存在しない場合
+        """
+        # 必要なデータの存在確認
+        required_columns = ["high", "low", "close"]
+        for col in required_columns:
+            if col not in df.columns:
+                raise ValueError(f"DX計算には{col}データが必要です")
+
+        # MomentumAdapterを使用したDX計算
+        return MomentumAdapter.dx(df["high"], df["low"], df["close"], period)
+
+    def get_description(self) -> str:
+        """指標の説明を取得"""
+        return "DX - Directional Movement Index、方向性の強さを測定"
+
+
 # 指標インスタンスのファクトリー関数
 def get_momentum_indicator(indicator_type: str) -> BaseIndicator:
     """
@@ -499,6 +674,11 @@ def get_momentum_indicator(indicator_type: str) -> BaseIndicator:
         "ULTOSC": UltimateOscillatorIndicator,
         "CMO": CMOIndicator,
         "TRIX": TRIXIndicator,
+        "BOP": BOPIndicator,
+        "APO": APOIndicator,
+        "PPO": PPOIndicator,
+        "AROONOSC": AROONOSCIndicator,
+        "DX": DXIndicator,
     }
 
     if indicator_type not in indicators:
@@ -575,6 +755,31 @@ MOMENTUM_INDICATORS_INFO = {
     "TRIX": {
         "periods": [14, 21, 30],
         "description": "TRIX - 三重平滑化されたモメンタム指標、ノイズを除去したトレンド分析",
+        "category": "momentum",
+    },
+    "BOP": {
+        "periods": [1],
+        "description": "BOP - Balance Of Power、買い圧力と売り圧力のバランスを測定",
+        "category": "momentum",
+    },
+    "APO": {
+        "periods": [12, 26],
+        "description": "APO - Absolute Price Oscillator、短期と長期移動平均の絶対差",
+        "category": "momentum",
+    },
+    "PPO": {
+        "periods": [12, 26],
+        "description": "PPO - Percentage Price Oscillator、短期と長期移動平均のパーセンテージ差",
+        "category": "momentum",
+    },
+    "AROONOSC": {
+        "periods": [14, 25],
+        "description": "AROONOSC - Aroon Oscillator、Aroon UpとAroon Downの差",
+        "category": "momentum",
+    },
+    "DX": {
+        "periods": [14, 21],
+        "description": "DX - Directional Movement Index、方向性の強さを測定",
         "category": "momentum",
     },
 }

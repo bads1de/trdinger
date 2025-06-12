@@ -78,6 +78,11 @@ class GAConfig:
             "VWAP",  # 新規追加: Volume Weighted Average Price
             # その他
             "PSAR",
+            "BOP",  # 新規追加: Balance Of Power
+            "APO",  # 新規追加: Absolute Price Oscillator
+            "PPO",  # 新規追加: Percentage Price Oscillator
+            "AROONOSC",  # 新規追加: Aroon Oscillator
+            "DX",  # 新規追加: Directional Movement Index
         ]
     )
 

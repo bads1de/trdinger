@@ -626,3 +626,182 @@ class MomentumAdapter(BaseAdapter):
         except Exception as e:
             MomentumAdapter._log_calculation_error("TRIX", e)
             raise TALibCalculationError(f"TRIX計算失敗: {e}")
+
+    @staticmethod
+    def bop(
+        open_prices: pd.Series, high: pd.Series, low: pd.Series, close: pd.Series
+    ) -> pd.Series:
+        """
+        BOP（Balance Of Power）を計算
+
+        Args:
+            open_prices: 始値のSeries
+            high: 高値のSeries
+            low: 安値のSeries
+            close: 終値のSeries
+
+        Returns:
+            BOP値のSeries
+
+        Raises:
+            TALibCalculationError: TA-Lib計算エラーの場合
+        """
+        MomentumAdapter._log_calculation_start("BOP")
+
+        try:
+            result = MomentumAdapter._safe_talib_calculation(
+                talib.BOP, open_prices.values, high.values, low.values, close.values
+            )
+            return MomentumAdapter._create_series_result(result, close.index, "BOP")
+        except TALibCalculationError:
+            raise
+        except Exception as e:
+            MomentumAdapter._log_calculation_error("BOP", e)
+            raise TALibCalculationError(f"BOP計算失敗: {e}")
+
+    @staticmethod
+    def apo(
+        close: pd.Series, fast_period: int, slow_period: int, matype: int = 0
+    ) -> pd.Series:
+        """
+        APO（Absolute Price Oscillator）を計算
+
+        Args:
+            close: 終値のSeries
+            fast_period: 短期期間
+            slow_period: 長期期間
+            matype: 移動平均タイプ（0=SMA, 1=EMA, etc.）
+
+        Returns:
+            APO値のSeries
+
+        Raises:
+            TALibCalculationError: TA-Lib計算エラーの場合
+        """
+        MomentumAdapter._validate_input(close, fast_period)
+        MomentumAdapter._log_calculation_start(
+            "APO", period=f"{fast_period}_{slow_period}"
+        )
+
+        try:
+            result = MomentumAdapter._safe_talib_calculation(
+                talib.APO,
+                close.values,
+                fastperiod=fast_period,
+                slowperiod=slow_period,
+                matype=matype,
+            )
+            return MomentumAdapter._create_series_result(
+                result, close.index, f"APO_{fast_period}_{slow_period}"
+            )
+        except TALibCalculationError:
+            raise
+        except Exception as e:
+            MomentumAdapter._log_calculation_error("APO", e)
+            raise TALibCalculationError(f"APO計算失敗: {e}")
+
+    @staticmethod
+    def ppo(
+        close: pd.Series, fast_period: int, slow_period: int, matype: int = 0
+    ) -> pd.Series:
+        """
+        PPO（Percentage Price Oscillator）を計算
+
+        Args:
+            close: 終値のSeries
+            fast_period: 短期期間
+            slow_period: 長期期間
+            matype: 移動平均タイプ（0=SMA, 1=EMA, etc.）
+
+        Returns:
+            PPO値のSeries
+
+        Raises:
+            TALibCalculationError: TA-Lib計算エラーの場合
+        """
+        MomentumAdapter._validate_input(close, fast_period)
+        MomentumAdapter._log_calculation_start(
+            "PPO", period=f"{fast_period}_{slow_period}"
+        )
+
+        try:
+            result = MomentumAdapter._safe_talib_calculation(
+                talib.PPO,
+                close.values,
+                fastperiod=fast_period,
+                slowperiod=slow_period,
+                matype=matype,
+            )
+            return MomentumAdapter._create_series_result(
+                result, close.index, f"PPO_{fast_period}_{slow_period}"
+            )
+        except TALibCalculationError:
+            raise
+        except Exception as e:
+            MomentumAdapter._log_calculation_error("PPO", e)
+            raise TALibCalculationError(f"PPO計算失敗: {e}")
+
+    @staticmethod
+    def aroonosc(high: pd.Series, low: pd.Series, period: int) -> pd.Series:
+        """
+        AROONOSC（Aroon Oscillator）を計算
+
+        Args:
+            high: 高値のSeries
+            low: 安値のSeries
+            period: 期間
+
+        Returns:
+            AROONOSC値のSeries
+
+        Raises:
+            TALibCalculationError: TA-Lib計算エラーの場合
+        """
+        MomentumAdapter._validate_input(high, period)
+        MomentumAdapter._log_calculation_start("AROONOSC", period=period)
+
+        try:
+            result = MomentumAdapter._safe_talib_calculation(
+                talib.AROONOSC, high.values, low.values, timeperiod=period
+            )
+            return MomentumAdapter._create_series_result(
+                result, high.index, f"AROONOSC_{period}"
+            )
+        except TALibCalculationError:
+            raise
+        except Exception as e:
+            MomentumAdapter._log_calculation_error("AROONOSC", e)
+            raise TALibCalculationError(f"AROONOSC計算失敗: {e}")
+
+    @staticmethod
+    def dx(high: pd.Series, low: pd.Series, close: pd.Series, period: int) -> pd.Series:
+        """
+        DX（Directional Movement Index）を計算
+
+        Args:
+            high: 高値のSeries
+            low: 安値のSeries
+            close: 終値のSeries
+            period: 期間
+
+        Returns:
+            DX値のSeries
+
+        Raises:
+            TALibCalculationError: TA-Lib計算エラーの場合
+        """
+        MomentumAdapter._validate_input(close, period)
+        MomentumAdapter._log_calculation_start("DX", period=period)
+
+        try:
+            result = MomentumAdapter._safe_talib_calculation(
+                talib.DX, high.values, low.values, close.values, timeperiod=period
+            )
+            return MomentumAdapter._create_series_result(
+                result, close.index, f"DX_{period}"
+            )
+        except TALibCalculationError:
+            raise
+        except Exception as e:
+            MomentumAdapter._log_calculation_error("DX", e)
+            raise TALibCalculationError(f"DX計算失敗: {e}")

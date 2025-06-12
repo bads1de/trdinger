@@ -76,6 +76,11 @@ class RandomGeneGenerator:
             "VWAP",  # 新規追加: Volume Weighted Average Price
             # その他
             "PSAR",
+            "BOP",  # 新規追加: Balance Of Power
+            "APO",  # 新規追加: Absolute Price Oscillator
+            "PPO",  # 新規追加: Percentage Price Oscillator
+            "AROONOSC",  # 新規追加: Aroon Oscillator
+            "DX",  # 新規追加: Directional Movement Index
         ]
 
         # 利用可能なデータソース
@@ -250,6 +255,30 @@ class RandomGeneGenerator:
             # Volume Weighted Average Price
             parameters["period"] = random.randint(14, 30)
 
+        elif indicator_type == "BOP":
+            # Balance Of Power
+            parameters["period"] = 1  # BOPは期間を使用しない
+
+        elif indicator_type == "APO":
+            # Absolute Price Oscillator
+            parameters["period"] = random.randint(12, 26)
+            parameters["slow_period"] = random.randint(26, 50)
+            parameters["matype"] = random.choice([0, 1])  # 0=SMA, 1=EMA
+
+        elif indicator_type == "PPO":
+            # Percentage Price Oscillator
+            parameters["period"] = random.randint(12, 26)
+            parameters["slow_period"] = random.randint(26, 50)
+            parameters["matype"] = random.choice([0, 1])  # 0=SMA, 1=EMA
+
+        elif indicator_type == "AROONOSC":
+            # Aroon Oscillator
+            parameters["period"] = random.randint(14, 25)
+
+        elif indicator_type == "DX":
+            # Directional Movement Index
+            parameters["period"] = random.randint(14, 21)
+
         return parameters
 
     def _generate_random_conditions(
@@ -403,6 +432,34 @@ class RandomGeneGenerator:
                 return random.uniform(-0.005, 0)  # 下降トレンド
             else:
                 return random.uniform(0, 0.005)  # 上昇トレンド
+
+        elif "BOP" in operand:
+            # BOP: -1から1の範囲
+            if condition_type == "entry":
+                return random.uniform(-0.5, 0)  # 売り圧力優勢
+            else:
+                return random.uniform(0, 0.5)  # 買い圧力優勢
+
+        elif "APO" in operand or "PPO" in operand:
+            # APO/PPO: ゼロライン周辺
+            if condition_type == "entry":
+                return random.uniform(-2, 0)  # 下降モメンタム
+            else:
+                return random.uniform(0, 2)  # 上昇モメンタム
+
+        elif "AROONOSC" in operand:
+            # AROONOSC: -100から100の範囲
+            if condition_type == "entry":
+                return random.uniform(-50, 0)  # 下降トレンド優勢
+            else:
+                return random.uniform(0, 50)  # 上昇トレンド優勢
+
+        elif "DX" in operand:
+            # DX: 0から100の範囲、25以上で強いトレンド
+            if condition_type == "entry":
+                return random.uniform(25, 40)  # 強いトレンド開始
+            else:
+                return random.uniform(15, 25)  # トレンド弱化
 
         else:
             # その他の場合は汎用的な値
