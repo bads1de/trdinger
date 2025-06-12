@@ -179,13 +179,50 @@ class TRANGEIndicator(BaseIndicator):
         return "TRANGE - 真の値幅、各期間の実際の価格変動幅"
 
 
+class KeltnerChannelsIndicator(BaseIndicator):
+    """Keltner Channels（ケルトナーチャネル）指標"""
+
+    def __init__(self):
+        super().__init__(indicator_type="KELTNER", supported_periods=[10, 14, 20])
+
+    def calculate(self, df: pd.DataFrame, period: int, **kwargs) -> pd.DataFrame:
+        """
+        Keltner Channels（ケルトナーチャネル）を計算
+
+        Args:
+            df: OHLCVデータのDataFrame
+            period: 期間
+            **kwargs: 追加パラメータ
+                - multiplier: ATRの倍数（デフォルト: 2.0）
+
+        Returns:
+            Keltner ChannelsのDataFrame (upper, middle, lower)
+
+        Raises:
+            TALibCalculationError: TA-Lib計算エラーの場合
+        """
+        # multiplierパラメータの取得
+        multiplier = kwargs.get("multiplier", 2.0)
+
+        # VolatilityAdapterを使用したKeltner Channels計算
+        return VolatilityAdapter.keltner_channels(
+            df["high"], df["low"], df["close"], period, multiplier
+        )
+
+    def get_description(self) -> str:
+        """指標の説明を取得"""
+        return (
+            "Keltner Channels - ケルトナーチャネル、ATRベースのボラティリティチャネル"
+        )
+
+
 # 指標インスタンスのファクトリー関数
 def get_volatility_indicator(indicator_type: str) -> BaseIndicator:
     """
     ボラティリティ系指標のインスタンスを取得
 
     Args:
-        indicator_type: 指標タイプ（'BB', 'ATR', 'NATR', 'TRANGE'）
+        indicator_type: 指標タイプ（'BB', 'ATR', 'NATR', 'TRANGE', 'KELTNER'）
 
     Returns:
         指標インスタンス
@@ -198,6 +235,7 @@ def get_volatility_indicator(indicator_type: str) -> BaseIndicator:
         "ATR": ATRIndicator,
         "NATR": NATRIndicator,
         "TRANGE": TRANGEIndicator,
+        "KELTNER": KeltnerChannelsIndicator,
     }
 
     if indicator_type not in indicators:
@@ -229,6 +267,11 @@ VOLATILITY_INDICATORS_INFO = {
     "TRANGE": {
         "periods": [1],
         "description": "TRANGE - 真の値幅、各期間の実際の価格変動幅",
+        "category": "volatility",
+    },
+    "KELTNER": {
+        "periods": [10, 14, 20],
+        "description": "Keltner Channels - ケルトナーチャネル、ATRベースのボラティリティチャネル",
         "category": "volatility",
     },
 }

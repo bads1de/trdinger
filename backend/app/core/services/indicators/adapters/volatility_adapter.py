@@ -74,7 +74,9 @@ class VolatilityAdapter(BaseAdapter):
             TALibCalculationError: 計算エラーの場合
         """
         VolatilityAdapter._validate_input(data, period)
-        VolatilityAdapter._log_calculation_start("BBANDS", period=period, std_dev=std_dev)
+        VolatilityAdapter._log_calculation_start(
+            "BBANDS", period=period, std_dev=std_dev
+        )
 
         try:
             upper, middle, lower = VolatilityAdapter._safe_talib_calculation(
@@ -234,3 +236,76 @@ class VolatilityAdapter(BaseAdapter):
         except Exception as e:
             VolatilityAdapter._log_calculation_error("VAR", e)
             raise TALibCalculationError(f"分散計算失敗: {e}")
+
+    @staticmethod
+    def keltner_channels(
+        high: pd.Series,
+        low: pd.Series,
+        close: pd.Series,
+        period: int,
+        multiplier: float = 2.0,
+    ) -> pd.DataFrame:
+        """
+        Keltner Channels (ケルトナーチャネル) を計算
+
+        Keltner Channels = EMA(Close) ± (multiplier × ATR)
+
+        Args:
+            high: 高値データ（pandas Series）
+            low: 安値データ（pandas Series）
+            close: 終値データ（pandas Series）
+            period: 期間
+            multiplier: ATRの倍数（デフォルト: 2.0）
+
+        Returns:
+            Keltner Channelsのpandas DataFrame (upper, middle, lower)
+
+        Raises:
+            TALibCalculationError: 計算エラーの場合
+        """
+        VolatilityAdapter._validate_input(close, period)
+        VolatilityAdapter._log_calculation_start(
+            "KELTNER", period=period, multiplier=multiplier
+        )
+
+        try:
+            # データの長さチェック
+            data_lengths = [len(high), len(low), len(close)]
+            if len(set(data_lengths)) > 1:
+                raise TALibCalculationError(
+                    f"全てのデータの長さが一致しません（高値: {len(high)}, 安値: {len(low)}, 終値: {len(close)}）"
+                )
+
+            # 最小データ数の確認
+            if len(close) < period:
+                raise TALibCalculationError(
+                    f"Keltner Channels計算には最低{period}個のデータが必要です（現在: {len(close)}個）"
+                )
+
+            # Middle Line: EMA(Close)
+            middle_line = VolatilityAdapter._safe_talib_calculation(
+                talib.EMA, close.values, timeperiod=period
+            )
+
+            # ATR計算
+            atr_values = VolatilityAdapter._safe_talib_calculation(
+                talib.ATR, high.values, low.values, close.values, timeperiod=period
+            )
+
+            # Upper and Lower Lines
+            upper_line = middle_line + (multiplier * atr_values)
+            lower_line = middle_line - (multiplier * atr_values)
+
+            # 結果のDataFrame作成
+            result = pd.DataFrame(
+                {"upper": upper_line, "middle": middle_line, "lower": lower_line},
+                index=close.index,
+            )
+
+            return result
+
+        except TALibCalculationError:
+            raise
+        except Exception as e:
+            VolatilityAdapter._log_calculation_error("KELTNER", e)
+            raise TALibCalculationError(f"Keltner Channels計算失敗: {e}")

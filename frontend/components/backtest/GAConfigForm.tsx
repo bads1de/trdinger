@@ -1,6 +1,6 @@
 /**
  * GA設定フォームコンポーネント
- * 
+ *
  * 遺伝的アルゴリズムによる自動戦略生成の設定を行います。
  */
 
@@ -72,7 +72,33 @@ const GAConfigForm: React.FC<GAConfigFormProps> = ({
     mutation_rate: 0.1,
     elite_size: 5,
     max_indicators: 5,
-    allowed_indicators: ["SMA", "EMA", "RSI", "MACD", "BB", "STOCH", "CCI", "WILLIAMS", "ADX"],
+    allowed_indicators: [
+      "SMA",
+      "EMA",
+      "WMA",
+      "KAMA",
+      "TEMA",
+      "DEMA",
+      "T3",
+      "RSI",
+      "STOCH",
+      "CCI",
+      "WILLR",
+      "MOMENTUM",
+      "ROC",
+      "ADX",
+      "AROON",
+      "MFI",
+      "MACD",
+      "BB",
+      "ATR",
+      "NATR",
+      "TRANGE",
+      "OBV",
+      "AD",
+      "ADOSC",
+      "PSAR",
+    ],
     fitness_weights: {
       total_return: 0.3,
       sharpe_ratio: 0.4,
@@ -88,7 +114,9 @@ const GAConfigForm: React.FC<GAConfigFormProps> = ({
 
   // 実験名
   const [experimentName, setExperimentName] = useState(
-    `${baseConfig.symbol.replace("/", "_")}_GA_${new Date().toISOString().slice(0, 10)}`
+    `${baseConfig.symbol.replace("/", "_")}_GA_${new Date()
+      .toISOString()
+      .slice(0, 10)}`
   );
 
   // プリセット設定
@@ -100,11 +128,13 @@ const GAConfigForm: React.FC<GAConfigFormProps> = ({
   useEffect(() => {
     const loadPresets = async () => {
       try {
-        const response = await fetchPresets("/api/auto-strategy/config/presets");
+        const response = await fetchPresets(
+          "/api/auto-strategy/config/presets"
+        );
         if (response?.success && response.presets) {
           // デフォルトプリセットを適用
           if (response.presets.default) {
-            setGaConfig(prev => ({
+            setGaConfig((prev) => ({
               ...prev,
               ...response.presets.default,
             }));
@@ -121,11 +151,11 @@ const GAConfigForm: React.FC<GAConfigFormProps> = ({
   // プリセット変更ハンドラー
   const handlePresetChange = async (preset: string) => {
     setSelectedPreset(preset);
-    
+
     try {
       const response = await fetchPresets("/api/auto-strategy/config/presets");
       if (response?.success && response.presets && response.presets[preset]) {
-        setGaConfig(prev => ({
+        setGaConfig((prev) => ({
           ...prev,
           ...response.presets[preset],
         }));
@@ -138,7 +168,7 @@ const GAConfigForm: React.FC<GAConfigFormProps> = ({
   // フォーム送信ハンドラー
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     const config: GAConfig = {
       experiment_name: experimentName,
       base_config: baseConfig,
@@ -150,18 +180,44 @@ const GAConfigForm: React.FC<GAConfigFormProps> = ({
 
   // 指標選択ハンドラー
   const handleIndicatorToggle = (indicator: string) => {
-    setGaConfig(prev => ({
+    setGaConfig((prev) => ({
       ...prev,
       allowed_indicators: prev.allowed_indicators.includes(indicator)
-        ? prev.allowed_indicators.filter(ind => ind !== indicator)
+        ? prev.allowed_indicators.filter((ind) => ind !== indicator)
         : [...prev.allowed_indicators, indicator],
     }));
   };
 
   // 利用可能な指標リスト
   const availableIndicators = [
-    "SMA", "EMA", "RSI", "MACD", "BB", "STOCH", "CCI", "WILLIAMS", 
-    "ADX", "AROON", "MFI", "MOMENTUM", "ROC", "ATR", "NATR"
+    // 移動平均系
+    "SMA",
+    "EMA",
+    "WMA",
+    "KAMA",
+    "TEMA",
+    "DEMA",
+    "T3",
+    // モメンタム系
+    "RSI",
+    "STOCH",
+    "CCI",
+    "WILLR",
+    "MOMENTUM",
+    "ROC",
+    "ADX",
+    "AROON",
+    "MFI",
+    // その他
+    "MACD",
+    "BB",
+    "ATR",
+    "NATR",
+    "TRANGE",
+    "OBV",
+    "AD",
+    "ADOSC",
+    "PSAR",
   ];
 
   return (
@@ -206,10 +262,12 @@ const GAConfigForm: React.FC<GAConfigFormProps> = ({
             <input
               type="number"
               value={gaConfig.population_size}
-              onChange={(e) => setGaConfig(prev => ({
-                ...prev,
-                population_size: parseInt(e.target.value)
-              }))}
+              onChange={(e) =>
+                setGaConfig((prev) => ({
+                  ...prev,
+                  population_size: parseInt(e.target.value),
+                }))
+              }
               min="10"
               max="500"
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -222,10 +280,12 @@ const GAConfigForm: React.FC<GAConfigFormProps> = ({
             <input
               type="number"
               value={gaConfig.generations}
-              onChange={(e) => setGaConfig(prev => ({
-                ...prev,
-                generations: parseInt(e.target.value)
-              }))}
+              onChange={(e) =>
+                setGaConfig((prev) => ({
+                  ...prev,
+                  generations: parseInt(e.target.value),
+                }))
+              }
               min="5"
               max="200"
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -267,49 +327,59 @@ const GAConfigForm: React.FC<GAConfigFormProps> = ({
                 min="0"
                 max="1"
                 value={gaConfig.fitness_weights.total_return}
-                onChange={(e) => setGaConfig(prev => ({
-                  ...prev,
-                  fitness_weights: {
-                    ...prev.fitness_weights,
-                    total_return: parseFloat(e.target.value)
-                  }
-                }))}
+                onChange={(e) =>
+                  setGaConfig((prev) => ({
+                    ...prev,
+                    fitness_weights: {
+                      ...prev.fitness_weights,
+                      total_return: parseFloat(e.target.value),
+                    },
+                  }))
+                }
                 className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
               />
             </div>
             <div>
-              <label className="block text-xs text-gray-600">シャープレシオ</label>
+              <label className="block text-xs text-gray-600">
+                シャープレシオ
+              </label>
               <input
                 type="number"
                 step="0.1"
                 min="0"
                 max="1"
                 value={gaConfig.fitness_weights.sharpe_ratio}
-                onChange={(e) => setGaConfig(prev => ({
-                  ...prev,
-                  fitness_weights: {
-                    ...prev.fitness_weights,
-                    sharpe_ratio: parseFloat(e.target.value)
-                  }
-                }))}
+                onChange={(e) =>
+                  setGaConfig((prev) => ({
+                    ...prev,
+                    fitness_weights: {
+                      ...prev.fitness_weights,
+                      sharpe_ratio: parseFloat(e.target.value),
+                    },
+                  }))
+                }
                 className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
               />
             </div>
             <div>
-              <label className="block text-xs text-gray-600">最大ドローダウン</label>
+              <label className="block text-xs text-gray-600">
+                最大ドローダウン
+              </label>
               <input
                 type="number"
                 step="0.1"
                 min="0"
                 max="1"
                 value={gaConfig.fitness_weights.max_drawdown}
-                onChange={(e) => setGaConfig(prev => ({
-                  ...prev,
-                  fitness_weights: {
-                    ...prev.fitness_weights,
-                    max_drawdown: parseFloat(e.target.value)
-                  }
-                }))}
+                onChange={(e) =>
+                  setGaConfig((prev) => ({
+                    ...prev,
+                    fitness_weights: {
+                      ...prev.fitness_weights,
+                      max_drawdown: parseFloat(e.target.value),
+                    },
+                  }))
+                }
                 className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
               />
             </div>
@@ -321,13 +391,15 @@ const GAConfigForm: React.FC<GAConfigFormProps> = ({
                 min="0"
                 max="1"
                 value={gaConfig.fitness_weights.win_rate}
-                onChange={(e) => setGaConfig(prev => ({
-                  ...prev,
-                  fitness_weights: {
-                    ...prev.fitness_weights,
-                    win_rate: parseFloat(e.target.value)
-                  }
-                }))}
+                onChange={(e) =>
+                  setGaConfig((prev) => ({
+                    ...prev,
+                    fitness_weights: {
+                      ...prev.fitness_weights,
+                      win_rate: parseFloat(e.target.value),
+                    },
+                  }))
+                }
                 className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
               />
             </div>

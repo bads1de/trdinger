@@ -43,9 +43,7 @@ class VolumeAdapter(BaseAdapter):
             result = VolumeAdapter._safe_talib_calculation(
                 talib.AD, high.values, low.values, close.values, volume.values
             )
-            return VolumeAdapter._create_series_result(
-                result, close.index, "AD"
-            )
+            return VolumeAdapter._create_series_result(result, close.index, "AD")
 
         except TALibCalculationError:
             raise
@@ -81,7 +79,9 @@ class VolumeAdapter(BaseAdapter):
         """
         VolumeAdapter._validate_multi_input(high, low, close, volume)
         VolumeAdapter._validate_input(close, slow_period)  # 長い期間で検証
-        VolumeAdapter._log_calculation_start("ADOSC", fast_period=fast_period, slow_period=slow_period)
+        VolumeAdapter._log_calculation_start(
+            "ADOSC", fast_period=fast_period, slow_period=slow_period
+        )
 
         try:
             result = VolumeAdapter._safe_talib_calculation(
@@ -125,9 +125,7 @@ class VolumeAdapter(BaseAdapter):
             result = VolumeAdapter._safe_talib_calculation(
                 talib.OBV, close.values, volume.values
             )
-            return VolumeAdapter._create_series_result(
-                result, close.index, "OBV"
-            )
+            return VolumeAdapter._create_series_result(result, close.index, "OBV")
 
         except TALibCalculationError:
             raise
@@ -200,3 +198,83 @@ class VolumeAdapter(BaseAdapter):
             TALibCalculationError: 計算エラーの場合
         """
         return VolumeAdapter.obv(close, volume)
+
+    @staticmethod
+    def vwap(
+        high: pd.Series,
+        low: pd.Series,
+        close: pd.Series,
+        volume: pd.Series,
+        period: int,
+    ) -> pd.Series:
+        """
+        Volume Weighted Average Price (出来高加重平均価格) を計算
+
+        VWAP = Σ(Typical Price × Volume) / Σ(Volume) for period
+        Typical Price = (High + Low + Close) / 3
+
+        Args:
+            high: 高値データ（pandas Series）
+            low: 安値データ（pandas Series）
+            close: 終値データ（pandas Series）
+            volume: 出来高データ（pandas Series）
+            period: 移動平均の期間
+
+        Returns:
+            VWAP値のpandas Series
+
+        Raises:
+            TALibCalculationError: 計算エラーの場合
+        """
+        VolumeAdapter._validate_input(close, period)
+        VolumeAdapter._log_calculation_start("VWAP", period=period)
+
+        try:
+            # データの長さチェック
+            data_lengths = [len(high), len(low), len(close), len(volume)]
+            if len(set(data_lengths)) > 1:
+                raise TALibCalculationError(
+                    f"全てのデータの長さが一致しません（高値: {len(high)}, 安値: {len(low)}, 終値: {len(close)}, 出来高: {len(volume)}）"
+                )
+
+            # 最小データ数の確認
+            if len(close) < period:
+                raise TALibCalculationError(
+                    f"VWAP計算には最低{period}個のデータが必要です（現在: {len(close)}個）"
+                )
+
+            # 出来高データの検証
+            if volume.isna().any():
+                raise TALibCalculationError("出来高データにNaN値が含まれています")
+
+            if (volume <= 0).any():
+                raise TALibCalculationError("出来高データに0以下の値が含まれています")
+
+            # Typical Price = (High + Low + Close) / 3
+            typical_price = (high + low + close) / 3
+
+            # VWAP計算
+            # Typical Price × Volume
+            price_volume = typical_price * volume
+
+            # 期間ごとの移動合計を計算
+            price_volume_sum = price_volume.rolling(
+                window=period, min_periods=period
+            ).sum()
+            volume_sum = volume.rolling(window=period, min_periods=period).sum()
+
+            # VWAP = Σ(Typical Price × Volume) / Σ(Volume)
+            vwap_result = price_volume_sum / volume_sum
+
+            # 結果のSeries作成
+            result = pd.Series(
+                vwap_result.values, index=close.index, name=f"VWAP_{period}"
+            )
+
+            return result
+
+        except TALibCalculationError:
+            raise
+        except Exception as e:
+            VolumeAdapter._log_calculation_error("VWAP", e)
+            raise TALibCalculationError(f"VWAP計算失敗: {e}")

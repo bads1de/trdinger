@@ -339,13 +339,87 @@ class MFIIndicator(BaseIndicator):
         return "MFI - マネーフローインデックス、出来高を考慮したRSI（0-100）"
 
 
+class StochasticRSIIndicator(BaseIndicator):
+    """Stochastic RSI（ストキャスティクスRSI）指標"""
+
+    def __init__(self):
+        super().__init__(indicator_type="STOCHRSI", supported_periods=[14, 21])
+
+    def calculate(self, df: pd.DataFrame, period: int, **kwargs) -> pd.DataFrame:
+        """
+        Stochastic RSI（ストキャスティクスRSI）を計算
+
+        Args:
+            df: OHLCVデータのDataFrame
+            period: RSI期間
+            **kwargs: 追加パラメータ
+                - fastk_period: Fast %K期間（デフォルト: 3）
+                - fastd_period: Fast %D期間（デフォルト: 3）
+
+        Returns:
+            Stochastic RSIのDataFrame (fastk, fastd)
+
+        Raises:
+            TALibCalculationError: TA-Lib計算エラーの場合
+        """
+        # パラメータの取得
+        fastk_period = kwargs.get("fastk_period", 3)
+        fastd_period = kwargs.get("fastd_period", 3)
+
+        # MomentumAdapterを使用したStochastic RSI計算
+        return MomentumAdapter.stochastic_rsi(
+            df["close"], period, fastk_period, fastd_period
+        )
+
+    def get_description(self) -> str:
+        """指標の説明を取得"""
+        return "Stochastic RSI - ストキャスティクスRSI、RSIにストキャスティクスを適用した高感度オシレーター"
+
+
+class UltimateOscillatorIndicator(BaseIndicator):
+    """Ultimate Oscillator（アルティメットオシレーター）指標"""
+
+    def __init__(self):
+        super().__init__(indicator_type="ULTOSC", supported_periods=[7, 14, 28])
+
+    def calculate(self, df: pd.DataFrame, period: int, **kwargs) -> pd.Series:
+        """
+        Ultimate Oscillator（アルティメットオシレーター）を計算
+
+        Args:
+            df: OHLCVデータのDataFrame
+            period: 短期期間（中期=period*2, 長期=period*4で計算）
+            **kwargs: 追加パラメータ
+                - period2: 中期期間（デフォルト: period*2）
+                - period3: 長期期間（デフォルト: period*4）
+
+        Returns:
+            Ultimate Oscillator値のSeries
+
+        Raises:
+            TALibCalculationError: TA-Lib計算エラーの場合
+        """
+        # パラメータの取得
+        period2 = kwargs.get("period2", period * 2)
+        period3 = kwargs.get("period3", period * 4)
+
+        # MomentumAdapterを使用したUltimate Oscillator計算
+        return MomentumAdapter.ultimate_oscillator(
+            df["high"], df["low"], df["close"], period, period2, period3
+        )
+
+    def get_description(self) -> str:
+        """指標の説明を取得"""
+        return "Ultimate Oscillator - アルティメットオシレーター、複数期間のTrue Rangeベースのモメンタム指標"
+
+
 # 指標インスタンスのファクトリー関数
 def get_momentum_indicator(indicator_type: str) -> BaseIndicator:
     """
     モメンタム系指標のインスタンスを取得
 
     Args:
-        indicator_type: 指標タイプ（'RSI', 'STOCH', 'CCI', 'WILLR', 'MOM', 'ROC', 'ADX', 'AROON', 'MFI'）
+        indicator_type: 指標タイプ（'RSI', 'STOCH', 'CCI', 'WILLR', 'MOM', 'ROC', 'ADX', 'AROON', 'MFI', 'STOCHRSI', 'ULTOSC'）
 
     Returns:
         指標インスタンス
@@ -363,6 +437,8 @@ def get_momentum_indicator(indicator_type: str) -> BaseIndicator:
         "ADX": ADXIndicator,
         "AROON": AroonIndicator,
         "MFI": MFIIndicator,
+        "STOCHRSI": StochasticRSIIndicator,
+        "ULTOSC": UltimateOscillatorIndicator,
     }
 
     if indicator_type not in indicators:
@@ -419,6 +495,16 @@ MOMENTUM_INDICATORS_INFO = {
     "MFI": {
         "periods": [14, 21],
         "description": "MFI - マネーフローインデックス、出来高を考慮したRSI（0-100）",
+        "category": "momentum",
+    },
+    "STOCHRSI": {
+        "periods": [14, 21],
+        "description": "Stochastic RSI - ストキャスティクスRSI、RSIにストキャスティクスを適用した高感度オシレーター",
+        "category": "momentum",
+    },
+    "ULTOSC": {
+        "periods": [7, 14, 28],
+        "description": "Ultimate Oscillator - アルティメットオシレーター、複数期間のTrue Rangeベースのモメンタム指標",
         "category": "momentum",
     },
 }

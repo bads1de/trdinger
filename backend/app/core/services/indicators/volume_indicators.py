@@ -150,13 +150,48 @@ class ADOSCIndicator(BaseIndicator):
         return "ADOSC - チャイキンA/Dオシレーター、A/D Lineの移動平均の差"
 
 
+class VWAPIndicator(BaseIndicator):
+    """VWAP（Volume Weighted Average Price）指標"""
+
+    def __init__(self):
+        super().__init__(indicator_type="VWAP", supported_periods=[1, 5, 10, 20])
+
+    def calculate(self, df: pd.DataFrame, period: int, **kwargs) -> pd.Series:
+        """
+        出来高加重平均価格（VWAP）を計算
+
+        Args:
+            df: OHLCVデータのDataFrame
+            period: 期間
+
+        Returns:
+            VWAP値のSeries
+
+        Raises:
+            TALibCalculationError: TA-Lib計算エラーの場合
+            ValueError: 出来高データが存在しない場合
+        """
+        # 出来高データの存在確認
+        if "volume" not in df.columns:
+            raise ValueError("VWAP計算には出来高データが必要です")
+
+        # VolumeAdapterを使用したVWAP計算
+        return VolumeAdapter.vwap(
+            df["high"], df["low"], df["close"], df["volume"], period
+        )
+
+    def get_description(self) -> str:
+        """指標の説明を取得"""
+        return "VWAP - 出来高加重平均価格、機関投資家のベンチマーク指標"
+
+
 # 指標インスタンスのファクトリー関数
 def get_volume_indicator(indicator_type: str) -> BaseIndicator:
     """
     出来高系指標のインスタンスを取得
 
     Args:
-        indicator_type: 指標タイプ（'OBV', 'AD', 'ADOSC'）
+        indicator_type: 指標タイプ（'OBV', 'AD', 'ADOSC', 'VWAP'）
 
     Returns:
         指標インスタンス
@@ -168,6 +203,7 @@ def get_volume_indicator(indicator_type: str) -> BaseIndicator:
         "OBV": OBVIndicator,
         "AD": ADIndicator,
         "ADOSC": ADOSCIndicator,
+        "VWAP": VWAPIndicator,
     }
 
     if indicator_type not in indicators:
@@ -194,6 +230,11 @@ VOLUME_INDICATORS_INFO = {
     "ADOSC": {
         "periods": [3, 10],
         "description": "ADOSC - チャイキンA/Dオシレーター、A/D Lineの移動平均の差",
+        "category": "volume",
+    },
+    "VWAP": {
+        "periods": [1, 5, 10, 20],
+        "description": "VWAP - 出来高加重平均価格、機関投資家のベンチマーク指標",
         "category": "volume",
     },
 }

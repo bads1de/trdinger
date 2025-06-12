@@ -18,6 +18,9 @@ from .trend_indicators import (
     T3Indicator,
     TEMAIndicator,
     DEMAIndicator,
+    WMAIndicator,
+    HMAIndicator,
+    VWMAIndicator,
     get_trend_indicator,
     TREND_INDICATORS_INFO,
 )
@@ -32,6 +35,8 @@ from .momentum_indicators import (
     ADXIndicator,
     AroonIndicator,
     MFIIndicator,
+    StochasticRSIIndicator,
+    UltimateOscillatorIndicator,
     get_momentum_indicator,
     MOMENTUM_INDICATORS_INFO,
 )
@@ -41,6 +46,7 @@ from .volatility_indicators import (
     ATRIndicator,
     NATRIndicator,
     TRANGEIndicator,
+    KeltnerChannelsIndicator,
     get_volatility_indicator,
     VOLATILITY_INDICATORS_INFO,
 )
@@ -49,6 +55,7 @@ from .volume_indicators import (
     OBVIndicator,
     ADIndicator,
     ADOSCIndicator,
+    VWAPIndicator,
     get_volume_indicator,
     VOLUME_INDICATORS_INFO,
 )
@@ -68,6 +75,9 @@ __all__ = [
     "T3Indicator",
     "TEMAIndicator",
     "DEMAIndicator",
+    "WMAIndicator",
+    "HMAIndicator",
+    "VWMAIndicator",
     "get_trend_indicator",
     "TREND_INDICATORS_INFO",
     # モメンタム系指標
@@ -80,6 +90,8 @@ __all__ = [
     "ADXIndicator",
     "AroonIndicator",
     "MFIIndicator",
+    "StochasticRSIIndicator",
+    "UltimateOscillatorIndicator",
     "get_momentum_indicator",
     "MOMENTUM_INDICATORS_INFO",
     # ボラティリティ系指標
@@ -87,12 +99,14 @@ __all__ = [
     "ATRIndicator",
     "NATRIndicator",
     "TRANGEIndicator",
+    "KeltnerChannelsIndicator",
     "get_volatility_indicator",
     "VOLATILITY_INDICATORS_INFO",
     # 出来高系指標
     "OBVIndicator",
     "ADIndicator",
     "ADOSCIndicator",
+    "VWAPIndicator",
     "get_volume_indicator",
     "VOLUME_INDICATORS_INFO",
     # その他の指標
@@ -125,7 +139,18 @@ def get_indicator_by_type(indicator_type: str) -> BaseIndicator:
         ValueError: サポートされていない指標タイプの場合
     """
     # カテゴリ別に適切なファクトリー関数を呼び出し
-    trend_indicators = ["SMA", "EMA", "MACD", "KAMA", "T3", "TEMA", "DEMA"]
+    trend_indicators = [
+        "SMA",
+        "EMA",
+        "MACD",
+        "KAMA",
+        "T3",
+        "TEMA",
+        "DEMA",
+        "WMA",
+        "HMA",
+        "VWMA",
+    ]
     momentum_indicators = [
         "RSI",
         "STOCH",
@@ -136,9 +161,11 @@ def get_indicator_by_type(indicator_type: str) -> BaseIndicator:
         "ADX",
         "AROON",
         "MFI",
+        "STOCHRSI",
+        "ULTOSC",
     ]
-    volatility_indicators = ["BB", "ATR", "NATR", "TRANGE"]
-    volume_indicators = ["OBV", "AD", "ADOSC"]
+    volatility_indicators = ["BB", "ATR", "NATR", "TRANGE", "KELTNER"]
+    volume_indicators = ["OBV", "AD", "ADOSC", "VWAP"]
     other_indicators = ["PSAR"]
 
     if indicator_type in trend_indicators:

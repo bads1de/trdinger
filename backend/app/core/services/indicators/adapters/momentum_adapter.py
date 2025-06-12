@@ -418,3 +418,141 @@ class MomentumAdapter(BaseAdapter):
         except Exception as e:
             MomentumAdapter._log_calculation_error("MFI", e)
             raise TALibCalculationError(f"MFI計算失敗: {e}")
+
+    @staticmethod
+    def stochastic_rsi(
+        close: pd.Series, period: int, fastk_period: int = 3, fastd_period: int = 3
+    ) -> pd.DataFrame:
+        """
+        Stochastic RSI (ストキャスティクスRSI) を計算
+
+        Stochastic RSI = Stochastic(RSI(close, period), fastk_period, fastd_period)
+
+        Args:
+            close: 終値データ（pandas Series）
+            period: RSI期間
+            fastk_period: Fast %K期間（デフォルト: 3）
+            fastd_period: Fast %D期間（デフォルト: 3）
+
+        Returns:
+            Stochastic RSIのpandas DataFrame (fastk, fastd)
+
+        Raises:
+            TALibCalculationError: 計算エラーの場合
+        """
+        MomentumAdapter._validate_input(close, period)
+        MomentumAdapter._log_calculation_start(
+            "STOCHRSI",
+            period=period,
+            fastk_period=fastk_period,
+            fastd_period=fastd_period,
+        )
+
+        try:
+            # 最小データ数の確認（RSI + Stochastic計算のため）
+            min_required = period + max(fastk_period, fastd_period) + 10
+            if len(close) < min_required:
+                raise TALibCalculationError(
+                    f"Stochastic RSI計算には最低{min_required}個のデータが必要です（現在: {len(close)}個）"
+                )
+
+            # Step 1: RSI計算
+            rsi_values = MomentumAdapter._safe_talib_calculation(
+                talib.RSI, close.values, timeperiod=period
+            )
+
+            # Step 2: RSI値にStochasticを適用
+            # RSI値を高値・安値・終値として使用
+            fastk, fastd = MomentumAdapter._safe_talib_calculation(
+                talib.STOCH,
+                rsi_values,  # high
+                rsi_values,  # low
+                rsi_values,  # close
+                fastk_period=fastk_period,
+                slowk_period=1,  # Fast Stochasticなので1
+                slowk_matype=0,  # SMA
+                slowd_period=fastd_period,
+                slowd_matype=0,  # SMA
+            )
+
+            # 結果のDataFrame作成
+            result = pd.DataFrame({"fastk": fastk, "fastd": fastd}, index=close.index)
+
+            return result
+
+        except TALibCalculationError:
+            raise
+        except Exception as e:
+            MomentumAdapter._log_calculation_error("STOCHRSI", e)
+            raise TALibCalculationError(f"Stochastic RSI計算失敗: {e}")
+
+    @staticmethod
+    def ultimate_oscillator(
+        high: pd.Series,
+        low: pd.Series,
+        close: pd.Series,
+        period1: int,
+        period2: int,
+        period3: int,
+    ) -> pd.Series:
+        """
+        Ultimate Oscillator (アルティメットオシレーター) を計算
+
+        Ultimate Oscillator = 100 * [(4*BP1/TR1) + (2*BP2/TR2) + (BP3/TR3)] / (4+2+1)
+        BP = Buying Pressure = Close - min(Low, Previous Close)
+        TR = True Range
+
+        Args:
+            high: 高値データ（pandas Series）
+            low: 安値データ（pandas Series）
+            close: 終値データ（pandas Series）
+            period1: 短期期間（通常7）
+            period2: 中期期間（通常14）
+            period3: 長期期間（通常28）
+
+        Returns:
+            Ultimate Oscillator値のpandas Series
+
+        Raises:
+            TALibCalculationError: 計算エラーの場合
+        """
+        MomentumAdapter._validate_input(close, max(period1, period2, period3))
+        MomentumAdapter._log_calculation_start(
+            "ULTOSC", period1=period1, period2=period2, period3=period3
+        )
+
+        try:
+            # データの長さチェック
+            data_lengths = [len(high), len(low), len(close)]
+            if len(set(data_lengths)) > 1:
+                raise TALibCalculationError(
+                    f"全てのデータの長さが一致しません（高値: {len(high)}, 安値: {len(low)}, 終値: {len(close)}）"
+                )
+
+            # 最小データ数の確認
+            min_required = max(period1, period2, period3) + 10
+            if len(close) < min_required:
+                raise TALibCalculationError(
+                    f"Ultimate Oscillator計算には最低{min_required}個のデータが必要です（現在: {len(close)}個）"
+                )
+
+            # TA-Libを使用したUltimate Oscillator計算
+            result = MomentumAdapter._safe_talib_calculation(
+                talib.ULTOSC,
+                high.values,
+                low.values,
+                close.values,
+                timeperiod1=period1,
+                timeperiod2=period2,
+                timeperiod3=period3,
+            )
+
+            return MomentumAdapter._create_series_result(
+                result, close.index, f"ULTOSC_{period1}_{period2}_{period3}"
+            )
+
+        except TALibCalculationError:
+            raise
+        except Exception as e:
+            MomentumAdapter._log_calculation_error("ULTOSC", e)
+            raise TALibCalculationError(f"Ultimate Oscillator計算失敗: {e}")

@@ -41,16 +41,32 @@ class RandomGeneGenerator:
             "SMA",
             "EMA",
             "WMA",
+            "KAMA",
+            "TEMA",
+            "DEMA",
+            "T3",
             # オシレーター
             "RSI",
             "MOMENTUM",
             "ROC",
-            # その他のテクニカル指標
-            "MACD",
-            "BB",
             "STOCH",
             "CCI",
+            "WILLR",
             "ADX",
+            "AROON",
+            "MFI",
+            # ボラティリティ系
+            "MACD",
+            "BB",
+            "ATR",
+            "NATR",
+            "TRANGE",
+            # 出来高系
+            "OBV",
+            "AD",
+            "ADOSC",
+            # その他
+            "PSAR",
         ]
 
         # 利用可能なデータソース
@@ -120,9 +136,14 @@ class RandomGeneGenerator:
         """指標タイプに応じたパラメータを生成"""
         parameters = {}
 
-        if indicator_type in ["SMA", "EMA", "WMA"]:
+        if indicator_type in ["SMA", "EMA", "WMA", "KAMA", "TEMA", "DEMA"]:
             # 移動平均系
             parameters["period"] = random.randint(5, 50)
+
+        elif indicator_type == "T3":
+            # T3 (Triple Exponential Moving Average)
+            parameters["period"] = random.randint(5, 30)
+            parameters["vfactor"] = random.uniform(0.5, 0.9)
 
         elif indicator_type == "RSI":
             # RSI
@@ -152,9 +173,29 @@ class RandomGeneGenerator:
             parameters["k_period"] = random.randint(10, 20)
             parameters["d_period"] = random.randint(3, 7)
 
-        elif indicator_type in ["CCI", "ADX"]:
-            # CCI, ADX
+        elif indicator_type in ["CCI", "ADX", "AROON", "MFI"]:
+            # CCI, ADX, Aroon, MFI
             parameters["period"] = random.randint(10, 25)
+
+        elif indicator_type == "WILLR":
+            # Williams %R
+            parameters["period"] = random.randint(10, 20)
+
+        elif indicator_type in ["ATR", "NATR", "TRANGE"]:
+            # ボラティリティ系指標
+            parameters["period"] = random.randint(10, 25)
+
+        elif indicator_type in ["OBV", "AD", "ADOSC"]:
+            # 出来高系指標
+            if indicator_type == "ADOSC":
+                parameters["fast_period"] = random.randint(3, 7)
+                parameters["slow_period"] = random.randint(8, 15)
+            else:
+                parameters["period"] = 1  # OBV, ADは期間を使用しない
+
+        elif indicator_type == "PSAR":
+            # Parabolic SAR
+            parameters["period"] = 1  # PSARは期間を使用しない
 
         return parameters
 

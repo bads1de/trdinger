@@ -265,13 +265,104 @@ class DEMAIndicator(BaseIndicator):
         return "DEMA - 二重指数移動平均、ラグを減らした応答性の高い移動平均"
 
 
+class WMAIndicator(BaseIndicator):
+    """WMA（Weighted Moving Average）指標"""
+
+    def __init__(self):
+        super().__init__(
+            indicator_type="WMA", supported_periods=[5, 10, 20, 50, 100, 200]
+        )
+
+    def calculate(self, df: pd.DataFrame, period: int, **kwargs) -> pd.Series:
+        """
+        加重移動平均（WMA）を計算（TA-Lib使用）
+
+        Args:
+            df: OHLCVデータのDataFrame
+            period: 期間
+
+        Returns:
+            WMA値のSeries
+
+        Raises:
+            TALibCalculationError: TA-Lib計算エラーの場合
+        """
+        # TA-Libを使用した高速計算
+        return TrendAdapter.wma(df["close"], period)
+
+    def get_description(self) -> str:
+        """指標の説明を取得"""
+        return "加重移動平均 - 直近の価格により大きな重みを置いた移動平均"
+
+
+class HMAIndicator(BaseIndicator):
+    """HMA（Hull Moving Average）指標"""
+
+    def __init__(self):
+        super().__init__(indicator_type="HMA", supported_periods=[9, 14, 21, 30, 50])
+
+    def calculate(self, df: pd.DataFrame, period: int, **kwargs) -> pd.Series:
+        """
+        ハル移動平均（HMA）を計算
+
+        Args:
+            df: OHLCVデータのDataFrame
+            period: 期間
+
+        Returns:
+            HMA値のSeries
+
+        Raises:
+            TALibCalculationError: TA-Lib計算エラーの場合
+        """
+        # TrendAdapterを使用したHMA計算
+        return TrendAdapter.hma(df["close"], period)
+
+    def get_description(self) -> str:
+        """指標の説明を取得"""
+        return "HMA - ハル移動平均、ラグを最小化した高応答性移動平均"
+
+
+class VWMAIndicator(BaseIndicator):
+    """VWMA（Volume Weighted Moving Average）指標"""
+
+    def __init__(self):
+        super().__init__(indicator_type="VWMA", supported_periods=[10, 20, 30, 50])
+
+    def calculate(self, df: pd.DataFrame, period: int, **kwargs) -> pd.Series:
+        """
+        出来高加重移動平均（VWMA）を計算
+
+        Args:
+            df: OHLCVデータのDataFrame
+            period: 期間
+
+        Returns:
+            VWMA値のSeries
+
+        Raises:
+            TALibCalculationError: TA-Lib計算エラーの場合
+            ValueError: 出来高データが存在しない場合
+        """
+        # 出来高データの存在確認
+        if "volume" not in df.columns:
+            raise ValueError("VWMA計算には出来高データが必要です")
+
+        # TrendAdapterを使用したVWMA計算
+        return TrendAdapter.vwma(df["close"], df["volume"], period)
+
+    def get_description(self) -> str:
+        """指標の説明を取得"""
+        return "VWMA - 出来高加重移動平均、出来高を重みとした移動平均"
+
+
 # 指標インスタンスのファクトリー関数
 def get_trend_indicator(indicator_type: str) -> BaseIndicator:
     """
     トレンド系指標のインスタンスを取得
 
     Args:
-        indicator_type: 指標タイプ（'SMA', 'EMA', 'MACD', 'KAMA', 'T3', 'TEMA', 'DEMA'）
+        indicator_type: 指標タイプ（'SMA', 'EMA', 'MACD', 'KAMA', 'T3', 'TEMA', 'DEMA', 'WMA', 'HMA', 'VWMA'）
 
     Returns:
         指標インスタンス
@@ -287,6 +378,9 @@ def get_trend_indicator(indicator_type: str) -> BaseIndicator:
         "T3": T3Indicator,
         "TEMA": TEMAIndicator,
         "DEMA": DEMAIndicator,
+        "WMA": WMAIndicator,
+        "HMA": HMAIndicator,
+        "VWMA": VWMAIndicator,
     }
 
     if indicator_type not in indicators:
@@ -333,6 +427,21 @@ TREND_INDICATORS_INFO = {
     "DEMA": {
         "periods": [14, 21, 30],
         "description": "DEMA - 二重指数移動平均、ラグを減らした応答性の高い移動平均",
+        "category": "trend",
+    },
+    "WMA": {
+        "periods": [5, 10, 20, 50, 100, 200],
+        "description": "加重移動平均 - 直近の価格により大きな重みを置いた移動平均",
+        "category": "trend",
+    },
+    "HMA": {
+        "periods": [9, 14, 21, 30, 50],
+        "description": "HMA - ハル移動平均、ラグを最小化した高応答性移動平均",
+        "category": "trend",
+    },
+    "VWMA": {
+        "periods": [10, 20, 30, 50],
+        "description": "VWMA - 出来高加重移動平均、出来高を重みとした移動平均",
         "category": "trend",
     },
 }
