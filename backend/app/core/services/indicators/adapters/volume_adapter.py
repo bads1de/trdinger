@@ -7,6 +7,7 @@ AD, ADOSC, OBV などのボリューム系指標を提供します。
 
 import talib
 import pandas as pd
+import numpy as np
 import logging
 
 from .base_adapter import BaseAdapter, TALibCalculationError
@@ -278,3 +279,196 @@ class VolumeAdapter(BaseAdapter):
         except Exception as e:
             VolumeAdapter._log_calculation_error("VWAP", e)
             raise TALibCalculationError(f"VWAP計算失敗: {e}")
+
+    @staticmethod
+    def pvt(close: pd.Series, volume: pd.Series) -> pd.Series:
+        """
+        Price Volume Trend (PVT) を計算
+
+        PVT = Previous PVT + (Volume × ((Close - Previous Close) / Previous Close))
+
+        PVTは、価格変化率と出来高を組み合わせた累積指標です。
+        OBVと似ていますが、価格変化の大きさも考慮に入れます。
+
+        Args:
+            close: 終値データ（pandas Series）
+            volume: 出来高データ（pandas Series）
+
+        Returns:
+            PVT値のpandas Series
+
+        Raises:
+            TALibCalculationError: 計算エラーの場合
+        """
+        VolumeAdapter._validate_multi_input(close, volume)
+        VolumeAdapter._log_calculation_start("PVT")
+
+        try:
+            # データの長さチェック
+            if len(close) != len(volume):
+                raise TALibCalculationError(
+                    f"終値と出来高データの長さが一致しません（終値: {len(close)}, 出来高: {len(volume)}）"
+                )
+
+            # 最小データ数の確認（PVTは前日比較が必要なので最低2個）
+            if len(close) < 2:
+                raise TALibCalculationError(
+                    f"PVT計算には最低2個のデータが必要です（現在: {len(close)}個）"
+                )
+
+            # 出来高データの検証
+            if volume.isna().any():
+                raise TALibCalculationError("出来高データにNaN値が含まれています")
+
+            if (volume < 0).any():
+                raise TALibCalculationError("出来高データに負の値が含まれています")
+
+            # 価格変化率の計算
+            # (Close - Previous Close) / Previous Close
+            price_change_rate = close.pct_change()
+
+            # PVT計算
+            # Volume × Price Change Rate
+            pvt_increment = volume * price_change_rate
+
+            # 累積合計（最初の値は0から開始）
+            pvt_result = pvt_increment.cumsum()
+
+            # 最初の値をNaNから0に変更
+            pvt_result.iloc[0] = 0
+
+            # 結果のSeries作成
+            result = pd.Series(pvt_result.values, index=close.index, name="PVT")
+
+            return result
+
+        except TALibCalculationError:
+            raise
+        except Exception as e:
+            VolumeAdapter._log_calculation_error("PVT", e)
+            raise TALibCalculationError(f"PVT計算失敗: {e}")
+
+    @staticmethod
+    def price_volume_trend(close: pd.Series, volume: pd.Series) -> pd.Series:
+        """
+        Price Volume Trend を計算（pvtのエイリアス）
+
+        Args:
+            close: 終値データ（pandas Series）
+            volume: 出来高データ（pandas Series）
+
+        Returns:
+            PVT値のpandas Series
+
+        Raises:
+            TALibCalculationError: 計算エラーの場合
+        """
+        return VolumeAdapter.pvt(close, volume)
+
+    @staticmethod
+    def emv(
+        high: pd.Series, low: pd.Series, volume: pd.Series, period: int
+    ) -> pd.Series:
+        """
+        Ease of Movement (EMV) を計算
+
+        EMV = SMA(Distance Moved / Box Height, period)
+        Distance Moved = (High + Low) / 2 - (Previous High + Previous Low) / 2
+        Box Height = Volume / (High - Low)
+
+        EMVは、価格変動の容易さを測定する指標です。
+        出来高が少なく価格変動が大きい場合、移動が容易であることを示します。
+
+        Args:
+            high: 高値データ（pandas Series）
+            low: 安値データ（pandas Series）
+            volume: 出来高データ（pandas Series）
+            period: 移動平均の期間
+
+        Returns:
+            EMV値のpandas Series
+
+        Raises:
+            TALibCalculationError: 計算エラーの場合
+        """
+        VolumeAdapter._validate_multi_input(high, low, volume)
+        VolumeAdapter._log_calculation_start("EMV", period=period)
+
+        try:
+            # データの長さチェック
+            if not (len(high) == len(low) == len(volume)):
+                raise TALibCalculationError(
+                    f"高値、安値、出来高データの長さが一致しません"
+                    f"（高値: {len(high)}, 安値: {len(low)}, 出来高: {len(volume)}）"
+                )
+
+            # 最小データ数の確認
+            min_required = period + 5  # 余裕を持たせる
+            if len(high) < min_required:
+                raise TALibCalculationError(
+                    f"EMV計算には最低{min_required}個のデータが必要です（現在: {len(high)}個）"
+                )
+
+            # 出来高データの検証
+            if volume.isna().any():
+                raise TALibCalculationError("出来高データにNaN値が含まれています")
+
+            if (volume <= 0).any():
+                raise TALibCalculationError("出来高データに0以下の値が含まれています")
+
+            # Distance Moved の計算
+            # (High + Low) / 2 の移動距離
+            mid_point = (high + low) / 2
+            distance_moved = mid_point.diff()
+
+            # Box Height の計算
+            # Volume / (High - Low)
+            price_range = high - low
+
+            # 価格レンジが0の場合の処理
+            price_range = price_range.replace(0, np.nan)
+            box_height = volume / price_range
+
+            # EMV Raw の計算
+            # Distance Moved / Box Height
+            emv_raw = distance_moved / box_height
+
+            # 無限大値の処理
+            emv_raw = emv_raw.replace([np.inf, -np.inf], np.nan)
+
+            # 移動平均の計算
+            emv_result = emv_raw.rolling(window=period, min_periods=period).mean()
+
+            # 結果のSeries作成
+            result = pd.Series(
+                emv_result.values, index=high.index, name=f"EMV_{period}"
+            )
+
+            return result
+
+        except TALibCalculationError:
+            raise
+        except Exception as e:
+            VolumeAdapter._log_calculation_error("EMV", e)
+            raise TALibCalculationError(f"EMV計算失敗: {e}")
+
+    @staticmethod
+    def ease_of_movement(
+        high: pd.Series, low: pd.Series, volume: pd.Series, period: int
+    ) -> pd.Series:
+        """
+        Ease of Movement を計算（emvのエイリアス）
+
+        Args:
+            high: 高値データ（pandas Series）
+            low: 安値データ（pandas Series）
+            volume: 出来高データ（pandas Series）
+            period: 移動平均の期間
+
+        Returns:
+            EMV値のpandas Series
+
+        Raises:
+            TALibCalculationError: 計算エラーの場合
+        """
+        return VolumeAdapter.emv(high, low, volume, period)

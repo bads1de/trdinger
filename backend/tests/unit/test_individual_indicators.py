@@ -50,6 +50,7 @@ def test_trend_indicators():
             KAMAIndicator,
             T3Indicator,
             TEMAIndicator,
+            WMAIndicator,  # WMAを追加
         )
 
         test_data = create_test_data(100)
@@ -74,8 +75,17 @@ def test_trend_indicators():
         assert ema_result.name == "EMA_20"
         print(f"   ✅ EMA計算成功: 最後の値 {ema_result.iloc[-1]:.2f}")
 
+        # WMAテスト（新規追加）
+        print("\n3. WMA指標テスト")
+        wma_indicator = WMAIndicator()
+        wma_result = wma_indicator.calculate(test_data, period=20)
+
+        assert isinstance(wma_result, pd.Series)
+        assert wma_result.name == "WMA_20"
+        print(f"   ✅ WMA計算成功: 最後の値 {wma_result.iloc[-1]:.2f}")
+
         # MACDテスト
-        print("\n3. MACD指標テスト")
+        print("\n4. MACD指標テスト")
         macd_indicator = MACDIndicator()
         macd_result = macd_indicator.calculate(test_data, period=12)
 
@@ -86,7 +96,7 @@ def test_trend_indicators():
         print(f"   ✅ MACD計算成功: MACD {macd_result['macd_line'].iloc[-1]:.4f}")
 
         # KAMAテスト
-        print("\n4. KAMA指標テスト")
+        print("\n5. KAMA指標テスト")
         kama_indicator = KAMAIndicator()
         kama_result = kama_indicator.calculate(test_data, period=20)
 
@@ -95,7 +105,7 @@ def test_trend_indicators():
         print(f"   ✅ KAMA計算成功: 最後の値 {kama_result.iloc[-1]:.2f}")
 
         # T3テスト
-        print("\n5. T3指標テスト")
+        print("\n6. T3指標テスト")
         t3_indicator = T3Indicator()
         t3_result = t3_indicator.calculate(test_data, period=5)
 
@@ -104,7 +114,7 @@ def test_trend_indicators():
         print(f"   ✅ T3計算成功: 最後の値 {t3_result.iloc[-1]:.2f}")
 
         # TEMAテスト
-        print("\n6. TEMA指標テスト")
+        print("\n7. TEMA指標テスト")
         tema_indicator = TEMAIndicator()
         tema_result = tema_indicator.calculate(test_data, period=14)
 

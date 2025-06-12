@@ -216,13 +216,74 @@ class KeltnerChannelsIndicator(BaseIndicator):
         )
 
 
+class STDDEVIndicator(BaseIndicator):
+    """STDDEV（Standard Deviation）指標"""
+
+    def __init__(self):
+        super().__init__(indicator_type="STDDEV", supported_periods=[5, 10, 20, 30])
+
+    def calculate(self, df: pd.DataFrame, period: int, **kwargs) -> pd.Series:
+        """
+        STDDEV（Standard Deviation）を計算
+
+        Args:
+            df: OHLCVデータのDataFrame
+            period: 期間
+            **kwargs: 追加パラメータ
+                - nbdev: 標準偏差の倍数（デフォルト: 1.0）
+
+        Returns:
+            STDDEV値のSeries
+
+        Raises:
+            TALibCalculationError: TA-Lib計算エラーの場合
+        """
+        # パラメータの取得
+        nbdev = kwargs.get("nbdev", 1.0)
+
+        # VolatilityAdapterを使用したSTDDEV計算
+        return VolatilityAdapter.stddev(df["close"], period, nbdev)
+
+    def get_description(self) -> str:
+        """指標の説明を取得"""
+        return "STDDEV - 標準偏差、価格のばらつきを測定するボラティリティ指標"
+
+
+class DonchianChannelsIndicator(BaseIndicator):
+    """Donchian Channels（ドンチャンチャネル）指標"""
+
+    def __init__(self):
+        super().__init__(indicator_type="DONCHIAN", supported_periods=[10, 20, 50])
+
+    def calculate(self, df: pd.DataFrame, period: int, **kwargs) -> dict:
+        """
+        ドンチャンチャネル（Donchian Channels）を計算
+
+        Args:
+            df: OHLCVデータのDataFrame
+            period: 期間
+
+        Returns:
+            Donchian Channelsを含む辞書（upper, lower, middle）
+
+        Raises:
+            TALibCalculationError: TA-Lib計算エラーの場合
+        """
+        # VolatilityAdapterを使用したDonchian Channels計算
+        return VolatilityAdapter.donchian_channels(df["high"], df["low"], period)
+
+    def get_description(self) -> str:
+        """指標の説明を取得"""
+        return "Donchian Channels - ドンチャンチャネル、指定期間の最高値・最低値によるチャネル指標"
+
+
 # 指標インスタンスのファクトリー関数
 def get_volatility_indicator(indicator_type: str) -> BaseIndicator:
     """
     ボラティリティ系指標のインスタンスを取得
 
     Args:
-        indicator_type: 指標タイプ（'BB', 'ATR', 'NATR', 'TRANGE', 'KELTNER'）
+        indicator_type: 指標タイプ（'BB', 'ATR', 'NATR', 'TRANGE', 'KELTNER', 'STDDEV', 'DONCHIAN'）
 
     Returns:
         指標インスタンス
@@ -236,6 +297,8 @@ def get_volatility_indicator(indicator_type: str) -> BaseIndicator:
         "NATR": NATRIndicator,
         "TRANGE": TRANGEIndicator,
         "KELTNER": KeltnerChannelsIndicator,
+        "STDDEV": STDDEVIndicator,
+        "DONCHIAN": DonchianChannelsIndicator,
     }
 
     if indicator_type not in indicators:
@@ -272,6 +335,16 @@ VOLATILITY_INDICATORS_INFO = {
     "KELTNER": {
         "periods": [10, 14, 20],
         "description": "Keltner Channels - ケルトナーチャネル、ATRベースのボラティリティチャネル",
+        "category": "volatility",
+    },
+    "STDDEV": {
+        "periods": [5, 10, 20, 30],
+        "description": "STDDEV - 標準偏差、価格のばらつきを測定するボラティリティ指標",
+        "category": "volatility",
+    },
+    "DONCHIAN": {
+        "periods": [10, 20, 50],
+        "description": "Donchian Channels - ドンチャンチャネル、指定期間の最高値・最低値によるチャネル指標",
         "category": "volatility",
     },
 }

@@ -356,13 +356,76 @@ class VWMAIndicator(BaseIndicator):
         return "VWMA - 出来高加重移動平均、出来高を重みとした移動平均"
 
 
+class ZLEMAIndicator(BaseIndicator):
+    """ZLEMA（Zero Lag Exponential Moving Average）指標"""
+
+    def __init__(self):
+        super().__init__(indicator_type="ZLEMA", supported_periods=[9, 14, 21, 30, 50])
+
+    def calculate(self, df: pd.DataFrame, period: int, **kwargs) -> pd.Series:
+        """
+        ゼロラグ指数移動平均（ZLEMA）を計算
+
+        Args:
+            df: OHLCVデータのDataFrame
+            period: 期間
+
+        Returns:
+            ZLEMA値のSeries
+
+        Raises:
+            TALibCalculationError: TA-Lib計算エラーの場合
+        """
+        # TrendAdapterを使用したZLEMA計算
+        return TrendAdapter.zlema(df["close"], period)
+
+    def get_description(self) -> str:
+        """指標の説明を取得"""
+        return "ZLEMA - ゼロラグ指数移動平均、従来のEMAのラグを削減した高応答性移動平均"
+
+
+class MAMAIndicator(BaseIndicator):
+    """MAMA（MESA Adaptive Moving Average）指標"""
+
+    def __init__(self):
+        super().__init__(indicator_type="MAMA", supported_periods=[20, 30, 50])
+
+    def calculate(self, df: pd.DataFrame, period: int, **kwargs) -> dict:
+        """
+        MAMA（MESA Adaptive Moving Average）を計算
+
+        Args:
+            df: OHLCVデータのDataFrame
+            period: 期間（fastlimitの計算に使用）
+            **kwargs: 追加パラメータ
+                - fastlimit: 高速制限（デフォルト: 0.5）
+                - slowlimit: 低速制限（デフォルト: 0.05）
+
+        Returns:
+            MAMA値を含む辞書（mama, fama）
+
+        Raises:
+            TALibCalculationError: TA-Lib計算エラーの場合
+        """
+        # パラメータの取得
+        fastlimit = kwargs.get("fastlimit", 0.5)
+        slowlimit = kwargs.get("slowlimit", 0.05)
+
+        # TrendAdapterを使用したMAMA計算
+        return TrendAdapter.mama(df["close"], fastlimit, slowlimit)
+
+    def get_description(self) -> str:
+        """指標の説明を取得"""
+        return "MAMA - MESA適応型移動平均、市場の効率性に応じて自動調整される移動平均"
+
+
 # 指標インスタンスのファクトリー関数
 def get_trend_indicator(indicator_type: str) -> BaseIndicator:
     """
     トレンド系指標のインスタンスを取得
 
     Args:
-        indicator_type: 指標タイプ（'SMA', 'EMA', 'MACD', 'KAMA', 'T3', 'TEMA', 'DEMA', 'WMA', 'HMA', 'VWMA'）
+        indicator_type: 指標タイプ（'SMA', 'EMA', 'MACD', 'KAMA', 'T3', 'TEMA', 'DEMA', 'WMA', 'HMA', 'VWMA', 'ZLEMA', 'MAMA'）
 
     Returns:
         指標インスタンス
@@ -381,6 +444,8 @@ def get_trend_indicator(indicator_type: str) -> BaseIndicator:
         "WMA": WMAIndicator,
         "HMA": HMAIndicator,
         "VWMA": VWMAIndicator,
+        "ZLEMA": ZLEMAIndicator,
+        "MAMA": MAMAIndicator,
     }
 
     if indicator_type not in indicators:
@@ -442,6 +507,16 @@ TREND_INDICATORS_INFO = {
     "VWMA": {
         "periods": [10, 20, 30, 50],
         "description": "VWMA - 出来高加重移動平均、出来高を重みとした移動平均",
+        "category": "trend",
+    },
+    "ZLEMA": {
+        "periods": [9, 14, 21, 30, 50],
+        "description": "ZLEMA - ゼロラグ指数移動平均、従来のEMAのラグを削減した高応答性移動平均",
+        "category": "trend",
+    },
+    "MAMA": {
+        "periods": [20, 30, 50],
+        "description": "MAMA - MESA適応型移動平均、市場の効率性に応じて自動調整される移動平均",
         "category": "trend",
     },
 }

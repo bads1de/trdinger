@@ -351,6 +351,58 @@ class TrendAdapter(BaseAdapter):
             raise TALibCalculationError(f"HMA計算失敗: {e}")
 
     @staticmethod
+    def mama(data: pd.Series, fastlimit: float = 0.5, slowlimit: float = 0.05) -> dict:
+        """
+        MESA Adaptive Moving Average (MAMA) を計算
+
+        Args:
+            data: 価格データ（pandas Series）
+            fastlimit: 高速制限（デフォルト: 0.5）
+            slowlimit: 低速制限（デフォルト: 0.05）
+
+        Returns:
+            MAMA値を含む辞書（mama, fama）
+
+        Raises:
+            TALibCalculationError: 計算エラーの場合
+        """
+        TrendAdapter._validate_input(data, 32)  # MAMAには最低32個のデータが必要
+
+        # パラメータ検証
+        if fastlimit <= 0 or fastlimit > 1:
+            raise TALibCalculationError(
+                f"fastlimitは0より大きく1以下である必要があります: {fastlimit}"
+            )
+        if slowlimit <= 0 or slowlimit > 1:
+            raise TALibCalculationError(
+                f"slowlimitは0より大きく1以下である必要があります: {slowlimit}"
+            )
+        if slowlimit >= fastlimit:
+            raise TALibCalculationError(
+                f"slowlimitはfastlimitより小さい必要があります: slow={slowlimit}, fast={fastlimit}"
+            )
+
+        TrendAdapter._log_calculation_start(
+            "MAMA", fastlimit=fastlimit, slowlimit=slowlimit
+        )
+
+        try:
+            mama, fama = TrendAdapter._safe_talib_calculation(
+                talib.MAMA, data.values, fastlimit=fastlimit, slowlimit=slowlimit
+            )
+
+            return {
+                "mama": TrendAdapter._create_series_result(mama, data.index, "MAMA"),
+                "fama": TrendAdapter._create_series_result(fama, data.index, "FAMA"),
+            }
+
+        except TALibCalculationError:
+            raise
+        except Exception as e:
+            TrendAdapter._log_calculation_error("MAMA", e)
+            raise TALibCalculationError(f"MAMA計算失敗: {e}")
+
+    @staticmethod
     def vwma(price_data: pd.Series, volume_data: pd.Series, period: int) -> pd.Series:
         """
         Volume Weighted Moving Average (出来高加重移動平均) を計算
@@ -416,6 +468,73 @@ class TrendAdapter(BaseAdapter):
         except Exception as e:
             TrendAdapter._log_calculation_error("VWMA", e)
             raise TALibCalculationError(f"VWMA計算失敗: {e}")
+
+    @staticmethod
+    def zlema(data: pd.Series, period: int) -> pd.Series:
+        """
+        Zero Lag Exponential Moving Average (ZLEMA) を計算
+
+        ZLEMA = EMA(data + (data - data[lag]), period)
+        lag = (period - 1) / 2
+
+        ZLEMAは、John Ehlers によって開発された指標で、
+        従来のEMAのラグを削減することを目的としています。
+
+        Args:
+            data: 価格データ（pandas Series）
+            period: 移動平均の期間
+
+        Returns:
+            ZLEMA値のpandas Series
+
+        Raises:
+            TALibCalculationError: 計算エラーの場合
+        """
+        TrendAdapter._validate_input(data, period)
+        TrendAdapter._log_calculation_start("ZLEMA", period=period)
+
+        try:
+            # ラグの計算
+            lag = int((period - 1) / 2)
+
+            # 最小データ数の確認
+            min_required = period + lag + 5  # 余裕を持たせる
+            if len(data) < min_required:
+                raise TALibCalculationError(
+                    f"ZLEMA計算には最低{min_required}個のデータが必要です（現在: {len(data)}個）"
+                )
+
+            # ラグ調整されたデータの計算
+            # ZLEMA = EMA(data + (data - data[lag]), period)
+            lagged_data = data.shift(lag)
+            adjusted_data = data + (data - lagged_data)
+
+            # NaN値を除去
+            adjusted_data_clean = adjusted_data.dropna()
+
+            if len(adjusted_data_clean) < period:
+                raise TALibCalculationError(
+                    f"ZLEMA計算の調整後データが不足しています（必要: {period}個、実際: {len(adjusted_data_clean)}個）"
+                )
+
+            # EMAを計算
+            zlema_result = TrendAdapter.ema(adjusted_data_clean, period)
+
+            # 元のインデックスに合わせて結果を調整
+            result = pd.Series(index=data.index, dtype=float, name=f"ZLEMA_{period}")
+
+            # ZLEMA結果を元のインデックスにマッピング
+            for idx in zlema_result.index:
+                if idx in result.index:
+                    result.loc[idx] = zlema_result.loc[idx]
+
+            return result
+
+        except TALibCalculationError:
+            raise
+        except Exception as e:
+            TrendAdapter._log_calculation_error("ZLEMA", e)
+            raise TALibCalculationError(f"ZLEMA計算失敗: {e}")
 
     @staticmethod
     def mama(

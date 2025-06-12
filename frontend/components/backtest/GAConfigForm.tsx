@@ -73,6 +73,7 @@ const GAConfigForm: React.FC<GAConfigFormProps> = ({
     elite_size: 5,
     max_indicators: 5,
     allowed_indicators: [
+      // 基本的な移動平均
       "SMA",
       "EMA",
       "WMA",
@@ -80,8 +81,11 @@ const GAConfigForm: React.FC<GAConfigFormProps> = ({
       "TEMA",
       "DEMA",
       "T3",
+      "MAMA", // 新規追加: MESA Adaptive Moving Average
+      // オシレーター
       "RSI",
       "STOCH",
+      "STOCHRSI", // 新規追加: Stochastic RSI
       "CCI",
       "WILLR",
       "MOMENTUM",
@@ -89,14 +93,24 @@ const GAConfigForm: React.FC<GAConfigFormProps> = ({
       "ADX",
       "AROON",
       "MFI",
+      "CMO", // 新規追加: Chande Momentum Oscillator
+      "TRIX", // 新規追加: Triple Exponential Moving Average
+      "ULTOSC", // 新規追加: Ultimate Oscillator
+      // ボラティリティ系
       "MACD",
       "BB",
+      "KELTNER", // 新規追加: Keltner Channels
       "ATR",
       "NATR",
       "TRANGE",
+      "STDDEV", // 新規追加: Standard Deviation
+      // 出来高系
       "OBV",
       "AD",
       "ADOSC",
+      "VWMA", // 新規追加: Volume Weighted Moving Average
+      "VWAP", // 新規追加: Volume Weighted Average Price
+      // その他
       "PSAR",
     ],
     fitness_weights: {
@@ -198,9 +212,11 @@ const GAConfigForm: React.FC<GAConfigFormProps> = ({
     "TEMA",
     "DEMA",
     "T3",
+    "MAMA", // 新規追加: MESA Adaptive Moving Average
     // モメンタム系
     "RSI",
     "STOCH",
+    "STOCHRSI", // 新規追加: Stochastic RSI
     "CCI",
     "WILLR",
     "MOMENTUM",
@@ -208,15 +224,24 @@ const GAConfigForm: React.FC<GAConfigFormProps> = ({
     "ADX",
     "AROON",
     "MFI",
-    // その他
+    "CMO", // 新規追加: Chande Momentum Oscillator
+    "TRIX", // 新規追加: Triple Exponential Moving Average
+    "ULTOSC", // 新規追加: Ultimate Oscillator
+    // ボラティリティ系
     "MACD",
     "BB",
+    "KELTNER", // 新規追加: Keltner Channels
     "ATR",
     "NATR",
     "TRANGE",
+    "STDDEV", // 新規追加: Standard Deviation
+    // 出来高系
     "OBV",
     "AD",
     "ADOSC",
+    "VWMA", // 新規追加: Volume Weighted Moving Average
+    "VWAP", // 新規追加: Volume Weighted Average Price
+    // その他
     "PSAR",
   ];
 

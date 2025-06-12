@@ -413,13 +413,71 @@ class UltimateOscillatorIndicator(BaseIndicator):
         return "Ultimate Oscillator - アルティメットオシレーター、複数期間のTrue Rangeベースのモメンタム指標"
 
 
+class CMOIndicator(BaseIndicator):
+    """CMO（Chande Momentum Oscillator）指標"""
+
+    def __init__(self):
+        super().__init__(indicator_type="CMO", supported_periods=[7, 14, 21, 28])
+
+    def calculate(self, df: pd.DataFrame, period: int, **kwargs) -> pd.Series:
+        """
+        CMO（Chande Momentum Oscillator）を計算
+
+        Args:
+            df: OHLCVデータのDataFrame
+            period: 期間
+
+        Returns:
+            CMO値のSeries（-100から100の範囲）
+
+        Raises:
+            TALibCalculationError: TA-Lib計算エラーの場合
+        """
+        # MomentumAdapterを使用したCMO計算
+        return MomentumAdapter.cmo(df["close"], period)
+
+    def get_description(self) -> str:
+        """指標の説明を取得"""
+        return (
+            "CMO - Chande Momentum Oscillator、改良されたモメンタム指標（-100から100）"
+        )
+
+
+class TRIXIndicator(BaseIndicator):
+    """TRIX（Triple Exponential Moving Average）指標"""
+
+    def __init__(self):
+        super().__init__(indicator_type="TRIX", supported_periods=[14, 21, 30])
+
+    def calculate(self, df: pd.DataFrame, period: int, **kwargs) -> pd.Series:
+        """
+        TRIX（Triple Exponential Moving Average）を計算
+
+        Args:
+            df: OHLCVデータのDataFrame
+            period: 期間
+
+        Returns:
+            TRIX値のSeries（パーセンテージ値）
+
+        Raises:
+            TALibCalculationError: TA-Lib計算エラーの場合
+        """
+        # MomentumAdapterを使用したTRIX計算
+        return MomentumAdapter.trix(df["close"], period)
+
+    def get_description(self) -> str:
+        """指標の説明を取得"""
+        return "TRIX - 三重平滑化されたモメンタム指標、ノイズを除去したトレンド分析"
+
+
 # 指標インスタンスのファクトリー関数
 def get_momentum_indicator(indicator_type: str) -> BaseIndicator:
     """
     モメンタム系指標のインスタンスを取得
 
     Args:
-        indicator_type: 指標タイプ（'RSI', 'STOCH', 'CCI', 'WILLR', 'MOM', 'ROC', 'ADX', 'AROON', 'MFI', 'STOCHRSI', 'ULTOSC'）
+        indicator_type: 指標タイプ（'RSI', 'STOCH', 'CCI', 'WILLR', 'MOM', 'ROC', 'ADX', 'AROON', 'MFI', 'STOCHRSI', 'ULTOSC', 'CMO', 'TRIX'）
 
     Returns:
         指標インスタンス
@@ -439,6 +497,8 @@ def get_momentum_indicator(indicator_type: str) -> BaseIndicator:
         "MFI": MFIIndicator,
         "STOCHRSI": StochasticRSIIndicator,
         "ULTOSC": UltimateOscillatorIndicator,
+        "CMO": CMOIndicator,
+        "TRIX": TRIXIndicator,
     }
 
     if indicator_type not in indicators:
@@ -505,6 +565,16 @@ MOMENTUM_INDICATORS_INFO = {
     "ULTOSC": {
         "periods": [7, 14, 28],
         "description": "Ultimate Oscillator - アルティメットオシレーター、複数期間のTrue Rangeベースのモメンタム指標",
+        "category": "momentum",
+    },
+    "CMO": {
+        "periods": [7, 14, 21, 28],
+        "description": "CMO - Chande Momentum Oscillator、改良されたモメンタム指標（-100から100）",
+        "category": "momentum",
+    },
+    "TRIX": {
+        "periods": [14, 21, 30],
+        "description": "TRIX - 三重平滑化されたモメンタム指標、ノイズを除去したトレンド分析",
         "category": "momentum",
     },
 }

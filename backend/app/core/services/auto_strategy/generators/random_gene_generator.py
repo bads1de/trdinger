@@ -45,26 +45,35 @@ class RandomGeneGenerator:
             "TEMA",
             "DEMA",
             "T3",
+            "MAMA",  # 新規追加: MESA Adaptive Moving Average
             # オシレーター
             "RSI",
             "MOMENTUM",
             "ROC",
             "STOCH",
+            "STOCHRSI",  # 新規追加: Stochastic RSI
             "CCI",
             "WILLR",
             "ADX",
             "AROON",
             "MFI",
+            "CMO",  # 新規追加: Chande Momentum Oscillator
+            "TRIX",  # 新規追加: Triple Exponential Moving Average
+            "ULTOSC",  # 新規追加: Ultimate Oscillator
             # ボラティリティ系
             "MACD",
             "BB",
+            "KELTNER",  # 新規追加: Keltner Channels
             "ATR",
             "NATR",
             "TRANGE",
+            "STDDEV",  # 新規追加: Standard Deviation
             # 出来高系
             "OBV",
             "AD",
             "ADOSC",
+            "VWMA",  # 新規追加: Volume Weighted Moving Average
+            "VWAP",  # 新規追加: Volume Weighted Average Price
             # その他
             "PSAR",
         ]
@@ -197,6 +206,50 @@ class RandomGeneGenerator:
             # Parabolic SAR
             parameters["period"] = 1  # PSARは期間を使用しない
 
+        # 新規追加指標のパラメータ生成
+        elif indicator_type == "MAMA":
+            # MESA Adaptive Moving Average
+            parameters["period"] = random.randint(20, 40)
+            parameters["fastlimit"] = random.uniform(0.4, 0.6)
+            parameters["slowlimit"] = random.uniform(0.02, 0.08)
+
+        elif indicator_type == "STOCHRSI":
+            # Stochastic RSI
+            parameters["period"] = random.randint(14, 21)
+            parameters["fastk_period"] = random.randint(3, 5)
+            parameters["fastd_period"] = random.randint(3, 5)
+
+        elif indicator_type == "CMO":
+            # Chande Momentum Oscillator
+            parameters["period"] = random.randint(14, 28)
+
+        elif indicator_type == "TRIX":
+            # Triple Exponential Moving Average
+            parameters["period"] = random.randint(14, 30)
+
+        elif indicator_type == "ULTOSC":
+            # Ultimate Oscillator
+            parameters["period"] = random.choice(
+                [7, 14, 28]
+            )  # 短期、中期、長期から選択
+
+        elif indicator_type == "KELTNER":
+            # Keltner Channels
+            parameters["period"] = random.randint(14, 20)
+            parameters["multiplier"] = random.uniform(1.5, 2.5)
+
+        elif indicator_type == "STDDEV":
+            # Standard Deviation
+            parameters["period"] = random.randint(10, 30)
+
+        elif indicator_type == "VWMA":
+            # Volume Weighted Moving Average
+            parameters["period"] = random.randint(10, 30)
+
+        elif indicator_type == "VWAP":
+            # Volume Weighted Average Price
+            parameters["period"] = random.randint(14, 30)
+
         return parameters
 
     def _generate_random_conditions(
@@ -321,6 +374,35 @@ class RandomGeneGenerator:
                 return random.uniform(-150, -100)  # 売られすぎ
             else:
                 return random.uniform(100, 150)  # 買われすぎ
+
+        # 新規追加指標の閾値生成
+        elif "STOCHRSI" in operand:
+            # Stochastic RSI: 0-100の範囲
+            if condition_type == "entry":
+                return random.uniform(15, 25)  # 売られすぎ
+            else:
+                return random.uniform(75, 85)  # 買われすぎ
+
+        elif "CMO" in operand:
+            # CMO: -100から100の範囲
+            if condition_type == "entry":
+                return random.uniform(-60, -40)  # 売られすぎ
+            else:
+                return random.uniform(40, 60)  # 買われすぎ
+
+        elif "ULTOSC" in operand:
+            # Ultimate Oscillator: 0-100の範囲
+            if condition_type == "entry":
+                return random.uniform(20, 30)  # 売られすぎ
+            else:
+                return random.uniform(70, 80)  # 買われすぎ
+
+        elif "TRIX" in operand:
+            # TRIX: 通常は小さな値（-0.01から0.01程度）
+            if condition_type == "entry":
+                return random.uniform(-0.005, 0)  # 下降トレンド
+            else:
+                return random.uniform(0, 0.005)  # 上昇トレンド
 
         else:
             # その他の場合は汎用的な値

@@ -39,6 +39,7 @@ class GAConfig:
     max_indicators: int = 5  # 最大指標数
     allowed_indicators: List[str] = field(
         default_factory=lambda: [
+            # 基本的な移動平均
             "SMA",
             "EMA",
             "WMA",
@@ -46,8 +47,11 @@ class GAConfig:
             "TEMA",
             "DEMA",
             "T3",
+            "MAMA",  # 新規追加: MESA Adaptive Moving Average
+            # オシレーター
             "RSI",
             "STOCH",
+            "STOCHRSI",  # 新規追加: Stochastic RSI
             "CCI",
             "WILLR",
             "MOMENTUM",
@@ -55,14 +59,24 @@ class GAConfig:
             "ADX",
             "AROON",
             "MFI",
+            "CMO",  # 新規追加: Chande Momentum Oscillator
+            "TRIX",  # 新規追加: Triple Exponential Moving Average
+            "ULTOSC",  # 新規追加: Ultimate Oscillator
+            # ボラティリティ系
             "MACD",
             "BB",
+            "KELTNER",  # 新規追加: Keltner Channels
             "ATR",
             "NATR",
             "TRANGE",
+            "STDDEV",  # 新規追加: Standard Deviation
+            # 出来高系
             "OBV",
             "AD",
             "ADOSC",
+            "VWMA",  # 新規追加: Volume Weighted Moving Average
+            "VWAP",  # 新規追加: Volume Weighted Average Price
+            # その他
             "PSAR",
         ]
     )

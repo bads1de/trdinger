@@ -185,13 +185,81 @@ class VWAPIndicator(BaseIndicator):
         return "VWAP - 出来高加重平均価格、機関投資家のベンチマーク指標"
 
 
+class PVTIndicator(BaseIndicator):
+    """PVT（Price Volume Trend）指標"""
+
+    def __init__(self):
+        super().__init__(indicator_type="PVT", supported_periods=[1])
+
+    def calculate(self, df: pd.DataFrame, period: int, **kwargs) -> pd.Series:
+        """
+        価格出来高トレンド（PVT）を計算
+
+        Args:
+            df: OHLCVデータのDataFrame
+            period: 期間（PVTは累積指標なので通常1）
+
+        Returns:
+            PVT値のSeries
+
+        Raises:
+            TALibCalculationError: TA-Lib計算エラーの場合
+            ValueError: 出来高データが存在しない場合
+        """
+        # 出来高データの存在確認
+        if "volume" not in df.columns:
+            raise ValueError("PVT計算には出来高データが必要です")
+
+        # VolumeAdapterを使用したPVT計算
+        return VolumeAdapter.pvt(df["close"], df["volume"])
+
+    def get_description(self) -> str:
+        """指標の説明を取得"""
+        return "PVT - 価格出来高トレンド、価格変化率と出来高を組み合わせた累積指標"
+
+
+class EMVIndicator(BaseIndicator):
+    """EMV（Ease of Movement）指標"""
+
+    def __init__(self):
+        super().__init__(indicator_type="EMV", supported_periods=[14, 20, 30])
+
+    def calculate(self, df: pd.DataFrame, period: int, **kwargs) -> pd.Series:
+        """
+        移動の容易さ（EMV）を計算
+
+        Args:
+            df: OHLCVデータのDataFrame
+            period: 移動平均の期間
+
+        Returns:
+            EMV値のSeries
+
+        Raises:
+            TALibCalculationError: TA-Lib計算エラーの場合
+            ValueError: 必要なデータが存在しない場合
+        """
+        # 必要なデータの存在確認
+        required_columns = ["high", "low", "volume"]
+        for col in required_columns:
+            if col not in df.columns:
+                raise ValueError(f"EMV計算には{col}データが必要です")
+
+        # VolumeAdapterを使用したEMV計算
+        return VolumeAdapter.emv(df["high"], df["low"], df["volume"], period)
+
+    def get_description(self) -> str:
+        """指標の説明を取得"""
+        return "EMV - 移動の容易さ、価格変動と出来高の関係から移動の容易性を測定"
+
+
 # 指標インスタンスのファクトリー関数
 def get_volume_indicator(indicator_type: str) -> BaseIndicator:
     """
     出来高系指標のインスタンスを取得
 
     Args:
-        indicator_type: 指標タイプ（'OBV', 'AD', 'ADOSC', 'VWAP'）
+        indicator_type: 指標タイプ（'OBV', 'AD', 'ADOSC', 'VWAP', 'PVT', 'EMV'）
 
     Returns:
         指標インスタンス
@@ -204,6 +272,8 @@ def get_volume_indicator(indicator_type: str) -> BaseIndicator:
         "AD": ADIndicator,
         "ADOSC": ADOSCIndicator,
         "VWAP": VWAPIndicator,
+        "PVT": PVTIndicator,
+        "EMV": EMVIndicator,
     }
 
     if indicator_type not in indicators:
@@ -235,6 +305,16 @@ VOLUME_INDICATORS_INFO = {
     "VWAP": {
         "periods": [1, 5, 10, 20],
         "description": "VWAP - 出来高加重平均価格、機関投資家のベンチマーク指標",
+        "category": "volume",
+    },
+    "PVT": {
+        "periods": [1],
+        "description": "PVT - 価格出来高トレンド、価格変化率と出来高を組み合わせた累積指標",
+        "category": "volume",
+    },
+    "EMV": {
+        "periods": [14, 20, 30],
+        "description": "EMV - 移動の容易さ、価格変動と出来高の関係から移動の容易性を測定",
         "category": "volume",
     },
 }

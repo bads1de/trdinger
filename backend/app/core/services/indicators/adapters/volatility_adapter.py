@@ -309,3 +309,69 @@ class VolatilityAdapter(BaseAdapter):
         except Exception as e:
             VolatilityAdapter._log_calculation_error("KELTNER", e)
             raise TALibCalculationError(f"Keltner Channels計算失敗: {e}")
+
+    @staticmethod
+    def donchian_channels(
+        high: pd.Series, low: pd.Series, period: int
+    ) -> Dict[str, pd.Series]:
+        """
+        Donchian Channels (ドンチャンチャネル) を計算
+
+        Donchian Channelsは、指定期間の最高値と最低値を使用したチャネル指標です。
+        - Upper Channel: 指定期間の最高値
+        - Lower Channel: 指定期間の最低値
+        - Middle Channel: (Upper + Lower) / 2
+
+        Args:
+            high: 高値データ（pandas Series）
+            low: 安値データ（pandas Series）
+            period: 期間
+
+        Returns:
+            Donchian Channelsを含む辞書（upper, lower, middle）
+
+        Raises:
+            TALibCalculationError: 計算エラーの場合
+        """
+        VolatilityAdapter._validate_input(high, period)
+        VolatilityAdapter._log_calculation_start("DONCHIAN", period=period)
+
+        try:
+            # データの長さチェック
+            if len(high) != len(low):
+                raise TALibCalculationError(
+                    f"高値と安値データの長さが一致しません（高値: {len(high)}, 安値: {len(low)}）"
+                )
+
+            # 最小データ数の確認
+            if len(high) < period:
+                raise TALibCalculationError(
+                    f"Donchian Channels計算には最低{period}個のデータが必要です（現在: {len(high)}個）"
+                )
+
+            # Upper Channel: 指定期間の最高値
+            upper_channel = high.rolling(window=period, min_periods=period).max()
+
+            # Lower Channel: 指定期間の最低値
+            lower_channel = low.rolling(window=period, min_periods=period).min()
+
+            # Middle Channel: (Upper + Lower) / 2
+            middle_channel = (upper_channel + lower_channel) / 2
+
+            return {
+                "upper": VolatilityAdapter._create_series_result(
+                    upper_channel.values, high.index, f"DONCHIAN_Upper_{period}"
+                ),
+                "lower": VolatilityAdapter._create_series_result(
+                    lower_channel.values, low.index, f"DONCHIAN_Lower_{period}"
+                ),
+                "middle": VolatilityAdapter._create_series_result(
+                    middle_channel.values, high.index, f"DONCHIAN_Middle_{period}"
+                ),
+            }
+
+        except TALibCalculationError:
+            raise
+        except Exception as e:
+            VolatilityAdapter._log_calculation_error("DONCHIAN", e)
+            raise TALibCalculationError(f"Donchian Channels計算失敗: {e}")

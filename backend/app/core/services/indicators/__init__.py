@@ -21,6 +21,7 @@ from .trend_indicators import (
     WMAIndicator,
     HMAIndicator,
     VWMAIndicator,
+    ZLEMAIndicator,
     get_trend_indicator,
     TREND_INDICATORS_INFO,
 )
@@ -47,6 +48,8 @@ from .volatility_indicators import (
     NATRIndicator,
     TRANGEIndicator,
     KeltnerChannelsIndicator,
+    STDDEVIndicator,
+    DonchianChannelsIndicator,
     get_volatility_indicator,
     VOLATILITY_INDICATORS_INFO,
 )
@@ -56,6 +59,8 @@ from .volume_indicators import (
     ADIndicator,
     ADOSCIndicator,
     VWAPIndicator,
+    PVTIndicator,
+    EMVIndicator,
     get_volume_indicator,
     VOLUME_INDICATORS_INFO,
 )
@@ -78,6 +83,7 @@ __all__ = [
     "WMAIndicator",
     "HMAIndicator",
     "VWMAIndicator",
+    "ZLEMAIndicator",
     "get_trend_indicator",
     "TREND_INDICATORS_INFO",
     # モメンタム系指標
@@ -100,6 +106,8 @@ __all__ = [
     "NATRIndicator",
     "TRANGEIndicator",
     "KeltnerChannelsIndicator",
+    "STDDEVIndicator",
+    "DonchianChannelsIndicator",
     "get_volatility_indicator",
     "VOLATILITY_INDICATORS_INFO",
     # 出来高系指標
@@ -107,6 +115,8 @@ __all__ = [
     "ADIndicator",
     "ADOSCIndicator",
     "VWAPIndicator",
+    "PVTIndicator",
+    "EMVIndicator",
     "get_volume_indicator",
     "VOLUME_INDICATORS_INFO",
     # その他の指標
@@ -150,6 +160,7 @@ def get_indicator_by_type(indicator_type: str) -> BaseIndicator:
         "WMA",
         "HMA",
         "VWMA",
+        "ZLEMA",
     ]
     momentum_indicators = [
         "RSI",
@@ -164,8 +175,16 @@ def get_indicator_by_type(indicator_type: str) -> BaseIndicator:
         "STOCHRSI",
         "ULTOSC",
     ]
-    volatility_indicators = ["BB", "ATR", "NATR", "TRANGE", "KELTNER"]
-    volume_indicators = ["OBV", "AD", "ADOSC", "VWAP"]
+    volatility_indicators = [
+        "BB",
+        "ATR",
+        "NATR",
+        "TRANGE",
+        "KELTNER",
+        "STDDEV",
+        "DONCHIAN",
+    ]
+    volume_indicators = ["OBV", "AD", "ADOSC", "VWAP", "PVT", "EMV"]
     other_indicators = ["PSAR"]
 
     if indicator_type in trend_indicators:

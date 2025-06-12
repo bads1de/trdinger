@@ -556,3 +556,73 @@ class MomentumAdapter(BaseAdapter):
         except Exception as e:
             MomentumAdapter._log_calculation_error("ULTOSC", e)
             raise TALibCalculationError(f"Ultimate Oscillator計算失敗: {e}")
+
+    @staticmethod
+    def cmo(data: pd.Series, period: int = 14) -> pd.Series:
+        """
+        Chande Momentum Oscillator (CMO) を計算
+
+        CMO = 100 * (Sum(Up) - Sum(Down)) / (Sum(Up) + Sum(Down))
+        Up = 前日比上昇分, Down = 前日比下降分
+
+        Args:
+            data: 価格データ（pandas Series）
+            period: CMOの期間（デフォルト: 14）
+
+        Returns:
+            CMO値のpandas Series（-100から100の範囲）
+
+        Raises:
+            TALibCalculationError: 計算エラーの場合
+        """
+        MomentumAdapter._validate_input(data, period)
+        MomentumAdapter._log_calculation_start("CMO", period=period)
+
+        try:
+            result = MomentumAdapter._safe_talib_calculation(
+                talib.CMO, data.values, timeperiod=period
+            )
+            return MomentumAdapter._create_series_result(
+                result, data.index, f"CMO_{period}"
+            )
+
+        except TALibCalculationError:
+            raise
+        except Exception as e:
+            MomentumAdapter._log_calculation_error("CMO", e)
+            raise TALibCalculationError(f"CMO計算失敗: {e}")
+
+    @staticmethod
+    def trix(data: pd.Series, period: int = 30) -> pd.Series:
+        """
+        TRIX (1-day Rate-Of-Change of a Triple Smooth EMA) を計算
+
+        TRIX = 1日前のTEMAに対する現在のTEMAの変化率（%）
+        TEMA = Triple Exponential Moving Average
+
+        Args:
+            data: 価格データ（pandas Series）
+            period: TRIXの期間（デフォルト: 30）
+
+        Returns:
+            TRIX値のpandas Series（パーセンテージ値）
+
+        Raises:
+            TALibCalculationError: 計算エラーの場合
+        """
+        MomentumAdapter._validate_input(data, period)
+        MomentumAdapter._log_calculation_start("TRIX", period=period)
+
+        try:
+            result = MomentumAdapter._safe_talib_calculation(
+                talib.TRIX, data.values, timeperiod=period
+            )
+            return MomentumAdapter._create_series_result(
+                result, data.index, f"TRIX_{period}"
+            )
+
+        except TALibCalculationError:
+            raise
+        except Exception as e:
+            MomentumAdapter._log_calculation_error("TRIX", e)
+            raise TALibCalculationError(f"TRIX計算失敗: {e}")

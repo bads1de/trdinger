@@ -34,30 +34,45 @@ class IndicatorGene:
 
         # 有効な指標タイプの確認
         valid_indicator_types = [
+            # 基本的な移動平均
             "SMA",
             "EMA",
-            "RSI",
-            "MACD",
-            "BB",
-            "STOCH",
-            "CCI",
-            "WILLIAMS",
-            "ADX",
-            "AROON",
-            "MFI",
-            "MOMENTUM",
-            "ROC",
-            "ATR",
-            "NATR",
-            "TRANGE",
-            "OBV",
-            "AD",
-            "ADOSC",
+            "WMA",
+            "KAMA",
             "TEMA",
             "DEMA",
             "T3",
-            "WMA",
-            "KAMA",
+            "MAMA",  # 新規追加: MESA Adaptive Moving Average
+            # オシレーター
+            "RSI",
+            "STOCH",
+            "STOCHRSI",  # 新規追加: Stochastic RSI
+            "CCI",
+            "WILLIAMS",
+            "MOMENTUM",
+            "ROC",
+            "ADX",
+            "AROON",
+            "MFI",
+            "CMO",  # 新規追加: Chande Momentum Oscillator
+            "TRIX",  # 新規追加: Triple Exponential Moving Average
+            "ULTOSC",  # 新規追加: Ultimate Oscillator
+            # ボラティリティ系
+            "MACD",
+            "BB",
+            "KELTNER",  # 新規追加: Keltner Channels
+            "ATR",
+            "NATR",
+            "TRANGE",
+            "STDDEV",  # 新規追加: Standard Deviation
+            # 出来高系
+            "OBV",
+            "AD",
+            "ADOSC",
+            "VWMA",  # 新規追加: Volume Weighted Moving Average
+            "VWAP",  # 新規追加: Volume Weighted Average Price
+            # その他
+            "PSAR",
         ]
 
         if self.type not in valid_indicator_types:
@@ -121,30 +136,45 @@ class Condition:
             if len(parts) == 2:
                 indicator_type = parts[0]
                 valid_indicators = [
+                    # 基本的な移動平均
                     "SMA",
                     "EMA",
-                    "RSI",
-                    "MACD",
-                    "BB",
-                    "STOCH",
-                    "CCI",
-                    "WILLIAMS",
-                    "ADX",
-                    "AROON",
-                    "MFI",
-                    "MOMENTUM",
-                    "ROC",
-                    "ATR",
-                    "NATR",
-                    "TRANGE",
-                    "OBV",
-                    "AD",
-                    "ADOSC",
+                    "WMA",
+                    "KAMA",
                     "TEMA",
                     "DEMA",
                     "T3",
-                    "WMA",
-                    "KAMA",
+                    "MAMA",  # 新規追加: MESA Adaptive Moving Average
+                    # オシレーター
+                    "RSI",
+                    "STOCH",
+                    "STOCHRSI",  # 新規追加: Stochastic RSI
+                    "CCI",
+                    "WILLIAMS",
+                    "MOMENTUM",
+                    "ROC",
+                    "ADX",
+                    "AROON",
+                    "MFI",
+                    "CMO",  # 新規追加: Chande Momentum Oscillator
+                    "TRIX",  # 新規追加: Triple Exponential Moving Average
+                    "ULTOSC",  # 新規追加: Ultimate Oscillator
+                    # ボラティリティ系
+                    "MACD",
+                    "BB",
+                    "KELTNER",  # 新規追加: Keltner Channels
+                    "ATR",
+                    "NATR",
+                    "TRANGE",
+                    "STDDEV",  # 新規追加: Standard Deviation
+                    # 出来高系
+                    "OBV",
+                    "AD",
+                    "ADOSC",
+                    "VWMA",  # 新規追加: Volume Weighted Moving Average
+                    "VWAP",  # 新規追加: Volume Weighted Average Price
+                    # その他
+                    "PSAR",
                 ]
                 return indicator_type in valid_indicators
         return False
