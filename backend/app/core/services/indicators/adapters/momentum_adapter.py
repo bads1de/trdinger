@@ -805,3 +805,38 @@ class MomentumAdapter(BaseAdapter):
         except Exception as e:
             MomentumAdapter._log_calculation_error("DX", e)
             raise TALibCalculationError(f"DX計算失敗: {e}")
+
+    @staticmethod
+    def adxr(
+        high: pd.Series, low: pd.Series, close: pd.Series, period: int
+    ) -> pd.Series:
+        """
+        ADXR（Average Directional Movement Index Rating）を計算
+
+        Args:
+            high: 高値のSeries
+            low: 安値のSeries
+            close: 終値のSeries
+            period: 期間
+
+        Returns:
+            ADXR値のSeries
+
+        Raises:
+            TALibCalculationError: TA-Lib計算エラーの場合
+        """
+        MomentumAdapter._validate_input(close, period)
+        MomentumAdapter._log_calculation_start("ADXR", period=period)
+
+        try:
+            result = MomentumAdapter._safe_talib_calculation(
+                talib.ADXR, high.values, low.values, close.values, timeperiod=period
+            )
+            return MomentumAdapter._create_series_result(
+                result, close.index, f"ADXR_{period}"
+            )
+        except TALibCalculationError:
+            raise
+        except Exception as e:
+            MomentumAdapter._log_calculation_error("ADXR", e)
+            raise TALibCalculationError(f"ADXR計算失敗: {e}")

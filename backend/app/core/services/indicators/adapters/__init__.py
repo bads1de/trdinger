@@ -11,12 +11,14 @@ from .trend_adapter import TrendAdapter
 from .momentum_adapter import MomentumAdapter
 from .volatility_adapter import VolatilityAdapter
 from .volume_adapter import VolumeAdapter
+from .price_transform_adapter import PriceTransformAdapter
 
 __all__ = [
     "BaseAdapter",
     "TALibCalculationError",
     "TrendAdapter",
-    "MomentumAdapter", 
+    "MomentumAdapter",
     "VolatilityAdapter",
     "VolumeAdapter",
+    "PriceTransformAdapter",
 ]

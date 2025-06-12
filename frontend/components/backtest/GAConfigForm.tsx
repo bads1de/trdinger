@@ -117,6 +117,11 @@ const GAConfigForm: React.FC<GAConfigFormProps> = ({
       "PPO", // 新規追加: Percentage Price Oscillator
       "AROONOSC", // 新規追加: Aroon Oscillator
       "DX", // 新規追加: Directional Movement Index
+      "ADXR", // 新規追加: Average Directional Movement Index Rating
+      "AVGPRICE", // 新規追加: Average Price
+      "MEDPRICE", // 新規追加: Median Price
+      "TYPPRICE", // 新規追加: Typical Price
+      "WCLPRICE", // 新規追加: Weighted Close Price
     ],
     fitness_weights: {
       total_return: 0.3,
@@ -253,6 +258,11 @@ const GAConfigForm: React.FC<GAConfigFormProps> = ({
     "PPO", // 新規追加: Percentage Price Oscillator
     "AROONOSC", // 新規追加: Aroon Oscillator
     "DX", // 新規追加: Directional Movement Index
+    "ADXR", // 新規追加: Average Directional Movement Index Rating
+    "AVGPRICE", // 新規追加: Average Price
+    "MEDPRICE", // 新規追加: Median Price
+    "TYPPRICE", // 新規追加: Typical Price
+    "WCLPRICE", // 新規追加: Weighted Close Price
   ];
 
   return (

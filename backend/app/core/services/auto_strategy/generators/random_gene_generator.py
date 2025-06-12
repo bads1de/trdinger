@@ -81,6 +81,11 @@ class RandomGeneGenerator:
             "PPO",  # 新規追加: Percentage Price Oscillator
             "AROONOSC",  # 新規追加: Aroon Oscillator
             "DX",  # 新規追加: Directional Movement Index
+            "ADXR",  # 新規追加: Average Directional Movement Index Rating
+            "AVGPRICE",  # 新規追加: Average Price
+            "MEDPRICE",  # 新規追加: Median Price
+            "TYPPRICE",  # 新規追加: Typical Price
+            "WCLPRICE",  # 新規追加: Weighted Close Price
         ]
 
         # 利用可能なデータソース
@@ -279,6 +284,14 @@ class RandomGeneGenerator:
             # Directional Movement Index
             parameters["period"] = random.randint(14, 21)
 
+        elif indicator_type == "ADXR":
+            # Average Directional Movement Index Rating
+            parameters["period"] = random.randint(14, 21)
+
+        elif indicator_type in ["AVGPRICE", "MEDPRICE", "TYPPRICE", "WCLPRICE"]:
+            # Price Transform indicators
+            parameters["period"] = 1  # Price Transform指標は期間を使用しない
+
         return parameters
 
     def _generate_random_conditions(
@@ -460,6 +473,24 @@ class RandomGeneGenerator:
                 return random.uniform(25, 40)  # 強いトレンド開始
             else:
                 return random.uniform(15, 25)  # トレンド弱化
+
+        elif "ADXR" in operand:
+            # ADXR: 0から100の範囲、ADXの平滑化版
+            if condition_type == "entry":
+                return random.uniform(25, 35)  # 強いトレンド
+            else:
+                return random.uniform(15, 25)  # トレンド弱化
+
+        elif any(
+            price_type in operand
+            for price_type in ["AVGPRICE", "MEDPRICE", "TYPPRICE", "WCLPRICE"]
+        ):
+            # Price Transform indicators: 価格レベルでの比較
+            # 現在価格に対する相対的な閾値
+            if condition_type == "entry":
+                return random.uniform(0.98, 1.0)  # 価格下落時のエントリー
+            else:
+                return random.uniform(1.0, 1.02)  # 価格上昇時のエグジット
 
         else:
             # その他の場合は汎用的な値

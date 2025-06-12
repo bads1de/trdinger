@@ -646,6 +646,41 @@ class DXIndicator(BaseIndicator):
         return "DX - Directional Movement Index、方向性の強さを測定"
 
 
+class ADXRIndicator(BaseIndicator):
+    """ADXR（Average Directional Movement Index Rating）指標"""
+
+    def __init__(self):
+        super().__init__(indicator_type="ADXR", supported_periods=[14, 21])
+
+    def calculate(self, df: pd.DataFrame, period: int, **kwargs) -> pd.Series:
+        """
+        ADXR（Average Directional Movement Index Rating）を計算
+
+        Args:
+            df: OHLCVデータのDataFrame
+            period: 期間
+
+        Returns:
+            ADXR値のSeries
+
+        Raises:
+            TALibCalculationError: TA-Lib計算エラーの場合
+            ValueError: 必要なデータが存在しない場合
+        """
+        # 必要なデータの存在確認
+        required_columns = ["high", "low", "close"]
+        for col in required_columns:
+            if col not in df.columns:
+                raise ValueError(f"ADXR計算には{col}データが必要です")
+
+        # MomentumAdapterを使用したADXR計算
+        return MomentumAdapter.adxr(df["high"], df["low"], df["close"], period)
+
+    def get_description(self) -> str:
+        """指標の説明を取得"""
+        return "ADXR - Average Directional Movement Index Rating、ADXの平滑化版"
+
+
 # 指標インスタンスのファクトリー関数
 def get_momentum_indicator(indicator_type: str) -> BaseIndicator:
     """
@@ -679,6 +714,7 @@ def get_momentum_indicator(indicator_type: str) -> BaseIndicator:
         "PPO": PPOIndicator,
         "AROONOSC": AROONOSCIndicator,
         "DX": DXIndicator,
+        "ADXR": ADXRIndicator,
     }
 
     if indicator_type not in indicators:
@@ -780,6 +816,11 @@ MOMENTUM_INDICATORS_INFO = {
     "DX": {
         "periods": [14, 21],
         "description": "DX - Directional Movement Index、方向性の強さを測定",
+        "category": "momentum",
+    },
+    "ADXR": {
+        "periods": [14, 21],
+        "description": "ADXR - Average Directional Movement Index Rating、ADXの平滑化版",
         "category": "momentum",
     },
 }

@@ -65,6 +65,15 @@ from .volume_indicators import (
     VOLUME_INDICATORS_INFO,
 )
 
+from .price_transform_indicators import (
+    AVGPRICEIndicator,
+    MEDPRICEIndicator,
+    TYPPRICEIndicator,
+    WCLPRICEIndicator,
+    get_price_transform_indicator,
+    PRICE_TRANSFORM_INDICATORS_INFO,
+)
+
 from .other_indicators import PSARIndicator, get_other_indicator, OTHER_INDICATORS_INFO
 
 # 公開API
@@ -119,6 +128,13 @@ __all__ = [
     "EMVIndicator",
     "get_volume_indicator",
     "VOLUME_INDICATORS_INFO",
+    # 価格変換系指標
+    "AVGPRICEIndicator",
+    "MEDPRICEIndicator",
+    "TYPPRICEIndicator",
+    "WCLPRICEIndicator",
+    "get_price_transform_indicator",
+    "PRICE_TRANSFORM_INDICATORS_INFO",
     # その他の指標
     "PSARIndicator",
     "get_other_indicator",
@@ -132,6 +148,7 @@ ALL_INDICATORS_INFO.update(TREND_INDICATORS_INFO)
 ALL_INDICATORS_INFO.update(MOMENTUM_INDICATORS_INFO)
 ALL_INDICATORS_INFO.update(VOLATILITY_INDICATORS_INFO)
 ALL_INDICATORS_INFO.update(VOLUME_INDICATORS_INFO)
+ALL_INDICATORS_INFO.update(PRICE_TRANSFORM_INDICATORS_INFO)
 ALL_INDICATORS_INFO.update(OTHER_INDICATORS_INFO)
 
 
@@ -174,6 +191,14 @@ def get_indicator_by_type(indicator_type: str) -> BaseIndicator:
         "MFI",
         "STOCHRSI",
         "ULTOSC",
+        "CMO",
+        "TRIX",
+        "BOP",
+        "APO",
+        "PPO",
+        "AROONOSC",
+        "DX",
+        "ADXR",
     ]
     volatility_indicators = [
         "BB",
@@ -185,6 +210,7 @@ def get_indicator_by_type(indicator_type: str) -> BaseIndicator:
         "DONCHIAN",
     ]
     volume_indicators = ["OBV", "AD", "ADOSC", "VWAP", "PVT", "EMV"]
+    price_transform_indicators = ["AVGPRICE", "MEDPRICE", "TYPPRICE", "WCLPRICE"]
     other_indicators = ["PSAR"]
 
     if indicator_type in trend_indicators:
@@ -195,6 +221,8 @@ def get_indicator_by_type(indicator_type: str) -> BaseIndicator:
         return get_volatility_indicator(indicator_type)
     elif indicator_type in volume_indicators:
         return get_volume_indicator(indicator_type)
+    elif indicator_type in price_transform_indicators:
+        return get_price_transform_indicator(indicator_type)
     elif indicator_type in other_indicators:
         return get_other_indicator(indicator_type)
     else:
