@@ -31,21 +31,21 @@ export default function Home() {
         </h1>
       </div>
 
-      {/* 機能ナビゲーショングリッド - 5つの主要機能へのリンク */}
-      <div className="mb-32 grid text-center lg:max-w-5xl lg:w-full lg:mb-0 lg:grid-cols-5 lg:text-left">
-        {/* 戦略定義ページへのリンク */}
+      {/* 機能ナビゲーショングリッド - 4つの主要機能へのリンク */}
+      <div className="mb-32 grid text-center lg:max-w-5xl lg:w-full lg:mb-0 lg:grid-cols-4 lg:text-left">
+        {/* 戦略ショーケースページへのリンク */}
         <a
-          href="/strategy"
+          href="/strategies"
           className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-600 hover:bg-gray-800 hover:dark:border-gray-600 hover:dark:bg-gray-800/30"
         >
           <h2 className={`mb-3 text-2xl font-semibold`}>
-            戦略定義{" "}
+            戦略ショーケース{" "}
             <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
               -&gt;
             </span>
           </h2>
           <p className={`m-0 max-w-[30ch] text-sm opacity-50`}>
-            テクニカル指標と売買ルールを定義してトレーディング戦略を作成
+            AI生成による30種類の投資戦略を比較・検討
           </p>
         </a>
 
@@ -62,38 +62,6 @@ export default function Home() {
           </h2>
           <p className={`m-0 max-w-[30ch] text-sm opacity-50`}>
             過去データを使用して戦略の有効性を検証
-          </p>
-        </a>
-
-        {/* 結果分析ページへのリンク */}
-        <a
-          href="/results"
-          className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-600 hover:bg-gray-800 hover:dark:border-gray-600 hover:dark:bg-gray-800/30"
-        >
-          <h2 className={`mb-3 text-2xl font-semibold`}>
-            結果分析{" "}
-            <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
-              -&gt;
-            </span>
-          </h2>
-          <p className={`m-0 max-w-[30ch] text-sm opacity-50`}>
-            パフォーマンス指標とグラフで結果を詳細分析
-          </p>
-        </a>
-
-        {/* 戦略ショーケースページへのリンク */}
-        <a
-          href="/strategies"
-          className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-600 hover:bg-gray-800 hover:dark:border-gray-600 hover:dark:bg-gray-800/30"
-        >
-          <h2 className={`mb-3 text-2xl font-semibold`}>
-            戦略ショーケース{" "}
-            <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
-              -&gt;
-            </span>
-          </h2>
-          <p className={`m-0 max-w-[30ch] text-sm opacity-50`}>
-            AI生成による30種類の投資戦略を比較・検討
           </p>
         </a>
 

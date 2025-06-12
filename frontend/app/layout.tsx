@@ -11,6 +11,8 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
+import Navbar from "@/components/navigation/Navbar";
+import MainContent from "@/components/navigation/MainContent";
 
 // Google Fontsからインポートしたフォント設定
 // ラテン文字セットのみを読み込んでパフォーマンスを最適化
@@ -37,7 +39,10 @@ export default function RootLayout({
 }) {
   return (
     <html lang="ja" className="dark">
-      <body className={inter.className}>{children}</body>
+      <body className={inter.className}>
+        <Navbar />
+        <MainContent>{children}</MainContent>
+      </body>
     </html>
   );
 }
