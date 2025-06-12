@@ -56,6 +56,11 @@ class StrategyFactory:
             "ROC": MomentumAdapter.roc,
             "BOP": MomentumAdapter.bop,
             "PPO": MomentumAdapter.ppo,
+            "PLUS_DI": MomentumAdapter.plus_di,
+            "MINUS_DI": MomentumAdapter.minus_di,
+            "ROCP": MomentumAdapter.rocp,
+            "ROCR": MomentumAdapter.rocr,
+            "STOCHF": MomentumAdapter.stochf,
             # ボラティリティ系
             "ATR": VolatilityAdapter.atr,
             "NATR": VolatilityAdapter.natr,
@@ -153,6 +158,8 @@ class StrategyFactory:
                             "ATR",
                             "NATR",
                             "TRANGE",
+                            "PLUS_DI",
+                            "MINUS_DI",
                         ]:
                             # High, Low, Closeが必要な指標
                             period = int(parameters.get("period", 20))
@@ -179,6 +186,19 @@ class StrategyFactory:
                             result = self.factory.indicator_adapters[indicator_type](
                                 close_data, fastperiod, slowperiod, matype
                             )
+                        elif indicator_type == "STOCHF":
+                            # STOCHFは複数パラメータが必要
+                            fastk_period = int(parameters.get("period", 5))
+                            fastd_period = int(parameters.get("fastd_period", 3))
+                            fastd_matype = int(parameters.get("fastd_matype", 0))
+                            result = self.factory.indicator_adapters[indicator_type](
+                                high_data,
+                                low_data,
+                                close_data,
+                                fastk_period,
+                                fastd_period,
+                                fastd_matype,
+                            )
                         elif indicator_type in ["STOCH"]:
                             # Stochasticは特別な処理
                             period = int(parameters.get("period", 14))
@@ -201,23 +221,48 @@ class StrategyFactory:
                             fastperiod = int(parameters.get("period", 12))
                             slowperiod = int(parameters.get("slow_period", 26))
                             indicator_name = f"PPO_{fastperiod}_{slowperiod}"
+                        elif indicator_type == "STOCHF":
+                            # STOCHFは複数の値を返すので、両方を登録
+                            fastk_period = int(parameters.get("period", 5))
+                            fastd_period = int(parameters.get("fastd_period", 3))
+                            # FastKとFastDの両方を登録
+                            if isinstance(result, dict):
+                                self.indicators[
+                                    f"STOCHF_K_{fastk_period}_{fastd_period}"
+                                ] = self.I(
+                                    lambda: result["fastk"].values,
+                                    name=f"STOCHF_K_{fastk_period}_{fastd_period}",
+                                )
+                                self.indicators[
+                                    f"STOCHF_D_{fastk_period}_{fastd_period}"
+                                ] = self.I(
+                                    lambda: result["fastd"].values,
+                                    name=f"STOCHF_D_{fastk_period}_{fastd_period}",
+                                )
+                                logger.debug(
+                                    f"指標初期化完了: STOCHF_K_{fastk_period}_{fastd_period}, STOCHF_D_{fastk_period}_{fastd_period}"
+                                )
+                            # STOCHFの場合は通常の処理をスキップ
+                            indicator_name = None
                         else:
                             # 通常の指標
                             indicator_name = (
                                 f"{indicator_type}_{parameters.get('period', '')}"
                             )
 
-                        # resultがSeriesの場合は値のみを取得
-                        if hasattr(result, "values"):
-                            indicator_values = result.values
-                        else:
-                            indicator_values = result
+                        # STOCHFの場合は既に処理済みなのでスキップ
+                        if indicator_name is not None:
+                            # resultがSeriesの場合は値のみを取得
+                            if hasattr(result, "values"):
+                                indicator_values = result.values
+                            else:
+                                indicator_values = result
 
-                        self.indicators[indicator_name] = self.I(
-                            lambda: indicator_values, name=indicator_name
-                        )
+                            self.indicators[indicator_name] = self.I(
+                                lambda: indicator_values, name=indicator_name
+                            )
 
-                        logger.debug(f"指標初期化完了: {indicator_name}")
+                            logger.debug(f"指標初期化完了: {indicator_name}")
 
                     else:
                         logger.warning(f"未対応の指標タイプ: {indicator_type}")
@@ -519,6 +564,16 @@ class StrategyFactory:
                     fastperiod = int(ind.parameters.get("period", 12))
                     slowperiod = int(ind.parameters.get("slow_period", 26))
                     available_indicators.append(f"PPO_{fastperiod}_{slowperiod}")
+                elif ind.type == "STOCHF":
+                    # STOCHFは複数の値を返す
+                    fastk_period = int(ind.parameters.get("period", 5))
+                    fastd_period = int(ind.parameters.get("fastd_period", 3))
+                    available_indicators.append(
+                        f"STOCHF_K_{fastk_period}_{fastd_period}"
+                    )
+                    available_indicators.append(
+                        f"STOCHF_D_{fastk_period}_{fastd_period}"
+                    )
                 else:
                     # 通常の指標
                     available_indicators.append(

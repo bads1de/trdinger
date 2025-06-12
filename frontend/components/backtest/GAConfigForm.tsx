@@ -218,25 +218,34 @@ const GAConfigForm: React.FC<GAConfigFormProps> = ({
     "SMA",
     "EMA",
     "WMA",
+    "HMA", // 新規統合: Hull Moving Average
     "KAMA",
     "TEMA",
     "DEMA",
     "T3",
     "MAMA", // 新規追加: MESA Adaptive Moving Average
+    "ZLEMA", // 新規統合: Zero Lag Exponential Moving Average
+    "TRIMA", // 新規統合: Triangular Moving Average
     // モメンタム系
     "RSI",
     "STOCH",
     "STOCHRSI", // 新規追加: Stochastic RSI
+    "STOCHF", // 新規統合: Stochastic Fast
     "CCI",
     "WILLR",
     "MOMENTUM",
+    "MOM", // 新規統合: Momentum (正式名)
     "ROC",
+    "ROCP", // 新規統合: Rate of change Percentage
+    "ROCR", // 新規統合: Rate of change ratio
     "ADX",
     "AROON",
     "MFI",
     "CMO", // 新規追加: Chande Momentum Oscillator
     "TRIX", // 新規追加: Triple Exponential Moving Average
     "ULTOSC", // 新規追加: Ultimate Oscillator
+    "PLUS_DI", // 新規統合: Plus Directional Indicator
+    "MINUS_DI", // 新規統合: Minus Directional Indicator
     // ボラティリティ系
     "MACD",
     "BB",
@@ -245,12 +254,22 @@ const GAConfigForm: React.FC<GAConfigFormProps> = ({
     "NATR",
     "TRANGE",
     "STDDEV", // 新規追加: Standard Deviation
+    "DONCHIAN", // 新規統合: Donchian Channels
     // 出来高系
     "OBV",
     "AD",
     "ADOSC",
     "VWMA", // 新規追加: Volume Weighted Moving Average
     "VWAP", // 新規追加: Volume Weighted Average Price
+    "PVT", // 新規統合: Price Volume Trend
+    "EMV", // 新規統合: Ease of Movement
+    // 価格変換系
+    "AVGPRICE", // 新規追加: Average Price
+    "MEDPRICE", // 新規追加: Median Price
+    "TYPPRICE", // 新規追加: Typical Price
+    "WCLPRICE", // 新規追加: Weighted Close Price
+    "MIDPOINT", // 新規統合: MidPoint over period
+    "MIDPRICE", // 新規統合: Midpoint Price over period
     // その他
     "PSAR",
     "BOP", // 新規追加: Balance Of Power
@@ -259,10 +278,6 @@ const GAConfigForm: React.FC<GAConfigFormProps> = ({
     "AROONOSC", // 新規追加: Aroon Oscillator
     "DX", // 新規追加: Directional Movement Index
     "ADXR", // 新規追加: Average Directional Movement Index Rating
-    "AVGPRICE", // 新規追加: Average Price
-    "MEDPRICE", // 新規追加: Median Price
-    "TYPPRICE", // 新規追加: Typical Price
-    "WCLPRICE", // 新規追加: Weighted Close Price
   ];
 
   return (

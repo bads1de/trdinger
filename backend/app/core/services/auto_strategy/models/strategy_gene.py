@@ -66,6 +66,12 @@ class IndicatorGene:
             "MIDPOINT",
             "MIDPRICE",
             "TRIMA",
+            # Phase 4 新規追加指標
+            "PLUS_DI",
+            "MINUS_DI",
+            "ROCP",
+            "ROCR",
+            "STOCHF",
             # 注意: OpenInterest, FundingRateは指標ではなく判断材料として条件で使用
         ]
 
@@ -149,10 +155,26 @@ class Condition:
             except ValueError:
                 pass
 
+        # STOCHFの複数パラメータパターン: "STOCHF_K_5_3", "STOCHF_D_5_3"
+        if name.startswith("STOCHF_") and len(name.split("_")) == 4:
+            parts = name.split("_")
+            try:
+                # STOCHF_K_fastk_fastd または STOCHF_D_fastk_fastd
+                if parts[1] in ["K", "D"]:
+                    int(parts[2])  # fastk_period
+                    int(parts[3])  # fastd_period
+                    return True
+            except ValueError:
+                pass
+
         # 指標名のパターン: "TYPE_PERIOD" (例: "SMA_20", "RSI_14")
         # または複合指標名: "OI_SMA_10", "FR_EMA_5"
         parts = name.split("_")
         if len(parts) >= 2:
+            # PLUS_DI_14, MINUS_DI_14 のような3部構成の指標名
+            if len(parts) == 3 and parts[0] in ["PLUS", "MINUS"] and parts[1] == "DI":
+                return True
+
             # 通常の指標: "SMA_20"
             if len(parts) == 2:
                 indicator_type = parts[0]
@@ -185,6 +207,9 @@ class Condition:
                     "MIDPOINT",
                     "MIDPRICE",
                     "TRIMA",
+                    # Phase 4 新規追加指標
+                    "ROCP",
+                    "ROCR",
                 ]
                 return indicator_type in valid_indicators
 

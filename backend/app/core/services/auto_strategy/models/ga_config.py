@@ -43,25 +43,34 @@ class GAConfig:
             "SMA",
             "EMA",
             "WMA",
+            "HMA",  # 新規統合: Hull Moving Average
             "KAMA",
             "TEMA",
             "DEMA",
             "T3",
             "MAMA",  # 新規追加: MESA Adaptive Moving Average
+            "ZLEMA",  # 新規統合: Zero Lag Exponential Moving Average
+            "TRIMA",  # 新規統合: Triangular Moving Average
             # オシレーター
             "RSI",
             "STOCH",
             "STOCHRSI",  # 新規追加: Stochastic RSI
+            "STOCHF",  # 新規統合: Stochastic Fast
             "CCI",
             "WILLR",
             "MOMENTUM",
+            "MOM",  # 新規統合: Momentum (正式名)
             "ROC",
+            "ROCP",  # 新規統合: Rate of change Percentage
+            "ROCR",  # 新規統合: Rate of change ratio
             "ADX",
             "AROON",
             "MFI",
             "CMO",  # 新規追加: Chande Momentum Oscillator
             "TRIX",  # 新規追加: Triple Exponential Moving Average
             "ULTOSC",  # 新規追加: Ultimate Oscillator
+            "PLUS_DI",  # 新規統合: Plus Directional Indicator
+            "MINUS_DI",  # 新規統合: Minus Directional Indicator
             # ボラティリティ系
             "MACD",
             "BB",
@@ -70,12 +79,22 @@ class GAConfig:
             "NATR",
             "TRANGE",
             "STDDEV",  # 新規追加: Standard Deviation
+            "DONCHIAN",  # 新規統合: Donchian Channels
             # 出来高系
             "OBV",
             "AD",
             "ADOSC",
             "VWMA",  # 新規追加: Volume Weighted Moving Average
             "VWAP",  # 新規追加: Volume Weighted Average Price
+            "PVT",  # 新規統合: Price Volume Trend
+            "EMV",  # 新規統合: Ease of Movement
+            # 価格変換系
+            "AVGPRICE",  # 新規追加: Average Price
+            "MEDPRICE",  # 新規追加: Median Price
+            "TYPPRICE",  # 新規追加: Typical Price
+            "WCLPRICE",  # 新規追加: Weighted Close Price
+            "MIDPOINT",  # 新規統合: MidPoint over period
+            "MIDPRICE",  # 新規統合: Midpoint Price over period
             # その他
             "PSAR",
             "BOP",  # 新規追加: Balance Of Power
@@ -84,10 +103,6 @@ class GAConfig:
             "AROONOSC",  # 新規追加: Aroon Oscillator
             "DX",  # 新規追加: Directional Movement Index
             "ADXR",  # 新規追加: Average Directional Movement Index Rating
-            "AVGPRICE",  # 新規追加: Average Price
-            "MEDPRICE",  # 新規追加: Median Price
-            "TYPPRICE",  # 新規追加: Typical Price
-            "WCLPRICE",  # 新規追加: Weighted Close Price
         ]
     )
 
@@ -98,35 +113,75 @@ class GAConfig:
             "SMA_period": [5, 200],
             "EMA_period": [5, 200],
             "WMA_period": [5, 200],
+            "HMA_period": [9, 50],  # 新規統合
             "KAMA_period": [10, 50],
             "TEMA_period": [10, 50],
             "DEMA_period": [10, 50],
             "T3_period": [5, 30],
             "T3_vfactor": [0.5, 0.9],
+            "MAMA_period": [20, 40],
+            "MAMA_fastlimit": [0.4, 0.6],
+            "MAMA_slowlimit": [0.02, 0.08],
+            "ZLEMA_period": [10, 50],  # 新規統合
+            "TRIMA_period": [14, 50],  # 新規統合
             # モメンタム系
             "RSI_period": [10, 30],
             "RSI_overbought": [70, 90],
             "RSI_oversold": [10, 30],
             "STOCH_k_period": [10, 20],
             "STOCH_d_period": [3, 7],
+            "STOCHRSI_period": [14, 21],
+            "STOCHRSI_fastk_period": [3, 5],
+            "STOCHRSI_fastd_period": [3, 5],
+            "STOCHF_period": [5, 14],  # 新規統合
+            "STOCHF_fastd_period": [3, 5],  # 新規統合
             "CCI_period": [10, 25],
             "WILLR_period": [10, 20],
             "MOMENTUM_period": [5, 20],
+            "MOM_period": [5, 20],  # 新規統合
             "ROC_period": [5, 25],
+            "ROCP_period": [10, 20],  # 新規統合
+            "ROCR_period": [10, 20],  # 新規統合
             "ADX_period": [10, 25],
             "AROON_period": [10, 25],
             "MFI_period": [10, 25],
-            # その他
+            "CMO_period": [14, 28],
+            "TRIX_period": [14, 30],
+            "ULTOSC_period": [7, 28],
+            "PLUS_DI_period": [14, 30],  # 新規統合
+            "MINUS_DI_period": [14, 30],  # 新規統合
+            # ボラティリティ系
             "MACD_fast": [5, 20],
             "MACD_slow": [20, 50],
             "MACD_signal": [5, 15],
             "BB_period": [15, 25],
             "BB_std_dev": [1.5, 2.5],
+            "KELTNER_period": [14, 20],
+            "KELTNER_multiplier": [1.5, 2.5],
             "ATR_period": [10, 25],
             "NATR_period": [10, 25],
             "TRANGE_period": [10, 25],
+            "STDDEV_period": [10, 30],
+            "DONCHIAN_period": [14, 30],  # 新規統合
+            # 出来高系
+            "VWMA_period": [10, 30],
+            "VWAP_period": [14, 30],
+            "PVT_period": [1, 1],  # 新規統合
+            "EMV_period": [14, 30],  # 新規統合
             "ADOSC_fast": [3, 7],
             "ADOSC_slow": [8, 15],
+            # 価格変換系
+            "MIDPOINT_period": [14, 30],  # 新規統合
+            "MIDPRICE_period": [14, 30],  # 新規統合
+            # その他
+            "BOP_period": [1, 1],
+            "APO_period": [12, 26],
+            "APO_slow_period": [26, 50],
+            "PPO_period": [12, 26],
+            "PPO_slow_period": [26, 50],
+            "AROONOSC_period": [14, 25],
+            "DX_period": [14, 21],
+            "ADXR_period": [14, 21],
         }
     )
 

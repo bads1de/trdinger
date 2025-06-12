@@ -41,17 +41,22 @@ class RandomGeneGenerator:
             "SMA",
             "EMA",
             "WMA",
+            "HMA",  # 新規統合: Hull Moving Average
             "KAMA",
             "TEMA",
             "DEMA",
             "T3",
             "MAMA",  # 新規追加: MESA Adaptive Moving Average
+            "ZLEMA",  # 新規統合: Zero Lag Exponential Moving Average
+            "TRIMA",  # 新規統合: Triangular Moving Average
             # オシレーター
             "RSI",
-            "MOMENTUM",
+            "MOMENTUM",  # 別名: MOM
+            "MOM",  # 新規統合: Momentum (正式名)
             "ROC",
             "STOCH",
             "STOCHRSI",  # 新規追加: Stochastic RSI
+            "STOCHF",  # 新規統合: Stochastic Fast
             "CCI",
             "WILLR",
             "ADX",
@@ -60,6 +65,10 @@ class RandomGeneGenerator:
             "CMO",  # 新規追加: Chande Momentum Oscillator
             "TRIX",  # 新規追加: Triple Exponential Moving Average
             "ULTOSC",  # 新規追加: Ultimate Oscillator
+            "PLUS_DI",  # 新規統合: Plus Directional Indicator
+            "MINUS_DI",  # 新規統合: Minus Directional Indicator
+            "ROCP",  # 新規統合: Rate of change Percentage
+            "ROCR",  # 新規統合: Rate of change ratio
             # ボラティリティ系
             "MACD",
             "BB",
@@ -68,12 +77,22 @@ class RandomGeneGenerator:
             "NATR",
             "TRANGE",
             "STDDEV",  # 新規追加: Standard Deviation
+            "DONCHIAN",  # 新規統合: Donchian Channels
             # 出来高系
             "OBV",
             "AD",
             "ADOSC",
             "VWMA",  # 新規追加: Volume Weighted Moving Average
             "VWAP",  # 新規追加: Volume Weighted Average Price
+            "PVT",  # 新規統合: Price Volume Trend
+            "EMV",  # 新規統合: Ease of Movement
+            # 価格変換系
+            "AVGPRICE",  # 新規追加: Average Price
+            "MEDPRICE",  # 新規追加: Median Price
+            "TYPPRICE",  # 新規追加: Typical Price
+            "WCLPRICE",  # 新規追加: Weighted Close Price
+            "MIDPOINT",  # 新規統合: MidPoint over period
+            "MIDPRICE",  # 新規統合: Midpoint Price over period
             # その他
             "PSAR",
             "BOP",  # 新規追加: Balance Of Power
@@ -82,13 +101,6 @@ class RandomGeneGenerator:
             "AROONOSC",  # 新規追加: Aroon Oscillator
             "DX",  # 新規追加: Directional Movement Index
             "ADXR",  # 新規追加: Average Directional Movement Index Rating
-            "AVGPRICE",  # 新規追加: Average Price
-            "MEDPRICE",  # 新規追加: Median Price
-            "TYPPRICE",  # 新規追加: Typical Price
-            "WCLPRICE",  # 新規追加: Weighted Close Price
-            "MIDPOINT",  # 新規追加: MidPoint over period
-            "MIDPRICE",  # 新規追加: Midpoint Price over period
-            "TRIMA",  # 新規追加: Triangular Moving Average
         ]
 
         # 利用可能なデータソース
@@ -307,6 +319,45 @@ class RandomGeneGenerator:
             # Triangular Moving Average
             parameters["period"] = random.randint(14, 50)
 
+        elif indicator_type in ["PLUS_DI", "MINUS_DI"]:
+            # Directional Indicators
+            parameters["period"] = random.randint(14, 30)
+
+        elif indicator_type in ["ROCP", "ROCR"]:
+            # Rate of Change variants
+            parameters["period"] = random.randint(10, 20)
+
+        elif indicator_type == "STOCHF":
+            # Stochastic Fast
+            parameters["period"] = random.randint(5, 14)
+            parameters["fastd_period"] = random.randint(3, 5)
+            parameters["fastd_matype"] = 0  # SMA
+
+        # 新規統合指標のパラメータ生成
+        elif indicator_type == "HMA":
+            # Hull Moving Average
+            parameters["period"] = random.randint(9, 50)
+
+        elif indicator_type == "ZLEMA":
+            # Zero Lag Exponential Moving Average
+            parameters["period"] = random.randint(10, 50)
+
+        elif indicator_type == "MOM":
+            # Momentum (正式名)
+            parameters["period"] = random.randint(5, 20)
+
+        elif indicator_type == "DONCHIAN":
+            # Donchian Channels
+            parameters["period"] = random.randint(14, 30)
+
+        elif indicator_type == "PVT":
+            # Price Volume Trend
+            parameters["period"] = 1  # PVTは期間を使用しない
+
+        elif indicator_type == "EMV":
+            # Ease of Movement
+            parameters["period"] = random.randint(14, 30)
+
         return parameters
 
     def _generate_random_conditions(
@@ -508,15 +559,62 @@ class RandomGeneGenerator:
                 return random.uniform(1.0, 1.02)  # 価格上昇時のエグジット
 
         elif any(
-            indicator_type in operand
-            for indicator_type in ["MIDPOINT", "MIDPRICE", "TRIMA"]
+            indicator_type in operand for indicator_type in ["PLUS_DI", "MINUS_DI"]
         ):
-            # MIDPOINT, MIDPRICE, TRIMA: 価格レベルでの比較
-            # 現在価格に対する相対的な閾値
+            # PLUS_DI, MINUS_DI: 0-100の範囲
+            if condition_type == "entry":
+                return random.uniform(20, 40)  # エントリー閾値
+            else:
+                return random.uniform(10, 30)  # エグジット閾値
+
+        elif "HMA" in operand or "ZLEMA" in operand:
+            # HMA, ZLEMA: 価格レベルでの比較
             if condition_type == "entry":
                 return random.uniform(0.98, 1.0)  # 価格下落時のエントリー
             else:
                 return random.uniform(1.0, 1.02)  # 価格上昇時のエグジット
+
+        elif "MOM" in operand and "MOMENTUM" not in operand:
+            # MOM (Momentum): 価格差での比較
+            if condition_type == "entry":
+                return random.uniform(-10, 0)  # 下降モメンタム
+            else:
+                return random.uniform(0, 10)  # 上昇モメンタム
+
+        elif "DONCHIAN" in operand:
+            # DONCHIAN: 価格レベルでの比較
+            if condition_type == "entry":
+                return random.uniform(0.99, 1.0)  # 下限ブレイクアウト
+            else:
+                return random.uniform(1.0, 1.01)  # 上限ブレイクアウト
+
+        elif "PVT" in operand:
+            # PVT: 累積値での比較（相対的な変化を重視）
+            if condition_type == "entry":
+                return random.uniform(-1000, 0)  # 下降トレンド
+            else:
+                return random.uniform(0, 1000)  # 上昇トレンド
+
+        elif "EMV" in operand:
+            # EMV: 移動の容易さ（通常は小さな値）
+            if condition_type == "entry":
+                return random.uniform(-0.1, 0)  # 困難な移動
+            else:
+                return random.uniform(0, 0.1)  # 容易な移動
+
+        elif any(indicator_type in operand for indicator_type in ["ROCP", "ROCR"]):
+            # ROCP, ROCR: 変化率指標
+            if condition_type == "entry":
+                return random.uniform(-5, 5)  # エントリー閾値
+            else:
+                return random.uniform(-3, 3)  # エグジット閾値
+
+        elif "STOCHF" in operand:
+            # STOCHF: 0-100の範囲
+            if condition_type == "entry":
+                return random.uniform(20, 80)  # エントリー閾値
+            else:
+                return random.uniform(30, 70)  # エグジット閾値
 
         else:
             # その他の場合は汎用的な値

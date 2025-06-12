@@ -742,6 +742,216 @@ class MomentumAdapter(BaseAdapter):
             raise TALibCalculationError(f"PPO計算失敗: {e}")
 
     @staticmethod
+    def plus_di(
+        high: pd.Series,
+        low: pd.Series,
+        close: pd.Series,
+        period: int = 14,
+    ) -> pd.Series:
+        """
+        Plus Directional Indicator (PLUS_DI) を計算
+
+        Args:
+            high: 高値データ（pandas Series）
+            low: 安値データ（pandas Series）
+            close: 終値データ（pandas Series）
+            period: 期間（デフォルト: 14）
+
+        Returns:
+            PLUS_DI値のpandas Series
+
+        Raises:
+            TALibCalculationError: 計算エラーの場合
+        """
+        MomentumAdapter._validate_multi_input(high, low, close)
+        MomentumAdapter._log_calculation_start("PLUS_DI", period=period)
+
+        try:
+            result = MomentumAdapter._safe_talib_calculation(
+                talib.PLUS_DI,
+                high.values,
+                low.values,
+                close.values,
+                timeperiod=period,
+            )
+            return MomentumAdapter._create_series_result(
+                result, close.index, f"PLUS_DI_{period}"
+            )
+
+        except TALibCalculationError:
+            raise
+        except Exception as e:
+            MomentumAdapter._log_calculation_error("PLUS_DI", e)
+            raise TALibCalculationError(f"PLUS_DI計算失敗: {e}")
+
+    @staticmethod
+    def minus_di(
+        high: pd.Series,
+        low: pd.Series,
+        close: pd.Series,
+        period: int = 14,
+    ) -> pd.Series:
+        """
+        Minus Directional Indicator (MINUS_DI) を計算
+
+        Args:
+            high: 高値データ（pandas Series）
+            low: 安値データ（pandas Series）
+            close: 終値データ（pandas Series）
+            period: 期間（デフォルト: 14）
+
+        Returns:
+            MINUS_DI値のpandas Series
+
+        Raises:
+            TALibCalculationError: 計算エラーの場合
+        """
+        MomentumAdapter._validate_multi_input(high, low, close)
+        MomentumAdapter._log_calculation_start("MINUS_DI", period=period)
+
+        try:
+            result = MomentumAdapter._safe_talib_calculation(
+                talib.MINUS_DI,
+                high.values,
+                low.values,
+                close.values,
+                timeperiod=period,
+            )
+            return MomentumAdapter._create_series_result(
+                result, close.index, f"MINUS_DI_{period}"
+            )
+
+        except TALibCalculationError:
+            raise
+        except Exception as e:
+            MomentumAdapter._log_calculation_error("MINUS_DI", e)
+            raise TALibCalculationError(f"MINUS_DI計算失敗: {e}")
+
+    @staticmethod
+    def rocp(data: pd.Series, period: int = 10) -> pd.Series:
+        """
+        Rate of change Percentage (ROCP) を計算
+
+        Args:
+            data: 価格データ（pandas Series）
+            period: 期間（デフォルト: 10）
+
+        Returns:
+            ROCP値のpandas Series
+
+        Raises:
+            TALibCalculationError: 計算エラーの場合
+        """
+        MomentumAdapter._validate_input(data, period)
+        MomentumAdapter._log_calculation_start("ROCP", period=period)
+
+        try:
+            result = MomentumAdapter._safe_talib_calculation(
+                talib.ROCP, data.values, timeperiod=period
+            )
+            return MomentumAdapter._create_series_result(
+                result, data.index, f"ROCP_{period}"
+            )
+
+        except TALibCalculationError:
+            raise
+        except Exception as e:
+            MomentumAdapter._log_calculation_error("ROCP", e)
+            raise TALibCalculationError(f"ROCP計算失敗: {e}")
+
+    @staticmethod
+    def rocr(data: pd.Series, period: int = 10) -> pd.Series:
+        """
+        Rate of change ratio (ROCR) を計算
+
+        Args:
+            data: 価格データ（pandas Series）
+            period: 期間（デフォルト: 10）
+
+        Returns:
+            ROCR値のpandas Series
+
+        Raises:
+            TALibCalculationError: 計算エラーの場合
+        """
+        MomentumAdapter._validate_input(data, period)
+        MomentumAdapter._log_calculation_start("ROCR", period=period)
+
+        try:
+            result = MomentumAdapter._safe_talib_calculation(
+                talib.ROCR, data.values, timeperiod=period
+            )
+            return MomentumAdapter._create_series_result(
+                result, data.index, f"ROCR_{period}"
+            )
+
+        except TALibCalculationError:
+            raise
+        except Exception as e:
+            MomentumAdapter._log_calculation_error("ROCR", e)
+            raise TALibCalculationError(f"ROCR計算失敗: {e}")
+
+    @staticmethod
+    def stochf(
+        high: pd.Series,
+        low: pd.Series,
+        close: pd.Series,
+        fastk_period: int = 5,
+        fastd_period: int = 3,
+        fastd_matype: int = 0,
+    ) -> dict:
+        """
+        Stochastic Fast (STOCHF) を計算
+
+        Args:
+            high: 高値データ（pandas Series）
+            low: 安値データ（pandas Series）
+            close: 終値データ（pandas Series）
+            fastk_period: FastK期間（デフォルト: 5）
+            fastd_period: FastD期間（デフォルト: 3）
+            fastd_matype: FastD移動平均タイプ（デフォルト: 0=SMA）
+
+        Returns:
+            STOCHF値を含む辞書（fastk, fastd）
+
+        Raises:
+            TALibCalculationError: 計算エラーの場合
+        """
+        MomentumAdapter._validate_multi_input(high, low, close)
+        MomentumAdapter._log_calculation_start(
+            "STOCHF",
+            fastk_period=fastk_period,
+            fastd_period=fastd_period,
+            fastd_matype=fastd_matype,
+        )
+
+        try:
+            fastk, fastd = MomentumAdapter._safe_talib_calculation(
+                talib.STOCHF,
+                high.values,
+                low.values,
+                close.values,
+                fastk_period=fastk_period,
+                fastd_period=fastd_period,
+                fastd_matype=fastd_matype,
+            )
+
+            return {
+                "fastk": MomentumAdapter._create_series_result(
+                    fastk, close.index, f"STOCHF_K_{fastk_period}_{fastd_period}"
+                ),
+                "fastd": MomentumAdapter._create_series_result(
+                    fastd, close.index, f"STOCHF_D_{fastk_period}_{fastd_period}"
+                ),
+            }
+
+        except TALibCalculationError:
+            raise
+        except Exception as e:
+            MomentumAdapter._log_calculation_error("STOCHF", e)
+            raise TALibCalculationError(f"STOCHF計算失敗: {e}")
+
+    @staticmethod
     def aroonosc(high: pd.Series, low: pd.Series, period: int) -> pd.Series:
         """
         AROONOSC（Aroon Oscillator）を計算

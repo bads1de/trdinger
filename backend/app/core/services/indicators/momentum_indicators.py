@@ -681,6 +681,182 @@ class ADXRIndicator(BaseIndicator):
         return "ADXR - Average Directional Movement Index Rating、ADXの平滑化版"
 
 
+class PLUSDIIndicator(BaseIndicator):
+    """PLUS_DI（Plus Directional Indicator）指標"""
+
+    def __init__(self):
+        super().__init__(indicator_type="PLUS_DI", supported_periods=[14, 20, 30])
+
+    def calculate(self, df: pd.DataFrame, period: int, **kwargs) -> pd.Series:
+        """
+        PLUS_DI（Plus Directional Indicator）を計算
+
+        Args:
+            df: OHLCVデータのDataFrame
+            period: 期間
+
+        Returns:
+            PLUS_DI値のSeries
+
+        Raises:
+            TALibCalculationError: TA-Lib計算エラーの場合
+            ValueError: 高値・安値・終値データが存在しない場合
+        """
+        # 高値・安値・終値データの存在確認
+        if (
+            "high" not in df.columns
+            or "low" not in df.columns
+            or "close" not in df.columns
+        ):
+            raise ValueError("PLUS_DI計算には高値・安値・終値データが必要です")
+
+        # MomentumAdapterを使用したPLUS_DI計算
+        return MomentumAdapter.plus_di(df["high"], df["low"], df["close"], period)
+
+    def get_description(self) -> str:
+        """指標の説明を取得"""
+        return "PLUS_DI - Plus Directional Indicator、ADXと組み合わせて使用する上昇方向性指標"
+
+
+class MINUSDIIndicator(BaseIndicator):
+    """MINUS_DI（Minus Directional Indicator）指標"""
+
+    def __init__(self):
+        super().__init__(indicator_type="MINUS_DI", supported_periods=[14, 20, 30])
+
+    def calculate(self, df: pd.DataFrame, period: int, **kwargs) -> pd.Series:
+        """
+        MINUS_DI（Minus Directional Indicator）を計算
+
+        Args:
+            df: OHLCVデータのDataFrame
+            period: 期間
+
+        Returns:
+            MINUS_DI値のSeries
+
+        Raises:
+            TALibCalculationError: TA-Lib計算エラーの場合
+            ValueError: 高値・安値・終値データが存在しない場合
+        """
+        # 高値・安値・終値データの存在確認
+        if (
+            "high" not in df.columns
+            or "low" not in df.columns
+            or "close" not in df.columns
+        ):
+            raise ValueError("MINUS_DI計算には高値・安値・終値データが必要です")
+
+        # MomentumAdapterを使用したMINUS_DI計算
+        return MomentumAdapter.minus_di(df["high"], df["low"], df["close"], period)
+
+    def get_description(self) -> str:
+        """指標の説明を取得"""
+        return "MINUS_DI - Minus Directional Indicator、ADXと組み合わせて使用する下降方向性指標"
+
+
+class ROCPIndicator(BaseIndicator):
+    """ROCP（Rate of change Percentage）指標"""
+
+    def __init__(self):
+        super().__init__(indicator_type="ROCP", supported_periods=[10, 14, 20])
+
+    def calculate(self, df: pd.DataFrame, period: int, **kwargs) -> pd.Series:
+        """
+        ROCP（Rate of change Percentage）を計算
+
+        Args:
+            df: OHLCVデータのDataFrame
+            period: 期間
+
+        Returns:
+            ROCP値のSeries
+
+        Raises:
+            TALibCalculationError: TA-Lib計算エラーの場合
+        """
+        # MomentumAdapterを使用したROCP計算
+        return MomentumAdapter.rocp(df["close"], period)
+
+    def get_description(self) -> str:
+        """指標の説明を取得"""
+        return "ROCP - Rate of change Percentage、ROCのパーセンテージ版、価格変化率をパーセンテージで表示"
+
+
+class ROCRIndicator(BaseIndicator):
+    """ROCR（Rate of change ratio）指標"""
+
+    def __init__(self):
+        super().__init__(indicator_type="ROCR", supported_periods=[10, 14, 20])
+
+    def calculate(self, df: pd.DataFrame, period: int, **kwargs) -> pd.Series:
+        """
+        ROCR（Rate of change ratio）を計算
+
+        Args:
+            df: OHLCVデータのDataFrame
+            period: 期間
+
+        Returns:
+            ROCR値のSeries
+
+        Raises:
+            TALibCalculationError: TA-Lib計算エラーの場合
+        """
+        # MomentumAdapterを使用したROCR計算
+        return MomentumAdapter.rocr(df["close"], period)
+
+    def get_description(self) -> str:
+        """指標の説明を取得"""
+        return "ROCR - Rate of change ratio、ROCの比率版、価格変化率を比率で表示"
+
+
+class STOCHFIndicator(BaseIndicator):
+    """STOCHF（Stochastic Fast）指標"""
+
+    def __init__(self):
+        super().__init__(indicator_type="STOCHF", supported_periods=[5, 14])
+
+    def calculate(self, df: pd.DataFrame, period: int, **kwargs) -> dict:
+        """
+        STOCHF（Stochastic Fast）を計算
+
+        Args:
+            df: OHLCVデータのDataFrame
+            period: FastK期間
+            **kwargs: 追加パラメータ
+                - fastd_period: FastD期間（デフォルト: 3）
+                - fastd_matype: FastD移動平均タイプ（デフォルト: 0=SMA）
+
+        Returns:
+            STOCHF値を含む辞書（fastk, fastd）
+
+        Raises:
+            TALibCalculationError: TA-Lib計算エラーの場合
+            ValueError: 高値・安値・終値データが存在しない場合
+        """
+        # 高値・安値・終値データの存在確認
+        if (
+            "high" not in df.columns
+            or "low" not in df.columns
+            or "close" not in df.columns
+        ):
+            raise ValueError("STOCHF計算には高値・安値・終値データが必要です")
+
+        # パラメータの取得
+        fastd_period = kwargs.get("fastd_period", 3)
+        fastd_matype = kwargs.get("fastd_matype", 0)
+
+        # MomentumAdapterを使用したSTOCHF計算
+        return MomentumAdapter.stochf(
+            df["high"], df["low"], df["close"], period, fastd_period, fastd_matype
+        )
+
+    def get_description(self) -> str:
+        """指標の説明を取得"""
+        return "STOCHF - Stochastic Fast、高速ストキャスティクス、短期的な価格モメンタムを測定"
+
+
 # 指標インスタンスのファクトリー関数
 def get_momentum_indicator(indicator_type: str) -> BaseIndicator:
     """
@@ -715,6 +891,11 @@ def get_momentum_indicator(indicator_type: str) -> BaseIndicator:
         "AROONOSC": AROONOSCIndicator,
         "DX": DXIndicator,
         "ADXR": ADXRIndicator,
+        "PLUS_DI": PLUSDIIndicator,
+        "MINUS_DI": MINUSDIIndicator,
+        "ROCP": ROCPIndicator,
+        "ROCR": ROCRIndicator,
+        "STOCHF": STOCHFIndicator,
     }
 
     if indicator_type not in indicators:
@@ -821,6 +1002,31 @@ MOMENTUM_INDICATORS_INFO = {
     "ADXR": {
         "periods": [14, 21],
         "description": "ADXR - Average Directional Movement Index Rating、ADXの平滑化版",
+        "category": "momentum",
+    },
+    "PLUS_DI": {
+        "periods": [14, 20, 30],
+        "description": "PLUS_DI - Plus Directional Indicator、ADXと組み合わせて使用する上昇方向性指標",
+        "category": "momentum",
+    },
+    "MINUS_DI": {
+        "periods": [14, 20, 30],
+        "description": "MINUS_DI - Minus Directional Indicator、ADXと組み合わせて使用する下降方向性指標",
+        "category": "momentum",
+    },
+    "ROCP": {
+        "periods": [10, 14, 20],
+        "description": "ROCP - Rate of change Percentage、ROCのパーセンテージ版、価格変化率をパーセンテージで表示",
+        "category": "momentum",
+    },
+    "ROCR": {
+        "periods": [10, 14, 20],
+        "description": "ROCR - Rate of change ratio、ROCの比率版、価格変化率を比率で表示",
+        "category": "momentum",
+    },
+    "STOCHF": {
+        "periods": [5, 14],
+        "description": "STOCHF - Stochastic Fast、高速ストキャスティクス、短期的な価格モメンタムを測定",
         "category": "momentum",
     },
 }

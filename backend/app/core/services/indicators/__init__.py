@@ -43,6 +43,11 @@ from .momentum_indicators import (
     UltimateOscillatorIndicator,
     BOPIndicator,
     PPOIndicator,
+    PLUSDIIndicator,
+    MINUSDIIndicator,
+    ROCPIndicator,
+    ROCRIndicator,
+    STOCHFIndicator,
     get_momentum_indicator,
     MOMENTUM_INDICATORS_INFO,
 )
@@ -117,6 +122,11 @@ __all__ = [
     "UltimateOscillatorIndicator",
     "BOPIndicator",
     "PPOIndicator",
+    "PLUSDIIndicator",
+    "MINUSDIIndicator",
+    "ROCPIndicator",
+    "ROCRIndicator",
+    "STOCHFIndicator",
     "get_momentum_indicator",
     "MOMENTUM_INDICATORS_INFO",
     # ボラティリティ系指標
