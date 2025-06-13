@@ -104,7 +104,7 @@ const Navbar: React.FC = () => {
       {/* デスクトップサイドバー */}
       <aside
         className={`
-          fixed left-0 top-0 h-full bg-gray-900 border-r border-gray-700 z-50
+          fixed left-0 top-0 h-full bg-black border-r border-gray-700 z-50
           transition-all duration-300 ease-in-out
           ${isCollapsed ? "w-16" : "w-64"}
           hidden md:block
@@ -205,7 +205,7 @@ const Navbar: React.FC = () => {
       {/* モバイル用サイドバー */}
       <aside
         className={`
-          fixed left-0 top-0 h-full w-64 bg-gray-900 border-r border-gray-700 z-50
+          fixed left-0 top-0 h-full w-64 bg-black border-r border-gray-700 z-50
           transform transition-transform duration-300 ease-in-out md:hidden
           ${isMobileMenuOpen ? "translate-x-0" : "-translate-x-full"}
         `}
@@ -271,7 +271,7 @@ const Navbar: React.FC = () => {
       {/* モバイル用メニューボタン */}
       <button
         onClick={toggleMobileMenu}
-        className="fixed top-4 left-4 z-50 md:hidden bg-gray-900 text-gray-300 hover:text-white p-2 rounded-lg hover:bg-gray-800 transition-colors border border-gray-700"
+        className="fixed top-4 left-4 z-50 md:hidden bg-black text-gray-300 hover:text-white p-2 rounded-lg hover:bg-gray-800 transition-colors border border-gray-700"
         aria-label="メニューを開く"
       >
         <svg

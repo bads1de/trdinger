@@ -88,7 +88,7 @@ export default function BacktestResultsTable({
 
   const getReturnColor = (value: number | undefined | null) => {
     if (value === undefined || value === null || isNaN(value))
-      return "text-gray-400";
+      return "text-secondary-400";
     if (value > 0) return "text-green-400";
     if (value < 0) return "text-red-400";
     return "text-gray-400";
@@ -98,7 +98,7 @@ export default function BacktestResultsTable({
     return (
       <div className="flex items-center justify-center py-12">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
-        <span className="ml-2 text-gray-400">読み込み中...</span>
+        <span className="ml-2 text-secondary-400">読み込み中...</span>
       </div>
     );
   }
@@ -106,8 +106,10 @@ export default function BacktestResultsTable({
   if (results.length === 0) {
     return (
       <div className="text-center py-12">
-        <p className="text-gray-400 text-lg">バックテスト結果がありません</p>
-        <p className="text-gray-500 text-sm mt-2">
+        <p className="text-secondary-400 text-lg">
+          バックテスト結果がありません
+        </p>
+        <p className="text-secondary-500 text-sm mt-2">
           バックテストを実行して結果を確認してください
         </p>
       </div>
@@ -116,47 +118,47 @@ export default function BacktestResultsTable({
 
   return (
     <div className="overflow-x-auto">
-      <table className="min-w-full divide-y divide-gray-800">
-        <thead className="bg-gray-800">
+      <table className="min-w-full divide-y divide-secondary-700">
+        <thead className="bg-secondary-800">
           <tr>
-            <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+            <th className="px-6 py-3 text-left text-xs font-medium text-secondary-300 uppercase tracking-wider">
               戦略名
             </th>
-            <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+            <th className="px-6 py-3 text-left text-xs font-medium text-secondary-300 uppercase tracking-wider">
               シンボル
             </th>
-            <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+            <th className="px-6 py-3 text-left text-xs font-medium text-secondary-300 uppercase tracking-wider">
               時間軸
             </th>
-            <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+            <th className="px-6 py-3 text-left text-xs font-medium text-secondary-300 uppercase tracking-wider">
               総リターン
             </th>
-            <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+            <th className="px-6 py-3 text-left text-xs font-medium text-secondary-300 uppercase tracking-wider">
               シャープレシオ
             </th>
-            <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+            <th className="px-6 py-3 text-left text-xs font-medium text-secondary-300 uppercase tracking-wider">
               最大DD
             </th>
-            <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+            <th className="px-6 py-3 text-left text-xs font-medium text-secondary-300 uppercase tracking-wider">
               勝率
             </th>
-            <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+            <th className="px-6 py-3 text-left text-xs font-medium text-secondary-300 uppercase tracking-wider">
               取引数
             </th>
-            <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+            <th className="px-6 py-3 text-left text-xs font-medium text-secondary-400 uppercase tracking-wider">
               実行日時
             </th>
-            <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+            <th className="px-6 py-3 text-left text-xs font-medium text-secondary-300 uppercase tracking-wider">
               操作
             </th>
           </tr>
         </thead>
-        <tbody className="bg-gray-900 divide-y divide-gray-800">
+        <tbody className="bg-black divide-y divide-secondary-700">
           {results.map((result) => (
             <tr
               key={result.id}
               onClick={() => onResultSelect?.(result)}
-              className="hover:bg-gray-800 cursor-pointer transition-colors"
+              className="hover:bg-secondary-800 cursor-pointer transition-colors"
             >
               <td className="px-6 py-4 whitespace-nowrap">
                 <div className="text-sm font-medium text-white">
@@ -164,10 +166,14 @@ export default function BacktestResultsTable({
                 </div>
               </td>
               <td className="px-6 py-4 whitespace-nowrap">
-                <div className="text-sm text-gray-300">{result.symbol}</div>
+                <div className="text-sm text-secondary-300">
+                  {result.symbol}
+                </div>
               </td>
               <td className="px-6 py-4 whitespace-nowrap">
-                <div className="text-sm text-gray-300">{result.timeframe}</div>
+                <div className="text-sm text-secondary-300">
+                  {result.timeframe}
+                </div>
               </td>
               <td className="px-6 py-4 whitespace-nowrap">
                 <div
@@ -179,7 +185,7 @@ export default function BacktestResultsTable({
                 </div>
               </td>
               <td className="px-6 py-4 whitespace-nowrap">
-                <div className="text-sm text-gray-300">
+                <div className="text-sm text-secondary-300">
                   {formatNumber(result.performance_metrics.sharpe_ratio)}
                 </div>
               </td>
@@ -189,17 +195,17 @@ export default function BacktestResultsTable({
                 </div>
               </td>
               <td className="px-6 py-4 whitespace-nowrap">
-                <div className="text-sm text-gray-300">
+                <div className="text-sm text-secondary-300">
                   {formatPercentage(result.performance_metrics.win_rate)}
                 </div>
               </td>
               <td className="px-6 py-4 whitespace-nowrap">
-                <div className="text-sm text-gray-300">
+                <div className="text-sm text-secondary-300">
                   {result.performance_metrics.total_trades}
                 </div>
               </td>
               <td className="px-6 py-4 whitespace-nowrap">
-                <div className="text-sm text-gray-400">
+                <div className="text-sm text-secondary-400">
                   {formatDate(result.created_at)}
                 </div>
               </td>

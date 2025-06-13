@@ -97,8 +97,8 @@ export default function OptimizationResults({
 
   if (!result) {
     return (
-      <div className="bg-gray-900 rounded-lg p-6">
-        <p className="text-gray-400 text-center">最適化結果がありません</p>
+      <div className="bg-secondary-950 rounded-lg p-6 border border-secondary-700">
+        <p className="text-secondary-400 text-center">最適化結果がありません</p>
       </div>
     );
   }
@@ -114,7 +114,7 @@ export default function OptimizationResults({
   };
 
   const getValueColor = (value: number, isPositive: boolean = true) => {
-    if (isNaN(value)) return "text-gray-400";
+    if (isNaN(value)) return "text-secondary-400";
     if (isPositive) {
       return value > 0 ? "text-green-400" : "text-red-400";
     } else {
@@ -138,7 +138,7 @@ export default function OptimizationResults({
       className={`px-4 py-2 text-sm font-medium rounded-t-lg transition-colors ${
         isActive
           ? "bg-blue-600 text-white border-b-2 border-blue-600"
-          : "bg-gray-700 text-gray-300 hover:bg-gray-600"
+          : "bg-secondary-700 text-secondary-300 hover:bg-secondary-600"
       }`}
     >
       {label}
@@ -156,24 +156,24 @@ export default function OptimizationResults({
     color?: string;
     description?: string;
   }) => (
-    <div className="bg-gray-700 rounded-lg p-4">
-      <h4 className="text-sm font-medium text-gray-300 mb-1">{title}</h4>
+    <div className="bg-secondary-700 rounded-lg p-4 border border-secondary-700">
+      <h4 className="text-sm font-medium text-secondary-300 mb-1">{title}</h4>
       <p className={`text-2xl font-bold ${color || "text-white"}`}>{value}</p>
       {description && (
-        <p className="text-xs text-gray-400 mt-1">{description}</p>
+        <p className="text-xs text-secondary-400 mt-1">{description}</p>
       )}
     </div>
   );
 
   return (
-    <div className="bg-gray-900 rounded-lg p-6">
+    <div className="bg-secondary-950 rounded-lg p-6 border border-secondary-700">
       <div className="flex justify-between items-center mb-4">
         <h2 className="text-xl font-semibold">
           {resultType === "enhanced" && "拡張最適化結果"}
           {resultType === "multi" && "マルチ目的最適化結果"}
           {resultType === "robustness" && "ロバストネステスト結果"}
         </h2>
-        <div className="text-sm text-gray-400">
+        <div className="text-sm text-secondary-400">
           {result.strategy_name} | {result.symbol} | {result.timeframe}
         </div>
       </div>
@@ -259,12 +259,12 @@ export default function OptimizationResults({
               <h3 className="text-lg font-medium mb-4">
                 最適化されたパラメータ
               </h3>
-              <div className="bg-gray-700 rounded-lg p-4">
+              <div className="bg-secondary-700 rounded-lg p-4 border border-secondary-700">
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                   {Object.entries(result.optimized_parameters).map(
                     ([key, value]) => (
                       <div key={key} className="text-center">
-                        <p className="text-sm text-gray-300">{key}</p>
+                        <p className="text-sm text-secondary-300">{key}</p>
                         <p className="text-xl font-bold text-blue-400">
                           {value}
                         </p>
@@ -280,17 +280,19 @@ export default function OptimizationResults({
           {result.multi_objective_details && (
             <div>
               <h3 className="text-lg font-medium mb-4">マルチ目的最適化詳細</h3>
-              <div className="bg-gray-700 rounded-lg p-4">
+              <div className="bg-secondary-700 rounded-lg p-4 border border-secondary-700">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <h4 className="text-sm font-medium text-gray-300 mb-2">
+                    <h4 className="text-sm font-medium text-secondary-300 mb-2">
                       目的関数と重み
                     </h4>
                     <div className="space-y-1">
                       {result.multi_objective_details.objectives.map(
                         (obj, index) => (
                           <div key={obj} className="flex justify-between">
-                            <span className="text-sm text-gray-300">{obj}</span>
+                            <span className="text-sm text-secondary-300">
+                              {obj}
+                            </span>
                             <span className="text-sm text-blue-400">
                               {formatNumber(
                                 result.multi_objective_details!.weights[index],
@@ -303,7 +305,7 @@ export default function OptimizationResults({
                     </div>
                   </div>
                   <div>
-                    <h4 className="text-sm font-medium text-gray-300 mb-2">
+                    <h4 className="text-sm font-medium text-secondary-300 mb-2">
                       個別スコア
                     </h4>
                     <div className="space-y-1">
@@ -311,7 +313,9 @@ export default function OptimizationResults({
                         result.multi_objective_details.individual_scores
                       ).map(([obj, score]) => (
                         <div key={obj} className="flex justify-between">
-                          <span className="text-sm text-gray-300">{obj}</span>
+                          <span className="text-sm text-secondary-300">
+                            {obj}
+                          </span>
                           <span className="text-sm text-green-400">
                             {formatNumber(score, 3)}
                           </span>
@@ -369,27 +373,27 @@ export default function OptimizationResults({
           {result.heatmap_summary && (
             <div>
               <h3 className="text-lg font-medium mb-4">ヒートマップサマリー</h3>
-              <div className="bg-gray-700 rounded-lg p-4">
+              <div className="bg-secondary-700 rounded-lg p-4 border border-secondary-700">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <h4 className="text-sm font-medium text-gray-300 mb-2">
+                    <h4 className="text-sm font-medium text-secondary-300 mb-2">
                       最適な組み合わせ
                     </h4>
                     <p className="text-lg font-bold text-green-400">
                       {JSON.stringify(result.heatmap_summary.best_combination)}
                     </p>
-                    <p className="text-sm text-gray-400">
+                    <p className="text-sm text-secondary-400">
                       値: {formatNumber(result.heatmap_summary.best_value, 3)}
                     </p>
                   </div>
                   <div>
-                    <h4 className="text-sm font-medium text-gray-300 mb-2">
+                    <h4 className="text-sm font-medium text-secondary-300 mb-2">
                       最悪な組み合わせ
                     </h4>
                     <p className="text-lg font-bold text-red-400">
                       {JSON.stringify(result.heatmap_summary.worst_combination)}
                     </p>
-                    <p className="text-sm text-gray-400">
+                    <p className="text-sm text-secondary-400">
                       値: {formatNumber(result.heatmap_summary.worst_value, 3)}
                     </p>
                   </div>
@@ -416,7 +420,7 @@ export default function OptimizationResults({
           {result.optimization_details && (
             <div>
               <h3 className="text-lg font-medium mb-4">最適化詳細</h3>
-              <div className="bg-gray-700 rounded-lg p-4">
+              <div className="bg-secondary-700 rounded-lg p-4 border border-secondary-700">
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <MetricCard
                     title="最適化手法"
@@ -439,7 +443,7 @@ export default function OptimizationResults({
                 {/* 収束分析 */}
                 {result.optimization_details.convergence && (
                   <div className="mt-4">
-                    <h4 className="text-sm font-medium text-gray-300 mb-2">
+                    <h4 className="text-sm font-medium text-secondary-300 mb-2">
                       収束分析
                     </h4>
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -494,15 +498,15 @@ export default function OptimizationResults({
           {result.optimization_metadata && (
             <div>
               <h3 className="text-lg font-medium mb-4">最適化メタデータ</h3>
-              <div className="bg-gray-700 rounded-lg p-4">
+              <div className="bg-secondary-700 rounded-lg p-4 border border-secondary-700">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <h4 className="text-sm font-medium text-gray-300 mb-2">
+                    <h4 className="text-sm font-medium text-secondary-300 mb-2">
                       設定情報
                     </h4>
                     <div className="space-y-1">
                       <div className="flex justify-between">
-                        <span className="text-sm text-gray-300">
+                        <span className="text-sm text-secondary-300">
                           最大化指標:
                         </span>
                         <span className="text-sm text-blue-400">
@@ -510,7 +514,7 @@ export default function OptimizationResults({
                         </span>
                       </div>
                       <div className="flex justify-between">
-                        <span className="text-sm text-gray-300">
+                        <span className="text-sm text-secondary-300">
                           パラメータ空間サイズ:
                         </span>
                         <span className="text-sm text-blue-400">
@@ -518,7 +522,9 @@ export default function OptimizationResults({
                         </span>
                       </div>
                       <div className="flex justify-between">
-                        <span className="text-sm text-gray-300">実行時刻:</span>
+                        <span className="text-sm text-secondary-300">
+                          実行時刻:
+                        </span>
                         <span className="text-sm text-blue-400">
                           {new Date(
                             result.optimization_metadata.optimization_timestamp
@@ -536,15 +542,15 @@ export default function OptimizationResults({
           {result.individual_results && (
             <div>
               <h3 className="text-lg font-medium mb-4">期間別結果</h3>
-              <div className="bg-gray-700 rounded-lg p-4">
+              <div className="bg-secondary-700 rounded-lg p-4 border border-secondary-700">
                 <div className="space-y-3">
                   {Object.entries(result.individual_results).map(
                     ([periodName, periodResult]: [string, any]) => (
                       <div
                         key={periodName}
-                        className="border-b border-gray-600 pb-3 last:border-b-0"
+                        className="border-b border-secondary-700 pb-3 last:border-b-0"
                       >
-                        <h4 className="text-sm font-medium text-gray-300 mb-2">
+                        <h4 className="text-sm font-medium text-secondary-300 mb-2">
                           {periodName}
                         </h4>
                         {periodResult.error ? (
@@ -558,7 +564,7 @@ export default function OptimizationResults({
                                 periodResult.optimized_parameters
                               ).map(([param, value]: [string, any]) => (
                                 <div key={param} className="text-center">
-                                  <p className="text-xs text-gray-400">
+                                  <p className="text-xs text-secondary-400">
                                     {param}
                                   </p>
                                   <p className="text-sm font-bold text-blue-400">
@@ -569,7 +575,7 @@ export default function OptimizationResults({
                             {periodResult.performance_metrics && (
                               <>
                                 <div className="text-center">
-                                  <p className="text-xs text-gray-400">
+                                  <p className="text-xs text-secondary-400">
                                     シャープレシオ
                                   </p>
                                   <p className="text-sm font-bold text-green-400">
@@ -581,7 +587,7 @@ export default function OptimizationResults({
                                   </p>
                                 </div>
                                 <div className="text-center">
-                                  <p className="text-xs text-gray-400">
+                                  <p className="text-xs text-secondary-400">
                                     リターン
                                   </p>
                                   <p className="text-sm font-bold text-green-400">
@@ -612,13 +618,13 @@ export default function OptimizationResults({
           {result.robustness_analysis?.performance_statistics && (
             <div>
               <h3 className="text-lg font-medium mb-4">パフォーマンス統計</h3>
-              <div className="bg-gray-700 rounded-lg p-4">
+              <div className="bg-secondary-700 rounded-lg p-4 border border-secondary-700">
                 <div className="space-y-4">
                   {Object.entries(
                     result.robustness_analysis.performance_statistics
                   ).map(([metric, stats]) => (
                     <div key={metric}>
-                      <h4 className="text-sm font-medium text-gray-300 mb-2">
+                      <h4 className="text-sm font-medium text-secondary-300 mb-2">
                         {metric}
                       </h4>
                       <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
@@ -657,13 +663,13 @@ export default function OptimizationResults({
           {result.robustness_analysis?.parameter_stability && (
             <div>
               <h3 className="text-lg font-medium mb-4">パラメータ安定性</h3>
-              <div className="bg-gray-700 rounded-lg p-4">
+              <div className="bg-secondary-700 rounded-lg p-4">
                 <div className="space-y-4">
                   {Object.entries(
                     result.robustness_analysis.parameter_stability
                   ).map(([param, stats]) => (
                     <div key={param}>
-                      <h4 className="text-sm font-medium text-gray-300 mb-2">
+                      <h4 className="text-sm font-medium text-secondary-300 mb-2">
                         {param}
                       </h4>
                       <div className="grid grid-cols-1 md:grid-cols-4 gap-2">
@@ -720,12 +726,12 @@ export default function OptimizationResults({
           {/* 推奨事項 */}
           <div>
             <h3 className="text-lg font-medium mb-4">推奨事項</h3>
-            <div className="bg-gray-700 rounded-lg p-4">
+            <div className="bg-secondary-700 rounded-lg p-4">
               <div className="space-y-3">
                 {result.performance_metrics.sharpe_ratio > 1.5 && (
                   <div className="flex items-start space-x-2">
                     <div className="w-2 h-2 bg-green-400 rounded-full mt-2"></div>
-                    <p className="text-sm text-gray-300">
+                    <p className="text-sm text-secondary-300">
                       シャープレシオが1.5を超えており、優秀な戦略です。
                     </p>
                   </div>
@@ -733,7 +739,7 @@ export default function OptimizationResults({
                 {result.performance_metrics.max_drawdown < -20 && (
                   <div className="flex items-start space-x-2">
                     <div className="w-2 h-2 bg-yellow-400 rounded-full mt-2"></div>
-                    <p className="text-sm text-gray-300">
+                    <p className="text-sm text-secondary-300">
                       最大ドローダウンが20%を超えています。リスク管理の見直しを検討してください。
                     </p>
                   </div>
@@ -742,7 +748,7 @@ export default function OptimizationResults({
                   result.robustness_analysis.robustness_score > 0.8 && (
                     <div className="flex items-start space-x-2">
                       <div className="w-2 h-2 bg-green-400 rounded-full mt-2"></div>
-                      <p className="text-sm text-gray-300">
+                      <p className="text-sm text-secondary-300">
                         ロバストネススコアが高く、安定した戦略です。
                       </p>
                     </div>
@@ -751,7 +757,7 @@ export default function OptimizationResults({
                   result.robustness_analysis.failed_periods > 0 && (
                     <div className="flex items-start space-x-2">
                       <div className="w-2 h-2 bg-red-400 rounded-full mt-2"></div>
-                      <p className="text-sm text-gray-300">
+                      <p className="text-sm text-secondary-300">
                         一部の期間で失敗しています。パラメータの調整や制約条件の見直しを検討してください。
                       </p>
                     </div>
@@ -760,7 +766,7 @@ export default function OptimizationResults({
                   ?.plateau_detection && (
                   <div className="flex items-start space-x-2">
                     <div className="w-2 h-2 bg-yellow-400 rounded-full mt-2"></div>
-                    <p className="text-sm text-gray-300">
+                    <p className="text-sm text-secondary-300">
                       最適化がプラトーに達しました。より多くの試行回数や異なるパラメータ範囲を試してみてください。
                     </p>
                   </div>

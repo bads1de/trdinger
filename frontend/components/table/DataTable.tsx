@@ -202,7 +202,7 @@ const DataTable = <T extends Record<string, any>>({
 
   if (error) {
     return (
-      <div className="bg-gray-900 dark:bg-gray-900 rounded-enterprise-lg border border-gray-700 dark:border-gray-700 p-8">
+      <div className="bg-secondary-950 dark:bg-secondary-950 rounded-enterprise-lg border border-gray-700 dark:border-gray-700 p-8">
         <div className="text-center">
           <div className="w-16 h-16 mx-auto mb-4 bg-gray-800 dark:bg-gray-800 rounded-full flex items-center justify-center">
             <ErrorIcon
@@ -221,7 +221,7 @@ const DataTable = <T extends Record<string, any>>({
 
   return (
     <div
-      className={`bg-gray-900 dark:bg-gray-900 rounded-enterprise-lg border border-gray-700 dark:border-gray-700 ${className}`}
+      className={`bg-secondary-950 dark:bg-secondary-950 rounded-enterprise-lg border border-gray-700 dark:border-gray-700 ${className}`}
     >
       {/* ヘッダー */}
       <div className="p-6 border-b border-gray-700 dark:border-gray-700">
@@ -275,7 +275,7 @@ const DataTable = <T extends Record<string, any>>({
       {/* テーブル */}
       <div className="overflow-x-auto">
         <table className="w-full table-fixed">
-          <thead className="bg-gray-800 dark:bg-gray-800">
+          <thead className="bg-secondary-900 dark:bg-secondary-900">
             <tr>
               {columns.map((column) => (
                 <th
@@ -321,7 +321,7 @@ const DataTable = <T extends Record<string, any>>({
               paginatedData.map((row, index) => (
                 <tr
                   key={index}
-                  className="hover:bg-gray-800 dark:hover:bg-gray-800"
+                  className="hover:bg-secondary-900 dark:hover:bg-secondary-900"
                 >
                   {columns.map((column) => (
                     <td
@@ -354,7 +354,7 @@ const DataTable = <T extends Record<string, any>>({
               <button
                 onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
                 disabled={currentPage === 1}
-                className="px-3 py-1 bg-gray-800 hover:bg-gray-700 disabled:bg-gray-700 disabled:cursor-not-allowed text-gray-100 text-sm rounded border border-gray-600"
+                className="px-3 py-1 bg-secondary-900 hover:bg-gray-700 disabled:bg-gray-700 disabled:cursor-not-allowed text-gray-100 text-sm rounded border border-gray-600"
               >
                 前へ
               </button>
@@ -366,7 +366,7 @@ const DataTable = <T extends Record<string, any>>({
                   setCurrentPage(Math.min(totalPages, currentPage + 1))
                 }
                 disabled={currentPage === totalPages}
-                className="px-3 py-1 bg-gray-800 hover:bg-gray-700 disabled:bg-gray-700 disabled:cursor-not-allowed text-gray-100 text-sm rounded border border-gray-600"
+                className="px-3 py-1 bg-secondary-900 hover:bg-gray-700 disabled:bg-gray-700 disabled:cursor-not-allowed text-gray-100 text-sm rounded border border-gray-600"
               >
                 次へ
               </button>

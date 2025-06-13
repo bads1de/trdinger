@@ -71,7 +71,7 @@ function MetricCard({
     red: "bg-red-900/20 border-red-500/30 text-red-400",
     blue: "bg-blue-900/20 border-blue-500/30 text-blue-400",
     yellow: "bg-yellow-900/20 border-yellow-500/30 text-yellow-400",
-    gray: "bg-gray-800/50 border-gray-700/30 text-gray-300",
+    gray: "bg-secondary-900/50 border-secondary-600 text-gray-300" /* 黒に変更 */,
   };
 
   return (
@@ -102,7 +102,7 @@ function TabButton({ id, label, isActive, onClick }: TabButtonProps) {
       onClick={onClick}
       className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
         isActive
-          ? "bg-blue-600 text-white"
+          ? "bg-secondary-900 text-white" /* 黒に変更 */
           : "bg-gray-800 text-gray-300 hover:bg-gray-700 hover:text-white"
       }`}
     >
@@ -219,7 +219,9 @@ export default function PerformanceMetrics({
       {activeTab === "overview" && (
         <div className="space-y-6">
           {/* 基本情報 */}
-          <div className="bg-gray-800/30 rounded-lg p-4">
+          <div className="bg-secondary-900/30 rounded-lg p-4 border border-secondary-700">
+            {" "}
+            {/* 黒に変更 */}
             <h3 className="text-lg font-semibold mb-3 text-white">基本情報</h3>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
               <div>
@@ -394,7 +396,7 @@ export default function PerformanceMetrics({
           </div>
 
           {/* 期間情報 */}
-          <div className="bg-gray-800/30 rounded-lg p-4">
+          <div className="bg-gray-800/30 rounded-lg p-4 border border-secondary-700">
             <h3 className="text-lg font-semibold mb-3 text-white">
               バックテスト期間
             </h3>
@@ -425,7 +427,9 @@ export default function PerformanceMetrics({
       {/* 取引履歴タブ */}
       {activeTab === "trades" && (
         <div className="space-y-6">
-          <div className="bg-gray-800/30 rounded-lg p-4">
+          <div className="bg-secondary-900/30 rounded-lg p-4 border border-secondary-700">
+            {" "}
+            {/* 黒に変更 */}
             <h3 className="text-lg font-semibold mb-4 text-white">
               取引履歴詳細
             </h3>

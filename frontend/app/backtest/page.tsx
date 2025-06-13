@@ -218,7 +218,7 @@ export default function BacktestPage() {
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
               <h1 className="text-3xl font-bold mb-2">バックテスト</h1>
-              <p className="text-gray-400">
+              <p className="text-secondary-400">
                 過去データを使用して戦略の有効性を検証します
               </p>
             </div>
@@ -229,7 +229,7 @@ export default function BacktestPage() {
         <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
           {/* 左側: バックテスト設定フォーム */}
           <div className="space-y-6">
-            <div className="bg-gray-900 rounded-lg p-6">
+            <div className="bg-black rounded-lg p-6 border border-secondary-700">
               <h2 className="text-xl font-semibold mb-4">バックテスト設定</h2>
               <BacktestForm
                 onSubmit={handleRunBacktest}
@@ -240,7 +240,7 @@ export default function BacktestPage() {
 
             {/* 最適化結果 */}
             {optimizationResult && (
-              <div className="bg-gray-900 rounded-lg p-6">
+              <div className="bg-black rounded-lg p-6 border border-secondary-700">
                 <h2 className="text-xl font-semibold mb-4">
                   {optimizationType === "enhanced" && "拡張最適化結果"}
                   {optimizationType === "multi" && "マルチ目的最適化結果"}
@@ -258,7 +258,7 @@ export default function BacktestPage() {
           {/* 右側: 結果一覧と詳細 */}
           <div className="space-y-6">
             {/* 結果一覧テーブル */}
-            <div className="bg-gray-900 rounded-lg p-6">
+            <div className="bg-secondary-950 rounded-lg p-6 border border-secondary-700">
               <div className="flex justify-between items-center mb-4">
                 <h2 className="text-xl font-semibold">バックテスト結果一覧</h2>
                 <button
@@ -279,7 +279,7 @@ export default function BacktestPage() {
 
             {/* 選択された結果の詳細 */}
             {selectedResult && (
-              <div className="bg-gray-900 rounded-lg p-6">
+              <div className="bg-secondary-950 rounded-lg p-6 border border-secondary-700">
                 <div className="flex justify-between items-center mb-4">
                   <h2 className="text-xl font-semibold">
                     結果詳細 - {selectedResult.strategy_name}
@@ -313,10 +313,10 @@ export default function BacktestPage() {
         {/* ローディング状態 */}
         {backtestLoading && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-gray-900 rounded-lg p-6 text-center">
+            <div className="bg-secondary-950 rounded-lg p-6 text-center border border-secondary-700">
               <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
               <p className="text-lg font-medium">バックテスト実行中...</p>
-              <p className="text-gray-400 text-sm mt-2">
+              <p className="text-secondary-400 text-sm mt-2">
                 データ量によっては数分かかる場合があります
               </p>
             </div>
@@ -326,14 +326,14 @@ export default function BacktestPage() {
         {/* 最適化ローディング状態 */}
         {isOptimizationLoading && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-gray-900 rounded-lg p-6 text-center">
+            <div className="bg-secondary-950 rounded-lg p-6 text-center border border-secondary-700">
               <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-500 mx-auto mb-4"></div>
               <p className="text-lg font-medium">
                 {enhancedOptimizationLoading && "拡張最適化実行中..."}
                 {multiOptimizationLoading && "マルチ目的最適化実行中..."}
                 {robustnessTestLoading && "ロバストネステスト実行中..."}
               </p>
-              <p className="text-gray-400 text-sm mt-2">
+              <p className="text-secondary-400 text-sm mt-2">
                 最適化には時間がかかる場合があります
               </p>
             </div>

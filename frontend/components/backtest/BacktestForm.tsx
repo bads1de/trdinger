@@ -151,7 +151,7 @@ export default function BacktestForm({
               setSelectedStrategy(e.target.value);
               handleStrategyChange(e.target.value);
             }}
-            className="w-full p-3 bg-gray-800 border border-gray-700 text-white rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="w-full p-3 bg-gray-800 border border-secondary-700 text-white rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             required
           >
             <option value="">戦略を選択してください</option>
@@ -177,7 +177,7 @@ export default function BacktestForm({
             <select
               value={config.symbol}
               onChange={(e) => updateConfig({ symbol: e.target.value })}
-              className="w-full p-3 bg-gray-800 border border-gray-700 text-white rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full p-3 bg-gray-800 border border-secondary-700 text-white rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               required
             >
               <option value="BTC/USDT">BTC/USDT</option>
@@ -191,7 +191,7 @@ export default function BacktestForm({
             <select
               value={config.timeframe}
               onChange={(e) => updateConfig({ timeframe: e.target.value })}
-              className="w-full p-3 bg-gray-800 border border-gray-700 text-white rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full p-3 bg-gray-800 border border-secondary-700 text-white rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               required
             >
               <option value="15m">15分</option>
@@ -213,7 +213,7 @@ export default function BacktestForm({
               type="date"
               value={config.start_date}
               onChange={(e) => updateConfig({ start_date: e.target.value })}
-              className="w-full p-3 bg-gray-800 border border-gray-700 text-white rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full p-3 bg-gray-800 border border-secondary-700 text-white rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               required
             />
           </div>
@@ -226,7 +226,7 @@ export default function BacktestForm({
               type="date"
               value={config.end_date}
               onChange={(e) => updateConfig({ end_date: e.target.value })}
-              className="w-full p-3 bg-gray-800 border border-gray-700 text-white rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full p-3 bg-gray-800 border border-secondary-700 text-white rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               required
             />
           </div>
@@ -244,7 +244,7 @@ export default function BacktestForm({
               onChange={(e) =>
                 updateConfig({ initial_capital: Number(e.target.value) })
               }
-              className="w-full p-3 bg-gray-800 border border-gray-700 text-white rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full p-3 bg-gray-800 border border-secondary-700 text-white rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               min="1000"
               step="1000"
               required
@@ -261,7 +261,7 @@ export default function BacktestForm({
               onChange={(e) =>
                 updateConfig({ commission_rate: Number(e.target.value) / 100 })
               }
-              className="w-full p-3 bg-gray-800 border border-gray-700 text-white rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full p-3 bg-gray-800 border border-secondary-700 text-white rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               min="0"
               max="100"
               step="0.001"
@@ -292,7 +292,7 @@ export default function BacktestForm({
                       onChange={(e) =>
                         handleParameterChange(paramName, Number(e.target.value))
                       }
-                      className="w-full p-3 bg-gray-800 border border-gray-700 text-white rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full p-3 bg-gray-800 border border-secondary-700 text-white rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                       min={param.min}
                       max={param.max}
                       required
