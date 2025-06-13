@@ -1,7 +1,5 @@
 """
-自動戦略生成機能の包括的テスト
-
-実装した全コンポーネントの大規模テストを実行します。
+戦略遺伝子機能の包括的テスト
 """
 
 import pytest
@@ -25,12 +23,6 @@ from app.core.services.auto_strategy.models.strategy_gene import (
     Condition,
     encode_gene_to_list,
     decode_list_to_gene,
-)
-from app.core.services.auto_strategy.models.ga_config import GAConfig, GAProgress
-from app.core.services.auto_strategy.factories.strategy_factory import StrategyFactory
-from app.core.services.auto_strategy.engines.ga_engine import GeneticAlgorithmEngine
-from app.core.services.auto_strategy.services.auto_strategy_service import (
-    AutoStrategyService,
 )
 
 
@@ -177,3 +169,10 @@ class TestStrategyGeneComprehensive:
 
         assert json_time < 10.0, f"JSON処理が遅すぎます: {json_time}秒"
         assert encode_time < 5.0, f"エンコード処理が遅すぎます: {encode_time}秒"
+
+
+if __name__ == "__main__":
+    print("戦略遺伝子包括的テスト実行")
+    test_suite = TestStrategyGeneComprehensive()
+    test_suite.test_large_scale_gene_creation()
+    test_suite.test_serialization_performance()
