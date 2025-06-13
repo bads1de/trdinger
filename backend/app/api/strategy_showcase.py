@@ -88,23 +88,19 @@ async def generate_showcase_strategies(
     request: GenerateShowcaseRequest, background_tasks: BackgroundTasks
 ):
     """
-    ショーケース用戦略を生成
+    ショーケース用戦略を生成（廃止予定）
 
-    30個の多様な投資戦略を自動生成し、データベースに保存します。
-    バックグラウンドで実行されるため、即座にレスポンスを返します。
+    注意: この機能は廃止予定です。代わりにオートストラテジー機能を使用してください。
     """
     try:
-        logger.info(f"ショーケース戦略生成開始: {request.count}個")
-
-        # バックグラウンドタスクとして実行
-        background_tasks.add_task(
-            _generate_and_save_strategies, request.count, request.base_config
+        logger.warning(
+            "ショーケース戦略生成は廃止予定です。オートストラテジー機能を使用してください。"
         )
 
         return GenerateShowcaseResponse(
-            success=True,
-            message=f"ショーケース戦略の生成を開始しました。{request.count}個の戦略を生成中です。",
-            generated_count=0,  # バックグラウンド実行のため初期値
+            success=False,
+            message="この機能は廃止予定です。代わりに /api/auto-strategy/generate エンドポイントを使用してください。",
+            generated_count=0,
             saved_count=0,
         )
 
@@ -243,24 +239,12 @@ async def _generate_and_save_strategies(
     count: int, base_config: Optional[Dict[str, Any]]
 ):
     """
-    戦略生成と保存をバックグラウンドで実行
+    戦略生成と保存をバックグラウンドで実行（廃止予定）
 
     Args:
         count: 生成する戦略数
         base_config: 基本バックテスト設定
     """
-    try:
-        logger.info(f"バックグラウンド戦略生成開始: {count}個")
-
-        # 戦略を生成
-        strategies = showcase_service.generate_showcase_strategies(count, base_config)
-
-        # データベースに保存
-        saved_ids = showcase_service.save_strategies_to_database(strategies)
-
-        logger.info(
-            f"バックグラウンド戦略生成完了: {len(strategies)}個生成, {len(saved_ids)}個保存"
-        )
-
-    except Exception as e:
-        logger.error(f"バックグラウンド戦略生成エラー: {e}")
+    logger.warning(
+        "バックグラウンド戦略生成は廃止予定です。オートストラテジー機能を使用してください。"
+    )

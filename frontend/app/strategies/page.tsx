@@ -197,56 +197,16 @@ const StrategiesShowcasePage: React.FC = () => {
   };
 
   /**
-   * 戦略生成を実行
+   * 戦略生成を実行（オートストラテジー機能へのリダイレクト）
    */
   const generateStrategies = async () => {
-    try {
-      setLoading((prev) => ({ ...prev, generation: true }));
-      setErrors((prev) => ({ ...prev, generation: undefined }));
-
-      const response = await fetch(`/api/strategies/showcase/generate`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          count: 30,
-          base_config: {
-            symbol: "BTC/USDT",
-            timeframe: "1h",
-            start_date: "2024-01-01",
-            end_date: "2024-12-19",
-            initial_capital: 100000,
-            commission_rate: 0.00055,
-          },
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const data = await response.json();
-
-      if (data.success) {
-        alert("戦略生成を開始しました。しばらくお待ちください。");
-        // 数秒後にデータを再取得
-        setTimeout(() => {
-          fetchStrategies();
-          fetchStatistics();
-        }, 5000);
-      } else {
-        throw new Error(data.message || "戦略生成に失敗しました");
-      }
-    } catch (error) {
-      console.error("戦略生成エラー:", error);
-      setErrors((prev) => ({
-        ...prev,
-        generation:
-          error instanceof Error ? error.message : "戦略生成に失敗しました",
-      }));
-    } finally {
-      setLoading((prev) => ({ ...prev, generation: false }));
+    // オートストラテジー機能へのリダイレクト
+    if (
+      confirm(
+        "戦略生成機能はオートストラテジー機能に移行しました。オートストラテジーページに移動しますか？"
+      )
+    ) {
+      window.location.href = "/auto-strategy";
     }
   };
 
@@ -311,21 +271,10 @@ const StrategiesShowcasePage: React.FC = () => {
               )}
             </div>
 
-            {/* 戦略生成ボタン */}
+            {/* オートストラテジーへのリンクボタン */}
             <div className="flex items-center gap-3">
-              <button
-                onClick={generateStrategies}
-                disabled={loading.generation}
-                className="btn-primary"
-              >
-                {loading.generation ? (
-                  <>
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                    生成中...
-                  </>
-                ) : (
-                  <>⚡ 戦略を生成</>
-                )}
+              <button onClick={generateStrategies} className="btn-primary">
+                🚀 オートストラテジーで生成
               </button>
             </div>
           </div>

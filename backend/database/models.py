@@ -427,12 +427,15 @@ class GeneratedStrategy(Base):
         }
 
 
+# 廃止予定: StrategyShowcaseモデル
+# オートストラテジー機能のGeneratedStrategyテーブルを使用するため削除予定
+"""
 class StrategyShowcase(Base):
-    """
+    \"\"\"
     戦略ショーケーステーブル
 
     自動生成された戦略のショーケース情報を保存します。
-    """
+    \"\"\"
 
     __tablename__ = "strategy_showcase"
 
@@ -489,8 +492,8 @@ class StrategyShowcase(Base):
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
     )
 
-    # リレーション
-    backtest_result = relationship("BacktestResult", backref="showcase_strategy")
+    # リレーション（削除予定）
+    # backtest_result = relationship("BacktestResult", backref="showcase_strategy")
 
     # インデックス定義
     __table_args__ = (
@@ -510,7 +513,7 @@ class StrategyShowcase(Base):
         )
 
     def to_dict(self):
-        """辞書形式に変換"""
+        \"\"\"辞書形式に変換\"\"\"
         return {
             "id": self.id,
             "name": self.name,
@@ -530,6 +533,7 @@ class StrategyShowcase(Base):
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "updated_at": self.updated_at.isoformat() if self.updated_at else None,
         }
+"""
 
 
 class StrategyTemplate(Base):
