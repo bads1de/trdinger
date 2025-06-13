@@ -94,7 +94,7 @@ async def collect_multi_timeframe_data(
                 }
 
         # 収集結果のサマリー
-        logger.info(f"\n=== 収集結果サマリー ===")
+        logger.info("\n=== 収集結果サマリー ===")
         total_collected = 0
         successful_timeframes = 0
 
@@ -139,7 +139,7 @@ async def collect_latest_data_for_all_timeframes(
 
     # データベースセッション
     db = SessionLocal()
-    ohlcv_repo = OHLCVRepository(db)
+    OHLCVRepository(db)
 
     results = {}
 

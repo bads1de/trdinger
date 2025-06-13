@@ -360,7 +360,7 @@ class EnhancedBacktestService(BacktestService):
                 # rangeオブジェクトの場合
                 try:
                     total_size *= len(list(param_range))
-                except:
+                except:  # noqa: E722
                     total_size *= 100  # デフォルト推定値
         return total_size
 

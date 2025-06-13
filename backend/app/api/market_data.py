@@ -4,8 +4,6 @@
 データベースからのOHLCVデータ取得APIエンドポイントです。
 バックテスト用に保存されたデータを提供し、適切なエラーハンドリングとバリデーションを含みます。
 
-@author Trdinger Development Team
-@version 2.0.0
 """
 
 from fastapi import APIRouter, Query, Depends

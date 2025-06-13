@@ -261,7 +261,7 @@ async def collect_bulk_historical_data(
         skipped_count = len(skipped_tasks)
         failed_count = len(failed_tasks)
 
-        logger.info(f"一括データ収集タスク分析完了:")
+        logger.info("一括データ収集タスク分析完了:")
         logger.info(f"  - 総組み合わせ数: {total_combinations}")
         logger.info(f"  - 実行タスク数: {actual_tasks}")
         logger.info(f"  - スキップ数: {skipped_count} (既存データ)")
@@ -528,7 +528,7 @@ async def collect_all_data_bulk(
         skipped_count = len(skipped_tasks)
         failed_count = len(failed_tasks)
 
-        logger.info(f"全データ一括収集タスク分析完了:")
+        logger.info("全データ一括収集タスク分析完了:")
         logger.info(f"  - 総組み合わせ数: {total_combinations}")
         logger.info(f"  - 実行タスク数: {actual_tasks}")
         logger.info(f"  - スキップ数: {skipped_count} (既存データ)")

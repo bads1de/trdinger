@@ -123,7 +123,7 @@ class FundingRateRepository(BaseRepository):
         """
         try:
             # 削除前の件数を取得
-            count_before = self.db.query(FundingRateData).count()
+            self.db.query(FundingRateData).count()
 
             # 全てのファンディングレートデータを削除
             deleted_count = self.db.query(FundingRateData).delete()

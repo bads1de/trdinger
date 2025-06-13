@@ -13,6 +13,7 @@ from .backtest_data_service import BacktestDataService
 from ..strategies.sma_cross_strategy import SMACrossStrategy
 from ..strategies.rsi_strategy import RSIStrategy
 from ..strategies.macd_strategy import MACDStrategy
+from ..strategies.sma_rsi_strategy import SMARSIStrategy
 from database.repositories.ohlcv_repository import OHLCVRepository
 from database.connection import SessionLocal
 
@@ -264,6 +265,26 @@ class BacktestService:
                 MACDStrategy.signal_period = parameters["signal_period"]
             return MACDStrategy
 
+        elif strategy_type == "SMA_RSI":
+            # パラメータをクラス変数として設定
+            if "sma_short" in parameters:
+                SMARSIStrategy.sma_short = parameters["sma_short"]
+            if "sma_long" in parameters:
+                SMARSIStrategy.sma_long = parameters["sma_long"]
+            if "rsi_period" in parameters:
+                SMARSIStrategy.rsi_period = parameters["rsi_period"]
+            if "oversold_threshold" in parameters:
+                SMARSIStrategy.oversold_threshold = parameters["oversold_threshold"]
+            if "overbought_threshold" in parameters:
+                SMARSIStrategy.overbought_threshold = parameters["overbought_threshold"]
+            if "use_risk_management" in parameters:
+                SMARSIStrategy.use_risk_management = parameters["use_risk_management"]
+            if "sl_pct" in parameters:
+                SMARSIStrategy.sl_pct = parameters["sl_pct"]
+            if "tp_pct" in parameters:
+                SMARSIStrategy.tp_pct = parameters["tp_pct"]
+            return SMARSIStrategy
+
         elif strategy_type == "GENERATED_TEST":
             # 自動生成戦略のテスト用
             # StrategyFactoryで生成された戦略クラスを使用
@@ -470,6 +491,70 @@ class BacktestService:
                     },
                 },
                 "constraints": ["fast_period < slow_period"],
+            },
+            "SMA_RSI": {
+                "name": "SMA + RSI Strategy",
+                "description": "Combined SMA Crossover and RSI Momentum Strategy",
+                "parameters": {
+                    "sma_short": {
+                        "type": "int",
+                        "default": 20,
+                        "min": 5,
+                        "max": 50,
+                        "description": "Short-term SMA period",
+                    },
+                    "sma_long": {
+                        "type": "int",
+                        "default": 50,
+                        "min": 20,
+                        "max": 200,
+                        "description": "Long-term SMA period",
+                    },
+                    "rsi_period": {
+                        "type": "int",
+                        "default": 14,
+                        "min": 5,
+                        "max": 50,
+                        "description": "RSI calculation period",
+                    },
+                    "oversold_threshold": {
+                        "type": "int",
+                        "default": 30,
+                        "min": 10,
+                        "max": 40,
+                        "description": "RSI oversold threshold",
+                    },
+                    "overbought_threshold": {
+                        "type": "int",
+                        "default": 70,
+                        "min": 60,
+                        "max": 90,
+                        "description": "RSI overbought threshold",
+                    },
+                    "use_risk_management": {
+                        "type": "bool",
+                        "default": True,
+                        "description": "Enable risk management",
+                    },
+                    "sl_pct": {
+                        "type": "float",
+                        "default": 0.02,
+                        "min": 0.005,
+                        "max": 0.1,
+                        "description": "Stop loss percentage",
+                    },
+                    "tp_pct": {
+                        "type": "float",
+                        "default": 0.05,
+                        "min": 0.01,
+                        "max": 0.2,
+                        "description": "Take profit percentage",
+                    },
+                },
+                "constraints": [
+                    "sma_short < sma_long",
+                    "oversold_threshold < overbought_threshold",
+                ],
             },
         }
 
