@@ -138,37 +138,6 @@
     @apply disabled:opacity-50 disabled:cursor-not-allowed;
   }
 
-  /* エンタープライズ入力フィールド */
-  .input-enterprise {
-    @apply block w-full px-3 py-2;
-    @apply bg-secondary-900;
-    @apply border border-secondary-700;
-    @apply rounded-enterprise shadow-enterprise-sm;
-    @apply text-secondary-100;
-    @apply placeholder-secondary-500;
-    @apply transition-all duration-200;
-    @apply focus:ring-2 focus:ring-primary-500 focus:border-primary-500;
-    @apply disabled:opacity-50 disabled:cursor-not-allowed;
-  }
-
-  /* エンタープライズセレクト */
-  .select-enterprise {
-    @apply input-enterprise;
-    @apply pr-10 cursor-pointer;
-    @apply appearance-none;
-    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='m6 8 4 4 4-4'/%3e%3c/svg%3e");
-    background-position: right 0.5rem center;
-    background-repeat: no-repeat;
-    background-size: 1.5em 1.5em;
-  }
-
-  /* エンタープライズラベル */
-  .label-enterprise {
-    @apply block text-sm font-medium;
-    @apply text-secondary-300;
-    @apply mb-2;
-  }
-
   /* エンタープライズバッジ */
   .badge-primary {
     @apply inline-flex items-center px-2.5 py-0.5;
@@ -183,30 +152,10 @@
     @apply bg-success-700 text-success-100;
     @apply rounded-full;
   }
-
-  .badge-warning {
-    @apply inline-flex items-center px-2.5 py-0.5;
-    @apply text-xs font-medium;
-    @apply bg-warning-900 text-warning-200;
-    @apply rounded-full;
-  }
-
-  .badge-error {
-    @apply inline-flex items-center px-2.5 py-0.5;
-    @apply text-xs font-medium;
-    @apply bg-error-900 text-error-200;
-    @apply rounded-full;
-  }
 }
 
 /* エンタープライズユーティリティ */
 @layer utilities {
-  /* グラスモーフィズム効果 */
-  .glass-effect {
-    @apply backdrop-blur-sm bg-black/80;
-    @apply border border-secondary-800/50;
-  }
-
   /* テキストグラデーション */
   .text-gradient {
     @apply bg-gradient-to-r from-primary-600 to-accent-600;
@@ -214,15 +163,7 @@
   }
 
   /* アニメーション */
-  .animate-fade-in {
-    animation: fadeIn 0.5s ease-in-out;
-  }
-
   .animate-slide-up {
     animation: slideUp 0.3s ease-out;
-  }
-
-  .animate-scale-in {
-    animation: scaleIn 0.2s ease-out;
   }
 }
