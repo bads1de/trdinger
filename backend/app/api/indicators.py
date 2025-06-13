@@ -14,7 +14,7 @@ from app.core.services.indicators.constants import (
     PRICE_TRANSFORM_INDICATORS,
     OTHER_INDICATORS,
     INDICATOR_INFO,
-    TOTAL_INDICATORS
+    TOTAL_INDICATORS,
 )
 
 router = APIRouter()
@@ -35,7 +35,7 @@ async def get_indicators_by_category():
         "volatility": VOLATILITY_INDICATORS,
         "volume": VOLUME_INDICATORS,
         "price_transform": PRICE_TRANSFORM_INDICATORS,
-        "other": OTHER_INDICATORS
+        "other": OTHER_INDICATORS,
     }
 
 
@@ -55,5 +55,5 @@ async def get_indicators_count():
         "volatility": len(VOLATILITY_INDICATORS),
         "volume": len(VOLUME_INDICATORS),
         "price_transform": len(PRICE_TRANSFORM_INDICATORS),
-        "other": len(OTHER_INDICATORS)
+        "other": len(OTHER_INDICATORS),
     }
