@@ -9,6 +9,8 @@ from typing import List, Dict, Any
 import logging
 
 from ..models.strategy_gene import StrategyGene, IndicatorGene, Condition
+from ...indicators.constants import ALL_INDICATORS
+from ..utils.parameter_generators import generate_indicator_parameters
 
 logger = logging.getLogger(__name__)
 
@@ -35,73 +37,8 @@ class RandomGeneGenerator:
         self.max_conditions = self.config.get("max_conditions", 3)
         self.min_conditions = self.config.get("min_conditions", 1)
 
-        # 利用可能な指標タイプ（価格・出来高ベースのテクニカル指標のみ）
-        self.available_indicators = [
-            # 基本的な移動平均
-            "SMA",
-            "EMA",
-            "WMA",
-            "HMA",  # 新規統合: Hull Moving Average
-            "KAMA",
-            "TEMA",
-            "DEMA",
-            "T3",
-            "MAMA",  # 新規追加: MESA Adaptive Moving Average
-            "ZLEMA",  # 新規統合: Zero Lag Exponential Moving Average
-            "TRIMA",  # 新規統合: Triangular Moving Average
-            # オシレーター
-            "RSI",
-            "MOMENTUM",  # 別名: MOM
-            "MOM",  # 新規統合: Momentum (正式名)
-            "ROC",
-            "STOCH",
-            "STOCHRSI",  # 新規追加: Stochastic RSI
-            "STOCHF",  # 新規統合: Stochastic Fast
-            "CCI",
-            "WILLR",
-            "ADX",
-            "AROON",
-            "MFI",
-            "CMO",  # 新規追加: Chande Momentum Oscillator
-            "TRIX",  # 新規追加: Triple Exponential Moving Average
-            "ULTOSC",  # 新規追加: Ultimate Oscillator
-            "PLUS_DI",  # 新規統合: Plus Directional Indicator
-            "MINUS_DI",  # 新規統合: Minus Directional Indicator
-            "ROCP",  # 新規統合: Rate of change Percentage
-            "ROCR",  # 新規統合: Rate of change ratio
-            # ボラティリティ系
-            "MACD",
-            "BB",
-            "KELTNER",  # 新規追加: Keltner Channels
-            "ATR",
-            "NATR",
-            "TRANGE",
-            "STDDEV",  # 新規追加: Standard Deviation
-            "DONCHIAN",  # 新規統合: Donchian Channels
-            # 出来高系
-            "OBV",
-            "AD",
-            "ADOSC",
-            "VWMA",  # 新規追加: Volume Weighted Moving Average
-            "VWAP",  # 新規追加: Volume Weighted Average Price
-            "PVT",  # 新規統合: Price Volume Trend
-            "EMV",  # 新規統合: Ease of Movement
-            # 価格変換系
-            "AVGPRICE",  # 新規追加: Average Price
-            "MEDPRICE",  # 新規追加: Median Price
-            "TYPPRICE",  # 新規追加: Typical Price
-            "WCLPRICE",  # 新規追加: Weighted Close Price
-            "MIDPOINT",  # 新規統合: MidPoint over period
-            "MIDPRICE",  # 新規統合: Midpoint Price over period
-            # その他
-            "PSAR",
-            "BOP",  # 新規追加: Balance Of Power
-            "APO",  # 新規追加: Absolute Price Oscillator
-            "PPO",  # 新規追加: Percentage Price Oscillator
-            "AROONOSC",  # 新規追加: Aroon Oscillator
-            "DX",  # 新規追加: Directional Movement Index
-            "ADXR",  # 新規追加: Average Directional Movement Index Rating
-        ]
+        # 利用可能な指標タイプ（共通定数から取得）
+        self.available_indicators = ALL_INDICATORS.copy()
 
         # 利用可能なデータソース
         self.available_data_sources = [
@@ -158,207 +95,13 @@ class RandomGeneGenerator:
 
         for _ in range(num_indicators):
             indicator_type = random.choice(self.available_indicators)
-            parameters = self._generate_indicator_parameters(indicator_type)
+            parameters = generate_indicator_parameters(indicator_type)
 
             indicators.append(
                 IndicatorGene(type=indicator_type, parameters=parameters, enabled=True)
             )
 
         return indicators
-
-    def _generate_indicator_parameters(self, indicator_type: str) -> Dict[str, float]:
-        """指標タイプに応じたパラメータを生成"""
-        parameters = {}
-
-        if indicator_type in ["SMA", "EMA", "WMA", "KAMA", "TEMA", "DEMA"]:
-            # 移動平均系
-            parameters["period"] = random.randint(5, 50)
-
-        elif indicator_type == "T3":
-            # T3 (Triple Exponential Moving Average)
-            parameters["period"] = random.randint(5, 30)
-            parameters["vfactor"] = random.uniform(0.5, 0.9)
-
-        elif indicator_type == "RSI":
-            # RSI
-            parameters["period"] = random.randint(10, 30)
-
-        elif indicator_type == "MOMENTUM":
-            # モメンタム
-            parameters["period"] = random.randint(5, 20)
-
-        elif indicator_type == "ROC":
-            # ROC (Rate of Change)
-            parameters["period"] = random.randint(5, 25)
-
-        elif indicator_type == "MACD":
-            # MACD
-            parameters["fast_period"] = random.randint(8, 15)
-            parameters["slow_period"] = random.randint(20, 30)
-            parameters["signal_period"] = random.randint(7, 12)
-
-        elif indicator_type == "BB":
-            # Bollinger Bands
-            parameters["period"] = random.randint(15, 25)
-            parameters["std_dev"] = random.uniform(1.5, 2.5)
-
-        elif indicator_type == "STOCH":
-            # Stochastic
-            parameters["k_period"] = random.randint(10, 20)
-            parameters["d_period"] = random.randint(3, 7)
-
-        elif indicator_type in ["CCI", "ADX", "AROON", "MFI"]:
-            # CCI, ADX, Aroon, MFI
-            parameters["period"] = random.randint(10, 25)
-
-        elif indicator_type == "WILLR":
-            # Williams %R
-            parameters["period"] = random.randint(10, 20)
-
-        elif indicator_type in ["ATR", "NATR", "TRANGE"]:
-            # ボラティリティ系指標
-            parameters["period"] = random.randint(10, 25)
-
-        elif indicator_type in ["OBV", "AD", "ADOSC"]:
-            # 出来高系指標
-            if indicator_type == "ADOSC":
-                parameters["fast_period"] = random.randint(3, 7)
-                parameters["slow_period"] = random.randint(8, 15)
-            else:
-                parameters["period"] = 1  # OBV, ADは期間を使用しない
-
-        elif indicator_type == "PSAR":
-            # Parabolic SAR
-            parameters["period"] = 1  # PSARは期間を使用しない
-
-        # 新規追加指標のパラメータ生成
-        elif indicator_type == "MAMA":
-            # MESA Adaptive Moving Average
-            parameters["period"] = random.randint(20, 40)
-            parameters["fastlimit"] = random.uniform(0.4, 0.6)
-            parameters["slowlimit"] = random.uniform(0.02, 0.08)
-
-        elif indicator_type == "STOCHRSI":
-            # Stochastic RSI
-            parameters["period"] = random.randint(14, 21)
-            parameters["fastk_period"] = random.randint(3, 5)
-            parameters["fastd_period"] = random.randint(3, 5)
-
-        elif indicator_type == "CMO":
-            # Chande Momentum Oscillator
-            parameters["period"] = random.randint(14, 28)
-
-        elif indicator_type == "TRIX":
-            # Triple Exponential Moving Average
-            parameters["period"] = random.randint(14, 30)
-
-        elif indicator_type == "ULTOSC":
-            # Ultimate Oscillator
-            parameters["period"] = random.choice(
-                [7, 14, 28]
-            )  # 短期、中期、長期から選択
-
-        elif indicator_type == "KELTNER":
-            # Keltner Channels
-            parameters["period"] = random.randint(14, 20)
-            parameters["multiplier"] = random.uniform(1.5, 2.5)
-
-        elif indicator_type == "STDDEV":
-            # Standard Deviation
-            parameters["period"] = random.randint(10, 30)
-
-        elif indicator_type == "VWMA":
-            # Volume Weighted Moving Average
-            parameters["period"] = random.randint(10, 30)
-
-        elif indicator_type == "VWAP":
-            # Volume Weighted Average Price
-            parameters["period"] = random.randint(14, 30)
-
-        elif indicator_type == "BOP":
-            # Balance Of Power
-            parameters["period"] = 1  # BOPは期間を使用しない
-
-        elif indicator_type == "APO":
-            # Absolute Price Oscillator
-            parameters["period"] = random.randint(12, 26)
-            parameters["slow_period"] = random.randint(26, 50)
-            parameters["matype"] = random.choice([0, 1])  # 0=SMA, 1=EMA
-
-        elif indicator_type == "PPO":
-            # Percentage Price Oscillator
-            parameters["period"] = random.randint(12, 26)
-            parameters["slow_period"] = random.randint(26, 50)
-            parameters["matype"] = random.choice([0, 1])  # 0=SMA, 1=EMA
-
-        elif indicator_type == "AROONOSC":
-            # Aroon Oscillator
-            parameters["period"] = random.randint(14, 25)
-
-        elif indicator_type == "DX":
-            # Directional Movement Index
-            parameters["period"] = random.randint(14, 21)
-
-        elif indicator_type == "ADXR":
-            # Average Directional Movement Index Rating
-            parameters["period"] = random.randint(14, 21)
-
-        elif indicator_type in ["AVGPRICE", "MEDPRICE", "TYPPRICE", "WCLPRICE"]:
-            # Price Transform indicators
-            parameters["period"] = 1  # Price Transform指標は期間を使用しない
-
-        elif indicator_type == "MIDPOINT":
-            # MidPoint over period
-            parameters["period"] = random.randint(14, 30)
-
-        elif indicator_type == "MIDPRICE":
-            # Midpoint Price over period
-            parameters["period"] = random.randint(14, 30)
-
-        elif indicator_type == "TRIMA":
-            # Triangular Moving Average
-            parameters["period"] = random.randint(14, 50)
-
-        elif indicator_type in ["PLUS_DI", "MINUS_DI"]:
-            # Directional Indicators
-            parameters["period"] = random.randint(14, 30)
-
-        elif indicator_type in ["ROCP", "ROCR"]:
-            # Rate of Change variants
-            parameters["period"] = random.randint(10, 20)
-
-        elif indicator_type == "STOCHF":
-            # Stochastic Fast
-            parameters["period"] = random.randint(5, 14)
-            parameters["fastd_period"] = random.randint(3, 5)
-            parameters["fastd_matype"] = 0  # SMA
-
-        # 新規統合指標のパラメータ生成
-        elif indicator_type == "HMA":
-            # Hull Moving Average
-            parameters["period"] = random.randint(9, 50)
-
-        elif indicator_type == "ZLEMA":
-            # Zero Lag Exponential Moving Average
-            parameters["period"] = random.randint(10, 50)
-
-        elif indicator_type == "MOM":
-            # Momentum (正式名)
-            parameters["period"] = random.randint(5, 20)
-
-        elif indicator_type == "DONCHIAN":
-            # Donchian Channels
-            parameters["period"] = random.randint(14, 30)
-
-        elif indicator_type == "PVT":
-            # Price Volume Trend
-            parameters["period"] = 1  # PVTは期間を使用しない
-
-        elif indicator_type == "EMV":
-            # Ease of Movement
-            parameters["period"] = random.randint(14, 30)
-
-        return parameters
 
     def _generate_random_conditions(
         self, indicators: List[IndicatorGene], condition_type: str
