@@ -8,6 +8,7 @@
 
 import React, { useState, useEffect } from "react";
 import { useApiCall } from "@/hooks/useApiCall";
+import IndicatorSelector from "@/components/common/IndicatorSelector";
 
 interface GAConfig {
   experiment_name: string;
@@ -65,64 +66,14 @@ const GAConfigForm: React.FC<GAConfigFormProps> = ({
   });
 
   // GA設定
-  const [gaConfig, setGaConfig] = useState({
+  const [gaConfig, setGaConfig] = useState<GAConfig["ga_config"]>({
     population_size: 50,
     generations: 30,
     crossover_rate: 0.8,
     mutation_rate: 0.1,
     elite_size: 5,
     max_indicators: 5,
-    allowed_indicators: [
-      // 基本的な移動平均
-      "SMA",
-      "EMA",
-      "WMA",
-      "KAMA",
-      "TEMA",
-      "DEMA",
-      "T3",
-      "MAMA", // 新規追加: MESA Adaptive Moving Average
-      // オシレーター
-      "RSI",
-      "STOCH",
-      "STOCHRSI", // 新規追加: Stochastic RSI
-      "CCI",
-      "WILLR",
-      "MOMENTUM",
-      "ROC",
-      "ADX",
-      "AROON",
-      "MFI",
-      "CMO", // 新規追加: Chande Momentum Oscillator
-      "TRIX", // 新規追加: Triple Exponential Moving Average
-      "ULTOSC", // 新規追加: Ultimate Oscillator
-      // ボラティリティ系
-      "MACD",
-      "BB",
-      "KELTNER", // 新規追加: Keltner Channels
-      "ATR",
-      "NATR",
-      "TRANGE",
-      "STDDEV", // 新規追加: Standard Deviation
-      // 出来高系
-      "OBV",
-      "AD",
-      "ADOSC",
-      "VWMA", // 新規追加: Volume Weighted Moving Average
-      "VWAP", // 新規追加: Volume Weighted Average Price
-      // その他
-      "PSAR",
-      "BOP", // 新規追加: Balance Of Power
-      "APO", // 新規追加: Absolute Price Oscillator
-      "PPO", // 新規追加: Percentage Price Oscillator
-      "AROONOSC", // 新規追加: Aroon Oscillator
-      "DX", // 新規追加: Directional Movement Index
-      "ADXR", // 新規追加: Average Directional Movement Index Rating
-      "AVGPRICE", // 新規追加: Average Price
-      "MEDPRICE", // 新規追加: Median Price
-      "TYPPRICE", // 新規追加: Typical Price
-      "WCLPRICE", // 新規追加: Weighted Close Price
-    ],
+    allowed_indicators: [], // 型を明示的に指定
     fitness_weights: {
       total_return: 0.3,
       sharpe_ratio: 0.4,
@@ -212,74 +163,6 @@ const GAConfigForm: React.FC<GAConfigFormProps> = ({
     }));
   };
 
-  // 利用可能な指標リスト
-  const availableIndicators = [
-    // 移動平均系
-    "SMA",
-    "EMA",
-    "WMA",
-    "HMA", // 新規統合: Hull Moving Average
-    "KAMA",
-    "TEMA",
-    "DEMA",
-    "T3",
-    "MAMA", // 新規追加: MESA Adaptive Moving Average
-    "ZLEMA", // 新規統合: Zero Lag Exponential Moving Average
-    "TRIMA", // 新規統合: Triangular Moving Average
-    // モメンタム系
-    "RSI",
-    "STOCH",
-    "STOCHRSI", // 新規追加: Stochastic RSI
-    "STOCHF", // 新規統合: Stochastic Fast
-    "CCI",
-    "WILLR",
-    "MOMENTUM",
-    "MOM", // 新規統合: Momentum (正式名)
-    "ROC",
-    "ROCP", // 新規統合: Rate of change Percentage
-    "ROCR", // 新規統合: Rate of change ratio
-    "ADX",
-    "AROON",
-    "MFI",
-    "CMO", // 新規追加: Chande Momentum Oscillator
-    "TRIX", // 新規追加: Triple Exponential Moving Average
-    "ULTOSC", // 新規追加: Ultimate Oscillator
-    "PLUS_DI", // 新規統合: Plus Directional Indicator
-    "MINUS_DI", // 新規統合: Minus Directional Indicator
-    // ボラティリティ系
-    "MACD",
-    "BB",
-    "KELTNER", // 新規追加: Keltner Channels
-    "ATR",
-    "NATR",
-    "TRANGE",
-    "STDDEV", // 新規追加: Standard Deviation
-    "DONCHIAN", // 新規統合: Donchian Channels
-    // 出来高系
-    "OBV",
-    "AD",
-    "ADOSC",
-    "VWMA", // 新規追加: Volume Weighted Moving Average
-    "VWAP", // 新規追加: Volume Weighted Average Price
-    "PVT", // 新規統合: Price Volume Trend
-    "EMV", // 新規統合: Ease of Movement
-    // 価格変換系
-    "AVGPRICE", // 新規追加: Average Price
-    "MEDPRICE", // 新規追加: Median Price
-    "TYPPRICE", // 新規追加: Typical Price
-    "WCLPRICE", // 新規追加: Weighted Close Price
-    "MIDPOINT", // 新規統合: MidPoint over period
-    "MIDPRICE", // 新規統合: Midpoint Price over period
-    // その他
-    "PSAR",
-    "BOP", // 新規追加: Balance Of Power
-    "APO", // 新規追加: Absolute Price Oscillator
-    "PPO", // 新規追加: Percentage Price Oscillator
-    "AROONOSC", // 新規追加: Aroon Oscillator
-    "DX", // 新規追加: Directional Movement Index
-    "ADXR", // 新規追加: Average Directional Movement Index Rating
-  ];
-
   return (
     <div className="space-y-6">
       <form onSubmit={handleSubmit} className="space-y-6">
@@ -358,19 +241,14 @@ const GAConfigForm: React.FC<GAConfigFormProps> = ({
           <label className="block text-sm font-medium text-gray-700 mb-2">
             使用可能指標（最大{gaConfig.max_indicators}個）
           </label>
-          <div className="grid grid-cols-3 gap-2">
-            {availableIndicators.map((indicator) => (
-              <label key={indicator} className="flex items-center space-x-2">
-                <input
-                  type="checkbox"
-                  checked={gaConfig.allowed_indicators.includes(indicator)}
-                  onChange={() => handleIndicatorToggle(indicator)}
-                  className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                />
-                <span className="text-sm">{indicator}</span>
-              </label>
-            ))}
-          </div>
+
+          <IndicatorSelector
+            selectedIndicators={gaConfig.allowed_indicators}
+            onIndicatorToggle={handleIndicatorToggle}
+            maxIndicators={gaConfig.max_indicators}
+            showCategories={true}
+            disabled={isLoading}
+          />
         </div>
 
         {/* フィットネス重み */}
