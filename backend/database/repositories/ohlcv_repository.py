@@ -321,5 +321,43 @@ class OHLCVRepository(BaseRepository):
             logger.error(f"時間足 '{timeframe}' のOHLCVデータ削除エラー: {e}")
             raise
 
+    def get_available_timeframes(self, symbol: str) -> List[str]:
+        """
+        指定されたシンボルで利用可能な時間軸のリストを取得
+
+        Args:
+            symbol: 取引ペア
+
+        Returns:
+            利用可能な時間軸のリスト
+        """
+        try:
+            result = (
+                self.db.query(OHLCVData.timeframe)
+                .filter(OHLCVData.symbol == symbol)
+                .distinct()
+                .all()
+            )
+            return [row[0] for row in result]
+
+        except Exception as e:
+            logger.error(f"利用可能時間軸取得エラー: {e}")
+            raise
+
+    def get_available_symbols(self) -> List[str]:
+        """
+        利用可能なシンボルのリストを取得
+
+        Returns:
+            利用可能なシンボルのリスト
+        """
+        try:
+            result = self.db.query(OHLCVData.symbol).distinct().all()
+            return [row[0] for row in result]
+
+        except Exception as e:
+            logger.error(f"利用可能シンボル取得エラー: {e}")
+            raise
+
 
 # sanitize_ohlcv_data メソッドは app.core.utils.data_converter.DataValidator に移動されました

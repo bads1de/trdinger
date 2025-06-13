@@ -1,0 +1,156 @@
+{
+  "execution_time": 0.06365203857421875,
+  "data_summary": {
+    "total_records": 58,
+    "start_date": "2025-04-15T00:00:00",
+    "end_date": "2025-06-11T00:00:00",
+    "price_range": {
+      "min": 83055.0,
+      "max": 111968.0,
+      "first_close": 83603.7,
+      "last_close": 109976.7
+    },
+    "volume_stats": {
+      "total": 4957950.375,
+      "average": 85481.90301724138,
+      "max": 221771.177
+    },
+    "open_interest_stats": {
+      "average": 52709.00739655173,
+      "min": 46107.808,
+      "max": 61794.002,
+      "first": 49686.026,
+      "last": 55324.044
+    },
+    "funding_rate_stats": {
+      "average": 0.0,
+      "min": 0.0,
+      "max": 0.0,
+      "first": 0.0,
+      "last": 0.0
+    }
+  },
+  "strategies_count": 10,
+  "results": [
+    {
+      "strategy_id": "0a96eaa8",
+      "total_return": 38.77322015926987,
+      "sharpe_ratio": 3.163652521441946,
+      "max_drawdown": 0.14419836830531135,
+      "win_rate": 43.332606520787884,
+      "total_trades": 56,
+      "has_oi_fr": true,
+      "indicator_count": 3,
+      "unique_indicators": 2,
+      "fitness": 0.7500752292977955
+    },
+    {
+      "strategy_id": "e5f6340b",
+      "total_return": 2.56617982760449,
+      "sharpe_ratio": 2.3193767887027503,
+      "max_drawdown": 0.17090899242723556,
+      "win_rate": 45.13327739335601,
+      "total_trades": 83,
+      "has_oi_fr": true,
+      "indicator_count": 4,
+      "unique_indicators": 4,
+      "fitness": 0.5126684402493669
+    },
+    {
+      "strategy_id": "5200a020",
+      "total_return": 19.805054131239054,
+      "sharpe_ratio": 1.116470075749525,
+      "max_drawdown": 0.10277656856052632,
+      "win_rate": 47.080769483813725,
+      "total_trades": 34,
+      "has_oi_fr": false,
+      "indicator_count": 4,
+      "unique_indicators": 4,
+      "fitness": 0.501673263997434
+    },
+    {
+      "strategy_id": "47c1f58e",
+      "total_return": 57.81427865512859,
+      "sharpe_ratio": 1.0833732039210675,
+      "max_drawdown": 0.20818255837557353,
+      "win_rate": 47.7910140750691,
+      "total_trades": 44,
+      "has_oi_fr": true,
+      "indicator_count": 2,
+      "unique_indicators": 2,
+      "fitness": 0.5006076548623234
+    },
+    {
+      "strategy_id": "9aa9bb3e",
+      "total_return": 4.158112223887949,
+      "sharpe_ratio": 2.105717410907612,
+      "max_drawdown": 0.25380166026554674,
+      "win_rate": 66.36269883701827,
+      "total_trades": 29,
+      "has_oi_fr": false,
+      "indicator_count": 3,
+      "unique_indicators": 3,
+      "fitness": 0.47160205870212296
+    },
+    {
+      "strategy_id": "669cf098",
+      "total_return": 11.667812171764467,
+      "sharpe_ratio": 0.5292034886983262,
+      "max_drawdown": 0.09892026873100355,
+      "win_rate": 49.50124312671498,
+      "total_trades": 44,
+      "has_oi_fr": false,
+      "indicator_count": 4,
+      "unique_indicators": 4,
+      "fitness": 0.459162294412395
+    },
+    {
+      "strategy_id": "8a0d7132",
+      "total_return": 29.7328198275484,
+      "sharpe_ratio": 0.7436948671480887,
+      "max_drawdown": 0.24709462918820738,
+      "win_rate": 59.207613642941155,
+      "total_trades": 22,
+      "has_oi_fr": true,
+      "indicator_count": 4,
+      "unique_indicators": 4,
+      "fitness": 0.4277313072362398
+    },
+    {
+      "strategy_id": "d93ea227",
+      "total_return": 29.17822937195352,
+      "sharpe_ratio": -0.393696480388396,
+      "max_drawdown": 0.15183821112035303,
+      "win_rate": 69.57027732275147,
+      "total_trades": 39,
+      "has_oi_fr": true,
+      "indicator_count": 2,
+      "unique_indicators": 2,
+      "fitness": 0.4134165928659444
+    },
+    {
+      "strategy_id": "855c3a19",
+      "total_return": -7.773082897096074,
+      "sharpe_ratio": 0.3014821659442352,
+      "max_drawdown": 0.18852642679050902,
+      "win_rate": 67.47472808682224,
+      "total_trades": 27,
+      "has_oi_fr": false,
+      "indicator_count": 3,
+      "unique_indicators": 3,
+      "fitness": 0.38284496093896914
+    },
+    {
+      "strategy_id": "6f6585ba",
+      "total_return": -12.651387030933044,
+      "sharpe_ratio": -0.7052586812185746,
+      "max_drawdown": 0.17462384878338666,
+      "win_rate": 60.833200783978526,
+      "total_trades": 22,
+      "has_oi_fr": false,
+      "indicator_count": 4,
+      "unique_indicators": 4,
+      "fitness": 0.3209193110859061
+    }
+  ]
+}

@@ -18,7 +18,7 @@ from app.api.data_reset import router as data_reset_router
 from app.api.backtest import router as backtest_router
 from app.api.auto_strategy import router as auto_strategy_router
 from app.api.strategy_showcase import router as strategy_showcase_router
-from app.api.routes.indicators import router as indicators_router
+from app.api.indicators import router as indicators_router
 
 
 def setup_logging():

@@ -11,6 +11,7 @@ import multiprocessing
 from typing import List, Dict, Any, Callable, Optional, Tuple
 import logging
 import numpy as np
+from datetime import datetime, timedelta, timezone
 
 from deap import base, creator, tools
 
@@ -59,6 +60,9 @@ class GeneticAlgorithmEngine:
         self.is_running = False
         self.current_generation = 0
         self.start_time = 0
+
+        # 利用可能な時間足
+        self.available_timeframes = ["15m", "30m", "1h", "4h", "1d"]
 
     def setup_deap(self, config: GAConfig):
         """
@@ -120,8 +124,8 @@ class GeneticAlgorithmEngine:
             "population", tools.initRepeat, list, self.toolbox.individual
         )
 
-        # 評価関数（バックテスト設定を保存）
-        self._current_backtest_config = None
+        # 評価関数（バックテスト設定は run_evolution で設定済み）
+        # self._current_backtest_config = None  # リセットしない
         self.toolbox.register(
             "evaluate", self._evaluate_individual_wrapper, config=config
         )
@@ -153,6 +157,45 @@ class GeneticAlgorithmEngine:
 
         logger.info("DEAP環境のセットアップ完了")
 
+    def _select_random_timeframe_config(
+        self, base_config: Dict[str, Any]
+    ) -> Dict[str, Any]:
+        """
+        ランダムな時間足を選択し、適切な期間を設定
+
+        Args:
+            base_config: ベースとなるバックテスト設定
+
+        Returns:
+            時間足と期間が調整された設定
+        """
+        # ランダムに時間足を選択
+        selected_timeframe = random.choice(self.available_timeframes)
+        logger.info(f"ランダム時間足選択: {selected_timeframe}")
+
+        # 現在時刻を基準に期間を設定
+        end_date = datetime.now(timezone.utc)
+
+        # 時間足に応じて適切な期間を設定
+        if selected_timeframe == "15m":
+            start_date = end_date - timedelta(days=7)  # 15分足: 1週間
+        elif selected_timeframe == "30m":
+            start_date = end_date - timedelta(days=14)  # 30分足: 2週間
+        elif selected_timeframe == "1h":
+            start_date = end_date - timedelta(days=30)  # 1時間足: 1ヶ月
+        elif selected_timeframe == "4h":
+            start_date = end_date - timedelta(days=60)  # 4時間足: 2ヶ月
+        else:  # 1d
+            start_date = end_date - timedelta(days=90)  # 日足: 3ヶ月
+
+        # 設定をコピーして更新
+        config = base_config.copy()
+        config["timeframe"] = selected_timeframe
+        config["start_date"] = start_date.isoformat()
+        config["end_date"] = end_date.isoformat()
+
+        return config
+
     def run_evolution(
         self, config: GAConfig, backtest_config: Dict[str, Any]
     ) -> Dict[str, Any]:
@@ -172,7 +215,11 @@ class GeneticAlgorithmEngine:
             self.current_generation = 0
 
             # バックテスト設定を保存
+            logger.info(f"GA実行開始時のバックテスト設定: {backtest_config}")
             self._current_backtest_config = backtest_config
+            logger.info(
+                f"保存後の_current_backtest_config: {self._current_backtest_config}"
+            )
 
             # DEAP環境のセットアップ
             self.setup_deap(config)
@@ -287,6 +334,8 @@ class GeneticAlgorithmEngine:
             フィットネス値のタプル
         """
         try:
+            logger.info(f"個体評価開始: 遺伝子長={len(individual)}")
+            logger.info(f"バックテスト設定: {backtest_config}")
             # 数値リストから戦略遺伝子にデコード
             gene = decode_list_to_gene(individual)
 
@@ -299,16 +348,23 @@ class GeneticAlgorithmEngine:
             # 戦略クラスを生成
             strategy_class = self.strategy_factory.create_strategy_class(gene)
 
-            # バックテスト設定を構築（動的設定を使用）
+            # バックテスト設定を構築（ランダム時間足を使用）
             if backtest_config:
+                logger.info(
+                    f"バックテスト設定あり: {backtest_config.get('timeframe', 'N/A')}"
+                )
+                # ランダムな時間足設定を取得
+                random_config = self._select_random_timeframe_config(backtest_config)
+                logger.info(f"ランダム設定後: {random_config.get('timeframe', 'N/A')}")
+
                 test_config = {
                     "strategy_name": f"GA_Generated_{gene.id}",
-                    "symbol": backtest_config.get("symbol", "BTC/USDT"),
-                    "timeframe": backtest_config.get("timeframe", "1d"),
-                    "start_date": backtest_config.get("start_date", "2024-01-01"),
-                    "end_date": backtest_config.get("end_date", "2024-04-09"),
-                    "initial_capital": backtest_config.get("initial_capital", 100000),
-                    "commission_rate": backtest_config.get("commission_rate", 0.001),
+                    "symbol": random_config.get("symbol", "BTC/USDT"),
+                    "timeframe": random_config.get("timeframe", "1d"),
+                    "start_date": random_config.get("start_date", "2024-01-01"),
+                    "end_date": random_config.get("end_date", "2024-04-09"),
+                    "initial_capital": random_config.get("initial_capital", 100000),
+                    "commission_rate": random_config.get("commission_rate", 0.001),
                     "strategy_config": {
                         "strategy_type": "GENERATED_TEST",
                         "parameters": {"strategy_gene": gene.to_dict()},
@@ -346,6 +402,7 @@ class GeneticAlgorithmEngine:
         self, individual: List[float], config: GAConfig
     ) -> Tuple[float]:
         """評価関数のラッパー（バックテスト設定を渡す）"""
+        logger.info(f"評価ラッパー呼び出し: {len(individual)}個の遺伝子")
         return self._evaluate_individual(
             individual, config, self._current_backtest_config
         )
