@@ -60,7 +60,6 @@ def init_db():
             DataCollectionLog,
             GAExperiment,
             GeneratedStrategy,
-            # StrategyShowcase,  # 廃止予定: オートストラテジー機能のGeneratedStrategyを使用
         )
 
         # テーブルを作成

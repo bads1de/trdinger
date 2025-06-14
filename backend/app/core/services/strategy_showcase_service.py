@@ -487,20 +487,3 @@ class StrategyShowcaseService:
             return "1h"
 
     # 以下は廃止予定のメソッド（後方互換性のため残す）
-    def generate_showcase_strategies(
-        self, count: int = 30, base_config: Optional[Dict[str, Any]] = None
-    ) -> List[Dict[str, Any]]:
-        """廃止予定: 代わりにオートストラテジー機能を使用してください"""
-        logger.warning(
-            "generate_showcase_strategies は廃止予定です。オートストラテジー機能を使用してください。"
-        )
-        return []
-
-    def save_strategies_to_database(
-        self, strategies: List[Dict[str, Any]]
-    ) -> List[int]:
-        """廃止予定: 代わりにオートストラテジー機能を使用してください"""
-        logger.warning(
-            "save_strategies_to_database は廃止予定です。オートストラテジー機能を使用してください。"
-        )
-        return []  # 廃止予定
