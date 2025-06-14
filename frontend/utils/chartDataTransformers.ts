@@ -97,61 +97,6 @@ export const transformTradeHistory = (trades: Trade[]): ChartTradePoint[] => {
  * @param equityCurve 資産曲線データ
  * @returns 月次リターンデータ
  */
-export const calculateMonthlyReturns = (
-  equityCurve: EquityPoint[]
-): MonthlyReturn[] => {
-  if (!equityCurve || equityCurve.length === 0) {
-    return [];
-  }
-
-  const monthlyData = new Map<string, { start: number; end: number }>();
-
-  // 各月の開始と終了の資産額を記録
-  equityCurve.forEach((point) => {
-    const date = new Date(point.timestamp);
-    const yearMonth = `${date.getFullYear()}-${String(
-      date.getMonth() + 1
-    ).padStart(2, "0")}`;
-
-    if (!monthlyData.has(yearMonth)) {
-      monthlyData.set(yearMonth, { start: point.equity, end: point.equity });
-    } else {
-      const existing = monthlyData.get(yearMonth)!;
-      existing.end = point.equity; // 最後の値で更新
-    }
-  });
-
-  // 月次リターンを計算
-  const monthNames = [
-    "Jan",
-    "Feb",
-    "Mar",
-    "Apr",
-    "May",
-    "Jun",
-    "Jul",
-    "Aug",
-    "Sep",
-    "Oct",
-    "Nov",
-    "Dec",
-  ];
-
-  return Array.from(monthlyData.entries())
-    .map(([yearMonth, data]) => {
-      const [year, month] = yearMonth.split("-").map(Number);
-      const monthlyReturn =
-        data.start > 0 ? (data.end - data.start) / data.start : 0;
-
-      return {
-        year,
-        month,
-        return: monthlyReturn * 100, // パーセンテージに変換
-        monthName: monthNames[month - 1],
-      };
-    })
-    .sort((a, b) => a.year - b.year || a.month - b.month);
-};
 
 /**
  * リターン分布を計算する
@@ -219,16 +164,6 @@ export const sampleData = <T>(data: T[], maxPoints: number = 1000): T[] => {
  * @param equityCurve 資産曲線データ
  * @returns Buy & Hold リターン率
  */
-export const calculateBuyHoldReturn = (equityCurve: EquityPoint[]): number => {
-  if (!equityCurve || equityCurve.length < 2) {
-    return 0;
-  }
-
-  const startEquity = equityCurve[0].equity;
-  const endEquity = equityCurve[equityCurve.length - 1].equity;
-
-  return startEquity > 0 ? (endEquity - startEquity) / startEquity : 0;
-};
 
 /**
  * 最大ドローダウンを計算する
@@ -236,16 +171,6 @@ export const calculateBuyHoldReturn = (equityCurve: EquityPoint[]): number => {
  * @param equityCurve 資産曲線データ
  * @returns 最大ドローダウン率（0-1の範囲）
  */
-export const calculateMaxDrawdown = (equityCurve: EquityPoint[]): number => {
-  if (!equityCurve || equityCurve.length === 0) {
-    return 0;
-  }
-
-  const equityWithDrawdown = calculateDrawdown(equityCurve);
-  return Math.max(
-    ...equityWithDrawdown.map((point) => point.drawdown_pct || 0)
-  );
-};
 
 /**
  * 日付範囲でデータをフィルタリングする
@@ -256,14 +181,3 @@ export const calculateMaxDrawdown = (equityCurve: EquityPoint[]): number => {
  * @param dateField 日付フィールド名
  * @returns フィルタリングされたデータ
  */
-export const filterByDateRange = <T extends Record<string, any>>(
-  data: T[],
-  startDate: Date,
-  endDate: Date,
-  dateField: keyof T
-): T[] => {
-  return data.filter((item) => {
-    const itemDate = new Date(item[dateField]);
-    return itemDate >= startDate && itemDate <= endDate;
-  });
-};
