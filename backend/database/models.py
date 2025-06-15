@@ -9,7 +9,6 @@ from sqlalchemy import (
     Float,
     DateTime,
     Index,
-    Boolean,
     Text,
     JSON,
     ForeignKey,
@@ -423,61 +422,5 @@ class GeneratedStrategy(Base):
             "performance_metrics": self.performance_metrics,
             "equity_curve": self.equity_curve,
             "trade_history": self.trade_history,
-            "created_at": self.created_at.isoformat() if self.created_at else None,
-        }
-
-
-class StrategyTemplate(Base):
-    """
-    戦略テンプレートテーブル
-
-    再利用可能な戦略設定を保存します。
-    """
-
-    __tablename__ = "strategy_templates"
-
-    # 主キー
-    id = Column(Integer, primary_key=True, autoincrement=True)
-
-    # テンプレート名（一意）
-    name = Column(String(100), nullable=False, unique=True)
-
-    # 説明
-    description = Column(Text, nullable=True)
-
-    # カテゴリ（例: trend_following, mean_reversion）
-    category = Column(String(50), nullable=True)
-
-    # 戦略設定（JSON形式）
-    config_json = Column(JSON, nullable=False)
-
-    # 公開フラグ
-    is_public = Column(Boolean, default=False)
-
-    # メタデータ
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
-
-    # インデックス定義
-    __table_args__ = (
-        Index("idx_template_category", "category"),
-        Index("idx_template_public", "is_public"),
-        Index("idx_template_created", "created_at"),
-    )
-
-    def __repr__(self):
-        return (
-            f"<StrategyTemplate(name='{self.name}', "
-            f"category='{self.category}', is_public={self.is_public})>"
-        )
-
-    def to_dict(self):
-        """辞書形式に変換"""
-        return {
-            "id": self.id,
-            "name": self.name,
-            "description": self.description,
-            "category": self.category,
-            "config_json": self.config_json,
-            "is_public": self.is_public,
             "created_at": self.created_at.isoformat() if self.created_at else None,
         }

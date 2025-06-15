@@ -16,10 +16,6 @@ from database.repositories.generated_strategy_repository import (
 )
 from database.repositories.backtest_result_repository import BacktestResultRepository
 
-# from database.repositories.strategy_showcase_repository import (
-#     StrategyShowcaseRepository,
-# )
-
 logger = logging.getLogger(__name__)
 
 
@@ -36,7 +32,6 @@ class StrategyIntegrationService:
         self.db = db
         self.generated_strategy_repo = GeneratedStrategyRepository(db)
         self.backtest_result_repo = BacktestResultRepository(db)
-        # self.strategy_showcase_repo = StrategyShowcaseRepository(db)
 
     def get_unified_strategies(
         self,
@@ -66,10 +61,7 @@ class StrategyIntegrationService:
             統合された戦略データ
         """
         try:
-            # ショーケース戦略を取得（一時的に無効化）
-            # showcase_strategies = self._get_showcase_strategies(
-            #     limit, offset, category, risk_level, sort_by, sort_order
-            # )
+            # ショーケース戦略は現在サポートされていないため、空のリストを返す
             showcase_strategies = []
 
             # オートストラテジー由来の戦略を取得
@@ -101,24 +93,6 @@ class StrategyIntegrationService:
         except Exception as e:
             logger.error(f"統合戦略取得エラー: {e}")
             raise
-
-    def _get_showcase_strategies(
-        self,
-        limit: int,
-        offset: int,
-        category: Optional[str],
-        risk_level: Optional[str],
-        sort_by: str,
-        sort_order: str,
-    ) -> List[Dict[str, Any]]:
-        """ショーケース戦略を取得（一時的に無効化）"""
-        try:
-            # 一時的に空のリストを返す
-            return []
-
-        except Exception as e:
-            logger.error(f"ショーケース戦略取得エラー: {e}")
-            return []
 
     def _get_auto_generated_strategies(
         self, limit: int, offset: int, sort_by: str, sort_order: str
