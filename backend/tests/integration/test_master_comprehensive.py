@@ -122,8 +122,6 @@ def main():
 
     # テストファイルの定義
     test_files = {
-        "TA-Lib基本動作確認": "backend/tests/check_talib.py",
-        "TA-Lib移行包括的テスト": "backend/tests/comprehensive_test.py",
         "IndicatorOrchestrator": "backend/tests/test_indicator_orchestrator.py",
         "個別指標クラス": "backend/tests/test_individual_indicators.py",
         "統合・エラーハンドリング": "backend/tests/test_integration_and_errors.py",
