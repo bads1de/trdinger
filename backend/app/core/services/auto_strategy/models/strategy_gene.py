@@ -490,7 +490,7 @@ def decode_list_to_gene(encoded: List[float]) -> StrategyGene:
 
     # 条件部分をデコード（確実に条件を生成）
     entry_start = StrategyGene.MAX_INDICATORS * 2
-    exit_start = entry_start + 3
+    entry_start + 3
 
     # 生成された指標に基づいて条件を作成
     entry_conditions = []

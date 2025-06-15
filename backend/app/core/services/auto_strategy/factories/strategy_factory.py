@@ -589,7 +589,7 @@ class StrategyFactory:
             "open",
             "volume",
             "OpenInterest",
-            "FundingRate",  # OI/FRデータソースを追加
+            "FundingRate",
         ]
 
         for condition in gene.entry_conditions + gene.exit_conditions:

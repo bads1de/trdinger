@@ -481,7 +481,7 @@ class AutoStrategyService:
                 return {"success": False, "errors": errors}
 
             # 戦略クラスを生成
-            strategy_class = self.strategy_factory.create_strategy_class(gene)
+            self.strategy_factory.create_strategy_class(gene)
 
             # バックテスト実行
             test_config = backtest_config.copy()

@@ -48,7 +48,7 @@ class GAConfig:
             "SMA_period": [5, 200],
             "EMA_period": [5, 200],
             "WMA_period": [5, 200],
-            "HMA_period": [9, 50],  # 新規統合
+            "HMA_period": [9, 50],
             "KAMA_period": [10, 50],
             "TEMA_period": [10, 50],
             "DEMA_period": [10, 50],
@@ -57,8 +57,8 @@ class GAConfig:
             "MAMA_period": [20, 40],
             "MAMA_fastlimit": [0.4, 0.6],
             "MAMA_slowlimit": [0.02, 0.08],
-            "ZLEMA_period": [10, 50],  # 新規統合
-            "TRIMA_period": [14, 50],  # 新規統合
+            "ZLEMA_period": [10, 50],
+            "TRIMA_period": [14, 50],
             # モメンタム系
             "RSI_period": [10, 30],
             "RSI_overbought": [70, 90],
@@ -68,23 +68,23 @@ class GAConfig:
             "STOCHRSI_period": [14, 21],
             "STOCHRSI_fastk_period": [3, 5],
             "STOCHRSI_fastd_period": [3, 5],
-            "STOCHF_period": [5, 14],  # 新規統合
-            "STOCHF_fastd_period": [3, 5],  # 新規統合
+            "STOCHF_period": [5, 14],
+            "STOCHF_fastd_period": [3, 5],
             "CCI_period": [10, 25],
             "WILLR_period": [10, 20],
             "MOMENTUM_period": [5, 20],
-            "MOM_period": [5, 20],  # 新規統合
+            "MOM_period": [5, 20],
             "ROC_period": [5, 25],
-            "ROCP_period": [10, 20],  # 新規統合
-            "ROCR_period": [10, 20],  # 新規統合
+            "ROCP_period": [10, 20],
+            "ROCR_period": [10, 20],
             "ADX_period": [10, 25],
             "AROON_period": [10, 25],
             "MFI_period": [10, 25],
             "CMO_period": [14, 28],
             "TRIX_period": [14, 30],
             "ULTOSC_period": [7, 28],
-            "PLUS_DI_period": [14, 30],  # 新規統合
-            "MINUS_DI_period": [14, 30],  # 新規統合
+            "PLUS_DI_period": [14, 30],
+            "MINUS_DI_period": [14, 30],
             # ボラティリティ系
             "MACD_fast": [5, 20],
             "MACD_slow": [20, 50],
@@ -97,17 +97,17 @@ class GAConfig:
             "NATR_period": [10, 25],
             "TRANGE_period": [10, 25],
             "STDDEV_period": [10, 30],
-            "DONCHIAN_period": [14, 30],  # 新規統合
+            "DONCHIAN_period": [14, 30],
             # 出来高系
             "VWMA_period": [10, 30],
             "VWAP_period": [14, 30],
-            "PVT_period": [1, 1],  # 新規統合
-            "EMV_period": [14, 30],  # 新規統合
+            "PVT_period": [1, 1],
+            "EMV_period": [14, 30],
             "ADOSC_fast": [3, 7],
             "ADOSC_slow": [8, 15],
             # 価格変換系
-            "MIDPOINT_period": [14, 30],  # 新規統合
-            "MIDPRICE_period": [14, 30],  # 新規統合
+            "MIDPOINT_period": [14, 30],
+            "MIDPRICE_period": [14, 30],
             # その他
             "BOP_period": [1, 1],
             "APO_period": [12, 26],

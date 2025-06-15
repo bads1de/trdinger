@@ -122,7 +122,7 @@ class OpenInterestRepository(BaseRepository):
         """
         try:
             # 削除前の件数を取得
-            count_before = self.db.query(OpenInterestData).count()
+            self.db.query(OpenInterestData).count()
 
             # 全てのオープンインタレストデータを削除
             deleted_count = self.db.query(OpenInterestData).delete()

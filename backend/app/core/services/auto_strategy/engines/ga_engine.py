@@ -83,7 +83,7 @@ class GeneticAlgorithmEngine:
         self.toolbox = base.Toolbox()
 
         # 遺伝子長の計算（v1仕様: 5指標×2 + エントリー条件3 + イグジット条件3 = 16）
-        gene_length = config.max_indicators * 2 + 6
+        config.max_indicators * 2 + 6
 
         # 個体生成関数（新しいランダム遺伝子生成器を使用）
         def create_individual():
@@ -346,7 +346,7 @@ class GeneticAlgorithmEngine:
                 return (0.0,)  # 無効な戦略には最低スコア
 
             # 戦略クラスを生成
-            strategy_class = self.strategy_factory.create_strategy_class(gene)
+            self.strategy_factory.create_strategy_class(gene)
 
             # バックテスト設定を構築（ランダム時間足を使用）
             if backtest_config:
