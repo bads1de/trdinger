@@ -132,7 +132,11 @@ export default function BacktestForm({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onSubmit(config);
+    const modifiedConfig = { ...config };
+    if (modifiedConfig.symbol === "BTC/USDT") {
+      modifiedConfig.symbol = "BTC/USDT:USDT";
+    }
+    onSubmit(modifiedConfig);
   };
 
   const selectedStrategyData = strategies[selectedStrategy];

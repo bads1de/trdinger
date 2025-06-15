@@ -122,9 +122,10 @@ def main():
 
     # テストファイルの定義
     test_files = {
-        "IndicatorOrchestrator": "backend/tests/test_indicator_orchestrator.py",
-        "個別指標クラス": "backend/tests/test_individual_indicators.py",
-        "統合・エラーハンドリング": "backend/tests/test_integration_and_errors.py",
+        # 削除されたテストファイルのためコメントアウト
+        # "IndicatorOrchestrator": "backend/tests/test_indicator_orchestrator.py",
+        # "個別指標クラス": "backend/tests/test_individual_indicators.py",
+        # "統合・エラーハンドリング": "backend/tests/test_integration_and_errors.py",
     }
 
     test_results = {}
