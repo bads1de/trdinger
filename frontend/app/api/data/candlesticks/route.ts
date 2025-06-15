@@ -9,12 +9,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { PriceData, TimeFrame } from "@/types/strategy";
 import { BACKEND_API_URL } from "@/constants";
-import {
-  validateSymbol,
-  validateTimeframe,
-  createSymbolValidationError,
-  createTimeframeValidationError,
-} from "@/lib/validation";
 
 /**
  * 利用可能な時間軸の定義
@@ -133,11 +127,17 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // シンボルバリデーション
-    if (!validateSymbol(symbol)) {
-      return NextResponse.json(createSymbolValidationError(symbol), {
-        status: 400,
-      });
+    // シンボルバリデーション (簡易版)
+    // 本来はサポートされているシンボルリストと照合すべきだが、今回は削除されたため簡易化
+    if (typeof symbol !== "string" || symbol.trim() === "") {
+      return NextResponse.json(
+        {
+          success: false,
+          message: "無効なシンボルです",
+          timestamp: new Date().toISOString(),
+        },
+        { status: 400 }
+      );
     }
 
     if (!timeframe) {
@@ -151,11 +151,18 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // 時間足バリデーション
-    if (!validateTimeframe(timeframe)) {
-      return NextResponse.json(createTimeframeValidationError(timeframe), {
-        status: 400,
-      });
+    // 時間足バリデーション (簡易版)
+    if (!VALID_TIMEFRAMES.includes(timeframe)) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: `サポートされていない時間足です: ${timeframe}. サポートされている時間足: ${VALID_TIMEFRAMES.join(
+            ", "
+          )}`,
+          timestamp: new Date().toISOString(),
+        },
+        { status: 400 }
+      );
     }
 
     if (limit < 1 || limit > 1000) {

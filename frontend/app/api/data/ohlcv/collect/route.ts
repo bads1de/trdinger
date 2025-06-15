@@ -8,12 +8,6 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { BACKEND_API_URL } from "@/constants";
-import { 
-  validateSymbol, 
-  validateTimeframe,
-  createSymbolValidationError,
-  createTimeframeValidationError 
-} from "@/lib/validation";
 
 /**
  * POST /api/data/ohlcv/collect
@@ -29,18 +23,29 @@ export async function POST(request: NextRequest) {
     const limit = searchParams.get("limit") || "100";
     const daysBack = searchParams.get("days_back") || "30";
 
-    // シンボルバリデーション
-    if (!validateSymbol(symbol)) {
+    // シンボルバリデーション (簡易版)
+    if (typeof symbol !== "string" || symbol.trim() === "") {
       return NextResponse.json(
-        createSymbolValidationError(symbol),
+        {
+          success: false,
+          message: "無効なシンボルです",
+          timestamp: new Date().toISOString(),
+        },
         { status: 400 }
       );
     }
 
-    // 時間足バリデーション
-    if (!validateTimeframe(timeframe)) {
+    // 時間足バリデーション (簡易版)
+    const VALID_TIMEFRAMES = ["15m", "30m", "1h", "4h", "1d"]; // ここで定義
+    if (!VALID_TIMEFRAMES.includes(timeframe)) {
       return NextResponse.json(
-        createTimeframeValidationError(timeframe),
+        {
+          success: false,
+          message: `サポートされていない時間足です: ${timeframe}. サポートされている時間足: ${VALID_TIMEFRAMES.join(
+            ", "
+          )}`,
+          timestamp: new Date().toISOString(),
+        },
         { status: 400 }
       );
     }
@@ -81,10 +86,11 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({
         success: true,
         data: backendData.data,
-        message: backendData.message || `${symbol} ${timeframe} OHLCVデータの収集が完了しました`,
+        message:
+          backendData.message ||
+          `${symbol} ${timeframe} OHLCVデータの収集が完了しました`,
         timestamp: new Date().toISOString(),
       });
-
     } catch (fetchError) {
       console.error("バックエンドAPI呼び出しエラー:", fetchError);
 

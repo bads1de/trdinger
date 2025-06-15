@@ -9,7 +9,7 @@
  */
 
 import React from "react";
-
+import { TableColumn } from "@/components/table/DataTable";
 import { FundingRateData, PriceData, OpenInterestData } from "@/types/strategy";
 import {
   formatDateTime,
@@ -22,7 +22,6 @@ import {
   getPriceChangeColor,
   formatLargeNumber,
 } from "@/utils/formatters";
-import { TableColumn } from "../table/DataTable";
 
 /**
  * ファンディングレートデータテーブルのカラム定義

@@ -6,12 +6,12 @@ import {
   PriceData,
   FundingRateData,
   OpenInterestData,
-  TimeFrame, // selectedTimeFrame を OHLCVDataTable に渡すために必要
+  TimeFrame,
 } from "@/types/strategy";
 
 interface DataTableContainerProps {
   selectedSymbol: string;
-  selectedTimeFrame: TimeFrame; // OHLCVDataTable に渡すために追加
+  selectedTimeFrame: TimeFrame;
   activeTab: "ohlcv" | "funding" | "openinterest";
   setActiveTab: (tab: "ohlcv" | "funding" | "openinterest") => void;
   ohlcvData: PriceData[];

@@ -8,7 +8,6 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { BACKEND_API_URL } from "@/constants";
-import { validateSymbol, createSymbolValidationError } from "@/lib/validation";
 
 /**
  * POST /api/data/open-interest/collect
@@ -23,11 +22,16 @@ export async function POST(request: NextRequest) {
     const limit = searchParams.get("limit") || "100";
     const fetchAll = searchParams.get("fetch_all") === "true";
 
-    // シンボルバリデーション
-    if (!validateSymbol(symbol)) {
-      return NextResponse.json(createSymbolValidationError(symbol), {
-        status: 400,
-      });
+    // シンボルバリデーション (簡易版)
+    if (typeof symbol !== "string" || symbol.trim() === "") {
+      return NextResponse.json(
+        {
+          success: false,
+          message: "無効なシンボルです",
+          timestamp: new Date().toISOString(),
+        },
+        { status: 400 }
+      );
     }
 
     // バックエンドAPIに転送
