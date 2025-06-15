@@ -3,8 +3,6 @@
  *
  * Funding Rate（資金調達率）データの収集を行う専用ボタンです。
  *
- * @author Trdinger Development Team
- * @version 1.0.0
  */
 
 "use client";

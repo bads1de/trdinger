@@ -3,8 +3,6 @@
  *
  * 共通のDataCollectionButtonコンポーネントを使用した全データ収集ボタンです。
  *
- * @author Trdinger Development Team
- * @version 2.0.0
  */
 
 "use client";

@@ -4,8 +4,6 @@
  * 各データテーブルのカラム定義を統一的に管理します。
  * フォーマッター関数とスタイリングを含む完全なカラム設定を提供します。
  *
- * @author Trdinger Development Team
- * @version 1.0.0
  */
 
 import React from "react";

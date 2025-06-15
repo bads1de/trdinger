@@ -4,8 +4,6 @@
  * FundingRateDataTableコンポーネントのテストケースです。
  * 表示、ソート、ページネーション、CSVエクスポート機能をテストします。
  *
- * @author Trdinger Development Team
- * @version 1.0.0
  */
 
 import React from "react";

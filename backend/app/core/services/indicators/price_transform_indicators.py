@@ -5,7 +5,6 @@ AVGPRICE, MEDPRICE, TYPPRICE, WCLPRICE の実装を提供します。
 """
 
 import pandas as pd
-from typing import List, Dict, Any, Optional
 import logging
 
 from .abstract_indicator import BaseIndicator

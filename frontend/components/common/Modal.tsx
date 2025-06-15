@@ -4,8 +4,6 @@
  * ポータル機能、オーバーレイ、アニメーション、アクセシビリティ対応を含む
  * 汎用的なモーダルコンポーネントです。
  *
- * @author Trdinger Development Team
- * @version 1.0.0
  */
 
 "use client";
@@ -153,10 +151,7 @@ const Modal: React.FC<ModalProps> = ({
             `}
           >
             {title && (
-              <h2
-                id="modal-title"
-                className="text-xl font-semibold text-white"
-              >
+              <h2 id="modal-title" className="text-xl font-semibold text-white">
                 {title}
               </h2>
             )}

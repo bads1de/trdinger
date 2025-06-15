@@ -4,8 +4,6 @@
  * 左側に配置される折り畳み可能なサイドバーナビゲーションです。
  * レスポンシブデザインとアクティブページのハイライト機能を提供します。
  *
- * @author Trdinger Development Team
- * @version 2.0.0
  */
 
 "use client";

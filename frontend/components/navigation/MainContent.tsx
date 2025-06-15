@@ -3,8 +3,6 @@
  *
  * サイドバーの折り畳み状態に応じてレイアウトを調整します。
  *
- * @author Trdinger Development Team
- * @version 1.0.0
  */
 
 "use client";

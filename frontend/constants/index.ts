@@ -1,8 +1,6 @@
 /**
  * アプリケーション全体で使用する定数定義
  *
- * @author Trdinger Development Team
- * @version 3.0.0
  */
 
 import { TradingPair, TimeFrameInfo } from "@/types/strategy";

@@ -4,8 +4,6 @@
  * アプリケーション全体で使用されるSVGアイコンを統一的に管理します。
  * 一貫性のあるアイコンサイズとスタイルを提供します。
  *
- * @author Trdinger Development Team
- * @version 1.0.0
  */
 
 import React from "react";

@@ -4,8 +4,6 @@
  * /api/data/candlesticks エンドポイントのテストケースです。
  * 正常系・異常系の両方をテストします。
  *
- * @author Trdinger Development Team
- * @version 2.0.0
  */
 
 import { GET } from "@/app/api/data/candlesticks/route";

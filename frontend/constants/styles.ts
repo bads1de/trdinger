@@ -4,8 +4,6 @@
  * アプリケーション全体で使用される共通のTailwind CSSクラスを定義します。
  * 一貫性のあるデザインシステムを提供し、スタイルの重複を削減します。
  *
- * @author Trdinger Development Team
- * @version 1.0.0
  */
 
 /**

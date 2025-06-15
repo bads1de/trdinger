@@ -4,8 +4,6 @@
  * OHLCVデータとFRデータを表形式で表示するページです。
  * リアルタイムでデータを取得・表示します。
  *
- * @author Trdinger Development Team
- * @version 2.0.0
  */
 
 "use client";

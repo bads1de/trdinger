@@ -3,8 +3,6 @@
  *
  * 簡略化された時間軸選択コンポーネントです。
  *
- * @author Trdinger Development Team
- * @version 2.0.0
  */
 
 "use client";

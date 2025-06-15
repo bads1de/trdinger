@@ -4,8 +4,6 @@
  * バックテスト最適化の設定を行うためのモーダルコンポーネントです。
  * 既存のOptimizationFormを内包し、モーダル形式で表示します。
  *
- * @author Trdinger Development Team
- * @version 1.0.0
  */
 
 "use client";

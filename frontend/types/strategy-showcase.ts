@@ -1,16 +1,14 @@
 /**
  * 戦略ショーケース関連の型定義
  *
- * @author Trdinger Development Team
- * @version 1.0.0
  */
 
 /**
  * 戦略カテゴリ
  */
-export type StrategyCategory = 
+export type StrategyCategory =
   | "trend_following"
-  | "mean_reversion" 
+  | "mean_reversion"
   | "breakout"
   | "range_trading"
   | "momentum";
@@ -23,7 +21,7 @@ export type RiskLevel = "low" | "medium" | "high";
 /**
  * ソート項目
  */
-export type SortBy = 
+export type SortBy =
   | "expected_return"
   | "sharpe_ratio"
   | "max_drawdown"

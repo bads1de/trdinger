@@ -3,8 +3,6 @@
  *
  * 簡略化された通貨ペア選択コンポーネントです。
  *
- * @author Trdinger Development Team
- * @version 2.0.0
  */
 
 "use client";

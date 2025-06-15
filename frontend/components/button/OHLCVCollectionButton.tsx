@@ -3,8 +3,6 @@
  *
  * OHLCV（Open, High, Low, Close, Volume）データの収集を行う専用ボタンです。
  *
- * @author Trdinger Development Team
- * @version 1.0.0
  */
 
 "use client";

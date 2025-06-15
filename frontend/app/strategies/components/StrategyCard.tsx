@@ -3,8 +3,6 @@
  *
  * 個別の投資戦略の要約情報を表示するカードコンポーネント
  *
- * @author Trdinger Development Team
- * @version 1.0.0
  */
 
 import React from "react";

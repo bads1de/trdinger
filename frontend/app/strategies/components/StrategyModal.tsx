@@ -3,8 +3,6 @@
  *
  * 選択された戦略の詳細情報を表示するモーダル
  *
- * @author Trdinger Development Team
- * @version 1.0.0
  */
 
 import React from "react";

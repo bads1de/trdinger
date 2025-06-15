@@ -4,8 +4,6 @@
  * FRデータを表形式で表示するコンポーネントです。
  * ソート、ページネーション、CSVエクスポート機能を提供します。
  *
- * @author Trdinger Development Team
- * @version 1.0.0
  */
 
 "use client";

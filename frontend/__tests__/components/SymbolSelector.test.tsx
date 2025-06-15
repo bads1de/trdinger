@@ -4,8 +4,6 @@
  * SymbolSelector コンポーネントのテストケースです。
  * ユーザーインタラクション、状態管理、カテゴリ表示をテストします。
  *
- * @author Trdinger Development Team
- * @version 1.0.0
  */
 
 import React from "react";
@@ -24,8 +22,18 @@ describe("SymbolSelector", () => {
   describe("レンダリングテスト", () => {
     test("基本的な要素が表示される（compactモード）", () => {
       const testSymbols = [
-        { symbol: "BTC/USDT", name: "Bitcoin / USDT", base: "BTC", quote: "USDT" },
-        { symbol: "ETH/USDT", name: "Ethereum / USDT", base: "ETH", quote: "USDT" }
+        {
+          symbol: "BTC/USDT",
+          name: "Bitcoin / USDT",
+          base: "BTC",
+          quote: "USDT",
+        },
+        {
+          symbol: "ETH/USDT",
+          name: "Ethereum / USDT",
+          base: "ETH",
+          quote: "USDT",
+        },
       ];
 
       render(
@@ -43,8 +51,18 @@ describe("SymbolSelector", () => {
 
     test("シンプル表示の場合、従来のセレクトボックスが表示される", () => {
       const testSymbols = [
-        { symbol: "BTC/USDT", name: "Bitcoin / USDT", base: "BTC", quote: "USDT" },
-        { symbol: "ETH/USDT", name: "Ethereum / USDT", base: "ETH", quote: "USDT" }
+        {
+          symbol: "BTC/USDT",
+          name: "Bitcoin / USDT",
+          base: "BTC",
+          quote: "USDT",
+        },
+        {
+          symbol: "ETH/USDT",
+          name: "Ethereum / USDT",
+          base: "ETH",
+          quote: "USDT",
+        },
       ];
 
       render(
@@ -61,8 +79,18 @@ describe("SymbolSelector", () => {
 
     test("選択されたペアの情報が正しく表示される", () => {
       const testSymbols = [
-        { symbol: "BTC/USDT", name: "Bitcoin / USDT", base: "BTC", quote: "USDT" },
-        { symbol: "ETH/USDT", name: "Ethereum / USDT", base: "ETH", quote: "USDT" }
+        {
+          symbol: "BTC/USDT",
+          name: "Bitcoin / USDT",
+          base: "BTC",
+          quote: "USDT",
+        },
+        {
+          symbol: "ETH/USDT",
+          name: "Ethereum / USDT",
+          base: "ETH",
+          quote: "USDT",
+        },
       ];
 
       render(
@@ -82,8 +110,18 @@ describe("SymbolSelector", () => {
   describe("ユーザーインタラクションテスト", () => {
     test("シンプル表示でペアを選択するとコールバックが呼ばれる", () => {
       const testSymbols = [
-        { symbol: "BTC/USDT", name: "Bitcoin / USDT", base: "BTC", quote: "USDT" },
-        { symbol: "ETH/USDT", name: "Ethereum / USDT", base: "ETH", quote: "USDT" }
+        {
+          symbol: "BTC/USDT",
+          name: "Bitcoin / USDT",
+          base: "BTC",
+          quote: "USDT",
+        },
+        {
+          symbol: "ETH/USDT",
+          name: "Ethereum / USDT",
+          base: "ETH",
+          quote: "USDT",
+        },
       ];
 
       render(
@@ -121,7 +159,12 @@ describe("SymbolSelector", () => {
   describe("無効化状態テスト", () => {
     test("disabled=trueの場合、セレクトボックスが無効化される", () => {
       const testSymbols = [
-        { symbol: "BTC/USDT", name: "Bitcoin / USDT", base: "BTC", quote: "USDT" }
+        {
+          symbol: "BTC/USDT",
+          name: "Bitcoin / USDT",
+          base: "BTC",
+          quote: "USDT",
+        },
       ];
 
       render(
@@ -146,8 +189,8 @@ describe("SymbolSelector", () => {
           symbol: "CUSTOM/USDT",
           name: "Custom Token / USDT",
           base: "CUSTOM",
-          quote: "USDT"
-        }
+          quote: "USDT",
+        },
       ];
 
       render(
@@ -159,7 +202,7 @@ describe("SymbolSelector", () => {
         />
       );
 
-      const option = screen.getByRole('option', { name: /CUSTOM\/USDT/ });
+      const option = screen.getByRole("option", { name: /CUSTOM\/USDT/ });
       expect(option).toBeInTheDocument();
     });
 
@@ -173,14 +216,21 @@ describe("SymbolSelector", () => {
         />
       );
 
-      expect(screen.getByText("利用可能な通貨ペアがありません")).toBeInTheDocument();
+      expect(
+        screen.getByText("利用可能な通貨ペアがありません")
+      ).toBeInTheDocument();
     });
   });
 
   describe("アクセシビリティテスト", () => {
     test("キーボードナビゲーションが可能である", () => {
       const testSymbols = [
-        { symbol: "BTC/USDT", name: "Bitcoin / USDT", base: "BTC", quote: "USDT" }
+        {
+          symbol: "BTC/USDT",
+          name: "Bitcoin / USDT",
+          base: "BTC",
+          quote: "USDT",
+        },
       ];
 
       render(

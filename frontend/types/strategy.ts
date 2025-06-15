@@ -4,8 +4,6 @@
  * このファイルには、バックテストシステムで使用される
  * 全ての型定義が含まれています。
  *
- * @author Trdinger Development Team
- * @version 1.0.0
  */
 
 /**

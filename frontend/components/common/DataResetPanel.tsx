@@ -4,14 +4,14 @@
  * データリセット機能をまとめたパネルコンポーネントです。
  * 各種データのリセットボタンと現在のデータ状況を表示します。
  *
- * @author Trdinger Development Team
- * @version 1.0.0
  */
 
 "use client";
 
 import React, { useState, useEffect } from "react";
-import DataResetButton, { DataResetResult } from "@/components/button/DataResetButton";
+import DataResetButton, {
+  DataResetResult,
+} from "@/components/button/DataResetButton";
 import { useApiCall } from "@/hooks/useApiCall";
 
 /**
@@ -64,7 +64,7 @@ const DataResetPanel: React.FC<DataResetPanelProps> = ({
       const result = await apiCall.execute("/api/data-reset/status", {
         method: "GET",
       });
-      
+
       if (result) {
         setDataStatus(result);
       }
@@ -82,9 +82,17 @@ const DataResetPanel: React.FC<DataResetPanelProps> = ({
     // 成功メッセージを表示
     if (result.success) {
       if (result.total_deleted !== undefined) {
-        setResetMessage(`✅ ${result.message} (${result.total_deleted.toLocaleString()}件削除)`);
+        setResetMessage(
+          `✅ ${
+            result.message
+          } (${result.total_deleted.toLocaleString()}件削除)`
+        );
       } else if (result.deleted_count !== undefined) {
-        setResetMessage(`✅ ${result.message} (${result.deleted_count.toLocaleString()}件削除)`);
+        setResetMessage(
+          `✅ ${
+            result.message
+          } (${result.deleted_count.toLocaleString()}件削除)`
+        );
       } else {
         setResetMessage(`✅ ${result.message}`);
       }
@@ -111,7 +119,7 @@ const DataResetPanel: React.FC<DataResetPanelProps> = ({
    */
   const handleResetError = (error: string) => {
     setResetMessage(`❌ ${error}`);
-    
+
     // 10秒後にメッセージをクリア
     setTimeout(() => {
       setResetMessage("");
@@ -150,8 +158,18 @@ const DataResetPanel: React.FC<DataResetPanelProps> = ({
               onClick={onClose}
               className="text-warning-600 hover:text-warning-800 dark:text-warning-400 dark:hover:text-warning-200"
             >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              <svg
+                className="w-5 h-5"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M6 18L18 6M6 6l12 12"
+                />
               </svg>
             </button>
           )}
@@ -168,25 +186,33 @@ const DataResetPanel: React.FC<DataResetPanelProps> = ({
                 <div className="text-lg font-bold text-blue-600 dark:text-blue-400">
                   {dataStatus.data_counts.ohlcv.toLocaleString()}
                 </div>
-                <div className="text-secondary-600 dark:text-secondary-400">OHLCV</div>
+                <div className="text-secondary-600 dark:text-secondary-400">
+                  OHLCV
+                </div>
               </div>
               <div className="text-center">
                 <div className="text-lg font-bold text-green-600 dark:text-green-400">
                   {dataStatus.data_counts.funding_rates.toLocaleString()}
                 </div>
-                <div className="text-secondary-600 dark:text-secondary-400">FR</div>
+                <div className="text-secondary-600 dark:text-secondary-400">
+                  FR
+                </div>
               </div>
               <div className="text-center">
                 <div className="text-lg font-bold text-purple-600 dark:text-purple-400">
                   {dataStatus.data_counts.open_interest.toLocaleString()}
                 </div>
-                <div className="text-secondary-600 dark:text-secondary-400">OI</div>
+                <div className="text-secondary-600 dark:text-secondary-400">
+                  OI
+                </div>
               </div>
               <div className="text-center">
                 <div className="text-lg font-bold text-secondary-900 dark:text-secondary-100">
                   {dataStatus.total_records.toLocaleString()}
                 </div>
-                <div className="text-secondary-600 dark:text-secondary-400">合計</div>
+                <div className="text-secondary-600 dark:text-secondary-400">
+                  合計
+                </div>
               </div>
             </div>
           </div>

@@ -3,8 +3,6 @@
  *
  * ソート、ページネーション、CSVエクスポート機能を持つ汎用テーブルコンポーネントです。
  *
- * @author Trdinger Development Team
- * @version 1.0.0
  */
 
 "use client";

@@ -3,8 +3,6 @@
  *
  * 戦略一覧のフィルタリング・ソート・検索機能を提供
  *
- * @author Trdinger Development Team
- * @version 1.0.0
  */
 
 import React, { useState } from "react";

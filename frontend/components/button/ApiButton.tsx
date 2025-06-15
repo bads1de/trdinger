@@ -4,8 +4,6 @@
  * ローディング状態、エラーハンドリング、アイコン表示などを統一的に管理する
  * 汎用的なAPIボタンコンポーネントです。
  *
- * @author Trdinger Development Team
- * @version 1.0.0
  */
 
 "use client";
@@ -21,7 +19,14 @@ export type ButtonSize = "xs" | "sm" | "md" | "lg" | "xl";
 /**
  * ボタンのバリアント
  */
-export type ButtonVariant = "primary" | "secondary" | "success" | "warning" | "error" | "outline" | "ghost";
+export type ButtonVariant =
+  | "primary"
+  | "secondary"
+  | "success"
+  | "warning"
+  | "error"
+  | "outline"
+  | "ghost";
 
 /**
  * APIボタンのプロパティ
@@ -52,8 +57,12 @@ export interface ApiButtonProps {
 /**
  * デフォルトのローディングアイコン
  */
-const LoadingIcon: React.FC<{ className?: string }> = ({ className = "w-4 h-4" }) => (
-  <div className={`animate-spin rounded-full border-b-2 border-current ${className}`} />
+const LoadingIcon: React.FC<{ className?: string }> = ({
+  className = "w-4 h-4",
+}) => (
+  <div
+    className={`animate-spin rounded-full border-b-2 border-current ${className}`}
+  />
 );
 
 /**
@@ -72,7 +81,7 @@ const ApiButton: React.FC<ApiButtonProps> = ({
   fixedWidth = true,
 }) => {
   const isDisabled = disabled || loading;
-  
+
   const buttonClasses = combineStyles(
     BUTTON_STYLES.base,
     BUTTON_STYLES.sizes[size],

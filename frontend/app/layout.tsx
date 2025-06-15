@@ -4,8 +4,6 @@
  * アプリケーション全体の基本的なHTML構造とメタデータを定義します。
  * 全ページで共通のフォント設定とスタイルを適用します。
  *
- * @author Trdinger Development Team
- * @version 1.0.0
  */
 
 import type { Metadata } from "next";

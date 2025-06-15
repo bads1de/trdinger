@@ -4,8 +4,6 @@
  * 汎用的なAPI呼び出し機能を提供し、ローディング状態、エラーハンドリング、
  * 成功時のコールバックを統一的に管理します。
  *
- * @author Trdinger Development Team
- * @version 1.0.0
  */
 
 import { useState, useCallback } from "react";

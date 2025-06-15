@@ -4,8 +4,6 @@
  * /api/data/symbols エンドポイントのテストケースです。
  * 通貨ペア一覧の取得機能をテストします。
  *
- * @author Trdinger Development Team
- * @version 1.0.0
  */
 
 import { GET } from "@/app/api/data/symbols/route";

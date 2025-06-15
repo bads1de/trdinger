@@ -4,8 +4,6 @@
  * TimeFrameSelector コンポーネントのテストケースです。
  * ユーザーインタラクション、状態管理をテストします。
  *
- * @author Trdinger Development Team
- * @version 1.0.0
  */
 
 import React from "react";
@@ -335,9 +333,8 @@ describe("TimeFrameSelector", () => {
 
         // 選択された時間軸のボタンがハイライトされていることを確認
         const buttons = screen.getAllByRole("button");
-        const selectedButton = buttons.find(
-          (button) =>
-            button.classList.contains("bg-primary-600")
+        const selectedButton = buttons.find((button) =>
+          button.classList.contains("bg-primary-600")
         );
         expect(selectedButton).toBeInTheDocument();
 

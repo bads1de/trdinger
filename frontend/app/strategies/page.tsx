@@ -4,8 +4,6 @@
  * 自動生成された30個の投資戦略を一覧表示し、
  * フィルタリング・ソート・詳細表示機能を提供します。
  *
- * @author Trdinger Development Team
- * @version 1.0.0
  */
 
 "use client";

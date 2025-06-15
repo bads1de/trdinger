@@ -3,8 +3,6 @@
  *
  * OHLCV、ファンディングレート、オープンインタレストデータのリセット機能を提供します。
  *
- * @author Trdinger Development Team
- * @version 1.0.0
  */
 
 "use client";
@@ -16,7 +14,12 @@ import ApiButton from "./ApiButton";
 /**
  * データリセットの種類
  */
-export type ResetType = "all" | "ohlcv" | "funding-rates" | "open-interest" | "symbol";
+export type ResetType =
+  | "all"
+  | "ohlcv"
+  | "funding-rates"
+  | "open-interest"
+  | "symbol";
 
 /**
  * データリセット結果の型
@@ -56,7 +59,14 @@ interface DataResetButtonProps {
   /** ボタンサイズ */
   size?: "xs" | "sm" | "md" | "lg" | "xl";
   /** ボタンバリアント */
-  variant?: "primary" | "secondary" | "success" | "warning" | "error" | "outline" | "ghost";
+  variant?:
+    | "primary"
+    | "secondary"
+    | "success"
+    | "warning"
+    | "error"
+    | "outline"
+    | "ghost";
 }
 
 /**
@@ -66,53 +76,53 @@ const RESET_CONFIGS = {
   all: {
     label: "全データリセット",
     endpoint: "/api/data-reset/all",
-    confirmMessage: 
+    confirmMessage:
       "⚠️ 全てのデータ（OHLCV・ファンディングレート・オープンインタレスト）を削除します。\n\n" +
       "この操作は取り消すことができません。\n" +
       "本当に実行しますか？",
     variant: "error" as const,
-    icon: "🗑️"
+    icon: "🗑️",
   },
   ohlcv: {
     label: "OHLCVリセット",
     endpoint: "/api/data-reset/ohlcv",
-    confirmMessage: 
+    confirmMessage:
       "⚠️ 全てのOHLCVデータを削除します。\n\n" +
       "この操作は取り消すことができません。\n" +
       "本当に実行しますか？",
     variant: "warning" as const,
-    icon: "📊"
+    icon: "📊",
   },
   "funding-rates": {
     label: "FRリセット",
     endpoint: "/api/data-reset/funding-rates",
-    confirmMessage: 
+    confirmMessage:
       "⚠️ 全てのファンディングレートデータを削除します。\n\n" +
       "この操作は取り消すことができません。\n" +
       "本当に実行しますか？",
     variant: "warning" as const,
-    icon: "💰"
+    icon: "💰",
   },
   "open-interest": {
     label: "OIリセット",
     endpoint: "/api/data-reset/open-interest",
-    confirmMessage: 
+    confirmMessage:
       "⚠️ 全てのオープンインタレストデータを削除します。\n\n" +
       "この操作は取り消すことができません。\n" +
       "本当に実行しますか？",
     variant: "warning" as const,
-    icon: "📈"
+    icon: "📈",
   },
   symbol: {
     label: "シンボル別リセット",
     endpoint: "/api/data-reset/symbol",
-    confirmMessage: 
+    confirmMessage:
       "⚠️ 指定されたシンボルの全データを削除します。\n\n" +
       "この操作は取り消すことができません。\n" +
       "本当に実行しますか？",
     variant: "warning" as const,
-    icon: "🎯"
-  }
+    icon: "🎯",
+  },
 };
 
 /**
@@ -154,7 +164,8 @@ const DataResetButton: React.FC<DataResetButtonProps> = ({
 
       // 確認メッセージをカスタマイズ
       if (resetType === "symbol" && symbol) {
-        confirmMessage = `⚠️ シンボル「${symbol}」の全データ（OHLCV・ファンディングレート・オープンインタレスト）を削除します。\n\n` +
+        confirmMessage =
+          `⚠️ シンボル「${symbol}」の全データ（OHLCV・ファンディングレート・オープンインタレスト）を削除します。\n\n` +
           "この操作は取り消すことができません。\n" +
           "本当に実行しますか？";
       }
@@ -177,7 +188,10 @@ const DataResetButton: React.FC<DataResetButtonProps> = ({
       }
     } catch (error) {
       console.error("データリセット処理エラー:", error);
-      const errorMessage = error instanceof Error ? error.message : "データリセット中にエラーが発生しました";
+      const errorMessage =
+        error instanceof Error
+          ? error.message
+          : "データリセット中にエラーが発生しました";
       onResetError?.(errorMessage);
     } finally {
       setIsProcessing(false);
