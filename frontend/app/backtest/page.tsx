@@ -13,57 +13,7 @@ import PerformanceMetrics from "@/components/backtest/PerformanceMetrics";
 import OptimizationResults from "@/components/backtest/OptimizationResults";
 import OptimizationModal from "@/components/backtest/OptimizationModal";
 import { useApiCall } from "@/hooks/useApiCall";
-
-interface BacktestConfig {
-  strategy_name: string;
-  symbol: string;
-  timeframe: string;
-  start_date: string;
-  end_date: string;
-  initial_capital: number;
-  commission_rate: number;
-  strategy_config: {
-    strategy_type: string;
-    parameters: Record<string, number>;
-  };
-}
-
-interface BacktestResult {
-  id: string;
-  strategy_name: string;
-  symbol: string;
-  timeframe: string;
-  start_date: string;
-  end_date: string;
-  initial_capital: number;
-  commission_rate: number;
-  performance_metrics: {
-    total_return: number | null;
-    sharpe_ratio: number | null;
-    max_drawdown: number | null;
-    win_rate: number | null;
-    profit_factor: number | null;
-    total_trades: number | null;
-    winning_trades: number | null;
-    losing_trades: number | null;
-    avg_win: number | null;
-    avg_loss: number | null;
-  };
-  equity_curve?: Array<{
-    timestamp: string;
-    equity: number;
-  }>;
-  trade_history?: Array<{
-    size: number;
-    entry_price: number;
-    exit_price: number;
-    pnl: number;
-    return_pct: number;
-    entry_time: string;
-    exit_time: string;
-  }>;
-  created_at: string;
-}
+import { BacktestConfig, BacktestResult } from "@/types/backtest";
 
 export default function BacktestPage() {
   const [results, setResults] = useState<BacktestResult[]>([]);

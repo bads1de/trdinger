@@ -73,11 +73,28 @@ export interface PerformanceMetrics {
 }
 
 /**
+ * バックテスト設定
+ */
+export interface BacktestConfig {
+  strategy_name: string;
+  symbol: string;
+  timeframe: string;
+  start_date: string;
+  end_date: string;
+  initial_capital: number;
+  commission_rate: number;
+  strategy_config: {
+    strategy_type: string;
+    parameters: Record<string, number>;
+  };
+}
+
+/**
  * バックテスト結果（統一版）
  */
 export interface BacktestResult {
-  /** 結果ID（オプション） */
-  id?: string;
+  /** 結果ID */
+  id: string;
   /** 戦略名 */
   strategy_name: string;
   /** 取引ペア */
@@ -98,8 +115,8 @@ export interface BacktestResult {
   equity_curve?: EquityPoint[];
   /** 取引履歴（オプション） */
   trade_history?: Trade[];
-  /** 作成日時（オプション） */
-  created_at?: string;
+  /** 作成日時 */
+  created_at: string;
 }
 
 /**
