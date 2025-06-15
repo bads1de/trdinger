@@ -52,16 +52,6 @@ def init_db():
     データベースを初期化
     """
     try:
-        # モデルクラスをインポートしてメタデータに登録
-        from .models import (
-            OHLCVData,
-            FundingRateData,
-            OpenInterestData,
-            DataCollectionLog,
-            GAExperiment,
-            GeneratedStrategy,
-        )
-
         # テーブルを作成
         Base.metadata.create_all(bind=engine)
         logger.info("データベースの初期化が完了しました")
@@ -79,7 +69,7 @@ def test_connection():
     """
     try:
         with engine.connect() as connection:
-            result = connection.execute(text("SELECT 1"))
+            connection.execute(text("SELECT 1"))
             logger.info("データベース接続テスト成功")
             return True
     except Exception as e:
