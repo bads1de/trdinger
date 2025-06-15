@@ -44,7 +44,9 @@ class StrategyIntegrationService:
         offset: int = 0,
         category: Optional[str] = None,
         risk_level: Optional[str] = None,
-        sort_by: str = "created_at",
+        experiment_id: Optional[int] = None,
+        min_fitness: Optional[float] = None,
+        sort_by: str = "fitness_score",
         sort_order: str = "desc",
     ) -> Dict[str, Any]:
         """
@@ -55,6 +57,8 @@ class StrategyIntegrationService:
             offset: オフセット
             category: カテゴリフィルター
             risk_level: リスクレベルフィルター
+            experiment_id: 実験IDフィルター
+            min_fitness: 最小フィットネススコア
             sort_by: ソート項目
             sort_order: ソート順序
 
@@ -75,6 +79,11 @@ class StrategyIntegrationService:
 
             # 統合
             all_strategies = showcase_strategies + auto_strategies
+
+            # フィルタリング適用
+            all_strategies = self._apply_filters(
+                all_strategies, category, risk_level, experiment_id, min_fitness
+            )
 
             # ソート
             all_strategies = self._sort_strategies(all_strategies, sort_by, sort_order)
@@ -116,22 +125,33 @@ class StrategyIntegrationService:
     ) -> List[Dict[str, Any]]:
         """オートストラテジー由来の戦略を取得"""
         try:
-            # 最新の実験から戦略を取得
+            # 有効なフィットネススコアとバックテスト結果を持つ戦略のみを取得
             strategies = (
                 self.generated_strategy_repo.get_strategies_with_backtest_results(
-                    limit=limit * 2,  # 統合後のページネーションのため多めに取得
+                    limit=limit
+                    * 3,  # フィルタリング後のページネーションのため多めに取得
                     offset=0,
                 )
             )
 
             converted_strategies = []
             for strategy in strategies:
-                converted = self._convert_generated_strategy_to_showcase_format(
-                    strategy
-                )
-                if converted:
-                    converted_strategies.append(converted)
+                # フィットネススコアが有効で、バックテスト結果がある戦略のみ処理
+                if (
+                    strategy.fitness_score is not None
+                    and strategy.fitness_score > 0.0
+                    and strategy.backtest_result is not None
+                ):
 
+                    converted = self._convert_generated_strategy_to_showcase_format(
+                        strategy
+                    )
+                    if converted:
+                        converted_strategies.append(converted)
+
+            logger.info(
+                f"有効な戦略数: {len(converted_strategies)} / {len(strategies)}"
+            )
             return converted_strategies
 
         except Exception as e:
@@ -330,14 +350,67 @@ class StrategyIntegrationService:
                 )  # 小さい方が良い
             elif sort_by == "win_rate":
                 strategies.sort(key=lambda x: x.get("win_rate", 0), reverse=reverse)
+            elif sort_by == "fitness_score":
+                strategies.sort(
+                    key=lambda x: x.get("fitness_score", 0), reverse=reverse
+                )
             elif sort_by == "created_at":
                 strategies.sort(key=lambda x: x.get("created_at", ""), reverse=reverse)
             else:
-                # デフォルトは作成日時順
-                strategies.sort(key=lambda x: x.get("created_at", ""), reverse=True)
+                # デフォルトはフィットネススコア順
+                strategies.sort(key=lambda x: x.get("fitness_score", 0), reverse=True)
 
             return strategies
 
         except Exception as e:
             logger.error(f"ソートエラー: {e}")
+            return strategies
+
+    def _apply_filters(
+        self,
+        strategies: List[Dict[str, Any]],
+        category: Optional[str] = None,
+        risk_level: Optional[str] = None,
+        experiment_id: Optional[int] = None,
+        min_fitness: Optional[float] = None,
+    ) -> List[Dict[str, Any]]:
+        """戦略にフィルターを適用"""
+        try:
+            filtered_strategies = strategies
+
+            # カテゴリフィルター
+            if category:
+                filtered_strategies = [
+                    s for s in filtered_strategies if s.get("category") == category
+                ]
+
+            # リスクレベルフィルター
+            if risk_level:
+                filtered_strategies = [
+                    s for s in filtered_strategies if s.get("risk_level") == risk_level
+                ]
+
+            # 実験IDフィルター
+            if experiment_id is not None:
+                filtered_strategies = [
+                    s
+                    for s in filtered_strategies
+                    if s.get("experiment_id") == experiment_id
+                ]
+
+            # 最小フィットネススコアフィルター
+            if min_fitness is not None:
+                filtered_strategies = [
+                    s
+                    for s in filtered_strategies
+                    if s.get("fitness_score", 0) >= min_fitness
+                ]
+
+            logger.info(
+                f"フィルター適用: {len(strategies)} -> {len(filtered_strategies)} 戦略"
+            )
+            return filtered_strategies
+
+        except Exception as e:
+            logger.error(f"フィルター適用エラー: {e}")
             return strategies
