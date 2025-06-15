@@ -4,9 +4,9 @@
 自動生成された投資戦略のショーケース機能を提供するAPIエンドポイント
 """
 
-from fastapi import APIRouter, HTTPException, BackgroundTasks, Query
+from fastapi import APIRouter, HTTPException, Query
 from typing import Dict, Any, List, Optional
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 import logging
 
 from app.core.services.strategy_showcase_service import StrategyShowcaseService
@@ -20,41 +20,6 @@ showcase_service = StrategyShowcaseService()
 
 
 # リクエスト・レスポンスモデル
-
-
-class GenerateShowcaseRequest(BaseModel):
-    """ショーケース戦略生成リクエスト"""
-
-    count: int = Field(default=30, ge=1, le=50, description="生成する戦略数")
-    base_config: Optional[Dict[str, Any]] = Field(
-        None, description="基本バックテスト設定"
-    )
-
-    class Config:
-        schema_extra = {
-            "example": {
-                "count": 30,
-                "base_config": {
-                    "symbol": "BTC/USDT",
-                    "timeframe": "1h",
-                    "start_date": "2024-01-01",
-                    "end_date": "2024-12-19",
-                    "initial_capital": 100000,
-                    "commission_rate": 0.00055,
-                },
-            }
-        }
-
-
-class GenerateShowcaseResponse(BaseModel):
-    """ショーケース戦略生成レスポンス"""
-
-    success: bool
-    message: str
-    generated_count: int
-    saved_count: int
-
-
 class StrategyListResponse(BaseModel):
     """戦略一覧レスポンス"""
 
@@ -81,34 +46,6 @@ class ShowcaseStatsResponse(BaseModel):
 
 
 # APIエンドポイント
-
-
-@router.post("/showcase/generate", response_model=GenerateShowcaseResponse)
-async def generate_showcase_strategies(
-    request: GenerateShowcaseRequest, background_tasks: BackgroundTasks
-):
-    """
-    ショーケース用戦略を生成（廃止予定）
-
-    注意: この機能は廃止予定です。代わりにオートストラテジー機能を使用してください。
-    """
-    try:
-        logger.warning(
-            "ショーケース戦略生成は廃止予定です。オートストラテジー機能を使用してください。"
-        )
-
-        return GenerateShowcaseResponse(
-            success=False,
-            message="この機能は廃止予定です。代わりに /api/auto-strategy/generate エンドポイントを使用してください。",
-            generated_count=0,
-            saved_count=0,
-        )
-
-    except Exception as e:
-        logger.error(f"ショーケース戦略生成エラー: {e}")
-        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
-
-
 @router.get("/showcase", response_model=StrategyListResponse)
 async def get_showcase_strategies(
     category: Optional[str] = Query(None, description="戦略カテゴリでフィルタ"),
@@ -230,21 +167,3 @@ async def get_risk_levels():
     except Exception as e:
         logger.error(f"リスクレベル一覧取得エラー: {e}")
         raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
-
-
-# ヘルパー関数
-
-
-async def _generate_and_save_strategies(
-    count: int, base_config: Optional[Dict[str, Any]]
-):
-    """
-    戦略生成と保存をバックグラウンドで実行（廃止予定）
-
-    Args:
-        count: 生成する戦略数
-        base_config: 基本バックテスト設定
-    """
-    logger.warning(
-        "バックグラウンド戦略生成は廃止予定です。オートストラテジー機能を使用してください。"
-    )
