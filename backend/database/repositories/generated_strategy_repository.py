@@ -208,6 +208,45 @@ class GeneratedStrategyRepository(BaseRepository):
             logger.error(f"世代別戦略取得エラー: {e}")
             return []
 
+    def get_strategies_with_backtest_results(
+        self, limit: int = 50, offset: int = 0, experiment_id: Optional[int] = None
+    ) -> List[GeneratedStrategy]:
+        """
+        バックテスト結果と結合した戦略を取得
+
+        Args:
+            limit: 取得件数制限
+            offset: オフセット
+            experiment_id: 実験IDフィルター
+
+        Returns:
+            戦略のリスト（バックテスト結果付き）
+        """
+        try:
+            from sqlalchemy.orm import joinedload
+
+            query = (
+                self.db.query(GeneratedStrategy)
+                .options(joinedload(GeneratedStrategy.backtest_result))
+                .filter(GeneratedStrategy.fitness_score.isnot(None))
+            )
+
+            if experiment_id is not None:
+                query = query.filter(GeneratedStrategy.experiment_id == experiment_id)
+
+            query = query.order_by(desc(GeneratedStrategy.fitness_score))
+
+            if offset > 0:
+                query = query.offset(offset)
+            if limit > 0:
+                query = query.limit(limit)
+
+            return query.all()
+
+        except Exception as e:
+            logger.error(f"バックテスト結果付き戦略取得エラー: {e}")
+            return []
+
     def update_fitness_score(self, strategy_id: int, fitness_score: float) -> bool:
         """
         フィットネススコアを更新

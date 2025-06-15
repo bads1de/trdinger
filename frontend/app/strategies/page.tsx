@@ -24,22 +24,28 @@ import {
   LoadingState,
   ErrorState,
 } from "@/types/strategy-showcase";
+import {
+  UnifiedStrategy,
+  UnifiedStrategyFilter,
+  UnifiedPagination,
+  StrategyStatistics,
+} from "@/types/auto-strategy";
 
 /**
  * ショーケースページコンポーネント
  */
 const StrategiesShowcasePage: React.FC = () => {
   // 状態管理
-  const [strategies, setStrategies] = useState<StrategyShowcase[]>([]);
-  const [statistics, setStatistics] = useState<ShowcaseStatistics | null>(null);
+  const [strategies, setStrategies] = useState<UnifiedStrategy[]>([]);
+  const [statistics, setStatistics] = useState<StrategyStatistics | null>(null);
   const [selectedStrategy, setSelectedStrategy] = useState<
-    StrategyShowcase | undefined
+    UnifiedStrategy | undefined
   >();
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   // フィルター・ページネーション
-  const [filter, setFilter] = useState<StrategyFilter>({});
-  const [pagination, setPagination] = useState<Pagination>({
+  const [filter, setFilter] = useState<UnifiedStrategyFilter>({});
+  const [pagination, setPagination] = useState<UnifiedPagination>({
     offset: 0,
     sort_by: "expected_return",
     sort_order: "desc",
@@ -94,6 +100,8 @@ const StrategiesShowcasePage: React.FC = () => {
       setLoading((prev) => ({ ...prev, strategies: true }));
       setErrors((prev) => ({ ...prev, strategies: undefined }));
 
+      console.log("戦略データを取得中...");
+
       // クエリパラメータを構築
       const params = new URLSearchParams();
 
@@ -104,18 +112,29 @@ const StrategiesShowcasePage: React.FC = () => {
       params.append("sort_by", pagination.sort_by);
       params.append("sort_order", pagination.sort_order);
 
+      console.log("API URL:", `/api/strategies/unified?${params.toString()}`);
+
       const response = await fetch(
-        `/api/strategies/showcase?${params.toString()}`
+        `/api/strategies/unified?${params.toString()}`
       );
 
+      console.log("Response status:", response.status);
+      console.log("Response ok:", response.ok);
+
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        const errorText = await response.text();
+        console.error("Response error:", errorText);
+        throw new Error(
+          `HTTP error! status: ${response.status} - ${errorText}`
+        );
       }
 
       const data = await response.json();
+      console.log("Response data:", data);
 
       if (data.success) {
-        setStrategies(data.strategies);
+        setStrategies(data.strategies || []);
+        console.log("戦略データ設定完了:", data.strategies?.length || 0, "件");
       } else {
         throw new Error(data.message || "戦略取得に失敗しました");
       }
@@ -139,7 +158,7 @@ const StrategiesShowcasePage: React.FC = () => {
       setLoading((prev) => ({ ...prev, statistics: true }));
       setErrors((prev) => ({ ...prev, statistics: undefined }));
 
-      const response = await fetch(`/api/strategies/showcase/stats`);
+      const response = await fetch(`/api/strategies/stats`);
 
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
@@ -148,7 +167,7 @@ const StrategiesShowcasePage: React.FC = () => {
       const data = await response.json();
 
       if (data.success) {
-        setStatistics(data.statistics);
+        setStatistics(data.stats);
       } else {
         throw new Error(data.message || "統計情報取得に失敗しました");
       }
@@ -213,7 +232,7 @@ const StrategiesShowcasePage: React.FC = () => {
   /**
    * 戦略詳細を表示
    */
-  const handleViewDetail = (strategy: StrategyShowcase) => {
+  const handleViewDetail = (strategy: UnifiedStrategy) => {
     setSelectedStrategy(strategy);
     setIsModalOpen(true);
   };
@@ -229,7 +248,7 @@ const StrategiesShowcasePage: React.FC = () => {
   /**
    * フィルター変更ハンドラ
    */
-  const handleFilterChange = (newFilter: StrategyFilter) => {
+  const handleFilterChange = (newFilter: UnifiedStrategyFilter) => {
     setFilter(newFilter);
     setPagination((prev) => ({ ...prev, offset: 0 })); // ページをリセット
   };
@@ -237,7 +256,7 @@ const StrategiesShowcasePage: React.FC = () => {
   /**
    * ページネーション変更ハンドラ
    */
-  const handlePaginationChange = (newPagination: Pagination) => {
+  const handlePaginationChange = (newPagination: UnifiedPagination) => {
     setPagination(newPagination);
   };
 
@@ -262,10 +281,15 @@ const StrategiesShowcasePage: React.FC = () => {
                     総戦略数: {statistics.total_strategies}
                   </span>
                   <span className="badge-success">
-                    平均リターン: {statistics.avg_return.toFixed(1)}%
+                    平均リターン:{" "}
+                    {(statistics.performance_summary.avg_return * 100).toFixed(
+                      1
+                    )}
+                    %
                   </span>
                   <span className="badge-info">
-                    平均シャープレシオ: {statistics.avg_sharpe_ratio.toFixed(2)}
+                    平均シャープレシオ:{" "}
+                    {statistics.performance_summary.avg_sharpe_ratio.toFixed(2)}
                   </span>
                 </div>
               )}

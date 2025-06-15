@@ -8,12 +8,25 @@
  */
 
 import React from "react";
-import { StrategyCardProps, PerformanceColors } from "@/types/strategy-showcase";
+import {
+  StrategyCardProps,
+  PerformanceColors,
+} from "@/types/strategy-showcase";
+import { UnifiedStrategy } from "@/types/auto-strategy";
+
+/**
+ * 統合戦略カードプロパティ
+ */
+interface UnifiedStrategyCardProps {
+  strategy: UnifiedStrategy;
+  onViewDetail: (strategy: UnifiedStrategy) => void;
+  className?: string;
+}
 
 /**
  * 戦略カードコンポーネント
  */
-const StrategyCard: React.FC<StrategyCardProps> = ({
+const StrategyCard: React.FC<UnifiedStrategyCardProps> = ({
   strategy,
   onViewDetail,
   className = "",
@@ -23,23 +36,26 @@ const StrategyCard: React.FC<StrategyCardProps> = ({
    */
   const getPerformanceColors = (): PerformanceColors => {
     return {
-      return: strategy.expected_return >= 10 
-        ? "positive" 
-        : strategy.expected_return >= 0 
-        ? "neutral" 
-        : "negative",
-      sharpe: strategy.sharpe_ratio >= 2.0
-        ? "excellent"
-        : strategy.sharpe_ratio >= 1.0
-        ? "good"
-        : strategy.sharpe_ratio >= 0.5
-        ? "fair"
-        : "poor",
-      drawdown: strategy.max_drawdown <= 5
-        ? "low"
-        : strategy.max_drawdown <= 15
-        ? "medium"
-        : "high",
+      return:
+        strategy.expected_return >= 0.1
+          ? "positive"
+          : strategy.expected_return >= 0
+          ? "neutral"
+          : "negative",
+      sharpe:
+        strategy.sharpe_ratio >= 2.0
+          ? "excellent"
+          : strategy.sharpe_ratio >= 1.0
+          ? "good"
+          : strategy.sharpe_ratio >= 0.5
+          ? "fair"
+          : "poor",
+      drawdown:
+        strategy.max_drawdown <= 0.05
+          ? "low"
+          : strategy.max_drawdown <= 0.15
+          ? "medium"
+          : "high",
     };
   };
 
@@ -74,6 +90,8 @@ const StrategyCard: React.FC<StrategyCardProps> = ({
         return "📊";
       case "momentum":
         return "⚡";
+      case "auto_generated":
+        return "🤖";
       default:
         return "🎯";
     }
@@ -94,6 +112,8 @@ const StrategyCard: React.FC<StrategyCardProps> = ({
         return "レンジ取引";
       case "momentum":
         return "モメンタム";
+      case "auto_generated":
+        return "AI自動生成";
       default:
         return "その他";
     }
@@ -184,7 +204,8 @@ const StrategyCard: React.FC<StrategyCardProps> = ({
                   : "text-secondary-600 dark:text-secondary-400"
               }`}
             >
-              {strategy.expected_return > 0 ? "+" : ""}{strategy.expected_return.toFixed(1)}%
+              {strategy.expected_return > 0 ? "+" : ""}
+              {(strategy.expected_return * 100).toFixed(1)}%
             </span>
           </div>
 
@@ -222,7 +243,7 @@ const StrategyCard: React.FC<StrategyCardProps> = ({
                   : "text-red-500"
               }`}
             >
-              -{strategy.max_drawdown.toFixed(1)}%
+              -{(strategy.max_drawdown * 100).toFixed(1)}%
             </span>
           </div>
 
@@ -232,7 +253,7 @@ const StrategyCard: React.FC<StrategyCardProps> = ({
               勝率
             </span>
             <span className="text-sm font-semibold text-secondary-900 dark:text-secondary-100">
-              {strategy.win_rate.toFixed(1)}%
+              {(strategy.win_rate * 100).toFixed(1)}%
             </span>
           </div>
         </div>
