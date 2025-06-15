@@ -324,6 +324,6 @@ export const useGAExecution = () => {
     experimentId,
     executeGA,
     ...gaProgress,
-    reset, // ローカルのresetを最後に配置して優先
+    reset,
   };
 };
