@@ -15,9 +15,6 @@ import StrategyCard from "./components/StrategyCard";
 import StrategyFilters from "./components/StrategyFilters";
 import StrategyModal from "./components/StrategyModal";
 import {
-  StrategyShowcase,
-  StrategyFilter,
-  Pagination,
   ShowcaseStatistics,
   StrategyCategory,
   RiskLevel,
@@ -296,11 +293,6 @@ const StrategiesShowcasePage: React.FC = () => {
             </div>
 
             {/* オートストラテジーへのリンクボタン */}
-            <div className="flex items-center gap-3">
-              <button onClick={generateStrategies} className="btn-primary">
-                🚀 オートストラテジーで生成
-              </button>
-            </div>
           </div>
         </div>
       </div>

@@ -8,7 +8,13 @@
  */
 
 import React from "react";
-import { StrategyModalProps } from "@/types/strategy-showcase";
+import { UnifiedStrategy } from "@/types/auto-strategy";
+
+interface StrategyModalProps {
+  strategy: UnifiedStrategy | undefined;
+  isOpen: boolean;
+  onClose: () => void;
+}
 
 /**
  * 戦略詳細モーダルコンポーネント
@@ -95,14 +101,31 @@ const StrategyModal: React.FC<StrategyModalProps> = ({
   /**
    * パフォーマンス指標の色を取得
    */
-  const getPerformanceColor = (value: number, type: "return" | "sharpe" | "drawdown") => {
+  const getPerformanceColor = (
+    value: number,
+    type: "return" | "sharpe" | "drawdown"
+  ) => {
     switch (type) {
       case "return":
-        return value >= 10 ? "text-green-500" : value >= 0 ? "text-secondary-600 dark:text-secondary-400" : "text-red-500";
+        return value >= 10
+          ? "text-green-500"
+          : value >= 0
+          ? "text-secondary-600 dark:text-secondary-400"
+          : "text-red-500";
       case "sharpe":
-        return value >= 2.0 ? "text-green-500" : value >= 1.0 ? "text-blue-500" : value >= 0.5 ? "text-yellow-500" : "text-red-500";
+        return value >= 2.0
+          ? "text-green-500"
+          : value >= 1.0
+          ? "text-blue-500"
+          : value >= 0.5
+          ? "text-yellow-500"
+          : "text-red-500";
       case "drawdown":
-        return value <= 5 ? "text-green-500" : value <= 15 ? "text-yellow-500" : "text-red-500";
+        return value <= 5
+          ? "text-green-500"
+          : value <= 15
+          ? "text-yellow-500"
+          : "text-red-500";
       default:
         return "text-secondary-600 dark:text-secondary-400";
     }
@@ -138,15 +161,27 @@ const StrategyModal: React.FC<StrategyModalProps> = ({
               </div>
             </div>
             <div className="flex items-center gap-3">
-              <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${getRiskLevelStyle()}`}>
+              <span
+                className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${getRiskLevelStyle()}`}
+              >
                 {getRiskLevelName()}
               </span>
               <button
                 onClick={onClose}
                 className="text-secondary-400 hover:text-secondary-600 dark:hover:text-secondary-300 transition-colors"
               >
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                <svg
+                  className="w-6 h-6"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M6 18L18 6M6 6l12 12"
+                  />
                 </svg>
               </button>
             </div>
@@ -169,25 +204,49 @@ const StrategyModal: React.FC<StrategyModalProps> = ({
             </h3>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <div className="bg-secondary-50 dark:bg-secondary-800 rounded-lg p-4">
-                <p className="text-sm text-secondary-600 dark:text-secondary-400 mb-1">期待リターン</p>
-                <p className={`text-2xl font-bold ${getPerformanceColor(strategy.expected_return, "return")}`}>
-                  {strategy.expected_return > 0 ? "+" : ""}{strategy.expected_return.toFixed(1)}%
+                <p className="text-sm text-secondary-600 dark:text-secondary-400 mb-1">
+                  期待リターン
+                </p>
+                <p
+                  className={`text-2xl font-bold ${getPerformanceColor(
+                    strategy.expected_return,
+                    "return"
+                  )}`}
+                >
+                  {strategy.expected_return > 0 ? "+" : ""}
+                  {strategy.expected_return.toFixed(1)}%
                 </p>
               </div>
               <div className="bg-secondary-50 dark:bg-secondary-800 rounded-lg p-4">
-                <p className="text-sm text-secondary-600 dark:text-secondary-400 mb-1">シャープレシオ</p>
-                <p className={`text-2xl font-bold ${getPerformanceColor(strategy.sharpe_ratio, "sharpe")}`}>
+                <p className="text-sm text-secondary-600 dark:text-secondary-400 mb-1">
+                  シャープレシオ
+                </p>
+                <p
+                  className={`text-2xl font-bold ${getPerformanceColor(
+                    strategy.sharpe_ratio,
+                    "sharpe"
+                  )}`}
+                >
                   {strategy.sharpe_ratio.toFixed(2)}
                 </p>
               </div>
               <div className="bg-secondary-50 dark:bg-secondary-800 rounded-lg p-4">
-                <p className="text-sm text-secondary-600 dark:text-secondary-400 mb-1">最大ドローダウン</p>
-                <p className={`text-2xl font-bold ${getPerformanceColor(strategy.max_drawdown, "drawdown")}`}>
+                <p className="text-sm text-secondary-600 dark:text-secondary-400 mb-1">
+                  最大ドローダウン
+                </p>
+                <p
+                  className={`text-2xl font-bold ${getPerformanceColor(
+                    strategy.max_drawdown,
+                    "drawdown"
+                  )}`}
+                >
                   -{strategy.max_drawdown.toFixed(1)}%
                 </p>
               </div>
               <div className="bg-secondary-50 dark:bg-secondary-800 rounded-lg p-4">
-                <p className="text-sm text-secondary-600 dark:text-secondary-400 mb-1">勝率</p>
+                <p className="text-sm text-secondary-600 dark:text-secondary-400 mb-1">
+                  勝率
+                </p>
                 <p className="text-2xl font-bold text-secondary-900 dark:text-secondary-100">
                   {strategy.win_rate.toFixed(1)}%
                 </p>
@@ -232,19 +291,25 @@ const StrategyModal: React.FC<StrategyModalProps> = ({
               </h3>
               <div className="space-y-3">
                 <div className="flex justify-between">
-                  <span className="text-secondary-600 dark:text-secondary-400">推奨時間軸</span>
+                  <span className="text-secondary-600 dark:text-secondary-400">
+                    推奨時間軸
+                  </span>
                   <span className="font-medium text-secondary-900 dark:text-secondary-100">
                     {strategy.recommended_timeframe}
                   </span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-secondary-600 dark:text-secondary-400">作成日時</span>
+                  <span className="text-secondary-600 dark:text-secondary-400">
+                    作成日時
+                  </span>
                   <span className="font-medium text-secondary-900 dark:text-secondary-100">
                     {new Date(strategy.created_at).toLocaleDateString("ja-JP")}
                   </span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-secondary-600 dark:text-secondary-400">更新日時</span>
+                  <span className="text-secondary-600 dark:text-secondary-400">
+                    更新日時
+                  </span>
                   <span className="font-medium text-secondary-900 dark:text-secondary-100">
                     {new Date(strategy.updated_at).toLocaleDateString("ja-JP")}
                   </span>
@@ -287,9 +352,7 @@ const StrategyModal: React.FC<StrategyModalProps> = ({
             >
               閉じる
             </button>
-            <button className="btn-primary">
-              この戦略でバックテスト
-            </button>
+            <button className="btn-primary">この戦略でバックテスト</button>
           </div>
         </div>
       </div>

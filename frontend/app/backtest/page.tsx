@@ -205,6 +205,20 @@ export default function BacktestPage() {
     // GA実行は別途進捗表示で管理されるため、ここでは設定のログ出力のみ
   };
 
+  /**
+   * 戦略生成を実行（オートストラテジー機能へのリダイレクト）
+   */
+  const generateStrategies = async () => {
+    // オートストラテジー機能へのリダイレクト
+    if (
+      confirm(
+        "戦略生成機能はオートストラテジー機能に移行しました。オートストラテジーページに移動しますか？"
+      )
+    ) {
+      window.location.href = "/auto-strategy";
+    }
+  };
+
   const isOptimizationLoading =
     enhancedOptimizationLoading ||
     multiOptimizationLoading ||
@@ -221,6 +235,12 @@ export default function BacktestPage() {
               <p className="text-secondary-400">
                 過去データを使用して戦略の有効性を検証します
               </p>
+            </div>
+            {/* オートストラテジーへのリンクボタン */}
+            <div className="flex items-center gap-3">
+              <button onClick={generateStrategies} className="btn-primary">
+                🚀 オートストラテジーで生成
+              </button>
             </div>
           </div>
         </div>

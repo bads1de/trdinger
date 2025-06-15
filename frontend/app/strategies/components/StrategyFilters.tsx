@@ -8,7 +8,20 @@
  */
 
 import React, { useState } from "react";
-import { StrategyFiltersProps, SortBy, SortOrder } from "@/types/strategy-showcase";
+import {
+  UnifiedStrategyFilter,
+  UnifiedPagination,
+} from "@/types/auto-strategy";
+import { StrategyCategory, RiskLevel } from "@/types/strategy-showcase";
+
+interface StrategyFiltersProps {
+  filter: UnifiedStrategyFilter;
+  pagination: UnifiedPagination;
+  onFilterChange: (filter: UnifiedStrategyFilter) => void;
+  onPaginationChange: (pagination: UnifiedPagination) => void;
+  categories: Record<StrategyCategory, string>;
+  riskLevels: Record<RiskLevel, string>;
+}
 
 /**
  * 戦略フィルターコンポーネント
@@ -34,7 +47,10 @@ const StrategyFilters: React.FC<StrategyFiltersProps> = ({
   /**
    * ソート変更ハンドラ
    */
-  const handleSortChange = (sortBy: SortBy, sortOrder: SortOrder) => {
+  const handleSortChange = (
+    sortBy: UnifiedPagination["sort_by"],
+    sortOrder: UnifiedPagination["sort_order"]
+  ) => {
     const newPagination = {
       ...pagination,
       sort_by: sortBy,
@@ -66,6 +82,7 @@ const StrategyFilters: React.FC<StrategyFiltersProps> = ({
     { value: "max_drawdown", label: "最大ドローダウン" },
     { value: "win_rate", label: "勝率" },
     { value: "created_at", label: "作成日時" },
+    { value: "fitness_score", label: "フィットネススコア" }, // 新しいソートオプションを追加
   ];
 
   return (
@@ -101,7 +118,9 @@ const StrategyFilters: React.FC<StrategyFiltersProps> = ({
             </label>
             <select
               value={filter.category || ""}
-              onChange={(e) => handleFilterChange("category", e.target.value || undefined)}
+              onChange={(e) =>
+                handleFilterChange("category", e.target.value || undefined)
+              }
               className="w-full px-3 py-2 border border-secondary-300 dark:border-secondary-600 rounded-md bg-white dark:bg-secondary-800 text-secondary-900 dark:text-secondary-100 focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
             >
               <option value="">すべてのカテゴリ</option>
@@ -120,7 +139,9 @@ const StrategyFilters: React.FC<StrategyFiltersProps> = ({
             </label>
             <select
               value={filter.risk_level || ""}
-              onChange={(e) => handleFilterChange("risk_level", e.target.value || undefined)}
+              onChange={(e) =>
+                handleFilterChange("risk_level", e.target.value || undefined)
+              }
               className="w-full px-3 py-2 border border-secondary-300 dark:border-secondary-600 rounded-md bg-white dark:bg-secondary-800 text-secondary-900 dark:text-secondary-100 focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
             >
               <option value="">すべてのリスクレベル</option>
@@ -139,7 +160,12 @@ const StrategyFilters: React.FC<StrategyFiltersProps> = ({
             </label>
             <select
               value={pagination.sort_by}
-              onChange={(e) => handleSortChange(e.target.value as SortBy, pagination.sort_order)}
+              onChange={(e) =>
+                handleSortChange(
+                  e.target.value as UnifiedPagination["sort_by"],
+                  pagination.sort_order
+                )
+              }
               className="w-full px-3 py-2 border border-secondary-300 dark:border-secondary-600 rounded-md bg-white dark:bg-secondary-800 text-secondary-900 dark:text-secondary-100 focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
             >
               {sortOptions.map((option) => (
@@ -157,7 +183,12 @@ const StrategyFilters: React.FC<StrategyFiltersProps> = ({
             </label>
             <select
               value={pagination.sort_order}
-              onChange={(e) => handleSortChange(pagination.sort_by, e.target.value as SortOrder)}
+              onChange={(e) =>
+                handleSortChange(
+                  pagination.sort_by,
+                  e.target.value as UnifiedPagination["sort_order"]
+                )
+              }
               className="w-full px-3 py-2 border border-secondary-300 dark:border-secondary-600 rounded-md bg-white dark:bg-secondary-800 text-secondary-900 dark:text-secondary-100 focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
             >
               <option value="desc">降順（高い順）</option>
@@ -180,14 +211,24 @@ const StrategyFilters: React.FC<StrategyFiltersProps> = ({
                     type="number"
                     placeholder="最小"
                     value={filter.min_return || ""}
-                    onChange={(e) => handleFilterChange("min_return", e.target.value ? parseFloat(e.target.value) : undefined)}
+                    onChange={(e) =>
+                      handleFilterChange(
+                        "min_return",
+                        e.target.value ? parseFloat(e.target.value) : undefined
+                      )
+                    }
                     className="w-full px-3 py-2 border border-secondary-300 dark:border-secondary-600 rounded-md bg-white dark:bg-secondary-800 text-secondary-900 dark:text-secondary-100 focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
                   />
                   <input
                     type="number"
                     placeholder="最大"
                     value={filter.max_return || ""}
-                    onChange={(e) => handleFilterChange("max_return", e.target.value ? parseFloat(e.target.value) : undefined)}
+                    onChange={(e) =>
+                      handleFilterChange(
+                        "max_return",
+                        e.target.value ? parseFloat(e.target.value) : undefined
+                      )
+                    }
                     className="w-full px-3 py-2 border border-secondary-300 dark:border-secondary-600 rounded-md bg-white dark:bg-secondary-800 text-secondary-900 dark:text-secondary-100 focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
                   />
                 </div>
@@ -204,7 +245,12 @@ const StrategyFilters: React.FC<StrategyFiltersProps> = ({
                     step="0.1"
                     placeholder="最小"
                     value={filter.min_sharpe || ""}
-                    onChange={(e) => handleFilterChange("min_sharpe", e.target.value ? parseFloat(e.target.value) : undefined)}
+                    onChange={(e) =>
+                      handleFilterChange(
+                        "min_sharpe",
+                        e.target.value ? parseFloat(e.target.value) : undefined
+                      )
+                    }
                     className="w-full px-3 py-2 border border-secondary-300 dark:border-secondary-600 rounded-md bg-white dark:bg-secondary-800 text-secondary-900 dark:text-secondary-100 focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
                   />
                   <input
@@ -212,7 +258,12 @@ const StrategyFilters: React.FC<StrategyFiltersProps> = ({
                     step="0.1"
                     placeholder="最大"
                     value={filter.max_sharpe || ""}
-                    onChange={(e) => handleFilterChange("max_sharpe", e.target.value ? parseFloat(e.target.value) : undefined)}
+                    onChange={(e) =>
+                      handleFilterChange(
+                        "max_sharpe",
+                        e.target.value ? parseFloat(e.target.value) : undefined
+                      )
+                    }
                     className="w-full px-3 py-2 border border-secondary-300 dark:border-secondary-600 rounded-md bg-white dark:bg-secondary-800 text-secondary-900 dark:text-secondary-100 focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
                   />
                 </div>
@@ -227,7 +278,12 @@ const StrategyFilters: React.FC<StrategyFiltersProps> = ({
                   type="text"
                   placeholder="戦略名で検索..."
                   value={filter.search_query || ""}
-                  onChange={(e) => handleFilterChange("search_query", e.target.value || undefined)}
+                  onChange={(e) =>
+                    handleFilterChange(
+                      "search_query",
+                      e.target.value || undefined
+                    )
+                  }
                   className="w-full px-3 py-2 border border-secondary-300 dark:border-secondary-600 rounded-md bg-white dark:bg-secondary-800 text-secondary-900 dark:text-secondary-100 focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
                 />
               </div>
@@ -242,10 +298,10 @@ const StrategyFilters: React.FC<StrategyFiltersProps> = ({
               <span className="text-sm text-secondary-600 dark:text-secondary-400">
                 アクティブフィルター:
               </span>
-              
+
               {filter.category && (
                 <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-primary-100 text-primary-800 dark:bg-primary-900 dark:text-primary-200">
-                  カテゴリ: {categories[filter.category]}
+                  カテゴリ: {categories[filter.category as StrategyCategory]}
                   <button
                     onClick={() => handleFilterChange("category", undefined)}
                     className="ml-1 text-primary-600 hover:text-primary-800"
@@ -254,10 +310,10 @@ const StrategyFilters: React.FC<StrategyFiltersProps> = ({
                   </button>
                 </span>
               )}
-              
+
               {filter.risk_level && (
                 <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-primary-100 text-primary-800 dark:bg-primary-900 dark:text-primary-200">
-                  リスク: {riskLevels[filter.risk_level]}
+                  リスク: {riskLevels[filter.risk_level as RiskLevel]}
                   <button
                     onClick={() => handleFilterChange("risk_level", undefined)}
                     className="ml-1 text-primary-600 hover:text-primary-800"
@@ -266,12 +322,14 @@ const StrategyFilters: React.FC<StrategyFiltersProps> = ({
                   </button>
                 </span>
               )}
-              
+
               {filter.search_query && (
                 <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-primary-100 text-primary-800 dark:bg-primary-900 dark:text-primary-200">
                   検索: {filter.search_query}
                   <button
-                    onClick={() => handleFilterChange("search_query", undefined)}
+                    onClick={() =>
+                      handleFilterChange("search_query", undefined)
+                    }
                     className="ml-1 text-primary-600 hover:text-primary-800"
                   >
                     ×
