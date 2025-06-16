@@ -1,20 +1,10 @@
 "use client";
 
 import React from "react";
-
-// バックエンドから返される取引履歴の型定義
-interface TradeHistoryItem {
-  size: number;
-  entry_price: number;
-  exit_price: number;
-  pnl: number;
-  return_pct: number;
-  entry_time: string;
-  exit_time: string;
-}
+import { Trade } from "@/types/backtest";
 
 interface TradeHistoryTableProps {
-  tradeHistory: TradeHistoryItem[];
+  tradeHistory: Trade[];
 }
 
 const TradeHistoryTable: React.FC<TradeHistoryTableProps> = ({

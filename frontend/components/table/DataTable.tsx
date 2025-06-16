@@ -16,50 +16,7 @@ import {
   ExportIcon,
   SearchIcon,
 } from "@/components/common/Icons";
-
-/**
- * テーブルカラムの定義
- */
-export interface TableColumn<T> {
-  /** カラムのキー */
-  key: keyof T;
-  /** カラムのヘッダー表示名 */
-  header: string;
-  /** カラムの幅（CSS値） */
-  width?: string;
-  /** ソート可能かどうか */
-  sortable?: boolean;
-  /** セルの値をフォーマットする関数 */
-  formatter?: (value: any, row: T) => React.ReactNode;
-  /** セルのクラス名 */
-  cellClassName?: string;
-}
-
-/**
- * データテーブルのプロパティ
- */
-export interface DataTableProps<T> {
-  /** テーブルデータ */
-  data: T[];
-  /** カラム定義 */
-  columns: TableColumn<T>[];
-  /** テーブルのタイトル */
-  title?: string;
-  /** ローディング状態 */
-  loading?: boolean;
-  /** エラーメッセージ */
-  error?: string;
-  /** 1ページあたりの表示件数 */
-  pageSize?: number;
-  /** CSVエクスポート機能を有効にするか */
-  enableExport?: boolean;
-  /** 検索機能を有効にするか */
-  enableSearch?: boolean;
-  /** 検索対象のキー */
-  searchKeys?: (keyof T)[];
-  /** テーブルのクラス名 */
-  className?: string;
-}
+import { DataTableProps, TableColumn } from "@/types/common";
 
 /**
  * ソート方向

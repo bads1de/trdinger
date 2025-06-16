@@ -580,3 +580,18 @@ export interface AllDataCollectionResult {
   /** 総組み合わせ数 */
   total_combinations?: number;
 }
+
+export interface StrategyParameter {
+  type: string;
+  default: number;
+  min?: number;
+  max?: number;
+  description: string;
+}
+
+export interface Strategy {
+  name: string;
+  description: string;
+  parameters: Record<string, StrategyParameter>;
+  constraints?: string[];
+}

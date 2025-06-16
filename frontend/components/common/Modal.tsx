@@ -10,39 +10,7 @@
 
 import React, { useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
-
-/**
- * モーダルのサイズ
- */
-export type ModalSize = "sm" | "md" | "lg" | "xl" | "2xl" | "full";
-
-/**
- * モーダルコンポーネントのプロパティ
- */
-export interface ModalProps {
-  /** モーダルの表示状態 */
-  isOpen: boolean;
-  /** モーダルを閉じる関数 */
-  onClose: () => void;
-  /** モーダルのタイトル */
-  title?: string;
-  /** モーダルのサイズ */
-  size?: ModalSize;
-  /** 外側クリックで閉じるかどうか */
-  closeOnOverlayClick?: boolean;
-  /** ESCキーで閉じるかどうか */
-  closeOnEscape?: boolean;
-  /** 閉じるボタンを表示するかどうか */
-  showCloseButton?: boolean;
-  /** モーダルの内容 */
-  children: React.ReactNode;
-  /** 追加のクラス名 */
-  className?: string;
-  /** ヘッダーの追加クラス名 */
-  headerClassName?: string;
-  /** コンテンツエリアの追加クラス名 */
-  contentClassName?: string;
-}
+import { ModalProps, ModalSize } from "@/types/common";
 
 /**
  * サイズ別のクラス定義

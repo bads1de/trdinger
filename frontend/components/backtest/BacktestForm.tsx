@@ -2,35 +2,8 @@
 
 import React, { useState, useEffect } from "react";
 import { useApiCall } from "@/hooks/useApiCall";
-
-interface StrategyParameter {
-  type: string;
-  default: number;
-  min?: number;
-  max?: number;
-  description: string;
-}
-
-interface Strategy {
-  name: string;
-  description: string;
-  parameters: Record<string, StrategyParameter>;
-  constraints?: string[];
-}
-
-interface BacktestConfig {
-  strategy_name: string;
-  symbol: string;
-  timeframe: string;
-  start_date: string;
-  end_date: string;
-  initial_capital: number;
-  commission_rate: number;
-  strategy_config: {
-    strategy_type: string;
-    parameters: Record<string, number>;
-  };
-}
+import { StrategyParameter, Strategy } from "@/types/strategy";
+import { BacktestConfig } from "@/types/backtest";
 
 interface BacktestFormProps {
   onSubmit: (config: BacktestConfig) => void;

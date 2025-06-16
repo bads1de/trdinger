@@ -112,9 +112,20 @@ export interface BacktestResult {
   /** パフォーマンス指標 */
   performance_metrics: PerformanceMetrics;
   /** 資産曲線データ（オプション） */
-  equity_curve?: EquityPoint[];
+  equity_curve?: Array<{
+    timestamp: string;
+    equity: number;
+  }>;
   /** 取引履歴（オプション） */
-  trade_history?: Trade[];
+  trade_history?: Array<{
+    size: number;
+    entry_price: number;
+    exit_price: number;
+    pnl: number;
+    return_pct: number;
+    entry_time: string;
+    exit_time: string;
+  }>;
   /** 作成日時 */
   created_at: string;
 }

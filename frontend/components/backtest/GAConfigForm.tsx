@@ -9,38 +9,7 @@
 import React, { useState, useEffect } from "react";
 import { useApiCall } from "@/hooks/useApiCall";
 import IndicatorSelector from "@/components/common/IndicatorSelector";
-
-interface GAConfig {
-  experiment_name: string;
-  base_config: {
-    symbol: string;
-    timeframe: string;
-    start_date: string;
-    end_date: string;
-    initial_capital: number;
-    commission_rate: number;
-  };
-  ga_config: {
-    population_size: number;
-    generations: number;
-    crossover_rate: number;
-    mutation_rate: number;
-    elite_size: number;
-    max_indicators: number;
-    allowed_indicators: string[];
-    fitness_weights: {
-      total_return: number;
-      sharpe_ratio: number;
-      max_drawdown: number;
-      win_rate: number;
-    };
-    fitness_constraints: {
-      min_trades: number;
-      max_drawdown_limit: number;
-      min_sharpe_ratio: number;
-    };
-  };
-}
+import { GAConfig } from "@/types/optimization";
 
 interface GAConfigFormProps {
   onSubmit: (config: GAConfig) => void;
