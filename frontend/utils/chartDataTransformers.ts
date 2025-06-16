@@ -10,7 +10,6 @@ import {
   Trade,
   ChartEquityPoint,
   ChartTradePoint,
-  MonthlyReturn,
   ReturnDistribution,
 } from "@/types/backtest";
 
