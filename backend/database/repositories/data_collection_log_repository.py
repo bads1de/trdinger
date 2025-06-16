@@ -10,6 +10,7 @@ import logging
 
 from .base_repository import BaseRepository
 from database.models import DataCollectionLog
+from app.core.utils.database_utils import DatabaseQueryHelper
 
 logger = logging.getLogger(__name__)
 
@@ -79,11 +80,12 @@ class DataCollectionLogRepository(BaseRepository):
             データ収集ログのリスト
         """
         try:
-            return (
-                self.db.query(DataCollectionLog)
-                .order_by(desc(DataCollectionLog.created_at))
-                .limit(limit)
-                .all()
+            return DatabaseQueryHelper.get_filtered_records(
+                db=self.db,
+                model_class=DataCollectionLog,
+                order_by_column="created_at",
+                order_asc=False,
+                limit=limit,
             )
 
         except Exception as e:

@@ -11,6 +11,7 @@ import logging
 
 from .base_repository import BaseRepository
 from database.models import GeneratedStrategy
+from app.core.utils.database_utils import DatabaseQueryHelper
 
 logger = logging.getLogger(__name__)
 
@@ -131,19 +132,18 @@ class GeneratedStrategyRepository(BaseRepository):
             戦略のリスト
         """
         try:
-            query = self.db.query(GeneratedStrategy).filter(
-                GeneratedStrategy.experiment_id == experiment_id
-            )
-
+            filters = {"experiment_id": experiment_id}
             if generation is not None:
-                query = query.filter(GeneratedStrategy.generation == generation)
+                filters["generation"] = generation
 
-            query = query.order_by(desc(GeneratedStrategy.fitness_score))
-
-            if limit:
-                query = query.limit(limit)
-
-            return query.all()
+            return DatabaseQueryHelper.get_filtered_records(
+                db=self.db,
+                model_class=GeneratedStrategy,
+                filters=filters,
+                order_by_column="fitness_score",
+                order_asc=False,
+                limit=limit,
+            )
 
         except Exception as e:
             logger.error(f"実験別戦略取得エラー: {e}")
@@ -192,16 +192,13 @@ class GeneratedStrategyRepository(BaseRepository):
             戦略のリスト
         """
         try:
-            return (
-                self.db.query(GeneratedStrategy)
-                .filter(
-                    and_(
-                        GeneratedStrategy.experiment_id == experiment_id,
-                        GeneratedStrategy.generation == generation,
-                    )
-                )
-                .order_by(desc(GeneratedStrategy.fitness_score))
-                .all()
+            filters = {"experiment_id": experiment_id, "generation": generation}
+            return DatabaseQueryHelper.get_filtered_records(
+                db=self.db,
+                model_class=GeneratedStrategy,
+                filters=filters,
+                order_by_column="fitness_score",
+                order_asc=False,
             )
 
         except Exception as e:

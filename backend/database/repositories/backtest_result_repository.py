@@ -11,6 +11,7 @@ from sqlalchemy import desc
 
 from .base_repository import BaseRepository
 from database.models import BacktestResult
+from app.core.utils.database_utils import DatabaseQueryHelper
 
 
 class BacktestResultRepository(BaseRepository):
@@ -157,14 +158,14 @@ class BacktestResultRepository(BaseRepository):
             バックテスト結果、見つからない場合はNone
         """
         try:
-            result = (
-                self.db.query(BacktestResult)
-                .filter(BacktestResult.id == result_id)
-                .first()
+            results = DatabaseQueryHelper.get_filtered_records(
+                db=self.db,
+                model_class=BacktestResult,
+                filters={"id": result_id},
+                limit=1,
             )
-
-            if result:
-                return result
+            if results:
+                return self._result_to_dict(results[0])
             return None
 
         except Exception as e:
@@ -274,22 +275,22 @@ class BacktestResultRepository(BaseRepository):
 
     def get_recent_backtest_results(self, limit: int = 10) -> List[Dict[str, Any]]:
         """
-        最新のバックテスト結果を取得
+        最近のバックテスト結果を取得
 
         Args:
             limit: 取得件数
 
         Returns:
-            最新のバックテスト結果のリスト
+            バックテスト結果のリスト
         """
         try:
-            results = (
-                self.db.query(BacktestResult)
-                .order_by(desc(BacktestResult.created_at))
-                .limit(limit)
-                .all()
+            results = DatabaseQueryHelper.get_filtered_records(
+                db=self.db,
+                model_class=BacktestResult,
+                order_by_column="created_at",
+                order_asc=False,
+                limit=limit,
             )
-
             return [self._result_to_dict(result) for result in results]
 
         except Exception as e:

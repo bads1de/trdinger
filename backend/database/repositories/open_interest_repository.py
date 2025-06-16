@@ -10,6 +10,7 @@ import logging
 
 from .base_repository import BaseRepository
 from database.models import OpenInterestData
+from app.core.utils.database_utils import DatabaseQueryHelper
 
 logger = logging.getLogger(__name__)
 
@@ -67,23 +68,18 @@ class OpenInterestRepository(BaseRepository):
             オープンインタレストデータのリスト
         """
         try:
-            query = self.db.query(OpenInterestData).filter(
-                OpenInterestData.symbol == symbol
+            filters = {"symbol": symbol}
+            return DatabaseQueryHelper.get_filtered_records(
+                db=self.db,
+                model_class=OpenInterestData,
+                filters=filters,
+                time_range_column="data_timestamp",
+                start_time=start_time,
+                end_time=end_time,
+                order_by_column="data_timestamp",
+                order_asc=True,
+                limit=limit,
             )
-
-            if start_time:
-                query = query.filter(OpenInterestData.data_timestamp >= start_time)
-
-            if end_time:
-                query = query.filter(OpenInterestData.data_timestamp <= end_time)
-
-            # 時系列順でソート
-            query = query.order_by(asc(OpenInterestData.data_timestamp))
-
-            if limit:
-                query = query.limit(limit)
-
-            return query.all()
 
         except Exception as e:
             logger.error(f"オープンインタレストデータ取得エラー: {e}")

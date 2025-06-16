@@ -12,6 +12,7 @@ import logging
 from .base_repository import BaseRepository
 from database.models import OHLCVData
 from app.core.utils.data_converter import DataValidator
+from app.core.utils.database_query_helper import DatabaseQueryHelper
 
 logger = logging.getLogger(__name__)
 
@@ -74,23 +75,18 @@ class OHLCVRepository(BaseRepository):
             OHLCV データのリスト
         """
         try:
-            query = self.db.query(OHLCVData).filter(
-                and_(OHLCVData.symbol == symbol, OHLCVData.timeframe == timeframe)
+            filters = {"symbol": symbol, "timeframe": timeframe}
+            return DatabaseQueryHelper.get_filtered_records(
+                db=self.db,
+                model_class=OHLCVData,
+                filters=filters,
+                time_range_column="timestamp",
+                start_time=start_time,
+                end_time=end_time,
+                order_by_column="timestamp",
+                order_asc=True,
+                limit=limit,
             )
-
-            if start_time:
-                query = query.filter(OHLCVData.timestamp >= start_time)
-
-            if end_time:
-                query = query.filter(OHLCVData.timestamp <= end_time)
-
-            # 時系列順でソート
-            query = query.order_by(asc(OHLCVData.timestamp))
-
-            if limit:
-                query = query.limit(limit)
-
-            return query.all()
 
         except Exception as e:
             logger.error(f"OHLCV データ取得エラー: {e}")

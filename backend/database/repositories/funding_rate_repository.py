@@ -11,6 +11,7 @@ import logging
 
 from .base_repository import BaseRepository
 from database.models import FundingRateData
+from app.core.utils.database_utils import DatabaseQueryHelper
 
 logger = logging.getLogger(__name__)
 
@@ -68,23 +69,18 @@ class FundingRateRepository(BaseRepository):
             ファンディングレートデータのリスト
         """
         try:
-            query = self.db.query(FundingRateData).filter(
-                FundingRateData.symbol == symbol
+            filters = {"symbol": symbol}
+            return DatabaseQueryHelper.get_filtered_records(
+                db=self.db,
+                model_class=FundingRateData,
+                filters=filters,
+                time_range_column="funding_timestamp",
+                start_time=start_time,
+                end_time=end_time,
+                order_by_column="funding_timestamp",
+                order_asc=True,
+                limit=limit,
             )
-
-            if start_time:
-                query = query.filter(FundingRateData.funding_timestamp >= start_time)
-
-            if end_time:
-                query = query.filter(FundingRateData.funding_timestamp <= end_time)
-
-            # 時系列順でソート
-            query = query.order_by(asc(FundingRateData.funding_timestamp))
-
-            if limit:
-                query = query.limit(limit)
-
-            return query.all()
 
         except Exception as e:
             logger.error(f"ファンディングレートデータ取得エラー: {e}")

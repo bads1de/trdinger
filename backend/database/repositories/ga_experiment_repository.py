@@ -12,6 +12,7 @@ import logging
 
 from .base_repository import BaseRepository
 from database.models import GAExperiment
+from app.core.utils.database_utils import DatabaseQueryHelper
 
 logger = logging.getLogger(__name__)
 
@@ -186,19 +187,18 @@ class GAExperimentRepository(BaseRepository):
             GA実験のリスト
         """
         try:
-            query = (
-                self.db.query(GAExperiment)
-                .filter(GAExperiment.status == status)
-                .order_by(desc(GAExperiment.created_at))
+            filters = {"status": status}
+            return DatabaseQueryHelper.get_filtered_records(
+                db=self.db,
+                model_class=GAExperiment,
+                filters=filters,
+                order_by_column="created_at",
+                order_asc=False,
+                limit=limit,
             )
 
-            if limit:
-                query = query.limit(limit)
-
-            return query.all()
-
         except Exception as e:
-            logger.error(f"ステータス別実験取得エラー: {e}")
+            logger.error(f"実験取得エラー: {e}")
             return []
 
     def get_recent_experiments(self, limit: int = 10) -> List[GAExperiment]:
@@ -206,17 +206,18 @@ class GAExperimentRepository(BaseRepository):
         最近の実験を取得
 
         Args:
-            limit: 取得件数
+            limit: 取得件数制限
 
         Returns:
             GA実験のリスト
         """
         try:
-            return (
-                self.db.query(GAExperiment)
-                .order_by(desc(GAExperiment.created_at))
-                .limit(limit)
-                .all()
+            return DatabaseQueryHelper.get_filtered_records(
+                db=self.db,
+                model_class=GAExperiment,
+                order_by_column="created_at",
+                order_asc=False,
+                limit=limit,
             )
 
         except Exception as e:
