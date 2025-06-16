@@ -19,7 +19,8 @@ import {
   ReferenceLine,
 } from "recharts";
 import ChartContainer from "./ChartContainer";
-import { chartColors, chartStyles, formatters } from "./ChartTheme";
+import { chartColors, chartStyles } from "./ChartTheme";
+import { formatCurrency, formatDateTime } from "@/utils/formatters";
 import { sampleData } from "@/utils/chartDataTransformers";
 import { ChartTradePoint } from "@/types/backtest";
 
@@ -95,7 +96,7 @@ const CustomTooltip: React.FC<any> = ({ active, payload }) => {
         <div className="flex justify-between">
           <span className="text-gray-400">損益:</span>
           <span className={data.isWin ? "text-green-400" : "text-red-400"}>
-            {formatters.currency(data.pnl)}
+            {formatCurrency(data.pnl)}
           </span>
         </div>
         <div className="flex justify-between">
@@ -184,7 +185,7 @@ const TradeScatterChart: React.FC<TradeScatterChartProps> = ({
             type="number"
             scale="time"
             domain={["dataMin", "dataMax"]}
-            tickFormatter={(timestamp) => formatters.date(timestamp)}
+            tickFormatter={(timestamp) => formatDateTime(timestamp)}
             {...chartStyles.axis}
           />
 

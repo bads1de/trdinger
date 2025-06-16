@@ -18,7 +18,7 @@ import {
   ReferenceLine,
 } from "recharts";
 import ChartContainer from "./ChartContainer";
-import { chartColors, chartStyles, formatters } from "./ChartTheme";
+import { chartColors, chartStyles } from "./ChartTheme";
 import { calculateReturnDistribution } from "@/utils/chartDataTransformers";
 import { Trade } from "@/types/backtest";
 

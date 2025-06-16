@@ -8,7 +8,6 @@
 
 import React from "react";
 import { BacktestResult } from "@/types/backtest";
-import { DataTableProps, TableColumn } from "@/types/common";
 
 interface BacktestResultsTableProps {
   results: BacktestResult[];

@@ -19,7 +19,8 @@ import {
   ReferenceLine,
 } from "recharts";
 import ChartContainer from "./ChartContainer";
-import { chartColors, chartStyles, formatters } from "./ChartTheme";
+import { chartColors, chartStyles } from "./ChartTheme";
+import { formatCurrency, formatDateTime } from "@/utils/formatters";
 import { sampleData } from "@/utils/chartDataTransformers";
 import { ChartEquityPoint } from "@/types/backtest";
 
@@ -75,7 +76,7 @@ const CustomTooltip: React.FC<any> = ({ active, payload, label }) => {
           </span>
           <span className="text-white font-medium">
             {entry.dataKey === "equity" || entry.dataKey === "buyHold"
-              ? formatters.currency(entry.value)
+              ? formatCurrency(entry.value)
               : `${entry.value.toFixed(2)}%`}
           </span>
         </div>
@@ -191,13 +192,13 @@ const EquityCurveChart: React.FC<EquityCurveChartProps> = ({
             type="number"
             scale="time"
             domain={["dataMin", "dataMax"]}
-            tickFormatter={(timestamp) => formatters.date(timestamp)}
+            tickFormatter={(timestamp) => formatDateTime(timestamp)}
             {...chartStyles.axis}
           />
 
           <YAxis
             domain={yAxisDomain}
-            tickFormatter={(value) => formatters.currency(value)}
+            tickFormatter={(value) => formatCurrency(value)}
             {...chartStyles.axis}
           />
 

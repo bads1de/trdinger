@@ -18,8 +18,9 @@ import {
   ReferenceLine,
 } from "recharts";
 import ChartContainer from "./ChartContainer";
-import { chartColors, chartStyles, formatters } from "./ChartTheme";
+import { chartColors, chartStyles } from "./ChartTheme";
 import { sampleData } from "@/utils/chartDataTransformers";
+import { formatCurrency, formatDateTime } from "@/utils/formatters";
 import { ChartEquityPoint } from "@/types/backtest";
 
 interface DrawdownChartProps {
@@ -74,7 +75,7 @@ const CustomTooltip: React.FC<any> = ({ active, payload, label }) => {
         <div className="flex items-center justify-between mt-2 pt-2 border-t border-gray-600">
           <span className="text-sm text-gray-400">資産額:</span>
           <span className="text-white font-medium">
-            {formatters.currency(data.equity)}
+            {formatCurrency(data.equity)}
           </span>
         </div>
       )}
@@ -169,7 +170,7 @@ const DrawdownChart: React.FC<DrawdownChartProps> = ({
             type="number"
             scale="time"
             domain={["dataMin", "dataMax"]}
-            tickFormatter={(timestamp) => formatters.date(timestamp)}
+            tickFormatter={(timestamp) => formatDateTime(timestamp)}
             {...chartStyles.axis}
           />
 

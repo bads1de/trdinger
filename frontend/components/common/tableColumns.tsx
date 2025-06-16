@@ -7,7 +7,7 @@
  */
 
 import React from "react";
-import { TableColumn } from "@/components/table/DataTable";
+import { TableColumn } from "@/types/common";
 import { FundingRateData, PriceData, OpenInterestData } from "@/types/strategy";
 import {
   formatDateTime,

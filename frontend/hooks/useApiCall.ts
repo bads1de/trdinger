@@ -96,6 +96,7 @@ export const useApiCall = <T = any>(): ApiCallResult<T> => {
         console.log("API Response Text:", responseText);
 
         let result;
+
         try {
           result = JSON.parse(responseText);
         } catch (parseError) {
