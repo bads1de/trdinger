@@ -91,6 +91,30 @@ class BacktestResultsResponse(BaseModel):
     error: Optional[str] = None
 
 
+# ヘルパー関数
+def _create_base_config(request: BacktestRequest) -> Dict[str, Any]:
+    """バックテストリクエストから基本設定辞書を作成"""
+    return {
+        "strategy_name": request.strategy_name,
+        "symbol": request.symbol,
+        "timeframe": request.timeframe,
+        "start_date": request.start_date,
+        "end_date": request.end_date,
+        "initial_capital": request.initial_capital,
+        "commission_rate": request.commission_rate,
+        "strategy_config": {
+            "strategy_type": request.strategy_config.strategy_type,
+            "parameters": request.strategy_config.parameters,
+        },
+    }
+
+
+def _save_backtest_result(result: Dict[str, Any], db: Session) -> Dict[str, Any]:
+    """バックテスト結果をデータベースに保存"""
+    backtest_repo = BacktestResultRepository(db)
+    return backtest_repo.save_backtest_result(result)
+
+
 @router.post("/run", response_model=BacktestResponse)
 async def run_backtest(request: BacktestRequest, db: Session = Depends(get_db)):
     """
@@ -104,31 +128,10 @@ async def run_backtest(request: BacktestRequest, db: Session = Depends(get_db)):
         バックテスト結果
     """
     try:
-        # バックテストサービスを初期化
         backtest_service = BacktestService()
-
-        # リクエストを辞書に変換
-        config = {
-            "strategy_name": request.strategy_name,
-            "symbol": request.symbol,
-            "timeframe": request.timeframe,
-            "start_date": request.start_date,
-            "end_date": request.end_date,
-            "initial_capital": request.initial_capital,
-            "commission_rate": request.commission_rate,
-            "strategy_config": {
-                "strategy_type": request.strategy_config.strategy_type,
-                "parameters": request.strategy_config.parameters,
-            },
-        }
-
-        # バックテストを実行
+        config = _create_base_config(request)
         result = backtest_service.run_backtest(config)
-
-        # 結果をデータベースに保存
-        backtest_repo = BacktestResultRepository(db)
-        saved_result = backtest_repo.save_backtest_result(result)
-
+        saved_result = _save_backtest_result(result, db)
         return BacktestResponse(success=True, result=saved_result)
 
     except ValueError as e:
@@ -262,33 +265,12 @@ async def optimize_strategy(
         最適化結果
     """
     try:
-        # バックテストサービスを初期化
         backtest_service = BacktestService()
-
-        # 基本設定を辞書に変換
-        base_config = {
-            "strategy_name": request.base_config.strategy_name,
-            "symbol": request.base_config.symbol,
-            "timeframe": request.base_config.timeframe,
-            "start_date": request.base_config.start_date,
-            "end_date": request.base_config.end_date,
-            "initial_capital": request.base_config.initial_capital,
-            "commission_rate": request.base_config.commission_rate,
-            "strategy_config": {
-                "strategy_type": request.base_config.strategy_config.strategy_type,
-                "parameters": request.base_config.strategy_config.parameters,
-            },
-        }
-
-        # 最適化を実行
+        base_config = _create_base_config(request.base_config)
         result = backtest_service.optimize_strategy(
             base_config, request.optimization_params
         )
-
-        # 結果をデータベースに保存
-        backtest_repo = BacktestResultRepository(db)
-        saved_result = backtest_repo.save_backtest_result(result)
-
+        saved_result = _save_backtest_result(result, db)
         return BacktestResponse(success=True, result=saved_result)
 
     except ValueError as e:
@@ -314,33 +296,12 @@ async def optimize_strategy_enhanced(
         最適化結果
     """
     try:
-        # 拡張バックテストサービスを初期化
         enhanced_service = EnhancedBacktestService()
-
-        # リクエストを辞書に変換
-        base_config = {
-            "strategy_name": request.base_config.strategy_name,
-            "symbol": request.base_config.symbol,
-            "timeframe": request.base_config.timeframe,
-            "start_date": request.base_config.start_date,
-            "end_date": request.base_config.end_date,
-            "initial_capital": request.base_config.initial_capital,
-            "commission_rate": request.base_config.commission_rate,
-            "strategy_config": {
-                "strategy_type": request.base_config.strategy_config.strategy_type,
-                "parameters": request.base_config.strategy_config.parameters,
-            },
-        }
-
-        # 拡張最適化を実行
+        base_config = _create_base_config(request.base_config)
         result = enhanced_service.optimize_strategy_enhanced(
             base_config, request.optimization_params
         )
-
-        # 結果をデータベースに保存
-        backtest_repo = BacktestResultRepository(db)
-        saved_result = backtest_repo.save_backtest_result(result)
-
+        saved_result = _save_backtest_result(result, db)
         return BacktestResponse(success=True, result=saved_result)
 
     except ValueError as e:
@@ -366,36 +327,15 @@ async def multi_objective_optimization(
         最適化結果
     """
     try:
-        # 拡張バックテストサービスを初期化
         enhanced_service = EnhancedBacktestService()
-
-        # リクエストを辞書に変換
-        base_config = {
-            "strategy_name": request.base_config.strategy_name,
-            "symbol": request.base_config.symbol,
-            "timeframe": request.base_config.timeframe,
-            "start_date": request.base_config.start_date,
-            "end_date": request.base_config.end_date,
-            "initial_capital": request.base_config.initial_capital,
-            "commission_rate": request.base_config.commission_rate,
-            "strategy_config": {
-                "strategy_type": request.base_config.strategy_config.strategy_type,
-                "parameters": request.base_config.strategy_config.parameters,
-            },
-        }
-
-        # マルチ目的最適化を実行
+        base_config = _create_base_config(request.base_config)
         result = enhanced_service.multi_objective_optimization(
             base_config,
             request.objectives,
             request.weights,
             request.optimization_params,
         )
-
-        # 結果をデータベースに保存
-        backtest_repo = BacktestResultRepository(db)
-        saved_result = backtest_repo.save_backtest_result(result)
-
+        saved_result = _save_backtest_result(result, db)
         return BacktestResponse(success=True, result=saved_result)
 
     except ValueError as e:
@@ -421,21 +361,12 @@ async def robustness_test(
         ロバストネステスト結果
     """
     try:
-        # 拡張バックテストサービスを初期化
         enhanced_service = EnhancedBacktestService()
+        base_config = _create_base_config(request.base_config)
 
-        # リクエストを辞書に変換
-        base_config = {
-            "strategy_name": request.base_config.strategy_name,
-            "symbol": request.base_config.symbol,
-            "timeframe": request.base_config.timeframe,
-            "initial_capital": request.base_config.initial_capital,
-            "commission_rate": request.base_config.commission_rate,
-            "strategy_config": {
-                "strategy_type": request.base_config.strategy_config.strategy_type,
-                "parameters": request.base_config.strategy_config.parameters,
-            },
-        }
+        # `start_date`と`end_date`はロバストネステストでは使用しないため削除
+        base_config.pop("start_date", None)
+        base_config.pop("end_date", None)
 
         # テスト期間をタプルのリストに変換
         test_periods = [(period[0], period[1]) for period in request.test_periods]
@@ -446,13 +377,19 @@ async def robustness_test(
         )
 
         # 結果をデータベースに保存（個別結果の最初のものを代表として保存）
-        backtest_repo = BacktestResultRepository(db)
-        if result["individual_results"]:
-            first_result = list(result["individual_results"].values())[0]
-            if "error" not in first_result:
+        if result.get("individual_results"):
+            first_result = next(
+                (
+                    res
+                    for res in result["individual_results"].values()
+                    if "error" not in res
+                ),
+                None,
+            )
+            if first_result:
                 # ロバストネス情報を追加
-                first_result["robustness_analysis"] = result["robustness_analysis"]
-                saved_result = backtest_repo.save_backtest_result(first_result)
+                first_result["robustness_analysis"] = result.get("robustness_analysis")
+                saved_result = _save_backtest_result(first_result, db)
                 result["saved_result_id"] = saved_result.get("id")
 
         return BacktestResponse(success=True, result=result)
