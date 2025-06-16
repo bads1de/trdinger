@@ -23,6 +23,7 @@ from database.repositories.ga_experiment_repository import GAExperimentRepositor
 from database.repositories.generated_strategy_repository import (
     GeneratedStrategyRepository,
 )
+from database.repositories.backtest_result_repository import BacktestResultRepository
 from database.connection import SessionLocal
 
 logger = logging.getLogger(__name__)
@@ -401,6 +402,7 @@ class AutoStrategyService:
             db = SessionLocal()
             try:
                 generated_strategy_repo = GeneratedStrategyRepository(db)
+                backtest_result_repo = BacktestResultRepository(db)
 
                 # 最良戦略を保存
                 best_strategy_record = generated_strategy_repo.save_strategy(
@@ -411,6 +413,65 @@ class AutoStrategyService:
                 )
 
                 logger.info(f"最良戦略を保存しました: DB ID {best_strategy_record.id}")
+
+                # 最良戦略のバックテスト結果をbacktest_resultsテーブルにも保存
+                try:
+                    logger.info("最良戦略のバックテスト結果を詳細保存開始...")
+
+                    # 最良戦略のバックテストを再実行（詳細データ取得のため）
+                    detailed_backtest_config = backtest_config.copy()
+                    detailed_backtest_config["strategy_name"] = (
+                        f"AUTO_STRATEGY_{experiment_info['name']}_{best_strategy.id[:8]}"
+                    )
+                    detailed_backtest_config["strategy_config"] = {
+                        "strategy_type": "GENERATED_AUTO",
+                        "parameters": {"strategy_gene": best_strategy.to_dict()},
+                    }
+
+                    # バックテスト実行
+                    detailed_result = self.backtest_service.run_backtest(
+                        detailed_backtest_config
+                    )
+
+                    # backtest_resultsテーブル用のデータ構造を構築
+                    backtest_result_data = {
+                        "strategy_name": detailed_backtest_config["strategy_name"],
+                        "symbol": detailed_backtest_config["symbol"],
+                        "timeframe": detailed_backtest_config["timeframe"],
+                        "start_date": detailed_backtest_config["start_date"],
+                        "end_date": detailed_backtest_config["end_date"],
+                        "initial_capital": detailed_backtest_config["initial_capital"],
+                        "commission_rate": detailed_backtest_config.get(
+                            "commission_rate", 0.001
+                        ),
+                        "config_json": {
+                            "strategy_config": detailed_backtest_config[
+                                "strategy_config"
+                            ],
+                            "experiment_id": experiment_id,
+                            "db_experiment_id": db_experiment_id,
+                            "fitness_score": best_fitness,
+                        },
+                        "performance_metrics": detailed_result.get(
+                            "performance_metrics", {}
+                        ),
+                        "equity_curve": detailed_result.get("equity_curve", []),
+                        "trade_history": detailed_result.get("trade_history", []),
+                        "execution_time": detailed_result.get("execution_time"),
+                        "status": "completed",
+                    }
+
+                    # backtest_resultsテーブルに保存
+                    saved_backtest_result = backtest_result_repo.save_backtest_result(
+                        backtest_result_data
+                    )
+                    logger.info(
+                        f"最良戦略のバックテスト結果を保存しました: ID {saved_backtest_result.get('id')}"
+                    )
+
+                except Exception as e:
+                    logger.error(f"最良戦略のバックテスト結果保存エラー: {e}")
+                    # エラーが発生してもメイン処理は継続
 
                 # 全戦略を一括保存（オプション）
                 if all_strategies and len(all_strategies) > 1:

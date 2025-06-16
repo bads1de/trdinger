@@ -305,6 +305,26 @@ class BacktestService:
                     "strategy_gene is required for GENERATED_TEST strategy type"
                 )
 
+        elif strategy_type == "GENERATED_AUTO":
+            # オートストラテジーで生成された戦略用
+            # StrategyFactoryで生成された戦略クラスを使用
+            from app.core.services.auto_strategy.factories.strategy_factory import (
+                StrategyFactory,
+            )
+            from app.core.services.auto_strategy.models.strategy_gene import (
+                StrategyGene,
+            )
+
+            # パラメータから戦略遺伝子を復元
+            if "strategy_gene" in parameters:
+                strategy_gene = StrategyGene.from_dict(parameters["strategy_gene"])
+                factory = StrategyFactory()
+                return factory.create_strategy_class(strategy_gene)
+            else:
+                raise ValueError(
+                    "strategy_gene is required for GENERATED_AUTO strategy type"
+                )
+
         else:
             raise ValueError(f"Unsupported strategy type: {strategy_type}")
 
@@ -366,15 +386,30 @@ class BacktestService:
 
         # 取引履歴を変換
         trade_history = []
+        winning_trades = 0
+        losing_trades = 0
+        total_wins = 0.0
+        total_losses = 0.0
+
         if "_trades" in stats and not stats["_trades"].empty:
             trades_df = stats["_trades"]
             for _, trade in trades_df.iterrows():
+                pnl = float(trade.get("PnL", 0))
+
+                # 勝ち負けの統計を計算
+                if pnl > 0:
+                    winning_trades += 1
+                    total_wins += pnl
+                elif pnl < 0:
+                    losing_trades += 1
+                    total_losses += abs(pnl)
+
                 trade_history.append(
                     {
                         "size": float(trade.get("Size", 0)),
                         "entry_price": float(trade.get("EntryPrice", 0)),
                         "exit_price": float(trade.get("ExitPrice", 0)),
-                        "pnl": float(trade.get("PnL", 0)),
+                        "pnl": pnl,
                         "return_pct": float(trade.get("ReturnPct", 0)),
                         "entry_time": (
                             trade.get("EntryTime", "").isoformat()
@@ -388,6 +423,22 @@ class BacktestService:
                         ),
                     }
                 )
+
+        # 追加の指標を計算
+        avg_win = total_wins / winning_trades if winning_trades > 0 else 0.0
+        avg_loss = total_losses / losing_trades if losing_trades > 0 else 0.0
+        profit_factor = total_wins / total_losses if total_losses > 0 else 0.0
+
+        # パフォーマンス指標に追加
+        performance_metrics.update(
+            {
+                "winning_trades": winning_trades,
+                "losing_trades": losing_trades,
+                "avg_win": avg_win,
+                "avg_loss": avg_loss,
+                "profit_factor": profit_factor,
+            }
+        )
 
         # 結果を統合
         result = {

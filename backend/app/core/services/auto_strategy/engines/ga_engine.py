@@ -61,8 +61,8 @@ class GeneticAlgorithmEngine:
         self.current_generation = 0
         self.start_time = 0
 
-        # 利用可能な時間足
-        self.available_timeframes = ["15m", "30m", "1h", "4h", "1d"]
+        # 利用可能な時間足（動的に取得）
+        self.available_timeframes = self._get_available_timeframes()
 
     def setup_deap(self, config: GAConfig):
         """
@@ -157,11 +157,69 @@ class GeneticAlgorithmEngine:
 
         logger.info("DEAP環境のセットアップ完了")
 
+    def _get_available_timeframes(self) -> List[str]:
+        """
+        データベースから利用可能な時間軸を取得
+
+        Returns:
+            利用可能な時間軸のリスト
+        """
+        try:
+            from database.connection import SessionLocal
+            from database.repositories.ohlcv_repository import OHLCVRepository
+
+            db = SessionLocal()
+            try:
+                repo = OHLCVRepository(db)
+                symbols = repo.get_available_symbols()
+
+                # BTC/USDT系のシンボルを優先的に使用
+                target_symbols = ["BTC/USDT:USDT", "BTC/USDT", "BTCUSDT"]
+                available_timeframes = []
+
+                for symbol in target_symbols:
+                    if symbol in symbols:
+                        timeframes = repo.get_available_timeframes(symbol)
+                        if timeframes:
+                            available_timeframes = timeframes
+                            logger.info(
+                                f"利用可能な時間軸を取得: {symbol} -> {timeframes}"
+                            )
+                            break
+
+                if not available_timeframes:
+                    # フォールバック: 最初に見つかったシンボルの時間軸を使用
+                    if symbols:
+                        first_symbol = symbols[0]
+                        available_timeframes = repo.get_available_timeframes(
+                            first_symbol
+                        )
+                        logger.info(
+                            f"フォールバック時間軸を取得: {first_symbol} -> {available_timeframes}"
+                        )
+
+                if not available_timeframes:
+                    # 最終フォールバック
+                    available_timeframes = ["1d"]
+                    logger.warning(
+                        "データベースに時間軸データが見つからないため、デフォルト値を使用"
+                    )
+
+                return available_timeframes
+
+            finally:
+                db.close()
+
+        except Exception as e:
+            logger.error(f"利用可能な時間軸の取得エラー: {e}")
+            # エラー時のフォールバック
+            return ["1d"]
+
     def _select_random_timeframe_config(
         self, base_config: Dict[str, Any]
     ) -> Dict[str, Any]:
         """
-        ランダムな時間足を選択し、適切な期間を設定
+        利用可能なデータに基づいてランダムな時間足を選択し、適切な期間を設定
 
         Args:
             base_config: ベースとなるバックテスト設定
@@ -169,9 +227,65 @@ class GeneticAlgorithmEngine:
         Returns:
             時間足と期間が調整された設定
         """
-        # ランダムに時間足を選択
-        selected_timeframe = random.choice(self.available_timeframes)
-        logger.info(f"ランダム時間足選択: {selected_timeframe}")
+        try:
+            from database.connection import SessionLocal
+            from database.repositories.ohlcv_repository import OHLCVRepository
+
+            db = SessionLocal()
+            try:
+                repo = OHLCVRepository(db)
+                symbols = repo.get_available_symbols()
+
+                # BTC/USDT系のシンボルを優先的に使用
+                target_symbols = ["BTC/USDT:USDT", "BTC/USDT", "BTCUSDT"]
+                selected_symbol = base_config.get("symbol", "BTC/USDT")
+                available_timeframes = []
+
+                # 指定されたシンボルが利用可能かチェック
+                if selected_symbol in symbols:
+                    available_timeframes = repo.get_available_timeframes(
+                        selected_symbol
+                    )
+
+                # 指定シンボルが利用できない場合、優先シンボルを使用
+                if not available_timeframes:
+                    for symbol in target_symbols:
+                        if symbol in symbols:
+                            timeframes = repo.get_available_timeframes(symbol)
+                            if timeframes:
+                                selected_symbol = symbol
+                                available_timeframes = timeframes
+                                logger.info(
+                                    f"シンボル変更: {base_config.get('symbol')} -> {symbol}"
+                                )
+                                break
+
+                # それでも見つからない場合、最初のシンボルを使用
+                if not available_timeframes and symbols:
+                    selected_symbol = symbols[0]
+                    available_timeframes = repo.get_available_timeframes(
+                        selected_symbol
+                    )
+                    logger.info(f"フォールバックシンボル使用: {selected_symbol}")
+
+                # 時間軸をランダム選択
+                if available_timeframes:
+                    selected_timeframe = random.choice(available_timeframes)
+                else:
+                    selected_timeframe = "1d"  # 最終フォールバック
+
+                logger.info(
+                    f"選択されたシンボル・時間軸: {selected_symbol} {selected_timeframe}"
+                )
+
+            finally:
+                db.close()
+
+        except Exception as e:
+            logger.error(f"データベース確認エラー: {e}")
+            # エラー時のフォールバック
+            selected_symbol = base_config.get("symbol", "BTC/USDT")
+            selected_timeframe = "1d"
 
         # 現在時刻を基準に期間を設定
         end_date = datetime.now(timezone.utc)
@@ -190,6 +304,7 @@ class GeneticAlgorithmEngine:
 
         # 設定をコピーして更新
         config = base_config.copy()
+        config["symbol"] = selected_symbol
         config["timeframe"] = selected_timeframe
         config["start_date"] = start_date.isoformat()
         config["end_date"] = end_date.isoformat()

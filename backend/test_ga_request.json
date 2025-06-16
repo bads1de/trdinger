@@ -1,0 +1,23 @@
+{
+  "experiment_name": "Test_Auto_Strategy",
+  "base_config": {
+    "symbol": "BTC/USDT",
+    "timeframe": "1d",
+    "start_date": "2024-01-01",
+    "end_date": "2024-04-09",
+    "initial_capital": 100000,
+    "commission_rate": 0.001
+  },
+  "ga_config": {
+    "population_size": 3,
+    "generations": 2,
+    "crossover_rate": 0.8,
+    "mutation_rate": 0.2,
+    "fitness_weights": {
+      "total_return": 0.4,
+      "sharpe_ratio": 0.3,
+      "max_drawdown": 0.2,
+      "win_rate": 0.1
+    }
+  }
+}

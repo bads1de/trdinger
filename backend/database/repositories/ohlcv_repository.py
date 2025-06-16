@@ -12,7 +12,7 @@ import logging
 from .base_repository import BaseRepository
 from database.models import OHLCVData
 from app.core.utils.data_converter import DataValidator
-from app.core.utils.database_query_helper import DatabaseQueryHelper
+from app.core.utils.database_utils import DatabaseQueryHelper
 
 logger = logging.getLogger(__name__)
 
