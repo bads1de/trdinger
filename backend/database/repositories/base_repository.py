@@ -124,3 +124,35 @@ class BaseRepository:
         except Exception as e:
             logger.error(f"利用可能シンボル取得エラー: {e}")
             raise
+
+    def _delete_all_records(self) -> int:
+        """
+        全てのレコードを削除する汎用メソッド。
+        """
+        try:
+            deleted_count = self.db.query(self.model_class).delete()
+            self.db.commit()
+            return deleted_count
+        except Exception as e:
+            self.db.rollback()
+            logger.error(f"全てのレコード削除エラー ({self.model_class.__name__}): {e}")
+            raise
+
+    def _delete_records_by_filter(self, filter_column: str, filter_value: Any) -> int:
+        """
+        指定されたカラムと値に基づいてレコードを削除する汎用メソッド。
+        """
+        try:
+            deleted_count = (
+                self.db.query(self.model_class)
+                .filter(getattr(self.model_class, filter_column) == filter_value)
+                .delete()
+            )
+            self.db.commit()
+            return deleted_count
+        except Exception as e:
+            self.db.rollback()
+            logger.error(
+                f"レコード削除エラー ({self.model_class.__name__}) by {filter_column}={filter_value}: {e}"
+            )
+            raise

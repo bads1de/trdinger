@@ -5,7 +5,6 @@ OHLCV データのリポジトリクラス
 from typing import List, Optional
 from datetime import datetime
 from sqlalchemy.orm import Session
-from sqlalchemy import and_, asc
 import pandas as pd
 import logging
 
@@ -240,20 +239,10 @@ class OHLCVRepository(BaseRepository):
             削除された件数
         """
         try:
-            # 削除前の件数を取得
-            self.db.query(OHLCVData).count()
-
-            # 全てのOHLCVデータを削除
-            deleted_count = self.db.query(OHLCVData).delete()
-
-            # コミット
-            self.db.commit()
-
+            deleted_count = self._delete_all_records()
             logger.info(f"全てのOHLCVデータを削除しました: {deleted_count}件")
             return deleted_count
-
         except Exception as e:
-            self.db.rollback()
             logger.error(f"OHLCVデータ全削除エラー: {e}")
             raise
 
@@ -268,21 +257,12 @@ class OHLCVRepository(BaseRepository):
             削除された件数
         """
         try:
-            # 指定シンボルのデータを削除
-            deleted_count = (
-                self.db.query(OHLCVData).filter(OHLCVData.symbol == symbol).delete()
-            )
-
-            # コミット
-            self.db.commit()
-
+            deleted_count = self._delete_records_by_filter("symbol", symbol)
             logger.info(
                 f"シンボル '{symbol}' のOHLCVデータを削除しました: {deleted_count}件"
             )
             return deleted_count
-
         except Exception as e:
-            self.db.rollback()
             logger.error(f"シンボル '{symbol}' のOHLCVデータ削除エラー: {e}")
             raise
 
@@ -297,21 +277,11 @@ class OHLCVRepository(BaseRepository):
             削除された件数
         """
         try:
-            # 指定時間足のデータを削除
-            deleted_count = (
-                self.db.query(OHLCVData)
-                .filter(OHLCVData.timeframe == timeframe)
-                .delete()
-            )
-
-            # コミット
-            self.db.commit()
-
+            deleted_count = self._delete_records_by_filter("timeframe", timeframe)
             logger.info(
                 f"時間足 '{timeframe}' のOHLCVデータを削除しました: {deleted_count}件"
             )
             return deleted_count
-
         except Exception as e:
             self.db.rollback()
             logger.error(f"時間足 '{timeframe}' のOHLCVデータ削除エラー: {e}")
@@ -347,13 +317,4 @@ class OHLCVRepository(BaseRepository):
         Returns:
             利用可能なシンボルのリスト
         """
-        try:
-            result = self.db.query(OHLCVData.symbol).distinct().all()
-            return [row[0] for row in result]
-
-        except Exception as e:
-            logger.error(f"利用可能シンボル取得エラー: {e}")
-            raise
-
-
-# sanitize_ohlcv_data メソッドは app.core.utils.data_converter.DataValidator に移動されました
+        return super().get_available_symbols("symbol")

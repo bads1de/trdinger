@@ -5,7 +5,6 @@
 from typing import List, Optional
 from datetime import datetime
 from sqlalchemy.orm import Session
-from sqlalchemy import asc
 import logging
 
 from .base_repository import BaseRepository
@@ -117,22 +116,12 @@ class OpenInterestRepository(BaseRepository):
             削除された件数
         """
         try:
-            # 削除前の件数を取得
-            self.db.query(OpenInterestData).count()
-
-            # 全てのオープンインタレストデータを削除
-            deleted_count = self.db.query(OpenInterestData).delete()
-
-            # コミット
-            self.db.commit()
-
+            deleted_count = self._delete_all_records()
             logger.info(
                 f"全てのオープンインタレストデータを削除しました: {deleted_count}件"
             )
             return deleted_count
-
         except Exception as e:
-            self.db.rollback()
             logger.error(f"オープンインタレストデータ全削除エラー: {e}")
             raise
 
@@ -147,16 +136,7 @@ class OpenInterestRepository(BaseRepository):
             削除された件数
         """
         try:
-            # 指定シンボルのデータを削除
-            deleted_count = (
-                self.db.query(OpenInterestData)
-                .filter(OpenInterestData.symbol == symbol)
-                .delete()
-            )
-
-            # コミット
-            self.db.commit()
-
+            deleted_count = self._delete_records_by_filter("symbol", symbol)
             logger.info(
                 f"シンボル '{symbol}' のオープンインタレストデータを削除しました: {deleted_count}件"
             )

@@ -118,22 +118,12 @@ class FundingRateRepository(BaseRepository):
             削除された件数
         """
         try:
-            # 削除前の件数を取得
-            self.db.query(FundingRateData).count()
-
-            # 全てのファンディングレートデータを削除
-            deleted_count = self.db.query(FundingRateData).delete()
-
-            # コミット
-            self.db.commit()
-
+            deleted_count = self._delete_all_records()
             logger.info(
                 f"全てのファンディングレートデータを削除しました: {deleted_count}件"
             )
             return deleted_count
-
         except Exception as e:
-            self.db.rollback()
             logger.error(f"ファンディングレートデータ全削除エラー: {e}")
             raise
 
@@ -148,16 +138,7 @@ class FundingRateRepository(BaseRepository):
             削除された件数
         """
         try:
-            # 指定シンボルのデータを削除
-            deleted_count = (
-                self.db.query(FundingRateData)
-                .filter(FundingRateData.symbol == symbol)
-                .delete()
-            )
-
-            # コミット
-            self.db.commit()
-
+            deleted_count = self._delete_records_by_filter("symbol", symbol)
             logger.info(
                 f"シンボル '{symbol}' のファンディングレートデータを削除しました: {deleted_count}件"
             )
