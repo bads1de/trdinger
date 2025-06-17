@@ -16,54 +16,51 @@ import AutoStrategyModal from "@/components/backtest/AutoStrategyModal";
 import { useApiCall } from "@/hooks/useApiCall";
 import { BacktestConfig, BacktestResult } from "@/types/backtest";
 import { GAConfig } from "@/types/optimization";
+import { useBacktestResults } from "@/hooks/useBacktestResults";
+import { useBacktestOptimizations } from "@/hooks/useBacktestOptimizations";
+import { useAutoStrategy } from "@/hooks/useAutoStrategy";
 
 export default function BacktestPage() {
-  const [results, setResults] = useState<BacktestResult[]>([]);
-  const [selectedResult, setSelectedResult] = useState<BacktestResult | null>(
-    null
-  );
-  const [optimizationResult, setOptimizationResult] = useState<any>(null);
-  const [optimizationType, setOptimizationType] = useState<
-    "enhanced" | "multi" | "robustness"
-  >("enhanced");
-  const [isOptimizationModalOpen, setIsOptimizationModalOpen] = useState(false);
-  const [currentBacktestConfig, setCurrentBacktestConfig] =
-    useState<BacktestConfig | null>(null);
-  const [showAutoStrategyModal, setShowAutoStrategyModal] = useState(false);
+  const {
+    results,
+    selectedResult,
+    resultsLoading,
+    deleteLoading,
+    loadResults,
+    handleResultSelect,
+    handleDeleteResult,
+    setSelectedResult,
+  } = useBacktestResults();
+
+  const {
+    optimizationResult,
+    optimizationType,
+    isOptimizationModalOpen,
+    currentBacktestConfig,
+    enhancedOptimizationLoading,
+    multiOptimizationLoading,
+    robustnessTestLoading,
+    isOptimizationLoading,
+    setOptimizationResult,
+    setOptimizationType,
+    setIsOptimizationModalOpen,
+    setCurrentBacktestConfig,
+    handleEnhancedOptimization,
+    handleMultiObjectiveOptimization,
+    handleRobustnessTest,
+  } = useBacktestOptimizations();
+
+  const {
+    showAutoStrategyModal,
+    autoStrategyLoading,
+    handleAutoStrategy,
+    openAutoStrategyModal,
+    setShowAutoStrategyModal,
+  } = useAutoStrategy(loadResults);
 
   const { execute: runBacktest, loading: backtestLoading } = useApiCall<{
     result: BacktestResult;
   }>();
-  const { execute: fetchResults, loading: resultsLoading } = useApiCall<{
-    results: BacktestResult[];
-    total: number;
-  }>();
-  const { execute: deleteResult, loading: deleteLoading } = useApiCall();
-  const {
-    execute: runEnhancedOptimization,
-    loading: enhancedOptimizationLoading,
-  } = useApiCall();
-  const {
-    execute: runMultiObjectiveOptimization,
-    loading: multiOptimizationLoading,
-  } = useApiCall();
-  const { execute: runRobustnessTest, loading: robustnessTestLoading } =
-    useApiCall();
-  const { execute: runAutoStrategy, loading: autoStrategyLoading } =
-    useApiCall();
-
-  // 結果一覧を取得
-  const loadResults = async () => {
-    const response = await fetchResults("/api/backtest/results?limit=20");
-    if (response) {
-      setResults(response.results);
-    }
-  };
-
-  // ページ読み込み時に結果一覧を取得
-  useEffect(() => {
-    loadResults();
-  }, []);
 
   // バックテスト実行
   const handleRunBacktest = async (config: BacktestConfig) => {
@@ -79,127 +76,11 @@ export default function BacktestPage() {
     });
   };
 
-  // 結果選択
-  const handleResultSelect = (result: BacktestResult) => {
-    setSelectedResult(result);
-  };
-
-  // 結果削除
-  const handleDeleteResult = async (result: BacktestResult) => {
-    const response = await deleteResult(`/api/backtest/results/${result.id}`, {
-      method: "DELETE",
-      confirmMessage: `バックテスト結果「${result.strategy_name}」を削除しますか？\nこの操作は取り消せません。`,
-      onSuccess: () => {
-        // 削除成功時は一覧を更新
-        loadResults();
-        // 選択中の結果が削除された場合はクリア
-        if (selectedResult?.id === result.id) {
-          setSelectedResult(null);
-        }
-      },
-      onError: (error) => {
-        console.error("Delete failed:", error);
-      },
-    });
-  };
-
-  // 拡張最適化実行
-  const handleEnhancedOptimization = async (config: any) => {
-    setOptimizationType("enhanced");
-    const response = await runEnhancedOptimization(
-      "/api/backtest/optimize-enhanced",
-      {
-        method: "POST",
-        body: config,
-        onSuccess: (data) => {
-          setOptimizationResult(data.result);
-        },
-        onError: (error) => {
-          console.error("Enhanced optimization failed:", error);
-        },
-      }
-    );
-  };
-
-  // マルチ目的最適化実行
-  const handleMultiObjectiveOptimization = async (config: any) => {
-    setOptimizationType("multi");
-    const response = await runMultiObjectiveOptimization(
-      "/api/backtest/multi-objective-optimization",
-      {
-        method: "POST",
-        body: config,
-        onSuccess: (data) => {
-          setOptimizationResult(data.result);
-        },
-        onError: (error) => {
-          console.error("Multi-objective optimization failed:", error);
-        },
-      }
-    );
-  };
-
-  // ロバストネステスト実行
-  const handleRobustnessTest = async (config: any) => {
-    setOptimizationType("robustness");
-    const response = await runRobustnessTest("/api/backtest/robustness-test", {
-      method: "POST",
-      body: config,
-      onSuccess: (data) => {
-        setOptimizationResult(data.result);
-      },
-      onError: (error) => {
-        console.error("Robustness test failed:", error);
-      },
-    });
-  };
-
   // GA戦略生成実行
   const handleGAGeneration = async (config: any) => {
     console.log("GA戦略生成開始:", config);
     // GA実行は別途進捗表示で管理されるため、ここでは設定のログ出力のみ
   };
-
-  /**
-   * オートストラテジー実行
-   */
-  const handleAutoStrategy = async (config: GAConfig) => {
-    // GAConfigをAPIリクエスト形式に変換
-    const requestBody = {
-      experiment_name: config.experiment_name,
-      base_config: config.base_config,
-      ga_config: config.ga_config,
-    };
-
-    const response = await runAutoStrategy("/api/auto-strategy/generate", {
-      method: "POST",
-      body: requestBody,
-      onSuccess: (data) => {
-        console.log("オートストラテジー生成開始:", data);
-        setShowAutoStrategyModal(false);
-        alert(
-          `🚀 戦略生成を開始しました！\n\n実験ID: ${data.experiment_id}\n\n生成完了後、結果一覧に自動的に表示されます。\n数分お待ちください。`
-        );
-        // 結果一覧を更新（GA完了後に結果が表示される）
-        loadResults();
-      },
-      onError: (error) => {
-        console.error("Auto strategy generation failed:", error);
-      },
-    });
-  };
-
-  /**
-   * オートストラテジーモーダルを開く
-   */
-  const openAutoStrategyModal = () => {
-    setShowAutoStrategyModal(true);
-  };
-
-  const isOptimizationLoading =
-    enhancedOptimizationLoading ||
-    multiOptimizationLoading ||
-    robustnessTestLoading;
 
   return (
     <div className="min-h-screen bg-black text-white">
