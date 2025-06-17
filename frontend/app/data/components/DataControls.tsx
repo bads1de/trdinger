@@ -43,6 +43,7 @@ interface DataControlsProps {
   fundingRateCollectionMessage: string;
   openInterestCollectionMessage: string;
   allDataCollectionMessage: string;
+  incrementalUpdateMessage: string;
   dataStatus: any; // TODO: より具体的な型を指定する
 }
 
@@ -67,6 +68,7 @@ const DataControls: React.FC<DataControlsProps> = ({
   fundingRateCollectionMessage,
   openInterestCollectionMessage,
   allDataCollectionMessage,
+  incrementalUpdateMessage,
   dataStatus,
 }) => {
   const [showResetPanel, setShowResetPanel] = useState(false);
@@ -209,12 +211,18 @@ const DataControls: React.FC<DataControlsProps> = ({
         {(bulkCollectionMessage ||
           fundingRateCollectionMessage ||
           openInterestCollectionMessage ||
-          allDataCollectionMessage) && (
+          allDataCollectionMessage ||
+          incrementalUpdateMessage) && (
           <div className="mt-6 pt-4 border-t border-secondary-200 dark:border-secondary-700">
             <div className="space-y-2">
               {allDataCollectionMessage && (
                 <div className="text-sm text-secondary-600 dark:text-secondary-400 font-medium">
                   {allDataCollectionMessage}
+                </div>
+              )}
+              {incrementalUpdateMessage && (
+                <div className="text-sm text-secondary-600 dark:text-secondary-400 font-medium">
+                  {incrementalUpdateMessage}
                 </div>
               )}
               {bulkCollectionMessage && (

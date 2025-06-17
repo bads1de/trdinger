@@ -66,6 +66,8 @@ const DataPage: React.FC = () => {
     useState<string>("");
   const [allDataCollectionMessage, setAllDataCollectionMessage] =
     useState<string>("");
+  const [incrementalUpdateMessage, setIncrementalUpdateMessage] =
+    useState<string>("");
 
   /**
    * 通貨ペア一覧を取得
@@ -211,6 +213,7 @@ const DataPage: React.FC = () => {
     try {
       setUpdating(true);
       setError("");
+      setIncrementalUpdateMessage("");
 
       const response = await fetch(
         `${BACKEND_API_URL}/api/data-collection/update?symbol=${selectedSymbol}&timeframe=${selectedTimeFrame}`,
@@ -222,14 +225,38 @@ const DataPage: React.FC = () => {
       const result = await response.json();
 
       if (result.success) {
-        // 更新後にデータを再取得
-        await fetchOHLCVData();
+        // 成功メッセージを表示
+        const savedCount = result.saved_count || 0;
+        setIncrementalUpdateMessage(
+          `✅ 差分更新完了！ ${selectedSymbol} ${selectedTimeFrame} - ${savedCount}件のデータを更新しました`
+        );
+
+        // 更新後に全てのデータを再取得
+        await Promise.all([
+          fetchOHLCVData(),
+          fetchFundingRateData(),
+          fetchOpenInterestData(),
+        ]);
+
+        // データ状況も更新
+        fetchDataStatus();
+
+        // 10秒後にメッセージをクリア
+        setTimeout(() => setIncrementalUpdateMessage(""), 10000);
       } else {
-        setError(result.message || "差分更新に失敗しました");
+        const errorMessage = result.message || "差分更新に失敗しました";
+        setError(errorMessage);
+        setIncrementalUpdateMessage(`❌ ${errorMessage}`);
+        // 10秒後にメッセージをクリア
+        setTimeout(() => setIncrementalUpdateMessage(""), 10000);
       }
     } catch (err) {
-      setError("差分更新中にエラーが発生しました");
+      const errorMessage = "差分更新中にエラーが発生しました";
+      setError(errorMessage);
+      setIncrementalUpdateMessage(`❌ ${errorMessage}`);
       console.error("差分更新エラー:", err);
+      // 10秒後にメッセージをクリア
+      setTimeout(() => setIncrementalUpdateMessage(""), 10000);
     } finally {
       setUpdating(false);
     }
@@ -456,6 +483,7 @@ const DataPage: React.FC = () => {
           fundingRateCollectionMessage={fundingRateCollectionMessage}
           openInterestCollectionMessage={openInterestCollectionMessage}
           allDataCollectionMessage={allDataCollectionMessage}
+          incrementalUpdateMessage={incrementalUpdateMessage}
         />
 
         <DataTableContainer

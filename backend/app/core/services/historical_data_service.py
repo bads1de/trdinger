@@ -6,8 +6,7 @@
 
 import asyncio
 import logging
-from datetime import datetime, timezone
-from typing import Dict, List, Optional
+from typing import Dict, Optional
 
 from app.core.services.market_data_service import BybitMarketDataService
 from database.repositories.ohlcv_repository import OHLCVRepository
@@ -20,12 +19,7 @@ class HistoricalDataService:
 
     def __init__(self, market_service: Optional[BybitMarketDataService] = None):
         self.market_service = market_service or BybitMarketDataService()
-
-        # ビットコインの対応時間軸
-        self.timeframes = ["15m", "30m", "1h", "4h", "1d"]
-
-        # APIレート制限対応（リクエスト間隔）
-        self.request_delay = 0.1  # 100ms
+        self.request_delay = 0.2  # APIレート制限対応
 
     async def collect_historical_data(
         self,
@@ -35,82 +29,64 @@ class HistoricalDataService:
     ) -> Dict:
         """
         指定シンボルの履歴データを包括的に収集
-
-        Args:
-            symbol: 取引ペア
-            timeframe: 時間軸
-            repository: データベースリポジトリ
-
-        Returns:
-            収集結果
         """
+        if not repository:
+            return {"success": False, "message": "リポジトリが必要です"}
+
         try:
             logger.info(f"履歴データ収集開始: {symbol} {timeframe}")
-
             total_saved = 0
             total_fetched = 0
+            max_limit = 1000
+            end_timestamp = None
 
-            # 複数回に分けてデータを取得（APIの制限対応）
-            max_limit = 1000  # Bybitの最大取得件数
-
-            # 最初のデータ取得
-            ohlcv_data = await self.market_service.fetch_ohlcv_data(
-                symbol, timeframe, max_limit
-            )
-
-            if not ohlcv_data:
-                return {"success": False, "message": "データが取得できませんでした"}
-
-            # データベースに保存
-            if repository:
-                saved_count = await self._save_ohlcv_to_database(
-                    ohlcv_data, symbol, timeframe, repository
-                )
-                total_saved += saved_count
-
-            total_fetched += len(ohlcv_data)
-
-            # 過去のデータを段階的に取得
-            oldest_timestamp = min(candle[0] for candle in ohlcv_data)
-
-            # 全期間のデータを取得（最大100回まで、約10万件のデータ）
-            for i in range(100):
+            for i in range(100):  # 安全のためのループ回数制限
                 await asyncio.sleep(self.request_delay)
 
-                # より古いデータを取得
-                since_timestamp = oldest_timestamp - (
-                    max_limit * self._get_timeframe_ms(timeframe)
+                params = {}
+                if end_timestamp:
+                    params["end"] = end_timestamp
+
+                historical_data = await self.market_service.fetch_ohlcv_data(
+                    symbol, timeframe, limit=max_limit, params=params
                 )
 
-                try:
-                    historical_data = await self._fetch_historical_batch(
-                        symbol, timeframe, since_timestamp, max_limit
-                    )
+                if not historical_data:
+                    logger.info(f"全期間データ取得完了: バッチ{i+1}でデータ終了")
+                    break
 
-                    if not historical_data or len(historical_data) < 10:
-                        # データがほとんどなくなったら終了（全期間取得完了）
-                        logger.info(f"全期間データ取得完了: バッチ{i+1}でデータ終了")
-                        break
+                # 最初のデータは重複している可能性があるので、最新のタイムスタンプと比較
+                latest_db_ts = repository.get_latest_timestamp(symbol, timeframe)
+                if latest_db_ts:
+                    historical_data = [
+                        d
+                        for d in historical_data
+                        if d[0] < latest_db_ts.timestamp() * 1000
+                    ]
 
-                    if repository:
-                        saved_count = await self._save_ohlcv_to_database(
-                            historical_data, symbol, timeframe, repository
-                        )
-                        total_saved += saved_count
+                if not historical_data:
+                    logger.info(f"全期間データ取得完了: バッチ{i+1}で重複データのみ")
+                    break
 
-                    total_fetched += len(historical_data)
-                    oldest_timestamp = min(candle[0] for candle in historical_data)
+                saved_count = await self.market_service._save_ohlcv_to_database(
+                    historical_data, symbol, timeframe, repository
+                )
+                total_saved += saved_count
+                total_fetched += len(historical_data)
 
-                    logger.info(f"バッチ {i+1}: {len(historical_data)}件取得")
+                end_timestamp = historical_data[0][0]
 
-                except Exception as e:
-                    logger.warning(f"バッチ {i+1} でエラー: {e}")
+                logger.info(
+                    f"バッチ {i+1}: {len(historical_data)}件取得 (次のend: {end_timestamp})"
+                )
+
+                if len(historical_data) < max_limit:
+                    logger.info("全期間データ取得完了: 最終バッチ")
                     break
 
             logger.info(
                 f"履歴データ収集完了: 取得{total_fetched}件, 保存{total_saved}件"
             )
-
             return {
                 "success": True,
                 "symbol": symbol,
@@ -131,34 +107,25 @@ class HistoricalDataService:
     ) -> Dict:
         """
         差分データを収集（最新タイムスタンプ以降）
-
-        Args:
-            symbol: 取引ペア
-            timeframe: 時間軸
-            repository: データベースリポジトリ
-
-        Returns:
-            収集結果
         """
+        if not repository:
+            return {"success": False, "message": "リポジトリが必要です"}
+
         try:
-            if not repository:
-                return {"success": False, "message": "リポジトリが必要です"}
-
-            # 最新タイムスタンプを取得
             latest_timestamp = repository.get_latest_timestamp(symbol, timeframe)
+            since_ms = (
+                int(latest_timestamp.timestamp() * 1000) if latest_timestamp else None
+            )
 
-            if latest_timestamp:
-                logger.info(f"最新データ: {latest_timestamp}")
-                # 最新タイムスタンプ以降のデータを取得
-                since_ms = int(latest_timestamp.timestamp() * 1000)
+            if since_ms:
+                logger.info(
+                    f"差分データ収集開始: {symbol} {timeframe} (since: {since_ms})"
+                )
             else:
-                # データがない場合は直近100件を取得
-                since_ms = None
-                logger.info("初回データ取得")
+                logger.info(f"初回データ収集開始: {symbol} {timeframe}")
 
-            # 新しいデータを取得
             ohlcv_data = await self.market_service.fetch_ohlcv_data(
-                symbol, timeframe, 1000
+                symbol, timeframe, 1000, since=since_ms
             )
 
             if not ohlcv_data:
@@ -168,25 +135,10 @@ class HistoricalDataService:
                     "saved_count": 0,
                 }
 
-            # 重複を除外（最新タイムスタンプより新しいもののみ）
-            if latest_timestamp:
-                latest_ms = int(latest_timestamp.timestamp() * 1000)
-                ohlcv_data = [candle for candle in ohlcv_data if candle[0] > latest_ms]
-
-            if not ohlcv_data:
-                return {
-                    "success": True,
-                    "message": "新しいデータはありません",
-                    "saved_count": 0,
-                }
-
-            # データベースに保存
-            saved_count = await self._save_ohlcv_to_database(
+            saved_count = await self.market_service._save_ohlcv_to_database(
                 ohlcv_data, symbol, timeframe, repository
             )
-
             logger.info(f"差分データ収集完了: {saved_count}件保存")
-
             return {
                 "success": True,
                 "symbol": symbol,
@@ -197,66 +149,3 @@ class HistoricalDataService:
         except Exception as e:
             logger.error(f"差分データ収集エラー: {e}")
             return {"success": False, "message": str(e)}
-
-    async def _fetch_historical_batch(
-        self, symbol: str, timeframe: str, since: int, limit: int
-    ) -> List:
-        """履歴データのバッチ取得"""
-        try:
-            # CCXTのfetch_ohlcvを直接使用してsinceパラメータを指定
-            import asyncio
-
-            ohlcv_data = await asyncio.get_event_loop().run_in_executor(
-                None,
-                self.market_service.exchange.fetch_ohlcv,
-                self.market_service.normalize_symbol(symbol),
-                timeframe,
-                since,
-                limit,
-            )
-            return ohlcv_data
-        except Exception as e:
-            logger.error(f"履歴バッチ取得エラー: {e}")
-            return []
-
-    async def _save_ohlcv_to_database(
-        self, ohlcv_data: List, symbol: str, timeframe: str, repository: OHLCVRepository
-    ) -> int:
-        """OHLCVデータをデータベースに保存"""
-        try:
-            # データを変換
-            records = []
-            for candle in ohlcv_data:
-                timestamp, open_price, high, low, close, volume = candle
-                records.append(
-                    {
-                        "symbol": symbol,
-                        "timeframe": timeframe,
-                        "timestamp": datetime.fromtimestamp(
-                            timestamp / 1000, tz=timezone.utc
-                        ),
-                        "open": float(open_price),
-                        "high": float(high),
-                        "low": float(low),
-                        "close": float(close),
-                        "volume": float(volume),
-                    }
-                )
-
-            # 一括挿入
-            return repository.insert_ohlcv_data(records)
-
-        except Exception as e:
-            logger.error(f"データベース保存エラー: {e}")
-            return 0
-
-    def _get_timeframe_ms(self, timeframe: str) -> int:
-        """時間軸をミリ秒に変換"""
-        timeframe_ms = {
-            "15m": 15 * 60 * 1000,
-            "30m": 30 * 60 * 1000,
-            "1h": 60 * 60 * 1000,
-            "4h": 4 * 60 * 60 * 1000,
-            "1d": 24 * 60 * 60 * 1000,
-        }
-        return timeframe_ms.get(timeframe, 60 * 60 * 1000)

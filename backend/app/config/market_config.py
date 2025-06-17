@@ -3,9 +3,6 @@
 
 このモジュールは、CCXT ライブラリを使用した市場データ取得に関する
 設定を管理します。
-
-@author Trdinger Development Team
-@version 1.0.0
 """
 
 from dataclasses import dataclass

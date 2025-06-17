@@ -1,11 +1,6 @@
 """
-市場データAPIエンドポイントのテスト
-
 FastAPIを使用した市場データ取得エンドポイントの統合テストです。
 実際のBybit APIを呼び出してOHLCVデータを取得し、APIレスポンスを検証します。
-
-@author Trdinger Development Team
-@version 1.0.0
 """
 
 import pytest

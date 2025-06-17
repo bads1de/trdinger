@@ -3,13 +3,10 @@
 
 CCXT ライブラリを使用したBybit取引所からのOHLCVデータ取得機能をテストします。
 TDD（テスト駆動開発）に従い、実際のAPI呼び出しを含む統合テストを実装します。
-
-@author Trdinger Development Team
-@version 1.0.0
 """
 
 import pytest
-import asyncio
+
 from datetime import datetime, timezone
 from typing import List
 from unittest.mock import patch

@@ -169,21 +169,35 @@ class BaseBybitService(ABC):
 
         all_data = []
         page_count = 0
-        current_time = int(datetime.now(timezone.utc).timestamp() * 1000)
-        end_time = current_time
+        end_time = int(datetime.now(timezone.utc).timestamp() * 1000)
 
         while page_count < max_pages:
             page_count += 1
 
             try:
                 # ページごとにデータを取得
-                page_data = await self._fetch_page_data(
-                    fetch_func, symbol, end_time, page_limit, **fetch_kwargs
+                params = fetch_kwargs.get("params", {})
+                params["end"] = end_time
+
+                page_data = await self._handle_ccxt_errors(
+                    f"ページデータ取得 (page={page_count})",
+                    fetch_func,
+                    symbol,
+                    None,  # since
+                    page_limit,
+                    params,
                 )
 
                 if not page_data:
                     logger.info(f"ページ {page_count}: データなし。取得終了")
                     break
+
+                # 最後のデータは次のリクエストのendになるため、重複を避けるために除外
+                if len(page_data) > 1:
+                    end_time = page_data[-1]["timestamp"]
+                    page_data = page_data[:-1]
+                else:
+                    end_time = page_data[0]["timestamp"] - 1
 
                 logger.info(
                     f"ページ {page_count}: {len(page_data)}件取得 "
@@ -218,57 +232,19 @@ class BaseBybitService(ABC):
                     f"(累計: {len(all_data)}件)"
                 )
 
-                # 次のページの終了時刻を設定（最古のタイムスタンプ）
-                if page_data:
-                    oldest_timestamp = min(item["timestamp"] for item in page_data)
-                    end_time = oldest_timestamp - 1
-
-                    # データが少ない場合は最後のページ
-                    if len(page_data) < page_limit:
-                        logger.info(f"ページ {page_count}: 最後のページに到達")
-                        break
-                else:
+                if len(page_data) < page_limit - 1:
+                    logger.info(f"ページ {page_count}: 最後のページに到達")
                     break
 
-                # レート制限対応
                 await asyncio.sleep(0.1)
 
             except Exception as e:
                 logger.error(f"ページ {page_count} 取得エラー: {e}")
-                # 個別ページのエラーは継続
                 continue
 
-        # データを時系列順（古い順）にソート
         all_data.sort(key=lambda x: x["timestamp"])
-
         logger.info(f"全期間データ取得完了: {len(all_data)}件 ({page_count}ページ)")
         return all_data
-
-    async def _fetch_page_data(
-        self, fetch_func: Callable, symbol: str, end_time: int, limit: int, **kwargs
-    ) -> List[Dict[str, Any]]:
-        """
-        1ページ分のデータを取得（サブクラスでオーバーライド可能）
-
-        Args:
-            fetch_func: データ取得関数
-            symbol: 正規化されたシンボル
-            end_time: 終了時刻（ミリ秒）
-            limit: 取得件数
-            **kwargs: 追加引数
-
-        Returns:
-            1ページ分のデータリスト
-        """
-        # デフォルト実装（サブクラスでオーバーライド推奨）
-        return await self._handle_ccxt_errors(
-            f"ページデータ取得 (limit={limit})",
-            fetch_func,
-            symbol,
-            None,  # since
-            limit,
-            **kwargs,
-        )
 
     def _get_database_session(self):
         """
@@ -279,20 +255,18 @@ class BaseBybitService(ABC):
         """
         return SessionLocal()
 
-    async def _execute_with_db_session(self, func: Callable, *args, **kwargs) -> Any:
+    async def _execute_with_db_session(self, func: Callable, **kwargs) -> Any:
         """
         データベースセッションを使用して関数を実行
-
-        Args:
-            func: 実行する関数
-            *args: 関数の引数
-            **kwargs: 関数のキーワード引数
-
-        Returns:
-            関数の実行結果
+        リポジトリが引数として渡された場合は、新しいセッションを作成しない。
         """
-        db = self._get_database_session()
-        try:
-            return await func(db, *args, **kwargs)
-        finally:
-            db.close()
+        if "repository" in kwargs and kwargs.get("repository") is not None:
+            # 既存のリポジトリが渡された場合、dbセッションはNoneで呼び出す
+            return await func(db=None, **kwargs)
+        else:
+            db = self._get_database_session()
+            try:
+                # 新しいdbセッションを渡す
+                return await func(db=db, **kwargs)
+            finally:
+                db.close()

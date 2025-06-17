@@ -1,22 +1,15 @@
 """
-市場データサービス
-
 CCXT ライブラリを使用してBybit取引所からOHLCVデータを取得するサービスです。
 リアルタイムの市場データを提供し、エラーハンドリングとデータ検証を含みます。
-
-@author Trdinger Development Team
-@version 1.0.0
 """
 
-import asyncio
-import ccxt
-from typing import List, Optional
+from typing import List, Optional, Dict, Any
 import logging
 
 from app.config.market_config import MarketDataConfig
 from database.repositories.ohlcv_repository import OHLCVRepository
-from database.connection import SessionLocal
 from app.core.utils.data_converter import OHLCVDataConverter
+from .base_bybit_service import BaseBybitService
 
 
 # ログ設定
@@ -24,7 +17,7 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
-class BybitMarketDataService:
+class BybitMarketDataService(BaseBybitService):
     """
     Bybit取引所からの市場データ取得サービス
 
@@ -35,18 +28,16 @@ class BybitMarketDataService:
     def __init__(self):
         """
         サービスを初期化します
-
-        Bybit取引所のインスタンスを作成し、レート制限を有効化します。
         """
-        try:
-            self.exchange = ccxt.bybit(MarketDataConfig.BYBIT_CONFIG)
-            logger.info("Bybit取引所インスタンスを初期化しました")
-        except Exception as e:
-            logger.error(f"Bybit取引所の初期化に失敗しました: {e}")
-            raise
+        super().__init__()
 
     async def fetch_ohlcv_data(
-        self, symbol: str, timeframe: str = "1h", limit: int = 100
+        self,
+        symbol: str,
+        timeframe: str = "1h",
+        limit: int = 100,
+        since: Optional[int] = None,
+        params: Dict[str, Any] = {},
     ) -> List[List]:
         """
         OHLCVデータを取得します
@@ -55,6 +46,8 @@ class BybitMarketDataService:
             symbol: 取引ペアシンボル（例: 'BTC/USD:BTC'）
             timeframe: 時間軸（例: '1h', '1d'）
             limit: 取得するデータ数（1-1000）
+            since: 開始タイムスタンプ（ミリ秒）
+            params: CCXT追加パラメータ
 
         Returns:
             OHLCVデータのリスト。各要素は [timestamp, open, high, low, close, volume] の形式
@@ -65,45 +58,27 @@ class BybitMarketDataService:
             ccxt.ExchangeError: 取引所エラーの場合
         """
         # パラメータの検証
-        self._validate_parameters(symbol, timeframe, limit)
+        self._validate_parameters(symbol, limit=limit)
+        self._validate_timeframe(timeframe)
 
         # シンボルの正規化
         normalized_symbol = self.normalize_symbol(symbol)
 
-        try:
-            logger.info(
-                f"OHLCVデータを取得中: {normalized_symbol}, {timeframe}, limit={limit}"
-            )
+        # 基底クラスの共通エラーハンドリングを使用
+        ohlcv_data = await self._handle_ccxt_errors(
+            f"OHLCVデータ取得: {normalized_symbol}, {timeframe}, limit={limit}, since={since}",
+            self.exchange.fetch_ohlcv,
+            normalized_symbol,
+            timeframe,
+            since,
+            limit,
+            params,
+        )
 
-            # 非同期でOHLCVデータを取得
-            ohlcv_data = await asyncio.get_event_loop().run_in_executor(
-                None,
-                self.exchange.fetch_ohlcv,
-                normalized_symbol,
-                timeframe,
-                None,  # since
-                limit,
-            )
+        # データの検証
+        self._validate_ohlcv_data(ohlcv_data)
 
-            logger.info(f"OHLCVデータを取得しました: {len(ohlcv_data)}件")
-
-            # データの検証
-            self._validate_ohlcv_data(ohlcv_data)
-
-            return ohlcv_data
-
-        except ccxt.BadSymbol as e:
-            logger.error(f"無効なシンボル: {normalized_symbol}")
-            raise ccxt.BadSymbol(f"無効なシンボル: {normalized_symbol}") from e
-        except ccxt.NetworkError as e:
-            logger.error(f"ネットワークエラー: {e}")
-            raise
-        except ccxt.ExchangeError as e:
-            logger.error(f"取引所エラー: {e}")
-            raise
-        except Exception as e:
-            logger.error(f"予期しないエラー: {e}")
-            raise ccxt.ExchangeError(f"データ取得中にエラーが発生しました: {e}") from e
+        return ohlcv_data
 
     async def fetch_and_save_ohlcv_data(
         self,
@@ -123,45 +98,28 @@ class BybitMarketDataService:
 
         Returns:
             保存結果を含む辞書
-
-        Raises:
-            ValueError: パラメータが無効な場合
-            Exception: データベースエラーの場合
         """
-        try:
-            # OHLCVデータを取得
-            ohlcv_data = await self.fetch_ohlcv_data(symbol, timeframe, limit)
+        # OHLCVデータを取得
+        ohlcv_data = await self.fetch_ohlcv_data(symbol, timeframe, limit)
 
-            # データベースに保存
-            if repository is None:
-                # 実際のデータベースセッションを使用
-                db = SessionLocal()
-                try:
-                    repository = OHLCVRepository(db)
-                    saved_count = await self._save_ohlcv_to_database(
-                        ohlcv_data, symbol, timeframe, repository
-                    )
-                    db.close()
-                except Exception as e:
-                    db.close()
-                    raise
-            else:
-                # テスト用のリポジトリを使用
-                saved_count = await self._save_ohlcv_to_database(
-                    ohlcv_data, symbol, timeframe, repository
-                )
+        # データベースに保存
+        async def save_with_db(db, repository):
+            repo = repository or OHLCVRepository(db)
+            return await self._save_ohlcv_to_database(
+                ohlcv_data, symbol, timeframe, repo
+            )
 
-            return {
-                "symbol": symbol,
-                "timeframe": timeframe,
-                "fetched_count": len(ohlcv_data),
-                "saved_count": saved_count,
-                "success": True,
-            }
+        saved_count = await self._execute_with_db_session(
+            func=save_with_db, repository=repository
+        )
 
-        except Exception as e:
-            logger.error(f"OHLCVデータ取得・保存エラー: {e}")
-            raise
+        return {
+            "symbol": symbol,
+            "timeframe": timeframe,
+            "fetched_count": len(ohlcv_data),
+            "saved_count": saved_count,
+            "success": True,
+        }
 
     async def _save_ohlcv_to_database(
         self,
@@ -188,70 +146,20 @@ class BybitMarketDataService:
         # データベースに挿入
         return repository.insert_ohlcv_data(records)
 
-    def validate_symbol(self, symbol: str) -> bool:
-        """
-        シンボルが有効かどうかを検証します
-
-        Args:
-            symbol: 検証するシンボル
-
-        Returns:
-            有効な場合True、無効な場合False
-        """
-        return symbol in MarketDataConfig.SUPPORTED_SYMBOLS
-
-    def validate_timeframe(self, timeframe: str) -> bool:
+    def _validate_timeframe(self, timeframe: str) -> None:
         """
         時間軸が有効かどうかを検証します
 
         Args:
             timeframe: 検証する時間軸
 
-        Returns:
-            有効な場合True、無効な場合False
-        """
-        return timeframe in MarketDataConfig.SUPPORTED_TIMEFRAMES
-
-    def normalize_symbol(self, symbol: str) -> str:
-        """
-        シンボルを正規化します
-
-        Args:
-            symbol: 正規化するシンボル
-
-        Returns:
-            正規化されたシンボル
-
         Raises:
-            ValueError: サポートされていないシンボルの場合
+            ValueError: 時間軸が無効な場合
         """
-        return MarketDataConfig.normalize_symbol(symbol)
-
-    def _validate_parameters(self, symbol: str, timeframe: str, limit: int) -> None:
-        """
-        パラメータを検証します
-
-        Args:
-            symbol: シンボル
-            timeframe: 時間軸
-            limit: 制限値
-
-        Raises:
-            ValueError: パラメータが無効な場合
-        """
-        if not symbol or not isinstance(symbol, str):
-            raise ValueError("シンボルは空でない文字列である必要があります")
-
-        if not MarketDataConfig.validate_timeframe(timeframe):
+        if timeframe not in MarketDataConfig.SUPPORTED_TIMEFRAMES:
             raise ValueError(
                 f"無効な時間軸: {timeframe}. "
                 f"サポート対象: {', '.join(MarketDataConfig.SUPPORTED_TIMEFRAMES)}"
-            )
-
-        if not MarketDataConfig.validate_limit(limit):
-            raise ValueError(
-                f"制限値は{MarketDataConfig.MIN_LIMIT}から"
-                f"{MarketDataConfig.MAX_LIMIT}の間である必要があります: {limit}"
             )
 
     def _validate_ohlcv_data(self, data: List[List]) -> None:
