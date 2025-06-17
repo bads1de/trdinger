@@ -17,7 +17,6 @@ from app.api.data_reset import router as data_reset_router
 
 from app.api.backtest import router as backtest_router
 from app.api.auto_strategy import router as auto_strategy_router
-from app.api.strategy_showcase import router as strategy_showcase_router
 from app.api.strategies import router as strategies_router
 from app.api.indicators import router as indicators_router
 
@@ -61,7 +60,6 @@ def create_app() -> FastAPI:
 
     app.include_router(backtest_router)
     app.include_router(auto_strategy_router)
-    app.include_router(strategy_showcase_router)
     app.include_router(strategies_router)
     app.include_router(indicators_router, prefix="/api")
 

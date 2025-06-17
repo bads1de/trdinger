@@ -193,9 +193,6 @@ async def get_strategy_statistics(db: Session = Depends(get_db)):
 
         stats = {
             "total_strategies": len(strategies),
-            "showcase_strategies": len(
-                [s for s in strategies if s["source"] == "showcase"]
-            ),
             "auto_generated_strategies": len(
                 [s for s in strategies if s["source"] == "auto_strategy"]
             ),

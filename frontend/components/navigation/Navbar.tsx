@@ -33,12 +33,6 @@ const navItems: NavItem[] = [
     description: "戦略の有効性を検証",
   },
   {
-    href: "/strategies",
-    label: "戦略ショーケース",
-    icon: "🚀",
-    description: "AI生成戦略を比較",
-  },
-  {
     href: "/data",
     label: "データ管理",
     icon: "📈",

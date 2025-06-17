@@ -1,7 +1,7 @@
 """
 戦略統合サービス
 
-オートストラテジーで生成された戦略とショーケース戦略を統合して
+オートストラテジーで生成された戦略を
 フロントエンド用の統一フォーマットで提供します。
 """
 
@@ -22,7 +22,7 @@ class StrategyIntegrationService:
     """
     戦略統合サービス
 
-    オートストラテジー由来の戦略とショーケース戦略を統合して
+    オートストラテジー由来の戦略を
     統一されたフォーマットで提供します。
     """
 
@@ -60,28 +60,24 @@ class StrategyIntegrationService:
             統合された戦略データ
         """
         try:
-            # ショーケース戦略は現在サポートされていないため、空のリストを返す
-            showcase_strategies = []
-
             # オートストラテジー由来の戦略を取得
-            auto_strategies = self._get_auto_generated_strategies(
+            unified_strategies = self._get_auto_generated_strategies(
                 limit, offset, sort_by, sort_order
             )
 
-            # 統合
-            all_strategies = showcase_strategies + auto_strategies
-
             # フィルタリング適用
-            all_strategies = self._apply_filters(
-                all_strategies, category, risk_level, experiment_id, min_fitness
+            unified_strategies = self._apply_filters(
+                unified_strategies, category, risk_level, experiment_id, min_fitness
             )
 
             # ソート
-            all_strategies = self._sort_strategies(all_strategies, sort_by, sort_order)
+            unified_strategies = self._sort_strategies(
+                unified_strategies, sort_by, sort_order
+            )
 
             # ページネーション適用
-            total_count = len(all_strategies)
-            paginated_strategies = all_strategies[offset : offset + limit]
+            total_count = len(unified_strategies)
+            paginated_strategies = unified_strategies[offset : offset + limit]
 
             return {
                 "strategies": paginated_strategies,
@@ -116,7 +112,7 @@ class StrategyIntegrationService:
                     and strategy.backtest_result is not None
                 ):
 
-                    converted = self._convert_generated_strategy_to_showcase_format(
+                    converted = self._convert_generated_strategy_to_unified_format(
                         strategy
                     )
                     if converted:
@@ -131,17 +127,17 @@ class StrategyIntegrationService:
             logger.error(f"オートストラテジー取得エラー: {e}")
             return []
 
-    def _convert_generated_strategy_to_showcase_format(
+    def _convert_generated_strategy_to_unified_format(
         self, strategy: GeneratedStrategy
     ) -> Optional[Dict[str, Any]]:
         """
-        GeneratedStrategyをショーケース形式に変換
+        GeneratedStrategyを統一形式に変換
 
         Args:
             strategy: 生成された戦略
 
         Returns:
-            ショーケース形式の戦略データ
+            統一形式の戦略データ
         """
         try:
             gene_data = strategy.gene_data

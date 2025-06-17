@@ -32,7 +32,6 @@
 - data_collection_log (ログデータ)
 - ga_experiment (実験データ)
 - generated_strategy (戦略データ)
-- strategy_showcase (ショーケースデータ)
 ```
 
 ### 現在の設定
