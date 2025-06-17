@@ -20,6 +20,15 @@ import {
   RobustnessConfig,
   GAConfig,
 } from "@/types/optimization";
+import { InputField } from "@/components/common/InputField";
+import { SelectField } from "@/components/common/SelectField";
+import { BaseBacktestConfigForm } from "./BaseBacktestConfigForm";
+import { Strategy } from "@/types/strategy";
+import {
+  OPTIMIZATION_METHODS,
+  ENHANCED_OPTIMIZATION_OBJECTIVES,
+  GA_OBJECTIVE_OPTIONS,
+} from "@/constants/backtest";
 
 interface OptimizationFormProps {
   onEnhancedOptimization: (config: OptimizationConfig) => void;
@@ -43,7 +52,7 @@ export default function OptimizationForm({
   const [activeTab, setActiveTab] = useState<
     "enhanced" | "multi" | "robustness" | "ga"
   >("enhanced");
-  const [strategies, setStrategies] = useState<Record<string, any>>({});
+  const [strategies, setStrategies] = useState<Record<string, Strategy>>({});
   const [selectedStrategy, setSelectedStrategy] = useState<string>("SMA_CROSS");
 
   // 基本設定
@@ -248,14 +257,18 @@ export default function OptimizationForm({
   };
 
   // GA実行ハンドラー
-  const handleGASubmit = async (config: GAConfig) => {
-    try {
-      await gaExecution.executeGA(config);
-      if (onGAGeneration) {
-        onGAGeneration(config);
-      }
-    } catch (error) {
-      console.error("GA execution failed:", error);
+  const handleGAGeneration = (gaConfig: GAConfig) => {
+    if (onGAGeneration) {
+      const strategyParameters =
+        currentBacktestConfig?.strategy_config?.parameters || {};
+      const baseBacktestConfig: BacktestConfig = {
+        ...baseConfig,
+        strategy_config: {
+          strategy_type: selectedStrategy,
+          parameters: strategyParameters,
+        },
+      };
+      onGAGeneration({ ...gaConfig, base_config: baseBacktestConfig });
     }
   };
 
@@ -271,901 +284,455 @@ export default function OptimizationForm({
     onClick: () => void;
   }) => (
     <button
+      type="button"
       onClick={onClick}
-      className={`px-4 py-2 text-sm font-medium rounded-t-lg transition-colors ${
-        isActive
-          ? "bg-blue-600 text-white border-b-2 border-blue-600"
-          : "bg-gray-800 text-gray-300 hover:bg-gray-700"
-      }`}
+      className={`py-2 px-4 text-sm font-medium rounded-t-lg transition-colors duration-200
+        ${
+          isActive
+            ? "bg-secondary-800 text-blue-400 border-b-2 border-blue-500"
+            : "bg-secondary-900 text-gray-400 hover:text-white hover:bg-secondary-700"
+        }`}
     >
       {label}
     </button>
   );
 
-  const InputField = ({
-    label,
-    value,
-    onChange,
-    type = "text",
-    min,
-    max,
-    step,
-  }: {
-    label: string;
-    value: any;
-    onChange: (value: any) => void;
-    type?: string;
-    min?: number;
-    max?: number;
-    step?: number;
-  }) => (
-    <div className="space-y-1">
-      <label className="block text-sm font-medium text-gray-300">{label}</label>
-      <input
-        type={type}
-        value={value}
-        onChange={(e) =>
-          onChange(type === "number" ? Number(e.target.value) : e.target.value)
-        }
-        min={min}
-        max={max}
-        step={step}
-        className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-      />
-    </div>
-  );
+  // GAProgressDisplay に渡す onComplete と onError のダミー関数
+  const handleGAProgressComplete = (result: any) => {
+    console.log("GA completed in OptimizationForm:", result);
+  };
 
-  const SelectField = ({
-    label,
-    value,
-    onChange,
-    options,
-  }: {
-    label: string;
-    value: string;
-    onChange: (value: string) => void;
-    options: { value: string; label: string }[];
-  }) => (
-    <div className="space-y-1">
-      <label className="block text-sm font-medium text-gray-300">{label}</label>
-      <select
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-      >
-        {options.map((option) => (
-          <option key={option.value} value={option.value}>
-            {option.label}
-          </option>
-        ))}
-      </select>
-    </div>
-  );
+  const handleGAProgressError = (error: string) => {
+    console.error("GA error in OptimizationForm:", error);
+  };
 
   return (
-    <div className="space-y-6">
-      <h2 className="text-xl font-semibold mb-4">最適化設定</h2>
-
-      {/* タブナビゲーション */}
-      <div className="flex space-x-1 mb-6">
-        <TabButton
-          id="enhanced"
-          label="拡張最適化"
-          isActive={activeTab === "enhanced"}
-          onClick={() => setActiveTab("enhanced")}
-        />
-        <TabButton
-          id="multi"
-          label="マルチ目的最適化"
-          isActive={activeTab === "multi"}
-          onClick={() => setActiveTab("multi")}
-        />
-        <TabButton
-          id="robustness"
-          label="ロバストネステスト"
-          isActive={activeTab === "robustness"}
-          onClick={() => setActiveTab("robustness")}
-        />
-        <TabButton
-          id="ga"
-          label="自動生成 (GA)"
-          isActive={activeTab === "ga"}
-          onClick={() => setActiveTab("ga")}
-        />
+    <div className="w-full">
+      <div className="mb-4 border-b border-secondary-700">
+        <nav className="flex -mb-px space-x-4" aria-label="Tabs">
+          <TabButton
+            id="enhanced"
+            label="拡張最適化"
+            isActive={activeTab === "enhanced"}
+            onClick={() => setActiveTab("enhanced")}
+          />
+          <TabButton
+            id="multi"
+            label="マルチ目的最適化"
+            isActive={activeTab === "multi"}
+            onClick={() => setActiveTab("multi")}
+          />
+          <TabButton
+            id="robustness"
+            label="ロバストネステスト"
+            isActive={activeTab === "robustness"}
+            onClick={() => setActiveTab("robustness")}
+          />
+          {onGAGeneration && (
+            <TabButton
+              id="ga"
+              label="遺伝的アルゴリズム"
+              isActive={activeTab === "ga"}
+              onClick={() => setActiveTab("ga")}
+            />
+          )}
+        </nav>
       </div>
 
-      {/* 基本設定 */}
-      <div className="mb-6 p-4 bg-gray-700 rounded-lg">
-        <h3 className="text-lg font-medium mb-3">基本設定</h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          <SelectField
-            label="戦略タイプ"
-            value={selectedStrategy}
-            onChange={(value) => {
-              setSelectedStrategy(value);
-              // 戦略変更時に戦略名も更新
-              setBaseConfig({
-                ...baseConfig,
-                strategy_name: `${value}_OPTIMIZED`,
-              });
-            }}
-            options={Object.entries(strategies).map(([key, strategy]) => ({
-              value: key,
-              label: strategy.name || key,
-            }))}
-          />
-          <InputField
-            label="戦略名"
-            value={baseConfig.strategy_name}
-            onChange={(value) =>
-              setBaseConfig({ ...baseConfig, strategy_name: value })
-            }
-          />
-          <SelectField
-            label="シンボル"
-            value={baseConfig.symbol}
-            onChange={(value) =>
-              setBaseConfig({ ...baseConfig, symbol: value })
-            }
-            options={[{ value: "BTC/USDT", label: "BTC/USDT" }]}
-          />
-          <SelectField
-            label="時間軸"
-            value={baseConfig.timeframe}
-            onChange={(value) =>
-              setBaseConfig({ ...baseConfig, timeframe: value })
-            }
-            options={[
-              { value: "15m", label: "15分" },
-              { value: "30m", label: "30分" },
-              { value: "1h", label: "1時間" },
-              { value: "4h", label: "4時間" },
-              { value: "1d", label: "1日" },
-            ]}
-          />
-          <InputField
-            label="開始日"
-            value={baseConfig.start_date}
-            onChange={(value) =>
-              setBaseConfig({ ...baseConfig, start_date: value })
-            }
-            type="date"
-          />
-          <InputField
-            label="終了日"
-            value={baseConfig.end_date}
-            onChange={(value) =>
-              setBaseConfig({ ...baseConfig, end_date: value })
-            }
-            type="date"
-          />
-          <InputField
-            label="初期資金"
-            value={baseConfig.initial_capital}
-            onChange={(value) =>
-              setBaseConfig({ ...baseConfig, initial_capital: value })
-            }
-            type="number"
-            min={1000000}
-            step={1000000}
-          />
-          <InputField
-            label="手数料率 (%)"
-            value={baseConfig.commission_rate * 100}
-            onChange={(value) =>
-              setBaseConfig({ ...baseConfig, commission_rate: value / 100 })
-            }
-            type="number"
-            min={0}
-            max={100}
-            step={0.001}
-          />
-        </div>
-      </div>
+      <form
+        onSubmit={(e) => e.preventDefault()}
+        className="space-y-6 p-4 rounded-lg bg-secondary-900"
+      >
+        {/* 基本設定はすべての最適化で共通 */}
+        <h2 className="text-xl font-semibold text-white">基本設定</h2>
+        <BaseBacktestConfigForm
+          config={{
+            strategy_name: baseConfig.strategy_name,
+            symbol: baseConfig.symbol,
+            timeframe: baseConfig.timeframe,
+            start_date: baseConfig.start_date,
+            end_date: baseConfig.end_date,
+            initial_capital: baseConfig.initial_capital,
+            commission_rate: baseConfig.commission_rate,
+            strategy_config: {
+              strategy_type: selectedStrategy,
+              parameters:
+                currentBacktestConfig?.strategy_config?.parameters || {},
+            },
+          }}
+          onConfigChange={(updates) =>
+            setBaseConfig((prev) => ({ ...prev, ...updates }))
+          }
+          isOptimization={true}
+        />
 
-      {/* 拡張最適化タブ */}
-      {activeTab === "enhanced" && (
-        <div className="space-y-4">
-          <h3 className="text-lg font-medium">拡張最適化設定</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {/* 戦略パラメータの表示と編集 */}
+        {selectedStrategy && strategies[selectedStrategy] && (
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold text-white">戦略パラメータ</h3>
+            {Object.entries(strategies[selectedStrategy].parameters).map(
+              ([key, param]) => (
+                <InputField
+                  key={key}
+                  label={param.description}
+                  type="number"
+                  value={
+                    currentBacktestConfig?.strategy_config?.parameters[key] ||
+                    param.default
+                  }
+                  onChange={(value) => {
+                    // 最適化フォームでは直接パラメータを変更しないため、変更を無視
+                    console.log(
+                      `OptimizationForm: Parameter ${key} changed to ${value}, but not applied.`
+                    );
+                  }}
+                  min={param.min}
+                  max={param.max}
+                  step={param.step}
+                  required
+                  className="cursor-not-allowed opacity-70"
+                />
+              )
+            )}
+            {strategies[selectedStrategy].constraints && (
+              <div className="mt-4 p-3 bg-yellow-900/20 border border-yellow-600/30 rounded-md">
+                <h4 className="text-sm font-medium text-yellow-400 mb-2">
+                  制約条件:
+                </h4>
+                <ul className="text-sm text-yellow-300">
+                  {strategies[selectedStrategy].constraints.map(
+                    (constraint: string, index: number) => (
+                      <li key={index}>• {constraint}</li>
+                    )
+                  )}
+                </ul>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* タブコンテンツ */}
+        {activeTab === "enhanced" && (
+          <div className="space-y-6">
+            <h2 className="text-xl font-semibold text-white">拡張最適化設定</h2>
             <SelectField
               label="最適化手法"
               value={enhancedConfig.method}
               onChange={(value) =>
-                setEnhancedConfig({
-                  ...enhancedConfig,
+                setEnhancedConfig((prev) => ({
+                  ...prev,
                   method: value as "grid" | "sambo",
-                })
+                }))
               }
-              options={[
-                { value: "grid", label: "Grid Search" },
-                { value: "sambo", label: "SAMBO (ベイズ最適化)" },
-              ]}
+              options={OPTIMIZATION_METHODS}
             />
             {enhancedConfig.method === "sambo" && (
               <InputField
-                label="最大試行回数"
+                label="最大試行回数 (max_tries)"
+                type="number"
                 value={enhancedConfig.max_tries}
                 onChange={(value) =>
-                  setEnhancedConfig({ ...enhancedConfig, max_tries: value })
+                  setEnhancedConfig((prev) => ({ ...prev, max_tries: value }))
                 }
-                type="number"
                 min={10}
-                max={500}
+                step={10}
               />
             )}
             <SelectField
-              label="最大化指標"
+              label="最大化する指標"
               value={enhancedConfig.maximize}
               onChange={(value) =>
-                setEnhancedConfig({ ...enhancedConfig, maximize: value })
+                setEnhancedConfig((prev) => ({ ...prev, maximize: value }))
               }
-              options={[
-                { value: "Sharpe Ratio", label: "シャープレシオ" },
-                { value: "Return [%]", label: "総リターン" },
-                { value: "Profit Factor", label: "プロフィットファクター" },
-              ]}
+              options={ENHANCED_OPTIMIZATION_OBJECTIVES}
             />
-            <SelectField
-              label="制約条件"
+            <div className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                id="return_heatmap"
+                checked={enhancedConfig.return_heatmap}
+                onChange={(e) =>
+                  setEnhancedConfig((prev) => ({
+                    ...prev,
+                    return_heatmap: e.target.checked,
+                  }))
+                }
+                className="form-checkbox h-5 w-5 text-blue-600 rounded border-gray-600 bg-gray-700"
+              />
+              <label htmlFor="return_heatmap" className="text-gray-300">
+                ヒートマップを返す
+              </label>
+            </div>
+            {enhancedConfig.method === "sambo" && (
+              <div className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  id="return_optimization"
+                  checked={enhancedConfig.return_optimization}
+                  onChange={(e) =>
+                    setEnhancedConfig((prev) => ({
+                      ...prev,
+                      return_optimization: e.target.checked,
+                    }))
+                  }
+                  className="form-checkbox h-5 w-5 text-blue-600 rounded border-gray-600 bg-gray-700"
+                />
+                <label htmlFor="return_optimization" className="text-gray-300">
+                  最適化結果を返す (Samboのみ)
+                </label>
+              </div>
+            )}
+            {enhancedConfig.method === "sambo" && (
+              <InputField
+                label="ランダムシード (random_state)"
+                type="number"
+                value={enhancedConfig.random_state}
+                onChange={(value) =>
+                  setEnhancedConfig((prev) => ({
+                    ...prev,
+                    random_state: value,
+                  }))
+                }
+                min={0}
+              />
+            )}
+            <InputField
+              label="制約 (constraint)"
               value={enhancedConfig.constraint}
               onChange={(value) =>
-                setEnhancedConfig({ ...enhancedConfig, constraint: value })
+                setEnhancedConfig((prev) => ({ ...prev, constraint: value }))
               }
-              options={[
-                { value: "sma_cross", label: "SMAクロス制約" },
-                { value: "rsi", label: "RSI制約" },
-                { value: "macd", label: "MACD制約" },
-                { value: "risk_management", label: "リスク管理制約" },
-              ]}
             />
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">
-                n1パラメータ範囲 [開始, 終了, ステップ]
-              </label>
-              <div className="grid grid-cols-3 gap-2">
-                <input
-                  type="number"
-                  value={enhancedConfig.n1_range[0]}
-                  onChange={(e) =>
-                    setEnhancedConfig({
-                      ...enhancedConfig,
-                      n1_range: [
-                        Number(e.target.value),
-                        enhancedConfig.n1_range[1],
-                        enhancedConfig.n1_range[2],
-                      ],
-                    })
-                  }
-                  className="px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white"
-                  placeholder="開始"
-                />
-                <input
-                  type="number"
-                  value={enhancedConfig.n1_range[1]}
-                  onChange={(e) =>
-                    setEnhancedConfig({
-                      ...enhancedConfig,
-                      n1_range: [
-                        enhancedConfig.n1_range[0],
-                        Number(e.target.value),
-                        enhancedConfig.n1_range[2],
-                      ],
-                    })
-                  }
-                  className="px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white"
-                  placeholder="終了"
-                />
-                <input
-                  type="number"
-                  value={enhancedConfig.n1_range[2]}
-                  onChange={(e) =>
-                    setEnhancedConfig({
-                      ...enhancedConfig,
-                      n1_range: [
-                        enhancedConfig.n1_range[0],
-                        enhancedConfig.n1_range[1],
-                        Number(e.target.value),
-                      ],
-                    })
-                  }
-                  className="px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white"
-                  placeholder="ステップ"
-                />
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">
-                n2パラメータ範囲 [開始, 終了, ステップ]
-              </label>
-              <div className="grid grid-cols-3 gap-2">
-                <input
-                  type="number"
-                  value={enhancedConfig.n2_range[0]}
-                  onChange={(e) =>
-                    setEnhancedConfig({
-                      ...enhancedConfig,
-                      n2_range: [
-                        Number(e.target.value),
-                        enhancedConfig.n2_range[1],
-                        enhancedConfig.n2_range[2],
-                      ],
-                    })
-                  }
-                  className="px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white"
-                  placeholder="開始"
-                />
-                <input
-                  type="number"
-                  value={enhancedConfig.n2_range[1]}
-                  onChange={(e) =>
-                    setEnhancedConfig({
-                      ...enhancedConfig,
-                      n2_range: [
-                        enhancedConfig.n2_range[0],
-                        Number(e.target.value),
-                        enhancedConfig.n2_range[2],
-                      ],
-                    })
-                  }
-                  className="px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white"
-                  placeholder="終了"
-                />
-                <input
-                  type="number"
-                  value={enhancedConfig.n2_range[2]}
-                  onChange={(e) =>
-                    setEnhancedConfig({
-                      ...enhancedConfig,
-                      n2_range: [
-                        enhancedConfig.n2_range[0],
-                        enhancedConfig.n2_range[1],
-                        Number(e.target.value),
-                      ],
-                    })
-                  }
-                  className="px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white"
-                  placeholder="ステップ"
-                />
-              </div>
-            </div>
-          </div>
-
-          <div className="pt-4">
-            <ApiButton
-              onClick={handleEnhancedSubmit}
-              loading={isLoading}
-              loadingText="最適化実行中..."
-              variant="primary"
-              size="lg"
-              className="w-full"
-            >
+            <InputField
+              label="N1範囲 [start, end, step]"
+              value={enhancedConfig.n1_range.join(", ")}
+              onChange={(value) =>
+                setEnhancedConfig((prev) => ({
+                  ...prev,
+                  n1_range: value.split(",").map(Number),
+                }))
+              }
+              placeholder="例: 10, 30, 5"
+            />
+            <InputField
+              label="N2範囲 [start, end, step]"
+              value={enhancedConfig.n2_range.join(", ")}
+              onChange={(value) =>
+                setEnhancedConfig((prev) => ({
+                  ...prev,
+                  n2_range: value.split(",").map(Number),
+                }))
+              }
+              placeholder="例: 30, 80, 10"
+            />
+            <ApiButton onClick={handleEnhancedSubmit} loading={isLoading}>
               拡張最適化を実行
             </ApiButton>
           </div>
-        </div>
-      )}
+        )}
 
-      {/* マルチ目的最適化タブ */}
-      {activeTab === "multi" && (
-        <div className="space-y-4">
-          <h3 className="text-lg font-medium">マルチ目的最適化設定</h3>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">
-                目的関数
-              </label>
-              <div className="space-y-2">
-                {[
-                  "Sharpe Ratio",
-                  "Return [%]",
-                  "-Max. Drawdown [%]",
-                  "Profit Factor",
-                  "-Volatility",
-                ].map((objective, index) => (
-                  <label key={objective} className="flex items-center">
-                    <input
-                      type="checkbox"
-                      checked={multiConfig.objectives.includes(objective)}
-                      onChange={(e) => {
-                        if (e.target.checked) {
-                          setMultiConfig({
-                            ...multiConfig,
-                            objectives: [...multiConfig.objectives, objective],
-                          });
-                        } else {
-                          setMultiConfig({
-                            ...multiConfig,
-                            objectives: multiConfig.objectives.filter(
-                              (obj) => obj !== objective
-                            ),
-                          });
-                        }
-                      }}
-                      className="mr-2"
-                    />
-                    <span className="text-sm text-gray-300">{objective}</span>
-                  </label>
-                ))}
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">
-                重み設定
-              </label>
-              <div className="space-y-2">
-                {multiConfig.objectives.map((objective, index) => (
-                  <div key={objective} className="flex items-center space-x-2">
-                    <span className="text-sm text-gray-300 w-32">
-                      {objective}:
-                    </span>
-                    <input
-                      type="number"
-                      value={multiConfig.weights[index] || 0}
-                      onChange={(e) => {
-                        const newWeights = [...multiConfig.weights];
-                        newWeights[index] = Number(e.target.value);
-                        setMultiConfig({ ...multiConfig, weights: newWeights });
-                      }}
-                      min={0}
-                      max={1}
-                      step={0.1}
-                      className="px-2 py-1 bg-gray-700 border border-gray-600 rounded text-white text-sm"
-                    />
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {activeTab === "multi" && (
+          <div className="space-y-6">
+            <h2 className="text-xl font-semibold text-white">
+              マルチ目的最適化設定
+            </h2>
             <SelectField
               label="最適化手法"
               value={multiConfig.method}
               onChange={(value) =>
-                setMultiConfig({
-                  ...multiConfig,
+                setMultiConfig((prev) => ({
+                  ...prev,
                   method: value as "grid" | "sambo",
-                })
+                }))
               }
-              options={[
-                { value: "grid", label: "Grid Search" },
-                { value: "sambo", label: "SAMBO (ベイズ最適化)" },
-              ]}
+              options={OPTIMIZATION_METHODS}
             />
             {multiConfig.method === "sambo" && (
               <InputField
-                label="最大試行回数"
+                label="最大試行回数 (max_tries)"
+                type="number"
                 value={multiConfig.max_tries}
                 onChange={(value) =>
-                  setMultiConfig({ ...multiConfig, max_tries: value })
+                  setMultiConfig((prev) => ({ ...prev, max_tries: value }))
                 }
-                type="number"
                 min={10}
-                max={300}
+                step={10}
               />
             )}
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">
-                n1パラメータ範囲 [開始, 終了, ステップ]
-              </label>
-              <div className="grid grid-cols-3 gap-2">
-                <input
-                  type="number"
-                  value={multiConfig.n1_range[0]}
-                  onChange={(e) =>
-                    setMultiConfig({
-                      ...multiConfig,
-                      n1_range: [
-                        Number(e.target.value),
-                        multiConfig.n1_range[1],
-                        multiConfig.n1_range[2],
-                      ],
-                    })
-                  }
-                  className="px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white"
-                  placeholder="開始"
-                />
-                <input
-                  type="number"
-                  value={multiConfig.n1_range[1]}
-                  onChange={(e) =>
-                    setMultiConfig({
-                      ...multiConfig,
-                      n1_range: [
-                        multiConfig.n1_range[0],
-                        Number(e.target.value),
-                        multiConfig.n1_range[2],
-                      ],
-                    })
-                  }
-                  className="px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white"
-                  placeholder="終了"
-                />
-                <input
-                  type="number"
-                  value={multiConfig.n1_range[2]}
-                  onChange={(e) =>
-                    setMultiConfig({
-                      ...multiConfig,
-                      n1_range: [
-                        multiConfig.n1_range[0],
-                        multiConfig.n1_range[1],
-                        Number(e.target.value),
-                      ],
-                    })
-                  }
-                  className="px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white"
-                  placeholder="ステップ"
-                />
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">
-                n2パラメータ範囲 [開始, 終了, ステップ]
-              </label>
-              <div className="grid grid-cols-3 gap-2">
-                <input
-                  type="number"
-                  value={multiConfig.n2_range[0]}
-                  onChange={(e) =>
-                    setMultiConfig({
-                      ...multiConfig,
-                      n2_range: [
-                        Number(e.target.value),
-                        multiConfig.n2_range[1],
-                        multiConfig.n2_range[2],
-                      ],
-                    })
-                  }
-                  className="px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white"
-                  placeholder="開始"
-                />
-                <input
-                  type="number"
-                  value={multiConfig.n2_range[1]}
-                  onChange={(e) =>
-                    setMultiConfig({
-                      ...multiConfig,
-                      n2_range: [
-                        multiConfig.n2_range[0],
-                        Number(e.target.value),
-                        multiConfig.n2_range[2],
-                      ],
-                    })
-                  }
-                  className="px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white"
-                  placeholder="終了"
-                />
-                <input
-                  type="number"
-                  value={multiConfig.n2_range[2]}
-                  onChange={(e) =>
-                    setMultiConfig({
-                      ...multiConfig,
-                      n2_range: [
-                        multiConfig.n2_range[0],
-                        multiConfig.n2_range[1],
-                        Number(e.target.value),
-                      ],
-                    })
-                  }
-                  className="px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white"
-                  placeholder="ステップ"
-                />
-              </div>
-            </div>
-          </div>
-
-          <div className="pt-4">
-            <ApiButton
-              onClick={handleMultiObjectiveSubmit}
-              loading={isLoading}
-              loadingText="マルチ目的最適化実行中..."
-              variant="success"
-              size="lg"
-              className="w-full"
-            >
+            <InputField
+              label="目的関数 [指標1, 指標2,...]"
+              value={multiConfig.objectives.join(", ")}
+              onChange={(value) =>
+                setMultiConfig((prev) => ({
+                  ...prev,
+                  objectives: value.split(",").map((s: string) => s.trim()),
+                }))
+              }
+              placeholder="例: Sharpe Ratio, Return [%], -Max. Drawdown [%]"
+            />
+            <InputField
+              label="重み [重み1, 重み2,...] (合計1.0)"
+              value={multiConfig.weights.join(", ")}
+              onChange={(value) =>
+                setMultiConfig((prev) => ({
+                  ...prev,
+                  weights: value.split(",").map(Number),
+                }))
+              }
+              placeholder="例: 0.4, 0.4, 0.2"
+            />
+            <InputField
+              label="N1範囲 [start, end, step]"
+              value={multiConfig.n1_range.join(", ")}
+              onChange={(value) =>
+                setMultiConfig((prev) => ({
+                  ...prev,
+                  n1_range: value.split(",").map(Number),
+                }))
+              }
+              placeholder="例: 10, 25, 5"
+            />
+            <InputField
+              label="N2範囲 [start, end, step]"
+              value={multiConfig.n2_range.join(", ")}
+              onChange={(value) =>
+                setMultiConfig((prev) => ({
+                  ...prev,
+                  n2_range: value.split(",").map(Number),
+                }))
+              }
+              placeholder="例: 30, 70, 10"
+            />
+            <ApiButton onClick={handleMultiObjectiveSubmit} loading={isLoading}>
               マルチ目的最適化を実行
             </ApiButton>
           </div>
-        </div>
-      )}
+        )}
 
-      {/* ロバストネステストタブ */}
-      {activeTab === "robustness" && (
-        <div className="space-y-4">
-          <h3 className="text-lg font-medium">ロバストネステスト設定</h3>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <SelectField
-              label="最適化手法"
-              value={robustnessConfig.method}
-              onChange={(value) =>
-                setRobustnessConfig({
-                  ...robustnessConfig,
-                  method: value as "grid" | "sambo",
-                })
-              }
-              options={[
-                { value: "grid", label: "Grid Search" },
-                { value: "sambo", label: "SAMBO (ベイズ最適化)" },
-              ]}
-            />
-            {robustnessConfig.method === "sambo" && (
-              <InputField
-                label="最大試行回数"
-                value={robustnessConfig.max_tries}
-                onChange={(value) =>
-                  setRobustnessConfig({ ...robustnessConfig, max_tries: value })
-                }
-                type="number"
-                min={10}
-                max={200}
-              />
-            )}
-            <SelectField
-              label="最大化指標"
-              value={robustnessConfig.maximize}
-              onChange={(value) =>
-                setRobustnessConfig({ ...robustnessConfig, maximize: value })
-              }
-              options={[
-                { value: "Sharpe Ratio", label: "シャープレシオ" },
-                { value: "Return [%]", label: "総リターン" },
-                { value: "Profit Factor", label: "プロフィットファクター" },
-              ]}
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">
-              テスト期間設定
-            </label>
+        {activeTab === "robustness" && (
+          <div className="space-y-6">
+            <h2 className="text-xl font-semibold text-white">
+              ロバストネステスト設定
+            </h2>
             <div className="space-y-2">
+              <label className="block text-sm font-medium text-gray-300 mb-2">
+                テスト期間 (test_periods)
+              </label>
               {robustnessConfig.test_periods.map((period, index) => (
-                <div
-                  key={index}
-                  className="grid grid-cols-3 gap-2 items-center"
-                >
-                  <input
+                <div key={index} className="flex gap-2">
+                  <InputField
+                    label={`期間 ${index + 1} 開始`}
                     type="date"
                     value={period[0]}
-                    onChange={(e) => {
+                    onChange={(value) => {
                       const newPeriods = [...robustnessConfig.test_periods];
-                      newPeriods[index][0] = e.target.value;
-                      setRobustnessConfig({
-                        ...robustnessConfig,
+                      newPeriods[index][0] = value;
+                      setRobustnessConfig((prev) => ({
+                        ...prev,
                         test_periods: newPeriods,
-                      });
+                      }));
                     }}
-                    className="px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white"
                   />
-                  <input
+                  <InputField
+                    label={`期間 ${index + 1} 終了`}
                     type="date"
                     value={period[1]}
-                    onChange={(e) => {
+                    onChange={(value) => {
                       const newPeriods = [...robustnessConfig.test_periods];
-                      newPeriods[index][1] = e.target.value;
-                      setRobustnessConfig({
-                        ...robustnessConfig,
+                      newPeriods[index][1] = value;
+                      setRobustnessConfig((prev) => ({
+                        ...prev,
                         test_periods: newPeriods,
-                      });
+                      }));
                     }}
-                    className="px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white"
                   />
-                  <button
-                    onClick={() => {
-                      const newPeriods = robustnessConfig.test_periods.filter(
-                        (_, i) => i !== index
-                      );
-                      setRobustnessConfig({
-                        ...robustnessConfig,
-                        test_periods: newPeriods,
-                      });
-                    }}
-                    className="px-3 py-2 bg-red-600 text-white rounded-md hover:bg-red-700"
-                  >
-                    削除
-                  </button>
                 </div>
               ))}
               <button
-                onClick={() => {
-                  const newPeriods = [
-                    ...robustnessConfig.test_periods,
-                    ["2024-01-01", "2024-03-31"],
-                  ];
-                  setRobustnessConfig({
-                    ...robustnessConfig,
-                    test_periods: newPeriods,
-                  });
-                }}
-                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+                type="button"
+                onClick={() =>
+                  setRobustnessConfig((prev) => ({
+                    ...prev,
+                    test_periods: [...prev.test_periods, ["", ""]],
+                  }))
+                }
+                className="mt-2 py-2 px-4 bg-gray-700 hover:bg-gray-600 rounded-md text-white text-sm"
               >
                 期間を追加
               </button>
             </div>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">
-                n1パラメータ範囲 [開始, 終了, ステップ]
-              </label>
-              <div className="grid grid-cols-3 gap-2">
-                <input
-                  type="number"
-                  value={robustnessConfig.n1_range[0]}
-                  onChange={(e) =>
-                    setRobustnessConfig({
-                      ...robustnessConfig,
-                      n1_range: [
-                        Number(e.target.value),
-                        robustnessConfig.n1_range[1],
-                        robustnessConfig.n1_range[2],
-                      ],
-                    })
-                  }
-                  className="px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white"
-                  placeholder="開始"
-                />
-                <input
-                  type="number"
-                  value={robustnessConfig.n1_range[1]}
-                  onChange={(e) =>
-                    setRobustnessConfig({
-                      ...robustnessConfig,
-                      n1_range: [
-                        robustnessConfig.n1_range[0],
-                        Number(e.target.value),
-                        robustnessConfig.n1_range[2],
-                      ],
-                    })
-                  }
-                  className="px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white"
-                  placeholder="終了"
-                />
-                <input
-                  type="number"
-                  value={robustnessConfig.n1_range[2]}
-                  onChange={(e) =>
-                    setRobustnessConfig({
-                      ...robustnessConfig,
-                      n1_range: [
-                        robustnessConfig.n1_range[0],
-                        robustnessConfig.n1_range[1],
-                        Number(e.target.value),
-                      ],
-                    })
-                  }
-                  className="px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white"
-                  placeholder="ステップ"
-                />
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">
-                n2パラメータ範囲 [開始, 終了, ステップ]
-              </label>
-              <div className="grid grid-cols-3 gap-2">
-                <input
-                  type="number"
-                  value={robustnessConfig.n2_range[0]}
-                  onChange={(e) =>
-                    setRobustnessConfig({
-                      ...robustnessConfig,
-                      n2_range: [
-                        Number(e.target.value),
-                        robustnessConfig.n2_range[1],
-                        robustnessConfig.n2_range[2],
-                      ],
-                    })
-                  }
-                  className="px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white"
-                  placeholder="開始"
-                />
-                <input
-                  type="number"
-                  value={robustnessConfig.n2_range[1]}
-                  onChange={(e) =>
-                    setRobustnessConfig({
-                      ...robustnessConfig,
-                      n2_range: [
-                        robustnessConfig.n2_range[0],
-                        Number(e.target.value),
-                        robustnessConfig.n2_range[2],
-                      ],
-                    })
-                  }
-                  className="px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white"
-                  placeholder="終了"
-                />
-                <input
-                  type="number"
-                  value={robustnessConfig.n2_range[2]}
-                  onChange={(e) =>
-                    setRobustnessConfig({
-                      ...robustnessConfig,
-                      n2_range: [
-                        robustnessConfig.n2_range[0],
-                        robustnessConfig.n2_range[1],
-                        Number(e.target.value),
-                      ],
-                    })
-                  }
-                  className="px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white"
-                  placeholder="ステップ"
-                />
-              </div>
-            </div>
-          </div>
-
-          <div className="pt-4">
-            <ApiButton
-              onClick={handleRobustnessSubmit}
-              loading={isLoading}
-              loadingText="ロバストネステスト実行中..."
-              variant="warning"
-              size="lg"
-              className="w-full"
-            >
+            <SelectField
+              label="最適化手法"
+              value={robustnessConfig.method}
+              onChange={(value) =>
+                setRobustnessConfig((prev) => ({
+                  ...prev,
+                  method: value as "grid" | "sambo",
+                }))
+              }
+              options={OPTIMIZATION_METHODS}
+            />
+            {robustnessConfig.method === "sambo" && (
+              <InputField
+                label="最大試行回数 (max_tries)"
+                type="number"
+                value={robustnessConfig.max_tries}
+                onChange={(value) =>
+                  setRobustnessConfig((prev) => ({ ...prev, max_tries: value }))
+                }
+                min={10}
+                step={10}
+              />
+            )}
+            <SelectField
+              label="最大化する指標"
+              value={robustnessConfig.maximize}
+              onChange={(value) =>
+                setRobustnessConfig((prev) => ({ ...prev, maximize: value }))
+              }
+              options={ENHANCED_OPTIMIZATION_OBJECTIVES}
+            />
+            <InputField
+              label="N1範囲 [start, end, step]"
+              value={robustnessConfig.n1_range.join(", ")}
+              onChange={(value) =>
+                setRobustnessConfig((prev) => ({
+                  ...prev,
+                  n1_range: value.split(",").map(Number),
+                }))
+              }
+              placeholder="例: 10, 25, 5"
+            />
+            <InputField
+              label="N2範囲 [start, end, step]"
+              value={robustnessConfig.n2_range.join(", ")}
+              onChange={(value) =>
+                setRobustnessConfig((prev) => ({
+                  ...prev,
+                  n2_range: value.split(",").map(Number),
+                }))
+              }
+              placeholder="例: 30, 60, 10"
+            />
+            <ApiButton onClick={handleRobustnessSubmit} loading={isLoading}>
               ロバストネステストを実行
             </ApiButton>
           </div>
-        </div>
-      )}
+        )}
 
-      {/* GA自動生成タブ */}
-      {activeTab === "ga" && (
-        <div className="space-y-6">
-          {!gaExecution.isExecuting && !gaExecution.experimentId ? (
-            // GA設定フォーム
-            <GAConfigForm
-              onSubmit={handleGASubmit}
-              isLoading={gaExecution.isExecuting}
-              currentBacktestConfig={currentBacktestConfig}
-            />
-          ) : (
-            // GA進捗表示
-            <div className="space-y-6">
-              {gaExecution.experimentId && (
-                <GAProgressDisplay
-                  experimentId={gaExecution.experimentId}
-                  onComplete={(result) => {
-                    console.log("GA completed:", result);
-                    // 結果処理のロジックをここに追加
-                  }}
-                  onError={(error) => {
-                    console.error("GA error:", error);
-                  }}
-                />
-              )}
-
-              {/* リセットボタン */}
-              <div className="flex justify-center">
-                <button
-                  onClick={gaExecution.reset}
-                  className="px-6 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700"
-                >
-                  新しいGA実験を開始
-                </button>
-              </div>
-            </div>
-          )}
-        </div>
-      )}
+        {activeTab === "ga" && onGAGeneration && (
+          <div className="space-y-6">
+            <GAConfigForm onSubmit={handleGAGeneration} isLoading={isLoading} />
+            {gaExecution.experimentId && (
+              <GAProgressDisplay
+                experimentId={gaExecution.experimentId}
+                onComplete={handleGAProgressComplete}
+                onError={handleGAProgressError}
+              />
+            )}
+          </div>
+        )}
+      </form>
     </div>
   );
 }

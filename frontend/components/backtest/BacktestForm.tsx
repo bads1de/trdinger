@@ -4,6 +4,9 @@ import React, { useState, useEffect } from "react";
 import { useApiCall } from "@/hooks/useApiCall";
 import { StrategyParameter, Strategy } from "@/types/strategy";
 import { BacktestConfig } from "@/types/backtest";
+import { InputField } from "@/components/common/InputField";
+import { SelectField } from "@/components/common/SelectField";
+import { BaseBacktestConfigForm } from "./BaseBacktestConfigForm";
 
 interface BacktestFormProps {
   onSubmit: (config: BacktestConfig) => void;
@@ -119,25 +122,19 @@ export default function BacktestForm({
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* 戦略選択 */}
         <div>
-          <label className="block text-sm font-medium text-gray-300 mb-2">
-            戦略
-          </label>
-          <select
+          <SelectField
+            label="戦略"
             value={selectedStrategy}
-            onChange={(e) => {
-              setSelectedStrategy(e.target.value);
-              handleStrategyChange(e.target.value);
+            onChange={(value) => {
+              setSelectedStrategy(value);
+              handleStrategyChange(value);
             }}
-            className="w-full p-3 bg-gray-800 border border-secondary-700 text-white rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            options={Object.entries(strategies).map(([key, strategy]) => ({
+              value: key,
+              label: strategy.name,
+            }))}
             required
-          >
-            <option value="">戦略を選択してください</option>
-            {Object.entries(strategies).map(([key, strategy]) => (
-              <option key={key} value={key}>
-                {strategy.name}
-              </option>
-            ))}
-          </select>
+          />
           {selectedStrategyData && (
             <p className="mt-2 text-sm text-gray-400">
               {selectedStrategyData.description}
@@ -146,169 +143,33 @@ export default function BacktestForm({
         </div>
 
         {/* 基本設定 */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">
-              取引ペア
-            </label>
-            <select
-              value={config.symbol}
-              onChange={(e) => updateConfig({ symbol: e.target.value })}
-              className="w-full p-3 bg-gray-800 border border-secondary-700 text-white rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              required
-            >
-              <option value="BTC/USDT">BTC/USDT</option>
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">
-              時間軸
-            </label>
-            <select
-              value={config.timeframe}
-              onChange={(e) => updateConfig({ timeframe: e.target.value })}
-              className="w-full p-3 bg-gray-800 border border-secondary-700 text-white rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              required
-            >
-              <option value="15m">15分</option>
-              <option value="30m">30分</option>
-              <option value="1h">1時間</option>
-              <option value="4h">4時間</option>
-              <option value="1d">1日</option>
-            </select>
-          </div>
-        </div>
-
-        {/* 期間設定 */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">
-              開始日
-            </label>
-            <input
-              type="date"
-              value={config.start_date}
-              onChange={(e) => updateConfig({ start_date: e.target.value })}
-              className="w-full p-3 bg-gray-800 border border-secondary-700 text-white rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              required
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">
-              終了日
-            </label>
-            <input
-              type="date"
-              value={config.end_date}
-              onChange={(e) => updateConfig({ end_date: e.target.value })}
-              className="w-full p-3 bg-gray-800 border border-secondary-700 text-white rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              required
-            />
-          </div>
-        </div>
-
-        {/* 資金設定 */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">
-              初期資金 (USDT)
-            </label>
-            <input
-              type="number"
-              value={config.initial_capital}
-              onChange={(e) =>
-                updateConfig({ initial_capital: Number(e.target.value) })
-              }
-              className="w-full p-3 bg-gray-800 border border-secondary-700 text-white rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              min="1000"
-              step="1000"
-              required
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">
-              手数料率 (%)
-            </label>
-            <input
-              type="number"
-              value={config.commission_rate * 100}
-              onChange={(e) =>
-                updateConfig({ commission_rate: Number(e.target.value) / 100 })
-              }
-              className="w-full p-3 bg-gray-800 border border-secondary-700 text-white rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              min="0"
-              max="100"
-              step="0.001"
-              required
-            />
-          </div>
-        </div>
+        <BaseBacktestConfigForm config={config} onConfigChange={updateConfig} />
 
         {/* 戦略パラメータ */}
-        {selectedStrategyData && (
-          <div>
-            <h3 className="text-lg font-medium text-white mb-4">
-              戦略パラメータ
-            </h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {Object.entries(selectedStrategyData.parameters).map(
-                ([paramName, param]) => (
-                  <div key={paramName}>
-                    <label className="block text-sm font-medium text-gray-300 mb-2">
-                      {paramName} - {param.description}
-                    </label>
-                    <input
-                      type="number"
-                      value={
-                        config.strategy_config.parameters[paramName] ||
-                        param.default
-                      }
-                      onChange={(e) =>
-                        handleParameterChange(paramName, Number(e.target.value))
-                      }
-                      className="w-full p-3 bg-gray-800 border border-secondary-700 text-white rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      min={param.min}
-                      max={param.max}
-                      required
-                    />
-                    {param.min !== undefined && param.max !== undefined && (
-                      <p className="mt-1 text-xs text-gray-400">
-                        範囲: {param.min} - {param.max}
-                      </p>
-                    )}
-                  </div>
-                )
-              )}
-            </div>
+        {selectedStrategyData &&
+          Object.entries(selectedStrategyData.parameters).map(
+            ([key, param]) => (
+              <InputField
+                key={key}
+                label={param.description}
+                type="number"
+                value={config.strategy_config.parameters[key] || param.default}
+                onChange={(value) => handleParameterChange(key, value)}
+                min={param.min}
+                max={param.max}
+                step={param.step}
+                required
+              />
+            )
+          )}
 
-            {selectedStrategyData.constraints && (
-              <div className="mt-4 p-3 bg-yellow-900/20 border border-yellow-600/30 rounded-md">
-                <h4 className="text-sm font-medium text-yellow-400 mb-2">
-                  制約条件:
-                </h4>
-                <ul className="text-sm text-yellow-300">
-                  {selectedStrategyData.constraints.map((constraint, index) => (
-                    <li key={index}>• {constraint}</li>
-                  ))}
-                </ul>
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* 実行ボタン */}
-        <div className="pt-4">
+        <div className="mt-6">
           <button
             type="submit"
-            disabled={isLoading || !selectedStrategy}
-            className={`w-full py-3 px-4 rounded-md font-medium text-white transition-colors ${
-              isLoading || !selectedStrategy
-                ? "bg-gray-700 cursor-not-allowed"
-                : "bg-blue-600 hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+            className={`w-full py-3 px-4 bg-blue-600 hover:bg-blue-700 rounded-md text-white font-semibold transition duration-200 ${
+              isLoading ? "opacity-50 cursor-not-allowed" : ""
             }`}
+            disabled={isLoading}
           >
             {isLoading ? "バックテスト実行中..." : "バックテストを実行"}
           </button>

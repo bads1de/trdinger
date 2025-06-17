@@ -71,12 +71,17 @@ export interface RobustnessConfig {
 export interface GAConfig {
   experiment_name: string;
   base_config: {
+    strategy_name: string;
     symbol: string;
     timeframe: string;
     start_date: string;
     end_date: string;
     initial_capital: number;
     commission_rate: number;
+    strategy_config: {
+      strategy_type: string;
+      parameters: Record<string, number>;
+    };
   };
   ga_config: {
     population_size: number;
@@ -97,5 +102,6 @@ export interface GAConfig {
       max_drawdown_limit: number;
       min_sharpe_ratio: number;
     };
+    ga_objective: string;
   };
 }

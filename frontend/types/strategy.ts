@@ -586,6 +586,7 @@ export interface StrategyParameter {
   default: number;
   min?: number;
   max?: number;
+  step?: number;
   description: string;
 }
 
