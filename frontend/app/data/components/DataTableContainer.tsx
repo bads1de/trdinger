@@ -47,7 +47,7 @@ const DataTableContainer: React.FC<DataTableContainerProps> = ({
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-4">
             <h2 className="text-xl font-semibold text-secondary-900 dark:text-secondary-100">
-              📊 {selectedSymbol} - データテーブル
+              📊 {selectedSymbol}
             </h2>
             <div className="flex bg-gray-800 rounded-lg p-1">
               <button

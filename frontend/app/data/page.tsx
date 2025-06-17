@@ -11,18 +11,14 @@
 import React, { useState, useEffect } from "react";
 import DataHeader from "./components/DataHeader";
 import DataControls from "./components/DataControls";
-
 import DataTableContainer from "./components/DataTableContainer";
-
+import { useOhlcvData } from "@/hooks/useOhlcvData";
+import { useFundingRateData } from "@/hooks/useFundingRateData";
+import { useOpenInterestData } from "@/hooks/useOpenInterestData";
+import { useSymbols } from "@/hooks/useSymbols";
 import {
-  PriceData,
-  FundingRateData,
-  OpenInterestData,
   TimeFrame,
   TradingPair,
-  OHLCVResponse,
-  FundingRateResponse,
-  OpenInterestResponse,
   BulkOHLCVCollectionResult,
   BulkFundingRateCollectionResult,
   FundingRateCollectionResult,
@@ -37,25 +33,11 @@ import { BACKEND_API_URL } from "@/constants";
  */
 const DataPage: React.FC = () => {
   // 状態管理
-  const [symbols, setSymbols] = useState<TradingPair[]>([]);
   const [selectedSymbol, setSelectedSymbol] = useState<string>("BTC/USDT:USDT");
   const [selectedTimeFrame, setSelectedTimeFrame] = useState<TimeFrame>("1h");
-  const [ohlcvData, setOhlcvData] = useState<PriceData[]>([]);
-  const [fundingRateData, setFundingRateData] = useState<FundingRateData[]>([]);
-  const [openInterestData, setOpenInterestData] = useState<OpenInterestData[]>(
-    []
-  );
   const [activeTab, setActiveTab] = useState<
     "ohlcv" | "funding" | "openinterest"
   >("ohlcv");
-  const [loading, setLoading] = useState<boolean>(false);
-  const [fundingLoading, setFundingLoading] = useState<boolean>(false);
-  const [openInterestLoading, setOpenInterestLoading] =
-    useState<boolean>(false);
-  const [error, setError] = useState<string>("");
-  const [fundingError, setFundingError] = useState<string>("");
-  const [openInterestError, setOpenInterestError] = useState<string>("");
-  const [symbolsLoading, setSymbolsLoading] = useState<boolean>(true);
   const [updating, setUpdating] = useState<boolean>(false);
   const [dataStatus, setDataStatus] = useState<any>(null);
   const [bulkCollectionMessage, setBulkCollectionMessage] =
@@ -69,115 +51,33 @@ const DataPage: React.FC = () => {
   const [incrementalUpdateMessage, setIncrementalUpdateMessage] =
     useState<string>("");
 
-  /**
-   * 通貨ペア一覧を取得
-   */
-  const fetchSymbols = async () => {
-    try {
-      setSymbolsLoading(true);
-      const response = await fetch("/api/data/symbols");
-      const result = await response.json();
+  // カスタムフックを使用してデータ取得
+  const {
+    symbols,
+    loading: symbolsLoading,
+    error: symbolsError,
+  } = useSymbols();
 
-      if (result.success) {
-        setSymbols(result.data);
-      } else {
-        setError("通貨ペア一覧の取得に失敗しました");
-      }
-    } catch (err) {
-      setError("通貨ペア一覧の取得中にエラーが発生しました");
-      console.error("通貨ペア取得エラー:", err);
-    } finally {
-      setSymbolsLoading(false);
-    }
-  };
+  const {
+    data: ohlcvData,
+    loading: ohlcvLoading,
+    error: ohlcvError,
+    refetch: fetchOHLCVData,
+  } = useOhlcvData(selectedSymbol, selectedTimeFrame);
 
-  /**
-   * OHLCVデータを取得
-   */
-  const fetchOHLCVData = async () => {
-    try {
-      setLoading(true);
-      setError("");
+  const {
+    data: fundingRateData,
+    loading: fundingLoading,
+    error: fundingError,
+    refetch: fetchFundingRateData,
+  } = useFundingRateData(selectedSymbol);
 
-      const params = new URLSearchParams({
-        symbol: selectedSymbol,
-        timeframe: selectedTimeFrame,
-        limit: "100",
-      });
-
-      const response = await fetch(`/api/data/candlesticks?${params}`);
-      const result: OHLCVResponse = await response.json();
-
-      if (result.success) {
-        setOhlcvData(result.data.ohlcv);
-      } else {
-        setError(result.message || "データの取得に失敗しました");
-      }
-    } catch (err) {
-      setError("データの取得中にエラーが発生しました");
-      console.error("OHLCVデータ取得エラー:", err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  /**
-   * FRデータを取得
-   */
-  const fetchFundingRateData = async () => {
-    try {
-      setFundingLoading(true);
-      setFundingError("");
-
-      const params = new URLSearchParams({
-        symbol: selectedSymbol,
-        limit: "100",
-      });
-
-      const response = await fetch(`/api/data/funding-rates?${params}`);
-      const result: FundingRateResponse = await response.json();
-
-      if (result.success) {
-        setFundingRateData(result.data.funding_rates);
-      } else {
-        setFundingError(result.message || "FRデータの取得に失敗しました");
-      }
-    } catch (err) {
-      setFundingError("FRデータの取得中にエラーが発生しました");
-      console.error("FRデータ取得エラー:", err);
-    } finally {
-      setFundingLoading(false);
-    }
-  };
-
-  /**
-   * OIデータを取得
-   */
-  const fetchOpenInterestData = async () => {
-    try {
-      setOpenInterestLoading(true);
-      setOpenInterestError("");
-
-      const params = new URLSearchParams({
-        symbol: selectedSymbol,
-        limit: "100",
-      });
-
-      const response = await fetch(`/api/data/open-interest?${params}`);
-      const result: OpenInterestResponse = await response.json();
-
-      if (result.success) {
-        setOpenInterestData(result.data.open_interest);
-      } else {
-        setOpenInterestError(result.message || "OIデータの取得に失敗しました");
-      }
-    } catch (err) {
-      setOpenInterestError("OIデータの取得中にエラーが発生しました");
-      console.error("OIデータ取得エラー:", err);
-    } finally {
-      setOpenInterestLoading(false);
-    }
-  };
+  const {
+    data: openInterestData,
+    loading: openInterestLoading,
+    error: openInterestError,
+    refetch: fetchOpenInterestData,
+  } = useOpenInterestData(selectedSymbol);
 
   /**
    * 通貨ペア変更ハンドラ
@@ -212,7 +112,6 @@ const DataPage: React.FC = () => {
   const handleIncrementalUpdate = async () => {
     try {
       setUpdating(true);
-      setError("");
       setIncrementalUpdateMessage("");
 
       const response = await fetch(
@@ -245,14 +144,12 @@ const DataPage: React.FC = () => {
         setTimeout(() => setIncrementalUpdateMessage(""), 10000);
       } else {
         const errorMessage = result.message || "差分更新に失敗しました";
-        setError(errorMessage);
         setIncrementalUpdateMessage(`❌ ${errorMessage}`);
         // 10秒後にメッセージをクリア
         setTimeout(() => setIncrementalUpdateMessage(""), 10000);
       }
     } catch (err) {
       const errorMessage = "差分更新中にエラーが発生しました";
-      setError(errorMessage);
       setIncrementalUpdateMessage(`❌ ${errorMessage}`);
       console.error("差分更新エラー:", err);
       // 10秒後にメッセージをクリア
@@ -405,17 +302,9 @@ const DataPage: React.FC = () => {
     setTimeout(() => setAllDataCollectionMessage(""), 15000);
   };
 
-  // 初期データ取得
-  useEffect(() => {
-    fetchSymbols();
-  }, []);
-
-  // 通貨ペアまたは時間軸変更時にデータを再取得
+  // 選択が変更されたときにデータステータスをフェッチ
   useEffect(() => {
     if (selectedSymbol && selectedTimeFrame) {
-      fetchOHLCVData();
-      fetchFundingRateData();
-      fetchOpenInterestData();
       fetchDataStatus();
     }
   }, [selectedSymbol, selectedTimeFrame]);
@@ -423,8 +312,13 @@ const DataPage: React.FC = () => {
   return (
     <div className="min-h-screen bg-secondary-50 dark:bg-secondary-950 animate-fade-in">
       <DataHeader
-        loading={loading}
-        error={error}
+        loading={
+          ohlcvLoading ||
+          fundingLoading ||
+          openInterestLoading ||
+          symbolsLoading
+        }
+        error={ohlcvError || fundingError || openInterestError || symbolsError}
         updating={updating}
         handleRefresh={handleRefresh}
         handleIncrementalUpdate={handleIncrementalUpdate}
@@ -433,7 +327,7 @@ const DataPage: React.FC = () => {
       {/* メインコンテンツエリア */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
         {/* エラー表示 */}
-        {error && (
+        {(ohlcvError || fundingError || openInterestError || symbolsError) && (
           <div className="enterprise-card border-error-200 dark:border-error-800 bg-error-50 dark:bg-error-900/20 animate-slide-down">
             <div className="p-4">
               <div className="flex items-center">
@@ -455,7 +349,10 @@ const DataPage: React.FC = () => {
                 </h3>
               </div>
               <p className="mt-2 text-sm text-error-700 dark:text-error-300">
-                {error}
+                {ohlcvError ||
+                  fundingError ||
+                  openInterestError ||
+                  symbolsError}
               </p>
             </div>
           </div>
@@ -467,7 +364,7 @@ const DataPage: React.FC = () => {
           selectedSymbol={selectedSymbol}
           handleSymbolChange={handleSymbolChange}
           symbolsLoading={symbolsLoading}
-          loading={loading}
+          loading={ohlcvLoading || fundingLoading || openInterestLoading}
           selectedTimeFrame={selectedTimeFrame}
           handleTimeFrameChange={handleTimeFrameChange}
           updating={updating}
@@ -492,8 +389,8 @@ const DataPage: React.FC = () => {
           activeTab={activeTab}
           setActiveTab={setActiveTab}
           ohlcvData={ohlcvData}
-          loading={loading}
-          error={error}
+          loading={ohlcvLoading}
+          error={ohlcvError}
           fundingRateData={fundingRateData}
           fundingLoading={fundingLoading}
           fundingError={fundingError}
