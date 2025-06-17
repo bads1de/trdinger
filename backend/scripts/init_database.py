@@ -4,13 +4,13 @@
 """
 import asyncio
 import logging
-from database.connection import init_db, test_connection
-from data_collector.collector import collect_btc_daily_data
+from database.connection import init_db, test_connection, SessionLocal
+from data_collector.collector import DataCollector
+
 
 # ログ設定
 logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 )
 logger = logging.getLogger(__name__)
 
@@ -37,9 +37,17 @@ async def main():
 
         # 3. BTC/USDT日足データを収集
         logger.info("BTC/USDT日足データを収集中...")
-        collected_count = await collect_btc_daily_data(days_back=365)
+        try:
+            with SessionLocal() as db:
+                collector = DataCollector(db)
+                collected_count = await collector.collect_historical_data(
+                    symbol="BTC/USDT", timeframe="1d", days_back=365
+                )
+        except Exception as e:
+            logger.error(f"BTC日足データ収集エラー: {e}", exc_info=True)
+            collected_count = 0
 
-        logger.info(f"=== 初期化完了 ===")
+        logger.info("=== 初期化完了 ===")
         logger.info(f"収集されたデータ件数: {collected_count}")
 
     except Exception as e:

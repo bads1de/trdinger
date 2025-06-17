@@ -6,7 +6,7 @@ import asyncio
 from datetime import datetime, timezone, timedelta
 import logging
 
-from database.connection import SessionLocal, ensure_db_initialized
+from database.connection import ensure_db_initialized
 from database.repositories.ohlcv_repository import OHLCVRepository
 from database.repositories.data_collection_log_repository import (
     DataCollectionLogRepository,
@@ -23,14 +23,44 @@ class DataCollector:
     市場データ収集クラス
 
     Bybit取引所からOHLCVデータを取得してデータベースに保存します。
+    データベースセッションは外部から注入されることを想定しています。
     """
 
-    def __init__(self):
-        # データベース初期化確認
+    def __init__(self, db_session):
+        """
+        コンストラクタ
+
+        Args:
+            db_session: SQLAlchemyのセッションオブジェクト
+        """
         if not ensure_db_initialized():
             raise RuntimeError("データベースの初期化に失敗しました")
-
+        self.db = db_session
         self.market_service = BybitMarketDataService()
+        self.ohlcv_repo = OHLCVRepository(self.db)
+        self.log_repo = DataCollectionLogRepository(self.db)
+
+    async def _determine_collection_range(
+        self, symbol: str, timeframe: str, days_back: int
+    ) -> (datetime, datetime):
+        """データ収集期間を決定する"""
+        latest_timestamp = self.ohlcv_repo.get_latest_timestamp(symbol, timeframe)
+        if latest_timestamp:
+            logger.info(f"既存データの最新タイムスタンプ: {latest_timestamp}")
+            # タイムゾーンをUTCに統一
+            if latest_timestamp.tzinfo is None:
+                latest_timestamp = latest_timestamp.replace(tzinfo=timezone.utc)
+
+            # 最新データ以降のデータを取得
+            start_time = latest_timestamp + timedelta(minutes=1)
+            end_time = datetime.now(timezone.utc)
+        else:
+            # 新規に過去データを取得
+            end_time = datetime.now(timezone.utc)
+            start_time = end_time - timedelta(days=days_back)
+
+        logger.info(f"データ収集期間: {start_time} ～ {end_time}")
+        return start_time, end_time
 
     async def collect_historical_data(
         self,
@@ -40,226 +70,105 @@ class DataCollector:
         batch_size: int = 1000,
     ) -> int:
         """
-        過去データを収集
+        過去データを収集・更新します。
+        既存データがある場合は、最新のタイムスタンプから現在までのデータを収集します。
+        データがない場合は、指定された日数分の過去データを収集します。
 
         Args:
-            symbol: 取引ペア（例: 'BTC/USD:BTC'）
+            symbol: 取引ペア（例: 'BTC/USDT:USDT'）
             timeframe: 時間軸（例: '1d'）
-            days_back: 何日前まで取得するか
-            batch_size: 一度に取得する件数
+            days_back: 遡ってデータを取得する日数（データがない場合のみ有効）
+            batch_size: 一度にAPIから取得するデータ件数
 
         Returns:
             収集された総件数
         """
-        logger.info(f"過去データ収集開始: {symbol} {timeframe} {days_back}日分")
-
-        # データベースセッション
-        db = SessionLocal()
-        ohlcv_repo = OHLCVRepository(db)
-        log_repo = DataCollectionLogRepository(db)
-
+        logger.info(f"データ収集開始: {symbol} {timeframe}")
         total_collected = 0
-        start_time = datetime.now(timezone.utc)
 
         try:
-            # 正規化されたシンボルを取得
             normalized_symbol = MarketDataConfig.normalize_symbol(symbol)
-
-            # 既存データの最新タイムスタンプを確認
-            latest_timestamp = ohlcv_repo.get_latest_timestamp(
-                normalized_symbol, timeframe
+            start_time_data, end_time = await self._determine_collection_range(
+                normalized_symbol, timeframe, days_back
             )
 
-            if latest_timestamp:
-                logger.info(f"既存データの最新タイムスタンプ: {latest_timestamp}")
-                # タイムゾーンを統一
-                if latest_timestamp.tzinfo is None:
-                    latest_timestamp = latest_timestamp.replace(tzinfo=timezone.utc)
-                # 既存データより古いデータを取得するため、最古データから遡る
-                oldest_timestamp = ohlcv_repo.get_oldest_timestamp(
-                    normalized_symbol, timeframe
-                )
-                if oldest_timestamp:
-                    if oldest_timestamp.tzinfo is None:
-                        oldest_timestamp = oldest_timestamp.replace(tzinfo=timezone.utc)
-                    # 最古データより古いデータを取得
-                    end_time = oldest_timestamp
-                    start_time_data = end_time - timedelta(days=days_back)
-                else:
-                    # 最新データより新しいデータを取得
-                    start_time_data = latest_timestamp + timedelta(minutes=1)
-                    end_time = datetime.now(timezone.utc)
-            else:
-                # 指定日数前から開始
-                end_time = datetime.now(timezone.utc)
-                start_time_data = end_time - timedelta(days=days_back)
-
-            logger.info(f"データ収集期間: {start_time_data} ～ {end_time}")
-
-            # バッチごとにデータを取得
             current_time = start_time_data
-
             while current_time < end_time:
                 try:
-                    # 一度に取得する期間を計算
-                    batch_end = min(current_time + timedelta(days=batch_size), end_time)
+                    limit = 1000  # Bybit APIの最大取得件数
 
-                    logger.info(f"バッチ収集: {current_time} ～ {batch_end}")
+                    logger.info(f"バッチ収集: {current_time} から {limit} 件")
 
-                    # OHLCVデータを取得
                     ohlcv_data = await self.market_service.fetch_ohlcv_data(
-                        normalized_symbol, timeframe, limit=batch_size
+                        normalized_symbol, timeframe, since=current_time, limit=limit
                     )
 
                     if not ohlcv_data:
-                        logger.warning(
-                            f"データが取得できませんでした: {normalized_symbol} {timeframe}"
+                        logger.info(
+                            "これ以上取得するデータがありません。収集を終了します。"
                         )
                         break
 
-                    # データベース形式に変換
                     db_records = OHLCVDataConverter.ccxt_to_db_format(
                         ohlcv_data, normalized_symbol, timeframe
                     )
-
-                    # データベースに挿入
-                    inserted_count = ohlcv_repo.insert_ohlcv_data(db_records)
+                    inserted_count = self.ohlcv_repo.insert_ohlcv_data(db_records)
                     total_collected += inserted_count
-
                     logger.info(f"バッチ完了: {inserted_count} 件挿入")
 
-                    # 次のバッチへ
-                    current_time = batch_end
+                    # 取得したデータの最後のタイムスタンプの次から収集を再開
+                    last_timestamp_ms = ohlcv_data[-1][0]
+                    current_time = datetime.fromtimestamp(
+                        last_timestamp_ms / 1000, tz=timezone.utc
+                    ) + timedelta(milliseconds=1)
 
-                    # レート制限を考慮して少し待機
-                    await asyncio.sleep(1)
+                    await asyncio.sleep(1)  # APIレート制限
 
                 except Exception as e:
-                    logger.error(f"バッチ収集エラー: {e}")
-                    # エラーログを記録
-                    log_repo.log_collection(
+                    logger.error(f"バッチ収集エラー: {e}", exc_info=True)
+                    self.log_repo.log_collection(
                         normalized_symbol,
                         timeframe,
                         current_time,
-                        batch_end,
+                        datetime.now(timezone.utc),
                         0,
                         "error",
                         str(e),
                     )
                     break
 
-            # 成功ログを記録
-            end_time_actual = datetime.now(timezone.utc)
-            log_repo.log_collection(
+            self.log_repo.log_collection(
                 normalized_symbol,
                 timeframe,
                 start_time_data,
-                end_time_actual,
+                datetime.now(timezone.utc),
                 total_collected,
                 "success",
             )
-
-            logger.info(f"過去データ収集完了: 総 {total_collected} 件")
+            logger.info(f"データ収集完了: 総 {total_collected} 件")
             return total_collected
 
         except Exception as e:
-            logger.error(f"過去データ収集エラー: {e}")
-            # エラーログを記録
-            end_time_actual = datetime.now(timezone.utc)
-            log_repo.log_collection(
-                normalized_symbol,
+            logger.error(f"データ収集処理全体でエラー: {e}", exc_info=True)
+            self.log_repo.log_collection(
+                symbol,
                 timeframe,
-                start_time_data if "start_time_data" in locals() else start_time,
-                end_time_actual,
+                datetime.now(timezone.utc),
+                datetime.now(timezone.utc),
                 total_collected,
                 "error",
                 str(e),
             )
             raise
-        finally:
-            db.close()
 
     async def collect_latest_data(self, symbol: str, timeframe: str = "1d") -> int:
         """
-        最新データを収集（増分更新）
-
-        Args:
-            symbol: 取引ペア
-            timeframe: 時間軸
-
-        Returns:
-            収集された件数
+        最新データを収集（増分更新）。collect_historical_dataに責務を統合するため、
+        このメソッドは後方互換性のために残すが、実質的にhistoricalを呼び出す。
         """
-        logger.info(f"最新データ収集開始: {symbol} {timeframe}")
-
-        db = SessionLocal()
-        ohlcv_repo = OHLCVRepository(db)
-        log_repo = DataCollectionLogRepository(db)
-
-        try:
-            # 正規化されたシンボルを取得
-            normalized_symbol = MarketDataConfig.normalize_symbol(symbol)
-
-            # 最新のOHLCVデータを取得
-            ohlcv_data = await self.market_service.fetch_ohlcv_data(
-                normalized_symbol, timeframe, limit=100  # 最新100件
-            )
-
-            if not ohlcv_data:
-                logger.warning(f"最新データが取得できませんでした: {normalized_symbol}")
-                return 0
-
-            # データベース形式に変換
-            db_records = OHLCVDataConverter.ccxt_to_db_format(
-                ohlcv_data, normalized_symbol, timeframe
-            )
-
-            # データベースに挿入（重複は無視）
-            inserted_count = ohlcv_repo.insert_ohlcv_data(db_records)
-
-            # ログを記録
-            start_time = datetime.now(timezone.utc) - timedelta(hours=1)
-            end_time = datetime.now(timezone.utc)
-            log_repo.log_collection(
-                normalized_symbol,
-                timeframe,
-                start_time,
-                end_time,
-                inserted_count,
-                "success",
-            )
-
-            logger.info(f"最新データ収集完了: {inserted_count} 件")
-            return inserted_count
-
-        except Exception as e:
-            logger.error(f"最新データ収集エラー: {e}")
-            # エラーログを記録
-            start_time = datetime.now(timezone.utc) - timedelta(hours=1)
-            end_time = datetime.now(timezone.utc)
-            log_repo.log_collection(
-                normalized_symbol, timeframe, start_time, end_time, 0, "error", str(e)
-            )
-            raise
-        finally:
-            db.close()
-
-
-# _convert_to_db_format メソッドは OHLCVDataConverter.ccxt_to_db_format に移動されました
-
-
-# 便利関数
-async def collect_btc_daily_data(days_back: int = 365) -> int:
-    """
-    BTC/USDT日足データを収集
-
-    Args:
-        days_back: 何日前まで取得するか
-
-    Returns:
-        収集された件数
-    """
-    collector = DataCollector()
-    return await collector.collect_historical_data(
-        symbol="BTC/USDT", timeframe="1d", days_back=days_back
-    )
+        logger.info(
+            f"最新データ収集 (collect_historical_dataを利用): {symbol} {timeframe}"
+        )
+        return await self.collect_historical_data(
+            symbol=symbol, timeframe=timeframe, days_back=1
+        )
