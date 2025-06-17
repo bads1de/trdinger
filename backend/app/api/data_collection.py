@@ -563,19 +563,6 @@ async def collect_all_data_bulk(
         handle_api_exception(e, message="全データ一括収集開始エラー")
 
 
-@router.get("/test-modified")
-async def test_modified_code() -> Dict:
-    """
-    修正されたコードが動作しているかをテスト
-    """
-    logger.info("テストエンドポイントが呼び出されました - 修正版コードが動作中")
-    return api_response(
-        success=True,
-        message="修正されたコードが正常に動作しています",
-        data={"version": "modified_2025_05_27"},
-    )
-
-
 async def _collect_all_data_background(symbol: str, timeframe: str, db: Session):
     """バックグラウンドでの全データ収集（OHLCV・FR・OI・TI）"""
     try:

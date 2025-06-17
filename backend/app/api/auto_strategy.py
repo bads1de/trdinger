@@ -4,7 +4,7 @@
 遺伝的アルゴリズムによる戦略自動生成のAPIエンドポイントを提供します。
 """
 
-from fastapi import APIRouter, HTTPException, Depends, BackgroundTasks
+from fastapi import APIRouter, Depends, BackgroundTasks
 from sqlalchemy.orm import Session
 from typing import Dict, Any, List, Optional
 from pydantic import BaseModel, Field
@@ -120,7 +120,7 @@ async def generate_strategy(
     バックグラウンドで実行され、進捗は別のエンドポイントで確認できます。
     """
     try:
-        logger.info(f"=== GA戦略生成API呼び出し開始 ===")
+        logger.info("=== GA戦略生成API呼び出し開始 ===")
         logger.info(f"実験名: {request.experiment_name}")
         logger.info(f"base_config: {request.base_config}")
         logger.info(f"ga_config: {request.ga_config}")
@@ -355,11 +355,7 @@ async def test_strategy(request: StrategyTestRequest):
             )
 
     except Exception as e:
-        return api_response(
-            success=False,
-            message="戦略テスト実行中にエラーが発生しました",
-            data={"errors": [str(e)]},
-        )
+        handle_api_exception(e, message="戦略テスト実行中にエラーが発生しました")
 
 
 @router.get("/config/default", response_model=Dict[str, Any])

@@ -29,7 +29,8 @@ async def reset_all_data(db: Session = Depends(get_db)) -> Dict[str, Any]:
     Returns:
         削除結果の詳細
     """
-    try:
+
+    async def _reset_all_data():
         # リポジトリインスタンス作成
         ohlcv_repo = OHLCVRepository(db)
         fr_repo = FundingRateRepository(db)
@@ -80,11 +81,7 @@ async def reset_all_data(db: Session = Depends(get_db)) -> Dict[str, Any]:
         logger.info(f"全データリセット完了: {deleted_counts}")
         return response
 
-    except Exception as e:
-        logger.error(f"全データリセットエラー: {e}")
-        raise HTTPException(
-            status_code=500, detail=f"データリセット中にエラーが発生しました: {str(e)}"
-        )
+    return await handle_api_exception(_reset_all_data, message="全データリセットエラー")
 
 
 @router.delete("/ohlcv")
@@ -95,7 +92,8 @@ async def reset_ohlcv_data(db: Session = Depends(get_db)) -> Dict[str, Any]:
     Returns:
         削除結果の詳細
     """
-    try:
+
+    async def _reset_ohlcv_data():
         ohlcv_repo = OHLCVRepository(db)
         deleted_count = ohlcv_repo.clear_all_ohlcv_data()
 
@@ -110,12 +108,9 @@ async def reset_ohlcv_data(db: Session = Depends(get_db)) -> Dict[str, Any]:
         logger.info(f"OHLCVデータリセット完了: {deleted_count}件")
         return response
 
-    except Exception as e:
-        logger.error(f"OHLCVデータリセットエラー: {e}")
-        raise HTTPException(
-            status_code=500,
-            detail=f"OHLCVデータリセット中にエラーが発生しました: {str(e)}",
-        )
+    return await handle_api_exception(
+        _reset_ohlcv_data, message="OHLCVデータリセットエラー"
+    )
 
 
 @router.delete("/funding-rates")
@@ -126,7 +121,8 @@ async def reset_funding_rate_data(db: Session = Depends(get_db)) -> Dict[str, An
     Returns:
         削除結果の詳細
     """
-    try:
+
+    async def _reset_funding_rate_data():
         fr_repo = FundingRateRepository(db)
         deleted_count = fr_repo.clear_all_funding_rate_data()
 
@@ -141,12 +137,9 @@ async def reset_funding_rate_data(db: Session = Depends(get_db)) -> Dict[str, An
         logger.info(f"ファンディングレートデータリセット完了: {deleted_count}件")
         return response
 
-    except Exception as e:
-        logger.error(f"ファンディングレートデータリセットエラー: {e}")
-        raise HTTPException(
-            status_code=500,
-            detail=f"ファンディングレートデータリセット中にエラーが発生しました: {str(e)}",
-        )
+    return await handle_api_exception(
+        _reset_funding_rate_data, message="ファンディングレートデータリセットエラー"
+    )
 
 
 @router.delete("/open-interest")

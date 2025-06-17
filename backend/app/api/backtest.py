@@ -14,7 +14,7 @@ from database.connection import get_db
 from database.repositories.backtest_result_repository import BacktestResultRepository
 from app.core.services.backtest_service import BacktestService
 from app.core.services.enhanced_backtest_service import EnhancedBacktestService
-from app.utils.api_response_utils import api_response, handle_api_exception
+from app.utils.api_response_utils import handle_api_exception
 
 router = APIRouter(prefix="/api/backtest", tags=["backtest"])
 

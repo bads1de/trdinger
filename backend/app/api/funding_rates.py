@@ -107,10 +107,10 @@ async def get_funding_rates(
         }
 
     except Exception as e:
-        logger.error(f"ファンディングレートデータ取得エラー: {e}")
-        raise HTTPException(
+        handle_api_exception(
+            e,
+            message="ファンディングレートデータの取得中にエラーが発生しました",
             status_code=500,
-            detail=f"ファンディングレートデータの取得中にエラーが発生しました: {str(e)}",
         )
 
 
