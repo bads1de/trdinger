@@ -10,7 +10,7 @@ export async function DELETE(
   { params }: { params: { symbol: string } }
 ) {
   try {
-    const { symbol } = params;
+    const { symbol } = await params;
 
     if (!symbol) {
       return NextResponse.json(

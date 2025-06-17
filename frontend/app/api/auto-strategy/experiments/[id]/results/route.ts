@@ -12,7 +12,7 @@ export async function GET(
   { params }: { params: { id: string } }
 ) {
   try {
-    const { id } = params;
+    const { id } = await params;
 
     // 実験IDのバリデーション
     if (!id || id.trim() === "") {
@@ -29,7 +29,9 @@ export async function GET(
 
     // バックエンドAPIを呼び出し
     const response = await fetch(
-      `${BACKEND_API_URL}/api/auto-strategy/experiments/${encodeURIComponent(id)}/results`,
+      `${BACKEND_API_URL}/api/auto-strategy/experiments/${encodeURIComponent(
+        id
+      )}/results`,
       {
         method: "GET",
         headers: {
@@ -77,7 +79,6 @@ export async function GET(
       message: data.message || "実験結果を取得しました",
       timestamp: new Date().toISOString(),
     });
-
   } catch (error) {
     console.error("実験結果取得API エラー:", error);
 

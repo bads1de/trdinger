@@ -12,7 +12,7 @@ export async function GET(
   { params }: { params: { id: string } }
 ) {
   try {
-    const { id } = params;
+    const { id } = await params;
 
     // バックエンドAPIに転送
     const backendUrl = `${BACKEND_API_URL}/api/strategies/showcase/${id}`;
