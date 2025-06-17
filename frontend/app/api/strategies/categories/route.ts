@@ -42,12 +42,11 @@ export async function GET(request: NextRequest) {
         mean_reversion: "逆張り",
         breakout: "ブレイクアウト",
         range_trading: "レンジ取引",
-        momentum: "モメンタム"
+        momentum: "モメンタム",
       },
       message: data.message || "カテゴリ一覧を取得しました",
       timestamp: new Date().toISOString(),
     });
-
   } catch (error) {
     console.error("カテゴリ一覧取得エラー:", error);
 

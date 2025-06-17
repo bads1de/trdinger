@@ -1,6 +1,6 @@
 /**
  * 戦略統計API
- * 
+ *
  * 戦略の統計情報を取得するAPIエンドポイント
  */
 
@@ -10,20 +10,19 @@ import { BACKEND_API_URL } from "@/constants";
 export async function GET(request: NextRequest) {
   try {
     // バックエンドAPIを呼び出し
-    const response = await fetch(
-      `${BACKEND_API_URL}/api/strategies/stats`,
-      {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        // キャッシュを無効化して最新データを取得
-        cache: "no-store",
-      }
-    );
+    const response = await fetch(`${BACKEND_API_URL}/api/strategies/stats`, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      // キャッシュを無効化して最新データを取得
+      cache: "no-store",
+    });
 
     if (!response.ok) {
-      throw new Error(`Backend API error: ${response.status} ${response.statusText}`);
+      throw new Error(
+        `Backend API error: ${response.status} ${response.statusText}`
+      );
     }
 
     const data = await response.json();
@@ -34,10 +33,9 @@ export async function GET(request: NextRequest) {
       message: "Strategy statistics retrieved successfully",
       timestamp: new Date().toISOString(),
     });
-
   } catch (error) {
     console.error("Strategy statistics API error:", error);
-    
+
     return NextResponse.json(
       {
         success: false,

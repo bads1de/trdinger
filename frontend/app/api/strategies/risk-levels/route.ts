@@ -40,12 +40,11 @@ export async function GET(request: NextRequest) {
       risk_levels: data.risk_levels || {
         low: "低リスク",
         medium: "中リスク",
-        high: "高リスク"
+        high: "高リスク",
       },
       message: data.message || "リスクレベル一覧を取得しました",
       timestamp: new Date().toISOString(),
     });
-
   } catch (error) {
     console.error("リスクレベル一覧取得エラー:", error);
 

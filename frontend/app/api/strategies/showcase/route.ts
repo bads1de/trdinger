@@ -11,7 +11,7 @@ export async function GET(request: NextRequest) {
   try {
     // クエリパラメータを取得
     const { searchParams } = new URL(request.url);
-    
+
     // バックエンドAPIに転送
     const backendUrl = `${BACKEND_API_URL}/api/strategies/showcase?${searchParams.toString()}`;
 
@@ -45,7 +45,6 @@ export async function GET(request: NextRequest) {
       message: data.message || "戦略一覧を取得しました",
       timestamp: new Date().toISOString(),
     });
-
   } catch (error) {
     console.error("戦略一覧取得エラー:", error);
 

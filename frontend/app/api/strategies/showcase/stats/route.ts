@@ -43,12 +43,11 @@ export async function GET(request: NextRequest) {
         avg_sharpe_ratio: 0,
         avg_max_drawdown: 0,
         category_distribution: {},
-        risk_distribution: {}
+        risk_distribution: {},
       },
       message: data.message || "統計情報を取得しました",
       timestamp: new Date().toISOString(),
     });
-
   } catch (error) {
     console.error("統計情報取得エラー:", error);
 

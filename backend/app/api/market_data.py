@@ -79,13 +79,21 @@ async def get_ohlcv_data(
             end_time = DateTimeHelper.parse_iso_datetime(end_date)
 
         # データベースからOHLCVデータを取得
-        ohlcv_records = repository.get_ohlcv_data(
-            symbol=symbol,
-            timeframe=timeframe,
-            start_time=start_time,
-            end_time=end_time,
-            limit=limit,
-        )
+        # 日付範囲が指定されていない場合は最新データを取得
+        if start_time is None and end_time is None:
+            ohlcv_records = repository.get_latest_ohlcv_data(
+                symbol=symbol,
+                timeframe=timeframe,
+                limit=limit,
+            )
+        else:
+            ohlcv_records = repository.get_ohlcv_data(
+                symbol=symbol,
+                timeframe=timeframe,
+                start_time=start_time,
+                end_time=end_time,
+                limit=limit,
+            )
 
         # データをAPIレスポンス形式に変換
         ohlcv_data = OHLCVDataConverter.db_to_api_format(ohlcv_records)

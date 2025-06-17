@@ -13,7 +13,7 @@ export async function GET(
 ) {
   try {
     const { id } = params;
-    
+
     // バックエンドAPIに転送
     const backendUrl = `${BACKEND_API_URL}/api/strategies/showcase/${id}`;
 
@@ -56,7 +56,6 @@ export async function GET(
       message: data.message || "戦略詳細を取得しました",
       timestamp: new Date().toISOString(),
     });
-
   } catch (error) {
     console.error("戦略詳細取得エラー:", error);
 

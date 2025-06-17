@@ -91,6 +91,41 @@ class OHLCVRepository(BaseRepository):
             logger.error(f"OHLCV データ取得エラー: {e}")
             raise
 
+    def get_latest_ohlcv_data(
+        self,
+        symbol: str,
+        timeframe: str,
+        limit: int = 100,
+    ) -> List[OHLCVData]:
+        """
+        最新のOHLCV データを取得（降順）
+
+        Args:
+            symbol: 取引ペア
+            timeframe: 時間軸
+            limit: 取得件数制限
+
+        Returns:
+            最新のOHLCV データのリスト（新しい順）
+        """
+        try:
+            filters = {"symbol": symbol, "timeframe": timeframe}
+            return DatabaseQueryHelper.get_filtered_records(
+                db=self.db,
+                model_class=OHLCVData,
+                filters=filters,
+                time_range_column="timestamp",
+                start_time=None,
+                end_time=None,
+                order_by_column="timestamp",
+                order_asc=False,  # 降順（新しい順）
+                limit=limit,
+            )
+
+        except Exception as e:
+            logger.error(f"最新OHLCV データ取得エラー: {e}")
+            raise
+
     def get_latest_timestamp(self, symbol: str, timeframe: str) -> Optional[datetime]:
         """
         指定されたシンボルと時間軸の最新タイムスタンプを取得
