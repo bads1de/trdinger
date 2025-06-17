@@ -6,9 +6,7 @@
 
 "use client";
 
-import React, { useState, useEffect } from "react";
-import { useApiCall } from "@/hooks/useApiCall";
-import IndicatorSelector from "@/components/common/IndicatorSelector";
+import React, { useState } from "react";
 import { GAConfig } from "@/types/optimization";
 
 interface GAConfigFormProps {
@@ -34,7 +32,7 @@ const GAConfigForm: React.FC<GAConfigFormProps> = ({
     commission_rate: currentBacktestConfig?.commission_rate || 0.00055,
   });
 
-  // GA設定
+  // GA設定（シンプル版）
   const [gaConfig, setGaConfig] = useState<GAConfig["ga_config"]>({
     population_size: 50,
     generations: 30,
@@ -42,7 +40,7 @@ const GAConfigForm: React.FC<GAConfigFormProps> = ({
     mutation_rate: 0.1,
     elite_size: 5,
     max_indicators: 5,
-    allowed_indicators: [], // 型を明示的に指定
+    allowed_indicators: [], // バックエンドで自動設定
     fitness_weights: {
       total_return: 0.3,
       sharpe_ratio: 0.4,
@@ -63,53 +61,26 @@ const GAConfigForm: React.FC<GAConfigFormProps> = ({
       .slice(0, 10)}`
   );
 
-  // プリセット設定
+  // プリセット設定（シンプル版）
   const [selectedPreset, setSelectedPreset] = useState("default");
 
-  const { execute: fetchPresets } = useApiCall();
-
-  // プリセット設定の読み込み
-  useEffect(() => {
-    const loadPresets = async () => {
-      try {
-        const response = await fetchPresets(
-          "/api/auto-strategy/config/presets"
-        );
-        if (response?.success && response.presets) {
-          // デフォルトプリセットを適用
-          if (response.presets.default) {
-            setGaConfig((prev) => ({
-              ...prev,
-              ...response.presets.default,
-            }));
-          }
-        }
-      } catch (error) {
-        console.error("Failed to load GA presets:", error);
-      }
-    };
-
-    loadPresets();
-  }, []);
+  const presets = {
+    default: { population_size: 50, generations: 30 },
+    fast: { population_size: 30, generations: 20 },
+    thorough: { population_size: 100, generations: 50 },
+  };
 
   // プリセット変更ハンドラー
-  const handlePresetChange = async (preset: string) => {
+  const handlePresetChange = (preset: string) => {
     setSelectedPreset(preset);
-
-    try {
-      const response = await fetchPresets("/api/auto-strategy/config/presets");
-      if (response?.success && response.presets && response.presets[preset]) {
-        setGaConfig((prev) => ({
-          ...prev,
-          ...response.presets[preset],
-        }));
-      }
-    } catch (error) {
-      console.error("Failed to apply preset:", error);
+    if (presets[preset as keyof typeof presets]) {
+      setGaConfig((prev) => ({
+        ...prev,
+        ...presets[preset as keyof typeof presets],
+      }));
     }
   };
 
-  // フォーム送信ハンドラー
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -122,15 +93,7 @@ const GAConfigForm: React.FC<GAConfigFormProps> = ({
     onSubmit(config);
   };
 
-  // 指標選択ハンドラー
-  const handleIndicatorToggle = (indicator: string) => {
-    setGaConfig((prev) => ({
-      ...prev,
-      allowed_indicators: prev.allowed_indicators.includes(indicator)
-        ? prev.allowed_indicators.filter((ind) => ind !== indicator)
-        : [...prev.allowed_indicators, indicator],
-    }));
-  };
+  // フォーム送信ハンドラー
 
   return (
     <div className="space-y-6">
@@ -144,7 +107,7 @@ const GAConfigForm: React.FC<GAConfigFormProps> = ({
             type="text"
             value={experimentName}
             onChange={(e) => setExperimentName(e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-gray-200 dark:border-gray-600"
             required
           />
         </div>
@@ -157,7 +120,7 @@ const GAConfigForm: React.FC<GAConfigFormProps> = ({
           <select
             value={selectedPreset}
             onChange={(e) => handlePresetChange(e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-gray-200 dark:border-gray-600"
           >
             <option value="fast">高速（50個体×30世代）</option>
             <option value="default">標準（100個体×50世代）</option>
@@ -182,7 +145,7 @@ const GAConfigForm: React.FC<GAConfigFormProps> = ({
               }
               min="10"
               max="500"
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-gray-200 dark:border-gray-600"
             />
           </div>
           <div>
@@ -200,24 +163,39 @@ const GAConfigForm: React.FC<GAConfigFormProps> = ({
               }
               min="5"
               max="200"
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-gray-200 dark:border-gray-600"
             />
           </div>
         </div>
 
-        {/* 使用指標選択 */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            使用可能指標（最大{gaConfig.max_indicators}個）
-          </label>
-
-          <IndicatorSelector
-            selectedIndicators={gaConfig.allowed_indicators}
-            onIndicatorToggle={handleIndicatorToggle}
-            maxIndicators={gaConfig.max_indicators}
-            showCategories={true}
-            disabled={isLoading}
-          />
+        {/* 指標は自動選択される旨の説明 */}
+        <div className="bg-blue-50 border border-blue-200 rounded-md p-4">
+          <div className="flex">
+            <div className="flex-shrink-0">
+              <svg
+                className="h-5 w-5 text-blue-400"
+                viewBox="0 0 20 20"
+                fill="currentColor"
+              >
+                <path
+                  fillRule="evenodd"
+                  d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
+                  clipRule="evenodd"
+                />
+              </svg>
+            </div>
+            <div className="ml-3">
+              <h3 className="text-sm font-medium text-blue-800">
+                自動指標選択
+              </h3>
+              <div className="mt-2 text-sm text-blue-700">
+                <p>
+                  使用する指標は遺伝的アルゴリズムによって自動的に選択・最適化されます。
+                  手動で指標を選択する必要はありません。
+                </p>
+              </div>
+            </div>
+          </div>
         </div>
 
         {/* フィットネス重み */}
@@ -243,7 +221,7 @@ const GAConfigForm: React.FC<GAConfigFormProps> = ({
                     },
                   }))
                 }
-                className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
+                className="w-full px-2 py-1 border border-gray-300 rounded text-sm dark:bg-gray-700 dark:text-gray-200 dark:border-gray-600"
               />
             </div>
             <div>
@@ -265,7 +243,7 @@ const GAConfigForm: React.FC<GAConfigFormProps> = ({
                     },
                   }))
                 }
-                className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
+                className="w-full px-2 py-1 border border-gray-300 rounded text-sm dark:bg-gray-700 dark:text-gray-200 dark:border-gray-600"
               />
             </div>
             <div>
@@ -287,7 +265,7 @@ const GAConfigForm: React.FC<GAConfigFormProps> = ({
                     },
                   }))
                 }
-                className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
+                className="w-full px-2 py-1 border border-gray-300 rounded text-sm dark:bg-gray-700 dark:text-gray-200 dark:border-gray-600"
               />
             </div>
             <div>
@@ -307,7 +285,7 @@ const GAConfigForm: React.FC<GAConfigFormProps> = ({
                     },
                   }))
                 }
-                className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
+                className="w-full px-2 py-1 border border-gray-300 rounded text-sm dark:bg-gray-700 dark:text-gray-200 dark:border-gray-600"
               />
             </div>
           </div>

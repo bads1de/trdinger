@@ -166,8 +166,7 @@ class GAConfig:
         # 指標制約の検証
         if self.max_indicators <= 0:
             errors.append("最大指標数は正の整数である必要があります")
-        if not self.allowed_indicators:
-            errors.append("使用可能指標が設定されていません")
+        # allowed_indicatorsが空の場合は自動設定されるため、エラーにしない
 
         return len(errors) == 0, errors
 
@@ -194,6 +193,11 @@ class GAConfig:
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "GAConfig":
         """辞書から復元"""
+        # allowed_indicatorsが空の場合はデフォルトの指標リストを使用
+        allowed_indicators = data.get("allowed_indicators", [])
+        if not allowed_indicators:
+            allowed_indicators = ALL_INDICATORS.copy()
+
         return cls(
             population_size=data.get("population_size", 100),
             generations=data.get("generations", 50),
@@ -203,7 +207,7 @@ class GAConfig:
             fitness_weights=data.get("fitness_weights", {}),
             primary_metric=data.get("primary_metric", "sharpe_ratio"),
             max_indicators=data.get("max_indicators", 5),
-            allowed_indicators=data.get("allowed_indicators", []),
+            allowed_indicators=allowed_indicators,
             parameter_ranges=data.get("parameter_ranges", {}),
             fitness_constraints=data.get("fitness_constraints", {}),
             parallel_processes=data.get("parallel_processes"),

@@ -20,7 +20,12 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/auto-strategy", tags=["auto-strategy"])
 
 # グローバルサービスインスタンス
-auto_strategy_service = AutoStrategyService()
+try:
+    auto_strategy_service = AutoStrategyService()
+    logger.info("AutoStrategyService初期化成功")
+except Exception as e:
+    logger.error(f"AutoStrategyService初期化エラー: {e}", exc_info=True)
+    auto_strategy_service = None
 
 
 # リクエスト・レスポンスモデル
@@ -114,24 +119,82 @@ async def generate_strategy(
     バックグラウンドで実行され、進捗は別のエンドポイントで確認できます。
     """
     try:
+        logger.info(f"=== GA戦略生成API呼び出し開始 ===")
+        logger.info(f"実験名: {request.experiment_name}")
+        logger.info(f"base_config: {request.base_config}")
+        logger.info(f"ga_config: {request.ga_config}")
+
+        # サービス初期化チェック
+        if auto_strategy_service is None:
+            logger.error("AutoStrategyService is None")
+            raise HTTPException(
+                status_code=503,
+                detail="AutoStrategyService is not available. Please check server logs.",
+            )
+
         logger.info(f"GA戦略生成開始: {request.experiment_name}")
 
         # GA設定の構築
-        ga_config = GAConfig.from_dict(request.ga_config)
+        logger.info("GA設定を構築中...")
+        logger.info(
+            f"リクエストのallowed_indicators: {request.ga_config.get('allowed_indicators', [])}"
+        )
+        try:
+            ga_config = GAConfig.from_dict(request.ga_config)
+            logger.info(
+                f"GA設定構築完了: {len(ga_config.allowed_indicators)} indicators"
+            )
+            logger.info(
+                f"構築後のallowed_indicators: {ga_config.allowed_indicators[:5]}..."
+            )
+        except Exception as e:
+            logger.error(f"GA設定構築エラー: {type(e).__name__}: {e}")
+            import traceback
 
-        # 設定の検証
-        is_valid, errors = ga_config.validate()
-        if not is_valid:
+            logger.error(f"GA設定構築トレースバック:\n{traceback.format_exc()}")
             raise HTTPException(
-                status_code=400, detail=f"Invalid GA configuration: {', '.join(errors)}"
+                status_code=400, detail=f"GA config creation failed: {str(e)}"
             )
 
+        # 設定の検証
+        logger.info("GA設定を検証中...")
+        try:
+            is_valid, errors = ga_config.validate()
+            if not is_valid:
+                logger.error(f"GA設定検証失敗: {errors}")
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Invalid GA configuration: {', '.join(errors)}",
+                )
+            logger.info("GA設定検証成功")
+        except Exception as e:
+            logger.error(f"GA設定検証エラー: {type(e).__name__}: {e}")
+            import traceback
+
+            logger.error(f"GA設定検証トレースバック:\n{traceback.format_exc()}")
+            raise
+
+        # バックテスト設定のシンボルを正規化
+        logger.info("バックテスト設定のシンボルを正規化中...")
+        backtest_config = request.base_config.copy()
+        original_symbol = backtest_config.get("symbol", "BTC/USDT")
+
+        # シンボルの正規化（BTC/USDT -> BTC/USDT:USDT）
+        if original_symbol == "BTC/USDT":
+            normalized_symbol = "BTC/USDT:USDT"
+            backtest_config["symbol"] = normalized_symbol
+            logger.info(f"シンボル正規化: {original_symbol} -> {normalized_symbol}")
+        else:
+            logger.info(f"シンボル正規化不要: {original_symbol}")
+
         # 戦略生成を開始（バックグラウンド実行）
+        logger.info("戦略生成を開始中...")
         experiment_id = auto_strategy_service.start_strategy_generation(
             experiment_name=request.experiment_name,
             ga_config=ga_config,
-            backtest_config=request.base_config,
+            backtest_config=backtest_config,
         )
+        logger.info(f"戦略生成開始成功: {experiment_id}")
 
         return GAGenerationResponse(
             success=True,
@@ -142,9 +205,30 @@ async def generate_strategy(
     except ValueError as e:
         logger.error(f"設定エラー: {e}")
         raise HTTPException(status_code=400, detail=str(e))
+    except RuntimeError as e:
+        # AutoStrategyServiceから詳細なエラー情報が含まれたRuntimeErrorが発生した場合
+        logger.error(f"サービス実行時エラー: {e}")
+        raise HTTPException(status_code=500, detail=f"Service error: {str(e)}")
     except Exception as e:
-        logger.error(f"戦略生成開始エラー: {e}")
-        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
+        import traceback
+
+        error_msg = str(e)
+        error_type = type(e).__name__
+        traceback_str = traceback.format_exc()
+
+        logger.error(f"戦略生成開始エラー - 例外型: {error_type}")
+        logger.error(f"戦略生成開始エラー - メッセージ: {error_msg}")
+        logger.error(f"戦略生成開始エラー - トレースバック:\n{traceback_str}")
+
+        # エラーメッセージが空の場合の対処
+        if not error_msg:
+            error_msg = f"Unknown {error_type} error occurred"
+
+        detailed_error = f"{error_type}: {error_msg}"
+
+        raise HTTPException(
+            status_code=500, detail=f"Internal server error: {detailed_error}"
+        )
 
 
 @router.get("/experiments/{experiment_id}/progress", response_model=GAProgressResponse)

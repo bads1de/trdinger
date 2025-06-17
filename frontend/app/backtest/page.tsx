@@ -12,8 +12,10 @@ import BacktestResultsTable from "@/components/backtest/BacktestResultsTable";
 import PerformanceMetrics from "@/components/backtest/PerformanceMetrics";
 import OptimizationResults from "@/components/backtest/OptimizationResults";
 import OptimizationModal from "@/components/backtest/OptimizationModal";
+import AutoStrategyModal from "@/components/backtest/AutoStrategyModal";
 import { useApiCall } from "@/hooks/useApiCall";
 import { BacktestConfig, BacktestResult } from "@/types/backtest";
+import { GAConfig } from "@/types/optimization";
 
 export default function BacktestPage() {
   const [results, setResults] = useState<BacktestResult[]>([]);
@@ -27,6 +29,7 @@ export default function BacktestPage() {
   const [isOptimizationModalOpen, setIsOptimizationModalOpen] = useState(false);
   const [currentBacktestConfig, setCurrentBacktestConfig] =
     useState<BacktestConfig | null>(null);
+  const [showAutoStrategyModal, setShowAutoStrategyModal] = useState(false);
 
   const { execute: runBacktest, loading: backtestLoading } = useApiCall<{
     result: BacktestResult;
@@ -45,6 +48,8 @@ export default function BacktestPage() {
     loading: multiOptimizationLoading,
   } = useApiCall();
   const { execute: runRobustnessTest, loading: robustnessTestLoading } =
+    useApiCall();
+  const { execute: runAutoStrategy, loading: autoStrategyLoading } =
     useApiCall();
 
   // 結果一覧を取得
@@ -156,17 +161,39 @@ export default function BacktestPage() {
   };
 
   /**
-   * 戦略生成を実行（オートストラテジー機能へのリダイレクト）
+   * オートストラテジー実行
    */
-  const generateStrategies = async () => {
-    // オートストラテジー機能へのリダイレクト
-    if (
-      confirm(
-        "戦略生成機能はオートストラテジー機能に移行しました。オートストラテジーページに移動しますか？"
-      )
-    ) {
-      window.location.href = "/auto-strategy";
-    }
+  const handleAutoStrategy = async (config: GAConfig) => {
+    // GAConfigをAPIリクエスト形式に変換
+    const requestBody = {
+      experiment_name: config.experiment_name,
+      base_config: config.base_config,
+      ga_config: config.ga_config,
+    };
+
+    const response = await runAutoStrategy("/api/auto-strategy/generate", {
+      method: "POST",
+      body: requestBody,
+      onSuccess: (data) => {
+        console.log("オートストラテジー生成開始:", data);
+        setShowAutoStrategyModal(false);
+        alert(
+          `🚀 戦略生成を開始しました！\n\n実験ID: ${data.experiment_id}\n\n生成完了後、結果一覧に自動的に表示されます。\n数分お待ちください。`
+        );
+        // 結果一覧を更新（GA完了後に結果が表示される）
+        loadResults();
+      },
+      onError: (error) => {
+        console.error("Auto strategy generation failed:", error);
+      },
+    });
+  };
+
+  /**
+   * オートストラテジーモーダルを開く
+   */
+  const openAutoStrategyModal = () => {
+    setShowAutoStrategyModal(true);
   };
 
   const isOptimizationLoading =
@@ -188,7 +215,7 @@ export default function BacktestPage() {
             </div>
             {/* オートストラテジーへのリンクボタン */}
             <div className="flex items-center gap-3">
-              <button onClick={generateStrategies} className="btn-primary">
+              <button onClick={openAutoStrategyModal} className="btn-primary">
                 🚀 オートストラテジーで生成
               </button>
             </div>
@@ -277,6 +304,15 @@ export default function BacktestPage() {
           onGAGeneration={handleGAGeneration}
           isLoading={isOptimizationLoading}
           selectedResult={selectedResult}
+          currentBacktestConfig={currentBacktestConfig}
+        />
+
+        {/* オートストラテジーモーダル */}
+        <AutoStrategyModal
+          isOpen={showAutoStrategyModal}
+          onClose={() => setShowAutoStrategyModal(false)}
+          onSubmit={handleAutoStrategy}
+          isLoading={autoStrategyLoading}
           currentBacktestConfig={currentBacktestConfig}
         />
 

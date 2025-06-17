@@ -105,18 +105,40 @@ class AutoStrategyService:
             実験ID
         """
         try:
+            logger.info(f"=== 戦略生成開始処理開始 ===")
+            logger.info(f"実験名: {experiment_name}")
+
+            # 依存関係の確認
+            logger.info("依存関係の確認中...")
+            if self.ga_engine is None:
+                raise RuntimeError("GAエンジンが初期化されていません")
+            if self.backtest_service is None:
+                raise RuntimeError("バックテストサービスが初期化されていません")
+            if self.ga_experiment_repo is None:
+                raise RuntimeError("GA実験リポジトリが初期化されていません")
+            logger.info("依存関係の確認完了")
+
             # 実験IDの生成
+            logger.info("実験IDを生成中...")
             experiment_id = str(uuid.uuid4())
+            logger.info(f"実験ID生成完了: {experiment_id}")
 
             # 設定の検証
+            logger.info("GA設定の検証中...")
             is_valid, errors = ga_config.validate()
             if not is_valid:
+                logger.error(f"GA設定検証失敗: {errors}")
                 raise ValueError(f"Invalid GA config: {', '.join(errors)}")
+            logger.info("GA設定検証完了")
 
             # データベースに実験を保存
+            logger.info("データベースに実験を保存中...")
             db = SessionLocal()
             try:
+                logger.info("データベースセッション作成完了")
                 ga_experiment_repo = GAExperimentRepository(db)
+                logger.info("GA実験リポジトリ作成完了")
+
                 db_experiment = ga_experiment_repo.create_experiment(
                     name=experiment_name,
                     config=ga_config.to_dict(),
@@ -124,10 +146,18 @@ class AutoStrategyService:
                     status="starting",
                 )
                 db_experiment_id = db_experiment.id
+                logger.info(f"データベース実験作成完了: DB ID = {db_experiment_id}")
+            except Exception as db_error:
+                logger.error(
+                    f"データベース操作エラー: {type(db_error).__name__}: {str(db_error)}"
+                )
+                raise
             finally:
                 db.close()
+                logger.info("データベースセッション終了")
 
             # 実験情報を記録
+            logger.info("実験情報を記録中...")
             experiment_info = {
                 "id": experiment_id,
                 "db_id": db_experiment_id,
@@ -138,6 +168,7 @@ class AutoStrategyService:
                 "start_time": time.time(),
                 "thread": None,
             }
+            logger.info("実験情報記録完了")
 
             self.running_experiments[experiment_id] = experiment_info
 
@@ -164,26 +195,47 @@ class AutoStrategyService:
                 if progress_callback:
                     progress_callback(progress)
 
+            logger.info("進捗コールバックを設定中...")
             self.ga_engine.set_progress_callback(combined_callback)
+            logger.info("進捗コールバック設定完了")
 
             # バックグラウンドで実行
+            logger.info("バックグラウンドスレッドを作成中...")
             thread = threading.Thread(
                 target=self._run_experiment,
                 args=(experiment_id, ga_config, backtest_config),
                 daemon=True,
             )
+            logger.info("スレッド作成完了")
 
             experiment_info["thread"] = thread
             experiment_info["status"] = "running"
 
+            logger.info("スレッドを開始中...")
             thread.start()
+            logger.info("スレッド開始完了")
 
-            logger.info(f"戦略生成実験開始: {experiment_id} ({experiment_name})")
+            logger.info(f"戦略生成実験開始成功: {experiment_id} ({experiment_name})")
             return experiment_id
 
         except Exception as e:
-            logger.error(f"戦略生成開始エラー: {e}")
-            raise
+            import traceback
+
+            error_msg = str(e)
+            error_type = type(e).__name__
+            traceback_str = traceback.format_exc()
+
+            logger.error(f"戦略生成開始エラー - 例外型: {error_type}")
+            logger.error(f"戦略生成開始エラー - メッセージ: {error_msg}")
+            logger.error(f"戦略生成開始エラー - トレースバック:\n{traceback_str}")
+
+            # エラーメッセージが空の場合の対処
+            if not error_msg:
+                error_msg = f"Unknown {error_type} error occurred"
+
+            # 詳細なエラー情報を含む例外を再発生
+            detailed_error = f"{error_type}: {error_msg}"
+            raise RuntimeError(detailed_error) from e
 
     def _run_experiment(
         self, experiment_id: str, ga_config: GAConfig, backtest_config: Dict[str, Any]

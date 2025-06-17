@@ -159,7 +159,7 @@ export default function BacktestResultsTable({
               </td>
               <td className="px-6 py-4 whitespace-nowrap">
                 <div className="text-sm text-secondary-300">
-                  {formatPercentage(result.performance_metrics.win_rate)}
+                  {formatNumber(result.performance_metrics.win_rate)}%
                 </div>
               </td>
               <td className="px-6 py-4 whitespace-nowrap">

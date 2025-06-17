@@ -230,24 +230,43 @@ class GeneticAlgorithmEngine:
         try:
             from database.connection import SessionLocal
             from database.repositories.ohlcv_repository import OHLCVRepository
+            from app.config.market_config import MarketDataConfig
 
             db = SessionLocal()
             try:
                 repo = OHLCVRepository(db)
                 symbols = repo.get_available_symbols()
 
+                # シンボルの正規化
+                input_symbol = base_config.get("symbol", "BTC/USDT")
+                try:
+                    # MarketDataConfigを使用してシンボルを正規化
+                    if input_symbol == "BTC/USDT":
+                        normalized_symbol = "BTC/USDT:USDT"  # データベース形式に変換
+                    else:
+                        normalized_symbol = MarketDataConfig.normalize_symbol(
+                            input_symbol
+                        )
+                except ValueError:
+                    # 正規化に失敗した場合のフォールバック
+                    normalized_symbol = "BTC/USDT:USDT"
+                    logger.warning(
+                        f"シンボル正規化失敗、フォールバック使用: {input_symbol} -> {normalized_symbol}"
+                    )
+
                 # BTC/USDT系のシンボルを優先的に使用
                 target_symbols = ["BTC/USDT:USDT", "BTC/USDT", "BTCUSDT"]
-                selected_symbol = base_config.get("symbol", "BTC/USDT")
+                selected_symbol = normalized_symbol
                 available_timeframes = []
 
-                # 指定されたシンボルが利用可能かチェック
+                # 正規化されたシンボルが利用可能かチェック
                 if selected_symbol in symbols:
                     available_timeframes = repo.get_available_timeframes(
                         selected_symbol
                     )
+                    logger.info(f"正規化シンボル使用: {selected_symbol}")
 
-                # 指定シンボルが利用できない場合、優先シンボルを使用
+                # 正規化シンボルが利用できない場合、優先シンボルを使用
                 if not available_timeframes:
                     for symbol in target_symbols:
                         if symbol in symbols:
@@ -255,9 +274,7 @@ class GeneticAlgorithmEngine:
                             if timeframes:
                                 selected_symbol = symbol
                                 available_timeframes = timeframes
-                                logger.info(
-                                    f"シンボル変更: {base_config.get('symbol')} -> {symbol}"
-                                )
+                                logger.info(f"シンボル変更: {input_symbol} -> {symbol}")
                                 break
 
                 # それでも見つからない場合、最初のシンボルを使用
@@ -271,8 +288,10 @@ class GeneticAlgorithmEngine:
                 # 時間軸をランダム選択
                 if available_timeframes:
                     selected_timeframe = random.choice(available_timeframes)
+                    logger.info(f"ランダム時間足選択: {selected_timeframe}")
                 else:
                     selected_timeframe = "1d"  # 最終フォールバック
+                    logger.warning("利用可能な時間足が見つからず、デフォルト使用: 1d")
 
                 logger.info(
                     f"選択されたシンボル・時間軸: {selected_symbol} {selected_timeframe}"
@@ -284,30 +303,44 @@ class GeneticAlgorithmEngine:
         except Exception as e:
             logger.error(f"データベース確認エラー: {e}")
             # エラー時のフォールバック
-            selected_symbol = base_config.get("symbol", "BTC/USDT")
+            selected_symbol = "BTC/USDT:USDT"
             selected_timeframe = "1d"
 
-        # 現在時刻を基準に期間を設定
-        end_date = datetime.now(timezone.utc)
+        # 元の設定の日付範囲を使用（現在時刻ベースではなく）
+        original_start = base_config.get("start_date")
+        original_end = base_config.get("end_date")
 
-        # 時間足に応じて適切な期間を設定
-        if selected_timeframe == "15m":
-            start_date = end_date - timedelta(days=7)  # 15分足: 1週間
-        elif selected_timeframe == "30m":
-            start_date = end_date - timedelta(days=14)  # 30分足: 2週間
-        elif selected_timeframe == "1h":
-            start_date = end_date - timedelta(days=30)  # 1時間足: 1ヶ月
-        elif selected_timeframe == "4h":
-            start_date = end_date - timedelta(days=60)  # 4時間足: 2ヶ月
-        else:  # 1d
-            start_date = end_date - timedelta(days=90)  # 日足: 3ヶ月
+        if original_start and original_end:
+            # 元の設定に日付がある場合はそれを使用
+            start_date = original_start
+            end_date = original_end
+            logger.info(f"元の日付範囲を使用: {start_date} ～ {end_date}")
+        else:
+            # 日付が指定されていない場合のみ、現在時刻を基準に設定
+            end_date_dt = datetime.now(timezone.utc)
+
+            # 時間足に応じて適切な期間を設定
+            if selected_timeframe == "15m":
+                start_date_dt = end_date_dt - timedelta(days=7)  # 15分足: 1週間
+            elif selected_timeframe == "30m":
+                start_date_dt = end_date_dt - timedelta(days=14)  # 30分足: 2週間
+            elif selected_timeframe == "1h":
+                start_date_dt = end_date_dt - timedelta(days=30)  # 1時間足: 1ヶ月
+            elif selected_timeframe == "4h":
+                start_date_dt = end_date_dt - timedelta(days=60)  # 4時間足: 2ヶ月
+            else:  # 1d
+                start_date_dt = end_date_dt - timedelta(days=90)  # 日足: 3ヶ月
+
+            start_date = start_date_dt.isoformat()
+            end_date = end_date_dt.isoformat()
+            logger.info(f"自動生成日付範囲: {start_date} ～ {end_date}")
 
         # 設定をコピーして更新
         config = base_config.copy()
         config["symbol"] = selected_symbol
         config["timeframe"] = selected_timeframe
-        config["start_date"] = start_date.isoformat()
-        config["end_date"] = end_date.isoformat()
+        config["start_date"] = start_date
+        config["end_date"] = end_date
 
         return config
 
