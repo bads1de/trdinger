@@ -13,6 +13,7 @@ import logging
 from database.connection import get_db, ensure_db_initialized
 from database.repositories.funding_rate_repository import FundingRateRepository
 from app.core.services.funding_rate_service import BybitFundingRateService
+from app.api.utils.api_utils import handle_api_exception, api_response
 
 logger = logging.getLogger(__name__)
 
@@ -139,25 +140,21 @@ async def collect_funding_rate_data(
     Raises:
         HTTPException: パラメータが無効な場合やAPI/データベースエラーが発生した場合
     """
-    try:
+
+    async def _collect_rates():
         logger.info(
             f"ファンディングレートデータ収集開始: symbol={symbol}, fetch_all={fetch_all}"
         )
 
-        # データベース初期化確認
         if not ensure_db_initialized():
             logger.error("データベースの初期化に失敗しました")
             raise HTTPException(
                 status_code=500, detail="データベースの初期化に失敗しました"
             )
 
-        # ファンディングレートサービスを作成
         service = BybitFundingRateService()
-
-        # データベースリポジトリを作成
         repository = FundingRateRepository(db)
 
-        # ファンディングレートデータを取得・保存
         result = await service.fetch_and_save_funding_rate_data(
             symbol=symbol,
             limit=limit,
@@ -167,18 +164,12 @@ async def collect_funding_rate_data(
 
         logger.info(f"ファンディングレートデータ収集完了: {result}")
 
-        return {
-            "success": True,
-            "data": result,
-            "message": f"{result['saved_count']}件のファンディングレートデータを保存しました",
-        }
-
-    except Exception as e:
-        logger.error(f"ファンディングレートデータ収集エラー: {e}")
-        raise HTTPException(
-            status_code=500,
-            detail=f"ファンディングレートデータの収集中にエラーが発生しました: {str(e)}",
+        return api_response(
+            data=result,
+            message=f"{result['saved_count']}件のファンディングレートデータを保存しました",
         )
+
+    return await handle_api_exception(_collect_rates)
 
 
 @router.get("/funding-rates/current")
@@ -199,20 +190,18 @@ async def get_current_funding_rate(
     Raises:
         HTTPException: パラメータが無効な場合やAPIエラーが発生した場合
     """
-    try:
+
+    async def _get_current_rate():
         logger.info(f"現在のファンディングレート取得開始: symbol={symbol}")
 
-        # ファンディングレートサービスを作成
         service = BybitFundingRateService()
 
-        # 現在のファンディングレートを取得
         current_rate = await service.fetch_current_funding_rate(symbol)
 
         logger.info(f"現在のファンディングレート取得完了: {symbol}")
 
-        return {
-            "success": True,
-            "data": {
+        return api_response(
+            data={
                 "symbol": current_rate["symbol"],
                 "funding_rate": current_rate["fundingRate"],
                 "funding_timestamp": current_rate.get("fundingDatetime"),
@@ -221,15 +210,10 @@ async def get_current_funding_rate(
                 "index_price": current_rate.get("indexPrice"),
                 "timestamp": current_rate.get("datetime"),
             },
-            "message": f"{symbol}の現在のファンディングレートを取得しました",
-        }
-
-    except Exception as e:
-        logger.error(f"現在のファンディングレート取得エラー: {e}")
-        raise HTTPException(
-            status_code=500,
-            detail=f"現在のファンディングレートの取得中にエラーが発生しました: {str(e)}",
+            message=f"{symbol}の現在のファンディングレートを取得しました",
         )
+
+    return await handle_api_exception(_get_current_rate)
 
 
 @router.post("/funding-rates/bulk-collect")
@@ -251,26 +235,23 @@ async def bulk_collect_funding_rates(
     Raises:
         HTTPException: データベースエラーが発生した場合
     """
-    try:
+
+    async def _bulk_collect():
         logger.info("ファンディングレート一括収集開始: BTC全期間データ")
 
-        # データベース初期化確認
         if not ensure_db_initialized():
             logger.error("データベースの初期化に失敗しました")
             raise HTTPException(
                 status_code=500, detail="データベースの初期化に失敗しました"
             )
 
-        # BTCの無期限契約シンボル（USDTのみ、ETHは除外）
         symbols = [
             "BTC/USDT:USDT",
         ]
 
-        # ファンディングレートサービスを作成
         service = BybitFundingRateService()
         repository = FundingRateRepository(db)
 
-        # 各シンボルのデータを収集
         results = []
         total_saved = 0
         successful_symbols = 0
@@ -281,7 +262,7 @@ async def bulk_collect_funding_rates(
                 result = await service.fetch_and_save_funding_rate_data(
                     symbol=symbol,
                     repository=repository,
-                    fetch_all=True,  # 全期間のデータを取得
+                    fetch_all=True,
                 )
                 results.append(result)
                 total_saved += result["saved_count"]
@@ -289,7 +270,6 @@ async def bulk_collect_funding_rates(
 
                 logger.info(f"✅ {symbol}: {result['saved_count']}件保存")
 
-                # レート制限対応
                 import asyncio
 
                 await asyncio.sleep(0.1)
@@ -302,9 +282,8 @@ async def bulk_collect_funding_rates(
             f"ファンディングレート一括収集完了: {successful_symbols}/{len(symbols)}成功"
         )
 
-        return {
-            "success": True,
-            "data": {
+        return api_response(
+            data={
                 "total_symbols": len(symbols),
                 "successful_symbols": successful_symbols,
                 "failed_symbols": len(failed_symbols),
@@ -312,12 +291,7 @@ async def bulk_collect_funding_rates(
                 "results": results,
                 "failures": failed_symbols,
             },
-            "message": f"{successful_symbols}/{len(symbols)}シンボル（BTC）で合計{total_saved}件のファンディングレートデータを保存しました",
-        }
-
-    except Exception as e:
-        logger.error(f"ファンディングレート一括収集エラー: {e}")
-        raise HTTPException(
-            status_code=500,
-            detail=f"ファンディングレートの一括収集中にエラーが発生しました: {str(e)}",
+            message=f"{successful_symbols}/{len(symbols)}シンボル（BTC）で合計{total_saved}件のファンディングレートデータを保存しました",
         )
+
+    return await handle_api_exception(_bulk_collect)

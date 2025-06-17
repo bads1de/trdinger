@@ -16,6 +16,7 @@ from database.connection import get_db
 from database.repositories.ohlcv_repository import OHLCVRepository
 from app.core.utils.api_utils import APIResponseHelper, APIErrorHandler, DateTimeHelper
 from app.core.utils.data_converter import OHLCVDataConverter
+from app.utils.api_response_utils import api_response, handle_api_exception
 
 
 # ログ設定
@@ -61,15 +62,14 @@ async def get_ohlcv_data(
     Raises:
         HTTPException: パラメータが無効な場合やデータベースエラーが発生した場合
     """
-    try:
+
+    async def _get_ohlcv():
         logger.info(
             f"OHLCVデータ取得リクエスト: symbol={symbol}, timeframe={timeframe}, limit={limit}"
         )
 
-        # データベースリポジトリを作成
         repository = OHLCVRepository(db)
 
-        # 日付パラメータの変換
         start_time = None
         end_time = None
 
@@ -78,8 +78,6 @@ async def get_ohlcv_data(
         if end_date:
             end_time = DateTimeHelper.parse_iso_datetime(end_date)
 
-        # データベースからOHLCVデータを取得
-        # 日付範囲が指定されていない場合は最新データを取得
         if start_time is None and end_time is None:
             ohlcv_records = repository.get_latest_ohlcv_data(
                 symbol=symbol,
@@ -95,22 +93,17 @@ async def get_ohlcv_data(
                 limit=limit,
             )
 
-        # データをAPIレスポンス形式に変換
         ohlcv_data = OHLCVDataConverter.db_to_api_format(ohlcv_records)
 
         logger.info(f"OHLCVデータ取得成功: {len(ohlcv_data)}件")
 
-        return APIResponseHelper.success_response(
+        return api_response(
             data=ohlcv_data,
             message=f"{symbol} の {timeframe} OHLCVデータを取得しました",
             additional_fields={"symbol": symbol, "timeframe": timeframe},
         )
 
-    except ValueError as e:
-        raise APIErrorHandler.handle_validation_error(e, "OHLCVデータ取得")
-
-    except Exception as e:
-        raise APIErrorHandler.handle_database_error(e, "OHLCVデータ取得")
+    return await handle_api_exception(_get_ohlcv)
 
 
 @router.get("/symbols")
@@ -121,16 +114,17 @@ async def get_supported_symbols():
     Returns:
         サポートされているシンボルのリスト
     """
-    try:
-        return APIResponseHelper.success_response(
+
+    async def _get_symbols():
+        return api_response(
             data={
                 "symbols": MarketDataConfig.SUPPORTED_SYMBOLS,
                 "symbol_mapping": MarketDataConfig.SYMBOL_MAPPING,
             },
             message="サポートされているシンボル一覧を取得しました",
         )
-    except Exception as e:
-        raise APIErrorHandler.handle_generic_error(e, "シンボル一覧取得")
+
+    return await handle_api_exception(_get_symbols)
 
 
 @router.get("/timeframes")
@@ -141,13 +135,14 @@ async def get_supported_timeframes():
     Returns:
         サポートされている時間軸のリスト
     """
-    try:
-        return APIResponseHelper.success_response(
+
+    async def _get_timeframes():
+        return api_response(
             data={
                 "timeframes": MarketDataConfig.SUPPORTED_TIMEFRAMES,
                 "default": MarketDataConfig.DEFAULT_TIMEFRAME,
             },
             message="サポートされている時間軸一覧を取得しました",
         )
-    except Exception as e:
-        raise APIErrorHandler.handle_generic_error(e, "時間軸一覧取得")
+
+    return await handle_api_exception(_get_timeframes)

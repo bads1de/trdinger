@@ -14,6 +14,7 @@ from database.connection import get_db
 from database.repositories.ohlcv_repository import OHLCVRepository
 from database.repositories.funding_rate_repository import FundingRateRepository
 from database.repositories.open_interest_repository import OpenInterestRepository
+from utils.api_utils import handle_api_exception, api_response
 
 logger = logging.getLogger(__name__)
 
@@ -156,27 +157,24 @@ async def reset_open_interest_data(db: Session = Depends(get_db)) -> Dict[str, A
     Returns:
         削除結果の詳細
     """
-    try:
+
+    async def _reset_open_interest():
         oi_repo = OpenInterestRepository(db)
         deleted_count = oi_repo.clear_all_open_interest_data()
 
-        response = {
-            "success": True,
-            "deleted_count": deleted_count,
-            "data_type": "open_interest",
-            "message": f"オープンインタレストデータを{deleted_count}件削除しました",
-            "timestamp": datetime.now().isoformat(),
-        }
+        message = f"オープンインタレストデータを{deleted_count}件削除しました"
 
         logger.info(f"オープンインタレストデータリセット完了: {deleted_count}件")
-        return response
-
-    except Exception as e:
-        logger.error(f"オープンインタレストデータリセットエラー: {e}")
-        raise HTTPException(
-            status_code=500,
-            detail=f"オープンインタレストデータリセット中にエラーが発生しました: {str(e)}",
+        return api_response(
+            success=True,
+            data={
+                "deleted_count": deleted_count,
+                "data_type": "open_interest",
+            },
+            message=message,
         )
+
+    return await handle_api_exception(_reset_open_interest)
 
 
 @router.delete("/symbol/{symbol}")
@@ -192,24 +190,21 @@ async def reset_data_by_symbol(
     Returns:
         削除結果の詳細
     """
-    try:
-        # リポジトリインスタンス作成
+
+    async def _reset_by_symbol():
         ohlcv_repo = OHLCVRepository(db)
         fr_repo = FundingRateRepository(db)
         oi_repo = OpenInterestRepository(db)
 
-        # 各データの削除実行
         deleted_counts = {}
         errors = []
 
-        # OHLCVデータ削除
         try:
             deleted_counts["ohlcv"] = ohlcv_repo.clear_ohlcv_data_by_symbol(symbol)
         except Exception as e:
             errors.append(f"OHLCV削除エラー: {str(e)}")
             deleted_counts["ohlcv"] = 0
 
-        # ファンディングレートデータ削除
         try:
             deleted_counts["funding_rates"] = fr_repo.clear_funding_rate_data_by_symbol(
                 symbol
@@ -218,7 +213,6 @@ async def reset_data_by_symbol(
             errors.append(f"ファンディングレート削除エラー: {str(e)}")
             deleted_counts["funding_rates"] = 0
 
-        # オープンインタレストデータ削除
         try:
             deleted_counts["open_interest"] = (
                 oi_repo.clear_open_interest_data_by_symbol(symbol)
@@ -227,33 +221,28 @@ async def reset_data_by_symbol(
             errors.append(f"オープンインタレスト削除エラー: {str(e)}")
             deleted_counts["open_interest"] = 0
 
-        # 結果の集計
         total_deleted = sum(deleted_counts.values())
         success = len(errors) == 0
 
-        response = {
-            "success": success,
-            "symbol": symbol,
-            "deleted_counts": deleted_counts,
-            "total_deleted": total_deleted,
-            "message": (
-                f"シンボル '{symbol}' のデータリセットが完了しました"
-                if success
-                else f"シンボル '{symbol}' の一部データリセットでエラーが発生しました"
-            ),
-            "errors": errors,
-            "timestamp": datetime.now().isoformat(),
-        }
+        message = (
+            f"シンボル '{symbol}' のデータリセットが完了しました"
+            if success
+            else f"シンボル '{symbol}' の一部データリセットでエラーが発生しました"
+        )
 
         logger.info(f"シンボル '{symbol}' データリセット完了: {deleted_counts}")
-        return response
-
-    except Exception as e:
-        logger.error(f"シンボル '{symbol}' データリセットエラー: {e}")
-        raise HTTPException(
-            status_code=500,
-            detail=f"シンボル '{symbol}' のデータリセット中にエラーが発生しました: {str(e)}",
+        return api_response(
+            success=success,
+            data={
+                "symbol": symbol,
+                "deleted_counts": deleted_counts,
+                "total_deleted": total_deleted,
+                "errors": errors,
+            },
+            message=message,
         )
+
+    return await handle_api_exception(_reset_by_symbol)
 
 
 @router.get("/status")
@@ -264,7 +253,8 @@ async def get_data_status(db: Session = Depends(get_db)) -> Dict[str, Any]:
     Returns:
         各データタイプの件数情報
     """
-    try:
+
+    async def _get_status():
         # リポジトリインスタンス作成
         OHLCVRepository(db)
         FundingRateRepository(db)
@@ -277,20 +267,19 @@ async def get_data_status(db: Session = Depends(get_db)) -> Dict[str, Any]:
         fr_count = db.query(FundingRateData).count()
         oi_count = db.query(OpenInterestData).count()
 
-        response = {
+        response_data = {
             "data_counts": {
                 "ohlcv": ohlcv_count,
                 "funding_rates": fr_count,
                 "open_interest": oi_count,
             },
             "total_records": ohlcv_count + fr_count + oi_count,
-            "timestamp": datetime.now().isoformat(),
         }
 
-        return response
-
-    except Exception as e:
-        logger.error(f"データ状況取得エラー: {e}")
-        raise HTTPException(
-            status_code=500, detail=f"データ状況取得中にエラーが発生しました: {str(e)}"
+        return api_response(
+            success=True,
+            data=response_data,
+            message="現在のデータ状況を取得しました",
         )
+
+    return await handle_api_exception(_get_status)

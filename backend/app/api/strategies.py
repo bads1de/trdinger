@@ -12,6 +12,7 @@ import logging
 
 from app.core.services.strategy_integration_service import StrategyIntegrationService
 from database.connection import get_db
+from app.utils.api_response_utils import api_response, handle_api_exception
 
 logger = logging.getLogger(__name__)
 
@@ -72,15 +73,14 @@ async def get_unified_strategies(
     Returns:
         統合された戦略データ
     """
-    try:
+
+    async def _get_unified():
         logger.info(
             f"統合戦略取得開始: limit={limit}, offset={offset}, category={category}"
         )
 
-        # 戦略統合サービスを初期化
         integration_service = StrategyIntegrationService(db)
 
-        # 統合戦略データを取得
         result = integration_service.get_unified_strategies(
             limit=limit,
             offset=offset,
@@ -94,17 +94,16 @@ async def get_unified_strategies(
 
         logger.info(f"統合戦略取得完了: {len(result['strategies'])} 件")
 
-        return UnifiedStrategiesResponse(
-            strategies=result["strategies"],
-            total_count=result["total_count"],
-            has_more=result["has_more"],
+        return api_response(
+            data=result["strategies"],
+            message="統合戦略を取得しました",
+            additional_fields={
+                "total_count": result["total_count"],
+                "has_more": result["has_more"],
+            },
         )
 
-    except Exception as e:
-        logger.error(f"統合戦略取得エラー: {e}")
-        raise HTTPException(
-            status_code=500, detail=f"Failed to retrieve unified strategies: {str(e)}"
-        )
+    return await handle_api_exception(_get_unified)
 
 
 @router.get("/auto-generated", response_model=UnifiedStrategiesResponse)
@@ -132,18 +131,16 @@ async def get_auto_generated_strategies(
     Returns:
         オートストラテジー戦略データ
     """
-    try:
+
+    async def _get_auto_strategies():
         logger.info(f"オートストラテジー取得開始: experiment_id={experiment_id}")
 
-        # 戦略統合サービスを初期化
         integration_service = StrategyIntegrationService(db)
 
-        # オートストラテジー戦略のみを取得
         auto_strategies = integration_service._get_auto_generated_strategies(
             limit=limit, offset=offset, sort_by=sort_by, sort_order=sort_order
         )
 
-        # フィルタリング
         if experiment_id is not None:
             auto_strategies = [
                 s for s in auto_strategies if s.get("experiment_id") == experiment_id
@@ -154,24 +151,21 @@ async def get_auto_generated_strategies(
                 s for s in auto_strategies if s.get("fitness_score", 0) >= min_fitness
             ]
 
-        # ページネーション適用
         total_count = len(auto_strategies)
         paginated_strategies = auto_strategies[offset : offset + limit]
 
         logger.info(f"オートストラテジー取得完了: {len(paginated_strategies)} 件")
 
-        return UnifiedStrategiesResponse(
-            strategies=paginated_strategies,
-            total_count=total_count,
-            has_more=offset + limit < total_count,
+        return api_response(
+            data=paginated_strategies,
+            message="オートストラテジー戦略を取得しました",
+            additional_fields={
+                "total_count": total_count,
+                "has_more": offset + limit < total_count,
+            },
         )
 
-    except Exception as e:
-        logger.error(f"オートストラテジー取得エラー: {e}")
-        raise HTTPException(
-            status_code=500,
-            detail=f"Failed to retrieve auto-generated strategies: {str(e)}",
-        )
+    return await handle_api_exception(_get_auto_strategies)
 
 
 @router.get("/stats", response_model=StrategyStatsResponse)
@@ -185,20 +179,18 @@ async def get_strategy_statistics(db: Session = Depends(get_db)):
     Returns:
         戦略統計データ
     """
-    try:
+
+    async def _get_stats():
         logger.info("戦略統計取得開始")
 
-        # 戦略統合サービスを初期化
         integration_service = StrategyIntegrationService(db)
 
-        # 全戦略を取得（統計用）
         all_strategies_result = integration_service.get_unified_strategies(
-            limit=1000, offset=0  # 統計用に多めに取得
+            limit=1000, offset=0
         )
 
         strategies = all_strategies_result["strategies"]
 
-        # 統計計算
         stats = {
             "total_strategies": len(strategies),
             "showcase_strategies": len(
@@ -217,7 +209,6 @@ async def get_strategy_statistics(db: Session = Depends(get_db)):
             },
         }
 
-        # カテゴリ別統計
         for strategy in strategies:
             category = strategy.get("category", "unknown")
             stats["categories"][category] = stats["categories"].get(category, 0) + 1
@@ -227,7 +218,6 @@ async def get_strategy_statistics(db: Session = Depends(get_db)):
                 stats["risk_levels"].get(risk_level, 0) + 1
             )
 
-        # パフォーマンス統計
         if strategies:
             stats["performance_summary"]["avg_return"] = sum(
                 s.get("expected_return", 0) for s in strategies
@@ -247,13 +237,9 @@ async def get_strategy_statistics(db: Session = Depends(get_db)):
 
         logger.info("戦略統計取得完了")
 
-        return StrategyStatsResponse(stats=stats)
+        return api_response(data=stats, message="戦略統計情報を取得しました")
 
-    except Exception as e:
-        logger.error(f"戦略統計取得エラー: {e}")
-        raise HTTPException(
-            status_code=500, detail=f"Failed to retrieve strategy statistics: {str(e)}"
-        )
+    return await handle_api_exception(_get_stats)
 
 
 @router.get("/categories")

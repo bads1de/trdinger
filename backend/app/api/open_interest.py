@@ -15,6 +15,7 @@ from sqlalchemy.orm import Session
 from app.core.services.open_interest_service import BybitOpenInterestService
 from database.connection import get_db, ensure_db_initialized
 from database.repositories.open_interest_repository import OpenInterestRepository
+from app.utils.api_response_utils import api_response, handle_api_exception
 
 # ログ設定
 logger = logging.getLogger(__name__)
@@ -49,15 +50,14 @@ async def get_open_interest_data(
     Raises:
         HTTPException: パラメータが無効な場合やデータベースエラーが発生した場合
     """
-    try:
+
+    async def _get_open_interest():
         logger.info(
             f"オープンインタレストデータ取得リクエスト: symbol={symbol}, limit={limit}"
         )
 
-        # データベースリポジトリを作成
         repository = OpenInterestRepository(db)
 
-        # 日付パラメータの変換
         start_time = None
         end_time = None
 
@@ -66,11 +66,9 @@ async def get_open_interest_data(
         if end_date:
             end_time = datetime.fromisoformat(end_date.replace("Z", "+00:00"))
 
-        # シンボルの正規化
         service = BybitOpenInterestService()
         normalized_symbol = service.normalize_symbol(symbol)
 
-        # データベースからオープンインタレストデータを取得
         open_interest_records = repository.get_open_interest_data(
             symbol=normalized_symbol,
             start_time=start_time,
@@ -78,7 +76,6 @@ async def get_open_interest_data(
             limit=limit,
         )
 
-        # レスポンス形式に変換
         open_interest_data = []
         for record in open_interest_records:
             open_interest_data.append(
@@ -92,22 +89,16 @@ async def get_open_interest_data(
 
         logger.info(f"オープンインタレストデータ取得成功: {len(open_interest_data)}件")
 
-        return {
-            "success": True,
-            "data": {
+        return api_response(
+            data={
                 "symbol": normalized_symbol,
                 "count": len(open_interest_data),
                 "open_interest": open_interest_data,
             },
-            "message": f"{len(open_interest_data)}件のオープンインタレストデータを取得しました",
-        }
-
-    except Exception as e:
-        logger.error(f"オープンインタレストデータ取得エラー: {e}")
-        raise HTTPException(
-            status_code=500,
-            detail=f"オープンインタレストデータの取得中にエラーが発生しました: {str(e)}",
+            message=f"{len(open_interest_data)}件のオープンインタレストデータを取得しました",
         )
+
+    return await handle_api_exception(_get_open_interest)
 
 
 @router.post("/open-interest/collect")
@@ -136,25 +127,21 @@ async def collect_open_interest_data(
     Raises:
         HTTPException: パラメータが無効な場合やAPI/データベースエラーが発生した場合
     """
-    try:
+
+    async def _collect_open_interest():
         logger.info(
             f"オープンインタレストデータ収集開始: symbol={symbol}, fetch_all={fetch_all}"
         )
 
-        # データベース初期化確認
         if not ensure_db_initialized():
             logger.error("データベースの初期化に失敗しました")
             raise HTTPException(
                 status_code=500, detail="データベースの初期化に失敗しました"
             )
 
-        # オープンインタレストサービスを作成
         service = BybitOpenInterestService()
-
-        # データベースリポジトリを作成
         repository = OpenInterestRepository(db)
 
-        # オープンインタレストデータを取得・保存
         result = await service.fetch_and_save_open_interest_data(
             symbol=symbol,
             limit=limit,
@@ -164,18 +151,12 @@ async def collect_open_interest_data(
 
         logger.info(f"オープンインタレストデータ収集完了: {result}")
 
-        return {
-            "success": True,
-            "data": result,
-            "message": f"{result['saved_count']}件のオープンインタレストデータを保存しました",
-        }
-
-    except Exception as e:
-        logger.error(f"オープンインタレストデータ収集エラー: {e}")
-        raise HTTPException(
-            status_code=500,
-            detail=f"オープンインタレストデータの収集中にエラーが発生しました: {str(e)}",
+        return api_response(
+            data=result,
+            message=f"{result['saved_count']}件のオープンインタレストデータを保存しました",
         )
+
+    return await handle_api_exception(_collect_open_interest)
 
 
 @router.get("/open-interest/current")
@@ -196,29 +177,22 @@ async def get_current_open_interest(
     Raises:
         HTTPException: パラメータが無効な場合やAPIエラーが発生した場合
     """
-    try:
+
+    async def _get_current_oi():
         logger.info(f"現在のオープンインタレスト取得開始: symbol={symbol}")
 
-        # オープンインタレストサービスを作成
         service = BybitOpenInterestService()
 
-        # 現在のオープンインタレストを取得
         current_open_interest = await service.fetch_current_open_interest(symbol)
 
         logger.info(f"現在のオープンインタレスト取得完了: {current_open_interest}")
 
-        return {
-            "success": True,
-            "data": current_open_interest,
-            "message": f"{symbol}の現在のオープンインタレストを取得しました",
-        }
-
-    except Exception as e:
-        logger.error(f"現在のオープンインタレスト取得エラー: {e}")
-        raise HTTPException(
-            status_code=500,
-            detail=f"現在のオープンインタレストの取得中にエラーが発生しました: {str(e)}",
+        return api_response(
+            data=current_open_interest,
+            message=f"{symbol}の現在のオープンインタレストを取得しました",
         )
+
+    return await handle_api_exception(_get_current_oi)
 
 
 @router.post("/open-interest/bulk-collect")
@@ -240,26 +214,23 @@ async def bulk_collect_open_interest(
     Raises:
         HTTPException: データベースエラーが発生した場合
     """
-    try:
+
+    async def _bulk_collect():
         logger.info("オープンインタレスト一括収集開始: BTC全期間データ")
 
-        # データベース初期化確認
         if not ensure_db_initialized():
             logger.error("データベースの初期化に失敗しました")
             raise HTTPException(
                 status_code=500, detail="データベースの初期化に失敗しました"
             )
 
-        # BTCの無期限契約シンボル（USDTのみ、ETHは除外）
         symbols = [
             "BTC/USDT:USDT",
         ]
 
-        # オープンインタレストサービスを作成
         service = BybitOpenInterestService()
         repository = OpenInterestRepository(db)
 
-        # 各シンボルのデータを収集
         results = []
         total_saved = 0
         successful_symbols = 0
@@ -270,7 +241,7 @@ async def bulk_collect_open_interest(
                 result = await service.fetch_and_save_open_interest_data(
                     symbol=symbol,
                     repository=repository,
-                    fetch_all=True,  # 全期間のデータを取得
+                    fetch_all=True,
                 )
                 results.append(result)
                 total_saved += result["saved_count"]
@@ -278,7 +249,6 @@ async def bulk_collect_open_interest(
 
                 logger.info(f"✅ {symbol}: {result['saved_count']}件保存")
 
-                # レート制限対応
                 import asyncio
 
                 await asyncio.sleep(0.1)
@@ -291,9 +261,8 @@ async def bulk_collect_open_interest(
             f"オープンインタレスト一括収集完了: {successful_symbols}/{len(symbols)}成功"
         )
 
-        return {
-            "success": True,
-            "data": {
+        return api_response(
+            data={
                 "results": results,
                 "summary": {
                     "total_symbols": len(symbols),
@@ -303,12 +272,7 @@ async def bulk_collect_open_interest(
                 },
                 "failed_symbols": failed_symbols,
             },
-            "message": f"{successful_symbols}/{len(symbols)}シンボル（BTC）で合計{total_saved}件のオープンインタレストデータを保存しました",
-        }
-
-    except Exception as e:
-        logger.error(f"オープンインタレスト一括収集エラー: {e}")
-        raise HTTPException(
-            status_code=500,
-            detail=f"オープンインタレスト一括収集中にエラーが発生しました: {str(e)}",
+            message=f"{successful_symbols}/{len(symbols)}シンボル（BTC）で合計{total_saved}件のオープンインタレストデータを保存しました",
         )
+
+    return await handle_api_exception(_bulk_collect)

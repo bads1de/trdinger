@@ -14,6 +14,12 @@ from database.repositories.ohlcv_repository import OHLCVRepository
 from app.config.market_config import MarketDataConfig
 import logging
 
+from app.utils.api_response_utils import (
+    handle_api_exception,
+    api_response,
+    log_exception,
+)
+
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/data-collection", tags=["data-collection"])
@@ -55,10 +61,7 @@ async def collect_historical_data(
             logger.warning(
                 f"パラメータ検証エラー: {ve} (symbol: {symbol}, timeframe: {timeframe})"
             )
-            # ここでログに出力されるエラーメッセージが問題の "サポートされていない通貨ペアです。利用可能: BTC/USDT" と一致するか確認
-            # MarketDataConfig.normalize_symbol から raise されるエラーはもっと詳細なはず
-            # もしこの ValueError が原因でなければ、他の箇所でエラーが発生している
-            raise HTTPException(status_code=400, detail=str(ve))
+            handle_api_exception(ve, message=str(ve), status_code=400)
 
         repository = OHLCVRepository(db)
         data_exists = repository.get_data_count(normalized_symbol, timeframe) > 0
@@ -67,11 +70,11 @@ async def collect_historical_data(
             logger.info(
                 f"{normalized_symbol} {timeframe} のデータは既にデータベースに存在します。"
             )
-            return {
-                "success": True,
-                "message": f"{normalized_symbol} {timeframe} のデータは既に存在します。新規収集は行いません。",
-                "status": "exists",
-            }
+            return api_response(
+                success=True,
+                message=f"{normalized_symbol} {timeframe} のデータは既に存在します。新規収集は行いません。",
+                status="exists",
+            )
 
         # バックグラウンドタスクとして実行
         background_tasks.add_task(
@@ -81,17 +84,14 @@ async def collect_historical_data(
             db,
         )
 
-        return {
-            "success": True,
-            "message": f"{normalized_symbol} {timeframe} の履歴データ収集を開始しました",
-            "status": "started",
-        }
+        return api_response(
+            success=True,
+            message=f"{normalized_symbol} {timeframe} の履歴データ収集を開始しました",
+            status="started",
+        )
 
-    except HTTPException:  # HTTPException はそのまま re-raise
-        raise
     except Exception as e:
-        logger.error(f"履歴データ収集開始エラー: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        handle_api_exception(e, message="履歴データ収集開始エラー")
 
 
 @router.post("/update")
@@ -115,11 +115,10 @@ async def update_incremental_data(
 
         result = await service.collect_incremental_data(symbol, timeframe, repository)
 
-        return result
+        return api_response(success=True, message="差分データ更新完了", data=result)
 
     except Exception as e:
-        logger.error(f"差分データ更新エラー: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        handle_api_exception(e, message="差分データ更新エラー")
 
 
 @router.post("/bitcoin-full")
@@ -144,16 +143,15 @@ async def collect_bitcoin_full_data(
                 _collect_historical_background, "BTC/USDT:USDT", timeframe, db
             )
 
-        return {
-            "success": True,
-            "message": "ビットコインの全時間軸データ収集を開始しました",
-            "timeframes": timeframes,
-            "status": "started",
-        }
+        return api_response(
+            success=True,
+            message="ビットコインの全時間軸データ収集を開始しました",
+            data={"timeframes": timeframes},
+            status="started",
+        )
 
     except Exception as e:
-        logger.error(f"ビットコイン全データ収集開始エラー: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        handle_api_exception(e, message="ビットコイン全データ収集開始エラー")
 
 
 @router.post("/bulk-historical")
@@ -267,27 +265,28 @@ async def collect_bulk_historical_data(
         logger.info(f"  - スキップ数: {skipped_count} (既存データ)")
         logger.info(f"  - 失敗数: {failed_count}")
 
-        return {
-            "success": True,
-            "message": f"一括データ収集を開始しました（{actual_tasks}タスク実行、{skipped_count}タスクスキップ）",
-            "status": "started",
-            "total_combinations": total_combinations,
-            "actual_tasks": actual_tasks,
-            "skipped_tasks": skipped_count,
-            "failed_tasks": failed_count,
-            "started_at": started_at,
-            "symbols": symbols,
-            "timeframes": timeframes,
-            "task_details": {
-                "executing": tasks_to_execute,
-                "skipped": skipped_tasks,
-                "failed": failed_tasks,
+        return api_response(
+            success=True,
+            message=f"一括データ収集を開始しました（{actual_tasks}タスク実行、{skipped_count}タスクスキップ）",
+            status="started",
+            data={
+                "total_combinations": total_combinations,
+                "actual_tasks": actual_tasks,
+                "skipped_tasks": skipped_count,
+                "failed_tasks": failed_count,
+                "started_at": started_at,
+                "symbols": symbols,
+                "timeframes": timeframes,
+                "task_details": {
+                    "executing": tasks_to_execute,
+                    "skipped": skipped_tasks,
+                    "failed": failed_tasks,
+                },
             },
-        }
+        )
 
     except Exception as e:
-        logger.error(f"一括データ収集開始エラー: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        handle_api_exception(e, message="一括データ収集開始エラー")
 
 
 @router.get("/status/{symbol:path}/{timeframe}")
@@ -314,9 +313,10 @@ async def get_collection_status(
     try:
         # データベース初期化確認
         if not ensure_db_initialized():
-            logger.error("データベースの初期化に失敗しました")
-            raise HTTPException(
-                status_code=500, detail="データベースの初期化に失敗しました"
+            handle_api_exception(
+                Exception("データベースの初期化に失敗しました"),
+                message="データベースの初期化に失敗しました",
+                status_code=500,
             )
 
         # シンボルと時間軸のバリデーション
@@ -328,7 +328,7 @@ async def get_collection_status(
             logger.warning(
                 f"パラメータ検証エラー: {ve} (symbol: {symbol}, timeframe: {timeframe})"
             )
-            raise HTTPException(status_code=400, detail=str(ve))
+            handle_api_exception(ve, message=str(ve), status_code=400)
 
         repository = OHLCVRepository(db)
 
@@ -347,55 +347,59 @@ async def get_collection_status(
                 )
                 logger.info(f"自動フェッチを開始: {normalized_symbol} {timeframe}")
 
-                return {
-                    "success": True,
-                    "symbol": normalized_symbol,
-                    "original_symbol": symbol,
-                    "timeframe": timeframe,
-                    "data_count": 0,
-                    "status": "auto_fetch_started",
-                    "message": f"{normalized_symbol} {timeframe} のデータが存在しないため、自動収集を開始しました。",
-                }
+                return api_response(
+                    success=True,
+                    message=f"{normalized_symbol} {timeframe} のデータが存在しないため、自動収集を開始しました。",
+                    status="auto_fetch_started",
+                    data={
+                        "symbol": normalized_symbol,
+                        "original_symbol": symbol,
+                        "timeframe": timeframe,
+                        "data_count": 0,
+                    },
+                )
             else:
                 # フェッチを提案
-                return {
-                    "success": True,
-                    "symbol": normalized_symbol,
-                    "original_symbol": symbol,
-                    "timeframe": timeframe,
-                    "data_count": 0,
-                    "status": "no_data",
-                    "message": f"{normalized_symbol} {timeframe} のデータが存在しません。新規収集が必要です。",
-                    "suggestion": {
-                        "manual_fetch": f"/api/data-collection/historical?symbol={normalized_symbol}&timeframe={timeframe}",
-                        "auto_fetch": f"/api/data-collection/status/{symbol}/{timeframe}?auto_fetch=true",
+                return api_response(
+                    success=True,
+                    message=f"{normalized_symbol} {timeframe} のデータが存在しません。新規収集が必要です。",
+                    status="no_data",
+                    data={
+                        "symbol": normalized_symbol,
+                        "original_symbol": symbol,
+                        "timeframe": timeframe,
+                        "data_count": 0,
+                        "suggestion": {
+                            "manual_fetch": f"/api/data-collection/historical?symbol={normalized_symbol}&timeframe={timeframe}",
+                            "auto_fetch": f"/api/data-collection/status/{symbol}/{timeframe}?auto_fetch=true",
+                        },
                     },
-                }
+                )
 
         # 最新・最古タイムスタンプを取得
         latest_timestamp = repository.get_latest_timestamp(normalized_symbol, timeframe)
         oldest_timestamp = repository.get_oldest_timestamp(normalized_symbol, timeframe)
 
-        return {
-            "success": True,
-            "symbol": normalized_symbol,
-            "original_symbol": symbol,
-            "timeframe": timeframe,
-            "data_count": data_count,
-            "status": "data_exists",
-            "latest_timestamp": (
-                latest_timestamp.isoformat() if latest_timestamp else None
-            ),
-            "oldest_timestamp": (
-                oldest_timestamp.isoformat() if oldest_timestamp else None
-            ),
-        }
+        return api_response(
+            success=True,
+            message="データ収集状況を取得しました。",
+            data={
+                "symbol": normalized_symbol,
+                "original_symbol": symbol,
+                "timeframe": timeframe,
+                "data_count": data_count,
+                "status": "data_exists",
+                "latest_timestamp": (
+                    latest_timestamp.isoformat() if latest_timestamp else None
+                ),
+                "oldest_timestamp": (
+                    oldest_timestamp.isoformat() if oldest_timestamp else None
+                ),
+            },
+        )
 
-    except HTTPException:  # HTTPException はそのまま re-raise
-        raise
     except Exception as e:
-        logger.error(f"収集状況確認エラー: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        handle_api_exception(e, message="収集状況確認エラー")
 
 
 @router.get("/supported-symbols")
@@ -407,18 +411,19 @@ async def get_supported_symbols() -> Dict:
         サポートされている取引ペアの一覧
     """
     try:
-        return {
-            "success": True,
-            "symbols": MarketDataConfig.SUPPORTED_SYMBOLS,
-            "timeframes": MarketDataConfig.SUPPORTED_TIMEFRAMES,
-            "default_symbol": MarketDataConfig.DEFAULT_SYMBOL,
-            "default_timeframe": MarketDataConfig.DEFAULT_TIMEFRAME,
-            "message": "サポートされている取引ペアと時間軸の一覧です。",
-        }
+        return api_response(
+            success=True,
+            message="サポートされている取引ペアと時間軸の一覧です。",
+            data={
+                "symbols": MarketDataConfig.SUPPORTED_SYMBOLS,
+                "timeframes": MarketDataConfig.SUPPORTED_TIMEFRAMES,
+                "default_symbol": MarketDataConfig.DEFAULT_SYMBOL,
+                "default_timeframe": MarketDataConfig.DEFAULT_TIMEFRAME,
+            },
+        )
 
     except Exception as e:
-        logger.error(f"サポートシンボル一覧取得エラー: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        handle_api_exception(e, message="サポートシンボル一覧取得エラー")
 
 
 @router.post("/all/bulk-collect")
@@ -534,27 +539,28 @@ async def collect_all_data_bulk(
         logger.info(f"  - スキップ数: {skipped_count} (既存データ)")
         logger.info(f"  - 失敗数: {failed_count}")
 
-        return {
-            "success": True,
-            "message": f"全データ一括収集を開始しました（{actual_tasks}タスク実行、{skipped_count}タスクスキップ）",
-            "status": "started",
-            "total_combinations": total_combinations,
-            "actual_tasks": actual_tasks,
-            "skipped_tasks": skipped_count,
-            "failed_tasks": failed_count,
-            "started_at": started_at,
-            "symbols": symbols,
-            "timeframes": timeframes,
-            "task_details": {
-                "executing": tasks_to_execute,
-                "skipped": skipped_tasks,
-                "failed": failed_tasks,
+        return api_response(
+            success=True,
+            message=f"全データ一括収集を開始しました（{actual_tasks}タスク実行、{skipped_count}タスクスキップ）",
+            status="started",
+            data={
+                "total_combinations": total_combinations,
+                "actual_tasks": actual_tasks,
+                "skipped_tasks": skipped_count,
+                "failed_tasks": failed_count,
+                "started_at": started_at,
+                "symbols": symbols,
+                "timeframes": timeframes,
+                "task_details": {
+                    "executing": tasks_to_execute,
+                    "skipped": skipped_tasks,
+                    "failed": failed_tasks,
+                },
             },
-        }
+        )
 
     except Exception as e:
-        logger.error(f"全データ一括収集開始エラー: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        handle_api_exception(e, message="全データ一括収集開始エラー")
 
 
 @router.get("/test-modified")
@@ -563,11 +569,11 @@ async def test_modified_code() -> Dict:
     修正されたコードが動作しているかをテスト
     """
     logger.info("テストエンドポイントが呼び出されました - 修正版コードが動作中")
-    return {
-        "success": True,
-        "message": "修正されたコードが正常に動作しています",
-        "version": "modified_2025_05_27",
-    }
+    return api_response(
+        success=True,
+        message="修正されたコードが正常に動作しています",
+        data={"version": "modified_2025_05_27"},
+    )
 
 
 async def _collect_all_data_background(symbol: str, timeframe: str, db: Session):
@@ -585,8 +591,9 @@ async def _collect_all_data_background(symbol: str, timeframe: str, db: Session)
         )
 
         if not ohlcv_result["success"]:
-            logger.error(
-                f"OHLCV収集失敗: {symbol} {timeframe} - {ohlcv_result.get('message')}"
+            log_exception(
+                Exception(ohlcv_result.get("message")),
+                message=f"OHLCV収集失敗: {symbol} {timeframe}",
             )
             return
 
@@ -614,12 +621,13 @@ async def _collect_all_data_background(symbol: str, timeframe: str, db: Session)
                     f"Funding Rate収集完了: {symbol} - {funding_result['saved_count']}件保存"
                 )
             else:
-                logger.warning(
-                    f"Funding Rate収集失敗: {symbol} - {funding_result.get('message')}"
+                log_exception(
+                    Exception(funding_result.get("message")),
+                    message=f"Funding Rate収集失敗: {symbol}",
                 )
 
         except Exception as funding_error:
-            logger.warning(f"Funding Rate収集エラー: {symbol} - {funding_error}")
+            log_exception(funding_error, message=f"Funding Rate収集エラー: {symbol}")
 
         # 3. Open Interest収集
         try:
@@ -644,19 +652,20 @@ async def _collect_all_data_background(symbol: str, timeframe: str, db: Session)
                     f"Open Interest収集完了: {symbol} {timeframe} - {oi_result['saved_count']}件保存"
                 )
             else:
-                logger.warning(
-                    f"Open Interest収集失敗: {symbol} {timeframe} - {oi_result.get('message')}"
+                log_exception(
+                    Exception(oi_result.get("message")),
+                    message=f"Open Interest収集失敗: {symbol} {timeframe}",
                 )
 
         except Exception as oi_error:
-            logger.warning(
-                f"Open Interest収集エラー: {symbol} {timeframe} - {oi_error}"
+            log_exception(
+                oi_error, message=f"Open Interest収集エラー: {symbol} {timeframe}"
             )
 
         logger.info(f"全データ収集完了: {symbol} {timeframe}")
 
     except Exception as e:
-        logger.error(f"全データ収集エラー: {symbol} {timeframe} - {e}")
+        log_exception(e, message=f"全データ収集エラー: {symbol} {timeframe}")
     finally:
         db.close()
 
@@ -674,11 +683,12 @@ async def _collect_historical_background(symbol: str, timeframe: str, db: Sessio
                 f"バックグラウンド収集完了: {symbol} {timeframe} - {result['saved_count']}件保存"
             )
         else:
-            logger.error(
-                f"バックグラウンド収集失敗: {symbol} {timeframe} - {result.get('message')}"
+            log_exception(
+                Exception(result.get("message")),
+                message=f"バックグラウンド収集失敗: {symbol} {timeframe}",
             )
 
     except Exception as e:
-        logger.error(f"バックグラウンド収集エラー: {symbol} {timeframe} - {e}")
+        log_exception(e, message=f"バックグラウンド収集エラー: {symbol} {timeframe}")
     finally:
         db.close()

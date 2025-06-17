@@ -14,6 +14,7 @@ from database.connection import get_db
 from database.repositories.backtest_result_repository import BacktestResultRepository
 from app.core.services.backtest_service import BacktestService
 from app.core.services.enhanced_backtest_service import EnhancedBacktestService
+from app.utils.api_response_utils import api_response, handle_api_exception
 
 router = APIRouter(prefix="/api/backtest", tags=["backtest"])
 
@@ -127,17 +128,15 @@ async def run_backtest(request: BacktestRequest, db: Session = Depends(get_db)):
     Returns:
         バックテスト結果
     """
-    try:
+
+    async def _run():
         backtest_service = BacktestService()
         config = _create_base_config(request)
         result = backtest_service.run_backtest(config)
         saved_result = _save_backtest_result(result, db)
-        return BacktestResponse(success=True, result=saved_result)
+        return {"success": True, "result": saved_result}
 
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
+    return await handle_api_exception(_run)
 
 
 @router.get("/results", response_model=BacktestResultsResponse)
@@ -161,7 +160,8 @@ async def get_backtest_results(
     Returns:
         バックテスト結果一覧
     """
-    try:
+
+    async def _get_results():
         backtest_repo = BacktestResultRepository(db)
 
         results = backtest_repo.get_backtest_results(
@@ -172,10 +172,9 @@ async def get_backtest_results(
             symbol=symbol, strategy_name=strategy_name
         )
 
-        return BacktestResultsResponse(success=True, results=results, total=total)
+        return {"success": True, "results": results, "total": total}
 
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
+    return await handle_api_exception(_get_results)
 
 
 @router.get("/results/{result_id}", response_model=BacktestResponse)
@@ -190,19 +189,17 @@ async def get_backtest_result_by_id(result_id: int, db: Session = Depends(get_db
     Returns:
         バックテスト結果
     """
-    try:
+
+    async def _get_by_id():
         backtest_repo = BacktestResultRepository(db)
         result = backtest_repo.get_backtest_result_by_id(result_id)
 
         if result is None:
             raise HTTPException(status_code=404, detail="Backtest result not found")
 
-        return BacktestResponse(success=True, result=result)
+        return {"success": True, "result": result}
 
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
+    return await handle_api_exception(_get_by_id)
 
 
 @router.delete("/results/{result_id}")
@@ -217,7 +214,8 @@ async def delete_backtest_result(result_id: int, db: Session = Depends(get_db)):
     Returns:
         削除結果
     """
-    try:
+
+    async def _delete_result():
         backtest_repo = BacktestResultRepository(db)
         success = backtest_repo.delete_backtest_result(result_id)
 
@@ -226,10 +224,7 @@ async def delete_backtest_result(result_id: int, db: Session = Depends(get_db)):
 
         return {"success": True, "message": "Backtest result deleted successfully"}
 
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
+    return await handle_api_exception(_delete_result)
 
 
 @router.get("/strategies")
@@ -240,14 +235,13 @@ async def get_supported_strategies():
     Returns:
         戦略一覧
     """
-    try:
+
+    async def _get_strategies():
         backtest_service = BacktestService()
         strategies = backtest_service.get_supported_strategies()
-
         return {"success": True, "strategies": strategies}
 
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
+    return await handle_api_exception(_get_strategies)
 
 
 @router.post("/optimize", response_model=BacktestResponse)
@@ -255,7 +249,7 @@ async def optimize_strategy(
     request: OptimizationRequest, db: Session = Depends(get_db)
 ):
     """
-    戦略パラメータを最適化
+    戦略を最適化
 
     Args:
         request: 最適化リクエスト
@@ -264,19 +258,17 @@ async def optimize_strategy(
     Returns:
         最適化結果
     """
-    try:
+
+    async def _optimize():
         backtest_service = BacktestService()
         base_config = _create_base_config(request.base_config)
         result = backtest_service.optimize_strategy(
             base_config, request.optimization_params
         )
         saved_result = _save_backtest_result(result, db)
-        return BacktestResponse(success=True, result=saved_result)
+        return {"success": True, "result": saved_result}
 
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
+    return await handle_api_exception(_optimize)
 
 
 @router.post("/optimize-enhanced", response_model=BacktestResponse)
@@ -284,9 +276,7 @@ async def optimize_strategy_enhanced(
     request: EnhancedOptimizationRequest, db: Session = Depends(get_db)
 ):
     """
-    拡張戦略最適化を実行
-
-    backtesting.py内蔵の高度な最適化機能（SAMBO、ヒートマップ、制約条件）を使用
+    戦略を拡張最適化
 
     Args:
         request: 拡張最適化リクエスト
@@ -295,19 +285,17 @@ async def optimize_strategy_enhanced(
     Returns:
         最適化結果
     """
-    try:
-        enhanced_service = EnhancedBacktestService()
+
+    async def _optimize_enhanced():
+        enhanced_backtest_service = EnhancedBacktestService()
         base_config = _create_base_config(request.base_config)
-        result = enhanced_service.optimize_strategy_enhanced(
+        result = enhanced_backtest_service.optimize_strategy_enhanced(
             base_config, request.optimization_params
         )
         saved_result = _save_backtest_result(result, db)
-        return BacktestResponse(success=True, result=saved_result)
+        return {"success": True, "result": saved_result}
 
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
+    return await handle_api_exception(_optimize_enhanced)
 
 
 @router.post("/multi-objective-optimization", response_model=BacktestResponse)
@@ -315,33 +303,29 @@ async def multi_objective_optimization(
     request: MultiObjectiveOptimizationRequest, db: Session = Depends(get_db)
 ):
     """
-    マルチ目的最適化を実行
-
-    複数の指標を同時に最適化
+    戦略を多目的最適化
 
     Args:
-        request: マルチ目的最適化リクエスト
+        request: 多目的最適化リクエスト
         db: データベースセッション
 
     Returns:
         最適化結果
     """
-    try:
-        enhanced_service = EnhancedBacktestService()
+
+    async def _multi_objective_optimize():
+        enhanced_backtest_service = EnhancedBacktestService()
         base_config = _create_base_config(request.base_config)
-        result = enhanced_service.multi_objective_optimization(
+        result = enhanced_backtest_service.multi_objective_optimization(
             base_config,
             request.objectives,
             request.weights,
             request.optimization_params,
         )
         saved_result = _save_backtest_result(result, db)
-        return BacktestResponse(success=True, result=saved_result)
+        return {"success": True, "result": saved_result}
 
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
+    return await handle_api_exception(_multi_objective_optimize)
 
 
 @router.post("/robustness-test", response_model=BacktestResponse)
@@ -349,68 +333,38 @@ async def robustness_test(
     request: RobustnessTestRequest, db: Session = Depends(get_db)
 ):
     """
-    ロバストネステストを実行
-
-    複数期間での最適化を行い、戦略の安定性を評価
+    戦略をロバストネステスト
 
     Args:
         request: ロバストネステストリクエスト
         db: データベースセッション
 
     Returns:
-        ロバストネステスト結果
+        テスト結果
     """
-    try:
-        enhanced_service = EnhancedBacktestService()
+
+    async def _robustness_test():
+        enhanced_backtest_service = EnhancedBacktestService()
         base_config = _create_base_config(request.base_config)
-
-        # `start_date`と`end_date`はロバストネステストでは使用しないため削除
-        base_config.pop("start_date", None)
-        base_config.pop("end_date", None)
-
-        # テスト期間をタプルのリストに変換
-        test_periods = [(period[0], period[1]) for period in request.test_periods]
-
-        # ロバストネステストを実行
-        result = enhanced_service.robustness_test(
-            base_config, test_periods, request.optimization_params
+        result = enhanced_backtest_service.robustness_test(
+            base_config, request.test_periods, request.optimization_params
         )
+        saved_result = _save_backtest_result(result, db)
+        return {"success": True, "result": saved_result}
 
-        # 結果をデータベースに保存（個別結果の最初のものを代表として保存）
-        if result.get("individual_results"):
-            first_result = next(
-                (
-                    res
-                    for res in result["individual_results"].values()
-                    if "error" not in res
-                ),
-                None,
-            )
-            if first_result:
-                # ロバストネス情報を追加
-                first_result["robustness_analysis"] = result.get("robustness_analysis")
-                saved_result = _save_backtest_result(first_result, db)
-                result["saved_result_id"] = saved_result.get("id")
-
-        return BacktestResponse(success=True, result=result)
-
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
+    return await handle_api_exception(_robustness_test)
 
 
 @router.get("/health")
 async def health_check():
     """
-    ヘルスチェック
+    ヘルスチェックエンドポイント
 
     Returns:
-        サービス状態
+        APIの状態
     """
-    return {
-        "success": True,
-        "service": "backtest",
-        "status": "healthy",
-        "timestamp": datetime.now().isoformat(),
-    }
+
+    async def _check_health():
+        return {"status": "ok"}
+
+    return await handle_api_exception(_check_health)

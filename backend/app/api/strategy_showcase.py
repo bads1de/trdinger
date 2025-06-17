@@ -10,6 +10,7 @@ from pydantic import BaseModel
 import logging
 
 from app.core.services.strategy_showcase_service import StrategyShowcaseService
+from app.utils.api_response_utils import api_response, handle_api_exception
 
 logger = logging.getLogger(__name__)
 
@@ -60,7 +61,8 @@ async def get_showcase_strategies(
 
     フィルタリング、ソート、ページネーション機能付きで戦略一覧を取得します。
     """
-    try:
+
+    async def _get_strategies():
         strategies = showcase_service.get_showcase_strategies(
             category=category,
             risk_level=risk_level,
@@ -70,16 +72,13 @@ async def get_showcase_strategies(
             sort_order=sort_order,
         )
 
-        return StrategyListResponse(
-            success=True,
-            strategies=strategies,
-            total_count=len(strategies),
+        return api_response(
+            data=strategies,
             message="戦略一覧を取得しました",
+            additional_fields={"total_count": len(strategies)},
         )
 
-    except Exception as e:
-        logger.error(f"戦略一覧取得エラー: {e}")
-        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
+    return await handle_api_exception(_get_strategies)
 
 
 @router.get("/showcase/stats", response_model=ShowcaseStatsResponse)
@@ -89,16 +88,13 @@ async def get_showcase_statistics():
 
     全戦略の統計情報（平均リターン、カテゴリ分布等）を取得します。
     """
-    try:
+
+    async def _get_stats():
         statistics = showcase_service.get_showcase_statistics()
 
-        return ShowcaseStatsResponse(
-            success=True, statistics=statistics, message="統計情報を取得しました"
-        )
+        return api_response(data=statistics, message="統計情報を取得しました")
 
-    except Exception as e:
-        logger.error(f"統計情報取得エラー: {e}")
-        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
+    return await handle_api_exception(_get_stats)
 
 
 @router.get("/showcase/{strategy_id}", response_model=StrategyDetailResponse)
@@ -108,21 +104,16 @@ async def get_strategy_detail(strategy_id: int):
 
     指定されたIDの戦略の詳細情報を取得します。
     """
-    try:
+
+    async def _get_detail():
         strategy = showcase_service.get_strategy_by_id(strategy_id)
 
         if not strategy:
             raise HTTPException(status_code=404, detail="Strategy not found")
 
-        return StrategyDetailResponse(
-            success=True, strategy=strategy, message="戦略詳細を取得しました"
-        )
+        return api_response(data=strategy, message="戦略詳細を取得しました")
 
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"戦略詳細取得エラー: {e}")
-        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
+    return await handle_api_exception(_get_detail)
 
 
 @router.get("/categories")
@@ -130,7 +121,8 @@ async def get_strategy_categories():
     """
     利用可能な戦略カテゴリ一覧を取得
     """
-    try:
+
+    async def _get_categories():
         categories = {
             "trend_following": "トレンドフォロー",
             "mean_reversion": "逆張り",
@@ -139,15 +131,12 @@ async def get_strategy_categories():
             "momentum": "モメンタム",
         }
 
-        return {
-            "success": True,
-            "categories": categories,
-            "message": "戦略カテゴリ一覧を取得しました",
-        }
+        return api_response(
+            data=categories,
+            message="戦略カテゴリ一覧を取得しました",
+        )
 
-    except Exception as e:
-        logger.error(f"カテゴリ一覧取得エラー: {e}")
-        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
+    return await handle_api_exception(_get_categories)
 
 
 @router.get("/risk-levels")
@@ -155,15 +144,13 @@ async def get_risk_levels():
     """
     利用可能なリスクレベル一覧を取得
     """
-    try:
+
+    async def _get_risk_levels():
         risk_levels = {"low": "低リスク", "medium": "中リスク", "high": "高リスク"}
 
-        return {
-            "success": True,
-            "risk_levels": risk_levels,
-            "message": "リスクレベル一覧を取得しました",
-        }
+        return api_response(
+            data=risk_levels,
+            message="リスクレベル一覧を取得しました",
+        )
 
-    except Exception as e:
-        logger.error(f"リスクレベル一覧取得エラー: {e}")
-        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
+    return await handle_api_exception(_get_risk_levels)
