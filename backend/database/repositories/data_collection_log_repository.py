@@ -5,7 +5,6 @@
 from typing import List, Optional
 from datetime import datetime
 from sqlalchemy.orm import Session
-from sqlalchemy import desc
 import logging
 
 from .base_repository import BaseRepository

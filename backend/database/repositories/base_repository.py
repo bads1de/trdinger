@@ -156,3 +156,14 @@ class BaseRepository:
                 f"レコード削除エラー ({self.model_class.__name__}) by {filter_column}={filter_value}: {e}"
             )
             raise
+
+    def _handle_delete_error(self, e: Exception, message_prefix: str, **kwargs):
+        """
+        削除時のエラーを処理し、ログを記録する汎用メソッド。
+        """
+        self.db.rollback()
+        error_message = f"{message_prefix}エラー ({self.model_class.__name__}): {e}"
+        if kwargs:
+            error_message += f" (詳細: {kwargs})"
+        logger.error(error_message)
+        raise

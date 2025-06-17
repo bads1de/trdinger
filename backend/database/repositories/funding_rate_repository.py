@@ -5,7 +5,6 @@
 from typing import List, Optional
 from datetime import datetime
 from sqlalchemy.orm import Session
-from sqlalchemy import asc
 import pandas as pd
 import logging
 
@@ -124,8 +123,7 @@ class FundingRateRepository(BaseRepository):
             )
             return deleted_count
         except Exception as e:
-            logger.error(f"ファンディングレートデータ全削除エラー: {e}")
-            raise
+            self._handle_delete_error(e, "ファンディングレートデータ全削除")
 
     def clear_funding_rate_data_by_symbol(self, symbol: str) -> int:
         """
@@ -145,11 +143,9 @@ class FundingRateRepository(BaseRepository):
             return deleted_count
 
         except Exception as e:
-            self.db.rollback()
-            logger.error(
-                f"シンボル '{symbol}' のファンディングレートデータ削除エラー: {e}"
+            self._handle_delete_error(
+                e, "シンボル '{symbol}' のファンディングレートデータ削除", symbol=symbol
             )
-            raise
 
     def get_funding_rate_dataframe(
         self,
