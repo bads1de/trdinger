@@ -25,7 +25,6 @@ from ..generators.random_gene_generator import RandomGeneGenerator
 from app.core.services.backtest_service import BacktestService
 
 logger = logging.getLogger(__name__)
-# TODO: 型エラーなど修正する
 
 
 class GeneticAlgorithmEngine:
@@ -47,15 +46,15 @@ class GeneticAlgorithmEngine:
         """
         self.backtest_service = backtest_service
         self.strategy_factory = strategy_factory
-        self.toolbox = None
+        self.toolbox: Optional[base.Toolbox] = None
         self.progress_callback: Optional[Callable] = None
 
         # 新しいランダム遺伝子生成器
         self.gene_generator = RandomGeneGenerator()
 
         # 統計情報
-        self.stats = None
-        self.logbook = None
+        self.stats: Optional[tools.Statistics] = None
+        self.logbook: Optional[tools.Logbook] = None
 
         # 実行状態
         self.is_running = False
@@ -78,13 +77,13 @@ class GeneticAlgorithmEngine:
 
         # 個体クラスの定義
         if not hasattr(creator, "Individual"):
-            creator.create("Individual", list, fitness=creator.FitnessMax)
+            creator.create("Individual", list, fitness=creator.FitnessMax)  # type: ignore
 
         # ツールボックスの初期化
         self.toolbox = base.Toolbox()
 
         # 遺伝子長の計算（v1仕様: 5指標×2 + エントリー条件3 + イグジット条件3 = 16）
-        config.max_indicators * 2 + 6
+        # gene_length = config.max_indicators * 2 + 6  # 現在未使用
 
         # 個体生成関数（新しいランダム遺伝子生成器を使用）
         def create_individual():
@@ -96,7 +95,7 @@ class GeneticAlgorithmEngine:
                 # 戦略遺伝子を数値リストにエンコード
                 individual = encode_gene_to_list(gene)
 
-                return creator.Individual(individual)
+                return creator.Individual(individual)  # type: ignore
             except Exception as e:
                 logger.warning(f"新しい遺伝子生成に失敗、フォールバックを使用: {e}")
                 # フォールバック: 従来の方法
@@ -118,11 +117,11 @@ class GeneticAlgorithmEngine:
                 for _ in range(6):  # エントリー3 + エグジット3
                     individual.append(random.uniform(0.0, 1.0))
 
-                return creator.Individual(individual)
+                return creator.Individual(individual)  # type: ignore
 
         self.toolbox.register("individual", create_individual)
         self.toolbox.register(
-            "population", tools.initRepeat, list, self.toolbox.individual
+            "population", tools.initRepeat, list, self.toolbox.individual  # type: ignore
         )
 
         # 評価関数（バックテスト設定は run_evolution で設定済み）
@@ -154,7 +153,7 @@ class GeneticAlgorithmEngine:
 
         # ログブックの初期化
         self.logbook = tools.Logbook()
-        self.logbook.header = "gen", "evals", "std", "min", "avg", "max"
+        self.logbook.header = "gen", "evals", "std", "min", "avg", "max"  # type: ignore
 
         logger.info("DEAP環境のセットアップ完了")
 
@@ -374,17 +373,25 @@ class GeneticAlgorithmEngine:
             self.setup_deap(config)
 
             # 初期個体群の生成
-            population = self.toolbox.population(n=config.population_size)
+            if self.toolbox is None:
+                raise RuntimeError(
+                    "DEAP環境がセットアップされていません。setup_deap()を先に実行してください。"
+                )
+            population = self.toolbox.population(n=config.population_size)  # type: ignore
 
             # 初期評価
             logger.info("初期個体群の評価開始...")
-            fitnesses = self.toolbox.map(self.toolbox.evaluate, population)
+            fitnesses = self.toolbox.map(self.toolbox.evaluate, population)  # type: ignore
             for ind, fit in zip(population, fitnesses):
                 ind.fitness.values = fit
 
             # 統計情報の記録
-            record = self.stats.compile(population)
-            self.logbook.record(gen=0, evals=len(population), **record)
+            if self.stats is None or self.logbook is None:
+                raise RuntimeError(
+                    "統計情報が初期化されていません。setup_deap()を先に実行してください。"
+                )
+            record = self.stats.compile(population)  # type: ignore
+            self.logbook.record(gen=0, evals=len(population), **record)  # type: ignore
 
             # 進捗コールバック
             if self.progress_callback:
@@ -400,25 +407,25 @@ class GeneticAlgorithmEngine:
                 logger.info(f"世代 {generation}/{config.generations} 開始")
 
                 # 選択
-                offspring = self.toolbox.select(population, len(population))
-                offspring = list(map(self.toolbox.clone, offspring))
+                offspring = self.toolbox.select(population, len(population))  # type: ignore
+                offspring = list(map(self.toolbox.clone, offspring))  # type: ignore
 
                 # 交叉
                 for child1, child2 in zip(offspring[::2], offspring[1::2]):
                     if random.random() < config.crossover_rate:
-                        self.toolbox.mate(child1, child2)
+                        self.toolbox.mate(child1, child2)  # type: ignore
                         del child1.fitness.values
                         del child2.fitness.values
 
                 # 突然変異
                 for mutant in offspring:
                     if random.random() < config.mutation_rate:
-                        self.toolbox.mutate(mutant)
+                        self.toolbox.mutate(mutant)  # type: ignore
                         del mutant.fitness.values
 
                 # 無効な個体の評価
                 invalid_ind = [ind for ind in offspring if not ind.fitness.valid]
-                fitnesses = self.toolbox.map(self.toolbox.evaluate, invalid_ind)
+                fitnesses = self.toolbox.map(self.toolbox.evaluate, invalid_ind)  # type: ignore
                 for ind, fit in zip(invalid_ind, fitnesses):
                     ind.fitness.values = fit
 
@@ -428,8 +435,8 @@ class GeneticAlgorithmEngine:
                 )
 
                 # 統計情報の記録
-                record = self.stats.compile(population)
-                self.logbook.record(gen=generation, evals=len(invalid_ind), **record)
+                record = self.stats.compile(population)  # type: ignore
+                self.logbook.record(gen=generation, evals=len(invalid_ind), **record)  # type: ignore
 
                 # 進捗コールバック
                 if self.progress_callback:
@@ -469,7 +476,7 @@ class GeneticAlgorithmEngine:
         self,
         individual: List[float],
         config: GAConfig,
-        backtest_config: Dict[str, Any] = None,
+        backtest_config: Optional[Dict[str, Any]] = None,
     ) -> Tuple[float]:
         """
         個体の評価（フィットネス計算）
@@ -645,17 +652,23 @@ class GeneticAlgorithmEngine:
         return wrapper
 
     def _apply_elitism(
-        self, population: List, offspring: List, elite_size: int
+        self,
+        population: List,
+        offspring: List,
+        elite_size: int,
     ) -> List:
         """エリート保存戦略を適用"""
-        # 親世代と子世代を結合
-        combined = population + offspring
+        # 親世代から上位elite_size個体を保存
+        population.sort(key=lambda x: x.fitness.values[0], reverse=True)
+        elite = population[:elite_size]
 
-        # フィットネスでソート
-        combined.sort(key=lambda x: x.fitness.values[0], reverse=True)
+        # 子世代から残りの個体を選択
+        offspring.sort(key=lambda x: x.fitness.values[0], reverse=True)
+        remaining_size = len(population) - elite_size
+        selected_offspring = offspring[:remaining_size]
 
-        # 上位個体を選択
-        return combined[: len(population)]
+        # エリートと選択された子世代を結合
+        return elite + selected_offspring
 
     def _create_progress_info(
         self, config: GAConfig, population: List, experiment_id: str
