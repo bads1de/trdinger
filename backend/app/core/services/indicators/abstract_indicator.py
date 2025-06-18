@@ -6,7 +6,7 @@
 
 import pandas as pd
 from abc import ABC, abstractmethod
-from typing import List, Dict, Any, Optional, Union
+from typing import List, Dict, Any, Optional, Union, cast
 import logging
 
 from database.connection import SessionLocal
@@ -30,7 +30,9 @@ class BaseIndicator(ABC):
         self.supported_periods = supported_periods
 
     @abstractmethod
-    def calculate(self, df: pd.DataFrame, period: int, **kwargs) -> Union[pd.Series, pd.DataFrame]:
+    def calculate(
+        self, df: pd.DataFrame, period: int, **kwargs
+    ) -> Union[pd.Series, pd.DataFrame]:
         """
         テクニカル指標を計算（サブクラスで実装）
 
@@ -57,7 +59,7 @@ class BaseIndicator(ABC):
         if df is None or df.empty:
             raise ValueError("OHLCVデータが空です")
 
-        required_columns = ['open', 'high', 'low', 'close', 'volume']
+        required_columns = ["open", "high", "low", "close", "volume"]
         missing_columns = [col for col in required_columns if col not in df.columns]
         if missing_columns:
             raise ValueError(f"必要なカラムが不足しています: {missing_columns}")
@@ -143,11 +145,7 @@ class BaseIndicator(ABC):
             raise
 
     def format_single_value_result(
-        self, 
-        result: pd.Series, 
-        symbol: str, 
-        timeframe: str, 
-        period: int
+        self, result: pd.Series, symbol: str, timeframe: str, period: int
     ) -> List[Dict[str, Any]]:
         """
         単一値の結果をフォーマット
@@ -162,21 +160,23 @@ class BaseIndicator(ABC):
             フォーマットされた結果のリスト
         """
         formatted_results = []
-        
+
         for timestamp, value in result.items():
             if pd.notna(value):  # NaN値をスキップ
-                formatted_results.append({
-                    "symbol": symbol,
-                    "timeframe": timeframe,
-                    "indicator_type": self.indicator_type,
-                    "period": period,
-                    "value": float(value),
-                    "signal_value": None,
-                    "histogram_value": None,
-                    "upper_band": None,
-                    "lower_band": None,
-                    "timestamp": timestamp,
-                })
+                formatted_results.append(
+                    {
+                        "symbol": symbol,
+                        "timeframe": timeframe,
+                        "indicator_type": self.indicator_type,
+                        "period": period,
+                        "value": float(value.real),
+                        "signal_value": None,
+                        "histogram_value": None,
+                        "upper_band": None,
+                        "lower_band": None,
+                        "timestamp": timestamp,
+                    }
+                )
 
         return formatted_results
 
@@ -186,7 +186,7 @@ class BaseIndicator(ABC):
         symbol: str,
         timeframe: str,
         period: int,
-        value_columns: Dict[str, str]
+        value_columns: Dict[str, str],
     ) -> List[Dict[str, Any]]:
         """
         複数値の結果をフォーマット
@@ -207,12 +207,13 @@ class BaseIndicator(ABC):
             # 全ての値がNaNでないかチェック
             row_values = {}
             all_valid = True
-            
+
             for key, column in value_columns.items():
                 if column in result.columns:
                     value = result.loc[timestamp, column]
                     if pd.notna(value):
-                        row_values[key] = float(value)
+                        numeric_value = cast(Union[float, complex], value)
+                        row_values[key] = float(numeric_value.real)
                     else:
                         all_valid = False
                         break
@@ -220,18 +221,20 @@ class BaseIndicator(ABC):
                     row_values[key] = None
 
             if all_valid and row_values:
-                formatted_results.append({
-                    "symbol": symbol,
-                    "timeframe": timeframe,
-                    "indicator_type": self.indicator_type,
-                    "period": period,
-                    "value": row_values.get("value"),
-                    "signal_value": row_values.get("signal_value"),
-                    "histogram_value": row_values.get("histogram_value"),
-                    "upper_band": row_values.get("upper_band"),
-                    "lower_band": row_values.get("lower_band"),
-                    "timestamp": timestamp,
-                })
+                formatted_results.append(
+                    {
+                        "symbol": symbol,
+                        "timeframe": timeframe,
+                        "indicator_type": self.indicator_type,
+                        "period": period,
+                        "value": row_values.get("value"),
+                        "signal_value": row_values.get("signal_value"),
+                        "histogram_value": row_values.get("histogram_value"),
+                        "upper_band": row_values.get("upper_band"),
+                        "lower_band": row_values.get("lower_band"),
+                        "timestamp": timestamp,
+                    }
+                )
 
         return formatted_results
 
@@ -241,7 +244,7 @@ class BaseIndicator(ABC):
         timeframe: str,
         period: int,
         limit: Optional[int] = None,
-        **kwargs
+        **kwargs,
     ) -> List[Dict[str, Any]]:
         """
         指標を計算してフォーマットされた結果を返す

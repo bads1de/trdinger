@@ -351,58 +351,6 @@ class TrendAdapter(BaseAdapter):
             raise TALibCalculationError(f"HMA計算失敗: {e}")
 
     @staticmethod
-    def mama(data: pd.Series, fastlimit: float = 0.5, slowlimit: float = 0.05) -> dict:
-        """
-        MESA Adaptive Moving Average (MAMA) を計算
-
-        Args:
-            data: 価格データ（pandas Series）
-            fastlimit: 高速制限（デフォルト: 0.5）
-            slowlimit: 低速制限（デフォルト: 0.05）
-
-        Returns:
-            MAMA値を含む辞書（mama, fama）
-
-        Raises:
-            TALibCalculationError: 計算エラーの場合
-        """
-        TrendAdapter._validate_input(data, 32)  # MAMAには最低32個のデータが必要
-
-        # パラメータ検証
-        if fastlimit <= 0 or fastlimit > 1:
-            raise TALibCalculationError(
-                f"fastlimitは0より大きく1以下である必要があります: {fastlimit}"
-            )
-        if slowlimit <= 0 or slowlimit > 1:
-            raise TALibCalculationError(
-                f"slowlimitは0より大きく1以下である必要があります: {slowlimit}"
-            )
-        if slowlimit >= fastlimit:
-            raise TALibCalculationError(
-                f"slowlimitはfastlimitより小さい必要があります: slow={slowlimit}, fast={fastlimit}"
-            )
-
-        TrendAdapter._log_calculation_start(
-            "MAMA", fastlimit=fastlimit, slowlimit=slowlimit
-        )
-
-        try:
-            mama, fama = TrendAdapter._safe_talib_calculation(
-                talib.MAMA, data.values, fastlimit=fastlimit, slowlimit=slowlimit
-            )
-
-            return {
-                "mama": TrendAdapter._create_series_result(mama, data.index, "MAMA"),
-                "fama": TrendAdapter._create_series_result(fama, data.index, "FAMA"),
-            }
-
-        except TALibCalculationError:
-            raise
-        except Exception as e:
-            TrendAdapter._log_calculation_error("MAMA", e)
-            raise TALibCalculationError(f"MAMA計算失敗: {e}")
-
-    @staticmethod
     def vwma(price_data: pd.Series, volume_data: pd.Series, period: int) -> pd.Series:
         """
         Volume Weighted Moving Average (出来高加重移動平均) を計算
@@ -644,35 +592,3 @@ class TrendAdapter(BaseAdapter):
         except Exception as e:
             TrendAdapter._log_calculation_error("MIDPRICE", e)
             raise TALibCalculationError(f"MIDPRICE計算失敗: {e}")
-
-    @staticmethod
-    def trima(data: pd.Series, period: int) -> pd.Series:
-        """
-        Triangular Moving Average (三角移動平均) を計算
-
-        Args:
-            data: 価格データ（pandas Series）
-            period: 期間
-
-        Returns:
-            TRIMA値のpandas Series
-
-        Raises:
-            TALibCalculationError: 計算エラーの場合
-        """
-        TrendAdapter._validate_input(data, period)
-        TrendAdapter._log_calculation_start("TRIMA", period=period)
-
-        try:
-            result = TrendAdapter._safe_talib_calculation(
-                talib.TRIMA, data.values, timeperiod=period
-            )
-            return TrendAdapter._create_series_result(
-                result, data.index, f"TRIMA_{period}"
-            )
-
-        except TALibCalculationError:
-            raise
-        except Exception as e:
-            TrendAdapter._log_calculation_error("TRIMA", e)
-            raise TALibCalculationError(f"TRIMA計算失敗: {e}")
