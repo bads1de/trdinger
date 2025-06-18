@@ -21,7 +21,7 @@ class RiskManagementMixin(Strategy):
     統一されたリスク管理機能を提供します。
 
     Usage:
-        class MyStrategy(Strategy, RiskManagementMixin):
+        class MyStrategy(RiskManagementMixin, Strategy):
             def init(self):
                 self.setup_risk_management(sl_pct=0.02, tp_pct=0.05)
 

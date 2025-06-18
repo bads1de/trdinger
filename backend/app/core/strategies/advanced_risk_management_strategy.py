@@ -14,7 +14,7 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-class AdvancedRiskManagementStrategy(Strategy, RiskManagementMixin):
+class AdvancedRiskManagementStrategy(RiskManagementMixin, Strategy):
     """
     高度なリスク管理機能付き戦略
 
@@ -78,7 +78,72 @@ class AdvancedRiskManagementStrategy(Strategy, RiskManagementMixin):
     consecutive_losses = 0
     consecutive_wins = 0
     use_risk_management = True
-    min_risk_reward_ratio = 2.0
+
+    def get_strategy_description(self) -> str:
+        """戦略の詳細説明を取得"""
+        return f"""
+        高度なリスク管理機能付き戦略 (SMA {self.n1}/{self.n2})
+        
+        エントリー条件:
+        - ゴールデンクロス: SMA({self.n1}) > SMA({self.n2})
+        - RSIフィルター: RSI < {self.rsi_overbought} (有効時)
+        
+        リスク管理:
+        - 最小リスクリワード比率: {self.min_risk_reward_ratio}:1
+        - Kelly Criterion: {'有効' if self.use_kelly_criterion else '無効'}
+        - ポジションサイジング: {self.position_sizing_method}
+        - ATRベースSL/TP: {'有効' if self.use_atr_based_risk else '無効'}
+        
+        特徴:
+        - 動的ポジションサイジング
+        - 取引履歴に基づく適応的リスク管理
+        - 複数のテクニカル指標によるフィルタリング
+        - 高度な統計的リスク管理
+        
+        推奨市場:
+        - トレンドが明確な市場
+        - 十分な流動性がある市場
+        - ボラティリティが適度な市場
+        """
+
+    def get_strategy_performance_metrics(self) -> dict:
+        """
+        戦略のパフォーマンス指標を取得
+
+        Returns:
+            パフォーマンス指標の辞書
+        """
+        try:
+            base_metrics = self.get_risk_metrics()
+
+            # 取引統計の追加
+            win_rate, avg_win, avg_loss = self._calculate_trade_statistics()
+            kelly_ratio = self._risk_calculator.calculate_kelly_criterion(
+                win_rate, avg_win, avg_loss
+            )
+
+            advanced_metrics = {
+                "win_rate": win_rate,
+                "avg_win": avg_win,
+                "avg_loss": avg_loss,
+                "kelly_ratio": kelly_ratio,
+                "trade_history_length": len(self._trade_history),
+                "current_rsi": self.rsi[-1] if len(self.rsi) > 0 else None,
+                "current_atr": self.atr[-1] if len(self.atr) > 0 else None,
+                "sma_trend": (
+                    "bullish"
+                    if len(self.sma1) > 0
+                    and len(self.sma2) > 0
+                    and self.sma1[-1] > self.sma2[-1]
+                    else "bearish"
+                ),
+            }
+
+            return {**base_metrics, **advanced_metrics}
+
+        except Exception as e:
+            logger.error(f"Error getting strategy performance metrics: {e}")
+            return {}
 
     def init(self):
         """戦略の初期化"""
@@ -161,72 +226,6 @@ class AdvancedRiskManagementStrategy(Strategy, RiskManagementMixin):
 
                 self.position.close()
                 logger.info("Position closed on dead cross")
-
-    def get_strategy_performance_metrics(self) -> dict:
-        """
-        戦略のパフォーマンス指標を取得
-
-        Returns:
-            パフォーマンス指標の辞書
-        """
-        try:
-            base_metrics = self.get_risk_metrics()
-
-            # 取引統計の追加
-            win_rate, avg_win, avg_loss = self._calculate_trade_statistics()
-            kelly_ratio = self._risk_calculator.calculate_kelly_criterion(
-                win_rate, avg_win, avg_loss
-            )
-
-            advanced_metrics = {
-                "win_rate": win_rate,
-                "avg_win": avg_win,
-                "avg_loss": avg_loss,
-                "kelly_ratio": kelly_ratio,
-                "trade_history_length": len(self._trade_history),
-                "current_rsi": self.rsi[-1] if len(self.rsi) > 0 else None,
-                "current_atr": self.atr[-1] if len(self.atr) > 0 else None,
-                "sma_trend": (
-                    "bullish"
-                    if len(self.sma1) > 0
-                    and len(self.sma2) > 0
-                    and self.sma1[-1] > self.sma2[-1]
-                    else "bearish"
-                ),
-            }
-
-            return {**base_metrics, **advanced_metrics}
-
-        except Exception as e:
-            logger.error(f"Error getting strategy performance metrics: {e}")
-            return {}
-
-    def get_strategy_description(self) -> str:
-        """戦略の詳細説明を取得"""
-        return f"""
-        高度なリスク管理機能付き戦略 (SMA {self.n1}/{self.n2})
-        
-        エントリー条件:
-        - ゴールデンクロス: SMA({self.n1}) > SMA({self.n2})
-        - RSIフィルター: RSI < {self.rsi_overbought} (有効時)
-        
-        リスク管理:
-        - 最小リスクリワード比率: {self.min_risk_reward_ratio}:1
-        - Kelly Criterion: {'有効' if self.use_kelly_criterion else '無効'}
-        - ポジションサイジング: {self.position_sizing_method}
-        - ATRベースSL/TP: {'有効' if self.use_atr_based_risk else '無効'}
-        
-        特徴:
-        - 動的ポジションサイジング
-        - 取引履歴に基づく適応的リスク管理
-        - 複数のテクニカル指標によるフィルタリング
-        - 高度な統計的リスク管理
-        
-        推奨市場:
-        - トレンドが明確な市場
-        - 十分な流動性がある市場
-        - ボラティリティが適度な市場
-        """
 
 
 class ConservativeRiskManagementStrategy(AdvancedRiskManagementStrategy):

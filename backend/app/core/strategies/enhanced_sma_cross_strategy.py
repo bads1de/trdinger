@@ -13,7 +13,7 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-class EnhancedSMACrossStrategy(Strategy, RiskManagementMixin):
+class EnhancedSMACrossStrategy(RiskManagementMixin, Strategy):
     """
     リスク管理機能付きSMAクロス戦略
 

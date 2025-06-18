@@ -13,7 +13,7 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-class SMARSIStrategy(Strategy, RiskManagementMixin):
+class SMARSIStrategy(RiskManagementMixin, Strategy):
     """
     SMA + RSI複合戦略
 
