@@ -18,9 +18,9 @@ class BaseStrategy(Strategy, ABC):
     backtesting.pyのStrategyクラスを拡張し、共通機能を提供します。
     """
 
-    def __init__(self):
+    def __init__(self, broker, data, params):
         """初期化"""
-        super().__init__()
+        super().__init__(broker, data, params)
         self._strategy_name = self.__class__.__name__
         self._parameters = {}
 

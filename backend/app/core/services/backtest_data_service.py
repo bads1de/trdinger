@@ -27,7 +27,7 @@ class BacktestDataService:
 
     def __init__(
         self,
-        ohlcv_repo: OHLCVRepository = None,
+        ohlcv_repo: Optional[OHLCVRepository] = None,
         oi_repo: Optional[OpenInterestRepository] = None,
         fr_repo: Optional[FundingRateRepository] = None,
     ):
@@ -61,6 +61,8 @@ class BacktestDataService:
         Raises:
             ValueError: データが見つからない場合
         """
+        if self.ohlcv_repo is None:
+            raise ValueError("OHLCVRepository is not initialized.")
         # 1. OHLCVデータを取得
         ohlcv_data = self.ohlcv_repo.get_ohlcv_data(
             symbol=symbol, timeframe=timeframe, start_time=start_date, end_time=end_date
@@ -103,6 +105,8 @@ class BacktestDataService:
             "get_ohlcv_for_backtest is deprecated. Use get_data_for_backtest instead."
         )
 
+        if self.ohlcv_repo is None:
+            raise ValueError("OHLCVRepository is not initialized.")
         # 1. 既存のリポジトリからデータ取得
         ohlcv_data = self.ohlcv_repo.get_ohlcv_data(
             symbol=symbol, timeframe=timeframe, start_time=start_date, end_time=end_date
@@ -142,7 +146,7 @@ class BacktestDataService:
         df = pd.DataFrame(data)
 
         # インデックスをdatetimeに設定
-        df.index = pd.to_datetime([r.timestamp for r in ohlcv_data])
+        df.index = pd.DatetimeIndex([r.timestamp for r in ohlcv_data])
 
         return df
 
@@ -225,7 +229,7 @@ class BacktestDataService:
         """
         data = {"OpenInterest": [r.open_interest_value for r in oi_data]}
         df = pd.DataFrame(data)
-        df.index = pd.to_datetime([r.data_timestamp for r in oi_data])
+        df.index = pd.DatetimeIndex([r.data_timestamp for r in oi_data])
         return df
 
     def _convert_fr_to_dataframe(self, fr_data: List[FundingRateData]) -> pd.DataFrame:
@@ -240,7 +244,7 @@ class BacktestDataService:
         """
         data = {"FundingRate": [r.funding_rate for r in fr_data]}
         df = pd.DataFrame(data)
-        df.index = pd.to_datetime([r.funding_timestamp for r in fr_data])
+        df.index = pd.DatetimeIndex([r.funding_timestamp for r in fr_data])
         return df
 
     def _validate_dataframe(self, df: pd.DataFrame) -> None:

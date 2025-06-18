@@ -15,7 +15,8 @@ from sqlalchemy.orm import Session
 from app.core.services.open_interest_service import BybitOpenInterestService
 from database.connection import get_db, ensure_db_initialized
 from database.repositories.open_interest_repository import OpenInterestRepository
-from app.utils.api_response_utils import api_response, handle_api_exception
+from app.utils.api_response_utils import api_response
+from app.core.utils.api_utils import APIErrorHandler
 
 # ログ設定
 logger = logging.getLogger(__name__)
@@ -50,8 +51,7 @@ async def get_open_interest_data(
     Raises:
         HTTPException: パラメータが無効な場合やデータベースエラーが発生した場合
     """
-
-    async def _get_open_interest():
+    try:
         logger.info(
             f"オープンインタレストデータ取得リクエスト: symbol={symbol}, limit={limit}"
         )
@@ -96,9 +96,10 @@ async def get_open_interest_data(
                 "open_interest": open_interest_data,
             },
             message=f"{len(open_interest_data)}件のオープンインタレストデータを取得しました",
+            success=True,
         )
-
-    return await handle_api_exception(_get_open_interest)
+    except Exception as e:
+        raise APIErrorHandler.handle_generic_error(e, "オープンインタレストデータ収集")
 
 
 @router.post("/open-interest/collect")
@@ -127,8 +128,7 @@ async def collect_open_interest_data(
     Raises:
         HTTPException: パラメータが無効な場合やAPI/データベースエラーが発生した場合
     """
-
-    async def _collect_open_interest():
+    try:
         logger.info(
             f"オープンインタレストデータ収集開始: symbol={symbol}, fetch_all={fetch_all}"
         )
@@ -154,9 +154,10 @@ async def collect_open_interest_data(
         return api_response(
             data=result,
             message=f"{result['saved_count']}件のオープンインタレストデータを保存しました",
+            success=True,
         )
-
-    return await handle_api_exception(_collect_open_interest)
+    except Exception as e:
+        raise APIErrorHandler.handle_generic_error(e, "オープンインタレストデータ取得")
 
 
 @router.get("/open-interest/current")
@@ -177,8 +178,7 @@ async def get_current_open_interest(
     Raises:
         HTTPException: パラメータが無効な場合やAPIエラーが発生した場合
     """
-
-    async def _get_current_oi():
+    try:
         logger.info(f"現在のオープンインタレスト取得開始: symbol={symbol}")
 
         service = BybitOpenInterestService()
@@ -190,9 +190,10 @@ async def get_current_open_interest(
         return api_response(
             data=current_open_interest,
             message=f"{symbol}の現在のオープンインタレストを取得しました",
+            success=True,
         )
-
-    return await handle_api_exception(_get_current_oi)
+    except Exception as e:
+        raise APIErrorHandler.handle_generic_error(e, "現在のオープンインタレスト取得")
 
 
 @router.post("/open-interest/bulk-collect")
@@ -214,8 +215,7 @@ async def bulk_collect_open_interest(
     Raises:
         HTTPException: データベースエラーが発生した場合
     """
-
-    async def _bulk_collect():
+    try:
         logger.info("オープンインタレスト一括収集開始: BTC全期間データ")
 
         if not ensure_db_initialized():
@@ -273,6 +273,7 @@ async def bulk_collect_open_interest(
                 "failed_symbols": failed_symbols,
             },
             message=f"{successful_symbols}/{len(symbols)}シンボル（BTC）で合計{total_saved}件のオープンインタレストデータを保存しました",
+            success=True,
         )
-
-    return await handle_api_exception(_bulk_collect)
+    except Exception as e:
+        raise APIErrorHandler.handle_generic_error(e, "オープンインタレスト一括収集")

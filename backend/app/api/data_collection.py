@@ -61,7 +61,8 @@ async def collect_historical_data(
             logger.warning(
                 f"パラメータ検証エラー: {ve} (symbol: {symbol}, timeframe: {timeframe})"
             )
-            handle_api_exception(ve, message=str(ve), status_code=400)
+            log_exception(ve, message=str(ve))
+            raise HTTPException(status_code=400, detail=str(ve))
 
         repository = OHLCVRepository(db)
         data_exists = repository.get_data_count(normalized_symbol, timeframe) > 0
@@ -91,12 +92,13 @@ async def collect_historical_data(
         )
 
     except Exception as e:
-        handle_api_exception(e, message="履歴データ収集開始エラー")
+        log_exception(e, message="履歴データ収集開始エラー")
+        raise HTTPException(status_code=500, detail="履歴データ収集開始エラー")
 
 
 @router.post("/update")
 async def update_incremental_data(
-    symbol: str = "BTC/USDT", timeframe: str = "1h", db: Session = Depends(get_db)
+    symbol: str = "BTC/USDT:USDT", timeframe: str = "1h", db: Session = Depends(get_db)
 ) -> Dict:
     """
     差分データを更新
@@ -118,7 +120,8 @@ async def update_incremental_data(
         return api_response(success=True, message="差分データ更新完了", data=result)
 
     except Exception as e:
-        handle_api_exception(e, message="差分データ更新エラー")
+        log_exception(e, message="差分データ更新エラー")
+        raise HTTPException(status_code=500, detail="差分データ更新エラー")
 
 
 @router.post("/bitcoin-full")
@@ -151,7 +154,10 @@ async def collect_bitcoin_full_data(
         )
 
     except Exception as e:
-        handle_api_exception(e, message="ビットコイン全データ収集開始エラー")
+        log_exception(e, message="ビットコイン全データ収集開始エラー")
+        raise HTTPException(
+            status_code=500, detail="ビットコイン全データ収集開始エラー"
+        )
 
 
 @router.post("/bulk-historical")
@@ -286,15 +292,16 @@ async def collect_bulk_historical_data(
         )
 
     except Exception as e:
-        handle_api_exception(e, message="一括データ収集開始エラー")
+        log_exception(e, message="一括データ収集開始エラー")
+        raise HTTPException(status_code=500, detail="一括データ収集開始エラー")
 
 
 @router.get("/status/{symbol:path}/{timeframe}")
 async def get_collection_status(
     symbol: str,
     timeframe: str,
+    background_tasks: BackgroundTasks,
     auto_fetch: bool = False,
-    background_tasks: BackgroundTasks = None,
     db: Session = Depends(get_db),
 ) -> Dict:
     """
@@ -313,10 +320,12 @@ async def get_collection_status(
     try:
         # データベース初期化確認
         if not ensure_db_initialized():
-            handle_api_exception(
+            log_exception(
                 Exception("データベースの初期化に失敗しました"),
                 message="データベースの初期化に失敗しました",
-                status_code=500,
+            )
+            raise HTTPException(
+                status_code=500, detail="データベースの初期化に失敗しました"
             )
 
         # シンボルと時間軸のバリデーション
@@ -328,7 +337,8 @@ async def get_collection_status(
             logger.warning(
                 f"パラメータ検証エラー: {ve} (symbol: {symbol}, timeframe: {timeframe})"
             )
-            handle_api_exception(ve, message=str(ve), status_code=400)
+            log_exception(ve, message=str(ve))
+            raise HTTPException(status_code=400, detail=str(ve))
 
         repository = OHLCVRepository(db)
 
@@ -399,7 +409,8 @@ async def get_collection_status(
         )
 
     except Exception as e:
-        handle_api_exception(e, message="収集状況確認エラー")
+        log_exception(e, message="収集状況確認エラー")
+        raise HTTPException(status_code=500, detail="収集状況確認エラー")
 
 
 @router.get("/supported-symbols")
@@ -423,7 +434,8 @@ async def get_supported_symbols() -> Dict:
         )
 
     except Exception as e:
-        handle_api_exception(e, message="サポートシンボル一覧取得エラー")
+        log_exception(e, message="サポートシンボル一覧取得エラー")
+        raise HTTPException(status_code=500, detail="サポートシンボル一覧取得エラー")
 
 
 @router.post("/all/bulk-collect")
@@ -560,7 +572,8 @@ async def collect_all_data_bulk(
         )
 
     except Exception as e:
-        handle_api_exception(e, message="全データ一括収集開始エラー")
+        log_exception(e, message="全データ一括収集開始エラー")
+        raise HTTPException(status_code=500, detail="全データ一括収集開始エラー")
 
 
 async def _collect_all_data_background(symbol: str, timeframe: str, db: Session):

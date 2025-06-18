@@ -6,7 +6,7 @@ backtesting.pyライブラリを使用したバックテスト実行機能を提
 
 import pandas as pd
 from datetime import datetime
-from typing import Dict, Any, Type
+from typing import Dict, Any, Type, Optional
 from backtesting import Backtest, Strategy
 
 from .backtest_data_service import BacktestDataService
@@ -26,7 +26,7 @@ class BacktestService:
     結果をデータベース保存用の形式に変換します。
     """
 
-    def __init__(self, data_service: BacktestDataService = None):
+    def __init__(self, data_service: Optional[BacktestDataService] = None):
         """
         初期化
 
@@ -335,8 +335,8 @@ class BacktestService:
         symbol: str,
         timeframe: str,
         initial_capital: float,
-        start_date: str = None,
-        end_date: str = None,
+        start_date: Optional[str] = None,
+        end_date: Optional[str] = None,
     ) -> Dict[str, Any]:
         """
         backtesting.pyの結果をデータベース保存用の形式に変換
@@ -677,7 +677,13 @@ class BacktestService:
         for param_name, param_range in optimization_params["parameters"].items():
             optimize_kwargs[param_name] = param_range
 
-        stats = bt.optimize(**optimize_kwargs)
+        stats_raw = bt.optimize(**optimize_kwargs)
+
+        # optimizeの結果がタプルの場合、最初の要素を実際の統計として扱う
+        if isinstance(stats_raw, tuple):
+            stats = stats_raw[0]
+        else:
+            stats = stats_raw
 
         # 結果を変換
         result = self._convert_backtest_results(
@@ -691,7 +697,8 @@ class BacktestService:
         )
 
         # 最適化されたパラメータを追加
-        optimized_strategy = stats["_strategy"]
+        # statsがpd.Seriesであることを前提に_strategy属性にアクセス
+        optimized_strategy = stats._strategy
         result["optimized_parameters"] = {
             param: getattr(optimized_strategy, param)
             for param in optimization_params["parameters"].keys()

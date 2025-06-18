@@ -13,7 +13,7 @@ import logging
 from database.connection import get_db, ensure_db_initialized
 from database.repositories.funding_rate_repository import FundingRateRepository
 from app.core.services.funding_rate_service import BybitFundingRateService
-from app.api.utils.api_utils import handle_api_exception, api_response
+from app.utils.api_response_utils import handle_api_exception, api_response
 
 logger = logging.getLogger(__name__)
 
@@ -46,7 +46,8 @@ async def get_funding_rates(
     Raises:
         HTTPException: パラメータが無効な場合やデータベースエラーが発生した場合
     """
-    try:
+
+    async def _get_funding_rates_data():
         logger.info(
             f"ファンディングレートデータ取得リクエスト: symbol={symbol}, limit={limit}"
         )
@@ -86,7 +87,7 @@ async def get_funding_rates(
                     "timestamp": record.timestamp.isoformat(),
                     "next_funding_timestamp": (
                         record.next_funding_timestamp.isoformat()
-                        if record.next_funding_timestamp
+                        if record.next_funding_timestamp is not None
                         else None
                     ),
                     "mark_price": record.mark_price,
@@ -96,22 +97,17 @@ async def get_funding_rates(
 
         logger.info(f"ファンディングレートデータ取得成功: {len(funding_rates)}件")
 
-        return {
-            "success": True,
-            "data": {
+        return api_response(
+            success=True,
+            data={
                 "symbol": normalized_symbol,
                 "count": len(funding_rates),
                 "funding_rates": funding_rates,
             },
-            "message": f"{len(funding_rates)}件のファンディングレートデータを取得しました",
-        }
-
-    except Exception as e:
-        handle_api_exception(
-            e,
-            message="ファンディングレートデータの取得中にエラーが発生しました",
-            status_code=500,
+            message=f"{len(funding_rates)}件のファンディングレートデータを取得しました",
         )
+
+    return await handle_api_exception(_get_funding_rates_data)
 
 
 @router.post("/funding-rates/collect")
@@ -167,6 +163,7 @@ async def collect_funding_rate_data(
         return api_response(
             data=result,
             message=f"{result['saved_count']}件のファンディングレートデータを保存しました",
+            success=True,
         )
 
     return await handle_api_exception(_collect_rates)
@@ -210,6 +207,7 @@ async def get_current_funding_rate(
                 "index_price": current_rate.get("indexPrice"),
                 "timestamp": current_rate.get("datetime"),
             },
+            success=True,
             message=f"{symbol}の現在のファンディングレートを取得しました",
         )
 
@@ -291,6 +289,7 @@ async def bulk_collect_funding_rates(
                 "results": results,
                 "failures": failed_symbols,
             },
+            success=True,
             message=f"{successful_symbols}/{len(symbols)}シンボル（BTC）で合計{total_saved}件のファンディングレートデータを保存しました",
         )
 

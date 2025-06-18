@@ -189,11 +189,19 @@ class OpenInterestData(Base):
             "symbol": self.symbol,
             "open_interest_value": self.open_interest_value,
             "data_timestamp": (
-                self.data_timestamp.isoformat() if self.data_timestamp else None
+                self.data_timestamp.isoformat()
+                if self.data_timestamp is not None
+                else None
             ),
-            "timestamp": self.timestamp.isoformat() if self.timestamp else None,
-            "created_at": self.created_at.isoformat() if self.created_at else None,
-            "updated_at": self.updated_at.isoformat() if self.updated_at else None,
+            "timestamp": (
+                self.timestamp.isoformat() if self.timestamp is not None else None
+            ),
+            "created_at": (
+                self.created_at.isoformat() if self.created_at is not None else None
+            ),
+            "updated_at": (
+                self.updated_at.isoformat() if self.updated_at is not None else None
+            ),
         }
 
 
@@ -302,6 +310,44 @@ class BacktestResult(Base):
             f"symbol='{self.symbol}', timeframe='{self.timeframe}', "
             f"created_at='{self.created_at}')>"
         )
+
+    def to_dict(self):
+        """辞書形式に変換"""
+        performance_metrics = self.performance_metrics or {}
+        return {
+            "id": self.id,
+            "strategy_name": self.strategy_name,
+            "symbol": self.symbol,
+            "timeframe": self.timeframe,
+            "start_date": (
+                self.start_date.isoformat() if self.start_date is not None else None
+            ),
+            "end_date": (
+                self.end_date.isoformat() if self.end_date is not None else None
+            ),
+            "initial_capital": self.initial_capital,
+            "commission_rate": self.commission_rate,
+            "config_json": self.config_json,
+            "performance_metrics": performance_metrics,
+            "equity_curve": self.equity_curve,
+            "trade_history": self.trade_history,
+            "execution_time": self.execution_time,
+            "status": self.status,
+            "error_message": self.error_message,
+            "created_at": (
+                self.created_at.isoformat() if self.created_at is not None else None
+            ),
+            "updated_at": (
+                self.updated_at.isoformat() if self.updated_at is not None else None
+            ),
+            # 個別のパフォーマンス指標（後方互換性のため）
+            "total_return": performance_metrics.get("total_return", 0.0),
+            "sharpe_ratio": performance_metrics.get("sharpe_ratio", 0.0),
+            "max_drawdown": performance_metrics.get("max_drawdown", 0.0),
+            "total_trades": performance_metrics.get("total_trades", 0),
+            "win_rate": performance_metrics.get("win_rate", 0.0),
+            "profit_factor": performance_metrics.get("profit_factor", 0.0),
+        }
 
 
 class GAExperiment(Base):
@@ -415,12 +461,18 @@ class GeneratedStrategy(Base):
             "strategy_name": self.strategy_name,
             "symbol": self.symbol,
             "timeframe": self.timeframe,
-            "start_date": self.start_date.isoformat() if self.start_date else None,
-            "end_date": self.end_date.isoformat() if self.end_date else None,
+            "start_date": (
+                self.start_date.isoformat() if self.start_date is not None else None
+            ),
+            "end_date": (
+                self.end_date.isoformat() if self.end_date is not None else None
+            ),
             "initial_capital": self.initial_capital,
             "config_json": self.config_json,
             "performance_metrics": self.performance_metrics,
             "equity_curve": self.equity_curve,
             "trade_history": self.trade_history,
-            "created_at": self.created_at.isoformat() if self.created_at else None,
+            "created_at": (
+                self.created_at.isoformat() if self.created_at is not None else None
+            ),
         }

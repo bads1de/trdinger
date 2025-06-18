@@ -174,9 +174,9 @@ class SMACrossStrategyOptimized(SMACrossStrategy):
             return  # 出来高が不十分な場合はシグナルを無視
 
         # 基本のSMAクロス判定
-        if crossover(self.sma1, self.sma2):
+        if crossover(self.sma1, self.sma2):  # type: ignore
             self.buy()
-        elif crossover(self.sma2, self.sma1):
+        elif crossover(self.sma2, self.sma1):  # type: ignore
             self.sell()
 
         # ATRベースのストップロス（ポジションがある場合）

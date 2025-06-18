@@ -95,12 +95,13 @@ async def get_unified_strategies(
         logger.info(f"統合戦略取得完了: {len(result['strategies'])} 件")
 
         return api_response(
-            data=result["strategies"],
-            message="統合戦略を取得しました",
-            additional_fields={
+            success=True,
+            data={
+                "strategies": result["strategies"],
                 "total_count": result["total_count"],
                 "has_more": result["has_more"],
             },
+            message="統合戦略を取得しました",
         )
 
     return await handle_api_exception(_get_unified)
@@ -157,12 +158,13 @@ async def get_auto_generated_strategies(
         logger.info(f"オートストラテジー取得完了: {len(paginated_strategies)} 件")
 
         return api_response(
-            data=paginated_strategies,
-            message="オートストラテジー戦略を取得しました",
-            additional_fields={
+            success=True,
+            data={
+                "strategies": paginated_strategies,
                 "total_count": total_count,
                 "has_more": offset + limit < total_count,
             },
+            message="オートストラテジー戦略を取得しました",
         )
 
     return await handle_api_exception(_get_auto_strategies)
@@ -234,7 +236,9 @@ async def get_strategy_statistics(db: Session = Depends(get_db)):
 
         logger.info("戦略統計取得完了")
 
-        return api_response(data=stats, message="戦略統計情報を取得しました")
+        return api_response(
+            data=stats, message="戦略統計情報を取得しました", success=True
+        )
 
     return await handle_api_exception(_get_stats)
 

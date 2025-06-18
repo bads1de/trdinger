@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 class BaseRepository:
     """リポジトリの基底クラス"""
 
-    def __init__(self, db: Session, model_class: Type = None):
+    def __init__(self, db: Session, model_class: Type = Any):
         self.db = db
         self.model_class = model_class
 

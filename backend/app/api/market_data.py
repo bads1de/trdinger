@@ -98,9 +98,9 @@ async def get_ohlcv_data(
         logger.info(f"OHLCVデータ取得成功: {len(ohlcv_data)}件")
 
         return api_response(
-            data=ohlcv_data,
+            success=True,
+            data={"ohlcv_data": ohlcv_data, "symbol": symbol, "timeframe": timeframe},
             message=f"{symbol} の {timeframe} OHLCVデータを取得しました",
-            additional_fields={"symbol": symbol, "timeframe": timeframe},
         )
 
     return await handle_api_exception(_get_ohlcv)
@@ -117,6 +117,7 @@ async def get_supported_symbols():
 
     async def _get_symbols():
         return api_response(
+            success=True,
             data={
                 "symbols": MarketDataConfig.SUPPORTED_SYMBOLS,
                 "symbol_mapping": MarketDataConfig.SYMBOL_MAPPING,
@@ -138,6 +139,7 @@ async def get_supported_timeframes():
 
     async def _get_timeframes():
         return api_response(
+            success=True,
             data={
                 "timeframes": MarketDataConfig.SUPPORTED_TIMEFRAMES,
                 "default": MarketDataConfig.DEFAULT_TIMEFRAME,

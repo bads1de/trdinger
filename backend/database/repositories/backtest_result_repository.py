@@ -4,7 +4,7 @@
 BacktestResultモデルのデータアクセス機能を提供します。
 """
 
-from typing import List, Optional, Dict, Any
+from typing import List, Optional, Dict, Any, cast
 from datetime import datetime
 from sqlalchemy.orm import Session
 from sqlalchemy import desc
@@ -99,7 +99,7 @@ class BacktestResultRepository(BaseRepository):
             self.db.refresh(backtest_result)
 
             # 辞書形式で返す
-            return self._result_to_dict(backtest_result)
+            return backtest_result.to_dict()
 
         except Exception as e:
             self.db.rollback()
@@ -142,7 +142,7 @@ class BacktestResultRepository(BaseRepository):
             results = query.all()
 
             # 辞書形式に変換（to_dictメソッドがない場合に備えて）
-            return [self._result_to_dict(result) for result in results]
+            return [result.to_dict() for result in results]
 
         except Exception as e:
             raise Exception(f"Failed to get backtest results: {str(e)}")
@@ -165,7 +165,9 @@ class BacktestResultRepository(BaseRepository):
                 limit=1,
             )
             if results:
-                return self._result_to_dict(results[0])
+                # get_filtered_recordsがジェネリックな型を返すため、ここでキャストする
+                result = cast(BacktestResult, results[0])
+                return result.to_dict()
             return None
 
         except Exception as e:
@@ -245,7 +247,9 @@ class BacktestResultRepository(BaseRepository):
                 .all()
             )
 
-            return [self._result_to_dict(result) for result in results]
+            # get_filtered_recordsがジェネリックな型を返すため、ここでキャストする
+            typed_results = cast(List[BacktestResult], results)
+            return [result.to_dict() for result in typed_results]
 
         except Exception as e:
             raise Exception(f"Failed to get backtest results by strategy: {str(e)}")
@@ -268,7 +272,7 @@ class BacktestResultRepository(BaseRepository):
                 .all()
             )
 
-            return [self._result_to_dict(result) for result in results]
+            return [result.to_dict() for result in results]
 
         except Exception as e:
             raise Exception(f"Failed to get backtest results by symbol: {str(e)}")
@@ -291,7 +295,7 @@ class BacktestResultRepository(BaseRepository):
                 order_asc=False,
                 limit=limit,
             )
-            return [self._result_to_dict(result) for result in results]
+            return [result.to_dict() for result in results]
 
         except Exception as e:
             raise Exception(f"Failed to get recent backtest results: {str(e)}")
@@ -359,43 +363,3 @@ class BacktestResultRepository(BaseRepository):
         except Exception as e:
             self.db.rollback()
             raise Exception(f"Failed to cleanup old results: {str(e)}")
-
-    def _result_to_dict(self, result: BacktestResult) -> Dict[str, Any]:
-        """
-        BacktestResultオブジェクトを辞書に変換
-
-        Args:
-            result: BacktestResultオブジェクト
-
-        Returns:
-            辞書形式のデータ
-        """
-        # パフォーマンス指標から個別の値を抽出
-        performance_metrics = result.performance_metrics or {}
-
-        return {
-            "id": result.id,
-            "strategy_name": result.strategy_name,
-            "symbol": result.symbol,
-            "timeframe": result.timeframe,
-            "start_date": result.start_date.isoformat() if result.start_date else None,
-            "end_date": result.end_date.isoformat() if result.end_date else None,
-            "initial_capital": result.initial_capital,
-            "commission_rate": result.commission_rate,
-            "config_json": result.config_json,
-            "performance_metrics": performance_metrics,
-            "equity_curve": result.equity_curve,
-            "trade_history": result.trade_history,
-            # 個別のパフォーマンス指標（後方互換性のため）
-            "total_return": performance_metrics.get("total_return", 0.0),
-            "sharpe_ratio": performance_metrics.get("sharpe_ratio", 0.0),
-            "max_drawdown": performance_metrics.get("max_drawdown", 0.0),
-            "total_trades": performance_metrics.get("total_trades", 0),
-            "win_rate": performance_metrics.get("win_rate", 0.0),
-            "profit_factor": performance_metrics.get("profit_factor", 0.0),
-            "execution_time": result.execution_time,
-            "status": result.status,
-            "error_message": result.error_message,
-            "created_at": result.created_at.isoformat() if result.created_at else None,
-            "updated_at": result.updated_at.isoformat() if result.updated_at else None,
-        }

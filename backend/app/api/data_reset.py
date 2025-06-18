@@ -14,7 +14,7 @@ from database.connection import get_db
 from database.repositories.ohlcv_repository import OHLCVRepository
 from database.repositories.funding_rate_repository import FundingRateRepository
 from database.repositories.open_interest_repository import OpenInterestRepository
-from utils.api_utils import handle_api_exception, api_response
+from app.utils.api_response_utils import handle_api_exception, api_response
 
 logger = logging.getLogger(__name__)
 

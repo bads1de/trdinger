@@ -5,7 +5,7 @@ backtesting.pyライブラリを使用したバックテスト機能のAPIを提
 """
 
 from datetime import datetime
-from typing import Optional, Dict, Any, List
+from typing import Optional, Dict, Any, List, Tuple
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from pydantic import BaseModel, Field
@@ -71,7 +71,7 @@ class RobustnessTestRequest(BaseModel):
     """ロバストネステストリクエスト"""
 
     base_config: BacktestRequest = Field(..., description="基本設定")
-    test_periods: List[List[str]] = Field(..., description="テスト期間のリスト")
+    test_periods: List[Tuple[str, str]] = Field(..., description="テスト期間のリスト")
     optimization_params: Dict[str, Any] = Field(..., description="最適化パラメータ")
 
 
@@ -319,8 +319,8 @@ async def multi_objective_optimization(
         result = enhanced_backtest_service.multi_objective_optimization(
             base_config,
             request.objectives,
-            request.weights,
-            request.optimization_params,
+            request.weights or [],
+            request.optimization_params or {},
         )
         saved_result = _save_backtest_result(result, db)
         return {"success": True, "result": saved_result}
