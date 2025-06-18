@@ -61,11 +61,11 @@ class SMACrossStrategy(Strategy):
         SMAのクロスオーバーを検出して売買シグナルを生成します。
         """
         # ゴールデンクロス: 短期SMAが長期SMAを上抜け → 買いシグナル
-        if crossover(self.sma1, self.sma2):
+        if crossover(self.sma1, self.sma2):  # type: ignore
             self.buy()
 
         # デッドクロス: 短期SMAが長期SMAを下抜け → 売りシグナル
-        elif crossover(self.sma2, self.sma1):
+        elif crossover(self.sma2, self.sma1):  # type: ignore
             self.sell()
 
     def validate_parameters(self) -> bool:

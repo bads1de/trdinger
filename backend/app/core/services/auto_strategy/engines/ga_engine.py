@@ -25,6 +25,7 @@ from ..generators.random_gene_generator import RandomGeneGenerator
 from app.core.services.backtest_service import BacktestService
 
 logger = logging.getLogger(__name__)
+# TODO: 型エラーなど修正する
 
 
 class GeneticAlgorithmEngine:

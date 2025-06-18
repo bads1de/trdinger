@@ -63,7 +63,7 @@ class EnhancedSMACrossStrategy(Strategy, RiskManagementMixin):
         SMAクロスオーバーを検出し、リスク管理機能付きで売買を実行します。
         """
         # ゴールデンクロス: 短期SMAが長期SMAを上抜け → 買いシグナル
-        if crossover(self.sma1, self.sma2):
+        if crossover(self.sma1, self.sma2):  # type: ignore
             if self.use_risk_management:
                 # リスク管理機能付きの買い注文
                 self.buy_with_risk_management()
@@ -72,7 +72,7 @@ class EnhancedSMACrossStrategy(Strategy, RiskManagementMixin):
                 self.buy()
 
         # デッドクロス: 短期SMAが長期SMAを下抜け → 売りシグナル
-        elif crossover(self.sma2, self.sma1):
+        elif crossover(self.sma2, self.sma1):  # type: ignore
             if self.position:
                 # ポジションがある場合は決済
                 self.position.close()
@@ -254,7 +254,7 @@ class EnhancedSMACrossStrategyAdvanced(EnhancedSMACrossStrategy):
                 return
 
         # ゴールデンクロス
-        if crossover(self.sma1, self.sma2):
+        if crossover(self.sma1, self.sma2):  # type: ignore
             if self.use_risk_management:
                 if self.use_atr_based_risk and len(self.atr) > 0:
                     # ATRベースのリスク管理
@@ -272,7 +272,7 @@ class EnhancedSMACrossStrategyAdvanced(EnhancedSMACrossStrategy):
                 self.buy()
 
         # デッドクロス
-        elif crossover(self.sma2, self.sma1):
+        elif crossover(self.sma2, self.sma1):  # type: ignore
             if self.position:
                 self.position.close()
 

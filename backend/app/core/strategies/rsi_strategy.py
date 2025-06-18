@@ -80,16 +80,16 @@ class RSIStrategy(Strategy):
         Raises:
             ValueError: パラメータが無効な場合
         """
-        if self.rsi_period <= 0:
+        if self.period <= 0:
             raise ValueError("RSI period must be positive integer")
 
-        if not (0 <= self.oversold_level <= 100):
+        if not (0 <= self.oversold <= 100):
             raise ValueError("Oversold level must be between 0 and 100")
 
-        if not (0 <= self.overbought_level <= 100):
+        if not (0 <= self.overbought <= 100):
             raise ValueError("Overbought level must be between 0 and 100")
 
-        if self.oversold_level >= self.overbought_level:
+        if self.oversold >= self.overbought:
             raise ValueError("Oversold level must be less than overbought level")
 
         return True
@@ -102,11 +102,11 @@ class RSIStrategy(Strategy):
             戦略の説明文
         """
         return f"""
-        RSI戦略 (期間: {self.rsi_period})
+        RSI戦略 (期間: {self.period})
         
         エントリー条件:
-        - 過売り: RSI <= {self.oversold_level} → 買い
-        - 過買い: RSI >= {self.overbought_level} → 売り
+        - 過売り: RSI <= {self.oversold} → 買い
+        - 過買い: RSI >= {self.overbought} → 売り
         
         特徴:
         - 逆張り戦略
@@ -131,14 +131,12 @@ class RSIStrategy(Strategy):
         current_rsi = self.rsi[-1]
 
         # シグナルの判定
-        if current_rsi <= self.oversold_level:
+        if current_rsi <= self.oversold:
             signal = "BUY"
-            signal_strength = (self.oversold_level - current_rsi) / self.oversold_level
-        elif current_rsi >= self.overbought_level:
+            signal_strength = (self.oversold - current_rsi) / self.oversold
+        elif current_rsi >= self.overbought:
             signal = "SELL"
-            signal_strength = (current_rsi - self.overbought_level) / (
-                100 - self.overbought_level
-            )
+            signal_strength = (current_rsi - self.overbought) / (100 - self.overbought)
         else:
             signal = "HOLD"
             signal_strength = 0.0
@@ -147,8 +145,8 @@ class RSIStrategy(Strategy):
             "signal": signal,
             "signal_strength": round(signal_strength, 4),
             "rsi_value": round(current_rsi, 2),
-            "oversold_level": self.oversold_level,
-            "overbought_level": self.overbought_level,
+            "oversold_level": self.oversold,
+            "overbought_level": self.overbought,
             "current_price": round(self.data.Close[-1], 2),
         }
 
@@ -204,7 +202,7 @@ class RSIStrategyAdvanced(RSIStrategy):
 
         # 買いシグナル（過売り + 上昇トレンド + 出来高確認）
         if (
-            current_rsi <= self.oversold_level
+            current_rsi <= self.oversold
             and not self.position
             and volume_ok
             and (trend_direction in ["up", "neutral"])
@@ -213,7 +211,7 @@ class RSIStrategyAdvanced(RSIStrategy):
 
         # 売りシグナル（過買い + 下降トレンド + 出来高確認）
         elif (
-            current_rsi >= self.overbought_level
+            current_rsi >= self.overbought
             and self.position
             and volume_ok
             and (trend_direction in ["down", "neutral"])

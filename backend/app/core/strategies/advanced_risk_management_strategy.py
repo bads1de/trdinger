@@ -122,7 +122,7 @@ class AdvancedRiskManagementStrategy(Strategy, RiskManagementMixin):
         current_atr = self.atr[-1]
 
         # ゴールデンクロス + RSIフィルター
-        if crossover(self.sma1, self.sma2):
+        if crossover(self.sma1, self.sma2):  # type: ignore
             # RSIフィルター（買われすぎでない場合のみエントリー）
             if self.use_rsi_filter and current_rsi > self.rsi_overbought:
                 logger.debug(f"Buy signal ignored: RSI overbought ({current_rsi:.1f})")
@@ -153,7 +153,7 @@ class AdvancedRiskManagementStrategy(Strategy, RiskManagementMixin):
                 self.buy_with_risk_management()
 
         # デッドクロス
-        elif crossover(self.sma2, self.sma1):
+        elif crossover(self.sma2, self.sma1):  # type: ignore
             if self.position:
                 # 取引結果を履歴に記録
                 if hasattr(self.position, "pl_pct"):
