@@ -94,7 +94,7 @@ class DatabaseQueryHelper:
         db: Session,
         model_class: Type,
         timestamp_column: str,
-        filter_conditions: dict = None,
+        filter_conditions: Optional[Dict[str, Any]] = None,
     ):
         """
         最新タイムスタンプを取得
@@ -128,7 +128,7 @@ class DatabaseQueryHelper:
         db: Session,
         model_class: Type,
         timestamp_column: str,
-        filter_conditions: dict = None,
+        filter_conditions: Optional[Dict[str, Any]] = None,
     ):
         """
         最古タイムスタンプを取得
@@ -159,7 +159,9 @@ class DatabaseQueryHelper:
 
     @staticmethod
     def get_record_count(
-        db: Session, model_class: Type, filter_conditions: dict = None
+        db: Session,
+        model_class: Type,
+        filter_conditions: Optional[Dict[str, Any]] = None,
     ) -> int:
         """
         レコード数を取得
@@ -190,7 +192,7 @@ class DatabaseQueryHelper:
         db: Session,
         model_class: Type,
         timestamp_column: str,
-        filter_conditions: dict = None,
+        filter_conditions: Optional[Dict[str, Any]] = None,
     ):
         """
         データ期間を取得
@@ -234,7 +236,7 @@ class DatabaseQueryHelper:
         order_by_column: Optional[str] = None,
         order_asc: bool = True,
         limit: Optional[int] = None,
-    ) -> List[Type]:
+    ) -> List[Any]:
         """
         指定された条件でレコードを取得
 

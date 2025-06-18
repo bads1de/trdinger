@@ -4,7 +4,7 @@ GA実験リポジトリ
 遺伝的アルゴリズム実験の永続化処理を管理します。
 """
 
-from typing import List, Optional, Dict, Any
+from typing import List, Optional, Dict, Any, cast
 from datetime import datetime
 from sqlalchemy.orm import Session
 from sqlalchemy import desc
@@ -94,11 +94,11 @@ class GAExperimentRepository(BaseRepository):
                 logger.warning(f"実験が見つかりません: {experiment_id}")
                 return False
 
-            experiment.current_generation = current_generation
-            experiment.progress = progress
+            experiment.current_generation = current_generation  # type: ignore
+            experiment.progress = progress  # type: ignore
 
             if best_fitness is not None:
-                experiment.best_fitness = best_fitness
+                experiment.best_fitness = best_fitness  # type: ignore
 
             self.db.commit()
             logger.debug(
@@ -136,12 +136,12 @@ class GAExperimentRepository(BaseRepository):
                 logger.warning(f"実験が見つかりません: {experiment_id}")
                 return False
 
-            experiment.status = status
+            experiment.status = status  # type: ignore
 
             if completed_at:
-                experiment.completed_at = completed_at
+                experiment.completed_at = cast(datetime, completed_at)  # type: ignore
             elif status in ["completed", "error", "cancelled"]:
-                experiment.completed_at = datetime.utcnow()
+                experiment.completed_at = cast(datetime, datetime.utcnow())  # type: ignore
 
             self.db.commit()
             logger.info(f"実験ステータスを更新: {experiment_id} -> {status}")
@@ -249,11 +249,11 @@ class GAExperimentRepository(BaseRepository):
                 logger.warning(f"実験が見つかりません: {experiment_id}")
                 return False
 
-            experiment.status = "completed"
-            experiment.best_fitness = best_fitness
-            experiment.current_generation = final_generation
-            experiment.progress = 1.0
-            experiment.completed_at = datetime.utcnow()
+            experiment.status = "completed"  # type: ignore
+            experiment.best_fitness = best_fitness  # type: ignore
+            experiment.current_generation = final_generation  # type: ignore
+            experiment.progress = 1.0  # type: ignore
+            experiment.completed_at = cast(datetime, datetime.utcnow())  # type: ignore
 
             self.db.commit()
             logger.info(
