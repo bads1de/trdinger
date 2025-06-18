@@ -8,11 +8,12 @@ from typing import Optional, Dict, Any
 import logging
 from .calculators import RiskCalculator, calculate_sl_tp_prices
 from .validators import validate_risk_parameters
+from backtesting import Strategy
 
 logger = logging.getLogger(__name__)
 
 
-class RiskManagementMixin:
+class RiskManagementMixin(Strategy):
     """
     リスク管理機能を提供するMixinクラス
 
