@@ -6,7 +6,7 @@
 """
 
 import logging
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any, List, Optional, cast
 from sqlalchemy.orm import Session
 
 from database.models import GeneratedStrategy, BacktestResult
@@ -105,18 +105,9 @@ class StrategyIntegrationService:
 
             converted_strategies = []
             for strategy in strategies:
-                # フィットネススコアが有効で、バックテスト結果がある戦略のみ処理
-                if (
-                    strategy.fitness_score is not None
-                    and strategy.fitness_score > 0.0
-                    and strategy.backtest_result is not None
-                ):
-
-                    converted = self._convert_generated_strategy_to_unified_format(
-                        strategy
-                    )
-                    if converted:
-                        converted_strategies.append(converted)
+                converted = self._convert_generated_strategy_to_unified_format(strategy)
+                if converted:
+                    converted_strategies.append(converted)
 
             logger.info(
                 f"有効な戦略数: {len(converted_strategies)} / {len(strategies)}"
@@ -140,7 +131,7 @@ class StrategyIntegrationService:
             統一形式の戦略データ
         """
         try:
-            gene_data = strategy.gene_data
+            gene_data = cast(Dict[str, Any], strategy.gene_data)
             backtest_result = strategy.backtest_result
 
             # 基本情報の抽出
@@ -173,10 +164,14 @@ class StrategyIntegrationService:
                 "generation": strategy.generation,
                 "fitness_score": strategy.fitness_score,
                 "created_at": (
-                    strategy.created_at.isoformat() if strategy.created_at else None
+                    strategy.created_at.isoformat()
+                    if strategy.created_at is not None
+                    else None
                 ),
                 "updated_at": (
-                    strategy.created_at.isoformat() if strategy.created_at else None
+                    strategy.updated_at.isoformat()
+                    if strategy.updated_at is not None
+                    else None
                 ),
             }
 
@@ -269,7 +264,7 @@ class StrategyIntegrationService:
         self, backtest_result: Optional[BacktestResult]
     ) -> Dict[str, float]:
         """パフォーマンス指標を抽出"""
-        if not backtest_result or not backtest_result.performance_metrics:
+        if backtest_result is None or backtest_result.performance_metrics is None:
             return {
                 "total_return": 0.0,
                 "sharpe_ratio": 0.0,

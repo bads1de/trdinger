@@ -105,7 +105,7 @@ class BybitFundingRateService(BaseBybitService):
 
         async def get_timestamp(db, **kwargs):
             repo = FundingRateRepository(db)
-            latest_datetime = repo.get_latest_funding_rate_timestamp(symbol)
+            latest_datetime = repo.get_latest_funding_timestamp(symbol)
             if latest_datetime:
                 return int(latest_datetime.timestamp() * 1000)
             return None

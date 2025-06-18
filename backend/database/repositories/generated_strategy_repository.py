@@ -209,7 +209,7 @@ class GeneratedStrategyRepository(BaseRepository):
         self, limit: int = 50, offset: int = 0, experiment_id: Optional[int] = None
     ) -> List[GeneratedStrategy]:
         """
-        バックテスト結果と結合した戦略を取得
+        バックテスト結果を持つ戦略を取得
 
         Args:
             limit: 取得件数制限
@@ -217,28 +217,21 @@ class GeneratedStrategyRepository(BaseRepository):
             experiment_id: 実験IDフィルター
 
         Returns:
-            戦略のリスト（バックテスト結果付き）
+            バックテスト結果を持つ戦略のリスト
         """
         try:
-            from sqlalchemy.orm import joinedload
-
-            query = (
-                self.db.query(GeneratedStrategy)
-                .options(joinedload(GeneratedStrategy.backtest_result))
-                .filter(GeneratedStrategy.fitness_score.isnot(None))
+            query = self.db.query(GeneratedStrategy).join(
+                GeneratedStrategy.backtest_result
+            )
+            query = query.filter(
+                GeneratedStrategy.fitness_score.isnot(None),
+                GeneratedStrategy.fitness_score > 0.0,
             )
 
             if experiment_id is not None:
                 query = query.filter(GeneratedStrategy.experiment_id == experiment_id)
 
-            query = query.order_by(desc(GeneratedStrategy.fitness_score))
-
-            if offset > 0:
-                query = query.offset(offset)
-            if limit > 0:
-                query = query.limit(limit)
-
-            return query.all()
+            return query.offset(offset).limit(limit).all()
 
         except Exception as e:
             logger.error(f"バックテスト結果付き戦略取得エラー: {e}")

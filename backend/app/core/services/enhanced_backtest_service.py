@@ -8,7 +8,7 @@ scipyなどの外部ライブラリは不要で、backtesting.py単体で高度�
 import pandas as pd
 import numpy as np
 from datetime import datetime
-from typing import Dict, Any, List, Tuple, Callable, Union
+from typing import Dict, Any, List, Tuple, Callable, Union, Optional
 from backtesting import Backtest
 from backtesting.lib import plot_heatmaps
 
@@ -26,7 +26,7 @@ class EnhancedBacktestService(BacktestService):
     scipyなどの外部ライブラリは不要
     """
 
-    def __init__(self, data_service: BacktestDataService = None):
+    def __init__(self, data_service: Optional[BacktestDataService] = None):
         """
         初期化
 
@@ -246,14 +246,22 @@ class EnhancedBacktestService(BacktestService):
         """最適化結果の処理"""
 
         # 結果の分解
+        stats: pd.Series
+        heatmap: Optional[Any] = None
+        optimization_result: Optional[Any] = None
+
         if optimization_params.get("return_heatmap", False):
             if optimization_params.get("return_optimization", False):
-                stats, heatmap, optimization_result = result
+                _stats, _heatmap, _optimization_result = result
+                stats = pd.Series(_stats)
+                heatmap = _heatmap
+                optimization_result = _optimization_result
             else:
-                stats, heatmap = result
-                optimization_result = None
+                _stats, _heatmap = result
+                stats = pd.Series(_stats)
+                heatmap = _heatmap
         else:
-            stats = result
+            stats = pd.Series(result)
             heatmap = None
             optimization_result = None
 
@@ -338,7 +346,7 @@ class EnhancedBacktestService(BacktestService):
         improvements = [
             recent_vals[i] - recent_vals[i - 1] for i in range(1, len(recent_vals))
         ]
-        return np.mean(improvements) if improvements else 0.0
+        return float(np.mean(improvements)) if improvements else 0.0
 
     def _detect_plateau(self, func_vals: List[float], threshold: float = 1e-6) -> bool:
         """プラトー（収束停滞）の検出"""
@@ -348,7 +356,7 @@ class EnhancedBacktestService(BacktestService):
         # 最後の20回の変動を確認
         recent_vals = func_vals[-20:]
         variance = np.var(recent_vals)
-        return variance < threshold
+        return bool(variance < threshold)
 
     def _calculate_parameter_space_size(self, parameters: Dict[str, Any]) -> int:
         """パラメータ空間のサイズを計算"""
@@ -380,8 +388,8 @@ class EnhancedBacktestService(BacktestService):
         self,
         config: Dict[str, Any],
         objectives: List[str],
-        weights: List[float] = None,
-        optimization_params: Dict[str, Any] = None,
+        weights: Optional[List[float]] = None,
+        optimization_params: Optional[Dict[str, Any]] = None,
     ) -> Dict[str, Any]:
         """
         複数指標での最適化
@@ -579,7 +587,7 @@ class EnhancedBacktestService(BacktestService):
                 stats.get("consistency_score", 0)
                 for stats in performance_stats.values()
             ]
-            performance_consistency = np.mean(consistency_scores)
+            performance_consistency = float(np.mean(consistency_scores))
 
         # パラメータ安定性スコア（0-1）
         parameter_consistency = 0
@@ -588,9 +596,9 @@ class EnhancedBacktestService(BacktestService):
                 1 / (1 + stats.get("coefficient_of_variation", 1))
                 for stats in parameter_stability.values()
             ]
-            parameter_consistency = np.mean(cv_scores)
+            parameter_consistency = float(np.mean(cv_scores))
 
         # 総合スコア（重み付き平均）
         robustness_score = 0.7 * performance_consistency + 0.3 * parameter_consistency
 
-        return max(0, min(1, robustness_score))
+        return max(0.0, min(1.0, float(robustness_score)))
