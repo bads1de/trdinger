@@ -5,7 +5,7 @@ GA実行時の各種パラメータを管理します。
 """
 
 from dataclasses import dataclass, field
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any, List, Optional, Callable
 import json
 
 from ...indicators.constants import ALL_INDICATORS
@@ -134,7 +134,7 @@ class GAConfig:
     random_state: Optional[int] = None  # 再現性のためのシード
 
     # 進捗・ログ設定
-    progress_callback: Optional[callable] = None
+    progress_callback: Optional[Callable[["GAProgress"], None]] = None
     log_level: str = "INFO"
     save_intermediate_results: bool = True
 

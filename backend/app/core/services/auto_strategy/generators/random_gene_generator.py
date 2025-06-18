@@ -22,7 +22,7 @@ class RandomGeneGenerator:
     OI/FRデータソースを含む多様な戦略遺伝子を生成します。
     """
 
-    def __init__(self, config: Dict[str, Any] = None):
+    def __init__(self, config: Dict[str, Any] | None = None):
         """
         初期化
 

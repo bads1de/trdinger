@@ -42,7 +42,7 @@ class DataCollector:
 
     async def _determine_collection_range(
         self, symbol: str, timeframe: str, days_back: int
-    ) -> (datetime, datetime):
+    ) -> tuple[datetime, datetime]:
         """データ収集期間を決定する"""
         latest_timestamp = self.ohlcv_repo.get_latest_timestamp(symbol, timeframe)
         if latest_timestamp:
@@ -99,8 +99,14 @@ class DataCollector:
 
                     logger.info(f"バッチ収集: {current_time} から {limit} 件")
 
+                    # datetimeをミリ秒のUNIXタイムスタンプに変換
+                    since_timestamp_ms = int(current_time.timestamp() * 1000)
+
                     ohlcv_data = await self.market_service.fetch_ohlcv_data(
-                        normalized_symbol, timeframe, since=current_time, limit=limit
+                        normalized_symbol,
+                        timeframe,
+                        since=since_timestamp_ms,
+                        limit=limit,
                     )
 
                     if not ohlcv_data:

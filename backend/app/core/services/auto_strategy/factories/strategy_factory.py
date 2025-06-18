@@ -456,7 +456,10 @@ class StrategyFactory:
                     return 0.0
 
             def _check_crossover(
-                self, left_operand: str, right_operand: str, direction: str
+                self,
+                left_operand: str | float,
+                right_operand: str | float,
+                direction: str,
             ) -> bool:
                 """クロスオーバーをチェック"""
                 try:

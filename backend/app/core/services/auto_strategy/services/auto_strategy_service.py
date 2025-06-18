@@ -7,7 +7,7 @@ GA実行、進捗管理、結果保存などの統合機能を提供します。
 import uuid
 import time
 import threading
-from typing import Dict, Any, List, Optional, Callable
+from typing import Dict, Any, List, Optional, Callable, cast
 import logging
 
 from ..models.strategy_gene import StrategyGene
@@ -43,8 +43,8 @@ class AutoStrategyService:
 
         # サービスの初期化
         self.strategy_factory = StrategyFactory()
-        self.backtest_service = None
-        self.ga_engine = None
+        self.backtest_service: BacktestService
+        self.ga_engine: GeneticAlgorithmEngine
 
         # リポジトリの初期化
         self.ga_experiment_repo = None
@@ -145,7 +145,7 @@ class AutoStrategyService:
                     total_generations=ga_config.generations,
                     status="starting",
                 )
-                db_experiment_id = db_experiment.id
+                db_experiment_id = cast(int, db_experiment.id)
                 logger.info(f"データベース実験作成完了: DB ID = {db_experiment_id}")
             except Exception as db_error:
                 logger.error(

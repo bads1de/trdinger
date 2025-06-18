@@ -146,7 +146,7 @@ def prepare_data_for_backtesting(df: pd.DataFrame) -> pd.DataFrame:
             # インデックスをDatetimeに変換を試行
             try:
                 standardized_df.index = pd.to_datetime(standardized_df.index)
-            except:
+            except ValueError:
                 raise ValueError("有効な日時インデックスが見つかりません")
 
     # 重複インデックスを削除
