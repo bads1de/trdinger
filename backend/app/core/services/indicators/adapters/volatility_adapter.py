@@ -360,13 +360,13 @@ class VolatilityAdapter(BaseAdapter):
 
             return {
                 "upper": VolatilityAdapter._create_series_result(
-                    upper_channel.values, high.index, f"DONCHIAN_Upper_{period}"
+                    upper_channel.to_numpy(), high.index, f"DONCHIAN_Upper_{period}"
                 ),
                 "lower": VolatilityAdapter._create_series_result(
-                    lower_channel.values, low.index, f"DONCHIAN_Lower_{period}"
+                    lower_channel.to_numpy(), low.index, f"DONCHIAN_Lower_{period}"
                 ),
                 "middle": VolatilityAdapter._create_series_result(
-                    middle_channel.values, high.index, f"DONCHIAN_Middle_{period}"
+                    middle_channel.to_numpy(), high.index, f"DONCHIAN_Middle_{period}"
                 ),
             }
 
