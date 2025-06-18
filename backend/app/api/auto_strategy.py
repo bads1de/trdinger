@@ -14,10 +14,7 @@ from app.core.services.auto_strategy import AutoStrategyService
 from app.core.services.auto_strategy.models.ga_config import GAConfig
 from app.core.services.auto_strategy.models.strategy_gene import StrategyGene
 from database.connection import get_db
-from app.utils.api_response_utils import (
-    api_response,
-    log_exception,
-)
+from app.core.utils.api_utils import APIResponseHelper
 
 logger = logging.getLogger(__name__)
 
@@ -131,11 +128,9 @@ async def generate_strategy(
         # サービス初期化チェック
         if auto_strategy_service is None:
             logger.error("AutoStrategyService is None")
-            log_exception(
-                Exception(
-                    "AutoStrategyService is not available. Please check server logs."
-                ),
-                message="AutoStrategyService is not available. Please check server logs.",
+            logger.error(
+                "AutoStrategyService is not available. Please check server logs.",
+                exc_info=True,
             )
             raise HTTPException(
                 status_code=503,
@@ -162,7 +157,7 @@ async def generate_strategy(
             import traceback
 
             logger.error(f"GA設定構築トレースバック:\n{traceback.format_exc()}")
-            log_exception(e, message=f"GA config creation failed: {str(e)}")
+            logger.error(f"GA config creation failed: {str(e)}", exc_info=True)
             raise HTTPException(
                 status_code=400, detail=f"GA config creation failed: {str(e)}"
             )
@@ -173,9 +168,8 @@ async def generate_strategy(
             is_valid, errors = ga_config.validate()
             if not is_valid:
                 logger.error(f"GA設定検証失敗: {errors}")
-                log_exception(
-                    Exception(f"Invalid GA configuration: {', '.join(errors)}"),
-                    message=f"Invalid GA configuration: {', '.join(errors)}",
+                logger.error(
+                    f"Invalid GA configuration: {', '.join(errors)}", exc_info=True
                 )
                 raise HTTPException(
                     status_code=400,
@@ -187,7 +181,7 @@ async def generate_strategy(
             import traceback
 
             logger.error(f"GA設定検証トレースバック:\n{traceback.format_exc()}")
-            log_exception(e, message=f"GA configuration validation failed: {str(e)}")
+            logger.error(f"GA configuration validation failed: {str(e)}", exc_info=True)
             raise HTTPException(
                 status_code=400, detail=f"GA configuration validation failed: {str(e)}"
             )
@@ -214,15 +208,15 @@ async def generate_strategy(
         )
         logger.info(f"戦略生成開始成功: {experiment_id}")
 
-        return api_response(
+        return APIResponseHelper.api_response(
             success=True,
             message="GA戦略生成を開始しました",
             data={"experiment_id": experiment_id},
         )
 
     except Exception as e:
-        log_exception(e, message="GA戦略生成エラー")
-        raise HTTPException(status_code=500, detail="GA戦略生成エラー")
+        logger.error("GA戦略生成エラー", exc_info=True)
+        raise HTTPException(status_code=500, detail="GA戦略生成エラー") from e
 
 
 @router.get("/experiments/{experiment_id}/progress", response_model=GAProgressResponse)
@@ -234,11 +228,9 @@ async def get_experiment_progress(experiment_id: str):
     """
     try:
         if auto_strategy_service is None:
-            log_exception(
-                Exception(
-                    "AutoStrategyService is not available. Please check server logs."
-                ),
-                message="AutoStrategyService is not available. Please check server logs.",
+            logger.error(
+                "AutoStrategyService is not available. Please check server logs.",
+                exc_info=True,
             )
             raise HTTPException(
                 status_code=503,
@@ -248,21 +240,18 @@ async def get_experiment_progress(experiment_id: str):
         progress = auto_strategy_service.get_experiment_progress(experiment_id)
 
         if progress is None:
-            log_exception(
-                Exception(f"Experiment not found: {experiment_id}"),
-                message=f"Experiment not found: {experiment_id}",
-            )
+            logger.error(f"Experiment not found: {experiment_id}", exc_info=True)
             raise HTTPException(
                 status_code=404, detail=f"Experiment not found: {experiment_id}"
             )
 
-        return api_response(
+        return APIResponseHelper.api_response(
             success=True, data=progress.to_dict(), message="進捗情報を取得しました"
         )
 
     except Exception as e:
-        log_exception(e, message="進捗取得エラー")
-        raise HTTPException(status_code=500, detail="進捗取得エラー")
+        logger.error("進捗取得エラー", exc_info=True)
+        raise HTTPException(status_code=500, detail="進捗取得エラー") from e
 
 
 @router.get("/experiments/{experiment_id}/results", response_model=GAResultResponse)
@@ -274,11 +263,9 @@ async def get_experiment_results(experiment_id: str):
     """
     try:
         if auto_strategy_service is None:
-            log_exception(
-                Exception(
-                    "AutoStrategyService is not available. Please check server logs."
-                ),
-                message="AutoStrategyService is not available. Please check server logs.",
+            logger.error(
+                "AutoStrategyService is not available. Please check server logs.",
+                exc_info=True,
             )
             raise HTTPException(
                 status_code=503,
@@ -291,18 +278,12 @@ async def get_experiment_results(experiment_id: str):
             # 実験が存在するか確認
             progress = auto_strategy_service.get_experiment_progress(experiment_id)
             if progress is None:
-                log_exception(
-                    Exception(f"Experiment not found: {experiment_id}"),
-                    message=f"Experiment not found: {experiment_id}",
-                )
+                logger.error(f"Experiment not found: {experiment_id}", exc_info=True)
                 raise HTTPException(
                     status_code=404, detail=f"Experiment not found: {experiment_id}"
                 )
             else:
-                log_exception(
-                    Exception("実験はまだ完了していません"),
-                    message="実験はまだ完了していません",
-                )
+                logger.error("実験はまだ完了していません", exc_info=True)
                 raise HTTPException(
                     status_code=202, detail="実験はまだ完了していません"
                 )
@@ -317,13 +298,13 @@ async def get_experiment_results(experiment_id: str):
             "final_population_size": result["final_population_size"],
         }
 
-        return api_response(
+        return APIResponseHelper.api_response(
             success=True, data=formatted_result, message="実験結果を取得しました"
         )
 
     except Exception as e:
-        log_exception(e, message="結果取得エラー")
-        raise HTTPException(status_code=500, detail="結果取得エラー")
+        logger.error("結果取得エラー", exc_info=True)
+        raise HTTPException(status_code=500, detail="結果取得エラー") from e
 
 
 @router.get("/experiments", response_model=List[Dict[str, Any]])
@@ -335,11 +316,9 @@ async def list_experiments():
     """
     try:
         if auto_strategy_service is None:
-            log_exception(
-                Exception(
-                    "AutoStrategyService is not available. Please check server logs."
-                ),
-                message="AutoStrategyService is not available. Please check server logs.",
+            logger.error(
+                "AutoStrategyService is not available. Please check server logs.",
+                exc_info=True,
             )
             raise HTTPException(
                 status_code=503,
@@ -347,15 +326,15 @@ async def list_experiments():
             )
 
         experiments = auto_strategy_service.list_experiments()
-        return api_response(
+        return APIResponseHelper.api_response(
             success=True,
             data={"experiments": experiments},
             message="実験一覧を取得しました",
         )
 
     except Exception as e:
-        log_exception(e, message="実験一覧取得エラー")
-        raise HTTPException(status_code=500, detail="実験一覧取得エラー")
+        logger.error("実験一覧取得エラー", exc_info=True)
+        raise HTTPException(status_code=500, detail="実験一覧取得エラー") from e
 
 
 @router.post("/experiments/{experiment_id}/stop")
@@ -367,11 +346,9 @@ async def stop_experiment(experiment_id: str):
     """
     try:
         if auto_strategy_service is None:
-            log_exception(
-                Exception(
-                    "AutoStrategyService is not available. Please check server logs."
-                ),
-                message="AutoStrategyService is not available. Please check server logs.",
+            logger.error(
+                "AutoStrategyService is not available. Please check server logs.",
+                exc_info=True,
             )
             raise HTTPException(
                 status_code=503,
@@ -381,22 +358,22 @@ async def stop_experiment(experiment_id: str):
         success = auto_strategy_service.stop_experiment(experiment_id)
 
         if not success:
-            log_exception(
-                Exception(
-                    "実験を停止できませんでした（存在しないか、既に完了している可能性があります）"
-                ),
-                message="実験を停止できませんでした（存在しないか、既に完了している可能性があります）",
+            logger.error(
+                "実験を停止できませんでした（存在しないか、既に完了している可能性があります）",
+                exc_info=True,
             )
             raise HTTPException(
                 status_code=400,
                 detail="実験を停止できませんでした（存在しないか、既に完了している可能性があります）",
             )
 
-        return api_response(success=True, message="実験を停止しました")
+        return APIResponseHelper.api_response(
+            success=True, message="実験を停止しました"
+        )
 
     except Exception as e:
-        log_exception(e, message="実験停止エラー")
-        raise HTTPException(status_code=500, detail="実験停止エラー")
+        logger.error("実験停止エラー", exc_info=True)
+        raise HTTPException(status_code=500, detail="実験停止エラー") from e
 
 
 @router.post("/test-strategy", response_model=StrategyTestResponse)
@@ -409,11 +386,9 @@ async def test_strategy(request: StrategyTestRequest):
     """
     try:
         if auto_strategy_service is None:
-            log_exception(
-                Exception(
-                    "AutoStrategyService is not available. Please check server logs."
-                ),
-                message="AutoStrategyService is not available. Please check server logs.",
+            logger.error(
+                "AutoStrategyService is not available. Please check server logs.",
+                exc_info=True,
             )
             raise HTTPException(
                 status_code=503,
@@ -429,21 +404,21 @@ async def test_strategy(request: StrategyTestRequest):
         )
 
         if result["success"]:
-            return api_response(
+            return APIResponseHelper.api_response(
                 success=True, data=result, message="戦略テストが完了しました"
             )
         else:
-            return api_response(
+            return APIResponseHelper.api_response(
                 success=False,
                 data=result,
                 message="戦略テストに失敗しました",
             )
 
     except Exception as e:
-        log_exception(e, message="戦略テスト実行中にエラーが発生しました")
+        logger.error("戦略テスト実行中にエラーが発生しました", exc_info=True)
         raise HTTPException(
             status_code=500, detail="戦略テスト実行中にエラーが発生しました"
-        )
+        ) from e
 
 
 @router.get("/config/default", response_model=Dict[str, Any])
@@ -455,11 +430,9 @@ async def get_default_config():
     """
     try:
         if auto_strategy_service is None:
-            log_exception(
-                Exception(
-                    "AutoStrategyService is not available. Please check server logs."
-                ),
-                message="AutoStrategyService is not available. Please check server logs.",
+            logger.error(
+                "AutoStrategyService is not available. Please check server logs.",
+                exc_info=True,
             )
             raise HTTPException(
                 status_code=503,
@@ -467,15 +440,15 @@ async def get_default_config():
             )
 
         default_config = GAConfig.create_default()
-        return api_response(
+        return APIResponseHelper.api_response(
             success=True,
             message="デフォルト設定を取得しました",
             data={"config": default_config.to_dict()},
         )
 
     except Exception as e:
-        log_exception(e, message="デフォルト設定取得エラー")
-        raise HTTPException(status_code=500, detail="デフォルト設定取得エラー")
+        logger.error("デフォルト設定取得エラー", exc_info=True)
+        raise HTTPException(status_code=500, detail="デフォルト設定取得エラー") from e
 
 
 @router.get("/config/presets", response_model=Dict[str, Any])
@@ -487,11 +460,9 @@ async def get_config_presets():
     """
     try:
         if auto_strategy_service is None:
-            log_exception(
-                Exception(
-                    "AutoStrategyService is not available. Please check server logs."
-                ),
-                message="AutoStrategyService is not available. Please check server logs.",
+            logger.error(
+                "AutoStrategyService is not available. Please check server logs.",
+                exc_info=True,
             )
             raise HTTPException(
                 status_code=503,
@@ -504,12 +475,12 @@ async def get_config_presets():
             "thorough": GAConfig.create_thorough().to_dict(),
         }
 
-        return api_response(
+        return APIResponseHelper.api_response(
             success=True,
             message="設定プリセットを取得しました",
             data={"presets": presets},
         )
 
     except Exception as e:
-        log_exception(e, message="プリセット取得エラー")
-        raise HTTPException(status_code=500, detail="プリセット取得エラー")
+        logger.error("プリセット取得エラー", exc_info=True)
+        raise HTTPException(status_code=500, detail="プリセット取得エラー") from e

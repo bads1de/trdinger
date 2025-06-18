@@ -14,7 +14,7 @@ from database.connection import get_db
 from database.repositories.backtest_result_repository import BacktestResultRepository
 from app.core.services.backtest_service import BacktestService
 from app.core.services.enhanced_backtest_service import EnhancedBacktestService
-from app.utils.api_response_utils import handle_api_exception
+from app.core.utils.api_utils import APIErrorHandler
 
 router = APIRouter(prefix="/api/backtest", tags=["backtest"])
 
@@ -136,7 +136,7 @@ async def run_backtest(request: BacktestRequest, db: Session = Depends(get_db)):
         saved_result = _save_backtest_result(result, db)
         return {"success": True, "result": saved_result}
 
-    return await handle_api_exception(_run)
+    return await APIErrorHandler.handle_api_exception(_run)
 
 
 @router.get("/results", response_model=BacktestResultsResponse)
@@ -174,7 +174,7 @@ async def get_backtest_results(
 
         return {"success": True, "results": results, "total": total}
 
-    return await handle_api_exception(_get_results)
+    return await APIErrorHandler.handle_api_exception(_get_results)
 
 
 @router.get("/results/{result_id}", response_model=BacktestResponse)
@@ -199,7 +199,7 @@ async def get_backtest_result_by_id(result_id: int, db: Session = Depends(get_db
 
         return {"success": True, "result": result}
 
-    return await handle_api_exception(_get_by_id)
+    return await APIErrorHandler.handle_api_exception(_get_by_id)
 
 
 @router.delete("/results/{result_id}")
@@ -224,7 +224,7 @@ async def delete_backtest_result(result_id: int, db: Session = Depends(get_db)):
 
         return {"success": True, "message": "Backtest result deleted successfully"}
 
-    return await handle_api_exception(_delete_result)
+    return await APIErrorHandler.handle_api_exception(_delete_result)
 
 
 @router.get("/strategies")
@@ -241,7 +241,7 @@ async def get_supported_strategies():
         strategies = backtest_service.get_supported_strategies()
         return {"success": True, "strategies": strategies}
 
-    return await handle_api_exception(_get_strategies)
+    return await APIErrorHandler.handle_api_exception(_get_strategies)
 
 
 @router.post("/optimize", response_model=BacktestResponse)
@@ -268,7 +268,7 @@ async def optimize_strategy(
         saved_result = _save_backtest_result(result, db)
         return {"success": True, "result": saved_result}
 
-    return await handle_api_exception(_optimize)
+    return await APIErrorHandler.handle_api_exception(_optimize)
 
 
 @router.post("/optimize-enhanced", response_model=BacktestResponse)
@@ -295,7 +295,7 @@ async def optimize_strategy_enhanced(
         saved_result = _save_backtest_result(result, db)
         return {"success": True, "result": saved_result}
 
-    return await handle_api_exception(_optimize_enhanced)
+    return await APIErrorHandler.handle_api_exception(_optimize_enhanced)
 
 
 @router.post("/multi-objective-optimization", response_model=BacktestResponse)
@@ -325,7 +325,7 @@ async def multi_objective_optimization(
         saved_result = _save_backtest_result(result, db)
         return {"success": True, "result": saved_result}
 
-    return await handle_api_exception(_multi_objective_optimize)
+    return await APIErrorHandler.handle_api_exception(_multi_objective_optimize)
 
 
 @router.post("/robustness-test", response_model=BacktestResponse)
@@ -352,7 +352,7 @@ async def robustness_test(
         saved_result = _save_backtest_result(result, db)
         return {"success": True, "result": saved_result}
 
-    return await handle_api_exception(_robustness_test)
+    return await APIErrorHandler.handle_api_exception(_robustness_test)
 
 
 @router.get("/health")
@@ -367,4 +367,4 @@ async def health_check():
     async def _check_health():
         return {"status": "ok"}
 
-    return await handle_api_exception(_check_health)
+    return await APIErrorHandler.handle_api_exception(_check_health)
