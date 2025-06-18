@@ -4,7 +4,7 @@
 OHLCV、ファンディングレート、オープンインタレストデータのリセット機能を提供します。
 """
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 from typing import Dict, Any
 from datetime import datetime
@@ -14,7 +14,7 @@ from database.connection import get_db
 from database.repositories.ohlcv_repository import OHLCVRepository
 from database.repositories.funding_rate_repository import FundingRateRepository
 from database.repositories.open_interest_repository import OpenInterestRepository
-from app.utils.api_response_utils import handle_api_exception, api_response
+from app.core.utils.api_utils import APIResponseHelper, APIErrorHandler
 
 logger = logging.getLogger(__name__)
 
@@ -81,7 +81,9 @@ async def reset_all_data(db: Session = Depends(get_db)) -> Dict[str, Any]:
         logger.info(f"全データリセット完了: {deleted_counts}")
         return response
 
-    return await handle_api_exception(_reset_all_data, message="全データリセットエラー")
+    return await APIErrorHandler.handle_api_exception(
+        _reset_all_data, message="全データリセットエラー"
+    )
 
 
 @router.delete("/ohlcv")
@@ -108,7 +110,7 @@ async def reset_ohlcv_data(db: Session = Depends(get_db)) -> Dict[str, Any]:
         logger.info(f"OHLCVデータリセット完了: {deleted_count}件")
         return response
 
-    return await handle_api_exception(
+    return await APIErrorHandler.handle_api_exception(
         _reset_ohlcv_data, message="OHLCVデータリセットエラー"
     )
 
@@ -137,7 +139,7 @@ async def reset_funding_rate_data(db: Session = Depends(get_db)) -> Dict[str, An
         logger.info(f"ファンディングレートデータリセット完了: {deleted_count}件")
         return response
 
-    return await handle_api_exception(
+    return await APIErrorHandler.handle_api_exception(
         _reset_funding_rate_data, message="ファンディングレートデータリセットエラー"
     )
 
@@ -158,7 +160,7 @@ async def reset_open_interest_data(db: Session = Depends(get_db)) -> Dict[str, A
         message = f"オープンインタレストデータを{deleted_count}件削除しました"
 
         logger.info(f"オープンインタレストデータリセット完了: {deleted_count}件")
-        return api_response(
+        return APIResponseHelper.api_response(
             success=True,
             data={
                 "deleted_count": deleted_count,
@@ -167,7 +169,7 @@ async def reset_open_interest_data(db: Session = Depends(get_db)) -> Dict[str, A
             message=message,
         )
 
-    return await handle_api_exception(_reset_open_interest)
+    return await APIErrorHandler.handle_api_exception(_reset_open_interest)
 
 
 @router.delete("/symbol/{symbol}")
@@ -224,7 +226,7 @@ async def reset_data_by_symbol(
         )
 
         logger.info(f"シンボル '{symbol}' データリセット完了: {deleted_counts}")
-        return api_response(
+        return APIResponseHelper.api_response(
             success=success,
             data={
                 "symbol": symbol,
@@ -235,7 +237,7 @@ async def reset_data_by_symbol(
             message=message,
         )
 
-    return await handle_api_exception(_reset_by_symbol)
+    return await APIErrorHandler.handle_api_exception(_reset_by_symbol)
 
 
 @router.get("/status")
@@ -269,10 +271,10 @@ async def get_data_status(db: Session = Depends(get_db)) -> Dict[str, Any]:
             "total_records": ohlcv_count + fr_count + oi_count,
         }
 
-        return api_response(
+        return APIResponseHelper.api_response(
             success=True,
             data=response_data,
             message="現在のデータ状況を取得しました",
         )
 
-    return await handle_api_exception(_get_status)
+    return await APIErrorHandler.handle_api_exception(_get_status)

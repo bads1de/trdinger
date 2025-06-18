@@ -13,7 +13,7 @@ import logging
 from database.connection import get_db, ensure_db_initialized
 from database.repositories.funding_rate_repository import FundingRateRepository
 from app.core.services.funding_rate_service import BybitFundingRateService
-from app.utils.api_response_utils import handle_api_exception, api_response
+from app.core.utils.api_utils import APIResponseHelper, APIErrorHandler
 
 logger = logging.getLogger(__name__)
 
@@ -97,7 +97,7 @@ async def get_funding_rates(
 
         logger.info(f"ファンディングレートデータ取得成功: {len(funding_rates)}件")
 
-        return api_response(
+        return APIResponseHelper.api_response(
             success=True,
             data={
                 "symbol": normalized_symbol,
@@ -107,7 +107,7 @@ async def get_funding_rates(
             message=f"{len(funding_rates)}件のファンディングレートデータを取得しました",
         )
 
-    return await handle_api_exception(_get_funding_rates_data)
+    return await APIErrorHandler.handle_api_exception(_get_funding_rates_data)
 
 
 @router.post("/funding-rates/collect")
@@ -160,13 +160,13 @@ async def collect_funding_rate_data(
 
         logger.info(f"ファンディングレートデータ収集完了: {result}")
 
-        return api_response(
+        return APIResponseHelper.api_response(
             data=result,
             message=f"{result['saved_count']}件のファンディングレートデータを保存しました",
             success=True,
         )
 
-    return await handle_api_exception(_collect_rates)
+    return await APIErrorHandler.handle_api_exception(_collect_rates)
 
 
 @router.get("/funding-rates/current")
@@ -197,7 +197,7 @@ async def get_current_funding_rate(
 
         logger.info(f"現在のファンディングレート取得完了: {symbol}")
 
-        return api_response(
+        return APIResponseHelper.api_response(
             data={
                 "symbol": current_rate["symbol"],
                 "funding_rate": current_rate["fundingRate"],
@@ -211,7 +211,7 @@ async def get_current_funding_rate(
             message=f"{symbol}の現在のファンディングレートを取得しました",
         )
 
-    return await handle_api_exception(_get_current_rate)
+    return await APIErrorHandler.handle_api_exception(_get_current_rate)
 
 
 @router.post("/funding-rates/bulk-collect")
@@ -280,7 +280,7 @@ async def bulk_collect_funding_rates(
             f"ファンディングレート一括収集完了: {successful_symbols}/{len(symbols)}成功"
         )
 
-        return api_response(
+        return APIResponseHelper.api_response(
             data={
                 "total_symbols": len(symbols),
                 "successful_symbols": successful_symbols,
@@ -293,4 +293,4 @@ async def bulk_collect_funding_rates(
             message=f"{successful_symbols}/{len(symbols)}シンボル（BTC）で合計{total_saved}件のファンディングレートデータを保存しました",
         )
 
-    return await handle_api_exception(_bulk_collect)
+    return await APIErrorHandler.handle_api_exception(_bulk_collect)

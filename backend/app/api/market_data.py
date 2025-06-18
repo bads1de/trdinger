@@ -14,9 +14,8 @@ import logging
 from app.config.market_config import MarketDataConfig
 from database.connection import get_db
 from database.repositories.ohlcv_repository import OHLCVRepository
-from app.core.utils.api_utils import DateTimeHelper
+from app.core.utils.api_utils import DateTimeHelper, APIResponseHelper, APIErrorHandler
 from app.core.utils.data_converter import OHLCVDataConverter
-from app.utils.api_response_utils import api_response, handle_api_exception
 
 
 # ログ設定
@@ -97,13 +96,13 @@ async def get_ohlcv_data(
 
         logger.info(f"OHLCVデータ取得成功: {len(ohlcv_data)}件")
 
-        return api_response(
+        return APIResponseHelper.api_response(
             success=True,
             data={"ohlcv_data": ohlcv_data, "symbol": symbol, "timeframe": timeframe},
             message=f"{symbol} の {timeframe} OHLCVデータを取得しました",
         )
 
-    return await handle_api_exception(_get_ohlcv)
+    return await APIErrorHandler.handle_api_exception(_get_ohlcv)
 
 
 @router.get("/symbols")
@@ -116,7 +115,7 @@ async def get_supported_symbols():
     """
 
     async def _get_symbols():
-        return api_response(
+        return APIResponseHelper.api_response(
             success=True,
             data={
                 "symbols": MarketDataConfig.SUPPORTED_SYMBOLS,
@@ -125,7 +124,7 @@ async def get_supported_symbols():
             message="サポートされているシンボル一覧を取得しました",
         )
 
-    return await handle_api_exception(_get_symbols)
+    return await APIErrorHandler.handle_api_exception(_get_symbols)
 
 
 @router.get("/timeframes")
@@ -138,7 +137,7 @@ async def get_supported_timeframes():
     """
 
     async def _get_timeframes():
-        return api_response(
+        return APIResponseHelper.api_response(
             success=True,
             data={
                 "timeframes": MarketDataConfig.SUPPORTED_TIMEFRAMES,
@@ -147,4 +146,4 @@ async def get_supported_timeframes():
             message="サポートされている時間軸一覧を取得しました",
         )
 
-    return await handle_api_exception(_get_timeframes)
+    return await APIErrorHandler.handle_api_exception(_get_timeframes)

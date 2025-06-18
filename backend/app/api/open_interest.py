@@ -15,8 +15,7 @@ from sqlalchemy.orm import Session
 from app.core.services.open_interest_service import BybitOpenInterestService
 from database.connection import get_db, ensure_db_initialized
 from database.repositories.open_interest_repository import OpenInterestRepository
-from app.utils.api_response_utils import api_response
-from app.core.utils.api_utils import APIErrorHandler
+from app.core.utils.api_utils import APIErrorHandler, APIResponseHelper
 
 # ログ設定
 logger = logging.getLogger(__name__)
@@ -89,7 +88,7 @@ async def get_open_interest_data(
 
         logger.info(f"オープンインタレストデータ取得成功: {len(open_interest_data)}件")
 
-        return api_response(
+        return APIResponseHelper.api_response(
             data={
                 "symbol": normalized_symbol,
                 "count": len(open_interest_data),
@@ -151,7 +150,7 @@ async def collect_open_interest_data(
 
         logger.info(f"オープンインタレストデータ収集完了: {result}")
 
-        return api_response(
+        return APIResponseHelper.api_response(
             data=result,
             message=f"{result['saved_count']}件のオープンインタレストデータを保存しました",
             success=True,
@@ -187,7 +186,7 @@ async def get_current_open_interest(
 
         logger.info(f"現在のオープンインタレスト取得完了: {current_open_interest}")
 
-        return api_response(
+        return APIResponseHelper.api_response(
             data=current_open_interest,
             message=f"{symbol}の現在のオープンインタレストを取得しました",
             success=True,
@@ -261,7 +260,7 @@ async def bulk_collect_open_interest(
             f"オープンインタレスト一括収集完了: {successful_symbols}/{len(symbols)}成功"
         )
 
-        return api_response(
+        return APIResponseHelper.api_response(
             data={
                 "results": results,
                 "summary": {

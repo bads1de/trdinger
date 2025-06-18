@@ -12,7 +12,7 @@ import logging
 
 from app.core.services.strategy_integration_service import StrategyIntegrationService
 from database.connection import get_db
-from app.utils.api_response_utils import api_response, handle_api_exception
+from app.core.utils.api_utils import APIResponseHelper, APIErrorHandler
 
 logger = logging.getLogger(__name__)
 
@@ -94,7 +94,7 @@ async def get_unified_strategies(
 
         logger.info(f"統合戦略取得完了: {len(result['strategies'])} 件")
 
-        return api_response(
+        return APIResponseHelper.api_response(
             success=True,
             data={
                 "strategies": result["strategies"],
@@ -104,7 +104,7 @@ async def get_unified_strategies(
             message="統合戦略を取得しました",
         )
 
-    return await handle_api_exception(_get_unified)
+    return await APIErrorHandler.handle_api_exception(_get_unified)
 
 
 @router.get("/auto-generated", response_model=UnifiedStrategiesResponse)
@@ -157,7 +157,7 @@ async def get_auto_generated_strategies(
 
         logger.info(f"オートストラテジー取得完了: {len(paginated_strategies)} 件")
 
-        return api_response(
+        return APIResponseHelper.api_response(
             success=True,
             data={
                 "strategies": paginated_strategies,
@@ -167,7 +167,7 @@ async def get_auto_generated_strategies(
             message="オートストラテジー戦略を取得しました",
         )
 
-    return await handle_api_exception(_get_auto_strategies)
+    return await APIErrorHandler.handle_api_exception(_get_auto_strategies)
 
 
 @router.get("/stats", response_model=StrategyStatsResponse)
@@ -236,11 +236,11 @@ async def get_strategy_statistics(db: Session = Depends(get_db)):
 
         logger.info("戦略統計取得完了")
 
-        return api_response(
+        return APIResponseHelper.api_response(
             data=stats, message="戦略統計情報を取得しました", success=True
         )
 
-    return await handle_api_exception(_get_stats)
+    return await APIErrorHandler.handle_api_exception(_get_stats)
 
 
 @router.get("/categories")
