@@ -74,8 +74,22 @@ async function fetchDatabaseOHLCVData(
     );
   }
 
+  // デバッグ用ログ出力
+  console.log(
+    "バックエンドレスポンス構造:",
+    JSON.stringify(backendData, null, 2)
+  );
+
   // バックエンドのOHLCVデータをフロントエンド形式に変換
-  const ohlcvData = backendData.data;
+  const ohlcvData = backendData.data.ohlcv_data;
+
+  // データが配列であることを確認
+  if (!Array.isArray(ohlcvData)) {
+    console.error("OHLCVデータの型:", typeof ohlcvData);
+    console.error("OHLCVデータの内容:", ohlcvData);
+    throw new Error("バックエンドから返されたOHLCVデータが配列ではありません");
+  }
+
   const priceData: PriceData[] = ohlcvData.map((candle: number[]) => {
     const [timestamp, open, high, low, close, volume] = candle;
 

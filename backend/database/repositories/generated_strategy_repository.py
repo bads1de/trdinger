@@ -10,7 +10,7 @@ from sqlalchemy import desc
 import logging
 
 from .base_repository import BaseRepository
-from backend.database.models import GeneratedStrategy  # Corrected import path
+from database.models import GeneratedStrategy
 from app.core.utils.database_utils import DatabaseQueryHelper
 
 logger = logging.getLogger(__name__)
