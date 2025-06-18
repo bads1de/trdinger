@@ -4,13 +4,13 @@
 GAによって生成された戦略の永続化処理を管理します。
 """
 
-from typing import List, Optional, Dict, Any
+from typing import List, Optional, Dict, Any, cast
 from sqlalchemy.orm import Session
-from sqlalchemy import desc, and_
+from sqlalchemy import desc
 import logging
 
 from .base_repository import BaseRepository
-from database.models import GeneratedStrategy
+from backend.database.models import GeneratedStrategy  # Corrected import path
 from app.core.utils.database_utils import DatabaseQueryHelper
 
 logger = logging.getLogger(__name__)
@@ -266,7 +266,7 @@ class GeneratedStrategyRepository(BaseRepository):
                 logger.warning(f"戦略が見つかりません: {strategy_id}")
                 return False
 
-            strategy.fitness_score = fitness_score
+            strategy.fitness_score = fitness_score  # type: ignore
             self.db.commit()
 
             logger.debug(
@@ -301,7 +301,7 @@ class GeneratedStrategyRepository(BaseRepository):
                 logger.warning(f"戦略が見つかりません: {strategy_id}")
                 return False
 
-            strategy.backtest_result_id = backtest_result_id
+            strategy.backtest_result_id = backtest_result_id  # type: ignore
             self.db.commit()
 
             logger.debug(
@@ -354,9 +354,10 @@ class GeneratedStrategyRepository(BaseRepository):
             if not strategies:
                 return {}
 
-            fitness_scores = [
-                s.fitness_score for s in strategies if s.fitness_score is not None
-            ]
+            fitness_scores = cast(
+                List[float],
+                [s.fitness_score for s in strategies if s.fitness_score is not None],
+            )
 
             if not fitness_scores:
                 return {"strategy_count": len(strategies)}

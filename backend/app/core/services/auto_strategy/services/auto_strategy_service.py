@@ -105,7 +105,7 @@ class AutoStrategyService:
             実験ID
         """
         try:
-            logger.info(f"=== 戦略生成開始処理開始 ===")
+            logger.info("=== 戦略生成開始処理開始 ===")
             logger.info(f"実験名: {experiment_name}")
 
             # 依存関係の確認
