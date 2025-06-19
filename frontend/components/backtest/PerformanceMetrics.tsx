@@ -88,7 +88,8 @@ export default function PerformanceMetrics({
       // もしくは、より明確な表示「データなし」などを検討することも可能
       return "0.00%";
     }
-    return `${(value * 100).toFixed(2)}%`;
+    // バックエンドから既にパーセンテージ値として渡されるため、100を掛けずにそのまま使用する
+    return `${value.toFixed(2)}%`;
   };
 
   const formatNumber = (
