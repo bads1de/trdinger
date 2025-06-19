@@ -109,6 +109,8 @@ export interface BacktestResult {
   initial_capital: number;
   /** 手数料率 */
   commission_rate: number;
+  /** 戦略設定（JSON形式） */
+  config_json?: Record<string, any>;
   /** パフォーマンス指標 */
   performance_metrics: PerformanceMetrics;
   /** 資産曲線データ（オプション） */

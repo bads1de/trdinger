@@ -8,6 +8,7 @@
 "use client";
 
 import React, { useState } from "react";
+import TabButton from "../common/TabButton";
 
 interface OptimizationResult {
   strategy_name: string;
@@ -122,29 +123,6 @@ export default function OptimizationResults({
     }
   };
 
-  const TabButton = ({
-    id,
-    label,
-    isActive,
-    onClick,
-  }: {
-    id: string;
-    label: string;
-    isActive: boolean;
-    onClick: () => void;
-  }) => (
-    <button
-      onClick={onClick}
-      className={`px-4 py-2 text-sm font-medium rounded-t-lg transition-colors ${
-        isActive
-          ? "bg-blue-600 text-white border-b-2 border-blue-600"
-          : "bg-secondary-700 text-secondary-300 hover:bg-secondary-600"
-      }`}
-    >
-      {label}
-    </button>
-  );
-
   const MetricCard = ({
     title,
     value,
@@ -181,19 +159,16 @@ export default function OptimizationResults({
       {/* タブナビゲーション */}
       <div className="flex space-x-1 mb-6">
         <TabButton
-          id="overview"
           label="概要"
           isActive={activeTab === "overview"}
           onClick={() => setActiveTab("overview")}
         />
         <TabButton
-          id="details"
           label="詳細"
           isActive={activeTab === "details"}
           onClick={() => setActiveTab("details")}
         />
         <TabButton
-          id="analysis"
           label="分析"
           isActive={activeTab === "analysis"}
           onClick={() => setActiveTab("analysis")}

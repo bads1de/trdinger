@@ -156,6 +156,13 @@ class BacktestService:
 
             # 6. 結果をデータベース形式に変換
             logger.info("Converting results...")
+
+            # config_jsonを構築
+            config_json = {
+                "strategy_config": config.get("strategy_config", {}),
+                "commission_rate": config.get("commission_rate", 0.001),
+            }
+
             result = self._convert_backtest_results(
                 stats,
                 config["strategy_name"],
@@ -164,6 +171,7 @@ class BacktestService:
                 config["initial_capital"],
                 config["start_date"],
                 config["end_date"],
+                config_json,
             )
 
             logger.info("Backtest result conversion completed")
@@ -337,6 +345,7 @@ class BacktestService:
         initial_capital: float,
         start_date: Optional[str] = None,
         end_date: Optional[str] = None,
+        config_json: Optional[Dict[str, Any]] = None,
     ) -> Dict[str, Any]:
         """
         backtesting.pyの結果をデータベース保存用の形式に変換
@@ -448,7 +457,10 @@ class BacktestService:
             "start_date": start_date,
             "end_date": end_date,
             "initial_capital": initial_capital,
-            "commission_rate": 0.001,  # デフォルト値を追加
+            "commission_rate": (
+                config_json.get("commission_rate", 0.001) if config_json else 0.001
+            ),
+            "config_json": config_json or {},
             "performance_metrics": performance_metrics,
             "equity_curve": equity_curve,
             "trade_history": trade_history,
@@ -685,6 +697,12 @@ class BacktestService:
         else:
             stats = stats_raw
 
+        # config_jsonを構築
+        config_json = {
+            "strategy_config": config.get("strategy_config", {}),
+            "commission_rate": config.get("commission_rate", 0.001),
+        }
+
         # 結果を変換
         result = self._convert_backtest_results(
             stats,
@@ -694,6 +712,7 @@ class BacktestService:
             config["initial_capital"],
             config.get("start_date"),
             config.get("end_date"),
+            config_json,
         )
 
         # 最適化されたパラメータを追加

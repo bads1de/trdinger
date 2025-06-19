@@ -16,6 +16,8 @@ import EquityCurveChart from "./EquityCurveChart";
 import DrawdownChart from "./DrawdownChart";
 import TradeScatterChart from "./TradeScatterChart";
 import ReturnsDistributionChart from "./ReturnsDistributionChart";
+import TabButton from "../../common/TabButton";
+import { X } from "lucide-react";
 
 interface ChartModalProps {
   /** モーダルの表示状態 */
@@ -44,27 +46,6 @@ const tabs: TabConfig[] = [
     description: "取引リターンの統計分布",
   },
 ];
-
-/**
- * タブボタンコンポーネント
- */
-const TabButton: React.FC<{
-  tab: TabConfig;
-  isActive: boolean;
-  onClick: () => void;
-}> = ({ tab, isActive, onClick }) => (
-  <button
-    onClick={onClick}
-    className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
-      isActive
-        ? "bg-blue-600 text-white"
-        : "bg-gray-950 text-gray-300 hover:bg-gray-900 hover:text-white"
-    }`}
-    title={tab.description}
-  >
-    {tab.label}
-  </button>
-);
 
 /**
  * チャートモーダルメインコンポーネント
@@ -131,53 +112,30 @@ const ChartModal: React.FC<ChartModalProps> = ({ isOpen, onClose, result }) => {
   `;
 
   return (
-    <div
-      data-testid="modal-overlay"
-      className={modalClasses}
-      style={{ backgroundColor: "rgba(0, 0, 0, 0.75)" }}
-      onClick={handleOverlayClick}
-    >
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div
-        data-testid="modal-content"
-        className={contentClasses}
-        onClick={(e) => e.stopPropagation()}
-      >
-        {/* ヘッダー */}
-        <div className="flex items-center justify-between p-4 border-b border-gray-800">
-          <div>
-            <h2 className="text-xl font-semibold text-white">チャート分析</h2>
-            <p className="text-sm text-gray-400 mt-1">
-              {result.strategy_name} - {result.symbol} ({result.timeframe})
-            </p>
-          </div>
+        className="fixed inset-0 bg-black opacity-50"
+        onClick={onClose}
+      ></div>
+      <div className="bg-secondary-900 rounded-lg shadow-xl z-10 w-full max-w-5xl h-[90vh] flex flex-col p-6 space-y-4 border border-secondary-700">
+        <div className="flex justify-between items-center">
+          <h2 className="text-2xl font-bold text-white">
+            バックテスト結果チャート
+          </h2>
           <button
-            data-testid="close-button"
             onClick={onClose}
-            className="p-2 text-gray-400 hover:text-white hover:bg-gray-900 rounded-lg transition-colors"
-            title="閉じる"
+            className="text-secondary-400 hover:text-white transition-colors"
           >
-            <svg
-              className="w-6 h-6"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M6 18L18 6M6 6l12 12"
-              />
-            </svg>
+            <X className="h-6 w-6" />
           </button>
         </div>
 
         {/* タブナビゲーション */}
-        <div className="flex space-x-1 p-4 pb-0">
+        <div className="flex space-x-2 border-b border-secondary-700 pb-2 overflow-x-auto">
           {tabs.map((tab) => (
             <TabButton
               key={tab.id}
-              tab={tab}
+              label={tab.label}
               isActive={activeTab === tab.id}
               onClick={() => setActiveTab(tab.id)}
             />

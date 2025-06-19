@@ -10,6 +10,7 @@ import React, { useState } from "react";
 import TradeHistoryTable from "./TradeHistoryTable";
 import ChartModal from "./charts/ChartModal";
 import { BacktestResult } from "@/types/backtest";
+import TabButton from "../common/TabButton";
 
 interface PerformanceMetricsProps {
   result: BacktestResult;
@@ -53,34 +54,14 @@ function MetricCard({
   );
 }
 
-// タブボタンコンポーネント
-interface TabButtonProps {
-  label: string;
-  isActive: boolean;
-  onClick: () => void;
-}
-
-function TabButton({ label, isActive, onClick }: TabButtonProps) {
-  return (
-    <button
-      onClick={onClick}
-      className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
-        isActive
-          ? "bg-secondary-900 text-white"
-          : "bg-gray-800 text-gray-300 hover:bg-gray-700 hover:text-white"
-      }`}
-    >
-      {label}
-    </button>
-  );
-}
-
 export default function PerformanceMetrics({
   result,
   onOptimizationClick,
 }: PerformanceMetricsProps) {
   const { performance_metrics: metrics } = result;
-  const [activeTab, setActiveTab] = useState<"overview" | "trades">("overview");
+  const [activeTab, setActiveTab] = useState<
+    "overview" | "parameters" | "trades"
+  >("overview");
   const [isChartModalOpen, setIsChartModalOpen] = useState(false);
 
   const formatPercentage = (value: number | undefined | null) => {
@@ -148,6 +129,11 @@ export default function PerformanceMetrics({
             label="概要"
             isActive={activeTab === "overview"}
             onClick={() => setActiveTab("overview")}
+          />
+          <TabButton
+            label="パラメータ"
+            isActive={activeTab === "parameters"}
+            onClick={() => setActiveTab("parameters")}
           />
           <TabButton
             label="取引履歴"
@@ -392,6 +378,152 @@ export default function PerformanceMetrics({
                 </span>
               </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* パラメータタブ */}
+      {activeTab === "parameters" && (
+        <div className="space-y-6">
+          <div className="bg-secondary-900/30 rounded-lg p-4 border border-secondary-700">
+            <h3 className="text-lg font-semibold mb-4 text-white">
+              戦略パラメータ
+            </h3>
+
+            {/* デバッグ情報 */}
+            <div className="mb-4 p-3 bg-gray-800/50 rounded text-xs text-gray-400">
+              <p>
+                Debug: config_json ={" "}
+                {JSON.stringify(result.config_json, null, 2)}
+              </p>
+            </div>
+
+            {result.config_json && result.config_json.strategy_config ? (
+              <div className="space-y-4">
+                {/* 戦略タイプ */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <span className="text-gray-400 text-sm">戦略タイプ:</span>
+                    <span className="ml-2 text-white font-medium">
+                      {result.config_json.strategy_config.strategy_type ||
+                        "N/A"}
+                    </span>
+                  </div>
+                </div>
+
+                {/* パラメータ一覧 */}
+                {result.config_json.strategy_config.parameters &&
+                Object.keys(result.config_json.strategy_config.parameters)
+                  .length > 0 ? (
+                  <div>
+                    <h4 className="text-md font-medium mb-3 text-white">
+                      パラメータ設定
+                    </h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                      {Object.entries(
+                        result.config_json.strategy_config.parameters
+                      ).map(([key, value]) => (
+                        <div
+                          key={key}
+                          className="bg-gray-800/50 rounded-lg p-3 border border-gray-600/30"
+                        >
+                          <div className="flex flex-col space-y-1">
+                            <span className="text-gray-400 text-sm capitalize">
+                              {key.replace(/_/g, " ")}
+                            </span>
+                            <span className="text-white font-medium text-lg">
+                              {typeof value === "number"
+                                ? value.toFixed(4)
+                                : String(value)}
+                            </span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="text-center py-8 text-gray-400">
+                    パラメータ情報がありません
+                  </div>
+                )}
+
+                {/* バックテスト設定 */}
+                <div>
+                  <h4 className="text-md font-medium mb-3 text-white">
+                    バックテスト設定
+                  </h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <div className="bg-gray-800/50 rounded-lg p-3 border border-gray-600/30">
+                      <div className="flex flex-col space-y-1">
+                        <span className="text-gray-400 text-sm">初期資金</span>
+                        <span className="text-green-400 font-medium text-lg">
+                          {formatCurrency(result.initial_capital)}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="bg-gray-800/50 rounded-lg p-3 border border-gray-600/30">
+                      <div className="flex flex-col space-y-1">
+                        <span className="text-gray-400 text-sm">手数料率</span>
+                        <span className="text-yellow-400 font-medium text-lg">
+                          {formatPercentage(result.commission_rate)}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="bg-gray-800/50 rounded-lg p-3 border border-gray-600/30">
+                      <div className="flex flex-col space-y-1">
+                        <span className="text-gray-400 text-sm">取引ペア</span>
+                        <span className="text-blue-400 font-medium text-lg">
+                          {result.symbol}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {/* 基本情報のフォールバック表示 */}
+                <div>
+                  <h4 className="text-md font-medium mb-3 text-white">
+                    基本設定
+                  </h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <div className="bg-gray-800/50 rounded-lg p-3 border border-gray-600/30">
+                      <div className="flex flex-col space-y-1">
+                        <span className="text-gray-400 text-sm">戦略名</span>
+                        <span className="text-white font-medium text-lg">
+                          {result.strategy_name}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="bg-gray-800/50 rounded-lg p-3 border border-gray-600/30">
+                      <div className="flex flex-col space-y-1">
+                        <span className="text-gray-400 text-sm">初期資金</span>
+                        <span className="text-green-400 font-medium text-lg">
+                          {formatCurrency(result.initial_capital)}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="bg-gray-800/50 rounded-lg p-3 border border-gray-600/30">
+                      <div className="flex flex-col space-y-1">
+                        <span className="text-gray-400 text-sm">手数料率</span>
+                        <span className="text-yellow-400 font-medium text-lg">
+                          {formatPercentage(result.commission_rate)}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="text-center py-8 text-gray-400">
+                  <div className="text-6xl mb-4">⚙️</div>
+                  <p className="text-lg">詳細なパラメータ情報がありません</p>
+                  <p className="text-sm mt-2">
+                    この結果は古いバージョンで作成されたため、戦略パラメータの詳細情報が含まれていません
+                  </p>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}

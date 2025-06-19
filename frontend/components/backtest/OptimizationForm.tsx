@@ -29,6 +29,7 @@ import {
   ENHANCED_OPTIMIZATION_OBJECTIVES,
   GA_OBJECTIVE_OPTIONS,
 } from "@/constants/backtest";
+import TabButton from "../common/TabButton";
 
 interface OptimizationFormProps {
   onEnhancedOptimization: (config: OptimizationConfig) => void;
@@ -272,31 +273,6 @@ export default function OptimizationForm({
     }
   };
 
-  const TabButton = ({
-    id,
-    label,
-    isActive,
-    onClick,
-  }: {
-    id: string;
-    label: string;
-    isActive: boolean;
-    onClick: () => void;
-  }) => (
-    <button
-      type="button"
-      onClick={onClick}
-      className={`py-2 px-4 text-sm font-medium rounded-t-lg transition-colors duration-200
-        ${
-          isActive
-            ? "bg-secondary-800 text-blue-400 border-b-2 border-blue-500"
-            : "bg-secondary-900 text-gray-400 hover:text-white hover:bg-secondary-700"
-        }`}
-    >
-      {label}
-    </button>
-  );
-
   // GAProgressDisplay に渡す onComplete と onError のダミー関数
   const handleGAProgressComplete = (result: any) => {
     console.log("GA completed in OptimizationForm:", result);
@@ -311,26 +287,22 @@ export default function OptimizationForm({
       <div className="mb-4 border-b border-secondary-700">
         <nav className="flex -mb-px space-x-4" aria-label="Tabs">
           <TabButton
-            id="enhanced"
             label="拡張最適化"
             isActive={activeTab === "enhanced"}
             onClick={() => setActiveTab("enhanced")}
           />
           <TabButton
-            id="multi"
             label="マルチ目的最適化"
             isActive={activeTab === "multi"}
             onClick={() => setActiveTab("multi")}
           />
           <TabButton
-            id="robustness"
             label="ロバストネステスト"
             isActive={activeTab === "robustness"}
             onClick={() => setActiveTab("robustness")}
           />
           {onGAGeneration && (
             <TabButton
-              id="ga"
               label="遺伝的アルゴリズム"
               isActive={activeTab === "ga"}
               onClick={() => setActiveTab("ga")}
