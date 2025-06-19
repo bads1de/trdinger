@@ -36,7 +36,7 @@ export default function BacktestResultsTable({
     if (value === undefined || value === null || isNaN(value)) {
       return "N/A";
     }
-    return `${(value * 100).toFixed(2)}%`;
+    return `${value.toFixed(2)}%`;
   };
 
   const formatNumber = (
