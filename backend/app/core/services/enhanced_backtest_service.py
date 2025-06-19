@@ -230,11 +230,56 @@ class EnhancedBacktestService(BacktestService):
 
     def _get_backtest_data(self, config: Dict[str, Any]) -> pd.DataFrame:
         """バックテスト用データの取得"""
-        return self.data_service.get_ohlcv_for_backtest(
-            symbol=config["symbol"],
-            timeframe=config["timeframe"],
-            start_date=config["start_date"],
-            end_date=config["end_date"],
+        # シンボルを正規化（BTC/USDT -> BTC/USDT:USDT）
+        from app.config.market_config import MarketDataConfig
+
+        symbol = config["symbol"]
+        symbols_to_try = []
+
+        # 1. 正規化されたシンボルを最初に試行
+        try:
+            normalized_symbol = MarketDataConfig.normalize_symbol(symbol)
+            symbols_to_try.append(normalized_symbol)
+        except ValueError:
+            pass
+
+        # 2. 元のシンボルも試行リストに追加
+        if symbol not in symbols_to_try:
+            symbols_to_try.append(symbol)
+
+        # 3. 一般的な変換パターンも追加
+        if symbol == "BTC/USDT" and "BTC/USDT:USDT" not in symbols_to_try:
+            symbols_to_try.append("BTC/USDT:USDT")
+        elif symbol == "BTC/USDT:USDT" and "BTC/USDT" not in symbols_to_try:
+            symbols_to_try.append("BTC/USDT")
+
+        # 各シンボルでデータ取得を試行
+        for symbol_to_try in symbols_to_try:
+            try:
+                # 新しい統合データ取得メソッドを使用（OI/FR含む）
+                return self.data_service.get_data_for_backtest(
+                    symbol=symbol_to_try,
+                    timeframe=config["timeframe"],
+                    start_date=config["start_date"],
+                    end_date=config["end_date"],
+                )
+            except (AttributeError, ValueError) as e:
+                # 新しいメソッドが利用できない場合や、データが見つからない場合
+                try:
+                    # 古いメソッドにフォールバック
+                    return self.data_service.get_ohlcv_for_backtest(
+                        symbol=symbol_to_try,
+                        timeframe=config["timeframe"],
+                        start_date=config["start_date"],
+                        end_date=config["end_date"],
+                    )
+                except ValueError:
+                    # このシンボルではデータが見つからない場合、次のシンボルを試行
+                    continue
+
+        # すべてのシンボルで失敗した場合
+        raise ValueError(
+            f"No data found for any symbol variant of {symbol} {config['timeframe']}. Tried: {symbols_to_try}"
         )
 
     def _process_optimization_results(

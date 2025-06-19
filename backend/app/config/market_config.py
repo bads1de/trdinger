@@ -84,6 +84,7 @@ class MarketDataConfig:
         # Bitcoin マッピング - 全てBTC/USDT:USDTに正規化
         "BTCUSDT": "BTC/USDT:USDT",  # USDT永続契約
         "BTC-USDT": "BTC/USDT:USDT",  # 様々な表記からUSDT永続契約へ
+        "BTC/USDT": "BTC/USDT:USDT",  # スポット表記から永続契約へ
         "BTC/USDT:USDT": "BTC/USDT:USDT",  # 永続契約正規化
         "BTCUSDT_PERP": "BTC/USDT:USDT",  # 永続契約表記
     }
