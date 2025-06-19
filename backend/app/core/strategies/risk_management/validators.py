@@ -41,7 +41,7 @@ def validate_risk_parameters(config: Dict[str, Any]) -> Dict[str, Any]:
             if validated_sl:
                 validated_config["stop_loss"] = validated_sl
             else:
-                errors.append("Invalid stop_loss configuration")
+                errors.append("無効なストップロス設定です。")
 
         # テイクプロフィット設定の検証
         if "take_profit" in config:
@@ -50,7 +50,7 @@ def validate_risk_parameters(config: Dict[str, Any]) -> Dict[str, Any]:
             if validated_tp:
                 validated_config["take_profit"] = validated_tp
             else:
-                errors.append("Invalid take_profit configuration")
+                errors.append("無効なテイクプロフィット設定です。")
 
         # トレーリングストップ設定の検証
         if "trailing_stop" in config:
@@ -59,7 +59,7 @@ def validate_risk_parameters(config: Dict[str, Any]) -> Dict[str, Any]:
             if validated_trailing:
                 validated_config["trailing_stop"] = validated_trailing
             else:
-                errors.append("Invalid trailing_stop configuration")
+                errors.append("無効なトレーリングストップ設定です。")
 
         # ATRベース設定の検証
         if "atr_based" in config:
@@ -68,15 +68,15 @@ def validate_risk_parameters(config: Dict[str, Any]) -> Dict[str, Any]:
             if validated_atr:
                 validated_config["atr_based"] = validated_atr
             else:
-                errors.append("Invalid atr_based configuration")
+                errors.append("無効なATRベース設定です。")
 
         if errors:
-            raise ValueError(f"Validation errors: {', '.join(errors)}")
+            raise ValueError(f"検証エラー: {', '.join(errors)}")
 
         return validated_config
 
     except Exception as e:
-        logger.error(f"リスクパラメータの検証中にエラーが発生しました: {e}")
+        logger.error(f"リスクパラメータの検証中に予期せぬエラーが発生しました: {e}")
         raise
 
 
@@ -95,16 +95,16 @@ def _validate_sl_tp_config(
     """
     try:
         if not isinstance(config, dict):
-            logger.error(f"{config_type}は辞書である必要があります。")
+            logger.error(f"{config_type}設定は辞書形式である必要があります。")
             return None
 
         # 必須フィールドの確認
         if "type" not in config:
-            logger.error(f"{config_type}には'type'フィールドが必要です。")
+            logger.error(f"{config_type}設定には'type'フィールドが必須です。")
             return None
 
         if "value" not in config:
-            logger.error(f"{config_type}には'value'フィールドが必要です。")
+            logger.error(f"{config_type}設定には'value'フィールドが必須です。")
             return None
 
         config_type_value = config["type"]
@@ -114,32 +114,36 @@ def _validate_sl_tp_config(
         valid_types = ["percentage", "absolute", "atr"]
         if config_type_value not in valid_types:
             logger.error(
-                f"無効な{config_type}タイプ: {config_type_value}。{valid_types}のいずれかである必要があります。"
+                f"無効な{config_type}タイプ: '{config_type_value}'。サポートされているタイプは{valid_types}のいずれかである必要があります。"
             )
             return None
 
         # 値の検証
         if config_type_value == "percentage":
-            if not isinstance(value, (int, float)) or value <= 0 or value >= 1:
+            if not isinstance(value, (int, float)) or not (0 < value < 1):
                 logger.error(
-                    f"パーセンテージの{config_type}の値は0と1の間である必要があります。"
+                    f"パーセンテージベースの{config_type}の値は0より大きく1より小さい数値である必要があります。"
                 )
                 return None
 
         elif config_type_value == "absolute":
             if not isinstance(value, (int, float)) or value <= 0:
-                logger.error(f"絶対値の{config_type}の値は正である必要があります。")
+                logger.error(
+                    f"絶対値ベースの{config_type}の値は正の数値である必要があります。"
+                )
                 return None
 
         elif config_type_value == "atr":
             if not isinstance(value, (int, float)) or value <= 0:
-                logger.error(f"ATRの{config_type}乗数は正である必要があります。")
+                logger.error(
+                    f"ATRベースの{config_type}の乗数は正の数値である必要があります。"
+                )
                 return None
 
         return {"type": config_type_value, "value": float(value)}
 
     except Exception as e:
-        logger.error(f"{config_type}設定の検証中にエラーが発生しました: {e}")
+        logger.error(f"{config_type}設定の検証中に予期せぬエラーが発生しました: {e}")
         return None
 
 
@@ -155,7 +159,7 @@ def _validate_trailing_config(config: Dict[str, Any]) -> Optional[Dict[str, Any]
     """
     try:
         if not isinstance(config, dict):
-            logger.error("trailing_stopは辞書である必要があります。")
+            logger.error("trailing_stop設定は辞書形式である必要があります。")
             return None
 
         # 必須フィールド
@@ -175,24 +179,24 @@ def _validate_trailing_config(config: Dict[str, Any]) -> Optional[Dict[str, Any]
 
         if method not in valid_methods:
             logger.error(
-                f"無効なトレーリング方式: {method}。{valid_methods}のいずれかである必要があります。"
+                f"無効なトレーリング方式: '{method}'。サポートされている方式は{valid_methods}のいずれかである必要があります。"
             )
             return None
 
         # 値の検証
         if "value" not in config:
-            logger.error("trailing_stopが有効な場合、'value'フィールドが必要です。")
+            logger.error("trailing_stopが有効な場合、'value'フィールドが必須です。")
             return None
 
         value = config["value"]
         if not isinstance(value, (int, float)) or value <= 0:
-            logger.error("trailing_stopの値は正である必要があります。")
+            logger.error("trailing_stopの値は正の数値である必要があります。")
             return None
 
         return {"enabled": True, "method": method, "value": float(value)}
 
     except Exception as e:
-        logger.error(f"トレーリング設定の検証中にエラーが発生しました: {e}")
+        logger.error(f"トレーリング設定の検証中に予期せぬエラーが発生しました: {e}")
         return None
 
 
@@ -208,7 +212,7 @@ def _validate_atr_config(config: Dict[str, Any]) -> Optional[Dict[str, Any]]:
     """
     try:
         if not isinstance(config, dict):
-            logger.error("atr_basedは辞書である必要があります。")
+            logger.error("atr_based設定は辞書形式である必要があります。")
             return None
 
         # ATR期間の検証
@@ -220,13 +224,13 @@ def _validate_atr_config(config: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         # ストップロス倍数の検証
         sl_multiplier = config.get("sl_multiplier", 2.0)
         if not isinstance(sl_multiplier, (int, float)) or sl_multiplier <= 0:
-            logger.error("ATRストップロス乗数は正である必要があります。")
+            logger.error("ATRストップロス乗数は正の数値である必要があります。")
             return None
 
         # テイクプロフィット倍数の検証
         tp_multiplier = config.get("tp_multiplier", 3.0)
         if not isinstance(tp_multiplier, (int, float)) or tp_multiplier <= 0:
-            logger.error("ATRテイクプロフィット乗数は正である必要があります。")
+            logger.error("ATRテイクプロフィット乗数は正の数値である必要があります。")
             return None
 
         return {
@@ -236,7 +240,7 @@ def _validate_atr_config(config: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         }
 
     except Exception as e:
-        logger.error(f"ATR設定の検証中にエラーが発生しました: {e}")
+        logger.error(f"ATR設定の検証中に予期せぬエラーが発生しました: {e}")
         return None
 
 
@@ -269,19 +273,19 @@ def validate_risk_reward_ratio(
             reward = entry_price - tp_price
 
         if risk <= 0:
-            logger.warning(f"無効なリスク値: {risk}")
+            logger.warning(f"無効なリスク値が検出されました: {risk}")
             return False
 
         ratio = reward / risk
 
         if ratio < min_ratio:
             logger.warning(
-                f"リスクリワード比率 {ratio:.2f} が最小値 {min_ratio} を下回っています。"
+                f"計算されたリスクリワード比率 {ratio:.2f} が最小要件 {min_ratio} を下回っています。"
             )
             return False
 
         return True
 
     except Exception as e:
-        logger.error(f"リスクリワード比率の検証中にエラーが発生しました: {e}")
+        logger.error(f"リスクリワード比率の検証中に予期せぬエラーが発生しました: {e}")
         return False

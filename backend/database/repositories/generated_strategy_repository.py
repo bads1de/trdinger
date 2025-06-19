@@ -69,7 +69,7 @@ class GeneratedStrategyRepository(BaseRepository):
 
         except Exception as e:
             self.db.rollback()
-            logger.error(f"戦略保存エラー: {e}")
+            logger.error(f"戦略の保存中にエラーが発生しました: {e}")
             raise
 
     def save_strategies_batch(
@@ -111,7 +111,7 @@ class GeneratedStrategyRepository(BaseRepository):
 
         except Exception as e:
             self.db.rollback()
-            logger.error(f"戦略一括保存エラー: {e}")
+            logger.error(f"戦略の一括保存中にエラーが発生しました: {e}")
             raise
 
     def get_strategies_by_experiment(
@@ -146,7 +146,7 @@ class GeneratedStrategyRepository(BaseRepository):
             )
 
         except Exception as e:
-            logger.error(f"実験別戦略取得エラー: {e}")
+            logger.error(f"実験IDによる戦略の取得中にエラーが発生しました: {e}")
             return []
 
     def get_best_strategies(
@@ -175,7 +175,7 @@ class GeneratedStrategyRepository(BaseRepository):
             )
 
         except Exception as e:
-            logger.error(f"最高戦略取得エラー: {e}")
+            logger.error(f"最高フィットネス戦略の取得中にエラーが発生しました: {e}")
             return []
 
     def get_strategies_by_generation(
@@ -202,7 +202,7 @@ class GeneratedStrategyRepository(BaseRepository):
             )
 
         except Exception as e:
-            logger.error(f"世代別戦略取得エラー: {e}")
+            logger.error(f"世代による戦略の取得中にエラーが発生しました: {e}")
             return []
 
     def get_strategies_with_backtest_results(
@@ -234,7 +234,9 @@ class GeneratedStrategyRepository(BaseRepository):
             return query.offset(offset).limit(limit).all()
 
         except Exception as e:
-            logger.error(f"バックテスト結果付き戦略取得エラー: {e}")
+            logger.error(
+                f"バックテスト結果を持つ戦略の取得中にエラーが発生しました: {e}"
+            )
             return []
 
     def update_fitness_score(self, strategy_id: int, fitness_score: float) -> bool:
@@ -256,7 +258,7 @@ class GeneratedStrategyRepository(BaseRepository):
             )
 
             if not strategy:
-                logger.warning(f"戦略が見つかりません: {strategy_id}")
+                logger.warning(f"指定されたIDの戦略が見つかりません: {strategy_id}")
                 return False
 
             strategy.fitness_score = fitness_score  # type: ignore
@@ -269,7 +271,7 @@ class GeneratedStrategyRepository(BaseRepository):
 
         except Exception as e:
             self.db.rollback()
-            logger.error(f"フィットネススコア更新エラー: {e}")
+            logger.error(f"フィットネススコアの更新中にエラーが発生しました: {e}")
             return False
 
     def update_backtest_result(self, strategy_id: int, backtest_result_id: int) -> bool:
@@ -291,7 +293,7 @@ class GeneratedStrategyRepository(BaseRepository):
             )
 
             if not strategy:
-                logger.warning(f"戦略が見つかりません: {strategy_id}")
+                logger.warning(f"指定されたIDの戦略が見つかりません: {strategy_id}")
                 return False
 
             strategy.backtest_result_id = backtest_result_id  # type: ignore
@@ -304,7 +306,7 @@ class GeneratedStrategyRepository(BaseRepository):
 
         except Exception as e:
             self.db.rollback()
-            logger.error(f"バックテスト結果ID更新エラー: {e}")
+            logger.error(f"バックテスト結果IDの更新中にエラーが発生しました: {e}")
             return False
 
     def get_strategy_by_id(self, strategy_id: int) -> Optional[GeneratedStrategy]:
@@ -325,7 +327,7 @@ class GeneratedStrategyRepository(BaseRepository):
             )
 
         except Exception as e:
-            logger.error(f"戦略取得エラー: {e}")
+            logger.error(f"戦略の取得中にエラーが発生しました: {e}")
             return None
 
     def get_generation_statistics(
@@ -364,7 +366,7 @@ class GeneratedStrategyRepository(BaseRepository):
             }
 
         except Exception as e:
-            logger.error(f"世代統計取得エラー: {e}")
+            logger.error(f"世代統計の取得中にエラーが発生しました: {e}")
             return {}
 
     def delete_strategies_by_experiment(self, experiment_id: int) -> int:
@@ -390,7 +392,7 @@ class GeneratedStrategyRepository(BaseRepository):
 
         except Exception as e:
             self.db.rollback()
-            logger.error(f"戦略削除エラー: {e}")
+            logger.error(f"戦略の削除中にエラーが発生しました: {e}")
             return 0
 
     def _validate_gene_data(self, gene_data: Dict[str, Any]) -> Dict[str, Any]:
@@ -418,7 +420,7 @@ class GeneratedStrategyRepository(BaseRepository):
         for field, default_value in required_fields.items():
             if field not in validated_data:
                 validated_data[field] = default_value
-                logger.debug(f"遺伝子データに欠損フィールドを補完: {field}")
+                logger.debug(f"遺伝子データに欠損フィールド '{field}' を補完しました。")
 
         # データ型の確認
         if not isinstance(validated_data["indicators"], list):

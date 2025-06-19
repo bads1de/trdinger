@@ -90,7 +90,9 @@ class BybitOpenInterestService(BaseBybitService):
                 func=get_timestamp, repository=None
             )
         except Exception as e:
-            logger.error(f"最新タイムスタンプ取得エラー: {e}")
+            logger.error(
+                f"オープンインタレストの最新タイムスタンプ取得中にエラーが発生しました: {e}"
+            )
             return None
 
     async def fetch_and_save_open_interest_data(

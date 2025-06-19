@@ -176,7 +176,7 @@ class BybitMarketDataService(BaseBybitService):
             raise ValueError("OHLCVデータはリストである必要があります")
 
         if len(data) == 0:
-            logger.warning("OHLCVデータが空です")
+            logger.warning("取得したOHLCVデータが空です。")
             return
 
         for i, candle in enumerate(data):

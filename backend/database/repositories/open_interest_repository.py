@@ -31,7 +31,7 @@ class OpenInterestRepository(BaseRepository):
             挿入された件数
         """
         if not open_interest_records:
-            logger.warning("挿入するオープンインタレストデータがありません")
+            logger.warning("挿入するオープンインタレストデータがありません。")
             return 0
 
         try:
@@ -44,7 +44,9 @@ class OpenInterestRepository(BaseRepository):
             return inserted_count
 
         except Exception as e:
-            logger.error(f"オープンインタレストデータ挿入エラー: {e}")
+            logger.error(
+                f"オープンインタレストデータの挿入中にエラーが発生しました: {e}"
+            )
             raise
 
     def get_open_interest_data(
@@ -81,7 +83,9 @@ class OpenInterestRepository(BaseRepository):
             )
 
         except Exception as e:
-            logger.error(f"オープンインタレストデータ取得エラー: {e}")
+            logger.error(
+                f"オープンインタレストデータの取得中にエラーが発生しました: {e}"
+            )
             raise
 
     def get_latest_open_interest_timestamp(self, symbol: str) -> Optional[datetime]:
@@ -122,7 +126,9 @@ class OpenInterestRepository(BaseRepository):
             )
             return deleted_count
         except Exception as e:
-            logger.error(f"オープンインタレストデータ全削除エラー: {e}")
+            logger.error(
+                f"オープンインタレストデータの全削除中にエラーが発生しました: {e}"
+            )
             raise
 
     def clear_open_interest_data_by_symbol(self, symbol: str) -> int:
@@ -145,6 +151,6 @@ class OpenInterestRepository(BaseRepository):
         except Exception as e:
             self.db.rollback()
             logger.error(
-                f"シンボル '{symbol}' のオープンインタレストデータ削除エラー: {e}"
+                f"シンボル '{symbol}' のオープンインタレストデータ削除中にエラーが発生しました: {e}"
             )
             raise

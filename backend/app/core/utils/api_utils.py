@@ -208,10 +208,10 @@ class APIErrorHandler:
         try:
             return await call()
         except HTTPException as e:
-            logger.error(f"{message}: {e.detail}", exc_info=True)
+            logger.error(f"API例外処理: {message} - {e.detail}", exc_info=True)
             raise e
         except Exception as e:
-            logger.error(f"{message}: {e}", exc_info=True)
+            logger.error(f"API例外処理: {message} - {e}", exc_info=True)
             raise HTTPException(status_code=status_code, detail=message)
 
 
@@ -237,7 +237,7 @@ class DateTimeHelper:
             normalized_string = date_string.replace("Z", "+00:00")
             return datetime.fromisoformat(normalized_string)
         except ValueError as e:
-            raise ValueError(f"無効な日時形式: {date_string}") from e
+            raise ValueError(f"無効な日時形式が指定されました: {date_string}") from e
 
     @staticmethod
     def timestamp_to_datetime(timestamp_ms: int) -> datetime:

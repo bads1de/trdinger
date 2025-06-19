@@ -38,7 +38,9 @@ class OHLCVRepository(BaseRepository):
         try:
             # データの検証
             if not DataValidator.validate_ohlcv_data(ohlcv_records):
-                raise ValueError("無効なOHLCVデータが含まれています")
+                raise ValueError(
+                    "挿入しようとしているOHLCVデータに無効なものが含まれています。"
+                )
 
             # 重複処理付き一括挿入
             inserted_count = self.bulk_insert_with_conflict_handling(
@@ -49,7 +51,7 @@ class OHLCVRepository(BaseRepository):
             return inserted_count
 
         except Exception as e:
-            logger.error(f"OHLCV データ挿入エラー: {e}")
+            logger.error(f"OHLCVデータの挿入中にエラーが発生しました: {e}")
             raise
 
     def get_ohlcv_data(
@@ -88,7 +90,7 @@ class OHLCVRepository(BaseRepository):
             )
 
         except Exception as e:
-            logger.error(f"OHLCV データ取得エラー: {e}")
+            logger.error(f"OHLCVデータの取得中にエラーが発生しました: {e}")
             raise
 
     def get_latest_ohlcv_data(
@@ -123,7 +125,7 @@ class OHLCVRepository(BaseRepository):
             )
 
         except Exception as e:
-            logger.error(f"最新OHLCV データ取得エラー: {e}")
+            logger.error(f"最新OHLCVデータの取得中にエラーが発生しました: {e}")
             raise
 
     def get_latest_timestamp(self, symbol: str, timeframe: str) -> Optional[datetime]:
@@ -278,7 +280,7 @@ class OHLCVRepository(BaseRepository):
             logger.info(f"全てのOHLCVデータを削除しました: {deleted_count}件")
             return deleted_count
         except Exception as e:
-            logger.error(f"OHLCVデータ全削除エラー: {e}")
+            logger.error(f"OHLCVデータの全削除中にエラーが発生しました: {e}")
             raise
 
     def clear_ohlcv_data_by_symbol(self, symbol: str) -> int:
@@ -298,7 +300,9 @@ class OHLCVRepository(BaseRepository):
             )
             return deleted_count
         except Exception as e:
-            logger.error(f"シンボル '{symbol}' のOHLCVデータ削除エラー: {e}")
+            logger.error(
+                f"シンボル '{symbol}' のOHLCVデータ削除中にエラーが発生しました: {e}"
+            )
             raise
 
     def clear_ohlcv_data_by_timeframe(self, timeframe: str) -> int:
@@ -319,7 +323,9 @@ class OHLCVRepository(BaseRepository):
             return deleted_count
         except Exception as e:
             self.db.rollback()
-            logger.error(f"時間足 '{timeframe}' のOHLCVデータ削除エラー: {e}")
+            logger.error(
+                f"時間足 '{timeframe}' のOHLCVデータ削除中にエラーが発生しました: {e}"
+            )
             raise
 
     def get_available_timeframes(self, symbol: str) -> List[str]:
@@ -342,7 +348,7 @@ class OHLCVRepository(BaseRepository):
             return [row[0] for row in result]
 
         except Exception as e:
-            logger.error(f"利用可能時間軸取得エラー: {e}")
+            logger.error(f"利用可能な時間軸の取得中にエラーが発生しました: {e}")
             raise
 
     def get_available_symbols(self) -> List[str]:

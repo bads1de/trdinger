@@ -62,14 +62,16 @@ class BacktestDataService:
             ValueError: データが見つからない場合
         """
         if self.ohlcv_repo is None:
-            raise ValueError("OHLCVRepository is not initialized.")
+            raise ValueError("OHLCVRepositoryが初期化されていません。")
         # 1. OHLCVデータを取得
         ohlcv_data = self.ohlcv_repo.get_ohlcv_data(
             symbol=symbol, timeframe=timeframe, start_time=start_date, end_time=end_date
         )
 
         if not ohlcv_data:
-            raise ValueError(f"No OHLCV data found for {symbol} {timeframe}")
+            raise ValueError(
+                f"{symbol} {timeframe}のOHLCVデータが見つかりませんでした。"
+            )
 
         # 2. OHLCVデータをDataFrameに変換
         df = self._convert_to_dataframe(ohlcv_data)
@@ -102,18 +104,18 @@ class BacktestDataService:
             ValueError: データが見つからない場合
         """
         logger.warning(
-            "get_ohlcv_for_backtest is deprecated. Use get_data_for_backtest instead."
+            "get_ohlcv_for_backtest は非推奨です。代わりに get_data_for_backtest を使用してください。"
         )
 
         if self.ohlcv_repo is None:
-            raise ValueError("OHLCVRepository is not initialized.")
+            raise ValueError("OHLCVRepositoryが初期化されていません。")
         # 1. 既存のリポジトリからデータ取得
         ohlcv_data = self.ohlcv_repo.get_ohlcv_data(
             symbol=symbol, timeframe=timeframe, start_time=start_date, end_time=end_date
         )
 
         if not ohlcv_data:
-            raise ValueError(f"No data found for {symbol} {timeframe}")
+            raise ValueError(f"{symbol} {timeframe}のデータが見つかりませんでした。")
 
         # 2. DataFrameに変換
         df = self._convert_to_dataframe(ohlcv_data)
@@ -180,12 +182,18 @@ class BacktestDataService:
                         right_index=True,
                         direction="backward",
                     )
-                    logger.info(f"Merged {len(oi_data)} Open Interest records")
+                    logger.info(
+                        f"Open Interestデータを{len(oi_data)}件マージしました。"
+                    )
                 else:
-                    logger.warning(f"No Open Interest data found for {symbol}")
+                    logger.warning(
+                        f"シンボル {symbol} のOpen Interestデータが見つかりませんでした。"
+                    )
                     df["OpenInterest"] = 0.0  # デフォルト値
             except Exception as e:
-                logger.warning(f"Failed to merge Open Interest data: {e}")
+                logger.warning(
+                    f"Open Interestデータのマージ中にエラーが発生しました: {e}"
+                )
                 df["OpenInterest"] = 0.0  # デフォルト値
         else:
             df["OpenInterest"] = 0.0  # リポジトリが無い場合のデフォルト値
@@ -205,12 +213,16 @@ class BacktestDataService:
                         right_index=True,
                         direction="backward",
                     )
-                    logger.info(f"Merged {len(fr_data)} Funding Rate records")
+                    logger.info(f"Funding Rateデータを{len(fr_data)}件マージしました。")
                 else:
-                    logger.warning(f"No Funding Rate data found for {symbol}")
+                    logger.warning(
+                        f"シンボル {symbol} のFunding Rateデータが見つかりませんでした。"
+                    )
                     df["FundingRate"] = 0.0  # デフォルト値
             except Exception as e:
-                logger.warning(f"Failed to merge Funding Rate data: {e}")
+                logger.warning(
+                    f"Funding Rateデータのマージ中にエラーが発生しました: {e}"
+                )
                 df["FundingRate"] = 0.0  # デフォルト値
         else:
             df["FundingRate"] = 0.0  # リポジトリが無い場合のデフォルト値
@@ -258,22 +270,22 @@ class BacktestDataService:
             ValueError: DataFrameが無効な場合
         """
         if df.empty:
-            raise ValueError("DataFrame is empty")
+            raise ValueError("DataFrameが空です。")
 
         # 必要なカラムの存在確認
         required_columns = ["Open", "High", "Low", "Close", "Volume"]
         missing_columns = [col for col in required_columns if col not in df.columns]
         if missing_columns:
-            raise ValueError(f"Missing required columns: {missing_columns}")
+            raise ValueError(f"必須カラムが見つかりません: {missing_columns}")
 
         # データ型の確認
         for col in required_columns:
             if not pd.api.types.is_numeric_dtype(df[col]):
-                raise ValueError(f"Column {col} must be numeric")
+                raise ValueError(f"カラム {col} は数値型である必要があります。")
 
         # NaN値のチェック
         if df.isnull().any().any():
-            raise ValueError("DataFrame contains NaN values")
+            raise ValueError("DataFrameにNaN値が含まれています。")
 
     def _validate_extended_dataframe(self, df: pd.DataFrame) -> None:
         """
@@ -286,7 +298,7 @@ class BacktestDataService:
             ValueError: DataFrameが無効な場合
         """
         if df.empty:
-            raise ValueError("DataFrame is empty")
+            raise ValueError("DataFrameが空です。")
 
         # 必要なカラムの存在確認（拡張版）
         required_columns = [
@@ -300,16 +312,16 @@ class BacktestDataService:
         ]
         missing_columns = [col for col in required_columns if col not in df.columns]
         if missing_columns:
-            raise ValueError(f"Missing required columns: {missing_columns}")
+            raise ValueError(f"必須カラムが見つかりません: {missing_columns}")
 
         # データ型の確認
         for col in required_columns:
             if not pd.api.types.is_numeric_dtype(df[col]):
-                raise ValueError(f"Column {col} must be numeric")
+                raise ValueError(f"カラム {col} は数値型である必要があります。")
 
         # NaN値のチェック（OI/FRは0で埋められているはずなので、NaNがあれば問題）
         if df.isnull().any().any():
-            logger.warning("DataFrame contains NaN values, filling with default values")
+            logger.warning("DataFrameにNaN値が含まれています。デフォルト値で埋めます。")
             # OI/FRのNaN値を0で埋める
             df["OpenInterest"] = df["OpenInterest"].fillna(0.0)
             df["FundingRate"] = df["FundingRate"].fillna(0.0)
@@ -317,7 +329,7 @@ class BacktestDataService:
             # OHLCV部分にNaNがある場合はエラー
             ohlcv_cols = ["Open", "High", "Low", "Close", "Volume"]
             if df[ohlcv_cols].isnull().any().any():
-                raise ValueError("OHLCV data contains NaN values")
+                raise ValueError("OHLCVデータにNaN値が含まれています。")
 
     def validate_data_for_strategy(
         self, df: pd.DataFrame, strategy_config: dict
@@ -336,7 +348,7 @@ class BacktestDataService:
         min_periods = self._calculate_min_periods(strategy_config)
         if len(df) < min_periods:
             raise ValueError(
-                f"Insufficient data: {len(df)} rows, but strategy requires at least {min_periods} rows"
+                f"データが不足しています: {len(df)}行しかありませんが、戦略には少なくとも{min_periods}行必要です。"
             )
 
     def _calculate_min_periods(self, strategy_config: dict) -> int:
@@ -384,7 +396,7 @@ class BacktestDataService:
             データ概要の辞書
         """
         if df.empty:
-            return {"error": "No data available"}
+            return {"error": "データがありません。"}
 
         summary = {
             "total_records": len(df),

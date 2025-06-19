@@ -82,7 +82,7 @@ class AutoStrategyService:
                 db.close()
 
         except Exception as e:
-            logger.error(f"サービス初期化エラー: {e}")
+            logger.error(f"AutoStrategyServiceの初期化中にエラーが発生しました: {e}")
             raise
 
     def start_strategy_generation(
@@ -111,11 +111,11 @@ class AutoStrategyService:
             # 依存関係の確認
             logger.info("依存関係の確認中...")
             if self.ga_engine is None:
-                raise RuntimeError("GAエンジンが初期化されていません")
+                raise RuntimeError("GAエンジンが初期化されていません。")
             if self.backtest_service is None:
-                raise RuntimeError("バックテストサービスが初期化されていません")
+                raise RuntimeError("バックテストサービスが初期化されていません。")
             if self.ga_experiment_repo is None:
-                raise RuntimeError("GA実験リポジトリが初期化されていません")
+                raise RuntimeError("GA実験リポジトリが初期化されていません。")
             logger.info("依存関係の確認完了")
 
             # 実験IDの生成
@@ -127,9 +127,9 @@ class AutoStrategyService:
             logger.info("GA設定の検証中...")
             is_valid, errors = ga_config.validate()
             if not is_valid:
-                logger.error(f"GA設定検証失敗: {errors}")
-                raise ValueError(f"Invalid GA config: {', '.join(errors)}")
-            logger.info("GA設定検証完了")
+                logger.error(f"GA設定の検証に失敗しました: {errors}")
+                raise ValueError(f"無効なGA設定です: {', '.join(errors)}")
+            logger.info("GA設定の検証が完了しました。")
 
             # データベースに実験を保存
             logger.info("データベースに実験を保存中...")
@@ -149,7 +149,7 @@ class AutoStrategyService:
                 logger.info(f"データベース実験作成完了: DB ID = {db_experiment_id}")
             except Exception as db_error:
                 logger.error(
-                    f"データベース操作エラー: {type(db_error).__name__}: {str(db_error)}"
+                    f"データベース操作中にエラーが発生しました: {type(db_error).__name__}: {str(db_error)}"
                 )
                 raise
             finally:
@@ -190,7 +190,9 @@ class AutoStrategyService:
                     finally:
                         db.close()
                 except Exception as e:
-                    logger.error(f"進捗保存エラー: {e}")
+                    logger.error(
+                        f"GA進捗のデータベース保存中にエラーが発生しました: {e}"
+                    )
 
                 if progress_callback:
                     progress_callback(progress)
@@ -231,7 +233,7 @@ class AutoStrategyService:
 
             # エラーメッセージが空の場合の対処
             if not error_msg:
-                error_msg = f"Unknown {error_type} error occurred"
+                error_msg = f"不明な {error_type} エラーが発生しました"
 
             # 詳細なエラー情報を含む例外を再発生
             detailed_error = f"{error_type}: {error_msg}"
@@ -281,7 +283,9 @@ class AutoStrategyService:
                 finally:
                     db.close()
             except Exception as e:
-                logger.error(f"実験完了状態更新エラー: {e}")
+                logger.error(
+                    f"実験完了状態のデータベース更新中にエラーが発生しました: {e}"
+                )
 
             # 最終進捗更新
             final_progress = GAProgress(
@@ -300,7 +304,7 @@ class AutoStrategyService:
             logger.info(f"GA実行完了: {experiment_id}")
 
         except Exception as e:
-            logger.error(f"実験実行エラー ({experiment_id}): {e}")
+            logger.error(f"GA実験の実行中にエラーが発生しました ({experiment_id}): {e}")
 
             # エラー状態の記録
             if experiment_id in self.running_experiments:
@@ -321,7 +325,9 @@ class AutoStrategyService:
                     finally:
                         db.close()
                 except Exception as db_error:
-                    logger.error(f"エラー状態DB更新エラー: {db_error}")
+                    logger.error(
+                        f"エラー状態のデータベース更新中にエラーが発生しました: {db_error}"
+                    )
 
             # エラー進捗更新
             error_progress = GAProgress(
@@ -414,7 +420,7 @@ class AutoStrategyService:
             return False
 
         except Exception as e:
-            logger.error(f"実験停止エラー: {e}")
+            logger.error(f"GA実験の停止中にエラーが発生しました: {e}")
             return False
 
     def _save_experiment_result(
@@ -436,7 +442,9 @@ class AutoStrategyService:
         try:
             experiment_info = self.running_experiments.get(experiment_id)
             if not experiment_info:
-                logger.error(f"実験情報が見つかりません: {experiment_id}")
+                logger.error(
+                    f"指定された実験IDの実験情報が見つかりません: {experiment_id}"
+                )
                 return
 
             db_experiment_id = experiment_info["db_id"]
@@ -522,7 +530,9 @@ class AutoStrategyService:
                     )
 
                 except Exception as e:
-                    logger.error(f"最良戦略のバックテスト結果保存エラー: {e}")
+                    logger.error(
+                        f"最良戦略のバックテスト結果の保存中にエラーが発生しました: {e}"
+                    )
                     # エラーが発生してもメイン処理は継続
 
                 # 全戦略を一括保存（オプション）
@@ -559,7 +569,7 @@ class AutoStrategyService:
             logger.info(f"実験結果保存完了: {experiment_id}")
 
         except Exception as e:
-            logger.error(f"実験結果保存エラー: {e}")
+            logger.error(f"GA実験結果の保存中にエラーが発生しました: {e}")
             raise
 
     def validate_strategy_gene(self, gene: StrategyGene) -> tuple[bool, List[str]]:
@@ -613,5 +623,5 @@ class AutoStrategyService:
             }
 
         except Exception as e:
-            logger.error(f"戦略テスト実行エラー: {e}")
+            logger.error(f"戦略のテスト実行中にエラーが発生しました: {e}")
             return {"success": False, "error": str(e)}

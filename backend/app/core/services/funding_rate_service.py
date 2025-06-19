@@ -115,7 +115,9 @@ class BybitFundingRateService(BaseBybitService):
                 func=get_timestamp, repository=None
             )
         except Exception as e:
-            logger.error(f"最新タイムスタンプ取得エラー: {e}")
+            logger.error(
+                f"ファンディングレートの最新タイムスタンプ取得中にエラーが発生しました: {e}"
+            )
             return None
 
     async def fetch_and_save_funding_rate_data(

@@ -62,7 +62,7 @@ def standardize_ohlcv_columns(df: pd.DataFrame) -> pd.DataFrame:
             missing_columns.append(required_col)
 
     if missing_columns:
-        raise ValueError(f"必要な列が見つかりません: {missing_columns}")
+        raise ValueError(f"OHLCVデータに必要な列が見つかりません: {missing_columns}")
 
     # Volumeが存在しない場合はデフォルト値を設定
     if "Volume" not in standardized_df.columns:
@@ -134,7 +134,7 @@ def prepare_data_for_backtesting(df: pd.DataFrame) -> pd.DataFrame:
 
     # データの妥当性をチェック
     if not validate_ohlcv_data(standardized_df):
-        raise ValueError("OHLCVデータが無効です")
+        raise ValueError("OHLCVデータが有効ではありません。")
 
     # インデックスがDatetimeIndexでない場合は変換
     if not isinstance(standardized_df.index, pd.DatetimeIndex):
@@ -147,7 +147,7 @@ def prepare_data_for_backtesting(df: pd.DataFrame) -> pd.DataFrame:
             try:
                 standardized_df.index = pd.to_datetime(standardized_df.index)
             except ValueError:
-                raise ValueError("有効な日時インデックスが見つかりません")
+                raise ValueError("DataFrameに有効な日時インデックスが見つかりません。")
 
     # 重複インデックスを削除
     standardized_df = standardized_df[~standardized_df.index.duplicated(keep="first")]

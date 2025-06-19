@@ -82,7 +82,7 @@ async def reset_all_data(db: Session = Depends(get_db)) -> Dict[str, Any]:
         return response
 
     return await APIErrorHandler.handle_api_exception(
-        _reset_all_data, message="全データリセットエラー"
+        _reset_all_data, message="全データのリセット中にエラーが発生しました"
     )
 
 
@@ -111,7 +111,7 @@ async def reset_ohlcv_data(db: Session = Depends(get_db)) -> Dict[str, Any]:
         return response
 
     return await APIErrorHandler.handle_api_exception(
-        _reset_ohlcv_data, message="OHLCVデータリセットエラー"
+        _reset_ohlcv_data, message="OHLCVデータのリセット中にエラーが発生しました"
     )
 
 
@@ -140,7 +140,8 @@ async def reset_funding_rate_data(db: Session = Depends(get_db)) -> Dict[str, An
         return response
 
     return await APIErrorHandler.handle_api_exception(
-        _reset_funding_rate_data, message="ファンディングレートデータリセットエラー"
+        _reset_funding_rate_data,
+        message="ファンディングレートデータのリセット中にエラーが発生しました",
     )
 
 
@@ -169,7 +170,10 @@ async def reset_open_interest_data(db: Session = Depends(get_db)) -> Dict[str, A
             message=message,
         )
 
-    return await APIErrorHandler.handle_api_exception(_reset_open_interest)
+    return await APIErrorHandler.handle_api_exception(
+        _reset_open_interest,
+        message="オープンインタレストデータのリセット中にエラーが発生しました",
+    )
 
 
 @router.delete("/symbol/{symbol}")
@@ -237,7 +241,9 @@ async def reset_data_by_symbol(
             message=message,
         )
 
-    return await APIErrorHandler.handle_api_exception(_reset_by_symbol)
+    return await APIErrorHandler.handle_api_exception(
+        _reset_by_symbol, message="シンボル別データのリセット中にエラーが発生しました"
+    )
 
 
 @router.get("/status")
@@ -277,4 +283,6 @@ async def get_data_status(db: Session = Depends(get_db)) -> Dict[str, Any]:
             message="現在のデータ状況を取得しました",
         )
 
-    return await APIErrorHandler.handle_api_exception(_get_status)
+    return await APIErrorHandler.handle_api_exception(
+        _get_status, message="データステータスの取得中にエラーが発生しました"
+    )

@@ -60,7 +60,7 @@ class SMARSIStrategy(RiskManagementMixin, Strategy):
             self.setup_risk_management(sl_pct=self.sl_pct, tp_pct=self.tp_pct)
 
         logger.info(
-            f"SMA+RSI Strategy initialized: SMA({self.sma_short},{self.sma_long}), RSI({self.rsi_period})"
+            f"SMA+RSI戦略が初期化されました: SMA(短期={self.sma_short},長期={self.sma_long}), RSI(期間={self.rsi_period})"
         )
 
     def next(self):
@@ -88,7 +88,7 @@ class SMARSIStrategy(RiskManagementMixin, Strategy):
                 if self.use_risk_management:
                     self.buy_with_risk_management()
                     logger.debug(
-                        f"Buy signal: Price={current_price:.2f}, SMA_short={sma_short_current:.2f}, SMA_long={sma_long_current:.2f}, RSI={rsi_current:.2f}"
+                        f"買いシグナル: 価格={current_price:.2f}, 短期SMA={sma_short_current:.2f}, 長期SMA={sma_long_current:.2f}, RSI={rsi_current:.2f}"
                     )
                 else:
                     self.buy()
@@ -98,7 +98,7 @@ class SMARSIStrategy(RiskManagementMixin, Strategy):
                 if self.use_risk_management:
                     self.sell_with_risk_management()
                     logger.debug(
-                        f"Sell signal: Price={current_price:.2f}, SMA_short={sma_short_current:.2f}, SMA_long={sma_long_current:.2f}, RSI={rsi_current:.2f}"
+                        f"売りシグナル: 価格={current_price:.2f}, 短期SMA={sma_short_current:.2f}, 長期SMA={sma_long_current:.2f}, RSI={rsi_current:.2f}"
                     )
                 else:
                     self.sell()
@@ -110,7 +110,7 @@ class SMARSIStrategy(RiskManagementMixin, Strategy):
                 if downtrend or rsi_current > self.overbought_threshold:
                     self.position.close()
                     logger.debug(
-                        f"Close long: Price={current_price:.2f}, RSI={rsi_current:.2f}"
+                        f"ロングポジションをクローズ: 価格={current_price:.2f}, RSI={rsi_current:.2f}"
                     )
 
             # 売りポジションのエグジット
@@ -118,7 +118,7 @@ class SMARSIStrategy(RiskManagementMixin, Strategy):
                 if uptrend or rsi_current < self.oversold_threshold:
                     self.position.close()
                     logger.debug(
-                        f"Close short: Price={current_price:.2f}, RSI={rsi_current:.2f}"
+                        f"ショートポジションをクローズ: 価格={current_price:.2f}, RSI={rsi_current:.2f}"
                     )
 
 
@@ -145,7 +145,7 @@ class SMARSIStrategyOptimized(SMARSIStrategy):
         if self.volume_filter:
             self.volume_ma = self.I(SMA, self.data.Volume, self.volume_period)
 
-        logger.info("Optimized SMA+RSI Strategy initialized")
+        logger.info("最適化されたSMA+RSI戦略が初期化されました")
 
     def next(self):
         """各バーでの戦略実行（最適化版）"""

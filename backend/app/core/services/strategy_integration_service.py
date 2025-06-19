@@ -86,7 +86,7 @@ class StrategyIntegrationService:
             }
 
         except Exception as e:
-            logger.error(f"統合戦略取得エラー: {e}")
+            logger.error(f"統合戦略の取得中にエラーが発生しました: {e}")
             raise
 
     def _get_auto_generated_strategies(
@@ -115,7 +115,7 @@ class StrategyIntegrationService:
             return converted_strategies
 
         except Exception as e:
-            logger.error(f"オートストラテジー取得エラー: {e}")
+            logger.error(f"自動生成戦略の取得中にエラーが発生しました: {e}")
             return []
 
     def _convert_generated_strategy_to_unified_format(
@@ -176,7 +176,7 @@ class StrategyIntegrationService:
             }
 
         except Exception as e:
-            logger.error(f"戦略変換エラー: {e}")
+            logger.error(f"戦略の変換中にエラーが発生しました: {e}")
             return None
 
     def _extract_strategy_name(self, gene_data: Dict[str, Any]) -> str:
@@ -327,7 +327,7 @@ class StrategyIntegrationService:
             return strategies
 
         except Exception as e:
-            logger.error(f"ソートエラー: {e}")
+            logger.error(f"戦略のソート中にエラーが発生しました: {e}")
             return strategies
 
     def _apply_filters(
@@ -376,5 +376,5 @@ class StrategyIntegrationService:
             return filtered_strategies
 
         except Exception as e:
-            logger.error(f"フィルター適用エラー: {e}")
+            logger.error(f"戦略のフィルター適用中にエラーが発生しました: {e}")
             return strategies

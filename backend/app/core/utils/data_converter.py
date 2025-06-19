@@ -225,11 +225,13 @@ class OpenInterestDataConverter:
 
             # 値が取得できない場合はスキップ
             if open_interest_value is None:
-                logger.warning(f"オープンインタレスト値が取得できません: {oi_data}")
+                logger.warning(
+                    f"オープンインタレスト値が取得できませんでした: {oi_data}"
+                )
                 continue
 
             logger.info(
-                f"オープンインタレストデータ変換: {oi_data} -> value={open_interest_value}"
+                f"オープンインタレストデータを変換中: {oi_data} -> value={open_interest_value}"
             )
 
             db_record = {
@@ -319,7 +321,7 @@ class DataValidator:
             return sanitized_records
 
         except Exception as e:
-            logger.error(f"データサニタイズエラー: {e}")
+            logger.error(f"OHLCVデータのサニタイズ中にエラーが発生しました: {e}")
             raise
 
     @staticmethod
@@ -348,7 +350,9 @@ class DataValidator:
                 ]
                 for field in required_fields:
                     if field not in record:
-                        logger.error(f"必須フィールド '{field}' が不足しています")
+                        logger.error(
+                            f"OHLCVデータに必須フィールド '{field}' が不足しています。"
+                        )
                         return False
 
                 # 価格データの妥当性確認
@@ -361,17 +365,17 @@ class DataValidator:
                 # 価格関係の検証
                 if high < max(open_price, close) or low > min(open_price, close):
                     logger.error(
-                        f"価格関係が無効です: open={open_price}, high={high}, low={low}, close={close}"
+                        f"OHLCVデータの価格関係が無効です: open={open_price}, high={high}, low={low}, close={close}"
                     )
                     return False
 
                 # 負の値の検証
                 if any(x < 0 for x in [open_price, high, low, close, volume]):
-                    logger.error("負の値が含まれています")
+                    logger.error("OHLCVデータに負の値が含まれています。")
                     return False
 
             return True
 
         except Exception as e:
-            logger.error(f"データ検証エラー: {e}")
+            logger.error(f"OHLCVデータの検証中にエラーが発生しました: {e}")
             return False

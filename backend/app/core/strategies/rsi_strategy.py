@@ -81,16 +81,18 @@ class RSIStrategy(Strategy):
             ValueError: パラメータが無効な場合
         """
         if self.period <= 0:
-            raise ValueError("RSI period must be positive integer")
+            raise ValueError("RSI期間は正の整数である必要があります。")
 
         if not (0 <= self.oversold <= 100):
-            raise ValueError("Oversold level must be between 0 and 100")
+            raise ValueError("売られすぎレベルは0から100の間である必要があります。")
 
         if not (0 <= self.overbought <= 100):
-            raise ValueError("Overbought level must be between 0 and 100")
+            raise ValueError("買われすぎレベルは0から100の間である必要があります。")
 
         if self.oversold >= self.overbought:
-            raise ValueError("Oversold level must be less than overbought level")
+            raise ValueError(
+                "売られすぎレベルは買われすぎレベルより小さくする必要があります。"
+            )
 
         return True
 
@@ -126,7 +128,7 @@ class RSIStrategy(Strategy):
             現在のシグナル情報を含む辞書
         """
         if len(self.rsi) == 0:
-            return {"error": "Insufficient data for signal calculation"}
+            return {"error": "シグナル計算のためのデータが不足しています。"}
 
         current_rsi = self.rsi[-1]
 

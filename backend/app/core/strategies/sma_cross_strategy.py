@@ -79,10 +79,12 @@ class SMACrossStrategy(Strategy):
             ValueError: パラメータが無効な場合
         """
         if self.n1 <= 0 or self.n2 <= 0:
-            raise ValueError("SMA periods must be positive integers")
+            raise ValueError("SMA期間は正の整数である必要があります。")
 
         if self.n1 >= self.n2:
-            raise ValueError("Short period (n1) must be less than long period (n2)")
+            raise ValueError(
+                "短期期間 (n1) は長期期間 (n2) より小さくする必要があります。"
+            )
 
         return True
 
@@ -118,7 +120,7 @@ class SMACrossStrategy(Strategy):
             現在のシグナル情報を含む辞書
         """
         if len(self.sma1) == 0 or len(self.sma2) == 0:
-            return {"error": "Insufficient data for signal calculation"}
+            return {"error": "シグナル計算のためのデータが不足しています。"}
 
         current_sma1 = self.sma1[-1]
         current_sma2 = self.sma2[-1]

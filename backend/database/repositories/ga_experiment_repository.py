@@ -61,7 +61,7 @@ class GAExperimentRepository(BaseRepository):
 
         except Exception as e:
             self.db.rollback()
-            logger.error(f"GA実験作成エラー: {e}")
+            logger.error(f"GA実験の作成中にエラーが発生しました: {e}")
             raise
 
     def update_experiment_progress(
@@ -91,7 +91,7 @@ class GAExperimentRepository(BaseRepository):
             )
 
             if not experiment:
-                logger.warning(f"実験が見つかりません: {experiment_id}")
+                logger.warning(f"指定されたIDの実験が見つかりません: {experiment_id}")
                 return False
 
             experiment.current_generation = current_generation  # type: ignore
@@ -108,7 +108,7 @@ class GAExperimentRepository(BaseRepository):
 
         except Exception as e:
             self.db.rollback()
-            logger.error(f"実験進捗更新エラー: {e}")
+            logger.error(f"実験進捗の更新中にエラーが発生しました: {e}")
             return False
 
     def update_experiment_status(
@@ -133,7 +133,7 @@ class GAExperimentRepository(BaseRepository):
             )
 
             if not experiment:
-                logger.warning(f"実験が見つかりません: {experiment_id}")
+                logger.warning(f"指定されたIDの実験が見つかりません: {experiment_id}")
                 return False
 
             experiment.status = status  # type: ignore
@@ -149,7 +149,7 @@ class GAExperimentRepository(BaseRepository):
 
         except Exception as e:
             self.db.rollback()
-            logger.error(f"実験ステータス更新エラー: {e}")
+            logger.error(f"実験ステータスの更新中にエラーが発生しました: {e}")
             return False
 
     def get_experiment_by_id(self, experiment_id: int) -> Optional[GAExperiment]:
@@ -170,7 +170,7 @@ class GAExperimentRepository(BaseRepository):
             )
 
         except Exception as e:
-            logger.error(f"実験取得エラー: {e}")
+            logger.error(f"実験の取得中にエラーが発生しました: {e}")
             return None
 
     def get_experiments_by_status(
@@ -198,7 +198,7 @@ class GAExperimentRepository(BaseRepository):
             )
 
         except Exception as e:
-            logger.error(f"実験取得エラー: {e}")
+            logger.error(f"ステータスによる実験の取得中にエラーが発生しました: {e}")
             return []
 
     def get_recent_experiments(self, limit: int = 10) -> List[GAExperiment]:
@@ -221,7 +221,7 @@ class GAExperimentRepository(BaseRepository):
             )
 
         except Exception as e:
-            logger.error(f"最近の実験取得エラー: {e}")
+            logger.error(f"最近の実験の取得中にエラーが発生しました: {e}")
             return []
 
     def complete_experiment(
@@ -246,7 +246,7 @@ class GAExperimentRepository(BaseRepository):
             )
 
             if not experiment:
-                logger.warning(f"実験が見つかりません: {experiment_id}")
+                logger.warning(f"指定されたIDの実験が見つかりません: {experiment_id}")
                 return False
 
             experiment.status = "completed"  # type: ignore
@@ -263,7 +263,7 @@ class GAExperimentRepository(BaseRepository):
 
         except Exception as e:
             self.db.rollback()
-            logger.error(f"実験完了処理エラー: {e}")
+            logger.error(f"実験完了処理中にエラーが発生しました: {e}")
             return False
 
     def get_experiment_statistics(self) -> Dict[str, Any]:
@@ -314,5 +314,5 @@ class GAExperimentRepository(BaseRepository):
             }
 
         except Exception as e:
-            logger.error(f"実験統計取得エラー: {e}")
+            logger.error(f"実験統計の取得中にエラーが発生しました: {e}")
             return {}

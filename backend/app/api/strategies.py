@@ -27,7 +27,7 @@ class UnifiedStrategiesResponse(BaseModel):
     strategies: list = Field(default_factory=list)
     total_count: int = 0
     has_more: bool = False
-    message: str = "Strategies retrieved successfully"
+    message: str = "戦略が正常に取得されました"
     timestamp: str = Field(
         default_factory=lambda: __import__("datetime").datetime.now().isoformat()
     )
@@ -38,7 +38,7 @@ class StrategyStatsResponse(BaseModel):
 
     success: bool = True
     stats: Dict[str, Any] = Field(default_factory=dict)
-    message: str = "Strategy statistics retrieved successfully"
+    message: str = "戦略統計が正常に取得されました"
     timestamp: str = Field(
         default_factory=lambda: __import__("datetime").datetime.now().isoformat()
     )
@@ -101,7 +101,7 @@ async def get_unified_strategies(
                 "total_count": result["total_count"],
                 "has_more": result["has_more"],
             },
-            message="統合戦略を取得しました",
+            message="統合戦略を正常に取得しました",
         )
 
     return await APIErrorHandler.handle_api_exception(_get_unified)
@@ -164,7 +164,7 @@ async def get_auto_generated_strategies(
                 "total_count": total_count,
                 "has_more": offset + limit < total_count,
             },
-            message="オートストラテジー戦略を取得しました",
+            message="自動生成戦略を正常に取得しました",
         )
 
     return await APIErrorHandler.handle_api_exception(_get_auto_strategies)
@@ -237,7 +237,7 @@ async def get_strategy_statistics(db: Session = Depends(get_db)):
         logger.info("戦略統計取得完了")
 
         return APIResponseHelper.api_response(
-            data=stats, message="戦略統計情報を取得しました", success=True
+            data=stats, message="戦略統計情報を正常に取得しました", success=True
         )
 
     return await APIErrorHandler.handle_api_exception(_get_stats)
@@ -266,13 +266,13 @@ async def get_strategy_categories():
         return {
             "success": True,
             "categories": categories,
-            "message": "Categories retrieved successfully",
+            "message": "カテゴリが正常に取得されました",
         }
 
     except Exception as e:
-        logger.error(f"カテゴリ取得エラー: {e}")
+        logger.error(f"カテゴリ取得中にエラーが発生しました: {e}")
         raise HTTPException(
-            status_code=500, detail=f"Failed to retrieve categories: {str(e)}"
+            status_code=500, detail=f"カテゴリの取得に失敗しました: {str(e)}"
         )
 
 
@@ -306,11 +306,11 @@ async def get_risk_levels():
         return {
             "success": True,
             "risk_levels": risk_levels,
-            "message": "Risk levels retrieved successfully",
+            "message": "リスクレベルが正常に取得されました",
         }
 
     except Exception as e:
-        logger.error(f"リスクレベル取得エラー: {e}")
+        logger.error(f"リスクレベル取得中にエラーが発生しました: {e}")
         raise HTTPException(
-            status_code=500, detail=f"Failed to retrieve risk levels: {str(e)}"
+            status_code=500, detail=f"リスクレベルの取得に失敗しました: {str(e)}"
         )

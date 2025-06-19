@@ -127,14 +127,14 @@ async def generate_strategy(
 
         # サービス初期化チェック
         if auto_strategy_service is None:
-            logger.error("AutoStrategyService is None")
+            logger.error("AutoStrategyServiceがNoneです")
             logger.error(
-                "AutoStrategyService is not available. Please check server logs.",
+                "AutoStrategyServiceが利用できません。サーバーログを確認してください。",
                 exc_info=True,
             )
             raise HTTPException(
                 status_code=503,
-                detail="AutoStrategyService is not available. Please check server logs.",
+                detail="AutoStrategyServiceが利用できません。サーバーログを確認してください。",
             )
 
         logger.info(f"GA戦略生成開始: {request.experiment_name}")
@@ -157,9 +157,9 @@ async def generate_strategy(
             import traceback
 
             logger.error(f"GA設定構築トレースバック:\n{traceback.format_exc()}")
-            logger.error(f"GA config creation failed: {str(e)}", exc_info=True)
+            logger.error(f"GA設定の作成に失敗しました: {str(e)}", exc_info=True)
             raise HTTPException(
-                status_code=400, detail=f"GA config creation failed: {str(e)}"
+                status_code=400, detail=f"GA設定の作成に失敗しました: {str(e)}"
             )
 
         # 設定の検証
@@ -229,20 +229,20 @@ async def get_experiment_progress(experiment_id: str):
     try:
         if auto_strategy_service is None:
             logger.error(
-                "AutoStrategyService is not available. Please check server logs.",
+                "AutoStrategyServiceが利用できません。サーバーログを確認してください。",
                 exc_info=True,
             )
             raise HTTPException(
                 status_code=503,
-                detail="AutoStrategyService is not available. Please check server logs.",
+                detail="AutoStrategyServiceが利用できません。サーバーログを確認してください。",
             )
 
         progress = auto_strategy_service.get_experiment_progress(experiment_id)
 
         if progress is None:
-            logger.error(f"Experiment not found: {experiment_id}", exc_info=True)
+            logger.error(f"実験が見つかりません: {experiment_id}", exc_info=True)
             raise HTTPException(
-                status_code=404, detail=f"Experiment not found: {experiment_id}"
+                status_code=404, detail=f"実験が見つかりません: {experiment_id}"
             )
 
         return APIResponseHelper.api_response(
@@ -264,12 +264,12 @@ async def get_experiment_results(experiment_id: str):
     try:
         if auto_strategy_service is None:
             logger.error(
-                "AutoStrategyService is not available. Please check server logs.",
+                "AutoStrategyServiceが利用できません。サーバーログを確認してください。",
                 exc_info=True,
             )
             raise HTTPException(
                 status_code=503,
-                detail="AutoStrategyService is not available. Please check server logs.",
+                detail="AutoStrategyServiceが利用できません。サーバーログを確認してください。",
             )
 
         result = auto_strategy_service.get_experiment_result(experiment_id)
@@ -278,9 +278,9 @@ async def get_experiment_results(experiment_id: str):
             # 実験が存在するか確認
             progress = auto_strategy_service.get_experiment_progress(experiment_id)
             if progress is None:
-                logger.error(f"Experiment not found: {experiment_id}", exc_info=True)
+                logger.error(f"実験が見つかりません: {experiment_id}", exc_info=True)
                 raise HTTPException(
-                    status_code=404, detail=f"Experiment not found: {experiment_id}"
+                    status_code=404, detail=f"実験が見つかりません: {experiment_id}"
                 )
             else:
                 logger.error("実験はまだ完了していません", exc_info=True)
@@ -317,12 +317,12 @@ async def list_experiments():
     try:
         if auto_strategy_service is None:
             logger.error(
-                "AutoStrategyService is not available. Please check server logs.",
+                "AutoStrategyServiceが利用できません。サーバーログを確認してください。",
                 exc_info=True,
             )
             raise HTTPException(
                 status_code=503,
-                detail="AutoStrategyService is not available. Please check server logs.",
+                detail="AutoStrategyServiceが利用できません。サーバーログを確認してください。",
             )
 
         experiments = auto_strategy_service.list_experiments()
@@ -347,12 +347,12 @@ async def stop_experiment(experiment_id: str):
     try:
         if auto_strategy_service is None:
             logger.error(
-                "AutoStrategyService is not available. Please check server logs.",
+                "AutoStrategyServiceが利用できません。サーバーログを確認してください。",
                 exc_info=True,
             )
             raise HTTPException(
                 status_code=503,
-                detail="AutoStrategyService is not available. Please check server logs.",
+                detail="AutoStrategyServiceが利用できません。サーバーログを確認してください。",
             )
 
         success = auto_strategy_service.stop_experiment(experiment_id)
@@ -387,12 +387,12 @@ async def test_strategy(request: StrategyTestRequest):
     try:
         if auto_strategy_service is None:
             logger.error(
-                "AutoStrategyService is not available. Please check server logs.",
+                "AutoStrategyServiceが利用できません。サーバーログを確認してください。",
                 exc_info=True,
             )
             raise HTTPException(
                 status_code=503,
-                detail="AutoStrategyService is not available. Please check server logs.",
+                detail="AutoStrategyServiceが利用できません。サーバーログを確認してください。",
             )
 
         # 戦略遺伝子の復元
@@ -431,12 +431,12 @@ async def get_default_config():
     try:
         if auto_strategy_service is None:
             logger.error(
-                "AutoStrategyService is not available. Please check server logs.",
+                "AutoStrategyServiceが利用できません。サーバーログを確認してください。",
                 exc_info=True,
             )
             raise HTTPException(
                 status_code=503,
-                detail="AutoStrategyService is not available. Please check server logs.",
+                detail="AutoStrategyServiceが利用できません。サーバーログを確認してください。",
             )
 
         default_config = GAConfig.create_default()
@@ -461,12 +461,12 @@ async def get_config_presets():
     try:
         if auto_strategy_service is None:
             logger.error(
-                "AutoStrategyService is not available. Please check server logs.",
+                "AutoStrategyServiceが利用できません。サーバーログを確認してください。",
                 exc_info=True,
             )
             raise HTTPException(
                 status_code=503,
-                detail="AutoStrategyService is not available. Please check server logs.",
+                detail="AutoStrategyServiceが利用できません。サーバーログを確認してください。",
             )
 
         presets = {

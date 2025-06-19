@@ -102,7 +102,9 @@ async def get_ohlcv_data(
             message=f"{symbol} の {timeframe} OHLCVデータを取得しました",
         )
 
-    return await APIErrorHandler.handle_api_exception(_get_ohlcv)
+    return await APIErrorHandler.handle_api_exception(
+        _get_ohlcv, message="OHLCVデータ取得エラー"
+    )
 
 
 @router.get("/symbols")
@@ -124,7 +126,9 @@ async def get_supported_symbols():
             message="サポートされているシンボル一覧を取得しました",
         )
 
-    return await APIErrorHandler.handle_api_exception(_get_symbols)
+    return await APIErrorHandler.handle_api_exception(
+        _get_symbols, message="サポートシンボル取得エラー"
+    )
 
 
 @router.get("/timeframes")
@@ -146,4 +150,6 @@ async def get_supported_timeframes():
             message="サポートされている時間軸一覧を取得しました",
         )
 
-    return await APIErrorHandler.handle_api_exception(_get_timeframes)
+    return await APIErrorHandler.handle_api_exception(
+        _get_timeframes, message="サポート時間軸取得エラー"
+    )

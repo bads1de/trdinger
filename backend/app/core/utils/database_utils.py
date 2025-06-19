@@ -36,7 +36,7 @@ class DatabaseInsertHelper:
             挿入された件数
         """
         if not records:
-            logger.warning("挿入するデータがありません")
+            logger.warning("挿入するレコードが指定されていません。")
             return 0
 
         try:
@@ -53,7 +53,7 @@ class DatabaseInsertHelper:
 
         except Exception as e:
             db.rollback()
-            logger.error(f"データ挿入エラー: {e}")
+            logger.error(f"データベースへのデータ挿入中にエラーが発生しました: {e}")
             raise
 
     @staticmethod
@@ -120,7 +120,7 @@ class DatabaseQueryHelper:
             return query.scalar()
 
         except Exception as e:
-            logger.error(f"最新タイムスタンプ取得エラー: {e}")
+            logger.error(f"最新タイムスタンプの取得中にエラーが発生しました: {e}")
             raise
 
     @staticmethod
@@ -154,7 +154,7 @@ class DatabaseQueryHelper:
             return query.scalar()
 
         except Exception as e:
-            logger.error(f"最古タイムスタンプ取得エラー: {e}")
+            logger.error(f"最古タイムスタンプの取得中にエラーが発生しました: {e}")
             raise
 
     @staticmethod
@@ -184,7 +184,7 @@ class DatabaseQueryHelper:
             return query.count()
 
         except Exception as e:
-            logger.error(f"レコード数取得エラー: {e}")
+            logger.error(f"レコード数の取得中にエラーが発生しました: {e}")
             raise
 
     @staticmethod
@@ -222,7 +222,7 @@ class DatabaseQueryHelper:
             return result if result else (None, None)
 
         except Exception as e:
-            logger.error(f"データ期間取得エラー: {e}")
+            logger.error(f"データ期間の取得中にエラーが発生しました: {e}")
             raise
 
     @staticmethod
@@ -285,5 +285,5 @@ class DatabaseQueryHelper:
             return query.all()
 
         except Exception as e:
-            logger.error(f"レコード取得エラー: {e}")
+            logger.error(f"指定された条件でのレコード取得中にエラーが発生しました: {e}")
             raise

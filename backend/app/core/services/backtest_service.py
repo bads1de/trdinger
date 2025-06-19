@@ -61,11 +61,11 @@ class BacktestService:
         logger = logging.getLogger(__name__)
 
         try:
-            logger.info(f"Starting backtest with config: {config}")
+            logger.info(f"バックテストを開始します。設定: {config}")
 
             # 1. 設定の検証
             self._validate_config(config)
-            logger.info("Config validation passed")
+            logger.info("バックテスト設定の検証が完了しました。")
 
             # 2. データサービスの初期化（必要に応じて）
             if self.data_service is None:
@@ -73,13 +73,13 @@ class BacktestService:
                 try:
                     ohlcv_repo = OHLCVRepository(db)
                     self.data_service = BacktestDataService(ohlcv_repo)
-                    logger.info("Data service initialized")
+                    logger.info("BacktestDataServiceが初期化されました。")
                 finally:
                     db.close()
 
             # 3. データ取得
             logger.info(
-                f"Fetching OHLCV data for {config['symbol']} {config['timeframe']} from {config['start_date']} to {config['end_date']}"
+                f"{config['symbol']} {config['timeframe']} のOHLCVデータを {config['start_date']} から {config['end_date']} まで取得しています。"
             )
 
             # 日付文字列をdatetimeオブジェクトに変換
@@ -104,10 +104,10 @@ class BacktestService:
                     start_date=start_date,
                     end_date=end_date,
                 )
-                logger.info("Using extended data with OI/FR integration")
+                logger.info("OI/FR統合を含む拡張データを使用しています。")
             except AttributeError:
                 # 後方互換性のため、古いメソッドにフォールバック
-                logger.warning("Falling back to OHLCV-only data")
+                logger.warning("OHLCVのみのデータにフォールバックします。")
                 data = self.data_service.get_ohlcv_for_backtest(
                     symbol=config["symbol"],
                     timeframe=config["timeframe"],
@@ -117,22 +117,24 @@ class BacktestService:
 
             if data is None or data.empty:
                 raise ValueError(
-                    f"No OHLCV data found for {config['symbol']} {config['timeframe']} from {config['start_date']} to {config['end_date']}"
+                    f"{config['symbol']} {config['timeframe']} の {config['start_date']} から {config['end_date']} までのOHLCVデータが見つかりませんでした。"
                 )
 
-            logger.info(f"Retrieved {len(data)} data points")
+            logger.info(f"{len(data)}件のデータポイントを取得しました。")
 
             # 4. 戦略クラス動的生成
             logger.info(
-                f"Creating strategy class for {config['strategy_config']['strategy_type']}"
+                f"{config['strategy_config']['strategy_type']} の戦略クラスを作成しています。"
             )
             strategy_class = self._create_strategy_class(config["strategy_config"])
 
             # 5. backtesting.py実行
-            logger.info("Running backtest...")
-            logger.info(f"Data shape: {data.shape}")
-            logger.info(f"Data columns: {data.columns.tolist()}")
-            logger.info(f"Data index range: {data.index.min()} to {data.index.max()}")
+            logger.info("バックテストを実行中...")
+            logger.info(f"データシェイプ: {data.shape}")
+            logger.info(f"データカラム: {data.columns.tolist()}")
+            logger.info(
+                f"データインデックス範囲: {data.index.min()} から {data.index.max()}"
+            )
 
             bt = Backtest(
                 data,
@@ -147,15 +149,15 @@ class BacktestService:
             import time
 
             start_time = time.time()
-            logger.info("Starting backtest execution...")
+            logger.info("backtesting.pyによるバックテストの実行を開始します...")
             stats = bt.run()
             execution_time = time.time() - start_time
             logger.info(
-                f"Backtest completed successfully in {execution_time:.2f} seconds"
+                f"バックテストが正常に完了しました。実行時間: {execution_time:.2f}秒"
             )
 
             # 6. 結果をデータベース形式に変換
-            logger.info("Converting results...")
+            logger.info("バックテスト結果の変換処理を開始します...")
 
             # config_jsonを構築
             config_json = {
@@ -174,11 +176,14 @@ class BacktestService:
                 config_json,
             )
 
-            logger.info("Backtest result conversion completed")
+            logger.info("バックテスト結果の変換が完了し、返却されます。")
             return result
 
         except Exception as e:
-            logger.error(f"Backtest failed: {str(e)}", exc_info=True)
+            logger.error(
+                f"バックテストの実行中に予期せぬエラーが発生しました: {str(e)}",
+                exc_info=True,
+            )
             raise
 
     def _validate_config(self, config: Dict[str, Any]) -> bool:
@@ -208,24 +213,24 @@ class BacktestService:
         # 必須フィールドの確認
         for field in required_fields:
             if field not in config:
-                raise ValueError(f"Missing required field: {field}")
+                raise ValueError(f"必須フィールドが見つかりません: {field}")
 
         # 日付の妥当性確認
         if config["start_date"] >= config["end_date"]:
-            raise ValueError("Start date must be before end date")
+            raise ValueError("開始日は終了日よりも前である必要があります。")
 
         # 初期資金の妥当性確認
         if config["initial_capital"] <= 0:
-            raise ValueError("Initial capital must be positive")
+            raise ValueError("初期資金は正の数である必要があります。")
 
         # 手数料率の妥当性確認
         if config["commission_rate"] < 0 or config["commission_rate"] > 1:
-            raise ValueError("Commission rate must be between 0 and 1")
+            raise ValueError("手数料率は0から1の間である必要があります。")
 
         # 戦略設定の確認
         strategy_config = config["strategy_config"]
         if "strategy_type" not in strategy_config:
-            raise ValueError("Strategy type is required in strategy_config")
+            raise ValueError("戦略設定にはstrategy_typeが必要です。")
 
         return True
 
@@ -310,7 +315,7 @@ class BacktestService:
                 return factory.create_strategy_class(strategy_gene)
             else:
                 raise ValueError(
-                    "strategy_gene is required for GENERATED_TEST strategy type"
+                    "GENERATED_TEST戦略タイプには、戦略遺伝子 (strategy_gene) がパラメータとして必要です。"
                 )
 
         elif strategy_type == "GENERATED_AUTO":
@@ -330,11 +335,13 @@ class BacktestService:
                 return factory.create_strategy_class(strategy_gene)
             else:
                 raise ValueError(
-                    "strategy_gene is required for GENERATED_AUTO strategy type"
+                    "GENERATED_AUTO戦略タイプには、戦略遺伝子 (strategy_gene) がパラメータとして必要です。"
                 )
 
         else:
-            raise ValueError(f"Unsupported strategy type: {strategy_type}")
+            raise ValueError(
+                f"サポートされていない戦略タイプが指定されました: {strategy_type}"
+            )
 
     def _convert_backtest_results(
         self,
@@ -356,6 +363,9 @@ class BacktestService:
             symbol: 取引ペア
             timeframe: 時間軸
             initial_capital: 初期資金
+            start_date: バックテスト開始日 (オプション)
+            end_date: バックテスト終了日 (オプション)
+            config_json: 設定のJSON表現 (オプション)
 
         Returns:
             データベース保存用の結果辞書
@@ -367,7 +377,7 @@ class BacktestService:
             "max_drawdown": float(stats.get("Max. Drawdown [%]", 0)),
             "win_rate": float(stats.get("Win Rate [%]", 0)),
             "total_trades": int(stats.get("# Trades", 0)),
-            "equity_final": float(stats.get("Equity Final [$]", initial_capital)),
+            "equity_final": float(stats.get("Equity Final [$", initial_capital)),
             "buy_hold_return": float(stats.get("Buy & Hold Return [%]", 0)),
             "exposure_time": float(stats.get("Exposure Time [%]", 0)),
             "sortino_ratio": float(stats.get("Sortino Ratio", 0)),
@@ -480,138 +490,138 @@ class BacktestService:
         return {
             "SMA_CROSS": {
                 "name": "SMA Cross Strategy",
-                "description": "Simple Moving Average Crossover Strategy",
+                "description": "単純移動平均線クロス戦略",
                 "parameters": {
                     "n1": {
                         "type": "int",
                         "default": 20,
                         "min": 5,
                         "max": 100,
-                        "description": "Short-term SMA period",
+                        "description": "短期SMA期間",
                     },
                     "n2": {
                         "type": "int",
                         "default": 50,
                         "min": 20,
                         "max": 200,
-                        "description": "Long-term SMA period",
+                        "description": "長期SMA期間",
                     },
                 },
                 "constraints": ["n1 < n2"],
             },
             "RSI": {
                 "name": "RSI Strategy",
-                "description": "Relative Strength Index Oscillator Strategy",
+                "description": "相対力指数オシレータ戦略",
                 "parameters": {
                     "period": {
                         "type": "int",
                         "default": 14,
                         "min": 5,
                         "max": 50,
-                        "description": "RSI calculation period",
+                        "description": "RSI計算期間",
                     },
                     "oversold": {
                         "type": "int",
                         "default": 30,
                         "min": 10,
                         "max": 40,
-                        "description": "Oversold threshold",
+                        "description": "売られすぎ閾値",
                     },
                     "overbought": {
                         "type": "int",
                         "default": 70,
                         "min": 60,
                         "max": 90,
-                        "description": "Overbought threshold",
+                        "description": "買われすぎ閾値",
                     },
                 },
                 "constraints": ["oversold < overbought"],
             },
             "MACD": {
                 "name": "MACD Strategy",
-                "description": "Moving Average Convergence Divergence Strategy",
+                "description": "移動平均収束拡散戦略",
                 "parameters": {
                     "fast_period": {
                         "type": "int",
                         "default": 12,
                         "min": 5,
                         "max": 20,
-                        "description": "Fast EMA period",
+                        "description": "高速EMA期間",
                     },
                     "slow_period": {
                         "type": "int",
                         "default": 26,
                         "min": 20,
                         "max": 50,
-                        "description": "Slow EMA period",
+                        "description": "低速EMA期間",
                     },
                     "signal_period": {
                         "type": "int",
                         "default": 9,
                         "min": 5,
                         "max": 15,
-                        "description": "Signal line period",
+                        "description": "シグナルライン期間",
                     },
                 },
                 "constraints": ["fast_period < slow_period"],
             },
             "SMA_RSI": {
                 "name": "SMA + RSI Strategy",
-                "description": "Combined SMA Crossover and RSI Momentum Strategy",
+                "description": "SMAクロスオーバーとRSIモメンタムを組み合わせた戦略",
                 "parameters": {
                     "sma_short": {
                         "type": "int",
                         "default": 20,
                         "min": 5,
                         "max": 50,
-                        "description": "Short-term SMA period",
+                        "description": "短期SMA期間",
                     },
                     "sma_long": {
                         "type": "int",
                         "default": 50,
                         "min": 20,
                         "max": 200,
-                        "description": "Long-term SMA period",
+                        "description": "長期SMA期間",
                     },
                     "rsi_period": {
                         "type": "int",
                         "default": 14,
                         "min": 5,
                         "max": 50,
-                        "description": "RSI calculation period",
+                        "description": "RSI計算期間",
                     },
                     "oversold_threshold": {
                         "type": "int",
                         "default": 30,
                         "min": 10,
                         "max": 40,
-                        "description": "RSI oversold threshold",
+                        "description": "RSI売られすぎ閾値",
                     },
                     "overbought_threshold": {
                         "type": "int",
                         "default": 70,
                         "min": 60,
                         "max": 90,
-                        "description": "RSI overbought threshold",
+                        "description": "RSI買われすぎ閾値",
                     },
                     "use_risk_management": {
                         "type": "bool",
                         "default": True,
-                        "description": "Enable risk management",
+                        "description": "リスク管理を有効にする",
                     },
                     "sl_pct": {
                         "type": "float",
                         "default": 0.02,
                         "min": 0.005,
                         "max": 0.1,
-                        "description": "Stop loss percentage",
+                        "description": "損切り率",
                     },
                     "tp_pct": {
                         "type": "float",
                         "default": 0.05,
                         "min": 0.01,
                         "max": 0.2,
-                        "description": "Take profit percentage",
+                        "description": "利確率",
                     },
                 },
                 "constraints": [

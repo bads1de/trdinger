@@ -115,8 +115,7 @@ class MarketDataConfig:
         # サポートされているシンボルかチェック
         if normalized not in cls.SUPPORTED_SYMBOLS:
             raise ValueError(
-                f"サポートされていないシンボルです: {symbol}. "
-                f"サポート対象: {', '.join(cls.SUPPORTED_SYMBOLS)}"
+                f"サポートされていないシンボルです: '{symbol}'。サポートされているシンボルは {', '.join(cls.SUPPORTED_SYMBOLS)} です。"
             )
 
         return normalized
