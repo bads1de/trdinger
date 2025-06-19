@@ -101,7 +101,7 @@ const Modal: React.FC<ModalProps> = ({
         tabIndex={-1}
         className={`
           relative w-full ${sizeClasses[size]} max-h-[90vh] 
-          bg-gray-900 rounded-lg shadow-2xl border border-gray-700
+          bg-black rounded-lg shadow-2xl border border-black
           flex flex-col overflow-hidden
           ${isOpen ? "animate-scale-in" : "animate-scale-out"}
           ${className}

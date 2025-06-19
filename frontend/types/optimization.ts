@@ -16,7 +16,6 @@ export interface OptimizationConfig {
     method: "grid" | "sambo";
     max_tries?: number;
     maximize: string;
-    return_heatmap: boolean;
     return_optimization?: boolean;
     random_state?: number;
     constraint?: string;

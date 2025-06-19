@@ -72,7 +72,6 @@ export default function OptimizationForm({
     method: "grid" as "grid" | "sambo",
     max_tries: 100,
     maximize: "Sharpe Ratio",
-    return_heatmap: true,
     return_optimization: false,
     random_state: 42,
     constraint: "sma_cross",
@@ -180,11 +179,8 @@ export default function OptimizationForm({
           max_tries: enhancedConfig.max_tries,
         }),
         maximize: enhancedConfig.maximize,
-        return_heatmap: enhancedConfig.return_heatmap,
-        ...(enhancedConfig.method === "sambo" && {
-          return_optimization: enhancedConfig.return_optimization,
-          random_state: enhancedConfig.random_state,
-        }),
+        return_optimization: enhancedConfig.return_optimization,
+        random_state: enhancedConfig.random_state,
         constraint: enhancedConfig.constraint,
         parameters: {
           n1: createParameterRange(enhancedConfig.n1_range),
@@ -418,23 +414,6 @@ export default function OptimizationForm({
               }
               options={ENHANCED_OPTIMIZATION_OBJECTIVES}
             />
-            <div className="flex items-center gap-2">
-              <input
-                type="checkbox"
-                id="return_heatmap"
-                checked={enhancedConfig.return_heatmap}
-                onChange={(e) =>
-                  setEnhancedConfig((prev) => ({
-                    ...prev,
-                    return_heatmap: e.target.checked,
-                  }))
-                }
-                className="form-checkbox h-5 w-5 text-blue-600 rounded border-gray-600 bg-gray-700"
-              />
-              <label htmlFor="return_heatmap" className="text-gray-300">
-                ヒートマップを返す
-              </label>
-            </div>
             {enhancedConfig.method === "sambo" && (
               <div className="flex items-center gap-2">
                 <input

@@ -28,7 +28,7 @@ interface ChartModalProps {
   result: BacktestResult;
 }
 
-type TabType = "equity" | "drawdown" | "trades" | "distribution" | "heatmap";
+type TabType = "equity" | "drawdown" | "trades" | "distribution";
 
 interface TabConfig {
   id: TabType;
