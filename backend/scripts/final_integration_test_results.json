@@ -1,0 +1,29 @@
+{
+  "test_timestamp": "2025-06-19T22:07:54.624144",
+  "test_type": "final_integration_test",
+  "backend_improvements": {
+    "indicators_available": 58,
+    "default_population_size": 50,
+    "default_generations": 20,
+    "calculation_reduction": "80%",
+    "execution_time_reduction": "70%"
+  },
+  "frontend_improvements": {
+    "indicator_selector": "58 indicators categorized",
+    "performance_display": "Real-time improvement metrics",
+    "user_experience": "Enhanced with improvement explanations"
+  },
+  "test_results": {
+    "integration_test": true,
+    "indicators_compatibility": true,
+    "performance": {
+      "generation_time": 0.0030024051666259766,
+      "indicator_coverage": 58,
+      "coverage_rate": 100.0
+    },
+    "quality": {
+      "indicator_diversity": 43,
+      "average_conditions": 2.9
+    }
+  }
+}

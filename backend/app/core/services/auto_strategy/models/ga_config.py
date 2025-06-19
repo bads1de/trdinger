@@ -19,12 +19,12 @@ class GAConfig:
     GA実行時の全パラメータを管理します。
     """
 
-    # 基本GA設定
-    population_size: int = 100  # 個体数
-    generations: int = 50  # 世代数
+    # 基本GA設定（パフォーマンス最適化済み）
+    population_size: int = 50  # 個体数（100→50に削減）
+    generations: int = 20  # 世代数（50→20に削減）
     crossover_rate: float = 0.8  # 交叉率
     mutation_rate: float = 0.1  # 突然変異率
-    elite_size: int = 10  # エリート保存数
+    elite_size: int = 5  # エリート保存数（10→5に削減）
 
     # 評価設定
     fitness_weights: Dict[str, float] = field(
@@ -135,8 +135,11 @@ class GAConfig:
 
     # 進捗・ログ設定
     progress_callback: Optional[Callable[["GAProgress"], None]] = None
-    log_level: str = "INFO"
+    log_level: str = "WARNING"  # パフォーマンス最適化のためWARNINGに変更
     save_intermediate_results: bool = True
+
+    # パフォーマンス設定
+    enable_detailed_logging: bool = False  # 詳細ログの有効/無効
 
     def validate(self) -> tuple[bool, List[str]]:
         """
@@ -234,12 +237,17 @@ class GAConfig:
     @classmethod
     def create_fast(cls) -> "GAConfig":
         """高速実行用設定を作成"""
-        return cls(population_size=50, generations=30, elite_size=5)
+        return cls(population_size=30, generations=15, elite_size=3)
 
     @classmethod
     def create_thorough(cls) -> "GAConfig":
         """徹底的な探索用設定を作成"""
-        return cls(population_size=200, generations=100, elite_size=20)
+        return cls(population_size=100, generations=50, elite_size=10)
+
+    @classmethod
+    def create_legacy(cls) -> "GAConfig":
+        """従来の設定を作成（互換性のため）"""
+        return cls(population_size=100, generations=50, elite_size=10)
 
 
 @dataclass

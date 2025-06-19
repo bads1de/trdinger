@@ -1,0 +1,290 @@
+{
+  "generated_at": "2025-06-19T21:05:01.321682",
+  "num_strategies": 5,
+  "strategies": [
+    {
+      "id": "ac4c494b",
+      "indicators": [
+        {
+          "type": "OBV",
+          "parameters": {},
+          "enabled": true
+        },
+        {
+          "type": "PPO",
+          "parameters": {
+            "fast_period": 14,
+            "slow_period": 32,
+            "matype": 0
+          },
+          "enabled": true
+        },
+        {
+          "type": "HMA",
+          "parameters": {
+            "period": 11
+          },
+          "enabled": true
+        },
+        {
+          "type": "T3",
+          "parameters": {
+            "period": 22,
+            "vfactor": 0.6832987204759988
+          },
+          "enabled": true
+        }
+      ],
+      "entry_conditions": [
+        {
+          "left_operand": "FundingRate",
+          "operator": "cross_above",
+          "right_operand": "PPO"
+        },
+        {
+          "left_operand": "close",
+          "operator": "cross_below",
+          "right_operand": "FundingRate"
+        }
+      ],
+      "exit_conditions": [
+        {
+          "left_operand": "HMA_11",
+          "operator": ">=",
+          "right_operand": 1.0077036639157493
+        }
+      ],
+      "risk_management": {
+        "stop_loss": 0.0342026606141932,
+        "take_profit": 0.05427721755211976,
+        "position_size": 0.2528842908006864
+      },
+      "metadata": {
+        "generated_by": "RandomGeneGenerator"
+      }
+    },
+    {
+      "id": "7e2c0582",
+      "indicators": [
+        {
+          "type": "MINUS_DI",
+          "parameters": {
+            "period": 28
+          },
+          "enabled": true
+        },
+        {
+          "type": "PPO",
+          "parameters": {
+            "fast_period": 12,
+            "slow_period": 34,
+            "matype": 1
+          },
+          "enabled": true
+        },
+        {
+          "type": "BOP",
+          "parameters": {},
+          "enabled": true
+        }
+      ],
+      "entry_conditions": [
+        {
+          "left_operand": "close",
+          "operator": ">",
+          "right_operand": "volume"
+        }
+      ],
+      "exit_conditions": [
+        {
+          "left_operand": "close",
+          "operator": "cross_below",
+          "right_operand": "FundingRate"
+        },
+        {
+          "left_operand": "volume",
+          "operator": "<=",
+          "right_operand": "high"
+        }
+      ],
+      "risk_management": {
+        "stop_loss": 0.04454508496681875,
+        "take_profit": 0.09570295829404785,
+        "position_size": 0.3750066236441226
+      },
+      "metadata": {
+        "generated_by": "RandomGeneGenerator"
+      }
+    },
+    {
+      "id": "e8d4b0b9",
+      "indicators": [
+        {
+          "type": "CCI",
+          "parameters": {
+            "period": 38
+          },
+          "enabled": true
+        },
+        {
+          "type": "NATR",
+          "parameters": {
+            "period": 29
+          },
+          "enabled": true
+        }
+      ],
+      "entry_conditions": [
+        {
+          "left_operand": "FundingRate",
+          "operator": "<",
+          "right_operand": "open"
+        },
+        {
+          "left_operand": "close",
+          "operator": "<=",
+          "right_operand": "NATR_29"
+        }
+      ],
+      "exit_conditions": [
+        {
+          "left_operand": "NATR_29",
+          "operator": ">",
+          "right_operand": "FundingRate"
+        }
+      ],
+      "risk_management": {
+        "stop_loss": 0.035384096290859826,
+        "take_profit": 0.14670562468789522,
+        "position_size": 0.3587464607557619
+      },
+      "metadata": {
+        "generated_by": "RandomGeneGenerator"
+      }
+    },
+    {
+      "id": "792b7466",
+      "indicators": [
+        {
+          "type": "STOCH",
+          "parameters": {
+            "k_period": 10,
+            "d_period": 6,
+            "slow_k_period": 4
+          },
+          "enabled": true
+        },
+        {
+          "type": "KAMA",
+          "parameters": {
+            "period": 30
+          },
+          "enabled": true
+        }
+      ],
+      "entry_conditions": [
+        {
+          "left_operand": "volume",
+          "operator": ">",
+          "right_operand": "STOCH"
+        }
+      ],
+      "exit_conditions": [
+        {
+          "left_operand": "close",
+          "operator": "<=",
+          "right_operand": "volume"
+        },
+        {
+          "left_operand": "high",
+          "operator": "<=",
+          "right_operand": 0.9709298885832175
+        }
+      ],
+      "risk_management": {
+        "stop_loss": 0.03667465378889663,
+        "take_profit": 0.1007284272156106,
+        "position_size": 0.4929508305094492
+      },
+      "metadata": {
+        "generated_by": "RandomGeneGenerator"
+      }
+    },
+    {
+      "id": "d36f7c3c",
+      "indicators": [
+        {
+          "type": "DONCHIAN",
+          "parameters": {
+            "period": 40
+          },
+          "enabled": true
+        },
+        {
+          "type": "T3",
+          "parameters": {
+            "period": 6,
+            "vfactor": 0.8069342913681863
+          },
+          "enabled": true
+        },
+        {
+          "type": "APO",
+          "parameters": {
+            "fast_period": 16,
+            "slow_period": 32,
+            "matype": 0
+          },
+          "enabled": true
+        },
+        {
+          "type": "MOMENTUM",
+          "parameters": {
+            "period": 28
+          },
+          "enabled": true
+        },
+        {
+          "type": "ADOSC",
+          "parameters": {
+            "fast_period": 3,
+            "slow_period": 13
+          },
+          "enabled": true
+        }
+      ],
+      "entry_conditions": [
+        {
+          "left_operand": "low",
+          "operator": "<=",
+          "right_operand": "OpenInterest"
+        },
+        {
+          "left_operand": "DONCHIAN_40",
+          "operator": "<",
+          "right_operand": "open"
+        }
+      ],
+      "exit_conditions": [
+        {
+          "left_operand": "close",
+          "operator": "cross_below",
+          "right_operand": "volume"
+        },
+        {
+          "left_operand": "volume",
+          "operator": "cross_above",
+          "right_operand": 0.9682521936135182
+        }
+      ],
+      "risk_management": {
+        "stop_loss": 0.04162787357762518,
+        "take_profit": 0.09828376045550277,
+        "position_size": 0.24421992644404728
+      },
+      "metadata": {
+        "generated_by": "RandomGeneGenerator"
+      }
+    }
+  ]
+}

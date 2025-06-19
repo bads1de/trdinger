@@ -6,7 +6,7 @@ v1仕様: 最大5指標、単純比較条件のみ
 """
 
 from dataclasses import dataclass, field
-from typing import List, Dict, Any, Union
+from typing import List, Dict, Any, Union, Tuple
 import json
 import logging
 
@@ -379,34 +379,12 @@ def encode_gene_to_list(gene: StrategyGene) -> List[float]:
     v1仕様: 最大5指標、単純条件のみ
     エンコード形式: [indicator1_id, param1_val, ..., entry_condition, exit_condition]
     """
-    # 利用可能な指標ID（24種類）
-    INDICATOR_IDS = {
-        "": 0,  # 未使用
-        "SMA": 1,
-        "EMA": 2,
-        "RSI": 3,
-        "MACD": 4,
-        "BB": 5,
-        "STOCH": 6,
-        "CCI": 7,
-        "WILLIAMS": 8,
-        "ADX": 9,
-        "AROON": 10,
-        "MFI": 11,
-        "MOMENTUM": 12,
-        "ROC": 13,
-        "ATR": 14,
-        "NATR": 15,
-        "TRANGE": 16,
-        "OBV": 17,
-        "AD": 18,
-        "ADOSC": 19,
-        "TEMA": 20,
-        "DEMA": 21,
-        "T3": 22,
-        "WMA": 23,
-        "KAMA": 24,
-    }
+    # 全指標ID（58種類）- constants.pyから自動生成
+    from app.core.services.indicators.constants import ALL_INDICATORS
+
+    INDICATOR_IDS = {"": 0}  # 未使用
+    for i, indicator in enumerate(ALL_INDICATORS, 1):
+        INDICATOR_IDS[indicator] = i
 
     encoded = []
 
@@ -447,23 +425,15 @@ def decode_list_to_gene(encoded: List[float]) -> StrategyGene:
     """
     固定長数値リストから戦略遺伝子にデコード
     """
-    # 指標IDの逆引き（安全で実用的な指標のみ）
-    ID_TO_INDICATOR = {
-        0: "",
-        1: "SMA",
-        2: "EMA",
-        3: "RSI",
-        4: "WMA",
-        5: "MOMENTUM",
-        6: "ROC",
-        # 複雑な指標は一旦除外
-        # 7: "MACD",
-        # 8: "BB",
-        # 9: "STOCH",
-        # 10: "CCI",
-        # 11: "WILLIAMS",
-        # 12: "ADX",
-    }
+    # 全指標を使用（58個の指標すべて）
+    from app.core.services.indicators.constants import ALL_INDICATORS
+
+    # 指標IDの逆引き（全58指標対応）
+    ID_TO_INDICATOR = {0: ""}  # 0は未使用を表す
+
+    # 全指標をIDにマッピング
+    for i, indicator in enumerate(ALL_INDICATORS, 1):
+        ID_TO_INDICATOR[i] = indicator
 
     indicators = []
 
@@ -471,19 +441,18 @@ def decode_list_to_gene(encoded: List[float]) -> StrategyGene:
     for i in range(StrategyGene.MAX_INDICATORS):
         idx = i * 2
         if idx + 1 < len(encoded):
-            # 指標IDを1-6の範囲にマッピング（安全な指標のみ）
-            indicator_id = max(1, int(encoded[idx] * 6) + 1)
+            # 指標IDを1-58の範囲にマッピング（全指標対応）
+            indicator_id = max(1, int(encoded[idx] * 58) + 1)
             param_val = encoded[idx + 1]
 
             indicator_type = ID_TO_INDICATOR.get(indicator_id, "")
             if indicator_type:
-                period = _denormalize_parameter(
-                    param_val, min_val=5, max_val=50
-                )  # 5-50の範囲
+                # 指標タイプに応じたパラメータ生成
+                parameters = _generate_indicator_parameters(indicator_type, param_val)
                 indicators.append(
                     IndicatorGene(
                         type=indicator_type,
-                        parameters={"period": period},
+                        parameters=parameters,
                         enabled=True,
                     )
                 )
@@ -504,37 +473,9 @@ def decode_list_to_gene(encoded: List[float]) -> StrategyGene:
         )
 
         # 指標タイプに応じた条件を生成
-        if first_indicator.type == "RSI":
-            entry_conditions = [
-                Condition(left_operand=indicator_name, operator="<", right_operand=30)
-            ]
-            exit_conditions = [
-                Condition(left_operand=indicator_name, operator=">", right_operand=70)
-            ]
-        elif first_indicator.type in ["SMA", "EMA", "WMA"]:
-            # 移動平均の場合は価格との比較
-            entry_conditions = [
-                Condition(
-                    left_operand="close", operator=">", right_operand=indicator_name
-                )
-            ]
-            exit_conditions = [
-                Condition(
-                    left_operand="close", operator="<", right_operand=indicator_name
-                )
-            ]
-        else:
-            # その他の指標の場合は汎用的な条件
-            entry_conditions = [
-                Condition(
-                    left_operand="close", operator=">", right_operand=indicator_name
-                )
-            ]
-            exit_conditions = [
-                Condition(
-                    left_operand="close", operator="<", right_operand=indicator_name
-                )
-            ]
+        entry_conditions, exit_conditions = _generate_indicator_specific_conditions(
+            first_indicator, indicator_name
+        )
     else:
         # 指標がない場合はデフォルト条件（価格ベース）
         entry_conditions = [
@@ -563,6 +504,556 @@ def _denormalize_parameter(
 ) -> int:
     """正規化されたパラメータを元の範囲に戻す"""
     return int(min_val + normalized * (max_val - min_val))
+
+
+def _generate_indicator_specific_conditions(
+    indicator: IndicatorGene, indicator_name: str
+) -> Tuple[List[Condition], List[Condition]]:
+    """
+    指標固有の条件を生成
+
+    Args:
+        indicator: 指標遺伝子
+        indicator_name: 指標名
+
+    Returns:
+        (エントリー条件リスト, エグジット条件リスト)
+    """
+    indicator_type = indicator.type
+
+    if indicator_type == "RSI":
+        # RSI: オーバーソールド/オーバーボート条件
+        entry_conditions = [
+            Condition(left_operand=indicator_name, operator="<", right_operand=30)
+        ]
+        exit_conditions = [
+            Condition(left_operand=indicator_name, operator=">", right_operand=70)
+        ]
+
+    elif indicator_type in ["SMA", "EMA", "WMA"]:
+        # 移動平均: 価格との比較
+        entry_conditions = [
+            Condition(left_operand="close", operator=">", right_operand=indicator_name)
+        ]
+        exit_conditions = [
+            Condition(left_operand="close", operator="<", right_operand=indicator_name)
+        ]
+
+    elif indicator_type == "MACD":
+        # MACD: ゼロライン交差とシグナル交差
+        entry_conditions = [
+            Condition(
+                left_operand=f"{indicator_name}_line", operator=">", right_operand=0
+            ),
+            Condition(
+                left_operand=f"{indicator_name}_line",
+                operator=">",
+                right_operand=f"{indicator_name}_signal",
+            ),
+        ]
+        exit_conditions = [
+            Condition(
+                left_operand=f"{indicator_name}_line",
+                operator="<",
+                right_operand=f"{indicator_name}_signal",
+            )
+        ]
+
+    elif indicator_type == "BB":
+        # ボリンジャーバンド: バンドタッチ条件
+        entry_conditions = [
+            Condition(
+                left_operand="close",
+                operator="<",
+                right_operand=f"{indicator_name}_lower",
+            )
+        ]
+        exit_conditions = [
+            Condition(
+                left_operand="close",
+                operator=">",
+                right_operand=f"{indicator_name}_upper",
+            )
+        ]
+
+    elif indicator_type == "STOCH":
+        # ストキャスティクス: オーバーソールド/オーバーボート
+        entry_conditions = [
+            Condition(
+                left_operand=f"{indicator_name}_k", operator="<", right_operand=20
+            )
+        ]
+        exit_conditions = [
+            Condition(
+                left_operand=f"{indicator_name}_k", operator=">", right_operand=80
+            )
+        ]
+
+    elif indicator_type in ["CCI", "WILLIAMS"]:
+        # CCI/Williams %R: オシレーター条件
+        if indicator_type == "CCI":
+            entry_conditions = [
+                Condition(left_operand=indicator_name, operator="<", right_operand=-100)
+            ]
+            exit_conditions = [
+                Condition(left_operand=indicator_name, operator=">", right_operand=100)
+            ]
+        else:  # WILLIAMS
+            entry_conditions = [
+                Condition(left_operand=indicator_name, operator="<", right_operand=-80)
+            ]
+            exit_conditions = [
+                Condition(left_operand=indicator_name, operator=">", right_operand=-20)
+            ]
+
+    elif indicator_type == "ADX":
+        # ADX: トレンド強度
+        entry_conditions = [
+            Condition(left_operand=indicator_name, operator=">", right_operand=25)
+        ]
+        exit_conditions = [
+            Condition(left_operand=indicator_name, operator="<", right_operand=20)
+        ]
+
+    elif indicator_type == "AROON":
+        # Aroon: トレンド方向
+        entry_conditions = [
+            Condition(
+                left_operand=f"{indicator_name}_up",
+                operator=">",
+                right_operand=f"{indicator_name}_down",
+            )
+        ]
+        exit_conditions = [
+            Condition(
+                left_operand=f"{indicator_name}_down",
+                operator=">",
+                right_operand=f"{indicator_name}_up",
+            )
+        ]
+
+    elif indicator_type == "MFI":
+        # Money Flow Index: オーバーソールド/オーバーボート
+        entry_conditions = [
+            Condition(left_operand=indicator_name, operator="<", right_operand=20)
+        ]
+        exit_conditions = [
+            Condition(left_operand=indicator_name, operator=">", right_operand=80)
+        ]
+
+    elif indicator_type in ["ATR", "NATR"]:
+        # ATR/NATR: ボラティリティベース
+        entry_conditions = [
+            Condition(
+                left_operand=indicator_name, operator=">", right_operand="ATR_20"
+            )  # 高ボラティリティ
+        ]
+        exit_conditions = [
+            Condition(
+                left_operand=indicator_name, operator="<", right_operand="ATR_20"
+            )  # 低ボラティリティ
+        ]
+
+    elif indicator_type == "TRANGE":
+        # True Range: ボラティリティ
+        entry_conditions = [
+            Condition(left_operand=indicator_name, operator=">", right_operand=1.0)
+        ]
+        exit_conditions = [
+            Condition(left_operand=indicator_name, operator="<", right_operand=0.5)
+        ]
+
+    elif indicator_type in ["KELTNER", "DONCHIAN"]:
+        # チャネル系指標
+        entry_conditions = [
+            Condition(
+                left_operand="close",
+                operator="<",
+                right_operand=f"{indicator_name}_lower",
+            )
+        ]
+        exit_conditions = [
+            Condition(
+                left_operand="close",
+                operator=">",
+                right_operand=f"{indicator_name}_upper",
+            )
+        ]
+
+    elif indicator_type == "STDDEV":
+        # Standard Deviation
+        entry_conditions = [
+            Condition(left_operand=indicator_name, operator=">", right_operand=2.0)
+        ]
+        exit_conditions = [
+            Condition(left_operand=indicator_name, operator="<", right_operand=1.0)
+        ]
+
+    elif indicator_type in ["OBV", "AD", "PVT"]:
+        # 出来高系指標
+        entry_conditions = [
+            Condition(
+                left_operand=indicator_name,
+                operator=">",
+                right_operand=f"{indicator_name}_SMA_20",
+            )
+        ]
+        exit_conditions = [
+            Condition(
+                left_operand=indicator_name,
+                operator="<",
+                right_operand=f"{indicator_name}_SMA_20",
+            )
+        ]
+
+    elif indicator_type == "ADOSC":
+        # Accumulation/Distribution Oscillator
+        entry_conditions = [
+            Condition(left_operand=indicator_name, operator=">", right_operand=0)
+        ]
+        exit_conditions = [
+            Condition(left_operand=indicator_name, operator="<", right_operand=0)
+        ]
+
+    elif indicator_type == "VWAP":
+        # Volume Weighted Average Price
+        entry_conditions = [
+            Condition(left_operand="close", operator=">", right_operand=indicator_name)
+        ]
+        exit_conditions = [
+            Condition(left_operand="close", operator="<", right_operand=indicator_name)
+        ]
+
+    elif indicator_type == "EMV":
+        # Ease of Movement
+        entry_conditions = [
+            Condition(left_operand=indicator_name, operator=">", right_operand=0)
+        ]
+        exit_conditions = [
+            Condition(left_operand=indicator_name, operator="<", right_operand=0)
+        ]
+
+    elif indicator_type in ["AVGPRICE", "MEDPRICE", "TYPPRICE", "WCLPRICE"]:
+        # 価格変換系指標
+        entry_conditions = [
+            Condition(left_operand="close", operator=">", right_operand=indicator_name)
+        ]
+        exit_conditions = [
+            Condition(left_operand="close", operator="<", right_operand=indicator_name)
+        ]
+
+    elif indicator_type == "PSAR":
+        # Parabolic SAR
+        entry_conditions = [
+            Condition(left_operand="close", operator=">", right_operand=indicator_name)
+        ]
+        exit_conditions = [
+            Condition(left_operand="close", operator="<", right_operand=indicator_name)
+        ]
+
+    # 追加のモメンタム系指標
+    elif indicator_type in ["CMO", "TRIX"]:
+        # Chande Momentum Oscillator, TRIX
+        entry_conditions = [
+            Condition(left_operand=indicator_name, operator=">", right_operand=0)
+        ]
+        exit_conditions = [
+            Condition(left_operand=indicator_name, operator="<", right_operand=0)
+        ]
+
+    elif indicator_type in ["APO", "PPO"]:
+        # Absolute/Percentage Price Oscillator
+        entry_conditions = [
+            Condition(left_operand=indicator_name, operator=">", right_operand=0)
+        ]
+        exit_conditions = [
+            Condition(left_operand=indicator_name, operator="<", right_operand=0)
+        ]
+
+    elif indicator_type in ["DX", "ADXR"]:
+        # Directional Movement Index
+        entry_conditions = [
+            Condition(left_operand=indicator_name, operator=">", right_operand=25)
+        ]
+        exit_conditions = [
+            Condition(left_operand=indicator_name, operator="<", right_operand=20)
+        ]
+
+    elif indicator_type in ["PLUS_DI", "MINUS_DI"]:
+        # Directional Indicators
+        if indicator_type == "PLUS_DI":
+            entry_conditions = [
+                Condition(
+                    left_operand=indicator_name, operator=">", right_operand="MINUS_DI"
+                )
+            ]
+            exit_conditions = [
+                Condition(
+                    left_operand=indicator_name, operator="<", right_operand="MINUS_DI"
+                )
+            ]
+        else:  # MINUS_DI
+            entry_conditions = [
+                Condition(
+                    left_operand=indicator_name, operator=">", right_operand="PLUS_DI"
+                )
+            ]
+            exit_conditions = [
+                Condition(
+                    left_operand=indicator_name, operator="<", right_operand="PLUS_DI"
+                )
+            ]
+
+    elif indicator_type == "BOP":
+        # Balance of Power
+        entry_conditions = [
+            Condition(left_operand=indicator_name, operator=">", right_operand=0)
+        ]
+        exit_conditions = [
+            Condition(left_operand=indicator_name, operator="<", right_operand=0)
+        ]
+
+    elif indicator_type == "ULTOSC":
+        # Ultimate Oscillator
+        entry_conditions = [
+            Condition(left_operand=indicator_name, operator="<", right_operand=30)
+        ]
+        exit_conditions = [
+            Condition(left_operand=indicator_name, operator=">", right_operand=70)
+        ]
+
+    elif indicator_type == "AROONOSC":
+        # Aroon Oscillator
+        entry_conditions = [
+            Condition(left_operand=indicator_name, operator=">", right_operand=0)
+        ]
+        exit_conditions = [
+            Condition(left_operand=indicator_name, operator="<", right_operand=0)
+        ]
+
+    # 追加のトレンド系指標
+    elif indicator_type in [
+        "HMA",
+        "KAMA",
+        "TEMA",
+        "DEMA",
+        "T3",
+        "ZLEMA",
+        "MIDPOINT",
+        "MIDPRICE",
+        "TRIMA",
+        "VWMA",
+    ]:
+        # 移動平均系指標
+        entry_conditions = [
+            Condition(left_operand="close", operator=">", right_operand=indicator_name)
+        ]
+        exit_conditions = [
+            Condition(left_operand="close", operator="<", right_operand=indicator_name)
+        ]
+
+    elif indicator_type == "MAMA":
+        # MESA Adaptive Moving Average
+        entry_conditions = [
+            Condition(
+                left_operand=f"{indicator_name}_mama",
+                operator=">",
+                right_operand=f"{indicator_name}_fama",
+            )
+        ]
+        exit_conditions = [
+            Condition(
+                left_operand=f"{indicator_name}_mama",
+                operator="<",
+                right_operand=f"{indicator_name}_fama",
+            )
+        ]
+
+    else:
+        # デフォルト: 汎用的な条件
+        entry_conditions = [
+            Condition(left_operand="close", operator=">", right_operand=indicator_name)
+        ]
+        exit_conditions = [
+            Condition(left_operand="close", operator="<", right_operand=indicator_name)
+        ]
+
+    return entry_conditions, exit_conditions
+
+
+def _generate_indicator_parameters(
+    indicator_type: str, param_val: float
+) -> Dict[str, Any]:
+    """
+    指標タイプに応じた適切なパラメータを生成（全58指標対応）
+
+    Args:
+        indicator_type: 指標タイプ
+        param_val: 正規化されたパラメータ値
+
+    Returns:
+        指標パラメータの辞書
+    """
+    # トレンド系指標（15個）
+    if indicator_type in [
+        "SMA",
+        "EMA",
+        "WMA",
+        "HMA",
+        "KAMA",
+        "TEMA",
+        "DEMA",
+        "T3",
+        "ZLEMA",
+        "MIDPOINT",
+        "MIDPRICE",
+        "TRIMA",
+        "VWMA",
+    ]:
+        period = _denormalize_parameter(param_val, min_val=5, max_val=50)
+        return {"period": period}
+
+    elif indicator_type == "MAMA":
+        # MESA Adaptive Moving Average
+        fastlimit = 0.01 + param_val * 0.99  # 0.01-1.0
+        slowlimit = 0.01 + param_val * 0.5 * 0.99  # 0.01-0.5
+        return {"fastlimit": fastlimit, "slowlimit": slowlimit}
+
+    elif indicator_type == "MACD":
+        # Moving Average Convergence Divergence
+        fast_period = _denormalize_parameter(param_val, min_val=8, max_val=15)
+        slow_period = _denormalize_parameter(param_val * 1.5, min_val=20, max_val=30)
+        signal_period = _denormalize_parameter(param_val * 0.5, min_val=5, max_val=12)
+        return {
+            "fast_period": fast_period,
+            "slow_period": slow_period,
+            "signal_period": signal_period,
+        }
+
+    # モメンタム系指標（24個）
+    elif indicator_type in [
+        "RSI",
+        "CCI",
+        "ADX",
+        "AROON",
+        "MFI",
+        "CMO",
+        "TRIX",
+        "DX",
+        "ADXR",
+        "PLUS_DI",
+        "MINUS_DI",
+    ]:
+        period = _denormalize_parameter(param_val, min_val=5, max_val=50)
+        return {"period": period}
+
+    elif indicator_type in ["STOCH", "STOCHRSI"]:
+        # Stochastic indicators
+        k_period = _denormalize_parameter(param_val, min_val=10, max_val=20)
+        d_period = _denormalize_parameter(param_val * 0.5, min_val=3, max_val=7)
+        return {"k_period": k_period, "d_period": d_period}
+
+    elif indicator_type == "STOCHF":
+        # Stochastic Fast
+        period = _denormalize_parameter(param_val, min_val=10, max_val=20)
+        fastd_period = _denormalize_parameter(param_val * 0.5, min_val=3, max_val=7)
+        fastd_matype = 0  # Simple Moving Average
+        return {
+            "period": period,
+            "fastd_period": fastd_period,
+            "fastd_matype": fastd_matype,
+        }
+
+    elif indicator_type == "WILLR":
+        # Williams %R
+        period = _denormalize_parameter(param_val, min_val=5, max_val=30)
+        return {"period": period}
+
+    elif indicator_type in ["MOMENTUM", "MOM", "ROC", "ROCP", "ROCR"]:
+        # Momentum indicators
+        period = _denormalize_parameter(param_val, min_val=1, max_val=30)
+        return {"period": period}
+
+    elif indicator_type == "AROONOSC":
+        # Aroon Oscillator
+        period = _denormalize_parameter(param_val, min_val=5, max_val=30)
+        return {"period": period}
+
+    elif indicator_type == "ULTOSC":
+        # Ultimate Oscillator
+        period1 = _denormalize_parameter(param_val, min_val=7, max_val=14)
+        period2 = _denormalize_parameter(param_val * 1.5, min_val=14, max_val=28)
+        period3 = _denormalize_parameter(param_val * 2.0, min_val=28, max_val=56)
+        return {"period1": period1, "period2": period2, "period3": period3}
+
+    elif indicator_type == "BOP":
+        # Balance of Power (パラメータなし)
+        return {}
+
+    elif indicator_type in ["APO", "PPO"]:
+        # Absolute/Percentage Price Oscillator
+        fast_period = _denormalize_parameter(param_val, min_val=8, max_val=15)
+        slow_period = _denormalize_parameter(param_val * 1.5, min_val=20, max_val=30)
+        matype = 0  # Simple Moving Average
+        return {
+            "fast_period": fast_period,
+            "slow_period": slow_period,
+            "matype": matype,
+        }
+
+    # ボラティリティ系指標（7個）
+    elif indicator_type == "BB":
+        # Bollinger Bands
+        period = _denormalize_parameter(param_val, min_val=10, max_val=30)
+        std_dev = 1.5 + param_val * 1.0  # 1.5-2.5の範囲
+        return {"period": period, "std_dev": std_dev}
+
+    elif indicator_type in ["ATR", "NATR", "STDDEV"]:
+        # Average True Range, Normalized ATR, Standard Deviation
+        period = _denormalize_parameter(param_val, min_val=5, max_val=30)
+        return {"period": period}
+
+    elif indicator_type == "TRANGE":
+        # True Range (パラメータなし)
+        return {}
+
+    elif indicator_type in ["KELTNER", "DONCHIAN"]:
+        # Keltner Channels, Donchian Channels
+        period = _denormalize_parameter(param_val, min_val=10, max_val=30)
+        return {"period": period}
+
+    # 出来高系指標（6個）
+    elif indicator_type in ["OBV", "AD", "VWAP", "PVT"]:
+        # On Balance Volume, Accumulation/Distribution, VWAP, Price Volume Trend (パラメータなし)
+        return {}
+
+    elif indicator_type == "ADOSC":
+        # Accumulation/Distribution Oscillator
+        fast_period = _denormalize_parameter(param_val, min_val=3, max_val=10)
+        slow_period = _denormalize_parameter(param_val * 1.5, min_val=10, max_val=30)
+        return {"fast_period": fast_period, "slow_period": slow_period}
+
+    elif indicator_type == "EMV":
+        # Ease of Movement
+        period = _denormalize_parameter(param_val, min_val=5, max_val=20)
+        return {"period": period}
+
+    # 価格変換系指標（4個）
+    elif indicator_type in ["AVGPRICE", "MEDPRICE", "TYPPRICE", "WCLPRICE"]:
+        # Average Price, Median Price, Typical Price, Weighted Close Price (パラメータなし)
+        return {}
+
+    # その他の指標（1個）
+    elif indicator_type == "PSAR":
+        # Parabolic SAR
+        acceleration = 0.02 + param_val * 0.18  # 0.02-0.2
+        maximum = 0.2 + param_val * 0.8  # 0.2-1.0
+        return {"acceleration": acceleration, "maximum": maximum}
+
+    else:
+        # デフォルト（期間のみ）
+        period = _denormalize_parameter(param_val, min_val=5, max_val=50)
+        return {"period": period}
 
 
 def _encode_condition(condition: Condition) -> List[float]:

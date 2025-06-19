@@ -15,6 +15,10 @@ from ..models.strategy_gene import StrategyGene, IndicatorGene, Condition
 from app.core.services.indicators.adapters.trend_adapter import TrendAdapter
 from app.core.services.indicators.adapters.momentum_adapter import MomentumAdapter
 from app.core.services.indicators.adapters.volatility_adapter import VolatilityAdapter
+from app.core.services.indicators.adapters.volume_adapter import VolumeAdapter
+from app.core.services.indicators.adapters.price_transform_adapter import (
+    PriceTransformAdapter,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -40,34 +44,63 @@ class StrategyFactory:
             "DEMA": TrendAdapter.dema,
             "T3": TrendAdapter.t3,
             "WMA": TrendAdapter.wma,
+            "HMA": TrendAdapter.hma,
             "KAMA": TrendAdapter.kama,
+            "ZLEMA": TrendAdapter.zlema,
+            "VWMA": TrendAdapter.vwma,
             "MIDPOINT": TrendAdapter.midpoint,
             "MIDPRICE": TrendAdapter.midprice,
             "TRIMA": TrendAdapter.trima,
             # モメンタム系
             "RSI": MomentumAdapter.rsi,
             "STOCH": MomentumAdapter.stochastic,
+            "STOCHRSI": MomentumAdapter.stochastic_rsi,
             "CCI": MomentumAdapter.cci,
+            "WILLR": MomentumAdapter.williams_r,
             "WILLIAMS": MomentumAdapter.williams_r,
             "ADX": MomentumAdapter.adx,
             "AROON": MomentumAdapter.aroon,
+            # "AROONOSC": MomentumAdapter.aroon_oscillator,  # 未実装
             "MFI": MomentumAdapter.mfi,
             "MOMENTUM": MomentumAdapter.momentum,
+            "MOM": MomentumAdapter.momentum,
             "ROC": MomentumAdapter.roc,
             "BOP": MomentumAdapter.bop,
             "PPO": MomentumAdapter.ppo,
+            # "APO": MomentumAdapter.apo,  # 未実装
             "PLUS_DI": MomentumAdapter.plus_di,
             "MINUS_DI": MomentumAdapter.minus_di,
             "ROCP": MomentumAdapter.rocp,
             "ROCR": MomentumAdapter.rocr,
             "STOCHF": MomentumAdapter.stochf,
+            # "ULTOSC": MomentumAdapter.ultimate_oscillator,  # 未実装
+            "CMO": MomentumAdapter.cmo,
+            "TRIX": MomentumAdapter.trix,
+            "DX": MomentumAdapter.dx,
+            # "ADXR": MomentumAdapter.adxr,  # 未実装
             # ボラティリティ系
             "ATR": VolatilityAdapter.atr,
             "NATR": VolatilityAdapter.natr,
             "TRANGE": VolatilityAdapter.trange,
+            "STDDEV": VolatilityAdapter.stddev,
+            # 出来高系
+            "OBV": VolumeAdapter.obv,
+            "AD": VolumeAdapter.ad,
+            "ADOSC": VolumeAdapter.adosc,
+            "VWAP": VolumeAdapter.vwap,
+            "PVT": VolumeAdapter.pvt,
+            "EMV": VolumeAdapter.emv,
+            # 価格変換系
+            "AVGPRICE": PriceTransformAdapter.avgprice,
+            "MEDPRICE": PriceTransformAdapter.medprice,
+            "TYPPRICE": PriceTransformAdapter.typprice,
+            "WCLPRICE": PriceTransformAdapter.wclprice,
             # 複合指標（特別処理）
             "MACD": self._calculate_macd,
             "BB": self._calculate_bollinger_bands,
+            "KELTNER": self._calculate_keltner_channels,
+            "DONCHIAN": self._calculate_donchian_channels,
+            "PSAR": self._calculate_psar,
         }
 
     def create_strategy_class(self, gene: StrategyGene) -> Type[Strategy]:
@@ -151,6 +184,19 @@ class StrategyFactory:
                             result = self.factory.indicator_adapters[indicator_type](
                                 close_data, **parameters
                             )
+                        elif indicator_type in ["KELTNER", "DONCHIAN"]:
+                            # High, Low, Closeが必要な複合指標
+                            period = int(parameters.get("period", 20))
+                            result = self.factory.indicator_adapters[indicator_type](
+                                high_data, low_data, close_data, period
+                            )
+                        elif indicator_type == "PSAR":
+                            # PSARはHigh, Lowが必要
+                            acceleration = float(parameters.get("acceleration", 0.02))
+                            maximum = float(parameters.get("maximum", 0.2))
+                            result = self.factory.indicator_adapters[indicator_type](
+                                high_data, low_data, acceleration, maximum
+                            )
                         elif indicator_type in [
                             "ADX",
                             "CCI",
@@ -160,6 +206,13 @@ class StrategyFactory:
                             "TRANGE",
                             "PLUS_DI",
                             "MINUS_DI",
+                            "AROON",
+                            "AROONOSC",
+                            "MFI",
+                            "STOCH",
+                            "STOCHRSI",
+                            "DX",
+                            "ADXR",
                         ]:
                             # High, Low, Closeが必要な指標
                             period = int(parameters.get("period", 20))
@@ -178,13 +231,26 @@ class StrategyFactory:
                             result = self.factory.indicator_adapters[indicator_type](
                                 open_data, high_data, low_data, close_data
                             )
-                        elif indicator_type == "PPO":
-                            # PPOは複数パラメータが必要
+                        elif indicator_type in ["PPO", "APO"]:
+                            # PPO/APOは複数パラメータが必要
                             fastperiod = int(parameters.get("period", 12))
                             slowperiod = int(parameters.get("slow_period", 26))
                             matype = int(parameters.get("matype", 0))
                             result = self.factory.indicator_adapters[indicator_type](
                                 close_data, fastperiod, slowperiod, matype
+                            )
+                        elif indicator_type == "ULTOSC":
+                            # Ultimate Oscillatorは複数期間が必要
+                            period1 = int(parameters.get("period1", 7))
+                            period2 = int(parameters.get("period2", 14))
+                            period3 = int(parameters.get("period3", 28))
+                            result = self.factory.indicator_adapters[indicator_type](
+                                high_data,
+                                low_data,
+                                close_data,
+                                period1,
+                                period2,
+                                period3,
                             )
                         elif indicator_type == "STOCHF":
                             # STOCHFは複数パラメータが必要
@@ -199,11 +265,56 @@ class StrategyFactory:
                                 fastd_period,
                                 fastd_matype,
                             )
-                        elif indicator_type in ["STOCH"]:
-                            # Stochasticは特別な処理
+                        elif indicator_type == "STDDEV":
+                            # STDDEVは追加パラメータが必要
+                            period = int(parameters.get("period", 5))
+                            nbdev = float(parameters.get("nbdev", 1.0))
+                            result = self.factory.indicator_adapters[indicator_type](
+                                close_data, period, nbdev
+                            )
+                        elif indicator_type in ["OBV", "AD", "PVT"]:
+                            # 出来高系指標（Close, Volumeが必要）
+                            volume_data = self._convert_to_series(self.data.Volume)
+                            result = self.factory.indicator_adapters[indicator_type](
+                                close_data, volume_data
+                            )
+                        elif indicator_type == "ADOSC":
+                            # ADOSCは複数パラメータが必要
+                            volume_data = self._convert_to_series(self.data.Volume)
+                            fastperiod = int(parameters.get("fastperiod", 3))
+                            slowperiod = int(parameters.get("slowperiod", 10))
+                            result = self.factory.indicator_adapters[indicator_type](
+                                high_data,
+                                low_data,
+                                close_data,
+                                volume_data,
+                                fastperiod,
+                                slowperiod,
+                            )
+                        elif indicator_type == "EMV":
+                            # EMVは期間とボリュームが必要
+                            volume_data = self._convert_to_series(self.data.Volume)
                             period = int(parameters.get("period", 14))
                             result = self.factory.indicator_adapters[indicator_type](
-                                high_data, low_data, close_data, period
+                                high_data, low_data, volume_data, period
+                            )
+                        elif indicator_type == "VWAP":
+                            # VWAPは特別な処理（期間が必要）
+                            volume_data = self._convert_to_series(self.data.Volume)
+                            period = int(parameters.get("period", 20))
+                            result = self.factory.indicator_adapters[indicator_type](
+                                high_data, low_data, close_data, volume_data, period
+                            )
+                        elif indicator_type in [
+                            "AVGPRICE",
+                            "MEDPRICE",
+                            "TYPPRICE",
+                            "WCLPRICE",
+                        ]:
+                            # 価格変換系指標
+                            open_data = self._convert_to_series(self.data.Open)
+                            result = self.factory.indicator_adapters[indicator_type](
+                                open_data, high_data, low_data, close_data
                             )
                         else:
                             # 単一値指標の場合（Close価格のみ）
@@ -213,14 +324,32 @@ class StrategyFactory:
                             )
 
                         # 指標をbacktesting.pyのインジケーターとして登録
-                        if indicator_type == "BOP":
-                            # BOPは期間を使用しない
-                            indicator_name = "BOP"
+                        if indicator_type in [
+                            "BOP",
+                            "OBV",
+                            "AD",
+                            "PVT",
+                            "AVGPRICE",
+                            "MEDPRICE",
+                            "TYPPRICE",
+                            "WCLPRICE",
+                        ]:
+                            # 期間を使用しない指標
+                            indicator_name = indicator_type
                         elif indicator_type == "PPO":
                             # PPOは複数パラメータを使用
                             fastperiod = int(parameters.get("period", 12))
                             slowperiod = int(parameters.get("slow_period", 26))
                             indicator_name = f"PPO_{fastperiod}_{slowperiod}"
+                        elif indicator_type == "VWAP":
+                            # VWAPは期間を使用
+                            period = int(parameters.get("period", 20))
+                            indicator_name = f"VWAP_{period}"
+                        elif indicator_type == "ADOSC":
+                            # ADOSCは複数パラメータを使用
+                            fastperiod = int(parameters.get("fastperiod", 3))
+                            slowperiod = int(parameters.get("slowperiod", 10))
+                            indicator_name = f"ADOSC_{fastperiod}_{slowperiod}"
                         elif indicator_type == "STOCHF":
                             # STOCHFは複数の値を返すので、両方を登録
                             fastk_period = int(parameters.get("period", 5))
@@ -245,10 +374,12 @@ class StrategyFactory:
                             # STOCHFの場合は通常の処理をスキップ
                             indicator_name = None
                         else:
-                            # 通常の指標
-                            indicator_name = (
-                                f"{indicator_type}_{parameters.get('period', '')}"
-                            )
+                            # 通常の指標（期間を使用）
+                            period = parameters.get("period", "")
+                            if period:
+                                indicator_name = f"{indicator_type}_{period}"
+                            else:
+                                indicator_name = indicator_type
 
                         # STOCHFの場合は既に処理済みなのでスキップ
                         if indicator_name is not None:
@@ -559,9 +690,18 @@ class StrategyFactory:
         available_indicators = []
         for ind in gene.indicators:
             if ind.enabled:
-                if ind.type == "BOP":
-                    # BOPは期間を使用しない
-                    available_indicators.append("BOP")
+                if ind.type in [
+                    "BOP",
+                    "OBV",
+                    "AD",
+                    "PVT",
+                    "AVGPRICE",
+                    "MEDPRICE",
+                    "TYPPRICE",
+                    "WCLPRICE",
+                ]:
+                    # 期間を使用しない指標
+                    available_indicators.append(ind.type)
                 elif ind.type == "PPO":
                     # PPOは複数パラメータを使用
                     fastperiod = int(ind.parameters.get("period", 12))
@@ -577,11 +717,22 @@ class StrategyFactory:
                     available_indicators.append(
                         f"STOCHF_D_{fastk_period}_{fastd_period}"
                     )
+                elif ind.type == "VWAP":
+                    # VWAPは期間を使用
+                    period = int(ind.parameters.get("period", 20))
+                    available_indicators.append(f"VWAP_{period}")
+                elif ind.type == "ADOSC":
+                    # ADOSCは複数パラメータを使用
+                    fastperiod = int(ind.parameters.get("fastperiod", 3))
+                    slowperiod = int(ind.parameters.get("slowperiod", 10))
+                    available_indicators.append(f"ADOSC_{fastperiod}_{slowperiod}")
                 else:
-                    # 通常の指標
-                    available_indicators.append(
-                        f"{ind.type}_{ind.parameters.get('period', '')}"
-                    )
+                    # 通常の指標（期間を使用）
+                    period = ind.parameters.get("period", "")
+                    if period:
+                        available_indicators.append(f"{ind.type}_{period}")
+                    else:
+                        available_indicators.append(ind.type)
 
         # 有効なデータソース（OI/FR対応版）
         valid_data_sources = [
@@ -628,4 +779,57 @@ class StrategyFactory:
             return VolatilityAdapter.bollinger_bands(data, period, std_dev)
         except Exception as e:
             logger.error(f"ボリンジャーバンド計算エラー: {e}")
+            return None
+
+    def _calculate_keltner_channels(self, high, low, close, period=20, multiplier=2.0):
+        """ケルトナーチャネル計算（複合指標）"""
+        try:
+            # ATRを計算
+            atr = VolatilityAdapter.atr(high, low, close, period)
+            # EMAを計算
+            ema = TrendAdapter.ema(close, period)
+
+            # ケルトナーチャネルを計算
+            upper = ema + (atr * multiplier)
+            lower = ema - (atr * multiplier)
+
+            return {
+                "upper": upper,
+                "middle": ema,
+                "lower": lower,
+            }
+        except Exception as e:
+            logger.error(f"ケルトナーチャネル計算エラー: {e}")
+            return None
+
+    def _calculate_donchian_channels(self, high, low, period=20):
+        """ドンチャンチャネル計算（複合指標）"""
+        try:
+            # 最高値と最安値を計算
+            upper = high.rolling(window=period).max()
+            lower = low.rolling(window=period).min()
+            middle = (upper + lower) / 2
+
+            return {
+                "upper": upper,
+                "middle": middle,
+                "lower": lower,
+            }
+        except Exception as e:
+            logger.error(f"ドンチャンチャネル計算エラー: {e}")
+            return None
+
+    def _calculate_psar(self, high, low, acceleration=0.02, maximum=0.2):
+        """パラボリックSAR計算（複合指標）"""
+        try:
+            import talib
+
+            result = talib.SAR(
+                high.values, low.values, acceleration=acceleration, maximum=maximum
+            )
+            return pd.Series(
+                result, index=high.index, name=f"PSAR_{acceleration}_{maximum}"
+            )
+        except Exception as e:
+            logger.error(f"パラボリックSAR計算エラー: {e}")
             return None

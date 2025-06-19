@@ -369,6 +369,19 @@ class GeneticAlgorithmEngine:
                 f"保存後の_current_backtest_config: {self._current_backtest_config}"
             )
 
+            # 評価環境固定化: GA実行開始時に一度だけバックテスト設定を決定
+            if backtest_config:
+                logger.info("評価環境を固定化中...")
+                self._fixed_backtest_config = self._select_random_timeframe_config(
+                    backtest_config
+                )
+                logger.info(f"固定化された評価環境: {self._fixed_backtest_config}")
+            else:
+                self._fixed_backtest_config = None
+                logger.info(
+                    "バックテスト設定が提供されていないため、フォールバック設定を使用"
+                )
+
             # DEAP環境のセットアップ
             self.setup_deap(config)
 
@@ -490,8 +503,11 @@ class GeneticAlgorithmEngine:
             フィットネス値のタプル
         """
         try:
-            logger.info(f"個体評価開始: 遺伝子長={len(individual)}")
-            logger.info(f"バックテスト設定: {backtest_config}")
+            # ログレベルに応じた出力制御
+            if config.enable_detailed_logging:
+                logger.info(f"個体評価開始: 遺伝子長={len(individual)}")
+                logger.info(f"バックテスト設定: {backtest_config}")
+
             # 数値リストから戦略遺伝子にデコード
             gene = decode_list_to_gene(individual)
 
@@ -504,23 +520,40 @@ class GeneticAlgorithmEngine:
             # 戦略クラスを生成
             self.strategy_factory.create_strategy_class(gene)
 
-            # バックテスト設定を構築（ランダム時間足を使用）
-            if backtest_config:
-                logger.info(
-                    f"バックテスト設定あり: {backtest_config.get('timeframe', 'N/A')}"
-                )
-                # ランダムな時間足設定を取得
-                random_config = self._select_random_timeframe_config(backtest_config)
-                logger.info(f"ランダム設定後: {random_config.get('timeframe', 'N/A')}")
+            # バックテスト設定を構築（固定化された設定を使用）
+            if hasattr(self, "_fixed_backtest_config") and self._fixed_backtest_config:
+                if config.enable_detailed_logging:
+                    logger.debug(
+                        f"固定化された設定を使用: {self._fixed_backtest_config.get('timeframe', 'N/A')}"
+                    )
+                fixed_config = self._fixed_backtest_config
 
                 test_config = {
                     "strategy_name": f"GA_Generated_{gene.id}",
-                    "symbol": random_config.get("symbol", "BTC/USDT"),
-                    "timeframe": random_config.get("timeframe", "1d"),
-                    "start_date": random_config.get("start_date", "2024-01-01"),
-                    "end_date": random_config.get("end_date", "2024-04-09"),
-                    "initial_capital": random_config.get("initial_capital", 100000),
-                    "commission_rate": random_config.get("commission_rate", 0.001),
+                    "symbol": fixed_config.get("symbol", "BTC/USDT"),
+                    "timeframe": fixed_config.get("timeframe", "1d"),
+                    "start_date": fixed_config.get("start_date", "2024-01-01"),
+                    "end_date": fixed_config.get("end_date", "2024-04-09"),
+                    "initial_capital": fixed_config.get("initial_capital", 100000),
+                    "commission_rate": fixed_config.get("commission_rate", 0.001),
+                    "strategy_config": {
+                        "strategy_type": "GENERATED_TEST",
+                        "parameters": {"strategy_gene": gene.to_dict()},
+                    },
+                }
+            elif backtest_config:
+                if config.enable_detailed_logging:
+                    logger.debug(
+                        f"フォールバック: 提供された設定を使用: {backtest_config.get('timeframe', 'N/A')}"
+                    )
+                test_config = {
+                    "strategy_name": f"GA_Generated_{gene.id}",
+                    "symbol": backtest_config.get("symbol", "BTC/USDT"),
+                    "timeframe": backtest_config.get("timeframe", "1d"),
+                    "start_date": backtest_config.get("start_date", "2024-01-01"),
+                    "end_date": backtest_config.get("end_date", "2024-04-09"),
+                    "initial_capital": backtest_config.get("initial_capital", 100000),
+                    "commission_rate": backtest_config.get("commission_rate", 0.001),
                     "strategy_config": {
                         "strategy_type": "GENERATED_TEST",
                         "parameters": {"strategy_gene": gene.to_dict()},

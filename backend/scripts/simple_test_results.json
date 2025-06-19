@@ -1,0 +1,523 @@
+{
+  "test_timestamp": "2025-06-19T21:08:33.071853",
+  "test_type": "simple_strategy_generation",
+  "num_strategies": 10,
+  "strategies": [
+    {
+      "id": "4beb7b53",
+      "indicators": [
+        {
+          "type": "ROCP",
+          "parameters": {
+            "period": 21
+          },
+          "enabled": true
+        },
+        {
+          "type": "NATR",
+          "parameters": {
+            "period": 18
+          },
+          "enabled": true
+        },
+        {
+          "type": "MAMA",
+          "parameters": {
+            "fastlimit": 0.5081650648100485,
+            "slowlimit": 0.046060892106690315
+          },
+          "enabled": true
+        },
+        {
+          "type": "EMA",
+          "parameters": {
+            "period": 21
+          },
+          "enabled": true
+        },
+        {
+          "type": "SMA",
+          "parameters": {
+            "period": 46
+          },
+          "enabled": true
+        }
+      ],
+      "entry_conditions": [
+        {
+          "left_operand": "OpenInterest",
+          "operator": "<=",
+          "right_operand": "NATR_18"
+        },
+        {
+          "left_operand": "low",
+          "operator": "cross_below",
+          "right_operand": 1.0270570405407367
+        }
+      ],
+      "exit_conditions": [
+        {
+          "left_operand": "SMA_46",
+          "operator": ">=",
+          "right_operand": 1.0335789038817318
+        }
+      ],
+      "risk_management": {
+        "stop_loss": 0.04787347430723403,
+        "take_profit": 0.11634701545995635,
+        "position_size": 0.2565030880844881
+      },
+      "metadata": {
+        "generated_by": "RandomGeneGenerator"
+      }
+    },
+    {
+      "id": "159ece5e",
+      "indicators": [
+        {
+          "type": "AVGPRICE",
+          "parameters": {},
+          "enabled": true
+        },
+        {
+          "type": "ROC",
+          "parameters": {
+            "period": 32
+          },
+          "enabled": true
+        },
+        {
+          "type": "BB",
+          "parameters": {
+            "period": 23,
+            "std_dev": 1.5723854858667194
+          },
+          "enabled": true
+        }
+      ],
+      "entry_conditions": [
+        {
+          "left_operand": "OpenInterest",
+          "operator": "<",
+          "right_operand": 1000000
+        },
+        {
+          "left_operand": "close",
+          "operator": "cross_below",
+          "right_operand": "open"
+        }
+      ],
+      "exit_conditions": [
+        {
+          "left_operand": "low",
+          "operator": ">=",
+          "right_operand": 1.0415900837255971
+        },
+        {
+          "left_operand": "close",
+          "operator": "cross_above",
+          "right_operand": 0.9647214961924891
+        }
+      ],
+      "risk_management": {
+        "stop_loss": 0.03301130205964013,
+        "take_profit": 0.05632919928733372,
+        "position_size": 0.16780084208986995
+      },
+      "metadata": {
+        "generated_by": "RandomGeneGenerator"
+      }
+    },
+    {
+      "id": "1d709a7b",
+      "indicators": [
+        {
+          "type": "MFI",
+          "parameters": {
+            "period": 44
+          },
+          "enabled": true
+        }
+      ],
+      "entry_conditions": [
+        {
+          "left_operand": "high",
+          "operator": ">",
+          "right_operand": "open"
+        },
+        {
+          "left_operand": "high",
+          "operator": ">",
+          "right_operand": "close"
+        }
+      ],
+      "exit_conditions": [
+        {
+          "left_operand": "open",
+          "operator": "<",
+          "right_operand": "close"
+        },
+        {
+          "left_operand": "close",
+          "operator": "<",
+          "right_operand": "low"
+        }
+      ],
+      "risk_management": {
+        "stop_loss": 0.03429343414224143,
+        "take_profit": 0.11877329252088348,
+        "position_size": 0.49681577305471436
+      },
+      "metadata": {
+        "generated_by": "RandomGeneGenerator"
+      }
+    },
+    {
+      "id": "3963269c",
+      "indicators": [
+        {
+          "type": "TRIMA",
+          "parameters": {
+            "period": 11
+          },
+          "enabled": true
+        },
+        {
+          "type": "ROC",
+          "parameters": {
+            "period": 30
+          },
+          "enabled": true
+        }
+      ],
+      "entry_conditions": [
+        {
+          "left_operand": "low",
+          "operator": "cross_below",
+          "right_operand": "low"
+        }
+      ],
+      "exit_conditions": [
+        {
+          "left_operand": "volume",
+          "operator": "cross_above",
+          "right_operand": 1.003133704252023
+        },
+        {
+          "left_operand": "close",
+          "operator": ">",
+          "right_operand": "volume"
+        }
+      ],
+      "risk_management": {
+        "stop_loss": 0.04619151070477936,
+        "take_profit": 0.10195132013459277,
+        "position_size": 0.39632097249371523
+      },
+      "metadata": {
+        "generated_by": "RandomGeneGenerator"
+      }
+    },
+    {
+      "id": "b6942424",
+      "indicators": [
+        {
+          "type": "ADX",
+          "parameters": {
+            "period": 27
+          },
+          "enabled": true
+        },
+        {
+          "type": "DONCHIAN",
+          "parameters": {
+            "period": 38
+          },
+          "enabled": true
+        },
+        {
+          "type": "ROCR",
+          "parameters": {
+            "period": 36
+          },
+          "enabled": true
+        }
+      ],
+      "entry_conditions": [
+        {
+          "left_operand": "open",
+          "operator": ">",
+          "right_operand": "ADX_27"
+        }
+      ],
+      "exit_conditions": [
+        {
+          "left_operand": "close",
+          "operator": "cross_above",
+          "right_operand": 1.0057095683678146
+        }
+      ],
+      "risk_management": {
+        "stop_loss": 0.03498028177120712,
+        "take_profit": 0.09673291698856021,
+        "position_size": 0.364980548160467
+      },
+      "metadata": {
+        "generated_by": "RandomGeneGenerator"
+      }
+    },
+    {
+      "id": "165077e4",
+      "indicators": [
+        {
+          "type": "MOM",
+          "parameters": {
+            "period": 28
+          },
+          "enabled": true
+        },
+        {
+          "type": "MIDPOINT",
+          "parameters": {
+            "period": 14
+          },
+          "enabled": true
+        },
+        {
+          "type": "STOCHF",
+          "parameters": {
+            "period": 12,
+            "fastd_period": 5,
+            "fastd_matype": 0
+          },
+          "enabled": true
+        },
+        {
+          "type": "CCI",
+          "parameters": {
+            "period": 48
+          },
+          "enabled": true
+        },
+        {
+          "type": "TRIMA",
+          "parameters": {
+            "period": 45
+          },
+          "enabled": true
+        }
+      ],
+      "entry_conditions": [
+        {
+          "left_operand": "open",
+          "operator": ">=",
+          "right_operand": "high"
+        }
+      ],
+      "exit_conditions": [
+        {
+          "left_operand": "volume",
+          "operator": "<",
+          "right_operand": 0.9947676396717071
+        },
+        {
+          "left_operand": "volume",
+          "operator": ">",
+          "right_operand": 1.004861272888743
+        }
+      ],
+      "risk_management": {
+        "stop_loss": 0.026308155511928555,
+        "take_profit": 0.06405701299938067,
+        "position_size": 0.22018617046222047
+      },
+      "metadata": {
+        "generated_by": "RandomGeneGenerator"
+      }
+    },
+    {
+      "id": "3c4b22a5",
+      "indicators": [
+        {
+          "type": "STOCHF",
+          "parameters": {
+            "period": 13,
+            "fastd_period": 4,
+            "fastd_matype": 0
+          },
+          "enabled": true
+        },
+        {
+          "type": "OBV",
+          "parameters": {},
+          "enabled": true
+        }
+      ],
+      "entry_conditions": [
+        {
+          "left_operand": "OpenInterest",
+          "operator": "cross_above",
+          "right_operand": 1000000
+        }
+      ],
+      "exit_conditions": [
+        {
+          "left_operand": "close",
+          "operator": ">",
+          "right_operand": "open"
+        },
+        {
+          "left_operand": "high",
+          "operator": "cross_below",
+          "right_operand": "close"
+        }
+      ],
+      "risk_management": {
+        "stop_loss": 0.033407428164955365,
+        "take_profit": 0.10148942152811838,
+        "position_size": 0.2878869253205807
+      },
+      "metadata": {
+        "generated_by": "RandomGeneGenerator"
+      }
+    },
+    {
+      "id": "15a24aa1",
+      "indicators": [
+        {
+          "type": "BOP",
+          "parameters": {},
+          "enabled": true
+        }
+      ],
+      "entry_conditions": [
+        {
+          "left_operand": "open",
+          "operator": "<=",
+          "right_operand": "high"
+        }
+      ],
+      "exit_conditions": [
+        {
+          "left_operand": "open",
+          "operator": "<=",
+          "right_operand": "volume"
+        },
+        {
+          "left_operand": "volume",
+          "operator": "cross_above",
+          "right_operand": "volume"
+        }
+      ],
+      "risk_management": {
+        "stop_loss": 0.046303792465429754,
+        "take_profit": 0.1398076865672121,
+        "position_size": 0.43752129599910183
+      },
+      "metadata": {
+        "generated_by": "RandomGeneGenerator"
+      }
+    },
+    {
+      "id": "cd5e133f",
+      "indicators": [
+        {
+          "type": "PLUS_DI",
+          "parameters": {
+            "period": 39
+          },
+          "enabled": true
+        },
+        {
+          "type": "MIDPOINT",
+          "parameters": {
+            "period": 21
+          },
+          "enabled": true
+        },
+        {
+          "type": "ATR",
+          "parameters": {
+            "period": 6
+          },
+          "enabled": true
+        },
+        {
+          "type": "MACD",
+          "parameters": {
+            "fast_period": 18,
+            "slow_period": 20,
+            "signal_period": 14
+          },
+          "enabled": true
+        },
+        {
+          "type": "TRANGE",
+          "parameters": {
+            "period": 9
+          },
+          "enabled": true
+        }
+      ],
+      "entry_conditions": [
+        {
+          "left_operand": "open",
+          "operator": "cross_above",
+          "right_operand": "TRANGE_9"
+        },
+        {
+          "left_operand": "high",
+          "operator": "<",
+          "right_operand": "close"
+        }
+      ],
+      "exit_conditions": [
+        {
+          "left_operand": "TRANGE_9",
+          "operator": ">",
+          "right_operand": "PLUS_DI_39"
+        }
+      ],
+      "risk_management": {
+        "stop_loss": 0.04693515537706096,
+        "take_profit": 0.12466692710704812,
+        "position_size": 0.38548846476349763
+      },
+      "metadata": {
+        "generated_by": "RandomGeneGenerator"
+      }
+    },
+    {
+      "id": "602fd2c0",
+      "indicators": [
+        {
+          "type": "VWAP",
+          "parameters": {},
+          "enabled": true
+        }
+      ],
+      "entry_conditions": [
+        {
+          "left_operand": "FundingRate",
+          "operator": "<=",
+          "right_operand": "VWAP"
+        }
+      ],
+      "exit_conditions": [
+        {
+          "left_operand": "high",
+          "operator": "cross_below",
+          "right_operand": "close"
+        }
+      ],
+      "risk_management": {
+        "stop_loss": 0.03738798113133561,
+        "take_profit": 0.08062643570856196,
+        "position_size": 0.30353857042358406
+      },
+      "metadata": {
+        "generated_by": "RandomGeneGenerator"
+      }
+    }
+  ]
+}
