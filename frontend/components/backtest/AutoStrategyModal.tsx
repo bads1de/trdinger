@@ -6,7 +6,7 @@
 
 "use client";
 
-import React, { useState } from "react";
+import React from "react";
 import { X } from "lucide-react";
 import GAConfigForm from "./GAConfigForm";
 import { GAConfig } from "@/types/optimization";
