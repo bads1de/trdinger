@@ -52,13 +52,13 @@ class GAGenerationRequest(BaseModel):
                     "commission_rate": 0.00055,
                 },
                 "ga_config": {
-                    "population_size": 50,
-                    "generations": 30,
+                    "population_size": 10,
+                    "generations": 5,
                     "crossover_rate": 0.8,
                     "mutation_rate": 0.1,
-                    "elite_size": 5,
-                    "max_indicators": 5,
-                    "allowed_indicators": ["SMA", "EMA", "RSI", "MACD", "BB"],
+                    "elite_size": 2,
+                    "max_indicators": 3,
+                    "allowed_indicators": ["SMA", "EMA", "RSI", "MACD", "BB", "ATR"],
                 },
             }
         }

@@ -19,12 +19,12 @@ class GAConfig:
     GA実行時の全パラメータを管理します。
     """
 
-    # 基本GA設定（パフォーマンス最適化済み）
-    population_size: int = 50  # 個体数（100→50に削減）
-    generations: int = 20  # 世代数（50→20に削減）
+    # 基本GA設定（高速化最適化済み）
+    population_size: int = 10  # 個体数（50→10に高速化）
+    generations: int = 5  # 世代数（20→5に高速化）
     crossover_rate: float = 0.8  # 交叉率
     mutation_rate: float = 0.1  # 突然変異率
-    elite_size: int = 5  # エリート保存数（10→5に削減）
+    elite_size: int = 2  # エリート保存数（5→2に高速化）
 
     # 評価設定
     fitness_weights: Dict[str, float] = field(
@@ -38,7 +38,7 @@ class GAConfig:
     primary_metric: str = "sharpe_ratio"
 
     # 制約条件
-    max_indicators: int = 5  # 最大指標数
+    max_indicators: int = 3  # 最大指標数（5→3に高速化）
     allowed_indicators: List[str] = field(default_factory=lambda: ALL_INDICATORS.copy())
 
     # パラメータ範囲
@@ -237,7 +237,7 @@ class GAConfig:
     @classmethod
     def create_fast(cls) -> "GAConfig":
         """高速実行用設定を作成"""
-        return cls(population_size=30, generations=15, elite_size=3)
+        return cls(population_size=10, generations=5, elite_size=2, max_indicators=3)
 
     @classmethod
     def create_thorough(cls) -> "GAConfig":
