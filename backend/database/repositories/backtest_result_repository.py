@@ -200,6 +200,22 @@ class BacktestResultRepository(BaseRepository):
             self.db.rollback()
             raise Exception(f"Failed to delete backtest result: {str(e)}")
 
+    def delete_all_backtest_results(self) -> int:
+        """
+        すべてのバックテスト結果を削除
+
+        Returns:
+            削除された件数
+        """
+        try:
+            deleted_count = self.db.query(BacktestResult).delete()
+            self.db.commit()
+            return deleted_count
+
+        except Exception as e:
+            self.db.rollback()
+            raise Exception(f"Failed to delete all backtest results: {str(e)}")
+
     def count_backtest_results(
         self, symbol: Optional[str] = None, strategy_name: Optional[str] = None
     ) -> int:

@@ -13,6 +13,7 @@ export const useBacktestResults = () => {
     total: number;
   }>();
   const { execute: deleteResult, loading: deleteLoading } = useApiCall();
+  const { execute: deleteAllResults, loading: deleteAllLoading } = useApiCall();
 
   // 結果一覧を取得
   const loadResults = async () => {
@@ -51,14 +52,33 @@ export const useBacktestResults = () => {
     });
   };
 
+  // すべての結果削除
+  const handleDeleteAllResults = async () => {
+    const response = await deleteAllResults("/api/backtest/results/all", {
+      method: "DELETE",
+      confirmMessage: `すべてのバックテスト結果を削除しますか？\n現在${results.length}件の結果があります。\nこの操作は取り消せません。`,
+      onSuccess: () => {
+        // 削除成功時は一覧を更新
+        loadResults();
+        // 選択中の結果をクリア
+        setSelectedResult(null);
+      },
+      onError: (error) => {
+        console.error("Delete all failed:", error);
+      },
+    });
+  };
+
   return {
     results,
     selectedResult,
     resultsLoading,
     deleteLoading,
+    deleteAllLoading,
     loadResults,
     handleResultSelect,
     handleDeleteResult,
+    handleDeleteAllResults,
     setSelectedResult, // 外部からselectedResultをクリアできるように公開
   };
 };

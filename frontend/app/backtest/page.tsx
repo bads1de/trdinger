@@ -26,9 +26,11 @@ export default function BacktestPage() {
     selectedResult,
     resultsLoading,
     deleteLoading,
+    deleteAllLoading,
     loadResults,
     handleResultSelect,
     handleDeleteResult,
+    handleDeleteAllResults,
     setSelectedResult,
   } = useBacktestResults();
 
@@ -139,13 +141,22 @@ export default function BacktestPage() {
             <div className="bg-secondary-950 rounded-lg p-6 border border-secondary-700">
               <div className="flex justify-between items-center mb-4">
                 <h2 className="text-xl font-semibold">バックテスト結果一覧</h2>
-                <button
-                  onClick={loadResults}
-                  disabled={resultsLoading}
-                  className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50"
-                >
-                  {resultsLoading ? "読み込み中..." : "更新"}
-                </button>
+                <div className="flex gap-2">
+                  <button
+                    onClick={loadResults}
+                    disabled={resultsLoading}
+                    className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50"
+                  >
+                    {resultsLoading ? "読み込み中..." : "更新"}
+                  </button>
+                  <button
+                    onClick={handleDeleteAllResults}
+                    disabled={deleteAllLoading || results.length === 0}
+                    className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 disabled:opacity-50"
+                  >
+                    {deleteAllLoading ? "削除中..." : "すべて削除"}
+                  </button>
+                </div>
               </div>
               <BacktestResultsTable
                 results={results}

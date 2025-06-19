@@ -177,6 +177,31 @@ async def get_backtest_results(
     return await APIErrorHandler.handle_api_exception(_get_results)
 
 
+@router.delete("/results-all")
+async def delete_all_backtest_results(db: Session = Depends(get_db)):
+    """
+    すべてのバックテスト結果を削除
+
+    Args:
+        db: データベースセッション
+
+    Returns:
+        削除結果
+    """
+
+    async def _delete_all_results():
+        backtest_repo = BacktestResultRepository(db)
+        deleted_count = backtest_repo.delete_all_backtest_results()
+
+        return {
+            "success": True,
+            "message": f"All backtest results deleted successfully ({deleted_count} records)",
+            "deleted_count": deleted_count,
+        }
+
+    return await APIErrorHandler.handle_api_exception(_delete_all_results)
+
+
 @router.get("/results/{result_id}", response_model=BacktestResponse)
 async def get_backtest_result_by_id(result_id: int, db: Session = Depends(get_db)):
     """

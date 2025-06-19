@@ -305,6 +305,32 @@ class TestBacktestAPI:
             assert data["success"] is True
             assert "deleted" in data["message"].lower()
 
+    def test_delete_all_backtest_results_success(self, client):
+        """バックテスト結果一括削除成功テスト"""
+        with (
+            patch("app.api.backtest.get_db") as mock_get_db,
+            patch("app.api.backtest.BacktestResultRepository") as mock_repo_class,
+        ):
+
+            # モックの設定
+            mock_db = Mock()
+            mock_get_db.return_value.__enter__.return_value = mock_db
+
+            mock_repo = Mock()
+            mock_repo_class.return_value = mock_repo
+            mock_repo.delete_all_backtest_results.return_value = 5
+
+            # APIリクエスト実行
+            response = client.delete("/api/backtest/results-all")
+
+            # レスポンス検証
+            assert response.status_code == 200
+            data = response.json()
+
+            assert data["success"] is True
+            assert data["deleted_count"] == 5
+            assert "deleted" in data["message"].lower()
+
     def test_delete_backtest_result_not_found(self, client):
         """存在しないバックテスト結果削除テスト"""
         with (
