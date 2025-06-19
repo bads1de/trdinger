@@ -13,6 +13,7 @@ import { BacktestResult } from "@/types/backtest";
 
 interface PerformanceMetricsProps {
   result: BacktestResult;
+  onOptimizationClick?: () => void;
 }
 
 interface MetricCardProps {
@@ -35,7 +36,7 @@ function MetricCard({
     red: "bg-red-900/20 border-red-500/30 text-red-400",
     blue: "bg-blue-900/20 border-blue-500/30 text-blue-400",
     yellow: "bg-yellow-900/20 border-yellow-500/30 text-yellow-400",
-    gray: "bg-secondary-900/50 border-secondary-600 text-gray-300" /* 黒に変更 */,
+    gray: "bg-secondary-900/50 border-secondary-600 text-gray-300",
   };
 
   return (
@@ -54,19 +55,18 @@ function MetricCard({
 
 // タブボタンコンポーネント
 interface TabButtonProps {
-  id: string;
   label: string;
   isActive: boolean;
   onClick: () => void;
 }
 
-function TabButton({ id, label, isActive, onClick }: TabButtonProps) {
+function TabButton({ label, isActive, onClick }: TabButtonProps) {
   return (
     <button
       onClick={onClick}
       className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
         isActive
-          ? "bg-secondary-900 text-white" /* 黒に変更 */
+          ? "bg-secondary-900 text-white"
           : "bg-gray-800 text-gray-300 hover:bg-gray-700 hover:text-white"
       }`}
     >
@@ -77,6 +77,7 @@ function TabButton({ id, label, isActive, onClick }: TabButtonProps) {
 
 export default function PerformanceMetrics({
   result,
+  onOptimizationClick,
 }: PerformanceMetricsProps) {
   const { performance_metrics: metrics } = result;
   const [activeTab, setActiveTab] = useState<"overview" | "trades">("overview");
@@ -144,40 +145,48 @@ export default function PerformanceMetrics({
       <div className="flex items-center justify-between mb-6">
         <div className="flex space-x-1">
           <TabButton
-            id="overview"
             label="概要"
             isActive={activeTab === "overview"}
             onClick={() => setActiveTab("overview")}
           />
           <TabButton
-            id="trades"
             label="取引履歴"
             isActive={activeTab === "trades"}
             onClick={() => setActiveTab("trades")}
           />
         </div>
 
-        {/* チャート表示ボタン */}
-        <button
-          onClick={() => setIsChartModalOpen(true)}
-          className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors flex items-center space-x-2"
-          title="チャート分析を表示"
-        >
-          <svg
-            className="w-4 h-4"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
+        {/* ボタングループ */}
+        <div className="flex items-center space-x-3">
+          {onOptimizationClick && (
+            <button
+              onClick={onOptimizationClick}
+              className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors font-medium text-sm"
+            >
+              🔧 最適化
+            </button>
+          )}
+          <button
+            onClick={() => setIsChartModalOpen(true)}
+            className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors flex items-center space-x-2"
+            title="チャート分析を表示"
           >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
-            />
-          </svg>
-          <span>分析</span>
-        </button>
+            <svg
+              className="w-4 h-4"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
+              />
+            </svg>
+            <span>分析</span>
+          </button>
+        </div>
       </div>
 
       {/* タブコンテンツ */}
@@ -185,8 +194,6 @@ export default function PerformanceMetrics({
         <div className="space-y-6">
           {/* 基本情報 */}
           <div className="bg-secondary-900/30 rounded-lg p-4 border border-secondary-700">
-            {" "}
-            {/* 黒に変更 */}
             <h3 className="text-lg font-semibold mb-3 text-white">基本情報</h3>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
               <div>
@@ -393,8 +400,6 @@ export default function PerformanceMetrics({
       {activeTab === "trades" && (
         <div className="space-y-6">
           <div className="bg-secondary-900/30 rounded-lg p-4 border border-secondary-700">
-            {" "}
-            {/* 黒に変更 */}
             <h3 className="text-lg font-semibold mb-4 text-white">
               取引履歴詳細
             </h3>
