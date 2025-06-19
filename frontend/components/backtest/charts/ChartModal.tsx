@@ -58,7 +58,7 @@ const TabButton: React.FC<{
     className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
       isActive
         ? "bg-blue-600 text-white"
-        : "bg-gray-800 text-gray-300 hover:bg-gray-700 hover:text-white"
+        : "bg-gray-950 text-gray-300 hover:bg-gray-900 hover:text-white"
     }`}
     title={tab.description}
   >
@@ -118,16 +118,15 @@ const ChartModal: React.FC<ChartModalProps> = ({ isOpen, onClose, result }) => {
 
   // レスポンシブ対応のクラス
   const modalClasses = `
-    fixed inset-0 z-50 flex items-center justify-center p-4
-    sm:p-6 md:p-8
+    fixed inset-0 z-50 flex items-center justify-center
   `;
 
   const contentClasses = `
-    bg-gray-900 rounded-lg shadow-2xl border border-gray-700
-    w-full h-full max-w-7xl max-h-[90vh]
-    sm:w-full sm:h-auto sm:max-h-[85vh]
-    md:w-[95vw] md:h-[85vh]
-    lg:w-[90vw] lg:h-[80vh]
+    bg-black rounded-lg shadow-2xl border border-gray-800
+    w-screen h-screen
+    sm:w-screen sm:h-screen
+    md:w-screen md:h-screen
+    lg:w-screen lg:h-screen
     flex flex-col
   `;
 
@@ -144,7 +143,7 @@ const ChartModal: React.FC<ChartModalProps> = ({ isOpen, onClose, result }) => {
         onClick={(e) => e.stopPropagation()}
       >
         {/* ヘッダー */}
-        <div className="flex items-center justify-between p-6 border-b border-gray-700">
+        <div className="flex items-center justify-between p-4 border-b border-gray-800">
           <div>
             <h2 className="text-xl font-semibold text-white">チャート分析</h2>
             <p className="text-sm text-gray-400 mt-1">
@@ -154,7 +153,7 @@ const ChartModal: React.FC<ChartModalProps> = ({ isOpen, onClose, result }) => {
           <button
             data-testid="close-button"
             onClick={onClose}
-            className="p-2 text-gray-400 hover:text-white hover:bg-gray-800 rounded-lg transition-colors"
+            className="p-2 text-gray-400 hover:text-white hover:bg-gray-900 rounded-lg transition-colors"
             title="閉じる"
           >
             <svg
@@ -174,7 +173,7 @@ const ChartModal: React.FC<ChartModalProps> = ({ isOpen, onClose, result }) => {
         </div>
 
         {/* タブナビゲーション */}
-        <div className="flex space-x-1 p-6 pb-0">
+        <div className="flex space-x-1 p-4 pb-0">
           {tabs.map((tab) => (
             <TabButton
               key={tab.id}
@@ -186,7 +185,7 @@ const ChartModal: React.FC<ChartModalProps> = ({ isOpen, onClose, result }) => {
         </div>
 
         {/* チャートコンテンツ */}
-        <div className="flex-1 p-6 overflow-auto">
+        <div className="flex-1 h-full">
           {activeTab === "equity" && (
             <EquityCurveChart
               data={chartData.equity}
@@ -197,7 +196,6 @@ const ChartModal: React.FC<ChartModalProps> = ({ isOpen, onClose, result }) => {
               showBuyHold={!!result.performance_metrics.buy_hold_return}
               title="資産曲線"
               subtitle="時系列での資産推移とBuy & Hold比較"
-              height={500}
             />
           )}
 
@@ -209,7 +207,6 @@ const ChartModal: React.FC<ChartModalProps> = ({ isOpen, onClose, result }) => {
               }
               title="ドローダウン分析"
               subtitle="最大下落期間と回復パターンの可視化"
-              height={500}
             />
           )}
 
@@ -218,7 +215,6 @@ const ChartModal: React.FC<ChartModalProps> = ({ isOpen, onClose, result }) => {
               data={chartData.trades}
               title="取引分析"
               subtitle="利益/損失の分布と取引パフォーマンス"
-              height={500}
             />
           )}
 
@@ -227,13 +223,12 @@ const ChartModal: React.FC<ChartModalProps> = ({ isOpen, onClose, result }) => {
               data={result.trade_history || []}
               title="リターン分布"
               subtitle="取引リターンの統計分布と正規性の検証"
-              height={500}
             />
           )}
         </div>
 
         {/* フッター（統計情報） */}
-        <div className="p-6 pt-0 border-t border-gray-700">
+        <div className="p-4 pt-0 border-t border-gray-800">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
             <div className="text-center">
               <div className="text-gray-400">総リターン</div>
