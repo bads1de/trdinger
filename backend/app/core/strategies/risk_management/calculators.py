@@ -67,35 +67,35 @@ def calculate_sl_tp_prices(
 
         # 価格の妥当性チェック
         if sl_price is not None and sl_price <= 0:
-            logger.warning(f"Invalid stop loss price: {sl_price}")
+            logger.warning(f"無効なストップロス価格: {sl_price}")
             sl_price = None
 
         if tp_price is not None and tp_price <= 0:
-            logger.warning(f"Invalid take profit price: {tp_price}")
+            logger.warning(f"無効なテイクプロフィット価格: {tp_price}")
             tp_price = None
 
         # ロング/ショートの論理チェック
         if is_long:
             if sl_price is not None and sl_price >= entry_price:
                 logger.warning(
-                    f"Long stop loss {sl_price} should be below entry {entry_price}"
+                    f"ロングのストップロス {sl_price} はエントリー価格 {entry_price} より下である必要があります。"
                 )
             if tp_price is not None and tp_price <= entry_price:
                 logger.warning(
-                    f"Long take profit {tp_price} should be above entry {entry_price}"
+                    f"ロングのテイクプロフィット {tp_price} はエントリー価格 {entry_price} より上である必要があります。"
                 )
         else:
             if sl_price is not None and sl_price <= entry_price:
                 logger.warning(
-                    f"Short stop loss {sl_price} should be above entry {entry_price}"
+                    f"ショートのストップロス {sl_price} はエントリー価格 {entry_price} より上である必要があります。"
                 )
             if tp_price is not None and tp_price >= entry_price:
                 logger.warning(
-                    f"Short take profit {tp_price} should be below entry {entry_price}"
+                    f"ショートのテイクプロフィット {tp_price} はエントリー価格 {entry_price} より下である必要があります。"
                 )
 
     except Exception as e:
-        logger.error(f"Error calculating SL/TP prices: {e}")
+        logger.error(f"SL/TP価格の計算中にエラーが発生しました: {e}")
         return None, None
 
     return sl_price, tp_price
@@ -204,7 +204,7 @@ class RiskCalculator:
             return sl_price, tp_price
 
         except Exception as e:
-            logger.error(f"Error calculating ATR-based SL/TP: {e}")
+            logger.error(f"ATRベースのSL/TP計算中にエラーが発生しました: {e}")
             return None, None
 
     def calculate_risk_reward_ratio(
@@ -231,13 +231,13 @@ class RiskCalculator:
                 reward = entry_price - tp_price
 
             if risk <= 0:
-                logger.warning(f"Invalid risk value: {risk}")
+                logger.warning(f"無効なリスク値: {risk}")
                 return None
 
             return reward / risk
 
         except Exception as e:
-            logger.error(f"Error calculating risk-reward ratio: {e}")
+            logger.error(f"リスクリワード比率の計算中にエラーが発生しました: {e}")
             return None
 
     def calculate_kelly_criterion(
@@ -263,11 +263,11 @@ class RiskCalculator:
         """
         try:
             if not (0 <= win_rate <= 1):
-                logger.warning(f"Invalid win rate: {win_rate}")
+                logger.warning(f"無効な勝率: {win_rate}")
                 return None
 
             if avg_win <= 0 or avg_loss <= 0:
-                logger.warning(f"Invalid avg_win or avg_loss: {avg_win}, {avg_loss}")
+                logger.warning(f"無効な平均利益または平均損失: {avg_win}, {avg_loss}")
                 return None
 
             # オッズ比（平均利益/平均損失）
@@ -284,7 +284,7 @@ class RiskCalculator:
             return kelly_ratio
 
         except Exception as e:
-            logger.error(f"Error calculating Kelly criterion: {e}")
+            logger.error(f"Kelly Criterionの計算中にエラーが発生しました: {e}")
             return None
 
     def calculate_optimal_position_size(
@@ -312,14 +312,14 @@ class RiskCalculator:
             # 入力値の検証
             if current_equity <= 0 or entry_price <= 0:
                 logger.warning(
-                    f"Invalid equity or entry price: {current_equity}, {entry_price}"
+                    f"無効な資産額またはエントリー価格: {current_equity}, {entry_price}"
                 )
                 return None
 
             if method == "fixed_ratio":
                 ratio = kwargs.get("ratio", 0.02)  # 2%
                 if ratio <= 0 or ratio >= 1:
-                    logger.warning(f"Invalid ratio: {ratio}")
+                    logger.warning(f"無効な比率: {ratio}")
                     return None
                 size = (current_equity * ratio) / entry_price
                 return max(0, min(size, 0.9999))  # 0-99.99%の範囲に制限
@@ -327,12 +327,12 @@ class RiskCalculator:
             elif method == "fixed_risk":
                 risk_amount = kwargs.get("risk_amount", current_equity * 0.01)  # 1%
                 if sl_price is None:
-                    logger.warning("Stop loss price required for fixed_risk method")
+                    logger.warning("fixed_riskメソッドにはストップロス価格が必要です。")
                     return None
 
                 risk_per_share = abs(entry_price - sl_price)
                 if risk_per_share <= 0:
-                    logger.warning(f"Invalid risk per share: {risk_per_share}")
+                    logger.warning(f"無効な1株あたりのリスク: {risk_per_share}")
                     return None
 
                 size = risk_amount / risk_per_share / entry_price  # 株数を比率に変換
@@ -347,7 +347,7 @@ class RiskCalculator:
                     win_rate, avg_win, avg_loss
                 )
                 if kelly_ratio is None or kelly_ratio <= 0:
-                    logger.warning(f"Invalid Kelly ratio: {kelly_ratio}")
+                    logger.warning(f"無効なKelly比率: {kelly_ratio}")
                     return None
 
                 # Kelly比率を保守的に調整（通常は1/2 Kelly）
@@ -359,9 +359,7 @@ class RiskCalculator:
                 # Ralph Vince's Optimal F
                 trade_history = kwargs.get("trade_history", [])
                 if len(trade_history) < 10:
-                    logger.warning(
-                        "Insufficient trade history for Optimal F calculation"
-                    )
+                    logger.warning("Optimal F計算には十分な取引履歴がありません。")
                     return None
 
                 optimal_f = self.calculate_optimal_f(trade_history)
@@ -426,11 +424,11 @@ class RiskCalculator:
                 return max(0, min(size, 0.9999))
 
             else:
-                logger.warning(f"Unknown position sizing method: {method}")
+                logger.warning(f"不明なポジションサイジングメソッド: {method}")
                 return None
 
         except Exception as e:
-            logger.error(f"Error calculating optimal position size: {e}")
+            logger.error(f"最適なポジションサイズの計算中にエラーが発生しました: {e}")
             return None
 
     def calculate_optimal_f(self, trade_history: list) -> Optional[float]:
@@ -450,7 +448,7 @@ class RiskCalculator:
             # 最大損失を取得
             max_loss = min(trade_history)
             if max_loss >= 0:
-                logger.warning("No losses in trade history for Optimal F calculation")
+                logger.warning("Optimal F計算には取引履歴に損失がありません。")
                 return None
 
             # 最適Fを計算（簡略版）
@@ -481,5 +479,5 @@ class RiskCalculator:
             return max(0, min(conservative_f, 0.5))  # 最大50%に制限
 
         except Exception as e:
-            logger.error(f"Error calculating Optimal F: {e}")
+            logger.error(f"Optimal Fの計算中にエラーが発生しました: {e}")
             return None

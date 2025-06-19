@@ -73,14 +73,14 @@ class RiskManagementMixin(Strategy):
             self._trade_history = []
 
             logger.info(
-                f"Risk management setup: SL={self._default_sl_pct:.1%}, TP={self._default_tp_pct:.1%}"
+                f"リスク管理をセットアップしました: SL={self._default_sl_pct:.1%}, TP={self._default_tp_pct:.1%}"
             )
             logger.info(
-                f"Min R:R ratio: {self._min_risk_reward_ratio}, Kelly: {self._use_kelly_criterion}"
+                f"最小リスクリワード比率: {self._min_risk_reward_ratio}, Kelly基準: {self._use_kelly_criterion}"
             )
 
         except Exception as e:
-            logger.error(f"Error setting up risk management: {e}")
+            logger.error(f"リスク管理の設定中にエラーが発生しました: {e}")
             raise
 
     def buy_with_risk_management(
@@ -118,7 +118,7 @@ class RiskManagementMixin(Strategy):
                 )
                 if rr_ratio and rr_ratio < self._min_risk_reward_ratio:
                     logger.warning(
-                        f"Risk-reward ratio {rr_ratio:.2f} below minimum {self._min_risk_reward_ratio}"
+                        f"リスクリワード比率 {rr_ratio:.2f} が最小値 {self._min_risk_reward_ratio} を下回っています。"
                     )
                     return None
 
@@ -138,13 +138,13 @@ class RiskManagementMixin(Strategy):
 
             if order:
                 logger.info(
-                    f"Buy order placed: Price={current_price:.2f}, Size={size:.4f}, SL={final_sl}, TP={final_tp}"
+                    f"買い注文が実行されました: 価格={current_price:.2f}, サイズ={size:.4f}, SL={final_sl}, TP={final_tp}"
                 )
 
             return order
 
         except Exception as e:
-            logger.error(f"Error placing buy order with risk management: {e}")
+            logger.error(f"リスク管理付き買い注文の実行中にエラーが発生しました: {e}")
             return None
 
     def sell_with_risk_management(
@@ -180,13 +180,13 @@ class RiskManagementMixin(Strategy):
 
             if order:
                 logger.info(
-                    f"Sell order placed: Price={current_price:.2f}, SL={final_sl}, TP={final_tp}"
+                    f"売り注文が実行されました: 価格={current_price:.2f}, SL={final_sl}, TP={final_tp}"
                 )
 
             return order
 
         except Exception as e:
-            logger.error(f"Error placing sell order with risk management: {e}")
+            logger.error(f"リスク管理付き売り注文の実行中にエラーが発生しました: {e}")
             return None
 
     def update_trailing_stop(self, atr_multiplier: float = 2.0):
@@ -209,7 +209,7 @@ class RiskManagementMixin(Strategy):
                     if trade.sl is None or new_sl > trade.sl:
                         trade.sl = new_sl
                         logger.debug(
-                            f"Updated trailing stop for long trade: {new_sl:.2f}"
+                            f"ロングトレードのトレーリングストップを更新しました: {new_sl:.2f}"
                         )
 
                 elif trade.is_short:
@@ -218,11 +218,11 @@ class RiskManagementMixin(Strategy):
                     if trade.sl is None or new_sl < trade.sl:
                         trade.sl = new_sl
                         logger.debug(
-                            f"Updated trailing stop for short trade: {new_sl:.2f}"
+                            f"ショートトレードのトレーリングストップを更新しました: {new_sl:.2f}"
                         )
 
         except Exception as e:
-            logger.error(f"Error updating trailing stop: {e}")
+            logger.error(f"トレーリングストップの更新中にエラーが発生しました: {e}")
 
     def _calculate_sl_tp_for_order(
         self,
@@ -274,7 +274,7 @@ class RiskManagementMixin(Strategy):
                 )
 
         except Exception as e:
-            logger.error(f"Error calculating SL/TP for order: {e}")
+            logger.error(f"注文のSL/TP計算中にエラーが発生しました: {e}")
             return None, None
 
     def get_risk_metrics(self) -> Dict[str, Any]:
@@ -322,7 +322,7 @@ class RiskManagementMixin(Strategy):
             return metrics
 
         except Exception as e:
-            logger.error(f"Error getting risk metrics: {e}")
+            logger.error(f"リスク指標の取得中にエラーが発生しました: {e}")
             return {}
 
     def _calculate_optimal_position_size(
@@ -375,7 +375,7 @@ class RiskManagementMixin(Strategy):
                 )
 
         except Exception as e:
-            logger.error(f"Error calculating optimal position size: {e}")
+            logger.error(f"最適なポジションサイズの計算中にエラーが発生しました: {e}")
             return None
 
     def _calculate_trade_statistics(self) -> tuple:
@@ -400,7 +400,7 @@ class RiskManagementMixin(Strategy):
             return win_rate, avg_win, avg_loss
 
         except Exception as e:
-            logger.error(f"Error calculating trade statistics: {e}")
+            logger.error(f"取引統計の計算中にエラーが発生しました: {e}")
             return 0.5, 0.05, 0.02
 
     def update_trade_history(self, trade_result: float):
@@ -418,4 +418,4 @@ class RiskManagementMixin(Strategy):
                 self._trade_history = self._trade_history[-100:]
 
         except Exception as e:
-            logger.error(f"Error updating trade history: {e}")
+            logger.error(f"取引履歴の更新中にエラーが発生しました: {e}")

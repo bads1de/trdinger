@@ -166,10 +166,10 @@ class AdvancedRiskManagementStrategy(RiskManagementMixin, Strategy):
             position_sizing_method=self.position_sizing_method,
         )
 
-        logger.info("Advanced Risk Management Strategy initialized")
-        logger.info(f"Kelly Criterion: {self.use_kelly_criterion}")
-        logger.info(f"Min R:R Ratio: {self.min_risk_reward_ratio}")
-        logger.info(f"Position Sizing: {self.position_sizing_method}")
+        logger.info("高度なリスク管理戦略が初期化されました")
+        logger.info(f"ケリー基準: {self.use_kelly_criterion}")
+        logger.info(f"最小リスクリワード比率: {self.min_risk_reward_ratio}")
+        logger.info(f"ポジションサイジング: {self.position_sizing_method}")
 
     def next(self):
         """売買ロジック"""
@@ -190,7 +190,9 @@ class AdvancedRiskManagementStrategy(RiskManagementMixin, Strategy):
         if crossover(self.sma1, self.sma2):  # type: ignore
             # RSIフィルター（買われすぎでない場合のみエントリー）
             if self.use_rsi_filter and current_rsi > self.rsi_overbought:
-                logger.debug(f"Buy signal ignored: RSI overbought ({current_rsi:.1f})")
+                logger.debug(
+                    f"買いシグナルは無視されました: RSIが買われすぎです ({current_rsi:.1f})"
+                )
                 return
 
             # ATRベースまたはパーセンテージベースのリスク管理
@@ -207,11 +209,11 @@ class AdvancedRiskManagementStrategy(RiskManagementMixin, Strategy):
                     # ATRベースの注文
                     self.buy(sl=sl_price, tp=tp_price)
                     logger.info(
-                        f"ATR-based buy: Price={current_price:.2f}, SL={sl_price:.2f}, TP={tp_price:.2f}, R:R={rr_ratio:.2f}"
+                        f"ATRベース買い: 価格={current_price:.2f}, SL={sl_price:.2f}, TP={tp_price:.2f}, R:R={rr_ratio:.2f}"
                     )
                 else:
                     logger.debug(
-                        f"ATR-based buy rejected: R:R ratio {rr_ratio:.2f} below minimum"
+                        f"ATRベース買いは却下されました: リスクリワード比率 {rr_ratio:.2f} が最小値を下回っています。"
                     )
             else:
                 # パーセンテージベースのリスク管理
@@ -225,7 +227,7 @@ class AdvancedRiskManagementStrategy(RiskManagementMixin, Strategy):
                     self.update_trade_history(self.position.pl_pct)
 
                 self.position.close()
-                logger.info("Position closed on dead cross")
+                logger.info("デッドクロスでポジションをクローズしました。")
 
 
 class ConservativeRiskManagementStrategy(AdvancedRiskManagementStrategy):
@@ -249,7 +251,7 @@ class ConservativeRiskManagementStrategy(AdvancedRiskManagementStrategy):
     def init(self):
         """保守的戦略の初期化"""
         super().init()
-        logger.info("Conservative Risk Management Strategy initialized")
+        logger.info("保守的なリスク管理戦略が初期化されました")
 
 
 class AggressiveRiskManagementStrategy(AdvancedRiskManagementStrategy):
@@ -274,4 +276,4 @@ class AggressiveRiskManagementStrategy(AdvancedRiskManagementStrategy):
     def init(self):
         """アグレッシブ戦略の初期化"""
         super().init()
-        logger.info("Aggressive Risk Management Strategy initialized")
+        logger.info("攻撃的なリスク管理戦略が初期化されました")
