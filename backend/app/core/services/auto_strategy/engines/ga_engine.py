@@ -124,15 +124,23 @@ class GeneticAlgorithmEngine:
             "population", tools.initRepeat, list, self.toolbox.individual  # type: ignore
         )
 
-        # 評価関数（バックテスト設定は run_evolution で設定済み）
-        # self._current_backtest_config = None
+        # 評価関数: 個体の適応度を計算する関数。
+        # GAの各世代で個々の戦略（個体）がどれだけ優れているかを評価するために使用されます。
+        # _evaluate_individual_wrapper を介して、GA実行時に固定されたバックテスト設定を渡し、
+        # 全ての個体が同じ基準で評価されるようにします。
         self.toolbox.register(
             "evaluate", self._evaluate_individual_wrapper, config=config
         )
 
-        # 選択・交叉・突然変異
+        # 交叉関数: 2つの個体から子孫を生成する関数。cxTwoPointは二点交叉を行います。
         self.toolbox.register("mate", tools.cxTwoPoint)
+        # 突然変異関数: 個体の遺伝子にランダムな変更を加える関数。
+        # mutGaussianはガウス分布に基づき遺伝子値を変更し、探索の多様性を維持します。
+        # mu: 平均, sigma: 標準偏差, indpb: 各遺伝子が突然変異する独立確率
         self.toolbox.register("mutate", tools.mutGaussian, mu=0, sigma=0.1, indpb=0.1)
+        # 選択関数: 次世代の個体群を選択する関数。
+        # selTournamentはトーナメント方式で、集団からランダムに個体を選び、
+        # 最も優れた個体を次世代に引き継ぎます。tournsizeはトーナメントの参加個体数。
         self.toolbox.register("select", tools.selTournament, tournsize=3)
 
         # 制約条件の適用
@@ -590,10 +598,17 @@ class GeneticAlgorithmEngine:
     def _evaluate_individual_wrapper(
         self, individual: List[float], config: GAConfig
     ) -> Tuple[float]:
-        """評価関数のラッパー（バックテスト設定を渡す）"""
-        logger.info(f"評価ラッパー呼び出し: {len(individual)}個の遺伝子")
+        """
+        評価関数のラッパー（バックテスト設定を渡す）
+
+        DEAPの評価関数は追加の引数を直接受け取れないため、このラッパーを介して
+        _current_backtest_config (GA実行時に固定されたバックテスト設定) を渡します。
+        これにより、各個体の評価が同じバックテスト環境で行われることを保証します。
+        """
+        logger.debug(f"評価ラッパー呼び出し: {len(individual)}個の遺伝子")
+        # _evaluate_individual メソッドを呼び出し、個体、GA設定、現在のバックテスト設定を渡します。
         return self._evaluate_individual(
-            individual, config, self._current_backtest_config
+            individual, config, self._fixed_backtest_config
         )
 
     def _calculate_fitness(
@@ -629,7 +644,8 @@ class GeneticAlgorithmEngine:
             if sharpe_ratio < constraints.get("min_sharpe_ratio", -1.0):
                 return 0.0
 
-            # 強化されたフィットネス計算（GA真の目的に特化）
+            # フィットネス計算: バックテスト結果の各指標を正規化し、重み付けして最終的な適応度を算出します。
+            # このスコアが高いほど、その戦略が「良い」と判断されます。
             fitness = 0.0
             weights = config.fitness_weights
 
@@ -652,14 +668,13 @@ class GeneticAlgorithmEngine:
             # 4. 勝率正規化: 0〜100% → 0〜1
             normalized_win_rate = max(0, min(1, win_rate))
 
-            # 重み付き合計（GA真の目的に重点）
+            # 重み付き合計: 正規化された各指標に重みを掛けて合計し、フィットネス値を計算します。
+            # GAの目的に合わせて、リターンとシャープレシオ（リスク調整後リターン）を特に重視しています。
             fitness = (
-                weights.get("total_return", 0.35) * normalized_return  # リターン重視
-                + weights.get("sharpe_ratio", 0.35)
-                * normalized_sharpe  # シャープレシオ重視
-                + weights.get("max_drawdown", 0.25)
-                * normalized_drawdown  # ドローダウン重視
-                + weights.get("win_rate", 0.05) * normalized_win_rate  # 勝率は参考程度
+                weights.get("total_return", 0.35) * normalized_return
+                + weights.get("sharpe_ratio", 0.35) * normalized_sharpe
+                + weights.get("max_drawdown", 0.25) * normalized_drawdown
+                + weights.get("win_rate", 0.05) * normalized_win_rate
             )
 
             # ボーナス: 優秀な戦略への追加評価
@@ -675,11 +690,24 @@ class GeneticAlgorithmEngine:
             return 0.0
 
     def _apply_constraints(self, func):
-        """制約条件を適用するデコレータ"""
+        """
+        制約条件を適用するデコレータ
+
+        交叉 (mate) や突然変異 (mutate) の結果生成された個体が、
+        定義された制約条件 (例: パラメータの有効範囲、指標の組み合わせルールなど) を
+        満たしているかを検証し、必要に応じて修正または無効化します。
+        これにより、GAが現実的で有効な戦略のみを探索するように誘導します。
+        """
 
         def wrapper(*args, **kwargs):
+            # 元の関数 (mate または mutate) を実行し、結果を取得
             result = func(*args, **kwargs)
-            # TODO: 制約条件の実装（パラメータ範囲チェック等）
+            # ここに具体的な制約条件のロジックを実装します。
+            # 例:
+            # for ind in result:
+            #     if not self.strategy_factory.validate_gene(decode_list_to_gene(ind))[0]:
+            #         # 無効な個体の場合、修正するか、適応度を0にするなどの処理
+            #         # 現状はデコレータとして機能するが、具体的な制約ロジックは未実装
             return result
 
         return wrapper
@@ -690,10 +718,16 @@ class GeneticAlgorithmEngine:
         offspring: List,
         elite_size: int,
     ) -> List:
-        """エリート保存戦略を適用"""
-        # 親世代から上位elite_size個体を保存
+        """
+        エリート保存戦略を適用
+
+        遺伝的アルゴリズムにおいて、最も適応度の高い個体 (エリート) を
+        次世代に直接引き継ぐことで、優れた遺伝子情報が失われるのを防ぎ、
+        収束を早める効果があります。
+        """
+        # 親世代の個体を適応度が高い順にソートし、上位 elite_size 個体をエリートとして選出
         population.sort(key=lambda x: x.fitness.values[0], reverse=True)
-        elite = population[:elite_size]
+        elite = population[:elite_size]  # 最も優れた個体群
 
         # 子世代から残りの個体を選択
         offspring.sort(key=lambda x: x.fitness.values[0], reverse=True)
@@ -706,7 +740,15 @@ class GeneticAlgorithmEngine:
     def _create_progress_info(
         self, config: GAConfig, population: List, experiment_id: str
     ) -> GAProgress:
-        """進捗情報を作成"""
+        """
+        進捗情報を作成
+
+        GAの現在の世代、最高適応度、平均適応度、経過時間、推定残り時間などの
+        情報を集約し、GAProgress オブジェクトとして返します。
+        これにより、外部システム (例: フロントエンド) がGAの進行状況を
+        リアルタイムで把握できるようになります。
+        """
+        # 現在の個体群から有効な適応度を持つ個体の適応度リストを抽出
         fitnesses = [ind.fitness.values[0] for ind in population if ind.fitness.valid]
 
         best_fitness = max(fitnesses) if fitnesses else 0.0

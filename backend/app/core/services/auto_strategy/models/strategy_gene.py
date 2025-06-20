@@ -228,20 +228,36 @@ class StrategyGene:
     v1仕様: 最大5指標、単純条件のみ
     """
 
-    id: str = ""
-    indicators: List[IndicatorGene] = field(default_factory=list)
-    entry_conditions: List[Condition] = field(default_factory=list)
-    exit_conditions: List[Condition] = field(default_factory=list)
-    risk_management: Dict[str, float] = field(default_factory=dict)
-    metadata: Dict[str, Any] = field(default_factory=dict)
+    id: str = ""  # 戦略遺伝子の一意なID
+    indicators: List[IndicatorGene] = field(
+        default_factory=list
+    )  # 使用するテクニカル指標のリスト
+    entry_conditions: List[Condition] = field(
+        default_factory=list
+    )  # エントリー（買い/売り）条件のリスト
+    exit_conditions: List[Condition] = field(
+        default_factory=list
+    )  # エグジット（決済）条件のリスト
+    risk_management: Dict[str, float] = field(
+        default_factory=dict
+    )  # リスク管理設定（例: ストップロス、テイクプロフィット）
+    metadata: Dict[str, Any] = field(
+        default_factory=dict
+    )  # その他のメタデータ（例: 生成日時、フィットネススコアなど）
 
     # v1制約
     MAX_INDICATORS = 5
 
     def __post_init__(self):
-        """初期化後の処理"""
+        """
+        初期化後の処理
+
+        StrategyGene オブジェクトが作成された後に自動的に呼び出されます。
+        もしIDが指定されていない場合、UUID (Universally Unique Identifier) を生成し、
+        戦略遺伝子に一意なIDを割り当てます。
+        """
         if not self.id:
-            import uuid
+            import uuid  # UUID生成のためのモジュールをインポート
 
             self.id = str(uuid.uuid4())[:8]
 
@@ -283,14 +299,20 @@ class StrategyGene:
         return len(errors) == 0, errors
 
     def to_dict(self) -> Dict[str, Any]:
-        """辞書形式に変換（データベース保存用）"""
+        """
+        戦略遺伝子を辞書形式に変換します。
+
+        このメソッドは、StrategyGene オブジェクトのデータをデータベースに保存したり、
+        APIレスポンスとして返したりする際に利用されます。
+        ネストされた IndicatorGene や Condition オブジェクトも適切に辞書形式に変換されます。
+        """
         return {
-            "id": self.id,
-            "indicators": [
+            "id": self.id,  # 戦略遺伝子ID
+            "indicators": [  # 指標リスト
                 {"type": ind.type, "parameters": ind.parameters, "enabled": ind.enabled}
                 for ind in self.indicators
             ],
-            "entry_conditions": [
+            "entry_conditions": [  # エントリー条件リスト
                 {
                     "left_operand": cond.left_operand,
                     "operator": cond.operator,
@@ -298,7 +320,7 @@ class StrategyGene:
                 }
                 for cond in self.entry_conditions
             ],
-            "exit_conditions": [
+            "exit_conditions": [  # エグジット条件リスト
                 {
                     "left_operand": cond.left_operand,
                     "operator": cond.operator,
@@ -306,21 +328,31 @@ class StrategyGene:
                 }
                 for cond in self.exit_conditions
             ],
-            "risk_management": self.risk_management,
-            "metadata": self.metadata,
+            "risk_management": self.risk_management,  # リスク管理設定
+            "metadata": self.metadata,  # メタデータ
         }
 
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "StrategyGene":
-        """辞書から復元"""
+        """
+        辞書形式のデータから StrategyGene オブジェクトを復元します。
+
+        データベースから読み込んだデータや、APIリクエストとして受け取ったデータを
+        StrategyGene オブジェクトに変換する際に使用されます。
+        ネストされた IndicatorGene や Condition オブジェクトも適切に復元されます。
+        """
         try:
             indicators = [
                 IndicatorGene(
                     type=ind["type"],
                     parameters=ind["parameters"],
-                    enabled=ind.get("enabled", True),
+                    enabled=ind.get(
+                        "enabled", True
+                    ),  # enabled が存在しない場合は True をデフォルトとする
                 )
-                for ind in data.get("indicators", [])
+                for ind in data.get(
+                    "indicators", []
+                )  # 'indicators' キーが存在しない場合は空リストをデフォルトとする
             ]
 
             entry_conditions = [
@@ -355,17 +387,32 @@ class StrategyGene:
             raise ValueError(f"Invalid strategy gene data: {e}")
 
     def to_json(self) -> str:
-        """JSON文字列に変換"""
+        """
+        戦略遺伝子をJSON文字列に変換します。
+
+        APIレスポンスやファイル保存など、JSON形式での出力が必要な場合に利用されます。
+        ensure_ascii=False により日本語などの非ASCII文字もそのまま出力され、
+        indent=2 により整形された読みやすいJSONが生成されます。
+        """
         return json.dumps(self.to_dict(), ensure_ascii=False, indent=2)
 
     @classmethod
     def from_json(cls, json_str: str) -> "StrategyGene":
-        """JSON文字列から復元"""
+        """
+        JSON文字列から StrategyGene オブジェクトを復元します。
+
+        JSON形式のデータ (ファイルから読み込んだものやAPIリクエストボディなど) を
+        StrategyGene オブジェクトに変換する際に使用されます。
+        """
         try:
-            data = json.loads(json_str)
-            return cls.from_dict(data)
+            data = json.loads(json_str)  # JSON文字列をPythonの辞書にパース
+            return cls.from_dict(
+                data
+            )  # パースした辞書から StrategyGene オブジェクトを生成
         except json.JSONDecodeError as e:
-            logger.error(f"JSON解析エラー: {e}")
+            logger.error(
+                f"JSON解析エラー: {e}"
+            )  # JSON形式が不正な場合のエラーハンドリング
             raise ValueError(f"Invalid JSON: {e}")
 
 
@@ -374,12 +421,14 @@ class StrategyGene:
 
 def encode_gene_to_list(gene: StrategyGene) -> List[float]:
     """
-    戦略遺伝子を固定長の数値リストにエンコード
+    戦略遺伝子(表現型)をGAが操作できる固定長の数値リスト(遺伝子型)にエンコードします。
 
-    v1仕様: 最大5指標、単純条件のみ
-    エンコード形式: [indicator1_id, param1_val, ..., entry_condition, exit_condition]
+    この関数は、複雑な構造を持つ StrategyGene オブジェクトを、DEAPライブラリが
+    交叉や突然変異の対象として扱える単純な浮動小数点数のリストに変換する重要な役割を担います。
+    この数値リストがGAにおける「個体」そのものとなります。
+    エンコード形式: [indicator1_id, param1_val, ..., entry_condition_params, exit_condition_params]
     """
-    # 全指標ID（58種類）- constants.pyから自動生成
+    # 全指標ID（58種類）を app.core.services.indicators.constants から動的に取得
     from app.core.services.indicators.constants import ALL_INDICATORS
 
     INDICATOR_IDS = {"": 0}  # 未使用
@@ -423,9 +472,13 @@ def encode_gene_to_list(gene: StrategyGene) -> List[float]:
 
 def decode_list_to_gene(encoded: List[float]) -> StrategyGene:
     """
-    固定長数値リストから戦略遺伝子にデコード
+    GAが操作した固定長数値リスト(遺伝子型)を、人間が解釈可能なStrategyGene(表現型)にデコードします。
+
+    この関数は、GAの進化プロセスで生成された数値のリストを、バックテストで実行可能な
+    具体的な取引戦略（どの指標を、どのパラメータで、どんな条件で使うか）に変換します。
+    この変換処理を通じて、抽象的な遺伝子情報が具体的な戦略として意味を持つようになります。
     """
-    # 全指標を使用（58個の指標すべて）
+    # 全指標を app.core.services.indicators.constants から動的に取得し、デコードに使用
     from app.core.services.indicators.constants import ALL_INDICATORS
 
     # 指標IDの逆引き（全58指標対応）
@@ -495,14 +548,24 @@ def decode_list_to_gene(encoded: List[float]) -> StrategyGene:
 def _normalize_parameter(
     value: float, min_val: float = 1, max_val: float = 200
 ) -> float:
-    """パラメータを0-1範囲に正規化"""
+    """
+    指定されたパラメータ値を0から1の範囲に正規化します。
+
+    遺伝的アルゴリズムでは、遺伝子値を特定の範囲 (例: 0-1) に収めることで、
+    交叉や突然変異といった遺伝的操作を均一に適用しやすくなります。
+    """
     return (value - min_val) / (max_val - min_val)
 
 
 def _denormalize_parameter(
     normalized: float, min_val: float = 1, max_val: float = 200
 ) -> int:
-    """正規化されたパラメータを元の範囲に戻す"""
+    """
+    0から1の範囲に正規化されたパラメータ値を元の定義域に戻します。
+
+    遺伝的アルゴリズムの数値リストから、実際のテクニカル指標のパラメータ値 (例: 期間) に
+    変換する際に使用されます。結果は整数に丸められます。
+    """
     return int(min_val + normalized * (max_val - min_val))
 
 
@@ -1057,14 +1120,29 @@ def _generate_indicator_parameters(
 
 
 def _encode_condition(condition: Condition) -> List[float]:
-    """条件を数値リストにエンコード（簡略化）"""
-    # 簡略化: 固定の条件パターンのみ
-    return [1.0, 0.0, 1.0]  # プレースホルダー
+    """
+    条件を数値リストにエンコードします（簡略化された実装）。
+
+    この関数は、Condition オブジェクトを遺伝的アルゴリズムが扱える数値リストに変換しますが、
+    現在の実装では簡略化されており、固定のプレースホルダー値を返します。
+    将来的に、より複雑な条件を遺伝子型にマッピングするために拡張される可能性があります。
+    """
+    # 簡略化: 固定の条件パターンのみを表現。
+    # 実際の遺伝的アルゴリズムの進化には、この部分のエンコード/デコードロジックの
+    # 複雑化が必要になる場合があります。
+    return [1.0, 0.0, 1.0]  # プレースホルダー値
 
 
 def _decode_condition(encoded: List[float]) -> Condition:
-    """数値リストから条件にデコード（実用的な条件を生成）"""
-    import random
+    """
+    数値リストから Condition オブジェクトにデコードします（実用的な条件を生成）。
+
+    この関数は、遺伝的アルゴリズムの数値リストから、実際の取引戦略で利用可能な
+    エントリーまたはエグジット条件を生成します。
+    現在の実装では、定義済みの条件パターンからランダムに選択することで、
+    多様な条件を生成します。Open Interest (OI) や Funding Rate (FR) に基づく条件も含まれます。
+    """
+    import random  # ランダム選択のためのモジュールをインポート
 
     # 実用的な条件パターンを生成（OI/FR対応版）
     patterns = [

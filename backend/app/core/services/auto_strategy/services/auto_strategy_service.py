@@ -38,8 +38,12 @@ class AutoStrategyService:
 
     def __init__(self):
         """初期化"""
-        self.running_experiments: Dict[str, Dict[str, Any]] = {}
-        self.progress_data: Dict[str, GAProgress] = {}
+        self.running_experiments: Dict[str, Dict[str, Any]] = (
+            {}
+        )  # 実行中のGA実験を管理する辞書
+        self.progress_data: Dict[str, GAProgress] = (
+            {}
+        )  # 各実験の進捗データを保持する辞書
 
         # サービスの初期化
         self.strategy_factory = StrategyFactory()
@@ -47,31 +51,52 @@ class AutoStrategyService:
         self.ga_engine: GeneticAlgorithmEngine
 
         # リポジトリの初期化
-        self.ga_experiment_repo = None
-        self.generated_strategy_repo = None
+        self.ga_experiment_repo = None  # GA実験の永続化を担当するリポジトリ
+        self.generated_strategy_repo = (
+            None  # 生成された戦略の永続化を担当するリポジトリ
+        )
 
         self._init_services()
 
     def _init_services(self):
-        """サービスの初期化"""
+        """
+        サービスの初期化を行います。
+
+        このメソッドは、AutoStrategyService が依存する他のサービスやリポジトリを
+        初期化するために呼び出されます。特に、データベース接続を確立し、
+        OHLCV、Open Interest、Funding Rate などのデータリポジトリ、
+        GA実験と生成戦略のリポジトリ、そしてバックテストサービスとGAエンジンを
+        設定します。
+        """
         try:
-            # データベースセッション
+            # データベースセッションの開始
             db = SessionLocal()
             try:
-                # リポジトリの初期化
-                ohlcv_repo = OHLCVRepository(db)
-                oi_repo = OpenInterestRepository(db)
-                fr_repo = FundingRateRepository(db)
-                self.ga_experiment_repo = GAExperimentRepository(db)
-                self.generated_strategy_repo = GeneratedStrategyRepository(db)
+                # 各種データリポジトリの初期化
+                ohlcv_repo = OHLCVRepository(
+                    db
+                )  # OHLCV (始値、高値、安値、終値、出来高) データのリポジトリ
+                oi_repo = OpenInterestRepository(
+                    db
+                )  # Open Interest (建玉) データのリポジトリ
+                fr_repo = FundingRateRepository(
+                    db
+                )  # Funding Rate (資金調達率) データのリポジトリ
+                self.ga_experiment_repo = GAExperimentRepository(
+                    db
+                )  # GA実験結果を保存・取得するリポジトリ
+                self.generated_strategy_repo = GeneratedStrategyRepository(
+                    db
+                )  # GAによって生成された戦略を保存・取得するリポジトリ
 
-                # サービスの初期化（拡張されたBacktestDataService）
+                # バックテストデータサービスを初期化 (OHLCV, OI, FR データを統合)
                 data_service = BacktestDataService(
                     ohlcv_repo=ohlcv_repo, oi_repo=oi_repo, fr_repo=fr_repo
                 )
+                # バックテストサービスを初期化 (データサービスを利用)
                 self.backtest_service = BacktestService(data_service)
 
-                # GAエンジンの初期化
+                # 遺伝的アルゴリズムエンジンを初期化 (バックテストサービスと戦略ファクトリを利用)
                 self.ga_engine = GeneticAlgorithmEngine(
                     self.backtest_service, self.strategy_factory
                 )
@@ -108,35 +133,47 @@ class AutoStrategyService:
             logger.info("=== 戦略生成開始処理開始 ===")
             logger.info(f"実験名: {experiment_name}")
 
-            # 依存関係の確認
+            # サービスが正しく初期化されているか依存関係を確認
             logger.info("依存関係の確認中...")
-            if self.ga_engine is None:
+            if self.ga_engine is None:  # GAエンジンが初期化されているか
                 raise RuntimeError("GAエンジンが初期化されていません。")
-            if self.backtest_service is None:
+            if (
+                self.backtest_service is None
+            ):  # バックテストサービスが初期化されているか
                 raise RuntimeError("バックテストサービスが初期化されていません。")
-            if self.ga_experiment_repo is None:
+            if self.ga_experiment_repo is None:  # GA実験リポジトリが初期化されているか
                 raise RuntimeError("GA実験リポジトリが初期化されていません。")
             logger.info("依存関係の確認完了")
 
-            # 実験IDの生成
+            # 新しいGA実験のための一意なIDを生成
             logger.info("実験IDを生成中...")
-            experiment_id = str(uuid.uuid4())
+            experiment_id = str(
+                uuid.uuid4()
+            )  # UUID (Universally Unique Identifier) を使用して一意なIDを生成
             logger.info(f"実験ID生成完了: {experiment_id}")
 
-            # 設定の検証
+            # GA設定オブジェクトの妥当性を検証
             logger.info("GA設定の検証中...")
-            is_valid, errors = ga_config.validate()
-            if not is_valid:
-                logger.error(f"GA設定の検証に失敗しました: {errors}")
-                raise ValueError(f"無効なGA設定です: {', '.join(errors)}")
+            is_valid, errors = (
+                ga_config.validate()
+            )  # GAConfig クラスの validate メソッドを呼び出し
+            if not is_valid:  # 検証に失敗した場合
+                logger.error(
+                    f"GA設定の検証に失敗しました: {errors}"
+                )  # エラーログを出力
+                raise ValueError(
+                    f"無効なGA設定です: {', '.join(errors)}"
+                )  # ValueError を発生させる
             logger.info("GA設定の検証が完了しました。")
 
-            # データベースに実験を保存
+            # 新しいGA実験の情報をデータベースに永続化
             logger.info("データベースに実験を保存中...")
-            db = SessionLocal()
+            db = SessionLocal()  # データベースセッションを取得
             try:
                 logger.info("データベースセッション作成完了")
-                ga_experiment_repo = GAExperimentRepository(db)
+                ga_experiment_repo = GAExperimentRepository(
+                    db
+                )  # GAExperimentRepository のインスタンスを作成
                 logger.info("GA実験リポジトリ作成完了")
 
                 db_experiment = ga_experiment_repo.create_experiment(
@@ -156,24 +193,27 @@ class AutoStrategyService:
                 db.close()
                 logger.info("データベースセッション終了")
 
-            # 実験情報を記録
+            # 実行中の実験情報をメモリ上に記録
             logger.info("実験情報を記録中...")
             experiment_info = {
-                "id": experiment_id,
-                "db_id": db_experiment_id,
-                "name": experiment_name,
-                "ga_config": ga_config,
-                "backtest_config": backtest_config,
-                "status": "starting",
-                "start_time": time.time(),
-                "thread": None,
+                "id": experiment_id,  # 生成された実験ID
+                "db_id": db_experiment_id,  # データベースに保存された実験のID
+                "name": experiment_name,  # 実験名
+                "ga_config": ga_config,  # GA設定オブジェクト
+                "backtest_config": backtest_config,  # バックテスト設定辞書
+                "status": "starting",  # 実験の現在のステータス
+                "start_time": time.time(),  # 実験開始時刻のタイムスタンプ
+                "thread": None,  # 実験を実行するスレッドオブジェクト (後で設定)
             }
             logger.info("実験情報記録完了")
 
             self.running_experiments[experiment_id] = experiment_info
 
-            # 進捗コールバックの設定
+            # GAエンジンからの進捗更新を受け取るコールバック関数を設定
+            logger.info("進捗コールバックを設定中...")
+
             def combined_callback(progress: GAProgress):
+                # メモリ上の進捗データを更新
                 self.progress_data[experiment_id] = progress
 
                 # データベースに進捗を保存
@@ -201,12 +241,17 @@ class AutoStrategyService:
             self.ga_engine.set_progress_callback(combined_callback)
             logger.info("進捗コールバック設定完了")
 
-            # バックグラウンドで実行
+            # GAの実行は時間がかかるため、バックグラウンドスレッドで非同期に実行します。
+            # これにより、GA実行中もAPIサーバーは他のリクエストを処理できます。
             logger.info("バックグラウンドスレッドを作成中...")
             thread = threading.Thread(
-                target=self._run_experiment,
-                args=(experiment_id, ga_config, backtest_config),
-                daemon=True,
+                target=self._run_experiment,  # スレッドで実行する関数
+                args=(
+                    experiment_id,
+                    ga_config,
+                    backtest_config,
+                ),  # _run_experiment に渡す引数
+                daemon=True,  # メインスレッドが終了すると、このスレッドも自動的に終了します。
             )
             logger.info("スレッド作成完了")
 
@@ -256,47 +301,55 @@ class AutoStrategyService:
             # バックテスト設定に実験IDを追加
             backtest_config["experiment_id"] = experiment_id
 
-            # GA実行
+            # GeneticAlgorithmEngine を使用してGAを実行
             logger.info(f"GA実行開始: {experiment_id}")
-            result = self.ga_engine.run_evolution(ga_config, backtest_config)
+            result = self.ga_engine.run_evolution(
+                ga_config, backtest_config
+            )  # GAの進化プロセスを開始
 
-            # 結果の保存
+            # GA実行結果をデータベースに保存
             self._save_experiment_result(
                 experiment_id, result, ga_config, backtest_config
             )
 
-            # 実験完了
+            # 実験のステータスを「完了」に更新
             experiment_info["status"] = "completed"
-            experiment_info["end_time"] = time.time()
-            experiment_info["result"] = result
+            experiment_info["end_time"] = time.time()  # 終了時刻を記録
+            experiment_info["result"] = result  # 最終結果を保存
 
-            # データベースで実験を完了状態にする
+            # データベース上の実験レコードを「完了」状態に更新
             try:
-                db = SessionLocal()
+                db = SessionLocal()  # データベースセッションを取得
                 try:
-                    ga_experiment_repo = GAExperimentRepository(db)
-                    ga_experiment_repo.complete_experiment(
-                        experiment_id=experiment_info["db_id"],
-                        best_fitness=result["best_fitness"],
-                        final_generation=ga_config.generations,
+                    ga_experiment_repo = GAExperimentRepository(
+                        db
+                    )  # GAExperimentRepository のインスタンスを作成
+                    ga_experiment_repo.complete_experiment(  # 実験を完了状態に更新
+                        experiment_id=experiment_info[
+                            "db_id"
+                        ],  # データベース上の実験ID
+                        best_fitness=result["best_fitness"],  # 最良の適応度
+                        final_generation=ga_config.generations,  # 完了した世代数
                     )
                 finally:
-                    db.close()
+                    db.close()  # データベースセッションを閉じる
             except Exception as e:
                 logger.error(
                     f"実験完了状態のデータベース更新中にエラーが発生しました: {e}"
                 )
 
-            # 最終進捗更新
+            # 最終的な進捗情報をGAProgressオブジェクトとして作成
             final_progress = GAProgress(
-                experiment_id=experiment_id,
-                current_generation=ga_config.generations,
-                total_generations=ga_config.generations,
-                best_fitness=result["best_fitness"],
-                average_fitness=result["best_fitness"],  # 簡略化
-                execution_time=result["execution_time"],
-                estimated_remaining_time=0.0,
-                status="completed",
+                experiment_id=experiment_id,  # 実験ID
+                current_generation=ga_config.generations,  # 完了した世代数
+                total_generations=ga_config.generations,  # 総世代数
+                best_fitness=result["best_fitness"],  # 最終的な最良適応度
+                average_fitness=result[
+                    "best_fitness"
+                ],  # 簡略化のため、最良適応度を平均適応度として設定
+                execution_time=result["execution_time"],  # 総実行時間
+                estimated_remaining_time=0.0,  # 残り推定時間は0
+                status="completed",  # ステータスを「完了」に設定
             )
 
             self.progress_data[experiment_id] = final_progress
@@ -306,39 +359,47 @@ class AutoStrategyService:
         except Exception as e:
             logger.error(f"GA実験の実行中にエラーが発生しました ({experiment_id}): {e}")
 
-            # エラー状態の記録
-            if experiment_id in self.running_experiments:
-                self.running_experiments[experiment_id]["status"] = "error"
-                self.running_experiments[experiment_id]["error"] = str(e)
+            # エラーが発生した場合、実験の状態を「エラー」として記録
+            if (
+                experiment_id in self.running_experiments
+            ):  # 実行中の実験リストに存在する場合
+                self.running_experiments[experiment_id][
+                    "status"
+                ] = "error"  # ステータスを「エラー」に設定
+                self.running_experiments[experiment_id]["error"] = str(
+                    e
+                )  # エラーメッセージを記録
 
-                # データベースでエラー状態を更新
+                # データベース上の実験レコードを「エラー」状態に更新
                 try:
-                    db = SessionLocal()
+                    db = SessionLocal()  # データベースセッションを取得
                     try:
-                        ga_experiment_repo = GAExperimentRepository(db)
-                        ga_experiment_repo.update_experiment_status(
+                        ga_experiment_repo = GAExperimentRepository(
+                            db
+                        )  # GAExperimentRepository のインスタンスを作成
+                        ga_experiment_repo.update_experiment_status(  # 実験のステータスを更新
                             experiment_id=self.running_experiments[experiment_id][
                                 "db_id"
-                            ],
-                            status="error",
+                            ],  # データベース上の実験ID
+                            status="error",  # ステータスを「エラー」に設定
                         )
                     finally:
-                        db.close()
+                        db.close()  # データベースセッションを閉じる
                 except Exception as db_error:
                     logger.error(
                         f"エラー状態のデータベース更新中にエラーが発生しました: {db_error}"
                     )
 
-            # エラー進捗更新
+            # エラー発生時の進捗情報をGAProgressオブジェクトとして作成
             error_progress = GAProgress(
-                experiment_id=experiment_id,
-                current_generation=0,
-                total_generations=ga_config.generations,
-                best_fitness=0.0,
-                average_fitness=0.0,
-                execution_time=0.0,
-                estimated_remaining_time=0.0,
-                status="error",
+                experiment_id=experiment_id,  # 実験ID
+                current_generation=0,  # 世代数は0 (エラーのため)
+                total_generations=ga_config.generations,  # 総世代数
+                best_fitness=0.0,  # 最良適応度は0.0 (エラーのため)
+                average_fitness=0.0,  # 平均適応度も0.0
+                execution_time=0.0,  # 実行時間も0.0
+                estimated_remaining_time=0.0,  # 残り推定時間も0.0
+                status="error",  # ステータスを「エラー」に設定
             )
 
             self.progress_data[experiment_id] = error_progress
@@ -464,12 +525,12 @@ class AutoStrategyService:
                 generated_strategy_repo = GeneratedStrategyRepository(db)
                 backtest_result_repo = BacktestResultRepository(db)
 
-                # 最良戦略を保存
+                # GAによって見つかった最良戦略をデータベースに保存
                 best_strategy_record = generated_strategy_repo.save_strategy(
-                    experiment_id=db_experiment_id,
-                    gene_data=best_strategy.to_dict(),
-                    generation=ga_config.generations,
-                    fitness_score=best_fitness,
+                    experiment_id=db_experiment_id,  # 関連するGA実験のデータベースID
+                    gene_data=best_strategy.to_dict(),  # 戦略遺伝子の辞書表現
+                    generation=ga_config.generations,  # 戦略が生成された世代
+                    fitness_score=best_fitness,  # 戦略の適応度スコア
                 )
 
                 logger.info(f"最良戦略を保存しました: DB ID {best_strategy_record.id}")
@@ -478,7 +539,9 @@ class AutoStrategyService:
                 try:
                     logger.info("最良戦略のバックテスト結果を詳細保存開始...")
 
-                    # 最良戦略のバックテストを再実行（詳細データ取得のため）
+                    # GAの評価フェーズでは高速化のために簡略化されたフィットネス計算を行いますが、
+                    # ここでは最終的に見つかった最良戦略について、詳細なパフォーマンス指標や
+                    # 取引履歴を含む完全なバックテストを再実行し、その結果を永続化します。
                     detailed_backtest_config = backtest_config.copy()
                     detailed_backtest_config["strategy_name"] = (
                         f"AUTO_STRATEGY_{experiment_info['name']}_{best_strategy.id[:8]}"
@@ -488,40 +551,53 @@ class AutoStrategyService:
                         "parameters": {"strategy_gene": best_strategy.to_dict()},
                     }
 
-                    # バックテスト実行
                     detailed_result = self.backtest_service.run_backtest(
                         detailed_backtest_config
                     )
 
-                    # backtest_resultsテーブル用のデータ構造を構築
+                    # backtest_results テーブルに保存するためのデータ構造を構築
                     backtest_result_data = {
-                        "strategy_name": detailed_backtest_config["strategy_name"],
-                        "symbol": detailed_backtest_config["symbol"],
-                        "timeframe": detailed_backtest_config["timeframe"],
-                        "start_date": detailed_backtest_config["start_date"],
-                        "end_date": detailed_backtest_config["end_date"],
-                        "initial_capital": detailed_backtest_config["initial_capital"],
-                        "commission_rate": detailed_backtest_config.get(
+                        "strategy_name": detailed_backtest_config[
+                            "strategy_name"
+                        ],  # 戦略名
+                        "symbol": detailed_backtest_config["symbol"],  # シンボル
+                        "timeframe": detailed_backtest_config["timeframe"],  # 時間足
+                        "start_date": detailed_backtest_config[
+                            "start_date"
+                        ],  # バックテスト開始日
+                        "end_date": detailed_backtest_config[
+                            "end_date"
+                        ],  # バックテスト終了日
+                        "initial_capital": detailed_backtest_config[
+                            "initial_capital"
+                        ],  # 初期資金
+                        "commission_rate": detailed_backtest_config.get(  # 手数料率 (デフォルト値あり)
                             "commission_rate", 0.001
                         ),
-                        "config_json": {
+                        "config_json": {  # バックテスト設定のJSON形式
                             "strategy_config": detailed_backtest_config[
                                 "strategy_config"
                             ],
-                            "experiment_id": experiment_id,
-                            "db_experiment_id": db_experiment_id,
-                            "fitness_score": best_fitness,
+                            "experiment_id": experiment_id,  # 実験ID
+                            "db_experiment_id": db_experiment_id,  # データベース実験ID
+                            "fitness_score": best_fitness,  # 適応度スコア
                         },
-                        "performance_metrics": detailed_result.get(
+                        "performance_metrics": detailed_result.get(  # パフォーマンス指標 (デフォルト値あり)
                             "performance_metrics", {}
                         ),
-                        "equity_curve": detailed_result.get("equity_curve", []),
-                        "trade_history": detailed_result.get("trade_history", []),
-                        "execution_time": detailed_result.get("execution_time"),
-                        "status": "completed",
+                        "equity_curve": detailed_result.get(
+                            "equity_curve", []
+                        ),  # エクイティカーブデータ (デフォルト値あり)
+                        "trade_history": detailed_result.get(
+                            "trade_history", []
+                        ),  # 取引履歴データ (デフォルト値あり)
+                        "execution_time": detailed_result.get(
+                            "execution_time"
+                        ),  # 実行時間
+                        "status": "completed",  # ステータスを「完了」に設定
                     }
 
-                    # backtest_resultsテーブルに保存
+                    # 構築したデータを backtest_results テーブルに保存
                     saved_backtest_result = backtest_result_repo.save_backtest_result(
                         backtest_result_data
                     )
@@ -535,21 +611,29 @@ class AutoStrategyService:
                     )
                     # エラーが発生してもメイン処理は継続
 
-                # 全戦略を一括保存（オプション）
-                if all_strategies and len(all_strategies) > 1:
-                    strategies_data = []
+                # GAによって生成された全ての戦略を一括でデータベースに保存 (オプション機能)
+                if (
+                    all_strategies and len(all_strategies) > 1
+                ):  # 全戦略が存在し、かつ複数ある場合
+                    strategies_data = []  # 保存する戦略データのリスト
                     for i, strategy in enumerate(
-                        all_strategies[:100]
-                    ):  # 最大100戦略まで保存
-                        if strategy != best_strategy:  # 最良戦略は既に保存済み
+                        all_strategies[
+                            :100
+                        ]  # 最大100戦略までを対象とする (パフォーマンス考慮)
+                    ):
+                        if (
+                            strategy != best_strategy
+                        ):  # 最良戦略は既に保存済みなのでスキップ
                             strategies_data.append(
                                 {
-                                    "experiment_id": db_experiment_id,
-                                    "gene_data": strategy.to_dict(),
-                                    "generation": ga_config.generations,
-                                    "fitness_score": result.get(
+                                    "experiment_id": db_experiment_id,  # 関連するGA実験のデータベースID
+                                    "gene_data": strategy.to_dict(),  # 戦略遺伝子の辞書表現
+                                    "generation": ga_config.generations,  # 戦略が生成された世代
+                                    "fitness_score": result.get(  # 適応度スコア (デフォルト値あり)
                                         "fitness_scores", [0.0] * len(all_strategies)
-                                    )[i],
+                                    )[
+                                        i
+                                    ],
                                 }
                             )
 
