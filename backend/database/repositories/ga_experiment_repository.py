@@ -294,7 +294,7 @@ class GAExperimentRepository(BaseRepository):
                 .count()
             )
 
-            # 最高フィットネスの実験
+            # フィットネスの実験
             best_experiment = (
                 self.db.query(GAExperiment)
                 .filter(GAExperiment.best_fitness.isnot(None))

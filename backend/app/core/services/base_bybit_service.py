@@ -105,7 +105,7 @@ class BaseBybitService(ABC):
         Args:
             operation_name: 操作名（ログ用）
             func: 実行する関数
-            *args: 関数の引数
+            **args: 関数の引数
             **kwargs: 関数のキーワード引数
 
         Returns:

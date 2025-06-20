@@ -346,6 +346,7 @@ class GeneratedStrategyRepository(BaseRepository):
         try:
             strategies = self.get_strategies_by_generation(experiment_id, generation)
 
+            # 世代が存在しない場合は空の辞書を返す
             if not strategies:
                 return {}
 

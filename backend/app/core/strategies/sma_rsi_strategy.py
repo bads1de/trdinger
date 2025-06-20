@@ -5,7 +5,6 @@ SMA + RSI複合戦略
 """
 
 from backtesting import Strategy
-from backtesting.lib import crossover
 from .indicators import SMA, RSI
 from .risk_management.base import RiskManagementMixin
 import logging

@@ -175,8 +175,8 @@ class MACDDivergenceStrategy(MACDStrategy):
 
     def next(self):
         """売買ロジック（ダイバージェンス版）"""
-        current_price = self.data.Close[-1]
-        current_macd = self.macd_line[-1]
+        self.data.Close[-1]
+        self.macd_line[-1]
 
         # 基本のMACDシグナル
         if crossover(self.macd_line, self.signal_line):

@@ -125,7 +125,7 @@ class GeneticAlgorithmEngine:
         )
 
         # 評価関数（バックテスト設定は run_evolution で設定済み）
-        # self._current_backtest_config = None  # リセットしない
+        # self._current_backtest_config = None
         self.toolbox.register(
             "evaluate", self._evaluate_individual_wrapper, config=config
         )

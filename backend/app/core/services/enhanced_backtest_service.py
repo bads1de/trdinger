@@ -263,7 +263,7 @@ class EnhancedBacktestService(BacktestService):
                     start_date=config["start_date"],
                     end_date=config["end_date"],
                 )
-            except (AttributeError, ValueError) as e:
+            except (AttributeError, ValueError):
                 # 新しいメソッドが利用できない場合や、データが見つからない場合
                 try:
                     # 古いメソッドにフォールバック

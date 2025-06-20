@@ -34,14 +34,14 @@ class BacktestResultRepository(BaseRepository):
             import logging
 
             logger = logging.getLogger(__name__)
-            logger.info(f"Saving backtest result with data: {result_data}")
+            logger.info(f"バックテスト結果を保存中: {result_data}")
 
             # 日付の処理
+            # start_dateとend_dateが文字列の場合、ISOフォーマットからdatetimeオブジェクトに変換します。
+            # これにより、データベースへの保存時に正しい型が保証されます。
             start_date = result_data.get("start_date")
             end_date = result_data.get("end_date")
-            logger.info(
-                f"Original dates - start_date: {start_date}, end_date: {end_date}"
-            )
+            logger.info(f"元のデータ範囲 - 開始日: {start_date}, 終了日: {end_date}")
 
             # datetimeオブジェクトの場合はそのまま使用、文字列の場合は変換
             if isinstance(start_date, str):
@@ -50,6 +50,10 @@ class BacktestResultRepository(BaseRepository):
                 end_date = datetime.fromisoformat(end_date)
 
             # パフォーマンス指標の構築
+            # performance_metricsは、新しい形式（performance_metricsフィールド）から優先的に取得されます。
+            # 後方互換性のため、もしperformance_metricsが存在しない場合、古いresults_json内のperformance_metrics、
+            # さらに個別のフィールドからも取得を試みます。
+            # これにより、APIのバージョンアップ後も既存のデータ形式に対応できます。
             performance_metrics = result_data.get("performance_metrics", {})
 
             # 後方互換性のため、results_jsonからも取得を試行
@@ -103,7 +107,7 @@ class BacktestResultRepository(BaseRepository):
 
         except Exception as e:
             self.db.rollback()
-            raise Exception(f"Failed to save backtest result: {str(e)}")
+            raise Exception(f"バックテスト結果の保存に失敗しました: {str(e)}")
 
     def get_backtest_results(
         self,
@@ -128,15 +132,20 @@ class BacktestResultRepository(BaseRepository):
             query = self.db.query(BacktestResult)
 
             # フィルター適用
+            # symbolまたはstrategy_nameが指定された場合、対応する条件でクエリをフィルタリングします。
+            # これにより、特定の取引ペアや戦略の結果のみを検索できます。
             if symbol:
                 query = query.filter(BacktestResult.symbol == symbol)
             if strategy_name:
                 query = query.filter(BacktestResult.strategy_name == strategy_name)
 
             # 作成日時の降順でソート
+            # 最新のバックテスト結果が最初に表示されるように、作成日時で降順にソートします。
             query = query.order_by(desc(BacktestResult.created_at))
 
             # ページネーション
+            # offsetとlimitを使用して、結果のサブセット（ページ）を取得します。
+            # これにより、大量のデータでも効率的にクライアントに提供できます。
             query = query.offset(offset).limit(limit)
 
             results = query.all()
@@ -145,7 +154,7 @@ class BacktestResultRepository(BaseRepository):
             return [result.to_dict() for result in results]
 
         except Exception as e:
-            raise Exception(f"Failed to get backtest results: {str(e)}")
+            raise Exception(f"バックテスト結果の取得に失敗しました: {str(e)}")
 
     def get_backtest_result_by_id(self, result_id: int) -> Optional[Dict[str, Any]]:
         """
@@ -165,13 +174,17 @@ class BacktestResultRepository(BaseRepository):
                 limit=1,
             )
             if results:
-                # get_filtered_recordsがジェネリックな型を返すため、ここでキャストする
+                # DatabaseQueryHelper.get_filtered_recordsはジェネリックな型を返すため、
+                # BacktestResult型として明示的にキャストしています。これにより、
+                # 返されたオブジェクトがBacktestResultの属性を持つことが保証されます。
                 result = cast(BacktestResult, results[0])
                 return result.to_dict()
             return None
 
         except Exception as e:
-            raise Exception(f"Failed to get backtest result by ID: {str(e)}")
+            raise Exception(
+                f"ID指定によるバックテスト結果の取得に失敗しました: {str(e)}"
+            )
 
     def delete_backtest_result(self, result_id: int) -> bool:
         """
@@ -198,7 +211,9 @@ class BacktestResultRepository(BaseRepository):
 
         except Exception as e:
             self.db.rollback()
-            raise Exception(f"Failed to delete backtest result: {str(e)}")
+            # 削除中にエラーが発生した場合、トランザクションをロールバックしてデータベースの状態を
+            # 変更前の状態に戻します。これにより、部分的な削除を防ぎ、データの一貫性を保ちます。
+            raise Exception(f"バックテスト結果の削除に失敗しました: {str(e)}")
 
     def delete_all_backtest_results(self) -> int:
         """
@@ -214,7 +229,9 @@ class BacktestResultRepository(BaseRepository):
 
         except Exception as e:
             self.db.rollback()
-            raise Exception(f"Failed to delete all backtest results: {str(e)}")
+            # すべての削除中にエラーが発生した場合、トランザクションをロールバックします。
+            # これにより、データベースの部分的な変更を防ぎ、整合性を維持します。
+            raise Exception(f"すべてのバックテスト結果の削除に失敗しました: {str(e)}")
 
     def count_backtest_results(
         self, symbol: Optional[str] = None, strategy_name: Optional[str] = None
@@ -233,6 +250,8 @@ class BacktestResultRepository(BaseRepository):
             query = self.db.query(BacktestResult)
 
             # フィルター適用
+            # symbolまたはstrategy_nameが指定された場合、対応する条件でクエリをフィルタリングします。
+            # これにより、特定の取引ペアや戦略の結果のみを検索できます。
             if symbol:
                 query = query.filter(BacktestResult.symbol == symbol)
             if strategy_name:
@@ -241,7 +260,7 @@ class BacktestResultRepository(BaseRepository):
             return query.count()
 
         except Exception as e:
-            raise Exception(f"Failed to count backtest results: {str(e)}")
+            raise Exception(f"バックテスト結果の総数取得に失敗しました: {str(e)}")
 
     def get_backtest_results_by_strategy(
         self, strategy_name: str
@@ -263,12 +282,16 @@ class BacktestResultRepository(BaseRepository):
                 .all()
             )
 
-            # get_filtered_recordsがジェネリックな型を返すため、ここでキャストする
+            # get_filtered_recordsがジェネリックな型を返す可能性を考慮し、
+            # BacktestResultのリストとして明示的にキャストしています。これにより、
+            # リスト内の各要素がto_dictメソッドを持つことが保証されます。
             typed_results = cast(List[BacktestResult], results)
             return [result.to_dict() for result in typed_results]
 
         except Exception as e:
-            raise Exception(f"Failed to get backtest results by strategy: {str(e)}")
+            raise Exception(
+                f"戦略名によるバックテスト結果の取得に失敗しました: {str(e)}"
+            )
 
     def get_backtest_results_by_symbol(self, symbol: str) -> List[Dict[str, Any]]:
         """
@@ -288,14 +311,23 @@ class BacktestResultRepository(BaseRepository):
                 .all()
             )
 
+            # データベースから取得したBacktestResultオブジェクトのリストを、
+            # クライアントに返しやすい辞書形式のリストに変換します。
+            # 各BacktestResultインスタンスはto_dictメソッドを持っています。
             return [result.to_dict() for result in results]
 
         except Exception as e:
-            raise Exception(f"Failed to get backtest results by symbol: {str(e)}")
+            raise Exception(
+                f"取引ペアによるバックテスト結果の取得に失敗しました: {str(e)}"
+            )
 
     def get_recent_backtest_results(self, limit: int = 10) -> List[Dict[str, Any]]:
         """
         最近のバックテスト結果を取得
+
+        このメソッドは、DatabaseQueryHelperという汎用的なユーティリティクラスを利用して、
+        最新のバックテスト結果を効率的に取得します。これにより、クエリロジックの重複を防ぎ、
+        コードの再利用性と保守性を高めています。
 
         Args:
             limit: 取得件数
@@ -311,22 +343,29 @@ class BacktestResultRepository(BaseRepository):
                 order_asc=False,
                 limit=limit,
             )
+            # 取得した結果を辞書形式のリストに変換して返します。
             return [result.to_dict() for result in results]
 
         except Exception as e:
-            raise Exception(f"Failed to get recent backtest results: {str(e)}")
+            raise Exception(f"最近のバックテスト結果の取得に失敗しました: {str(e)}")
 
     def get_performance_summary(self) -> Dict[str, Any]:
         """
         パフォーマンスサマリーを取得
 
+        このメソッドは、データベースに保存されているすべてのバックテスト結果の概要を計算します。
+        具体的には、総結果数、戦略のユニーク数、そして最近の5件の結果を提供します。
+        結果が一つもない場合は、すべてのメトリクスをゼロで返します。
+
         Returns:
             パフォーマンスサマリー
         """
         try:
+            # 総バックテスト結果数を取得
             total_results = self.db.query(BacktestResult).count()
 
             if total_results == 0:
+                # 結果がない場合は、デフォルトのサマリーを返す
                 return {
                     "total_results": 0,
                     "avg_return": 0,
@@ -339,6 +378,8 @@ class BacktestResultRepository(BaseRepository):
             from sqlalchemy import func
 
             # 戦略数
+            # func.distinctを使用して、重複しない戦略名の数をカウントします。
+            # これにより、異なる戦略がいくつ実行されたかを把握できます。
             strategies_count = self.db.query(
                 func.count(func.distinct(BacktestResult.strategy_name))
             ).scalar()
@@ -350,14 +391,17 @@ class BacktestResultRepository(BaseRepository):
             }
 
         except Exception as e:
-            raise Exception(f"Failed to get performance summary: {str(e)}")
+            raise Exception(f"パフォーマンスサマリーの取得に失敗しました: {str(e)}")
 
     def cleanup_old_results(self, days_to_keep: int = 30) -> int:
         """
         古いバックテスト結果を削除
 
+        このメソッドは、指定された日数よりも古いバックテスト結果をデータベースから削除します。
+        データの肥大化を防ぎ、パフォーマンスを維持するために定期的なクリーンアップを目的としています。
+
         Args:
-            days_to_keep: 保持する日数
+            days_to_keep: 保持する日数。この日数よりも古いデータが削除されます。
 
         Returns:
             削除された件数
@@ -365,8 +409,12 @@ class BacktestResultRepository(BaseRepository):
         try:
             from datetime import timedelta
 
+            # 削除対象の基準日を計算
+            # 現在日時からdays_to_keepで指定された日数を遡り、それ以前のデータが対象となります。
             cutoff_date = datetime.now() - timedelta(days=days_to_keep)
 
+            # 基準日より古い結果を削除
+            # フィルタリングされたレコードを一括で削除し、削除された行数を返します。
             deleted_count = (
                 self.db.query(BacktestResult)
                 .filter(BacktestResult.created_at < cutoff_date)
@@ -378,4 +426,6 @@ class BacktestResultRepository(BaseRepository):
 
         except Exception as e:
             self.db.rollback()
-            raise Exception(f"Failed to cleanup old results: {str(e)}")
+            raise Exception(
+                f"古いバックテスト結果のクリーンアップに失敗しました: {str(e)}"
+            )

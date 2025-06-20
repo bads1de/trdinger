@@ -120,7 +120,7 @@ class OHLCVRepository(BaseRepository):
                 start_time=None,
                 end_time=None,
                 order_by_column="timestamp",
-                order_asc=False,  # 降順（新しい順）
+                order_asc=False,
                 limit=limit,
             )
 

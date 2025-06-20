@@ -20,11 +20,11 @@ class GAConfig:
     """
 
     # 基本GA設定（高速化最適化済み）
-    population_size: int = 10  # 個体数（50→10に高速化）
-    generations: int = 5  # 世代数（20→5に高速化）
+    population_size: int = 10  # 個体数
+    generations: int = 5  # 世代数
     crossover_rate: float = 0.8  # 交叉率
     mutation_rate: float = 0.1  # 突然変異率
-    elite_size: int = 2  # エリート保存数（5→2に高速化）
+    elite_size: int = 2  # エリート保存数
 
     # 評価設定
     fitness_weights: Dict[str, float] = field(
@@ -38,7 +38,7 @@ class GAConfig:
     primary_metric: str = "sharpe_ratio"
 
     # 制約条件
-    max_indicators: int = 3  # 最大指標数（5→3に高速化）
+    max_indicators: int = 3  # 最大指標数（
     allowed_indicators: List[str] = field(default_factory=lambda: ALL_INDICATORS.copy())
 
     # パラメータ範囲

@@ -94,7 +94,7 @@ class BollingerBandsIndicator(BaseIndicator):
 
             return formatted_result
 
-        except Exception as e:
+        except Exception:
             raise
 
     def get_description(self) -> str:

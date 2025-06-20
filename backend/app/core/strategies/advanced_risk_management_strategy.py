@@ -72,7 +72,7 @@ class AdvancedRiskManagementStrategy(RiskManagementMixin, Strategy):
     rsi_overbought = 70
     use_rsi_filter = True
 
-    # 追加パラメータ（backtesting.pyの要求）
+    # 追加パラメータ
     volatility = 0.02
     risk_percent = 0.01
     consecutive_losses = 0
@@ -237,10 +237,9 @@ class ConservativeRiskManagementStrategy(AdvancedRiskManagementStrategy):
     より保守的なパラメータを使用した安全重視の戦略
     """
 
-    # より保守的なパラメータ
     sl_pct = 0.015  # 1.5%
     tp_pct = 0.045  # 4.5%
-    min_risk_reward_ratio = 3.0  # 3:1
+    min_risk_reward_ratio = 1.5
     use_kelly_criterion = True
     position_sizing_method = "fixed_risk"  # 固定リスクでより安全
 

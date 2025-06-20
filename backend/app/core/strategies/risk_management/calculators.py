@@ -483,10 +483,11 @@ class RiskCalculator:
             p = win_rate
             q = 1 - p
 
+            # Optimal Fの計算
             optimal_f = (b * p - q) / b
 
             # Optimal Fは通常Kelly基準より保守的
-            conservative_f = optimal_f * 0.25  # 1/4 Kelly相当
+            conservative_f = optimal_f * 0.5  # 1/2 ハーフーケリー
 
             return max(0, min(conservative_f, 0.5))  # 最大50%に制限
 

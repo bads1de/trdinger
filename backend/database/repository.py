@@ -10,8 +10,6 @@ from .repositories.open_interest_repository import OpenInterestRepository
 from .repositories.data_collection_log_repository import DataCollectionLogRepository
 from .repositories.ga_experiment_repository import GAExperimentRepository
 from .repositories.generated_strategy_repository import GeneratedStrategyRepository
-
-# レガシー互換性のため、既存のインポートを維持
 from .models import OHLCVData, DataCollectionLog, FundingRateData, OpenInterestData
 from .connection import get_db, ensure_db_initialized
 
