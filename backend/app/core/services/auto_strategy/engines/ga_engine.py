@@ -3,8 +3,6 @@
 
 DEAPライブラリを使用したGA実装。
 既存のBacktestServiceと統合し、戦略の自動生成・最適化を行います。
-
-リファクタリング版: 責任を分離し、各機能を専用モジュールに委譲。
 """
 
 import time
@@ -31,7 +29,7 @@ logger = logging.getLogger(__name__)
 
 class GeneticAlgorithmEngine:
     """
-    遺伝的アルゴリズムエンジン（リファクタリング版）
+    遺伝的アルゴリズムエンジン
 
     DEAPライブラリを使用して戦略の自動生成・最適化を行います。
     各機能は専用モジュールに委譲し、メインの進化ループに集中します。
@@ -67,7 +65,7 @@ class GeneticAlgorithmEngine:
 
     def setup_deap(self, config: GAConfig):
         """
-        DEAP環境のセットアップ（リファクタリング版）
+        DEAP環境のセットアップ
 
         Args:
             config: GA設定
@@ -86,7 +84,7 @@ class GeneticAlgorithmEngine:
         self, config: GAConfig, backtest_config: Dict[str, Any]
     ) -> Dict[str, Any]:
         """
-        進化アルゴリズムを実行（リファクタリング版）
+        進化アルゴリズムを実行
 
         Args:
             config: GA設定
@@ -239,7 +237,7 @@ class GeneticAlgorithmEngine:
 
     def _evaluate_individual_wrapper(self, individual, config: GAConfig):
         """
-        評価関数のラッパー（リファクタリング版）
+        評価関数のラッパー
 
         FitnessCalculatorに委譲します。
         """
@@ -248,7 +246,7 @@ class GeneticAlgorithmEngine:
         )
 
     def set_progress_callback(self, callback):
-        """進捗コールバックを設定（リファクタリング版）"""
+        """進捗コールバックを設定"""
         self.progress_manager.set_progress_callback(callback)
 
     def stop_evolution(self):

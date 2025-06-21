@@ -1,5 +1,5 @@
 """
-自動戦略生成サービス（リファクタリング版）
+自動戦略生成サービス
 
 GA実行、進捗管理、結果保存などの統合機能を提供します。
 責任を分離し、各機能を専用モジュールに委譲します。
@@ -39,14 +39,14 @@ logger = logging.getLogger(__name__)
 
 class AutoStrategyService:
     """
-    自動戦略生成サービス（リファクタリング版）
+    自動戦略生成サービス
 
     GA実行、進捗管理、結果保存を統合的に管理します。
     各機能は専用モジュールに委譲し、メインのAPI機能に集中します。
     """
 
     def __init__(self):
-        """初期化（リファクタリング版）"""
+        """初期化"""
         # 分離されたコンポーネント
         self.experiment_manager = ExperimentManager()
         self.progress_tracker = ProgressTracker()
@@ -125,7 +125,7 @@ class AutoStrategyService:
         progress_callback: Optional[Callable[[GAProgress], None]] = None,
     ) -> str:
         """
-        戦略生成を開始（リファクタリング版）
+        戦略生成を開始
 
         Args:
             experiment_name: 実験名
@@ -184,7 +184,7 @@ class AutoStrategyService:
         self, experiment_id: str, ga_config: GAConfig, backtest_config: Dict[str, Any]
     ):
         """
-        実験をバックグラウンドで実行（リファクタリング版）
+        実験をバックグラウンドで実行
 
         Args:
             experiment_id: 実験ID

@@ -1,5 +1,5 @@
 """
-戦略ファクトリー（リファクタリング版）
+戦略ファクトリー
 
 StrategyGeneから動的にbacktesting.py互換のStrategy継承クラスを生成します。
 責任を分離し、各機能を専用モジュールに委譲します。
@@ -28,7 +28,7 @@ class StrategyFactory:
     """
 
     def __init__(self):
-        """初期化（リファクタリング版）"""
+        """初期化"""
         # 分離されたコンポーネント
         self.indicator_initializer = IndicatorInitializer()
         self.condition_evaluator = ConditionEvaluator()
@@ -98,7 +98,7 @@ class StrategyFactory:
                     # エラーが発生してもバックテストを継続
 
             def _init_indicator(self, indicator_gene: IndicatorGene):
-                """単一指標の初期化（リファクタリング版）"""
+                """単一指標の初期化"""
                 # IndicatorInitializerに委譲
                 indicator_name = (
                     self.factory.indicator_initializer.initialize_indicator(
@@ -111,29 +111,29 @@ class StrategyFactory:
                     logger.warning(f"指標初期化失敗: {indicator_gene.type}")
 
             def _convert_to_series(self, bt_array):
-                """backtesting.pyの_ArrayをPandas Seriesに変換（リファクタリング版）"""
+                """backtesting.pyの_ArrayをPandas Seriesに変換"""
                 return self.factory.data_converter.convert_to_series(bt_array)
 
             def _check_entry_conditions(self) -> bool:
-                """エントリー条件をチェック（リファクタリング版）"""
+                """エントリー条件をチェック"""
                 return self.factory.condition_evaluator.check_entry_conditions(
                     gene.entry_conditions, self
                 )
 
             def _check_exit_conditions(self) -> bool:
-                """イグジット条件をチェック（リファクタリング版）"""
+                """イグジット条件をチェック"""
                 return self.factory.condition_evaluator.check_exit_conditions(
                     gene.exit_conditions, self
                 )
 
             def _evaluate_condition(self, condition):
-                """単一条件を評価（リファクタリング版）"""
+                """単一条件を評価"""
                 return self.factory.condition_evaluator.evaluate_condition(
                     condition, self
                 )
 
             def _get_condition_value(self, operand):
-                """条件のオペランドから値を取得（リファクタリング版）"""
+                """条件のオペランドから値を取得"""
                 return self.factory.condition_evaluator.get_condition_value(
                     operand, self
                 )
@@ -271,7 +271,7 @@ class StrategyFactory:
                     return False
 
             def _apply_risk_management(self):
-                """リスク管理を適用（リファクタリング版）"""
+                """リスク管理を適用"""
                 self.factory.condition_evaluator.apply_risk_management(self)
 
         # クラス名を設定
@@ -282,7 +282,7 @@ class StrategyFactory:
 
     def validate_gene(self, gene: StrategyGene) -> Tuple[bool, list]:
         """
-        遺伝子の妥当性を詳細に検証（リファクタリング版）
+        遺伝子の妥当性を詳細に検証
 
         Args:
             gene: 検証する戦略遺伝子

@@ -12,23 +12,17 @@ from typing import Dict, Any, Optional
 
 from ..models.strategy_gene import IndicatorGene
 
-try:
-    from app.core.services.indicators.adapters.trend_adapter import TrendAdapter
-    from app.core.services.indicators.adapters.momentum_adapter import MomentumAdapter
-    from app.core.services.indicators.adapters.volatility_adapter import (
-        VolatilityAdapter,
-    )
-    from app.core.services.indicators.adapters.volume_adapter import VolumeAdapter
-    from app.core.services.indicators.adapters.price_transform_adapter import (
-        PriceTransformAdapter,
-    )
-except ImportError:
-    # テスト環境での代替インポート
-    TrendAdapter = None
-    MomentumAdapter = None
-    VolatilityAdapter = None
-    VolumeAdapter = None
-    PriceTransformAdapter = None
+
+from app.core.services.indicators.adapters.trend_adapter import TrendAdapter
+from app.core.services.indicators.adapters.momentum_adapter import MomentumAdapter
+from app.core.services.indicators.adapters.volatility_adapter import (
+    VolatilityAdapter,
+)
+from app.core.services.indicators.adapters.volume_adapter import VolumeAdapter
+from app.core.services.indicators.adapters.price_transform_adapter import (
+    PriceTransformAdapter,
+)
+
 
 logger = logging.getLogger(__name__)
 
