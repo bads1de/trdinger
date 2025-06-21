@@ -97,13 +97,19 @@ class AutoStrategyService:
                 )  # GAによって生成された戦略を保存・取得するリポジトリ
 
                 # バックテストデータサービスを初期化 (OHLCV, OI, FR データを統合)
+                # このサービスは、バックテストに必要な市場データ（OHLCV、建玉、資金調達率）を
+                # データベースから取得し、整形する役割を担います。
                 data_service = BacktestDataService(
                     ohlcv_repo=ohlcv_repo, oi_repo=oi_repo, fr_repo=fr_repo
                 )
                 # バックテストサービスを初期化 (データサービスを利用)
+                # このサービスは、特定の戦略と市場データを用いてバックテストを実行し、
+                # そのパフォーマンスを評価する役割を担います。
                 self.backtest_service = BacktestService(data_service)
 
                 # 遺伝的アルゴリズムエンジンを初期化 (バックテストサービスと戦略ファクトリを利用)
+                # このエンジンは、遺伝的アルゴリズムの中核を実装し、戦略の生成、評価、選択、
+                # 交叉、突然変異といった進化プロセスを管理します。
                 self.ga_engine = GeneticAlgorithmEngine(
                     self.backtest_service, self.strategy_factory
                 )
@@ -307,12 +313,12 @@ class AutoStrategyService:
                 logger.info(f"最良戦略を保存しました: DB ID {best_strategy_record.id}")
 
                 # 最良戦略のバックテスト結果をbacktest_resultsテーブルにも保存
+                # GAの評価フェーズでは高速化のために簡略化されたフィットネス計算を行いますが、
+                # ここでは最終的に見つかった最良戦略について、詳細なパフォーマンス指標や
+                # 取引履歴を含む完全なバックテストを再実行し、その結果を永続化します。
                 try:
                     logger.info("最良戦略のバックテスト結果を詳細保存開始...")
 
-                    # GAの評価フェーズでは高速化のために簡略化されたフィットネス計算を行いますが、
-                    # ここでは最終的に見つかった最良戦略について、詳細なパフォーマンス指標や
-                    # 取引履歴を含む完全なバックテストを再実行し、その結果を永続化します。
                     detailed_backtest_config = backtest_config.copy()
                     detailed_backtest_config["strategy_name"] = (
                         f"AUTO_STRATEGY_{experiment_info['name']}_{best_strategy.id[:8]}"
@@ -342,9 +348,9 @@ class AutoStrategyService:
                         "initial_capital": detailed_backtest_config[
                             "initial_capital"
                         ],  # 初期資金
-                        "commission_rate": detailed_backtest_config.get(  # 手数料率 (デフォルト値あり)
+                        "commission_rate": detailed_backtest_config.get(
                             "commission_rate", 0.001
-                        ),
+                        ),  # 手数料率 (デフォルト値あり)
                         "config_json": {  # バックテスト設定のJSON形式
                             "strategy_config": detailed_backtest_config[
                                 "strategy_config"
@@ -353,9 +359,9 @@ class AutoStrategyService:
                             "db_experiment_id": db_experiment_id,  # データベース実験ID
                             "fitness_score": best_fitness,  # 適応度スコア
                         },
-                        "performance_metrics": detailed_result.get(  # パフォーマンス指標 (デフォルト値あり)
+                        "performance_metrics": detailed_result.get(
                             "performance_metrics", {}
-                        ),
+                        ),  # パフォーマンス指標 (デフォルト値あり)
                         "equity_curve": detailed_result.get(
                             "equity_curve", []
                         ),  # エクイティカーブデータ (デフォルト値あり)
@@ -383,6 +389,8 @@ class AutoStrategyService:
                     # エラーが発生してもメイン処理は継続
 
                 # GAによって生成された全ての戦略を一括でデータベースに保存 (オプション機能)
+                # 大量の戦略が生成される可能性があるため、パフォーマンスを考慮し、
+                # 最良戦略以外の戦略もまとめて保存します。
                 if (
                     all_strategies and len(all_strategies) > 1
                 ):  # 全戦略が存在し、かつ複数ある場合

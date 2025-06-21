@@ -28,8 +28,7 @@ class EvolutionOperators:
         elite_size: int,
     ) -> List[Any]:
         """
-        エリート保存戦略を適用
-
+        エリート保存戦略を適用します。
         遺伝的アルゴリズムにおいて、最も適応度の高い個体 (エリート) を
         次世代に直接引き継ぐことで、優れた遺伝子情報が失われるのを防ぎ、
         収束を早める効果があります。
@@ -37,7 +36,7 @@ class EvolutionOperators:
         Args:
             population: 親世代の個体群
             offspring: 子世代の個体群
-            elite_size: エリートサイズ
+            elite_size: エリートとして次世代に残す個体の数
 
         Returns:
             エリート保存を適用した新しい個体群
@@ -47,12 +46,12 @@ class EvolutionOperators:
             population.sort(key=lambda x: x.fitness.values[0], reverse=True)
             elite = population[:elite_size]  # 最も優れた個体群
 
-            # 子世代から残りの個体を選択
+            # 子世代から残りの個体を選択 (エリートの数だけ子世代から減らす)
             offspring.sort(key=lambda x: x.fitness.values[0], reverse=True)
             remaining_size = len(population) - elite_size
             selected_offspring = offspring[:remaining_size]
 
-            # エリートと選択された子世代を結合
+            # エリートと選択された子世代を結合して新しい個体群を形成
             new_population = elite + selected_offspring
 
             logger.debug(
@@ -69,12 +68,14 @@ class EvolutionOperators:
         self, offspring: List[Any], crossover_rate: float, toolbox
     ) -> List[Any]:
         """
-        交叉を実行
+        交叉を実行します。
+        個体群の中からランダムにペアを選択し、交叉率に基づいて遺伝子を交換します。
+        交叉後、子個体の適応度を無効化し、再評価を促します。
 
         Args:
-            offspring: 子世代個体群
-            crossover_rate: 交叉率
-            toolbox: DEAPツールボックス
+            offspring: 子世代個体群 (交叉の対象)
+            crossover_rate: 交叉を行う確率 (0.0から1.0)
+            toolbox: DEAPツールボックス (mate関数を含む)
 
         Returns:
             交叉後の個体群
@@ -83,30 +84,33 @@ class EvolutionOperators:
             import random
 
             crossover_count = 0
+            # 個体群を2つずつペアにしてイテレート
             for child1, child2 in zip(offspring[::2], offspring[1::2]):
+                # 交叉率に基づいて交叉を実行
                 if random.random() < crossover_rate:
-                    toolbox.mate(child1, child2)  # type: ignore
-                    del child1.fitness.values
-                    del child2.fitness.values
+                    toolbox.mate(child1, child2)  # type: ignore # mate関数で遺伝子を交換
+                    del child1.fitness.values  # 適応度を無効化
+                    del child2.fitness.values  # 適応度を無効化
                     crossover_count += 1
 
-            logger.debug(f"交叉実行: {crossover_count}組の個体で交叉")
-            return offspring
+            return offspring  # 正常終了時も個体群を返す
 
         except Exception as e:
             logger.error(f"交叉エラー: {e}")
-            return offspring
+            return offspring  # エラー時も個体群を返す
 
     def perform_mutation(
         self, offspring: List[Any], mutation_rate: float, toolbox
     ) -> List[Any]:
         """
-        突然変異を実行
+        突然変異を実行します。
+        個体群の各個体に対し、突然変異率に基づいて遺伝子にランダムな変更を加えます。
+        突然変異後、個体の適応度を無効化し、再評価を促します。
 
         Args:
-            offspring: 子世代個体群
-            mutation_rate: 突然変異率
-            toolbox: DEAPツールボックス
+            offspring: 子世代個体群 (突然変異の対象)
+            mutation_rate: 突然変異を行う確率 (0.0から1.0)
+            toolbox: DEAPツールボックス (mutate関数を含む)
 
         Returns:
             突然変異後の個体群
@@ -115,18 +119,19 @@ class EvolutionOperators:
             import random
 
             mutation_count = 0
+            # 個体群の各個体に対してイテレート
             for mutant in offspring:
+                # 突然変異率に基づいて突然変異を実行
                 if random.random() < mutation_rate:
-                    toolbox.mutate(mutant)  # type: ignore
-                    del mutant.fitness.values
+                    toolbox.mutate(mutant)  # type: ignore # mutate関数で遺伝子を変更
+                    del mutant.fitness.values  # 適応度を無効化
                     mutation_count += 1
 
-            logger.debug(f"突然変異実行: {mutation_count}個体で突然変異")
-            return offspring
+            return offspring  # 正常終了時も個体群を返す
 
         except Exception as e:
             logger.error(f"突然変異エラー: {e}")
-            return offspring
+            return offspring  # エラー時も個体群を返す
 
     def select_parents(self, population: List[Any], toolbox) -> List[Any]:
         """

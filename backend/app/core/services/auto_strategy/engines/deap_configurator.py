@@ -99,7 +99,10 @@ class DEAPConfigurator:
             return
 
         def create_individual():
-            """新しいランダム遺伝子生成器を使用して個体を生成"""
+            """
+            新しいランダム遺伝子生成器を使用して個体を生成します。
+            生成に失敗した場合は、フォールバックとして固定の構造を持つ個体を生成します。
+            """
             try:
                 # ランダム遺伝子生成器で戦略遺伝子を生成
                 gene = self.gene_generator.generate_random_gene()
@@ -110,7 +113,7 @@ class DEAPConfigurator:
                 return creator.Individual(individual)  # type: ignore
             except Exception as e:
                 logger.warning(f"新しい遺伝子生成に失敗、フォールバックを使用: {e}")
-                # フォールバック: 従来の方法
+                # フォールバック: 従来の方法（固定の構造を持つ個体を生成）
                 return self._create_fallback_individual(config)
 
         self.toolbox.register("individual", create_individual)
@@ -144,13 +147,15 @@ class DEAPConfigurator:
         """進化演算子の登録"""
         if not self.toolbox:
             return
-        # 交叉関数: 2つの個体から子孫を生成する関数
+        # 交叉関数: 2つの個体から子孫を生成する関数 (ここでは2点交叉を使用)
         self.toolbox.register("mate", tools.cxTwoPoint)
 
-        # 突然変異関数: 個体の遺伝子にランダムな変更を加える関数
+        # 突然変異関数: 個体の遺伝子にランダムな変更を加える関数 (ここではガウス変異を使用)
+        # mu: 平均 (変異の中心), sigma: 標準偏差 (変異の幅), indpb: 各遺伝子が変異する確率
         self.toolbox.register("mutate", tools.mutGaussian, mu=0, sigma=0.1, indpb=0.1)
 
-        # 選択関数: 次世代の個体群を選択する関数
+        # 選択関数: 次世代の個体群を選択する関数 (ここではトーナメント選択を使用)
+        # tournsize: トーナメントサイズ (選択される個体数)
         self.toolbox.register("select", tools.selTournament, tournsize=3)
 
     def _setup_parallel_processing(self, config: GAConfig):

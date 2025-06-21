@@ -218,17 +218,20 @@ class FitnessCalculator:
         max_drawdown = abs(metrics.get("max_drawdown", 1.0))
         win_rate = metrics.get("win_rate", 0.0) / 100.0  # パーセンテージを小数に変換
 
-        # 正規化（より実用的な範囲設定）
-        # 1. リターン正規化: -50%〜+200% → 0〜1
+        # 正規化（より実用的な範囲設定）: 各指標を0から1の範囲にスケーリング
+        # 1. リターン正規化: -50%〜+200% の範囲を0〜1にマッピング
+        #    (total_return + 50) で負の値をオフセットし、250 (200 - (-50)) で割る
         normalized_return = max(0, min(1, (total_return + 50) / 250))
 
-        # 2. シャープレシオ正規化: -2〜+4 → 0〜1 (優秀な戦略は2以上)
+        # 2. シャープレシオ正規化: -2〜+4 の範囲を0〜1にマッピング (優秀な戦略は2以上)
+        #    (sharpe_ratio + 2) で負の値をオフセットし、6 (4 - (-2)) で割る
         normalized_sharpe = max(0, min(1, (sharpe_ratio + 2) / 6))
 
-        # 3. ドローダウン正規化: 0〜50% → 1〜0 (低いほど良い)
+        # 3. ドローダウン正規化: 0〜50% の範囲を1〜0にマッピング (低いほど良い)
+        #    1から (max_drawdown / 0.5) を引くことで、ドローダウンが低いほど値が高くなるようにする
         normalized_drawdown = max(0, min(1, 1 - (max_drawdown / 0.5)))
 
-        # 4. 勝率正規化: 0〜100% → 0〜1
+        # 4. 勝率正規化: 0〜100% の範囲を0〜1にマッピング
         normalized_win_rate = max(0, min(1, win_rate))
 
         # 重み付き合計
@@ -259,9 +262,11 @@ class FitnessCalculator:
         max_drawdown = abs(metrics.get("max_drawdown", 1.0))
 
         # ボーナス: 優秀な戦略への追加評価
+        # 特定のパフォーマンス基準を満たす戦略に対して、フィットネススコアにボーナスを適用し、
+        # その戦略がGAによって優先的に選択されるようにします。
         if total_return > 20 and sharpe_ratio > 1.5 and max_drawdown < 0.15:
-            fitness *= 1.2  # 20%ボーナス
+            fitness *= 1.2  # 20%ボーナス (リターン20%超、シャープレシオ1.5超、最大ドローダウン15%未満)
         elif total_return > 50 and sharpe_ratio > 2.0 and max_drawdown < 0.10:
-            fitness *= 1.5  # 50%ボーナス（非常に優秀）
+            fitness *= 1.5  # 50%ボーナス（非常に優秀）(リターン50%超、シャープレシオ2.0超、最大ドローダウン10%未満)
 
         return fitness

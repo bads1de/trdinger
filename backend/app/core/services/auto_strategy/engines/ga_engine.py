@@ -141,29 +141,29 @@ class GeneticAlgorithmEngine:
                 config, population, backtest_config.get("experiment_id", "")
             )
 
-            # 世代ループ
+            # 世代ループ: 指定された世代数だけ進化プロセスを繰り返す
             for generation in range(1, config.generations + 1):
                 self.progress_manager.set_current_generation(generation)
                 logger.info(f"世代 {generation}/{config.generations} 開始")
 
-                # 進化演算の実行
+                # 進化演算の実行: 選択、交叉、突然変異、エリート保存など
                 population = self._run_generation(population, config, self.toolbox)
 
-                # 統計情報の記録
+                # 統計情報の記録: 各世代の個体群の適応度統計（平均、最大など）を記録
                 record = stats.compile(population)
                 logbook.record(gen=generation, evals=len(population), **record)
 
-                # 進捗通知
+                # 進捗通知: 現在の世代の進捗状況を外部に通知
                 self.progress_manager.notify_progress(
                     config, population, backtest_config.get("experiment_id", "")
                 )
 
                 logger.info(f"世代 {generation} 完了 - 最高適応度: {record['max']:.4f}")
 
-            # 結果の整理
+            # 結果の整理: 最終世代の個体群から最も適応度の高い個体を選出
             best_individual = tools.selBest(population, 1)[0]
 
-            # 遺伝子エンコーダーを使用してデコード
+            # 遺伝子エンコーダーを使用してデコード: 数値リスト形式の遺伝子をStrategyGeneオブジェクトに変換
             from ..models.gene_encoding import GeneEncoder
             from ..models.strategy_gene import StrategyGene
 
