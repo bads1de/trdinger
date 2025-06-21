@@ -95,6 +95,8 @@ class DEAPConfigurator:
 
     def _register_individual_creation(self, config: GAConfig):
         """個体生成関数の登録"""
+        if not self.toolbox:
+            return
 
         def create_individual():
             """新しいランダム遺伝子生成器を使用して個体を生成"""
@@ -140,6 +142,8 @@ class DEAPConfigurator:
 
     def _register_evolution_operators(self):
         """進化演算子の登録"""
+        if not self.toolbox:
+            return
         # 交叉関数: 2つの個体から子孫を生成する関数
         self.toolbox.register("mate", tools.cxTwoPoint)
 
@@ -151,6 +155,8 @@ class DEAPConfigurator:
 
     def _setup_parallel_processing(self, config: GAConfig):
         """並列処理の設定"""
+        if not self.toolbox:
+            return
         if config.parallel_processes:
             pool = multiprocessing.Pool(config.parallel_processes)
             self.toolbox.register("map", pool.map)
@@ -197,6 +203,7 @@ class DEAPConfigurator:
 
     def decorate_operators_with_constraints(self):
         """演算子に制約条件を適用"""
-        if self.toolbox:
-            self.toolbox.decorate("mate", self.apply_constraints_decorator)
-            self.toolbox.decorate("mutate", self.apply_constraints_decorator)
+        if not self.toolbox:
+            return
+        self.toolbox.decorate("mate", self.apply_constraints_decorator)
+        self.toolbox.decorate("mutate", self.apply_constraints_decorator)
