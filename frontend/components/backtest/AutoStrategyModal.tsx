@@ -9,7 +9,6 @@
 import React from "react";
 import { X } from "lucide-react";
 import GAConfigForm from "./GAConfigForm";
-import AutoStrategyImprovements from "./AutoStrategyImprovements";
 import { GAConfig } from "@/types/optimization";
 
 interface AutoStrategyModalProps {
@@ -66,8 +65,6 @@ export default function AutoStrategyModal({
 
         {/* コンテンツ */}
         <div className="p-6 overflow-y-auto max-h-[calc(90vh-120px)] space-y-6">
-          <AutoStrategyImprovements />
-
           <GAConfigForm
             onSubmit={handleSubmit}
             isLoading={isLoading}
@@ -78,7 +75,7 @@ export default function AutoStrategyModal({
         {/* フッター */}
         <div className="flex items-center justify-between p-6 border-t border-secondary-700 bg-secondary-900">
           <div className="text-sm text-secondary-400">
-            🚀 改善版: 実行時間70%短縮、58種類の指標が利用可能
+            最適な取引戦略を自動生成します
           </div>
           <button
             onClick={onClose}
