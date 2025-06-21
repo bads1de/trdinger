@@ -8,7 +8,7 @@ import uuid
 import time
 import threading
 import logging
-from typing import Dict, Any, List, Optional, cast
+from typing import Callable, Dict, Any, List, Optional, cast
 
 from ..models.ga_config import GAConfig
 
@@ -81,7 +81,7 @@ class ExperimentManager:
     def start_experiment(
         self,
         experiment_id: str,
-        experiment_runner: callable,
+        experiment_runner: Callable[[str, GAConfig, Dict[str, Any]], None],
     ) -> bool:
         """
         実験を開始
