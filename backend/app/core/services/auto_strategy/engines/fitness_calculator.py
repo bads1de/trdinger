@@ -12,12 +12,8 @@ from ..models.strategy_gene import StrategyGene
 from ..models.gene_encoding import GeneEncoder
 from ..models.ga_config import GAConfig
 from ..factories.strategy_factory import StrategyFactory
+from app.core.services.backtest_service import BacktestService
 
-try:
-    from app.core.services.backtest_service import BacktestService
-except ImportError:
-    # テスト環境での代替インポート
-    BacktestService = None
 
 logger = logging.getLogger(__name__)
 

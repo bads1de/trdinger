@@ -13,6 +13,8 @@ from ..models.strategy_gene import StrategyGene, IndicatorGene
 from .indicator_initializer import IndicatorInitializer
 from .condition_evaluator import ConditionEvaluator
 from .data_converter import DataConverter
+import pandas as pd
+import numpy as np
 
 logger = logging.getLogger(__name__)
 
@@ -249,6 +251,10 @@ class StrategyFactory:
                 try:
                     left_current = self._get_condition_value(left_operand)
                     right_current = self._get_condition_value(right_operand)
+
+                    # いずれかの値がNoneの場合は評価できないためFalseを返す
+                    if left_current is None or right_current is None:
+                        return False
 
                     # 前の値も取得（簡略化）
                     if len(self.data.Close) < 2:

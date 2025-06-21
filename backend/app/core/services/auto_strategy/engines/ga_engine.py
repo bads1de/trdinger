@@ -9,19 +9,15 @@ DEAPライブラリを使用したGA実装。
 
 import time
 import logging
-from typing import Dict, Any, Optional
+from typing import Dict, Any
 from deap import tools
 
-from ..models.strategy_gene import decode_list_to_gene
+
 from ..models.ga_config import GAConfig
 from ..factories.strategy_factory import StrategyFactory
 from ..generators.random_gene_generator import RandomGeneGenerator
+from app.core.services.backtest_service import BacktestService
 
-try:
-    from app.core.services.backtest_service import BacktestService
-except ImportError:
-    # テスト環境での代替インポート
-    BacktestService = None
 
 # 分離されたモジュール
 from .fitness_calculator import FitnessCalculator

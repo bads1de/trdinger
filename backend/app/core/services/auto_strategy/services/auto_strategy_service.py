@@ -12,41 +12,27 @@ from ..models.ga_config import GAConfig, GAProgress
 from ..models.strategy_gene import StrategyGene
 from ..engines.ga_engine import GeneticAlgorithmEngine
 from ..factories.strategy_factory import StrategyFactory
+from app.core.services.backtest_service import BacktestService
+from app.core.services.backtest_data_service import BacktestDataService
 
-try:
-    from app.core.services.backtest_service import BacktestService
-    from app.core.services.backtest_data_service import BacktestDataService
-except ImportError:
-    # テスト環境での代替インポート
-    BacktestService = None
-    BacktestDataService = None
 
 # 分離されたモジュール
 from .experiment_manager import ExperimentManager
 from .progress_tracker import ProgressTracker
 
 # データベースリポジトリのインポート
-try:
-    from database.repositories.ohlcv_repository import OHLCVRepository
-    from database.repositories.open_interest_repository import OpenInterestRepository
-    from database.repositories.funding_rate_repository import FundingRateRepository
-    from database.repositories.generated_strategy_repository import (
-        GeneratedStrategyRepository,
-    )
-    from database.repositories.ga_experiment_repository import GAExperimentRepository
-    from database.repositories.backtest_result_repository import (
-        BacktestResultRepository,
-    )
-    from database.connection import SessionLocal
-except ImportError:
-    # テスト環境での代替インポート
-    OHLCVRepository = None
-    OpenInterestRepository = None
-    FundingRateRepository = None
-    GeneratedStrategyRepository = None
-    GAExperimentRepository = None
-    BacktestResultRepository = None
-    SessionLocal = None
+from database.repositories.ohlcv_repository import OHLCVRepository
+from database.repositories.open_interest_repository import OpenInterestRepository
+from database.repositories.funding_rate_repository import FundingRateRepository
+from database.repositories.generated_strategy_repository import (
+    GeneratedStrategyRepository,
+)
+from database.repositories.ga_experiment_repository import GAExperimentRepository
+from database.repositories.backtest_result_repository import (
+    BacktestResultRepository,
+)
+from database.connection import SessionLocal
+
 
 logger = logging.getLogger(__name__)
 
@@ -169,9 +155,10 @@ class AutoStrategyService:
             # 進捗コールバックを設定
             experiment_info = self.experiment_manager.get_experiment_info(experiment_id)
             if experiment_info:
-                self.progress_tracker.set_progress_callback(
-                    experiment_id, progress_callback, experiment_info["db_id"]
-                )
+                if progress_callback:
+                    self.progress_tracker.set_progress_callback(
+                        experiment_id, progress_callback, experiment_info["db_id"]
+                    )
 
                 # GAエンジンに進捗コールバックを設定
                 ga_callback = self.progress_tracker.get_progress_callback(experiment_id)
@@ -221,7 +208,7 @@ class AutoStrategyService:
             self.experiment_manager.complete_experiment(experiment_id, result)
 
             # 最終進捗を作成・通知
-            final_progress = self.progress_tracker.create_final_progress(
+            self.progress_tracker.create_final_progress(
                 experiment_id, result, ga_config
             )
 
@@ -234,24 +221,24 @@ class AutoStrategyService:
             self.experiment_manager.fail_experiment(experiment_id, str(e))
 
             # エラー進捗を作成・通知
-            error_progress = self.progress_tracker.create_error_progress(
+            self.progress_tracker.create_error_progress(
                 experiment_id, ga_config, str(e)
             )
 
     def get_experiment_progress(self, experiment_id: str) -> Optional[GAProgress]:
-        """実験の進捗を取得（リファクタリング版）"""
+        """実験の進捗を取得"""
         return self.progress_tracker.get_progress(experiment_id)
 
     def get_experiment_result(self, experiment_id: str) -> Optional[Dict[str, Any]]:
-        """実験結果を取得（リファクタリング版）"""
+        """実験結果を取得"""
         return self.experiment_manager.get_experiment_result(experiment_id)
 
     def list_experiments(self) -> List[Dict[str, Any]]:
-        """実験一覧を取得（リファクタリング版）"""
+        """実験一覧を取得"""
         return self.experiment_manager.list_experiments()
 
     def stop_experiment(self, experiment_id: str) -> bool:
-        """実験を停止（リファクタリング版）"""
+        """実験を停止"""
         try:
             # GA実行を停止
             self.ga_engine.stop_evolution()

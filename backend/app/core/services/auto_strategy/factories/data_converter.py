@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 class DataConverter:
     """
     データ変換器
-    
+
     backtesting.py互換のデータ変換を担当します。
     """
 
@@ -26,10 +26,10 @@ class DataConverter:
     def convert_to_series(self, data) -> pd.Series:
         """
         backtesting.pyの_ArrayをPandas Seriesに変換
-        
+
         Args:
             data: 変換対象のデータ
-            
+
         Returns:
             Pandas Series
         """
@@ -49,10 +49,10 @@ class DataConverter:
     def convert_to_backtesting_format(self, data: Any) -> Any:
         """
         データをbacktesting.py形式に変換
-        
+
         Args:
             data: 変換対象のデータ
-            
+
         Returns:
             backtesting.py互換形式のデータ
         """
@@ -79,10 +79,10 @@ class DataConverter:
     def _convert_dataframe_to_backtesting(self, df: pd.DataFrame) -> Any:
         """
         DataFrameをbacktesting.py形式に変換
-        
+
         Args:
             df: 変換対象のDataFrame
-            
+
         Returns:
             backtesting.py互換形式のデータ
         """
@@ -90,7 +90,7 @@ class DataConverter:
             # 必要な列が存在するかチェック
             required_columns = ["Open", "High", "Low", "Close", "Volume"]
             missing_columns = [col for col in required_columns if col not in df.columns]
-            
+
             if missing_columns:
                 logger.warning(f"必要な列が不足: {missing_columns}")
                 # 不足している列を補完
@@ -103,9 +103,17 @@ class DataConverter:
             # インデックスがDatetimeでない場合は変換
             if not isinstance(df.index, pd.DatetimeIndex):
                 if "timestamp" in df.columns:
-                    df.index = pd.to_datetime(df["timestamp"])
+                    df = df.set_index(
+                        pd.to_datetime(df["timestamp"], unit="ms")
+                        .dt.tz_localize(None)
+                        .rename("time")
+                    )
                 elif "date" in df.columns:
-                    df.index = pd.to_datetime(df["date"])
+                    df = df.set_index(
+                        pd.to_datetime(df["date"], unit="ms")
+                        .dt.tz_localize(None)
+                        .rename("time")
+                    )
                 else:
                     # デフォルトの日付インデックスを作成
                     df.index = pd.date_range(
@@ -121,10 +129,10 @@ class DataConverter:
     def _convert_series_to_backtesting(self, series: pd.Series) -> pd.Series:
         """
         SeriesをBacktesting.py形式に変換
-        
+
         Args:
             series: 変換対象のSeries
-            
+
         Returns:
             backtesting.py互換形式のSeries
         """
@@ -144,10 +152,10 @@ class DataConverter:
     def validate_data_format(self, data: Any) -> bool:
         """
         データ形式の妥当性をチェック
-        
+
         Args:
             data: チェック対象のデータ
-            
+
         Returns:
             妥当な場合True
         """
@@ -158,7 +166,11 @@ class DataConverter:
                 return all(col in data.columns for col in required_columns)
 
             # backtesting.pyのデータオブジェクトの場合
-            if hasattr(data, "Close") and hasattr(data, "High") and hasattr(data, "Low"):
+            if (
+                hasattr(data, "Close")
+                and hasattr(data, "High")
+                and hasattr(data, "Low")
+            ):
                 return True
 
             # その他の場合は無効
@@ -171,10 +183,10 @@ class DataConverter:
     def extract_price_data(self, data: Any) -> dict:
         """
         価格データを抽出
-        
+
         Args:
             data: データオブジェクト
-            
+
         Returns:
             価格データの辞書
         """
@@ -206,10 +218,10 @@ class DataConverter:
     def normalize_column_names(self, df: pd.DataFrame) -> pd.DataFrame:
         """
         列名を正規化
-        
+
         Args:
             df: 対象のDataFrame
-            
+
         Returns:
             列名が正規化されたDataFrame
         """
@@ -240,10 +252,10 @@ class DataConverter:
     def ensure_numeric_data(self, data: Any) -> Any:
         """
         データが数値型であることを保証
-        
+
         Args:
             data: 対象のデータ
-            
+
         Returns:
             数値型に変換されたデータ
         """

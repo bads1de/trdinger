@@ -6,7 +6,7 @@
 """
 
 from dataclasses import dataclass, field
-from typing import List, Dict, Any, Union, Tuple
+from typing import List, Dict, Any, Union
 import logging
 
 # 分離されたモジュール
@@ -21,9 +21,10 @@ logger = logging.getLogger(__name__)
 class IndicatorGene:
     """
     指標遺伝子（リファクタリング版）
-    
+
     単一のテクニカル指標の設定を表現します。
     """
+
     type: str  # 指標タイプ（例: "SMA", "RSI", "MACD"）
     parameters: Dict[str, Any] = field(default_factory=dict)  # 指標パラメータ
     enabled: bool = True  # 指標の有効/無効
@@ -38,9 +39,10 @@ class IndicatorGene:
 class Condition:
     """
     条件（リファクタリング版）
-    
+
     エントリー・イグジット条件を表現します。
     """
+
     left_operand: Union[str, float]  # 左オペランド
     operator: str  # 演算子
     right_operand: Union[str, float]  # 右オペランド
@@ -60,9 +62,10 @@ class Condition:
 class StrategyGene:
     """
     戦略遺伝子（リファクタリング版）
-    
+
     完全な取引戦略を表現する遺伝子です。
     """
+
     # 制約定数
     MAX_INDICATORS = 5  # 最大指標数
 
@@ -119,5 +122,5 @@ def decode_list_to_gene(encoded: List[float]) -> StrategyGene:
 
 # 全ての関数実装は分離されたモジュールに移動されました
 # - gene_validation.py: バリデーション機能
-# - gene_serialization.py: シリアライゼーション機能  
+# - gene_serialization.py: シリアライゼーション機能
 # - gene_encoding.py: GA用エンコード/デコード機能

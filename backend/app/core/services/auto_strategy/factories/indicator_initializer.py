@@ -49,66 +49,89 @@ class IndicatorInitializer:
 
     def _setup_indicator_adapters(self) -> Dict[str, Any]:
         """指標アダプターのマッピングを設定"""
-        return {
-            # トレンド系
-            "SMA": TrendAdapter.sma,
-            "EMA": TrendAdapter.ema,
-            "TEMA": TrendAdapter.tema,
-            "DEMA": TrendAdapter.dema,
-            "T3": TrendAdapter.t3,
-            "WMA": TrendAdapter.wma,
-            "HMA": TrendAdapter.hma,
-            "KAMA": TrendAdapter.kama,
-            "ZLEMA": TrendAdapter.zlema,
-            "VWMA": TrendAdapter.vwma,
-            "MIDPOINT": TrendAdapter.midpoint,
-            "MIDPRICE": TrendAdapter.midprice,
-            "TRIMA": TrendAdapter.trima,
-            # モメンタム系
-            "RSI": MomentumAdapter.rsi,
-            "STOCH": MomentumAdapter.stochastic,
-            "STOCHRSI": MomentumAdapter.stochastic_rsi,
-            "CCI": MomentumAdapter.cci,
-            "WILLR": MomentumAdapter.williams_r,
-            "WILLIAMS": MomentumAdapter.williams_r,
-            "ADX": MomentumAdapter.adx,
-            "AROON": MomentumAdapter.aroon,
-            "MFI": MomentumAdapter.mfi,
-            "MOM": MomentumAdapter.momentum,
-            "ROC": MomentumAdapter.roc,
-            "ULTOSC": MomentumAdapter.ultimate_oscillator,
-            "CMO": MomentumAdapter.cmo,
-            "TRIX": MomentumAdapter.trix,
-            "BOP": MomentumAdapter.bop,
-            "APO": MomentumAdapter.apo,
-            "PPO": MomentumAdapter.ppo,
-            "DX": MomentumAdapter.dx,
-            "ADXR": MomentumAdapter.adxr,
-            # ボラティリティ系
-            "ATR": VolatilityAdapter.atr,
-            "NATR": VolatilityAdapter.natr,
-            "TRANGE": VolatilityAdapter.trange,
-            "STDDEV": VolatilityAdapter.stddev,
-            # 複合指標
-            "MACD": MomentumAdapter.macd,
-            "BB": VolatilityAdapter.bollinger_bands,
-            "KELTNER": VolatilityAdapter.keltner_channels,
-            "DONCHIAN": VolatilityAdapter.donchian_channels,
-            # ボリューム系
-            "OBV": VolumeAdapter.obv,
-            "AD": VolumeAdapter.ad,
-            "ADOSC": VolumeAdapter.adosc,
-            "VWAP": VolumeAdapter.vwap,
-            "PVT": VolumeAdapter.pvt,
-            "EMV": VolumeAdapter.emv,
-            # 価格変換系
-            "AVGPRICE": PriceTransformAdapter.avgprice,
-            "MEDPRICE": PriceTransformAdapter.medprice,
-            "TYPPRICE": PriceTransformAdapter.typprice,
-            "WCLPRICE": PriceTransformAdapter.wclprice,
-            # その他
-            # "PSAR": TrendAdapter.parabolic_sar,  # TODO: 正しい実装を追加
-        }
+        adapters = {}
+
+        if TrendAdapter:
+            adapters.update(
+                {
+                    "SMA": TrendAdapter.sma,
+                    "EMA": TrendAdapter.ema,
+                    "TEMA": TrendAdapter.tema,
+                    "DEMA": TrendAdapter.dema,
+                    "T3": TrendAdapter.t3,
+                    "WMA": TrendAdapter.wma,
+                    "HMA": TrendAdapter.hma,
+                    "KAMA": TrendAdapter.kama,
+                    "ZLEMA": TrendAdapter.zlema,
+                    "VWMA": TrendAdapter.vwma,
+                    "MIDPOINT": TrendAdapter.midpoint,
+                    "MIDPRICE": TrendAdapter.midprice,
+                    "TRIMA": TrendAdapter.trima,
+                }
+            )
+
+        if MomentumAdapter:
+            adapters.update(
+                {
+                    "RSI": MomentumAdapter.rsi,
+                    "STOCH": MomentumAdapter.stochastic,
+                    "STOCHRSI": MomentumAdapter.stochastic_rsi,
+                    "CCI": MomentumAdapter.cci,
+                    "WILLR": MomentumAdapter.williams_r,
+                    "WILLIAMS": MomentumAdapter.williams_r,
+                    "ADX": MomentumAdapter.adx,
+                    "AROON": MomentumAdapter.aroon,
+                    "MFI": MomentumAdapter.mfi,
+                    "MOM": MomentumAdapter.momentum,
+                    "ROC": MomentumAdapter.roc,
+                    "ULTOSC": MomentumAdapter.ultimate_oscillator,
+                    "CMO": MomentumAdapter.cmo,
+                    "TRIX": MomentumAdapter.trix,
+                    "BOP": MomentumAdapter.bop,
+                    "APO": MomentumAdapter.apo,
+                    "PPO": MomentumAdapter.ppo,
+                    "DX": MomentumAdapter.dx,
+                    "ADXR": MomentumAdapter.adxr,
+                    "MACD": MomentumAdapter.macd,
+                }
+            )
+
+        if VolatilityAdapter:
+            adapters.update(
+                {
+                    "ATR": VolatilityAdapter.atr,
+                    "NATR": VolatilityAdapter.natr,
+                    "TRANGE": VolatilityAdapter.trange,
+                    "STDDEV": VolatilityAdapter.stddev,
+                    "BB": VolatilityAdapter.bollinger_bands,
+                    "KELTNER": VolatilityAdapter.keltner_channels,
+                    "DONCHIAN": VolatilityAdapter.donchian_channels,
+                }
+            )
+
+        if VolumeAdapter:
+            adapters.update(
+                {
+                    "OBV": VolumeAdapter.obv,
+                    "AD": VolumeAdapter.ad,
+                    "ADOSC": VolumeAdapter.adosc,
+                    "VWAP": VolumeAdapter.vwap,
+                    "PVT": VolumeAdapter.pvt,
+                    "EMV": VolumeAdapter.emv,
+                }
+            )
+
+        if PriceTransformAdapter:
+            adapters.update(
+                {
+                    "AVGPRICE": PriceTransformAdapter.avgprice,
+                    "MEDPRICE": PriceTransformAdapter.medprice,
+                    "TYPPRICE": PriceTransformAdapter.typprice,
+                    "WCLPRICE": PriceTransformAdapter.wclprice,
+                }
+            )
+
+        return adapters
 
     def initialize_indicator(
         self, indicator_gene: IndicatorGene, data, strategy_instance

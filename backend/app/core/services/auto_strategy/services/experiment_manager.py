@@ -10,19 +10,10 @@ import threading
 import logging
 from typing import Dict, Any, List, Optional, cast
 
-from ..models.ga_config import GAConfig, GAProgress
+from ..models.ga_config import GAConfig
 
-try:
-    from database.repositories.ga_experiment_repository import GAExperimentRepository
-    from database.repositories.generated_strategy_repository import (
-        GeneratedStrategyRepository,
-    )
-    from database.connection import SessionLocal
-except ImportError:
-    # テスト環境での代替インポート
-    GAExperimentRepository = None
-    GeneratedStrategyRepository = None
-    SessionLocal = None
+from database.repositories.ga_experiment_repository import GAExperimentRepository
+from database.connection import SessionLocal
 
 logger = logging.getLogger(__name__)
 

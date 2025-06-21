@@ -9,13 +9,9 @@ from typing import Dict, Optional, Callable
 
 from ..models.ga_config import GAProgress
 
-try:
-    from database.repositories.ga_experiment_repository import GAExperimentRepository
-    from database.connection import SessionLocal
-except ImportError:
-    # テスト環境での代替インポート
-    GAExperimentRepository = None
-    SessionLocal = None
+from database.repositories.ga_experiment_repository import GAExperimentRepository
+from database.connection import SessionLocal
+
 
 logger = logging.getLogger(__name__)
 

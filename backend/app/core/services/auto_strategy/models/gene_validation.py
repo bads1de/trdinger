@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 class GeneValidator:
     """
     遺伝子バリデーター
-    
+
     戦略遺伝子の妥当性検証を担当します。
     """
 
@@ -26,14 +26,40 @@ class GeneValidator:
     def _get_valid_indicator_types(self) -> List[str]:
         """有効な指標タイプのリストを取得"""
         return [
-            # 従来のテクニカル指標（価格・出来高ベース）
-            "SMA", "EMA", "RSI", "MACD", "BB", "STOCH", "CCI", "WILLIAMS",
-            "ADX", "AROON", "MFI", "MOMENTUM", "ROC", "ATR", "NATR", "TRANGE",
-            "OBV", "AD", "ADOSC", "TEMA", "DEMA", "T3", "WMA", "KAMA",
-            # Phase 3 新規追加指標
-            "BOP", "PPO", "MIDPOINT", "MIDPRICE", "TRIMA",
-            # Phase 4 新規追加指標
-            "PLUS_DI", "MINUS_DI", "ROCP", "ROCR", "STOCHF",
+            "SMA",
+            "EMA",
+            "RSI",
+            "MACD",
+            "BB",
+            "STOCH",
+            "CCI",
+            "WILLIAMS",
+            "ADX",
+            "AROON",
+            "MFI",
+            "MOMENTUM",
+            "ROC",
+            "ATR",
+            "NATR",
+            "TRANGE",
+            "OBV",
+            "AD",
+            "ADOSC",
+            "TEMA",
+            "DEMA",
+            "T3",
+            "WMA",
+            "KAMA",
+            "BOP",
+            "PPO",
+            "MIDPOINT",
+            "MIDPRICE",
+            "TRIMA",
+            "PLUS_DI",
+            "MINUS_DI",
+            "ROCP",
+            "ROCR",
+            "STOCHF",
             # 注意: OpenInterest, FundingRateは指標ではなく判断材料として条件で使用
         ]
 
@@ -44,24 +70,29 @@ class GeneValidator:
     def _get_valid_data_sources(self) -> List[str]:
         """有効なデータソースのリストを取得"""
         return [
-            "close", "open", "high", "low", "volume",  # 基本OHLCV
-            "OpenInterest", "FundingRate",  # 新規追加データソース
+            "close",
+            "open",
+            "high",
+            "low",
+            "volume",
+            "OpenInterest",
+            "FundingRate",
         ]
 
     def validate_indicator_gene(self, indicator_gene) -> bool:
         """
         指標遺伝子の妥当性を検証
-        
+
         Args:
             indicator_gene: 指標遺伝子オブジェクト
-            
+
         Returns:
             妥当性（True/False）
         """
         try:
             if not indicator_gene.type or not isinstance(indicator_gene.type, str):
                 return False
-            
+
             if not isinstance(indicator_gene.parameters, dict):
                 return False
 
@@ -84,10 +115,10 @@ class GeneValidator:
     def validate_condition(self, condition) -> bool:
         """
         条件の妥当性を検証
-        
+
         Args:
             condition: 条件オブジェクト
-            
+
         Returns:
             妥当性（True/False）
         """
@@ -120,10 +151,10 @@ class GeneValidator:
     def validate_strategy_gene(self, strategy_gene) -> Tuple[bool, List[str]]:
         """
         戦略遺伝子の妥当性を検証
-        
+
         Args:
             strategy_gene: 戦略遺伝子オブジェクト
-            
+
         Returns:
             (is_valid, error_messages)
         """
@@ -131,7 +162,7 @@ class GeneValidator:
 
         try:
             # 指標数の制約チェック
-            max_indicators = getattr(strategy_gene, 'MAX_INDICATORS', 5)
+            max_indicators = getattr(strategy_gene, "MAX_INDICATORS", 5)
             if len(strategy_gene.indicators) > max_indicators:
                 errors.append(
                     f"指標数が上限({max_indicators})を超えています: {len(strategy_gene.indicators)}"
@@ -159,7 +190,9 @@ class GeneValidator:
                 errors.append("イグジット条件が設定されていません")
 
             # 有効な指標の存在チェック
-            enabled_indicators = [ind for ind in strategy_gene.indicators if ind.enabled]
+            enabled_indicators = [
+                ind for ind in strategy_gene.indicators if ind.enabled
+            ]
             if not enabled_indicators:
                 errors.append("有効な指標が設定されていません")
 
@@ -173,10 +206,10 @@ class GeneValidator:
     def _is_indicator_name(self, name: str) -> bool:
         """
         指標名かどうかを判定
-        
+
         Args:
             name: 判定対象の文字列
-            
+
         Returns:
             指標名の場合True
         """
@@ -185,7 +218,7 @@ class GeneValidator:
             if "_" in name:
                 indicator_type = name.split("_")[0]
                 return indicator_type in self.valid_indicator_types
-            
+
             # 単純な指標名（期間なし）
             return name in self.valid_indicator_types
 
@@ -196,10 +229,10 @@ class GeneValidator:
     def validate_risk_management(self, risk_management: dict) -> Tuple[bool, List[str]]:
         """
         リスク管理設定の妥当性を検証
-        
+
         Args:
             risk_management: リスク管理設定
-            
+
         Returns:
             (is_valid, error_messages)
         """
@@ -209,7 +242,11 @@ class GeneValidator:
             # ストップロスの検証
             if "stop_loss" in risk_management:
                 stop_loss = risk_management["stop_loss"]
-                if not isinstance(stop_loss, (int, float)) or stop_loss <= 0 or stop_loss >= 1:
+                if (
+                    not isinstance(stop_loss, (int, float))
+                    or stop_loss <= 0
+                    or stop_loss >= 1
+                ):
                     errors.append("ストップロスは0-1の範囲で設定してください")
 
             # テイクプロフィットの検証
@@ -221,7 +258,11 @@ class GeneValidator:
             # ポジションサイズの検証
             if "position_size" in risk_management:
                 position_size = risk_management["position_size"]
-                if not isinstance(position_size, (int, float)) or position_size <= 0 or position_size > 1:
+                if (
+                    not isinstance(position_size, (int, float))
+                    or position_size <= 0
+                    or position_size > 1
+                ):
                     errors.append("ポジションサイズは0-1の範囲で設定してください")
 
             return len(errors) == 0, errors
@@ -234,10 +275,10 @@ class GeneValidator:
     def validate_metadata(self, metadata: dict) -> Tuple[bool, List[str]]:
         """
         メタデータの妥当性を検証
-        
+
         Args:
             metadata: メタデータ
-            
+
         Returns:
             (is_valid, error_messages)
         """
@@ -266,20 +307,24 @@ class GeneValidator:
     def get_validation_summary(self, strategy_gene) -> dict:
         """
         バリデーション結果のサマリーを取得
-        
+
         Args:
             strategy_gene: 戦略遺伝子オブジェクト
-            
+
         Returns:
             バリデーション結果のサマリー
         """
         try:
             is_valid, errors = self.validate_strategy_gene(strategy_gene)
-            
+
             # リスク管理とメタデータの検証
-            risk_valid, risk_errors = self.validate_risk_management(strategy_gene.risk_management)
-            metadata_valid, metadata_errors = self.validate_metadata(strategy_gene.metadata)
-            
+            risk_valid, risk_errors = self.validate_risk_management(
+                strategy_gene.risk_management
+            )
+            metadata_valid, metadata_errors = self.validate_metadata(
+                strategy_gene.metadata
+            )
+
             return {
                 "overall_valid": is_valid and risk_valid and metadata_valid,
                 "strategy_valid": is_valid,
@@ -287,7 +332,9 @@ class GeneValidator:
                 "metadata_valid": metadata_valid,
                 "errors": errors + risk_errors + metadata_errors,
                 "indicator_count": len(strategy_gene.indicators),
-                "enabled_indicator_count": len([ind for ind in strategy_gene.indicators if ind.enabled]),
+                "enabled_indicator_count": len(
+                    [ind for ind in strategy_gene.indicators if ind.enabled]
+                ),
                 "entry_condition_count": len(strategy_gene.entry_conditions),
                 "exit_condition_count": len(strategy_gene.exit_conditions),
             }
