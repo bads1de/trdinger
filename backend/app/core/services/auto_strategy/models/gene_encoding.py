@@ -84,7 +84,11 @@ class GeneEncoder:
                     indicator_id = 0  # 未使用
                     param_val = 0.0
 
-                encoded.extend([indicator_id, param_val])
+                # 指標IDを0-1の範囲に正規化してエンコード
+                normalized_id = (
+                    indicator_id / len(self.indicator_ids) if indicator_id > 0 else 0.0
+                )
+                encoded.extend([normalized_id, param_val])
 
             # エントリー条件（簡略化: 最初の条件のみ）
             if strategy_gene.entry_conditions:
@@ -125,17 +129,25 @@ class GeneEncoder:
             max_indicators = 5  # デフォルト値
             indicators = []
 
-            # 指標部分をデコード
+            # 指標部分をデコード（多様性を確保）
             for i in range(max_indicators):
                 idx = i * 2
                 if idx + 1 < len(encoded):
-                    # 指標IDを1-58の範囲にマッピング
-                    indicator_count = len(self.indicator_ids) - 1  # 0を除く
-                    indicator_id = max(1, int(encoded[idx] * indicator_count) + 1)
+                    # 指標IDマッピングの改善：正規化された値から元のIDを復元
+                    # 0.01未満は無効指標として扱う
+                    if encoded[idx] < 0.01:
+                        continue
+
+                    # 正規化された値から元の指標IDを復元
+                    indicator_id = int(encoded[idx] * len(self.indicator_ids))
+
+                    # 指標IDが範囲外の場合は調整（1以上、最大ID以下）
+                    max_id = len(self.indicator_ids) - 1
+                    indicator_id = max(1, min(max_id, indicator_id))
                     param_val = encoded[idx + 1]
 
                     indicator_type = self.id_to_indicator.get(indicator_id, "")
-                    if indicator_type:
+                    if indicator_type and indicator_type != "":
                         # 指標タイプに応じたパラメータ生成
                         parameters = self._generate_indicator_parameters(
                             indicator_type, param_val
@@ -148,8 +160,12 @@ class GeneEncoder:
                             IndicatorGene(
                                 type=indicator_type,
                                 parameters=parameters,
-                                enabled=(indicator_id != 0),
+                                enabled=True,
                             )
+                        )
+
+                        logger.debug(
+                            f"デコード指標: {indicator_type} (ID: {indicator_id}, 元値: {encoded[idx]:.3f})"
                         )
 
             # 条件部分をデコード（確実に条件を生成）
@@ -157,31 +173,139 @@ class GeneEncoder:
             exit_conditions = []
 
             if indicators:
-                # 最初の指標を使用して条件を作成
+                # 複数の指標を使用してより多様な条件を作成
+                from .strategy_gene import Condition
+
+                # 最初の指標を使用
                 first_indicator = indicators[0]
                 indicator_name = f"{first_indicator.type}_{first_indicator.parameters.get('period', 20)}"
 
-                # 指標タイプに応じた条件を生成
-                entry_conditions, exit_conditions = (
-                    self._generate_indicator_specific_conditions(
-                        first_indicator, indicator_name
-                    )
+                # 基本的な条件を生成
+                if first_indicator.type in ["SMA", "EMA", "WMA"]:
+                    # 移動平均系
+                    entry_conditions = [
+                        Condition(
+                            left_operand="close",
+                            operator="cross_above",
+                            right_operand=indicator_name,
+                        )
+                    ]
+                    exit_conditions = [
+                        Condition(
+                            left_operand="close",
+                            operator="cross_below",
+                            right_operand=indicator_name,
+                        )
+                    ]
+                elif first_indicator.type == "RSI":
+                    # RSI系
+                    entry_conditions = [
+                        Condition(
+                            left_operand=indicator_name,
+                            operator="<",
+                            right_operand="30",
+                        )
+                    ]
+                    exit_conditions = [
+                        Condition(
+                            left_operand=indicator_name,
+                            operator=">",
+                            right_operand="70",
+                        )
+                    ]
+                elif first_indicator.type == "MACD":
+                    # MACD系
+                    entry_conditions = [
+                        Condition(
+                            left_operand="MACD_line",
+                            operator="cross_above",
+                            right_operand="MACD_signal",
+                        )
+                    ]
+                    exit_conditions = [
+                        Condition(
+                            left_operand="MACD_line",
+                            operator="cross_below",
+                            right_operand="MACD_signal",
+                        )
+                    ]
+                else:
+                    # その他の指標
+                    entry_conditions = [
+                        Condition(
+                            left_operand="close",
+                            operator=">",
+                            right_operand=indicator_name,
+                        )
+                    ]
+                    exit_conditions = [
+                        Condition(
+                            left_operand="close",
+                            operator="<",
+                            right_operand=indicator_name,
+                        )
+                    ]
+
+                # 複数指標がある場合は追加条件を生成
+                if len(indicators) > 1:
+                    second_indicator = indicators[1]
+                    second_name = f"{second_indicator.type}_{second_indicator.parameters.get('period', 20)}"
+
+                    if second_indicator.type in ["RSI", "STOCH", "CCI"]:
+                        # オシレーター系の追加条件
+                        entry_conditions.append(
+                            Condition(
+                                left_operand=second_name,
+                                operator="<",
+                                right_operand="50",
+                            )
+                        )
+                        exit_conditions.append(
+                            Condition(
+                                left_operand=second_name,
+                                operator=">",
+                                right_operand="50",
+                            )
+                        )
+
+                logger.info(
+                    f"生成された条件: エントリー={len(entry_conditions)}, エグジット={len(exit_conditions)}"
                 )
             else:
                 # 指標がない場合はデフォルト条件（価格ベース）
                 from .strategy_gene import Condition
 
                 entry_conditions = [
-                    Condition(left_operand="close", operator=">", right_operand="close")
+                    Condition(left_operand="close", operator=">", right_operand="open")
                 ]
                 exit_conditions = [
-                    Condition(left_operand="close", operator="<", right_operand="close")
+                    Condition(left_operand="close", operator="<", right_operand="open")
                 ]
+                logger.warning("指標なしでデフォルト条件を使用")
+
+            # リスク管理設定を追加
+            risk_management = {
+                "stop_loss": 0.03,
+                "take_profit": 0.15,
+                "position_size": 0.1,
+            }
+
+            # メタデータを追加
+            metadata = {
+                "generated_by": "GeneEncoder_decode",
+                "source": (
+                    "fallback_individual" if len(indicators) <= 1 else "normal_decode"
+                ),
+                "indicators_count": len(indicators),
+                "decoded_from_length": len(encoded),
+            }
 
             return strategy_gene_class(
                 indicators=indicators,
                 entry_conditions=entry_conditions,
                 exit_conditions=exit_conditions,
+                risk_management=risk_management,
+                metadata=metadata,
             )
 
         except Exception as e:

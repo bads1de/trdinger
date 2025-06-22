@@ -62,15 +62,26 @@ class RandomGeneGenerator:
             生成された戦略遺伝子
         """
         try:
+            logger.debug("ランダム戦略遺伝子生成開始")
+
             # 指標を生成
+            logger.debug("指標生成開始")
             indicators = self._generate_random_indicators()
+            logger.debug(f"指標生成完了: {len(indicators)}個")
 
             # 条件を生成
+            logger.debug("エントリー条件生成開始")
             entry_conditions = self._generate_random_conditions(indicators, "entry")
+            logger.debug(f"エントリー条件生成完了: {len(entry_conditions)}個")
+
+            logger.debug("エグジット条件生成開始")
             exit_conditions = self._generate_random_conditions(indicators, "exit")
+            logger.debug(f"エグジット条件生成完了: {len(exit_conditions)}個")
 
             # リスク管理設定
+            logger.debug("リスク管理設定生成開始")
             risk_management = self._generate_risk_management()
+            logger.debug("リスク管理設定生成完了")
 
             gene = StrategyGene(
                 indicators=indicators,
@@ -80,28 +91,56 @@ class RandomGeneGenerator:
                 metadata={"generated_by": "RandomGeneGenerator"},
             )
 
-            logger.debug(f"Generated random gene with {len(indicators)} indicators")
+            logger.info(
+                f"ランダム戦略遺伝子生成成功: 指標={len(indicators)}, エントリー={len(entry_conditions)}, エグジット={len(exit_conditions)}"
+            )
             return gene
 
         except Exception as e:
-            logger.error(f"Failed to generate random gene: {e}")
+            logger.error(f"ランダム戦略遺伝子生成失敗: {e}", exc_info=True)
             # フォールバック: 最小限の遺伝子を生成
+            logger.info("フォールバック戦略遺伝子を生成")
             return self._generate_fallback_gene()
 
     def _generate_random_indicators(self) -> List[IndicatorGene]:
         """ランダムな指標リストを生成"""
-        num_indicators = random.randint(self.min_indicators, self.max_indicators)
-        indicators = []
+        try:
+            num_indicators = random.randint(self.min_indicators, self.max_indicators)
+            logger.debug(f"生成する指標数: {num_indicators}")
+            indicators = []
 
-        for _ in range(num_indicators):
-            indicator_type = random.choice(self.available_indicators)
-            parameters = generate_indicator_parameters(indicator_type)
+            for i in range(num_indicators):
+                try:
+                    indicator_type = random.choice(self.available_indicators)
+                    logger.debug(f"指標{i+1}: {indicator_type}を生成中")
 
-            indicators.append(
-                IndicatorGene(type=indicator_type, parameters=parameters, enabled=True)
-            )
+                    parameters = generate_indicator_parameters(indicator_type)
+                    logger.debug(f"指標{i+1}: パラメータ生成完了 {parameters}")
 
-        return indicators
+                    indicators.append(
+                        IndicatorGene(
+                            type=indicator_type, parameters=parameters, enabled=True
+                        )
+                    )
+                    logger.debug(f"指標{i+1}: {indicator_type} 生成完了")
+
+                except Exception as e:
+                    logger.error(f"指標{i+1}生成エラー: {e}")
+                    # エラーが発生した場合はSMAをフォールバックとして使用
+                    indicators.append(
+                        IndicatorGene(
+                            type="SMA", parameters={"period": 20}, enabled=True
+                        )
+                    )
+                    logger.debug(f"指標{i+1}: フォールバックSMAを使用")
+
+            logger.debug(f"指標生成完了: 合計{len(indicators)}個")
+            return indicators
+
+        except Exception as e:
+            logger.error(f"指標リスト生成エラー: {e}")
+            # 最低限の指標を返す
+            return [IndicatorGene(type="SMA", parameters={"period": 20}, enabled=True)]
 
     def _generate_random_conditions(
         self, indicators: List[IndicatorGene], condition_type: str
@@ -358,6 +397,13 @@ class RandomGeneGenerator:
                 return random.uniform(20, 80)  # エントリー閾値
             else:
                 return random.uniform(30, 70)  # エグジット閾値
+
+        elif "PSAR" in operand:
+            # PSAR: 価格レベルでの比較（現在価格との相対比較）
+            if condition_type == "entry":
+                return random.uniform(0.98, 1.0)  # 価格がPSARを下回る
+            else:
+                return random.uniform(1.0, 1.02)  # 価格がPSARを上回る
 
         else:
             # その他の場合は汎用的な値

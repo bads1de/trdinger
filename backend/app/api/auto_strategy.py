@@ -208,10 +208,10 @@ async def generate_strategy(
         )
         logger.info(f"戦略生成開始成功: {experiment_id}")
 
-        return APIResponseHelper.api_response(
+        return GAGenerationResponse(
             success=True,
+            experiment_id=experiment_id,
             message="GA戦略生成を開始しました",
-            data={"experiment_id": experiment_id},
         )
 
     except Exception as e:

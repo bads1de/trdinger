@@ -311,6 +311,53 @@ class VolatilityAdapter(BaseAdapter):
             raise TALibCalculationError(f"Keltner Channels計算失敗: {e}")
 
     @staticmethod
+    def psar(
+        high: pd.Series,
+        low: pd.Series,
+        acceleration: float = 0.02,
+        maximum: float = 0.2,
+    ) -> pd.Series:
+        """
+        Parabolic SAR (パラボリックSAR) を計算
+
+        Args:
+            high: 高値データ（pandas Series）
+            low: 安値データ（pandas Series）
+            acceleration: 加速因子（デフォルト: 0.02）
+            maximum: 最大加速因子（デフォルト: 0.2）
+
+        Returns:
+            PSAR値のpandas Series
+
+        Raises:
+            TALibCalculationError: 計算エラーの場合
+        """
+        VolatilityAdapter._validate_multi_input(
+            high, low, high
+        )  # closeの代わりにhighを使用
+        VolatilityAdapter._log_calculation_start(
+            "PSAR", acceleration=acceleration, maximum=maximum
+        )
+
+        try:
+            result = VolatilityAdapter._safe_talib_calculation(
+                talib.SAR,
+                high.values,
+                low.values,
+                acceleration=acceleration,
+                maximum=maximum,
+            )
+            return VolatilityAdapter._create_series_result(
+                result, high.index, f"PSAR_{acceleration}_{maximum}"
+            )
+
+        except TALibCalculationError:
+            raise
+        except Exception as e:
+            VolatilityAdapter._log_calculation_error("PSAR", e)
+            raise TALibCalculationError(f"PSAR計算失敗: {e}")
+
+    @staticmethod
     def donchian_channels(
         high: pd.Series, low: pd.Series, period: int
     ) -> Dict[str, pd.Series]:

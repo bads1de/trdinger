@@ -110,11 +110,25 @@ class DEAPConfigurator:
                 # 戦略遺伝子を数値リストにエンコード
                 individual = encode_gene_to_list(gene)
 
+                logger.debug(
+                    f"正常に遺伝子生成: 指標数={len(gene.indicators)}, 遺伝子長={len(individual)}"
+                )
                 return creator.Individual(individual)  # type: ignore
             except Exception as e:
-                logger.warning(f"新しい遺伝子生成に失敗、フォールバックを使用: {e}")
+                logger.warning(
+                    f"新しい遺伝子生成に失敗、フォールバックを使用: {e}", exc_info=True
+                )
                 # フォールバック: 従来の方法（固定の構造を持つ個体を生成）
-                return self._create_fallback_individual(config)
+                fallback_individual = self._create_fallback_individual(config)
+
+                # フォールバック個体にメタデータを追加
+                if hasattr(fallback_individual, "metadata"):
+                    fallback_individual.metadata = {
+                        "source": "fallback_individual",
+                        "error": str(e),
+                    }
+
+                return fallback_individual
 
         self.toolbox.register("individual", create_individual)
         self.toolbox.register(
@@ -122,25 +136,39 @@ class DEAPConfigurator:
         )
 
     def _create_fallback_individual(self, config: GAConfig):
-        """フォールバック個体生成"""
+        """フォールバック個体生成（多様性を確保）"""
         individual = []
 
-        # 指標部分（最低1個の指標を保証）
+        # 指標部分（より多様な指標を生成）
         for i in range(config.max_indicators):
             if i == 0:
-                # 最初の指標は必ず有効にする
-                indicator_id = random.uniform(0.1, 0.9)  # 0を避ける
+                # 最初の指標は必ず有効にし、より広い範囲から選択
+                indicator_id = random.uniform(0.1, 0.95)  # より広い範囲
+            elif i < 3:
+                # 最初の3つは高確率で有効
+                indicator_id = (
+                    random.uniform(0.05, 0.9) if random.random() < 0.8 else 0.0
+                )
             else:
-                # 他の指標は50%の確率で有効
-                indicator_id = random.uniform(0.0, 1.0)
+                # 残りは30%の確率で有効
+                indicator_id = (
+                    random.uniform(0.1, 0.9) if random.random() < 0.3 else 0.0
+                )
 
-            param_val = random.uniform(0.0, 1.0)
+            # パラメータ値もより多様に
+            param_val = random.uniform(0.1, 0.9)
             individual.extend([indicator_id, param_val])
 
-        # 条件部分
-        for _ in range(6):  # エントリー3 + エグジット3
-            individual.append(random.uniform(0.0, 1.0))
+        # 条件部分（より多様な条件を生成）
+        for i in range(6):  # エントリー3 + エグジット3
+            if i < 3:  # エントリー条件
+                individual.append(random.uniform(0.2, 0.8))
+            else:  # エグジット条件
+                individual.append(random.uniform(0.1, 0.9))
 
+        logger.info(
+            f"フォールバック個体生成: 指標数={config.max_indicators}, 遺伝子長={len(individual)}"
+        )
         return creator.Individual(individual)  # type: ignore
 
     def _register_evolution_operators(self):

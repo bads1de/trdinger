@@ -100,6 +100,7 @@ class IndicatorInitializer:
                     "BB": VolatilityAdapter.bollinger_bands,
                     "KELTNER": VolatilityAdapter.keltner_channels,
                     "DONCHIAN": VolatilityAdapter.donchian_channels,
+                    "PSAR": VolatilityAdapter.psar,
                 }
             )
 
@@ -126,6 +127,42 @@ class IndicatorInitializer:
             )
 
         return adapters
+
+    def calculate_indicator_only(
+        self, indicator_type: str, parameters: Dict[str, Any], data
+    ) -> tuple:
+        """
+        指標計算のみを行う（戦略インスタンスへの追加は行わない）
+
+        Args:
+            indicator_type: 指標タイプ
+            parameters: パラメータ辞書
+            data: 価格データ（DataFrame）
+
+        Returns:
+            (計算結果, 指標名) のタプル
+        """
+        try:
+            if indicator_type not in self.indicator_adapters:
+                logger.warning(f"未対応の指標タイプ: {indicator_type}")
+                return None, None
+
+            # DataFrameからSeriesを取得
+            close_data = pd.Series(data["close"].values, index=data.index)
+            high_data = pd.Series(data["high"].values, index=data.index)
+            low_data = pd.Series(data["low"].values, index=data.index)
+            volume_data = pd.Series(data["volume"].values, index=data.index)
+
+            # 指標を計算
+            result, indicator_name = self._calculate_indicator(
+                indicator_type, parameters, close_data, high_data, low_data, volume_data
+            )
+
+            return result, indicator_name
+
+        except Exception as e:
+            logger.error(f"指標計算エラー ({indicator_type}): {e}")
+            return None, None
 
     def initialize_indicator(
         self, indicator_gene: IndicatorGene, data, strategy_instance
@@ -235,15 +272,17 @@ class IndicatorInitializer:
                     result, indicator_type, parameters
                 )
 
-            # elif indicator_type == "PSAR":
-            #     # PSARはHigh, Lowが必要
-            #     acceleration = float(parameters.get("acceleration", 0.02))
-            #     maximum = float(parameters.get("maximum", 0.2))
-            #     result = self.indicator_adapters[indicator_type](
-            #         high_data, low_data, acceleration, maximum
-            #     )
-            #     indicator_name = f"{indicator_type}_{acceleration}_{maximum}"
-            #     return result, indicator_name
+            elif indicator_type == "PSAR":
+                # PSARはHigh, Lowが必要
+                # periodパラメータからaccelerationとmaximumを生成
+                period = parameters.get("period", 12)
+                acceleration = 0.02 + (period - 1) * 0.001  # 0.02-0.03の範囲
+                maximum = 0.15 + (period - 1) * 0.005  # 0.15-0.25の範囲
+                result = self.indicator_adapters[indicator_type](
+                    high_data, low_data, acceleration, maximum
+                )
+                indicator_name = f"PSAR_{period}"
+                return result, indicator_name
 
             elif indicator_type in ["ATR", "NATR", "TRANGE"]:
                 # High, Low, Closeが必要な指標
