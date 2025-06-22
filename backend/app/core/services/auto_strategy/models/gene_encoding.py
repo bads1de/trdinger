@@ -148,7 +148,7 @@ class GeneEncoder:
                             IndicatorGene(
                                 type=indicator_type,
                                 parameters=parameters,
-                                enabled=True,
+                                enabled=(indicator_id != 0),
                             )
                         )
 
