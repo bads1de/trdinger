@@ -5,6 +5,7 @@ backtesting.pyライブラリを使用したバックテスト実行機能を提
 """
 
 import pandas as pd
+import warnings
 from datetime import datetime
 from typing import Dict, Any, Type, Optional
 from backtesting import Backtest, Strategy
@@ -150,7 +151,9 @@ class BacktestService:
 
             start_time = time.time()
             logger.info("backtesting.pyによるバックテストの実行を開始します...")
+            warnings.filterwarnings("ignore", category=UserWarning)
             stats = bt.run()
+            warnings.filterwarnings("default", category=UserWarning)
             execution_time = time.time() - start_time
             logger.info(
                 f"バックテストが正常に完了しました。実行時間: {execution_time:.2f}秒"
@@ -372,25 +375,25 @@ class BacktestService:
         """
         # パフォーマンス指標を抽出
         performance_metrics = {
-            "total_return": float(stats.get("Return [%]", 0)),
-            "sharpe_ratio": float(stats.get("Sharpe Ratio", 0)),
-            "max_drawdown": float(stats.get("Max. Drawdown [%]", 0)),
-            "win_rate": float(stats.get("Win Rate [%]", 0)),
-            "total_trades": int(stats.get("# Trades", 0)),
-            "equity_final": float(stats.get("Equity Final [$", initial_capital)),
-            "buy_hold_return": float(stats.get("Buy & Hold Return [%]", 0)),
-            "exposure_time": float(stats.get("Exposure Time [%]", 0)),
-            "sortino_ratio": float(stats.get("Sortino Ratio", 0)),
-            "calmar_ratio": float(stats.get("Calmar Ratio", 0)),
+            "total_return": float(stats.get("Return [%]") or 0.0),
+            "sharpe_ratio": float(stats.get("Sharpe Ratio") or 0.0),
+            "max_drawdown": float(stats.get("Max. Drawdown [%]") or 0.0),
+            "win_rate": float(stats.get("Win Rate [%]") or 0.0),
+            "total_trades": int(stats.get("# Trades") or 0),
+            "equity_final": float(stats.get("Equity Final [$") or initial_capital),
+            "buy_hold_return": float(stats.get("Buy & Hold Return [%]") or 0.0),
+            "exposure_time": float(stats.get("Exposure Time [%]") or 0.0),
+            "sortino_ratio": float(stats.get("Sortino Ratio") or 0.0),
+            "calmar_ratio": float(stats.get("Calmar Ratio") or 0.0),
         }
 
         # 資産曲線を変換
         equity_curve = []
-        if "_equity_curve" in stats and not stats["_equity_curve"].empty:
-            equity_df = stats["_equity_curve"]
-            for timestamp, row in equity_df.iterrows():
+        equity_data = stats.get("_equity_curve")
+        if isinstance(equity_data, pd.DataFrame) and not equity_data.empty:
+            for timestamp, row in equity_data.iterrows():
                 # timestampがdatetimeオブジェクトかどうかを確認
-                if hasattr(timestamp, "isoformat"):
+                if isinstance(timestamp, datetime) and hasattr(timestamp, "isoformat"):
                     timestamp_str = timestamp.isoformat()
                 else:
                     timestamp_str = str(timestamp)
@@ -398,8 +401,8 @@ class BacktestService:
                 equity_curve.append(
                     {
                         "timestamp": timestamp_str,
-                        "equity": float(row["Equity"]),
-                        "drawdown_pct": float(row.get("DrawdownPct", 0)),
+                        "equity": float(row["Equity"]) if "Equity" in row else 0.0,
+                        "drawdown_pct": float(row.get("DrawdownPct") or 0.0),
                     }
                 )
 
@@ -410,10 +413,10 @@ class BacktestService:
         total_wins = 0.0
         total_losses = 0.0
 
-        if "_trades" in stats and not stats["_trades"].empty:
-            trades_df = stats["_trades"]
-            for _, trade in trades_df.iterrows():
-                pnl = float(trade.get("PnL", 0))
+        trades_data = stats.get("_trades")
+        if isinstance(trades_data, pd.DataFrame) and not trades_data.empty:
+            for _, trade in trades_data.iterrows():
+                pnl = float(trade.get("PnL") or 0.0)
 
                 # 勝ち負けの統計を計算
                 if pnl > 0:
@@ -423,22 +426,27 @@ class BacktestService:
                     losing_trades += 1
                     total_losses += abs(pnl)
 
+                entry_time_obj = trade.get("EntryTime")
+                exit_time_obj = trade.get("ExitTime")
+
                 trade_history.append(
                     {
-                        "size": float(trade.get("Size", 0)),
-                        "entry_price": float(trade.get("EntryPrice", 0)),
-                        "exit_price": float(trade.get("ExitPrice", 0)),
+                        "size": float(trade.get("Size") or 0.0),
+                        "entry_price": float(trade.get("EntryPrice") or 0.0),
+                        "exit_price": float(trade.get("ExitPrice") or 0.0),
                         "pnl": pnl,
-                        "return_pct": float(trade.get("ReturnPct", 0)),
+                        "return_pct": float(trade.get("ReturnPct") or 0.0),
                         "entry_time": (
-                            trade.get("EntryTime", "").isoformat()
-                            if hasattr(trade.get("EntryTime", ""), "isoformat")
-                            else str(trade.get("EntryTime", ""))
+                            entry_time_obj.isoformat()
+                            if isinstance(entry_time_obj, datetime)
+                            and hasattr(entry_time_obj, "isoformat")
+                            else str(entry_time_obj or "")
                         ),
                         "exit_time": (
-                            trade.get("ExitTime", "").isoformat()
-                            if hasattr(trade.get("ExitTime", ""), "isoformat")
-                            else str(trade.get("ExitTime", ""))
+                            exit_time_obj.isoformat()
+                            if isinstance(exit_time_obj, datetime)
+                            and hasattr(exit_time_obj, "isoformat")
+                            else str(exit_time_obj or "")
                         ),
                     }
                 )
