@@ -362,12 +362,12 @@ class AutoStrategyService:
                         "performance_metrics": detailed_result.get(
                             "performance_metrics", {}
                         ),  # パフォーマンス指標 (デフォルト値あり)
-                        "equity_curve": detailed_result.get(
-                            "equity_curve", []
-                        ),  # エクイティカーブデータ (デフォルト値あり)
-                        "trade_history": detailed_result.get(
-                            "trade_history", []
-                        ),  # 取引履歴データ (デフォルト値あり)
+                        # "equity_curve": detailed_result.get(
+                        #     "equity_curve", []
+                        # ),  # エクイティカーブデータ (デフォルト値あり)
+                        # "trade_history": detailed_result.get(
+                        #     "trade_history", []
+                        # ),  # 取引履歴データ (デフォルト値あり)
                         "execution_time": detailed_result.get(
                             "execution_time"
                         ),  # 実行時間

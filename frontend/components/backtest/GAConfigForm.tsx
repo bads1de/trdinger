@@ -53,8 +53,8 @@ const GAConfigForm: React.FC<GAConfigFormProps> = ({
           .slice(0, 10)}_${effectiveBaseConfig.symbol.replace("/", "_")}`,
       base_config: effectiveBaseConfig,
       ga_config: {
-        population_size: initialConfig.ga_config?.population_size || 50, // 100→50に最適化
-        generations: initialConfig.ga_config?.generations || 20, // 50→20に最適化
+        population_size: initialConfig.ga_config?.population_size || 20, // 100→50→20に最適化
+        generations: initialConfig.ga_config?.generations || 10, // 50→20→10に最適化
         mutation_rate: initialConfig.ga_config?.mutation_rate || 0.1,
         crossover_rate: initialConfig.ga_config?.crossover_rate || 0.8, // 0.7→0.8に調整
         elite_size: initialConfig.ga_config?.elite_size || 5,
