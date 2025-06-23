@@ -159,6 +159,13 @@ class ConditionEvaluator:
                 elif operand in strategy_instance.indicators:
                     indicator = strategy_instance.indicators[operand]
                     return indicator[-1] if len(indicator) > 0 else None
+                else:
+                    # 指標が見つからない場合のログ出力
+                    available_indicators = list(strategy_instance.indicators.keys())
+                    logger.warning(
+                        f"指標 '{operand}' が見つかりません。利用可能な指標: {available_indicators}"
+                    )
+                    return None
 
             return None
 

@@ -181,8 +181,8 @@ class GeneEncoder:
                 indicator_name = f"{first_indicator.type}_{first_indicator.parameters.get('period', 20)}"
 
                 # 基本的な条件を生成
-                if first_indicator.type in ["SMA", "EMA", "WMA"]:
-                    # 移動平均系
+                if first_indicator.type in ["SMA", "EMA", "WMA", "MAMA"]:
+                    # 移動平均系（MAMAを含む）
                     entry_conditions = [
                         Condition(
                             left_operand="close",
@@ -384,6 +384,12 @@ class GeneEncoder:
                 d_period = self._denormalize_parameter(param_val, min_val=3, max_val=10)
                 return {"k_period": k_period, "d_period": d_period}
 
+            elif indicator_type == "MAMA":
+                # MAMA指標のパラメータ
+                fast_limit = 0.2 + param_val * 0.3  # 0.2-0.5の範囲
+                slow_limit = 0.01 + param_val * 0.09  # 0.01-0.1の範囲
+                return {"fast_limit": fast_limit, "slow_limit": slow_limit}
+
             else:
                 # デフォルト（期間のみ）
                 period = self._denormalize_parameter(param_val, min_val=5, max_val=50)
@@ -414,8 +420,8 @@ class GeneEncoder:
                     )
                 ]
 
-            elif indicator.type in ["SMA", "EMA"]:
-                # 移動平均条件
+            elif indicator.type in ["SMA", "EMA", "MAMA"]:
+                # 移動平均条件（MAMAを含む）
                 entry_conditions = [
                     Condition(
                         left_operand="close", operator=">", right_operand=indicator_name

@@ -328,7 +328,7 @@ class RiskCalculator:
                     logger.warning(f"無効な比率が検出されました: {ratio}")
                     return None
                 size = (current_equity * ratio) / entry_price
-                return max(0, min(size, 0.9999))  # 0-99.99%の範囲に制限
+                return size  # 0-99.99%の範囲に制限を撤廃
 
             elif method == "fixed_risk":
                 risk_amount = kwargs.get("risk_amount", current_equity * 0.01)  # 1%
@@ -344,7 +344,7 @@ class RiskCalculator:
                     return None
 
                 size = risk_amount / risk_per_share / entry_price  # 株数を比率に変換
-                return max(0, min(size, 0.9999))  # 0-99.99%の範囲に制限
+                return size  # 0-99.99%の範囲に制限を撤廃
 
             elif method == "kelly":
                 win_rate = kwargs.get("win_rate", 0.5)
@@ -361,7 +361,7 @@ class RiskCalculator:
                 # Kelly比率を保守的に調整（通常は1/2 Kelly）
                 conservative_kelly = kelly_ratio * kwargs.get("kelly_fraction", 0.5)
                 size = (current_equity * conservative_kelly) / entry_price
-                return max(0, min(size, 0.9999))  # 0-99.99%の範囲に制限
+                return size  # 0-99.99%の範囲に制限を撤廃
 
             elif method == "optimal_f":
                 # Ralph Vince's Optimal F
@@ -375,7 +375,7 @@ class RiskCalculator:
                     return None
 
                 size = optimal_f
-                return max(0, min(size, 0.9999))
+                return size
 
             elif method == "volatility_based":
                 # ボラティリティベースサイジング
@@ -391,7 +391,7 @@ class RiskCalculator:
                 # ボラティリティ調整
                 adjusted_size = base_size * (volatility_target / volatility)
                 size = (current_equity * adjusted_size) / entry_price
-                return max(0, min(size, 0.9999))
+                return size  # 0-99.99%の範囲に制限を撤廃
 
             elif method == "percent_volatility":
                 # Larry Williams式パーセントボラティリティ
@@ -403,7 +403,7 @@ class RiskCalculator:
 
                 # ボラティリティ調整済みサイズ
                 size = risk_percent / volatility
-                return max(0, min(size, 0.9999))
+                return size  # 0-99.99%の範囲に制限を撤廃
 
             elif method == "martingale":
                 # マルチンゲール方式
@@ -417,7 +417,7 @@ class RiskCalculator:
                     multiplier**consecutive_losses, max_multiplier
                 )
                 size = (current_equity * base_size * adjusted_multiplier) / entry_price
-                return max(0, min(size, 0.9999))
+                return size  # 0-99.99%の範囲に制限を撤廃
 
             elif method == "anti_martingale":
                 # アンチマルチンゲール方式
@@ -429,7 +429,7 @@ class RiskCalculator:
                 # 連勝回数に応じてサイズを増加
                 adjusted_multiplier = min(multiplier**consecutive_wins, max_multiplier)
                 size = (current_equity * base_size * adjusted_multiplier) / entry_price
-                return max(0, min(size, 0.9999))
+                return size  # 0-99.99%の範囲に制限を撤廃
 
             else:
                 logger.warning(
