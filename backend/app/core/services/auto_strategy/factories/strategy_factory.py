@@ -90,9 +90,6 @@ class StrategyFactory:
                     elif self.position and self._check_exit_conditions():
                         self.sell()
 
-                    # リスク管理
-                    self._apply_risk_management()
-
                 except Exception as e:
                     logger.error(f"売買ロジックエラー: {e}")
                     # エラーが発生してもバックテストを継続
@@ -269,10 +266,6 @@ class StrategyFactory:
                 except Exception as e:
                     logger.error(f"クロスオーバーチェックエラー: {e}")
                     return False
-
-            def _apply_risk_management(self):
-                """リスク管理を適用"""
-                self.factory.condition_evaluator.apply_risk_management(self)
 
         # クラス名を設定
         GeneratedStrategy.__name__ = f"GeneratedStrategy_{gene.id}"

@@ -270,29 +270,3 @@ class ConditionEvaluator:
     def is_supported_operator(self, operator: str) -> bool:
         """演算子がサポートされているかチェック"""
         return operator in self.get_supported_operators()
-
-    # def apply_risk_management(self, strategy_instance):
-    #     """
-    #     リスク管理を適用
-    #
-    #     Args:
-    #         strategy_instance: 戦略インスタンス
-    #     """
-    #     try:
-    #         # 基本的なリスク管理（将来拡張可能）
-    #         if hasattr(strategy_instance, 'position') and strategy_instance.position:
-    #             # ポジションサイズの制限
-    #             max_position_size = getattr(strategy_instance, 'max_position_size', 1.0)
-    #             if abs(strategy_instance.position.size) > max_position_size:
-    #                 logger.warning("ポジションサイズが上限を超過")
-
-    #             # 最大保有期間の制限
-    #             max_holding_period = getattr(strategy_instance, 'max_holding_period', 100)
-    #             if hasattr(strategy_instance.position, 'entry_bar'):
-    #                 holding_period = len(strategy_instance.data.Close) - strategy_instance.position.entry_bar
-    #                 if holding_period > max_holding_period:
-    #                     logger.info("最大保有期間に達したため決済")
-    #                     strategy_instance.position.close()
-
-    #     except Exception as e:
-    #         logger.error(f"リスク管理エラー: {e}")
