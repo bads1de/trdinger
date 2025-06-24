@@ -46,14 +46,12 @@ const GAConfigForm: React.FC<GAConfigFormProps> = ({
     const effectiveBaseConfig = currentBacktestConfig || baseBacktestConfig;
 
     return {
-      experiment_name:
-        initialConfig.experiment_name ||
-        `GA_${new Date()
-          .toISOString()
-          .slice(0, 10)}_${effectiveBaseConfig.symbol.replace("/", "_")}`,
+      experiment_name: `GA_${new Date()
+        .toISOString()
+        .slice(0, 10)}_${effectiveBaseConfig.symbol.replace("/", "_")}`,
       base_config: effectiveBaseConfig,
       ga_config: {
-        population_size: initialConfig.ga_config?.population_size || 20, // 100→50→20に最適化
+        population_size: initialConfig.ga_config?.population_size || 10, // 100→50→20に最適化
         generations: initialConfig.ga_config?.generations || 10, // 50→20→10に最適化
         mutation_rate: initialConfig.ga_config?.mutation_rate || 0.1,
         crossover_rate: initialConfig.ga_config?.crossover_rate || 0.8, // 0.7→0.8に調整
@@ -98,21 +96,10 @@ const GAConfigForm: React.FC<GAConfigFormProps> = ({
 
   return (
     <form onSubmit={(e) => e.preventDefault()} className="space-y-6">
-      <h2 className="text-xl font-semibold text-white">
-        遺伝的アルゴリズム設定
-      </h2>
-
       <BaseBacktestConfigForm
         config={config.base_config}
         onConfigChange={handleBaseConfigChange}
         isOptimization={true}
-      />
-
-      <InputField
-        label="実験名 (experiment_name)"
-        value={config.experiment_name}
-        onChange={(value) => setConfig({ ...config, experiment_name: value })}
-        required
       />
 
       <InputField

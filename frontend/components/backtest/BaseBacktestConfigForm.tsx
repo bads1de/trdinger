@@ -21,16 +21,6 @@ export const BaseBacktestConfigForm: React.FC<BaseBacktestConfigFormProps> = ({
 
   return (
     <div className="space-y-4">
-      {/* 戦略名 */}
-      {isOptimization && (
-        <InputField
-          label="戦略名"
-          value={config.strategy_name}
-          onChange={(value) => onConfigChange({ strategy_name: value })}
-          required
-        />
-      )}
-
       {/* 取引ペアと時間軸 */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <SelectField
