@@ -10,7 +10,10 @@ import logging
 
 from ..models.strategy_gene import StrategyGene, IndicatorGene, Condition
 from ...indicators.constants import ALL_INDICATORS
-from ..utils.parameter_generators import generate_indicator_parameters
+from ..utils.parameter_generators import (
+    generate_indicator_parameters,
+    PARAMETER_GENERATORS,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -185,17 +188,46 @@ class RandomGeneGenerator:
         """オペランドを選択（指標名またはデータソース）"""
         choices = []
 
+        no_param_indicators = PARAMETER_GENERATORS["no_params"]
+
         # テクニカル指標名を追加
-        for indicator in indicators:
-            # 通常のテクニカル指標の場合
-            if indicator.type in ["MACD"]:
-                # MACDは特別な命名
-                choices.append(f"{indicator.type}")
-            elif "period" in indicator.parameters:
-                period = indicator.parameters.get("period", 20)
-                choices.append(f"{indicator.type}_{int(period)}")
+        for indicator_gene in indicators:
+            indicator_type = indicator_gene.type
+            parameters = indicator_gene.parameters
+
+            # 期間パラメータを持たない指標は、そのままのタイプ名を使用
+            if indicator_type in no_param_indicators:
+                choices.append(indicator_type)
+            elif indicator_type == "MACD":
+                # MACDはfast_periodを名前に含む
+                fast_period = parameters.get("fast_period")
+                if fast_period is not None:
+                    choices.append(f"{indicator_type}_{int(fast_period)}")
+                else:
+                    # フォールバックとして基本名を使用
+                    choices.append(indicator_type)
+            elif indicator_type == "ADOSC":
+                # ADOSCはfast_periodとslow_periodを名前に含む
+                fast_period = parameters.get("fast_period")
+                slow_period = parameters.get("slow_period")
+                if fast_period is not None and slow_period is not None:
+                    choices.append(
+                        f"{indicator_type}_{int(fast_period)}_{int(slow_period)}"
+                    )
+                else:
+                    # フォールバックとして基本名を使用
+                    choices.append(indicator_type)
+            elif "period" in parameters:
+                # periodパラメータを持つ他の指標
+                period = parameters.get("period")
+                if period is not None:
+                    choices.append(f"{indicator_type}_{int(period)}")
+                else:
+                    # periodはあるはずだがNoneの場合は、そのままのタイプ名を使用
+                    choices.append(indicator_type)
             else:
-                choices.append(indicator.type)
+                # その他のケース（通常パラメータを持たないか、特殊な命名規則がない）
+                choices.append(indicator_type)
 
         # 基本データソースを追加（価格データ）
         basic_sources = ["close", "open", "high", "low", "volume"]

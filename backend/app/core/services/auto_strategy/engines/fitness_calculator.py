@@ -121,7 +121,7 @@ class FitnessCalculator:
         else:
             # フォールバック設定
             test_config = {
-                "strategy_name": f"GA_Generated_{gene.id}",
+                "strategy_name": f"GA_Fallback_{gene.id}",
                 "symbol": "BTC/USDT",
                 "timeframe": "1d",
                 "start_date": "2024-01-01",
