@@ -3,7 +3,7 @@
 """
 
 import logging
-from typing import Dict, Any
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -19,8 +19,8 @@ def create_default_strategy_gene(strategy_gene_class) -> Any:
         デフォルトの戦略遺伝子オブジェクト
     """
     try:
-        # StrategyGene, IndicatorGene, Condition クラスを動的にインポート
-        from ..models.strategy_gene import StrategyGene, IndicatorGene, Condition
+
+        from ..models.strategy_gene import IndicatorGene, Condition
 
         # デフォルト指標
         indicators = [

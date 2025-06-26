@@ -13,8 +13,7 @@ from ..models.strategy_gene import StrategyGene, IndicatorGene
 from .indicator_initializer import IndicatorInitializer
 from .condition_evaluator import ConditionEvaluator
 from .data_converter import DataConverter
-import pandas as pd
-import numpy as np
+
 
 logger = logging.getLogger(__name__)
 

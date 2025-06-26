@@ -206,7 +206,7 @@ class RandomGeneGenerator:
         """オペランドを選択（指標名またはデータソース）"""
         choices = []
 
-        no_param_indicators = PARAMETER_GENERATORS["no_params"]
+        PARAMETER_GENERATORS["no_params"]
 
         # テクニカル指標名を追加（JSON形式：パラメータなし）
         for indicator_gene in indicators:
