@@ -111,7 +111,9 @@ class RandomGeneGenerator:
             logger.error(f"ランダム戦略遺伝子生成失敗: {e}", exc_info=True)
             # フォールバック: 最小限の遺伝子を生成
             logger.info("フォールバック戦略遺伝子を生成")
-            return self._generate_fallback_gene()
+            from ..utils.strategy_gene_utils import create_default_strategy_gene
+
+            return create_default_strategy_gene(StrategyGene)
 
     def _generate_random_indicators(self) -> List[IndicatorGene]:
         """ランダムな指標リストを生成"""
@@ -439,28 +441,6 @@ class RandomGeneGenerator:
         else:
             return Condition(left_operand="close", operator="<", right_operand="SMA")
 
-    def _generate_fallback_gene(self) -> StrategyGene:
-        """フォールバック用の最小限の遺伝子を生成"""
-        indicators = [
-            IndicatorGene(type="SMA", parameters={"period": 20}, enabled=True)
-        ]
-
-        entry_conditions = [
-            Condition(left_operand="close", operator=">", right_operand="SMA")
-        ]
-
-        exit_conditions = [
-            Condition(left_operand="close", operator="<", right_operand="SMA")
-        ]
-
-        return StrategyGene(
-            indicators=indicators,
-            entry_conditions=entry_conditions,
-            exit_conditions=exit_conditions,
-            risk_management={"stop_loss": 0.03, "take_profit": 0.1},
-            metadata={"generated_by": "RandomGeneGenerator_fallback"},
-        )
-
     def generate_population(self, size: int) -> List[StrategyGene]:
         """
         ランダム個体群を生成
@@ -473,6 +453,9 @@ class RandomGeneGenerator:
         """
         population = []
 
+        # strategy_gene_utilsをインポート
+        from ..utils.strategy_gene_utils import create_default_strategy_gene
+
         for i in range(size):
             try:
                 gene = self.generate_random_gene()
@@ -484,7 +467,7 @@ class RandomGeneGenerator:
             except Exception as e:
                 logger.error(f"Failed to generate gene {i}: {e}")
                 # フォールバックを追加
-                population.append(self._generate_fallback_gene())
+                population.append(create_default_strategy_gene(StrategyGene))
 
         logger.info(f"Generated population of {len(population)} genes")
         return population

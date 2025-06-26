@@ -213,30 +213,3 @@ class DEAPConfigurator:
     def get_logbook(self) -> Optional[tools.Logbook]:
         """ログブックを取得"""
         return self.logbook
-
-    def apply_constraints_decorator(self, func):
-        """
-        制約条件を適用するデコレータ
-
-        Args:
-            func: デコレートする関数
-
-        Returns:
-            デコレートされた関数
-        """
-
-        def wrapper(*args, **kwargs):
-            # 元の関数 (mate または mutate) を実行し、結果を取得
-            result = func(*args, **kwargs)
-            # ここに具体的な制約条件のロジックを実装可能
-            # 現状はデコレータとして機能するが、具体的な制約ロジックは未実装
-            return result
-
-        return wrapper
-
-    def decorate_operators_with_constraints(self):
-        """演算子に制約条件を適用"""
-        if not self.toolbox:
-            return
-        self.toolbox.decorate("mate", self.apply_constraints_decorator)
-        self.toolbox.decorate("mutate", self.apply_constraints_decorator)

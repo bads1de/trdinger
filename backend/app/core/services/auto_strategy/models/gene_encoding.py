@@ -311,7 +311,9 @@ class GeneEncoder:
         except Exception as e:
             logger.error(f"戦略遺伝子デコードエラー: {e}")
             # エラー時はデフォルト戦略遺伝子を返す
-            return self._create_default_strategy_gene(strategy_gene_class)
+            from ..utils.strategy_gene_utils import create_default_strategy_gene
+
+            return create_default_strategy_gene(strategy_gene_class)
 
     def _normalize_parameter(
         self, value: float, min_val: float = 1, max_val: float = 200
@@ -474,36 +476,6 @@ class GeneEncoder:
                 [Condition(left_operand="close", operator=">", right_operand="close")],
                 [Condition(left_operand="close", operator="<", right_operand="close")],
             )
-
-    def _create_default_strategy_gene(self, strategy_gene_class):
-        """デフォルト戦略遺伝子を作成"""
-        try:
-            from .strategy_gene import IndicatorGene, Condition
-
-            # デフォルト指標
-            indicators = [
-                IndicatorGene(type="SMA", parameters={"period": 20}, enabled=True),
-                IndicatorGene(type="RSI", parameters={"period": 14}, enabled=True),
-            ]
-
-            # デフォルト条件（JSON形式の指標名）
-            entry_conditions = [
-                Condition(left_operand="RSI", operator="<", right_operand=30)
-            ]
-            exit_conditions = [
-                Condition(left_operand="RSI", operator=">", right_operand=70)
-            ]
-
-            return strategy_gene_class(
-                indicators=indicators,
-                entry_conditions=entry_conditions,
-                exit_conditions=exit_conditions,
-            )
-
-        except Exception as e:
-            logger.error(f"デフォルト戦略遺伝子作成エラー: {e}")
-            # 最小限の戦略遺伝子を返す
-            return strategy_gene_class()
 
     def get_encoding_info(self) -> Dict:
         """エンコーディング情報を取得"""

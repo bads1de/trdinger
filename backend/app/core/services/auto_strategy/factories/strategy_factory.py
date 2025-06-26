@@ -138,109 +138,6 @@ class StrategyFactory:
                     operand, self
                 )
 
-            def _get_condition_value_legacy(self, operand):
-                """条件のオペランドから値を取得（OI/FR対応版・レガシー）"""
-                try:
-                    # 数値の場合
-                    if isinstance(operand, (int, float)):
-                        return float(operand)
-
-                    # 文字列の場合（指標名、価格、またはOI/FR）
-                    if isinstance(operand, str):
-                        # 基本価格データ
-                        if operand == "price" or operand == "close":
-                            return self.data.Close[-1]
-                        elif operand == "high":
-                            return self.data.High[-1]
-                        elif operand == "low":
-                            return self.data.Low[-1]
-                        elif operand == "open":
-                            return self.data.Open[-1]
-                        elif operand == "volume":
-                            return self.data.Volume[-1]
-
-                        # OI/FRデータ（新規追加）
-                        elif operand == "OpenInterest":
-                            return self._get_oi_fr_value("OpenInterest")
-                        elif operand == "FundingRate":
-                            return self._get_oi_fr_value("FundingRate")
-
-                        # 技術指標
-                        elif operand in self.indicators:
-                            indicator = self.indicators[operand]
-                            return indicator[-1] if len(indicator) > 0 else None
-
-                    return None
-
-                except Exception as e:
-                    logger.error(f"オペランド値取得エラー: {e}")
-                    return None
-
-            def _get_oi_fr_value(self, data_type: str):
-                """OI/FRデータから値を取得（堅牢版）"""
-                try:
-                    # backtesting.pyのdataオブジェクトからOI/FRデータにアクセス
-                    if hasattr(self.data, data_type):
-                        data_series = getattr(self.data, data_type)
-
-                        # データ系列の型チェックと変換
-                        if hasattr(data_series, "__len__") and len(data_series) > 0:
-                            # pandas Series, numpy array, listなどに対応
-                            try:
-                                if hasattr(data_series, "iloc"):
-                                    # pandas Series
-                                    value = data_series.iloc[-1]
-                                elif hasattr(data_series, "__getitem__"):
-                                    # numpy array, list
-                                    value = data_series[-1]
-                                else:
-                                    logger.warning(
-                                        f"{data_type}データの型が不明: {type(data_series)}"
-                                    )
-                                    return 0.0
-
-                                # NaN値チェック
-                                if pd.isna(value) or (
-                                    isinstance(value, float) and np.isnan(value)
-                                ):
-                                    logger.warning(
-                                        f"{data_type}データにNaN値が含まれています"
-                                    )
-                                    # 有効な値を後ろから探す
-                                    for i in range(len(data_series) - 2, -1, -1):
-                                        if hasattr(data_series, "iloc"):
-                                            prev_value = data_series.iloc[i]
-                                        else:
-                                            prev_value = data_series[i]
-
-                                        if not pd.isna(prev_value) and not (
-                                            isinstance(prev_value, float)
-                                            and np.isnan(prev_value)
-                                        ):
-                                            return float(prev_value)
-
-                                    # 全てNaNの場合
-                                    logger.warning(f"{data_type}データが全てNaNです")
-                                    return 0.0
-
-                                return float(value)
-
-                            except (IndexError, KeyError) as e:
-                                logger.warning(
-                                    f"{data_type}データのインデックスエラー: {e}"
-                                )
-                                return 0.0
-                        else:
-                            logger.warning(f"{data_type}データが空です")
-                            return 0.0
-                    else:
-                        logger.warning(f"{data_type}データが利用できません")
-                        return 0.0
-
-                except Exception as e:
-                    logger.error(f"{data_type}データ取得エラー: {e}")
-                    return 0.0
-
             def _check_crossover(
                 self,
                 left_operand: str | float,
@@ -249,8 +146,15 @@ class StrategyFactory:
             ) -> bool:
                 """クロスオーバーをチェック"""
                 try:
-                    left_current = self._get_condition_value(left_operand)
-                    right_current = self._get_condition_value(right_operand)
+                    # ConditionEvaluatorのget_condition_valueを使用
+                    left_current = self.factory.condition_evaluator.get_condition_value(
+                        left_operand, self
+                    )
+                    right_current = (
+                        self.factory.condition_evaluator.get_condition_value(
+                            right_operand, self
+                        )
+                    )
 
                     # いずれかの値がNoneの場合は評価できないためFalseを返す
                     if left_current is None or right_current is None:
