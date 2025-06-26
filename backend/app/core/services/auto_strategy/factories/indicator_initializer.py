@@ -12,6 +12,7 @@ from typing import Dict, Any, Optional
 
 from ..models.strategy_gene import IndicatorGene
 from .indicator_calculator import IndicatorCalculator
+from app.core.services.indicators.config import indicator_registry
 
 logger = logging.getLogger(__name__)
 
@@ -150,24 +151,48 @@ class IndicatorInitializer:
             )
 
             if result is not None and indicator_name is not None:
-                final_indicator_name = self._get_final_indicator_name(
-                    original_type, indicator_type, indicator_name, parameters
-                )
+                # JSON形式の指標名を使用（パラメータなし）
+                json_indicator_name = original_type
 
-                indicator_values = (
-                    result.values if hasattr(result, "values") else result
-                )
-
-                strategy_instance.indicators[final_indicator_name] = (
-                    strategy_instance.I(
-                        lambda: indicator_values, name=final_indicator_name
+                # 指標値の処理（辞書形式の指標に対応）
+                if isinstance(result, dict):
+                    # 辞書形式の場合（STOCH、MACD等）
+                    # 最初の値を使用するか、適切なキーを選択
+                    if original_type == "STOCH":
+                        # STOCHの場合は%Kを使用
+                        indicator_values = result.get(
+                            "k_percent", list(result.values())[0]
+                        )
+                    elif original_type == "MACD":
+                        # MACDの場合はMACDラインを使用
+                        indicator_values = result.get("macd", list(result.values())[0])
+                    else:
+                        # その他の辞書形式は最初の値を使用
+                        indicator_values = list(result.values())[0]
+                else:
+                    # Series形式の場合
+                    indicator_values = (
+                        result.values if hasattr(result, "values") else result
                     )
+
+                # JSON形式で指標を登録
+                strategy_instance.indicators[json_indicator_name] = strategy_instance.I(
+                    lambda vals=indicator_values: vals, name=json_indicator_name
                 )
+
+                # 後方互換性のためレガシー形式でも登録
+                legacy_indicator_name = self._get_legacy_indicator_name(
+                    original_type, parameters
+                )
+                if legacy_indicator_name != json_indicator_name:
+                    strategy_instance.indicators[legacy_indicator_name] = (
+                        strategy_instance.indicators[json_indicator_name]
+                    )
 
                 logger.debug(
-                    f"指標初期化完了: {final_indicator_name} (実装: {indicator_type})"
+                    f"指標初期化完了: {json_indicator_name} (実装: {indicator_type})"
                 )
-                return final_indicator_name
+                return json_indicator_name
 
             return None
 
@@ -188,17 +213,44 @@ class IndicatorInitializer:
                 return None
         return indicator_type
 
+    def _get_legacy_indicator_name(self, indicator_type: str, parameters: dict) -> str:
+        """レガシー形式の指標名を生成（後方互換性用）"""
+        try:
+            # indicator_registryから設定を取得
+            config = indicator_registry.get(indicator_type)
+
+            # パラメータがない、またはパラメータが空の場合は指標名のみ返す
+            if not config or not config.parameters:
+                return indicator_type
+
+            # 単一パラメータの指標
+            if "period" in parameters:
+                period = parameters["period"]
+                return f"{indicator_type}_{period}"
+
+            # 複数パラメータの指標（MACD等）
+            if indicator_type == "MACD":
+                fast = parameters.get("fast_period", 12)
+                slow = parameters.get("slow_period", 26)
+                signal = parameters.get("signal_period", 9)
+                return f"MACD_{fast}_{slow}_{signal}"
+
+            # その他の場合はパラメータなし
+            return indicator_type
+
+        except Exception as e:
+            logger.warning(f"レガシー指標名生成エラー ({indicator_type}): {e}")
+            return indicator_type
+
     def _get_final_indicator_name(
         self, original_type, indicator_type, indicator_name, parameters
     ):
-        """最終的な指標名を取得"""
-        if original_type != indicator_type:
-            if original_type == "MAMA":
-                return "MAMA"
-            else:
-                period = parameters.get("period", 14)
-                return f"{original_type}_{period}"
-        return indicator_name
+        """最終的な指標名を取得（非推奨：後方互換性のみ）"""
+        # JSON形式への移行により、このメソッドは非推奨
+        logger.warning(
+            "_get_final_indicator_name is deprecated, use JSON format instead"
+        )
+        return self._get_legacy_indicator_name(original_type, parameters)
 
     def _convert_to_series(self, data) -> pd.Series:
         """backtesting.pyの_ArrayをPandas Seriesに変換"""

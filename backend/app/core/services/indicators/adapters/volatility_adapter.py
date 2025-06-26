@@ -45,8 +45,11 @@ class VolatilityAdapter(BaseAdapter):
             result = VolatilityAdapter._safe_talib_calculation(
                 talib.ATR, high.values, low.values, close.values, timeperiod=period
             )
-            return VolatilityAdapter._create_series_result(
-                result, close.index, f"ATR_{period}"
+
+            # JSON形式対応の名前生成
+            parameters = {"period": period}
+            return VolatilityAdapter._create_series_result_with_config(
+                result, close.index, "ATR", parameters
             )
 
         except TALibCalculationError:
@@ -87,12 +90,18 @@ class VolatilityAdapter(BaseAdapter):
                 nbdevdn=std_dev,
             )
 
+            # JSON形式対応の名前生成
+            parameters = {"period": period, "std_dev": std_dev}
+
+            # 各バンドの名前を生成（JSON形式：パラメータなし）
+            upper_name = "BB_Upper"
+            middle_name = "BB_Middle"
+            lower_name = "BB_Lower"
+
             return {
-                "upper": pd.Series(upper, index=data.index, name=f"BB_Upper_{period}"),
-                "middle": pd.Series(
-                    middle, index=data.index, name=f"BB_Middle_{period}"
-                ),
-                "lower": pd.Series(lower, index=data.index, name=f"BB_Lower_{period}"),
+                "upper": pd.Series(upper, index=data.index, name=upper_name),
+                "middle": pd.Series(middle, index=data.index, name=middle_name),
+                "lower": pd.Series(lower, index=data.index, name=lower_name),
             }
 
         except TALibCalculationError:

@@ -7,7 +7,7 @@ TA-Lib アダプター基底クラス
 
 import pandas as pd
 import numpy as np
-from typing import Union
+from typing import Union, Dict, Any
 import logging
 
 logger = logging.getLogger(__name__)
@@ -15,7 +15,6 @@ logger = logging.getLogger(__name__)
 
 class TALibCalculationError(Exception):
     """TA-Lib計算エラー"""
-
 
 
 class BaseAdapter:
@@ -154,6 +153,89 @@ class BaseAdapter:
             error: エラー
         """
         logger.error(f"{indicator_name}計算でエラー: {error}")
+
+    @staticmethod
+    def _generate_indicator_name(
+        indicator: str, parameters: Dict[str, Any], format_type: str = "json"
+    ) -> str:
+        """
+        インジケーター名を生成（JSON形式：パラメータなし）
+
+        Args:
+            indicator: インジケーター名
+            parameters: パラメータ辞書（使用されない）
+            format_type: 形式タイプ（JSON形式固定）
+
+        Returns:
+            生成された名前（パラメータなし）
+        """
+        # JSON形式では指標名にパラメータを含めない
+        return indicator
+
+    @staticmethod
+    def _generate_legacy_name(indicator: str, parameters: Dict[str, Any]) -> str:
+        """
+        レガシー形式の名前を生成（フォールバック用）
+
+        Args:
+            indicator: インジケーター名
+            parameters: パラメータ辞書
+
+        Returns:
+            レガシー形式の名前
+        """
+        if not parameters:
+            return indicator
+
+        # 一般的なパターンに基づく生成
+        if len(parameters) == 1:
+            param_value = list(parameters.values())[0]
+            return f"{indicator}_{param_value}"
+        elif len(parameters) == 2:
+            values = list(parameters.values())
+            return f"{indicator}_{values[0]}_{values[1]}"
+        elif len(parameters) == 3:
+            values = list(parameters.values())
+            return f"{indicator}_{values[0]}_{values[1]}_{values[2]}"
+        else:
+            # 複雑なパラメータの場合は基本名のみ
+            return indicator
+
+    @staticmethod
+    def _create_series_result_with_config(
+        result: np.ndarray,
+        index: pd.Index,
+        indicator: str,
+        parameters: Dict[str, Any],
+        format_type: str = "auto",
+    ) -> pd.Series:
+        """
+        設定を考慮した計算結果のSeries変換
+
+        Args:
+            result: TA-Libの計算結果
+            index: 元データのインデックス
+            indicator: インジケーター名
+            parameters: パラメータ辞書
+            format_type: 名前の形式タイプ
+
+        Returns:
+            pandas.Series
+        """
+        name = BaseAdapter._generate_indicator_name(indicator, parameters, format_type)
+
+        # JSON形式の場合は文字列に変換
+        if isinstance(name, dict):
+            # 簡易的な文字列表現
+            if name.get("parameters"):
+                param_str = "_".join(str(v) for v in name["parameters"].values())
+                name_str = f"{name['indicator']}_{param_str}"
+            else:
+                name_str = name["indicator"]
+        else:
+            name_str = name
+
+        return pd.Series(result, index=index, name=name_str)
 
 
 # 後方互換性のためのヘルパー関数

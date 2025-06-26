@@ -40,8 +40,11 @@ class MomentumAdapter(BaseAdapter):
             result = MomentumAdapter._safe_talib_calculation(
                 talib.RSI, data.values, timeperiod=period
             )
-            return MomentumAdapter._create_series_result(
-                result, data.index, f"RSI_{period}"
+
+            # JSON形式対応の名前生成
+            parameters = {"period": period}
+            return MomentumAdapter._create_series_result_with_config(
+                result, data.index, "RSI", parameters
             )
 
         except TALibCalculationError:
@@ -330,8 +333,11 @@ class MomentumAdapter(BaseAdapter):
             result = MomentumAdapter._safe_talib_calculation(
                 talib.MOM, data.values, timeperiod=period
             )
-            return MomentumAdapter._create_series_result(
-                result, data.index, f"MOM_{period}"
+
+            # JSON形式対応の名前生成
+            parameters = {"period": period}
+            return MomentumAdapter._create_series_result_with_config(
+                result, data.index, "MOM", parameters
             )
 
         except TALibCalculationError:
@@ -680,7 +686,7 @@ class MomentumAdapter(BaseAdapter):
         """
         MomentumAdapter._validate_input(close, fast_period)
         MomentumAdapter._log_calculation_start(
-            "APO", period=f"{fast_period}_{slow_period}"
+            "APO", fast_period=fast_period, slow_period=slow_period, matype=matype
         )
 
         try:
@@ -691,8 +697,15 @@ class MomentumAdapter(BaseAdapter):
                 slowperiod=slow_period,
                 matype=matype,
             )
-            return MomentumAdapter._create_series_result(
-                result, close.index, f"APO_{fast_period}_{slow_period}"
+
+            # JSON形式対応の名前生成
+            parameters = {
+                "fast_period": fast_period,
+                "slow_period": slow_period,
+                "matype": matype,
+            }
+            return MomentumAdapter._create_series_result_with_config(
+                result, close.index, "APO", parameters
             )
         except TALibCalculationError:
             raise
@@ -721,7 +734,7 @@ class MomentumAdapter(BaseAdapter):
         """
         MomentumAdapter._validate_input(close, fast_period)
         MomentumAdapter._log_calculation_start(
-            "PPO", period=f"{fast_period}_{slow_period}"
+            "PPO", fast_period=fast_period, slow_period=slow_period, matype=matype
         )
 
         try:
@@ -732,8 +745,15 @@ class MomentumAdapter(BaseAdapter):
                 slowperiod=slow_period,
                 matype=matype,
             )
-            return MomentumAdapter._create_series_result(
-                result, close.index, f"PPO_{fast_period}_{slow_period}"
+
+            # JSON形式対応の名前生成
+            parameters = {
+                "fast_period": fast_period,
+                "slow_period": slow_period,
+                "matype": matype,
+            }
+            return MomentumAdapter._create_series_result_with_config(
+                result, close.index, "PPO", parameters
             )
         except TALibCalculationError:
             raise

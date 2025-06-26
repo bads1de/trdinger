@@ -29,10 +29,71 @@ class IndicatorGene:
     parameters: Dict[str, Any] = field(default_factory=dict)  # 指標パラメータ
     enabled: bool = True  # 指標の有効/無効
 
+    # JSON形式サポート用の追加フィールド
+    json_config: Dict[str, Any] = field(default_factory=dict)  # JSON形式の設定
+
     def validate(self) -> bool:
         """指標遺伝子の妥当性を検証"""
         validator = GeneValidator()
         return validator.validate_indicator_gene(self)
+
+    def get_json_config(self) -> Dict[str, Any]:
+        """JSON形式の設定を取得"""
+        try:
+            # 新しいJSON形式のインジケーター設定を使用
+            from app.core.services.indicators.config import indicator_registry
+
+            config = indicator_registry.get(self.type)
+            if config:
+                return config.generate_json_name(self.parameters)
+
+            # フォールバック: 基本的なJSON形式
+            return {"indicator": self.type, "parameters": self.parameters}
+
+        except ImportError:
+            # 設定モジュールが利用できない場合のフォールバック
+            return {"indicator": self.type, "parameters": self.parameters}
+
+    def get_legacy_name(self) -> str:
+        """レガシー形式の名前を取得（非推奨：JSON形式への移行により削除予定）"""
+        # JSON形式への移行により、レガシー形式の名前生成は非推奨
+        # 指標名のみを返す（パラメータなし）
+        return self.type
+
+    def normalize_parameters(self) -> Dict[str, Any]:
+        """パラメータをJSON形式に正規化"""
+        try:
+            from app.core.services.indicators.config import indicator_registry
+
+            config = indicator_registry.get(self.type)
+            if config:
+                # 設定に基づいてパラメータを正規化
+                normalized = {}
+                for param_name, param_config in config.parameters.items():
+                    value = self.parameters.get(param_name, param_config.default_value)
+                    normalized[param_name] = value
+                return normalized
+
+            # フォールバック: そのまま返す
+            return self.parameters.copy()
+
+        except ImportError:
+            return self.parameters.copy()
+
+    @classmethod
+    def create_from_json_config(
+        cls, json_config: Dict[str, Any], enabled: bool = True
+    ) -> "IndicatorGene":
+        """JSON形式の設定から指標遺伝子を作成"""
+        indicator_type = json_config.get("indicator", "")
+        parameters = json_config.get("parameters", {})
+
+        return cls(
+            type=indicator_type,
+            parameters=parameters,
+            enabled=enabled,
+            json_config=json_config,
+        )
 
 
 @dataclass

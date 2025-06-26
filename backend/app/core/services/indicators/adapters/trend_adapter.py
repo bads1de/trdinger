@@ -40,8 +40,11 @@ class TrendAdapter(BaseAdapter):
             result = TrendAdapter._safe_talib_calculation(
                 talib.SMA, data.values, timeperiod=period
             )
-            return TrendAdapter._create_series_result(
-                result, data.index, f"SMA_{period}"
+
+            # JSON形式対応の名前生成
+            parameters = {"period": period}
+            return TrendAdapter._create_series_result_with_config(
+                result, data.index, "SMA", parameters
             )
 
         except TALibCalculationError:
@@ -72,8 +75,11 @@ class TrendAdapter(BaseAdapter):
             result = TrendAdapter._safe_talib_calculation(
                 talib.EMA, data.values, timeperiod=period
             )
-            return TrendAdapter._create_series_result(
-                result, data.index, f"EMA_{period}"
+
+            # JSON形式対応の名前生成
+            parameters = {"period": period}
+            return TrendAdapter._create_series_result_with_config(
+                result, data.index, "EMA", parameters
             )
 
         except TALibCalculationError:

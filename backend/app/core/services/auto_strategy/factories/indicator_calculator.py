@@ -16,6 +16,12 @@ from app.core.services.indicators.adapters.volatility_adapter import (
 )
 from app.core.services.indicators.adapters.volume_adapter import VolumeAdapter
 
+# 新しいJSON形式のインジケーター設定
+from app.core.services.indicators.config import (
+    indicator_registry,
+    compatibility_manager,
+)
+
 # PriceTransformAdapterは使用しない（オートストラテジー用10個の指標のみ）
 
 logger = logging.getLogger(__name__)
@@ -31,6 +37,9 @@ class IndicatorCalculator:
         self.indicator_config = self._setup_indicator_config()
         self.indicator_adapters = self._setup_indicator_adapters()
         self._current_data = None
+
+        # 互換性モードを有効化（段階的移行のため）
+        compatibility_manager.enable_compatibility_mode()
 
     def _setup_indicator_adapters(self) -> Dict[str, Any]:
         """指標アダプターのマッピングを設定"""
@@ -75,9 +84,61 @@ class IndicatorCalculator:
         return adapters
 
     def _setup_indicator_config(self) -> Dict[str, Dict[str, Any]]:
-        """指標設定マッピングを設定（オートストラテジー用10個の指標のみ）"""
-        return {
-            # トレンド系指標（4個）
+        """指標設定マッピングを設定（JSON形式対応）"""
+        config = {}
+
+        # オートストラテジー用の10個の指標を設定
+        auto_strategy_indicators = [
+            "SMA",
+            "EMA",
+            "MACD",
+            "BB",
+            "RSI",
+            "STOCH",
+            "CCI",
+            "ADX",
+            "ATR",
+            "OBV",
+        ]
+
+        for indicator_name in auto_strategy_indicators:
+            indicator_config = indicator_registry.get(indicator_name)
+            if indicator_config:
+                # 新しいJSON形式ベースの設定
+                config[indicator_name] = {
+                    "indicator_config": indicator_config,
+                    "adapter_function": self._get_adapter_function(indicator_name),
+                    "required_data": indicator_config.required_data,
+                    "result_type": indicator_config.result_type.value,
+                    "result_handler": indicator_config.result_handler,
+                    # 後方互換性のためのレガシー設定も保持
+                    "legacy_name_format": indicator_config.legacy_name_format,
+                }
+            else:
+                # フォールバック: 従来の設定
+                config[indicator_name] = self._get_legacy_config(indicator_name)
+
+        return config
+
+    def _get_adapter_function(self, indicator_name: str):
+        """指標名に対応するアダプター関数を取得"""
+        adapter_mapping = {
+            "SMA": TrendAdapter.sma,
+            "EMA": TrendAdapter.ema,
+            "MACD": MomentumAdapter.macd,
+            "BB": VolatilityAdapter.bollinger_bands,
+            "RSI": MomentumAdapter.rsi,
+            "STOCH": MomentumAdapter.stochastic,
+            "CCI": MomentumAdapter.cci,
+            "ADX": MomentumAdapter.adx,
+            "ATR": VolatilityAdapter.atr,
+            "OBV": VolumeAdapter.obv,
+        }
+        return adapter_mapping.get(indicator_name)
+
+    def _get_legacy_config(self, indicator_name: str) -> Dict[str, Any]:
+        """レガシー設定を取得（フォールバック用）"""
+        legacy_configs = {
             "SMA": {
                 "adapter_function": TrendAdapter.sma,
                 "required_data": ["close"],
@@ -159,6 +220,7 @@ class IndicatorCalculator:
                 "name_format": "{indicator}",
             },
         }
+        return legacy_configs.get(indicator_name, {})
 
     def calculate_indicator(
         self,
@@ -310,14 +372,67 @@ class IndicatorCalculator:
     def _prepare_parameters_for_indicator(
         self, config: Dict[str, Any], parameters: Dict[str, Any]
     ) -> Dict[str, Any]:
-        """指標に必要なパラメータを準備"""
+        """指標に必要なパラメータを準備（JSON形式対応）"""
         prepared_params = {}
-        param_config = config.get("parameters", {})
-        for _, param_info in param_config.items():
-            param_key = param_info["param_key"]
-            default_value = param_info["default"]
-            prepared_params[param_key] = parameters.get(param_key, default_value)
+
+        # 新しいJSON形式の設定がある場合
+        if "indicator_config" in config:
+            indicator_config = config["indicator_config"]
+            indicator_name = indicator_config.indicator_name
+
+            # 指標固有のパラメータマッピング
+            param_mapping = self._get_parameter_mapping(indicator_name)
+
+            # IndicatorConfigからパラメータのデフォルト値を取得
+            for param_name, param_config in indicator_config.parameters.items():
+                value = parameters.get(param_name, param_config.default_value)
+
+                # パラメータ名をアダプター関数の引数名にマッピング
+                adapter_param_name = param_mapping.get(param_name, param_name)
+
+                # 特定の指標で使用されないパラメータをスキップ
+                if self._should_skip_parameter(indicator_name, param_name):
+                    continue
+
+                prepared_params[adapter_param_name] = value
+
+        else:
+            # レガシー形式の設定
+            param_config = config.get("parameters", {})
+            for _, param_info in param_config.items():
+                param_key = param_info["param_key"]
+                default_value = param_info["default"]
+                prepared_params[param_key] = parameters.get(param_key, default_value)
+
         return prepared_params
+
+    def _get_parameter_mapping(self, indicator_name: str) -> Dict[str, str]:
+        """指標固有のパラメータ名マッピングを取得"""
+        mappings = {
+            "MACD": {
+                "fast_period": "fast",  # MomentumAdapter.macdの引数名
+                "slow_period": "slow",  # MomentumAdapter.macdの引数名
+                "signal_period": "signal",  # MomentumAdapter.macdの引数名
+            },
+            "STOCH": {
+                "k_period": "k_period",  # MomentumAdapter.stochasticの引数名
+                "d_period": "d_period",  # MomentumAdapter.stochasticの引数名
+                # slowingパラメータはstochasticメソッドにはない
+            },
+            "BB": {"period": "period", "std_dev": "std_dev"},
+        }
+        return mappings.get(indicator_name, {})
+
+    def _should_skip_parameter(self, indicator_name: str, param_name: str) -> bool:
+        """特定の指標で使用されないパラメータかどうかを判定"""
+        skip_rules = {
+            "STOCH": [
+                "slowing"
+            ],  # stochasticメソッドではslowingパラメータは使用されない
+        }
+
+        skip_params = skip_rules.get(indicator_name, [])
+        return param_name in skip_params
 
     def _call_adapter_function(
         self, adapter_function, data_args: list, param_args: Dict[str, Any]
@@ -331,16 +446,15 @@ class IndicatorCalculator:
     def _generate_indicator_name(
         self, config: Dict[str, Any], indicator_type: str, parameters: Dict[str, Any]
     ) -> str:
-        """指標名を生成"""
-        name_format = config["name_format"]
-        format_params = {"indicator": indicator_type}
-        param_config = config.get("parameters", {})
-        for param_name, param_info in param_config.items():
-            param_key = param_info["param_key"]
-            default_value = param_info["default"]
-            format_params[param_name] = parameters.get(param_name, default_value)
-            format_params[param_key] = parameters.get(param_name, default_value)
-        return name_format.format(**format_params)
+        """指標名を生成（JSON形式：パラメータなし）"""
+        try:
+            # JSON形式では指標名にパラメータを含めない
+            return indicator_type
+
+        except Exception as e:
+            logger.warning(f"指標名生成エラー ({indicator_type}): {e}")
+            # フォールバック
+            return indicator_type
 
     def _handle_complex_result(
         self,

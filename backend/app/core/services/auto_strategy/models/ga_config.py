@@ -41,10 +41,24 @@ class GAConfig:
     max_indicators: int = 3  # 最大指標数（
     allowed_indicators: List[str] = field(default_factory=lambda: ALL_INDICATORS.copy())
 
-    # パラメータ範囲（オートストラテジー用10個の指標のみ）
+    # パラメータ範囲（JSON形式対応）
     parameter_ranges: Dict[str, List[float]] = field(
         default_factory=lambda: {
-            # トレンド系指標（4個）
+            # 統一されたパラメータ名（JSON形式準拠）
+            # 基本パラメータ
+            "period": [5, 200],  # 一般的な期間パラメータ
+            "fast_period": [5, 20],  # 短期期間
+            "slow_period": [20, 50],  # 長期期間
+            "signal_period": [5, 15],  # シグナル期間
+            # 特殊パラメータ
+            "std_dev": [1.5, 2.5],  # 標準偏差（BB用）
+            "k_period": [10, 20],  # %K期間（STOCH用）
+            "d_period": [3, 7],  # %D期間（STOCH用）
+            "slowing": [1, 5],  # スローイング（STOCH用）
+            # 閾値パラメータ（条件生成用）
+            "overbought": [70, 90],  # 買われすぎ閾値
+            "oversold": [10, 30],  # 売られすぎ閾値
+            # 後方互換性のためのレガシーパラメータ名も保持
             "SMA_period": [5, 200],
             "EMA_period": [5, 200],
             "MACD_fast": [5, 20],
@@ -52,7 +66,6 @@ class GAConfig:
             "MACD_signal": [5, 15],
             "BB_period": [15, 25],
             "BB_std_dev": [1.5, 2.5],
-            # モメンタム系指標（4個）
             "RSI_period": [10, 30],
             "RSI_overbought": [70, 90],
             "RSI_oversold": [10, 30],
@@ -60,9 +73,7 @@ class GAConfig:
             "STOCH_d_period": [3, 7],
             "CCI_period": [10, 25],
             "ADX_period": [10, 25],
-            # ボラティリティ系指標（1個）
             "ATR_period": [10, 25],
-            # 出来高系指標（1個）
             "OBV_period": [1, 1],  # OBVは期間パラメータを持たないが、統一性のため
         }
     )
@@ -185,6 +196,87 @@ class GAConfig:
     def create_fast(cls) -> "GAConfig":
         """高速実行用設定を作成（オートストラテジー用デフォルト）"""
         return cls(population_size=10, generations=5, elite_size=2, max_indicators=3)
+
+    def get_parameter_range(self, param_name: str) -> List[float]:
+        """
+        パラメータ範囲を取得（JSON形式とレガシー形式の両方をサポート）
+
+        Args:
+            param_name: パラメータ名
+
+        Returns:
+            パラメータ範囲 [min, max]
+        """
+        # 直接的な名前での検索
+        if param_name in self.parameter_ranges:
+            return self.parameter_ranges[param_name]
+
+        # JSON形式からレガシー形式への変換マッピング
+        json_to_legacy_mapping = {
+            "period": [
+                "SMA_period",
+                "EMA_period",
+                "RSI_period",
+                "CCI_period",
+                "ADX_period",
+                "ATR_period",
+            ],
+            "fast_period": ["MACD_fast"],
+            "slow_period": ["MACD_slow"],
+            "signal_period": ["MACD_signal"],
+            "std_dev": ["BB_std_dev"],
+            "k_period": ["STOCH_k_period"],
+            "d_period": ["STOCH_d_period"],
+        }
+
+        # JSON形式のパラメータ名からレガシー形式を検索
+        for json_param, legacy_params in json_to_legacy_mapping.items():
+            if param_name == json_param and legacy_params:
+                legacy_param = legacy_params[0]  # 最初のマッピングを使用
+                if legacy_param in self.parameter_ranges:
+                    return self.parameter_ranges[legacy_param]
+
+        # デフォルト範囲を返す
+        return [1, 100]
+
+    def normalize_parameter_name(self, indicator_type: str, param_name: str) -> str:
+        """
+        パラメータ名を正規化（JSON形式に統一）
+
+        Args:
+            indicator_type: インジケーター名
+            param_name: パラメータ名
+
+        Returns:
+            正規化されたパラメータ名
+        """
+        # レガシー形式からJSON形式への変換マッピング
+        legacy_to_json_mapping = {
+            f"{indicator_type}_period": "period",
+            f"{indicator_type}_fast": "fast_period",
+            f"{indicator_type}_slow": "slow_period",
+            f"{indicator_type}_signal": "signal_period",
+            f"{indicator_type}_std_dev": "std_dev",
+            f"{indicator_type}_k_period": "k_period",
+            f"{indicator_type}_d_period": "d_period",
+        }
+
+        # 直接マッピングがある場合
+        if param_name in legacy_to_json_mapping:
+            return legacy_to_json_mapping[param_name]
+
+        # 一般的なマッピング
+        if param_name.endswith("_period"):
+            return "period"
+        elif param_name.endswith("_fast"):
+            return "fast_period"
+        elif param_name.endswith("_slow"):
+            return "slow_period"
+        elif param_name.endswith("_signal"):
+            return "signal_period"
+
+        # そのまま返す
+        return param_name
 
 
 @dataclass

@@ -60,6 +60,9 @@ class StrategyFactory:
             """動的生成された戦略クラス"""
 
             def __init__(self, broker=None, data=None, params=None):
+                # paramsがNoneの場合は空辞書を設定
+                if params is None:
+                    params = {}
                 super().__init__(broker, data, params)
                 self.gene = gene
                 self.indicators = {}

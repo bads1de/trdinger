@@ -34,11 +34,19 @@ class RandomGeneGenerator:
         """
         self.config = config or {}
 
-        # デフォルト設定
-        self.max_indicators = self.config.get("max_indicators", 5)
-        self.min_indicators = self.config.get("min_indicators", 1)
-        self.max_conditions = self.config.get("max_conditions", 3)
-        self.min_conditions = self.config.get("min_conditions", 1)
+        # GAConfigオブジェクトの場合は辞書として扱えるように変換
+        if hasattr(config, "__dict__") and not hasattr(config, "get"):
+            # GAConfigオブジェクトの場合
+            self.max_indicators = getattr(config, "max_indicators", 5)
+            self.min_indicators = getattr(config, "min_indicators", 1)
+            self.max_conditions = getattr(config, "max_conditions", 3)
+            self.min_conditions = getattr(config, "min_conditions", 1)
+        else:
+            # 辞書の場合
+            self.max_indicators = self.config.get("max_indicators", 5)
+            self.min_indicators = self.config.get("min_indicators", 1)
+            self.max_conditions = self.config.get("max_conditions", 3)
+            self.min_conditions = self.config.get("min_conditions", 1)
 
         # 利用可能な指標タイプ（共通定数から取得）
         self.available_indicators = ALL_INDICATORS.copy()
@@ -120,11 +128,19 @@ class RandomGeneGenerator:
                     parameters = generate_indicator_parameters(indicator_type)
                     logger.debug(f"指標{i+1}: パラメータ生成完了 {parameters}")
 
-                    indicators.append(
-                        IndicatorGene(
-                            type=indicator_type, parameters=parameters, enabled=True
-                        )
+                    # JSON形式対応のIndicatorGene作成
+                    indicator_gene = IndicatorGene(
+                        type=indicator_type, parameters=parameters, enabled=True
                     )
+
+                    # JSON設定を生成して保存
+                    try:
+                        json_config = indicator_gene.get_json_config()
+                        indicator_gene.json_config = json_config
+                    except Exception as e:
+                        logger.debug(f"JSON設定生成エラー: {e}")
+
+                    indicators.append(indicator_gene)
                     logger.debug(f"指標{i+1}: {indicator_type} 生成完了")
 
                 except Exception as e:
@@ -190,34 +206,11 @@ class RandomGeneGenerator:
 
         no_param_indicators = PARAMETER_GENERATORS["no_params"]
 
-        # テクニカル指標名を追加
+        # テクニカル指標名を追加（JSON形式：パラメータなし）
         for indicator_gene in indicators:
             indicator_type = indicator_gene.type
-            parameters = indicator_gene.parameters
-
-            # 期間パラメータを持たない指標は、そのままのタイプ名を使用
-            if indicator_type in no_param_indicators:
-                choices.append(indicator_type)
-            elif indicator_type == "MACD":
-                # MACDはfast_periodを名前に含む
-                fast_period = parameters.get("fast_period")
-                if fast_period is not None:
-                    choices.append(f"{indicator_type}_{int(fast_period)}")
-                else:
-                    # フォールバックとして基本名を使用
-                    choices.append(indicator_type)
-            # ADOSCは削除された指標のため、この分岐は不要
-            elif "period" in parameters:
-                # periodパラメータを持つ他の指標
-                period = parameters.get("period")
-                if period is not None:
-                    choices.append(f"{indicator_type}_{int(period)}")
-                else:
-                    # periodはあるはずだがNoneの場合は、そのままのタイプ名を使用
-                    choices.append(indicator_type)
-            else:
-                # その他のケース（通常パラメータを持たないか、特殊な命名規則がない）
-                choices.append(indicator_type)
+            # JSON形式では指標名にパラメータを含めない
+            choices.append(indicator_type)
 
         # 基本データソースを追加（価格データ）
         basic_sources = ["close", "open", "high", "low", "volume"]
@@ -440,11 +433,11 @@ class RandomGeneGenerator:
         }
 
     def _generate_fallback_condition(self, condition_type: str) -> Condition:
-        """フォールバック用の基本条件を生成"""
+        """フォールバック用の基本条件を生成（JSON形式の指標名）"""
         if condition_type == "entry":
-            return Condition(left_operand="close", operator=">", right_operand="SMA_20")
+            return Condition(left_operand="close", operator=">", right_operand="SMA")
         else:
-            return Condition(left_operand="close", operator="<", right_operand="SMA_20")
+            return Condition(left_operand="close", operator="<", right_operand="SMA")
 
     def _generate_fallback_gene(self) -> StrategyGene:
         """フォールバック用の最小限の遺伝子を生成"""
@@ -453,11 +446,11 @@ class RandomGeneGenerator:
         ]
 
         entry_conditions = [
-            Condition(left_operand="close", operator=">", right_operand="SMA_20")
+            Condition(left_operand="close", operator=">", right_operand="SMA")
         ]
 
         exit_conditions = [
-            Condition(left_operand="close", operator="<", right_operand="SMA_20")
+            Condition(left_operand="close", operator="<", right_operand="SMA")
         ]
 
         return StrategyGene(

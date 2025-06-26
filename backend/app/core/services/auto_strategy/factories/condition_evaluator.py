@@ -155,22 +155,62 @@ class ConditionEvaluator:
                 elif operand == "FundingRate":
                     return self._get_oi_fr_value("FundingRate", strategy_instance)
 
-                # 技術指標
-                elif operand in strategy_instance.indicators:
-                    indicator = strategy_instance.indicators[operand]
-                    return indicator[-1] if len(indicator) > 0 else None
+                # 技術指標（JSON形式対応）
                 else:
-                    # 指標が見つからない場合のログ出力
-                    available_indicators = list(strategy_instance.indicators.keys())
-                    logger.warning(
-                        f"指標 '{operand}' が見つかりません。利用可能な指標: {available_indicators}"
+                    resolved_name = self._resolve_indicator_name(
+                        operand, strategy_instance
                     )
-                    return None
+                    if resolved_name:
+                        indicator = strategy_instance.indicators[resolved_name]
+                        return indicator[-1] if len(indicator) > 0 else None
+                    else:
+                        # 指標が見つからない場合のログ出力
+                        available_indicators = list(strategy_instance.indicators.keys())
+                        logger.warning(
+                            f"指標 '{operand}' が見つかりません。利用可能な指標: {available_indicators}"
+                        )
+                        return None
 
             return None
 
         except Exception as e:
             logger.error(f"オペランド値取得エラー: {e}")
+            return None
+
+    def _resolve_indicator_name(self, operand: str, strategy_instance) -> Optional[str]:
+        """
+        指標名を解決（レガシー形式からJSON形式への変換対応）
+
+        Args:
+            operand: 指標名（レガシー形式またはJSON形式）
+            strategy_instance: 戦略インスタンス
+
+        Returns:
+            解決された指標名（見つからない場合はNone）
+        """
+        try:
+            # 直接存在する場合はそのまま使用（JSON形式）
+            if operand in strategy_instance.indicators:
+                return operand
+
+            # レガシー形式の場合、JSON形式に変換して検索
+            if "_" in operand:
+                base_name = operand.split("_")[0]
+                if base_name in strategy_instance.indicators:
+                    logger.debug(
+                        f"レガシー形式の指標名 '{operand}' をJSON形式 '{base_name}' に変換"
+                    )
+                    return base_name
+
+            # 特別なケース：MACD関連の指標
+            if operand in ["MACD_line", "MACD_signal", "MACD_histogram"]:
+                if "MACD" in strategy_instance.indicators:
+                    return "MACD"
+
+            return None
+
+        except Exception as e:
+            logger.error(f"指標名解決エラー: {e}")
             return None
 
     def _get_oi_fr_value(self, data_type: str, strategy_instance) -> Optional[float]:

@@ -94,8 +94,11 @@ class VolumeAdapter(BaseAdapter):
                 fastperiod=fast_period,
                 slowperiod=slow_period,
             )
-            return VolumeAdapter._create_series_result(
-                result, close.index, f"ADOSC_{fast_period}_{slow_period}"
+
+            # JSON形式対応の名前生成
+            parameters = {"fast_period": fast_period, "slow_period": slow_period}
+            return VolumeAdapter._create_series_result_with_config(
+                result, close.index, "ADOSC", parameters
             )
 
         except TALibCalculationError:

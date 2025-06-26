@@ -176,9 +176,9 @@ class GeneEncoder:
                 # 複数の指標を使用してより多様な条件を作成
                 from .strategy_gene import Condition
 
-                # 最初の指標を使用
+                # 最初の指標を使用（JSON形式の指標名）
                 first_indicator = indicators[0]
-                indicator_name = f"{first_indicator.type}_{first_indicator.parameters.get('period', 20)}"
+                indicator_name = first_indicator.type  # パラメータなしのJSON形式
 
                 # 基本的な条件を生成
                 if first_indicator.type in ["SMA", "EMA", "WMA", "MAMA"]:
@@ -214,19 +214,19 @@ class GeneEncoder:
                         )
                     ]
                 elif first_indicator.type == "MACD":
-                    # MACD系
+                    # MACD系（JSON形式では単一の指標名）
                     entry_conditions = [
                         Condition(
-                            left_operand="MACD_line",
-                            operator="cross_above",
-                            right_operand="MACD_signal",
+                            left_operand="MACD",
+                            operator=">",
+                            right_operand=0,
                         )
                     ]
                     exit_conditions = [
                         Condition(
-                            left_operand="MACD_line",
-                            operator="cross_below",
-                            right_operand="MACD_signal",
+                            left_operand="MACD",
+                            operator="<",
+                            right_operand=0,
                         )
                     ]
                 else:
@@ -249,7 +249,7 @@ class GeneEncoder:
                 # 複数指標がある場合は追加条件を生成
                 if len(indicators) > 1:
                     second_indicator = indicators[1]
-                    second_name = f"{second_indicator.type}_{second_indicator.parameters.get('period', 20)}"
+                    second_name = second_indicator.type  # JSON形式
 
                     if second_indicator.type in ["RSI", "STOCH", "CCI"]:
                         # オシレーター系の追加条件
@@ -434,19 +434,19 @@ class GeneEncoder:
                 ]
 
             elif indicator.type == "MACD":
-                # MACD条件
+                # MACD条件（JSON形式では単一の指標名）
                 entry_conditions = [
                     Condition(
-                        left_operand="MACD_line",
+                        left_operand="MACD",
                         operator=">",
-                        right_operand="MACD_signal",
+                        right_operand=0,
                     )
                 ]
                 exit_conditions = [
                     Condition(
-                        left_operand="MACD_line",
+                        left_operand="MACD",
                         operator="<",
-                        right_operand="MACD_signal",
+                        right_operand=0,
                     )
                 ]
 
@@ -486,12 +486,12 @@ class GeneEncoder:
                 IndicatorGene(type="RSI", parameters={"period": 14}, enabled=True),
             ]
 
-            # デフォルト条件
+            # デフォルト条件（JSON形式の指標名）
             entry_conditions = [
-                Condition(left_operand="RSI_14", operator="<", right_operand=30)
+                Condition(left_operand="RSI", operator="<", right_operand=30)
             ]
             exit_conditions = [
-                Condition(left_operand="RSI_14", operator=">", right_operand=70)
+                Condition(left_operand="RSI", operator=">", right_operand=70)
             ]
 
             return strategy_gene_class(
