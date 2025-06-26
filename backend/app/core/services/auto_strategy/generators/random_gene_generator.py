@@ -206,17 +206,7 @@ class RandomGeneGenerator:
                 else:
                     # フォールバックとして基本名を使用
                     choices.append(indicator_type)
-            elif indicator_type == "ADOSC":
-                # ADOSCはfast_periodとslow_periodを名前に含む
-                fast_period = parameters.get("fast_period")
-                slow_period = parameters.get("slow_period")
-                if fast_period is not None and slow_period is not None:
-                    choices.append(
-                        f"{indicator_type}_{int(fast_period)}_{int(slow_period)}"
-                    )
-                else:
-                    # フォールバックとして基本名を使用
-                    choices.append(indicator_type)
+            # ADOSCは削除された指標のため、この分岐は不要
             elif "period" in parameters:
                 # periodパラメータを持つ他の指標
                 period = parameters.get("period")

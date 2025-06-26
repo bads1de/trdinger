@@ -56,84 +56,8 @@ class ParameterGenerator:
             "slow_k_period": random.randint(3, 5),
         }
 
-    @staticmethod
-    def generate_stochastic_fast_parameters() -> Dict[str, Any]:
-        """ストキャスティクス高速パラメータを生成"""
-        return {
-            "period": random.randint(5, 14),
-            "fastd_period": random.randint(3, 5),
-            "fastd_matype": 0,  # SMA
-        }
-
-    @staticmethod
-    def generate_stochastic_rsi_parameters() -> Dict[str, Any]:
-        """ストキャスティクスRSIパラメータを生成"""
-        return {
-            "period": random.randint(14, 21),
-            "fastk_period": random.randint(3, 5),
-            "fastd_period": random.randint(3, 5),
-            "fastd_matype": 0,  # SMA
-        }
-
-    @staticmethod
-    def generate_t3_parameters() -> Dict[str, Any]:
-        """T3パラメータを生成"""
-        return {"period": random.randint(5, 30), "vfactor": random.uniform(0.5, 0.9)}
-
-    @staticmethod
-    def generate_mama_parameters() -> Dict[str, Any]:
-        """MAMAパラメータを生成"""
-        return {
-            "fastlimit": random.uniform(0.4, 0.6),
-            "slowlimit": random.uniform(0.02, 0.08),
-        }
-
-    @staticmethod
-    def generate_keltner_parameters() -> Dict[str, Any]:
-        """ケルトナーチャネルパラメータを生成"""
-        return {
-            "period": random.randint(14, 20),
-            "multiplier": random.uniform(1.5, 2.5),
-        }
-
-    @staticmethod
-    def generate_ultimate_oscillator_parameters() -> Dict[str, Any]:
-        """アルティメットオシレーターパラメータを生成"""
-        periods = [7, 14, 28]
-        return {
-            "period1": random.choice([7, 8, 9]),
-            "period2": random.choice([14, 15, 16]),
-            "period3": random.choice([28, 29, 30]),
-        }
-
-    @staticmethod
-    def generate_apo_parameters() -> Dict[str, Any]:
-        """APOパラメータを生成"""
-        fast_period = random.randint(12, 20)
-        slow_period = random.randint(26, 40)
-        return {
-            "fast_period": fast_period,
-            "slow_period": slow_period,
-            "matype": random.choice([0, 1]),  # SMA or EMA
-        }
-
-    @staticmethod
-    def generate_ppo_parameters() -> Dict[str, Any]:
-        """PPOパラメータを生成"""
-        fast_period = random.randint(12, 20)
-        slow_period = random.randint(26, 40)
-        return {
-            "fast_period": fast_period,
-            "slow_period": slow_period,
-            "matype": random.choice([0, 1]),  # SMA or EMA
-        }
-
-    @staticmethod
-    def generate_adosc_parameters() -> Dict[str, Any]:
-        """ADOSCパラメータを生成"""
-        fast_period = random.randint(3, 7)
-        slow_period = random.randint(8, 15)
-        return {"fast_period": fast_period, "slow_period": slow_period}
+    # 削除された指標専用のパラメータ生成メソッドは削除済み
+    # 現在は10個の指標（SMA, EMA, MACD, BB, RSI, STOCH, CCI, ADX, ATR, OBV）のみサポート
 
 
 class ThresholdGenerator:

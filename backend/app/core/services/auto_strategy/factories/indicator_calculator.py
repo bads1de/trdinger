@@ -174,7 +174,7 @@ class IndicatorCalculator:
         指標を計算
         """
         try:
-            # データを一時的に保存（BOP、AVGPRICEで使用）
+            # データを一時的に保存（将来の拡張用）
             if open_data is not None:
                 self._current_data = pd.DataFrame(
                     {

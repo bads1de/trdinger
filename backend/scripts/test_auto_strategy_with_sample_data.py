@@ -280,75 +280,20 @@ def test_auto_strategy_with_sample_data():
         print(f"利用可能な指標数: {len(available_indicators)}")
         print("指標リスト:")
 
-        # カテゴリ別に分類
+        # カテゴリ別に分類（オートストラテジー用10個の指標のみ）
         trend_indicators = [
-            ind
-            for ind in available_indicators
-            if ind
-            in [
-                "SMA",
-                "EMA",
-                "TEMA",
-                "DEMA",
-                "T3",
-                "WMA",
-                "HMA",
-                "KAMA",
-                "ZLEMA",
-                "VWMA",
-                "MIDPOINT",
-                "MIDPRICE",
-                "TRIMA",
-            ]
+            ind for ind in available_indicators if ind in ["SMA", "EMA", "MACD", "BB"]
         ]
         momentum_indicators = [
-            ind
-            for ind in available_indicators
-            if ind
-            in [
-                "RSI",
-                "STOCH",
-                "STOCHRSI",
-                "CCI",
-                "WILLR",
-                "WILLIAMS",
-                "ADX",
-                "AROON",
-                "MFI",
-                "MOMENTUM",
-                "MOM",
-                "ROC",
-                "BOP",
-                "PPO",
-                "PLUS_DI",
-                "MINUS_DI",
-                "ROCP",
-                "ROCR",
-                "STOCHF",
-                "CMO",
-                "TRIX",
-                "DX",
-            ]
+            ind for ind in available_indicators if ind in ["RSI", "STOCH", "CCI", "ADX"]
         ]
-        volatility_indicators = [
-            ind
-            for ind in available_indicators
-            if ind in ["ATR", "NATR", "TRANGE", "STDDEV"]
-        ]
-        volume_indicators = [
-            ind
-            for ind in available_indicators
-            if ind in ["OBV", "AD", "ADOSC", "VWAP", "PVT", "EMV"]
-        ]
-        price_indicators = [
-            ind
-            for ind in available_indicators
-            if ind in ["AVGPRICE", "MEDPRICE", "TYPPRICE", "WCLPRICE"]
-        ]
+        volatility_indicators = [ind for ind in available_indicators if ind in ["ATR"]]
+        volume_indicators = [ind for ind in available_indicators if ind in ["OBV"]]
+        # 価格変換系指標は削除済み
+        price_indicators = []
+        # 複合指標（オートストラテジー用）
         complex_indicators = [
-            ind
-            for ind in available_indicators
-            if ind in ["MACD", "BB", "KELTNER", "DONCHIAN", "PSAR"]
+            ind for ind in available_indicators if ind in ["MACD", "BB"]
         ]
 
         print(f"  トレンド系 ({len(trend_indicators)}): {', '.join(trend_indicators)}")

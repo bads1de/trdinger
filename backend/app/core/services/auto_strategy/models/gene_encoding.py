@@ -35,19 +35,19 @@ class GeneEncoder:
 
         except ImportError as e:
             logger.error(f"指標定数インポートエラー: {e}")
-            # フォールバック: 基本的な指標のみ
+            # フォールバック: オートストラテジー用10個の指標のみ
             return {
                 "": 0,
                 "SMA": 1,
                 "EMA": 2,
-                "RSI": 3,
-                "MACD": 4,
-                "BB": 5,
+                "MACD": 3,
+                "BB": 4,
+                "RSI": 5,
                 "STOCH": 6,
                 "CCI": 7,
-                "WILLIAMS": 8,
-                "ADX": 9,
-                "ATR": 10,
+                "ADX": 8,
+                "ATR": 9,
+                "OBV": 10,
             }
 
     def _get_id_to_indicator(self) -> Dict[int, str]:
