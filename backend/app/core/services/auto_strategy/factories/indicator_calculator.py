@@ -15,9 +15,8 @@ from app.core.services.indicators.adapters.volatility_adapter import (
     VolatilityAdapter,
 )
 from app.core.services.indicators.adapters.volume_adapter import VolumeAdapter
-from app.core.services.indicators.adapters.price_transform_adapter import (
-    PriceTransformAdapter,
-)
+
+# PriceTransformAdapterは使用しない（オートストラテジー用10個の指標のみ）
 
 logger = logging.getLogger(__name__)
 
@@ -42,18 +41,6 @@ class IndicatorCalculator:
                 {
                     "SMA": TrendAdapter.sma,
                     "EMA": TrendAdapter.ema,
-                    "TEMA": TrendAdapter.tema,
-                    "DEMA": TrendAdapter.dema,
-                    "T3": TrendAdapter.t3,
-                    "WMA": TrendAdapter.wma,
-                    "HMA": TrendAdapter.hma,
-                    "KAMA": TrendAdapter.kama,
-                    "MAMA": TrendAdapter.mama,
-                    "ZLEMA": TrendAdapter.zlema,
-                    "VWMA": TrendAdapter.vwma,
-                    "MIDPOINT": TrendAdapter.midpoint,
-                    "MIDPRICE": TrendAdapter.midprice,
-                    "TRIMA": TrendAdapter.trima,
                 }
             )
 
@@ -62,23 +49,8 @@ class IndicatorCalculator:
                 {
                     "RSI": MomentumAdapter.rsi,
                     "STOCH": MomentumAdapter.stochastic,
-                    "STOCHRSI": MomentumAdapter.stochastic_rsi,
                     "CCI": MomentumAdapter.cci,
-                    "WILLR": MomentumAdapter.williams_r,
-                    "WILLIAMS": MomentumAdapter.williams_r,
                     "ADX": MomentumAdapter.adx,
-                    "AROON": MomentumAdapter.aroon,
-                    "MFI": MomentumAdapter.mfi,
-                    "MOM": MomentumAdapter.momentum,
-                    "ROC": MomentumAdapter.roc,
-                    "ULTOSC": MomentumAdapter.ultimate_oscillator,
-                    "CMO": MomentumAdapter.cmo,
-                    "TRIX": MomentumAdapter.trix,
-                    "BOP": MomentumAdapter.bop,
-                    "APO": MomentumAdapter.apo,
-                    "PPO": MomentumAdapter.ppo,
-                    "DX": MomentumAdapter.dx,
-                    "ADXR": MomentumAdapter.adxr,
                     "MACD": MomentumAdapter.macd,
                 }
             )
@@ -87,13 +59,7 @@ class IndicatorCalculator:
             adapters.update(
                 {
                     "ATR": VolatilityAdapter.atr,
-                    "NATR": VolatilityAdapter.natr,
-                    "TRANGE": VolatilityAdapter.trange,
-                    "STDDEV": VolatilityAdapter.stddev,
                     "BB": VolatilityAdapter.bollinger_bands,
-                    "KELTNER": VolatilityAdapter.keltner_channels,
-                    "DONCHIAN": VolatilityAdapter.donchian_channels,
-                    "PSAR": VolatilityAdapter.psar,
                 }
             )
 
@@ -101,29 +67,17 @@ class IndicatorCalculator:
             adapters.update(
                 {
                     "OBV": VolumeAdapter.obv,
-                    "AD": VolumeAdapter.ad,
-                    "ADOSC": VolumeAdapter.adosc,
-                    "VWAP": VolumeAdapter.vwap,
-                    "PVT": VolumeAdapter.pvt,
-                    "EMV": VolumeAdapter.emv,
                 }
             )
 
-        if PriceTransformAdapter:
-            adapters.update(
-                {
-                    "AVGPRICE": PriceTransformAdapter.avgprice,
-                    "MEDPRICE": PriceTransformAdapter.medprice,
-                    "TYPPRICE": PriceTransformAdapter.typprice,
-                    "WCLPRICE": PriceTransformAdapter.wclprice,
-                }
-            )
+        # PriceTransformAdapterは使用しない（オートストラテジー用10個の指標のみ）
 
         return adapters
 
     def _setup_indicator_config(self) -> Dict[str, Dict[str, Any]]:
-        """指標設定マッピングを設定"""
+        """指標設定マッピングを設定（オートストラテジー用10個の指標のみ）"""
         return {
+            # トレンド系指標（4個）
             "SMA": {
                 "adapter_function": TrendAdapter.sma,
                 "required_data": ["close"],
@@ -133,13 +87,6 @@ class IndicatorCalculator:
             },
             "EMA": {
                 "adapter_function": TrendAdapter.ema,
-                "required_data": ["close"],
-                "parameters": {"period": {"default": 14, "param_key": "period"}},
-                "result_type": "single",
-                "name_format": "{indicator}_{period}",
-            },
-            "RSI": {
-                "adapter_function": MomentumAdapter.rsi,
                 "required_data": ["close"],
                 "parameters": {"period": {"default": 14, "param_key": "period"}},
                 "result_type": "single",
@@ -165,6 +112,37 @@ class IndicatorCalculator:
                 "result_handler": "bb_handler",
                 "name_format": "BB_MIDDLE_{period}",
             },
+            # モメンタム系指標（4個）
+            "RSI": {
+                "adapter_function": MomentumAdapter.rsi,
+                "required_data": ["close"],
+                "parameters": {"period": {"default": 14, "param_key": "period"}},
+                "result_type": "single",
+                "name_format": "{indicator}_{period}",
+            },
+            "STOCH": {
+                "adapter_function": MomentumAdapter.stochastic,
+                "required_data": ["high", "low", "close"],
+                "parameters": {"period": {"default": 14, "param_key": "period"}},
+                "result_type": "complex",
+                "result_handler": "stoch_handler",
+                "name_format": "{indicator}_{period}",
+            },
+            "CCI": {
+                "adapter_function": MomentumAdapter.cci,
+                "required_data": ["high", "low", "close"],
+                "parameters": {"period": {"default": 14, "param_key": "period"}},
+                "result_type": "single",
+                "name_format": "{indicator}_{period}",
+            },
+            "ADX": {
+                "adapter_function": MomentumAdapter.adx,
+                "required_data": ["high", "low", "close"],
+                "parameters": {"period": {"default": 14, "param_key": "period"}},
+                "result_type": "single",
+                "name_format": "{indicator}_{period}",
+            },
+            # ボラティリティ系指標（1個）
             "ATR": {
                 "adapter_function": VolatilityAdapter.atr,
                 "required_data": ["high", "low", "close"],
@@ -172,16 +150,10 @@ class IndicatorCalculator:
                 "result_type": "single",
                 "name_format": "{indicator}_{period}",
             },
+            # 出来高系指標（1個）
             "OBV": {
                 "adapter_function": VolumeAdapter.obv,
                 "required_data": ["close", "volume"],
-                "parameters": {},
-                "result_type": "single",
-                "name_format": "{indicator}",
-            },
-            "MEDPRICE": {
-                "adapter_function": PriceTransformAdapter.medprice,
-                "required_data": ["high", "low"],
                 "parameters": {},
                 "result_type": "single",
                 "name_format": "{indicator}",
@@ -287,19 +259,8 @@ class IndicatorCalculator:
         try:
             adapter_function = self.indicator_adapters[indicator_type]
 
-            if indicator_type in [
-                "SMA",
-                "EMA",
-                "RSI",
-                "WMA",
-                "HMA",
-                "KAMA",
-                "TEMA",
-                "DEMA",
-                "T3",
-                "ZLEMA",
-                "TRIMA",
-            ]:
+            # オートストラテジー用10個の指標のみ対応
+            if indicator_type in ["SMA", "EMA", "RSI"]:
                 period = parameters.get("period", 14)
                 result = adapter_function(close_data, period)
                 indicator_name = f"{indicator_type}_{period}"
@@ -307,150 +268,19 @@ class IndicatorCalculator:
                 period = parameters.get("period", 14)
                 result = adapter_function(high_data, low_data, close_data, period)
                 indicator_name = f"{indicator_type}_{period}"
-            elif indicator_type == "STOCHRSI":
-                period = parameters.get("period", 14)
-                result = adapter_function(close_data, period)
-                indicator_name = f"{indicator_type}_{period}"
-            elif indicator_type in ["CCI", "WILLR"]:
+            elif indicator_type in ["CCI", "ADX"]:
                 period = parameters.get("period", 14)
                 result = adapter_function(high_data, low_data, close_data, period)
                 indicator_name = f"{indicator_type}_{period}"
-            elif indicator_type in ["ATR", "NATR", "TRANGE"]:
-                if indicator_type == "TRANGE":
-                    result = adapter_function(high_data, low_data, close_data)
-                    indicator_name = "TRANGE"
-                else:
-                    period = parameters.get("period", 14)
-                    result = adapter_function(high_data, low_data, close_data, period)
-                    indicator_name = f"{indicator_type}_{period}"
-            elif indicator_type in ["MOM", "ROC"]:
-                period = parameters.get("period", 10)
-                result = adapter_function(close_data, period)
-                indicator_name = f"{indicator_type}_{period}"
-            elif indicator_type == "AROON":
-                period = parameters.get("period", 14)
-                result = adapter_function(high_data, low_data, period)
-                indicator_name = f"{indicator_type}_{period}"
-            elif indicator_type in ["ADX", "DX", "ADXR"]:
+            elif indicator_type == "ATR":
                 period = parameters.get("period", 14)
                 result = adapter_function(high_data, low_data, close_data, period)
                 indicator_name = f"{indicator_type}_{period}"
-            elif indicator_type in ["MFI"]:
-                period = parameters.get("period", 14)
-                result = adapter_function(
-                    high_data, low_data, close_data, volume_data, period
-                )
-                indicator_name = f"{indicator_type}_{period}"
-            elif indicator_type in ["OBV", "PVT"]:
+            elif indicator_type == "OBV":
                 result = adapter_function(close_data, volume_data)
                 indicator_name = indicator_type
-            elif indicator_type == "AD":
-                result = adapter_function(high_data, low_data, close_data, volume_data)
-                indicator_name = indicator_type
-            elif indicator_type == "AVGPRICE":
-                if self._current_data is not None and "open" in self._current_data:
-                    result = adapter_function(
-                        self._current_data["open"], high_data, low_data, close_data
-                    )
-                    indicator_name = indicator_type
-                else:
-                    logger.warning(
-                        "AVGPRICEにはopenデータが必要ですが、提供されていません。"
-                    )
-                    return None, None
-            elif indicator_type in ["TYPPRICE", "WCLPRICE"]:
-                result = adapter_function(high_data, low_data, close_data)
-                indicator_name = indicator_type
-            elif indicator_type == "MEDPRICE":
-                result = adapter_function(high_data, low_data)
-                indicator_name = indicator_type
-            elif indicator_type == "MIDPOINT":
-                period = parameters.get("period", 14)
-                result = adapter_function(close_data, period)
-                indicator_name = f"{indicator_type}_{period}"
-            elif indicator_type == "MIDPRICE":
-                period = parameters.get("period", 14)
-                result = adapter_function(high_data, low_data, period)
-                indicator_name = f"{indicator_type}_{period}"
-            elif indicator_type == "VWMA":
-                period = parameters.get("period", 14)
-                result = adapter_function(close_data, volume_data, period)
-                indicator_name = f"{indicator_type}_{period}"
-            elif indicator_type == "MAMA":
-                result = adapter_function(close_data)
-                indicator_name = "MAMA"
-            elif indicator_type in ["CMO", "TRIX"]:
-                period = parameters.get("period", 14)
-                result = adapter_function(close_data, period)
-                indicator_name = f"{indicator_type}_{period}"
-            elif indicator_type == "ULTOSC":
-                period1 = parameters.get("period1", 7)
-                period2 = parameters.get("period2", 14)
-                period3 = parameters.get("period3", 28)
-                result = adapter_function(
-                    high_data, low_data, close_data, period1, period2, period3
-                )
-                indicator_name = indicator_type
-            elif indicator_type == "BOP":
-                if self._current_data is not None and "open" in self._current_data:
-                    result = adapter_function(
-                        self._current_data["open"], high_data, low_data, close_data
-                    )
-                    indicator_name = indicator_type
-                else:
-                    logger.warning(
-                        "BOPにはopenデータが必要ですが、提供されていません。"
-                    )
-                    return None, None
-            elif indicator_type == "APO":
-                fast_period = parameters.get("fast_period", 12)
-                slow_period = parameters.get("slow_period", 26)
-                result = adapter_function(close_data, fast_period, slow_period)
-                indicator_name = indicator_type
-            elif indicator_type == "PPO":
-                fast_period = parameters.get("fast_period", 12)
-                slow_period = parameters.get("slow_period", 26)
-                result = adapter_function(close_data, fast_period, slow_period)
-                indicator_name = indicator_type
-            elif indicator_type in ["STDDEV"]:
-                period = parameters.get("period", 20)
-                result = adapter_function(close_data, period)
-                indicator_name = f"{indicator_type}_{period}"
-            elif indicator_type == "PSAR":
-                result = adapter_function(high_data, low_data)
-                indicator_name = "PSAR"
-            elif indicator_type == "VWAP":
-                period = parameters.get("period", 20)
-                result = adapter_function(
-                    high_data, low_data, close_data, volume_data, period
-                )
-                indicator_name = "VWAP"
-            elif indicator_type in ["ADOSC"]:
-                fast_period = parameters.get("fast_period", 3)
-                slow_period = parameters.get("slow_period", 10)
-                result = adapter_function(
-                    high_data,
-                    low_data,
-                    close_data,
-                    volume_data,
-                    fast_period,
-                    slow_period,
-                )
-                indicator_name = f"{indicator_type}_{fast_period}_{slow_period}"
-            elif indicator_type == "EMV":
-                period = parameters.get("period", 14)
-                result = adapter_function(high_data, low_data, volume_data, period)
-                indicator_name = "EMV"
-            elif indicator_type == "DONCHIAN":
-                period = parameters.get("period", 20)
-                result = adapter_function(high_data, low_data, period)
-                indicator_name = f"{indicator_type}_{period}"
-            elif indicator_type == "KELTNER":
-                period = parameters.get("period", 20)
-                result = adapter_function(high_data, low_data, close_data, period)
-                indicator_name = f"{indicator_type}_{period}"
             else:
-                logger.warning(f"アダプター関数の引数設定が未定義: {indicator_type}")
+                logger.warning(f"未対応の指標タイプ: {indicator_type}")
                 return None, None
 
             return result, indicator_name

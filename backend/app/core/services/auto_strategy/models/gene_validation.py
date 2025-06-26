@@ -31,66 +31,18 @@ class GeneValidator:
 
             return ALL_INDICATORS.copy()
         except ImportError:
-            # フォールバック: 手動リスト（PSARを含む）
+            # フォールバック: オートストラテジー用10個の指標
             return [
-                "SMA",
-                "EMA",
-                "WMA",
-                "HMA",
-                "DEMA",
-                "TEMA",
-                "T3",
-                "TRIMA",
-                "KAMA",
-                "ZLEMA",
-                "VWMA",
-                "MIDPOINT",
-                "MIDPRICE",
-                "MAMA",
-                "FAMA",
-                "RSI",
-                "STOCH",
-                "STOCHF",
-                "STOCHRSI",
-                "WILLR",
-                "CCI",
-                "CMO",
-                "ULTOSC",
-                "TRIX",
-                "BOP",
-                "APO",
-                "PPO",
-                "AROON",
-                "AROONOSC",
-                "DX",
-                "ADX",
-                "ADXR",
-                "PLUS_DI",
-                "MINUS_DI",
-                "MOM",
-                "ROC",
-                "ROCP",
-                "ROCR",
-                "MACD",
-                "BB",
-                "ATR",
-                "NATR",
-                "TRANGE",
-                "STDDEV",
-                "KELTNER",
-                "DONCHIAN",
-                "OBV",
-                "AD",
-                "ADOSC",
-                "VWAP",
-                "PVT",
-                "EMV",
-                "MFI",
-                "AVGPRICE",
-                "MEDPRICE",
-                "TYPPRICE",
-                "WCLPRICE",
-                "PSAR",
+                "SMA",  # Simple Moving Average
+                "EMA",  # Exponential Moving Average
+                "MACD",  # Moving Average Convergence Divergence
+                "BB",  # Bollinger Bands
+                "RSI",  # Relative Strength Index
+                "STOCH",  # Stochastic
+                "CCI",  # Commodity Channel Index
+                "ADX",  # Average Directional Movement Index
+                "ATR",  # Average True Range
+                "OBV",  # On Balance Volume
             ]
 
     def _get_valid_operators(self) -> List[str]:

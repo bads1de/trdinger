@@ -180,74 +180,26 @@ class ThresholdGenerator:
             return random.uniform(-500, 500)
 
 
-# 指標タイプ別のパラメータ生成マッピング
+# 指標タイプ別のパラメータ生成マッピング（オートストラテジー用10個の指標のみ）
 PARAMETER_GENERATORS = {
     # 期間のみのパラメータ
     "period_only": [
-        "SMA",
-        "EMA",
-        "WMA",
-        "HMA",
-        "KAMA",
-        "TEMA",
-        "DEMA",
-        "ZLEMA",
-        "TRIMA",
-        "RSI",
-        "MOMENTUM",
-        "MOM",
-        "ROC",
-        "ROCP",
-        "ROCR",
-        "CCI",
-        "WILLR",
-        "ADX",
-        "AROON",
-        "AROONOSC",
-        "MFI",
-        "CMO",
-        "TRIX",
-        "ATR",
-        "NATR",
-        "TRANGE",
-        "STDDEV",
-        "DONCHIAN",
-        "VWMA",
-        "MIDPOINT",
-        "MIDPRICE",
-        "DX",
-        "ADXR",
-        "PLUS_DI",
-        "MINUS_DI",
-        "EMV",
+        "SMA",  # Simple Moving Average
+        "EMA",  # Exponential Moving Average
+        "RSI",  # Relative Strength Index
+        "CCI",  # Commodity Channel Index
+        "ADX",  # Average Directional Movement Index
+        "ATR",  # Average True Range
     ],
     # 特別なパラメータ生成が必要な指標
     "special": {
         "MACD": ParameterGenerator.generate_macd_parameters,
         "BB": ParameterGenerator.generate_bollinger_bands_parameters,
         "STOCH": ParameterGenerator.generate_stochastic_parameters,
-        "STOCHF": ParameterGenerator.generate_stochastic_fast_parameters,
-        "STOCHRSI": ParameterGenerator.generate_stochastic_rsi_parameters,
-        "T3": ParameterGenerator.generate_t3_parameters,
-        "MAMA": ParameterGenerator.generate_mama_parameters,
-        "KELTNER": ParameterGenerator.generate_keltner_parameters,
-        "ULTOSC": ParameterGenerator.generate_ultimate_oscillator_parameters,
-        "APO": ParameterGenerator.generate_apo_parameters,
-        "PPO": ParameterGenerator.generate_ppo_parameters,
-        "ADOSC": ParameterGenerator.generate_adosc_parameters,
     },
     # パラメータが不要な指標
     "no_params": [
-        "BOP",
-        "PSAR",
-        "OBV",
-        "AD",
-        "VWAP",
-        "PVT",
-        "AVGPRICE",
-        "MEDPRICE",
-        "TYPPRICE",
-        "WCLPRICE",
+        "OBV",  # On Balance Volume
     ],
 }
 
