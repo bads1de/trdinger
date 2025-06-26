@@ -11,12 +11,7 @@ from typing import Union, List
 import logging
 
 # TALibAdapterをインポート
-try:
-    from ..services.indicators.talib_adapter import TALibAdapter
-
-    TALIB_AVAILABLE = True
-except ImportError:
-    TALIB_AVAILABLE = False
+from ..services.indicators.talib_adapter import TALibAdapter
 
 logger = logging.getLogger(__name__)
 
@@ -36,9 +31,6 @@ def SMA(data: Union[pd.Series, List, np.ndarray], period: int) -> pd.Series:
         ImportError: TA-Libが利用できない場合
         TALibCalculationError: TA-Lib計算エラーの場合
     """
-    if not TALIB_AVAILABLE:
-        raise ImportError("TA-Libが利用できません。TA-Libをインストールしてください。")
-
     return TALibAdapter.sma(TALibAdapter._ensure_series(data), period)
 
 
@@ -57,9 +49,6 @@ def EMA(data: Union[pd.Series, List, np.ndarray], period: int) -> pd.Series:
         ImportError: TA-Libが利用できない場合
         TALibCalculationError: TA-Lib計算エラーの場合
     """
-    if not TALIB_AVAILABLE:
-        raise ImportError("TA-Libが利用できません。TA-Libをインストールしてください。")
-
     return TALibAdapter.ema(TALibAdapter._ensure_series(data), period)
 
 
@@ -78,9 +67,6 @@ def RSI(data: Union[pd.Series, List, np.ndarray], period: int = 14) -> pd.Series
         ImportError: TA-Libが利用できない場合
         TALibCalculationError: TA-Lib計算エラーの場合
     """
-    if not TALIB_AVAILABLE:
-        raise ImportError("TA-Libが利用できません。TA-Libをインストールしてください。")
-
     return TALibAdapter.rsi(TALibAdapter._ensure_series(data), period)
 
 
@@ -106,9 +92,6 @@ def MACD(
         ImportError: TA-Libが利用できない場合
         TALibCalculationError: TA-Lib計算エラーの場合
     """
-    if not TALIB_AVAILABLE:
-        raise ImportError("TA-Libが利用できません。TA-Libをインストールしてください。")
-
     # TA-LibでMACDを計算（辞書で返される）
     macd_result = TALibAdapter.macd(
         TALibAdapter._ensure_series(data), fast_period, slow_period, signal_period
@@ -140,9 +123,6 @@ def BollingerBands(
         ImportError: TA-Libが利用できない場合
         TALibCalculationError: TA-Lib計算エラーの場合
     """
-    if not TALIB_AVAILABLE:
-        raise ImportError("TA-Libが利用できません。TA-Libをインストールしてください。")
-
     # TA-LibでBollinger Bandsを計算（辞書で返される）
     bb_result = TALibAdapter.bollinger_bands(
         TALibAdapter._ensure_series(data), period, std_dev
@@ -176,9 +156,6 @@ def Stochastic(
         ImportError: TA-Libが利用できない場合
         TALibCalculationError: TA-Lib計算エラーの場合
     """
-    if not TALIB_AVAILABLE:
-        raise ImportError("TA-Libが利用できません。TA-Libをインストールしてください。")
-
     # TA-LibでStochasticを計算（辞書で返される）
     stoch_result = TALibAdapter.stochastic(
         TALibAdapter._ensure_series(high),
@@ -214,9 +191,6 @@ def ATR(
         ImportError: TA-Libが利用できない場合
         TALibCalculationError: TA-Lib計算エラーの場合
     """
-    if not TALIB_AVAILABLE:
-        raise ImportError("TA-Libが利用できません。TA-Libをインストールしてください。")
-
     return TALibAdapter.atr(
         TALibAdapter._ensure_series(high),
         TALibAdapter._ensure_series(low),
