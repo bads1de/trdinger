@@ -45,8 +45,8 @@ class PriceTransformAdapter(BaseAdapter):
                 low.values,
                 close.values,
             )
-            return PriceTransformAdapter._create_series_result(
-                result, close.index, "AVGPRICE"
+            return PriceTransformAdapter._create_series_result_with_config(
+                result, close.index, "AVGPRICE", {}
             )
         except TALibCalculationError:
             raise
@@ -76,8 +76,8 @@ class PriceTransformAdapter(BaseAdapter):
             result = PriceTransformAdapter._safe_talib_calculation(
                 talib.MEDPRICE, high.values, low.values
             )
-            return PriceTransformAdapter._create_series_result(
-                result, high.index, "MEDPRICE"
+            return PriceTransformAdapter._create_series_result_with_config(
+                result, high.index, "MEDPRICE", {}
             )
         except TALibCalculationError:
             raise
@@ -108,8 +108,8 @@ class PriceTransformAdapter(BaseAdapter):
             result = PriceTransformAdapter._safe_talib_calculation(
                 talib.TYPPRICE, high.values, low.values, close.values
             )
-            return PriceTransformAdapter._create_series_result(
-                result, close.index, "TYPPRICE"
+            return PriceTransformAdapter._create_series_result_with_config(
+                result, close.index, "TYPPRICE", {}
             )
         except TALibCalculationError:
             raise
@@ -140,8 +140,8 @@ class PriceTransformAdapter(BaseAdapter):
             result = PriceTransformAdapter._safe_talib_calculation(
                 talib.WCLPRICE, high.values, low.values, close.values
             )
-            return PriceTransformAdapter._create_series_result(
-                result, close.index, "WCLPRICE"
+            return PriceTransformAdapter._create_series_result_with_config(
+                result, close.index, "WCLPRICE", {}
             )
         except TALibCalculationError:
             raise
