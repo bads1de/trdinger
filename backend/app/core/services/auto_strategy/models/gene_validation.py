@@ -27,7 +27,7 @@ class GeneValidator:
         """有効な指標タイプのリストを取得"""
         # 共通定数から取得して一貫性を保つ
         try:
-            from ....indicators.constants import ALL_INDICATORS
+            from ...indicators.constants import ALL_INDICATORS
 
             return ALL_INDICATORS.copy()
         except ImportError:
