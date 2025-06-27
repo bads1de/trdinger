@@ -22,25 +22,25 @@ interface NavItem {
 const navItems: NavItem[] = [
   {
     href: "/",
-    label: "ホーム",
+    label: "Home",
     icon: "🏠",
     description: "メインダッシュボード",
   },
   {
     href: "/backtest",
-    label: "バックテスト",
+    label: "Backtest",
     icon: "📊",
     description: "戦略の有効性を検証",
   },
   {
     href: "/strategy-builder",
-    label: "ストラテジービルダー",
+    label: "Strategy Builder",
     icon: "🔧",
     description: "カスタム戦略を作成",
   },
   {
     href: "/data",
-    label: "データ管理",
+    label: "Data Management",
     icon: "📈",
     description: "価格データを管理",
   },
@@ -124,9 +124,7 @@ const Navbar: React.FC = () => {
           <button
             onClick={toggleCollapse}
             className="text-gray-300 hover:text-white p-1 rounded-lg hover:bg-gray-800 transition-colors"
-            aria-label={
-              isCollapsed ? "サイドバーを展開" : "サイドバーを折り畳む"
-            }
+            aria-label={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
           >
             <svg
               className="w-5 h-5"
@@ -217,7 +215,7 @@ const Navbar: React.FC = () => {
           <button
             onClick={toggleMobileMenu}
             className="text-gray-300 hover:text-white p-1 rounded-lg hover:bg-gray-800 transition-colors"
-            aria-label="メニューを閉じる"
+            aria-label="Close menu"
           >
             <svg
               className="w-6 h-6"
@@ -270,7 +268,7 @@ const Navbar: React.FC = () => {
       <button
         onClick={toggleMobileMenu}
         className="fixed top-4 left-4 z-50 md:hidden bg-black text-gray-300 hover:text-white p-2 rounded-lg hover:bg-gray-800 transition-colors border border-gray-700"
-        aria-label="メニューを開く"
+        aria-label="Open menu"
       >
         <svg
           className="w-6 h-6"
