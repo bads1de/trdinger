@@ -179,9 +179,3 @@ def decode_list_to_gene(encoded: List[float]) -> StrategyGene:
     """GA用数値リストから戦略遺伝子にデコード"""
     encoder = GeneEncoder()
     return encoder.decode_list_to_strategy_gene(encoded, StrategyGene)
-
-
-# 全ての関数実装は分離されたモジュールに移動されました
-# - gene_validation.py: バリデーション機能
-# - gene_serialization.py: シリアライゼーション機能
-# - gene_encoding.py: GA用エンコード/デコード機能

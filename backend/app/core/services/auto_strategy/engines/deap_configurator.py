@@ -210,6 +210,74 @@ class DEAPConfigurator:
         """統計情報を取得"""
         return self.stats
 
+    def decorate_operators_with_constraints(self):
+        """
+        進化演算子に制約条件を適用
+
+        DEAPの進化演算子（交叉、突然変異）に制約条件を適用し、
+        無効な個体の生成を防ぎます。
+        """
+        if not self.toolbox:
+            logger.warning("ツールボックスが初期化されていません")
+            return
+
+        # 元の演算子を保存
+        original_mate = self.toolbox.mate
+        original_mutate = self.toolbox.mutate
+
+        def constrained_mate(ind1, ind2):
+            """制約付き交叉演算子"""
+            try:
+                # 元の交叉を実行
+                result = original_mate(ind1, ind2)
+
+                # 制約チェック（基本的な範囲チェック）
+                self._apply_basic_constraints(ind1)
+                self._apply_basic_constraints(ind2)
+
+                return result
+            except Exception as e:
+                logger.debug(f"制約付き交叉エラー: {e}")
+                return ind1, ind2
+
+        def constrained_mutate(individual):
+            """制約付き突然変異演算子"""
+            try:
+                # 元の突然変異を実行
+                result = original_mutate(individual)
+
+                # 制約チェック（基本的な範囲チェック）
+                self._apply_basic_constraints(individual)
+
+                return result
+            except Exception as e:
+                logger.debug(f"制約付き突然変異エラー: {e}")
+                return (individual,)
+
+        # 制約付き演算子で置き換え
+        self.toolbox.register("mate", constrained_mate)
+        self.toolbox.register("mutate", constrained_mutate)
+
+        logger.info("進化演算子に制約条件を適用しました")
+
+    def _apply_basic_constraints(self, individual):
+        """
+        個体に基本的な制約条件を適用
+
+        Args:
+            individual: 制約を適用する個体
+        """
+        try:
+            # 遺伝子値を0.0-1.0の範囲に制限
+            for i in range(len(individual)):
+                if individual[i] < 0.0:
+                    individual[i] = 0.0
+                elif individual[i] > 1.0:
+                    individual[i] = 1.0
+
+        except Exception as e:
+            logger.debug(f"基本制約適用エラー: {e}")
+
     def get_logbook(self) -> Optional[tools.Logbook]:
         """ログブックを取得"""
         return self.logbook

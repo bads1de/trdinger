@@ -109,25 +109,54 @@ class GeneValidator:
             if condition.operator not in self.valid_operators:
                 return False
 
-            # オペランドの検証（指標名またはデータソース名）
-            if isinstance(condition.left_operand, str):
-                if not (
-                    self._is_indicator_name(condition.left_operand)
-                    or condition.left_operand in self.valid_data_sources
-                ):
-                    return False
+            # オペランドの検証
+            if not self._is_valid_operand(condition.left_operand):
+                return False
 
-            if isinstance(condition.right_operand, str):
-                if not (
-                    self._is_indicator_name(condition.right_operand)
-                    or condition.right_operand in self.valid_data_sources
-                ):
-                    return False
+            if not self._is_valid_operand(condition.right_operand):
+                return False
 
             return True
 
         except Exception as e:
             logger.error(f"条件バリデーションエラー: {e}")
+            return False
+
+    def _is_valid_operand(self, operand) -> bool:
+        """
+        オペランドの妥当性を検証
+
+        Args:
+            operand: 検証するオペランド
+
+        Returns:
+            妥当性（True/False）
+        """
+        try:
+            # 数値の場合は常に有効
+            if isinstance(operand, (int, float)):
+                return True
+
+            # 文字列の場合
+            if isinstance(operand, str):
+                # 数値文字列の場合は有効
+                try:
+                    float(operand)
+                    return True
+                except ValueError:
+                    pass
+
+                # 指標名またはデータソース名の場合は有効
+                if (
+                    self._is_indicator_name(operand)
+                    or operand in self.valid_data_sources
+                ):
+                    return True
+
+            return False
+
+        except Exception as e:
+            logger.error(f"オペランド検証エラー: {e}")
             return False
 
     def validate_strategy_gene(self, strategy_gene) -> Tuple[bool, List[str]]:

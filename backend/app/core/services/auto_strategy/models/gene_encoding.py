@@ -480,8 +480,8 @@ class GeneEncoder:
     def get_encoding_info(self) -> Dict:
         """エンコーディング情報を取得"""
         return {
-            "indicator_count": len(self.indicator_ids) - 1,  # 0を除く
+            "indicator_count": len(self.indicator_ids) - 1,
             "max_indicators": 5,
             "encoding_length": 16,  # 5指標×2 + 条件×6
-            "supported_indicators": list(self.indicator_ids.keys())[1:],  # 空文字を除く
+            "supported_indicators": list(self.indicator_ids.keys())[1:],
         }

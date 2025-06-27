@@ -235,195 +235,63 @@ class RandomGeneGenerator:
         return self._choose_operand(indicators)
 
     def _generate_threshold_value(self, operand: str, condition_type: str) -> float:
-        """オペランドに応じた実用的な閾値を生成"""
-        if "RSI" in operand:
-            # RSI: 買われすぎ・売られすぎの判定
-            if condition_type == "entry":
-                return random.uniform(25, 35)  # 売られすぎからの反発狙い
-            else:
-                return random.uniform(65, 75)  # 買われすぎでの利確
+        """オペランドの型に応じて、簡略化された実用的な閾値を生成"""
 
-        elif operand == "FundingRate":
-            # Funding Rate: 市場センチメントの判定
-            # 正の値: ロングポジション過熱、負の値: ショートポジション過熱
+        # グループ1: 0-100スケールのオシレーター (RSI, STOCH, ULTOSC, DXなど)
+        if any(
+            op in operand
+            for op in [
+                "RSI",
+                "STOCH",
+                "ULTOSC",
+                "DX",
+                "ADXR",
+                "STOCHF",
+                "PLUS_DI",
+                "MINUS_DI",
+            ]
+        ):
+            # エントリー/エグジットで範囲を分ける複雑さをなくし、中間的な範囲に統一
+            return random.uniform(20, 80)
+
+        # グループ2: ±100スケールのオシレーター (CCI, CMO, AROONOSCなど)
+        elif any(op in operand for op in ["CCI", "CMO", "AROONOSC"]):
+            return random.uniform(-100, 100)
+
+        # グループ3: ゼロ近辺で変動する変化率/モメンタム指標 (TRIX, PPO, MOMなど)
+        elif any(
+            op in operand
+            for op in ["TRIX", "PPO", "MOM", "BOP", "APO", "EMV", "ROCP", "ROCR"]
+        ):
+            return random.uniform(-0.5, 0.5)
+
+        # グループ4: Funding Rate (特殊ケース)
+        elif "FundingRate" in operand:
             funding_thresholds = [
-                0.0001,  # 0.01% - 軽微な偏り
-                0.0005,  # 0.05% - 中程度の偏り
-                0.001,  # 0.1% - 強い偏り
-                -0.0001,  # -0.01% - 軽微な逆偏り
-                -0.0005,  # -0.05% - 中程度の逆偏り
-                -0.001,  # -0.1% - 強い逆偏り
+                0.0001,
+                0.0005,
+                0.001,
+                -0.0001,
+                -0.0005,
+                -0.001,
             ]
             return random.choice(funding_thresholds)
 
-        elif operand == "OpenInterest":
-            # Open Interest: 絶対値での判定（市場規模に依存）
-            # 実際の値は市場によって大きく異なるため、相対的な変化率で判定することが多い
-            # ここでは仮の絶対値を設定（実際の運用では過去データの統計値を使用）
+        # グループ5: Open Interest (特殊ケース)
+        elif "OpenInterest" in operand:
+            # 市場規模に依存するため、大きな値のサンプル
             oi_thresholds = [
-                1000000,  # 100万 - 小規模
-                5000000,  # 500万 - 中規模
-                10000000,  # 1000万 - 大規模
-                50000000,  # 5000万 - 非常に大規模
+                1000000,
+                5000000,
+                10000000,
+                50000000,
             ]
             return random.choice(oi_thresholds)
 
-        elif "STOCH" in operand:
-            # Stochastic: 買われすぎ・売られすぎ
-            if condition_type == "entry":
-                return random.uniform(15, 25)  # 売られすぎ
-            else:
-                return random.uniform(75, 85)  # 買われすぎ
-
-        elif "CCI" in operand:
-            # CCI: 買われすぎ・売られすぎ
-            if condition_type == "entry":
-                return random.uniform(-150, -100)  # 売られすぎ
-            else:
-                return random.uniform(100, 150)  # 買われすぎ
-
-        # 新規追加指標の閾値生成
-        elif "STOCHRSI" in operand:
-            # Stochastic RSI: 0-100の範囲
-            if condition_type == "entry":
-                return random.uniform(15, 25)  # 売られすぎ
-            else:
-                return random.uniform(75, 85)  # 買われすぎ
-
-        elif "CMO" in operand:
-            # CMO: -100から100の範囲
-            if condition_type == "entry":
-                return random.uniform(-60, -40)  # 売られすぎ
-            else:
-                return random.uniform(40, 60)  # 買われすぎ
-
-        elif "ULTOSC" in operand:
-            # Ultimate Oscillator: 0-100の範囲
-            if condition_type == "entry":
-                return random.uniform(20, 30)  # 売られすぎ
-            else:
-                return random.uniform(70, 80)  # 買われすぎ
-
-        elif "TRIX" in operand:
-            # TRIX: 通常は小さな値（-0.01から0.01程度）
-            if condition_type == "entry":
-                return random.uniform(-0.005, 0)  # 下降トレンド
-            else:
-                return random.uniform(0, 0.005)  # 上昇トレンド
-
-        elif "BOP" in operand:
-            # BOP: -1から1の範囲
-            if condition_type == "entry":
-                return random.uniform(-0.5, 0)  # 売り圧力優勢
-            else:
-                return random.uniform(0, 0.5)  # 買い圧力優勢
-
-        elif "APO" in operand or "PPO" in operand:
-            # APO/PPO: ゼロライン周辺
-            if condition_type == "entry":
-                return random.uniform(-2, 0)  # 下降モメンタム
-            else:
-                return random.uniform(0, 2)  # 上昇モメンタム
-
-        elif "AROONOSC" in operand:
-            # AROONOSC: -100から100の範囲
-            if condition_type == "entry":
-                return random.uniform(-50, 0)  # 下降トレンド優勢
-            else:
-                return random.uniform(0, 50)  # 上昇トレンド優勢
-
-        elif "DX" in operand:
-            # DX: 0から100の範囲、25以上で強いトレンド
-            if condition_type == "entry":
-                return random.uniform(25, 40)  # 強いトレンド開始
-            else:
-                return random.uniform(15, 25)  # トレンド弱化
-
-        elif "ADXR" in operand:
-            # ADXR: 0から100の範囲、ADXの平滑化版
-            if condition_type == "entry":
-                return random.uniform(25, 35)  # 強いトレンド
-            else:
-                return random.uniform(15, 25)  # トレンド弱化
-
-        elif any(
-            price_type in operand
-            for price_type in ["AVGPRICE", "MEDPRICE", "TYPPRICE", "WCLPRICE"]
-        ):
-            # Price Transform indicators: 価格レベルでの比較
-            # 現在価格に対する相対的な閾値
-            if condition_type == "entry":
-                return random.uniform(0.98, 1.0)  # 価格下落時のエントリー
-            else:
-                return random.uniform(1.0, 1.02)  # 価格上昇時のエグジット
-
-        elif any(
-            indicator_type in operand for indicator_type in ["PLUS_DI", "MINUS_DI"]
-        ):
-            # PLUS_DI, MINUS_DI: 0-100の範囲
-            if condition_type == "entry":
-                return random.uniform(20, 40)  # エントリー閾値
-            else:
-                return random.uniform(10, 30)  # エグジット閾値
-
-        elif "HMA" in operand or "ZLEMA" in operand:
-            # HMA, ZLEMA: 価格レベルでの比較
-            if condition_type == "entry":
-                return random.uniform(0.98, 1.0)  # 価格下落時のエントリー
-            else:
-                return random.uniform(1.0, 1.02)  # 価格上昇時のエグジット
-
-        elif "MOM" in operand and "MOMENTUM" not in operand:
-            # MOM (Momentum): 価格差での比較
-            if condition_type == "entry":
-                return random.uniform(-10, 0)  # 下降モメンタム
-            else:
-                return random.uniform(0, 10)  # 上昇モメンタム
-
-        elif "DONCHIAN" in operand:
-            # DONCHIAN: 価格レベルでの比較
-            if condition_type == "entry":
-                return random.uniform(0.99, 1.0)  # 下限ブレイクアウト
-            else:
-                return random.uniform(1.0, 1.01)  # 上限ブレイクアウト
-
-        elif "PVT" in operand:
-            # PVT: 累積値での比較（相対的な変化を重視）
-            if condition_type == "entry":
-                return random.uniform(-1000, 0)  # 下降トレンド
-            else:
-                return random.uniform(0, 1000)  # 上昇トレンド
-
-        elif "EMV" in operand:
-            # EMV: 移動の容易さ（通常は小さな値）
-            if condition_type == "entry":
-                return random.uniform(-0.1, 0)  # 困難な移動
-            else:
-                return random.uniform(0, 0.1)  # 容易な移動
-
-        elif any(indicator_type in operand for indicator_type in ["ROCP", "ROCR"]):
-            # ROCP, ROCR: 変化率指標
-            if condition_type == "entry":
-                return random.uniform(-5, 5)  # エントリー閾値
-            else:
-                return random.uniform(-3, 3)  # エグジット閾値
-
-        elif "STOCHF" in operand:
-            # STOCHF: 0-100の範囲
-            if condition_type == "entry":
-                return random.uniform(20, 80)  # エントリー閾値
-            else:
-                return random.uniform(30, 70)  # エグジット閾値
-
-        elif "PSAR" in operand:
-            # PSAR: 価格レベルでの比較（現在価格との相対比較）
-            if condition_type == "entry":
-                return random.uniform(0.98, 1.0)  # 価格がPSARを下回る
-            else:
-                return random.uniform(1.0, 1.02)  # 価格がPSARを上回る
-
+        # 上記以外 (価格ベースの指標: HMA, ZLEMA, PSAR, DONCHIAN, AVGPRICEなど) は、
+        # 汎用的な相対値で処理
         else:
-            # その他の場合は汎用的な値
+            # 価格に対する乗数として機能
             return random.uniform(0.95, 1.05)
 
     def _generate_risk_management(self) -> Dict[str, float]:
