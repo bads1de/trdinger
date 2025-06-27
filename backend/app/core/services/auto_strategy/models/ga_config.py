@@ -197,6 +197,21 @@ class GAConfig:
         """高速実行用設定を作成（オートストラテジー用デフォルト）"""
         return cls(population_size=10, generations=5, elite_size=2, max_indicators=3)
 
+    @classmethod
+    def create_thorough(cls) -> "GAConfig":
+        """徹底的な探索用設定を作成"""
+        return cls(
+            population_size=200,
+            generations=100,
+            crossover_rate=0.85,
+            mutation_rate=0.05,
+            elite_size=20,
+            max_indicators=5,
+            log_level="INFO",
+            save_intermediate_results=True,
+            parallel_processes=None,  # デフォルトはCPU数
+        )
+
     def get_parameter_range(self, param_name: str) -> List[float]:
         """
         パラメータ範囲を取得（JSON形式とレガシー形式の両方をサポート）

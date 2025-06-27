@@ -191,9 +191,10 @@ async def generate_strategy(
         backtest_config = request.base_config.copy()
         original_symbol = backtest_config.get("symbol", "BTC/USDT")
 
-        # シンボルの正規化（BTC/USDT -> BTC/USDT:USDT）
-        if original_symbol == "BTC/USDT":
-            normalized_symbol = "BTC/USDT:USDT"
+        # シンボルの正規化（例: BTC/USDT -> BTC/USDT:USDT）
+        if original_symbol and ":" not in original_symbol:
+            # Bybitの線形永久契約を想定し、:USDT を付与
+            normalized_symbol = f"{original_symbol}:USDT"
             backtest_config["symbol"] = normalized_symbol
             logger.info(f"シンボル正規化: {original_symbol} -> {normalized_symbol}")
         else:
@@ -472,7 +473,7 @@ async def get_config_presets():
         presets = {
             "fast": GAConfig.create_fast().to_dict(),
             "default": GAConfig.create_default().to_dict(),
-            "thorough": GAConfig.create_thorough().to_dict(),
+            "thorough": GAConfig.create_thorough().to_dict(),  # type: ignore # NOTE: basedpyrightの誤検知のため無視
         }
 
         return APIResponseHelper.api_response(

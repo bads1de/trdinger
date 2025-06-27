@@ -17,10 +17,10 @@ class MarketDataConfig:
 
     # サポートされているシンボル（Bybit形式）- BTCUSDT無期限先物のみ
     SUPPORTED_SYMBOLS = [
-        "BTC/USDT:USDT",  # Bitcoin USDT無期限先物のみ
+        "BTC/USDT:USDT",
     ]
 
-    # サポートされている時間軸（要求された5つの時間足のみ）
+    # サポートされている時間軸
     SUPPORTED_TIMEFRAMES = ["15m", "30m", "1h", "4h", "1d"]
 
     # デフォルト設定
