@@ -6,7 +6,7 @@ import logging
 import time
 import pytest
 from io import StringIO
-from app.core.utils.DuplicateFilterHandler import DuplicateFilterHandler
+from app.core.utils.duplicate_filter_handler import DuplicateFilterHandler
 
 
 class TestDuplicateFilterHandler:
@@ -17,11 +17,11 @@ class TestDuplicateFilterHandler:
         self.filter = DuplicateFilterHandler(capacity=10, interval=1.0)
         self.logger = logging.getLogger("test_logger")
         self.logger.setLevel(logging.INFO)
-        
+
         # 既存のハンドラーをクリア
         for handler in self.logger.handlers[:]:
             self.logger.removeHandler(handler)
-        
+
         # StringIOハンドラーを作成してテスト用に使用
         self.log_stream = StringIO()
         self.handler = logging.StreamHandler(self.log_stream)
@@ -43,7 +43,7 @@ class TestDuplicateFilterHandler:
         """重複メッセージがフィルタリングされることを確認"""
         self.logger.info("Duplicate message")
         self.logger.info("Duplicate message")
-        
+
         output = self.log_stream.getvalue()
         # メッセージが1回だけ出力されることを確認
         assert output.count("Duplicate message") == 1
@@ -52,7 +52,7 @@ class TestDuplicateFilterHandler:
         """異なるメッセージは通ることを確認"""
         self.logger.info("Message 1")
         self.logger.info("Message 2")
-        
+
         output = self.log_stream.getvalue()
         assert "Message 1" in output
         assert "Message 2" in output
@@ -63,11 +63,11 @@ class TestDuplicateFilterHandler:
         short_filter = DuplicateFilterHandler(capacity=10, interval=0.1)
         self.handler.removeFilter(self.filter)
         self.handler.addFilter(short_filter)
-        
+
         self.logger.info("Interval test message")
         time.sleep(0.2)  # インターバルより長く待機
         self.logger.info("Interval test message")
-        
+
         output = self.log_stream.getvalue()
         # メッセージが2回出力されることを確認
         assert output.count("Interval test message") == 2
@@ -77,15 +77,15 @@ class TestDuplicateFilterHandler:
         small_filter = DuplicateFilterHandler(capacity=2, interval=10.0)
         self.handler.removeFilter(self.filter)
         self.handler.addFilter(small_filter)
-        
+
         # キャパシティを超えるメッセージを送信
         self.logger.info("Message 1")
         self.logger.info("Message 2")
         self.logger.info("Message 3")  # これでキャパシティを超える
-        
+
         # 最初のメッセージが削除されているはずなので、再度送信すると通る
         self.logger.info("Message 1")
-        
+
         output = self.log_stream.getvalue()
         assert output.count("Message 1") == 2
 
@@ -93,7 +93,7 @@ class TestDuplicateFilterHandler:
         """統計情報の取得をテスト"""
         self.logger.info("Stats test message 1")
         self.logger.info("Stats test message 2")
-        
+
         stats = self.filter.get_stats()
         assert stats["tracked_messages"] == 2
         assert stats["capacity"] == 10
@@ -102,13 +102,13 @@ class TestDuplicateFilterHandler:
         """キャッシュクリア機能をテスト"""
         self.logger.info("Cache test message")
         self.logger.info("Cache test message")  # 重複でフィルタリング
-        
+
         # キャッシュをクリア
         self.filter.clear_cache()
-        
+
         # 同じメッセージが再度通るはず
         self.logger.info("Cache test message")
-        
+
         output = self.log_stream.getvalue()
         assert output.count("Cache test message") == 2
 
@@ -122,9 +122,9 @@ class TestDuplicateFilterHandler:
             lineno=0,
             msg=None,  # 不正なメッセージ
             args=(),
-            exc_info=None
+            exc_info=None,
         )
-        
+
         # 例外が発生せずにTrueが返されることを確認
         result = self.filter.filter(record)
         assert result is True

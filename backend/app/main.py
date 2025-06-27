@@ -9,7 +9,7 @@ from fastapi.middleware.cors import CORSMiddleware
 import logging
 
 from app.config.settings import settings
-from app.core.utils.DuplicateFilterHandler import DuplicateFilterHandler
+from app.core.utils.duplicate_filter_handler import DuplicateFilterHandler
 from app.api.market_data import router as market_data_router
 from app.api.data_collection import router as data_collection_router
 from app.api.funding_rates import router as funding_rates_router
