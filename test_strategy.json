@@ -1,0 +1,33 @@
+{
+  "name": "テスト戦略",
+  "description": "統合テスト用の戦略",
+  "strategy_config": {
+    "indicators": [
+      {
+        "type": "SMA",
+        "parameters": {"period": 20},
+        "enabled": true,
+        "json_config": {
+          "indicator_name": "SMA",
+          "parameters": {"period": 20}
+        }
+      }
+    ],
+    "entry_conditions": [
+      {
+        "type": "threshold",
+        "indicator": "SMA",
+        "operator": ">",
+        "value": 100
+      }
+    ],
+    "exit_conditions": [
+      {
+        "type": "threshold",
+        "indicator": "SMA",
+        "operator": "<",
+        "value": 95
+      }
+    ]
+  }
+}

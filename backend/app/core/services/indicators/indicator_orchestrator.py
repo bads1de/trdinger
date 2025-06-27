@@ -8,10 +8,14 @@ import logging
 from typing import List, Dict, Any, Optional
 
 
-
 from .trend_indicators import get_trend_indicator, TREND_INDICATORS_INFO
 from .momentum_indicators import get_momentum_indicator, MOMENTUM_INDICATORS_INFO
 from .volatility_indicators import get_volatility_indicator, VOLATILITY_INDICATORS_INFO
+from .volume_indicators import get_volume_indicator, VOLUME_INDICATORS_INFO
+from .price_transform_indicators import (
+    get_price_transform_indicator,
+    PRICE_TRANSFORM_INDICATORS_INFO,
+)
 from .other_indicators import get_other_indicator, OTHER_INDICATORS_INFO
 
 logger = logging.getLogger(__name__)
@@ -27,13 +31,57 @@ class TechnicalIndicatorService:
         self.supported_indicators.update(TREND_INDICATORS_INFO)
         self.supported_indicators.update(MOMENTUM_INDICATORS_INFO)
         self.supported_indicators.update(VOLATILITY_INDICATORS_INFO)
+        self.supported_indicators.update(VOLUME_INDICATORS_INFO)
+        self.supported_indicators.update(PRICE_TRANSFORM_INDICATORS_INFO)
         self.supported_indicators.update(OTHER_INDICATORS_INFO)
 
         # 指標カテゴリのマッピング
         self.indicator_categories = {
             "trend": ["SMA", "EMA", "MACD"],
-            "momentum": ["RSI", "STOCH", "CCI", "WILLR", "MOM", "ROC"],
+            "momentum": [
+                "RSI",
+                "STOCH",
+                "CCI",
+                "WILLR",
+                "MOM",
+                "ROC",
+                "ADX",
+                "AROON",
+                "MFI",
+                "STOCHRSI",
+                "ULTOSC",
+                "CMO",
+                "TRIX",
+                "BOP",
+                "APO",
+                "PPO",
+                "AROONOSC",
+                "DX",
+                "ADXR",
+                "PLUS_DI",
+                "MINUS_DI",
+                "ROCP",
+                "ROCR",
+                "STOCHF",
+            ],
             "volatility": ["BB", "ATR"],
+            "volume": ["OBV", "AD", "ADOSC"],
+            "price_transform": [
+                "AVGPRICE",
+                "MEDPRICE",
+                "TYPPRICE",
+                "WCLPRICE",
+                "MAMA",
+                "APO",
+                "HT_DCPERIOD",
+                "HT_DCPHASE",
+                "HT_PHASOR",
+                "HT_SINE",
+                "HT_TRENDMODE",
+                "FAMA",
+                "SAREXT",
+                "SAR",
+            ],
             "other": ["PSAR"],
         }
 
@@ -57,6 +105,10 @@ class TechnicalIndicatorService:
             return get_momentum_indicator(indicator_type)
         elif indicator_type in self.indicator_categories["volatility"]:
             return get_volatility_indicator(indicator_type)
+        elif indicator_type in self.indicator_categories["volume"]:
+            return get_volume_indicator(indicator_type)
+        elif indicator_type in self.indicator_categories["price_transform"]:
+            return get_price_transform_indicator(indicator_type)
         elif indicator_type in self.indicator_categories["other"]:
             return get_other_indicator(indicator_type)
         else:

@@ -341,6 +341,26 @@ class BacktestService:
                     "GENERATED_AUTO戦略タイプには、戦略遺伝子 (strategy_gene) がパラメータとして必要です。"
                 )
 
+        elif strategy_type == "USER_CUSTOM":
+            # ストラテジービルダーで作成されたユーザー定義戦略用
+            # StrategyFactoryで生成された戦略クラスを使用
+            from app.core.services.auto_strategy.factories.strategy_factory import (
+                StrategyFactory,
+            )
+            from app.core.services.auto_strategy.models.strategy_gene import (
+                StrategyGene,
+            )
+
+            # パラメータから戦略遺伝子を復元
+            if "strategy_gene" in parameters:
+                strategy_gene = StrategyGene.from_dict(parameters["strategy_gene"])
+                factory = StrategyFactory()
+                return factory.create_strategy_class(strategy_gene)
+            else:
+                raise ValueError(
+                    "USER_CUSTOM戦略タイプには、戦略遺伝子 (strategy_gene) がパラメータとして必要です。"
+                )
+
         else:
             raise ValueError(
                 f"サポートされていない戦略タイプが指定されました: {strategy_type}"
@@ -636,6 +656,18 @@ class BacktestService:
                     "sma_short < sma_long",
                     "oversold_threshold < overbought_threshold",
                 ],
+            },
+            "USER_CUSTOM": {
+                "name": "User Custom Strategy",
+                "description": "ストラテジービルダーで作成されたユーザー定義戦略",
+                "parameters": {
+                    "strategy_gene": {
+                        "type": "object",
+                        "description": "戦略遺伝子（StrategyGene形式）",
+                        "required": True,
+                    }
+                },
+                "constraints": [],
             },
         }
 

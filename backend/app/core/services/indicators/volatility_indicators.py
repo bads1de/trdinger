@@ -277,6 +277,80 @@ class DonchianChannelsIndicator(BaseIndicator):
         return "Donchian Channels - ドンチャンチャネル、指定期間の最高値・最低値によるチャネル指標"
 
 
+class VARIndicator(BaseIndicator):
+    """VAR（Variance）指標"""
+
+    def __init__(self):
+        super().__init__(indicator_type="VAR", supported_periods=[5, 10, 20, 30])
+
+    def calculate(self, df: pd.DataFrame, period: int, **kwargs) -> pd.Series:
+        """
+        VAR（Variance）を計算
+
+        Args:
+            df: OHLCVデータのDataFrame
+            period: 期間
+
+        Returns:
+            VAR値のSeries
+        """
+        return VolatilityAdapter.var(df["close"], period)
+
+    def get_description(self) -> str:
+        """指標の説明を取得"""
+        return "VAR - Variance、価格の分散を測定するボラティリティ指標"
+
+
+class BETAIndicator(BaseIndicator):
+    """BETA（Beta）指標"""
+
+    def __init__(self):
+        super().__init__(indicator_type="BETA", supported_periods=[5, 10, 20, 30])
+
+    def calculate(self, df: pd.DataFrame, period: int, **kwargs) -> pd.Series:
+        """
+        BETA（Beta）を計算
+
+        Args:
+            df: OHLCVデータのDataFrame
+            period: 期間
+
+        Returns:
+            BETA値のSeries
+        """
+        # BETAは通常、市場指数との相関を計算するが、ここでは簡易版として高値と安値の関係を使用
+        return VolatilityAdapter.beta(df["high"], df["low"], period)
+
+    def get_description(self) -> str:
+        """指標の説明を取得"""
+        return "BETA - Beta、価格の相対的なボラティリティを測定"
+
+
+class CORRELIndicator(BaseIndicator):
+    """CORREL（Correlation Coefficient）指標"""
+
+    def __init__(self):
+        super().__init__(indicator_type="CORREL", supported_periods=[5, 10, 20, 30])
+
+    def calculate(self, df: pd.DataFrame, period: int, **kwargs) -> pd.Series:
+        """
+        CORREL（Correlation Coefficient）を計算
+
+        Args:
+            df: OHLCVデータのDataFrame
+            period: 期間
+
+        Returns:
+            CORREL値のSeries
+        """
+        # 高値と安値の相関係数を計算
+        return VolatilityAdapter.correl(df["high"], df["low"], period)
+
+    def get_description(self) -> str:
+        """指標の説明を取得"""
+        return "CORREL - Correlation Coefficient、価格系列間の相関係数"
+
+
 # 指標インスタンスのファクトリー関数
 def get_volatility_indicator(indicator_type: str) -> BaseIndicator:
     """
@@ -299,6 +373,9 @@ def get_volatility_indicator(indicator_type: str) -> BaseIndicator:
         "KELTNER": KeltnerChannelsIndicator,
         "STDDEV": STDDEVIndicator,
         "DONCHIAN": DonchianChannelsIndicator,
+        "VAR": VARIndicator,
+        "BETA": BETAIndicator,
+        "CORREL": CORRELIndicator,
     }
 
     if indicator_type not in indicators:
@@ -345,6 +422,21 @@ VOLATILITY_INDICATORS_INFO = {
     "DONCHIAN": {
         "periods": [10, 20, 50],
         "description": "Donchian Channels - ドンチャンチャネル、指定期間の最高値・最低値によるチャネル指標",
+        "category": "volatility",
+    },
+    "VAR": {
+        "periods": [5, 10, 20, 30],
+        "description": "VAR - Variance、価格の分散を測定するボラティリティ指標",
+        "category": "volatility",
+    },
+    "BETA": {
+        "periods": [5, 10, 20, 30],
+        "description": "BETA - Beta、価格の相対的なボラティリティを測定",
+        "category": "volatility",
+    },
+    "CORREL": {
+        "periods": [5, 10, 20, 30],
+        "description": "CORREL - Correlation Coefficient、価格系列間の相関係数",
         "category": "volatility",
     },
 }

@@ -455,3 +455,98 @@ class VolatilityAdapter(BaseAdapter):
         except Exception as e:
             VolatilityAdapter._log_calculation_error("DONCHIAN", e)
             raise TALibCalculationError(f"Donchian Channels計算失敗: {e}")
+
+    @staticmethod
+    def var(close: pd.Series, period: int = 20) -> pd.Series:
+        """
+        VAR（Variance）を計算
+
+        Args:
+            close: 終値データ（pandas Series）
+            period: 期間
+
+        Returns:
+            VAR値のpandas Series
+
+        Raises:
+            TALibCalculationError: 計算エラーの場合
+        """
+        VolatilityAdapter._validate_input(close, period)
+        VolatilityAdapter._log_calculation_start("VAR")
+
+        try:
+            result = VolatilityAdapter._safe_talib_calculation(
+                talib.VAR, close.values, timeperiod=period
+            )
+            return VolatilityAdapter._create_series_result_with_config(
+                result, close.index, "VAR", {"period": period}
+            )
+        except TALibCalculationError:
+            raise
+        except Exception as e:
+            VolatilityAdapter._log_calculation_error("VAR", e)
+            raise TALibCalculationError(f"VAR計算失敗: {e}")
+
+    @staticmethod
+    def beta(high: pd.Series, low: pd.Series, period: int = 20) -> pd.Series:
+        """
+        BETA（Beta）を計算
+
+        Args:
+            high: 高値データ（pandas Series）
+            low: 安値データ（pandas Series）
+            period: 期間
+
+        Returns:
+            BETA値のpandas Series
+
+        Raises:
+            TALibCalculationError: 計算エラーの場合
+        """
+        VolatilityAdapter._validate_input(high, period)
+        VolatilityAdapter._log_calculation_start("BETA")
+
+        try:
+            result = VolatilityAdapter._safe_talib_calculation(
+                talib.BETA, high.values, low.values, timeperiod=period
+            )
+            return VolatilityAdapter._create_series_result_with_config(
+                result, high.index, "BETA", {"period": period}
+            )
+        except TALibCalculationError:
+            raise
+        except Exception as e:
+            VolatilityAdapter._log_calculation_error("BETA", e)
+            raise TALibCalculationError(f"BETA計算失敗: {e}")
+
+    @staticmethod
+    def correl(high: pd.Series, low: pd.Series, period: int = 20) -> pd.Series:
+        """
+        CORREL（Correlation Coefficient）を計算
+
+        Args:
+            high: 高値データ（pandas Series）
+            low: 安値データ（pandas Series）
+            period: 期間
+
+        Returns:
+            CORREL値のpandas Series
+
+        Raises:
+            TALibCalculationError: 計算エラーの場合
+        """
+        VolatilityAdapter._validate_input(high, period)
+        VolatilityAdapter._log_calculation_start("CORREL")
+
+        try:
+            result = VolatilityAdapter._safe_talib_calculation(
+                talib.CORREL, high.values, low.values, timeperiod=period
+            )
+            return VolatilityAdapter._create_series_result_with_config(
+                result, high.index, "CORREL", {"period": period}
+            )
+        except TALibCalculationError:
+            raise
+        except Exception as e:
+            VolatilityAdapter._log_calculation_error("CORREL", e)
+            raise TALibCalculationError(f"CORREL計算失敗: {e}")
