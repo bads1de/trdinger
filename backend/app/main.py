@@ -9,6 +9,7 @@ from fastapi.middleware.cors import CORSMiddleware
 import logging
 
 from app.config.settings import settings
+from app.core.utils.DuplicateFilterHandler import DuplicateFilterHandler
 from app.api.market_data import router as market_data_router
 from app.api.data_collection import router as data_collection_router
 from app.api.funding_rates import router as funding_rates_router
@@ -22,10 +23,29 @@ from app.api.indicators import router as indicators_router
 
 
 def setup_logging():
-    """ログ設定を初期化"""
-    logging.basicConfig(
-        level=getattr(logging, settings.log_level.upper()), format=settings.log_format
-    )
+    """ログ設定を初期化（重複ログフィルター付き）"""
+    # ルートロガーを取得
+    root_logger = logging.getLogger()
+    root_logger.setLevel(getattr(logging, settings.log_level.upper()))
+
+    # 既存のハンドラーをクリア
+    for handler in root_logger.handlers[:]:
+        root_logger.removeHandler(handler)
+
+    # コンソールハンドラーを作成
+    console_handler = logging.StreamHandler()
+    console_handler.setLevel(getattr(logging, settings.log_level.upper()))
+
+    # フォーマッターを設定
+    formatter = logging.Formatter(settings.log_format)
+    console_handler.setFormatter(formatter)
+
+    # 重複フィルターを作成（1秒間隔で同じメッセージをフィルタリング）
+    duplicate_filter = DuplicateFilterHandler(capacity=200, interval=1.0)
+    console_handler.addFilter(duplicate_filter)
+
+    # ハンドラーをルートロガーに追加
+    root_logger.addHandler(console_handler)
 
 
 def create_app() -> FastAPI:
