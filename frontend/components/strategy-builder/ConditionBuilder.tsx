@@ -263,7 +263,7 @@ const ConditionBuilder: React.FC<ConditionBuilderProps> = ({
         </div>
 
         {/* 条件の説明 */}
-        <div className="mt-4 p-3 bg-gray-800 rounded border border-gray-600">
+        <div className="mt-4 p-3 bg-secondary-950 rounded border border-gray-600">
           <p className="text-sm text-gray-300">
             {renderConditionDescription(condition, indicatorOptions)}
           </p>
@@ -308,7 +308,7 @@ const ConditionBuilder: React.FC<ConditionBuilderProps> = ({
 
   if (selectedIndicators.filter((ind) => ind.enabled).length === 0) {
     return (
-      <div className="bg-gray-800 rounded-lg p-6">
+      <div className="bg-secondary-950 rounded-lg p-6">
         <div className="text-center py-8">
           <svg
             className="w-12 h-12 text-gray-500 mx-auto mb-4"
@@ -336,7 +336,7 @@ const ConditionBuilder: React.FC<ConditionBuilderProps> = ({
     activeTab === "entry" ? entryConditions : exitConditions;
 
   return (
-    <div className="bg-gray-800 rounded-lg p-6">
+    <div className="bg-secondary-950 rounded-lg p-6">
       {/* タブ */}
       <div className="flex gap-2 mb-6">
         <button
@@ -410,7 +410,7 @@ const ConditionBuilder: React.FC<ConditionBuilderProps> = ({
       </button>
 
       {/* 条件サマリー */}
-      <div className="mt-6 p-4 bg-gray-900 rounded-lg border border-gray-600">
+      <div className="mt-6 p-4 bg-secondary-950 rounded-lg border border-gray-600">
         <h5 className="text-gray-300 font-medium mb-3">条件サマリー</h5>
         <div className="grid grid-cols-2 gap-4 text-sm">
           <div>

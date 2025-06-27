@@ -348,7 +348,7 @@ const IndicatorSelector: React.FC<IndicatorSelectorProps> = ({
 
   if (loading) {
     return (
-      <div className="bg-gray-800 rounded-lg p-6">
+      <div className="bg-secondary-950 rounded-lg p-6">
         <div className="flex items-center justify-center h-64">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
           <span className="ml-3 text-gray-300">指標を読み込み中...</span>
@@ -453,7 +453,7 @@ const IndicatorSelector: React.FC<IndicatorSelectorProps> = ({
                 ${
                   isSelected
                     ? "border-blue-500 bg-blue-900/30"
-                    : "border-gray-800 bg-gray-900 hover:border-gray-700"
+                    : "border-gray-800 bg-secondary-950 hover:border-gray-700"
                 }
               `}
               onClick={() => toggleIndicator(indicator)}
