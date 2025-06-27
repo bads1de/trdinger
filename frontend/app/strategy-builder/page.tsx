@@ -245,15 +245,15 @@ const StrategyBuilderPage: React.FC = () => {
   return (
     <div className="min-h-screen animate-fade-in">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
-        <div className="bg-card text-card-foreground shadow-lg rounded-lg p-6">
+        <div className="bg-secondary-950 text-white shadow-lg rounded-lg p-6 border border-secondary-700">
           <h1 className="text-3xl font-bold">ストラテジービルダー</h1>
-          <p className="mt-2 text-muted-foreground">
+          <p className="mt-2 text-secondary-400">
             テクニカル指標を組み合わせて独自の投資戦略を作成
           </p>
         </div>
 
         {/* ステップナビゲーション */}
-        <div className="bg-card text-card-foreground shadow-lg rounded-lg p-4">
+        <div className="bg-secondary-950 text-white shadow-lg rounded-lg p-4 border border-secondary-700">
           <div className="flex flex-wrap gap-2">
             {BUILDER_STEPS.map((step) => (
               <TabButton
@@ -271,7 +271,7 @@ const StrategyBuilderPage: React.FC = () => {
         </div>
 
         {/* メインコンテンツ */}
-        <div className="bg-card text-card-foreground shadow-lg rounded-lg p-6">
+        <div className="bg-secondary-950 text-white shadow-lg rounded-lg p-6 border border-secondary-700">
           {currentStepInfo && (
             <div className="mb-4">
               <div className="flex items-center gap-3 mb-2">

@@ -1,6 +1,6 @@
 /**
  * 条件ビルダーコンポーネント
- * 
+ *
  * エントリー・イグジット条件の設定と論理演算子管理を提供します。
  */
 
@@ -86,8 +86,8 @@ const ConditionBuilder: React.FC<ConditionBuilderProps> = ({
   // 有効な指標のオプションを取得
   const getIndicatorOptions = () => {
     return selectedIndicators
-      .filter(indicator => indicator.enabled)
-      .map(indicator => ({
+      .filter((indicator) => indicator.enabled)
+      .map((indicator) => ({
         value: indicator.id,
         label: `${indicator.name} (${indicator.type})`,
       }));
@@ -113,16 +113,24 @@ const ConditionBuilder: React.FC<ConditionBuilderProps> = ({
   // 条件を削除
   const removeCondition = (type: "entry" | "exit", conditionId: string) => {
     if (type === "entry") {
-      onEntryConditionsChange(entryConditions.filter(c => c.id !== conditionId));
+      onEntryConditionsChange(
+        entryConditions.filter((c) => c.id !== conditionId)
+      );
     } else {
-      onExitConditionsChange(exitConditions.filter(c => c.id !== conditionId));
+      onExitConditionsChange(
+        exitConditions.filter((c) => c.id !== conditionId)
+      );
     }
   };
 
   // 条件を更新
-  const updateCondition = (type: "entry" | "exit", conditionId: string, updates: Partial<Condition>) => {
+  const updateCondition = (
+    type: "entry" | "exit",
+    conditionId: string,
+    updates: Partial<Condition>
+  ) => {
     const updateConditions = (conditions: Condition[]) =>
-      conditions.map(condition =>
+      conditions.map((condition) =>
         condition.id === conditionId ? { ...condition, ...updates } : condition
       );
 
@@ -134,21 +142,36 @@ const ConditionBuilder: React.FC<ConditionBuilderProps> = ({
   };
 
   // 条件エディターをレンダリング
-  const renderConditionEditor = (condition: Condition, type: "entry" | "exit", index: number) => {
+  const renderConditionEditor = (
+    condition: Condition,
+    type: "entry" | "exit",
+    index: number
+  ) => {
     const indicatorOptions = getIndicatorOptions();
 
     return (
-      <div key={condition.id} className="border border-gray-600 rounded-lg p-4 bg-gray-700">
+      <div
+        key={condition.id}
+        className="border border-gray-600 rounded-lg p-4 bg-secondary-950"
+      >
         <div className="flex items-center justify-between mb-4">
-          <h5 className="font-medium text-white">
-            条件 {index + 1}
-          </h5>
+          <h5 className="font-medium text-white">条件 {index + 1}</h5>
           <button
             onClick={() => removeCondition(type, condition.id)}
             className="text-red-400 hover:text-red-300 p-1"
           >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+            <svg
+              className="w-4 h-4"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+              />
             </svg>
           </button>
         </div>
@@ -158,14 +181,17 @@ const ConditionBuilder: React.FC<ConditionBuilderProps> = ({
           <SelectField
             label="条件タイプ"
             value={condition.type}
-            onChange={(value) => updateCondition(type, condition.id, { 
-              type: value as Condition["type"],
-              // タイプ変更時にリセット
-              indicator1: undefined,
-              indicator2: undefined,
-              value: undefined,
-              operator: OPERATORS[value as keyof typeof OPERATORS][0]?.value || ">"
-            })}
+            onChange={(value) =>
+              updateCondition(type, condition.id, {
+                type: value as Condition["type"],
+                // タイプ変更時にリセット
+                indicator1: undefined,
+                indicator2: undefined,
+                value: undefined,
+                operator:
+                  OPERATORS[value as keyof typeof OPERATORS][0]?.value || ">",
+              })
+            }
             options={CONDITION_TYPES}
           />
 
@@ -174,7 +200,11 @@ const ConditionBuilder: React.FC<ConditionBuilderProps> = ({
             <SelectField
               label="論理演算子"
               value={condition.logicalOperator || "AND"}
-              onChange={(value) => updateCondition(type, condition.id, { logicalOperator: value as "AND" | "OR" })}
+              onChange={(value) =>
+                updateCondition(type, condition.id, {
+                  logicalOperator: value as "AND" | "OR",
+                })
+              }
               options={LOGICAL_OPERATORS}
             />
           )}
@@ -185,10 +215,12 @@ const ConditionBuilder: React.FC<ConditionBuilderProps> = ({
           <SelectField
             label={condition.type === "crossover" ? "基準指標" : "指標"}
             value={condition.indicator1 || ""}
-            onChange={(value) => updateCondition(type, condition.id, { indicator1: value })}
+            onChange={(value) =>
+              updateCondition(type, condition.id, { indicator1: value })
+            }
             options={[
               { value: "", label: "指標を選択..." },
-              ...indicatorOptions
+              ...indicatorOptions,
             ]}
           />
 
@@ -196,7 +228,9 @@ const ConditionBuilder: React.FC<ConditionBuilderProps> = ({
           <SelectField
             label="演算子"
             value={condition.operator}
-            onChange={(value) => updateCondition(type, condition.id, { operator: value })}
+            onChange={(value) =>
+              updateCondition(type, condition.id, { operator: value })
+            }
             options={OPERATORS[condition.type] || OPERATORS.threshold}
           />
 
@@ -205,10 +239,14 @@ const ConditionBuilder: React.FC<ConditionBuilderProps> = ({
             <SelectField
               label={condition.type === "crossover" ? "比較指標" : "比較指標"}
               value={condition.indicator2 || ""}
-              onChange={(value) => updateCondition(type, condition.id, { indicator2: value })}
+              onChange={(value) =>
+                updateCondition(type, condition.id, { indicator2: value })
+              }
               options={[
                 { value: "", label: "指標を選択..." },
-                ...indicatorOptions.filter(opt => opt.value !== condition.indicator1)
+                ...indicatorOptions.filter(
+                  (opt) => opt.value !== condition.indicator1
+                ),
               ]}
             />
           ) : (
@@ -216,7 +254,9 @@ const ConditionBuilder: React.FC<ConditionBuilderProps> = ({
               label="値"
               type="number"
               value={condition.value || 0}
-              onChange={(value) => updateCondition(type, condition.id, { value: Number(value) })}
+              onChange={(value) =>
+                updateCondition(type, condition.id, { value: Number(value) })
+              }
               step={0.1}
             />
           )}
@@ -233,32 +273,55 @@ const ConditionBuilder: React.FC<ConditionBuilderProps> = ({
   };
 
   // 条件の説明文を生成
-  const renderConditionDescription = (condition: Condition, indicatorOptions: Array<{value: string, label: string}>) => {
+  const renderConditionDescription = (
+    condition: Condition,
+    indicatorOptions: Array<{ value: string; label: string }>
+  ) => {
     const getIndicatorName = (id: string) => {
-      const option = indicatorOptions.find(opt => opt.value === id);
+      const option = indicatorOptions.find((opt) => opt.value === id);
       return option ? option.label : "未選択";
     };
 
-    const operatorText = OPERATORS[condition.type]?.find(op => op.value === condition.operator)?.label || condition.operator;
+    const operatorText =
+      OPERATORS[condition.type]?.find((op) => op.value === condition.operator)
+        ?.label || condition.operator;
 
     switch (condition.type) {
       case "threshold":
-        return `${getIndicatorName(condition.indicator1 || "")} が ${condition.value} ${operatorText}`;
+        return `${getIndicatorName(condition.indicator1 || "")} が ${
+          condition.value
+        } ${operatorText}`;
       case "crossover":
-        return `${getIndicatorName(condition.indicator1 || "")} が ${getIndicatorName(condition.indicator2 || "")} を ${operatorText}`;
+        return `${getIndicatorName(
+          condition.indicator1 || ""
+        )} が ${getIndicatorName(
+          condition.indicator2 || ""
+        )} を ${operatorText}`;
       case "comparison":
-        return `${getIndicatorName(condition.indicator1 || "")} が ${getIndicatorName(condition.indicator2 || "")} ${operatorText}`;
+        return `${getIndicatorName(
+          condition.indicator1 || ""
+        )} が ${getIndicatorName(condition.indicator2 || "")} ${operatorText}`;
       default:
         return "条件を設定してください";
     }
   };
 
-  if (selectedIndicators.filter(ind => ind.enabled).length === 0) {
+  if (selectedIndicators.filter((ind) => ind.enabled).length === 0) {
     return (
       <div className="bg-gray-800 rounded-lg p-6">
         <div className="text-center py-8">
-          <svg className="w-12 h-12 text-gray-500 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          <svg
+            className="w-12 h-12 text-gray-500 mx-auto mb-4"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+            />
           </svg>
           <p className="text-gray-400 text-lg">有効な指標がありません</p>
           <p className="text-gray-500 text-sm mt-2">
@@ -269,7 +332,8 @@ const ConditionBuilder: React.FC<ConditionBuilderProps> = ({
     );
   }
 
-  const currentConditions = activeTab === "entry" ? entryConditions : exitConditions;
+  const currentConditions =
+    activeTab === "entry" ? entryConditions : exitConditions;
 
   return (
     <div className="bg-gray-800 rounded-lg p-6">
@@ -279,9 +343,10 @@ const ConditionBuilder: React.FC<ConditionBuilderProps> = ({
           onClick={() => setActiveTab("entry")}
           className={`
             px-4 py-2 rounded-lg font-medium transition-colors
-            ${activeTab === "entry" 
-              ? "bg-blue-600 text-white" 
-              : "bg-gray-700 text-gray-300 hover:bg-gray-600"
+            ${
+              activeTab === "entry"
+                ? "bg-blue-600 text-white"
+                : "bg-gray-700 text-gray-300 hover:bg-gray-600"
             }
           `}
         >
@@ -291,9 +356,10 @@ const ConditionBuilder: React.FC<ConditionBuilderProps> = ({
           onClick={() => setActiveTab("exit")}
           className={`
             px-4 py-2 rounded-lg font-medium transition-colors
-            ${activeTab === "exit" 
-              ? "bg-blue-600 text-white" 
-              : "bg-gray-700 text-gray-300 hover:bg-gray-600"
+            ${
+              activeTab === "exit"
+                ? "bg-blue-600 text-white"
+                : "bg-gray-700 text-gray-300 hover:bg-gray-600"
             }
           `}
         >
@@ -310,7 +376,8 @@ const ConditionBuilder: React.FC<ConditionBuilderProps> = ({
         ) : (
           <div className="text-center py-8 border-2 border-dashed border-gray-600 rounded-lg">
             <p className="text-gray-400">
-              {activeTab === "entry" ? "エントリー" : "イグジット"}条件が設定されていません
+              {activeTab === "entry" ? "エントリー" : "イグジット"}
+              条件が設定されていません
             </p>
             <p className="text-gray-500 text-sm mt-2">
               「条件を追加」ボタンで新しい条件を作成してください
@@ -325,8 +392,18 @@ const ConditionBuilder: React.FC<ConditionBuilderProps> = ({
         className="w-full py-3 border-2 border-dashed border-gray-600 rounded-lg text-gray-400 hover:border-gray-500 hover:text-gray-300 transition-colors"
       >
         <div className="flex items-center justify-center gap-2">
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+          <svg
+            className="w-5 h-5"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M12 6v6m0 0v6m0-6h6m-6 0H6"
+            />
           </svg>
           {activeTab === "entry" ? "エントリー" : "イグジット"}条件を追加
         </div>
@@ -345,8 +422,8 @@ const ConditionBuilder: React.FC<ConditionBuilderProps> = ({
             <p className="text-white font-medium">{exitConditions.length}個</p>
           </div>
         </div>
-        
-        {(entryConditions.length === 0 && exitConditions.length === 0) && (
+
+        {entryConditions.length === 0 && exitConditions.length === 0 && (
           <div className="mt-3 p-3 bg-yellow-900/30 border border-yellow-700 rounded">
             <p className="text-yellow-300 text-sm">
               ⚠️ 少なくとも1つの条件を設定してください
