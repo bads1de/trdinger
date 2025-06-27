@@ -1,20 +1,64 @@
+"use client";
+import { useState, useEffect, useRef } from "react";
+
 /**
  * ホームページコンポーネント
  *
  * アプリケーションのメインランディングページです。
  * 主要機能へのナビゲーションリンクと概要を表示します。
+ * マウスカーソルの位置に応じて動的に変化するグラデーション背景を実装。
  *
  * 機能:
  * - 戦略定義ページへのリンク
  * - バックテストページへのリンク
  * - 結果分析ページへのリンク
  * - データ管理ページへのリンク
+ * - マウス追従型動的グラデーション背景
  *
  * @returns ホームページのJSX要素
  */
 export default function Home() {
+  // マウス座標を正規化した値（0-1の範囲）で管理
+  const [mousePosition, setMousePosition] = useState({ x: 0.5, y: 0.5 });
+  const animationRef = useRef<number>();
+
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      // 前のアニメーションフレームをキャンセル（パフォーマンス最適化）
+      if (animationRef.current) {
+        cancelAnimationFrame(animationRef.current);
+      }
+
+      // requestAnimationFrameを使用してスムーズなアニメーションを実現
+      animationRef.current = requestAnimationFrame(() => {
+        const x = e.clientX / window.innerWidth;
+        const y = e.clientY / window.innerHeight;
+        setMousePosition({ x, y });
+      });
+    };
+
+    // マウスイベントリスナーを追加
+    window.addEventListener("mousemove", handleMouseMove);
+
+    // クリーンアップ処理
+    return () => {
+      window.removeEventListener("mousemove", handleMouseMove);
+      if (animationRef.current) {
+        cancelAnimationFrame(animationRef.current);
+      }
+    };
+  }, []);
+
+  // CSS変数としてマウス座標を設定
+  const dynamicStyle = {
+    "--mouse-x": mousePosition.x,
+    "--mouse-y": mousePosition.y,
+  } as React.CSSProperties;
   return (
-    <main className="flex min-h-screen flex-col items-center justify-between p-24">
+    <main
+      style={dynamicStyle}
+      className="flex min-h-screen flex-col items-center justify-between p-24"
+    >
       {/* ヘッダー部分 - アプリケーション名を表示 */}
       <div className="z-10 max-w-5xl w-full items-center justify-between font-mono text-sm lg:flex">
         <p className="fixed left-0 top-0 flex w-full justify-center border-b border-gray-700 bg-gradient-to-b from-gray-900 pb-6 pt-8 backdrop-blur-2xl dark:border-gray-700 dark:bg-gray-900/30 dark:from-inherit lg:static lg:w-auto  lg:rounded-xl lg:border lg:bg-gray-900 lg:p-4 lg:dark:bg-gray-900/30">
@@ -22,8 +66,30 @@ export default function Home() {
         </p>
       </div>
 
-      {/* メインタイトル部分 - グラデーション背景付き */}
-      <div className="relative flex place-items-center before:absolute before:h-[300px] before:w-[480px] before:-translate-x-1/2 before:translate-y-1/4 before:rounded-full before:bg-gradient-radial before:from-white before:to-transparent before:blur-2xl before:content-[''] after:absolute after:-z-20 after:h-[180px] after:w-[240px] after:translate-x-1/3 after:bg-gradient-conic after:from-sky-200 after:via-blue-200 after:blur-2xl after:content-[''] before:dark:bg-gradient-to-br before:dark:from-transparent before:dark:to-blue-700 before:dark:opacity-10 after:dark:from-sky-900 after:dark:via-[#0141ff] after:dark:opacity-40 before:lg:h-[360px] z-[-1]">
+      {/* メインタイトル部分 - マウス追従型動的グラデーション背景付き */}
+      <div
+        className="relative flex place-items-center z-[-1]"
+        style={
+          {
+            "--gradient-x": `${(mousePosition.x - 0.5) * 100}px`,
+            "--gradient-y": `${(mousePosition.y - 0.5) * 100}px`,
+          } as React.CSSProperties
+        }
+      >
+        {/* 放射状グラデーション（マウス追従） */}
+        <div
+          className="absolute h-[300px] w-[480px] rounded-full bg-gradient-radial from-white to-transparent blur-2xl transition-transform duration-300 ease-out dark:bg-gradient-to-br dark:from-transparent dark:to-blue-700 dark:opacity-10 lg:h-[360px]"
+          style={{
+            transform: `translate(calc(-50% + var(--gradient-x)), calc(25% + var(--gradient-y)))`,
+          }}
+        />
+        {/* 円錐状グラデーション（マウス追従） */}
+        <div
+          className="absolute -z-20 h-[180px] w-[240px] bg-gradient-conic from-sky-200 via-blue-200 blur-2xl transition-transform duration-300 ease-out dark:from-sky-900 dark:via-[#0141ff] dark:opacity-40"
+          style={{
+            transform: `translate(calc(33% + var(--gradient-x) * 0.8), calc(0% + var(--gradient-y) * 0.8))`,
+          }}
+        />
         <h1 className="text-4xl font-bold">
           仮想通貨トレーディング戦略
           <br />
