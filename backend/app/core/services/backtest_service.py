@@ -341,25 +341,9 @@ class BacktestService:
                     "GENERATED_AUTO戦略タイプには、戦略遺伝子 (strategy_gene) がパラメータとして必要です。"
                 )
 
-        elif strategy_type == "USER_CUSTOM":
-            # ストラテジービルダーで作成されたユーザー定義戦略用
-            # StrategyFactoryで生成された戦略クラスを使用
-            from app.core.services.auto_strategy.factories.strategy_factory import (
-                StrategyFactory,
-            )
-            from app.core.services.auto_strategy.models.strategy_gene import (
-                StrategyGene,
-            )
-
-            # パラメータから戦略遺伝子を復元
-            if "strategy_gene" in parameters:
-                strategy_gene = StrategyGene.from_dict(parameters["strategy_gene"])
-                factory = StrategyFactory()
-                return factory.create_strategy_class(strategy_gene)
-            else:
-                raise ValueError(
-                    "USER_CUSTOM戦略タイプには、戦略遺伝子 (strategy_gene) がパラメータとして必要です。"
-                )
+        elif strategy_type == "STRATEGY_BUILDER":
+            # ストラテジービルダー専用戦略（GA機能を使わない）
+            return self._create_strategy_builder_class(parameters)
 
         else:
             raise ValueError(
@@ -657,18 +641,6 @@ class BacktestService:
                     "oversold_threshold < overbought_threshold",
                 ],
             },
-            "USER_CUSTOM": {
-                "name": "User Custom Strategy",
-                "description": "ストラテジービルダーで作成されたユーザー定義戦略",
-                "parameters": {
-                    "strategy_gene": {
-                        "type": "object",
-                        "description": "戦略遺伝子（StrategyGene形式）",
-                        "required": True,
-                    }
-                },
-                "constraints": [],
-            },
         }
 
     def optimize_strategy(
@@ -775,3 +747,122 @@ class BacktestService:
         }
 
         return result
+
+    def _create_strategy_builder_class(self, parameters: Dict[str, Any]):
+        """
+        ストラテジービルダー専用の戦略クラスを作成（GA機能を使わない）
+
+        Args:
+            parameters: ストラテジービルダーのパラメータ
+
+        Returns:
+            動的に生成された戦略クラス
+        """
+        from backtesting import Strategy
+        from backtesting.lib import crossover
+        from app.core.strategies.indicators import SMA, RSI, MACD
+
+        # パラメータから指標と条件を取得
+        indicators = parameters.get("indicators", [])
+        entry_conditions = parameters.get("entry_conditions", [])
+        exit_conditions = parameters.get("exit_conditions", [])
+
+        class StrategyBuilderStrategy(Strategy):
+            """ストラテジービルダーで作成された戦略"""
+
+            def init(self):
+                """指標の初期化"""
+                # 指標を初期化
+                self.indicators_data = {}
+
+                for indicator in indicators:
+                    indicator_name = indicator.get("name", "")
+                    params = indicator.get("params", {})
+
+                    if indicator_name == "SMA":
+                        period = params.get("period", 20)
+                        self.indicators_data[f"SMA_{period}"] = self.I(
+                            SMA, self.data.Close, period
+                        )
+                    elif indicator_name == "RSI":
+                        period = params.get("period", 14)
+                        self.indicators_data[f"RSI_{period}"] = self.I(
+                            RSI, self.data.Close, period
+                        )
+                    elif indicator_name == "MACD":
+                        fast = params.get("fast_period", 12)
+                        slow = params.get("slow_period", 26)
+                        signal = params.get("signal_period", 9)
+                        macd_line, signal_line, histogram = self.I(
+                            MACD, self.data.Close, fast, slow, signal
+                        )
+                        self.indicators_data["MACD_line"] = macd_line
+                        self.indicators_data["MACD_signal"] = signal_line
+                        self.indicators_data["MACD_histogram"] = histogram
+
+            def next(self):
+                """売買ロジック"""
+                # エントリー条件をチェック
+                if not self.position and self._check_entry_conditions():
+                    self.buy()
+
+                # エグジット条件をチェック
+                elif self.position and self._check_exit_conditions():
+                    self.sell()
+
+            def _check_entry_conditions(self) -> bool:
+                """エントリー条件をチェック"""
+                for condition in entry_conditions:
+                    if not self._evaluate_condition(condition):
+                        return False
+                return len(entry_conditions) > 0
+
+            def _check_exit_conditions(self) -> bool:
+                """エグジット条件をチェック"""
+                for condition in exit_conditions:
+                    if not self._evaluate_condition(condition):
+                        return False
+                return len(exit_conditions) > 0
+
+            def _evaluate_condition(self, condition: Dict[str, Any]) -> bool:
+                """条件を評価"""
+                try:
+                    condition_type = condition.get("type", "")
+
+                    if condition_type == "indicator_comparison":
+                        indicator1 = condition.get("indicator1", "")
+                        operator = condition.get("operator", ">")
+                        value = condition.get("value", 0)
+
+                        if indicator1 in self.indicators_data:
+                            current_value = self.indicators_data[indicator1][-1]
+
+                            if operator == ">":
+                                return current_value > value
+                            elif operator == "<":
+                                return current_value < value
+                            elif operator == ">=":
+                                return current_value >= value
+                            elif operator == "<=":
+                                return current_value <= value
+                            elif operator == "==":
+                                return abs(current_value - value) < 0.0001
+
+                    elif condition_type == "crossover":
+                        indicator1 = condition.get("indicator1", "")
+                        indicator2 = condition.get("indicator2", "")
+
+                        if (
+                            indicator1 in self.indicators_data
+                            and indicator2 in self.indicators_data
+                        ):
+                            return crossover(
+                                self.indicators_data[indicator1],
+                                self.indicators_data[indicator2],
+                            )
+
+                    return False
+                except Exception:
+                    return False
+
+        return StrategyBuilderStrategy

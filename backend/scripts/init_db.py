@@ -4,7 +4,6 @@
 """
 
 from database.connection import init_db, get_db
-from database.models import UserStrategy
 from sqlalchemy import text
 
 

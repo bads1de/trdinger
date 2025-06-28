@@ -47,7 +47,18 @@ class GeneValidator:
 
     def _get_valid_operators(self) -> List[str]:
         """有効な演算子のリストを取得"""
-        return [">", "<", ">=", "<=", "==", "cross_above", "cross_below"]
+        return [
+            ">",
+            "<",
+            ">=",
+            "<=",
+            "==",
+            "!=",  # 基本比較演算子
+            "cross_above",
+            "cross_below",  # クロスオーバー演算子
+            "above",
+            "below",  # フロントエンド用演算子
+        ]
 
     def _get_valid_data_sources(self) -> List[str]:
         """有効なデータソースのリストを取得"""
@@ -159,6 +170,39 @@ class GeneValidator:
             logger.error(f"オペランド検証エラー: {e}")
             return False
 
+    def _is_indicator_name(self, name: str) -> bool:
+        """
+        指標名かどうかを判定
+
+        Args:
+            name: 判定する名前
+
+        Returns:
+            指標名の場合True
+        """
+        try:
+            # 基本的な指標タイプの確認
+            if name in self.valid_indicator_types:
+                return True
+
+            # 指標名_パラメータ形式の確認（例: SMA_20, RSI_14）
+            if "_" in name:
+                indicator_type = name.split("_")[0]
+                if indicator_type in self.valid_indicator_types:
+                    return True
+
+            # 指標インデックス形式の確認（例: SMA_0, RSI_1）
+            if name.endswith(("_0", "_1", "_2", "_3", "_4")):
+                indicator_type = name.rsplit("_", 1)[0]
+                if indicator_type in self.valid_indicator_types:
+                    return True
+
+            return False
+
+        except Exception as e:
+            logger.error(f"指標名判定エラー: {e}")
+            return False
+
     def validate_strategy_gene(self, strategy_gene) -> Tuple[bool, List[str]]:
         """
         戦略遺伝子の妥当性を検証
@@ -213,29 +257,6 @@ class GeneValidator:
             logger.error(f"戦略遺伝子バリデーションエラー: {e}")
             errors.append(f"バリデーション処理エラー: {e}")
             return False, errors
-
-    def _is_indicator_name(self, name: str) -> bool:
-        """
-        指標名かどうかを判定
-
-        Args:
-            name: 判定対象の文字列
-
-        Returns:
-            指標名の場合True
-        """
-        try:
-            # 指標名のパターン: "INDICATOR_PERIOD" (例: "SMA_20", "RSI_14")
-            if "_" in name:
-                indicator_type = name.split("_")[0]
-                return indicator_type in self.valid_indicator_types
-
-            # 単純な指標名（期間なし）
-            return name in self.valid_indicator_types
-
-        except Exception as e:
-            logger.error(f"指標名判定エラー: {e}")
-            return False
 
     def validate_risk_management(self, risk_management: dict) -> Tuple[bool, List[str]]:
         """
