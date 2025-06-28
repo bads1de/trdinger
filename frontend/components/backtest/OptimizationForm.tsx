@@ -271,11 +271,11 @@ export default function OptimizationForm({
 
   // GAProgressDisplay に渡す onComplete と onError のダミー関数
   const handleGAProgressComplete = (result: any) => {
-    console.log("GA completed in OptimizationForm:", result);
+    
   };
 
   const handleGAProgressError = (error: string) => {
-    console.error("GA error in OptimizationForm:", error);
+    
   };
 
   return (
@@ -350,9 +350,7 @@ export default function OptimizationForm({
                   }
                   onChange={(value) => {
                     // 最適化フォームでは直接パラメータを変更しないため、変更を無視
-                    console.log(
-                      `OptimizationForm: Parameter ${key} changed to ${value}, but not applied.`
-                    );
+                    
                   }}
                   min={param.min}
                   max={param.max}

@@ -80,7 +80,7 @@ export default function BacktestPage() {
 
   // GA戦略生成実行
   const handleGAGeneration = async (config: any) => {
-    console.log("GA戦略生成開始:", config);
+    
     // GA実行は別途進捗表示で管理されるため、ここでは設定のログ出力のみ
   };
 

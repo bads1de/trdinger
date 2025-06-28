@@ -9,9 +9,9 @@ import { BACKEND_API_URL } from "@/constants";
 
 export async function POST(request: NextRequest) {
   try {
-    console.log("=== Next.js API Route: オートストラテジー生成開始 ===");
+    
     const body = await request.json();
-    console.log("Request body:", JSON.stringify(body, null, 2));
+    
 
     // リクエストボディのバリデーション
     if (!body.experiment_name || !body.base_config || !body.ga_config) {

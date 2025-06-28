@@ -78,22 +78,15 @@ export const useApiCall = <T = any>(): ApiCallResult<T> => {
             typeof body === "string" ? body : JSON.stringify(body);
         }
 
-        console.log("API Request:", { url, method, headers, body });
+        
 
         const response = await fetch(url, requestOptions);
 
-        console.log(
-          "API Response Status:",
-          response.status,
-          response.statusText
-        );
-        console.log(
-          "API Response Headers:",
-          Object.fromEntries(response.headers.entries())
-        );
+        
+        
 
         const responseText = await response.text();
-        console.log("API Response Text:", responseText);
+        
 
         let result;
 

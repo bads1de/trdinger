@@ -277,7 +277,7 @@ export const useGAExecution = () => {
   const gaProgress = useGAProgress({
     onComplete: (result) => {
       setIsExecuting(false);
-      console.log("GA execution completed:", result);
+      
     },
     onError: (error) => {
       setIsExecuting(false);

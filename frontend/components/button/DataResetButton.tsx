@@ -174,7 +174,7 @@ const DataResetButton: React.FC<DataResetButtonProps> = ({
         method: "DELETE",
         confirmMessage,
         onSuccess: (data: DataResetResult) => {
-          console.log("データリセット完了:", data);
+          
           onResetComplete?.(data);
         },
         onError: (error: string) => {
@@ -184,7 +184,7 @@ const DataResetButton: React.FC<DataResetButtonProps> = ({
       });
 
       if (result) {
-        console.log("データリセット結果:", result);
+        
       }
     } catch (error) {
       console.error("データリセット処理エラー:", error);

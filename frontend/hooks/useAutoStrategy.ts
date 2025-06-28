@@ -23,7 +23,7 @@ export const useAutoStrategy = (loadResults: () => void) => {
       method: "POST",
       body: requestBody,
       onSuccess: (data) => {
-        console.log("オートストラテジー生成開始:", data);
+        
         setShowAutoStrategyModal(false);
         alert(
           `🚀 戦略生成を開始しました！\n\n実験ID: ${data.experiment_id}\n\n生成完了後、結果一覧に自動的に表示されます。\n数分お待ちください。`

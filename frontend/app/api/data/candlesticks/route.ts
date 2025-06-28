@@ -75,10 +75,7 @@ async function fetchDatabaseOHLCVData(
   }
 
   // デバッグ用ログ出力
-  console.log(
-    "バックエンドレスポンス構造:",
-    JSON.stringify(backendData, null, 2)
-  );
+  
 
   // バックエンドのOHLCVデータをフロントエンド形式に変換
   const ohlcvData = backendData.data.ohlcv_data;
