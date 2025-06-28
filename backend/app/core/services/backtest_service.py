@@ -11,10 +11,7 @@ from typing import Dict, Any, Type, Optional
 from backtesting import Backtest, Strategy
 
 from .backtest_data_service import BacktestDataService
-from ..strategies.sma_cross_strategy import SMACrossStrategy
-from ..strategies.rsi_strategy import RSIStrategy
 from ..strategies.macd_strategy import MACDStrategy
-from ..strategies.sma_rsi_strategy import SMARSIStrategy
 from database.repositories.ohlcv_repository import OHLCVRepository
 from database.connection import SessionLocal
 
@@ -253,25 +250,7 @@ class BacktestService:
         strategy_type = strategy_config["strategy_type"]
         parameters = strategy_config.get("parameters", {})
 
-        if strategy_type == "SMA_CROSS":
-            # パラメータをクラス変数として設定
-            if "n1" in parameters:
-                SMACrossStrategy.n1 = parameters["n1"]
-            if "n2" in parameters:
-                SMACrossStrategy.n2 = parameters["n2"]
-            return SMACrossStrategy
-
-        elif strategy_type == "RSI":
-            # パラメータをクラス変数として設定
-            if "period" in parameters:
-                RSIStrategy.period = parameters["period"]
-            if "oversold" in parameters:
-                RSIStrategy.oversold = parameters["oversold"]
-            if "overbought" in parameters:
-                RSIStrategy.overbought = parameters["overbought"]
-            return RSIStrategy
-
-        elif strategy_type == "MACD":
+        if strategy_type == "MACD":
             # パラメータをクラス変数として設定
             if "fast_period" in parameters:
                 MACDStrategy.fast_period = parameters["fast_period"]
@@ -281,25 +260,7 @@ class BacktestService:
                 MACDStrategy.signal_period = parameters["signal_period"]
             return MACDStrategy
 
-        elif strategy_type == "SMA_RSI":
-            # パラメータをクラス変数として設定
-            if "sma_short" in parameters:
-                SMARSIStrategy.sma_short = parameters["sma_short"]
-            if "sma_long" in parameters:
-                SMARSIStrategy.sma_long = parameters["sma_long"]
-            if "rsi_period" in parameters:
-                SMARSIStrategy.rsi_period = parameters["rsi_period"]
-            if "oversold_threshold" in parameters:
-                SMARSIStrategy.oversold_threshold = parameters["oversold_threshold"]
-            if "overbought_threshold" in parameters:
-                SMARSIStrategy.overbought_threshold = parameters["overbought_threshold"]
-            if "use_risk_management" in parameters:
-                SMARSIStrategy.use_risk_management = parameters["use_risk_management"]
-            if "sl_pct" in parameters:
-                SMARSIStrategy.sl_pct = parameters["sl_pct"]
-            if "tp_pct" in parameters:
-                SMARSIStrategy.tp_pct = parameters["tp_pct"]
-            return SMARSIStrategy
+        
 
         elif strategy_type == "GENERATED_TEST":
             # 自動生成戦略のテスト用
@@ -496,55 +457,6 @@ class BacktestService:
             戦略情報の辞書
         """
         return {
-            "SMA_CROSS": {
-                "name": "SMA Cross Strategy",
-                "description": "単純移動平均線クロス戦略",
-                "parameters": {
-                    "n1": {
-                        "type": "int",
-                        "default": 20,
-                        "min": 5,
-                        "max": 100,
-                        "description": "短期SMA期間",
-                    },
-                    "n2": {
-                        "type": "int",
-                        "default": 50,
-                        "min": 20,
-                        "max": 200,
-                        "description": "長期SMA期間",
-                    },
-                },
-                "constraints": ["n1 < n2"],
-            },
-            "RSI": {
-                "name": "RSI Strategy",
-                "description": "相対力指数オシレータ戦略",
-                "parameters": {
-                    "period": {
-                        "type": "int",
-                        "default": 14,
-                        "min": 5,
-                        "max": 50,
-                        "description": "RSI計算期間",
-                    },
-                    "oversold": {
-                        "type": "int",
-                        "default": 30,
-                        "min": 10,
-                        "max": 40,
-                        "description": "売られすぎ閾値",
-                    },
-                    "overbought": {
-                        "type": "int",
-                        "default": 70,
-                        "min": 60,
-                        "max": 90,
-                        "description": "買われすぎ閾値",
-                    },
-                },
-                "constraints": ["oversold < overbought"],
-            },
             "MACD": {
                 "name": "MACD Strategy",
                 "description": "移動平均収束拡散戦略",
@@ -572,71 +484,7 @@ class BacktestService:
                     },
                 },
                 "constraints": ["fast_period < slow_period"],
-            },
-            "SMA_RSI": {
-                "name": "SMA + RSI Strategy",
-                "description": "SMAクロスオーバーとRSIモメンタムを組み合わせた戦略",
-                "parameters": {
-                    "sma_short": {
-                        "type": "int",
-                        "default": 20,
-                        "min": 5,
-                        "max": 50,
-                        "description": "短期SMA期間",
-                    },
-                    "sma_long": {
-                        "type": "int",
-                        "default": 50,
-                        "min": 20,
-                        "max": 200,
-                        "description": "長期SMA期間",
-                    },
-                    "rsi_period": {
-                        "type": "int",
-                        "default": 14,
-                        "min": 5,
-                        "max": 50,
-                        "description": "RSI計算期間",
-                    },
-                    "oversold_threshold": {
-                        "type": "int",
-                        "default": 30,
-                        "min": 10,
-                        "max": 40,
-                        "description": "RSI売られすぎ閾値",
-                    },
-                    "overbought_threshold": {
-                        "type": "int",
-                        "default": 70,
-                        "min": 60,
-                        "max": 90,
-                        "description": "RSI買われすぎ閾値",
-                    },
-                    "use_risk_management": {
-                        "type": "bool",
-                        "default": True,
-                        "description": "リスク管理を有効にする",
-                    },
-                    "sl_pct": {
-                        "type": "float",
-                        "default": 0.02,
-                        "min": 0.005,
-                        "max": 0.1,
-                        "description": "損切り率",
-                    },
-                    "tp_pct": {
-                        "type": "float",
-                        "default": 0.05,
-                        "min": 0.01,
-                        "max": 0.2,
-                        "description": "利確率",
-                    },
-                },
-                "constraints": [
-                    "sma_short < sma_long",
-                    "oversold_threshold < overbought_threshold",
-                ],
-            },
+            }
         }
 
     def optimize_strategy(
@@ -743,14 +591,3 @@ class BacktestService:
         }
 
         return result
-
-    def _create_strategy_builder_class(self, parameters: Dict[str, Any]):
-        """
-        ストラテジービルダー専用の戦略クラスを作成（GA機能を使わない）
-
-        Args:
-            parameters: ストラテジービルダーのパラメータ
-
-        Returns:
-            動的に生成された戦略クラス
-        """
