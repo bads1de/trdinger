@@ -2,6 +2,7 @@
 ランダム遺伝子生成器
 
 OI/FRデータを含む多様な戦略遺伝子をランダムに生成します。
+スケール不一致問題を解決するため、オペランドグループ化システムを使用します。
 """
 
 import random
@@ -14,6 +15,7 @@ from ..utils.parameter_generators import (
     generate_indicator_parameters,
     PARAMETER_GENERATORS,
 )
+from ..utils.operand_grouping import operand_grouping_system, OperandGroup
 
 logger = logging.getLogger(__name__)
 
@@ -203,10 +205,11 @@ class RandomGeneGenerator:
         )
 
     def _choose_operand(self, indicators: List[IndicatorGene]) -> str:
-        """オペランドを選択（指標名またはデータソース）"""
-        choices = []
+        """オペランドを選択（指標名またはデータソース）
 
-        PARAMETER_GENERATORS["no_params"]
+        グループ化システムを考慮した重み付き選択を行います。
+        """
+        choices = []
 
         # テクニカル指標名を追加（JSON形式：パラメータなし）
         for indicator_gene in indicators:
@@ -215,10 +218,13 @@ class RandomGeneGenerator:
             choices.append(indicator_type)
 
         # 基本データソースを追加（価格データ）
-        basic_sources = ["close", "open", "high", "low", "volume"]
-        choices.extend(basic_sources * 2)  # 基本データソースの重みを増やす
+        basic_sources = ["close", "open", "high", "low"]
+        choices.extend(basic_sources * 3)  # 価格データの重みを増やす
 
-        # OI/FRデータソースを判断材料として追加
+        # 出来高データを追加（重みを調整）
+        choices.append("volume")
+
+        # OI/FRデータソースを追加（重みを抑制）
         choices.extend(["OpenInterest", "FundingRate"])
 
         return random.choice(choices) if choices else "close"
@@ -226,13 +232,84 @@ class RandomGeneGenerator:
     def _choose_right_operand(
         self, left_operand: str, indicators: List[IndicatorGene], condition_type: str
     ):
-        """右オペランドを選択（指標名、データソース、または数値）"""
-        # 30%の確率で数値を使用
-        if random.random() < 0.3:
+        """右オペランドを選択（指標名、データソース、または数値）
+
+        グループ化システムを使用して、互換性の高いオペランドを優先的に選択します。
+        """
+        # 80%の確率で数値を使用（スケール不一致問題を回避）
+        if random.random() < 0.8:
             return self._generate_threshold_value(left_operand, condition_type)
 
-        # 70%の確率で別の指標またはデータソースを使用
-        return self._choose_operand(indicators)
+        # 20%の確率で別の指標またはデータソースを使用
+        # グループ化システムを使用して厳密に互換性の高いオペランドのみを選択
+        compatible_operand = self._choose_compatible_operand(left_operand, indicators)
+
+        # 互換性チェック: 低い互換性の場合は数値にフォールバック
+        if compatible_operand != left_operand:
+            compatibility = operand_grouping_system.get_compatibility_score(
+                left_operand, compatible_operand
+            )
+            if compatibility < 0.8:  # 厳密な互換性チェック
+                logger.debug(
+                    f"互換性が低いため数値にフォールバック: {left_operand} vs {compatible_operand} (互換性: {compatibility:.2f})"
+                )
+                return self._generate_threshold_value(left_operand, condition_type)
+
+        return compatible_operand
+
+    def _choose_compatible_operand(
+        self, left_operand: str, indicators: List[IndicatorGene]
+    ) -> str:
+        """左オペランドと互換性の高い右オペランドを選択
+
+        Args:
+            left_operand: 左オペランド
+            indicators: 利用可能な指標リスト
+
+        Returns:
+            互換性の高い右オペランド
+        """
+        # 利用可能なオペランドリストを構築
+        available_operands = []
+
+        # テクニカル指標を追加
+        for indicator_gene in indicators:
+            available_operands.append(indicator_gene.type)
+
+        # 基本データソースを追加
+        available_operands.extend(["close", "open", "high", "low", "volume"])
+
+        # OI/FRデータソースを追加
+        available_operands.extend(["OpenInterest", "FundingRate"])
+
+        # 厳密な互換性チェック（0.9以上のみ許可）
+        strict_compatible = operand_grouping_system.get_compatible_operands(
+            left_operand, available_operands, min_compatibility=0.9
+        )
+
+        if strict_compatible:
+            logger.debug(f"厳密な互換性から選択: {left_operand} -> {strict_compatible}")
+            return random.choice(strict_compatible)
+
+        # 厳密な互換性がない場合は高い互換性から選択
+        high_compatible = operand_grouping_system.get_compatible_operands(
+            left_operand, available_operands, min_compatibility=0.8
+        )
+
+        if high_compatible:
+            logger.debug(f"高い互換性から選択: {left_operand} -> {high_compatible}")
+            return random.choice(high_compatible)
+
+        # フォールバック: 利用可能なオペランドからランダム選択
+        # ただし、左オペランドと同じものは除外
+        fallback_operands = [op for op in available_operands if op != left_operand]
+        if fallback_operands:
+            selected = random.choice(fallback_operands)
+            logger.debug(f"フォールバック選択: {left_operand} -> {selected}")
+            return selected
+
+        # 最終フォールバック
+        return "close"
 
     def _generate_threshold_value(self, operand: str, condition_type: str) -> float:
         """オペランドの型に応じて、簡略化された実用的な閾値を生成"""

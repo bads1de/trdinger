@@ -453,15 +453,15 @@ class GeneEncoder:
                 ]
 
             else:
-                # デフォルト条件
+                # デフォルト条件（数値は適切な型で設定）
                 entry_conditions = [
                     Condition(
-                        left_operand=indicator_name, operator=">", right_operand=50
+                        left_operand=indicator_name, operator=">", right_operand=50.0
                     )
                 ]
                 exit_conditions = [
                     Condition(
-                        left_operand=indicator_name, operator="<", right_operand=50
+                        left_operand=indicator_name, operator="<", right_operand=50.0
                     )
                 ]
 

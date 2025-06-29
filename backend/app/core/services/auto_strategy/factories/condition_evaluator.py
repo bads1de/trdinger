@@ -129,6 +129,12 @@ class ConditionEvaluator:
 
             # 文字列の場合（指標名、価格、またはOI/FR）
             if isinstance(operand, str):
+                # 数値文字列の場合（例: "50", "30.5"）
+                try:
+                    return float(operand)
+                except ValueError:
+                    pass  # 数値でない場合は続行
+
                 # 基本価格データ
                 if operand == "price" or operand == "close":
                     return strategy_instance.data.Close[-1]
@@ -156,11 +162,14 @@ class ConditionEvaluator:
                         indicator = strategy_instance.indicators[resolved_name]
                         return indicator[-1] if len(indicator) > 0 else None
                     else:
-                        # 指標が見つからない場合のログ出力
-                        available_indicators = list(strategy_instance.indicators.keys())
-                        logger.warning(
-                            f"指標 '{operand}' が見つかりません。利用可能な指標: {available_indicators}"
-                        )
+                        # 指標が見つからない場合のログ出力（数値文字列の場合は警告しない）
+                        if not operand.replace(".", "").replace("-", "").isdigit():
+                            available_indicators = list(
+                                strategy_instance.indicators.keys()
+                            )
+                            logger.warning(
+                                f"指標 '{operand}' が見つかりません。利用可能な指標: {available_indicators}"
+                            )
                         return None
 
             return None

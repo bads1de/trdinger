@@ -83,7 +83,7 @@ class GAConfig:
         default_factory=lambda: {
             "min_trades": 10,
             "max_drawdown_limit": 0.3,
-            "min_sharpe_ratio": 0.5,
+            "min_sharpe_ratio": 1.0,
         }
     )
 

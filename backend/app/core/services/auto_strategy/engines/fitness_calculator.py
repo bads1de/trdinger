@@ -12,6 +12,7 @@ from ..models.strategy_gene import StrategyGene
 from ..models.gene_encoding import GeneEncoder
 from ..models.ga_config import GAConfig
 from ..factories.strategy_factory import StrategyFactory
+from ..utils.data_coverage_analyzer import data_coverage_analyzer
 from app.core.services.backtest_service import BacktestService
 
 
@@ -82,8 +83,8 @@ class FitnessCalculator:
             # バックテスト実行
             result = self.backtest_service.run_backtest(test_config)
 
-            # フィットネス計算
-            fitness = self.calculate_fitness(result, config)
+            # フィットネス計算（戦略遺伝子を渡してデータカバレッジ考慮）
+            fitness = self.calculate_fitness(result, config, gene)
 
             return (fitness,)
 
@@ -137,7 +138,10 @@ class FitnessCalculator:
         return test_config
 
     def calculate_fitness(
-        self, backtest_result: Dict[str, Any], config: GAConfig
+        self,
+        backtest_result: Dict[str, Any],
+        config: GAConfig,
+        strategy_gene: Optional[StrategyGene] = None,
     ) -> float:
         """
         バックテスト結果からフィットネスを計算
@@ -145,6 +149,7 @@ class FitnessCalculator:
         Args:
             backtest_result: バックテスト結果
             config: GA設定
+            strategy_gene: 戦略遺伝子（データカバレッジ分析用）
 
         Returns:
             フィットネス値
@@ -161,6 +166,12 @@ class FitnessCalculator:
 
             # ボーナス適用
             fitness = self._apply_performance_bonus(fitness, metrics)
+
+            # データカバレッジペナルティの適用
+            if strategy_gene is not None:
+                fitness = self._apply_data_coverage_penalty(
+                    fitness, backtest_result, strategy_gene
+                )
 
             return fitness
 
@@ -207,9 +218,7 @@ class FitnessCalculator:
         # 最小シャープレシオチェック（大幅緩和: -5.0まで許可）
         sharpe_ratio = metrics.get("sharpe_ratio", 0.0)
         min_sharpe = constraints.get("min_sharpe_ratio", 0.5)
-        # テスト環境では制約を緩和
-        if min_sharpe > -5.0:
-            min_sharpe = -5.0
+        
 
         if sharpe_ratio < min_sharpe:
             logger.debug(f"シャープレシオ制約違反: {sharpe_ratio} < {min_sharpe}")
@@ -290,3 +299,56 @@ class FitnessCalculator:
             fitness *= 1.5  # 50%ボーナス（非常に優秀）(リターン50%超、シャープレシオ2.0超、最大ドローダウン10%未満)
 
         return fitness
+
+    def _apply_data_coverage_penalty(
+        self,
+        fitness: float,
+        backtest_result: Dict[str, Any],
+        strategy_gene: StrategyGene,
+    ) -> float:
+        """
+        データカバレッジに基づくペナルティを適用
+
+        Args:
+            fitness: ベースフィットネス値
+            backtest_result: バックテスト結果
+            strategy_gene: 戦略遺伝子
+
+        Returns:
+            ペナルティ適用後のフィットネス値
+        """
+        try:
+            # バックテストデータを取得
+            data = backtest_result.get("data")
+            if data is None:
+                logger.debug(
+                    "バックテストデータが見つからないため、データカバレッジペナルティをスキップ"
+                )
+                return fitness
+
+            # データカバレッジを分析
+            coverage_analysis = data_coverage_analyzer.analyze_strategy_coverage(
+                strategy_gene, data
+            )
+
+            if not coverage_analysis.get("uses_special_data", False):
+                # 特殊データソースを使用していない場合はペナルティなし
+                return fitness
+
+            # カバレッジスコアを適用
+            coverage_score = coverage_analysis.get("overall_coverage_score", 1.0)
+            adjusted_fitness = fitness * coverage_score
+
+            # ログ出力
+            if logger.isEnabledFor(logging.DEBUG):
+                summary = data_coverage_analyzer.get_coverage_summary(coverage_analysis)
+                logger.debug(
+                    f"データカバレッジペナルティ適用: {fitness:.4f} -> {adjusted_fitness:.4f} "
+                    f"(スコア: {coverage_score:.3f}) | {summary}"
+                )
+
+            return adjusted_fitness
+
+        except Exception as e:
+            logger.error(f"データカバレッジペナルティ適用エラー: {e}")
+            return fitness
