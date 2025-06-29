@@ -50,7 +50,7 @@ def generate_sample_data(
         data.append(
             {
                 "timestamp": timestamp,
-                "Open": open_price,  # backtesting.py標準形式
+                "Open": open_price,
                 "High": max(open_price, high, close_price),
                 "Low": min(open_price, low, close_price),
                 "Close": close_price,
@@ -129,7 +129,7 @@ def run_backtest(config: dict) -> dict:
             "commission_rate": config.get("commission_rate", 0.001),
             "strategy_config": {
                 "strategy_type": "SMA_CROSS",
-                "parameters": {"n1": 20, "n2": 50},  # デフォルト値  # デフォルト値
+                "parameters": {"n1": 20, "n2": 50},
             },
         }
 
@@ -156,7 +156,7 @@ def run_backtest(config: dict) -> dict:
 
 def main():
     """
-    メイン関数：標準入力からJSONを読み取り、結果を標準出力に出力
+    標準入力からJSONを読み取り、結果を標準出力に出力
     """
     try:
         # 標準入力からJSONを読み取り

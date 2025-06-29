@@ -381,7 +381,7 @@ class AutoStrategyService:
 
                 except Exception as e:
                     logger.error(
-                        f"最良戦略のバックテスト結果の保存中にエラーが発生しました: {e}"
+                        f"最良戦略のバックテスト結果の保存中にエラーが発生しました: {e}", exc_info=True
                     )
                     # エラーが発生してもメイン処理は継続
 
