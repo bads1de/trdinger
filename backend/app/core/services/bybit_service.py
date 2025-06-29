@@ -17,7 +17,7 @@ from database.connection import SessionLocal
 logger = logging.getLogger(__name__)
 
 
-class BaseBybitService(ABC):
+class BybitService(ABC):
     """Bybitサービスの基底クラス"""
 
     def __init__(self):

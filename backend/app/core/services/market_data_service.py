@@ -9,7 +9,7 @@ import logging
 from app.config.market_config import MarketDataConfig
 from database.repositories.ohlcv_repository import OHLCVRepository
 from app.core.utils.data_converter import OHLCVDataConverter
-from .base_bybit_service import BaseBybitService
+from .bybit_service import BybitService
 
 
 # ログ設定
@@ -17,7 +17,7 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
-class BybitMarketDataService(BaseBybitService):
+class BybitMarketDataService(BybitService):
     """
     Bybit取引所からの市場データ取得サービス
 

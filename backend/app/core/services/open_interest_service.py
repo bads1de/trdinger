@@ -10,12 +10,12 @@ from typing import Any, Dict, List, Optional
 
 from database.repositories.open_interest_repository import OpenInterestRepository
 from app.core.utils.data_converter import OpenInterestDataConverter
-from app.core.services.base_bybit_service import BaseBybitService
+from app.core.services.bybit_service import BybitService
 
 logger = logging.getLogger(__name__)
 
 
-class BybitOpenInterestService(BaseBybitService):
+class BybitOpenInterestService(BybitService):
     """Bybitオープンインタレストサービス"""
 
     def __init__(self):

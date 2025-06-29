@@ -10,12 +10,12 @@ from typing import Any, Dict, List, Optional
 
 from database.repositories.funding_rate_repository import FundingRateRepository
 from app.core.utils.data_converter import FundingRateDataConverter
-from app.core.services.base_bybit_service import BaseBybitService
+from app.core.services.bybit_service import BybitService
 
 logger = logging.getLogger(__name__)
 
 
-class BybitFundingRateService(BaseBybitService):
+class BybitFundingRateService(BybitService):
     """Bybitファンディングレートサービス"""
 
     def __init__(self):

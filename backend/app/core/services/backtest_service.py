@@ -254,10 +254,21 @@ class BacktestService:
             # パラメータをクラス変数として設定
             if "fast_period" in parameters:
                 MACDStrategy.fast_period = parameters["fast_period"]
+                MACDStrategy.n1 = parameters["fast_period"]  # エイリアス
             if "slow_period" in parameters:
                 MACDStrategy.slow_period = parameters["slow_period"]
+                MACDStrategy.n2 = parameters["slow_period"]  # エイリアス
             if "signal_period" in parameters:
                 MACDStrategy.signal_period = parameters["signal_period"]
+
+            # 後方互換性のためのエイリアス処理
+            if "n1" in parameters:
+                MACDStrategy.fast_period = parameters["n1"]
+                MACDStrategy.n1 = parameters["n1"]
+            if "n2" in parameters:
+                MACDStrategy.slow_period = parameters["n2"]
+                MACDStrategy.n2 = parameters["n2"]
+
             return MACDStrategy
 
         elif strategy_type == "GENERATED_TEST":
@@ -480,8 +491,22 @@ class BacktestService:
                         "max": 15,
                         "description": "シグナルライン期間",
                     },
+                    "n1": {
+                        "type": "int",
+                        "default": 12,
+                        "min": 5,
+                        "max": 20,
+                        "description": "高速EMA期間（fast_periodのエイリアス）",
+                    },
+                    "n2": {
+                        "type": "int",
+                        "default": 26,
+                        "min": 20,
+                        "max": 50,
+                        "description": "低速EMA期間（slow_periodのエイリアス）",
+                    },
                 },
-                "constraints": ["fast_period < slow_period"],
+                "constraints": ["fast_period < slow_period", "n1 < n2"],
             }
         }
 
@@ -614,8 +639,8 @@ class BacktestService:
         self,
         config: Dict[str, Any],
         objectives: list,
-        weights: list = None,
-        optimization_params: Dict[str, Any] = None,
+        weights: Optional[list] = None,
+        optimization_params: Optional[Dict[str, Any]] = None,
     ) -> Dict[str, Any]:
         """
         多目的最適化

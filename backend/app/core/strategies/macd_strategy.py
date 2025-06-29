@@ -28,6 +28,10 @@ class MACDStrategy(Strategy):
     slow_period = 26
     signal_period = 9
 
+    # 後方互換性のためのエイリアス
+    n1 = 12  # fast_period のエイリアス
+    n2 = 26  # slow_period のエイリアス
+
     def __init__(self, broker=None, data=None, params=None):
         """
         戦略の初期化
@@ -48,6 +52,12 @@ class MACDStrategy(Strategy):
 
         MACDインジケーターを計算し、戦略で使用できるように設定します。
         """
+        # エイリアスパラメータの同期
+        if hasattr(self, "n1") and self.n1 != self.fast_period:
+            self.fast_period = self.n1
+        if hasattr(self, "n2") and self.n2 != self.slow_period:
+            self.slow_period = self.n2
+
         # 終値データを取得
         close = self.data.Close
 
