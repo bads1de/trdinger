@@ -13,7 +13,6 @@ from pydantic import BaseModel, Field
 from database.connection import get_db
 from database.repositories.backtest_result_repository import BacktestResultRepository
 from app.core.services.backtest_service import BacktestService
-from app.core.services.enhanced_backtest_service import EnhancedBacktestService
 from app.core.utils.api_utils import APIErrorHandler
 
 router = APIRouter(prefix="/api/backtest", tags=["backtest"])
@@ -312,9 +311,9 @@ async def optimize_strategy_enhanced(
     """
 
     async def _optimize_enhanced():
-        enhanced_backtest_service = EnhancedBacktestService()
+        backtest_service = BacktestService()
         base_config = _create_base_config(request.base_config)
-        result = enhanced_backtest_service.optimize_strategy_enhanced(
+        result = backtest_service.optimize_strategy_enhanced(
             base_config, request.optimization_params
         )
         saved_result = _save_backtest_result(result, db)
@@ -339,9 +338,9 @@ async def multi_objective_optimization(
     """
 
     async def _multi_objective_optimize():
-        enhanced_backtest_service = EnhancedBacktestService()
+        backtest_service = BacktestService()
         base_config = _create_base_config(request.base_config)
-        result = enhanced_backtest_service.multi_objective_optimization(
+        result = backtest_service.multi_objective_optimization(
             base_config,
             request.objectives,
             request.weights or [],
@@ -369,9 +368,9 @@ async def robustness_test(
     """
 
     async def _robustness_test():
-        enhanced_backtest_service = EnhancedBacktestService()
+        backtest_service = BacktestService()
         base_config = _create_base_config(request.base_config)
-        result = enhanced_backtest_service.robustness_test(
+        result = backtest_service.robustness_test(
             base_config, request.test_periods, request.optimization_params
         )
         saved_result = _save_backtest_result(result, db)
