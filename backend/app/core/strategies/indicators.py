@@ -10,7 +10,6 @@ import numpy as np
 from typing import Union, List
 import logging
 
-# TALibAdapterをインポート
 from ..services.indicators.talib_adapter import TALibAdapter
 
 logger = logging.getLogger(__name__)

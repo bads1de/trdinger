@@ -26,6 +26,15 @@ logger = logging.getLogger(__name__)
 
 def check_database_status():
     """データベースの状況を詳細に確認"""
+    if (
+        SessionLocal is None
+        or OHLCVRepository is None
+        or OpenInterestRepository is None
+        or FundingRateRepository is None
+    ):
+        print("エラー: データベースコンポーネントが利用できません。")
+        return
+
     print("🔍 データベース状況確認開始")
     print("=" * 80)
 
@@ -59,11 +68,10 @@ def check_database_status():
                         ohlcv_repo.get_date_range(symbol, timeframe)
                         latest = ohlcv_repo.get_latest_timestamp(symbol, timeframe)
                         oldest = ohlcv_repo.get_oldest_timestamp(symbol, timeframe)
-
-                        print(f"    {timeframe}: {count:,} 件")
-                        print(
-                            f"      期間: {oldest.strftime('%Y-%m-%d')} ～ {latest.strftime('%Y-%m-%d')}"
-                        )
+                        if oldest and latest:
+                            print(
+                                f"    期間: {oldest.strftime('%Y-%m-%d')} ～ {latest.strftime('%Y-%m-%d')}"
+                            )
 
                         # 最新データのサンプル表示
                         latest_data = ohlcv_repo.get_ohlcv_data(

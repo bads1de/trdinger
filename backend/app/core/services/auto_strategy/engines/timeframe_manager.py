@@ -9,13 +9,17 @@ import logging
 from typing import List, Dict, Any
 from datetime import datetime, timedelta, timezone
 
+from database.connection import SessionLocal
+from database.repositories.ohlcv_repository import OHLCVRepository
+from app.config.market_config import MarketDataConfig
+
 logger = logging.getLogger(__name__)
 
 
 class TimeframeManager:
     """
     時間軸管理器
-    
+
     データベースから利用可能な時間軸を取得し、バックテスト設定を管理します。
     """
 
@@ -30,10 +34,13 @@ class TimeframeManager:
         Returns:
             利用可能な時間軸のリスト
         """
-        try:
-            from database.connection import SessionLocal
-            from database.repositories.ohlcv_repository import OHLCVRepository
+        if SessionLocal is None or OHLCVRepository is None:
+            logger.warning(
+                "データベースコンポーネントが利用できません。デフォルトの時間軸を使用します。"
+            )
+            return ["1d"]
 
+        try:
             db = SessionLocal()
             try:
                 repo = OHLCVRepository(db)
@@ -94,10 +101,6 @@ class TimeframeManager:
             時間足と期間が調整された設定
         """
         try:
-            from database.connection import SessionLocal
-            from database.repositories.ohlcv_repository import OHLCVRepository
-            from app.config.market_config import MarketDataConfig
-
             db = SessionLocal()
             try:
                 repo = OHLCVRepository(db)

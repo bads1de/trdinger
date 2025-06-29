@@ -111,6 +111,11 @@ class BaseIndicator(ABC):
         Raises:
             ValueError: データが見つからない場合
         """
+        if SessionLocal is None or OHLCVRepository is None:
+            raise RuntimeError(
+                "データベースコンポーネントが利用できません。SessionLocalまたはOHLCVRepositoryがロードされていません。"
+            )
+
         try:
             db = SessionLocal()
             try:
