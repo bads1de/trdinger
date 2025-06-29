@@ -222,8 +222,8 @@ class DEAPConfigurator:
             return
 
         # 元の演算子を保存
-        original_mate = self.toolbox.mate
-        original_mutate = self.toolbox.mutate
+        original_mate = self.toolbox.mate  # type: ignore
+        original_mutate = self.toolbox.mutate  # type: ignore
 
         def constrained_mate(ind1, ind2):
             """制約付き交叉演算子"""

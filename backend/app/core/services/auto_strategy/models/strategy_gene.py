@@ -166,9 +166,6 @@ class StrategyGene:
         return serializer.json_to_strategy_gene(json_str, cls)
 
 
-# v1仕様用のエンコード/デコード関数
-
-
 def encode_gene_to_list(gene: StrategyGene) -> List[float]:
     """戦略遺伝子をGA用数値リストにエンコード"""
     encoder = GeneEncoder()

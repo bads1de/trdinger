@@ -53,5 +53,4 @@ def create_default_strategy_gene(strategy_gene_class) -> Any:
 
     except Exception as e:
         logger.error(f"デフォルト戦略遺伝子作成エラー (ユーティリティ): {e}")
-        # 最小限の戦略遺伝子を返す
         return strategy_gene_class()

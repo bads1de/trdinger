@@ -81,3 +81,65 @@ GA の評価プロセスにおいて、データが欠損している指標（OI
 - **適応度への反映:** データカバレッジが低い指標を使用する戦略に対しては、適応度スコアにペナルティを課すことで、データが十分に存在する信頼性の高い戦略が選ばれやすくなります。
 
 以上の改善を行うことで、取引が実際に発生しうる、より実践的な戦略が生成され、遺伝的アルゴリズムが有効に機能することが期待されます。
+
+## 6. コードの重複・冗長性に関する改善提案
+
+これまでのファイル分析に基づき、オートストラテジー関連コードにおける重複や冗長な部分、および改善の余地がある点を以下にまとめます。
+
+### 6.1. `backend/app/api/auto_strategy.py` における重複と改善
+
+*   **`AutoStrategyService` 初期化チェックの重複**:
+    *   **現状**: ほとんどのAPIエンドポイントで `auto_strategy_service is None` のチェックと `HTTPException(status_code=503, ...)` の処理が繰り返されている。
+    *   **改善提案**: FastAPIの依存性注入 (`Depends`) を活用し、`get_auto_strategy_service` のような共通の依存性関数を作成することで、このチェックを各エンドポイントから排除し、コードの重複を大幅に削減できます。
+*   **エラーハンドリングの重複**:
+    *   **現状**: 各エンドポイントの `try...except` ブロック内で、`logger.error` と `raise HTTPException(status_code=500, ...)` が繰り返されている。
+    *   **改善提案**:
+        *   カスタム例外ハンドラをFastAPIアプリケーションに登録することで、一元的にエラーを処理できます。
+        *   あるいは、共通のデコレータやユーティリティ関数を作成し、APIエンドポイントのロジックをラップすることで、エラーロギングとHTTPExceptionの発生を共通化できます。
+*   **`APIResponseHelper.api_response` の利用**:
+    *   **現状**: レスポンスの整形に `APIResponseHelper.api_response` が使われている。
+    *   **改善提案**: FastAPIの `response_model` を適切に活用することで、レスポンスのスキーマを自動的に検証・整形させることができ、`APIResponseHelper` の呼び出しを減らすか、その内部ロジックをよりシンプルにできます。
+*   **GA設定構築・検証ロジックの場所**:
+    *   **現状**: `generate_strategy` エンドポイント内で `GAConfig.from_dict` や `ga_config.validate()` の呼び出しと、それに続く詳細なログ出力、エラーハンドリングが行われている。
+    *   **改善提案**: これらのロジックはAPI層の責務ではなく、`AutoStrategyService` の `start_strategy_generation` メソッド内に移動すべきです。これにより、APIエンドポイントはリクエストの受け付けとサービス層への委譲に集中でき、よりクリーンになります。
+*   **シンボル正規化ロジックの場所**:
+    *   **現状**: `generate_strategy` 内でバックテスト設定のシンボル正規化ロジックが記述されている。
+    *   **改善提案**: このロジックも `AutoStrategyService` の `start_strategy_generation` メソッド内に移動すべきです。サービス層がバックテスト設定の準備を行うのが自然です。
+
+### 6.2. `backend/app/core/services/auto_strategy/services/auto_strategy_service.py` における改善の余地
+
+*   **データベースセッションの管理**:
+    *   **現状**: `_init_services` と `_save_experiment_result` で `SessionLocal()` を使用し、`db.close()` を `finally` で呼び出している。これは正しいパターンだが、もし複数のメソッドで頻繁にDBセッションを必要とする場合、FastAPIの依存性注入 (`Depends(get_db)`) をサービス層でも活用するか、コンテキストマネージャ (`with SessionLocal() as db:`) を利用することで、コードの重複を減らし、テスト容易性を向上させることができます。
+*   **`_save_experiment_result` 内のバックテスト再実行のエラーハンドリング**:
+    *   **現状**: 最良戦略のバックテスト結果を詳細に保存する際の `backtest_service.run_backtest` 呼び出しが `try...except` で囲まれており、エラーが発生しても処理が継続されるが、エラーが上位に伝播しない。
+    *   **改善提案**: エラーをログに記録するだけでなく、必要に応じて `_save_experiment_result` メソッドの呼び出し元にエラーを通知するメカニズム（例: 戻り値で成功/失敗を示す、特定の例外を再raiseする）を検討することで、デバッグやエラー追跡が容易になります。
+
+### 6.3. `backend/app/core/strategies/macd_strategy.py` における重複と改善
+
+*   **`MACDStrategy` と `BaseStrategy` の継承関係**:
+    *   **現状**: `MACDStrategy` は `backtesting.Strategy` を直接継承しており、`BaseStrategy` を継承していない。そのため、`BaseStrategy` で定義されている共通の初期化ロジック（例: `_strategy_name`, `_parameters` の設定）やユーティリティメソッドが利用されていない。
+    *   **改善提案**: `MACDStrategy` を `BaseStrategy` から継承するように変更することで、共通機能の再利用性を高め、コードの重複を削減できます。これにより、`MACDStrategy` の `__init__` メソッドをより簡潔にできます。
+*   **パラメータのエイリアス `n1`, `n2`**:
+    *   **現状**: `fast_period` と `slow_period` のエイリアスとして `n1`, `n2` が定義されており、`init` メソッド内で同期処理が行われている。コメントには後方互換性のためとある。
+    *   **改善提案**: もし後方互換性の必要がなければ、これらのエイリアスと同期ロジックを削除することで、コードを簡潔にできます。
+*   **`MACDScalpingStrategy` の利確・損切りロジックの共通化**:
+    *   **現状**: `MACDScalpingStrategy` の `next` メソッド内で利確・損切りロジックが直接実装されている。
+    *   **改善提案**: もし他の戦略でも同様の利確・損切りロジックを共通で利用したい場合、`BaseStrategy` に共通のメソッド（例: `apply_risk_management`）として切り出すことを検討できます。これにより、各戦略の `next` メソッドは売買シグナル生成に集中し、リスク管理ロジックは共通化されます。
+
+### 6.4. `backend/app/core/services/auto_strategy/models/ga_config.py` における改善の余地
+
+*   **`parameter_ranges` のレガシーパラメータ名**:
+    *   **現状**: 統一されたパラメータ名と後方互換性のためのレガシーパラメータ名が混在している。
+    *   **改善提案**: 長期的には、パラメータ名を統一し、レガシーな名前を完全に排除することを検討すべきです。ただし、これは既存のデータやフロントエンドとの互換性に関わるため、段階的な移行が必要です。
+*   **`create_fast` と `create_default` の重複**:
+    *   **現状**: `create_default` は `cls()` を呼び出しており、`GAConfig` のデフォルト値を使用している。`create_fast` も一部のパラメータを上書きしているが、デフォルト値と重複する部分がある。
+    *   **改善提案**: `create_fast` が `create_default` のサブセットであるならば、`create_default` を呼び出して一部を上書きする形にすることで、コードの重複を減らせるかもしれません。
+
+### 6.5. `backend/app/core/services/auto_strategy/generators/random_gene_generator.py` における改善の余地
+
+*   **`__init__` メソッドの設定初期化**:
+    *   **現状**: `config` が `GAConfig` オブジェクトと辞書の両方に対応している。
+    *   **改善提案**: もし `GAConfig` オブジェクトに統一できるのであれば、`if hasattr(config, "__dict__")` のようなチェックを削除し、コードを簡潔にできます。
+*   **`_generate_threshold_value` のハードコードされた閾値**:
+    *   **現状**: 各指標グループに対してハードコードされた閾値範囲が定義されている。
+    *   **改善提案**: これらの閾値範囲を `GAConfig` に含めるか、外部設定ファイルから読み込むようにすることで、より柔軟な設定が可能になります。これにより、コードの変更なしに閾値を調整できるようになります。

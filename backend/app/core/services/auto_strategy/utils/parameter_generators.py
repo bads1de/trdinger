@@ -56,9 +56,6 @@ class ParameterGenerator:
             "slow_k_period": random.randint(3, 5),
         }
 
-    # 削除された指標専用のパラメータ生成メソッドは削除済み
-    # 現在は10個の指標（SMA, EMA, MACD, BB, RSI, STOCH, CCI, ADX, ATR, OBV）のみサポート
-
 
 class ThresholdGenerator:
     """閾値生成器"""

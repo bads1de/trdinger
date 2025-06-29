@@ -16,13 +16,11 @@ from app.core.services.indicators.adapters.volatility_adapter import (
 )
 from app.core.services.indicators.adapters.volume_adapter import VolumeAdapter
 
-# 新しいJSON形式のインジケーター設定
+
 from app.core.services.indicators.config import (
     indicator_registry,
     compatibility_manager,
 )
-
-# PriceTransformAdapterは使用しない（オートストラテジー用10個の指標のみ）
 
 logger = logging.getLogger(__name__)
 
@@ -78,8 +76,6 @@ class IndicatorCalculator:
                     "OBV": VolumeAdapter.obv,
                 }
             )
-
-        # PriceTransformAdapterは使用しない（オートストラテジー用10個の指標のみ）
 
         return adapters
 
@@ -173,7 +169,6 @@ class IndicatorCalculator:
                 "result_handler": "bb_handler",
                 "name_format": "BB_MIDDLE_{period}",
             },
-            # モメンタム系指標（4個）
             "RSI": {
                 "adapter_function": MomentumAdapter.rsi,
                 "required_data": ["close"],
@@ -203,7 +198,6 @@ class IndicatorCalculator:
                 "result_type": "single",
                 "name_format": "{indicator}_{period}",
             },
-            # ボラティリティ系指標（1個）
             "ATR": {
                 "adapter_function": VolatilityAdapter.atr,
                 "required_data": ["high", "low", "close"],
@@ -211,7 +205,6 @@ class IndicatorCalculator:
                 "result_type": "single",
                 "name_format": "{indicator}_{period}",
             },
-            # 出来高系指標（1個）
             "OBV": {
                 "adapter_function": VolumeAdapter.obv,
                 "required_data": ["close", "volume"],

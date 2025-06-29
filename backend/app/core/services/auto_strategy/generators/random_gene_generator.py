@@ -13,9 +13,8 @@ from ..models.strategy_gene import StrategyGene, IndicatorGene, Condition
 from ...indicators.constants import ALL_INDICATORS
 from ..utils.parameter_generators import (
     generate_indicator_parameters,
-    PARAMETER_GENERATORS,
 )
-from ..utils.operand_grouping import operand_grouping_system, OperandGroup
+from ..utils.operand_grouping import operand_grouping_system
 
 logger = logging.getLogger(__name__)
 
@@ -375,7 +374,7 @@ class RandomGeneGenerator:
         """リスク管理設定を生成"""
         return {
             "stop_loss": random.uniform(0.02, 0.05),  # 2-5%
-            "take_profit": random.uniform(0.05, 0.15),  # 5-15%
+            "take_profit": random.uniform(0.01, 0.15),  # 1-15%
             "position_size": random.uniform(0.1, 0.5),  # 10-50%
         }
 
@@ -398,7 +397,6 @@ class RandomGeneGenerator:
         """
         population = []
 
-        # strategy_gene_utilsをインポート
         from ..utils.strategy_gene_utils import create_default_strategy_gene
 
         for i in range(size):
@@ -407,12 +405,12 @@ class RandomGeneGenerator:
                 population.append(gene)
 
                 if (i + 1) % 10 == 0:
-                    logger.info(f"Generated {i + 1}/{size} random genes")
+                    logger.info(f"{i + 1}/{size}個のランダム遺伝子を生成しました")
 
             except Exception as e:
-                logger.error(f"Failed to generate gene {i}: {e}")
+                logger.error(f"遺伝子{i}の生成に失敗しました: {e}")
                 # フォールバックを追加
                 population.append(create_default_strategy_gene(StrategyGene))
 
-        logger.info(f"Generated population of {len(population)} genes")
+        logger.info(f"{len(population)}個の遺伝子の個体群を生成しました")
         return population
