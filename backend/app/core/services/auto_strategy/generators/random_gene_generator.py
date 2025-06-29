@@ -63,7 +63,7 @@ class RandomGeneGenerator:
         ]
 
         # 利用可能な演算子
-        self.available_operators = [">", "<", ">=", "<=", "cross_above", "cross_below"]
+        self.available_operators = [">", "<", ">=", "<="]
 
     def generate_random_gene(self) -> StrategyGene:
         """

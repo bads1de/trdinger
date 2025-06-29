@@ -54,8 +54,6 @@ class GeneValidator:
             "<=",
             "==",
             "!=",  # 基本比較演算子
-            "cross_above",
-            "cross_below",  # クロスオーバー演算子
             "above",
             "below",  # フロントエンド用演算子
         ]

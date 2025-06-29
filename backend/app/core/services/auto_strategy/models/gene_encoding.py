@@ -186,14 +186,14 @@ class GeneEncoder:
                     entry_conditions = [
                         Condition(
                             left_operand="close",
-                            operator="cross_above",
+                            operator=">",
                             right_operand=indicator_name,
                         )
                     ]
                     exit_conditions = [
                         Condition(
                             left_operand="close",
-                            operator="cross_below",
+                            operator="<",
                             right_operand=indicator_name,
                         )
                     ]
