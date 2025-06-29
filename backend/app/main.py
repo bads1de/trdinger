@@ -4,7 +4,8 @@ FastAPI メインアプリケーション
 Trdinger Trading API のエントリーポイント
 """
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
+from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 import logging
 
@@ -53,6 +54,7 @@ def create_app() -> FastAPI:
 
     # ログ設定
     setup_logging()
+    logger = logging.getLogger(__name__)
 
     # FastAPIアプリケーション作成
     app = FastAPI(
@@ -82,6 +84,19 @@ def create_app() -> FastAPI:
     app.include_router(auto_strategy_router)
     app.include_router(strategies_router)
     app.include_router(indicators_router, prefix="/api")
+
+    # グローバル例外ハンドラ
+    @app.exception_handler(Exception)
+    async def global_exception_handler(request: Request, exc: Exception):
+        logger.error(f"Unhandled exception: {exc}", exc_info=True)
+        return JSONResponse(
+            status_code=500,
+            content={
+                "success": False,
+                "message": "サーバー内部で予期せぬエラーが発生しました。",
+                "error_type": type(exc).__name__,
+            },
+        )
 
     # ヘルスチェックエンドポイント
     @app.get("/health")

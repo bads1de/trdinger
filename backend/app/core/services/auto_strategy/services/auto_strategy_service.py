@@ -6,8 +6,9 @@ GA実行、進捗管理、結果保存などの統合機能を提供します。
 """
 
 import logging
-from typing import Dict, Any, List, Optional, Callable
 
+from typing import Dict, Any, List, Optional
+from fastapi import BackgroundTasks
 from ..models.ga_config import GAConfig, GAProgress
 from ..models.strategy_gene import StrategyGene
 from ..engines.ga_engine import GeneticAlgorithmEngine
@@ -123,65 +124,64 @@ class AutoStrategyService:
     def start_strategy_generation(
         self,
         experiment_name: str,
-        ga_config: GAConfig,
-        backtest_config: Dict[str, Any],
-        progress_callback: Optional[Callable[[GAProgress], None]] = None,
+        ga_config_dict: Dict[str, Any],
+        backtest_config_dict: Dict[str, Any],
+        background_tasks: BackgroundTasks,
     ) -> str:
         """
         戦略生成を開始
 
         Args:
             experiment_name: 実験名
-            ga_config: GA設定
-            backtest_config: バックテスト設定
-            progress_callback: 進捗コールバック
+            ga_config_dict: GA設定の辞書
+            backtest_config_dict: バックテスト設定の辞書
+            background_tasks: FastAPIのバックグラウンドタスク
 
         Returns:
             実験ID
         """
+        logger.info(f"戦略生成開始: {experiment_name}")
+        self._validate_dependencies()
+
+        # 1. GA設定の構築と検証
         try:
-            logger.info(f"戦略生成開始: {experiment_name}")
-
-            # 依存関係の確認
-            self._validate_dependencies()
-
-            # GA設定の検証
+            ga_config = GAConfig.from_dict(ga_config_dict)
             is_valid, errors = ga_config.validate()
             if not is_valid:
                 raise ValueError(f"無効なGA設定です: {', '.join(errors)}")
-
-            # 実験を作成
-            experiment_id = self.experiment_manager.create_experiment(
-                experiment_name, ga_config, backtest_config
-            )
-
-            # 進捗コールバックを設定
-            experiment_info = self.experiment_manager.get_experiment_info(experiment_id)
-            if experiment_info:
-                if progress_callback:
-                    self.progress_tracker.set_progress_callback(
-                        experiment_id, progress_callback, experiment_info["db_id"]
-                    )
-
-                # GAエンジンに進捗コールバックを設定
-                ga_callback = self.progress_tracker.get_progress_callback(experiment_id)
-                if ga_callback:
-                    self.ga_engine.set_progress_callback(ga_callback)
-
-            # 実験を開始
-            success = self.experiment_manager.start_experiment(
-                experiment_id, self._run_experiment
-            )
-
-            if not success:
-                raise RuntimeError("実験の開始に失敗しました")
-
-            logger.info(f"戦略生成実験開始成功: {experiment_id}")
-            return experiment_id
-
         except Exception as e:
-            logger.error(f"戦略生成開始エラー: {e}")
-            raise
+            logger.error(f"GA設定の構築または検証に失敗しました: {e}", exc_info=True)
+            raise ValueError(f"GA設定の構築または検証に失敗しました: {e}")
+
+        # 2. バックテスト設定のシンボル正規化
+        backtest_config = backtest_config_dict.copy()
+        original_symbol = backtest_config.get("symbol")
+        if original_symbol and ":" not in original_symbol:
+            normalized_symbol = f"{original_symbol}:USDT"
+            backtest_config["symbol"] = normalized_symbol
+            logger.info(
+                f"シンボルを正規化しました: {original_symbol} -> {normalized_symbol}"
+            )
+
+        # 3. 実験を作成
+        experiment_id = self.experiment_manager.create_experiment(
+            experiment_name, ga_config, backtest_config
+        )
+
+        # 4. GAエンジンに進捗コールバックを設定
+        ga_callback = self.progress_tracker.get_progress_callback(experiment_id)
+        if ga_callback:
+            self.ga_engine.set_progress_callback(ga_callback)
+
+        # 5. 実験をバックグラウンドで開始
+        background_tasks.add_task(
+            self._run_experiment, experiment_id, ga_config, backtest_config
+        )
+
+        logger.info(
+            f"戦略生成実験のバックグラウンドタスクを追加しました: {experiment_id}"
+        )
+        return experiment_id
 
     def _run_experiment(
         self, experiment_id: str, ga_config: GAConfig, backtest_config: Dict[str, Any]
@@ -381,7 +381,8 @@ class AutoStrategyService:
 
                 except Exception as e:
                     logger.error(
-                        f"最良戦略のバックテスト結果の保存中にエラーが発生しました: {e}", exc_info=True
+                        f"最良戦略のバックテスト結果の保存中にエラーが発生しました: {e}",
+                        exc_info=True,
                     )
                     # エラーが発生してもメイン処理は継続
 
