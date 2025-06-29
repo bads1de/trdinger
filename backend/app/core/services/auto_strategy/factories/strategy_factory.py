@@ -137,41 +137,7 @@ class StrategyFactory:
                     operand, self
                 )
 
-            def _check_crossover(
-                self,
-                left_operand: str | float,
-                right_operand: str | float,
-                direction: str,
-            ) -> bool:
-                """クロスオーバーをチェック"""
-                try:
-                    # ConditionEvaluatorのget_condition_valueを使用
-                    left_current = self.factory.condition_evaluator.get_condition_value(
-                        left_operand, self
-                    )
-                    right_current = (
-                        self.factory.condition_evaluator.get_condition_value(
-                            right_operand, self
-                        )
-                    )
-
-                    # いずれかの値がNoneの場合は評価できないためFalseを返す
-                    if left_current is None or right_current is None:
-                        return False
-
-                    # 前の値も取得（簡略化）
-                    if len(self.data.Close) < 2:
-                        return False
-
-                    # 簡略化: 現在の値のみで判定
-                    if direction == "above":
-                        return left_current > right_current
-                    else:  # below
-                        return left_current < right_current
-
-                except Exception as e:
-                    logger.error(f"クロスオーバーチェックエラー: {e}")
-                    return False
+            
 
         # クラス名を設定
         GeneratedStrategy.__name__ = f"GeneratedStrategy_{gene.id}"

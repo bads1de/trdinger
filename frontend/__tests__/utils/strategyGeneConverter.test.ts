@@ -43,12 +43,6 @@ describe("StrategyGene変換ロジック", () => {
       operator: "<",
       value: 30,
     },
-    {
-      type: "crossover",
-      indicator1: "SMA",
-      indicator2: "close",
-      operator: ">",
-    },
   ];
 
   const mockExitConditions: Condition[] = [
@@ -126,14 +120,7 @@ describe("StrategyGene変換ロジック", () => {
         value: 30,
       });
 
-      // crossover条件の変換
-      const crossoverCondition = strategyGene.entry_conditions[1];
-      expect(crossoverCondition).toEqual({
-        type: "crossover",
-        operator: ">",
-        indicator1: "SMA",
-        indicator2: "close",
-      });
+      
     });
 
     test("イグジット条件が正しく変換される", () => {

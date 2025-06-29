@@ -212,12 +212,6 @@ describe('バックテストAPI統合', () => {
         operator: '<',
         value: 30,
       },
-      {
-        type: 'crossover',
-        indicator1: 'EMA',
-        indicator2: 'SMA',
-        operator: '>',
-      },
     ];
 
     const complexExitConditions: Condition[] = [
@@ -226,12 +220,6 @@ describe('バックテストAPI統合', () => {
         indicator1: 'RSI',
         operator: '>',
         value: 70,
-      },
-      {
-        type: 'crossover',
-        indicator1: 'SMA',
-        indicator2: 'EMA',
-        operator: '>',
       },
     ];
 
@@ -268,11 +256,6 @@ describe('バックテストAPI統合', () => {
                     indicator: 'RSI',
                     value: 30,
                   }),
-                  expect.objectContaining({
-                    type: 'crossover',
-                    indicator1: 'EMA',
-                    indicator2: 'SMA',
-                  }),
                 ]),
                 // 複数のイグジット条件
                 exit_conditions: expect.arrayContaining([
@@ -280,11 +263,6 @@ describe('バックテストAPI統合', () => {
                     type: 'threshold',
                     indicator: 'RSI',
                     value: 70,
-                  }),
-                  expect.objectContaining({
-                    type: 'crossover',
-                    indicator1: 'SMA',
-                    indicator2: 'EMA',
                   }),
                 ]),
               }),

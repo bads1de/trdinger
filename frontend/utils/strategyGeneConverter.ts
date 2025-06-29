@@ -100,7 +100,6 @@ function convertConditionToStrategyCondition(
     baseCondition.indicator = condition.indicator1;
     baseCondition.value = condition.value;
   } else if (
-    condition.type === "crossover" ||
     condition.type === "comparison"
   ) {
     baseCondition.indicator1 = condition.indicator1;
