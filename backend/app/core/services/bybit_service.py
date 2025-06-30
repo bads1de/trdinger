@@ -169,35 +169,27 @@ class BybitService(ABC):
 
         all_data = []
         page_count = 0
-        end_time = int(datetime.now(timezone.utc).timestamp() * 1000)
+        # 最新の時刻から開始（Bybit APIは新しいデータから古いデータの順で返す）
+        until_time = int(datetime.now(timezone.utc).timestamp() * 1000)
 
         while page_count < max_pages:
             page_count += 1
 
             try:
                 # ページごとにデータを取得
-                params = fetch_kwargs.get("params", {})
-                params["end"] = end_time
-
+                # Bybit APIは until パラメータを使用して指定時刻より前のデータを取得
                 page_data = await self._handle_ccxt_errors(
                     f"ページデータ取得 (page={page_count})",
                     fetch_func,
                     symbol,
-                    None,  # since
+                    None,  # since（開始時刻は指定しない）
                     page_limit,
-                    params,
+                    {"until": until_time},  # 指定時刻より前のデータを取得
                 )
 
                 if not page_data:
                     logger.info(f"ページ {page_count}: データなし。取得終了")
                     break
-
-                # 最後のデータは次のリクエストのendになるため、重複を避けるために除外
-                if len(page_data) > 1:
-                    end_time = page_data[-1]["timestamp"]
-                    page_data = page_data[:-1]
-                else:
-                    end_time = page_data[0]["timestamp"] - 1
 
                 logger.info(
                     f"ページ {page_count}: {len(page_data)}件取得 "
@@ -232,7 +224,13 @@ class BybitService(ABC):
                     f"(累計: {len(all_data)}件)"
                 )
 
-                if len(page_data) < page_limit - 1:
+                # 次のページのために until_time を更新
+                # 最も古いデータのタイムスタンプより1ミリ秒前に設定
+                if page_data:
+                    until_time = min(item["timestamp"] for item in page_data) - 1
+
+                # 取得件数が期待値より少ない場合は最後のページ
+                if len(page_data) < page_limit:
                     logger.info(f"ページ {page_count}: 最後のページに到達")
                     break
 
@@ -242,7 +240,7 @@ class BybitService(ABC):
                 logger.error(f"ページ {page_count} 取得エラー: {e}")
                 continue
 
-        all_data.sort(key=lambda x: x["timestamp"])
+        all_data.sort(key=lambda x: x["timestamp"], reverse=True)  # 新しい順にソート
         logger.info(f"全期間データ取得完了: {len(all_data)}件 ({page_count}ページ)")
         return all_data
 
