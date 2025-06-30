@@ -120,9 +120,15 @@ class BybitService(ABC):
             logger.info(f"{operation_name}を実行中...")
 
             # 非同期で実行
-            result = await asyncio.get_event_loop().run_in_executor(
-                None, func, *args, **kwargs
-            )
+            # run_in_executorはキーワード引数を直接渡せないため、lambdaを使用
+            if kwargs:
+                result = await asyncio.get_event_loop().run_in_executor(
+                    None, lambda: func(*args, **kwargs)
+                )
+            else:
+                result = await asyncio.get_event_loop().run_in_executor(
+                    None, func, *args
+                )
 
             logger.info(f"{operation_name}実行成功")
             return result
