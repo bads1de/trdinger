@@ -184,7 +184,7 @@ const DataResetPanel: React.FC<DataResetPanelProps> = ({
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
               <div className="text-center">
                 <div className="text-lg font-bold text-blue-600 dark:text-blue-400">
-                  {dataStatus.data_counts.ohlcv.toLocaleString()}
+                  {(dataStatus.data_counts?.ohlcv ?? 0).toLocaleString()}
                 </div>
                 <div className="text-secondary-600 dark:text-secondary-400">
                   OHLCV
@@ -192,7 +192,9 @@ const DataResetPanel: React.FC<DataResetPanelProps> = ({
               </div>
               <div className="text-center">
                 <div className="text-lg font-bold text-green-600 dark:text-green-400">
-                  {dataStatus.data_counts.funding_rates.toLocaleString()}
+                  {(
+                    dataStatus.data_counts?.funding_rates ?? 0
+                  ).toLocaleString()}
                 </div>
                 <div className="text-secondary-600 dark:text-secondary-400">
                   FR
@@ -200,7 +202,9 @@ const DataResetPanel: React.FC<DataResetPanelProps> = ({
               </div>
               <div className="text-center">
                 <div className="text-lg font-bold text-purple-600 dark:text-purple-400">
-                  {dataStatus.data_counts.open_interest.toLocaleString()}
+                  {(
+                    dataStatus.data_counts?.open_interest ?? 0
+                  ).toLocaleString()}
                 </div>
                 <div className="text-secondary-600 dark:text-secondary-400">
                   OI
@@ -208,7 +212,7 @@ const DataResetPanel: React.FC<DataResetPanelProps> = ({
               </div>
               <div className="text-center">
                 <div className="text-lg font-bold text-secondary-900 dark:text-secondary-100">
-                  {dataStatus.total_records.toLocaleString()}
+                  {(dataStatus.total_records ?? 0).toLocaleString()}
                 </div>
                 <div className="text-secondary-600 dark:text-secondary-400">
                   合計

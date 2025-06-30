@@ -37,7 +37,7 @@
 
 - **現状:** `funding_rate_service.py`, `market_data_service.py`, `open_interest_service.py` の `fetch_and_save_..._data` メソッドが共通のパターンを持っている。
 - **改善案:**
-  - `bybit_service.py` に、データ取得関数、データ変換関数、リポジトリ、および関連するパラメータを引数として受け取る汎用的な `_fetch_and_save_data_template` メソッドを実装し、各サービスがそれを呼び出すようにする。
+  - `bybit_service.py` に、データ取得関数、データ変換関数、リポジトリ、および関連するパラメータを引数として受け取る汎用的な `_fetch_and_save_data` メソッドを実装し、各サービスがそれを呼び出すようにする。
 
 ## 今後の進め方
 
