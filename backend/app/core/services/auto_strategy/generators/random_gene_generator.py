@@ -42,12 +42,14 @@ class RandomGeneGenerator:
             self.min_indicators = getattr(config, "min_indicators", 1)
             self.max_conditions = getattr(config, "max_conditions", 3)
             self.min_conditions = getattr(config, "min_conditions", 1)
+            self.threshold_ranges = getattr(config, "threshold_ranges", {})
         else:
             # 辞書の場合
             self.max_indicators = self.config.get("max_indicators", 5)
             self.min_indicators = self.config.get("min_indicators", 1)
             self.max_conditions = self.config.get("max_conditions", 3)
             self.min_conditions = self.config.get("min_conditions", 1)
+            self.threshold_ranges = self.config.get("threshold_ranges", {})
 
         # 利用可能な指標タイプ（共通定数から取得）
         self.available_indicators = ALL_INDICATORS.copy()
@@ -311,9 +313,9 @@ class RandomGeneGenerator:
         return "close"
 
     def _generate_threshold_value(self, operand: str, condition_type: str) -> float:
-        """オペランドの型に応じて、簡略化された実用的な閾値を生成"""
+        """オペランドの型に応じて、GAConfigで設定された閾値を生成"""
 
-        # グループ1: 0-100スケールのオシレーター (RSI, STOCH, ULTOSC, DXなど)
+        # グループ1: 0-100スケールのオシレーター
         if any(
             op in operand
             for op in [
@@ -327,48 +329,36 @@ class RandomGeneGenerator:
                 "MINUS_DI",
             ]
         ):
-            # エントリー/エグジットで範囲を分ける複雑さをなくし、中間的な範囲に統一
-            return random.uniform(20, 80)
+            range_ = self.threshold_ranges.get("oscillator_0_100", [20, 80])
+            return random.uniform(range_[0], range_[1])
 
-        # グループ2: ±100スケールのオシレーター (CCI, CMO, AROONOSCなど)
+        # グループ2: ±100スケールのオシレーター
         elif any(op in operand for op in ["CCI", "CMO", "AROONOSC"]):
-            return random.uniform(-100, 100)
+            range_ = self.threshold_ranges.get("oscillator_plus_minus_100", [-100, 100])
+            return random.uniform(range_[0], range_[1])
 
-        # グループ3: ゼロ近辺で変動する変化率/モメンタム指標 (TRIX, PPO, MOMなど)
+        # グループ3: ゼロ近辺で変動する変化率/モメンタム指標
         elif any(
             op in operand
             for op in ["TRIX", "PPO", "MOM", "BOP", "APO", "EMV", "ROCP", "ROCR"]
         ):
-            return random.uniform(-0.5, 0.5)
+            range_ = self.threshold_ranges.get("momentum_zero_centered", [-0.5, 0.5])
+            return random.uniform(range_[0], range_[1])
 
-        # グループ4: Funding Rate (特殊ケース)
+        # グループ4: Funding Rate
         elif "FundingRate" in operand:
-            funding_thresholds = [
-                0.0001,
-                0.0005,
-                0.001,
-                -0.0001,
-                -0.0005,
-                -0.001,
-            ]
-            return random.choice(funding_thresholds)
+            choices = self.threshold_ranges.get("funding_rate", [0.0001, -0.0001])
+            return random.choice(choices)
 
-        # グループ5: Open Interest (特殊ケース)
+        # グループ5: Open Interest
         elif "OpenInterest" in operand:
-            # 市場規模に依存するため、大きな値のサンプル
-            oi_thresholds = [
-                1000000,
-                5000000,
-                10000000,
-                50000000,
-            ]
-            return random.choice(oi_thresholds)
+            choices = self.threshold_ranges.get("open_interest", [1000000, 50000000])
+            return random.choice(choices)
 
-        # 上記以外 (価格ベースの指標: HMA, ZLEMA, PSAR, DONCHIAN, AVGPRICEなど) は、
-        # 汎用的な相対値で処理
+        # 上記以外 (価格ベースの指標)
         else:
-            # 価格に対する乗数として機能
-            return random.uniform(0.95, 1.05)
+            range_ = self.threshold_ranges.get("price_ratio", [0.95, 1.05])
+            return random.uniform(range_[0], range_[1])
 
     def _generate_risk_management(self) -> Dict[str, float]:
         """リスク管理設定を生成"""
