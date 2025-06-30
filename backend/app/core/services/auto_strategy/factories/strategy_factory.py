@@ -58,12 +58,38 @@ class StrategyFactory:
         class GeneratedStrategy(Strategy):
             """動的生成された戦略クラス"""
 
+            # backtesting.pyがパラメータを認識できるようにクラス変数として定義
+            strategy_gene = None
+
+            def _check_params(self, params):
+                # backtesting.pyの厳格なパラメータチェックを回避するため、
+                # 親の親である_Strategyのメソッドを模倣する。
+                # これにより、クラス変数として定義されていないパラメータも受け入れられる。
+                checked_params = dict(params)
+
+                # _get_params()のロジックを再実装して静的解析エラーを回避
+                defined_params = {}
+                for key, value in type(self).__dict__.items():
+                    if not key.startswith("_") and not callable(value):
+                        defined_params[key] = value
+
+                for key, value in defined_params.items():
+                    checked_params.setdefault(key, value)
+                return checked_params
+
             def __init__(self, broker=None, data=None, params=None):
                 # paramsがNoneの場合は空辞書を設定
                 if params is None:
                     params = {}
+
+                # super().__init__は渡されたparamsを検証し、インスタンス変数として設定する
                 super().__init__(broker, data, params)
-                self.gene = gene
+
+                # self.strategy_geneはbacktesting.pyによって設定される
+                # 渡されていればそれを使用し、なければ元のgeneを使用する
+                current_gene = getattr(self, "strategy_gene", None)
+                self.gene = current_gene if current_gene is not None else gene
+
                 self.indicators = {}
                 self.factory = factory  # ファクトリーへの参照
 
@@ -136,8 +162,6 @@ class StrategyFactory:
                 return self.factory.condition_evaluator.get_condition_value(
                     operand, self
                 )
-
-            
 
         # クラス名を設定
         GeneratedStrategy.__name__ = f"GeneratedStrategy_{gene.id}"

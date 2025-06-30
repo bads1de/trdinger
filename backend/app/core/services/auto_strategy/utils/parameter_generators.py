@@ -5,6 +5,7 @@ IndicatorParameterManagerを使用した統一されたパラメータ生成シ�
 旧システムのParameterGeneratorクラスは廃止され、全てParameterManagerに統合されました。
 """
 
+import random
 import logging
 from typing import Dict, Any
 
