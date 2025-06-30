@@ -41,11 +41,7 @@ class MomentumAdapter(BaseAdapter):
                 talib.RSI, data.values, timeperiod=period
             )
 
-            # JSON形式対応の名前生成
-            parameters = {"period": period}
-            return MomentumAdapter._create_series_result_with_config(
-                result, data.index, "RSI", parameters
-            )
+            return MomentumAdapter._create_series_result(result, data.index, "RSI")
 
         except TALibCalculationError:
             raise
@@ -87,23 +83,20 @@ class MomentumAdapter(BaseAdapter):
             )
 
             return {
-                "macd_line": MomentumAdapter._create_series_result_with_config(
+                "macd_line": MomentumAdapter._create_series_result(
                     macd_line,
                     data.index,
                     "MACD",
-                    {"fast": fast, "slow": slow, "signal": signal},
                 ),
-                "signal_line": MomentumAdapter._create_series_result_with_config(
+                "signal_line": MomentumAdapter._create_series_result(
                     signal_line,
                     data.index,
                     "MACD_Signal",
-                    {"fast": fast, "slow": slow, "signal": signal},
                 ),
-                "histogram": MomentumAdapter._create_series_result_with_config(
+                "histogram": MomentumAdapter._create_series_result(
                     histogram,
                     data.index,
                     "MACD_Histogram",
-                    {"fast": fast, "slow": slow, "signal": signal},
                 ),
             }
 
@@ -155,17 +148,15 @@ class MomentumAdapter(BaseAdapter):
             )
 
             return {
-                "k_percent": MomentumAdapter._create_series_result_with_config(
+                "k_percent": MomentumAdapter._create_series_result(
                     k_percent,
                     close.index,
                     "STOCH_K",
-                    {"k_period": k_period, "d_period": d_period},
                 ),
-                "d_percent": MomentumAdapter._create_series_result_with_config(
+                "d_percent": MomentumAdapter._create_series_result(
                     d_percent,
                     close.index,
                     "STOCH_D",
-                    {"k_period": k_period, "d_period": d_period},
                 ),
             }
 
@@ -202,10 +193,7 @@ class MomentumAdapter(BaseAdapter):
             result = MomentumAdapter._safe_talib_calculation(
                 talib.CCI, high.values, low.values, close.values, timeperiod=period
             )
-            parameters = {"period": period}
-            return MomentumAdapter._create_series_result_with_config(
-                result, close.index, "CCI", parameters
-            )
+            return MomentumAdapter._create_series_result(result, close.index, "CCI")
 
         except TALibCalculationError:
             raise
@@ -240,10 +228,7 @@ class MomentumAdapter(BaseAdapter):
             result = MomentumAdapter._safe_talib_calculation(
                 talib.WILLR, high.values, low.values, close.values, timeperiod=period
             )
-            parameters = {"period": period}
-            return MomentumAdapter._create_series_result_with_config(
-                result, close.index, "WILLR", parameters
-            )
+            return MomentumAdapter._create_series_result(result, close.index, "WILLR")
 
         except TALibCalculationError:
             raise
@@ -278,10 +263,7 @@ class MomentumAdapter(BaseAdapter):
             result = MomentumAdapter._safe_talib_calculation(
                 talib.ADX, high.values, low.values, close.values, timeperiod=period
             )
-            parameters = {"period": period}
-            return MomentumAdapter._create_series_result_with_config(
-                result, close.index, "ADX", parameters
-            )
+            return MomentumAdapter._create_series_result(result, close.index, "ADX")
 
         except TALibCalculationError:
             raise
@@ -317,11 +299,11 @@ class MomentumAdapter(BaseAdapter):
             )
 
             return {
-                "aroon_down": MomentumAdapter._create_series_result_with_config(
-                    aroon_down, high.index, "AROON_DOWN", {"period": period}
+                "aroon_down": MomentumAdapter._create_series_result(
+                    aroon_down, high.index, "AROON_DOWN"
                 ),
-                "aroon_up": MomentumAdapter._create_series_result_with_config(
-                    aroon_up, high.index, "AROON_UP", {"period": period}
+                "aroon_up": MomentumAdapter._create_series_result(
+                    aroon_up, high.index, "AROON_UP"
                 ),
             }
 
@@ -354,11 +336,7 @@ class MomentumAdapter(BaseAdapter):
                 talib.MOM, data.values, timeperiod=period
             )
 
-            # JSON形式対応の名前生成
-            parameters = {"period": period}
-            return MomentumAdapter._create_series_result_with_config(
-                result, data.index, "MOM", parameters
-            )
+            return MomentumAdapter._create_series_result(result, data.index, "MOM")
 
         except TALibCalculationError:
             raise
@@ -388,10 +366,7 @@ class MomentumAdapter(BaseAdapter):
             result = MomentumAdapter._safe_talib_calculation(
                 talib.ROC, data.values, timeperiod=period
             )
-            parameters = {"period": period}
-            return MomentumAdapter._create_series_result_with_config(
-                result, data.index, "ROC", parameters
-            )
+            return MomentumAdapter._create_series_result(result, data.index, "ROC")
 
         except TALibCalculationError:
             raise
@@ -436,10 +411,7 @@ class MomentumAdapter(BaseAdapter):
                 volume.values,
                 timeperiod=period,
             )
-            parameters = {"period": period}
-            return MomentumAdapter._create_series_result_with_config(
-                result, close.index, "MFI", parameters
-            )
+            return MomentumAdapter._create_series_result(result, close.index, "MFI")
 
         except TALibCalculationError:
             raise
@@ -575,10 +547,7 @@ class MomentumAdapter(BaseAdapter):
                 timeperiod3=period3,
             )
 
-            parameters = {"period1": period1, "period2": period2, "period3": period3}
-            return MomentumAdapter._create_series_result_with_config(
-                result, close.index, "ULTOSC", parameters
-            )
+            return MomentumAdapter._create_series_result(result, close.index, "ULTOSC")
 
         except TALibCalculationError:
             raise
@@ -611,10 +580,7 @@ class MomentumAdapter(BaseAdapter):
             result = MomentumAdapter._safe_talib_calculation(
                 talib.CMO, data.values, timeperiod=period
             )
-            parameters = {"period": period}
-            return MomentumAdapter._create_series_result_with_config(
-                result, data.index, "CMO", parameters
-            )
+            return MomentumAdapter._create_series_result(result, data.index, "CMO")
 
         except TALibCalculationError:
             raise
@@ -647,10 +613,7 @@ class MomentumAdapter(BaseAdapter):
             result = MomentumAdapter._safe_talib_calculation(
                 talib.TRIX, data.values, timeperiod=period
             )
-            parameters = {"period": period}
-            return MomentumAdapter._create_series_result_with_config(
-                result, data.index, "TRIX", parameters
-            )
+            return MomentumAdapter._create_series_result(result, data.index, "TRIX")
 
         except TALibCalculationError:
             raise
@@ -683,9 +646,7 @@ class MomentumAdapter(BaseAdapter):
             result = MomentumAdapter._safe_talib_calculation(
                 talib.BOP, open_prices.values, high.values, low.values, close.values
             )
-            return MomentumAdapter._create_series_result_with_config(
-                result, close.index, "BOP", {}
-            )
+            return MomentumAdapter._create_series_result(result, close.index, "BOP")
         except TALibCalculationError:
             raise
         except Exception as e:
@@ -725,15 +686,7 @@ class MomentumAdapter(BaseAdapter):
                 matype=matype,
             )
 
-            # JSON形式対応の名前生成
-            parameters = {
-                "fast_period": fast_period,
-                "slow_period": slow_period,
-                "matype": matype,
-            }
-            return MomentumAdapter._create_series_result_with_config(
-                result, close.index, "APO", parameters
-            )
+            return MomentumAdapter._create_series_result(result, close.index, "APO")
         except TALibCalculationError:
             raise
         except Exception as e:
@@ -773,15 +726,7 @@ class MomentumAdapter(BaseAdapter):
                 matype=matype,
             )
 
-            # JSON形式対応の名前生成
-            parameters = {
-                "fast_period": fast_period,
-                "slow_period": slow_period,
-                "matype": matype,
-            }
-            return MomentumAdapter._create_series_result_with_config(
-                result, close.index, "PPO", parameters
-            )
+            return MomentumAdapter._create_series_result(result, close.index, "PPO")
         except TALibCalculationError:
             raise
         except Exception as e:
@@ -821,10 +766,7 @@ class MomentumAdapter(BaseAdapter):
                 close.values,
                 timeperiod=period,
             )
-            parameters = {"period": period}
-            return MomentumAdapter._create_series_result_with_config(
-                result, close.index, "PLUS_DI", parameters
-            )
+            return MomentumAdapter._create_series_result(result, close.index, "PLUS_DI")
 
         except TALibCalculationError:
             raise
@@ -865,9 +807,8 @@ class MomentumAdapter(BaseAdapter):
                 close.values,
                 timeperiod=period,
             )
-            parameters = {"period": period}
-            return MomentumAdapter._create_series_result_with_config(
-                result, close.index, "MINUS_DI", parameters
+            return MomentumAdapter._create_series_result(
+                result, close.index, "MINUS_DI"
             )
 
         except TALibCalculationError:
@@ -898,10 +839,7 @@ class MomentumAdapter(BaseAdapter):
             result = MomentumAdapter._safe_talib_calculation(
                 talib.ROCP, data.values, timeperiod=period
             )
-            parameters = {"period": period}
-            return MomentumAdapter._create_series_result_with_config(
-                result, data.index, "ROCP", parameters
-            )
+            return MomentumAdapter._create_series_result(result, data.index, "ROCP")
 
         except TALibCalculationError:
             raise
@@ -931,10 +869,7 @@ class MomentumAdapter(BaseAdapter):
             result = MomentumAdapter._safe_talib_calculation(
                 talib.ROCR, data.values, timeperiod=period
             )
-            parameters = {"period": period}
-            return MomentumAdapter._create_series_result_with_config(
-                result, data.index, "ROCR", parameters
-            )
+            return MomentumAdapter._create_series_result(result, data.index, "ROCR")
 
         except TALibCalculationError:
             raise
@@ -988,17 +923,15 @@ class MomentumAdapter(BaseAdapter):
             )
 
             return {
-                "fastk": MomentumAdapter._create_series_result_with_config(
+                "fastk": MomentumAdapter._create_series_result(
                     fastk,
                     close.index,
                     "STOCHF_K",
-                    {"fastk_period": fastk_period, "fastd_period": fastd_period},
                 ),
-                "fastd": MomentumAdapter._create_series_result_with_config(
+                "fastd": MomentumAdapter._create_series_result(
                     fastd,
                     close.index,
                     "STOCHF_D",
-                    {"fastk_period": fastk_period, "fastd_period": fastd_period},
                 ),
             }
 
@@ -1031,10 +964,7 @@ class MomentumAdapter(BaseAdapter):
             result = MomentumAdapter._safe_talib_calculation(
                 talib.AROONOSC, high.values, low.values, timeperiod=period
             )
-            parameters = {"period": period}
-            return MomentumAdapter._create_series_result_with_config(
-                result, high.index, "AROONOSC", parameters
-            )
+            return MomentumAdapter._create_series_result(result, high.index, "AROONOSC")
         except TALibCalculationError:
             raise
         except Exception as e:
@@ -1065,10 +995,7 @@ class MomentumAdapter(BaseAdapter):
             result = MomentumAdapter._safe_talib_calculation(
                 talib.DX, high.values, low.values, close.values, timeperiod=period
             )
-            parameters = {"period": period}
-            return MomentumAdapter._create_series_result_with_config(
-                result, close.index, "DX", parameters
-            )
+            return MomentumAdapter._create_series_result(result, close.index, "DX")
         except TALibCalculationError:
             raise
         except Exception as e:
@@ -1101,10 +1028,7 @@ class MomentumAdapter(BaseAdapter):
             result = MomentumAdapter._safe_talib_calculation(
                 talib.ADXR, high.values, low.values, close.values, timeperiod=period
             )
-            parameters = {"period": period}
-            return MomentumAdapter._create_series_result_with_config(
-                result, close.index, "ADXR", parameters
-            )
+            return MomentumAdapter._create_series_result(result, close.index, "ADXR")
         except TALibCalculationError:
             raise
         except Exception as e:

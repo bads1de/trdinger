@@ -296,9 +296,7 @@ class IndicatorCalculator:
                 result, config, indicator_type, parameters
             )
         else:
-            indicator_name = self._generate_indicator_name(
-                config, indicator_type, parameters
-            )
+            indicator_name = config["indicator_config"].generate_json_name()
             return result, indicator_name
 
     def _calculate_from_adapter(
@@ -436,19 +434,6 @@ class IndicatorCalculator:
         else:
             return adapter_function(*data_args)
 
-    def _generate_indicator_name(
-        self, config: Dict[str, Any], indicator_type: str, parameters: Dict[str, Any]
-    ) -> str:
-        """指標名を生成（JSON形式：パラメータなし）"""
-        try:
-            # JSON形式では指標名にパラメータを含めない
-            return indicator_type
-
-        except Exception as e:
-            logger.warning(f"指標名生成エラー ({indicator_type}): {e}")
-            # フォールバック
-            return indicator_type
-
     def _handle_complex_result(
         self,
         result: Any,
@@ -459,23 +444,16 @@ class IndicatorCalculator:
         """複合指標の結果を処理"""
         try:
             result_handler = config.get("result_handler")
+            indicator_name = config["indicator_config"].generate_json_name()
+
             if result_handler == "macd_handler":
                 if isinstance(result, dict) and "macd_line" in result:
-                    indicator_name = self._generate_indicator_name(
-                        config, indicator_type, parameters
-                    )
                     return result["macd_line"], indicator_name
             elif result_handler == "bb_handler":
                 if isinstance(result, dict) and "middle" in result:
-                    indicator_name = self._generate_indicator_name(
-                        config, indicator_type, parameters
-                    )
                     return result["middle"], indicator_name
 
             # デフォルト処理
-            indicator_name = self._generate_indicator_name(
-                config, indicator_type, parameters
-            )
             return result, indicator_name
         except Exception as e:
             logger.error(f"複合指標処理エラー ({indicator_type}): {e}")

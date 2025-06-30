@@ -45,7 +45,13 @@ class IndicatorGene:
 
             config = indicator_registry.get(self.type)
             if config:
-                return config.generate_json_name(self.parameters)
+                # IndicatorConfigから完全なJSON設定を構築
+                resolved_params = {}
+                for param_name, param_config in config.parameters.items():
+                    resolved_params[param_name] = self.parameters.get(
+                        param_name, param_config.default_value
+                    )
+                return {"indicator": self.type, "parameters": resolved_params}
 
             # フォールバック: 基本的なJSON形式
             return {"indicator": self.type, "parameters": self.parameters}
@@ -57,8 +63,17 @@ class IndicatorGene:
     def get_legacy_name(self) -> str:
         """レガシー形式の名前を取得（非推奨：JSON形式への移行により削除予定）"""
         # JSON形式への移行により、レガシー形式の名前生成は非推奨
-        # 指標名のみを返す（パラメータなし）
-        return self.type
+        # indicator_registry を介して一元化された命名ロジックを使用
+        try:
+            from app.core.services.indicators.config import indicator_registry
+
+            return indicator_registry.generate_legacy_name(self.type, self.parameters)
+        except ImportError:
+            logger.error(
+                "Could not import indicator_registry for legacy name generation."
+            )
+            # フォールバックとして、パラメータなしの名前を返す
+            return self.type
 
     def normalize_parameters(self) -> Dict[str, Any]:
         """パラメータをJSON形式に正規化"""

@@ -215,41 +215,12 @@ class IndicatorInitializer:
     def _get_legacy_indicator_name(self, indicator_type: str, parameters: dict) -> str:
         """レガシー形式の指標名を生成（後方互換性用）"""
         try:
-            # indicator_registryから設定を取得
-            config = indicator_registry.get(indicator_type)
-
-            # パラメータがない、またはパラメータが空の場合は指標名のみ返す
-            if not config or not config.parameters:
-                return indicator_type
-
-            # 単一パラメータの指標
-            if "period" in parameters:
-                period = parameters["period"]
-                return f"{indicator_type}_{period}"
-
-            # 複数パラメータの指標（MACD等）
-            if indicator_type == "MACD":
-                fast = parameters.get("fast_period", 12)
-                slow = parameters.get("slow_period", 26)
-                signal = parameters.get("signal_period", 9)
-                return f"MACD_{fast}_{slow}_{signal}"
-
-            # その他の場合はパラメータなし
-            return indicator_type
-
+            # indicator_registryから一元的に名前を生成
+            return indicator_registry.generate_legacy_name(indicator_type, parameters)
         except Exception as e:
             logger.warning(f"レガシー指標名生成エラー ({indicator_type}): {e}")
+            # フォールバック
             return indicator_type
-
-    def _get_final_indicator_name(
-        self, original_type, indicator_type, indicator_name, parameters
-    ):
-        """最終的な指標名を取得（非推奨：後方互換性のみ）"""
-        # JSON形式への移行により、このメソッドは非推奨
-        logger.warning(
-            "_get_final_indicator_name is deprecated, use JSON format instead"
-        )
-        return self._get_legacy_indicator_name(original_type, parameters)
 
     def get_supported_indicators(self) -> list:
         """サポートされている指標のリストを取得"""

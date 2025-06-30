@@ -85,11 +85,9 @@ class IndicatorNameMigrator:
             "component": macd_type.lower(),  # line, signal, histogram
         }
 
-    def generate_json_name(
-        self, indicator: str, parameters: Dict[str, Any]
-    ) -> Dict[str, Any]:
+    def generate_json_name(self, indicator: str) -> str:
         """JSON形式の名前を生成"""
-        return indicator_registry.generate_json_name(indicator, parameters)
+        return indicator_registry.generate_json_name(indicator)
 
     def generate_legacy_name(self, json_config: Dict[str, Any]) -> str:
         """JSON形式からレガシー形式の名前を生成"""
@@ -172,10 +170,10 @@ class BackwardCompatibilityManager:
             json_config = {"indicator": indicator, "parameters": parameters}
             return self.migrator.generate_legacy_name(json_config)
         elif format_type == "json":
-            return self.migrator.generate_json_name(indicator, parameters)
+            return self.migrator.generate_json_name(indicator)
         else:  # auto
             # JSON形式を優先（レガシー形式は非推奨）
-            return self.migrator.generate_json_name(indicator, parameters)
+            return self.migrator.generate_json_name(indicator)
 
 
 # グローバルインスタンス

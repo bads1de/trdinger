@@ -44,9 +44,7 @@ class VolumeAdapter(BaseAdapter):
             result = VolumeAdapter._safe_talib_calculation(
                 talib.AD, high.values, low.values, close.values, volume.values
             )
-            return VolumeAdapter._create_series_result_with_config(
-                result, close.index, "AD", {}
-            )
+            return VolumeAdapter._create_series_result(result, close.index, "AD")
 
         except TALibCalculationError:
             raise
@@ -97,11 +95,7 @@ class VolumeAdapter(BaseAdapter):
                 slowperiod=slow_period,
             )
 
-            # JSON形式対応の名前生成
-            parameters = {"fast_period": fast_period, "slow_period": slow_period}
-            return VolumeAdapter._create_series_result_with_config(
-                result, close.index, "ADOSC", parameters
-            )
+            return VolumeAdapter._create_series_result(result, close.index, "ADOSC")
 
         except TALibCalculationError:
             raise
@@ -131,9 +125,7 @@ class VolumeAdapter(BaseAdapter):
             result = VolumeAdapter._safe_talib_calculation(
                 talib.OBV, close.values, volume.values
             )
-            return VolumeAdapter._create_series_result_with_config(
-                result, close.index, "OBV", {}
-            )
+            return VolumeAdapter._create_series_result(result, close.index, "OBV")
 
         except TALibCalculationError:
             raise
@@ -275,11 +267,10 @@ class VolumeAdapter(BaseAdapter):
             vwap_result = price_volume_sum / volume_sum
 
             # 結果のSeries作成
-            parameters = {"period": period}
             result = pd.Series(
                 vwap_result.values,
                 index=close.index,
-                name=VolumeAdapter._generate_indicator_name("VWAP", parameters),
+                name="VWAP",
             )
 
             return result
@@ -351,7 +342,7 @@ class VolumeAdapter(BaseAdapter):
             result = pd.Series(
                 pvt_result.values,
                 index=close.index,
-                name=VolumeAdapter._generate_indicator_name("PVT", {}),
+                name="PVT",
             )
 
             return result
@@ -454,11 +445,10 @@ class VolumeAdapter(BaseAdapter):
             emv_result = emv_raw.rolling(window=period, min_periods=period).mean()
 
             # 結果のSeries作成
-            parameters = {"period": period}
             result = pd.Series(
                 emv_result.values,
                 index=high.index,
-                name=VolumeAdapter._generate_indicator_name("EMV", parameters),
+                name="EMV",
             )
 
             return result

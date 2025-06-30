@@ -46,11 +46,7 @@ class VolatilityAdapter(BaseAdapter):
                 talib.ATR, high.values, low.values, close.values, timeperiod=period
             )
 
-            # JSON形式対応の名前生成
-            parameters = {"period": period}
-            return VolatilityAdapter._create_series_result_with_config(
-                result, close.index, "ATR", parameters
-            )
+            return VolatilityAdapter._create_series_result(result, close.index, "ATR")
 
         except TALibCalculationError:
             raise
@@ -90,18 +86,10 @@ class VolatilityAdapter(BaseAdapter):
                 nbdevdn=std_dev,
             )
 
-            # JSON形式対応の名前生成
-            parameters = {"period": period, "std_dev": std_dev}
-
-            # 各バンドの名前を生成（JSON形式：パラメータなし）
-            upper_name = "BB_Upper"
-            middle_name = "BB_Middle"
-            lower_name = "BB_Lower"
-
             return {
-                "upper": pd.Series(upper, index=data.index, name=upper_name),
-                "middle": pd.Series(middle, index=data.index, name=middle_name),
-                "lower": pd.Series(lower, index=data.index, name=lower_name),
+                "upper": pd.Series(upper, index=data.index, name="BB_Upper"),
+                "middle": pd.Series(middle, index=data.index, name="BB_Middle"),
+                "lower": pd.Series(lower, index=data.index, name="BB_Lower"),
             }
 
         except TALibCalculationError:
@@ -137,10 +125,7 @@ class VolatilityAdapter(BaseAdapter):
             result = VolatilityAdapter._safe_talib_calculation(
                 talib.NATR, high.values, low.values, close.values, timeperiod=period
             )
-            parameters = {"period": period}
-            return VolatilityAdapter._create_series_result_with_config(
-                result, close.index, "NATR", parameters
-            )
+            return VolatilityAdapter._create_series_result(result, close.index, "NATR")
 
         except TALibCalculationError:
             raise
@@ -171,8 +156,8 @@ class VolatilityAdapter(BaseAdapter):
             result = VolatilityAdapter._safe_talib_calculation(
                 talib.TRANGE, high.values, low.values, close.values
             )
-            return VolatilityAdapter._create_series_result_with_config(
-                result, close.index, "TRANGE", {}
+            return VolatilityAdapter._create_series_result(
+                result, close.index, "TRANGE"
             )
 
         except TALibCalculationError:
@@ -204,10 +189,7 @@ class VolatilityAdapter(BaseAdapter):
             result = VolatilityAdapter._safe_talib_calculation(
                 talib.STDDEV, data.values, timeperiod=period, nbdev=nbdev
             )
-            parameters = {"period": period, "nbdev": nbdev}
-            return VolatilityAdapter._create_series_result_with_config(
-                result, data.index, "STDDEV", parameters
-            )
+            return VolatilityAdapter._create_series_result(result, data.index, "STDDEV")
 
         except TALibCalculationError:
             raise
@@ -238,10 +220,7 @@ class VolatilityAdapter(BaseAdapter):
             result = VolatilityAdapter._safe_talib_calculation(
                 talib.VAR, data.values, timeperiod=period, nbdev=nbdev
             )
-            parameters = {"period": period, "nbdev": nbdev}
-            return VolatilityAdapter._create_series_result_with_config(
-                result, data.index, "VAR", parameters
-            )
+            return VolatilityAdapter._create_series_result(result, data.index, "VAR")
 
         except TALibCalculationError:
             raise
@@ -309,17 +288,16 @@ class VolatilityAdapter(BaseAdapter):
             lower_line = middle_line - (multiplier * atr_values)
 
             # 結果のDataFrame作成
-            parameters = {"period": period, "multiplier": multiplier}
             result = pd.DataFrame(
                 {
-                    "upper": VolatilityAdapter._create_series_result_with_config(
-                        upper_line, close.index, "KELTNER_Upper", parameters
+                    "upper": VolatilityAdapter._create_series_result(
+                        upper_line, close.index, "KELTNER_Upper"
                     ),
-                    "middle": VolatilityAdapter._create_series_result_with_config(
-                        middle_line, close.index, "KELTNER_Middle", parameters
+                    "middle": VolatilityAdapter._create_series_result(
+                        middle_line, close.index, "KELTNER_Middle"
                     ),
-                    "lower": VolatilityAdapter._create_series_result_with_config(
-                        lower_line, close.index, "KELTNER_Lower", parameters
+                    "lower": VolatilityAdapter._create_series_result(
+                        lower_line, close.index, "KELTNER_Lower"
                     ),
                 },
                 index=close.index,
@@ -370,10 +348,7 @@ class VolatilityAdapter(BaseAdapter):
                 acceleration=acceleration,
                 maximum=maximum,
             )
-            parameters = {"acceleration": acceleration, "maximum": maximum}
-            return VolatilityAdapter._create_series_result_with_config(
-                result, high.index, "PSAR", parameters
-            )
+            return VolatilityAdapter._create_series_result(result, high.index, "PSAR")
 
         except TALibCalculationError:
             raise
@@ -430,23 +405,20 @@ class VolatilityAdapter(BaseAdapter):
             middle_channel = (upper_channel + lower_channel) / 2
 
             return {
-                "upper": VolatilityAdapter._create_series_result_with_config(
+                "upper": VolatilityAdapter._create_series_result(
                     upper_channel.to_numpy(),
                     high.index,
                     "DONCHIAN_Upper",
-                    {"period": period},
                 ),
-                "lower": VolatilityAdapter._create_series_result_with_config(
+                "lower": VolatilityAdapter._create_series_result(
                     lower_channel.to_numpy(),
                     low.index,
                     "DONCHIAN_Lower",
-                    {"period": period},
                 ),
-                "middle": VolatilityAdapter._create_series_result_with_config(
+                "middle": VolatilityAdapter._create_series_result(
                     middle_channel.to_numpy(),
                     high.index,
                     "DONCHIAN_Middle",
-                    {"period": period},
                 ),
             }
 
@@ -455,37 +427,6 @@ class VolatilityAdapter(BaseAdapter):
         except Exception as e:
             VolatilityAdapter._log_calculation_error("DONCHIAN", e)
             raise TALibCalculationError(f"Donchian Channels計算失敗: {e}")
-
-    @staticmethod
-    def var(close: pd.Series, period: int = 20) -> pd.Series:
-        """
-        VAR（Variance）を計算
-
-        Args:
-            close: 終値データ（pandas Series）
-            period: 期間
-
-        Returns:
-            VAR値のpandas Series
-
-        Raises:
-            TALibCalculationError: 計算エラーの場合
-        """
-        VolatilityAdapter._validate_input(close, period)
-        VolatilityAdapter._log_calculation_start("VAR")
-
-        try:
-            result = VolatilityAdapter._safe_talib_calculation(
-                talib.VAR, close.values, timeperiod=period
-            )
-            return VolatilityAdapter._create_series_result_with_config(
-                result, close.index, "VAR", {"period": period}
-            )
-        except TALibCalculationError:
-            raise
-        except Exception as e:
-            VolatilityAdapter._log_calculation_error("VAR", e)
-            raise TALibCalculationError(f"VAR計算失敗: {e}")
 
     @staticmethod
     def beta(high: pd.Series, low: pd.Series, period: int = 20) -> pd.Series:
@@ -510,9 +451,7 @@ class VolatilityAdapter(BaseAdapter):
             result = VolatilityAdapter._safe_talib_calculation(
                 talib.BETA, high.values, low.values, timeperiod=period
             )
-            return VolatilityAdapter._create_series_result_with_config(
-                result, high.index, "BETA", {"period": period}
-            )
+            return VolatilityAdapter._create_series_result(result, high.index, "BETA")
         except TALibCalculationError:
             raise
         except Exception as e:
@@ -542,9 +481,7 @@ class VolatilityAdapter(BaseAdapter):
             result = VolatilityAdapter._safe_talib_calculation(
                 talib.CORREL, high.values, low.values, timeperiod=period
             )
-            return VolatilityAdapter._create_series_result_with_config(
-                result, high.index, "CORREL", {"period": period}
-            )
+            return VolatilityAdapter._create_series_result(result, high.index, "CORREL")
         except TALibCalculationError:
             raise
         except Exception as e:

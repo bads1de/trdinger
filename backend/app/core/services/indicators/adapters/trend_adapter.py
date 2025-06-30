@@ -41,11 +41,7 @@ class TrendAdapter(BaseAdapter):
                 talib.SMA, data.values, timeperiod=period
             )
 
-            # JSON形式対応の名前生成
-            parameters = {"period": period}
-            return TrendAdapter._create_series_result_with_config(
-                result, data.index, "SMA", parameters
-            )
+            return TrendAdapter._create_series_result(result, data.index, "SMA")
 
         except TALibCalculationError:
             raise
@@ -76,11 +72,7 @@ class TrendAdapter(BaseAdapter):
                 talib.EMA, data.values, timeperiod=period
             )
 
-            # JSON形式対応の名前生成
-            parameters = {"period": period}
-            return TrendAdapter._create_series_result_with_config(
-                result, data.index, "EMA", parameters
-            )
+            return TrendAdapter._create_series_result(result, data.index, "EMA")
 
         except TALibCalculationError:
             raise
@@ -110,10 +102,7 @@ class TrendAdapter(BaseAdapter):
             result = TrendAdapter._safe_talib_calculation(
                 talib.TEMA, data.values, timeperiod=period
             )
-            parameters = {"period": period}
-            return TrendAdapter._create_series_result_with_config(
-                result, data.index, "TEMA", parameters
-            )
+            return TrendAdapter._create_series_result(result, data.index, "TEMA")
 
         except TALibCalculationError:
             raise
@@ -143,10 +132,7 @@ class TrendAdapter(BaseAdapter):
             result = TrendAdapter._safe_talib_calculation(
                 talib.DEMA, data.values, timeperiod=period
             )
-            parameters = {"period": period}
-            return TrendAdapter._create_series_result_with_config(
-                result, data.index, "DEMA", parameters
-            )
+            return TrendAdapter._create_series_result(result, data.index, "DEMA")
 
         except TALibCalculationError:
             raise
@@ -176,10 +162,7 @@ class TrendAdapter(BaseAdapter):
             result = TrendAdapter._safe_talib_calculation(
                 talib.KAMA, data.values, timeperiod=period
             )
-            parameters = {"period": period}
-            return TrendAdapter._create_series_result_with_config(
-                result, data.index, "KAMA", parameters
-            )
+            return TrendAdapter._create_series_result(result, data.index, "KAMA")
 
         except TALibCalculationError:
             raise
@@ -210,10 +193,7 @@ class TrendAdapter(BaseAdapter):
             result = TrendAdapter._safe_talib_calculation(
                 talib.T3, data.values, timeperiod=period, vfactor=vfactor
             )
-            parameters = {"period": period, "vfactor": vfactor}
-            return TrendAdapter._create_series_result_with_config(
-                result, data.index, "T3", parameters
-            )
+            return TrendAdapter._create_series_result(result, data.index, "T3")
 
         except TALibCalculationError:
             raise
@@ -243,10 +223,7 @@ class TrendAdapter(BaseAdapter):
             result = TrendAdapter._safe_talib_calculation(
                 talib.WMA, data.values, timeperiod=period
             )
-            parameters = {"period": period}
-            return TrendAdapter._create_series_result_with_config(
-                result, data.index, "WMA", parameters
-            )
+            return TrendAdapter._create_series_result(result, data.index, "WMA")
 
         except TALibCalculationError:
             raise
@@ -276,10 +253,7 @@ class TrendAdapter(BaseAdapter):
             result = TrendAdapter._safe_talib_calculation(
                 talib.TRIMA, data.values, timeperiod=period
             )
-            parameters = {"period": period}
-            return TrendAdapter._create_series_result_with_config(
-                result, data.index, "TRIMA", parameters
-            )
+            return TrendAdapter._create_series_result(result, data.index, "TRIMA")
 
         except TALibCalculationError:
             raise
@@ -347,11 +321,10 @@ class TrendAdapter(BaseAdapter):
             hma_result = TrendAdapter.wma(diff_series_clean, sqrt_period)
 
             # 元のインデックスに合わせて結果を調整
-            parameters = {"period": period}
             result = pd.Series(
                 index=data.index,
                 dtype=float,
-                name=TrendAdapter._generate_indicator_name("HMA", parameters),
+                name="HMA",
             )
 
             # HMA結果を元のインデックスにマッピング
@@ -422,11 +395,10 @@ class TrendAdapter(BaseAdapter):
             vwma_result = price_volume_sum / volume_sum
 
             # 結果のSeries作成
-            parameters = {"period": period}
             result = pd.Series(
                 vwma_result.values,
                 index=price_data.index,
-                name=TrendAdapter._generate_indicator_name("VWMA", parameters),
+                name="VWMA",
             )
 
             return result
@@ -489,11 +461,10 @@ class TrendAdapter(BaseAdapter):
             zlema_result = TrendAdapter.ema(adjusted_data_clean, period)
 
             # 元のインデックスに合わせて結果を調整
-            parameters = {"period": period}
             result = pd.Series(
                 index=data.index,
                 dtype=float,
-                name=TrendAdapter._generate_indicator_name("ZLEMA", parameters),
+                name="ZLEMA",
             )
 
             # ZLEMA結果を元のインデックスにマッピング
@@ -542,17 +513,15 @@ class TrendAdapter(BaseAdapter):
             )
 
             return {
-                "mama": TrendAdapter._create_series_result_with_config(
+                "mama": TrendAdapter._create_series_result(
                     mama,
                     data.index,
                     "MAMA",
-                    {"fast_limit": fast_limit, "slow_limit": slow_limit},
                 ),
-                "fama": TrendAdapter._create_series_result_with_config(
+                "fama": TrendAdapter._create_series_result(
                     fama,
                     data.index,
                     "FAMA",
-                    {"fast_limit": fast_limit, "slow_limit": slow_limit},
                 ),
             }
 
@@ -584,10 +553,7 @@ class TrendAdapter(BaseAdapter):
             result = TrendAdapter._safe_talib_calculation(
                 talib.MIDPOINT, data.values, timeperiod=period
             )
-            parameters = {"period": period}
-            return TrendAdapter._create_series_result_with_config(
-                result, data.index, "MIDPOINT", parameters
-            )
+            return TrendAdapter._create_series_result(result, data.index, "MIDPOINT")
 
         except TALibCalculationError:
             raise
@@ -619,10 +585,7 @@ class TrendAdapter(BaseAdapter):
             result = TrendAdapter._safe_talib_calculation(
                 talib.MIDPRICE, high.values, low.values, timeperiod=period
             )
-            parameters = {"period": period}
-            return TrendAdapter._create_series_result_with_config(
-                result, high.index, "MIDPRICE", parameters
-            )
+            return TrendAdapter._create_series_result(result, high.index, "MIDPRICE")
 
         except TALibCalculationError:
             raise
