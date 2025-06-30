@@ -19,7 +19,7 @@ from app.core.services.indicators.adapters import (
     VolatilityAdapter,
     VolumeAdapter,
 )
-from app.core.utils.data_utils import ensure_series
+from app.core.utils.data_utils import ensure_series, DataConversionError
 
 
 class TestBaseAdapter:
@@ -64,21 +64,21 @@ class TestBaseAdapter:
 
     def test_ensure_series_with_series(self, sample_price_data):
         """pandas.Seriesの変換テスト"""
-        result = BaseAdapter._ensure_series(sample_price_data)
+        result = ensure_series(sample_price_data, raise_on_error=True)
         assert isinstance(result, pd.Series)
         assert result.equals(sample_price_data)
 
     def test_ensure_series_with_list(self):
         """リストからpandas.Seriesへの変換テスト"""
         test_list = [1.0, 2.0, 3.0, 4.0, 5.0]
-        result = BaseAdapter._ensure_series(test_list)
+        result = ensure_series(test_list, raise_on_error=True)
         assert isinstance(result, pd.Series)
         assert list(result.values) == test_list
 
     def test_ensure_series_with_numpy_array(self):
         """numpy配列からpandas.Seriesへの変換テスト"""
         test_array = np.array([1.0, 2.0, 3.0, 4.0, 5.0])
-        result = BaseAdapter._ensure_series(test_array)
+        result = ensure_series(test_array, raise_on_error=True)
         assert isinstance(result, pd.Series)
         np.testing.assert_array_equal(result.values, test_array)
 
@@ -86,8 +86,8 @@ class TestBaseAdapter:
         """サポートされていないデータ型のテスト"""
         # 辞書型など、明らかにサポートされていない型を使用
         invalid_data = {"key": "value"}
-        with pytest.raises(TALibCalculationError):
-            BaseAdapter._ensure_series(invalid_data)
+        with pytest.raises(DataConversionError):
+            ensure_series(invalid_data, raise_on_error=True)
 
     def test_create_series_result(self):
         """計算結果のSeries変換テスト"""
@@ -128,7 +128,7 @@ class TestTrendAdapter:
         assert result.index.equals(sample_price_data.index)
         assert not result.iloc[:19].notna().any()  # 最初の19個はNaN
         assert result.iloc[19:].notna().all()  # 20個目以降は値あり
-        assert result.name == "SMA_20"
+        assert result.name == "SMA"
 
     def test_ema_calculation(self, sample_price_data):
         """EMA計算のテスト"""
@@ -137,7 +137,7 @@ class TestTrendAdapter:
         assert isinstance(result, pd.Series)
         assert len(result) == len(sample_price_data)
         assert result.index.equals(sample_price_data.index)
-        assert result.name == "EMA_20"
+        assert result.name == "EMA"
 
     def test_tema_calculation(self, sample_price_data):
         """TEMA計算のテスト"""
@@ -146,7 +146,7 @@ class TestTrendAdapter:
         assert isinstance(result, pd.Series)
         assert len(result) == len(sample_price_data)
         assert result.index.equals(sample_price_data.index)
-        assert result.name == "TEMA_30"
+        assert result.name == "TEMA"
 
     def test_dema_calculation(self, sample_price_data):
         """DEMA計算のテスト"""
@@ -155,7 +155,7 @@ class TestTrendAdapter:
         assert isinstance(result, pd.Series)
         assert len(result) == len(sample_price_data)
         assert result.index.equals(sample_price_data.index)
-        assert result.name == "DEMA_30"
+        assert result.name == "DEMA"
 
     def test_t3_calculation(self, sample_price_data):
         """T3計算のテスト"""
@@ -164,7 +164,7 @@ class TestTrendAdapter:
         assert isinstance(result, pd.Series)
         assert len(result) == len(sample_price_data)
         assert result.index.equals(sample_price_data.index)
-        assert result.name == "T3_5"
+        assert result.name == "T3"
 
     def test_wma_calculation(self, sample_price_data):
         """WMA計算のテスト"""
@@ -173,7 +173,7 @@ class TestTrendAdapter:
         assert isinstance(result, pd.Series)
         assert len(result) == len(sample_price_data)
         assert result.index.equals(sample_price_data.index)
-        assert result.name == "WMA_20"
+        assert result.name == "WMA"
 
 
 class TestMomentumAdapter:
@@ -199,7 +199,7 @@ class TestMomentumAdapter:
         assert isinstance(result, pd.Series)
         assert len(result) == len(sample_price_data)
         assert result.index.equals(sample_price_data.index)
-        assert result.name == "RSI_14"
+        assert result.name == "RSI"
 
         # RSIは0-100の範囲
         valid_values = result.dropna()
@@ -213,7 +213,7 @@ class TestMomentumAdapter:
         assert isinstance(result, pd.Series)
         assert len(result) == len(sample_price_data)
         assert result.index.equals(sample_price_data.index)
-        assert result.name == "MOM_10"
+        assert result.name == "MOM"
 
 
 class TestVolatilityAdapter:
@@ -254,7 +254,7 @@ class TestVolatilityAdapter:
 
         assert isinstance(result, pd.Series)
         assert len(result) == len(sample_ohlcv_data)
-        assert result.name == "ATR_14"
+        assert result.name == "ATR"
 
 
 class TestVolumeAdapter:

@@ -16,48 +16,6 @@
 
 ---
 
-## 1. 冗長なデータ変換の排除
-
-### 現状の課題
-
-データ変換と基本的なデータ準備ロジックは `app.core.utils.data_utils` に集約されつつありますが、まだ一部のモジュールで冗長なラッパーメソッドが存在しています。特に、`base_adapter.py` と `talib_adapter.py` の `_ensure_series` メソッドは、`data_utils.ensure_series` を単に呼び出しているだけであり、直接 `data_utils.ensure_series` を使用することでコードを簡素化できます。
-
-- `backend/app/core/services/auto_strategy/factories/data_converter.py`:
-  - `convert_to_series` メソッドが `app.core.utils.data_utils.convert_to_series` を呼び出しており、これは適切です。`DataConverter` クラスは `backtesting.py` 固有の変換ロジックに特化しています。
-- `backend/app/core/services/auto_strategy/factories/indicator_initializer.py`:
-  - `app.core.utils.data_utils.convert_to_series` を直接使用しており、`_convert_to_series` という冗長なメソッドは存在しません。
-- `backend/app/core/services/indicators/adapters/base_adapter.py`:
-  - `_ensure_series` 静的メソッドが `app.core.utils.data_utils.ensure_series` を呼び出しています。このラッパーは冗長です。
-- `backend/app/core/services/indicators/talib_adapter.py`:
-  - `_ensure_series` 静的メソッドが `app.core.utils.data_utils.ensure_series` を呼び出しています。このラッパーも冗長です。
-- `backend/app/core/services/indicators/abstract_indicator.py`:
-  - `get_ohlcv_data` は `pd.DataFrame` を返しており、その後の処理はアダプターや計算ロジックに委ねられています。これは適切な責務分担です。
-
-これにより、以下の問題が発生しています。
-
-- **コードの冗長性**: `_ensure_series` のような単純なラッパーメソッドが複数存在し、DRY 原則に反しています。
-- **可読性の低下**: 不要な間接参照がコードの理解を妨げる可能性があります。
-
-### 提案
-
-データ変換ロジックへのアクセスをさらに直接的にし、冗長なラッパーメソッドを排除することを提案します。
-
-**変更案の概要:**
-
-1.  **`base_adapter.py` および `talib_adapter.py` の修正**:
-    - `_ensure_series` 静的メソッドを削除します。
-    - `_ensure_series` を呼び出している箇所を全て `app.core.utils.data_utils.ensure_series` の直接呼び出しに置き換えます。
-2.  **`data_converter.py` の見直し**:
-    - `convert_to_series` メソッドは `app.core.utils.data_utils.convert_to_series` を呼び出しているため、このままで問題ありません。`DataConverter` は `backtesting.py` 固有の変換に特化させるという方針を維持します。
-
-**期待される効果:**
-
-- **DRY 原則の遵守**: コードの重複が排除され、よりクリーンで簡潔なコードベースになります。
-- **保守性の向上**: データ変換ロジックの変更やバグ修正が容易になり、一貫性が保たれます。
-- **可読性の向上**: データフローがより直接的になり、コードの理解が容易になります。
-
----
-
 ## 2. `IndicatorCalculator` の計算ロジックの合理化
 
 ### 現状の課題

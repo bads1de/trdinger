@@ -48,25 +48,6 @@ class TALibAdapter:
             )
 
     @staticmethod
-    def _ensure_series(data: Union[pd.Series, list, np.ndarray]) -> pd.Series:
-        """
-        データをpandas.Seriesに変換（data_utilsへの委譲）
-
-        Args:
-            data: 入力データ
-
-        Returns:
-            pandas.Series
-
-        Raises:
-            TALibCalculationError: サポートされていないデータ型の場合
-        """
-        try:
-            return ensure_series(data, raise_on_error=True)
-        except DataConversionError as e:
-            raise TALibCalculationError(str(e))
-
-    @staticmethod
     def _safe_talib_calculation(func, *args, **kwargs) -> np.ndarray:
         """
         TA-Lib計算の安全な実行
