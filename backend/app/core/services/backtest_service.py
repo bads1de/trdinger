@@ -149,7 +149,7 @@ class BacktestService:
             start_time = time.time()
             logger.info("backtesting.pyによるバックテストの実行を開始します...")
             warnings.filterwarnings("ignore", category=UserWarning)
-            stats = bt.run()
+            stats = bt.run(**config.get("strategy_config", {}).get("parameters", {}))
             warnings.filterwarnings("default", category=UserWarning)
             execution_time = time.time() - start_time
             logger.info(
@@ -248,27 +248,8 @@ class BacktestService:
             ValueError: サポートされていない戦略タイプの場合
         """
         strategy_type = strategy_config["strategy_type"]
-        parameters = strategy_config.get("parameters", {})
 
         if strategy_type == "MACD":
-            # パラメータをクラス変数として設定
-            if "fast_period" in parameters:
-                MACDStrategy.fast_period = parameters["fast_period"]
-                MACDStrategy.n1 = parameters["fast_period"]  # エイリアス
-            if "slow_period" in parameters:
-                MACDStrategy.slow_period = parameters["slow_period"]
-                MACDStrategy.n2 = parameters["slow_period"]  # エイリアス
-            if "signal_period" in parameters:
-                MACDStrategy.signal_period = parameters["signal_period"]
-
-            # 後方互換性のためのエイリアス処理
-            if "n1" in parameters:
-                MACDStrategy.fast_period = parameters["n1"]
-                MACDStrategy.n1 = parameters["n1"]
-            if "n2" in parameters:
-                MACDStrategy.slow_period = parameters["n2"]
-                MACDStrategy.n2 = parameters["n2"]
-
             return MACDStrategy
 
         elif strategy_type == "GENERATED_TEST":

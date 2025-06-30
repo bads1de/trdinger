@@ -49,18 +49,18 @@ class TestBacktestService:
         """サンプルOHLCVデータフレーム"""
         dates = pd.date_range(start='2024-01-01', periods=100, freq='D')
         data = {
-            'Open': [50000 + i * 10 for i in range(100)],
-            'High': [50100 + i * 10 for i in range(100)],
-            'Low': [49900 + i * 10 for i in range(100)],
-            'Close': [50000 + i * 10 for i in range(100)],
-            'Volume': [1000] * 100
+            'Open': [float(50000 + i * 10) for i in range(100)],
+            'High': [float(50100 + i * 10) for i in range(100)],
+            'Low': [float(49900 + i * 10) for i in range(100)],
+            'Close': [float(50000 + i * 10) for i in range(100)],
+            'Volume': [float(1000) for _ in range(100)]
         }
         return pd.DataFrame(data, index=dates)
 
     def test_run_backtest_success(self, backtest_service, mock_data_service, sample_config, sample_ohlcv_dataframe):
         """正常なバックテスト実行テスト"""
         # モックの設定
-        mock_data_service.get_ohlcv_for_backtest.return_value = sample_ohlcv_dataframe
+        mock_data_service.get_data_for_backtest.return_value = sample_ohlcv_dataframe
 
         # テスト実行
         result = backtest_service.run_backtest(sample_config)
@@ -100,7 +100,7 @@ class TestBacktestService:
         }
 
         # モックの設定
-        mock_data_service.get_ohlcv_for_backtest.return_value = sample_ohlcv_dataframe
+        mock_data_service.get_data_for_backtest.return_value = sample_ohlcv_dataframe
 
         # テスト実行
         result = backtest_service.run_backtest(config)
@@ -133,9 +133,6 @@ class TestBacktestService:
         # 検証
         assert strategy_class is not None
         assert issubclass(strategy_class, MACDStrategy)
-        assert strategy_class.fast_period == 12
-        assert strategy_class.slow_period == 26
-        assert strategy_class.signal_period == 9
 
     def test_create_strategy_class_invalid_type(self, backtest_service):
         """無効な戦略タイプのテスト"""
@@ -269,7 +266,7 @@ class TestBacktestService:
     def test_run_backtest_with_backtesting_py(self, mock_backtest_class, backtest_service, mock_data_service, sample_config, sample_ohlcv_dataframe):
         """backtesting.pyライブラリとの統合テスト"""
         # モックの設定
-        mock_data_service.get_ohlcv_for_backtest.return_value = sample_ohlcv_dataframe
+        mock_data_service.get_data_for_backtest.return_value = sample_ohlcv_dataframe
         
         mock_backtest_instance = Mock()
         mock_backtest_class.return_value = mock_backtest_instance
@@ -306,8 +303,9 @@ class TestBacktestService:
         assert kwargs['commission'] == 0.001
         assert kwargs['exclusive_orders'] is True
 
-        # run()メソッドが呼ばれたことを確認
-        mock_backtest_instance.run.assert_called_once()
+        # run()メソッドが正しいパラメータで呼ばれたことを確認
+        expected_params = sample_config.get("strategy_config", {}).get("parameters", {})
+        mock_backtest_instance.run.assert_called_once_with(**expected_params)
 
         # 結果の確認
         assert result["performance_metrics"]["total_return"] == 15.0
