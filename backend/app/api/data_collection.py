@@ -116,9 +116,19 @@ async def update_incremental_data(
 
         result = await service.collect_incremental_data(symbol, timeframe, repository)
 
-        return APIResponseHelper.api_response(
-            success=True, message="差分データ更新完了", data=result
-        )
+        if isinstance(result, dict) and result.get("success"):
+            return APIResponseHelper.api_response(
+                success=True, message="差分データ更新完了", data=result
+            )
+        else:
+            error_message = (
+                result.get("message") if isinstance(result, dict) else str(result)
+            )
+            return APIResponseHelper.api_response(
+                success=False,
+                message=f"差分データ更新に失敗しました: {error_message}",
+                status="failed",
+            )
 
     except Exception as e:
         logger.error("差分データ更新エラー", exc_info=True)
@@ -593,16 +603,21 @@ async def _collect_all_data_background(symbol: str, timeframe: str, db: Session)
             symbol, timeframe, ohlcv_repository
         )
 
-        if not ohlcv_result["success"]:
+        # ohlcv_resultが辞書型であり、'success'キーがTrueであることを安全にチェック
+        if not isinstance(ohlcv_result, dict) or not ohlcv_result.get("success"):
+            error_message = (
+                ohlcv_result.get("message")
+                if isinstance(ohlcv_result, dict)
+                else str(ohlcv_result)
+            )
             logger.error(
-                f"OHLCV収集失敗: {symbol} {timeframe} - {ohlcv_result.get('message')}",
+                f"OHLCV収集失敗: {symbol} {timeframe} - {error_message}",
                 exc_info=True,
             )
             return
 
-        logger.info(
-            f"OHLCV収集完了: {symbol} {timeframe} - {ohlcv_result['saved_count']}件保存"
-        )
+        saved_count = ohlcv_result.get("saved_count", 0)
+        logger.info(f"OHLCV収集完了: {symbol} {timeframe} - {saved_count}件保存")
 
         # 2. Funding Rate収集
         try:
@@ -681,13 +696,17 @@ async def _collect_historical_background(symbol: str, timeframe: str, db: Sessio
 
         result = await service.collect_historical_data(symbol, timeframe, repository)
 
-        if result["success"]:
+        if isinstance(result, dict) and result.get("success"):
+            saved_count = result.get("saved_count", 0)
             logger.info(
-                f"バックグラウンド収集完了: {symbol} {timeframe} - {result['saved_count']}件保存"
+                f"バックグラウンド収集完了: {symbol} {timeframe} - {saved_count}件保存"
             )
         else:
+            error_message = (
+                result.get("message") if isinstance(result, dict) else str(result)
+            )
             logger.error(
-                f"バックグラウンド収集失敗: {symbol} {timeframe} - {result.get('message')}",
+                f"バックグラウンド収集失敗: {symbol} {timeframe} - {error_message}",
                 exc_info=True,
             )
 

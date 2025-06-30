@@ -6,7 +6,7 @@ OI/FRデータを含む多様な戦略遺伝子をランダムに生成します
 """
 
 import random
-from typing import List, Dict, Any
+from typing import List, Dict
 import logging
 
 from ..models.strategy_gene import StrategyGene, IndicatorGene, Condition
@@ -320,62 +320,61 @@ class RandomGeneGenerator:
 
         # 特殊なデータソースの処理
         if "FundingRate" in operand:
-            range_ = self.threshold_ranges.get("funding_rate", [0.0001, 0.001])
-            return (
-                random.choice(range_)
-                if isinstance(range_, list) and len(range_) > 2
-                else random.uniform(range_[0], range_[1])
+            return self._get_safe_threshold(
+                "funding_rate", [0.0001, 0.001], allow_choice=True
             )
-
-        elif "OpenInterest" in operand:
-            range_ = self.threshold_ranges.get("open_interest", [1000000, 50000000])
-            return (
-                random.choice(range_)
-                if isinstance(range_, list) and len(range_) > 2
-                else random.uniform(range_[0], range_[1])
+        if "OpenInterest" in operand:
+            return self._get_safe_threshold(
+                "open_interest", [1000000, 50000000], allow_choice=True
             )
-
-        elif operand in ["volume"]:
-            range_ = self.threshold_ranges.get("volume", [1000, 100000])
-            return random.uniform(range_[0], range_[1])
+        if operand == "volume":
+            return self._get_safe_threshold("volume", [1000, 100000])
 
         # 指標レジストリからスケールタイプを取得
         indicator_config = indicator_registry.get_indicator_config(operand)
         if indicator_config and indicator_config.scale_type:
             scale_type = indicator_config.scale_type
-
-            # スケールタイプに基づく閾値生成
             if scale_type == IndicatorScaleType.OSCILLATOR_0_100:
-                range_ = self.threshold_ranges.get("oscillator_0_100", [20, 80])
-                return random.uniform(range_[0], range_[1])
-
-            elif scale_type == IndicatorScaleType.OSCILLATOR_PLUS_MINUS_100:
-                range_ = self.threshold_ranges.get(
+                return self._get_safe_threshold("oscillator_0_100", [20, 80])
+            if scale_type == IndicatorScaleType.OSCILLATOR_PLUS_MINUS_100:
+                return self._get_safe_threshold(
                     "oscillator_plus_minus_100", [-100, 100]
                 )
-                return random.uniform(range_[0], range_[1])
-
-            elif scale_type == IndicatorScaleType.MOMENTUM_ZERO_CENTERED:
-                range_ = self.threshold_ranges.get(
-                    "momentum_zero_centered", [-0.5, 0.5]
-                )
-                return random.uniform(range_[0], range_[1])
-
-            elif scale_type == IndicatorScaleType.PRICE_RATIO:
-                range_ = self.threshold_ranges.get("price_ratio", [0.95, 1.05])
-                return random.uniform(range_[0], range_[1])
-
-            elif scale_type == IndicatorScaleType.PRICE_ABSOLUTE:
-                range_ = self.threshold_ranges.get("price_ratio", [0.95, 1.05])
-                return random.uniform(range_[0], range_[1])
-
-            elif scale_type == IndicatorScaleType.VOLUME:
-                range_ = self.threshold_ranges.get("volume", [1000, 100000])
-                return random.uniform(range_[0], range_[1])
+            if scale_type == IndicatorScaleType.MOMENTUM_ZERO_CENTERED:
+                return self._get_safe_threshold("momentum_zero_centered", [-0.5, 0.5])
+            if scale_type == IndicatorScaleType.PRICE_RATIO:
+                return self._get_safe_threshold("price_ratio", [0.95, 1.05])
+            if scale_type == IndicatorScaleType.PRICE_ABSOLUTE:
+                return self._get_safe_threshold("price_ratio", [0.95, 1.05])
+            if scale_type == IndicatorScaleType.VOLUME:
+                return self._get_safe_threshold("volume", [1000, 100000])
 
         # フォールバック: 価格ベースの指標として扱う
-        range_ = self.threshold_ranges.get("price_ratio", [0.95, 1.05])
-        return random.uniform(range_[0], range_[1])
+        return self._get_safe_threshold("price_ratio", [0.95, 1.05])
+
+    def _get_safe_threshold(
+        self, key: str, default_range: List[float], allow_choice: bool = False
+    ) -> float:
+        """設定から値を取得し、安全に閾値を生成する"""
+        range_ = self.threshold_ranges.get(key, default_range)
+
+        if isinstance(range_, list):
+            if allow_choice and len(range_) > 2:
+                # 離散値リストから選択
+                try:
+                    return float(random.choice(range_))
+                except (ValueError, TypeError):
+                    # 変換できない場合はフォールバック
+                    pass
+            if (
+                len(range_) >= 2
+                and isinstance(range_[0], (int, float))
+                and isinstance(range_[1], (int, float))
+            ):
+                # 範囲から選択
+                return random.uniform(range_[0], range_[1])
+        # フォールバック
+        return random.uniform(default_range[0], default_range[1])
 
     def _generate_risk_management(self) -> Dict[str, float]:
         """リスク管理設定を生成（設定値から範囲を取得）"""

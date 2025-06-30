@@ -7,18 +7,10 @@
 import pandas as pd
 from abc import ABC, abstractmethod
 from typing import List, Dict, Any, Optional, Union, cast
+from database.connection import SessionLocal
+from database.repositories.ohlcv_repository import OHLCVRepository
 import logging
 
-try:
-    from database.connection import SessionLocal
-except ImportError:
-    # テスト環境での代替インポート
-    SessionLocal = None
-try:
-    from database.repositories.ohlcv_repository import OHLCVRepository
-except ImportError:
-    # テスト環境での代替インポート
-    OHLCVRepository = None
 
 logger = logging.getLogger(__name__)
 

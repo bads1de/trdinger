@@ -6,12 +6,6 @@
 
 ## 計画
 
-### 3. `BacktestDataService` のデータ検証メソッドの整理
-
-- **現状:** `backtest_data_service.py` の `_validate_dataframe` と `_validate_extended_dataframe` が類似した検証ロジックを持っている。
-- **改善案:**
-  - 共通の検証ロジックを抽出したプライベートメソッドを作成し、各メソッドがその共通ロジックを呼び出すようにする。
-
 ### 4. `StrategyGene` の `parameters` プロパティの責務の明確化
 
 - **現状:** `auto_strategy/models/strategy_gene.py` の `parameters` プロパティが、`backtesting.py` の `Strategy` クラスに渡すためのパラメータを抽出するロジックを含んでいる。

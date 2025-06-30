@@ -480,21 +480,28 @@ class GAConfig:
     def create_fast(cls) -> "GAConfig":
         """高速実行用設定を作成（オートストラテジー用デフォルト）"""
         # create_defaultを呼び出すのではなく、独立した設定として定義
-        return cls(population_size=10, generations=5, elite_size=2, max_indicators=3)
+        return cls(
+            evolution=EvolutionConfig(population_size=10, generations=5, elite_size=2),
+            indicators=IndicatorConfig(max_indicators=3),
+        )
 
     @classmethod
     def create_thorough(cls) -> "GAConfig":
         """徹底的な探索用設定を作成"""
         return cls(
-            population_size=200,
-            generations=100,
-            crossover_rate=0.85,
-            mutation_rate=0.05,
-            elite_size=20,
-            max_indicators=5,
-            log_level="INFO",
-            save_intermediate_results=True,
-            parallel_processes=None,  # デフォルトはCPU数
+            evolution=EvolutionConfig(
+                population_size=200,
+                generations=100,
+                crossover_rate=0.85,
+                mutation_rate=0.05,
+                elite_size=20,
+            ),
+            indicators=IndicatorConfig(max_indicators=5),
+            execution=ExecutionConfig(
+                log_level="INFO",
+                save_intermediate_results=True,
+                parallel_processes=None,  # デフォルトはCPU数
+            ),
         )
 
 

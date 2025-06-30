@@ -6,7 +6,6 @@ backtesting.py互換のデータ変換を担当するモジュール。
 
 import logging
 import pandas as pd
-import numpy as np
 from typing import Any
 
 from app.core.utils.data_utils import convert_to_series as utils_convert_to_series

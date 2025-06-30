@@ -7,10 +7,8 @@ TA-Lib アダプター基底クラス
 
 import pandas as pd
 import numpy as np
-from typing import Union
 import logging
 
-from app.core.utils.data_utils import ensure_series, DataConversionError
 
 logger = logging.getLogger(__name__)
 

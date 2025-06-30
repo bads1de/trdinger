@@ -43,7 +43,7 @@ class IndicatorGene:
             # 新しいJSON形式のインジケーター設定を使用
             from app.core.services.indicators.config import indicator_registry
 
-            config = indicator_registry.get(self.type)
+            config = indicator_registry.get_indicator_config(self.type)
             if config:
                 # IndicatorConfigから完全なJSON設定を構築
                 resolved_params = {}
@@ -80,7 +80,7 @@ class IndicatorGene:
         try:
             from app.core.services.indicators.config import indicator_registry
 
-            config = indicator_registry.get(self.type)
+            config = indicator_registry.get_indicator_config(self.type)
             if config:
                 # 設定に基づいてパラメータを正規化
                 normalized = {}

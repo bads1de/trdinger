@@ -35,6 +35,7 @@ class PriceTransformAdapter(BaseAdapter):
         Raises:
             TALibCalculationError: TA-Lib計算エラーの場合
         """
+        PriceTransformAdapter._validate_multi_input(open_prices, high, low, close)
         PriceTransformAdapter._log_calculation_start("AVGPRICE")
 
         try:
@@ -45,8 +46,8 @@ class PriceTransformAdapter(BaseAdapter):
                 low.values,
                 close.values,
             )
-            return PriceTransformAdapter._create_series_result_with_config(
-                result, close.index, "AVGPRICE", {}
+            return PriceTransformAdapter._create_series_result(
+                result, close.index, "AVGPRICE"
             )
         except TALibCalculationError:
             raise
@@ -76,8 +77,8 @@ class PriceTransformAdapter(BaseAdapter):
             result = PriceTransformAdapter._safe_talib_calculation(
                 talib.MEDPRICE, high.values, low.values
             )
-            return PriceTransformAdapter._create_series_result_with_config(
-                result, high.index, "MEDPRICE", {}
+            return PriceTransformAdapter._create_series_result(
+                result, high.index, "MEDPRICE"
             )
         except TALibCalculationError:
             raise
@@ -108,8 +109,8 @@ class PriceTransformAdapter(BaseAdapter):
             result = PriceTransformAdapter._safe_talib_calculation(
                 talib.TYPPRICE, high.values, low.values, close.values
             )
-            return PriceTransformAdapter._create_series_result_with_config(
-                result, close.index, "TYPPRICE", {}
+            return PriceTransformAdapter._create_series_result(
+                result, close.index, "TYPPRICE"
             )
         except TALibCalculationError:
             raise
@@ -140,8 +141,8 @@ class PriceTransformAdapter(BaseAdapter):
             result = PriceTransformAdapter._safe_talib_calculation(
                 talib.WCLPRICE, high.values, low.values, close.values
             )
-            return PriceTransformAdapter._create_series_result_with_config(
-                result, close.index, "WCLPRICE", {}
+            return PriceTransformAdapter._create_series_result(
+                result, close.index, "WCLPRICE"
             )
         except TALibCalculationError:
             raise
@@ -167,8 +168,8 @@ class PriceTransformAdapter(BaseAdapter):
             result = PriceTransformAdapter._safe_talib_calculation(
                 talib.HT_DCPERIOD, close.values
             )
-            return PriceTransformAdapter._create_series_result_with_config(
-                result, close.index, "HT_DCPERIOD", {}
+            return PriceTransformAdapter._create_series_result(
+                result, close.index, "HT_DCPERIOD"
             )
         except TALibCalculationError:
             raise
@@ -194,8 +195,8 @@ class PriceTransformAdapter(BaseAdapter):
             result = PriceTransformAdapter._safe_talib_calculation(
                 talib.HT_DCPHASE, close.values
             )
-            return PriceTransformAdapter._create_series_result_with_config(
-                result, close.index, "HT_DCPHASE", {}
+            return PriceTransformAdapter._create_series_result(
+                result, close.index, "HT_DCPHASE"
             )
         except TALibCalculationError:
             raise
@@ -218,11 +219,15 @@ class PriceTransformAdapter(BaseAdapter):
         PriceTransformAdapter._log_calculation_start("HT_PHASOR")
 
         try:
-            inphase, quadrature = talib.HT_PHASOR(close.values)
-            # 最初の成分（inphase）を返す
-            return PriceTransformAdapter._create_series_result_with_config(
-                inphase, close.index, "HT_PHASOR", {}
+            inphase, quadrature = PriceTransformAdapter._safe_talib_calculation(
+                talib.HT_PHASOR, close.values
             )
+            # 最初の成分（inphase）を返す
+            return PriceTransformAdapter._create_series_result(
+                inphase, close.index, "HT_PHASOR"
+            )
+        except TALibCalculationError:
+            raise
         except Exception as e:
             PriceTransformAdapter._log_calculation_error("HT_PHASOR", e)
             raise TALibCalculationError(f"HT_PHASOR計算失敗: {e}")
@@ -242,11 +247,15 @@ class PriceTransformAdapter(BaseAdapter):
         PriceTransformAdapter._log_calculation_start("HT_SINE")
 
         try:
-            sine, leadsine = talib.HT_SINE(close.values)
-            # 最初の成分（sine）を返す
-            return PriceTransformAdapter._create_series_result_with_config(
-                sine, close.index, "HT_SINE", {}
+            sine, leadsine = PriceTransformAdapter._safe_talib_calculation(
+                talib.HT_SINE, close.values
             )
+            # 最初の成分（sine）を返す
+            return PriceTransformAdapter._create_series_result(
+                sine, close.index, "HT_SINE"
+            )
+        except TALibCalculationError:
+            raise
         except Exception as e:
             PriceTransformAdapter._log_calculation_error("HT_SINE", e)
             raise TALibCalculationError(f"HT_SINE計算失敗: {e}")
@@ -269,8 +278,8 @@ class PriceTransformAdapter(BaseAdapter):
             result = PriceTransformAdapter._safe_talib_calculation(
                 talib.HT_TRENDMODE, close.values
             )
-            return PriceTransformAdapter._create_series_result_with_config(
-                result, close.index, "HT_TRENDMODE", {}
+            return PriceTransformAdapter._create_series_result(
+                result, close.index, "HT_TRENDMODE"
             )
         except TALibCalculationError:
             raise
@@ -295,10 +304,14 @@ class PriceTransformAdapter(BaseAdapter):
 
         try:
             # FAMAはMAMAの第2成分として計算される
-            mama, fama = talib.MAMA(close.values, fastlimit=0.5, slowlimit=0.05)
-            return PriceTransformAdapter._create_series_result_with_config(
-                fama, close.index, "FAMA", {"period": period}
+            mama, fama = PriceTransformAdapter._safe_talib_calculation(
+                talib.MAMA, close.values, fastlimit=0.5, slowlimit=0.05
             )
+            return PriceTransformAdapter._create_series_result(
+                fama, close.index, "FAMA"
+            )
+        except TALibCalculationError:
+            raise
         except Exception as e:
             PriceTransformAdapter._log_calculation_error("FAMA", e)
             raise TALibCalculationError(f"FAMA計算失敗: {e}")
@@ -322,8 +335,8 @@ class PriceTransformAdapter(BaseAdapter):
             result = PriceTransformAdapter._safe_talib_calculation(
                 talib.SAREXT, high.values, low.values
             )
-            return PriceTransformAdapter._create_series_result_with_config(
-                result, high.index, "SAREXT", {}
+            return PriceTransformAdapter._create_series_result(
+                result, high.index, "SAREXT"
             )
         except TALibCalculationError:
             raise
@@ -350,8 +363,8 @@ class PriceTransformAdapter(BaseAdapter):
             result = PriceTransformAdapter._safe_talib_calculation(
                 talib.SAR, high.values, low.values
             )
-            return PriceTransformAdapter._create_series_result_with_config(
-                result, high.index, "SAR", {}
+            return PriceTransformAdapter._create_series_result(
+                result, high.index, "SAR"
             )
         except TALibCalculationError:
             raise

@@ -9,10 +9,9 @@ pandas SeriesとTA-Lib間のデータ変換、エラーハンドリング、
 import talib
 import pandas as pd
 import numpy as np
-from typing import Union, Dict
+from typing import Dict
 import logging
 
-from app.core.utils.data_utils import ensure_series, DataConversionError
 
 logger = logging.getLogger(__name__)
 
@@ -495,6 +494,40 @@ class TALibAdapter:
         except Exception as e:
             logger.error(f"AROON計算でエラー: {e}")
             raise TALibCalculationError(f"AROON計算失敗: {e}")
+
+    @staticmethod
+    def aroon_osc(high: pd.Series, low: pd.Series, period: int = 14) -> pd.Series:
+        """
+        Aroon Oscillator (AROONOSC) を計算
+
+        Args:
+            high: 高値データ（pandas Series）
+            low: 安値データ（pandas Series）
+            period: 期間（デフォルト: 14）
+
+        Returns:
+            AROONOSC値のpandas Series
+
+        Raises:
+            TALibCalculationError: 計算エラーの場合
+        """
+        if not (len(high) == len(low)):
+            raise TALibCalculationError("高値、安値のデータ長が一致しません")
+
+        TALibAdapter._validate_input(high, period)
+
+        try:
+            result = TALibAdapter._safe_talib_calculation(
+                talib.AROONOSC, high.values, low.values, timeperiod=period
+            )
+
+            return pd.Series(result, index=high.index, name=f"AROONOSC_{period}")
+
+        except TALibCalculationError:
+            raise
+        except Exception as e:
+            logger.error(f"AROONOSC計算でエラー: {e}")
+            raise TALibCalculationError(f"AROONOSC計算失敗: {e}")
 
     @staticmethod
     def mfi(
@@ -1044,7 +1077,7 @@ class TALibAdapter:
             # EMA計算
             result = TALibAdapter._safe_talib_calculation(
                 talib.EMA,
-                adjusted_data.fillna(method="bfill").values,
+                adjusted_data.bfill().values,
                 timeperiod=period,
             )
 
@@ -1404,6 +1437,162 @@ class TALibAdapter:
         except Exception as e:
             logger.error(f"ROC計算でエラー: {e}")
             raise TALibCalculationError(f"ROC計算失敗: {e}")
+
+    @staticmethod
+    def stochastic_rsi(
+        data: pd.Series, period: int, fastk_period: int, fastd_period: int
+    ) -> Dict[str, pd.Series]:
+        TALibAdapter._validate_input(data, period)
+        try:
+            fastk, fastd = TALibAdapter._safe_talib_calculation(
+                talib.STOCHRSI,
+                data.values,
+                timeperiod=period,
+                fastk_period=fastk_period,
+                fastd_period=fastd_period,
+            )
+            return {
+                "fastk": pd.Series(fastk, index=data.index, name="STOCHRSI_K"),
+                "fastd": pd.Series(fastd, index=data.index, name="STOCHRSI_D"),
+            }
+        except TALibCalculationError:
+            raise
+        except Exception as e:
+            raise TALibCalculationError(f"Stochastic RSI計算失敗: {e}")
+
+    @staticmethod
+    def ultimate_oscillator(
+        high: pd.Series,
+        low: pd.Series,
+        close: pd.Series,
+        period1: int,
+        period2: int,
+        period3: int,
+    ) -> pd.Series:
+        TALibAdapter._validate_input(close, max(period1, period2, period3))
+        try:
+            result = TALibAdapter._safe_talib_calculation(
+                talib.ULTOSC,
+                high.values,
+                low.values,
+                close.values,
+                timeperiod1=period1,
+                timeperiod2=period2,
+                timeperiod3=period3,
+            )
+            return pd.Series(result, index=close.index, name="ULTOSC")
+        except TALibCalculationError:
+            raise
+        except Exception as e:
+            raise TALibCalculationError(f"Ultimate Oscillator計算失敗: {e}")
+
+    @staticmethod
+    def cmo(data: pd.Series, period: int) -> pd.Series:
+        TALibAdapter._validate_input(data, period)
+        try:
+            result = TALibAdapter._safe_talib_calculation(
+                talib.CMO, data.values, timeperiod=period
+            )
+            return pd.Series(result, index=data.index, name=f"CMO_{period}")
+        except TALibCalculationError:
+            raise
+        except Exception as e:
+            raise TALibCalculationError(f"CMO計算失敗: {e}")
+
+    @staticmethod
+    def trix(data: pd.Series, period: int) -> pd.Series:
+        TALibAdapter._validate_input(data, period)
+        try:
+            result = TALibAdapter._safe_talib_calculation(
+                talib.TRIX, data.values, timeperiod=period
+            )
+            return pd.Series(result, index=data.index, name=f"TRIX_{period}")
+        except TALibCalculationError:
+            raise
+        except Exception as e:
+            raise TALibCalculationError(f"TRIX計算失敗: {e}")
+
+    @staticmethod
+    def bop(
+        open: pd.Series, high: pd.Series, low: pd.Series, close: pd.Series
+    ) -> pd.Series:
+        if not (len(open) == len(high) == len(low) == len(close)):
+            raise TALibCalculationError("OHLCデータの長さが一致しません")
+        try:
+            result = TALibAdapter._safe_talib_calculation(
+                talib.BOP, open.values, high.values, low.values, close.values
+            )
+            return pd.Series(result, index=close.index, name="BOP")
+        except TALibCalculationError:
+            raise
+        except Exception as e:
+            raise TALibCalculationError(f"BOP計算失敗: {e}")
+
+    @staticmethod
+    def apo(
+        data: pd.Series, fast_period: int, slow_period: int, matype: int
+    ) -> pd.Series:
+        TALibAdapter._validate_input(data, slow_period)
+        try:
+            result = TALibAdapter._safe_talib_calculation(
+                talib.APO,
+                data.values,
+                fastperiod=fast_period,
+                slowperiod=slow_period,
+                matype=matype,
+            )
+            return pd.Series(result, index=data.index, name="APO")
+        except TALibCalculationError:
+            raise
+        except Exception as e:
+            raise TALibCalculationError(f"APO計算失敗: {e}")
+
+    @staticmethod
+    def ppo(
+        data: pd.Series, fast_period: int, slow_period: int, matype: int
+    ) -> pd.Series:
+        TALibAdapter._validate_input(data, slow_period)
+        try:
+            result = TALibAdapter._safe_talib_calculation(
+                talib.PPO,
+                data.values,
+                fastperiod=fast_period,
+                slowperiod=slow_period,
+                matype=matype,
+            )
+            return pd.Series(result, index=data.index, name="PPO")
+        except TALibCalculationError:
+            raise
+        except Exception as e:
+            raise TALibCalculationError(f"PPO計算失敗: {e}")
+
+    @staticmethod
+    def dx(high: pd.Series, low: pd.Series, close: pd.Series, period: int) -> pd.Series:
+        TALibAdapter._validate_input(close, period)
+        try:
+            result = TALibAdapter._safe_talib_calculation(
+                talib.DX, high.values, low.values, close.values, timeperiod=period
+            )
+            return pd.Series(result, index=close.index, name=f"DX_{period}")
+        except TALibCalculationError:
+            raise
+        except Exception as e:
+            raise TALibCalculationError(f"DX計算失敗: {e}")
+
+    @staticmethod
+    def adxr(
+        high: pd.Series, low: pd.Series, close: pd.Series, period: int
+    ) -> pd.Series:
+        TALibAdapter._validate_input(close, period)
+        try:
+            result = TALibAdapter._safe_talib_calculation(
+                talib.ADXR, high.values, low.values, close.values, timeperiod=period
+            )
+            return pd.Series(result, index=close.index, name=f"ADXR_{period}")
+        except TALibCalculationError:
+            raise
+        except Exception as e:
+            raise TALibCalculationError(f"ADXR計算失敗: {e}")
 
 
 # 後方互換性のためのヘルパー関数

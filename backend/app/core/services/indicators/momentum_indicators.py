@@ -367,9 +367,10 @@ class StochasticRSIIndicator(BaseIndicator):
         fastd_period = kwargs.get("fastd_period", 3)
 
         # TALibAdapterを使用したStochastic RSI計算
-        return TALibAdapter.stochastic_rsi(
+        stoch_rsi_result = TALibAdapter.stochastic_rsi(
             df["close"], period, fastk_period, fastd_period
         )
+        return pd.DataFrame(stoch_rsi_result)
 
     def get_description(self) -> str:
         """指標の説明を取得"""
@@ -604,7 +605,7 @@ class AROONOSCIndicator(BaseIndicator):
                 raise ValueError(f"AROONOSC計算には{col}データが必要です")
 
         # TALibAdapterを使用したAROONOSC計算
-        return TALibAdapter.aroonosc(df["high"], df["low"], period)
+        return TALibAdapter.aroon_osc(df["high"], df["low"], period)
 
     def get_description(self) -> str:
         """指標の説明を取得"""

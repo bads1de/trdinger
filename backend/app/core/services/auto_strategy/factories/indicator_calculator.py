@@ -8,15 +8,6 @@ IndicatorInitializerから計算機能を分離し、責務を明確化します
 import logging
 import pandas as pd
 from typing import Dict, Any, Optional
-
-from app.core.services.indicators.adapters.trend_adapter import TrendAdapter
-from app.core.services.indicators.adapters.momentum_adapter import MomentumAdapter
-from app.core.services.indicators.adapters.volatility_adapter import (
-    VolatilityAdapter,
-)
-from app.core.services.indicators.adapters.volume_adapter import VolumeAdapter
-
-
 from app.core.services.indicators.config import (
     indicator_registry,
     compatibility_manager,

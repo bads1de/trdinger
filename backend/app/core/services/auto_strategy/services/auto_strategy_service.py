@@ -13,6 +13,7 @@ from ..models.ga_config import GAConfig, GAProgress
 from ..models.strategy_gene import StrategyGene
 from ..engines.ga_engine import GeneticAlgorithmEngine
 from ..factories.strategy_factory import StrategyFactory
+from ..generators.random_gene_generator import RandomGeneGenerator
 from app.core.services.backtest_service import BacktestService
 from app.core.services.backtest_data_service import BacktestDataService
 from .experiment_manager import ExperimentManager
@@ -52,7 +53,7 @@ class AutoStrategyService:
         # サービスの初期化
         self.strategy_factory = StrategyFactory()
         self.backtest_service: BacktestService
-        self.ga_engine: GeneticAlgorithmEngine
+        self.ga_engine: Optional[GeneticAlgorithmEngine] = None
 
         self._init_services()
 
@@ -108,9 +109,8 @@ class AutoStrategyService:
                 # 遺伝的アルゴリズムエンジンを初期化 (バックテストサービスと戦略ファクトリを利用)
                 # このエンジンは、遺伝的アルゴリズムの中核を実装し、戦略の生成、評価、選択、
                 # 交叉、突然変異といった進化プロセスを管理します。
-                self.ga_engine = GeneticAlgorithmEngine(
-                    self.backtest_service, self.strategy_factory
-                )
+                # GAエンジンは実行時に動的に初期化されるため、ここではNoneに設定
+                self.ga_engine = None
 
                 logger.info("自動戦略生成サービス初期化完了（OI/FR統合版）")
 
@@ -141,7 +141,6 @@ class AutoStrategyService:
             実験ID
         """
         logger.info(f"戦略生成開始: {experiment_name}")
-        self._validate_dependencies()
 
         # 1. GA設定の構築と検証
         try:
@@ -168,12 +167,19 @@ class AutoStrategyService:
             experiment_name, ga_config, backtest_config
         )
 
-        # 4. GAエンジンに進捗コールバックを設定
+        # 4. GAエンジンを初期化
+        gene_generator = RandomGeneGenerator(ga_config)
+        self.ga_engine = GeneticAlgorithmEngine(
+            self.backtest_service, self.strategy_factory, gene_generator
+        )
+        logger.info("GAエンジンを動的に初期化しました。")
+
+        # 5. GAエンジンに進捗コールバックを設定
         ga_callback = self.progress_tracker.get_progress_callback(experiment_id)
-        if ga_callback:
+        if ga_callback and self.ga_engine:
             self.ga_engine.set_progress_callback(ga_callback)
 
-        # 5. 実験をバックグラウンドで開始
+        # 6. 実験をバックグラウンドで開始
         background_tasks.add_task(
             self._run_experiment, experiment_id, ga_config, backtest_config
         )
@@ -200,6 +206,8 @@ class AutoStrategyService:
 
             # GA実行
             logger.info(f"GA実行開始: {experiment_id}")
+            if not self.ga_engine:
+                raise RuntimeError("GAエンジンが初期化されていません。")
             result = self.ga_engine.run_evolution(ga_config, backtest_config)
 
             # 実験結果を保存
@@ -244,7 +252,8 @@ class AutoStrategyService:
         """実験を停止"""
         try:
             # GA実行を停止
-            self.ga_engine.stop_evolution()
+            if self.ga_engine:
+                self.ga_engine.stop_evolution()
 
             # 実験を停止状態にする
             success = self.experiment_manager.stop_experiment(experiment_id)

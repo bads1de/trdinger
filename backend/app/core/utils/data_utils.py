@@ -48,13 +48,13 @@ def ensure_series(
                 return result
             return data
 
-        # backtesting.pyの_Arrayオブジェクト（_data属性を持つ）
-        if hasattr(data, "_data"):
-            return pd.Series(data._data, name=name)
-
         # list, numpy.ndarray（valuesより先にチェック）
         if isinstance(data, (list, np.ndarray)):
             return pd.Series(data, name=name)
+
+        # backtesting.pyの_Arrayオブジェクト（_data属性を持つ）
+        if hasattr(data, "_data"):
+            return pd.Series(data._data, name=name)
 
         # valuesアトリビュートを持つオブジェクト（pandas.DataFrame等、ただし辞書は除外）
         if hasattr(data, "values") and not isinstance(data, dict):
@@ -227,12 +227,14 @@ def safe_array_conversion(data: Any) -> np.ndarray:
             return data
 
         if isinstance(data, pd.Series):
-            return data.values
+            return data.to_numpy()
 
         if hasattr(data, "_data"):
             return np.array(data._data)
 
         if hasattr(data, "values"):
+            if hasattr(data, "to_numpy"):
+                return data.to_numpy()
             return np.array(data.values)
 
         return np.array(data)

@@ -263,8 +263,8 @@ class BacktestService:
             )
 
             # パラメータから戦略遺伝子を復元
-            if "strategy_gene" in parameters:
-                strategy_gene = StrategyGene.from_dict(parameters["strategy_gene"])
+            if "strategy_gene" in strategy_config:
+                strategy_gene = StrategyGene.from_dict(strategy_config["strategy_gene"])
                 factory = StrategyFactory()
                 return factory.create_strategy_class(strategy_gene)
             else:
@@ -283,8 +283,8 @@ class BacktestService:
             )
 
             # パラメータから戦略遺伝子を復元
-            if "strategy_gene" in parameters:
-                strategy_gene = StrategyGene.from_dict(parameters["strategy_gene"])
+            if "strategy_gene" in strategy_config:
+                strategy_gene = StrategyGene.from_dict(strategy_config["strategy_gene"])
                 factory = StrategyFactory()
                 return factory.create_strategy_class(strategy_gene)
             else:
