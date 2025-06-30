@@ -8,138 +8,102 @@
 
 以下の主要なリファクタリング領域を特定しました。
 
-1.  **パラメータ生成とバリデーションの一元化**
 2.  **指標命名ロジックの統合**
 3.  **冗長なデータ変換の排除**
 4.  **`IndicatorCalculator` の計算ロジックの合理化**
-5.  **`IndicatorCalculator` 内のパラメータハンドリングの洗練**
+5.  **`IndicatorCalculator` 内のパラメータハンドリングの洗練** (セクション 4 に統合)
 6.  **OI/FR データソースのハードコードされたフォールバック値の見直し**
 7.  **指標インスタンス作成とパラメータバリデーションの調和**
 
 ---
 
-## 1. パラメータ生成とバリデーションの一元化
+## 2. 指標命名ロジックの統合
 
 ### 現状の課題
 
-現在、指標のパラメータ生成ロジックとバリデーションロジックが複数のファイルに分散しており、一貫性が欠けています。
+指標の命名ロジックは `IndicatorConfig` に集約されつつありますが、まだ完全に一元化されていません。特に、`indicator_initializer.py` ではレガシーな命名ロジックへの依存が残っており、`indicator_calculator.py` では命名に関する冗長なコメントや、`_generate_indicator_name` のような存在しないメソッドへの言及が見られます。
 
-- `backend/app/core/services/auto_strategy/generators/random_gene_generator.py`:
-  - `_generate_random_indicators` 内で `generate_indicator_parameters` を呼び出し、ランダムなパラメータを生成しています。
-  - `_generate_threshold_value` で条件の閾値を生成していますが、これは `GAConfig` の `threshold_ranges` に依存しています。
-- `backend/app/core/services/auto_strategy/utils/parameter_generators.py`:
-  - 期間、MACD、Bollinger Bands、Stochastic などの具体的なパラメータ生成ロジックが静的メソッドとして存在します。これらのロジックは、指標のタイプごとに異なるハードコードされた範囲を使用しています。
+- `backend/app/core/services/auto_strategy/factories/indicator_initializer.py`:
+  - `_get_legacy_indicator_name` メソッドが `indicator_registry.generate_legacy_name` を呼び出していますが、`initialize_indicator` メソッド内で `json_indicator_name = original_type` と直接 `original_type` を使用しており、`IndicatorConfig.generate_json_name` を明示的に呼び出していません。
+  - `_get_final_indicator_name` というメソッドは存在しません。
+- `backend/app/core/services/auto_strategy/factories/indicator_calculator.py`:
+  - `_generate_indicator_name` というメソッドは存在しません。
+  - `_handle_complex_result` メソッドは `config["indicator_config"].generate_json_name()` を使用しており、これは正しいアプローチです。
+- `backend/app/core/services/indicators/adapters/base_adapter.py`:
+  - `_generate_indicator_name` および `_generate_legacy_name` というメソッドは存在しません。
 - `backend/app/core/services/indicators/config/indicator_config.py`:
-  - `ParameterConfig` クラスがパラメータの `min_value` と `max_value` を持ち、`validate_value` メソッドでバリデーションを行います。
-  - `IndicatorConfig` は各指標のパラメータ定義（デフォルト値、範囲など）を保持していますが、パラメータの「生成」には直接関与していません。
+  - `IndicatorConfig.generate_json_name` と `IndicatorConfig.generate_legacy_name` が定義されており、命名ロジックのハブとして機能しています。
 
 これにより、以下の問題が発生しています。
 
-- **重複と不整合**: パラメータの範囲定義が `GAConfig`、`parameter_generators.py`、`indicator_config.py` の間で重複または不整合が生じる可能性があります。
-- **保守性の低下**: 新しい指標を追加したり、既存の指標のパラメータ範囲を変更したりする際に、複数のファイルを更新する必要があり、エラーのリスクが高まります。
-- **責務の不明確さ**: パラメータの「生成」と「バリデーション」の責務が複数のモジュールにまたがっています。
+- **一貫性の欠如**: `initialize_indicator` での `json_indicator_name` の生成方法が `IndicatorConfig` の意図と完全に一致していない可能性があります。
+- **コードの混乱**: 存在しないメソッドへの言及がコードベースに残っており、可読性を損ねています。
 
 ### 提案
 
-`backend/app/core/services/indicators/config/` ディレクトリ内に、指標のパラメータ生成とバリデーションを一元的に管理する `ParameterService` のような新しいモジュールを作成することを提案します。
+指標の命名ロジックを `IndicatorConfig` クラス（または関連するコンフィグレーションモジュール）に完全に一元化し、`IndicatorConfig.generate_json_name` を全ての新しい命名の標準とすることを提案します。
 
 **変更案の概要:**
 
-1.  **`ParameterService` の導入**:
-    - このサービスは、`IndicatorConfigRegistry` から各指標の `IndicatorConfig` を参照し、その情報に基づいてパラメータを生成・バリデートします。
-    - ランダムなパラメータ生成ロジックもここに集約し、`IndicatorConfig` で定義された `min_value` と `max_value` を利用して値を生成します。
-    - 特定の指標タイプ（例: MACD の`fast_period` < `slow_period`）に固有のパラメータ間の制約も、このサービスで扱います。
-2.  **`random_gene_generator.py` の修正**:
-    - `_generate_random_indicators` および `_generate_threshold_value` から、具体的なパラメータ生成ロジックを `ParameterService` へ委譲します。
-    - `GAConfig` の `threshold_ranges` は引き続き `ParameterService` で利用されるよう調整します。
-3.  **`parameter_generators.py` の廃止**:
-    - このファイルは冗長になるため、削除を検討します。その機能は `ParameterService` に統合されます。
-4.  **`IndicatorConfig` の強化**:
-    - `IndicatorConfig` がパラメータのデフォルト値、最小値、最大値の唯一のソースとなるように徹底します。
+1.  **`indicator_initializer.py` の修正**:
+    - `initialize_indicator` メソッド内で `json_indicator_name` を生成する際に、`indicator_gene.get_json_config().generate_json_name()` または `indicator_registry.generate_json_name(original_type)` を明示的に呼び出すように変更します。
+    - `_get_final_indicator_name` への言及があれば削除します（現状では存在しないため、このステップは不要かもしれません）。
+2.  **`indicator_calculator.py` の修正**:
+    - `_generate_indicator_name` への言及があれば削除します（現状では存在しないため、このステップは不要かもしれません）。
+    - `_handle_complex_result` は既に `config["indicator_config"].generate_json_name()` を使用しているため、変更は不要です。
+3.  **`base_adapter.py` から命名ロジックを削除**:
+    - `_generate_indicator_name` と `_generate_legacy_name` への言及があれば削除します（現状では存在しないため、このステップは不要かもしれません）。
+4.  **`StrategyGene` の `get_legacy_name` の見直し**:
+    - `StrategyGene.get_legacy_name` が `IndicatorConfig.generate_legacy_name` を利用していることを確認し、非推奨コメントの通り将来的な削除を検討します。
 
 **期待される効果:**
 
-- **一貫性**: 全てのパラメータ生成とバリデーションが単一のモジュールで管理されるため、定義の一貫性が保証されます。
-- **保守性の向上**: 指標やパラメータの追加・変更が容易になり、エラー発生のリスクが減少します。
-- **責務の明確化**: 各モジュールの責務が明確になり、コードの可読性が向上します。
-
----
-
-### 提案
-
-指標の命名ロジックを `IndicatorConfig` クラス（または関連するコンフィグレーションモジュール）に一元化し、JSON 形式の命名規則を標準とすることを提案します。
-
-**変更案の概要:**
-
-1.  **`IndicatorConfig` を命名の唯一のソースとする**:
-    - `IndicatorConfig.generate_json_name` を指標名の生成における公式なメソッドとし、他の場所からはこれを呼び出すようにします。
-    - `generate_legacy_name` は後方互換性のため残すとしても、新規コードでの直接使用は避けるべきです。
-2.  **`indicator_initializer.py` の修正**:
-    - `_get_legacy_indicator_name` のロジックを `IndicatorConfig.generate_legacy_name` の呼び出しに置き換えます。
-    - `_get_final_indicator_name` は完全に削除します。
-3.  **`indicator_calculator.py` の修正**:
-    - `_generate_indicator_name` を削除し、命名が必要な箇所では `IndicatorConfig.generate_json_name` を呼び出すように変更します。
-    - `_handle_complex_result` も同様に `IndicatorConfig` を利用するように修正します。
-4.  **`base_adapter.py` から命名ロジックを削除**:
-    - `_generate_indicator_name` と `_generate_legacy_name` は `IndicatorConfig` に責務が移るため、削除します。
-5.  **`StrategyGene` の `get_legacy_name` の見直し**:
-    - `StrategyGene.get_legacy_name` は非推奨とコメントされているため、将来的に削除することを検討し、現時点では `IndicatorConfig.generate_legacy_name` を利用するように変更します。
-
-**期待される効果:**
-
-- **単一責任の原則**: 命名ロジックの責務が `IndicatorConfig` に集約され、コードの品質が向上します。
+- **単一責任の原則**: 命名ロジックの責務が `IndicatorConfig` に完全に集約され、コードの品質が向上します。
 - **一貫した命名**: 全ての指標名生成が一元化されるため、命名規則の一貫性が保証されます。
 - **保守性の向上**: 命名規則の変更が容易になり、新しい指標の追加もスムーズになります。
-- **コードの簡素化**: 冗長な命名ロジックが排除され、コードベースがクリーンになります。
+- **コードの簡素化**: 冗長な命名ロジックや存在しないメソッドへの言及が排除され、コードベースがクリーンになります。
 
 ---
 
-## 3. 　
+## 3. 冗長なデータ変換の排除
 
 ### 現状の課題
 
-現在、データ変換および基本的なデータ準備ロジックが複数のモジュールに分散しており、コードの重複と保守性の低下を招いています。特に、`backtesting.py` の `_Array` オブジェクトから Pandas Series への変換ロジックが複数箇所に存在します。
+データ変換と基本的なデータ準備ロジックは `app.core.utils.data_utils` に集約されつつありますが、まだ一部のモジュールで冗長なラッパーメソッドが存在しています。特に、`base_adapter.py` と `talib_adapter.py` の `_ensure_series` メソッドは、`data_utils.ensure_series` を単に呼び出しているだけであり、直接 `data_utils.ensure_series` を使用することでコードを簡素化できます。
 
 - `backend/app/core/services/auto_strategy/factories/data_converter.py`:
-  - `convert_to_series` メソッドが `_Array` や NumPy 配列、リストなどを Pandas Series に変換する主要なロジックを提供しています。
-  - `convert_to_backtesting_format` や `_convert_dataframe_to_backtesting` など、`backtesting.py` 互換形式への変換ロジックも持っています。
+  - `convert_to_series` メソッドが `app.core.utils.data_utils.convert_to_series` を呼び出しており、これは適切です。`DataConverter` クラスは `backtesting.py` 固有の変換ロジックに特化しています。
 - `backend/app/core/services/auto_strategy/factories/indicator_initializer.py`:
-  - `_convert_to_series` メソッドが `data_converter.py` の同名メソッドとほぼ同じロジックを独自に実装しています。
+  - `app.core.utils.data_utils.convert_to_series` を直接使用しており、`_convert_to_series` という冗長なメソッドは存在しません。
 - `backend/app/core/services/indicators/adapters/base_adapter.py`:
-  - `_ensure_series` 静的メソッドが、入力データを確実に Pandas Series に変換するロロジックを持っています。これは `data_converter.py` の `convert_to_series` と重複しています。
+  - `_ensure_series` 静的メソッドが `app.core.utils.data_utils.ensure_series` を呼び出しています。このラッパーは冗長です。
 - `backend/app/core/services/indicators/talib_adapter.py`:
-  - ここにも `_ensure_series` が存在し、同様の重複があります。
+  - `_ensure_series` 静的メソッドが `app.core.utils.data_utils.ensure_series` を呼び出しています。このラッパーも冗長です。
 - `backend/app/core/services/indicators/abstract_indicator.py`:
-  - `get_ohlcv_data` でデータベースから取得したデータを Pandas DataFrame に変換していますが、その後の指標計算で `pd.Series` に再度変換する際に冗長な処理が発生する可能性があります。
+  - `get_ohlcv_data` は `pd.DataFrame` を返しており、その後の処理はアダプターや計算ロジックに委ねられています。これは適切な責務分担です。
 
-これらの重複により、以下の問題が発生しています。
+これにより、以下の問題が発生しています。
 
-- **コードの冗長性**: 同じようなデータ変換ロジックが複数の場所に存在し、DRY 原則に反しています。
-- **保守性の低下**: データ変換の仕様変更やバグ修正が発生した場合、複数のファイルを更新する必要があり、一貫性を保つのが困難です。
-- **テストの複雑化**: 同じロジックを何度もテストする必要が生じ、テストコードも冗長になります。
+- **コードの冗長性**: `_ensure_series` のような単純なラッパーメソッドが複数存在し、DRY 原則に反しています。
+- **可読性の低下**: 不要な間接参照がコードの理解を妨げる可能性があります。
 
 ### 提案
 
-データ変換と基本的なデータ準備ロジックを単一のユーティリティモジュールに集約し、全ての関連モジュールからそのモジュールを参照するように変更することを提案します。これにより、データフローがより明確になり、コードの重複が排除されます。
+データ変換ロジックへのアクセスをさらに直接的にし、冗長なラッパーメソッドを排除することを提案します。
 
 **変更案の概要:**
 
-1.  **データ変換ユーティリティの一元化**:
-    - `backend/app/core/services/auto_strategy/utils/` または `backend/app/core/utils/` （より広範なユーティリティとして）に `data_utils.py` のような新しいモジュールを作成し、汎用的なデータ変換（例: `_Array` から `pd.Series`、DataFrame への変換、数値型保証など）のための関数を集約します。
-    - `backend/app/core/services/auto_strategy/factories/data_converter.py` は、`backtesting.py` 固有の変換ロジック（DataFrame の列名正規化など）に特化させ、汎用的な変換は新しいユーティリティモジュールに委譲します。最終的には、その機能が完全に不要であれば削除も検討します。
-2.  **`indicator_initializer.py` の修正**:
-    - `_convert_to_series` メソッドを削除し、一元化されたデータ変換ユーティリティの関数を呼び出すように変更します。
-3.  **`base_adapter.py` および `talib_adapter.py` の修正**:
-    - `_ensure_series` 静的メソッドを削除し、一元化されたデータ変換ユーティリティの関数を呼び出すように変更します。
-4.  **`abstract_indicator.py` の見直し**:
-    - `get_ohlcv_data` で取得した DataFrame を直接利用するのではなく、必要に応じて一元化されたデータ変換ユーティリティを使って、計算に必要な形式（例：特定の列を Series として抽出）に変換するようにします。
+1.  **`base_adapter.py` および `talib_adapter.py` の修正**:
+    - `_ensure_series` 静的メソッドを削除します。
+    - `_ensure_series` を呼び出している箇所を全て `app.core.utils.data_utils.ensure_series` の直接呼び出しに置き換えます。
+2.  **`data_converter.py` の見直し**:
+    - `convert_to_series` メソッドは `app.core.utils.data_utils.convert_to_series` を呼び出しているため、このままで問題ありません。`DataConverter` は `backtesting.py` 固有の変換に特化させるという方針を維持します。
 
 **期待される効果:**
 
 - **DRY 原則の遵守**: コードの重複が排除され、よりクリーンで簡潔なコードベースになります。
 - **保守性の向上**: データ変換ロジックの変更やバグ修正が容易になり、一貫性が保たれます。
-- **可読性の向上**: データフローが明確になり、各モジュールの責務がより鮮明になります。
-- **テストの効率化**: 共通のデータ変換ロジックを一箇所でテストできるようになります。
+- **可読性の向上**: データフローがより直接的になり、コードの理解が容易になります。
 
 ---
 
@@ -147,14 +111,17 @@
 
 ### 現状の課題
 
-`backend/app/core/services/auto_strategy/factories/indicator_calculator.py` にある `IndicatorCalculator` クラスは、指標の計算ロジックにおいて冗長性や複雑さを抱えています。特に、`_calculate_from_config` と `_calculate_from_adapter` の 2 つの主要な計算パスが存在し、それぞれが異なる方法で指標設定とアダプター関数を扱っています。これは、JSON 形式への移行とレガシー互換性の維持が不完全に実施されていることによるものです。
+`IndicatorCalculator` クラスは、指標の計算ロジックにおいて冗長性や複雑さを抱えています。特に、`_setup_indicator_config` での新旧設定の混在、`calculate_indicator` 内の `_calculate_from_config` と `_calculate_from_adapter` という二つの計算パス、そして `_calculate_from_adapter` 内でのパラメータの手動再解釈が主な課題です。
 
-- `_setup_indicator_config` メソッドは、新しい JSON 形式ベースの設定と、後方互換性のためのレガシー設定の両方を保持しようとしています。これにより、設定管理が複雑になっています。
-- `calculate_indicator` メソッド内で、まず `indicator_type` が `self.indicator_config` に存在するかどうかを確認し、存在しない場合は `self.indicator_adapters` を確認するという二段階のロジックがあります。
-- `_calculate_from_config` と `_calculate_from_adapter` は、類似の目的（指標計算）を果たしながら、異なるロジックパスをたどります。特に `_calculate_from_adapter` 内では、特定の指標タイプ（SMA, EMA, RSI など）に対してパラメータを手動で再解釈しており、これは `IndicatorConfig` の `parameters` 定義との重複や不整合を生む可能性があります。
-- `_generate_indicator_name` は JSON 形式では単純に `indicator_type` を返していますが、これが `IndicatorConfig` の `generate_json_name` メソッドの意図と完全に一致しているか不明確です。
+- `backend/app/core/services/auto_strategy/factories/indicator_calculator.py`:
+  - `_setup_indicator_config` メソッドは、`indicator_registry` からの `IndicatorConfig` インスタンスと、ハードコードされたレガシー設定の両方を `self.indicator_config` に格納しています。これにより、設定管理が複雑になっています。
+  - `calculate_indicator` メソッドは、`indicator_type` が `self.indicator_config` に存在するかどうかで処理を分岐させ、`_calculate_from_config` または `_calculate_from_adapter` を呼び出しています。
+  - `_calculate_from_adapter` メソッドは、特定の指標タイプ（SMA, EMA, RSI など）に対してパラメータを手動で再解釈しており、これは `IndicatorConfig` の `parameters` 定義との重複や不整合を生む可能性があります。このメソッドは冗長であり、`IndicatorConfig` を中心とした設計に反しています。
+  - `_prepare_parameters_for_indicator` メソッドは、新しい JSON 形式の設定とレガシー形式の設定の両方を扱っていますが、`IndicatorConfig` の `parameters` 定義に完全に依存するように強化する必要があります。
+  - `_generate_indicator_name` というメソッドは存在しません。
+  - `_handle_complex_result` は `config["indicator_config"].generate_json_name()` を使用しており、これは適切です。しかし、`macd_handler` と `bb_handler` のロジックはハードコードされており、`IndicatorConfig` の `result_handler` をより汎用的に活用できる可能性があります。
 
-これらの課題により、以下の問題が発生しています。
+これにより、以下の問題が発生しています。
 
 - **ロジックの複雑性**: 2 つの計算パスが存在するため、コードの理解とデバッグが困難です。
 - **設定の一貫性の欠如**: JSON 形式への移行が中途半端なため、新旧の設定が混在し、将来的な拡張が難しくなっています。
@@ -166,18 +133,21 @@
 
 **変更案の概要:**
 
-1.  **`IndicatorConfig` を指標計算の唯一のソースとする**:
-    - `_setup_indicator_config` を見直し、`indicator_registry` からの `IndicatorConfig` インスタンスのみを `self.indicator_config` に格納するようにします。レガシー設定のフォールバックは `indicator_registry` または `IndicatorConfig` 自体で処理されるべきです。
-    - `_setup_indicator_adapters` は `IndicatorConfig` 内の `adapter_function` フィールドへの参照を提供する役割に限定します。
-2.  **単一の計算フローへの統合**:
+1.  **`_setup_indicator_config` の合理化**:
+    - `self.indicator_config` には `indicator_registry` から取得した `IndicatorConfig` インスタンスのみを格納するように変更します。レガシー設定のフォールバックは `indicator_registry` または `IndicatorConfig` 自体で処理されるべきです。
+    - `_get_legacy_config` メソッドは削除します。
+2.  **`_setup_indicator_adapters` の役割の明確化**:
+    - このメソッドは、`IndicatorConfig` 内の `adapter_function` フィールドへの参照を提供する役割に限定します。`indicator_registry` から `IndicatorConfig` を取得し、その `adapter_function` を直接使用するように変更します。
+3.  **単一の計算フローへの統合**:
     - `calculate_indicator` メソッド内で、直接 `self.indicator_config` を参照し、対応する `adapter_function` と `IndicatorConfig` から取得したパラメータ情報を使用して計算を実行します。
-    - `_calculate_from_config` は `calculate_indicator` に統合し、`_calculate_from_adapter` は削除します。アダプター関数へのデータとパラメータの渡し方は、`_prepare_data_for_indicator` と `_prepare_parameters_for_indicator` を活用して統一します。
-3.  **パラメータハンドリングの委譲**:
-    - `_prepare_parameters_for_indicator` メソッドを強化し、`IndicatorConfig` の `parameters` 定義に完全に依存してパラメータを準備するようにします。これにより、手動でのパラメータ解析が不要になります。
-4.  **命名ロジックの排除**:
-    - 「指標命名ロジックの統合」の提案にも関連しますが、`_generate_indicator_name` メソッドを削除し、命名が必要な箇所では一元化された命名ロジック（`IndicatorConfig.generate_json_name` など）を呼び出すようにします。
-5.  **複合結果ハンドリングの改善**:
-    - `_handle_complex_result` は、`IndicatorConfig` で定義された `result_handler` に基づいて、計算結果から適切な値を抽出するロジックを保持します。
+    - `_calculate_from_adapter` メソッドを完全に削除します。
+    - `_calculate_from_config` のロジックを `calculate_indicator` に統合し、`_prepare_data_for_indicator` と `_prepare_parameters_for_indicator` を活用して統一されたデータとパラメータの渡し方を実現します。
+4.  **`_prepare_parameters_for_indicator` の強化**:
+    - このメソッドを強化し、`IndicatorConfig` の `parameters` 定義に完全に依存してパラメータを準備するようにします。これにより、手動でのパラメータ解析が不要になります。
+5.  **`_generate_indicator_name` への言及の削除**:
+    - `_generate_indicator_name` というメソッドは存在しないため、コード内のその言及を削除します。
+6.  **`_handle_complex_result` の改善**:
+    - `IndicatorConfig` で定義された `result_handler` に基づいて、計算結果から適切な値を抽出するロジックを保持します。必要に応じて、`result_handler` の種類を拡張し、より汎用的な処理を可能にします。
 
 **期待される効果:**
 
@@ -192,11 +162,33 @@
 
 ### 現状の課題
 
-`backend/app/core/services/indicators/factories/indicator_factory.py` および関連するデータサービスでは、OI (Open Interest) と FR (Funding Rate) のデータ取得において、データの不足やエラー時にハードコードされたフォールバック値（例: 0）を使用している箇所が見られます。これは、データが欠落している場合でも計算を続行できるようにするための措置ですが、以下の問題を引き起こす可能性があります。
+`random_gene_generator.py` の `_generate_threshold_value` メソッドにおいて、Funding Rate と Open Interest の閾値がハードコードされており、`GAConfig` の `threshold_ranges` を十分に活用できていません。これにより、閾値の管理が一元化されておらず、設定変更の際に複数のファイルを修正する必要が生じる可能性があります。
 
-- **誤った信号**: 実際のデータがないにも関わらず、0 などの固定値を使用することで、誤った取引信号や分析結果が生成される可能性があります。これは、バックテストの信頼性を損ない、現実の取引で予期せぬ結果を招く可能性があります。
-- **問題の隠蔽**: データ不足の問題が表面化しにくくなり、根本的なデータ収集やストレージの問題が見過ごされる可能性があります。
-- **デバッグの困難さ**: データの問題が原因であるにも関わらず、ロジックの問題として誤解され、デバッグが困難になる可能性があります。
+- `backend/app/core/services/auto_strategy/generators/random_gene_generator.py`:
+  - `_generate_threshold_value` メソッド内で、`FundingRate` と `OpenInterest` の閾値が直接数値で定義されています。
+
+これにより、以下の問題が発生しています。
+
+- **設定の一貫性の欠如**: 閾値の定義が `GAConfig` と `random_gene_generator.py` の間で分散しています。
+- **保守性の低下**: 閾値の変更が必要になった場合、コードを直接修正する必要があり、エラーのリスクが高まります。
+
+### 提案
+
+Funding Rate と Open Interest の閾値生成ロジックを `GAConfig` の `threshold_ranges` に完全に依存するように変更し、ハードコードされた値を排除することを提案します。
+
+**変更案の概要:**
+
+1.  **`random_gene_generator.py` の修正**:
+    - `_generate_threshold_value` メソッド内で、`FundingRate` と `OpenInterest` の閾値を生成する際に、`self.threshold_ranges.get("funding_rate", [デフォルト値])` および `self.threshold_ranges.get("open_interest", [デフォルト値])` を使用するように変更します。これにより、`GAConfig` で定義された範囲が優先的に使用されるようになります。
+    - `GAConfig` にこれらのデフォルト範囲が定義されていない場合のフォールバックとして、適切なデフォルト値を設定します。
+
+**期待される効果:**
+
+- **設定の一元化**: 全ての閾値が `GAConfig` を通じて管理されるため、一貫性が保証されます。
+- **保守性の向上**: 閾値の変更が容易になり、コードの修正なしで設定を調整できるようになります。
+- **柔軟性の向上**: `GAConfig` を介して、より多様な閾値の範囲を動的に設定できるようになります。
+
+---
 
 ## 7. 指標インスタンス作成とパラメータバリデーションの調和
 
@@ -231,7 +223,7 @@
     - バリデーション済みのデータとパラメータを `IndicatorCalculator` に渡し、計算結果を受け取ります。
     - 計算結果を `backtesting.py` の戦略インスタンスに適切に統合する責務を担います。
 2.  **`IndicatorCalculator` は純粋な計算ロジックに集中**:
-    - 「4. `IndicatorCalculator` の計算ロジックの合理化」および「5. `IndicatorCalculator` 内のパラメータハンドリングの洗練」の提案に基づき、`IndicatorConfig` を唯一の情報源として計算を実行します。
+    - 「4. `IndicatorCalculator` の計算ロジックの合理化」の提案に基づき、`IndicatorConfig` を唯一の情報源として計算を実行します。
     - パラメータのバリデーションは `IndicatorInitializer` が実施し、`IndicatorCalculator` にはバリデーション済みのパラメータが渡されることを前提とします。
 3.  **パラメータバリデーションの一元化と強制**:
     - 全ての指標インスタンス作成（または計算開始前）において、`ParameterService` を介してパラメータのバリデーションを強制します。これにより、不正なパラメータが指標計算に渡されることを防ぎます。

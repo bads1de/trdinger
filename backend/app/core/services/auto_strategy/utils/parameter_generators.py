@@ -2,10 +2,17 @@
 パラメータ生成ユーティリティ
 
 指標のパラメータ生成ロジックを共通化し、重複を削除します。
+新しいIndicatorParameterManagerシステムへの移行中です。
 """
 
 import random
+import logging
 from typing import Dict, Any
+
+from app.core.services.indicators.parameter_manager import IndicatorParameterManager
+from app.core.services.indicators.config.indicator_config import indicator_registry
+
+logger = logging.getLogger(__name__)
 
 
 class ParameterGenerator:
@@ -126,7 +133,24 @@ PARAMETER_GENERATORS = {
 
 
 def generate_indicator_parameters(indicator_type: str) -> Dict[str, Any]:
-    """指標タイプに応じたパラメータを生成"""
+    """
+    指標タイプに応じたパラメータを生成
+
+    新しいIndicatorParameterManagerシステムを使用します。
+    レジストリに登録されていない指標は従来のロジックにフォールバックします。
+    """
+    try:
+        # 新しいシステムを試行
+        config = indicator_registry.get_config(indicator_type)
+        if config:
+            manager = IndicatorParameterManager()
+            return manager.generate_parameters(indicator_type, config)
+    except Exception as e:
+        logger.debug(
+            f"新システムでの生成に失敗、フォールバックを使用: {indicator_type}, {e}"
+        )
+
+    # フォールバック: 従来のロジック
     if indicator_type in PARAMETER_GENERATORS["no_params"]:
         return {}
     elif indicator_type in PARAMETER_GENERATORS["special"]:

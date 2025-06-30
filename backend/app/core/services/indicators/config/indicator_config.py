@@ -78,6 +78,40 @@ class IndicatorConfig:
                     return False
         return True
 
+    def generate_random_parameters(self) -> Dict[str, Any]:
+        """
+        ランダムなパラメータを生成
+
+        Returns:
+            生成されたパラメータ辞書
+        """
+        from app.core.services.indicators.parameter_manager import (
+            IndicatorParameterManager,
+        )
+
+        manager = IndicatorParameterManager()
+        return manager.generate_parameters(self.indicator_name, self)
+
+    def get_parameter_ranges(self) -> Dict[str, Dict[str, Union[int, float]]]:
+        """
+        パラメータの範囲情報を取得
+
+        Returns:
+            パラメータ範囲情報の辞書
+        """
+        ranges = {}
+        for param_name, param_config in self.parameters.items():
+            ranges[param_name] = {
+                "min": param_config.min_value,
+                "max": param_config.max_value,
+                "default": param_config.default_value,
+            }
+        return ranges
+
+    def has_parameters(self) -> bool:
+        """パラメータが定義されているかチェック"""
+        return len(self.parameters) > 0
+
     def generate_json_name(self) -> str:
         """JSON形式のインジケーター名（=指標名）を生成"""
         # JSON形式では指標名にパラメータを含めない

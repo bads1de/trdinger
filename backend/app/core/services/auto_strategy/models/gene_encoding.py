@@ -342,7 +342,32 @@ class GeneEncoder:
     def _generate_indicator_parameters(
         self, indicator_type: str, param_val: float
     ) -> Dict:
-        """指標タイプに応じたパラメータを生成"""
+        """
+        指標タイプに応じたパラメータを生成
+
+        新しいIndicatorParameterManagerシステムを使用し、
+        フォールバックとして従来のロジックを保持します。
+        """
+        try:
+            # 新しいシステムを試行
+            from app.core.services.indicators.config.indicator_config import (
+                indicator_registry,
+            )
+            from app.core.services.indicators.parameter_manager import (
+                IndicatorParameterManager,
+            )
+
+            config = indicator_registry.get_config(indicator_type)
+            if config:
+                manager = IndicatorParameterManager()
+                return manager.generate_parameters(indicator_type, config)
+
+        except Exception as e:
+            logger.debug(
+                f"新システムでの生成に失敗、フォールバックを使用: {indicator_type}, {e}"
+            )
+
+        # フォールバック: 従来のロジック（param_valを使用した正規化）
         try:
             # 基本的な期間パラメータ
             if indicator_type in [
