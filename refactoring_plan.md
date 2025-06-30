@@ -8,112 +8,14 @@
 
 以下の主要なリファクタリング領域を特定しました。
 
-2.  **`IndicatorCalculator` の計算ロジックの合理化**
-3.  **`IndicatorCalculator` 内のパラメータハンドリングの洗練** (セクション 2 に統合)
-4.  **OI/FR データソースのハードコードされたフォールバック値の見直し**
-5.  **指標インスタンス作成とパラメータバリデーションの調和**
+1.  **OI/FR データソースのハードコードされたフォールバック値の見直し**
+2.  **API エンドポイントの改善**
+3.  **サービスレイヤーと状態管理の改善**
+4.  **遺伝的オペレータの改善**
 
 ---
 
-## 2. `IndicatorCalculator` の計算ロジックの合理化
-
-### 現状の課題
-
-`IndicatorCalculator` クラスは、指標の計算ロジックにおいて冗長性や複雑さを抱えています。特に、`_setup_indicator_config` での新旧設定の混在、`calculate_indicator` 内の `_calculate_from_config` と `_calculate_from_adapter` という二つの計算パス、そして `_calculate_from_adapter` 内でのパラメータの手動再解釈が主な課題です。
-
-- `backend/app/core/services/auto_strategy/factories/indicator_calculator.py`:
-  - `_setup_indicator_config` メソッドは、`indicator_registry` からの `IndicatorConfig` インスタンスと、ハードコードされたレガシー設定の両方を `self.indicator_config` に格納しています。これにより、設定管理が複雑になっています。
-  - `calculate_indicator` メソッドは、`indicator_type` が `self.indicator_config` に存在するかどうかで処理を分岐させ、`_calculate_from_config` または `_calculate_from_adapter` を呼び出しています。
-  - `_calculate_from_adapter` メソッドは、特定の指標タイプ（SMA, EMA, RSI など）に対してパラメータを手動で再解釈しており、これは `IndicatorConfig` の `parameters` 定義との重複や不整合を生む可能性があります。このメソッドは冗長であり、`IndicatorConfig` を中心とした設計に反しています。
-  - `_prepare_parameters_for_indicator` メソッドは、新しい JSON 形式の設定とレガシー形式の設定の両方を扱っていますが、`IndicatorConfig` の `parameters` 定義に完全に依存するように強化する必要があります。
-  - `_generate_indicator_name` というメソッドは存在しません。
-  - `_handle_complex_result` は `config["indicator_config"].generate_json_name()` を使用しており、これは適切です。しかし、`macd_handler` と `bb_handler` のロジックはハードコードされており、`IndicatorConfig` の `result_handler` をより汎用的に活用できる可能性があります。
-
-これにより、以下の問題が発生しています。
-
-- **ロジックの複雑性**: 2 つの計算パスが存在するため、コードの理解とデバッグが困難です。
-- **設定の一貫性の欠如**: JSON 形式への移行が中途半端なため、新旧の設定が混在し、将来的な拡張が難しくなっています。
-- **冗長なパラメータハンドリング**: `_calculate_from_adapter` でパラメータを再度解析している部分が冗長です。
-
-### 提案
-
-`IndicatorCalculator` の計算ロジックを合理化し、`IndicatorConfig` を中心とした単一の、より明確なフローに統合することを提案します。これにより、JSON 形式の指標設定を完全に活用し、レガシー互換性をより適切に管理できます。
-
-**変更案の概要:**
-
-1.  **`_setup_indicator_config` の合理化**:
-    - `self.indicator_config` には `indicator_registry` から取得した `IndicatorConfig` インスタンスのみを格納するように変更します。レガシー設定のフォールバックは `indicator_registry` または `IndicatorConfig` 自体で処理されるべきです。
-    - `_get_legacy_config` メソッドは削除します。
-2.  **`_setup_indicator_adapters` の役割の明確化**:
-    - このメソッドは、`IndicatorConfig` 内の `adapter_function` フィールドへの参照を提供する役割に限定します。`indicator_registry` から `IndicatorConfig` を取得し、その `adapter_function` を直接使用するように変更します。
-3.  **単一の計算フローへの統合**:
-    - `calculate_indicator` メソッド内で、直接 `self.indicator_config` を参照し、対応する `adapter_function` と `IndicatorConfig` から取得したパラメータ情報を使用して計算を実行します。
-    - `_calculate_from_adapter` メソッドを完全に削除します。
-    - `_calculate_from_config` のロジックを `calculate_indicator` に統合し、`_prepare_data_for_indicator` と `_prepare_parameters_for_indicator` を活用して統一されたデータとパラメータの渡し方を実現します。
-4.  **`_prepare_parameters_for_indicator` の強化**:
-    - このメソッドを強化し、`IndicatorConfig` の `parameters` 定義に完全に依存してパラメータを準備するようにします。これにより、手動でのパラメータ解析が不要になります。
-5.  **`_generate_indicator_name` への言及の削除**:
-    - `_generate_indicator_name` というメソッドは存在しないため、コード内のその言及を削除します。
-6.  **`_handle_complex_result` の改善**:
-    - `IndicatorConfig` で定義された `result_handler` に基づいて、計算結果から適切な値を抽出するロジックを保持します。必要に応じて、`result_handler` の種類を拡張し、より汎用的な処理を可能にします。
-
-**期待される効果:**
-
-- **コードの簡素化**: 計算ロジックが単一の明確なパスに統合され、コードベースが大幅に簡素化されます。
-- **保守性の向上**: 指標の計算ロジックが一元化されるため、バグ修正や機能追加が容易になります。
-- **JSON 形式の完全活用**: `IndicatorConfig` に定義された JSON 形式の情報を最大限に活用し、設定とロジックの一貫性が向上します。
-- **パフォーマンスの可能性**: 不要な条件分岐や再解析が減ることで、わずかながらパフォーマンスの改善が期待できます。
-
----
-
-## 4. 指標インスタンス作成とパラメータバリデーションの調和
-
-### 現状の課題
-
-当初、`backend/app/core/services/indicators/factories/indicator_factory.py` に `IndicatorFactory` クラスが存在し、`backend/app/core/services/auto_strategy/factories/indicator_initializer.py` との間で指標インスタンス作成とパラメータバリデーションロジックが重複していると推測していました。
-
-しかし、その後の調査で `IndicatorFactory` というクラスは現在のコードベースには存在しないことが判明しました。
-
-現在のところ、指標のインスタンス作成と初期化は主に `backend/app/core/services/auto_strategy/factories/indicator_initializer.py` および `backend/app/core/services/auto_strategy/factories/indicator_calculator.py` で行われているようです。具体的には以下の課題が見られます。
-
-- `indicator_initializer.py` の `initialize_indicator` メソッドが、`IndicatorCalculator` を呼び出して指標の計算と結果取得を行っています。
-- `_create_indicator_instance` のような直接的なインスタンス生成ロジックは `indicator_initializer.py` にはありませんが、`calculate_indicator_only` メソッドが `IndicatorCalculator` を直接利用しています。
-- パラメータのバリデーションは、`IndicatorConfig` に定義があるにも関わらず、呼び出し側で一貫して適用されているか不明確です。
-
-これにより、以下の問題が発生しています。
-
-- **ロジックの分散**: 指標インスタンスの作成とパラメータバリデーションに関する責任が、`IndicatorInitializer` と `IndicatorCalculator` の間で明確に分かれていない可能性があります。
-- **バリデーションの不透明性**: パラメータがどこで、どのようにバリデーションされているかが一貫していません。
-- **保守性の低下**: 指標の追加や変更時に、複数のファイルを修正する必要があり、エラーのリスクが高まります。
-- **責務の不明確さ**: どのモジュールが指標のインスタンス作成とパラメータバリデーションの主要な責務を持つべきかが不明確です。
-
-### 提案
-
-指標のインスタンス作成とパラメータバリデーションのロジックを、指標の「初期化」と「計算」という役割分担に基づき、より明確に責任を割り当てることを提案します。`IndicatorInitializer` を指標のセットアップと `backtesting.py` 戦略インスタンスへの統合に特化させ、`IndicatorCalculator` は純粋に指標の計算ロジックに集中させます。
-
-**変更案の概要:**
-
-1.  **`IndicatorInitializer` を指標のセットアップと統合に特化**:
-    - `initialize_indicator` メソッド内で、`IndicatorConfig` を参照し、その情報に基づいて必要なデータ準備とパラメータのバリデーションを行います。
-    - パラメータのバリデーションには、「1. パラメータ生成とバリデーションの一元化」で提案した `ParameterService` を利用することを検討します。
-    - バリデーション済みのデータとパラメータを `IndicatorCalculator` に渡し、計算結果を受け取ります。
-    - 計算結果を `backtesting.py` の戦略インスタンスに適切に統合する責務を担います。
-2.  **`IndicatorCalculator` は純粋な計算ロジックに集中**:
-    - 「4. `IndicatorCalculator` の計算ロジックの合理化」の提案に基づき、`IndicatorConfig` を唯一の情報源として計算を実行します。
-    - パラメータのバリデーションは `IndicatorInitializer` が実施し、`IndicatorCalculator` にはバリデーション済みのパラメータが渡されることを前提とします。
-3.  **パラメータバリデーションの一元化と強制**:
-    - 全ての指標インスタンス作成（または計算開始前）において、`ParameterService` を介してパラメータのバリデーションを強制します。これにより、不正なパラメータが指標計算に渡されることを防ぎます。
-
-**期待される効果:**
-
-- **単一責任の原則**: 各モジュールの責務が明確になり、コードの品質が向上します。
-- **一貫したバリデーション**: パラメータのバリデーションが強制され、不正なデータによるエラーを防ぎます。
-- **保守性の向上**: 指標の追加や変更が容易になり、エラー発生のリスクが減少します。
-- **可読性の向上**: コードのフローが明確になり、各モジュールの役割がより鮮明になります。
-
----
-
-## 5. API エンドポイントの改善 (`auto_strategy.py`)
+## 1. API エンドポイントの改善 (`auto_strategy.py`)
 
 ### 現状の課題
 
@@ -142,36 +44,7 @@ API エンドポイントの保守性と拡張性を向上させるため、以�
 
 ---
 
-## 7. GA 設定管理の改善 (`ga_config.py`)
-
-### 現状の課題
-
-`backend/app/core/services/auto_strategy/models/ga_config.py` の `GAConfig` クラスは、多くの設定項目をフラットに管理しており、構造が不明確です。また、マジックナンバーの使用や、バリデーションの不足が見られます。
-
-- **フラットな構造**: 関連する設定がグループ化されておらず、可読性が低いです。
-- **マジックナンバー**: `from_dict` メソッド内でデフォルト値がハードコードされており、一元管理されていません。
-- **限定的なバリデーション**: バリデーションが基本的な範囲チェックに留まっています。
-
-### 提案
-
-`GAConfig` の構造を改善し、保守性と堅牢性を高めます。
-
-1.  **設定の構造化**:
-    - 関連する設定項目をネストしたデータクラス（例: `EvolutionConfig`, `EvaluationConfig`）にまとめ、設定の階層構造を明確にします。
-2.  **マジックナンバーの排除**:
-    - デフォルト値をクラス属性として定数で定義し、`from_dict` や `__init__` から参照するように統一します。
-3.  **バリデーションの強化**:
-    - `pydantic` の `@validator` を活用し、より宣言的で強力なバリデーション（例: 許可されていない指標のチェック）を実装します。
-
-**期待される効果:**
-
-- **可読性の向上**: 設定の意図が明確になり、コードの理解が容易になります。
-- **保守性の向上**: デフォルト値が一元管理され、変更が容易かつ安全になります。
-- **堅牢性の向上**: より厳密なバリデーションにより、不正な設定によるエラーを未然に防ぎます。
-
----
-
-## 8. GA エンジンの責務分離 (`ga_engine.py`)
+## 3. GA エンジンの責務分離 (`ga_engine.py`)
 
 ### 現状の課題
 
@@ -200,7 +73,7 @@ API エンドポイントの保守性と拡張性を向上させるため、以�
 
 ---
 
-## 9. サービスレイヤーと状態管理の改善 (`auto_strategy_service.py`)
+## 4. サービスレイヤーと状態管理の改善 (`auto_strategy_service.py`)
 
 ### 現状の課題
 
@@ -215,42 +88,6 @@ API エンドポイントの保守性と拡張性を向上させるため、以�
 3.  **リクエスト毎の DB 接続**: リクエスト毎にデータベース接続を取得・解放するよう、FastAPI の標準的なパターンに変更します。
 
 **期待される効果**: スケーラビリティと堅牢性の向上、コードの簡素化。
-
----
-
-## 11. 遺伝子生成ロジックの改善 (`random_gene_generator.py`)
-
-### 現状の課題
-
-- **複雑な設定処理**: `__init__`が辞書と`GAConfig`オブジェクトの両方を扱えるように作られており、冗長です。
-- **ハードコードされたロジック**: 指標選択の重み、右オペランドの選択確率、リスク管理パラメータの範囲などがすべてハードコードされています。
-- **巨大な条件分岐**: `_generate_threshold_value`内の指標をグループ化するロジックが巨大な`if/elif`ブロックになっており、メンテナンス性に乏しいです。
-
-### 提案
-
-1.  **`GAConfig`への統一**: `__init__`では常に`GAConfig`オブジェクトを受け取るようにし、型安全性を高めます。
-2.  **設定の外部化**: ハードコードされている数値をすべて`GAConfig`に移動し、設定ファイルから一元管理できるようにします。
-3.  **データ駆動へのリファクタリング**: `_generate_threshold_value`のロジックを、指標レジストリに`scale_type`のようなメタデータを追加し、それを参照する形にリファクタリングします。
-
-**期待される効果**: コードの可読性と保守性の向上、遺伝子生成アルゴリズムの柔軟性向上。
-
----
-
-## 12. 遺伝的オペレータの改善 (`crossover.py`, `mutation.py`)
-
-### 現状の課題
-
-- **不確実な交叉ロジック**: `_crossover_risk_management`の実装に、意図が不明確な部分やバグの可能性がある箇所が含まれています。
-- **未実装の突然変異**: `_mutate_conditions`で、文字列ベースの右オペランド（指標名など）を突然変異させるロジックが未実装です。
-- **ハードコードされた制約**: `_mutate_risk_management`で、突然変異後の値を丸める際の範囲がハードコードされています。
-
-### 提案
-
-1.  **交叉ロジックの明確化**: `_crossover_risk_management`のロジックを見直し、より意図が明確な方法（例: 親の値を単純に交換する、など）に修正します。
-2.  **突然変異ロジックの実装**: 未実装の突然変異ロジックを、利用可能な指標リストを考慮して実装します。
-3.  **制約の外部化**: 突然変異におけるパラメータのクランプ（範囲制約）を`GAConfig`で設定可能にします。
-
-**期待される効果**: 遺伝的アルゴリズムの探査能力の向上、オペレータの信頼性と柔軟性の向上。
 
 ---
 

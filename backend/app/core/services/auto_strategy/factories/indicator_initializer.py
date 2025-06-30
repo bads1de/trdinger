@@ -12,6 +12,7 @@ from typing import Dict, Any, Optional
 from ..models.strategy_gene import IndicatorGene
 from .indicator_calculator import IndicatorCalculator
 from app.core.services.indicators.config import indicator_registry
+from app.core.services.indicators.parameter_manager import IndicatorParameterManager
 from app.core.utils.data_utils import convert_to_series
 
 logger = logging.getLogger(__name__)
@@ -28,12 +29,14 @@ class IndicatorInitializer:
     def __init__(self):
         """初期化"""
         self.indicator_calculator = IndicatorCalculator()
+        self.parameter_manager = IndicatorParameterManager()
 
     def calculate_indicator_only(
         self, indicator_type: str, parameters: Dict[str, Any], data: pd.DataFrame
     ) -> tuple:
         """
         指標計算のみを行う（戦略インスタンスへの追加は行わない）
+        パラメータバリデーションを含む
         """
         try:
             resolved_indicator_type = indicator_registry.resolve_indicator_type(
@@ -43,6 +46,17 @@ class IndicatorInitializer:
                 logger.warning(f"未対応の指標タイプ（代替なし）: {indicator_type}")
                 return None, None
             indicator_type = resolved_indicator_type
+
+            # パラメータバリデーション
+            indicator_config = indicator_registry.get_indicator_config(indicator_type)
+            if indicator_config:
+                if not self.parameter_manager.validate_parameters(
+                    indicator_type, parameters, indicator_config
+                ):
+                    logger.error(f"パラメータバリデーション失敗: {indicator_type}")
+                    return None, None
+            else:
+                logger.warning(f"指標設定が見つかりません: {indicator_type}")
 
             close_data = pd.Series(data["close"].values, index=data.index)
             high_data = pd.Series(data["high"].values, index=data.index)
@@ -68,7 +82,7 @@ class IndicatorInitializer:
         self, indicator_gene: IndicatorGene, data, strategy_instance
     ) -> Optional[str]:
         """
-        単一指標の初期化
+        単一指標の初期化（パラメータバリデーション付き）
         """
         try:
             indicator_type = indicator_gene.type
@@ -78,6 +92,17 @@ class IndicatorInitializer:
             indicator_type = indicator_registry.resolve_indicator_type(indicator_type)
             if not indicator_type:
                 return None
+
+            # パラメータバリデーション
+            indicator_config = indicator_registry.get_indicator_config(indicator_type)
+            if indicator_config:
+                if not self.parameter_manager.validate_parameters(
+                    indicator_type, parameters, indicator_config
+                ):
+                    logger.error(f"パラメータバリデーション失敗: {indicator_type}")
+                    return None
+            else:
+                logger.warning(f"指標設定が見つかりません: {indicator_type}")
 
             close_data = convert_to_series(data.Close)
             high_data = convert_to_series(data.High)

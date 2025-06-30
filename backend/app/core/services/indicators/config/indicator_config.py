@@ -11,6 +11,20 @@ from typing import Dict, Any, List, Optional, Union
 from enum import Enum
 import logging
 
+
+class IndicatorScaleType(Enum):
+    """指標のスケールタイプ"""
+
+    OSCILLATOR_0_100 = "oscillator_0_100"  # 0-100スケール（RSI, STOCH等）
+    OSCILLATOR_PLUS_MINUS_100 = "oscillator_plus_minus_100"  # ±100スケール（CCI等）
+    MOMENTUM_ZERO_CENTERED = "momentum_zero_centered"  # ゼロ近辺変動（TRIX, PPO等）
+    PRICE_RATIO = "price_ratio"  # 価格比率（SMA, EMA等）
+    FUNDING_RATE = "funding_rate"  # ファンディングレート
+    OPEN_INTEREST = "open_interest"  # オープンインタレスト
+    VOLUME = "volume"  # 出来高
+    PRICE_ABSOLUTE = "price_absolute"  # 絶対価格
+
+
 logger = logging.getLogger(__name__)
 
 
@@ -58,6 +72,9 @@ class IndicatorConfig:
 
     # 命名設定（後方互換性のため）
     legacy_name_format: Optional[str] = None  # 旧形式の名前フォーマット
+
+    # メタデータ（遺伝子生成用）
+    scale_type: Optional[IndicatorScaleType] = None  # スケールタイプ
 
     def add_parameter(self, param_config: ParameterConfig) -> None:
         """パラメータを追加"""

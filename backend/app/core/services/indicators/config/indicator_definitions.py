@@ -8,8 +8,15 @@ from .indicator_config import (
     IndicatorConfig,
     ParameterConfig,
     IndicatorResultType,
+    IndicatorScaleType,
     indicator_registry,
 )
+
+# アダプター関数のインポート
+from app.core.services.indicators.adapters.trend_adapter import TrendAdapter
+from app.core.services.indicators.adapters.momentum_adapter import MomentumAdapter
+from app.core.services.indicators.adapters.volatility_adapter import VolatilityAdapter
+from app.core.services.indicators.adapters.volume_adapter import VolumeAdapter
 
 
 def setup_momentum_indicators():
@@ -18,9 +25,11 @@ def setup_momentum_indicators():
     # RSI
     rsi_config = IndicatorConfig(
         indicator_name="RSI",
+        adapter_function=MomentumAdapter.rsi,
         required_data=["close"],
         result_type=IndicatorResultType.SINGLE,
         legacy_name_format="{indicator}_{period}",
+        scale_type=IndicatorScaleType.OSCILLATOR_0_100,
     )
     rsi_config.add_parameter(
         ParameterConfig(
@@ -108,10 +117,12 @@ def setup_momentum_indicators():
     # MACD (複数値結果の例)
     macd_config = IndicatorConfig(
         indicator_name="MACD",
+        adapter_function=MomentumAdapter.macd,
         required_data=["close"],
         result_type=IndicatorResultType.COMPLEX,
         result_handler="macd_handler",
         legacy_name_format="{indicator}_{fast_period}",
+        scale_type=IndicatorScaleType.MOMENTUM_ZERO_CENTERED,
     )
     macd_config.add_parameter(
         ParameterConfig(
@@ -149,9 +160,11 @@ def setup_trend_indicators():
     # SMA
     sma_config = IndicatorConfig(
         indicator_name="SMA",
+        adapter_function=TrendAdapter.sma,
         required_data=["close"],
         result_type=IndicatorResultType.SINGLE,
         legacy_name_format="{indicator}_{period}",
+        scale_type=IndicatorScaleType.PRICE_RATIO,
     )
     sma_config.add_parameter(
         ParameterConfig(
@@ -167,9 +180,11 @@ def setup_trend_indicators():
     # EMA
     ema_config = IndicatorConfig(
         indicator_name="EMA",
+        adapter_function=TrendAdapter.ema,
         required_data=["close"],
         result_type=IndicatorResultType.SINGLE,
         legacy_name_format="{indicator}_{period}",
+        scale_type=IndicatorScaleType.PRICE_RATIO,
     )
     ema_config.add_parameter(
         ParameterConfig(
@@ -189,9 +204,11 @@ def setup_volatility_indicators():
     # ATR
     atr_config = IndicatorConfig(
         indicator_name="ATR",
+        adapter_function=VolatilityAdapter.atr,
         required_data=["high", "low", "close"],
         result_type=IndicatorResultType.SINGLE,
         legacy_name_format="{indicator}_{period}",
+        scale_type=IndicatorScaleType.PRICE_ABSOLUTE,
     )
     atr_config.add_parameter(
         ParameterConfig(
@@ -207,10 +224,12 @@ def setup_volatility_indicators():
     # Bollinger Bands (複数値結果の例)
     bb_config = IndicatorConfig(
         indicator_name="BB",
+        adapter_function=VolatilityAdapter.bollinger_bands,
         required_data=["close"],
         result_type=IndicatorResultType.COMPLEX,
         result_handler="bb_handler",
         legacy_name_format="BB_MIDDLE_{period}",
+        scale_type=IndicatorScaleType.PRICE_RATIO,
     )
     bb_config.add_parameter(
         ParameterConfig(
@@ -239,9 +258,11 @@ def setup_volume_indicators():
     # OBV (パラメータなしの例)
     obv_config = IndicatorConfig(
         indicator_name="OBV",
+        adapter_function=VolumeAdapter.obv,
         required_data=["close", "volume"],
         result_type=IndicatorResultType.SINGLE,
         legacy_name_format="{indicator}",
+        scale_type=IndicatorScaleType.VOLUME,
     )
     indicator_registry.register(obv_config)
 
@@ -279,10 +300,12 @@ def setup_additional_indicators():
     # STOCH (Stochastic Oscillator)
     stoch_config = IndicatorConfig(
         indicator_name="STOCH",
+        adapter_function=MomentumAdapter.stochastic,
         required_data=["high", "low", "close"],
         result_type=IndicatorResultType.COMPLEX,
         result_handler="stoch_handler",
         legacy_name_format="STOCH_{k_period}",
+        scale_type=IndicatorScaleType.OSCILLATOR_0_100,
     )
     stoch_config.add_parameter(
         ParameterConfig(
@@ -316,9 +339,11 @@ def setup_additional_indicators():
     # CCI (Commodity Channel Index)
     cci_config = IndicatorConfig(
         indicator_name="CCI",
+        adapter_function=MomentumAdapter.cci,
         required_data=["high", "low", "close"],
         result_type=IndicatorResultType.SINGLE,
         legacy_name_format="{indicator}_{period}",
+        scale_type=IndicatorScaleType.OSCILLATOR_PLUS_MINUS_100,
     )
     cci_config.add_parameter(
         ParameterConfig(
@@ -334,9 +359,11 @@ def setup_additional_indicators():
     # ADX (Average Directional Index)
     adx_config = IndicatorConfig(
         indicator_name="ADX",
+        adapter_function=MomentumAdapter.adx,
         required_data=["high", "low", "close"],
         result_type=IndicatorResultType.SINGLE,
         legacy_name_format="{indicator}_{period}",
+        scale_type=IndicatorScaleType.OSCILLATOR_0_100,
     )
     adx_config.add_parameter(
         ParameterConfig(

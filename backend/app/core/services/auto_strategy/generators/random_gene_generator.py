@@ -10,7 +10,10 @@ from typing import List, Dict, Any
 import logging
 
 from ..models.strategy_gene import StrategyGene, IndicatorGene, Condition
+from ..models.ga_config import GAConfig
 from ...indicators.constants import ALL_INDICATORS
+from ...indicators.config import indicator_registry
+from ...indicators.config.indicator_config import IndicatorScaleType
 from ..utils.parameter_generators import (
     generate_indicator_parameters,
 )
@@ -26,30 +29,21 @@ class RandomGeneGenerator:
     OI/FRデータソースを含む多様な戦略遺伝子を生成します。
     """
 
-    def __init__(self, config: Dict[str, Any] | None = None):
+    def __init__(self, config: GAConfig):
         """
         初期化
 
         Args:
-            config: 生成設定
+            config: GA設定オブジェクト
         """
-        self.config = config or {}
+        self.config = config
 
-        # GAConfigオブジェクトの場合は辞書として扱えるように変換
-        if hasattr(config, "__dict__") and not hasattr(config, "get"):
-            # GAConfigオブジェクトの場合
-            self.max_indicators = getattr(config, "max_indicators", 5)
-            self.min_indicators = getattr(config, "min_indicators", 1)
-            self.max_conditions = getattr(config, "max_conditions", 3)
-            self.min_conditions = getattr(config, "min_conditions", 1)
-            self.threshold_ranges = getattr(config, "threshold_ranges", {})
-        else:
-            # 辞書の場合
-            self.max_indicators = self.config.get("max_indicators", 5)
-            self.min_indicators = self.config.get("min_indicators", 1)
-            self.max_conditions = self.config.get("max_conditions", 3)
-            self.min_conditions = self.config.get("min_conditions", 1)
-            self.threshold_ranges = self.config.get("threshold_ranges", {})
+        # 設定値を取得（型安全）
+        self.max_indicators = config.max_indicators
+        self.min_indicators = config.gene_generation.min_indicators
+        self.max_conditions = config.gene_generation.max_conditions
+        self.min_conditions = config.gene_generation.min_conditions
+        self.threshold_ranges = config.threshold_ranges
 
         # 利用可能な指標タイプ（共通定数から取得）
         self.available_indicators = ALL_INDICATORS.copy()
@@ -220,13 +214,16 @@ class RandomGeneGenerator:
 
         # 基本データソースを追加（価格データ）
         basic_sources = ["close", "open", "high", "low"]
-        choices.extend(basic_sources * 3)  # 価格データの重みを増やす
+        choices.extend(basic_sources * self.config.gene_generation.price_data_weight)
 
         # 出来高データを追加（重みを調整）
-        choices.append("volume")
+        choices.extend(["volume"] * self.config.gene_generation.volume_data_weight)
 
         # OI/FRデータソースを追加（重みを抑制）
-        choices.extend(["OpenInterest", "FundingRate"])
+        choices.extend(
+            ["OpenInterest", "FundingRate"]
+            * self.config.gene_generation.oi_fr_data_weight
+        )
 
         return random.choice(choices) if choices else "close"
 
@@ -237,8 +234,8 @@ class RandomGeneGenerator:
 
         グループ化システムを使用して、互換性の高いオペランドを優先的に選択します。
         """
-        # 80%の確率で数値を使用（スケール不一致問題を回避）
-        if random.random() < 0.8:
+        # 設定された確率で数値を使用（スケール不一致問題を回避）
+        if random.random() < self.config.gene_generation.numeric_threshold_probability:
             return self._generate_threshold_value(left_operand, condition_type)
 
         # 20%の確率で別の指標またはデータソースを使用
@@ -250,7 +247,9 @@ class RandomGeneGenerator:
             compatibility = operand_grouping_system.get_compatibility_score(
                 left_operand, compatible_operand
             )
-            if compatibility < 0.8:  # 厳密な互換性チェック
+            if (
+                compatibility < self.config.gene_generation.min_compatibility_score
+            ):  # 設定された互換性チェック
                 logger.debug(
                     f"互換性が低いため数値にフォールバック: {left_operand} vs {compatible_operand} (互換性: {compatibility:.2f})"
                 )
@@ -283,9 +282,11 @@ class RandomGeneGenerator:
         # OI/FRデータソースを追加
         available_operands.extend(["OpenInterest", "FundingRate"])
 
-        # 厳密な互換性チェック（0.9以上のみ許可）
+        # 厳密な互換性チェック（設定値以上のみ許可）
         strict_compatible = operand_grouping_system.get_compatible_operands(
-            left_operand, available_operands, min_compatibility=0.9
+            left_operand,
+            available_operands,
+            min_compatibility=self.config.gene_generation.strict_compatibility_score,
         )
 
         if strict_compatible:
@@ -294,7 +295,9 @@ class RandomGeneGenerator:
 
         # 厳密な互換性がない場合は高い互換性から選択
         high_compatible = operand_grouping_system.get_compatible_operands(
-            left_operand, available_operands, min_compatibility=0.8
+            left_operand,
+            available_operands,
+            min_compatibility=self.config.gene_generation.min_compatibility_score,
         )
 
         if high_compatible:
@@ -313,59 +316,77 @@ class RandomGeneGenerator:
         return "close"
 
     def _generate_threshold_value(self, operand: str, condition_type: str) -> float:
-        """オペランドの型に応じて、GAConfigで設定された閾値を生成"""
+        """オペランドの型に応じて、データ駆動で閾値を生成"""
 
-        # グループ1: 0-100スケールのオシレーター
-        if any(
-            op in operand
-            for op in [
-                "RSI",
-                "STOCH",
-                "ULTOSC",
-                "DX",
-                "ADXR",
-                "STOCHF",
-                "PLUS_DI",
-                "MINUS_DI",
-            ]
-        ):
-            range_ = self.threshold_ranges.get("oscillator_0_100", [20, 80])
-            return random.uniform(range_[0], range_[1])
+        # 特殊なデータソースの処理
+        if "FundingRate" in operand:
+            range_ = self.threshold_ranges.get("funding_rate", [0.0001, 0.001])
+            return (
+                random.choice(range_)
+                if isinstance(range_, list) and len(range_) > 2
+                else random.uniform(range_[0], range_[1])
+            )
 
-        # グループ2: ±100スケールのオシレーター
-        elif any(op in operand for op in ["CCI", "CMO", "AROONOSC"]):
-            range_ = self.threshold_ranges.get("oscillator_plus_minus_100", [-100, 100])
-            return random.uniform(range_[0], range_[1])
-
-        # グループ3: ゼロ近辺で変動する変化率/モメンタム指標
-        elif any(
-            op in operand
-            for op in ["TRIX", "PPO", "MOM", "BOP", "APO", "EMV", "ROCP", "ROCR"]
-        ):
-            range_ = self.threshold_ranges.get("momentum_zero_centered", [-0.5, 0.5])
-            return random.uniform(range_[0], range_[1])
-
-        # グループ4: Funding Rate
-        elif "FundingRate" in operand:
-            range_ = self.threshold_ranges["funding_rate"]
-            return random.uniform(range_[0], range_[1])
-
-        # グループ5: Open Interest
         elif "OpenInterest" in operand:
-            range_ = self.threshold_ranges["open_interest"]
+            range_ = self.threshold_ranges.get("open_interest", [1000000, 50000000])
+            return (
+                random.choice(range_)
+                if isinstance(range_, list) and len(range_) > 2
+                else random.uniform(range_[0], range_[1])
+            )
+
+        elif operand in ["volume"]:
+            range_ = self.threshold_ranges.get("volume", [1000, 100000])
             return random.uniform(range_[0], range_[1])
 
-        # 上記以外 (価格ベースの指標)
-        else:
-            range_ = self.threshold_ranges.get("price_ratio", [0.95, 1.05])
-            return random.uniform(range_[0], range_[1])
+        # 指標レジストリからスケールタイプを取得
+        indicator_config = indicator_registry.get_indicator_config(operand)
+        if indicator_config and indicator_config.scale_type:
+            scale_type = indicator_config.scale_type
+
+            # スケールタイプに基づく閾値生成
+            if scale_type == IndicatorScaleType.OSCILLATOR_0_100:
+                range_ = self.threshold_ranges.get("oscillator_0_100", [20, 80])
+                return random.uniform(range_[0], range_[1])
+
+            elif scale_type == IndicatorScaleType.OSCILLATOR_PLUS_MINUS_100:
+                range_ = self.threshold_ranges.get(
+                    "oscillator_plus_minus_100", [-100, 100]
+                )
+                return random.uniform(range_[0], range_[1])
+
+            elif scale_type == IndicatorScaleType.MOMENTUM_ZERO_CENTERED:
+                range_ = self.threshold_ranges.get(
+                    "momentum_zero_centered", [-0.5, 0.5]
+                )
+                return random.uniform(range_[0], range_[1])
+
+            elif scale_type == IndicatorScaleType.PRICE_RATIO:
+                range_ = self.threshold_ranges.get("price_ratio", [0.95, 1.05])
+                return random.uniform(range_[0], range_[1])
+
+            elif scale_type == IndicatorScaleType.PRICE_ABSOLUTE:
+                range_ = self.threshold_ranges.get("price_ratio", [0.95, 1.05])
+                return random.uniform(range_[0], range_[1])
+
+            elif scale_type == IndicatorScaleType.VOLUME:
+                range_ = self.threshold_ranges.get("volume", [1000, 100000])
+                return random.uniform(range_[0], range_[1])
+
+        # フォールバック: 価格ベースの指標として扱う
+        range_ = self.threshold_ranges.get("price_ratio", [0.95, 1.05])
+        return random.uniform(range_[0], range_[1])
 
     def _generate_risk_management(self) -> Dict[str, float]:
-        """リスク管理設定を生成"""
+        """リスク管理設定を生成（設定値から範囲を取得）"""
         return {
-            "stop_loss": random.uniform(0.02, 0.05),  # 2-5%
-            "take_profit": random.uniform(0.01, 0.15),  # 1-15%
-            "position_size": random.uniform(0.1, 0.5),  # 10-50%
+            "stop_loss": random.uniform(*self.config.gene_generation.stop_loss_range),
+            "take_profit": random.uniform(
+                *self.config.gene_generation.take_profit_range
+            ),
+            "position_size": random.uniform(
+                *self.config.gene_generation.position_size_range
+            ),
         }
 
     def _generate_fallback_condition(self, condition_type: str) -> Condition:
