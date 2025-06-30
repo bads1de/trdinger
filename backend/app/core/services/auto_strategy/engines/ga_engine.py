@@ -36,7 +36,10 @@ class GeneticAlgorithmEngine:
     """
 
     def __init__(
-        self, backtest_service: BacktestService, strategy_factory: StrategyFactory
+        self,
+        backtest_service: BacktestService,
+        strategy_factory: StrategyFactory,
+        gene_generator: RandomGeneGenerator,
     ):
         """
         初期化
@@ -52,7 +55,7 @@ class GeneticAlgorithmEngine:
         self.is_running = False
 
         # 分離されたコンポーネント
-        self.gene_generator = RandomGeneGenerator()
+        self.gene_generator = gene_generator
         self.fitness_calculator = FitnessCalculator(backtest_service, strategy_factory)
         self.deap_configurator = DEAPConfigurator(self.gene_generator)
         self.evolution_operators = EvolutionOperators()
@@ -102,7 +105,7 @@ class GeneticAlgorithmEngine:
             self.progress_manager.set_current_generation(0)
 
             # バックテスト設定を保存
-            logger.info(f"GA実行開始時のバックテスト設定: {backtest_config}")
+            logger.debug(f"GA実行開始時のバックテスト設定: {backtest_config}")
 
             # 評価環境固定化: GA実行開始時に一度だけバックテスト設定を決定
             if backtest_config:
@@ -112,7 +115,7 @@ class GeneticAlgorithmEngine:
                         backtest_config
                     )
                 )
-                logger.info(f"固定化された評価環境: {self._fixed_backtest_config}")
+                logger.debug(f"固定化された評価環境: {self._fixed_backtest_config}")
             else:
                 self._fixed_backtest_config = None
                 logger.info(
