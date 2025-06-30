@@ -87,8 +87,10 @@ class BybitFundingRateService(BybitService):
             全期間のファンディングレート履歴データのリスト
         """
         normalized_symbol = self.normalize_symbol(symbol)
-        latest_timestamp = await self._get_latest_funding_rate_timestamp(
-            normalized_symbol
+        latest_timestamp = await self._get_latest_timestamp_from_db(
+            repository_class=FundingRateRepository,
+            get_timestamp_method_name="get_latest_funding_timestamp",
+            symbol=normalized_symbol,
         )
         return await self._fetch_paginated_data(
             fetch_func=self.exchange.fetch_funding_rate_history,
@@ -97,28 +99,6 @@ class BybitFundingRateService(BybitService):
             max_pages=50,
             latest_existing_timestamp=latest_timestamp,
         )
-
-    async def _get_latest_funding_rate_timestamp(self, symbol: str) -> Optional[int]:
-        """
-        データベースから最新のファンディングレートタイムスタンプを取得
-        """
-
-        async def get_timestamp(db, **kwargs):
-            repo = FundingRateRepository(db)
-            latest_datetime = repo.get_latest_funding_timestamp(symbol)
-            if latest_datetime:
-                return int(latest_datetime.timestamp() * 1000)
-            return None
-
-        try:
-            return await self._execute_with_db_session(
-                func=get_timestamp, repository=None
-            )
-        except Exception as e:
-            logger.error(
-                f"ファンディングレートの最新タイムスタンプ取得中にエラーが発生しました: {e}"
-            )
-            return None
 
     async def fetch_and_save_funding_rate_data(
         self,

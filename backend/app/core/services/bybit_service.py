@@ -270,3 +270,39 @@ class BybitService(ABC):
                 return await func(db=db, **kwargs)
             finally:
                 db.close()
+
+    async def _get_latest_timestamp_from_db(
+        self,
+        repository_class: Any,
+        get_timestamp_method_name: str,
+        symbol: str,
+        **kwargs,
+    ) -> Optional[int]:
+        """
+        データベースから最新のタイムスタンプを汎用的に取得する
+
+        Args:
+            repository_class: リポジトリクラス
+            get_timestamp_method_name: タイムスタンプ取得メソッド名
+            symbol: シンボル
+            **kwargs: タイムスタンプ取得メソッドに渡す追加引数
+
+        Returns:
+            最新のタイムスタンプ（ミリ秒）
+        """
+
+        async def get_timestamp(db, **inner_kwargs):
+            repo = repository_class(db)
+            get_timestamp_method = getattr(repo, get_timestamp_method_name)
+            latest_datetime = get_timestamp_method(symbol, **kwargs)
+            if latest_datetime:
+                return int(latest_datetime.timestamp() * 1000)
+            return None
+
+        try:
+            return await self._execute_with_db_session(
+                func=get_timestamp, repository=None
+            )
+        except Exception as e:
+            logger.error(f"最新タイムスタンプの取得中にエラーが発生しました: {e}")
+            return None

@@ -61,8 +61,10 @@ class BybitOpenInterestService(BybitService):
         全期間のオープンインタレスト履歴を取得
         """
         normalized_symbol = self.normalize_symbol(symbol)
-        latest_timestamp = await self._get_latest_open_interest_timestamp(
-            normalized_symbol
+        latest_timestamp = await self._get_latest_timestamp_from_db(
+            repository_class=OpenInterestRepository,
+            get_timestamp_method_name="get_latest_open_interest_timestamp",
+            symbol=normalized_symbol,
         )
         return await self._fetch_paginated_data(
             fetch_func=self.exchange.fetch_open_interest_history,
@@ -72,28 +74,6 @@ class BybitOpenInterestService(BybitService):
             latest_existing_timestamp=latest_timestamp,
             fetch_kwargs={"params": {"intervalTime": interval}},
         )
-
-    async def _get_latest_open_interest_timestamp(self, symbol: str) -> Optional[int]:
-        """
-        データベースから最新のオープンインタレストタイムスタンプを取得
-        """
-
-        async def get_timestamp(db, **kwargs):
-            repo = OpenInterestRepository(db)
-            latest_datetime = repo.get_latest_open_interest_timestamp(symbol)
-            if latest_datetime:
-                return int(latest_datetime.timestamp() * 1000)
-            return None
-
-        try:
-            return await self._execute_with_db_session(
-                func=get_timestamp, repository=None
-            )
-        except Exception as e:
-            logger.error(
-                f"オープンインタレストの最新タイムスタンプ取得中にエラーが発生しました: {e}"
-            )
-            return None
 
     async def fetch_and_save_open_interest_data(
         self,
