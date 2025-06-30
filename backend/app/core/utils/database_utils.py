@@ -60,18 +60,85 @@ class DatabaseInsertHelper:
     def _sqlite_insert_with_ignore(
         db: Session, model_class: Type, records: List[dict]
     ) -> int:
-        """SQLite用の重複無視挿入"""
+        """SQLite用の重複無視挿入（バッチ処理対応）"""
+        if not records:
+            return 0
+
         inserted_count = 0
-        for record in records:
+        batch_size = 100  # バッチサイズを設定
+        total_records = len(records)
+
+        logger.info(
+            f"SQLite一括挿入開始: {total_records}件のデータを{batch_size}件ずつ処理"
+        )
+
+        # レコードをバッチに分割して処理
+        for i in range(0, total_records, batch_size):
+            batch = records[i : i + batch_size]
+            batch_num = (i // batch_size) + 1
+            total_batches = (total_records + batch_size - 1) // batch_size
+
+            logger.info(f"バッチ {batch_num}/{total_batches}: {len(batch)}件処理中...")
+
             try:
-                obj = model_class(**record)
-                db.add(obj)
-                db.commit()
-                inserted_count += 1
-            except Exception:
-                # 重複エラーの場合はロールバックして続行
+                # バッチ内の各レコードを追加
+                batch_inserted = 0
+                batch_skipped = 0
+
+                for record in batch:
+                    try:
+                        obj = model_class(**record)
+                        db.add(obj)
+                        batch_inserted += 1
+                    except Exception as e:
+                        # 重複エラーなどの場合は該当レコードをスキップ
+                        batch_skipped += 1
+                        logger.debug(f"レコードスキップ: {e}")
+                        continue
+
+                # バッチ単位でコミット
+                try:
+                    if batch_inserted > 0:
+                        db.commit()
+                        inserted_count += batch_inserted
+                        logger.info(
+                            f"バッチ {batch_num}: {batch_inserted}件挿入完了 (スキップ: {batch_skipped}件)"
+                        )
+                    else:
+                        logger.info(
+                            f"バッチ {batch_num}: 新規挿入データなし (スキップ: {batch_skipped}件)"
+                        )
+                except Exception as commit_error:
+                    # コミット時のエラー（重複制約など）
+                    db.rollback()
+                    logger.warning(
+                        f"バッチ {batch_num} コミットエラー、個別処理に切り替え: {commit_error}"
+                    )
+
+                    # 個別処理で重複を回避
+                    individual_inserted = 0
+                    for record in batch:
+                        try:
+                            obj = model_class(**record)
+                            db.add(obj)
+                            db.commit()
+                            individual_inserted += 1
+                        except Exception:
+                            db.rollback()
+                            continue
+
+                    inserted_count += individual_inserted
+                    logger.info(
+                        f"バッチ {batch_num}: 個別処理で {individual_inserted}件挿入完了"
+                    )
+
+            except Exception as e:
+                # バッチ全体でエラーが発生した場合はロールバック
                 db.rollback()
+                logger.warning(f"バッチ {batch_num} でエラー発生、ロールバック: {e}")
                 continue
+
+        logger.info(f"SQLite一括挿入完了: {inserted_count}/{total_records}件挿入")
         return inserted_count
 
     @staticmethod

@@ -143,7 +143,22 @@ class BybitFundingRateService(BybitService):
         """
         ファンディングレートデータをデータベースに保存（内部メソッド）
         """
+        logger.info(
+            f"FRデータのDB保存開始: {len(funding_history)}件のデータを変換中..."
+        )
+
+        # データ変換
         records = FundingRateDataConverter.ccxt_to_db_format(
             funding_history, self.normalize_symbol(symbol)
         )
-        return repository.insert_funding_rate_data(records)
+
+        logger.info(f"データ変換完了: {len(records)}件のレコードをDB挿入開始...")
+
+        # データベース挿入（タイムアウト対応）
+        try:
+            inserted_count = repository.insert_funding_rate_data(records)
+            logger.info(f"FRデータのDB保存完了: {inserted_count}件挿入")
+            return inserted_count
+        except Exception as e:
+            logger.error(f"FRデータのDB保存エラー: {e}")
+            raise
