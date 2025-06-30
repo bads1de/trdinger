@@ -195,22 +195,95 @@ class IndicatorConfigRegistry:
 
     def __init__(self):
         self._configs: Dict[str, IndicatorConfig] = {}
+        # フォールバックマッピングをレジストリ内に定義
+        self._fallback_indicators = self._setup_fallback_indicators()
+
+    def _setup_fallback_indicators(self) -> Dict[str, str]:
+        """未対応指標の代替指標マッピングを設定（オートストラテジー用）"""
+        return {
+            "WMA": "SMA",
+            "HMA": "EMA",
+            "KAMA": "EMA",
+            "TEMA": "EMA",
+            "DEMA": "EMA",
+            "T3": "EMA",
+            "MAMA": "EMA",
+            "ZLEMA": "EMA",
+            "MIDPOINT": "SMA",
+            "MIDPRICE": "SMA",
+            "TRIMA": "SMA",
+            "VWMA": "SMA",
+            "STOCHRSI": "RSI",
+            "STOCHF": "STOCH",
+            "WILLR": "CCI",
+            "MOMENTUM": "RSI",
+            "MOM": "RSI",
+            "ROC": "RSI",
+            "ROCP": "RSI",
+            "ROCR": "RSI",
+            "AROON": "ADX",
+            "AROONOSC": "ADX",
+            "MFI": "RSI",
+            "CMO": "RSI",
+            "TRIX": "RSI",
+            "ULTOSC": "RSI",
+            "BOP": "RSI",
+            "APO": "MACD",
+            "PPO": "MACD",
+            "DX": "ADX",
+            "ADXR": "ADX",
+            "PLUS_DI": "ADX",
+            "MINUS_DI": "ADX",
+            "NATR": "ATR",
+            "TRANGE": "ATR",
+            "KELTNER": "BB",
+            "STDDEV": "ATR",
+            "DONCHIAN": "BB",
+            "AD": "OBV",
+            "ADOSC": "OBV",
+            "VWAP": "OBV",
+            "PVT": "OBV",
+            "EMV": "OBV",
+            "AVGPRICE": "SMA",
+            "MEDPRICE": "SMA",
+            "TYPPRICE": "SMA",
+            "WCLPRICE": "SMA",
+            "PSAR": "SMA",
+        }
 
     def register(self, config: IndicatorConfig) -> None:
         """設定を登録"""
         self._configs[config.indicator_name] = config
 
-    def get(self, indicator_name: str) -> Optional[IndicatorConfig]:
-        """設定を取得"""
+    def get_indicator_config(self, indicator_name: str) -> Optional[IndicatorConfig]:
+        """設定を取得 (get をリネーム)"""
         return self._configs.get(indicator_name)
 
     def list_indicators(self) -> List[str]:
         """登録されているインジケーター名のリストを取得"""
         return list(self._configs.keys())
 
+    def get_supported_indicator_names(self) -> List[str]:
+        """サポートされている指標の名前のリストを取得 (新規追加)"""
+        return list(self._configs.keys())
+
+    def is_indicator_supported(self, indicator_name: str) -> bool:
+        """指標が直接サポートされているかチェック (新規追加)"""
+        return indicator_name in self._configs
+
+    def resolve_indicator_type(self, indicator_type: str) -> Optional[str]:
+        """指標タイプを解決し、未対応の場合は代替指標を返す (新規追加)"""
+        if indicator_type in self._configs:
+            return indicator_type
+        elif indicator_type in self._fallback_indicators:
+            fallback_type = self._fallback_indicators[indicator_type]
+            logger.info(f"未対応指標 {indicator_type} を {fallback_type} で代替")
+            return fallback_type
+        return None
+
     def generate_json_name(self, indicator_name: str) -> str:
         """JSON形式の名前を生成"""
-        config = self.get(indicator_name)
+        config = self.get_indicator_config(indicator_name)
         if config:
             return config.generate_json_name()
 
@@ -221,7 +294,7 @@ class IndicatorConfigRegistry:
         self, indicator_name: str, parameters: Dict[str, Any]
     ) -> str:
         """レガシー形式の名前を生成"""
-        config = self.get(indicator_name)
+        config = self.get_indicator_config(indicator_name)
         if config:
             return config.generate_legacy_name(parameters)
 
