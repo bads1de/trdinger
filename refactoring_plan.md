@@ -8,64 +8,15 @@
 
 以下の主要なリファクタリング領域を特定しました。
 
-2.  **指標命名ロジックの統合**
-3.  **冗長なデータ変換の排除**
-4.  **`IndicatorCalculator` の計算ロジックの合理化**
-5.  **`IndicatorCalculator` 内のパラメータハンドリングの洗練** (セクション 4 に統合)
-6.  **OI/FR データソースのハードコードされたフォールバック値の見直し**
-7.  **指標インスタンス作成とパラメータバリデーションの調和**
+1.  **冗長なデータ変換の排除**
+2.  **`IndicatorCalculator` の計算ロジックの合理化**
+3.  **`IndicatorCalculator` 内のパラメータハンドリングの洗練** (セクション 2 に統合)
+4.  **OI/FR データソースのハードコードされたフォールバック値の見直し**
+5.  **指標インスタンス作成とパラメータバリデーションの調和**
 
 ---
 
-## 2. 指標命名ロジックの統合
-
-### 現状の課題
-
-指標の命名ロジックは `IndicatorConfig` に集約されつつありますが、まだ完全に一元化されていません。特に、`indicator_initializer.py` ではレガシーな命名ロジックへの依存が残っており、`indicator_calculator.py` では命名に関する冗長なコメントや、`_generate_indicator_name` のような存在しないメソッドへの言及が見られます。
-
-- `backend/app/core/services/auto_strategy/factories/indicator_initializer.py`:
-  - `_get_legacy_indicator_name` メソッドが `indicator_registry.generate_legacy_name` を呼び出していますが、`initialize_indicator` メソッド内で `json_indicator_name = original_type` と直接 `original_type` を使用しており、`IndicatorConfig.generate_json_name` を明示的に呼び出していません。
-  - `_get_final_indicator_name` というメソッドは存在しません。
-- `backend/app/core/services/auto_strategy/factories/indicator_calculator.py`:
-  - `_generate_indicator_name` というメソッドは存在しません。
-  - `_handle_complex_result` メソッドは `config["indicator_config"].generate_json_name()` を使用しており、これは正しいアプローチです。
-- `backend/app/core/services/indicators/adapters/base_adapter.py`:
-  - `_generate_indicator_name` および `_generate_legacy_name` というメソッドは存在しません。
-- `backend/app/core/services/indicators/config/indicator_config.py`:
-  - `IndicatorConfig.generate_json_name` と `IndicatorConfig.generate_legacy_name` が定義されており、命名ロジックのハブとして機能しています。
-
-これにより、以下の問題が発生しています。
-
-- **一貫性の欠如**: `initialize_indicator` での `json_indicator_name` の生成方法が `IndicatorConfig` の意図と完全に一致していない可能性があります。
-- **コードの混乱**: 存在しないメソッドへの言及がコードベースに残っており、可読性を損ねています。
-
-### 提案
-
-指標の命名ロジックを `IndicatorConfig` クラス（または関連するコンフィグレーションモジュール）に完全に一元化し、`IndicatorConfig.generate_json_name` を全ての新しい命名の標準とすることを提案します。
-
-**変更案の概要:**
-
-1.  **`indicator_initializer.py` の修正**:
-    - `initialize_indicator` メソッド内で `json_indicator_name` を生成する際に、`indicator_gene.get_json_config().generate_json_name()` または `indicator_registry.generate_json_name(original_type)` を明示的に呼び出すように変更します。
-    - `_get_final_indicator_name` への言及があれば削除します（現状では存在しないため、このステップは不要かもしれません）。
-2.  **`indicator_calculator.py` の修正**:
-    - `_generate_indicator_name` への言及があれば削除します（現状では存在しないため、このステップは不要かもしれません）。
-    - `_handle_complex_result` は既に `config["indicator_config"].generate_json_name()` を使用しているため、変更は不要です。
-3.  **`base_adapter.py` から命名ロジックを削除**:
-    - `_generate_indicator_name` と `_generate_legacy_name` への言及があれば削除します（現状では存在しないため、このステップは不要かもしれません）。
-4.  **`StrategyGene` の `get_legacy_name` の見直し**:
-    - `StrategyGene.get_legacy_name` が `IndicatorConfig.generate_legacy_name` を利用していることを確認し、非推奨コメントの通り将来的な削除を検討します。
-
-**期待される効果:**
-
-- **単一責任の原則**: 命名ロジックの責務が `IndicatorConfig` に完全に集約され、コードの品質が向上します。
-- **一貫した命名**: 全ての指標名生成が一元化されるため、命名規則の一貫性が保証されます。
-- **保守性の向上**: 命名規則の変更が容易になり、新しい指標の追加もスムーズになります。
-- **コードの簡素化**: 冗長な命名ロジックや存在しないメソッドへの言及が排除され、コードベースがクリーンになります。
-
----
-
-## 3. 冗長なデータ変換の排除
+## 1. 冗長なデータ変換の排除
 
 ### 現状の課題
 
@@ -107,7 +58,7 @@
 
 ---
 
-## 4. `IndicatorCalculator` の計算ロジックの合理化
+## 2. `IndicatorCalculator` の計算ロジックの合理化
 
 ### 現状の課題
 
@@ -158,7 +109,7 @@
 
 ---
 
-## 6. OI/FR データソースのハードコードされたフォールバック値の見直し
+## 3. OI/FR データソースのハードコードされたフォールバック値の見直し
 
 ### 現状の課題
 
@@ -190,7 +141,7 @@ Funding Rate と Open Interest の閾値生成ロジックを `GAConfig` の `th
 
 ---
 
-## 7. 指標インスタンス作成とパラメータバリデーションの調和
+## 4. 指標インスタンス作成とパラメータバリデーションの調和
 
 ### 現状の課題
 

@@ -149,8 +149,10 @@ class IndicatorInitializer:
             )
 
             if result is not None and indicator_name is not None:
-                # JSON形式の指標名を使用（パラメータなし）
-                json_indicator_name = original_type
+                # JSON形式の指標名を使用（IndicatorConfigから一元的に生成）
+                json_indicator_name = indicator_registry.generate_json_name(
+                    original_type
+                )
 
                 # 指標値の処理（辞書形式の指標に対応）
                 if isinstance(result, dict):
