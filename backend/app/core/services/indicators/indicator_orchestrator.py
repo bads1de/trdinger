@@ -5,7 +5,8 @@
 """
 
 import logging
-from typing import List, Dict, Any, Optional
+import pandas as pd
+from typing import List, Dict, Any, Optional, Union
 
 
 from .trend_indicators import get_trend_indicator, TREND_INDICATORS_INFO
@@ -149,6 +150,54 @@ class TechnicalIndicatorService:
                 f"{indicator_type}でサポートされていない期間です: {period}. "
                 f"サポート対象: {self.supported_indicators[indicator_type]['periods']}"
             )
+
+    def calculate_indicator(
+        self, df: pd.DataFrame, indicator_type: str, **kwargs
+    ) -> Union[pd.Series, pd.DataFrame, Dict]:
+        """
+        同期的にテクニカル指標を計算（strategies/indicators.py用）
+
+        Args:
+            df: OHLCVデータのDataFrame
+            indicator_type: 指標タイプ
+            **kwargs: 指標固有のパラメータ
+
+        Returns:
+            計算結果（Series、DataFrame、または辞書）
+
+        Raises:
+            ValueError: サポートされていない指標タイプの場合
+        """
+        try:
+            # 指標タイプの正規化
+            indicator_type = indicator_type.upper()
+
+            # 指標インスタンスの取得と計算
+            if indicator_type in self.indicator_categories["trend"]:
+                indicator = get_trend_indicator(indicator_type)
+            elif indicator_type in self.indicator_categories["momentum"]:
+                indicator = get_momentum_indicator(indicator_type)
+            elif indicator_type in self.indicator_categories["volatility"]:
+                indicator = get_volatility_indicator(indicator_type)
+            elif indicator_type in self.indicator_categories["volume"]:
+                indicator = get_volume_indicator(indicator_type)
+            elif indicator_type in self.indicator_categories["price_transform"]:
+                indicator = get_price_transform_indicator(indicator_type)
+            else:
+                # その他の指標を試行
+                try:
+                    indicator = get_other_indicator(indicator_type)
+                except ValueError:
+                    raise ValueError(
+                        f"サポートされていない指標タイプ: {indicator_type}"
+                    )
+
+            # インジケーター計算を実行
+            return indicator.calculate(df, **kwargs)
+
+        except Exception as e:
+            logger.error(f"指標計算エラー ({indicator_type}): {e}")
+            raise
 
     async def calculate_technical_indicator(
         self,

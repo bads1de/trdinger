@@ -6,12 +6,11 @@
 
 import random
 import logging
-from typing import Dict, Any, Optional, Union
+from typing import Dict, Any, Union
 from dataclasses import dataclass
 
 from app.core.services.indicators.config.indicator_config import (
     IndicatorConfig,
-    ParameterConfig,
 )
 
 logger = logging.getLogger(__name__)
@@ -203,18 +202,34 @@ class IndicatorParameterManager:
         signal_config = config.parameters.get("signal_period")
 
         if fast_config and slow_config:
-            # fast_period < slow_periodを保証
-            fast_period = random.randint(
-                int(fast_config.min_value), int(fast_config.max_value)
-            )
-            # slow_periodはfast_periodより大きくなるように調整
-            slow_min = max(int(slow_config.min_value), fast_period + 1)
-            slow_max = int(slow_config.max_value)
+            if (
+                fast_config.min_value is not None
+                and fast_config.max_value is not None
+                and slow_config.min_value is not None
+                and slow_config.max_value is not None
+            ):
+                # fast_period < slow_periodを保証
+                fast_period = random.randint(
+                    int(fast_config.min_value), int(fast_config.max_value)
+                )
+                # slow_periodはfast_periodより大きくなるように調整
+                slow_min = max(int(slow_config.min_value), fast_period + 1)
+                slow_max = int(slow_config.max_value)
 
-            if slow_min <= slow_max:
-                slow_period = random.randint(slow_min, slow_max)
+                if slow_min <= slow_max:
+                    slow_period = random.randint(slow_min, slow_max)
+                else:
+                    # 調整できない場合はデフォルト値を使用
+                    self.logger.warning(
+                        "Could not generate slow_period > fast_period for MACD, falling back to defaults."
+                    )
+                    fast_period = int(fast_config.default_value)
+                    slow_period = int(slow_config.default_value)
             else:
-                # 調整できない場合はデフォルト値を使用
+                # 範囲が定義されていない場合はデフォルト値を使用
+                self.logger.warning(
+                    "MACD fast/slow period range not fully defined, using default values."
+                )
                 fast_period = int(fast_config.default_value)
                 slow_period = int(slow_config.default_value)
 
@@ -222,8 +237,26 @@ class IndicatorParameterManager:
             params["slow_period"] = slow_period
 
         if signal_config:
-            params["signal_period"] = random.randint(
-                int(signal_config.min_value), int(signal_config.max_value)
+            if (
+                signal_config.min_value is not None
+                and signal_config.max_value is not None
+            ):
+                params["signal_period"] = random.randint(
+                    int(signal_config.min_value), int(signal_config.max_value)
+                )
+            else:
+                self.logger.warning(
+                    "MACD signal_period range not defined, using default value."
+                )
+                params["signal_period"] = int(signal_config.default_value)
+
+        # すべてのパラメータが生成されたか確認
+        if not all(
+            key in params for key in ["fast_period", "slow_period", "signal_period"]
+        ):
+            raise ParameterGenerationError(
+                "Failed to generate all required parameters for MACD. "
+                "Check indicator configuration."
             )
 
         return params

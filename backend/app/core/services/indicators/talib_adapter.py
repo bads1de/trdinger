@@ -765,6 +765,485 @@ class TALibAdapter:
             raise TALibCalculationError(f"TEMA計算失敗: {e}")
 
     @staticmethod
+    def wma(data: pd.Series, period: int) -> pd.Series:
+        """
+        Weighted Moving Average (加重移動平均) を計算
+
+        Args:
+            data: 価格データ（pandas Series）
+            period: 移動平均の期間
+
+        Returns:
+            WMA値のpandas Series
+
+        Raises:
+            TALibCalculationError: 計算エラーの場合
+        """
+        TALibAdapter._validate_input(data, period)
+
+        try:
+            result = TALibAdapter._safe_talib_calculation(
+                talib.WMA, data.values, timeperiod=period
+            )
+
+            return pd.Series(result, index=data.index, name=f"WMA_{period}")
+
+        except TALibCalculationError:
+            raise
+        except Exception as e:
+            logger.error(f"WMA計算でエラー: {e}")
+            raise TALibCalculationError(f"WMA計算失敗: {e}")
+
+    @staticmethod
+    def trima(data: pd.Series, period: int) -> pd.Series:
+        """
+        Triangular Moving Average (三角移動平均) を計算
+
+        Args:
+            data: 価格データ（pandas Series）
+            period: 移動平均の期間
+
+        Returns:
+            TRIMA値のpandas Series
+
+        Raises:
+            TALibCalculationError: 計算エラーの場合
+        """
+        TALibAdapter._validate_input(data, period)
+
+        try:
+            result = TALibAdapter._safe_talib_calculation(
+                talib.TRIMA, data.values, timeperiod=period
+            )
+
+            return pd.Series(result, index=data.index, name=f"TRIMA_{period}")
+
+        except TALibCalculationError:
+            raise
+        except Exception as e:
+            logger.error(f"TRIMA計算でエラー: {e}")
+            raise TALibCalculationError(f"TRIMA計算失敗: {e}")
+
+    @staticmethod
+    def midpoint(data: pd.Series, period: int) -> pd.Series:
+        """
+        MidPoint over period (期間中の中点) を計算
+
+        Args:
+            data: 価格データ（pandas Series）
+            period: 期間
+
+        Returns:
+            MIDPOINT値のpandas Series
+
+        Raises:
+            TALibCalculationError: 計算エラーの場合
+        """
+        TALibAdapter._validate_input(data, period)
+
+        try:
+            result = TALibAdapter._safe_talib_calculation(
+                talib.MIDPOINT, data.values, timeperiod=period
+            )
+
+            return pd.Series(result, index=data.index, name=f"MIDPOINT_{period}")
+
+        except TALibCalculationError:
+            raise
+        except Exception as e:
+            logger.error(f"MIDPOINT計算でエラー: {e}")
+            raise TALibCalculationError(f"MIDPOINT計算失敗: {e}")
+
+    @staticmethod
+    def midprice(high: pd.Series, low: pd.Series, period: int) -> pd.Series:
+        """
+        Midpoint Price over period (期間中の高値と安値の中点価格) を計算
+
+        Args:
+            high: 高値データ（pandas Series）
+            low: 安値データ（pandas Series）
+            period: 期間
+
+        Returns:
+            MIDPRICE値のpandas Series
+
+        Raises:
+            TALibCalculationError: 計算エラーの場合
+        """
+        if not (len(high) == len(low)):
+            raise TALibCalculationError("高値と安値のデータ長が一致しません")
+
+        TALibAdapter._validate_input(high, period)
+
+        try:
+            result = TALibAdapter._safe_talib_calculation(
+                talib.MIDPRICE, high.values, low.values, timeperiod=period
+            )
+
+            return pd.Series(result, index=high.index, name=f"MIDPRICE_{period}")
+
+        except TALibCalculationError:
+            raise
+        except Exception as e:
+            logger.error(f"MIDPRICE計算でエラー: {e}")
+            raise TALibCalculationError(f"MIDPRICE計算失敗: {e}")
+
+    @staticmethod
+    def mama(data: pd.Series, fastlimit: float = 0.5, slowlimit: float = 0.05) -> dict:
+        """
+        MESA Adaptive Moving Average (MAMA) を計算
+
+        Args:
+            data: 価格データ（pandas Series）
+            fastlimit: 高速制限（デフォルト: 0.5）
+            slowlimit: 低速制限（デフォルト: 0.05）
+
+        Returns:
+            MAMA値を含む辞書（mama, fama）
+
+        Raises:
+            TALibCalculationError: 計算エラーの場合
+        """
+        TALibAdapter._validate_input(data, 1)  # 最小期間チェック
+
+        try:
+            mama_result, fama_result = TALibAdapter._safe_talib_calculation(
+                talib.MAMA, data.values, fastlimit=fastlimit, slowlimit=slowlimit
+            )
+
+            return {
+                "mama": pd.Series(mama_result, index=data.index, name="MAMA"),
+                "fama": pd.Series(fama_result, index=data.index, name="FAMA"),
+            }
+
+        except TALibCalculationError:
+            raise
+        except Exception as e:
+            logger.error(f"MAMA計算でエラー: {e}")
+            raise TALibCalculationError(f"MAMA計算失敗: {e}")
+
+    @staticmethod
+    def hma(data: pd.Series, period: int) -> pd.Series:
+        """
+        Hull Moving Average (ハル移動平均) を計算
+
+        HMAはTA-Libに直接実装されていないため、WMAを使用して計算します。
+        HMA = WMA(2*WMA(data, period/2) - WMA(data, period), sqrt(period))
+
+        Args:
+            data: 価格データ（pandas Series）
+            period: 期間
+
+        Returns:
+            HMA値のpandas Series
+
+        Raises:
+            TALibCalculationError: 計算エラーの場合
+        """
+        TALibAdapter._validate_input(data, period)
+
+        try:
+            import math
+
+            # HMA計算のためのWMA計算
+            half_period = max(1, period // 2)
+            sqrt_period = max(1, int(math.sqrt(period)))
+
+            wma_half = TALibAdapter._safe_talib_calculation(
+                talib.WMA, data.values, timeperiod=half_period
+            )
+            wma_full = TALibAdapter._safe_talib_calculation(
+                talib.WMA, data.values, timeperiod=period
+            )
+
+            # 2*WMA(period/2) - WMA(period)
+            diff_data = 2 * wma_half - wma_full
+
+            # 最終的なWMA計算
+            result = TALibAdapter._safe_talib_calculation(
+                talib.WMA, diff_data, timeperiod=sqrt_period
+            )
+
+            return pd.Series(result, index=data.index, name=f"HMA_{period}")
+
+        except TALibCalculationError:
+            raise
+        except Exception as e:
+            logger.error(f"HMA計算でエラー: {e}")
+            raise TALibCalculationError(f"HMA計算失敗: {e}")
+
+    @staticmethod
+    def vwma(data: pd.Series, volume: pd.Series, period: int) -> pd.Series:
+        """
+        Volume Weighted Moving Average (出来高加重移動平均) を計算
+
+        VWMAはTA-Libに直接実装されていないため、手動で計算します。
+
+        Args:
+            data: 価格データ（pandas Series）
+            volume: 出来高データ（pandas Series）
+            period: 期間
+
+        Returns:
+            VWMA値のpandas Series
+
+        Raises:
+            TALibCalculationError: 計算エラーの場合
+        """
+        if not (len(data) == len(volume)):
+            raise TALibCalculationError("価格と出来高のデータ長が一致しません")
+
+        TALibAdapter._validate_input(data, period)
+
+        try:
+            # 価格×出来高の積
+            pv = data * volume
+
+            # 移動平均計算
+            pv_sum = pv.rolling(window=period).sum()
+            volume_sum = volume.rolling(window=period).sum()
+
+            # VWMA = sum(price * volume) / sum(volume)
+            result = pv_sum / volume_sum
+
+            return pd.Series(result, index=data.index, name=f"VWMA_{period}")
+
+        except Exception as e:
+            logger.error(f"VWMA計算でエラー: {e}")
+            raise TALibCalculationError(f"VWMA計算失敗: {e}")
+
+    @staticmethod
+    def zlema(data: pd.Series, period: int) -> pd.Series:
+        """
+        Zero Lag Exponential Moving Average (ゼロラグ指数移動平均) を計算
+
+        ZLEMAはTA-Libに直接実装されていないため、EMAを使用して計算します。
+
+        Args:
+            data: 価格データ（pandas Series）
+            period: 期間
+
+        Returns:
+            ZLEMA値のpandas Series
+
+        Raises:
+            TALibCalculationError: 計算エラーの場合
+        """
+        TALibAdapter._validate_input(data, period)
+
+        try:
+            # ラグ計算
+            lag = (period - 1) // 2
+
+            # ラグ調整されたデータ
+            if lag > 0:
+                adjusted_data = 2 * data - data.shift(lag)
+            else:
+                adjusted_data = data
+
+            # EMA計算
+            result = TALibAdapter._safe_talib_calculation(
+                talib.EMA,
+                adjusted_data.fillna(method="bfill").values,
+                timeperiod=period,
+            )
+
+            return pd.Series(result, index=data.index, name=f"ZLEMA_{period}")
+
+        except TALibCalculationError:
+            raise
+        except Exception as e:
+            logger.error(f"ZLEMA計算でエラー: {e}")
+            raise TALibCalculationError(f"ZLEMA計算失敗: {e}")
+
+    @staticmethod
+    def plus_di(
+        high: pd.Series, low: pd.Series, close: pd.Series, period: int = 14
+    ) -> pd.Series:
+        """
+        Plus Directional Indicator (PLUS_DI) を計算
+
+        Args:
+            high: 高値データ（pandas Series）
+            low: 安値データ（pandas Series）
+            close: 終値データ（pandas Series）
+            period: 期間（デフォルト: 14）
+
+        Returns:
+            PLUS_DI値のpandas Series
+
+        Raises:
+            TALibCalculationError: 計算エラーの場合
+        """
+        if not (len(high) == len(low) == len(close)):
+            raise TALibCalculationError("高値、安値、終値のデータ長が一致しません")
+
+        TALibAdapter._validate_input(close, period)
+
+        try:
+            result = TALibAdapter._safe_talib_calculation(
+                talib.PLUS_DI, high.values, low.values, close.values, timeperiod=period
+            )
+
+            return pd.Series(result, index=close.index, name=f"PLUS_DI_{period}")
+
+        except TALibCalculationError:
+            raise
+        except Exception as e:
+            logger.error(f"PLUS_DI計算でエラー: {e}")
+            raise TALibCalculationError(f"PLUS_DI計算失敗: {e}")
+
+    @staticmethod
+    def minus_di(
+        high: pd.Series, low: pd.Series, close: pd.Series, period: int = 14
+    ) -> pd.Series:
+        """
+        Minus Directional Indicator (MINUS_DI) を計算
+
+        Args:
+            high: 高値データ（pandas Series）
+            low: 安値データ（pandas Series）
+            close: 終値データ（pandas Series）
+            period: 期間（デフォルト: 14）
+
+        Returns:
+            MINUS_DI値のpandas Series
+
+        Raises:
+            TALibCalculationError: 計算エラーの場合
+        """
+        if not (len(high) == len(low) == len(close)):
+            raise TALibCalculationError("高値、安値、終値のデータ長が一致しません")
+
+        TALibAdapter._validate_input(close, period)
+
+        try:
+            result = TALibAdapter._safe_talib_calculation(
+                talib.MINUS_DI, high.values, low.values, close.values, timeperiod=period
+            )
+
+            return pd.Series(result, index=close.index, name=f"MINUS_DI_{period}")
+
+        except TALibCalculationError:
+            raise
+        except Exception as e:
+            logger.error(f"MINUS_DI計算でエラー: {e}")
+            raise TALibCalculationError(f"MINUS_DI計算失敗: {e}")
+
+    @staticmethod
+    def rocp(data: pd.Series, period: int = 10) -> pd.Series:
+        """
+        Rate of change Percentage (ROCP) を計算
+
+        Args:
+            data: 価格データ（pandas Series）
+            period: 期間（デフォルト: 10）
+
+        Returns:
+            ROCP値のpandas Series
+
+        Raises:
+            TALibCalculationError: 計算エラーの場合
+        """
+        TALibAdapter._validate_input(data, period)
+
+        try:
+            result = TALibAdapter._safe_talib_calculation(
+                talib.ROCP, data.values, timeperiod=period
+            )
+
+            return pd.Series(result, index=data.index, name=f"ROCP_{period}")
+
+        except TALibCalculationError:
+            raise
+        except Exception as e:
+            logger.error(f"ROCP計算でエラー: {e}")
+            raise TALibCalculationError(f"ROCP計算失敗: {e}")
+
+    @staticmethod
+    def rocr(data: pd.Series, period: int = 10) -> pd.Series:
+        """
+        Rate of change ratio (ROCR) を計算
+
+        Args:
+            data: 価格データ（pandas Series）
+            period: 期間（デフォルト: 10）
+
+        Returns:
+            ROCR値のpandas Series
+
+        Raises:
+            TALibCalculationError: 計算エラーの場合
+        """
+        TALibAdapter._validate_input(data, period)
+
+        try:
+            result = TALibAdapter._safe_talib_calculation(
+                talib.ROCR, data.values, timeperiod=period
+            )
+
+            return pd.Series(result, index=data.index, name=f"ROCR_{period}")
+
+        except TALibCalculationError:
+            raise
+        except Exception as e:
+            logger.error(f"ROCR計算でエラー: {e}")
+            raise TALibCalculationError(f"ROCR計算失敗: {e}")
+
+    @staticmethod
+    def stochf(
+        high: pd.Series,
+        low: pd.Series,
+        close: pd.Series,
+        fastk_period: int = 5,
+        fastd_period: int = 3,
+        fastd_matype: int = 0,
+    ) -> dict:
+        """
+        Stochastic Fast (STOCHF) を計算
+
+        Args:
+            high: 高値データ（pandas Series）
+            low: 安値データ（pandas Series）
+            close: 終値データ（pandas Series）
+            fastk_period: Fast %K期間（デフォルト: 5）
+            fastd_period: Fast %D期間（デフォルト: 3）
+            fastd_matype: Fast %D移動平均タイプ（デフォルト: 0=SMA）
+
+        Returns:
+            STOCHF値を含む辞書（fastk, fastd）
+
+        Raises:
+            TALibCalculationError: 計算エラーの場合
+        """
+        if not (len(high) == len(low) == len(close)):
+            raise TALibCalculationError("高値、安値、終値のデータ長が一致しません")
+
+        TALibAdapter._validate_input(close, max(fastk_period, fastd_period))
+
+        try:
+            fastk, fastd = TALibAdapter._safe_talib_calculation(
+                talib.STOCHF,
+                high.values,
+                low.values,
+                close.values,
+                fastk_period=fastk_period,
+                fastd_period=fastd_period,
+                fastd_matype=fastd_matype,
+            )
+
+            return {
+                "fastk": pd.Series(fastk, index=close.index, name="STOCHF_K"),
+                "fastd": pd.Series(fastd, index=close.index, name="STOCHF_D"),
+            }
+
+        except TALibCalculationError:
+            raise
+        except Exception as e:
+            logger.error(f"STOCHF計算でエラー: {e}")
+            raise TALibCalculationError(f"STOCHF計算失敗: {e}")
+
+    @staticmethod
     def dema(data: pd.Series, period: int = 30) -> pd.Series:
         """
         Double Exponential Moving Average (DEMA) を計算

@@ -9,7 +9,7 @@ from typing import List, Dict, Any, Optional
 import logging
 
 from .abstract_indicator import BaseIndicator
-from .adapters import MomentumAdapter
+from .talib_adapter import TALibAdapter
 
 logger = logging.getLogger(__name__)
 
@@ -31,8 +31,8 @@ class RSIIndicator(BaseIndicator):
         Returns:
             RSI値のSeries
         """
-        # TA-Libを使用した高速計算
-        return MomentumAdapter.rsi(df["close"], period)
+        # TALibAdapterを使用した高速計算
+        return TALibAdapter.rsi(df["close"], period)
 
     def get_description(self) -> str:
         """指標の説明を取得"""
@@ -56,8 +56,8 @@ class StochasticIndicator(BaseIndicator):
         Returns:
             ストキャスティクス値を含むDataFrame（%K, %D）
         """
-        # TA-Libを使用した高速計算
-        stoch_result = MomentumAdapter.stochastic(
+        # TALibAdapterを使用した高速計算
+        stoch_result = TALibAdapter.stochastic(
             df["high"], df["low"], df["close"], k_period=period, d_period=3
         )
 
@@ -129,8 +129,8 @@ class CCIIndicator(BaseIndicator):
         Returns:
             CCI値のSeries
         """
-        # TA-Libを使用した高速計算
-        return MomentumAdapter.cci(df["high"], df["low"], df["close"], period)
+        # TALibAdapterを使用した高速計算
+        return TALibAdapter.cci(df["high"], df["low"], df["close"], period)
 
     def get_description(self) -> str:
         """指標の説明を取得"""
@@ -154,8 +154,8 @@ class WilliamsRIndicator(BaseIndicator):
         Returns:
             Williams %R値のSeries
         """
-        # TA-Libを使用した高速計算
-        return MomentumAdapter.williams_r(df["high"], df["low"], df["close"], period)
+        # TALibAdapterを使用した高速計算
+        return TALibAdapter.williams_r(df["high"], df["low"], df["close"], period)
 
     def get_description(self) -> str:
         """指標の説明を取得"""
@@ -179,8 +179,8 @@ class MomentumIndicator(BaseIndicator):
         Returns:
             モメンタム値のSeries
         """
-        # TA-Libを使用した高速計算
-        return MomentumAdapter.momentum(df["close"], period)
+        # TALibAdapterを使用した高速計算
+        return TALibAdapter.momentum(df["close"], period)
 
     def get_description(self) -> str:
         """指標の説明を取得"""
@@ -204,8 +204,8 @@ class ROCIndicator(BaseIndicator):
         Returns:
             ROC値のSeries
         """
-        # TA-Libを使用した高速計算
-        return MomentumAdapter.roc(df["close"], period)
+        # TALibAdapterを使用した高速計算
+        return TALibAdapter.roc(df["close"], period)
 
     def get_description(self) -> str:
         """指標の説明を取得"""
@@ -229,8 +229,8 @@ class ADXIndicator(BaseIndicator):
         Returns:
             ADX値のSeries（0-100の範囲）
         """
-        # TA-Libを使用した高速計算
-        return MomentumAdapter.adx(df["high"], df["low"], df["close"], period)
+        # TALibAdapterを使用した高速計算
+        return TALibAdapter.adx(df["high"], df["low"], df["close"], period)
 
     def get_description(self) -> str:
         """指標の説明を取得"""
@@ -254,8 +254,8 @@ class AroonIndicator(BaseIndicator):
         Returns:
             Aroon値を含むDataFrame（aroon_down, aroon_up）
         """
-        # TA-Libを使用した高速計算
-        aroon_result = MomentumAdapter.aroon(df["high"], df["low"], period)
+        # TALibAdapterを使用した高速計算
+        aroon_result = TALibAdapter.aroon(df["high"], df["low"], period)
 
         # DataFrameに変換して返す
         result = pd.DataFrame(
@@ -329,8 +329,8 @@ class MFIIndicator(BaseIndicator):
         if "volume" not in df.columns:
             raise ValueError("MFI計算には出来高データが必要です")
 
-        # TA-Libを使用した高速計算
-        return MomentumAdapter.mfi(
+        # TALibAdapterを使用した高速計算
+        return TALibAdapter.mfi(
             df["high"], df["low"], df["close"], df["volume"], period
         )
 
@@ -366,8 +366,8 @@ class StochasticRSIIndicator(BaseIndicator):
         fastk_period = kwargs.get("fastk_period", 3)
         fastd_period = kwargs.get("fastd_period", 3)
 
-        # MomentumAdapterを使用したStochastic RSI計算
-        return MomentumAdapter.stochastic_rsi(
+        # TALibAdapterを使用したStochastic RSI計算
+        return TALibAdapter.stochastic_rsi(
             df["close"], period, fastk_period, fastd_period
         )
 
@@ -403,8 +403,8 @@ class UltimateOscillatorIndicator(BaseIndicator):
         period2 = kwargs.get("period2", period * 2)
         period3 = kwargs.get("period3", period * 4)
 
-        # MomentumAdapterを使用したUltimate Oscillator計算
-        return MomentumAdapter.ultimate_oscillator(
+        # TALibAdapterを使用したUltimate Oscillator計算
+        return TALibAdapter.ultimate_oscillator(
             df["high"], df["low"], df["close"], period, period2, period3
         )
 
@@ -433,8 +433,8 @@ class CMOIndicator(BaseIndicator):
         Raises:
             TALibCalculationError: TA-Lib計算エラーの場合
         """
-        # MomentumAdapterを使用したCMO計算
-        return MomentumAdapter.cmo(df["close"], period)
+        # TALibAdapterを使用したCMO計算
+        return TALibAdapter.cmo(df["close"], period)
 
     def get_description(self) -> str:
         """指標の説明を取得"""
@@ -463,8 +463,8 @@ class TRIXIndicator(BaseIndicator):
         Raises:
             TALibCalculationError: TA-Lib計算エラーの場合
         """
-        # MomentumAdapterを使用したTRIX計算
-        return MomentumAdapter.trix(df["close"], period)
+        # TALibAdapterを使用したTRIX計算
+        return TALibAdapter.trix(df["close"], period)
 
     def get_description(self) -> str:
         """指標の説明を取得"""
@@ -498,8 +498,8 @@ class BOPIndicator(BaseIndicator):
             if col not in df.columns:
                 raise ValueError(f"BOP計算には{col}データが必要です")
 
-        # MomentumAdapterを使用したBOP計算
-        return MomentumAdapter.bop(df["open"], df["high"], df["low"], df["close"])
+        # TALibAdapterを使用したBOP計算
+        return TALibAdapter.bop(df["open"], df["high"], df["low"], df["close"])
 
     def get_description(self) -> str:
         """指標の説明を取得"""
@@ -533,8 +533,8 @@ class APOIndicator(BaseIndicator):
         slow_period = kwargs.get("slow_period", period * 2)
         matype = kwargs.get("matype", 0)
 
-        # MomentumAdapterを使用したAPO計算
-        return MomentumAdapter.apo(df["close"], period, slow_period, matype)
+        # TALibAdapterを使用したAPO計算
+        return TALibAdapter.apo(df["close"], period, slow_period, matype)
 
     def get_description(self) -> str:
         """指標の説明を取得"""
@@ -568,8 +568,8 @@ class PPOIndicator(BaseIndicator):
         slow_period = kwargs.get("slow_period", period * 2)
         matype = kwargs.get("matype", 0)
 
-        # MomentumAdapterを使用したPPO計算
-        return MomentumAdapter.ppo(df["close"], period, slow_period, matype)
+        # TALibAdapterを使用したPPO計算
+        return TALibAdapter.ppo(df["close"], period, slow_period, matype)
 
     def get_description(self) -> str:
         """指標の説明を取得"""
@@ -603,8 +603,8 @@ class AROONOSCIndicator(BaseIndicator):
             if col not in df.columns:
                 raise ValueError(f"AROONOSC計算には{col}データが必要です")
 
-        # MomentumAdapterを使用したAROONOSC計算
-        return MomentumAdapter.aroonosc(df["high"], df["low"], period)
+        # TALibAdapterを使用したAROONOSC計算
+        return TALibAdapter.aroonosc(df["high"], df["low"], period)
 
     def get_description(self) -> str:
         """指標の説明を取得"""
@@ -638,8 +638,8 @@ class DXIndicator(BaseIndicator):
             if col not in df.columns:
                 raise ValueError(f"DX計算には{col}データが必要です")
 
-        # MomentumAdapterを使用したDX計算
-        return MomentumAdapter.dx(df["high"], df["low"], df["close"], period)
+        # TALibAdapterを使用したDX計算
+        return TALibAdapter.dx(df["high"], df["low"], df["close"], period)
 
     def get_description(self) -> str:
         """指標の説明を取得"""
@@ -673,8 +673,8 @@ class ADXRIndicator(BaseIndicator):
             if col not in df.columns:
                 raise ValueError(f"ADXR計算には{col}データが必要です")
 
-        # MomentumAdapterを使用したADXR計算
-        return MomentumAdapter.adxr(df["high"], df["low"], df["close"], period)
+        # TALibAdapterを使用したADXR計算
+        return TALibAdapter.adxr(df["high"], df["low"], df["close"], period)
 
     def get_description(self) -> str:
         """指標の説明を取得"""
@@ -710,8 +710,8 @@ class PLUSDIIndicator(BaseIndicator):
         ):
             raise ValueError("PLUS_DI計算には高値・安値・終値データが必要です")
 
-        # MomentumAdapterを使用したPLUS_DI計算
-        return MomentumAdapter.plus_di(df["high"], df["low"], df["close"], period)
+        # TALibAdapterを使用したPLUS_DI計算
+        return TALibAdapter.plus_di(df["high"], df["low"], df["close"], period)
 
     def get_description(self) -> str:
         """指標の説明を取得"""
@@ -747,8 +747,8 @@ class MINUSDIIndicator(BaseIndicator):
         ):
             raise ValueError("MINUS_DI計算には高値・安値・終値データが必要です")
 
-        # MomentumAdapterを使用したMINUS_DI計算
-        return MomentumAdapter.minus_di(df["high"], df["low"], df["close"], period)
+        # TALibAdapterを使用したMINUS_DI計算
+        return TALibAdapter.minus_di(df["high"], df["low"], df["close"], period)
 
     def get_description(self) -> str:
         """指標の説明を取得"""
@@ -775,8 +775,8 @@ class ROCPIndicator(BaseIndicator):
         Raises:
             TALibCalculationError: TA-Lib計算エラーの場合
         """
-        # MomentumAdapterを使用したROCP計算
-        return MomentumAdapter.rocp(df["close"], period)
+        # TALibAdapterを使用したROCP計算
+        return TALibAdapter.rocp(df["close"], period)
 
     def get_description(self) -> str:
         """指標の説明を取得"""
@@ -803,8 +803,8 @@ class ROCRIndicator(BaseIndicator):
         Raises:
             TALibCalculationError: TA-Lib計算エラーの場合
         """
-        # MomentumAdapterを使用したROCR計算
-        return MomentumAdapter.rocr(df["close"], period)
+        # TALibAdapterを使用したROCR計算
+        return TALibAdapter.rocr(df["close"], period)
 
     def get_description(self) -> str:
         """指標の説明を取得"""
@@ -847,8 +847,8 @@ class STOCHFIndicator(BaseIndicator):
         fastd_period = kwargs.get("fastd_period", 3)
         fastd_matype = kwargs.get("fastd_matype", 0)
 
-        # MomentumAdapterを使用したSTOCHF計算
-        return MomentumAdapter.stochf(
+        # TALibAdapterを使用したSTOCHF計算
+        return TALibAdapter.stochf(
             df["high"], df["low"], df["close"], period, fastd_period, fastd_matype
         )
 

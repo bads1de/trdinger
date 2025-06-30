@@ -9,7 +9,7 @@ from typing import List, Dict, Any, Optional
 import logging
 
 from .abstract_indicator import BaseIndicator
-from .adapters import VolatilityAdapter
+from .talib_adapter import TALibAdapter
 
 logger = logging.getLogger(__name__)
 
@@ -31,8 +31,8 @@ class BollingerBandsIndicator(BaseIndicator):
         Returns:
             ボリンジャーバンド値を含むDataFrame（middle, upper, lower）
         """
-        # TA-Libを使用した高速計算
-        bb_result = VolatilityAdapter.bollinger_bands(
+        # TALibAdapterを使用した高速計算
+        bb_result = TALibAdapter.bollinger_bands(
             df["close"], period=period, std_dev=2.0
         )
 
@@ -119,8 +119,8 @@ class ATRIndicator(BaseIndicator):
         Returns:
             ATR値のSeries
         """
-        # TA-Libを使用した高速計算
-        return VolatilityAdapter.atr(df["high"], df["low"], df["close"], period)
+        # TALibAdapterを使用した高速計算
+        return TALibAdapter.atr(df["high"], df["low"], df["close"], period)
 
     def get_description(self) -> str:
         """指標の説明を取得"""
@@ -144,8 +144,8 @@ class NATRIndicator(BaseIndicator):
         Returns:
             NATR値のSeries（パーセンテージ）
         """
-        # TA-Libを使用した高速計算
-        return VolatilityAdapter.natr(df["high"], df["low"], df["close"], period)
+        # TALibAdapterを使用した高速計算
+        return TALibAdapter.natr(df["high"], df["low"], df["close"], period)
 
     def get_description(self) -> str:
         """指標の説明を取得"""
@@ -171,8 +171,8 @@ class TRANGEIndicator(BaseIndicator):
         Returns:
             True Range値のSeries
         """
-        # TA-Libを使用した高速計算
-        return VolatilityAdapter.trange(df["high"], df["low"], df["close"])
+        # TALibAdapterを使用した高速計算
+        return TALibAdapter.trange(df["high"], df["low"], df["close"])
 
     def get_description(self) -> str:
         """指標の説明を取得"""
@@ -204,8 +204,8 @@ class KeltnerChannelsIndicator(BaseIndicator):
         # multiplierパラメータの取得
         multiplier = kwargs.get("multiplier", 2.0)
 
-        # VolatilityAdapterを使用したKeltner Channels計算
-        return VolatilityAdapter.keltner_channels(
+        # TALibAdapterを使用したKeltner Channels計算
+        return TALibAdapter.keltner_channels(
             df["high"], df["low"], df["close"], period, multiplier
         )
 
@@ -241,8 +241,8 @@ class STDDEVIndicator(BaseIndicator):
         # パラメータの取得
         nbdev = kwargs.get("nbdev", 1.0)
 
-        # VolatilityAdapterを使用したSTDDEV計算
-        return VolatilityAdapter.stddev(df["close"], period, nbdev)
+        # TALibAdapterを使用したSTDDEV計算
+        return TALibAdapter.stddev(df["close"], period, nbdev)
 
     def get_description(self) -> str:
         """指標の説明を取得"""
@@ -269,8 +269,8 @@ class DonchianChannelsIndicator(BaseIndicator):
         Raises:
             TALibCalculationError: TA-Lib計算エラーの場合
         """
-        # VolatilityAdapterを使用したDonchian Channels計算
-        return VolatilityAdapter.donchian_channels(df["high"], df["low"], period)
+        # TALibAdapterを使用したDonchian Channels計算
+        return TALibAdapter.donchian_channels(df["high"], df["low"], period)
 
     def get_description(self) -> str:
         """指標の説明を取得"""
@@ -294,7 +294,7 @@ class VARIndicator(BaseIndicator):
         Returns:
             VAR値のSeries
         """
-        return VolatilityAdapter.var(df["close"], period)
+        return TALibAdapter.var(df["close"], period)
 
     def get_description(self) -> str:
         """指標の説明を取得"""
@@ -319,7 +319,7 @@ class BETAIndicator(BaseIndicator):
             BETA値のSeries
         """
         # BETAは通常、市場指数との相関を計算するが、ここでは簡易版として高値と安値の関係を使用
-        return VolatilityAdapter.beta(df["high"], df["low"], period)
+        return TALibAdapter.beta(df["high"], df["low"], period)
 
     def get_description(self) -> str:
         """指標の説明を取得"""
@@ -344,7 +344,7 @@ class CORRELIndicator(BaseIndicator):
             CORREL値のSeries
         """
         # 高値と安値の相関係数を計算
-        return VolatilityAdapter.correl(df["high"], df["low"], period)
+        return TALibAdapter.correl(df["high"], df["low"], period)
 
     def get_description(self) -> str:
         """指標の説明を取得"""

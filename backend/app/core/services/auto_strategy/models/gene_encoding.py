@@ -345,11 +345,9 @@ class GeneEncoder:
         """
         指標タイプに応じたパラメータを生成
 
-        新しいIndicatorParameterManagerシステムを使用し、
-        フォールバックとして従来のロジックを保持します。
+        IndicatorParameterManagerシステムを使用した統一されたパラメータ生成。
         """
         try:
-            # 新しいシステムを試行
             from app.core.services.indicators.config.indicator_config import (
                 indicator_registry,
             )
@@ -357,74 +355,17 @@ class GeneEncoder:
                 IndicatorParameterManager,
             )
 
-            config = indicator_registry.get_config(indicator_type)
+            config = indicator_registry.get_indicator_config(indicator_type)
             if config:
                 manager = IndicatorParameterManager()
                 return manager.generate_parameters(indicator_type, config)
-
-        except Exception as e:
-            logger.debug(
-                f"新システムでの生成に失敗、フォールバックを使用: {indicator_type}, {e}"
-            )
-
-        # フォールバック: 従来のロジック（param_valを使用した正規化）
-        try:
-            # 基本的な期間パラメータ
-            if indicator_type in [
-                "SMA",
-                "EMA",
-                "RSI",
-                "ATR",
-                "CCI",
-                "WILLIAMS",
-                "MFI",
-                "MOMENTUM",
-                "ROC",
-            ]:
-                period = self._denormalize_parameter(param_val, min_val=5, max_val=50)
-                return {"period": period}
-
-            # 複数パラメータを持つ指標
-            elif indicator_type == "MACD":
-                fast_period = self._denormalize_parameter(
-                    param_val, min_val=5, max_val=20
-                )
-                slow_period = fast_period + self._denormalize_parameter(
-                    param_val, min_val=5, max_val=15
-                )
-                signal_period = self._denormalize_parameter(
-                    param_val, min_val=5, max_val=15
-                )
-                return {
-                    "fast_period": fast_period,
-                    "slow_period": slow_period,
-                    "signal_period": signal_period,
-                }
-
-            elif indicator_type == "BB":
-                period = self._denormalize_parameter(param_val, min_val=10, max_val=30)
-                std_dev = 1.5 + param_val * 1.0  # 1.5-2.5
-                return {"period": period, "std_dev": std_dev}
-
-            elif indicator_type == "STOCH":
-                k_period = self._denormalize_parameter(param_val, min_val=5, max_val=20)
-                d_period = self._denormalize_parameter(param_val, min_val=3, max_val=10)
-                return {"k_period": k_period, "d_period": d_period}
-
-            elif indicator_type == "MAMA":
-                # MAMA指標のパラメータ
-                fast_limit = 0.2 + param_val * 0.3  # 0.2-0.5の範囲
-                slow_limit = 0.01 + param_val * 0.09  # 0.01-0.1の範囲
-                return {"fast_limit": fast_limit, "slow_limit": slow_limit}
-
             else:
-                # デフォルト（期間のみ）
-                period = self._denormalize_parameter(param_val, min_val=5, max_val=50)
-                return {"period": period}
+                logger.warning(f"指標 {indicator_type} の設定が見つかりません")
+                return {}
 
         except Exception as e:
-            logger.error(f"指標パラメータ生成エラー: {e}")
-            return {"period": 20}  # デフォルト値
+            logger.error(f"指標 {indicator_type} のパラメータ生成に失敗: {e}")
+            return {}
 
     def _generate_indicator_specific_conditions(self, indicator, indicator_name):
         """指標に応じた条件を生成"""

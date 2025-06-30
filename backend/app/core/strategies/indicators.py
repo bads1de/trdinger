@@ -7,10 +7,10 @@ backtesting.pyで使用するテクニカル指標を定義します。
 
 import pandas as pd
 import numpy as np
-from typing import Union, List
+from typing import Union, List, cast
 import logging
 
-from ..services.indicators.talib_adapter import TALibAdapter
+from ..services.indicators.indicator_orchestrator import TechnicalIndicatorService
 from ..utils.data_utils import ensure_series
 
 logger = logging.getLogger(__name__)
@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 
 def SMA(data: Union[pd.Series, List, np.ndarray], period: int) -> pd.Series:
     """
-    Simple Moving Average (単純移動平均) - TA-Lib使用
+    Simple Moving Average (単純移動平均) - IndicatorOrchestrator使用
 
     Args:
         data: 価格データ（通常はClose価格）
@@ -31,12 +31,19 @@ def SMA(data: Union[pd.Series, List, np.ndarray], period: int) -> pd.Series:
         ImportError: TA-Libが利用できない場合
         TALibCalculationError: TA-Lib計算エラーの場合
     """
-    return TALibAdapter.sma(ensure_series(data), period)
+    orchestrator = TechnicalIndicatorService()
+    data_series = ensure_series(data)
+
+    # DataFrameに変換（IndicatorOrchestratorはDataFrameを期待）
+    df = pd.DataFrame({"close": data_series})
+
+    result = orchestrator.calculate_indicator(df, indicator_type="SMA", period=period)
+    return cast(pd.Series, result)
 
 
 def EMA(data: Union[pd.Series, List, np.ndarray], period: int) -> pd.Series:
     """
-    Exponential Moving Average (指数移動平均) - TA-Lib使用
+    Exponential Moving Average (指数移動平均) - IndicatorOrchestrator使用
 
     Args:
         data: 価格データ（通常はClose価格）
@@ -49,12 +56,19 @@ def EMA(data: Union[pd.Series, List, np.ndarray], period: int) -> pd.Series:
         ImportError: TA-Libが利用できない場合
         TALibCalculationError: TA-Lib計算エラーの場合
     """
-    return TALibAdapter.ema(ensure_series(data), period)
+    orchestrator = TechnicalIndicatorService()
+    data_series = ensure_series(data)
+
+    # DataFrameに変換（IndicatorOrchestratorはDataFrameを期待）
+    df = pd.DataFrame({"close": data_series})
+
+    result = orchestrator.calculate_indicator(df, indicator_type="EMA", period=period)
+    return cast(pd.Series, result)
 
 
 def RSI(data: Union[pd.Series, List, np.ndarray], period: int = 14) -> pd.Series:
     """
-    Relative Strength Index (相対力指数) - TA-Lib使用
+    Relative Strength Index (相対力指数) - IndicatorOrchestrator使用
 
     Args:
         data: 価格データ（通常はClose価格）
@@ -67,7 +81,14 @@ def RSI(data: Union[pd.Series, List, np.ndarray], period: int = 14) -> pd.Series
         ImportError: TA-Libが利用できない場合
         TALibCalculationError: TA-Lib計算エラーの場合
     """
-    return TALibAdapter.rsi(ensure_series(data), period)
+    orchestrator = TechnicalIndicatorService()
+    data_series = ensure_series(data)
+
+    # DataFrameに変換（IndicatorOrchestratorはDataFrameを期待）
+    df = pd.DataFrame({"close": data_series})
+
+    result = orchestrator.calculate_indicator(df, indicator_type="RSI", period=period)
+    return cast(pd.Series, result)
 
 
 def MACD(
@@ -92,9 +113,19 @@ def MACD(
         ImportError: TA-Libが利用できない場合
         TALibCalculationError: TA-Lib計算エラーの場合
     """
-    # TA-LibでMACDを計算（辞書で返される）
-    macd_result = TALibAdapter.macd(
-        ensure_series(data), fast_period, slow_period, signal_period
+    orchestrator = TechnicalIndicatorService()
+    data_series = ensure_series(data)
+
+    # DataFrameに変換（IndicatorOrchestratorはDataFrameを期待）
+    df = pd.DataFrame({"close": data_series})
+
+    # IndicatorOrchestratorでMACDを計算（辞書で返される）
+    macd_result = orchestrator.calculate_indicator(
+        df,
+        indicator_type="MACD",
+        fast_period=fast_period,
+        slow_period=slow_period,
+        signal_period=signal_period,
     )
 
     # 既存のAPIに合わせてtupleで返す
@@ -123,8 +154,16 @@ def BollingerBands(
         ImportError: TA-Libが利用できない場合
         TALibCalculationError: TA-Lib計算エラーの場合
     """
-    # TA-LibでBollinger Bandsを計算（辞書で返される）
-    bb_result = TALibAdapter.bollinger_bands(ensure_series(data), period, std_dev)
+    orchestrator = TechnicalIndicatorService()
+    data_series = ensure_series(data)
+
+    # DataFrameに変換（IndicatorOrchestratorはDataFrameを期待）
+    df = pd.DataFrame({"close": data_series})
+
+    # IndicatorOrchestratorでBollinger Bandsを計算（DataFrameで返される）
+    bb_result = orchestrator.calculate_indicator(
+        df, indicator_type="BB", period=period, std_dev=std_dev
+    )
 
     # 既存のAPIに合わせてtupleで返す
     return bb_result["upper"], bb_result["middle"], bb_result["lower"]
@@ -154,13 +193,17 @@ def Stochastic(
         ImportError: TA-Libが利用できない場合
         TALibCalculationError: TA-Lib計算エラーの場合
     """
-    # TA-LibでStochasticを計算（辞書で返される）
-    stoch_result = TALibAdapter.stochastic(
-        ensure_series(high),
-        ensure_series(low),
-        ensure_series(close),
-        k_period,
-        d_period,
+    orchestrator = TechnicalIndicatorService()
+    high_series = ensure_series(high)
+    low_series = ensure_series(low)
+    close_series = ensure_series(close)
+
+    # DataFrameに変換（IndicatorOrchestratorはDataFrameを期待）
+    df = pd.DataFrame({"high": high_series, "low": low_series, "close": close_series})
+
+    # IndicatorOrchestratorでStochasticを計算（DataFrameで返される）
+    stoch_result = orchestrator.calculate_indicator(
+        df, indicator_type="STOCH", period=k_period, d_period=d_period
     )
 
     # 既存のAPIに合わせてtupleで返す
@@ -189,9 +232,13 @@ def ATR(
         ImportError: TA-Libが利用できない場合
         TALibCalculationError: TA-Lib計算エラーの場合
     """
-    return TALibAdapter.atr(
-        ensure_series(high),
-        ensure_series(low),
-        ensure_series(close),
-        period,
-    )
+    orchestrator = TechnicalIndicatorService()
+    high_series = ensure_series(high)
+    low_series = ensure_series(low)
+    close_series = ensure_series(close)
+
+    # DataFrameに変換（IndicatorOrchestratorはDataFrameを期待）
+    df = pd.DataFrame({"high": high_series, "low": low_series, "close": close_series})
+
+    result = orchestrator.calculate_indicator(df, indicator_type="ATR", period=period)
+    return cast(pd.Series, result)
