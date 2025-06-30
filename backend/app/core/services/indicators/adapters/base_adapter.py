@@ -7,7 +7,7 @@ TA-Lib アダプター基底クラス
 
 import pandas as pd
 import numpy as np
-from typing import Union, Dict, Any
+from typing import Union
 import logging
 
 from app.core.utils.data_utils import ensure_series, DataConversionError

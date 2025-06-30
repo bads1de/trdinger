@@ -189,14 +189,14 @@ class BacktestDataService:
                     logger.warning(
                         f"シンボル {symbol} のOpen Interestデータが見つかりませんでした。"
                     )
-                    df["OpenInterest"] = 0.0  # デフォルト値
+                    df["OpenInterest"] = pd.NA  # プレースホルダーとしてNAを設定
             except Exception as e:
                 logger.warning(
                     f"Open Interestデータのマージ中にエラーが発生しました: {e}"
                 )
-                df["OpenInterest"] = 0.0  # デフォルト値
+                df["OpenInterest"] = pd.NA
         else:
-            df["OpenInterest"] = 0.0  # リポジトリが無い場合のデフォルト値
+            df["OpenInterest"] = pd.NA
 
         # Funding Rateデータをマージ
         if self.fr_repo:
@@ -218,14 +218,20 @@ class BacktestDataService:
                     logger.warning(
                         f"シンボル {symbol} のFunding Rateデータが見つかりませんでした。"
                     )
-                    df["FundingRate"] = 0.0  # デフォルト値
+                    df["FundingRate"] = pd.NA
             except Exception as e:
                 logger.warning(
                     f"Funding Rateデータのマージ中にエラーが発生しました: {e}"
                 )
-                df["FundingRate"] = 0.0  # デフォルト値
+                df["FundingRate"] = pd.NA
         else:
-            df["FundingRate"] = 0.0  # リポジトリが無い場合のデフォルト値
+            df["FundingRate"] = pd.NA
+
+        # 欠損値を前方データで埋め、それでも残る場合は0で埋める
+        if "OpenInterest" in df.columns:
+            df["OpenInterest"] = df["OpenInterest"].ffill().fillna(0.0)
+        if "FundingRate" in df.columns:
+            df["FundingRate"] = df["FundingRate"].ffill().fillna(0.0)
 
         return df
 
@@ -319,17 +325,16 @@ class BacktestDataService:
             if not pd.api.types.is_numeric_dtype(df[col]):
                 raise ValueError(f"カラム {col} は数値型である必要があります。")
 
-        # NaN値のチェック（OI/FRは0で埋められているはずなので、NaNがあれば問題）
+        # NaN値のチェック
         if df.isnull().any().any():
-            logger.warning("DataFrameにNaN値が含まれています。デフォルト値で埋めます。")
-            # OI/FRのNaN値を0で埋める
-            df["OpenInterest"] = df["OpenInterest"].fillna(0.0)
-            df["FundingRate"] = df["FundingRate"].fillna(0.0)
-
             # OHLCV部分にNaNがある場合はエラー
             ohlcv_cols = ["Open", "High", "Low", "Close", "Volume"]
             if df[ohlcv_cols].isnull().any().any():
                 raise ValueError("OHLCVデータにNaN値が含まれています。")
+
+            # OI/FRのNaNは既にffill/fillna(0.0)で処理されているはずだが、念のためログ出力
+            if df[["OpenInterest", "FundingRate"]].isnull().any().any():
+                logger.warning("OI/FRデータに予期せぬNaN値が残っています。")
 
     def validate_data_for_strategy(
         self, df: pd.DataFrame, strategy_config: dict

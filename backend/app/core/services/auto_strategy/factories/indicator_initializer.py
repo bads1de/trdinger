@@ -7,7 +7,6 @@ TALibAdapterシステムとの統合を重視した実装です。
 
 import logging
 import pandas as pd
-import numpy as np
 from typing import Dict, Any, Optional
 
 from ..models.strategy_gene import IndicatorGene
