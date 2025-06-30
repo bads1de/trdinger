@@ -11,6 +11,7 @@ from typing import Union, List
 import logging
 
 from ..services.indicators.talib_adapter import TALibAdapter
+from ..utils.data_utils import ensure_series
 
 logger = logging.getLogger(__name__)
 
@@ -30,7 +31,7 @@ def SMA(data: Union[pd.Series, List, np.ndarray], period: int) -> pd.Series:
         ImportError: TA-Libが利用できない場合
         TALibCalculationError: TA-Lib計算エラーの場合
     """
-    return TALibAdapter.sma(TALibAdapter._ensure_series(data), period)
+    return TALibAdapter.sma(ensure_series(data), period)
 
 
 def EMA(data: Union[pd.Series, List, np.ndarray], period: int) -> pd.Series:
@@ -48,7 +49,7 @@ def EMA(data: Union[pd.Series, List, np.ndarray], period: int) -> pd.Series:
         ImportError: TA-Libが利用できない場合
         TALibCalculationError: TA-Lib計算エラーの場合
     """
-    return TALibAdapter.ema(TALibAdapter._ensure_series(data), period)
+    return TALibAdapter.ema(ensure_series(data), period)
 
 
 def RSI(data: Union[pd.Series, List, np.ndarray], period: int = 14) -> pd.Series:
@@ -66,7 +67,7 @@ def RSI(data: Union[pd.Series, List, np.ndarray], period: int = 14) -> pd.Series
         ImportError: TA-Libが利用できない場合
         TALibCalculationError: TA-Lib計算エラーの場合
     """
-    return TALibAdapter.rsi(TALibAdapter._ensure_series(data), period)
+    return TALibAdapter.rsi(ensure_series(data), period)
 
 
 def MACD(
@@ -93,7 +94,7 @@ def MACD(
     """
     # TA-LibでMACDを計算（辞書で返される）
     macd_result = TALibAdapter.macd(
-        TALibAdapter._ensure_series(data), fast_period, slow_period, signal_period
+        ensure_series(data), fast_period, slow_period, signal_period
     )
 
     # 既存のAPIに合わせてtupleで返す
@@ -123,9 +124,7 @@ def BollingerBands(
         TALibCalculationError: TA-Lib計算エラーの場合
     """
     # TA-LibでBollinger Bandsを計算（辞書で返される）
-    bb_result = TALibAdapter.bollinger_bands(
-        TALibAdapter._ensure_series(data), period, std_dev
-    )
+    bb_result = TALibAdapter.bollinger_bands(ensure_series(data), period, std_dev)
 
     # 既存のAPIに合わせてtupleで返す
     return bb_result["upper"], bb_result["middle"], bb_result["lower"]
@@ -157,9 +156,9 @@ def Stochastic(
     """
     # TA-LibでStochasticを計算（辞書で返される）
     stoch_result = TALibAdapter.stochastic(
-        TALibAdapter._ensure_series(high),
-        TALibAdapter._ensure_series(low),
-        TALibAdapter._ensure_series(close),
+        ensure_series(high),
+        ensure_series(low),
+        ensure_series(close),
         k_period,
         d_period,
     )
@@ -191,8 +190,8 @@ def ATR(
         TALibCalculationError: TA-Lib計算エラーの場合
     """
     return TALibAdapter.atr(
-        TALibAdapter._ensure_series(high),
-        TALibAdapter._ensure_series(low),
-        TALibAdapter._ensure_series(close),
+        ensure_series(high),
+        ensure_series(low),
+        ensure_series(close),
         period,
     )

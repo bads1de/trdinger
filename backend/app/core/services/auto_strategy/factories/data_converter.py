@@ -9,6 +9,8 @@ import pandas as pd
 import numpy as np
 from typing import Any
 
+from app.core.utils.data_utils import convert_to_series as utils_convert_to_series
+
 logger = logging.getLogger(__name__)
 
 
@@ -25,7 +27,7 @@ class DataConverter:
 
     def convert_to_series(self, data) -> pd.Series:
         """
-        backtesting.pyの_ArrayをPandas Seriesに変換
+        backtesting.pyの_ArrayをPandas Seriesに変換（data_utilsへの委譲）
 
         Args:
             data: 変換対象のデータ
@@ -33,18 +35,7 @@ class DataConverter:
         Returns:
             Pandas Series
         """
-        try:
-            if hasattr(data, "_data"):
-                return pd.Series(data._data)
-            elif hasattr(data, "values"):
-                return pd.Series(data.values)
-            elif isinstance(data, (list, np.ndarray)):
-                return pd.Series(data)
-            else:
-                return pd.Series(data)
-        except Exception as e:
-            logger.error(f"データ変換エラー: {e}")
-            return pd.Series([])
+        return utils_convert_to_series(data, raise_on_error=False)
 
     def convert_to_backtesting_format(self, data: Any) -> Any:
         """

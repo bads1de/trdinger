@@ -13,6 +13,7 @@ from typing import Dict, Any, Optional
 from ..models.strategy_gene import IndicatorGene
 from .indicator_calculator import IndicatorCalculator
 from app.core.services.indicators.config import indicator_registry
+from app.core.utils.data_utils import convert_to_series
 
 logger = logging.getLogger(__name__)
 
@@ -131,14 +132,12 @@ class IndicatorInitializer:
             if not indicator_type:
                 return None
 
-            close_data = self._convert_to_series(data.Close)
-            high_data = self._convert_to_series(data.High)
-            low_data = self._convert_to_series(data.Low)
-            volume_data = self._convert_to_series(data.Volume)
+            close_data = convert_to_series(data.Close)
+            high_data = convert_to_series(data.High)
+            low_data = convert_to_series(data.Low)
+            volume_data = convert_to_series(data.Volume)
             # open_dataは任意
-            open_data = (
-                self._convert_to_series(data.Open) if hasattr(data, "Open") else None
-            )
+            open_data = convert_to_series(data.Open) if hasattr(data, "Open") else None
 
             result, indicator_name = self.indicator_calculator.calculate_indicator(
                 indicator_type,
@@ -251,21 +250,6 @@ class IndicatorInitializer:
             "_get_final_indicator_name is deprecated, use JSON format instead"
         )
         return self._get_legacy_indicator_name(original_type, parameters)
-
-    def _convert_to_series(self, data) -> pd.Series:
-        """backtesting.pyの_ArrayをPandas Seriesに変換"""
-        try:
-            if hasattr(data, "_data"):
-                return pd.Series(data._data)
-            elif hasattr(data, "values"):
-                return pd.Series(data.values)
-            elif isinstance(data, (list, np.ndarray)):
-                return pd.Series(data)
-            else:
-                return pd.Series(data)
-        except Exception as e:
-            logger.error(f"データ変換エラー: {e}")
-            return pd.Series([])
 
     def get_supported_indicators(self) -> list:
         """サポートされている指標のリストを取得"""

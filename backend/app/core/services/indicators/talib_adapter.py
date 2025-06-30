@@ -12,12 +12,13 @@ import numpy as np
 from typing import Union, Dict
 import logging
 
+from app.core.utils.data_utils import ensure_series, DataConversionError
+
 logger = logging.getLogger(__name__)
 
 
 class TALibCalculationError(Exception):
     """TA-Lib計算エラー"""
-
 
 
 class TALibAdapter:
@@ -49,20 +50,21 @@ class TALibAdapter:
     @staticmethod
     def _ensure_series(data: Union[pd.Series, list, np.ndarray]) -> pd.Series:
         """
-        データをpandas.Seriesに変換
+        データをpandas.Seriesに変換（data_utilsへの委譲）
 
         Args:
             data: 入力データ
 
         Returns:
             pandas.Series
+
+        Raises:
+            TALibCalculationError: サポートされていないデータ型の場合
         """
-        if isinstance(data, pd.Series):
-            return data
-        elif isinstance(data, (list, np.ndarray)):
-            return pd.Series(data)
-        else:
-            raise TALibCalculationError(f"サポートされていないデータ型: {type(data)}")
+        try:
+            return ensure_series(data, raise_on_error=True)
+        except DataConversionError as e:
+            raise TALibCalculationError(str(e))
 
     @staticmethod
     def _safe_talib_calculation(func, *args, **kwargs) -> np.ndarray:

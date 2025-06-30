@@ -19,6 +19,7 @@ from app.core.services.indicators.adapters import (
     VolatilityAdapter,
     VolumeAdapter,
 )
+from app.core.utils.data_utils import ensure_series
 
 
 class TestBaseAdapter:
@@ -83,8 +84,10 @@ class TestBaseAdapter:
 
     def test_ensure_series_with_invalid_type(self):
         """サポートされていないデータ型のテスト"""
+        # 辞書型など、明らかにサポートされていない型を使用
+        invalid_data = {"key": "value"}
         with pytest.raises(TALibCalculationError):
-            BaseAdapter._ensure_series("invalid_type")
+            BaseAdapter._ensure_series(invalid_data)
 
     def test_create_series_result(self):
         """計算結果のSeries変換テスト"""
