@@ -347,13 +347,13 @@ class RandomGeneGenerator:
 
         # グループ4: Funding Rate
         elif "FundingRate" in operand:
-            choices = self.threshold_ranges.get("funding_rate", [0.0001, -0.0001])
-            return random.choice(choices)
+            range_ = self.threshold_ranges["funding_rate"]
+            return random.uniform(range_[0], range_[1])
 
         # グループ5: Open Interest
         elif "OpenInterest" in operand:
-            choices = self.threshold_ranges.get("open_interest", [1000000, 50000000])
-            return random.choice(choices)
+            range_ = self.threshold_ranges["open_interest"]
+            return random.uniform(range_[0], range_[1])
 
         # 上記以外 (価格ベースの指標)
         else:
