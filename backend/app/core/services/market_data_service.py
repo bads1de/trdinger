@@ -12,8 +12,6 @@ from app.core.utils.data_converter import OHLCVDataConverter
 from .bybit_service import BybitService
 
 
-# ログ設定
-logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 

@@ -21,13 +21,6 @@
   - `ParameterManager` にインジケーターのパラメータ生成と検証の責務を集中させる。
   - `StrategyGene` は `ParameterManager` を利用してランダムなインジケーター設定を生成するように変更する。
 
-### 4. ロギング設定の一元化
-
-- **現状:** `market_data_service.py` の冒頭で `logging.basicConfig` が直接呼び出されている。
-- **改善案:**
-  - ロギング設定はアプリケーションのエントリポイント（例: `backend/main.py`）で一度だけ行うように修正する。
-  - 各モジュールからは `logging.getLogger(__name__)` を使用してロガーを取得する。
-
 ### 5. `BacktestDataService` のデータ検証メソッドの整理
 
 - **現状:** `backtest_data_service.py` の `_validate_dataframe` と `_validate_extended_dataframe` が類似した検証ロジックを持っている。
@@ -45,12 +38,6 @@
 - **現状:** `funding_rate_service.py`, `market_data_service.py`, `open_interest_service.py` の `fetch_and_save_..._data` メソッドが共通のパターンを持っている。
 - **改善案:**
   - `bybit_service.py` に、データ取得関数、データ変換関数、リポジトリ、および関連するパラメータを引数として受け取る汎用的な `_fetch_and_save_data_template` メソッドを実装し、各サービスがそれを呼び出すようにする。
-
-### 8. `HistoricalDataService` のエラーハンドリングの一貫性
-
-- **現状:** `HistoricalDataService` のエラーハンドリングが `BybitService` と一貫していない。
-- **改善案:**
-  - `HistoricalDataService` のエラー処理を `BybitService` と同様の例外処理パターンに統一し、より具体的な例外を発生させるように修正する。
 
 ## 今後の進め方
 

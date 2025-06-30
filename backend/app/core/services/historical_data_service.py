@@ -6,7 +6,8 @@
 
 import asyncio
 import logging
-from typing import Dict, Optional
+from typing import Optional
+import ccxt
 
 from app.core.services.market_data_service import BybitMarketDataService
 from database.repositories.ohlcv_repository import OHLCVRepository
@@ -26,12 +27,21 @@ class HistoricalDataService:
         symbol: str = "BTC/USDT",
         timeframe: str = "1h",
         repository: Optional[OHLCVRepository] = None,
-    ) -> Dict:
+    ) -> int:
         """
         指定シンボルの履歴データを包括的に収集
+
+        Returns:
+            保存された件数
+
+        Raises:
+            ValueError: パラメータが無効な場合
+            ccxt.NetworkError: ネットワークエラーの場合
+            ccxt.ExchangeError: 取引所エラーの場合
+            RuntimeError: その他の予期せぬエラー
         """
         if not repository:
-            return {"success": False, "message": "リポジトリが必要です"}
+            raise ValueError("リポジトリが必要です")
 
         try:
             logger.info(f"履歴データ収集開始: {symbol} {timeframe}")
@@ -87,29 +97,46 @@ class HistoricalDataService:
             logger.info(
                 f"履歴データ収集完了: 取得{total_fetched}件, 保存{total_saved}件"
             )
-            return {
-                "success": True,
-                "symbol": symbol,
-                "timeframe": timeframe,
-                "fetched_count": total_fetched,
-                "saved_count": total_saved,
-            }
+            return total_saved
 
+        except ccxt.BadSymbol as e:
+            logger.error(f"無効なシンボルによる履歴データ収集エラー: {symbol} - {e}")
+            raise
+        except ccxt.NetworkError as e:
+            logger.error(f"ネットワークエラーによる履歴データ収集エラー: {e}")
+            raise
+        except ccxt.ExchangeError as e:
+            logger.error(f"取引所エラーによる履歴データ収集エラー: {e}")
+            raise
+        except ValueError as e:
+            logger.error(f"パラメータ検証エラー: {e}")
+            raise
         except Exception as e:
-            logger.error(f"履歴データ収集エラー: {e}")
-            return {"success": False, "message": str(e)}
+            logger.error(f"予期しない履歴データ収集エラー: {e}", exc_info=True)
+            raise RuntimeError(
+                f"履歴データ収集中に予期しないエラーが発生しました: {e}"
+            ) from e
 
     async def collect_incremental_data(
         self,
         symbol: str = "BTC/USDT",
         timeframe: str = "1h",
         repository: Optional[OHLCVRepository] = None,
-    ) -> Dict:
+    ) -> int:
         """
         差分データを収集（最新タイムスタンプ以降）
+
+        Returns:
+            保存された件数
+
+        Raises:
+            ValueError: パラメータが無効な場合
+            ccxt.NetworkError: ネットワークエラーの場合
+            ccxt.ExchangeError: 取引所エラーの場合
+            RuntimeError: その他の予期せぬエラー
         """
         if not repository:
-            return {"success": False, "message": "リポジトリが必要です"}
+            raise ValueError("リポジトリが必要です")
 
         try:
             latest_timestamp = repository.get_latest_timestamp(symbol, timeframe)
@@ -129,23 +156,29 @@ class HistoricalDataService:
             )
 
             if not ohlcv_data:
-                return {
-                    "success": True,
-                    "message": "新しいデータはありません",
-                    "saved_count": 0,
-                }
+                logger.info("新しいデータはありません")
+                return 0
 
             saved_count = await self.market_service._save_ohlcv_to_database(
                 ohlcv_data, symbol, timeframe, repository
             )
             logger.info(f"差分データ収集完了: {saved_count}件保存")
-            return {
-                "success": True,
-                "symbol": symbol,
-                "timeframe": timeframe,
-                "saved_count": saved_count,
-            }
+            return saved_count
 
+        except ccxt.BadSymbol as e:
+            logger.error(f"無効なシンボルによる差分データ収集エラー: {symbol} - {e}")
+            raise
+        except ccxt.NetworkError as e:
+            logger.error(f"ネットワークエラーによる差分データ収集エラー: {e}")
+            raise
+        except ccxt.ExchangeError as e:
+            logger.error(f"取引所エラーによる差分データ収集エラー: {e}")
+            raise
+        except ValueError as e:
+            logger.error(f"パラメータ検証エラー: {e}")
+            raise
         except Exception as e:
-            logger.error(f"差分データ収集エラー: {e}")
-            return {"success": False, "message": str(e)}
+            logger.error(f"予期しない差分データ収集エラー: {e}", exc_info=True)
+            raise RuntimeError(
+                f"差分データ収集中に予期しないエラーが発生しました: {e}"
+            ) from e
