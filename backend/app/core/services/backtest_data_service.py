@@ -265,6 +265,32 @@ class BacktestDataService:
         df.index = pd.DatetimeIndex([r.funding_timestamp for r in fr_data])
         return df
 
+    def _perform_common_validation(
+        self, df: pd.DataFrame, required_columns: List[str]
+    ) -> None:
+        """
+        DataFrameの共通検証を実行
+
+        Args:
+            df: 検証対象のDataFrame
+            required_columns: 必須カラムのリスト
+
+        Raises:
+            ValueError: DataFrameが無効な場合
+        """
+        if df.empty:
+            raise ValueError("DataFrameが空です。")
+
+        # 必要なカラムの存在確認
+        missing_columns = [col for col in required_columns if col not in df.columns]
+        if missing_columns:
+            raise ValueError(f"必須カラムが見つかりません: {missing_columns}")
+
+        # データ型の確認
+        for col in required_columns:
+            if not pd.api.types.is_numeric_dtype(df[col]):
+                raise ValueError(f"カラム {col} は数値型である必要があります。")
+
     def _validate_dataframe(self, df: pd.DataFrame) -> None:
         """
         DataFrameの整合性をチェック
@@ -275,19 +301,8 @@ class BacktestDataService:
         Raises:
             ValueError: DataFrameが無効な場合
         """
-        if df.empty:
-            raise ValueError("DataFrameが空です。")
-
-        # 必要なカラムの存在確認
         required_columns = ["Open", "High", "Low", "Close", "Volume"]
-        missing_columns = [col for col in required_columns if col not in df.columns]
-        if missing_columns:
-            raise ValueError(f"必須カラムが見つかりません: {missing_columns}")
-
-        # データ型の確認
-        for col in required_columns:
-            if not pd.api.types.is_numeric_dtype(df[col]):
-                raise ValueError(f"カラム {col} は数値型である必要があります。")
+        self._perform_common_validation(df, required_columns)
 
         # NaN値のチェック
         if df.isnull().any().any():
@@ -303,10 +318,6 @@ class BacktestDataService:
         Raises:
             ValueError: DataFrameが無効な場合
         """
-        if df.empty:
-            raise ValueError("DataFrameが空です。")
-
-        # 必要なカラムの存在確認（拡張版）
         required_columns = [
             "Open",
             "High",
@@ -316,23 +327,16 @@ class BacktestDataService:
             "OpenInterest",
             "FundingRate",
         ]
-        missing_columns = [col for col in required_columns if col not in df.columns]
-        if missing_columns:
-            raise ValueError(f"必須カラムが見つかりません: {missing_columns}")
-
-        # データ型の確認
-        for col in required_columns:
-            if not pd.api.types.is_numeric_dtype(df[col]):
-                raise ValueError(f"カラム {col} は数値型である必要があります。")
+        self._perform_common_validation(df, required_columns)
 
         # NaN値のチェック
-        if df.isnull().any().any():
-            # OHLCV部分にNaNがある場合はエラー
-            ohlcv_cols = ["Open", "High", "Low", "Close", "Volume"]
-            if df[ohlcv_cols].isnull().any().any():
-                raise ValueError("OHLCVデータにNaN値が含まれています。")
+        # OHLCV部分にNaNがある場合はエラー
+        ohlcv_cols = ["Open", "High", "Low", "Close", "Volume"]
+        if df[ohlcv_cols].isnull().any().any():
+            raise ValueError("OHLCVデータにNaN値が含まれています。")
 
-            # OI/FRのNaNは既にffill/fillna(0.0)で処理されているはずだが、念のためログ出力
+        # OI/FRのNaNは既にffill/fillna(0.0)で処理されているはずだが、念のためログ出力
+        if "OpenInterest" in df.columns and "FundingRate" in df.columns:
             if df[["OpenInterest", "FundingRate"]].isnull().any().any():
                 logger.warning("OI/FRデータに予期せぬNaN値が残っています。")
 
