@@ -3,9 +3,8 @@ CCXT ライブラリを使用してBybit取引所からOHLCVデータを取得�
 リアルタイムの市場データを提供し、エラーハンドリングとデータ検証を含みます。
 """
 
-from typing import List, Optional, Dict, Any
 import logging
-
+from typing import List, Optional, Dict, Any
 from app.config.market_config import MarketDataConfig
 from database.repositories.ohlcv_repository import OHLCVRepository
 from app.core.utils.data_converter import OHLCVDataConverter

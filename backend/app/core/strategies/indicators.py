@@ -5,10 +5,11 @@ backtesting.pyで使用するテクニカル指標を定義します。
 既存のテクニカル指標計算機能と統合可能です。
 """
 
+import logging
 import pandas as pd
 import numpy as np
+
 from typing import Union, List, cast
-import logging
 
 from ..services.indicators.indicator_orchestrator import TechnicalIndicatorService
 from ..utils.data_utils import ensure_series

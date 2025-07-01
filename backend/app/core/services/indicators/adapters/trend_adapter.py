@@ -7,9 +7,9 @@ SMA, EMA, TEMA, DEMA, KAMA, T3 などのトレンド系指標を提供します�
 
 import talib
 import pandas as pd
-from typing import Dict
 import logging
 
+from typing import Dict
 from .base_adapter import BaseAdapter, TALibCalculationError
 
 logger = logging.getLogger(__name__)

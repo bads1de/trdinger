@@ -5,10 +5,10 @@
 RSI, MACD, Stochastic, CCI, Williams %R, ADX, Aroon, MOM, ROC, MFI などを提供します。
 """
 
+import logging
 import talib
 import pandas as pd
 from typing import Dict
-import logging
 
 from .base_adapter import BaseAdapter, TALibCalculationError
 

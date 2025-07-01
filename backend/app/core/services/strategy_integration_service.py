@@ -8,7 +8,6 @@
 import logging
 from typing import Dict, Any, List, Optional, cast
 from sqlalchemy.orm import Session
-
 from database.models import GeneratedStrategy, BacktestResult
 from database.repositories.generated_strategy_repository import (
     GeneratedStrategyRepository,

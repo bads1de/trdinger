@@ -2,10 +2,12 @@
 API共通ユーティリティ
 """
 
+import logging
+
 from fastapi import HTTPException
 from datetime import datetime
 from typing import Any, Dict, Optional, Callable, Awaitable
-import logging
+
 
 logger = logging.getLogger(__name__)
 

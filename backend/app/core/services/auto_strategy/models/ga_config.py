@@ -4,9 +4,10 @@
 GA実行時の各種パラメータを管理します。
 """
 
+import json
+
 from dataclasses import dataclass, field
 from typing import Dict, Any, List, Optional, Callable
-import json
 
 from ...indicators.constants import ALL_INDICATORS
 

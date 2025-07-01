@@ -6,10 +6,12 @@ backtesting.pyの_Arrayオブジェクト、pandas.Series、numpy配列、リス
 相互変換を統一的に処理します。
 """
 
+import logging
+
 import pandas as pd
 import numpy as np
 from typing import Union, Any, Optional
-import logging
+
 
 logger = logging.getLogger(__name__)
 

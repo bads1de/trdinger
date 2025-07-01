@@ -7,9 +7,9 @@ ATR, Bollinger Bands, NATR, TRANGE などのボラティリティ系指標を提
 
 import talib
 import pandas as pd
-from typing import Dict
 import logging
 
+from typing import Dict
 from .base_adapter import BaseAdapter, TALibCalculationError
 
 logger = logging.getLogger(__name__)

@@ -2,9 +2,11 @@
 データ変換処理の共通ユーティリティ
 """
 
+import logging
+
 from typing import List, Dict, Any
 from datetime import datetime, timezone
-import logging
+
 
 logger = logging.getLogger(__name__)
 

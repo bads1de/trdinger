@@ -8,7 +8,6 @@ Bybitオープンインタレストサービス
 import asyncio
 import logging
 from typing import Any, Dict, List, Optional
-
 from database.repositories.open_interest_repository import OpenInterestRepository
 from app.core.utils.data_converter import OpenInterestDataConverter
 from app.core.services.bybit_service import BybitService

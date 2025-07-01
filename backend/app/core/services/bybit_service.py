@@ -11,7 +11,6 @@ import logging
 from datetime import datetime, timezone
 from typing import Dict, List, Any, Optional, Callable
 from abc import ABC
-
 from database.connection import SessionLocal
 
 logger = logging.getLogger(__name__)

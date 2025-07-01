@@ -14,6 +14,9 @@ from .backtest_data_service import BacktestDataService
 from ..strategies.macd_strategy import MACDStrategy
 from database.repositories.ohlcv_repository import OHLCVRepository
 from database.connection import SessionLocal
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class BacktestService:

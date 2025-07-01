@@ -4,12 +4,12 @@
 全てのテクニカル指標クラスの共通機能を提供します。
 """
 
+import logging
 import pandas as pd
 from abc import ABC, abstractmethod
 from typing import List, Dict, Any, Optional, Union, cast
 from database.connection import SessionLocal
 from database.repositories.ohlcv_repository import OHLCVRepository
-import logging
 
 
 logger = logging.getLogger(__name__)

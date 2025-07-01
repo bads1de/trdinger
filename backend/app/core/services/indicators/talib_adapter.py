@@ -6,11 +6,11 @@ pandas SeriesとTA-Lib間のデータ変換、エラーハンドリング、
 後方互換性の確保を担当します。
 """
 
+import logging
 import talib
 import pandas as pd
 import numpy as np
 from typing import Dict
-import logging
 
 
 logger = logging.getLogger(__name__)

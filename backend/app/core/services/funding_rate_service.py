@@ -7,7 +7,6 @@ CCXTライブラリを使用してBybitからファンディングレートデ�
 
 import logging
 from typing import Any, Dict, List, Optional
-
 from database.repositories.funding_rate_repository import FundingRateRepository
 from app.core.utils.data_converter import FundingRateDataConverter
 from app.core.services.bybit_service import BybitService

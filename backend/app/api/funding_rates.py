@@ -4,11 +4,13 @@
 ファンディングレートデータの取得・収集機能を提供するAPIエンドポイント
 """
 
+import logging
+
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from datetime import datetime
 from typing import Optional
-import logging
+
 
 from database.connection import get_db, ensure_db_initialized
 from database.repositories.funding_rate_repository import FundingRateRepository

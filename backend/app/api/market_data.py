@@ -6,10 +6,11 @@
 
 """
 
+import logging
+
 from fastapi import APIRouter, Query, Depends
 from typing import Optional
 from sqlalchemy.orm import Session
-import logging
 
 from app.config.market_config import MarketDataConfig
 from database.connection import get_db

@@ -2,10 +2,11 @@
 データベース操作の共通ユーティリティ
 """
 
+import logging
+
 from typing import List, Type, Optional, Dict, Any
 from sqlalchemy.orm import Session
 from sqlalchemy.dialects.postgresql import insert
-import logging
 from datetime import datetime
 
 logger = logging.getLogger(__name__)

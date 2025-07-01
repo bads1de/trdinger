@@ -4,11 +4,12 @@
 ショーケース戦略とオートストラテジー由来の戦略を統合して提供するAPIエンドポイントです。
 """
 
+import logging
+
 from fastapi import APIRouter, HTTPException, Depends, Query
 from sqlalchemy.orm import Session
 from typing import Dict, Any, Optional
 from pydantic import BaseModel, Field
-import logging
 
 from app.core.services.strategy_integration_service import StrategyIntegrationService
 from database.connection import get_db

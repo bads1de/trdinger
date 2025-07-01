@@ -1,7 +1,8 @@
+import logging
+
 from fastapi import APIRouter, Depends, BackgroundTasks, HTTPException, status
 from typing import Dict, Any, List, Optional
 from pydantic import BaseModel, Field
-import logging
 from functools import lru_cache
 
 from app.core.services.auto_strategy import AutoStrategyService

@@ -5,6 +5,7 @@ backtesting.pyライブラリで使用するためのデータ変換機能を提
 Open Interest (OI) と Funding Rate (FR) データの統合機能を含みます。
 """
 
+import logging
 import pandas as pd
 from datetime import datetime
 from typing import List, Optional
@@ -12,7 +13,7 @@ from database.repositories.ohlcv_repository import OHLCVRepository
 from database.repositories.open_interest_repository import OpenInterestRepository
 from database.repositories.funding_rate_repository import FundingRateRepository
 from database.models import OHLCVData, OpenInterestData, FundingRateData
-import logging
+
 
 logger = logging.getLogger(__name__)
 

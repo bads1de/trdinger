@@ -5,8 +5,9 @@ StrategyGeneから動的にbacktesting.py互換のStrategy継承クラスを生�
 責任を分離し、各機能を専用モジュールに委譲します。
 """
 
-from typing import Type, Tuple
 import logging
+
+from typing import Type, Tuple
 from backtesting import Strategy
 
 from ..models.strategy_gene import StrategyGene, IndicatorGene
@@ -104,11 +105,11 @@ class StrategyFactory:
                             f"  指標 {i+1}: {indicator_gene.type}, enabled={indicator_gene.enabled}"
                         )
                         if indicator_gene.enabled:
-                            print(f"    → 初期化実行中...")
+                            print("    → 初期化実行中...")
                             self._init_indicator(indicator_gene)
-                            print(f"    → 初期化完了")
+                            print("    → 初期化完了")
                         else:
-                            print(f"    → スキップ（無効）")
+                            print("    → スキップ（無効）")
 
                     print(f"🔧 戦略初期化完了: {len(self.indicators)}個の指標")
                     print(f"  登録された指標: {list(self.indicators.keys())}")

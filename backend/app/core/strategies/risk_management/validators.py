@@ -4,8 +4,8 @@
 リスク管理設定の妥当性を検証する機能
 """
 
-from typing import Dict, Any, Optional
 import logging
+from typing import Dict, Any, Optional
 
 logger = logging.getLogger(__name__)
 

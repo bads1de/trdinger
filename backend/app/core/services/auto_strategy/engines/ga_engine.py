@@ -10,14 +10,11 @@ import logging
 from typing import Dict, Any
 from deap import tools
 
-
 from ..models.ga_config import GAConfig
 from ..factories.strategy_factory import StrategyFactory
 from ..generators.random_gene_generator import RandomGeneGenerator
 from app.core.services.backtest_service import BacktestService
 
-
-# 分離されたモジュール
 from .fitness_calculator import FitnessCalculator
 from .deap_configurator import DEAPConfigurator
 from .evolution_operators import EvolutionOperators

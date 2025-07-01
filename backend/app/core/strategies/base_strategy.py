@@ -4,10 +4,11 @@
 backtesting.pyライブラリを使用した戦略の基底クラスを定義します。
 """
 
+import pandas as pd
+
 from backtesting import Strategy
 from abc import ABC, abstractmethod
 from typing import Dict, Any
-import pandas as pd
 
 
 class BaseStrategy(Strategy, ABC):

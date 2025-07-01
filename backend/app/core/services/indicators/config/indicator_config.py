@@ -5,11 +5,11 @@ JSON形式でのインジケーター設定を管理し、
 パラメータ埋め込み文字列からの移行をサポートします。
 """
 
+import logging
 import json
 from dataclasses import dataclass, field, asdict
 from typing import Dict, Any, List, Optional, Union
 from enum import Enum
-import logging
 
 
 class IndicatorScaleType(Enum):

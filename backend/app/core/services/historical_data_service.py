@@ -6,9 +6,8 @@
 
 import asyncio
 import logging
-from typing import Optional
 import ccxt
-
+from typing import Optional
 from app.core.services.market_data_service import BybitMarketDataService
 from database.repositories.ohlcv_repository import OHLCVRepository
 

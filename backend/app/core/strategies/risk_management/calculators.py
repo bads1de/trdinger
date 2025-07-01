@@ -4,8 +4,9 @@
 ストップロス・テイクプロフィット価格の計算ロジック
 """
 
-from typing import Tuple, Optional, Union
 import logging
+
+from typing import Tuple, Optional, Union
 
 logger = logging.getLogger(__name__)
 
