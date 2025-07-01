@@ -233,7 +233,7 @@ class DEAPConfigurator:
                 self._apply_basic_constraints(ind2)
 
                 return result
-            except Exception as e:
+            except Exception:
                 pass
 
         def constrained_mutate(individual):
@@ -246,7 +246,7 @@ class DEAPConfigurator:
                 self._apply_basic_constraints(individual)
 
                 return result
-            except Exception as e:
+            except Exception:
                 pass
 
         # 制約付き演算子で置き換え
@@ -270,7 +270,7 @@ class DEAPConfigurator:
                 elif individual[i] > 1.0:
                     individual[i] = 1.0
 
-        except Exception as e:
+        except Exception:
             pass
 
     def get_logbook(self) -> Optional[tools.Logbook]:

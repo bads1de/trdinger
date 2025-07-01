@@ -38,23 +38,23 @@ class ConditionEvaluator:
             全ての条件を満たす場合True
         """
         try:
-            print(f"    🔍 エントリー条件チェック開始: {len(entry_conditions)}個の条件")
+            # print(f"    🔍 エントリー条件チェック開始: {len(entry_conditions)}個の条件")
 
             for i, condition in enumerate(entry_conditions):
                 result = self.evaluate_condition(condition, strategy_instance)
-                print(
-                    f"      条件{i+1}: {condition.left_operand} {condition.operator} {condition.right_operand} = {result}"
-                )
+                # print(
+                #     f"      条件{i+1}: {condition.left_operand} {condition.operator} {condition.right_operand} = {result}"
+                # )
                 if not result:
-                    print(
-                        f"    ❌ エントリー条件{i+1}が不満足のため、エントリーしません"
-                    )
+                    # print(
+                    #     f"    ❌ エントリー条件{i+1}が不満足のため、エントリーしません"
+                    # )
                     return False
 
-            print(f"    ✅ 全てのエントリー条件を満足")
+            # print(f"    ✅ 全てのエントリー条件を満足")
             return True
         except Exception as e:
-            print(f"    ❌ エントリー条件チェックエラー: {e}")
+            # print(f"    ❌ エントリー条件チェックエラー: {e}")
             logger.error(f"エントリー条件チェックエラー: {e}")
             return False
 
@@ -99,11 +99,11 @@ class ConditionEvaluator:
                 condition.right_operand, strategy_instance
             )
 
-            print(f"        → 左辺値: {condition.left_operand} = {left_value}")
-            print(f"        → 右辺値: {condition.right_operand} = {right_value}")
+            # print(f"        → 左辺値: {condition.left_operand} = {left_value}")
+            # print(f"        → 右辺値: {condition.right_operand} = {right_value}")
 
             if left_value is None or right_value is None:
-                print(f"        → 値がNoneのため条件評価失敗")
+                # print(f"        → 値がNoneのため条件評価失敗")
                 return False
 
             # 演算子に基づく比較
@@ -122,17 +122,17 @@ class ConditionEvaluator:
             elif operator == "!=":
                 result = abs(left_value - right_value) >= 1e-6
             else:
-                print(f"        → 未対応の演算子: {operator}")
+                # print(f"        → 未対応の演算子: {operator}")
                 logger.warning(f"未対応の演算子: {operator}")
                 return False
 
-            print(
-                f"        → 比較結果: {left_value} {operator} {right_value} = {result}"
-            )
+            # print(
+            #     f"        → 比較結果: {left_value} {operator} {right_value} = {result}"
+            # )
             return result
 
         except Exception as e:
-            print(f"        → 条件評価エラー: {e}")
+            # print(f"        → 条件評価エラー: {e}")
             logger.error(f"条件評価エラー: {e}")
             return False
 

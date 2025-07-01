@@ -442,7 +442,6 @@ class GeneEncoder:
             (entry_conditions, exit_conditions)のタプル
         """
         from .strategy_gene import Condition
-        from ..utils.operand_grouping import operand_grouping_system
 
         try:
             # 指標タイプに基づく適切な条件生成

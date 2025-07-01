@@ -14,7 +14,6 @@ from ..models.ga_config import GAConfig
 from ..factories.strategy_factory import StrategyFactory
 from ..utils.data_coverage_analyzer import data_coverage_analyzer
 from app.core.services.backtest_service import BacktestService
-import pandas as pd
 
 
 logger = logging.getLogger(__name__)
@@ -266,7 +265,7 @@ class FitnessCalculator:
 
         # 4. 勝率正規化: 0〜100% を0〜1にマッピング
         #    win_rateは既に小数なのでそのまま
-        normalized_win_rate = metrics.get("win_rate", 0.0) / 100.0
+        normalized_win_rate = win_rate
 
         # 全指標が0の場合はフィットネスを0にする
         if (

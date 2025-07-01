@@ -122,7 +122,7 @@ class RandomGeneGenerator:
                     try:
                         json_config = indicator_gene.get_json_config()
                         indicator_gene.json_config = json_config
-                    except Exception as e:
+                    except Exception:
                         pass  # JSON設定生成エラーのログを削除
 
                     indicators.append(indicator_gene)
