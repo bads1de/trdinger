@@ -164,10 +164,6 @@ class GeneEncoder:
                             )
                         )
 
-                        logger.debug(
-                            f"デコード指標: {indicator_type} (ID: {indicator_id}, 元値: {encoded[idx]:.3f})"
-                        )
-
             # 条件部分をデコード（確実に条件を生成）
             entry_conditions = []
             exit_conditions = []
@@ -230,21 +226,12 @@ class GeneEncoder:
                         )
                     ]
                 else:
-                    # その他の指標
-                    entry_conditions = [
-                        Condition(
-                            left_operand="close",
-                            operator=">",
-                            right_operand=indicator_name,
+                    # その他の指標 - 互換性チェックを含む適切な条件生成
+                    entry_conditions, exit_conditions = (
+                        self._generate_compatible_conditions(
+                            indicator_name, first_indicator.type
                         )
-                    ]
-                    exit_conditions = [
-                        Condition(
-                            left_operand="close",
-                            operator="<",
-                            right_operand=indicator_name,
-                        )
-                    ]
+                    )
 
                 # 複数指標がある場合は追加条件を生成
                 if len(indicators) > 1:
@@ -441,6 +428,114 @@ class GeneEncoder:
             return (
                 [Condition(left_operand="close", operator=">", right_operand="close")],
                 [Condition(left_operand="close", operator="<", right_operand="close")],
+            )
+
+    def _generate_compatible_conditions(self, indicator_name: str, indicator_type: str):
+        """
+        指標タイプに基づいて互換性のある条件を生成
+
+        Args:
+            indicator_name: 指標名
+            indicator_type: 指標タイプ
+
+        Returns:
+            (entry_conditions, exit_conditions)のタプル
+        """
+        from .strategy_gene import Condition
+        from ..utils.operand_grouping import operand_grouping_system
+
+        try:
+            # 指標タイプに基づく適切な条件生成
+            if indicator_type in ["RSI", "STOCH", "ADX"]:
+                # 0-100%オシレーター - 数値閾値を使用
+                entry_conditions = [
+                    Condition(
+                        left_operand=indicator_name,
+                        operator="<",
+                        right_operand=30.0,  # 買われすぎ/売られすぎレベル
+                    )
+                ]
+                exit_conditions = [
+                    Condition(
+                        left_operand=indicator_name,
+                        operator=">",
+                        right_operand=70.0,
+                    )
+                ]
+            elif indicator_type in ["CCI"]:
+                # ±100オシレーター - 数値閾値を使用
+                entry_conditions = [
+                    Condition(
+                        left_operand=indicator_name,
+                        operator="<",
+                        right_operand=-100.0,
+                    )
+                ]
+                exit_conditions = [
+                    Condition(
+                        left_operand=indicator_name,
+                        operator=">",
+                        right_operand=100.0,
+                    )
+                ]
+            elif indicator_type in ["OBV"]:
+                # ボリューム指標 - ゼロ中心の数値閾値を使用
+                entry_conditions = [
+                    Condition(
+                        left_operand=indicator_name,
+                        operator=">",
+                        right_operand=0.0,
+                    )
+                ]
+                exit_conditions = [
+                    Condition(
+                        left_operand=indicator_name,
+                        operator="<",
+                        right_operand=0.0,
+                    )
+                ]
+            elif indicator_type in ["ATR"]:
+                # 価格ベース指標 - 価格との比較は可能だが、数値閾値の方が安全
+                entry_conditions = [
+                    Condition(
+                        left_operand=indicator_name,
+                        operator=">",
+                        right_operand=0.01,  # 適度なボラティリティ閾値
+                    )
+                ]
+                exit_conditions = [
+                    Condition(
+                        left_operand=indicator_name,
+                        operator="<",
+                        right_operand=0.005,
+                    )
+                ]
+            else:
+                # 未知の指標 - 安全な数値閾値を使用
+                logger.warning(f"未知の指標タイプ: {indicator_type}, 数値閾値を使用")
+                entry_conditions = [
+                    Condition(
+                        left_operand=indicator_name,
+                        operator=">",
+                        right_operand=50.0,
+                    )
+                ]
+                exit_conditions = [
+                    Condition(
+                        left_operand=indicator_name,
+                        operator="<",
+                        right_operand=50.0,
+                    )
+                ]
+
+            return entry_conditions, exit_conditions
+
+        except Exception as e:
+            logger.error(f"互換性条件生成エラー: {e}")
+            # エラー時は安全なデフォルト条件
+            return (
+                [Condition(left_operand="close", operator=">", right_operand="open")],
+                [Condition(left_operand="close", operator="<", right_operand="open")],
             )
 
     def get_encoding_info(self) -> Dict:

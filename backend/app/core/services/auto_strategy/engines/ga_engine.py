@@ -105,7 +105,6 @@ class GeneticAlgorithmEngine:
             self.progress_manager.set_current_generation(0)
 
             # バックテスト設定を保存
-            logger.debug(f"GA実行開始時のバックテスト設定: {backtest_config}")
 
             # 評価環境固定化: GA実行開始時に一度だけバックテスト設定を決定
             if backtest_config:
@@ -115,7 +114,6 @@ class GeneticAlgorithmEngine:
                         backtest_config
                     )
                 )
-                logger.debug(f"固定化された評価環境: {self._fixed_backtest_config}")
             else:
                 self._fixed_backtest_config = None
                 logger.info(

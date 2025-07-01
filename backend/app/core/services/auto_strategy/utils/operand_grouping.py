@@ -165,7 +165,6 @@ class OperandGroupingSystem:
             return OperandGroup.SPECIAL_SCALE
 
         # デフォルトは価格ベース
-        logger.debug(f"オペランド '{operand}' を価格ベースとして分類")
         return OperandGroup.PRICE_BASED
 
     def get_compatibility_score(self, operand1: str, operand2: str) -> float:

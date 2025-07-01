@@ -215,8 +215,6 @@ class ProgressTracker:
             if experiment_id in self.progress_callbacks:
                 del self.progress_callbacks[experiment_id]
 
-            logger.debug(f"進捗データクリーンアップ完了: {experiment_id}")
-
         except Exception as e:
             logger.error(f"進捗クリーンアップエラー: {e}")
 
@@ -238,10 +236,6 @@ class ProgressTracker:
                     progress=progress.progress_percentage / 100.0,
                     best_fitness=progress.best_fitness,
                 )
-                logger.debug(
-                    f"進捗データベース保存完了: 世代{progress.current_generation}"
-                )
-
             finally:
                 db.close()
 

@@ -119,9 +119,9 @@ class Condition:
     エントリー・イグジット条件を表現します。
     """
 
-    left_operand: Union[str, float]  # 左オペランド
+    left_operand: Union[Dict[str, Any], str, float]  # 左オペランド
     operator: str  # 演算子
-    right_operand: Union[str, float]  # 右オペランド
+    right_operand: Union[Dict[str, Any], str, float]  # 右オペランド
 
     def validate(self) -> bool:
         """条件の妥当性を検証"""

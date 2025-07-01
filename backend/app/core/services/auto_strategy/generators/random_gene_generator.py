@@ -70,26 +70,15 @@ class RandomGeneGenerator:
             生成された戦略遺伝子
         """
         try:
-            logger.debug("ランダム戦略遺伝子生成開始")
-
             # 指標を生成
-            logger.debug("指標生成開始")
             indicators = self._generate_random_indicators()
-            logger.debug(f"指標生成完了: {len(indicators)}個")
 
             # 条件を生成
-            logger.debug("エントリー条件生成開始")
             entry_conditions = self._generate_random_conditions(indicators, "entry")
-            logger.debug(f"エントリー条件生成完了: {len(entry_conditions)}個")
-
-            logger.debug("エグジット条件生成開始")
             exit_conditions = self._generate_random_conditions(indicators, "exit")
-            logger.debug(f"エグジット条件生成完了: {len(exit_conditions)}個")
 
             # リスク管理設定
-            logger.debug("リスク管理設定生成開始")
             risk_management = self._generate_risk_management()
-            logger.debug("リスク管理設定生成完了")
 
             gene = StrategyGene(
                 indicators=indicators,
@@ -116,16 +105,13 @@ class RandomGeneGenerator:
         """ランダムな指標リストを生成"""
         try:
             num_indicators = random.randint(self.min_indicators, self.max_indicators)
-            logger.debug(f"生成する指標数: {num_indicators}")
             indicators = []
 
             for i in range(num_indicators):
                 try:
                     indicator_type = random.choice(self.available_indicators)
-                    logger.debug(f"指標{i+1}: {indicator_type}を生成中")
 
                     parameters = generate_indicator_parameters(indicator_type)
-                    logger.debug(f"指標{i+1}: パラメータ生成完了 {parameters}")
 
                     # JSON形式対応のIndicatorGene作成
                     indicator_gene = IndicatorGene(
@@ -137,10 +123,9 @@ class RandomGeneGenerator:
                         json_config = indicator_gene.get_json_config()
                         indicator_gene.json_config = json_config
                     except Exception as e:
-                        logger.debug(f"JSON設定生成エラー: {e}")
+                        pass  # JSON設定生成エラーのログを削除
 
                     indicators.append(indicator_gene)
-                    logger.debug(f"指標{i+1}: {indicator_type} 生成完了")
 
                 except Exception as e:
                     logger.error(f"指標{i+1}生成エラー: {e}")
@@ -150,9 +135,7 @@ class RandomGeneGenerator:
                             type="SMA", parameters={"period": 20}, enabled=True
                         )
                     )
-                    logger.debug(f"指標{i+1}: フォールバックSMAを使用")
 
-            logger.debug(f"指標生成完了: 合計{len(indicators)}個")
             return indicators
 
         except Exception as e:
@@ -250,9 +233,6 @@ class RandomGeneGenerator:
             if (
                 compatibility < self.config.gene_generation.min_compatibility_score
             ):  # 設定された互換性チェック
-                logger.debug(
-                    f"互換性が低いため数値にフォールバック: {left_operand} vs {compatible_operand} (互換性: {compatibility:.2f})"
-                )
                 return self._generate_threshold_value(left_operand, condition_type)
 
         return compatible_operand
@@ -290,7 +270,6 @@ class RandomGeneGenerator:
         )
 
         if strict_compatible:
-            logger.debug(f"厳密な互換性から選択: {left_operand} -> {strict_compatible}")
             return random.choice(strict_compatible)
 
         # 厳密な互換性がない場合は高い互換性から選択
@@ -301,7 +280,6 @@ class RandomGeneGenerator:
         )
 
         if high_compatible:
-            logger.debug(f"高い互換性から選択: {left_operand} -> {high_compatible}")
             return random.choice(high_compatible)
 
         # フォールバック: 利用可能なオペランドからランダム選択
@@ -309,7 +287,6 @@ class RandomGeneGenerator:
         fallback_operands = [op for op in available_operands if op != left_operand]
         if fallback_operands:
             selected = random.choice(fallback_operands)
-            logger.debug(f"フォールバック選択: {left_operand} -> {selected}")
             return selected
 
         # 最終フォールバック

@@ -61,9 +61,6 @@ class EvolutionOperators:
             # エリートと選択された子世代を結合して新しい個体群を形成
             new_population = elite + selected_offspring
 
-            logger.debug(
-                f"エリート保存適用: エリート{elite_size}個体 + 子世代{remaining_size}個体"
-            )
             return new_population
 
         except Exception as e:
@@ -201,7 +198,6 @@ class EvolutionOperators:
             offspring = toolbox.select(population, len(population))  # type: ignore
             offspring = list(map(toolbox.clone, offspring))  # type: ignore
 
-            logger.debug(f"親選択完了: {len(offspring)}個体を選択")
             return offspring
 
         except Exception as e:
@@ -228,8 +224,6 @@ class EvolutionOperators:
                 fitnesses = toolbox.map(toolbox.evaluate, invalid_ind)  # type: ignore
                 for ind, fit in zip(invalid_ind, fitnesses):
                     ind.fitness.values = fit
-
-                logger.debug(f"無効個体評価完了: {len(invalid_ind)}個体を評価")
 
             return offspring
 

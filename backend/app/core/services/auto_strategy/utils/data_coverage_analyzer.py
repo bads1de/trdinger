@@ -71,11 +71,6 @@ class DataCoverageAnalyzer:
                 )
                 total_penalty += penalty
 
-                logger.debug(
-                    f"データソース '{source}': カバレッジ {coverage_info['coverage_ratio']:.2%}, "
-                    f"ペナルティ {penalty:.3f}"
-                )
-
             # 平均ペナルティを計算
             avg_penalty = (
                 total_penalty / len(used_special_sources)

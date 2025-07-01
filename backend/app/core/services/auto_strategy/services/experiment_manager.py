@@ -188,6 +188,9 @@ class ExperimentManager:
             if experiment_id in self.experiment_threads:
                 del self.experiment_threads[experiment_id]
 
+            # データベースのステータスも更新
+            self._update_experiment_status_in_db(experiment_id, "completed", result)
+
             logger.info(f"実験完了: {experiment_id}")
 
         except Exception as e:
@@ -218,6 +221,11 @@ class ExperimentManager:
             # スレッドの参照を削除
             if experiment_id in self.experiment_threads:
                 del self.experiment_threads[experiment_id]
+
+            # データベースのステータスも更新
+            self._update_experiment_status_in_db(
+                experiment_id, "error", {"error": error}
+            )
 
             logger.error(f"実験失敗: {experiment_id} - {error}")
 
@@ -338,6 +346,65 @@ class ExperimentManager:
         except Exception as e:
             logger.error(f"データベース保存エラー: {e}")
             raise
+
+    def _update_experiment_status_in_db(
+        self, experiment_id: str, status: str, result: Optional[Dict[str, Any]] = None
+    ):
+        """
+        データベースの実験ステータスを更新
+
+        Args:
+            experiment_id: 実験ID
+            status: 新しいステータス
+            result: 実験結果（完了時）
+        """
+        try:
+            # 実験情報からデータベースIDを取得
+            experiment_info = self.running_experiments.get(experiment_id)
+            if not experiment_info:
+                logger.error(f"実験情報が見つかりません: {experiment_id}")
+                return
+
+            db_experiment_id = experiment_info.get("db_id")
+            if not db_experiment_id:
+                logger.error(f"データベース実験IDが見つかりません: {experiment_id}")
+                return
+
+            # データベースを更新
+            from database.connection import SessionLocal
+            from database.repositories.ga_experiment_repository import (
+                GAExperimentRepository,
+            )
+
+            db = SessionLocal()
+            try:
+                ga_experiment_repo = GAExperimentRepository(db)
+
+                if status == "completed" and result:
+                    # 完了時は詳細情報も更新
+                    best_fitness = result.get("best_fitness", 0.0)
+                    final_generation = result.get("final_generation", 0)
+                    success = ga_experiment_repo.complete_experiment(
+                        db_experiment_id, best_fitness, final_generation
+                    )
+                else:
+                    # ステータスのみ更新
+                    success = ga_experiment_repo.update_experiment_status(
+                        db_experiment_id, status
+                    )
+
+                if success:
+                    logger.info(
+                        f"データベース実験ステータス更新成功: {experiment_id} -> {status}"
+                    )
+                else:
+                    logger.error(f"データベース実験ステータス更新失敗: {experiment_id}")
+
+            finally:
+                db.close()
+
+        except Exception as e:
+            logger.error(f"データベースステータス更新エラー: {e}", exc_info=True)
 
     def get_running_experiment_count(self) -> int:
         """実行中の実験数を取得"""

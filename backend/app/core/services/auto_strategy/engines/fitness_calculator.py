@@ -14,6 +14,7 @@ from ..models.ga_config import GAConfig
 from ..factories.strategy_factory import StrategyFactory
 from ..utils.data_coverage_analyzer import data_coverage_analyzer
 from app.core.services.backtest_service import BacktestService
+import pandas as pd
 
 
 logger = logging.getLogger(__name__)
@@ -71,7 +72,6 @@ class FitnessCalculator:
             # 戦略の妥当性チェック
             is_valid, errors = self.strategy_factory.validate_gene(gene)
             if not is_valid:
-                logger.debug(f"無効な戦略: {errors}")
                 return (0.0,)  # 無効な戦略には最低スコア
 
             # 戦略クラスを生成
@@ -157,6 +157,16 @@ class FitnessCalculator:
         try:
             metrics = backtest_result.get("performance_metrics", {})
 
+            # 取引数ゼロの場合、全指標をゼロに強制
+            if metrics.get("total_trades", 0) == 0:
+                metrics = {
+                    "total_return": 0.0,
+                    "sharpe_ratio": 0.0,
+                    "max_drawdown": 0.0,
+                    "win_rate": 0.0,
+                    "total_trades": 0,
+                }
+
             # 制約条件のチェック
             if not self._check_constraints(metrics, config):
                 return 0.0
@@ -199,9 +209,6 @@ class FitnessCalculator:
             min_trades = 1  # テスト時は1取引以上で十分
 
         if metrics.get("total_trades", 0) < min_trades:
-            logger.debug(
-                f"取引数制約違反: {metrics.get('total_trades', 0)} < {min_trades}"
-            )
             return False
 
         # 最大ドローダウンチェック（緩和: 80%まで許可）
@@ -212,16 +219,13 @@ class FitnessCalculator:
             max_dd_limit = 0.8
 
         if max_drawdown > max_dd_limit:
-            logger.debug(f"ドローダウン制約違反: {max_drawdown} > {max_dd_limit}")
             return False
 
         # 最小シャープレシオチェック（大幅緩和: -5.0まで許可）
         sharpe_ratio = metrics.get("sharpe_ratio", 0.0)
         min_sharpe = constraints.get("min_sharpe_ratio", 0.5)
-        
 
         if sharpe_ratio < min_sharpe:
-            logger.debug(f"シャープレシオ制約違反: {sharpe_ratio} < {min_sharpe}")
             return False
 
         return True
@@ -260,15 +264,25 @@ class FitnessCalculator:
         #    1から (max_drawdown / 0.5) を引くことで、ドローダウンが低いほど値が高くなるようにする
         normalized_drawdown = max(0, min(1, 1 - (max_drawdown / 0.5)))
 
-        # 4. 勝率正規化: 0〜100% の範囲を0〜1にマッピング
-        normalized_win_rate = max(0, min(1, win_rate))
+        # 4. 勝率正規化: 0〜100% を0〜1にマッピング
+        #    win_rateは既に小数なのでそのまま
+        normalized_win_rate = metrics.get("win_rate", 0.0) / 100.0
 
-        # 重み付き合計
+        # 全指標が0の場合はフィットネスを0にする
+        if (
+            normalized_return == 0
+            and normalized_sharpe == 0
+            and normalized_drawdown == 0
+            and normalized_win_rate == 0
+        ):
+            return 0.0
+
+        # 重み付き和の計算
         fitness = (
-            weights.get("total_return", 0.35) * normalized_return
-            + weights.get("sharpe_ratio", 0.35) * normalized_sharpe
-            + weights.get("max_drawdown", 0.25) * normalized_drawdown
-            + weights.get("win_rate", 0.05) * normalized_win_rate
+            weights.get("total_return", 0.0) * normalized_return
+            + weights.get("sharpe_ratio", 0.0) * normalized_sharpe
+            + weights.get("max_drawdown", 0.0) * normalized_drawdown
+            + weights.get("win_rate", 0.0) * normalized_win_rate
         )
 
         return fitness

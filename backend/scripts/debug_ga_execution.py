@@ -85,13 +85,29 @@ def test_simple_ga_execution():
         print("AutoStrategyServiceを初期化中...")
         service = AutoStrategyService()
 
-        # テスト用のGA設定
+        # テスト用のGA設定（正しい初期化方法）
+        from app.core.services.auto_strategy.models.ga_config import (
+            EvolutionConfig,
+            IndicatorConfig,
+            GeneGenerationConfig,
+        )
+
         ga_config = GAConfig(
-            population_size=5,  # 小さな個体数でテスト
-            generations=2,  # 少ない世代数でテスト
-            crossover_rate=0.8,
-            mutation_rate=0.2,
-            allowed_indicators=["RSI", "SMA", "CCI"],  # 制限された指標
+            evolution=EvolutionConfig(
+                population_size=5,  # 小さな個体数でテスト
+                generations=2,  # 少ない世代数でテスト
+                crossover_rate=0.8,
+                mutation_rate=0.2,
+            ),
+            indicators=IndicatorConfig(
+                allowed_indicators=["RSI", "SMA", "CCI"],  # 制限された指標
+                max_indicators=3,
+            ),
+            gene_generation=GeneGenerationConfig(
+                numeric_threshold_probability=0.8,  # 80%の確率で数値を使用
+                min_compatibility_score=0.8,  # 最小互換性スコア
+                strict_compatibility_score=0.9,  # 厳密な互換性スコア
+            ),
         )
 
         # テスト用のバックテスト設定
@@ -105,10 +121,23 @@ def test_simple_ga_execution():
         }
 
         print("GA実行を開始...")
+
+        # BackgroundTasksのモック作成
+        class MockBackgroundTasks:
+            def add_task(self, func, *args, **kwargs):
+                # 実際にはバックグラウンドで実行せず、直接実行
+                try:
+                    func(*args, **kwargs)
+                except Exception as e:
+                    print(f"バックグラウンドタスクエラー: {e}")
+
+        mock_tasks = MockBackgroundTasks()
+
         experiment_id = service.start_strategy_generation(
             experiment_name=f"DEBUG_TEST_{datetime.now().strftime('%Y%m%d_%H%M%S')}",
-            ga_config=ga_config,
-            backtest_config=backtest_config,
+            ga_config_dict=ga_config.to_dict(),  # 辞書形式に変換
+            backtest_config_dict=backtest_config,
+            background_tasks=mock_tasks,
         )
 
         print(f"実験ID: {experiment_id}")
@@ -167,7 +196,9 @@ def check_dependencies():
         db = SessionLocal()
         try:
             # 簡単なクエリを実行
-            result = db.execute("SELECT 1").fetchone()
+            from sqlalchemy import text
+
+            result = db.execute(text("SELECT 1")).fetchone()
             print("✅ データベース接続OK")
         finally:
             db.close()
@@ -216,7 +247,7 @@ def check_data_availability():
             print(f"OHLCV データ数: {ohlcv_count}")
 
             if ohlcv_count > 0:
-                latest_ohlcv = ohlcv_repo.get_latest_data("BTC/USDT:USDT", "1h")
+                latest_ohlcv = ohlcv_repo.get_latest_ohlcv_data("BTC/USDT:USDT", "1h")
                 print(
                     f"最新OHLCV: {latest_ohlcv.timestamp if latest_ohlcv else 'None'}"
                 )

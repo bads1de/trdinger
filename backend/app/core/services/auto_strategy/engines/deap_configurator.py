@@ -110,9 +110,6 @@ class DEAPConfigurator:
                 # 戦略遺伝子を数値リストにエンコード
                 individual = encode_gene_to_list(gene)
 
-                logger.debug(
-                    f"正常に遺伝子生成: 指標数={len(gene.indicators)}, 遺伝子長={len(individual)}"
-                )
                 return creator.Individual(individual)  # type: ignore
             except Exception as e:
                 logger.warning(
@@ -237,8 +234,7 @@ class DEAPConfigurator:
 
                 return result
             except Exception as e:
-                logger.debug(f"制約付き交叉エラー: {e}")
-                return ind1, ind2
+                pass
 
         def constrained_mutate(individual):
             """制約付き突然変異演算子"""
@@ -251,8 +247,7 @@ class DEAPConfigurator:
 
                 return result
             except Exception as e:
-                logger.debug(f"制約付き突然変異エラー: {e}")
-                return (individual,)
+                pass
 
         # 制約付き演算子で置き換え
         self.toolbox.register("mate", constrained_mate)
@@ -276,7 +271,7 @@ class DEAPConfigurator:
                     individual[i] = 1.0
 
         except Exception as e:
-            logger.debug(f"基本制約適用エラー: {e}")
+            pass
 
     def get_logbook(self) -> Optional[tools.Logbook]:
         """ログブックを取得"""
