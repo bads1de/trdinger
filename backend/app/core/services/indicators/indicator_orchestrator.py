@@ -17,7 +17,6 @@ from .price_transform_indicators import (
     get_price_transform_indicator,
     PRICE_TRANSFORM_INDICATORS_INFO,
 )
-from .other_indicators import get_other_indicator, OTHER_INDICATORS_INFO
 
 logger = logging.getLogger(__name__)
 
@@ -34,7 +33,6 @@ class TechnicalIndicatorService:
         self.supported_indicators.update(VOLATILITY_INDICATORS_INFO)
         self.supported_indicators.update(VOLUME_INDICATORS_INFO)
         self.supported_indicators.update(PRICE_TRANSFORM_INDICATORS_INFO)
-        self.supported_indicators.update(OTHER_INDICATORS_INFO)
 
         # 指標カテゴリのマッピング
         self.indicator_categories = {
@@ -83,7 +81,6 @@ class TechnicalIndicatorService:
                 "SAREXT",
                 "SAR",
             ],
-            "other": ["PSAR"],
         }
 
     def _get_indicator_instance(self, indicator_type: str):
@@ -110,8 +107,6 @@ class TechnicalIndicatorService:
             return get_volume_indicator(indicator_type)
         elif indicator_type in self.indicator_categories["price_transform"]:
             return get_price_transform_indicator(indicator_type)
-        elif indicator_type in self.indicator_categories["other"]:
-            return get_other_indicator(indicator_type)
         else:
             raise ValueError(
                 f"サポートされていない指標タイプです: {indicator_type}. "
@@ -184,13 +179,7 @@ class TechnicalIndicatorService:
             elif indicator_type in self.indicator_categories["price_transform"]:
                 indicator = get_price_transform_indicator(indicator_type)
             else:
-                # その他の指標を試行
-                try:
-                    indicator = get_other_indicator(indicator_type)
-                except ValueError:
-                    raise ValueError(
-                        f"サポートされていない指標タイプ: {indicator_type}"
-                    )
+                raise ValueError(f"サポートされていない指標タイプ: {indicator_type}")
 
             # インジケーター計算を実行
             return indicator.calculate(df, **kwargs)

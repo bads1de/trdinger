@@ -46,7 +46,6 @@ VOLUME_INDICATORS: List[str] = [
 
 # 現在使用されていないカテゴリ（空リスト）
 PRICE_TRANSFORM_INDICATORS: List[str] = []
-OTHER_INDICATORS: List[str] = []
 
 # 指標情報辞書
 INDICATOR_INFO: Dict[str, Dict[str, Any]] = {
@@ -79,12 +78,11 @@ def validate_indicator_lists() -> bool:
         + len(VOLATILITY_INDICATORS)
         + len(VOLUME_INDICATORS)
         + len(PRICE_TRANSFORM_INDICATORS)
-        + len(OTHER_INDICATORS)
     )
 
     return len(ALL_INDICATORS) == category_total == len(INDICATOR_INFO)
 
 
 TOTAL_INDICATORS = len(ALL_INDICATORS)
-assert TOTAL_INDICATORS == 10, f"Expected 10 indicators, got {TOTAL_INDICATORS}"
+assert TOTAL_INDICATORS == 9, f"Expected 9 indicators, got {TOTAL_INDICATORS}"
 assert validate_indicator_lists(), "Indicator lists are inconsistent"
