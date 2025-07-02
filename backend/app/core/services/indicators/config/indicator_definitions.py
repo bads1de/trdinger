@@ -17,21 +17,6 @@ from app.core.services.indicators.trend import TrendIndicators
 from app.core.services.indicators.momentum import MomentumIndicators
 from app.core.services.indicators.volatility import VolatilityIndicators
 
-# 古いアダプター関数（段階的移行のため一時的に保持）
-try:
-    from app.core.services.indicators.adapters.trend_adapter import TrendAdapter
-    from app.core.services.indicators.adapters.momentum_adapter import MomentumAdapter
-    from app.core.services.indicators.adapters.volatility_adapter import (
-        VolatilityAdapter,
-    )
-    from app.core.services.indicators.adapters.volume_adapter import VolumeAdapter
-except ImportError:
-    # 古いアダプターが削除されている場合はスキップ
-    TrendAdapter = None
-    MomentumAdapter = None
-    VolatilityAdapter = None
-    VolumeAdapter = None
-
 
 def setup_momentum_indicators():
     """モメンタム系インジケーターの設定（オートストラテジー最適化版）"""

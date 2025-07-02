@@ -84,5 +84,7 @@ def validate_indicator_lists() -> bool:
 
 
 TOTAL_INDICATORS = len(ALL_INDICATORS)
-assert TOTAL_INDICATORS == 10, f"Expected 10 indicators, got {TOTAL_INDICATORS}"
-assert validate_indicator_lists(), "Indicator lists are inconsistent"
+assert (
+    TOTAL_INDICATORS == 10
+), f"インジケーター数が不正です。期待値: 10, 実際: {TOTAL_INDICATORS}"
+assert validate_indicator_lists(), "インジケーターリストの整合性に問題があります"

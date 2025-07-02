@@ -8,9 +8,10 @@ pandas Seriesの変換は一切行いません。
 
 import talib
 import numpy as np
-from typing import Optional
+from typing import Tuple, cast
 from .utils import (
     validate_input,
+    validate_multi_input,
     handle_talib_errors,
     log_indicator_calculation,
     format_indicator_result,
@@ -44,7 +45,7 @@ class TrendIndicators:
         log_indicator_calculation("SMA", {"period": period}, len(data))
 
         result = talib.SMA(data, timeperiod=period)
-        return format_indicator_result(result, "SMA")
+        return cast(np.ndarray, format_indicator_result(result, "SMA"))
 
     @staticmethod
     @handle_talib_errors
@@ -64,7 +65,7 @@ class TrendIndicators:
         log_indicator_calculation("EMA", {"period": period}, len(data))
 
         result = talib.EMA(data, timeperiod=period)
-        return format_indicator_result(result, "EMA")
+        return cast(np.ndarray, format_indicator_result(result, "EMA"))
 
     @staticmethod
     @handle_talib_errors
@@ -83,7 +84,7 @@ class TrendIndicators:
         log_indicator_calculation("TEMA", {"period": period}, len(data))
 
         result = talib.TEMA(data, timeperiod=period)
-        return format_indicator_result(result, "TEMA")
+        return cast(np.ndarray, format_indicator_result(result, "TEMA"))
 
     @staticmethod
     @handle_talib_errors
@@ -102,7 +103,7 @@ class TrendIndicators:
         log_indicator_calculation("DEMA", {"period": period}, len(data))
 
         result = talib.DEMA(data, timeperiod=period)
-        return format_indicator_result(result, "DEMA")
+        return cast(np.ndarray, format_indicator_result(result, "DEMA"))
 
     @staticmethod
     @handle_talib_errors
@@ -121,7 +122,7 @@ class TrendIndicators:
         log_indicator_calculation("WMA", {"period": period}, len(data))
 
         result = talib.WMA(data, timeperiod=period)
-        return format_indicator_result(result, "WMA")
+        return cast(np.ndarray, format_indicator_result(result, "WMA"))
 
     @staticmethod
     @handle_talib_errors
@@ -140,7 +141,7 @@ class TrendIndicators:
         log_indicator_calculation("TRIMA", {"period": period}, len(data))
 
         result = talib.TRIMA(data, timeperiod=period)
-        return format_indicator_result(result, "TRIMA")
+        return cast(np.ndarray, format_indicator_result(result, "TRIMA"))
 
     @staticmethod
     @handle_talib_errors
@@ -159,13 +160,13 @@ class TrendIndicators:
         log_indicator_calculation("KAMA", {"period": period}, len(data))
 
         result = talib.KAMA(data, timeperiod=period)
-        return format_indicator_result(result, "KAMA")
+        return cast(np.ndarray, format_indicator_result(result, "KAMA"))
 
     @staticmethod
     @handle_talib_errors
     def mama(
         data: np.ndarray, fastlimit: float = 0.5, slowlimit: float = 0.05
-    ) -> tuple:
+    ) -> Tuple[np.ndarray, np.ndarray]:
         """
         MESA Adaptive Moving Average (MESA適応移動平均)
 
@@ -183,7 +184,10 @@ class TrendIndicators:
         )
 
         mama, fama = talib.MAMA(data, fastlimit=fastlimit, slowlimit=slowlimit)
-        return format_indicator_result((mama, fama), "MAMA")
+        return cast(
+            Tuple[np.ndarray, np.ndarray],
+            format_indicator_result((mama, fama), "MAMA"),
+        )
 
     @staticmethod
     @handle_talib_errors
@@ -205,7 +209,7 @@ class TrendIndicators:
         )
 
         result = talib.T3(data, timeperiod=period, vfactor=vfactor)
-        return format_indicator_result(result, "T3")
+        return cast(np.ndarray, format_indicator_result(result, "T3"))
 
     @staticmethod
     @handle_talib_errors
@@ -224,7 +228,7 @@ class TrendIndicators:
         log_indicator_calculation("MIDPOINT", {"period": period}, len(data))
 
         result = talib.MIDPOINT(data, timeperiod=period)
-        return format_indicator_result(result, "MIDPOINT")
+        return cast(np.ndarray, format_indicator_result(result, "MIDPOINT"))
 
     @staticmethod
     @handle_talib_errors
@@ -240,13 +244,11 @@ class TrendIndicators:
         Returns:
             MIDPRICE値のnumpy配列
         """
-        from .utils import validate_multi_input
-
-        validate_multi_input(high, low, high, period)  # closeの代わりにhighを使用
+        validate_multi_input(high, low, high, period)
         log_indicator_calculation("MIDPRICE", {"period": period}, len(high))
 
         result = talib.MIDPRICE(high, low, timeperiod=period)
-        return format_indicator_result(result, "MIDPRICE")
+        return cast(np.ndarray, format_indicator_result(result, "MIDPRICE"))
 
     @staticmethod
     @handle_talib_errors
@@ -268,15 +270,13 @@ class TrendIndicators:
         Returns:
             SAR値のnumpy配列
         """
-        from .utils import validate_multi_input
-
-        validate_multi_input(high, low, high, 2)  # 最小期間は2
+        validate_multi_input(high, low, high, 2)
         log_indicator_calculation(
             "SAR", {"acceleration": acceleration, "maximum": maximum}, len(high)
         )
 
         result = talib.SAR(high, low, acceleration=acceleration, maximum=maximum)
-        return format_indicator_result(result, "SAR")
+        return cast(np.ndarray, format_indicator_result(result, "SAR"))
 
     @staticmethod
     @handle_talib_errors
@@ -303,9 +303,7 @@ class TrendIndicators:
         Returns:
             SAREXT値のnumpy配列
         """
-        from .utils import validate_multi_input
-
-        validate_multi_input(high, low, high, 2)  # 最小期間は2
+        validate_multi_input(high, low, high, 2)
 
         params = {
             "startvalue": startvalue,
@@ -320,4 +318,4 @@ class TrendIndicators:
         log_indicator_calculation("SAREXT", params, len(high))
 
         result = talib.SAREXT(high, low, **params)
-        return format_indicator_result(result, "SAREXT")
+        return cast(np.ndarray, format_indicator_result(result, "SAREXT"))

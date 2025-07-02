@@ -8,7 +8,7 @@ pandas Seriesの変換は一切行いません。
 
 import talib
 import numpy as np
-from typing import Optional, Tuple
+from typing import Tuple, cast
 from .utils import (
     validate_input,
     validate_multi_input,
@@ -51,7 +51,7 @@ class VolatilityIndicators:
         log_indicator_calculation("ATR", {"period": period}, len(close))
 
         result = talib.ATR(high, low, close, timeperiod=period)
-        return format_indicator_result(result, "ATR")
+        return cast(np.ndarray, format_indicator_result(result, "ATR"))
 
     @staticmethod
     @handle_talib_errors
@@ -74,7 +74,7 @@ class VolatilityIndicators:
         log_indicator_calculation("NATR", {"period": period}, len(close))
 
         result = talib.NATR(high, low, close, timeperiod=period)
-        return format_indicator_result(result, "NATR")
+        return cast(np.ndarray, format_indicator_result(result, "NATR"))
 
     @staticmethod
     @handle_talib_errors
@@ -94,7 +94,7 @@ class VolatilityIndicators:
         log_indicator_calculation("TRANGE", {}, len(close))
 
         result = talib.TRANGE(high, low, close)
-        return format_indicator_result(result, "TRANGE")
+        return cast(np.ndarray, format_indicator_result(result, "TRANGE"))
 
     @staticmethod
     @handle_talib_errors
@@ -123,8 +123,11 @@ class VolatilityIndicators:
         }
         log_indicator_calculation("BBANDS", params, len(data))
 
-        upper, middle, lower = talib.BBANDS(data, **params)
-        return format_indicator_result((upper, middle, lower), "BBANDS")
+        upper, middle, lower = talib.BBANDS(data, **params)  # type: ignore
+        return cast(
+            Tuple[np.ndarray, np.ndarray, np.ndarray],
+            format_indicator_result((upper, middle, lower), "BBANDS"),
+        )
 
     @staticmethod
     @handle_talib_errors
@@ -146,7 +149,7 @@ class VolatilityIndicators:
         )
 
         result = talib.STDDEV(data, timeperiod=period, nbdev=nbdev)
-        return format_indicator_result(result, "STDDEV")
+        return cast(np.ndarray, format_indicator_result(result, "STDDEV"))
 
     @staticmethod
     @handle_talib_errors
@@ -166,7 +169,7 @@ class VolatilityIndicators:
         log_indicator_calculation("VAR", {"period": period, "nbdev": nbdev}, len(data))
 
         result = talib.VAR(data, timeperiod=period, nbdev=nbdev)
-        return format_indicator_result(result, "VAR")
+        return cast(np.ndarray, format_indicator_result(result, "VAR"))
 
     @staticmethod
     @handle_talib_errors
@@ -189,7 +192,7 @@ class VolatilityIndicators:
         log_indicator_calculation("ADX", {"period": period}, len(close))
 
         result = talib.ADX(high, low, close, timeperiod=period)
-        return format_indicator_result(result, "ADX")
+        return cast(np.ndarray, format_indicator_result(result, "ADX"))
 
     @staticmethod
     @handle_talib_errors
@@ -212,7 +215,7 @@ class VolatilityIndicators:
         log_indicator_calculation("ADXR", {"period": period}, len(close))
 
         result = talib.ADXR(high, low, close, timeperiod=period)
-        return format_indicator_result(result, "ADXR")
+        return cast(np.ndarray, format_indicator_result(result, "ADXR"))
 
     @staticmethod
     @handle_talib_errors
@@ -235,7 +238,7 @@ class VolatilityIndicators:
         log_indicator_calculation("DX", {"period": period}, len(close))
 
         result = talib.DX(high, low, close, timeperiod=period)
-        return format_indicator_result(result, "DX")
+        return cast(np.ndarray, format_indicator_result(result, "DX"))
 
     @staticmethod
     @handle_talib_errors
@@ -258,7 +261,7 @@ class VolatilityIndicators:
         log_indicator_calculation("MINUS_DI", {"period": period}, len(close))
 
         result = talib.MINUS_DI(high, low, close, timeperiod=period)
-        return format_indicator_result(result, "MINUS_DI")
+        return cast(np.ndarray, format_indicator_result(result, "MINUS_DI"))
 
     @staticmethod
     @handle_talib_errors
@@ -281,7 +284,7 @@ class VolatilityIndicators:
         log_indicator_calculation("PLUS_DI", {"period": period}, len(close))
 
         result = talib.PLUS_DI(high, low, close, timeperiod=period)
-        return format_indicator_result(result, "PLUS_DI")
+        return cast(np.ndarray, format_indicator_result(result, "PLUS_DI"))
 
     @staticmethod
     @handle_talib_errors
@@ -301,7 +304,7 @@ class VolatilityIndicators:
         log_indicator_calculation("MINUS_DM", {"period": period}, len(high))
 
         result = talib.MINUS_DM(high, low, timeperiod=period)
-        return format_indicator_result(result, "MINUS_DM")
+        return cast(np.ndarray, format_indicator_result(result, "MINUS_DM"))
 
     @staticmethod
     @handle_talib_errors
@@ -321,7 +324,7 @@ class VolatilityIndicators:
         log_indicator_calculation("PLUS_DM", {"period": period}, len(high))
 
         result = talib.PLUS_DM(high, low, timeperiod=period)
-        return format_indicator_result(result, "PLUS_DM")
+        return cast(np.ndarray, format_indicator_result(result, "PLUS_DM"))
 
     @staticmethod
     @handle_talib_errors
@@ -343,7 +346,10 @@ class VolatilityIndicators:
         log_indicator_calculation("AROON", {"period": period}, len(high))
 
         aroondown, aroonup = talib.AROON(high, low, timeperiod=period)
-        return format_indicator_result((aroondown, aroonup), "AROON")
+        return cast(
+            Tuple[np.ndarray, np.ndarray],
+            format_indicator_result((aroondown, aroonup), "AROON"),
+        )
 
     @staticmethod
     @handle_talib_errors
@@ -363,4 +369,4 @@ class VolatilityIndicators:
         log_indicator_calculation("AROONOSC", {"period": period}, len(high))
 
         result = talib.AROONOSC(high, low, timeperiod=period)
-        return format_indicator_result(result, "AROONOSC")
+        return cast(np.ndarray, format_indicator_result(result, "AROONOSC"))

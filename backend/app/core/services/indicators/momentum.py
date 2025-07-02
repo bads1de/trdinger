@@ -8,7 +8,7 @@ pandas Seriesの変換は一切行いません。
 
 import talib
 import numpy as np
-from typing import Optional, Tuple
+from typing import Optional, Tuple, cast
 from .utils import (
     validate_input,
     validate_multi_input,
@@ -45,7 +45,7 @@ class MomentumIndicators:
         log_indicator_calculation("RSI", {"period": period}, len(data))
 
         result = talib.RSI(data, timeperiod=period)
-        return format_indicator_result(result, "RSI")
+        return cast(np.ndarray, format_indicator_result(result, "RSI"))
 
     @staticmethod
     @handle_talib_errors
@@ -72,7 +72,10 @@ class MomentumIndicators:
         macd, signal_line, histogram = talib.MACD(
             data, fastperiod=fast, slowperiod=slow, signalperiod=signal
         )
-        return format_indicator_result((macd, signal_line, histogram), "MACD")
+        return cast(
+            Tuple[np.ndarray, np.ndarray, np.ndarray],
+            format_indicator_result((macd, signal_line, histogram), "MACD"),
+        )
 
     @staticmethod
     @handle_talib_errors
@@ -112,8 +115,11 @@ class MomentumIndicators:
         }
         log_indicator_calculation("MACDEXT", params, len(data))
 
-        macd, signal_line, histogram = talib.MACDEXT(data, **params)
-        return format_indicator_result((macd, signal_line, histogram), "MACDEXT")
+        macd, signal_line, histogram = talib.MACDEXT(data, **params)  # type: ignore
+        return cast(
+            Tuple[np.ndarray, np.ndarray, np.ndarray],
+            format_indicator_result((macd, signal_line, histogram), "MACDEXT"),
+        )
 
     @staticmethod
     @handle_talib_errors
@@ -134,7 +140,10 @@ class MomentumIndicators:
         log_indicator_calculation("MACDFIX", {"signalperiod": signalperiod}, len(data))
 
         macd, signal_line, histogram = talib.MACDFIX(data, signalperiod=signalperiod)
-        return format_indicator_result((macd, signal_line, histogram), "MACDFIX")
+        return cast(
+            Tuple[np.ndarray, np.ndarray, np.ndarray],
+            format_indicator_result((macd, signal_line, histogram), "MACDFIX"),
+        )
 
     @staticmethod
     @handle_talib_errors
@@ -177,8 +186,11 @@ class MomentumIndicators:
         }
         log_indicator_calculation("STOCH", params, len(close))
 
-        slowk, slowd = talib.STOCH(high, low, close, **params)
-        return format_indicator_result((slowk, slowd), "STOCH")
+        slowk, slowd = talib.STOCH(high, low, close, **params)  # type: ignore
+        return cast(
+            Tuple[np.ndarray, np.ndarray],
+            format_indicator_result((slowk, slowd), "STOCH"),
+        )
 
     @staticmethod
     @handle_talib_errors
@@ -213,8 +225,11 @@ class MomentumIndicators:
         }
         log_indicator_calculation("STOCHF", params, len(close))
 
-        fastk, fastd = talib.STOCHF(high, low, close, **params)
-        return format_indicator_result((fastk, fastd), "STOCHF")
+        fastk, fastd = talib.STOCHF(high, low, close, **params)  # type: ignore
+        return cast(
+            Tuple[np.ndarray, np.ndarray],
+            format_indicator_result((fastk, fastd), "STOCHF"),
+        )
 
     @staticmethod
     @handle_talib_errors
@@ -248,8 +263,11 @@ class MomentumIndicators:
         }
         log_indicator_calculation("STOCHRSI", params, len(data))
 
-        fastk, fastd = talib.STOCHRSI(data, **params)
-        return format_indicator_result((fastk, fastd), "STOCHRSI")
+        fastk, fastd = talib.STOCHRSI(data, **params)  # type: ignore
+        return cast(
+            Tuple[np.ndarray, np.ndarray],
+            format_indicator_result((fastk, fastd), "STOCHRSI"),
+        )
 
     @staticmethod
     @handle_talib_errors
@@ -272,7 +290,7 @@ class MomentumIndicators:
         log_indicator_calculation("WILLR", {"period": period}, len(close))
 
         result = talib.WILLR(high, low, close, timeperiod=period)
-        return format_indicator_result(result, "WILLR")
+        return cast(np.ndarray, format_indicator_result(result, "WILLR"))
 
     @staticmethod
     @handle_talib_errors
@@ -295,7 +313,7 @@ class MomentumIndicators:
         log_indicator_calculation("CCI", {"period": period}, len(close))
 
         result = talib.CCI(high, low, close, timeperiod=period)
-        return format_indicator_result(result, "CCI")
+        return cast(np.ndarray, format_indicator_result(result, "CCI"))
 
     @staticmethod
     @handle_talib_errors
@@ -314,7 +332,7 @@ class MomentumIndicators:
         log_indicator_calculation("CMO", {"period": period}, len(data))
 
         result = talib.CMO(data, timeperiod=period)
-        return format_indicator_result(result, "CMO")
+        return cast(np.ndarray, format_indicator_result(result, "CMO"))
 
     @staticmethod
     @handle_talib_errors
@@ -333,7 +351,7 @@ class MomentumIndicators:
         log_indicator_calculation("ROC", {"period": period}, len(data))
 
         result = talib.ROC(data, timeperiod=period)
-        return format_indicator_result(result, "ROC")
+        return cast(np.ndarray, format_indicator_result(result, "ROC"))
 
     @staticmethod
     @handle_talib_errors
@@ -352,7 +370,7 @@ class MomentumIndicators:
         log_indicator_calculation("ROCP", {"period": period}, len(data))
 
         result = talib.ROCP(data, timeperiod=period)
-        return format_indicator_result(result, "ROCP")
+        return cast(np.ndarray, format_indicator_result(result, "ROCP"))
 
     @staticmethod
     @handle_talib_errors
@@ -371,7 +389,7 @@ class MomentumIndicators:
         log_indicator_calculation("ROCR", {"period": period}, len(data))
 
         result = talib.ROCR(data, timeperiod=period)
-        return format_indicator_result(result, "ROCR")
+        return cast(np.ndarray, format_indicator_result(result, "ROCR"))
 
     @staticmethod
     @handle_talib_errors
@@ -390,7 +408,7 @@ class MomentumIndicators:
         log_indicator_calculation("ROCR100", {"period": period}, len(data))
 
         result = talib.ROCR100(data, timeperiod=period)
-        return format_indicator_result(result, "ROCR100")
+        return cast(np.ndarray, format_indicator_result(result, "ROCR100"))
 
     @staticmethod
     @handle_talib_errors
@@ -409,4 +427,4 @@ class MomentumIndicators:
         log_indicator_calculation("MOM", {"period": period}, len(data))
 
         result = talib.MOM(data, timeperiod=period)
-        return format_indicator_result(result, "MOM")
+        return cast(np.ndarray, format_indicator_result(result, "MOM"))

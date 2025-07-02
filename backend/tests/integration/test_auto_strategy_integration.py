@@ -160,33 +160,29 @@ def test_indicator_calculation():
 
     # 新規指標のテスト
     new_indicators_tests = [
-        (
-            "VWMA",
-            "app.core.services.indicators.trend_indicators",
-            "VWMAIndicator",
-        ),  # 修正: trend_indicatorsに移動
-        ("VWAP", "app.core.services.indicators.volume_indicators", "VWAPIndicator"),
+        ("VWMA", "app.core.services.indicators.trend", "VWMAIndicator"),
+        ("VWAP", "app.core.services.indicators.volume", "VWAPIndicator"),
         (
             "KELTNER",
-            "app.core.services.indicators.volatility_indicators",
+            "app.core.services.indicators.volatility",
             "KeltnerChannelsIndicator",
         ),
         (
             "STOCHRSI",
-            "app.core.services.indicators.momentum_indicators",
+            "app.core.services.indicators.momentum",
             "StochasticRSIIndicator",
         ),
         (
             "ULTOSC",
-            "app.core.services.indicators.momentum_indicators",
+            "app.core.services.indicators.momentum",
             "UltimateOscillatorIndicator",
         ),
-        ("CMO", "app.core.services.indicators.momentum_indicators", "CMOIndicator"),
-        ("TRIX", "app.core.services.indicators.momentum_indicators", "TRIXIndicator"),
-        ("MAMA", "app.core.services.indicators.trend_indicators", "MAMAIndicator"),
+        ("CMO", "app.core.services.indicators.momentum", "CMOIndicator"),
+        ("TRIX", "app.core.services.indicators.momentum", "TRIXIndicator"),
+        ("MAMA", "app.core.services.indicators.trend", "MAMAIndicator"),
         (
             "STDDEV",
-            "app.core.services.indicators.volatility_indicators",
+            "app.core.services.indicators.volatility",
             "STDDEVIndicator",
         ),
     ]

@@ -8,8 +8,9 @@ backtesting.pyとの完全な互換性を保ちます。
 
 import logging
 import numpy as np
+import pandas as pd
 from functools import wraps
-from typing import Union, Any
+from typing import Union
 
 logger = logging.getLogger(__name__)
 
@@ -161,14 +162,19 @@ def ensure_numpy_array(data: Union[np.ndarray, list, "pd.Series"]) -> np.ndarray
 
     try:
         # pandas Seriesの場合
-        if hasattr(data, "values"):
-            array = data.values
+        if isinstance(data, pd.Series):
+            array = data.to_numpy()
         # 既にnumpy配列の場合
         elif isinstance(data, np.ndarray):
             array = data
         # listやその他のシーケンス型の場合
         else:
-            array = np.asarray(data)
+            array = np.asarray(data, dtype=np.float64)
+
+        # Ta-lib用にfloat64に変換
+        if array.dtype != np.float64:
+            return array.astype(np.float64)
+        return array
 
         # Ta-lib用にfloat64に変換
         return array.astype(np.float64)
