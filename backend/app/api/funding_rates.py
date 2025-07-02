@@ -14,7 +14,9 @@ from typing import Optional
 
 from database.connection import get_db, ensure_db_initialized
 from database.repositories.funding_rate_repository import FundingRateRepository
-from app.core.services.funding_rate_service import BybitFundingRateService
+from app.core.services.data_collection.funding_rate_service import (
+    BybitFundingRateService,
+)
 from app.core.utils.api_utils import APIResponseHelper, APIErrorHandler
 
 logger = logging.getLogger(__name__)

@@ -10,7 +10,9 @@ from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
 from sqlalchemy.orm import Session
 from typing import Dict
 
-from app.core.services.historical_data_service import HistoricalDataService
+from app.core.services.data_collection.historical_data_service import (
+    HistoricalDataService,
+)
 from database.connection import get_db, ensure_db_initialized
 from database.repositories.ohlcv_repository import OHLCVRepository
 from app.config.market_config import MarketDataConfig
@@ -622,7 +624,9 @@ async def _collect_all_data_background(symbol: str, timeframe: str, db: Session)
         # 2. Funding Rate収集
         try:
             logger.info(f"Funding Rate収集開始: {symbol} {timeframe}")
-            from app.core.services.funding_rate_service import BybitFundingRateService
+            from app.core.services.data_collection.funding_rate_service import (
+                BybitFundingRateService,
+            )
             from database.repositories.funding_rate_repository import (
                 FundingRateRepository,
             )
@@ -650,7 +654,9 @@ async def _collect_all_data_background(symbol: str, timeframe: str, db: Session)
         # 3. Open Interest収集
         try:
             logger.info(f"Open Interest収集開始: {symbol} {timeframe}")
-            from app.core.services.open_interest_service import BybitOpenInterestService
+            from app.core.services.data_collection.open_interest_service import (
+                BybitOpenInterestService,
+            )
             from database.repositories.open_interest_repository import (
                 OpenInterestRepository,
             )

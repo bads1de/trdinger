@@ -8,7 +8,7 @@ import asyncio
 import logging
 import ccxt
 from typing import Optional
-from app.core.services.market_data_service import BybitMarketDataService
+from app.core.services.data_collection.market_data_service import BybitMarketDataService
 from database.repositories.ohlcv_repository import OHLCVRepository
 
 logger = logging.getLogger(__name__)
