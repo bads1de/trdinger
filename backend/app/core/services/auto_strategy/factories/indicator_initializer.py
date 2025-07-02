@@ -7,13 +7,14 @@ TALibAdapterシステムとの統合を重視した実装です。
 
 import logging
 import pandas as pd
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, List
 
 from ..models.strategy_gene import IndicatorGene
 from .indicator_calculator import IndicatorCalculator
 from app.core.services.indicators.config import indicator_registry
 from app.core.services.indicators.parameter_manager import IndicatorParameterManager
 from app.core.utils.data_utils import convert_to_series
+from app.core.services.indicators.config.indicator_config import IndicatorResultType
 
 logger = logging.getLogger(__name__)
 
@@ -30,6 +31,28 @@ class IndicatorInitializer:
         """初期化"""
         self.indicator_calculator = IndicatorCalculator()
         self.parameter_manager = IndicatorParameterManager()
+
+    def _create_multi_value_wrapper(self, adapter_function, index: int):
+        """
+        複数値指標の特定のインデックスを返すラッパー関数を作成
+
+        Args:
+            adapter_function: 元の指標関数
+            index: 取得するインデックス（0=MACD線, 1=シグナル線, 2=ヒストグラム等）
+
+        Returns:
+            指定されたインデックスの値のみを返す関数
+        """
+
+        def wrapper(*args, **kwargs):
+            result = adapter_function(*args, **kwargs)
+            if isinstance(result, tuple) and len(result) > index:
+                return result[index]
+            else:
+                # フォールバック: 結果がtupleでない場合はそのまま返す
+                return result
+
+        return wrapper
 
     def calculate_indicator_only(
         self, indicator_type: str, parameters: Dict[str, Any], data: pd.DataFrame
@@ -79,148 +102,123 @@ class IndicatorInitializer:
             return None, None
 
     def initialize_indicator(
-        self, indicator_gene: IndicatorGene, data, strategy_instance
-    ) -> Optional[str]:
+        self, indicator_gene: IndicatorGene, strategy_instance: Any
+    ) -> Optional[List[str]]:
         """
-        単一指標の初期化（パラメータバリデーション付き）
+        単一指標をbacktesting.pyに正しく登録します（動的計算版）。
+
+        Args:
+            indicator_gene (IndicatorGene): 初期化する指標の遺伝子情報。
+            strategy_instance (Any): backtesting.pyの戦略インスタンス。
+
+        Returns:
+            Optional[List[str]]: 登録された指標の名前のリスト。失敗した場合はNone。
         """
         try:
             indicator_type = indicator_gene.type
             parameters = indicator_gene.parameters
-            original_type = indicator_type
+            original_type = indicator_gene.type
 
             # 指標タイプ解決
-            indicator_type = indicator_registry.resolve_indicator_type(indicator_type)
-            if not indicator_type:
+            resolved_indicator_type = indicator_registry.resolve_indicator_type(
+                indicator_type
+            )
+            if not resolved_indicator_type:
+                logger.warning(f"未対応の指標タイプ（代替なし）: {indicator_type}")
                 return None
+            indicator_type = resolved_indicator_type
 
             # パラメータバリデーション
             indicator_config = indicator_registry.get_indicator_config(indicator_type)
-            if indicator_config:
-                validation_result = self.parameter_manager.validate_parameters(
-                    indicator_type, parameters, indicator_config
-                )
-                if not validation_result:
-                    logger.error(f"パラメータバリデーション失敗: {indicator_type}")
-                    return None
-            else:
-                logger.warning(f"指標設定が見つかりません: {indicator_type}")
+            if not indicator_config:
+                logger.error(f"指標設定が見つかりません: {indicator_type}")
+                return None
 
-            # データ変換
-            close_data = convert_to_series(data.Close)
-            high_data = convert_to_series(data.High)
-            low_data = convert_to_series(data.Low)
-            volume_data = convert_to_series(data.Volume)
-            open_data = convert_to_series(data.Open) if hasattr(data, "Open") else None
+            if not self.parameter_manager.validate_parameters(
+                indicator_type, parameters, indicator_config
+            ):
+                logger.error(f"パラメータバリデーション失敗: {indicator_type}")
+                return None
 
-            # 指標計算
-            result, indicator_name = self.indicator_calculator.calculate_indicator(
-                indicator_type,
-                parameters,
-                close_data,
-                high_data,
-                low_data,
-                volume_data,
-                open_data,
-            )
+            adapter_function = indicator_config.adapter_function
+            required_data_keys = indicator_config.required_data
 
-            if result is not None and indicator_name is not None:
-                json_indicator_name = indicator_registry.generate_json_name(
-                    original_type
-                )
+            # 動的にデータを取得
+            input_data = [
+                getattr(strategy_instance.data, key.capitalize())
+                for key in required_data_keys
+            ]
 
-                if isinstance(result, dict):
-                    indicator_config = indicator_registry.get_indicator_config(
-                        original_type
-                    )
-                    if indicator_config and indicator_config.result_handler:
-                        handler_key = indicator_config.result_handler
-                        indicator_values = result.get(
-                            handler_key, list(result.values())[0]
-                        )
+            # パラメータ値を取得
+            param_values = [
+                parameters[p.name] for p in indicator_config.parameters.values()
+            ]
+
+            json_indicator_name = indicator_registry.generate_json_name(original_type)
+
+            # 複数値指標の場合は個別に登録
+            if indicator_config.result_type == IndicatorResultType.COMPLEX:
+                # 複数値指標（MACD, Bollinger Bands等）の処理
+                output_names = []
+
+                # 指標の種類に応じて適切な名前を設定
+                if original_type == "MACD":
+                    component_names = ["macd_line", "signal_line", "histogram"]
+                elif original_type == "BB":
+                    component_names = ["upper", "middle", "lower"]
+                elif original_type == "STOCH":
+                    component_names = ["slowk", "slowd"]
                 else:
-                    indicator_values = (
-                        result.values if hasattr(result, "values") else result
+                    # デフォルトの名前
+                    component_names = [f"component_{i}" for i in range(3)]
+
+                for i, component_name in enumerate(component_names):
+                    # 各コンポーネント用のラッパー関数を作成
+                    wrapper_function = self._create_multi_value_wrapper(
+                        adapter_function, i
                     )
 
-                # backtesting.pyのIメソッドを使用して動的指標を作成
-                # indicator_valuesをPandas Seriesに変換
-                if not isinstance(indicator_values, pd.Series):
-                    indicator_values = pd.Series(
-                        indicator_values, index=close_data.index
+                    # backtesting.pyに個別に登録
+                    component_indicator = strategy_instance.I(
+                        wrapper_function,
+                        *input_data,
+                        *param_values,
+                        name=f"{original_type}_{component_name}",
                     )
 
-                # backtesting.pyの正しい指標作成方法
-                # 指標計算関数を作成（事前計算された値を返す関数）
-                def create_indicator_func(values):
-                    """
-                    事前計算された指標値を返す関数を作成
-                    backtesting.pyのIメソッドが期待する形式に合わせる
-
-                    backtesting.pyは各バーで現在のデータ長に応じた配列を期待する
-                    """
-                    import numpy as np
-
-                    def indicator_func(data):
-                        # データの長さを取得
-                        data_length = len(data)
-
-                        # 指標値の配列を作成
-                        if data_length <= len(values):
-                            # データ長に合わせて指標値を切り取り
-                            if hasattr(values, "iloc"):
-                                result_values = values.iloc[:data_length].values
-                            else:
-                                result_values = np.array(values[:data_length])
-                        else:
-                            # データが指標値より長い場合は、最後の値で埋める
-                            if hasattr(values, "iloc"):
-                                base_values = values.values
-                            else:
-                                base_values = np.array(values)
-
-                            # 不足分を最後の値で埋める
-                            last_value = base_values[-1] if len(base_values) > 0 else 0
-                            padding = np.full(
-                                data_length - len(base_values), last_value
-                            )
-                            result_values = np.concatenate([base_values, padding])
-
-                        return result_values
-
-                    return indicator_func
-
-                try:
-                    strategy_instance.indicators[json_indicator_name] = (
-                        strategy_instance.I(
-                            create_indicator_func(indicator_values),
-                            strategy_instance.data.Close,
-                            name=json_indicator_name,
-                        )
+                    # 戦略インスタンスに登録
+                    component_json_name = f"{json_indicator_name}_{i}"
+                    strategy_instance.indicators[component_json_name] = (
+                        component_indicator
                     )
-                except Exception:
-                    import traceback
+                    output_names.append(component_json_name)
 
-                    traceback.print_exc()
-                    return None
+                logger.info(f"複数値指標を登録: {output_names}")
+                return output_names
+            else:
+                # 単一値指標（SMA, RSI等）の処理
+                indicator_result = strategy_instance.I(
+                    adapter_function, *input_data, *param_values, name=original_type
+                )
 
+                strategy_instance.indicators[json_indicator_name] = indicator_result
+                logger.info(f"単一値指標を登録: {json_indicator_name}")
+
+                # 後方互換性のためのレガシー名登録
                 legacy_indicator_name = self._get_legacy_indicator_name(
                     original_type, parameters
                 )
                 if legacy_indicator_name != json_indicator_name:
                     strategy_instance.indicators[legacy_indicator_name] = (
-                        strategy_instance.indicators[json_indicator_name]
+                        indicator_result
                     )
 
-                return json_indicator_name
-
-            return None
+                return [json_indicator_name]
 
         except Exception as e:
-            logger.error(f"指標初期化エラー ({indicator_gene.type}): {e}")
-            import traceback
-
-            traceback.print_exc()
+            logger.error(
+                f"指標初期化エラー ({indicator_gene.type}): {e}", exc_info=True
+            )
             return None
 
     def _get_legacy_indicator_name(self, indicator_type: str, parameters: dict) -> str:

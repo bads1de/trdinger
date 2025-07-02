@@ -295,36 +295,129 @@ class ConditionEvaluator:
 
     def _resolve_indicator_name(self, operand: str, strategy_instance) -> Optional[str]:
         """
-        指標名を解決（レガシー形式からJSON形式への変換対応）
+        指標名を解決（新しい動的指標システム対応）
 
         Args:
-            operand: 指標名（レガシー形式またはJSON形式）
+            operand: 指標名（基本名、コンポーネント名、またはレガシー形式）
             strategy_instance: 戦略インスタンス
 
         Returns:
             解決された指標名（見つからない場合はNone）
         """
         try:
-            # 直接存在する場合はそのまま使用（JSON形式）
+            # 1. 完全一致を試す (例: "MACD_0", "RSI", "SMA_20")
             if operand in strategy_instance.indicators:
                 return operand
 
-            # レガシー形式の場合、JSON形式に変換して検索
-            if "_" in operand:
-                base_name = operand.split("_")[0]
-                if base_name in strategy_instance.indicators:
-                    return base_name
+            # 2. 複数値指標の特別な名前解決ルール
+            resolved_name = self._resolve_multi_value_indicator(
+                operand, strategy_instance
+            )
+            if resolved_name:
+                return resolved_name
 
-            # 特別なケース：MACD関連の指標
-            if operand in ["MACD_line", "MACD_signal", "MACD_histogram"]:
-                if "MACD" in strategy_instance.indicators:
-                    return "MACD"
+            # 3. 前方一致を試す (例: "MACD" が "MACD_0" にマッチ)
+            for indicator_name in strategy_instance.indicators:
+                if indicator_name.startswith(operand):
+                    logger.debug(
+                        f"前方一致で指標名を解決: '{operand}' -> '{indicator_name}'"
+                    )
+                    return indicator_name
 
+            # 4. レガシー形式の解決を試す
+            legacy_resolved = self._resolve_legacy_indicator_name(
+                operand, strategy_instance
+            )
+            if legacy_resolved:
+                return legacy_resolved
+
+            logger.warning(
+                f"指標名 '{operand}' が解決できませんでした。利用可能な指標: {list(strategy_instance.indicators.keys())}"
+            )
             return None
-
         except Exception as e:
-            logger.error(f"指標名解決エラー: {e}")
+            logger.error(f"指標名解決エラー: {e}", exc_info=True)
             return None
+
+    def _resolve_multi_value_indicator(
+        self, operand: str, strategy_instance
+    ) -> Optional[str]:
+        """
+        複数値指標の名前解決（新しい動的指標システム対応）
+
+        Args:
+            operand: 指標名（基本名またはコンポーネント指定）
+            strategy_instance: 戦略インスタンス
+
+        Returns:
+            解決された指標名（見つからない場合はNone）
+        """
+        # 複数値指標のコンポーネント名マッピング
+        multi_value_mappings = {
+            # MACD関連
+            "MACD": "MACD_0",  # デフォルトはMACD線
+            "MACD_line": "MACD_0",  # MACD線
+            "MACD_signal": "MACD_1",  # シグナル線
+            "MACD_histogram": "MACD_2",  # ヒストグラム
+            "macd_line": "MACD_0",  # 小文字対応
+            "macd_signal": "MACD_1",
+            "macd_histogram": "MACD_2",
+            # Bollinger Bands関連
+            "BB": "BB_1",  # デフォルトは中央線（SMA）
+            "BB_upper": "BB_0",  # 上限バンド
+            "BB_middle": "BB_1",  # 中央線
+            "BB_lower": "BB_2",  # 下限バンド
+            "bb_upper": "BB_0",  # 小文字対応
+            "bb_middle": "BB_1",
+            "bb_lower": "BB_2",
+            "BollingerBands": "BB_1",  # フル名
+            "BollingerBands_upper": "BB_0",
+            "BollingerBands_middle": "BB_1",
+            "BollingerBands_lower": "BB_2",
+            # Stochastic関連
+            "STOCH": "STOCH_0",  # デフォルトは%K
+            "STOCH_K": "STOCH_0",  # %K
+            "STOCH_D": "STOCH_1",  # %D
+            "stoch_k": "STOCH_0",  # 小文字対応
+            "stoch_d": "STOCH_1",
+            "Stochastic": "STOCH_0",  # フル名
+            "Stochastic_K": "STOCH_0",
+            "Stochastic_D": "STOCH_1",
+        }
+
+        # マッピングテーブルから解決を試す
+        if operand in multi_value_mappings:
+            target_name = multi_value_mappings[operand]
+            if target_name in strategy_instance.indicators:
+                logger.debug(f"複数値指標名を解決: '{operand}' -> '{target_name}'")
+                return target_name
+
+        return None
+
+    def _resolve_legacy_indicator_name(
+        self, operand: str, strategy_instance
+    ) -> Optional[str]:
+        """
+        レガシー形式の指標名解決
+
+        Args:
+            operand: レガシー形式の指標名（例: "SMA_20", "RSI_14"）
+            strategy_instance: 戦略インスタンス
+
+        Returns:
+            解決された指標名（見つからない場合はNone）
+        """
+        # レガシー形式から新しい形式への変換を試す
+        # 例: "SMA_20" -> "SMA", "RSI_14" -> "RSI"
+
+        # アンダースコア区切りの場合、基本名を抽出
+        if "_" in operand:
+            base_name = operand.split("_")[0]
+            if base_name in strategy_instance.indicators:
+                logger.debug(f"レガシー指標名を解決: '{operand}' -> '{base_name}'")
+                return base_name
+
+        return None
 
     def _get_oi_fr_value(self, data_type: str, strategy_instance) -> Optional[float]:
         """

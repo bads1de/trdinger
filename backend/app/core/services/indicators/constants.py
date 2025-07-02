@@ -84,5 +84,5 @@ def validate_indicator_lists() -> bool:
 
 
 TOTAL_INDICATORS = len(ALL_INDICATORS)
-assert TOTAL_INDICATORS == 9, f"Expected 9 indicators, got {TOTAL_INDICATORS}"
+assert TOTAL_INDICATORS == 10, f"Expected 10 indicators, got {TOTAL_INDICATORS}"
 assert validate_indicator_lists(), "Indicator lists are inconsistent"

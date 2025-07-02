@@ -1,271 +1,262 @@
 """
-指標計算機
+指標計算機（オートストラテジー最適化版）
 
-指標の計算ロジックを専門に担当するモジュール。
-IndicatorInitializerから計算機能を分離し、責務を明確化します。
+numpy配列ベースの新しいTa-lib指標クラスを使用し、
+backtesting.pyとの完全な互換性を提供します。
+pandas Seriesの変換は一切行いません。
 """
 
 import logging
+import numpy as np
 import pandas as pd
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, Tuple, Union
 
-from app.core.services.indicators.config import (
-    indicator_registry,
-    compatibility_manager,
-)
+# 新しいnumpy配列ベース指標クラス
+from app.core.services.indicators.trend import TrendIndicators
+from app.core.services.indicators.momentum import MomentumIndicators
+from app.core.services.indicators.volatility import VolatilityIndicators
+from app.core.services.indicators.utils import TALibError, ensure_numpy_array
 
 logger = logging.getLogger(__name__)
 
 
 class IndicatorCalculator:
     """
-    指標計算を担当するクラス
+    指標計算を担当するクラス（オートストラテジー最適化版）
 
     責務:
-    - 純粋な指標計算ロジックの実行
-    - IndicatorConfig に基づく統一された計算フロー
-    - バリデーション済みパラメータの処理
+    - numpy配列ベースの高速指標計算
+    - backtesting.pyとの完全な互換性
+    - pandas Seriesの変換を一切行わない最適化
 
-    注意:
-    - パラメータバリデーションは IndicatorInitializer で実行されます
-    - このクラスはバリデーション済みのデータのみを処理します
+    特徴:
+    - Ta-lib直接呼び出しによる最大パフォーマンス
+    - numpy配列ネイティブ処理
+    - メモリ効率の最大化
     """
 
     def __init__(self):
         """初期化"""
-        self.indicator_config = self._setup_indicator_config()
-        self._current_data = None
-
-        # 互換性モードを有効化（段階的移行のため）
-        compatibility_manager.enable_compatibility_mode()
-
-    def _setup_indicator_config(self) -> Dict[str, Dict[str, Any]]:
-        """指標設定マッピングを設定（JSON形式対応）"""
-        config = {}
-
-        # オートストラテジー用の10個の指標を設定
-        auto_strategy_indicators = [
-            "SMA",
-            "EMA",
-            "MACD",
-            "BB",
-            "RSI",
-            "STOCH",
-            "CCI",
-            "ADX",
-            "ATR",
-            "OBV",
-        ]
-
-        for indicator_name in auto_strategy_indicators:
-            indicator_config = indicator_registry.get_indicator_config(indicator_name)
-            if indicator_config:
-                # JSON形式ベースの設定（統一）
-                config[indicator_name] = {
-                    "indicator_config": indicator_config,
-                    "adapter_function": indicator_config.adapter_function,
-                    "required_data": indicator_config.required_data,
-                    "result_type": indicator_config.result_type.value,
-                    "result_handler": indicator_config.result_handler,
-                    "legacy_name_format": indicator_config.legacy_name_format,
-                }
-            else:
-                logger.warning(f"指標 {indicator_name} の設定が見つかりません")
-                # 設定が見つからない場合はスキップ
-
-        return config
+        self.indicator_map = {
+            # トレンド系指標
+            "SMA": TrendIndicators.sma,
+            "EMA": TrendIndicators.ema,
+            "TEMA": TrendIndicators.tema,
+            "DEMA": TrendIndicators.dema,
+            "WMA": TrendIndicators.wma,
+            "TRIMA": TrendIndicators.trima,
+            "KAMA": TrendIndicators.kama,
+            "T3": TrendIndicators.t3,
+            "MIDPOINT": TrendIndicators.midpoint,
+            "MIDPRICE": TrendIndicators.midprice,
+            "SAR": TrendIndicators.sar,
+            "SAREXT": TrendIndicators.sarext,
+            # モメンタム系指標
+            "RSI": MomentumIndicators.rsi,
+            "MACD": MomentumIndicators.macd,
+            "MACDEXT": MomentumIndicators.macdext,
+            "MACDFIX": MomentumIndicators.macdfix,
+            "STOCH": MomentumIndicators.stoch,
+            "STOCHF": MomentumIndicators.stochf,
+            "STOCHRSI": MomentumIndicators.stochrsi,
+            "WILLR": MomentumIndicators.williams_r,
+            "CCI": MomentumIndicators.cci,
+            "CMO": MomentumIndicators.cmo,
+            "ROC": MomentumIndicators.roc,
+            "ROCP": MomentumIndicators.rocp,
+            "ROCR": MomentumIndicators.rocr,
+            "ROCR100": MomentumIndicators.rocr100,
+            "MOM": MomentumIndicators.mom,
+            # ボラティリティ系指標
+            "ATR": VolatilityIndicators.atr,
+            "NATR": VolatilityIndicators.natr,
+            "TRANGE": VolatilityIndicators.trange,
+            "BBANDS": VolatilityIndicators.bollinger_bands,
+            "STDDEV": VolatilityIndicators.stddev,
+            "VAR": VolatilityIndicators.var,
+            "ADX": VolatilityIndicators.adx,
+            "ADXR": VolatilityIndicators.adxr,
+            "DX": VolatilityIndicators.dx,
+            "MINUS_DI": VolatilityIndicators.minus_di,
+            "PLUS_DI": VolatilityIndicators.plus_di,
+            "MINUS_DM": VolatilityIndicators.minus_dm,
+            "PLUS_DM": VolatilityIndicators.plus_dm,
+            "AROON": VolatilityIndicators.aroon,
+            "AROONOSC": VolatilityIndicators.aroonosc,
+        }
 
     def calculate_indicator(
         self,
         indicator_type: str,
         parameters: Dict[str, Any],
-        close_data: pd.Series,
-        high_data: pd.Series,
-        low_data: pd.Series,
-        volume_data: pd.Series,
-        open_data: Optional[pd.Series] = None,
-    ) -> tuple:
+        close_data: Union[pd.Series, np.ndarray],
+        high_data: Optional[Union[pd.Series, np.ndarray]] = None,
+        low_data: Optional[Union[pd.Series, np.ndarray]] = None,
+        volume_data: Optional[Union[pd.Series, np.ndarray]] = None,
+        open_data: Optional[Union[pd.Series, np.ndarray]] = None,
+    ) -> Tuple[Optional[Union[np.ndarray, tuple]], Optional[str]]:
         """
-        指標を計算（純粋な計算ロジック）
-
-        注意: このメソッドはバリデーション済みのパラメータを受け取ることを前提とします。
-        パラメータバリデーションは IndicatorInitializer で実行されます。
+        指標を計算（numpy配列最適化版）
 
         Args:
             indicator_type: 指標タイプ
-            parameters: バリデーション済みパラメータ
-            close_data: 終値データ
-            high_data: 高値データ
-            low_data: 安値データ
-            volume_data: 出来高データ
+            parameters: パラメータ辞書
+            close_data: 終値データ（numpy配列またはpandas Series）
+            high_data: 高値データ（オプション）
+            low_data: 安値データ（オプション）
+            volume_data: 出来高データ（オプション）
             open_data: 始値データ（オプション）
 
         Returns:
-            tuple: (計算結果, 指標名)
+            tuple: (計算結果, 指標名) または (None, None)
         """
         try:
-            # データを一時的に保存（将来の拡張用）
-            if open_data is not None:
-                self._current_data = pd.DataFrame(
-                    {
-                        "open": open_data,
-                        "high": high_data,
-                        "low": low_data,
-                        "close": close_data,
-                        "volume": volume_data,
-                    }
-                )
+            # データをnumpy配列に変換（最適化）
+            close_array = ensure_numpy_array(close_data)
+            high_array = (
+                ensure_numpy_array(high_data) if high_data is not None else None
+            )
+            low_array = ensure_numpy_array(low_data) if low_data is not None else None
+            volume_array = (
+                ensure_numpy_array(volume_data) if volume_data is not None else None
+            )
 
-            # 統一された設定マッピングを使用した処理
-            if indicator_type in self.indicator_config:
-                return self._calculate_from_config(
-                    indicator_type,
-                    parameters,
-                    close_data,
-                    high_data,
-                    low_data,
-                    volume_data,
-                )
-            else:
+            # 指標タイプに応じて適切な関数を呼び出し
+            if indicator_type not in self.indicator_map:
                 logger.warning(f"未対応の指標タイプ: {indicator_type}")
                 return None, None
 
+            func = self.indicator_map[indicator_type]
+
+            # 指標タイプに応じて適切な引数で呼び出し（numpy配列直接渡し）
+            result = self._call_indicator_function(
+                func,
+                indicator_type,
+                parameters,
+                close_array,
+                high_array,
+                low_array,
+                volume_array,
+            )
+
+            return result, indicator_type
+
+        except TALibError as e:
+            logger.error(f"Ta-lib計算エラー ({indicator_type}): {e}")
+            return None, None
         except Exception as e:
             logger.error(f"指標計算エラー ({indicator_type}): {e}")
             return None, None
 
-    def _calculate_from_config(
+    def _call_indicator_function(
         self,
+        func,
         indicator_type: str,
         parameters: Dict[str, Any],
-        close_data: pd.Series,
-        high_data: pd.Series,
-        low_data: pd.Series,
-        volume_data: pd.Series,
-    ) -> tuple:
-        """設定マッピングベースの指標計算"""
-        config = self.indicator_config[indicator_type]
+        close_array: np.ndarray,
+        high_array: Optional[np.ndarray] = None,
+        low_array: Optional[np.ndarray] = None,
+        volume_array: Optional[np.ndarray] = None,
+    ) -> Union[np.ndarray, tuple]:
+        """
+        指標関数を適切な引数で呼び出し
 
-        data_args = self._prepare_data_for_indicator(
-            config, close_data, high_data, low_data, volume_data
-        )
-        param_args = self._prepare_parameters_for_indicator(config, parameters)
-        result = self._call_adapter_function(
-            config["adapter_function"], data_args, param_args
-        )
+        Args:
+            func: 指標関数
+            indicator_type: 指標タイプ
+            parameters: パラメータ辞書
+            close_array: 終値データ
+            high_array: 高値データ（オプション）
+            low_array: 安値データ（オプション）
+            volume_array: 出来高データ（オプション）
 
-        if config["result_type"] == "complex":
-            return self._handle_complex_result(
-                result, config, indicator_type, parameters
-            )
-        else:
-            indicator_name = config["indicator_config"].generate_json_name()
-            return result, indicator_name
-
-    def _prepare_data_for_indicator(
-        self,
-        config: Dict[str, Any],
-        close_data: pd.Series,
-        high_data: pd.Series,
-        low_data: pd.Series,
-        volume_data: pd.Series,
-    ) -> list:
-        """指標に必要なデータを準備"""
-        data_map = {
-            "close": close_data,
-            "high": high_data,
-            "low": low_data,
-            "volume": volume_data,
-        }
-        required_data = config["required_data"]
-        return [data_map[data_type] for data_type in required_data]
-
-    def _prepare_parameters_for_indicator(
-        self, config: Dict[str, Any], parameters: Dict[str, Any]
-    ) -> Dict[str, Any]:
-        """指標に必要なパラメータを準備（IndicatorConfig完全依存）"""
-        prepared_params = {}
-
-        # IndicatorConfigから完全にパラメータを取得
-        indicator_config = config["indicator_config"]
-        indicator_name = indicator_config.indicator_name
-
-        # 指標固有のパラメータマッピング
-        param_mapping = self._get_parameter_mapping(indicator_name)
-
-        # IndicatorConfigからパラメータのデフォルト値を取得
-        for param_name, param_config in indicator_config.parameters.items():
-            value = parameters.get(param_name, param_config.default_value)
-
-            # パラメータ名をアダプター関数の引数名にマッピング
-            adapter_param_name = param_mapping.get(param_name, param_name)
-
-            # 特定の指標で使用されないパラメータをスキップ
-            if self._should_skip_parameter(indicator_name, param_name):
-                continue
-
-            prepared_params[adapter_param_name] = value
-
-        return prepared_params
-
-    def _get_parameter_mapping(self, indicator_name: str) -> Dict[str, str]:
-        """指標固有のパラメータ名マッピングを取得"""
-        mappings = {
-            "MACD": {
-                "fast_period": "fast",  # MomentumAdapter.macdの引数名
-                "slow_period": "slow",  # MomentumAdapter.macdの引数名
-                "signal_period": "signal",  # MomentumAdapter.macdの引数名
-            },
-            "STOCH": {
-                "k_period": "k_period",  # MomentumAdapter.stochasticの引数名
-                "d_period": "d_period",  # MomentumAdapter.stochasticの引数名
-                # slowingパラメータはstochasticメソッドにはない
-            },
-            "BB": {"period": "period", "std_dev": "std_dev"},
-        }
-        return mappings.get(indicator_name, {})
-
-    def _should_skip_parameter(self, indicator_name: str, param_name: str) -> bool:
-        """特定の指標で使用されないパラメータかどうかを判定"""
-        skip_rules = {
-            "STOCH": [
-                "slowing"
-            ],  # stochasticメソッドではslowingパラメータは使用されない
+        Returns:
+            指標計算結果
+        """
+        # 単一価格データを使用する指標
+        single_price_indicators = {
+            "SMA",
+            "EMA",
+            "TEMA",
+            "DEMA",
+            "WMA",
+            "TRIMA",
+            "KAMA",
+            "T3",
+            "MIDPOINT",
+            "RSI",
+            "CMO",
+            "ROC",
+            "ROCP",
+            "ROCR",
+            "ROCR100",
+            "MOM",
+            "STDDEV",
+            "VAR",
         }
 
-        skip_params = skip_rules.get(indicator_name, [])
-        return param_name in skip_params
+        # OHLC価格データを使用する指標
+        ohlc_indicators = {
+            "ATR",
+            "NATR",
+            "TRANGE",
+            "ADX",
+            "ADXR",
+            "DX",
+            "MINUS_DI",
+            "PLUS_DI",
+            "CCI",
+            "WILLR",
+            "STOCH",
+            "STOCHF",
+        }
 
-    def _call_adapter_function(
-        self, adapter_function, data_args: list, param_args: Dict[str, Any]
-    ) -> Any:
-        """アダプター関数を呼び出し"""
-        if param_args:
-            return adapter_function(*data_args, **param_args)
-        else:
-            return adapter_function(*data_args)
+        # HL価格データを使用する指標
+        hl_indicators = {
+            "MIDPRICE",
+            "SAR",
+            "SAREXT",
+            "MINUS_DM",
+            "PLUS_DM",
+            "AROON",
+            "AROONOSC",
+        }
 
-    def _handle_complex_result(
-        self,
-        result: Any,
-        config: Dict[str, Any],
-        indicator_type: str,
-        parameters: Dict[str, Any],
-    ) -> tuple:
-        """複合指標の結果を処理"""
+        # 複合指標（特別な処理が必要）
+        complex_indicators = {"MACD", "MACDEXT", "MACDFIX", "STOCHRSI", "BBANDS"}
+
         try:
-            result_handler = config.get("result_handler")
-            indicator_name = config["indicator_config"].generate_json_name()
+            if indicator_type in single_price_indicators:
+                # 単一価格データ（通常はclose）
+                return func(close_array, **parameters)
 
-            if result_handler == "macd_handler":
-                if isinstance(result, dict) and "macd_line" in result:
-                    return result["macd_line"], indicator_name
-            elif result_handler == "bb_handler":
-                if isinstance(result, dict) and "middle" in result:
-                    return result["middle"], indicator_name
+            elif indicator_type in ohlc_indicators:
+                # OHLC価格データが必要
+                if high_array is None or low_array is None:
+                    raise TALibError(f"{indicator_type}には高値・安値データが必要です")
+                return func(high_array, low_array, close_array, **parameters)
 
-            # デフォルト処理
-            return result, indicator_name
+            elif indicator_type in hl_indicators:
+                # HL価格データが必要
+                if high_array is None or low_array is None:
+                    raise TALibError(f"{indicator_type}には高値・安値データが必要です")
+                return func(high_array, low_array, **parameters)
+
+            elif indicator_type in complex_indicators:
+                # 複合指標の特別処理
+                if indicator_type in ["MACD", "MACDEXT", "MACDFIX"]:
+                    return func(close_array, **parameters)
+                elif indicator_type == "STOCHRSI":
+                    return func(close_array, **parameters)
+                elif indicator_type == "BBANDS":
+                    return func(close_array, **parameters)
+
+            else:
+                # デフォルト処理（close価格のみ）
+                logger.warning(
+                    f"未知の指標タイプ {indicator_type}、デフォルト処理を使用"
+                )
+                return func(close_array, **parameters)
+
         except Exception as e:
-            logger.error(f"複合指標処理エラー ({indicator_type}): {e}")
-            return None, None
+            raise TALibError(f"{indicator_type}計算エラー: {e}")

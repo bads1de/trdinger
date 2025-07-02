@@ -12,20 +12,34 @@ from .indicator_config import (
     indicator_registry,
 )
 
-# アダプター関数のインポート
-from app.core.services.indicators.adapters.trend_adapter import TrendAdapter
-from app.core.services.indicators.adapters.momentum_adapter import MomentumAdapter
-from app.core.services.indicators.adapters.volatility_adapter import VolatilityAdapter
-from app.core.services.indicators.adapters.volume_adapter import VolumeAdapter
+# 新しいnumpy配列ベース指標クラス（オートストラテジー最適化版）
+from app.core.services.indicators.trend import TrendIndicators
+from app.core.services.indicators.momentum import MomentumIndicators
+from app.core.services.indicators.volatility import VolatilityIndicators
+
+# 古いアダプター関数（段階的移行のため一時的に保持）
+try:
+    from app.core.services.indicators.adapters.trend_adapter import TrendAdapter
+    from app.core.services.indicators.adapters.momentum_adapter import MomentumAdapter
+    from app.core.services.indicators.adapters.volatility_adapter import (
+        VolatilityAdapter,
+    )
+    from app.core.services.indicators.adapters.volume_adapter import VolumeAdapter
+except ImportError:
+    # 古いアダプターが削除されている場合はスキップ
+    TrendAdapter = None
+    MomentumAdapter = None
+    VolatilityAdapter = None
+    VolumeAdapter = None
 
 
 def setup_momentum_indicators():
-    """モメンタム系インジケーターの設定"""
+    """モメンタム系インジケーターの設定（オートストラテジー最適化版）"""
 
-    # RSI
+    # RSI - 新しいnumpy配列ベース指標クラス使用
     rsi_config = IndicatorConfig(
         indicator_name="RSI",
-        adapter_function=MomentumAdapter.rsi,
+        adapter_function=MomentumIndicators.rsi,
         required_data=["close"],
         result_type=IndicatorResultType.SINGLE,
         legacy_name_format="{indicator}_{period}",
@@ -114,10 +128,10 @@ def setup_momentum_indicators():
     )
     indicator_registry.register(ppo_config)
 
-    # MACD (複数値結果の例)
+    # MACD - 新しいnumpy配列ベース指標クラス使用（複数値結果）
     macd_config = IndicatorConfig(
         indicator_name="MACD",
-        adapter_function=MomentumAdapter.macd,
+        adapter_function=MomentumIndicators.macd,
         required_data=["close"],
         result_type=IndicatorResultType.COMPLEX,
         result_handler="macd_handler",
@@ -126,7 +140,7 @@ def setup_momentum_indicators():
     )
     macd_config.add_parameter(
         ParameterConfig(
-            name="fast_period",
+            name="fast",
             default_value=12,
             min_value=2,
             max_value=50,
@@ -135,7 +149,7 @@ def setup_momentum_indicators():
     )
     macd_config.add_parameter(
         ParameterConfig(
-            name="slow_period",
+            name="slow",
             default_value=26,
             min_value=10,
             max_value=100,
@@ -144,7 +158,7 @@ def setup_momentum_indicators():
     )
     macd_config.add_parameter(
         ParameterConfig(
-            name="signal_period",
+            name="signal",
             default_value=9,
             min_value=2,
             max_value=50,
@@ -155,12 +169,12 @@ def setup_momentum_indicators():
 
 
 def setup_trend_indicators():
-    """トレンド系インジケーターの設定"""
+    """トレンド系インジケーターの設定（オートストラテジー最適化版）"""
 
-    # SMA
+    # SMA - 新しいnumpy配列ベース指標クラス使用
     sma_config = IndicatorConfig(
         indicator_name="SMA",
-        adapter_function=TrendAdapter.sma,
+        adapter_function=TrendIndicators.sma,
         required_data=["close"],
         result_type=IndicatorResultType.SINGLE,
         legacy_name_format="{indicator}_{period}",
@@ -177,10 +191,10 @@ def setup_trend_indicators():
     )
     indicator_registry.register(sma_config)
 
-    # EMA
+    # EMA - 新しいnumpy配列ベース指標クラス使用
     ema_config = IndicatorConfig(
         indicator_name="EMA",
-        adapter_function=TrendAdapter.ema,
+        adapter_function=TrendIndicators.ema,
         required_data=["close"],
         result_type=IndicatorResultType.SINGLE,
         legacy_name_format="{indicator}_{period}",
@@ -199,12 +213,12 @@ def setup_trend_indicators():
 
 
 def setup_volatility_indicators():
-    """ボラティリティ系インジケーターの設定"""
+    """ボラティリティ系インジケーターの設定（オートストラテジー最適化版）"""
 
-    # ATR
+    # ATR - 新しいnumpy配列ベース指標クラス使用
     atr_config = IndicatorConfig(
         indicator_name="ATR",
-        adapter_function=VolatilityAdapter.atr,
+        adapter_function=VolatilityIndicators.atr,
         required_data=["high", "low", "close"],
         result_type=IndicatorResultType.SINGLE,
         legacy_name_format="{indicator}_{period}",
@@ -221,10 +235,10 @@ def setup_volatility_indicators():
     )
     indicator_registry.register(atr_config)
 
-    # Bollinger Bands (複数値結果の例)
+    # Bollinger Bands - 新しいnumpy配列ベース指標クラス使用
     bb_config = IndicatorConfig(
         indicator_name="BB",
-        adapter_function=VolatilityAdapter.bollinger_bands,
+        adapter_function=VolatilityIndicators.bollinger_bands,
         required_data=["close"],
         result_type=IndicatorResultType.COMPLEX,
         result_handler="bb_handler",
@@ -253,93 +267,99 @@ def setup_volatility_indicators():
 
 
 def setup_volume_indicators():
-    """出来高系インジケーターの設定"""
+    """出来高系インジケーターの設定（一時的に無効化）"""
 
-    # OBV (パラメータなしの例)
-    obv_config = IndicatorConfig(
-        indicator_name="OBV",
-        adapter_function=VolumeAdapter.obv,
-        required_data=["close", "volume"],
-        result_type=IndicatorResultType.SINGLE,
-        legacy_name_format="{indicator}",
-        scale_type=IndicatorScaleType.VOLUME,
-    )
-    indicator_registry.register(obv_config)
+    # 出来高系指標は新しいアーキテクチャでまだ実装されていないため、
+    # 一時的に無効化します
+    pass
 
-    # ADOSC (複数パラメータの例)
-    adosc_config = IndicatorConfig(
-        indicator_name="ADOSC",
-        required_data=["high", "low", "close", "volume"],
-        result_type=IndicatorResultType.SINGLE,
-        legacy_name_format="{indicator}_{fast_period}_{slow_period}",
-    )
-    adosc_config.add_parameter(
-        ParameterConfig(
-            name="fast_period",
-            default_value=3,
-            min_value=1,
-            max_value=20,
-            description="短期期間",
-        )
-    )
-    adosc_config.add_parameter(
-        ParameterConfig(
-            name="slow_period",
-            default_value=10,
-            min_value=5,
-            max_value=50,
-            description="長期期間",
-        )
-    )
-    indicator_registry.register(adosc_config)
+    # TODO: 出来高系指標の新しい実装を追加
+    # # OBV (パラメータなしの例)
+    # obv_config = IndicatorConfig(
+    #     indicator_name="OBV",
+    #     adapter_function=VolumeIndicators.obv,  # 新しい実装が必要
+    #     required_data=["close", "volume"],
+    #     result_type=IndicatorResultType.SINGLE,
+    #     legacy_name_format="{indicator}",
+    #     scale_type=IndicatorScaleType.VOLUME,
+    # )
+    # indicator_registry.register(obv_config)
+
+    # TODO: ADOSC等の出来高系指標も新しい実装が必要
+    # # ADOSC (複数パラメータの例)
+    # adosc_config = IndicatorConfig(
+    #     indicator_name="ADOSC",
+    #     required_data=["high", "low", "close", "volume"],
+    #     result_type=IndicatorResultType.SINGLE,
+    #     legacy_name_format="{indicator}_{fast_period}_{slow_period}",
+    # )
+    # adosc_config.add_parameter(
+    #     ParameterConfig(
+    #         name="fast_period",
+    #         default_value=3,
+    #         min_value=1,
+    #         max_value=20,
+    #         description="短期期間",
+    #     )
+    # )
+    # adosc_config.add_parameter(
+    #     ParameterConfig(
+    #         name="slow_period",
+    #         default_value=10,
+    #         min_value=5,
+    #         max_value=50,
+    #         description="長期期間",
+    #     )
+    # )
+    # indicator_registry.register(adosc_config)
 
 
 def setup_additional_indicators():
-    """オートストラテジー用の追加インジケーター設定"""
+    """オートストラテジー用の追加インジケーター設定（オートストラテジー最適化版）"""
 
-    # STOCH (Stochastic Oscillator)
+    # STOCH (Stochastic Oscillator) - 新しいnumpy配列ベース指標クラス使用
     stoch_config = IndicatorConfig(
         indicator_name="STOCH",
-        adapter_function=MomentumAdapter.stochastic,
+        adapter_function=MomentumIndicators.stoch,
         required_data=["high", "low", "close"],
         result_type=IndicatorResultType.COMPLEX,
         result_handler="stoch_handler",
-        legacy_name_format="STOCH_{k_period}",
+        legacy_name_format="STOCH_{fastk_period}",
         scale_type=IndicatorScaleType.OSCILLATOR_0_100,
     )
     stoch_config.add_parameter(
         ParameterConfig(
-            name="k_period",
-            default_value=14,
-            min_value=5,
+            name="fastk_period",
+            default_value=5,
+            min_value=1,
             max_value=30,
-            description="%K期間",
+            description="Fast %K期間",
         )
     )
     stoch_config.add_parameter(
         ParameterConfig(
-            name="d_period",
+            name="slowk_period",
             default_value=3,
             min_value=1,
             max_value=10,
-            description="%D期間",
+            description="Slow %K期間",
         )
     )
     stoch_config.add_parameter(
         ParameterConfig(
-            name="slowing",
+            name="slowd_period",
             default_value=3,
             min_value=1,
             max_value=10,
-            description="スローイング期間",
+            description="Slow %D期間",
         )
     )
     indicator_registry.register(stoch_config)
 
-    # CCI (Commodity Channel Index)
+    # CCI (Commodity Channel Index) - 新しいnumpy配列ベース指標クラス使用
     cci_config = IndicatorConfig(
         indicator_name="CCI",
-        adapter_function=MomentumAdapter.cci,
+        adapter_function=MomentumIndicators.cci,
         required_data=["high", "low", "close"],
         result_type=IndicatorResultType.SINGLE,
         legacy_name_format="{indicator}_{period}",
@@ -356,10 +376,10 @@ def setup_additional_indicators():
     )
     indicator_registry.register(cci_config)
 
-    # ADX (Average Directional Index)
+    # ADX (Average Directional Index) - 新しいnumpy配列ベース指標クラス使用
     adx_config = IndicatorConfig(
         indicator_name="ADX",
-        adapter_function=MomentumAdapter.adx,
+        adapter_function=VolatilityIndicators.adx,
         required_data=["high", "low", "close"],
         result_type=IndicatorResultType.SINGLE,
         legacy_name_format="{indicator}_{period}",

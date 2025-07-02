@@ -1,17 +1,27 @@
 """
-テクニカル指標関数
+テクニカル指標関数（オートストラテジー最適化版）
 
 backtesting.pyで使用するテクニカル指標を定義します。
-既存のテクニカル指標計算機能と統合可能です。
+numpy配列ベースの新しいアーキテクチャを使用し、最大限のパフォーマンスを実現します。
+
+主な特徴:
+- backtesting.pyとの完全な互換性
+- numpy配列ネイティブ処理による最高速度
+- Ta-lib直接呼び出しによる最大パフォーマンス
+- pandas Seriesの変換を最小限に抑制
 """
 
 import logging
 import pandas as pd
 import numpy as np
 
-from typing import Union, List, cast
+from typing import Union, List
 
-from ..services.indicators.indicator_orchestrator import TechnicalIndicatorService
+
+from ..services.indicators.trend import TrendIndicators
+from ..services.indicators.momentum import MomentumIndicators
+from ..services.indicators.volatility import VolatilityIndicators
+from ..services.indicators.utils import ensure_numpy_array
 from ..utils.data_utils import ensure_series
 
 logger = logging.getLogger(__name__)
@@ -19,7 +29,7 @@ logger = logging.getLogger(__name__)
 
 def SMA(data: Union[pd.Series, List, np.ndarray], period: int) -> pd.Series:
     """
-    Simple Moving Average (単純移動平均) - IndicatorOrchestrator使用
+    Simple Moving Average (単純移動平均) - numpy配列最適化版
 
     Args:
         data: 価格データ（通常はClose価格）
@@ -28,23 +38,29 @@ def SMA(data: Union[pd.Series, List, np.ndarray], period: int) -> pd.Series:
     Returns:
         SMAの値を含むpandas.Series
 
-    Raises:
-        ImportError: TA-Libが利用できない場合
-        TALibCalculationError: TA-Lib計算エラーの場合
+    Note:
+        numpy配列ベースの高速計算を使用し、結果をpandas.Seriesに変換して
+        backtesting.pyとの互換性を維持します。
     """
-    orchestrator = TechnicalIndicatorService()
-    data_series = ensure_series(data)
+    try:
+        # numpy配列に変換して高速計算
+        data_array = ensure_numpy_array(data)
+        result_array = TrendIndicators.sma(data_array, period=period)
 
-    # DataFrameに変換（IndicatorOrchestratorはDataFrameを期待）
-    df = pd.DataFrame({"close": data_series})
+        # backtesting.py互換性のためpandas.Seriesに変換
+        if isinstance(data, pd.Series):
+            return pd.Series(result_array, index=data.index, name=f"SMA_{period}")
+        else:
+            return pd.Series(result_array, name=f"SMA_{period}")
 
-    result = orchestrator.calculate_indicator(df, indicator_type="SMA", period=period)
-    return cast(pd.Series, result)
+    except Exception as e:
+        logger.error(f"SMA計算エラー: {e}")
+        raise
 
 
 def EMA(data: Union[pd.Series, List, np.ndarray], period: int) -> pd.Series:
     """
-    Exponential Moving Average (指数移動平均) - IndicatorOrchestrator使用
+    Exponential Moving Average (指数移動平均) - numpy配列最適化版
 
     Args:
         data: 価格データ（通常はClose価格）
@@ -53,23 +69,29 @@ def EMA(data: Union[pd.Series, List, np.ndarray], period: int) -> pd.Series:
     Returns:
         EMAの値を含むpandas.Series
 
-    Raises:
-        ImportError: TA-Libが利用できない場合
-        TALibCalculationError: TA-Lib計算エラーの場合
+    Note:
+        numpy配列ベースの高速計算を使用し、結果をpandas.Seriesに変換して
+        backtesting.pyとの互換性を維持します。
     """
-    orchestrator = TechnicalIndicatorService()
-    data_series = ensure_series(data)
+    try:
+        # numpy配列に変換して高速計算
+        data_array = ensure_numpy_array(data)
+        result_array = TrendIndicators.ema(data_array, period=period)
 
-    # DataFrameに変換（IndicatorOrchestratorはDataFrameを期待）
-    df = pd.DataFrame({"close": data_series})
+        # backtesting.py互換性のためpandas.Seriesに変換
+        if isinstance(data, pd.Series):
+            return pd.Series(result_array, index=data.index, name=f"EMA_{period}")
+        else:
+            return pd.Series(result_array, name=f"EMA_{period}")
 
-    result = orchestrator.calculate_indicator(df, indicator_type="EMA", period=period)
-    return cast(pd.Series, result)
+    except Exception as e:
+        logger.error(f"EMA計算エラー: {e}")
+        raise
 
 
 def RSI(data: Union[pd.Series, List, np.ndarray], period: int = 14) -> pd.Series:
     """
-    Relative Strength Index (相対力指数) - IndicatorOrchestrator使用
+    Relative Strength Index (相対力指数) - numpy配列最適化版
 
     Args:
         data: 価格データ（通常はClose価格）
@@ -78,18 +100,24 @@ def RSI(data: Union[pd.Series, List, np.ndarray], period: int = 14) -> pd.Series
     Returns:
         RSIの値を含むpandas.Series（0-100の範囲）
 
-    Raises:
-        ImportError: TA-Libが利用できない場合
-        TALibCalculationError: TA-Lib計算エラーの場合
+    Note:
+        numpy配列ベースの高速計算を使用し、結果をpandas.Seriesに変換して
+        backtesting.pyとの互換性を維持します。
     """
-    orchestrator = TechnicalIndicatorService()
-    data_series = ensure_series(data)
+    try:
+        # numpy配列に変換して高速計算
+        data_array = ensure_numpy_array(data)
+        result_array = MomentumIndicators.rsi(data_array, period=period)
 
-    # DataFrameに変換（IndicatorOrchestratorはDataFrameを期待）
-    df = pd.DataFrame({"close": data_series})
+        # backtesting.py互換性のためpandas.Seriesに変換
+        if isinstance(data, pd.Series):
+            return pd.Series(result_array, index=data.index, name=f"RSI_{period}")
+        else:
+            return pd.Series(result_array, name=f"RSI_{period}")
 
-    result = orchestrator.calculate_indicator(df, indicator_type="RSI", period=period)
-    return cast(pd.Series, result)
+    except Exception as e:
+        logger.error(f"RSI計算エラー: {e}")
+        raise
 
 
 def MACD(
@@ -99,7 +127,7 @@ def MACD(
     signal_period: int = 9,
 ) -> tuple:
     """
-    Moving Average Convergence Divergence (MACD) - TA-Lib使用
+    Moving Average Convergence Divergence (MACD) - numpy配列最適化版
 
     Args:
         data: 価格データ（通常はClose価格）
@@ -108,40 +136,43 @@ def MACD(
         signal_period: シグナル線の期間（デフォルト: 9）
 
     Returns:
-        tuple: (MACD線, シグナル線, ヒストグラム)
+        tuple: (MACD線, シグナル線, ヒストグラム) - 全てpandas.Series
 
-    Raises:
-        ImportError: TA-Libが利用できない場合
-        TALibCalculationError: TA-Lib計算エラーの場合
+    Note:
+        numpy配列ベースの高速計算を使用し、結果をpandas.Seriesに変換して
+        backtesting.pyとの互換性を維持します。
     """
-    orchestrator = TechnicalIndicatorService()
-    data_series = ensure_series(data)
+    try:
+        # numpy配列に変換して高速計算
+        data_array = ensure_numpy_array(data)
+        macd_array, signal_array, histogram_array = MomentumIndicators.macd(
+            data_array, fast=fast_period, slow=slow_period, signal=signal_period
+        )
 
-    # DataFrameに変換（IndicatorOrchestratorはDataFrameを期待）
-    df = pd.DataFrame({"close": data_series})
+        # backtesting.py互換性のためpandas.Seriesに変換
+        if isinstance(data, pd.Series):
+            index = data.index
+        else:
+            index = None
 
-    # IndicatorOrchestratorでMACDを計算（辞書で返される）
-    macd_result = orchestrator.calculate_indicator(
-        df,
-        indicator_type="MACD",
-        fast_period=fast_period,
-        slow_period=slow_period,
-        signal_period=signal_period,
-    )
+        macd_series = pd.Series(macd_array, index=index, name="MACD")
+        signal_series = pd.Series(signal_array, index=index, name="MACD_Signal")
+        histogram_series = pd.Series(
+            histogram_array, index=index, name="MACD_Histogram"
+        )
 
-    # 既存のAPIに合わせてtupleで返す
-    return (
-        macd_result["macd_line"],
-        macd_result["signal_line"],
-        macd_result["histogram"],
-    )
+        return macd_series, signal_series, histogram_series
+
+    except Exception as e:
+        logger.error(f"MACD計算エラー: {e}")
+        raise
 
 
 def BollingerBands(
     data: Union[pd.Series, List, np.ndarray], period: int = 20, std_dev: float = 2.0
 ) -> tuple:
     """
-    Bollinger Bands (ボリンジャーバンド) - TA-Lib使用
+    Bollinger Bands (ボリンジャーバンド) - numpy配列最適化版
 
     Args:
         data: 価格データ（通常はClose価格）
@@ -149,25 +180,34 @@ def BollingerBands(
         std_dev: 標準偏差の倍数（デフォルト: 2.0）
 
     Returns:
-        tuple: (上限バンド, 中央線(SMA), 下限バンド)
+        tuple: (上限バンド, 中央線(SMA), 下限バンド) - 全てpandas.Series
 
-    Raises:
-        ImportError: TA-Libが利用できない場合
-        TALibCalculationError: TA-Lib計算エラーの場合
+    Note:
+        numpy配列ベースの高速計算を使用し、結果をpandas.Seriesに変換して
+        backtesting.pyとの互換性を維持します。
     """
-    orchestrator = TechnicalIndicatorService()
-    data_series = ensure_series(data)
+    try:
+        # numpy配列に変換して高速計算
+        data_array = ensure_numpy_array(data)
+        upper_array, middle_array, lower_array = VolatilityIndicators.bollinger_bands(
+            data_array, period=period, std_dev=std_dev
+        )
 
-    # DataFrameに変換（IndicatorOrchestratorはDataFrameを期待）
-    df = pd.DataFrame({"close": data_series})
+        # backtesting.py互換性のためpandas.Seriesに変換
+        if isinstance(data, pd.Series):
+            index = data.index
+        else:
+            index = None
 
-    # IndicatorOrchestratorでBollinger Bandsを計算（DataFrameで返される）
-    bb_result = orchestrator.calculate_indicator(
-        df, indicator_type="BB", period=period, std_dev=std_dev
-    )
+        upper_series = pd.Series(upper_array, index=index, name=f"BB_Upper_{period}")
+        middle_series = pd.Series(middle_array, index=index, name=f"BB_Middle_{period}")
+        lower_series = pd.Series(lower_array, index=index, name=f"BB_Lower_{period}")
 
-    # 既存のAPIに合わせてtupleで返す
-    return bb_result["upper"], bb_result["middle"], bb_result["lower"]
+        return upper_series, middle_series, lower_series
+
+    except Exception as e:
+        logger.error(f"BollingerBands計算エラー: {e}")
+        raise
 
 
 def Stochastic(
@@ -218,7 +258,7 @@ def ATR(
     period: int = 14,
 ) -> pd.Series:
     """
-    Average True Range (平均真の値幅) - TA-Lib使用
+    Average True Range (平均真の値幅) - numpy配列最適化版
 
     Args:
         high: 高値データ
@@ -229,17 +269,26 @@ def ATR(
     Returns:
         ATRの値を含むpandas.Series
 
-    Raises:
-        ImportError: TA-Libが利用できない場合
-        TALibCalculationError: TA-Lib計算エラーの場合
+    Note:
+        numpy配列ベースの高速計算を使用し、結果をpandas.Seriesに変換して
+        backtesting.pyとの互換性を維持します。
     """
-    orchestrator = TechnicalIndicatorService()
-    high_series = ensure_series(high)
-    low_series = ensure_series(low)
-    close_series = ensure_series(close)
+    try:
+        # numpy配列に変換して高速計算
+        high_array = ensure_numpy_array(high)
+        low_array = ensure_numpy_array(low)
+        close_array = ensure_numpy_array(close)
 
-    # DataFrameに変換（IndicatorOrchestratorはDataFrameを期待）
-    df = pd.DataFrame({"high": high_series, "low": low_series, "close": close_series})
+        result_array = VolatilityIndicators.atr(
+            high_array, low_array, close_array, period=period
+        )
 
-    result = orchestrator.calculate_indicator(df, indicator_type="ATR", period=period)
-    return cast(pd.Series, result)
+        # backtesting.py互換性のためpandas.Seriesに変換
+        if isinstance(close, pd.Series):
+            return pd.Series(result_array, index=close.index, name=f"ATR_{period}")
+        else:
+            return pd.Series(result_array, name=f"ATR_{period}")
+
+    except Exception as e:
+        logger.error(f"ATR計算エラー: {e}")
+        raise

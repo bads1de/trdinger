@@ -126,24 +126,43 @@ class StrategyFactory:
             def next(self):
                 """売買ロジック"""
                 try:
+                    # リスク管理設定を取得
+                    risk_management = self.gene.risk_management
+                    position_size = risk_management.get(
+                        "position_size", 0.1
+                    )  # デフォルトは10%
+                    stop_loss_pct = risk_management.get("stop_loss")
+                    take_profit_pct = risk_management.get("take_profit")
+
+                    # ストップロスとテイクプロフィットの価格を計算
+                    sl_price = (
+                        self.data.Close[-1] * (1 - stop_loss_pct)
+                        if stop_loss_pct
+                        else None
+                    )
+                    tp_price = (
+                        self.data.Close[-1] * (1 + take_profit_pct)
+                        if take_profit_pct
+                        else None
+                    )
+
                     # エントリー条件チェック
                     if not self.position and self._check_entry_conditions():
-                        self.buy()
+                        self.buy(size=position_size, sl=sl_price, tp=tp_price)
 
                     # イグジット条件チェック
                     elif self.position and self._check_exit_conditions():
-                        self.sell()
+                        self.position.close()
 
                 except Exception as e:
-                    logger.error(f"売買ロジックエラー: {e}")
-                    # エラーが発生してもバックテストを継続
+                    logger.error(f"売買ロジックエラー: {e}", exc_info=True)
 
             def _init_indicator(self, indicator_gene: IndicatorGene):
                 """単一指標の初期化"""
                 # IndicatorInitializerに委譲
                 indicator_name = (
                     self.factory.indicator_initializer.initialize_indicator(
-                        indicator_gene, self.data, self
+                        indicator_gene, self
                     )
                 )
                 if indicator_name:
