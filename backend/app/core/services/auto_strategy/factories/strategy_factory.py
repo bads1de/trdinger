@@ -24,7 +24,7 @@ class StrategyFactory:
     戦略ファクトリー
 
     StrategyGeneから動的にStrategy継承クラスを生成し、
-    既存のTALibAdapterシステムと統合します。
+    既存の指標システムと統合します。
     """
 
     def __init__(self):

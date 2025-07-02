@@ -176,9 +176,6 @@ def ensure_numpy_array(data: Union[np.ndarray, list, "pd.Series"]) -> np.ndarray
             return array.astype(np.float64)
         return array
 
-        # Ta-lib用にfloat64に変換
-        return array.astype(np.float64)
-
     except (ValueError, TypeError) as e:
         raise TALibError(f"データをnumpy配列に変換できません: {e}")
 

@@ -14,13 +14,7 @@ from .volatility import VolatilityIndicators
 from .utils import TALibError, validate_input, ensure_numpy_array
 
 # 既存のクラス（互換性維持）
-try:
-    from .indicator_orchestrator import TechnicalIndicatorService
-    from .abstract_indicator import BaseIndicator
-except ImportError:
-    # 依存関係が不足している場合はスキップ
-    TechnicalIndicatorService = None
-    BaseIndicator = None
+from .indicator_orchestrator import TechnicalIndicatorService
 
 # 古いインポートは一時的にコメントアウト（段階的移行のため）
 # from .momentum_indicators import ...
@@ -40,5 +34,4 @@ __all__ = [
     "ensure_numpy_array",
     # 既存クラス（互換性維持）
     "TechnicalIndicatorService",
-    "BaseIndicator",
 ]

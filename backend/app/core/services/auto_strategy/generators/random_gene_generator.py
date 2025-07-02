@@ -11,7 +11,7 @@ import logging
 
 from ..models.strategy_gene import StrategyGene, IndicatorGene, Condition
 from ..models.ga_config import GAConfig
-from ...indicators.constants import ALL_INDICATORS
+from app.core.services.indicators import TechnicalIndicatorService
 from ...indicators.config import indicator_registry
 from ...indicators.config.indicator_config import IndicatorScaleType
 from ..utils.parameter_generators import (
@@ -46,7 +46,8 @@ class RandomGeneGenerator:
         self.threshold_ranges = config.threshold_ranges
 
         # 利用可能な指標タイプ（共通定数から取得）
-        self.available_indicators = ALL_INDICATORS.copy()
+        self.indicator_service = TechnicalIndicatorService()
+        self.available_indicators = list(self.indicator_service.get_supported_indicators().keys())
 
         # 利用可能なデータソース
         self.available_data_sources = [

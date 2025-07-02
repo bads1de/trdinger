@@ -2,7 +2,7 @@
 指標初期化器
 
 指標の初期化とアダプター統合を担当するモジュール。
-TALibAdapterシステムとの統合を重視した実装です。
+指標の初期化と戦略への統合を担当するモジュール。
 """
 
 import logging
@@ -10,7 +10,7 @@ import pandas as pd
 from typing import Dict, Any, Optional, List
 
 from ..models.strategy_gene import IndicatorGene
-from .indicator_calculator import IndicatorCalculator
+from app.core.services.indicators import TechnicalIndicatorService
 from app.core.services.indicators.config import indicator_registry
 from app.core.services.indicators.parameter_manager import IndicatorParameterManager
 from app.core.utils.data_utils import convert_to_series
@@ -24,12 +24,12 @@ class IndicatorInitializer:
     指標初期化器
 
     指標の初期化と戦略への統合を担当します。
-    計算ロジックはIndicatorCalculatorに委譲します。
+    計算ロジックはTechnicalIndicatorServiceに委譲します。
     """
 
     def __init__(self):
         """初期化"""
-        self.indicator_calculator = IndicatorCalculator()
+        self.technical_indicator_service = TechnicalIndicatorService()
         self.parameter_manager = IndicatorParameterManager()
 
     def _create_multi_value_wrapper(self, adapter_function, index: int):
@@ -81,20 +81,10 @@ class IndicatorInitializer:
             else:
                 logger.warning(f"指標設定が見つかりません: {indicator_type}")
 
-            close_data = pd.Series(data["close"].values, index=data.index)
-            high_data = pd.Series(data["high"].values, index=data.index)
-            low_data = pd.Series(data["low"].values, index=data.index)
-            volume_data = pd.Series(data["volume"].values, index=data.index)
-            open_data = pd.Series(data["open"].values, index=data.index)
-
-            return self.indicator_calculator.calculate_indicator(
+            return self.technical_indicator_service.calculate_indicator(
+                data,
                 indicator_type,
                 parameters,
-                close_data,
-                high_data,
-                low_data,
-                volume_data,
-                open_data,
             )
 
         except Exception as e:
@@ -179,12 +169,13 @@ class IndicatorInitializer:
                     )
 
                     # backtesting.pyに個別に登録
-                    component_indicator = strategy_instance.I(
-                        wrapper_function,
-                        *input_data,
-                        *param_values,
-                        name=f"{original_type}_{component_name}",
-                    )
+                component_indicator = strategy_instance.I(
+                    self.technical_indicator_service.calculate_indicator,
+                    data,
+                    indicator_type,
+                    parameters,
+                    name=f"{original_type}_{component_name}",
+                )
 
                     # 戦略インスタンスに登録
                     component_json_name = f"{json_indicator_name}_{i}"
@@ -197,9 +188,13 @@ class IndicatorInitializer:
                 return output_names
             else:
                 # 単一値指標（SMA, RSI等）の処理
-                indicator_result = strategy_instance.I(
-                    adapter_function, *input_data, *param_values, name=original_type
-                )
+            indicator_result = strategy_instance.I(
+                self.technical_indicator_service.calculate_indicator,
+                data,
+                indicator_type,
+                parameters,
+                name=original_type,
+            )
 
                 strategy_instance.indicators[json_indicator_name] = indicator_result
                 logger.info(f"単一値指標を登録: {json_indicator_name}")

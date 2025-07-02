@@ -7,6 +7,10 @@ GA用の戦略遺伝子エンコード/デコード機能を担当するモジ�
 import logging
 from typing import List, Dict
 
+from app.core.services.indicators.indicator_orchestrator import (
+    TechnicalIndicatorService,
+)
+
 logger = logging.getLogger(__name__)
 
 
@@ -25,30 +29,17 @@ class GeneEncoder:
     def _get_indicator_ids(self) -> Dict[str, int]:
         """指標IDマッピングを取得"""
         try:
-            from app.core.services.indicators.constants import ALL_INDICATORS
+            indicator_service = TechnicalIndicatorService()
+            all_indicators = list(indicator_service.get_supported_indicators().keys())
 
             indicator_ids = {"": 0}  # 未使用
-            for i, indicator in enumerate(ALL_INDICATORS, 1):
+            for i, indicator in enumerate(all_indicators, 1):
                 indicator_ids[indicator] = i
 
             return indicator_ids
-
-        except ImportError as e:
-            logger.error(f"指標定数インポートエラー: {e}")
-            # フォールバック: オートストラテジー用10個の指標のみ
-            return {
-                "": 0,
-                "SMA": 1,
-                "EMA": 2,
-                "MACD": 3,
-                "BB": 4,
-                "RSI": 5,
-                "STOCH": 6,
-                "CCI": 7,
-                "ADX": 8,
-                "ATR": 9,
-                "OBV": 10,
-            }
+        except Exception as e:
+            logger.error(f"指標IDの取得に失敗しました: {e}")
+            return {"": 0}
 
     def _get_id_to_indicator(self) -> Dict[int, str]:
         """ID→指標の逆引きマッピングを取得"""

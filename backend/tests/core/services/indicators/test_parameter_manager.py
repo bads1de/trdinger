@@ -230,7 +230,7 @@ class TestIndicatorParameterManager:
 
     def test_backward_compatibility_with_existing_system(self):
         """既存システムとの後方互換性テスト"""
-        # 既存のparameter_generators.pyと同じ結果が得られることを確認
+        
 
         # RSIの場合
         rsi_config = IndicatorConfig(indicator_name="RSI")

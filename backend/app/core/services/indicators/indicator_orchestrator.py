@@ -1,15 +1,15 @@
 """
 テクニカル指標統合サービス
 
-分割されたテクニカル指標クラスを統合し、既存APIとの互換性を維持します。
+Numpyベースの指標計算関数を呼び出し、結果を整形する責務を担います。
 """
 
 import logging
 import pandas as pd
-from typing import List, Dict, Any, Optional, Union
+import numpy as np
+from typing import List, Dict, Any, Optional, Union, Tuple
 
-
-from .config.indicator_definitions import indicator_registry
+from .config import indicator_registry, IndicatorConfig, IndicatorResultType
 
 logger = logging.getLogger(__name__)
 
@@ -19,155 +19,53 @@ class TechnicalIndicatorService:
 
     def __init__(self):
         """サービスを初期化"""
-        # 全ての指標情報を統合
-        self.supported_indicators = indicator_registry._configs
+        self.registry = indicator_registry
 
-    def _get_indicator_instance(self, indicator_type: str):
+    def _get_indicator_config(self, indicator_type: str) -> IndicatorConfig:
         """
-        指標タイプに応じた指標インスタンスを取得
-
-        Args:
-            indicator_type: 指標タイプ
-
-        Returns:
-            指標インスタンス
-
-        Raises:
-            ValueError: サポートされていない指標タイプの場合
+        指標設定を取得
         """
-        indicator_config = self.supported_indicators.get(indicator_type)
-        if not indicator_config:
+        config = self.registry.get_indicator_config(indicator_type)
+        if not config or not config.adapter_function:
+            supported = [
+                name
+                for name, cfg in self.registry._configs.items()
+                if cfg.adapter_function
+            ]
             raise ValueError(
-                f"サポートされていない指標タイプです: {indicator_type}. "
-                f"サポート対象: {list(self.supported_indicators.keys())}"
+                f"サポートされていない、またはアダプターが設定されていない指標タイプです: {indicator_type}. "
+                f"サポート対象: {supported}"
             )
-        return indicator_config.adapter_function
-
-    def _validate_parameters(
-        self, symbol: str, timeframe: str, indicator_type: str, period: int
-    ):
-        """
-        パラメータの検証
-
-        Args:
-            symbol: 取引ペア
-            timeframe: 時間枠
-            indicator_type: 指標タイプ
-            period: 期間
-
-        Raises:
-            ValueError: パラメータが無効な場合
-        """
-        if not symbol or not isinstance(symbol, str):
-            raise ValueError("シンボルは有効な文字列である必要があります")
-
-        if not timeframe or not isinstance(timeframe, str):
-            raise ValueError("時間枠は有効な文字列である必要があります")
-
-        if indicator_type not in self.supported_indicators:
-            raise ValueError(
-                f"サポートされていない指標タイプです: {indicator_type}. "
-                f"サポート対象: {list(self.supported_indicators.keys())}"
-            )
-
-        if period not in self.supported_indicators[indicator_type]["periods"]:
-            raise ValueError(
-                f"{indicator_type}でサポートされていない期間です: {period}. "
-                f"サポート対象: {self.supported_indicators[indicator_type]['periods']}"
-            )
+        return config
 
     def calculate_indicator(
-        self, df: pd.DataFrame, indicator_type: str, **kwargs
-    ) -> Union[pd.Series, pd.DataFrame, Dict]:
+        self, df: pd.DataFrame, indicator_type: str, params: Dict[str, Any]
+    ) -> Union[np.ndarray, Tuple[np.ndarray, ...]]:
         """
-        同期的にテクニカル指標を計算（strategies/indicators.py用）
+        指定された指標を計算します。
 
         Args:
-            df: OHLCVデータのDataFrame
-            indicator_type: 指標タイプ
-            **kwargs: 指標固有のパラメータ
+            df: OHLCVデータを含むPandas DataFrame
+            indicator_type: 計算する指標のタイプ (例: "RSI", "MACD")
+            params: 指標計算に必要なパラメータ
 
         Returns:
-            計算結果（Series、DataFrame、または辞書）
-
-        Raises:
-            ValueError: サポートされていない指標タイプの場合
+            計算結果 (numpy配列または配列のタプル)
         """
-        try:
-            # 指標タイプの正規化
-            indicator_type = indicator_type.upper()
+        config = self._get_indicator_config(indicator_type)
+        indicator_func = config.adapter_function
 
-            # 指標インスタンスの取得と計算
-            if indicator_type in self.indicator_categories["trend"]:
-                indicator = get_trend_indicator(indicator_type)
-            elif indicator_type in self.indicator_categories["momentum"]:
-                indicator = get_momentum_indicator(indicator_type)
-            elif indicator_type in self.indicator_categories["volatility"]:
-                indicator = get_volatility_indicator(indicator_type)
-            elif indicator_type in self.indicator_categories["volume"]:
-                indicator = get_volume_indicator(indicator_type)
-            elif indicator_type in self.indicator_categories["price_transform"]:
-                indicator = get_price_transform_indicator(indicator_type)
-            else:
-                raise ValueError(f"サポートされていない指標タイプ: {indicator_type}")
+        # 必要なデータをDataFrameからNumpy配列として抽出
+        required_data = {}
+        for data_key in config.required_data:
+            if data_key not in df.columns:
+                raise ValueError(f"必要なカラム '{data_key}' がDataFrameにありません。")
+            required_data[data_key] = df[data_key].to_numpy()
 
-            # インジケーター計算を実行
-            return indicator.calculate(df, **kwargs)
+        # パラメータとデータを結合して関数を呼び出し
+        all_args = {**required_data, **params}
 
-        except Exception as e:
-            logger.error(f"指標計算エラー ({indicator_type}): {e}")
-            raise
-
-    async def calculate_technical_indicator(
-        self,
-        symbol: str,
-        timeframe: str,
-        indicator_type: str,
-        period: int,
-        limit: Optional[int] = None,
-    ) -> List[Dict[str, Any]]:
-        """
-        テクニカル指標を計算
-
-        Args:
-            symbol: 取引ペア
-            timeframe: 時間枠
-            indicator_type: 指標タイプ（SMA, EMA, RSI）
-            period: 期間
-            limit: OHLCVデータの取得件数制限
-
-        Returns:
-            計算されたテクニカル指標データのリスト
-
-        Raises:
-            ValueError: パラメータが無効な場合
-            Exception: 計算エラーの場合
-        """
-        # パラメータの検証
-        self._validate_parameters(symbol, timeframe, indicator_type, period)
-
-        try:
-            logger.info(
-                f"テクニカル指標計算開始: {symbol} {timeframe} {indicator_type}({period})"
-            )
-
-            # 適切な指標インスタンスを取得
-            indicator = self._get_indicator_instance(indicator_type)
-
-            # 指標を計算してフォーマット
-            results = await indicator.calculate_and_format(
-                symbol=symbol, timeframe=timeframe, period=period, limit=limit
-            )
-
-            logger.info(
-                f"テクニカル指標計算完了: {len(results)}件 "
-                f"({symbol} {timeframe} {indicator_type}({period}))"
-            )
-            return results
-
-        except Exception as e:
-            logger.error(f"テクニカル指標計算エラー: {e}")
-            raise
+        return indicator_func(**all_args)
 
     def get_supported_indicators(self) -> Dict[str, Any]:
         """
@@ -176,11 +74,14 @@ class TechnicalIndicatorService:
         Returns:
             サポート指標の情報
         """
-        return {
-            indicator_type: {
-                "periods": config["periods"],
-                "description": config["description"],
-                "category": config["category"],
+        infos = {}
+        for name, config in self.registry._configs.items():
+            if not config.adapter_function:
+                continue
+            infos[name] = {
+                "parameters": config.get_parameter_ranges(),
+                "result_type": config.result_type.value,
+                "required_data": config.required_data,
+                "scale_type": config.scale_type.value if config.scale_type else None,
             }
-            for indicator_type, config in self.supported_indicators.items()
-        }
+        return infos

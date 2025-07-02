@@ -9,7 +9,7 @@ import json
 from dataclasses import dataclass, field
 from typing import Dict, Any, List, Optional, Callable
 
-from ...indicators.constants import ALL_INDICATORS
+from app.core.services.indicators import TechnicalIndicatorService
 
 
 # デフォルト値定数
@@ -80,7 +80,7 @@ class IndicatorConfig:
     """指標設定"""
 
     max_indicators: int = GADefaults.MAX_INDICATORS
-    allowed_indicators: List[str] = field(default_factory=lambda: ALL_INDICATORS.copy())
+    allowed_indicators: List[str] = field(default_factory=lambda: list(TechnicalIndicatorService().get_supported_indicators().keys()))
 
 
 @dataclass
@@ -335,7 +335,7 @@ class GAConfig:
             errors.append("許可された指標リストが空です")
         else:
             # 無効な指標名のチェック
-            valid_indicators = set(ALL_INDICATORS)
+            valid_indicators = set(TechnicalIndicatorService().get_supported_indicators().keys())
             invalid_indicators = set(self.allowed_indicators) - valid_indicators
             if invalid_indicators:
                 errors.append(f"無効な指標が含まれています: {invalid_indicators}")
@@ -404,9 +404,8 @@ class GAConfig:
     def from_dict(cls, data: Dict[str, Any]) -> "GAConfig":
         """辞書から復元（構造化設定対応）"""
         # allowed_indicatorsが空の場合はデフォルトの指標リストを使用
-        allowed_indicators = data.get("allowed_indicators", [])
-        if not allowed_indicators:
-            allowed_indicators = ALL_INDICATORS.copy()
+        indicator_service = TechnicalIndicatorService()
+        allowed_indicators = data.get("allowed_indicators", list(indicator_service.get_supported_indicators().keys()))
 
         # 構造化された設定を作成
         evolution = EvolutionConfig(
