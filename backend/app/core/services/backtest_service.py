@@ -58,10 +58,6 @@ class BacktestService:
         Raises:
             ValueError: 設定が無効な場合
         """
-        import logging
-
-        logger = logging.getLogger(__name__)
-
         try:
             logger.info(f"バックテストを開始します。設定: {config}")
 
@@ -85,8 +81,6 @@ class BacktestService:
             )
 
             # 日付文字列をdatetimeオブジェクトに変換
-            from datetime import datetime
-
             start_date = (
                 datetime.fromisoformat(config["start_date"])
                 if isinstance(config["start_date"], str)
@@ -431,21 +425,10 @@ class BacktestService:
     ) -> Dict[str, Any]:
         """
         戦略パラメータの最適化
-
-        Args:
-            config: 基本バックテスト設定
-            optimization_params: 最適化パラメータ
-                - parameters: 最適化対象のパラメータ範囲
-                - maximize: 最大化する指標
-                - constraint: 制約条件
-
-        Returns:
-            最適化結果
         """
-        # 設定の検証
+        logger.info(f"戦略の最適化を開始します。設定: {optimization_params}")
         self._validate_config(config)
 
-        # データサービスの初期化（必要に応じて）
         if self.data_service is None:
             db = SessionLocal()
             try:
@@ -454,7 +437,6 @@ class BacktestService:
             finally:
                 db.close()
 
-        # データ取得（常に統合データを使用）
         data = self.data_service.get_data_for_backtest(
             symbol=config["symbol"],
             timeframe=config["timeframe"],
@@ -462,10 +444,8 @@ class BacktestService:
             end_date=config["end_date"],
         )
 
-        # 戦略クラス取得
         strategy_class = self._create_strategy_class(config["strategy_config"])
 
-        # バックテスト実行
         bt = Backtest(
             data,
             strategy_class,
@@ -474,32 +454,25 @@ class BacktestService:
             exclusive_orders=True,
         )
 
-        # 最適化実行
-        optimize_kwargs = {}
-        if "maximize" in optimization_params:
-            optimize_kwargs["maximize"] = optimization_params["maximize"]
-        if "constraint" in optimization_params:
-            optimize_kwargs["constraint"] = optimization_params["constraint"]
+        optimization_result = bt.optimize(
+            **optimization_params["parameters"],
+            maximize=optimization_params.get("maximize", "SQN"),
+            constraint=optimization_params.get("constraint"),
+            return_heatmap=True,
+        )
 
-        # パラメータ範囲を追加
-        for param_name, param_range in optimization_params["parameters"].items():
-            optimize_kwargs[param_name] = param_range
-
-        stats_raw = bt.optimize(**optimize_kwargs)
-
-        # optimizeの結果がタプルの場合、最初の要素を実際の統計として扱う
-        if isinstance(stats_raw, tuple):
-            stats = stats_raw[0]
+        # 最適化結果から統計情報を抽出
+        if isinstance(optimization_result, tuple):
+            stats = optimization_result[0]
         else:
-            stats = stats_raw
+            stats = optimization_result
 
-        # config_jsonを構築
         config_json = {
             "strategy_config": config.get("strategy_config", {}),
             "commission_rate": config.get("commission_rate", 0.001),
+            "optimization_params": optimization_params,
         }
 
-        # 結果を変換
         result = self._convert_backtest_results(
             stats,
             config["strategy_name"],
@@ -511,199 +484,14 @@ class BacktestService:
             config_json,
         )
 
-        # 最適化されたパラメータを追加
-        # statsがpd.Seriesであることを前提に_strategy属性にアクセス
-        optimized_strategy = stats._strategy
-        result["optimized_parameters"] = {
-            param: getattr(optimized_strategy, param)
-            for param in optimization_params["parameters"].keys()
-            if hasattr(optimized_strategy, param)
-        }
+        optimized_params = stats._strategy._params.copy()
+        # strategy_geneはパラメータではないので削除
+        optimized_params.pop("strategy_gene", None)
+        result["optimized_parameters"] = optimized_params
 
-        return result
-
-    def optimize_strategy_enhanced(
-        self, config: Dict[str, Any], optimization_params: Dict[str, Any]
-    ) -> Dict[str, Any]:
-        """
-        戦略パラメータの拡張最適化
-
-        Args:
-            config: 基本バックテスト設定
-            optimization_params: 拡張最適化パラメータ
-                - parameters: 最適化対象のパラメータ範囲
-                - maximize: 最大化する指標
-                - constraint: 制約条件
-                - advanced_options: 拡張オプション
-
-        Returns:
-            拡張最適化結果
-        """
-        # 基本的には既存のoptimize_strategyを使用し、拡張オプションを適用
-        return self.optimize_strategy(config, optimization_params)
-
-    def multi_objective_optimization(
-        self,
-        config: Dict[str, Any],
-        objectives: list,
-        weights: Optional[list] = None,
-        optimization_params: Optional[Dict[str, Any]] = None,
-    ) -> Dict[str, Any]:
-        """
-        多目的最適化
-
-        Args:
-            config: 基本バックテスト設定
-            objectives: 最適化対象の指標リスト
-            weights: 各指標の重み
-            optimization_params: 追加の最適化パラメータ
-
-        Returns:
-            多目的最適化結果
-        """
-        import logging
-
-        logger = logging.getLogger(__name__)
-
-        # 現在は単一目的最適化として実装（将来的に拡張可能）
-        if not objectives:
-            raise ValueError("最適化対象の指標が指定されていません")
-
-        # 最初の目的関数を使用
-        primary_objective = objectives[0]
-
-        # optimization_paramsが指定されていない場合はデフォルト値を使用
-        if optimization_params is None:
-            optimization_params = {"maximize": primary_objective}
-        else:
-            optimization_params = optimization_params.copy()
-            optimization_params["maximize"] = primary_objective
-
-        logger.info(f"多目的最適化を実行中（主目的: {primary_objective}）")
-
-        result = self.optimize_strategy(config, optimization_params)
-
-        # 多目的最適化の結果として追加情報を付与
-        result["multi_objective_info"] = {
-            "objectives": objectives,
-            "weights": weights,
-            "primary_objective": primary_objective,
-        }
-
-        return result
-
-    def robustness_test(
-        self,
-        config: Dict[str, Any],
-        test_periods: list,
-        optimization_params: Dict[str, Any],
-    ) -> Dict[str, Any]:
-        """
-        戦略のロバストネステスト
-
-        Args:
-            config: 基本バックテスト設定
-            test_periods: テスト期間のリスト [(start_date, end_date), ...]
-            optimization_params: 最適化パラメータ
-
-        Returns:
-            ロバストネステスト結果
-        """
-        import logging
-
-        logger = logging.getLogger(__name__)
-
-        logger.info(f"ロバストネステストを開始（{len(test_periods)}期間）")
-
-        results = []
-
-        for i, (start_date, end_date) in enumerate(test_periods):
-            logger.info(f"期間 {i+1}/{len(test_periods)}: {start_date} - {end_date}")
-
-            # 期間ごとの設定を作成
-            period_config = config.copy()
-            period_config["start_date"] = start_date
-            period_config["end_date"] = end_date
-
-            try:
-                # 各期間でバックテストを実行
-                period_result = self.run_backtest(period_config)
-                period_result["test_period"] = {
-                    "start_date": start_date,
-                    "end_date": end_date,
-                }
-                results.append(period_result)
-
-            except Exception as e:
-                logger.error(f"期間 {start_date} - {end_date} でエラー: {e}")
-                results.append(
-                    {
-                        "test_period": {"start_date": start_date, "end_date": end_date},
-                        "error": str(e),
-                        "status": "failed",
-                    }
-                )
-
-        # ロバストネス統計を計算
-        successful_results = [r for r in results if r.get("status") != "failed"]
-
-        if successful_results:
-            returns = [
-                r["performance_metrics"]["total_return"] for r in successful_results
-            ]
-            sharpe_ratios = [
-                r["performance_metrics"]["sharpe_ratio"] for r in successful_results
-            ]
-            max_drawdowns = [
-                r["performance_metrics"]["max_drawdown"] for r in successful_results
-            ]
-
-            robustness_stats = {
-                "total_periods": len(test_periods),
-                "successful_periods": len(successful_results),
-                "success_rate": len(successful_results) / len(test_periods),
-                "avg_return": sum(returns) / len(returns) if returns else 0,
-                "std_return": (
-                    (
-                        sum((r - sum(returns) / len(returns)) ** 2 for r in returns)
-                        / len(returns)
-                    )
-                    ** 0.5
-                    if len(returns) > 1
-                    else 0
-                ),
-                "avg_sharpe": (
-                    sum(sharpe_ratios) / len(sharpe_ratios) if sharpe_ratios else 0
-                ),
-                "avg_max_drawdown": (
-                    sum(max_drawdowns) / len(max_drawdowns) if max_drawdowns else 0
-                ),
-            }
-        else:
-            robustness_stats = {
-                "total_periods": len(test_periods),
-                "successful_periods": 0,
-                "success_rate": 0,
-                "avg_return": 0,
-                "std_return": 0,
-                "avg_sharpe": 0,
-                "avg_max_drawdown": 0,
-            }
-
-        # 統合結果を作成
-        robustness_result = {
-            "strategy_name": config["strategy_name"],
-            "symbol": config["symbol"],
-            "timeframe": config["timeframe"],
-            "test_type": "robustness_test",
-            "robustness_stats": robustness_stats,
-            "period_results": results,
-            "status": "completed",
-            "created_at": datetime.now().isoformat(),
-        }
-
+        # ヒートマップはJSONシリアライズできないため、ここでは返さない
+        # 必要であれば別途ファイル保存などを検討
         logger.info(
-            f"ロバストネステスト完了（成功率: {robustness_stats['success_rate']:.2%}）"
+            f"最適化が完了しました。最適化されたパラメータ: {result['optimized_parameters']}"
         )
-
-        return robustness_result
+        return result

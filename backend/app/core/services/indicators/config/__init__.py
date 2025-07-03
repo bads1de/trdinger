@@ -14,13 +14,6 @@ from .indicator_config import (
 
 from .indicator_definitions import initialize_all_indicators
 
-from .migration_strategy import (
-    IndicatorNameMigrator,
-    BackwardCompatibilityManager,
-    migrator,
-    compatibility_manager,
-)
-
 # 自動初期化
 initialize_all_indicators()
 
@@ -31,8 +24,4 @@ __all__ = [
     "IndicatorConfigRegistry",
     "indicator_registry",
     "initialize_all_indicators",
-    "IndicatorNameMigrator",
-    "BackwardCompatibilityManager",
-    "migrator",
-    "compatibility_manager",
 ]

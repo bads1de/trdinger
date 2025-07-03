@@ -4,9 +4,9 @@
 GAによって生成された戦略の永続化処理を管理します。
 """
 
-from typing import List, Optional, Dict, Any, cast
+from typing import List, Optional, Dict, Any, cast as typing_cast, Tuple
 from sqlalchemy.orm import Session
-from sqlalchemy import desc
+from sqlalchemy import desc, cast, Float
 import logging
 
 from .base_repository import BaseRepository
@@ -239,6 +239,73 @@ class GeneratedStrategyRepository(BaseRepository):
             )
             return []
 
+    def get_filtered_and_sorted_strategies(
+        self,
+        limit: int = 50,
+        offset: int = 0,
+        risk_level: Optional[str] = None,
+        experiment_id: Optional[int] = None,
+        min_fitness: Optional[float] = None,
+        sort_by: str = "fitness_score",
+        sort_order: str = "desc",
+    ) -> Tuple[int, List[GeneratedStrategy]]:
+        """
+        フィルタリングとソートを適用して戦略を取得
+        """
+        from database.models import BacktestResult
+
+        try:
+            query = self.db.query(GeneratedStrategy).join(
+                GeneratedStrategy.backtest_result
+            )
+
+            # フィルタリング
+            if experiment_id is not None:
+                query = query.filter(GeneratedStrategy.experiment_id == experiment_id)
+            if min_fitness is not None:
+                query = query.filter(GeneratedStrategy.fitness_score >= min_fitness)
+
+            # リスクレベルのフィルタリング (DBレベルでは難しいので後処理)
+            # ただし、max_drawdownで事前にある程度絞り込むことは可能
+            if risk_level:
+                if risk_level == "low":
+                    query = query.filter(
+                        cast(BacktestResult.performance_metrics["max_drawdown"], Float)
+                        <= 0.05
+                    )
+                elif risk_level == "medium":
+                    query = query.filter(
+                        cast(BacktestResult.performance_metrics["max_drawdown"], Float)
+                        > 0.05,
+                        cast(BacktestResult.performance_metrics["max_drawdown"], Float)
+                        <= 0.15,
+                    )
+                elif risk_level == "high":
+                    query = query.filter(
+                        cast(BacktestResult.performance_metrics["max_drawdown"], Float)
+                        > 0.15
+                    )
+
+            # ソート
+            sort_column = getattr(GeneratedStrategy, sort_by, None)
+            if sort_column is None:
+                # BacktestResultのメトリクスでソートする場合
+                sort_column = cast(BacktestResult.performance_metrics[sort_by], Float)
+
+            if sort_order.lower() == "desc":
+                query = query.order_by(desc(sort_column))
+            else:
+                query = query.order_by(sort_column)
+
+            total_count = query.count()
+            strategies = query.offset(offset).limit(limit).all()
+
+            return total_count, strategies
+
+        except Exception as e:
+            logger.error(f"フィルタリング済み戦略の取得中にエラーが発生しました: {e}")
+            return 0, []
+
     def update_fitness_score(self, strategy_id: int, fitness_score: float) -> bool:
         """
         フィットネススコアを更新
@@ -350,7 +417,7 @@ class GeneratedStrategyRepository(BaseRepository):
             if not strategies:
                 return {}
 
-            fitness_scores = cast(
+            fitness_scores = typing_cast(
                 List[float],
                 [s.fitness_score for s in strategies if s.fitness_score is not None],
             )

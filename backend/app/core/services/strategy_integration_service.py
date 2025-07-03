@@ -43,33 +43,24 @@ class StrategyIntegrationService:
         sort_order: str = "desc",
     ) -> Dict[str, Any]:
         """
-        生成済み戦略の一覧を取得
-
-        Args:
-            limit: 取得件数制限
-            offset: オフセット
-            category: カテゴリフィルター
-            risk_level: リスクレベルフィルター
-            experiment_id: 実験IDフィルター
-            min_fitness: 最小フィットネススコア
-            sort_by: ソート項目
-            sort_order: ソート順序
-
-        Returns:
-            生成済み戦略のデータ
+        生成済み戦略の一覧を効率的に取得
         """
         try:
-            # DBから有効な戦略を取得
-            # フィルタリングとソートはDBレベルで行う方が効率的だが、
-            # 現状の変換ロジックを維持するため、一旦多めに取得
-            strategies_from_db = (
-                self.generated_strategy_repo.get_strategies_with_backtest_results(
-                    limit=1000, offset=0, experiment_id=experiment_id
+            # フィルタリングとソートをリポジトリ層で実行
+            total_count, strategies_from_db = (
+                self.generated_strategy_repo.get_filtered_and_sorted_strategies(
+                    limit=limit,
+                    offset=offset,
+                    risk_level=risk_level,
+                    experiment_id=experiment_id,
+                    min_fitness=min_fitness,
+                    sort_by=sort_by,
+                    sort_order=sort_order,
                 )
             )
 
             # フロントエンド向け形式に変換
-            all_strategies = [
+            paginated_strategies = [
                 s
                 for s in (
                     self._convert_generated_strategy_to_display_format(strategy)
@@ -77,20 +68,6 @@ class StrategyIntegrationService:
                 )
                 if s is not None
             ]
-
-            # フィルタリング適用
-            filtered_strategies = self._apply_filters(
-                all_strategies, category, risk_level, min_fitness
-            )
-
-            # ソート
-            sorted_strategies = self._sort_strategies(
-                filtered_strategies, sort_by, sort_order
-            )
-
-            # ページネーション適用
-            total_count = len(sorted_strategies)
-            paginated_strategies = sorted_strategies[offset : offset + limit]
 
             return {
                 "strategies": paginated_strategies,
@@ -296,75 +273,3 @@ class StrategyIntegrationService:
             return "medium"
         else:
             return "high"
-
-    def _sort_strategies(
-        self, strategies: List[Dict[str, Any]], sort_by: str, sort_order: str
-    ) -> List[Dict[str, Any]]:
-        """戦略をソート"""
-        try:
-            reverse = sort_order.lower() == "desc"
-
-            if sort_by == "expected_return":
-                strategies.sort(
-                    key=lambda x: x.get("expected_return", 0), reverse=reverse
-                )
-            elif sort_by == "sharpe_ratio":
-                strategies.sort(key=lambda x: x.get("sharpe_ratio", 0), reverse=reverse)
-            elif sort_by == "max_drawdown":
-                strategies.sort(
-                    key=lambda x: x.get("max_drawdown", 0), reverse=not reverse
-                )  # 小さい方が良い
-            elif sort_by == "win_rate":
-                strategies.sort(key=lambda x: x.get("win_rate", 0), reverse=reverse)
-            elif sort_by == "fitness_score":
-                strategies.sort(
-                    key=lambda x: x.get("fitness_score", 0), reverse=reverse
-                )
-            elif sort_by == "created_at":
-                strategies.sort(key=lambda x: x.get("created_at", ""), reverse=reverse)
-            else:
-                # デフォルトはフィットネススコア順
-                strategies.sort(key=lambda x: x.get("fitness_score", 0), reverse=True)
-
-            return strategies
-
-        except Exception as e:
-            logger.error(f"戦略のソート中にエラーが発生しました: {e}")
-            return strategies
-
-    def _apply_filters(
-        self,
-        strategies: List[Dict[str, Any]],
-        category: Optional[str] = None,
-        risk_level: Optional[str] = None,
-        min_fitness: Optional[float] = None,
-    ) -> List[Dict[str, Any]]:
-        """戦略にフィルターを適用"""
-        try:
-            filtered_strategies = strategies
-
-            if category:
-                filtered_strategies = [
-                    s for s in filtered_strategies if s.get("category") == category
-                ]
-
-            if risk_level:
-                filtered_strategies = [
-                    s for s in filtered_strategies if s.get("risk_level") == risk_level
-                ]
-
-            if min_fitness is not None:
-                filtered_strategies = [
-                    s
-                    for s in filtered_strategies
-                    if s.get("fitness_score", 0) >= min_fitness
-                ]
-
-            logger.info(
-                f"フィルター適用: {len(strategies)} -> {len(filtered_strategies)} 戦略"
-            )
-            return filtered_strategies
-
-        except Exception as e:
-            logger.error(f"戦略のフィルター適用中にエラーが発生しました: {e}")
-            return strategies

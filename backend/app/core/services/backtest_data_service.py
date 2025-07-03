@@ -251,23 +251,6 @@ class BacktestDataService:
             if not pd.api.types.is_numeric_dtype(df[col]):
                 raise ValueError(f"カラム {col} は数値型である必要があります。")
 
-    def _validate_dataframe(self, df: pd.DataFrame) -> None:
-        """
-        DataFrameの整合性をチェック
-
-        Args:
-            df: 検証対象のDataFrame
-
-        Raises:
-            ValueError: DataFrameが無効な場合
-        """
-        required_columns = ["Open", "High", "Low", "Close", "Volume"]
-        self._perform_common_validation(df, required_columns)
-
-        # NaN値のチェック
-        if df.isnull().any().any():
-            raise ValueError("DataFrameにNaN値が含まれています。")
-
     def _validate_extended_dataframe(self, df: pd.DataFrame) -> None:
         """
         拡張されたDataFrame（OI/FR含む）の整合性をチェック
