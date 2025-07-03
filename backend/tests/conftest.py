@@ -118,12 +118,12 @@ def performance_thresholds():
 def common_backtest_config():
     """共通のバックテスト設定"""
     return {
-        "strategy_name": "SMA_CROSS",
+        "strategy_name": "GENERATED_TEST",
         "timeframe": "1d",
         "initial_capital": 100000,
         "commission_rate": 0.001,
         "strategy_config": {
-            "strategy_type": "SMA_CROSS",
-            "parameters": {"n1": 20, "n2": 50},
+            "strategy_type": "GENERATED_TEST",
+            "parameters": {"strategy_gene": {}},
         },
     }

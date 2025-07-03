@@ -21,8 +21,8 @@ router = APIRouter(prefix="/api/strategies", tags=["strategies"])
 
 
 # レスポンスモデル
-class UnifiedStrategiesResponse(BaseModel):
-    """統合戦略レスポンス"""
+class StrategiesResponse(BaseModel):
+    """戦略レスポンス"""
 
     success: bool = True
     strategies: list = Field(default_factory=list)
@@ -45,8 +45,8 @@ class StrategyStatsResponse(BaseModel):
     )
 
 
-@router.get("/unified", response_model=UnifiedStrategiesResponse)
-async def get_unified_strategies(
+@router.get("/", response_model=StrategiesResponse)
+async def get_strategies(
     limit: int = Query(20, ge=1, le=100, description="取得件数制限"),
     offset: int = Query(0, ge=0, description="オフセット"),
     category: Optional[str] = Query(None, description="カテゴリフィルター"),
@@ -58,31 +58,34 @@ async def get_unified_strategies(
     db: Session = Depends(get_db),
 ):
     """
-    統合された戦略一覧を取得
+    生成された戦略の一覧を取得
 
-    ショーケース戦略とオートストラテジー由来の戦略を統合して返します。
+    オートストラテジーによって生成された戦略をフィルタリング、ソート、
+    ページネーションして返します。
 
     Args:
         limit: 取得件数制限 (1-100)
         offset: オフセット
         category: カテゴリフィルター
         risk_level: リスクレベルフィルター (low, medium, high)
-        sort_by: ソート項目 (created_at, expected_return, sharpe_ratio, max_drawdown, win_rate)
+        experiment_id: 実験IDフィルター
+        min_fitness: 最小フィットネススコア
+        sort_by: ソート項目 (fitness_score, created_at, expected_return, sharpe_ratio, max_drawdown, win_rate)
         sort_order: ソート順序 (asc, desc)
         db: データベースセッション
 
     Returns:
-        統合された戦略データ
+        生成された戦略データ
     """
 
-    async def _get_unified():
+    async def _get_strategies_task():
         logger.info(
-            f"統合戦略取得開始: limit={limit}, offset={offset}, category={category}"
+            f"戦略取得開始: limit={limit}, offset={offset}, category={category}, experiment_id={experiment_id}"
         )
 
-        integration_service = StrategyIntegrationService(db)
+        service = StrategyIntegrationService(db)
 
-        result = integration_service.get_unified_strategies(
+        result = service.get_strategies(
             limit=limit,
             offset=offset,
             category=category,
@@ -93,7 +96,7 @@ async def get_unified_strategies(
             sort_order=sort_order,
         )
 
-        logger.info(f"統合戦略取得完了: {len(result['strategies'])} 件")
+        logger.info(f"戦略取得完了: {len(result['strategies'])} 件")
 
         return APIResponseHelper.api_response(
             success=True,
@@ -102,73 +105,10 @@ async def get_unified_strategies(
                 "total_count": result["total_count"],
                 "has_more": result["has_more"],
             },
-            message="統合戦略を正常に取得しました",
+            message="戦略を正常に取得しました",
         )
 
-    return await APIErrorHandler.handle_api_exception(_get_unified)
-
-
-@router.get("/auto-generated", response_model=UnifiedStrategiesResponse)
-async def get_auto_generated_strategies(
-    limit: int = Query(20, ge=1, le=100, description="取得件数制限"),
-    offset: int = Query(0, ge=0, description="オフセット"),
-    experiment_id: Optional[int] = Query(None, description="実験IDフィルター"),
-    min_fitness: Optional[float] = Query(None, description="最小フィットネススコア"),
-    sort_by: str = Query("fitness_score", description="ソート項目"),
-    sort_order: str = Query("desc", regex="^(asc|desc)$", description="ソート順序"),
-    db: Session = Depends(get_db),
-):
-    """
-    オートストラテジー由来の戦略のみを取得
-
-    Args:
-        limit: 取得件数制限
-        offset: オフセット
-        experiment_id: 実験IDフィルター
-        min_fitness: 最小フィットネススコア
-        sort_by: ソート項目
-        sort_order: ソート順序
-        db: データベースセッション
-
-    Returns:
-        オートストラテジー戦略データ
-    """
-
-    async def _get_auto_strategies():
-        logger.info(f"オートストラテジー取得開始: experiment_id={experiment_id}")
-
-        integration_service = StrategyIntegrationService(db)
-
-        auto_strategies = integration_service._get_auto_generated_strategies(
-            limit=limit, offset=offset, sort_by=sort_by, sort_order=sort_order
-        )
-
-        if experiment_id is not None:
-            auto_strategies = [
-                s for s in auto_strategies if s.get("experiment_id") == experiment_id
-            ]
-
-        if min_fitness is not None:
-            auto_strategies = [
-                s for s in auto_strategies if s.get("fitness_score", 0) >= min_fitness
-            ]
-
-        total_count = len(auto_strategies)
-        paginated_strategies = auto_strategies[offset : offset + limit]
-
-        logger.info(f"オートストラテジー取得完了: {len(paginated_strategies)} 件")
-
-        return APIResponseHelper.api_response(
-            success=True,
-            data={
-                "strategies": paginated_strategies,
-                "total_count": total_count,
-                "has_more": offset + limit < total_count,
-            },
-            message="自動生成戦略を正常に取得しました",
-        )
-
-    return await APIErrorHandler.handle_api_exception(_get_auto_strategies)
+    return await APIErrorHandler.handle_api_exception(_get_strategies_task)
 
 
 @router.get("/stats", response_model=StrategyStatsResponse)
@@ -188,11 +128,8 @@ async def get_strategy_statistics(db: Session = Depends(get_db)):
 
         integration_service = StrategyIntegrationService(db)
 
-        all_strategies_result = integration_service.get_unified_strategies(
-            limit=1000, offset=0
-        )
-
-        strategies = all_strategies_result["strategies"]
+        integration_service = StrategyIntegrationService(db)
+        strategies = integration_service.get_all_strategies_for_stats()
 
         stats = {
             "total_strategies": len(strategies),

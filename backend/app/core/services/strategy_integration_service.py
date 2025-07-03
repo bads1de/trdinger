@@ -19,10 +19,10 @@ logger = logging.getLogger(__name__)
 
 class StrategyIntegrationService:
     """
-    戦略統合サービス
+    生成済み戦略サービス
 
-    オートストラテジー由来の戦略を
-    統一されたフォーマットで提供します。
+    オートストラテジーで生成された戦略を、フロントエンド向けの
+    統一フォーマットに変換・整形して提供します。
     """
 
     def __init__(self, db: Session):
@@ -31,7 +31,7 @@ class StrategyIntegrationService:
         self.generated_strategy_repo = GeneratedStrategyRepository(db)
         self.backtest_result_repo = BacktestResultRepository(db)
 
-    def get_unified_strategies(
+    def get_strategies(
         self,
         limit: int = 50,
         offset: int = 0,
@@ -43,7 +43,7 @@ class StrategyIntegrationService:
         sort_order: str = "desc",
     ) -> Dict[str, Any]:
         """
-        統合された戦略一覧を取得
+        生成済み戦略の一覧を取得
 
         Args:
             limit: 取得件数制限
@@ -56,27 +56,41 @@ class StrategyIntegrationService:
             sort_order: ソート順序
 
         Returns:
-            統合された戦略データ
+            生成済み戦略のデータ
         """
         try:
-            # オートストラテジー由来の戦略を取得
-            unified_strategies = self._get_auto_generated_strategies(
-                limit, offset, sort_by, sort_order
+            # DBから有効な戦略を取得
+            # フィルタリングとソートはDBレベルで行う方が効率的だが、
+            # 現状の変換ロジックを維持するため、一旦多めに取得
+            strategies_from_db = (
+                self.generated_strategy_repo.get_strategies_with_backtest_results(
+                    limit=1000, offset=0, experiment_id=experiment_id
+                )
             )
 
+            # フロントエンド向け形式に変換
+            all_strategies = [
+                s
+                for s in (
+                    self._convert_generated_strategy_to_display_format(strategy)
+                    for strategy in strategies_from_db
+                )
+                if s is not None
+            ]
+
             # フィルタリング適用
-            unified_strategies = self._apply_filters(
-                unified_strategies, category, risk_level, experiment_id, min_fitness
+            filtered_strategies = self._apply_filters(
+                all_strategies, category, risk_level, min_fitness
             )
 
             # ソート
-            unified_strategies = self._sort_strategies(
-                unified_strategies, sort_by, sort_order
+            sorted_strategies = self._sort_strategies(
+                filtered_strategies, sort_by, sort_order
             )
 
             # ページネーション適用
-            total_count = len(unified_strategies)
-            paginated_strategies = unified_strategies[offset : offset + limit]
+            total_count = len(sorted_strategies)
+            paginated_strategies = sorted_strategies[offset : offset + limit]
 
             return {
                 "strategies": paginated_strategies,
@@ -85,49 +99,38 @@ class StrategyIntegrationService:
             }
 
         except Exception as e:
-            logger.error(f"統合戦略の取得中にエラーが発生しました: {e}")
+            logger.error(
+                f"生成済み戦略の取得中にエラーが発生しました: {e}", exc_info=True
+            )
             raise
 
-    def _get_auto_generated_strategies(
-        self, limit: int, offset: int, sort_by: str, sort_order: str
-    ) -> List[Dict[str, Any]]:
-        """オートストラテジー由来の戦略を取得"""
-        try:
-            # 有効なフィットネススコアとバックテスト結果を持つ戦略のみを取得
-            strategies = (
-                self.generated_strategy_repo.get_strategies_with_backtest_results(
-                    limit=limit
-                    * 3,  # フィルタリング後のページネーションのため多めに取得
-                    offset=0,
-                )
+    def get_all_strategies_for_stats(self) -> List[Dict[str, Any]]:
+        """統計情報計算のために、フィルター前の全戦略を取得する"""
+        strategies_from_db = (
+            self.generated_strategy_repo.get_strategies_with_backtest_results(
+                limit=2000, offset=0
             )
-
-            converted_strategies = []
-            for strategy in strategies:
-                converted = self._convert_generated_strategy_to_unified_format(strategy)
-                if converted:
-                    converted_strategies.append(converted)
-
-            logger.info(
-                f"有効な戦略数: {len(converted_strategies)} / {len(strategies)}"
+        )
+        return [
+            s
+            for s in (
+                self._convert_generated_strategy_to_display_format(strategy)
+                for strategy in strategies_from_db
             )
-            return converted_strategies
+            if s is not None
+        ]
 
-        except Exception as e:
-            logger.error(f"自動生成戦略の取得中にエラーが発生しました: {e}")
-            return []
-
-    def _convert_generated_strategy_to_unified_format(
+    def _convert_generated_strategy_to_display_format(
         self, strategy: GeneratedStrategy
     ) -> Optional[Dict[str, Any]]:
         """
-        GeneratedStrategyを統一形式に変換
+        GeneratedStrategyを表示用の形式に変換します。
 
         Args:
             strategy: 生成された戦略
 
         Returns:
-            統一形式の戦略データ
+            表示形式の戦略データ
         """
         try:
             gene_data = cast(Dict[str, Any], strategy.gene_data)
@@ -334,34 +337,22 @@ class StrategyIntegrationService:
         strategies: List[Dict[str, Any]],
         category: Optional[str] = None,
         risk_level: Optional[str] = None,
-        experiment_id: Optional[int] = None,
         min_fitness: Optional[float] = None,
     ) -> List[Dict[str, Any]]:
         """戦略にフィルターを適用"""
         try:
             filtered_strategies = strategies
 
-            # カテゴリフィルター
             if category:
                 filtered_strategies = [
                     s for s in filtered_strategies if s.get("category") == category
                 ]
 
-            # リスクレベルフィルター
             if risk_level:
                 filtered_strategies = [
                     s for s in filtered_strategies if s.get("risk_level") == risk_level
                 ]
 
-            # 実験IDフィルター
-            if experiment_id is not None:
-                filtered_strategies = [
-                    s
-                    for s in filtered_strategies
-                    if s.get("experiment_id") == experiment_id
-                ]
-
-            # 最小フィットネススコアフィルター
             if min_fitness is not None:
                 filtered_strategies = [
                     s

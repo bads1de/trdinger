@@ -9,8 +9,6 @@ from unittest.mock import Mock, patch
 from app.core.services.backtest_service import BacktestService
 from app.core.services.backtest_data_service import BacktestDataService
 
-# from app.core.strategies.macd_strategy import MACDStrategy  # 削除予定のレガシーコード
-
 
 class TestBacktestService:
     """BacktestServiceのテスト"""
@@ -32,7 +30,7 @@ class TestBacktestService:
     def sample_config(self):
         """サンプルバックテスト設定"""
         return {
-            "strategy_name": "MACD",
+            "strategy_name": "GENERATED_TEST",
             "symbol": "BTC/USDT",
             "timeframe": "1h",
             "start_date": datetime(2024, 1, 1, tzinfo=timezone.utc),
@@ -40,8 +38,8 @@ class TestBacktestService:
             "initial_capital": 100000.0,
             "commission_rate": 0.001,
             "strategy_config": {
-                "strategy_type": "MACD",
-                "parameters": {"n1": 20, "n2": 50},
+                "strategy_type": "GENERATED_TEST",
+                "parameters": {"strategy_gene": {}},
             },
         }
 
@@ -91,7 +89,7 @@ class TestBacktestService:
     ):
         """カスタム戦略パラメータでのバックテストテスト"""
         config = {
-            "strategy_name": "MACD",
+            "strategy_name": "GENERATED_AUTO",
             "symbol": "BTC/USDT",
             "timeframe": "4h",
             "start_date": datetime(2024, 1, 1, tzinfo=timezone.utc),
@@ -99,8 +97,8 @@ class TestBacktestService:
             "initial_capital": 50000.0,
             "commission_rate": 0.002,
             "strategy_config": {
-                "strategy_type": "MACD",
-                "parameters": {"n1": 10, "n2": 30},
+                "strategy_type": "GENERATED_AUTO",
+                "parameters": {"strategy_gene": {}},
             },
         }
 
@@ -111,7 +109,7 @@ class TestBacktestService:
         result = backtest_service.run_backtest(config)
 
         # カスタムパラメータが適用されていることを確認
-        assert result["strategy_name"] == "MACD"
+        assert result["strategy_name"] == "GENERATED_AUTO"
         assert result["symbol"] == "BTC/USDT"
         assert result["timeframe"] == "4h"
         assert result["initial_capital"] == 50000.0
@@ -129,11 +127,11 @@ class TestBacktestService:
         with pytest.raises(ValueError, match="OHLCVデータが見つかりませんでした"):
             backtest_service.run_backtest(sample_config)
 
-    def test_create_strategy_class_macd(self, backtest_service):
-        """MACD戦略クラス作成テスト"""
+    def test_create_strategy_class_generated_test(self, backtest_service):
+        """GENERATED_TEST戦略クラス作成テスト"""
         strategy_config = {
-            "strategy_type": "MACD",
-            "parameters": {"fast_period": 12, "slow_period": 26, "signal_period": 9},
+            "strategy_type": "GENERATED_TEST",
+            "parameters": {"strategy_gene": {}},
         }
 
         # 戦略クラスを作成
@@ -141,7 +139,6 @@ class TestBacktestService:
 
         # 検証
         assert strategy_class is not None
-        # assert issubclass(strategy_class, MACDStrategy)  # レガシーコード削除のためコメントアウト
 
     def test_create_strategy_class_invalid_type(self, backtest_service):
         """無効な戦略タイプのテスト"""
@@ -187,11 +184,11 @@ class TestBacktestService:
 
         # 変換実行
         result = backtest_service._convert_backtest_results(
-            mock_stats, "MACD", "BTC/USDT", "1h", 100000.0
+            mock_stats, "GENERATED_TEST", "BTC/USDT", "1h", 100000.0
         )
 
         # 検証
-        assert result["strategy_name"] == "MACD"
+        assert result["strategy_name"] == "GENERATED_TEST"
         assert result["symbol"] == "BTC/USDT"
         assert result["timeframe"] == "1h"
         assert result["initial_capital"] == 100000.0
@@ -216,7 +213,7 @@ class TestBacktestService:
         """バックテスト設定の検証テスト"""
         # 有効な設定
         valid_config = {
-            "strategy_name": "MACD",
+            "strategy_name": "GENERATED_TEST",
             "symbol": "BTC/USDT",
             "timeframe": "1h",
             "start_date": datetime(2024, 1, 1, tzinfo=timezone.utc),
@@ -224,8 +221,8 @@ class TestBacktestService:
             "initial_capital": 100000.0,
             "commission_rate": 0.001,
             "strategy_config": {
-                "strategy_type": "MACD",
-                "parameters": {"n1": 20, "n2": 50},
+                "strategy_type": "GENERATED_TEST",
+                "parameters": {"strategy_gene": {}},
             },
         }
 
@@ -235,7 +232,7 @@ class TestBacktestService:
     def test_validate_backtest_config_invalid_dates(self, backtest_service):
         """無効な日付設定の検証テスト"""
         invalid_config = {
-            "strategy_name": "MACD",
+            "strategy_name": "GENERATED_TEST",
             "symbol": "BTC/USDT",
             "timeframe": "1h",
             "start_date": datetime(2024, 12, 31, tzinfo=timezone.utc),  # 終了日より後
@@ -243,8 +240,8 @@ class TestBacktestService:
             "initial_capital": 100000.0,
             "commission_rate": 0.001,
             "strategy_config": {
-                "strategy_type": "MACD",
-                "parameters": {"n1": 20, "n2": 50},
+                "strategy_type": "GENERATED_TEST",
+                "parameters": {"strategy_gene": {}},
             },
         }
 
@@ -257,7 +254,7 @@ class TestBacktestService:
     def test_validate_backtest_config_invalid_capital(self, backtest_service):
         """無効な初期資金の検証テスト"""
         invalid_config = {
-            "strategy_name": "MACD",
+            "strategy_name": "GENERATED_TEST",
             "symbol": "BTC/USDT",
             "timeframe": "1h",
             "start_date": datetime(2024, 1, 1, tzinfo=timezone.utc),
@@ -265,8 +262,8 @@ class TestBacktestService:
             "initial_capital": -1000.0,  # 負の値
             "commission_rate": 0.001,
             "strategy_config": {
-                "strategy_type": "MACD",
-                "parameters": {"n1": 20, "n2": 50},
+                "strategy_type": "GENERATED_TEST",
+                "parameters": {"strategy_gene": {}},
             },
         }
 
@@ -316,7 +313,7 @@ class TestBacktestService:
         assert isinstance(call_args[0][0], pd.DataFrame)
 
         # 戦略クラスが渡されていることを確認
-        # assert issubclass(call_args[0][1], MACDStrategy)  # レガシーコード削除のためコメントアウト
+        # 戦略クラスの検証はオートストラテジーシステムで行われる
 
         # キーワード引数の確認
         kwargs = call_args[1]

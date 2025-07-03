@@ -254,7 +254,6 @@ class BacktestService:
         strategy_type = strategy_config["strategy_type"]
 
         if strategy_type == "MACD":
-            # return MACDStrategy  # 削除済みのレガシーコード
             raise ValueError(
                 f"MACD戦略は削除されました。オートストラテジーシステムを使用してください。"
             )

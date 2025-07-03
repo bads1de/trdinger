@@ -80,7 +80,6 @@ export default function BacktestPage() {
 
   // GA戦略生成実行
   const handleGAGeneration = async (config: any) => {
-    
     // GA実行は別途進捗表示で管理されるため、ここでは設定のログ出力のみ
   };
 
@@ -106,17 +105,57 @@ export default function BacktestPage() {
         </div>
 
         {/* メインコンテンツ */}
-        <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-          {/* 左側: バックテスト設定フォーム */}
-          <div className="space-y-6">
-            <div className="bg-black rounded-lg p-6 border border-secondary-700">
-              <h2 className="text-xl font-semibold mb-4">バックテスト設定</h2>
-              <BacktestForm
-                onSubmit={handleRunBacktest}
-                onConfigChange={setCurrentBacktestConfig}
-                isLoading={backtestLoading}
-              />
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* 左側: 結果一覧 */}
+          <div className="bg-secondary-950 rounded-lg p-6 border border-secondary-700 lg:col-span-1">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-semibold">バックテスト結果一覧</h2>
+              <div className="flex gap-2">
+                <button
+                  onClick={loadResults}
+                  disabled={resultsLoading}
+                  className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50"
+                >
+                  {resultsLoading ? "読み込み中..." : "更新"}
+                </button>
+                <button
+                  onClick={handleDeleteAllResults}
+                  disabled={deleteAllLoading || results.length === 0}
+                  className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 disabled:opacity-50"
+                >
+                  {deleteAllLoading ? "削除中..." : "すべて削除"}
+                </button>
+              </div>
             </div>
+            <BacktestResultsTable
+              results={results}
+              loading={resultsLoading}
+              onResultSelect={handleResultSelect}
+              onDelete={handleDeleteResult}
+            />
+          </div>
+
+          {/* 右側: 詳細 */}
+          <div className="space-y-6 lg:col-span-1">
+            {selectedResult ? (
+              <div className="bg-secondary-950 rounded-lg p-6 border border-secondary-700">
+                <div className="flex justify-between items-center mb-4">
+                  <h2 className="text-xl font-semibold">
+                    結果詳細 - {selectedResult.strategy_name}
+                  </h2>
+                </div>
+                <PerformanceMetrics
+                  result={selectedResult}
+                  onOptimizationClick={() => setIsOptimizationModalOpen(true)}
+                />
+              </div>
+            ) : (
+              <div className="flex items-center justify-center h-full bg-secondary-950 rounded-lg p-6 border border-secondary-700 border-dashed">
+                <p className="text-secondary-400">
+                  結果を一覧から選択して詳細を表示
+                </p>
+              </div>
+            )}
 
             {/* 最適化結果 */}
             {optimizationResult && (
@@ -130,53 +169,6 @@ export default function BacktestPage() {
                 <OptimizationResults
                   result={optimizationResult}
                   resultType={optimizationType}
-                />
-              </div>
-            )}
-          </div>
-
-          {/* 右側: 結果一覧と詳細 */}
-          <div className="space-y-6">
-            {/* 結果一覧テーブル */}
-            <div className="bg-secondary-950 rounded-lg p-6 border border-secondary-700">
-              <div className="flex justify-between items-center mb-4">
-                <h2 className="text-xl font-semibold">バックテスト結果一覧</h2>
-                <div className="flex gap-2">
-                  <button
-                    onClick={loadResults}
-                    disabled={resultsLoading}
-                    className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50"
-                  >
-                    {resultsLoading ? "読み込み中..." : "更新"}
-                  </button>
-                  <button
-                    onClick={handleDeleteAllResults}
-                    disabled={deleteAllLoading || results.length === 0}
-                    className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 disabled:opacity-50"
-                  >
-                    {deleteAllLoading ? "削除中..." : "すべて削除"}
-                  </button>
-                </div>
-              </div>
-              <BacktestResultsTable
-                results={results}
-                loading={resultsLoading}
-                onResultSelect={handleResultSelect}
-                onDelete={handleDeleteResult}
-              />
-            </div>
-
-            {/* 選択された結果の詳細 */}
-            {selectedResult && (
-              <div className="bg-secondary-950 rounded-lg p-6 border border-secondary-700">
-                <div className="flex justify-between items-center mb-4">
-                  <h2 className="text-xl font-semibold">
-                    結果詳細 - {selectedResult.strategy_name}
-                  </h2>
-                </div>
-                <PerformanceMetrics
-                  result={selectedResult}
-                  onOptimizationClick={() => setIsOptimizationModalOpen(true)}
                 />
               </div>
             )}
