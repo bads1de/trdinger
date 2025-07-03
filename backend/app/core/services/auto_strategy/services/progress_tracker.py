@@ -23,10 +23,11 @@ class ProgressTracker:
     GA実験の進捗追跡・コールバック管理を担当します。
     """
 
-    def __init__(self):
+    def __init__(self, db_session_factory: Callable = SessionLocal):
         """初期化"""
         self.progress_data: Dict[str, GAProgress] = {}
         self.progress_callbacks: Dict[str, Callable[[GAProgress], None]] = {}
+        self.db_session_factory = db_session_factory
 
     def set_progress_callback(
         self,
@@ -227,8 +228,7 @@ class ProgressTracker:
             db_experiment_id: データベース実験ID
         """
         try:
-            db = SessionLocal()
-            try:
+            with self.db_session_factory() as db:
                 ga_experiment_repo = GAExperimentRepository(db)
                 ga_experiment_repo.update_experiment_progress(
                     experiment_id=db_experiment_id,
@@ -236,9 +236,6 @@ class ProgressTracker:
                     progress=progress.progress_percentage / 100.0,
                     best_fitness=progress.best_fitness,
                 )
-            finally:
-                db.close()
-
         except Exception as e:
             logger.error(f"進捗データベース保存エラー: {e}")
 

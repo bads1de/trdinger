@@ -14,6 +14,7 @@ from ..models.ga_config import GAConfig
 from ..factories.strategy_factory import StrategyFactory
 from ..utils.data_coverage_analyzer import data_coverage_analyzer
 from app.core.services.backtest_service import BacktestService
+from app.config.settings import settings
 
 
 logger = logging.getLogger(__name__)
@@ -119,15 +120,15 @@ class FitnessCalculator:
                 },
             }
         else:
-            # フォールバック設定
+            # フォールバック設定を settings から読み込む
             test_config = {
                 "strategy_name": f"GA_Fallback_{gene.id}",
-                "symbol": "BTC/USDT",
-                "timeframe": "1d",
-                "start_date": "2024-01-01",
-                "end_date": "2024-04-09",
-                "initial_capital": 100000,
-                "commission_rate": 0.001,
+                "symbol": settings.ga_fallback_symbol,
+                "timeframe": settings.ga_fallback_timeframe,
+                "start_date": settings.ga_fallback_start_date,
+                "end_date": settings.ga_fallback_end_date,
+                "initial_capital": settings.ga_fallback_initial_capital,
+                "commission_rate": settings.ga_fallback_commission_rate,
                 "strategy_config": {
                     "strategy_type": "GENERATED_TEST",
                     "parameters": {"strategy_gene": gene.to_dict()},

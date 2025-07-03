@@ -97,30 +97,27 @@ class StrategyFactory:
             def init(self):
                 """指標の初期化"""
                 try:
-                    print(f"🔧 戦略初期化開始: {len(gene.indicators)}個の指標")
+                    logger.debug(f"戦略初期化開始: {len(gene.indicators)}個の指標")
 
                     # 各指標を初期化
                     for i, indicator_gene in enumerate(gene.indicators):
-                        print(
+                        logger.debug(
                             f"  指標 {i+1}: {indicator_gene.type}, enabled={indicator_gene.enabled}"
                         )
                         if indicator_gene.enabled:
-                            print("    → 初期化実行中...")
+                            logger.debug("    → 初期化実行中...")
                             self._init_indicator(indicator_gene)
-                            print("    → 初期化完了")
+                            logger.debug("    → 初期化完了")
                         else:
-                            print("    → スキップ（無効）")
+                            logger.debug("    → スキップ（無効）")
 
-                    print(f"🔧 戦略初期化完了: {len(self.indicators)}個の指標")
-                    print(f"  登録された指標: {list(self.indicators.keys())}")
-                    logger.info(f"戦略初期化完了: {len(self.indicators)}個の指標")
+                    logger.info(
+                        f"戦略初期化完了: {len(self.indicators)}個の指標. "
+                        f"登録された指標: {list(self.indicators.keys())}"
+                    )
 
                 except Exception as e:
-                    print(f"❌ 戦略初期化エラー: {e}")
-                    logger.error(f"戦略初期化エラー: {e}")
-                    import traceback
-
-                    traceback.print_exc()
+                    logger.error(f"戦略初期化エラー: {e}", exc_info=True)
                     raise
 
             def next(self):

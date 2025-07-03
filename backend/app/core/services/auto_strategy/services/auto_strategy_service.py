@@ -46,9 +46,12 @@ class AutoStrategyService:
 
     def __init__(self):
         """初期化"""
+        # データベースセッションファクトリ
+        self.db_session_factory = SessionLocal
+
         # 分離されたコンポーネント
-        self.experiment_manager = ExperimentManager()
-        self.progress_tracker = ProgressTracker()
+        self.experiment_manager = ExperimentManager(self.db_session_factory)
+        self.progress_tracker = ProgressTracker(self.db_session_factory)
 
         # サービスの初期化
         self.strategy_factory = StrategyFactory()
@@ -75,47 +78,25 @@ class AutoStrategyService:
         設定します。
         """
         try:
-            # データベースセッションの開始
-            db = SessionLocal()
-            try:
+            with self.db_session_factory() as db:
                 # 各種データリポジトリの初期化
-                ohlcv_repo = OHLCVRepository(
-                    db
-                )  # OHLCV (始値、高値、安値、終値、出来高) データのリポジトリ
-                oi_repo = OpenInterestRepository(
-                    db
-                )  # Open Interest (建玉) データのリポジトリ
-                fr_repo = FundingRateRepository(
-                    db
-                )  # Funding Rate (資金調達率) データのリポジトリ
-                self.ga_experiment_repo = GAExperimentRepository(
-                    db
-                )  # GA実験結果を保存・取得するリポジトリ
-                self.generated_strategy_repo = GeneratedStrategyRepository(
-                    db
-                )  # GAによって生成された戦略を保存・取得するリポジトリ
+                ohlcv_repo = OHLCVRepository(db)
+                oi_repo = OpenInterestRepository(db)
+                fr_repo = FundingRateRepository(db)
+                self.ga_experiment_repo = GAExperimentRepository(db)
+                self.generated_strategy_repo = GeneratedStrategyRepository(db)
 
-                # バックテストデータサービスを初期化 (OHLCV, OI, FR データを統合)
-                # このサービスは、バックテストに必要な市場データ（OHLCV、建玉、資金調達率）を
-                # データベースから取得し、整形する役割を担います。
+                # バックテストデータサービスを初期化
                 data_service = BacktestDataService(
                     ohlcv_repo=ohlcv_repo, oi_repo=oi_repo, fr_repo=fr_repo
                 )
-                # バックテストサービスを初期化 (データサービスを利用)
-                # このサービスは、特定の戦略と市場データを用いてバックテストを実行し、
-                # そのパフォーマンスを評価する役割を担います。
+                # バックテストサービスを初期化
                 self.backtest_service = BacktestService(data_service)
 
-                # 遺伝的アルゴリズムエンジンを初期化 (バックテストサービスと戦略ファクトリを利用)
-                # このエンジンは、遺伝的アルゴリズムの中核を実装し、戦略の生成、評価、選択、
-                # 交叉、突然変異といった進化プロセスを管理します。
-                # GAエンジンは実行時に動的に初期化されるため、ここではNoneに設定
+                # GAエンジンは実行時に動的に初期化
                 self.ga_engine = None
 
                 logger.info("自動戦略生成サービス初期化完了（OI/FR統合版）")
-
-            finally:
-                db.close()
 
         except Exception as e:
             logger.error(f"AutoStrategyServiceの初期化中にエラーが発生しました: {e}")
@@ -274,173 +255,172 @@ class AutoStrategyService:
         ga_config: GAConfig,
         backtest_config: Dict[str, Any],
     ):
-        """
-        実験結果をデータベースに保存
-
-        Args:
-            experiment_id: 実験ID
-            result: GA実行結果
-            ga_config: GA設定
-            backtest_config: バックテスト設定
-        """
+        """実験結果をデータベースに保存（リファクタリング版）"""
         try:
             experiment_info = self.experiment_manager.get_experiment_info(experiment_id)
             if not experiment_info:
-                logger.error(
-                    f"指定された実験IDの実験情報が見つかりません: {experiment_id}"
-                )
+                logger.error(f"実験情報が見つかりません: {experiment_id}")
                 return
 
-            db_experiment_id = experiment_info["db_id"]
-            best_strategy = result["best_strategy"]
-            best_fitness = result["best_fitness"]
-            all_strategies = result.get("all_strategies", [])
-
             logger.info(f"実験結果保存開始: {experiment_id}")
-            logger.info(f"最高フィットネス: {best_fitness:.4f}")
-            logger.info(f"最良戦略ID: {best_strategy.id}")
-            logger.info(f"使用指標数: {len(best_strategy.indicators)}")
-            logger.info(f"保存対象戦略数: {len(all_strategies)}")
 
-            # データベースに戦略を保存
-            db = SessionLocal()
-            try:
-                generated_strategy_repo = GeneratedStrategyRepository(db)
-                backtest_result_repo = BacktestResultRepository(db)
-
-                # GAによって見つかった最良戦略をデータベースに保存
-                best_strategy_record = generated_strategy_repo.save_strategy(
-                    experiment_id=db_experiment_id,  # 関連するGA実験のデータベースID
-                    gene_data=best_strategy.to_dict(),  # 戦略遺伝子の辞書表現
-                    generation=ga_config.generations,  # 戦略が生成された世代
-                    fitness_score=best_fitness,  # 戦略の適応度スコア
+            with SessionLocal() as db:
+                # 最良戦略の保存と詳細バックテストの実行
+                self._save_best_strategy_and_run_detailed_backtest(
+                    db,
+                    experiment_id,
+                    experiment_info,
+                    result,
+                    ga_config,
+                    backtest_config,
                 )
 
-                logger.info(f"最良戦略を保存しました: DB ID {best_strategy_record.id}")
-
-                # 最良戦略のバックテスト結果をbacktest_resultsテーブルにも保存
-                # GAの評価フェーズでは高速化のために簡略化されたフィットネス計算を行いますが、
-                # ここでは最終的に見つかった最良戦略について、詳細なパフォーマンス指標や
-                # 取引履歴を含む完全なバックテストを再実行し、その結果を永続化します。
-                try:
-                    logger.info("最良戦略のバックテスト結果を詳細保存開始...")
-
-                    detailed_backtest_config = backtest_config.copy()
-                    detailed_backtest_config["strategy_name"] = (
-                        f"AUTO_STRATEGY_{experiment_info['name']}_{best_strategy.id[:8]}"
-                    )
-                    detailed_backtest_config["strategy_config"] = {
-                        "strategy_type": "GENERATED_AUTO",
-                        "parameters": {"strategy_gene": best_strategy.to_dict()},
-                    }
-
-                    detailed_result = self.backtest_service.run_backtest(
-                        detailed_backtest_config
-                    )
-
-                    # backtest_results テーブルに保存するためのデータ構造を構築
-                    backtest_result_data = {
-                        "strategy_name": detailed_backtest_config[
-                            "strategy_name"
-                        ],  # 戦略名
-                        "symbol": detailed_backtest_config["symbol"],  # シンボル
-                        "timeframe": detailed_backtest_config["timeframe"],  # 時間足
-                        "start_date": detailed_backtest_config[
-                            "start_date"
-                        ],  # バックテスト開始日
-                        "end_date": detailed_backtest_config[
-                            "end_date"
-                        ],  # バックテスト終了日
-                        "initial_capital": detailed_backtest_config[
-                            "initial_capital"
-                        ],  # 初期資金
-                        "commission_rate": detailed_backtest_config.get(
-                            "commission_rate", 0.001
-                        ),  # 手数料率 (デフォルト値あり)
-                        "config_json": {  # バックテスト設定のJSON形式
-                            "strategy_config": detailed_backtest_config[
-                                "strategy_config"
-                            ],
-                            "experiment_id": experiment_id,  # 実験ID
-                            "db_experiment_id": db_experiment_id,  # データベース実験ID
-                            "fitness_score": best_fitness,  # 適応度スコア
-                        },
-                        "performance_metrics": detailed_result.get(
-                            "performance_metrics", {}
-                        ),  # パフォーマンス指標 (デフォルト値あり)
-                        "equity_curve": detailed_result.get(
-                            "equity_curve", []
-                        ),  # エクイティカーブデータ (デフォルト値あり)
-                        "trade_history": detailed_result.get(
-                            "trade_history", []
-                        ),  # 取引履歴データ (デフォルト値あり)
-                        "execution_time": detailed_result.get(
-                            "execution_time"
-                        ),  # 実行時間
-                        "status": "completed",  # ステータスを「完了」に設定
-                    }
-
-                    # 構築したデータを backtest_results テーブルに保存
-                    saved_backtest_result = backtest_result_repo.save_backtest_result(
-                        backtest_result_data
-                    )
-                    logger.info(
-                        f"最良戦略のバックテスト結果を保存しました: ID {saved_backtest_result.get('id')}"
-                    )
-
-                except Exception as e:
-                    logger.error(
-                        f"最良戦略のバックテスト結果の保存中にエラーが発生しました: {e}",
-                        exc_info=True,
-                    )
-                    # エラーが発生してもメイン処理は継続
-
-                # GAによって生成された全ての戦略を一括でデータベースに保存 (オプション機能)
-                # 大量の戦略が生成される可能性があるため、パフォーマンスを考慮し、
-                # 最良戦略以外の戦略もまとめて保存します。
-                if (
-                    all_strategies and len(all_strategies) > 1
-                ):  # 全戦略が存在し、かつ複数ある場合
-                    strategies_data = []  # 保存する戦略データのリスト
-                    for i, strategy in enumerate(
-                        all_strategies[
-                            :100
-                        ]  # 最大100戦略までを対象とする (パフォーマンス考慮)
-                    ):
-                        if (
-                            strategy != best_strategy
-                        ):  # 最良戦略は既に保存済みなのでスキップ
-                            strategies_data.append(
-                                {
-                                    "experiment_id": db_experiment_id,  # 関連するGA実験のデータベースID
-                                    "gene_data": strategy.to_dict(),  # 戦略遺伝子の辞書表現
-                                    "generation": ga_config.generations,  # 戦略が生成された世代
-                                    "fitness_score": result.get(  # 適応度スコア (デフォルト値あり)
-                                        "fitness_scores", [0.0] * len(all_strategies)
-                                    )[
-                                        i
-                                    ],
-                                }
-                            )
-
-                    if strategies_data:
-                        saved_strategies = (
-                            generated_strategy_repo.save_strategies_batch(
-                                strategies_data
-                            )
-                        )
-                        logger.info(
-                            f"追加戦略を一括保存しました: {len(saved_strategies)} 件"
-                        )
-
-            finally:
-                db.close()
+                # その他の戦略をバッチ保存
+                self._save_other_strategies(db, experiment_info, result, ga_config)
 
             logger.info(f"実験結果保存完了: {experiment_id}")
 
         except Exception as e:
-            logger.error(f"GA実験結果の保存中にエラーが発生しました: {e}")
+            logger.error(
+                f"GA実験結果の保存中にエラーが発生しました: {e}", exc_info=True
+            )
             raise
+
+    def _save_best_strategy_and_run_detailed_backtest(
+        self,
+        db,
+        experiment_id: str,
+        experiment_info: Dict[str, Any],
+        result: Dict[str, Any],
+        ga_config: GAConfig,
+        backtest_config: Dict[str, Any],
+    ):
+        """最良戦略を保存し、詳細なバックテストを実行して結果を保存する"""
+        generated_strategy_repo = GeneratedStrategyRepository(db)
+        backtest_result_repo = BacktestResultRepository(db)
+
+        db_experiment_id = experiment_info["db_id"]
+        best_strategy = result["best_strategy"]
+        best_fitness = result["best_fitness"]
+
+        # 1. 最良戦略を generated_strategies に保存
+        best_strategy_record = generated_strategy_repo.save_strategy(
+            experiment_id=db_experiment_id,
+            gene_data=best_strategy.to_dict(),
+            generation=ga_config.generations,
+            fitness_score=best_fitness,
+        )
+        logger.info(f"最良戦略を保存しました: DB ID {best_strategy_record.id}")
+
+        # 2. 最良戦略の詳細バックテストを実行し、backtest_results に保存
+        try:
+            logger.info("最良戦略の詳細バックテストと結果保存を開始...")
+            detailed_backtest_config = self._prepare_detailed_backtest_config(
+                best_strategy, experiment_info, backtest_config
+            )
+            detailed_result = self.backtest_service.run_backtest(
+                detailed_backtest_config
+            )
+
+            backtest_result_data = self._prepare_backtest_result_data(
+                detailed_result,
+                detailed_backtest_config,
+                experiment_id,
+                db_experiment_id,
+                best_fitness,
+            )
+            saved_backtest_result = backtest_result_repo.save_backtest_result(
+                backtest_result_data
+            )
+            logger.info(
+                f"最良戦略のバックテスト結果を保存しました: ID {saved_backtest_result.get('id')}"
+            )
+
+        except Exception as e:
+            logger.error(
+                f"最良戦略の詳細バックテスト結果の保存中にエラー: {e}", exc_info=True
+            )
+
+    def _prepare_detailed_backtest_config(
+        self,
+        best_strategy: StrategyGene,
+        experiment_info: Dict[str, Any],
+        backtest_config: Dict[str, Any],
+    ) -> Dict[str, Any]:
+        """詳細バックテスト用の設定を準備する"""
+        config = backtest_config.copy()
+        config["strategy_name"] = (
+            f"AUTO_STRATEGY_{experiment_info['name']}_{best_strategy.id[:8]}"
+        )
+        config["strategy_config"] = {
+            "strategy_type": "GENERATED_AUTO",
+            "parameters": {"strategy_gene": best_strategy.to_dict()},
+        }
+        return config
+
+    def _prepare_backtest_result_data(
+        self,
+        detailed_result: Dict[str, Any],
+        config: Dict[str, Any],
+        experiment_id: str,
+        db_experiment_id: int,
+        best_fitness: float,
+    ) -> Dict[str, Any]:
+        """backtest_resultsテーブルに保存するためのデータを構築する"""
+        return {
+            "strategy_name": config["strategy_name"],
+            "symbol": config["symbol"],
+            "timeframe": config["timeframe"],
+            "start_date": config["start_date"],
+            "end_date": config["end_date"],
+            "initial_capital": config["initial_capital"],
+            "commission_rate": config.get("commission_rate", 0.001),
+            "config_json": {
+                "strategy_config": config["strategy_config"],
+                "experiment_id": experiment_id,
+                "db_experiment_id": db_experiment_id,
+                "fitness_score": best_fitness,
+            },
+            "performance_metrics": detailed_result.get("performance_metrics", {}),
+            "equity_curve": detailed_result.get("equity_curve", []),
+            "trade_history": detailed_result.get("trade_history", []),
+            "execution_time": detailed_result.get("execution_time"),
+            "status": "completed",
+        }
+
+    def _save_other_strategies(
+        self,
+        db,
+        experiment_info: Dict[str, Any],
+        result: Dict[str, Any],
+        ga_config: GAConfig,
+    ):
+        """最良戦略以外の戦略をバッチ保存する"""
+        all_strategies = result.get("all_strategies", [])
+        if not all_strategies or len(all_strategies) <= 1:
+            return
+
+        best_strategy = result["best_strategy"]
+        db_experiment_id = experiment_info["db_id"]
+        generated_strategy_repo = GeneratedStrategyRepository(db)
+
+        strategies_data = []
+        for i, strategy in enumerate(all_strategies[:100]):  # 上位100件に制限
+            if strategy.id != best_strategy.id:
+                strategies_data.append(
+                    {
+                        "experiment_id": db_experiment_id,
+                        "gene_data": strategy.to_dict(),
+                        "generation": ga_config.generations,
+                        "fitness_score": result.get(
+                            "fitness_scores", [0.0] * len(all_strategies)
+                        )[i],
+                    }
+                )
+
+        if strategies_data:
+            saved_count = generated_strategy_repo.save_strategies_batch(strategies_data)
+            logger.info(f"追加戦略を一括保存しました: {saved_count} 件")
 
     def validate_strategy_gene(self, gene: StrategyGene) -> tuple[bool, List[str]]:
         """

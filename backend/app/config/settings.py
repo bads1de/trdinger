@@ -44,6 +44,22 @@ class Settings(BaseSettings):
     # セキュリティ設定
     secret_key: str = Field(default="your-secret-key-here", alias="SECRET_KEY")
 
+    # GA フォールバック設定
+    ga_fallback_symbol: str = Field(default="BTC/USDT", alias="GA_FALLBACK_SYMBOL")
+    ga_fallback_timeframe: str = Field(default="1d", alias="GA_FALLBACK_TIMEFRAME")
+    ga_fallback_start_date: str = Field(
+        default="2024-01-01", alias="GA_FALLBACK_START_DATE"
+    )
+    ga_fallback_end_date: str = Field(
+        default="2024-04-09", alias="GA_FALLBACK_END_DATE"
+    )
+    ga_fallback_initial_capital: float = Field(
+        default=100000.0, alias="GA_FALLBACK_INITIAL_CAPITAL"
+    )
+    ga_fallback_commission_rate: float = Field(
+        default=0.001, alias="GA_FALLBACK_COMMISSION_RATE"
+    )
+
     @property
     def database_url_complete(self) -> str:
         """完全なデータベースURLを生成"""

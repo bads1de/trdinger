@@ -25,10 +25,11 @@ class ExperimentManager:
     GA実験の管理・スレッド制御を担当します。
     """
 
-    def __init__(self):
+    def __init__(self, db_session_factory: Callable = SessionLocal):
         """初期化"""
         self.running_experiments: Dict[str, Dict[str, Any]] = {}
         self.experiment_threads: Dict[str, threading.Thread] = {}
+        self.db_session_factory = db_session_factory
 
     def create_experiment(
         self,
@@ -327,8 +328,7 @@ class ExperimentManager:
             データベース実験ID
         """
         try:
-            db = SessionLocal()
-            try:
+            with self.db_session_factory() as db:
                 ga_experiment_repo = GAExperimentRepository(db)
                 db_experiment = ga_experiment_repo.create_experiment(
                     name=experiment_name,
@@ -339,10 +339,6 @@ class ExperimentManager:
                 db_experiment_id = cast(int, db_experiment.id)
                 logger.info(f"データベース実験作成完了: DB ID = {db_experiment_id}")
                 return db_experiment_id
-
-            finally:
-                db.close()
-
         except Exception as e:
             logger.error(f"データベース保存エラー: {e}")
             raise
@@ -371,13 +367,7 @@ class ExperimentManager:
                 return
 
             # データベースを更新
-            from database.connection import SessionLocal
-            from database.repositories.ga_experiment_repository import (
-                GAExperimentRepository,
-            )
-
-            db = SessionLocal()
-            try:
+            with self.db_session_factory() as db:
                 ga_experiment_repo = GAExperimentRepository(db)
 
                 if status == "completed" and result:
@@ -399,9 +389,6 @@ class ExperimentManager:
                     )
                 else:
                     logger.error(f"データベース実験ステータス更新失敗: {experiment_id}")
-
-            finally:
-                db.close()
 
         except Exception as e:
             logger.error(f"データベースステータス更新エラー: {e}", exc_info=True)
