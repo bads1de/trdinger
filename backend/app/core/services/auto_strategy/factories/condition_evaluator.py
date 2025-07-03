@@ -325,11 +325,11 @@ class ConditionEvaluator:
                     return indicator_name
 
             # 4. レガシー形式の解決を試す
-            legacy_resolved = self._resolve_legacy_indicator_name(
-                operand, strategy_instance
-            )
-            if legacy_resolved:
-                return legacy_resolved
+            # legacy_resolved = self._resolve_legacy_indicator_name(
+            #     operand, strategy_instance
+            # )
+            # if legacy_resolved:
+            #     return legacy_resolved
 
             logger.warning(
                 f"指標名 '{operand}' が解決できませんでした。利用可能な指標: {list(strategy_instance.indicators.keys())}"
@@ -391,31 +391,6 @@ class ConditionEvaluator:
             if target_name in strategy_instance.indicators:
                 logger.debug(f"複数値指標名を解決: '{operand}' -> '{target_name}'")
                 return target_name
-
-        return None
-
-    def _resolve_legacy_indicator_name(
-        self, operand: str, strategy_instance
-    ) -> Optional[str]:
-        """
-        レガシー形式の指標名解決
-
-        Args:
-            operand: レガシー形式の指標名（例: "SMA_20", "RSI_14"）
-            strategy_instance: 戦略インスタンス
-
-        Returns:
-            解決された指標名（見つからない場合はNone）
-        """
-        # レガシー形式から新しい形式への変換を試す
-        # 例: "SMA_20" -> "SMA", "RSI_14" -> "RSI"
-
-        # アンダースコア区切りの場合、基本名を抽出
-        if "_" in operand:
-            base_name = operand.split("_")[0]
-            if base_name in strategy_instance.indicators:
-                logger.debug(f"レガシー指標名を解決: '{operand}' -> '{base_name}'")
-                return base_name
 
         return None
 

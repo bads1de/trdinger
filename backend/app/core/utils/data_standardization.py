@@ -5,7 +5,6 @@ backtesting.pyライブラリとの統一を図るためのデータ形式標準
 """
 
 import pandas as pd
-from typing import Dict, Any
 
 
 # backtesting.py標準のOHLCV列名
@@ -159,62 +158,3 @@ def prepare_data_for_backtesting(df: pd.DataFrame) -> pd.DataFrame:
     standardized_df = standardized_df.dropna()
 
     return standardized_df
-
-
-def convert_legacy_config_to_backtest_service(
-    legacy_config: Dict[str, Any],
-) -> Dict[str, Any]:
-    """
-    従来の設定形式をBacktestService形式に変換
-
-    Args:
-        legacy_config: 従来の設定形式
-
-    Returns:
-        BacktestService用の設定
-    """
-    # 基本設定の変換
-    backtest_config = {
-        "strategy_name": legacy_config.get("strategy", {}).get("name", "SMA_CROSS"),
-        "symbol": legacy_config.get("strategy", {}).get("target_pair", "BTC/USDT"),
-        "timeframe": legacy_config.get("timeframe", "1d"),
-        "start_date": legacy_config.get("start_date"),
-        "end_date": legacy_config.get("end_date"),
-        "initial_capital": legacy_config.get("initial_capital", 100000),
-        "commission_rate": legacy_config.get("commission_rate", 0.001),
-    }
-
-    # 戦略設定の変換
-    strategy_info = legacy_config.get("strategy", {})
-
-    # SMAクロス戦略の場合
-    if "indicators" in strategy_info:
-        indicators = strategy_info["indicators"]
-        sma_params = {}
-
-        for indicator in indicators:
-            if indicator.get("name", "").upper() == "SMA":
-                period = indicator.get("params", {}).get("period", 20)
-                if "n1" not in sma_params:
-                    sma_params["n1"] = period
-                else:
-                    sma_params["n2"] = period
-
-        # デフォルト値を設定
-        if "n1" not in sma_params:
-            sma_params["n1"] = 20
-        if "n2" not in sma_params:
-            sma_params["n2"] = 50
-
-        backtest_config["strategy_config"] = {
-            "strategy_type": "SMA_CROSS",
-            "parameters": sma_params,
-        }
-    else:
-        # デフォルト戦略設定
-        backtest_config["strategy_config"] = {
-            "strategy_type": "SMA_CROSS",
-            "parameters": {"n1": 20, "n2": 50},
-        }
-
-    return backtest_config
