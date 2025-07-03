@@ -5,9 +5,9 @@
 """
 
 import logging
-from typing import List, Any, Optional
 import pandas as pd
 
+from typing import List, Any, Optional
 from ..models.strategy_gene import Condition
 
 logger = logging.getLogger(__name__)

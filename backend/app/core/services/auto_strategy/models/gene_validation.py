@@ -7,6 +7,8 @@
 import logging
 from typing import List, Tuple
 
+from app.core.services.indicators import TechnicalIndicatorService
+
 logger = logging.getLogger(__name__)
 
 

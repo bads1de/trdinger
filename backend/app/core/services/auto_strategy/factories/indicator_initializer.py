@@ -7,13 +7,13 @@
 
 import logging
 import pandas as pd
-from typing import Dict, Any, Optional, List
+import numpy as np
+from typing import Dict, Any, Optional, List, Union, Tuple
 
 from ..models.strategy_gene import IndicatorGene
 from app.core.services.indicators import TechnicalIndicatorService
 from app.core.services.indicators.config import indicator_registry
 from app.core.services.indicators.parameter_manager import IndicatorParameterManager
-from app.core.utils.data_utils import convert_to_series
 from app.core.services.indicators.config.indicator_config import IndicatorResultType
 
 logger = logging.getLogger(__name__)
@@ -32,31 +32,9 @@ class IndicatorInitializer:
         self.technical_indicator_service = TechnicalIndicatorService()
         self.parameter_manager = IndicatorParameterManager()
 
-    def _create_multi_value_wrapper(self, adapter_function, index: int):
-        """
-        複数値指標の特定のインデックスを返すラッパー関数を作成
-
-        Args:
-            adapter_function: 元の指標関数
-            index: 取得するインデックス（0=MACD線, 1=シグナル線, 2=ヒストグラム等）
-
-        Returns:
-            指定されたインデックスの値のみを返す関数
-        """
-
-        def wrapper(*args, **kwargs):
-            result = adapter_function(*args, **kwargs)
-            if isinstance(result, tuple) and len(result) > index:
-                return result[index]
-            else:
-                # フォールバック: 結果がtupleでない場合はそのまま返す
-                return result
-
-        return wrapper
-
     def calculate_indicator_only(
         self, indicator_type: str, parameters: Dict[str, Any], data: pd.DataFrame
-    ) -> tuple:
+    ) -> Union[np.ndarray, Tuple[np.ndarray, ...], Tuple[None, None]]:
         """
         指標計算のみを行う（戦略インスタンスへの追加は行わない）
         パラメータバリデーションを含む
@@ -146,6 +124,11 @@ class IndicatorInitializer:
 
             json_indicator_name = indicator_registry.generate_json_name(original_type)
 
+            # backtesting.pyに指標を登録
+            indicator_result_or_tuple = strategy_instance.I(
+                adapter_function, *input_data, *param_values, name=original_type
+            )
+
             # 複数値指標の場合は個別に登録
             if indicator_config.result_type == IndicatorResultType.COMPLEX:
                 # 複数値指標（MACD, Bollinger Bands等）の処理
@@ -160,43 +143,25 @@ class IndicatorInitializer:
                     component_names = ["slowk", "slowd"]
                 else:
                     # デフォルトの名前
-                    component_names = [f"component_{i}" for i in range(3)]
+                    component_names = [
+                        f"component_{i}" for i in range(len(indicator_result_or_tuple))
+                    ]
 
                 for i, component_name in enumerate(component_names):
-                    # 各コンポーネント用のラッパー関数を作成
-                    wrapper_function = self._create_multi_value_wrapper(
-                        adapter_function, i
-                    )
-
-                    # backtesting.pyに個別に登録
-                component_indicator = strategy_instance.I(
-                    self.technical_indicator_service.calculate_indicator,
-                    data,
-                    indicator_type,
-                    parameters,
-                    name=f"{original_type}_{component_name}",
-                )
-
-                    # 戦略インスタンスに登録
-                    component_json_name = f"{json_indicator_name}_{i}"
-                    strategy_instance.indicators[component_json_name] = (
-                        component_indicator
-                    )
-                    output_names.append(component_json_name)
+                    if i < len(indicator_result_or_tuple):
+                        component_json_name = f"{json_indicator_name}_{i}"
+                        strategy_instance.indicators[component_json_name] = (
+                            indicator_result_or_tuple[i]
+                        )
+                        output_names.append(component_json_name)
 
                 logger.info(f"複数値指標を登録: {output_names}")
                 return output_names
             else:
                 # 単一値指標（SMA, RSI等）の処理
-            indicator_result = strategy_instance.I(
-                self.technical_indicator_service.calculate_indicator,
-                data,
-                indicator_type,
-                parameters,
-                name=original_type,
-            )
-
-                strategy_instance.indicators[json_indicator_name] = indicator_result
+                strategy_instance.indicators[json_indicator_name] = (
+                    indicator_result_or_tuple
+                )
                 logger.info(f"単一値指標を登録: {json_indicator_name}")
 
                 # 後方互換性のためのレガシー名登録
@@ -205,7 +170,7 @@ class IndicatorInitializer:
                 )
                 if legacy_indicator_name != json_indicator_name:
                     strategy_instance.indicators[legacy_indicator_name] = (
-                        indicator_result
+                        indicator_result_or_tuple
                     )
 
                 return [json_indicator_name]
