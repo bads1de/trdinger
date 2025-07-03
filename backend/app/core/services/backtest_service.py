@@ -11,7 +11,8 @@ from typing import Dict, Any, Type, Optional
 from backtesting import Backtest, Strategy
 
 from .backtest_data_service import BacktestDataService
-from ..strategies.macd_strategy import MACDStrategy
+
+
 from database.repositories.ohlcv_repository import OHLCVRepository
 from database.connection import SessionLocal
 import logging
@@ -253,7 +254,10 @@ class BacktestService:
         strategy_type = strategy_config["strategy_type"]
 
         if strategy_type == "MACD":
-            return MACDStrategy
+            # return MACDStrategy  # 削除済みのレガシーコード
+            raise ValueError(
+                f"MACD戦略は削除されました。オートストラテジーシステムを使用してください。"
+            )
 
         elif strategy_type == "GENERATED_TEST":
             # 自動生成戦略のテスト用
@@ -456,48 +460,30 @@ class BacktestService:
             戦略情報の辞書
         """
         return {
-            "MACD": {
-                "name": "MACD Strategy",
-                "description": "移動平均収束拡散戦略",
+            "GENERATED_TEST": {
+                "name": "Generated Test Strategy",
+                "description": "オートストラテジーシステムで生成されたテスト戦略",
                 "parameters": {
-                    "fast_period": {
-                        "type": "int",
-                        "default": 12,
-                        "min": 5,
-                        "max": 20,
-                        "description": "高速EMA期間",
-                    },
-                    "slow_period": {
-                        "type": "int",
-                        "default": 26,
-                        "min": 20,
-                        "max": 50,
-                        "description": "低速EMA期間",
-                    },
-                    "signal_period": {
-                        "type": "int",
-                        "default": 9,
-                        "min": 5,
-                        "max": 15,
-                        "description": "シグナルライン期間",
-                    },
-                    "n1": {
-                        "type": "int",
-                        "default": 12,
-                        "min": 5,
-                        "max": 20,
-                        "description": "高速EMA期間（fast_periodのエイリアス）",
-                    },
-                    "n2": {
-                        "type": "int",
-                        "default": 26,
-                        "min": 20,
-                        "max": 50,
-                        "description": "低速EMA期間（slow_periodのエイリアス）",
-                    },
+                    "strategy_gene": {
+                        "type": "dict",
+                        "description": "戦略遺伝子データ",
+                        "required": True,
+                    }
                 },
-                "constraints": ["fast_period < slow_period", "n1 < n2"],
-            }
+                "constraints": [],
+            },
+            "GENERATED_AUTO": {
+                "name": "Auto-Generated Strategy",
+                "description": "オートストラテジーシステムで自動生成された戦略",
+                "parameters": {
+                    "strategy_gene": {
+                        "type": "dict",
+                        "description": "戦略遺伝子データ",
+                        "required": True,
+                    }
+                },
+                "constraints": [],
+            },
         }
 
     def optimize_strategy(
