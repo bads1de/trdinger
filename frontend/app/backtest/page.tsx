@@ -6,16 +6,12 @@
 
 "use client";
 
-import React, { useState, useEffect } from "react";
-import BacktestForm from "@/components/backtest/BacktestForm";
+import React from "react";
 import BacktestResultsTable from "@/components/backtest/BacktestResultsTable";
 import PerformanceMetrics from "@/components/backtest/PerformanceMetrics";
 import OptimizationResults from "@/components/backtest/OptimizationResults";
 import OptimizationModal from "@/components/backtest/OptimizationModal";
 import AutoStrategyModal from "@/components/backtest/AutoStrategyModal";
-import { useApiCall } from "@/hooks/useApiCall";
-import { BacktestConfig, BacktestResult } from "@/types/backtest";
-import { GAConfig } from "@/types/optimization";
 import { useBacktestResults } from "@/hooks/useBacktestResults";
 import { useBacktestOptimizations } from "@/hooks/useBacktestOptimizations";
 import { useAutoStrategy } from "@/hooks/useAutoStrategy";
@@ -59,24 +55,6 @@ export default function BacktestPage() {
     openAutoStrategyModal,
     setShowAutoStrategyModal,
   } = useAutoStrategy(loadResults);
-
-  const { execute: runBacktest, loading: backtestLoading } = useApiCall<{
-    result: BacktestResult;
-  }>();
-
-  // バックテスト実行
-  const handleRunBacktest = async (config: BacktestConfig) => {
-    const response = await runBacktest("/api/backtest/run", {
-      method: "POST",
-      body: config,
-      onSuccess: (data) => {
-        loadResults(); // 結果一覧を更新
-      },
-      onError: (error) => {
-        console.error("Backtest failed:", error);
-      },
-    });
-  };
 
   // GA戦略生成実行
   const handleGAGeneration = async (config: any) => {
@@ -196,19 +174,6 @@ export default function BacktestPage() {
           isLoading={autoStrategyLoading}
           currentBacktestConfig={currentBacktestConfig}
         />
-
-        {/* ローディング状態 */}
-        {backtestLoading && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-secondary-950 rounded-lg p-6 text-center border border-secondary-700">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
-              <p className="text-lg font-medium">バックテスト実行中...</p>
-              <p className="text-secondary-400 text-sm mt-2">
-                データ量によっては数分かかる場合があります
-              </p>
-            </div>
-          </div>
-        )}
 
         {/* 最適化ローディング状態 */}
         {isOptimizationLoading && (
