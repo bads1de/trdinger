@@ -50,27 +50,44 @@ class MomentumIndicators:
     @staticmethod
     @handle_talib_errors
     def macd(
-        data: np.ndarray, fast: int = 12, slow: int = 26, signal: int = 9
+        data: np.ndarray,
+        fastperiod: int = 12,
+        slowperiod: int = 26,
+        signalperiod: int = 9,
     ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
         """
         Moving Average Convergence Divergence (MACD)
 
         Args:
             data: 価格データ（numpy配列）
-            fast: 高速期間（デフォルト: 12）
-            slow: 低速期間（デフォルト: 26）
-            signal: シグナル期間（デフォルト: 9）
+            fastperiod: 高速期間（デフォルト: 12）
+            slowperiod: 低速期間（デフォルト: 26）
+            signalperiod: シグナル期間（デフォルト: 9）
 
         Returns:
             (MACD, Signal, Histogram)のtuple
         """
-        validate_input(data, max(fast, slow, signal))
+        # パラメータのバリデーションと調整
+        fastperiod = max(2, fastperiod)
+        slowperiod = max(fastperiod + 1, slowperiod)  # slowはfastより大きい必要がある
+        signalperiod = max(2, signalperiod)
+
+        validate_input(data, max(fastperiod, slowperiod, signalperiod))
         log_indicator_calculation(
-            "MACD", {"fast": fast, "slow": slow, "signal": signal}, len(data)
+            "MACD",
+            {
+                "fastperiod": fastperiod,
+                "slowperiod": slowperiod,
+                "signalperiod": signalperiod,
+            },
+            len(data),
         )
 
         macd, signal_line, histogram = talib.MACD(
-            data, fastperiod=fast, slowperiod=slow, signalperiod=signal
+            data,
+            fastperiod=fastperiod,
+            slowperiod=slowperiod,
+            signalperiod=signalperiod,
         )
         return cast(
             Tuple[np.ndarray, np.ndarray, np.ndarray],
@@ -173,6 +190,11 @@ class MomentumIndicators:
         Returns:
             (%K, %D)のtuple
         """
+        # パラメータのバリデーションと調整
+        fastk_period = max(2, fastk_period)
+        slowk_period = max(2, slowk_period)
+        slowd_period = max(2, slowd_period)
+
         validate_multi_input(
             high, low, close, max(fastk_period, slowk_period, slowd_period)
         )

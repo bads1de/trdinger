@@ -126,7 +126,7 @@ class IndicatorInitializer:
 
             # backtesting.pyに指標を登録
             indicator_result_or_tuple = strategy_instance.I(
-                adapter_function, *input_data, *param_values, name=original_type
+                adapter_function, *input_data, **parameters, name=original_type
             )
 
             # 複数値指標の場合は個別に登録

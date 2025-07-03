@@ -202,54 +202,66 @@ class IndicatorParameterManager:
         slow_config = config.parameters.get("slow_period")
         signal_config = config.parameters.get("signal_period")
 
-        if fast_config and slow_config:
-            if (
-                fast_config.min_value is not None
-                and fast_config.max_value is not None
-                and slow_config.min_value is not None
-                and slow_config.max_value is not None
-            ):
+        # fast_periodとslow_periodの生成
+        fast_period = 12  # デフォルト値
+        slow_period = 26  # デフォルト値
+
+        if (
+            fast_config
+            and slow_config
+            and fast_config.min_value is not None
+            and fast_config.max_value is not None
+            and slow_config.min_value is not None
+            and slow_config.max_value is not None
+        ):
+            try:
                 # fast_period < slow_periodを保証
-                fast_period = random.randint(
+                fast_period_val = random.randint(
                     int(fast_config.min_value), int(fast_config.max_value)
                 )
-                # slow_periodはfast_periodより大きくなるように調整
-                slow_min = max(int(slow_config.min_value), fast_period + 1)
+                slow_min = max(int(slow_config.min_value), fast_period_val + 1)
                 slow_max = int(slow_config.max_value)
 
                 if slow_min <= slow_max:
-                    slow_period = random.randint(slow_min, slow_max)
+                    slow_period_val = random.randint(slow_min, slow_max)
+                    fast_period = fast_period_val
+                    slow_period = slow_period_val
                 else:
-                    # 調整できない場合はデフォルト値を使用
                     self.logger.warning(
-                        "Could not generate slow_period > fast_period for MACD, falling back to defaults."
+                        "Could not generate slow_period > fast_period for MACD, using defaults."
                     )
-                    fast_period = int(fast_config.default_value)
-                    slow_period = int(slow_config.default_value)
-            else:
-                # 範囲が定義されていない場合はデフォルト値を使用
+            except ValueError:
                 self.logger.warning(
-                    "MACD fast/slow period range not fully defined, using default values."
+                    "Invalid range for MACD fast/slow periods, using defaults."
                 )
-                fast_period = int(fast_config.default_value)
-                slow_period = int(slow_config.default_value)
+        else:
+            self.logger.warning(
+                "MACD fast/slow period range not fully defined, using default values."
+            )
 
-            params["fast_period"] = fast_period
-            params["slow_period"] = slow_period
+        params["fast_period"] = fast_period
+        params["slow_period"] = slow_period
 
-        if signal_config:
-            if (
-                signal_config.min_value is not None
-                and signal_config.max_value is not None
-            ):
-                params["signal_period"] = random.randint(
+        # signal_periodの生成
+        signal_period = 9  # デフォルト値
+        if (
+            signal_config
+            and signal_config.min_value is not None
+            and signal_config.max_value is not None
+        ):
+            try:
+                signal_period = random.randint(
                     int(signal_config.min_value), int(signal_config.max_value)
                 )
-            else:
+            except ValueError:
                 self.logger.warning(
-                    "MACD signal_period range not defined, using default value."
+                    "Invalid range for MACD signal_period, using default."
                 )
-                params["signal_period"] = int(signal_config.default_value)
+        else:
+            self.logger.warning(
+                "MACD signal_period range not defined, using default value."
+            )
+        params["signal_period"] = signal_period
 
         # すべてのパラメータが生成されたか確認
         if not all(
@@ -271,5 +283,13 @@ class IndicatorParameterManager:
     def _generate_stochastic_parameters(
         self, config: IndicatorConfig
     ) -> Dict[str, Any]:
-        """Stochasticパラメータの生成"""
-        return self._generate_standard_parameters(config)
+        """Stochasticパラメータの生成（matypeを0-8に制限）"""
+        params = self._generate_standard_parameters(config)
+
+        # matypeを0-8の範囲に制限
+        if "slowk_matype" in params:
+            params["slowk_matype"] = random.randint(0, 8)
+        if "slowd_matype" in params:
+            params["slowd_matype"] = random.randint(0, 8)
+
+        return params

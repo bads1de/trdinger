@@ -73,7 +73,7 @@ class Settings(BaseSettings):
     class Config:
         env_file = ".env"
         env_file_encoding = "utf-8"
-        extra = "ignore"  # 追加の環境変数を無視
+        extra = "ignore"
 
 
 # 設定のシングルトンインスタンス

@@ -75,7 +75,7 @@ class IndicatorConfig:
 
     # メタデータ（遺伝子生成用）
     scale_type: Optional[IndicatorScaleType] = None  # スケールタイプ
-    category: Optional[str] = None # 指標カテゴリ（例: trend, momentum）
+    category: Optional[str] = None  # 指標カテゴリ（例: trend, momentum）
 
     def add_parameter(self, param_config: ParameterConfig) -> None:
         """パラメータを追加"""
@@ -268,6 +268,36 @@ class IndicatorConfigRegistry:
             "WCLPRICE": "SMA",
             "PSAR": "SMA",
         }
+        # MACDのパラメータ設定を追加
+        macd_config = self.get_indicator_config("MACD")
+        if macd_config:
+            macd_config.add_parameter(
+                ParameterConfig(
+                    name="fastperiod",
+                    default_value=12,
+                    min_value=2,
+                    max_value=50,
+                    description="高速期間",
+                )
+            )
+            macd_config.add_parameter(
+                ParameterConfig(
+                    name="slowperiod",
+                    default_value=26,
+                    min_value=5,
+                    max_value=100,
+                    description="低速期間",
+                )
+            )
+            macd_config.add_parameter(
+                ParameterConfig(
+                    name="signalperiod",
+                    default_value=9,
+                    min_value=2,
+                    max_value=50,
+                    description="シグナル期間",
+                )
+            )
 
     def register(self, config: IndicatorConfig) -> None:
         """設定を登録"""

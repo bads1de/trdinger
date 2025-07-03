@@ -8,6 +8,7 @@ from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 import logging
+import os
 
 from app.config.settings import settings
 from app.core.utils.duplicate_filter_handler import DuplicateFilterHandler
@@ -47,6 +48,32 @@ def setup_logging():
 
     # ハンドラーをルートロガーに追加
     root_logger.addHandler(console_handler)
+
+    # オートストラテジー専用ロガーの設定
+    auto_strategy_logger = logging.getLogger("app.core.services.auto_strategy")
+    auto_strategy_logger.setLevel(
+        getattr(logging, settings.log_level.upper())
+    )  # settings.log_level を使用
+
+    # ログディレクトリが存在しない場合は作成
+    log_dir = "C:/Users/buti3/trading"
+    os.makedirs(log_dir, exist_ok=True)
+
+    # オートストラテジー専用ファイルハンドラーを作成
+    auto_strategy_log_file_path = os.path.join(log_dir, "auto_strategy_debug.log")
+    auto_strategy_file_handler = logging.FileHandler(
+        auto_strategy_log_file_path, encoding="utf-8"
+    )
+    auto_strategy_file_handler.setLevel(getattr(logging, settings.log_level.upper()))
+    auto_strategy_file_handler.setFormatter(formatter)
+    auto_strategy_file_handler.addFilter(
+        duplicate_filter
+    )  # コンソールと同じフィルターを適用
+    auto_strategy_logger.addHandler(auto_strategy_file_handler)
+
+    # オートストラテジーロガーが親ロガーにログを伝播しないように設定
+    # これにより、オートストラテジーのログがルートロガーのハンドラー（コンソール）に二重に出力されるのを防ぐ
+    auto_strategy_logger.propagate = False
 
 
 def create_app() -> FastAPI:

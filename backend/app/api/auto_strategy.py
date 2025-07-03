@@ -48,7 +48,7 @@ class GAGenerationRequest(BaseModel):
     ga_config: Dict[str, Any] = Field(..., description="GA設定")
 
     class Config:
-        schema_extra = {
+        json_schema_extra = {
             "example": {
                 "experiment_name": "BTC_Strategy_Gen_001",
                 "base_config": {
