@@ -86,47 +86,6 @@ class BacktestDataService:
 
         return df
 
-    def get_ohlcv_for_backtest(
-        self, symbol: str, timeframe: str, start_date: datetime, end_date: datetime
-    ) -> pd.DataFrame:
-        """
-        OHLCVデータのみをbacktesting.py形式に変換（後方互換性のため）
-
-        Args:
-            symbol: 取引ペア（例: BTC/USDT）
-            timeframe: 時間軸（例: 1h, 4h, 1d）
-            start_date: 開始日時
-            end_date: 終了日時
-
-        Returns:
-            backtesting.py用のDataFrame（Open, High, Low, Close, Volumeカラム）
-
-        Raises:
-            ValueError: データが見つからない場合
-        """
-        logger.warning(
-            "get_ohlcv_for_backtest は非推奨です。代わりに get_data_for_backtest を使用してください。"
-        )
-
-        if self.ohlcv_repo is None:
-            raise ValueError("OHLCVRepositoryが初期化されていません。")
-        # 1. 既存のリポジトリからデータ取得
-        ohlcv_data = self.ohlcv_repo.get_ohlcv_data(
-            symbol=symbol, timeframe=timeframe, start_time=start_date, end_time=end_date
-        )
-
-        if not ohlcv_data:
-            raise ValueError(f"{symbol} {timeframe}のデータが見つかりませんでした。")
-
-        # 2. DataFrameに変換
-        df = self._convert_to_dataframe(ohlcv_data)
-
-        # 3. データの整合性チェックとソート
-        self._validate_dataframe(df)
-        df = df.sort_index()  # 時系列順にソート
-
-        return df
-
     def _convert_to_dataframe(self, ohlcv_data: List[OHLCVData]) -> pd.DataFrame:
         """
         OHLCVDataリストをpandas.DataFrameに変換
@@ -363,37 +322,63 @@ class BacktestDataService:
 
     def _calculate_min_periods(self, strategy_config: dict) -> int:
         """
-        戦略に必要な最小期間数を計算
+        オートストラテジーの遺伝子情報から必要な最小期間数を計算します。
 
         Args:
-            strategy_config: 戦略設定
+            strategy_config: 戦略設定 ('strategy_gene' を含む)
 
         Returns:
             必要な最小期間数
         """
-        min_periods = 1
+        gene_data = strategy_config.get("strategy_gene") or strategy_config.get(
+            "parameters", {}
+        ).get("strategy_gene")
 
-        # SMA戦略の場合
-        if strategy_config.get("strategy_type") == "SMA_CROSS":
-            params = strategy_config.get("parameters", {})
-            n1 = params.get("n1", 20)
-            n2 = params.get("n2", 50)
-            min_periods = max(n1, n2)
+        if not gene_data:
+            logger.warning(
+                "戦略遺伝子(strategy_gene)が見つからないため、最小期間を1として計算します。"
+            )
+            return 1
 
-        # RSI戦略の場合
-        elif strategy_config.get("strategy_type") == "RSI":
-            params = strategy_config.get("parameters", {})
-            period = params.get("period", 14)
-            min_periods = period
+        max_period = 0
 
-        # MACD戦略の場合
-        elif strategy_config.get("strategy_type") == "MACD":
-            params = strategy_config.get("parameters", {})
-            slow_period = params.get("slow_period", 26)
-            signal_period = params.get("signal_period", 9)
-            min_periods = slow_period + signal_period
+        def extract_periods_recursive(data):
+            nonlocal max_period
+            if isinstance(data, dict):
+                # インジケーターのパラメータをチェック
+                if "parameters" in data and isinstance(data["parameters"], dict):
+                    params = data["parameters"]
+                    # 一般的な期間パラメータを探索
+                    for p_name, p_value in params.items():
+                        if "period" in p_name.lower() or p_name.lower() in [
+                            "n",
+                            "n1",
+                            "n2",
+                            "timeperiod",
+                        ]:
+                            if isinstance(p_value, int):
+                                max_period = max(max_period, p_value)
+                    # MACD特有の計算
+                    if (
+                        "fast_period" in params
+                        and "slow_period" in params
+                        and "signal_period" in params
+                    ):
+                        macd_period = params["slow_period"] + params["signal_period"]
+                        max_period = max(max_period, macd_period)
 
-        return min_periods
+                # 辞書の値を再帰的に探索
+                for value in data.values():
+                    extract_periods_recursive(value)
+            elif isinstance(data, list):
+                # リストの各要素を再帰的に探索
+                for item in data:
+                    extract_periods_recursive(item)
+
+        extract_periods_recursive(gene_data)
+
+        # 期間が0のままなら、デフォルトで1を返す（インジケーターがない場合など）
+        return max_period if max_period > 0 else 1
 
     def get_data_summary(self, df: pd.DataFrame) -> dict:
         """

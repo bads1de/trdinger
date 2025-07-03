@@ -99,23 +99,14 @@ class BacktestService:
             )
 
             # 新しい統合データ取得メソッドを使用（OI/FR含む）
-            try:
-                data = self.data_service.get_data_for_backtest(
-                    symbol=config["symbol"],
-                    timeframe=config["timeframe"],
-                    start_date=start_date,
-                    end_date=end_date,
-                )
-                logger.info("OI/FR統合を含む拡張データを使用しています。")
-            except AttributeError:
-                # 後方互換性のため、古いメソッドにフォールバック
-                logger.warning("OHLCVのみのデータにフォールバックします。")
-                data = self.data_service.get_ohlcv_for_backtest(
-                    symbol=config["symbol"],
-                    timeframe=config["timeframe"],
-                    start_date=start_date,
-                    end_date=end_date,
-                )
+            # 常にOI/FR統合データを使用
+            data = self.data_service.get_data_for_backtest(
+                symbol=config["symbol"],
+                timeframe=config["timeframe"],
+                start_date=start_date,
+                end_date=end_date,
+            )
+            logger.info("OI/FR統合を含む拡張データを使用しています。")
 
             if data is None or data.empty:
                 raise ValueError(
@@ -125,9 +116,7 @@ class BacktestService:
             logger.info(f"{len(data)}件のデータポイントを取得しました。")
 
             # 4. 戦略クラス動的生成
-            logger.info(
-                f"{config['strategy_config']['strategy_type']} の戦略クラスを作成しています。"
-            )
+            logger.info("オートストラテジーの戦略クラスを作成しています。")
             strategy_class = self._create_strategy_class(config["strategy_config"])
 
             # 5. backtesting.py実行
@@ -232,82 +221,45 @@ class BacktestService:
             raise ValueError("手数料率は0から1の間である必要があります。")
 
         # 戦略設定の確認
-        strategy_config = config["strategy_config"]
-        if "strategy_type" not in strategy_config:
-            raise ValueError("戦略設定にはstrategy_typeが必要です。")
+        # オートストラテジーへの移行に伴い、strategy_typeのチェックは不要。
+        # strategy_geneの存在は_create_strategy_classで検証される。
 
         return True
 
     def _create_strategy_class(self, strategy_config: Dict[str, Any]) -> Type[Strategy]:
         """
-        戦略設定から戦略クラスを取得し、パラメータを設定
+        戦略設定からオートストラテジーのクラスを生成します。
 
         Args:
-            strategy_config: 戦略設定
+            strategy_config: 戦略設定。'strategy_gene' を含む必要があります。
 
         Returns:
-            戦略クラス
+            生成された戦略クラス
 
         Raises:
-            ValueError: サポートされていない戦略タイプの場合
+            ValueError: 戦略遺伝子が見つからない場合
         """
-        strategy_type = strategy_config["strategy_type"]
+        # オートストラテジーのみをサポート
+        from app.core.services.auto_strategy.factories.strategy_factory import (
+            StrategyFactory,
+        )
+        from app.core.services.auto_strategy.models.strategy_gene import (
+            StrategyGene,
+        )
 
-        if strategy_type == "MACD":
+        # パラメータから戦略遺伝子を復元
+        gene_data = strategy_config.get("strategy_gene") or strategy_config.get(
+            "parameters", {}
+        ).get("strategy_gene")
+
+        if not gene_data:
             raise ValueError(
-                f"MACD戦略は削除されました。オートストラテジーシステムを使用してください。"
+                "オートストラテジーの実行には、戦略遺伝子 (strategy_gene) がパラメータとして必要です。"
             )
 
-        elif strategy_type == "GENERATED_TEST":
-            # 自動生成戦略のテスト用
-            # StrategyFactoryで生成された戦略クラスを使用
-            from app.core.services.auto_strategy.factories.strategy_factory import (
-                StrategyFactory,
-            )
-            from app.core.services.auto_strategy.models.strategy_gene import (
-                StrategyGene,
-            )
-
-            # パラメータから戦略遺伝子を復元
-            gene_data = strategy_config.get("strategy_gene") or strategy_config.get(
-                "parameters", {}
-            ).get("strategy_gene")
-            if gene_data:
-                strategy_gene = StrategyGene.from_dict(gene_data)
-                factory = StrategyFactory()
-                return factory.create_strategy_class(strategy_gene)
-            else:
-                raise ValueError(
-                    "GENERATED_TEST戦略タイプには、戦略遺伝子 (strategy_gene) がパラメータとして必要です。"
-                )
-
-        elif strategy_type == "GENERATED_AUTO":
-            # オートストラテジーで生成された戦略用
-            # StrategyFactoryで生成された戦略クラスを使用
-            from app.core.services.auto_strategy.factories.strategy_factory import (
-                StrategyFactory,
-            )
-            from app.core.services.auto_strategy.models.strategy_gene import (
-                StrategyGene,
-            )
-
-            # パラメータから戦略遺伝子を復元
-            gene_data = strategy_config.get("strategy_gene") or strategy_config.get(
-                "parameters", {}
-            ).get("strategy_gene")
-            if gene_data:
-                strategy_gene = StrategyGene.from_dict(gene_data)
-                factory = StrategyFactory()
-                return factory.create_strategy_class(strategy_gene)
-            else:
-                raise ValueError(
-                    "GENERATED_AUTO戦略タイプには、戦略遺伝子 (strategy_gene) がパラメータとして必要です。"
-                )
-
-        else:
-            raise ValueError(
-                f"サポートされていない戦略タイプが指定されました: {strategy_type}"
-            )
+        strategy_gene = StrategyGene.from_dict(gene_data)
+        factory = StrategyFactory()
+        return factory.create_strategy_class(strategy_gene)
 
     def _convert_backtest_results(
         self,
@@ -453,24 +405,13 @@ class BacktestService:
 
     def get_supported_strategies(self) -> Dict[str, Dict[str, Any]]:
         """
-        サポートされている戦略の一覧を取得
+        サポートされている戦略の一覧を取得します。
+        現在はオートストラテジーのみをサポートしています。
 
         Returns:
             戦略情報の辞書
         """
         return {
-            "GENERATED_TEST": {
-                "name": "Generated Test Strategy",
-                "description": "オートストラテジーシステムで生成されたテスト戦略",
-                "parameters": {
-                    "strategy_gene": {
-                        "type": "dict",
-                        "description": "戦略遺伝子データ",
-                        "required": True,
-                    }
-                },
-                "constraints": [],
-            },
             "GENERATED_AUTO": {
                 "name": "Auto-Generated Strategy",
                 "description": "オートストラテジーシステムで自動生成された戦略",
@@ -482,7 +423,7 @@ class BacktestService:
                     }
                 },
                 "constraints": [],
-            },
+            }
         }
 
     def optimize_strategy(
@@ -513,22 +454,13 @@ class BacktestService:
             finally:
                 db.close()
 
-        # データ取得（統合データを優先）
-        try:
-            data = self.data_service.get_data_for_backtest(
-                symbol=config["symbol"],
-                timeframe=config["timeframe"],
-                start_date=config["start_date"],
-                end_date=config["end_date"],
-            )
-        except AttributeError:
-            # 後方互換性のため、古いメソッドにフォールバック
-            data = self.data_service.get_ohlcv_for_backtest(
-                symbol=config["symbol"],
-                timeframe=config["timeframe"],
-                start_date=config["start_date"],
-                end_date=config["end_date"],
-            )
+        # データ取得（常に統合データを使用）
+        data = self.data_service.get_data_for_backtest(
+            symbol=config["symbol"],
+            timeframe=config["timeframe"],
+            start_date=config["start_date"],
+            end_date=config["end_date"],
+        )
 
         # 戦略クラス取得
         strategy_class = self._create_strategy_class(config["strategy_config"])
