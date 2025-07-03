@@ -361,17 +361,20 @@ class TestBacktestAPI:
             mock_service = Mock()
             mock_service_class.return_value = mock_service
 
-            supported_strategies = {
-                "SMA_CROSS": {
-                    "name": "SMA Cross Strategy",
-                    "description": "Simple Moving Average Crossover Strategy",
+            mock_service.get_supported_strategies.return_value = {
+                "GENERATED_AUTO": {
+                    "name": "Auto-Generated Strategy",
+                    "description": "オートストラテジーシステムで自動生成された戦略",
                     "parameters": {
-                        "n1": {"type": "int", "default": 20},
-                        "n2": {"type": "int", "default": 50},
+                        "strategy_gene": {
+                            "type": "dict",
+                            "description": "戦略遺伝子データ",
+                            "required": True,
+                        },
                     },
+                    "constraints": [],
                 }
             }
-            mock_service.get_supported_strategies.return_value = supported_strategies
 
             # APIリクエスト実行
             response = client.get("/api/backtest/strategies")
@@ -382,5 +385,8 @@ class TestBacktestAPI:
 
             assert data["success"] is True
             assert "strategies" in data
-            assert "SMA_CROSS" in data["strategies"]
-            assert data["strategies"]["SMA_CROSS"]["name"] == "SMA Cross Strategy"
+            assert "GENERATED_AUTO" in data["strategies"]
+            assert (
+                data["strategies"]["GENERATED_AUTO"]["name"]
+                == "Auto-Generated Strategy"
+            )

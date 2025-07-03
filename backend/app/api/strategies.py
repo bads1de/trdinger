@@ -191,12 +191,6 @@ async def get_strategy_categories():
     """
     try:
         categories = [
-            {"value": "trend_following", "label": "トレンドフォロー"},
-            {"value": "mean_reversion", "label": "平均回帰"},
-            {"value": "momentum", "label": "モメンタム"},
-            {"value": "breakout", "label": "ブレイクアウト"},
-            {"value": "scalping", "label": "スキャルピング"},
-            {"value": "swing", "label": "スイング"},
             {"value": "auto_generated", "label": "自動生成"},
             {"value": "hybrid", "label": "ハイブリッド"},
         ]
