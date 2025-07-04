@@ -142,6 +142,11 @@ class IndicatorParameterManager:
                     )
                     return False
 
+            # 指標固有の追加バリデーション
+            if indicator_type == "MACD":
+                if not self._validate_macd_specific_params(parameters):
+                    return False
+
             return True
 
         except Exception as e:
@@ -273,6 +278,19 @@ class IndicatorParameterManager:
             )
 
         return params
+
+    def _validate_macd_specific_params(self, parameters: Dict[str, Any]) -> bool:
+        """MACD固有のパラメータ関係性を検証"""
+        fast_period = parameters.get("fast_period")
+        slow_period = parameters.get("slow_period")
+
+        if fast_period is not None and slow_period is not None:
+            if fast_period >= slow_period:
+                self.logger.warning(
+                    f"MACD validation failed: fast_period ({fast_period}) must be less than slow_period ({slow_period})"
+                )
+                return False
+        return True
 
     def _generate_bollinger_bands_parameters(
         self, config: IndicatorConfig

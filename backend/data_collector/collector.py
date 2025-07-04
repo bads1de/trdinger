@@ -8,10 +8,10 @@ import logging
 
 from database.connection import ensure_db_initialized
 from database.repositories.ohlcv_repository import OHLCVRepository
-from database.repositories.data_collection_log_repository import (
-    DataCollectionLogRepository,
+
+from ..app.core.services.data_collection.market_data_service import (
+    BybitMarketDataService,
 )
-from app.core.services.market_data_service import BybitMarketDataService
 from app.config.market_config import MarketDataConfig
 from app.core.utils.data_converter import OHLCVDataConverter
 
@@ -38,7 +38,6 @@ class DataCollector:
         self.db = db_session
         self.market_service = BybitMarketDataService()
         self.ohlcv_repo = OHLCVRepository(self.db)
-        self.log_repo = DataCollectionLogRepository(self.db)
 
     async def _determine_collection_range(
         self, symbol: str, timeframe: str, days_back: int
@@ -132,39 +131,14 @@ class DataCollector:
 
                 except Exception as e:
                     logger.error(f"バッチ収集エラー: {e}", exc_info=True)
-                    self.log_repo.log_collection(
-                        normalized_symbol,
-                        timeframe,
-                        current_time,
-                        datetime.now(timezone.utc),
-                        0,
-                        "error",
-                        str(e),
-                    )
+
                     break
 
-            self.log_repo.log_collection(
-                normalized_symbol,
-                timeframe,
-                start_time_data,
-                datetime.now(timezone.utc),
-                total_collected,
-                "success",
-            )
             logger.info(f"データ収集完了: 総 {total_collected} 件")
             return total_collected
 
         except Exception as e:
             logger.error(f"データ収集処理全体でエラー: {e}", exc_info=True)
-            self.log_repo.log_collection(
-                symbol,
-                timeframe,
-                datetime.now(timezone.utc),
-                datetime.now(timezone.utc),
-                total_collected,
-                "error",
-                str(e),
-            )
             raise
 
     async def collect_latest_data(self, symbol: str, timeframe: str = "1d") -> int:

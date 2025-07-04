@@ -205,38 +205,7 @@ class OpenInterestData(Base):
         }
 
 
-class DataCollectionLog(Base):
-    """
-    データ収集ログテーブル
 
-    データ収集の履歴と状態を管理します。
-    """
-
-    __tablename__ = "data_collection_log"
-
-    id = Column(Integer, primary_key=True, autoincrement=True)
-
-    # 収集対象
-    symbol = Column(String(50), nullable=False)
-    timeframe = Column(String(10), nullable=False)
-
-    # 収集期間
-    start_time = Column(DateTime(timezone=True), nullable=False)
-    end_time = Column(DateTime(timezone=True), nullable=False)
-
-    # 収集結果
-    records_collected = Column(Integer, default=0)
-    status = Column(String(20), nullable=False)  # 'success', 'error', 'partial'
-    error_message = Column(String(500), nullable=True)
-
-    # メタデータ
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
-
-    def __repr__(self):
-        return (
-            f"<DataCollectionLog(symbol='{self.symbol}', timeframe='{self.timeframe}', "
-            f"status='{self.status}', records={self.records_collected})>"
-        )
 
 
 class BacktestResult(Base):

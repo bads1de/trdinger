@@ -8,7 +8,7 @@ pandas Seriesの変換は一切行いません。
 
 import talib
 import numpy as np
-from typing import Optional, Tuple, cast
+from typing import Tuple, cast
 from .utils import (
     validate_input,
     validate_multi_input,
@@ -69,7 +69,7 @@ class MomentumIndicators:
         """
         # パラメータのバリデーションと調整
         fastperiod = max(2, fastperiod)
-        slowperiod = max(fastperiod + 1, slowperiod)  # slowはfastより大きい必要がある
+        slowperiod = max(fastperiod + 1, slowperiod)
         signalperiod = max(2, signalperiod)
 
         validate_input(data, max(fastperiod, slowperiod, signalperiod))
