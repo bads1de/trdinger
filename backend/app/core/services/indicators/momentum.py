@@ -51,43 +51,43 @@ class MomentumIndicators:
     @handle_talib_errors
     def macd(
         data: np.ndarray,
-        fastperiod: int = 12,
-        slowperiod: int = 26,
-        signalperiod: int = 9,
+        fast_period: int = 12,
+        slow_period: int = 26,
+        signal_period: int = 9,
     ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
         """
         Moving Average Convergence Divergence (MACD)
 
         Args:
             data: 価格データ（numpy配列）
-            fastperiod: 高速期間（デフォルト: 12）
-            slowperiod: 低速期間（デフォルト: 26）
-            signalperiod: シグナル期間（デフォルト: 9）
+            fast_period: 高速期間（デフォルト: 12）
+            slow_period: 低速期間（デフォルト: 26）
+            signal_period: シグナル期間（デフォルト: 9）
 
         Returns:
             (MACD, Signal, Histogram)のtuple
         """
         # パラメータのバリデーションと調整
-        fastperiod = max(2, fastperiod)
-        slowperiod = max(fastperiod + 1, slowperiod)
-        signalperiod = max(2, signalperiod)
+        fast_period = max(2, fast_period)
+        slow_period = max(fast_period + 1, slow_period)
+        signal_period = max(2, signal_period)
 
-        validate_input(data, max(fastperiod, slowperiod, signalperiod))
+        validate_input(data, max(fast_period, slow_period, signal_period))
         log_indicator_calculation(
             "MACD",
             {
-                "fastperiod": fastperiod,
-                "slowperiod": slowperiod,
-                "signalperiod": signalperiod,
+                "fast_period": fast_period,
+                "slow_period": slow_period,
+                "signal_period": signal_period,
             },
             len(data),
         )
 
         macd, signal_line, histogram = talib.MACD(
             data,
-            fastperiod=fastperiod,
-            slowperiod=slowperiod,
-            signalperiod=signalperiod,
+            fastperiod=fast_period,
+            slowperiod=slow_period,
+            signalperiod=signal_period,
         )
         return cast(
             Tuple[np.ndarray, np.ndarray, np.ndarray],
@@ -98,37 +98,37 @@ class MomentumIndicators:
     @handle_talib_errors
     def macdext(
         data: np.ndarray,
-        fastperiod: int = 12,
-        fastmatype: int = 0,
-        slowperiod: int = 26,
-        slowmatype: int = 0,
-        signalperiod: int = 9,
-        signalmatype: int = 0,
+        fast_period: int = 12,
+        fast_ma_type: int = 0,
+        slow_period: int = 26,
+        slow_ma_type: int = 0,
+        signal_period: int = 9,
+        signal_ma_type: int = 0,
     ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
         """
         MACD with controllable MA type (MA種別制御可能MACD)
 
         Args:
             data: 価格データ（numpy配列）
-            fastperiod: 高速期間
-            fastmatype: 高速MA種別
-            slowperiod: 低速期間
-            slowmatype: 低速MA種別
-            signalperiod: シグナル期間
-            signalmatype: シグナルMA種別
+            fast_period: 高速期間
+            fast_ma_type: 高速MA種別
+            slow_period: 低速期間
+            slow_ma_type: 低速MA種別
+            signal_period: シグナル期間
+            signal_ma_type: シグナルMA種別
 
         Returns:
             (MACD, Signal, Histogram)のtuple
         """
-        validate_input(data, max(fastperiod, slowperiod, signalperiod))
+        validate_input(data, max(fast_period, slow_period, signal_period))
 
         params = {
-            "fastperiod": fastperiod,
-            "fastmatype": fastmatype,
-            "slowperiod": slowperiod,
-            "slowmatype": slowmatype,
-            "signalperiod": signalperiod,
-            "signalmatype": signalmatype,
+            "fastperiod": fast_period,
+            "fastmatype": fast_ma_type,
+            "slowperiod": slow_period,
+            "slowmatype": slow_ma_type,
+            "signalperiod": signal_period,
+            "signalmatype": signal_ma_type,
         }
         log_indicator_calculation("MACDEXT", params, len(data))
 
@@ -141,22 +141,24 @@ class MomentumIndicators:
     @staticmethod
     @handle_talib_errors
     def macdfix(
-        data: np.ndarray, signalperiod: int = 9
+        data: np.ndarray, signal_period: int = 9
     ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
         """
         Moving Average Convergence/Divergence Fix 12/26 (固定12/26 MACD)
 
         Args:
             data: 価格データ（numpy配列）
-            signalperiod: シグナル期間（デフォルト: 9）
+            signal_period: シグナル期間（デフォルト: 9）
 
         Returns:
             (MACD, Signal, Histogram)のtuple
         """
-        validate_input(data, max(26, signalperiod))
-        log_indicator_calculation("MACDFIX", {"signalperiod": signalperiod}, len(data))
+        validate_input(data, max(26, signal_period))
+        log_indicator_calculation(
+            "MACDFIX", {"signal_period": signal_period}, len(data)
+        )
 
-        macd, signal_line, histogram = talib.MACDFIX(data, signalperiod=signalperiod)
+        macd, signal_line, histogram = talib.MACDFIX(data, signalperiod=signal_period)
         return cast(
             Tuple[np.ndarray, np.ndarray, np.ndarray],
             format_indicator_result((macd, signal_line, histogram), "MACDFIX"),

@@ -55,6 +55,10 @@ class TechnicalIndicatorService:
         config = self._get_indicator_config(indicator_type)
         indicator_func = config.adapter_function
 
+        assert (
+            indicator_func is not None
+        ), "Adapter function cannot be None at this point."
+
         # 必要なデータをDataFrameからNumpy配列として抽出
         required_data = {}
         for data_key in config.required_data:

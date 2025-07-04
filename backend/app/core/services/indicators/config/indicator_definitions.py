@@ -12,7 +12,6 @@ from .indicator_config import (
     indicator_registry,
 )
 
-# 新しいnumpy配列ベース指標クラス（オートストラテジー最適化版）
 from app.core.services.indicators.trend import TrendIndicators
 from app.core.services.indicators.momentum import MomentumIndicators
 from app.core.services.indicators.volatility import VolatilityIndicators
@@ -185,7 +184,7 @@ def setup_trend_indicators():
 
 
 def setup_volatility_indicators():
-    """ボラティリティ系インジケーターの設定（オートストラテジー最適化版）"""
+    """ボラティリティ系インジケーターの設定"""
 
     # ATR
     atr_config = IndicatorConfig(
