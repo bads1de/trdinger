@@ -60,21 +60,6 @@ class IndicatorGene:
             # 設定モジュールが利用できない場合のフォールバック
             return {"indicator": self.type, "parameters": self.parameters}
 
-    def get_legacy_name(self) -> str:
-        """レガシー形式の名前を取得（非推奨：JSON形式への移行により削除予定）"""
-        # JSON形式への移行により、レガシー形式の名前生成は非推奨
-        # indicator_registry を介して一元化された命名ロジックを使用
-        try:
-            from app.core.services.indicators.config import indicator_registry
-
-            return indicator_registry.generate_legacy_name(self.type, self.parameters)
-        except ImportError:
-            logger.error(
-                "Could not import indicator_registry for legacy name generation."
-            )
-            # フォールバックとして、パラメータなしの名前を返す
-            return self.type
-
     def normalize_parameters(self) -> Dict[str, Any]:
         """パラメータをJSON形式に正規化"""
         try:

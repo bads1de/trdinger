@@ -19,7 +19,6 @@ from .fitness_calculator import FitnessCalculator
 from .deap_configurator import DEAPConfigurator
 from .evolution_operators import EvolutionOperators
 from .timeframe_manager import TimeframeManager
-from .progress_manager import ProgressManager
 
 logger = logging.getLogger(__name__)
 
@@ -57,7 +56,6 @@ class GeneticAlgorithmEngine:
         self.deap_configurator = DEAPConfigurator(self.gene_generator)
         self.evolution_operators = EvolutionOperators()
         self.timeframe_manager = TimeframeManager()
-        self.progress_manager = ProgressManager()
 
         # DEAP関連
         self.toolbox = None
@@ -97,10 +95,6 @@ class GeneticAlgorithmEngine:
             self.is_running = True
             start_time = time.time()
 
-            # 進捗管理器の初期化
-            self.progress_manager.set_start_time(start_time)
-            self.progress_manager.set_current_generation(0)
-
             # バックテスト設定を保存
 
             # 評価環境固定化: GA実行開始時に一度だけバックテスト設定を決定
@@ -134,14 +128,8 @@ class GeneticAlgorithmEngine:
             record = stats.compile(population)
             logbook.record(gen=0, evals=len(population), **record)
 
-            # 初期進捗通知
-            self.progress_manager.notify_progress(
-                config, population, backtest_config.get("experiment_id", "")
-            )
-
             # 世代ループ: 指定された世代数だけ進化プロセスを繰り返す
             for generation in range(1, config.generations + 1):
-                self.progress_manager.set_current_generation(generation)
                 logger.info(f"世代 {generation}/{config.generations} 開始")
 
                 # 進化演算の実行: 選択、交叉、突然変異、エリート保存など
@@ -150,11 +138,6 @@ class GeneticAlgorithmEngine:
                 # 統計情報の記録: 各世代の個体群の適応度統計（平均、最大など）を記録
                 record = stats.compile(population)
                 logbook.record(gen=generation, evals=len(population), **record)
-
-                # 進捗通知: 現在の世代の進捗状況を外部に通知
-                self.progress_manager.notify_progress(
-                    config, population, backtest_config.get("experiment_id", "")
-                )
 
                 logger.info(f"世代 {generation} 完了 - 最高適応度: {record['max']:.4f}")
 
@@ -170,7 +153,7 @@ class GeneticAlgorithmEngine:
                 best_individual, StrategyGene
             )
 
-            execution_time = self.progress_manager.get_execution_time()
+            execution_time = time.time() - start_time
 
             result = {
                 "best_strategy": best_gene,
@@ -245,7 +228,6 @@ class GeneticAlgorithmEngine:
 
     def set_progress_callback(self, callback):
         """進捗コールバックを設定"""
-        self.progress_manager.set_progress_callback(callback)
 
     def stop_evolution(self):
         """進化を停止"""

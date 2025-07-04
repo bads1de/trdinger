@@ -324,13 +324,6 @@ class ConditionEvaluator:
                     )
                     return indicator_name
 
-            # 4. レガシー形式の解決を試す
-            # legacy_resolved = self._resolve_legacy_indicator_name(
-            #     operand, strategy_instance
-            # )
-            # if legacy_resolved:
-            #     return legacy_resolved
-
             logger.warning(
                 f"指標名 '{operand}' が解決できませんでした。利用可能な指標: {list(strategy_instance.indicators.keys())}"
             )

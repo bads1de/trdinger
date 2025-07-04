@@ -70,9 +70,6 @@ class IndicatorConfig:
     # 結果処理設定
     result_handler: Optional[str] = None  # 複数値結果の処理ハンドラー
 
-    # 命名設定（後方互換性のため）
-    legacy_name_format: Optional[str] = None  # 旧形式の名前フォーマット
-
     # メタデータ（遺伝子生成用）
     scale_type: Optional[IndicatorScaleType] = None  # スケールタイプ
     category: Optional[str] = None  # 指標カテゴリ（例: trend, momentum）
@@ -134,43 +131,6 @@ class IndicatorConfig:
         """JSON形式のインジケーター名（=指標名）を生成"""
         # JSON形式では指標名にパラメータを含めない
         return self.indicator_name
-
-    def generate_legacy_name(self, parameters: Dict[str, Any]) -> str:
-        """レガシー形式の名前を生成（後方互換性）"""
-        if not self.legacy_name_format:
-            return self.indicator_name
-
-        # パラメータにデフォルト値を適用
-        format_params = {"indicator": self.indicator_name}
-        # legacy_name_formatで必要なパラメータのみを収集
-        required_params = [
-            fn
-            for _, fn, _, _ in __import__("string")
-            .Formatter()
-            .parse(self.legacy_name_format)
-            if fn is not None and fn != "indicator"
-        ]
-
-        for param_name in required_params:
-            if param_name in self.parameters:
-                value = parameters.get(
-                    param_name, self.parameters[param_name].default_value
-                )
-                format_params[param_name] = value
-            else:
-                # 必要なパラメータが提供されていない場合
-                logger.warning(
-                    f"Legacy name format requires parameter '{param_name}' which is not defined in IndicatorConfig for {self.indicator_name}."
-                )
-                # パラメータが見つからない場合は、フォーマット文字列にそのまま残すか、エラーとする
-                # ここでは、安全のためにプレースホルダーを空文字で埋める
-                format_params[param_name] = ""
-
-        try:
-            return self.legacy_name_format.format(**format_params)
-        except KeyError as e:
-            logger.warning(f"Legacy name format error for {self.indicator_name}: {e}")
-            return self.indicator_name
 
     def to_dict(self) -> Dict[str, Any]:
         """辞書形式に変換"""
@@ -268,36 +228,6 @@ class IndicatorConfigRegistry:
             "WCLPRICE": "SMA",
             "PSAR": "SMA",
         }
-        # MACDのパラメータ設定を追加
-        macd_config = self.get_indicator_config("MACD")
-        if macd_config:
-            macd_config.add_parameter(
-                ParameterConfig(
-                    name="fastperiod",
-                    default_value=12,
-                    min_value=2,
-                    max_value=50,
-                    description="高速期間",
-                )
-            )
-            macd_config.add_parameter(
-                ParameterConfig(
-                    name="slowperiod",
-                    default_value=26,
-                    min_value=5,
-                    max_value=100,
-                    description="低速期間",
-                )
-            )
-            macd_config.add_parameter(
-                ParameterConfig(
-                    name="signalperiod",
-                    default_value=9,
-                    min_value=2,
-                    max_value=50,
-                    description="シグナル期間",
-                )
-            )
 
     def register(self, config: IndicatorConfig) -> None:
         """設定を登録"""
@@ -334,17 +264,6 @@ class IndicatorConfigRegistry:
         config = self.get_indicator_config(indicator_name)
         if config:
             return config.generate_json_name()
-
-        # 設定が見つからない場合のフォールバック
-        return indicator_name
-
-    def generate_legacy_name(
-        self, indicator_name: str, parameters: Dict[str, Any]
-    ) -> str:
-        """レガシー形式の名前を生成"""
-        config = self.get_indicator_config(indicator_name)
-        if config:
-            return config.generate_legacy_name(parameters)
 
         # 設定が見つからない場合のフォールバック
         return indicator_name

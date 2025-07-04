@@ -27,7 +27,6 @@ def setup_momentum_indicators():
         adapter_function=MomentumIndicators.rsi,
         required_data=["close"],
         result_type=IndicatorResultType.SINGLE,
-        legacy_name_format="{indicator}_{period}",
         scale_type=IndicatorScaleType.OSCILLATOR_0_100,
         category="momentum",
     )
@@ -49,13 +48,12 @@ def setup_momentum_indicators():
         required_data=["close"],
         result_type=IndicatorResultType.COMPLEX,
         result_handler="macd_handler",
-        legacy_name_format="{indicator}_{fast_period}",
         scale_type=IndicatorScaleType.MOMENTUM_ZERO_CENTERED,
         category="momentum",
     )
     macd_config.add_parameter(
         ParameterConfig(
-            name="fast",
+            name="fast_period",
             default_value=12,
             min_value=2,
             max_value=50,
@@ -64,7 +62,7 @@ def setup_momentum_indicators():
     )
     macd_config.add_parameter(
         ParameterConfig(
-            name="slow",
+            name="slow_period",
             default_value=26,
             min_value=10,
             max_value=100,
@@ -73,7 +71,7 @@ def setup_momentum_indicators():
     )
     macd_config.add_parameter(
         ParameterConfig(
-            name="signal",
+            name="signal_period",
             default_value=9,
             min_value=2,
             max_value=50,
@@ -89,7 +87,6 @@ def setup_momentum_indicators():
         required_data=["high", "low", "close"],
         result_type=IndicatorResultType.COMPLEX,
         result_handler="stoch_handler",
-        legacy_name_format="STOCH_{fastk_period}",
         scale_type=IndicatorScaleType.OSCILLATOR_0_100,
         category="momentum",
     )
@@ -128,7 +125,6 @@ def setup_momentum_indicators():
         adapter_function=MomentumIndicators.cci,
         required_data=["high", "low", "close"],
         result_type=IndicatorResultType.SINGLE,
-        legacy_name_format="{indicator}_{period}",
         scale_type=IndicatorScaleType.OSCILLATOR_PLUS_MINUS_100,
         category="momentum",
     )
@@ -153,7 +149,6 @@ def setup_trend_indicators():
         adapter_function=TrendIndicators.sma,
         required_data=["close"],
         result_type=IndicatorResultType.SINGLE,
-        legacy_name_format="{indicator}_{period}",
         scale_type=IndicatorScaleType.PRICE_RATIO,
         category="trend",
     )
@@ -174,7 +169,6 @@ def setup_trend_indicators():
         adapter_function=TrendIndicators.ema,
         required_data=["close"],
         result_type=IndicatorResultType.SINGLE,
-        legacy_name_format="{indicator}_{period}",
         scale_type=IndicatorScaleType.PRICE_RATIO,
         category="trend",
     )
@@ -199,7 +193,6 @@ def setup_volatility_indicators():
         adapter_function=VolatilityIndicators.atr,
         required_data=["high", "low", "close"],
         result_type=IndicatorResultType.SINGLE,
-        legacy_name_format="{indicator}_{period}",
         scale_type=IndicatorScaleType.PRICE_ABSOLUTE,
         category="volatility",
     )
@@ -221,7 +214,6 @@ def setup_volatility_indicators():
         required_data=["close"],
         result_type=IndicatorResultType.COMPLEX,
         result_handler="bb_handler",
-        legacy_name_format="BB_MIDDLE_{period}",
         scale_type=IndicatorScaleType.PRICE_RATIO,
         category="volatility",
     )
@@ -251,7 +243,6 @@ def setup_volatility_indicators():
         adapter_function=VolatilityIndicators.adx,
         required_data=["high", "low", "close"],
         result_type=IndicatorResultType.SINGLE,
-        legacy_name_format="{indicator}_{period}",
         scale_type=IndicatorScaleType.OSCILLATOR_0_100,
         category="volatility",
     )
@@ -275,7 +266,6 @@ def setup_volume_indicators():
         # adapter_function=VolumeIndicators.obv, # 新しい実装が必要
         required_data=["close", "volume"],
         result_type=IndicatorResultType.SINGLE,
-        legacy_name_format="{indicator}",
         scale_type=IndicatorScaleType.VOLUME,
         category="volume",
     )

@@ -164,15 +164,6 @@ class IndicatorInitializer:
                 )
                 logger.info(f"単一値指標を登録: {json_indicator_name}")
 
-                # 後方互換性のためのレガシー名登録
-                legacy_indicator_name = self._get_legacy_indicator_name(
-                    original_type, parameters
-                )
-                if legacy_indicator_name != json_indicator_name:
-                    strategy_instance.indicators[legacy_indicator_name] = (
-                        indicator_result_or_tuple
-                    )
-
                 return [json_indicator_name]
 
         except Exception as e:
@@ -180,14 +171,6 @@ class IndicatorInitializer:
                 f"指標初期化エラー ({indicator_gene.type}): {e}", exc_info=True
             )
             return None
-
-    def _get_legacy_indicator_name(self, indicator_type: str, parameters: dict) -> str:
-        """レガシー形式の指標名を生成（後方互換性用）"""
-        try:
-            return indicator_registry.generate_legacy_name(indicator_type, parameters)
-        except Exception as e:
-            logger.warning(f"レガシー指標名生成エラー ({indicator_type}): {e}")
-            return indicator_type
 
     def get_supported_indicators(self) -> list:
         """サポートされている指標のリストを取得"""
