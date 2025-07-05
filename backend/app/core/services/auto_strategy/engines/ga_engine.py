@@ -1,15 +1,13 @@
 """
-遺伝的アルゴリズムエンジン（簡素化版）
+遺伝的アルゴリズムエンジン
 
 DEAPライブラリを使用したGA実装。
-複雑な分離構造を削除し、統合された実装に変更しました。
 """
 
 import time
 import logging
-import random
 import numpy as np
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any, Optional
 from deap import base, creator, tools, algorithms
 
 from ..models.ga_config import GAConfig
@@ -22,7 +20,7 @@ logger = logging.getLogger(__name__)
 
 class GeneticAlgorithmEngine:
     """
-    遺伝的アルゴリズムエンジン（簡素化版）
+    遺伝的アルゴリズムエンジン
 
     DEAPライブラリを使用して戦略の自動生成・最適化を行います。
     複雑な分離構造を削除し、直接的で理解しやすい実装に変更しました。
@@ -50,8 +48,9 @@ class GeneticAlgorithmEngine:
         self.is_running = False
 
         # DEAP関連
-        self.toolbox = None
+        self.toolbox: Optional[base.Toolbox] = None
         self._fixed_backtest_config = None
+        self.Individual = None  # 個体クラスを保持する変数を追加
 
     def setup_deap(self, config: GAConfig):
         """
@@ -66,15 +65,16 @@ class GeneticAlgorithmEngine:
 
         # 個体クラスの定義
         if not hasattr(creator, "Individual"):
-            creator.create("Individual", list, fitness=creator.FitnessMax)
+            creator.create("Individual", list, fitness=creator.FitnessMax)  # type: ignore
+        self.Individual = creator.Individual  # type: ignore # 生成したクラスをインスタンス変数に格納
 
         # ツールボックスの初期化
         self.toolbox = base.Toolbox()
 
         # 個体生成関数の登録
-        self.toolbox.register("individual", self._create_individual, config)
+        self.toolbox.register("individual", self._create_individual)
         self.toolbox.register(
-            "population", tools.initRepeat, list, self.toolbox.individual
+            "population", tools.initRepeat, list, self.toolbox.individual  # type: ignore
         )
 
         # 評価関数の登録
@@ -91,7 +91,7 @@ class GeneticAlgorithmEngine:
         self, config: GAConfig, backtest_config: Dict[str, Any]
     ) -> Dict[str, Any]:
         """
-        進化アルゴリズムを実行（簡素化版）
+        進化アルゴリズムを実行
 
         Args:
             config: GA設定
@@ -111,7 +111,10 @@ class GeneticAlgorithmEngine:
             self.setup_deap(config)
 
             # 初期個体群の生成
-            population = self.toolbox.population(n=config.population_size)
+            # self.toolboxがNoneでないことをアサートし、静的解析エラーを回避
+            assert self.toolbox is not None, "Toolbox must be initialized before use."
+            # deap.Toolboxは動的に属性を登録するため、静的解析ではpopulation属性を検出できない
+            population = self.toolbox.population(n=config.population_size)  # type: ignore
 
             # 統計情報の設定
             stats = tools.Statistics(lambda ind: ind.fitness.values)
@@ -164,11 +167,11 @@ class GeneticAlgorithmEngine:
         finally:
             self.is_running = False
 
-    def _create_individual(self, config: GAConfig):
+    def _create_individual(self):
         """個体生成（統合版）"""
         try:
             # RandomGeneGeneratorを使用して遺伝子を生成
-            gene = self.gene_generator.generate_random_gene(config)
+            gene = self.gene_generator.generate_random_gene()
 
             # 遺伝子をエンコード
             from ..models.gene_encoding import GeneEncoder
@@ -176,12 +179,14 @@ class GeneticAlgorithmEngine:
             gene_encoder = GeneEncoder()
             encoded_gene = gene_encoder.encode_strategy_gene_to_list(gene)
 
-            return creator.Individual(encoded_gene)
+            if not self.Individual:
+                raise TypeError("個体クラス 'Individual' が初期化されていません。")
+            return self.Individual(encoded_gene)
 
         except Exception as e:
-            logger.error(f"個体生成エラー: {e}")
-            # フォールバック: ランダムな数値リストを生成
-            return creator.Individual([random.random() for _ in range(50)])
+            logger.error(f"個体生成中に致命的なエラーが発生しました: {e}")
+            # 遺伝子生成はGAの根幹部分であり、失敗した場合は例外をスローして処理を停止するのが安全
+            raise
 
     def _evaluate_individual(self, individual, config: GAConfig):
         """

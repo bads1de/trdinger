@@ -6,7 +6,6 @@ GA実行、進捗管理、結果保存を統合的に管理します。
 
 import logging
 import uuid
-from datetime import datetime
 from typing import Dict, Any, List, Optional
 
 from fastapi import BackgroundTasks
@@ -33,10 +32,9 @@ logger = logging.getLogger(__name__)
 
 class AutoStrategyService:
     """
-    自動戦略生成サービス（簡素化版）
+    自動戦略生成サービス
 
     GA実行、進捗管理、結果保存を統合的に管理します。
-    複雑な分離構造を削除し、直接的で理解しやすい実装に変更しました。
     """
 
     def __init__(self):
@@ -56,7 +54,7 @@ class AutoStrategyService:
 
     def _init_services(self):
         """
-        サービスの初期化（簡素化版）
+        サービスの初期化
 
         必要最小限のサービス初期化を行います。
         複雑な依存関係管理を削除し、シンプルな実装に変更しました。
@@ -85,7 +83,7 @@ class AutoStrategyService:
             # GAエンジンは実行時に動的に初期化
             self.ga_engine = None
 
-            logger.info("自動戦略生成サービス初期化完了（簡素化版）")
+            logger.info("自動戦略生成サービス初期化完了")
 
         except Exception as e:
             logger.error(f"AutoStrategyServiceの初期化中にエラーが発生しました: {e}")
@@ -217,12 +215,12 @@ class AutoStrategyService:
                 self.ga_engine.stop_evolution()
 
             # 実験を停止状態にする
-            success = self.experiment_manager.stop_experiment(experiment_id)
-
-            if success:
-                logger.info(f"実験停止: {experiment_id}")
-
-            return success
+            with self.db_session_factory() as db:
+                ga_experiment_repo = GAExperimentRepository(db)
+                db_experiment_id = int(experiment_id)
+                ga_experiment_repo.update_experiment_status(db_experiment_id, "stopped")
+            logger.info(f"実験停止: {experiment_id}")
+            return True
 
         except Exception as e:
             logger.error(f"GA実験の停止中にエラーが発生しました: {e}")
@@ -515,12 +513,11 @@ class AutoStrategyService:
             with self.db_session_factory() as db:
                 ga_experiment_repo = GAExperimentRepository(db)
 
-                # 実験IDで検索して更新
-                experiments = ga_experiment_repo.get_experiments_by_status("running")
-                for exp in experiments:
-                    if exp.experiment_name == experiment_id:  # 簡易的な実装
-                        ga_experiment_repo.update_experiment_status(exp.id, "completed")
-                        break
+                # experiment_idはDBのIDなので、直接更新する
+                db_experiment_id = int(experiment_id)
+                ga_experiment_repo.update_experiment_status(
+                    db_experiment_id, "completed"
+                )
 
         except Exception as e:
             logger.error(f"実験完了処理エラー: {e}")
@@ -537,12 +534,9 @@ class AutoStrategyService:
             with self.db_session_factory() as db:
                 ga_experiment_repo = GAExperimentRepository(db)
 
-                # 実験IDで検索して更新
-                experiments = ga_experiment_repo.get_experiments_by_status("running")
-                for exp in experiments:
-                    if exp.experiment_name == experiment_id:  # 簡易的な実装
-                        ga_experiment_repo.update_experiment_status(exp.id, "failed")
-                        break
+                # experiment_idはDBのIDなので、直接更新する
+                db_experiment_id = int(experiment_id)
+                ga_experiment_repo.update_experiment_status(db_experiment_id, "failed")
 
         except Exception as e:
             logger.error(f"実験失敗処理エラー: {e}")
@@ -627,11 +621,13 @@ class AutoStrategyService:
                             "experiment_name": exp.experiment_name,
                             "status": exp.status,
                             "created_at": (
-                                exp.created_at.isoformat() if exp.created_at else None
+                                exp.created_at.isoformat()
+                                if exp.created_at is not None
+                                else None
                             ),
                             "completed_at": (
                                 exp.completed_at.isoformat()
-                                if exp.completed_at
+                                if exp.completed_at is not None
                                 else None
                             ),
                         }
@@ -660,10 +656,14 @@ class AutoStrategyService:
                         "experiment_name": exp.name,  # nameプロパティを使用
                         "status": exp.status,
                         "created_at": (
-                            exp.created_at.isoformat() if exp.created_at else None
+                            exp.created_at.isoformat()
+                            if exp.created_at is not None
+                            else None
                         ),
                         "completed_at": (
-                            exp.completed_at.isoformat() if exp.completed_at else None
+                            exp.completed_at.isoformat()
+                            if exp.completed_at is not None
+                            else None
                         ),
                     }
                     for exp in experiments
@@ -693,7 +693,9 @@ class AutoStrategyService:
                     # 実験名またはDB IDがexperiment_idと一致するものを検索
                     # UUIDとして生成されたexperiment_idは実験名として保存されている
                     if (
-                        hasattr(exp, "name") and exp.name and experiment_id in exp.name
+                        hasattr(exp, "name")
+                        and exp.name is not None
+                        and experiment_id in exp.name
                     ) or str(exp.id) == experiment_id:
                         return {
                             "db_id": exp.id,

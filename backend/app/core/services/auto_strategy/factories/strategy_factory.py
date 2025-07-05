@@ -1,18 +1,15 @@
 """
-戦略ファクトリー（簡素化版）
+戦略ファクトリー
 
 StrategyGeneから動的にbacktesting.py互換のStrategy継承クラスを生成します。
-複雑な分離構造を削除し、必要な機能を統合しました。
 """
 
 import logging
 import numpy as np
-import pandas as pd
 from typing import Type, Dict, Any, List, Union, Tuple
 
 from backtesting import Strategy
 from app.core.services.indicators import TechnicalIndicatorService
-from app.core.services.indicators.utils import ensure_numpy_array
 from ..models.strategy_gene import StrategyGene, IndicatorGene, Condition
 
 logger = logging.getLogger(__name__)
@@ -20,10 +17,9 @@ logger = logging.getLogger(__name__)
 
 class StrategyFactory:
     """
-    戦略ファクトリー（簡素化版）
+    戦略ファクトリー
 
     StrategyGeneから動的にStrategy継承クラスを生成します。
-    複雑な分離構造を削除し、直接的で理解しやすい実装に変更しました。
     """
 
     def __init__(self):
@@ -32,7 +28,7 @@ class StrategyFactory:
 
     def create_strategy_class(self, gene: StrategyGene) -> Type[Strategy]:
         """
-        遺伝子から動的にStrategy継承クラスを生成（簡素化版）
+        遺伝子から動的にStrategy継承クラスを生成
 
         Args:
             gene: 戦略遺伝子
@@ -200,7 +196,7 @@ class StrategyFactory:
 
     def validate_gene(self, gene: StrategyGene) -> Tuple[bool, list]:
         """
-        戦略遺伝子の妥当性を検証（簡素化版）
+        戦略遺伝子の妥当性を検証
 
         Args:
             gene: 検証する戦略遺伝子
@@ -223,23 +219,18 @@ class StrategyFactory:
         Args:
             indicator_type: 指標タイプ
             parameters: パラメータ
-            data: 価格データ
+            data: backtesting.pyのデータオブジェクト
 
         Returns:
             計算結果（numpy配列）
         """
         try:
-            # OHLCVデータをnumpy配列に変換
-            close_data = ensure_numpy_array(data.Close)
-            high_data = ensure_numpy_array(data.High)
-            low_data = ensure_numpy_array(data.Low)
-            volume_data = (
-                ensure_numpy_array(data.Volume) if hasattr(data, "Volume") else None
-            )
+            # backtesting.pyのデータオブジェクトをDataFrameに変換
+            df = data.df
 
             # TechnicalIndicatorServiceを使用して計算
             result = self.technical_indicator_service.calculate_indicator(
-                indicator_type, parameters, close_data, high_data, low_data, volume_data
+                df, indicator_type, parameters
             )
 
             return result
@@ -292,14 +283,19 @@ class StrategyFactory:
             left_value = self._get_condition_value(
                 condition.left_operand, strategy_instance
             )
+            right_value = self._get_condition_value(
+                condition.right_operand, strategy_instance
+            )
 
-            # 右オペランドの値を取得（数値文字列を適切に処理）
-            right_value = condition.right_operand
-            if (
-                isinstance(right_value, str)
-                and right_value.replace(".", "").replace("-", "").isdigit()
+            # 両方の値が数値であることを確認
+            if not isinstance(left_value, (int, float)) or not isinstance(
+                right_value, (int, float)
             ):
-                right_value = float(right_value)
+                logger.warning(
+                    f"比較できない値です: left={left_value}({type(left_value)}), "
+                    f"right={right_value}({type(right_value)})"
+                )
+                return False
 
             # 条件評価
             if condition.operator == ">":
@@ -311,9 +307,9 @@ class StrategyFactory:
             elif condition.operator == "<=":
                 return left_value <= right_value
             elif condition.operator == "==":
-                return left_value == right_value
+                return bool(np.isclose(left_value, right_value))
             elif condition.operator == "!=":
-                return left_value != right_value
+                return not bool(np.isclose(left_value, right_value))
             else:
                 logger.warning(f"未対応の演算子: {condition.operator}")
                 return False
@@ -322,18 +318,29 @@ class StrategyFactory:
             logger.error(f"条件評価エラー: {e}")
             return False
 
-    def _get_condition_value(self, operand: str, strategy_instance) -> float:
+    def _get_condition_value(
+        self, operand: Union[Dict[str, Any], str, int, float], strategy_instance
+    ) -> float:
         """
         条件オペランドから値を取得（統合版）
 
         Args:
-            operand: オペランド文字列
+            operand: オペランド（辞書、文字列、数値）
             strategy_instance: 戦略インスタンス
 
         Returns:
             オペランドの値
         """
         try:
+            # 辞書の場合（指標を表す）
+            if isinstance(operand, dict):
+                indicator_name = operand.get("indicator")
+                if indicator_name and hasattr(strategy_instance, indicator_name):
+                    indicator_value = getattr(strategy_instance, indicator_name)
+                    if hasattr(indicator_value, "__getitem__"):
+                        return float(indicator_value[-1])
+                    return float(indicator_value)
+
             # 数値の場合
             if isinstance(operand, (int, float)):
                 return float(operand)

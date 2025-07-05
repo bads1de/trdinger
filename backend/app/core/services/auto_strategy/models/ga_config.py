@@ -1,8 +1,7 @@
 """
-遺伝的アルゴリズム設定モデル（簡素化版）
+遺伝的アルゴリズム設定モデル
 
 GA実行時の各種パラメータを単一のクラスで管理します。
-複雑な階層構造を削除し、フラットで理解しやすい構造に変更しました。
 """
 
 import json
@@ -15,10 +14,9 @@ from app.core.services.indicators import TechnicalIndicatorService
 @dataclass
 class GAConfig:
     """
-    遺伝的アルゴリズム設定（簡素化版）
+    遺伝的アルゴリズム設定
 
     GA実行時の全パラメータをフラットな構造で管理します。
-    複雑な階層構造を削除し、直接的でわかりやすい設計に変更しました。
     """
 
     # 進化アルゴリズム設定
@@ -107,7 +105,7 @@ class GAConfig:
 
     def validate(self) -> tuple[bool, List[str]]:
         """
-        設定の妥当性を検証（簡素化版）
+        設定の妥当性を検証
 
         Returns:
             (is_valid, error_messages)
@@ -197,7 +195,7 @@ class GAConfig:
         return len(errors) == 0, errors
 
     def to_dict(self) -> Dict[str, Any]:
-        """辞書形式に変換（簡素化版）"""
+        """辞書形式に変換"""
         return {
             "population_size": self.population_size,
             "generations": self.generations,
@@ -222,7 +220,7 @@ class GAConfig:
 
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "GAConfig":
-        """辞書から復元（簡素化版）"""
+        """辞書から復元"""
         # allowed_indicatorsが空の場合はデフォルトの指標リストを使用
         indicator_service = TechnicalIndicatorService()
         allowed_indicators = data.get("allowed_indicators") or list(
