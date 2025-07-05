@@ -1,42 +1,38 @@
 """
-戦略ファクトリー
+戦略ファクトリー（簡素化版）
 
 StrategyGeneから動的にbacktesting.py互換のStrategy継承クラスを生成します。
-責任を分離し、各機能を専用モジュールに委譲します。
+複雑な分離構造を削除し、必要な機能を統合しました。
 """
 
 import logging
+import numpy as np
+import pandas as pd
+from typing import Type, Dict, Any, List, Union, Tuple
 
-from typing import Type, Tuple
 from backtesting import Strategy
-
-from ..models.strategy_gene import StrategyGene, IndicatorGene
-from .indicator_initializer import IndicatorInitializer
-from .condition_evaluator import ConditionEvaluator
-from .data_converter import DataConverter
-
+from app.core.services.indicators import TechnicalIndicatorService
+from app.core.services.indicators.utils import ensure_numpy_array
+from ..models.strategy_gene import StrategyGene, IndicatorGene, Condition
 
 logger = logging.getLogger(__name__)
 
 
 class StrategyFactory:
     """
-    戦略ファクトリー
+    戦略ファクトリー（簡素化版）
 
-    StrategyGeneから動的にStrategy継承クラスを生成し、
-    既存の指標システムと統合します。
+    StrategyGeneから動的にStrategy継承クラスを生成します。
+    複雑な分離構造を削除し、直接的で理解しやすい実装に変更しました。
     """
 
     def __init__(self):
         """初期化"""
-        # 分離されたコンポーネント
-        self.indicator_initializer = IndicatorInitializer()
-        self.condition_evaluator = ConditionEvaluator()
-        self.data_converter = DataConverter()
+        self.technical_indicator_service = TechnicalIndicatorService()
 
     def create_strategy_class(self, gene: StrategyGene) -> Type[Strategy]:
         """
-        遺伝子から動的にStrategy継承クラスを生成
+        遺伝子から動的にStrategy継承クラスを生成（簡素化版）
 
         Args:
             gene: 戦略遺伝子
@@ -155,44 +151,45 @@ class StrategyFactory:
                     logger.error(f"売買ロジックエラー: {e}", exc_info=True)
 
             def _init_indicator(self, indicator_gene: IndicatorGene):
-                """単一指標の初期化"""
-                # IndicatorInitializerに委譲
-                indicator_name = (
-                    self.factory.indicator_initializer.initialize_indicator(
-                        indicator_gene, self
+                """単一指標の初期化（統合版）"""
+                try:
+                    # 指標計算を直接実行
+                    result = self.factory._calculate_indicator(
+                        indicator_gene.type, indicator_gene.parameters, self.data
                     )
-                )
-                if indicator_name:
-                    pass
-                else:
-                    logger.warning(f"指標初期化失敗: {indicator_gene.type}")
 
-            def _convert_to_series(self, bt_array):
-                """backtesting.pyの_ArrayをPandas Seriesに変換"""
-                return self.factory.data_converter.convert_to_series(bt_array)
+                    if result is not None:
+                        # 指標をstrategy.I()で登録
+                        if isinstance(result, tuple):
+                            # 複数の出力がある指標（MACD等）
+                            for i, output in enumerate(result):
+                                indicator_name = f"{indicator_gene.type}_{i}"
+                                setattr(
+                                    self, indicator_name, self.I(lambda x=output: x)
+                                )
+                        else:
+                            # 単一出力の指標
+                            setattr(
+                                self, indicator_gene.type, self.I(lambda x=result: x)
+                            )
+
+                        logger.debug(f"指標初期化成功: {indicator_gene.type}")
+                    else:
+                        logger.warning(f"指標計算失敗: {indicator_gene.type}")
+
+                except Exception as e:
+                    logger.error(f"指標初期化エラー {indicator_gene.type}: {e}")
 
             def _check_entry_conditions(self) -> bool:
-                """エントリー条件をチェック"""
-                return self.factory.condition_evaluator.check_entry_conditions(
-                    gene.entry_conditions, self
+                """エントリー条件をチェック（統合版）"""
+                return self.factory._evaluate_conditions(
+                    self.gene.entry_conditions, self
                 )
 
             def _check_exit_conditions(self) -> bool:
-                """イグジット条件をチェック"""
-                return self.factory.condition_evaluator.check_exit_conditions(
-                    gene.exit_conditions, self
-                )
-
-            def _evaluate_condition(self, condition):
-                """単一条件を評価"""
-                return self.factory.condition_evaluator.evaluate_condition(
-                    condition, self
-                )
-
-            def _get_condition_value(self, operand):
-                """条件のオペランドから値を取得"""
-                return self.factory.condition_evaluator.get_condition_value(
-                    operand, self
+                """イグジット条件をチェック（統合版）"""
+                return self.factory._evaluate_conditions(
+                    self.gene.exit_conditions, self
                 )
 
         # クラス名を設定
@@ -203,7 +200,7 @@ class StrategyFactory:
 
     def validate_gene(self, gene: StrategyGene) -> Tuple[bool, list]:
         """
-        遺伝子の妥当性を詳細に検証
+        戦略遺伝子の妥当性を検証（簡素化版）
 
         Args:
             gene: 検証する戦略遺伝子
@@ -211,25 +208,157 @@ class StrategyFactory:
         Returns:
             (is_valid, error_messages)
         """
-        errors = []
+        try:
+            return gene.validate()
+        except Exception as e:
+            logger.error(f"遺伝子検証エラー: {e}")
+            return False, [f"検証エラー: {str(e)}"]
 
-        # 基本的な妥当性チェック
-        is_valid, basic_errors = gene.validate()
-        errors.extend(basic_errors)
+    def _calculate_indicator(
+        self, indicator_type: str, parameters: Dict[str, Any], data
+    ) -> Union[np.ndarray, Tuple[np.ndarray, ...], None]:
+        """
+        指標計算（統合版）
 
-        # 指標の対応状況チェック
-        for indicator in gene.indicators:
+        Args:
+            indicator_type: 指標タイプ
+            parameters: パラメータ
+            data: 価格データ
+
+        Returns:
+            計算結果（numpy配列）
+        """
+        try:
+            # OHLCVデータをnumpy配列に変換
+            close_data = ensure_numpy_array(data.Close)
+            high_data = ensure_numpy_array(data.High)
+            low_data = ensure_numpy_array(data.Low)
+            volume_data = (
+                ensure_numpy_array(data.Volume) if hasattr(data, "Volume") else None
+            )
+
+            # TechnicalIndicatorServiceを使用して計算
+            result = self.technical_indicator_service.calculate_indicator(
+                indicator_type, parameters, close_data, high_data, low_data, volume_data
+            )
+
+            return result
+
+        except Exception as e:
+            logger.error(f"指標計算エラー {indicator_type}: {e}")
+            return None
+
+    def _evaluate_conditions(
+        self, conditions: List[Condition], strategy_instance
+    ) -> bool:
+        """
+        条件評価（統合版）
+
+        Args:
+            conditions: 評価する条件リスト
+            strategy_instance: 戦略インスタンス
+
+        Returns:
+            全条件がTrueかどうか
+        """
+        try:
+            if not conditions:
+                return True
+
+            for condition in conditions:
+                if not self._evaluate_single_condition(condition, strategy_instance):
+                    return False
+            return True
+
+        except Exception as e:
+            logger.error(f"条件評価エラー: {e}")
+            return False
+
+    def _evaluate_single_condition(
+        self, condition: Condition, strategy_instance
+    ) -> bool:
+        """
+        単一条件の評価（統合版）
+
+        Args:
+            condition: 評価する条件
+            strategy_instance: 戦略インスタンス
+
+        Returns:
+            条件の評価結果
+        """
+        try:
+            # 左オペランドの値を取得
+            left_value = self._get_condition_value(
+                condition.left_operand, strategy_instance
+            )
+
+            # 右オペランドの値を取得（数値文字列を適切に処理）
+            right_value = condition.right_operand
             if (
-                indicator.enabled
-                and not self.indicator_initializer.is_supported_indicator(
-                    indicator.type
-                )
+                isinstance(right_value, str)
+                and right_value.replace(".", "").replace("-", "").isdigit()
             ):
-                errors.append(f"未対応の指標: {indicator.type}")
+                right_value = float(right_value)
 
-        # 演算子の対応状況チェック
-        for condition in gene.entry_conditions + gene.exit_conditions:
-            if not self.condition_evaluator.is_supported_operator(condition.operator):
-                errors.append(f"未対応の演算子: {condition.operator}")
+            # 条件評価
+            if condition.operator == ">":
+                return left_value > right_value
+            elif condition.operator == "<":
+                return left_value < right_value
+            elif condition.operator == ">=":
+                return left_value >= right_value
+            elif condition.operator == "<=":
+                return left_value <= right_value
+            elif condition.operator == "==":
+                return left_value == right_value
+            elif condition.operator == "!=":
+                return left_value != right_value
+            else:
+                logger.warning(f"未対応の演算子: {condition.operator}")
+                return False
 
-        return len(errors) == 0, errors
+        except Exception as e:
+            logger.error(f"条件評価エラー: {e}")
+            return False
+
+    def _get_condition_value(self, operand: str, strategy_instance) -> float:
+        """
+        条件オペランドから値を取得（統合版）
+
+        Args:
+            operand: オペランド文字列
+            strategy_instance: 戦略インスタンス
+
+        Returns:
+            オペランドの値
+        """
+        try:
+            # 数値の場合
+            if isinstance(operand, (int, float)):
+                return float(operand)
+
+            # 文字列の場合
+            if isinstance(operand, str):
+                # 数値文字列の場合
+                if operand.replace(".", "").replace("-", "").isdigit():
+                    return float(operand)
+
+                # 価格データの場合
+                if operand.lower() in ["close", "high", "low", "open"]:
+                    price_data = getattr(strategy_instance.data, operand.capitalize())
+                    return float(price_data[-1])
+
+                # 指標の場合
+                if hasattr(strategy_instance, operand):
+                    indicator_value = getattr(strategy_instance, operand)
+                    if hasattr(indicator_value, "__getitem__"):
+                        return float(indicator_value[-1])
+                    return float(indicator_value)
+
+            logger.warning(f"未対応のオペランド: {operand}")
+            return 0.0
+
+        except Exception as e:
+            logger.error(f"オペランド値取得エラー: {e}")
+            return 0.0

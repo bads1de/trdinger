@@ -49,7 +49,14 @@ class TestGAEngineComprehensive:
         }
 
         factory = StrategyFactory()
-        ga_engine = GeneticAlgorithmEngine(mock_backtest_service, factory)
+        from app.core.services.auto_strategy.generators.random_gene_generator import (
+            RandomGeneGenerator,
+        )
+
+        gene_generator = RandomGeneGenerator(GAConfig())
+        ga_engine = GeneticAlgorithmEngine(
+            mock_backtest_service, factory, gene_generator
+        )
 
         # 小規模GA設定
         config = GAConfig(
@@ -133,7 +140,10 @@ class TestGAEngineComprehensive:
 
         mock_backtest_service = Mock()
         factory = StrategyFactory()
-        ga_engine = GeneticAlgorithmEngine(mock_backtest_service, factory)
+        gene_generator = RandomGeneGenerator(GAConfig())
+        ga_engine = GeneticAlgorithmEngine(
+            mock_backtest_service, factory, gene_generator
+        )
 
         config = GAConfig()
 

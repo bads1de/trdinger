@@ -1,13 +1,14 @@
 """
 自動戦略生成サービス
-
-GA実行、進捗管理、結果保存などの統合機能を提供します。
-責任を分離し、各機能を専用モジュールに委譲します。
+GA実行、進捗管理、結果保存を統合的に管理します。
+複雑な分離構造を削除し、直接的で理解しやすい実装に変更しました。
 """
 
 import logging
-
+import uuid
+from datetime import datetime
 from typing import Dict, Any, List, Optional
+
 from fastapi import BackgroundTasks
 from ..models.ga_config import GAConfig, GAProgress
 from ..models.strategy_gene import StrategyGene
@@ -16,13 +17,8 @@ from ..factories.strategy_factory import StrategyFactory
 from ..generators.random_gene_generator import RandomGeneGenerator
 from app.core.services.backtest_service import BacktestService
 from app.core.services.backtest_data_service import BacktestDataService
-from .experiment_manager import ExperimentManager
-from .progress_tracker import ProgressTracker
 
 # データベースリポジトリのインポート
-from database.repositories.ohlcv_repository import OHLCVRepository
-from database.repositories.open_interest_repository import OpenInterestRepository
-from database.repositories.funding_rate_repository import FundingRateRepository
 from database.repositories.generated_strategy_repository import (
     GeneratedStrategyRepository,
 )
@@ -32,16 +28,15 @@ from database.repositories.backtest_result_repository import (
 )
 from database.connection import SessionLocal
 
-
 logger = logging.getLogger(__name__)
 
 
 class AutoStrategyService:
     """
-    自動戦略生成サービス
+    自動戦略生成サービス（簡素化版）
 
     GA実行、進捗管理、結果保存を統合的に管理します。
-    各機能は専用モジュールに委譲し、メインのAPI機能に集中します。
+    複雑な分離構造を削除し、直接的で理解しやすい実装に変更しました。
     """
 
     def __init__(self):
@@ -49,54 +44,48 @@ class AutoStrategyService:
         # データベースセッションファクトリ
         self.db_session_factory = SessionLocal
 
-        # 分離されたコンポーネント
-        self.experiment_manager = ExperimentManager(self.db_session_factory)
-        self.progress_tracker = ProgressTracker(self.db_session_factory)
-
         # サービスの初期化
         self.strategy_factory = StrategyFactory()
         self.backtest_service: BacktestService
         self.ga_engine: Optional[GeneticAlgorithmEngine] = None
 
-        self._init_services()
+        # 進捗管理（統合版）
+        self.progress_data: Dict[str, GAProgress] = {}
 
-    def _validate_dependencies(self):
-        """依存関係の確認"""
-        if self.ga_engine is None:
-            raise RuntimeError("GAエンジンが初期化されていません。")
-        if self.backtest_service is None:
-            raise RuntimeError("バックテストサービスが初期化されていません。")
+        self._init_services()
 
     def _init_services(self):
         """
-        サービスの初期化を行います。
+        サービスの初期化（簡素化版）
 
-        このメソッドは、AutoStrategyService が依存する他のサービスやリポジトリを
-        初期化するために呼び出されます。特に、データベース接続を確立し、
-        OHLCV、Open Interest、Funding Rate などのデータリポジトリ、
-        GA実験と生成戦略のリポジトリ、そしてバックテストサービスとGAエンジンを
-        設定します。
+        必要最小限のサービス初期化を行います。
+        複雑な依存関係管理を削除し、シンプルな実装に変更しました。
         """
         try:
+            # データベースリポジトリの初期化
             with self.db_session_factory() as db:
-                # 各種データリポジトリの初期化
+                from database.repositories.ohlcv_repository import OHLCVRepository
+                from database.repositories.open_interest_repository import (
+                    OpenInterestRepository,
+                )
+                from database.repositories.funding_rate_repository import (
+                    FundingRateRepository,
+                )
+
                 ohlcv_repo = OHLCVRepository(db)
                 oi_repo = OpenInterestRepository(db)
                 fr_repo = FundingRateRepository(db)
-                self.ga_experiment_repo = GAExperimentRepository(db)
-                self.generated_strategy_repo = GeneratedStrategyRepository(db)
 
-                # バックテストデータサービスを初期化
+                # バックテストサービスの初期化
                 data_service = BacktestDataService(
                     ohlcv_repo=ohlcv_repo, oi_repo=oi_repo, fr_repo=fr_repo
                 )
-                # バックテストサービスを初期化
                 self.backtest_service = BacktestService(data_service)
 
-                # GAエンジンは実行時に動的に初期化
-                self.ga_engine = None
+            # GAエンジンは実行時に動的に初期化
+            self.ga_engine = None
 
-                logger.info("自動戦略生成サービス初期化完了（OI/FR統合版）")
+            logger.info("自動戦略生成サービス初期化完了（簡素化版）")
 
         except Exception as e:
             logger.error(f"AutoStrategyServiceの初期化中にエラーが発生しました: {e}")
@@ -143,8 +132,8 @@ class AutoStrategyService:
                 f"シンボルを正規化しました: {original_symbol} -> {normalized_symbol}"
             )
 
-        # 3. 実験を作成
-        experiment_id = self.experiment_manager.create_experiment(
+        # 3. 実験を作成（統合版）
+        experiment_id = self._create_experiment(
             experiment_name, ga_config, backtest_config
         )
 
@@ -155,12 +144,7 @@ class AutoStrategyService:
         )
         logger.info("GAエンジンを動的に初期化しました。")
 
-        # 5. GAエンジンに進捗コールバックを設定
-        ga_callback = self.progress_tracker.get_progress_callback(experiment_id)
-        if ga_callback and self.ga_engine:
-            self.ga_engine.set_progress_callback(ga_callback)
-
-        # 6. 実験をバックグラウンドで開始
+        # 5. 実験をバックグラウンドで開始
         background_tasks.add_task(
             self._run_experiment, experiment_id, ga_config, backtest_config
         )
@@ -196,38 +180,34 @@ class AutoStrategyService:
                 experiment_id, result, ga_config, backtest_config
             )
 
-            # 実験を完了状態にする
-            self.experiment_manager.complete_experiment(experiment_id, result)
+            # 実験を完了状態にする（統合版）
+            self._complete_experiment(experiment_id, result)
 
-            # 最終進捗を作成・通知
-            self.progress_tracker.create_final_progress(
-                experiment_id, result, ga_config
-            )
+            # 最終進捗を作成・通知（統合版）
+            self._create_final_progress(experiment_id, result, ga_config)
 
             logger.info(f"GA実行完了: {experiment_id}")
 
         except Exception as e:
             logger.error(f"GA実験の実行中にエラーが発生しました ({experiment_id}): {e}")
 
-            # 実験を失敗状態にする
-            self.experiment_manager.fail_experiment(experiment_id, str(e))
+            # 実験を失敗状態にする（統合版）
+            self._fail_experiment(experiment_id, str(e))
 
-            # エラー進捗を作成・通知
-            self.progress_tracker.create_error_progress(
-                experiment_id, ga_config, str(e)
-            )
+            # エラー進捗を作成・通知（統合版）
+            self._create_error_progress(experiment_id, ga_config, str(e))
 
     def get_experiment_progress(self, experiment_id: str) -> Optional[GAProgress]:
-        """実験の進捗を取得"""
-        return self.progress_tracker.get_progress(experiment_id)
+        """実験の進捗を取得（統合版）"""
+        return self.progress_data.get(experiment_id)
 
     def get_experiment_result(self, experiment_id: str) -> Optional[Dict[str, Any]]:
-        """実験結果を取得"""
-        return self.experiment_manager.get_experiment_result(experiment_id)
+        """実験結果を取得（統合版）"""
+        return self._get_experiment_result(experiment_id)
 
     def list_experiments(self) -> List[Dict[str, Any]]:
-        """実験一覧を取得"""
-        return self.experiment_manager.list_experiments()
+        """実験一覧を取得（統合版）"""
+        return self._list_experiments()
 
     def stop_experiment(self, experiment_id: str) -> bool:
         """実験を停止"""
@@ -255,16 +235,17 @@ class AutoStrategyService:
         ga_config: GAConfig,
         backtest_config: Dict[str, Any],
     ):
-        """実験結果をデータベースに保存（リファクタリング版）"""
+        """実験結果をデータベースに保存（統合版）"""
         try:
-            experiment_info = self.experiment_manager.get_experiment_info(experiment_id)
+            # 実験情報を取得（統合版）
+            experiment_info = self._get_experiment_info(experiment_id)
             if not experiment_info:
                 logger.error(f"実験情報が見つかりません: {experiment_id}")
                 return
 
             logger.info(f"実験結果保存開始: {experiment_id}")
 
-            with SessionLocal() as db:
+            with self.db_session_factory() as db:
                 # 最良戦略の保存と詳細バックテストの実行
                 self._save_best_strategy_and_run_detailed_backtest(
                     db,
@@ -475,3 +456,257 @@ class AutoStrategyService:
         except Exception as e:
             logger.error(f"戦略のテスト実行中にエラーが発生しました: {e}")
             return {"success": False, "error": str(e)}
+
+    # 統合された機能メソッド
+
+    def _create_experiment(
+        self, experiment_name: str, ga_config: GAConfig, backtest_config: Dict[str, Any]
+    ) -> str:
+        """
+        実験を作成（統合版）
+
+        Args:
+            experiment_name: 実験名
+            ga_config: GA設定
+            backtest_config: バックテスト設定
+
+        Returns:
+            実験ID
+        """
+        try:
+            experiment_id = str(uuid.uuid4())
+
+            with self.db_session_factory() as db:
+                ga_experiment_repo = GAExperimentRepository(db)
+
+                # 設定データを準備
+                config_data = {
+                    "ga_config": ga_config.to_dict(),
+                    "backtest_config": backtest_config,
+                }
+
+                # create_experimentメソッドの正しい引数で呼び出し
+                db_experiment = ga_experiment_repo.create_experiment(
+                    name=experiment_name,
+                    config=config_data,
+                    total_generations=ga_config.generations,
+                    status="running",
+                )
+                logger.info(
+                    f"実験を作成しました: {experiment_id} (DB ID: {db_experiment.id})"
+                )
+
+                # 実際のDB IDを返すように変更（実験情報取得で使用するため）
+                return str(db_experiment.id)
+
+        except Exception as e:
+            logger.error(f"実験作成エラー: {e}")
+            raise
+
+    def _complete_experiment(self, experiment_id: str, result: Dict[str, Any]):
+        """
+        実験を完了状態にする（統合版）
+
+        Args:
+            experiment_id: 実験ID
+            result: 実験結果
+        """
+        try:
+            with self.db_session_factory() as db:
+                ga_experiment_repo = GAExperimentRepository(db)
+
+                # 実験IDで検索して更新
+                experiments = ga_experiment_repo.get_experiments_by_status("running")
+                for exp in experiments:
+                    if exp.experiment_name == experiment_id:  # 簡易的な実装
+                        ga_experiment_repo.update_experiment_status(exp.id, "completed")
+                        break
+
+        except Exception as e:
+            logger.error(f"実験完了処理エラー: {e}")
+
+    def _fail_experiment(self, experiment_id: str, error_message: str):
+        """
+        実験を失敗状態にする（統合版）
+
+        Args:
+            experiment_id: 実験ID
+            error_message: エラーメッセージ
+        """
+        try:
+            with self.db_session_factory() as db:
+                ga_experiment_repo = GAExperimentRepository(db)
+
+                # 実験IDで検索して更新
+                experiments = ga_experiment_repo.get_experiments_by_status("running")
+                for exp in experiments:
+                    if exp.experiment_name == experiment_id:  # 簡易的な実装
+                        ga_experiment_repo.update_experiment_status(exp.id, "failed")
+                        break
+
+        except Exception as e:
+            logger.error(f"実験失敗処理エラー: {e}")
+
+    def _create_final_progress(
+        self, experiment_id: str, result: Dict[str, Any], ga_config: GAConfig
+    ):
+        """
+        最終進捗を作成（統合版）
+
+        Args:
+            experiment_id: 実験ID
+            result: 実験結果
+            ga_config: GA設定
+        """
+        try:
+            progress = GAProgress(
+                experiment_id=experiment_id,
+                current_generation=ga_config.generations,
+                total_generations=ga_config.generations,
+                best_fitness=result.get("best_fitness", 0.0),
+                average_fitness=result.get("best_fitness", 0.0),
+                execution_time=result.get("execution_time", 0.0),
+                estimated_remaining_time=0.0,
+                status="completed",
+            )
+
+            self.progress_data[experiment_id] = progress
+            logger.info(f"最終進捗を作成しました: {experiment_id}")
+
+        except Exception as e:
+            logger.error(f"最終進捗作成エラー: {e}")
+
+    def _create_error_progress(
+        self, experiment_id: str, ga_config: GAConfig, error_message: str
+    ):
+        """
+        エラー進捗を作成（統合版）
+
+        Args:
+            experiment_id: 実験ID
+            ga_config: GA設定
+            error_message: エラーメッセージ
+        """
+        try:
+            progress = GAProgress(
+                experiment_id=experiment_id,
+                current_generation=0,
+                total_generations=ga_config.generations,
+                best_fitness=0.0,
+                average_fitness=0.0,
+                execution_time=0.0,
+                estimated_remaining_time=0.0,
+                status="error",
+            )
+
+            self.progress_data[experiment_id] = progress
+            logger.info(f"エラー進捗を作成しました: {experiment_id}")
+
+        except Exception as e:
+            logger.error(f"エラー進捗作成エラー: {e}")
+
+    def _get_experiment_result(self, experiment_id: str) -> Optional[Dict[str, Any]]:
+        """
+        実験結果を取得（統合版）
+
+        Args:
+            experiment_id: 実験ID
+
+        Returns:
+            実験結果
+        """
+        try:
+            with self.db_session_factory() as db:
+                ga_experiment_repo = GAExperimentRepository(db)
+                experiments = ga_experiment_repo.get_experiments_by_status("completed")
+
+                for exp in experiments:
+                    if exp.experiment_name == experiment_id:  # 簡易的な実装
+                        return {
+                            "id": exp.id,
+                            "experiment_name": exp.experiment_name,
+                            "status": exp.status,
+                            "created_at": (
+                                exp.created_at.isoformat() if exp.created_at else None
+                            ),
+                            "completed_at": (
+                                exp.completed_at.isoformat()
+                                if exp.completed_at
+                                else None
+                            ),
+                        }
+
+                return None
+
+        except Exception as e:
+            logger.error(f"実験結果取得エラー: {e}")
+            return None
+
+    def _list_experiments(self) -> List[Dict[str, Any]]:
+        """
+        実験一覧を取得（統合版）
+
+        Returns:
+            実験一覧
+        """
+        try:
+            with self.db_session_factory() as db:
+                ga_experiment_repo = GAExperimentRepository(db)
+                experiments = ga_experiment_repo.get_recent_experiments(limit=100)
+
+                return [
+                    {
+                        "id": exp.id,
+                        "experiment_name": exp.name,  # nameプロパティを使用
+                        "status": exp.status,
+                        "created_at": (
+                            exp.created_at.isoformat() if exp.created_at else None
+                        ),
+                        "completed_at": (
+                            exp.completed_at.isoformat() if exp.completed_at else None
+                        ),
+                    }
+                    for exp in experiments
+                ]
+
+        except Exception as e:
+            logger.error(f"実験一覧取得エラー: {e}")
+            return []
+
+    def _get_experiment_info(self, experiment_id: str) -> Optional[Dict[str, Any]]:
+        """
+        実験情報を取得（統合版）
+
+        Args:
+            experiment_id: 実験ID
+
+        Returns:
+            実験情報辞書
+        """
+        try:
+            with self.db_session_factory() as db:
+                ga_experiment_repo = GAExperimentRepository(db)
+
+                # 実験IDで検索（改良版）
+                experiments = ga_experiment_repo.get_recent_experiments(limit=100)
+                for exp in experiments:
+                    # 実験名またはDB IDがexperiment_idと一致するものを検索
+                    # UUIDとして生成されたexperiment_idは実験名として保存されている
+                    if (
+                        hasattr(exp, "name") and exp.name and experiment_id in exp.name
+                    ) or str(exp.id) == experiment_id:
+                        return {
+                            "db_id": exp.id,
+                            "name": exp.name,
+                            "status": exp.status,
+                            "config": exp.config,
+                            "created_at": exp.created_at,
+                            "completed_at": exp.completed_at,
+                        }
+
+                logger.warning(f"実験が見つかりません: {experiment_id}")
+                return None
+
+        except Exception as e:
+            logger.error(f"実験情報取得エラー: {e}")
+            return None

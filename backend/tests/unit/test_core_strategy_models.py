@@ -129,14 +129,15 @@ def test_random_gene_generator():
     try:
         # 1. 生成器作成
         print("1. 生成器作成...")
-        generator = RandomGeneGenerator(
-            {
-                "max_indicators": 3,
-                "min_indicators": 2,
-                "max_conditions": 3,
-                "min_conditions": 1,
-            }
+        from app.core.services.auto_strategy.models.ga_config import GAConfig
+
+        ga_config = GAConfig(
+            max_indicators=3,
+            min_indicators=2,
+            max_conditions=3,
+            min_conditions=1,
         )
+        generator = RandomGeneGenerator(ga_config)
         print("  ✅ 生成器作成完了")
 
         # 2. 単一遺伝子生成

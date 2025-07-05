@@ -1,62 +1,34 @@
 """
-遺伝的アルゴリズム設定モデル
+遺伝的アルゴリズム設定モデル（簡素化版）
 
-GA実行時の各種パラメータを管理します。
+GA実行時の各種パラメータを単一のクラスで管理します。
+複雑な階層構造を削除し、フラットで理解しやすい構造に変更しました。
 """
 
 import json
-
 from dataclasses import dataclass, field
 from typing import Dict, Any, List, Optional, Callable
 
 from app.core.services.indicators import TechnicalIndicatorService
 
 
-# デフォルト値定数
-class GADefaults:
-    """GA設定のデフォルト値定数"""
+@dataclass
+class GAConfig:
+    """
+    遺伝的アルゴリズム設定（簡素化版）
 
-    # 進化設定
-    POPULATION_SIZE = 10
-    GENERATIONS = 5
-    CROSSOVER_RATE = 0.8
-    MUTATION_RATE = 0.1
-    ELITE_SIZE = 2
+    GA実行時の全パラメータをフラットな構造で管理します。
+    複雑な階層構造を削除し、直接的でわかりやすい設計に変更しました。
+    """
+
+    # 進化アルゴリズム設定
+    population_size: int = 10
+    generations: int = 5
+    crossover_rate: float = 0.8
+    mutation_rate: float = 0.1
+    elite_size: int = 2
 
     # 評価設定
-    PRIMARY_METRIC = "sharpe_ratio"
-
-    # 指標設定
-    MAX_INDICATORS = 3
-
-    # 実行設定
-    LOG_LEVEL = "WARNING"
-    SAVE_INTERMEDIATE_RESULTS = True
-    ENABLE_DETAILED_LOGGING = True
-
-    # from_dict用デフォルト値
-    LEGACY_POPULATION_SIZE = 100
-    LEGACY_GENERATIONS = 50
-    LEGACY_ELITE_SIZE = 10
-    LEGACY_MAX_INDICATORS = 5
-    LEGACY_LOG_LEVEL = "INFO"
-
-
-@dataclass
-class EvolutionConfig:
-    """進化アルゴリズム設定"""
-
-    population_size: int = GADefaults.POPULATION_SIZE
-    generations: int = GADefaults.GENERATIONS
-    crossover_rate: float = GADefaults.CROSSOVER_RATE
-    mutation_rate: float = GADefaults.MUTATION_RATE
-    elite_size: int = GADefaults.ELITE_SIZE
-
-
-@dataclass
-class EvaluationConfig:
-    """評価設定"""
-
     fitness_weights: Dict[str, float] = field(
         default_factory=lambda: {
             "total_return": 0.3,
@@ -65,7 +37,7 @@ class EvaluationConfig:
             "win_rate": 0.1,
         }
     )
-    primary_metric: str = GADefaults.PRIMARY_METRIC
+    primary_metric: str = "sharpe_ratio"
     fitness_constraints: Dict[str, float] = field(
         default_factory=lambda: {
             "min_trades": 10,
@@ -74,23 +46,15 @@ class EvaluationConfig:
         }
     )
 
-
-@dataclass
-class IndicatorConfig:
-    """指標設定"""
-
-    max_indicators: int = GADefaults.MAX_INDICATORS
+    # 指標設定
+    max_indicators: int = 3
     allowed_indicators: List[str] = field(
         default_factory=lambda: list(
             TechnicalIndicatorService().get_supported_indicators().keys()
         )
     )
 
-
-@dataclass
-class ParameterConfig:
-    """パラメータ範囲設定"""
-
+    # パラメータ範囲設定
     parameter_ranges: Dict[str, List[float]] = field(
         default_factory=lambda: {
             # 基本パラメータ
@@ -119,136 +83,31 @@ class ParameterConfig:
         }
     )
 
-
-@dataclass
-class GeneGenerationConfig:
-    """遺伝子生成設定"""
-
+    # 遺伝子生成設定
     min_indicators: int = 1
     min_conditions: int = 1
     max_conditions: int = 3
-
-    # 重み設定
-    price_data_weight: int = 3  # 価格データの重み
-    volume_data_weight: int = 1  # 出来高データの重み
-    oi_fr_data_weight: int = 1  # OI/FRデータの重み
-
-    # 確率設定
-    numeric_threshold_probability: float = 0.8  # 数値閾値を使用する確率
-    min_compatibility_score: float = 0.8  # 最小互換性スコア
-    strict_compatibility_score: float = 0.9  # 厳密な互換性スコア
-
-    # リスク管理範囲
+    price_data_weight: int = 3
+    volume_data_weight: int = 1
+    oi_fr_data_weight: int = 1
+    numeric_threshold_probability: float = 0.8
+    min_compatibility_score: float = 0.8
+    strict_compatibility_score: float = 0.9
     stop_loss_range: List[float] = field(default_factory=lambda: [0.02, 0.05])
     take_profit_range: List[float] = field(default_factory=lambda: [0.01, 0.15])
     position_size_range: List[float] = field(default_factory=lambda: [0.1, 0.5])
 
-
-@dataclass
-class ExecutionConfig:
-    """実行設定"""
-
+    # 実行設定
     parallel_processes: Optional[int] = None
     random_state: Optional[int] = None
-    log_level: str = GADefaults.LOG_LEVEL
-    save_intermediate_results: bool = GADefaults.SAVE_INTERMEDIATE_RESULTS
-    enable_detailed_logging: bool = GADefaults.ENABLE_DETAILED_LOGGING
+    log_level: str = "WARNING"
+    save_intermediate_results: bool = True
+    enable_detailed_logging: bool = True
     progress_callback: Optional[Callable[["GAProgress"], None]] = None
-
-
-@dataclass
-class GAConfig:
-    """
-    遺伝的アルゴリズム設定
-
-    GA実行時の全パラメータを管理します。
-    構造化された設定により、可読性と保守性を向上させます。
-    """
-
-    # 構造化された設定
-    evolution: EvolutionConfig = field(default_factory=EvolutionConfig)
-    evaluation: EvaluationConfig = field(default_factory=EvaluationConfig)
-    indicators: IndicatorConfig = field(default_factory=IndicatorConfig)
-    parameters: ParameterConfig = field(default_factory=ParameterConfig)
-    execution: ExecutionConfig = field(default_factory=ExecutionConfig)
-    gene_generation: GeneGenerationConfig = field(default_factory=GeneGenerationConfig)
-
-    # 後方互換性のためのプロパティ
-    @property
-    def population_size(self) -> int:
-        return self.evolution.population_size
-
-    @property
-    def generations(self) -> int:
-        return self.evolution.generations
-
-    @property
-    def crossover_rate(self) -> float:
-        return self.evolution.crossover_rate
-
-    @property
-    def mutation_rate(self) -> float:
-        return self.evolution.mutation_rate
-
-    @property
-    def elite_size(self) -> int:
-        return self.evolution.elite_size
-
-    @property
-    def fitness_weights(self) -> Dict[str, float]:
-        return self.evaluation.fitness_weights
-
-    @property
-    def primary_metric(self) -> str:
-        return self.evaluation.primary_metric
-
-    @property
-    def max_indicators(self) -> int:
-        return self.indicators.max_indicators
-
-    @property
-    def allowed_indicators(self) -> List[str]:
-        return self.indicators.allowed_indicators
-
-    @property
-    def parameter_ranges(self) -> Dict[str, List[float]]:
-        return self.parameters.parameter_ranges
-
-    @property
-    def threshold_ranges(self) -> Dict[str, List[float] | Dict[str, List[float]]]:
-        return self.parameters.threshold_ranges
-
-    @property
-    def fitness_constraints(self) -> Dict[str, float]:
-        return self.evaluation.fitness_constraints
-
-    @property
-    def parallel_processes(self) -> Optional[int]:
-        return self.execution.parallel_processes
-
-    @property
-    def random_state(self) -> Optional[int]:
-        return self.execution.random_state
-
-    @property
-    def log_level(self) -> str:
-        return self.execution.log_level
-
-    @property
-    def save_intermediate_results(self) -> bool:
-        return self.execution.save_intermediate_results
-
-    @property
-    def enable_detailed_logging(self) -> bool:
-        return self.execution.enable_detailed_logging
-
-    @property
-    def progress_callback(self) -> Optional[Callable[["GAProgress"], None]]:
-        return self.execution.progress_callback
 
     def validate(self) -> tuple[bool, List[str]]:
         """
-        設定の妥当性を検証（強化版）
+        設定の妥当性を検証（簡素化版）
 
         Returns:
             (is_valid, error_messages)
@@ -256,26 +115,6 @@ class GAConfig:
         errors = []
 
         # 進化設定の検証
-        errors.extend(self._validate_evolution_config())
-
-        # 評価設定の検証
-        errors.extend(self._validate_evaluation_config())
-
-        # 指標設定の検証
-        errors.extend(self._validate_indicator_config())
-
-        # パラメータ設定の検証
-        errors.extend(self._validate_parameter_config())
-
-        # 実行設定の検証
-        errors.extend(self._validate_execution_config())
-
-        return len(errors) == 0, errors
-
-    def _validate_evolution_config(self) -> List[str]:
-        """進化設定のバリデーション"""
-        errors = []
-
         if self.population_size <= 0:
             errors.append("個体数は正の整数である必要があります")
         elif self.population_size > 1000:
@@ -299,34 +138,21 @@ class GAConfig:
         if self.elite_size < 0 or self.elite_size >= self.population_size:
             errors.append("エリート保存数は0以上、個体数未満である必要があります")
 
-        return errors
-
-    def _validate_evaluation_config(self) -> List[str]:
-        """評価設定のバリデーション"""
-        errors = []
-
-        # フィットネス重みの検証
+        # 評価設定の検証
         if abs(sum(self.fitness_weights.values()) - 1.0) > 0.01:
             errors.append("フィットネス重みの合計は1.0である必要があります")
 
-        # 必要なメトリクスが含まれているかチェック
         required_metrics = {"total_return", "sharpe_ratio", "max_drawdown", "win_rate"}
         missing_metrics = required_metrics - set(self.fitness_weights.keys())
         if missing_metrics:
             errors.append(f"必要なメトリクスが不足しています: {missing_metrics}")
 
-        # プライマリメトリクスの検証
         if self.primary_metric not in self.fitness_weights:
             errors.append(
                 f"プライマリメトリクス '{self.primary_metric}' がフィットネス重みに含まれていません"
             )
 
-        return errors
-
-    def _validate_indicator_config(self) -> List[str]:
-        """指標設定のバリデーション"""
-        errors = []
-
+        # 指標設定の検証
         if self.max_indicators <= 0:
             errors.append("最大指標数は正の整数である必要があります")
         elif self.max_indicators > 10:
@@ -334,11 +160,9 @@ class GAConfig:
                 "最大指標数は10以下である必要があります（パフォーマンス上の制約）"
             )
 
-        # 許可された指標の検証
         if not self.allowed_indicators:
             errors.append("許可された指標リストが空です")
         else:
-            # 無効な指標名のチェック
             valid_indicators = set(
                 TechnicalIndicatorService().get_supported_indicators().keys()
             )
@@ -346,13 +170,7 @@ class GAConfig:
             if invalid_indicators:
                 errors.append(f"無効な指標が含まれています: {invalid_indicators}")
 
-        return errors
-
-    def _validate_parameter_config(self) -> List[str]:
-        """パラメータ設定のバリデーション"""
-        errors = []
-
-        # パラメータ範囲の検証
+        # パラメータ設定の検証
         for param_name, range_values in self.parameter_ranges.items():
             if not isinstance(range_values, list) or len(range_values) != 2:
                 errors.append(
@@ -363,30 +181,23 @@ class GAConfig:
                     f"パラメータ '{param_name}' の最小値は最大値より小さい必要があります"
                 )
 
-        return errors
-
-    def _validate_execution_config(self) -> List[str]:
-        """実行設定のバリデーション"""
-        errors = []
-
-        # ログレベルの検証
+        # 実行設定の検証
         valid_log_levels = {"DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"}
         if self.log_level not in valid_log_levels:
             errors.append(
                 f"無効なログレベル: {self.log_level}. 有効な値: {valid_log_levels}"
             )
 
-        # 並列プロセス数の検証
         if self.parallel_processes is not None:
             if self.parallel_processes <= 0:
                 errors.append("並列プロセス数は正の整数である必要があります")
             elif self.parallel_processes > 32:
                 errors.append("並列プロセス数は32以下である必要があります")
 
-        return errors
+        return len(errors) == 0, errors
 
     def to_dict(self) -> Dict[str, Any]:
-        """辞書形式に変換"""
+        """辞書形式に変換（簡素化版）"""
         return {
             "population_size": self.population_size,
             "generations": self.generations,
@@ -400,6 +211,9 @@ class GAConfig:
             "parameter_ranges": self.parameter_ranges,
             "threshold_ranges": self.threshold_ranges,
             "fitness_constraints": self.fitness_constraints,
+            "min_indicators": self.min_indicators,
+            "min_conditions": self.min_conditions,
+            "max_conditions": self.max_conditions,
             "parallel_processes": self.parallel_processes,
             "random_state": self.random_state,
             "log_level": self.log_level,
@@ -408,65 +222,35 @@ class GAConfig:
 
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "GAConfig":
-        """辞書から復元（構造化設定対応）"""
+        """辞書から復元（簡素化版）"""
         # allowed_indicatorsが空の場合はデフォルトの指標リストを使用
         indicator_service = TechnicalIndicatorService()
         allowed_indicators = data.get("allowed_indicators") or list(
             indicator_service.get_supported_indicators().keys()
         )
 
-        # 構造化された設定を作成
-        evolution = EvolutionConfig(
-            population_size=data.get(
-                "population_size", GADefaults.LEGACY_POPULATION_SIZE
-            ),
-            generations=data.get("generations", GADefaults.LEGACY_GENERATIONS),
-            crossover_rate=data.get("crossover_rate", GADefaults.CROSSOVER_RATE),
-            mutation_rate=data.get("mutation_rate", GADefaults.MUTATION_RATE),
-            elite_size=data.get("elite_size", GADefaults.LEGACY_ELITE_SIZE),
-        )
-
-        evaluation = EvaluationConfig(
+        # デフォルト値を使用してフラットな構造で復元
+        return cls(
+            population_size=data.get("population_size", 100),
+            generations=data.get("generations", 50),
+            crossover_rate=data.get("crossover_rate", 0.8),
+            mutation_rate=data.get("mutation_rate", 0.1),
+            elite_size=data.get("elite_size", 10),
             fitness_weights=data.get("fitness_weights", {}),
-            primary_metric=data.get("primary_metric", GADefaults.PRIMARY_METRIC),
+            primary_metric=data.get("primary_metric", "sharpe_ratio"),
             fitness_constraints=data.get("fitness_constraints", {}),
-        )
-
-        indicators = IndicatorConfig(
-            max_indicators=data.get("max_indicators", GADefaults.LEGACY_MAX_INDICATORS),
+            max_indicators=data.get("max_indicators", 5),
             allowed_indicators=allowed_indicators,
-        )
-
-        parameters = ParameterConfig(
             parameter_ranges=data.get("parameter_ranges", {}),
             threshold_ranges=data.get("threshold_ranges", {}),
-        )
-
-        execution = ExecutionConfig(
-            parallel_processes=data.get("parallel_processes"),
-            random_state=data.get("random_state"),
-            log_level=data.get("log_level", GADefaults.LEGACY_LOG_LEVEL),
-            save_intermediate_results=data.get(
-                "save_intermediate_results", GADefaults.SAVE_INTERMEDIATE_RESULTS
-            ),
-            enable_detailed_logging=data.get(
-                "enable_detailed_logging", GADefaults.ENABLE_DETAILED_LOGGING
-            ),
-        )
-
-        gene_generation = GeneGenerationConfig(
             min_indicators=data.get("min_indicators", 1),
             min_conditions=data.get("min_conditions", 1),
             max_conditions=data.get("max_conditions", 3),
-        )
-
-        return cls(
-            evolution=evolution,
-            evaluation=evaluation,
-            indicators=indicators,
-            parameters=parameters,
-            execution=execution,
-            gene_generation=gene_generation,
+            parallel_processes=data.get("parallel_processes"),
+            random_state=data.get("random_state"),
+            log_level=data.get("log_level", "INFO"),
+            save_intermediate_results=data.get("save_intermediate_results", True),
+            enable_detailed_logging=data.get("enable_detailed_logging", True),
         )
 
     def to_json(self) -> str:
@@ -487,29 +271,25 @@ class GAConfig:
     @classmethod
     def create_fast(cls) -> "GAConfig":
         """高速実行用設定を作成（オートストラテジー用デフォルト）"""
-        # create_defaultを呼び出すのではなく、独立した設定として定義
         return cls(
-            evolution=EvolutionConfig(population_size=10, generations=5, elite_size=2),
-            indicators=IndicatorConfig(max_indicators=3),
+            population_size=10,
+            generations=5,
+            elite_size=2,
+            max_indicators=3,
         )
 
     @classmethod
     def create_thorough(cls) -> "GAConfig":
         """徹底的な探索用設定を作成"""
         return cls(
-            evolution=EvolutionConfig(
-                population_size=200,
-                generations=100,
-                crossover_rate=0.85,
-                mutation_rate=0.05,
-                elite_size=20,
-            ),
-            indicators=IndicatorConfig(max_indicators=5),
-            execution=ExecutionConfig(
-                log_level="INFO",
-                save_intermediate_results=True,
-                parallel_processes=None,  # デフォルトはCPU数
-            ),
+            population_size=200,
+            generations=100,
+            crossover_rate=0.85,
+            mutation_rate=0.05,
+            elite_size=20,
+            max_indicators=5,
+            log_level="INFO",
+            save_intermediate_results=True,
         )
 
 

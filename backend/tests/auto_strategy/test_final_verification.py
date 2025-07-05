@@ -13,7 +13,8 @@ from unittest.mock import Mock, patch
 from app.core.services.auto_strategy.generators.random_gene_generator import (
     RandomGeneGenerator,
 )
-from app.core.services.auto_strategy.engines.fitness_calculator import FitnessCalculator
+
+# FitnessCalculatorは削除され、GAEngineに統合されました
 from app.core.services.auto_strategy.models.ga_config import GAConfig
 from app.core.services.auto_strategy.utils.operand_grouping import (
     operand_grouping_system,

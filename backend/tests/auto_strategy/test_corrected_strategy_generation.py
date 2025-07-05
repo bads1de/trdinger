@@ -129,14 +129,15 @@ def test_corrected_random_generator():
     try:
         # 1. 修正されたランダム遺伝子生成器作成
         print("1. 修正されたランダム遺伝子生成器作成中...")
-        generator = RandomGeneGenerator(
-            {
-                "max_indicators": 4,
-                "min_indicators": 2,
-                "max_conditions": 4,
-                "min_conditions": 2,
-            }
+        from app.core.services.auto_strategy.models.ga_config import GAConfig
+
+        ga_config = GAConfig(
+            max_indicators=4,
+            min_indicators=2,
+            max_conditions=4,
+            min_conditions=2,
         )
+        generator = RandomGeneGenerator(ga_config)
         print("  ✅ ランダム遺伝子生成器作成完了")
 
         # 2. 複数遺伝子生成テスト

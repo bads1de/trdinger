@@ -1,34 +1,31 @@
 """
-遺伝的アルゴリズムエンジン
+遺伝的アルゴリズムエンジン（簡素化版）
 
 DEAPライブラリを使用したGA実装。
-既存のBacktestServiceと統合し、戦略の自動生成・最適化を行います。
+複雑な分離構造を削除し、統合された実装に変更しました。
 """
 
 import time
 import logging
-from typing import Dict, Any
-from deap import tools
+import random
+import numpy as np
+from typing import Dict, Any, List, Optional
+from deap import base, creator, tools, algorithms
 
 from ..models.ga_config import GAConfig
 from ..factories.strategy_factory import StrategyFactory
 from ..generators.random_gene_generator import RandomGeneGenerator
 from app.core.services.backtest_service import BacktestService
 
-from .fitness_calculator import FitnessCalculator
-from .deap_configurator import DEAPConfigurator
-from .evolution_operators import EvolutionOperators
-from .timeframe_manager import TimeframeManager
-
 logger = logging.getLogger(__name__)
 
 
 class GeneticAlgorithmEngine:
     """
-    遺伝的アルゴリズムエンジン
+    遺伝的アルゴリズムエンジン（簡素化版）
 
     DEAPライブラリを使用して戦略の自動生成・最適化を行います。
-    各機能は専用モジュールに委譲し、メインの進化ループに集中します。
+    複雑な分離構造を削除し、直接的で理解しやすい実装に変更しました。
     """
 
     def __init__(
@@ -43,19 +40,14 @@ class GeneticAlgorithmEngine:
         Args:
             backtest_service: バックテストサービス
             strategy_factory: 戦略ファクトリー
+            gene_generator: 遺伝子生成器
         """
         self.backtest_service = backtest_service
         self.strategy_factory = strategy_factory
+        self.gene_generator = gene_generator
 
         # 実行状態
         self.is_running = False
-
-        # 分離されたコンポーネント
-        self.gene_generator = gene_generator
-        self.fitness_calculator = FitnessCalculator(backtest_service, strategy_factory)
-        self.deap_configurator = DEAPConfigurator(self.gene_generator)
-        self.evolution_operators = EvolutionOperators()
-        self.timeframe_manager = TimeframeManager()
 
         # DEAP関連
         self.toolbox = None
@@ -63,18 +55,35 @@ class GeneticAlgorithmEngine:
 
     def setup_deap(self, config: GAConfig):
         """
-        DEAP環境のセットアップ
+        DEAP環境のセットアップ（統合版）
 
         Args:
             config: GA設定
         """
-        # DEAPConfigurator に委譲
-        self.toolbox = self.deap_configurator.setup_deap_environment(
-            config, self._evaluate_individual_wrapper
+        # フィットネスクラスの定義（最大化問題）
+        if not hasattr(creator, "FitnessMax"):
+            creator.create("FitnessMax", base.Fitness, weights=(1.0,))
+
+        # 個体クラスの定義
+        if not hasattr(creator, "Individual"):
+            creator.create("Individual", list, fitness=creator.FitnessMax)
+
+        # ツールボックスの初期化
+        self.toolbox = base.Toolbox()
+
+        # 個体生成関数の登録
+        self.toolbox.register("individual", self._create_individual, config)
+        self.toolbox.register(
+            "population", tools.initRepeat, list, self.toolbox.individual
         )
 
-        # 制約条件の適用
-        self.deap_configurator.decorate_operators_with_constraints()
+        # 評価関数の登録
+        self.toolbox.register("evaluate", self._evaluate_individual, config=config)
+
+        # 進化演算子の登録
+        self.toolbox.register("mate", tools.cxTwoPoint)
+        self.toolbox.register("mutate", tools.mutGaussian, mu=0, sigma=0.1, indpb=0.1)
+        self.toolbox.register("select", tools.selTournament, tournsize=3)
 
         logger.info("DEAP環境のセットアップ完了")
 
@@ -82,7 +91,7 @@ class GeneticAlgorithmEngine:
         self, config: GAConfig, backtest_config: Dict[str, Any]
     ) -> Dict[str, Any]:
         """
-        進化アルゴリズムを実行
+        進化アルゴリズムを実行（簡素化版）
 
         Args:
             config: GA設定
@@ -96,55 +105,36 @@ class GeneticAlgorithmEngine:
             start_time = time.time()
 
             # バックテスト設定を保存
-
-            # 評価環境固定化: GA実行開始時に一度だけバックテスト設定を決定
-            if backtest_config:
-                logger.info("評価環境を固定化中...")
-                self._fixed_backtest_config = (
-                    self.timeframe_manager.select_random_timeframe_config(
-                        backtest_config
-                    )
-                )
-            else:
-                self._fixed_backtest_config = None
-                logger.info(
-                    "バックテスト設定が提供されていないため、フォールバック設定を使用"
-                )
+            self._fixed_backtest_config = self._select_timeframe_config(backtest_config)
 
             # DEAP環境のセットアップ
             self.setup_deap(config)
 
-            # 初期個体群の生成と評価
-            population = self._initialize_population(config)
+            # 初期個体群の生成
+            population = self.toolbox.population(n=config.population_size)
 
-            # 統計情報の取得
-            stats = self.deap_configurator.get_statistics()
-            logbook = self.deap_configurator.get_logbook()
+            # 統計情報の設定
+            stats = tools.Statistics(lambda ind: ind.fitness.values)
+            stats.register("avg", np.mean)
+            stats.register("std", np.std)
+            stats.register("min", np.min)
+            stats.register("max", np.max)
 
-            if stats is None or logbook is None:
-                raise RuntimeError("統計情報が初期化されていません。")
+            # 進化アルゴリズムの実行
+            population, logbook = algorithms.eaSimple(
+                population,
+                self.toolbox,
+                cxpb=config.crossover_rate,
+                mutpb=config.mutation_rate,
+                ngen=config.generations,
+                stats=stats,
+                verbose=False,
+            )
 
-            # 初期統計の記録
-            record = stats.compile(population)
-            logbook.record(gen=0, evals=len(population), **record)
-
-            # 世代ループ: 指定された世代数だけ進化プロセスを繰り返す
-            for generation in range(1, config.generations + 1):
-                logger.info(f"世代 {generation}/{config.generations} 開始")
-
-                # 進化演算の実行: 選択、交叉、突然変異、エリート保存など
-                population = self._run_generation(population, config, self.toolbox)
-
-                # 統計情報の記録: 各世代の個体群の適応度統計（平均、最大など）を記録
-                record = stats.compile(population)
-                logbook.record(gen=generation, evals=len(population), **record)
-
-                logger.info(f"世代 {generation} 完了 - 最高適応度: {record['max']:.4f}")
-
-            # 結果の整理: 最終世代の個体群から最も適応度の高い個体を選出
+            # 最良個体の取得
             best_individual = tools.selBest(population, 1)[0]
 
-            # 遺伝子エンコーダーを使用してデコード: 数値リスト形式の遺伝子をStrategyGeneオブジェクトに変換
+            # 遺伝子デコード
             from ..models.gene_encoding import GeneEncoder
             from ..models.strategy_gene import StrategyGene
 
@@ -174,60 +164,123 @@ class GeneticAlgorithmEngine:
         finally:
             self.is_running = False
 
-    def _initialize_population(self, config: GAConfig):
-        """初期個体群の生成と評価"""
-        if self.toolbox is None:
-            raise RuntimeError("DEAP環境がセットアップされていません。")
+    def _create_individual(self, config: GAConfig):
+        """個体生成（統合版）"""
+        try:
+            # RandomGeneGeneratorを使用して遺伝子を生成
+            gene = self.gene_generator.generate_random_gene(config)
 
-        population = self.toolbox.population(n=config.population_size)  # type: ignore
+            # 遺伝子をエンコード
+            from ..models.gene_encoding import GeneEncoder
 
-        # 初期評価
-        logger.info("初期個体群の評価開始...")
-        fitnesses = self.toolbox.map(self.toolbox.evaluate, population)  # type: ignore
-        for ind, fit in zip(population, fitnesses):
-            ind.fitness.values = fit
+            gene_encoder = GeneEncoder()
+            encoded_gene = gene_encoder.encode_strategy_gene_to_list(gene)
 
-        return population
+            return creator.Individual(encoded_gene)
 
-    def _run_generation(self, population, config: GAConfig, toolbox):
-        """単一世代の進化演算を実行"""
-        # 親選択
-        offspring = self.evolution_operators.select_parents(population, toolbox)
+        except Exception as e:
+            logger.error(f"個体生成エラー: {e}")
+            # フォールバック: ランダムな数値リストを生成
+            return creator.Individual([random.random() for _ in range(50)])
 
-        # 交叉
-        offspring = self.evolution_operators.perform_crossover(
-            offspring, config.crossover_rate, toolbox
-        )
-
-        # 突然変異
-        offspring = self.evolution_operators.perform_mutation(
-            offspring, config.mutation_rate, toolbox
-        )
-
-        # 無効個体の評価
-        offspring = self.evolution_operators.evaluate_invalid_individuals(
-            offspring, toolbox
-        )
-
-        # エリート保存
-        population = self.evolution_operators.apply_elitism(
-            population, offspring, config.elite_size
-        )
-
-        return population
-
-    def _evaluate_individual_wrapper(self, individual, config: GAConfig):
+    def _evaluate_individual(self, individual, config: GAConfig):
         """
-        評価関数のラッパー
+        個体評価（統合版）
 
-        FitnessCalculatorに委譲します。
+        Args:
+            individual: 評価する個体
+            config: GA設定
+
+        Returns:
+            フィットネス値のタプル
         """
-        return self.fitness_calculator.evaluate_individual(
-            individual, config, self._fixed_backtest_config
-        )
+        try:
+            # 遺伝子デコード
+            from ..models.gene_encoding import GeneEncoder
+            from ..models.strategy_gene import StrategyGene
 
-    def set_progress_callback(self, callback):
-        """進捗コールバックを設定"""
+            gene_encoder = GeneEncoder()
+            gene = gene_encoder.decode_list_to_strategy_gene(individual, StrategyGene)
+
+            # 戦略クラス生成
+            strategy_class = self.strategy_factory.create_strategy_class(gene)
+
+            # バックテスト実行
+            backtest_config = (
+                self._fixed_backtest_config.copy()
+                if self._fixed_backtest_config
+                else {}
+            )
+            backtest_config["strategy_class"] = strategy_class
+
+            result = self.backtest_service.run_backtest(backtest_config)
+
+            # フィットネス計算
+            fitness = self._calculate_fitness(result, config)
+
+            return (fitness,)
+
+        except Exception as e:
+            logger.error(f"個体評価エラー: {e}")
+            return (0.0,)
+
+    def _calculate_fitness(
+        self, backtest_result: Dict[str, Any], config: GAConfig
+    ) -> float:
+        """
+        フィットネス計算（統合版）
+
+        Args:
+            backtest_result: バックテスト結果
+            config: GA設定
+
+        Returns:
+            フィットネス値
+        """
+        try:
+            # 基本メトリクスの取得
+            total_return = backtest_result.get("total_return", 0.0)
+            sharpe_ratio = backtest_result.get("sharpe_ratio", 0.0)
+            max_drawdown = backtest_result.get("max_drawdown", 1.0)
+            win_rate = backtest_result.get("win_rate", 0.0)
+
+            # 制約チェック
+            if total_return < 0 or sharpe_ratio < config.fitness_constraints.get(
+                "min_sharpe_ratio", 0
+            ):
+                return 0.0
+
+            # 重み付きフィットネス計算
+            fitness = (
+                config.fitness_weights["total_return"] * total_return
+                + config.fitness_weights["sharpe_ratio"] * sharpe_ratio
+                + config.fitness_weights["max_drawdown"] * (1 - max_drawdown)
+                + config.fitness_weights["win_rate"] * win_rate
+            )
+
+            return max(0.0, fitness)
+
+        except Exception as e:
+            logger.error(f"フィットネス計算エラー: {e}")
+            return 0.0
+
+    def _select_timeframe_config(
+        self, backtest_config: Dict[str, Any]
+    ) -> Dict[str, Any]:
+        """
+        タイムフレーム設定の選択（統合版）
+
+        Args:
+            backtest_config: バックテスト設定
+
+        Returns:
+            選択されたタイムフレーム設定
+        """
+        if not backtest_config:
+            return {}
+
+        # 簡単な実装: 設定をそのまま返す
+        return backtest_config.copy()
 
     def stop_evolution(self):
         """進化を停止"""

@@ -40,14 +40,16 @@ class RandomGeneGenerator:
 
         # 設定値を取得（型安全）
         self.max_indicators = config.max_indicators
-        self.min_indicators = config.gene_generation.min_indicators
-        self.max_conditions = config.gene_generation.max_conditions
-        self.min_conditions = config.gene_generation.min_conditions
+        self.min_indicators = config.min_indicators
+        self.max_conditions = config.max_conditions
+        self.min_conditions = config.min_conditions
         self.threshold_ranges = config.threshold_ranges
 
         # 利用可能な指標タイプ（共通定数から取得）
         self.indicator_service = TechnicalIndicatorService()
-        self.available_indicators = list(self.indicator_service.get_supported_indicators().keys())
+        self.available_indicators = list(
+            self.indicator_service.get_supported_indicators().keys()
+        )
 
         # 利用可能なデータソース
         self.available_data_sources = [
@@ -198,16 +200,13 @@ class RandomGeneGenerator:
 
         # 基本データソースを追加（価格データ）
         basic_sources = ["close", "open", "high", "low"]
-        choices.extend(basic_sources * self.config.gene_generation.price_data_weight)
+        choices.extend(basic_sources * self.config.price_data_weight)
 
         # 出来高データを追加（重みを調整）
-        choices.extend(["volume"] * self.config.gene_generation.volume_data_weight)
+        choices.extend(["volume"] * self.config.volume_data_weight)
 
         # OI/FRデータソースを追加（重みを抑制）
-        choices.extend(
-            ["OpenInterest", "FundingRate"]
-            * self.config.gene_generation.oi_fr_data_weight
-        )
+        choices.extend(["OpenInterest", "FundingRate"] * self.config.oi_fr_data_weight)
 
         return random.choice(choices) if choices else "close"
 
@@ -219,7 +218,7 @@ class RandomGeneGenerator:
         グループ化システムを使用して、互換性の高いオペランドを優先的に選択します。
         """
         # 設定された確率で数値を使用（スケール不一致問題を回避）
-        if random.random() < self.config.gene_generation.numeric_threshold_probability:
+        if random.random() < self.config.numeric_threshold_probability:
             return self._generate_threshold_value(left_operand, condition_type)
 
         # 20%の確率で別の指標またはデータソースを使用
@@ -232,7 +231,7 @@ class RandomGeneGenerator:
                 left_operand, compatible_operand
             )
             if (
-                compatibility < self.config.gene_generation.min_compatibility_score
+                compatibility < self.config.min_compatibility_score
             ):  # 設定された互換性チェック
                 return self._generate_threshold_value(left_operand, condition_type)
 
@@ -267,7 +266,7 @@ class RandomGeneGenerator:
         strict_compatible = operand_grouping_system.get_compatible_operands(
             left_operand,
             available_operands,
-            min_compatibility=self.config.gene_generation.strict_compatibility_score,
+            min_compatibility=self.config.strict_compatibility_score,
         )
 
         if strict_compatible:
@@ -277,7 +276,7 @@ class RandomGeneGenerator:
         high_compatible = operand_grouping_system.get_compatible_operands(
             left_operand,
             available_operands,
-            min_compatibility=self.config.gene_generation.min_compatibility_score,
+            min_compatibility=self.config.min_compatibility_score,
         )
 
         if high_compatible:
@@ -357,13 +356,9 @@ class RandomGeneGenerator:
     def _generate_risk_management(self) -> Dict[str, float]:
         """リスク管理設定を生成（設定値から範囲を取得）"""
         return {
-            "stop_loss": random.uniform(*self.config.gene_generation.stop_loss_range),
-            "take_profit": random.uniform(
-                *self.config.gene_generation.take_profit_range
-            ),
-            "position_size": random.uniform(
-                *self.config.gene_generation.position_size_range
-            ),
+            "stop_loss": random.uniform(*self.config.stop_loss_range),
+            "take_profit": random.uniform(*self.config.take_profit_range),
+            "position_size": random.uniform(*self.config.position_size_range),
         }
 
     def _generate_fallback_condition(self, condition_type: str) -> Condition:
