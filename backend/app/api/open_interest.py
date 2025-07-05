@@ -162,44 +162,6 @@ async def collect_open_interest_data(
         raise APIErrorHandler.handle_generic_error(e, "オープンインタレストデータ収集")
 
 
-@router.get("/open-interest/current")
-async def get_current_open_interest(
-    symbol: str = Query(..., description="取引ペアシンボル（例: 'BTC/USDT'）"),
-):
-    """
-    現在のオープンインタレストを取得します
-
-    Bybit取引所から現在のオープンインタレストデータを直接取得します。
-
-    Args:
-        symbol: 取引ペアシンボル（例: 'BTC/USDT'）
-
-    Returns:
-        現在のオープンインタレストデータを含むJSONレスポンス
-
-    Raises:
-        HTTPException: パラメータが無効な場合やAPIエラーが発生した場合
-    """
-    try:
-        logger.info(f"現在のオープンインタレスト取得開始: symbol={symbol}")
-
-        service = BybitOpenInterestService()
-
-        current_open_interest = await service.fetch_current_open_interest(symbol)
-
-        logger.info(f"現在のオープンインタレスト取得完了: {current_open_interest}")
-
-        return APIResponseHelper.api_response(
-            data=current_open_interest,
-            message=f"{symbol}の現在のオープンインタレストを取得しました",
-            success=True,
-        )
-    except Exception as e:
-        raise APIErrorHandler.handle_generic_error(
-            e, "現在のオープンインタレストの取得"
-        )
-
-
 @router.post("/open-interest/bulk-collect")
 async def bulk_collect_open_interest(
     db: Session = Depends(get_db),

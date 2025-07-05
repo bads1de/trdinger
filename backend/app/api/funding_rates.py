@@ -177,53 +177,6 @@ async def collect_funding_rate_data(
     )
 
 
-@router.get("/funding-rates/current")
-async def get_current_funding_rate(
-    symbol: str = Query(..., description="取引ペアシンボル（例: 'BTC/USDT'）"),
-):
-    """
-    現在のファンディングレートを取得します
-
-    Bybit取引所から現在のファンディングレートをリアルタイムで取得します。
-
-    Args:
-        symbol: 取引ペアシンボル（例: 'BTC/USDT'）
-
-    Returns:
-        現在のファンディングレートを含むJSONレスポンス
-
-    Raises:
-        HTTPException: パラメータが無効な場合やAPIエラーが発生した場合
-    """
-
-    async def _get_current_rate():
-        logger.info(f"現在のファンディングレート取得開始: symbol={symbol}")
-
-        service = BybitFundingRateService()
-
-        current_rate = await service.fetch_current_funding_rate(symbol)
-
-        logger.info(f"現在のファンディングレート取得完了: {symbol}")
-
-        return APIResponseHelper.api_response(
-            data={
-                "symbol": current_rate["symbol"],
-                "funding_rate": current_rate["fundingRate"],
-                "funding_timestamp": current_rate.get("fundingDatetime"),
-                "next_funding_timestamp": current_rate.get("nextFundingDatetime"),
-                "mark_price": current_rate.get("markPrice"),
-                "index_price": current_rate.get("indexPrice"),
-                "timestamp": current_rate.get("datetime"),
-            },
-            success=True,
-            message=f"{symbol}の現在のファンディングレートを取得しました",
-        )
-
-    return await APIErrorHandler.handle_api_exception(
-        _get_current_rate, message="現在のファンディングレート取得エラー"
-    )
-
-
 @router.post("/funding-rates/bulk-collect")
 async def bulk_collect_funding_rates(
     db: Session = Depends(get_db),

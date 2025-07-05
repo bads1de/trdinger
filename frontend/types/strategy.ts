@@ -362,20 +362,6 @@ export interface FundingRateResponse {
 }
 
 /**
- * 現在のFRAPIレスポンス
- *
- * 現在のFR取得APIのレスポンス形式を定義します。
- */
-export interface CurrentFundingRateResponse {
-  /** 成功フラグ */
-  success: boolean;
-  /** データ */
-  data: CurrentFundingRateData;
-  /** メッセージ */
-  message?: string;
-}
-
-/**
  * FR収集結果
  *
  * FRデータ収集の結果を表現します。
@@ -532,67 +518,4 @@ export interface BulkOpenInterestCollectionResult {
     symbol: string;
     error: string;
   }>;
-}
-
-/**
- * 全データ一括収集結果
- *
- * OHLCV、FR、OIの
- * 全データタイプを一括収集した結果を表現します。
- */
-export interface AllDataCollectionResult {
-  /** 成功フラグ */
-  success: boolean;
-  /** メッセージ */
-  message: string;
-  /** 処理状況 */
-  status: "started" | "in_progress" | "completed" | "error";
-  /** 総ステップ数 */
-  total_steps?: number;
-  /** 完了したステップ数 */
-  completed_steps?: number;
-  /** 現在のステップ */
-  current_step?:
-    | "ohlcv"
-    | "funding_rate"
-    | "open_interest"
-    | "technical_indicators";
-  /** OHLCVデータ収集結果 */
-  ohlcv_result?: BulkOHLCVCollectionResult;
-  /** FRデータ収集結果 */
-  funding_rate_result?: BulkFundingRateCollectionResult;
-  /** OIデータ収集結果 */
-  open_interest_result?: BulkOpenInterestCollectionResult;
-  /** テクニカル指標計算結果（削除済み） */
-  // technical_indicator_result?: BulkTechnicalIndicatorCalculationResult;
-  /** 開始時刻 */
-  started_at?: string;
-  /** 完了時刻 */
-  completed_at?: string;
-  /** エラー詳細（エラー時のみ） */
-  error_details?: string;
-  /** 実行タスク数 */
-  actual_tasks?: number;
-  /** スキップタスク数 */
-  skipped_tasks?: number;
-  /** 失敗タスク数 */
-  failed_tasks?: number;
-  /** 総組み合わせ数 */
-  total_combinations?: number;
-}
-
-export interface StrategyParameter {
-  type: string;
-  default: number;
-  min?: number;
-  max?: number;
-  step?: number;
-  description: string;
-}
-
-export interface Strategy {
-  name: string;
-  description: string;
-  parameters: Record<string, StrategyParameter>;
-  constraints?: string[];
 }

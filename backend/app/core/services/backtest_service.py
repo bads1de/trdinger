@@ -437,7 +437,7 @@ class BacktestService:
             }
         }
 
-    def optimize_strategy(
+    def optimize_strategy_enhanced(
         self, config: Dict[str, Any], optimization_params: Dict[str, Any]
     ) -> Dict[str, Any]:
         """

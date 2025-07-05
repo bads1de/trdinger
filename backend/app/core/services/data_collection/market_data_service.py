@@ -207,20 +207,3 @@ class BybitMarketDataService(BybitService):
                 raise ValueError(
                     f"ローソク足データ[{i}]に負の出来高が含まれています: {candle}"
                 )
-
-
-# サービスのシングルトンインスタンス
-_service_instance: Optional[BybitMarketDataService] = None
-
-
-def get_market_data_service() -> BybitMarketDataService:
-    """
-    市場データサービスのインスタンスを取得します
-
-    Returns:
-        BybitMarketDataServiceのインスタンス
-    """
-    global _service_instance
-    if _service_instance is None:
-        _service_instance = BybitMarketDataService()
-    return _service_instance

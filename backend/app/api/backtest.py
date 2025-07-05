@@ -41,36 +41,10 @@ class BacktestRequest(BaseModel):
     strategy_config: StrategyConfig = Field(..., description="戦略設定")
 
 
-class OptimizationRequest(BaseModel):
-    """最適化リクエスト"""
-
-    base_config: BacktestRequest = Field(..., description="基本設定")
-    optimization_params: Dict[str, Any] = Field(..., description="最適化パラメータ")
-
-
 class EnhancedOptimizationRequest(BaseModel):
     """拡張最適化リクエスト"""
 
     base_config: BacktestRequest = Field(..., description="基本設定")
-    optimization_params: Dict[str, Any] = Field(..., description="最適化パラメータ")
-
-
-class MultiObjectiveOptimizationRequest(BaseModel):
-    """マルチ目的最適化リクエスト"""
-
-    base_config: BacktestRequest = Field(..., description="基本設定")
-    objectives: List[str] = Field(..., description="最適化対象の指標リスト")
-    weights: Optional[List[float]] = Field(None, description="各指標の重み")
-    optimization_params: Optional[Dict[str, Any]] = Field(
-        None, description="追加の最適化パラメータ"
-    )
-
-
-class RobustnessTestRequest(BaseModel):
-    """ロバストネステストリクエスト"""
-
-    base_config: BacktestRequest = Field(..., description="基本設定")
-    test_periods: List[Tuple[str, str]] = Field(..., description="テスト期間のリスト")
     optimization_params: Dict[str, Any] = Field(..., description="最適化パラメータ")
 
 
@@ -268,33 +242,6 @@ async def get_supported_strategies():
     return await APIErrorHandler.handle_api_exception(_get_strategies)
 
 
-@router.post("/optimize", response_model=BacktestResponse)
-async def optimize_strategy(
-    request: OptimizationRequest, db: Session = Depends(get_db)
-):
-    """
-    戦略を最適化
-
-    Args:
-        request: 最適化リクエスト
-        db: データベースセッション
-
-    Returns:
-        最適化結果
-    """
-
-    async def _optimize():
-        backtest_service = BacktestService()
-        base_config = _create_base_config(request.base_config)
-        result = backtest_service.optimize_strategy(
-            base_config, request.optimization_params
-        )
-        saved_result = _save_backtest_result(result, db)
-        return {"success": True, "result": saved_result}
-
-    return await APIErrorHandler.handle_api_exception(_optimize)
-
-
 @router.post("/optimize-enhanced", response_model=BacktestResponse)
 async def optimize_strategy_enhanced(
     request: EnhancedOptimizationRequest, db: Session = Depends(get_db)
@@ -320,63 +267,6 @@ async def optimize_strategy_enhanced(
         return {"success": True, "result": saved_result}
 
     return await APIErrorHandler.handle_api_exception(_optimize_enhanced)
-
-
-@router.post("/multi-objective-optimization", response_model=BacktestResponse)
-async def multi_objective_optimization(
-    request: MultiObjectiveOptimizationRequest, db: Session = Depends(get_db)
-):
-    """
-    戦略を多目的最適化
-
-    Args:
-        request: 多目的最適化リクエスト
-        db: データベースセッション
-
-    Returns:
-        最適化結果
-    """
-
-    async def _multi_objective_optimize():
-        backtest_service = BacktestService()
-        base_config = _create_base_config(request.base_config)
-        result = backtest_service.multi_objective_optimization(
-            base_config,
-            request.objectives,
-            request.weights or [],
-            request.optimization_params or {},
-        )
-        saved_result = _save_backtest_result(result, db)
-        return {"success": True, "result": saved_result}
-
-    return await APIErrorHandler.handle_api_exception(_multi_objective_optimize)
-
-
-@router.post("/robustness-test", response_model=BacktestResponse)
-async def robustness_test(
-    request: RobustnessTestRequest, db: Session = Depends(get_db)
-):
-    """
-    戦略をロバストネステスト
-
-    Args:
-        request: ロバストネステストリクエスト
-        db: データベースセッション
-
-    Returns:
-        テスト結果
-    """
-
-    async def _robustness_test():
-        backtest_service = BacktestService()
-        base_config = _create_base_config(request.base_config)
-        result = backtest_service.robustness_test(
-            base_config, request.test_periods, request.optimization_params
-        )
-        saved_result = _save_backtest_result(result, db)
-        return {"success": True, "result": saved_result}
-
-    return await APIErrorHandler.handle_api_exception(_robustness_test)
 
 
 @router.get("/health")

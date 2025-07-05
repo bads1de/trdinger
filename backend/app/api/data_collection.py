@@ -426,33 +426,6 @@ async def get_collection_status(
         raise HTTPException(status_code=500, detail="収集状況確認エラー") from e
 
 
-@router.get("/supported-symbols")
-async def get_supported_symbols() -> Dict:
-    """
-    サポートされている取引ペアの一覧を取得
-
-    Returns:
-        サポートされている取引ペアの一覧
-    """
-    try:
-        return APIResponseHelper.api_response(
-            success=True,
-            message="サポートされている取引ペアと時間軸の一覧です。",
-            data={
-                "symbols": MarketDataConfig.SUPPORTED_SYMBOLS,
-                "timeframes": MarketDataConfig.SUPPORTED_TIMEFRAMES,
-                "default_symbol": MarketDataConfig.DEFAULT_SYMBOL,
-                "default_timeframe": MarketDataConfig.DEFAULT_TIMEFRAME,
-            },
-        )
-
-    except Exception as e:
-        logger.error("サポートシンボル一覧取得エラー", exc_info=True)
-        raise HTTPException(
-            status_code=500, detail="サポートシンボル一覧取得エラー"
-        ) from e
-
-
 @router.post("/all/bulk-collect")
 async def collect_all_data_bulk(
     background_tasks: BackgroundTasks, db: Session = Depends(get_db)

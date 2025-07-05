@@ -243,33 +243,3 @@ export interface APIError {
   detail?: string;
   timestamp: string;
 }
-
-/**
- * 戦略パフォーマンス指標
- */
-export interface PerformanceMetrics {
-  total_return: number;
-  sharpe_ratio: number;
-  max_drawdown: number;
-  win_rate: number;
-  profit_factor: number;
-  total_trades: number;
-  winning_trades: number;
-  losing_trades: number;
-  avg_win: number;
-  avg_loss: number;
-}
-
-/**
- * 戦略比較データ
- */
-export interface StrategyComparison {
-  strategies: UnifiedStrategy[];
-  comparison_metrics: {
-    best_return: UnifiedStrategy;
-    best_sharpe: UnifiedStrategy;
-    lowest_drawdown: UnifiedStrategy;
-    highest_win_rate: UnifiedStrategy;
-  };
-  correlation_matrix?: number[][];
-}
