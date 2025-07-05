@@ -207,16 +207,25 @@ class GeneticAlgorithmEngine:
             gene_encoder = GeneEncoder()
             gene = gene_encoder.decode_list_to_strategy_gene(individual, StrategyGene)
 
-            # 戦略クラス生成
-            strategy_class = self.strategy_factory.create_strategy_class(gene)
-
-            # バックテスト実行
+            # バックテスト実行用の設定を構築
             backtest_config = (
                 self._fixed_backtest_config.copy()
                 if self._fixed_backtest_config
                 else {}
             )
-            backtest_config["strategy_class"] = strategy_class
+
+            # 戦略設定を追加（test_strategy_generationと同じ形式）
+            backtest_config["strategy_config"] = {
+                "strategy_type": "GENERATED_GA",
+                "parameters": {"strategy_gene": gene.to_dict()},
+            }
+
+            # デバッグログ: 取引量設定を確認
+            risk_management = gene.risk_management
+            position_size = risk_management.get("position_size", 0.1)
+            logger.debug(
+                f"GA個体評価 - position_size: {position_size}, gene_id: {gene.id}"
+            )
 
             result = self.backtest_service.run_backtest(backtest_config)
 
@@ -243,11 +252,24 @@ class GeneticAlgorithmEngine:
             フィットネス値
         """
         try:
-            # 基本メトリクスの取得
-            total_return = backtest_result.get("total_return", 0.0)
-            sharpe_ratio = backtest_result.get("sharpe_ratio", 0.0)
-            max_drawdown = backtest_result.get("max_drawdown", 1.0)
-            win_rate = backtest_result.get("win_rate", 0.0)
+            # performance_metricsから基本メトリクスを取得
+            performance_metrics = backtest_result.get("performance_metrics", {})
+
+            total_return = performance_metrics.get("total_return", 0.0)
+            sharpe_ratio = performance_metrics.get("sharpe_ratio", 0.0)
+            max_drawdown = performance_metrics.get("max_drawdown", 1.0)
+            win_rate = performance_metrics.get("win_rate", 0.0)
+            total_trades = performance_metrics.get("total_trades", 0)
+
+            # デバッグログ: メトリクス値を確認
+            logger.debug(
+                f"フィットネス計算 - return: {total_return}, sharpe: {sharpe_ratio}, drawdown: {max_drawdown}, win_rate: {win_rate}, trades: {total_trades}"
+            )
+
+            # 取引回数が0の場合は低いフィットネス値を返す
+            if total_trades == 0:
+                logger.warning("取引回数が0のため、低いフィットネス値を設定")
+                return 0.1  # 完全に0ではなく、わずかな値を返す
 
             # 制約チェック
             if total_return < 0 or sharpe_ratio < config.fitness_constraints.get(

@@ -36,6 +36,7 @@ class GAConfig:
         }
     )
     primary_metric: str = "sharpe_ratio"
+    ga_objective: str = "Sharpe Ratio"  # フロントエンドとの互換性のため
     fitness_constraints: Dict[str, float] = field(
         default_factory=lambda: {
             "min_trades": 10,

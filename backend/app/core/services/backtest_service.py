@@ -109,9 +109,23 @@ class BacktestService:
 
             logger.info(f"{len(data)}件のデータポイントを取得しました。")
 
-            # 4. 戦略クラス動的生成
-            logger.info("オートストラテジーの戦略クラスを作成しています。")
-            strategy_class = self._create_strategy_class(config["strategy_config"])
+            # 4. 戦略クラス取得または生成
+            if "strategy_class" in config:
+                # GAエンジンから直接戦略クラスが渡された場合
+                strategy_class = config["strategy_class"]
+                logger.info("GAエンジンから直接渡された戦略クラスを使用します。")
+                # パラメータは戦略クラス生成時に既に設定済み
+                strategy_parameters = {}
+            else:
+                # 通常のstrategy_configから戦略クラスを生成する場合
+                logger.info(
+                    "strategy_configからオートストラテジーの戦略クラスを作成しています。"
+                )
+                strategy_class = self._create_strategy_class(config["strategy_config"])
+                # パラメータを取得
+                strategy_parameters = config.get("strategy_config", {}).get(
+                    "parameters", {}
+                )
 
             # 5. backtesting.py実行
             logger.info("バックテストを実行中...")
@@ -126,8 +140,10 @@ class BacktestService:
                 strategy_class,
                 cash=config["initial_capital"],
                 commission=config["commission_rate"],
-                exclusive_orders=True,  # 推奨設定
+                exclusive_orders=False,  # マージン問題を回避
                 trade_on_close=True,  # 終値で取引
+                hedging=False,  # ヘッジングを無効化
+                margin=1.0,  # マージン要件を1.0に設定（レバレッジなし）
             )
 
             # バックテストを実行（時間計測付き）
@@ -135,8 +151,9 @@ class BacktestService:
 
             start_time = time.time()
             logger.info("backtesting.pyによるバックテストの実行を開始します...")
+            logger.info(f"戦略パラメータ: {strategy_parameters}")
             warnings.filterwarnings("ignore", category=UserWarning)
-            stats = bt.run(**config.get("strategy_config", {}).get("parameters", {}))
+            stats = bt.run(**strategy_parameters)
             warnings.filterwarnings("default", category=UserWarning)
             execution_time = time.time() - start_time
             logger.info(

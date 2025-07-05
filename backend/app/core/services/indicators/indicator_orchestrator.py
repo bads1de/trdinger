@@ -60,16 +60,88 @@ class TechnicalIndicatorService:
         ), "Adapter function cannot be None at this point."
 
         # 必要なデータをDataFrameからNumpy配列として抽出
+        # backtesting.pyは大文字カラム名（Close, Open等）を使用するため、
+        # 小文字の設定を大文字に変換して対応
         required_data = {}
         for data_key in config.required_data:
-            if data_key not in df.columns:
-                raise ValueError(f"必要なカラム '{data_key}' がDataFrameにありません。")
-            required_data[data_key] = df[data_key].to_numpy()
+            # カラム名の大文字小文字を適切に処理
+            actual_column = self._resolve_column_name(df, data_key)
+            if actual_column is None:
+                raise ValueError(
+                    f"必要なカラム '{data_key}' がDataFrameにありません。利用可能なカラム: {list(df.columns)}"
+                )
+
+            # データキーを適切な関数パラメータ名にマッピング
+            param_name = self._map_data_key_to_param(indicator_type, data_key)
+            required_data[param_name] = df[actual_column].to_numpy()
 
         # パラメータとデータを結合して関数を呼び出し
         all_args = {**required_data, **params}
 
         return indicator_func(**all_args)
+
+    def _resolve_column_name(self, df: pd.DataFrame, data_key: str) -> Optional[str]:
+        """
+        データフレームから適切なカラム名を解決
+
+        Args:
+            df: データフレーム
+            data_key: 探すカラム名（小文字）
+
+        Returns:
+            実際のカラム名（見つからない場合はNone）
+        """
+        # 直接一致をチェック
+        if data_key in df.columns:
+            return data_key
+
+        # 大文字小文字を変換してチェック
+        capitalized_key = data_key.capitalize()
+        if capitalized_key in df.columns:
+            return capitalized_key
+
+        # 全て大文字でチェック
+        upper_key = data_key.upper()
+        if upper_key in df.columns:
+            return upper_key
+
+        # 全て小文字でチェック
+        lower_key = data_key.lower()
+        if lower_key in df.columns:
+            return lower_key
+
+        return None
+
+    def _map_data_key_to_param(self, indicator_type: str, data_key: str) -> str:
+        """
+        データキーを適切な関数パラメータ名にマッピング
+
+        Args:
+            indicator_type: 指標タイプ（例: "RSI", "MACD"）
+            data_key: データキー（例: "close", "high", "low"）
+
+        Returns:
+            関数パラメータ名
+        """
+        # 単一データ系指標（RSI, SMA, EMA等）は"close"を"data"にマッピング
+        single_data_indicators = [
+            "RSI",
+            "SMA",
+            "EMA",
+            "WMA",
+            "DEMA",
+            "TEMA",
+            "TRIMA",
+            "KAMA",
+            "MAMA",
+            "T3",
+        ]
+
+        if indicator_type in single_data_indicators and data_key == "close":
+            return "data"
+
+        # その他の指標は元のキー名を使用（high, low, close等）
+        return data_key
 
     def get_supported_indicators(self) -> Dict[str, Any]:
         """

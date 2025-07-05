@@ -70,6 +70,16 @@ const GAConfigForm: React.FC<GAConfigFormProps> = ({
           min_sharpe_ratio: 0.5,
         },
         ga_objective: initialConfig.ga_config?.ga_objective || "Sharpe Ratio",
+        // リスク管理パラメータ範囲設定
+        position_size_range: initialConfig.ga_config?.position_size_range || [
+          0.1, 0.5,
+        ],
+        stop_loss_range: initialConfig.ga_config?.stop_loss_range || [
+          0.02, 0.05,
+        ],
+        take_profit_range: initialConfig.ga_config?.take_profit_range || [
+          0.01, 0.15,
+        ],
       },
     };
   });
@@ -90,7 +100,61 @@ const GAConfigForm: React.FC<GAConfigFormProps> = ({
     }));
   };
 
+  const validateConfig = () => {
+    const errors: string[] = [];
+
+    // 取引量範囲のバリデーション
+    if (
+      config.ga_config.position_size_range[0] >=
+      config.ga_config.position_size_range[1]
+    ) {
+      errors.push("取引量範囲: 最小値は最大値より小さくしてください");
+    }
+    if (
+      config.ga_config.position_size_range[0] < 0.01 ||
+      config.ga_config.position_size_range[1] > 0.5
+    ) {
+      errors.push("取引量範囲: 1%〜50%の範囲で設定してください");
+    }
+
+    // ストップロス範囲のバリデーション
+    if (
+      config.ga_config.stop_loss_range[0] >= config.ga_config.stop_loss_range[1]
+    ) {
+      errors.push("ストップロス範囲: 最小値は最大値より小さくしてください");
+    }
+    if (
+      config.ga_config.stop_loss_range[0] < 0.005 ||
+      config.ga_config.stop_loss_range[1] > 0.1
+    ) {
+      errors.push("ストップロス範囲: 0.5%〜10%の範囲で設定してください");
+    }
+
+    // テイクプロフィット範囲のバリデーション
+    if (
+      config.ga_config.take_profit_range[0] >=
+      config.ga_config.take_profit_range[1]
+    ) {
+      errors.push(
+        "テイクプロフィット範囲: 最小値は最大値より小さくしてください"
+      );
+    }
+    if (
+      config.ga_config.take_profit_range[0] < 0.005 ||
+      config.ga_config.take_profit_range[1] > 0.2
+    ) {
+      errors.push("テイクプロフィット範囲: 0.5%〜20%の範囲で設定してください");
+    }
+
+    return errors;
+  };
+
   const handleSubmit = () => {
+    const errors = validateConfig();
+    if (errors.length > 0) {
+      alert("設定エラー:\n" + errors.join("\n"));
+      return;
+    }
     onSubmit(config);
   };
 
@@ -176,6 +240,152 @@ const GAConfigForm: React.FC<GAConfigFormProps> = ({
         options={GA_OBJECTIVE_OPTIONS}
         required
       />
+
+      {/* リスク管理設定セクション */}
+      <div className="space-y-4 p-4 border border-secondary-600 rounded-lg bg-secondary-800">
+        <h3 className="text-lg font-semibold text-white">リスク管理設定</h3>
+        <p className="text-sm text-secondary-400">
+          戦略生成時に使用するリスク管理パラメータの範囲を設定します
+        </p>
+
+        {/* 取引量範囲設定 */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <InputField
+            label="取引量範囲 - 最小値 (%)"
+            type="number"
+            value={config.ga_config.position_size_range[0] * 100}
+            onChange={(value) =>
+              setConfig((prev) => ({
+                ...prev,
+                ga_config: {
+                  ...prev.ga_config,
+                  position_size_range: [
+                    value / 100,
+                    prev.ga_config.position_size_range[1],
+                  ],
+                },
+              }))
+            }
+            min={1}
+            max={50}
+            step={1}
+            required
+          />
+          <InputField
+            label="取引量範囲 - 最大値 (%)"
+            type="number"
+            value={config.ga_config.position_size_range[1] * 100}
+            onChange={(value) =>
+              setConfig((prev) => ({
+                ...prev,
+                ga_config: {
+                  ...prev.ga_config,
+                  position_size_range: [
+                    prev.ga_config.position_size_range[0],
+                    value / 100,
+                  ],
+                },
+              }))
+            }
+            min={1}
+            max={50}
+            step={1}
+            required
+          />
+        </div>
+
+        {/* ストップロス範囲設定 */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <InputField
+            label="ストップロス範囲 - 最小値 (%)"
+            type="number"
+            value={config.ga_config.stop_loss_range[0] * 100}
+            onChange={(value) =>
+              setConfig((prev) => ({
+                ...prev,
+                ga_config: {
+                  ...prev.ga_config,
+                  stop_loss_range: [
+                    value / 100,
+                    prev.ga_config.stop_loss_range[1],
+                  ],
+                },
+              }))
+            }
+            min={0.5}
+            max={10}
+            step={0.1}
+            required
+          />
+          <InputField
+            label="ストップロス範囲 - 最大値 (%)"
+            type="number"
+            value={config.ga_config.stop_loss_range[1] * 100}
+            onChange={(value) =>
+              setConfig((prev) => ({
+                ...prev,
+                ga_config: {
+                  ...prev.ga_config,
+                  stop_loss_range: [
+                    prev.ga_config.stop_loss_range[0],
+                    value / 100,
+                  ],
+                },
+              }))
+            }
+            min={0.5}
+            max={10}
+            step={0.1}
+            required
+          />
+        </div>
+
+        {/* テイクプロフィット範囲設定 */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <InputField
+            label="テイクプロフィット範囲 - 最小値 (%)"
+            type="number"
+            value={config.ga_config.take_profit_range[0] * 100}
+            onChange={(value) =>
+              setConfig((prev) => ({
+                ...prev,
+                ga_config: {
+                  ...prev.ga_config,
+                  take_profit_range: [
+                    value / 100,
+                    prev.ga_config.take_profit_range[1],
+                  ],
+                },
+              }))
+            }
+            min={0.5}
+            max={20}
+            step={0.1}
+            required
+          />
+          <InputField
+            label="テイクプロフィット範囲 - 最大値 (%)"
+            type="number"
+            value={config.ga_config.take_profit_range[1] * 100}
+            onChange={(value) =>
+              setConfig((prev) => ({
+                ...prev,
+                ga_config: {
+                  ...prev.ga_config,
+                  take_profit_range: [
+                    prev.ga_config.take_profit_range[0],
+                    value / 100,
+                  ],
+                },
+              }))
+            }
+            min={0.5}
+            max={20}
+            step={0.1}
+            required
+          />
+        </div>
+      </div>
 
       <ApiButton onClick={handleSubmit} loading={isLoading}>
         GA戦略を生成
