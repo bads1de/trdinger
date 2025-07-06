@@ -5,8 +5,6 @@
  * バックテスト設定と組み合わせてBacktestConfigを生成します。
  */
 
-import { SelectedIndicator, Condition } from "@/hooks/useStrategyBuilder";
-
 // StrategyGene関連の型定義
 interface IndicatorGene {
   type: string;
@@ -70,90 +68,6 @@ interface BacktestConfig {
 }
 
 /**
- * SelectedIndicatorをIndicatorGeneに変換
- */
-function convertIndicatorToGene(indicator: SelectedIndicator): IndicatorGene {
-  return {
-    type: indicator.type || indicator.name,
-    parameters: indicator.parameters || indicator.params || {},
-    enabled: indicator.enabled,
-    json_config: {
-      indicator_name: indicator.type || indicator.name,
-      parameters: indicator.parameters || indicator.params || {},
-    },
-  };
-}
-
-/**
- * ConditionをStrategyConditionに変換
- */
-function convertConditionToStrategyCondition(
-  condition: Condition
-): StrategyCondition {
-  const baseCondition: StrategyCondition = {
-    type: condition.type,
-    operator: condition.operator,
-  };
-
-  // 条件タイプに応じて適切なフィールドを設定
-  if (condition.type === "threshold") {
-    baseCondition.indicator = condition.indicator1;
-    baseCondition.value = condition.value;
-  } else if (
-    condition.type === "comparison"
-  ) {
-    baseCondition.indicator1 = condition.indicator1;
-    baseCondition.indicator2 = condition.indicator2;
-  }
-
-  return baseCondition;
-}
-
-/**
- * ストラテジービルダーの設定からStrategyGeneを生成
- */
-export function generateStrategyGene(
-  selectedIndicators: SelectedIndicator[],
-  entryConditions: Condition[],
-  exitConditions: Condition[]
-): StrategyGene {
-  // 有効な指標のみを抽出してIndicatorGeneに変換
-  const enabledIndicators = selectedIndicators.filter(
-    (indicator) => indicator.enabled
-  );
-  const indicators = enabledIndicators.map(convertIndicatorToGene);
-
-  // 条件をStrategyConditionに変換
-  const convertedEntryConditions = entryConditions.map(
-    convertConditionToStrategyCondition
-  );
-  const convertedExitConditions = exitConditions.map(
-    convertConditionToStrategyCondition
-  );
-
-  // 一意のIDを生成
-  const id = `user_strategy_${Date.now()}`;
-
-  // StrategyGeneオブジェクトを構築
-  return {
-    id,
-    indicators,
-    entry_conditions: convertedEntryConditions,
-    exit_conditions: convertedExitConditions,
-    risk_management: {
-      stop_loss_pct: 0.02,
-      take_profit_pct: 0.05,
-      position_sizing: "fixed",
-    },
-    metadata: {
-      created_by: "strategy_builder",
-      version: "1.0",
-      created_at: new Date().toISOString(),
-    },
-  };
-}
-
-/**
  * StrategyGeneとバックテスト設定をBacktestConfigに変換
  */
 export function convertToBacktestConfig(
@@ -175,45 +89,6 @@ export function convertToBacktestConfig(
       strategy_type: "USER_CUSTOM",
       parameters: {
         strategy_gene: strategyGene,
-      },
-    },
-  };
-}
-
-/**
- * ストラテジービルダーの設定を直接BacktestConfigに変換するヘルパー関数
- * GA機能を使わずにシンプルな形式で変換
- */
-export function convertStrategyBuilderToBacktestConfig(
-  selectedIndicators: SelectedIndicator[],
-  entryConditions: Condition[],
-  exitConditions: Condition[],
-  backtestSettings: BacktestSettings
-): BacktestConfig {
-  // 一意の戦略名を生成
-  const strategyName = `STRATEGY_BUILDER_${Date.now()}`;
-
-  // 指標データを変換
-  const indicators = selectedIndicators.map((indicator) => ({
-    name: indicator.name,
-    params: indicator.params,
-    enabled: indicator.enabled,
-  }));
-
-  return {
-    strategy_name: strategyName,
-    symbol: backtestSettings.symbol,
-    timeframe: backtestSettings.timeframe,
-    start_date: backtestSettings.start_date,
-    end_date: backtestSettings.end_date,
-    initial_capital: backtestSettings.initial_capital,
-    commission_rate: backtestSettings.commission_rate,
-    strategy_config: {
-      strategy_type: "STRATEGY_BUILDER",
-      parameters: {
-        indicators: indicators,
-        entry_conditions: entryConditions,
-        exit_conditions: exitConditions,
       },
     },
   };

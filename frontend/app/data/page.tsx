@@ -15,7 +15,6 @@ import DataTableContainer from "./components/DataTableContainer";
 import { useOhlcvData } from "@/hooks/useOhlcvData";
 import { useFundingRateData } from "@/hooks/useFundingRateData";
 import { useOpenInterestData } from "@/hooks/useOpenInterestData";
-import { useSymbols } from "@/hooks/useSymbols";
 import {
   TimeFrame,
   TradingPair,
@@ -27,6 +26,7 @@ import {
   AllDataCollectionResult,
 } from "@/types/strategy";
 import { BACKEND_API_URL } from "@/constants";
+import { useSymbols } from "@/hooks/useSymbols";
 
 /**
  * データページコンポーネント
@@ -52,11 +52,7 @@ const DataPage: React.FC = () => {
     useState<string>("");
 
   // カスタムフックを使用してデータ取得
-  const {
-    symbols,
-    loading: symbolsLoading,
-    error: symbolsError,
-  } = useSymbols();
+  const { symbols } = useSymbols();
 
   const {
     data: ohlcvData,
@@ -266,7 +262,7 @@ const DataPage: React.FC = () => {
    * 全データ一括収集開始時のコールバック
    */
   const handleAllDataCollectionStart = (result: AllDataCollectionResult) => {
-    if (result.status === "completed") {
+    if (result.ohlcv_result.status === "completed") {
       const ohlcvCount = result.ohlcv_result?.total_tasks || 0;
       const fundingCount = result.funding_rate_result?.total_saved_records || 0;
       const openInterestCount =
@@ -276,7 +272,9 @@ const DataPage: React.FC = () => {
         `🚀 全データ収集完了！ OHLCV:${ohlcvCount}タスク, FR:${fundingCount}件, OI:${openInterestCount}件, TI:自動計算済み`
       );
     } else {
-      setAllDataCollectionMessage(`🔄 ${result.message} (実行中...)`);
+      setAllDataCollectionMessage(
+        `🔄 ${result.ohlcv_result.message} (実行中...)`
+      );
     }
 
     // データ状況を更新
@@ -312,13 +310,8 @@ const DataPage: React.FC = () => {
   return (
     <div className="min-h-screen bg-secondary-50 dark:bg-secondary-950 animate-fade-in">
       <DataHeader
-        loading={
-          ohlcvLoading ||
-          fundingLoading ||
-          openInterestLoading ||
-          symbolsLoading
-        }
-        error={ohlcvError || fundingError || openInterestError || symbolsError}
+        loading={ohlcvLoading || fundingLoading || openInterestLoading}
+        error={ohlcvError || fundingError || openInterestError}
         updating={updating}
         handleRefresh={handleRefresh}
         handleIncrementalUpdate={handleIncrementalUpdate}
@@ -327,7 +320,7 @@ const DataPage: React.FC = () => {
       {/* メインコンテンツエリア */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
         {/* エラー表示 */}
-        {(ohlcvError || fundingError || openInterestError || symbolsError) && (
+        {(ohlcvError || fundingError || openInterestError) && (
           <div className="enterprise-card border-error-200 dark:border-error-800 bg-error-50 dark:bg-error-900/20 animate-slide-down">
             <div className="p-4">
               <div className="flex items-center">
@@ -349,10 +342,7 @@ const DataPage: React.FC = () => {
                 </h3>
               </div>
               <p className="mt-2 text-sm text-error-700 dark:text-error-300">
-                {ohlcvError ||
-                  fundingError ||
-                  openInterestError ||
-                  symbolsError}
+                {ohlcvError || fundingError || openInterestError}
               </p>
             </div>
           </div>
@@ -363,7 +353,7 @@ const DataPage: React.FC = () => {
           symbols={symbols}
           selectedSymbol={selectedSymbol}
           handleSymbolChange={handleSymbolChange}
-          symbolsLoading={symbolsLoading}
+          symbolsLoading={false}
           loading={ohlcvLoading || fundingLoading || openInterestLoading}
           selectedTimeFrame={selectedTimeFrame}
           handleTimeFrameChange={handleTimeFrameChange}

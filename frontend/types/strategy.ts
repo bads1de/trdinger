@@ -519,3 +519,18 @@ export interface BulkOpenInterestCollectionResult {
     error: string;
   }>;
 }
+
+/**
+ * 全データ一括収集結果
+ *
+ * OHLCV、ファンディングレート、オープンインタレストの
+ * 全てのデータ収集結果をまとめた型です。
+ */
+export interface AllDataCollectionResult {
+  /** OHLCVデータ収集結果 */
+  ohlcv_result: BulkOHLCVCollectionResult;
+  /** ファンディングレートデータ収集結果 */
+  funding_rate_result: BulkFundingRateCollectionResult;
+  /** オープンインタレストデータ収集結果 */
+  open_interest_result: BulkOpenInterestCollectionResult;
+}
