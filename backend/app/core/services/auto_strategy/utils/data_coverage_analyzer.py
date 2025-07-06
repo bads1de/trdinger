@@ -6,11 +6,12 @@ OI/FRデータのカバレッジを分析し、戦略の適応度計算にペナ
 
 from typing import Dict, Any
 import pandas as pd
-import logging
+
+# import logging
 
 from ..models.strategy_gene import StrategyGene, Condition
 
-logger = logging.getLogger(__name__)
+# logger = logging.getLogger(__name__)
 
 
 class DataCoverageAnalyzer:
@@ -90,7 +91,7 @@ class DataCoverageAnalyzer:
             }
 
         except Exception as e:
-            logger.error(f"データカバレッジ分析エラー: {e}")
+            # logger.error(f"データカバレッジ分析エラー: {e}")
             return {
                 "uses_special_data": False,
                 "coverage_penalty": 0.0,

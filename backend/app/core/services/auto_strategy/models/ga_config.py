@@ -96,12 +96,35 @@ class GAConfig:
     take_profit_range: List[float] = field(default_factory=lambda: [0.01, 0.15])
     position_size_range: List[float] = field(default_factory=lambda: [0.1, 0.5])
 
+    # TP/SL GA最適化範囲設定（ユーザー設定ではなくGA制約）
+    tpsl_method_constraints: List[str] = field(
+        default_factory=lambda: [
+            "fixed_percentage",
+            "risk_reward_ratio",
+            "volatility_based",
+            "statistical",
+            "adaptive",
+        ]
+    )  # GA最適化で使用可能なTP/SLメソッド
+    tpsl_sl_range: List[float] = field(
+        default_factory=lambda: [0.01, 0.08]
+    )  # SL範囲（1%-8%）
+    tpsl_tp_range: List[float] = field(
+        default_factory=lambda: [0.02, 0.20]
+    )  # TP範囲（2%-20%）
+    tpsl_rr_range: List[float] = field(
+        default_factory=lambda: [1.2, 4.0]
+    )  # リスクリワード比範囲
+    tpsl_atr_multiplier_range: List[float] = field(
+        default_factory=lambda: [1.0, 4.0]
+    )  # ATR倍率範囲
+
     # 実行設定
     parallel_processes: Optional[int] = None
     random_state: Optional[int] = None
     log_level: str = "WARNING"
     save_intermediate_results: bool = True
-    enable_detailed_logging: bool = True
+    # enable_detailed_logging: bool = True
     progress_callback: Optional[Callable[["GAProgress"], None]] = None
 
     def validate(self) -> tuple[bool, List[str]]:
@@ -249,7 +272,7 @@ class GAConfig:
             random_state=data.get("random_state"),
             log_level=data.get("log_level", "INFO"),
             save_intermediate_results=data.get("save_intermediate_results", True),
-            enable_detailed_logging=data.get("enable_detailed_logging", True),
+            # enable_detailed_logging=data.get("enable_detailed_logging", True),
         )
 
     def to_json(self) -> str:

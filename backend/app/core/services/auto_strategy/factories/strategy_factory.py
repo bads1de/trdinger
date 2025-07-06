@@ -4,15 +4,15 @@
 StrategyGeneから動的にbacktesting.py互換のStrategy継承クラスを生成します。
 """
 
-import logging
+# import logging
 import numpy as np
-from typing import Type, Dict, Any, List, Union, Tuple
+from typing import Type, Dict, Any, List, Union, Tuple, Optional
 
 from backtesting import Strategy
 from app.core.services.indicators import TechnicalIndicatorService
 from ..models.strategy_gene import StrategyGene, IndicatorGene, Condition
 
-logger = logging.getLogger(__name__)
+# logger = logging.getLogger(__name__)
 
 
 class StrategyFactory:
@@ -89,27 +89,16 @@ class StrategyFactory:
             def init(self):
                 """指標の初期化"""
                 try:
-                    logger.debug(f"戦略初期化開始: {len(gene.indicators)}個の指標")
-
                     # 各指標を初期化
                     for i, indicator_gene in enumerate(gene.indicators):
-                        logger.debug(
-                            f"  指標 {i+1}: {indicator_gene.type}, enabled={indicator_gene.enabled}"
-                        )
                         if indicator_gene.enabled:
-                            logger.debug("    → 初期化実行中...")
                             self._init_indicator(indicator_gene)
-                            logger.debug("    → 初期化完了")
                         else:
-                            logger.debug("    → スキップ（無効）")
-
-                    logger.info(
-                        f"戦略初期化完了: {len(self.indicators)}個の指標. "
-                        f"登録された指標: {list(self.indicators.keys())}"
-                    )
+                            pass
 
                 except Exception as e:
-                    logger.error(f"戦略初期化エラー: {e}", exc_info=True)
+                    # logger.error(f"戦略初期化エラー: {e}", exc_info=True)
+                    pass
                     raise
 
             def next(self):
@@ -117,9 +106,6 @@ class StrategyFactory:
                 try:
                     # リスク管理設定を取得
                     risk_management = self.gene.risk_management
-                    position_size = risk_management.get(
-                        "position_size", 0.1
-                    )  # デフォルトは10%
                     stop_loss_pct = risk_management.get("stop_loss")
                     take_profit_pct = risk_management.get("take_profit")
 
@@ -128,22 +114,16 @@ class StrategyFactory:
                     current_equity = getattr(self, "equity", "N/A")
 
                     # ストップロスとテイクプロフィットの価格を計算
-                    sl_price = (
-                        self.data.Close[-1] * (1 - stop_loss_pct)
-                        if stop_loss_pct
-                        else None
-                    )
-                    tp_price = (
-                        self.data.Close[-1] * (1 + take_profit_pct)
-                        if take_profit_pct
-                        else None
+                    sl_price, tp_price = self.factory._calculate_tpsl_prices(
+                        current_price,
+                        stop_loss_pct,
+                        take_profit_pct,
+                        risk_management,
+                        gene,
                     )
 
                     # エントリー条件チェック
                     entry_result = self._check_entry_conditions()
-                    logger.debug(
-                        f"エントリー条件チェック結果: {entry_result}, ポジション有無: {bool(self.position)}"
-                    )
 
                     if not self.position and entry_result:
                         # backtesting.pyのマージン問題を回避するため、非常に小さな固定サイズを使用
@@ -159,32 +139,27 @@ class StrategyFactory:
 
                         # 利用可能現金で購入可能かチェック
                         required_cash = fixed_size * current_price
-                        if required_cash <= available_cash * 0.99:  # 99%まで使用可能
-                            logger.info(
-                                f"買い注文実行 - 固定size: {fixed_size}, 価格: {current_price}"
-                            )
-                            logger.info(
-                                f"  必要資金: {required_cash:.2f}, 利用可能現金: {available_cash:.2f}"
-                            )
-                            logger.info(f"  元の相対size設定: {position_size}")
+                        if required_cash <= available_cash * 0.99:
+                            # logger.info(
+                            #     f"買い注文実行 - 固定size: {fixed_size}, 価格: {current_price}"
+                            # )
+                            # logger.info(
+                            #     f"  必要資金: {required_cash:.2f}, 利用可能現金: {available_cash:.2f}"
+                            # )
 
                             # 固定サイズで注文を実行（SL/TPなし）
                             self.buy(size=fixed_size)
                         else:
-                            logger.warning(
-                                f"資金不足のため注文をスキップ - 必要: {required_cash:.2f}, 利用可能: {available_cash:.2f}"
-                            )
-
+                            pass
                     # イグジット条件チェック
                     elif self.position:
                         exit_result = self._check_exit_conditions()
-                        logger.debug(f"エグジット条件チェック結果: {exit_result}")
                         if exit_result:
-                            logger.info("ポジションクローズ実行")
                             self.position.close()
 
                 except Exception as e:
-                    logger.error(f"売買ロジックエラー: {e}", exc_info=True)
+                    # logger.error(f"売買ロジックエラー: {e}", exc_info=True)
+                    pass
 
             def _init_indicator(self, indicator_gene: IndicatorGene):
                 """単一指標の初期化（統合版）"""
@@ -208,13 +183,12 @@ class StrategyFactory:
                             setattr(
                                 self, indicator_gene.type, self.I(lambda x=result: x)
                             )
-
-                        logger.debug(f"指標初期化成功: {indicator_gene.type}")
                     else:
-                        logger.warning(f"指標計算失敗: {indicator_gene.type}")
+                        pass
 
                 except Exception as e:
-                    logger.error(f"指標初期化エラー {indicator_gene.type}: {e}")
+                    # logger.error(f"指標初期化エラー {indicator_gene.type}: {e}")
+                    pass
 
             def _check_entry_conditions(self) -> bool:
                 """エントリー条件をチェック（統合版）"""
@@ -247,7 +221,7 @@ class StrategyFactory:
         try:
             return gene.validate()
         except Exception as e:
-            logger.error(f"遺伝子検証エラー: {e}")
+            # logger.error(f"遺伝子検証エラー: {e}")
             return False, [f"検証エラー: {str(e)}"]
 
     def _calculate_indicator(
@@ -276,7 +250,7 @@ class StrategyFactory:
             return result
 
         except Exception as e:
-            logger.error(f"指標計算エラー {indicator_type}: {e}")
+            # logger.error(f"指標計算エラー {indicator_type}: {e}")
             return None
 
     def _evaluate_conditions(
@@ -302,7 +276,7 @@ class StrategyFactory:
             return True
 
         except Exception as e:
-            logger.error(f"条件評価エラー: {e}")
+            # logger.error(f"条件評価エラー: {e}")
             return False
 
     def _evaluate_single_condition(
@@ -331,10 +305,10 @@ class StrategyFactory:
             if not isinstance(left_value, (int, float)) or not isinstance(
                 right_value, (int, float)
             ):
-                logger.warning(
-                    f"比較できない値です: left={left_value}({type(left_value)}), "
-                    f"right={right_value}({type(right_value)})"
-                )
+                # logger.warning(
+                #     f"比較できない値です: left={left_value}({type(left_value)}), "
+                #     f"right={right_value}({type(right_value)})"
+                # )
                 return False
 
             # 条件評価
@@ -351,11 +325,11 @@ class StrategyFactory:
             elif condition.operator == "!=":
                 return not bool(np.isclose(left_value, right_value))
             else:
-                logger.warning(f"未対応の演算子: {condition.operator}")
+                # logger.warning(f"未対応の演算子: {condition.operator}")
                 return False
 
         except Exception as e:
-            logger.error(f"条件評価エラー: {e}")
+            # logger.error(f"条件評価エラー: {e}")
             return False
 
     def _get_condition_value(
@@ -403,9 +377,191 @@ class StrategyFactory:
                         return float(indicator_value[-1])
                     return float(indicator_value)
 
-            logger.warning(f"未対応のオペランド: {operand}")
+            # logger.warning(f"未対応のオペランド: {operand}")
             return 0.0
 
         except Exception as e:
-            logger.error(f"オペランド値取得エラー: {e}")
+            # logger.error(f"オペランド値取得エラー: {e}")
             return 0.0
+
+    def _calculate_tpsl_prices(
+        self,
+        current_price: float,
+        stop_loss_pct: Optional[float],
+        take_profit_pct: Optional[float],
+        risk_management: Dict[str, Any],
+        gene: Optional[Any] = None,
+    ) -> Tuple[Optional[float], Optional[float]]:
+        """
+        TP/SL価格を計算（従来方式と新方式の両方をサポート）
+
+        Args:
+            current_price: 現在価格
+            stop_loss_pct: ストップロス割合
+            take_profit_pct: テイクプロフィット割合
+            risk_management: リスク管理設定
+
+        Returns:
+            (SL価格, TP価格)のタプル
+        """
+        try:
+            # TP/SL遺伝子が利用可能かチェック（GA最適化対象）
+            if gene and hasattr(gene, "tpsl_gene") and gene.tpsl_gene:
+                return self._calculate_tpsl_from_gene(current_price, gene.tpsl_gene)
+            # 新しいTP/SL計算方式が使用されているかチェック（従来の高度機能）
+            elif self._is_advanced_tpsl_used(risk_management):
+                return self._calculate_advanced_tpsl_prices(
+                    current_price, stop_loss_pct, take_profit_pct, risk_management
+                )
+            else:
+                # 従来の固定割合ベース計算
+                return self._calculate_legacy_tpsl_prices(
+                    current_price, stop_loss_pct, take_profit_pct
+                )
+
+        except Exception as e:
+            # logger.error(f"TP/SL価格計算エラー: {e}")
+            # フォールバック: 従来方式
+            return self._calculate_legacy_tpsl_prices(
+                current_price, stop_loss_pct, take_profit_pct
+            )
+
+    def _is_advanced_tpsl_used(self, risk_management: Dict[str, Any]) -> bool:
+        """高度なTP/SL機能が使用されているかチェック"""
+        return any(key.startswith("_tpsl_") for key in risk_management.keys())
+
+    def _calculate_legacy_tpsl_prices(
+        self,
+        current_price: float,
+        stop_loss_pct: Optional[float],
+        take_profit_pct: Optional[float],
+    ) -> Tuple[Optional[float], Optional[float]]:
+        """従来の固定割合ベースTP/SL価格計算"""
+        sl_price = current_price * (1 - stop_loss_pct) if stop_loss_pct else None
+        tp_price = current_price * (1 + take_profit_pct) if take_profit_pct else None
+        return sl_price, tp_price
+
+    def _calculate_advanced_tpsl_prices(
+        self,
+        current_price: float,
+        stop_loss_pct: Optional[float],
+        take_profit_pct: Optional[float],
+        risk_management: Dict[str, Any],
+    ) -> Tuple[Optional[float], Optional[float]]:
+        """高度なTP/SL価格計算（リスクリワード比、ボラティリティベースなど）"""
+        try:
+            # 使用された戦略を取得
+            strategy_used = risk_management.get("_tpsl_strategy", "unknown")
+
+            # 基本的な価格計算
+            sl_price = current_price * (1 - stop_loss_pct) if stop_loss_pct else None
+            tp_price = (
+                current_price * (1 + take_profit_pct) if take_profit_pct else None
+            )
+
+            # 戦略固有の調整
+            if strategy_used == "volatility_adaptive":
+                # ボラティリティベースの場合、追加の調整を適用
+                sl_price, tp_price = self._apply_volatility_adjustments(
+                    current_price, sl_price, tp_price, risk_management
+                )
+            elif strategy_used == "risk_reward":
+                # リスクリワード比ベースの場合、比率の整合性をチェック
+                sl_price, tp_price = self._apply_risk_reward_adjustments(
+                    current_price, sl_price, tp_price, risk_management
+                )
+
+            # メタデータをログ出力
+            confidence_score = risk_management.get("_confidence_score", "N/A")
+            rr_ratio = risk_management.get("_risk_reward_ratio", "N/A")
+
+            # logger.info(
+            #     f"高度なTP/SL計算: 戦略={strategy_used}, "
+            #     f"RR比={rr_ratio}, 信頼度={confidence_score}"
+            # )
+
+            return sl_price, tp_price
+
+        except Exception as e:
+            # logger.error(f"高度なTP/SL価格計算エラー: {e}")
+            # フォールバック
+            return self._calculate_legacy_tpsl_prices(
+                current_price, stop_loss_pct, take_profit_pct
+            )
+
+    def _apply_volatility_adjustments(
+        self,
+        current_price: float,
+        sl_price: Optional[float],
+        tp_price: Optional[float],
+        risk_management: Dict[str, Any],
+    ) -> Tuple[Optional[float], Optional[float]]:
+        """ボラティリティベース調整を適用"""
+        # 現在は基本実装のみ（将来的にATRベース調整を追加）
+        return sl_price, tp_price
+
+    def _apply_risk_reward_adjustments(
+        self,
+        current_price: float,
+        sl_price: Optional[float],
+        tp_price: Optional[float],
+        risk_management: Dict[str, Any],
+    ) -> Tuple[Optional[float], Optional[float]]:
+        """リスクリワード比ベース調整を適用"""
+        try:
+            target_rr_ratio = risk_management.get("_risk_reward_ratio")
+
+            if target_rr_ratio and sl_price:
+                # SLが設定されている場合、RR比に基づいてTPを再計算
+                sl_distance = current_price - sl_price
+                tp_distance = sl_distance * target_rr_ratio
+                adjusted_tp_price = current_price + tp_distance
+
+                # logger.debug(
+                #     f"RR比調整: 目標比率={target_rr_ratio}, "
+                #     f"調整後TP={adjusted_tp_price}"
+                # )
+
+                return sl_price, adjusted_tp_price
+
+            return sl_price, tp_price
+
+        except Exception as e:
+            # logger.error(f"RR比調整エラー: {e}")
+            return sl_price, tp_price
+
+    def _calculate_tpsl_from_gene(
+        self, current_price: float, tpsl_gene
+    ) -> Tuple[Optional[float], Optional[float]]:
+        """
+        TP/SL遺伝子からTP/SL価格を計算（GA最適化対象）
+
+        Args:
+            current_price: 現在価格
+            tpsl_gene: TP/SL遺伝子
+
+        Returns:
+            (SL価格, TP価格)のタプル
+        """
+        try:
+            # TP/SL遺伝子から値を計算
+            tpsl_values = tpsl_gene.calculate_tpsl_values()
+
+            sl_pct = tpsl_values.get("stop_loss", 0.03)
+            tp_pct = tpsl_values.get("take_profit", 0.06)
+
+            # 価格に変換
+            sl_price = current_price * (1 - sl_pct)
+            tp_price = current_price * (1 + tp_pct)
+
+            # logger.debug(
+            #     f"TP/SL遺伝子計算: メソッド={tpsl_gene.method.value}, "
+            #     f"SL={sl_pct:.3f}({sl_price:.2f}), TP={tp_pct:.3f}({tp_price:.2f})"
+            # )
+
+            return sl_price, tp_price
+
+        except Exception as e:
+            # logger.error(f"TP/SL遺伝子計算エラー: {e}")
+            # フォールバック
+            return current_price * 0.97, current_price * 1.06  # デフォルト3%SL, 6%TP

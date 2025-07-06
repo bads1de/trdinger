@@ -14,6 +14,7 @@ import { GAConfig as GAConfigType } from "@/types/optimization";
 import { BacktestConfig as BacktestConfigType } from "@/types/backtest";
 import { BaseBacktestConfigForm } from "./BaseBacktestConfigForm";
 import { GA_OBJECTIVE_OPTIONS } from "@/constants/backtest";
+// import TPSLConfigSection from "./TPSLConfigSection"; // TP/SL設定はGAが自動最適化するため不要
 
 interface GAConfigFormProps {
   onSubmit: (config: GAConfigType) => void;
@@ -117,7 +118,8 @@ const GAConfigForm: React.FC<GAConfigFormProps> = ({
       errors.push("取引量範囲: 1%〜50%の範囲で設定してください");
     }
 
-    // ストップロス範囲のバリデーション
+    // TP/SL設定はGAが自動最適化するため、バリデーション不要
+    // 従来のTP/SL範囲バリデーション（後方互換性のため保持）
     if (
       config.ga_config.stop_loss_range[0] >= config.ga_config.stop_loss_range[1]
     ) {
@@ -130,7 +132,6 @@ const GAConfigForm: React.FC<GAConfigFormProps> = ({
       errors.push("ストップロス範囲: 0.5%〜10%の範囲で設定してください");
     }
 
-    // テイクプロフィット範囲のバリデーション
     if (
       config.ga_config.take_profit_range[0] >=
       config.ga_config.take_profit_range[1]
@@ -294,96 +295,22 @@ const GAConfigForm: React.FC<GAConfigFormProps> = ({
           />
         </div>
 
-        {/* ストップロス範囲設定 */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <InputField
-            label="ストップロス範囲 - 最小値 (%)"
-            type="number"
-            value={config.ga_config.stop_loss_range[0] * 100}
-            onChange={(value) =>
-              setConfig((prev) => ({
-                ...prev,
-                ga_config: {
-                  ...prev.ga_config,
-                  stop_loss_range: [
-                    value / 100,
-                    prev.ga_config.stop_loss_range[1],
-                  ],
-                },
-              }))
-            }
-            min={0.5}
-            max={10}
-            step={0.1}
-            required
-          />
-          <InputField
-            label="ストップロス範囲 - 最大値 (%)"
-            type="number"
-            value={config.ga_config.stop_loss_range[1] * 100}
-            onChange={(value) =>
-              setConfig((prev) => ({
-                ...prev,
-                ga_config: {
-                  ...prev.ga_config,
-                  stop_loss_range: [
-                    prev.ga_config.stop_loss_range[0],
-                    value / 100,
-                  ],
-                },
-              }))
-            }
-            min={0.5}
-            max={10}
-            step={0.1}
-            required
-          />
-        </div>
-
-        {/* テイクプロフィット範囲設定 */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <InputField
-            label="テイクプロフィット範囲 - 最小値 (%)"
-            type="number"
-            value={config.ga_config.take_profit_range[0] * 100}
-            onChange={(value) =>
-              setConfig((prev) => ({
-                ...prev,
-                ga_config: {
-                  ...prev.ga_config,
-                  take_profit_range: [
-                    value / 100,
-                    prev.ga_config.take_profit_range[1],
-                  ],
-                },
-              }))
-            }
-            min={0.5}
-            max={20}
-            step={0.1}
-            required
-          />
-          <InputField
-            label="テイクプロフィット範囲 - 最大値 (%)"
-            type="number"
-            value={config.ga_config.take_profit_range[1] * 100}
-            onChange={(value) =>
-              setConfig((prev) => ({
-                ...prev,
-                ga_config: {
-                  ...prev.ga_config,
-                  take_profit_range: [
-                    prev.ga_config.take_profit_range[0],
-                    value / 100,
-                  ],
-                },
-              }))
-            }
-            min={0.5}
-            max={20}
-            step={0.1}
-            required
-          />
+        {/* TP/SL設定はGAが自動最適化するため、ユーザー設定不要 */}
+        <div className="p-4 bg-blue-50 border border-blue-200 rounded-md">
+          <h4 className="font-medium text-blue-900 mb-2">📈 TP/SL自動最適化</h4>
+          <p className="text-sm text-blue-700">
+            テイクプロフィット（TP）とストップロス（SL）の設定は、
+            テクニカル指標パラメータと同様にGAが自動で最適化します。
+            手動設定は不要です。
+          </p>
+          <div className="mt-2 text-xs text-blue-600">
+            <p>
+              •
+              TP/SL決定方式（固定値、リスクリワード比、ボラティリティベースなど）
+            </p>
+            <p>• リスクリワード比（1:1.2 ～ 1:4.0の範囲）</p>
+            <p>• 具体的なパーセンテージ（SL: 1%-8%, TP: 2%-20%）</p>
+          </div>
         </div>
       </div>
 

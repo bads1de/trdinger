@@ -7,10 +7,12 @@ OI/FRデータを含む多様な戦略遺伝子をランダムに生成します
 
 import random
 from typing import List, Dict
-import logging
+
+# import logging
 
 from ..models.strategy_gene import StrategyGene, IndicatorGene, Condition
 from ..models.ga_config import GAConfig
+from ..models.tpsl_gene import TPSLGene, TPSLMethod, create_random_tpsl_gene
 from app.core.services.indicators import TechnicalIndicatorService
 from ...indicators.config import indicator_registry
 from ...indicators.config.indicator_config import IndicatorScaleType
@@ -19,7 +21,7 @@ from ..utils.parameter_generators import (
 )
 from ..utils.operand_grouping import operand_grouping_system
 
-logger = logging.getLogger(__name__)
+# logger = logging.getLogger(__name__)
 
 
 class RandomGeneGenerator:
@@ -80,26 +82,30 @@ class RandomGeneGenerator:
             entry_conditions = self._generate_random_conditions(indicators, "entry")
             exit_conditions = self._generate_random_conditions(indicators, "exit")
 
-            # リスク管理設定
+            # リスク管理設定（従来方式、後方互換性のため保持）
             risk_management = self._generate_risk_management()
+
+            # TP/SL遺伝子を生成（GA最適化対象）
+            tpsl_gene = self._generate_tpsl_gene()
 
             gene = StrategyGene(
                 indicators=indicators,
                 entry_conditions=entry_conditions,
                 exit_conditions=exit_conditions,
                 risk_management=risk_management,
+                tpsl_gene=tpsl_gene,  # 新しいTP/SL遺伝子
                 metadata={"generated_by": "RandomGeneGenerator"},
             )
 
-            logger.info(
-                f"ランダム戦略遺伝子生成成功: 指標={len(indicators)}, エントリー={len(entry_conditions)}, エグジット={len(exit_conditions)}"
-            )
+            # logger.info(
+            #     f"ランダム戦略遺伝子生成成功: 指標={len(indicators)}, エントリー={len(entry_conditions)}, エグジット={len(exit_conditions)}"
+            # )
             return gene
 
         except Exception as e:
-            logger.error(f"ランダム戦略遺伝子生成失敗: {e}", exc_info=True)
+            # logger.error(f"ランダム戦略遺伝子生成失敗: {e}", exc_info=True)
             # フォールバック: 最小限の遺伝子を生成
-            logger.info("フォールバック戦略遺伝子を生成")
+            # logger.info("フォールバック戦略遺伝子を生成")
             from ..utils.strategy_gene_utils import create_default_strategy_gene
 
             return create_default_strategy_gene(StrategyGene)
@@ -131,7 +137,7 @@ class RandomGeneGenerator:
                     indicators.append(indicator_gene)
 
                 except Exception as e:
-                    logger.error(f"指標{i+1}生成エラー: {e}")
+                    # logger.error(f"指標{i+1}生成エラー: {e}")
                     # エラーが発生した場合はSMAをフォールバックとして使用
                     indicators.append(
                         IndicatorGene(
@@ -142,7 +148,7 @@ class RandomGeneGenerator:
             return indicators
 
         except Exception as e:
-            logger.error(f"指標リスト生成エラー: {e}")
+            # logger.error(f"指標リスト生成エラー: {e}")
             # 最低限の指標を返す
             return [IndicatorGene(type="SMA", parameters={"period": 20}, enabled=True)]
 
@@ -354,11 +360,16 @@ class RandomGeneGenerator:
         return random.uniform(default_range[0], default_range[1])
 
     def _generate_risk_management(self) -> Dict[str, float]:
-        """リスク管理設定を生成（設定値から範囲を取得）"""
+        """リスク管理設定を生成（設定値から範囲を取得または新しいTP/SL自動決定機能を使用）"""
+        # 常に従来のリスク管理設定を生成する
+        # _generate_advanced_risk_management は未実装または廃止された機能に依存しているため、
+        # 呼び出しを無効化しています。
+        return self._generate_legacy_risk_management()
+
+    def _generate_legacy_risk_management(self) -> Dict[str, float]:
+        """従来のリスク管理設定生成（TP/SL設定を除外、tpsl_geneに統一）"""
         return {
-            "stop_loss": random.uniform(*self.config.stop_loss_range),
-            "take_profit": random.uniform(*self.config.take_profit_range),
-            "position_size": random.uniform(*self.config.position_size_range),
+            "position_size": round(random.uniform(*self.config.position_size_range), 3),
         }
 
     def _generate_fallback_condition(self, condition_type: str) -> Condition:
@@ -388,12 +399,74 @@ class RandomGeneGenerator:
                 population.append(gene)
 
                 if (i + 1) % 10 == 0:
-                    logger.info(f"{i + 1}/{size}個のランダム遺伝子を生成しました")
+                    # logger.info(f"{i + 1}/{size}個のランダム遺伝子を生成しました")
+                    pass
 
             except Exception as e:
-                logger.error(f"遺伝子{i}の生成に失敗しました: {e}")
+                # logger.error(f"遺伝子{i}の生成に失敗しました: {e}")
                 # フォールバックを追加
                 population.append(create_default_strategy_gene(StrategyGene))
+                pass
 
-        logger.info(f"{len(population)}個の遺伝子の個体群を生成しました")
+        # logger.info(f"{len(population)}個の遺伝子の個体群を生成しました")
         return population
+
+    def _generate_tpsl_gene(self) -> TPSLGene:
+        """
+        TP/SL遺伝子を生成（GA最適化対象）
+
+        Returns:
+            生成されたTP/SL遺伝子
+        """
+        try:
+            # GAConfigの設定範囲内でランダムなTP/SL遺伝子を生成
+            tpsl_gene = create_random_tpsl_gene()
+
+            # GAConfigの制約を適用（設定されている場合）
+            if hasattr(self.config, "tpsl_method_constraints"):
+                # 許可されたメソッドのみを使用
+                allowed_methods = self.config.tpsl_method_constraints
+                if allowed_methods:
+                    tpsl_gene.method = random.choice(
+                        [TPSLMethod(m) for m in allowed_methods]
+                    )
+
+            if hasattr(self.config, "tpsl_sl_range"):
+                # SL範囲制約
+                sl_min, sl_max = self.config.tpsl_sl_range
+                tpsl_gene.stop_loss_pct = random.uniform(sl_min, sl_max)
+                tpsl_gene.base_stop_loss = random.uniform(sl_min, sl_max)
+
+            if hasattr(self.config, "tpsl_tp_range"):
+                # TP範囲制約
+                tp_min, tp_max = self.config.tpsl_tp_range
+                tpsl_gene.take_profit_pct = random.uniform(tp_min, tp_max)
+
+            if hasattr(self.config, "tpsl_rr_range"):
+                # リスクリワード比範囲制約
+                rr_min, rr_max = self.config.tpsl_rr_range
+                tpsl_gene.risk_reward_ratio = random.uniform(rr_min, rr_max)
+
+            if hasattr(self.config, "tpsl_atr_multiplier_range"):
+                # ATR倍率範囲制約
+                atr_min, atr_max = self.config.tpsl_atr_multiplier_range
+                tpsl_gene.atr_multiplier_sl = random.uniform(atr_min, atr_max)
+                tpsl_gene.atr_multiplier_tp = random.uniform(
+                    atr_min * 1.5, atr_max * 2.0
+                )
+
+            # logger.debug(
+            #     f"TP/SL遺伝子生成: メソッド={tpsl_gene.method.value}, SL={tpsl_gene.stop_loss_pct:.3f}"
+            # )
+            return tpsl_gene
+
+        except Exception as e:
+            # logger.error(f"TP/SL遺伝子生成エラー: {e}")
+            # フォールバック: デフォルトのTP/SL遺伝子
+            return TPSLGene(
+                method=TPSLMethod.RISK_REWARD_RATIO,
+                stop_loss_pct=0.03,
+                take_profit_pct=0.06,
+                risk_reward_ratio=2.0,
+                base_stop_loss=0.03,
+            )

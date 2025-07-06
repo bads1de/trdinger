@@ -2,10 +2,10 @@
 戦略遺伝子ユーティリティ
 """
 
-import logging
+# import logging
 from typing import Any
 
-logger = logging.getLogger(__name__)
+# logger = logging.getLogger(__name__)
 
 
 def create_default_strategy_gene(strategy_gene_class) -> Any:
@@ -52,5 +52,5 @@ def create_default_strategy_gene(strategy_gene_class) -> Any:
         )
 
     except Exception as e:
-        logger.error(f"デフォルト戦略遺伝子作成エラー (ユーティリティ): {e}")
+        # logger.error(f"デフォルト戦略遺伝子作成エラー (ユーティリティ): {e}")
         return strategy_gene_class()

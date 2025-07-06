@@ -80,9 +80,11 @@ class GeneticAlgorithmEngine:
         # 評価関数の登録
         self.toolbox.register("evaluate", self._evaluate_individual, config=config)
 
-        # 進化演算子の登録
-        self.toolbox.register("mate", tools.cxTwoPoint)
-        self.toolbox.register("mutate", tools.mutGaussian, mu=0, sigma=0.1, indpb=0.1)
+        # 進化演算子の登録（戦略遺伝子レベル）
+        self.toolbox.register("mate", self._crossover_strategy_genes)
+        self.toolbox.register(
+            "mutate", self._mutate_strategy_gene, mutation_rate=config.mutation_rate
+        )
         self.toolbox.register("select", tools.selTournament, tournsize=3)
 
         logger.info("DEAP環境のセットアップ完了")
@@ -262,9 +264,9 @@ class GeneticAlgorithmEngine:
             total_trades = performance_metrics.get("total_trades", 0)
 
             # デバッグログ: メトリクス値を確認
-            logger.debug(
-                f"フィットネス計算 - return: {total_return}, sharpe: {sharpe_ratio}, drawdown: {max_drawdown}, win_rate: {win_rate}, trades: {total_trades}"
-            )
+            # logger.debug(
+            #     f"フィットネス計算 - return: {total_return}, sharpe: {sharpe_ratio}, drawdown: {max_drawdown}, win_rate: {win_rate}, trades: {total_trades}"
+            # )
 
             # 取引回数が0の場合は低いフィットネス値を返す
             if total_trades == 0:
@@ -312,4 +314,76 @@ class GeneticAlgorithmEngine:
     def stop_evolution(self):
         """進化を停止"""
         self.is_running = False
-        logger.info("進化停止が要求されました")
+
+    def _crossover_strategy_genes(self, ind1, ind2):
+        """
+        戦略遺伝子レベルの交叉
+
+        Args:
+            ind1: 個体1（エンコードされた戦略遺伝子）
+            ind2: 個体2（エンコードされた戦略遺伝子）
+
+        Returns:
+            交叉後の個体のタプル
+        """
+        try:
+            # 遺伝子デコード
+            from ..models.gene_encoding import GeneEncoder
+            from ..models.strategy_gene import StrategyGene, crossover_strategy_genes
+
+            gene_encoder = GeneEncoder()
+            gene1 = gene_encoder.decode_list_to_strategy_gene(ind1, StrategyGene)
+            gene2 = gene_encoder.decode_list_to_strategy_gene(ind2, StrategyGene)
+
+            # 戦略遺伝子レベルの交叉
+            child1, child2 = crossover_strategy_genes(gene1, gene2)
+
+            # 再エンコード
+            encoded_child1 = gene_encoder.encode_strategy_gene_to_list(child1)
+            encoded_child2 = gene_encoder.encode_strategy_gene_to_list(child2)
+
+            # 個体を更新
+            ind1[:] = encoded_child1
+            ind2[:] = encoded_child2
+
+            return ind1, ind2
+
+        except Exception as e:
+            logger.error(f"戦略遺伝子交叉エラー: {e}")
+            # エラー時は元の個体をそのまま返す
+            return ind1, ind2
+
+    def _mutate_strategy_gene(self, individual, mutation_rate: float = 0.1):
+        """
+        戦略遺伝子レベルの突然変異
+
+        Args:
+            individual: 個体（エンコードされた戦略遺伝子）
+            mutation_rate: 突然変異率
+
+        Returns:
+            突然変異後の個体のタプル
+        """
+        try:
+            # 遺伝子デコード
+            from ..models.gene_encoding import GeneEncoder
+            from ..models.strategy_gene import StrategyGene, mutate_strategy_gene
+
+            gene_encoder = GeneEncoder()
+            gene = gene_encoder.decode_list_to_strategy_gene(individual, StrategyGene)
+
+            # 戦略遺伝子レベルの突然変異
+            mutated_gene = mutate_strategy_gene(gene, mutation_rate)
+
+            # 再エンコード
+            encoded_mutated = gene_encoder.encode_strategy_gene_to_list(mutated_gene)
+
+            # 個体を更新
+            individual[:] = encoded_mutated
+
+            return (individual,)
+
+        except Exception as e:
+            logger.error(f"戦略遺伝子突然変異エラー: {e}")
+            # エラー時は元の個体をそのまま返す
+            return (individual,)

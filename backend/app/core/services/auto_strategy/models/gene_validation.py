@@ -4,12 +4,12 @@
 戦略遺伝子の妥当性検証を担当するモジュール。
 """
 
-import logging
+# import logging
 from typing import List, Tuple
 
 from app.core.services.indicators import TechnicalIndicatorService
 
-logger = logging.getLogger(__name__)
+# logger = logging.getLogger(__name__)
 
 
 class GeneValidator:
@@ -101,7 +101,7 @@ class GeneValidator:
             return True
 
         except Exception as e:
-            logger.error(f"指標遺伝子バリデーションエラー: {e}")
+            # logger.error(f"指標遺伝子バリデーションエラー: {e}")
             return False
 
     def validate_condition(self, condition) -> bool:
@@ -129,7 +129,7 @@ class GeneValidator:
             return True
 
         except Exception as e:
-            logger.error(f"条件バリデーションエラー: {e}")
+            # logger.error(f"条件バリデーションエラー: {e}")
             return False
 
     def _is_valid_operand(self, operand) -> bool:
@@ -166,7 +166,7 @@ class GeneValidator:
             return False
 
         except Exception as e:
-            logger.error(f"オペランド検証エラー: {e}")
+            # logger.error(f"オペランド検証エラー: {e}")
             return False
 
     def _is_indicator_name(self, name: str) -> bool:
@@ -199,7 +199,7 @@ class GeneValidator:
             return False
 
         except Exception as e:
-            logger.error(f"指標名判定エラー: {e}")
+            # logger.error(f"指標名判定エラー: {e}")
             return False
 
     def validate_strategy_gene(self, strategy_gene) -> Tuple[bool, List[str]]:
@@ -253,7 +253,7 @@ class GeneValidator:
             return len(errors) == 0, errors
 
         except Exception as e:
-            logger.error(f"戦略遺伝子バリデーションエラー: {e}")
+            # logger.error(f"戦略遺伝子バリデーションエラー: {e}")
             errors.append(f"バリデーション処理エラー: {e}")
             return False, errors
 
@@ -299,7 +299,7 @@ class GeneValidator:
             return len(errors) == 0, errors
 
         except Exception as e:
-            logger.error(f"リスク管理バリデーションエラー: {e}")
+            # logger.error(f"リスク管理バリデーションエラー: {e}")
             errors.append(f"リスク管理バリデーション処理エラー: {e}")
             return False, errors
 
@@ -331,7 +331,7 @@ class GeneValidator:
             return len(errors) == 0, errors
 
         except Exception as e:
-            logger.error(f"メタデータバリデーションエラー: {e}")
+            # logger.error(f"メタデータバリデーションエラー: {e}")
             errors.append(f"メタデータバリデーション処理エラー: {e}")
             return False, errors
 
@@ -371,7 +371,7 @@ class GeneValidator:
             }
 
         except Exception as e:
-            logger.error(f"バリデーションサマリー作成エラー: {e}")
+            # logger.error(f"バリデーションサマリー作成エラー: {e}")
             return {
                 "overall_valid": False,
                 "strategy_valid": False,

@@ -4,14 +4,15 @@
 GA用の戦略遺伝子エンコード/デコード機能を担当するモジュール。
 """
 
-import logging
-from typing import List, Dict
+# import logging
+from typing import List, Dict, Optional
 
 from app.core.services.indicators.indicator_orchestrator import (
     TechnicalIndicatorService,
 )
+from .tpsl_gene import TPSLGene, TPSLMethod
 
-logger = logging.getLogger(__name__)
+# logger = logging.getLogger(__name__)
 
 
 class GeneEncoder:
@@ -38,7 +39,7 @@ class GeneEncoder:
 
             return indicator_ids
         except Exception as e:
-            logger.error(f"指標IDの取得に失敗しました: {e}")
+            # logger.error(f"指標IDの取得に失敗しました: {e}")
             return {"": 0}
 
     def _get_id_to_indicator(self) -> Dict[int, str]:
@@ -98,12 +99,16 @@ class GeneEncoder:
             encoded.extend(entry_encoded)
             encoded.extend(exit_encoded)
 
+            # TP/SL遺伝子のエンコード（新機能）
+            tpsl_encoded = self._encode_tpsl_gene(strategy_gene.tpsl_gene)
+            encoded.extend(tpsl_encoded)
+
             return encoded
 
         except Exception as e:
-            logger.error(f"戦略遺伝子エンコードエラー: {e}")
+            # logger.error(f"戦略遺伝子エンコードエラー: {e}")
             # エラー時はデフォルトエンコードを返す
-            return [0.0] * 16  # 5指標×2 + 条件×6
+            return [0.0] * 24  # 5指標×2 + 条件×6 + TP/SL×8
 
     def decode_list_to_strategy_gene(self, encoded: List[float], strategy_gene_class):
         """
@@ -246,9 +251,9 @@ class GeneEncoder:
                             )
                         )
 
-                logger.info(
-                    f"生成された条件: エントリー={len(entry_conditions)}, エグジット={len(exit_conditions)}"
-                )
+                # logger.info(
+                #     f"生成された条件: エントリー={len(entry_conditions)}, エグジット={len(exit_conditions)}"
+                # )
             else:
                 # 指標がない場合はデフォルト条件（価格ベース）
                 from .strategy_gene import Condition
@@ -259,7 +264,7 @@ class GeneEncoder:
                 exit_conditions = [
                     Condition(left_operand="close", operator="<", right_operand="open")
                 ]
-                logger.warning("指標なしでデフォルト条件を使用")
+                # logger.warning("指標なしでデフォルト条件を使用")
 
             # リスク管理設定を追加
             risk_management = {
@@ -267,6 +272,12 @@ class GeneEncoder:
                 "take_profit": 0.15,
                 "position_size": 0.1,
             }
+
+            # TP/SL遺伝子をデコード（新機能）
+            tpsl_gene = None
+            if len(encoded) >= 24:  # TP/SL遺伝子が含まれている場合
+                tpsl_encoded = encoded[16:24]  # 16-23番目の要素
+                tpsl_gene = self._decode_tpsl_gene(tpsl_encoded)
 
             # メタデータを追加
             metadata = {
@@ -276,6 +287,7 @@ class GeneEncoder:
                 ),
                 "indicators_count": len(indicators),
                 "decoded_from_length": len(encoded),
+                "tpsl_gene_included": tpsl_gene is not None,
             }
 
             return strategy_gene_class(
@@ -283,11 +295,12 @@ class GeneEncoder:
                 entry_conditions=entry_conditions,
                 exit_conditions=exit_conditions,
                 risk_management=risk_management,
+                tpsl_gene=tpsl_gene,  # 新しいTP/SL遺伝子
                 metadata=metadata,
             )
 
         except Exception as e:
-            logger.error(f"戦略遺伝子デコードエラー: {e}")
+            # logger.error(f"戦略遺伝子デコードエラー: {e}")
             # エラー時はデフォルト戦略遺伝子を返す
             from ..utils.strategy_gene_utils import create_default_strategy_gene
 
@@ -338,11 +351,11 @@ class GeneEncoder:
                 manager = IndicatorParameterManager()
                 return manager.generate_parameters(indicator_type, config)
             else:
-                logger.warning(f"指標 {indicator_type} の設定が見つかりません")
+                # logger.warning(f"指標 {indicator_type} の設定が見つかりません")
                 return {}
 
         except Exception as e:
-            logger.error(f"指標 {indicator_type} のパラメータ生成に失敗: {e}")
+            # logger.error(f"指標 {indicator_type} のパラメータ生成に失敗: {e}")
             return {}
 
     def _generate_indicator_specific_conditions(self, indicator, indicator_name):
@@ -412,7 +425,7 @@ class GeneEncoder:
             return entry_conditions, exit_conditions
 
         except Exception as e:
-            logger.error(f"指標固有条件生成エラー: {e}")
+            # logger.error(f"指標固有条件生成エラー: {e}")
             # エラー時はデフォルト条件を返す
             from .strategy_gene import Condition
 
@@ -502,7 +515,7 @@ class GeneEncoder:
                 ]
             else:
                 # 未知の指標 - 安全な数値閾値を使用
-                logger.warning(f"未知の指標タイプ: {indicator_type}, 数値閾値を使用")
+                # logger.warning(f"未知の指標タイプ: {indicator_type}, 数値閾値を使用")
                 entry_conditions = [
                     Condition(
                         left_operand=indicator_name,
@@ -521,11 +534,129 @@ class GeneEncoder:
             return entry_conditions, exit_conditions
 
         except Exception as e:
-            logger.error(f"互換性条件生成エラー: {e}")
+            # logger.error(f"互換性条件生成エラー: {e}")
             # エラー時は安全なデフォルト条件
             return (
                 [Condition(left_operand="close", operator=">", right_operand="open")],
                 [Condition(left_operand="close", operator="<", right_operand="open")],
+            )
+
+    def _encode_tpsl_gene(self, tpsl_gene: Optional[TPSLGene]) -> List[float]:
+        """
+        TP/SL遺伝子をエンコード
+
+        Args:
+            tpsl_gene: TP/SL遺伝子
+
+        Returns:
+            エンコードされた数値リスト（8要素）
+        """
+        if not tpsl_gene:
+            return [0.0] * 8  # デフォルト値
+
+        try:
+            # メソッドをエンコード（0-1の範囲）
+            method_mapping = {
+                TPSLMethod.FIXED_PERCENTAGE: 0.2,
+                TPSLMethod.RISK_REWARD_RATIO: 0.4,
+                TPSLMethod.VOLATILITY_BASED: 0.6,
+                TPSLMethod.STATISTICAL: 0.8,
+                TPSLMethod.ADAPTIVE: 1.0,
+            }
+            method_encoded = method_mapping.get(tpsl_gene.method, 0.4)
+
+            # パラメータを正規化（0-1の範囲）
+            sl_pct_norm = min(
+                max(tpsl_gene.stop_loss_pct / 0.15, 0.0), 1.0
+            )  # 0-15%を0-1に
+            tp_pct_norm = min(
+                max(tpsl_gene.take_profit_pct / 0.3, 0.0), 1.0
+            )  # 0-30%を0-1に
+            rr_ratio_norm = min(
+                max((tpsl_gene.risk_reward_ratio - 0.5) / 9.5, 0.0), 1.0
+            )  # 0.5-10を0-1に
+            base_sl_norm = min(
+                max(tpsl_gene.base_stop_loss / 0.15, 0.0), 1.0
+            )  # 0-15%を0-1に
+            atr_sl_norm = min(
+                max((tpsl_gene.atr_multiplier_sl - 0.5) / 4.5, 0.0), 1.0
+            )  # 0.5-5を0-1に
+            atr_tp_norm = min(
+                max((tpsl_gene.atr_multiplier_tp - 1.0) / 9.0, 0.0), 1.0
+            )  # 1-10を0-1に
+            priority_norm = min(max(tpsl_gene.priority / 2.0, 0.0), 1.0)  # 0-2を0-1に
+
+            return [
+                method_encoded,
+                sl_pct_norm,
+                tp_pct_norm,
+                rr_ratio_norm,
+                base_sl_norm,
+                atr_sl_norm,
+                atr_tp_norm,
+                priority_norm,
+            ]
+
+        except Exception as e:
+            # logger.error(f"TP/SL遺伝子エンコードエラー: {e}")
+            return [0.4, 0.2, 0.2, 0.3, 0.2, 0.4, 0.3, 0.5]  # デフォルト値
+
+    def _decode_tpsl_gene(self, encoded: List[float]) -> TPSLGene:
+        """
+        エンコードされた数値リストからTP/SL遺伝子をデコード
+
+        Args:
+            encoded: エンコードされた数値リスト（8要素）
+
+        Returns:
+            デコードされたTP/SL遺伝子
+        """
+        try:
+            if len(encoded) < 8:
+                encoded.extend([0.0] * (8 - len(encoded)))
+
+            # メソッドをデコード
+            method_value = encoded[0]
+            if method_value <= 0.2:
+                method = TPSLMethod.FIXED_PERCENTAGE
+            elif method_value <= 0.4:
+                method = TPSLMethod.RISK_REWARD_RATIO
+            elif method_value <= 0.6:
+                method = TPSLMethod.VOLATILITY_BASED
+            elif method_value <= 0.8:
+                method = TPSLMethod.STATISTICAL
+            else:
+                method = TPSLMethod.ADAPTIVE
+
+            # パラメータをデノーマライズ
+            stop_loss_pct = encoded[1] * 0.15  # 0-1を0-15%に
+            take_profit_pct = encoded[2] * 0.3  # 0-1を0-30%に
+            risk_reward_ratio = encoded[3] * 9.5 + 0.5  # 0-1を0.5-10に
+            base_stop_loss = encoded[4] * 0.15  # 0-1を0-15%に
+            atr_multiplier_sl = encoded[5] * 4.5 + 0.5  # 0-1を0.5-5に
+            atr_multiplier_tp = encoded[6] * 9.0 + 1.0  # 0-1を1-10に
+            priority = encoded[7] * 2.0  # 0-1を0-2に
+
+            return TPSLGene(
+                method=method,
+                stop_loss_pct=stop_loss_pct,
+                take_profit_pct=take_profit_pct,
+                risk_reward_ratio=risk_reward_ratio,
+                base_stop_loss=base_stop_loss,
+                atr_multiplier_sl=atr_multiplier_sl,
+                atr_multiplier_tp=atr_multiplier_tp,
+                priority=priority,
+            )
+
+        except Exception as e:
+            # logger.error(f"TP/SL遺伝子デコードエラー: {e}")
+            # デフォルトのTP/SL遺伝子を返す
+            return TPSLGene(
+                method=TPSLMethod.RISK_REWARD_RATIO,
+                stop_loss_pct=0.03,
+                take_profit_pct=0.06,
+                risk_reward_ratio=2.0,
+                base_stop_loss=0.03,
             )
 
     def get_encoding_info(self) -> Dict:
@@ -533,6 +664,8 @@ class GeneEncoder:
         return {
             "indicator_count": len(self.indicator_ids) - 1,
             "max_indicators": 5,
-            "encoding_length": 16,  # 5指標×2 + 条件×6
+            "encoding_length": 24,  # 5指標×2 + 条件×6 + TP/SL×8
+            "tpsl_encoding_length": 8,
             "supported_indicators": list(self.indicator_ids.keys())[1:],
+            "supported_tpsl_methods": [method.value for method in TPSLMethod],
         }
