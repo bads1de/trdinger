@@ -385,97 +385,93 @@ export default function PerformanceMetrics({
       {/* パラメータタブ */}
       {activeTab === "parameters" && (
         <div className="space-y-6">
-          <div className="bg-secondary-900/30 rounded-lg p-4 border border-secondary-700">
-            <h3 className="text-lg font-semibold mb-4 text-white">
-              戦略パラメータ
-            </h3>
+          <div className="bg-gradient-to-br from-gray-900/90 to-black/80 rounded-xl p-6 border border-gray-700/50 shadow-2xl backdrop-blur-sm">
+            <div className="flex items-center mb-6">
+              <div className="w-4 h-4 bg-gradient-to-r from-cyan-400 to-blue-500 rounded-full mr-3 animate-pulse shadow-lg shadow-cyan-500/50"></div>
+              <h3 className="text-xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-500 font-mono tracking-wide">
+                STRATEGY PARAMETERS
+              </h3>
+            </div>
 
-            {/* デバッグ情報 */}
-            <div className="mb-4 p-3 bg-gray-800/50 rounded text-xs text-gray-400">
-              <p>
-                Debug: config_json ={" "}
-                {JSON.stringify(result.config_json, null, 2)}
-              </p>
+            {/* デバッグ情報 - 改良されたJSON表示 */}
+            <div className="mb-4 p-4 bg-black/80 rounded-lg border border-green-500/30 shadow-lg">
+              <div className="flex items-center mb-3">
+                <div className="w-2 h-2 bg-green-400 rounded-full mr-2 animate-pulse"></div>
+                <h4 className="text-green-400 font-mono text-sm font-semibold tracking-wide">
+                  DEBUG: CONFIG_JSON
+                </h4>
+              </div>
+              <div className="relative">
+                <pre className="text-green-300 font-mono text-xs leading-relaxed overflow-x-auto whitespace-pre-wrap bg-gray-900/50 p-3 rounded border border-green-500/20 shadow-inner">
+                  <code className="text-green-300">
+                    {JSON.stringify(result.config_json, null, 2)}
+                  </code>
+                </pre>
+                {/* 電子蛍光効果のためのオーバーレイ */}
+                <div className="absolute inset-0 bg-green-400/5 rounded pointer-events-none"></div>
+              </div>
             </div>
 
             {result.config_json && result.config_json.strategy_config ? (
               <div className="space-y-4">
-                {/* 戦略タイプ */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <span className="text-gray-400 text-sm">戦略タイプ:</span>
-                    <span className="ml-2 text-white font-medium">
-                      {result.config_json.strategy_config.strategy_type ||
-                        "N/A"}
-                    </span>
+                {/* 戦略タイプ - 改良されたデザイン */}
+                <div className="mb-6">
+                  <div className="bg-gradient-to-r from-indigo-900/50 to-purple-900/50 rounded-lg p-4 border border-indigo-500/30 shadow-lg">
+                    <div className="flex items-center">
+                      <div className="w-3 h-3 bg-indigo-400 rounded-full mr-3 animate-pulse"></div>
+                      <span className="text-indigo-300 text-sm font-mono uppercase tracking-wider mr-4">
+                        戦略タイプ:
+                      </span>
+                      <span className="text-white font-mono text-lg font-bold bg-black/30 px-3 py-1 rounded border border-indigo-400/30">
+                        {result.config_json.strategy_config.strategy_type ||
+                          "N/A"}
+                      </span>
+                    </div>
+                    <div className="absolute inset-0 bg-indigo-400/5 rounded-lg pointer-events-none"></div>
                   </div>
                 </div>
 
-                {/* パラメータ一覧 */}
-                {result.config_json.strategy_config.parameters &&
-                Object.keys(result.config_json.strategy_config.parameters)
-                  .length > 0 ? (
-                  <div>
-                    <h4 className="text-md font-medium mb-3 text-white">
-                      パラメータ設定
-                    </h4>
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                      {Object.entries(
-                        result.config_json.strategy_config.parameters
-                      ).map(([key, value]) => (
-                        <div
-                          key={key}
-                          className="bg-gray-800/50 rounded-lg p-3 border border-gray-600/30"
-                        >
-                          <div className="flex flex-col space-y-1">
-                            <span className="text-gray-400 text-sm capitalize">
-                              {key.replace(/_/g, " ")}
-                            </span>
-                            <span className="text-white font-medium text-lg">
-                              {typeof value === "number"
-                                ? value.toFixed(4)
-                                : String(value)}
-                            </span>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                ) : (
-                  <div className="text-center py-8 text-gray-400">
-                    パラメータ情報がありません
-                  </div>
-                )}
-
-                {/* バックテスト設定 */}
+                {/* バックテスト設定 - 改良されたデザイン */}
                 <div>
-                  <h4 className="text-md font-medium mb-3 text-white">
-                    バックテスト設定
-                  </h4>
+                  <div className="flex items-center mb-4">
+                    <div className="w-2 h-2 bg-purple-400 rounded-full mr-2"></div>
+                    <h4 className="text-purple-400 font-mono text-md font-semibold tracking-wide">
+                      BACKTEST CONFIGURATION
+                    </h4>
+                  </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    <div className="bg-gray-800/50 rounded-lg p-3 border border-gray-600/30">
-                      <div className="flex flex-col space-y-1">
-                        <span className="text-gray-400 text-sm">初期資金</span>
-                        <span className="text-green-400 font-medium text-lg">
+                    <div className="bg-gradient-to-br from-gray-900/80 to-black/60 rounded-lg p-4 border border-purple-500/30 shadow-lg hover:border-purple-400/50 transition-all duration-300 hover:shadow-purple-500/20">
+                      <div className="flex flex-col space-y-2">
+                        <span className="text-purple-300 text-sm font-mono uppercase tracking-wider">
+                          初期資金
+                        </span>
+                        <span className="text-green-300 font-mono text-lg font-semibold">
                           {formatCurrency(result.initial_capital)}
                         </span>
                       </div>
+                      <div className="absolute inset-0 bg-purple-400/5 rounded-lg pointer-events-none"></div>
                     </div>
-                    <div className="bg-gray-800/50 rounded-lg p-3 border border-gray-600/30">
-                      <div className="flex flex-col space-y-1">
-                        <span className="text-gray-400 text-sm">手数料率</span>
-                        <span className="text-yellow-400 font-medium text-lg">
+                    <div className="bg-gradient-to-br from-gray-900/80 to-black/60 rounded-lg p-4 border border-purple-500/30 shadow-lg hover:border-purple-400/50 transition-all duration-300 hover:shadow-purple-500/20">
+                      <div className="flex flex-col space-y-2">
+                        <span className="text-purple-300 text-sm font-mono uppercase tracking-wider">
+                          手数料率
+                        </span>
+                        <span className="text-yellow-300 font-mono text-lg font-semibold">
                           {formatPercentage(result.commission_rate)}
                         </span>
                       </div>
+                      <div className="absolute inset-0 bg-purple-400/5 rounded-lg pointer-events-none"></div>
                     </div>
-                    <div className="bg-gray-800/50 rounded-lg p-3 border border-gray-600/30">
-                      <div className="flex flex-col space-y-1">
-                        <span className="text-gray-400 text-sm">取引ペア</span>
-                        <span className="text-blue-400 font-medium text-lg">
+                    <div className="bg-gradient-to-br from-gray-900/80 to-black/60 rounded-lg p-4 border border-purple-500/30 shadow-lg hover:border-purple-400/50 transition-all duration-300 hover:shadow-purple-500/20">
+                      <div className="flex flex-col space-y-2">
+                        <span className="text-purple-300 text-sm font-mono uppercase tracking-wider">
+                          取引ペア
+                        </span>
+                        <span className="text-cyan-300 font-mono text-lg font-semibold">
                           {result.symbol}
                         </span>
                       </div>
+                      <div className="absolute inset-0 bg-purple-400/5 rounded-lg pointer-events-none"></div>
                     </div>
                   </div>
                 </div>

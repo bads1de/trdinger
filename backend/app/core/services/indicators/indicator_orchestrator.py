@@ -7,9 +7,9 @@ Numpyベースの指標計算関数を呼び出し、結果を整形する責務
 import logging
 import pandas as pd
 import numpy as np
-from typing import List, Dict, Any, Optional, Union, Tuple
+from typing import Dict, Any, Optional, Union, Tuple
 
-from .config import indicator_registry, IndicatorConfig, IndicatorResultType
+from .config import indicator_registry, IndicatorConfig
 
 logger = logging.getLogger(__name__)
 

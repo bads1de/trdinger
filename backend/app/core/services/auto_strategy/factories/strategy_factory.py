@@ -126,9 +126,6 @@ class StrategyFactory:
                     # デバッグログ: 取引量設定の詳細
                     current_price = self.data.Close[-1]
                     current_equity = getattr(self, "equity", "N/A")
-                    logger.debug(
-                        f"取引量計算 - position_size: {position_size}, 現在価格: {current_price}, 資産: {current_equity}"
-                    )
 
                     # ストップロスとテイクプロフィットの価格を計算
                     sl_price = (

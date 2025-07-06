@@ -7,8 +7,7 @@
 import random
 import logging
 from abc import ABC, abstractmethod
-from typing import Dict, Any, List, Optional
-from dataclasses import dataclass
+from typing import Dict, Any, List
 
 logger = logging.getLogger(__name__)
 
@@ -39,7 +38,7 @@ class OrderConstraint(ParameterConstraint):
         """
         Args:
             param1: 第一パラメータ名
-            param2: 第二パラメータ名  
+            param2: 第二パラメータ名
             operator: 比較演算子 ("<", "<=", ">", ">=")
             margin: 最小差分 (デフォルト: 1)
         """
@@ -120,7 +119,7 @@ class RangeConstraint(ParameterConstraint):
         """値域制約の検証"""
         if self.param not in params:
             return True
-        
+
         val = params[self.param]
         return self.min_val <= val <= self.max_val
 
@@ -154,7 +153,7 @@ class DependencyConstraint(ParameterConstraint):
         """依存関係制約の検証"""
         if self.source_param not in params or self.target_param not in params:
             return True
-        
+
         source_val = params[self.source_param]
         expected_val = self.dependency_func(source_val)
         return params[self.target_param] == expected_val
@@ -170,37 +169,49 @@ class ConstraintEngine:
         self.constraint_registry: Dict[str, List[ParameterConstraint]] = {}
         self.logger = logging.getLogger(__name__)
 
-    def register_constraints(self, indicator_name: str, constraints: List[ParameterConstraint]):
+    def register_constraints(
+        self, indicator_name: str, constraints: List[ParameterConstraint]
+    ):
         """インディケーターの制約を登録"""
         self.constraint_registry[indicator_name] = constraints
-        self.logger.debug(f"Registered {len(constraints)} constraints for {indicator_name}")
+        self.logger.debug(
+            f"Registered {len(constraints)} constraints for {indicator_name}"
+        )
 
-    def apply_constraints(self, indicator_name: str, params: Dict[str, Any]) -> Dict[str, Any]:
+    def apply_constraints(
+        self, indicator_name: str, params: Dict[str, Any]
+    ) -> Dict[str, Any]:
         """制約を適用してパラメータを調整"""
         constraints = self.constraint_registry.get(indicator_name, [])
-        
+
         for constraint in constraints:
             try:
                 params = constraint.apply(params)
                 self.logger.debug(f"Applied constraint: {constraint.get_description()}")
             except Exception as e:
-                self.logger.warning(f"Failed to apply constraint {constraint.get_description()}: {e}")
-        
+                self.logger.warning(
+                    f"Failed to apply constraint {constraint.get_description()}: {e}"
+                )
+
         return params
 
     def validate_constraints(self, indicator_name: str, params: Dict[str, Any]) -> bool:
         """すべての制約が満たされているかを検証"""
         constraints = self.constraint_registry.get(indicator_name, [])
-        
+
         for constraint in constraints:
             try:
                 if not constraint.validate(params):
-                    self.logger.warning(f"Constraint validation failed: {constraint.get_description()}")
+                    self.logger.warning(
+                        f"Constraint validation failed: {constraint.get_description()}"
+                    )
                     return False
             except Exception as e:
-                self.logger.error(f"Constraint validation error {constraint.get_description()}: {e}")
+                self.logger.error(
+                    f"Constraint validation error {constraint.get_description()}: {e}"
+                )
                 return False
-        
+
         return True
 
     def get_constraints(self, indicator_name: str) -> List[ParameterConstraint]:
@@ -218,25 +229,25 @@ constraint_engine = ConstraintEngine()
 
 def setup_default_constraints():
     """デフォルト制約の設定"""
-    
+
     # MACD制約
-    macd_constraints = [
+    macd_constraints: List[ParameterConstraint] = [
         OrderConstraint("fast_period", "slow_period", "<", margin=1)
     ]
     constraint_engine.register_constraints("MACD", macd_constraints)
-    
+
     # Stochastic制約
-    stoch_constraints = [
+    stochastic_constraints: List[ParameterConstraint] = [
         RangeConstraint("slowk_matype", 0, 8),
         RangeConstraint("slowd_matype", 0, 8),
-        RangeConstraint("fastd_matype", 0, 8),  # STOCHF用
+        RangeConstraint("fastd_matype", 0, 8),
     ]
-    constraint_engine.register_constraints("STOCH", stoch_constraints)
-    constraint_engine.register_constraints("STOCHF", stoch_constraints)
-    constraint_engine.register_constraints("STOCHRSI", stoch_constraints)
-    
+    constraint_engine.register_constraints("STOCH", stochastic_constraints)
+    constraint_engine.register_constraints("STOCHF", stochastic_constraints)
+    constraint_engine.register_constraints("STOCHRSI", stochastic_constraints)
+
     # MACDEXT制約
-    macdext_constraints = [
+    macdext_constraints: List[ParameterConstraint] = [
         OrderConstraint("fast_period", "slow_period", "<", margin=1),
         RangeConstraint("fast_ma_type", 0, 8),
         RangeConstraint("slow_ma_type", 0, 8),
