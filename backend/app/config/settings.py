@@ -35,11 +35,19 @@ class Settings(BaseSettings):
     db_password: str = Field(default="", alias="DB_PASSWORD")
 
     # ログ設定
-    log_level: str = Field(default="INFO", alias="LOG_LEVEL")
+    log_level: str = Field(default="DEBUG", alias="LOG_LEVEL")
     log_format: str = Field(
         default="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
         alias="LOG_FORMAT",
     )
+    log_file: str = Field(default="market_data.log", alias="LOG_FILE")
+    log_max_bytes: int = Field(default=10485760, alias="LOG_MAX_BYTES")
+    log_backup_count: int = Field(default=5, alias="LOG_BACKUP_COUNT")
+
+    # 市場データ設定
+    market_data_sandbox: bool = Field(default=False, alias="MARKET_DATA_SANDBOX")
+    enable_cache: bool = Field(default=True, alias="ENABLE_CACHE")
+    max_cache_size: int = Field(default=1000, alias="MAX_CACHE_SIZE")
 
     # セキュリティ設定
     secret_key: str = Field(default="your-secret-key-here", alias="SECRET_KEY")
@@ -71,8 +79,6 @@ class Settings(BaseSettings):
         )
 
     class Config:
-        env_file = ".env"
-        env_file_encoding = "utf-8"
         extra = "ignore"
 
 
