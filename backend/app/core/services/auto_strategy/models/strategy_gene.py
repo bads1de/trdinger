@@ -135,11 +135,61 @@ class StrategyGene:
     # 戦略構成要素
     id: str = ""
     indicators: List[IndicatorGene] = field(default_factory=list)
-    entry_conditions: List[Condition] = field(default_factory=list)
+    entry_conditions: List[Condition] = field(
+        default_factory=list
+    )  # 後方互換性のため保持
     exit_conditions: List[Condition] = field(default_factory=list)
+
+    # ロング・ショート分離条件（新機能）
+    long_entry_conditions: List[Condition] = field(default_factory=list)
+    short_entry_conditions: List[Condition] = field(default_factory=list)
+
     risk_management: Dict[str, Any] = field(default_factory=dict)
     tpsl_gene: Optional[TPSLGene] = None  # TP/SL遺伝子（GA最適化対象）
     metadata: Dict[str, Any] = field(default_factory=dict)
+
+    def __post_init__(self):
+        """後方互換性のための初期化処理"""
+        # 明示的にロング・ショート条件が設定されていない場合のみ、
+        # 既存のentry_conditionsを使用（後方互換性）
+        # ただし、long_entry_conditionsやshort_entry_conditionsは変更しない
+        pass
+
+    def get_effective_long_conditions(self) -> List[Condition]:
+        """有効なロング条件を取得（後方互換性を考慮）"""
+        # 明示的にlong_entry_conditionsが設定されていて、かつ空でない場合
+        if self.long_entry_conditions:
+            return self.long_entry_conditions
+        # entry_conditionsがある場合は後方互換性で使用（long_entry_conditionsが空でも）
+        elif self.entry_conditions:
+            # 後方互換性：既存のentry_conditionsをロング条件として扱う
+            return self.entry_conditions
+        else:
+            return []
+
+    def get_effective_short_conditions(self) -> List[Condition]:
+        """有効なショート条件を取得（後方互換性を考慮）"""
+        # 明示的にshort_entry_conditionsが設定されていて、かつ空でない場合
+        if self.short_entry_conditions:
+            return self.short_entry_conditions
+        # entry_conditionsがある場合は後方互換性で使用（short_entry_conditionsが空でも）
+        elif self.entry_conditions and not self.long_entry_conditions:
+            # long_entry_conditionsが設定されていない場合のみ、entry_conditionsをショート条件としても使用
+            return self.entry_conditions
+        else:
+            return []
+
+    def has_long_short_separation(self) -> bool:
+        """ロング・ショート条件が分離されているかチェック"""
+        # 明示的にロング・ショート条件が設定されている場合のみTrue
+        # 空のリストでも明示的に設定されていればTrue（後方互換性のため）
+        return (
+            self.long_entry_conditions is not None
+            and len(self.long_entry_conditions) > 0
+        ) or (
+            self.short_entry_conditions is not None
+            and len(self.short_entry_conditions) > 0
+        )
 
     def validate(self) -> tuple[bool, List[str]]:
         """戦略遺伝子の妥当性を検証"""

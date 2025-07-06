@@ -122,10 +122,11 @@ class StrategyFactory:
                         gene,
                     )
 
-                    # エントリー条件チェック
-                    entry_result = self._check_entry_conditions()
+                    # ロング・ショートエントリー条件チェック
+                    long_entry_result = self._check_long_entry_conditions()
+                    short_entry_result = self._check_short_entry_conditions()
 
-                    if not self.position and entry_result:
+                    if not self.position and (long_entry_result or short_entry_result):
                         # backtesting.pyのマージン問題を回避するため、非常に小さな固定サイズを使用
                         current_price = self.data.Close[-1]
 
@@ -133,21 +134,33 @@ class StrategyFactory:
                         current_equity = getattr(self, "equity", 100000.0)
                         available_cash = getattr(self, "cash", current_equity)
 
+                        # ポジション方向を決定
+                        if long_entry_result and short_entry_result:
+                            # 両方の条件が満たされた場合はロングを優先
+                            position_direction = 1.0  # ロング
+                        elif long_entry_result:
+                            position_direction = 1.0  # ロング
+                        elif short_entry_result:
+                            position_direction = -1.0  # ショート
+                        else:
+                            position_direction = 1.0  # デフォルトはロング
+
                         # 非常に小さな固定サイズ（1単位）を使用
                         # これによりマージン不足エラーを回避
-                        fixed_size = 1.0
+                        fixed_size = 1.0 * position_direction
 
-                        # 利用可能現金で購入可能かチェック
-                        required_cash = fixed_size * current_price
+                        # 利用可能現金で購入可能かチェック（ショートの場合も絶対値で計算）
+                        required_cash = abs(fixed_size) * current_price
                         if required_cash <= available_cash * 0.99:
                             # logger.info(
-                            #     f"買い注文実行 - 固定size: {fixed_size}, 価格: {current_price}"
+                            #     f"{'ロング' if fixed_size > 0 else 'ショート'}注文実行 - 固定size: {fixed_size}, 価格: {current_price}"
                             # )
                             # logger.info(
                             #     f"  必要資金: {required_cash:.2f}, 利用可能現金: {available_cash:.2f}"
                             # )
 
                             # 固定サイズで注文を実行（SL/TPなし）
+                            # ショートの場合は負のサイズでbuy()を呼び出す
                             self.buy(size=fixed_size)
                         else:
                             pass
@@ -191,10 +204,33 @@ class StrategyFactory:
                     pass
 
             def _check_entry_conditions(self) -> bool:
-                """エントリー条件をチェック（統合版）"""
+                """エントリー条件をチェック（後方互換性のため保持）"""
                 return self.factory._evaluate_conditions(
                     self.gene.entry_conditions, self
                 )
+
+            def _check_long_entry_conditions(self) -> bool:
+                """ロングエントリー条件をチェック"""
+                long_conditions = self.gene.get_effective_long_conditions()
+                if not long_conditions:
+                    # 条件が空の場合は、戦略設定に依存
+                    # 後方互換性のため、entry_conditionsがある場合は有効とする
+                    return bool(self.gene.entry_conditions)
+                return self.factory._evaluate_conditions(long_conditions, self)
+
+            def _check_short_entry_conditions(self) -> bool:
+                """ショートエントリー条件をチェック"""
+                short_conditions = self.gene.get_effective_short_conditions()
+                if not short_conditions:
+                    # ショート条件が明示的に設定されていない場合は無効
+                    # ただし、ロング・ショート分離がされていない場合は後方互換性を考慮
+                    if (
+                        not self.gene.has_long_short_separation()
+                        and self.gene.entry_conditions
+                    ):
+                        return bool(self.gene.entry_conditions)
+                    return False
+                return self.factory._evaluate_conditions(short_conditions, self)
 
             def _check_exit_conditions(self) -> bool:
                 """イグジット条件をチェック（統合版）"""
@@ -370,7 +406,17 @@ class StrategyFactory:
                     price_data = getattr(strategy_instance.data, operand.capitalize())
                     return float(price_data[-1])
 
-                # 指標の場合
+                # 指標の場合（indicatorsディクショナリから取得）
+                if (
+                    hasattr(strategy_instance, "indicators")
+                    and operand in strategy_instance.indicators
+                ):
+                    indicator_value = strategy_instance.indicators[operand]
+                    if hasattr(indicator_value, "__getitem__"):
+                        return float(indicator_value[-1])
+                    return float(indicator_value)
+
+                # 指標の場合（直接属性から取得）
                 if hasattr(strategy_instance, operand):
                     indicator_value = getattr(strategy_instance, operand)
                     if hasattr(indicator_value, "__getitem__"):

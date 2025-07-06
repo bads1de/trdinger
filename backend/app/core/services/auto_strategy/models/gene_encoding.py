@@ -359,7 +359,7 @@ class GeneEncoder:
             return {}
 
     def _generate_indicator_specific_conditions(self, indicator, indicator_name):
-        """指標に応じた条件を生成"""
+        """指標に応じた条件を生成（後方互換性のため保持）"""
         try:
             from .strategy_gene import Condition
 
@@ -539,6 +539,126 @@ class GeneEncoder:
             return (
                 [Condition(left_operand="close", operator=">", right_operand="open")],
                 [Condition(left_operand="close", operator="<", right_operand="open")],
+            )
+
+    def _generate_long_short_conditions(self, indicator_name: str, indicator_type: str):
+        """
+        指標タイプに基づいてロング・ショート条件を分離して生成
+
+        Args:
+            indicator_name: 指標名
+            indicator_type: 指標タイプ
+
+        Returns:
+            (long_entry_conditions, short_entry_conditions, exit_conditions)のタプル
+        """
+        from .strategy_gene import Condition
+
+        try:
+            long_entry_conditions = []
+            short_entry_conditions = []
+            exit_conditions = []
+
+            if indicator_type == "RSI":
+                # RSI条件：売られすぎでロング、買われすぎでショート
+                long_entry_conditions = [
+                    Condition(
+                        left_operand=indicator_name, operator="<", right_operand=30
+                    )
+                ]
+                short_entry_conditions = [
+                    Condition(
+                        left_operand=indicator_name, operator=">", right_operand=70
+                    )
+                ]
+                exit_conditions = [
+                    Condition(
+                        left_operand=indicator_name, operator=">", right_operand=50
+                    )
+                ]
+
+            elif indicator_type in ["SMA", "EMA", "MAMA"]:
+                # 移動平均条件：価格が上でロング、下でショート
+                long_entry_conditions = [
+                    Condition(
+                        left_operand="close", operator=">", right_operand=indicator_name
+                    )
+                ]
+                short_entry_conditions = [
+                    Condition(
+                        left_operand="close", operator="<", right_operand=indicator_name
+                    )
+                ]
+                exit_conditions = [
+                    Condition(
+                        left_operand="close",
+                        operator="==",
+                        right_operand=indicator_name,
+                    )
+                ]
+
+            elif indicator_type == "CCI":
+                # CCI条件：-100以下でロング、+100以上でショート
+                long_entry_conditions = [
+                    Condition(
+                        left_operand=indicator_name, operator="<", right_operand=-100.0
+                    )
+                ]
+                short_entry_conditions = [
+                    Condition(
+                        left_operand=indicator_name, operator=">", right_operand=100.0
+                    )
+                ]
+                exit_conditions = [
+                    Condition(
+                        left_operand=indicator_name, operator="==", right_operand=0.0
+                    )
+                ]
+
+            elif indicator_type == "ADX":
+                # ADX条件：トレンド強度に基づく（他の指標と組み合わせて使用）
+                long_entry_conditions = [
+                    Condition(
+                        left_operand=indicator_name, operator=">", right_operand=25.0
+                    )
+                ]
+                short_entry_conditions = [
+                    Condition(
+                        left_operand=indicator_name, operator=">", right_operand=25.0
+                    )
+                ]
+                exit_conditions = [
+                    Condition(
+                        left_operand=indicator_name, operator="<", right_operand=20.0
+                    )
+                ]
+
+            else:
+                # デフォルト条件
+                long_entry_conditions = [
+                    Condition(
+                        left_operand=indicator_name, operator=">", right_operand=50.0
+                    )
+                ]
+                short_entry_conditions = [
+                    Condition(
+                        left_operand=indicator_name, operator="<", right_operand=50.0
+                    )
+                ]
+                exit_conditions = [
+                    Condition(
+                        left_operand=indicator_name, operator="==", right_operand=50.0
+                    )
+                ]
+
+            return long_entry_conditions, short_entry_conditions, exit_conditions
+
+        except Exception as e:
+            # エラー時は安全なデフォルト条件
+            return (
+                [Condition(left_operand="close", operator=">", right_operand="open")],
+                [Condition(left_operand="close", operator="<", right_operand="open")],
+                [Condition(left_operand="close", operator="==", right_operand="open")],
             )
 
     def _encode_tpsl_gene(self, tpsl_gene: Optional[TPSLGene]) -> List[float]:

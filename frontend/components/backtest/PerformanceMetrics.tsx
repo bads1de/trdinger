@@ -11,6 +11,8 @@ import TradeHistoryTable from "./TradeHistoryTable";
 import ChartModal from "./charts/ChartModal";
 import { BacktestResult } from "@/types/backtest";
 import TabButton from "../common/TabButton";
+import CollapsibleJson from "@/components/common/CollapsibleJson";
+import StrategyGeneDisplay from "./StrategyGeneDisplay";
 
 interface PerformanceMetricsProps {
   result: BacktestResult;
@@ -395,28 +397,18 @@ export default function PerformanceMetrics({
               </h3>
             </div>
 
-            {/* デバッグ情報 - 改良されたJSON表示 */}
-            <div className="mb-4 p-4 bg-black/80 rounded-lg border border-green-500/30 shadow-lg">
-              <div className="flex items-center mb-3">
-                <div className="w-2 h-2 bg-green-400 rounded-full mr-2 animate-pulse"></div>
-                <h4 className="text-green-400 font-mono text-sm font-semibold tracking-wide">
-                  DEBUG: CONFIG_JSON
-                </h4>
-              </div>
-              <div className="relative">
-                <pre className="text-green-300 font-mono text-xs leading-relaxed overflow-x-auto whitespace-pre-wrap bg-gray-900/50 p-3 rounded border border-green-500/20 shadow-inner">
-                  <code className="text-green-300">
-                    {JSON.stringify(result.config_json, null, 2)}
-                  </code>
-                </pre>
-                {/* 電子蛍光効果のためのオーバーレイ */}
-                <div className="absolute inset-0 bg-green-400/5 rounded pointer-events-none"></div>
-              </div>
-            </div>
+            {/* デバッグ情報 - 折りたたみ可能なJSON表示 */}
+            <CollapsibleJson
+              data={result.config_json}
+              title="DEBUG: CONFIG_JSON"
+              defaultExpanded={false}
+              theme="matrix"
+              className="mb-4"
+            />
 
             {result.config_json && result.config_json.strategy_config ? (
               <div className="space-y-4">
-                {/* 戦略タイプ - 改良されたデザイン */}
+                {/* 戦略タイプ */}
                 <div className="mb-6">
                   <div className="bg-gradient-to-r from-indigo-900/50 to-purple-900/50 rounded-lg p-4 border border-indigo-500/30 shadow-lg">
                     <div className="flex items-center">
@@ -424,13 +416,26 @@ export default function PerformanceMetrics({
                       <span className="text-indigo-300 text-sm font-mono uppercase tracking-wider mr-4">
                         戦略タイプ:
                       </span>
-                      <span className="text-white font-mono text-lg font-bold bg-black/30 px-3 py-1 rounded border border-indigo-400/30">
+                      <span className=" text-white font-mono text-lg font-bold bg-black/30 px-3 py-1 rounded border border-indigo-400/30">
                         {result.config_json.strategy_config.strategy_type ||
                           "N/A"}
                       </span>
                     </div>
                     <div className="absolute inset-0 bg-indigo-400/5 rounded-lg pointer-events-none"></div>
                   </div>
+
+                  {/* 戦略遺伝子の有効条件表示 */}
+                  {result.config_json.strategy_config.parameters
+                    ?.strategy_gene && (
+                    <div className="mt-4">
+                      <StrategyGeneDisplay
+                        strategyGene={
+                          result.config_json.strategy_config.parameters
+                            .strategy_gene
+                        }
+                      />
+                    </div>
+                  )}
                 </div>
 
                 {/* バックテスト設定 */}

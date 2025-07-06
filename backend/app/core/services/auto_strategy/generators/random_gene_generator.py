@@ -78,9 +78,14 @@ class RandomGeneGenerator:
             # 指標を生成
             indicators = self._generate_random_indicators()
 
-            # 条件を生成
+            # 条件を生成（後方互換性のため保持）
             entry_conditions = self._generate_random_conditions(indicators, "entry")
             exit_conditions = self._generate_random_conditions(indicators, "exit")
+
+            # ロング・ショート条件を生成（新機能）
+            long_entry_conditions, short_entry_conditions = (
+                self._generate_long_short_conditions(indicators)
+            )
 
             # リスク管理設定（従来方式、後方互換性のため保持）
             risk_management = self._generate_risk_management()
@@ -90,8 +95,10 @@ class RandomGeneGenerator:
 
             gene = StrategyGene(
                 indicators=indicators,
-                entry_conditions=entry_conditions,
+                entry_conditions=entry_conditions,  # 後方互換性
                 exit_conditions=exit_conditions,
+                long_entry_conditions=long_entry_conditions,  # 新機能
+                short_entry_conditions=short_entry_conditions,  # 新機能
                 risk_management=risk_management,
                 tpsl_gene=tpsl_gene,  # 新しいTP/SL遺伝子
                 metadata={"generated_by": "RandomGeneGenerator"},
@@ -469,4 +476,76 @@ class RandomGeneGenerator:
                 take_profit_pct=0.06,
                 risk_reward_ratio=2.0,
                 base_stop_loss=0.03,
+            )
+
+    def _generate_long_short_conditions(self, indicators: List[IndicatorGene]):
+        """
+        ロング・ショート条件を生成
+
+        Args:
+            indicators: 指標リスト
+
+        Returns:
+            (long_entry_conditions, short_entry_conditions)のタプル
+        """
+        try:
+            from ..models.gene_encoding import GeneEncoder
+            from ..models.strategy_gene import Condition
+
+            long_entry_conditions = []
+            short_entry_conditions = []
+
+            if not indicators:
+                # 指標がない場合はデフォルト条件
+                long_entry_conditions = [
+                    Condition(left_operand="close", operator=">", right_operand="open")
+                ]
+                short_entry_conditions = [
+                    Condition(left_operand="close", operator="<", right_operand="open")
+                ]
+                return long_entry_conditions, short_entry_conditions
+
+            # 各指標に対してロング・ショート条件を生成
+            encoder = GeneEncoder()
+
+            for indicator in indicators:
+                if not indicator.enabled:
+                    continue
+
+                # 指標名を生成
+                indicator_name = (
+                    f"{indicator.type}_{indicator.parameters.get('period', 14)}"
+                )
+
+                # ロング・ショート条件を生成
+                long_conds, short_conds, _ = encoder._generate_long_short_conditions(
+                    indicator_name, indicator.type
+                )
+
+                # 条件を追加（最大2つまで）
+                if long_conds and len(long_entry_conditions) < 2:
+                    long_entry_conditions.extend(long_conds[:1])
+                if short_conds and len(short_entry_conditions) < 2:
+                    short_entry_conditions.extend(short_conds[:1])
+
+            # 条件が空の場合はデフォルト条件を追加
+            if not long_entry_conditions:
+                long_entry_conditions = [
+                    Condition(left_operand="close", operator=">", right_operand="open")
+                ]
+            if not short_entry_conditions:
+                short_entry_conditions = [
+                    Condition(left_operand="close", operator="<", right_operand="open")
+                ]
+
+            return long_entry_conditions, short_entry_conditions
+
+        except Exception as e:
+            # logger.error(f"ロング・ショート条件生成エラー: {e}")
+            # フォールバック: デフォルト条件
+            from ..models.strategy_gene import Condition
+
+            return (
+                [Condition(left_operand="close", operator=">", right_operand="open")],
+                [Condition(left_operand="close", operator="<", right_operand="open")],
             )

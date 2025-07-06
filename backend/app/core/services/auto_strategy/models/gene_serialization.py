@@ -53,6 +53,14 @@ class GeneSerializer:
                     self.condition_to_dict(cond)
                     for cond in strategy_gene.entry_conditions
                 ],
+                "long_entry_conditions": [
+                    self.condition_to_dict(cond)
+                    for cond in strategy_gene.long_entry_conditions
+                ],
+                "short_entry_conditions": [
+                    self.condition_to_dict(cond)
+                    for cond in strategy_gene.short_entry_conditions
+                ],
                 "exit_conditions": [
                     self.condition_to_dict(cond)
                     for cond in strategy_gene.exit_conditions
@@ -94,6 +102,16 @@ class GeneSerializer:
                 for cond_data in data.get("entry_conditions", [])
             ]
 
+            long_entry_conditions = [
+                self.dict_to_condition(cond_data)
+                for cond_data in data.get("long_entry_conditions", [])
+            ]
+
+            short_entry_conditions = [
+                self.dict_to_condition(cond_data)
+                for cond_data in data.get("short_entry_conditions", [])
+            ]
+
             exit_conditions = [
                 self.dict_to_condition(cond_data)
                 for cond_data in data.get("exit_conditions", [])
@@ -108,6 +126,8 @@ class GeneSerializer:
                 id=data.get("id", ""),
                 indicators=indicators,
                 entry_conditions=entry_conditions,
+                long_entry_conditions=long_entry_conditions,
+                short_entry_conditions=short_entry_conditions,
                 exit_conditions=exit_conditions,
                 risk_management=data.get("risk_management", {}),
                 tpsl_gene=tpsl_gene,

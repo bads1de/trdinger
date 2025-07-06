@@ -16,7 +16,7 @@ const TradeHistoryTable: React.FC<TradeHistoryTableProps> = ({
       const date = new Date(dateString);
       return {
         date: date.toLocaleDateString("ja-JP", {
-          year: "numeric",
+          year: "2-digit",
           month: "2-digit",
           day: "2-digit",
         }),
@@ -24,9 +24,16 @@ const TradeHistoryTable: React.FC<TradeHistoryTableProps> = ({
           hour: "2-digit",
           minute: "2-digit",
         }),
+        fullDateTime: date.toLocaleString("ja-JP", {
+          year: "numeric",
+          month: "2-digit",
+          day: "2-digit",
+          hour: "2-digit",
+          minute: "2-digit",
+        }),
       };
     } catch {
-      return { date: dateString, time: "" };
+      return { date: dateString, time: "", fullDateTime: dateString };
     }
   };
 
@@ -64,64 +71,80 @@ const TradeHistoryTable: React.FC<TradeHistoryTableProps> = ({
 
   return (
     <>
-      <div className="overflow-x-auto">
+      {/* デスクトップ表示 */}
+      <div className="hidden lg:block overflow-x-auto">
         <table className="min-w-full divide-y divide-gray-700/50">
           <thead className="bg-black/30">
             <tr>
-              <th className="px-4 py-3 text-left text-xs font-mono font-medium text-cyan-400 uppercase tracking-wider">
+              <th className="px-2 py-3 text-left text-xs font-mono font-medium text-cyan-400 uppercase tracking-wider">
                 Entry Time
               </th>
-              <th className="px-4 py-3 text-left text-xs font-mono font-medium text-cyan-400 uppercase tracking-wider">
+              <th className="px-2 py-3 text-left text-xs font-mono font-medium text-cyan-400 uppercase tracking-wider">
                 Exit Time
               </th>
-              <th className="px-4 py-3 text-right text-xs font-mono font-medium text-cyan-400 uppercase tracking-wider">
+              <th className="px-2 py-3 text-right text-xs font-mono font-medium text-cyan-400 uppercase tracking-wider">
                 Entry
               </th>
-              <th className="px-4 py-3 text-right text-xs font-mono font-medium text-cyan-400 uppercase tracking-wider">
+              <th className="px-2 py-3 text-right text-xs font-mono font-medium text-cyan-400 uppercase tracking-wider">
                 Exit
               </th>
-              <th className="px-4 py-3 text-right text-xs font-mono font-medium text-cyan-400 uppercase tracking-wider">
+              <th className="px-2 py-3 text-right text-xs font-mono font-medium text-cyan-400 uppercase tracking-wider">
                 Size
               </th>
-              <th className="px-4 py-3 text-right text-xs font-mono font-medium text-cyan-400 uppercase tracking-wider">
+              <th className="px-2 py-3 text-right text-xs font-mono font-medium text-cyan-400 uppercase tracking-wider">
                 P/L
               </th>
-              <th className="px-4 py-3 text-right text-xs font-mono font-medium text-cyan-400 uppercase tracking-wider">
-                Return %
+              <th className="px-2 py-3 text-right text-xs font-mono font-medium text-cyan-400 uppercase tracking-wider">
+                Ret%
               </th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-800/50">
             {tradeHistory.map((trade, index) => {
+              const entryDateTime = formatDateTime(trade.entry_time);
+              const exitDateTime = formatDateTime(trade.exit_time);
+
               return (
                 <tr
                   key={index}
                   className="hover:bg-gray-800/70 transition-colors duration-200"
                 >
-                  <td className="px-4 py-3 text-sm font-mono text-gray-300 whitespace-nowrap">
-                    {formatDateTime(trade.entry_time).date}
+                  <td className="px-2 py-3 text-xs font-mono text-gray-300 whitespace-nowrap">
+                    <div className="flex flex-col">
+                      <span className="text-gray-300">
+                        {entryDateTime.date}
+                      </span>
+                      <span className="text-gray-500 text-xs">
+                        {entryDateTime.time}
+                      </span>
+                    </div>
                   </td>
-                  <td className="px-4 py-3 text-sm font-mono text-gray-300 whitespace-nowrap">
-                    {formatDateTime(trade.exit_time).date}
+                  <td className="px-2 py-3 text-xs font-mono text-gray-300 whitespace-nowrap">
+                    <div className="flex flex-col">
+                      <span className="text-gray-300">{exitDateTime.date}</span>
+                      <span className="text-gray-500 text-xs">
+                        {exitDateTime.time}
+                      </span>
+                    </div>
                   </td>
-                  <td className="px-4 py-3 text-sm text-gray-300 text-right font-mono">
+                  <td className="px-2 py-3 text-xs text-gray-300 text-right font-mono">
                     {formatCurrency(trade.entry_price)}
                   </td>
-                  <td className="px-4 py-3 text-sm text-gray-300 text-right font-mono">
+                  <td className="px-2 py-3 text-xs text-gray-300 text-right font-mono">
                     {formatCurrency(trade.exit_price)}
                   </td>
-                  <td className="px-4 py-3 text-sm text-gray-300 text-right font-mono">
+                  <td className="px-2 py-3 text-xs text-gray-300 text-right font-mono">
                     {formatNumber(trade.size, 4)}
                   </td>
                   <td
-                    className={`px-4 py-3 text-sm text-right font-mono font-semibold ${getPnlColor(
+                    className={`px-2 py-3 text-xs text-right font-mono font-semibold ${getPnlColor(
                       trade.pnl
                     )}`}
                   >
                     {formatCurrency(trade.pnl)}
                   </td>
                   <td
-                    className={`px-4 py-3 text-sm text-right font-mono font-semibold ${getPnlColor(
+                    className={`px-2 py-3 text-xs text-right font-mono font-semibold ${getPnlColor(
                       trade.return_pct
                     )}`}
                   >
@@ -132,6 +155,70 @@ const TradeHistoryTable: React.FC<TradeHistoryTableProps> = ({
             })}
           </tbody>
         </table>
+      </div>
+
+      {/* モバイル表示 */}
+      <div className="lg:hidden space-y-3">
+        {tradeHistory.map((trade, index) => {
+          const entryDateTime = formatDateTime(trade.entry_time);
+          const exitDateTime = formatDateTime(trade.exit_time);
+
+          return (
+            <div
+              key={index}
+              className="bg-gray-800/50 rounded-lg p-4 border border-gray-700/50"
+            >
+              <div className="flex justify-between items-start mb-3">
+                <div className="text-xs text-gray-400">取引 #{index + 1}</div>
+                <div
+                  className={`text-sm font-mono font-semibold ${getPnlColor(
+                    trade.pnl
+                  )}`}
+                >
+                  {formatCurrency(trade.pnl)} (
+                  {formatPercentage(trade.return_pct)})
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3 text-xs">
+                <div>
+                  <div className="text-gray-400 mb-1">エントリー</div>
+                  <div className="font-mono text-gray-300">
+                    {entryDateTime.date}
+                  </div>
+                  <div className="font-mono text-gray-500">
+                    {entryDateTime.time}
+                  </div>
+                  <div className="font-mono text-gray-300 mt-1">
+                    {formatCurrency(trade.entry_price)}
+                  </div>
+                </div>
+
+                <div>
+                  <div className="text-gray-400 mb-1">エグジット</div>
+                  <div className="font-mono text-gray-300">
+                    {exitDateTime.date}
+                  </div>
+                  <div className="font-mono text-gray-500">
+                    {exitDateTime.time}
+                  </div>
+                  <div className="font-mono text-gray-300 mt-1">
+                    {formatCurrency(trade.exit_price)}
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-3 pt-3 border-t border-gray-700/50">
+                <div className="flex justify-between text-xs">
+                  <span className="text-gray-400">サイズ:</span>
+                  <span className="font-mono text-gray-300">
+                    {formatNumber(trade.size, 4)}
+                  </span>
+                </div>
+              </div>
+            </div>
+          );
+        })}
       </div>
 
       {/* 統計情報 */}

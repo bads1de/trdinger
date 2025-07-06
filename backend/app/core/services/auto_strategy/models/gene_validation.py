@@ -232,13 +232,29 @@ class GeneValidator:
                 if not self.validate_condition(condition):
                     errors.append(f"エントリー条件{i}が無効です")
 
+            # ロング・ショート条件の妥当性チェック
+            for i, condition in enumerate(strategy_gene.long_entry_conditions):
+                if not self.validate_condition(condition):
+                    errors.append(f"ロングエントリー条件{i}が無効です")
+
+            for i, condition in enumerate(strategy_gene.short_entry_conditions):
+                if not self.validate_condition(condition):
+                    errors.append(f"ショートエントリー条件{i}が無効です")
+
             for i, condition in enumerate(strategy_gene.exit_conditions):
                 if not self.validate_condition(condition):
                     errors.append(f"イグジット条件{i}が無効です")
 
-            # 最低限の条件チェック
-            if not strategy_gene.entry_conditions:
-                errors.append("エントリー条件が設定されていません")
+            # 最低限の条件チェック（ロング・ショート条件も考慮）
+            has_entry_conditions = (
+                bool(strategy_gene.entry_conditions)
+                or bool(strategy_gene.long_entry_conditions)
+                or bool(strategy_gene.short_entry_conditions)
+            )
+            if not has_entry_conditions:
+                errors.append(
+                    "エントリー条件が設定されていません（entry_conditions、long_entry_conditions、short_entry_conditionsのいずれかが必要）"
+                )
 
             if not strategy_gene.exit_conditions:
                 errors.append("イグジット条件が設定されていません")
