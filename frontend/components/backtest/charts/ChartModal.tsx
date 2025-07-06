@@ -192,9 +192,7 @@ const ChartModal: React.FC<ChartModalProps> = ({ isOpen, onClose, result }) => {
               <div className="text-gray-400">総リターン</div>
               <div className="text-white font-semibold">
                 {result.performance_metrics.total_return
-                  ? `${(result.performance_metrics.total_return * 100).toFixed(
-                      2
-                    )}%`
+                  ? `${result.performance_metrics.total_return.toFixed(2)}%`
                   : "N/A"}
               </div>
             </div>
@@ -202,8 +200,8 @@ const ChartModal: React.FC<ChartModalProps> = ({ isOpen, onClose, result }) => {
               <div className="text-gray-400">最大ドローダウン</div>
               <div className="text-red-400 font-semibold">
                 {result.performance_metrics.max_drawdown
-                  ? `${(
-                      Math.abs(result.performance_metrics.max_drawdown) * 100
+                  ? `${Math.abs(
+                      result.performance_metrics.max_drawdown
                     ).toFixed(2)}%`
                   : "N/A"}
               </div>
@@ -212,7 +210,7 @@ const ChartModal: React.FC<ChartModalProps> = ({ isOpen, onClose, result }) => {
               <div className="text-gray-400">勝率</div>
               <div className="text-green-400 font-semibold">
                 {result.performance_metrics.win_rate
-                  ? `${(result.performance_metrics.win_rate * 100).toFixed(1)}%`
+                  ? `${result.performance_metrics.win_rate.toFixed(1)}%`
                   : "N/A"}
               </div>
             </div>

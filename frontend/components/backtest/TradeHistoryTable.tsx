@@ -67,33 +67,25 @@ const TradeHistoryTable: React.FC<TradeHistoryTableProps> = ({
         <thead className="bg-secondary-800">
           <tr>
             <th className="px-3 py-3 text-left text-xs font-medium text-secondary-300 uppercase tracking-wider">
-              エントリー
-              <br />
-              日時
+              Entry Time
             </th>
             <th className="px-3 py-3 text-left text-xs font-medium text-secondary-300 uppercase tracking-wider">
-              イグジット
-              <br />
-              日時
+              Exit Time
             </th>
             <th className="px-3 py-3 text-right text-xs font-medium text-secondary-300 uppercase tracking-wider">
-              エントリー
-              <br />
-              価格
+              Entry Price
             </th>
             <th className="px-3 py-3 text-right text-xs font-medium text-secondary-300 uppercase tracking-wider">
-              イグジット
-              <br />
-              価格
+              Exit Price
             </th>
             <th className="px-3 py-3 text-right text-xs font-medium text-secondary-300 uppercase tracking-wider">
-              数量
+              Size
             </th>
             <th className="px-3 py-3 text-right text-xs font-medium text-secondary-300 uppercase tracking-wider">
-              損益
+              P/L
             </th>
             <th className="px-3 py-3 text-right text-xs font-medium text-secondary-300 uppercase tracking-wider">
-              リターン率
+              Return %
             </th>
           </tr>
         </thead>
@@ -149,7 +141,7 @@ const TradeHistoryTable: React.FC<TradeHistoryTableProps> = ({
       </table>
 
       {/* 統計情報 */}
-      <div className="mt-4 p-4 bg-secondary-800 rounded-lg border border-secondary-700">
+      <div className="mt-4 p-4 bg-secondary-900/30 rounded-lg border border-secondary-700">
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
           <div>
             <span className="text-secondary-400">総取引数:</span>

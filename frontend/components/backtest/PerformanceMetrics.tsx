@@ -283,7 +283,9 @@ export default function PerformanceMetrics({
 
               <MetricCard
                 title="勝率"
-                value={formatPercentage(metrics.win_rate)}
+                value={formatPercentage(
+                  metrics.win_rate !== null ? metrics.win_rate : null
+                )}
                 subtitle={`${metrics.winning_trades || 0}勝 / ${
                   metrics.losing_trades || 0
                 }敗`}
