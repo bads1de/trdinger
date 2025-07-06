@@ -16,6 +16,7 @@ const TradeHistoryTable: React.FC<TradeHistoryTableProps> = ({
       const date = new Date(dateString);
       return {
         date: date.toLocaleDateString("ja-JP", {
+          year: "numeric",
           month: "2-digit",
           day: "2-digit",
         }),
@@ -32,7 +33,7 @@ const TradeHistoryTable: React.FC<TradeHistoryTableProps> = ({
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat("ja-JP", {
       style: "currency",
-      currency: "JPY",
+      currency: "USD",
       minimumFractionDigits: 0,
       maximumFractionDigits: 1,
     }).format(value);
@@ -74,10 +75,10 @@ const TradeHistoryTable: React.FC<TradeHistoryTableProps> = ({
                 Exit Time
               </th>
               <th className="px-4 py-3 text-right text-xs font-mono font-medium text-cyan-400 uppercase tracking-wider">
-                Entry Price
+                Entry
               </th>
               <th className="px-4 py-3 text-right text-xs font-mono font-medium text-cyan-400 uppercase tracking-wider">
-                Exit Price
+                Exit
               </th>
               <th className="px-4 py-3 text-right text-xs font-mono font-medium text-cyan-400 uppercase tracking-wider">
                 Size
@@ -92,29 +93,16 @@ const TradeHistoryTable: React.FC<TradeHistoryTableProps> = ({
           </thead>
           <tbody className="divide-y divide-gray-800/50">
             {tradeHistory.map((trade, index) => {
-              const entryDateTime = formatDateTime(trade.entry_time);
-              const exitDateTime = formatDateTime(trade.exit_time);
-
               return (
                 <tr
                   key={index}
                   className="hover:bg-gray-800/70 transition-colors duration-200"
                 >
-                  <td className="px-4 py-3 text-sm">
-                    <div className="font-mono text-gray-300">
-                      {entryDateTime.date}
-                    </div>
-                    <div className="font-mono text-gray-500 text-xs">
-                      {entryDateTime.time}
-                    </div>
+                  <td className="px-4 py-3 text-sm font-mono text-gray-300 whitespace-nowrap">
+                    {formatDateTime(trade.entry_time).date}
                   </td>
-                  <td className="px-4 py-3 text-sm">
-                    <div className="font-mono text-gray-300">
-                      {exitDateTime.date}
-                    </div>
-                    <div className="font-mono text-gray-500 text-xs">
-                      {exitDateTime.time}
-                    </div>
+                  <td className="px-4 py-3 text-sm font-mono text-gray-300 whitespace-nowrap">
+                    {formatDateTime(trade.exit_time).date}
                   </td>
                   <td className="px-4 py-3 text-sm text-gray-300 text-right font-mono">
                     {formatCurrency(trade.entry_price)}
