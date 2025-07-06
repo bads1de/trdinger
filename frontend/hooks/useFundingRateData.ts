@@ -24,11 +24,11 @@ export const useFundingRateData = (symbol: string, initialLimit = 100) => {
       if (result.success) {
         setData(result.data.funding_rates);
       } else {
-        setError(result.message || "Failed to fetch funding rate data");
+        setError(result.message || "資金調達データの取得に失敗しました");
       }
     } catch (err) {
-      setError("An error occurred while fetching funding rate data");
-      console.error("Error fetching funding rate data:", err);
+      setError("資金調達データの取得中にエラーが発生しました");
+      console.error("資金調達データの取得中にエラーが発生しました:", err);
     } finally {
       setLoading(false);
     }

@@ -11,8 +11,6 @@ import React, { useState, useEffect } from "react";
 import ApiButton from "@/components/button/ApiButton";
 import { useApiCall } from "@/hooks/useApiCall";
 import GAConfigForm from "./GAConfigForm";
-import GAProgressDisplay from "./GAProgressDisplay";
-import { useGAExecution } from "@/hooks/useGAProgress";
 import { BacktestConfig, BacktestResult } from "@/types/backtest";
 import {
   OptimizationConfig,
@@ -23,7 +21,7 @@ import {
 import { InputField } from "@/components/common/InputField";
 import { SelectField } from "@/components/common/SelectField";
 import { BaseBacktestConfigForm } from "./BaseBacktestConfigForm";
-import { Strategy } from "@/types/strategy";
+import { UnifiedStrategy } from "@/types/auto-strategy";
 import {
   OPTIMIZATION_METHODS,
   ENHANCED_OPTIMIZATION_OBJECTIVES,
@@ -53,7 +51,9 @@ export default function OptimizationForm({
   const [activeTab, setActiveTab] = useState<
     "enhanced" | "multi" | "robustness" | "ga"
   >("enhanced");
-  const [strategies, setStrategies] = useState<Record<string, Strategy>>({});
+  const [strategies, setStrategies] = useState<Record<string, UnifiedStrategy>>(
+    {}
+  );
   const [selectedStrategy, setSelectedStrategy] = useState<string>("SMA_CROSS");
 
   // 基本設定
@@ -105,9 +105,6 @@ export default function OptimizationForm({
   });
 
   const { execute: fetchStrategies } = useApiCall();
-
-  // GA実行管理
-  const gaExecution = useGAExecution();
 
   useEffect(() => {
     const loadStrategies = async () => {
@@ -269,15 +266,6 @@ export default function OptimizationForm({
     }
   };
 
-  // GAProgressDisplay に渡す onComplete と onError のダミー関数
-  const handleGAProgressComplete = (result: any) => {
-    
-  };
-
-  const handleGAProgressError = (error: string) => {
-    
-  };
-
   return (
     <div className="w-full">
       <div className="mb-4 border-b border-secondary-700">
@@ -339,7 +327,16 @@ export default function OptimizationForm({
           <div className="space-y-4">
             <h3 className="text-lg font-semibold text-white">戦略パラメータ</h3>
             {Object.entries(strategies[selectedStrategy].parameters).map(
-              ([key, param]) => (
+              ([key, param]: [
+                string,
+                {
+                  description: string;
+                  default: any;
+                  min?: number;
+                  max?: number;
+                  step?: number;
+                }
+              ]) => (
                 <InputField
                   key={key}
                   label={param.description}
@@ -350,7 +347,6 @@ export default function OptimizationForm({
                   }
                   onChange={(value) => {
                     // 最適化フォームでは直接パラメータを変更しないため、変更を無視
-                    
                   }}
                   min={param.min}
                   max={param.max}
@@ -360,20 +356,7 @@ export default function OptimizationForm({
                 />
               )
             )}
-            {strategies[selectedStrategy].constraints && (
-              <div className="mt-4 p-3 bg-yellow-900/20 border border-yellow-600/30 rounded-md">
-                <h4 className="text-sm font-medium text-yellow-400 mb-2">
-                  制約条件:
-                </h4>
-                <ul className="text-sm text-yellow-300">
-                  {strategies[selectedStrategy].constraints.map(
-                    (constraint: string, index: number) => (
-                      <li key={index}>• {constraint}</li>
-                    )
-                  )}
-                </ul>
-              </div>
-            )}
+            {/* UnifiedStrategy に constraints プロパティがないため、関連コードを削除 */}
           </div>
         )}
 
@@ -672,13 +655,6 @@ export default function OptimizationForm({
         {activeTab === "ga" && onGAGeneration && (
           <div className="space-y-6">
             <GAConfigForm onSubmit={handleGAGeneration} isLoading={isLoading} />
-            {gaExecution.experimentId && (
-              <GAProgressDisplay
-                experimentId={gaExecution.experimentId}
-                onComplete={handleGAProgressComplete}
-                onError={handleGAProgressError}
-              />
-            )}
           </div>
         )}
       </form>

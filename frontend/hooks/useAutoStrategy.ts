@@ -23,7 +23,6 @@ export const useAutoStrategy = (loadResults: () => void) => {
       method: "POST",
       body: requestBody,
       onSuccess: (data) => {
-        
         setShowAutoStrategyModal(false);
         alert(
           `🚀 戦略生成を開始しました！\n\n実験ID: ${data.experiment_id}\n\n生成完了後、結果一覧に自動的に表示されます。\n数分お待ちください。`
@@ -49,6 +48,6 @@ export const useAutoStrategy = (loadResults: () => void) => {
     autoStrategyLoading,
     handleAutoStrategy,
     openAutoStrategyModal,
-    setShowAutoStrategyModal, // モーダルを外部から閉じるために公開
+    setShowAutoStrategyModal,
   };
 };

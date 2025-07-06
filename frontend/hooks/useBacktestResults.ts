@@ -79,6 +79,6 @@ export const useBacktestResults = () => {
     handleResultSelect,
     handleDeleteResult,
     handleDeleteAllResults,
-    setSelectedResult, // 外部からselectedResultをクリアできるように公開
+    setSelectedResult,
   };
 };

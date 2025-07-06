@@ -32,8 +32,8 @@ export const useOhlcvData = (
         setError(result.message || "Failed to fetch OHLCV data");
       }
     } catch (err) {
-      setError("An error occurred while fetching OHLCV data");
-      console.error("Error fetching OHLCV data:", err);
+      setError("OHLCVデータの取得中にエラーが発生しました");
+      console.error("OHLCVデータの取得中にエラーが発生しました:", err);
     } finally {
       setLoading(false);
     }

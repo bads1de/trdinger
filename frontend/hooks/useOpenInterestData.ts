@@ -24,11 +24,16 @@ export const useOpenInterestData = (symbol: string, initialLimit = 100) => {
       if (result.success) {
         setData(result.data.open_interest);
       } else {
-        setError(result.message || "Failed to fetch open interest data");
+        setError(
+          result.message || "オープンインタレストのデータ取得に失敗しました"
+        );
       }
     } catch (err) {
-      setError("An error occurred while fetching open interest data");
-      console.error("Error fetching open interest data:", err);
+      setError("オープンインタレストのデータ取得中にエラーが発生しました");
+      console.error(
+        "オープンインタレストのデータ取得中にエラーが発生しました:",
+        err
+      );
     } finally {
       setLoading(false);
     }
