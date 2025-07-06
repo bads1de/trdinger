@@ -61,6 +61,6 @@ def standardize_ohlcv_columns(df: pd.DataFrame) -> pd.DataFrame:
 
     # Volumeが存在しない場合はデフォルト値を設定
     if "Volume" not in standardized_df.columns:
-        standardized_df["Volume"] = 1000  # デフォルト出来高
+        standardized_df["Volume"] = 1000
 
     return standardized_df

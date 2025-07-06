@@ -17,7 +17,6 @@ from ..generators.random_gene_generator import RandomGeneGenerator
 from app.core.services.backtest_service import BacktestService
 from app.core.services.backtest_data_service import BacktestDataService
 
-# データベースリポジトリのインポート
 from database.repositories.generated_strategy_repository import (
     GeneratedStrategyRepository,
 )
@@ -615,7 +614,7 @@ class AutoStrategyService:
                 experiments = ga_experiment_repo.get_experiments_by_status("completed")
 
                 for exp in experiments:
-                    if exp.experiment_name == experiment_id:  # 簡易的な実装
+                    if exp.experiment_name == experiment_id:
                         return {
                             "id": exp.id,
                             "experiment_name": exp.experiment_name,
@@ -653,7 +652,7 @@ class AutoStrategyService:
                 return [
                     {
                         "id": exp.id,
-                        "experiment_name": exp.name,  # nameプロパティを使用
+                        "experiment_name": exp.name,
                         "status": exp.status,
                         "created_at": (
                             exp.created_at.isoformat()

@@ -578,21 +578,15 @@ async def _collect_all_data_background(symbol: str, timeframe: str, db: Session)
             symbol, timeframe, ohlcv_repository
         )
 
-        # ohlcv_resultが辞書型であり、'success'キーがTrueであることを安全にチェック
-        if not isinstance(ohlcv_result, dict) or not ohlcv_result.get("success"):
-            error_message = (
-                ohlcv_result.get("message")
-                if isinstance(ohlcv_result, dict)
-                else str(ohlcv_result)
-            )
+        # ohlcv_resultは保存された件数(int)を返す。0以上であれば成功とみなす。
+        if ohlcv_result is not None and ohlcv_result >= 0:
+            logger.info(f"OHLCV収集完了: {symbol} {timeframe} - {ohlcv_result}件保存")
+        else:
             logger.error(
-                f"OHLCV収集失敗: {symbol} {timeframe} - {error_message}",
+                f"OHLCV収集失敗: {symbol} {timeframe}",
                 exc_info=True,
             )
             return
-
-        saved_count = ohlcv_result.get("saved_count", 0)
-        logger.info(f"OHLCV収集完了: {symbol} {timeframe} - {saved_count}件保存")
 
         # 2. Funding Rate収集
         try:
@@ -675,17 +669,14 @@ async def _collect_historical_background(symbol: str, timeframe: str, db: Sessio
 
         result = await service.collect_historical_data(symbol, timeframe, repository)
 
-        if isinstance(result, dict) and result.get("success"):
-            saved_count = result.get("saved_count", 0)
+        # resultは保存された件数(int)を返す。0以上であれば成功とみなす。
+        if result is not None and result >= 0:
             logger.info(
-                f"バックグラウンド収集完了: {symbol} {timeframe} - {saved_count}件保存"
+                f"バックグラウンド収集完了: {symbol} {timeframe} - {result}件保存"
             )
         else:
-            error_message = (
-                result.get("message") if isinstance(result, dict) else str(result)
-            )
             logger.error(
-                f"バックグラウンド収集失敗: {symbol} {timeframe} - {error_message}",
+                f"バックグラウンド収集失敗: {symbol} {timeframe}",
                 exc_info=True,
             )
 

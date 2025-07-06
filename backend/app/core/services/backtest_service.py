@@ -231,10 +231,6 @@ class BacktestService:
         if config["commission_rate"] < 0 or config["commission_rate"] > 1:
             raise ValueError("手数料率は0から1の間である必要があります。")
 
-        # 戦略設定の確認
-        # オートストラテジーへの移行に伴い、strategy_typeのチェックは不要。
-        # strategy_geneの存在は_create_strategy_classで検証される。
-
         return True
 
     def _create_strategy_class(self, strategy_config: Dict[str, Any]) -> Type[Strategy]:

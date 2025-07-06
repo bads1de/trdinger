@@ -5,7 +5,7 @@ backtesting.pyライブラリを使用したバックテスト機能のAPIを提
 """
 
 from datetime import datetime
-from typing import Optional, Dict, Any, List, Tuple
+from typing import Optional, Dict, Any
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from pydantic import BaseModel, Field
@@ -267,18 +267,3 @@ async def optimize_strategy_enhanced(
         return {"success": True, "result": saved_result}
 
     return await APIErrorHandler.handle_api_exception(_optimize_enhanced)
-
-
-@router.get("/health")
-async def health_check():
-    """
-    ヘルスチェックエンドポイント
-
-    Returns:
-        APIの状態
-    """
-
-    async def _check_health():
-        return {"status": "ok"}
-
-    return await APIErrorHandler.handle_api_exception(_check_health)

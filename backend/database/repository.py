@@ -3,7 +3,6 @@
 レガシー互換性のため、新しい分割されたリポジトリクラスを再エクスポート
 """
 
-# 新しい分割されたリポジトリクラスをインポート
 from .repositories.ohlcv_repository import OHLCVRepository
 from .repositories.funding_rate_repository import FundingRateRepository
 from .repositories.open_interest_repository import OpenInterestRepository

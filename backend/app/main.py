@@ -4,11 +4,12 @@ FastAPI メインアプリケーション
 Trdinger Trading API のエントリーポイント
 """
 
+import logging
+import os
+
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
-import logging
-import os
 
 from app.config.settings import settings
 from app.core.utils.duplicate_filter_handler import DuplicateFilterHandler
@@ -17,11 +18,9 @@ from app.api.data_collection import router as data_collection_router
 from app.api.funding_rates import router as funding_rates_router
 from app.api.open_interest import router as open_interest_router
 from app.api.data_reset import router as data_reset_router
-
 from app.api.backtest import router as backtest_router
 from app.api.auto_strategy import router as auto_strategy_router
 from app.api.strategies import router as strategies_router
-from app.api.indicators import router as indicators_router
 
 
 def setup_logging():
@@ -51,9 +50,7 @@ def setup_logging():
 
     # オートストラテジー専用ロガーの設定
     auto_strategy_logger = logging.getLogger("app.core.services.auto_strategy")
-    auto_strategy_logger.setLevel(
-        getattr(logging, settings.log_level.upper())
-    )  # settings.log_level を使用
+    auto_strategy_logger.setLevel(getattr(logging, settings.log_level.upper()))
 
     # ログディレクトリが存在しない場合は作成
     log_dir = "C:/Users/buti3/trading"
@@ -94,7 +91,6 @@ def create_app() -> FastAPI:
     app.include_router(backtest_router)
     app.include_router(auto_strategy_router)
     app.include_router(strategies_router)
-    app.include_router(indicators_router, prefix="/api")
 
     # グローバル例外ハンドラ
     @app.exception_handler(Exception)
