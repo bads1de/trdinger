@@ -128,3 +128,60 @@ export const getPriceChangeColor = (open: number, close: number): string => {
 export const formatLargeNumber = (num: number): string => {
   return num.toLocaleString("en-US");
 };
+
+/**
+ * パーセンテージをフォーマットします。
+ * @param value - パーセンテージ値
+ * @returns フォーマットされたパーセンテージ文字列
+ */
+export const formatPercentage = (value: number | undefined | null) => {
+  if (value === undefined || value === null || isNaN(value)) {
+    return "0.00%";
+  }
+  return `${value.toFixed(2)}%`;
+};
+
+/**
+ * 数値を指定された小数点以下の桁数でフォーマットします。
+ * @param value - 数値
+ * @param decimals - 小数点以下の桁数 (デフォルト: 2)
+ * @returns フォーマットされた数値文字列
+ */
+export const formatNumber = (
+  value: number | undefined | null,
+  decimals: number = 2
+) => {
+  if (value === undefined || value === null || isNaN(value)) {
+    return "N/A";
+  }
+  return value.toFixed(decimals);
+};
+
+/**
+ * リターン値に応じて色を返します。
+ * @param value - リターン値
+ * @returns 色の文字列 ("green", "red", "gray")
+ */
+export const getReturnColor = (
+  value: number | undefined | null
+): "green" | "red" | "gray" => {
+  if (value === undefined || value === null || isNaN(value)) return "gray";
+  if (value > 0) return "green";
+  if (value < 0) return "red";
+  return "gray";
+};
+
+/**
+ * シャープレシオの値に応じて色を返します。
+ * @param value - シャープレシオ
+ * @returns 色の文字列 ("green", "yellow", "red", "gray")
+ */
+export const getSharpeColor = (
+  value: number | undefined | null
+): "green" | "yellow" | "red" | "gray" => {
+  if (value === undefined || value === null || isNaN(value)) return "gray";
+  if (value > 1.5) return "green";
+  if (value > 1.0) return "yellow";
+  if (value > 0) return "gray";
+  return "red";
+};
