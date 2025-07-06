@@ -9,9 +9,9 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import DataHeader from "./components/DataHeader";
-import DataControls from "./components/DataControls";
-import DataTableContainer from "./components/DataTableContainer";
+import DataHeader from "@/components/data/DataHeader";
+import DataControls from "@/components/data/DataControls";
+import DataTableContainer from "@/components/data/DataTableContainer";
 import { useOhlcvData } from "@/hooks/useOhlcvData";
 import { useFundingRateData } from "@/hooks/useFundingRateData";
 import { useOpenInterestData } from "@/hooks/useOpenInterestData";
