@@ -243,34 +243,3 @@ def safe_array_conversion(data: Any) -> np.ndarray:
 
     except Exception as e:
         raise DataConversionError(f"numpy配列変換エラー: {e}")
-
-
-# 後方互換性のためのエイリアス
-def convert_to_series(data, raise_on_error: bool = False) -> pd.Series:
-    """
-    後方互換性のためのエイリアス
-
-    Args:
-        data: 変換対象のデータ
-        raise_on_error: エラー時に例外を発生させるかどうか
-
-    Returns:
-        pandas.Series
-    """
-    return ensure_series(data, raise_on_error=raise_on_error)
-
-
-def _ensure_series(data: Union[pd.Series, list, np.ndarray]) -> pd.Series:
-    """
-    後方互換性のためのエイリアス（BaseAdapter._ensure_series互換）
-
-    Args:
-        data: 入力データ
-
-    Returns:
-        pandas.Series
-
-    Raises:
-        DataConversionError: サポートされていないデータ型の場合
-    """
-    return ensure_series(data, raise_on_error=True)

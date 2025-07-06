@@ -16,33 +16,6 @@ class APIResponseHelper:
     """API レスポンス形式の共通ヘルパークラス"""
 
     @staticmethod
-    def success_response(
-        data: Any, message: str, additional_fields: Optional[Dict[str, Any]] = None
-    ) -> Dict[str, Any]:
-        """
-        成功レスポンスを生成
-
-        Args:
-            data: レスポンスデータ
-            message: メッセージ
-            additional_fields: 追加フィールド
-
-        Returns:
-            成功レスポンス辞書
-        """
-        response = {
-            "success": True,
-            "data": data,
-            "message": message,
-            "timestamp": datetime.now().isoformat(),
-        }
-
-        if additional_fields:
-            response.update(additional_fields)
-
-        return response
-
-    @staticmethod
     def error_response(
         message: str,
         error_code: Optional[str] = None,

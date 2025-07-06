@@ -147,38 +147,6 @@ class FundingRateDataConverter:
 
         return db_records
 
-    @staticmethod
-    def db_to_api_format(funding_rate_records: List[Any]) -> List[Dict[str, Any]]:
-        """
-        データベース形式のファンディングレートデータをAPI形式に変換
-
-        Args:
-            funding_rate_records: データベースのファンディングレートレコード
-
-        Returns:
-            API形式のファンディングレートデータ
-        """
-        api_data = []
-
-        for record in funding_rate_records:
-            api_data.append(
-                {
-                    "symbol": record.symbol,
-                    "funding_rate": record.funding_rate,
-                    "funding_timestamp": record.funding_timestamp.isoformat(),
-                    "timestamp": record.timestamp.isoformat(),
-                    "next_funding_timestamp": (
-                        record.next_funding_timestamp.isoformat()
-                        if record.next_funding_timestamp
-                        else None
-                    ),
-                    "mark_price": record.mark_price,
-                    "index_price": record.index_price,
-                }
-            )
-
-        return api_data
-
 
 class OpenInterestDataConverter:
     """オープンインタレストデータ変換の共通ヘルパークラス"""
@@ -246,31 +214,6 @@ class OpenInterestDataConverter:
             db_records.append(db_record)
 
         return db_records
-
-    @staticmethod
-    def db_to_api_format(open_interest_records: List[Any]) -> List[Dict[str, Any]]:
-        """
-        データベース形式のオープンインタレストデータをAPI形式に変換
-
-        Args:
-            open_interest_records: データベースのオープンインタレストレコード
-
-        Returns:
-            API形式のオープンインタレストデータ
-        """
-        api_data = []
-
-        for record in open_interest_records:
-            api_data.append(
-                {
-                    "symbol": record.symbol,
-                    "open_interest": record.open_interest,
-                    "data_timestamp": record.data_timestamp.isoformat(),
-                    "timestamp": record.timestamp.isoformat(),
-                }
-            )
-
-        return api_data
 
 
 class DataValidator:
