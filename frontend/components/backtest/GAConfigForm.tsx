@@ -14,7 +14,6 @@ import { GAConfig as GAConfigType } from "@/types/optimization";
 import { BacktestConfig as BacktestConfigType } from "@/types/backtest";
 import { BaseBacktestConfigForm } from "./BaseBacktestConfigForm";
 import { GA_OBJECTIVE_OPTIONS } from "@/constants/backtest";
-// import TPSLConfigSection from "./TPSLConfigSection"; // TP/SL設定はGAが自動最適化するため不要
 
 interface GAConfigFormProps {
   onSubmit: (config: GAConfigType) => void;
@@ -34,12 +33,12 @@ const GAConfigForm: React.FC<GAConfigFormProps> = ({
       strategy_name: "GA_STRATEGY",
       symbol: "BTC/USDT",
       timeframe: "1h",
-      start_date: "2023-01-01",
-      end_date: "2023-12-31",
+      start_date: "2020-03-01",
+      end_date: "2023-03-01",
       initial_capital: 100000,
       commission_rate: 0.00055,
       strategy_config: {
-        strategy_type: "", // GAで生成されるため、初期値は空
+        strategy_type: "",
         parameters: {},
       },
     };
@@ -71,10 +70,7 @@ const GAConfigForm: React.FC<GAConfigFormProps> = ({
           min_sharpe_ratio: 0.5,
         },
         ga_objective: initialConfig.ga_config?.ga_objective || "Sharpe Ratio",
-        // リスク管理パラメータ範囲設定
-        position_size_range: initialConfig.ga_config?.position_size_range || [
-          0.1, 0.5,
-        ],
+        // 従来のリスク管理パラメータ（Position Sizingシステムにより廃止予定）
         stop_loss_range: initialConfig.ga_config?.stop_loss_range || [
           0.02, 0.05,
         ],
@@ -104,19 +100,7 @@ const GAConfigForm: React.FC<GAConfigFormProps> = ({
   const validateConfig = () => {
     const errors: string[] = [];
 
-    // 取引量範囲のバリデーション
-    if (
-      config.ga_config.position_size_range[0] >=
-      config.ga_config.position_size_range[1]
-    ) {
-      errors.push("取引量範囲: 最小値は最大値より小さくしてください");
-    }
-    if (
-      config.ga_config.position_size_range[0] < 0.01 ||
-      config.ga_config.position_size_range[1] > 0.5
-    ) {
-      errors.push("取引量範囲: 1%〜50%の範囲で設定してください");
-    }
+    // 従来の取引量範囲バリデーションは削除（Position Sizingシステムにより不要）
 
     // TP/SL設定はGAが自動最適化するため、バリデーション不要
     // 従来のTP/SL範囲バリデーション（後方互換性のため保持）
@@ -242,74 +226,51 @@ const GAConfigForm: React.FC<GAConfigFormProps> = ({
         required
       />
 
-      {/* リスク管理設定セクション */}
-      <div className="space-y-4 p-4 border border-secondary-600 rounded-lg bg-secondary-800">
-        <h3 className="text-lg font-semibold text-white">リスク管理設定</h3>
-        <p className="text-sm text-secondary-400">
-          戦略生成時に使用するリスク管理パラメータの範囲を設定します
+      {/* TP/SL & ポジションサイジング自動最適化の説明 */}
+      <div className="space-y-4 p-4 border border-blue-600 rounded-lg bg-blue-900/20">
+        <h3 className="text-lg font-semibold text-blue-300">
+          🤖 リスク管理自動最適化
+        </h3>
+        <p className="text-sm text-blue-200">
+          TP/SL設定とポジションサイズは、テクニカル指標と同様にGAが自動で最適化します。手動設定は不要です。
         </p>
 
-        {/* 取引量範囲設定 */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <InputField
-            label="取引量範囲 - 最小値 (%)"
-            type="number"
-            value={config.ga_config.position_size_range[0] * 100}
-            onChange={(value) =>
-              setConfig((prev) => ({
-                ...prev,
-                ga_config: {
-                  ...prev.ga_config,
-                  position_size_range: [
-                    value / 100,
-                    prev.ga_config.position_size_range[1],
-                  ],
-                },
-              }))
-            }
-            min={1}
-            max={50}
-            step={1}
-            required
-          />
-          <InputField
-            label="取引量範囲 - 最大値 (%)"
-            type="number"
-            value={config.ga_config.position_size_range[1] * 100}
-            onChange={(value) =>
-              setConfig((prev) => ({
-                ...prev,
-                ga_config: {
-                  ...prev.ga_config,
-                  position_size_range: [
-                    prev.ga_config.position_size_range[0],
-                    value / 100,
-                  ],
-                },
-              }))
-            }
-            min={1}
-            max={50}
-            step={1}
-            required
-          />
+        {/* TP/SL自動最適化 */}
+        <div className="p-3 bg-pink-900/30 border border-pink-500/30 rounded-md">
+          <h4 className="font-medium text-pink-300 mb-2">📈 TP/SL自動最適化</h4>
+          <div className="text-xs text-pink-200 space-y-1">
+            <div>
+              • <strong>TP/SL決定方式</strong>:
+              固定値、リスクリワード比、ボラティリティベースなど
+            </div>
+            <div>
+              • <strong>リスクリワード比</strong>: 1:1.2 ～ 1:4.0の範囲
+            </div>
+            <div>
+              • <strong>具体的なパーセンテージ</strong>: SL: 1%-8%, TP: 2%-20%
+            </div>
+          </div>
         </div>
 
-        {/* TP/SL設定はGAが自動最適化するため、ユーザー設定不要 */}
-        <div className="p-4 bg-blue-50 border border-blue-200 rounded-md">
-          <h4 className="font-medium text-blue-900 mb-2">📈 TP/SL自動最適化</h4>
-          <p className="text-sm text-blue-700">
-            テイクプロフィット（TP）とストップロス（SL）の設定は、
-            テクニカル指標パラメータと同様にGAが自動で最適化します。
-            手動設定は不要です。
-          </p>
-          <div className="mt-2 text-xs text-blue-600">
-            <p>
-              •
-              TP/SL決定方式（固定値、リスクリワード比、ボラティリティベースなど）
-            </p>
-            <p>• リスクリワード比（1:1.2 ～ 1:4.0の範囲）</p>
-            <p>• 具体的なパーセンテージ（SL: 1%-8%, TP: 2%-20%）</p>
+        {/* ポジションサイジング自動最適化 */}
+        <div className="p-3 bg-emerald-900/30 border border-emerald-500/30 rounded-md">
+          <h4 className="font-medium text-emerald-300 mb-2">
+            � ポジションサイジング自動最適化
+          </h4>
+          <div className="text-xs text-emerald-200 space-y-1">
+            <div>
+              • <strong>ハーフオプティマルF</strong>:
+              過去データ分析によるリスク最適化
+            </div>
+            <div>
+              • <strong>ボラティリティベース</strong>: ATRを使用したリスク調整
+            </div>
+            <div>
+              • <strong>固定比率</strong>: 口座残高に対する固定比率
+            </div>
+            <div>
+              • <strong>固定枚数</strong>: 設定された固定枚数
+            </div>
           </div>
         </div>
       </div>

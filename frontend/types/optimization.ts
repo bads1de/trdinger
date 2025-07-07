@@ -102,8 +102,7 @@ export interface GAConfig {
       min_sharpe_ratio: number;
     };
     ga_objective: string;
-    // リスク管理パラメータ範囲設定
-    position_size_range: [number, number];
+    // 従来のリスク管理パラメータ（Position Sizingシステムにより廃止）
     stop_loss_range: [number, number];
     take_profit_range: [number, number];
 

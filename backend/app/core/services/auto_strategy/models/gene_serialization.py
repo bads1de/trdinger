@@ -71,6 +71,13 @@ class GeneSerializer:
                     if strategy_gene.tpsl_gene
                     else None
                 ),
+                "position_sizing_gene": (
+                    self.position_sizing_gene_to_dict(
+                        strategy_gene.position_sizing_gene
+                    )
+                    if getattr(strategy_gene, "position_sizing_gene", None)
+                    else None
+                ),
                 "metadata": strategy_gene.metadata,
             }
 
@@ -122,6 +129,13 @@ class GeneSerializer:
             if data.get("tpsl_gene"):
                 tpsl_gene = self.dict_to_tpsl_gene(data["tpsl_gene"])
 
+            # ポジションサイジング遺伝子の復元
+            position_sizing_gene = None
+            if data.get("position_sizing_gene"):
+                position_sizing_gene = self.dict_to_position_sizing_gene(
+                    data["position_sizing_gene"]
+                )
+
             return strategy_gene_class(
                 id=data.get("id", ""),
                 indicators=indicators,
@@ -131,6 +145,7 @@ class GeneSerializer:
                 exit_conditions=exit_conditions,
                 risk_management=data.get("risk_management", {}),
                 tpsl_gene=tpsl_gene,
+                position_sizing_gene=position_sizing_gene,
                 metadata=data.get("metadata", {}),
             )
 
@@ -273,6 +288,51 @@ class GeneSerializer:
         except Exception as e:
             # logger.error(f"TP/SL遺伝子復元エラー: {e}")
             raise ValueError(f"TP/SL遺伝子の復元に失敗: {e}")
+
+    def position_sizing_gene_to_dict(
+        self, position_sizing_gene
+    ) -> Optional[Dict[str, Any]]:
+        """
+        ポジションサイジング遺伝子を辞書形式に変換
+
+        Args:
+            position_sizing_gene: ポジションサイジング遺伝子オブジェクト
+
+        Returns:
+            辞書形式のデータ
+        """
+        try:
+            if position_sizing_gene is None:
+                return None
+
+            return position_sizing_gene.to_dict()
+
+        except Exception as e:
+            # logger.error(f"ポジションサイジング遺伝子辞書変換エラー: {e}")
+            raise ValueError(f"ポジションサイジング遺伝子の辞書変換に失敗: {e}")
+
+    def dict_to_position_sizing_gene(self, data: Dict[str, Any]):
+        """
+        辞書形式からポジションサイジング遺伝子を復元
+
+        Args:
+            data: 辞書形式のデータ
+
+        Returns:
+            ポジションサイジング遺伝子オブジェクト
+        """
+        try:
+            if data is None:
+                return None
+
+            # PositionSizingGeneクラスを動的にインポート
+            from .position_sizing_gene import PositionSizingGene
+
+            return PositionSizingGene.from_dict(data)
+
+        except Exception as e:
+            # logger.error(f"ポジションサイジング遺伝子復元エラー: {e}")
+            raise ValueError(f"ポジションサイジング遺伝子の復元に失敗: {e}")
 
     def _clean_risk_management(self, risk_management: Dict[str, Any]) -> Dict[str, Any]:
         """

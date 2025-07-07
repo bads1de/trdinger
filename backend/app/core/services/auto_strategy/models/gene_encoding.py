@@ -103,12 +103,18 @@ class GeneEncoder:
             tpsl_encoded = self._encode_tpsl_gene(strategy_gene.tpsl_gene)
             encoded.extend(tpsl_encoded)
 
+            # ポジションサイジング遺伝子のエンコード（新機能）
+            position_sizing_encoded = self._encode_position_sizing_gene(
+                getattr(strategy_gene, "position_sizing_gene", None)
+            )
+            encoded.extend(position_sizing_encoded)
+
             return encoded
 
         except Exception as e:
             # logger.error(f"戦略遺伝子エンコードエラー: {e}")
             # エラー時はデフォルトエンコードを返す
-            return [0.0] * 24  # 5指標×2 + 条件×6 + TP/SL×8
+            return [0.0] * 32  # 5指標×2 + 条件×6 + TP/SL×8 + ポジションサイジング×8
 
     def decode_list_to_strategy_gene(self, encoded: List[float], strategy_gene_class):
         """
@@ -279,6 +285,14 @@ class GeneEncoder:
                 tpsl_encoded = encoded[16:24]  # 16-23番目の要素
                 tpsl_gene = self._decode_tpsl_gene(tpsl_encoded)
 
+            # ポジションサイジング遺伝子をデコード（新機能）
+            position_sizing_gene = None
+            if len(encoded) >= 32:  # ポジションサイジング遺伝子が含まれている場合
+                position_sizing_encoded = encoded[24:32]  # 24-31番目の要素
+                position_sizing_gene = self._decode_position_sizing_gene(
+                    position_sizing_encoded
+                )
+
             # メタデータを追加
             metadata = {
                 "generated_by": "GeneEncoder_decode",
@@ -288,6 +302,7 @@ class GeneEncoder:
                 "indicators_count": len(indicators),
                 "decoded_from_length": len(encoded),
                 "tpsl_gene_included": tpsl_gene is not None,
+                "position_sizing_gene_included": position_sizing_gene is not None,
             }
 
             return strategy_gene_class(
@@ -296,6 +311,7 @@ class GeneEncoder:
                 exit_conditions=exit_conditions,
                 risk_management=risk_management,
                 tpsl_gene=tpsl_gene,  # 新しいTP/SL遺伝子
+                position_sizing_gene=position_sizing_gene,  # 新しいポジションサイジング遺伝子
                 metadata=metadata,
             )
 
@@ -777,6 +793,152 @@ class GeneEncoder:
                 take_profit_pct=0.06,
                 risk_reward_ratio=2.0,
                 base_stop_loss=0.03,
+            )
+
+    def _encode_position_sizing_gene(self, position_sizing_gene) -> List[float]:
+        """
+        ポジションサイジング遺伝子をエンコード
+
+        Args:
+            position_sizing_gene: ポジションサイジング遺伝子
+
+        Returns:
+            エンコードされた数値リスト（8要素）
+        """
+        if not position_sizing_gene:
+            return [0.0] * 8  # デフォルト値
+
+        try:
+            # PositionSizingMethodをインポート
+            from .position_sizing_gene import PositionSizingMethod
+
+            # メソッドをエンコード（0-1の範囲）
+            method_mapping = {
+                PositionSizingMethod.HALF_OPTIMAL_F: 0.25,
+                PositionSizingMethod.VOLATILITY_BASED: 0.5,
+                PositionSizingMethod.FIXED_RATIO: 0.75,
+                PositionSizingMethod.FIXED_QUANTITY: 1.0,
+            }
+            method_encoded = method_mapping.get(position_sizing_gene.method, 0.75)
+
+            # パラメータを正規化
+            lookback_norm = (position_sizing_gene.lookback_period - 50) / (200 - 50)
+            optimal_f_norm = (position_sizing_gene.optimal_f_multiplier - 0.25) / (
+                0.75 - 0.25
+            )
+            atr_period_norm = (position_sizing_gene.atr_period - 10) / (30 - 10)
+            atr_multiplier_norm = (position_sizing_gene.atr_multiplier - 1.0) / (
+                4.0 - 1.0
+            )
+            risk_per_trade_norm = (position_sizing_gene.risk_per_trade - 0.01) / (
+                0.05 - 0.01
+            )
+            fixed_ratio_norm = (position_sizing_gene.fixed_ratio - 0.05) / (0.3 - 0.05)
+            fixed_quantity_norm = (position_sizing_gene.fixed_quantity - 0.1) / (
+                5.0 - 0.1
+            )
+            priority_norm = (position_sizing_gene.priority - 0.5) / (1.5 - 0.5)
+
+            # 0-1の範囲にクリップ
+            lookback_norm = max(0, min(1, lookback_norm))
+            optimal_f_norm = max(0, min(1, optimal_f_norm))
+            atr_period_norm = max(0, min(1, atr_period_norm))
+            atr_multiplier_norm = max(0, min(1, atr_multiplier_norm))
+            risk_per_trade_norm = max(0, min(1, risk_per_trade_norm))
+            fixed_ratio_norm = max(0, min(1, fixed_ratio_norm))
+            fixed_quantity_norm = max(0, min(1, fixed_quantity_norm))
+            priority_norm = max(0, min(1, priority_norm))
+
+            return [
+                method_encoded,
+                lookback_norm,
+                optimal_f_norm,
+                atr_period_norm,
+                atr_multiplier_norm,
+                risk_per_trade_norm,
+                fixed_ratio_norm,
+                fixed_quantity_norm,
+            ]
+
+        except Exception as e:
+            # logger.error(f"ポジションサイジング遺伝子エンコードエラー: {e}")
+            return [0.75, 0.5, 0.5, 0.2, 0.33, 0.25, 0.2, 0.2]  # デフォルト値
+
+    def _decode_position_sizing_gene(self, encoded: List[float]):
+        """
+        エンコードされた数値リストからポジションサイジング遺伝子をデコード
+
+        Args:
+            encoded: エンコードされた数値リスト（8要素）
+
+        Returns:
+            デコードされたポジションサイジング遺伝子
+        """
+        try:
+            # PositionSizingGeneとPositionSizingMethodをインポート
+            from .position_sizing_gene import PositionSizingGene, PositionSizingMethod
+
+            if len(encoded) < 8:
+                encoded.extend([0.0] * (8 - len(encoded)))
+
+            # メソッドをデコード
+            method_value = encoded[0]
+            if method_value <= 0.25:
+                method = PositionSizingMethod.HALF_OPTIMAL_F
+            elif method_value <= 0.5:
+                method = PositionSizingMethod.VOLATILITY_BASED
+            elif method_value <= 0.75:
+                method = PositionSizingMethod.FIXED_RATIO
+            else:
+                method = PositionSizingMethod.FIXED_QUANTITY
+
+            # パラメータをデコード
+            lookback_period = int(50 + encoded[1] * (200 - 50))
+            optimal_f_multiplier = 0.25 + encoded[2] * (0.75 - 0.25)
+            atr_period = int(10 + encoded[3] * (30 - 10))
+            atr_multiplier = 1.0 + encoded[4] * (4.0 - 1.0)
+            risk_per_trade = 0.01 + encoded[5] * (0.05 - 0.01)
+            fixed_ratio = 0.05 + encoded[6] * (0.3 - 0.05)
+            fixed_quantity = 0.1 + encoded[7] * (5.0 - 0.1)
+            priority = 0.5 + encoded[7] * (1.5 - 0.5)  # 最後の要素を再利用
+
+            # 範囲制限
+            lookback_period = max(50, min(200, lookback_period))
+            optimal_f_multiplier = max(0.25, min(0.75, optimal_f_multiplier))
+            atr_period = max(10, min(30, atr_period))
+            atr_multiplier = max(1.0, min(4.0, atr_multiplier))
+            risk_per_trade = max(0.01, min(0.05, risk_per_trade))
+            fixed_ratio = max(0.05, min(0.3, fixed_ratio))
+            fixed_quantity = max(0.1, min(5.0, fixed_quantity))
+            priority = max(0.5, min(1.5, priority))
+
+            return PositionSizingGene(
+                method=method,
+                lookback_period=lookback_period,
+                optimal_f_multiplier=optimal_f_multiplier,
+                atr_period=atr_period,
+                atr_multiplier=atr_multiplier,
+                risk_per_trade=risk_per_trade,
+                fixed_ratio=fixed_ratio,
+                fixed_quantity=fixed_quantity,
+                min_position_size=0.01,
+                max_position_size=1.0,
+                enabled=True,
+                priority=priority,
+            )
+
+        except Exception as e:
+            # logger.error(f"ポジションサイジング遺伝子デコードエラー: {e}")
+            # エラー時はデフォルト遺伝子を返す
+            from .position_sizing_gene import PositionSizingGene, PositionSizingMethod
+
+            return PositionSizingGene(
+                method=PositionSizingMethod.FIXED_RATIO,
+                fixed_ratio=0.1,
+                min_position_size=0.01,
+                max_position_size=1.0,
+                enabled=True,
+                priority=1.0,
             )
 
     def get_encoding_info(self) -> Dict:

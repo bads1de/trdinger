@@ -145,23 +145,27 @@ class StrategyFactory:
                         else:
                             position_direction = 1.0  # デフォルトはロング
 
-                        # 非常に小さな固定サイズ（1単位）を使用
-                        # これによりマージン不足エラーを回避
-                        fixed_size = 1.0 * position_direction
+                        # 動的ポジションサイズ計算
+                        calculated_size = self.factory._calculate_position_size(
+                            gene, current_equity, current_price, self.data
+                        )
+
+                        # ポジション方向を適用
+                        final_size = calculated_size * position_direction
 
                         # 利用可能現金で購入可能かチェック（ショートの場合も絶対値で計算）
-                        required_cash = abs(fixed_size) * current_price
+                        required_cash = abs(final_size) * current_price
                         if required_cash <= available_cash * 0.99:
                             # logger.info(
-                            #     f"{'ロング' if fixed_size > 0 else 'ショート'}注文実行 - 固定size: {fixed_size}, 価格: {current_price}"
+                            #     f"{'ロング' if final_size > 0 else 'ショート'}注文実行 - 計算size: {final_size}, 価格: {current_price}"
                             # )
                             # logger.info(
                             #     f"  必要資金: {required_cash:.2f}, 利用可能現金: {available_cash:.2f}"
                             # )
 
-                            # 固定サイズで注文を実行（SL/TPなし）
+                            # 計算されたサイズで注文を実行（SL/TPなし）
                             # ショートの場合は負のサイズでbuy()を呼び出す
-                            self.buy(size=fixed_size)
+                            self.buy(size=final_size)
                         else:
                             pass
                     # イグジット条件チェック
@@ -611,3 +615,127 @@ class StrategyFactory:
             # logger.error(f"TP/SL遺伝子計算エラー: {e}")
             # フォールバック
             return current_price * 0.97, current_price * 1.06  # デフォルト3%SL, 6%TP
+
+    def _calculate_position_size(
+        self, gene: StrategyGene, account_balance: float, current_price: float, data
+    ) -> float:
+        """
+        ポジションサイズを計算
+
+        Args:
+            gene: 戦略遺伝子
+            account_balance: 口座残高
+            current_price: 現在価格
+            data: 市場データ
+
+        Returns:
+            計算されたポジションサイズ
+        """
+        try:
+            # ポジションサイジング遺伝子が存在するかチェック
+            position_sizing_gene = getattr(gene, "position_sizing_gene", None)
+
+            if not position_sizing_gene or not position_sizing_gene.enabled:
+                # ポジションサイジング遺伝子が無効な場合は従来のrisk_managementを使用
+                position_size = gene.risk_management.get("position_size", 0.1)
+                return max(0.01, min(1.0, position_size))
+
+            # ポジションサイジング計算サービスを使用
+            from ..calculators.position_sizing_calculator import (
+                PositionSizingCalculatorService,
+            )
+
+            calculator = PositionSizingCalculatorService()
+
+            # 市場データの準備
+            market_data = self._prepare_market_data_for_position_sizing(
+                data, current_price
+            )
+
+            # 取引履歴の準備（簡易版）
+            trade_history = self._prepare_trade_history_for_position_sizing()
+
+            # ポジションサイズを計算
+            result = calculator.calculate_position_size(
+                gene=position_sizing_gene,
+                account_balance=account_balance,
+                current_price=current_price,
+                symbol="BTCUSDT",  # デフォルト
+                market_data=market_data,
+                trade_history=trade_history,
+                use_cache=False,  # バックテスト中はキャッシュを使用しない
+            )
+
+            # 計算結果を返す
+            return result.position_size
+
+        except Exception as e:
+            # logger.error(f"ポジションサイズ計算エラー: {e}")
+            # エラー時は従来のrisk_managementにフォールバック
+            position_size = gene.risk_management.get("position_size", 0.1)
+            return max(0.01, min(1.0, position_size))
+
+    def _prepare_market_data_for_position_sizing(
+        self, data, current_price: float
+    ) -> Dict[str, Any]:
+        """ポジションサイジング用の市場データを準備"""
+        try:
+            market_data = {}
+
+            # ATR計算（簡易版）
+            if (
+                hasattr(data, "High")
+                and hasattr(data, "Low")
+                and hasattr(data, "Close")
+            ):
+                # 過去14日のATRを計算
+                period = min(14, len(data.Close) - 1)
+                if period > 1:
+                    high_low = data.High[-period:] - data.Low[-period:]
+                    high_close = np.abs(
+                        data.High[-period:] - data.Close[-period - 1 : -1]
+                    )
+                    low_close = np.abs(
+                        data.Low[-period:] - data.Close[-period - 1 : -1]
+                    )
+
+                    true_range = np.maximum(high_low, np.maximum(high_close, low_close))
+                    atr_value = np.mean(true_range)
+
+                    market_data["atr"] = atr_value
+                    market_data["atr_pct"] = (
+                        atr_value / current_price if current_price > 0 else 0.02
+                    )
+                    market_data["atr_source"] = "calculated"
+                else:
+                    # データ不足時はデフォルト値
+                    market_data["atr"] = current_price * 0.02
+                    market_data["atr_pct"] = 0.02
+                    market_data["atr_source"] = "default"
+            else:
+                # データ不足時はデフォルト値
+                market_data["atr"] = current_price * 0.02
+                market_data["atr_pct"] = 0.02
+                market_data["atr_source"] = "default"
+
+            return market_data
+
+        except Exception as e:
+            # logger.error(f"市場データ準備エラー: {e}")
+            return {
+                "atr": current_price * 0.02,
+                "atr_pct": 0.02,
+                "atr_source": "error_fallback",
+            }
+
+    def _prepare_trade_history_for_position_sizing(self) -> List[Dict[str, Any]]:
+        """ポジションサイジング用の取引履歴を準備（簡易版）"""
+        try:
+            # バックテスト中は取引履歴が利用できないため、
+            # ダミーデータまたは空のリストを返す
+            # 実際の実装では、過去の取引結果を保存・参照する仕組みが必要
+            return []
+
+        except Exception as e:
+            # logger.error(f"取引履歴準備エラー: {e}")
+            return []

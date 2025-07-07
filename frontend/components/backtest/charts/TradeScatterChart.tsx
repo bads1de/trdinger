@@ -185,7 +185,7 @@ const TradeScatterChart: React.FC<TradeScatterChartProps> = ({
             type="number"
             scale="time"
             domain={["dataMin", "dataMax"]}
-            tickFormatter={(timestamp) => formatDateTime(timestamp)}
+            tickFormatter={(timestamp) => formatDateTime(timestamp).date}
             {...chartStyles.axis}
           />
 

@@ -2,6 +2,14 @@
 
 import React from "react";
 import { Trade } from "@/types/backtest";
+import {
+  formatDateTime,
+  formatCurrency,
+  formatPercentage,
+  formatNumber,
+  getPnlColor,
+  getPnlTextColor,
+} from "@/utils/formatters";
 
 interface TradeHistoryTableProps {
   tradeHistory: Trade[];
@@ -10,57 +18,6 @@ interface TradeHistoryTableProps {
 const TradeHistoryTable: React.FC<TradeHistoryTableProps> = ({
   tradeHistory,
 }) => {
-  // フォーマット関数
-  const formatDateTime = (dateString: string) => {
-    try {
-      const date = new Date(dateString);
-      return {
-        date: date.toLocaleDateString("ja-JP", {
-          year: "2-digit",
-          month: "2-digit",
-          day: "2-digit",
-        }),
-        time: date.toLocaleTimeString("ja-JP", {
-          hour: "2-digit",
-          minute: "2-digit",
-        }),
-        fullDateTime: date.toLocaleString("ja-JP", {
-          year: "numeric",
-          month: "2-digit",
-          day: "2-digit",
-          hour: "2-digit",
-          minute: "2-digit",
-        }),
-      };
-    } catch {
-      return { date: dateString, time: "", fullDateTime: dateString };
-    }
-  };
-
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat("ja-JP", {
-      style: "currency",
-      currency: "USD",
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 1,
-    }).format(value);
-  };
-
-  const formatPercentage = (value: number) => {
-    const formatted = (value * 100).toFixed(2);
-    return `${formatted}%`;
-  };
-
-  const formatNumber = (value: number, decimals: number = 4) => {
-    return value.toFixed(decimals);
-  };
-
-  const getPnlColor = (pnl: number) => {
-    if (pnl > 0) return "text-green-400";
-    if (pnl < 0) return "text-red-400";
-    return "text-secondary-400";
-  };
-
   if (!tradeHistory || tradeHistory.length === 0) {
     return (
       <div className="text-center py-8 text-secondary-400">
@@ -171,7 +128,7 @@ const TradeHistoryTable: React.FC<TradeHistoryTableProps> = ({
               <div className="flex justify-between items-start mb-3">
                 <div className="text-xs text-gray-400">取引 #{index + 1}</div>
                 <div
-                  className={`text-sm font-mono font-semibold ${getPnlColor(
+                  className={`text-sm font-mono font-semibold ${getPnlTextColor(
                     trade.pnl
                   )}`}
                 >
@@ -253,7 +210,7 @@ const TradeHistoryTable: React.FC<TradeHistoryTableProps> = ({
               総損益
             </span>
             <span
-              className={`block text-lg font-semibold font-mono mt-1 ${getPnlColor(
+              className={`block text-lg font-semibold font-mono mt-1 ${getPnlTextColor(
                 tradeHistory.reduce((sum, t) => sum + t.pnl, 0)
               )}`}
             >

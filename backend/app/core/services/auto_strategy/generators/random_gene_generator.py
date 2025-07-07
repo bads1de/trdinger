@@ -93,6 +93,9 @@ class RandomGeneGenerator:
             # TP/SL遺伝子を生成（GA最適化対象）
             tpsl_gene = self._generate_tpsl_gene()
 
+            # ポジションサイジング遺伝子を生成（GA最適化対象）
+            position_sizing_gene = self._generate_position_sizing_gene()
+
             gene = StrategyGene(
                 indicators=indicators,
                 entry_conditions=entry_conditions,  # 後方互換性
@@ -101,6 +104,7 @@ class RandomGeneGenerator:
                 short_entry_conditions=short_entry_conditions,  # 新機能
                 risk_management=risk_management,
                 tpsl_gene=tpsl_gene,  # 新しいTP/SL遺伝子
+                position_sizing_gene=position_sizing_gene,  # 新しいポジションサイジング遺伝子
                 metadata={"generated_by": "RandomGeneGenerator"},
             )
 
@@ -374,10 +378,32 @@ class RandomGeneGenerator:
         return self._generate_legacy_risk_management()
 
     def _generate_legacy_risk_management(self) -> Dict[str, float]:
-        """従来のリスク管理設定生成（TP/SL設定を除外、tpsl_geneに統一）"""
+        """従来のリスク管理設定生成（Position Sizingシステムにより廃止予定）"""
+        # Position Sizingシステムにより、position_sizeは自動最適化されるため固定値を使用
         return {
-            "position_size": round(random.uniform(*self.config.position_size_range), 3),
+            "position_size": 0.1,  # デフォルト値（実際にはposition_sizing_geneが使用される）
         }
+
+    def _generate_position_sizing_gene(self):
+        """ポジションサイジング遺伝子を生成"""
+        try:
+            from ..models.position_sizing_gene import create_random_position_sizing_gene
+
+            return create_random_position_sizing_gene(self.config)
+        except Exception as e:
+            # logger.error(f"ポジションサイジング遺伝子生成失敗: {e}")
+            # フォールバック: デフォルト遺伝子を返す
+            from ..models.position_sizing_gene import (
+                PositionSizingGene,
+                PositionSizingMethod,
+            )
+
+            return PositionSizingGene(
+                method=PositionSizingMethod.FIXED_RATIO,
+                fixed_ratio=0.1,
+                max_position_size=20.0,  # より大きなデフォルト値
+                enabled=True,
+            )
 
     def _generate_fallback_condition(self, condition_type: str) -> Condition:
         """フォールバック用の基本条件を生成（JSON形式の指標名）"""

@@ -1,6 +1,6 @@
 /**
  * 戦略遺伝子表示コンポーネント
- * 
+ *
  * 戦略遺伝子の有効な条件を後方互換性を考慮して表示します。
  */
 
@@ -38,6 +38,7 @@ interface StrategyGene {
   }>;
   risk_management?: Record<string, any>;
   tpsl_gene?: Record<string, any>;
+  position_sizing_gene?: Record<string, any>;
   metadata?: Record<string, any>;
 }
 
@@ -48,23 +49,29 @@ interface StrategyGeneDisplayProps {
 const StrategyGeneDisplay: React.FC<StrategyGeneDisplayProps> = ({
   strategyGene,
 }) => {
-  const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
+  const [expandedSections, setExpandedSections] = useState<
+    Record<string, boolean>
+  >({
     indicators: false,
-    conditions: true, // デフォルトで展開
+    conditions: true,
     risk: false,
     tpsl: false,
+    position_sizing: false,
   });
 
   const toggleSection = (section: string) => {
-    setExpandedSections(prev => ({
+    setExpandedSections((prev) => ({
       ...prev,
-      [section]: !prev[section]
+      [section]: !prev[section],
     }));
   };
 
   // 有効なロング条件を取得（後方互換性を考慮）
   const getEffectiveLongConditions = () => {
-    if (strategyGene.long_entry_conditions && strategyGene.long_entry_conditions.length > 0) {
+    if (
+      strategyGene.long_entry_conditions &&
+      strategyGene.long_entry_conditions.length > 0
+    ) {
       return strategyGene.long_entry_conditions;
     }
     return strategyGene.entry_conditions || [];
@@ -72,11 +79,17 @@ const StrategyGeneDisplay: React.FC<StrategyGeneDisplayProps> = ({
 
   // 有効なショート条件を取得（後方互換性を考慮）
   const getEffectiveShortConditions = () => {
-    if (strategyGene.short_entry_conditions && strategyGene.short_entry_conditions.length > 0) {
+    if (
+      strategyGene.short_entry_conditions &&
+      strategyGene.short_entry_conditions.length > 0
+    ) {
       return strategyGene.short_entry_conditions;
     }
     // ロング・ショート分離がされていない場合は、entry_conditionsをショート条件としても使用
-    if (!strategyGene.long_entry_conditions || strategyGene.long_entry_conditions.length === 0) {
+    if (
+      !strategyGene.long_entry_conditions ||
+      strategyGene.long_entry_conditions.length === 0
+    ) {
       return strategyGene.entry_conditions || [];
     }
     return [];
@@ -94,7 +107,7 @@ const StrategyGeneDisplay: React.FC<StrategyGeneDisplayProps> = ({
       {/* 指標セクション */}
       <div className="bg-gradient-to-r from-green-900/30 to-emerald-900/30 rounded-lg p-4 border border-green-500/30">
         <button
-          onClick={() => toggleSection('indicators')}
+          onClick={() => toggleSection("indicators")}
           className="flex items-center w-full text-left"
         >
           {expandedSections.indicators ? (
@@ -106,16 +119,19 @@ const StrategyGeneDisplay: React.FC<StrategyGeneDisplayProps> = ({
             指標 ({strategyGene.indicators?.length || 0}個)
           </span>
         </button>
-        
+
         {expandedSections.indicators && strategyGene.indicators && (
           <div className="mt-3 space-y-2">
             {strategyGene.indicators.map((indicator, index) => (
-              <div key={index} className="bg-black/20 rounded p-2 text-xs font-mono">
+              <div
+                key={index}
+                className="bg-black/20 rounded p-2 text-xs font-mono"
+              >
                 <span className="text-green-400">{indicator.type}</span>
                 <span className="text-gray-400 ml-2">
-                  {Object.entries(indicator.parameters).map(([key, value]) => 
-                    `${key}: ${value}`
-                  ).join(', ')}
+                  {Object.entries(indicator.parameters)
+                    .map(([key, value]) => `${key}: ${value}`)
+                    .join(", ")}
                 </span>
                 {!indicator.enabled && (
                   <span className="text-red-400 ml-2">(無効)</span>
@@ -129,7 +145,7 @@ const StrategyGeneDisplay: React.FC<StrategyGeneDisplayProps> = ({
       {/* 条件セクション */}
       <div className="bg-gradient-to-r from-blue-900/30 to-cyan-900/30 rounded-lg p-4 border border-blue-500/30">
         <button
-          onClick={() => toggleSection('conditions')}
+          onClick={() => toggleSection("conditions")}
           className="flex items-center w-full text-left"
         >
           {expandedSections.conditions ? (
@@ -141,7 +157,7 @@ const StrategyGeneDisplay: React.FC<StrategyGeneDisplayProps> = ({
             取引条件
           </span>
         </button>
-        
+
         {expandedSections.conditions && (
           <div className="mt-3 space-y-3">
             {/* ロング条件 */}
@@ -151,17 +167,21 @@ const StrategyGeneDisplay: React.FC<StrategyGeneDisplayProps> = ({
                 <span className="text-green-300 text-xs font-mono uppercase">
                   ロングエントリー条件 ({effectiveLongConditions.length}個)
                 </span>
-                {effectiveLongConditions.length > 0 && 
-                 (!strategyGene.long_entry_conditions || strategyGene.long_entry_conditions.length === 0) && (
-                  <span className="ml-2 text-xs text-yellow-400 bg-yellow-400/10 px-2 py-1 rounded">
-                    後方互換
-                  </span>
-                )}
+                {effectiveLongConditions.length > 0 &&
+                  (!strategyGene.long_entry_conditions ||
+                    strategyGene.long_entry_conditions.length === 0) && (
+                    <span className="ml-2 text-xs text-yellow-400 bg-yellow-400/10 px-2 py-1 rounded">
+                      後方互換
+                    </span>
+                  )}
               </div>
               {effectiveLongConditions.length > 0 ? (
                 <div className="space-y-1">
                   {effectiveLongConditions.map((condition, index) => (
-                    <div key={index} className="bg-green-900/20 rounded p-2 text-xs font-mono text-green-200">
+                    <div
+                      key={index}
+                      className="bg-green-900/20 rounded p-2 text-xs font-mono text-green-200"
+                    >
                       {formatCondition(condition)}
                     </div>
                   ))}
@@ -178,17 +198,21 @@ const StrategyGeneDisplay: React.FC<StrategyGeneDisplayProps> = ({
                 <span className="text-red-300 text-xs font-mono uppercase">
                   ショートエントリー条件 ({effectiveShortConditions.length}個)
                 </span>
-                {effectiveShortConditions.length > 0 && 
-                 (!strategyGene.short_entry_conditions || strategyGene.short_entry_conditions.length === 0) && (
-                  <span className="ml-2 text-xs text-yellow-400 bg-yellow-400/10 px-2 py-1 rounded">
-                    後方互換
-                  </span>
-                )}
+                {effectiveShortConditions.length > 0 &&
+                  (!strategyGene.short_entry_conditions ||
+                    strategyGene.short_entry_conditions.length === 0) && (
+                    <span className="ml-2 text-xs text-yellow-400 bg-yellow-400/10 px-2 py-1 rounded">
+                      後方互換
+                    </span>
+                  )}
               </div>
               {effectiveShortConditions.length > 0 ? (
                 <div className="space-y-1">
                   {effectiveShortConditions.map((condition, index) => (
-                    <div key={index} className="bg-red-900/20 rounded p-2 text-xs font-mono text-red-200">
+                    <div
+                      key={index}
+                      className="bg-red-900/20 rounded p-2 text-xs font-mono text-red-200"
+                    >
                       {formatCondition(condition)}
                     </div>
                   ))}
@@ -206,10 +230,14 @@ const StrategyGeneDisplay: React.FC<StrategyGeneDisplayProps> = ({
                   エグジット条件 ({strategyGene.exit_conditions?.length || 0}個)
                 </span>
               </div>
-              {strategyGene.exit_conditions && strategyGene.exit_conditions.length > 0 ? (
+              {strategyGene.exit_conditions &&
+              strategyGene.exit_conditions.length > 0 ? (
                 <div className="space-y-1">
                   {strategyGene.exit_conditions.map((condition, index) => (
-                    <div key={index} className="bg-purple-900/20 rounded p-2 text-xs font-mono text-purple-200">
+                    <div
+                      key={index}
+                      className="bg-purple-900/20 rounded p-2 text-xs font-mono text-purple-200"
+                    >
                       {formatCondition(condition)}
                     </div>
                   ))}
@@ -226,7 +254,7 @@ const StrategyGeneDisplay: React.FC<StrategyGeneDisplayProps> = ({
       {strategyGene.risk_management && (
         <div className="bg-gradient-to-r from-yellow-900/30 to-orange-900/30 rounded-lg p-4 border border-yellow-500/30">
           <button
-            onClick={() => toggleSection('risk')}
+            onClick={() => toggleSection("risk")}
             className="flex items-center w-full text-left"
           >
             {expandedSections.risk ? (
@@ -238,15 +266,18 @@ const StrategyGeneDisplay: React.FC<StrategyGeneDisplayProps> = ({
               リスク管理
             </span>
           </button>
-          
+
           {expandedSections.risk && (
             <div className="mt-3">
               <div className="bg-black/20 rounded p-2 text-xs font-mono">
-                {Object.entries(strategyGene.risk_management).map(([key, value]) => (
-                  <div key={key} className="text-yellow-200">
-                    <span className="text-yellow-400">{key}:</span> {String(value)}
-                  </div>
-                ))}
+                {Object.entries(strategyGene.risk_management).map(
+                  ([key, value]) => (
+                    <div key={key} className="text-yellow-200">
+                      <span className="text-yellow-400">{key}:</span>{" "}
+                      {String(value)}
+                    </div>
+                  )
+                )}
               </div>
             </div>
           )}
@@ -257,7 +288,7 @@ const StrategyGeneDisplay: React.FC<StrategyGeneDisplayProps> = ({
       {strategyGene.tpsl_gene && (
         <div className="bg-gradient-to-r from-pink-900/30 to-rose-900/30 rounded-lg p-4 border border-pink-500/30">
           <button
-            onClick={() => toggleSection('tpsl')}
+            onClick={() => toggleSection("tpsl")}
             className="flex items-center w-full text-left"
           >
             {expandedSections.tpsl ? (
@@ -269,17 +300,54 @@ const StrategyGeneDisplay: React.FC<StrategyGeneDisplayProps> = ({
               TP/SL設定
             </span>
           </button>
-          
+
           {expandedSections.tpsl && (
             <div className="mt-3">
               <div className="bg-black/20 rounded p-2 text-xs font-mono space-y-1">
                 {Object.entries(strategyGene.tpsl_gene).map(([key, value]) => (
                   <div key={key} className="text-pink-200">
-                    <span className="text-pink-400">{key}:</span> {
-                      typeof value === 'object' ? JSON.stringify(value) : String(value)
-                    }
+                    <span className="text-pink-400">{key}:</span>{" "}
+                    {typeof value === "object"
+                      ? JSON.stringify(value)
+                      : String(value)}
                   </div>
                 ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ポジションサイジング遺伝子セクション */}
+      {strategyGene.position_sizing_gene && (
+        <div className="bg-gradient-to-r from-emerald-900/30 to-green-900/30 rounded-lg p-4 border border-emerald-500/30">
+          <button
+            onClick={() => toggleSection("position_sizing")}
+            className="flex items-center w-full text-left"
+          >
+            {expandedSections.position_sizing ? (
+              <ChevronDownIcon className="h-4 w-4 mr-2 text-emerald-400" />
+            ) : (
+              <ChevronRightIcon className="h-4 w-4 mr-2 text-emerald-400" />
+            )}
+            <span className="text-emerald-300 font-medium">
+              ポジションサイジング遺伝子
+            </span>
+          </button>
+
+          {expandedSections.position_sizing && (
+            <div className="mt-3">
+              <div className="bg-black/20 rounded p-2 text-xs font-mono space-y-1">
+                {Object.entries(strategyGene.position_sizing_gene).map(
+                  ([key, value]) => (
+                    <div key={key} className="text-emerald-200">
+                      <span className="text-emerald-400">{key}:</span>{" "}
+                      {typeof value === "object"
+                        ? JSON.stringify(value)
+                        : String(value)}
+                    </div>
+                  )
+                )}
               </div>
             </div>
           )}

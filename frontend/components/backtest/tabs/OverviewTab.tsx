@@ -7,7 +7,7 @@ import {
   formatCurrency,
   getReturnColor,
   getSharpeColor,
-} from "@/utils/formatting";
+} from "@/utils/formatters";
 
 interface OverviewTabProps {
   result: BacktestResult;
@@ -62,7 +62,7 @@ export default function OverviewTab({ result }: OverviewTabProps) {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           <MetricCard
             title="総リターン"
-            value={formatPercentage(metrics.total_return)}
+            value={formatPercentage(metrics.total_return ?? 0)}
             subtitle={`最終資産: ${formatCurrency(finalEquity)}`}
             color={getReturnColor(metrics.total_return)}
             icon={
@@ -84,7 +84,7 @@ export default function OverviewTab({ result }: OverviewTabProps) {
 
           <MetricCard
             title="シャープレシオ"
-            value={formatNumber(metrics.sharpe_ratio)}
+            value={formatNumber(metrics.sharpe_ratio ?? 0)}
             subtitle="リスク調整後リターン"
             color={getSharpeColor(metrics.sharpe_ratio)}
             icon={
@@ -106,7 +106,7 @@ export default function OverviewTab({ result }: OverviewTabProps) {
 
           <MetricCard
             title="最大ドローダウン"
-            value={formatPercentage(metrics.max_drawdown)}
+            value={formatPercentage(metrics.max_drawdown ?? 0)}
             subtitle="最大下落率"
             color="red"
             icon={
@@ -128,9 +128,7 @@ export default function OverviewTab({ result }: OverviewTabProps) {
 
           <MetricCard
             title="勝率"
-            value={formatPercentage(
-              metrics.win_rate !== null ? metrics.win_rate : null
-            )}
+            value={formatPercentage((metrics.win_rate ?? 0) / 100)}
             subtitle={`${metrics.winning_trades || 0}勝 / ${
               metrics.losing_trades || 0
             }敗`}
@@ -162,7 +160,7 @@ export default function OverviewTab({ result }: OverviewTabProps) {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           <MetricCard
             title="プロフィットファクター"
-            value={formatNumber(metrics.profit_factor)}
+            value={formatNumber(metrics.profit_factor ?? 0)}
             subtitle="総利益 / 総損失"
             color={
               metrics.profit_factor && metrics.profit_factor > 1
@@ -180,7 +178,7 @@ export default function OverviewTab({ result }: OverviewTabProps) {
 
           <MetricCard
             title="平均利益"
-            value={formatCurrency(metrics.avg_win)}
+            value={formatCurrency(metrics.avg_win ?? 0)}
             subtitle="勝ちトレードあたり"
             color="green"
           />

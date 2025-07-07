@@ -2,7 +2,7 @@ import React from "react";
 import { BacktestResult } from "@/types/backtest";
 import CollapsibleJson from "@/components/common/CollapsibleJson";
 import StrategyGeneDisplay from "../StrategyGeneDisplay";
-import { formatCurrency, formatPercentage } from "@/utils/formatting";
+import { formatCurrency, formatPercentage } from "@/utils/formatters";
 
 interface ParametersTabProps {
   result: BacktestResult;

@@ -146,6 +146,9 @@ class StrategyGene:
 
     risk_management: Dict[str, Any] = field(default_factory=dict)
     tpsl_gene: Optional[TPSLGene] = None  # TP/SL遺伝子（GA最適化対象）
+    position_sizing_gene: Optional["PositionSizingGene"] = (
+        None  # ポジションサイジング遺伝子（GA最適化対象）
+    )
     metadata: Dict[str, Any] = field(default_factory=dict)
 
     def __post_init__(self):
@@ -316,6 +319,27 @@ def crossover_strategy_genes(
             child1_tpsl = parent2.tpsl_gene
             child2_tpsl = parent2.tpsl_gene  # コピー
 
+        # ポジションサイジング遺伝子の交叉
+        child1_position_sizing = None
+        child2_position_sizing = None
+
+        if getattr(parent1, "position_sizing_gene", None) and getattr(
+            parent2, "position_sizing_gene", None
+        ):
+            from .position_sizing_gene import crossover_position_sizing_genes
+
+            child1_position_sizing, child2_position_sizing = (
+                crossover_position_sizing_genes(
+                    parent1.position_sizing_gene, parent2.position_sizing_gene
+                )
+            )
+        elif getattr(parent1, "position_sizing_gene", None):
+            child1_position_sizing = parent1.position_sizing_gene
+            child2_position_sizing = parent1.position_sizing_gene  # コピー
+        elif getattr(parent2, "position_sizing_gene", None):
+            child1_position_sizing = parent2.position_sizing_gene
+            child2_position_sizing = parent2.position_sizing_gene  # コピー
+
         # メタデータの継承
         child1_metadata = parent1.metadata.copy()
         child1_metadata["crossover_parent1"] = parent1.id
@@ -333,6 +357,7 @@ def crossover_strategy_genes(
             exit_conditions=child1_exit,
             risk_management=child1_risk,
             tpsl_gene=child1_tpsl,
+            position_sizing_gene=child1_position_sizing,
             metadata=child1_metadata,
         )
 
@@ -343,6 +368,7 @@ def crossover_strategy_genes(
             exit_conditions=child2_exit,
             risk_management=child2_risk,
             tpsl_gene=child2_tpsl,
+            position_sizing_gene=child2_position_sizing,
             metadata=child2_metadata,
         )
 
@@ -456,6 +482,21 @@ def mutate_strategy_gene(
             # TP/SL遺伝子が存在しない場合、低確率で新規作成
             if random.random() < mutation_rate * 0.2:
                 mutated.tpsl_gene = create_random_tpsl_gene()
+
+        # ポジションサイジング遺伝子の突然変異
+        if getattr(mutated, "position_sizing_gene", None):
+            if random.random() < mutation_rate:
+                from .position_sizing_gene import mutate_position_sizing_gene
+
+                mutated.position_sizing_gene = mutate_position_sizing_gene(
+                    mutated.position_sizing_gene, mutation_rate
+                )
+        else:
+            # ポジションサイジング遺伝子が存在しない場合、低確率で新規作成
+            if random.random() < mutation_rate * 0.2:
+                from .position_sizing_gene import create_random_position_sizing_gene
+
+                mutated.position_sizing_gene = create_random_position_sizing_gene()
 
         # メタデータの更新
         mutated.metadata["mutated"] = True

@@ -94,7 +94,7 @@ class GAConfig:
     strict_compatibility_score: float = 0.9
     stop_loss_range: List[float] = field(default_factory=lambda: [0.02, 0.05])
     take_profit_range: List[float] = field(default_factory=lambda: [0.01, 0.15])
-    position_size_range: List[float] = field(default_factory=lambda: [0.1, 0.5])
+    # position_size_range: 削除（Position Sizingシステムにより不要）
 
     # TP/SL GA最適化範囲設定（ユーザー設定ではなくGA制約）
     tpsl_method_constraints: List[str] = field(
@@ -118,6 +118,46 @@ class GAConfig:
     tpsl_atr_multiplier_range: List[float] = field(
         default_factory=lambda: [1.0, 4.0]
     )  # ATR倍率範囲
+
+    # ポジションサイジング GA最適化範囲設定
+    position_sizing_method_constraints: List[str] = field(
+        default_factory=lambda: [
+            "half_optimal_f",
+            "volatility_based",
+            "fixed_ratio",
+            "fixed_quantity",
+        ]
+    )  # GA最適化で使用可能なポジションサイジングメソッド
+    position_sizing_lookback_range: List[int] = field(
+        default_factory=lambda: [50, 200]
+    )  # ハーフオプティマルF用ルックバック期間
+    position_sizing_optimal_f_multiplier_range: List[float] = field(
+        default_factory=lambda: [0.25, 0.75]
+    )  # オプティマルF倍率範囲
+    position_sizing_atr_period_range: List[int] = field(
+        default_factory=lambda: [10, 30]
+    )  # ATR計算期間範囲
+    position_sizing_atr_multiplier_range: List[float] = field(
+        default_factory=lambda: [1.0, 4.0]
+    )  # ポジションサイジング用ATR倍率範囲
+    position_sizing_risk_per_trade_range: List[float] = field(
+        default_factory=lambda: [0.01, 0.05]
+    )  # 1取引あたりのリスク範囲（1%-5%）
+    position_sizing_fixed_ratio_range: List[float] = field(
+        default_factory=lambda: [0.05, 0.3]
+    )  # 固定比率範囲（5%-30%）
+    position_sizing_fixed_quantity_range: List[float] = field(
+        default_factory=lambda: [0.1, 5.0]
+    )  # 固定枚数範囲
+    position_sizing_min_size_range: List[float] = field(
+        default_factory=lambda: [0.01, 0.1]
+    )  # 最小ポジションサイズ範囲
+    position_sizing_max_size_range: List[float] = field(
+        default_factory=lambda: [0.5, 2.0]
+    )  # 最大ポジションサイズ範囲
+    position_sizing_priority_range: List[float] = field(
+        default_factory=lambda: [0.5, 1.5]
+    )  # 優先度範囲
 
     # 実行設定
     parallel_processes: Optional[int] = None
