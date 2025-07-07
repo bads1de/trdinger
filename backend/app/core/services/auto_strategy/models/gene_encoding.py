@@ -922,7 +922,7 @@ class GeneEncoder:
                 fixed_ratio=fixed_ratio,
                 fixed_quantity=fixed_quantity,
                 min_position_size=0.01,
-                max_position_size=1.0,
+                max_position_size=50.0,  # 適切な上限値に変更
                 enabled=True,
                 priority=priority,
             )

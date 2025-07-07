@@ -673,7 +673,8 @@ class StrategyFactory:
             # logger.error(f"ポジションサイズ計算エラー: {e}")
             # エラー時は従来のrisk_managementにフォールバック
             position_size = gene.risk_management.get("position_size", 0.1)
-            return max(0.01, min(1.0, position_size))
+            # 適切な範囲に制限（上限を大幅に拡大）
+            return max(0.01, min(50.0, position_size))
 
     def _prepare_market_data_for_position_sizing(
         self, data, current_price: float

@@ -86,7 +86,9 @@ class PositionSizingGene:
             fixed_ratio=data.get("fixed_ratio", 0.1),
             fixed_quantity=data.get("fixed_quantity", 1.0),
             min_position_size=data.get("min_position_size", 0.01),
-            max_position_size=data.get("max_position_size", 1.0),
+            max_position_size=data.get(
+                "max_position_size", 10.0
+            ),  # クラス定義と一致させる
             enabled=data.get("enabled", True),
             priority=data.get("priority", 1.0),
         )
@@ -279,21 +281,62 @@ class PositionSizingGene:
         return max(self.min_position_size, min(position_size, self.max_position_size))
 
 
-def create_random_position_sizing_gene() -> PositionSizingGene:
-    """ランダムなポジションサイジング遺伝子を生成"""
-    method = random.choice(list(PositionSizingMethod))
+def create_random_position_sizing_gene(config=None) -> PositionSizingGene:
+    """ランダムなポジションサイジング遺伝子を生成
+
+    Args:
+        config: GAConfig（オプション）。制約範囲の指定に使用
+    """
+    # デフォルト範囲
+    method_choices = list(PositionSizingMethod)
+    lookback_range = [50, 200]
+    optimal_f_range = [0.25, 0.75]
+    atr_period_range = [10, 30]
+    atr_multiplier_range = [1.0, 4.0]
+    risk_per_trade_range = [0.01, 0.05]
+    fixed_ratio_range = [0.05, 0.3]
+    fixed_quantity_range = [0.1, 10.0]
+    max_position_range = [5.0, 50.0]
+
+    # GAConfigが提供されている場合は制約を適用
+    if config and hasattr(config, "position_sizing_method_constraints"):
+        if config.position_sizing_method_constraints:
+            method_choices = [
+                PositionSizingMethod(m)
+                for m in config.position_sizing_method_constraints
+            ]
+
+    if config and hasattr(config, "position_sizing_lookback_range"):
+        lookback_range = config.position_sizing_lookback_range
+
+    if config and hasattr(config, "position_sizing_optimal_f_multiplier_range"):
+        optimal_f_range = config.position_sizing_optimal_f_multiplier_range
+
+    if config and hasattr(config, "position_sizing_atr_period_range"):
+        atr_period_range = config.position_sizing_atr_period_range
+
+    if config and hasattr(config, "position_sizing_atr_multiplier_range"):
+        atr_multiplier_range = config.position_sizing_atr_multiplier_range
+
+    if config and hasattr(config, "position_sizing_risk_per_trade_range"):
+        risk_per_trade_range = config.position_sizing_risk_per_trade_range
+
+    if config and hasattr(config, "position_sizing_fixed_ratio_range"):
+        fixed_ratio_range = config.position_sizing_fixed_ratio_range
+
+    method = random.choice(method_choices)
 
     return PositionSizingGene(
         method=method,
-        lookback_period=random.randint(50, 200),
-        optimal_f_multiplier=random.uniform(0.25, 0.75),
-        atr_period=random.randint(10, 30),
-        atr_multiplier=random.uniform(1.0, 4.0),
-        risk_per_trade=random.uniform(0.01, 0.05),
-        fixed_ratio=random.uniform(0.05, 0.3),
-        fixed_quantity=random.uniform(0.1, 10.0),  # 上限を10.0に調整
+        lookback_period=random.randint(lookback_range[0], lookback_range[1]),
+        optimal_f_multiplier=random.uniform(optimal_f_range[0], optimal_f_range[1]),
+        atr_period=random.randint(atr_period_range[0], atr_period_range[1]),
+        atr_multiplier=random.uniform(atr_multiplier_range[0], atr_multiplier_range[1]),
+        risk_per_trade=random.uniform(risk_per_trade_range[0], risk_per_trade_range[1]),
+        fixed_ratio=random.uniform(fixed_ratio_range[0], fixed_ratio_range[1]),
+        fixed_quantity=random.uniform(fixed_quantity_range[0], fixed_quantity_range[1]),
         min_position_size=random.uniform(0.01, 0.05),
-        max_position_size=random.uniform(5.0, 50.0),  # 適切な範囲に調整
+        max_position_size=random.uniform(max_position_range[0], max_position_range[1]),
         enabled=True,
         priority=random.uniform(0.5, 1.5),
     )

@@ -284,7 +284,7 @@ const StrategyGeneDisplay: React.FC<StrategyGeneDisplayProps> = ({
         </div>
       )}
 
-      {/* TP/SL遺伝子セクション */}
+      {/* TP/SL設定セクション */}
       {strategyGene.tpsl_gene && (
         <div className="bg-gradient-to-r from-pink-900/30 to-rose-900/30 rounded-lg p-4 border border-pink-500/30">
           <button
@@ -318,7 +318,7 @@ const StrategyGeneDisplay: React.FC<StrategyGeneDisplayProps> = ({
         </div>
       )}
 
-      {/* ポジションサイジング遺伝子セクション */}
+      {/* 資金管理設定セクション */}
       {strategyGene.position_sizing_gene && (
         <div className="bg-gradient-to-r from-emerald-900/30 to-green-900/30 rounded-lg p-4 border border-emerald-500/30">
           <button
@@ -330,9 +330,7 @@ const StrategyGeneDisplay: React.FC<StrategyGeneDisplayProps> = ({
             ) : (
               <ChevronRightIcon className="h-4 w-4 mr-2 text-emerald-400" />
             )}
-            <span className="text-emerald-300 font-medium">
-              ポジションサイジング遺伝子
-            </span>
+            <span className="text-emerald-300 font-medium">資金管理設定</span>
           </button>
 
           {expandedSections.position_sizing && (
