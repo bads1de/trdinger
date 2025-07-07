@@ -6,12 +6,16 @@
 
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
+import { InformationCircleIcon } from "@heroicons/react/24/outline";
+
 import BacktestResultsTable from "@/components/backtest/BacktestResultsTable";
 import PerformanceMetrics from "@/components/backtest/PerformanceMetrics";
 import OptimizationResults from "@/components/backtest/OptimizationResults";
 import OptimizationModal from "@/components/backtest/OptimizationModal";
 import AutoStrategyModal from "@/components/backtest/AutoStrategyModal";
+import AutoStrategyExplanationModal from "@/components/backtest/AutoStrategyExplanationModal";
+
 import { useBacktestResults } from "@/hooks/useBacktestResults";
 import { useBacktestOptimizations } from "@/hooks/useBacktestOptimizations";
 import { useAutoStrategy } from "@/hooks/useAutoStrategy";
@@ -56,6 +60,8 @@ export default function BacktestPage() {
     setShowAutoStrategyModal,
   } = useAutoStrategy(loadResults);
 
+  const [isExplanationModalOpen, setIsExplanationModalOpen] = useState(false);
+
   // GA戦略生成実行
   const handleGAGeneration = async (config: any) => {
     // GA実行は別途進捗表示で管理されるため、ここでは設定のログ出力のみ
@@ -78,6 +84,10 @@ export default function BacktestPage() {
               <button onClick={openAutoStrategyModal} className="btn-primary">
                 🚀 オートストラテジーで生成
               </button>
+              <InformationCircleIcon
+                className="h-6 w-6 text-gray-400 cursor-pointer hover:text-white"
+                onClick={() => setIsExplanationModalOpen(true)}
+              />
             </div>
           </div>
         </div>
@@ -173,6 +183,11 @@ export default function BacktestPage() {
           onSubmit={handleAutoStrategy}
           isLoading={autoStrategyLoading}
           currentBacktestConfig={currentBacktestConfig}
+        />
+
+        <AutoStrategyExplanationModal
+          isOpen={isExplanationModalOpen}
+          onClose={() => setIsExplanationModalOpen(false)}
         />
 
         {/* 最適化ローディング状態 */}
