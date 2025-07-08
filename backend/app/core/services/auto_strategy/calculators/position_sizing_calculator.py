@@ -233,16 +233,62 @@ class PositionSizingCalculatorService:
         warnings = []
 
         if not trade_history or len(trade_history) < 10:
-            # データ不足時は固定比率にフォールバック
-            position_size = account_balance * gene.fixed_ratio
-            warnings.append("取引履歴が不足、固定比率にフォールバック")
-            details.update(
-                {
-                    "fallback_reason": "insufficient_trade_history",
-                    "trade_count": len(trade_history) if trade_history else 0,
-                    "fallback_ratio": gene.fixed_ratio,
-                }
-            )
+            # データ不足時は簡易版オプティマルF計算を試行
+            try:
+                # 統計的仮定値を使用した簡易計算
+                assumed_win_rate = 0.55
+                assumed_avg_win = 0.02
+                assumed_avg_loss = 0.015
+
+                optimal_f = (
+                    assumed_win_rate * assumed_avg_win
+                    - (1 - assumed_win_rate) * assumed_avg_loss
+                ) / assumed_avg_win
+                half_optimal_f = max(0, min(0.1, optimal_f * gene.optimal_f_multiplier))
+
+                position_size = account_balance * half_optimal_f
+                warnings.append("取引履歴が不足、簡易版オプティマルF計算を使用")
+                details.update(
+                    {
+                        "fallback_reason": "insufficient_trade_history_simplified",
+                        "trade_count": len(trade_history) if trade_history else 0,
+                        "assumed_win_rate": assumed_win_rate,
+                        "assumed_avg_win": assumed_avg_win,
+                        "assumed_avg_loss": assumed_avg_loss,
+                        "calculated_optimal_f": optimal_f,
+                        "half_optimal_f": half_optimal_f,
+                    }
+                )
+            except Exception:
+                # 簡易計算も失敗した場合はボラティリティベースを試行
+                try:
+                    volatility_result = self._calculate_volatility_based_enhanced(
+                        gene,
+                        account_balance,
+                        current_price,
+                        {"atr": current_price * 0.04},
+                    )
+                    position_size = volatility_result["position_size"]
+                    warnings.append(
+                        "取引履歴不足、ボラティリティベース方式にフォールバック"
+                    )
+                    details.update(
+                        {
+                            "fallback_reason": "insufficient_trade_history_to_volatility",
+                            "trade_count": len(trade_history) if trade_history else 0,
+                        }
+                    )
+                except Exception:
+                    # 最終フォールバック：固定比率
+                    position_size = account_balance * gene.fixed_ratio
+                    warnings.append("取引履歴が不足、固定比率にフォールバック")
+                    details.update(
+                        {
+                            "fallback_reason": "insufficient_trade_history_to_fixed",
+                            "trade_count": len(trade_history) if trade_history else 0,
+                            "fallback_ratio": gene.fixed_ratio,
+                        }
+                    )
         else:
             # 過去データの分析
             recent_trades = trade_history[-gene.lookback_period :]
@@ -286,14 +332,34 @@ class PositionSizingCalculatorService:
                         }
                     )
                 else:
-                    position_size = account_balance * gene.fixed_ratio
-                    warnings.append("無効な損益データ、固定比率にフォールバック")
-                    details.update(
-                        {
-                            "fallback_reason": "invalid_pnl_data",
-                            "fallback_ratio": gene.fixed_ratio,
-                        }
-                    )
+                    # 無効な損益データの場合、ボラティリティベース方式を試行
+                    try:
+                        volatility_result = self._calculate_volatility_based_enhanced(
+                            gene,
+                            account_balance,
+                            current_price,
+                            {"atr": current_price * 0.04},
+                        )
+                        position_size = volatility_result["position_size"]
+                        warnings.append(
+                            "無効な損益データ、ボラティリティベース方式にフォールバック"
+                        )
+                        details.update(
+                            {
+                                "fallback_reason": "invalid_pnl_data_to_volatility",
+                                "fallback_method": "volatility_based",
+                            }
+                        )
+                    except Exception:
+                        # ボラティリティベースも失敗した場合のみ固定比率
+                        position_size = account_balance * gene.fixed_ratio
+                        warnings.append("無効な損益データ、固定比率にフォールバック")
+                        details.update(
+                            {
+                                "fallback_reason": "invalid_pnl_data_to_fixed",
+                                "fallback_ratio": gene.fixed_ratio,
+                            }
+                        )
 
         # サイズ制限の適用
         position_size = max(

@@ -7,7 +7,7 @@ from functools import lru_cache
 
 from app.core.services.auto_strategy import AutoStrategyService
 from app.core.services.auto_strategy.models.ga_config import GAConfig
-from app.core.services.auto_strategy.models.strategy_gene import StrategyGene
+from app.core.services.auto_strategy.models.gene_strategy import StrategyGene
 
 
 logger = logging.getLogger(__name__)
@@ -167,73 +167,6 @@ async def generate_strategy(
     except ValueError as e:
         logger.error(f"設定エラー: {str(e)}", exc_info=True)
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
-
-
-@router.get("/experiments/{experiment_id}/progress", response_model=GAProgressResponse)
-async def get_experiment_progress(
-    experiment_id: str,
-    auto_strategy_service: AutoStrategyService = Depends(get_auto_strategy_service),
-):
-    """
-    実験の進捗を取得
-
-    指定された実験IDの進捗状況をリアルタイムで取得します。
-    """
-    progress = auto_strategy_service.get_experiment_progress(experiment_id)
-
-    if progress is None:
-        logger.warning(f"実験が見つかりません: {experiment_id}")
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"実験が見つかりません: {experiment_id}",
-        )
-
-    return GAProgressResponse(
-        success=True, progress=progress.to_dict(), message="進捗情報を取得しました"
-    )
-
-
-@router.get("/experiments/{experiment_id}/results", response_model=GAResultResponse)
-async def get_experiment_results(
-    experiment_id: str,
-    auto_strategy_service: AutoStrategyService = Depends(get_auto_strategy_service),
-):
-    """
-    実験結果を取得
-
-    完了した実験の結果を取得します。
-    """
-    result = auto_strategy_service.get_experiment_result(experiment_id)
-
-    if result is None:
-        # 実験が存在するか確認
-        progress = auto_strategy_service.get_experiment_progress(experiment_id)
-        if progress is None:
-            logger.warning(f"実験が見つかりません: {experiment_id}")
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"実験が見つかりません: {experiment_id}",
-            )
-        else:
-            logger.info(f"実験はまだ完了していません: {experiment_id}")
-            raise HTTPException(
-                status_code=status.HTTP_202_ACCEPTED,
-                detail="実験はまだ完了していません",
-            )
-
-    # 結果を整形
-    formatted_result = {
-        "experiment_id": experiment_id,
-        "best_strategy": result["best_strategy"].to_dict(),
-        "best_fitness": result["best_fitness"],
-        "execution_time": result["execution_time"],
-        "generations_completed": result["generations_completed"],
-        "final_population_size": result["final_population_size"],
-    }
-
-    return GAResultResponse(
-        success=True, result=formatted_result, message="実験結果を取得しました"
-    )
 
 
 @router.get("/experiments", response_model=ListExperimentsResponse)

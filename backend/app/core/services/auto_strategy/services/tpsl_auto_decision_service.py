@@ -5,14 +5,13 @@ TP/SL自動決定サービス
 ストップロス（SL）を自動的に決定する機能を提供します。
 """
 
-# import logging
+import logging
 import random
 from typing import Dict, Any, Optional
 from enum import Enum
 from dataclasses import dataclass, field
 
-
-# logger = logging.getLogger(__name__)
+logger = logging.getLogger(__name__)
 
 
 class TPSLStrategy(Enum):
@@ -111,7 +110,7 @@ class TPSLAutoDecisionService:
                 raise ValueError(f"未サポートの戦略: {config.strategy}")
 
         except Exception as e:
-            # self.logger.error(f"TP/SL自動決定エラー: {e}", exc_info=True)
+            logger.error(f"TP/SL自動決定エラー: {e}", exc_info=True)
             # フォールバック: デフォルト値を返す
             return self._generate_fallback_tpsl(config)
 
@@ -312,5 +311,5 @@ class TPSLAutoDecisionService:
             return True
 
         except Exception as e:
-            # self.logger.error(f"TP/SL値検証エラー: {e}")
+            logger.error(f"TP/SL値検証エラー: {e}")
             return False

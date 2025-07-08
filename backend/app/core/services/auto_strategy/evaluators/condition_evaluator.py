@@ -8,7 +8,7 @@ import logging
 import numpy as np
 from typing import List, Union, Dict, Any
 
-from ..models.strategy_gene import Condition
+from ..models.gene_strategy import Condition
 
 logger = logging.getLogger(__name__)
 

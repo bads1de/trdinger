@@ -9,7 +9,7 @@ import numpy as np
 from typing import Dict, Any, Union, Tuple
 
 from app.core.services.indicators import TechnicalIndicatorService
-from ..models.strategy_gene import IndicatorGene
+from ..models.gene_strategy import IndicatorGene
 
 logger = logging.getLogger(__name__)
 

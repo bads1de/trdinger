@@ -7,13 +7,15 @@ Take Profit/Stop Loss価格の計算を担当します。
 import logging
 from typing import Dict, Any, Optional, Tuple
 
+from ..models.gene_tpsl import TPSLGene
+
 logger = logging.getLogger(__name__)
 
 
 class TPSLCalculator:
     """
     TP/SL計算器
-    
+
     Take Profit/Stop Loss価格の計算を担当します。
     """
 
@@ -156,7 +158,7 @@ class TPSLCalculator:
             return sl_price, tp_price
 
     def calculate_tpsl_from_gene(
-        self, current_price: float, tpsl_gene
+        self, current_price: float, tpsl_gene: TPSLGene
     ) -> Tuple[Optional[float], Optional[float]]:
         """
         TP/SL遺伝子からTP/SL価格を計算（GA最適化対象）

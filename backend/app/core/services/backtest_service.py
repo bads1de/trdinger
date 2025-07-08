@@ -261,7 +261,7 @@ class BacktestService:
         from app.core.services.auto_strategy.factories.strategy_factory import (
             StrategyFactory,
         )
-        from app.core.services.auto_strategy.models.strategy_gene import (
+        from app.core.services.auto_strategy.models.gene_strategy import (
             StrategyGene,
         )
 

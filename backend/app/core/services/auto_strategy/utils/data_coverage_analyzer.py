@@ -9,7 +9,7 @@ import pandas as pd
 
 import logging
 
-from ..models.strategy_gene import StrategyGene, Condition
+from ..models.gene_strategy import StrategyGene, Condition
 
 logger = logging.getLogger(__name__)
 

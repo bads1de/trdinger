@@ -10,7 +10,7 @@ import uuid
 import logging
 from typing import Tuple
 
-from ..models.strategy_gene import StrategyGene
+from ..models.gene_strategy import StrategyGene
 
 logger = logging.getLogger(__name__)
 
@@ -86,7 +86,7 @@ def crossover_strategy_genes(
         child2_tpsl = None
 
         if parent1.tpsl_gene and parent2.tpsl_gene:
-            from ..models.tpsl_gene import crossover_tpsl_genes
+            from ..models.gene_tpsl import crossover_tpsl_genes
 
             child1_tpsl, child2_tpsl = crossover_tpsl_genes(
                 parent1.tpsl_gene, parent2.tpsl_gene
@@ -106,7 +106,7 @@ def crossover_strategy_genes(
         ps_gene2 = getattr(parent2, "position_sizing_gene", None)
 
         if ps_gene1 and ps_gene2:
-            from ..models.position_sizing_gene import crossover_position_sizing_genes
+            from ..models.gene_position_sizing import crossover_position_sizing_genes
 
             child1_position_sizing, child2_position_sizing = (
                 crossover_position_sizing_genes(ps_gene1, ps_gene2)
@@ -252,13 +252,13 @@ def mutate_strategy_gene(
         tpsl_gene = mutated.tpsl_gene
         if tpsl_gene:
             if random.random() < mutation_rate:
-                from ..models.tpsl_gene import mutate_tpsl_gene
+                from ..models.gene_tpsl import mutate_tpsl_gene
 
                 mutated.tpsl_gene = mutate_tpsl_gene(tpsl_gene, mutation_rate)
         else:
             # TP/SL遺伝子が存在しない場合、低確率で新規作成
             if random.random() < mutation_rate * 0.2:
-                from ..models.tpsl_gene import create_random_tpsl_gene
+                from ..models.gene_tpsl import create_random_tpsl_gene
 
                 mutated.tpsl_gene = create_random_tpsl_gene()
 
@@ -266,7 +266,7 @@ def mutate_strategy_gene(
         ps_gene = getattr(mutated, "position_sizing_gene", None)
         if ps_gene:
             if random.random() < mutation_rate:
-                from ..models.position_sizing_gene import mutate_position_sizing_gene
+                from ..models.gene_position_sizing import mutate_position_sizing_gene
 
                 mutated.position_sizing_gene = mutate_position_sizing_gene(
                     ps_gene, mutation_rate
@@ -274,7 +274,7 @@ def mutate_strategy_gene(
         else:
             # ポジションサイジング遺伝子が存在しない場合、低確率で新規作成
             if random.random() < mutation_rate * 0.2:
-                from ..models.position_sizing_gene import (
+                from ..models.gene_position_sizing import (
                     create_random_position_sizing_gene,
                 )
 

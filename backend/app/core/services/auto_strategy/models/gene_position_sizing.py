@@ -32,8 +32,8 @@ class PositionSizingGene:
     TP/SL遺伝子と同じレベルで進化します。
     """
 
-    # ポジションサイジング決定方式
-    method: PositionSizingMethod = PositionSizingMethod.FIXED_RATIO
+    # ポジションサイジング決定方式（デフォルトをボラティリティベースに変更）
+    method: PositionSizingMethod = PositionSizingMethod.VOLATILITY_BASED
 
     # ハーフオプティマルF方式のパラメータ
     lookback_period: int = 100  # 過去データ参照期間（50-200日）
@@ -194,8 +194,8 @@ class PositionSizingGene:
         """ハーフオプティマルF方式でポジションサイズを計算"""
         try:
             if not trade_history or len(trade_history) < 10:
-                # データ不足時は固定比率にフォールバック
-                return self._calculate_fixed_ratio(account_balance, 1.0)
+                # データ不足時は簡易版計算を試行
+                return self._calculate_simplified_optimal_f(account_balance)
 
             # 過去のlookback_period分の取引を分析
             recent_trades = trade_history[-self.lookback_period :]
@@ -226,7 +226,40 @@ class PositionSizingGene:
 
         except Exception as e:
             logger.error(f"ハーフオプティマルF計算エラー: {e}")
-            return self.min_position_size
+            # エラー時は簡易版計算を試行
+            return self._calculate_simplified_optimal_f(account_balance)
+
+    def _calculate_simplified_optimal_f(self, account_balance: float) -> float:
+        """
+        簡易版オプティマルF計算（取引履歴が不足している場合）
+
+        統計的な仮定値を使用してオプティマルFを推定します。
+        """
+        try:
+            # 一般的な取引統計の仮定値を使用
+            assumed_win_rate = 0.55  # 55%の勝率を仮定
+            assumed_avg_win = 0.02  # 平均2%の利益を仮定
+            assumed_avg_loss = 0.015  # 平均1.5%の損失を仮定
+
+            # オプティマルF計算
+            optimal_f = (
+                assumed_win_rate * assumed_avg_win
+                - (1 - assumed_win_rate) * assumed_avg_loss
+            ) / assumed_avg_win
+            half_optimal_f = max(0, optimal_f * self.optimal_f_multiplier)
+
+            # 保守的な上限を設定（最大10%）
+            half_optimal_f = min(half_optimal_f, 0.1)
+
+            position_size = account_balance * half_optimal_f
+            return self._apply_size_limits(position_size)
+
+        except Exception as e:
+            logger.error(f"簡易版オプティマルF計算エラー: {e}")
+            # 最終フォールバック：ボラティリティベース方式を試行
+            return self._calculate_volatility_based(
+                account_balance, account_balance * 0.0001, {}
+            )
 
     def _calculate_volatility_based(
         self,
@@ -236,24 +269,59 @@ class PositionSizingGene:
     ) -> float:
         """ボラティリティベース方式でポジションサイズを計算"""
         try:
-            # ATR値を取得（デフォルト値を設定）
-            atr_value = 0.02 * current_price  # デフォルト2%
-            if market_data and "atr" in market_data:
-                atr_value = market_data["atr"]
-            elif market_data and "atr_pct" in market_data:
-                atr_value = market_data["atr_pct"] * current_price
+            # ATR値を取得（改善されたデフォルト値計算）
+            atr_value = self._calculate_atr_fallback(current_price, market_data)
 
             # リスク量を計算
             risk_amount = account_balance * self.risk_per_trade
 
             # ポジションサイズを計算
-            position_size = risk_amount / (atr_value * self.atr_multiplier)
+            volatility_factor = atr_value * self.atr_multiplier
+            if volatility_factor > 0:
+                position_size = risk_amount / volatility_factor
+            else:
+                # ボラティリティが0の場合は固定比率にフォールバック
+                position_size = account_balance * self.fixed_ratio
 
             return self._apply_size_limits(position_size)
 
         except Exception as e:
             logger.error(f"ボラティリティベース計算エラー: {e}")
-            return self.min_position_size
+            # エラー時は固定比率にフォールバック
+            return self._calculate_fixed_ratio(account_balance, current_price)
+
+    def _calculate_atr_fallback(
+        self, current_price: float, market_data: Optional[Dict[str, Any]]
+    ) -> float:
+        """
+        ATR値の計算とフォールバック処理
+
+        市場データからATRを取得し、利用できない場合は代替計算を行います。
+        """
+        try:
+            # 1. 市場データからATRを取得
+            if market_data:
+                if "atr" in market_data and market_data["atr"] > 0:
+                    return market_data["atr"]
+                elif "atr_pct" in market_data and market_data["atr_pct"] > 0:
+                    return market_data["atr_pct"] * current_price
+
+            # 2. 代替ボラティリティ指標を試行
+            if market_data and "volatility" in market_data:
+                return market_data["volatility"] * current_price
+
+            # 3. 価格ベースの簡易ボラティリティ計算
+            if current_price > 0:
+                # 一般的な暗号通貨の日次ボラティリティ（約3-5%）を仮定
+                estimated_volatility = current_price * 0.04  # 4%を仮定
+                return estimated_volatility
+
+            # 4. 最終フォールバック
+            return 100.0  # 固定値
+
+        except Exception as e:
+            logger.error(f"ATRフォールバック計算エラー: {e}")
+            return current_price * 0.02 if current_price > 0 else 100.0
 
     def _calculate_fixed_ratio(
         self, account_balance: float, current_price: float

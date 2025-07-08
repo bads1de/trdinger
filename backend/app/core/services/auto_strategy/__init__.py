@@ -5,11 +5,11 @@
 """
 
 from .services.auto_strategy_service import AutoStrategyService
-from .models.strategy_gene import StrategyGene
+from .models.gene_strategy import StrategyGene
 from .models.ga_config import GAConfig
 
 __all__ = [
     "AutoStrategyService",
-    "StrategyGene", 
+    "StrategyGene",
     "GAConfig",
 ]

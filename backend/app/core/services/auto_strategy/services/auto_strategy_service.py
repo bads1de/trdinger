@@ -7,8 +7,8 @@ GA実行、進捗管理、結果保存を統合的に管理します。
 from typing import Dict, Any, List, Optional
 
 from fastapi import BackgroundTasks
-from ..models.ga_config import GAConfig, GAProgress
-from ..models.strategy_gene import StrategyGene
+from ..models.ga_config import GAConfig
+from ..models.gene_strategy import StrategyGene
 from app.core.services.backtest_service import BacktestService
 from app.core.services.backtest_data_service import BacktestDataService
 from .experiment_persistence_service import ExperimentPersistenceService
@@ -75,7 +75,7 @@ class AutoStrategyService:
                 self.backtest_service, self.persistence_service
             )
 
-        except Exception as e:
+        except Exception:
             raise
 
     def start_strategy_generation(
@@ -131,14 +131,16 @@ class AutoStrategyService:
 
         # 5. 実験をバックグラウンドで開始
         background_tasks.add_task(
-            self.experiment_manager.run_experiment, experiment_id, ga_config, backtest_config
+            self.experiment_manager.run_experiment,
+            experiment_id,
+            ga_config,
+            backtest_config,
         )
 
         # logger.info(
         #     f"戦略生成実験のバックグラウンドタスクを追加しました: {experiment_id}"
         # )
         return experiment_id
-
 
     def get_experiment_result(self, experiment_id: str) -> Optional[Dict[str, Any]]:
         """実験結果を取得（統合版）"""
@@ -182,8 +184,8 @@ class AutoStrategyService:
             テスト結果
         """
         if not self.experiment_manager:
-            return {"success": False, "error": "実験管理マネージャーが初期化されていません。"}
+            return {
+                "success": False,
+                "error": "実験管理マネージャーが初期化されていません。",
+            }
         return self.experiment_manager.test_strategy_generation(gene, backtest_config)
-
-
-

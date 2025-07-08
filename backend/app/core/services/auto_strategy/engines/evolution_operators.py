@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 class EvolutionOperators:
     """
     進化演算子クラス
-    
+
     遺伝的アルゴリズムの進化演算子（交叉・突然変異）を担当します。
     """
 
@@ -30,7 +30,7 @@ class EvolutionOperators:
         try:
             # 遺伝子デコード
             from ..models.gene_encoding import GeneEncoder
-            from ..models.strategy_gene import StrategyGene, crossover_strategy_genes
+            from ..models.gene_strategy import StrategyGene, crossover_strategy_genes
 
             gene_encoder = GeneEncoder()
             gene1 = gene_encoder.decode_list_to_strategy_gene(ind1, StrategyGene)
@@ -68,7 +68,7 @@ class EvolutionOperators:
         try:
             # 遺伝子デコード
             from ..models.gene_encoding import GeneEncoder
-            from ..models.strategy_gene import StrategyGene, mutate_strategy_gene
+            from ..models.gene_strategy import StrategyGene, mutate_strategy_gene
 
             gene_encoder = GeneEncoder()
             gene = gene_encoder.decode_list_to_strategy_gene(individual, StrategyGene)

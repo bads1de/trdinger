@@ -8,7 +8,7 @@ import logging
 import numpy as np
 from typing import Dict, Any, List
 
-from ..models.strategy_gene import StrategyGene
+from ..models.gene_strategy import StrategyGene
 from .position_sizing_calculator import PositionSizingCalculatorService
 
 logger = logging.getLogger(__name__)
@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 class PositionSizingHelper:
     """
     ポジションサイジングヘルパー
-    
+
     戦略ファクトリーで使用するポジションサイズ計算のヘルパー機能を提供します。
     """
 
@@ -38,7 +38,7 @@ class PositionSizingHelper:
         """
         try:
             # ポジションサイジング遺伝子が存在するかチェック
-            position_sizing_gene = getattr(gene, "position_sizing_gene", None)
+            position_sizing_gene = getattr(gene, "gene_position_sizing", None)
 
             if not position_sizing_gene or not position_sizing_gene.enabled:
                 # ポジションサイジング遺伝子が無効な場合は従来のrisk_managementを使用
@@ -80,45 +80,36 @@ class PositionSizingHelper:
     def prepare_market_data_for_position_sizing(
         self, data, current_price: float
     ) -> Dict[str, Any]:
-        """ポジションサイジング用の市場データを準備"""
+        """ポジションサイジング用の市場データを準備（改善版）"""
         try:
             market_data = {}
 
-            # ATR計算（簡易版）
+            # ATR計算の改善
             if (
-                hasattr(data, "High")
+                data is not None
+                and hasattr(data, "High")
                 and hasattr(data, "Low")
                 and hasattr(data, "Close")
             ):
-                # 過去14日のATRを計算
-                period = min(14, len(data.Close) - 1)
-                if period > 1:
-                    high_low = data.High[-period:] - data.Low[-period:]
-                    high_close = np.abs(
-                        data.High[-period:] - data.Close[-period - 1 : -1]
-                    )
-                    low_close = np.abs(
-                        data.Low[-period:] - data.Close[-period - 1 : -1]
-                    )
+                try:
+                    # 実際のATR計算を試行
+                    atr_value = self._calculate_atr_from_data(data, period=14)
+                    if atr_value > 0:
+                        market_data["atr"] = atr_value
+                        market_data["atr_source"] = "calculated"
+                        market_data["atr_pct"] = (
+                            atr_value / current_price if current_price > 0 else 0.04
+                        )
+                except Exception as e:
+                    logger.warning(f"ATR計算失敗: {e}")
 
-                    true_range = np.maximum(high_low, np.maximum(high_close, low_close))
-                    atr_value = np.mean(true_range)
-
-                    market_data["atr"] = atr_value
-                    market_data["atr_pct"] = (
-                        atr_value / current_price if current_price > 0 else 0.02
-                    )
-                    market_data["atr_source"] = "calculated"
-                else:
-                    # データ不足時はデフォルト値
-                    market_data["atr"] = current_price * 0.02
-                    market_data["atr_pct"] = 0.02
-                    market_data["atr_source"] = "default"
-            else:
-                # データ不足時はデフォルト値
-                market_data["atr"] = current_price * 0.02
-                market_data["atr_pct"] = 0.02
-                market_data["atr_source"] = "default"
+            # ATRが計算できない場合の代替指標
+            if "atr" not in market_data:
+                # 価格ベースの簡易ボラティリティ推定
+                estimated_atr = current_price * 0.04  # 4%を仮定
+                market_data["atr"] = estimated_atr
+                market_data["atr_source"] = "estimated"
+                market_data["atr_pct"] = 0.04
 
             return market_data
 
@@ -141,3 +132,47 @@ class PositionSizingHelper:
         except Exception as e:
             logger.error(f"取引履歴準備エラー: {e}")
             return []
+
+    def _calculate_atr_from_data(self, data, period: int = 14) -> float:
+        """
+        市場データからATRを計算
+
+        Args:
+            data: OHLC市場データ
+            period: ATR計算期間
+
+        Returns:
+            計算されたATR値
+        """
+        try:
+            if (
+                not hasattr(data, "High")
+                or not hasattr(data, "Low")
+                or not hasattr(data, "Close")
+            ):
+                return 0.0
+
+            # 利用可能なデータ期間を調整
+            available_period = min(period, len(data.Close) - 1)
+            if available_period < 2:
+                return 0.0
+
+            # True Range計算
+            high_low = data.High[-available_period:] - data.Low[-available_period:]
+            high_close = np.abs(
+                data.High[-available_period:] - data.Close[-available_period - 1 : -1]
+            )
+            low_close = np.abs(
+                data.Low[-available_period:] - data.Close[-available_period - 1 : -1]
+            )
+
+            true_range = np.maximum(high_low, np.maximum(high_close, low_close))
+
+            # ATR計算（単純移動平均）
+            atr_value = np.mean(true_range)
+
+            return float(atr_value) if atr_value > 0 else 0.0
+
+        except Exception as e:
+            logger.error(f"ATR計算エラー: {e}")
+            return 0.0

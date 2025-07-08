@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 class IndividualEvaluator:
     """
     個体評価器
-    
+
     遺伝的アルゴリズムの個体評価を担当します。
     """
 
@@ -43,7 +43,7 @@ class IndividualEvaluator:
         try:
             # 遺伝子デコード
             from ..models.gene_encoding import GeneEncoder
-            from ..models.strategy_gene import StrategyGene
+            from ..models.gene_strategy import StrategyGene
 
             gene_encoder = GeneEncoder()
             gene = gene_encoder.decode_list_to_strategy_gene(individual, StrategyGene)

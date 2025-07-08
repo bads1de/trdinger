@@ -10,9 +10,9 @@ import logging
 from typing import TYPE_CHECKING, Dict, Any, Optional, Type
 
 if TYPE_CHECKING:
-    from .strategy_gene import Condition, IndicatorGene, StrategyGene
+    from .gene_strategy import Condition, IndicatorGene, StrategyGene
 
-from .tpsl_gene import TPSLGene
+from .gene_tpsl import TPSLGene
 
 logger = logging.getLogger(__name__)
 
@@ -187,7 +187,7 @@ class GeneSerializer:
         try:
             # IndicatorGeneクラスを動的にインポート
             # IndicatorGeneクラスを動的にインポート
-            from .strategy_gene import IndicatorGene
+            from .gene_strategy import IndicatorGene
 
             return IndicatorGene(
                 type=data["type"],
@@ -233,7 +233,7 @@ class GeneSerializer:
         try:
             # Conditionクラスを動的にインポート
             # Conditionクラスを動的にインポート
-            from .strategy_gene import Condition
+            from .gene_strategy import Condition
 
             return Condition(
                 left_operand=data["left_operand"],
@@ -281,7 +281,7 @@ class GeneSerializer:
 
             # TPSLGeneクラスを動的にインポート
             # TPSLGeneクラスを動的にインポート
-            from .tpsl_gene import TPSLGene
+            from .gene_tpsl import TPSLGene
 
             return TPSLGene.from_dict(data)
 
@@ -326,7 +326,7 @@ class GeneSerializer:
                 return None
 
             # PositionSizingGeneクラスを動的にインポート
-            from .position_sizing_gene import PositionSizingGene
+            from .gene_position_sizing import PositionSizingGene
 
             return PositionSizingGene.from_dict(data)
 

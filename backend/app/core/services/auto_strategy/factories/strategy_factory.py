@@ -8,7 +8,7 @@ import logging
 from typing import Type, Tuple
 
 from backtesting import Strategy
-from ..models.strategy_gene import StrategyGene, IndicatorGene
+from ..models.gene_strategy import StrategyGene, IndicatorGene
 from ..evaluators.condition_evaluator import ConditionEvaluator
 from ..calculators.indicator_calculator import IndicatorCalculator
 from ..calculators.tpsl_calculator import TPSLCalculator

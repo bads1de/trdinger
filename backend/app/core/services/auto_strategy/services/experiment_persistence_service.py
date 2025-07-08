@@ -8,8 +8,10 @@ from typing import Dict, Any, List, Optional
 from sqlalchemy.orm import Session
 
 from ..models.ga_config import GAConfig
-from ..models.strategy_gene import StrategyGene
-from database.repositories.generated_strategy_repository import GeneratedStrategyRepository
+from ..models.gene_strategy import StrategyGene
+from database.repositories.generated_strategy_repository import (
+    GeneratedStrategyRepository,
+)
 from database.repositories.ga_experiment_repository import GAExperimentRepository
 from database.repositories.backtest_result_repository import BacktestResultRepository
 from app.core.services.backtest_service import BacktestService
@@ -52,7 +54,9 @@ class ExperimentPersistenceService:
                     total_generations=ga_config.generations,
                     status="running",
                 )
-                logger.info(f"実験を作成しました: {experiment_name} (DB ID: {db_experiment.id})")
+                logger.info(
+                    f"実験を作成しました: {experiment_name} (DB ID: {db_experiment.id})"
+                )
                 return str(db_experiment.id)
         except Exception as e:
             logger.error(f"実験作成エラー: {e}")
@@ -88,7 +92,9 @@ class ExperimentPersistenceService:
             logger.info(f"実験結果保存完了: {experiment_id}")
 
         except Exception as e:
-            logger.error(f"GA実験結果の保存中にエラーが発生しました: {e}", exc_info=True)
+            logger.error(
+                f"GA実験結果の保存中にエラーが発生しました: {e}", exc_info=True
+            )
             pass
 
     def _save_best_strategy_and_run_detailed_backtest(

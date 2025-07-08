@@ -66,8 +66,7 @@ class GeneticAlgorithmEngine:
         """
         # 個体生成器を初期化
         self.individual_creator = IndividualCreator(
-            self.gene_generator,
-            None  # 個体クラスはDEAPSetupで設定される
+            self.gene_generator, None  # 個体クラスはDEAPSetupで設定される
         )
 
         # DEAP環境をセットアップ
@@ -76,7 +75,7 @@ class GeneticAlgorithmEngine:
             self.individual_creator.create_individual,
             self.individual_evaluator.evaluate_individual,
             self.evolution_operators.crossover_strategy_genes,
-            self.evolution_operators.mutate_strategy_gene
+            self.evolution_operators.mutate_strategy_gene,
         )
 
         # 個体生成器に個体クラスを設定
@@ -137,7 +136,7 @@ class GeneticAlgorithmEngine:
 
             # 遺伝子デコード
             from ..models.gene_encoding import GeneEncoder
-            from ..models.strategy_gene import StrategyGene
+            from ..models.gene_strategy import StrategyGene
 
             gene_encoder = GeneEncoder()
             best_gene = gene_encoder.decode_list_to_strategy_gene(
@@ -164,8 +163,6 @@ class GeneticAlgorithmEngine:
             raise
         finally:
             self.is_running = False
-
-
 
     def stop_evolution(self):
         """進化を停止"""

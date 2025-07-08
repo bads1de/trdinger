@@ -8,7 +8,7 @@ import logging
 from typing import Dict, Any, List, Optional
 
 from ..models.ga_config import GAConfig
-from ..models.strategy_gene import StrategyGene
+from ..models.gene_strategy import StrategyGene
 from ..engines.ga_engine import GeneticAlgorithmEngine
 from ..factories.strategy_factory import StrategyFactory
 from ..generators.random_gene_generator import RandomGeneGenerator

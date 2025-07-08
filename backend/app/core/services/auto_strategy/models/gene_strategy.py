@@ -13,9 +13,8 @@ import logging
 # 分離されたモジュール
 from .gene_validation import GeneValidator
 from .gene_serialization import GeneSerializer
-from .gene_encoding import GeneEncoder
-from .tpsl_gene import TPSLGene
-from .position_sizing_gene import PositionSizingGene
+from .gene_tpsl import TPSLGene
+from .gene_position_sizing import PositionSizingGene
 
 logger = logging.getLogger(__name__)
 
@@ -225,12 +224,16 @@ class StrategyGene:
 
 def encode_gene_to_list(gene: StrategyGene) -> List[float]:
     """戦略遺伝子をGA用数値リストにエンコード"""
+    from .gene_encoding import GeneEncoder
+
     encoder = GeneEncoder()
     return encoder.encode_strategy_gene_to_list(gene)
 
 
 def decode_list_to_gene(encoded: List[float]) -> StrategyGene:
     """GA用数値リストから戦略遺伝子にデコード"""
+    from .gene_encoding import GeneEncoder
+
     encoder = GeneEncoder()
     return encoder.decode_list_to_strategy_gene(encoded, StrategyGene)
 
