@@ -22,7 +22,7 @@ class DuplicateFilterHandler(logging.Filter):
         self.interval = interval
         self.last_logs: Dict[str, Tuple[float, int]] = (
             {}
-        )  # {message: (timestamp, count)}
+        )  
 
     def filter(self, record: logging.LogRecord) -> bool:
         """

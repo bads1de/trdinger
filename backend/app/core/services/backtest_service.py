@@ -59,7 +59,18 @@ class BacktestService:
             ValueError: 設定が無効な場合
         """
         try:
-            logger.info(f"バックテストを開始します。設定: {config}")
+            # ログに出力する設定情報から、長大なデータを除外する
+            log_config = {
+                k: v
+                for k, v in config.items()
+                if k not in ["strategy_config", "equity_curve", "trade_history"]
+            }
+            if "strategy_config" in config:
+                log_config["strategy_config"] = {
+                    "strategy_type": config["strategy_config"].get("strategy_type"),
+                    "parameters": "...",  # strategy_geneはログに出力しない
+                }
+            logger.info(f"バックテストを開始します。設定: {log_config}")
 
             # 1. 設定の検証
             self._validate_config(config)

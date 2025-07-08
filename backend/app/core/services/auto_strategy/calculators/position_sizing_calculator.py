@@ -8,9 +8,9 @@ PositionSizingGeneに基づいて実際のポジションサイズを計算す�
 import logging
 import numpy as np
 import pandas as pd
-from typing import Dict, Any, List, Optional, Tuple
+from typing import Dict, Any, List, Optional
 from dataclasses import dataclass
-from datetime import datetime, timedelta
+from datetime import datetime
 
 logger = logging.getLogger(__name__)
 
@@ -162,7 +162,7 @@ class PositionSizingCalculatorService:
 
             # 履歴に追加
             self._calculation_history.append(final_result)
-            if len(self._calculation_history) > 1000:  # 履歴サイズ制限
+            if len(self._calculation_history) > 1000:  
                 self._calculation_history = self._calculation_history[-500:]
 
             return final_result

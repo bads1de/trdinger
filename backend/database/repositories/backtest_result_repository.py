@@ -34,7 +34,14 @@ class BacktestResultRepository(BaseRepository):
             import logging
 
             logger = logging.getLogger(__name__)
-            logger.info(f"バックテスト結果を保存中: {result_data}")
+            # ログに出力する情報から長大なデータを除外
+            log_data = {
+                k: v
+                for k, v in result_data.items()
+                if k not in ["equity_curve", "trade_history", "config_json"]
+            }
+            log_data["config_json"] = "..."  # config_jsonは内容が大きいため省略
+            logger.info(f"バックテスト結果を保存中: {log_data}")
 
             # 日付の処理
             # start_dateとend_dateが文字列の場合、ISOフォーマットからdatetimeオブジェクトに変換します。
