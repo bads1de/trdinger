@@ -21,7 +21,7 @@ logger = logging.getLogger(__name__)
 class ExperimentManager:
     """
     実験管理マネージャー
-    
+
     GA実験の実行と管理を担当します。
     """
 
@@ -68,6 +68,9 @@ class ExperimentManager:
             # 最終進捗を作成・通知
 
             logger.info(f"GA実行完了: {experiment_id}")
+
+            # 取引数0の問題を分析
+            self._analyze_zero_trades_issue(experiment_id, result)
 
         except Exception as e:
             logger.error(f"GA実験の実行中にエラーが発生しました ({experiment_id}): {e}")
@@ -153,5 +156,144 @@ class ExperimentManager:
             }
 
         except Exception as e:
-            logger.error(f"戦略のテスト実行中にエラーが発生しました: {e}")
+            logger.error(f"戦略テスト実行エラー: {e}")
             return {"success": False, "error": str(e)}
+
+    def _analyze_zero_trades_issue(self, experiment_id: str, result: Dict[str, Any]):
+        """取引数0の問題を分析してログ出力"""
+        try:
+            best_strategy = result.get("best_strategy")
+            if not best_strategy:
+                logger.warning(f"実験 {experiment_id}: ベスト戦略が見つかりません")
+                return
+
+            # 最新のバックテスト結果を取得して分析
+            # 最新のバックテスト結果を取得して分析
+            from backend.database.repositories.backtest_result_repository import (
+                BacktestResultRepository,
+            )
+            from backend.database.connection import get_db
+
+            db = next(get_db())
+            try:
+                backtest_repo = BacktestResultRepository(db)
+                recent_results = backtest_repo.get_recent_backtest_results(limit=10)
+
+                zero_trade_count = 0
+                for backtest_result in recent_results:
+                    metrics = backtest_result.get("performance_metrics")
+                    if metrics:
+                        total_trades = metrics.get("total_trades", 0)
+
+                        if total_trades == 0:
+                            zero_trade_count += 1
+                            logger.warning(
+                                f"🔍 取引数0の戦略発見 (ID: {backtest_result.get('id')})"
+                            )
+
+                            # 戦略遺伝子を分析
+                            strategy_config = backtest_result.get("config_json")
+                            if strategy_config:
+                                strategy_gene_dict = strategy_config.get(
+                                    "parameters", {}
+                                ).get("strategy_gene", {})
+
+                                result_id = backtest_result.get("id")
+                                if strategy_gene_dict and result_id is not None:
+                                    self._analyze_strategy_gene_for_zero_trades(
+                                        strategy_gene_dict, str(result_id)
+                                    )
+
+                if zero_trade_count > 0:
+                    logger.warning(
+                        f"実験 {experiment_id}: 最近の結果で {zero_trade_count}/10 の戦略が取引数0でした"
+                    )
+                else:
+                    logger.info(
+                        f"実験 {experiment_id}: 最近の結果で取引数0の問題は見つかりませんでした"
+                    )
+
+            finally:
+                db.close()
+
+        except Exception as e:
+            logger.error(f"取引数0分析エラー: {e}")
+
+    def _analyze_strategy_gene_for_zero_trades(
+        self, strategy_gene_dict: Dict[str, Any], result_id: str
+    ):
+        """戦略遺伝子を分析して取引数0の原因を特定"""
+        try:
+            logger.info(f"      📊 戦略分析 (結果ID: {result_id}):")
+
+            # インジケーター分析
+            indicators = strategy_gene_dict.get("indicators", [])
+            logger.info(f"        インジケーター数: {len(indicators)}")
+            for indicator in indicators:
+                indicator_type = indicator.get("type", "Unknown")
+                parameters = indicator.get("parameters", {})
+                logger.info(f"          - {indicator_type}: {parameters}")
+
+            # エントリー条件分析
+            entry_conditions = strategy_gene_dict.get("entry_conditions", [])
+            long_entry_conditions = strategy_gene_dict.get("long_entry_conditions", [])
+            short_entry_conditions = strategy_gene_dict.get(
+                "short_entry_conditions", []
+            )
+
+            logger.info(f"        エントリー条件数: {len(entry_conditions)}")
+            logger.info(f"        ロングエントリー条件数: {len(long_entry_conditions)}")
+            logger.info(
+                f"        ショートエントリー条件数: {len(short_entry_conditions)}"
+            )
+
+            # 条件の詳細分析
+            all_conditions = (
+                entry_conditions + long_entry_conditions + short_entry_conditions
+            )
+            problematic_conditions = []
+
+            for i, condition in enumerate(all_conditions):
+                left = condition.get("left_operand", "")
+                operator = condition.get("operator", "")
+                right = condition.get("right_operand", "")
+
+                logger.info(f"          条件{i+1}: {left} {operator} {right}")
+
+                # 問題のある条件をチェック
+                if left == "MACD" or right == "MACD":
+                    problematic_conditions.append(f"MACD参照問題 (条件{i+1})")
+
+                if (
+                    isinstance(right, str)
+                    and right.replace(".", "").replace("-", "").isdigit()
+                ):
+                    try:
+                        num_value = float(right)
+                        if left in ["RSI", "CCI", "STOCH"] and (
+                            num_value < 0 or num_value > 100
+                        ):
+                            problematic_conditions.append(
+                                f"範囲外の値 (条件{i+1}: {left} {operator} {right})"
+                            )
+                    except Exception:
+                        pass
+
+            # 問題の報告
+            if problematic_conditions:
+                logger.warning("        🚨 問題のある条件:")
+                for problem in problematic_conditions:
+                    logger.warning(f"          - {problem}")
+            else:
+                logger.info("        ✅ 条件に明らかな問題は見つかりませんでした")
+
+            # エグジット条件分析
+            exit_conditions = strategy_gene_dict.get("exit_conditions", [])
+            logger.info(f"        エグジット条件数: {len(exit_conditions)}")
+
+            # リスク管理分析
+            risk_management = strategy_gene_dict.get("risk_management", {})
+            logger.info(f"        リスク管理設定: {risk_management}")
+
+        except Exception as e:
+            logger.error(f"戦略遺伝子分析エラー: {e}")

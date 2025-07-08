@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 class ConditionEvaluator:
     """
     条件評価器
-    
+
     戦略の条件評価ロジックを担当します。
     """
 
@@ -154,7 +154,34 @@ class ConditionEvaluator:
                         return float(indicator_value[-1])
                     return float(indicator_value)
 
-            logger.warning(f"未対応のオペランド: {operand}")
+                # 複数出力指標の場合（MACD_0, BB_0等）
+                # MACDの場合、MACD -> MACD_0（メインライン）にマッピング
+                if operand == "MACD" and hasattr(strategy_instance, "MACD_0"):
+                    # logger.info(f"MACDオペランドをMACD_0にマッピング")
+                    indicator_value = getattr(strategy_instance, "MACD_0")
+                    if hasattr(indicator_value, "__getitem__"):
+                        return float(indicator_value[-1])
+                    return float(indicator_value)
+
+                # BBの場合、BB -> BB_1（中央線）にマッピング
+                if operand == "BB" and hasattr(strategy_instance, "BB_1"):
+                    # logger.info(f"BBオペランドをBB_1にマッピング")
+                    indicator_value = getattr(strategy_instance, "BB_1")
+                    if hasattr(indicator_value, "__getitem__"):
+                        return float(indicator_value[-1])
+                    return float(indicator_value)
+
+                # STOCHの場合、STOCH -> STOCH_0（%K）にマッピング
+                if operand == "STOCH" and hasattr(strategy_instance, "STOCH_0"):
+                    # logger.info(f"STOCHオペランドをSTOCH_0にマッピング")
+                    indicator_value = getattr(strategy_instance, "STOCH_0")
+                    if hasattr(indicator_value, "__getitem__"):
+                        return float(indicator_value[-1])
+                    return float(indicator_value)
+
+            logger.warning(
+                f"未対応のオペランド: {operand} (利用可能な属性: {[attr for attr in dir(strategy_instance) if not attr.startswith('_')]})"
+            )
             return 0.0
 
         except Exception as e:

@@ -8,15 +8,16 @@
 from dataclasses import dataclass, field
 from typing import List, Dict, Any, Union, Optional
 
-# import logging
+import logging
 
 # 分離されたモジュール
 from .gene_validation import GeneValidator
 from .gene_serialization import GeneSerializer
 from .gene_encoding import GeneEncoder
 from .tpsl_gene import TPSLGene
+from .position_sizing_gene import PositionSizingGene
 
-# logger = logging.getLogger(__name__)
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -146,7 +147,7 @@ class StrategyGene:
 
     risk_management: Dict[str, Any] = field(default_factory=dict)
     tpsl_gene: Optional[TPSLGene] = None  # TP/SL遺伝子（GA最適化対象）
-    position_sizing_gene: Optional["PositionSizingGene"] = (
+    position_sizing_gene: Optional[PositionSizingGene] = (
         None  # ポジションサイジング遺伝子（GA最適化対象）
     )
     metadata: Dict[str, Any] = field(default_factory=dict)
@@ -250,6 +251,7 @@ def crossover_strategy_genes(
         交叉後の子1、子2の戦略遺伝子のタプル
     """
     from ..operators.genetic_operators import crossover_strategy_genes as _crossover
+
     return _crossover(parent1, parent2)
 
 
@@ -269,4 +271,5 @@ def mutate_strategy_gene(
         突然変異後の戦略遺伝子
     """
     from ..operators.genetic_operators import mutate_strategy_gene as _mutate
+
     return _mutate(gene, mutation_rate)

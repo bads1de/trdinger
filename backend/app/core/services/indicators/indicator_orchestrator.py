@@ -52,8 +52,14 @@ class TechnicalIndicatorService:
         Returns:
             計算結果 (numpy配列または配列のタプル)
         """
+        logger.info(f"TechnicalIndicatorService: {indicator_type}の計算開始")
+
         config = self._get_indicator_config(indicator_type)
         indicator_func = config.adapter_function
+
+        logger.info(
+            f"指標設定取得完了: {indicator_type}, 必要データ: {config.required_data}"
+        )
 
         assert (
             indicator_func is not None
@@ -74,11 +80,23 @@ class TechnicalIndicatorService:
             # データキーを適切な関数パラメータ名にマッピング
             param_name = self._map_data_key_to_param(indicator_type, data_key)
             required_data[param_name] = df[actual_column].to_numpy()
+            logger.info(
+                f"データ抽出完了: {data_key} -> {actual_column} -> {param_name}, 長さ: {len(required_data[param_name])}"
+            )
 
         # パラメータとデータを結合して関数を呼び出し
         all_args = {**required_data, **params}
+        logger.info(
+            f"関数呼び出し準備完了: {indicator_type}, 引数: {list(all_args.keys())}"
+        )
 
-        return indicator_func(**all_args)
+        try:
+            result = indicator_func(**all_args)
+            logger.info(f"指標計算成功: {indicator_type}, 結果タイプ: {type(result)}")
+            return result
+        except Exception as e:
+            logger.error(f"指標関数呼び出しエラー {indicator_type}: {e}", exc_info=True)
+            raise
 
     def _resolve_column_name(self, df: pd.DataFrame, data_key: str) -> Optional[str]:
         """
@@ -135,6 +153,10 @@ class TechnicalIndicatorService:
             "KAMA",
             "MAMA",
             "T3",
+            "MACD",
+            "MACDEXT",
+            "MACDFIX",
+            "BB",
         ]
 
         if indicator_type in single_data_indicators and data_key == "close":

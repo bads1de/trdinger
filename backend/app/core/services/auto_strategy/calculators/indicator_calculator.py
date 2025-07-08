@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 class IndicatorCalculator:
     """
     指標計算器
-    
+
     テクニカル指標の計算を担当します。
     """
 
@@ -42,17 +42,31 @@ class IndicatorCalculator:
         try:
             # backtesting.pyのデータオブジェクトをDataFrameに変換
             df = data.df
+            logger.info(
+                f"指標計算開始: {indicator_type}, データ形状: {df.shape}, パラメータ: {parameters}"
+            )
+
+            # データの基本検証
+            if df.empty:
+                raise ValueError(f"データが空です: {indicator_type}")
+
+            required_columns = ["Open", "High", "Low", "Close", "Volume"]
+            missing_columns = [col for col in required_columns if col not in df.columns]
+            if missing_columns:
+                logger.warning(f"不足しているカラム: {missing_columns}")
 
             # TechnicalIndicatorServiceを使用して計算
             result = self.technical_indicator_service.calculate_indicator(
                 df, indicator_type, parameters
             )
 
+            logger.info(f"指標計算完了: {indicator_type}, 結果タイプ: {type(result)}")
             return result
 
         except Exception as e:
-            logger.error(f"指標計算エラー {indicator_type}: {e}")
-            return None
+            logger.error(f"指標計算エラー {indicator_type}: {e}", exc_info=True)
+            # エラーを再発生させて上位で適切に処理
+            raise
 
     def init_indicator(self, indicator_gene: IndicatorGene, strategy_instance):
         """
@@ -72,19 +86,44 @@ class IndicatorCalculator:
                 # 指標をstrategy.I()で登録
                 if isinstance(result, tuple):
                     # 複数の出力がある指標（MACD等）
+                    logger.info(
+                        f"複数出力指標 {indicator_gene.type}: {len(result)}個の出力"
+                    )
                     for i, output in enumerate(result):
                         indicator_name = f"{indicator_gene.type}_{i}"
+
+                        # クロージャ問題を回避するため、デフォルト引数を使用
+                        def create_indicator_func(data=output):
+                            return data
+
                         setattr(
-                            strategy_instance, indicator_name, strategy_instance.I(lambda x=output: x)
+                            strategy_instance,
+                            indicator_name,
+                            strategy_instance.I(create_indicator_func),
+                        )
+                        logger.info(
+                            f"指標登録完了: {indicator_name}, データ長: {len(output) if hasattr(output, '__len__') else 'N/A'}"
                         )
                 else:
                     # 単一出力の指標
-                    setattr(
-                        strategy_instance, indicator_gene.type, strategy_instance.I(lambda x=result: x)
+                    logger.info(
+                        f"単一出力指標 {indicator_gene.type}, データ長: {len(result) if hasattr(result, '__len__') else 'N/A'}"
                     )
+
+                    def create_indicator_func(data=result):
+                        return data
+
+                    setattr(
+                        strategy_instance,
+                        indicator_gene.type,
+                        strategy_instance.I(create_indicator_func),
+                    )
+                    logger.info(f"指標登録完了: {indicator_gene.type}")
             else:
-                logger.warning(f"指標計算結果がNullです: {indicator_gene.type}")
+                logger.error(f"指標計算結果がNullです: {indicator_gene.type}")
+                raise ValueError(f"指標計算に失敗しました: {indicator_gene.type}")
 
         except Exception as e:
-            logger.error(f"指標初期化エラー {indicator_gene.type}: {e}")
-            pass
+            logger.error(f"指標初期化エラー {indicator_gene.type}: {e}", exc_info=True)
+            # エラーを再発生させて上位で適切に処理
+            raise

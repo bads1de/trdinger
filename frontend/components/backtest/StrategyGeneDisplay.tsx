@@ -36,7 +36,6 @@ interface StrategyGene {
     operator: string;
     right_operand: string | number;
   }>;
-  risk_management?: Record<string, any>;
   tpsl_gene?: Record<string, any>;
   position_sizing_gene?: Record<string, any>;
   metadata?: Record<string, any>;
@@ -54,7 +53,6 @@ const StrategyGeneDisplay: React.FC<StrategyGeneDisplayProps> = ({
   >({
     indicators: false,
     conditions: true,
-    risk: false,
     tpsl: false,
     position_sizing: false,
   });
@@ -249,40 +247,6 @@ const StrategyGeneDisplay: React.FC<StrategyGeneDisplayProps> = ({
           </div>
         )}
       </div>
-
-      {/* リスク管理セクション */}
-      {strategyGene.risk_management && (
-        <div className="bg-gradient-to-r from-yellow-900/30 to-orange-900/30 rounded-lg p-4 border border-yellow-500/30">
-          <button
-            onClick={() => toggleSection("risk")}
-            className="flex items-center w-full text-left"
-          >
-            {expandedSections.risk ? (
-              <ChevronDownIcon className="w-4 h-4 text-yellow-400 mr-2" />
-            ) : (
-              <ChevronRightIcon className="w-4 h-4 text-yellow-400 mr-2" />
-            )}
-            <span className="text-yellow-300 text-sm font-mono uppercase tracking-wider">
-              リスク管理
-            </span>
-          </button>
-
-          {expandedSections.risk && (
-            <div className="mt-3">
-              <div className="bg-black/20 rounded p-2 text-xs font-mono">
-                {Object.entries(strategyGene.risk_management).map(
-                  ([key, value]) => (
-                    <div key={key} className="text-yellow-200">
-                      <span className="text-yellow-400">{key}:</span>{" "}
-                      {String(value)}
-                    </div>
-                  )
-                )}
-              </div>
-            </div>
-          )}
-        </div>
-      )}
 
       {/* TP/SL設定セクション */}
       {strategyGene.tpsl_gene && (

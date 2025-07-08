@@ -162,7 +162,7 @@ class PositionSizingCalculatorService:
 
             # 履歴に追加
             self._calculation_history.append(final_result)
-            if len(self._calculation_history) > 1000:  
+            if len(self._calculation_history) > 1000:
                 self._calculation_history = self._calculation_history[-500:]
 
             return final_result
@@ -229,7 +229,7 @@ class PositionSizingCalculatorService:
         trade_history: Optional[List[Dict[str, Any]]],
     ) -> Dict[str, Any]:
         """ハーフオプティマルF方式の拡張計算"""
-        details = {"method": "half_optimal_f"}
+        details: Dict[str, Any] = {"method": "half_optimal_f"}
         warnings = []
 
         if not trade_history or len(trade_history) < 10:
@@ -315,7 +315,7 @@ class PositionSizingCalculatorService:
         market_data: Dict[str, Any],
     ) -> Dict[str, Any]:
         """ボラティリティベース方式の拡張計算"""
-        details = {"method": "volatility_based"}
+        details: Dict[str, Any] = {"method": "volatility_based"}
         warnings = []
 
         # ATR値の取得
@@ -364,7 +364,7 @@ class PositionSizingCalculatorService:
         current_price: float,
     ) -> Dict[str, Any]:
         """固定比率方式の拡張計算"""
-        details = {"method": "fixed_ratio"}
+        details: Dict[str, Any] = {"method": "fixed_ratio"}
 
         # ポジションサイズの計算
         position_size = account_balance * gene.fixed_ratio
@@ -395,7 +395,7 @@ class PositionSizingCalculatorService:
         current_price: float,
     ) -> Dict[str, Any]:
         """固定枚数方式の拡張計算"""
-        details = {"method": "fixed_quantity"}
+        details: Dict[str, Any] = {"method": "fixed_quantity"}
 
         # ポジションサイズの計算
         position_size = gene.fixed_quantity

@@ -151,8 +151,10 @@ class StrategyFactory:
                             position_direction = 1.0  # デフォルトはロング
 
                         # 動的ポジションサイズ計算
-                        calculated_size = factory.position_sizing_helper.calculate_position_size(
-                            gene, current_equity, current_price, self.data
+                        calculated_size = (
+                            factory.position_sizing_helper.calculate_position_size(
+                                gene, current_equity, current_price, self.data
+                            )
                         )
 
                         # ポジション方向を適用
@@ -177,18 +179,25 @@ class StrategyFactory:
                             self.position.close()
 
                 except Exception as e:
-                    # logger.error(f"売買ロジックエラー: {e}", exc_info=True)
+                    logger.error(f"売買ロジックエラー: {e}", exc_info=True)
                     pass
 
             def _init_indicator(self, indicator_gene: IndicatorGene):
                 """単一指標の初期化（統合版）"""
                 try:
+                    logger.info(
+                        f"指標初期化開始: {indicator_gene.type}, パラメータ: {indicator_gene.parameters}"
+                    )
                     # 指標計算器を使用して初期化
                     factory.indicator_calculator.init_indicator(indicator_gene, self)
+                    logger.info(f"指標初期化完了: {indicator_gene.type}")
 
                 except Exception as e:
-                    # logger.error(f"指標初期化エラー {indicator_gene.type}: {e}")
-                    pass
+                    logger.error(
+                        f"指標初期化エラー {indicator_gene.type}: {e}", exc_info=True
+                    )
+                    # エラーを再発生させて上位で適切に処理
+                    raise
 
             def _check_entry_conditions(self) -> bool:
                 """エントリー条件をチェック（後方互換性のため保持）"""
@@ -203,7 +212,9 @@ class StrategyFactory:
                     # 条件が空の場合は、戦略設定に依存
                     # 後方互換性のため、entry_conditionsがある場合は有効とする
                     return bool(self.gene.entry_conditions)
-                return factory.condition_evaluator.evaluate_conditions(long_conditions, self)
+                return factory.condition_evaluator.evaluate_conditions(
+                    long_conditions, self
+                )
 
             def _check_short_entry_conditions(self) -> bool:
                 """ショートエントリー条件をチェック"""
@@ -217,7 +228,9 @@ class StrategyFactory:
                     ):
                         return bool(self.gene.entry_conditions)
                     return False
-                return factory.condition_evaluator.evaluate_conditions(short_conditions, self)
+                return factory.condition_evaluator.evaluate_conditions(
+                    short_conditions, self
+                )
 
             def _check_exit_conditions(self) -> bool:
                 """イグジット条件をチェック（統合版）"""
@@ -246,11 +259,3 @@ class StrategyFactory:
         except Exception as e:
             # logger.error(f"遺伝子検証エラー: {e}")
             return False, [f"検証エラー: {str(e)}"]
-
-
-
-
-
-
-
-

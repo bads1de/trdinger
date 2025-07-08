@@ -6,14 +6,14 @@
 動的に設定する機能を提供します。
 """
 
-# import logging
+import logging
 from typing import Dict, Any, Tuple
 from dataclasses import dataclass, field
 from enum import Enum
 
 import numpy as np
 
-# logger = logging.getLogger(__name__)
+logger = logging.getLogger(__name__)
 
 
 class VolatilityRegime(Enum):
@@ -201,7 +201,7 @@ class VolatilityBasedGenerator:
             return result
 
         except Exception as e:
-            # self.logger.error(f"ボラティリティベース生成エラー: {e}", exc_info=True)
+            logger.error(f"ボラティリティベース生成エラー: {e}", exc_info=True)
             return self._generate_fallback_result(config, current_price)
 
     def _get_or_calculate_atr(
@@ -233,11 +233,11 @@ class VolatilityBasedGenerator:
             estimated_atr_pct = 0.02  # 2%のデフォルト
             estimated_atr_value = estimated_atr_pct * current_price
 
-            # self.logger.warning("ATR計算用データ不足、推定値を使用")
+            logger.warning("ATR計算用データ不足、推定値を使用")
             return estimated_atr_value, estimated_atr_pct
 
         except Exception as e:
-            # self.logger.error(f"ATR取得/計算エラー: {e}")
+            logger.error(f"ATR取得/計算エラー: {e}")
             # エラー時のフォールバック
             fallback_atr_pct = 0.02
             return fallback_atr_pct * current_price, fallback_atr_pct
@@ -262,7 +262,7 @@ class VolatilityBasedGenerator:
             return float(atr)
 
         except Exception as e:
-            # self.logger.error(f"ATR計算エラー: {e}")
+            logger.error(f"ATR計算エラー: {e}")
             return 0.02 * close[-1]  # フォールバック
 
     def _determine_volatility_regime(
@@ -298,7 +298,7 @@ class VolatilityBasedGenerator:
                 return VolatilityRegime.VERY_HIGH
 
         except Exception as e:
-            # self.logger.error(f"ボラティリティレジーム判定エラー: {e}")
+            logger.error(f"ボラティリティレジーム判定エラー: {e}")
             return VolatilityRegime.NORMAL  # デフォルト
 
     def _apply_adaptive_adjustment(
@@ -334,7 +334,7 @@ class VolatilityBasedGenerator:
             return sl_multiplier, tp_multiplier
 
         except Exception as e:
-            # self.logger.error(f"適応的調整エラー: {e}")
+            logger.error(f"適応的調整エラー: {e}")
             return sl_multiplier, tp_multiplier
 
     def _calculate_confidence_score(
@@ -360,7 +360,7 @@ class VolatilityBasedGenerator:
             return max(0.1, min(1.0, final_confidence))
 
         except Exception as e:
-            # self.logger.error(f"信頼度計算エラー: {e}")
+            logger.error(f"信頼度計算エラー: {e}")
             return 0.5  # デフォルト
 
     def _generate_fallback_result(

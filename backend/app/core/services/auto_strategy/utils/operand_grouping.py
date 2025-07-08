@@ -8,9 +8,9 @@
 from typing import Dict, List, Tuple
 from enum import Enum
 
-# import logging
+import logging
 
-# logger = logging.getLogger(__name__)
+logger = logging.getLogger(__name__)
 
 
 class OperandGroup(Enum):
@@ -55,6 +55,16 @@ class OperandGroupingSystem:
             "CCI": OperandGroup.PERCENTAGE_NEG100_100,
             # ゼロ中心の変化率・モメンタム指標
             "MACD": OperandGroup.ZERO_CENTERED,
+            "MACD_0": OperandGroup.ZERO_CENTERED,  # MACDメインライン
+            "MACD_1": OperandGroup.ZERO_CENTERED,  # MACDシグナルライン
+            "MACD_2": OperandGroup.ZERO_CENTERED,  # MACDヒストグラム
+            # ボリンジャーバンドの複数出力
+            "BB_0": OperandGroup.PRICE_BASED,  # 上限バンド
+            "BB_1": OperandGroup.PRICE_BASED,  # 中央線（SMA）
+            "BB_2": OperandGroup.PRICE_BASED,  # 下限バンド
+            # ストキャスティクスの複数出力
+            "STOCH_0": OperandGroup.PERCENTAGE_0_100,  # %K
+            "STOCH_1": OperandGroup.PERCENTAGE_0_100,  # %D
             # 特殊スケール
             "ATR": OperandGroup.PRICE_BASED,  # 価格の絶対値なので価格ベース
             "OBV": OperandGroup.ZERO_CENTERED,  # 累積出来高、ゼロ中心的

@@ -4,7 +4,7 @@
 GA用の戦略遺伝子エンコード/デコード機能を担当するモジュール。
 """
 
-# import logging
+import logging
 from typing import List, Dict, Optional
 
 from app.core.services.indicators.indicator_orchestrator import (
@@ -12,7 +12,7 @@ from app.core.services.indicators.indicator_orchestrator import (
 )
 from .tpsl_gene import TPSLGene, TPSLMethod
 
-# logger = logging.getLogger(__name__)
+logger = logging.getLogger(__name__)
 
 
 class GeneEncoder:
@@ -39,7 +39,7 @@ class GeneEncoder:
 
             return indicator_ids
         except Exception as e:
-            # logger.error(f"指標IDの取得に失敗しました: {e}")
+            logger.error(f"指標IDの取得に失敗しました: {e}")
             return {"": 0}
 
     def _get_id_to_indicator(self) -> Dict[int, str]:

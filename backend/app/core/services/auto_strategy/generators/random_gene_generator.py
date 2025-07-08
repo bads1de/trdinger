@@ -8,7 +8,7 @@ OI/FRデータを含む多様な戦略遺伝子をランダムに生成します
 import random
 from typing import List, Dict
 
-# import logging
+import logging
 
 from ..models.strategy_gene import StrategyGene, IndicatorGene, Condition
 from ..models.ga_config import GAConfig
@@ -21,7 +21,7 @@ from ..utils.parameter_generators import (
 )
 from ..utils.operand_grouping import operand_grouping_system
 
-# logger = logging.getLogger(__name__)
+logger = logging.getLogger(__name__)
 
 
 class RandomGeneGenerator:
@@ -114,7 +114,7 @@ class RandomGeneGenerator:
             return gene
 
         except Exception as e:
-            # logger.error(f"ランダム戦略遺伝子生成失敗: {e}", exc_info=True)
+            logger.error(f"ランダム戦略遺伝子生成失敗: {e}", exc_info=True)
             # フォールバック: 最小限の遺伝子を生成
             # logger.info("フォールバック戦略遺伝子を生成")
             from ..utils.strategy_gene_utils import create_default_strategy_gene
@@ -148,7 +148,7 @@ class RandomGeneGenerator:
                     indicators.append(indicator_gene)
 
                 except Exception as e:
-                    # logger.error(f"指標{i+1}生成エラー: {e}")
+                    logger.error(f"指標{i+1}生成エラー: {e}")
                     # エラーが発生した場合はSMAをフォールバックとして使用
                     indicators.append(
                         IndicatorGene(
@@ -159,7 +159,7 @@ class RandomGeneGenerator:
             return indicators
 
         except Exception as e:
-            # logger.error(f"指標リスト生成エラー: {e}")
+            logger.error(f"指標リスト生成エラー: {e}")
             # 最低限の指標を返す
             return [IndicatorGene(type="SMA", parameters={"period": 20}, enabled=True)]
 
@@ -391,7 +391,7 @@ class RandomGeneGenerator:
 
             return create_random_position_sizing_gene(self.config)
         except Exception as e:
-            # logger.error(f"ポジションサイジング遺伝子生成失敗: {e}")
+            logger.error(f"ポジションサイジング遺伝子生成失敗: {e}")
             # フォールバック: デフォルト遺伝子を返す
             from ..models.position_sizing_gene import (
                 PositionSizingGene,
@@ -436,7 +436,7 @@ class RandomGeneGenerator:
                     pass
 
             except Exception as e:
-                # logger.error(f"遺伝子{i}の生成に失敗しました: {e}")
+                logger.error(f"遺伝子{i}の生成に失敗しました: {e}")
                 # フォールバックを追加
                 population.append(create_default_strategy_gene(StrategyGene))
                 pass
@@ -494,7 +494,7 @@ class RandomGeneGenerator:
             return tpsl_gene
 
         except Exception as e:
-            # logger.error(f"TP/SL遺伝子生成エラー: {e}")
+            logger.error(f"TP/SL遺伝子生成エラー: {e}")
             # フォールバック: デフォルトのTP/SL遺伝子
             return TPSLGene(
                 method=TPSLMethod.RISK_REWARD_RATIO,
@@ -567,7 +567,7 @@ class RandomGeneGenerator:
             return long_entry_conditions, short_entry_conditions
 
         except Exception as e:
-            # logger.error(f"ロング・ショート条件生成エラー: {e}")
+            logger.error(f"ロング・ショート条件生成エラー: {e}")
             # フォールバック: デフォルト条件
             from ..models.strategy_gene import Condition
 

@@ -5,7 +5,7 @@
 TP/SL遺伝子と同様に、GA操作（交叉、突然変異）の対象となります。
 """
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Dict, Any, List, Optional, Tuple
 from enum import Enum
 import random

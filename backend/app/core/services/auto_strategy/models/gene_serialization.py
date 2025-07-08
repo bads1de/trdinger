@@ -6,7 +6,7 @@
 
 import json
 
-# import logging
+import logging
 from typing import TYPE_CHECKING, Dict, Any, Optional, Type
 
 if TYPE_CHECKING:
@@ -14,7 +14,7 @@ if TYPE_CHECKING:
 
 from .tpsl_gene import TPSLGene
 
-# logger = logging.getLogger(__name__)
+logger = logging.getLogger(__name__)
 
 
 class GeneSerializer:
@@ -82,7 +82,7 @@ class GeneSerializer:
             }
 
         except Exception as e:
-            # logger.error(f"戦略遺伝子辞書変換エラー: {e}")
+            logger.error(f"戦略遺伝子辞書変換エラー: {e}")
             raise ValueError(f"戦略遺伝子の辞書変換に失敗: {e}")
 
     def dict_to_strategy_gene(
@@ -150,7 +150,7 @@ class GeneSerializer:
             )
 
         except Exception as e:
-            # logger.error(f"戦略遺伝子復元エラー: {e}")
+            logger.error(f"戦略遺伝子復元エラー: {e}")
             raise ValueError(f"戦略遺伝子の復元に失敗: {e}")
 
     def indicator_gene_to_dict(self, indicator_gene) -> Dict[str, Any]:
@@ -171,7 +171,7 @@ class GeneSerializer:
             }
 
         except Exception as e:
-            # logger.error(f"指標遺伝子辞書変換エラー: {e}")
+            logger.error(f"指標遺伝子辞書変換エラー: {e}")
             raise ValueError(f"指標遺伝子の辞書変換に失敗: {e}")
 
     def dict_to_indicator_gene(self, data: Dict[str, Any]) -> "IndicatorGene":
@@ -196,7 +196,7 @@ class GeneSerializer:
             )
 
         except Exception as e:
-            # logger.error(f"指標遺伝子復元エラー: {e}")
+            logger.error(f"指標遺伝子復元エラー: {e}")
             raise ValueError(f"指標遺伝子の復元に失敗: {e}")
 
     def condition_to_dict(self, condition) -> Dict[str, Any]:
@@ -217,7 +217,7 @@ class GeneSerializer:
             }
 
         except Exception as e:
-            # logger.error(f"条件辞書変換エラー: {e}")
+            logger.error(f"条件辞書変換エラー: {e}")
             raise ValueError(f"条件の辞書変換に失敗: {e}")
 
     def dict_to_condition(self, data: Dict[str, Any]) -> "Condition":
@@ -242,7 +242,7 @@ class GeneSerializer:
             )
 
         except Exception as e:
-            # logger.error(f"条件復元エラー: {e}")
+            logger.error(f"条件復元エラー: {e}")
             raise ValueError(f"条件の復元に失敗: {e}")
 
     def tpsl_gene_to_dict(self, tpsl_gene) -> Optional[Dict[str, Any]]:
@@ -262,7 +262,7 @@ class GeneSerializer:
             return tpsl_gene.to_dict()
 
         except Exception as e:
-            # logger.error(f"TP/SL遺伝子辞書変換エラー: {e}")
+            logger.error(f"TP/SL遺伝子辞書変換エラー: {e}")
             raise ValueError(f"TP/SL遺伝子の辞書変換に失敗: {e}")
 
     def dict_to_tpsl_gene(self, data: Dict[str, Any]) -> Optional["TPSLGene"]:
@@ -286,7 +286,7 @@ class GeneSerializer:
             return TPSLGene.from_dict(data)
 
         except Exception as e:
-            # logger.error(f"TP/SL遺伝子復元エラー: {e}")
+            logger.error(f"TP/SL遺伝子復元エラー: {e}")
             raise ValueError(f"TP/SL遺伝子の復元に失敗: {e}")
 
     def position_sizing_gene_to_dict(
@@ -308,7 +308,7 @@ class GeneSerializer:
             return position_sizing_gene.to_dict()
 
         except Exception as e:
-            # logger.error(f"ポジションサイジング遺伝子辞書変換エラー: {e}")
+            logger.error(f"ポジションサイジング遺伝子辞書変換エラー: {e}")
             raise ValueError(f"ポジションサイジング遺伝子の辞書変換に失敗: {e}")
 
     def dict_to_position_sizing_gene(self, data: Dict[str, Any]):
@@ -331,7 +331,7 @@ class GeneSerializer:
             return PositionSizingGene.from_dict(data)
 
         except Exception as e:
-            # logger.error(f"ポジションサイジング遺伝子復元エラー: {e}")
+            logger.error(f"ポジションサイジング遺伝子復元エラー: {e}")
             raise ValueError(f"ポジションサイジング遺伝子の復元に失敗: {e}")
 
     def _clean_risk_management(self, risk_management: Dict[str, Any]) -> Dict[str, Any]:
@@ -386,7 +386,7 @@ class GeneSerializer:
             return json.dumps(data, ensure_ascii=False, indent=2)
 
         except Exception as e:
-            # logger.error(f"戦略遺伝子JSON変換エラー: {e}")
+            logger.error(f"戦略遺伝子JSON変換エラー: {e}")
             raise ValueError(f"戦略遺伝子のJSON変換に失敗: {e}")
 
     def json_to_strategy_gene(
@@ -407,10 +407,10 @@ class GeneSerializer:
             return self.dict_to_strategy_gene(data, strategy_gene_class)
 
         except json.JSONDecodeError as e:
-            # logger.error(f"JSON解析エラー: {e}")
+            logger.error(f"JSON解析エラー: {e}")
             raise ValueError(f"無効なJSON: {e}")
         except Exception as e:
-            # logger.error(f"戦略遺伝子JSON復元エラー: {e}")
+            logger.error(f"戦略遺伝子JSON復元エラー: {e}")
             raise ValueError(f"戦略遺伝子のJSON復元に失敗: {e}")
 
     def serialize_for_database(self, strategy_gene) -> Dict[str, Any]:
@@ -433,7 +433,7 @@ class GeneSerializer:
             return data
 
         except Exception as e:
-            # logger.error(f"データベースシリアライゼーションエラー: {e}")
+            logger.error(f"データベースシリアライゼーションエラー: {e}")
             raise ValueError(f"データベース用シリアライゼーションに失敗: {e}")
 
     def deserialize_from_database(
@@ -453,7 +453,7 @@ class GeneSerializer:
             # バージョン情報をチェック
             version = data.get("serialization_version", "1.0")
             if version != "1.0":
-                # logger.warning(f"異なるシリアライゼーションバージョン: {version}")
+                logger.warning(f"異なるシリアライゼーションバージョン: {version}")
                 pass
 
             # 不要なメタデータを除去
@@ -466,7 +466,7 @@ class GeneSerializer:
             return self.dict_to_strategy_gene(clean_data, strategy_gene_class)
 
         except Exception as e:
-            # logger.error(f"データベースデシリアライゼーションエラー: {e}")
+            logger.error(f"データベースデシリアライゼーションエラー: {e}")
             raise ValueError(f"データベースからのデシリアライゼーションに失敗: {e}")
 
     def serialize_for_api(self, strategy_gene) -> Dict[str, Any]:
@@ -499,7 +499,7 @@ class GeneSerializer:
             return data
 
         except Exception as e:
-            # logger.error(f"APIシリアライゼーションエラー: {e}")
+            logger.error(f"APIシリアライゼーションエラー: {e}")
             raise ValueError(f"API用シリアライゼーションに失敗: {e}")
 
     def _get_current_timestamp(self) -> str:
@@ -509,7 +509,7 @@ class GeneSerializer:
 
             return datetime.now().isoformat()
         except Exception as e:
-            # logger.error(f"タイムスタンプ取得エラー: {e}")
+            logger.error(f"タイムスタンプ取得エラー: {e}")
             return ""
 
     def validate_serialized_data(self, data: Dict[str, Any]) -> bool:
@@ -528,24 +528,24 @@ class GeneSerializer:
             # 必須キーの存在確認
             for key in required_keys:
                 if key not in data:
-                    # logger.error(f"必須キーが不足: {key}")
+                    logger.error(f"必須キーが不足: {key}")
                     return False
 
             # データ型の確認
             if not isinstance(data["indicators"], list):
-                # logger.error("indicatorsがリストではありません")
+                logger.error("indicatorsがリストではありません")
                 return False
 
             if not isinstance(data["entry_conditions"], list):
-                # logger.error("entry_conditionsがリストではありません")
+                logger.error("entry_conditionsがリストではありません")
                 return False
 
             if not isinstance(data["exit_conditions"], list):
-                # logger.error("exit_conditionsがリストではありません")
+                logger.error("exit_conditionsがリストではありません")
                 return False
 
             return True
 
         except Exception as e:
-            # logger.error(f"シリアライズデータ検証エラー: {e}")
+            logger.error(f"シリアライズデータ検証エラー: {e}")
             return False
