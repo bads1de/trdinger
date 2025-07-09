@@ -186,7 +186,6 @@ class StrategyFactory:
                         # デバッグログ: 最終ポジションサイズ
                         if self._debug_counter % 100 == 0:
                             logger.info(f"[DEBUG] 計算サイズ: {calculated_size}, 最終サイズ: {final_size}")
-                            logger.info(f"[DEBUG] TP/SL価格: SL={sl_price}, TP={tp_price}, 現在価格={current_price}")
 
                         # 利用可能現金で購入可能かチェック（ショートの場合も絶対値で計算）
                         required_cash = abs(final_size) * current_price
@@ -244,9 +243,12 @@ class StrategyFactory:
                 """ロングエントリー条件をチェック"""
                 long_conditions = self.gene.get_effective_long_conditions()
                 if not long_conditions:
-                    # 条件が空の場合は、戦略設定に依存
-                    # 後方互換性のため、entry_conditionsがある場合は有効とする
-                    return bool(self.gene.entry_conditions)
+                    # 条件が空の場合は、entry_conditionsを使用
+                    if self.gene.entry_conditions:
+                        return factory.condition_evaluator.evaluate_conditions(
+                            self.gene.entry_conditions, self
+                        )
+                    return False
                 return factory.condition_evaluator.evaluate_conditions(
                     long_conditions, self
                 )
@@ -261,13 +263,11 @@ class StrategyFactory:
                     logger.info(f"[DEBUG] ロング・ショート分離: {self.gene.has_long_short_separation()}")
 
                 if not short_conditions:
-                    # ショート条件が明示的に設定されていない場合は無効
-                    # ただし、ロング・ショート分離がされていない場合は後方互換性を考慮
-                    if (
-                        not self.gene.has_long_short_separation()
-                        and self.gene.entry_conditions
-                    ):
-                        return bool(self.gene.entry_conditions)
+                    # ショート条件が空の場合は、entry_conditionsを使用
+                    if self.gene.entry_conditions:
+                        return factory.condition_evaluator.evaluate_conditions(
+                            self.gene.entry_conditions, self
+                        )
                     return False
 
                 result = factory.condition_evaluator.evaluate_conditions(

@@ -256,8 +256,11 @@ class GeneValidator:
                     "エントリー条件が設定されていません（entry_conditions、long_entry_conditions、short_entry_conditionsのいずれかが必要）"
                 )
 
+            # TP/SL遺伝子が有効な場合はイグジット条件は不要
             if not strategy_gene.exit_conditions:
-                errors.append("イグジット条件が設定されていません")
+                # TP/SL遺伝子が有効でない場合のみエラーとする
+                if not (strategy_gene.tpsl_gene and strategy_gene.tpsl_gene.enabled):
+                    errors.append("イグジット条件が設定されていません")
 
             # 有効な指標の存在チェック
             enabled_indicators = [

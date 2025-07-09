@@ -8,7 +8,12 @@
 "use client";
 
 import React, { useState } from "react";
-import { ChevronDownIcon, ChevronRightIcon } from "@heroicons/react/24/outline";
+import {
+  ChevronDownIcon,
+  ChevronRightIcon,
+  ClipboardDocumentIcon,
+  CheckIcon,
+} from "@heroicons/react/24/outline";
 
 interface CollapsibleJsonProps {
   /** 表示するJSONデータ */
@@ -34,11 +39,23 @@ const CollapsibleJson: React.FC<CollapsibleJsonProps> = ({
   theme = "matrix",
 }) => {
   const [isExpanded, setIsExpanded] = useState(defaultExpanded);
+  const [isCopied, setIsCopied] = useState(false);
 
   // JSONサイズを計算
   const jsonString = JSON.stringify(data, null, 2);
   const jsonSize = jsonString.length;
   const isLarge = jsonSize > 1000;
+
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(jsonString);
+      setIsCopied(true);
+      setTimeout(() => setIsCopied(false), 2000);
+    } catch (err) {
+      console.error("クリップボードへのコピーに失敗しました:", err);
+      // ここでユーザーにエラーを通知することもできます
+    }
+  };
 
   // テーマに応じたスタイル
   const getThemeStyles = () => {
@@ -101,12 +118,33 @@ const CollapsibleJson: React.FC<CollapsibleJsonProps> = ({
           )}
         </div>
 
-        {/* 展開/折りたたみボタン */}
-        <button
-          onClick={() => setIsExpanded(!isExpanded)}
-          className={`flex items-center px-3 py-1 rounded transition-colors ${styles.button}`}
-          aria-label={isExpanded ? "折りたたむ" : "展開する"}
-        >
+        <div className="flex items-center space-x-2">
+          {/* コピーボタン */}
+          <button
+            onClick={handleCopy}
+            className={`flex items-center px-3 py-1 rounded transition-colors ${styles.button}`}
+            aria-label="JSONをコピー"
+            disabled={isCopied}
+          >
+            {isCopied ? (
+              <>
+                <CheckIcon className="w-4 h-4 mr-1 text-green-500" />
+                <span className="text-xs">コピー完了</span>
+              </>
+            ) : (
+              <>
+                <ClipboardDocumentIcon className="w-4 h-4 mr-1" />
+                <span className="text-xs">コピー</span>
+              </>
+            )}
+          </button>
+
+          {/* 展開/折りたたみボタン */}
+          <button
+            onClick={() => setIsExpanded(!isExpanded)}
+            className={`flex items-center px-3 py-1 rounded transition-colors ${styles.button}`}
+            aria-label={isExpanded ? "折りたたむ" : "展開する"}
+          >
           {isExpanded ? (
             <>
               <ChevronDownIcon className="w-4 h-4 mr-1" />
@@ -118,7 +156,8 @@ const CollapsibleJson: React.FC<CollapsibleJsonProps> = ({
               <span className="text-xs">展開する</span>
             </>
           )}
-        </button>
+          </button>
+        </div>
       </div>
 
       {/* プレビュー（折りたたみ時） */}
