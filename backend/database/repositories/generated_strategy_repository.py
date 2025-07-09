@@ -463,6 +463,23 @@ class GeneratedStrategyRepository(BaseRepository):
             logger.error(f"戦略の削除中にエラーが発生しました: {e}")
             return 0
 
+    def delete_all_strategies(self) -> int:
+        """
+        すべての生成された戦略を削除
+
+        Returns:
+            削除された件数
+        """
+        try:
+            deleted_count = self.db.query(GeneratedStrategy).delete()
+            self.db.commit()
+            logger.info(f"すべての生成された戦略を削除しました: {deleted_count} 件")
+            return deleted_count
+        except Exception as e:
+            self.db.rollback()
+            logger.error(f"すべての生成された戦略の削除中にエラーが発生しました: {e}")
+            raise
+
     def _validate_gene_data(self, gene_data: Dict[str, Any]) -> Dict[str, Any]:
         """
         遺伝子データの整合性を確保

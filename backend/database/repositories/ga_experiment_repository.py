@@ -316,3 +316,20 @@ class GAExperimentRepository(BaseRepository):
         except Exception as e:
             logger.error(f"実験統計の取得中にエラーが発生しました: {e}")
             return {}
+
+    def delete_all_experiments(self) -> int:
+        """
+        すべてのGA実験を削除
+
+        Returns:
+            削除された件数
+        """
+        try:
+            deleted_count = self.db.query(GAExperiment).delete()
+            self.db.commit()
+            logger.info(f"すべてのGA実験を削除しました: {deleted_count} 件")
+            return deleted_count
+        except Exception as e:
+            self.db.rollback()
+            logger.error(f"すべてのGA実験の削除中にエラーが発生しました: {e}")
+            raise

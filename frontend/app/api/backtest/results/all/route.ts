@@ -28,8 +28,8 @@ export async function DELETE(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      message: `すべてのバックテスト結果を削除しました (${data.deleted_count}件)`,
-      deleted_count: data.deleted_count,
+      message: `すべての関連データを削除しました`,
+      deleted_counts: data.deleted_counts,
       timestamp: new Date().toISOString(),
     });
   } catch (error) {

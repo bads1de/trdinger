@@ -14,6 +14,10 @@ from database.connection import get_db
 from database.repositories.backtest_result_repository import BacktestResultRepository
 from app.core.services.backtest_service import BacktestService
 from app.core.utils.api_utils import APIErrorHandler
+from database.repositories.ga_experiment_repository import GAExperimentRepository
+from database.repositories.generated_strategy_repository import (
+    GeneratedStrategyRepository,
+)
 
 router = APIRouter(prefix="/api/backtest", tags=["backtest"])
 
@@ -164,12 +168,28 @@ async def delete_all_backtest_results(db: Session = Depends(get_db)):
 
     async def _delete_all_results():
         backtest_repo = BacktestResultRepository(db)
-        deleted_count = backtest_repo.delete_all_backtest_results()
+        ga_experiment_repo = GAExperimentRepository(db)
+        generated_strategy_repo = GeneratedStrategyRepository(db)
+
+        # 関連テーブルのデータをすべて削除
+        deleted_strategies_count = generated_strategy_repo.delete_all_strategies()
+        deleted_experiments_count = ga_experiment_repo.delete_all_experiments()
+        deleted_backtests_count = backtest_repo.delete_all_backtest_results()
+
+        total_deleted = (
+            deleted_strategies_count
+            + deleted_experiments_count
+            + deleted_backtests_count
+        )
 
         return {
             "success": True,
-            "message": f"All backtest results deleted successfully ({deleted_count} records)",
-            "deleted_count": deleted_count,
+            "message": f"All related data deleted successfully ({total_deleted} records)",
+            "deleted_counts": {
+                "backtest_results": deleted_backtests_count,
+                "ga_experiments": deleted_experiments_count,
+                "generated_strategies": deleted_strategies_count,
+            },
         }
 
     return await APIErrorHandler.handle_api_exception(_delete_all_results)
