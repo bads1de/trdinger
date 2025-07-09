@@ -97,6 +97,12 @@ const StrategyGeneDisplay: React.FC<StrategyGeneDisplayProps> = ({
     return `${condition.left_operand} ${condition.operator} ${condition.right_operand}`;
   };
 
+  // TP/SL遺伝子が有効かどうかを判定
+  const isTPSLEnabled = () => {
+    return strategyGene.tpsl_gene &&
+           (strategyGene.tpsl_gene.enabled === undefined || strategyGene.tpsl_gene.enabled === true);
+  };
+
   const effectiveLongConditions = getEffectiveLongConditions();
   const effectiveShortConditions = getEffectiveShortConditions();
 
@@ -227,9 +233,23 @@ const StrategyGeneDisplay: React.FC<StrategyGeneDisplayProps> = ({
                 <span className="text-purple-300 text-xs font-mono uppercase">
                   エグジット条件 ({strategyGene.exit_conditions?.length || 0}個)
                 </span>
+                {isTPSLEnabled() && (
+                  <span className="ml-2 text-xs text-pink-400 bg-pink-400/10 px-2 py-1 rounded">
+                    TP/SL自動管理
+                  </span>
+                )}
               </div>
-              {strategyGene.exit_conditions &&
-              strategyGene.exit_conditions.length > 0 ? (
+              {isTPSLEnabled() ? (
+                <div className="bg-pink-900/20 rounded p-2 text-xs text-pink-200 border border-pink-500/30">
+                  <div className="flex items-center">
+                    <span className="text-pink-400 mr-2">🎯</span>
+                    <span>
+                      TP/SL機能により自動管理されています。従来のイグジット条件は無効化されています。
+                    </span>
+                  </div>
+                </div>
+              ) : strategyGene.exit_conditions &&
+                strategyGene.exit_conditions.length > 0 ? (
                 <div className="space-y-1">
                   {strategyGene.exit_conditions.map((condition, index) => (
                     <div

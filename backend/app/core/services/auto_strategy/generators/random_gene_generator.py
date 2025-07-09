@@ -82,7 +82,17 @@ class RandomGeneGenerator:
 
             # 条件を生成（後方互換性のため保持）
             entry_conditions = self._generate_random_conditions(indicators, "entry")
-            exit_conditions = self._generate_random_conditions(indicators, "exit")
+
+            # TP/SL遺伝子を先に生成してイグジット条件生成を調整
+            tpsl_gene = self._generate_tpsl_gene()
+
+            # TP/SL遺伝子が有効な場合はイグジット条件を最小化
+            if tpsl_gene and tpsl_gene.enabled:
+                # TP/SL機能が有効な場合は空のイグジット条件を生成
+                exit_conditions = []
+            else:
+                # TP/SL機能が無効な場合は従来通りイグジット条件を生成
+                exit_conditions = self._generate_random_conditions(indicators, "exit")
 
             # ロング・ショート条件を生成（新機能）
             long_entry_conditions, short_entry_conditions = (
@@ -91,9 +101,6 @@ class RandomGeneGenerator:
 
             # リスク管理設定（従来方式、後方互換性のため保持）
             risk_management = self._generate_risk_management()
-
-            # TP/SL遺伝子を生成（GA最適化対象）
-            tpsl_gene = self._generate_tpsl_gene()
 
             # ポジションサイジング遺伝子を生成（GA最適化対象）
             position_sizing_gene = self._generate_position_sizing_gene()

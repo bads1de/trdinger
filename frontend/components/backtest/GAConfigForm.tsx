@@ -232,7 +232,9 @@ const GAConfigForm: React.FC<GAConfigFormProps> = ({
           🤖 リスク管理自動最適化
         </h3>
         <p className="text-sm text-blue-200">
-          TP/SL設定とポジションサイズは、テクニカル指標と同様にGAが自動で最適化します。手動設定は不要です。
+          TP/SL設定とポジションサイズは、テクニカル指標と同様にGAが自動で最適化します。
+          <strong className="text-blue-100">従来のイグジット条件は自動的に無効化され、TP/SL機能が優先されます。</strong>
+          手動設定は不要です。
         </p>
 
         {/* TP/SL自動最適化 */}

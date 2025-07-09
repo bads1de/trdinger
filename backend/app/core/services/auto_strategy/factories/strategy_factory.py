@@ -167,16 +167,34 @@ class StrategyFactory:
                                 f"  必要資金: {required_cash:.2f}, 利用可能現金: {available_cash:.2f}"
                             )
 
-                            # 計算されたサイズで注文を実行（SL/TPなし）
-                            # ショートの場合は負のサイズでbuy()を呼び出す
-                            self.buy(size=final_size)
+                            # 計算されたサイズで注文を実行
+                            # TP/SL遺伝子が存在する場合はSL/TPを設定
+                            if self.gene.tpsl_gene and self.gene.tpsl_gene.enabled:
+                                # TP/SL価格を計算
+                                sl_price, tp_price = factory.tpsl_calculator.calculate_tpsl_from_gene(
+                                    current_price, self.gene.tpsl_gene
+                                )
+                                # ポジション方向に応じてbuy()またはsell()を呼び出し、SL/TPも設定
+                                if final_size > 0:
+                                    self.buy(size=final_size, sl=sl_price, tp=tp_price)
+                                else:
+                                    self.sell(size=abs(final_size), sl=sl_price, tp=tp_price)
+                            else:
+                                # TP/SL遺伝子がない場合は従来通り（SL/TPなし）
+                                # ポジション方向に応じてbuy()またはsell()を呼び出す
+                                if final_size > 0:
+                                    self.buy(size=final_size)
+                                else:
+                                    self.sell(size=abs(final_size))
                         else:
                             pass
-                    # イグジット条件チェック
+                    # イグジット条件チェック（TP/SL遺伝子が存在しない場合のみ）
                     elif self.position:
-                        exit_result = self._check_exit_conditions()
-                        if exit_result:
-                            self.position.close()
+                        # TP/SL遺伝子が存在する場合はイグジット条件をスキップ
+                        if not self.gene.tpsl_gene or not self.gene.tpsl_gene.enabled:
+                            exit_result = self._check_exit_conditions()
+                            if exit_result:
+                                self.position.close()
 
                 except Exception as e:
                     logger.error(f"売買ロジックエラー: {e}", exc_info=True)
@@ -234,6 +252,10 @@ class StrategyFactory:
 
             def _check_exit_conditions(self) -> bool:
                 """イグジット条件をチェック（統合版）"""
+                # TP/SL遺伝子が存在し有効な場合はイグジット条件をスキップ
+                if self.gene.tpsl_gene and self.gene.tpsl_gene.enabled:
+                    return False
+
                 return factory.condition_evaluator.evaluate_conditions(
                     self.gene.exit_conditions, self
                 )
@@ -257,5 +279,5 @@ class StrategyFactory:
         try:
             return gene.validate()
         except Exception as e:
-            # logger.error(f"遺伝子検証エラー: {e}")
+            logger.error(f"遺伝子検証エラー: {e}")
             return False, [f"検証エラー: {str(e)}"]
