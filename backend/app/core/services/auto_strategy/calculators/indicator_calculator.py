@@ -42,9 +42,6 @@ class IndicatorCalculator:
         try:
             # backtesting.pyのデータオブジェクトをDataFrameに変換
             df = data.df
-            logger.info(
-                f"指標計算開始: {indicator_type}, データ形状: {df.shape}, パラメータ: {parameters}"
-            )
 
             # データの基本検証
             if df.empty:
@@ -60,7 +57,6 @@ class IndicatorCalculator:
                 df, indicator_type, parameters
             )
 
-            logger.info(f"指標計算完了: {indicator_type}, 結果タイプ: {type(result)}")
             return result
 
         except Exception as e:
@@ -86,9 +82,6 @@ class IndicatorCalculator:
                 # 指標をstrategy.I()で登録
                 if isinstance(result, tuple):
                     # 複数の出力がある指標（MACD等）
-                    logger.info(
-                        f"複数出力指標 {indicator_gene.type}: {len(result)}個の出力"
-                    )
                     for i, output in enumerate(result):
                         indicator_name = f"{indicator_gene.type}_{i}"
 
@@ -101,14 +94,8 @@ class IndicatorCalculator:
                             indicator_name,
                             strategy_instance.I(create_indicator_func),
                         )
-                        logger.info(
-                            f"指標登録完了: {indicator_name}, データ長: {len(output) if hasattr(output, '__len__') else 'N/A'}"
-                        )
                 else:
                     # 単一出力の指標
-                    logger.info(
-                        f"単一出力指標 {indicator_gene.type}, データ長: {len(result) if hasattr(result, '__len__') else 'N/A'}"
-                    )
 
                     def create_indicator_func(data=result):
                         return data
@@ -118,7 +105,6 @@ class IndicatorCalculator:
                         indicator_gene.type,
                         strategy_instance.I(create_indicator_func),
                     )
-                    logger.info(f"指標登録完了: {indicator_gene.type}")
             else:
                 logger.error(f"指標計算結果がNullです: {indicator_gene.type}")
                 raise ValueError(f"指標計算に失敗しました: {indicator_gene.type}")

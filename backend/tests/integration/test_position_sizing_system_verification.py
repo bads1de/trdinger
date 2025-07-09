@@ -12,7 +12,7 @@ import os
 backend_path = os.path.join(os.path.dirname(__file__), "..", "..")
 sys.path.insert(0, backend_path)
 
-from app.core.services.auto_strategy.models.position_sizing_gene import (
+from app.core.services.auto_strategy.models.gene_position_sizing import (
     PositionSizingGene,
     PositionSizingMethod,
     create_random_position_sizing_gene,
@@ -20,7 +20,7 @@ from app.core.services.auto_strategy.models.position_sizing_gene import (
 from app.core.services.auto_strategy.calculators.position_sizing_calculator import (
     PositionSizingCalculatorService,
 )
-from app.core.services.auto_strategy.models.strategy_gene import StrategyGene
+from app.core.services.auto_strategy.models.gene_strategy import StrategyGene
 from app.core.services.auto_strategy.models.ga_config import GAConfig
 from app.core.services.auto_strategy.generators.random_gene_generator import (
     RandomGeneGenerator,

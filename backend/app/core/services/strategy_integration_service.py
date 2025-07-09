@@ -257,7 +257,7 @@ class StrategyIntegrationService:
         return {
             "total_return": metrics.get("total_return", 0.0),
             "sharpe_ratio": metrics.get("sharpe_ratio", 0.0),
-            "max_drawdown": abs(metrics.get("max_drawdown", 0.0)),  # 正の値に変換
+            "max_drawdown": abs(metrics.get("max_drawdown", 0.0)),
             "win_rate": metrics.get("win_rate", 0.0),
             "profit_factor": metrics.get("profit_factor", 0.0),
             "total_trades": metrics.get("total_trades", 0),

@@ -191,7 +191,11 @@ class PositionSizingGene:
     def _calculate_half_optimal_f(
         self, account_balance: float, trade_history: Optional[List[Dict[str, Any]]]
     ) -> float:
-        """ハーフオプティマルF方式でポジションサイズを計算"""
+        """ハーフオプティマルF方式でポジションサイズを計算
+
+        Returns:
+            口座残高に対する比率（0.1 = 10%）
+        """
         try:
             if not trade_history or len(trade_history) < 10:
                 # データ不足時は簡易版計算を試行
@@ -219,10 +223,8 @@ class PositionSizingGene:
             optimal_f = (win_rate * avg_win - (1 - win_rate) * avg_loss) / avg_win
             half_optimal_f = max(0, optimal_f * self.optimal_f_multiplier)
 
-            # 口座残高に対する比率として適用
-            position_size = account_balance * half_optimal_f
-
-            return self._apply_size_limits(position_size)
+            # 比率として返す（金額ではなく）
+            return self._apply_size_limits(half_optimal_f)
 
         except Exception as e:
             logger.error(f"ハーフオプティマルF計算エラー: {e}")
@@ -234,6 +236,9 @@ class PositionSizingGene:
         簡易版オプティマルF計算（取引履歴が不足している場合）
 
         統計的な仮定値を使用してオプティマルFを推定します。
+
+        Returns:
+            口座残高に対する比率（0.1 = 10%）
         """
         try:
             # 一般的な取引統計の仮定値を使用
@@ -248,11 +253,11 @@ class PositionSizingGene:
             ) / assumed_avg_win
             half_optimal_f = max(0, optimal_f * self.optimal_f_multiplier)
 
-            # 保守的な上限を設定（最大10%）
-            half_optimal_f = min(half_optimal_f, 0.1)
+            # 保守的な上限を設定（最大50%）
+            half_optimal_f = min(half_optimal_f, 0.5)
 
-            position_size = account_balance * half_optimal_f
-            return self._apply_size_limits(position_size)
+            # 比率として返す（金額ではなく）
+            return self._apply_size_limits(half_optimal_f)
 
         except Exception as e:
             logger.error(f"簡易版オプティマルF計算エラー: {e}")
@@ -267,23 +272,27 @@ class PositionSizingGene:
         current_price: float,
         market_data: Optional[Dict[str, Any]],
     ) -> float:
-        """ボラティリティベース方式でポジションサイズを計算"""
+        """ボラティリティベース方式でポジションサイズを計算
+
+        Returns:
+            口座残高に対する比率（0.1 = 10%）
+        """
         try:
             # ATR値を取得（改善されたデフォルト値計算）
             atr_value = self._calculate_atr_fallback(current_price, market_data)
 
-            # リスク量を計算
-            risk_amount = account_balance * self.risk_per_trade
+            # ボラティリティ比率を計算
+            atr_pct = atr_value / current_price if current_price > 0 else 0.02
+            volatility_factor = atr_pct * self.atr_multiplier
 
-            # ポジションサイズを計算
-            volatility_factor = atr_value * self.atr_multiplier
             if volatility_factor > 0:
-                position_size = risk_amount / volatility_factor
+                # リスク量に基づいてポジション比率を計算
+                position_ratio = self.risk_per_trade / volatility_factor
             else:
                 # ボラティリティが0の場合は固定比率にフォールバック
-                position_size = account_balance * self.fixed_ratio
+                position_ratio = self.fixed_ratio
 
-            return self._apply_size_limits(position_size)
+            return self._apply_size_limits(position_ratio)
 
         except Exception as e:
             logger.error(f"ボラティリティベース計算エラー: {e}")
@@ -326,9 +335,14 @@ class PositionSizingGene:
     def _calculate_fixed_ratio(
         self, account_balance: float, current_price: float
     ) -> float:
-        """固定比率方式でポジションサイズを計算"""
+        """固定比率方式でポジションサイズを計算
+
+        Returns:
+            口座残高に対する比率（0.1 = 10%）
+        """
         try:
-            position_size = account_balance * self.fixed_ratio
+            # 固定比率をそのまま返す（比率として）
+            position_size = self.fixed_ratio
             return self._apply_size_limits(position_size)
 
         except Exception as e:

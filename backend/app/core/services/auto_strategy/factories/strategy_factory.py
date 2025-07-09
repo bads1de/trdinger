@@ -163,10 +163,6 @@ class StrategyFactory:
                         # 利用可能現金で購入可能かチェック（ショートの場合も絶対値で計算）
                         required_cash = abs(final_size) * current_price
                         if required_cash <= available_cash * 0.99:
-                            logger.info(
-                                f"  必要資金: {required_cash:.2f}, 利用可能現金: {available_cash:.2f}"
-                            )
-
                             # 計算されたサイズで注文を実行
                             # TP/SL遺伝子が存在する場合はSL/TPを設定
                             if self.gene.tpsl_gene and self.gene.tpsl_gene.enabled:
@@ -203,12 +199,8 @@ class StrategyFactory:
             def _init_indicator(self, indicator_gene: IndicatorGene):
                 """単一指標の初期化（統合版）"""
                 try:
-                    logger.info(
-                        f"指標初期化開始: {indicator_gene.type}, パラメータ: {indicator_gene.parameters}"
-                    )
                     # 指標計算器を使用して初期化
                     factory.indicator_calculator.init_indicator(indicator_gene, self)
-                    logger.info(f"指標初期化完了: {indicator_gene.type}")
 
                 except Exception as e:
                     logger.error(

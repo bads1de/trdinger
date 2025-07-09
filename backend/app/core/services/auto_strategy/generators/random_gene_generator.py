@@ -13,7 +13,7 @@ import logging
 from ..models.gene_strategy import StrategyGene, IndicatorGene, Condition
 from ..models.ga_config import GAConfig
 from ..models.gene_tpsl import TPSLGene, TPSLMethod, create_random_tpsl_gene
-from ..models.gene_decoder import GeneDecoder  # GeneDecoderをインポート
+from ..models.gene_decoder import GeneDecoder  
 from app.core.services.indicators import TechnicalIndicatorService
 from ...indicators.config import indicator_registry
 from ...indicators.config.indicator_config import IndicatorScaleType

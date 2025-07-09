@@ -5,6 +5,7 @@ Take Profit/Stop Loss価格の計算を担当します。
 """
 
 import logging
+import math
 from typing import Dict, Any, Optional, Tuple
 
 from ..models.gene_tpsl import TPSLGene
@@ -72,10 +73,40 @@ class TPSLCalculator:
         stop_loss_pct: Optional[float],
         take_profit_pct: Optional[float],
     ) -> Tuple[Optional[float], Optional[float]]:
-        """従来の固定割合ベースTP/SL価格計算"""
-        sl_price = current_price * (1 - stop_loss_pct) if stop_loss_pct else None
-        tp_price = current_price * (1 + take_profit_pct) if take_profit_pct else None
-        return sl_price, tp_price
+        """従来の固定割合ベースTP/SL価格計算（エラーハンドリング強化版）"""
+        try:
+            # 入力値検証
+            if not self._validate_price(current_price):
+                logger.warning(f"不正な価格: {current_price}")
+                return None, None
+
+            # SL割合の検証と処理
+            sl_price = None
+            if stop_loss_pct is not None:
+                if self._validate_percentage(stop_loss_pct, "SL"):
+                    if stop_loss_pct == 0:
+                        sl_price = current_price  # 0%の場合は現在価格と同じ
+                    else:
+                        sl_price = current_price * (1 - stop_loss_pct)
+                else:
+                    logger.warning(f"不正なSL割合: {stop_loss_pct}")
+
+            # TP割合の検証と処理
+            tp_price = None
+            if take_profit_pct is not None:
+                if self._validate_percentage(take_profit_pct, "TP"):
+                    if take_profit_pct == 0:
+                        tp_price = current_price  # 0%の場合は現在価格と同じ
+                    else:
+                        tp_price = current_price * (1 + take_profit_pct)
+                else:
+                    logger.warning(f"不正なTP割合: {take_profit_pct}")
+
+            return sl_price, tp_price
+
+        except Exception as e:
+            logger.error(f"TP/SL価格計算エラー: {e}")
+            return None, None
 
     def calculate_advanced_tpsl_prices(
         self,
@@ -187,3 +218,32 @@ class TPSLCalculator:
             logger.error(f"TP/SL遺伝子計算エラー: {e}")
             # フォールバック
             return current_price * 0.97, current_price * 1.06  # デフォルト3%SL, 6%TP
+
+    def _validate_price(self, price: float) -> bool:
+        """価格の妥当性を検証"""
+        if price is None:
+            return False
+        if not isinstance(price, (int, float)):
+            return False
+        if not math.isfinite(price):
+            return False
+        if price <= 0:
+            return False
+        return True
+
+    def _validate_percentage(self, percentage: float, label: str) -> bool:
+        """割合の妥当性を検証"""
+        if percentage is None:
+            return False
+        if not isinstance(percentage, (int, float)):
+            return False
+        if not math.isfinite(percentage):
+            return False
+
+        # SLは0-100%、TPは0-1000%まで許容
+        if label == "SL":
+            return 0 <= percentage <= 1.0
+        elif label == "TP":
+            return 0 <= percentage <= 10.0
+        else:
+            return 0 <= percentage <= 1.0
