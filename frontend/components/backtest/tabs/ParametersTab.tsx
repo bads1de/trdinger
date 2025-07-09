@@ -31,19 +31,14 @@ export default function ParametersTab({ result }: ParametersTabProps) {
         {result.config_json && result.config_json.strategy_config ? (
           <div className="space-y-4">
             {/* 戦略タイプ */}
-            <div className="mb-6">
-              <div className="bg-gradient-to-r from-indigo-900/50 to-purple-900/50 rounded-lg p-4 border border-indigo-500/30 shadow-lg">
-                <div className="flex items-center">
-                  <div className="w-3 h-3 bg-indigo-400 rounded-full mr-3 animate-pulse"></div>
-                  <span className="text-indigo-300 text-sm font-mono uppercase tracking-wider mr-4">
-                    戦略タイプ:
-                  </span>
-                  <span className=" text-white font-mono text-lg font-bold bg-black/30 px-3 py-1 rounded border border-indigo-400/30">
-                    {result.config_json.strategy_config.strategy_type || "N/A"}
-                  </span>
-                </div>
-                <div className="absolute inset-0 bg-indigo-400/5 rounded-lg pointer-events-none"></div>
+            <div className="space-y-4">
+              <div className="flex items-center mb-4">
+                <div className="w-2 h-2 bg-purple-400 rounded-full mr-2"></div>
+                <h4 className="text-purple-400 font-mono text-md font-semibold tracking-wide">
+                  STRATEGY TYPE
+                </h4>
               </div>
+
 
               {/* 戦略遺伝子の有効条件表示 */}
               {result.config_json.strategy_config.parameters?.strategy_gene && (
