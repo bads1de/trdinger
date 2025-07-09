@@ -18,6 +18,15 @@ interface TradeHistoryTableProps {
 const TradeHistoryTable: React.FC<TradeHistoryTableProps> = ({
   tradeHistory,
 }) => {
+  // ロング/ショートの判定とスタイリング
+  const getTradeType = (size: number) => {
+    return size > 0 ? "LONG" : "SHORT";
+  };
+
+  const getTradeTypeColor = (size: number) => {
+    return size > 0 ? "text-green-400" : "text-red-400";
+  };
+
   if (!tradeHistory || tradeHistory.length === 0) {
     return (
       <div className="text-center py-8 text-secondary-400">
@@ -38,6 +47,9 @@ const TradeHistoryTable: React.FC<TradeHistoryTableProps> = ({
               </th>
               <th className="px-2 py-3 text-left text-xs font-mono font-medium text-cyan-400 uppercase tracking-wider">
                 Exit Time
+              </th>
+              <th className="px-2 py-3 text-center text-xs font-mono font-medium text-cyan-400 uppercase tracking-wider">
+                Type
               </th>
               <th className="px-2 py-3 text-right text-xs font-mono font-medium text-cyan-400 uppercase tracking-wider">
                 Entry
@@ -84,6 +96,9 @@ const TradeHistoryTable: React.FC<TradeHistoryTableProps> = ({
                       </span>
                     </div>
                   </td>
+                  <td className={`px-2 py-3 text-xs text-center font-mono font-semibold ${getTradeTypeColor(trade.size)}`}>
+                    {getTradeType(trade.size)}
+                  </td>
                   <td className="px-2 py-3 text-xs text-gray-300 text-right font-mono">
                     {formatCurrency(trade.entry_price)}
                   </td>
@@ -91,7 +106,7 @@ const TradeHistoryTable: React.FC<TradeHistoryTableProps> = ({
                     {formatCurrency(trade.exit_price)}
                   </td>
                   <td className="px-2 py-3 text-xs text-gray-300 text-right font-mono">
-                    {formatNumber(trade.size, 4)}
+                    {formatNumber(Math.abs(trade.size), 4)}
                   </td>
                   <td
                     className={`px-2 py-3 text-xs text-right font-mono font-semibold ${getPnlColor(
@@ -126,7 +141,12 @@ const TradeHistoryTable: React.FC<TradeHistoryTableProps> = ({
               className="bg-gray-800/50 rounded-lg p-4 border border-gray-700/50"
             >
               <div className="flex justify-between items-start mb-3">
-                <div className="text-xs text-gray-400">取引 #{index + 1}</div>
+                <div className="flex items-center gap-2">
+                  <div className="text-xs text-gray-400">取引 #{index + 1}</div>
+                  <div className={`text-xs font-mono font-semibold px-2 py-1 rounded ${getTradeTypeColor(trade.size)} bg-gray-700/50`}>
+                    {getTradeType(trade.size)}
+                  </div>
+                </div>
                 <div
                   className={`text-sm font-mono font-semibold ${getPnlTextColor(
                     trade.pnl
@@ -169,7 +189,7 @@ const TradeHistoryTable: React.FC<TradeHistoryTableProps> = ({
                 <div className="flex justify-between text-xs">
                   <span className="text-gray-400">サイズ:</span>
                   <span className="font-mono text-gray-300">
-                    {formatNumber(trade.size, 4)}
+                    {formatNumber(Math.abs(trade.size), 4)}
                   </span>
                 </div>
               </div>

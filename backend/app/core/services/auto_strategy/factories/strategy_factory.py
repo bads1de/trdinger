@@ -118,18 +118,21 @@ class StrategyFactory:
                     current_price = self.data.Close[-1]
                     current_equity = getattr(self, "equity", "N/A")
 
-                    # ストップロスとテイクプロフィットの価格を計算
-                    sl_price, tp_price = factory.tpsl_calculator.calculate_tpsl_prices(
-                        current_price,
-                        stop_loss_pct,
-                        take_profit_pct,
-                        risk_management,
-                        gene,
-                    )
-
                     # ロング・ショートエントリー条件チェック
                     long_entry_result = self._check_long_entry_conditions()
                     short_entry_result = self._check_short_entry_conditions()
+
+                    # デバッグログ: ロング・ショート条件の評価結果
+                    if hasattr(self, '_debug_counter'):
+                        self._debug_counter += 1
+                    else:
+                        self._debug_counter = 1
+
+                    # 100回に1回ログを出力（パフォーマンス考慮）
+                    if self._debug_counter % 100 == 0:
+                        logger.info(f"[DEBUG] ロング条件: {long_entry_result}, ショート条件: {short_entry_result}")
+                        logger.info(f"[DEBUG] ロング条件数: {len(self.gene.get_effective_long_conditions())}")
+                        logger.info(f"[DEBUG] ショート条件数: {len(self.gene.get_effective_short_conditions())}")
 
                     if not self.position and (long_entry_result or short_entry_result):
                         # backtesting.pyのマージン問題を回避するため、非常に小さな固定サイズを使用
@@ -141,14 +144,34 @@ class StrategyFactory:
 
                         # ポジション方向を決定
                         if long_entry_result and short_entry_result:
-                            # 両方の条件が満たされた場合はロングを優先
-                            position_direction = 1.0  # ロング
+                            # 両方の条件が満たされた場合はランダムに選択（より公平）
+                            import random
+                            position_direction = random.choice([1.0, -1.0])
                         elif long_entry_result:
                             position_direction = 1.0  # ロング
                         elif short_entry_result:
                             position_direction = -1.0  # ショート
                         else:
-                            position_direction = 1.0  # デフォルトはロング
+                            # どちらの条件も満たされない場合はエントリーしない
+                            position_direction = None
+
+                        # デバッグログ: ポジション方向決定
+                        if self._debug_counter % 100 == 0:
+                            logger.info(f"[DEBUG] ポジション方向: {position_direction} (ロング={long_entry_result}, ショート={short_entry_result})")
+
+                        # ポジション方向がNoneの場合はエントリーしない
+                        if position_direction is None:
+                            return
+
+                        # ストップロスとテイクプロフィットの価格を計算（ポジション方向を考慮）
+                        sl_price, tp_price = factory.tpsl_calculator.calculate_tpsl_prices(
+                            current_price,
+                            stop_loss_pct,
+                            take_profit_pct,
+                            risk_management,
+                            gene,
+                            position_direction,
+                        )
 
                         # 動的ポジションサイズ計算
                         calculated_size = (
@@ -160,16 +183,18 @@ class StrategyFactory:
                         # ポジション方向を適用
                         final_size = calculated_size * position_direction
 
+                        # デバッグログ: 最終ポジションサイズ
+                        if self._debug_counter % 100 == 0:
+                            logger.info(f"[DEBUG] 計算サイズ: {calculated_size}, 最終サイズ: {final_size}")
+                            logger.info(f"[DEBUG] TP/SL価格: SL={sl_price}, TP={tp_price}, 現在価格={current_price}")
+
                         # 利用可能現金で購入可能かチェック（ショートの場合も絶対値で計算）
                         required_cash = abs(final_size) * current_price
                         if required_cash <= available_cash * 0.99:
                             # 計算されたサイズで注文を実行
                             # TP/SL遺伝子が存在する場合はSL/TPを設定
                             if self.gene.tpsl_gene and self.gene.tpsl_gene.enabled:
-                                # TP/SL価格を計算
-                                sl_price, tp_price = factory.tpsl_calculator.calculate_tpsl_from_gene(
-                                    current_price, self.gene.tpsl_gene
-                                )
+                                # 既に計算済みのTP/SL価格を使用（二重計算を避ける）
                                 # ポジション方向に応じてbuy()またはsell()を呼び出し、SL/TPも設定
                                 if final_size > 0:
                                     self.buy(size=final_size, sl=sl_price, tp=tp_price)
@@ -229,6 +254,12 @@ class StrategyFactory:
             def _check_short_entry_conditions(self) -> bool:
                 """ショートエントリー条件をチェック"""
                 short_conditions = self.gene.get_effective_short_conditions()
+
+                # デバッグログ: ショート条件の詳細
+                if hasattr(self, '_debug_counter') and self._debug_counter % 100 == 0:
+                    logger.info(f"[DEBUG] ショート条件詳細: {[str(c.__dict__) for c in short_conditions]}")
+                    logger.info(f"[DEBUG] ロング・ショート分離: {self.gene.has_long_short_separation()}")
+
                 if not short_conditions:
                     # ショート条件が明示的に設定されていない場合は無効
                     # ただし、ロング・ショート分離がされていない場合は後方互換性を考慮
@@ -238,9 +269,16 @@ class StrategyFactory:
                     ):
                         return bool(self.gene.entry_conditions)
                     return False
-                return factory.condition_evaluator.evaluate_conditions(
+
+                result = factory.condition_evaluator.evaluate_conditions(
                     short_conditions, self
                 )
+
+                # デバッグログ: ショート条件評価結果
+                if hasattr(self, '_debug_counter') and self._debug_counter % 100 == 0:
+                    logger.info(f"[DEBUG] ショート条件評価結果: {result}")
+
+                return result
 
             def _check_exit_conditions(self) -> bool:
                 """イグジット条件をチェック（統合版）"""

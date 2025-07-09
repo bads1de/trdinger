@@ -27,6 +27,7 @@ class TPSLCalculator:
         take_profit_pct: Optional[float],
         risk_management: Dict[str, Any],
         gene: Optional[Any] = None,
+        position_direction: float = 1.0,  # 1.0 = ロング, -1.0 = ショート
     ) -> Tuple[Optional[float], Optional[float]]:
         """
         TP/SL価格を計算（従来方式と新方式の両方をサポート）
@@ -37,6 +38,7 @@ class TPSLCalculator:
             take_profit_pct: テイクプロフィット割合
             risk_management: リスク管理設定
             gene: 戦略遺伝子（オプション）
+            position_direction: ポジション方向（1.0=ロング, -1.0=ショート）
 
         Returns:
             (SL価格, TP価格)のタプル
@@ -44,23 +46,23 @@ class TPSLCalculator:
         try:
             # TP/SL遺伝子が利用可能かチェック（GA最適化対象）
             if gene and hasattr(gene, "tpsl_gene") and gene.tpsl_gene:
-                return self.calculate_tpsl_from_gene(current_price, gene.tpsl_gene)
+                return self.calculate_tpsl_from_gene(current_price, gene.tpsl_gene, position_direction)
             # 新しいTP/SL計算方式が使用されているかチェック（従来の高度機能）
             elif self.is_advanced_tpsl_used(risk_management):
                 return self.calculate_advanced_tpsl_prices(
-                    current_price, stop_loss_pct, take_profit_pct, risk_management
+                    current_price, stop_loss_pct, take_profit_pct, risk_management, position_direction
                 )
             else:
                 # 従来の固定割合ベース計算
                 return self.calculate_legacy_tpsl_prices(
-                    current_price, stop_loss_pct, take_profit_pct
+                    current_price, stop_loss_pct, take_profit_pct, position_direction
                 )
 
         except Exception as e:
             logger.error(f"TP/SL価格計算エラー: {e}")
             # フォールバック: 従来方式
             return self.calculate_legacy_tpsl_prices(
-                current_price, stop_loss_pct, take_profit_pct
+                current_price, stop_loss_pct, take_profit_pct, position_direction
             )
 
     def is_advanced_tpsl_used(self, risk_management: Dict[str, Any]) -> bool:
@@ -72,6 +74,7 @@ class TPSLCalculator:
         current_price: float,
         stop_loss_pct: Optional[float],
         take_profit_pct: Optional[float],
+        position_direction: float = 1.0,
     ) -> Tuple[Optional[float], Optional[float]]:
         """従来の固定割合ベースTP/SL価格計算（エラーハンドリング強化版）"""
         try:
@@ -87,7 +90,10 @@ class TPSLCalculator:
                     if stop_loss_pct == 0:
                         sl_price = current_price  # 0%の場合は現在価格と同じ
                     else:
-                        sl_price = current_price * (1 - stop_loss_pct)
+                        if position_direction > 0:  # ロングポジション
+                            sl_price = current_price * (1 - stop_loss_pct)
+                        else:  # ショートポジション
+                            sl_price = current_price * (1 + stop_loss_pct)
                 else:
                     logger.warning(f"不正なSL割合: {stop_loss_pct}")
 
@@ -98,7 +104,10 @@ class TPSLCalculator:
                     if take_profit_pct == 0:
                         tp_price = current_price  # 0%の場合は現在価格と同じ
                     else:
-                        tp_price = current_price * (1 + take_profit_pct)
+                        if position_direction > 0:  # ロングポジション
+                            tp_price = current_price * (1 + take_profit_pct)
+                        else:  # ショートポジション
+                            tp_price = current_price * (1 - take_profit_pct)
                 else:
                     logger.warning(f"不正なTP割合: {take_profit_pct}")
 
@@ -114,17 +123,20 @@ class TPSLCalculator:
         stop_loss_pct: Optional[float],
         take_profit_pct: Optional[float],
         risk_management: Dict[str, Any],
+        position_direction: float = 1.0,
     ) -> Tuple[Optional[float], Optional[float]]:
         """高度なTP/SL価格計算（リスクリワード比、ボラティリティベースなど）"""
         try:
             # 使用された戦略を取得
             strategy_used = risk_management.get("_tpsl_strategy", "unknown")
 
-            # 基本的な価格計算
-            sl_price = current_price * (1 - stop_loss_pct) if stop_loss_pct else None
-            tp_price = (
-                current_price * (1 + take_profit_pct) if take_profit_pct else None
-            )
+            # 基本的な価格計算（ポジション方向を考慮）
+            if position_direction > 0:  # ロングポジション
+                sl_price = current_price * (1 - stop_loss_pct) if stop_loss_pct else None
+                tp_price = current_price * (1 + take_profit_pct) if take_profit_pct else None
+            else:  # ショートポジション
+                sl_price = current_price * (1 + stop_loss_pct) if stop_loss_pct else None
+                tp_price = current_price * (1 - take_profit_pct) if take_profit_pct else None
 
             # 戦略固有の調整
             if strategy_used == "volatility_adaptive":
@@ -144,7 +156,7 @@ class TPSLCalculator:
             logger.error(f"高度なTP/SL価格計算エラー: {e}")
             # フォールバック
             return self.calculate_legacy_tpsl_prices(
-                current_price, stop_loss_pct, take_profit_pct
+                current_price, stop_loss_pct, take_profit_pct, position_direction
             )
 
     def apply_volatility_adjustments(
@@ -189,7 +201,7 @@ class TPSLCalculator:
             return sl_price, tp_price
 
     def calculate_tpsl_from_gene(
-        self, current_price: float, tpsl_gene: TPSLGene
+        self, current_price: float, tpsl_gene: TPSLGene, position_direction: float = 1.0
     ) -> Tuple[Optional[float], Optional[float]]:
         """
         TP/SL遺伝子からTP/SL価格を計算（GA最適化対象）
@@ -197,6 +209,7 @@ class TPSLCalculator:
         Args:
             current_price: 現在価格
             tpsl_gene: TP/SL遺伝子
+            position_direction: ポジション方向（1.0=ロング, -1.0=ショート）
 
         Returns:
             (SL価格, TP価格)のタプル
@@ -208,9 +221,13 @@ class TPSLCalculator:
             sl_pct = tpsl_values.get("stop_loss", 0.03)
             tp_pct = tpsl_values.get("take_profit", 0.06)
 
-            # 価格に変換
-            sl_price = current_price * (1 - sl_pct)
-            tp_price = current_price * (1 + tp_pct)
+            # 価格に変換（ポジション方向を考慮）
+            if position_direction > 0:  # ロングポジション
+                sl_price = current_price * (1 - sl_pct)
+                tp_price = current_price * (1 + tp_pct)
+            else:  # ショートポジション
+                sl_price = current_price * (1 + sl_pct)
+                tp_price = current_price * (1 - tp_pct)
 
             return sl_price, tp_price
 

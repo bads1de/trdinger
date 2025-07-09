@@ -10,7 +10,7 @@ from typing import Generator
 from unittest.mock import Mock
 
 from app.config.settings import settings
-from app.core.services.market_data_service import BybitMarketDataService
+# from app.core.services.market_data_service import BybitMarketDataService
 
 
 @pytest.fixture(scope="session")
@@ -24,7 +24,7 @@ def event_loop():
 @pytest.fixture
 def mock_market_data_service():
     """モックされた市場データサービス"""
-    service = Mock(spec=BybitMarketDataService)
+    service = Mock()  # spec=BybitMarketDataService
     service.fetch_ohlcv_data.return_value = [
         [1640995200000, 47000.0, 48000.0, 46500.0, 47500.0, 1000.0],
         [1641081600000, 47500.0, 48500.0, 47000.0, 48000.0, 1200.0],

@@ -572,6 +572,17 @@ class RandomGeneGenerator:
                     Condition(left_operand="close", operator="<", right_operand="open")
                 ]
 
+            # ショート条件が確実に満たされるように、より緩い条件を追加
+            # 50%の確率でより緩いショート条件を追加
+            if random.random() < 0.5 and short_entry_conditions:
+                # 既存のショート条件に加えて、より満たされやすい条件を追加
+                relaxed_short_condition = Condition(
+                    left_operand="close",
+                    operator="<",
+                    right_operand=random.choice(["high", "open"])
+                )
+                short_entry_conditions.append(relaxed_short_condition)
+
             return long_entry_conditions, short_entry_conditions
 
         except Exception as e:
