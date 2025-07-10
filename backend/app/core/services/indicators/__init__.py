@@ -8,9 +8,9 @@
 from typing import Dict, Any
 
 # 新しいnumpy配列ベース指標クラス（オートストラテジー最適化版）
-from .trend import TrendIndicators
-from .momentum import MomentumIndicators
-from .volatility import VolatilityIndicators
+from .technical_indicators.trend import TrendIndicators
+from .technical_indicators.momentum import MomentumIndicators
+from .technical_indicators.volatility import VolatilityIndicators
 from .utils import TALibError, validate_input, ensure_numpy_array
 
 # 既存のクラス（互換性維持）

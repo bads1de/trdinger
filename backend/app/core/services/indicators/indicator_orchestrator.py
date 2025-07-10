@@ -10,6 +10,9 @@ import numpy as np
 from typing import Dict, Any, Optional, Union, Tuple
 
 from .config import indicator_registry, IndicatorConfig
+from .technical_indicators.momentum import MomentumIndicators
+from .technical_indicators.trend import TrendIndicators
+from .technical_indicators.volatility import VolatilityIndicators
 
 logger = logging.getLogger(__name__)
 

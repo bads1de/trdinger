@@ -1,23 +1,30 @@
-export const formatDateTime = (dateInput: string | number | null): string => {
+export const formatDateTime = (
+  dateInput: string | number | null
+): { date: string; time: string } => {
   if (dateInput === null || dateInput === undefined) {
-    return "-";
+    return { date: "-", time: "-" };
   }
   try {
     const date = new Date(dateInput);
     if (isNaN(date.getTime())) {
-      return String(dateInput);
+      return { date: String(dateInput), time: "" };
     }
-    return new Intl.DateTimeFormat("ja-JP", {
+    const dateString = new Intl.DateTimeFormat("ja-JP", {
       year: "numeric",
       month: "2-digit",
       day: "2-digit",
+    })
+      .format(date)
+      .replace(/\//g, "-");
+    const timeString = new Intl.DateTimeFormat("ja-JP", {
       hour: "2-digit",
       minute: "2-digit",
       second: "2-digit",
       hour12: false,
     }).format(date);
+    return { date: dateString, time: timeString };
   } catch {
-    return String(dateInput);
+    return { date: String(dateInput), time: "" };
   }
 };
 
