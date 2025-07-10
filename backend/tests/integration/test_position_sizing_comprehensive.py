@@ -243,11 +243,12 @@ class TestPositionSizingComprehensive:
             market_data=sample_market_data,
         )
         
-        # 最大制限が適用されることを確認
-        assert result.position_size <= gene.max_position_size, \
-            f"最大制限が適用されていない: {result.position_size} > {gene.max_position_size}"
-        
-        print(f"  ✅ 最大制限適用: {result.position_size} <= {gene.max_position_size}")
+        # 最大制限は無効化されているため、計算値がそのまま使用されることを確認
+        expected_size = account_balance * gene.fixed_ratio
+        assert result.position_size == expected_size, \
+            f"計算値が正しくない: {result.position_size} != {expected_size}"
+
+        print(f"  ✅ 最大制限無効化: {result.position_size} == {expected_size}")
         
         # 極端に小さな比率設定
         gene.fixed_ratio = 0.01  # 1% (小さな値)
@@ -260,14 +261,14 @@ class TestPositionSizingComprehensive:
             market_data=sample_market_data,
         )
 
-        # 計算値と制限の確認
+        # 計算値の確認（最大制限は無効化されているため）
         calculated_size = account_balance * gene.fixed_ratio  # 100.0
-        expected_size = max(gene.min_position_size, min(calculated_size, gene.max_position_size))  # 50.0
+        expected_size = max(gene.min_position_size, calculated_size)  # 最小制限のみ適用
 
         assert abs(result.position_size - expected_size) < 0.01, \
             f"制限適用が不正: 実際={result.position_size}, 期待={expected_size}, 計算値={calculated_size}"
 
-        print(f"  ✅ 制限適用: 計算値={calculated_size}, 制限後={result.position_size}")
+        print(f"  ✅ 最小制限のみ適用: 計算値={calculated_size}, 制限後={result.position_size}")
 
     def test_error_handling_and_fallbacks(self, calculator_service):
         """エラーハンドリングとフォールバックテスト"""

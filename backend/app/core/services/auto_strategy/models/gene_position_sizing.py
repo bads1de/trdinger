@@ -52,7 +52,7 @@ class PositionSizingGene:
 
     # 共通パラメータ
     min_position_size: float = 0.01  # 最小ポジションサイズ
-    max_position_size: float = 10.0  # 最大ポジションサイズ（枚数単位）
+    max_position_size: float = float('inf')  # 最大ポジションサイズ（無制限）
     enabled: bool = True  # 有効フラグ
     priority: float = 1.0  # 優先度（0.5-1.5）
 
@@ -87,7 +87,7 @@ class PositionSizingGene:
             fixed_quantity=data.get("fixed_quantity", 1.0),
             min_position_size=data.get("min_position_size", 0.01),
             max_position_size=data.get(
-                "max_position_size", 10.0
+                "max_position_size", float('inf')
             ),  # クラス定義と一致させる
             enabled=data.get("enabled", True),
             priority=data.get("priority", 1.0),
@@ -118,23 +118,20 @@ class PositionSizingGene:
         if self.risk_per_trade < 0.001 or self.risk_per_trade > 0.1:
             errors.append("risk_per_tradeは0.1%-10%の範囲である必要があります")
 
-        if self.fixed_ratio < 0.01 or self.fixed_ratio > 0.5:
-            errors.append("fixed_ratioは1%-50%の範囲である必要があります")
+        if self.fixed_ratio < 0.01 or self.fixed_ratio > 10.0:
+            errors.append("fixed_ratioは1%-1000%の範囲である必要があります")
 
         if (
-            self.fixed_quantity < 0.01 or self.fixed_quantity > 100.0
-        ):  # 上限を100.0に拡大
-            errors.append("fixed_quantityは0.01-100.0の範囲である必要があります")
+            self.fixed_quantity < 0.01 or self.fixed_quantity > 1000.0
+        ):  # 上限を1000.0に拡大
+            errors.append("fixed_quantityは0.01-1000.0の範囲である必要があります")
 
         if self.min_position_size < 0.001 or self.min_position_size > 1.0:
             errors.append("min_position_sizeは0.001-1.0の範囲である必要があります")
 
-        if (
-            self.max_position_size < self.min_position_size
-            or self.max_position_size > 100.0  # 上限を100.0に拡大
-        ):
+        if self.max_position_size < self.min_position_size:
             errors.append(
-                "max_position_sizeはmin_position_size以上100.0以下である必要があります"
+                "max_position_sizeはmin_position_size以上である必要があります"
             )
 
         if self.priority < 0.1 or self.priority > 2.0:
@@ -359,8 +356,8 @@ class PositionSizingGene:
             return self.min_position_size
 
     def _apply_size_limits(self, position_size: float) -> float:
-        """ポジションサイズに制限を適用"""
-        return max(self.min_position_size, min(position_size, self.max_position_size))
+        """ポジションサイズに制限を適用（最小値のみ）"""
+        return max(self.min_position_size, position_size)
 
 
 def create_random_position_sizing_gene(config=None) -> PositionSizingGene:
@@ -406,6 +403,12 @@ def create_random_position_sizing_gene(config=None) -> PositionSizingGene:
     if config and hasattr(config, "position_sizing_fixed_ratio_range"):
         fixed_ratio_range = config.position_sizing_fixed_ratio_range
 
+    if config and hasattr(config, "position_sizing_fixed_quantity_range"):
+        fixed_quantity_range = config.position_sizing_fixed_quantity_range
+
+    if config and hasattr(config, "position_sizing_max_size_range"):
+        max_position_range = config.position_sizing_max_size_range
+
     method = random.choice(method_choices)
 
     return PositionSizingGene(
@@ -418,7 +421,7 @@ def create_random_position_sizing_gene(config=None) -> PositionSizingGene:
         fixed_ratio=random.uniform(fixed_ratio_range[0], fixed_ratio_range[1]),
         fixed_quantity=random.uniform(fixed_quantity_range[0], fixed_quantity_range[1]),
         min_position_size=random.uniform(0.01, 0.05),
-        max_position_size=random.uniform(max_position_range[0], max_position_range[1]),
+        max_position_size=float('inf'),  # 資金管理で制御するため無制限
         enabled=True,
         priority=random.uniform(0.5, 1.5),
     )

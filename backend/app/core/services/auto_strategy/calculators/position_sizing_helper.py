@@ -38,7 +38,7 @@ class PositionSizingHelper:
         """
         try:
             # ポジションサイジング遺伝子が存在するかチェック
-            position_sizing_gene = getattr(gene, "gene_position_sizing", None)
+            position_sizing_gene = getattr(gene, "position_sizing_gene", None)
 
             if not position_sizing_gene or not position_sizing_gene.enabled:
                 # ポジションサイジング遺伝子が無効な場合は従来のrisk_managementを使用

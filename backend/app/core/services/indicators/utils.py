@@ -191,9 +191,10 @@ def log_indicator_calculation(
         parameters: パラメータ辞書
         data_length: データ長
     """
-    logger.debug(
-        f"指標計算開始: {indicator_name}, パラメータ: {parameters}, データ長: {data_length}"
-    )
+    # logger.debug(
+    #     f"指標計算開始: {indicator_name}, パラメータ: {parameters}, データ長: {data_length}"
+    # )
+    pass
 
 
 def format_indicator_result(
@@ -213,7 +214,8 @@ def format_indicator_result(
         # NaNの数をログ出力
         nan_count = np.sum(np.isnan(result))
         if nan_count > 0:
-            logger.debug(f"{indicator_name}: {nan_count}個のNaN値があります")
+            # logger.debug(f"{indicator_name}: {nan_count}個のNaN値があります")
+            pass
 
         return result
 
@@ -224,9 +226,10 @@ def format_indicator_result(
             if isinstance(arr, np.ndarray):
                 nan_count = np.sum(np.isnan(arr))
                 if nan_count > 0:
-                    logger.debug(
-                        f"{indicator_name}[{i}]: {nan_count}個のNaN値があります"
-                    )
+                    # logger.debug(
+                    #     f"{indicator_name}[{i}]: {nan_count}個のNaN値があります"
+                    # )
+                    pass
             formatted_results.append(arr)
 
         return tuple(formatted_results)

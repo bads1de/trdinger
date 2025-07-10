@@ -363,7 +363,8 @@ class GeneSerializer:
                 # 数値の場合は適切な桁数に丸める
                 if isinstance(value, float):
                     if key == "position_size":
-                        clean_risk_management[key] = round(value, 3)
+                        # BTCトレードでは小数点以下の精度が重要なため、6桁の精度を保持
+                        clean_risk_management[key] = round(value, 6)
                     else:
                         clean_risk_management[key] = round(value, 4)
                 else:

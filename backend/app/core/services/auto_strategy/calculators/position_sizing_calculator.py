@@ -60,7 +60,7 @@ class PositionSizingCalculatorService:
 
     def calculate_position_size(
         self,
-        gene,  # PositionSizingGene
+        gene,  
         account_balance: float,
         current_price: float,
         symbol: str = "BTCUSDT",
@@ -246,7 +246,11 @@ class PositionSizingCalculatorService:
                 ) / assumed_avg_win
                 half_optimal_f = max(0, min(0.1, optimal_f * gene.optimal_f_multiplier))
 
-                position_size = account_balance * half_optimal_f
+                position_amount = account_balance * half_optimal_f
+                if current_price > 0:
+                    position_size = position_amount / current_price
+                else:
+                    position_size = 0
                 warnings.append("取引履歴が不足、簡易版オプティマルF計算を使用")
                 details.update(
                     {
@@ -280,7 +284,11 @@ class PositionSizingCalculatorService:
                     )
                 except Exception:
                     # 最終フォールバック：固定比率
-                    position_size = account_balance * gene.fixed_ratio
+                    position_amount = account_balance * gene.fixed_ratio
+                    if current_price > 0:
+                        position_size = position_amount / current_price
+                    else:
+                        position_size = 0
                     warnings.append("取引履歴が不足、固定比率にフォールバック")
                     details.update(
                         {
@@ -297,7 +305,11 @@ class PositionSizingCalculatorService:
             losses = [t for t in recent_trades if t.get("pnl", 0) < 0]
 
             if len(recent_trades) == 0 or len(wins) == 0 or len(losses) == 0:
-                position_size = account_balance * gene.fixed_ratio
+                position_amount = account_balance * gene.fixed_ratio
+                if current_price > 0:
+                    position_size = position_amount / current_price
+                else:
+                    position_size = 0
                 warnings.append("有効な取引データなし、固定比率にフォールバック")
                 details.update(
                     {
@@ -318,7 +330,11 @@ class PositionSizingCalculatorService:
                     half_optimal_f = max(0, optimal_f * gene.optimal_f_multiplier)
 
                     # 口座残高に対する比率として適用
-                    position_size = account_balance * half_optimal_f
+                    position_amount = account_balance * half_optimal_f
+                    if current_price > 0:
+                        position_size = position_amount / current_price
+                    else:
+                        position_size = 0
 
                     details.update(
                         {
@@ -352,7 +368,11 @@ class PositionSizingCalculatorService:
                         )
                     except Exception:
                         # ボラティリティベースも失敗した場合のみ固定比率
-                        position_size = account_balance * gene.fixed_ratio
+                        position_amount = account_balance * gene.fixed_ratio
+                        if current_price > 0:
+                            position_size = position_amount / current_price
+                        else:
+                            position_size = 0
                         warnings.append("無効な損益データ、固定比率にフォールバック")
                         details.update(
                             {
@@ -361,10 +381,8 @@ class PositionSizingCalculatorService:
                             }
                         )
 
-        # サイズ制限の適用
-        position_size = max(
-            gene.min_position_size, min(position_size, gene.max_position_size)
-        )
+        # サイズ制限の適用（最小値のみ、資金管理で上限は制御）
+        position_size = max(gene.min_position_size, position_size)
         details["final_position_size"] = position_size
 
         return {
@@ -433,18 +451,20 @@ class PositionSizingCalculatorService:
         details: Dict[str, Any] = {"method": "fixed_ratio"}
 
         # ポジションサイズの計算
-        position_size = account_balance * gene.fixed_ratio
+        position_amount = account_balance * gene.fixed_ratio
+        if current_price > 0:
+            position_size = position_amount / current_price
+        else:
+            position_size = 0
 
-        # サイズ制限の適用
-        position_size = max(
-            gene.min_position_size, min(position_size, gene.max_position_size)
-        )
+        # サイズ制限の適用（最小値のみ）
+        position_size = max(gene.min_position_size, position_size)
 
         details.update(
             {
                 "fixed_ratio": gene.fixed_ratio,
                 "account_balance": account_balance,
-                "calculated_size": account_balance * gene.fixed_ratio,
+                "calculated_amount": position_amount,
                 "final_position_size": position_size,
             }
         )
@@ -466,10 +486,8 @@ class PositionSizingCalculatorService:
         # ポジションサイズの計算
         position_size = gene.fixed_quantity
 
-        # サイズ制限の適用
-        position_size = max(
-            gene.min_position_size, min(position_size, gene.max_position_size)
-        )
+        # サイズ制限の適用（最小値のみ）
+        position_size = max(gene.min_position_size, position_size)
 
         details.update(
             {

@@ -187,25 +187,28 @@ class StrategyFactory:
                         if self._debug_counter % 100 == 0:
                             logger.info(f"[DEBUG] 計算サイズ: {calculated_size}, 最終サイズ: {final_size}")
 
+                        # backtesting.pyの制約に合わせてポジションサイズを調整
+                        adjusted_size = self._adjust_position_size_for_backtesting(final_size)
+
                         # 利用可能現金で購入可能かチェック（ショートの場合も絶対値で計算）
-                        required_cash = abs(final_size) * current_price
-                        if required_cash <= available_cash * 0.99:
+                        required_cash = abs(adjusted_size) * current_price
+                        if required_cash <= available_cash * 0.99 and adjusted_size != 0:
                             # 計算されたサイズで注文を実行
                             # TP/SL遺伝子が存在する場合はSL/TPを設定
                             if self.gene.tpsl_gene and self.gene.tpsl_gene.enabled:
                                 # 既に計算済みのTP/SL価格を使用（二重計算を避ける）
                                 # ポジション方向に応じてbuy()またはsell()を呼び出し、SL/TPも設定
-                                if final_size > 0:
-                                    self.buy(size=final_size, sl=sl_price, tp=tp_price)
+                                if adjusted_size > 0:
+                                    self.buy(size=adjusted_size, sl=sl_price, tp=tp_price)
                                 else:
-                                    self.sell(size=abs(final_size), sl=sl_price, tp=tp_price)
+                                    self.sell(size=abs(adjusted_size), sl=sl_price, tp=tp_price)
                             else:
                                 # TP/SL遺伝子がない場合は従来通り（SL/TPなし）
                                 # ポジション方向に応じてbuy()またはsell()を呼び出す
-                                if final_size > 0:
-                                    self.buy(size=final_size)
+                                if adjusted_size > 0:
+                                    self.buy(size=adjusted_size)
                                 else:
-                                    self.sell(size=abs(final_size))
+                                    self.sell(size=abs(adjusted_size))
                         else:
                             pass
                     # イグジット条件チェック（TP/SL遺伝子が存在しない場合のみ）
@@ -219,6 +222,41 @@ class StrategyFactory:
                 except Exception as e:
                     logger.error(f"売買ロジックエラー: {e}", exc_info=True)
                     pass
+
+            def _adjust_position_size_for_backtesting(self, size: float) -> float:
+                """
+                backtesting.pyの制約に合わせてポジションサイズを調整
+
+                制約:
+                - 0 < size < 1 (資産の割合として) または
+                - size >= 1 かつ 整数 (単位数として)
+
+                Args:
+                    size: 元のポジションサイズ
+
+                Returns:
+                    調整されたポジションサイズ
+                """
+                if size == 0:
+                    return 0
+
+                abs_size = abs(size)
+                sign = 1 if size > 0 else -1
+
+                # 1未満の場合は割合として扱う（そのまま使用）
+                if abs_size < 1:
+                    # 最小値チェック（backtesting.pyは0より大きい必要がある）
+                    if abs_size <= 0:
+                        return 0
+                    return size
+
+                # 1以上の場合は整数に丸める（単位数として扱う）
+                else:
+                    rounded_size = round(abs_size)
+                    # 丸めた結果が0になった場合は1にする
+                    if rounded_size == 0:
+                        rounded_size = 1
+                    return sign * rounded_size
 
             def _init_indicator(self, indicator_gene: IndicatorGene):
                 """単一指標の初期化（統合版）"""

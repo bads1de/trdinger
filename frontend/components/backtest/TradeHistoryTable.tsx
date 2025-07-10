@@ -106,7 +106,7 @@ const TradeHistoryTable: React.FC<TradeHistoryTableProps> = ({
                     {formatCurrency(trade.exit_price)}
                   </td>
                   <td className="px-2 py-3 text-xs text-gray-300 text-right font-mono">
-                    {formatNumber(Math.abs(trade.size), 4)}
+                    {formatNumber(Math.abs(trade.size), 0, 6)}
                   </td>
                   <td
                     className={`px-2 py-3 text-xs text-right font-mono font-semibold ${getPnlColor(
@@ -189,7 +189,7 @@ const TradeHistoryTable: React.FC<TradeHistoryTableProps> = ({
                 <div className="flex justify-between text-xs">
                   <span className="text-gray-400">サイズ:</span>
                   <span className="font-mono text-gray-300">
-                    {formatNumber(Math.abs(trade.size), 4)}
+                    {formatNumber(Math.abs(trade.size), 0, 4)}
                   </span>
                 </div>
               </div>

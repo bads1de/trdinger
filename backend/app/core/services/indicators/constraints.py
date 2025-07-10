@@ -174,9 +174,9 @@ class ConstraintEngine:
     ):
         """インディケーターの制約を登録"""
         self.constraint_registry[indicator_name] = constraints
-        self.logger.debug(
-            f"Registered {len(constraints)} constraints for {indicator_name}"
-        )
+        # self.logger.debug(
+        #     f"Registered {len(constraints)} constraints for {indicator_name}"
+        # )
 
     def apply_constraints(
         self, indicator_name: str, params: Dict[str, Any]
@@ -187,11 +187,12 @@ class ConstraintEngine:
         for constraint in constraints:
             try:
                 params = constraint.apply(params)
-                self.logger.debug(f"Applied constraint: {constraint.get_description()}")
+                # self.logger.debug(f"Applied constraint: {constraint.get_description()}")
             except Exception as e:
-                self.logger.warning(
-                    f"Failed to apply constraint {constraint.get_description()}: {e}"
-                )
+                # self.logger.warning(
+                #     f"Failed to apply constraint {constraint.get_description()}: {e}"
+                # )
+                pass
 
         return params
 
@@ -202,14 +203,15 @@ class ConstraintEngine:
         for constraint in constraints:
             try:
                 if not constraint.validate(params):
-                    self.logger.warning(
-                        f"Constraint validation failed: {constraint.get_description()}"
-                    )
+                    # self.logger.warning(
+                    #     f"Constraint validation failed: {constraint.get_description()}"
+                    # )
                     return False
             except Exception as e:
-                self.logger.error(
-                    f"Constraint validation error {constraint.get_description()}: {e}"
-                )
+                # self.logger.error(
+                #     f"Constraint validation error {constraint.get_description()}: {e}"
+                pass
+                # )
                 return False
 
         return True

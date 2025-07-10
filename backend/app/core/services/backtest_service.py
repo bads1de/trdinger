@@ -70,11 +70,8 @@ class BacktestService:
                     "strategy_type": config["strategy_config"].get("strategy_type"),
                     "parameters": "...",  # strategy_geneはログに出力しない
                 }
-            logger.info(f"バックテストを開始します。設定: {log_config}")
-
             # 1. 設定の検証
             self._validate_config(config)
-            logger.info("バックテスト設定の検証が完了しました。")
 
             # 2. データサービスの初期化（必要に応じて）
             if self.data_service is None:
@@ -82,15 +79,10 @@ class BacktestService:
                 try:
                     ohlcv_repo = OHLCVRepository(db)
                     self.data_service = BacktestDataService(ohlcv_repo)
-                    logger.info("BacktestDataServiceが初期化されました。")
                 finally:
                     db.close()
 
             # 3. データ取得
-            logger.info(
-                f"{config['symbol']} {config['timeframe']} のOHLCVデータを {config['start_date']} から {config['end_date']} まで取得しています。"
-            )
-
             # 日付文字列をdatetimeオブジェクトに変換
             start_date = (
                 datetime.fromisoformat(config["start_date"])
@@ -111,27 +103,20 @@ class BacktestService:
                 start_date=start_date,
                 end_date=end_date,
             )
-            logger.info("OI/FR統合を含む拡張データを使用しています。")
 
             if data is None or data.empty:
                 raise ValueError(
                     f"{config['symbol']} {config['timeframe']} の {config['start_date']} から {config['end_date']} までのOHLCVデータが見つかりませんでした。"
                 )
 
-            logger.info(f"{len(data)}件のデータポイントを取得しました。")
-
             # 4. 戦略クラス取得または生成
             if "strategy_class" in config:
                 # GAエンジンから直接戦略クラスが渡された場合
                 strategy_class = config["strategy_class"]
-                logger.info("GAエンジンから直接渡された戦略クラスを使用します。")
                 # パラメータは戦略クラス生成時に既に設定済み
                 strategy_parameters = {}
             else:
                 # 通常のstrategy_configから戦略クラスを生成する場合
-                logger.info(
-                    "strategy_configからオートストラテジーの戦略クラスを作成しています。"
-                )
                 strategy_class = self._create_strategy_class(config["strategy_config"])
                 # パラメータを取得
                 strategy_parameters = config.get("strategy_config", {}).get(
@@ -139,13 +124,6 @@ class BacktestService:
                 )
 
             # 5. backtesting.py実行
-            logger.info("バックテストを実行中...")
-            logger.info(f"データシェイプ: {data.shape}")
-            logger.info(f"データカラム: {data.columns.tolist()}")
-            logger.info(
-                f"データインデックス範囲: {data.index.min()} から {data.index.max()}"
-            )
-
             bt = Backtest(
                 data,
                 strategy_class,
@@ -161,18 +139,12 @@ class BacktestService:
             import time
 
             start_time = time.time()
-            logger.info("backtesting.pyによるバックテストの実行を開始します...")
-            logger.info(f"戦略パラメータ: {strategy_parameters}")
             warnings.filterwarnings("ignore", category=UserWarning)
             stats = bt.run(**strategy_parameters)
             warnings.filterwarnings("default", category=UserWarning)
             execution_time = time.time() - start_time
-            logger.info(
-                f"バックテストが正常に完了しました。実行時間: {execution_time:.2f}秒"
-            )
 
             # 6. 結果をデータベース形式に変換
-            logger.info("バックテスト結果の変換処理を開始します...")
 
             # config_jsonを構築
             config_json = {
@@ -191,7 +163,6 @@ class BacktestService:
                 config_json,
             )
 
-            logger.info("バックテスト結果の変換が完了し、返却されます。")
             return result
 
         except Exception as e:
@@ -450,7 +421,6 @@ class BacktestService:
         """
         戦略パラメータの最適化
         """
-        logger.info(f"戦略の最適化を開始します。設定: {optimization_params}")
         self._validate_config(config)
 
         if self.data_service is None:
@@ -515,7 +485,4 @@ class BacktestService:
 
         # ヒートマップはJSONシリアライズできないため、ここでは返さない
         # 必要であれば別途ファイル保存などを検討
-        logger.info(
-            f"最適化が完了しました。最適化されたパラメータ: {result['optimized_parameters']}"
-        )
         return result

@@ -153,8 +153,8 @@ class GAConfig:
         default_factory=lambda: [0.01, 0.1]
     )  # 最小ポジションサイズ範囲
     position_sizing_max_size_range: List[float] = field(
-        default_factory=lambda: [0.5, 2.0]
-    )  # 最大ポジションサイズ範囲
+        default_factory=lambda: [5.0, 50.0]
+    )  # 最大ポジションサイズ範囲（BTCトレードに適した範囲に拡大）
     position_sizing_priority_range: List[float] = field(
         default_factory=lambda: [0.5, 1.5]
     )  # 優先度範囲
@@ -162,7 +162,7 @@ class GAConfig:
     # 実行設定
     parallel_processes: Optional[int] = None
     random_state: Optional[int] = None
-    log_level: str = "WARNING"
+    log_level: str = "ERROR"  # エラーログのみ出力
     save_intermediate_results: bool = True
     # enable_detailed_logging: bool = True
     progress_callback: Optional[Callable[["GAProgress"], None]] = None
@@ -310,7 +310,7 @@ class GAConfig:
             max_conditions=data.get("max_conditions", 3),
             parallel_processes=data.get("parallel_processes"),
             random_state=data.get("random_state"),
-            log_level=data.get("log_level", "INFO"),
+            log_level=data.get("log_level", "ERROR"),
             save_intermediate_results=data.get("save_intermediate_results", True),
             # enable_detailed_logging=data.get("enable_detailed_logging", True),
         )

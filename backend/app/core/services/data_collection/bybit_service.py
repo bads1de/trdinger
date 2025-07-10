@@ -193,13 +193,13 @@ class BybitService(ABC):
                 )
 
                 if not page_data:
-                    logger.info(f"ページ {page_count}: データなし。取得終了")
+                    # logger.info(f"ページ {page_count}: データなし。取得終了")
                     break
 
                 logger.info(
-                    f"ページ {page_count}: {len(page_data)}件取得 "
-                    f"(累計: {len(all_data) + len(page_data)}件)"
-                )
+                     f"ページ {page_count}: {len(page_data)}件取得 "
+                     f"(累計: {len(all_data) + len(page_data)}件)"
+                 )
 
                 # 重複チェック（タイムスタンプベース）
                 existing_timestamps = {item["timestamp"] for item in all_data}

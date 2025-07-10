@@ -14,6 +14,9 @@ from ..factories.strategy_factory import StrategyFactory
 from ..generators.random_gene_generator import RandomGeneGenerator
 from app.core.services.backtest_service import BacktestService
 from ..services.experiment_persistence_service import ExperimentPersistenceService
+from database.connection import get_db
+from database.repositories.backtest_result_repository import BacktestResultRepository
+
 
 logger = logging.getLogger(__name__)
 
@@ -82,11 +85,16 @@ class ExperimentManager:
 
     def initialize_ga_engine(self, ga_config: GAConfig):
         """GAエンジンを初期化"""
+        # GAConfigのログレベルを適用
+        auto_strategy_logger = logging.getLogger("app.core.services.auto_strategy")
+        auto_strategy_logger.setLevel(getattr(logging, ga_config.log_level.upper()))
+
         gene_generator = RandomGeneGenerator(ga_config)
         self.ga_engine = GeneticAlgorithmEngine(
             self.backtest_service, self.strategy_factory, gene_generator
         )
-        logger.info("GAエンジンを動的に初期化しました。")
+        if ga_config.log_level.upper() in ["DEBUG", "INFO"]:
+            logger.info("GAエンジンを動的に初期化しました。")
 
     def stop_experiment(self, experiment_id: str) -> bool:
         """実験を停止"""
@@ -169,11 +177,6 @@ class ExperimentManager:
 
             # 最新のバックテスト結果を取得して分析
             # 最新のバックテスト結果を取得して分析
-            from backend.database.repositories.backtest_result_repository import (
-                BacktestResultRepository,
-            )
-            from backend.database.connection import get_db
-
             db = next(get_db())
             try:
                 backtest_repo = BacktestResultRepository(db)
@@ -217,7 +220,7 @@ class ExperimentManager:
                 db.close()
 
         except Exception as e:
-            logger.error(f"取引数0分析エラー: {e}")
+            logger.warning(f"取引数0の分析処理中にエラーが発生しました: {e}", exc_info=True)
 
     def _analyze_strategy_gene_for_zero_trades(
         self, strategy_gene_dict: Dict[str, Any], result_id: str
@@ -228,23 +231,17 @@ class ExperimentManager:
 
             # インジケーター分析
             indicators = strategy_gene_dict.get("indicators", [])
-            logger.info(f"        インジケーター数: {len(indicators)}")
+
             for indicator in indicators:
                 indicator_type = indicator.get("type", "Unknown")
                 parameters = indicator.get("parameters", {})
-                logger.info(f"          - {indicator_type}: {parameters}")
+        
 
             # エントリー条件分析
             entry_conditions = strategy_gene_dict.get("entry_conditions", [])
             long_entry_conditions = strategy_gene_dict.get("long_entry_conditions", [])
             short_entry_conditions = strategy_gene_dict.get(
                 "short_entry_conditions", []
-            )
-
-            logger.info(f"        エントリー条件数: {len(entry_conditions)}")
-            logger.info(f"        ロングエントリー条件数: {len(long_entry_conditions)}")
-            logger.info(
-                f"        ショートエントリー条件数: {len(short_entry_conditions)}"
             )
 
             # 条件の詳細分析

@@ -42,8 +42,15 @@ export const formatPercentage = (value: number) => {
   return `${formatted}%`;
 };
 
-export const formatNumber = (value: number, decimals: number = 4) => {
-  return value.toFixed(decimals);
+export const formatNumber = (
+  value: number,
+  minDecimals: number = 0,
+  maxDecimals: number = 4
+) => {
+  return new Intl.NumberFormat("en-US", {
+    minimumFractionDigits: minDecimals,
+    maximumFractionDigits: maxDecimals,
+  }).format(value);
 };
 
 export const getPnlColor = (pnl: number) => {

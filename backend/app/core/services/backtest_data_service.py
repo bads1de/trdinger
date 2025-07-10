@@ -142,9 +142,6 @@ class BacktestDataService:
                         right_index=True,
                         direction="backward",
                     )
-                    logger.info(
-                        f"Open Interestデータを{len(oi_data)}件マージしました。"
-                    )
                 else:
                     logger.warning(
                         f"シンボル {symbol} のOpen Interestデータが見つかりませんでした。"
@@ -173,7 +170,6 @@ class BacktestDataService:
                         right_index=True,
                         direction="backward",
                     )
-                    logger.info(f"Funding Rateデータを{len(fr_data)}件マージしました。")
                 else:
                     logger.warning(
                         f"シンボル {symbol} のFunding Rateデータが見つかりませんでした。"
@@ -235,7 +231,7 @@ class BacktestDataService:
             df: 検証対象のDataFrame
             required_columns: 必須カラムのリスト
 
-        Raises:
+        Raises
             ValueError: DataFrameが無効な場合
         """
         if df.empty:
