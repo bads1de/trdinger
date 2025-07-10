@@ -8,9 +8,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import ApiButton from "@/components/button/ApiButton";
 import { useApiCall } from "@/hooks/useApiCall";
-import GAConfigForm from "./GAConfigForm";
 import { BacktestConfig, BacktestResult } from "@/types/backtest";
 import {
   OptimizationConfig,
@@ -18,16 +16,16 @@ import {
   RobustnessConfig,
   GAConfig,
 } from "@/types/optimization";
-import { InputField } from "@/components/common/InputField";
-import { SelectField } from "@/components/common/SelectField";
 import { BaseBacktestConfigForm } from "./BaseBacktestConfigForm";
 import { UnifiedStrategy } from "@/types/auto-strategy";
-import {
-  OPTIMIZATION_METHODS,
-  ENHANCED_OPTIMIZATION_OBJECTIVES,
-  GA_OBJECTIVE_OPTIONS,
-} from "@/constants/backtest";
 import TabButton from "../common/TabButton";
+import { InputField } from "../common/InputField";
+
+// Dynamic imports for tab components
+import EnhancedOptimizationTab from "./optimization/EnhancedOptimizationTab";
+import MultiObjectiveTab from "./optimization/MultiObjectiveTab";
+import RobustnessTestTab from "./optimization/RobustnessTestTab";
+import GATab from "./optimization/GATab";
 
 interface OptimizationFormProps {
   onEnhancedOptimization: (config: OptimizationConfig) => void;
@@ -54,10 +52,9 @@ export default function OptimizationForm({
   const [strategies, setStrategies] = useState<Record<string, UnifiedStrategy>>(
     {}
   );
-  const [selectedStrategy, setSelectedStrategy] = useState<string>("SMA_CROSS");
+  const [selectedStrategy, setSelectedStrategy] = useState<string>("");
 
-  // 基本設定
-  const [baseConfig, setBaseConfig] = useState({
+  const [baseConfig, setBaseConfig] = useState<Omit<BacktestConfig, 'strategy_config'>>({
     strategy_name: "OPTIMIZED_STRATEGY",
     symbol: "BTC/USDT",
     timeframe: "1d",
@@ -67,51 +64,18 @@ export default function OptimizationForm({
     commission_rate: 0.00055,
   });
 
-  // 拡張最適化設定
-  const [enhancedConfig, setEnhancedConfig] = useState({
-    method: "grid" as "grid" | "sambo",
-    max_tries: 100,
-    maximize: "Sharpe Ratio",
-    return_optimization: false,
-    random_state: 42,
-    constraint: "sma_cross",
-    n1_range: [10, 30, 5],
-    n2_range: [30, 80, 10],
-  });
-
-  // マルチ目的最適化設定
-  const [multiConfig, setMultiConfig] = useState({
-    objectives: ["Sharpe Ratio", "Return [%]", "-Max. Drawdown [%]"],
-    weights: [0.4, 0.4, 0.2],
-    method: "grid" as "grid" | "sambo",
-    max_tries: 80,
-    n1_range: [10, 25, 5],
-    n2_range: [30, 70, 10],
-  });
-
-  // ロバストネステスト設定
-  const [robustnessConfig, setRobustnessConfig] = useState({
-    test_periods: [
-      ["2024-01-01", "2024-03-31"],
-      ["2024-04-01", "2024-06-30"],
-      ["2024-07-01", "2024-09-30"],
-      ["2024-10-01", "2024-12-31"],
-    ],
-    method: "grid" as "grid" | "sambo",
-    max_tries: 50,
-    maximize: "Sharpe Ratio",
-    n1_range: [10, 25, 5],
-    n2_range: [30, 60, 10],
-  });
-
   const { execute: fetchStrategies } = useApiCall();
 
   useEffect(() => {
     const loadStrategies = async () => {
       try {
         const response = await fetchStrategies("/api/backtest/strategies");
-        if (response?.success) {
+        if (response?.success && Object.keys(response.strategies).length > 0) {
           setStrategies(response.strategies);
+          // Set default strategy if not set by currentBacktestConfig
+          if (!selectedStrategy) {
+            setSelectedStrategy(Object.keys(response.strategies)[0]);
+          }
         }
       } catch (error) {
         console.error("Failed to load strategies:", error);
@@ -119,9 +83,8 @@ export default function OptimizationForm({
     };
 
     loadStrategies();
-  }, []);
+  }, [selectedStrategy]);
 
-  // 現在のバックテスト設定から基本設定を自動入力（優先）
   useEffect(() => {
     if (currentBacktestConfig) {
       setBaseConfig({
@@ -135,7 +98,6 @@ export default function OptimizationForm({
       });
       setSelectedStrategy(currentBacktestConfig.strategy_config.strategy_type);
     } else if (initialConfig) {
-      // フォールバック: 選択されたバックテスト結果から設定を引き継ぎ
       setBaseConfig({
         strategy_name: `${initialConfig.strategy_name}_OPTIMIZED`,
         symbol: initialConfig.symbol,
@@ -148,123 +110,16 @@ export default function OptimizationForm({
     }
   }, [currentBacktestConfig, initialConfig]);
 
-  const createParameterRange = (rangeConfig: number[]) => {
-    const [start, end, step] = rangeConfig;
-    const range = [];
-    for (let i = start; i <= end; i += step) {
-      range.push(i);
-    }
-    return range;
+  const fullBaseConfig: BacktestConfig = {
+    ...baseConfig,
+    strategy_config: {
+      strategy_type: selectedStrategy,
+      parameters: currentBacktestConfig?.strategy_config?.parameters || {},
+    },
   };
 
-  const handleEnhancedSubmit = () => {
-    // 現在のバックテスト設定から戦略パラメータを引き継ぐ
-    const strategyParameters =
-      currentBacktestConfig?.strategy_config?.parameters || {};
+  const { 'start_date': startDate, 'end_date': endDate, ...robustnessBaseConfig } = fullBaseConfig;
 
-    const config: OptimizationConfig = {
-      base_config: {
-        ...baseConfig,
-        strategy_config: {
-          strategy_type: selectedStrategy,
-          parameters: strategyParameters,
-        },
-      },
-      optimization_params: {
-        method: enhancedConfig.method,
-        ...(enhancedConfig.method === "sambo" && {
-          max_tries: enhancedConfig.max_tries,
-        }),
-        maximize: enhancedConfig.maximize,
-        return_optimization: enhancedConfig.return_optimization,
-        random_state: enhancedConfig.random_state,
-        constraint: enhancedConfig.constraint,
-        parameters: {
-          n1: createParameterRange(enhancedConfig.n1_range),
-          n2: createParameterRange(enhancedConfig.n2_range),
-        },
-      },
-    };
-    onEnhancedOptimization(config);
-  };
-
-  const handleMultiObjectiveSubmit = () => {
-    // 現在のバックテスト設定から戦略パラメータを引き継ぐ
-    const strategyParameters =
-      currentBacktestConfig?.strategy_config?.parameters || {};
-
-    const config: MultiObjectiveConfig = {
-      base_config: {
-        ...baseConfig,
-        strategy_config: {
-          strategy_type: selectedStrategy,
-          parameters: strategyParameters,
-        },
-      },
-      optimization_params: {
-        objectives: multiConfig.objectives,
-        weights: multiConfig.weights || [], // multiConfig.weights が undefined の場合のフォールバックを提供
-        method: multiConfig.method,
-        ...(multiConfig.method === "sambo" && {
-          max_tries: multiConfig.max_tries,
-        }),
-        parameters: {
-          n1: createParameterRange(multiConfig.n1_range),
-          n2: createParameterRange(multiConfig.n2_range),
-        },
-      },
-    };
-    onMultiObjectiveOptimization(config);
-  };
-
-  const handleRobustnessSubmit = () => {
-    // 現在のバックテスト設定から戦略パラメータを引き継ぐ
-    const strategyParameters =
-      currentBacktestConfig?.strategy_config?.parameters || {};
-
-    const config: RobustnessConfig = {
-      base_config: {
-        strategy_name: baseConfig.strategy_name,
-        symbol: baseConfig.symbol,
-        timeframe: baseConfig.timeframe,
-        initial_capital: baseConfig.initial_capital,
-        commission_rate: baseConfig.commission_rate,
-        strategy_config: {
-          strategy_type: selectedStrategy,
-          parameters: strategyParameters,
-        },
-      },
-      test_periods: robustnessConfig.test_periods,
-      optimization_params: {
-        method: robustnessConfig.method,
-        ...(robustnessConfig.method === "sambo" && {
-          max_tries: robustnessConfig.max_tries,
-        }),
-        maximize: robustnessConfig.maximize,
-        parameters: {
-          n1: createParameterRange(robustnessConfig.n1_range),
-          n2: createParameterRange(robustnessConfig.n2_range),
-        },
-      },
-    };
-    onRobustnessTest(config);
-  };
-
-  // GA実行ハンドラー
-  const handleGAGeneration = (gaConfig: GAConfig) => {
-    if (onGAGeneration) {
-      const strategyParameters =
-        currentBacktestConfig?.strategy_config?.parameters || {};
-      const baseBacktestConfig: BacktestConfig = {
-        ...baseConfig,
-        strategy_config: {
-          strategy_type: selectedStrategy,
-          parameters: strategyParameters,
-        },
-      };
-      onGAGeneration({ ...gaConfig, base_config: baseBacktestConfig });
-    }
-  };
 
   return (
     <div className="w-full">
@@ -299,55 +154,29 @@ export default function OptimizationForm({
         onSubmit={(e) => e.preventDefault()}
         className="space-y-6 p-4 rounded-lg bg-secondary-900"
       >
-        {/* 基本設定はすべての最適化で共通 */}
         <h2 className="text-xl font-semibold text-white">基本設定</h2>
         <BaseBacktestConfigForm
-          config={{
-            strategy_name: baseConfig.strategy_name,
-            symbol: baseConfig.symbol,
-            timeframe: baseConfig.timeframe,
-            start_date: baseConfig.start_date,
-            end_date: baseConfig.end_date,
-            initial_capital: baseConfig.initial_capital,
-            commission_rate: baseConfig.commission_rate,
-            strategy_config: {
-              strategy_type: selectedStrategy,
-              parameters:
-                currentBacktestConfig?.strategy_config?.parameters || {},
-            },
-          }}
+          config={fullBaseConfig}
           onConfigChange={(updates) =>
             setBaseConfig((prev) => ({ ...prev, ...updates }))
           }
           isOptimization={true}
         />
 
-        {/* 戦略パラメータの表示と編集 */}
         {selectedStrategy && strategies[selectedStrategy] && (
           <div className="space-y-4">
             <h3 className="text-lg font-semibold text-white">戦略パラメータ</h3>
             {Object.entries(strategies[selectedStrategy].parameters).map(
-              ([key, param]: [
-                string,
-                {
-                  description: string;
-                  default: any;
-                  min?: number;
-                  max?: number;
-                  step?: number;
-                }
-              ]) => (
+              ([key, param]: [string, any]) => (
                 <InputField
                   key={key}
                   label={param.description}
                   type="number"
                   value={
-                    currentBacktestConfig?.strategy_config?.parameters[key] ||
+                    currentBacktestConfig?.strategy_config?.parameters[key] ??
                     param.default
                   }
-                  onChange={(value) => {
-                    // 最適化フォームでは直接パラメータを変更しないため、変更を無視
-                  }}
+                  onChange={() => {}}
                   min={param.min}
                   max={param.max}
                   step={param.step}
@@ -356,306 +185,40 @@ export default function OptimizationForm({
                 />
               )
             )}
-            {/* UnifiedStrategy に constraints プロパティがないため、関連コードを削除 */}
           </div>
         )}
 
-        {/* タブコンテンツ */}
         {activeTab === "enhanced" && (
-          <div className="space-y-6">
-            <h2 className="text-xl font-semibold text-white">拡張最適化設定</h2>
-            <SelectField
-              label="最適化手法"
-              value={enhancedConfig.method}
-              onChange={(value) =>
-                setEnhancedConfig((prev) => ({
-                  ...prev,
-                  method: value as "grid" | "sambo",
-                }))
-              }
-              options={OPTIMIZATION_METHODS}
-            />
-            {enhancedConfig.method === "sambo" && (
-              <InputField
-                label="最大試行回数 (max_tries)"
-                type="number"
-                value={enhancedConfig.max_tries}
-                onChange={(value) =>
-                  setEnhancedConfig((prev) => ({ ...prev, max_tries: value }))
-                }
-                min={10}
-                step={10}
-              />
-            )}
-            <SelectField
-              label="最大化する指標"
-              value={enhancedConfig.maximize}
-              onChange={(value) =>
-                setEnhancedConfig((prev) => ({ ...prev, maximize: value }))
-              }
-              options={ENHANCED_OPTIMIZATION_OBJECTIVES}
-            />
-            {enhancedConfig.method === "sambo" && (
-              <div className="flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  id="return_optimization"
-                  checked={enhancedConfig.return_optimization}
-                  onChange={(e) =>
-                    setEnhancedConfig((prev) => ({
-                      ...prev,
-                      return_optimization: e.target.checked,
-                    }))
-                  }
-                  className="form-checkbox h-5 w-5 text-blue-600 rounded border-gray-600 bg-gray-700"
-                />
-                <label htmlFor="return_optimization" className="text-gray-300">
-                  最適化結果を返す (Samboのみ)
-                </label>
-              </div>
-            )}
-            {enhancedConfig.method === "sambo" && (
-              <InputField
-                label="ランダムシード (random_state)"
-                type="number"
-                value={enhancedConfig.random_state}
-                onChange={(value) =>
-                  setEnhancedConfig((prev) => ({
-                    ...prev,
-                    random_state: value,
-                  }))
-                }
-                min={0}
-              />
-            )}
-            <InputField
-              label="制約 (constraint)"
-              value={enhancedConfig.constraint}
-              onChange={(value) =>
-                setEnhancedConfig((prev) => ({ ...prev, constraint: value }))
-              }
-            />
-            <InputField
-              label="N1範囲 [start, end, step]"
-              value={enhancedConfig.n1_range.join(", ")}
-              onChange={(value) =>
-                setEnhancedConfig((prev) => ({
-                  ...prev,
-                  n1_range: value.split(",").map(Number),
-                }))
-              }
-              placeholder="例: 10, 30, 5"
-            />
-            <InputField
-              label="N2範囲 [start, end, step]"
-              value={enhancedConfig.n2_range.join(", ")}
-              onChange={(value) =>
-                setEnhancedConfig((prev) => ({
-                  ...prev,
-                  n2_range: value.split(",").map(Number),
-                }))
-              }
-              placeholder="例: 30, 80, 10"
-            />
-            <ApiButton onClick={handleEnhancedSubmit} loading={isLoading}>
-              拡張最適化を実行
-            </ApiButton>
-          </div>
+          <EnhancedOptimizationTab
+            baseConfig={fullBaseConfig}
+            selectedStrategy={selectedStrategy}
+            onRun={onEnhancedOptimization}
+            isLoading={isLoading}
+          />
         )}
-
         {activeTab === "multi" && (
-          <div className="space-y-6">
-            <h2 className="text-xl font-semibold text-white">
-              マルチ目的最適化設定
-            </h2>
-            <SelectField
-              label="最適化手法"
-              value={multiConfig.method}
-              onChange={(value) =>
-                setMultiConfig((prev) => ({
-                  ...prev,
-                  method: value as "grid" | "sambo",
-                }))
-              }
-              options={OPTIMIZATION_METHODS}
-            />
-            {multiConfig.method === "sambo" && (
-              <InputField
-                label="最大試行回数 (max_tries)"
-                type="number"
-                value={multiConfig.max_tries}
-                onChange={(value) =>
-                  setMultiConfig((prev) => ({ ...prev, max_tries: value }))
-                }
-                min={10}
-                step={10}
-              />
-            )}
-            <InputField
-              label="目的関数 [指標1, 指標2,...]"
-              value={multiConfig.objectives.join(", ")}
-              onChange={(value) =>
-                setMultiConfig((prev) => ({
-                  ...prev,
-                  objectives: value.split(",").map((s: string) => s.trim()),
-                }))
-              }
-              placeholder="例: Sharpe Ratio, Return [%], -Max. Drawdown [%]"
-            />
-            <InputField
-              label="重み [重み1, 重み2,...] (合計1.0)"
-              value={multiConfig.weights.join(", ")}
-              onChange={(value) =>
-                setMultiConfig((prev) => ({
-                  ...prev,
-                  weights: value.split(",").map(Number),
-                }))
-              }
-              placeholder="例: 0.4, 0.4, 0.2"
-            />
-            <InputField
-              label="N1範囲 [start, end, step]"
-              value={multiConfig.n1_range.join(", ")}
-              onChange={(value) =>
-                setMultiConfig((prev) => ({
-                  ...prev,
-                  n1_range: value.split(",").map(Number),
-                }))
-              }
-              placeholder="例: 10, 25, 5"
-            />
-            <InputField
-              label="N2範囲 [start, end, step]"
-              value={multiConfig.n2_range.join(", ")}
-              onChange={(value) =>
-                setMultiConfig((prev) => ({
-                  ...prev,
-                  n2_range: value.split(",").map(Number),
-                }))
-              }
-              placeholder="例: 30, 70, 10"
-            />
-            <ApiButton onClick={handleMultiObjectiveSubmit} loading={isLoading}>
-              マルチ目的最適化を実行
-            </ApiButton>
-          </div>
+          <MultiObjectiveTab
+            baseConfig={fullBaseConfig}
+            selectedStrategy={selectedStrategy}
+            onRun={onMultiObjectiveOptimization}
+            isLoading={isLoading}
+          />
         )}
-
         {activeTab === "robustness" && (
-          <div className="space-y-6">
-            <h2 className="text-xl font-semibold text-white">
-              ロバストネステスト設定
-            </h2>
-            <div className="space-y-2">
-              <label className="block text-sm font-medium text-gray-300 mb-2">
-                テスト期間 (test_periods)
-              </label>
-              {robustnessConfig.test_periods.map((period, index) => (
-                <div key={index} className="flex gap-2">
-                  <InputField
-                    label={`期間 ${index + 1} 開始`}
-                    type="date"
-                    value={period[0]}
-                    onChange={(value) => {
-                      const newPeriods = [...robustnessConfig.test_periods];
-                      newPeriods[index][0] = value;
-                      setRobustnessConfig((prev) => ({
-                        ...prev,
-                        test_periods: newPeriods,
-                      }));
-                    }}
-                  />
-                  <InputField
-                    label={`期間 ${index + 1} 終了`}
-                    type="date"
-                    value={period[1]}
-                    onChange={(value) => {
-                      const newPeriods = [...robustnessConfig.test_periods];
-                      newPeriods[index][1] = value;
-                      setRobustnessConfig((prev) => ({
-                        ...prev,
-                        test_periods: newPeriods,
-                      }));
-                    }}
-                  />
-                </div>
-              ))}
-              <button
-                type="button"
-                onClick={() =>
-                  setRobustnessConfig((prev) => ({
-                    ...prev,
-                    test_periods: [...prev.test_periods, ["", ""]],
-                  }))
-                }
-                className="mt-2 py-2 px-4 bg-gray-700 hover:bg-gray-600 rounded-md text-white text-sm"
-              >
-                期間を追加
-              </button>
-            </div>
-            <SelectField
-              label="最適化手法"
-              value={robustnessConfig.method}
-              onChange={(value) =>
-                setRobustnessConfig((prev) => ({
-                  ...prev,
-                  method: value as "grid" | "sambo",
-                }))
-              }
-              options={OPTIMIZATION_METHODS}
-            />
-            {robustnessConfig.method === "sambo" && (
-              <InputField
-                label="最大試行回数 (max_tries)"
-                type="number"
-                value={robustnessConfig.max_tries}
-                onChange={(value) =>
-                  setRobustnessConfig((prev) => ({ ...prev, max_tries: value }))
-                }
-                min={10}
-                step={10}
-              />
-            )}
-            <SelectField
-              label="最大化する指標"
-              value={robustnessConfig.maximize}
-              onChange={(value) =>
-                setRobustnessConfig((prev) => ({ ...prev, maximize: value }))
-              }
-              options={ENHANCED_OPTIMIZATION_OBJECTIVES}
-            />
-            <InputField
-              label="N1範囲 [start, end, step]"
-              value={robustnessConfig.n1_range.join(", ")}
-              onChange={(value) =>
-                setRobustnessConfig((prev) => ({
-                  ...prev,
-                  n1_range: value.split(",").map(Number),
-                }))
-              }
-              placeholder="例: 10, 25, 5"
-            />
-            <InputField
-              label="N2範囲 [start, end, step]"
-              value={robustnessConfig.n2_range.join(", ")}
-              onChange={(value) =>
-                setRobustnessConfig((prev) => ({
-                  ...prev,
-                  n2_range: value.split(",").map(Number),
-                }))
-              }
-              placeholder="例: 30, 60, 10"
-            />
-            <ApiButton onClick={handleRobustnessSubmit} loading={isLoading}>
-              ロバストネステストを実行
-            </ApiButton>
-          </div>
+          <RobustnessTestTab
+            baseConfig={robustnessBaseConfig}
+            selectedStrategy={selectedStrategy}
+            onRun={onRobustnessTest}
+            isLoading={isLoading}
+          />
         )}
-
         {activeTab === "ga" && onGAGeneration && (
-          <div className="space-y-6">
-            <GAConfigForm onSubmit={handleGAGeneration} isLoading={isLoading} />
-          </div>
+          <GATab
+            baseConfig={fullBaseConfig}
+            selectedStrategy={selectedStrategy}
+            onRun={onGAGeneration}
+            isLoading={isLoading}
+          />
         )}
       </form>
     </div>

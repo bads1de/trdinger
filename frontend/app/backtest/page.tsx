@@ -8,6 +8,7 @@
 
 import React, { useState } from "react";
 import { InformationCircleIcon } from "@heroicons/react/24/outline";
+import ActionButton from "@/components/common/ActionButton";
 
 import BacktestResultsTable from "@/components/backtest/BacktestResultsTable";
 import PerformanceMetrics from "@/components/backtest/PerformanceMetrics";
@@ -81,9 +82,13 @@ export default function BacktestPage() {
             </div>
             {/* オートストラテジーへのリンクボタン */}
             <div className="flex items-center gap-3">
-              <button onClick={openAutoStrategyModal} className="btn-primary">
-                🚀 オートストラテジーで生成
-              </button>
+              <ActionButton
+                onClick={openAutoStrategyModal}
+                variant="secondary"
+                icon={<span className="text-lg">🚀</span>}
+              >
+                オートストラテジーで生成
+              </ActionButton>
               <InformationCircleIcon
                 className="h-6 w-6 text-gray-400 cursor-pointer hover:text-white"
                 onClick={() => setIsExplanationModalOpen(true)}
@@ -99,20 +104,23 @@ export default function BacktestPage() {
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-xl font-semibold">バックテスト結果一覧</h2>
               <div className="flex gap-2">
-                <button
+                <ActionButton
                   onClick={loadResults}
-                  disabled={resultsLoading}
-                  className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50"
+                  loading={resultsLoading}
+                  loadingText="読み込み中..."
+                  variant="primary"
                 >
-                  {resultsLoading ? "読み込み中..." : "更新"}
-                </button>
-                <button
+                  更新
+                </ActionButton>
+                <ActionButton
                   onClick={handleDeleteAllResults}
                   disabled={deleteAllLoading || results.length === 0}
-                  className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 disabled:opacity-50"
+                  loading={deleteAllLoading}
+                  loadingText="削除中..."
+                  variant="danger"
                 >
-                  {deleteAllLoading ? "削除中..." : "すべて削除"}
-                </button>
+                  すべて削除
+                </ActionButton>
               </div>
             </div>
             <BacktestResultsTable
