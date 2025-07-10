@@ -49,8 +49,7 @@ const OHLCVCollectionButton: React.FC<OHLCVCollectionButtonProps> = ({
       variant="primary"
       size="sm"
       loadingText="収集中..."
-      className={`bg-blue-600 hover:bg-blue-700 focus:ring-blue-500 ${className}`}
-      fixedWidth={false}
+      className={className}
     >
       OHLCV収集
     </ApiButton>

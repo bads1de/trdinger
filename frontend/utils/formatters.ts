@@ -1,30 +1,23 @@
-export const formatDateTime = (dateInput: string | number) => {
+export const formatDateTime = (dateInput: string | number | null): string => {
+  if (dateInput === null || dateInput === undefined) {
+    return "-";
+  }
   try {
     const date = new Date(dateInput);
-    return {
-      date: date.toLocaleDateString("ja-JP", {
-        year: "2-digit",
-        month: "2-digit",
-        day: "2-digit",
-      }),
-      time: date.toLocaleTimeString("ja-JP", {
-        hour: "2-digit",
-        minute: "2-digit",
-      }),
-      fullDateTime: date.toLocaleString("ja-JP", {
-        year: "numeric",
-        month: "2-digit",
-        day: "2-digit",
-        hour: "2-digit",
-        minute: "2-digit",
-      }),
-    };
+    if (isNaN(date.getTime())) {
+      return String(dateInput);
+    }
+    return new Intl.DateTimeFormat("ja-JP", {
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+      hour12: false,
+    }).format(date);
   } catch {
-    const safeDateInput =
-      typeof dateInput === "number"
-        ? new Date(dateInput).toISOString()
-        : dateInput;
-    return { date: safeDateInput, time: "", fullDateTime: safeDateInput };
+    return String(dateInput);
   }
 };
 
@@ -64,6 +57,12 @@ export const getPnlTextColor = (pnl: number) => {
   if (pnl < 0) return "text-red-400";
   return "text-secondary-400";
 };
+export const getPriceChangeColor = (open: number, close: number) => {
+  if (close > open) return "text-green-400";
+  if (close < open) return "text-red-400";
+  return "text-gray-400";
+};
+
 
 export const getReturnColor = (value: number | null) => {
   if (value === null) return "gray";
@@ -77,4 +76,54 @@ export const getSharpeColor = (value: number | null) => {
   if (value > 1) return "green"; // 一般的にシャープレシオが1より大きいと良好
   if (value < 0) return "red";
   return "gray";
+};
+
+export const formatPrice = (value: number | null) => {
+  if (value === null) return "-";
+  return new Intl.NumberFormat("en-US", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(value);
+};
+
+export const formatSymbol = (symbol: string) => {
+  if (symbol.endsWith("USDT")) {
+    return `${symbol.slice(0, -4)}/USDT`;
+  }
+  return symbol;
+};
+
+export const formatFundingRate = (value: number) => {
+  return `${(value * 100).toFixed(4)}%`;
+};
+
+export const getFundingRateColor = (value: number) => {
+  if (value > 0.0002) return "text-green-400";
+  if (value > 0) return "text-green-600";
+  if (value < -0.0002) return "text-red-400";
+  if (value < 0) return "text-red-600";
+  return "text-gray-400";
+};
+
+export const formatLargeNumber = (num: number, digits = 2) => {
+  const lookup = [
+    { value: 1, symbol: "" },
+    { value: 1e3, symbol: "K" },
+    { value: 1e6, symbol: "M" },
+    { value: 1e9, symbol: "B" },
+    { value: 1e12, symbol: "T" },
+  ];
+  const item = lookup
+    .slice()
+    .reverse()
+    .find((item) => num >= item.value);
+  if (!item) return num.toFixed(digits);
+  return (
+    (num / item.value).toFixed(digits).replace(/\.0+$|(\.[0-9]*[1-9])0+$/, "$1") +
+    item.symbol
+  );
+};
+
+export const formatVolume = (value: number) => {
+  return formatLargeNumber(value, 2);
 };

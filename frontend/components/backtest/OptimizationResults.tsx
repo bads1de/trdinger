@@ -157,7 +157,7 @@ export default function OptimizationResults({
       </div>
 
       {/* タブナビゲーション */}
-      <div className="flex space-x-1 mb-6">
+      <div className="flex space-x-2 mb-6">
         <TabButton
           label="概要"
           isActive={activeTab === "overview"}

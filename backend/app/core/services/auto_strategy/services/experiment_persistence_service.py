@@ -4,6 +4,8 @@ GA実験に関連するデータのデータベースへの保存、更新、取
 """
 
 import logging
+import re
+from datetime import datetime
 from typing import Dict, Any, List, Optional
 from sqlalchemy.orm import Session
 
@@ -158,9 +160,26 @@ class ExperimentPersistenceService:
     ) -> Dict[str, Any]:
         """詳細バックテスト用の設定を準備する"""
         config = backtest_config.copy()
-        config["strategy_name"] = (
-            f"AUTO_STRATEGY_{experiment_info['name']}_{best_strategy.id[:8]}"
+
+        # 元の実験名から不要な部分を削除し、日付を整形
+        original_name = experiment_info.get("name", "")
+        # 'AUTO_STRATEGY_GA_' プレフィックスを削除
+        cleaned_name = re.sub(r"^AUTO_STRATEGY_GA_", "GA_", original_name)
+        # 日付部分を 'YYMMDD' 形式に変換
+        cleaned_name = re.sub(
+            r"(\d{4})-(\d{2})-(\d{2})",
+            lambda m: f"{m.group(1)[2:]}{m.group(2)}{m.group(3)}",
+            cleaned_name,
         )
+        # シンボル名 (例: _BTC_USDT_) を削除
+        cleaned_name = re.sub(r"_[A-Z]+_[A-Z]+_", "_", cleaned_name)
+        # 末尾のアンダースコアを削除
+        cleaned_name = cleaned_name.rstrip("_")
+
+        # 新しい戦略名を生成
+        strategy_name = f"AS_{cleaned_name}_{best_strategy.id[:6]}"
+
+        config["strategy_name"] = strategy_name
         config["strategy_config"] = {
             "strategy_type": "GENERATED_AUTO",
             "parameters": {"strategy_gene": best_strategy.to_dict()},

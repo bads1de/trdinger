@@ -59,8 +59,7 @@ const FundingRateCollectionButton: React.FC<
       variant="success"
       size="sm"
       loadingText="収集中..."
-      className={`bg-green-600 hover:bg-green-700 focus:ring-green-500 ${className}`}
-      fixedWidth={false}
+      className={className}
     >
       FR収集
     </ApiButton>
