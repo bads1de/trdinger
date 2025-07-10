@@ -11,6 +11,8 @@ import math
 from typing import Dict, Any, Optional, Tuple
 
 # テスト対象のモジュールをインポートするためのパス設定
+backend_path = os.path.join(os.path.dirname(__file__), "..", "..")
+sys.path.insert(0, backend_path)
 backend_path = os.path.join(os.path.dirname(__file__), "..")
 sys.path.insert(0, backend_path)
 

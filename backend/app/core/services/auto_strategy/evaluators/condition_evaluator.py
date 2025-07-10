@@ -134,12 +134,25 @@ class ConditionEvaluator:
 
                 # 価格データの場合
                 if operand.lower() in ["close", "high", "low", "open"]:
-                    price_data = getattr(strategy_instance.data, operand.capitalize())
-                    return float(price_data[-1])
+                    if hasattr(strategy_instance, operand.lower()):
+                        # 直接属性から取得（backtesting.pyスタイル）
+                        return float(getattr(strategy_instance, operand.lower()))
+                    elif hasattr(strategy_instance, "data"):
+                        # データフレームから取得
+                        price_data = getattr(strategy_instance.data, operand.capitalize())
+                        return float(price_data[-1])
+
+                # 指標の場合（Iディクショナリから取得 - 最優先）
+                if hasattr(strategy_instance, "I") and hasattr(strategy_instance.I, '__contains__') and operand in strategy_instance.I:
+                    indicator_value = strategy_instance.I[operand]
+                    if hasattr(indicator_value, "__getitem__"):
+                        return float(indicator_value[-1])
+                    return float(indicator_value)
 
                 # 指標の場合（indicatorsディクショナリから取得）
                 if (
                     hasattr(strategy_instance, "indicators")
+                    and isinstance(strategy_instance.indicators, dict)
                     and operand in strategy_instance.indicators
                 ):
                     indicator_value = strategy_instance.indicators[operand]
@@ -155,6 +168,68 @@ class ConditionEvaluator:
                     return float(indicator_value)
 
                 # 複数出力指標の場合（MACD_0, BB_0等）
+                # 期間付き指標名の処理（例：STOCH_14 -> STOCH_0, CCI_28 -> CCI）
+                if "_" in operand:
+                    base_indicator = operand.split("_")[0]
+
+                    # STOCHの場合
+                    if base_indicator == "STOCH" and hasattr(strategy_instance, "STOCH_0"):
+                        indicator_value = getattr(strategy_instance, "STOCH_0")
+                        if hasattr(indicator_value, "__getitem__"):
+                            return float(indicator_value[-1])
+                        return float(indicator_value)
+
+                    # CCIの場合
+                    if base_indicator == "CCI" and hasattr(strategy_instance, "CCI"):
+                        indicator_value = getattr(strategy_instance, "CCI")
+                        if hasattr(indicator_value, "__getitem__"):
+                            return float(indicator_value[-1])
+                        return float(indicator_value)
+
+                    # RSIの場合
+                    if base_indicator == "RSI" and hasattr(strategy_instance, "RSI"):
+                        indicator_value = getattr(strategy_instance, "RSI")
+                        if hasattr(indicator_value, "__getitem__"):
+                            return float(indicator_value[-1])
+                        return float(indicator_value)
+
+                    # SMAの場合
+                    if base_indicator == "SMA" and hasattr(strategy_instance, "SMA"):
+                        indicator_value = getattr(strategy_instance, "SMA")
+                        if hasattr(indicator_value, "__getitem__"):
+                            return float(indicator_value[-1])
+                        return float(indicator_value)
+
+                    # EMAの場合
+                    if base_indicator == "EMA" and hasattr(strategy_instance, "EMA"):
+                        indicator_value = getattr(strategy_instance, "EMA")
+                        if hasattr(indicator_value, "__getitem__"):
+                            return float(indicator_value[-1])
+                        return float(indicator_value)
+
+                    # MACDの場合
+                    if base_indicator == "MACD" and hasattr(strategy_instance, "MACD_0"):
+                        indicator_value = getattr(strategy_instance, "MACD_0")
+                        if hasattr(indicator_value, "__getitem__"):
+                            return float(indicator_value[-1])
+                        return float(indicator_value)
+
+                    # ボリンジャーバンドの場合
+                    if operand.startswith("BB_"):
+                        if "Upper" in operand and hasattr(strategy_instance, "BB_2"):
+                            indicator_value = getattr(strategy_instance, "BB_2")
+                        elif "Middle" in operand and hasattr(strategy_instance, "BB_1"):
+                            indicator_value = getattr(strategy_instance, "BB_1")
+                        elif "Lower" in operand and hasattr(strategy_instance, "BB_0"):
+                            indicator_value = getattr(strategy_instance, "BB_0")
+                        else:
+                            indicator_value = None
+
+                        if indicator_value is not None:
+                            if hasattr(indicator_value, "__getitem__"):
+                                return float(indicator_value[-1])
+                            return float(indicator_value)
+
                 # MACDの場合、MACD -> MACD_0（メインライン）にマッピング
                 if operand == "MACD" and hasattr(strategy_instance, "MACD_0"):
                     # logger.info(f"MACDオペランドをMACD_0にマッピング")
@@ -186,4 +261,4 @@ class ConditionEvaluator:
 
         except Exception as e:
             logger.error(f"オペランド値取得エラー: {e}")
-            return 0.0
+            return -1  # エラーを示す値

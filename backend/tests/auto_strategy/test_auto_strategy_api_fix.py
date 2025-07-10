@@ -12,7 +12,7 @@ import asyncio
 from unittest.mock import patch, MagicMock
 
 # プロジェクトルートをパスに追加
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
 
 from app.core.services.auto_strategy.services.auto_strategy_service import AutoStrategyService
 from app.core.services.auto_strategy.models.ga_config import GAConfig

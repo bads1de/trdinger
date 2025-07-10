@@ -11,6 +11,7 @@ from .gene_tpsl import TPSLGene, TPSLMethod
 from .gene_position_sizing import PositionSizingGene, PositionSizingMethod
 from .gene_strategy import Condition, IndicatorGene
 from . import gene_utils
+from ..generators.smart_condition_generator import SmartConditionGenerator
 
 logger = logging.getLogger(__name__)
 
@@ -22,10 +23,16 @@ class GeneDecoder:
     GA用の戦略遺伝子デコード機能を担当します。
     """
 
-    def __init__(self):
-        """初期化"""
+    def __init__(self, enable_smart_generation: bool = True):
+        """
+        初期化
+
+        Args:
+            enable_smart_generation: SmartConditionGeneratorを使用するか
+        """
         self.indicator_ids = gene_utils.get_indicator_ids()
         self.id_to_indicator = gene_utils.get_id_to_indicator(self.indicator_ids)
+        self.smart_condition_generator = SmartConditionGenerator(enable_smart_generation)
 
     def decode_list_to_strategy_gene(self, encoded: List[float], strategy_gene_class):
         """
@@ -67,10 +74,10 @@ class GeneDecoder:
                             )
                         )
 
-            # 条件部分をデコード（ロング・ショート分離）
+            # 条件部分をデコード（SmartConditionGeneratorを使用）
             if indicators:
                 long_entry_conditions, short_entry_conditions, exit_conditions = (
-                    self._generate_balanced_long_short_conditions(indicators)
+                    self.smart_condition_generator.generate_balanced_conditions(indicators)
                 )
                 # 後方互換性のためのentry_conditions
                 entry_conditions = long_entry_conditions
@@ -479,128 +486,4 @@ class GeneDecoder:
             logger.error(f"ポジションサイジング遺伝子デコードエラー: {e}")
             return PositionSizingGene()  # Return default
 
-    def _generate_balanced_long_short_conditions(self, indicators):
-        """
-        複数指標を考慮してバランスの取れたロング・ショート条件を生成
 
-        Args:
-            indicators: 指標リスト
-
-        Returns:
-            (long_entry_conditions, short_entry_conditions, exit_conditions)のタプル
-        """
-        from .gene_strategy import Condition
-        import random
-
-        try:
-            long_entry_conditions = []
-            short_entry_conditions = []
-            exit_conditions = []
-
-            if not indicators:
-                # フォールバック条件
-                return (
-                    [Condition(left_operand="close", operator=">", right_operand="open")],
-                    [Condition(left_operand="close", operator="<", right_operand="open")],
-                    [Condition(left_operand="close", operator="==", right_operand="open")],
-                )
-
-            # 主要指標を選択
-            primary_indicator = indicators[0]
-            indicator_name = f"{primary_indicator.type}_{primary_indicator.parameters.get('period', 14)}"
-
-            # 指標タイプに基づいて条件を生成
-            if primary_indicator.type == "RSI":
-                # RSI: 異なる閾値でロング・ショート条件を生成
-                long_threshold = random.uniform(20, 35)  # 売られすぎ
-                short_threshold = random.uniform(65, 80)  # 買われすぎ
-
-                long_entry_conditions = [
-                    Condition(left_operand=indicator_name, operator="<", right_operand=long_threshold)
-                ]
-                short_entry_conditions = [
-                    Condition(left_operand=indicator_name, operator=">", right_operand=short_threshold)
-                ]
-
-            elif primary_indicator.type in ["SMA", "EMA", "MAMA"]:
-                # 移動平均: 価格との関係でロング・ショート
-                long_entry_conditions = [
-                    Condition(left_operand="close", operator=">", right_operand=indicator_name)
-                ]
-                short_entry_conditions = [
-                    Condition(left_operand="close", operator="<", right_operand=indicator_name)
-                ]
-
-            elif primary_indicator.type == "BB":
-                # ボリンジャーバンド: バンドとの関係
-                # 注意: BBは通常上限・下限・中央線があるが、ここでは簡略化
-                bb_threshold = random.uniform(40, 60)
-                long_entry_conditions = [
-                    Condition(left_operand=indicator_name, operator="<", right_operand=bb_threshold)
-                ]
-                short_entry_conditions = [
-                    Condition(left_operand=indicator_name, operator=">", right_operand=bb_threshold)
-                ]
-
-            elif primary_indicator.type == "CCI":
-                # CCI: 異なる閾値
-                long_threshold = random.uniform(-150, -80)
-                short_threshold = random.uniform(80, 150)
-
-                long_entry_conditions = [
-                    Condition(left_operand=indicator_name, operator="<", right_operand=long_threshold)
-                ]
-                short_entry_conditions = [
-                    Condition(left_operand=indicator_name, operator=">", right_operand=short_threshold)
-                ]
-
-            elif primary_indicator.type == "ADX":
-                # ADX: トレンド強度 + 価格方向で判定
-                adx_threshold = random.uniform(20, 30)
-
-                # ADXが強い時に価格の方向で判定
-                long_entry_conditions = [
-                    Condition(left_operand=indicator_name, operator=">", right_operand=adx_threshold),
-                    Condition(left_operand="close", operator=">", right_operand="open")
-                ]
-                short_entry_conditions = [
-                    Condition(left_operand=indicator_name, operator=">", right_operand=adx_threshold),
-                    Condition(left_operand="close", operator="<", right_operand="open")
-                ]
-
-            elif primary_indicator.type in ["MACD", "STOCH"]:
-                # MACD/STOCH: ゼロライン/中央値を基準
-                if primary_indicator.type == "MACD":
-                    threshold = 0.0
-                else:  # STOCH
-                    threshold = 50.0
-
-                long_entry_conditions = [
-                    Condition(left_operand=indicator_name, operator=">", right_operand=threshold)
-                ]
-                short_entry_conditions = [
-                    Condition(left_operand=indicator_name, operator="<", right_operand=threshold)
-                ]
-
-            else:
-                # デフォルト: 価格ベース
-                long_entry_conditions = [
-                    Condition(left_operand="close", operator=">", right_operand="open")
-                ]
-                short_entry_conditions = [
-                    Condition(left_operand="close", operator="<", right_operand="open")
-                ]
-
-            # exit_conditionsは空にする（TP/SLが使用されるため）
-            exit_conditions = []
-
-            return (long_entry_conditions, short_entry_conditions, exit_conditions)
-
-        except Exception as e:
-            logger.error(f"バランス型ロング・ショート条件生成エラー: {e}")
-            # フォールバック条件
-            return (
-                [Condition(left_operand="close", operator=">", right_operand="open")],
-                [Condition(left_operand="close", operator="<", right_operand="open")],
-                [],
-            )

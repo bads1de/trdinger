@@ -291,7 +291,9 @@ class StrategyFactory:
                 )
 
         # クラス名を設定
-        GeneratedStrategy.__name__ = f"GeneratedStrategy_{gene.id}"
+        # クラス名を短縮
+        short_id = str(gene.id).split("-")[0]
+        GeneratedStrategy.__name__ = f"GS_{short_id}"
         GeneratedStrategy.__qualname__ = GeneratedStrategy.__name__
 
         return GeneratedStrategy

@@ -13,8 +13,9 @@ import logging
 from ..models.gene_strategy import StrategyGene, IndicatorGene, Condition
 from ..models.ga_config import GAConfig
 from ..models.gene_tpsl import TPSLGene, TPSLMethod, create_random_tpsl_gene
-from ..models.gene_decoder import GeneDecoder  
+from ..models.gene_decoder import GeneDecoder
 from app.core.services.indicators import TechnicalIndicatorService
+from .smart_condition_generator import SmartConditionGenerator
 from ...indicators.config import indicator_registry
 from ...indicators.config.indicator_config import IndicatorScaleType
 from ..utils.parameter_generators import (
@@ -32,15 +33,17 @@ class RandomGeneGenerator:
     OI/FRデータソースを含む多様な戦略遺伝子を生成します。
     """
 
-    def __init__(self, config: GAConfig):
+    def __init__(self, config: GAConfig, enable_smart_generation: bool = True):
         """
         初期化
 
         Args:
             config: GA設定オブジェクト
+            enable_smart_generation: SmartConditionGeneratorを使用するか
         """
         self.config = config
-        self.decoder = GeneDecoder()  # GeneDecoderのインスタンスを作成
+        self.decoder = GeneDecoder(enable_smart_generation)  # GeneDecoderのインスタンスを作成
+        self.smart_condition_generator = SmartConditionGenerator(enable_smart_generation)
 
         # 設定値を取得（型安全）
         self.max_indicators = config.max_indicators
@@ -94,9 +97,9 @@ class RandomGeneGenerator:
                 # TP/SL機能が無効な場合は従来通りイグジット条件を生成
                 exit_conditions = self._generate_random_conditions(indicators, "exit")
 
-            # ロング・ショート条件を生成（新機能）
-            long_entry_conditions, short_entry_conditions = (
-                self._generate_long_short_conditions(indicators)
+            # ロング・ショート条件を生成（SmartConditionGeneratorを使用）
+            long_entry_conditions, short_entry_conditions, _ = (
+                self.smart_condition_generator.generate_balanced_conditions(indicators)
             )
 
             # リスク管理設定（従来方式、後方互換性のため保持）
@@ -513,167 +516,6 @@ class RandomGeneGenerator:
                 base_stop_loss=0.03,
             )
 
-    def _generate_long_short_conditions(self, indicators: List[IndicatorGene]):
-        """
-        ロング・ショート条件を生成
 
-        Args:
-            indicators: 指標リスト
 
-        Returns:
-            (long_entry_conditions, short_entry_conditions)のタプル
-        """
-        try:
-            from ..models.gene_strategy import Condition
 
-            long_entry_conditions = []
-            short_entry_conditions = []
-
-            if not indicators:
-                # 指標がない場合はデフォルト条件
-                long_entry_conditions = [
-                    Condition(left_operand="close", operator=">", right_operand="open")
-                ]
-                short_entry_conditions = [
-                    Condition(left_operand="close", operator="<", right_operand="open")
-                ]
-                return long_entry_conditions, short_entry_conditions
-
-            # 各指標に対してロング・ショート条件を生成
-            for indicator in indicators:
-                if not indicator.enabled:
-                    continue
-
-                # 指標名を生成
-                indicator_name = (
-                    f"{indicator.type}_{indicator.parameters.get('period', 14)}"
-                )
-
-                # ロング・ショート条件を生成
-                long_conds, short_conds, _ = (
-                    self._create_long_short_conditions_for_indicator(
-                        indicator_name, indicator.type
-                    )
-                )
-
-                # 条件を追加（最大2つまで）
-                if long_conds and len(long_entry_conditions) < 2:
-                    long_entry_conditions.extend(long_conds[:1])
-                if short_conds and len(short_entry_conditions) < 2:
-                    short_entry_conditions.extend(short_conds[:1])
-
-            # 条件が空の場合はデフォルト条件を追加
-            if not long_entry_conditions:
-                long_entry_conditions = [
-                    Condition(left_operand="close", operator=">", right_operand="open")
-                ]
-            if not short_entry_conditions:
-                short_entry_conditions = [
-                    Condition(left_operand="close", operator="<", right_operand="open")
-                ]
-
-            # ショート条件が確実に満たされるように、より緩い条件を追加
-            # 50%の確率でより緩いショート条件を追加
-            if random.random() < 0.5 and short_entry_conditions:
-                # 既存のショート条件に加えて、より満たされやすい条件を追加
-                relaxed_short_condition = Condition(
-                    left_operand="close",
-                    operator="<",
-                    right_operand=random.choice(["high", "open"])
-                )
-                short_entry_conditions.append(relaxed_short_condition)
-
-            return long_entry_conditions, short_entry_conditions
-
-        except Exception as e:
-            logger.error(f"ロング・ショート条件生成エラー: {e}")
-            # フォールバック: デフォルト条件
-            from ..models.gene_strategy import Condition
-
-            return (
-                [Condition(left_operand="close", operator=">", right_operand="open")],
-                [Condition(left_operand="close", operator="<", right_operand="open")],
-            )
-
-    def _create_long_short_conditions_for_indicator(
-        self, indicator_name: str, indicator_type: str
-    ):
-        """
-        指標タイプに基づいてロング・ショート条件を分離して生成
-        （GeneDecoderからロジックを移動）
-        """
-        from ..models.gene_strategy import Condition
-
-        try:
-            long_entry_conditions = []
-            short_entry_conditions = []
-            exit_conditions = []  # 互換性のために保持
-
-            if indicator_type == "RSI":
-                long_entry_conditions = [
-                    Condition(
-                        left_operand=indicator_name, operator="<", right_operand=30
-                    )
-                ]
-                short_entry_conditions = [
-                    Condition(
-                        left_operand=indicator_name, operator=">", right_operand=70
-                    )
-                ]
-            elif indicator_type in ["SMA", "EMA", "MAMA"]:
-                long_entry_conditions = [
-                    Condition(
-                        left_operand="close", operator=">", right_operand=indicator_name
-                    )
-                ]
-                short_entry_conditions = [
-                    Condition(
-                        left_operand="close", operator="<", right_operand=indicator_name
-                    )
-                ]
-            elif indicator_type == "CCI":
-                long_entry_conditions = [
-                    Condition(
-                        left_operand=indicator_name, operator="<", right_operand=-100.0
-                    )
-                ]
-                short_entry_conditions = [
-                    Condition(
-                        left_operand=indicator_name, operator=">", right_operand=100.0
-                    )
-                ]
-            elif indicator_type == "ADX":
-                # ADXはトレンドの強さを示すため、他の指標と組み合わせることが多い
-                # ここでは単純な閾値超えを条件とする
-                long_entry_conditions = [
-                    Condition(
-                        left_operand=indicator_name, operator=">", right_operand=25.0
-                    )
-                ]
-                short_entry_conditions = [
-                    Condition(
-                        left_operand=indicator_name, operator=">", right_operand=25.0
-                    )
-                ]
-            else:
-                # デフォルトのフォールバック条件
-                long_entry_conditions = [
-                    Condition(
-                        left_operand=indicator_name, operator=">", right_operand=50.0
-                    )
-                ]
-                short_entry_conditions = [
-                    Condition(
-                        left_operand=indicator_name, operator="<", right_operand=50.0
-                    )
-                ]
-
-            return long_entry_conditions, short_entry_conditions, exit_conditions
-
-        except Exception as e:
-            logger.error(f"個別指標のロング・ショート条件生成エラー: {e}")
-            return (
-                [Condition(left_operand="close", operator=">", right_operand="open")],
-                [Condition(left_operand="close", operator="<", right_operand="open")],
-                [],
-            )

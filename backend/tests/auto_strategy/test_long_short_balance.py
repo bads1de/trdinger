@@ -10,12 +10,13 @@ import os
 import pandas as pd
 
 # プロジェクトルートをパスに追加
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
 
 from app.core.services.auto_strategy.models.gene_strategy import StrategyGene, IndicatorGene, Condition
 from app.core.services.auto_strategy.models.gene_tpsl import TPSLGene, TPSLMethod
 from app.core.services.auto_strategy.factories.strategy_factory import StrategyFactory
 from app.core.services.auto_strategy.generators.random_gene_generator import RandomGeneGenerator
+from app.core.services.auto_strategy.generators.smart_condition_generator import SmartConditionGenerator
 from app.core.services.auto_strategy.models.ga_config import GAConfig
 
 
@@ -320,12 +321,181 @@ def test_specific_condition_logic():
     print("✅ 特定条件ロジックテスト成功")
 
 
+def test_smart_condition_generator_balance():
+    """SmartConditionGeneratorのロング・ショートバランステスト"""
+    print("\n=== SmartConditionGeneratorバランステスト ===")
+
+    generator = SmartConditionGenerator(enable_smart_generation=True)
+
+    # 様々な指標の組み合わせでテスト
+    test_cases = [
+        {
+            "name": "異なる指標の組み合わせ",
+            "indicators": [
+                IndicatorGene(type="RSI", parameters={"period": 14}, enabled=True),
+                IndicatorGene(type="SMA", parameters={"period": 20}, enabled=True)
+            ]
+        },
+        {
+            "name": "時間軸分離戦略",
+            "indicators": [
+                IndicatorGene(type="RSI", parameters={"period": 7}, enabled=True),
+                IndicatorGene(type="RSI", parameters={"period": 21}, enabled=True)
+            ]
+        },
+        {
+            "name": "ボリンジャーバンド特性活用",
+            "indicators": [
+                IndicatorGene(type="BB", parameters={"period": 20}, enabled=True)
+            ]
+        },
+        {
+            "name": "ADX特性活用",
+            "indicators": [
+                IndicatorGene(type="ADX", parameters={"period": 14}, enabled=True)
+            ]
+        },
+        {
+            "name": "複合条件戦略",
+            "indicators": [
+                IndicatorGene(type="CCI", parameters={"period": 14}, enabled=True),
+                IndicatorGene(type="STOCH", parameters={"period": 14}, enabled=True)
+            ]
+        }
+    ]
+
+    balanced_strategies = 0
+    total_strategies = 0
+
+    for test_case in test_cases:
+        print(f"\n--- {test_case['name']} ---")
+
+        # 複数回生成してバランスを確認
+        for i in range(10):
+            long_conds, short_conds, exit_conds = generator.generate_balanced_conditions(test_case['indicators'])
+
+            # 基本的な検証
+            assert len(long_conds) > 0, f"ロング条件が生成されませんでした: {test_case['name']}"
+            assert len(short_conds) > 0, f"ショート条件が生成されませんでした: {test_case['name']}"
+
+            # 条件の論理的整合性を確認
+            is_balanced = True
+
+            # 同一指標での相反条件チェック（計画書で指摘された問題）
+            long_indicators = set()
+            short_indicators = set()
+
+            for cond in long_conds:
+                if "_" in str(cond.left_operand):
+                    indicator_name = str(cond.left_operand).split("_")[0]
+                    long_indicators.add((indicator_name, cond.operator, cond.right_operand))
+
+            for cond in short_conds:
+                if "_" in str(cond.left_operand):
+                    indicator_name = str(cond.left_operand).split("_")[0]
+                    short_indicators.add((indicator_name, cond.operator, cond.right_operand))
+
+            # 同一指標で同じ条件が使用されていないかチェック
+            overlapping_conditions = long_indicators.intersection(short_indicators)
+            if overlapping_conditions:
+                print(f"⚠️  同一条件が検出されました: {overlapping_conditions}")
+                is_balanced = False
+
+            # ADXの誤用チェック（同じ条件をロング・ショート両方に設定）
+            adx_conditions = []
+            for cond in long_conds + short_conds:
+                if "ADX_" in str(cond.left_operand):
+                    adx_conditions.append((cond.operator, cond.right_operand))
+
+            if len(adx_conditions) > 1 and len(set(adx_conditions)) == 1:
+                print(f"⚠️  ADXで同一条件が検出されました: {adx_conditions}")
+                is_balanced = False
+
+            total_strategies += 1
+            if is_balanced:
+                balanced_strategies += 1
+                print(f"✅ 戦略 {i+1}: バランス良好")
+            else:
+                print(f"❌ 戦略 {i+1}: バランス問題あり")
+
+    # バランス率を計算
+    balance_rate = (balanced_strategies / total_strategies) * 100 if total_strategies > 0 else 0
+
+    print(f"\n=== SmartConditionGeneratorバランステスト結果 ===")
+    print(f"総戦略数: {total_strategies}")
+    print(f"バランス良好戦略数: {balanced_strategies}")
+    print(f"バランス率: {balance_rate:.1f}%")
+
+    # 目標値（60%以上）を達成しているかチェック
+    target_rate = 60.0
+    if balance_rate >= target_rate:
+        print(f"🎉 目標達成！ バランス率 {balance_rate:.1f}% >= {target_rate}%")
+        return True
+    else:
+        print(f"🚨 目標未達成！ バランス率 {balance_rate:.1f}% < {target_rate}%")
+        return False
+
+
+def test_smart_vs_legacy_comparison():
+    """SmartConditionGeneratorと従来方式の比較テスト"""
+    print("\n=== SmartConditionGenerator vs 従来方式比較 ===")
+
+    # 同じ指標セットで新旧方式を比較
+    indicators = [
+        IndicatorGene(type="RSI", parameters={"period": 14}, enabled=True),
+        IndicatorGene(type="SMA", parameters={"period": 20}, enabled=True)
+    ]
+
+    # SmartConditionGenerator（新方式）
+    smart_generator = SmartConditionGenerator(enable_smart_generation=True)
+    smart_balanced = 0
+    smart_total = 20
+
+    for i in range(smart_total):
+        long_conds, short_conds, _ = smart_generator.generate_balanced_conditions(indicators)
+
+        # 簡単なバランスチェック
+        if len(long_conds) > 0 and len(short_conds) > 0:
+            # 同一条件チェック
+            long_str = str([(c.left_operand, c.operator, c.right_operand) for c in long_conds])
+            short_str = str([(c.left_operand, c.operator, c.right_operand) for c in short_conds])
+
+            if long_str != short_str:  # 異なる条件が生成されている
+                smart_balanced += 1
+
+    # 従来方式（無効化）
+    legacy_generator = SmartConditionGenerator(enable_smart_generation=False)
+    legacy_balanced = 0
+    legacy_total = 20
+
+    for i in range(legacy_total):
+        long_conds, short_conds, _ = legacy_generator.generate_balanced_conditions(indicators)
+
+        if len(long_conds) > 0 and len(short_conds) > 0:
+            long_str = str([(c.left_operand, c.operator, c.right_operand) for c in long_conds])
+            short_str = str([(c.left_operand, c.operator, c.right_operand) for c in short_conds])
+
+            if long_str != short_str:
+                legacy_balanced += 1
+
+    smart_rate = (smart_balanced / smart_total) * 100
+    legacy_rate = (legacy_balanced / legacy_total) * 100
+
+    print(f"SmartConditionGenerator: {smart_rate:.1f}% ({smart_balanced}/{smart_total})")
+    print(f"従来方式: {legacy_rate:.1f}% ({legacy_balanced}/{legacy_total})")
+    print(f"改善率: {smart_rate - legacy_rate:.1f}%")
+
+    return smart_rate > legacy_rate
+
+
 if __name__ == "__main__":
     test_long_short_condition_evaluation()
     test_specific_condition_logic()
     balance_result = test_random_strategy_long_short_balance()
-    
-    if balance_result:
+    smart_balance_result = test_smart_condition_generator_balance()
+    comparison_result = test_smart_vs_legacy_comparison()
+
+    if balance_result and smart_balance_result and comparison_result:
         print("\n🎉 全てのロング・ショートバランステストが成功しました！")
     else:
         print("\n🚨 ロング・ショートバランスに問題があります！")

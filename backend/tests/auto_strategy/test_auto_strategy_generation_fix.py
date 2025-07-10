@@ -10,7 +10,7 @@ import os
 import json
 
 # プロジェクトルートをパスに追加
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
 
 from app.core.services.auto_strategy.models.gene_decoder import GeneDecoder
 from app.core.services.auto_strategy.models.gene_strategy import StrategyGene

@@ -81,6 +81,16 @@
 - **戦略生成**: 70%の戦略で条件が満たされない
 - **バックテスト**: 指標データ不足によるエラー
 - **ユーザー体験**: 期待される多様な戦略が生成されない
+### コードベースの追加分析
+
+- **ロジックの散在と責務の曖昧さ**:
+  - `GeneDecoder`内の`_generate_balanced_long_short_conditions`と`RandomGeneGenerator`内の`_create_long_short_conditions_for_indicator`に、ロング・ショート条件を生成するロジックが散在している。
+  - `GeneDecoder`はランダムな組み合わせに依存し、`RandomGeneGenerator`は固定的で多様性に欠けるロジックとなっている。
+  - この責務の曖昧さが、メンテナンス性と拡張性を著しく低下させている。
+
+- **既存機能の活用不足**:
+  - `RandomGeneGenerator`には、スケールの異なる指標同士の比較を避けるための`operand_grouping_system`が実装されているが、現在の条件生成ロジックでは十分に活用されていない。
+
 
 ## 設計計画
 
@@ -188,13 +198,14 @@ short_conditions = [
 - [ ] 指標データ不足時のエラーハンドリング改善
 
 #### 1.2 条件生成エンジンの設計
-- [ ] `ConditionGenerationEngine` クラスの作成
-- [ ] 指標特性データベースの構築
-- [ ] 組み合わせルールの定義
+- [ ] `SmartConditionGenerator` クラスの作成（`ConditionGenerationEngine`から改名）
+- [ ] 指標特性データベースの構築（指標のタイプ、スケール、有効な戦略などを定義）
+- [ ] 組み合わせルールの定義（例：トレンド系＋オシレーター系）
+- [ ] **責務の集約**: ロング・ショート条件生成ロジックを`SmartConditionGenerator`に完全に集約する。
 
 ### フェーズ2: 新条件生成ロジック実装（2-3週間）
 
-#### 2.1 `SmartConditionGenerator` の実装
+#### 2.1 `SmartConditionGenerator` の実装と責務集約
 ```python
 class SmartConditionGenerator:
     def generate_balanced_conditions(self, indicators: List[IndicatorGene]):
@@ -243,15 +254,16 @@ COMBINATION_RULES = {
 ### フェーズ3: 統合とテスト（1-2週間）
 
 #### 3.1 既存システムとの統合
-- [ ] GeneDecoder の `_generate_balanced_long_short_conditions` 置き換え
-- [ ] RandomGeneGenerator の `_generate_long_short_conditions` 更新
-- [ ] 後方互換性の確保
+- [ ] **リファクタリング**: `GeneDecoder` と `RandomGeneGenerator` から既存の条件生成ロジックを削除し、`SmartConditionGenerator`の呼び出しに置き換える。
+- [ ] **既存機能連携**: `RandomGeneGenerator`の`operand_grouping_system`を`SmartConditionGenerator`で活用し、論理的に整合性の取れた条件を生成する。
+- [ ] 後方互換性の確保（設定フラグによる新旧ロジックの切り替え機能など）
 
 #### 3.2 包括的テスト
-- [ ] 単体テスト（各指標組み合わせ）
-- [ ] 統合テスト（戦略生成フロー）
-- [ ] パフォーマンステスト（生成速度）
-- [ ] バランステスト（ロング・ショート比率）
+- [ ] **単体テスト**: `SmartConditionGenerator`が、定義されたルールに基づき、多様かつ論理的な条件の組み合わせを生成することを検証する。
+- [ ] **統合テスト**: 戦略生成からバックテストまでの一連のフローが、新しい条件生成ロジックで正常に動作することを確認する。
+- [ ] **バランステスト**: 生成された戦略のロング・ショート比率が、目標値（60%以上）に達していることを確認する。
+- [ ] **有効性テスト**: `backend/tests/test_long_short_balance.py`に、生成された戦略が実際にロングとショート両方のトレードを実行することを検証するテストケースを追加する。
+- [ ] **パフォーマンステスト**: 新しいロジックによる戦略生成速度が、許容範囲内であることを確認する。
 
 ### フェーズ4: 最適化と監視（継続）
 
