@@ -5,7 +5,8 @@ BacktestResultモデルのデータアクセス機能を提供します。
 """
 
 from typing import List, Optional, Dict, Any, cast
-from datetime import datetime
+from datetime import datetime, timedelta
+import logging
 from sqlalchemy.orm import Session
 from sqlalchemy import desc
 
@@ -13,12 +14,68 @@ from .base_repository import BaseRepository
 from database.models import BacktestResult
 from app.core.utils.database_utils import DatabaseQueryHelper
 
+logger = logging.getLogger(__name__)
+
 
 class BacktestResultRepository(BaseRepository):
     """バックテスト結果のリポジトリクラス"""
 
     def __init__(self, db: Session):
         super().__init__(db, BacktestResult)
+
+    def _normalize_result_data(self, result_data: Dict[str, Any]) -> Dict[str, Any]:
+        """入力データを正規化し、BacktestResultモデルの形式に変換する"""
+
+        # 日付の処理
+        start_date = result_data.get("start_date")
+        if isinstance(start_date, str):
+            start_date = datetime.fromisoformat(start_date)
+
+        end_date = result_data.get("end_date")
+        if isinstance(end_date, str):
+            end_date = datetime.fromisoformat(end_date)
+
+        # パフォーマンス指標の正規化（後方互換性対応）
+        performance_metrics = result_data.get("performance_metrics", {})
+        if not performance_metrics:
+            performance_metrics = result_data.get("results_json", {}).get(
+                "performance_metrics", {}
+            )
+        if not performance_metrics:
+            performance_metrics = {
+                "total_return": result_data.get("total_return", 0.0),
+                "sharpe_ratio": result_data.get("sharpe_ratio", 0.0),
+                "max_drawdown": result_data.get("max_drawdown", 0.0),
+                "total_trades": result_data.get("total_trades", 0),
+                "win_rate": result_data.get("win_rate", 0.0),
+                "profit_factor": result_data.get("profit_factor", 0.0),
+            }
+
+        # その他のデータの正規化
+        equity_curve = result_data.get(
+            "equity_curve", result_data.get("results_json", {}).get("equity_curve", [])
+        )
+        trade_history = result_data.get(
+            "trade_history",
+            result_data.get("results_json", {}).get("trade_history", []),
+        )
+
+        return {
+            "strategy_name": result_data["strategy_name"],
+            "symbol": result_data["symbol"],
+            "timeframe": result_data["timeframe"],
+            "start_date": start_date,
+            "end_date": end_date,
+            "initial_capital": result_data["initial_capital"],
+            "commission_rate": result_data.get("commission_rate", 0.001),
+            "config_json": result_data.get("config_json", {}),
+            "performance_metrics": performance_metrics,
+            "equity_curve": equity_curve,
+            "trade_history": trade_history,
+            "execution_time": result_data.get("execution_time"),
+            "status": result_data.get("status", "completed"),
+            "error_message": result_data.get("error_message"),
+        }
 
     def save_backtest_result(self, result_data: Dict[str, Any]) -> Dict[str, Any]:
         """
@@ -31,89 +88,27 @@ class BacktestResultRepository(BaseRepository):
             保存されたバックテスト結果（ID付き）
         """
         try:
-            import logging
-
-            logger = logging.getLogger(__name__)
-            # ログに出力する情報から長大なデータを除外
             log_data = {
                 k: v
                 for k, v in result_data.items()
                 if k not in ["equity_curve", "trade_history", "config_json"]
             }
-            log_data["config_json"] = "..."  # config_jsonは内容が大きいため省略
+            log_data["config_json"] = "..."
             logger.info(f"バックテスト結果を保存中: {log_data}")
 
-            # 日付の処理
-            # start_dateとend_dateが文字列の場合、ISOフォーマットからdatetimeオブジェクトに変換します。
-            # これにより、データベースへの保存時に正しい型が保証されます。
-            start_date = result_data.get("start_date")
-            end_date = result_data.get("end_date")
-            logger.info(f"元のデータ範囲 - 開始日: {start_date}, 終了日: {end_date}")
+            normalized_data = self._normalize_result_data(result_data)
+            backtest_result = BacktestResult(**normalized_data)
 
-            # datetimeオブジェクトの場合はそのまま使用、文字列の場合は変換
-            if isinstance(start_date, str):
-                start_date = datetime.fromisoformat(start_date)
-            if isinstance(end_date, str):
-                end_date = datetime.fromisoformat(end_date)
-
-            # パフォーマンス指標の構築
-            # performance_metricsは、新しい形式（performance_metricsフィールド）から優先的に取得されます。
-            # 後方互換性のため、もしperformance_metricsが存在しない場合、古いresults_json内のperformance_metrics、
-            # さらに個別のフィールドからも取得を試みます。
-            # これにより、APIのバージョンアップ後も既存のデータ形式に対応できます。
-            performance_metrics = result_data.get("performance_metrics", {})
-
-            # 後方互換性のため、results_jsonからも取得を試行
-            if not performance_metrics:
-                performance_metrics = result_data.get("results_json", {}).get(
-                    "performance_metrics", {}
-                )
-
-            # さらに後方互換性のため、個別フィールドからも取得
-            if not performance_metrics:
-                performance_metrics = {
-                    "total_return": result_data.get("total_return", 0.0),
-                    "sharpe_ratio": result_data.get("sharpe_ratio", 0.0),
-                    "max_drawdown": result_data.get("max_drawdown", 0.0),
-                    "total_trades": result_data.get("total_trades", 0),
-                    "win_rate": result_data.get("win_rate", 0.0),
-                    "profit_factor": result_data.get("profit_factor", 0.0),
-                }
-
-            # BacktestResultインスタンスを作成
-            backtest_result = BacktestResult(
-                strategy_name=result_data["strategy_name"],
-                symbol=result_data["symbol"],
-                timeframe=result_data["timeframe"],
-                start_date=start_date,
-                end_date=end_date,
-                initial_capital=result_data["initial_capital"],
-                commission_rate=result_data.get("commission_rate", 0.001),
-                config_json=result_data.get("config_json", {}),
-                performance_metrics=performance_metrics,
-                equity_curve=result_data.get(
-                    "equity_curve",
-                    result_data.get("results_json", {}).get("equity_curve", []),
-                ),
-                trade_history=result_data.get(
-                    "trade_history",
-                    result_data.get("results_json", {}).get("trade_history", []),
-                ),
-                execution_time=result_data.get("execution_time"),
-                status=result_data.get("status", "completed"),
-                error_message=result_data.get("error_message"),
-            )
-
-            # データベースに保存
             self.db.add(backtest_result)
             self.db.commit()
             self.db.refresh(backtest_result)
 
-            # 辞書形式で返す
+            logger.info(f"バックテスト結果を保存しました (ID: {backtest_result.id})")
             return backtest_result.to_dict()
 
         except Exception as e:
             self.db.rollback()
+            logger.error(f"バックテスト結果の保存に失敗しました: {e}", exc_info=True)
             raise Exception(f"バックテスト結果の保存に失敗しました: {str(e)}")
 
     def get_backtest_results(
@@ -414,25 +409,34 @@ class BacktestResultRepository(BaseRepository):
             削除された件数
         """
         try:
-            from datetime import timedelta
+            logger.info(
+                f"{days_to_keep}日より古いバックテスト結果のクリーンアップを開始します。"
+            )
 
-            # 削除対象の基準日を計算
-            # 現在日時からdays_to_keepで指定された日数を遡り、それ以前のデータが対象となります。
             cutoff_date = datetime.now() - timedelta(days=days_to_keep)
+            logger.debug(f"削除対象の基準日: {cutoff_date}")
 
-            # 基準日より古い結果を削除
-            # フィルタリングされたレコードを一括で削除し、削除された行数を返します。
             deleted_count = (
                 self.db.query(BacktestResult)
                 .filter(BacktestResult.created_at < cutoff_date)
-                .delete()
+                .delete(synchronize_session=False)
             )
 
             self.db.commit()
+
+            if deleted_count > 0:
+                logger.info(f"{deleted_count}件の古いバックテスト結果を削除しました。")
+            else:
+                logger.info("削除対象の古いバックテスト結果はありませんでした。")
+
             return deleted_count
 
         except Exception as e:
             self.db.rollback()
+            logger.error(
+                f"古いバックテスト結果のクリーンアップ中にエラーが発生しました: {e}",
+                exc_info=True,
+            )
             raise Exception(
                 f"古いバックテスト結果のクリーンアップに失敗しました: {str(e)}"
             )

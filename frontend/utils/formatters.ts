@@ -6,9 +6,11 @@ export const formatDateTime = (
   }
   try {
     const date = new Date(dateInput);
+
     if (isNaN(date.getTime())) {
       return { date: String(dateInput), time: "" };
     }
+
     const dateString = new Intl.DateTimeFormat("ja-JP", {
       year: "numeric",
       month: "2-digit",
@@ -16,12 +18,14 @@ export const formatDateTime = (
     })
       .format(date)
       .replace(/\//g, "-");
+
     const timeString = new Intl.DateTimeFormat("ja-JP", {
       hour: "2-digit",
       minute: "2-digit",
       second: "2-digit",
       hour12: false,
     }).format(date);
+
     return { date: dateString, time: timeString };
   } catch {
     return { date: String(dateInput), time: "" };
@@ -54,38 +58,77 @@ export const formatNumber = (
 };
 
 export const getPnlColor = (pnl: number) => {
-  if (pnl > 0) return "green";
-  if (pnl < 0) return "red";
-  return "gray"; // または適切なデフォルト色
+  if (pnl > 0) {
+    return "green";
+  }
+
+  if (pnl < 0) {
+    return "red";
+  }
+
+  return "gray";
 };
 
 export const getPnlTextColor = (pnl: number) => {
-  if (pnl > 0) return "text-green-400";
-  if (pnl < 0) return "text-red-400";
+  if (pnl > 0) {
+    return "text-green-400";
+  }
+
+  if (pnl < 0) {
+    return "text-red-400";
+  }
+
   return "text-secondary-400";
 };
 export const getPriceChangeColor = (open: number, close: number) => {
-  if (close > open) return "text-green-400";
-  if (close < open) return "text-red-400";
+  if (close > open) {
+    return "text-green-400";
+  }
+
+  if (close < open) {
+    return "text-red-400";
+  }
+
   return "text-gray-400";
 };
 
 export const getReturnColor = (value: number | null) => {
-  if (value === null) return "gray";
-  if (value > 0) return "green";
-  if (value < 0) return "red";
+  if (value === null) {
+    return "gray";
+  }
+
+  if (value > 0) {
+    return "green";
+  }
+
+  if (value < 0) {
+    return "red";
+  }
+
   return "gray";
 };
 
 export const getSharpeColor = (value: number | null) => {
-  if (value === null) return "gray";
-  if (value > 1) return "green"; // 一般的にシャープレシオが1より大きいと良好
-  if (value < 0) return "red";
+  if (value === null) {
+    return "gray";
+  }
+
+  if (value > 1) {
+    return "green";
+  }
+
+  if (value < 0) {
+    return "red";
+  }
+
   return "gray";
 };
 
 export const formatPrice = (value: number | null) => {
-  if (value === null) return "-";
+  if (value === null) {
+    return "-";
+  }
+
   return new Intl.NumberFormat("en-US", {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
@@ -96,6 +139,7 @@ export const formatSymbol = (symbol: string) => {
   if (symbol.endsWith("USDT")) {
     return `${symbol.slice(0, -4)}/USDT`;
   }
+
   return symbol;
 };
 
@@ -104,10 +148,22 @@ export const formatFundingRate = (value: number) => {
 };
 
 export const getFundingRateColor = (value: number) => {
-  if (value > 0.0002) return "text-green-400";
-  if (value > 0) return "text-green-600";
-  if (value < -0.0002) return "text-red-400";
-  if (value < 0) return "text-red-600";
+  if (value > 0.0002) {
+    return "text-green-400";
+  }
+
+  if (value > 0) {
+    return "text-green-600";
+  }
+
+  if (value < -0.0002) {
+    return "text-red-400";
+  }
+
+  if (value < 0) {
+    return "text-red-600";
+  }
+
   return "text-gray-400";
 };
 
@@ -123,7 +179,11 @@ export const formatLargeNumber = (num: number, digits = 2) => {
     .slice()
     .reverse()
     .find((item) => num >= item.value);
-  if (!item) return num.toFixed(digits);
+
+  if (!item) {
+    return num.toFixed(digits);
+  }
+
   return (
     (num / item.value)
       .toFixed(digits)

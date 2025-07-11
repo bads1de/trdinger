@@ -24,6 +24,28 @@ import { DataTableProps, TableColumn } from "@/types/common";
 type SortDirection = "asc" | "desc" | null;
 
 /**
+ * 2つの値を比較するヘルパー関数
+ */
+const compareValues = <T,>(
+  a: T,
+  b: T,
+  sortDirection: SortDirection
+): number => {
+  if (a == null && b == null) return 0;
+  if (a == null) return sortDirection === "asc" ? -1 : 1;
+  if (b == null) return sortDirection === "asc" ? 1 : -1;
+
+  if (typeof a === "number" && typeof b === "number") {
+    return sortDirection === "asc" ? a - b : b - a;
+  }
+
+  const aStr = String(a);
+  const bStr = String(b);
+  const comparison = aStr.localeCompare(bStr);
+  return sortDirection === "asc" ? comparison : -comparison;
+};
+
+/**
  * 共通データテーブルコンポーネント
  */
 const DataTable = <T extends Record<string, any>>({
@@ -67,19 +89,7 @@ const DataTable = <T extends Record<string, any>>({
     return [...filteredData].sort((a, b) => {
       const aValue = a[sortKey];
       const bValue = b[sortKey];
-
-      if (aValue == null && bValue == null) return 0;
-      if (aValue == null) return sortDirection === "asc" ? -1 : 1;
-      if (bValue == null) return sortDirection === "asc" ? 1 : -1;
-
-      if (typeof aValue === "number" && typeof bValue === "number") {
-        return sortDirection === "asc" ? aValue - bValue : bValue - aValue;
-      }
-
-      const aStr = String(aValue);
-      const bStr = String(bValue);
-      const comparison = aStr.localeCompare(bStr);
-      return sortDirection === "asc" ? comparison : -comparison;
+      return compareValues(aValue, bValue, sortDirection);
     });
   }, [filteredData, sortKey, sortDirection]);
 

@@ -5,6 +5,8 @@
  * バックテスト設定と組み合わせてBacktestConfigを生成します。
  */
 
+import { BacktestConfig } from "@/types/optimization";
+
 // StrategyGene関連の型定義
 interface IndicatorGene {
   type: string;
@@ -42,30 +44,15 @@ interface StrategyGene {
   };
 }
 
-interface BacktestSettings {
-  symbol: string;
-  timeframe: string;
-  start_date: string;
-  end_date: string;
-  initial_capital: number;
-  commission_rate: number;
-}
-
-interface BacktestConfig {
-  strategy_name: string;
-  symbol: string;
-  timeframe: string;
-  start_date: string;
-  end_date: string;
-  initial_capital: number;
-  commission_rate: number;
-  strategy_config: {
-    strategy_type: string;
-    parameters: {
-      strategy_gene: StrategyGene;
-    };
-  };
-}
+type BacktestSettings = Pick<
+  BacktestConfig,
+  | "symbol"
+  | "timeframe"
+  | "start_date"
+  | "end_date"
+  | "initial_capital"
+  | "commission_rate"
+>;
 
 /**
  * StrategyGeneとバックテスト設定をBacktestConfigに変換

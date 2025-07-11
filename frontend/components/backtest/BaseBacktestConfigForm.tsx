@@ -3,7 +3,7 @@
 import React from "react";
 import { InputField } from "@/components/common/InputField";
 import { SelectField } from "@/components/common/SelectField";
-import { BacktestConfig } from "@/types/backtest";
+import { BacktestConfig } from "@/types/optimization";
 import { TIME_FRAME_OPTIONS } from "@/constants/backtest";
 
 interface BaseBacktestConfigFormProps {

@@ -10,8 +10,10 @@ import React, { useState, useEffect } from "react";
 import { InputField } from "@/components/common/InputField";
 import { SelectField } from "@/components/common/SelectField";
 import ApiButton from "@/components/button/ApiButton";
-import { GAConfig as GAConfigType } from "@/types/optimization";
-import { BacktestConfig as BacktestConfigType } from "@/types/backtest";
+import {
+  GAConfig as GAConfigType,
+  BacktestConfig as BacktestConfigType,
+} from "@/types/optimization";
 import { BaseBacktestConfigForm } from "./BaseBacktestConfigForm";
 import { GA_OBJECTIVE_OPTIONS } from "@/constants/backtest";
 
@@ -50,31 +52,31 @@ const GAConfigForm: React.FC<GAConfigFormProps> = ({
         .toISOString()
         .slice(0, 10)}_${effectiveBaseConfig.symbol.replace("/", "_")}`,
       base_config: effectiveBaseConfig,
-      ga_config: {
-        population_size: initialConfig.ga_config?.population_size || 10, // 100→50→20に最適化
-        generations: initialConfig.ga_config?.generations || 10, // 50→20→10に最適化
-        mutation_rate: initialConfig.ga_config?.mutation_rate || 0.1,
-        crossover_rate: initialConfig.ga_config?.crossover_rate || 0.8, // 0.7→0.8に調整
-        elite_size: initialConfig.ga_config?.elite_size || 5,
-        max_indicators: initialConfig.ga_config?.max_indicators || 5,
-        allowed_indicators: initialConfig.ga_config?.allowed_indicators || [],
-        fitness_weights: initialConfig.ga_config?.fitness_weights || {
+      ga_params: {
+        population_size: initialConfig.ga_params?.population_size || 10, // 100→50→20に最適化
+        generations: initialConfig.ga_params?.generations || 10, // 50→20→10に最適化
+        mutation_rate: initialConfig.ga_params?.mutation_rate || 0.1,
+        crossover_rate: initialConfig.ga_params?.crossover_rate || 0.8, // 0.7→0.8に調整
+        elite_size: initialConfig.ga_params?.elite_size || 5,
+        max_indicators: initialConfig.ga_params?.max_indicators || 5,
+        allowed_indicators: initialConfig.ga_params?.allowed_indicators || [],
+        fitness_weights: initialConfig.ga_params?.fitness_weights || {
           total_return: 0.3,
           sharpe_ratio: 0.4,
           max_drawdown: 0.2,
           win_rate: 0.1,
         },
-        fitness_constraints: initialConfig.ga_config?.fitness_constraints || {
+        fitness_constraints: initialConfig.ga_params?.fitness_constraints || {
           min_trades: 10,
           max_drawdown_limit: 0.3,
           min_sharpe_ratio: 0.5,
         },
-        ga_objective: initialConfig.ga_config?.ga_objective || "Sharpe Ratio",
+        ga_objective: initialConfig.ga_params?.ga_objective || "Sharpe Ratio",
         // 従来のリスク管理パラメータ（Position Sizingシステムにより廃止予定）
-        stop_loss_range: initialConfig.ga_config?.stop_loss_range || [
+        stop_loss_range: initialConfig.ga_params?.stop_loss_range || [
           0.02, 0.05,
         ],
-        take_profit_range: initialConfig.ga_config?.take_profit_range || [
+        take_profit_range: initialConfig.ga_params?.take_profit_range || [
           0.01, 0.15,
         ],
       },
@@ -105,28 +107,28 @@ const GAConfigForm: React.FC<GAConfigFormProps> = ({
     // TP/SL設定はGAが自動最適化するため、バリデーション不要
     // 従来のTP/SL範囲バリデーション（後方互換性のため保持）
     if (
-      config.ga_config.stop_loss_range[0] >= config.ga_config.stop_loss_range[1]
+      config.ga_params.stop_loss_range[0] >= config.ga_params.stop_loss_range[1]
     ) {
       errors.push("ストップロス範囲: 最小値は最大値より小さくしてください");
     }
     if (
-      config.ga_config.stop_loss_range[0] < 0.005 ||
-      config.ga_config.stop_loss_range[1] > 0.1
+      config.ga_params.stop_loss_range[0] < 0.005 ||
+      config.ga_params.stop_loss_range[1] > 0.1
     ) {
       errors.push("ストップロス範囲: 0.5%〜10%の範囲で設定してください");
     }
 
     if (
-      config.ga_config.take_profit_range[0] >=
-      config.ga_config.take_profit_range[1]
+      config.ga_params.take_profit_range[0] >=
+      config.ga_params.take_profit_range[1]
     ) {
       errors.push(
         "テイクプロフィット範囲: 最小値は最大値より小さくしてください"
       );
     }
     if (
-      config.ga_config.take_profit_range[0] < 0.005 ||
-      config.ga_config.take_profit_range[1] > 0.2
+      config.ga_params.take_profit_range[0] < 0.005 ||
+      config.ga_params.take_profit_range[1] > 0.2
     ) {
       errors.push("テイクプロフィット範囲: 0.5%〜20%の範囲で設定してください");
     }
@@ -154,11 +156,11 @@ const GAConfigForm: React.FC<GAConfigFormProps> = ({
       <InputField
         label="個体数 (population_size)"
         type="number"
-        value={config.ga_config.population_size}
+        value={config.ga_params.population_size}
         onChange={(value) =>
           setConfig((prev) => ({
             ...prev,
-            ga_config: { ...prev.ga_config, population_size: value },
+            ga_params: { ...prev.ga_params, population_size: value },
           }))
         }
         min={10}
@@ -169,11 +171,11 @@ const GAConfigForm: React.FC<GAConfigFormProps> = ({
       <InputField
         label="世代数 (generations)"
         type="number"
-        value={config.ga_config.generations}
+        value={config.ga_params.generations}
         onChange={(value) =>
           setConfig((prev) => ({
             ...prev,
-            ga_config: { ...prev.ga_config, generations: value },
+            ga_params: { ...prev.ga_params, generations: value },
           }))
         }
         min={1}
@@ -184,11 +186,11 @@ const GAConfigForm: React.FC<GAConfigFormProps> = ({
       <InputField
         label="突然変異率 (mutation_rate)"
         type="number"
-        value={config.ga_config.mutation_rate}
+        value={config.ga_params.mutation_rate}
         onChange={(value) =>
           setConfig((prev) => ({
             ...prev,
-            ga_config: { ...prev.ga_config, mutation_rate: value },
+            ga_params: { ...prev.ga_params, mutation_rate: value },
           }))
         }
         min={0}
@@ -200,11 +202,11 @@ const GAConfigForm: React.FC<GAConfigFormProps> = ({
       <InputField
         label="交叉率 (crossover_rate)"
         type="number"
-        value={config.ga_config.crossover_rate}
+        value={config.ga_params.crossover_rate}
         onChange={(value) =>
           setConfig((prev) => ({
             ...prev,
-            ga_config: { ...prev.ga_config, crossover_rate: value },
+            ga_params: { ...prev.ga_params, crossover_rate: value },
           }))
         }
         min={0}
@@ -215,11 +217,11 @@ const GAConfigForm: React.FC<GAConfigFormProps> = ({
 
       <SelectField
         label="最適化目的 (ga_objective)"
-        value={config.ga_config.ga_objective}
+        value={config.ga_params.ga_objective}
         onChange={(value) =>
           setConfig((prev) => ({
             ...prev,
-            ga_config: { ...prev.ga_config, ga_objective: value },
+            ga_params: { ...prev.ga_params, ga_objective: value },
           }))
         }
         options={GA_OBJECTIVE_OPTIONS}
@@ -233,7 +235,9 @@ const GAConfigForm: React.FC<GAConfigFormProps> = ({
         </h3>
         <p className="text-sm text-blue-200">
           TP/SL設定とポジションサイズは、テクニカル指標と同様にGAが自動で最適化します。
-          <strong className="text-blue-100">従来のイグジット条件は自動的に無効化され、TP/SL機能が優先されます。</strong>
+          <strong className="text-blue-100">
+            従来のイグジット条件は自動的に無効化され、TP/SL機能が優先されます。
+          </strong>
           手動設定は不要です。
         </p>
 
