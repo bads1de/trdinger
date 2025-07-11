@@ -627,7 +627,7 @@ class RealMarketValidationTestSuite:
     # ヘルパーメソッド
     def _create_simulated_market_data(self) -> pd.DataFrame:
         """シミュレートされた市場データを作成"""
-        dates = pd.date_range(start='2023-01-01', end='2023-01-31', freq='1H')
+        dates = pd.date_range(start='2023-01-01', end='2023-01-31', freq='h')
 
         # ランダムウォークベースの価格データ
         np.random.seed(42)

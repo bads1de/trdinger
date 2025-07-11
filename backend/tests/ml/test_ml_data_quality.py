@@ -20,7 +20,7 @@ import warnings
 project_root = Path(__file__).parent.parent.parent
 sys.path.insert(0, str(project_root))
 
-from utils import (
+from .utils import (
     create_sample_ohlcv_data,
     create_sample_funding_rate_data,
     create_sample_open_interest_data,
@@ -631,7 +631,7 @@ class MLDataQualityTestSuite:
             try:
                 # 正常な時系列データ
                 ordered_data = create_sample_ohlcv_data(100)
-                ordered_data['timestamp'] = pd.date_range(start='2023-01-01', periods=len(ordered_data), freq='H')
+                ordered_data['timestamp'] = pd.date_range(start='2023-01-01', periods=len(ordered_data), freq='h')
 
                 # 逆順データ
                 reversed_data = ordered_data.iloc[::-1].reset_index(drop=True)
@@ -675,7 +675,7 @@ class MLDataQualityTestSuite:
                 duplicate_data = create_sample_ohlcv_data(30)
 
                 # 重複するタイムスタンプ
-                timestamps = pd.date_range(start='2023-01-01', periods=20, freq='H').tolist()
+                timestamps = pd.date_range(start='2023-01-01', periods=20, freq='h').tolist()
                 timestamps.extend(timestamps[:10])  # 最初の10個を重複
                 duplicate_data['timestamp'] = timestamps
 

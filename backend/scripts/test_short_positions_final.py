@@ -25,7 +25,7 @@ from backtesting import Backtest
 def create_test_data():
     """テスト用の市場データを作成"""
     # 1週間分の時間足データ
-    dates = pd.date_range(start="2024-01-01", end="2024-01-07", freq="1h")
+    dates = pd.date_range(start="2024-01-01", end="2024-01-07", freq="h")
     
     # トレンド変化のあるデータを作成
     np.random.seed(42)

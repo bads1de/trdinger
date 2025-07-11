@@ -277,20 +277,15 @@ class MLIndicatorService:
     def _safe_ml_prediction(self, features_df: pd.DataFrame) -> Dict[str, float]:
         """安全なML予測実行"""
         try:
-            # モデルが学習済みの場合は予測を実行
-            if self.is_model_loaded and self.ml_generator.is_trained:
-                predictions = self.ml_generator.predict(features_df)
+            # 予測を実行
+            predictions = self.ml_generator.predict(features_df)
 
-                # 予測値の妥当性チェック
-                if self._validate_predictions(predictions):
-                    self._last_predictions = predictions
-                    return predictions
-                else:
-                    logger.warning("予測値が無効、前回の予測値を使用")
-                    return self._last_predictions
+            # 予測値の妥当性チェック
+            if self._validate_predictions(predictions):
+                self._last_predictions = predictions
+                return predictions
             else:
-                # モデルが未学習の場合はデフォルト値を使用
-                logger.debug("MLモデルが未学習のため、デフォルト予測値を使用")
+                logger.warning("予測値が無効、前回の予測値を使用")
                 return self._last_predictions
 
         except Exception as e:
@@ -332,14 +327,6 @@ class MLIndicatorService:
             ml_up_prob = np.full(data_length, predictions["up"])
             ml_down_prob = np.full(data_length, predictions["down"])
             ml_range_prob = np.full(data_length, predictions["range"])
-
-            # 最新の数ポイントのみ実際の予測値を使用（計算負荷軽減）
-            if data_length > 10:
-                # 古いデータは中立値を使用
-                neutral_value = 0.33
-                ml_up_prob[:-10] = neutral_value
-                ml_down_prob[:-10] = neutral_value
-                ml_range_prob[:-10] = neutral_value + 0.01
 
             return {
                 "ML_UP_PROB": ml_up_prob,

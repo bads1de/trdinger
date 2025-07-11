@@ -202,7 +202,7 @@ class FeatureEngineeringService:
                 return df
 
             # リターンを計算
-            df['returns'] = df['close'].pct_change().fillna(0)
+            df['returns'] = df['close'].pct_change(fill_method=None).fillna(0)
 
             # 実現ボラティリティ
             df[f'Realized_Volatility_{periods["volatility"]}'] = (
@@ -519,8 +519,8 @@ class FeatureEngineeringService:
             support_level = df['low'].rolling(window=50).min()
             resistance_level = df['high'].rolling(window=50).max()
 
-            df['Support_Distance'] = ((df['close'] - support_level) / df['close']).fillna(0)
-            df['Resistance_Distance'] = ((resistance_level - df['close']) / df['close']).fillna(0)
+            df['Support_Distance'] = ((df['close'] - support_level) / df['close']).fillna(0).infer_objects(copy=False)
+            df['Resistance_Distance'] = ((resistance_level - df['close']) / df['close']).fillna(0).infer_objects(copy=False)
 
             return df
 

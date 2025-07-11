@@ -22,7 +22,7 @@ from app.core.services.auto_strategy.evaluators.condition_evaluator import Condi
 
 def create_test_data():
     """テスト用の市場データを作成"""
-    dates = pd.date_range('2020-01-01', periods=1000, freq='H')
+    dates = pd.date_range('2020-01-01', periods=1000, freq='h')
 
     # 基本的なOHLCVデータ
     np.random.seed(42)

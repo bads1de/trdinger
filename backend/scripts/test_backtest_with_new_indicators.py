@@ -29,7 +29,7 @@ def create_test_data() -> pd.DataFrame:
     
     # 日付インデックスを作成
     start_date = datetime.now() - timedelta(days=n)
-    dates = pd.date_range(start=start_date, periods=n, freq='1H')
+    dates = pd.date_range(start=start_date, periods=n, freq='h')
     
     # ランダムウォークで価格データを生成
     returns = np.random.normal(0, 0.01, n)

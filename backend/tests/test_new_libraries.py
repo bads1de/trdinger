@@ -179,7 +179,7 @@ def test_sample_data_creation():
     """テスト用サンプルデータの作成"""
     try:
         # OHLCVデータの作成
-        dates = pd.date_range(start='2024-01-01', end='2024-01-31', freq='1H')
+        dates = pd.date_range(start='2024-01-01', end='2024-01-31', freq='h')
         
         np.random.seed(42)
         price_base = 50000

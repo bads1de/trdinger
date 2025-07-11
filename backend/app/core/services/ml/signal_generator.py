@@ -64,6 +64,11 @@ class MLSignalGenerator:
             特徴量DataFrame、ラベルSeries
         """
         try:
+            # ターゲットカラムの存在チェック
+            required_target_columns = ['target_up', 'target_down', 'target_range']
+            if not all(col in df.columns for col in required_target_columns):
+                raise ValueError("Target columns not found in features_df")
+
             # 未来の価格変化率を計算
             future_returns = (
                 df['close'].shift(-prediction_horizon) / df['close'] - 1
@@ -83,7 +88,7 @@ class MLSignalGenerator:
             # 特徴量カラムを選択（数値カラムのみ）
             feature_columns = []
             for col in df_clean.columns:
-                if col not in ['timestamp', 'open', 'high', 'low', 'close', 'volume']:
+                if col not in ['timestamp', 'open', 'high', 'low', 'close'] and col not in required_target_columns:
                     if df_clean[col].dtype in ['int64', 'float64']:
                         feature_columns.append(col)
 

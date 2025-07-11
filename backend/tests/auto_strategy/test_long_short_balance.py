@@ -22,7 +22,7 @@ from app.core.services.auto_strategy.models.ga_config import GAConfig
 
 def create_test_data():
     """テスト用データを作成"""
-    dates = pd.date_range('2020-01-01', periods=100, freq='H')
+    dates = pd.date_range('2020-01-01', periods=100, freq='h')
     data = pd.DataFrame({
         'Open': [100 + i * 0.1 for i in range(100)],
         'High': [101 + i * 0.1 for i in range(100)],
