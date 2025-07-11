@@ -11,6 +11,13 @@ from typing import Dict, Any
 from .technical_indicators.trend import TrendIndicators
 from .technical_indicators.momentum import MomentumIndicators
 from .technical_indicators.volatility import VolatilityIndicators
+from .technical_indicators.volume import VolumeIndicators
+from .technical_indicators.price_transform import PriceTransformIndicators
+from .technical_indicators.cycle import CycleIndicators
+from .technical_indicators.statistics import StatisticsIndicators
+from .technical_indicators.math_transform import MathTransformIndicators
+from .technical_indicators.math_operators import MathOperatorsIndicators
+from .technical_indicators.pattern_recognition import PatternRecognitionIndicators
 from .utils import TALibError, validate_input, ensure_numpy_array
 
 # 既存のクラス（互換性維持）
@@ -29,6 +36,13 @@ __all__ = [
     "TrendIndicators",
     "MomentumIndicators",
     "VolatilityIndicators",
+    "VolumeIndicators",
+    "PriceTransformIndicators",
+    "CycleIndicators",
+    "StatisticsIndicators",
+    "MathTransformIndicators",
+    "MathOperatorsIndicators",
+    "PatternRecognitionIndicators",
     "TALibError",
     "validate_input",
     "ensure_numpy_array",

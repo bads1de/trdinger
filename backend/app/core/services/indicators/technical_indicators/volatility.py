@@ -9,7 +9,7 @@ pandas Seriesの変換は一切行いません。
 import talib
 import numpy as np
 from typing import Tuple, cast
-from .utils import (
+from ..utils import (
     validate_input,
     validate_multi_input,
     handle_talib_errors,
@@ -128,6 +128,53 @@ class VolatilityIndicators:
             Tuple[np.ndarray, np.ndarray, np.ndarray],
             format_indicator_result((upper, middle, lower), "BBANDS"),
         )
+
+    @staticmethod
+    @handle_talib_errors
+    def natr(high: np.ndarray, low: np.ndarray, close: np.ndarray, period: int = 14) -> np.ndarray:
+        """
+        Normalized Average True Range (正規化平均真の値幅)
+
+        Args:
+            high: 高値データ（numpy配列）
+            low: 安値データ（numpy配列）
+            close: 終値データ（numpy配列）
+            period: 期間（デフォルト: 14）
+
+        Returns:
+            NATR値のnumpy配列
+        """
+        high = ensure_numpy_array(high)
+        low = ensure_numpy_array(low)
+        close = ensure_numpy_array(close)
+        validate_multi_input(high, low, close, period)
+        log_indicator_calculation("NATR", {"period": period}, len(close))
+
+        result = talib.NATR(high, low, close, timeperiod=period)
+        return cast(np.ndarray, format_indicator_result(result, "NATR"))
+
+    @staticmethod
+    @handle_talib_errors
+    def trange(high: np.ndarray, low: np.ndarray, close: np.ndarray) -> np.ndarray:
+        """
+        True Range (真の値幅)
+
+        Args:
+            high: 高値データ（numpy配列）
+            low: 安値データ（numpy配列）
+            close: 終値データ（numpy配列）
+
+        Returns:
+            TRANGE値のnumpy配列
+        """
+        high = ensure_numpy_array(high)
+        low = ensure_numpy_array(low)
+        close = ensure_numpy_array(close)
+        validate_multi_input(high, low, close, 1)
+        log_indicator_calculation("TRANGE", {}, len(close))
+
+        result = talib.TRANGE(high, low, close)
+        return cast(np.ndarray, format_indicator_result(result, "TRANGE"))
 
     @staticmethod
     @handle_talib_errors

@@ -29,6 +29,11 @@ class IndicatorType(Enum):
     MOMENTUM = "momentum"  # モメンタム系
     TREND = "trend"  # トレンド系
     VOLATILITY = "volatility"  # ボラティリティ系
+    CYCLE = "cycle"  # サイクル系
+    STATISTICS = "statistics"  # 統計系
+    MATH_TRANSFORM = "math_transform"  # 数学変換系
+    MATH_OPERATORS = "math_operators"  # 数学演算子系
+    PATTERN_RECOGNITION = "pattern_recognition"  # パターン認識系
 
 
 # 指標特性データベース（計画書の設計に基づく）
@@ -98,6 +103,275 @@ INDICATOR_CHARACTERISTICS = {
         "type": IndicatorType.VOLATILITY,
         "range": (0, None),
         "volatility_measure": True
+    },
+
+    # サイクル系インジケータ
+    "HT_DCPERIOD": {
+        "type": IndicatorType.CYCLE,
+        "range": (10, 50),  # 一般的なサイクル期間
+        "cycle_analysis": True,
+        "trend_following": False
+    },
+    "HT_DCPHASE": {
+        "type": IndicatorType.CYCLE,
+        "range": (-180, 180),  # 位相角度
+        "zero_cross": True,
+        "cycle_analysis": True
+    },
+    "HT_PHASOR": {
+        "type": IndicatorType.CYCLE,
+        "range": None,  # 複数値出力
+        "components": ["inphase", "quadrature"],
+        "cycle_analysis": True
+    },
+    "HT_SINE": {
+        "type": IndicatorType.CYCLE,
+        "range": (-1, 1),  # サイン波
+        "zero_cross": True,
+        "components": ["sine", "leadsine"],
+        "cycle_analysis": True
+    },
+    "HT_TRENDMODE": {
+        "type": IndicatorType.CYCLE,
+        "range": (0, 1),  # バイナリ出力
+        "trend_mode": True,
+        "binary_signal": True
+    },
+
+    # 統計系インジケータ
+    "BETA": {
+        "type": IndicatorType.STATISTICS,
+        "range": (-2, 2),  # 一般的なベータ値範囲
+        "correlation_measure": True,
+        "zero_cross": True
+    },
+    "CORREL": {
+        "type": IndicatorType.STATISTICS,
+        "range": (-1, 1),  # 相関係数
+        "correlation_measure": True,
+        "zero_cross": True
+    },
+    "LINEARREG": {
+        "type": IndicatorType.STATISTICS,
+        "range": None,  # 価格依存
+        "price_comparison": True,
+        "trend_following": True
+    },
+    "LINEARREG_ANGLE": {
+        "type": IndicatorType.STATISTICS,
+        "range": (-90, 90),  # 角度
+        "zero_cross": True,
+        "trend_strength": True
+    },
+    "LINEARREG_INTERCEPT": {
+        "type": IndicatorType.STATISTICS,
+        "range": None,  # 価格依存
+        "price_comparison": True
+    },
+    "LINEARREG_SLOPE": {
+        "type": IndicatorType.STATISTICS,
+        "range": None,  # 価格変化率依存
+        "zero_cross": True,
+        "trend_strength": True
+    },
+    "STDDEV": {
+        "type": IndicatorType.STATISTICS,
+        "range": (0, None),  # 常に正値
+        "volatility_measure": True
+    },
+    "TSF": {
+        "type": IndicatorType.STATISTICS,
+        "range": None,  # 価格依存
+        "price_comparison": True,
+        "trend_following": True
+    },
+    "VAR": {
+        "type": IndicatorType.STATISTICS,
+        "range": (0, None),  # 常に正値
+        "volatility_measure": True
+    },
+
+    # 数学変換系インジケータ（三角関数）
+    "ACOS": {
+        "type": IndicatorType.MATH_TRANSFORM,
+        "range": (0, 3.14159),  # アークコサイン範囲
+        "math_function": True
+    },
+    "ASIN": {
+        "type": IndicatorType.MATH_TRANSFORM,
+        "range": (-1.5708, 1.5708),  # アークサイン範囲
+        "math_function": True,
+        "zero_cross": True
+    },
+    "ATAN": {
+        "type": IndicatorType.MATH_TRANSFORM,
+        "range": (-1.5708, 1.5708),  # アークタンジェント範囲
+        "math_function": True,
+        "zero_cross": True
+    },
+    "COS": {
+        "type": IndicatorType.MATH_TRANSFORM,
+        "range": (-1, 1),  # コサイン範囲
+        "math_function": True,
+        "zero_cross": True
+    },
+    "SIN": {
+        "type": IndicatorType.MATH_TRANSFORM,
+        "range": (-1, 1),  # サイン範囲
+        "math_function": True,
+        "zero_cross": True
+    },
+    "TAN": {
+        "type": IndicatorType.MATH_TRANSFORM,
+        "range": None,  # タンジェントは無限大になる可能性
+        "math_function": True,
+        "zero_cross": True
+    },
+
+    # 数学変換系インジケータ（その他の数学関数）
+    "CEIL": {
+        "type": IndicatorType.MATH_TRANSFORM,
+        "range": None,  # 入力依存
+        "math_function": True,
+        "price_comparison": True
+    },
+    "FLOOR": {
+        "type": IndicatorType.MATH_TRANSFORM,
+        "range": None,  # 入力依存
+        "math_function": True,
+        "price_comparison": True
+    },
+    "SQRT": {
+        "type": IndicatorType.MATH_TRANSFORM,
+        "range": (0, None),  # 常に正値
+        "math_function": True
+    },
+    "LN": {
+        "type": IndicatorType.MATH_TRANSFORM,
+        "range": None,  # 自然対数
+        "math_function": True,
+        "zero_cross": True
+    },
+    "LOG10": {
+        "type": IndicatorType.MATH_TRANSFORM,
+        "range": None,  # 常用対数
+        "math_function": True,
+        "zero_cross": True
+    },
+    "EXP": {
+        "type": IndicatorType.MATH_TRANSFORM,
+        "range": (0, None),  # 指数関数は常に正値
+        "math_function": True
+    },
+
+    # 数学演算子系インジケータ
+    "ADD": {
+        "type": IndicatorType.MATH_OPERATORS,
+        "range": None,  # 入力依存
+        "math_operator": True,
+        "requires_two_inputs": True
+    },
+    "SUB": {
+        "type": IndicatorType.MATH_OPERATORS,
+        "range": None,  # 入力依存
+        "math_operator": True,
+        "requires_two_inputs": True,
+        "zero_cross": True
+    },
+    "MULT": {
+        "type": IndicatorType.MATH_OPERATORS,
+        "range": None,  # 入力依存
+        "math_operator": True,
+        "requires_two_inputs": True
+    },
+    "DIV": {
+        "type": IndicatorType.MATH_OPERATORS,
+        "range": None,  # 入力依存
+        "math_operator": True,
+        "requires_two_inputs": True
+    },
+    "MAX": {
+        "type": IndicatorType.MATH_OPERATORS,
+        "range": None,  # 入力依存
+        "math_operator": True,
+        "requires_two_inputs": True
+    },
+    "MIN": {
+        "type": IndicatorType.MATH_OPERATORS,
+        "range": None,  # 入力依存
+        "math_operator": True,
+        "requires_two_inputs": True
+    },
+
+    # パターン認識系インジケータ
+    "CDL_DOJI": {
+        "type": IndicatorType.PATTERN_RECOGNITION,
+        "range": (-100, 100),  # パターン強度
+        "pattern_recognition": True,
+        "binary_like": True,
+        "reversal_pattern": True
+    },
+    "CDL_HAMMER": {
+        "type": IndicatorType.PATTERN_RECOGNITION,
+        "range": (-100, 100),
+        "pattern_recognition": True,
+        "binary_like": True,
+        "reversal_pattern": True,
+        "bullish_pattern": True
+    },
+    "CDL_HANGING_MAN": {
+        "type": IndicatorType.PATTERN_RECOGNITION,
+        "range": (-100, 100),
+        "pattern_recognition": True,
+        "binary_like": True,
+        "reversal_pattern": True,
+        "bearish_pattern": True
+    },
+    "CDL_SHOOTING_STAR": {
+        "type": IndicatorType.PATTERN_RECOGNITION,
+        "range": (-100, 100),
+        "pattern_recognition": True,
+        "binary_like": True,
+        "reversal_pattern": True,
+        "bearish_pattern": True
+    },
+    "CDL_ENGULFING": {
+        "type": IndicatorType.PATTERN_RECOGNITION,
+        "range": (-100, 100),
+        "pattern_recognition": True,
+        "binary_like": True,
+        "reversal_pattern": True
+    },
+    "CDL_HARAMI": {
+        "type": IndicatorType.PATTERN_RECOGNITION,
+        "range": (-100, 100),
+        "pattern_recognition": True,
+        "binary_like": True,
+        "reversal_pattern": True
+    },
+    "CDL_PIERCING": {
+        "type": IndicatorType.PATTERN_RECOGNITION,
+        "range": (-100, 100),
+        "pattern_recognition": True,
+        "binary_like": True,
+        "reversal_pattern": True,
+        "bullish_pattern": True
+    },
+    "CDL_THREE_BLACK_CROWS": {
+        "type": IndicatorType.PATTERN_RECOGNITION,
+        "range": (-100, 100),
+        "pattern_recognition": True,
+        "binary_like": True,
+        "continuation_pattern": True,
+        "bearish_pattern": True
+    },
+    "CDL_THREE_WHITE_SOLDIERS": {
+        "type": IndicatorType.PATTERN_RECOGNITION,
+        "range": (-100, 100),
+        "pattern_recognition": True,
+        "binary_like": True,
+        "continuation_pattern": True,
+        "bullish_pattern": True
     }
 }
 
@@ -267,7 +541,12 @@ class SmartConditionGenerator:
             indicators_by_type = {
                 IndicatorType.MOMENTUM: [],
                 IndicatorType.TREND: [],
-                IndicatorType.VOLATILITY: []
+                IndicatorType.VOLATILITY: [],
+                IndicatorType.CYCLE: [],
+                IndicatorType.STATISTICS: [],
+                IndicatorType.MATH_TRANSFORM: [],
+                IndicatorType.MATH_OPERATORS: [],
+                IndicatorType.PATTERN_RECOGNITION: []
             }
 
             for indicator in indicators:
@@ -305,6 +584,31 @@ class SmartConditionGenerator:
                 else:
                     momentum_indicator = random.choice(indicators_by_type[IndicatorType.MOMENTUM])
                 short_conditions.extend(self._create_momentum_short_conditions(momentum_indicator))
+
+            # 新しいカテゴリのインジケータを活用
+            # サイクル系指標の追加
+            if indicators_by_type[IndicatorType.CYCLE]:
+                cycle_indicator = random.choice(indicators_by_type[IndicatorType.CYCLE])
+                if random.choice([True, False]):  # 50%の確率でロング条件に追加
+                    long_conditions.extend(self._create_cycle_long_conditions(cycle_indicator))
+                else:  # 50%の確率でショート条件に追加
+                    short_conditions.extend(self._create_cycle_short_conditions(cycle_indicator))
+
+            # 統計系指標の追加
+            if indicators_by_type[IndicatorType.STATISTICS]:
+                stats_indicator = random.choice(indicators_by_type[IndicatorType.STATISTICS])
+                if random.choice([True, False]):
+                    long_conditions.extend(self._create_statistics_long_conditions(stats_indicator))
+                else:
+                    short_conditions.extend(self._create_statistics_short_conditions(stats_indicator))
+
+            # パターン認識系指標の追加
+            if indicators_by_type[IndicatorType.PATTERN_RECOGNITION]:
+                pattern_indicator = random.choice(indicators_by_type[IndicatorType.PATTERN_RECOGNITION])
+                if random.choice([True, False]):
+                    long_conditions.extend(self._create_pattern_long_conditions(pattern_indicator))
+                else:
+                    short_conditions.extend(self._create_pattern_short_conditions(pattern_indicator))
 
             # 条件が空の場合はフォールバック
             if not long_conditions:
@@ -377,6 +681,108 @@ class SmartConditionGenerator:
         elif indicator.type == "MACD":
             # MACD: ゼロライン下抜けでショート
             return [Condition(left_operand=indicator_name, operator="<", right_operand=0)]
+        else:
+            return []
+
+    def _create_cycle_long_conditions(self, indicator: IndicatorGene) -> List[Condition]:
+        """サイクル系指標のロング条件を生成"""
+        indicator_name = f"{indicator.type}_{indicator.parameters.get('period', 14)}"
+
+        if indicator.type == "HT_DCPHASE":
+            # 位相が上昇トレンドでロング
+            threshold = random.uniform(-90, 0)
+            return [Condition(left_operand=indicator_name, operator=">", right_operand=threshold)]
+        elif indicator.type == "HT_SINE":
+            # サイン波が下から上へクロスでロング
+            return [Condition(left_operand=indicator_name, operator=">", right_operand=0)]
+        elif indicator.type == "HT_TRENDMODE":
+            # トレンドモードでロング
+            return [Condition(left_operand=indicator_name, operator=">", right_operand=0.5)]
+        else:
+            return []
+
+    def _create_cycle_short_conditions(self, indicator: IndicatorGene) -> List[Condition]:
+        """サイクル系指標のショート条件を生成"""
+        indicator_name = f"{indicator.type}_{indicator.parameters.get('period', 14)}"
+
+        if indicator.type == "HT_DCPHASE":
+            # 位相が下降トレンドでショート
+            threshold = random.uniform(0, 90)
+            return [Condition(left_operand=indicator_name, operator="<", right_operand=threshold)]
+        elif indicator.type == "HT_SINE":
+            # サイン波が上から下へクロスでショート
+            return [Condition(left_operand=indicator_name, operator="<", right_operand=0)]
+        elif indicator.type == "HT_TRENDMODE":
+            # レンジモードでショート
+            return [Condition(left_operand=indicator_name, operator="<", right_operand=0.5)]
+        else:
+            return []
+
+    def _create_statistics_long_conditions(self, indicator: IndicatorGene) -> List[Condition]:
+        """統計系指標のロング条件を生成"""
+        indicator_name = f"{indicator.type}_{indicator.parameters.get('period', 14)}"
+
+        if indicator.type == "CORREL":
+            # 正の相関でロング
+            threshold = random.uniform(0.3, 0.7)
+            return [Condition(left_operand=indicator_name, operator=">", right_operand=threshold)]
+        elif indicator.type == "LINEARREG_ANGLE":
+            # 上昇角度でロング
+            threshold = random.uniform(10, 45)
+            return [Condition(left_operand=indicator_name, operator=">", right_operand=threshold)]
+        elif indicator.type == "LINEARREG_SLOPE":
+            # 正の傾きでロング
+            return [Condition(left_operand=indicator_name, operator=">", right_operand=0)]
+        elif indicator.type in ["LINEARREG", "TSF"]:
+            # 価格が回帰線より上でロング
+            return [Condition(left_operand="close", operator=">", right_operand=indicator_name)]
+        else:
+            return []
+
+    def _create_statistics_short_conditions(self, indicator: IndicatorGene) -> List[Condition]:
+        """統計系指標のショート条件を生成"""
+        indicator_name = f"{indicator.type}_{indicator.parameters.get('period', 14)}"
+
+        if indicator.type == "CORREL":
+            # 負の相関でショート
+            threshold = random.uniform(-0.7, -0.3)
+            return [Condition(left_operand=indicator_name, operator="<", right_operand=threshold)]
+        elif indicator.type == "LINEARREG_ANGLE":
+            # 下降角度でショート
+            threshold = random.uniform(-45, -10)
+            return [Condition(left_operand=indicator_name, operator="<", right_operand=threshold)]
+        elif indicator.type == "LINEARREG_SLOPE":
+            # 負の傾きでショート
+            return [Condition(left_operand=indicator_name, operator="<", right_operand=0)]
+        elif indicator.type in ["LINEARREG", "TSF"]:
+            # 価格が回帰線より下でショート
+            return [Condition(left_operand="close", operator="<", right_operand=indicator_name)]
+        else:
+            return []
+
+    def _create_pattern_long_conditions(self, indicator: IndicatorGene) -> List[Condition]:
+        """パターン認識系指標のロング条件を生成"""
+        indicator_name = f"{indicator.type}"
+
+        if indicator.type in ["CDL_HAMMER", "CDL_PIERCING", "CDL_THREE_WHITE_SOLDIERS"]:
+            # 強気パターンでロング
+            return [Condition(left_operand=indicator_name, operator=">", right_operand=0)]
+        elif indicator.type == "CDL_DOJI":
+            # ドージパターンは反転の可能性（文脈依存）
+            return [Condition(left_operand=indicator_name, operator="!=", right_operand=0)]
+        else:
+            return []
+
+    def _create_pattern_short_conditions(self, indicator: IndicatorGene) -> List[Condition]:
+        """パターン認識系指標のショート条件を生成"""
+        indicator_name = f"{indicator.type}"
+
+        if indicator.type in ["CDL_HANGING_MAN", "CDL_SHOOTING_STAR", "CDL_THREE_BLACK_CROWS"]:
+            # 弱気パターンでショート
+            return [Condition(left_operand=indicator_name, operator="<", right_operand=0)]
+        elif indicator.type == "CDL_DOJI":
+            # ドージパターンは反転の可能性（文脈依存）
+            return [Condition(left_operand=indicator_name, operator="!=", right_operand=0)]
         else:
             return []
 
@@ -534,8 +940,28 @@ class SmartConditionGenerator:
 
                 if indicator.type in INDICATOR_CHARACTERISTICS:
                     # 各指標の特性に基づいて条件を追加
-                    long_conds = self._create_momentum_long_conditions(indicator)
-                    short_conds = self._create_momentum_short_conditions(indicator)
+                    char = INDICATOR_CHARACTERISTICS[indicator.type]
+                    indicator_type = char["type"]
+
+                    long_conds = []
+                    short_conds = []
+
+                    # インジケータタイプに応じて適切な条件生成メソッドを呼び出し
+                    if indicator_type == IndicatorType.MOMENTUM:
+                        long_conds = self._create_momentum_long_conditions(indicator)
+                        short_conds = self._create_momentum_short_conditions(indicator)
+                    elif indicator_type == IndicatorType.TREND:
+                        long_conds = self._create_trend_long_conditions(indicator)
+                        short_conds = self._create_trend_short_conditions(indicator)
+                    elif indicator_type == IndicatorType.CYCLE:
+                        long_conds = self._create_cycle_long_conditions(indicator)
+                        short_conds = self._create_cycle_short_conditions(indicator)
+                    elif indicator_type == IndicatorType.STATISTICS:
+                        long_conds = self._create_statistics_long_conditions(indicator)
+                        short_conds = self._create_statistics_short_conditions(indicator)
+                    elif indicator_type == IndicatorType.PATTERN_RECOGNITION:
+                        long_conds = self._create_pattern_long_conditions(indicator)
+                        short_conds = self._create_pattern_short_conditions(indicator)
 
                     if long_conds:
                         long_conditions.extend(long_conds)

@@ -29,21 +29,42 @@ class GeneValidator:
         """有効な指標タイプのリストを取得"""
         # 共通定数から取得して一貫性を保つ
         try:
-            indicator_service = TechnicalIndicatorService()
-            return list(indicator_service.get_supported_indicators().keys())
+            from app.core.services.indicators.config.indicator_config import indicator_registry
+            return indicator_registry.list_indicators()
         except ImportError:
-            # フォールバック: オートストラテジー用10個の指標
+            # フォールバック: 包括的な指標リスト
             return [
-                "SMA",  # Simple Moving Average
-                "EMA",  # Exponential Moving Average
-                "MACD",  # Moving Average Convergence Divergence
-                "BB",  # Bollinger Bands
-                "RSI",  # Relative Strength Index
-                "STOCH",  # Stochastic
-                "CCI",  # Commodity Channel Index
-                "ADX",  # Average Directional Movement Index
-                "ATR",  # Average True Range
-                "OBV",  # On Balance Volume
+                # トレンド系指標
+                "SMA", "EMA", "WMA", "DEMA", "TEMA", "TRIMA", "KAMA", "MAMA", "T3", "MA",
+                "MACD", "MACDEXT", "MACDFIX", "BB", "HT_TRENDLINE",
+                # モメンタム系指標
+                "RSI", "STOCH", "STOCHF", "STOCHRSI", "CCI", "ADX", "ADXR", "DX",
+                "PLUS_DI", "MINUS_DI", "PLUS_DM", "MINUS_DM", "WILLR", "MFI", "BOP",
+                "ROC", "ROCP", "ROCR", "ROCR100", "MOM", "MOMENTUM", "CMO", "TRIX",
+                "APO", "PPO", "ULTOSC", "AROON", "AROONOSC",
+                # ボラティリティ系指標
+                "ATR", "NATR", "TRANGE", "STDDEV", "VAR",
+                # ボリューム系指標
+                "OBV", "AD", "ADOSC",
+                # サイクル系指標
+                "HT_DCPERIOD", "HT_DCPHASE", "HT_TRENDMODE", "HT_PHASOR", "HT_SINE",
+                # 統計系指標
+                "BETA", "CORREL", "LINEARREG", "LINEARREG_ANGLE", "LINEARREG_INTERCEPT",
+                "LINEARREG_SLOPE", "TSF",
+                # 数学変換系指標
+                "ACOS", "ASIN", "ATAN", "COS", "COSH", "SIN", "SINH", "TAN", "TANH",
+                "CEIL", "EXP", "FLOOR", "LN", "LOG10", "SQRT",
+                # 数学演算子
+                "ADD", "DIV", "MULT", "SUB", "MAX", "MIN", "MAXINDEX", "MININDEX",
+                "SUM", "MINMAX", "MINMAXINDEX",
+                # 価格変換系指標
+                "AVGPRICE", "MEDPRICE", "TYPPRICE", "WCLPRICE",
+                # オーバーレイ系指標
+                "SAR",
+                # パターン認識系指標
+                "CDL_DOJI", "CDL_HAMMER", "CDL_HANGING_MAN", "CDL_SHOOTING_STAR",
+                "CDL_ENGULFING", "CDL_HARAMI", "CDL_PIERCING", "CDL_THREE_BLACK_CROWS",
+                "CDL_THREE_WHITE_SOLDIERS", "CDL_DARK_CLOUD_COVER",
             ]
 
     def _get_valid_operators(self) -> List[str]:
@@ -115,15 +136,23 @@ class GeneValidator:
             妥当性（True/False）
         """
         try:
+            # 条件オブジェクトの基本検証
+            if not hasattr(condition, 'operator') or not hasattr(condition, 'left_operand') or not hasattr(condition, 'right_operand'):
+                logger.warning(f"条件オブジェクトに必要な属性がありません: {condition}")
+                return False
+
             # オペレーターの検証
             if condition.operator not in self.valid_operators:
+                logger.warning(f"無効な演算子: {condition.operator}, 有効な演算子: {self.valid_operators}")
                 return False
 
             # オペランドの検証
             if not self._is_valid_operand(condition.left_operand):
+                logger.warning(f"無効な左オペランド: {condition.left_operand} (型: {type(condition.left_operand)})")
                 return False
 
             if not self._is_valid_operand(condition.right_operand):
+                logger.warning(f"無効な右オペランド: {condition.right_operand} (型: {type(condition.right_operand)})")
                 return False
 
             return True
@@ -143,12 +172,23 @@ class GeneValidator:
             妥当性（True/False）
         """
         try:
-            # 数値の場合は常に有効
+            # None値は無効
+            if operand is None:
+                return False
+
+            # 数値の場合は常に有効（NaNや無限大も含む）
             if isinstance(operand, (int, float)):
                 return True
 
             # 文字列の場合
             if isinstance(operand, str):
+                # 空文字列は無効
+                if not operand or not operand.strip():
+                    return False
+
+                # 前後の空白を除去して処理
+                operand = operand.strip()
+
                 # 数値文字列の場合は有効
                 try:
                     float(operand)
@@ -163,10 +203,55 @@ class GeneValidator:
                 ):
                     return True
 
+            # 辞書形式のオペランド（GA生成時に発生する可能性）
+            if isinstance(operand, dict):
+                return self._validate_dict_operand(operand)
+
             return False
 
         except Exception as e:
             logger.error(f"オペランド検証エラー: {e}")
+            return False
+
+    def _validate_dict_operand(self, operand: dict) -> bool:
+        """
+        辞書形式のオペランドを検証
+
+        Args:
+            operand: 辞書形式のオペランド
+
+        Returns:
+            妥当性（True/False）
+        """
+        try:
+            # 指標タイプの辞書
+            if operand.get("type") == "indicator":
+                indicator_name = operand.get("name")
+                if indicator_name and isinstance(indicator_name, str):
+                    return self._is_indicator_name(indicator_name.strip())
+
+            # 価格データタイプの辞書
+            elif operand.get("type") == "price":
+                price_name = operand.get("name")
+                if price_name and isinstance(price_name, str):
+                    return price_name.strip() in self.valid_data_sources
+
+            # 数値タイプの辞書
+            elif operand.get("type") == "value":
+                value = operand.get("value")
+                if isinstance(value, (int, float)):
+                    return True
+                elif isinstance(value, str):
+                    try:
+                        float(value.strip())
+                        return True
+                    except ValueError:
+                        pass
+
+            return False
+
+        except Exception as e:
+            logger.error(f"辞書オペランド検証エラー: {e}")
             return False
 
     def _is_indicator_name(self, name: str) -> bool:
@@ -180,19 +265,26 @@ class GeneValidator:
             指標名の場合True
         """
         try:
+            # 空文字列や空白のみの場合は無効
+            if not name or not name.strip():
+                return False
+
+            # 前後の空白を除去
+            name = name.strip()
+
             # 基本的な指標タイプの確認
             if name in self.valid_indicator_types:
                 return True
 
             # 指標名_パラメータ形式の確認（例: SMA_20, RSI_14）
             if "_" in name:
-                indicator_type = name.split("_")[0]
+                indicator_type = name.split("_")[0].strip()
                 if indicator_type in self.valid_indicator_types:
                     return True
 
             # 指標インデックス形式の確認（例: SMA_0, RSI_1）
             if name.endswith(("_0", "_1", "_2", "_3", "_4")):
-                indicator_type = name.rsplit("_", 1)[0]
+                indicator_type = name.rsplit("_", 1)[0].strip()
                 if indicator_type in self.valid_indicator_types:
                     return True
 
@@ -201,6 +293,68 @@ class GeneValidator:
         except Exception as e:
             logger.error(f"指標名判定エラー: {e}")
             return False
+
+    def clean_condition(self, condition) -> bool:
+        """
+        条件をクリーニングして修正可能な問題を自動修正
+
+        Args:
+            condition: クリーニング対象の条件
+
+        Returns:
+            クリーニング成功の場合True
+        """
+        try:
+            # 文字列オペランドの前後空白を除去
+            if isinstance(condition.left_operand, str):
+                condition.left_operand = condition.left_operand.strip()
+
+            if isinstance(condition.right_operand, str):
+                condition.right_operand = condition.right_operand.strip()
+
+            # 辞書形式のオペランドから文字列を抽出
+            if isinstance(condition.left_operand, dict):
+                condition.left_operand = self._extract_operand_from_dict(condition.left_operand)
+
+            if isinstance(condition.right_operand, dict):
+                condition.right_operand = self._extract_operand_from_dict(condition.right_operand)
+
+            # フロントエンド用演算子を標準形式に変換
+            if condition.operator == "above":
+                condition.operator = ">"
+            elif condition.operator == "below":
+                condition.operator = "<"
+
+            return True
+
+        except Exception as e:
+            logger.error(f"条件クリーニングエラー: {e}")
+            return False
+
+    def _extract_operand_from_dict(self, operand_dict: dict) -> str:
+        """
+        辞書形式のオペランドから文字列を抽出
+
+        Args:
+            operand_dict: 辞書形式のオペランド
+
+        Returns:
+            抽出された文字列オペランド
+        """
+        try:
+            if operand_dict.get("type") == "indicator":
+                return operand_dict.get("name", "")
+            elif operand_dict.get("type") == "price":
+                return operand_dict.get("name", "")
+            elif operand_dict.get("type") == "value":
+                value = operand_dict.get("value")
+                return str(value) if value is not None else ""
+            else:
+                return str(operand_dict.get("name", ""))
+
+        except Exception as e:
+            logger.error(f"辞書オペランド抽出エラー: {e}")
+            return ""
 
     def validate_strategy_gene(self, strategy_gene) -> Tuple[bool, List[str]]:
         """
@@ -227,21 +381,29 @@ class GeneValidator:
                 if not self.validate_indicator_gene(indicator):
                     errors.append(f"指標{i}が無効です: {indicator.type}")
 
-            # 条件の妥当性チェック
+            # 条件の妥当性チェック（クリーニング付き）
             for i, condition in enumerate(strategy_gene.entry_conditions):
+                # 条件をクリーニング
+                self.clean_condition(condition)
                 if not self.validate_condition(condition):
                     errors.append(f"エントリー条件{i}が無効です")
 
-            # ロング・ショート条件の妥当性チェック
+            # ロング・ショート条件の妥当性チェック（クリーニング付き）
             for i, condition in enumerate(strategy_gene.long_entry_conditions):
+                # 条件をクリーニング
+                self.clean_condition(condition)
                 if not self.validate_condition(condition):
                     errors.append(f"ロングエントリー条件{i}が無効です")
 
             for i, condition in enumerate(strategy_gene.short_entry_conditions):
+                # 条件をクリーニング
+                self.clean_condition(condition)
                 if not self.validate_condition(condition):
                     errors.append(f"ショートエントリー条件{i}が無効です")
 
             for i, condition in enumerate(strategy_gene.exit_conditions):
+                # 条件をクリーニング
+                self.clean_condition(condition)
                 if not self.validate_condition(condition):
                     errors.append(f"イグジット条件{i}が無効です")
 

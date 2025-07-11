@@ -74,7 +74,7 @@ class TechnicalIndicatorService:
         required_data = {}
         for data_key in config.required_data:
             # カラム名の大文字小文字を適切に処理
-            actual_column = self._resolve_column_name(df, data_key)
+            actual_column = self._resolve_column_name(df, data_key, indicator_type)
             if actual_column is None:
                 raise ValueError(
                     f"必要なカラム '{data_key}' がDataFrameにありません。利用可能なカラム: {list(df.columns)}"
@@ -101,17 +101,32 @@ class TechnicalIndicatorService:
             logger.error(f"指標関数呼び出しエラー {indicator_type}: {e}", exc_info=True)
             raise
 
-    def _resolve_column_name(self, df: pd.DataFrame, data_key: str) -> Optional[str]:
+    def _resolve_column_name(self, df: pd.DataFrame, data_key: str, indicator_type: str = None) -> Optional[str]:
         """
         データフレームから適切なカラム名を解決
 
         Args:
             df: データフレーム
             data_key: 探すカラム名（小文字）
+            indicator_type: 指標タイプ（オプション）
 
         Returns:
             実際のカラム名（見つからない場合はNone）
         """
+        # 特別なマッピング（指標タイプを考慮）
+        special_mappings = {
+            "data0": "high",  # デフォルトで高値を使用
+            "data1": "low",   # デフォルトで安値を使用
+        }
+
+        # open_dataの特別な処理
+        if data_key == "open_data":
+            # open_dataは常に"open"カラムを参照する
+            data_key = "open"
+
+        if data_key in special_mappings:
+            data_key = special_mappings[data_key]
+
         # 直接一致をチェック
         if data_key in df.columns:
             return data_key
@@ -144,26 +159,42 @@ class TechnicalIndicatorService:
         Returns:
             関数パラメータ名
         """
-        # 単一データ系指標（RSI, SMA, EMA等）は"close"を"data"にマッピング
+        # 単一データ系指標（required_data=["close"]）は"close"を"data"にマッピング
         single_data_indicators = [
-            "RSI",
-            "SMA",
-            "EMA",
-            "WMA",
-            "DEMA",
-            "TEMA",
-            "TRIMA",
-            "KAMA",
-            "MAMA",
-            "T3",
-            "MACD",
-            "MACDEXT",
-            "MACDFIX",
-            "BB",
+            # トレンド系指標
+            "RSI", "SMA", "EMA", "WMA", "DEMA", "TEMA", "TRIMA", "KAMA", "MAMA", "T3", "MA",
+            "MACD", "MACDEXT", "MACDFIX", "BB", "HT_TRENDLINE", "MIDPOINT",
+            # サイクル系指標
+            "HT_DCPERIOD", "HT_DCPHASE", "HT_TRENDMODE", "HT_PHASOR", "HT_SINE",
+            # 統計系指標（単一データ）
+            "LINEARREG", "STDDEV", "TSF", "VAR", "LINEARREG_ANGLE", "LINEARREG_INTERCEPT", "LINEARREG_SLOPE",
+            # 数学変換系指標
+            "ACOS", "ASIN", "ATAN", "COS", "COSH", "SIN", "SINH", "TAN", "TANH",
+            "CEIL", "EXP", "FLOOR", "LN", "LOG10", "SQRT",
+            # 期間ベース数学演算子（単一データ）
+            "MAX", "MIN", "MAXINDEX", "MININDEX", "SUM", "MINMAX", "MINMAXINDEX",
+            # モメンタム系指標（単一データ）
+            "ROC", "ROCP", "ROCR", "ROCR100", "MOM", "MOMENTUM", "CMO", "TRIX", "APO", "PPO",
+            "STOCHRSI",
         ]
 
         if indicator_type in single_data_indicators and data_key == "close":
             return "data"
+
+        # パターン認識系指標の特別なマッピング
+        if data_key == "open" and indicator_type.startswith("CDL_"):
+            return "open_data"
+
+        # BOP指標とAVGPRICE指標の特別なマッピング
+        if indicator_type in ["BOP", "AVGPRICE"] and data_key == "open":
+            return "open_data"
+
+        # 数学演算子の特別なマッピング
+        if indicator_type in ["ADD", "DIV", "MULT", "SUB"]:
+            if data_key == "data0":
+                return "data0"
+            elif data_key == "data1":
+                return "data1"
 
         # その他の指標は元のキー名を使用（high, low, close等）
         return data_key
