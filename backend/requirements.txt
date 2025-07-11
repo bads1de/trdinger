@@ -19,3 +19,11 @@ backtesting==0.6.4
 
 # Genetic Algorithm library
 deap>=1.3.1
+
+# Machine Learning libraries for Auto Strategy Enhancement
+scikit-learn>=1.3.0
+lightgbm>=4.0.0
+joblib>=1.3.0
+
+# Bayesian Optimization for Phase 4
+scikit-optimize>=0.9.0

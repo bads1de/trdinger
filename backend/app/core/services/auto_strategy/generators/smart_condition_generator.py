@@ -311,6 +311,35 @@ INDICATOR_CHARACTERISTICS = {
         "binary_like": True,
         "reversal_pattern": True
     },
+
+    # ML予測確率指標
+    "ML_UP_PROB": {
+        "type": IndicatorType.PATTERN_RECOGNITION,
+        "range": (0, 1),  # 確率値
+        "ml_prediction": True,
+        "long_zones": [(0.6, 1.0)],
+        "short_zones": [(0, 0.4)],
+        "neutral_zone": (0.4, 0.6),
+        "high_confidence_threshold": 0.7
+    },
+    "ML_DOWN_PROB": {
+        "type": IndicatorType.PATTERN_RECOGNITION,
+        "range": (0, 1),  # 確率値
+        "ml_prediction": True,
+        "long_zones": [(0, 0.4)],
+        "short_zones": [(0.6, 1.0)],
+        "neutral_zone": (0.4, 0.6),
+        "high_confidence_threshold": 0.7
+    },
+    "ML_RANGE_PROB": {
+        "type": IndicatorType.PATTERN_RECOGNITION,
+        "range": (0, 1),  # 確率値
+        "ml_prediction": True,
+        "long_zones": [(0, 0.3)],
+        "short_zones": [(0, 0.3)],
+        "neutral_zone": (0.7, 1.0),
+        "high_confidence_threshold": 0.8
+    },
     "CDL_HAMMER": {
         "type": IndicatorType.PATTERN_RECOGNITION,
         "range": (-100, 100),
@@ -568,22 +597,27 @@ class SmartConditionGenerator:
                 momentum_indicator = random.choice(indicators_by_type[IndicatorType.MOMENTUM])
                 long_conditions.extend(self._create_momentum_long_conditions(momentum_indicator))
 
-            # ショート条件：異なる指標を使用
-            if indicators_by_type[IndicatorType.TREND]:
-                trend_indicator = random.choice(indicators_by_type[IndicatorType.TREND])
-                short_conditions.extend(self._create_trend_short_conditions(trend_indicator))
+            # ショート条件：拡張されたショート特化条件を優先使用
+            enhanced_short_conditions = self.generate_enhanced_short_conditions(indicators)
+            if enhanced_short_conditions and random.random() < 0.7:  # 70%の確率で拡張条件を使用
+                short_conditions.extend(enhanced_short_conditions[:2])  # 最大2つの条件を使用
+            else:
+                # フォールバック：従来のショート条件
+                if indicators_by_type[IndicatorType.TREND]:
+                    trend_indicator = random.choice(indicators_by_type[IndicatorType.TREND])
+                    short_conditions.extend(self._create_trend_short_conditions(trend_indicator))
 
-            if indicators_by_type[IndicatorType.MOMENTUM]:
-                # ロングとは異なるモメンタム指標を選択
-                available_momentum = [
-                    ind for ind in indicators_by_type[IndicatorType.MOMENTUM]
-                    if ind.type != (long_conditions[1].left_operand.split('_')[0] if len(long_conditions) > 1 else "")
-                ]
-                if available_momentum:
-                    momentum_indicator = random.choice(available_momentum)
-                else:
-                    momentum_indicator = random.choice(indicators_by_type[IndicatorType.MOMENTUM])
-                short_conditions.extend(self._create_momentum_short_conditions(momentum_indicator))
+                if indicators_by_type[IndicatorType.MOMENTUM]:
+                    # ロングとは異なるモメンタム指標を選択
+                    available_momentum = [
+                        ind for ind in indicators_by_type[IndicatorType.MOMENTUM]
+                        if ind.type != (long_conditions[1].left_operand.split('_')[0] if len(long_conditions) > 1 else "")
+                    ]
+                    if available_momentum:
+                        momentum_indicator = random.choice(available_momentum)
+                    else:
+                        momentum_indicator = random.choice(indicators_by_type[IndicatorType.MOMENTUM])
+                    short_conditions.extend(self._create_momentum_short_conditions(momentum_indicator))
 
             # 新しいカテゴリのインジケータを活用
             # サイクル系指標の追加
@@ -977,3 +1011,310 @@ class SmartConditionGenerator:
         except Exception as e:
             self.logger.error(f"複合条件戦略エラー: {e}")
             return self._generate_fallback_conditions()
+
+    def _generate_fallback_conditions(self) -> Tuple[List[Condition], List[Condition], List[Condition]]:
+        """
+        フォールバック条件を生成
+
+        Returns:
+            (long_entry_conditions, short_entry_conditions, exit_conditions)のタプル
+        """
+        long_conditions = [Condition(left_operand="close", operator=">", right_operand="open")]
+        short_conditions = [Condition(left_operand="close", operator="<", right_operand="open")]
+        return long_conditions, short_conditions, []
+
+    def generate_enhanced_short_conditions(
+        self, indicators: List[IndicatorGene]
+    ) -> List[Condition]:
+        """
+        ショートに特化した高度な条件を生成
+
+        Args:
+            indicators: 指標リスト
+
+        Returns:
+            ショート条件のリスト
+        """
+        try:
+            short_conditions = []
+
+            # デスクロスパターンの検出
+            death_cross_conditions = self._create_death_cross_conditions(indicators)
+            short_conditions.extend(death_cross_conditions)
+
+            # ベアダイバージェンスパターンの検出
+            bear_divergence_conditions = self._create_bear_divergence_conditions(indicators)
+            short_conditions.extend(bear_divergence_conditions)
+
+            # ブレイクダウンパターンの検出
+            breakdown_conditions = self._create_breakdown_conditions(indicators)
+            short_conditions.extend(breakdown_conditions)
+
+            # ML予測を活用したショート条件
+            ml_short_conditions = self._create_ml_short_conditions(indicators)
+            short_conditions.extend(ml_short_conditions)
+
+            # 高ボラティリティ環境でのショート条件
+            volatility_short_conditions = self._create_volatility_short_conditions(indicators)
+            short_conditions.extend(volatility_short_conditions)
+
+            return short_conditions
+
+        except Exception as e:
+            self.logger.error(f"拡張ショート条件生成エラー: {e}")
+            return [Condition(left_operand="close", operator="<", right_operand="open")]
+
+    def _create_death_cross_conditions(self, indicators: List[IndicatorGene]) -> List[Condition]:
+        """デスクロス（移動平均線の下抜け）条件を生成"""
+        try:
+            conditions = []
+
+            # 移動平均線指標を探す
+            ma_indicators = [ind for ind in indicators if ind.enabled and ind.type in ["SMA", "EMA", "MA"]]
+
+            if len(ma_indicators) >= 2:
+                # 短期と長期の移動平均を選択
+                sorted_mas = sorted(ma_indicators, key=lambda x: x.parameters.get('period', 14))
+                short_ma = sorted_mas[0]
+                long_ma = sorted_mas[-1]
+
+                short_name = f"{short_ma.type}_{short_ma.parameters.get('period', 10)}"
+                long_name = f"{long_ma.type}_{long_ma.parameters.get('period', 20)}"
+
+                # デスクロス条件：短期MA < 長期MA
+                conditions.append(
+                    Condition(left_operand=short_name, operator="<", right_operand=long_name)
+                )
+
+                # 価格が移動平均線を下抜け
+                conditions.append(
+                    Condition(left_operand="close", operator="<", right_operand=short_name)
+                )
+
+            elif ma_indicators:
+                # 単一の移動平均線がある場合
+                ma = ma_indicators[0]
+                ma_name = f"{ma.type}_{ma.parameters.get('period', 20)}"
+
+                # 価格が移動平均線を下抜け
+                conditions.append(
+                    Condition(left_operand="close", operator="<", right_operand=ma_name)
+                )
+
+            return conditions
+
+        except Exception as e:
+            self.logger.error(f"デスクロス条件生成エラー: {e}")
+            return []
+
+    def _create_bear_divergence_conditions(self, indicators: List[IndicatorGene]) -> List[Condition]:
+        """ベアダイバージェンス（価格とオシレーターの逆行）条件を生成"""
+        try:
+            conditions = []
+
+            # オシレーター系指標を探す
+            oscillators = [ind for ind in indicators if ind.enabled and ind.type in ["RSI", "STOCH", "CCI", "MACD"]]
+
+            for osc in oscillators:
+                osc_name = f"{osc.type}_{osc.parameters.get('period', 14)}"
+
+                if osc.type == "RSI":
+                    # RSIが高値圏で弱気ダイバージェンス
+                    conditions.extend([
+                        Condition(left_operand=osc_name, operator=">", right_operand=60),
+                        Condition(left_operand=osc_name, operator="<", right_operand=80)  # 極端な買われすぎは避ける
+                    ])
+                elif osc.type == "MACD":
+                    # MACDがゼロライン付近で下向き
+                    conditions.append(
+                        Condition(left_operand=osc_name, operator="<", right_operand=0)
+                    )
+                elif osc.type == "CCI":
+                    # CCIが高値圏から下落
+                    conditions.append(
+                        Condition(left_operand=osc_name, operator="<", right_operand=100)
+                    )
+
+            return conditions
+
+        except Exception as e:
+            self.logger.error(f"ベアダイバージェンス条件生成エラー: {e}")
+            return []
+
+    def _create_breakdown_conditions(self, indicators: List[IndicatorGene]) -> List[Condition]:
+        """ブレイクダウン（サポートライン下抜け）条件を生成"""
+        try:
+            conditions = []
+
+            # ボリンジャーバンドがある場合
+            bb_indicators = [ind for ind in indicators if ind.enabled and ind.type == "BB"]
+            if bb_indicators:
+                bb = bb_indicators[0]
+                bb_lower = f"{bb.type}_lower_{bb.parameters.get('period', 20)}"
+
+                # 下部バンド下抜け
+                conditions.append(
+                    Condition(left_operand="close", operator="<", right_operand=bb_lower)
+                )
+
+            # ATRを使った動的サポートライン
+            atr_indicators = [ind for ind in indicators if ind.enabled and ind.type == "ATR"]
+            if atr_indicators:
+                atr = atr_indicators[0]
+                atr_name = f"{atr.type}_{atr.parameters.get('period', 14)}"
+
+                # 価格が前日安値 - ATRを下抜け（動的サポート）
+                # 簡易実装として、closeが相対的に低い位置にある条件
+                conditions.append(
+                    Condition(left_operand="close", operator="<", right_operand="low")
+                )
+
+            # パターン認識でのブレイクダウン
+            pattern_indicators = [ind for ind in indicators if ind.enabled and
+                                ind.type in ["CDL_HANGING_MAN", "CDL_SHOOTING_STAR", "CDL_THREE_BLACK_CROWS"]]
+            for pattern in pattern_indicators:
+                pattern_name = pattern.type
+                conditions.append(
+                    Condition(left_operand=pattern_name, operator="<", right_operand=0)
+                )
+
+            return conditions
+
+        except Exception as e:
+            self.logger.error(f"ブレイクダウン条件生成エラー: {e}")
+            return []
+
+    def _create_ml_short_conditions(self, indicators: List[IndicatorGene]) -> List[Condition]:
+        """ML予測を活用したショート条件を生成"""
+        try:
+            conditions = []
+
+            # ML予測確率指標を探す
+            ml_indicators = [ind for ind in indicators if ind.enabled and ind.type.startswith("ML_")]
+
+            if any(ind.type == "ML_DOWN_PROB" for ind in ml_indicators):
+                # 下落予測確率が高い場合
+                conditions.append(
+                    Condition(left_operand="ML_DOWN_PROB", operator=">", right_operand=0.6)
+                )
+
+            if any(ind.type == "ML_UP_PROB" for ind in ml_indicators):
+                # 上昇予測確率が低い場合
+                conditions.append(
+                    Condition(left_operand="ML_UP_PROB", operator="<", right_operand=0.4)
+                )
+
+            if any(ind.type == "ML_RANGE_PROB" for ind in ml_indicators):
+                # レンジ予測確率が低い場合（トレンド発生の可能性）
+                conditions.append(
+                    Condition(left_operand="ML_RANGE_PROB", operator="<", right_operand=0.3)
+                )
+
+            # ML予測とテクニカル指標の組み合わせ
+            rsi_indicators = [ind for ind in indicators if ind.enabled and ind.type == "RSI"]
+            if ml_indicators and rsi_indicators:
+                rsi = rsi_indicators[0]
+                rsi_name = f"{rsi.type}_{rsi.parameters.get('period', 14)}"
+
+                # ML下落予測 + RSI買われすぎ
+                conditions.extend([
+                    Condition(left_operand="ML_DOWN_PROB", operator=">", right_operand=0.5),
+                    Condition(left_operand=rsi_name, operator=">", right_operand=65)
+                ])
+
+            return conditions
+
+        except Exception as e:
+            self.logger.error(f"MLショート条件生成エラー: {e}")
+            return []
+
+    def _create_volatility_short_conditions(self, indicators: List[IndicatorGene]) -> List[Condition]:
+        """高ボラティリティ環境でのショート条件を生成"""
+        try:
+            conditions = []
+
+            # ATR（Average True Range）を使ったボラティリティ条件
+            atr_indicators = [ind for ind in indicators if ind.enabled and ind.type == "ATR"]
+            if atr_indicators:
+                atr = atr_indicators[0]
+                atr_name = f"{atr.type}_{atr.parameters.get('period', 14)}"
+
+                # 高ボラティリティ環境でのショート（ATRが高い）
+                # ATRの具体的な閾値は市場によって異なるため、相対的な条件を使用
+                conditions.append(
+                    Condition(left_operand=atr_name, operator=">", right_operand=0.02)  # 2%以上のボラティリティ
+                )
+
+            # ボリンジャーバンドの拡張
+            bb_indicators = [ind for ind in indicators if ind.enabled and ind.type == "BB"]
+            if bb_indicators:
+                bb = bb_indicators[0]
+                bb_upper = f"{bb.type}_upper_{bb.parameters.get('period', 20)}"
+                bb_lower = f"{bb.type}_lower_{bb.parameters.get('period', 20)}"
+
+                # バンド上限からの反落
+                conditions.append(
+                    Condition(left_operand="close", operator="<", right_operand=bb_upper)
+                )
+
+            # VIX的な指標（ボラティリティ指標）
+            volatility_indicators = [ind for ind in indicators if ind.enabled and
+                                   ind.type in ["STDDEV", "VAR"]]
+            for vol_ind in volatility_indicators:
+                vol_name = f"{vol_ind.type}_{vol_ind.parameters.get('period', 20)}"
+
+                # 標準偏差が高い場合（高ボラティリティ）
+                conditions.append(
+                    Condition(left_operand=vol_name, operator=">", right_operand=0.015)  # 1.5%以上の標準偏差
+                )
+
+            # 急激な価格変動でのショート
+            # 前日比での大幅上昇後の反落を狙う
+            conditions.append(
+                Condition(left_operand="close", operator="<", right_operand="high")
+            )
+
+            return conditions
+
+        except Exception as e:
+            self.logger.error(f"ボラティリティショート条件生成エラー: {e}")
+            return []
+
+    def apply_short_bias_mutation(self, conditions: List[Condition], mutation_rate: float = 0.3) -> List[Condition]:
+        """
+        既存条件にショートバイアスを適用する突然変異
+
+        Args:
+            conditions: 既存の条件リスト
+            mutation_rate: 突然変異率
+
+        Returns:
+            ショートバイアスが適用された条件リスト
+        """
+        try:
+            mutated_conditions = conditions.copy()
+
+            for i, condition in enumerate(mutated_conditions):
+                if random.random() < mutation_rate:
+                    # 演算子を反転してショート寄りに変更
+                    if condition.operator == ">":
+                        mutated_conditions[i] = Condition(
+                            left_operand=condition.left_operand,
+                            operator="<",
+                            right_operand=condition.right_operand
+                        )
+                    elif condition.operator == "<":
+                        # 既にショート寄りなので、より厳しい条件に
+                        if isinstance(condition.right_operand, (int, float)):
+                            new_threshold = condition.right_operand * 0.9  # 10%厳しく
+                            mutated_conditions[i] = Condition(
+                                left_operand=condition.left_operand,
+                                operator=condition.operator,
+                                right_operand=new_threshold
+                            )
+
+            return mutated_conditions
+
+        except Exception as e:
+            self.logger.error(f"ショートバイアス突然変異エラー: {e}")
+            return conditions

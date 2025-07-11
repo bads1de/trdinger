@@ -1608,6 +1608,43 @@ def setup_pattern_recognition_indicators():
             indicator_registry.register(config)
 
 
+def setup_ml_indicators():
+    """ML予測確率指標の設定"""
+
+    # ML_UP_PROB
+    ml_up_prob_config = IndicatorConfig(
+        indicator_name="ML_UP_PROB",
+        adapter_function=None,  # IndicatorCalculatorで直接処理
+        required_data=["close"],
+        result_type=IndicatorResultType.SINGLE,
+        scale_type=IndicatorScaleType.OSCILLATOR_0_1,
+        category="ml_prediction",
+    )
+    indicator_registry.register(ml_up_prob_config)
+
+    # ML_DOWN_PROB
+    ml_down_prob_config = IndicatorConfig(
+        indicator_name="ML_DOWN_PROB",
+        adapter_function=None,  # IndicatorCalculatorで直接処理
+        required_data=["close"],
+        result_type=IndicatorResultType.SINGLE,
+        scale_type=IndicatorScaleType.OSCILLATOR_0_1,
+        category="ml_prediction",
+    )
+    indicator_registry.register(ml_down_prob_config)
+
+    # ML_RANGE_PROB
+    ml_range_prob_config = IndicatorConfig(
+        indicator_name="ML_RANGE_PROB",
+        adapter_function=None,  # IndicatorCalculatorで直接処理
+        required_data=["close"],
+        result_type=IndicatorResultType.SINGLE,
+        scale_type=IndicatorScaleType.OSCILLATOR_0_1,
+        category="ml_prediction",
+    )
+    indicator_registry.register(ml_range_prob_config)
+
+
 def initialize_all_indicators():
     """全インジケーターの設定を初期化"""
     setup_momentum_indicators()
@@ -1620,6 +1657,7 @@ def initialize_all_indicators():
     setup_math_transform_indicators()
     setup_math_operators_indicators()
     setup_pattern_recognition_indicators()
+    setup_ml_indicators()
 
 
 # モジュール読み込み時に初期化

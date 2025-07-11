@@ -83,7 +83,7 @@ class IndividualEvaluator:
         self, backtest_result: Dict[str, Any], config: GAConfig
     ) -> float:
         """
-        フィットネス計算
+        フィットネス計算（ロング・ショートバランス評価を含む）
 
         Args:
             backtest_result: バックテスト結果
@@ -113,12 +113,17 @@ class IndividualEvaluator:
             ):
                 return 0.0
 
-            # 重み付きフィットネス計算
+            # ロング・ショートバランス評価を計算
+            balance_score = self._calculate_long_short_balance(backtest_result)
+
+            # 重み付きフィットネス計算（バランススコアを追加）
+            fitness_weights = config.fitness_weights
             fitness = (
-                config.fitness_weights["total_return"] * total_return
-                + config.fitness_weights["sharpe_ratio"] * sharpe_ratio
-                + config.fitness_weights["max_drawdown"] * (1 - max_drawdown)
-                + config.fitness_weights["win_rate"] * win_rate
+                fitness_weights.get("total_return", 0.3) * total_return
+                + fitness_weights.get("sharpe_ratio", 0.4) * sharpe_ratio
+                + fitness_weights.get("max_drawdown", 0.2) * (1 - max_drawdown)
+                + fitness_weights.get("win_rate", 0.1) * win_rate
+                + fitness_weights.get("balance_score", 0.1) * balance_score
             )
 
             return max(0.0, fitness)
@@ -126,6 +131,70 @@ class IndividualEvaluator:
         except Exception as e:
             logger.error(f"フィットネス計算エラー: {e}")
             return 0.0
+
+    def _calculate_long_short_balance(self, backtest_result: Dict[str, Any]) -> float:
+        """
+        ロング・ショートバランススコアを計算
+
+        Args:
+            backtest_result: バックテスト結果
+
+        Returns:
+            バランススコア（0.0-1.0）
+        """
+        try:
+            trade_history = backtest_result.get("trade_history", [])
+            if not trade_history:
+                return 0.5  # 取引がない場合は中立スコア
+
+            long_trades = []
+            short_trades = []
+            long_pnl = 0.0
+            short_pnl = 0.0
+
+            # 取引をロング・ショートに分類
+            for trade in trade_history:
+                size = trade.get("size", 0.0)
+                pnl = trade.get("pnl", 0.0)
+
+                if size > 0:  # ロング取引
+                    long_trades.append(trade)
+                    long_pnl += pnl
+                elif size < 0:  # ショート取引
+                    short_trades.append(trade)
+                    short_pnl += pnl
+
+            total_trades = len(long_trades) + len(short_trades)
+            if total_trades == 0:
+                return 0.5
+
+            # 取引回数バランス（理想は50:50）
+            long_ratio = len(long_trades) / total_trades
+            short_ratio = len(short_trades) / total_trades
+            trade_balance = 1.0 - abs(long_ratio - short_ratio)
+
+            # 利益バランス（両方向で利益を出せているか）
+            total_pnl = long_pnl + short_pnl
+            profit_balance = 0.5  # デフォルト
+
+            if total_pnl > 0:
+                # 両方向で利益が出ている場合は高スコア
+                if long_pnl > 0 and short_pnl > 0:
+                    profit_balance = 1.0
+                # 片方向のみで利益の場合は中程度
+                elif long_pnl > 0 or short_pnl > 0:
+                    profit_balance = 0.7
+                else:
+                    profit_balance = 0.3
+
+            # 総合バランススコア（取引回数バランス60%、利益バランス40%）
+            balance_score = 0.6 * trade_balance + 0.4 * profit_balance
+
+            return max(0.0, min(1.0, balance_score))
+
+        except Exception as e:
+            logger.error(f"ロング・ショートバランス計算エラー: {e}")
+            return 0.5  # エラー時は中立スコア
 
     def _select_timeframe_config(
         self, backtest_config: Dict[str, Any]

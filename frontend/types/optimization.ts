@@ -102,6 +102,14 @@ export interface GAConfig {
       min_sharpe_ratio: number;
     };
     ga_objective: string;
+
+    // 高度な設定
+    enable_fitness_sharing?: boolean;
+    sharing_radius?: number;
+    sharing_alpha?: number;
+    enable_short_bias_mutation?: boolean;
+    short_bias_rate?: number;
+
     // 従来のリスク管理パラメータ（Position Sizingシステムにより廃止）
     stop_loss_range: [number, number];
     take_profit_range: [number, number];

@@ -59,9 +59,21 @@ class DEAPSetup:
 
         # 進化演算子の登録（戦略遺伝子レベル）
         self.toolbox.register("mate", crossover_func)
-        self.toolbox.register(
-            "mutate", mutate_func, mutation_rate=config.mutation_rate
-        )
+
+        # 突然変異の登録（ショートバイアス対応）
+        if config.enable_short_bias_mutation:
+            # ショートバイアス付き突然変異
+            self.toolbox.register(
+                "mutate",
+                evolution_operators.mutate_with_short_bias,
+                mutation_rate=config.mutation_rate,
+                short_bias_rate=config.short_bias_rate
+            )
+        else:
+            # 通常の突然変異
+            self.toolbox.register(
+                "mutate", mutate_func, mutation_rate=config.mutation_rate
+            )
         self.toolbox.register("select", tools.selTournament, tournsize=3)
 
         logger.info("DEAP環境のセットアップ完了")

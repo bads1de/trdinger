@@ -275,6 +275,92 @@ const GAConfigForm: React.FC<GAConfigFormProps> = ({
             </div>
           </div>
         </div>
+
+        {/* 高度な設定 */}
+        <div className="p-3 bg-purple-900/30 border border-purple-500/30 rounded-md">
+          <h4 className="font-medium text-purple-300 mb-3">
+            🧬 高度なGA設定
+          </h4>
+
+          {/* フィットネス共有 */}
+          <div className="mb-4">
+            <label className="flex items-center space-x-2">
+              <input
+                type="checkbox"
+                checked={config.ga_config.enable_fitness_sharing ?? true}
+                onChange={(e) =>
+                  setConfig({
+                    ...config,
+                    ga_config: {
+                      ...config.ga_config,
+                      enable_fitness_sharing: e.target.checked,
+                    },
+                  })
+                }
+                className="rounded border-purple-500 text-purple-600 focus:ring-purple-500"
+              />
+              <span className="text-sm text-purple-200">
+                フィットネス共有を有効化（戦略の多様性向上）
+              </span>
+            </label>
+          </div>
+
+          {/* ショートバイアス突然変異 */}
+          <div className="mb-4">
+            <label className="flex items-center space-x-2">
+              <input
+                type="checkbox"
+                checked={config.ga_config.enable_short_bias_mutation ?? true}
+                onChange={(e) =>
+                  setConfig({
+                    ...config,
+                    ga_config: {
+                      ...config.ga_config,
+                      enable_short_bias_mutation: e.target.checked,
+                    },
+                  })
+                }
+                className="rounded border-purple-500 text-purple-600 focus:ring-purple-500"
+              />
+              <span className="text-sm text-purple-200">
+                ショートバイアス突然変異を有効化（ショート戦略強化）
+              </span>
+            </label>
+          </div>
+
+          {/* ショートバイアス率 */}
+          {config.ga_config.enable_short_bias_mutation && (
+            <div className="mb-4">
+              <InputField
+                label="ショートバイアス適用率"
+                type="number"
+                value={config.ga_config.short_bias_rate ?? 0.3}
+                onChange={(value) =>
+                  setConfig({
+                    ...config,
+                    ga_config: {
+                      ...config.ga_config,
+                      short_bias_rate: parseFloat(value) || 0.3,
+                    },
+                  })
+                }
+                min={0}
+                max={1}
+                step={0.1}
+                className="text-sm"
+              />
+            </div>
+          )}
+
+          <div className="text-xs text-purple-200 space-y-1">
+            <div>
+              • <strong>フィットネス共有</strong>: 類似戦略の評価を下げ、多様な戦略を促進
+            </div>
+            <div>
+              • <strong>ショートバイアス突然変異</strong>: ショート戦略の生成を強化
+            </div>
+          </div>
+        </div>
       </div>
 
       <ApiButton onClick={handleSubmit} loading={isLoading}>

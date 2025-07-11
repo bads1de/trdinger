@@ -29,10 +29,11 @@ class GAConfig:
     # 評価設定
     fitness_weights: Dict[str, float] = field(
         default_factory=lambda: {
-            "total_return": 0.3,
-            "sharpe_ratio": 0.4,
+            "total_return": 0.25,
+            "sharpe_ratio": 0.35,
             "max_drawdown": 0.2,
             "win_rate": 0.1,
+            "balance_score": 0.1,  # ロング・ショートバランススコア
         }
     )
     primary_metric: str = "sharpe_ratio"
@@ -44,6 +45,15 @@ class GAConfig:
             "min_sharpe_ratio": 1.0,
         }
     )
+
+    # フィットネス共有設定
+    enable_fitness_sharing: bool = True
+    sharing_radius: float = 0.1
+    sharing_alpha: float = 1.0
+
+    # ショートバイアス突然変異設定
+    enable_short_bias_mutation: bool = True
+    short_bias_rate: float = 0.3  # ショートバイアス適用率
 
     # 指標設定
     max_indicators: int = 3
@@ -280,6 +290,15 @@ class GAConfig:
             "random_state": self.random_state,
             "log_level": self.log_level,
             "save_intermediate_results": self.save_intermediate_results,
+
+            # フィットネス共有設定
+            "enable_fitness_sharing": self.enable_fitness_sharing,
+            "sharing_radius": self.sharing_radius,
+            "sharing_alpha": self.sharing_alpha,
+
+            # ショートバイアス突然変異設定
+            "enable_short_bias_mutation": self.enable_short_bias_mutation,
+            "short_bias_rate": self.short_bias_rate,
         }
 
     @classmethod
@@ -313,6 +332,15 @@ class GAConfig:
             log_level=data.get("log_level", "ERROR"),
             save_intermediate_results=data.get("save_intermediate_results", True),
             # enable_detailed_logging=data.get("enable_detailed_logging", True),
+
+            # フィットネス共有設定
+            enable_fitness_sharing=data.get("enable_fitness_sharing", True),
+            sharing_radius=data.get("sharing_radius", 0.1),
+            sharing_alpha=data.get("sharing_alpha", 1.0),
+
+            # ショートバイアス突然変異設定
+            enable_short_bias_mutation=data.get("enable_short_bias_mutation", True),
+            short_bias_rate=data.get("short_bias_rate", 0.3),
         )
 
     def to_json(self) -> str:
