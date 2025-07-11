@@ -57,9 +57,19 @@ export const fundingRateColumns: TableColumn<FundingRateData>[] = [
     header: "ファンディング時刻",
     width: "180px",
     sortable: true,
-    formatter: (value: string) => (
-      <span className="font-mono text-sm">{formatDateTime(value)}</span>
-    ),
+    formatter: (value: string) => {
+      const { date, time } = formatDateTime(value);
+      if (time) {
+        return (
+          <span className="font-mono text-sm">
+            {date}
+            <br />
+            {time}
+          </span>
+        );
+      }
+      return <span className="font-mono text-sm">{date}</span>;
+    },
   },
   {
     key: "mark_price",
@@ -90,22 +100,40 @@ export const fundingRateColumns: TableColumn<FundingRateData>[] = [
     header: "次回ファンディング",
     width: "180px",
     sortable: true,
-    formatter: (value: string | null) => (
-      <span className="font-mono text-sm text-gray-400">
-        {value ? formatDateTime(value) : "-"}
-      </span>
-    ),
+    formatter: (value: string | null) => {
+      if (!value)
+        return <span className="font-mono text-sm text-gray-400">-</span>;
+      const { date, time } = formatDateTime(value);
+      if (time) {
+        return (
+          <span className="font-mono text-sm text-gray-400">
+            {date}
+            <br />
+            {time}
+          </span>
+        );
+      }
+      return <span className="font-mono text-sm text-gray-400">{date}</span>;
+    },
   },
   {
     key: "timestamp",
     header: "取得時刻",
     width: "180px",
     sortable: true,
-    formatter: (value: string) => (
-      <span className="font-mono text-xs text-gray-500">
-        {formatDateTime(value)}
-      </span>
-    ),
+    formatter: (value: string) => {
+      const { date, time } = formatDateTime(value);
+      if (time) {
+        return (
+          <span className="font-mono text-xs text-gray-500">
+            {date}
+            <br />
+            {time}
+          </span>
+        );
+      }
+      return <span className="font-mono text-xs text-gray-500">{date}</span>;
+    },
   },
 ];
 
@@ -118,9 +146,19 @@ export const ohlcvColumns: TableColumn<PriceData>[] = [
     header: "日時",
     width: "180px",
     sortable: true,
-    formatter: (value: string) => (
-      <span className="font-mono text-sm">{formatDateTime(value)}</span>
-    ),
+    formatter: (value: string) => {
+      const { date, time } = formatDateTime(value);
+      if (time) {
+        return (
+          <span className="font-mono text-sm">
+            {date}
+            <br />
+            {time}
+          </span>
+        );
+      }
+      return <span className="font-mono text-sm">{date}</span>;
+    },
   },
   {
     key: "open",
@@ -219,21 +257,37 @@ export const openInterestColumns: TableColumn<OpenInterestData>[] = [
     header: "データ時刻",
     width: "180px",
     sortable: true,
-    formatter: (value: string) => (
-      <span className="font-mono text-sm text-gray-400">
-        {formatDateTime(value)}
-      </span>
-    ),
+    formatter: (value: string) => {
+      const { date, time } = formatDateTime(value);
+      if (time) {
+        return (
+          <span className="font-mono text-sm text-gray-400">
+            {date}
+            <br />
+            {time}
+          </span>
+        );
+      }
+      return <span className="font-mono text-sm text-gray-400">{date}</span>;
+    },
   },
   {
     key: "timestamp",
     header: "取得時刻",
     width: "180px",
     sortable: true,
-    formatter: (value: string) => (
-      <span className="font-mono text-xs text-gray-500">
-        {formatDateTime(value)}
-      </span>
-    ),
+    formatter: (value: string) => {
+      const { date, time } = formatDateTime(value);
+      if (time) {
+        return (
+          <span className="font-mono text-xs text-gray-500">
+            {date}
+            <br />
+            {time}
+          </span>
+        );
+      }
+      return <span className="font-mono text-xs text-gray-500">{date}</span>;
+    },
   },
 ];

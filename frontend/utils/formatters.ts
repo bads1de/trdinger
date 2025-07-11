@@ -70,7 +70,6 @@ export const getPriceChangeColor = (open: number, close: number) => {
   return "text-gray-400";
 };
 
-
 export const getReturnColor = (value: number | null) => {
   if (value === null) return "gray";
   if (value > 0) return "green";
@@ -126,8 +125,9 @@ export const formatLargeNumber = (num: number, digits = 2) => {
     .find((item) => num >= item.value);
   if (!item) return num.toFixed(digits);
   return (
-    (num / item.value).toFixed(digits).replace(/\.0+$|(\.[0-9]*[1-9])0+$/, "$1") +
-    item.symbol
+    (num / item.value)
+      .toFixed(digits)
+      .replace(/\.0+$|(\.[0-9]*[1-9])0+$/, "$1") + item.symbol
   );
 };
 
