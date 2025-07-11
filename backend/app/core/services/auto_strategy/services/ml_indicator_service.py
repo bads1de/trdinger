@@ -69,20 +69,37 @@ class MLIndicatorService:
 
             # 特徴量計算（タイムアウト付き）
             try:
-                import signal
+                import platform
+                import concurrent.futures
 
-                def timeout_handler(signum, frame):
-                    raise TimeoutError("特徴量計算がタイムアウトしました")
+                # Windows環境ではconcurrent.futuresを使用、Unix系ではsignalを使用
+                if platform.system() == "Windows":
+                    # Windows環境でのタイムアウト処理
+                    with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
+                        future = executor.submit(
+                            self.feature_service.calculate_advanced_features,
+                            df, funding_rate_data, open_interest_data
+                        )
+                        try:
+                            features_df = future.result(timeout=30)  # 30秒のタイムアウト
+                        except concurrent.futures.TimeoutError:
+                            raise TimeoutError("特徴量計算がタイムアウトしました")
+                else:
+                    # Unix系環境でのシグナル処理
+                    import signal
 
-                # 30秒のタイムアウトを設定
-                signal.signal(signal.SIGALRM, timeout_handler)
-                signal.alarm(30)
+                    def timeout_handler(signum, frame):
+                        raise TimeoutError("特徴量計算がタイムアウトしました")
 
-                features_df = self.feature_service.calculate_advanced_features(
-                    df, funding_rate_data, open_interest_data
-                )
+                    # 30秒のタイムアウトを設定
+                    signal.signal(signal.SIGALRM, timeout_handler)
+                    signal.alarm(30)
 
-                signal.alarm(0)  # タイムアウトをクリア
+                    features_df = self.feature_service.calculate_advanced_features(
+                        df, funding_rate_data, open_interest_data
+                    )
+
+                    signal.alarm(0)  # タイムアウトをクリア
 
             except TimeoutError:
                 logger.error("特徴量計算がタイムアウトしました")

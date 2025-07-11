@@ -165,7 +165,7 @@ class MLSignalGenerator:
             y_pred_class = np.argmax(y_pred, axis=1)
 
             accuracy = accuracy_score(y_test, y_pred_class)
-            class_report = classification_report(y_test, y_pred_class, output_dict=True)
+            class_report = classification_report(y_test, y_pred_class, output_dict=True, zero_division=0)
 
             # 特徴量重要度
             feature_importance = dict(zip(

@@ -20,7 +20,7 @@ import json
 project_root = Path(__file__).parent.parent.parent
 sys.path.insert(0, str(project_root))
 
-from utils import (
+from tests.ml.utils import (
     create_sample_ohlcv_data,
     create_sample_funding_rate_data,
     create_sample_open_interest_data,
