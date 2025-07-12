@@ -9,11 +9,11 @@
 
 import React, { useState } from "react";
 import {
-  ChevronDownIcon,
-  ChevronRightIcon,
-  ClipboardDocumentIcon,
-  CheckIcon,
-} from "@heroicons/react/24/outline";
+  ChevronDown,
+  ChevronRight,
+  Clipboard,
+  Check,
+} from "lucide-react";
 
 interface CollapsibleJsonProps {
   /** 表示するJSONデータ */
@@ -128,12 +128,12 @@ const CollapsibleJson: React.FC<CollapsibleJsonProps> = ({
           >
             {isCopied ? (
               <>
-                <CheckIcon className="w-4 h-4 mr-1 text-green-500" />
+                <Check className="w-4 h-4 mr-1 text-green-500" />
                 <span className="text-xs">コピー完了</span>
               </>
             ) : (
               <>
-                <ClipboardDocumentIcon className="w-4 h-4 mr-1" />
+                <Clipboard className="w-4 h-4 mr-1" />
                 <span className="text-xs">コピー</span>
               </>
             )}
@@ -147,12 +147,12 @@ const CollapsibleJson: React.FC<CollapsibleJsonProps> = ({
           >
           {isExpanded ? (
             <>
-              <ChevronDownIcon className="w-4 h-4 mr-1" />
+              <ChevronDown className="w-4 h-4 mr-1" />
               <span className="text-xs">折りたたむ</span>
             </>
           ) : (
             <>
-              <ChevronRightIcon className="w-4 h-4 mr-1" />
+              <ChevronRight className="w-4 h-4 mr-1" />
               <span className="text-xs">展開する</span>
             </>
           )}

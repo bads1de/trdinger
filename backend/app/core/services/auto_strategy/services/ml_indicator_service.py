@@ -9,6 +9,8 @@ GAで使用可能なML予測指標を生成します。
 import logging
 import pandas as pd
 import numpy as np
+import os
+import glob
 from typing import Dict, Any, Optional
 from datetime import datetime
 
@@ -31,6 +33,10 @@ class MLIndicatorService:
         self.ml_generator = ml_signal_generator if ml_signal_generator else MLSignalGenerator()
         self.is_model_loaded = self.ml_generator.is_trained if ml_signal_generator else False
         self._last_predictions = {"up": 0.33, "down": 0.33, "range": 0.34}
+
+        # 既存の学習済みモデルを自動読み込み
+        if not self.is_model_loaded:
+            self._try_load_latest_model()
 
     def calculate_ml_indicators(
         self,
@@ -174,7 +180,14 @@ class MLIndicatorService:
         training_data: pd.DataFrame,
         funding_rate_data: Optional[pd.DataFrame] = None,
         open_interest_data: Optional[pd.DataFrame] = None,
-        save_model: bool = True
+        save_model: bool = True,
+        train_test_split: float = 0.8,
+        cross_validation_folds: int = 5,
+        random_state: int = 42,
+        early_stopping_rounds: int = 100,
+        max_depth: int = 10,
+        n_estimators: int = 100,
+        learning_rate: float = 0.1,
     ) -> Dict[str, Any]:
         """
         MLモデルを学習
@@ -184,6 +197,13 @@ class MLIndicatorService:
             funding_rate_data: ファンディングレートデータ（オプション）
             open_interest_data: 建玉残高データ（オプション）
             save_model: モデルを保存するか
+            train_test_split: トレーニング/テスト分割比率
+            cross_validation_folds: クロスバリデーション分割数
+            random_state: ランダムシード
+            early_stopping_rounds: 早期停止ラウンド数
+            max_depth: 最大深度
+            n_estimators: 推定器数
+            learning_rate: 学習率
 
         Returns:
             学習結果
@@ -197,8 +217,42 @@ class MLIndicatorService:
             # 学習用データを準備
             X, y = self.ml_generator.prepare_training_data(features_df)
 
-            # モデルを学習
-            result = self.ml_generator.train(X, y)
+            # モデルを学習（新しいパラメータを使用して直接実装）
+            from sklearn.ensemble import RandomForestClassifier
+            from sklearn.model_selection import train_test_split as sklearn_train_test_split
+            from sklearn.metrics import accuracy_score, classification_report
+
+            # データ分割
+            X_train, X_test, y_train, y_test = sklearn_train_test_split(
+                X, y, test_size=1-train_test_split, random_state=random_state, stratify=y
+            )
+
+            # モデル作成とトレーニング
+            self.model = RandomForestClassifier(
+                n_estimators=n_estimators,
+                max_depth=max_depth,
+                random_state=random_state,
+                n_jobs=-1
+            )
+
+            self.model.fit(X_train, y_train)
+
+            # 評価
+            y_pred = self.model.predict(X_test)
+            accuracy = accuracy_score(y_test, y_pred)
+
+            # 特徴量カラムを保存
+            self.feature_columns = X.columns.tolist()
+
+            result = {
+                "success": True,
+                "accuracy": accuracy,
+                "loss": 1 - accuracy,
+                "feature_count": len(self.feature_columns),
+                "training_samples": len(X_train),
+                "test_samples": len(X_test),
+                "classification_report": classification_report(y_test, y_pred, output_dict=True)
+            }
 
             # モデルを保存
             if save_model:
@@ -360,6 +414,138 @@ class MLIndicatorService:
             logger.error(f"予測値拡張エラー: {e}")
             return self._get_default_indicators(data_length)
 
+
+
+    def _preprocess_training_data(
+        self,
+        ohlcv_data: pd.DataFrame,
+        funding_rate_data: Optional[pd.DataFrame] = None,
+        open_interest_data: Optional[pd.DataFrame] = None
+    ) -> pd.DataFrame:
+        """
+        トレーニングデータの前処理
+
+        Args:
+            ohlcv_data: OHLCVデータ
+            funding_rate_data: ファンディングレートデータ
+            open_interest_data: オープンインタレストデータ
+
+        Returns:
+            前処理済みデータ
+        """
+        # 基本的なOHLCVデータをコピー
+        processed = ohlcv_data.copy()
+
+        # カラム名を小文字に統一
+        processed.columns = [col.lower() for col in processed.columns]
+
+        # 追加データがある場合は結合
+        if funding_rate_data is not None and not funding_rate_data.empty:
+            funding_rate_data.columns = [col.lower() for col in funding_rate_data.columns]
+            processed = processed.join(funding_rate_data, how='left')
+
+        if open_interest_data is not None and not open_interest_data.empty:
+            open_interest_data.columns = [col.lower() for col in open_interest_data.columns]
+            processed = processed.join(open_interest_data, how='left')
+
+        # 欠損値を前方補完
+        processed = processed.fillna(method='ffill').fillna(method='bfill')
+
+        return processed
+
+    def _create_features_and_targets(self, data: pd.DataFrame) -> tuple:
+        """
+        特徴量とターゲットを作成
+
+        Args:
+            data: 前処理済みデータ
+
+        Returns:
+            (特徴量DataFrame, ターゲットSeries)
+        """
+        # 基本的なテクニカル指標を計算
+        features = pd.DataFrame(index=data.index)
+
+        # 価格変動率
+        features['price_change'] = data['close'].pct_change()
+        features['high_low_ratio'] = (data['high'] - data['low']) / data['close']
+        features['volume_change'] = data['volume'].pct_change()
+
+        # 移動平均
+        for period in [5, 10, 20]:
+            features[f'sma_{period}'] = data['close'].rolling(period).mean()
+            features[f'price_sma_{period}_ratio'] = data['close'] / features[f'sma_{period}']
+
+        # RSI
+        delta = data['close'].diff()
+        gain = (delta.where(delta > 0, 0)).rolling(window=14).mean()
+        loss = (-delta.where(delta < 0, 0)).rolling(window=14).mean()
+        rs = gain / loss
+        features['rsi'] = 100 - (100 / (1 + rs))
+
+        # ボリンジャーバンド
+        sma_20 = data['close'].rolling(20).mean()
+        std_20 = data['close'].rolling(20).std()
+        features['bb_upper'] = sma_20 + (std_20 * 2)
+        features['bb_lower'] = sma_20 - (std_20 * 2)
+        features['bb_position'] = (data['close'] - features['bb_lower']) / (features['bb_upper'] - features['bb_lower'])
+
+        # 追加データがある場合の特徴量
+        if 'fundingrate' in data.columns:
+            features['funding_rate'] = data['fundingrate']
+            features['funding_rate_change'] = data['fundingrate'].pct_change()
+
+        if 'openinterest' in data.columns:
+            features['open_interest'] = data['openinterest']
+            features['oi_change'] = data['openinterest'].pct_change()
+
+        # ターゲット作成（24時間後の価格変動）
+        future_returns = data['close'].shift(-24).pct_change(24)
+
+        # 3クラス分類：上昇(0)、下降(1)、横ばい(2)
+        targets = pd.Series(index=data.index, dtype=int)
+        targets[future_returns > 0.02] = 0  # 上昇
+        targets[future_returns < -0.02] = 1  # 下降
+        targets[(future_returns >= -0.02) & (future_returns <= 0.02)] = 2  # 横ばい
+
+        # 欠損値を除去
+        valid_idx = features.dropna().index.intersection(targets.dropna().index)
+        features = features.loc[valid_idx]
+        targets = targets.loc[valid_idx]
+
+        return features, targets
+
+    def _save_model(self) -> str:
+        """
+        モデルを保存
+
+        Returns:
+            保存されたモデルのパス
+        """
+        import joblib
+        import os
+        from datetime import datetime
+
+        # モデル保存ディレクトリを作成
+        model_dir = "ml_models"
+        os.makedirs(model_dir, exist_ok=True)
+
+        # ファイル名を生成
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        model_path = os.path.join(model_dir, f"ml_model_{timestamp}.joblib")
+
+        # モデルと特徴量カラムを保存
+        model_data = {
+            "model": self.model,
+            "feature_columns": self.feature_columns,
+            "timestamp": timestamp
+        }
+
+        joblib.dump(model_data, model_path)
+        logger.info(f"MLモデルを保存しました: {model_path}")
+
+        return model_path
+
     def _validate_ml_indicators(self, ml_indicators: Dict[str, np.ndarray]) -> bool:
         """ML指標の妥当性を検証"""
         try:
@@ -381,6 +567,56 @@ class MLIndicatorService:
                     return False
 
             return True
+
+        except Exception as e:
+            logger.error(f"ML指標の妥当性検証エラー: {e}")
+            return False
+
+    def _try_load_latest_model(self) -> bool:
+        """
+        最新の学習済みモデルを自動読み込み
+
+        Returns:
+            読み込み成功フラグ
+        """
+        try:
+            # 複数のモデル保存場所を検索
+            search_paths = [
+                self.ml_generator.model_save_path,  # デフォルトパス: backend/ml_models/
+                "backend/models/ml_indicators/",    # 実際のモデル保存場所
+                "models/ml_indicators/",            # 相対パス
+                "ml_models/",                       # 別の可能性
+            ]
+
+            all_model_files = []
+
+            for model_dir in search_paths:
+                if os.path.exists(model_dir):
+                    # .pkl と .joblib ファイルを検索
+                    pkl_files = glob.glob(os.path.join(model_dir, "*.pkl"))
+                    joblib_files = glob.glob(os.path.join(model_dir, "*.joblib"))
+                    all_model_files.extend(pkl_files + joblib_files)
+
+            if not all_model_files:
+                logger.info("学習済みMLモデルが見つかりません。ML機能はデフォルト値で動作します。")
+                return False
+
+            # 最新のモデルファイルを取得（更新時刻でソート）
+            latest_model = max(all_model_files, key=os.path.getmtime)
+
+            # モデルを読み込み
+            success = self.ml_generator.load_model(latest_model)
+            if success:
+                self.is_model_loaded = True
+                logger.info(f"最新のMLモデルを自動読み込みしました: {os.path.basename(latest_model)}")
+                return True
+            else:
+                logger.warning(f"MLモデルの読み込みに失敗しました: {os.path.basename(latest_model)}")
+                return False
+
+        except Exception as e:
+            logger.warning(f"MLモデルの自動読み込み中にエラーが発生しました: {e}")
+            return False
 
         except Exception:
             return False

@@ -7,7 +7,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { InformationCircleIcon } from "@heroicons/react/24/outline";
+import { Info } from "lucide-react";
 import ActionButton from "@/components/common/ActionButton";
 
 import BacktestResultsTable from "@/components/backtest/BacktestResultsTable";
@@ -16,6 +16,7 @@ import OptimizationResults from "@/components/backtest/OptimizationResults";
 import OptimizationModal from "@/components/backtest/OptimizationModal";
 import AutoStrategyModal from "@/components/backtest/AutoStrategyModal";
 import AutoStrategyExplanationModal from "@/components/backtest/AutoStrategyExplanationModal";
+import MLTrainingModal from "@/components/MLTrainingModal";
 
 import { useBacktestResults } from "@/hooks/useBacktestResults";
 import { useBacktestOptimizations } from "@/hooks/useBacktestOptimizations";
@@ -62,6 +63,7 @@ export default function BacktestPage() {
   } = useAutoStrategy(loadResults);
 
   const [isExplanationModalOpen, setIsExplanationModalOpen] = useState(false);
+  const [isMLTrainingModalOpen, setIsMLTrainingModalOpen] = useState(false);
 
   // GA戦略生成実行
   const handleGAGeneration = async (config: any) => {
@@ -80,8 +82,15 @@ export default function BacktestPage() {
                 過去データを使用して戦略の有効性を検証します
               </p>
             </div>
-            {/* オートストラテジーへのリンクボタン */}
+            {/* アクションボタン */}
             <div className="flex items-center gap-3">
+              <ActionButton
+                onClick={() => setIsMLTrainingModalOpen(true)}
+                variant="primary"
+                icon={<span className="text-lg">🧠</span>}
+              >
+                MLトレーニング
+              </ActionButton>
               <ActionButton
                 onClick={openAutoStrategyModal}
                 variant="secondary"
@@ -89,7 +98,7 @@ export default function BacktestPage() {
               >
                 オートストラテジーで生成
               </ActionButton>
-              <InformationCircleIcon
+              <Info
                 className="h-6 w-6 text-gray-400 cursor-pointer hover:text-white"
                 onClick={() => setIsExplanationModalOpen(true)}
               />
@@ -196,6 +205,12 @@ export default function BacktestPage() {
         <AutoStrategyExplanationModal
           isOpen={isExplanationModalOpen}
           onClose={() => setIsExplanationModalOpen(false)}
+        />
+
+        {/* MLトレーニングモーダル */}
+        <MLTrainingModal
+          isOpen={isMLTrainingModalOpen}
+          onClose={() => setIsMLTrainingModalOpen(false)}
         />
 
         {/* 最適化ローディング状態 */}

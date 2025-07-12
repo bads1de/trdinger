@@ -21,6 +21,7 @@ from app.api.data_reset import router as data_reset_router
 from app.api.backtest import router as backtest_router
 from app.api.auto_strategy import router as auto_strategy_router
 from app.api.strategies import router as strategies_router
+from app.api.ml_training import router as ml_training_router
 
 
 def setup_logging():
@@ -91,6 +92,7 @@ def create_app() -> FastAPI:
     app.include_router(backtest_router)
     app.include_router(auto_strategy_router)
     app.include_router(strategies_router)
+    app.include_router(ml_training_router)
 
     # グローバル例外ハンドラ
     @app.exception_handler(Exception)

@@ -208,22 +208,43 @@ class MLSignalGenerator:
         """
         try:
             if not self.is_trained or self.model is None:
-                raise ValueError("モデルが学習されていません")
+                # モデル未学習時は警告レベルでログ出力（エラーレベルから変更）
+                logger.warning("モデルが学習されていません。デフォルト値を返します。")
+                return {"down": 0.33, "range": 0.34, "up": 0.33}  # 早期リターン
 
             if self.feature_columns is None:
-                raise ValueError("特徴量カラムが設定されていません")
-
-            # 特徴量を選択・整形
-            features_selected = features[self.feature_columns].fillna(0)
+                # 特徴量カラムが設定されていない場合、利用可能な全カラムを使用
+                logger.warning("特徴量カラムが設定されていません。利用可能な全カラムを使用します。")
+                features_selected = features.fillna(0)
+            else:
+                # 特徴量を選択・整形
+                available_columns = [col for col in self.feature_columns if col in features.columns]
+                if not available_columns:
+                    logger.warning("指定された特徴量カラムが見つかりません。利用可能な全カラムを使用します。")
+                    features_selected = features.fillna(0)
+                else:
+                    features_selected = features[available_columns].fillna(0)
             
             # 標準化
-            features_scaled = self.scaler.transform(features_selected)
+            if self.scaler is not None:
+                features_scaled = self.scaler.transform(features_selected)
+            else:
+                logger.warning("スケーラーが設定されていません。標準化をスキップします。")
+                features_scaled = features_selected.values
 
-            # 予測
-            predictions = self.model.predict(
-                features_scaled, 
-                num_iteration=self.model.best_iteration
-            )
+            # 予測（モデルタイプに応じて適切なメソッドを使用）
+            if hasattr(self.model, 'predict_proba'):
+                # 確率予測が可能な場合（RandomForest等）
+                predictions = self.model.predict_proba(features_scaled)
+            elif hasattr(self.model, 'predict') and hasattr(self.model, 'best_iteration'):
+                # LightGBM等の場合
+                predictions = self.model.predict(
+                    features_scaled,
+                    num_iteration=self.model.best_iteration
+                )
+            else:
+                # その他のモデルの場合
+                predictions = self.model.predict(features_scaled)
 
             # 最新の予測結果を取得
             if len(predictions.shape) == 2:
@@ -231,14 +252,27 @@ class MLSignalGenerator:
             else:
                 latest_pred = predictions
 
-            return {
-                "down": float(latest_pred[0]),
-                "range": float(latest_pred[1]),
-                "up": float(latest_pred[2])
-            }
+            # 予測結果を3クラス（down, range, up）の確率に変換
+            if len(latest_pred) == 3:
+                return {
+                    "down": float(latest_pred[0]),
+                    "range": float(latest_pred[1]),
+                    "up": float(latest_pred[2])
+                }
+            elif len(latest_pred) == 2:
+                # 2クラス分類の場合、rangeを中間値として設定
+                return {
+                    "down": float(latest_pred[0]),
+                    "range": 0.34,
+                    "up": float(latest_pred[1])
+                }
+            else:
+                # 予期しない形式の場合、デフォルト値を返す
+                logger.warning(f"予期しない予測結果の形式: {latest_pred.shape}")
+                return {"down": 0.33, "range": 0.34, "up": 0.33}
 
         except Exception as e:
-            logger.error(f"予測エラー: {e}")
+            logger.warning(f"予測エラー: {e}")
             return {"down": 0.33, "range": 0.34, "up": 0.33}  # デフォルト値
 
     def save_model(self, model_name: str = "ml_signal_model") -> str:
@@ -290,10 +324,25 @@ class MLSignalGenerator:
                 raise FileNotFoundError(f"モデルファイルが見つかりません: {model_path}")
 
             model_data = joblib.load(model_path)
-            
-            self.model = model_data['model']
-            self.scaler = model_data['scaler']
-            self.feature_columns = model_data['feature_columns']
+
+            # モデルデータの構造を確認して適切に読み込み
+            if isinstance(model_data, dict):
+                # 新しい形式（辞書形式）
+                if 'model' in model_data:
+                    self.model = model_data['model']
+                    self.scaler = model_data.get('scaler')
+                    self.feature_columns = model_data.get('feature_columns')
+                else:
+                    # 古い形式の可能性があるため、直接モデルとして扱う
+                    self.model = model_data
+                    self.scaler = None
+                    self.feature_columns = None
+            else:
+                # 直接モデルオブジェクトの場合
+                self.model = model_data
+                self.scaler = None
+                self.feature_columns = None
+
             self.is_trained = True
 
             logger.info(f"モデル読み込み完了: {model_path}")

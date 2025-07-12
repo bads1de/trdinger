@@ -7,7 +7,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { ChevronDownIcon, ChevronRightIcon } from "@heroicons/react/24/outline";
+import { ChevronDown, ChevronRight } from "lucide-react";
 
 interface StrategyGene {
   id?: string;
@@ -115,9 +115,9 @@ const StrategyGeneDisplay: React.FC<StrategyGeneDisplayProps> = ({
           className="flex items-center w-full text-left"
         >
           {expandedSections.indicators ? (
-            <ChevronDownIcon className="w-4 h-4 text-green-400 mr-2" />
+            <ChevronDown className="w-4 h-4 text-green-400 mr-2" />
           ) : (
-            <ChevronRightIcon className="w-4 h-4 text-green-400 mr-2" />
+            <ChevronRight className="w-4 h-4 text-green-400 mr-2" />
           )}
           <span className="text-green-300 text-sm font-mono uppercase tracking-wider">
             指標 ({strategyGene.indicators?.length || 0}個)
@@ -153,9 +153,9 @@ const StrategyGeneDisplay: React.FC<StrategyGeneDisplayProps> = ({
           className="flex items-center w-full text-left"
         >
           {expandedSections.conditions ? (
-            <ChevronDownIcon className="w-4 h-4 text-blue-400 mr-2" />
+            <ChevronDown className="w-4 h-4 text-blue-400 mr-2" />
           ) : (
-            <ChevronRightIcon className="w-4 h-4 text-blue-400 mr-2" />
+            <ChevronRight className="w-4 h-4 text-blue-400 mr-2" />
           )}
           <span className="text-blue-300 text-sm font-mono uppercase tracking-wider">
             取引条件
@@ -237,9 +237,9 @@ const StrategyGeneDisplay: React.FC<StrategyGeneDisplayProps> = ({
             className="flex items-center w-full text-left"
           >
             {expandedSections.tpsl ? (
-              <ChevronDownIcon className="w-4 h-4 text-pink-400 mr-2" />
+              <ChevronDown className="w-4 h-4 text-pink-400 mr-2" />
             ) : (
-              <ChevronRightIcon className="w-4 h-4 text-pink-400 mr-2" />
+              <ChevronRight className="w-4 h-4 text-pink-400 mr-2" />
             )}
             <span className="text-pink-300 text-sm font-mono uppercase tracking-wider">
               TP/SL設定
@@ -271,9 +271,9 @@ const StrategyGeneDisplay: React.FC<StrategyGeneDisplayProps> = ({
             className="flex items-center w-full text-left"
           >
             {expandedSections.position_sizing ? (
-              <ChevronDownIcon className="h-4 w-4 mr-2 text-emerald-400" />
+              <ChevronDown className="h-4 w-4 mr-2 text-emerald-400" />
             ) : (
-              <ChevronRightIcon className="h-4 w-4 mr-2 text-emerald-400" />
+              <ChevronRight className="h-4 w-4 mr-2 text-emerald-400" />
             )}
             <span className="text-emerald-300 font-medium">資金管理設定</span>
           </button>

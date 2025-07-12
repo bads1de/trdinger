@@ -139,3 +139,7 @@ Pipfile.lock
 .mypy_cache/
 .dmypy.json
 dmypy.json
+
+
+# Ignore ML models
+backend/models/ml_indicators/*.joblib
