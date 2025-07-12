@@ -198,26 +198,33 @@ class ModelManager:
     def list_models(self, model_name_pattern: str = "*") -> List[Dict[str, Any]]:
         """
         モデルファイルの一覧を取得
-        
+
         Args:
             model_name_pattern: モデル名のパターン
-        
+
         Returns:
             モデル情報のリスト
         """
         try:
             models = []
-            
+            seen_files = set()  # 重複を防ぐためのセット
+
             for search_path in ml_config.get_model_search_paths():
                 if not os.path.exists(search_path):
                     continue
-                
+
                 pattern_pkl = os.path.join(search_path, f"{model_name_pattern}*.pkl")
                 pattern_joblib = os.path.join(search_path, f"{model_name_pattern}*.joblib")
-                
+
                 for pattern in [pattern_pkl, pattern_joblib]:
                     for model_path in glob.glob(pattern):
                         try:
+                            # 絶対パスで正規化して重複チェック
+                            normalized_path = os.path.abspath(model_path)
+                            if normalized_path in seen_files:
+                                continue
+                            seen_files.add(normalized_path)
+
                             stat = os.stat(model_path)
                             models.append({
                                 'path': model_path,
@@ -228,10 +235,10 @@ class ModelManager:
                             })
                         except Exception as e:
                             logger.warning(f"モデルファイル情報取得エラー {model_path}: {e}")
-            
+
             # 更新時刻でソート（新しい順）
             models.sort(key=lambda x: x['modified_at'], reverse=True)
-            
+
             return models
             
         except Exception as e:
@@ -241,28 +248,34 @@ class ModelManager:
     def backup_model(self, model_path: str) -> Optional[str]:
         """
         モデルをバックアップ
-        
+
         Args:
             model_path: バックアップするモデルのパス
-        
+
         Returns:
             バックアップファイルのパス
         """
         try:
+            logger.info(f"モデルバックアップ開始: {model_path}")
+
             if not os.path.exists(model_path):
+                logger.error(f"バックアップ対象のモデルが見つかりません: {model_path}")
                 raise MLModelError(f"バックアップ対象のモデルが見つかりません: {model_path}")
-            
+
+            # バックアップディレクトリの確認・作成
+            os.makedirs(self.config.MODEL_BACKUP_PATH, exist_ok=True)
+
             # バックアップファイル名を生成
             model_name = os.path.basename(model_path)
             backup_name = f"backup_{datetime.now().strftime('%Y%m%d_%H%M%S')}_{model_name}"
             backup_path = os.path.join(self.config.MODEL_BACKUP_PATH, backup_name)
-            
+
             # ファイルをコピー
             shutil.copy2(model_path, backup_path)
-            
-            logger.info(f"モデルバックアップ完了: {backup_name}")
+
+            logger.info(f"モデルバックアップ完了: {backup_name} -> {backup_path}")
             return backup_path
-            
+
         except Exception as e:
             logger.error(f"モデルバックアップエラー: {e}")
             return None

@@ -260,13 +260,25 @@ class MLConfig:
     
     def get_model_search_paths(self) -> List[str]:
         """モデル検索パスのリストを取得"""
-        return [
+        paths = [
             self.model.MODEL_SAVE_PATH,
             "backend/models/",
             "models/",
-            "ml_models/",
-            "backend/ml_models/"
+            "backend/ml_models/",
+            "ml_models/"
         ]
+
+        # 重複を除去し、存在するパスのみを返す
+        unique_paths = []
+        seen_absolute_paths = set()
+
+        for path in paths:
+            abs_path = os.path.abspath(path)
+            if abs_path not in seen_absolute_paths:
+                unique_paths.append(path)
+                seen_absolute_paths.add(abs_path)
+
+        return unique_paths
 
 
 # グローバル設定インスタンス

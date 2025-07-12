@@ -74,29 +74,43 @@ async def get_models():
 async def delete_model(model_id: str):
     """
     指定されたモデルを削除
-    
+
     Args:
-        model_id: モデルID
+        model_id: モデルID（ファイル名）
     """
     try:
+        logger.info(f"モデル削除要求: {model_id}")
+
+        # モデルIDをデコード（URLエンコードされている場合）
+        from urllib.parse import unquote
+        decoded_model_id = unquote(model_id)
+
         # モデルファイルを検索
         models = model_manager.list_models("*")
         target_model = None
-        
+
         for model in models:
-            if model["name"] == model_id:
+            # ファイル名で比較（拡張子も含む）
+            if model["name"] == decoded_model_id or model["name"] == model_id:
                 target_model = model
                 break
-        
+
         if not target_model:
-            raise HTTPException(status_code=404, detail="モデルが見つかりません")
-        
+            logger.warning(f"モデルが見つかりません: {decoded_model_id}")
+            logger.info(f"利用可能なモデル: {[m['name'] for m in models]}")
+            raise HTTPException(status_code=404, detail=f"モデルが見つかりません: {decoded_model_id}")
+
+        # ファイルの存在確認
+        import os
+        if not os.path.exists(target_model["path"]):
+            logger.warning(f"モデルファイルが存在しません: {target_model['path']}")
+            raise HTTPException(status_code=404, detail="モデルファイルが存在しません")
+
         # バックアップしてから削除
         backup_path = model_manager.backup_model(target_model["path"])
         if backup_path:
-            import os
             os.remove(target_model["path"])
-            logger.info(f"モデル削除完了: {model_id}")
+            logger.info(f"モデル削除完了: {decoded_model_id} -> {target_model['path']}")
             return {"message": "モデルが削除されました", "backup_path": backup_path}
         else:
             raise HTTPException(status_code=500, detail="モデルのバックアップに失敗しました")
