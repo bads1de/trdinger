@@ -10,7 +10,7 @@ from typing import Dict, Any, Optional
 from fastapi import APIRouter, HTTPException, BackgroundTasks, Depends
 from pydantic import BaseModel, Field
 
-from app.core.services.auto_strategy.services.ml_indicator_service import MLIndicatorService
+from app.core.services.ml.ml_training_service import MLTrainingService
 from app.core.services.backtest_data_service import BacktestDataService
 from database.repositories.ohlcv_repository import OHLCVRepository
 from database.repositories.open_interest_repository import OpenInterestRepository
@@ -132,7 +132,7 @@ async def train_ml_model_background(config: MLTrainingConfig):
             "message": "MLサービスを初期化しています..."
         })
         
-        ml_service = MLIndicatorService()
+        ml_service = MLTrainingService()
         
         # モデルトレーニング
         training_status.update({
@@ -160,13 +160,9 @@ async def train_ml_model_background(config: MLTrainingConfig):
             funding_rate_data=funding_rate_data,
             open_interest_data=open_interest_data,
             save_model=config.save_model,
-            train_test_split=config.train_test_split,
-            cross_validation_folds=config.cross_validation_folds,
-            random_state=config.random_state,
-            early_stopping_rounds=config.early_stopping_rounds,
-            max_depth=config.max_depth,
-            n_estimators=config.n_estimators,
-            learning_rate=config.learning_rate
+            # 新しいMLTrainingServiceは設定から自動的にパラメータを取得
+            test_size=1-config.train_test_split,
+            random_state=config.random_state
         )
         
         # トレーニング完了

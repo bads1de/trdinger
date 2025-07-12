@@ -17,6 +17,10 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.metrics import classification_report, accuracy_score
 import lightgbm as lgb
 
+from ...config.ml_config import ml_config
+from ...utils.ml_error_handler import MLErrorHandler, MLModelError, safe_ml_operation
+from .model_manager import model_manager
+
 logger = logging.getLogger(__name__)
 
 
@@ -28,28 +32,29 @@ class MLSignalGenerator:
     未来の価格動向（上昇・下落・レンジ）を予測するモデルを構築・運用します。
     """
 
-    def __init__(self, model_save_path: str = "backend/ml_models/"):
+    def __init__(self, model_save_path: Optional[str] = None):
         """
         初期化
 
         Args:
-            model_save_path: モデル保存パス
+            model_save_path: モデル保存パス（オプション、設定から取得）
         """
-        self.model_save_path = model_save_path
+        self.config = ml_config
+        self.model_save_path = model_save_path or self.config.model.MODEL_SAVE_PATH
         self.model = None
         self.scaler = None
         self.feature_columns = None
         self.is_trained = False
-        
+
         # モデル保存ディレクトリを作成
-        os.makedirs(model_save_path, exist_ok=True)
+        os.makedirs(self.model_save_path, exist_ok=True)
 
     def prepare_training_data(
         self,
         df: pd.DataFrame,
-        prediction_horizon: int = 24,
-        threshold_up: float = 0.02,
-        threshold_down: float = -0.02
+        prediction_horizon: Optional[int] = None,
+        threshold_up: Optional[float] = None,
+        threshold_down: Optional[float] = None
     ) -> Tuple[pd.DataFrame, pd.Series]:
         """
         学習用データを準備
@@ -64,6 +69,13 @@ class MLSignalGenerator:
             特徴量DataFrame、ラベルSeries
         """
         try:
+            # 設定からデフォルト値を取得
+            if prediction_horizon is None:
+                prediction_horizon = self.config.training.PREDICTION_HORIZON
+            if threshold_up is None:
+                threshold_up = self.config.training.THRESHOLD_UP
+            if threshold_down is None:
+                threshold_down = self.config.training.THRESHOLD_DOWN
             # ターゲットカラムの存在チェック
             required_target_columns = ['target_up', 'target_down', 'target_range']
             if not all(col in df.columns for col in required_target_columns):
@@ -108,8 +120,8 @@ class MLSignalGenerator:
         self,
         features: pd.DataFrame,
         labels: pd.Series,
-        test_size: float = 0.2,
-        random_state: int = 42
+        test_size: Optional[float] = None,
+        random_state: Optional[int] = None
     ) -> Dict[str, Any]:
         """
         モデルを学習
@@ -124,6 +136,11 @@ class MLSignalGenerator:
             学習結果の辞書
         """
         try:
+            # 設定からデフォルト値を取得
+            if test_size is None:
+                test_size = 1 - self.config.training.TRAIN_TEST_SPLIT
+            if random_state is None:
+                random_state = self.config.training.RANDOM_STATE
             # 時系列分割（リークを防ぐため）
             split_index = int(len(features) * (1 - test_size))
             X_train = features.iloc[:split_index]
@@ -140,20 +157,9 @@ class MLSignalGenerator:
             train_data = lgb.Dataset(X_train_scaled, label=y_train)
             valid_data = lgb.Dataset(X_test_scaled, label=y_test, reference=train_data)
 
-            # LightGBMパラメータ
-            params = {
-                'objective': 'multiclass',
-                'num_class': 3,
-                'metric': 'multi_logloss',
-                'boosting_type': 'gbdt',
-                'num_leaves': 31,
-                'learning_rate': 0.05,
-                'feature_fraction': 0.9,
-                'bagging_fraction': 0.8,
-                'bagging_freq': 5,
-                'verbose': -1,
-                'random_state': random_state
-            }
+            # LightGBMパラメータ（設定から取得）
+            params = self.config.lightgbm.to_dict()
+            params['random_state'] = random_state
 
             # モデル学習
             self.model = lgb.train(
@@ -161,8 +167,11 @@ class MLSignalGenerator:
                 train_data,
                 valid_sets=[train_data, valid_data],
                 valid_names=['train', 'valid'],
-                num_boost_round=1000,
-                callbacks=[lgb.early_stopping(stopping_rounds=50), lgb.log_evaluation(0)]
+                num_boost_round=self.config.lightgbm.NUM_BOOST_ROUND,
+                callbacks=[
+                    lgb.early_stopping(stopping_rounds=self.config.lightgbm.EARLY_STOPPING_ROUNDS),
+                    lgb.log_evaluation(0)
+                ]
             )
 
             # 予測と評価
@@ -210,7 +219,7 @@ class MLSignalGenerator:
             if not self.is_trained or self.model is None:
                 # モデル未学習時は警告レベルでログ出力（エラーレベルから変更）
                 logger.warning("モデルが学習されていません。デフォルト値を返します。")
-                return {"down": 0.33, "range": 0.34, "up": 0.33}  # 早期リターン
+                return self.config.prediction.get_default_predictions()  # 早期リターン
 
             if self.feature_columns is None:
                 # 特徴量カラムが設定されていない場合、利用可能な全カラムを使用
@@ -269,11 +278,11 @@ class MLSignalGenerator:
             else:
                 # 予期しない形式の場合、デフォルト値を返す
                 logger.warning(f"予期しない予測結果の形式: {latest_pred.shape}")
-                return {"down": 0.33, "range": 0.34, "up": 0.33}
+                return self.config.prediction.get_default_predictions()
 
         except Exception as e:
             logger.warning(f"予測エラー: {e}")
-            return {"down": 0.33, "range": 0.34, "up": 0.33}  # デフォルト値
+            return self.config.prediction.get_default_predictions()  # デフォルト値
 
     def save_model(self, model_name: str = "ml_signal_model") -> str:
         """
@@ -287,27 +296,29 @@ class MLSignalGenerator:
         """
         try:
             if not self.is_trained:
-                raise ValueError("学習済みモデルがありません")
+                raise MLModelError("学習済みモデルがありません")
 
-            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            model_path = os.path.join(self.model_save_path, f"{model_name}_{timestamp}")
-
-            # モデルとメタデータを保存
-            model_data = {
-                'model': self.model,
-                'scaler': self.scaler,
-                'feature_columns': self.feature_columns,
-                'timestamp': timestamp
+            # ModelManagerを使用してモデルを保存
+            metadata = {
+                'model_type': 'LightGBM',
+                'feature_count': len(self.feature_columns) if self.feature_columns else 0,
+                'is_trained': self.is_trained
             }
 
-            joblib.dump(model_data, f"{model_path}.pkl")
-            logger.info(f"モデル保存完了: {model_path}.pkl")
+            model_path = model_manager.save_model(
+                model=self.model,
+                model_name=model_name,
+                metadata=metadata,
+                scaler=self.scaler,
+                feature_columns=self.feature_columns
+            )
 
-            return f"{model_path}.pkl"
+            logger.info(f"モデル保存完了: {model_path}")
+            return model_path
 
         except Exception as e:
             logger.error(f"モデル保存エラー: {e}")
-            raise
+            raise MLModelError(f"モデル保存に失敗しました: {e}")
 
     def load_model(self, model_path: str) -> bool:
         """
@@ -320,31 +331,21 @@ class MLSignalGenerator:
             読み込み成功フラグ
         """
         try:
-            if not os.path.exists(model_path):
-                raise FileNotFoundError(f"モデルファイルが見つかりません: {model_path}")
+            # ModelManagerを使用してモデルを読み込み
+            model_data = model_manager.load_model(model_path)
 
-            model_data = joblib.load(model_path)
+            if model_data is None:
+                return False
 
-            # モデルデータの構造を確認して適切に読み込み
-            if isinstance(model_data, dict):
-                # 新しい形式（辞書形式）
-                if 'model' in model_data:
-                    self.model = model_data['model']
-                    self.scaler = model_data.get('scaler')
-                    self.feature_columns = model_data.get('feature_columns')
-                else:
-                    # 古い形式の可能性があるため、直接モデルとして扱う
-                    self.model = model_data
-                    self.scaler = None
-                    self.feature_columns = None
-            else:
-                # 直接モデルオブジェクトの場合
-                self.model = model_data
-                self.scaler = None
-                self.feature_columns = None
+            # モデルデータから各要素を取得
+            self.model = model_data.get('model')
+            self.scaler = model_data.get('scaler')
+            self.feature_columns = model_data.get('feature_columns')
+
+            if self.model is None:
+                raise MLModelError("モデルデータにモデルが含まれていません")
 
             self.is_trained = True
-
             logger.info(f"モデル読み込み完了: {model_path}")
             return True
 

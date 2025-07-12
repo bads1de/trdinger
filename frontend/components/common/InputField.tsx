@@ -13,6 +13,7 @@ interface InputFieldProps {
   required?: boolean;
   placeholder?: string;
   className?: string;
+  disabled?: boolean;
 }
 
 export const InputField: React.FC<InputFieldProps> = ({
@@ -26,6 +27,7 @@ export const InputField: React.FC<InputFieldProps> = ({
   required = false,
   placeholder = "",
   className = "",
+  disabled = false,
 }) => (
   <div>
     <label className="block text-sm font-medium text-gray-300 mb-2">
@@ -47,6 +49,7 @@ export const InputField: React.FC<InputFieldProps> = ({
       step={step}
       required={required}
       placeholder={placeholder}
+      disabled={disabled}
     />
   </div>
 );

@@ -16,7 +16,6 @@ import OptimizationResults from "@/components/backtest/OptimizationResults";
 import OptimizationModal from "@/components/backtest/OptimizationModal";
 import AutoStrategyModal from "@/components/backtest/AutoStrategyModal";
 import AutoStrategyExplanationModal from "@/components/backtest/AutoStrategyExplanationModal";
-import MLTrainingModal from "@/components/MLTrainingModal";
 
 import { useBacktestResults } from "@/hooks/useBacktestResults";
 import { useBacktestOptimizations } from "@/hooks/useBacktestOptimizations";
@@ -63,7 +62,6 @@ export default function BacktestPage() {
   } = useAutoStrategy(loadResults);
 
   const [isExplanationModalOpen, setIsExplanationModalOpen] = useState(false);
-  const [isMLTrainingModalOpen, setIsMLTrainingModalOpen] = useState(false);
 
   // GA戦略生成実行
   const handleGAGeneration = async (config: any) => {
@@ -84,13 +82,6 @@ export default function BacktestPage() {
             </div>
             {/* アクションボタン */}
             <div className="flex items-center gap-3">
-              <ActionButton
-                onClick={() => setIsMLTrainingModalOpen(true)}
-                variant="primary"
-                icon={<span className="text-lg">🧠</span>}
-              >
-                MLトレーニング
-              </ActionButton>
               <ActionButton
                 onClick={openAutoStrategyModal}
                 variant="secondary"
@@ -205,12 +196,6 @@ export default function BacktestPage() {
         <AutoStrategyExplanationModal
           isOpen={isExplanationModalOpen}
           onClose={() => setIsExplanationModalOpen(false)}
-        />
-
-        {/* MLトレーニングモーダル */}
-        <MLTrainingModal
-          isOpen={isMLTrainingModalOpen}
-          onClose={() => setIsMLTrainingModalOpen(false)}
         />
 
         {/* 最適化ローディング状態 */}

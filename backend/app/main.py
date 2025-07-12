@@ -22,6 +22,7 @@ from app.api.backtest import router as backtest_router
 from app.api.auto_strategy import router as auto_strategy_router
 from app.api.strategies import router as strategies_router
 from app.api.ml_training import router as ml_training_router
+from app.api.ml_management import router as ml_management_router
 
 
 def setup_logging():
@@ -93,6 +94,7 @@ def create_app() -> FastAPI:
     app.include_router(auto_strategy_router)
     app.include_router(strategies_router)
     app.include_router(ml_training_router)
+    app.include_router(ml_management_router, prefix="/api/ml")
 
     # グローバル例外ハンドラ
     @app.exception_handler(Exception)

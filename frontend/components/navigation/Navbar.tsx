@@ -33,6 +33,12 @@ const navItems: NavItem[] = [
     description: "戦略の有効性を検証",
   },
   {
+    href: "/ml",
+    label: "ML Management",
+    icon: "🧠",
+    description: "機械学習モデル管理",
+  },
+  {
     href: "/data",
     label: "Data Management",
     icon: "📈",
