@@ -11,6 +11,7 @@ import numpy as np
 from typing import Dict, Any
 
 from ....utils.ml_error_handler import safe_ml_operation
+from ....utils.data_validation import DataValidator
 
 logger = logging.getLogger(__name__)
 
@@ -85,13 +86,20 @@ class PriceFeatureCalculator:
 
         # 価格位置（期間内での相対位置）
         period = lookback_periods.get("volatility", 20)
-        result_df['Price_Position'] = (
-            (result_df['Close'] - result_df['Close'].rolling(window=period).min()) /
-            (result_df['Close'].rolling(window=period).max() - result_df['Close'].rolling(window=period).min() + 1e-8)
+        close_min = result_df['Close'].rolling(window=period).min()
+        close_max = result_df['Close'].rolling(window=period).max()
+        result_df['Price_Position'] = DataValidator.safe_divide(
+            result_df['Close'] - close_min,
+            close_max - close_min,
+            default_value=0.5
         )
 
         # ギャップ（前日終値との差）
-        result_df['Gap'] = (result_df['Open'] - result_df['Close'].shift(1)) / result_df['Close'].shift(1)
+        result_df['Gap'] = DataValidator.safe_divide(
+            result_df['Open'] - result_df['Close'].shift(1),
+            result_df['Close'].shift(1),
+            default_value=0.0
+        )
 
         logger.debug("価格特徴量計算完了")
         return result_df
@@ -126,7 +134,11 @@ class PriceFeatureCalculator:
             
             # ボラティリティスパイク
             vol_ma = result_df['Realized_Volatility_20'].rolling(window=volatility_period).mean()
-            result_df['Volatility_Spike'] = result_df['Realized_Volatility_20'] / (vol_ma + 1e-8)
+            result_df['Volatility_Spike'] = DataValidator.safe_divide(
+                result_df['Realized_Volatility_20'],
+                vol_ma,
+                default_value=1.0
+            )
             
             # ATR（Average True Range）
             result_df['TR'] = np.maximum(
@@ -179,7 +191,11 @@ class PriceFeatureCalculator:
             result_df[f'Volume_MA_{volume_period}'] = result_df['Volume'].rolling(window=volume_period).mean()
             
             # 出来高比率
-            result_df['Volume_Ratio'] = result_df['Volume'] / (result_df[f'Volume_MA_{volume_period}'] + 1e-8)
+            result_df['Volume_Ratio'] = DataValidator.safe_divide(
+                result_df['Volume'],
+                result_df[f'Volume_MA_{volume_period}'],
+                default_value=1.0
+            )
             
             # 価格・出来高トレンド
             price_change = result_df['Close'].pct_change()
@@ -188,22 +204,28 @@ class PriceFeatureCalculator:
             
             # 出来高加重平均価格（VWAP）
             typical_price = (result_df['High'] + result_df['Low'] + result_df['Close']) / 3
-            result_df['VWAP'] = (
-                (typical_price * result_df['Volume']).rolling(window=volume_period).sum() /
-                result_df['Volume'].rolling(window=volume_period).sum()
+            result_df['VWAP'] = DataValidator.safe_divide(
+                (typical_price * result_df['Volume']).rolling(window=volume_period).sum(),
+                result_df['Volume'].rolling(window=volume_period).sum(),
+                default_value=typical_price
             )
-            
+
             # VWAPからの乖離
-            result_df['VWAP_Deviation'] = (result_df['Close'] - result_df['VWAP']) / result_df['VWAP']
+            result_df['VWAP_Deviation'] = DataValidator.safe_divide(
+                result_df['Close'] - result_df['VWAP'],
+                result_df['VWAP'],
+                default_value=0.0
+            )
             
             # 出来高スパイク
             vol_threshold = result_df['Volume'].rolling(window=volume_period).quantile(0.9)
             result_df['Volume_Spike'] = (result_df['Volume'] > vol_threshold).astype(int)
             
             # 出来高トレンド
-            result_df['Volume_Trend'] = (
-                result_df['Volume'].rolling(window=5).mean() / 
-                result_df['Volume'].rolling(window=volume_period).mean()
+            result_df['Volume_Trend'] = DataValidator.safe_divide(
+                result_df['Volume'].rolling(window=5).mean(),
+                result_df['Volume'].rolling(window=volume_period).mean(),
+                default_value=1.0
             )
             
             logger.debug("出来高特徴量計算完了")

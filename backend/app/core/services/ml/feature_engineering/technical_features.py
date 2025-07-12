@@ -10,6 +10,8 @@ import pandas as pd
 import numpy as np
 from typing import Dict, Any
 
+from ....utils.data_validation import DataValidator
+
 logger = logging.getLogger(__name__)
 
 
@@ -49,15 +51,21 @@ class TechnicalFeatureCalculator:
             ma_short = result_df['Close'].rolling(window=short_ma).mean()
             ma_long = result_df['Close'].rolling(window=long_ma).mean()
             
-            result_df['Trend_Strength'] = (ma_short - ma_long) / ma_long
+            result_df['Trend_Strength'] = DataValidator.safe_divide(
+                ma_short - ma_long,
+                ma_long,
+                default_value=0.0
+            )
             
             # レンジ相場判定
             volatility_period = lookback_periods.get("volatility", 20)
             high_20 = result_df['High'].rolling(window=volatility_period).max()
             low_20 = result_df['Low'].rolling(window=volatility_period).min()
             
-            result_df['Range_Bound_Ratio'] = (
-                (result_df['Close'] - low_20) / (high_20 - low_20 + 1e-8)
+            result_df['Range_Bound_Ratio'] = DataValidator.safe_divide(
+                result_df['Close'] - low_20,
+                high_20 - low_20,
+                default_value=0.5
             )
             
             # ブレイクアウト強度
@@ -108,7 +116,7 @@ class TechnicalFeatureCalculator:
             delta = result_df['Close'].diff()
             gain = (delta.where(delta > 0, 0)).rolling(window=14).mean()
             loss = (-delta.where(delta < 0, 0)).rolling(window=14).mean()
-            rs = gain / (loss + 1e-8)
+            rs = DataValidator.safe_divide(gain, loss, default_value=1.0)
             result_df['RSI'] = 100 - (100 / (1 + rs))
             
             # MACD
@@ -123,8 +131,10 @@ class TechnicalFeatureCalculator:
             low_14 = result_df['Low'].rolling(window=period).min()
             high_14 = result_df['High'].rolling(window=period).max()
             
-            result_df['Stochastic_K'] = 100 * (
-                (result_df['Close'] - low_14) / (high_14 - low_14 + 1e-8)
+            result_df['Stochastic_K'] = 100 * DataValidator.safe_divide(
+                result_df['Close'] - low_14,
+                high_14 - low_14,
+                default_value=0.5
             )
             result_df['Stochastic_D'] = result_df['Stochastic_K'].rolling(window=3).mean()
             

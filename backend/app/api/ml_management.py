@@ -400,6 +400,17 @@ async def run_training_task(config_data: Dict[str, Any]):
         config_data: トレーニング設定
     """
     try:
+        # 設定データから必要な情報を取得
+        symbol = config_data.get("symbol", "BTC/USDT:USDT")
+        timeframe = config_data.get("timeframe", "1h")
+        start_date = datetime.fromisoformat(config_data.get("start_date"))
+        end_date = datetime.fromisoformat(config_data.get("end_date"))
+        save_model = config_data.get("save_model", True)
+        train_test_split = config_data.get("train_test_split", 0.8)
+        random_state = config_data.get("random_state", 42)
+
+        logger.info(f"トレーニング設定: symbol={symbol}, timeframe={timeframe}, period={start_date} to {end_date}")
+
         # トレーニング開始
         training_status.update({
             "is_training": True,
@@ -460,17 +471,6 @@ async def run_training_task(config_data: Dict[str, Any]):
             "message": "トレーニングデータを読み込んでいます..."
         })
 
-        # 設定データから必要な情報を取得
-        symbol = config_data.get("symbol", "BTC/USDT:USDT")
-        timeframe = config_data.get("timeframe", "1h")
-        start_date = datetime.fromisoformat(config_data.get("start_date"))
-        end_date = datetime.fromisoformat(config_data.get("end_date"))
-        save_model = config_data.get("save_model", True)
-        train_test_split = config_data.get("train_test_split", 0.8)
-        random_state = config_data.get("random_state", 42)
-
-        logger.info(f"トレーニング設定: symbol={symbol}, timeframe={timeframe}, period={start_date} to {end_date}")
-
         training_data = data_service.get_data_for_backtest(
             symbol=symbol,
             timeframe=timeframe,
@@ -485,12 +485,12 @@ async def run_training_task(config_data: Dict[str, Any]):
         logger.info(f"取得データのカラム: {list(training_data.columns)}")
 
         # データの詳細をログ出力
-        if 'FundingRate' in training_data.columns:
-            non_na_fr = training_data['FundingRate'].notna().sum()
+        if 'funding_rate' in training_data.columns:
+            non_na_fr = training_data['funding_rate'].notna().sum()
             logger.info(f"ファンディングレートデータ: {non_na_fr}/{len(training_data)} 行に値あり")
 
-        if 'OpenInterest' in training_data.columns:
-            non_na_oi = training_data['OpenInterest'].notna().sum()
+        if 'open_interest' in training_data.columns:
+            non_na_oi = training_data['open_interest'].notna().sum()
             logger.info(f"オープンインタレストデータ: {non_na_oi}/{len(training_data)} 行に値あり")
 
         # 追加データ取得（オプション）
@@ -505,34 +505,34 @@ async def run_training_task(config_data: Dict[str, Any]):
         open_interest_data = None
 
         # ファンディングレートデータの確認
-        if 'FundingRate' in training_data.columns:
+        if 'funding_rate' in training_data.columns:
             # NAでない値の数を確認
-            valid_fr_count = training_data['FundingRate'].notna().sum()
-            zero_fr_count = (training_data['FundingRate'] == 0.0).sum()
-            logger.info(f"FundingRateカラム: 有効値={valid_fr_count}, ゼロ値={zero_fr_count}, 総行数={len(training_data)}")
+            valid_fr_count = training_data['funding_rate'].notna().sum()
+            zero_fr_count = (training_data['funding_rate'] == 0.0).sum()
+            logger.info(f"funding_rateカラム: 有効値={valid_fr_count}, ゼロ値={zero_fr_count}, 総行数={len(training_data)}")
 
             if valid_fr_count > 0:
-                funding_rate_data = training_data[['FundingRate']].copy()
+                funding_rate_data = training_data[['funding_rate']].copy()
                 logger.info("ファンディングレートデータを使用します")
             else:
                 logger.info("ファンディングレートデータは全てNA/NULLです（OHLCVデータのみでトレーニングを実行）")
         else:
-            logger.info("FundingRateカラムが存在しません")
+            logger.info("funding_rateカラムが存在しません")
 
         # オープンインタレストデータの確認
-        if 'OpenInterest' in training_data.columns:
+        if 'open_interest' in training_data.columns:
             # NAでない値の数を確認
-            valid_oi_count = training_data['OpenInterest'].notna().sum()
-            zero_oi_count = (training_data['OpenInterest'] == 0.0).sum()
-            logger.info(f"OpenInterestカラム: 有効値={valid_oi_count}, ゼロ値={zero_oi_count}, 総行数={len(training_data)}")
+            valid_oi_count = training_data['open_interest'].notna().sum()
+            zero_oi_count = (training_data['open_interest'] == 0.0).sum()
+            logger.info(f"open_interestカラム: 有効値={valid_oi_count}, ゼロ値={zero_oi_count}, 総行数={len(training_data)}")
 
             if valid_oi_count > 0:
-                open_interest_data = training_data[['OpenInterest']].copy()
+                open_interest_data = training_data[['open_interest']].copy()
                 logger.info("建玉残高データを使用します")
             else:
                 logger.info("建玉残高データは全てNA/NULLです（OHLCVデータのみでトレーニングを実行）")
         else:
-            logger.info("OpenInterestカラムが存在しません")
+            logger.info("open_interestカラムが存在しません")
 
         # OHLCVデータのみを抽出
         ohlcv_data = training_data[['Open', 'High', 'Low', 'Close', 'Volume']].copy()

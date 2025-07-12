@@ -16,6 +16,7 @@ from datetime import datetime, timedelta
 from .price_features import PriceFeatureCalculator
 from .market_data_features import MarketDataFeatureCalculator
 from .technical_features import TechnicalFeatureCalculator
+from ....utils.data_validation import DataValidator
 
 logger = logging.getLogger(__name__)
 
@@ -128,6 +129,15 @@ class FeatureEngineeringService:
 
             # パターン認識特徴量
             result_df = self.technical_calculator.calculate_pattern_features(result_df, lookback_periods)
+
+            # データバリデーションとクリーンアップ
+            feature_columns = [col for col in result_df.columns if col not in ['Open', 'High', 'Low', 'Close', 'Volume']]
+            result_df = DataValidator.validate_and_clean(
+                result_df,
+                column_names=feature_columns,
+                fill_method="median",
+                log_name="特徴量データ"
+            )
 
             logger.info(f"特徴量計算完了: {len(result_df.columns)}個の特徴量を生成")
 

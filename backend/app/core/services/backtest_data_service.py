@@ -57,7 +57,7 @@ class BacktestDataService:
             end_date: 終了日時
 
         Returns:
-            backtesting.py用のDataFrame（Open, High, Low, Close, Volume, OpenInterest, FundingRateカラム）
+            backtesting.py用のDataFrame（Open, High, Low, Close, Volume, open_interest, funding_rateカラム）
 
         Raises:
             ValueError: データが見つからない場合
@@ -144,20 +144,20 @@ class BacktestDataService:
                         right_index=True,
                         direction="backward",
                     )
-                    logger.info(f"OIデータマージ完了: {df['OpenInterest'].notna().sum()}/{len(df)}行に値あり")
+                    logger.info(f"OIデータマージ完了: {df['open_interest'].notna().sum()}/{len(df)}行に値あり")
                 else:
                     logger.warning(
                         f"シンボル {symbol} のOpen Interestデータが見つかりませんでした。"
                     )
-                    df["OpenInterest"] = pd.NA  # プレースホルダーとしてNAを設定
+                    df["open_interest"] = pd.NA  # プレースホルダーとしてNAを設定
             except Exception as e:
                 logger.warning(
                     f"Open Interestデータのマージ中にエラーが発生しました: {e}"
                 )
-                df["OpenInterest"] = pd.NA
+                df["open_interest"] = pd.NA
         else:
             logger.info("OIリポジトリが設定されていません")
-            df["OpenInterest"] = pd.NA
+            df["open_interest"] = pd.NA
 
         # Funding Rateデータをマージ
         if self.fr_repo:
@@ -176,26 +176,26 @@ class BacktestDataService:
                         right_index=True,
                         direction="backward",
                     )
-                    logger.info(f"FRデータマージ完了: {df['FundingRate'].notna().sum()}/{len(df)}行に値あり")
+                    logger.info(f"FRデータマージ完了: {df['funding_rate'].notna().sum()}/{len(df)}行に値あり")
                 else:
                     logger.warning(
                         f"シンボル {symbol} のFunding Rateデータが見つかりませんでした。"
                     )
-                    df["FundingRate"] = pd.NA
+                    df["funding_rate"] = pd.NA
             except Exception as e:
                 logger.warning(
                     f"Funding Rateデータのマージ中にエラーが発生しました: {e}"
                 )
-                df["FundingRate"] = pd.NA
+                df["funding_rate"] = pd.NA
         else:
             logger.info("FRリポジトリが設定されていません")
-            df["FundingRate"] = pd.NA
+            df["funding_rate"] = pd.NA
 
         # 欠損値を前方データで埋め、それでも残る場合は0で埋める
-        if "OpenInterest" in df.columns:
-            df["OpenInterest"] = df["OpenInterest"].ffill().fillna(0.0)
-        if "FundingRate" in df.columns:
-            df["FundingRate"] = df["FundingRate"].ffill().fillna(0.0)
+        if "open_interest" in df.columns:
+            df["open_interest"] = df["open_interest"].ffill().fillna(0.0)
+        if "funding_rate" in df.columns:
+            df["funding_rate"] = df["funding_rate"].ffill().fillna(0.0)
 
         return df
 
@@ -209,7 +209,7 @@ class BacktestDataService:
         Returns:
             Open InterestのDataFrame
         """
-        data = {"OpenInterest": [r.open_interest_value for r in oi_data]}
+        data = {"open_interest": [r.open_interest_value for r in oi_data]}
         df = pd.DataFrame(data)
         df.index = pd.DatetimeIndex([r.data_timestamp for r in oi_data])
         return df
@@ -224,7 +224,7 @@ class BacktestDataService:
         Returns:
             Funding RateのDataFrame
         """
-        data = {"FundingRate": [r.funding_rate for r in fr_data]}
+        data = {"funding_rate": [r.funding_rate for r in fr_data]}
         df = pd.DataFrame(data)
         df.index = pd.DatetimeIndex([r.funding_timestamp for r in fr_data])
         return df
@@ -271,8 +271,8 @@ class BacktestDataService:
             "Low",
             "Close",
             "Volume",
-            "OpenInterest",
-            "FundingRate",
+            "open_interest",
+            "funding_rate",
         ]
         self._perform_common_validation(df, required_columns)
 
@@ -283,8 +283,8 @@ class BacktestDataService:
             raise ValueError("OHLCVデータにNaN値が含まれています。")
 
         # OI/FRのNaNは既にffill/fillna(0.0)で処理されているはずだが、念のためログ出力
-        if "OpenInterest" in df.columns and "FundingRate" in df.columns:
-            if df[["OpenInterest", "FundingRate"]].isnull().any().any():
+        if "open_interest" in df.columns and "funding_rate" in df.columns:
+            if df[["open_interest", "funding_rate"]].isnull().any().any():
                 logger.warning("OI/FRデータに予期せぬNaN値が残っています。")
 
     def get_data_summary(self, df: pd.DataFrame) -> dict:
@@ -318,22 +318,22 @@ class BacktestDataService:
         }
 
         # OI/FRデータが含まれている場合は追加情報を含める
-        if "OpenInterest" in df.columns:
+        if "open_interest" in df.columns:
             summary["open_interest_stats"] = {
-                "average": float(df["OpenInterest"].mean()),
-                "min": float(df["OpenInterest"].min()),
-                "max": float(df["OpenInterest"].max()),
-                "first": float(df["OpenInterest"].iloc[0]),
-                "last": float(df["OpenInterest"].iloc[-1]),
+                "average": float(df["open_interest"].mean()),
+                "min": float(df["open_interest"].min()),
+                "max": float(df["open_interest"].max()),
+                "first": float(df["open_interest"].iloc[0]),
+                "last": float(df["open_interest"].iloc[-1]),
             }
 
-        if "FundingRate" in df.columns:
+        if "funding_rate" in df.columns:
             summary["funding_rate_stats"] = {
-                "average": float(df["FundingRate"].mean()),
-                "min": float(df["FundingRate"].min()),
-                "max": float(df["FundingRate"].max()),
-                "first": float(df["FundingRate"].iloc[0]),
-                "last": float(df["FundingRate"].iloc[-1]),
+                "average": float(df["funding_rate"].mean()),
+                "min": float(df["funding_rate"].min()),
+                "max": float(df["funding_rate"].max()),
+                "first": float(df["funding_rate"].iloc[0]),
+                "last": float(df["funding_rate"].iloc[-1]),
             }
 
         return summary
