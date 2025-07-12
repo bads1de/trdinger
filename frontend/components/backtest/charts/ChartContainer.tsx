@@ -8,6 +8,8 @@
 
 import React from "react";
 import { ChartContainerProps } from "@/types/backtest";
+import LoadingSpinner from "@/components/common/LoadingSpinner";
+import ErrorDisplay from "@/components/common/ErrorDisplay";
 
 /**
  * ローディングスケルトンコンポーネント
@@ -20,7 +22,7 @@ const ChartSkeleton: React.FC<{ height?: number }> = ({ height = 400 }) => (
       className="bg-secondary-800 rounded-lg flex items-center justify-center"
       style={{ height: `${height}px` }}
     >
-      <div className="text-secondary-400 text-sm">チャートを読み込み中...</div>
+      <LoadingSpinner text="チャートを読み込み中..." />
     </div>
   </div>
 );
@@ -32,31 +34,11 @@ const ChartError: React.FC<{ error: string; height?: number }> = ({
   error,
   height = 400,
 }) => (
-  <div className="text-center">
-    <div className="h-6 text-red-400 font-semibold mb-2">
-      エラーが発生しました
-    </div>
-    <div
-      className="bg-red-900/20 border border-red-500/30 rounded-lg flex items-center justify-center"
-      style={{ height: `${height}px` }}
-    >
-      <div className="text-red-400 text-sm px-4">
-        <svg
-          className="w-8 h-8 mx-auto mb-2"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={2}
-            d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.732-.833-2.5 0L4.268 19.5c-.77.833.192 2.5 1.732 2.5z"
-          />
-        </svg>
-        <div>{error}</div>
-      </div>
-    </div>
+  <div
+    className="flex items-center justify-center"
+    style={{ height: `${height}px` }}
+  >
+    <ErrorDisplay message={error} />
   </div>
 );
 

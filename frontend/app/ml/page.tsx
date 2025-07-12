@@ -2,9 +2,10 @@
 
 import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Brain, Database, TrendingUp, Settings } from "lucide-react";
 import TabButton from "@/components/common/TabButton";
+import ErrorDisplay from "@/components/common/ErrorDisplay";
+import LoadingSpinner from "@/components/common/LoadingSpinner";
 
 import MLModelList from "@/components/ml/MLModelList";
 import MLTraining from "@/components/ml/MLTraining";
@@ -41,10 +42,7 @@ export default function MLManagementPage() {
   if (isLoading) {
     return (
       <div className="container mx-auto p-6">
-        <div className="flex items-center justify-center h-64">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-          <span className="ml-2 text-muted-foreground">読み込み中...</span>
-        </div>
+        <LoadingSpinner text="ページの初期データを読み込んでいます..." size="lg" />
       </div>
     );
   }
@@ -52,9 +50,7 @@ export default function MLManagementPage() {
   if (error) {
     return (
       <div className="container mx-auto p-6">
-        <Alert variant="destructive">
-          <AlertDescription>{error}</AlertDescription>
-        </Alert>
+        <ErrorDisplay message={error} />
       </div>
     );
   }

@@ -4,7 +4,8 @@ import React, { useState, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import ActionButton from "@/components/common/ActionButton";
 import { Badge } from "@/components/ui/badge";
-import { Alert, AlertDescription } from "@/components/ui/alert";
+import ErrorDisplay from "@/components/common/ErrorDisplay";
+import LoadingSpinner from "@/components/common/LoadingSpinner";
 import {
   Download,
   Trash2,
@@ -145,20 +146,11 @@ export default function MLModelList({
   };
 
   if (isLoading) {
-    return (
-      <div className="flex items-center justify-center p-8">
-        <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
-        <span className="ml-2 text-muted-foreground">読み込み中...</span>
-      </div>
-    );
+    return <LoadingSpinner text="モデル一覧を読み込んでいます..." />;
   }
 
   if (error) {
-    return (
-      <Alert variant="destructive">
-        <AlertDescription>{error}</AlertDescription>
-      </Alert>
-    );
+    return <ErrorDisplay message={error} />;
   }
 
   if (models.length === 0) {

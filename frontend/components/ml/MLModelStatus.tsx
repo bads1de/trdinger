@@ -3,10 +3,11 @@
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { 
-  Brain, 
-  TrendingUp, 
+import ErrorDisplay from '@/components/common/ErrorDisplay';
+import LoadingSpinner from '@/components/common/LoadingSpinner';
+import {
+  Brain,
+  TrendingUp,
   Database, 
   Clock, 
   CheckCircle, 
@@ -96,20 +97,11 @@ export default function MLModelStatus() {
   };
 
   if (isLoading) {
-    return (
-      <div className="flex items-center justify-center p-8">
-        <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
-        <span className="ml-2 text-gray-600">読み込み中...</span>
-      </div>
-    );
+    return <LoadingSpinner text="モデル状態を読み込んでいます..." />;
   }
 
   if (error) {
-    return (
-      <Alert variant="destructive">
-        <AlertDescription>{error}</AlertDescription>
-      </Alert>
-    );
+    return <ErrorDisplay message={error} />;
   }
 
   if (!modelStatus) {

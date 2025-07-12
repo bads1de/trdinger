@@ -6,6 +6,7 @@ import ActionButton from "@/components/common/ActionButton";
 import { InputField } from "@/components/common/InputField";
 import { SelectField } from "@/components/common/SelectField";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import ErrorDisplay from "@/components/common/ErrorDisplay";
 import { Progress } from "@/components/ui/progress";
 import {
   Play,
@@ -175,11 +176,7 @@ export default function MLTraining() {
   return (
     <div className="space-y-6">
       {/* エラー表示 */}
-      {error && (
-        <Alert variant="destructive">
-          <AlertDescription>{error}</AlertDescription>
-        </Alert>
-      )}
+      {error && <ErrorDisplay message={error} />}
 
       {/* トレーニング設定 */}
       <Card>

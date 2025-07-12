@@ -4,8 +4,9 @@ import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import ActionButton from "@/components/common/ActionButton";
 import { InputField } from "@/components/common/InputField";
-import { Switch } from "@/components/ui/switch";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import ErrorDisplay from "@/components/common/ErrorDisplay";
+import LoadingSpinner from "@/components/common/LoadingSpinner";
 import {
   Settings,
   Save,
@@ -14,7 +15,6 @@ import {
   Clock,
   Brain,
   Trash2,
-  Download,
 } from "lucide-react";
 
 interface MLConfig {
@@ -177,20 +177,11 @@ export default function MLSettings() {
   };
 
   if (isLoading) {
-    return (
-      <div className="flex items-center justify-center p-8">
-        <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
-        <span className="ml-2 text-gray-600">読み込み中...</span>
-      </div>
-    );
+    return <LoadingSpinner text="設定を読み込んでいます..." />;
   }
 
   if (error) {
-    return (
-      <Alert variant="destructive">
-        <AlertDescription>{error}</AlertDescription>
-      </Alert>
-    );
+    return <ErrorDisplay message={error} />;
   }
 
   if (!config) {

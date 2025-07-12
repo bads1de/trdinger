@@ -8,6 +8,7 @@
 
 import React from "react";
 import { BacktestResult } from "@/types/backtest";
+import LoadingSpinner from "@/components/common/LoadingSpinner";
 
 interface BacktestResultsTableProps {
   results: BacktestResult[];
@@ -59,9 +60,8 @@ export default function BacktestResultsTable({
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-12">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
-        <span className="ml-2 text-secondary-400">読み込み中...</span>
+      <div className="py-12">
+        <LoadingSpinner text="バックテスト結果を読み込んでいます..." />
       </div>
     );
   }
