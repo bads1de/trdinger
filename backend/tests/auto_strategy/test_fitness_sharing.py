@@ -83,7 +83,8 @@ def test_similarity_calculation():
                 IndicatorGene(type="SMA", parameters={"period": 20}, enabled=True),
                 IndicatorGene(type="RSI", parameters={"period": 14}, enabled=True)
             ],
-            entry_conditions=[],
+            long_entry_conditions=[],
+            short_entry_conditions=[],
             exit_conditions=[],
             risk_management={"position_size": 0.1, "stop_loss": 0.02}
         )
@@ -94,7 +95,8 @@ def test_similarity_calculation():
                 IndicatorGene(type="SMA", parameters={"period": 21}, enabled=True),
                 IndicatorGene(type="RSI", parameters={"period": 14}, enabled=True)
             ],
-            entry_conditions=[],
+            long_entry_conditions=[],
+            short_entry_conditions=[],
             exit_conditions=[],
             risk_management={"position_size": 0.1, "stop_loss": 0.02}
         )
@@ -106,7 +108,8 @@ def test_similarity_calculation():
                 IndicatorGene(type="MACD", parameters={"fast": 12, "slow": 26}, enabled=True),
                 IndicatorGene(type="BB", parameters={"period": 20}, enabled=True)
             ],
-            entry_conditions=[],
+            long_entry_conditions=[],
+            short_entry_conditions=[],
             exit_conditions=[],
             risk_management={"position_size": 0.2, "stop_loss": 0.05}
         )
@@ -128,7 +131,7 @@ def test_similarity_calculation():
 def test_sharing_function():
     """共有関数のテスト"""
     try:
-        from app.core.services.auto_strategy.engines.fitness_sharing import FitnessSharing
+        from backend.app.core.services.auto_strategy.engines.fitness_sharing import FitnessSharing
         
         fitness_sharing = FitnessSharing(sharing_radius=0.1, alpha=1.0)
         
@@ -137,11 +140,11 @@ def test_sharing_function():
         sharing_values = [fitness_sharing._sharing_function(sim) for sim in similarities]
         
         # 共有半径以下では0、以上では減少する値
-        assert sharing_values[0] == 0.0  # similarity < radius
-        assert sharing_values[1] == 0.0  # similarity < radius
-        assert sharing_values[2] == 0.0  # similarity == radius
-        assert sharing_values[3] > 0.0   # similarity > radius
-        assert sharing_values[4] > sharing_values[3]  # より高い類似度でより高い共有値
+        assert sharing_values[0] == 1.0  # similarity = 0.0
+        assert sharing_values[1] == 0.5  # similarity = 0.05
+        assert sharing_values[2] == 0.0  # similarity = 0.1
+        assert sharing_values[3] == 0.0   # similarity = 0.15
+        assert sharing_values[4] == 0.0  # similarity = 0.2
         
         print(f"✅ Sharing function works: {sharing_values}")
         

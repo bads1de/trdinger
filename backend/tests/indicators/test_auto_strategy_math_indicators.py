@@ -10,12 +10,13 @@ import sys
 import os
 import logging
 
-# プロジェクトルートをパスに追加
-sys.path.append(os.path.join(os.path.dirname(__file__), 'backend'))
+# プロジェクトのルートディレクトリをsys.pathに追加
+project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', '..'))
+sys.path.insert(0, project_root)
 
-from app.core.services.auto_strategy.models.gene_indicator import IndicatorGene
-from app.core.services.auto_strategy.calculators.indicator_calculator import IndicatorCalculator
-from app.core.services.indicators.indicator_orchestrator import TechnicalIndicatorService
+from backend.app.core.services.auto_strategy.models.gene_strategy import IndicatorGene
+from backend.app.core.services.auto_strategy.calculators.indicator_calculator import IndicatorCalculator
+from backend.app.core.services.indicators.indicator_orchestrator import TechnicalIndicatorService
 import pandas as pd
 import numpy as np
 

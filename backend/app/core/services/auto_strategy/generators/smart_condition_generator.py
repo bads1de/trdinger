@@ -1,11 +1,3 @@
-"""
-SmartConditionGenerator
-
-責務を集約したロング・ショート条件生成器
-計画書に基づいて、異なる指標の組み合わせ戦略、時間軸分離戦略、
-複合条件戦略、指標特性活用戦略を実装
-"""
-
 import logging
 import random
 from typing import List, Tuple
@@ -506,10 +498,27 @@ class SmartConditionGenerator:
         try:
             # 指標の種類を分析
             indicator_types = set()
+            ml_indicators = []
+            technical_indicators = []
+
             for indicator in indicators:
                 if indicator.enabled and indicator.type in INDICATOR_CHARACTERISTICS:
                     char = INDICATOR_CHARACTERISTICS[indicator.type]
                     indicator_types.add(char["type"])
+
+                    # ML指標とテクニカル指標を分類
+                    if char.get("ml_prediction", False):
+                        ml_indicators.append(indicator)
+                    else:
+                        technical_indicators.append(indicator)
+
+            # ML指標のみの場合は指標特性活用戦略（ML専用ロジック）
+            if ml_indicators and not technical_indicators:
+                return StrategyType.INDICATOR_CHARACTERISTICS
+
+            # ML指標とテクニカル指標の混合の場合は異なる指標の組み合わせ戦略
+            if ml_indicators and technical_indicators:
+                return StrategyType.DIFFERENT_INDICATORS
 
             # 複数の指標タイプがある場合は異なる指標の組み合わせ戦略
             if len(indicator_types) >= 2:
@@ -587,17 +596,39 @@ class SmartConditionGenerator:
             long_conditions = []
             short_conditions = []
 
-            # ロング条件：トレンド系指標
-            if indicators_by_type[IndicatorType.TREND]:
-                trend_indicator = random.choice(indicators_by_type[IndicatorType.TREND])
-                long_conditions.extend(self._create_trend_long_conditions(trend_indicator))
+            # ML指標とテクニカル指標の混合戦略
+            ml_indicators = [ind for ind in indicators if ind.enabled and ind.type.startswith("ML_")]
+            technical_indicators = [ind for ind in indicators if ind.enabled and not ind.type.startswith("ML_")]
 
-            # ロング条件：モメンタム系指標
-            if indicators_by_type[IndicatorType.MOMENTUM]:
-                momentum_indicator = random.choice(indicators_by_type[IndicatorType.MOMENTUM])
-                long_conditions.extend(self._create_momentum_long_conditions(momentum_indicator))
+            # ロング条件：ML指標 + テクニカル指標の組み合わせ
+            if ml_indicators and technical_indicators:
+                # ML予測とテクニカル指標の合意による高信頼度条件
+                ml_long_conditions = self._create_ml_long_conditions(ml_indicators)
+                long_conditions.extend(ml_long_conditions)
 
-            # ショート条件：拡張されたショート特化条件を優先使用
+                # テクニカル指標でML予測を補強
+                if indicators_by_type[IndicatorType.TREND]:
+                    trend_indicator = random.choice(indicators_by_type[IndicatorType.TREND])
+                    long_conditions.extend(self._create_trend_long_conditions(trend_indicator))
+
+                if indicators_by_type[IndicatorType.MOMENTUM]:
+                    momentum_indicator = random.choice(indicators_by_type[IndicatorType.MOMENTUM])
+                    long_conditions.extend(self._create_momentum_long_conditions(momentum_indicator))
+            else:
+                # 従来のテクニカル指標のみの処理
+                if indicators_by_type[IndicatorType.TREND]:
+                    trend_indicator = random.choice(indicators_by_type[IndicatorType.TREND])
+                    long_conditions.extend(self._create_trend_long_conditions(trend_indicator))
+
+                if indicators_by_type[IndicatorType.MOMENTUM]:
+                    momentum_indicator = random.choice(indicators_by_type[IndicatorType.MOMENTUM])
+                    long_conditions.extend(self._create_momentum_long_conditions(momentum_indicator))
+
+            # ショート条件：ML指標を優先的に使用
+            if ml_indicators:
+                ml_short_conditions = self._create_ml_short_conditions(ml_indicators)
+                short_conditions.extend(ml_short_conditions)
+
             enhanced_short_conditions = self.generate_enhanced_short_conditions(indicators)
             if enhanced_short_conditions and random.random() < 0.7:  # 70%の確率で拡張条件を使用
                 short_conditions.extend(enhanced_short_conditions[:2])  # 最大2つの条件を使用
@@ -608,16 +639,12 @@ class SmartConditionGenerator:
                     short_conditions.extend(self._create_trend_short_conditions(trend_indicator))
 
                 if indicators_by_type[IndicatorType.MOMENTUM]:
-                    # ロングとは異なるモメンタム指標を選択
-                    available_momentum = [
-                        ind for ind in indicators_by_type[IndicatorType.MOMENTUM]
-                        if ind.type != (long_conditions[1].left_operand.split('_')[0] if len(long_conditions) > 1 else "")
-                    ]
-                    if available_momentum:
-                        momentum_indicator = random.choice(available_momentum)
-                    else:
-                        momentum_indicator = random.choice(indicators_by_type[IndicatorType.MOMENTUM])
+                    momentum_indicator = random.choice(indicators_by_type[IndicatorType.MOMENTUM])
                     short_conditions.extend(self._create_momentum_short_conditions(momentum_indicator))
+
+                # 拡張ショート条件が生成されなかった場合でも、最低1つのショート条件を保証
+                if not short_conditions:
+                    short_conditions.append(Condition(left_operand="close", operator="<", right_operand="open"))
 
             # 新しいカテゴリのインジケータを活用
             # サイクル系指標の追加
@@ -650,6 +677,7 @@ class SmartConditionGenerator:
             if not short_conditions:
                 short_conditions = [Condition(left_operand="close", operator="<", right_operand="open")]
 
+            
             return long_conditions, short_conditions, []
 
         except Exception as e:
@@ -900,9 +928,42 @@ class SmartConditionGenerator:
             long_conditions = []
             short_conditions = []
 
+            # ML指標専用の処理
+            ml_indicators = [ind for ind in indicators if ind.enabled and ind.type.startswith("ML_")]
+            if ml_indicators:
+                # ML指標のみの場合の特別な戦略
+                ml_long_conditions = self._create_ml_long_conditions(indicators)
+                ml_short_conditions = self._create_ml_short_conditions(indicators)
+
+                long_conditions.extend(ml_long_conditions)
+                short_conditions.extend(ml_short_conditions)
+
+                # ML指標の組み合わせ戦略
+                if len(ml_indicators) >= 2:
+                    # 複数のML指標の合意による高信頼度条件
+                    up_prob_indicators = [ind for ind in ml_indicators if ind.type == "ML_UP_PROB"]
+                    down_prob_indicators = [ind for ind in ml_indicators if ind.type == "ML_DOWN_PROB"]
+
+                    if up_prob_indicators and down_prob_indicators:
+                        # 上昇確率が高く、下落確率が低い場合
+                        long_conditions.append(
+                            Condition(left_operand="ML_UP_PROB", operator=">", right_operand=0.7)
+                        )
+                        long_conditions.append(
+                            Condition(left_operand="ML_DOWN_PROB", operator="<", right_operand=0.3)
+                        )
+
+                        # 下落確率が高く、上昇確率が低い場合
+                        short_conditions.append(
+                            Condition(left_operand="ML_DOWN_PROB", operator=">", right_operand=0.7)
+                        )
+                        short_conditions.append(
+                            Condition(left_operand="ML_UP_PROB", operator="<", right_operand=0.3)
+                        )
+
             # ボリンジャーバンドの特性を活用
             bb_indicators = [ind for ind in indicators if ind.type == "BB" and ind.enabled]
-            if bb_indicators:
+            if bb_indicators and not ml_indicators:  # ML指標がない場合のみ
                 bb_indicator = bb_indicators[0]
                 period = bb_indicator.parameters.get('period', 20)
 
@@ -918,8 +979,8 @@ class SmartConditionGenerator:
                 ])
 
                 short_conditions.extend([
-                    Condition(left_operand="close", operator=">", right_operand=bb_upper),  # 上限突破
-                    Condition(left_operand="close", operator="<", right_operand=bb_middle)  # 中央線割れ
+                    Condition(left_operand="close", operator="<", right_operand=bb_upper),  # 上限突破
+                    Condition(left_operand="close", operator=">", right_operand=bb_middle)  # 中央線割れ
                 ])
 
             # ADXの正しい活用（方向性指標との組み合わせ）
@@ -1065,7 +1126,15 @@ class SmartConditionGenerator:
             return [Condition(left_operand="close", operator="<", right_operand="open")]
 
     def _create_death_cross_conditions(self, indicators: List[IndicatorGene]) -> List[Condition]:
-        """デスクロス（移動平均線の下抜け）条件を生成"""
+        """
+        デスクロス（移動平均線の下抜け）条件を生成
+
+        Args:
+            indicators: 指標リスト
+
+        Returns:
+            ショート条件のリスト
+        """
         try:
             conditions = []
 
@@ -1108,7 +1177,15 @@ class SmartConditionGenerator:
             return []
 
     def _create_bear_divergence_conditions(self, indicators: List[IndicatorGene]) -> List[Condition]:
-        """ベアダイバージェンス（価格とオシレーターの逆行）条件を生成"""
+        """
+        ベアダイバージェンス（価格とオシレーターの逆行）条件を生成
+
+        Args:
+            indicators: 指標リスト
+
+        Returns:
+            ショート条件のリスト
+        """
         try:
             conditions = []
 
@@ -1142,7 +1219,15 @@ class SmartConditionGenerator:
             return []
 
     def _create_breakdown_conditions(self, indicators: List[IndicatorGene]) -> List[Condition]:
-        """ブレイクダウン（サポートライン下抜け）条件を生成"""
+        """
+        ブレイクダウン（サポートライン下抜け）条件を生成
+
+        Args:
+            indicators: 指標リスト
+
+        Returns:
+            ショート条件のリスト
+        """
         try:
             conditions = []
 
@@ -1185,7 +1270,15 @@ class SmartConditionGenerator:
             return []
 
     def _create_ml_short_conditions(self, indicators: List[IndicatorGene]) -> List[Condition]:
-        """ML予測を活用したショート条件を生成"""
+        """
+        ML予測を活用したショート条件を生成
+
+        Args:
+            indicators: 指標リスト
+
+        Returns:
+            ショート条件のリスト
+        """
         try:
             conditions = []
 
@@ -1197,18 +1290,21 @@ class SmartConditionGenerator:
                 conditions.append(
                     Condition(left_operand="ML_DOWN_PROB", operator=">", right_operand=0.6)
                 )
+                self.logger.debug("Added ML_DOWN_PROB > 0.6 to short conditions")
 
             if any(ind.type == "ML_UP_PROB" for ind in ml_indicators):
                 # 上昇予測確率が低い場合
                 conditions.append(
                     Condition(left_operand="ML_UP_PROB", operator="<", right_operand=0.4)
                 )
+                self.logger.debug("Added ML_UP_PROB < 0.4 to short conditions")
 
             if any(ind.type == "ML_RANGE_PROB" for ind in ml_indicators):
                 # レンジ予測確率が低い場合（トレンド発生の可能性）
                 conditions.append(
                     Condition(left_operand="ML_RANGE_PROB", operator="<", right_operand=0.3)
                 )
+                self.logger.debug("Added ML_RANGE_PROB < 0.3 to short conditions")
 
             # ML予測とテクニカル指標の組み合わせ
             rsi_indicators = [ind for ind in indicators if ind.enabled and ind.type == "RSI"]
@@ -1221,6 +1317,13 @@ class SmartConditionGenerator:
                     Condition(left_operand="ML_DOWN_PROB", operator=">", right_operand=0.5),
                     Condition(left_operand=rsi_name, operator=">", right_operand=65)
                 ])
+            # ML予測の組み合わせ条件
+            if (any(ind.type == "ML_UP_PROB" for ind in ml_indicators) and
+                any(ind.type == "ML_DOWN_PROB" for ind in ml_indicators)):
+                # 下落確率が上昇確率より高い
+                conditions.append(
+                    Condition(left_operand="ML_DOWN_PROB", operator=">", right_operand="ML_UP_PROB")
+                )
 
             return conditions
 
@@ -1229,7 +1332,15 @@ class SmartConditionGenerator:
             return []
 
     def _create_volatility_short_conditions(self, indicators: List[IndicatorGene]) -> List[Condition]:
-        """高ボラティリティ環境でのショート条件を生成"""
+        """
+        高ボラティリティ環境でのショート条件を生成
+
+        Args:
+            indicators: 指標リスト
+
+        Returns:
+            ショート条件のリスト
+        """
         try:
             conditions = []
 
@@ -1278,6 +1389,64 @@ class SmartConditionGenerator:
 
         except Exception as e:
             self.logger.error(f"ボラティリティショート条件生成エラー: {e}")
+            return []
+
+    def _create_ml_long_conditions(self, indicators: List[IndicatorGene]) -> List[Condition]:
+        """
+        ML予測を活用したロング条件を生成
+
+        Args:
+            indicators: 指標リスト
+
+        Returns:
+            ロング条件のリスト
+        """
+        try:
+            conditions = []
+
+            # ML予測確率指標を探す
+            ml_indicators = [ind for ind in indicators if ind.enabled and ind.type.startswith("ML_")]
+
+            if any(ind.type == "ML_UP_PROB" for ind in ml_indicators):
+                # 上昇予測確率が高い場合
+                conditions.append(
+                    Condition(left_operand="ML_UP_PROB", operator=">", right_operand=0.6)
+                )
+                self.logger.debug("Added ML_UP_PROB > 0.6 to long conditions")
+
+            if any(ind.type == "ML_DOWN_PROB" for ind in ml_indicators):
+                # 下落予測確率が低い場合
+                conditions.append(
+                    Condition(left_operand="ML_DOWN_PROB", operator="<", right_operand=0.4)
+                )
+                self.logger.debug("Added ML_DOWN_PROB < 0.4 to long conditions")
+
+            if any(ind.type == "ML_RANGE_PROB" for ind in ml_indicators):
+                # レンジ予測確率が低い場合（トレンド発生の可能性）
+                conditions.append(
+                    Condition(left_operand="ML_RANGE_PROB", operator="<", right_operand=0.3)
+                )
+                self.logger.debug("Added ML_RANGE_PROB < 0.3 to long conditions")
+
+            # 高信頼度のML予測条件
+            if any(ind.type == "ML_UP_PROB" for ind in ml_indicators):
+                # 非常に高い上昇確率
+                conditions.append(
+                    Condition(left_operand="ML_UP_PROB", operator=">", right_operand=0.8)
+                )
+
+            # ML予測の組み合わせ条件
+            if (any(ind.type == "ML_UP_PROB" for ind in ml_indicators) and
+                any(ind.type == "ML_DOWN_PROB" for ind in ml_indicators)):
+                # 上昇確率が下落確率より高い
+                conditions.append(
+                    Condition(left_operand="ML_UP_PROB", operator=">", right_operand="ML_DOWN_PROB")
+                )
+
+            return conditions
+
+        except Exception as e:
+            self.logger.error(f"MLロング条件生成エラー: {e}")
             return []
 
     def apply_short_bias_mutation(self, conditions: List[Condition], mutation_rate: float = 0.3) -> List[Condition]:

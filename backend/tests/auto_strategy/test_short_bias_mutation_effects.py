@@ -60,8 +60,8 @@ def create_mock_backtest_result(long_trades: int, short_trades: int,
 def test_individual_evaluator_balance_calculation():
     """IndividualEvaluatorのバランス計算テスト"""
     try:
-        from app.core.services.auto_strategy.engines.individual_evaluator import IndividualEvaluator
-        from app.core.services.backtest import BacktestService
+        from backend.app.core.services.auto_strategy.engines.individual_evaluator import IndividualEvaluator
+        from backend.app.core.services.backtest import BacktestService
         
         # モックBacktestServiceを作成
         backtest_service = BacktestService()
@@ -98,7 +98,7 @@ def test_fitness_calculation_with_balance():
     try:
         from app.core.services.auto_strategy.engines.individual_evaluator import IndividualEvaluator
         from app.core.services.auto_strategy.models.ga_config import GAConfig
-        from app.core.services.backtest import BacktestService
+        from backend.app.core.services.backtest import BacktestService
         
         backtest_service = BacktestService()
         evaluator = IndividualEvaluator(backtest_service)
@@ -135,7 +135,6 @@ def test_fitness_calculation_with_balance():
 def test_short_bias_mutation_frequency():
     """ショートバイアス突然変異の頻度テスト"""
     try:
-        from app.core.services.auto_strategy.engines.evolution_operators import EvolutionOperators
         
         operators = EvolutionOperators()
         

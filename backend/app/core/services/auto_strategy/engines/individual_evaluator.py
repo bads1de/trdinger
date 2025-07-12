@@ -61,6 +61,9 @@ class IndividualEvaluator:
                 "parameters": {"strategy_gene": gene.to_dict()},
             }
 
+            # strategy_nameフィールドを追加
+            backtest_config["strategy_name"] = f"GA_Individual_{gene.id[:8]}"
+
             # デバッグログ: 取引量設定を確認
             # risk_management = gene.risk_management
             # position_size = risk_management.get("position_size", 0.1)

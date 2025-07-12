@@ -25,11 +25,11 @@ class MLIndicatorService:
     機械学習による予測確率を指標として提供します。
     """
 
-    def __init__(self):
+    def __init__(self, ml_signal_generator: Optional[MLSignalGenerator] = None):
         """初期化"""
         self.feature_service = FeatureEngineeringService()
-        self.ml_generator = MLSignalGenerator()
-        self.is_model_loaded = False
+        self.ml_generator = ml_signal_generator if ml_signal_generator else MLSignalGenerator()
+        self.is_model_loaded = self.ml_generator.is_trained if ml_signal_generator else False
         self._last_predictions = {"up": 0.33, "down": 0.33, "range": 0.34}
 
     def calculate_ml_indicators(
@@ -60,12 +60,29 @@ class MLIndicatorService:
             df = df.tail(10000)  # 最新10,000行に制限
 
         try:
-            # 必要なカラムの存在確認
-            required_columns = ['open', 'high', 'low', 'close', 'volume']
-            missing_columns = [col for col in required_columns if col not in df.columns]
-            if missing_columns:
-                logger.error(f"必要なカラムが不足: {missing_columns}")
+            # 必要なカラムの存在確認（大文字・小文字両方に対応）
+            required_columns_lower = ['open', 'high', 'low', 'close', 'volume']
+            required_columns_upper = ['Open', 'High', 'Low', 'Close', 'Volume']
+
+            # 小文字のカラムが存在するかチェック
+            missing_lower = [col for col in required_columns_lower if col not in df.columns]
+            # 大文字のカラムが存在するかチェック
+            missing_upper = [col for col in required_columns_upper if col not in df.columns]
+
+            # どちらかのセットが完全に存在すればOK
+            if len(missing_lower) == 0:
+                # 小文字のカラムが揃っている
+                df_normalized = df.copy()
+            elif len(missing_upper) == 0:
+                # 大文字のカラムが揃っている場合、小文字に変換
+                df_normalized = df.copy()
+                df_normalized.columns = [col.lower() if col in required_columns_upper else col for col in df_normalized.columns]
+            else:
+                logger.error(f"必要なカラムが不足: {missing_lower} (小文字) または {missing_upper} (大文字)")
                 return self._get_default_indicators(len(df))
+
+            # 正規化されたデータフレームを使用
+            df = df_normalized
 
             # 特徴量計算（タイムアウト付き）
             try:
@@ -253,8 +270,13 @@ class MLIndicatorService:
             指標値の配列
         """
         try:
+            # データフレームの基本検証
+            if df is None or df.empty:
+                logger.warning(f"空のデータフレームが提供されました: {indicator_type}")
+                return np.full(100, 0.33)
+
             ml_indicators = self.calculate_ml_indicators(df)
-            
+
             if indicator_type in ml_indicators:
                 return ml_indicators[indicator_type]
             else:
@@ -263,7 +285,7 @@ class MLIndicatorService:
 
         except Exception as e:
             logger.error(f"単一ML指標計算エラー {indicator_type}: {e}")
-            return np.full(len(df), 0.33)
+            return np.full(len(df) if df is not None and not df.empty else 100, 0.33)
 
     def _get_default_indicators(self, data_length: int) -> Dict[str, np.ndarray]:
         """デフォルトのML指標を取得"""

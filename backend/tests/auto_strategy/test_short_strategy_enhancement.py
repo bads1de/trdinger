@@ -234,7 +234,6 @@ def test_strategy_generation_comparison():
 def test_evolution_operators_short_bias():
     """進化演算子のショートバイアステスト"""
     try:
-        from app.core.services.auto_strategy.engines.evolution_operators import EvolutionOperators
         from app.core.services.auto_strategy.models.ga_config import GAConfig
         
         operators = EvolutionOperators()

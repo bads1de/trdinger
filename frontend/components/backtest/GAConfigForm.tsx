@@ -15,6 +15,13 @@ import { BacktestConfig as BacktestConfigType } from "@/types/backtest";
 import { BaseBacktestConfigForm } from "./BaseBacktestConfigForm";
 import { GA_OBJECTIVE_OPTIONS } from "@/constants/backtest";
 
+// 指標モードの選択肢
+const INDICATOR_MODE_OPTIONS = [
+  { value: "mixed", label: "混合 (テクニカル + ML)" },
+  { value: "technical_only", label: "テクニカルオンリー" },
+  { value: "ml_only", label: "MLオンリー" },
+];
+
 interface GAConfigFormProps {
   onSubmit: (config: GAConfigType) => void;
   initialConfig?: Partial<GAConfigType>;
@@ -70,6 +77,8 @@ const GAConfigForm: React.FC<GAConfigFormProps> = ({
           min_sharpe_ratio: 0.5,
         },
         ga_objective: initialConfig.ga_config?.ga_objective || "Sharpe Ratio",
+        // 指標モード設定
+        indicator_mode: initialConfig.ga_config?.indicator_mode || "mixed",
         // 従来のリスク管理パラメータ（Position Sizingシステムにより廃止予定）
         stop_loss_range: initialConfig.ga_config?.stop_loss_range || [
           0.02, 0.05,
@@ -225,6 +234,40 @@ const GAConfigForm: React.FC<GAConfigFormProps> = ({
         options={GA_OBJECTIVE_OPTIONS}
         required
       />
+
+      <SelectField
+        label="指標モード (indicator_mode)"
+        value={config.ga_config.indicator_mode}
+        onChange={(value) =>
+          setConfig((prev) => ({
+            ...prev,
+            ga_config: { ...prev.ga_config, indicator_mode: value },
+          }))
+        }
+        options={INDICATOR_MODE_OPTIONS}
+        required
+      />
+
+      {/* 指標モードの説明 */}
+      <div className="space-y-2 p-4 border border-purple-600 rounded-lg bg-purple-900/20">
+        <h3 className="text-lg font-semibold text-purple-300">
+          📊 指標モード選択
+        </h3>
+        <div className="text-sm text-purple-200 space-y-2">
+          <div>
+            <strong className="text-purple-100">混合 (テクニカル + ML):</strong>
+            テクニカル指標とML予測指標の両方を使用して戦略を生成します（推奨）
+          </div>
+          <div>
+            <strong className="text-purple-100">テクニカルオンリー:</strong>
+            従来のテクニカル指標のみを使用して戦略を生成します
+          </div>
+          <div>
+            <strong className="text-purple-100">MLオンリー:</strong>
+            ML予測指標（ML_UP_PROB, ML_DOWN_PROB, ML_RANGE_PROB）のみを使用します
+          </div>
+        </div>
+      </div>
 
       {/* TP/SL & ポジションサイジング自動最適化の説明 */}
       <div className="space-y-4 p-4 border border-blue-600 rounded-lg bg-blue-900/20">

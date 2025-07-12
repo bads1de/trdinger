@@ -52,11 +52,9 @@ class RandomGeneGenerator:
         self.min_conditions = config.min_conditions
         self.threshold_ranges = config.threshold_ranges
 
-        # 利用可能な指標タイプ（共通定数から取得）
+        # 利用可能な指標タイプを指標モードに応じて設定
         self.indicator_service = TechnicalIndicatorService()
-        self.available_indicators = list(
-            self.indicator_service.get_supported_indicators().keys()
-        )
+        self.available_indicators = self._setup_indicators_by_mode(config)
 
         # 利用可能なデータソース
         self.available_data_sources = [
@@ -88,6 +86,11 @@ class RandomGeneGenerator:
 
             # TP/SL遺伝子を先に生成してイグジット条件生成を調整
             tpsl_gene = self._generate_tpsl_gene()
+
+            # MLオンリーモードの場合は常にTP/SL遺伝子を有効化
+            indicator_mode = getattr(self.config, 'indicator_mode', 'mixed')
+            if indicator_mode == 'ml_only' and tpsl_gene:
+                tpsl_gene.enabled = True
 
             # TP/SL遺伝子が有効な場合はイグジット条件を最小化
             if tpsl_gene and tpsl_gene.enabled:
@@ -132,6 +135,42 @@ class RandomGeneGenerator:
             from ..utils.strategy_gene_utils import create_default_strategy_gene
 
             return create_default_strategy_gene(StrategyGene)
+
+    def _setup_indicators_by_mode(self, config: GAConfig) -> List[str]:
+        """
+        指標モードに応じて利用可能な指標を設定
+
+        Args:
+            config: GA設定
+
+        Returns:
+            利用可能な指標のリスト
+        """
+        # テクニカル指標を取得
+        technical_indicators = list(self.indicator_service.get_supported_indicators().keys())
+
+        # ML指標
+        ml_indicators = ['ML_UP_PROB', 'ML_DOWN_PROB', 'ML_RANGE_PROB']
+
+        # 指標モードに応じて選択
+        indicator_mode = getattr(config, 'indicator_mode', 'mixed')
+
+        if indicator_mode == 'technical_only':
+            # テクニカル指標のみ
+            available_indicators = technical_indicators
+            logger.info(f"指標モード: テクニカルオンリー ({len(available_indicators)}個の指標)")
+
+        elif indicator_mode == 'ml_only':
+            # ML指標のみ
+            available_indicators = ml_indicators
+            logger.info(f"指標モード: MLオンリー ({len(available_indicators)}個の指標)")
+
+        else:  # mixed または未設定
+            # 両方使用（デフォルト）
+            available_indicators = technical_indicators + ml_indicators
+            logger.info(f"指標モード: 混合 (テクニカル: {len(technical_indicators)}, ML: {len(ml_indicators)})")
+
+        return available_indicators
 
     def _generate_random_indicators(self) -> List[IndicatorGene]:
         """ランダムな指標リストを生成"""
@@ -514,6 +553,7 @@ class RandomGeneGenerator:
                 take_profit_pct=0.06,
                 risk_reward_ratio=2.0,
                 base_stop_loss=0.03,
+                enabled=True,  # 有効化を明示的に設定
             )
 
 

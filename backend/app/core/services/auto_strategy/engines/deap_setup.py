@@ -9,6 +9,7 @@ from typing import Optional
 from deap import base, creator, tools
 
 from ..models.ga_config import GAConfig
+from ..operators import genetic_operators
 
 logger = logging.getLogger(__name__)
 
@@ -65,7 +66,7 @@ class DEAPSetup:
             # ショートバイアス付き突然変異
             self.toolbox.register(
                 "mutate",
-                evolution_operators.mutate_with_short_bias,
+                genetic_operators.mutate_with_short_bias,
                 mutation_rate=config.mutation_rate,
                 short_bias_rate=config.short_bias_rate
             )

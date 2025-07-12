@@ -17,7 +17,7 @@ from ..generators.random_gene_generator import RandomGeneGenerator
 from app.core.services.backtest_service import BacktestService
 from .deap_setup import DEAPSetup
 from .individual_evaluator import IndividualEvaluator
-from .evolution_operators import EvolutionOperators
+from ..operators.genetic_operators import crossover_strategy_genes, mutate_strategy_gene
 from .individual_creator import IndividualCreator
 from .fitness_sharing import FitnessSharing
 
@@ -56,7 +56,6 @@ class GeneticAlgorithmEngine:
         # 分離されたコンポーネント
         self.deap_setup = DEAPSetup()
         self.individual_evaluator = IndividualEvaluator(backtest_service)
-        self.evolution_operators = EvolutionOperators()
         self.individual_creator = None  # setup_deap時に初期化
         self.fitness_sharing = None  # setup_deap時に初期化
 
@@ -77,8 +76,8 @@ class GeneticAlgorithmEngine:
             config,
             self.individual_creator.create_individual,
             self.individual_evaluator.evaluate_individual,
-            self.evolution_operators.crossover_strategy_genes,
-            self.evolution_operators.mutate_strategy_gene,
+            crossover_strategy_genes,
+            mutate_strategy_gene,
         )
 
         # 個体生成器に個体クラスを設定

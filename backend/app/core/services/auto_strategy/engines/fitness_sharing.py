@@ -114,17 +114,17 @@ class FitnessSharing:
             )
             similarity_scores.append(indicator_similarity)
 
-            # 買い条件の類似度
-            buy_similarity = self._calculate_condition_similarity(
-                gene1.buy_conditions, gene2.buy_conditions
+            # ロング条件の類似度
+            long_similarity = self._calculate_condition_similarity(
+                gene1.long_entry_conditions, gene2.long_entry_conditions
             )
-            similarity_scores.append(buy_similarity)
+            similarity_scores.append(long_similarity)
 
-            # 売り条件の類似度
-            sell_similarity = self._calculate_condition_similarity(
-                gene1.sell_conditions, gene2.sell_conditions
+            # ショート条件の類似度
+            short_similarity = self._calculate_condition_similarity(
+                gene1.short_entry_conditions, gene2.short_entry_conditions
             )
-            similarity_scores.append(sell_similarity)
+            similarity_scores.append(short_similarity)
 
             # リスク管理の類似度
             risk_similarity = self._calculate_risk_management_similarity(
@@ -132,8 +132,21 @@ class FitnessSharing:
             )
             similarity_scores.append(risk_similarity)
 
-            # 重み付き平均（指標とリスク管理を重視）
-            weights = [0.3, 0.25, 0.25, 0.2]
+            # TP/SL遺伝子の類似度
+            tpsl_similarity = self._calculate_tpsl_similarity(
+                gene1.tpsl_gene, gene2.tpsl_gene
+            )
+            similarity_scores.append(tpsl_similarity)
+
+            # ポジションサイジング遺伝子の類似度
+            position_sizing_similarity = self._calculate_position_sizing_similarity(
+                gene1.position_sizing_gene, gene2.position_sizing_gene
+            )
+            similarity_scores.append(position_sizing_similarity)
+
+            # 重み付き平均（指標、条件、リスク管理、TP/SL、ポジションサイジングを考慮）
+            # 各要素の重要度に応じて重みを調整
+            weights = [0.2, 0.2, 0.2, 0.15, 0.15, 0.1]  # 合計1.0
             weighted_similarity = sum(
                 score * weight for score, weight in zip(similarity_scores, weights)
             )
@@ -228,6 +241,48 @@ class FitnessSharing:
         except Exception:
             return 0.0
 
+    def _calculate_tpsl_similarity(self, tpsl1: Any, tpsl2: Any) -> float:
+        """TP/SL遺伝子の類似度を計算"""
+        if tpsl1 is None and tpsl2 is None:
+            return 1.0
+        if tpsl1 is None or tpsl2 is None:
+            return 0.0
+
+        # 例: メソッドと主要パラメータの一致度
+        score = 0.0
+        if tpsl1.method == tpsl2.method:
+            score += 0.5
+        
+        # 数値パラメータの類似度（例: stop_loss_pct, take_profit_pct）
+        if tpsl1.stop_loss_pct is not None and tpsl2.stop_loss_pct is not None:
+            diff = abs(tpsl1.stop_loss_pct - tpsl2.stop_loss_pct)
+            score += max(0.0, 0.25 * (1 - diff / max(tpsl1.stop_loss_pct, tpsl2.stop_loss_pct, 1e-6)))
+        
+        if tpsl1.take_profit_pct is not None and tpsl2.take_profit_pct is not None:
+            diff = abs(tpsl1.take_profit_pct - tpsl2.take_profit_pct)
+            score += max(0.0, 0.25 * (1 - diff / max(tpsl1.take_profit_pct, tpsl2.take_profit_pct, 1e-6)))
+
+        return min(1.0, score)
+
+    def _calculate_position_sizing_similarity(self, ps1: Any, ps2: Any) -> float:
+        """ポジションサイジング遺伝子の類似度を計算"""
+        if ps1 is None and ps2 is None:
+            return 1.0
+        if ps1 is None or ps2 is None:
+            return 0.0
+
+        # 例: メソッドと主要パラメータの一致度
+        score = 0.0
+        if ps1.method == ps2.method:
+            score += 0.5
+
+        # 数値パラメータの類似度（例: risk_per_trade）
+        if ps1.risk_per_trade is not None and ps2.risk_per_trade is not None:
+            diff = abs(ps1.risk_per_trade - ps2.risk_per_trade)
+            score += max(0.0, 0.5 * (1 - diff / max(ps1.risk_per_trade, ps2.risk_per_trade, 1e-6)))
+
+        return min(1.0, score)
+
     def _sharing_function(self, similarity: float) -> float:
         """
         共有関数
@@ -238,7 +293,7 @@ class FitnessSharing:
         Returns:
             共有値
         """
-        if similarity < self.sharing_radius:
-            return 0.0
+        if similarity <= self.sharing_radius:
+            return 1.0 # Full sharing within the radius
         else:
-            return 1.0 - (similarity / self.sharing_radius) ** self.alpha
+            return 0.0 # No sharing outside the radius

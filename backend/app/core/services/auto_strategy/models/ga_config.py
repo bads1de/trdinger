@@ -63,6 +63,10 @@ class GAConfig:
         )
     )
 
+    # 指標モード設定
+    indicator_mode: str = "mixed"  # "technical_only", "ml_only", "mixed"
+    enable_ml_indicators: bool = True  # 後方互換性のため保持
+
     # パラメータ範囲設定
     parameter_ranges: Dict[str, List[float]] = field(
         default_factory=lambda: {
@@ -299,6 +303,10 @@ class GAConfig:
             # ショートバイアス突然変異設定
             "enable_short_bias_mutation": self.enable_short_bias_mutation,
             "short_bias_rate": self.short_bias_rate,
+
+            # 指標モード設定
+            "indicator_mode": self.indicator_mode,
+            "enable_ml_indicators": self.enable_ml_indicators,
         }
 
     @classmethod
@@ -341,6 +349,10 @@ class GAConfig:
             # ショートバイアス突然変異設定
             enable_short_bias_mutation=data.get("enable_short_bias_mutation", True),
             short_bias_rate=data.get("short_bias_rate", 0.3),
+
+            # 指標モード設定
+            indicator_mode=data.get("indicator_mode", "mixed"),
+            enable_ml_indicators=data.get("enable_ml_indicators", True),
         )
 
     def to_json(self) -> str:

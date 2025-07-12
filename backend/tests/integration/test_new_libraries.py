@@ -117,6 +117,7 @@ def test_joblib_basic_functionality():
         # 一時ファイルに保存
         with tempfile.NamedTemporaryFile(delete=False, suffix='.pkl') as tmp_file:
             joblib.dump(test_data, tmp_file.name)
+            tmp_file.close() # ファイルを閉じる
             
             # 読み込み
             loaded_data = joblib.load(tmp_file.name)
