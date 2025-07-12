@@ -15,7 +15,7 @@ from ....utils.ml_error_handler import (
     MLErrorHandler, MLDataError, MLValidationError,
     timeout_decorator, safe_ml_operation, ml_operation_context
 )
-from ...feature_engineering.feature_engineering_service import FeatureEngineeringService
+from ...ml.feature_engineering.feature_engineering_service import FeatureEngineeringService
 from ...ml.signal_generator import MLSignalGenerator
 from ...ml.model_manager import model_manager
 

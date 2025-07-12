@@ -7,6 +7,7 @@ import { InputField } from "@/components/common/InputField";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import ErrorDisplay from "@/components/common/ErrorDisplay";
 import LoadingSpinner from "@/components/common/LoadingSpinner";
+import InfoModal from "@/components/common/InfoModal";
 import {
   Settings,
   Save,
@@ -15,6 +16,7 @@ import {
   Clock,
   Brain,
   Trash2,
+  Info,
 } from "lucide-react";
 
 interface MLConfig {
@@ -62,6 +64,13 @@ export default function MLSettings() {
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [isInfoModalOpen, setIsInfoModalOpen] = useState(false);
+  const [modalContent, setModalContent] = useState({ title: "", content: "" });
+
+  const openInfoModal = (title: string, content: string) => {
+    setModalContent({ title, content });
+    setIsInfoModalOpen(true);
+  };
 
   useEffect(() => {
     fetchConfig();
@@ -222,6 +231,17 @@ export default function MLSettings() {
                 onChange={(value) =>
                   updateConfig("data_processing", "max_ohlcv_rows", value)
                 }
+                labelAddon={
+                  <Info
+                    className="h-5 w-5 text-gray-400 cursor-pointer"
+                    onClick={() =>
+                      openInfoModal(
+                        "最大OHLCV行数",
+                        "特徴量計算に使用するOHLCV（四本値）データの最大行数を指定します。この値が大きいほど、より長期のデータを分析できますが、計算時間とメモリ使用量が増加します。"
+                      )
+                    }
+                  />
+                }
               />
             </div>
             <div>
@@ -231,6 +251,17 @@ export default function MLSettings() {
                 value={config.data_processing.max_feature_rows}
                 onChange={(value) =>
                   updateConfig("data_processing", "max_feature_rows", value)
+                }
+                labelAddon={
+                  <Info
+                    className="h-5 w-5 text-gray-400 cursor-pointer"
+                    onClick={() =>
+                      openInfoModal(
+                        "最大特徴量行数",
+                        "モデル学習に使用する特徴量データの最大行数を指定します。この値が大きいほど、より多くの学習サンプルを使用できますが、学習時間とメモリ使用量が増加します。"
+                      )
+                    }
+                  />
                 }
               />
             </div>
@@ -246,6 +277,17 @@ export default function MLSettings() {
                     value
                   )
                 }
+                labelAddon={
+                  <Info
+                    className="h-5 w-5 text-gray-400 cursor-pointer"
+                    onClick={() =>
+                      openInfoModal(
+                        "特徴量計算タイムアウト（秒）",
+                        "特徴量計算処理の最大許容時間（秒）です。複雑な特徴量を多数計算する場合、この値を大きくする必要があります。タイムアウトすると処理が中断されます。"
+                      )
+                    }
+                  />
+                }
               />
             </div>
             <div>
@@ -259,6 +301,17 @@ export default function MLSettings() {
                     "model_training_timeout",
                     value
                   )
+                }
+                labelAddon={
+                  <Info
+                    className="h-5 w-5 text-gray-400 cursor-pointer"
+                    onClick={() =>
+                      openInfoModal(
+                        "モデル学習タイムアウト（秒）",
+                        "モデル学習処理の最大許容時間（秒）です。データ量が多い場合や、複雑なモデルを学習する場合、この値を大きくする必要があります。タイムアウトすると学習が中断されます。"
+                      )
+                    }
+                  />
                 }
               />
             </div>
@@ -285,6 +338,17 @@ export default function MLSettings() {
                 onChange={(value) =>
                   updateConfig("lightgbm", "learning_rate", value)
                 }
+                labelAddon={
+                  <Info
+                    className="h-5 w-5 text-gray-400 cursor-pointer"
+                    onClick={() =>
+                      openInfoModal(
+                        "学習率 (learning_rate)",
+                        "モデルが学習する際の更新ステップの大きさを制御します。小さいほど慎重に学習しますが、時間がかかります。大きいと学習が速いですが、最適解を通り過ぎる可能性があります。一般的に0.01〜0.1の値が使われます。"
+                      )
+                    }
+                  />
+                }
               />
             </div>
             <div>
@@ -294,6 +358,17 @@ export default function MLSettings() {
                 value={config.lightgbm.num_leaves}
                 onChange={(value) =>
                   updateConfig("lightgbm", "num_leaves", value)
+                }
+                labelAddon={
+                  <Info
+                    className="h-5 w-5 text-gray-400 cursor-pointer"
+                    onClick={() =>
+                      openInfoModal(
+                        "葉の数 (num_leaves)",
+                        "決定木モデルの複雑さを決定します。値が大きいほど複雑なモデルを作成でき、訓練データへの適合度は高まりますが、過学習のリスクも増大します。ツリーの深さ(depth)と関連し、2^depthより小さい値が推奨されます。"
+                      )
+                    }
+                  />
                 }
               />
             </div>
@@ -308,6 +383,17 @@ export default function MLSettings() {
                 onChange={(value) =>
                   updateConfig("lightgbm", "feature_fraction", value)
                 }
+                labelAddon={
+                  <Info
+                    className="h-5 w-5 text-gray-400 cursor-pointer"
+                    onClick={() =>
+                      openInfoModal(
+                        "特徴量サンプリング率 (feature_fraction)",
+                        "各決定木を構築する際に、ランダムに選択される特徴量の割合です。例えば0.8の場合、全特徴量の80%を毎回ランダムに選んで使用します。過学習を抑制する効果があります。"
+                      )
+                    }
+                  />
+                }
               />
             </div>
             <div>
@@ -320,6 +406,17 @@ export default function MLSettings() {
                 value={config.lightgbm.bagging_fraction}
                 onChange={(value) =>
                   updateConfig("lightgbm", "bagging_fraction", value)
+                }
+                labelAddon={
+                  <Info
+                    className="h-5 w-5 text-gray-400 cursor-pointer"
+                    onClick={() =>
+                      openInfoModal(
+                        "バギング率 (bagging_fraction)",
+                        "各決定木を学習する際に、ランダムに選択されるデータの割合です。例えば0.8の場合、全データの中から80%をランダムに（重複を許して）抽出し、学習に使用します。これも過学習を抑制する効果があります。"
+                      )
+                    }
+                  />
                 }
               />
             </div>
@@ -415,6 +512,14 @@ export default function MLSettings() {
           古いモデルを削除
         </ActionButton>
       </div>
+
+      <InfoModal
+        isOpen={isInfoModalOpen}
+        onClose={() => setIsInfoModalOpen(false)}
+        title={modalContent.title}
+      >
+        <p>{modalContent.content}</p>
+      </InfoModal>
     </div>
   );
 }

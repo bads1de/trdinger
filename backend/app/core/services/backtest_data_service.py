@@ -133,8 +133,10 @@ class BacktestDataService:
                 oi_data = self.oi_repo.get_open_interest_data(
                     symbol=symbol, start_time=start_date, end_time=end_date
                 )
+                logger.info(f"取得したOIデータ件数: {len(oi_data) if oi_data else 0}")
                 if oi_data:
                     oi_df = self._convert_oi_to_dataframe(oi_data)
+                    logger.info(f"OI DataFrame作成完了: {len(oi_df)}行")
                     df = pd.merge_asof(
                         df.sort_index(),
                         oi_df.sort_index(),
@@ -142,6 +144,7 @@ class BacktestDataService:
                         right_index=True,
                         direction="backward",
                     )
+                    logger.info(f"OIデータマージ完了: {df['OpenInterest'].notna().sum()}/{len(df)}行に値あり")
                 else:
                     logger.warning(
                         f"シンボル {symbol} のOpen Interestデータが見つかりませんでした。"
@@ -153,6 +156,7 @@ class BacktestDataService:
                 )
                 df["OpenInterest"] = pd.NA
         else:
+            logger.info("OIリポジトリが設定されていません")
             df["OpenInterest"] = pd.NA
 
         # Funding Rateデータをマージ
@@ -161,8 +165,10 @@ class BacktestDataService:
                 fr_data = self.fr_repo.get_funding_rate_data(
                     symbol=symbol, start_time=start_date, end_time=end_date
                 )
+                logger.info(f"取得したFRデータ件数: {len(fr_data) if fr_data else 0}")
                 if fr_data:
                     fr_df = self._convert_fr_to_dataframe(fr_data)
+                    logger.info(f"FR DataFrame作成完了: {len(fr_df)}行")
                     df = pd.merge_asof(
                         df.sort_index(),
                         fr_df.sort_index(),
@@ -170,6 +176,7 @@ class BacktestDataService:
                         right_index=True,
                         direction="backward",
                     )
+                    logger.info(f"FRデータマージ完了: {df['FundingRate'].notna().sum()}/{len(df)}行に値あり")
                 else:
                     logger.warning(
                         f"シンボル {symbol} のFunding Rateデータが見つかりませんでした。"
@@ -181,6 +188,7 @@ class BacktestDataService:
                 )
                 df["FundingRate"] = pd.NA
         else:
+            logger.info("FRリポジトリが設定されていません")
             df["FundingRate"] = pd.NA
 
         # 欠損値を前方データで埋め、それでも残る場合は0で埋める

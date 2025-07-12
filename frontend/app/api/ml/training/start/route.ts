@@ -1,7 +1,7 @@
 /**
  * MLトレーニング開始API
- *
- * バックエンドのMLトレーニングAPIへのプロキシエンドポイントです。
+ * 
+ * フロントエンドからのMLトレーニング開始リクエストをバックエンドに転送します。
  */
 
 import { NextRequest, NextResponse } from "next/server";
@@ -9,7 +9,7 @@ import { BACKEND_API_URL } from "@/constants";
 import { convertSymbolForBackend } from "@/utils/symbolConverter";
 
 /**
- * POST /api/ml/train
+ * POST /api/ml/training/start
  *
  * MLモデルのトレーニングを開始します。
  */
@@ -23,7 +23,7 @@ export async function POST(request: NextRequest) {
     }
 
     // バックエンドAPIに転送
-    const backendUrl = `${BACKEND_API_URL}/api/ml/train`;
+    const backendUrl = `${BACKEND_API_URL}/api/ml/training/start`;
     
     const response = await fetch(backendUrl, {
       method: "POST",

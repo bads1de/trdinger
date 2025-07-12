@@ -5,7 +5,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import ActionButton from "@/components/common/ActionButton";
 import { InputField } from "@/components/common/InputField";
 import { SelectField } from "@/components/common/SelectField";
-import { Alert, AlertDescription } from "@/components/ui/alert";
 import ErrorDisplay from "@/components/common/ErrorDisplay";
 import { Progress } from "@/components/ui/progress";
 import {
@@ -51,12 +50,10 @@ interface TrainingStatus {
  */
 export default function MLTraining() {
   const [config, setConfig] = useState<TrainingConfig>({
-    symbol: "BTCUSDT",
+    symbol: "BTC/USDT:USDT",
     timeframe: "1h",
-    start_date: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
-      .toISOString()
-      .split("T")[0], // 30日前
-    end_date: new Date().toISOString().split("T")[0], // 今日
+    start_date: "2020-03-05",
+    end_date: "2024-12-31",
     save_model: true,
     train_test_split: 0.8,
     random_state: 42,
@@ -111,7 +108,7 @@ export default function MLTraining() {
         throw new Error(errorData.detail || "トレーニングの開始に失敗しました");
       }
 
-      const result = await response.json();
+      await response.json();
       setTrainingStatus({
         is_training: true,
         progress: 0,

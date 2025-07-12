@@ -32,8 +32,8 @@ class DataProcessingConfig:
 class ModelConfig:
     """モデル関連の設定"""
     # モデル保存パス
-    MODEL_SAVE_PATH: str = "backend/models/ml_indicators/"
-    MODEL_BACKUP_PATH: str = "backend/models/ml_indicators/backup/"
+    MODEL_SAVE_PATH: str = "backend/models/"
+    MODEL_BACKUP_PATH: str = "backend/models/backup/"
     
     # モデルファイル設定
     MODEL_FILE_EXTENSION: str = ".pkl"
@@ -262,8 +262,8 @@ class MLConfig:
         """モデル検索パスのリストを取得"""
         return [
             self.model.MODEL_SAVE_PATH,
-            "backend/models/ml_indicators/",
-            "models/ml_indicators/",
+            "backend/models/",
+            "models/",
             "ml_models/",
             "backend/ml_models/"
         ]

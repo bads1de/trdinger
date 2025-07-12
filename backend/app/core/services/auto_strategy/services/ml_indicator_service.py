@@ -2,8 +2,7 @@
 ML指標サービス
 
 機械学習による予測確率を指標として提供するサービス。
-FeatureEngineeringServiceとMLSignalGeneratorを統合して、
-GAで使用可能なML予測指標を生成します。
+BaseMLTrainerを使用してコードの重複を解消し、責任を明確化します。
 """
 
 import logging
@@ -14,8 +13,8 @@ import glob
 from typing import Dict, Any, Optional
 from datetime import datetime
 
-from ...feature_engineering.feature_engineering_service import FeatureEngineeringService
-from ...ml.signal_generator import MLSignalGenerator
+from ...ml.lightgbm_trainer import RandomForestTrainer
+from ...ml.model_manager import model_manager
 
 logger = logging.getLogger(__name__)
 
@@ -23,15 +22,20 @@ logger = logging.getLogger(__name__)
 class MLIndicatorService:
     """
     ML指標サービス
-    
-    機械学習による予測確率を指標として提供します。
+
+    BaseMLTrainerを使用して機械学習による予測確率を指標として提供します。
+    コードの重複を解消し、保守性を向上させます。
     """
 
-    def __init__(self, ml_signal_generator: Optional[MLSignalGenerator] = None):
-        """初期化"""
-        self.feature_service = FeatureEngineeringService()
-        self.ml_generator = ml_signal_generator if ml_signal_generator else MLSignalGenerator()
-        self.is_model_loaded = self.ml_generator.is_trained if ml_signal_generator else False
+    def __init__(self, trainer: Optional[RandomForestTrainer] = None):
+        """
+        初期化
+
+        Args:
+            trainer: 使用するMLトレーナー（オプション）
+        """
+        self.trainer = trainer if trainer else RandomForestTrainer()
+        self.is_model_loaded = self.trainer.is_trained
         self._last_predictions = {"up": 0.33, "down": 0.33, "range": 0.34}
 
         # 既存の学習済みモデルを自動読み込み
@@ -163,7 +167,7 @@ class MLIndicatorService:
             読み込み成功フラグ
         """
         try:
-            success = self.ml_generator.load_model(model_path)
+            success = self.trainer.load_model(model_path)
             if success:
                 self.is_model_loaded = True
                 logger.info(f"MLモデル読み込み成功: {model_path}")
@@ -209,55 +213,19 @@ class MLIndicatorService:
             学習結果
         """
         try:
-            # 特徴量を計算
-            features_df = self.feature_service.calculate_advanced_features(
-                training_data, funding_rate_data, open_interest_data
-            )
-
-            # 学習用データを準備
-            X, y = self.ml_generator.prepare_training_data(features_df)
-
-            # モデルを学習（新しいパラメータを使用して直接実装）
-            from sklearn.ensemble import RandomForestClassifier
-            from sklearn.model_selection import train_test_split as sklearn_train_test_split
-            from sklearn.metrics import accuracy_score, classification_report
-
-            # データ分割
-            X_train, X_test, y_train, y_test = sklearn_train_test_split(
-                X, y, test_size=1-train_test_split, random_state=random_state, stratify=y
-            )
-
-            # モデル作成とトレーニング
-            self.model = RandomForestClassifier(
+            # BaseMLTrainerに委譲
+            result = self.trainer.train_model(
+                training_data=training_data,
+                funding_rate_data=funding_rate_data,
+                open_interest_data=open_interest_data,
+                save_model=save_model,
+                model_name="auto_strategy_ml_model",
+                test_size=1-train_test_split,
+                random_state=random_state,
                 n_estimators=n_estimators,
                 max_depth=max_depth,
-                random_state=random_state,
-                n_jobs=-1
+                learning_rate=learning_rate
             )
-
-            self.model.fit(X_train, y_train)
-
-            # 評価
-            y_pred = self.model.predict(X_test)
-            accuracy = accuracy_score(y_test, y_pred)
-
-            # 特徴量カラムを保存
-            self.feature_columns = X.columns.tolist()
-
-            result = {
-                "success": True,
-                "accuracy": accuracy,
-                "loss": 1 - accuracy,
-                "feature_count": len(self.feature_columns),
-                "training_samples": len(X_train),
-                "test_samples": len(X_test),
-                "classification_report": classification_report(y_test, y_pred, output_dict=True)
-            }
-
-            # モデルを保存
-            if save_model:
-                model_path = self.ml_generator.save_model("auto_strategy_ml_model")
-                result["model_path"] = model_path
 
             self.is_model_loaded = True
             logger.info("MLモデル学習完了")
@@ -277,9 +245,10 @@ class MLIndicatorService:
         """
         return {
             "is_model_loaded": self.is_model_loaded,
-            "is_trained": self.ml_generator.is_trained if hasattr(self.ml_generator, 'is_trained') else False,
+            "is_trained": self.trainer.is_trained,
             "last_predictions": self._last_predictions,
-            "feature_count": len(self.ml_generator.feature_columns) if self.ml_generator.feature_columns else 0
+            "feature_count": len(self.trainer.feature_columns) if self.trainer.feature_columns else 0,
+            "model_type": self.trainer.model_type if hasattr(self.trainer, 'model_type') else "Unknown"
         }
 
     def update_predictions(self, predictions: Dict[str, float]):
@@ -305,8 +274,14 @@ class MLIndicatorService:
         Returns:
             特徴量重要度の辞書
         """
-        if self.is_model_loaded and self.ml_generator.is_trained:
-            return self.ml_generator.get_feature_importance(top_n)
+        if self.is_model_loaded and self.trainer.is_trained:
+            if hasattr(self.trainer, 'get_feature_importance'):
+                importance = self.trainer.get_feature_importance()
+                # 上位N個を取得
+                sorted_importance = sorted(importance.items(), key=lambda x: x[1], reverse=True)
+                return dict(sorted_importance[:top_n])
+            else:
+                return {}
         else:
             return {}
 
@@ -353,15 +328,41 @@ class MLIndicatorService:
     def _safe_ml_prediction(self, features_df: pd.DataFrame) -> Dict[str, float]:
         """安全なML予測実行"""
         try:
-            # 予測を実行
-            predictions = self.ml_generator.predict(features_df)
+            # モデルが読み込まれている場合のみ予測を実行
+            if self.is_model_loaded and self.trainer.is_trained:
+                # 特徴量を使用して予測
+                predictions_array = self.trainer.predict(features_df)
 
-            # 予測値の妥当性チェック
-            if self._validate_predictions(predictions):
-                self._last_predictions = predictions
-                return predictions
+                # 予測結果を正規化（3クラス分類: [下落, レンジ, 上昇]）
+                if predictions_array.ndim == 2 and predictions_array.shape[1] == 3:
+                    # 既に3クラス分類の確率 - 最後の行の予測値を使用
+                    last_prediction = predictions_array[-1]
+                    predictions = {
+                        "down": float(last_prediction[0]),
+                        "range": float(last_prediction[1]),
+                        "up": float(last_prediction[2])
+                    }
+                elif predictions_array.ndim == 1:
+                    # バイナリ分類の場合は3クラスに変換
+                    last_prediction = predictions_array[-1]
+                    predictions = {
+                        "up": float(last_prediction),
+                        "down": float(1 - last_prediction),
+                        "range": 0.0
+                    }
+                else:
+                    # デフォルト値
+                    predictions = self._last_predictions.copy()
+
+                # 予測値の妥当性チェック
+                if self._validate_predictions(predictions):
+                    self._last_predictions = predictions
+                    return predictions
+                else:
+                    logger.warning("予測値が無効、前回の予測値を使用")
+                    return self._last_predictions
             else:
-                logger.warning("予測値が無効、前回の予測値を使用")
+                logger.warning("MLモデルが読み込まれていません。デフォルト値を使用します。")
                 return self._last_predictions
 
         except Exception as e:
@@ -580,38 +581,21 @@ class MLIndicatorService:
             読み込み成功フラグ
         """
         try:
-            # 複数のモデル保存場所を検索
-            search_paths = [
-                self.ml_generator.model_save_path,  # デフォルトパス: backend/ml_models/
-                "backend/models/ml_indicators/",    # 実際のモデル保存場所
-                "models/ml_indicators/",            # 相対パス
-                "ml_models/",                       # 別の可能性
-            ]
+            # ModelManagerを使用して最新のモデルを取得
+            latest_model_path = model_manager.get_latest_model("*")
 
-            all_model_files = []
-
-            for model_dir in search_paths:
-                if os.path.exists(model_dir):
-                    # .pkl と .joblib ファイルを検索
-                    pkl_files = glob.glob(os.path.join(model_dir, "*.pkl"))
-                    joblib_files = glob.glob(os.path.join(model_dir, "*.joblib"))
-                    all_model_files.extend(pkl_files + joblib_files)
-
-            if not all_model_files:
+            if not latest_model_path:
                 logger.info("学習済みMLモデルが見つかりません。ML機能はデフォルト値で動作します。")
                 return False
 
-            # 最新のモデルファイルを取得（更新時刻でソート）
-            latest_model = max(all_model_files, key=os.path.getmtime)
-
             # モデルを読み込み
-            success = self.ml_generator.load_model(latest_model)
+            success = self.trainer.load_model(latest_model_path)
             if success:
                 self.is_model_loaded = True
-                logger.info(f"最新のMLモデルを自動読み込みしました: {os.path.basename(latest_model)}")
+                logger.info(f"最新のMLモデルを自動読み込みしました: {os.path.basename(latest_model_path)}")
                 return True
             else:
-                logger.warning(f"MLモデルの読み込みに失敗しました: {os.path.basename(latest_model)}")
+                logger.warning(f"MLモデルの読み込みに失敗しました: {os.path.basename(latest_model_path)}")
                 return False
 
         except Exception as e:

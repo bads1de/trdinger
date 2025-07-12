@@ -14,6 +14,11 @@ from app.core.services.ml.ml_training_service import ml_training_service
 from app.core.services.auto_strategy.services.ml_orchestrator import MLOrchestrator
 from app.core.config.ml_config import ml_config
 from app.core.utils.ml_error_handler import MLErrorHandler
+from app.core.services.backtest_data_service import BacktestDataService
+from database.repositories.ohlcv_repository import OHLCVRepository
+from database.repositories.open_interest_repository import OpenInterestRepository
+from database.repositories.funding_rate_repository import FundingRateRepository
+from database.connection import get_db
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -141,13 +146,13 @@ async def backup_model(model_id: str):
 async def get_ml_status():
     """
     MLモデルの現在の状態を取得
-    
+
     Returns:
         モデル状態情報
     """
     try:
         status = ml_orchestrator.get_model_status()
-        
+
         # 追加情報を取得
         latest_model = model_manager.get_latest_model("*")
         if latest_model:
@@ -159,11 +164,27 @@ async def get_ml_status():
                 "training_samples": 10000  # TODO: 実際のサンプル数を取得
             }
             status["model_info"] = model_info
-        
+
         return status
-        
+
     except Exception as e:
         logger.error(f"ML状態取得エラー: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/training/status")
+async def get_training_status():
+    """
+    MLトレーニングの現在の状態を取得
+
+    Returns:
+        トレーニング状態情報
+    """
+    try:
+        return training_status
+
+    except Exception as e:
+        logger.error(f"トレーニング状態取得エラー: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -359,54 +380,217 @@ async def cleanup_old_models():
         raise HTTPException(status_code=500, detail=str(e))
 
 
+def get_data_service():
+    """データサービスの依存性注入"""
+    db = next(get_db())
+    try:
+        ohlcv_repo = OHLCVRepository(db)
+        oi_repo = OpenInterestRepository(db)
+        fr_repo = FundingRateRepository(db)
+        return BacktestDataService(ohlcv_repo, oi_repo, fr_repo)
+    finally:
+        db.close()
+
+
 async def run_training_task(config_data: Dict[str, Any]):
     """
     バックグラウンドでトレーニングを実行
-    
+
     Args:
         config_data: トレーニング設定
     """
     try:
-        # TODO: 実際のトレーニングロジックを実装
-        # 現在はダミーの進捗更新
-        
+        # トレーニング開始
         training_status.update({
+            "is_training": True,
+            "progress": 0,
+            "status": "starting",
+            "message": "トレーニングを開始しています...",
+            "start_time": datetime.now().isoformat(),
+            "end_time": None,
+            "error": None
+        })
+
+        # データサービスを初期化
+        data_service = get_data_service()
+
+        # DBの状況を確認
+        db = next(get_db())
+        try:
+            ohlcv_repo = OHLCVRepository(db)
+            oi_repo = OpenInterestRepository(db)
+            fr_repo = FundingRateRepository(db)
+
+            # データ件数を確認
+            ohlcv_count = ohlcv_repo.get_record_count({"symbol": symbol})
+            oi_count = oi_repo.get_open_interest_count(symbol)
+            fr_count = fr_repo.get_funding_rate_count(symbol)
+
+            logger.info(f"DB内データ件数 - OHLCV: {ohlcv_count}, OI: {oi_count}, FR: {fr_count}")
+
+            # 期間内のデータ件数も確認
+            ohlcv_data_in_range = ohlcv_repo.get_ohlcv_data(
+                symbol=symbol, timeframe=timeframe, start_time=start_date, end_time=end_date
+            )
+            oi_data_in_range = oi_repo.get_open_interest_data(
+                symbol=symbol, start_time=start_date, end_time=end_date
+            )
+            fr_data_in_range = fr_repo.get_funding_rate_data(
+                symbol=symbol, start_time=start_date, end_time=end_date
+            )
+
+            logger.info(f"期間内データ件数 - OHLCV: {len(ohlcv_data_in_range)}, OI: {len(oi_data_in_range)}, FR: {len(fr_data_in_range)}")
+
+            # 利用可能なシンボルも確認
+            available_symbols_ohlcv = ohlcv_repo.get_available_symbols()
+            available_symbols_oi = oi_repo.get_available_symbols()
+            available_symbols_fr = fr_repo.get_available_symbols()
+
+            logger.info(f"利用可能シンボル - OHLCV: {available_symbols_ohlcv}")
+            logger.info(f"利用可能シンボル - OI: {available_symbols_oi}")
+            logger.info(f"利用可能シンボル - FR: {available_symbols_fr}")
+
+        finally:
+            db.close()
+
+        # データ取得
+        training_status.update({
+            "progress": 10,
             "status": "loading_data",
-            "message": "データを読み込んでいます...",
-            "progress": 10
+            "message": "トレーニングデータを読み込んでいます..."
         })
-        
-        import asyncio
-        await asyncio.sleep(2)
-        
+
+        # 設定データから必要な情報を取得
+        symbol = config_data.get("symbol", "BTC/USDT:USDT")
+        timeframe = config_data.get("timeframe", "1h")
+        start_date = datetime.fromisoformat(config_data.get("start_date"))
+        end_date = datetime.fromisoformat(config_data.get("end_date"))
+        save_model = config_data.get("save_model", True)
+        train_test_split = config_data.get("train_test_split", 0.8)
+        random_state = config_data.get("random_state", 42)
+
+        logger.info(f"トレーニング設定: symbol={symbol}, timeframe={timeframe}, period={start_date} to {end_date}")
+
+        training_data = data_service.get_data_for_backtest(
+            symbol=symbol,
+            timeframe=timeframe,
+            start_date=start_date,
+            end_date=end_date
+        )
+
+        if training_data.empty:
+            raise ValueError(f"指定された期間のデータが見つかりません: {symbol}")
+
+        logger.info(f"トレーニングデータ取得完了: {len(training_data)}行")
+        logger.info(f"取得データのカラム: {list(training_data.columns)}")
+
+        # データの詳細をログ出力
+        if 'FundingRate' in training_data.columns:
+            non_na_fr = training_data['FundingRate'].notna().sum()
+            logger.info(f"ファンディングレートデータ: {non_na_fr}/{len(training_data)} 行に値あり")
+
+        if 'OpenInterest' in training_data.columns:
+            non_na_oi = training_data['OpenInterest'].notna().sum()
+            logger.info(f"オープンインタレストデータ: {non_na_oi}/{len(training_data)} 行に値あり")
+
+        # 追加データ取得（オプション）
         training_status.update({
+            "progress": 20,
+            "status": "loading_data",
+            "message": "追加データを読み込んでいます..."
+        })
+
+        # ファンディングレートとオープンインタレストデータを分離
+        funding_rate_data = None
+        open_interest_data = None
+
+        # ファンディングレートデータの確認
+        if 'FundingRate' in training_data.columns:
+            # NAでない値の数を確認
+            valid_fr_count = training_data['FundingRate'].notna().sum()
+            zero_fr_count = (training_data['FundingRate'] == 0.0).sum()
+            logger.info(f"FundingRateカラム: 有効値={valid_fr_count}, ゼロ値={zero_fr_count}, 総行数={len(training_data)}")
+
+            if valid_fr_count > 0:
+                funding_rate_data = training_data[['FundingRate']].copy()
+                logger.info("ファンディングレートデータを使用します")
+            else:
+                logger.info("ファンディングレートデータは全てNA/NULLです（OHLCVデータのみでトレーニングを実行）")
+        else:
+            logger.info("FundingRateカラムが存在しません")
+
+        # オープンインタレストデータの確認
+        if 'OpenInterest' in training_data.columns:
+            # NAでない値の数を確認
+            valid_oi_count = training_data['OpenInterest'].notna().sum()
+            zero_oi_count = (training_data['OpenInterest'] == 0.0).sum()
+            logger.info(f"OpenInterestカラム: 有効値={valid_oi_count}, ゼロ値={zero_oi_count}, 総行数={len(training_data)}")
+
+            if valid_oi_count > 0:
+                open_interest_data = training_data[['OpenInterest']].copy()
+                logger.info("建玉残高データを使用します")
+            else:
+                logger.info("建玉残高データは全てNA/NULLです（OHLCVデータのみでトレーニングを実行）")
+        else:
+            logger.info("OpenInterestカラムが存在しません")
+
+        # OHLCVデータのみを抽出
+        ohlcv_data = training_data[['Open', 'High', 'Low', 'Close', 'Volume']].copy()
+
+        # トレーニング実行
+        training_status.update({
+            "progress": 30,
             "status": "training",
-            "message": "モデルを学習しています...",
-            "progress": 50
+            "message": "特徴量を計算しています..."
         })
-        
-        await asyncio.sleep(5)
-        
+
+        training_result = ml_training_service.train_model(
+            training_data=ohlcv_data,
+            funding_rate_data=funding_rate_data,
+            open_interest_data=open_interest_data,
+            save_model=save_model,
+            model_name="ml_training_model",
+            test_size=1-train_test_split,
+            random_state=random_state
+        )
+
+        # モデル学習完了後の進捗更新
         training_status.update({
+            "progress": 90,
+            "status": "saving",
+            "message": "モデルを保存しています..."
+        })
+
+        # トレーニング完了
+        training_status.update({
+            "progress": 100,
             "status": "completed",
             "message": "トレーニングが完了しました",
-            "progress": 100,
-            "is_training": False,
             "end_time": datetime.now().isoformat(),
+            "is_training": False,
             "model_info": {
-                "accuracy": 0.87,
-                "feature_count": 45,
-                "training_samples": 8000,
-                "test_samples": 2000
+                "accuracy": training_result.get("accuracy", 0.0),
+                "feature_count": training_result.get("feature_count", 0),
+                "training_samples": len(training_data),
+                "test_samples": training_result.get("test_samples", 0),
+                "model_path": training_result.get("model_path", ""),
+                "model_type": training_result.get("model_type", "LightGBM")
             }
         })
-        
+
+        logger.info(f"MLモデルトレーニング完了: {symbol}")
+
     except Exception as e:
+        import traceback
+        error_details = traceback.format_exc()
         logger.error(f"トレーニングタスクエラー: {e}")
+        logger.error(f"エラー詳細: {error_details}")
+
         training_status.update({
             "is_training": False,
             "status": "error",
             "message": f"トレーニングエラー: {str(e)}",
             "end_time": datetime.now().isoformat(),
-            "error": str(e)
+            "error": str(e),
+            "progress": 0
         })

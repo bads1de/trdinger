@@ -4,6 +4,7 @@ import React from "react";
 
 interface InputFieldProps {
   label: string;
+  labelAddon?: React.ReactNode;
   value: any;
   onChange: (value: any) => void;
   type?: string;
@@ -18,6 +19,7 @@ interface InputFieldProps {
 
 export const InputField: React.FC<InputFieldProps> = ({
   label,
+  labelAddon,
   value,
   onChange,
   type = "text",
@@ -30,9 +32,12 @@ export const InputField: React.FC<InputFieldProps> = ({
   disabled = false,
 }) => (
   <div>
-    <label className="block text-sm font-medium text-gray-300 mb-2">
-      {label}
-    </label>
+    <div className="flex items-center justify-between mb-2">
+      <label className="block text-sm font-medium text-gray-300">
+        {label}
+      </label>
+      {labelAddon}
+    </div>
     <input
       type={type}
       value={value}

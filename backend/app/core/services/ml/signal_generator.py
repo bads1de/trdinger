@@ -181,11 +181,17 @@ class MLSignalGenerator:
             accuracy = accuracy_score(y_test, y_pred_class)
             class_report = classification_report(y_test, y_pred_class, output_dict=True, zero_division=0)
 
-            # 特徴量重要度
-            feature_importance = dict(zip(
-                self.feature_columns,
-                self.model.feature_importance(importance_type='gain')
-            ))
+            # 特徴量重要度（モデルタイプに応じて分岐）
+            if hasattr(self.model, 'feature_importances_'):
+                # scikit-learn互換モデル (e.g., RandomForest)
+                importances = self.model.feature_importances_
+            elif hasattr(self.model, 'feature_importance'):
+                # LightGBMモデル
+                importances = self.model.feature_importance(importance_type='gain')
+            else:
+                importances = [0] * len(self.feature_columns)
+
+            feature_importance = dict(zip(self.feature_columns, importances))
 
             self.is_trained = True
 
@@ -367,10 +373,17 @@ class MLSignalGenerator:
             if not self.is_trained or self.model is None:
                 return {}
 
-            importance = dict(zip(
-                self.feature_columns,
-                self.model.feature_importance(importance_type='gain')
-            ))
+            # 特徴量重要度（モデルタイプに応じて分岐）
+            if hasattr(self.model, 'feature_importances_'):
+                # scikit-learn互換モデル (e.g., RandomForest)
+                importances = self.model.feature_importances_
+            elif hasattr(self.model, 'feature_importance'):
+                # LightGBMモデル
+                importances = self.model.feature_importance(importance_type='gain')
+            else:
+                importances = [0] * len(self.feature_columns)
+
+            importance = dict(zip(self.feature_columns, importances))
 
             # 重要度順にソート
             sorted_importance = dict(

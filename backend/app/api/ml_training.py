@@ -11,6 +11,7 @@ from fastapi import APIRouter, HTTPException, BackgroundTasks, Depends
 from pydantic import BaseModel, Field
 
 from app.core.services.ml.ml_training_service import MLTrainingService
+from app.core.services.auto_strategy.services.ml_orchestrator import MLOrchestrator
 from app.core.services.backtest_data_service import BacktestDataService
 from database.repositories.ohlcv_repository import OHLCVRepository
 from database.repositories.open_interest_repository import OpenInterestRepository
@@ -257,9 +258,9 @@ async def get_ml_model_info():
     現在のMLモデル情報を取得
     """
     try:
-        ml_service = MLIndicatorService()
-        model_status = ml_service.get_model_status()
-        
+        ml_orchestrator = MLOrchestrator()
+        model_status = ml_orchestrator.get_model_status()
+
         return {
             "success": True,
             "model_status": model_status,
