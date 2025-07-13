@@ -4,6 +4,7 @@ import React from "react";
 
 interface SelectFieldProps {
   label: string;
+  labelAddon?: React.ReactNode;
   value: string;
   onChange: (value: string) => void;
   options: { value: string; label: string }[];
@@ -14,6 +15,7 @@ interface SelectFieldProps {
 
 export const SelectField: React.FC<SelectFieldProps> = ({
   label,
+  labelAddon,
   value,
   onChange,
   options,
@@ -22,9 +24,12 @@ export const SelectField: React.FC<SelectFieldProps> = ({
   disabled = false,
 }) => (
   <div>
-    <label className="block text-sm font-medium text-gray-300 mb-2">
-      {label}
-    </label>
+    <div className="flex items-center justify-between mb-2">
+      <label className="block text-sm font-medium text-gray-300">
+        {label}
+      </label>
+      {labelAddon}
+    </div>
     <select
       value={value}
       onChange={(e) => onChange(e.target.value)}

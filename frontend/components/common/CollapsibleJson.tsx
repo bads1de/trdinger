@@ -192,10 +192,10 @@ const CollapsibleJson: React.FC<CollapsibleJsonProps> = ({
       {isExpanded && (
         <div className="relative">
           <div
-            className={`overflow-auto ${styles.content} p-3 rounded border shadow-inner`}
+            className={`overflow-auto ${styles.content} rounded border shadow-inner`}
             style={{ maxHeight }}
           >
-            <pre className="font-mono text-xs leading-relaxed whitespace-pre-wrap">
+            <pre className="font-mono text-xs leading-relaxed whitespace-pre-wrap p-3">
               <code className={styles.content.split(" ")[0]}>{jsonString}</code>
             </pre>
           </div>

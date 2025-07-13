@@ -99,26 +99,24 @@ const BayesianOptimizationModal: React.FC<BayesianOptimizationModalProps> = ({
       isOpen={isOpen}
       onClose={handleClose}
       title="ベイジアン最適化"
-      size="xl"
+      size="2xl"
       closeOnOverlayClick={!isLoading}
       closeOnEscape={!isLoading}
       showCloseButton={!isLoading}
       contentClassName="p-0"
     >
-      <div className="max-h-[80vh] overflow-y-auto">
+      <div className="max-h-[90vh] overflow-y-auto p-6">
         {!result && !error && (
-          <div className="p-6">
-            <BayesianOptimizationForm
-              onGAOptimization={handleGAOptimization}
-              onMLOptimization={handleMLOptimization}
-              isLoading={isLoading}
-              currentBacktestConfig={currentBacktestConfig}
-            />
-          </div>
+          <BayesianOptimizationForm
+            onGAOptimization={handleGAOptimization}
+            onMLOptimization={handleMLOptimization}
+            isLoading={isLoading}
+            currentBacktestConfig={currentBacktestConfig}
+          />
         )}
 
         {isLoading && (
-          <div className="p-6">
+          <>
             <div className="flex items-center justify-center space-x-3">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
               <span className="text-lg">ベイジアン最適化を実行中...</span>
@@ -126,11 +124,11 @@ const BayesianOptimizationModal: React.FC<BayesianOptimizationModalProps> = ({
             <div className="mt-4 text-center text-sm text-gray-600">
               この処理には数分かかる場合があります
             </div>
-          </div>
+          </>
         )}
 
         {error && (
-          <div className="p-6">
+          <>
             <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-4">
               <h3 className="text-lg font-medium text-red-800 mb-2">エラーが発生しました</h3>
               <p className="text-red-700">{error}</p>
@@ -143,11 +141,11 @@ const BayesianOptimizationModal: React.FC<BayesianOptimizationModalProps> = ({
                 閉じる
               </ActionButton>
             </div>
-          </div>
+          </>
         )}
 
         {result && (
-          <div className="p-6">
+          <>
             <div className="mb-4 flex justify-between items-center">
               <h2 className="text-xl font-bold">最適化完了</h2>
               <div className="space-x-2">
@@ -160,7 +158,7 @@ const BayesianOptimizationModal: React.FC<BayesianOptimizationModalProps> = ({
               </div>
             </div>
             <BayesianOptimizationResults result={result} />
-          </div>
+          </>
         )}
       </div>
     </Modal>

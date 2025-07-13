@@ -5,6 +5,9 @@ import ActionButton from "@/components/common/ActionButton";
 import { Card } from "@/components/ui/card";
 import { InputField } from "@/components/common/InputField";
 import { SelectField } from "@/components/common/SelectField";
+import InfoModal from "@/components/common/InfoModal";
+import { Info } from "lucide-react";
+import CollapsibleJson from "@/components/common/CollapsibleJson";
 import {
   BayesianOptimizationConfig,
   ParameterSpace,
@@ -31,10 +34,26 @@ const BayesianOptimizationForm: React.FC<BayesianOptimizationFormProps> = ({
   const [nCalls, setNCalls] = useState(50);
   const [useDefaultParams, setUseDefaultParams] = useState(true);
   const [customParameterSpace, setCustomParameterSpace] = useState("");
-  const [defaultParameterSpace, setDefaultParameterSpace] = useState<Record<string, ParameterSpace> | null>(null);
+  const [defaultParameterSpace, setDefaultParameterSpace] = useState<Record<
+    string,
+    ParameterSpace
+  > | null>(null);
   const [acquisitionFunction, setAcquisitionFunction] = useState("EI");
   const [nInitialPoints, setNInitialPoints] = useState(10);
   const [randomState, setRandomState] = useState(42);
+  const [isInfoModalOpen, setIsInfoModalOpen] = useState(false);
+  const [modalContent, setModalContent] = useState<{
+    title: string;
+    content: React.ReactNode;
+  }>({
+    title: "",
+    content: null,
+  });
+
+  const openInfoModal = (title: string, content: React.ReactNode) => {
+    setModalContent({ title, content });
+    setIsInfoModalOpen(true);
+  };
 
   // デフォルトパラメータ空間を取得
   useEffect(() => {
@@ -97,163 +116,220 @@ const BayesianOptimizationForm: React.FC<BayesianOptimizationFormProps> = ({
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
-      {/* 最適化タイプ選択 */}
-      <Card className="p-4">
-        <label className="text-sm font-medium mb-3 block">最適化タイプ</label>
-        <div className="flex space-x-4">
-          <label className="flex items-center">
-            <input
-              type="radio"
-              value="ga"
-              checked={optimizationType === "ga"}
-              onChange={(e) => setOptimizationType(e.target.value as "ga" | "ml")}
-              className="mr-2"
-            />
-            GAパラメータ最適化
-          </label>
-          <label className="flex items-center">
-            <input
-              type="radio"
-              value="ml"
-              checked={optimizationType === "ml"}
-              onChange={(e) => setOptimizationType(e.target.value as "ga" | "ml")}
-              className="mr-2"
-            />
-            MLハイパーパラメータ最適化
-          </label>
+    <>
+      <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="space-y-6">
+          {/* 最適化タイプ選択 */}
+          <Card className="p-4">
+            <label className="text-sm font-medium mb-3 block">最適化タイプ</label>
+            <div className="flex space-x-4">
+              <label className="flex items-center">
+                <input
+                  type="radio"
+                  value="ga"
+                  checked={optimizationType === "ga"}
+                  onChange={(e) =>
+                    setOptimizationType(e.target.value as "ga" | "ml")
+                  }
+                  className="mr-2"
+                />
+                GAパラメータ最適化
+              </label>
+              <label className="flex items-center">
+                <input
+                  type="radio"
+                  value="ml"
+                  checked={optimizationType === "ml"}
+                  onChange={(e) =>
+                    setOptimizationType(e.target.value as "ga" | "ml")
+                  }
+                  className="mr-2"
+                />
+                MLハイパーパラメータ最適化
+              </label>
+            </div>
+          </Card>
+
+          {/* GA/ML最適化設定 */}
+          {optimizationType === "ga" ? (
+            <Card className="p-4">
+              <InputField
+                label="実験名"
+                value={experimentName}
+                onChange={setExperimentName}
+                placeholder="ベイジアン最適化実験"
+                required
+              />
+            </Card>
+          ) : (
+            <Card className="p-4">
+              <SelectField
+                label="モデルタイプ"
+                value={modelType}
+                onChange={setModelType}
+                options={[
+                  { value: "lightgbm", label: "LightGBM" },
+                  { value: "xgboost", label: "XGBoost" },
+                  { value: "random_forest", label: "Random Forest" },
+                ]}
+              />
+            </Card>
+          )}
+
+          {/* 最適化パラメータ */}
+          <Card className="p-4">
+            <h3 className="text-lg font-medium mb-4">最適化パラメータ</h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+              <InputField
+                label="試行回数"
+                type="number"
+                value={nCalls}
+                onChange={setNCalls}
+                min={10}
+                max={200}
+                labelAddon={
+                  <Info
+                    className="h-5 w-5 text-gray-400 cursor-pointer"
+                    onClick={() =>
+                      openInfoModal(
+                        "試行回数 (n_calls)",
+                        "ベイズ最適化を実行する総回数を指定します。初期ランダム試行数もこの回数に含まれます。回数が多いほど最適なパラメータを見つけやすくなりますが、時間がかかります。"
+                      )
+                    }
+                  />
+                }
+              />
+              <InputField
+                label="初期ランダム試行数"
+                type="number"
+                value={nInitialPoints}
+                onChange={setNInitialPoints}
+                min={5}
+                max={50}
+                labelAddon={
+                  <Info
+                    className="h-5 w-5 text-gray-400 cursor-pointer"
+                    onClick={() =>
+                      openInfoModal(
+                        "初期ランダム試行数 (n_initial_points)",
+                        "最適化の初期段階で、ランダムにパラメータを探索する回数を指定します。これにより、パラメータ空間の全体像を把握し、局所解に陥るのを防ぎます。"
+                      )
+                    }
+                  />
+                }
+              />
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <SelectField
+                label="獲得関数 (acq_func)"
+                value={acquisitionFunction}
+                onChange={setAcquisitionFunction}
+                options={[
+                  { value: "EI", label: "Expected Improvement (EI)" },
+                  { value: "PI", label: "Probability of Improvement (PI)" },
+                  { value: "UCB", label: "Upper Confidence Bound (UCB)" },
+                ]}
+                labelAddon={
+                  <Info
+                    className="h-5 w-5 text-gray-400 cursor-pointer"
+                    onClick={() =>
+                      openInfoModal(
+                        "獲得関数 (Acquisition Function)",
+                        <>
+                          <p>
+                            次にどのパラメータを試すべきかを決定するための関数です。
+                          </p>
+                          <ul className="list-disc pl-5 mt-2 space-y-1">
+                            <li>
+                              <strong>EI (Expected Improvement):</strong>{" "}
+                              現在の最良値からの改善が期待できる量に基づいて評価します。探索と活用のバランスが良く、一般的に使われます。
+                            </li>
+                            <li>
+                              <strong>PI (Probability of Improvement):</strong>{" "}
+                              現在の最良値を超える確率に基づいて評価します。活用（exploitation）を重視する傾向があります。
+                            </li>
+                            <li>
+                              <strong>UCB (Upper Confidence Bound):</strong>{" "}
+                              予測値の信頼区間の上限に基づいて評価します。探索（exploration）を重視する傾向があります。
+                            </li>
+                          </ul>
+                        </>
+                      )
+                    }
+                  />
+                }
+              />
+              <InputField
+                label="乱数シード (random_state)"
+                type="number"
+                value={randomState}
+                onChange={setRandomState}
+                labelAddon={
+                  <Info
+                    className="h-5 w-5 text-gray-400 cursor-pointer"
+                    onClick={() =>
+                      openInfoModal(
+                        "乱数シード (random_state)",
+                        "最適化プロセスの再現性を確保するための乱数シードです。同じシード値を使えば、同じ初期ランダム試行が行われ、同じ結果が得られます。"
+                      )
+                    }
+                  />
+                }
+              />
+            </div>
+          </Card>
         </div>
-      </Card>
 
-      {/* GA最適化設定 */}
-      {optimizationType === "ga" && (
-        <Card className="p-4">
-          <InputField
-            label="実験名"
-            value={experimentName}
-            onChange={setExperimentName}
-            placeholder="ベイジアン最適化実験"
-            required
-          />
-        </Card>
-      )}
-
-      {/* ML最適化設定 */}
-      {optimizationType === "ml" && (
-        <Card className="p-4">
-          <SelectField
-            label="モデルタイプ"
-            value={modelType}
-            onChange={setModelType}
-            options={[
-              { value: "lightgbm", label: "LightGBM" },
-              { value: "xgboost", label: "XGBoost" },
-              { value: "random_forest", label: "Random Forest" },
-            ]}
-          />
-        </Card>
-      )}
-
-      {/* 最適化パラメータ */}
-      <Card className="p-4">
-        <h3 className="text-lg font-medium mb-4">最適化パラメータ</h3>
-        
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-          <div>
-            <InputField
-              label="試行回数"
-              type="number"
-              value={nCalls}
-              onChange={setNCalls}
-              min={10}
-              max={200}
-            />
-          </div>
-          
-          <div>
-            <SelectField
-              label="獲得関数"
-              value={acquisitionFunction}
-              onChange={setAcquisitionFunction}
-              options={[
-                { value: "EI", label: "Expected Improvement" },
-                { value: "PI", label: "Probability of Improvement" },
-                { value: "UCB", label: "Upper Confidence Bound" },
-              ]}
-            />
-          </div>
-          
-          <div>
-            <InputField
-              label="初期ランダム試行数"
-              type="number"
-              value={nInitialPoints}
-              onChange={setNInitialPoints}
-              min={5}
-              max={50}
-            />
-          </div>
+        <div className="space-y-6">
+          {/* パラメータ空間設定 */}
+          <Card className="p-4 flex flex-col">
+            <h3 className="text-lg font-medium mb-4">パラメータ空間</h3>
+            <div className="mb-4">
+              <div className="flex items-center space-x-2">
+                <input
+                  type="checkbox"
+                  id="useDefaultParams"
+                  checked={useDefaultParams}
+                  onChange={(e) => setUseDefaultParams(e.target.checked)}
+                  className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                />
+                <label htmlFor="useDefaultParams" className="text-sm font-medium text-gray-300">
+                  デフォルトパラメータ空間を使用
+                </label>
+              </div>
+            </div>
+            <div className="flex-grow flex flex-col">
+              {!useDefaultParams && (
+                <div className="flex-grow flex flex-col">
+                  <label htmlFor="customParameterSpace" className="text-sm font-medium mb-2 block">
+                    カスタムパラメータ空間 (JSON)
+                  </label>
+                  <textarea
+                    id="customParameterSpace"
+                    value={customParameterSpace}
+                    onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setCustomParameterSpace(e.target.value)}
+                    placeholder="パラメータ空間をJSON形式で入力してください"
+                    className="font-mono text-sm w-full flex-grow p-3 bg-gray-800 border border-secondary-700 text-white rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    rows={15}
+                  />
+                </div>
+              )}
+              {useDefaultParams && defaultParameterSpace && (
+                <div className="flex-grow flex flex-col">
+                  <CollapsibleJson
+                    data={defaultParameterSpace}
+                    title="デフォルトパラメータ空間 (プレビュー)"
+                    defaultExpanded={true}
+                    theme="dark"
+                  />
+                </div>
+              )}
+            </div>
+          </Card>
         </div>
 
-        <div className="mb-4">
-          <InputField
-            label="乱数シード"
-            type="number"
-            value={randomState}
-            onChange={setRandomState}
-          />
-        </div>
-      </Card>
-
-      {/* パラメータ空間設定 */}
-      <Card className="p-4">
-        <h3 className="text-lg font-medium mb-4">パラメータ空間</h3>
-        
-        <div className="mb-4">
-          <div className="flex items-center space-x-2">
-            <input
-              type="checkbox"
-              id="useDefaultParams"
-              checked={useDefaultParams}
-              onChange={(e) => setUseDefaultParams(e.target.checked)}
-              className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
-            />
-            <label htmlFor="useDefaultParams" className="text-sm font-medium text-gray-300">
-              デフォルトパラメータ空間を使用
-            </label>
-          </div>
-        </div>
-
-        {!useDefaultParams && (
-          <div>
-            <label htmlFor="customParameterSpace" className="text-sm font-medium mb-2 block">
-              カスタムパラメータ空間 (JSON)
-            </label>
-            <textarea
-              id="customParameterSpace"
-              value={customParameterSpace}
-              onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setCustomParameterSpace(e.target.value)}
-              rows={10}
-              placeholder="パラメータ空間をJSON形式で入力してください"
-              className="font-mono text-sm w-full p-3 bg-gray-800 border border-secondary-700 text-white rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            />
-          </div>
-        )}
-
-        {useDefaultParams && defaultParameterSpace && (
-          <div>
-            <label className="text-sm font-medium mb-2 block">
-              デフォルトパラメータ空間 (プレビュー)
-            </label>
-            <pre className="bg-gray-100 p-3 rounded text-sm overflow-auto max-h-40">
-              {JSON.stringify(defaultParameterSpace, null, 2)}
-            </pre>
-          </div>
-        )}
-      </Card>
-
-      {/* 実行ボタン */}
-      <div className="flex justify-end">
+        {/* 実行ボタン */}
+        <div className="md:col-span-2 flex justify-end">
         <ActionButton
           type="submit"
           disabled={isLoading}
@@ -262,7 +338,15 @@ const BayesianOptimizationForm: React.FC<BayesianOptimizationFormProps> = ({
           {isLoading ? "最適化実行中..." : "ベイジアン最適化を実行"}
         </ActionButton>
       </div>
-    </form>
+      </form>
+      <InfoModal
+        isOpen={isInfoModalOpen}
+        onClose={() => setIsInfoModalOpen(false)}
+        title={modalContent.title}
+      >
+        {modalContent.content}
+      </InfoModal>
+    </>
   );
 };
 
