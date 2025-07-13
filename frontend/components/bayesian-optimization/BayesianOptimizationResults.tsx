@@ -1,17 +1,26 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import ActionButton from "@/components/common/ActionButton";
 import { BayesianOptimizationResult } from "@/types/bayesian-optimization";
+import ProfileSaveDialog from "./ProfileSaveDialog";
 
 interface BayesianOptimizationResultsProps {
   result: BayesianOptimizationResult;
+  onSaveAsProfile?: (profileData: {
+    name: string;
+    description?: string;
+    isDefault?: boolean;
+  }) => void;
 }
 
 const BayesianOptimizationResults: React.FC<BayesianOptimizationResultsProps> = ({
   result,
+  onSaveAsProfile,
 }) => {
+  const [showProfileDialog, setShowProfileDialog] = useState(false);
   const formatDuration = (seconds: number): string => {
     if (seconds < 60) {
       return `${seconds.toFixed(1)}秒`;
@@ -71,30 +80,38 @@ const BayesianOptimizationResults: React.FC<BayesianOptimizationResultsProps> = 
               {result.optimization_type === "bayesian_ga" ? "GAパラメータ" : "MLハイパーパラメータ"}
             </Badge>
           </div>
-          
-          {result.experiment_name && (
-            <div className="text-sm text-gray-600">
-              実験: {result.experiment_name}
-            </div>
-          )}
-          
-          {result.model_type && (
-            <div className="text-sm text-gray-600">
-              モデル: {result.model_type}
-            </div>
+
+          {onSaveAsProfile && (
+            <ActionButton
+              onClick={() => setShowProfileDialog(true)}
+              variant="secondary"
+              size="sm"
+            >
+              プロファイルとして保存
+            </ActionButton>
           )}
         </div>
       </Card>
 
-      {/* ベストパラメータ */}
-      <Card className="p-6 dark:bg-gray-900">
-        <h3 className="text-lg font-bold mb-4">ベストパラメータ</h3>
-        
+      {/* プロファイル保存ダイアログ */}
+      {onSaveAsProfile && (
+        <ProfileSaveDialog
+          isOpen={showProfileDialog}
+          onClose={() => setShowProfileDialog(false)}
+          onSave={onSaveAsProfile}
+          optimizationResult={result}
+        />
+      )}
+
+      {/* 最適パラメータ */}
+      <Card className="p-6">
+        <h3 className="text-xl font-bold mb-4">最適パラメータ</h3>
+
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {Object.entries(result.best_params).map(([key, value]) => (
-            <div key={key} className="flex justify-between items-center p-3 bg-gray-50 dark:bg-gray-800 rounded">
-              <span className="font-medium text-gray-800 dark:text-gray-200">{key}</span>
-              <span className="text-blue-600 dark:text-blue-400 font-mono">
+            <div key={key} className="flex justify-between items-center p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+              <span className="font-medium">{key}:</span>
+              <span className="font-mono text-blue-600 dark:text-blue-400">
                 {typeof value === "number" ? value.toFixed(4) : String(value)}
               </span>
             </div>
@@ -104,8 +121,8 @@ const BayesianOptimizationResults: React.FC<BayesianOptimizationResultsProps> = 
 
       {/* 最適化履歴 */}
       <Card className="p-6">
-        <h3 className="text-lg font-bold mb-4">最適化履歴</h3>
-        
+        <h3 className="text-xl font-bold mb-4">最適化履歴（上位10件）</h3>
+
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
@@ -129,36 +146,34 @@ const BayesianOptimizationResults: React.FC<BayesianOptimizationResultsProps> = 
                       )}
                     </div>
                   </td>
-                  <td className="p-2 font-mono">
-                    {formatScore(entry.score)}
+                  <td className="p-2">
+                    <span className="font-mono text-green-600 dark:text-green-400">
+                      {formatScore(entry.score)}
+                    </span>
                   </td>
                   <td className="p-2">
-                    <details className="cursor-pointer">
-                      <summary className="text-blue-600 hover:text-blue-800">
-                        パラメータを表示
-                      </summary>
-                      <div className="mt-2 p-2 bg-gray-100 dark:bg-gray-800 rounded text-xs font-mono text-gray-800 dark:text-gray-200">
-                        <pre>{JSON.stringify(entry.params, null, 2)}</pre>
-                      </div>
-                    </details>
+                    <div className="text-xs space-y-1">
+                      {Object.entries(entry.params).map(([key, value]) => (
+                        <div key={key} className="flex justify-between">
+                          <span className="text-gray-500">{key}:</span>
+                          <span className="font-mono">
+                            {typeof value === "number" ? value.toFixed(3) : String(value)}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
                   </td>
                 </tr>
               ))}
             </tbody>
           </table>
-          
-          {result.optimization_history.length > 10 && (
-            <div className="text-center mt-4 text-sm text-gray-600">
-              上位10件を表示中（全{result.optimization_history.length}件）
-            </div>
-          )}
         </div>
       </Card>
 
       {/* 収束情報 */}
       <Card className="p-6">
-        <h3 className="text-lg font-bold mb-4">収束情報</h3>
-        
+        <h3 className="text-xl font-bold mb-4">収束情報</h3>
+
         <div className="space-y-2">
           <div className="flex justify-between">
             <span>収束状態:</span>
@@ -166,17 +181,17 @@ const BayesianOptimizationResults: React.FC<BayesianOptimizationResultsProps> = 
               {result.convergence_info.converged ? "収束済み" : "未収束"}
             </Badge>
           </div>
-          
+
           <div className="flex justify-between">
             <span>ベスト反復:</span>
             <span className="font-mono">{result.convergence_info.best_iteration}</span>
           </div>
-          
+
           <div className="flex justify-between">
             <span>総評価回数:</span>
             <span className="font-mono">{result.total_evaluations}</span>
           </div>
-          
+
           <div className="flex justify-between">
             <span>最適化効率:</span>
             <span className="font-mono">

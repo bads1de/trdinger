@@ -21,6 +21,10 @@ export interface BayesianOptimizationConfig {
     n_initial_points?: number;
     random_state?: number;
   };
+  // プロファイル保存用パラメータ
+  save_as_profile?: boolean;
+  profile_name?: string;
+  profile_description?: string;
 }
 
 export interface OptimizationHistory {
@@ -56,4 +60,53 @@ export interface DefaultParameterSpaceResponse {
   success: boolean;
   parameter_space?: Record<string, ParameterSpace>;
   message: string;
+}
+
+// プロファイル関連の型定義
+export interface OptimizationProfile {
+  id: number;
+  name: string;
+  description?: string;
+  optimization_result_id: number;
+  is_default: boolean;
+  is_active: boolean;
+  target_model_type?: string;
+  created_at: string;
+  updated_at: string;
+  optimization_result?: BayesianOptimizationResult;
+}
+
+export interface ProfileCreateRequest {
+  name: string;
+  optimization_result_id: number;
+  description?: string;
+  is_default?: boolean;
+  target_model_type?: string;
+}
+
+export interface ProfileUpdateRequest {
+  name?: string;
+  description?: string;
+  is_default?: boolean;
+  is_active?: boolean;
+  target_model_type?: string;
+}
+
+export interface ProfileResponse {
+  success: boolean;
+  profile?: OptimizationProfile;
+  profiles?: OptimizationProfile[];
+  count?: number;
+  message: string;
+  timestamp: string;
+}
+
+export interface MLOptimizationRequest {
+  model_type: string;
+  parameter_space?: Record<string, ParameterSpace>;
+  n_calls?: number;
+  optimization_config?: Record<string, any>;
+  save_as_profile?: boolean;
+  profile_name?: string;
+  profile_description?: string;
 }

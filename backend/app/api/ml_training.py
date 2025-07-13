@@ -16,6 +16,7 @@ from app.core.services.backtest_data_service import BacktestDataService
 from database.repositories.ohlcv_repository import OHLCVRepository
 from database.repositories.open_interest_repository import OpenInterestRepository
 from database.repositories.funding_rate_repository import FundingRateRepository
+from database.repositories.bayesian_optimization_repository import BayesianOptimizationRepository
 from database.connection import get_db
 
 logger = logging.getLogger(__name__)
@@ -54,6 +55,11 @@ class MLTrainingConfig(BaseModel):
     max_depth: int = Field(default=10, description="最大深度")
     n_estimators: int = Field(default=100, description="推定器数")
     learning_rate: float = Field(default=0.1, description="学習率")
+
+    # プロファイル適用設定
+    use_profile: bool = Field(default=False, description="プロファイルを使用するか")
+    profile_id: Optional[int] = Field(None, description="使用するプロファイルID")
+    profile_name: Optional[str] = Field(None, description="使用するプロファイル名")
 
 
 class MLTrainingResponse(BaseModel):
@@ -134,7 +140,48 @@ async def train_ml_model_background(config: MLTrainingConfig):
         })
         
         ml_service = MLTrainingService()
-        
+
+        # プロファイルからハイパーパラメータを適用
+        training_params = {}
+        if config.use_profile and (config.profile_id or config.profile_name):
+            training_status.update({
+                "progress": 25,
+                "status": "loading_profile",
+                "message": "プロファイルからハイパーパラメータを読み込んでいます..."
+            })
+
+            db = next(get_db())
+            try:
+                bayesian_repo = BayesianOptimizationRepository(db)
+                profile = None
+
+                if config.profile_id:
+                    profile = bayesian_repo.get_by_id(config.profile_id)
+                elif config.profile_name:
+                    profile = bayesian_repo.get_by_profile_name(config.profile_name)
+
+                if profile:
+                    # プロファイルからハイパーパラメータを取得
+                    best_params = profile.best_params
+
+                    # 設定を上書き
+                    for param_name, param_value in best_params.items():
+                        if hasattr(config, param_name):
+                            setattr(config, param_name, param_value)
+                            training_params[param_name] = param_value
+
+                    logger.info(f"プロファイル '{profile.profile_name}' からハイパーパラメータを適用: {training_params}")
+                    training_status.update({
+                        "message": f"プロファイル '{profile.profile_name}' からハイパーパラメータを適用しました"
+                    })
+                else:
+                    logger.warning(f"指定されたプロファイルが見つかりません: ID={config.profile_id}, Name={config.profile_name}")
+
+            except Exception as e:
+                logger.warning(f"プロファイル読み込みエラー: {e}")
+            finally:
+                db.close()
+
         # モデルトレーニング
         training_status.update({
             "progress": 30,

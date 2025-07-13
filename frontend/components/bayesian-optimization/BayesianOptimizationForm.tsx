@@ -48,6 +48,11 @@ const BayesianOptimizationForm: React.FC<BayesianOptimizationFormProps> = ({
     content: null,
   });
 
+  // プロファイル保存関連の状態
+  const [saveAsProfile, setSaveAsProfile] = useState(false);
+  const [profileName, setProfileName] = useState("");
+  const [profileDescription, setProfileDescription] = useState("");
+
   const openInfoModal = (title: string, content: React.ReactNode) => {
     setModalContent({ title, content });
     setIsInfoModalOpen(true);
@@ -76,8 +81,14 @@ const BayesianOptimizationForm: React.FC<BayesianOptimizationFormProps> = ({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
+    // プロファイル保存時のバリデーション
+    if (saveAsProfile && !profileName.trim()) {
+      alert("プロファイル保存を有効にする場合、プロファイル名は必須です");
+      return;
+    }
+
     let parameterSpace: Record<string, ParameterSpace> | undefined;
-    
+
     if (!useDefaultParams) {
       try {
         parameterSpace = JSON.parse(customParameterSpace);
@@ -96,6 +107,10 @@ const BayesianOptimizationForm: React.FC<BayesianOptimizationFormProps> = ({
         n_initial_points: nInitialPoints,
         random_state: randomState,
       },
+      // プロファイル保存設定を追加
+      save_as_profile: saveAsProfile,
+      profile_name: saveAsProfile && profileName.trim() ? profileName.trim() : undefined,
+      profile_description: saveAsProfile && profileDescription.trim() ? profileDescription.trim() : undefined,
     };
 
     config.model_type = modelType;
@@ -267,6 +282,57 @@ const BayesianOptimizationForm: React.FC<BayesianOptimizationFormProps> = ({
                     theme="dark"
                   />
                 </div>
+              )}
+            </div>
+          </Card>
+        </div>
+
+        {/* プロファイル保存設定 */}
+        <div className="md:col-span-2">
+          <Card className="p-4">
+            <h3 className="text-lg font-semibold mb-4 text-white">プロファイル保存設定</h3>
+
+            <div className="space-y-4">
+              {/* プロファイル保存チェックボックス */}
+              <div className="flex items-center space-x-2">
+                <input
+                  type="checkbox"
+                  id="save-as-profile"
+                  checked={saveAsProfile}
+                  onChange={(e) => setSaveAsProfile(e.target.checked)}
+                  className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600"
+                />
+                <label htmlFor="save-as-profile" className="text-sm font-medium text-white">
+                  最適化結果をプロファイルとして保存
+                </label>
+              </div>
+
+              {/* プロファイル名入力 */}
+              {saveAsProfile && (
+                <>
+                  <InputField
+                    label="プロファイル名 *"
+                    type="text"
+                    value={profileName}
+                    onChange={setProfileName}
+                    placeholder="プロファイル名を入力してください"
+                    required={saveAsProfile}
+                    className="text-sm"
+                  />
+
+                  <div className="space-y-2">
+                    <label className="block text-sm font-medium text-white">
+                      プロファイル説明（オプション）
+                    </label>
+                    <textarea
+                      value={profileDescription}
+                      onChange={(e) => setProfileDescription(e.target.value)}
+                      placeholder="プロファイルの説明を入力してください"
+                      rows={3}
+                      className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:placeholder-gray-400"
+                    />
+                  </div>
+                </>
               )}
             </div>
           </Card>

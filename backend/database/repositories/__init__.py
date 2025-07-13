@@ -6,9 +6,12 @@ from .base_repository import BaseRepository
 from .ohlcv_repository import OHLCVRepository
 from .funding_rate_repository import FundingRateRepository
 from .open_interest_repository import OpenInterestRepository
+from .bayesian_optimization_repository import BayesianOptimizationRepository
+
 __all__ = [
     "BaseRepository",
-    "OHLCVRepository", 
+    "OHLCVRepository",
     "FundingRateRepository",
-    "OpenInterestRepository"
+    "OpenInterestRepository",
+    "BayesianOptimizationRepository",
 ]

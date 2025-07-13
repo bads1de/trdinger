@@ -18,6 +18,8 @@ import {
   Target,
 } from "lucide-react";
 import BayesianOptimizationModal from "@/components/bayesian-optimization/BayesianOptimizationModal";
+import ProfileSelector from "@/components/bayesian-optimization/ProfileSelector";
+import { OptimizationProfile } from "@/types/bayesian-optimization";
 
 interface TrainingConfig {
   symbol: string;
@@ -27,6 +29,9 @@ interface TrainingConfig {
   save_model: boolean;
   train_test_split: number;
   random_state: number;
+  use_profile: boolean;
+  profile_id?: number;
+  profile_name?: string;
 }
 
 interface TrainingStatus {
@@ -59,6 +64,7 @@ export default function MLTraining() {
     save_model: true,
     train_test_split: 0.8,
     random_state: 42,
+    use_profile: false,
   });
 
   const [trainingStatus, setTrainingStatus] = useState<TrainingStatus>({
@@ -70,6 +76,7 @@ export default function MLTraining() {
 
   const [error, setError] = useState<string | null>(null);
   const [showBayesianModal, setShowBayesianModal] = useState(false);
+  const [selectedProfile, setSelectedProfile] = useState<OptimizationProfile | null>(null);
 
   useEffect(() => {
     // トレーニング状態を定期的にチェック
@@ -268,6 +275,47 @@ export default function MLTraining() {
                 disabled={trainingStatus.is_training}
               />
             </div>
+          </div>
+
+          {/* プロファイル選択 */}
+          <div className="mt-6">
+            <div className="flex items-center space-x-2 mb-4">
+              <input
+                type="checkbox"
+                id="use-profile"
+                checked={config.use_profile}
+                onChange={(e) => {
+                  const useProfile = e.target.checked;
+                  setConfig((prev) => ({
+                    ...prev,
+                    use_profile: useProfile,
+                    profile_id: useProfile ? selectedProfile?.id : undefined,
+                    profile_name: useProfile ? selectedProfile?.name : undefined,
+                  }));
+                }}
+                disabled={trainingStatus.is_training}
+                className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+              />
+              <label htmlFor="use-profile" className="text-sm font-medium">
+                最適化プロファイルを使用する
+              </label>
+            </div>
+
+            {config.use_profile && (
+              <ProfileSelector
+                selectedProfileId={selectedProfile?.id}
+                onProfileSelect={(profile) => {
+                  setSelectedProfile(profile);
+                  setConfig((prev) => ({
+                    ...prev,
+                    profile_id: profile?.id,
+                    profile_name: profile?.name,
+                  }));
+                }}
+                modelType="LightGBM"
+                className="mt-2"
+              />
+            )}
           </div>
 
           <div className="flex items-center space-x-4">
