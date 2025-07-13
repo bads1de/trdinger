@@ -75,9 +75,9 @@ const BayesianOptimizationModal: React.FC<BayesianOptimizationModalProps> = ({
       closeOnOverlayClick={!isLoading}
       closeOnEscape={!isLoading}
       showCloseButton={!isLoading}
-      contentClassName="p-0"
+      contentClassName="p-6"
     >
-      <div className="max-h-[90vh] overflow-y-auto p-6">
+      <div className="max-h-[85vh]">
         {!result && !error && (
           <BayesianOptimizationForm
             onMLOptimization={handleMLOptimization}

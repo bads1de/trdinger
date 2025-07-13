@@ -9,6 +9,8 @@ from typing import Dict, Any, List, Optional
 from fastapi import APIRouter, HTTPException, status, Depends
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
+from datetime import datetime
+import numpy as np
 
 from database.connection import get_db, SessionLocal
 from app.core.services.optimization import BayesianOptimizer
@@ -105,24 +107,41 @@ async def optimize_ml_hyperparameters(
             n_calls=request.n_calls
         )
         
-        # 結果を整理
+        # NumPy型をPythonの標準型に変換する関数
+        def convert_numpy_types(obj):
+            """NumPy型をPythonの標準型に再帰的に変換"""
+            if isinstance(obj, np.integer):
+                return int(obj)
+            elif isinstance(obj, np.floating):
+                return float(obj)
+            elif isinstance(obj, np.ndarray):
+                return obj.tolist()
+            elif isinstance(obj, dict):
+                return {key: convert_numpy_types(value) for key, value in obj.items()}
+            elif isinstance(obj, list):
+                return [convert_numpy_types(item) for item in obj]
+            else:
+                return obj
+
+        # 結果を整理（NumPy型を変換）
         result = {
             "model_type": request.model_type,
             "optimization_type": "bayesian_ml",
-            "best_params": optimization_result.best_params,
-            "best_score": optimization_result.best_score,
-            "total_evaluations": optimization_result.total_evaluations,
-            "optimization_time": optimization_result.optimization_time,
-            "convergence_info": optimization_result.convergence_info,
-            "optimization_history": optimization_result.optimization_history
+            "best_params": convert_numpy_types(optimization_result.best_params),
+            "best_score": convert_numpy_types(optimization_result.best_score),
+            "total_evaluations": convert_numpy_types(optimization_result.total_evaluations),
+            "optimization_time": convert_numpy_types(optimization_result.optimization_time),
+            "convergence_info": convert_numpy_types(optimization_result.convergence_info),
+            "optimization_history": convert_numpy_types(optimization_result.optimization_history)
         }
-        
+
         logger.info(f"MLハイパーパラメータ最適化完了: ベストスコア={optimization_result.best_score:.4f}")
-        
+
         return {
             "success": True,
             "result": result,
-            "message": "MLハイパーパラメータのベイジアン最適化が完了しました"
+            "message": "MLハイパーパラメータのベイジアン最適化が完了しました",
+            "timestamp": datetime.now().isoformat()
         }
     
     return await APIErrorHandler.handle_api_exception(_optimize_ml)

@@ -1,8 +1,8 @@
 "use client";
 
 import React from "react";
-import { Card } from "@/components/ui/Card";
-import { Badge } from "@/components/ui/Badge";
+import { Card } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { BayesianOptimizationResult } from "@/types/bayesian-optimization";
 
 interface BayesianOptimizationResultsProps {
@@ -87,14 +87,14 @@ const BayesianOptimizationResults: React.FC<BayesianOptimizationResultsProps> = 
       </Card>
 
       {/* ベストパラメータ */}
-      <Card className="p-6">
+      <Card className="p-6 dark:bg-gray-900">
         <h3 className="text-lg font-bold mb-4">ベストパラメータ</h3>
         
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {Object.entries(result.best_params).map(([key, value]) => (
-            <div key={key} className="flex justify-between items-center p-3 bg-gray-50 rounded">
-              <span className="font-medium">{key}</span>
-              <span className="text-blue-600 font-mono">
+            <div key={key} className="flex justify-between items-center p-3 bg-gray-50 dark:bg-gray-800 rounded">
+              <span className="font-medium text-gray-800 dark:text-gray-200">{key}</span>
+              <span className="text-blue-600 dark:text-blue-400 font-mono">
                 {typeof value === "number" ? value.toFixed(4) : String(value)}
               </span>
             </div>
@@ -120,12 +120,12 @@ const BayesianOptimizationResults: React.FC<BayesianOptimizationResultsProps> = 
                 .sort((a, b) => b.score - a.score)
                 .slice(0, 10)
                 .map((entry, index) => (
-                <tr key={entry.iteration} className="border-b hover:bg-gray-50">
+                <tr key={entry.iteration} className="border-b hover:bg-gray-50 dark:hover:bg-gray-800">
                   <td className="p-2">
                     <div className="flex items-center space-x-2">
                       <span>{entry.iteration}</span>
                       {index === 0 && (
-                        <Badge variant="success" size="sm">BEST</Badge>
+                        <Badge variant="success">BEST</Badge>
                       )}
                     </div>
                   </td>
@@ -137,8 +137,8 @@ const BayesianOptimizationResults: React.FC<BayesianOptimizationResultsProps> = 
                       <summary className="text-blue-600 hover:text-blue-800">
                         パラメータを表示
                       </summary>
-                      <div className="mt-2 p-2 bg-gray-100 rounded text-xs font-mono">
-                        {JSON.stringify(entry.params, null, 2)}
+                      <div className="mt-2 p-2 bg-gray-100 dark:bg-gray-800 rounded text-xs font-mono text-gray-800 dark:text-gray-200">
+                        <pre>{JSON.stringify(entry.params, null, 2)}</pre>
                       </div>
                     </details>
                   </td>
