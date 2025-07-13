@@ -129,50 +129,7 @@ export default function MLManagementPage() {
               </Card>
             </div>
 
-            {/* クイックアクション */}
-            <Card>
-              <CardHeader>
-                <CardTitle>クイックアクション</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div
-                    onClick={() => setActiveTab("training")}
-                    className="p-4 border border-border rounded-lg hover:bg-muted/50 transition-all text-left cursor-pointer hover:shadow-[0_0_15px_#3b82f6] hover:border-blue-400"
-                  >
-                    <Brain className="h-6 w-6 text-blue-500 mb-2" />
-                    <h3 className="font-medium text-foreground">
-                      新しいモデルを学習
-                    </h3>
-                    <p className="text-sm text-muted-foreground">
-                      最新データでモデルをトレーニング
-                    </p>
-                  </div>
-
-                  <div
-                    onClick={() => setActiveTab("models")}
-                    className="p-4 border border-border rounded-lg hover:bg-muted/50 transition-all text-left cursor-pointer hover:shadow-[0_0_15px_#22c55e] hover:border-green-400"
-                  >
-                    <Database className="h-6 w-6 text-green-500 mb-2" />
-                    <h3 className="font-medium text-foreground">モデル管理</h3>
-                    <p className="text-sm text-muted-foreground">
-                      既存モデルの確認・管理
-                    </p>
-                  </div>
-
-                  <div
-                    onClick={() => setActiveTab("settings")}
-                    className="p-4 border border-border rounded-lg hover:bg-muted/50 transition-all text-left cursor-pointer hover:shadow-[0_0_15px_#a855f7] hover:border-purple-400"
-                  >
-                    <Settings className="h-6 w-6 text-purple-500 mb-2" />
-                    <h3 className="font-medium text-foreground">設定</h3>
-                    <p className="text-sm text-muted-foreground">
-                      ML関連の設定を変更
-                    </p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+            
           </div>
         )}
 

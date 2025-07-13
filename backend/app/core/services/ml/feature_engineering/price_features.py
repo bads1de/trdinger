@@ -53,15 +53,19 @@ class PriceFeatureCalculator:
         short_ma = lookback_periods.get("short_ma", 10)
         long_ma = lookback_periods.get("long_ma", 50)
 
-        result_df[f'MA_{short_ma}'] = result_df['Close'].rolling(window=short_ma).mean()
-        result_df[f'MA_{long_ma}'] = result_df['Close'].rolling(window=long_ma).mean()
+        result_df[f'MA_{short_ma}'] = DataValidator.safe_rolling_mean(result_df['Close'], window=short_ma)
+        result_df[f'MA_{long_ma}'] = DataValidator.safe_rolling_mean(result_df['Close'], window=long_ma)
 
-        result_df['Price_MA_Ratio_Short'] = result_df['Close'] / result_df[f'MA_{short_ma}']
-        result_df['Price_MA_Ratio_Long'] = result_df['Close'] / result_df[f'MA_{long_ma}']
+        result_df['Price_MA_Ratio_Short'] = DataValidator.safe_divide(
+            result_df['Close'], result_df[f'MA_{short_ma}'], default_value=1.0
+        )
+        result_df['Price_MA_Ratio_Long'] = DataValidator.safe_divide(
+            result_df['Close'], result_df[f'MA_{long_ma}'], default_value=1.0
+        )
 
-        # 価格モメンタム
+        # 価格モメンタム（安全な計算）
         momentum_period = lookback_periods.get("momentum", 14)
-        result_df['Price_Momentum_14'] = result_df['Close'].pct_change(momentum_period)
+        result_df['Price_Momentum_14'] = DataValidator.safe_pct_change(result_df['Close'], periods=momentum_period)
 
         # 高値・安値ポジション
         result_df['High_Low_Position'] = (
@@ -69,10 +73,10 @@ class PriceFeatureCalculator:
             (result_df['High'] - result_df['Low'] + 1e-8)
         )
 
-        # 価格変化率
-        result_df['Price_Change_1'] = result_df['Close'].pct_change(1)
-        result_df['Price_Change_5'] = result_df['Close'].pct_change(5)
-        result_df['Price_Change_20'] = result_df['Close'].pct_change(20)
+        # 価格変化率（安全な計算）
+        result_df['Price_Change_1'] = DataValidator.safe_pct_change(result_df['Close'], periods=1)
+        result_df['Price_Change_5'] = DataValidator.safe_pct_change(result_df['Close'], periods=5)
+        result_df['Price_Change_20'] = DataValidator.safe_pct_change(result_df['Close'], periods=20)
 
         # 価格レンジ
         result_df['Price_Range'] = (result_df['High'] - result_df['Low']) / result_df['Close']
@@ -86,8 +90,8 @@ class PriceFeatureCalculator:
 
         # 価格位置（期間内での相対位置）
         period = lookback_periods.get("volatility", 20)
-        close_min = result_df['Close'].rolling(window=period).min()
-        close_max = result_df['Close'].rolling(window=period).max()
+        close_min = result_df['Close'].rolling(window=period, min_periods=1).min()
+        close_max = result_df['Close'].rolling(window=period, min_periods=1).max()
         result_df['Price_Position'] = DataValidator.safe_divide(
             result_df['Close'] - close_min,
             close_max - close_min,
@@ -124,16 +128,16 @@ class PriceFeatureCalculator:
             
             volatility_period = lookback_periods.get("volatility", 20)
             
-            # リターンを計算
-            result_df['Returns'] = result_df['Close'].pct_change()
-            
-            # 実現ボラティリティ
+            # リターンを計算（安全な計算）
+            result_df['Returns'] = DataValidator.safe_pct_change(result_df['Close'])
+
+            # 実現ボラティリティ（安全な計算）
             result_df['Realized_Volatility_20'] = (
-                result_df['Returns'].rolling(window=volatility_period).std() * np.sqrt(24)
+                DataValidator.safe_rolling_std(result_df['Returns'], window=volatility_period) * np.sqrt(24)
             )
             
-            # ボラティリティスパイク
-            vol_ma = result_df['Realized_Volatility_20'].rolling(window=volatility_period).mean()
+            # ボラティリティスパイク（安全な計算）
+            vol_ma = DataValidator.safe_rolling_mean(result_df['Realized_Volatility_20'], window=volatility_period)
             result_df['Volatility_Spike'] = DataValidator.safe_divide(
                 result_df['Realized_Volatility_20'],
                 vol_ma,
@@ -148,17 +152,19 @@ class PriceFeatureCalculator:
                     abs(result_df['Low'] - result_df['Close'].shift(1))
                 )
             )
-            result_df['ATR_20'] = result_df['TR'].rolling(window=volatility_period).mean()
-            
-            # 正規化ATR
-            result_df['ATR_Normalized'] = result_df['ATR_20'] / result_df['Close']
-            
+            result_df['ATR_20'] = DataValidator.safe_rolling_mean(result_df['TR'], window=volatility_period)
+
+            # 正規化ATR（安全な計算）
+            result_df['ATR_Normalized'] = DataValidator.safe_divide(
+                result_df['ATR_20'], result_df['Close'], default_value=0.01
+            )
+
             # ボラティリティレジーム
-            vol_quantile = result_df['Realized_Volatility_20'].rolling(window=volatility_period*2).quantile(0.8)
+            vol_quantile = result_df['Realized_Volatility_20'].rolling(window=volatility_period*2, min_periods=1).quantile(0.8)
             result_df['High_Vol_Regime'] = (result_df['Realized_Volatility_20'] > vol_quantile).astype(int)
-            
-            # ボラティリティ変化率
-            result_df['Vol_Change'] = result_df['Realized_Volatility_20'].pct_change()
+
+            # ボラティリティ変化率（安全な計算）
+            result_df['Vol_Change'] = DataValidator.safe_pct_change(result_df['Realized_Volatility_20'])
             
             logger.debug("ボラティリティ特徴量計算完了")
             return result_df
@@ -187,8 +193,8 @@ class PriceFeatureCalculator:
             
             volume_period = lookback_periods.get("volume", 20)
             
-            # 出来高移動平均
-            result_df[f'Volume_MA_{volume_period}'] = result_df['Volume'].rolling(window=volume_period).mean()
+            # 出来高移動平均（安全な計算）
+            result_df[f'Volume_MA_{volume_period}'] = DataValidator.safe_rolling_mean(result_df['Volume'], window=volume_period)
             
             # 出来高比率
             result_df['Volume_Ratio'] = DataValidator.safe_divide(
@@ -197,10 +203,10 @@ class PriceFeatureCalculator:
                 default_value=1.0
             )
             
-            # 価格・出来高トレンド
-            price_change = result_df['Close'].pct_change()
-            volume_change = result_df['Volume'].pct_change()
-            result_df['Price_Volume_Trend'] = price_change * volume_change
+            # 価格・出来高トレンド（安全な計算）
+            price_change = DataValidator.safe_pct_change(result_df['Close'])
+            volume_change = DataValidator.safe_pct_change(result_df['Volume'])
+            result_df['Price_Volume_Trend'] = DataValidator.safe_multiply(price_change, volume_change)
             
             # 出来高加重平均価格（VWAP）
             typical_price = (result_df['High'] + result_df['Low'] + result_df['Close']) / 3

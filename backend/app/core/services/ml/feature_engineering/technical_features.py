@@ -48,8 +48,8 @@ class TechnicalFeatureCalculator:
             short_ma = lookback_periods.get("short_ma", 10)
             long_ma = lookback_periods.get("long_ma", 50)
             
-            ma_short = result_df['Close'].rolling(window=short_ma).mean()
-            ma_long = result_df['Close'].rolling(window=long_ma).mean()
+            ma_short = DataValidator.safe_rolling_mean(result_df['Close'], window=short_ma)
+            ma_long = DataValidator.safe_rolling_mean(result_df['Close'], window=long_ma)
             
             result_df['Trend_Strength'] = DataValidator.safe_divide(
                 ma_short - ma_long,
@@ -59,8 +59,8 @@ class TechnicalFeatureCalculator:
             
             # レンジ相場判定
             volatility_period = lookback_periods.get("volatility", 20)
-            high_20 = result_df['High'].rolling(window=volatility_period).max()
-            low_20 = result_df['Low'].rolling(window=volatility_period).min()
+            high_20 = result_df['High'].rolling(window=volatility_period, min_periods=1).max()
+            low_20 = result_df['Low'].rolling(window=volatility_period, min_periods=1).min()
             
             result_df['Range_Bound_Ratio'] = DataValidator.safe_divide(
                 result_df['Close'] - low_20,
@@ -112,10 +112,10 @@ class TechnicalFeatureCalculator:
         try:
             result_df = df.copy()
             
-            # RSI
-            delta = result_df['Close'].diff()
-            gain = (delta.where(delta > 0, 0)).rolling(window=14).mean()
-            loss = (-delta.where(delta < 0, 0)).rolling(window=14).mean()
+            # RSI（安全な計算）
+            delta = result_df['Close'].diff().fillna(0.0)
+            gain = DataValidator.safe_rolling_mean((delta.where(delta > 0, 0)), window=14)
+            loss = DataValidator.safe_rolling_mean((-delta.where(delta < 0, 0)), window=14)
             rs = DataValidator.safe_divide(gain, loss, default_value=1.0)
             result_df['RSI'] = 100 - (100 / (1 + rs))
             
@@ -126,34 +126,44 @@ class TechnicalFeatureCalculator:
             result_df['MACD_Signal'] = result_df['MACD'].ewm(span=9).mean()
             result_df['MACD_Histogram'] = result_df['MACD'] - result_df['MACD_Signal']
             
-            # ストキャスティクス
+            # ストキャスティクス（安全な計算）
             period = 14
-            low_14 = result_df['Low'].rolling(window=period).min()
-            high_14 = result_df['High'].rolling(window=period).max()
-            
+            low_14 = result_df['Low'].rolling(window=period, min_periods=1).min()
+            high_14 = result_df['High'].rolling(window=period, min_periods=1).max()
+
             result_df['Stochastic_K'] = 100 * DataValidator.safe_divide(
                 result_df['Close'] - low_14,
                 high_14 - low_14,
                 default_value=0.5
             )
-            result_df['Stochastic_D'] = result_df['Stochastic_K'].rolling(window=3).mean()
+            result_df['Stochastic_D'] = DataValidator.safe_rolling_mean(result_df['Stochastic_K'], window=3)
             
-            # ウィリアムズ%R
-            result_df['Williams_R'] = -100 * (
-                (high_14 - result_df['Close']) / (high_14 - low_14 + 1e-8)
+            # ウィリアムズ%R（安全な計算）
+            result_df['Williams_R'] = -100 * DataValidator.safe_divide(
+                high_14 - result_df['Close'],
+                high_14 - low_14,
+                default_value=0.5
             )
-            
-            # CCI（Commodity Channel Index）
+
+            # CCI（Commodity Channel Index）（安全な計算）
             typical_price = (result_df['High'] + result_df['Low'] + result_df['Close']) / 3
-            sma_tp = typical_price.rolling(window=20).mean()
-            mad = typical_price.rolling(window=20).apply(lambda x: np.mean(np.abs(x - x.mean())))
-            result_df['CCI'] = (typical_price - sma_tp) / (0.015 * mad + 1e-8)
-            
-            # ROC（Rate of Change）
-            result_df['ROC'] = result_df['Close'].pct_change(12) * 100
-            
-            # モメンタム
-            result_df['Momentum'] = result_df['Close'] / result_df['Close'].shift(10)
+            sma_tp = DataValidator.safe_rolling_mean(typical_price, window=20)
+            mad = typical_price.rolling(window=20, min_periods=1).apply(lambda x: np.mean(np.abs(x - x.mean())))
+            result_df['CCI'] = DataValidator.safe_divide(
+                typical_price - sma_tp,
+                0.015 * mad,
+                default_value=0.0
+            )
+
+            # ROC（Rate of Change）（安全な計算）
+            result_df['ROC'] = DataValidator.safe_pct_change(result_df['Close'], periods=12) * 100
+
+            # モメンタム（安全な計算）
+            result_df['Momentum'] = DataValidator.safe_divide(
+                result_df['Close'],
+                result_df['Close'].shift(10),
+                default_value=1.0
+            )
             
             logger.debug("モメンタム特徴量計算完了")
             return result_df

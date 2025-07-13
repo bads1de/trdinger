@@ -106,12 +106,29 @@ class FeatureEngineeringService:
                 result_df = self.market_data_calculator.calculate_funding_rate_features(
                     result_df, funding_rate_data, lookback_periods
                 )
+                # 中間クリーニング
+                fr_columns = ['FR_MA_24', 'FR_MA_168', 'FR_Change', 'FR_Change_Rate',
+                             'Price_FR_Divergence', 'FR_Normalized', 'FR_Trend', 'FR_Volatility']
+                existing_fr_columns = [col for col in fr_columns if col in result_df.columns]
+                if existing_fr_columns:
+                    result_df = DataValidator.clean_dataframe(
+                        result_df, column_names=existing_fr_columns, fill_method="median"
+                    )
 
             # 建玉残高特徴量（データがある場合）
             if open_interest_data is not None and not open_interest_data.empty:
                 result_df = self.market_data_calculator.calculate_open_interest_features(
                     result_df, open_interest_data, lookback_periods
                 )
+                # 中間クリーニング
+                oi_columns = ['OI_Change_Rate', 'OI_Change_Rate_24h', 'OI_Surge',
+                             'Volatility_Adjusted_OI', 'OI_MA_24', 'OI_MA_168', 'OI_Trend',
+                             'OI_Price_Correlation', 'OI_Normalized']
+                existing_oi_columns = [col for col in oi_columns if col in result_df.columns]
+                if existing_oi_columns:
+                    result_df = DataValidator.clean_dataframe(
+                        result_df, column_names=existing_oi_columns, fill_method="median"
+                    )
 
             # 複合特徴量（FR + OI）
             if (funding_rate_data is not None and not funding_rate_data.empty and
@@ -119,6 +136,13 @@ class FeatureEngineeringService:
                 result_df = self.market_data_calculator.calculate_composite_features(
                     result_df, funding_rate_data, open_interest_data, lookback_periods
                 )
+                # 中間クリーニング
+                composite_columns = ['FR_OI_Ratio', 'Market_Heat_Index', 'Market_Stress', 'Market_Balance']
+                existing_composite_columns = [col for col in composite_columns if col in result_df.columns]
+                if existing_composite_columns:
+                    result_df = DataValidator.clean_dataframe(
+                        result_df, column_names=existing_composite_columns, fill_method="median"
+                    )
 
             # 市場レジーム特徴量
             result_df = self.technical_calculator.calculate_market_regime_features(result_df, lookback_periods)

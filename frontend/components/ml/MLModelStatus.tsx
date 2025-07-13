@@ -88,7 +88,7 @@ export default function MLModelStatus() {
     } else if (modelStatus.is_model_loaded) {
       return <Badge className="bg-yellow-100 text-yellow-800">読み込み済み</Badge>;
     } else {
-      return <Badge variant="secondary">未読み込み</Badge>;
+      return <Badge variant="secondary" className="mt-1">未読み込み</Badge>;
     }
   };
 
@@ -116,11 +116,11 @@ export default function MLModelStatus() {
   return (
     <div className="space-y-6">
       {/* モデル基本情報 */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 gap-4">
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center justify-between mb-3">
-              <h3 className="font-medium text-gray-900">モデル状態</h3>
+              <h3 className="font-medium text-white">モデル状態</h3>
               {getStatusBadge()}
             </div>
             <div className="space-y-2 text-sm">
@@ -224,7 +224,7 @@ export default function MLModelStatus() {
           <CardContent className="p-4">
             <div className="flex items-center space-x-2 mb-4">
               <Activity className="h-5 w-5 text-orange-600" />
-              <h3 className="font-medium text-gray-900">特徴量重要度 (上位10個)</h3>
+              <h3 className="font-medium text-white">特徴量重要度 (上位10個)</h3>
             </div>
             <div className="space-y-2">
               {Object.entries(featureImportance)
