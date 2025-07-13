@@ -11,11 +11,11 @@ import joblib
 import shutil
 import logging
 from datetime import datetime, timedelta
-from typing import Dict, Any, List, Optional, Tuple
-from pathlib import Path
+from typing import Dict, Any, List, Optional
 
-from ...config.ml_config import ml_config
-from ...utils.ml_error_handler import MLErrorHandler, MLModelError, safe_ml_operation
+
+from app.core.services.ml.config import ml_config
+from ...utils.ml_error_handler import  MLModelError, safe_ml_operation
 
 logger = logging.getLogger(__name__)
 

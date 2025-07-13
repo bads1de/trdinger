@@ -10,14 +10,14 @@ import pandas as pd
 import numpy as np
 from typing import Dict, Any, Optional
 
-from ....config.ml_config import ml_config
-from ....utils.ml_error_handler import (
+from app.core.services.ml.config import ml_config
+from app.core.utils.ml_error_handler import (
     MLErrorHandler, MLDataError, MLValidationError,
     timeout_decorator, safe_ml_operation, ml_operation_context
 )
-from ...ml.feature_engineering.feature_engineering_service import FeatureEngineeringService
-from ...ml.signal_generator import MLSignalGenerator
-from ...ml.model_manager import model_manager
+from app.core.services.ml.feature_engineering.feature_engineering_service import FeatureEngineeringService
+from app.core.services.ml.signal_generator import MLSignalGenerator
+from app.core.services.ml.model_manager import model_manager
 
 logger = logging.getLogger(__name__)
 

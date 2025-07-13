@@ -9,7 +9,7 @@ import logging
 import pandas as pd
 from typing import Dict, Any, Optional
 
-from ...config.ml_config import ml_config
+from .config import ml_config
 from ...utils.ml_error_handler import (
     MLErrorHandler, MLDataError, MLModelError,
     safe_ml_operation, ml_operation_context

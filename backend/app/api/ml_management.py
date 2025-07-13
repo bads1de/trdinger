@@ -12,7 +12,7 @@ from datetime import datetime
 from app.core.services.ml.model_manager import model_manager
 from app.core.services.ml.ml_training_service import ml_training_service
 from app.core.services.auto_strategy.services.ml_orchestrator import MLOrchestrator
-from app.core.config.ml_config import ml_config
+from app.core.services.ml.config import ml_config
 from app.core.utils.ml_error_handler import MLErrorHandler
 from app.core.services.backtest_data_service import BacktestDataService
 from database.repositories.ohlcv_repository import OHLCVRepository
