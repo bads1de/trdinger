@@ -9,9 +9,8 @@ OHLCV、ファンディングレート（FR）、建玉残高（OI）データ�
 
 import logging
 import pandas as pd
-import numpy as np
 from typing import Dict, Any, Optional, List
-from datetime import datetime, timedelta
+from datetime import datetime
 
 from .price_features import PriceFeatureCalculator
 from .market_data_features import MarketDataFeatureCalculator

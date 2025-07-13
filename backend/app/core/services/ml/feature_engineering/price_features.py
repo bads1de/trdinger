@@ -8,7 +8,7 @@ OHLCV価格データから基本的な価格関連特徴量を計算します。
 import logging
 import pandas as pd
 import numpy as np
-from typing import Dict, Any
+from typing import Dict
 
 from ....utils.ml_error_handler import safe_ml_operation
 from ....utils.data_validation import DataValidator

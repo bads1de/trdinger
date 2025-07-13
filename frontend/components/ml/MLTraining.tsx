@@ -15,7 +15,9 @@ import {
   CheckCircle,
   AlertCircle,
   Clock,
+  Target,
 } from "lucide-react";
+import BayesianOptimizationModal from "@/components/bayesian-optimization/BayesianOptimizationModal";
 
 interface TrainingConfig {
   symbol: string;
@@ -67,6 +69,7 @@ export default function MLTraining() {
   });
 
   const [error, setError] = useState<string | null>(null);
+  const [showBayesianModal, setShowBayesianModal] = useState(false);
 
   useEffect(() => {
     // トレーニング状態を定期的にチェック
@@ -269,13 +272,22 @@ export default function MLTraining() {
 
           <div className="flex items-center space-x-4">
             {!trainingStatus.is_training ? (
-              <ActionButton
-                onClick={startTraining}
-                variant="primary"
-                icon={<Play className="h-4 w-4" />}
-              >
-                トレーニング開始
-              </ActionButton>
+              <>
+                <ActionButton
+                  onClick={startTraining}
+                  variant="primary"
+                  icon={<Play className="h-4 w-4" />}
+                >
+                  トレーニング開始
+                </ActionButton>
+                <ActionButton
+                  onClick={() => setShowBayesianModal(true)}
+                  variant="secondary"
+                  icon={<Target className="h-4 w-4" />}
+                >
+                  ハイパーパラメータ最適化
+                </ActionButton>
+              </>
             ) : (
               <ActionButton
                 onClick={stopTraining}
@@ -353,6 +365,12 @@ export default function MLTraining() {
           )}
         </CardContent>
       </Card>
+
+      {/* ベイジアン最適化モーダル */}
+      <BayesianOptimizationModal
+        isOpen={showBayesianModal}
+        onClose={() => setShowBayesianModal(false)}
+      />
     </div>
   );
 }

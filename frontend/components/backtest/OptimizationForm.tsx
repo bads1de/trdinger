@@ -16,6 +16,7 @@ import {
   RobustnessConfig,
   GAConfig,
 } from "@/types/optimization";
+
 import { BaseBacktestConfigForm } from "./BaseBacktestConfigForm";
 import { UnifiedStrategy } from "@/types/auto-strategy";
 import TabButton from "../common/TabButton";
@@ -32,6 +33,7 @@ interface OptimizationFormProps {
   onMultiObjectiveOptimization: (config: MultiObjectiveConfig) => void;
   onRobustnessTest: (config: RobustnessConfig) => void;
   onGAGeneration?: (config: GAConfig) => void;
+
   isLoading?: boolean;
   initialConfig?: BacktestResult | null;
   currentBacktestConfig?: BacktestConfig | null;
@@ -147,6 +149,7 @@ export default function OptimizationForm({
               onClick={() => setActiveTab("ga")}
             />
           )}
+
         </nav>
       </div>
 
@@ -221,6 +224,8 @@ export default function OptimizationForm({
           />
         )}
       </form>
+
+
     </div>
   );
 }

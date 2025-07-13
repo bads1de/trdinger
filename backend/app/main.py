@@ -23,6 +23,7 @@ from app.api.auto_strategy import router as auto_strategy_router
 from app.api.strategies import router as strategies_router
 from app.api.ml_training import router as ml_training_router
 from app.api.ml_management import router as ml_management_router
+from app.api.bayesian_optimization import router as bayesian_optimization_router
 
 
 def setup_logging():
@@ -95,6 +96,7 @@ def create_app() -> FastAPI:
     app.include_router(strategies_router)
     app.include_router(ml_training_router)
     app.include_router(ml_management_router, prefix="/api/ml")
+    app.include_router(bayesian_optimization_router)
 
     # グローバル例外ハンドラ
     @app.exception_handler(Exception)

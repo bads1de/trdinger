@@ -6,17 +6,15 @@ GAパラメータとMLハイパーパラメータの自動調整を行います�
 
 import logging
 import numpy as np
-import pandas as pd
-from typing import Dict, Any, List, Tuple, Callable, Optional
+from typing import Dict, Any, List,Callable, Optional
 from dataclasses import dataclass
-import json
 from datetime import datetime
 
 logger = logging.getLogger(__name__)
 
 # scikit-optimizeのインポート（オプション）
 try:
-    from skopt import gp_minimize, forest_minimize
+    from skopt import gp_minimize
     from skopt.space import Real, Integer, Categorical
     from skopt.utils import use_named_args
     SKOPT_AVAILABLE = True

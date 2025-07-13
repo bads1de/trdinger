@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Brain, Database, TrendingUp, Settings } from "lucide-react";
+import { Brain, Database, TrendingUp, Settings, Target } from "lucide-react";
 import TabButton from "@/components/common/TabButton";
 import ErrorDisplay from "@/components/common/ErrorDisplay";
 import LoadingSpinner from "@/components/common/LoadingSpinner";
@@ -11,6 +11,7 @@ import MLModelList from "@/components/ml/MLModelList";
 import MLTraining from "@/components/ml/MLTraining";
 import MLModelStatus from "@/components/ml/MLModelStatus";
 import MLSettings from "@/components/ml/MLSettings";
+import BayesianOptimizationModal from "@/components/bayesian-optimization/BayesianOptimizationModal";
 
 /**
  * ML管理専用ページ
@@ -21,6 +22,7 @@ export default function MLManagementPage() {
   const [activeTab, setActiveTab] = useState("overview");
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [showBayesianModal, setShowBayesianModal] = useState(false);
 
   useEffect(() => {
     // ページ初期化
@@ -95,6 +97,15 @@ export default function MLManagementPage() {
             isActive={activeTab === "settings"}
             onClick={() => setActiveTab("settings")}
             icon={<Settings className="h-4 w-4" />}
+          />
+          <TabButton
+            label="ベイジアン最適化"
+            isActive={activeTab === "bayesian"}
+            onClick={() => {
+              setActiveTab("bayesian");
+              setShowBayesianModal(true);
+            }}
+            icon={<Target className="h-4 w-4" />}
           />
         </div>
 
@@ -215,6 +226,15 @@ export default function MLManagementPage() {
             </Card>
           </div>
         )}
+
+        {/* ベイジアン最適化モーダル */}
+        <BayesianOptimizationModal
+          isOpen={showBayesianModal}
+          onClose={() => {
+            setShowBayesianModal(false);
+            setActiveTab("overview");
+          }}
+        />
       </div>
     </div>
   );

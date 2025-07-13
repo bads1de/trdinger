@@ -19,6 +19,7 @@ import {
   GAConfig,
 } from "@/types/optimization";
 
+
 /**
  * 最適化モーダルのプロパティ
  */
@@ -35,6 +36,7 @@ interface OptimizationModalProps {
   onRobustnessTest: (config: RobustnessConfig) => void;
   /** GA戦略生成実行時のコールバック */
   onGAGeneration?: (config: GAConfig) => void;
+
   /** 最適化実行中かどうか */
   isLoading?: boolean;
   /** 選択されたバックテスト結果（設定を引き継ぐため） */
@@ -79,6 +81,8 @@ const OptimizationModal: React.FC<OptimizationModalProps> = ({
     }
     // GAの場合はモーダルを閉じない（進捗表示のため）
   };
+
+
 
   return (
     <Modal
