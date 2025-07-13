@@ -65,7 +65,7 @@ export interface DefaultParameterSpaceResponse {
 // プロファイル関連の型定義
 export interface OptimizationProfile {
   id: number;
-  name: string;
+  profile_name: string;
   description?: string;
   optimization_result_id: number;
   is_default: boolean;

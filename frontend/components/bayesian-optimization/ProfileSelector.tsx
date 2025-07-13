@@ -110,7 +110,7 @@ const ProfileSelector: React.FC<ProfileSelectorProps> = ({
               </div>
             ) : selectedProfile ? (
               <div className="flex items-center space-x-2 truncate">
-                <span className="truncate">{selectedProfile.name}</span>
+                <span className="truncate">{selectedProfile.profile_name}</span>
                 {selectedProfile.is_default && (
                   <Badge variant="secondary" className="text-xs flex-shrink-0">
                     デフォルト
@@ -129,7 +129,7 @@ const ProfileSelector: React.FC<ProfileSelectorProps> = ({
           {profiles.map((profile) => (
             <SelectItem key={profile.id} value={profile.id.toString()}>
               <div className="flex items-center justify-between w-full">
-                <span className="truncate">{profile.name}</span>
+                <span className="truncate">{profile.profile_name}</span>
                 <div className="flex items-center space-x-1 ml-2 flex-shrink-0">
                   {profile.is_default && (
                     <Badge variant="secondary" className="text-xs">
@@ -152,7 +152,7 @@ const ProfileSelector: React.FC<ProfileSelectorProps> = ({
         <Card className="p-3 bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800">
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <span className="font-medium text-sm">{selectedProfile.name}</span>
+              <span className="font-medium text-sm">{selectedProfile.profile_name}</span>
               {selectedProfile.is_default && (
                 <Badge variant="secondary" className="text-xs">
                   デフォルト
