@@ -27,34 +27,6 @@ const BayesianOptimizationModal: React.FC<BayesianOptimizationModalProps> = ({
   const [result, setResult] = useState<BayesianOptimizationResult | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const handleGAOptimization = async (config: BayesianOptimizationConfig) => {
-    setIsLoading(true);
-    setError(null);
-    setResult(null);
-
-    try {
-      const response = await fetch("/api/bayesian-optimization/ga-parameters", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(config),
-      });
-
-      const data: BayesianOptimizationResponse = await response.json();
-
-      if (data.success && data.result) {
-        setResult(data.result);
-      } else {
-        setError(data.error || "GAパラメータの最適化に失敗しました");
-      }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "予期せぬエラーが発生しました");
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
   const handleMLOptimization = async (config: BayesianOptimizationConfig) => {
     setIsLoading(true);
     setError(null);
@@ -108,7 +80,6 @@ const BayesianOptimizationModal: React.FC<BayesianOptimizationModalProps> = ({
       <div className="max-h-[90vh] overflow-y-auto p-6">
         {!result && !error && (
           <BayesianOptimizationForm
-            onGAOptimization={handleGAOptimization}
             onMLOptimization={handleMLOptimization}
             isLoading={isLoading}
             currentBacktestConfig={currentBacktestConfig}

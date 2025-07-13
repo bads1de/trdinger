@@ -55,61 +55,6 @@ class BayesianOptimizer:
             "n_jobs": 1,                # 並列実行数
         }
 
-    def optimize_ga_parameters(
-        self,
-        objective_function: Callable[[Dict[str, Any]], float],
-        parameter_space: Optional[Dict[str, Any]] = None,
-        n_calls: int = 50
-    ) -> OptimizationResult:
-        """
-        GAパラメータの最適化
-
-        Args:
-            objective_function: 目的関数（パラメータ辞書を受け取り、スコアを返す）
-            parameter_space: パラメータ空間の定義
-            n_calls: 最適化試行回数
-
-        Returns:
-            最適化結果
-        """
-        try:
-            if parameter_space is None:
-                parameter_space = self._get_default_ga_parameter_space()
-
-            logger.info("GAパラメータの最適化を開始")
-            start_time = datetime.now()
-
-            if SKOPT_AVAILABLE:
-                result = self._optimize_with_skopt(
-                    objective_function, parameter_space, n_calls
-                )
-            else:
-                result = self._optimize_with_fallback(
-                    objective_function, parameter_space, n_calls
-                )
-
-            end_time = datetime.now()
-            optimization_time = (end_time - start_time).total_seconds()
-
-            # 結果を整理
-            optimization_result = OptimizationResult(
-                best_params=result["best_params"],
-                best_score=result["best_score"],
-                optimization_history=result["history"],
-                total_evaluations=len(result["history"]),
-                optimization_time=optimization_time,
-                convergence_info=result.get("convergence_info", {})
-            )
-
-            self.best_result = optimization_result
-            logger.info(f"GAパラメータ最適化完了: ベストスコア={result['best_score']:.4f}")
-
-            return optimization_result
-
-        except Exception as e:
-            logger.error(f"GAパラメータ最適化エラー: {e}")
-            raise
-
     def optimize_ml_hyperparameters(
         self,
         model_type: str,
@@ -311,41 +256,6 @@ class BayesianOptimizer:
         except Exception as e:
             logger.error(f"フォールバック最適化エラー: {e}")
             raise
-
-    def _get_default_ga_parameter_space(self) -> Dict[str, Any]:
-        """デフォルトのGAパラメータ空間を取得"""
-        return {
-            "population_size": {
-                "type": "integer",
-                "low": 20,
-                "high": 100
-            },
-            "generations": {
-                "type": "integer", 
-                "low": 10,
-                "high": 50
-            },
-            "crossover_rate": {
-                "type": "real",
-                "low": 0.5,
-                "high": 0.9
-            },
-            "mutation_rate": {
-                "type": "real",
-                "low": 0.01,
-                "high": 0.3
-            },
-            "sharing_radius": {
-                "type": "real",
-                "low": 0.05,
-                "high": 0.3
-            },
-            "short_bias_rate": {
-                "type": "real",
-                "low": 0.1,
-                "high": 0.6
-            }
-        }
 
     def _get_default_ml_parameter_space(self, model_type: str) -> Dict[str, Any]:
         """デフォルトのMLパラメータ空間を取得"""

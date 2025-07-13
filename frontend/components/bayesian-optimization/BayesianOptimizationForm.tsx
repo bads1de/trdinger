@@ -16,19 +16,17 @@ import {
 import { BacktestConfig } from "@/types/backtest";
 
 interface BayesianOptimizationFormProps {
-  onGAOptimization: (config: BayesianOptimizationConfig) => void;
   onMLOptimization: (config: BayesianOptimizationConfig) => void;
   isLoading?: boolean;
   currentBacktestConfig?: BacktestConfig | null;
 }
 
 const BayesianOptimizationForm: React.FC<BayesianOptimizationFormProps> = ({
-  onGAOptimization,
   onMLOptimization,
   isLoading = false,
   currentBacktestConfig = null,
 }) => {
-  const [optimizationType, setOptimizationType] = useState<"ga" | "ml">("ga");
+  const [optimizationType, setOptimizationType] = useState<"ml">("ml");
   const [experimentName, setExperimentName] = useState("");
   const [modelType, setModelType] = useState("lightgbm");
   const [nCalls, setNCalls] = useState(50);
@@ -59,7 +57,7 @@ const BayesianOptimizationForm: React.FC<BayesianOptimizationFormProps> = ({
   useEffect(() => {
     const fetchDefaultParameterSpace = async () => {
       try {
-        const type = optimizationType === "ga" ? "ga" : modelType;
+        const type = modelType;
         const response = await fetch(`/api/bayesian-optimization/parameter-spaces/${type}`);
         const data: DefaultParameterSpaceResponse = await response.json();
         
@@ -77,11 +75,6 @@ const BayesianOptimizationForm: React.FC<BayesianOptimizationFormProps> = ({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-
-    if (!currentBacktestConfig && optimizationType === "ga") {
-      alert("GAパラメータ最適化にはバックテスト設定が必要です");
-      return;
-    }
 
     let parameterSpace: Record<string, ParameterSpace> | undefined;
     
@@ -105,14 +98,8 @@ const BayesianOptimizationForm: React.FC<BayesianOptimizationFormProps> = ({
       },
     };
 
-    if (optimizationType === "ga") {
-      config.experiment_name = experimentName;
-      config.base_config = currentBacktestConfig;
-      onGAOptimization(config);
-    } else {
-      config.model_type = modelType;
-      onMLOptimization(config);
-    }
+    config.model_type = modelType;
+    onMLOptimization(config);
   };
 
   return (
@@ -121,48 +108,6 @@ const BayesianOptimizationForm: React.FC<BayesianOptimizationFormProps> = ({
         <div className="space-y-6">
           {/* 最適化タイプ選択 */}
           <Card className="p-4">
-            <label className="text-sm font-medium mb-3 block">最適化タイプ</label>
-            <div className="flex space-x-4">
-              <label className="flex items-center">
-                <input
-                  type="radio"
-                  value="ga"
-                  checked={optimizationType === "ga"}
-                  onChange={(e) =>
-                    setOptimizationType(e.target.value as "ga" | "ml")
-                  }
-                  className="mr-2"
-                />
-                GAパラメータ最適化
-              </label>
-              <label className="flex items-center">
-                <input
-                  type="radio"
-                  value="ml"
-                  checked={optimizationType === "ml"}
-                  onChange={(e) =>
-                    setOptimizationType(e.target.value as "ga" | "ml")
-                  }
-                  className="mr-2"
-                />
-                MLハイパーパラメータ最適化
-              </label>
-            </div>
-          </Card>
-
-          {/* GA/ML最適化設定 */}
-          {optimizationType === "ga" ? (
-            <Card className="p-4">
-              <InputField
-                label="実験名"
-                value={experimentName}
-                onChange={setExperimentName}
-                placeholder="ベイジアン最適化実験"
-                required
-              />
-            </Card>
-          ) : (
-            <Card className="p-4">
               <SelectField
                 label="モデルタイプ"
                 value={modelType}
@@ -174,7 +119,6 @@ const BayesianOptimizationForm: React.FC<BayesianOptimizationFormProps> = ({
                 ]}
               />
             </Card>
-          )}
 
           {/* 最適化パラメータ */}
           <Card className="p-4">

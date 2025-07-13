@@ -31,15 +31,6 @@ class ParameterSpace(BaseModel):
     categories: Optional[List[Any]] = Field(None, description="カテゴリ値 (categorical)")
 
 
-class GAOptimizationRequest(BaseModel):
-    """GAパラメータ最適化リクエスト"""
-    experiment_name: str = Field(..., description="実験名")
-    base_config: Dict[str, Any] = Field(..., description="基本バックテスト設定")
-    parameter_space: Optional[Dict[str, ParameterSpace]] = Field(None, description="パラメータ空間")
-    n_calls: int = Field(50, description="最適化試行回数")
-    optimization_config: Optional[Dict[str, Any]] = Field(None, description="最適化設定")
-
-
 class MLOptimizationRequest(BaseModel):
     """MLハイパーパラメータ最適化リクエスト"""
     model_type: str = Field(..., description="モデルタイプ")
@@ -55,101 +46,6 @@ class OptimizationResponse(BaseModel):
     error: Optional[str] = None
     message: str
     timestamp: str
-
-
-@router.post("/ga-parameters", response_model=OptimizationResponse)
-async def optimize_ga_parameters(
-    request: GAOptimizationRequest,
-    db: Session = Depends(get_db)
-):
-    """
-    GAパラメータのベイジアン最適化
-    
-    Args:
-        request: GAパラメータ最適化リクエスト
-        db: データベースセッション
-    
-    Returns:
-        最適化結果
-    """
-    
-    async def _optimize_ga():
-        logger.info(f"GAパラメータのベイジアン最適化を開始: {request.experiment_name}")
-        
-        # ベイジアン最適化エンジンを初期化
-        optimizer = BayesianOptimizer()
-        
-        # バックテストサービスを初期化
-        backtest_service = BacktestService()
-        ohlcv_repo = OHLCVRepository(db)
-        data_service = BacktestDataService(ohlcv_repo)
-        
-        # 目的関数を定義（バックテストを実行してスコアを返す）
-        def objective_function(params: Dict[str, Any]) -> float:
-            try:
-                # GAパラメータを基本設定に適用
-                config = request.base_config.copy()
-                
-                # GAパラメータを戦略設定に反映
-                if "strategy_config" not in config:
-                    config["strategy_config"] = {}
-                
-                # GAパラメータを戦略設定に追加
-                config["strategy_config"].update(params)
-                
-                # バックテストを実行
-                result = backtest_service.run_backtest(config)
-                
-                # スコアを抽出（SQNを使用）
-                if "stats" in result and "SQN" in result["stats"]:
-                    return float(result["stats"]["SQN"])
-                else:
-                    return 0.0
-                    
-            except Exception as e:
-                logger.warning(f"目的関数評価エラー: {e}")
-                return -1000.0  # ペナルティスコア
-        
-        # パラメータ空間を変換
-        parameter_space_dict = None
-        if request.parameter_space:
-            parameter_space_dict = {}
-            for param_name, param_config in request.parameter_space.items():
-                parameter_space_dict[param_name] = {
-                    "type": param_config.type,
-                    "low": param_config.low,
-                    "high": param_config.high,
-                    "categories": param_config.categories
-                }
-        
-        # ベイジアン最適化を実行
-        optimization_result = optimizer.optimize_ga_parameters(
-            objective_function=objective_function,
-            parameter_space=parameter_space_dict,
-            n_calls=request.n_calls
-        )
-        
-        # 結果を整理
-        result = {
-            "experiment_name": request.experiment_name,
-            "optimization_type": "bayesian_ga",
-            "best_params": optimization_result.best_params,
-            "best_score": optimization_result.best_score,
-            "total_evaluations": optimization_result.total_evaluations,
-            "optimization_time": optimization_result.optimization_time,
-            "convergence_info": optimization_result.convergence_info,
-            "optimization_history": optimization_result.optimization_history
-        }
-        
-        logger.info(f"GAパラメータ最適化完了: ベストスコア={optimization_result.best_score:.4f}")
-        
-        return {
-            "success": True,
-            "result": result,
-            "message": "GAパラメータのベイジアン最適化が完了しました"
-        }
-    
-    return await APIErrorHandler.handle_api_exception(_optimize_ga)
 
 
 @router.post("/ml-hyperparameters", response_model=OptimizationResponse)
@@ -247,9 +143,7 @@ async def get_default_parameter_space(optimization_type: str):
     async def _get_parameter_space():
         optimizer = BayesianOptimizer()
         
-        if optimization_type == "ga":
-            parameter_space = optimizer._get_default_ga_parameter_space()
-        elif optimization_type == "lightgbm":
+        if optimization_type == "lightgbm":
             parameter_space = optimizer._get_default_ml_parameter_space("lightgbm")
         else:
             raise HTTPException(

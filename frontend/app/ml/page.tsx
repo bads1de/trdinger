@@ -11,7 +11,7 @@ import MLModelList from "@/components/ml/MLModelList";
 import MLTraining from "@/components/ml/MLTraining";
 import MLModelStatus from "@/components/ml/MLModelStatus";
 import MLSettings from "@/components/ml/MLSettings";
-import BayesianOptimizationModal from "@/components/bayesian-optimization/BayesianOptimizationModal";
+
 
 /**
  * ML管理専用ページ
@@ -22,7 +22,7 @@ export default function MLManagementPage() {
   const [activeTab, setActiveTab] = useState("overview");
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [showBayesianModal, setShowBayesianModal] = useState(false);
+
 
   useEffect(() => {
     // ページ初期化
@@ -30,7 +30,7 @@ export default function MLManagementPage() {
       try {
         setIsLoading(true);
         // 必要な初期データの読み込み
-        await new Promise((resolve) => setTimeout(resolve, 500)); // 仮の読み込み時間
+        await new Promise((resolve) => setTimeout(resolve, 500)); 
         setIsLoading(false);
       } catch (err) {
         setError("ページの初期化に失敗しました");
@@ -97,15 +97,6 @@ export default function MLManagementPage() {
             isActive={activeTab === "settings"}
             onClick={() => setActiveTab("settings")}
             icon={<Settings className="h-4 w-4" />}
-          />
-          <TabButton
-            label="ベイジアン最適化"
-            isActive={activeTab === "bayesian"}
-            onClick={() => {
-              setActiveTab("bayesian");
-              setShowBayesianModal(true);
-            }}
-            icon={<Target className="h-4 w-4" />}
           />
         </div>
 
@@ -226,15 +217,6 @@ export default function MLManagementPage() {
             </Card>
           </div>
         )}
-
-        {/* ベイジアン最適化モーダル */}
-        <BayesianOptimizationModal
-          isOpen={showBayesianModal}
-          onClose={() => {
-            setShowBayesianModal(false);
-            setActiveTab("overview");
-          }}
-        />
       </div>
     </div>
   );
