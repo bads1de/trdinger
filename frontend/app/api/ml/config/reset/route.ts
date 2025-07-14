@@ -1,21 +1,21 @@
 /**
- * MLモデルクリーンアップAPI
+ * ML設定リセットAPI
  * 
- * 古いMLモデルファイルのクリーンアップリクエストをバックエンドに転送します。
+ * ML設定のリセットリクエストをバックエンドに転送します。
  */
 
 import { NextRequest, NextResponse } from "next/server";
 import { BACKEND_API_URL } from "@/constants";
 
 /**
- * POST /api/ml/models/cleanup
+ * POST /api/ml/config/reset
  *
- * 古いMLモデルファイルをクリーンアップします。
+ * ML設定をデフォルト値にリセットします。
  */
 export async function POST(request: NextRequest) {
   try {
     // バックエンドAPIに転送
-    const backendUrl = `${BACKEND_API_URL}/api/ml/models/cleanup`;
+    const backendUrl = `${BACKEND_API_URL}/api/ml/config/reset`;
     
     const response = await fetch(backendUrl, {
       method: "POST",
@@ -28,14 +28,14 @@ export async function POST(request: NextRequest) {
 
     if (!response.ok) {
       return NextResponse.json(
-        { success: false, message: data.detail || "モデルクリーンアップに失敗しました" },
+        { success: false, message: data.detail || "設定のリセットに失敗しました" },
         { status: response.status }
       );
     }
 
     return NextResponse.json({ success: true, ...data });
   } catch (error) {
-    console.error("MLモデルクリーンアップエラー:", error);
+    console.error("ML設定リセットエラー:", error);
     return NextResponse.json(
       { success: false, message: "サーバーエラーが発生しました" },
       { status: 500 }

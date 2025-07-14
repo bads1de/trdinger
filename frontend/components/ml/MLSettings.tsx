@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import ActionButton from "@/components/common/ActionButton";
 import { InputField } from "@/components/common/InputField";
@@ -8,6 +8,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import ErrorDisplay from "@/components/common/ErrorDisplay";
 import LoadingSpinner from "@/components/common/LoadingSpinner";
 import InfoModal from "@/components/common/InfoModal";
+import { useApiCall } from "@/hooks/useApiCall";
 import {
   Settings,
   Save,
@@ -61,117 +62,84 @@ interface MLConfig {
  */
 export default function MLSettings() {
   const [config, setConfig] = useState<MLConfig | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isSaving, setIsSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [isInfoModalOpen, setIsInfoModalOpen] = useState(false);
   const [modalContent, setModalContent] = useState({ title: "", content: "" });
+
+  const {
+    loading: isLoading,
+    error: fetchError,
+    execute: fetchConfigApi,
+  } = useApiCall<MLConfig>();
+  const {
+    loading: isSaving,
+    error: saveError,
+    execute: saveConfigApi,
+  } = useApiCall();
+  const {
+    loading: isResetting,
+    error: resetError,
+    execute: resetConfigApi,
+  } = useApiCall();
+  const {
+    loading: isCleaning,
+    error: cleanupError,
+    execute: cleanupApi,
+  } = useApiCall();
+
+  const error = fetchError || saveError || resetError || cleanupError;
 
   const openInfoModal = (title: string, content: string) => {
     setModalContent({ title, content });
     setIsInfoModalOpen(true);
   };
 
+  const showSuccessMessage = (message: string) => {
+    setSuccessMessage(message);
+    setTimeout(() => setSuccessMessage(null), 3000);
+  };
+
+  const fetchConfig = useCallback(async () => {
+    const result = await fetchConfigApi("/api/ml/config");
+    if (result) {
+      // APIルートが { success: true, ...config } を返すため、
+      // successプロパティを除いた残りをstateにセットする
+      const { success, ...configData } = result as any;
+      setConfig(configData);
+    }
+  }, [fetchConfigApi]);
+
   useEffect(() => {
     fetchConfig();
-  }, []);
-
-  const fetchConfig = async () => {
-    try {
-      setIsLoading(true);
-      const response = await fetch("/api/ml/config");
-      if (!response.ok) {
-        throw new Error("設定の取得に失敗しました");
-      }
-      const data = await response.json();
-      setConfig(data);
-      setError(null);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "エラーが発生しました");
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  }, [fetchConfig]);
 
   const saveConfig = async () => {
     if (!config) return;
-
-    try {
-      setIsSaving(true);
-      setError(null);
-      setSuccessMessage(null);
-
-      const response = await fetch("/api/ml/config", {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(config),
-      });
-
-      if (!response.ok) {
-        throw new Error("設定の保存に失敗しました");
-      }
-
-      setSuccessMessage("設定が正常に保存されました");
-      setTimeout(() => setSuccessMessage(null), 3000);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "保存エラーが発生しました");
-    } finally {
-      setIsSaving(false);
-    }
+    await saveConfigApi("/api/ml/config", {
+      method: "PUT",
+      body: config,
+      onSuccess: () => showSuccessMessage("設定が正常に保存されました"),
+    });
   };
 
   const resetToDefaults = async () => {
-    if (!confirm("設定をデフォルト値にリセットしますか？")) {
-      return;
-    }
-
-    try {
-      const response = await fetch("/api/ml/config/reset", {
-        method: "POST",
-      });
-
-      if (!response.ok) {
-        throw new Error("設定のリセットに失敗しました");
-      }
-
-      await fetchConfig();
-      setSuccessMessage("設定がデフォルト値にリセットされました");
-      setTimeout(() => setSuccessMessage(null), 3000);
-    } catch (err) {
-      setError(
-        err instanceof Error ? err.message : "リセットエラーが発生しました"
-      );
-    }
+    await resetConfigApi("/api/ml/config/reset", {
+      method: "POST",
+      confirmMessage: "設定をデフォルト値にリセットしますか？",
+      onSuccess: () => {
+        fetchConfig();
+        showSuccessMessage("設定がデフォルト値にリセットされました");
+      },
+    });
   };
 
   const cleanupOldModels = async () => {
-    if (
-      !confirm("古いモデルファイルを削除しますか？この操作は取り消せません。")
-    ) {
-      return;
-    }
-
-    try {
-      const response = await fetch("/api/ml/models/cleanup", {
-        method: "POST",
-      });
-
-      if (!response.ok) {
-        throw new Error("モデルクリーンアップに失敗しました");
-      }
-
-      setSuccessMessage("古いモデルファイルが削除されました");
-      setTimeout(() => setSuccessMessage(null), 3000);
-    } catch (err) {
-      setError(
-        err instanceof Error
-          ? err.message
-          : "クリーンアップエラーが発生しました"
-      );
-    }
+    await cleanupApi("/api/ml/models/cleanup", {
+      method: "POST",
+      confirmMessage:
+        "古いモデルファイルを削除しますか？この操作は取り消せません。",
+      onSuccess: () => showSuccessMessage("古いモデルファイルが削除されました"),
+    });
   };
 
   const updateConfig = (section: keyof MLConfig, key: string, value: any) => {
@@ -190,7 +158,7 @@ export default function MLSettings() {
     return <LoadingSpinner text="設定を読み込んでいます..." />;
   }
 
-  if (error) {
+  if (error && !config) {
     return <ErrorDisplay message={error} />;
   }
 
@@ -205,12 +173,17 @@ export default function MLSettings() {
 
   return (
     <div className="space-y-6">
-      {/* 成功メッセージ */}
+      {/* 成功・エラーメッセージ */}
       {successMessage && (
         <Alert className="border-green-200 bg-green-50">
           <AlertDescription className="text-green-800">
             {successMessage}
           </AlertDescription>
+        </Alert>
+      )}
+      {error && (
+        <Alert variant="destructive">
+          <AlertDescription>{error}</AlertDescription>
         </Alert>
       )}
 
@@ -633,26 +606,23 @@ export default function MLSettings() {
       <div className="flex flex-wrap gap-4">
         <ActionButton
           onClick={saveConfig}
-          disabled={isSaving}
-          variant="primary"
-          icon={<Save className="h-4 w-4" />}
           loading={isSaving}
-          loadingText="保存中..."
+          icon={<Save className="h-4 w-4" />}
         >
           設定を保存
         </ActionButton>
-
         <ActionButton
           onClick={resetToDefaults}
+          loading={isResetting}
           variant="secondary"
           icon={<RotateCcw className="h-4 w-4" />}
         >
-          デフォルトにリセット
+          デフォルトに戻す
         </ActionButton>
-
         <ActionButton
           onClick={cleanupOldModels}
-          variant="warning"
+          loading={isCleaning}
+          variant="danger"
           icon={<Trash2 className="h-4 w-4" />}
         >
           古いモデルを削除
