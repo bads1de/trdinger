@@ -99,6 +99,69 @@ class BybitFundingRateService(BybitService):
             latest_existing_timestamp=latest_timestamp,
         )
 
+    async def fetch_incremental_funding_rate_data(
+        self,
+        symbol: str,
+        repository: Optional[FundingRateRepository] = None,
+    ) -> dict:
+        """
+        差分ファンディングレートデータを取得してデータベースに保存
+
+        最新のタイムスタンプ以降のデータのみを取得します。
+
+        Args:
+            symbol: 取引ペアシンボル（例: 'BTC/USDT'）
+            repository: FundingRateRepository（テスト用）
+
+        Returns:
+            差分更新結果を含む辞書
+        """
+        normalized_symbol = self.normalize_symbol(symbol)
+
+        # データベースから最新タイムスタンプを取得
+        latest_timestamp = await self._get_latest_timestamp_from_db(
+            repository_class=FundingRateRepository,
+            get_timestamp_method_name="get_latest_funding_timestamp",
+            symbol=normalized_symbol,
+        )
+
+        if latest_timestamp:
+            logger.info(
+                f"FR差分データ収集開始: {normalized_symbol} (since: {latest_timestamp})"
+            )
+            # 最新タイムスタンプより新しいデータを取得
+            funding_history = await self.fetch_funding_rate_history(
+                symbol, limit=1000, since=latest_timestamp
+            )
+
+            # 重複を避けるため、最新タイムスタンプより新しいデータのみフィルタ
+            funding_history = [
+                item for item in funding_history if item["timestamp"] > latest_timestamp
+            ]
+        else:
+            logger.info(f"FR初回データ収集開始: {normalized_symbol}")
+            # データがない場合は最新100件を取得
+            funding_history = await self.fetch_funding_rate_history(symbol, limit=100)
+
+        async def save_with_db(db, repository):
+            repo = repository or FundingRateRepository(db)
+            return await self._save_funding_rate_to_database(
+                funding_history, symbol, repo
+            )
+
+        saved_count = await self._execute_with_db_session(
+            func=save_with_db, repository=repository
+        )
+
+        logger.info(f"FR差分データ収集完了: {saved_count}件保存")
+        return {
+            "symbol": normalized_symbol,
+            "fetched_count": len(funding_history),
+            "saved_count": saved_count,
+            "success": True,
+            "latest_timestamp": latest_timestamp,
+        }
+
     async def fetch_and_save_funding_rate_data(
         self,
         symbol: str,

@@ -15,6 +15,8 @@ import DataTableContainer from "@/components/data/DataTableContainer";
 import { useOhlcvData } from "@/hooks/useOhlcvData";
 import { useFundingRateData } from "@/hooks/useFundingRateData";
 import { useOpenInterestData } from "@/hooks/useOpenInterestData";
+import { useIncrementalUpdate } from "@/hooks/useIncrementalUpdate";
+import { useBulkIncrementalUpdate } from "@/hooks/useBulkIncrementalUpdate";
 import { useApiCall } from "@/hooks/useApiCall";
 import {
   TimeFrame,
@@ -54,8 +56,16 @@ const DataPage: React.FC = () => {
 
   // カスタムフックを使用してデータ取得
   const { symbols } = useSymbols();
-  const { execute: updateIncrementalData, loading: incrementalUpdateLoading } =
-    useApiCall();
+  const {
+    update: updateIncrementalData,
+    loading: incrementalUpdateLoading,
+    error: incrementalUpdateError,
+  } = useIncrementalUpdate();
+  const {
+    bulkUpdate: updateBulkIncrementalData,
+    loading: bulkIncrementalUpdateLoading,
+    error: bulkIncrementalUpdateError,
+  } = useBulkIncrementalUpdate();
   const { execute: fetchDataStatusApi, loading: dataStatusLoading } =
     useApiCall();
 
@@ -108,43 +118,79 @@ const DataPage: React.FC = () => {
   };
 
   /**
-   * 差分データ更新
+   * 差分データ更新（従来版）
    */
   const handleIncrementalUpdate = async () => {
     setIncrementalUpdateMessage("");
+    await updateIncrementalData(selectedSymbol, selectedTimeFrame, {
+      onSuccess: async (result) => {
+        const savedCount = result.saved_count || 0;
+        setIncrementalUpdateMessage(
+          `✅ 差分更新完了！ ${selectedSymbol} ${selectedTimeFrame} - ${savedCount}件のデータを更新しました`
+        );
+        await Promise.all([
+          fetchOHLCVData(),
+          fetchFundingRateData(),
+          fetchOpenInterestData(),
+        ]);
+        fetchDataStatus();
+        setTimeout(() => setIncrementalUpdateMessage(""), 10000);
+      },
+      onError: (errorMessage) => {
+        setIncrementalUpdateMessage(`❌ ${errorMessage}`);
+        console.error("差分更新エラー:", errorMessage);
+        setTimeout(() => setIncrementalUpdateMessage(""), 10000);
+      },
+    });
+  };
 
-    await updateIncrementalData(
-      `${BACKEND_API_URL}/api/data-collection/update?symbol=${selectedSymbol}&timeframe=${selectedTimeFrame}`,
-      {
-        method: "POST",
-        onSuccess: async (result) => {
-          // 成功メッセージを表示
-          const savedCount = result.saved_count || 0;
-          setIncrementalUpdateMessage(
-            `✅ 差分更新完了！ ${selectedSymbol} ${selectedTimeFrame} - ${savedCount}件のデータを更新しました`
+  /**
+   * 一括差分データ更新（新機能）
+   */
+  const handleBulkIncrementalUpdate = async () => {
+    setIncrementalUpdateMessage("");
+    await updateBulkIncrementalData(selectedSymbol, selectedTimeFrame, {
+      onSuccess: async (result) => {
+        console.log("一括差分更新結果:", result);
+
+        const totalSavedCount = result.data.total_saved_count || 0;
+        const ohlcvCount = result.data.data.ohlcv.saved_count || 0;
+        const frCount = result.data.data.funding_rate.saved_count || 0;
+        const oiCount = result.data.data.open_interest.saved_count || 0;
+
+        // 時間足別の詳細情報を取得
+        let timeframeDetails = "";
+        if (result.data.data.ohlcv.timeframe_results) {
+          console.log(
+            "時間足別結果:",
+            result.data.data.ohlcv.timeframe_results
           );
+          const tfResults = Object.entries(
+            result.data.data.ohlcv.timeframe_results
+          )
+            .map(([tf, res]) => `${tf}:${res.saved_count}`)
+            .join(", ");
+          timeframeDetails = ` [${tfResults}]`;
+        } else {
+          console.warn("時間足別結果が見つかりません");
+        }
 
-          // 更新後に全てのデータを再取得
-          await Promise.all([
-            fetchOHLCVData(),
-            fetchFundingRateData(),
-            fetchOpenInterestData(),
-          ]);
+        setIncrementalUpdateMessage(
+          `✅ 一括差分更新完了！ ${selectedSymbol} - ` +
+            `総計${totalSavedCount}件 (OHLCV:${ohlcvCount}${timeframeDetails}, FR:${frCount}, OI:${oiCount})`
+        );
 
-          // データ状況も更新
-          fetchDataStatus();
-
-          // 10秒後にメッセージをクリア
-          setTimeout(() => setIncrementalUpdateMessage(""), 10000);
-        },
-        onError: (errorMessage) => {
-          setIncrementalUpdateMessage(`❌ ${errorMessage}`);
-          console.error("差分更新エラー:", errorMessage);
-          // 10秒後にメッセージをクリア
-          setTimeout(() => setIncrementalUpdateMessage(""), 10000);
-        },
-      }
-    );
+        // 現在選択されている時間足のデータを再取得
+        await fetchOHLCVData();
+        fetchDataStatus();
+        setTimeout(() => setIncrementalUpdateMessage(""), 15000);
+      },
+      onError: (errorMessage) => {
+        setIncrementalUpdateMessage(`❌ ${errorMessage}`);
+        console.error("一括差分更新エラー:", errorMessage);
+        setTimeout(() => setIncrementalUpdateMessage(""), 10000);
+      },
+    });
   };
 
   /**
@@ -303,16 +349,27 @@ const DataPage: React.FC = () => {
     <div className="min-h-screen bg-secondary-50 dark:bg-secondary-950 animate-fade-in">
       <DataHeader
         loading={ohlcvLoading || fundingLoading || openInterestLoading}
-        error={ohlcvError || fundingError || openInterestError || ""}
+        error={
+          ohlcvError ||
+          fundingError ||
+          openInterestError ||
+          incrementalUpdateError ||
+          ""
+        }
         updating={incrementalUpdateLoading}
+        bulkUpdating={bulkIncrementalUpdateLoading}
         handleRefresh={handleRefresh}
         handleIncrementalUpdate={handleIncrementalUpdate}
+        handleBulkIncrementalUpdate={handleBulkIncrementalUpdate}
       />
 
       {/* メインコンテンツエリア */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
         {/* エラー表示 */}
-        {(ohlcvError || fundingError || openInterestError) && (
+        {(ohlcvError ||
+          fundingError ||
+          openInterestError ||
+          incrementalUpdateError) && (
           <div className="enterprise-card border-error-200 dark:border-error-800 bg-error-50 dark:bg-error-900/20 animate-slide-down">
             <div className="p-4">
               <div className="flex items-center">
@@ -334,7 +391,10 @@ const DataPage: React.FC = () => {
                 </h3>
               </div>
               <p className="mt-2 text-sm text-error-700 dark:text-error-300">
-                {ohlcvError || fundingError || openInterestError}
+                {ohlcvError ||
+                  fundingError ||
+                  openInterestError ||
+                  incrementalUpdateError}
               </p>
             </div>
           </div>

@@ -15,6 +15,8 @@ from app.core.services.data_collection.historical_data_service import (
 )
 from database.connection import get_db, ensure_db_initialized
 from database.repositories.ohlcv_repository import OHLCVRepository
+from database.repositories.funding_rate_repository import FundingRateRepository
+from database.repositories.open_interest_repository import OpenInterestRepository
 from app.config.market_config import MarketDataConfig
 from app.core.utils.api_utils import APIResponseHelper
 
@@ -135,6 +137,59 @@ async def update_incremental_data(
     except Exception as e:
         logger.error("差分データ更新エラー", exc_info=True)
         raise HTTPException(status_code=500, detail="差分データ更新エラー") from e
+
+
+@router.post("/bulk-incremental-update")
+async def update_bulk_incremental_data(
+    symbol: str = "BTC/USDT:USDT", timeframe: str = "1h", db: Session = Depends(get_db)
+) -> Dict:
+    """
+    一括差分データを更新（OHLCV、FR、OI）
+
+    注意: OHLCVは全時間足（15m, 30m, 1h, 4h, 1d）を自動的に処理します。
+    timeframeパラメータは後方互換性のために残していますが、実際には全時間足が処理されます。
+
+    Args:
+        symbol: 取引ペア（デフォルト: BTC/USDT:USDT）
+        timeframe: 時間軸（デフォルト: 1h）※OHLCVでは全時間足を処理
+        db: データベースセッション
+
+    Returns:
+        一括差分更新結果
+    """
+    try:
+        service = HistoricalDataService()
+        ohlcv_repository = OHLCVRepository(db)
+        funding_rate_repository = FundingRateRepository(db)
+        open_interest_repository = OpenInterestRepository(db)
+
+        # 全時間足を処理するため、timeframeパラメータは参考値として渡すが、
+        # 実際にはサービス内で全時間足が処理される
+        result = await service.collect_bulk_incremental_data(
+            symbol=symbol,
+            timeframe=timeframe,  # 参考値（実際は全時間足を処理）
+            ohlcv_repository=ohlcv_repository,
+            funding_rate_repository=funding_rate_repository,
+            open_interest_repository=open_interest_repository,
+        )
+
+        if result.get("success"):
+            return APIResponseHelper.api_response(
+                success=True,
+                message=f"一括差分データ更新完了: 総保存件数 {result['total_saved_count']}件",
+                data=result,
+            )
+        else:
+            return APIResponseHelper.api_response(
+                success=False,
+                message=f"一括差分データ更新で一部エラー: {result.get('errors', [])}",
+                data=result,
+                status="partial_failure",
+            )
+
+    except Exception as e:
+        logger.error("一括差分データ更新エラー", exc_info=True)
+        raise HTTPException(status_code=500, detail="一括差分データ更新エラー") from e
 
 
 @router.post("/bitcoin-full")
