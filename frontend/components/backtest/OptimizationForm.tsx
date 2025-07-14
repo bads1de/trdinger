@@ -7,8 +7,8 @@
 
 "use client";
 
-import React, { useState, useEffect } from "react";
-import { useApiCall } from "@/hooks/useApiCall";
+import React, { useState } from "react";
+import { useOptimizationForm } from "@/hooks/useOptimizationForm";
 import { BacktestConfig, BacktestResult } from "@/types/backtest";
 import {
   OptimizationConfig,
@@ -18,7 +18,6 @@ import {
 } from "@/types/optimization";
 
 import { BaseBacktestConfigForm } from "./BaseBacktestConfigForm";
-import { UnifiedStrategy } from "@/types/auto-strategy";
 import TabButton from "../common/TabButton";
 import { InputField } from "../common/InputField";
 
@@ -51,66 +50,9 @@ export default function OptimizationForm({
   const [activeTab, setActiveTab] = useState<
     "enhanced" | "multi" | "robustness" | "ga"
   >("enhanced");
-  const [strategies, setStrategies] = useState<Record<string, UnifiedStrategy>>(
-    {}
-  );
-  const [selectedStrategy, setSelectedStrategy] = useState<string>("");
 
-  const [baseConfig, setBaseConfig] = useState<Omit<BacktestConfig, 'strategy_config'>>({
-    strategy_name: "OPTIMIZED_STRATEGY",
-    symbol: "BTC/USDT",
-    timeframe: "1d",
-    start_date: "2024-01-01",
-    end_date: "2024-12-31",
-    initial_capital: 10000000,
-    commission_rate: 0.00055,
-  });
-
-  const { execute: fetchStrategies } = useApiCall();
-
-  useEffect(() => {
-    const loadStrategies = async () => {
-      try {
-        const response = await fetchStrategies("/api/backtest/strategies");
-        if (response?.success && Object.keys(response.strategies).length > 0) {
-          setStrategies(response.strategies);
-          // Set default strategy if not set by currentBacktestConfig
-          if (!selectedStrategy) {
-            setSelectedStrategy(Object.keys(response.strategies)[0]);
-          }
-        }
-      } catch (error) {
-        console.error("Failed to load strategies:", error);
-      }
-    };
-
-    loadStrategies();
-  }, [selectedStrategy]);
-
-  useEffect(() => {
-    if (currentBacktestConfig) {
-      setBaseConfig({
-        strategy_name: `${currentBacktestConfig.strategy_name}_OPTIMIZED`,
-        symbol: currentBacktestConfig.symbol,
-        timeframe: currentBacktestConfig.timeframe,
-        start_date: currentBacktestConfig.start_date,
-        end_date: currentBacktestConfig.end_date,
-        initial_capital: currentBacktestConfig.initial_capital,
-        commission_rate: currentBacktestConfig.commission_rate,
-      });
-      setSelectedStrategy(currentBacktestConfig.strategy_config.strategy_type);
-    } else if (initialConfig) {
-      setBaseConfig({
-        strategy_name: `${initialConfig.strategy_name}_OPTIMIZED`,
-        symbol: initialConfig.symbol,
-        timeframe: initialConfig.timeframe,
-        start_date: initialConfig.start_date,
-        end_date: initialConfig.end_date,
-        initial_capital: initialConfig.initial_capital,
-        commission_rate: initialConfig.commission_rate,
-      });
-    }
-  }, [currentBacktestConfig, initialConfig]);
+  const { strategies, selectedStrategy, baseConfig, setBaseConfig } =
+    useOptimizationForm(initialConfig, currentBacktestConfig);
 
   const fullBaseConfig: BacktestConfig = {
     ...baseConfig,
@@ -120,8 +62,11 @@ export default function OptimizationForm({
     },
   };
 
-  const { 'start_date': startDate, 'end_date': endDate, ...robustnessBaseConfig } = fullBaseConfig;
-
+  const {
+    start_date: startDate,
+    end_date: endDate,
+    ...robustnessBaseConfig
+  } = fullBaseConfig;
 
   return (
     <div className="w-full">
@@ -149,7 +94,6 @@ export default function OptimizationForm({
               onClick={() => setActiveTab("ga")}
             />
           )}
-
         </nav>
       </div>
 
@@ -224,8 +168,6 @@ export default function OptimizationForm({
           />
         )}
       </form>
-
-
     </div>
   );
 }

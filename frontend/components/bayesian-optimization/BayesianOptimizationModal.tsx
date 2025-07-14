@@ -1,16 +1,11 @@
 "use client";
 
-import React, { useState } from "react";
+import React from "react";
 import Modal from "@/components/common/Modal";
 import ActionButton from "@/components/common/ActionButton";
-import { useApiCall } from "@/hooks/useApiCall";
+import { useBayesianOptimization } from "@/hooks/useBayesianOptimization";
 import BayesianOptimizationForm from "./BayesianOptimizationForm";
 import BayesianOptimizationResults from "./BayesianOptimizationResults";
-import {
-  BayesianOptimizationConfig,
-  BayesianOptimizationResult,
-  BayesianOptimizationResponse,
-} from "@/types/bayesian-optimization";
 import { BacktestConfig } from "@/types/backtest";
 
 interface BayesianOptimizationModalProps {
@@ -24,39 +19,16 @@ const BayesianOptimizationModal: React.FC<BayesianOptimizationModalProps> = ({
   onClose,
   currentBacktestConfig = null,
 }) => {
-  const [result, setResult] = useState<BayesianOptimizationResult | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const { execute: runOptimization, loading: isLoading } = useApiCall<BayesianOptimizationResponse>();
-
-  const handleMLOptimization = async (config: BayesianOptimizationConfig) => {
-    setError(null);
-    setResult(null);
-
-    await runOptimization("/api/bayesian-optimization/ml-hyperparameters", {
-      method: "POST",
-      body: config,
-      onSuccess: (data) => {
-        if (data.success && data.result) {
-          setResult(data.result);
-        } else {
-          setError(data.error || "MLハイパーパラメータの最適化に失敗しました");
-        }
-      },
-      onError: (errorMessage) => {
-        setError(errorMessage);
-      }
-    });
-  };
+  const { result, error, isLoading, runMLOptimization, reset } =
+    useBayesianOptimization();
 
   const handleClose = () => {
-    setResult(null);
-    setError(null);
+    reset();
     onClose();
   };
 
   const handleReset = () => {
-    setResult(null);
-    setError(null);
+    reset();
   };
 
   return (
@@ -73,7 +45,7 @@ const BayesianOptimizationModal: React.FC<BayesianOptimizationModalProps> = ({
       <div className="max-h-[85vh]">
         {!result && !error && (
           <BayesianOptimizationForm
-            onMLOptimization={handleMLOptimization}
+            onMLOptimization={runMLOptimization}
             isLoading={isLoading}
             currentBacktestConfig={currentBacktestConfig}
           />
@@ -94,16 +66,16 @@ const BayesianOptimizationModal: React.FC<BayesianOptimizationModalProps> = ({
         {error && (
           <>
             <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-4">
-              <h3 className="text-lg font-medium text-red-800 mb-2">エラーが発生しました</h3>
+              <h3 className="text-lg font-medium text-red-800 mb-2">
+                エラーが発生しました
+              </h3>
               <p className="text-red-700">{error}</p>
             </div>
             <div className="flex justify-center space-x-3">
               <ActionButton onClick={handleReset} variant="secondary">
                 再試行
               </ActionButton>
-              <ActionButton onClick={handleClose}>
-                閉じる
-              </ActionButton>
+              <ActionButton onClick={handleClose}>閉じる</ActionButton>
             </div>
           </>
         )}
@@ -113,7 +85,11 @@ const BayesianOptimizationModal: React.FC<BayesianOptimizationModalProps> = ({
             <div className="mb-4 flex justify-between items-center">
               <h2 className="text-xl font-bold">最適化完了</h2>
               <div className="space-x-2">
-                <ActionButton onClick={handleReset} variant="secondary" size="sm">
+                <ActionButton
+                  onClick={handleReset}
+                  variant="secondary"
+                  size="sm"
+                >
                   新しい最適化
                 </ActionButton>
                 <ActionButton onClick={handleClose} size="sm">

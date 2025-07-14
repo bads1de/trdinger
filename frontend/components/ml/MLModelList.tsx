@@ -1,14 +1,13 @@
 "use client";
 
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import ActionButton from "@/components/common/ActionButton";
 import { Badge } from "@/components/ui/badge";
 import ErrorDisplay from "@/components/common/ErrorDisplay";
 import LoadingSpinner from "@/components/common/LoadingSpinner";
-import { useApiCall } from "@/hooks/useApiCall";
+import { useMLModels, MLModel } from "@/hooks/useMLModels";
 import {
-  Download,
   Trash2,
   Eye,
   Calendar,
@@ -25,19 +24,6 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
-interface MLModel {
-  id: string;
-  name: string;
-  path: string;
-  size_mb: number;
-  modified_at: string;
-  directory: string;
-  accuracy?: number;
-  feature_count?: number;
-  model_type?: string;
-  is_active?: boolean;
-}
-
 interface MLModelListProps {
   limit?: number;
   showActions?: boolean;
@@ -52,55 +38,13 @@ export default function MLModelList({
   limit,
   showActions = true,
 }: MLModelListProps) {
-  const [models, setModels] = useState<MLModel[]>([]);
   const [selectedModel, setSelectedModel] = useState<string | null>(null);
-
-  const {
-    execute: fetchModelsApi,
-    loading: isLoading,
-    error,
-    reset,
-  } = useApiCall<{ models: MLModel[] }>();
-  const { execute: deleteModelApi } = useApiCall();
-  const { execute: backupModelApi } = useApiCall();
-
-  const fetchModels = useCallback(() => {
-    reset();
-    fetchModelsApi("/api/ml/models", {
-      onSuccess: (data) => {
-        if (data) {
-          let modelList = data.models || [];
-          if (limit) {
-            modelList = modelList.slice(0, limit);
-          }
-          setModels(modelList);
-        }
-      },
-    });
-  }, [fetchModelsApi, limit, reset]);
+  const { models, isLoading, error, fetchModels, deleteModel, backupModel } =
+    useMLModels(limit);
 
   useEffect(() => {
     fetchModels();
   }, [fetchModels]);
-
-  const handleDeleteModel = (modelId: string) => {
-    deleteModelApi(`/api/ml/models/${modelId}`, {
-      method: "DELETE",
-      confirmMessage: "このモデルを削除しますか？この操作は取り消せません。",
-      onSuccess: () => {
-        fetchModels(); // リストを更新
-      },
-    });
-  };
-
-  const handleBackupModel = (modelId: string) => {
-    backupModelApi(`/api/ml/models/${modelId}/backup`, {
-      method: "POST",
-      onSuccess: () => {
-        alert("モデルのバックアップが完了しました");
-      },
-    });
-  };
 
   const formatFileSize = (sizeInMB: number): string => {
     if (sizeInMB < 1) {
@@ -215,14 +159,12 @@ export default function MLModelList({
                       </ActionButton>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
-                      <DropdownMenuItem
-                        onClick={() => handleBackupModel(model.id)}
-                      >
+                      <DropdownMenuItem onClick={() => backupModel(model.id)}>
                         <Archive className="h-4 w-4 mr-2" />
                         バックアップ
                       </DropdownMenuItem>
                       <DropdownMenuItem
-                        onClick={() => handleDeleteModel(model.id)}
+                        onClick={() => deleteModel(model.id)}
                         className="text-red-500 hover:text-red-400"
                       >
                         <Trash2 className="h-4 w-4 mr-2" />

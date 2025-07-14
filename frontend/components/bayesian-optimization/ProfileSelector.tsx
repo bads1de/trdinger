@@ -1,11 +1,17 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import React from "react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import ActionButton from "@/components/common/ActionButton";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
-import { useApiCall } from "@/hooks/useApiCall";
+import { useOptimizationProfiles } from "@/hooks/useOptimizationProfiles";
 import { OptimizationProfile } from "@/types/bayesian-optimization";
 import { Loader2, RefreshCw } from "lucide-react";
 
@@ -22,51 +28,22 @@ const ProfileSelector: React.FC<ProfileSelectorProps> = ({
   modelType,
   className = "",
 }) => {
-  const [profiles, setProfiles] = useState<OptimizationProfile[]>([]);
-  const [error, setError] = useState<string | null>(null);
-  const { execute: fetchProfilesApi, loading: isLoading } = useApiCall<{success: boolean, profiles: OptimizationProfile[], message?: string}>();
-
-  const fetchProfiles = async () => {
-    setError(null);
-
-    const params = new URLSearchParams();
-    if (modelType) {
-      params.append("target_model_type", modelType);
-    }
-
-    await fetchProfilesApi(`/api/bayesian-optimization/profiles?${params}`, {
-      method: "GET",
-      onSuccess: (data) => {
-        if (data.success) {
-          setProfiles(data.profiles || []);
-        } else {
-          setError(data.message || "プロファイルの取得に失敗しました");
-        }
-      },
-      onError: (errorMessage) => {
-        console.error("プロファイル取得エラー:", errorMessage);
-        setError("プロファイルの取得中にエラーが発生しました");
-      }
-    });
-  };
-
-  useEffect(() => {
-    fetchProfiles();
-  }, [modelType, fetchProfilesApi]);
+  const { profiles, isLoading, error, fetchProfiles } =
+    useOptimizationProfiles(modelType);
 
   const handleProfileChange = (profileId: string) => {
     if (profileId === "none") {
       onProfileSelect(null);
       return;
     }
-    
-    const profile = profiles.find(p => p.id.toString() === profileId);
+
+    const profile = profiles.find((p) => p.id.toString() === profileId);
     if (profile) {
       onProfileSelect(profile);
     }
   };
 
-  const selectedProfile = profiles.find(p => p.id === selectedProfileId);
+  const selectedProfile = profiles.find((p) => p.id === selectedProfileId);
 
   return (
     <div className={`space-y-3 ${className}`}>
@@ -74,9 +51,7 @@ const ProfileSelector: React.FC<ProfileSelectorProps> = ({
         <label className="text-sm font-medium">
           最適化プロファイル
           {modelType && (
-            <span className="text-xs text-gray-500 ml-1">
-              ({modelType})
-            </span>
+            <span className="text-xs text-gray-500 ml-1">({modelType})</span>
           )}
         </label>
         <ActionButton
@@ -88,13 +63,11 @@ const ProfileSelector: React.FC<ProfileSelectorProps> = ({
           <RefreshCw className={`h-4 w-4 ${isLoading ? "animate-spin" : ""}`} />
         </ActionButton>
       </div>
-      
+
       {error && (
-        <div className="text-sm text-red-600 dark:text-red-400">
-          {error}
-        </div>
+        <div className="text-sm text-red-600 dark:text-red-400">{error}</div>
       )}
-      
+
       <Select
         value={selectedProfileId?.toString() || "none"}
         onValueChange={handleProfileChange}
@@ -137,7 +110,8 @@ const ProfileSelector: React.FC<ProfileSelectorProps> = ({
                   )}
                   {profile.optimization_result && (
                     <span className="text-xs text-gray-500">
-                      スコア: {profile.optimization_result.best_score.toFixed(3)}
+                      スコア:{" "}
+                      {profile.optimization_result.best_score.toFixed(3)}
                     </span>
                   )}
                 </div>
@@ -146,25 +120,27 @@ const ProfileSelector: React.FC<ProfileSelectorProps> = ({
           ))}
         </SelectContent>
       </Select>
-      
+
       {selectedProfile && (
         <Card className="p-3 bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800">
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <span className="font-medium text-sm">{selectedProfile.profile_name}</span>
+              <span className="font-medium text-sm">
+                {selectedProfile.profile_name}
+              </span>
               {selectedProfile.is_default && (
                 <Badge variant="secondary" className="text-xs">
                   デフォルト
                 </Badge>
               )}
             </div>
-            
+
             {selectedProfile.description && (
               <p className="text-xs text-gray-600 dark:text-gray-400">
                 {selectedProfile.description}
               </p>
             )}
-            
+
             {selectedProfile.optimization_result && (
               <div className="grid grid-cols-2 gap-2 text-xs">
                 <div>

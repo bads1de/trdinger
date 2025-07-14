@@ -1,82 +1,29 @@
-'use client';
+"use client";
 
-import React, { useState, useEffect } from 'react';
-import { Card, CardContent } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import ErrorDisplay from '@/components/common/ErrorDisplay';
-import LoadingSpinner from '@/components/common/LoadingSpinner';
-import { useApiCall } from '@/hooks/useApiCall';
+import React from "react";
+import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import ErrorDisplay from "@/components/common/ErrorDisplay";
+import LoadingSpinner from "@/components/common/LoadingSpinner";
+import { useMLModelStatus } from "@/hooks/useMLModelStatus";
 import {
   Brain,
   TrendingUp,
   Database,
-  Clock,
   CheckCircle,
   AlertCircle,
   BarChart3,
-  Activity
-} from 'lucide-react';
-
-interface ModelStatus {
-  is_model_loaded: boolean;
-  is_trained: boolean;
-  last_predictions: {
-    up: number;
-    down: number;
-    range: number;
-  };
-  feature_count: number;
-  model_info?: {
-    accuracy: number;
-    model_type: string;
-    last_updated: string;
-    training_samples: number;
-  };
-}
-
-interface FeatureImportance {
-  [key: string]: number;
-}
+  Activity,
+} from "lucide-react";
 
 /**
  * MLモデル状態表示コンポーネント
- * 
+ *
  * 現在のモデルの状態、精度、特徴量重要度などを表示するダッシュボード
  */
 export default function MLModelStatus() {
-  const [modelStatus, setModelStatus] = useState<ModelStatus | null>(null);
-  const [featureImportance, setFeatureImportance] = useState<FeatureImportance>({});
-  const { execute: fetchStatus, loading: isLoading, error } = useApiCall<ModelStatus>();
-  const { execute: fetchImportance } = useApiCall<{feature_importance: FeatureImportance}>();
-
-  useEffect(() => {
-    fetchModelStatus();
-    fetchFeatureImportance();
-  }, []);
-
-  const fetchModelStatus = async () => {
-    await fetchStatus('/api/ml/status', {
-      method: 'GET',
-      onSuccess: (data) => {
-        setModelStatus(data);
-      },
-      onError: (errorMessage) => {
-        console.error('モデル状態の取得に失敗しました:', errorMessage);
-      }
-    });
-  };
-
-  const fetchFeatureImportance = async () => {
-    await fetchImportance('/api/ml/feature-importance', {
-      method: 'GET',
-      onSuccess: (data) => {
-        setFeatureImportance(data.feature_importance || {});
-      },
-      onError: (errorMessage) => {
-        console.error('特徴量重要度の取得に失敗:', errorMessage);
-      }
-    });
-  };
+  const { modelStatus, featureImportance, isLoading, error } =
+    useMLModelStatus();
 
   const getStatusBadge = () => {
     if (!modelStatus) return null;
@@ -84,9 +31,15 @@ export default function MLModelStatus() {
     if (modelStatus.is_model_loaded && modelStatus.is_trained) {
       return <Badge className="bg-green-100 text-green-800">アクティブ</Badge>;
     } else if (modelStatus.is_model_loaded) {
-      return <Badge className="bg-yellow-100 text-yellow-800">読み込み済み</Badge>;
+      return (
+        <Badge className="bg-yellow-100 text-yellow-800">読み込み済み</Badge>
+      );
     } else {
-      return <Badge variant="secondary" className="mt-1">未読み込み</Badge>;
+      return (
+        <Badge variant="secondary" className="mt-1">
+          未読み込み
+        </Badge>
+      );
     }
   };
 
@@ -128,7 +81,10 @@ export default function MLModelStatus() {
                 ) : (
                   <AlertCircle className="h-4 w-4 text-red-600" />
                 )}
-                <span>モデル読み込み: {modelStatus.is_model_loaded ? '完了' : '未完了'}</span>
+                <span>
+                  モデル読み込み:{" "}
+                  {modelStatus.is_model_loaded ? "完了" : "未完了"}
+                </span>
               </div>
               <div className="flex items-center space-x-2">
                 {modelStatus.is_trained ? (
@@ -136,7 +92,9 @@ export default function MLModelStatus() {
                 ) : (
                   <AlertCircle className="h-4 w-4 text-red-600" />
                 )}
-                <span>学習状態: {modelStatus.is_trained ? '学習済み' : '未学習'}</span>
+                <span>
+                  学習状態: {modelStatus.is_trained ? "学習済み" : "未学習"}
+                </span>
               </div>
               <div className="flex items-center space-x-2">
                 <Database className="h-4 w-4 text-blue-600" />
@@ -207,7 +165,9 @@ export default function MLModelStatus() {
               </div>
               <div className="text-center">
                 <div className="text-sm text-gray-600">
-                  {new Date(modelStatus.model_info.last_updated).toLocaleDateString('ja-JP')}
+                  {new Date(
+                    modelStatus.model_info.last_updated
+                  ).toLocaleDateString("ja-JP")}
                 </div>
                 <div className="text-sm text-gray-600">最終更新</div>
               </div>
@@ -222,7 +182,9 @@ export default function MLModelStatus() {
           <CardContent className="p-6">
             <div className="flex items-center space-x-2 mb-4">
               <Activity className="h-5 w-5 text-orange-600" />
-              <h3 className="font-medium text-white">特徴量重要度 (上位10個)</h3>
+              <h3 className="font-medium text-white">
+                特徴量重要度 (上位10個)
+              </h3>
             </div>
             <div className="space-y-2">
               {Object.entries(featureImportance)
@@ -231,7 +193,9 @@ export default function MLModelStatus() {
                 .map(([feature, importance]) => (
                   <div key={feature} className="flex items-center space-x-2">
                     <div className="flex-1 flex items-center justify-between">
-                      <span className="text-sm text-gray-300 truncate">{feature}</span>
+                      <span className="text-sm text-gray-300 truncate">
+                        {feature}
+                      </span>
                       <span className="text-sm font-medium text-gray-400">
                         {importance.toFixed(3)}
                       </span>
@@ -240,7 +204,11 @@ export default function MLModelStatus() {
                       <div
                         className="bg-blue-600 h-2 rounded-full"
                         style={{
-                          width: `${(importance / Math.max(...Object.values(featureImportance))) * 100}%`
+                          width: `${
+                            (importance /
+                              Math.max(...Object.values(featureImportance))) *
+                            100
+                          }%`,
                         }}
                       />
                     </div>

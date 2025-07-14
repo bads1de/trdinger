@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import ActionButton from "@/components/common/ActionButton";
 import { Card } from "@/components/ui/card";
 import { InputField } from "@/components/common/InputField";
@@ -8,12 +8,11 @@ import { SelectField } from "@/components/common/SelectField";
 import InfoModal from "@/components/common/InfoModal";
 import { Info } from "lucide-react";
 import { ML_INFO_MESSAGES } from "@/constants/info";
-import { useApiCall } from "@/hooks/useApiCall";
 import CollapsibleJson from "@/components/common/CollapsibleJson";
+import { useBayesianOptimizationForm } from "@/hooks/useBayesianOptimizationForm";
 import {
   BayesianOptimizationConfig,
   ParameterSpace,
-  DefaultParameterSpaceResponse,
 } from "@/types/bayesian-optimization";
 import { BacktestConfig } from "@/types/backtest";
 
@@ -29,15 +28,9 @@ const BayesianOptimizationForm: React.FC<BayesianOptimizationFormProps> = ({
   currentBacktestConfig = null,
 }) => {
   const [optimizationType, setOptimizationType] = useState<"ml">("ml");
-  const [experimentName, setExperimentName] = useState("");
   const [modelType, setModelType] = useState("lightgbm");
   const [nCalls, setNCalls] = useState(50);
   const [useDefaultParams, setUseDefaultParams] = useState(true);
-  const [customParameterSpace, setCustomParameterSpace] = useState("");
-  const [defaultParameterSpace, setDefaultParameterSpace] = useState<Record<
-    string,
-    ParameterSpace
-  > | null>(null);
   const [acquisitionFunction, setAcquisitionFunction] = useState("EI");
   const [nInitialPoints, setNInitialPoints] = useState(10);
   const [randomState, setRandomState] = useState(42);
@@ -55,34 +48,16 @@ const BayesianOptimizationForm: React.FC<BayesianOptimizationFormProps> = ({
   const [profileName, setProfileName] = useState("");
   const [profileDescription, setProfileDescription] = useState("");
 
-  // API呼び出し用フック
-  const { execute: fetchParameterSpace } = useApiCall<DefaultParameterSpaceResponse>();
+  const {
+    customParameterSpace,
+    setCustomParameterSpace,
+    defaultParameterSpace,
+  } = useBayesianOptimizationForm(modelType);
 
   const openInfoModal = (title: string, content: React.ReactNode) => {
     setModalContent({ title, content });
     setIsInfoModalOpen(true);
   };
-
-  // デフォルトパラメータ空間を取得
-  useEffect(() => {
-    const fetchDefaultParameterSpace = async () => {
-      const type = modelType;
-      await fetchParameterSpace(`/api/bayesian-optimization/parameter-spaces/${type}`, {
-        method: "GET",
-        onSuccess: (data) => {
-          if (data.success && data.parameter_space) {
-            setDefaultParameterSpace(data.parameter_space);
-            setCustomParameterSpace(JSON.stringify(data.parameter_space, null, 2));
-          }
-        },
-        onError: (errorMessage) => {
-          console.error("デフォルトパラメータ空間の取得に失敗:", errorMessage);
-        }
-      });
-    };
-
-    fetchDefaultParameterSpace();
-  }, [optimizationType, modelType, fetchParameterSpace]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -115,8 +90,12 @@ const BayesianOptimizationForm: React.FC<BayesianOptimizationFormProps> = ({
       },
       // プロファイル保存設定を追加
       save_as_profile: saveAsProfile,
-      profile_name: saveAsProfile && profileName.trim() ? profileName.trim() : undefined,
-      profile_description: saveAsProfile && profileDescription.trim() ? profileDescription.trim() : undefined,
+      profile_name:
+        saveAsProfile && profileName.trim() ? profileName.trim() : undefined,
+      profile_description:
+        saveAsProfile && profileDescription.trim()
+          ? profileDescription.trim()
+          : undefined,
     };
 
     config.model_type = modelType;
@@ -125,21 +104,24 @@ const BayesianOptimizationForm: React.FC<BayesianOptimizationFormProps> = ({
 
   return (
     <>
-      <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <form
+        onSubmit={handleSubmit}
+        className="grid grid-cols-1 md:grid-cols-2 gap-6"
+      >
         <div className="space-y-6">
           {/* 最適化タイプ選択 */}
           <Card className="p-4">
-              <SelectField
-                label="モデルタイプ"
-                value={modelType}
-                onChange={setModelType}
-                options={[
-                  { value: "lightgbm", label: "LightGBM" },
-                  { value: "xgboost", label: "XGBoost" },
-                  { value: "random_forest", label: "Random Forest" },
-                ]}
-              />
-            </Card>
+            <SelectField
+              label="モデルタイプ"
+              value={modelType}
+              onChange={setModelType}
+              options={[
+                { value: "lightgbm", label: "LightGBM" },
+                { value: "xgboost", label: "XGBoost" },
+                { value: "random_forest", label: "Random Forest" },
+              ]}
+            />
+          </Card>
 
           {/* 最適化パラメータ */}
           <Card className="p-4">
@@ -258,7 +240,10 @@ const BayesianOptimizationForm: React.FC<BayesianOptimizationFormProps> = ({
                   onChange={(e) => setUseDefaultParams(e.target.checked)}
                   className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
                 />
-                <label htmlFor="useDefaultParams" className="text-sm font-medium text-gray-300">
+                <label
+                  htmlFor="useDefaultParams"
+                  className="text-sm font-medium text-gray-300"
+                >
                   デフォルトパラメータ空間を使用
                 </label>
               </div>
@@ -266,13 +251,18 @@ const BayesianOptimizationForm: React.FC<BayesianOptimizationFormProps> = ({
             <div className="flex-grow flex flex-col">
               {!useDefaultParams && (
                 <div className="flex-grow flex flex-col">
-                  <label htmlFor="customParameterSpace" className="text-sm font-medium mb-2 block">
+                  <label
+                    htmlFor="customParameterSpace"
+                    className="text-sm font-medium mb-2 block"
+                  >
                     カスタムパラメータ空間 (JSON)
                   </label>
                   <textarea
                     id="customParameterSpace"
                     value={customParameterSpace}
-                    onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setCustomParameterSpace(e.target.value)}
+                    onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
+                      setCustomParameterSpace(e.target.value)
+                    }
                     placeholder="パラメータ空間をJSON形式で入力してください"
                     className="font-mono text-sm w-full flex-grow p-3 bg-gray-800 border border-secondary-700 text-white rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     rows={15}
@@ -296,7 +286,9 @@ const BayesianOptimizationForm: React.FC<BayesianOptimizationFormProps> = ({
         {/* プロファイル保存設定 */}
         <div className="md:col-span-2">
           <Card className="p-4">
-            <h3 className="text-lg font-semibold mb-4 text-white">プロファイル保存設定</h3>
+            <h3 className="text-lg font-semibold mb-4 text-white">
+              プロファイル保存設定
+            </h3>
 
             <div className="space-y-4">
               {/* プロファイル保存チェックボックス */}
@@ -308,7 +300,10 @@ const BayesianOptimizationForm: React.FC<BayesianOptimizationFormProps> = ({
                   onChange={(e) => setSaveAsProfile(e.target.checked)}
                   className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600"
                 />
-                <label htmlFor="save-as-profile" className="text-sm font-medium text-white">
+                <label
+                  htmlFor="save-as-profile"
+                  className="text-sm font-medium text-white"
+                >
                   最適化結果をプロファイルとして保存
                 </label>
               </div>
@@ -346,14 +341,14 @@ const BayesianOptimizationForm: React.FC<BayesianOptimizationFormProps> = ({
 
         {/* 実行ボタン */}
         <div className="md:col-span-2 flex justify-end">
-        <ActionButton
-          type="submit"
-          disabled={isLoading}
-          className="px-6 py-2"
-        >
-          {isLoading ? "最適化実行中..." : "ベイジアン最適化を実行"}
-        </ActionButton>
-      </div>
+          <ActionButton
+            type="submit"
+            disabled={isLoading}
+            className="px-6 py-2"
+          >
+            {isLoading ? "最適化実行中..." : "ベイジアン最適化を実行"}
+          </ActionButton>
+        </div>
       </form>
       <InfoModal
         isOpen={isInfoModalOpen}

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import ActionButton from "@/components/common/ActionButton";
 import { InputField } from "@/components/common/InputField";
@@ -8,7 +8,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import ErrorDisplay from "@/components/common/ErrorDisplay";
 import LoadingSpinner from "@/components/common/LoadingSpinner";
 import InfoModal from "@/components/common/InfoModal";
-import { useApiCall } from "@/hooks/useApiCall";
+import { useMLSettings } from "@/hooks/useMLSettings";
 import {
   Settings,
   Save,
@@ -21,137 +21,32 @@ import {
 } from "lucide-react";
 import { ML_INFO_MESSAGES } from "@/constants/info";
 
-interface MLConfig {
-  data_processing: {
-    max_ohlcv_rows: number;
-    max_feature_rows: number;
-    feature_calculation_timeout: number;
-    model_training_timeout: number;
-  };
-  model: {
-    model_save_path: string;
-    max_model_versions: number;
-    model_retention_days: number;
-  };
-  lightgbm: {
-    learning_rate: number;
-    num_leaves: number;
-    feature_fraction: number;
-    bagging_fraction: number;
-    num_boost_round: number;
-    early_stopping_rounds: number;
-  };
-  training: {
-    train_test_split: number;
-    prediction_horizon: number;
-    threshold_up: number;
-    threshold_down: number;
-    min_training_samples: number;
-  };
-  prediction: {
-    default_up_prob: number;
-    default_down_prob: number;
-    default_range_prob: number;
-  };
-}
-
 /**
  * ML設定コンポーネント
  *
  * ML関連の設定を変更・管理するコンポーネント
  */
 export default function MLSettings() {
-  const [config, setConfig] = useState<MLConfig | null>(null);
-  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const {
+    config,
+    isLoading,
+    isSaving,
+    isResetting,
+    isCleaning,
+    error,
+    successMessage,
+    saveConfig,
+    resetToDefaults,
+    cleanupOldModels,
+    updateConfig,
+  } = useMLSettings();
+
   const [isInfoModalOpen, setIsInfoModalOpen] = useState(false);
   const [modalContent, setModalContent] = useState({ title: "", content: "" });
-
-  const {
-    loading: isLoading,
-    error: fetchError,
-    execute: fetchConfigApi,
-  } = useApiCall<MLConfig>();
-  const {
-    loading: isSaving,
-    error: saveError,
-    execute: saveConfigApi,
-  } = useApiCall();
-  const {
-    loading: isResetting,
-    error: resetError,
-    execute: resetConfigApi,
-  } = useApiCall();
-  const {
-    loading: isCleaning,
-    error: cleanupError,
-    execute: cleanupApi,
-  } = useApiCall();
-
-  const error = fetchError || saveError || resetError || cleanupError;
 
   const openInfoModal = (title: string, content: string) => {
     setModalContent({ title, content });
     setIsInfoModalOpen(true);
-  };
-
-  const showSuccessMessage = (message: string) => {
-    setSuccessMessage(message);
-    setTimeout(() => setSuccessMessage(null), 3000);
-  };
-
-  const fetchConfig = useCallback(async () => {
-    const result = await fetchConfigApi("/api/ml/config");
-    if (result) {
-      // APIルートが { success: true, ...config } を返すため、
-      // successプロパティを除いた残りをstateにセットする
-      const { success, ...configData } = result as any;
-      setConfig(configData);
-    }
-  }, [fetchConfigApi]);
-
-  useEffect(() => {
-    fetchConfig();
-  }, [fetchConfig]);
-
-  const saveConfig = async () => {
-    if (!config) return;
-    await saveConfigApi("/api/ml/config", {
-      method: "PUT",
-      body: config,
-      onSuccess: () => showSuccessMessage("設定が正常に保存されました"),
-    });
-  };
-
-  const resetToDefaults = async () => {
-    await resetConfigApi("/api/ml/config/reset", {
-      method: "POST",
-      confirmMessage: "設定をデフォルト値にリセットしますか？",
-      onSuccess: () => {
-        fetchConfig();
-        showSuccessMessage("設定がデフォルト値にリセットされました");
-      },
-    });
-  };
-
-  const cleanupOldModels = async () => {
-    await cleanupApi("/api/ml/models/cleanup", {
-      method: "POST",
-      confirmMessage:
-        "古いモデルファイルを削除しますか？この操作は取り消せません。",
-      onSuccess: () => showSuccessMessage("古いモデルファイルが削除されました"),
-    });
-  };
-
-  const updateConfig = (section: keyof MLConfig, key: string, value: any) => {
-    if (!config) return;
-
-    setConfig((prev) => ({
-      ...prev!,
-      [section]: {
-        ...prev![section],
-        [key]: value,
-      },
-    }));
   };
 
   if (isLoading) {
@@ -605,7 +500,7 @@ export default function MLSettings() {
       {/* アクションボタン */}
       <div className="flex flex-wrap gap-4">
         <ActionButton
-          onClick={saveConfig}
+          onClick={() => config && saveConfig(config)}
           loading={isSaving}
           icon={<Save className="h-4 w-4" />}
         >

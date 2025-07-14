@@ -8,24 +8,11 @@
 
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React from "react";
 import DataResetButton, {
   DataResetResult,
 } from "@/components/button/DataResetButton";
-import { useApiCall } from "@/hooks/useApiCall";
-
-/**
- * データ状況の型
- */
-interface DataStatus {
-  data_counts: {
-    ohlcv: number;
-    funding_rates: number;
-    open_interest: number;
-  };
-  total_records: number;
-  timestamp: string;
-}
+import { useDataReset } from "@/hooks/useDataReset";
 
 /**
  * データリセットパネルのプロパティ
@@ -50,88 +37,19 @@ const DataResetPanel: React.FC<DataResetPanelProps> = ({
   isVisible = true,
   onClose,
 }) => {
-  const [dataStatus, setDataStatus] = useState<DataStatus | null>(null);
-  const [resetMessage, setResetMessage] = useState<string>("");
-  const [isLoading, setIsLoading] = useState(false);
-  const apiCall = useApiCall<DataStatus>();
+  const {
+    dataStatus,
+    resetMessage,
+    isLoading,
+    fetchDataStatus,
+    handleResetComplete,
+    handleResetError,
+  } = useDataReset(isVisible);
 
-  /**
-   * データ状況を取得
-   */
-  const fetchDataStatus = async () => {
-    try {
-      setIsLoading(true);
-      const result = await apiCall.execute("/api/data-reset/status", {
-        method: "GET",
-      });
-
-      if (result) {
-        setDataStatus(result);
-      }
-    } catch (error) {
-      console.error("データ状況取得エラー:", error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  /**
-   * リセット完了時のハンドラー
-   */
-  const handleResetComplete = (result: DataResetResult) => {
-    // 成功メッセージを表示
-    if (result.success) {
-      if (result.total_deleted !== undefined) {
-        setResetMessage(
-          `✅ ${
-            result.message
-          } (${result.total_deleted.toLocaleString()}件削除)`
-        );
-      } else if (result.deleted_count !== undefined) {
-        setResetMessage(
-          `✅ ${
-            result.message
-          } (${result.deleted_count.toLocaleString()}件削除)`
-        );
-      } else {
-        setResetMessage(`✅ ${result.message}`);
-      }
-    } else {
-      setResetMessage(`❌ ${result.message}`);
-    }
-
-    // データ状況を再取得
-    setTimeout(() => {
-      fetchDataStatus();
-    }, 1000);
-
-    // 親コンポーネントに通知
+  const onResetCompleted = (result: DataResetResult) => {
+    handleResetComplete(result);
     onResetComplete?.(result);
-
-    // 10秒後にメッセージをクリア
-    setTimeout(() => {
-      setResetMessage("");
-    }, 10000);
   };
-
-  /**
-   * リセットエラー時のハンドラー
-   */
-  const handleResetError = (error: string) => {
-    setResetMessage(`❌ ${error}`);
-
-    // 10秒後にメッセージをクリア
-    setTimeout(() => {
-      setResetMessage("");
-    }, 10000);
-  };
-
-  // 初期データ取得
-  useEffect(() => {
-    if (isVisible) {
-      fetchDataStatus();
-    }
-  }, [isVisible]);
 
   if (!isVisible) {
     return null;
@@ -232,21 +150,21 @@ const DataResetPanel: React.FC<DataResetPanelProps> = ({
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <DataResetButton
                 resetType="ohlcv"
-                onResetComplete={handleResetComplete}
+                onResetComplete={onResetCompleted}
                 onResetError={handleResetError}
                 disabled={isLoading}
                 size="sm"
               />
               <DataResetButton
                 resetType="funding-rates"
-                onResetComplete={handleResetComplete}
+                onResetComplete={onResetCompleted}
                 onResetError={handleResetError}
                 disabled={isLoading}
                 size="sm"
               />
               <DataResetButton
                 resetType="open-interest"
-                onResetComplete={handleResetComplete}
+                onResetComplete={onResetCompleted}
                 onResetError={handleResetError}
                 disabled={isLoading}
                 size="sm"
@@ -263,7 +181,7 @@ const DataResetPanel: React.FC<DataResetPanelProps> = ({
               <DataResetButton
                 resetType="symbol"
                 symbol={selectedSymbol}
-                onResetComplete={handleResetComplete}
+                onResetComplete={onResetCompleted}
                 onResetError={handleResetError}
                 disabled={isLoading}
                 size="sm"
@@ -279,7 +197,7 @@ const DataResetPanel: React.FC<DataResetPanelProps> = ({
             </label>
             <DataResetButton
               resetType="all"
-              onResetComplete={handleResetComplete}
+              onResetComplete={onResetCompleted}
               onResetError={handleResetError}
               disabled={isLoading}
               size="sm"
