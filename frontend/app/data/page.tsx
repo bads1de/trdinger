@@ -8,7 +8,7 @@
 
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import DataHeader from "@/components/data/DataHeader";
 import DataControls from "@/components/data/DataControls";
 import DataTableContainer from "@/components/data/DataTableContainer";
@@ -54,7 +54,10 @@ const DataPage: React.FC = () => {
 
   // カスタムフックを使用してデータ取得
   const { symbols } = useSymbols();
-  const { execute: updateIncrementalData, loading: incrementalUpdateLoading } = useApiCall();
+  const { execute: updateIncrementalData, loading: incrementalUpdateLoading } =
+    useApiCall();
+  const { execute: fetchDataStatusApi, loading: dataStatusLoading } =
+    useApiCall();
 
   const {
     data: ohlcvData,
@@ -139,7 +142,7 @@ const DataPage: React.FC = () => {
           console.error("差分更新エラー:", errorMessage);
           // 10秒後にメッセージをクリア
           setTimeout(() => setIncrementalUpdateMessage(""), 10000);
-        }
+        },
       }
     );
   };
@@ -147,19 +150,19 @@ const DataPage: React.FC = () => {
   /**
    * データ収集状況を取得
    */
-  const fetchDataStatus = async () => {
-    try {
-      const url = `${BACKEND_API_URL}/api/data-collection/status/${selectedSymbol}/${selectedTimeFrame}`;
-      const response = await fetch(url);
-      const result = await response.json();
-
-      if (result.success) {
-        setDataStatus(result);
-      }
-    } catch (err) {
-      console.error("データ状況取得エラー:", err);
-    }
-  };
+  const fetchDataStatus = useCallback(() => {
+    const url = `${BACKEND_API_URL}/api/data-collection/status/${selectedSymbol}/${selectedTimeFrame}`;
+    fetchDataStatusApi(url, {
+      onSuccess: (result) => {
+        if (result) {
+          setDataStatus(result);
+        }
+      },
+      onError: (err) => {
+        console.error("データ状況取得エラー:", err);
+      },
+    });
+  }, [selectedSymbol, selectedTimeFrame, fetchDataStatusApi]);
 
   /**
    * 一括OHLCVデータ収集開始時のコールバック
@@ -294,13 +297,13 @@ const DataPage: React.FC = () => {
     if (selectedSymbol && selectedTimeFrame) {
       fetchDataStatus();
     }
-  }, [selectedSymbol, selectedTimeFrame]);
+  }, [selectedSymbol, selectedTimeFrame, fetchDataStatus]);
 
   return (
     <div className="min-h-screen bg-secondary-50 dark:bg-secondary-950 animate-fade-in">
       <DataHeader
         loading={ohlcvLoading || fundingLoading || openInterestLoading}
-        error={ohlcvError || fundingError || openInterestError || ''}
+        error={ohlcvError || fundingError || openInterestError || ""}
         updating={incrementalUpdateLoading}
         handleRefresh={handleRefresh}
         handleIncrementalUpdate={handleIncrementalUpdate}
@@ -369,13 +372,13 @@ const DataPage: React.FC = () => {
           setActiveTab={setActiveTab}
           ohlcvData={ohlcvData}
           loading={ohlcvLoading}
-          error={ohlcvError || ''}
+          error={ohlcvError || ""}
           fundingRateData={fundingRateData}
           fundingLoading={fundingLoading}
-          fundingError={fundingError || ''}
+          fundingError={fundingError || ""}
           openInterestData={openInterestData}
           openInterestLoading={openInterestLoading}
-          openInterestError={openInterestError || ''}
+          openInterestError={openInterestError || ""}
         />
       </div>
     </div>

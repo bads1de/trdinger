@@ -1,11 +1,12 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import ActionButton from "@/components/common/ActionButton";
 import { Badge } from "@/components/ui/badge";
 import ErrorDisplay from "@/components/common/ErrorDisplay";
 import LoadingSpinner from "@/components/common/LoadingSpinner";
+import { useApiCall } from "@/hooks/useApiCall";
 import {
   Download,
   Trash2,
@@ -15,6 +16,7 @@ import {
   TrendingUp,
   MoreVertical,
   Archive,
+  RefreshCw,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -51,73 +53,53 @@ export default function MLModelList({
   showActions = true,
 }: MLModelListProps) {
   const [models, setModels] = useState<MLModel[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [selectedModel, setSelectedModel] = useState<string | null>(null);
+
+  const {
+    execute: fetchModelsApi,
+    loading: isLoading,
+    error,
+    reset,
+  } = useApiCall<{ models: MLModel[] }>();
+  const { execute: deleteModelApi } = useApiCall();
+  const { execute: backupModelApi } = useApiCall();
+
+  const fetchModels = useCallback(() => {
+    reset();
+    fetchModelsApi("/api/ml/models", {
+      onSuccess: (data) => {
+        if (data) {
+          let modelList = data.models || [];
+          if (limit) {
+            modelList = modelList.slice(0, limit);
+          }
+          setModels(modelList);
+        }
+      },
+    });
+  }, [fetchModelsApi, limit, reset]);
 
   useEffect(() => {
     fetchModels();
-  }, []);
+  }, [fetchModels]);
 
-  const fetchModels = async () => {
-    try {
-      setIsLoading(true);
-      const response = await fetch("/api/ml/models");
-      if (!response.ok) {
-        throw new Error("モデル一覧の取得に失敗しました");
-      }
-      const data = await response.json();
-      let modelList = data.models || [];
-
-      if (limit) {
-        modelList = modelList.slice(0, limit);
-      }
-
-      setModels(modelList);
-      setError(null);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "エラーが発生しました");
-    } finally {
-      setIsLoading(false);
-    }
+  const handleDeleteModel = (modelId: string) => {
+    deleteModelApi(`/api/ml/models/${modelId}`, {
+      method: "DELETE",
+      confirmMessage: "このモデルを削除しますか？この操作は取り消せません。",
+      onSuccess: () => {
+        fetchModels(); // リストを更新
+      },
+    });
   };
 
-  const handleDeleteModel = async (modelId: string) => {
-    if (!confirm("このモデルを削除しますか？この操作は取り消せません。")) {
-      return;
-    }
-
-    try {
-      const response = await fetch(`/api/ml/models/${modelId}`, {
-        method: "DELETE",
-      });
-
-      if (!response.ok) {
-        throw new Error("モデルの削除に失敗しました");
-      }
-
-      await fetchModels(); // リストを更新
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "削除エラーが発生しました");
-    }
-  };
-
-  const handleBackupModel = async (modelId: string) => {
-    try {
-      const response = await fetch(`/api/ml/models/${modelId}/backup`, {
-        method: "POST",
-      });
-
-      if (!response.ok) {
-        throw new Error("モデルのバックアップに失敗しました");
-      }
-
-      alert("モデルのバックアップが完了しました");
-    } catch (err) {
-      setError(
-        err instanceof Error ? err.message : "バックアップエラーが発生しました"
-      );
-    }
+  const handleBackupModel = (modelId: string) => {
+    backupModelApi(`/api/ml/models/${modelId}/backup`, {
+      method: "POST",
+      onSuccess: () => {
+        alert("モデルのバックアップが完了しました");
+      },
+    });
   };
 
   const formatFileSize = (sizeInMB: number): string => {
@@ -260,7 +242,7 @@ export default function MLModelList({
           <ActionButton
             variant="secondary"
             onClick={fetchModels}
-            icon={<Download className="h-4 w-4" />}
+            icon={<RefreshCw className="h-4 w-4" />}
           >
             更新
           </ActionButton>

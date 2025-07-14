@@ -1,6 +1,6 @@
 /**
  * MLモデル個別操作API
- * 
+ *
  * 特定のMLモデルに対する操作（削除など）をバックエンドに転送します。
  */
 
@@ -29,7 +29,9 @@ export async function DELETE(
     console.log("削除要求されたモデルID:", modelId);
 
     // バックエンドAPIに転送（modelIdは既にURLデコードされているのでそのまま使用）
-    const backendUrl = `${BACKEND_API_URL}/api/ml/models/${encodeURIComponent(modelId)}`;
+    const backendUrl = `${BACKEND_API_URL}/api/ml/models/${encodeURIComponent(
+      modelId
+    )}`;
 
     console.log("バックエンドURL:", backendUrl);
 
@@ -49,7 +51,7 @@ export async function DELETE(
       );
     }
 
-    return NextResponse.json(data);
+    return NextResponse.json({ ...data, success: true });
   } catch (error) {
     console.error("MLモデル削除エラー:", error);
     return NextResponse.json(

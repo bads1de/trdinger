@@ -1,6 +1,6 @@
 /**
  * MLトレーニング開始API
- * 
+ *
  * フロントエンドからのMLトレーニング開始リクエストをバックエンドに転送します。
  */
 
@@ -16,7 +16,7 @@ import { convertSymbolForBackend } from "@/utils/symbolConverter";
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    
+
     // シンボル形式を変換
     if (body.symbol) {
       body.symbol = convertSymbolForBackend(body.symbol);
@@ -24,7 +24,7 @@ export async function POST(request: NextRequest) {
 
     // バックエンドAPIに転送
     const backendUrl = `${BACKEND_API_URL}/api/ml/training/start`;
-    
+
     const response = await fetch(backendUrl, {
       method: "POST",
       headers: {
@@ -37,12 +37,15 @@ export async function POST(request: NextRequest) {
 
     if (!response.ok) {
       return NextResponse.json(
-        { success: false, message: data.detail || "トレーニング開始に失敗しました" },
+        {
+          success: false,
+          message: data.detail || "トレーニング開始に失敗しました",
+        },
         { status: response.status }
       );
     }
 
-    return NextResponse.json(data);
+    return NextResponse.json({ ...data, success: true });
   } catch (error) {
     console.error("MLトレーニング開始エラー:", error);
     return NextResponse.json(

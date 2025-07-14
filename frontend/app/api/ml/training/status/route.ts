@@ -1,6 +1,6 @@
 /**
  * MLトレーニング状態取得API
- * 
+ *
  * フロントエンドからのMLトレーニング状態確認リクエストをバックエンドに転送します。
  */
 
@@ -16,7 +16,7 @@ export async function GET(request: NextRequest) {
   try {
     // バックエンドAPIに転送（ml_managementの/training/statusエンドポイントを使用）
     const backendUrl = `${BACKEND_API_URL}/api/ml/training/status`;
-    
+
     const response = await fetch(backendUrl, {
       method: "GET",
       headers: {
@@ -28,12 +28,15 @@ export async function GET(request: NextRequest) {
 
     if (!response.ok) {
       return NextResponse.json(
-        { success: false, message: data.detail || "トレーニング状態取得に失敗しました" },
+        {
+          success: false,
+          message: data.detail || "トレーニング状態取得に失敗しました",
+        },
         { status: response.status }
       );
     }
 
-    return NextResponse.json(data);
+    return NextResponse.json({ ...data, success: true });
   } catch (error) {
     console.error("MLトレーニング状態取得エラー:", error);
     return NextResponse.json(

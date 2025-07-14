@@ -1,6 +1,6 @@
 /**
  * MLモデルバックアップAPI
- * 
+ *
  * 特定のMLモデルのバックアップリクエストをバックエンドに転送します。
  */
 
@@ -27,8 +27,10 @@ export async function POST(
     }
 
     // バックエンドAPIに転送
-    const backendUrl = `${BACKEND_API_URL}/api/ml/models/${encodeURIComponent(modelId)}/backup`;
-    
+    const backendUrl = `${BACKEND_API_URL}/api/ml/models/${encodeURIComponent(
+      modelId
+    )}/backup`;
+
     const response = await fetch(backendUrl, {
       method: "POST",
       headers: {
@@ -40,12 +42,15 @@ export async function POST(
 
     if (!response.ok) {
       return NextResponse.json(
-        { success: false, message: data.detail || "モデルバックアップに失敗しました" },
+        {
+          success: false,
+          message: data.detail || "モデルバックアップに失敗しました",
+        },
         { status: response.status }
       );
     }
 
-    return NextResponse.json(data);
+    return NextResponse.json({ ...data, success: true });
   } catch (error) {
     console.error("MLモデルバックアップエラー:", error);
     return NextResponse.json(

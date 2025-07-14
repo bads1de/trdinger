@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import ActionButton from "@/components/common/ActionButton";
 import { InputField } from "@/components/common/InputField";
@@ -77,11 +77,28 @@ export default function MLTraining() {
 
   const [error, setError] = useState<string | null>(null);
   const [showBayesianModal, setShowBayesianModal] = useState(false);
-  const [selectedProfile, setSelectedProfile] = useState<OptimizationProfile | null>(null);
+  const [selectedProfile, setSelectedProfile] =
+    useState<OptimizationProfile | null>(null);
 
   // API呼び出し用フック
-  const { execute: startTrainingApi, loading: startTrainingLoading } = useApiCall();
-  const { execute: stopTrainingApi, loading: stopTrainingLoading } = useApiCall();
+  const { execute: startTrainingApi, loading: startTrainingLoading } =
+    useApiCall();
+  const { execute: stopTrainingApi, loading: stopTrainingLoading } =
+    useApiCall();
+  const { execute: checkTrainingStatusApi } = useApiCall<TrainingStatus>();
+
+  const checkTrainingStatus = useCallback(() => {
+    checkTrainingStatusApi("/api/ml/training/status", {
+      onSuccess: (status) => {
+        if (status) {
+          setTrainingStatus(status);
+        }
+      },
+      onError: (err) => {
+        console.error("トレーニング状態の確認に失敗:", err);
+      },
+    });
+  }, [checkTrainingStatusApi]);
 
   useEffect(() => {
     // トレーニング状態を定期的にチェック
@@ -92,19 +109,7 @@ export default function MLTraining() {
     }, 2000);
 
     return () => clearInterval(interval);
-  }, [trainingStatus.is_training]);
-
-  const checkTrainingStatus = async () => {
-    try {
-      const response = await fetch("/api/ml/training/status");
-      if (response.ok) {
-        const status = await response.json();
-        setTrainingStatus(status);
-      }
-    } catch (err) {
-      console.error("トレーニング状態の確認に失敗:", err);
-    }
-  };
+  }, [trainingStatus.is_training, checkTrainingStatus]);
 
   const startTraining = async () => {
     setError(null);
@@ -123,7 +128,7 @@ export default function MLTraining() {
       },
       onError: (errorMessage) => {
         setError(errorMessage);
-      }
+      },
     });
   };
 
@@ -140,7 +145,7 @@ export default function MLTraining() {
       },
       onError: (errorMessage) => {
         setError("トレーニングの停止に失敗しました: " + errorMessage);
-      }
+      },
     });
   };
 
@@ -284,7 +289,9 @@ export default function MLTraining() {
                     ...prev,
                     use_profile: useProfile,
                     profile_id: useProfile ? selectedProfile?.id : undefined,
-                    profile_name: useProfile ? selectedProfile?.profile_name : undefined,
+                    profile_name: useProfile
+                      ? selectedProfile?.profile_name
+                      : undefined,
                   }));
                 }}
                 disabled={trainingStatus.is_training}

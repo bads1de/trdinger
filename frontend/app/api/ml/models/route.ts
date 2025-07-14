@@ -16,7 +16,7 @@ export async function GET(request: NextRequest) {
   try {
     // バックエンドAPIに転送
     const backendUrl = `${BACKEND_API_URL}/api/ml/models`;
-    
+
     const response = await fetch(backendUrl, {
       method: "GET",
       headers: {
@@ -28,12 +28,15 @@ export async function GET(request: NextRequest) {
 
     if (!response.ok) {
       return NextResponse.json(
-        { success: false, message: data.detail || "モデル一覧取得に失敗しました" },
+        {
+          success: false,
+          message: data.detail || "モデル一覧取得に失敗しました",
+        },
         { status: response.status }
       );
     }
 
-    return NextResponse.json(data);
+    return NextResponse.json({ ...data, success: true });
   } catch (error) {
     console.error("MLモデル一覧取得エラー:", error);
     return NextResponse.json(

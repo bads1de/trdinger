@@ -1,6 +1,6 @@
 /**
  * MLトレーニング停止API
- * 
+ *
  * フロントエンドからのMLトレーニング停止リクエストをバックエンドに転送します。
  */
 
@@ -16,7 +16,7 @@ export async function POST(request: NextRequest) {
   try {
     // バックエンドAPIに転送（ml_managementの/training/stopエンドポイントを使用）
     const backendUrl = `${BACKEND_API_URL}/api/ml/training/stop`;
-    
+
     const response = await fetch(backendUrl, {
       method: "POST",
       headers: {
@@ -28,12 +28,15 @@ export async function POST(request: NextRequest) {
 
     if (!response.ok) {
       return NextResponse.json(
-        { success: false, message: data.detail || "トレーニング停止に失敗しました" },
+        {
+          success: false,
+          message: data.detail || "トレーニング停止に失敗しました",
+        },
         { status: response.status }
       );
     }
 
-    return NextResponse.json(data);
+    return NextResponse.json({ ...data, success: true });
   } catch (error) {
     console.error("MLトレーニング停止エラー:", error);
     return NextResponse.json(
