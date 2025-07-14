@@ -1,7 +1,12 @@
 "use client";
 
 import React, { useState } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import ActionButton from "@/components/common/ActionButton";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -43,7 +48,7 @@ const ProfileSaveDialog: React.FC<ProfileSaveDialogProps> = ({
         description: description.trim() || undefined,
         isDefault,
       });
-      
+
       // リセット
       setProfileName("");
       setDescription("");
@@ -69,7 +74,7 @@ const ProfileSaveDialog: React.FC<ProfileSaveDialogProps> = ({
         <DialogHeader>
           <DialogTitle>最適化結果をプロファイルとして保存</DialogTitle>
         </DialogHeader>
-        
+
         <div className="space-y-4">
           {optimizationResult && (
             <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded-lg">
@@ -84,7 +89,7 @@ const ProfileSaveDialog: React.FC<ProfileSaveDialogProps> = ({
               </div>
             </div>
           )}
-          
+
           <div className="space-y-2">
             <Label htmlFor="profile-name">プロファイル名 *</Label>
             <Input
@@ -95,7 +100,7 @@ const ProfileSaveDialog: React.FC<ProfileSaveDialogProps> = ({
               disabled={isLoading}
             />
           </div>
-          
+
           <div className="space-y-2">
             <Label htmlFor="profile-description">説明（オプション）</Label>
             <Textarea
@@ -107,7 +112,7 @@ const ProfileSaveDialog: React.FC<ProfileSaveDialogProps> = ({
               disabled={isLoading}
             />
           </div>
-          
+
           <div className="flex items-center space-x-2">
             <Checkbox
               id="is-default"
@@ -119,7 +124,7 @@ const ProfileSaveDialog: React.FC<ProfileSaveDialogProps> = ({
               デフォルトプロファイルとして設定
             </Label>
           </div>
-          
+
           <div className="flex justify-end space-x-2 pt-4">
             <ActionButton
               variant="secondary"

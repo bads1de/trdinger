@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Brain, Database, TrendingUp, Settings, Target } from "lucide-react";
+import { Brain, Database, TrendingUp, Settings } from "lucide-react";
 import TabButton from "@/components/common/TabButton";
 import ErrorDisplay from "@/components/common/ErrorDisplay";
 import LoadingSpinner from "@/components/common/LoadingSpinner";
@@ -11,7 +11,6 @@ import MLModelList from "@/components/ml/MLModelList";
 import MLTraining from "@/components/ml/MLTraining";
 import MLModelStatus from "@/components/ml/MLModelStatus";
 import MLSettings from "@/components/ml/MLSettings";
-
 
 /**
  * ML管理専用ページ
@@ -23,14 +22,13 @@ export default function MLManagementPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-
   useEffect(() => {
     // ページ初期化
     const initializePage = async () => {
       try {
         setIsLoading(true);
         // 必要な初期データの読み込み
-        await new Promise((resolve) => setTimeout(resolve, 500)); 
+        await new Promise((resolve) => setTimeout(resolve, 500));
         setIsLoading(false);
       } catch (err) {
         setError("ページの初期化に失敗しました");
@@ -44,7 +42,10 @@ export default function MLManagementPage() {
   if (isLoading) {
     return (
       <div className="container mx-auto p-6">
-        <LoadingSpinner text="ページの初期データを読み込んでいます..." size="lg" />
+        <LoadingSpinner
+          text="ページの初期データを読み込んでいます..."
+          size="lg"
+        />
       </div>
     );
   }
@@ -128,8 +129,6 @@ export default function MLManagementPage() {
                 </CardContent>
               </Card>
             </div>
-
-            
           </div>
         )}
 

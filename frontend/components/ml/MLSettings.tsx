@@ -18,6 +18,7 @@ import {
   Trash2,
   Info,
 } from "lucide-react";
+import { ML_INFO_MESSAGES } from "@/constants/info";
 
 interface MLConfig {
   data_processing: {
@@ -237,7 +238,7 @@ export default function MLSettings() {
                     onClick={() =>
                       openInfoModal(
                         "最大OHLCV行数",
-                        "特徴量計算に使用するOHLCV（四本値）データの最大行数を指定します。この値が大きいほど、より長期のデータを分析できますが、計算時間とメモリ使用量が増加します。"
+                        ML_INFO_MESSAGES.maxOhlcvRows
                       )
                     }
                   />
@@ -258,7 +259,7 @@ export default function MLSettings() {
                     onClick={() =>
                       openInfoModal(
                         "最大特徴量行数",
-                        "モデル学習に使用する特徴量データの最大行数を指定します。この値が大きいほど、より多くの学習サンプルを使用できますが、学習時間とメモリ使用量が増加します。"
+                        ML_INFO_MESSAGES.maxFeatureRows
                       )
                     }
                   />
@@ -283,7 +284,7 @@ export default function MLSettings() {
                     onClick={() =>
                       openInfoModal(
                         "特徴量計算タイムアウト（秒）",
-                        "特徴量計算処理の最大許容時間（秒）です。複雑な特徴量を多数計算する場合、この値を大きくする必要があります。タイムアウトすると処理が中断されます。"
+                        ML_INFO_MESSAGES.featureCalculationTimeout
                       )
                     }
                   />
@@ -308,7 +309,108 @@ export default function MLSettings() {
                     onClick={() =>
                       openInfoModal(
                         "モデル学習タイムアウト（秒）",
-                        "モデル学習処理の最大許容時間（秒）です。データ量が多い場合や、複雑なモデルを学習する場合、この値を大きくする必要があります。タイムアウトすると学習が中断されます。"
+                        ML_INFO_MESSAGES.modelTrainingTimeout
+                      )
+                    }
+                  />
+                }
+              />
+            </div>
+            <div>
+              <InputField
+                label="最小学習サンプル数"
+                type="number"
+                value={config.training.min_training_samples}
+                onChange={(value) =>
+                  updateConfig("training", "min_training_samples", value)
+                }
+                labelAddon={
+                  <Info
+                    className="h-5 w-5 text-gray-400 cursor-pointer"
+                    onClick={() =>
+                      openInfoModal(
+                        "最小学習サンプル数",
+                        ML_INFO_MESSAGES.minTrainingSamples
+                      )
+                    }
+                  />
+                }
+              />
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* 予測設定 */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center space-x-2">
+            <Brain className="h-5 w-5" />
+            <span>予測設定</span>
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <InputField
+                label="デフォルト上昇確率"
+                type="number"
+                step={0.01}
+                value={config.prediction.default_up_prob}
+                onChange={(value) =>
+                  updateConfig("prediction", "default_up_prob", value)
+                }
+                labelAddon={
+                  <Info
+                    className="h-5 w-5 text-gray-400 cursor-pointer"
+                    onClick={() =>
+                      openInfoModal(
+                        "デフォルト上昇確率",
+                        ML_INFO_MESSAGES.defaultUpProb
+                      )
+                    }
+                  />
+                }
+              />
+            </div>
+            <div>
+              <InputField
+                label="デフォルト下落確率"
+                type="number"
+                step={0.01}
+                value={config.prediction.default_down_prob}
+                onChange={(value) =>
+                  updateConfig("prediction", "default_down_prob", value)
+                }
+                labelAddon={
+                  <Info
+                    className="h-5 w-5 text-gray-400 cursor-pointer"
+                    onClick={() =>
+                      openInfoModal(
+                        "デフォルト下落確率",
+                        ML_INFO_MESSAGES.defaultDownProb
+                      )
+                    }
+                  />
+                }
+              />
+            </div>
+            <div>
+              <InputField
+                label="デフォルト範囲確率"
+                type="number"
+                step={0.01}
+                value={config.prediction.default_range_prob}
+                onChange={(value) =>
+                  updateConfig("prediction", "default_range_prob", value)
+                }
+                labelAddon={
+                  <Info
+                    className="h-5 w-5 text-gray-400 cursor-pointer"
+                    onClick={() =>
+                      openInfoModal(
+                        "デフォルト範囲確率",
+                        ML_INFO_MESSAGES.defaultRangeProb
                       )
                     }
                   />
@@ -344,7 +446,7 @@ export default function MLSettings() {
                     onClick={() =>
                       openInfoModal(
                         "学習率 (learning_rate)",
-                        "モデルが学習する際の更新ステップの大きさを制御します。小さいほど慎重に学習しますが、時間がかかります。大きいと学習が速いですが、最適解を通り過ぎる可能性があります。一般的に0.01〜0.1の値が使われます。"
+                        ML_INFO_MESSAGES.learningRate
                       )
                     }
                   />
@@ -365,7 +467,7 @@ export default function MLSettings() {
                     onClick={() =>
                       openInfoModal(
                         "葉の数 (num_leaves)",
-                        "決定木モデルの複雑さを決定します。値が大きいほど複雑なモデルを作成でき、訓練データへの適合度は高まりますが、過学習のリスクも増大します。ツリーの深さ(depth)と関連し、2^depthより小さい値が推奨されます。"
+                        ML_INFO_MESSAGES.numLeaves
                       )
                     }
                   />
@@ -389,7 +491,7 @@ export default function MLSettings() {
                     onClick={() =>
                       openInfoModal(
                         "特徴量サンプリング率 (feature_fraction)",
-                        "各決定木を構築する際に、ランダムに選択される特徴量の割合です。例えば0.8の場合、全特徴量の80%を毎回ランダムに選んで使用します。過学習を抑制する効果があります。"
+                        ML_INFO_MESSAGES.featureFraction
                       )
                     }
                   />
@@ -413,7 +515,7 @@ export default function MLSettings() {
                     onClick={() =>
                       openInfoModal(
                         "バギング率 (bagging_fraction)",
-                        "各決定木を学習する際に、ランダムに選択されるデータの割合です。例えば0.8の場合、全データの中から80%をランダムに（重複を許して）抽出し、学習に使用します。これも過学習を抑制する効果があります。"
+                        ML_INFO_MESSAGES.baggingFraction
                       )
                     }
                   />
@@ -445,6 +547,17 @@ export default function MLSettings() {
                 onChange={(value) =>
                   updateConfig("training", "train_test_split", value)
                 }
+                labelAddon={
+                  <Info
+                    className="h-5 w-5 text-gray-400 cursor-pointer"
+                    onClick={() =>
+                      openInfoModal(
+                        "学習/テスト分割比率",
+                        ML_INFO_MESSAGES.trainTestSplit
+                      )
+                    }
+                  />
+                }
               />
             </div>
             <div>
@@ -454,6 +567,17 @@ export default function MLSettings() {
                 value={config.training.prediction_horizon}
                 onChange={(value) =>
                   updateConfig("training", "prediction_horizon", value)
+                }
+                labelAddon={
+                  <Info
+                    className="h-5 w-5 text-gray-400 cursor-pointer"
+                    onClick={() =>
+                      openInfoModal(
+                        "予測期間（時間）",
+                        ML_INFO_MESSAGES.predictionHorizon
+                      )
+                    }
+                  />
                 }
               />
             </div>
@@ -466,6 +590,17 @@ export default function MLSettings() {
                 onChange={(value) =>
                   updateConfig("training", "threshold_up", value)
                 }
+                labelAddon={
+                  <Info
+                    className="h-5 w-5 text-gray-400 cursor-pointer"
+                    onClick={() =>
+                      openInfoModal(
+                        "上昇判定閾値",
+                        ML_INFO_MESSAGES.thresholdUp
+                      )
+                    }
+                  />
+                }
               />
             </div>
             <div>
@@ -476,6 +611,17 @@ export default function MLSettings() {
                 value={config.training.threshold_down}
                 onChange={(value) =>
                   updateConfig("training", "threshold_down", value)
+                }
+                labelAddon={
+                  <Info
+                    className="h-5 w-5 text-gray-400 cursor-pointer"
+                    onClick={() =>
+                      openInfoModal(
+                        "下落判定閾値",
+                        ML_INFO_MESSAGES.thresholdDown
+                      )
+                    }
+                  />
                 }
               />
             </div>

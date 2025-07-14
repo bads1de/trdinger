@@ -15,6 +15,8 @@ from datetime import datetime
 from .price_features import PriceFeatureCalculator
 from .market_data_features import MarketDataFeatureCalculator
 from .technical_features import TechnicalFeatureCalculator
+from .temporal_features import TemporalFeatureCalculator
+from .interaction_features import InteractionFeatureCalculator
 from ....utils.data_validation import DataValidator
 
 logger = logging.getLogger(__name__)
@@ -38,6 +40,8 @@ class FeatureEngineeringService:
         self.price_calculator = PriceFeatureCalculator()
         self.market_data_calculator = MarketDataFeatureCalculator()
         self.technical_calculator = TechnicalFeatureCalculator()
+        self.temporal_calculator = TemporalFeatureCalculator()
+        self.interaction_calculator = InteractionFeatureCalculator()
 
     def calculate_advanced_features(
         self,
@@ -153,6 +157,12 @@ class FeatureEngineeringService:
             # パターン認識特徴量
             result_df = self.technical_calculator.calculate_pattern_features(result_df, lookback_periods)
 
+            # 時間的特徴量
+            result_df = self.temporal_calculator.calculate_temporal_features(result_df)
+
+            # 相互作用特徴量（全ての基本特徴量が計算された後に実行）
+            result_df = self.interaction_calculator.calculate_interaction_features(result_df)
+
             # データバリデーションとクリーンアップ
             feature_columns = [col for col in result_df.columns if col not in ['Open', 'High', 'Low', 'Close', 'Volume']]
             result_df = DataValidator.validate_and_clean(
@@ -195,6 +205,8 @@ class FeatureEngineeringService:
         feature_names.extend(self.price_calculator.get_feature_names())
         feature_names.extend(self.market_data_calculator.get_feature_names())
         feature_names.extend(self.technical_calculator.get_feature_names())
+        feature_names.extend(self.temporal_calculator.get_feature_names())
+        feature_names.extend(self.interaction_calculator.get_feature_names())
 
         return feature_names
 

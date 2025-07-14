@@ -7,6 +7,7 @@ import { InputField } from "@/components/common/InputField";
 import { SelectField } from "@/components/common/SelectField";
 import InfoModal from "@/components/common/InfoModal";
 import { Info } from "lucide-react";
+import { ML_INFO_MESSAGES } from "@/constants/info";
 import { useApiCall } from "@/hooks/useApiCall";
 import CollapsibleJson from "@/components/common/CollapsibleJson";
 import {
@@ -157,7 +158,7 @@ const BayesianOptimizationForm: React.FC<BayesianOptimizationFormProps> = ({
                     onClick={() =>
                       openInfoModal(
                         "試行回数 (n_calls)",
-                        "ベイズ最適化を実行する総回数を指定します。初期ランダム試行数もこの回数に含まれます。回数が多いほど最適なパラメータを見つけやすくなりますが、時間がかかります。"
+                        ML_INFO_MESSAGES.nCalls
                       )
                     }
                   />
@@ -176,7 +177,7 @@ const BayesianOptimizationForm: React.FC<BayesianOptimizationFormProps> = ({
                     onClick={() =>
                       openInfoModal(
                         "初期ランダム試行数 (n_initial_points)",
-                        "最適化の初期段階で、ランダムにパラメータを探索する回数を指定します。これにより、パラメータ空間の全体像を把握し、局所解に陥るのを防ぎます。"
+                        ML_INFO_MESSAGES.nInitialPoints
                       )
                     }
                   />
@@ -206,15 +207,15 @@ const BayesianOptimizationForm: React.FC<BayesianOptimizationFormProps> = ({
                           <ul className="list-disc pl-5 mt-2 space-y-1">
                             <li>
                               <strong>EI (Expected Improvement):</strong>{" "}
-                              現在の最良値からの改善が期待できる量に基づいて評価します。探索と活用のバランスが良く、一般的に使われます。
+                              {ML_INFO_MESSAGES.acquisitionFunctionEI}
                             </li>
                             <li>
                               <strong>PI (Probability of Improvement):</strong>{" "}
-                              現在の最良値を超える確率に基づいて評価します。活用（exploitation）を重視する傾向があります。
+                              {ML_INFO_MESSAGES.acquisitionFunctionPI}
                             </li>
                             <li>
                               <strong>UCB (Upper Confidence Bound):</strong>{" "}
-                              予測値の信頼区間の上限に基づいて評価します。探索（exploration）を重視する傾向があります。
+                              {ML_INFO_MESSAGES.acquisitionFunctionUCB}
                             </li>
                           </ul>
                         </>
@@ -234,7 +235,7 @@ const BayesianOptimizationForm: React.FC<BayesianOptimizationFormProps> = ({
                     onClick={() =>
                       openInfoModal(
                         "乱数シード (random_state)",
-                        "最適化プロセスの再現性を確保するための乱数シードです。同じシード値を使えば、同じ初期ランダム試行が行われ、同じ結果が得られます。"
+                        ML_INFO_MESSAGES.randomState
                       )
                     }
                   />
