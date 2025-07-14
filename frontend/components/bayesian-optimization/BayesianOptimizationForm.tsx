@@ -117,8 +117,7 @@ const BayesianOptimizationForm: React.FC<BayesianOptimizationFormProps> = ({
               onChange={setModelType}
               options={[
                 { value: "lightgbm", label: "LightGBM" },
-                { value: "xgboost", label: "XGBoost" },
-                { value: "random_forest", label: "Random Forest" },
+                { value: "randomforest", label: "Random Forest" },
               ]}
             />
           </Card>

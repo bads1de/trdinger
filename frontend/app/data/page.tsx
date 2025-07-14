@@ -312,7 +312,7 @@ const DataPage: React.FC = () => {
   }, [fetchDataStatus]);
 
   return (
-    <div className="min-h-screen bg-secondary-50 dark:bg-secondary-950 animate-fade-in">
+    <div className="min-h-screen  from-gray-900 animate-fade-in">
       <DataHeader
         loading={ohlcvLoading || fundingLoading || openInterestLoading}
         error={

@@ -70,7 +70,7 @@ export default function BacktestPage() {
   };
 
   return (
-    <div className="min-h-screen bg-black text-white">
+    <div className="min-h-screen from-gray-900  text-white">
       <div className="container mx-auto px-4 py-8">
         {/* ヘッダー */}
         <div className="mb-8">

@@ -54,6 +54,7 @@ export default function Home() {
     "--mouse-x": mousePosition.x,
     "--mouse-y": mousePosition.y,
   } as React.CSSProperties;
+  
   return (
     <main
       style={dynamicStyle}
