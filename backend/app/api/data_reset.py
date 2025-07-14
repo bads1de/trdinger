@@ -251,17 +251,17 @@ async def reset_data_by_symbol(
 @router.get("/status")
 async def get_data_status(db: Session = Depends(get_db)) -> Dict[str, Any]:
     """
-    現在のデータ状況を取得
+    現在のデータ状況を取得（詳細版）
 
     Returns:
-        各データタイプの件数情報
+        各データタイプの詳細情報（件数、最新・最古データ）
     """
 
     async def _get_status():
         # リポジトリインスタンス作成
-        OHLCVRepository(db)
-        FundingRateRepository(db)
-        OpenInterestRepository(db)
+        ohlcv_repo = OHLCVRepository(db)
+        fr_repo = FundingRateRepository(db)
+        oi_repo = OpenInterestRepository(db)
 
         # 各データの件数取得
         from database.models import OHLCVData, FundingRateData, OpenInterestData
@@ -270,6 +270,30 @@ async def get_data_status(db: Session = Depends(get_db)) -> Dict[str, Any]:
         fr_count = db.query(FundingRateData).count()
         oi_count = db.query(OpenInterestData).count()
 
+        # OHLCV詳細情報（時間足別）
+        timeframes = ["15m", "30m", "1h", "4h", "1d"]
+        symbol = "BTC/USDT:USDT"
+
+        ohlcv_details = {}
+        for tf in timeframes:
+            count = ohlcv_repo.get_data_count(symbol, tf)
+            latest = ohlcv_repo.get_latest_timestamp(symbol, tf)
+            oldest = ohlcv_repo.get_oldest_timestamp(symbol, tf)
+
+            ohlcv_details[tf] = {
+                "count": count,
+                "latest_timestamp": latest.isoformat() if latest else None,
+                "oldest_timestamp": oldest.isoformat() if oldest else None,
+            }
+
+        # ファンディングレート詳細情報
+        fr_latest = fr_repo.get_latest_funding_timestamp(symbol)
+        fr_oldest = fr_repo.get_oldest_funding_timestamp(symbol)
+
+        # オープンインタレスト詳細情報
+        oi_latest = oi_repo.get_latest_open_interest_timestamp(symbol)
+        oi_oldest = oi_repo.get_oldest_open_interest_timestamp(symbol)
+
         response_data = {
             "data_counts": {
                 "ohlcv": ohlcv_count,
@@ -277,6 +301,25 @@ async def get_data_status(db: Session = Depends(get_db)) -> Dict[str, Any]:
                 "open_interest": oi_count,
             },
             "total_records": ohlcv_count + fr_count + oi_count,
+            "details": {
+                "ohlcv": {
+                    "symbol": symbol,
+                    "timeframes": ohlcv_details,
+                    "total_count": ohlcv_count,
+                },
+                "funding_rates": {
+                    "symbol": symbol,
+                    "count": fr_count,
+                    "latest_timestamp": fr_latest.isoformat() if fr_latest else None,
+                    "oldest_timestamp": fr_oldest.isoformat() if fr_oldest else None,
+                },
+                "open_interest": {
+                    "symbol": symbol,
+                    "count": oi_count,
+                    "latest_timestamp": oi_latest.isoformat() if oi_latest else None,
+                    "oldest_timestamp": oi_oldest.isoformat() if oi_oldest else None,
+                },
+            },
         }
 
         return APIResponseHelper.api_response(

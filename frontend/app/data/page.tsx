@@ -15,7 +15,6 @@ import DataTableContainer from "@/components/data/DataTableContainer";
 import { useOhlcvData } from "@/hooks/useOhlcvData";
 import { useFundingRateData } from "@/hooks/useFundingRateData";
 import { useOpenInterestData } from "@/hooks/useOpenInterestData";
-import { useIncrementalUpdate } from "@/hooks/useIncrementalUpdate";
 import { useBulkIncrementalUpdate } from "@/hooks/useBulkIncrementalUpdate";
 import { useApiCall } from "@/hooks/useApiCall";
 import {
@@ -56,11 +55,6 @@ const DataPage: React.FC = () => {
 
   // カスタムフックを使用してデータ取得
   const { symbols } = useSymbols();
-  const {
-    update: updateIncrementalData,
-    loading: incrementalUpdateLoading,
-    error: incrementalUpdateError,
-  } = useIncrementalUpdate();
   const {
     bulkUpdate: updateBulkIncrementalData,
     loading: bulkIncrementalUpdateLoading,
@@ -118,34 +112,7 @@ const DataPage: React.FC = () => {
   };
 
   /**
-   * 差分データ更新（従来版）
-   */
-  const handleIncrementalUpdate = async () => {
-    setIncrementalUpdateMessage("");
-    await updateIncrementalData(selectedSymbol, selectedTimeFrame, {
-      onSuccess: async (result) => {
-        const savedCount = result.saved_count || 0;
-        setIncrementalUpdateMessage(
-          `✅ 差分更新完了！ ${selectedSymbol} ${selectedTimeFrame} - ${savedCount}件のデータを更新しました`
-        );
-        await Promise.all([
-          fetchOHLCVData(),
-          fetchFundingRateData(),
-          fetchOpenInterestData(),
-        ]);
-        fetchDataStatus();
-        setTimeout(() => setIncrementalUpdateMessage(""), 10000);
-      },
-      onError: (errorMessage) => {
-        setIncrementalUpdateMessage(`❌ ${errorMessage}`);
-        console.error("差分更新エラー:", errorMessage);
-        setTimeout(() => setIncrementalUpdateMessage(""), 10000);
-      },
-    });
-  };
-
-  /**
-   * 一括差分データ更新（新機能）
+   * 一括差分データ更新
    */
   const handleBulkIncrementalUpdate = async () => {
     setIncrementalUpdateMessage("");
@@ -194,13 +161,14 @@ const DataPage: React.FC = () => {
   };
 
   /**
-   * データ収集状況を取得
+   * データ収集状況を取得（詳細版）
    */
   const fetchDataStatus = useCallback(() => {
-    const url = `${BACKEND_API_URL}/api/data-collection/status/${selectedSymbol}/${selectedTimeFrame}`;
+    const url = `${BACKEND_API_URL}/api/data-reset/status`;
     fetchDataStatusApi(url, {
       onSuccess: (result) => {
         if (result) {
+          console.log("詳細データ状況:", result);
           setDataStatus(result);
         }
       },
@@ -208,7 +176,7 @@ const DataPage: React.FC = () => {
         console.error("データ状況取得エラー:", err);
       },
     });
-  }, [selectedSymbol, selectedTimeFrame, fetchDataStatusApi]);
+  }, [fetchDataStatusApi]);
 
   /**
    * 一括OHLCVデータ収集開始時のコールバック
@@ -338,12 +306,10 @@ const DataPage: React.FC = () => {
     setTimeout(() => setAllDataCollectionMessage(""), 15000);
   };
 
-  // 選択が変更されたときにデータステータスをフェッチ
+  // コンポーネント初期化時にデータステータスをフェッチ
   useEffect(() => {
-    if (selectedSymbol && selectedTimeFrame) {
-      fetchDataStatus();
-    }
-  }, [selectedSymbol, selectedTimeFrame, fetchDataStatus]);
+    fetchDataStatus();
+  }, [fetchDataStatus]);
 
   return (
     <div className="min-h-screen bg-secondary-50 dark:bg-secondary-950 animate-fade-in">
@@ -353,13 +319,12 @@ const DataPage: React.FC = () => {
           ohlcvError ||
           fundingError ||
           openInterestError ||
-          incrementalUpdateError ||
+          bulkIncrementalUpdateError ||
           ""
         }
-        updating={incrementalUpdateLoading}
+        updating={false}
         bulkUpdating={bulkIncrementalUpdateLoading}
         handleRefresh={handleRefresh}
-        handleIncrementalUpdate={handleIncrementalUpdate}
         handleBulkIncrementalUpdate={handleBulkIncrementalUpdate}
       />
 
@@ -369,7 +334,7 @@ const DataPage: React.FC = () => {
         {(ohlcvError ||
           fundingError ||
           openInterestError ||
-          incrementalUpdateError) && (
+          bulkIncrementalUpdateError) && (
           <div className="enterprise-card border-error-200 dark:border-error-800 bg-error-50 dark:bg-error-900/20 animate-slide-down">
             <div className="p-4">
               <div className="flex items-center">
@@ -394,7 +359,7 @@ const DataPage: React.FC = () => {
                 {ohlcvError ||
                   fundingError ||
                   openInterestError ||
-                  incrementalUpdateError}
+                  bulkIncrementalUpdateError}
               </p>
             </div>
           </div>
@@ -409,7 +374,7 @@ const DataPage: React.FC = () => {
           loading={ohlcvLoading || fundingLoading || openInterestLoading}
           selectedTimeFrame={selectedTimeFrame}
           handleTimeFrameChange={handleTimeFrameChange}
-          updating={incrementalUpdateLoading}
+          updating={bulkIncrementalUpdateLoading}
           handleAllDataCollectionStart={handleAllDataCollectionStart}
           handleAllDataCollectionError={handleAllDataCollectionError}
           handleBulkCollectionStart={handleBulkCollectionStart}

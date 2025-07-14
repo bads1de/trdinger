@@ -76,49 +76,170 @@ const DataControls: React.FC<DataControlsProps> = ({
     <div className="enterprise-card animate-slide-up">
       <div className="p-6">
         {/* データベース状況セクション */}
-        {dataStatus && (
+        {dataStatus && dataStatus.data && (
           <div className="mb-6">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-xl font-semibold text-secondary-900 dark:text-secondary-100">
                 📊 データベース状況
               </h2>
               <span className="badge-primary">
-                {dataStatus.data_count?.toLocaleString()}件
+                {dataStatus.data.total_records?.toLocaleString()}件
               </span>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+
+            {/* 総計表示 */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm mb-4">
               <div className="flex justify-between">
                 <span className="text-secondary-600 dark:text-secondary-400">
-                  データ件数:
+                  OHLCV:
                 </span>
                 <span className="font-medium text-secondary-900 dark:text-secondary-100">
-                  {dataStatus.data_count?.toLocaleString()}件
+                  {dataStatus.data.data_counts?.ohlcv?.toLocaleString()}件
                 </span>
               </div>
               <div className="flex justify-between">
                 <span className="text-secondary-600 dark:text-secondary-400">
-                  最新データ:
+                  ファンディングレート:
                 </span>
                 <span className="font-medium text-secondary-900 dark:text-secondary-100">
-                  {dataStatus.latest_timestamp
-                    ? new Date(dataStatus.latest_timestamp).toLocaleString(
-                        "ja-JP"
-                      )
-                    : "なし"}
+                  {dataStatus.data.data_counts?.funding_rates?.toLocaleString()}
+                  件
                 </span>
               </div>
               <div className="flex justify-between">
                 <span className="text-secondary-600 dark:text-secondary-400">
-                  最古データ:
+                  オープンインタレスト:
                 </span>
                 <span className="font-medium text-secondary-900 dark:text-secondary-100">
-                  {dataStatus.oldest_timestamp
-                    ? new Date(dataStatus.oldest_timestamp).toLocaleString(
-                        "ja-JP"
-                      )
-                    : "なし"}
+                  {dataStatus.data.data_counts?.open_interest?.toLocaleString()}
+                  件
                 </span>
               </div>
+            </div>
+
+            {/* OHLCV詳細（時間足別） */}
+            {dataStatus.data.details?.ohlcv?.timeframes && (
+              <div className="mb-4">
+                <h3 className="text-lg font-medium text-secondary-800 dark:text-secondary-200 mb-2">
+                  OHLCV時間足別詳細
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-5 gap-2 text-xs">
+                  {Object.entries(dataStatus.data.details.ohlcv.timeframes).map(
+                    ([tf, details]: [string, any]) => (
+                      <div
+                        key={tf}
+                        className="bg-secondary-100 dark:bg-secondary-800 p-2 rounded"
+                      >
+                        <div className="font-medium text-secondary-900 dark:text-secondary-100">
+                          {tf}
+                        </div>
+                        <div className="text-secondary-600 dark:text-secondary-400">
+                          {details.count?.toLocaleString()}件
+                        </div>
+                        {details.latest_timestamp && (
+                          <div className="text-xs text-secondary-500 dark:text-secondary-500">
+                            最新:{" "}
+                            {new Date(
+                              details.latest_timestamp
+                            ).toLocaleDateString("ja-JP")}
+                          </div>
+                        )}
+                      </div>
+                    )
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* FR・OI詳細 */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+              {/* ファンディングレート詳細 */}
+              {dataStatus.data.details?.funding_rates && (
+                <div className="bg-secondary-100 dark:bg-secondary-800 p-3 rounded">
+                  <h4 className="font-medium text-secondary-900 dark:text-secondary-100 mb-2">
+                    ファンディングレート詳細
+                  </h4>
+                  <div className="space-y-1">
+                    <div className="flex justify-between">
+                      <span className="text-secondary-600 dark:text-secondary-400">
+                        件数:
+                      </span>
+                      <span>
+                        {dataStatus.data.details.funding_rates.count?.toLocaleString()}
+                        件
+                      </span>
+                    </div>
+                    {dataStatus.data.details.funding_rates.latest_timestamp && (
+                      <div className="flex justify-between">
+                        <span className="text-secondary-600 dark:text-secondary-400">
+                          最新:
+                        </span>
+                        <span>
+                          {new Date(
+                            dataStatus.data.details.funding_rates.latest_timestamp
+                          ).toLocaleDateString("ja-JP")}
+                        </span>
+                      </div>
+                    )}
+                    {dataStatus.data.details.funding_rates.oldest_timestamp && (
+                      <div className="flex justify-between">
+                        <span className="text-secondary-600 dark:text-secondary-400">
+                          最古:
+                        </span>
+                        <span>
+                          {new Date(
+                            dataStatus.data.details.funding_rates.oldest_timestamp
+                          ).toLocaleDateString("ja-JP")}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* オープンインタレスト詳細 */}
+              {dataStatus.data.details?.open_interest && (
+                <div className="bg-secondary-100 dark:bg-secondary-800 p-3 rounded">
+                  <h4 className="font-medium text-secondary-900 dark:text-secondary-100 mb-2">
+                    オープンインタレスト詳細
+                  </h4>
+                  <div className="space-y-1">
+                    <div className="flex justify-between">
+                      <span className="text-secondary-600 dark:text-secondary-400">
+                        件数:
+                      </span>
+                      <span>
+                        {dataStatus.data.details.open_interest.count?.toLocaleString()}
+                        件
+                      </span>
+                    </div>
+                    {dataStatus.data.details.open_interest.latest_timestamp && (
+                      <div className="flex justify-between">
+                        <span className="text-secondary-600 dark:text-secondary-400">
+                          最新:
+                        </span>
+                        <span>
+                          {new Date(
+                            dataStatus.data.details.open_interest.latest_timestamp
+                          ).toLocaleDateString("ja-JP")}
+                        </span>
+                      </div>
+                    )}
+                    {dataStatus.data.details.open_interest.oldest_timestamp && (
+                      <div className="flex justify-between">
+                        <span className="text-secondary-600 dark:text-secondary-400">
+                          最古:
+                        </span>
+                        <span>
+                          {new Date(
+                            dataStatus.data.details.open_interest.oldest_timestamp
+                          ).toLocaleDateString("ja-JP")}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         )}

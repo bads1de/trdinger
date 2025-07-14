@@ -34,7 +34,6 @@ describe("差分更新機能のテスト", () => {
       updating: false,
       bulkUpdating: false,
       handleRefresh: jest.fn(),
-      handleIncrementalUpdate: jest.fn(),
       handleBulkIncrementalUpdate: jest.fn(),
     };
 
@@ -44,14 +43,6 @@ describe("差分更新機能のテスト", () => {
       const incrementalButton = screen.getByText("差分更新");
       expect(incrementalButton).toBeInTheDocument();
       expect(incrementalButton).not.toBeDisabled();
-    });
-
-    test("一括差分更新ボタンが正しく表示される", () => {
-      render(<DataHeader {...defaultProps} />);
-
-      const bulkIncrementalButton = screen.getByText("一括差分更新");
-      expect(bulkIncrementalButton).toBeInTheDocument();
-      expect(bulkIncrementalButton).not.toBeDisabled();
     });
 
     test("updating状態の時にボタンが無効化される", () => {

@@ -99,46 +99,6 @@ async def collect_historical_data(
         raise HTTPException(status_code=500, detail="履歴データ収集開始エラー") from e
 
 
-@router.post("/update")
-async def update_incremental_data(
-    symbol: str = "BTC/USDT:USDT", timeframe: str = "1h", db: Session = Depends(get_db)
-) -> Dict:
-    """
-    差分データを更新
-
-    Args:
-        symbol: 取引ペア（デフォルト: BTC/USDT）
-        timeframe: 時間軸（デフォルト: 1h）
-        db: データベースセッション
-
-    Returns:
-        更新結果
-    """
-    try:
-        service = HistoricalDataService()
-        repository = OHLCVRepository(db)
-
-        result = await service.collect_incremental_data(symbol, timeframe, repository)
-
-        if isinstance(result, dict) and result.get("success"):
-            return APIResponseHelper.api_response(
-                success=True, message="差分データ更新完了", data=result
-            )
-        else:
-            error_message = (
-                result.get("message") if isinstance(result, dict) else str(result)
-            )
-            return APIResponseHelper.api_response(
-                success=False,
-                message=f"差分データ更新に失敗しました: {error_message}",
-                status="failed",
-            )
-
-    except Exception as e:
-        logger.error("差分データ更新エラー", exc_info=True)
-        raise HTTPException(status_code=500, detail="差分データ更新エラー") from e
-
-
 @router.post("/bulk-incremental-update")
 async def update_bulk_incremental_data(
     symbol: str = "BTC/USDT:USDT", timeframe: str = "1h", db: Session = Depends(get_db)
