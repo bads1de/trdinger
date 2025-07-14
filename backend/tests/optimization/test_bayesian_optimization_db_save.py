@@ -4,6 +4,10 @@
 ベイジアン最適化の結果がデータベースに正しく保存されるかをテストします。
 """
 
+import sys
+import os
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
+
 import pytest
 import json
 import sqlite3

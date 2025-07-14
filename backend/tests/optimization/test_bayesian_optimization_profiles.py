@@ -5,6 +5,10 @@ optimization_profilesテーブルを削除し、bayesian_optimization_resultsに
 プロファイル機能のテストを行います。
 """
 
+import sys
+import os
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
+
 import pytest
 import json
 from datetime import datetime

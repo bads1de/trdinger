@@ -10,8 +10,7 @@ import os
 from pathlib import Path
 
 # プロジェクトルートをPythonパスに追加
-project_root = Path(__file__).parent
-sys.path.insert(0, str(project_root))
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', '..')))
 
 def test_ga_config_indicator_modes():
     """GAConfigの指標モード設定テスト"""

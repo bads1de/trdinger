@@ -11,7 +11,7 @@ import numpy as np
 from datetime import datetime, timedelta
 
 # プロジェクトルートをパスに追加
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
 
 from app.core.utils.data_validation import DataValidator
 from app.core.services.ml.feature_engineering.market_data_features import MarketDataFeatureCalculator

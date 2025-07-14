@@ -118,7 +118,7 @@ export default function MLModelStatus() {
       {/* モデル基本情報 */}
       <div className="grid grid-cols-1 gap-4">
         <Card>
-          <CardContent className="p-4">
+          <CardContent className="p-6">
             <div className="flex items-center justify-between mb-3">
               <h3 className="font-medium text-white">モデル状態</h3>
               {getStatusBadge()}
@@ -221,7 +221,7 @@ export default function MLModelStatus() {
       {/* 特徴量重要度 */}
       {Object.keys(featureImportance).length > 0 && (
         <Card>
-          <CardContent className="p-4">
+          <CardContent className="p-6">
             <div className="flex items-center space-x-2 mb-4">
               <Activity className="h-5 w-5 text-orange-600" />
               <h3 className="font-medium text-white">特徴量重要度 (上位10個)</h3>
@@ -233,8 +233,8 @@ export default function MLModelStatus() {
                 .map(([feature, importance]) => (
                   <div key={feature} className="flex items-center space-x-2">
                     <div className="flex-1 flex items-center justify-between">
-                      <span className="text-sm text-gray-700 truncate">{feature}</span>
-                      <span className="text-sm font-medium text-gray-900">
+                      <span className="text-sm text-gray-300 truncate">{feature}</span>
+                      <span className="text-sm font-medium text-gray-400">
                         {importance.toFixed(3)}
                       </span>
                     </div>
