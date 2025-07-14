@@ -5,12 +5,13 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import ErrorDisplay from '@/components/common/ErrorDisplay';
 import LoadingSpinner from '@/components/common/LoadingSpinner';
+import { useApiCall } from '@/hooks/useApiCall';
 import {
   Brain,
   TrendingUp,
-  Database, 
-  Clock, 
-  CheckCircle, 
+  Database,
+  Clock,
+  CheckCircle,
   AlertCircle,
   BarChart3,
   Activity
@@ -45,8 +46,8 @@ interface FeatureImportance {
 export default function MLModelStatus() {
   const [modelStatus, setModelStatus] = useState<ModelStatus | null>(null);
   const [featureImportance, setFeatureImportance] = useState<FeatureImportance>({});
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const { execute: fetchStatus, loading: isLoading, error } = useApiCall<ModelStatus>();
+  const { execute: fetchImportance } = useApiCall<{feature_importance: FeatureImportance}>();
 
   useEffect(() => {
     fetchModelStatus();
@@ -54,30 +55,27 @@ export default function MLModelStatus() {
   }, []);
 
   const fetchModelStatus = async () => {
-    try {
-      const response = await fetch('/api/ml/status');
-      if (!response.ok) {
-        throw new Error('モデル状態の取得に失敗しました');
+    await fetchStatus('/api/ml/status', {
+      method: 'GET',
+      onSuccess: (data) => {
+        setModelStatus(data);
+      },
+      onError: (errorMessage) => {
+        console.error('モデル状態の取得に失敗しました:', errorMessage);
       }
-      const data = await response.json();
-      setModelStatus(data);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'エラーが発生しました');
-    } finally {
-      setIsLoading(false);
-    }
+    });
   };
 
   const fetchFeatureImportance = async () => {
-    try {
-      const response = await fetch('/api/ml/feature-importance');
-      if (response.ok) {
-        const data = await response.json();
+    await fetchImportance('/api/ml/feature-importance', {
+      method: 'GET',
+      onSuccess: (data) => {
         setFeatureImportance(data.feature_importance || {});
+      },
+      onError: (errorMessage) => {
+        console.error('特徴量重要度の取得に失敗:', errorMessage);
       }
-    } catch (err) {
-      console.error('特徴量重要度の取得に失敗:', err);
-    }
+    });
   };
 
   const getStatusBadge = () => {

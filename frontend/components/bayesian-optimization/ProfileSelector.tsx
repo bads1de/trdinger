@@ -5,6 +5,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import ActionButton from "@/components/common/ActionButton";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
+import { useApiCall } from "@/hooks/useApiCall";
 import { OptimizationProfile } from "@/types/bayesian-optimization";
 import { Loader2, RefreshCw } from "lucide-react";
 
@@ -22,38 +23,36 @@ const ProfileSelector: React.FC<ProfileSelectorProps> = ({
   className = "",
 }) => {
   const [profiles, setProfiles] = useState<OptimizationProfile[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const { execute: fetchProfilesApi, loading: isLoading } = useApiCall<{success: boolean, profiles: OptimizationProfile[], message?: string}>();
 
   const fetchProfiles = async () => {
-    setIsLoading(true);
     setError(null);
-    
-    try {
-      const params = new URLSearchParams();
-      if (modelType) {
-        params.append("target_model_type", modelType);
-      }
-      
-      const response = await fetch(`/api/bayesian-optimization/profiles?${params}`);
-      const data = await response.json();
-      
-      if (data.success) {
-        setProfiles(data.profiles || []);
-      } else {
-        setError(data.message || "プロファイルの取得に失敗しました");
-      }
-    } catch (error) {
-      console.error("プロファイル取得エラー:", error);
-      setError("プロファイルの取得中にエラーが発生しました");
-    } finally {
-      setIsLoading(false);
+
+    const params = new URLSearchParams();
+    if (modelType) {
+      params.append("target_model_type", modelType);
     }
+
+    await fetchProfilesApi(`/api/bayesian-optimization/profiles?${params}`, {
+      method: "GET",
+      onSuccess: (data) => {
+        if (data.success) {
+          setProfiles(data.profiles || []);
+        } else {
+          setError(data.message || "プロファイルの取得に失敗しました");
+        }
+      },
+      onError: (errorMessage) => {
+        console.error("プロファイル取得エラー:", errorMessage);
+        setError("プロファイルの取得中にエラーが発生しました");
+      }
+    });
   };
 
   useEffect(() => {
     fetchProfiles();
-  }, [modelType]);
+  }, [modelType, fetchProfilesApi]);
 
   const handleProfileChange = (profileId: string) => {
     if (profileId === "none") {

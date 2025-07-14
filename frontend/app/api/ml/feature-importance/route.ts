@@ -37,7 +37,7 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    return NextResponse.json(data);
+    return NextResponse.json({ success: true, ...data });
   } catch (error) {
     console.error("ML特徴量重要度取得エラー:", error);
     return NextResponse.json(

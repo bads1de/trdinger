@@ -7,6 +7,7 @@ import { InputField } from "@/components/common/InputField";
 import { SelectField } from "@/components/common/SelectField";
 import ErrorDisplay from "@/components/common/ErrorDisplay";
 import { Progress } from "@/components/ui/progress";
+import { useApiCall } from "@/hooks/useApiCall";
 import {
   Play,
   Square,
@@ -78,6 +79,10 @@ export default function MLTraining() {
   const [showBayesianModal, setShowBayesianModal] = useState(false);
   const [selectedProfile, setSelectedProfile] = useState<OptimizationProfile | null>(null);
 
+  // API呼び出し用フック
+  const { execute: startTrainingApi, loading: startTrainingLoading } = useApiCall();
+  const { execute: stopTrainingApi, loading: stopTrainingLoading } = useApiCall();
+
   useEffect(() => {
     // トレーニング状態を定期的にチェック
     const interval = setInterval(() => {
@@ -102,52 +107,41 @@ export default function MLTraining() {
   };
 
   const startTraining = async () => {
-    try {
-      setError(null);
+    setError(null);
 
-      const response = await fetch("/api/ml/training/start", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(config),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.detail || "トレーニングの開始に失敗しました");
+    await startTrainingApi("/api/ml/training/start", {
+      method: "POST",
+      body: config,
+      onSuccess: () => {
+        setTrainingStatus({
+          is_training: true,
+          progress: 0,
+          status: "starting",
+          message: "トレーニングを開始しています...",
+          start_time: new Date().toISOString(),
+        });
+      },
+      onError: (errorMessage) => {
+        setError(errorMessage);
       }
-
-      await response.json();
-      setTrainingStatus({
-        is_training: true,
-        progress: 0,
-        status: "starting",
-        message: "トレーニングを開始しています...",
-        start_time: new Date().toISOString(),
-      });
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "エラーが発生しました");
-    }
+    });
   };
 
   const stopTraining = async () => {
-    try {
-      const response = await fetch("/api/ml/training/stop", {
-        method: "POST",
-      });
-
-      if (response.ok) {
+    await stopTrainingApi("/api/ml/training/stop", {
+      method: "POST",
+      onSuccess: () => {
         setTrainingStatus((prev) => ({
           ...prev,
           is_training: false,
           status: "stopped",
           message: "トレーニングが停止されました",
         }));
+      },
+      onError: (errorMessage) => {
+        setError("トレーニングの停止に失敗しました: " + errorMessage);
       }
-    } catch (err) {
-      setError("トレーニングの停止に失敗しました");
-    }
+    });
   };
 
   const getStatusIcon = () => {
@@ -290,7 +284,7 @@ export default function MLTraining() {
                     ...prev,
                     use_profile: useProfile,
                     profile_id: useProfile ? selectedProfile?.id : undefined,
-                    profile_name: useProfile ? selectedProfile?.name : undefined,
+                    profile_name: useProfile ? selectedProfile?.profile_name : undefined,
                   }));
                 }}
                 disabled={trainingStatus.is_training}
@@ -309,7 +303,7 @@ export default function MLTraining() {
                   setConfig((prev) => ({
                     ...prev,
                     profile_id: profile?.id,
-                    profile_name: profile?.name,
+                    profile_name: profile?.profile_name,
                   }));
                 }}
                 modelType="LightGBM"

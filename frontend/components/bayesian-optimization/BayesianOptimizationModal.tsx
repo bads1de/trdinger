@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import Modal from "@/components/common/Modal";
 import ActionButton from "@/components/common/ActionButton";
+import { useApiCall } from "@/hooks/useApiCall";
 import BayesianOptimizationForm from "./BayesianOptimizationForm";
 import BayesianOptimizationResults from "./BayesianOptimizationResults";
 import {
@@ -23,36 +24,28 @@ const BayesianOptimizationModal: React.FC<BayesianOptimizationModalProps> = ({
   onClose,
   currentBacktestConfig = null,
 }) => {
-  const [isLoading, setIsLoading] = useState(false);
   const [result, setResult] = useState<BayesianOptimizationResult | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const { execute: runOptimization, loading: isLoading } = useApiCall<BayesianOptimizationResponse>();
 
   const handleMLOptimization = async (config: BayesianOptimizationConfig) => {
-    setIsLoading(true);
     setError(null);
     setResult(null);
 
-    try {
-      const response = await fetch("/api/bayesian-optimization/ml-hyperparameters", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(config),
-      });
-
-      const data: BayesianOptimizationResponse = await response.json();
-
-      if (data.success && data.result) {
-        setResult(data.result);
-      } else {
-        setError(data.error || "MLハイパーパラメータの最適化に失敗しました");
+    await runOptimization("/api/bayesian-optimization/ml-hyperparameters", {
+      method: "POST",
+      body: config,
+      onSuccess: (data) => {
+        if (data.success && data.result) {
+          setResult(data.result);
+        } else {
+          setError(data.error || "MLハイパーパラメータの最適化に失敗しました");
+        }
+      },
+      onError: (errorMessage) => {
+        setError(errorMessage);
       }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "予期せぬエラーが発生しました");
-    } finally {
-      setIsLoading(false);
-    }
+    });
   };
 
   const handleClose = () => {

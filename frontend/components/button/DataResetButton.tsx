@@ -57,16 +57,14 @@ interface DataResetButtonProps {
   /** カスタムクラス名 */
   className?: string;
   /** ボタンサイズ */
-  size?: "xs" | "sm" | "md" | "lg" | "xl";
+  size?: "sm" | "md" | "lg";
   /** ボタンバリアント */
   variant?:
     | "primary"
     | "secondary"
     | "success"
     | "warning"
-    | "error"
-    | "outline"
-    | "ghost";
+    | "danger";
 }
 
 /**
@@ -80,7 +78,7 @@ const RESET_CONFIGS = {
       "⚠️ 全てのデータ（OHLCV・ファンディングレート・オープンインタレスト）を削除します。\n\n" +
       "この操作は取り消すことができません。\n" +
       "本当に実行しますか？",
-    variant: "error" as const,
+    variant: "danger" as const,
     icon: "🗑️",
   },
   ohlcv: {

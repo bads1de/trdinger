@@ -15,6 +15,7 @@ import DataTableContainer from "@/components/data/DataTableContainer";
 import { useOhlcvData } from "@/hooks/useOhlcvData";
 import { useFundingRateData } from "@/hooks/useFundingRateData";
 import { useOpenInterestData } from "@/hooks/useOpenInterestData";
+import { useApiCall } from "@/hooks/useApiCall";
 import {
   TimeFrame,
   TradingPair,
@@ -38,7 +39,7 @@ const DataPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<
     "ohlcv" | "funding" | "openinterest"
   >("ohlcv");
-  const [updating, setUpdating] = useState<boolean>(false);
+
   const [dataStatus, setDataStatus] = useState<any>(null);
   const [bulkCollectionMessage, setBulkCollectionMessage] =
     useState<string>("");
@@ -53,6 +54,7 @@ const DataPage: React.FC = () => {
 
   // カスタムフックを使用してデータ取得
   const { symbols } = useSymbols();
+  const { execute: updateIncrementalData, loading: incrementalUpdateLoading } = useApiCall();
 
   const {
     data: ohlcvData,
@@ -106,53 +108,40 @@ const DataPage: React.FC = () => {
    * 差分データ更新
    */
   const handleIncrementalUpdate = async () => {
-    try {
-      setUpdating(true);
-      setIncrementalUpdateMessage("");
+    setIncrementalUpdateMessage("");
 
-      const response = await fetch(
-        `${BACKEND_API_URL}/api/data-collection/update?symbol=${selectedSymbol}&timeframe=${selectedTimeFrame}`,
-        {
-          method: "POST",
+    await updateIncrementalData(
+      `${BACKEND_API_URL}/api/data-collection/update?symbol=${selectedSymbol}&timeframe=${selectedTimeFrame}`,
+      {
+        method: "POST",
+        onSuccess: async (result) => {
+          // 成功メッセージを表示
+          const savedCount = result.saved_count || 0;
+          setIncrementalUpdateMessage(
+            `✅ 差分更新完了！ ${selectedSymbol} ${selectedTimeFrame} - ${savedCount}件のデータを更新しました`
+          );
+
+          // 更新後に全てのデータを再取得
+          await Promise.all([
+            fetchOHLCVData(),
+            fetchFundingRateData(),
+            fetchOpenInterestData(),
+          ]);
+
+          // データ状況も更新
+          fetchDataStatus();
+
+          // 10秒後にメッセージをクリア
+          setTimeout(() => setIncrementalUpdateMessage(""), 10000);
+        },
+        onError: (errorMessage) => {
+          setIncrementalUpdateMessage(`❌ ${errorMessage}`);
+          console.error("差分更新エラー:", errorMessage);
+          // 10秒後にメッセージをクリア
+          setTimeout(() => setIncrementalUpdateMessage(""), 10000);
         }
-      );
-
-      const result = await response.json();
-
-      if (result.success) {
-        // 成功メッセージを表示
-        const savedCount = result.saved_count || 0;
-        setIncrementalUpdateMessage(
-          `✅ 差分更新完了！ ${selectedSymbol} ${selectedTimeFrame} - ${savedCount}件のデータを更新しました`
-        );
-
-        // 更新後に全てのデータを再取得
-        await Promise.all([
-          fetchOHLCVData(),
-          fetchFundingRateData(),
-          fetchOpenInterestData(),
-        ]);
-
-        // データ状況も更新
-        fetchDataStatus();
-
-        // 10秒後にメッセージをクリア
-        setTimeout(() => setIncrementalUpdateMessage(""), 10000);
-      } else {
-        const errorMessage = result.message || "差分更新に失敗しました";
-        setIncrementalUpdateMessage(`❌ ${errorMessage}`);
-        // 10秒後にメッセージをクリア
-        setTimeout(() => setIncrementalUpdateMessage(""), 10000);
       }
-    } catch (err) {
-      const errorMessage = "差分更新中にエラーが発生しました";
-      setIncrementalUpdateMessage(`❌ ${errorMessage}`);
-      console.error("差分更新エラー:", err);
-      // 10秒後にメッセージをクリア
-      setTimeout(() => setIncrementalUpdateMessage(""), 10000);
-    } finally {
-      setUpdating(false);
-    }
+    );
   };
 
   /**
@@ -311,8 +300,8 @@ const DataPage: React.FC = () => {
     <div className="min-h-screen bg-secondary-50 dark:bg-secondary-950 animate-fade-in">
       <DataHeader
         loading={ohlcvLoading || fundingLoading || openInterestLoading}
-        error={ohlcvError || fundingError || openInterestError}
-        updating={updating}
+        error={ohlcvError || fundingError || openInterestError || ''}
+        updating={incrementalUpdateLoading}
         handleRefresh={handleRefresh}
         handleIncrementalUpdate={handleIncrementalUpdate}
       />
@@ -357,7 +346,7 @@ const DataPage: React.FC = () => {
           loading={ohlcvLoading || fundingLoading || openInterestLoading}
           selectedTimeFrame={selectedTimeFrame}
           handleTimeFrameChange={handleTimeFrameChange}
-          updating={updating}
+          updating={incrementalUpdateLoading}
           handleAllDataCollectionStart={handleAllDataCollectionStart}
           handleAllDataCollectionError={handleAllDataCollectionError}
           handleBulkCollectionStart={handleBulkCollectionStart}
@@ -380,13 +369,13 @@ const DataPage: React.FC = () => {
           setActiveTab={setActiveTab}
           ohlcvData={ohlcvData}
           loading={ohlcvLoading}
-          error={ohlcvError}
+          error={ohlcvError || ''}
           fundingRateData={fundingRateData}
           fundingLoading={fundingLoading}
-          fundingError={fundingError}
+          fundingError={fundingError || ''}
           openInterestData={openInterestData}
           openInterestLoading={openInterestLoading}
-          openInterestError={openInterestError}
+          openInterestError={openInterestError || ''}
         />
       </div>
     </div>

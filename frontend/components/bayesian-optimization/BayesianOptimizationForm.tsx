@@ -7,6 +7,7 @@ import { InputField } from "@/components/common/InputField";
 import { SelectField } from "@/components/common/SelectField";
 import InfoModal from "@/components/common/InfoModal";
 import { Info } from "lucide-react";
+import { useApiCall } from "@/hooks/useApiCall";
 import CollapsibleJson from "@/components/common/CollapsibleJson";
 import {
   BayesianOptimizationConfig,
@@ -53,6 +54,9 @@ const BayesianOptimizationForm: React.FC<BayesianOptimizationFormProps> = ({
   const [profileName, setProfileName] = useState("");
   const [profileDescription, setProfileDescription] = useState("");
 
+  // API呼び出し用フック
+  const { execute: fetchParameterSpace } = useApiCall<DefaultParameterSpaceResponse>();
+
   const openInfoModal = (title: string, content: React.ReactNode) => {
     setModalContent({ title, content });
     setIsInfoModalOpen(true);
@@ -61,22 +65,23 @@ const BayesianOptimizationForm: React.FC<BayesianOptimizationFormProps> = ({
   // デフォルトパラメータ空間を取得
   useEffect(() => {
     const fetchDefaultParameterSpace = async () => {
-      try {
-        const type = modelType;
-        const response = await fetch(`/api/bayesian-optimization/parameter-spaces/${type}`);
-        const data: DefaultParameterSpaceResponse = await response.json();
-        
-        if (data.success && data.parameter_space) {
-          setDefaultParameterSpace(data.parameter_space);
-          setCustomParameterSpace(JSON.stringify(data.parameter_space, null, 2));
+      const type = modelType;
+      await fetchParameterSpace(`/api/bayesian-optimization/parameter-spaces/${type}`, {
+        method: "GET",
+        onSuccess: (data) => {
+          if (data.success && data.parameter_space) {
+            setDefaultParameterSpace(data.parameter_space);
+            setCustomParameterSpace(JSON.stringify(data.parameter_space, null, 2));
+          }
+        },
+        onError: (errorMessage) => {
+          console.error("デフォルトパラメータ空間の取得に失敗:", errorMessage);
         }
-      } catch (error) {
-        console.error("デフォルトパラメータ空間の取得に失敗:", error);
-      }
+      });
     };
 
     fetchDefaultParameterSpace();
-  }, [optimizationType, modelType]);
+  }, [optimizationType, modelType, fetchParameterSpace]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
