@@ -68,42 +68,6 @@ export default function MLModelStatus() {
     <div className="space-y-6">
       {/* モデル基本情報 */}
       <div className="grid grid-cols-1 gap-4">
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between mb-3">
-              <h3 className="font-medium text-white">モデル状態</h3>
-              {getStatusBadge()}
-            </div>
-            <div className="space-y-2 text-sm">
-              <div className="flex items-center space-x-2">
-                {modelStatus.is_model_loaded ? (
-                  <CheckCircle className="h-4 w-4 text-green-600" />
-                ) : (
-                  <AlertCircle className="h-4 w-4 text-red-600" />
-                )}
-                <span>
-                  モデル読み込み:{" "}
-                  {modelStatus.is_model_loaded ? "完了" : "未完了"}
-                </span>
-              </div>
-              <div className="flex items-center space-x-2">
-                {modelStatus.is_trained ? (
-                  <CheckCircle className="h-4 w-4 text-green-600" />
-                ) : (
-                  <AlertCircle className="h-4 w-4 text-red-600" />
-                )}
-                <span>
-                  学習状態: {modelStatus.is_trained ? "学習済み" : "未学習"}
-                </span>
-              </div>
-              <div className="flex items-center space-x-2">
-                <Database className="h-4 w-4 text-blue-600" />
-                <span>特徴量数: {modelStatus.feature_count}個</span>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
         {modelStatus.last_predictions && (
           <Card>
             <CardContent className="p-4">

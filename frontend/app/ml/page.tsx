@@ -104,19 +104,7 @@ export default function MLManagementPage() {
         {/* 概要タブ */}
         {activeTab === "overview" && (
           <div className="space-y-6">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center space-x-2">
-                    <TrendingUp className="h-5 w-5" />
-                    <span>モデル状態</span>
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <MLModelStatus />
-                </CardContent>
-              </Card>
-
+            <div className="grid grid-cols-1 gap-6">
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center space-x-2">
