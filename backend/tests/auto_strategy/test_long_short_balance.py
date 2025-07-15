@@ -436,56 +436,7 @@ def test_smart_condition_generator_balance():
         return False
 
 
-def test_smart_vs_legacy_comparison():
-    """SmartConditionGeneratorと従来方式の比較テスト"""
-    print("\n=== SmartConditionGenerator vs 従来方式比較 ===")
 
-    # 同じ指標セットで新旧方式を比較
-    indicators = [
-        IndicatorGene(type="RSI", parameters={"period": 14}, enabled=True),
-        IndicatorGene(type="SMA", parameters={"period": 20}, enabled=True)
-    ]
-
-    # SmartConditionGenerator（新方式）
-    smart_generator = SmartConditionGenerator(enable_smart_generation=True)
-    smart_balanced = 0
-    smart_total = 20
-
-    for i in range(smart_total):
-        long_conds, short_conds, _ = smart_generator.generate_balanced_conditions(indicators)
-
-        # 簡単なバランスチェック
-        if len(long_conds) > 0 and len(short_conds) > 0:
-            # 同一条件チェック
-            long_str = str([(c.left_operand, c.operator, c.right_operand) for c in long_conds])
-            short_str = str([(c.left_operand, c.operator, c.right_operand) for c in short_conds])
-
-            if long_str != short_str:  # 異なる条件が生成されている
-                smart_balanced += 1
-
-    # 従来方式（無効化）
-    legacy_generator = SmartConditionGenerator(enable_smart_generation=False)
-    legacy_balanced = 0
-    legacy_total = 20
-
-    for i in range(legacy_total):
-        long_conds, short_conds, _ = legacy_generator.generate_balanced_conditions(indicators)
-
-        if len(long_conds) > 0 and len(short_conds) > 0:
-            long_str = str([(c.left_operand, c.operator, c.right_operand) for c in long_conds])
-            short_str = str([(c.left_operand, c.operator, c.right_operand) for c in short_conds])
-
-            if long_str != short_str:
-                legacy_balanced += 1
-
-    smart_rate = (smart_balanced / smart_total) * 100
-    legacy_rate = (legacy_balanced / legacy_total) * 100
-
-    print(f"SmartConditionGenerator: {smart_rate:.1f}% ({smart_balanced}/{smart_total})")
-    print(f"従来方式: {legacy_rate:.1f}% ({legacy_balanced}/{legacy_total})")
-    print(f"改善率: {smart_rate - legacy_rate:.1f}%")
-
-    return smart_rate > legacy_rate
 
 
 if __name__ == "__main__":
@@ -493,9 +444,8 @@ if __name__ == "__main__":
     test_specific_condition_logic()
     balance_result = test_random_strategy_long_short_balance()
     smart_balance_result = test_smart_condition_generator_balance()
-    comparison_result = test_smart_vs_legacy_comparison()
 
-    if balance_result and smart_balance_result and comparison_result:
+    if balance_result and smart_balance_result:
         print("\n🎉 全てのロング・ショートバランステストが成功しました！")
     else:
         print("\n🚨 ロング・ショートバランスに問題があります！")

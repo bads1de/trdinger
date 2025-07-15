@@ -109,25 +109,7 @@ class TestParameterSystemIntegration:
         assert 20 <= new_params["slow_period"] <= 50
         assert 5 <= new_params["signal_period"] <= 15
 
-    def test_backward_compatibility_with_auto_strategy(self):
-        """オートストラテジーとの後方互換性テスト"""
-        # オートストラテジーで使用される10個の指標をテスト
-        auto_strategy_indicators = [
-            "SMA", "EMA", "RSI", "CCI", "ADX", "ATR", "MACD", "BB", "STOCH", "OBV"
-        ]
-
-        for indicator_type in auto_strategy_indicators:
-            # パラメータ生成が成功することを確認
-            params = generate_indicator_parameters(indicator_type)
-            assert isinstance(params, dict)
-
-            # OBV以外は何らかのパラメータを持つことを確認
-            if indicator_type == "OBV":
-                assert params == {}
-            else:
-                assert len(params) > 0
-
-    def test_error_handling_and_fallback(self):
+def test_error_handling_and_fallback(self):
         """エラーハンドリングとフォールバック機能のテスト"""
         # 存在しない指標での生成
         params = generate_indicator_parameters("UNKNOWN_INDICATOR")

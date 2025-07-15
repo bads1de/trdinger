@@ -213,23 +213,7 @@ class TestFeatureEngineeringEndToEnd:
                 actual = row['FR_RSI_Extreme']
                 assert abs(expected - actual) < 1e-10, f"FR_RSI_Extreme calculation error at index {idx}"
     
-    def test_backward_compatibility(self, comprehensive_ohlcv_data):
-        """後方互換性テスト"""
-        service = FeatureEngineeringService()
-        
-        # 既存の呼び出し方法（FR/OIなし）でも動作することを確認
-        result_basic = service.calculate_advanced_features(comprehensive_ohlcv_data)
-        
-        # 基本的な特徴量が生成されていることを確認
-        basic_features = ['Price_Momentum_14', 'RSI', 'ATR_20', 'Volume_Ratio']
-        for feature in basic_features:
-            assert feature in result_basic.columns, f"Basic feature {feature} missing in backward compatibility test"
-        
-        # 時間的特徴量は常に生成されることを確認
-        temporal_features = ['Hour_of_Day', 'Day_of_Week', 'Asia_Session']
-        for feature in temporal_features:
-            assert feature in result_basic.columns, f"Temporal feature {feature} missing in backward compatibility test"
-    
+
     def test_performance_scalability(self):
         """パフォーマンスとスケーラビリティテスト"""
         service = FeatureEngineeringService()

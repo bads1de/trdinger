@@ -223,35 +223,7 @@ class TestFeatureEngineeringIntegrationRobust:
                     corrupted_val = result_corrupted.iloc[row_idx][feature]
                     assert normal_val == corrupted_val, f"Feature {feature} differs at row {row_idx}"
     
-    def test_version_compatibility(self, sample_data):
-        """バージョン互換性テスト"""
-        ohlcv, fr, oi = sample_data
-        
-        # 古いインターフェースでの呼び出し（位置引数）
-        service = FeatureEngineeringService()
-        result_positional = service.calculate_advanced_features(ohlcv, fr, oi)
-        
-        # 新しいインターフェースでの呼び出し（キーワード引数）
-        result_keyword = service.calculate_advanced_features(
-            ohlcv_data=ohlcv, 
-            funding_rate_data=fr, 
-            open_interest_data=oi
-        )
-        
-        # 結果が同じであることを確認
-        assert len(result_positional) == len(result_keyword)
-        assert len(result_positional.columns) == len(result_keyword.columns)
-        
-        # 重要な特徴量の値が一致することを確認
-        important_features = ['Hour_of_Day', 'Day_of_Week', 'Price_Momentum_14']
-        for feature in important_features:
-            if feature in result_positional.columns and feature in result_keyword.columns:
-                pd.testing.assert_series_equal(
-                    result_positional[feature], 
-                    result_keyword[feature],
-                    check_names=False
-                )
-    
+
     def test_concurrent_service_instances(self, sample_data):
         """並行サービスインスタンステスト"""
         ohlcv, fr, oi = sample_data

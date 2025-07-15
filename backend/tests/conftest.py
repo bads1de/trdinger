@@ -17,7 +17,6 @@ from typing import Generator
 from unittest.mock import Mock
 
 from app.config.settings import settings
-# from app.core.services.market_data_service import BybitMarketDataService
 
 
 @pytest.fixture(scope="session")

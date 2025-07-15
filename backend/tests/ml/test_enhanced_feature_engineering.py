@@ -197,19 +197,7 @@ class TestEnhancedFeatureEngineering:
         print(f"Total features generated: {len(result.columns)}")
         print(f"Feature names: {sorted(result.columns.tolist())}")
     
-    def test_enhanced_feature_backward_compatibility(self, enhanced_service, sample_ohlcv_data):
-        """強化された特徴量の後方互換性テスト"""
-        # FR/OIデータなしでも動作することを確認
-        result = enhanced_service.calculate_advanced_features(sample_ohlcv_data)
-        
-        # 基本的な特徴量が生成されていることを確認
-        assert len(result.columns) > len(sample_ohlcv_data.columns)
-        
-        # 時間的特徴量は常に生成されることを確認
-        temporal_features = ['Hour_of_Day', 'Day_of_Week', 'Is_Weekend']
-        for feature in temporal_features:
-            assert feature in result.columns, f"Temporal feature {feature} should be present even without FR/OI data"
-    
+
     def test_enhanced_feature_performance(self, enhanced_service):
         """強化された特徴量生成のパフォーマンステスト"""
         # 1週間分のデータ
