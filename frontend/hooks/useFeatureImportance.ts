@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { useApiCall } from "@/hooks/useApiCall";
+import { getBarColor } from "@/utils/colorUtils";
 
 interface FeatureImportanceData {
   feature_name: string;
@@ -80,12 +81,6 @@ export const useFeatureImportance = (
       colorIndex: index,
     }));
   }, [data]);
-
-  const getBarColor = (index: number, total: number) => {
-    const intensity = 1 - index / total;
-    const hue = 180 + intensity * 60;
-    return `hsl(${hue}, 70%, ${50 + intensity * 20}%)`;
-  };
 
   return {
     data,

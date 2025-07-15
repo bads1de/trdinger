@@ -36,15 +36,6 @@ export const formatDateTime = (
   }
 };
 
-export const formatCurrency = (value: number) => {
-  return new Intl.NumberFormat("ja-JP", {
-    style: "currency",
-    currency: "USD",
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 1,
-  }).format(value);
-};
-
 export const formatPercentage = (value?: number | null) => {
   if (value === undefined || value === null || isNaN(value)) {
     return "N/A";
@@ -68,125 +59,6 @@ export const formatNumber = (
     minimumFractionDigits: minDecimals,
     maximumFractionDigits: maxDecimals,
   }).format(value);
-};
-
-/**
- * 値に基づいて色を決定する汎用関数
- * @param value 評価する数値
- * @param options オプション
- * @param options.invert 評価を反転するか（小さいほど良い場合はtrue）
- * @param options.threshold しきい値（デフォルトは0）
- * @returns Tailwind CSSのカラークラス
- */
-export const getValueColorClass = (
-  value: number | null | undefined,
-  options: { invert?: boolean; threshold?: number } = {}
-) => {
-  const { invert = false, threshold = 0 } = options;
-  if (value === null || value === undefined || isNaN(value)) {
-    return "text-secondary-400";
-  }
-
-  const isPositive = value > threshold;
-  const isNegative = value < threshold;
-
-  if (invert) {
-    if (isPositive) return "text-red-400";
-    if (isNegative) return "text-green-400";
-  } else {
-    if (isPositive) return "text-green-400";
-    if (isNegative) return "text-red-400";
-  }
-
-  return "text-secondary-400";
-};
-
-export const getPnlColor = (pnl: number) => {
-  if (pnl > 0) return "green";
-  if (pnl < 0) return "red";
-  return "gray";
-};
-
-export const getPnlTextColor = (pnl: number) => {
-  return getValueColorClass(pnl);
-};
-
-export const getPriceChangeColor = (open: number, close: number) => {
-  return getValueColorClass(close - open);
-};
-
-export const getReturnColor = (value: number | null) => {
-  if (value === null) return "gray";
-  if (value > 0) return "green";
-  if (value < 0) return "red";
-  return "gray";
-};
-
-export const getSharpeColor = (value: number | null) => {
-  if (value === null) return "gray";
-  if (value > 1) return "green";
-  if (value < 0) return "red";
-  return "gray";
-};
-
-export const formatPrice = (value: number | null) => {
-  if (value === null) return "-";
-
-  return new Intl.NumberFormat("en-US", {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  }).format(value);
-};
-
-export const formatSymbol = (symbol: string) => {
-  if (symbol.endsWith("USDT")) {
-    return `${symbol.slice(0, -4)}/USDT`;
-  }
-
-  return symbol;
-};
-
-export const formatFundingRate = (value: number) => {
-  return `${(value * 100).toFixed(4)}%`;
-};
-
-export const getFundingRateColor = (value: number) => {
-  if (value > 0.0002) return "text-green-400";
-
-  if (value > 0) return "text-green-600";
-
-  if (value < -0.0002) return "text-red-400";
-
-  if (value < 0) return "text-red-600";
-
-  return "text-gray-400";
-};
-
-export const formatLargeNumber = (num: number, digits = 2) => {
-  const lookup = [
-    { value: 1, symbol: "" },
-    { value: 1e3, symbol: "K" },
-    { value: 1e6, symbol: "M" },
-    { value: 1e9, symbol: "B" },
-    { value: 1e12, symbol: "T" },
-  ];
-
-  const item = lookup
-    .slice()
-    .reverse()
-    .find((item) => num >= item.value);
-
-  if (!item) return num.toFixed(digits);
-
-  return (
-    (num / item.value)
-      .toFixed(digits)
-      .replace(/\.0+$|(\.[0-9]*[1-9])0+$/, "$1") + item.symbol
-  );
-};
-
-export const formatVolume = (value: number) => {
-  return formatLargeNumber(value, 2);
 };
 
 export const formatFileSize = (sizeInMB?: number) => {
@@ -240,19 +112,4 @@ export const formatScore = (score?: number) => {
   if (score === undefined || score === null || isNaN(score)) return "N/A";
 
   return score.toFixed(4);
-};
-
-/**
- * スコアに基づいて色を決定する関数
- * @param score 評価するスコア
- * @returns Tailwind CSSのカラークラス
- */
-export const getScoreColorClass = (score?: number) => {
-  if (score === undefined || score === null || isNaN(score))
-    return "text-gray-400";
-
-  if (score >= 0.8) return "text-green-400";
-  if (score >= 0.7) return "text-yellow-400";
-  if (score >= 0.6) return "text-orange-400";
-  return "text-red-400";
 };

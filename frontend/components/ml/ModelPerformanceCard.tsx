@@ -7,7 +7,8 @@ import { Button } from "@/components/ui/button";
 import LoadingSpinner from "@/components/common/LoadingSpinner";
 import ErrorDisplay from "@/components/common/ErrorDisplay";
 import { useModelPerformance } from "@/hooks/useModelPerformance";
-import { formatTrainingTime, getScoreColorClass } from "@/utils/formatters";
+import { formatTrainingTime } from "@/utils/formatters";
+import { getScoreColorClass } from "@/utils/colorUtils";
 import {
   TrendingUp,
   Target,

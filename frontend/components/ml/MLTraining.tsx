@@ -8,6 +8,7 @@ import { SelectField } from "@/components/common/SelectField";
 import ErrorDisplay from "@/components/common/ErrorDisplay";
 import { Progress } from "@/components/ui/progress";
 import { useMLTraining } from "@/hooks/useMLTraining";
+import { getStatusColor } from "@/utils/colorUtils";
 import {
   Play,
   Square,
@@ -52,21 +53,6 @@ export default function MLTraining() {
         return <Clock className="h-5 w-5 text-blue-600 animate-spin" />;
       default:
         return <Brain className="h-5 w-5 text-gray-600" />;
-    }
-  };
-
-  const getStatusColor = () => {
-    switch (trainingStatus.status) {
-      case "completed":
-        return "text-green-600";
-      case "error":
-        return "text-red-600";
-      case "training":
-      case "loading_data":
-      case "initializing":
-        return "text-blue-600";
-      default:
-        return "text-gray-600";
     }
   };
 
@@ -251,7 +237,9 @@ export default function MLTraining() {
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="flex items-center justify-between">
-            <span className={`font-medium ${getStatusColor()}`}>
+            <span
+              className={`font-medium ${getStatusColor(trainingStatus.status)}`}
+            >
               {trainingStatus.message}
             </span>
             <span className="text-sm text-gray-500">

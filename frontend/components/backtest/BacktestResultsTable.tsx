@@ -10,8 +10,8 @@ import {
   formatDateTime,
   formatPercentage,
   formatNumber,
-  getValueColorClass,
 } from "@/utils/formatters";
+import { getValueColorClass } from "@/utils/colorUtils";
 import { BacktestResult } from "@/types/backtest";
 import LoadingSpinner from "@/components/common/LoadingSpinner";
 

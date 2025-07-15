@@ -4,13 +4,15 @@ import React from "react";
 import { Trade } from "@/types/backtest";
 import {
   formatDateTime,
-  formatCurrency,
   formatPercentage,
   formatNumber,
+} from "@/utils/formatters";
+import { formatCurrency } from "@/utils/financialFormatters";
+import {
   getPnlColor,
   getPnlTextColor,
   getValueColorClass,
-} from "@/utils/formatters";
+} from "@/utils/colorUtils";
 
 interface TradeHistoryTableProps {
   tradeHistory: Trade[];

@@ -9,11 +9,8 @@
 
 import React, { useState } from "react";
 import TabButton from "../common/TabButton";
-import {
-  formatNumber,
-  formatPercentage,
-  getValueColorClass,
-} from "@/utils/formatters";
+import { formatNumber, formatPercentage } from "@/utils/formatters";
+import { getValueColorClass } from "@/utils/colorUtils";
 
 interface OptimizationResult {
   strategy_name: string;

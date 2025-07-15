@@ -1,13 +1,9 @@
 import React from "react";
 import { BacktestResult } from "@/types/backtest";
 import MetricCard from "../MetricCard";
-import {
-  formatPercentage,
-  formatNumber,
-  formatCurrency,
-  getReturnColor,
-  getSharpeColor,
-} from "@/utils/formatters";
+import { formatPercentage, formatNumber } from "@/utils/formatters";
+import { formatCurrency } from "@/utils/financialFormatters";
+import { getReturnColor, getSharpeColor } from "@/utils/colorUtils";
 import {
   ArrowDownRight,
   ArrowUpRight,
@@ -89,11 +85,7 @@ export default function OverviewTab({ result }: OverviewTabProps) {
       <div className="bg-gradient-to-br from-gray-900/90 to-black/80 rounded-xl p-6 border border-gray-700/50 shadow-2xl backdrop-blur-sm">
         <SectionHeader title="基本情報" icon={Info} />
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          <InfoCard
-            label="戦略"
-            value={result.strategy_name}
-            icon={Zap}
-          />
+          <InfoCard label="戦略" value={result.strategy_name} icon={Zap} />
           <InfoCard label="シンボル" value={result.symbol} icon={Hash} />
           <InfoCard label="時間軸" value={result.timeframe} icon={Clock} />
           <InfoCard
