@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { useApiCall } from "@/hooks/useApiCall";
+import { formatTrainingTime } from "@/utils/formatters";
 
 interface PerformanceMetrics {
   accuracy?: number;
@@ -94,24 +95,6 @@ export const useModelPerformance = () => {
     return "outline";
   };
 
-  const formatTrainingTime = (seconds?: number) => {
-    if (!seconds) return "不明";
-
-    const hours = Math.floor(seconds / 3600);
-    const minutes = Math.floor((seconds % 3600) / 60);
-    const secs = Math.floor(seconds % 60);
-
-    if (hours > 0) {
-      return `${hours}時間${minutes}分${secs}秒`;
-    }
-
-    if (minutes > 0) {
-      return `${minutes}分${secs}秒`;
-    }
-
-    return `${secs}秒`;
-  };
-
   return {
     modelStatus,
     loading,
@@ -120,6 +103,5 @@ export const useModelPerformance = () => {
     getScoreColor,
     getScoreBadgeVariant,
     getStatusBadgeVariant,
-    formatTrainingTime,
   };
 };

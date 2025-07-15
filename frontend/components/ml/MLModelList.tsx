@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { formatDateTime } from "@/utils/formatters";
+import { formatDateTime, formatFileSize } from "@/utils/formatters";
 import { Card, CardContent } from "@/components/ui/card";
 import ActionButton from "@/components/common/ActionButton";
 import { Badge } from "@/components/ui/badge";
@@ -46,14 +46,6 @@ export default function MLModelList({
   useEffect(() => {
     fetchModels();
   }, [fetchModels]);
-
-  const formatFileSize = (sizeInMB: number): string => {
-    if (sizeInMB < 1) {
-      return `${(sizeInMB * 1024).toFixed(1)} KB`;
-    }
-
-    return `${sizeInMB.toFixed(1)} MB`;
-  };
 
   const getModelStatusBadge = (model: MLModel) => {
     if (model.is_active) {

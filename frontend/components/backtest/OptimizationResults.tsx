@@ -9,6 +9,7 @@
 
 import React, { useState } from "react";
 import TabButton from "../common/TabButton";
+import { formatNumber, formatPercentage } from "@/utils/formatters";
 
 interface OptimizationResult {
   strategy_name: string;
@@ -103,16 +104,6 @@ export default function OptimizationResults({
       </div>
     );
   }
-
-  const formatNumber = (value: number, decimals: number = 2) => {
-    if (isNaN(value)) return "N/A";
-    return value.toFixed(decimals);
-  };
-
-  const formatPercentage = (value: number) => {
-    if (isNaN(value)) return "N/A";
-    return `${(value * 100).toFixed(2)}%`;
-  };
 
   const getValueColor = (value: number, isPositive: boolean = true) => {
     if (isNaN(value)) return "text-secondary-400";

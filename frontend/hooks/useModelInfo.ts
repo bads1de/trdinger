@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { formatDateTime as formatDateTimeUtil } from "@/utils/formatters";
+import { formatDateTime, formatFileSize } from "@/utils/formatters";
 import { useApiCall } from "@/hooks/useApiCall";
 
 interface ModelInfo {
@@ -64,19 +64,6 @@ export const useModelInfo = (autoRefreshInterval?: number) => {
     }
   }, [autoRefreshInterval, loadModelStatus]);
 
-  const formatDateTime = (dateString?: string) => {
-    if (!dateString) return "不明";
-    return formatDateTimeUtil(dateString).dateTime;
-  };
-
-  const formatFileSize = (sizeInMB?: number) => {
-    if (!sizeInMB) return "不明";
-    if (sizeInMB < 1) {
-      return `${(sizeInMB * 1024).toFixed(1)} KB`;
-    }
-    return `${sizeInMB.toFixed(1)} MB`;
-  };
-
   const getModelTypeBadgeVariant = (modelType?: string) => {
     switch (modelType?.toLowerCase()) {
       case "lightgbm":
@@ -100,8 +87,6 @@ export const useModelInfo = (autoRefreshInterval?: number) => {
     loading,
     error,
     loadModelStatus,
-    formatDateTime,
-    formatFileSize,
     getModelTypeBadgeVariant,
     getAccuracyBadgeVariant,
   };

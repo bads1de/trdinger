@@ -6,7 +6,11 @@
 
 "use client";
 
-import { formatDateTime } from "@/utils/formatters";
+import {
+  formatDateTime,
+  formatPercentage,
+  formatNumber,
+} from "@/utils/formatters";
 import { BacktestResult } from "@/types/backtest";
 import LoadingSpinner from "@/components/common/LoadingSpinner";
 
@@ -23,25 +27,6 @@ export default function BacktestResultsTable({
   onResultSelect,
   onDelete,
 }: BacktestResultsTableProps) {
-  
-
-  const formatPercentage = (value: number | undefined | null) => {
-    if (value === undefined || value === null || isNaN(value)) {
-      return "N/A";
-    }
-    return `${value.toFixed(2)}%`;
-  };
-
-  const formatNumber = (
-    value: number | undefined | null,
-    decimals: number = 2
-  ) => {
-    if (value === undefined || value === null || isNaN(value)) {
-      return "N/A";
-    }
-    return value.toFixed(decimals);
-  };
-
   const getReturnColor = (value: number | undefined | null) => {
     if (value === undefined || value === null || isNaN(value))
       return "text-secondary-400";

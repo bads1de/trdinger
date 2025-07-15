@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import LoadingSpinner from "@/components/common/LoadingSpinner";
 import ErrorDisplay from "@/components/common/ErrorDisplay";
 import { useModelPerformance } from "@/hooks/useModelPerformance";
+import { formatTrainingTime } from "@/utils/formatters";
 import {
   TrendingUp,
   Target,
@@ -39,7 +40,6 @@ export default function ModelPerformanceCard({
     getScoreColor,
     getScoreBadgeVariant,
     getStatusBadgeVariant,
-    formatTrainingTime,
   } = useModelPerformance();
 
   // 学習状態のアイコンを取得

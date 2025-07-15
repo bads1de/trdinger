@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import ErrorDisplay from "@/components/common/ErrorDisplay";
 import LoadingSpinner from "@/components/common/LoadingSpinner";
 import { useMLModelStatus } from "@/hooks/useMLModelStatus";
+import { formatProbability } from "@/utils/formatters";
 import {
   Brain,
   TrendingUp,
@@ -41,10 +42,6 @@ export default function MLModelStatus() {
         </Badge>
       );
     }
-  };
-
-  const formatProbability = (prob: number): string => {
-    return `${(prob * 100).toFixed(1)}%`;
   };
 
   if (isLoading) {

@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import ActionButton from "@/components/common/ActionButton";
 import { BayesianOptimizationResult } from "@/types/bayesian-optimization";
 import ProfileSaveDialog from "./ProfileSaveDialog";
+import { formatDuration, formatScore } from "@/utils/formatters";
 
 interface BayesianOptimizationResultsProps {
   result: BayesianOptimizationResult;
@@ -20,20 +21,6 @@ const BayesianOptimizationResults: React.FC<
   BayesianOptimizationResultsProps
 > = ({ result, onSaveAsProfile }) => {
   const [showProfileDialog, setShowProfileDialog] = useState(false);
-
-  const formatDuration = (seconds: number): string => {
-    if (seconds < 60) {
-      return `${seconds.toFixed(1)}秒`;
-    } else if (seconds < 3600) {
-      return `${(seconds / 60).toFixed(1)}分`;
-    } else {
-      return `${(seconds / 3600).toFixed(1)}時間`;
-    }
-  };
-
-  const formatScore = (score: number): string => {
-    return score.toFixed(4);
-  };
 
   return (
     <div className="space-y-6">

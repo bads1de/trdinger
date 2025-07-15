@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import LoadingSpinner from "@/components/common/LoadingSpinner";
 import ErrorDisplay from "@/components/common/ErrorDisplay";
 import { useModelInfo } from "@/hooks/useModelInfo";
+import { formatDateTime, formatFileSize } from "@/utils/formatters";
 import {
   Brain,
   Database,
@@ -42,8 +43,6 @@ export default function ModelInfoCard({
     loading,
     error,
     loadModelStatus,
-    formatDateTime,
-    formatFileSize,
     getModelTypeBadgeVariant,
     getAccuracyBadgeVariant,
   } = useModelInfo(autoRefreshInterval);
@@ -188,7 +187,9 @@ export default function ModelInfoCard({
                 <div className="flex items-center justify-between">
                   <span className="text-gray-400 text-sm">最終更新</span>
                   <span className="text-white font-medium text-xs">
-                    {formatDateTime(modelInfo?.last_updated)}
+                    {modelInfo?.last_updated
+                      ? formatDateTime(modelInfo.last_updated).dateTime
+                      : "不明"}
                   </span>
                 </div>
 
@@ -277,7 +278,10 @@ export default function ModelInfoCard({
                       <div className="flex justify-between">
                         <span className="text-gray-400">最終予測時刻:</span>
                         <span className="text-white font-mono">
-                          {formatDateTime(modelStatus?.last_prediction_time)}
+                          {modelStatus?.last_prediction_time
+                            ? formatDateTime(modelStatus.last_prediction_time)
+                                .dateTime
+                            : "不明"}
                         </span>
                       </div>
                     </div>
