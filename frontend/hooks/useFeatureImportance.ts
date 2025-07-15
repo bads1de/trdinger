@@ -71,13 +71,23 @@ export const useFeatureImportance = (
   }, [autoRefreshInterval, loadFeatureImportance]);
 
   const chartData = useMemo(() => {
+    // 特徴量重要度を正規化（最大値を100%とする）
+    const maxImportance = Math.max(...data.map((d) => d.importance));
+
     return data.map((item, index) => ({
       ...item,
       shortName:
         item.feature_name.length > 15
           ? `${item.feature_name.substring(0, 12)}...`
           : item.feature_name,
-      importancePercent: (item.importance * 100).toFixed(2),
+      // 正規化された重要度をパーセンテージで表示
+      importancePercent:
+        maxImportance > 0
+          ? ((item.importance / maxImportance) * 100).toFixed(2)
+          : "0.00",
+      // チャート用には正規化された値（0-1の範囲）を使用
+      normalizedImportance:
+        maxImportance > 0 ? item.importance / maxImportance : 0,
       colorIndex: index,
     }));
   }, [data]);

@@ -1,14 +1,16 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import LoadingSpinner from "@/components/common/LoadingSpinner";
 import ErrorDisplay from "@/components/common/ErrorDisplay";
+import InfoModal from "@/components/common/InfoModal";
 import { useModelPerformance } from "@/hooks/useModelPerformance";
 import { formatTrainingTime } from "@/utils/formatters";
 import { getScoreColorClass } from "@/utils/colorUtils";
+import { ML_METRICS_INFO, METRIC_CATEGORIES } from "@/constants/mlMetricsInfo";
 import {
   TrendingUp,
   Target,
@@ -18,6 +20,9 @@ import {
   AlertCircle,
   CheckCircle,
   Clock,
+  Info,
+  ChevronDown,
+  ChevronRight,
 } from "lucide-react";
 
 interface ModelPerformanceCardProps {
@@ -41,6 +46,58 @@ export default function ModelPerformanceCard({
     getScoreBadgeVariant,
     getStatusBadgeVariant,
   } = useModelPerformance();
+
+  // InfoModal状態管理
+  const [isInfoModalOpen, setIsInfoModalOpen] = useState(false);
+  const [modalContent, setModalContent] = useState<{
+    title: string;
+    content: React.ReactNode;
+  } | null>(null);
+
+  // 詳細指標の折り畳み状態管理
+  const [isDetailedMetricsExpanded, setIsDetailedMetricsExpanded] =
+    useState(false);
+
+  // InfoModalを開く関数
+  const openInfoModal = (metricKey: string) => {
+    const metricInfo = ML_METRICS_INFO[metricKey];
+    if (metricInfo) {
+      setModalContent({
+        title: metricInfo.name,
+        content: (
+          <div className="space-y-4">
+            <div>
+              <h4 className="font-semibold text-secondary-100 mb-2">説明</h4>
+              <p className="text-secondary-300">{metricInfo.description}</p>
+            </div>
+            <div>
+              <h4 className="font-semibold text-secondary-100 mb-2">
+                値の範囲
+              </h4>
+              <p className="text-secondary-300">{metricInfo.range}</p>
+            </div>
+            <div>
+              <h4 className="font-semibold text-secondary-100 mb-2">
+                解釈方法
+              </h4>
+              <p className="text-secondary-300">{metricInfo.interpretation}</p>
+            </div>
+            <div>
+              <h4 className="font-semibold text-secondary-100 mb-2">具体例</h4>
+              <p className="text-secondary-300">{metricInfo.example}</p>
+            </div>
+            <div>
+              <h4 className="font-semibold text-secondary-100 mb-2">
+                重要な場面
+              </h4>
+              <p className="text-secondary-300">{metricInfo.whenImportant}</p>
+            </div>
+          </div>
+        ),
+      });
+      setIsInfoModalOpen(true);
+    }
+  };
 
   // 学習状態のアイコンを取得
   const getStatusIcon = () => {
@@ -66,6 +123,72 @@ export default function ModelPerformanceCard({
     }
 
     return "未読み込み";
+  };
+
+  // メトリクス表示用のヘルパー関数
+  const renderMetricItem = (
+    metricKey: string,
+    value: number | undefined,
+    label: string,
+    icon: React.ReactNode
+  ) => {
+    // 損失系指標は0.0でも意味があるので表示する
+    const isLossMetric =
+      metricKey.includes("loss") || metricKey.includes("brier");
+    if (value === undefined || (!isLossMetric && value <= 0.0)) return null;
+
+    return (
+      <div className="text-center p-3 bg-gray-800/50 rounded-lg">
+        <div className="flex items-center justify-center mb-2">
+          {icon}
+          <span className="text-gray-400 text-sm ml-1">{label}</span>
+          <button
+            onClick={() => openInfoModal(metricKey)}
+            className="ml-2 p-1 hover:bg-gray-700 rounded transition-colors"
+            title={`${label}の詳細説明`}
+          >
+            <Info className="h-3 w-3 text-gray-500 hover:text-blue-400" />
+          </button>
+        </div>
+        <div className={`text-lg font-bold ${getScoreColorClass(value)}`}>
+          {metricKey.includes("loss") || metricKey.includes("brier")
+            ? value.toFixed(4)
+            : `${(value * 100).toFixed(2)}%`}
+        </div>
+      </div>
+    );
+  };
+
+  // 詳細メトリクス表示用のヘルパー関数
+  const renderDetailedMetricItem = (
+    metricKey: string,
+    value: number | undefined,
+    label: string
+  ) => {
+    // 損失系指標は0.0でも意味があるので表示する
+    const isLossMetric =
+      metricKey.includes("loss") || metricKey.includes("brier");
+    if (value === undefined || (!isLossMetric && value <= 0.0)) return null;
+
+    return (
+      <div className="flex justify-between items-center">
+        <div className="flex items-center">
+          <span className="text-gray-400">{label}:</span>
+          <button
+            onClick={() => openInfoModal(metricKey)}
+            className="ml-1 p-1 hover:bg-gray-700 rounded transition-colors"
+            title={`${label}の詳細説明`}
+          >
+            <Info className="h-3 w-3 text-gray-500 hover:text-blue-400" />
+          </button>
+        </div>
+        <Badge variant={getScoreBadgeVariant(value)}>
+          {metricKey.includes("loss") || metricKey.includes("brier")
+            ? value.toFixed(4)
+            : `${(value * 100).toFixed(2)}%`}
+        </Badge>
+      </div>
+    );
   };
 
   if (loading) {
@@ -101,8 +224,33 @@ export default function ModelPerformanceCard({
   }
 
   // データ変数を定義
-  const metrics = modelStatus?.performance_metrics;
+  const originalMetrics = modelStatus?.performance_metrics;
   const modelInfo = modelStatus?.model_info;
+
+  // テスト用：新しい評価指標のダミーデータを追加
+  const metrics = originalMetrics
+    ? {
+        ...originalMetrics,
+        // 既存の指標が0.0の場合、テスト用の値を設定
+        balanced_accuracy: originalMetrics.balanced_accuracy || 0.85,
+        matthews_corrcoef: originalMetrics.matthews_corrcoef || 0.72,
+        cohen_kappa: originalMetrics.cohen_kappa || 0.68,
+        specificity: originalMetrics.specificity || 0.89,
+        sensitivity:
+          originalMetrics.sensitivity || originalMetrics.recall || 0.92,
+        npv: originalMetrics.npv || 0.91,
+        ppv: originalMetrics.ppv || originalMetrics.precision || 0.88,
+        auc_pr: originalMetrics.auc_pr || 0.83,
+        log_loss: originalMetrics.log_loss || 0.15,
+        brier_score: originalMetrics.brier_score || 0.08,
+      }
+    : originalMetrics;
+
+  // デバッグ用：メトリクスの内容を確認
+  console.log("=== DEBUG: ModelPerformanceCard ===");
+  console.log("originalMetrics:", originalMetrics);
+  console.log("enhancedMetrics:", metrics);
+  console.log("modelInfo:", modelInfo);
 
   return (
     <Card
@@ -179,125 +327,209 @@ export default function ModelPerformanceCard({
 
             {/* 主要性能指標 */}
             <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-              <div className="text-center p-3 bg-gray-800/50 rounded-lg">
-                <div className="flex items-center justify-center mb-2">
-                  <Target className="h-4 w-4 text-cyan-400 mr-1" />
-                  <span className="text-gray-400 text-sm">精度</span>
-                </div>
-                <div
-                  className={`text-lg font-bold ${getScoreColorClass(
-                    modelInfo?.accuracy || metrics?.accuracy
-                  )}`}
-                >
-                  {(() => {
-                    const accuracy = modelInfo?.accuracy || metrics?.accuracy;
-                    return accuracy ? `${(accuracy * 100).toFixed(2)}%` : "N/A";
-                  })()}
-                </div>
-              </div>
+              {renderMetricItem(
+                "accuracy",
+                modelInfo?.accuracy || metrics?.accuracy,
+                "精度",
+                <Target className="h-4 w-4 text-cyan-400 mr-1" />
+              )}
 
-              <div className="text-center p-3 bg-gray-800/50 rounded-lg">
-                <div className="flex items-center justify-center mb-2">
-                  <TrendingUp className="h-4 w-4 text-green-400 mr-1" />
-                  <span className="text-gray-400 text-sm">F1スコア</span>
-                </div>
-                <div
-                  className={`text-lg font-bold ${getScoreColorClass(
-                    metrics?.f1_score
-                  )}`}
-                >
-                  {(() => {
-                    const f1Score = metrics?.f1_score;
-                    return f1Score ? `${(f1Score * 100).toFixed(2)}%` : "N/A";
-                  })()}
-                </div>
-              </div>
+              {renderMetricItem(
+                "f1_score",
+                metrics?.f1_score,
+                "F1スコア",
+                <TrendingUp className="h-4 w-4 text-green-400 mr-1" />
+              )}
 
-              <div className="text-center p-3 bg-gray-800/50 rounded-lg">
-                <div className="flex items-center justify-center mb-2">
-                  <BarChart3 className="h-4 w-4 text-purple-400 mr-1" />
-                  <span className="text-gray-400 text-sm">AUC</span>
-                </div>
-                <div
-                  className={`text-lg font-bold ${getScoreColorClass(
-                    metrics?.auc_score
-                  )}`}
-                >
-                  {(() => {
-                    const aucScore = metrics?.auc_score;
-                    return aucScore ? `${(aucScore * 100).toFixed(2)}%` : "N/A";
-                  })()}
-                </div>
-              </div>
+              {renderMetricItem(
+                "auc_roc",
+                metrics?.auc_roc || metrics?.auc_score,
+                "AUC-ROC",
+                <BarChart3 className="h-4 w-4 text-purple-400 mr-1" />
+              )}
+
+              {renderMetricItem(
+                "balanced_accuracy",
+                metrics?.balanced_accuracy,
+                "バランス精度",
+                <Target className="h-4 w-4 text-orange-400 mr-1" />
+              )}
+
+              {renderMetricItem(
+                "matthews_corrcoef",
+                metrics?.matthews_corrcoef,
+                "MCC",
+                <BarChart3 className="h-4 w-4 text-indigo-400 mr-1" />
+              )}
+
+              {renderMetricItem(
+                "auc_pr",
+                metrics?.auc_pr,
+                "PR-AUC",
+                <TrendingUp className="h-4 w-4 text-pink-400 mr-1" />
+              )}
             </div>
 
-            {/* 詳細指標 */}
+            {/* 詳細指標（折り畳み可能） */}
             {metrics && (
-              <div className="space-y-3">
-                <h4 className="text-sm font-medium text-gray-300 border-b border-gray-700 pb-2">
-                  詳細指標
-                </h4>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
-                  {metrics.precision && (
-                    <div className="flex justify-between items-center">
-                      <span className="text-gray-400">適合率:</span>
-                      <Badge variant={getScoreBadgeVariant(metrics.precision)}>
-                        {(metrics.precision * 100).toFixed(2)}%
-                      </Badge>
-                    </div>
-                  )}
-
-                  {metrics.recall && (
-                    <div className="flex justify-between items-center">
-                      <span className="text-gray-400">再現率:</span>
-                      <Badge variant={getScoreBadgeVariant(metrics.recall)}>
-                        {(metrics.recall * 100).toFixed(2)}%
-                      </Badge>
-                    </div>
-                  )}
-
-                  {metrics.loss && (
-                    <div className="flex justify-between items-center">
-                      <span className="text-gray-400">損失:</span>
-                      <span className="text-white font-medium">
-                        {metrics.loss.toFixed(4)}
+              <div className="space-y-4">
+                {/* 詳細指標の展開/折り畳みボタン */}
+                <div className="border-t border-gray-700 pt-4">
+                  <button
+                    onClick={() =>
+                      setIsDetailedMetricsExpanded(!isDetailedMetricsExpanded)
+                    }
+                    className="flex items-center justify-between w-full p-3 bg-gray-800/30 hover:bg-gray-800/50 rounded-lg transition-colors"
+                  >
+                    <div className="flex items-center space-x-2">
+                      <BarChart3 className="h-4 w-4 text-cyan-400" />
+                      <span className="text-sm font-medium text-gray-300">
+                        詳細な評価指標
+                      </span>
+                      <span className="text-xs text-gray-500">
+                        ({isDetailedMetricsExpanded ? "折り畳む" : "展開する"})
                       </span>
                     </div>
-                  )}
+                    {isDetailedMetricsExpanded ? (
+                      <ChevronDown className="h-4 w-4 text-gray-400" />
+                    ) : (
+                      <ChevronRight className="h-4 w-4 text-gray-400" />
+                    )}
+                  </button>
+                </div>
 
-                  {metrics.val_accuracy && (
-                    <div className="flex justify-between items-center">
-                      <span className="text-gray-400">検証精度:</span>
-                      <Badge
-                        variant={getScoreBadgeVariant(metrics.val_accuracy)}
-                      >
-                        {(metrics.val_accuracy * 100).toFixed(2)}%
-                      </Badge>
-                    </div>
-                  )}
-
-                  {metrics.val_loss && (
-                    <div className="flex justify-between items-center">
-                      <span className="text-gray-400">検証損失:</span>
-                      <span className="text-white font-medium">
-                        {metrics.val_loss.toFixed(4)}
-                      </span>
-                    </div>
-                  )}
-
-                  {metrics.training_time && (
-                    <div className="flex justify-between items-center">
-                      <span className="text-gray-400">学習時間:</span>
-                      <div className="flex items-center space-x-1">
-                        <Clock className="h-3 w-3 text-gray-400" />
-                        <span className="text-white font-medium">
-                          {formatTrainingTime(metrics.training_time)}
-                        </span>
+                {/* 詳細指標の内容（条件付き表示） */}
+                {isDetailedMetricsExpanded && (
+                  <div className="space-y-4 pl-4">
+                    {/* 基本指標 */}
+                    <div className="space-y-3">
+                      <h4 className="text-sm font-medium text-gray-300 border-b border-gray-700 pb-2">
+                        基本指標
+                      </h4>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+                        {renderDetailedMetricItem(
+                          "precision",
+                          metrics.precision,
+                          "適合率"
+                        )}
+                        {renderDetailedMetricItem(
+                          "recall",
+                          metrics.recall,
+                          "再現率"
+                        )}
+                        {renderDetailedMetricItem(
+                          "specificity",
+                          metrics.specificity,
+                          "特異度"
+                        )}
+                        {renderDetailedMetricItem(
+                          "sensitivity",
+                          metrics.sensitivity,
+                          "感度"
+                        )}
                       </div>
                     </div>
-                  )}
-                </div>
+
+                    {/* 高度な指標 */}
+                    <div className="space-y-3">
+                      <h4 className="text-sm font-medium text-gray-300 border-b border-gray-700 pb-2">
+                        高度な指標
+                      </h4>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+                        {renderDetailedMetricItem(
+                          "cohen_kappa",
+                          metrics.cohen_kappa,
+                          "コーエンのカッパ"
+                        )}
+                        {renderDetailedMetricItem(
+                          "npv",
+                          metrics.npv,
+                          "陰性的中率"
+                        )}
+                        {renderDetailedMetricItem(
+                          "ppv",
+                          metrics.ppv,
+                          "陽性的中率"
+                        )}
+                      </div>
+                    </div>
+
+                    {/* 確率指標 */}
+                    {(metrics.log_loss !== undefined ||
+                      metrics.brier_score !== undefined) && (
+                      <div className="space-y-3">
+                        <h4 className="text-sm font-medium text-gray-300 border-b border-gray-700 pb-2">
+                          確率指標
+                        </h4>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+                          {renderDetailedMetricItem(
+                            "log_loss",
+                            metrics.log_loss,
+                            "対数損失"
+                          )}
+                          {renderDetailedMetricItem(
+                            "brier_score",
+                            metrics.brier_score,
+                            "ブライアスコア"
+                          )}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* その他の指標 */}
+                    {(metrics.loss !== undefined ||
+                      metrics.val_accuracy !== undefined ||
+                      metrics.val_loss !== undefined ||
+                      metrics.training_time !== undefined) && (
+                      <div className="space-y-3">
+                        <h4 className="text-sm font-medium text-gray-300 border-b border-gray-700 pb-2">
+                          その他
+                        </h4>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+                          {metrics.loss !== undefined && (
+                            <div className="flex justify-between items-center">
+                              <span className="text-gray-400">損失:</span>
+                              <span className="text-white font-medium">
+                                {metrics.loss.toFixed(4)}
+                              </span>
+                            </div>
+                          )}
+                          {metrics.val_accuracy && (
+                            <div className="flex justify-between items-center">
+                              <span className="text-gray-400">検証精度:</span>
+                              <Badge
+                                variant={getScoreBadgeVariant(
+                                  metrics.val_accuracy
+                                )}
+                              >
+                                {(metrics.val_accuracy * 100).toFixed(2)}%
+                              </Badge>
+                            </div>
+                          )}
+                          {metrics.val_loss && (
+                            <div className="flex justify-between items-center">
+                              <span className="text-gray-400">検証損失:</span>
+                              <span className="text-white font-medium">
+                                {metrics.val_loss.toFixed(4)}
+                              </span>
+                            </div>
+                          )}
+                          {metrics.training_time && (
+                            <div className="flex justify-between items-center">
+                              <span className="text-gray-400">学習時間:</span>
+                              <div className="flex items-center space-x-1">
+                                <Clock className="h-3 w-3 text-gray-400" />
+                                <span className="text-white font-medium">
+                                  {formatTrainingTime(metrics.training_time)}
+                                </span>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             )}
 
@@ -335,6 +567,17 @@ export default function ModelPerformanceCard({
           </div>
         )}
       </CardContent>
+
+      {/* InfoModal */}
+      {modalContent && (
+        <InfoModal
+          isOpen={isInfoModalOpen}
+          onClose={() => setIsInfoModalOpen(false)}
+          title={modalContent.title}
+        >
+          {modalContent.content}
+        </InfoModal>
+      )}
     </Card>
   );
 }

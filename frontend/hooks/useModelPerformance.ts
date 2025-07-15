@@ -3,11 +3,33 @@ import { useApiCall } from "@/hooks/useApiCall";
 import { formatTrainingTime } from "@/utils/formatters";
 
 interface PerformanceMetrics {
+  // 基本指標
   accuracy?: number;
   precision?: number;
   recall?: number;
   f1_score?: number;
-  auc_score?: number;
+
+  // AUC指標
+  auc_score?: number; // 後方互換性のため保持
+  auc_roc?: number;
+  auc_pr?: number;
+
+  // 高度な指標
+  balanced_accuracy?: number;
+  matthews_corrcoef?: number;
+  cohen_kappa?: number;
+
+  // 専門指標
+  specificity?: number;
+  sensitivity?: number;
+  npv?: number; // Negative Predictive Value
+  ppv?: number; // Positive Predictive Value
+
+  // 確率指標
+  log_loss?: number;
+  brier_score?: number;
+
+  // その他
   loss?: number;
   val_accuracy?: number;
   val_loss?: number;

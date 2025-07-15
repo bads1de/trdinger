@@ -68,22 +68,43 @@ class PerformanceExtractor:
     @staticmethod
     def _has_new_format_metrics(metadata: Dict[str, Any]) -> bool:
         """新しい形式の性能指標が存在するかチェック"""
-        required_keys = ["precision", "recall", "f1_score", "auc_score"]
+        required_keys = ["precision", "recall", "f1_score"]
         return all(key in metadata and metadata[key] > 0 for key in required_keys)
 
     @staticmethod
     def _extract_new_format_metrics(metadata: Dict[str, Any]) -> Dict[str, float]:
         """新しい形式のメタデータから性能指標を抽出"""
         return {
+            # 基本指標
             "accuracy": metadata.get("accuracy", 0.0),
             "precision": metadata.get("precision", 0.0),
             "recall": metadata.get("recall", 0.0),
             "f1_score": metadata.get("f1_score", 0.0),
-            "auc_score": metadata.get("auc_score", 0.0),
-            "loss": 0.0,  # TODO: 学習時のlossを保存する仕組みを追加
-            "val_accuracy": 0.0,  # TODO: 検証精度を保存する仕組みを追加
-            "val_loss": 0.0,  # TODO: 検証lossを保存する仕組みを追加
-            "training_time": 0.0,  # TODO: 学習時間を保存する仕組みを追加
+            # AUC指標
+            "auc_score": metadata.get("auc_score", 0.0),  # 後方互換性
+            "auc_roc": metadata.get("auc_roc", metadata.get("auc_score", 0.0)),
+            "auc_pr": metadata.get("auc_pr", 0.0),
+            # 高度な指標
+            "balanced_accuracy": metadata.get("balanced_accuracy", 0.0),
+            "matthews_corrcoef": metadata.get("matthews_corrcoef", 0.0),
+            "cohen_kappa": metadata.get("cohen_kappa", 0.0),
+            # 専門指標
+            "specificity": metadata.get("specificity", 0.0),
+            "sensitivity": metadata.get(
+                "sensitivity", metadata.get("recall", 0.0)
+            ),  # sensitivityはrecallと同じ
+            "npv": metadata.get("npv", 0.0),
+            "ppv": metadata.get(
+                "ppv", metadata.get("precision", 0.0)
+            ),  # ppvはprecisionと同じ
+            # 確率指標
+            "log_loss": metadata.get("log_loss", 0.0),
+            "brier_score": metadata.get("brier_score", 0.0),
+            # その他
+            "loss": metadata.get("loss", 0.0),
+            "val_accuracy": metadata.get("val_accuracy", 0.0),
+            "val_loss": metadata.get("val_loss", 0.0),
+            "training_time": metadata.get("training_time", 0.0),
         }
 
     @staticmethod
@@ -116,11 +137,28 @@ class PerformanceExtractor:
         print(f"=== END DEBUG ===")
 
         return {
+            # 基本指標
             "accuracy": metadata.get("accuracy", 0.0),
             "precision": precision,
             "recall": recall,
             "f1_score": f1_score,
+            # AUC指標
             "auc_score": 0.0,  # classification_reportにはAUCが含まれていない
+            "auc_roc": 0.0,
+            "auc_pr": 0.0,
+            # 高度な指標
+            "balanced_accuracy": 0.0,
+            "matthews_corrcoef": 0.0,
+            "cohen_kappa": 0.0,
+            # 専門指標
+            "specificity": 0.0,
+            "sensitivity": recall,  # sensitivityはrecallと同じ
+            "npv": 0.0,
+            "ppv": precision,  # ppvはprecisionと同じ
+            # 確率指標
+            "log_loss": 0.0,
+            "brier_score": 0.0,
+            # その他
             "loss": 0.0,
             "val_accuracy": 0.0,
             "val_loss": 0.0,
@@ -131,11 +169,28 @@ class PerformanceExtractor:
     def _get_default_metrics() -> Dict[str, float]:
         """デフォルトの性能指標を返す"""
         return {
+            # 基本指標
             "accuracy": 0.0,
             "precision": 0.0,
             "recall": 0.0,
             "f1_score": 0.0,
+            # AUC指標
             "auc_score": 0.0,
+            "auc_roc": 0.0,
+            "auc_pr": 0.0,
+            # 高度な指標
+            "balanced_accuracy": 0.0,
+            "matthews_corrcoef": 0.0,
+            "cohen_kappa": 0.0,
+            # 専門指標
+            "specificity": 0.0,
+            "sensitivity": 0.0,
+            "npv": 0.0,
+            "ppv": 0.0,
+            # 確率指標
+            "log_loss": 0.0,
+            "brier_score": 0.0,
+            # その他
             "loss": 0.0,
             "val_accuracy": 0.0,
             "val_loss": 0.0,

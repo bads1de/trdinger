@@ -211,7 +211,7 @@ export default function FeatureImportanceChart({
                 <Tooltip content={<CustomTooltip />} />
 
                 <Bar
-                  dataKey="importance"
+                  dataKey="normalizedImportance"
                   radius={[4, 4, 0, 0]}
                   stroke="#0891b2"
                   strokeWidth={1}
@@ -239,20 +239,23 @@ export default function FeatureImportanceChart({
               <div className="text-center">
                 <p className="text-gray-400">最高重要度</p>
                 <p className="text-cyan-400 font-medium">
-                  {(Math.max(...data.map((d) => d.importance)) * 100).toFixed(
-                    2
-                  )}
+                  {chartData.length > 0
+                    ? chartData[0].importancePercent
+                    : "0.00"}
                   %
                 </p>
               </div>
               <div className="text-center">
                 <p className="text-gray-400">平均重要度</p>
                 <p className="text-white font-medium">
-                  {(
-                    (data.reduce((sum, d) => sum + d.importance, 0) /
-                      data.length) *
-                    100
-                  ).toFixed(2)}
+                  {chartData.length > 0
+                    ? (
+                        chartData.reduce(
+                          (sum, d) => sum + parseFloat(d.importancePercent),
+                          0
+                        ) / chartData.length
+                      ).toFixed(2)
+                    : "0.00"}
                   %
                 </p>
               </div>

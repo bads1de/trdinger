@@ -192,8 +192,7 @@ async def get_ml_status():
                             os.path.getmtime(latest_model)
                         ).isoformat(),
                         "training_samples": metadata.get("training_samples", 0),
-                        "file_size_mb": os.path.getsize(latest_model)
-                        / (1024 * 1024),
+                        "file_size_mb": os.path.getsize(latest_model) / (1024 * 1024),
                         "feature_count": metadata.get("feature_count", 0),
                     }
                 else:
@@ -204,14 +203,13 @@ async def get_ml_status():
                             os.path.getmtime(latest_model)
                         ).isoformat(),
                         "training_samples": 0,
-                        "file_size_mb": os.path.getsize(latest_model)
-                        / (1024 * 1024),
+                        "file_size_mb": os.path.getsize(latest_model) / (1024 * 1024),
                         "feature_count": 0,
                     }
                 status["model_info"] = model_info
 
-                performance_metrics = (
-                    performance_extractor.extract_performance_metrics(latest_model)
+                performance_metrics = performance_extractor.extract_performance_metrics(
+                    latest_model
                 )
                 status["performance_metrics"] = performance_metrics
             except Exception as e:
@@ -223,16 +221,32 @@ async def get_ml_status():
                         os.path.getmtime(latest_model)
                     ).isoformat(),
                     "training_samples": 0,
-                    "file_size_mb": os.path.getsize(latest_model)
-                    / (1024 * 1024),
+                    "file_size_mb": os.path.getsize(latest_model) / (1024 * 1024),
                     "feature_count": 0,
                 }
                 status["performance_metrics"] = {
+                    # 基本指標
                     "accuracy": 0.0,
                     "precision": 0.0,
                     "recall": 0.0,
                     "f1_score": 0.0,
+                    # AUC指標
                     "auc_score": 0.0,
+                    "auc_roc": 0.0,
+                    "auc_pr": 0.0,
+                    # 高度な指標
+                    "balanced_accuracy": 0.0,
+                    "matthews_corrcoef": 0.0,
+                    "cohen_kappa": 0.0,
+                    # 専門指標
+                    "specificity": 0.0,
+                    "sensitivity": 0.0,
+                    "npv": 0.0,
+                    "ppv": 0.0,
+                    # 確率指標
+                    "log_loss": 0.0,
+                    "brier_score": 0.0,
+                    # その他
                     "loss": 0.0,
                     "val_accuracy": 0.0,
                     "val_loss": 0.0,
@@ -545,11 +559,17 @@ async def run_training_task(config_data: Dict[str, Any]):
         funding_rate_data = None
         open_interest_data = None
 
-        if "funding_rate" in training_data.columns and training_data["funding_rate"].notna().any():
+        if (
+            "funding_rate" in training_data.columns
+            and training_data["funding_rate"].notna().any()
+        ):
             funding_rate_data = training_data[["funding_rate"]].copy()
             logger.info("ファンディングレートデータを使用します")
 
-        if "open_interest" in training_data.columns and training_data["open_interest"].notna().any():
+        if (
+            "open_interest" in training_data.columns
+            and training_data["open_interest"].notna().any()
+        ):
             open_interest_data = training_data[["open_interest"]].copy()
             logger.info("建玉残高データを使用します")
 
