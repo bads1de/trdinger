@@ -111,10 +111,6 @@ export interface GAConfig {
     enable_short_bias_mutation?: boolean;
     short_bias_rate?: number;
 
-    // 従来のリスク管理パラメータ（Position Sizingシステムにより廃止）
-    stop_loss_range: [number, number];
-    take_profit_range: [number, number];
-
     // 新しいTP/SL自動決定設定
     tpsl_strategy?: TPSLStrategy;
     max_risk_per_trade?: number;

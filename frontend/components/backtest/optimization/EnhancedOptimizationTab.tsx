@@ -43,9 +43,11 @@ export default function EnhancedOptimizationTab({
   const createParameterRange = (rangeConfig: number[]) => {
     const [start, end, step] = rangeConfig;
     const range = [];
+
     for (let i = start; i <= end; i += step) {
       range.push(i);
     }
+
     return range;
   };
 

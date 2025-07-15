@@ -6,7 +6,7 @@
 
 "use client";
 
-import React from "react";
+import { formatDateTime } from "@/utils/formatters";
 import { BacktestResult } from "@/types/backtest";
 import LoadingSpinner from "@/components/common/LoadingSpinner";
 
@@ -23,15 +23,7 @@ export default function BacktestResultsTable({
   onResultSelect,
   onDelete,
 }: BacktestResultsTableProps) {
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString("ja-JP", {
-      year: "numeric",
-      month: "2-digit",
-      day: "2-digit",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-  };
+  
 
   const formatPercentage = (value: number | undefined | null) => {
     if (value === undefined || value === null || isNaN(value)) {
@@ -169,7 +161,7 @@ export default function BacktestResultsTable({
               </td>
               <td className="px-6 py-4 whitespace-nowrap">
                 <div className="text-sm text-secondary-400">
-                  {formatDate(result.created_at)}
+                  {formatDateTime(result.created_at).dateTime}
                 </div>
               </td>
               <td className="px-6 py-4 whitespace-nowrap">

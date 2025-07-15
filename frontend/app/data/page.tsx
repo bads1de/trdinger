@@ -118,7 +118,6 @@ const DataPage: React.FC = () => {
     setIncrementalUpdateMessage("");
     await updateBulkIncrementalData(selectedSymbol, selectedTimeFrame, {
       onSuccess: async (result) => {
-        console.log("一括差分更新結果:", result);
 
         const totalSavedCount = result.data.total_saved_count || 0;
         const ohlcvCount = result.data.data.ohlcv.saved_count || 0;
@@ -128,10 +127,6 @@ const DataPage: React.FC = () => {
         // 時間足別の詳細情報を取得
         let timeframeDetails = "";
         if (result.data.data.ohlcv.timeframe_results) {
-          console.log(
-            "時間足別結果:",
-            result.data.data.ohlcv.timeframe_results
-          );
           const tfResults = Object.entries(
             result.data.data.ohlcv.timeframe_results
           )
@@ -168,7 +163,6 @@ const DataPage: React.FC = () => {
     fetchDataStatusApi(url, {
       onSuccess: (result) => {
         if (result) {
-          console.log("詳細データ状況:", result);
           setDataStatus(result);
         }
       },

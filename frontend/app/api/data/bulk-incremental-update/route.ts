@@ -18,10 +18,10 @@ const VALID_TIMEFRAMES: TimeFrame[] = ["15m", "30m", "1h", "4h", "1d"];
  * POST /api/data/bulk-incremental-update
  *
  * OHLCV、ファンディングレート、オープンインタレストの差分データを一括で取得します。
- * 
+ * 全時間足（15m, 30m, 1h, 4h, 1d）を自動的に処理します。
+ *
  * クエリパラメータ:
  * - symbol: 通貨ペア (オプション、デフォルト: BTC/USDT:USDT)
- * - timeframe: 時間軸 (オプション、デフォルト: 1h)
  */
 export async function POST(request: NextRequest) {
   try {
@@ -29,26 +29,11 @@ export async function POST(request: NextRequest) {
 
     // パラメータの取得
     const symbol = searchParams.get("symbol") || "BTC/USDT:USDT";
-    const timeframe = (searchParams.get("timeframe") as TimeFrame) || "1h";
-
-    // 時間軸のバリデーション
-    if (!VALID_TIMEFRAMES.includes(timeframe)) {
-      return NextResponse.json(
-        {
-          success: false,
-          message: `サポートされていない時間足です: ${timeframe}. サポートされている時間足: ${VALID_TIMEFRAMES.join(
-            ", "
-          )}`,
-          timestamp: new Date().toISOString(),
-        },
-        { status: 400 }
-      );
-    }
 
     // バックエンドAPIに転送
     const backendUrl = `${BACKEND_API_URL}/api/data-collection/bulk-incremental-update?symbol=${encodeURIComponent(
       symbol
-    )}&timeframe=${timeframe}`;
+    )}`;
 
     try {
       const backendResponse = await fetch(backendUrl, {
@@ -91,7 +76,12 @@ export async function POST(request: NextRequest) {
             success: false,
             message: "エラーが発生しました",
             data: {
-              ohlcv: { symbol, timeframe, saved_count: 0, success: false },
+              ohlcv: {
+                symbol,
+                timeframe: "1h",
+                saved_count: 0,
+                success: false,
+              },
               funding_rate: { symbol, saved_count: 0, success: false },
               open_interest: { symbol, saved_count: 0, success: false },
             },
@@ -114,7 +104,7 @@ export async function POST(request: NextRequest) {
           success: false,
           message: "ネットワークエラー",
           data: {
-            ohlcv: { symbol, timeframe, saved_count: 0, success: false },
+            ohlcv: { symbol, timeframe: "1h", saved_count: 0, success: false },
             funding_rate: { symbol, saved_count: 0, success: false },
             open_interest: { symbol, saved_count: 0, success: false },
           },
@@ -137,9 +127,22 @@ export async function POST(request: NextRequest) {
         success: false,
         message: "内部サーバーエラー",
         data: {
-          ohlcv: { symbol: "BTC/USDT:USDT", timeframe: "1h", saved_count: 0, success: false },
-          funding_rate: { symbol: "BTC/USDT:USDT", saved_count: 0, success: false },
-          open_interest: { symbol: "BTC/USDT:USDT", saved_count: 0, success: false },
+          ohlcv: {
+            symbol: "BTC/USDT:USDT",
+            timeframe: "1h",
+            saved_count: 0,
+            success: false,
+          },
+          funding_rate: {
+            symbol: "BTC/USDT:USDT",
+            saved_count: 0,
+            success: false,
+          },
+          open_interest: {
+            symbol: "BTC/USDT:USDT",
+            saved_count: 0,
+            success: false,
+          },
         },
         total_saved_count: 0,
         timestamp: new Date().toISOString(),

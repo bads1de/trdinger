@@ -176,44 +176,12 @@ async def get_ml_status():
     """
 
     try:
-        logger.info("=== ML Management /status エンドポイントが呼ばれました ===")
         status = ml_orchestrator.get_model_status()
-        logger.info(f"ML状態取得: {status}")
 
-        # 追加情報を取得
         latest_model = model_manager.get_latest_model("*")
 
-        # デバッグ用：モデルが存在しない場合はテストデータを返す
-        if not latest_model:
-            logger.warning("モデルファイルが見つかりません。テストデータを返します。")
-            # モデル状態をテスト用に設定
-            status["is_model_loaded"] = True
-            status["is_trained"] = True
-            status["feature_count"] = 25
-
-            status["model_info"] = {
-                "accuracy": 0.85,
-                "model_type": "LightGBM",
-                "last_updated": datetime.now().isoformat(),
-                "training_samples": 10000,
-                "file_size_mb": 2.5,
-                "feature_count": 25,
-            }
-            # テスト用の性能指標を追加（実際のモデルがない場合のフォールバック）
-            status["performance_metrics"] = {
-                "accuracy": 0.85,
-                "precision": 0.999,  # 変更：このコードが実行されているかテスト
-                "recall": 0.999,  # 変更：このコードが実行されているかテスト
-                "f1_score": 0.999,  # 変更：このコードが実行されているかテスト
-                "auc_score": 0.999,  # 変更：このコードが実行されているかテスト
-                "loss": 0.35,
-                "val_accuracy": 0.83,
-                "val_loss": 0.38,
-                "training_time": 120.5,
-            }
-        elif latest_model and os.path.exists(latest_model):
+        if latest_model and os.path.exists(latest_model):
             try:
-                # モデルファイルから実際のメタデータを取得
                 model_data = model_manager.load_model(latest_model)
                 if model_data and "metadata" in model_data:
                     metadata = model_data["metadata"]
@@ -224,11 +192,11 @@ async def get_ml_status():
                             os.path.getmtime(latest_model)
                         ).isoformat(),
                         "training_samples": metadata.get("training_samples", 0),
-                        "file_size_mb": os.path.getsize(latest_model) / (1024 * 1024),
+                        "file_size_mb": os.path.getsize(latest_model)
+                        / (1024 * 1024),
                         "feature_count": metadata.get("feature_count", 0),
                     }
                 else:
-                    # フォールバック情報
                     model_info = {
                         "accuracy": 0.0,
                         "model_type": "LightGBM",
@@ -236,21 +204,18 @@ async def get_ml_status():
                             os.path.getmtime(latest_model)
                         ).isoformat(),
                         "training_samples": 0,
-                        "file_size_mb": os.path.getsize(latest_model) / (1024 * 1024),
+                        "file_size_mb": os.path.getsize(latest_model)
+                        / (1024 * 1024),
                         "feature_count": 0,
                     }
                 status["model_info"] = model_info
-                logger.info(f"モデル情報追加: {model_info}")
 
-                # 新しい性能指標抽出サービスを使用
-                performance_metrics = performance_extractor.extract_performance_metrics(
-                    latest_model
+                performance_metrics = (
+                    performance_extractor.extract_performance_metrics(latest_model)
                 )
                 status["performance_metrics"] = performance_metrics
-                logger.info(f"抽出された性能指標: {performance_metrics}")
             except Exception as e:
                 logger.warning(f"モデル情報取得エラー: {e}")
-                # 基本情報のみ設定
                 status["model_info"] = {
                     "accuracy": 0.0,
                     "model_type": "Unknown",
@@ -258,11 +223,10 @@ async def get_ml_status():
                         os.path.getmtime(latest_model)
                     ).isoformat(),
                     "training_samples": 0,
-                    "file_size_mb": os.path.getsize(latest_model) / (1024 * 1024),
+                    "file_size_mb": os.path.getsize(latest_model)
+                    / (1024 * 1024),
                     "feature_count": 0,
                 }
-
-                # エラー時も性能指標を追加（デフォルト値）
                 status["performance_metrics"] = {
                     "accuracy": 0.0,
                     "precision": 0.0,
@@ -281,7 +245,6 @@ async def get_ml_status():
             status["training_progress"] = training_status.get("progress", 0)
             status["status"] = training_status.get("status", "unknown")
 
-        logger.info(f"最終レスポンス: {status}")
         return status
 
     except Exception as e:
@@ -551,52 +514,6 @@ async def run_training_task(config_data: Dict[str, Any]):
         # データサービスを初期化
         data_service = get_data_service()
 
-        # DBの状況を確認
-        db = next(get_db())
-        try:
-            ohlcv_repo = OHLCVRepository(db)
-            oi_repo = OpenInterestRepository(db)
-            fr_repo = FundingRateRepository(db)
-
-            # データ件数を確認
-            ohlcv_count = ohlcv_repo.get_record_count({"symbol": symbol})
-            oi_count = oi_repo.get_open_interest_count(symbol)
-            fr_count = fr_repo.get_funding_rate_count(symbol)
-
-            logger.info(
-                f"DB内データ件数 - OHLCV: {ohlcv_count}, OI: {oi_count}, FR: {fr_count}"
-            )
-
-            # 期間内のデータ件数も確認
-            ohlcv_data_in_range = ohlcv_repo.get_ohlcv_data(
-                symbol=symbol,
-                timeframe=timeframe,
-                start_time=start_date,
-                end_time=end_date,
-            )
-            oi_data_in_range = oi_repo.get_open_interest_data(
-                symbol=symbol, start_time=start_date, end_time=end_date
-            )
-            fr_data_in_range = fr_repo.get_funding_rate_data(
-                symbol=symbol, start_time=start_date, end_time=end_date
-            )
-
-            logger.info(
-                f"期間内データ件数 - OHLCV: {len(ohlcv_data_in_range)}, OI: {len(oi_data_in_range)}, FR: {len(fr_data_in_range)}"
-            )
-
-            # 利用可能なシンボルも確認
-            available_symbols_ohlcv = ohlcv_repo.get_available_symbols()
-            available_symbols_oi = oi_repo.get_available_symbols()
-            available_symbols_fr = fr_repo.get_available_symbols()
-
-            logger.info(f"利用可能シンボル - OHLCV: {available_symbols_ohlcv}")
-            logger.info(f"利用可能シンボル - OI: {available_symbols_oi}")
-            logger.info(f"利用可能シンボル - FR: {available_symbols_fr}")
-
-        finally:
-            db.close()
-
         # データ取得
         training_status.update(
             {
@@ -614,20 +531,6 @@ async def run_training_task(config_data: Dict[str, Any]):
             raise ValueError(f"指定された期間のデータが見つかりません: {symbol}")
 
         logger.info(f"トレーニングデータ取得完了: {len(training_data)}行")
-        logger.info(f"取得データのカラム: {list(training_data.columns)}")
-
-        # データの詳細をログ出力
-        if "funding_rate" in training_data.columns:
-            non_na_fr = training_data["funding_rate"].notna().sum()
-            logger.info(
-                f"ファンディングレートデータ: {non_na_fr}/{len(training_data)} 行に値あり"
-            )
-
-        if "open_interest" in training_data.columns:
-            non_na_oi = training_data["open_interest"].notna().sum()
-            logger.info(
-                f"オープンインタレストデータ: {non_na_oi}/{len(training_data)} 行に値あり"
-            )
 
         # 追加データ取得（オプション）
         training_status.update(
@@ -642,43 +545,13 @@ async def run_training_task(config_data: Dict[str, Any]):
         funding_rate_data = None
         open_interest_data = None
 
-        # ファンディングレートデータの確認
-        if "funding_rate" in training_data.columns:
-            # NAでない値の数を確認
-            valid_fr_count = training_data["funding_rate"].notna().sum()
-            zero_fr_count = (training_data["funding_rate"] == 0.0).sum()
-            logger.info(
-                f"funding_rateカラム: 有効値={valid_fr_count}, ゼロ値={zero_fr_count}, 総行数={len(training_data)}"
-            )
+        if "funding_rate" in training_data.columns and training_data["funding_rate"].notna().any():
+            funding_rate_data = training_data[["funding_rate"]].copy()
+            logger.info("ファンディングレートデータを使用します")
 
-            if valid_fr_count > 0:
-                funding_rate_data = training_data[["funding_rate"]].copy()
-                logger.info("ファンディングレートデータを使用します")
-            else:
-                logger.info(
-                    "ファンディングレートデータは全てNA/NULLです（OHLCVデータのみでトレーニングを実行）"
-                )
-        else:
-            logger.info("funding_rateカラムが存在しません")
-
-        # オープンインタレストデータの確認
-        if "open_interest" in training_data.columns:
-            # NAでない値の数を確認
-            valid_oi_count = training_data["open_interest"].notna().sum()
-            zero_oi_count = (training_data["open_interest"] == 0.0).sum()
-            logger.info(
-                f"open_interestカラム: 有効値={valid_oi_count}, ゼロ値={zero_oi_count}, 総行数={len(training_data)}"
-            )
-
-            if valid_oi_count > 0:
-                open_interest_data = training_data[["open_interest"]].copy()
-                logger.info("建玉残高データを使用します")
-            else:
-                logger.info(
-                    "建玉残高データは全てNA/NULLです（OHLCVデータのみでトレーニングを実行）"
-                )
-        else:
-            logger.info("open_interestカラムが存在しません")
+        if "open_interest" in training_data.columns and training_data["open_interest"].notna().any():
+            open_interest_data = training_data[["open_interest"]].copy()
+            logger.info("建玉残高データを使用します")
 
         # OHLCVデータのみを抽出
         ohlcv_data = training_data[["Open", "High", "Low", "Close", "Volume"]].copy()
@@ -729,11 +602,7 @@ async def run_training_task(config_data: Dict[str, Any]):
         logger.info(f"MLモデルトレーニング完了: {symbol}")
 
     except Exception as e:
-        import traceback
-
-        error_details = traceback.format_exc()
         logger.error(f"トレーニングタスクエラー: {e}")
-        logger.error(f"エラー詳細: {error_details}")
 
         training_status.update(
             {

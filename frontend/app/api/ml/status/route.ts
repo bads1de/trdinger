@@ -16,8 +16,6 @@ export async function GET(request: NextRequest) {
   try {
     // バックエンドAPIに転送
     const backendUrl = `${BACKEND_API_URL}/api/ml/status`;
-    console.log("=== DEBUG: フロントエンドAPIルートが呼ばれました ===");
-    console.log("=== DEBUG: バックエンドURL:", backendUrl, "===");
 
     const response = await fetch(backendUrl, {
       method: "GET",
@@ -28,9 +26,6 @@ export async function GET(request: NextRequest) {
 
     const data = await response.json();
 
-    console.log("ML Status API - バックエンドレスポンス:", data);
-    console.log("ML Status API - HTTPステータス:", response.status);
-
     if (!response.ok) {
       console.error("ML Status API - エラーレスポンス:", data);
       return NextResponse.json(
@@ -40,7 +35,6 @@ export async function GET(request: NextRequest) {
     }
 
     const responseData = { success: true, ...data };
-    console.log("ML Status API - フロントエンドレスポンス:", responseData);
     return NextResponse.json(responseData);
   } catch (error) {
     console.error("MLトレーニング状態取得エラー:", error);

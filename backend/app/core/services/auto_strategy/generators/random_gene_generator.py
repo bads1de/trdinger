@@ -42,8 +42,12 @@ class RandomGeneGenerator:
             enable_smart_generation: SmartConditionGeneratorを使用するか
         """
         self.config = config
-        self.decoder = GeneDecoder(enable_smart_generation)  # GeneDecoderのインスタンスを作成
-        self.smart_condition_generator = SmartConditionGenerator(enable_smart_generation)
+        self.decoder = GeneDecoder(
+            enable_smart_generation
+        )  # GeneDecoderのインスタンスを作成
+        self.smart_condition_generator = SmartConditionGenerator(
+            enable_smart_generation
+        )
 
         # 設定値を取得（型安全）
         self.max_indicators = config.max_indicators
@@ -88,8 +92,8 @@ class RandomGeneGenerator:
             tpsl_gene = self._generate_tpsl_gene()
 
             # MLオンリーモードの場合は常にTP/SL遺伝子を有効化
-            indicator_mode = getattr(self.config, 'indicator_mode', 'mixed')
-            if indicator_mode == 'ml_only' and tpsl_gene:
+            indicator_mode = getattr(self.config, "indicator_mode", "mixed")
+            if indicator_mode == "ml_only" and tpsl_gene:
                 tpsl_gene.enabled = True
 
             # TP/SL遺伝子が有効な場合はイグジット条件を最小化
@@ -147,20 +151,24 @@ class RandomGeneGenerator:
             利用可能な指標のリスト
         """
         # テクニカル指標を取得
-        technical_indicators = list(self.indicator_service.get_supported_indicators().keys())
+        technical_indicators = list(
+            self.indicator_service.get_supported_indicators().keys()
+        )
 
         # ML指標
-        ml_indicators = ['ML_UP_PROB', 'ML_DOWN_PROB', 'ML_RANGE_PROB']
+        ml_indicators = ["ML_UP_PROB", "ML_DOWN_PROB", "ML_RANGE_PROB"]
 
         # 指標モードに応じて選択
-        indicator_mode = getattr(config, 'indicator_mode', 'mixed')
+        indicator_mode = getattr(config, "indicator_mode", "mixed")
 
-        if indicator_mode == 'technical_only':
+        if indicator_mode == "technical_only":
             # テクニカル指標のみ
             available_indicators = technical_indicators
-            logger.info(f"指標モード: テクニカルオンリー ({len(available_indicators)}個の指標)")
+            logger.info(
+                f"指標モード: テクニカルオンリー ({len(available_indicators)}個の指標)"
+            )
 
-        elif indicator_mode == 'ml_only':
+        elif indicator_mode == "ml_only":
             # ML指標のみ
             available_indicators = ml_indicators
             logger.info(f"指標モード: MLオンリー ({len(available_indicators)}個の指標)")
@@ -168,7 +176,9 @@ class RandomGeneGenerator:
         else:  # mixed または未設定
             # 両方使用（デフォルト）
             available_indicators = technical_indicators + ml_indicators
-            logger.info(f"指標モード: 混合 (テクニカル: {len(technical_indicators)}, ML: {len(ml_indicators)})")
+            logger.info(
+                f"指標モード: 混合 (テクニカル: {len(technical_indicators)}, ML: {len(ml_indicators)})"
+            )
 
         return available_indicators
 
@@ -422,14 +432,7 @@ class RandomGeneGenerator:
         return random.uniform(default_range[0], default_range[1])
 
     def _generate_risk_management(self) -> Dict[str, float]:
-        """リスク管理設定を生成（設定値から範囲を取得または新しいTP/SL自動決定機能を使用）"""
-        # 常に従来のリスク管理設定を生成する
-        # _generate_advanced_risk_management は未実装または廃止された機能に依存しているため、
-        # 呼び出しを無効化しています。
-        return self._generate_legacy_risk_management()
-
-    def _generate_legacy_risk_management(self) -> Dict[str, float]:
-        """従来のリスク管理設定生成（Position Sizingシステムにより廃止予定）"""
+        """リスク管理設定を生成"""
         # Position Sizingシステムにより、position_sizeは自動最適化されるため固定値を使用
         return {
             "position_size": 0.1,  # デフォルト値（実際にはposition_sizing_geneが使用される）
@@ -555,7 +558,3 @@ class RandomGeneGenerator:
                 base_stop_loss=0.03,
                 enabled=True,  # 有効化を明示的に設定
             )
-
-
-
-

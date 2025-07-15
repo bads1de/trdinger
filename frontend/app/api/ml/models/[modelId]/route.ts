@@ -26,14 +26,10 @@ export async function DELETE(
       );
     }
 
-    console.log("削除要求されたモデルID:", modelId);
-
     // バックエンドAPIに転送（modelIdは既にURLデコードされているのでそのまま使用）
     const backendUrl = `${BACKEND_API_URL}/api/ml/models/${encodeURIComponent(
       modelId
     )}`;
-
-    console.log("バックエンドURL:", backendUrl);
 
     const response = await fetch(backendUrl, {
       method: "DELETE",

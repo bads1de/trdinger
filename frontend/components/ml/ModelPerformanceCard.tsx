@@ -135,13 +135,6 @@ export default function ModelPerformanceCard({
 
       <CardContent>
         {(() => {
-          console.log("ModelPerformanceCard - 条件分岐チェック:");
-          console.log("  - is_model_loaded:", modelStatus?.is_model_loaded);
-          console.log("  - is_training:", modelStatus?.is_training);
-          console.log(
-            "  - 表示条件:",
-            !modelStatus?.is_model_loaded && !modelStatus?.is_training
-          );
           return null;
         })()}
 
@@ -156,12 +149,6 @@ export default function ModelPerformanceCard({
         ) : (
           <div className="space-y-6">
             {(() => {
-              const metrics = modelStatus?.performance_metrics;
-              const modelInfo = modelStatus?.model_info;
-              console.log("ModelPerformanceCard - データ確認:");
-              console.log("  - metrics:", metrics);
-              console.log("  - modelInfo:", modelInfo);
-              console.log("  - modelStatus:", modelStatus);
               return null;
             })()}
 
@@ -204,7 +191,6 @@ export default function ModelPerformanceCard({
                 >
                   {(() => {
                     const accuracy = modelInfo?.accuracy || metrics?.accuracy;
-                    console.log("精度表示:", accuracy);
                     return accuracy ? `${(accuracy * 100).toFixed(2)}%` : "N/A";
                   })()}
                 </div>
@@ -222,7 +208,6 @@ export default function ModelPerformanceCard({
                 >
                   {(() => {
                     const f1Score = metrics?.f1_score;
-                    console.log("F1スコア表示:", f1Score);
                     return f1Score ? `${(f1Score * 100).toFixed(2)}%` : "N/A";
                   })()}
                 </div>
@@ -240,7 +225,6 @@ export default function ModelPerformanceCard({
                 >
                   {(() => {
                     const aucScore = metrics?.auc_score;
-                    console.log("AUCスコア表示:", aucScore);
                     return aucScore ? `${(aucScore * 100).toFixed(2)}%` : "N/A";
                   })()}
                 </div>

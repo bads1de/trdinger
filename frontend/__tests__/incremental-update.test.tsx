@@ -11,7 +11,7 @@ import { jest } from "@jest/globals";
 
 // テスト対象のコンポーネントをインポート
 import DataPage from "../app/data/page";
-import DataHeader from "../app/data/components/DataHeader";
+import DataHeader from "../components/data/DataHeader";
 
 // fetchのモック
 global.fetch = jest.fn();
@@ -37,57 +37,80 @@ describe("差分更新機能のテスト", () => {
       handleBulkIncrementalUpdate: jest.fn(),
     };
 
-    test("差分更新ボタンが正しく表示される", () => {
+    test("一括差分更新ボタンが正しく表示される", () => {
       render(<DataHeader {...defaultProps} />);
 
-      const incrementalButton = screen.getByText("差分更新");
-      expect(incrementalButton).toBeInTheDocument();
-      expect(incrementalButton).not.toBeDisabled();
+      const bulkIncrementalButton = screen.getByText("一括差分更新");
+      expect(bulkIncrementalButton).toBeInTheDocument();
+      expect(bulkIncrementalButton).not.toBeDisabled();
     });
 
-    test("updating状態の時にボタンが無効化される", () => {
-      render(<DataHeader {...defaultProps} updating={true} />);
+    test("bulkUpdating状態の時にボタンが無効化される", () => {
+      render(<DataHeader {...defaultProps} bulkUpdating={true} />);
 
-      const incrementalButton = screen.getByText("差分更新中...");
-      expect(incrementalButton).toBeInTheDocument();
-      expect(incrementalButton).toBeDisabled();
+      const bulkIncrementalButton = screen.getByText("一括差分更新中...");
+      expect(bulkIncrementalButton).toBeInTheDocument();
+      expect(bulkIncrementalButton).toBeDisabled();
     });
 
     test("loading状態の時にボタンが無効化される", () => {
       render(<DataHeader {...defaultProps} loading={true} />);
 
-      const incrementalButton = screen.getByText("差分更新");
-      expect(incrementalButton).toBeDisabled();
+      const bulkIncrementalButton = screen.getByText("一括差分更新");
+      expect(bulkIncrementalButton).toBeDisabled();
     });
 
-    test("差分更新ボタンクリック時にハンドラが呼び出される", () => {
+    test("一括差分更新ボタンクリック時にハンドラが呼び出される", () => {
       const mockHandler = jest.fn();
       render(
-        <DataHeader {...defaultProps} handleIncrementalUpdate={mockHandler} />
+        <DataHeader
+          {...defaultProps}
+          handleBulkIncrementalUpdate={mockHandler}
+        />
       );
 
-      const incrementalButton = screen.getByText("差分更新");
-      fireEvent.click(incrementalButton);
+      const bulkIncrementalButton = screen.getByText("一括差分更新");
+      fireEvent.click(bulkIncrementalButton);
 
       expect(mockHandler).toHaveBeenCalledTimes(1);
     });
   });
 
   describe("差分更新API連携", () => {
-    test("差分更新成功時の処理", async () => {
-      // 成功レスポンスのモック
-      const mockSuccessResponse = {
+    test("一括差分更新成功時の処理", async () => {
+      // 一括差分更新の成功レスポンスのモック
+      const mockBulkSuccessResponse = {
         success: true,
-        symbol: "BTC/USDT:USDT",
-        timeframe: "1h",
-        saved_count: 5,
+        message: "一括差分データ更新が完了しました",
+        data: {
+          success: true,
+          total_saved_count: 15,
+          data: {
+            ohlcv: {
+              symbol: "BTC/USDT:USDT",
+              timeframe: "1h",
+              saved_count: 10,
+              success: true,
+            },
+            funding_rate: {
+              symbol: "BTC/USDT:USDT",
+              saved_count: 3,
+              success: true,
+            },
+            open_interest: {
+              symbol: "BTC/USDT:USDT",
+              saved_count: 2,
+              success: true,
+            },
+          },
+        },
       };
 
       // fetchのモック設定
       (fetch as jest.MockedFunction<typeof fetch>)
         .mockResolvedValueOnce({
           ok: true,
-          json: async () => mockSuccessResponse,
+          json: async () => mockBulkSuccessResponse,
         } as Response)
         .mockResolvedValue({
           ok: true,
@@ -97,29 +120,26 @@ describe("差分更新機能のテスト", () => {
       // DataPageコンポーネントをレンダリング
       render(<DataPage />);
 
-      // 差分更新ボタンを見つけてクリック
+      // 一括差分更新ボタンを見つけてクリック
       await waitFor(() => {
-        const incrementalButton = screen.getByText("差分更新");
-        expect(incrementalButton).toBeInTheDocument();
+        const bulkIncrementalButton = screen.getByText("一括差分更新");
+        expect(bulkIncrementalButton).toBeInTheDocument();
       });
 
-      const incrementalButton = screen.getByText("差分更新");
-      fireEvent.click(incrementalButton);
+      const bulkIncrementalButton = screen.getByText("一括差分更新");
+      fireEvent.click(bulkIncrementalButton);
 
-      // API呼び出しが正しく行われることを確認
+      // 一括差分更新API呼び出しが正しく行われることを確認
       await waitFor(() => {
-        expect(fetch).toHaveBeenCalledWith(
-          "http://127.0.0.1:8000/api/data-collection/update?symbol=BTC/USDT:USDT&timeframe=1h",
-          { method: "POST" }
-        );
+        const calls = (fetch as jest.MockedFunction<typeof fetch>).mock.calls;
+        expect(calls[0][0]).toContain("/api/data/bulk-incremental-update");
       });
 
       // 成功メッセージが表示されることを確認
       await waitFor(() => {
-        const successMessage = screen.getByText(
-          /差分更新完了！.*5件のデータを更新しました/
-        );
-        expect(successMessage).toBeInTheDocument();
+        expect(screen.getByText(/一括差分更新完了/)).toBeInTheDocument();
+        expect(screen.getByText(/総計15件/)).toBeInTheDocument();
+        expect(screen.getByText(/OHLCV:10/)).toBeInTheDocument();
       });
     });
 
@@ -138,14 +158,14 @@ describe("差分更新機能のテスト", () => {
 
       render(<DataPage />);
 
-      // 差分更新ボタンをクリック
+      // 一括差分更新ボタンをクリック
       await waitFor(() => {
-        const incrementalButton = screen.getByText("差分更新");
-        expect(incrementalButton).toBeInTheDocument();
+        const bulkIncrementalButton = screen.getByText("一括差分更新");
+        expect(bulkIncrementalButton).toBeInTheDocument();
       });
 
-      const incrementalButton = screen.getByText("差分更新");
-      fireEvent.click(incrementalButton);
+      const bulkIncrementalButton = screen.getByText("一括差分更新");
+      fireEvent.click(bulkIncrementalButton);
 
       // エラーメッセージが表示されることを確認
       await waitFor(() => {
@@ -162,14 +182,14 @@ describe("差分更新機能のテスト", () => {
 
       render(<DataPage />);
 
-      // 差分更新ボタンをクリック
+      // 一括差分更新ボタンをクリック
       await waitFor(() => {
-        const incrementalButton = screen.getByText("差分更新");
-        expect(incrementalButton).toBeInTheDocument();
+        const bulkIncrementalButton = screen.getByText("一括差分更新");
+        expect(bulkIncrementalButton).toBeInTheDocument();
       });
 
-      const incrementalButton = screen.getByText("差分更新");
-      fireEvent.click(incrementalButton);
+      const bulkIncrementalButton = screen.getByText("一括差分更新");
+      fireEvent.click(bulkIncrementalButton);
 
       // エラーメッセージが表示されることを確認
       await waitFor(() => {
@@ -200,78 +220,17 @@ describe("差分更新機能のテスト", () => {
       render(<DataPage />);
 
       await waitFor(() => {
-        const incrementalButton = screen.getByText("差分更新");
-        expect(incrementalButton).toBeInTheDocument();
+        const bulkIncrementalButton = screen.getByText("一括差分更新");
+        expect(bulkIncrementalButton).toBeInTheDocument();
       });
 
-      const incrementalButton = screen.getByText("差分更新");
-      fireEvent.click(incrementalButton);
+      const bulkIncrementalButton = screen.getByText("一括差分更新");
+      fireEvent.click(bulkIncrementalButton);
 
       // 適切なメッセージが表示されることを確認
       await waitFor(() => {
-        const message = screen.getByText(
-          /差分更新完了！.*0件のデータを更新しました/
-        );
+        const message = screen.getByText(/一括差分更新完了！.*0件/);
         expect(message).toBeInTheDocument();
-      });
-    });
-  });
-
-  describe("データ再取得の確認", () => {
-    test("差分更新成功後に全データが再取得される", async () => {
-      const mockSuccessResponse = {
-        success: true,
-        symbol: "BTC/USDT:USDT",
-        timeframe: "1h",
-        saved_count: 3,
-      };
-
-      // 複数のAPI呼び出しをモック
-      (fetch as jest.MockedFunction<typeof fetch>)
-        .mockResolvedValueOnce({
-          ok: true,
-          json: async () => mockSuccessResponse,
-        } as Response)
-        .mockResolvedValue({
-          ok: true,
-          json: async () => ({
-            success: true,
-            data: { ohlcv: [], funding_rates: [], open_interest: [] },
-          }),
-        } as Response);
-
-      render(<DataPage />);
-
-      await waitFor(() => {
-        const incrementalButton = screen.getByText("差分更新");
-        expect(incrementalButton).toBeInTheDocument();
-      });
-
-      const incrementalButton = screen.getByText("差分更新");
-      fireEvent.click(incrementalButton);
-
-      // 差分更新API + データ再取得API（OHLCV, FR, OI）+ ステータス取得が呼び出されることを確認
-      await waitFor(() => {
-        expect(fetch).toHaveBeenCalledTimes(5); // 1 + 3 + 1
-      });
-
-      // 各APIエンドポイントが呼び出されることを確認
-      await waitFor(() => {
-        const calls = (fetch as jest.MockedFunction<typeof fetch>).mock.calls;
-
-        // 差分更新API
-        expect(calls[0][0]).toContain("/api/data-collection/update");
-
-        // データ再取得API
-        expect(
-          calls.some((call) => call[0].includes("/api/data/candlesticks"))
-        ).toBe(true);
-        expect(
-          calls.some((call) => call[0].includes("/api/data/funding-rates"))
-        ).toBe(true);
-        expect(
-          calls.some((call) => call[0].includes("/api/data/open-interest"))
-        ).toBe(true);
       });
     });
   });
@@ -295,22 +254,22 @@ describe("差分更新機能のテスト", () => {
       render(<DataPage />);
 
       await waitFor(() => {
-        const incrementalButton = screen.getByText("差分更新");
-        fireEvent.click(incrementalButton);
+        const bulkIncrementalButton = screen.getByText("一括差分更新");
+        fireEvent.click(bulkIncrementalButton);
       });
 
       // 成功メッセージが表示されることを確認
       await waitFor(() => {
-        const successMessage = screen.getByText(/差分更新完了！/);
+        const successMessage = screen.getByText(/一括差分更新完了！/);
         expect(successMessage).toBeInTheDocument();
       });
 
-      // 10秒経過をシミュレート
-      jest.advanceTimersByTime(10000);
+      // 15秒経過をシミュレート（一括差分更新は15秒でクリア）
+      jest.advanceTimersByTime(15000);
 
       // メッセージがクリアされることを確認
       await waitFor(() => {
-        const successMessage = screen.queryByText(/差分更新完了！/);
+        const successMessage = screen.queryByText(/一括差分更新完了！/);
         expect(successMessage).not.toBeInTheDocument();
       });
 

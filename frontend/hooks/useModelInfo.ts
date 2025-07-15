@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import { formatDateTime as formatDateTimeUtil } from "@/utils/formatters";
 import { useApiCall } from "@/hooks/useApiCall";
 
 interface ModelInfo {
@@ -65,17 +66,7 @@ export const useModelInfo = (autoRefreshInterval?: number) => {
 
   const formatDateTime = (dateString?: string) => {
     if (!dateString) return "不明";
-    try {
-      return new Date(dateString).toLocaleString("ja-JP", {
-        year: "numeric",
-        month: "2-digit",
-        day: "2-digit",
-        hour: "2-digit",
-        minute: "2-digit",
-      });
-    } catch {
-      return "不明";
-    }
+    return formatDateTimeUtil(dateString).dateTime;
   };
 
   const formatFileSize = (sizeInMB?: number) => {

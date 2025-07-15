@@ -10,12 +10,17 @@ interface BulkIncrementalUpdateOptions {
 
 /**
  * 一括差分更新フック
- * 
+ *
  * OHLCV、ファンディングレート、オープンインタレストの
  * 差分データを一括で取得する機能を提供します。
  */
 export const useBulkIncrementalUpdate = () => {
-  const { execute: executeUpdate, loading, error, reset } = useApiCall<BulkIncrementalUpdateResponse>();
+  const {
+    execute: executeUpdate,
+    loading,
+    error,
+    reset,
+  } = useApiCall<BulkIncrementalUpdateResponse>();
 
   const bulkUpdate = useCallback(
     async (
@@ -25,7 +30,9 @@ export const useBulkIncrementalUpdate = () => {
     ) => {
       const { onSuccess, onError } = options;
 
-      const url = `/api/data/bulk-incremental-update?symbol=${encodeURIComponent(symbol)}&timeframe=${timeframe}`;
+      const url = `/api/data/bulk-incremental-update?symbol=${encodeURIComponent(
+        symbol
+      )}`;
 
       await executeUpdate(url, {
         method: "POST",

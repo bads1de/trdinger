@@ -106,8 +106,7 @@ class GAConfig:
     numeric_threshold_probability: float = 0.8
     min_compatibility_score: float = 0.8
     strict_compatibility_score: float = 0.9
-    stop_loss_range: List[float] = field(default_factory=lambda: [0.02, 0.05])
-    take_profit_range: List[float] = field(default_factory=lambda: [0.01, 0.15])
+
     # position_size_range: 削除（Position Sizingシステムにより不要）
 
     # TP/SL GA最適化範囲設定（ユーザー設定ではなくGA制約）
@@ -294,16 +293,13 @@ class GAConfig:
             "random_state": self.random_state,
             "log_level": self.log_level,
             "save_intermediate_results": self.save_intermediate_results,
-
             # フィットネス共有設定
             "enable_fitness_sharing": self.enable_fitness_sharing,
             "sharing_radius": self.sharing_radius,
             "sharing_alpha": self.sharing_alpha,
-
             # ショートバイアス突然変異設定
             "enable_short_bias_mutation": self.enable_short_bias_mutation,
             "short_bias_rate": self.short_bias_rate,
-
             # 指標モード設定
             "indicator_mode": self.indicator_mode,
             "enable_ml_indicators": self.enable_ml_indicators,
@@ -340,16 +336,13 @@ class GAConfig:
             log_level=data.get("log_level", "ERROR"),
             save_intermediate_results=data.get("save_intermediate_results", True),
             # enable_detailed_logging=data.get("enable_detailed_logging", True),
-
             # フィットネス共有設定
             enable_fitness_sharing=data.get("enable_fitness_sharing", True),
             sharing_radius=data.get("sharing_radius", 0.1),
             sharing_alpha=data.get("sharing_alpha", 1.0),
-
             # ショートバイアス突然変異設定
             enable_short_bias_mutation=data.get("enable_short_bias_mutation", True),
             short_bias_rate=data.get("short_bias_rate", 0.3),
-
             # 指標モード設定
             indicator_mode=data.get("indicator_mode", "mixed"),
             enable_ml_indicators=data.get("enable_ml_indicators", True),

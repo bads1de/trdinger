@@ -140,15 +140,3 @@ class DataCollector:
         except Exception as e:
             logger.error(f"データ収集処理全体でエラー: {e}", exc_info=True)
             raise
-
-    async def collect_latest_data(self, symbol: str, timeframe: str = "1d") -> int:
-        """
-        最新データを収集（増分更新）。collect_historical_dataに責務を統合するため、
-        このメソッドは後方互換性のために残すが、実質的にhistoricalを呼び出す。
-        """
-        logger.info(
-            f"最新データ収集 (collect_historical_dataを利用): {symbol} {timeframe}"
-        )
-        return await self.collect_historical_data(
-            symbol=symbol, timeframe=timeframe, days_back=1
-        )

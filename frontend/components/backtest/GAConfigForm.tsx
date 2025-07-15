@@ -80,13 +80,6 @@ const GAConfigForm: React.FC<GAConfigFormProps> = ({
         ga_objective: initialConfig.ga_config?.ga_objective || "Sharpe Ratio",
         // 指標モード設定
         indicator_mode: initialConfig.ga_config?.indicator_mode || "mixed",
-        // 従来のリスク管理パラメータ（Position Sizingシステムにより廃止予定）
-        stop_loss_range: initialConfig.ga_config?.stop_loss_range || [
-          0.02, 0.05,
-        ],
-        take_profit_range: initialConfig.ga_config?.take_profit_range || [
-          0.01, 0.15,
-        ],
       },
     };
   });
@@ -113,33 +106,6 @@ const GAConfigForm: React.FC<GAConfigFormProps> = ({
     // 従来の取引量範囲バリデーションは削除（Position Sizingシステムにより不要）
 
     // TP/SL設定はGAが自動最適化するため、バリデーション不要
-    // 従来のTP/SL範囲バリデーション（後方互換性のため保持）
-    if (
-      config.ga_config.stop_loss_range[0] >= config.ga_config.stop_loss_range[1]
-    ) {
-      errors.push("ストップロス範囲: 最小値は最大値より小さくしてください");
-    }
-    if (
-      config.ga_config.stop_loss_range[0] < 0.005 ||
-      config.ga_config.stop_loss_range[1] > 0.1
-    ) {
-      errors.push("ストップロス範囲: 0.5%〜10%の範囲で設定してください");
-    }
-
-    if (
-      config.ga_config.take_profit_range[0] >=
-      config.ga_config.take_profit_range[1]
-    ) {
-      errors.push(
-        "テイクプロフィット範囲: 最小値は最大値より小さくしてください"
-      );
-    }
-    if (
-      config.ga_config.take_profit_range[0] < 0.005 ||
-      config.ga_config.take_profit_range[1] > 0.2
-    ) {
-      errors.push("テイクプロフィット範囲: 0.5%〜20%の範囲で設定してください");
-    }
 
     return errors;
   };

@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import { formatDateTime } from "@/utils/formatters";
 import { Card, CardContent } from "@/components/ui/card";
 import ActionButton from "@/components/common/ActionButton";
 import { Badge } from "@/components/ui/badge";
@@ -50,11 +51,8 @@ export default function MLModelList({
     if (sizeInMB < 1) {
       return `${(sizeInMB * 1024).toFixed(1)} KB`;
     }
-    return `${sizeInMB.toFixed(1)} MB`;
-  };
 
-  const formatDate = (dateString: string): string => {
-    return new Date(dateString).toLocaleString("ja-JP");
+    return `${sizeInMB.toFixed(1)} MB`;
   };
 
   const getModelStatusBadge = (model: MLModel) => {
@@ -110,7 +108,7 @@ export default function MLModelList({
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm text-muted-foreground">
                   <div className="flex items-center space-x-1">
                     <Calendar className="h-4 w-4" />
-                    <span>{formatDate(model.modified_at)}</span>
+                    <span>{formatDateTime(model.modified_at).dateTime}</span>
                   </div>
 
                   <div className="flex items-center space-x-1">
