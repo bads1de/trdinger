@@ -8,7 +8,7 @@ import random
 import copy
 import uuid
 import logging
-from typing import Tuple, Union
+from typing import Union, overload
 
 from ..models.gene_strategy import StrategyGene
 
@@ -26,15 +26,18 @@ def _convert_to_strategy_gene(individual_or_gene) -> StrategyGene:
         StrategyGeneオブジェクト
     """
     # StrategyGeneオブジェクトの場合はそのまま返す
-    if hasattr(individual_or_gene, 'indicators'):
+    if hasattr(individual_or_gene, "indicators"):
         return individual_or_gene
 
     # DEAPのIndividualオブジェクト（リスト）の場合はデコード
     if isinstance(individual_or_gene, list):
         try:
             from ..models.gene_encoding import GeneEncoder
+
             gene_encoder = GeneEncoder()
-            return gene_encoder.decode_list_to_strategy_gene(individual_or_gene, StrategyGene)
+            return gene_encoder.decode_list_to_strategy_gene(
+                individual_or_gene, StrategyGene
+            )
         except Exception as e:
             logger.error(f"Individual→StrategyGene変換エラー: {e}")
             raise
@@ -58,6 +61,7 @@ def _convert_to_individual(strategy_gene: StrategyGene, individual_class=None):
 
     try:
         from ..models.gene_encoding import GeneEncoder
+
         gene_encoder = GeneEncoder()
         encoded_gene = gene_encoder.encode_strategy_gene_to_list(strategy_gene)
         return individual_class(encoded_gene)
@@ -66,9 +70,19 @@ def _convert_to_individual(strategy_gene: StrategyGene, individual_class=None):
         raise
 
 
+@overload
+def crossover_strategy_genes(
+    parent1: StrategyGene, parent2: StrategyGene
+) -> tuple[StrategyGene, StrategyGene]: ...
+
+
+@overload
+def crossover_strategy_genes(parent1: list, parent2: list) -> tuple[list, list]: ...
+
+
 def crossover_strategy_genes(
     parent1: Union[StrategyGene, list], parent2: Union[StrategyGene, list]
-) -> Tuple[Union[StrategyGene, list], Union[StrategyGene, list]]:
+) -> tuple[Union[StrategyGene, list], Union[StrategyGene, list]]:
     """
     戦略遺伝子の交叉
 
@@ -91,7 +105,9 @@ def crossover_strategy_genes(
         strategy_parent1 = _convert_to_strategy_gene(parent1)
         strategy_parent2 = _convert_to_strategy_gene(parent2)
         # 指標遺伝子の交叉（単純な一点交叉）
-        min_indicators = min(len(strategy_parent1.indicators), len(strategy_parent2.indicators))
+        min_indicators = min(
+            len(strategy_parent1.indicators), len(strategy_parent2.indicators)
+        )
         if min_indicators <= 1:
             # 指標数が1以下の場合は交叉点を0に設定（全体を交換）
             crossover_point = 0
@@ -99,10 +115,12 @@ def crossover_strategy_genes(
             crossover_point = random.randint(1, min_indicators)
 
         child1_indicators = (
-            strategy_parent1.indicators[:crossover_point] + strategy_parent2.indicators[crossover_point:]
+            strategy_parent1.indicators[:crossover_point]
+            + strategy_parent2.indicators[crossover_point:]
         )
         child2_indicators = (
-            strategy_parent2.indicators[:crossover_point] + strategy_parent1.indicators[crossover_point:]
+            strategy_parent2.indicators[:crossover_point]
+            + strategy_parent1.indicators[crossover_point:]
         )
 
         # 最大指標数制限
@@ -235,6 +253,7 @@ def crossover_strategy_genes(
         if parent1_is_individual or parent2_is_individual:
             # DEAPのIndividualクラスを取得
             from deap import creator
+
             individual_class = getattr(creator, "Individual", None)
 
             child1_result = _convert_to_individual(child1_strategy, individual_class)
@@ -247,6 +266,16 @@ def crossover_strategy_genes(
         logger.error(f"戦略遺伝子交叉エラー: {e}")
         # エラー時は親をそのまま返す
         return parent1, parent2
+
+
+@overload
+def mutate_strategy_gene(
+    gene: StrategyGene, mutation_rate: float = 0.1
+) -> StrategyGene: ...
+
+
+@overload
+def mutate_strategy_gene(gene: list, mutation_rate: float = 0.1) -> list: ...
 
 
 def mutate_strategy_gene(
@@ -386,6 +415,7 @@ def mutate_strategy_gene(
         if gene_is_individual:
             # DEAPのIndividualクラスを取得
             from deap import creator
+
             individual_class = getattr(creator, "Individual", None)
 
             return _convert_to_individual(mutated, individual_class)
@@ -398,8 +428,22 @@ def mutate_strategy_gene(
         return gene
 
 
+@overload
 def mutate_with_short_bias(
-    gene: Union[StrategyGene, list], mutation_rate: float = 0.1, short_bias_rate: float = 0.3
+    gene: StrategyGene, mutation_rate: float = 0.1, short_bias_rate: float = 0.3
+) -> StrategyGene: ...
+
+
+@overload
+def mutate_with_short_bias(
+    gene: list, mutation_rate: float = 0.1, short_bias_rate: float = 0.3
+) -> list: ...
+
+
+def mutate_with_short_bias(
+    gene: Union[StrategyGene, list],
+    mutation_rate: float = 0.1,
+    short_bias_rate: float = 0.3,
 ) -> Union[StrategyGene, list]:
     """
     ショートバイアス付き突然変異
@@ -420,11 +464,8 @@ def mutate_with_short_bias(
     # まず通常の突然変異を適用
     mutated_gene = mutate_strategy_gene(gene, mutation_rate)
 
-    # ショートバイアスを適用するため、StrategyGeneに変換
-    if gene_is_individual:
-        strategy_gene = _convert_to_strategy_gene(mutated_gene)
-    else:
-        strategy_gene = mutated_gene
+    # ショートバイアスを適用するため、常にStrategyGeneに変換
+    strategy_gene = _convert_to_strategy_gene(mutated_gene)
 
     # ショートバイアスを適用
     if random.random() < short_bias_rate:
@@ -441,6 +482,7 @@ def mutate_with_short_bias(
     # 元の型に応じて適切な形式で返す
     if gene_is_individual:
         from deap import creator
+
         individual_class = getattr(creator, "Individual", None)
         return _convert_to_individual(strategy_gene, individual_class)
     else:

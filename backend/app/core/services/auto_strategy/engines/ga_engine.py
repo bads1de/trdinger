@@ -86,8 +86,7 @@ class GeneticAlgorithmEngine:
         # フィットネス共有の初期化
         if config.enable_fitness_sharing:
             self.fitness_sharing = FitnessSharing(
-                sharing_radius=config.sharing_radius,
-                alpha=config.sharing_alpha
+                sharing_radius=config.sharing_radius, alpha=config.sharing_alpha
             )
         else:
             self.fitness_sharing = None
@@ -135,10 +134,7 @@ class GeneticAlgorithmEngine:
             if config.enable_fitness_sharing and self.fitness_sharing:
                 # フィットネス共有付き進化
                 population, logbook = self._run_evolution_with_fitness_sharing(
-                    population,
-                    toolbox,
-                    config,
-                    stats
+                    population, toolbox, config, stats
                 )
             else:
                 # 通常の進化アルゴリズム
@@ -206,7 +202,6 @@ class GeneticAlgorithmEngine:
         """
         try:
             logbook = tools.Logbook()
-            logbook.header = ['gen', 'nevals'] + (stats.fields if stats else [])
 
             # 初期個体群の評価
             fitnesses = toolbox.map(toolbox.evaluate, population)
@@ -214,7 +209,8 @@ class GeneticAlgorithmEngine:
                 ind.fitness.values = fit
 
             # フィットネス共有を適用
-            population = self.fitness_sharing.apply_fitness_sharing(population)
+            if self.fitness_sharing:
+                population = self.fitness_sharing.apply_fitness_sharing(population)
 
             if stats:
                 record = stats.compile(population)
@@ -245,7 +241,8 @@ class GeneticAlgorithmEngine:
                     ind.fitness.values = fit
 
                 # フィットネス共有を適用
-                offspring = self.fitness_sharing.apply_fitness_sharing(offspring)
+                if self.fitness_sharing:
+                    offspring = self.fitness_sharing.apply_fitness_sharing(offspring)
 
                 # 次世代の選択
                 population[:] = offspring

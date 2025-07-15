@@ -103,49 +103,9 @@ class MLIndicatorService:
             # 正規化されたデータフレームを使用
             df = df_normalized
 
-            # 特徴量計算（タイムアウト付き）
+            # 特徴量計算
             try:
-                import platform
-                import concurrent.futures
-
-                # Windows環境ではconcurrent.futuresを使用、Unix系ではsignalを使用
-                if platform.system() == "Windows":
-                    # Windows環境でのタイムアウト処理
-                    with concurrent.futures.ThreadPoolExecutor(
-                        max_workers=1
-                    ) as executor:
-                        future = executor.submit(
-                            self.feature_service.calculate_advanced_features,
-                            df,
-                            funding_rate_data,
-                            open_interest_data,
-                        )
-                        try:
-                            features_df = future.result(
-                                timeout=30
-                            )  # 30秒のタイムアウト
-                        except concurrent.futures.TimeoutError:
-                            raise TimeoutError("特徴量計算がタイムアウトしました")
-                else:
-                    # Unix系環境でのシグナル処理
-                    import signal
-
-                    def timeout_handler(signum, frame):
-                        raise TimeoutError("特徴量計算がタイムアウトしました")
-
-                    # 30秒のタイムアウトを設定
-                    signal.signal(signal.SIGALRM, timeout_handler)
-                    signal.alarm(30)
-
-                    features_df = self.feature_service.calculate_advanced_features(
-                        df, funding_rate_data, open_interest_data
-                    )
-
-                    signal.alarm(0)  # タイムアウトをクリア
-
-            except TimeoutError:
-                logger.error("特徴量計算がタイムアウトしました")
-                return self._get_default_indicators(len(df))
+                features_df, _ = self._create_features_and_targets(df)
             except Exception as e:
                 logger.error(f"特徴量計算エラー: {e}")
                 return self._get_default_indicators(len(df))
@@ -479,7 +439,7 @@ class MLIndicatorService:
             processed = processed.join(open_interest_data, how="left")
 
         # 欠損値を前方補完
-        processed = processed.fillna(method="ffill").fillna(method="bfill")
+        # processed = processed.fillna(method="ffill").fillna(method="bfill")
 
         return processed
 
@@ -510,8 +470,8 @@ class MLIndicatorService:
 
         # RSI
         delta = data["close"].diff()
-        gain = (delta.where(delta > 0, 0)).rolling(window=14).mean()
-        loss = (-delta.where(delta < 0, 0)).rolling(window=14).mean()
+        gain = delta.clip(lower=0).rolling(window=14).mean()
+        loss = delta.clip(upper=0).abs().rolling(window=14).mean()
         rs = gain / loss
         features["rsi"] = 100 - (100 / (1 + rs))
 
@@ -570,8 +530,8 @@ class MLIndicatorService:
 
         # モデルと特徴量カラムを保存
         model_data = {
-            "model": self.model,
-            "feature_columns": self.feature_columns,
+            "model": self.trainer.model,
+            "feature_columns": self.trainer.feature_columns,
             "timestamp": timestamp,
         }
 
@@ -639,7 +599,4 @@ class MLIndicatorService:
 
         except Exception as e:
             logger.warning(f"MLモデルの自動読み込み中にエラーが発生しました: {e}")
-            return False
-
-        except Exception:
             return False

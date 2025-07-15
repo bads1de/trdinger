@@ -4,47 +4,51 @@
 ベイジアン最適化結果の永続化処理を管理します。
 """
 
-from typing import List, Optional, Dict, Any, cast
-from datetime import datetime
+from typing import List, Optional, Dict, Any, Union, cast
+from datetime import datetime, timezone
 from sqlalchemy.orm import Session
-from sqlalchemy import desc, and_, or_
+from sqlalchemy import desc
 import logging
 import numpy as np
 
 from .base_repository import BaseRepository
 from database.models import BayesianOptimizationResult
-from app.core.utils.database_utils import DatabaseQueryHelper
 
 logger = logging.getLogger(__name__)
 
+# NumPyの型を許容するための型エイリアス
+Numeric = Union[int, float, np.integer, np.floating]
+Primitive = Union[str, int, float, bool, None]
+# 再帰的なJSONデータ型を定義
+JsonData = Union[Dict[str, "JsonData"], List["JsonData"], Primitive]
 
-class BayesianOptimizationRepository(BaseRepository):
+
+class BayesianOptimizationRepository(BaseRepository[BayesianOptimizationResult]):
     """ベイジアン最適化結果のリポジトリクラス"""
 
     def __init__(self, db: Session):
         super().__init__(db, BayesianOptimizationResult)
 
-    def _convert_numpy_types(self, obj):
+    def _convert_numpy_types(self, obj: Any) -> JsonData:
         """NumPy型をPythonの標準型に再帰的に変換"""
         if isinstance(obj, np.integer):
             return int(obj)
-        elif isinstance(obj, np.floating):
+        if isinstance(obj, np.floating):
             return float(obj)
-        elif isinstance(obj, np.ndarray):
+        if isinstance(obj, np.ndarray):
             return obj.tolist()
-        elif isinstance(obj, dict):
-            return {key: self._convert_numpy_types(value) for key, value in obj.items()}
-        elif isinstance(obj, list):
+        if isinstance(obj, dict):
+            # JSONのキーは常に文字列であるべき
+            return {str(k): self._convert_numpy_types(v) for k, v in obj.items()}
+        if isinstance(obj, list):
             return [self._convert_numpy_types(item) for item in obj]
-        else:
-            return obj
+        return obj
 
-    def _normalize_model_type(self, model_type: str) -> str:
+    def _normalize_model_type(self, model_type: Optional[str]) -> Optional[str]:
         """モデルタイプの大文字小文字を正規化"""
         if not model_type:
             return model_type
 
-        # 一般的なモデルタイプの正規化
         model_type_mapping = {
             "lightgbm": "LightGBM",
             "xgboost": "XGBoost",
@@ -54,7 +58,6 @@ class BayesianOptimizationRepository(BaseRepository):
             "decisiontree": "DecisionTree",
             "gradientboosting": "GradientBoosting",
         }
-
         return model_type_mapping.get(model_type.lower(), model_type)
 
     def create_optimization_result(
@@ -62,9 +65,9 @@ class BayesianOptimizationRepository(BaseRepository):
         profile_name: str,
         optimization_type: str,
         best_params: Dict[str, Any],
-        best_score: float,
-        total_evaluations: int,
-        optimization_time: float,
+        best_score: Numeric,
+        total_evaluations: Numeric,
+        optimization_time: Numeric,
         convergence_info: Dict[str, Any],
         optimization_history: List[Dict[str, Any]],
         model_type: Optional[str] = None,
@@ -76,122 +79,111 @@ class BayesianOptimizationRepository(BaseRepository):
     ) -> BayesianOptimizationResult:
         """
         新しいベイジアン最適化結果を作成
-
-        Args:
-            profile_name: プロファイル名
-            optimization_type: 最適化タイプ
-            best_params: 最適パラメータ
-            best_score: 最高スコア
-            total_evaluations: 総評価回数
-            optimization_time: 最適化時間
-            convergence_info: 収束情報
-            optimization_history: 最適化履歴
-            model_type: モデルタイプ（オプション）
-            experiment_name: 実験名（オプション）
-            description: 説明（オプション）
-            is_active: アクティブフラグ
-            is_default: デフォルトプロファイルかどうか
-            target_model_type: 対象モデルタイプ（オプション）
-
-        Returns:
-            作成されたベイジアン最適化結果
-
-        Raises:
-            Exception: 作成に失敗した場合
         """
         try:
-            # NumPy型を変換
-            best_params = self._convert_numpy_types(best_params)
-            best_score = self._convert_numpy_types(best_score)
-            total_evaluations = self._convert_numpy_types(total_evaluations)
-            optimization_time = self._convert_numpy_types(optimization_time)
-            convergence_info = self._convert_numpy_types(convergence_info)
-            optimization_history = self._convert_numpy_types(optimization_history)
+            # NumPy型をPythonの標準型に変換
+            clean_best_params = self._convert_numpy_types(best_params)
+            # _convert_numpy_typesは適切な型を返すので、ここでキャストする
+            converted_best_score = self._convert_numpy_types(best_score)
+            clean_best_score = (
+                float(converted_best_score)
+                if isinstance(converted_best_score, (int, float))
+                else 0.0
+            )
+
+            converted_total_evaluations = self._convert_numpy_types(total_evaluations)
+            clean_total_evaluations = (
+                int(converted_total_evaluations)
+                if isinstance(converted_total_evaluations, (int, float))
+                else 0
+            )
+
+            converted_optimization_time = self._convert_numpy_types(optimization_time)
+            clean_optimization_time = (
+                float(converted_optimization_time)
+                if isinstance(converted_optimization_time, (int, float))
+                else 0.0
+            )
+
+            clean_convergence_info = self._convert_numpy_types(convergence_info)
+            clean_optimization_history = self._convert_numpy_types(optimization_history)
 
             # モデルタイプを正規化
-            model_type = (
-                self._normalize_model_type(model_type) if model_type else model_type
-            )
-            target_model_type = (
-                self._normalize_model_type(target_model_type)
-                if target_model_type
-                else self._normalize_model_type(model_type)
-            )
+            normalized_model_type = self._normalize_model_type(model_type)
+            normalized_target_model_type = self._normalize_model_type(
+                target_model_type
+            ) or self._normalize_model_type(model_type)
 
             # 同じプロファイル名が存在する場合は更新
             existing_result = self.get_by_profile_name(profile_name)
             if existing_result:
-                return self.update_optimization_result(
-                    existing_result.id,
-                    best_params=best_params,
-                    best_score=best_score,
-                    total_evaluations=total_evaluations,
-                    optimization_time=optimization_time,
-                    convergence_info=convergence_info,
-                    optimization_history=optimization_history,
-                    model_type=model_type,
-                    experiment_name=experiment_name,
-                    description=description,
-                    is_active=is_active,
-                    is_default=is_default,
-                    target_model_type=target_model_type,
+                update_data = {
+                    "best_params": clean_best_params,
+                    "best_score": clean_best_score,
+                    "total_evaluations": clean_total_evaluations,
+                    "optimization_time": clean_optimization_time,
+                    "convergence_info": clean_convergence_info,
+                    "optimization_history": clean_optimization_history,
+                    "model_type": normalized_model_type,
+                    "experiment_name": experiment_name,
+                    "description": description,
+                    "is_active": is_active,
+                    "is_default": is_default,
+                    "target_model_type": normalized_target_model_type,
+                }
+                updated_result = self.update_optimization_result(
+                    cast(int, existing_result.id), **update_data
                 )
+                if updated_result:
+                    return updated_result
+                # 更新に失敗した場合は、予期せぬエラーとしてログに残し、例外を発生させる
+                logger.error(f"プロファイル更新に失敗: {profile_name}")
+                raise Exception(f"Failed to update profile: {profile_name}")
 
-            result = BayesianOptimizationResult(
+            new_result = BayesianOptimizationResult(
                 profile_name=profile_name,
                 optimization_type=optimization_type,
-                model_type=model_type,
+                model_type=normalized_model_type,
                 experiment_name=experiment_name,
-                best_params=best_params,
-                best_score=best_score,
-                total_evaluations=total_evaluations,
-                optimization_time=optimization_time,
-                convergence_info=convergence_info,
-                optimization_history=optimization_history,
+                best_params=clean_best_params,
+                best_score=clean_best_score,
+                total_evaluations=clean_total_evaluations,
+                optimization_time=clean_optimization_time,
+                convergence_info=clean_convergence_info,
+                optimization_history=clean_optimization_history,
                 is_active=is_active,
                 is_default=is_default,
-                target_model_type=target_model_type,
+                target_model_type=normalized_target_model_type,
                 description=description,
             )
 
-            self.db.add(result)
+            self.db.add(new_result)
             self.db.commit()
-            self.db.refresh(result)
+            self.db.refresh(new_result)
 
             logger.info(f"ベイジアン最適化結果を作成: {profile_name}")
-            return result
+            return new_result
 
         except Exception as e:
             self.db.rollback()
-            logger.error(f"ベイジアン最適化結果作成エラー: {e}")
+            logger.error(f"ベイジアン最適化結果作成エラー: {e}", exc_info=True)
             raise
 
     def update_optimization_result(
-        self, result_id: int, **kwargs
+        self, result_id: int, **kwargs: Any
     ) -> Optional[BayesianOptimizationResult]:
         """
         ベイジアン最適化結果を更新
-
-        Args:
-            result_id: 結果ID
-            **kwargs: 更新するフィールド
-
-        Returns:
-            更新されたベイジアン最適化結果
         """
         try:
-            result = (
-                self.db.query(BayesianOptimizationResult)
-                .filter(BayesianOptimizationResult.id == result_id)
-                .first()
-            )
-
+            result = self.get_by_id(result_id)
             if not result:
-                logger.warning(f"ベイジアン最適化結果が見つかりません: ID={result_id}")
+                logger.warning(
+                    f"更新対象のベイジアン最適化結果が見つかりません: ID={result_id}"
+                )
                 return None
 
-            # 更新可能なフィールドのみ更新
-            updatable_fields = [
+            updatable_fields = {
                 "best_params",
                 "best_score",
                 "total_evaluations",
@@ -204,15 +196,15 @@ class BayesianOptimizationRepository(BaseRepository):
                 "is_active",
                 "is_default",
                 "target_model_type",
-            ]
+            }
 
             for field, value in kwargs.items():
-                if field in updatable_fields and hasattr(result, field):
-                    # NumPy型を変換
+                if field in updatable_fields:
                     converted_value = self._convert_numpy_types(value)
                     setattr(result, field, converted_value)
 
-            result.updated_at = datetime.utcnow()
+            # updated_atはDBのonupdate機能で自動更新されるため、明示的な更新は不要
+            # result.updated_at = datetime.now(timezone.utc)
             self.db.commit()
             self.db.refresh(result)
 
@@ -221,7 +213,7 @@ class BayesianOptimizationRepository(BaseRepository):
 
         except Exception as e:
             self.db.rollback()
-            logger.error(f"ベイジアン最適化結果更新エラー: {e}")
+            logger.error(f"ベイジアン最適化結果更新エラー: {e}", exc_info=True)
             raise
 
     def get_by_profile_name(
@@ -238,8 +230,8 @@ class BayesianOptimizationRepository(BaseRepository):
         """
         try:
             return (
-                self.db.query(BayesianOptimizationResult)
-                .filter(BayesianOptimizationResult.profile_name == profile_name)
+                self.db.query(self.model_class)
+                .filter(self.model_class.profile_name == profile_name)
                 .first()
             )
 
@@ -258,11 +250,7 @@ class BayesianOptimizationRepository(BaseRepository):
             ベイジアン最適化結果（見つからない場合はNone）
         """
         try:
-            return (
-                self.db.query(BayesianOptimizationResult)
-                .filter(BayesianOptimizationResult.id == result_id)
-                .first()
-            )
+            return self.db.query(self.model_class).filter_by(id=result_id).first()
 
         except Exception as e:
             logger.error(f"ID による検索エラー: {e}")
@@ -288,26 +276,18 @@ class BayesianOptimizationRepository(BaseRepository):
             ベイジアン最適化結果のリスト
         """
         try:
-            query = self.db.query(BayesianOptimizationResult).filter(
-                BayesianOptimizationResult.is_active == True
-            )
+            query = self.db.query(self.model_class).filter_by(is_active=True)
 
             if optimization_type:
-                query = query.filter(
-                    BayesianOptimizationResult.optimization_type == optimization_type
-                )
+                query = query.filter_by(optimization_type=optimization_type)
 
             if model_type:
-                query = query.filter(
-                    BayesianOptimizationResult.model_type == model_type
-                )
+                query = query.filter_by(model_type=model_type)
 
             if target_model_type:
-                query = query.filter(
-                    BayesianOptimizationResult.target_model_type == target_model_type
-                )
+                query = query.filter_by(target_model_type=target_model_type)
 
-            query = query.order_by(desc(BayesianOptimizationResult.created_at))
+            query = query.order_by(desc(self.model_class.created_at))
 
             if limit:
                 query = query.limit(limit)
@@ -332,12 +312,12 @@ class BayesianOptimizationRepository(BaseRepository):
             ベイジアン最適化結果のリスト
         """
         try:
-            query = self.db.query(BayesianOptimizationResult)
+            query = self.db.query(self.model_class)
 
             if not include_inactive:
-                query = query.filter(BayesianOptimizationResult.is_active == True)
+                query = query.filter_by(is_active=True)
 
-            query = query.order_by(desc(BayesianOptimizationResult.created_at))
+            query = query.order_by(desc(self.model_class.created_at))
 
             if limit:
                 query = query.limit(limit)
@@ -359,11 +339,7 @@ class BayesianOptimizationRepository(BaseRepository):
             削除成功の場合True
         """
         try:
-            result = (
-                self.db.query(BayesianOptimizationResult)
-                .filter(BayesianOptimizationResult.id == result_id)
-                .first()
-            )
+            result = self.get_by_id(result_id)
 
             if not result:
                 logger.warning(
@@ -400,14 +376,11 @@ class BayesianOptimizationRepository(BaseRepository):
             normalized_model_type = self._normalize_model_type(target_model_type)
 
             return (
-                self.db.query(BayesianOptimizationResult)
-                .filter(
-                    and_(
-                        BayesianOptimizationResult.target_model_type
-                        == normalized_model_type,
-                        BayesianOptimizationResult.is_default == True,
-                        BayesianOptimizationResult.is_active == True,
-                    )
+                self.db.query(self.model_class)
+                .filter_by(
+                    target_model_type=normalized_model_type,
+                    is_default=True,
+                    is_active=True,
                 )
                 .first()
             )
@@ -428,27 +401,36 @@ class BayesianOptimizationRepository(BaseRepository):
             設定成功の場合True
         """
         try:
-            # 既存のデフォルトプロファイルを無効化
-            self.db.query(BayesianOptimizationResult).filter(
-                and_(
-                    BayesianOptimizationResult.target_model_type == target_model_type,
-                    BayesianOptimizationResult.is_default == True,
-                )
-            ).update({"is_default": False})
-
-            # 新しいデフォルトプロファイルを設定
-            result = (
-                self.db.query(BayesianOptimizationResult)
-                .filter(BayesianOptimizationResult.id == profile_id)
-                .first()
-            )
-
-            if not result:
-                logger.warning(f"プロファイルが見つかりません: ID={profile_id}")
+            normalized_model_type = self._normalize_model_type(target_model_type)
+            if not normalized_model_type:
+                logger.warning(f"無効なモデルタイプです: {target_model_type}")
                 return False
 
-            result.is_default = True
-            result.target_model_type = target_model_type
+            # 既存のデフォルトプロファイルを無効化
+            (
+                self.db.query(self.model_class)
+                .filter_by(target_model_type=normalized_model_type, is_default=True)
+                .update({"is_default": False})
+            )
+
+            # 新しいデフォルトプロファイルを設定
+            update_count = (
+                self.db.query(self.model_class)
+                .filter_by(id=profile_id)
+                .update(
+                    {
+                        "is_default": True,
+                        "target_model_type": normalized_model_type,
+                        "updated_at": datetime.now(timezone.utc),
+                    }
+                )
+            )
+
+            if update_count == 0:
+                logger.warning(f"プロファイルが見つかりません: ID={profile_id}")
+                self.db.rollback()
+                return False
+
             self.db.commit()
 
             logger.info(
@@ -482,16 +464,16 @@ class BayesianOptimizationRepository(BaseRepository):
             # モデルタイプを正規化
             normalized_model_type = self._normalize_model_type(target_model_type)
 
-            query = self.db.query(BayesianOptimizationResult).filter(
-                BayesianOptimizationResult.target_model_type == normalized_model_type
+            query = self.db.query(self.model_class).filter_by(
+                target_model_type=normalized_model_type
             )
 
             if not include_inactive:
-                query = query.filter(BayesianOptimizationResult.is_active == True)
+                query = query.filter_by(is_active=True)
 
             query = query.order_by(
-                desc(BayesianOptimizationResult.is_default),
-                desc(BayesianOptimizationResult.created_at),
+                desc(self.model_class.is_default),
+                desc(self.model_class.created_at),
             )
 
             if limit:

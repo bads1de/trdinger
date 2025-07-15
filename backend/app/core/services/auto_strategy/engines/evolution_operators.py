@@ -5,6 +5,7 @@
 """
 
 import logging
+import random
 
 logger = logging.getLogger(__name__)
 
@@ -89,7 +90,9 @@ class EvolutionOperators:
             # エラー時は元の個体をそのまま返す
             return (individual,)
 
-    def mutate_with_short_bias(self, individual, mutation_rate: float = 0.1, short_bias_rate: float = 0.3):
+    def mutate_with_short_bias(
+        self, individual, mutation_rate: float = 0.1, short_bias_rate: float = 0.3
+    ):
         """
         ショートバイアス付き突然変異
 
@@ -126,7 +129,6 @@ class EvolutionOperators:
             ショートバイアスが適用された個体
         """
         try:
-            import random
             from ..models.gene_encoding import GeneEncoder
             from ..models.gene_strategy import StrategyGene
             from ..generators.smart_condition_generator import SmartConditionGenerator
@@ -138,28 +140,41 @@ class EvolutionOperators:
             smart_generator = SmartConditionGenerator()
 
             # 既存のショート条件を拡張
-            enhanced_short_conditions = smart_generator.generate_enhanced_short_conditions(gene.indicators)
+            enhanced_short_conditions = (
+                smart_generator.generate_enhanced_short_conditions(gene.indicators)
+            )
 
             if enhanced_short_conditions:
                 # 既存のショート条件を一部置き換え
-                if hasattr(gene, 'short_entry_conditions') and gene.short_entry_conditions:
+                if (
+                    hasattr(gene, "short_entry_conditions")
+                    and gene.short_entry_conditions
+                ):
                     # 既存のショート条件の一部を拡張条件で置き換え
-                    replacement_count = min(len(enhanced_short_conditions), len(gene.short_entry_conditions))
+                    replacement_count = min(
+                        len(enhanced_short_conditions), len(gene.short_entry_conditions)
+                    )
                     for i in range(replacement_count):
                         if random.random() < 0.5:  # 50%の確率で置き換え
-                            gene.short_entry_conditions[i] = enhanced_short_conditions[i]
+                            gene.short_entry_conditions[i] = enhanced_short_conditions[
+                                i
+                            ]
 
                     # 追加の条件を加える
                     if len(enhanced_short_conditions) > replacement_count:
                         gene.short_entry_conditions.extend(
-                            enhanced_short_conditions[replacement_count:replacement_count+1]
+                            enhanced_short_conditions[
+                                replacement_count : replacement_count + 1
+                            ]
                         )
                 else:
                     # ショート条件が存在しない場合は新規追加
-                    gene.short_entry_conditions = enhanced_short_conditions[:2]  # 最大2つの条件
+                    gene.short_entry_conditions = enhanced_short_conditions[
+                        :2
+                    ]  # 最大2つの条件
 
             # 既存の条件にショートバイアスを適用
-            if hasattr(gene, 'entry_conditions') and gene.entry_conditions:
+            if hasattr(gene, "entry_conditions") and gene.entry_conditions:
                 gene.entry_conditions = smart_generator.apply_short_bias_mutation(
                     gene.entry_conditions, mutation_rate=0.4
                 )

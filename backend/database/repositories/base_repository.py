@@ -2,20 +2,23 @@
 基底リポジトリクラス
 """
 
-from typing import List, Optional, Type, Dict, Any
+from typing import List, Optional, Type, Dict, Any, TypeVar, Generic
 from datetime import datetime
 from sqlalchemy.orm import Session
 import logging
 
 from app.core.utils.database_utils import DatabaseInsertHelper, DatabaseQueryHelper
 
+
 logger = logging.getLogger(__name__)
 
+T = TypeVar("T")
 
-class BaseRepository:
+
+class BaseRepository(Generic[T]):
     """リポジトリの基底クラス"""
 
-    def __init__(self, db: Session, model_class: Type[Any]):
+    def __init__(self, db: Session, model_class: Type[T]):
         self.db = db
         self.model_class = model_class
 

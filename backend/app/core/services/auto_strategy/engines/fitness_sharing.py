@@ -6,7 +6,7 @@
 """
 
 import logging
-import math
+
 from typing import List, Dict, Any
 from ..models.gene_encoding import GeneEncoder
 from ..models.gene_strategy import StrategyGene
@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 class FitnessSharing:
     """
     フィットネス共有クラス
-    
+
     個体間の類似度を計算し、類似した個体のフィットネス値を調整することで
     多様な戦略の共存を促進します。
     """
@@ -74,7 +74,7 @@ class FitnessSharing:
 
                     # 類似度を計算
                     similarity = self._calculate_similarity(gene_i, gene_j)
-                    
+
                     # 共有関数を適用
                     sharing_value = self._sharing_function(similarity)
                     niche_count += sharing_value
@@ -83,7 +83,7 @@ class FitnessSharing:
 
             # フィットネス値を調整
             for i, individual in enumerate(population):
-                if hasattr(individual, 'fitness') and individual.fitness.valid:
+                if hasattr(individual, "fitness") and individual.fitness.valid:
                     original_fitness = individual.fitness.values[0]
                     shared_fitness = original_fitness / niche_counts[i]
                     individual.fitness.values = (shared_fitness,)
@@ -157,7 +157,9 @@ class FitnessSharing:
             logger.error(f"類似度計算エラー: {e}")
             return 0.0
 
-    def _calculate_indicator_similarity(self, indicators1: List[Any], indicators2: List[Any]) -> float:
+    def _calculate_indicator_similarity(
+        self, indicators1: List[Any], indicators2: List[Any]
+    ) -> float:
         """指標の類似度を計算"""
         try:
             if not indicators1 or not indicators2:
@@ -176,7 +178,9 @@ class FitnessSharing:
         except Exception:
             return 0.0
 
-    def _calculate_condition_similarity(self, conditions1: List[Any], conditions2: List[Any]) -> float:
+    def _calculate_condition_similarity(
+        self, conditions1: List[Any], conditions2: List[Any]
+    ) -> float:
         """条件の類似度を計算"""
         try:
             if not conditions1 or not conditions2:
@@ -191,21 +195,25 @@ class FitnessSharing:
                 cond2 = conditions2[i]
 
                 # 演算子の一致
-                if hasattr(cond1, 'operator') and hasattr(cond2, 'operator'):
+                if hasattr(cond1, "operator") and hasattr(cond2, "operator"):
                     if cond1.operator == cond2.operator:
                         similar_conditions += 0.5
 
                 # オペランドタイプの一致（簡易版）
-                if hasattr(cond1, 'left_operand') and hasattr(cond2, 'left_operand'):
+                if hasattr(cond1, "left_operand") and hasattr(cond2, "left_operand"):
                     if str(type(cond1.left_operand)) == str(type(cond2.left_operand)):
                         similar_conditions += 0.5
 
-            return similar_conditions / total_conditions if total_conditions > 0 else 0.0
+            return (
+                similar_conditions / total_conditions if total_conditions > 0 else 0.0
+            )
 
         except Exception:
             return 0.0
 
-    def _calculate_risk_management_similarity(self, risk1: Dict[str, Any], risk2: Dict[str, Any]) -> float:
+    def _calculate_risk_management_similarity(
+        self, risk1: Dict[str, Any], risk2: Dict[str, Any]
+    ) -> float:
         """リスク管理の類似度を計算"""
         try:
             if not risk1 or not risk2:
@@ -216,7 +224,7 @@ class FitnessSharing:
 
             # 共通フィールドの類似度を計算
             common_fields = set(risk1.keys()) & set(risk2.keys())
-            
+
             for field in common_fields:
                 total_fields += 1
                 val1 = risk1[field]
@@ -252,15 +260,22 @@ class FitnessSharing:
         score = 0.0
         if tpsl1.method == tpsl2.method:
             score += 0.5
-        
+
         # 数値パラメータの類似度（例: stop_loss_pct, take_profit_pct）
         if tpsl1.stop_loss_pct is not None and tpsl2.stop_loss_pct is not None:
             diff = abs(tpsl1.stop_loss_pct - tpsl2.stop_loss_pct)
-            score += max(0.0, 0.25 * (1 - diff / max(tpsl1.stop_loss_pct, tpsl2.stop_loss_pct, 1e-6)))
-        
+            score += max(
+                0.0,
+                0.25 * (1 - diff / max(tpsl1.stop_loss_pct, tpsl2.stop_loss_pct, 1e-6)),
+            )
+
         if tpsl1.take_profit_pct is not None and tpsl2.take_profit_pct is not None:
             diff = abs(tpsl1.take_profit_pct - tpsl2.take_profit_pct)
-            score += max(0.0, 0.25 * (1 - diff / max(tpsl1.take_profit_pct, tpsl2.take_profit_pct, 1e-6)))
+            score += max(
+                0.0,
+                0.25
+                * (1 - diff / max(tpsl1.take_profit_pct, tpsl2.take_profit_pct, 1e-6)),
+            )
 
         return min(1.0, score)
 
@@ -279,7 +294,10 @@ class FitnessSharing:
         # 数値パラメータの類似度（例: risk_per_trade）
         if ps1.risk_per_trade is not None and ps2.risk_per_trade is not None:
             diff = abs(ps1.risk_per_trade - ps2.risk_per_trade)
-            score += max(0.0, 0.5 * (1 - diff / max(ps1.risk_per_trade, ps2.risk_per_trade, 1e-6)))
+            score += max(
+                0.0,
+                0.5 * (1 - diff / max(ps1.risk_per_trade, ps2.risk_per_trade, 1e-6)),
+            )
 
         return min(1.0, score)
 
@@ -294,6 +312,6 @@ class FitnessSharing:
             共有値
         """
         if similarity <= self.sharing_radius:
-            return 1.0 # Full sharing within the radius
+            return 1.0  # Full sharing within the radius
         else:
-            return 0.0 # No sharing outside the radius
+            return 0.0  # No sharing outside the radius
