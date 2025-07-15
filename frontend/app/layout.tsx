@@ -16,8 +16,6 @@ import MainContent from "@/components/navigation/MainContent";
 // ラテン文字セットのみを読み込んでパフォーマンスを最適化
 const inter = Inter({ subsets: ["latin"] });
 
-// アプリケーションのメタデータ設定
-// SEOとソーシャルメディア共有に重要
 export const metadata: Metadata = {
   title: "Trdinger - Trading Strategy Backtest",
   description: "A trading strategy backtesting service for cryptocurrency",

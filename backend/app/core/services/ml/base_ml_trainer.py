@@ -15,8 +15,10 @@ from sklearn.preprocessing import StandardScaler
 
 from .config import ml_config
 from ...utils.ml_error_handler import (
-     MLDataError, MLModelError,
-    safe_ml_operation, ml_operation_context
+    MLDataError,
+    MLModelError,
+    safe_ml_operation,
+    ml_operation_context,
 )
 from .feature_engineering.feature_engineering_service import FeatureEngineeringService
 from .model_manager import model_manager
@@ -27,11 +29,11 @@ logger = logging.getLogger(__name__)
 class BaseMLTrainer(ABC):
     """
     ML学習基盤クラス
-    
+
     共通の学習ロジックを提供し、具体的な実装は継承クラスで行います。
     単一責任原則に従い、学習に関する責任のみを持ちます。
     """
-    
+
     def __init__(self):
         """初期化"""
         self.config = ml_config
@@ -40,8 +42,10 @@ class BaseMLTrainer(ABC):
         self.feature_columns = None
         self.is_trained = False
         self.model = None
-    
-    @safe_ml_operation(default_value={}, error_message="MLモデル学習でエラーが発生しました")
+
+    @safe_ml_operation(
+        default_value={}, error_message="MLモデル学習でエラーが発生しました"
+    )
     def train_model(
         self,
         training_data: pd.DataFrame,
@@ -49,11 +53,11 @@ class BaseMLTrainer(ABC):
         open_interest_data: Optional[pd.DataFrame] = None,
         save_model: bool = True,
         model_name: Optional[str] = None,
-        **training_params
+        **training_params,
     ) -> Dict[str, Any]:
         """
         MLモデルを学習（テンプレートメソッドパターン）
-        
+
         Args:
             training_data: 学習用OHLCVデータ
             funding_rate_data: ファンディングレートデータ（オプション）
@@ -61,10 +65,10 @@ class BaseMLTrainer(ABC):
             save_model: モデルを保存するか
             model_name: モデル名（オプション）
             **training_params: 追加の学習パラメータ
-        
+
         Returns:
             学習結果の辞書
-        
+
         Raises:
             MLDataError: データが無効な場合
             MLModelError: 学習に失敗した場合
@@ -72,21 +76,21 @@ class BaseMLTrainer(ABC):
         with ml_operation_context("MLモデル学習"):
             # 1. 入力データの検証
             self._validate_training_data(training_data)
-            
+
             # 2. 特徴量を計算
             features_df = self._calculate_features(
                 training_data, funding_rate_data, open_interest_data
             )
-            
+
             # 3. 学習用データを準備
             X, y = self._prepare_training_data(features_df, **training_params)
-            
+
             # 4. データを分割
             X_train, X_test, y_train, y_test = self._split_data(X, y, **training_params)
-            
+
             # 5. データを前処理
             X_train_scaled, X_test_scaled = self._preprocess_data(X_train, X_test)
-            
+
             # 6. モデルを学習（継承クラスで実装）
             training_result = self._train_model_impl(
                 X_train_scaled, X_test_scaled, y_train, y_test, **training_params
@@ -98,7 +102,8 @@ class BaseMLTrainer(ABC):
             # 8. モデルを保存
             if save_model:
                 model_path = self._save_model(
-                    model_name or self.config.model.AUTO_STRATEGY_MODEL_NAME
+                    model_name or self.config.model.AUTO_STRATEGY_MODEL_NAME,
+                    training_result,
                 )
                 training_result["model_path"] = model_path
 
@@ -107,59 +112,61 @@ class BaseMLTrainer(ABC):
 
             logger.info("MLモデル学習完了")
             return result
-    
-    @safe_ml_operation(default_value={}, error_message="モデル評価でエラーが発生しました")
+
+    @safe_ml_operation(
+        default_value={}, error_message="モデル評価でエラーが発生しました"
+    )
     def evaluate_model(
         self,
         test_data: pd.DataFrame,
         funding_rate_data: Optional[pd.DataFrame] = None,
-        open_interest_data: Optional[pd.DataFrame] = None
+        open_interest_data: Optional[pd.DataFrame] = None,
     ) -> Dict[str, Any]:
         """
         学習済みモデルを評価
-        
+
         Args:
             test_data: テスト用OHLCVデータ
             funding_rate_data: ファンディングレートデータ（オプション）
             open_interest_data: 建玉残高データ（オプション）
-        
+
         Returns:
             評価結果の辞書
         """
         if not self.is_trained:
             raise MLModelError("評価対象の学習済みモデルがありません")
-        
+
         # 特徴量を計算
         features_df = self._calculate_features(
             test_data, funding_rate_data, open_interest_data
         )
-        
+
         # 予測を実行
         predictions = self.predict(features_df)
-        
+
         # 評価結果を作成
         evaluation_result = {
             "predictions": predictions,
             "test_samples": len(test_data),
             "feature_count": len(self.feature_columns) if self.feature_columns else 0,
-            "model_status": "trained" if self.is_trained else "not_trained"
+            "model_status": "trained" if self.is_trained else "not_trained",
         }
-        
+
         return evaluation_result
-    
+
     @abstractmethod
     def predict(self, features_df: pd.DataFrame) -> np.ndarray:
         """
         予測を実行（継承クラスで実装）
-        
+
         Args:
             features_df: 特徴量DataFrame
-        
+
         Returns:
             予測結果
         """
         pass
-    
+
     @abstractmethod
     def _train_model_impl(
         self,
@@ -167,195 +174,206 @@ class BaseMLTrainer(ABC):
         X_test: pd.DataFrame,
         y_train: pd.Series,
         y_test: pd.Series,
-        **training_params
+        **training_params,
     ) -> Dict[str, Any]:
         """
         モデル学習の具体的な実装（継承クラスで実装）
-        
+
         Args:
             X_train: 学習用特徴量
             X_test: テスト用特徴量
             y_train: 学習用ラベル
             y_test: テスト用ラベル
             **training_params: 学習パラメータ
-        
+
         Returns:
             学習結果
         """
         pass
-    
+
     def _validate_training_data(self, training_data: pd.DataFrame) -> None:
         """入力データの検証"""
         if training_data is None or training_data.empty:
             raise MLDataError("学習データが空です")
-        
-        required_columns = ['Open', 'High', 'Low', 'Close', 'Volume']
-        missing_columns = [col for col in required_columns if col not in training_data.columns]
+
+        required_columns = ["Open", "High", "Low", "Close", "Volume"]
+        missing_columns = [
+            col for col in required_columns if col not in training_data.columns
+        ]
         if missing_columns:
             raise MLDataError(f"必要なカラムが不足しています: {missing_columns}")
-        
+
         if len(training_data) < 100:
             raise MLDataError("学習データが不足しています（最低100行必要）")
-    
+
     def _calculate_features(
         self,
         ohlcv_data: pd.DataFrame,
         funding_rate_data: Optional[pd.DataFrame] = None,
-        open_interest_data: Optional[pd.DataFrame] = None
+        open_interest_data: Optional[pd.DataFrame] = None,
     ) -> pd.DataFrame:
         """特徴量を計算"""
         return self.feature_service.calculate_advanced_features(
             ohlcv_data, funding_rate_data, open_interest_data
         )
-    
+
     def _prepare_training_data(
-        self, 
-        features_df: pd.DataFrame, 
-        **training_params
+        self, features_df: pd.DataFrame, **training_params
     ) -> Tuple[pd.DataFrame, pd.Series]:
         """学習用データを準備（継承クラスでオーバーライド可能）"""
         # デフォルト実装：最後の列をラベルとして使用
         if features_df.empty:
             raise MLDataError("特徴量データが空です")
-        
+
         # 数値列のみを選択
         numeric_columns = features_df.select_dtypes(include=[np.number]).columns
         features_df_numeric = features_df[numeric_columns]
-        
+
         # NaNを0で埋める
         features_df_clean = features_df_numeric.fillna(0)
-        
+
         # 特徴量とラベルを分離（デフォルト：価格変化率をラベルとして生成）
-        if 'Close' in features_df_clean.columns:
-            price_change = features_df_clean['Close'].pct_change().shift(-1)
-            threshold_up = training_params.get('threshold_up', 0.02)
-            threshold_down = training_params.get('threshold_down', -0.02)
-            
+        if "Close" in features_df_clean.columns:
+            price_change = features_df_clean["Close"].pct_change().shift(-1)
+            threshold_up = training_params.get("threshold_up", 0.02)
+            threshold_down = training_params.get("threshold_down", -0.02)
+
             # ラベル生成：0=下落、1=レンジ、2=上昇
             labels = pd.Series(1, index=price_change.index)  # デフォルト：レンジ
             labels[price_change > threshold_up] = 2  # 上昇
             labels[price_change < threshold_down] = 0  # 下落
-            
+
             # 最後の行は予測できないので除外
             features_df_clean = features_df_clean.iloc[:-1]
             labels = labels.iloc[:-1]
         else:
             raise MLDataError("価格データ（Close）が見つかりません")
-        
+
         # 無効なデータを除外
         valid_mask = ~(features_df_clean.isnull().any(axis=1) | labels.isnull())
         features_clean = features_df_clean[valid_mask]
         labels_clean = labels[valid_mask]
-        
+
         if len(features_clean) == 0:
             raise MLDataError("有効な学習データがありません")
-        
+
         self.feature_columns = features_clean.columns.tolist()
-        
-        logger.info(f"学習データ準備完了: {len(features_clean)}サンプル, {len(self.feature_columns)}特徴量")
-        logger.info(f"ラベル分布: 下落={sum(labels_clean==0)}, レンジ={sum(labels_clean==1)}, 上昇={sum(labels_clean==2)}")
-        
+
+        logger.info(
+            f"学習データ準備完了: {len(features_clean)}サンプル, {len(self.feature_columns)}特徴量"
+        )
+        logger.info(
+            f"ラベル分布: 下落={sum(labels_clean==0)}, レンジ={sum(labels_clean==1)}, 上昇={sum(labels_clean==2)}"
+        )
+
         return features_clean, labels_clean
-    
+
     def _split_data(
-        self, 
-        X: pd.DataFrame, 
-        y: pd.Series, 
-        **training_params
+        self, X: pd.DataFrame, y: pd.Series, **training_params
     ) -> Tuple[pd.DataFrame, pd.DataFrame, pd.Series, pd.Series]:
         """データを分割"""
-        test_size = training_params.get('test_size', 0.2)
-        random_state = training_params.get('random_state', 42)
-        
+        test_size = training_params.get("test_size", 0.2)
+        random_state = training_params.get("random_state", 42)
+
         return train_test_split(
-            X, y, 
-            test_size=test_size, 
-            random_state=random_state, 
-            stratify=y
+            X, y, test_size=test_size, random_state=random_state, stratify=y
         )
-    
+
     def _preprocess_data(
-        self, 
-        X_train: pd.DataFrame, 
-        X_test: pd.DataFrame
+        self, X_train: pd.DataFrame, X_test: pd.DataFrame
     ) -> Tuple[pd.DataFrame, pd.DataFrame]:
         """データを前処理（スケーリング）"""
         X_train_scaled = pd.DataFrame(
             self.scaler.fit_transform(X_train),
             columns=X_train.columns,
-            index=X_train.index
+            index=X_train.index,
         )
-        
+
         X_test_scaled = pd.DataFrame(
-            self.scaler.transform(X_test),
-            columns=X_test.columns,
-            index=X_test.index
+            self.scaler.transform(X_test), columns=X_test.columns, index=X_test.index
         )
-        
+
         return X_train_scaled, X_test_scaled
-    
-    def _save_model(self, model_name: str) -> str:
+
+    def _save_model(
+        self, model_name: str, training_result: Dict[str, Any] = None
+    ) -> str:
         """モデルを保存"""
         if not self.is_trained:
             raise MLModelError("学習済みモデルがありません")
-        
+
+        # 学習結果からメタデータを構築
         metadata = {
-            'model_type': self.__class__.__name__,
-            'feature_count': len(self.feature_columns) if self.feature_columns else 0,
-            'is_trained': self.is_trained
+            "model_type": self.__class__.__name__,
+            "feature_count": len(self.feature_columns) if self.feature_columns else 0,
+            "is_trained": self.is_trained,
         }
-        
+
+        # 学習結果が提供されている場合、メタデータに追加
+        if training_result:
+            metadata.update(
+                {
+                    "accuracy": training_result.get("accuracy", 0.0),
+                    "training_samples": training_result.get("train_samples", 0),
+                    "test_samples": training_result.get("test_samples", 0),
+                    "feature_importance": training_result.get("feature_importance", {}),
+                    "classification_report": training_result.get(
+                        "classification_report", {}
+                    ),
+                    "best_iteration": training_result.get("best_iteration", 0),
+                }
+            )
+
         model_path = model_manager.save_model(
             model=self.model,
             model_name=model_name,
             metadata=metadata,
             scaler=self.scaler,
-            feature_columns=self.feature_columns
+            feature_columns=self.feature_columns,
         )
-        
+
         logger.info(f"モデル保存完了: {model_path}")
         return model_path
-    
+
     def _format_training_result(
-        self, 
-        training_result: Dict[str, Any], 
-        X: pd.DataFrame, 
-        y: pd.Series
+        self, training_result: Dict[str, Any], X: pd.DataFrame, y: pd.Series
     ) -> Dict[str, Any]:
         """学習結果を整形"""
         result = {
             "success": True,
             "feature_count": len(self.feature_columns) if self.feature_columns else 0,
             "total_samples": len(X),
-            **training_result
+            **training_result,
         }
-        
+
         return result
-    
-    @safe_ml_operation(default_value=False, error_message="モデル読み込みでエラーが発生しました")
+
+    @safe_ml_operation(
+        default_value=False, error_message="モデル読み込みでエラーが発生しました"
+    )
     def load_model(self, model_path: str) -> bool:
         """
         モデルを読み込み
-        
+
         Args:
             model_path: モデルファイルパス
-        
+
         Returns:
             読み込み成功フラグ
         """
         model_data = model_manager.load_model(model_path)
-        
+
         if model_data is None:
             return False
-        
+
         # モデルデータから各要素を取得
-        self.model = model_data.get('model')
-        self.scaler = model_data.get('scaler')
-        self.feature_columns = model_data.get('feature_columns')
-        
+        self.model = model_data.get("model")
+        self.scaler = model_data.get("scaler")
+        self.feature_columns = model_data.get("feature_columns")
+
         if self.model is None:
             raise MLModelError("モデルデータにモデルが含まれていません")
-        
+
         self.is_trained = True
         logger.info(f"モデル読み込み完了: {model_path}")
         return True

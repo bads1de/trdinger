@@ -11,6 +11,7 @@ import MLModelList from "@/components/ml/MLModelList";
 import MLTraining from "@/components/ml/MLTraining";
 import MLModelStatus from "@/components/ml/MLModelStatus";
 import MLSettings from "@/components/ml/MLSettings";
+import MLOverviewDashboard from "@/components/ml/MLOverviewDashboard";
 
 /**
  * ML管理専用ページ
@@ -102,23 +103,7 @@ export default function MLManagementPage() {
         </div>
 
         {/* 概要タブ */}
-        {activeTab === "overview" && (
-          <div className="space-y-6">
-            <div className="grid grid-cols-1 gap-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center space-x-2">
-                    <Database className="h-5 w-5" />
-                    <span>最近のモデル</span>
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <MLModelList limit={5} showActions={false} />
-                </CardContent>
-              </Card>
-            </div>
-          </div>
-        )}
+        {activeTab === "overview" && <MLOverviewDashboard />}
 
         {/* モデル一覧タブ */}
         {activeTab === "models" && (
