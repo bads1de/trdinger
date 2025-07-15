@@ -67,7 +67,7 @@ export default function MLOverviewDashboard({
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-3">
           <Brain className="h-6 w-6 text-cyan-400" />
-          <div>
+          <div className="pt-1">
             <h2 className="text-xl font-bold text-foreground">
               ML概要ダッシュボード
             </h2>
@@ -97,53 +97,53 @@ export default function MLOverviewDashboard({
       {/* 統計サマリーカード */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <Card className="bg-gray-900/50 border-gray-800">
-          <CardContent className="p-4">
+          <CardContent className="pt-2">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-gray-400">総モデル数</p>
-                <p className="text-2xl font-bold text-white">
+                <p className="p-1 text-2xl font-bold text-white">
                   {stats.totalModels}
                 </p>
               </div>
-              <Database className="h-8 w-8 text-cyan-400" />
+              <Database className="h-10 w-10 text-cyan-400" />
             </div>
           </CardContent>
         </Card>
 
         <Card className="bg-gray-900/50 border-gray-800">
-          <CardContent className="p-4">
+          <CardContent className="pt-2">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-gray-400">アクティブモデル</p>
-                <p className="text-2xl font-bold text-green-400">
+                <p className="p-1 text-2xl font-bold text-green-400">
                   {stats.activeModels}
                 </p>
               </div>
-              <Activity className="h-8 w-8 text-green-400" />
+              <Activity className="h-10 w-10 text-green-400" />
             </div>
           </CardContent>
         </Card>
 
         <Card className="bg-gray-900/50 border-gray-800">
-          <CardContent className="p-4">
+          <CardContent className="pt-2">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-gray-400">総ファイルサイズ</p>
-                <p className="text-2xl font-bold text-purple-400">
+                <p className="p-1 text-2xl font-bold text-purple-400">
                   {stats.totalSize.toFixed(1)} MB
                 </p>
               </div>
-              <BarChart3 className="h-8 w-8 text-purple-400" />
+              <BarChart3 className="h-10 w-10 text-purple-400" />
             </div>
           </CardContent>
         </Card>
 
         <Card className="bg-gray-900/50 border-gray-800">
-          <CardContent className="p-4">
+          <CardContent className="pt-2">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-gray-400">最新モデル</p>
-                <p className="text-sm font-medium text-white truncate max-w-24">
+                <p className="p-1text-sm font-medium text-white truncate max-w-24">
                   {stats.latestModel?.name || "なし"}
                 </p>
                 {stats.latestModel && (
@@ -154,7 +154,7 @@ export default function MLOverviewDashboard({
                   </p>
                 )}
               </div>
-              <TrendingUp className="h-8 w-8 text-yellow-400" />
+              <TrendingUp className="h-10 w-10 text-yellow-400" />
             </div>
           </CardContent>
         </Card>
