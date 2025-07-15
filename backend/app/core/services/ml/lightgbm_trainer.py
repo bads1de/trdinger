@@ -8,7 +8,7 @@ import logging
 import pandas as pd
 import numpy as np
 import lightgbm as lgb
-from typing import Dict, Any
+from typing import Dict, Any, cast
 from sklearn.metrics import accuracy_score, classification_report
 
 from .base_ml_trainer import BaseMLTrainer
@@ -68,8 +68,11 @@ class LightGBMTrainer(BaseMLTrainer):
                 features_scaled = features_selected.values
 
             # 予測実行
-            predictions = self.model.predict(
-                features_scaled, num_iteration=self.model.best_iteration
+            predictions = cast(
+                np.ndarray,
+                self.model.predict(
+                    features_scaled, num_iteration=self.model.best_iteration
+                ),
             )
 
             # 3クラス分類の確率を返す
@@ -149,25 +152,26 @@ class LightGBMTrainer(BaseMLTrainer):
             )
 
             # 予測と評価
-            y_pred = self.model.predict(X_test, num_iteration=self.model.best_iteration)
+            y_pred_proba = cast(
+                np.ndarray,
+                self.model.predict(X_test, num_iteration=self.model.best_iteration),
+            )
 
             if num_classes > 2:
-                y_pred_class = np.argmax(y_pred, axis=1)
+                y_pred_class = np.argmax(y_pred_proba, axis=1)
             else:
-                y_pred_class = (y_pred > 0.5).astype(int)
+                y_pred_class = (y_pred_proba > 0.5).astype(int)
 
             accuracy = accuracy_score(y_test, y_pred_class)
             class_report = classification_report(
-                y_test, y_pred_class, output_dict=True, zero_division=0
+                y_test, y_pred_class, output_dict=True, zero_division="0"
             )
 
             # 特徴量重要度
-            feature_importance = dict(
-                zip(
-                    self.feature_columns,
-                    self.model.feature_importance(importance_type="gain"),
-                )
-            )
+            feature_importance = {}
+            if self.feature_columns:
+                importances = self.model.feature_importance(importance_type="gain")
+                feature_importance = dict(zip(self.feature_columns, importances))
 
             result = {
                 "accuracy": accuracy,

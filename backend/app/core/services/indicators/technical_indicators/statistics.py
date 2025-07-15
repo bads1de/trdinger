@@ -16,7 +16,6 @@ from ..utils import (
     log_indicator_calculation,
     format_indicator_result,
     ensure_numpy_array,
-    TALibError,
 )
 
 
@@ -168,7 +167,9 @@ class StatisticsIndicators:
         """
         data = ensure_numpy_array(data)
         validate_input(data, period)
-        log_indicator_calculation("STDDEV", {"period": period, "nbdev": nbdev}, len(data))
+        log_indicator_calculation(
+            "STDDEV", {"period": period, "nbdev": nbdev}, len(data)
+        )
 
         result = talib.STDDEV(data, timeperiod=period, nbdev=nbdev)
         return cast(np.ndarray, format_indicator_result(result, "STDDEV"))

@@ -165,61 +165,70 @@ class HistoricalDataService:
         ohlcv_results = {}
         total_ohlcv_saved = 0
 
-        for tf in timeframes:
-            try:
-                logger.info(f"OHLCV差分データ収集開始: {symbol} {tf}")
+        if ohlcv_repository:
+            for tf in timeframes:
+                try:
+                    logger.info(f"OHLCV差分データ収集開始: {symbol} {tf}")
 
-                # 最新タイムスタンプを取得
-                latest_timestamp = ohlcv_repository.get_latest_timestamp(symbol, tf)
-                since_ms = (
-                    int(latest_timestamp.timestamp() * 1000)
-                    if latest_timestamp
-                    else None
-                )
-
-                if since_ms:
-                    logger.info(f"差分データ収集: {symbol} {tf} (since: {since_ms})")
-                else:
-                    logger.info(f"初回データ収集: {symbol} {tf}")
-
-                # OHLCVデータを取得
-                ohlcv_data = await self.market_service.fetch_ohlcv_data(
-                    symbol, tf, 1000, since=since_ms
-                )
-
-                if not ohlcv_data:
-                    logger.info(f"新しいデータはありません: {symbol} {tf}")
-                    ohlcv_result = 0
-                else:
-                    # データベースに保存
-                    ohlcv_result = await self.market_service._save_ohlcv_to_database(
-                        ohlcv_data, symbol, tf, ohlcv_repository
+                    # 最新タイムスタンプを取得
+                    latest_timestamp = ohlcv_repository.get_latest_timestamp(symbol, tf)
+                    since_ms = (
+                        int(latest_timestamp.timestamp() * 1000)
+                        if latest_timestamp
+                        else None
                     )
 
-                ohlcv_results[tf] = {
-                    "symbol": symbol,
-                    "timeframe": tf,
-                    "saved_count": ohlcv_result,
-                    "success": True,
-                }
-                total_ohlcv_saved += ohlcv_result
-                logger.info(
-                    f"OHLCV差分データ収集完了: {symbol} {tf} - {ohlcv_result}件保存"
-                )
+                    if since_ms:
+                        logger.info(
+                            f"差分データ収集: {symbol} {tf} (since: {since_ms})"
+                        )
+                    else:
+                        logger.info(f"初回データ収集: {symbol} {tf}")
 
-                # API制限を回避するため少し待機
-                await asyncio.sleep(0.1)
+                    # OHLCVデータを取得
+                    ohlcv_data = await self.market_service.fetch_ohlcv_data(
+                        symbol, tf, 1000, since=since_ms
+                    )
 
-            except Exception as e:
-                logger.error(f"OHLCV差分データ収集エラー: {symbol} {tf} - {e}")
-                ohlcv_results[tf] = {
-                    "symbol": symbol,
-                    "timeframe": tf,
-                    "saved_count": 0,
-                    "success": False,
-                    "error": str(e),
-                }
-                results["errors"].append(f"OHLCV {tf}: {str(e)}")
+                    if not ohlcv_data:
+                        logger.info(f"新しいデータはありません: {symbol} {tf}")
+                        ohlcv_result = 0
+                    else:
+                        # データベースに保存
+                        ohlcv_result = (
+                            await self.market_service._save_ohlcv_to_database(
+                                ohlcv_data, symbol, tf, ohlcv_repository
+                            )
+                        )
+
+                    ohlcv_results[tf] = {
+                        "symbol": symbol,
+                        "timeframe": tf,
+                        "saved_count": ohlcv_result,
+                        "success": True,
+                    }
+                    total_ohlcv_saved += ohlcv_result
+                    logger.info(
+                        f"OHLCV差分データ収集完了: {symbol} {tf} - {ohlcv_result}件保存"
+                    )
+
+                    # API制限を回避するため少し待機
+                    await asyncio.sleep(0.1)
+
+                except Exception as e:
+                    logger.error(f"OHLCV差分データ収集エラー: {symbol} {tf} - {e}")
+                    ohlcv_results[tf] = {
+                        "symbol": symbol,
+                        "timeframe": tf,
+                        "saved_count": 0,
+                        "success": False,
+                        "error": str(e),
+                    }
+                    results["errors"].append(f"OHLCV {tf}: {str(e)}")
+        else:
+            logger.info(
+                "OHLCVリポジトリが提供されていないため、OHLCVデータ収集をスキップします。"
+            )
 
         # OHLCV結果の集計
         successful_timeframes = [r for r in ohlcv_results.values() if r["success"]]
@@ -241,63 +250,87 @@ class HistoricalDataService:
         await asyncio.sleep(0.2)
 
         # 2. ファンディングレートデータの差分更新
-        try:
-            logger.info(f"FR差分データ収集開始: {symbol}")
-            funding_rate_service = BybitFundingRateService()
-            fr_result = await funding_rate_service.fetch_incremental_funding_rate_data(
-                symbol, funding_rate_repository
+        if funding_rate_repository:
+            try:
+                logger.info(f"FR差分データ収集開始: {symbol}")
+                funding_rate_service = BybitFundingRateService()
+                fr_result = (
+                    await funding_rate_service.fetch_incremental_funding_rate_data(
+                        symbol, funding_rate_repository
+                    )
+                )
+
+                results["data"]["funding_rate"] = {
+                    "symbol": fr_result["symbol"],
+                    "saved_count": fr_result["saved_count"],
+                    "success": fr_result["success"],
+                    "latest_timestamp": fr_result.get("latest_timestamp"),
+                }
+                results["total_saved_count"] += fr_result["saved_count"]
+                logger.info(f"FR差分データ収集完了: {fr_result['saved_count']}件保存")
+
+            except Exception as e:
+                logger.error(f"FR差分データ収集エラー: {e}")
+                results["data"]["funding_rate"] = {
+                    "symbol": symbol,
+                    "saved_count": 0,
+                    "success": False,
+                    "error": str(e),
+                }
+                results["errors"].append(f"FR: {str(e)}")
+        else:
+            logger.info(
+                "ファンディングレートリポジトリが提供されていないため、FRデータ収集をスキップします。"
             )
-
-            results["data"]["funding_rate"] = {
-                "symbol": fr_result["symbol"],
-                "saved_count": fr_result["saved_count"],
-                "success": fr_result["success"],
-                "latest_timestamp": fr_result.get("latest_timestamp"),
-            }
-            results["total_saved_count"] += fr_result["saved_count"]
-            logger.info(f"FR差分データ収集完了: {fr_result['saved_count']}件保存")
-
-        except Exception as e:
-            logger.error(f"FR差分データ収集エラー: {e}")
             results["data"]["funding_rate"] = {
                 "symbol": symbol,
                 "saved_count": 0,
-                "success": False,
-                "error": str(e),
+                "success": True,
+                "error": "Repository not provided",
             }
-            results["errors"].append(f"FR: {str(e)}")
 
         # 少し待機してAPI制限を回避
         await asyncio.sleep(0.2)
 
         # 3. オープンインタレストデータの差分更新
-        try:
-            logger.info(f"OI差分データ収集開始: {symbol}")
-            open_interest_service = BybitOpenInterestService()
-            oi_result = (
-                await open_interest_service.fetch_incremental_open_interest_data(
-                    symbol, open_interest_repository
+        if open_interest_repository:
+            try:
+                logger.info(f"OI差分データ収集開始: {symbol}")
+                open_interest_service = BybitOpenInterestService()
+                oi_result = (
+                    await open_interest_service.fetch_incremental_open_interest_data(
+                        symbol, open_interest_repository
+                    )
                 )
+
+                results["data"]["open_interest"] = {
+                    "symbol": oi_result["symbol"],
+                    "saved_count": oi_result["saved_count"],
+                    "success": oi_result["success"],
+                    "latest_timestamp": oi_result.get("latest_timestamp"),
+                }
+                results["total_saved_count"] += oi_result["saved_count"]
+                logger.info(f"OI差分データ収集完了: {oi_result['saved_count']}件保存")
+
+            except Exception as e:
+                logger.error(f"OI差分データ収集エラー: {e}")
+                results["data"]["open_interest"] = {
+                    "symbol": symbol,
+                    "saved_count": 0,
+                    "success": False,
+                    "error": str(e),
+                }
+                results["errors"].append(f"OI: {str(e)}")
+        else:
+            logger.info(
+                "オープンインタレストリポジトリが提供されていないため、OIデータ収集をスキップします。"
             )
-
-            results["data"]["open_interest"] = {
-                "symbol": oi_result["symbol"],
-                "saved_count": oi_result["saved_count"],
-                "success": oi_result["success"],
-                "latest_timestamp": oi_result.get("latest_timestamp"),
-            }
-            results["total_saved_count"] += oi_result["saved_count"]
-            logger.info(f"OI差分データ収集完了: {oi_result['saved_count']}件保存")
-
-        except Exception as e:
-            logger.error(f"OI差分データ収集エラー: {e}")
             results["data"]["open_interest"] = {
                 "symbol": symbol,
                 "saved_count": 0,
-                "success": False,
-                "error": str(e),
+                "success": True,
+                "error": "Repository not provided",
             }
-            results["errors"].append(f"OI: {str(e)}")
 
         # 全体の成功判定
         if results["errors"]:

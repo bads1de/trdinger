@@ -82,7 +82,8 @@ class MLSignalGenerator:
             future_returns = df["close"].shift(-prediction_horizon) / df["close"] - 1
 
             # 3クラス分類のラベルを作成
-            labels = pd.Series(index=df.index, dtype=int)
+            # float型でラベルを初期化し、NaNを許容
+            labels = pd.Series(np.nan, index=df.index, dtype=float)
             labels[future_returns >= threshold_up] = 2  # 上昇
             labels[future_returns <= threshold_down] = 0  # 下落
             labels[
@@ -90,9 +91,10 @@ class MLSignalGenerator:
             ] = 1  # レンジ
 
             # NaNを除去
-            valid_mask = ~(future_returns.isna() | labels.isna())
+            valid_mask = labels.notna()
             df_clean = df[valid_mask].copy()
-            labels_clean = labels[valid_mask]
+            # NaN除去後にint型に変換
+            labels_clean = labels[valid_mask].astype(int)
 
             # 特徴量カラムを選択（数値カラムのみ）
             feature_columns = []
@@ -181,27 +183,23 @@ class MLSignalGenerator:
             )
 
             # 予測と評価
-            y_pred = self.model.predict(
+            y_pred_proba = self.model.predict(
                 X_test_scaled, num_iteration=self.model.best_iteration
             )
-            y_pred_class = np.argmax(y_pred, axis=1)
+            # 型チェッカーのためにキャスト
+            y_pred_proba = np.array(y_pred_proba)
+            y_pred_class = np.argmax(y_pred_proba, axis=1)
 
             accuracy = accuracy_score(y_test, y_pred_class)
             class_report = classification_report(
-                y_test, y_pred_class, output_dict=True, zero_division=0
+                y_test, y_pred_class, output_dict=True, zero_division="0"
             )
 
-            # 特徴量重要度（モデルタイプに応じて分岐）
-            if hasattr(self.model, "feature_importances_"):
-                # scikit-learn互換モデル
-                importances = self.model.feature_importances_
-            elif hasattr(self.model, "feature_importance"):
-                # LightGBMモデル
+            # 特徴量重要度
+            feature_importance = {}
+            if self.feature_columns and hasattr(self.model, "feature_importance"):
                 importances = self.model.feature_importance(importance_type="gain")
-            else:
-                importances = [0] * len(self.feature_columns)
-
-            feature_importance = dict(zip(self.feature_columns, importances))
+                feature_importance = dict(zip(self.feature_columns, importances))
 
             self.is_trained = True
 
@@ -267,24 +265,26 @@ class MLSignalGenerator:
 
             # 予測（モデルタイプに応じて適切なメソッドを使用）
             # LightGBMモデルの場合
-            predictions = self.model.predict(
-                features_scaled, num_iteration=self.model.best_iteration
+            predictions = np.array(
+                self.model.predict(
+                    features_scaled, num_iteration=self.model.best_iteration
+                )
             )
 
             # 最新の予測結果を取得
-            if len(predictions.shape) == 2:
+            if predictions.ndim == 2:
                 latest_pred = predictions[-1]  # 最後の行
             else:
                 latest_pred = predictions
 
             # 予測結果を3クラス（down, range, up）の確率に変換
-            if len(latest_pred) == 3:
+            if latest_pred.shape[0] == 3:
                 return {
                     "down": float(latest_pred[0]),
                     "range": float(latest_pred[1]),
                     "up": float(latest_pred[2]),
                 }
-            elif len(latest_pred) == 2:
+            elif latest_pred.shape[0] == 2:
                 # 2クラス分類の場合、rangeを中間値として設定
                 return {
                     "down": float(latest_pred[0]),
@@ -330,6 +330,9 @@ class MLSignalGenerator:
                 scaler=self.scaler,
                 feature_columns=self.feature_columns,
             )
+
+            if model_path is None:
+                raise MLModelError("モデルの保存に失敗し、パスが返されませんでした。")
 
             logger.info(f"モデル保存完了: {model_path}")
             return model_path
@@ -385,9 +388,15 @@ class MLSignalGenerator:
             if not self.is_trained or self.model is None:
                 return {}
 
+            if not self.feature_columns:
+                return {}
+
             # 特徴量重要度（モデルタイプに応じて分岐）
             # LightGBMモデル
             importances = self.model.feature_importance(importance_type="gain")
+
+            if not self.feature_columns:
+                return {}
 
             importance = dict(zip(self.feature_columns, importances))
 

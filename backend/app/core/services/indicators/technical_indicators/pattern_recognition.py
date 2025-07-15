@@ -11,7 +11,6 @@ import numpy as np
 from typing import cast
 from ..utils import (
     validate_input,
-    validate_multi_input,
     handle_talib_errors,
     log_indicator_calculation,
     format_indicator_result,
@@ -30,7 +29,9 @@ class PatternRecognitionIndicators:
 
     @staticmethod
     @handle_talib_errors
-    def cdl_doji(open_data: np.ndarray, high: np.ndarray, low: np.ndarray, close: np.ndarray) -> np.ndarray:
+    def cdl_doji(
+        open_data: np.ndarray, high: np.ndarray, low: np.ndarray, close: np.ndarray
+    ) -> np.ndarray:
         """
         Doji (同事)
 
@@ -47,12 +48,12 @@ class PatternRecognitionIndicators:
         high = ensure_numpy_array(high)
         low = ensure_numpy_array(low)
         close = ensure_numpy_array(close)
-        
+
         if not (len(open_data) == len(high) == len(low) == len(close)):
             raise TALibError(
                 f"OHLCデータの長さが一致しません。Open: {len(open_data)}, High: {len(high)}, Low: {len(low)}, Close: {len(close)}"
             )
-        
+
         validate_input(close, 1)
         log_indicator_calculation("CDL_DOJI", {}, len(close))
 
@@ -61,7 +62,9 @@ class PatternRecognitionIndicators:
 
     @staticmethod
     @handle_talib_errors
-    def cdl_hammer(open_data: np.ndarray, high: np.ndarray, low: np.ndarray, close: np.ndarray) -> np.ndarray:
+    def cdl_hammer(
+        open_data: np.ndarray, high: np.ndarray, low: np.ndarray, close: np.ndarray
+    ) -> np.ndarray:
         """
         Hammer (ハンマー)
 
@@ -78,12 +81,12 @@ class PatternRecognitionIndicators:
         high = ensure_numpy_array(high)
         low = ensure_numpy_array(low)
         close = ensure_numpy_array(close)
-        
+
         if not (len(open_data) == len(high) == len(low) == len(close)):
             raise TALibError(
                 f"OHLCデータの長さが一致しません。Open: {len(open_data)}, High: {len(high)}, Low: {len(low)}, Close: {len(close)}"
             )
-        
+
         validate_input(close, 1)
         log_indicator_calculation("CDL_HAMMER", {}, len(close))
 
@@ -92,7 +95,9 @@ class PatternRecognitionIndicators:
 
     @staticmethod
     @handle_talib_errors
-    def cdl_hanging_man(open_data: np.ndarray, high: np.ndarray, low: np.ndarray, close: np.ndarray) -> np.ndarray:
+    def cdl_hanging_man(
+        open_data: np.ndarray, high: np.ndarray, low: np.ndarray, close: np.ndarray
+    ) -> np.ndarray:
         """
         Hanging Man (首吊り線)
 
@@ -109,12 +114,12 @@ class PatternRecognitionIndicators:
         high = ensure_numpy_array(high)
         low = ensure_numpy_array(low)
         close = ensure_numpy_array(close)
-        
+
         if not (len(open_data) == len(high) == len(low) == len(close)):
             raise TALibError(
                 f"OHLCデータの長さが一致しません。Open: {len(open_data)}, High: {len(high)}, Low: {len(low)}, Close: {len(close)}"
             )
-        
+
         validate_input(close, 1)
         log_indicator_calculation("CDL_HANGING_MAN", {}, len(close))
 
@@ -123,7 +128,9 @@ class PatternRecognitionIndicators:
 
     @staticmethod
     @handle_talib_errors
-    def cdl_shooting_star(open_data: np.ndarray, high: np.ndarray, low: np.ndarray, close: np.ndarray) -> np.ndarray:
+    def cdl_shooting_star(
+        open_data: np.ndarray, high: np.ndarray, low: np.ndarray, close: np.ndarray
+    ) -> np.ndarray:
         """
         Shooting Star (流れ星)
 
@@ -140,12 +147,12 @@ class PatternRecognitionIndicators:
         high = ensure_numpy_array(high)
         low = ensure_numpy_array(low)
         close = ensure_numpy_array(close)
-        
+
         if not (len(open_data) == len(high) == len(low) == len(close)):
             raise TALibError(
                 f"OHLCデータの長さが一致しません。Open: {len(open_data)}, High: {len(high)}, Low: {len(low)}, Close: {len(close)}"
             )
-        
+
         validate_input(close, 1)
         log_indicator_calculation("CDL_SHOOTING_STAR", {}, len(close))
 
@@ -154,7 +161,9 @@ class PatternRecognitionIndicators:
 
     @staticmethod
     @handle_talib_errors
-    def cdl_engulfing(open_data: np.ndarray, high: np.ndarray, low: np.ndarray, close: np.ndarray) -> np.ndarray:
+    def cdl_engulfing(
+        open_data: np.ndarray, high: np.ndarray, low: np.ndarray, close: np.ndarray
+    ) -> np.ndarray:
         """
         Engulfing Pattern (包み線)
 
@@ -171,12 +180,12 @@ class PatternRecognitionIndicators:
         high = ensure_numpy_array(high)
         low = ensure_numpy_array(low)
         close = ensure_numpy_array(close)
-        
+
         if not (len(open_data) == len(high) == len(low) == len(close)):
             raise TALibError(
                 f"OHLCデータの長さが一致しません。Open: {len(open_data)}, High: {len(high)}, Low: {len(low)}, Close: {len(close)}"
             )
-        
+
         validate_input(close, 2)  # 包み線は2本のローソク足が必要
         log_indicator_calculation("CDL_ENGULFING", {}, len(close))
 
@@ -185,7 +194,9 @@ class PatternRecognitionIndicators:
 
     @staticmethod
     @handle_talib_errors
-    def cdl_harami(open_data: np.ndarray, high: np.ndarray, low: np.ndarray, close: np.ndarray) -> np.ndarray:
+    def cdl_harami(
+        open_data: np.ndarray, high: np.ndarray, low: np.ndarray, close: np.ndarray
+    ) -> np.ndarray:
         """
         Harami Pattern (はらみ線)
 
@@ -202,12 +213,12 @@ class PatternRecognitionIndicators:
         high = ensure_numpy_array(high)
         low = ensure_numpy_array(low)
         close = ensure_numpy_array(close)
-        
+
         if not (len(open_data) == len(high) == len(low) == len(close)):
             raise TALibError(
                 f"OHLCデータの長さが一致しません。Open: {len(open_data)}, High: {len(high)}, Low: {len(low)}, Close: {len(close)}"
             )
-        
+
         validate_input(close, 2)  # はらみ線は2本のローソク足が必要
         log_indicator_calculation("CDL_HARAMI", {}, len(close))
 
@@ -216,7 +227,9 @@ class PatternRecognitionIndicators:
 
     @staticmethod
     @handle_talib_errors
-    def cdl_piercing(open_data: np.ndarray, high: np.ndarray, low: np.ndarray, close: np.ndarray) -> np.ndarray:
+    def cdl_piercing(
+        open_data: np.ndarray, high: np.ndarray, low: np.ndarray, close: np.ndarray
+    ) -> np.ndarray:
         """
         Piercing Pattern (切り込み線)
 
@@ -233,12 +246,12 @@ class PatternRecognitionIndicators:
         high = ensure_numpy_array(high)
         low = ensure_numpy_array(low)
         close = ensure_numpy_array(close)
-        
+
         if not (len(open_data) == len(high) == len(low) == len(close)):
             raise TALibError(
                 f"OHLCデータの長さが一致しません。Open: {len(open_data)}, High: {len(high)}, Low: {len(low)}, Close: {len(close)}"
             )
-        
+
         validate_input(close, 2)
         log_indicator_calculation("CDL_PIERCING", {}, len(close))
 
@@ -247,7 +260,13 @@ class PatternRecognitionIndicators:
 
     @staticmethod
     @handle_talib_errors
-    def cdl_dark_cloud_cover(open_data: np.ndarray, high: np.ndarray, low: np.ndarray, close: np.ndarray, penetration: float = 0.5) -> np.ndarray:
+    def cdl_dark_cloud_cover(
+        open_data: np.ndarray,
+        high: np.ndarray,
+        low: np.ndarray,
+        close: np.ndarray,
+        penetration: float = 0.5,
+    ) -> np.ndarray:
         """
         Dark Cloud Cover (かぶせ線)
 
@@ -265,21 +284,31 @@ class PatternRecognitionIndicators:
         high = ensure_numpy_array(high)
         low = ensure_numpy_array(low)
         close = ensure_numpy_array(close)
-        
+
         if not (len(open_data) == len(high) == len(low) == len(close)):
             raise TALibError(
                 f"OHLCデータの長さが一致しません。Open: {len(open_data)}, High: {len(high)}, Low: {len(low)}, Close: {len(close)}"
             )
-        
-        validate_input(close, 2)
-        log_indicator_calculation("CDL_DARK_CLOUD_COVER", {"penetration": penetration}, len(close))
 
-        result = talib.CDLDARKCLOUDCOVER(open_data, high, low, close, penetration=penetration)
+        validate_input(close, 2)
+        log_indicator_calculation(
+            "CDL_DARK_CLOUD_COVER", {"penetration": penetration}, len(close)
+        )
+
+        result = talib.CDLDARKCLOUDCOVER(
+            open_data, high, low, close, penetration=penetration
+        )
         return cast(np.ndarray, format_indicator_result(result, "CDL_DARK_CLOUD_COVER"))
 
     @staticmethod
     @handle_talib_errors
-    def cdl_morning_star(open_data: np.ndarray, high: np.ndarray, low: np.ndarray, close: np.ndarray, penetration: float = 0.3) -> np.ndarray:
+    def cdl_morning_star(
+        open_data: np.ndarray,
+        high: np.ndarray,
+        low: np.ndarray,
+        close: np.ndarray,
+        penetration: float = 0.3,
+    ) -> np.ndarray:
         """
         Morning Star (明けの明星)
 
@@ -304,14 +333,24 @@ class PatternRecognitionIndicators:
             )
 
         validate_input(close, 3)  # 明けの明星は3本のローソク足が必要
-        log_indicator_calculation("CDL_MORNING_STAR", {"penetration": penetration}, len(close))
+        log_indicator_calculation(
+            "CDL_MORNING_STAR", {"penetration": penetration}, len(close)
+        )
 
-        result = talib.CDLMORNINGSTAR(open_data, high, low, close, penetration=penetration)
+        result = talib.CDLMORNINGSTAR(
+            open_data, high, low, close, penetration=penetration
+        )
         return cast(np.ndarray, format_indicator_result(result, "CDL_MORNING_STAR"))
 
     @staticmethod
     @handle_talib_errors
-    def cdl_evening_star(open_data: np.ndarray, high: np.ndarray, low: np.ndarray, close: np.ndarray, penetration: float = 0.3) -> np.ndarray:
+    def cdl_evening_star(
+        open_data: np.ndarray,
+        high: np.ndarray,
+        low: np.ndarray,
+        close: np.ndarray,
+        penetration: float = 0.3,
+    ) -> np.ndarray:
         """
         Evening Star (宵の明星)
 
@@ -336,14 +375,20 @@ class PatternRecognitionIndicators:
             )
 
         validate_input(close, 3)  # 宵の明星は3本のローソク足が必要
-        log_indicator_calculation("CDL_EVENING_STAR", {"penetration": penetration}, len(close))
+        log_indicator_calculation(
+            "CDL_EVENING_STAR", {"penetration": penetration}, len(close)
+        )
 
-        result = talib.CDLEVENINGSTAR(open_data, high, low, close, penetration=penetration)
+        result = talib.CDLEVENINGSTAR(
+            open_data, high, low, close, penetration=penetration
+        )
         return cast(np.ndarray, format_indicator_result(result, "CDL_EVENING_STAR"))
 
     @staticmethod
     @handle_talib_errors
-    def cdl_three_black_crows(open_data: np.ndarray, high: np.ndarray, low: np.ndarray, close: np.ndarray) -> np.ndarray:
+    def cdl_three_black_crows(
+        open_data: np.ndarray, high: np.ndarray, low: np.ndarray, close: np.ndarray
+    ) -> np.ndarray:
         """
         Three Black Crows (三羽烏)
 
@@ -370,11 +415,15 @@ class PatternRecognitionIndicators:
         log_indicator_calculation("CDL_THREE_BLACK_CROWS", {}, len(close))
 
         result = talib.CDL3BLACKCROWS(open_data, high, low, close)
-        return cast(np.ndarray, format_indicator_result(result, "CDL_THREE_BLACK_CROWS"))
+        return cast(
+            np.ndarray, format_indicator_result(result, "CDL_THREE_BLACK_CROWS")
+        )
 
     @staticmethod
     @handle_talib_errors
-    def cdl_three_white_soldiers(open_data: np.ndarray, high: np.ndarray, low: np.ndarray, close: np.ndarray) -> np.ndarray:
+    def cdl_three_white_soldiers(
+        open_data: np.ndarray, high: np.ndarray, low: np.ndarray, close: np.ndarray
+    ) -> np.ndarray:
         """
         Three Advancing White Soldiers (三兵)
 
@@ -401,4 +450,6 @@ class PatternRecognitionIndicators:
         log_indicator_calculation("CDL_THREE_WHITE_SOLDIERS", {}, len(close))
 
         result = talib.CDL3WHITESOLDIERS(open_data, high, low, close)
-        return cast(np.ndarray, format_indicator_result(result, "CDL_THREE_WHITE_SOLDIERS"))
+        return cast(
+            np.ndarray, format_indicator_result(result, "CDL_THREE_WHITE_SOLDIERS")
+        )
