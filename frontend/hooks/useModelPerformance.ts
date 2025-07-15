@@ -65,18 +65,6 @@ export const useModelPerformance = () => {
     loadModelStatus();
   }, [loadModelStatus]);
 
-  const getScoreColor = (score?: number) => {
-    if (!score) return "text-gray-400";
-
-    if (score >= 0.8) return "text-green-400";
-
-    if (score >= 0.7) return "text-yellow-400";
-
-    if (score >= 0.6) return "text-orange-400";
-
-    return "text-red-400";
-  };
-
   const getScoreBadgeVariant = (score?: number) => {
     if (!score) return "outline";
 
@@ -100,7 +88,6 @@ export const useModelPerformance = () => {
     loading,
     error,
     loadModelStatus,
-    getScoreColor,
     getScoreBadgeVariant,
     getStatusBadgeVariant,
   };

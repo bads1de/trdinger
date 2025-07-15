@@ -10,6 +10,7 @@ import {
   formatDateTime,
   formatPercentage,
   formatNumber,
+  getValueColorClass,
 } from "@/utils/formatters";
 import { BacktestResult } from "@/types/backtest";
 import LoadingSpinner from "@/components/common/LoadingSpinner";
@@ -27,14 +28,6 @@ export default function BacktestResultsTable({
   onResultSelect,
   onDelete,
 }: BacktestResultsTableProps) {
-  const getReturnColor = (value: number | undefined | null) => {
-    if (value === undefined || value === null || isNaN(value))
-      return "text-secondary-400";
-    if (value > 0) return "text-green-400";
-    if (value < 0) return "text-red-400";
-    return "text-gray-400";
-  };
-
   if (loading) {
     return (
       <div className="py-12">
@@ -117,7 +110,7 @@ export default function BacktestResultsTable({
               </td>
               <td className="px-6 py-4 whitespace-nowrap">
                 <div
-                  className={`text-sm font-medium ${getReturnColor(
+                  className={`text-sm font-medium ${getValueColorClass(
                     result.performance_metrics.total_return
                   )}`}
                 >
@@ -130,7 +123,12 @@ export default function BacktestResultsTable({
                 </div>
               </td>
               <td className="px-6 py-4 whitespace-nowrap">
-                <div className="text-sm text-red-400">
+                <div
+                  className={`text-sm ${getValueColorClass(
+                    result.performance_metrics.max_drawdown,
+                    { invert: true }
+                  )}`}
+                >
                   {formatPercentage(result.performance_metrics.max_drawdown)}
                 </div>
               </td>

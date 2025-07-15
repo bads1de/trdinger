@@ -70,46 +70,62 @@ export const formatNumber = (
   }).format(value);
 };
 
+/**
+ * 値に基づいて色を決定する汎用関数
+ * @param value 評価する数値
+ * @param options オプション
+ * @param options.invert 評価を反転するか（小さいほど良い場合はtrue）
+ * @param options.threshold しきい値（デフォルトは0）
+ * @returns Tailwind CSSのカラークラス
+ */
+export const getValueColorClass = (
+  value: number | null | undefined,
+  options: { invert?: boolean; threshold?: number } = {}
+) => {
+  const { invert = false, threshold = 0 } = options;
+  if (value === null || value === undefined || isNaN(value)) {
+    return "text-secondary-400";
+  }
+
+  const isPositive = value > threshold;
+  const isNegative = value < threshold;
+
+  if (invert) {
+    if (isPositive) return "text-red-400";
+    if (isNegative) return "text-green-400";
+  } else {
+    if (isPositive) return "text-green-400";
+    if (isNegative) return "text-red-400";
+  }
+
+  return "text-secondary-400";
+};
+
 export const getPnlColor = (pnl: number) => {
   if (pnl > 0) return "green";
-
   if (pnl < 0) return "red";
-
   return "gray";
 };
 
 export const getPnlTextColor = (pnl: number) => {
-  if (pnl > 0) return "text-green-400";
-
-  if (pnl < 0) return "text-red-400";
-
-  return "text-secondary-400";
+  return getValueColorClass(pnl);
 };
+
 export const getPriceChangeColor = (open: number, close: number) => {
-  if (close > open) return "text-green-400";
-
-  if (close < open) return "text-red-400";
-
-  return "text-gray-400";
+  return getValueColorClass(close - open);
 };
 
 export const getReturnColor = (value: number | null) => {
   if (value === null) return "gray";
-
   if (value > 0) return "green";
-
   if (value < 0) return "red";
-
   return "gray";
 };
 
 export const getSharpeColor = (value: number | null) => {
   if (value === null) return "gray";
-
   if (value > 1) return "green";
-
   if (value < 0) return "red";
-
   return "gray";
 };
 
@@ -224,4 +240,19 @@ export const formatScore = (score?: number) => {
   if (score === undefined || score === null || isNaN(score)) return "N/A";
 
   return score.toFixed(4);
+};
+
+/**
+ * スコアに基づいて色を決定する関数
+ * @param score 評価するスコア
+ * @returns Tailwind CSSのカラークラス
+ */
+export const getScoreColorClass = (score?: number) => {
+  if (score === undefined || score === null || isNaN(score))
+    return "text-gray-400";
+
+  if (score >= 0.8) return "text-green-400";
+  if (score >= 0.7) return "text-yellow-400";
+  if (score >= 0.6) return "text-orange-400";
+  return "text-red-400";
 };

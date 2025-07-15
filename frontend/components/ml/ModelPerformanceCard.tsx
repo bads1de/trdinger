@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import LoadingSpinner from "@/components/common/LoadingSpinner";
 import ErrorDisplay from "@/components/common/ErrorDisplay";
 import { useModelPerformance } from "@/hooks/useModelPerformance";
-import { formatTrainingTime } from "@/utils/formatters";
+import { formatTrainingTime, getScoreColorClass } from "@/utils/formatters";
 import {
   TrendingUp,
   Target,
@@ -37,7 +37,6 @@ export default function ModelPerformanceCard({
     loading,
     error,
     loadModelStatus,
-    getScoreColor,
     getScoreBadgeVariant,
     getStatusBadgeVariant,
   } = useModelPerformance();
@@ -185,7 +184,7 @@ export default function ModelPerformanceCard({
                   <span className="text-gray-400 text-sm">精度</span>
                 </div>
                 <div
-                  className={`text-lg font-bold ${getScoreColor(
+                  className={`text-lg font-bold ${getScoreColorClass(
                     modelInfo?.accuracy || metrics?.accuracy
                   )}`}
                 >
@@ -202,7 +201,7 @@ export default function ModelPerformanceCard({
                   <span className="text-gray-400 text-sm">F1スコア</span>
                 </div>
                 <div
-                  className={`text-lg font-bold ${getScoreColor(
+                  className={`text-lg font-bold ${getScoreColorClass(
                     metrics?.f1_score
                   )}`}
                 >
@@ -219,7 +218,7 @@ export default function ModelPerformanceCard({
                   <span className="text-gray-400 text-sm">AUC</span>
                 </div>
                 <div
-                  className={`text-lg font-bold ${getScoreColor(
+                  className={`text-lg font-bold ${getScoreColorClass(
                     metrics?.auc_score
                   )}`}
                 >
