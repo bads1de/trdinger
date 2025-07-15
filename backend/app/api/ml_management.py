@@ -5,15 +5,16 @@ ML管理API
 """
 
 from fastapi import APIRouter, HTTPException, BackgroundTasks
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any
 import logging
 from datetime import datetime
+import os
 
 from app.core.services.ml.model_manager import model_manager
 from app.core.services.ml.ml_training_service import ml_training_service
 from app.core.services.auto_strategy.services.ml_orchestrator import MLOrchestrator
 from app.core.services.ml.config import ml_config
-from app.core.utils.ml_error_handler import MLErrorHandler
+
 from app.core.services.backtest_data_service import BacktestDataService
 from database.repositories.ohlcv_repository import OHLCVRepository
 from database.repositories.open_interest_repository import OpenInterestRepository
@@ -208,9 +209,7 @@ async def get_ml_status():
                 "val_loss": 0.38,
                 "training_time": 120.5,
             }
-        elif latest_model:
-            import os
-
+        elif latest_model and os.path.exists(latest_model):
             try:
                 # モデルファイルから実際のメタデータを取得
                 model_data = model_manager.load_model(latest_model)
@@ -390,17 +389,6 @@ async def reset_ml_config():
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.get("/training/status")
-async def get_training_status():
-    """
-    トレーニング状態を取得
-
-    Returns:
-        トレーニング状態
-    """
-    return training_status
-
-
 @router.post("/training/start")
 async def start_training(
     background_tasks: BackgroundTasks, config_data: Dict[str, Any]
@@ -509,8 +497,14 @@ async def run_training_task(config_data: Dict[str, Any]):
         # 設定データから必要な情報を取得
         symbol = config_data.get("symbol", "BTC/USDT:USDT")
         timeframe = config_data.get("timeframe", "1h")
-        start_date = datetime.fromisoformat(config_data.get("start_date"))
-        end_date = datetime.fromisoformat(config_data.get("end_date"))
+        start_date_str = config_data.get("start_date")
+        end_date_str = config_data.get("end_date")
+
+        if not start_date_str or not end_date_str:
+            raise ValueError("start_date and end_date are required")
+
+        start_date = datetime.fromisoformat(start_date_str)
+        end_date = datetime.fromisoformat(end_date_str)
         save_model = config_data.get("save_model", True)
         train_test_split = config_data.get("train_test_split", 0.8)
         random_state = config_data.get("random_state", 42)

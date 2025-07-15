@@ -8,7 +8,7 @@
 import logging
 import pandas as pd
 import numpy as np
-from typing import Dict, Any
+from typing import Dict
 
 from ....utils.data_validation import DataValidator
 
@@ -220,12 +220,12 @@ class TechnicalFeatureCalculator:
             recent_high = result_df["High"].rolling(window=period).max()
             recent_low = result_df["Low"].rolling(window=period).min()
 
-            result_df["Support_Distance"] = (
-                result_df["Close"] - recent_low
-            ) / result_df["Close"]
-            result_df["Resistance_Distance"] = (
-                recent_high - result_df["Close"]
-            ) / result_df["Close"]
+            result_df["Support_Distance"] = DataValidator.safe_divide(
+                result_df["Close"] - recent_low, result_df["Close"]
+            )
+            result_df["Resistance_Distance"] = DataValidator.safe_divide(
+                recent_high - result_df["Close"], result_df["Close"]
+            )
 
             # ピボットポイント
             prev_high = result_df["High"].shift(1)
@@ -233,7 +233,9 @@ class TechnicalFeatureCalculator:
             prev_close = result_df["Close"].shift(1)
 
             pivot = (prev_high + prev_low + prev_close) / 3
-            result_df["Pivot_Distance"] = (result_df["Close"] - pivot) / pivot
+            result_df["Pivot_Distance"] = DataValidator.safe_divide(
+                result_df["Close"] - pivot, pivot
+            )
 
             # フィボナッチレベル
             swing_high = result_df["High"].rolling(window=period).max()
@@ -243,15 +245,17 @@ class TechnicalFeatureCalculator:
             for level in fib_levels:
                 fib_price = swing_low + (swing_high - swing_low) * level
                 result_df[f"Fib_{int(level*1000)}_Distance"] = (
-                    abs(result_df["Close"] - fib_price) / result_df["Close"]
+                    DataValidator.safe_divide(
+                        abs(result_df["Close"] - fib_price), result_df["Close"]
+                    )
                 )
 
             # ギャップ分析
             gap = result_df["Open"] - result_df["Close"].shift(1)
-            gap_pct = gap / result_df["Close"].shift(1)
+            gap_pct = DataValidator.safe_divide(gap, result_df["Close"].shift(1))
 
-            result_df["Gap_Up"] = (gap_pct > 0.01).astype(int)
-            result_df["Gap_Down"] = (gap_pct < -0.01).astype(int)
+            result_df["Gap_Up"] = (pd.Series(gap_pct) > 0.01).astype(int)
+            result_df["Gap_Down"] = (pd.Series(gap_pct) < -0.01).astype(int)
             result_df["Gap_Size"] = abs(gap_pct)
 
             logger.debug("パターン認識特徴量計算完了")

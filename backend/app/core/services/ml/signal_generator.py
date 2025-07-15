@@ -192,7 +192,7 @@ class MLSignalGenerator:
 
             accuracy = accuracy_score(y_test, y_pred_class)
             class_report = classification_report(
-                y_test, y_pred_class, output_dict=True, zero_division="0"
+                y_test, y_pred_class, output_dict=True, zero_division=0.0
             )
 
             # 特徴量重要度
