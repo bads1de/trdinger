@@ -14,6 +14,7 @@ import { GAConfig as GAConfigType } from "@/types/optimization";
 import { BacktestConfig as BacktestConfigType } from "@/types/backtest";
 import { BaseBacktestConfigForm } from "./BaseBacktestConfigForm";
 import { GA_OBJECTIVE_OPTIONS } from "@/constants/backtest";
+import { GA_INFO_MESSAGES } from "@/constants/info";
 
 // 指標モードの選択肢
 const INDICATOR_MODE_OPTIONS = [
@@ -173,6 +174,7 @@ const GAConfigForm: React.FC<GAConfigFormProps> = ({
         min={10}
         step={10}
         required
+        description={GA_INFO_MESSAGES.population_size}
       />
 
       <InputField
@@ -188,6 +190,7 @@ const GAConfigForm: React.FC<GAConfigFormProps> = ({
         min={1}
         step={1}
         required
+        description={GA_INFO_MESSAGES.generations}
       />
 
       <InputField
@@ -204,6 +207,7 @@ const GAConfigForm: React.FC<GAConfigFormProps> = ({
         max={1}
         step={0.01}
         required
+        description={GA_INFO_MESSAGES.mutation_rate}
       />
 
       <InputField
@@ -220,6 +224,7 @@ const GAConfigForm: React.FC<GAConfigFormProps> = ({
         max={1}
         step={0.01}
         required
+        description={GA_INFO_MESSAGES.crossover_rate}
       />
 
       <SelectField
@@ -241,58 +246,69 @@ const GAConfigForm: React.FC<GAConfigFormProps> = ({
         onChange={(value) =>
           setConfig((prev) => ({
             ...prev,
-            ga_config: { ...prev.ga_config, indicator_mode: value },
+            ga_config: {
+              ...prev.ga_config,
+              indicator_mode: value as "technical_only" | "ml_only" | "mixed",
+            },
           }))
         }
         options={INDICATOR_MODE_OPTIONS}
         required
       />
 
-      {/* 指標モードの説明 */}
-      <div className="space-y-2 p-4 border border-purple-600 rounded-lg bg-purple-900/20">
-        <h3 className="text-lg font-semibold text-purple-300">
-          📊 指標モード選択
+      {/* GA詳細設定 */}
+      <div className="space-y-4 p-4 border border-gray-700 rounded-lg bg-gray-900/30">
+        <h3 className="text-lg font-semibold text-gray-200 mb-3">
+          🧬 GA詳細設定
         </h3>
-        <div className="text-sm text-purple-200 space-y-2">
-          <div>
-            <strong className="text-purple-100">混合 (テクニカル + ML):</strong>
-            テクニカル指標とML予測指標の両方を使用して戦略を生成します（推奨）
-          </div>
-          <div>
-            <strong className="text-purple-100">テクニカルオンリー:</strong>
-            従来のテクニカル指標のみを使用して戦略を生成します
-          </div>
-          <div>
-            <strong className="text-purple-100">MLオンリー:</strong>
-            ML予測指標（ML_UP_PROB, ML_DOWN_PROB, ML_RANGE_PROB）のみを使用します
+
+        {/* 指標モードの説明 */}
+        <div className="p-3 bg-purple-900/30 border border-purple-500/30 rounded-md">
+          <h4 className="font-medium text-purple-300 mb-2">
+            📊 指標モード選択
+          </h4>
+          <div className="text-sm text-purple-200 space-y-1">
+            <div>
+              <strong className="text-purple-100">混合 (推奨):</strong>{" "}
+              テクニカル指標とML予測指標の両方を使用
+            </div>
+            <div>
+              <strong className="text-purple-100">テクニカルオンリー:</strong>{" "}
+              従来のテクニカル指標のみを使用
+            </div>
+            <div>
+              <strong className="text-purple-100">MLオンリー:</strong>{" "}
+              ML予測指標のみを使用
+            </div>
           </div>
         </div>
-      </div>
 
-      {/* TP/SL & ポジションサイジング自動最適化の説明 */}
-      <div className="space-y-4 p-4 border border-blue-600 rounded-lg bg-blue-900/20">
-        <h3 className="text-lg font-semibold text-blue-300">
-          🤖 リスク管理自動最適化
-        </h3>
-        <p className="text-sm text-blue-200">
-          TP/SL設定とポジションサイズは、テクニカル指標と同様にGAが自動で最適化します。
-          <strong className="text-blue-100">従来のイグジット条件は自動的に無効化され、TP/SL機能が優先されます。</strong>
-          手動設定は不要です。
-        </p>
+        {/* リスク管理自動最適化 */}
+        <div className="p-3 bg-blue-900/30 border border-blue-500/30 rounded-md">
+          <h4 className="font-medium text-blue-300 mb-2">
+            🤖 リスク管理自動最適化
+          </h4>
+          <p className="text-sm text-blue-200">
+            TP/SLとポジションサイズはGAが自動最適化します。
+            <strong className="text-blue-100">
+              手動でのイグジット条件は無視されます。
+            </strong>
+          </p>
+        </div>
 
         {/* TP/SL自動最適化 */}
         <div className="p-3 bg-pink-900/30 border border-pink-500/30 rounded-md">
           <h4 className="font-medium text-pink-300 mb-2">📈 TP/SL自動最適化</h4>
           <div className="text-xs text-pink-200 space-y-1">
             <div>
-              • <strong>TP/SL決定方式</strong>:
-              固定値、リスクリワード比、ボラティリティベースなど
+              • <strong>決定方式</strong>:
+              固定値、リスクリワード比、ボラティリティベース等
             </div>
             <div>
-              • <strong>リスクリワード比</strong>: 1:1.2 ～ 1:4.0の範囲
+              • <strong>リスクリワード比</strong>: 1:1.2 ～ 1:4.0
             </div>
             <div>
-              • <strong>具体的なパーセンテージ</strong>: SL: 1%-8%, TP: 2%-20%
+              • <strong>パーセンテージ範囲</strong>: SL: 1%-8%, TP: 2%-20%
             </div>
           </div>
         </div>
@@ -300,33 +316,22 @@ const GAConfigForm: React.FC<GAConfigFormProps> = ({
         {/* ポジションサイジング自動最適化 */}
         <div className="p-3 bg-emerald-900/30 border border-emerald-500/30 rounded-md">
           <h4 className="font-medium text-emerald-300 mb-2">
-            � ポジションサイジング自動最適化
+            💰 ポジションサイジング自動最適化
           </h4>
           <div className="text-xs text-emerald-200 space-y-1">
             <div>
-              • <strong>ハーフオプティマルF</strong>:
-              過去データ分析によるリスク最適化
-            </div>
-            <div>
-              • <strong>ボラティリティベース</strong>: ATRを使用したリスク調整
-            </div>
-            <div>
-              • <strong>固定比率</strong>: 口座残高に対する固定比率
-            </div>
-            <div>
-              • <strong>固定枚数</strong>: 設定された固定枚数
+              • <strong>方式</strong>: ハーフオプティマルF,
+              ボラティリティベース, 固定比率/枚数
             </div>
           </div>
         </div>
 
-        {/* 高度な設定 */}
-        <div className="p-3 bg-purple-900/30 border border-purple-500/30 rounded-md">
-          <h4 className="font-medium text-purple-300 mb-3">
-            🧬 高度なGA設定
-          </h4>
+        {/* 高度なGA設定 */}
+        <div className="p-3 bg-indigo-900/30 border border-indigo-500/30 rounded-md">
+          <h4 className="font-medium text-indigo-300 mb-3">⚙️ 高度なGA設定</h4>
 
           {/* フィットネス共有 */}
-          <div className="mb-4">
+          <div className="mb-2">
             <label className="flex items-center space-x-2">
               <input
                 type="checkbox"
@@ -340,16 +345,16 @@ const GAConfigForm: React.FC<GAConfigFormProps> = ({
                     },
                   })
                 }
-                className="rounded border-purple-500 text-purple-600 focus:ring-purple-500"
+                className="rounded border-indigo-500 text-indigo-600 focus:ring-indigo-500"
               />
-              <span className="text-sm text-purple-200">
-                フィットネス共有を有効化（戦略の多様性向上）
+              <span className="text-sm text-indigo-200">
+                フィットネス共有 (戦略の多様性向上)
               </span>
             </label>
           </div>
 
           {/* ショートバイアス突然変異 */}
-          <div className="mb-4">
+          <div>
             <label className="flex items-center space-x-2">
               <input
                 type="checkbox"
@@ -363,17 +368,17 @@ const GAConfigForm: React.FC<GAConfigFormProps> = ({
                     },
                   })
                 }
-                className="rounded border-purple-500 text-purple-600 focus:ring-purple-500"
+                className="rounded border-indigo-500 text-indigo-600 focus:ring-indigo-500"
               />
-              <span className="text-sm text-purple-200">
-                ショートバイアス突然変異を有効化（ショート戦略強化）
+              <span className="text-sm text-indigo-200">
+                ショートバイアス突然変異 (ショート戦略強化)
               </span>
             </label>
           </div>
 
           {/* ショートバイアス率 */}
           {config.ga_config.enable_short_bias_mutation && (
-            <div className="mb-4">
+            <div className="mt-2 pl-6">
               <InputField
                 label="ショートバイアス適用率"
                 type="number"
@@ -394,15 +399,6 @@ const GAConfigForm: React.FC<GAConfigFormProps> = ({
               />
             </div>
           )}
-
-          <div className="text-xs text-purple-200 space-y-1">
-            <div>
-              • <strong>フィットネス共有</strong>: 類似戦略の評価を下げ、多様な戦略を促進
-            </div>
-            <div>
-              • <strong>ショートバイアス突然変異</strong>: ショート戦略の生成を強化
-            </div>
-          </div>
         </div>
       </div>
 

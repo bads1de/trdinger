@@ -23,8 +23,6 @@ import {
 } from "lucide-react";
 
 interface MLOverviewDashboardProps {
-  /** 自動更新間隔（秒） */
-  autoRefreshInterval?: number;
   /** カスタムクラス名 */
   className?: string;
 }
@@ -35,7 +33,6 @@ interface MLOverviewDashboardProps {
  * 機械学習モデルの詳細情報を統合的に可視化するダッシュボード
  */
 export default function MLOverviewDashboard({
-  autoRefreshInterval = 0,
   className = "",
 }: MLOverviewDashboardProps) {
   const [refreshKey, setRefreshKey] = useState(0);

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useMemo } from "react";
+import React from "react";
 import {
   BarChart,
   Bar,
@@ -16,18 +16,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import LoadingSpinner from "@/components/common/LoadingSpinner";
 import ErrorDisplay from "@/components/common/ErrorDisplay";
-import { useApiCall } from "@/hooks/useApiCall";
+import { useFeatureImportance } from "@/hooks/useFeatureImportance";
 import { TrendingUp, BarChart3, RefreshCw } from "lucide-react";
-
-interface FeatureImportanceData {
-  feature_name: string;
-  importance: number;
-  rank: number;
-}
-
-interface FeatureImportanceResponse {
-  feature_importance: Record<string, number>;
-}
 
 interface FeatureImportanceChartProps {
   /** 表示する特徴量の数 */
@@ -52,89 +42,18 @@ export default function FeatureImportanceChart({
   autoRefreshInterval,
   className = "",
 }: FeatureImportanceChartProps) {
-  const [displayCount, setDisplayCount] = useState(topN);
-  const [sortOrder, setSortOrder] = useState<"desc" | "asc">("desc");
-
   const {
-    execute: fetchFeatureImportance,
+    data,
+    chartData,
     loading,
     error,
-    reset,
-  } = useApiCall<FeatureImportanceResponse>();
-
-  const [data, setData] = useState<FeatureImportanceData[]>([]);
-
-  // データ取得関数
-  const loadFeatureImportance = async () => {
-    reset();
-    await fetchFeatureImportance(
-      `/api/ml/feature-importance?top_n=${displayCount}`,
-      {
-        method: "GET",
-        onSuccess: (response) => {
-          console.log("FeatureImportanceChart - APIレスポンス:", response);
-          if (response?.feature_importance) {
-            const formattedData = Object.entries(response.feature_importance)
-              .map(([feature_name, importance], index) => ({
-                feature_name,
-                importance: Number(importance),
-                rank: index + 1,
-              }))
-              .sort((a, b) =>
-                sortOrder === "desc"
-                  ? b.importance - a.importance
-                  : a.importance - b.importance
-              );
-            setData(formattedData);
-            console.log(
-              "FeatureImportanceChart - 処理済みデータ:",
-              formattedData
-            );
-          } else {
-            console.warn(
-              "FeatureImportanceChart - feature_importanceが見つかりません:",
-              response
-            );
-          }
-        },
-        onError: (errorMessage) => {
-          console.error("特徴量重要度取得エラー:", errorMessage);
-        },
-      }
-    );
-  };
-
-  // 初期データ読み込み
-  useEffect(() => {
-    loadFeatureImportance();
-  }, [displayCount, sortOrder]);
-
-  // 自動更新設定
-  useEffect(() => {
-    if (autoRefreshInterval && autoRefreshInterval > 0) {
-      const interval = setInterval(
-        loadFeatureImportance,
-        autoRefreshInterval * 1000
-      );
-      return () => clearInterval(interval);
-    }
-  }, [autoRefreshInterval, displayCount, sortOrder]);
-
-  // チャートデータの処理
-  const chartData = useMemo(() => {
-    return data.map((item, index) => ({
-      ...item,
-      // 特徴量名を短縮表示用に加工
-      shortName:
-        item.feature_name.length > 15
-          ? `${item.feature_name.substring(0, 12)}...`
-          : item.feature_name,
-      // 重要度を百分率に変換
-      importancePercent: (item.importance * 100).toFixed(2),
-      // カラーグラデーション用のインデックス
-      colorIndex: index,
-    }));
-  }, [data]);
+    displayCount,
+    sortOrder,
+    setDisplayCount,
+    setSortOrder,
+    loadFeatureImportance,
+    getBarColor,
+  } = useFeatureImportance(topN, autoRefreshInterval);
 
   // カスタムツールチップ
   const CustomTooltip = ({ active, payload, label }: any) => {
@@ -161,13 +80,6 @@ export default function FeatureImportanceChart({
       );
     }
     return null;
-  };
-
-  // 色の生成（重要度に基づくグラデーション）
-  const getBarColor = (index: number, total: number) => {
-    const intensity = 1 - index / total;
-    const hue = 180 + intensity * 60; // 青緑から青へのグラデーション
-    return `hsl(${hue}, 70%, ${50 + intensity * 20}%)`;
   };
 
   if (loading) {

@@ -1,12 +1,12 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import LoadingSpinner from "@/components/common/LoadingSpinner";
 import ErrorDisplay from "@/components/common/ErrorDisplay";
-import { useApiCall } from "@/hooks/useApiCall";
+import { useModelPerformance } from "@/hooks/useModelPerformance";
 import {
   TrendingUp,
   Target,
@@ -17,40 +17,6 @@ import {
   CheckCircle,
   Clock,
 } from "lucide-react";
-
-interface PerformanceMetrics {
-  accuracy?: number;
-  precision?: number;
-  recall?: number;
-  f1_score?: number;
-  auc_score?: number;
-  loss?: number;
-  val_accuracy?: number;
-  val_loss?: number;
-  training_time?: number;
-  last_evaluation?: string;
-}
-
-interface ModelStatusResponse {
-  is_model_loaded: boolean;
-  is_trained: boolean;
-  last_predictions?: {
-    up: number;
-    down: number;
-    range: number;
-  };
-  feature_count: number;
-  model_info?: {
-    accuracy?: number;
-    model_type?: string;
-    training_samples?: number;
-    last_updated?: string;
-  };
-  performance_metrics?: PerformanceMetrics;
-  is_training?: boolean;
-  training_progress?: number;
-  status?: string;
-}
 
 interface ModelPerformanceCardProps {
   /** カスタムクラス名 */
@@ -65,63 +31,16 @@ interface ModelPerformanceCardProps {
 export default function ModelPerformanceCard({
   className = "",
 }: ModelPerformanceCardProps) {
-  const [modelStatus, setModelStatus] = useState<ModelStatusResponse | null>(
-    null
-  );
-
   const {
-    execute: fetchModelStatus,
+    modelStatus,
     loading,
     error,
-    reset,
-  } = useApiCall<ModelStatusResponse>();
-
-  // データ取得関数
-  const loadModelStatus = async () => {
-    reset();
-    await fetchModelStatus("/api/ml/status", {
-      method: "GET",
-      onSuccess: (response) => {
-        console.log("ModelPerformanceCard - APIレスポンス:", response);
-        console.log(
-          "ModelPerformanceCard - is_model_loaded:",
-          response?.is_model_loaded
-        );
-        console.log("ModelPerformanceCard - is_trained:", response?.is_trained);
-        console.log("ModelPerformanceCard - model_info:", response?.model_info);
-        console.log(
-          "ModelPerformanceCard - feature_count:",
-          response?.feature_count
-        );
-        setModelStatus(response);
-      },
-      onError: (errorMessage) => {
-        console.error("モデル状態取得エラー:", errorMessage);
-      },
-    });
-  };
-
-  // 初期データ読み込み
-  useEffect(() => {
-    loadModelStatus();
-  }, []);
-
-  // 性能スコアの色を取得
-  const getScoreColor = (score?: number) => {
-    if (!score) return "text-gray-400";
-    if (score >= 0.8) return "text-green-400";
-    if (score >= 0.7) return "text-yellow-400";
-    if (score >= 0.6) return "text-orange-400";
-    return "text-red-400";
-  };
-
-  // 性能スコアのバッジバリアントを取得
-  const getScoreBadgeVariant = (score?: number) => {
-    if (!score) return "outline";
-    if (score >= 0.8) return "success";
-    if (score >= 0.7) return "warning";
-    return "destructive";
-  };
+    loadModelStatus,
+    getScoreColor,
+    getScoreBadgeVariant,
+    getStatusBadgeVariant,
+    formatTrainingTime,
+  } = useModelPerformance();
 
   // 学習状態のアイコンを取得
   const getStatusIcon = () => {
@@ -147,34 +66,6 @@ export default function ModelPerformanceCard({
     }
 
     return "未読み込み";
-  };
-
-  // 学習状態のバッジバリアントを取得
-  const getStatusBadgeVariant = () => {
-    if (modelStatus?.is_training) return "default";
-
-    if (modelStatus?.is_model_loaded) return "success";
-
-    return "outline";
-  };
-
-  // 時間フォーマット関数
-  const formatTrainingTime = (seconds?: number) => {
-    if (!seconds) return "不明";
-
-    const hours = Math.floor(seconds / 3600);
-    const minutes = Math.floor((seconds % 3600) / 60);
-    const secs = Math.floor(seconds % 60);
-
-    if (hours > 0) {
-      return `${hours}時間${minutes}分${secs}秒`;
-    }
-
-    if (minutes > 0) {
-      return `${minutes}分${secs}秒`;
-    }
-
-    return `${secs}秒`;
   };
 
   if (loading) {

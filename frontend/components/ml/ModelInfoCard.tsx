@@ -1,15 +1,14 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import LoadingSpinner from "@/components/common/LoadingSpinner";
 import ErrorDisplay from "@/components/common/ErrorDisplay";
-import { useApiCall } from "@/hooks/useApiCall";
+import { useModelInfo } from "@/hooks/useModelInfo";
 import {
   Brain,
-  Calendar,
   Database,
   Settings,
   ChevronDown,
@@ -17,32 +16,6 @@ import {
   RefreshCw,
   Info,
 } from "lucide-react";
-
-interface ModelInfo {
-  model_name?: string;
-  model_type?: string;
-  accuracy?: number;
-  last_updated?: string;
-  training_samples?: number;
-  file_size_mb?: number;
-  parameters?: Record<string, any>;
-  training_config?: Record<string, any>;
-}
-
-interface ModelStatusResponse {
-  is_model_loaded: boolean;
-  is_trained: boolean;
-  last_predictions?: {
-    up: number;
-    down: number;
-    range: number;
-  };
-  feature_count: number;
-  model_info?: ModelInfo;
-  model_path?: string;
-  last_prediction_time?: string;
-  prediction_count?: number;
-}
 
 interface ModelInfoCardProps {
   /** 自動更新間隔（秒） */
@@ -64,91 +37,16 @@ export default function ModelInfoCard({
   defaultExpanded = false,
 }: ModelInfoCardProps) {
   const [isExpanded, setIsExpanded] = useState(defaultExpanded);
-  const [modelStatus, setModelStatus] = useState<ModelStatusResponse | null>(
-    null
-  );
-
   const {
-    execute: fetchModelStatus,
+    modelStatus,
     loading,
     error,
-    reset,
-  } = useApiCall<ModelStatusResponse>();
-
-  // データ取得関数
-  const loadModelStatus = async () => {
-    reset();
-    await fetchModelStatus("/api/ml/status", {
-      method: "GET",
-      onSuccess: (response) => {
-        console.log("ModelInfoCard - APIレスポンス:", response);
-        setModelStatus(response);
-      },
-      onError: (errorMessage) => {
-        console.error("モデル状態取得エラー:", errorMessage);
-      },
-    });
-  };
-
-  // 初期データ読み込み
-  useEffect(() => {
-    loadModelStatus();
-  }, []);
-
-  // 自動更新設定
-  useEffect(() => {
-    if (autoRefreshInterval && autoRefreshInterval > 0) {
-      const interval = setInterval(loadModelStatus, autoRefreshInterval * 1000);
-      return () => clearInterval(interval);
-    }
-  }, [autoRefreshInterval]);
-
-  // 日時フォーマット関数
-  const formatDateTime = (dateString?: string) => {
-    if (!dateString) return "不明";
-    try {
-      return new Date(dateString).toLocaleString("ja-JP", {
-        year: "numeric",
-        month: "2-digit",
-        day: "2-digit",
-        hour: "2-digit",
-        minute: "2-digit",
-      });
-    } catch {
-      return "不明";
-    }
-  };
-
-  // ファイルサイズフォーマット関数
-  const formatFileSize = (sizeInMB?: number) => {
-    if (!sizeInMB) return "不明";
-    if (sizeInMB < 1) {
-      return `${(sizeInMB * 1024).toFixed(1)} KB`;
-    }
-    return `${sizeInMB.toFixed(1)} MB`;
-  };
-
-  // モデル種別のバッジ色を取得
-  const getModelTypeBadgeVariant = (modelType?: string) => {
-    switch (modelType?.toLowerCase()) {
-      case "lightgbm":
-        return "default";
-      case "randomforest":
-        return "secondary";
-      case "xgboost":
-        return "outline";
-      default:
-        return "outline";
-    }
-  };
-
-  // 精度のバッジ色を取得
-  const getAccuracyBadgeVariant = (accuracy?: number) => {
-    if (!accuracy) return "outline";
-    if (accuracy >= 0.8) return "success";
-    if (accuracy >= 0.7) return "warning";
-    return "destructive";
-  };
+    loadModelStatus,
+    formatDateTime,
+    formatFileSize,
+    getModelTypeBadgeVariant,
+    getAccuracyBadgeVariant,
+  } = useModelInfo(autoRefreshInterval);
 
   if (loading) {
     return (

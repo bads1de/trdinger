@@ -1,6 +1,13 @@
 "use client";
 
 import React from "react";
+import { Info } from "lucide-react";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 interface InputFieldProps {
   label: string;
@@ -15,6 +22,7 @@ interface InputFieldProps {
   placeholder?: string;
   className?: string;
   disabled?: boolean;
+  description?: string;
 }
 
 export const InputField: React.FC<InputFieldProps> = ({
@@ -30,12 +38,27 @@ export const InputField: React.FC<InputFieldProps> = ({
   placeholder = "",
   className = "",
   disabled = false,
+  description,
 }) => (
   <div>
     <div className="flex items-center justify-between mb-2">
-      <label className="block text-sm font-medium text-gray-300">
-        {label}
-      </label>
+      <div className="flex items-center gap-2">
+        <label className="block text-sm font-medium text-gray-300">
+          {label}
+        </label>
+        {description && (
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Info size={16} className="text-gray-400 cursor-pointer" />
+              </TooltipTrigger>
+              <TooltipContent className="bg-black text-white border-gray-600">
+                <p className="max-w-xs">{description}</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        )}
+      </div>
       {labelAddon}
     </div>
     <input
