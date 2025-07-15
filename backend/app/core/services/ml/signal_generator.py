@@ -11,7 +11,14 @@ import pandas as pd
 import numpy as np
 from typing import Dict, Any, Optional, Tuple
 from sklearn.preprocessing import StandardScaler
-from sklearn.metrics import classification_report, accuracy_score
+from sklearn.metrics import (
+    classification_report,
+    accuracy_score,
+    precision_score,
+    recall_score,
+    f1_score,
+    roc_auc_score,
+)
 import lightgbm as lgb
 
 from .config import ml_config
@@ -190,10 +197,37 @@ class MLSignalGenerator:
             y_pred_proba = np.array(y_pred_proba)
             y_pred_class = np.argmax(y_pred_proba, axis=1)
 
+            # 基本的な評価指標を計算
             accuracy = accuracy_score(y_test, y_pred_class)
             class_report = classification_report(
                 y_test, y_pred_class, output_dict=True, zero_division=0.0
             )
+
+            # 詳細な性能指標を計算
+            precision = precision_score(
+                y_test, y_pred_class, average="weighted", zero_division=0.0
+            )
+            recall = recall_score(
+                y_test, y_pred_class, average="weighted", zero_division=0.0
+            )
+            f1 = f1_score(y_test, y_pred_class, average="weighted", zero_division=0.0)
+
+            # AUCスコアを計算（多クラス分類の場合はOvR方式）
+            try:
+                if len(np.unique(y_test)) > 2:
+                    # 多クラス分類の場合
+                    auc = roc_auc_score(
+                        y_test, y_pred_proba, multi_class="ovr", average="weighted"
+                    )
+                else:
+                    # 二値分類の場合
+                    auc = roc_auc_score(
+                        y_test,
+                        y_pred_proba[:, 1] if y_pred_proba.ndim > 1 else y_pred_proba,
+                    )
+            except Exception as e:
+                logger.warning(f"AUCスコア計算エラー: {e}")
+                auc = 0.0
 
             # 特徴量重要度
             feature_importance = {}
@@ -205,6 +239,10 @@ class MLSignalGenerator:
 
             result = {
                 "accuracy": accuracy,
+                "precision": precision,
+                "recall": recall,
+                "f1_score": f1,
+                "auc_score": auc,
                 "classification_report": class_report,
                 "feature_importance": feature_importance,
                 "train_samples": len(X_train),

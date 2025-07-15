@@ -9,7 +9,14 @@ import pandas as pd
 import numpy as np
 import lightgbm as lgb
 from typing import Dict, Any, cast
-from sklearn.metrics import accuracy_score, classification_report
+from sklearn.metrics import (
+    accuracy_score,
+    classification_report,
+    precision_score,
+    recall_score,
+    f1_score,
+    roc_auc_score,
+)
 
 from .base_ml_trainer import BaseMLTrainer
 from ...utils.ml_error_handler import MLModelError
@@ -167,6 +174,32 @@ class LightGBMTrainer(BaseMLTrainer):
                 y_test, y_pred_class, output_dict=True, zero_division=0.0
             )
 
+            # 詳細な性能指標を計算
+            precision = precision_score(
+                y_test, y_pred_class, average="weighted", zero_division=0.0
+            )
+            recall = recall_score(
+                y_test, y_pred_class, average="weighted", zero_division=0.0
+            )
+            f1 = f1_score(y_test, y_pred_class, average="weighted", zero_division=0.0)
+
+            # AUCスコアを計算
+            try:
+                if num_classes > 2:
+                    # 多クラス分類の場合
+                    auc = roc_auc_score(
+                        y_test, y_pred_proba, multi_class="ovr", average="weighted"
+                    )
+                else:
+                    # 二値分類の場合
+                    auc = roc_auc_score(
+                        y_test,
+                        y_pred_proba[:, 1] if y_pred_proba.ndim > 1 else y_pred_proba,
+                    )
+            except Exception as e:
+                logger.warning(f"AUCスコア計算エラー: {e}")
+                auc = 0.0
+
             # 特徴量重要度
             feature_importance = {}
             if self.feature_columns:
@@ -175,6 +208,10 @@ class LightGBMTrainer(BaseMLTrainer):
 
             result = {
                 "accuracy": accuracy,
+                "precision": precision,
+                "recall": recall,
+                "f1_score": f1,
+                "auc_score": auc,
                 "classification_report": class_report,
                 "feature_importance": feature_importance,
                 "train_samples": len(X_train),

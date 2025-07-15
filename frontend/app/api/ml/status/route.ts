@@ -16,6 +16,8 @@ export async function GET(request: NextRequest) {
   try {
     // バックエンドAPIに転送
     const backendUrl = `${BACKEND_API_URL}/api/ml/status`;
+    console.log("=== DEBUG: フロントエンドAPIルートが呼ばれました ===");
+    console.log("=== DEBUG: バックエンドURL:", backendUrl, "===");
 
     const response = await fetch(backendUrl, {
       method: "GET",

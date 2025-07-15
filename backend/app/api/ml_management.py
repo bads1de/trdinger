@@ -14,6 +14,7 @@ from app.core.services.ml.model_manager import model_manager
 from app.core.services.ml.ml_training_service import ml_training_service
 from app.core.services.auto_strategy.services.ml_orchestrator import MLOrchestrator
 from app.core.services.ml.config import ml_config
+from app.core.services.ml.performance_extractor import performance_extractor
 
 from app.core.services.backtest_data_service import BacktestDataService
 from database.repositories.ohlcv_repository import OHLCVRepository
@@ -173,6 +174,7 @@ async def get_ml_status():
     Returns:
         モデル状態情報
     """
+
     try:
         logger.info("=== ML Management /status エンドポイントが呼ばれました ===")
         status = ml_orchestrator.get_model_status()
@@ -197,13 +199,13 @@ async def get_ml_status():
                 "file_size_mb": 2.5,
                 "feature_count": 25,
             }
-            # テスト用の性能指標を追加
+            # テスト用の性能指標を追加（実際のモデルがない場合のフォールバック）
             status["performance_metrics"] = {
                 "accuracy": 0.85,
-                "precision": 0.82,
-                "recall": 0.88,
-                "f1_score": 0.85,
-                "auc_score": 0.91,
+                "precision": 0.999,  # 変更：このコードが実行されているかテスト
+                "recall": 0.999,  # 変更：このコードが実行されているかテスト
+                "f1_score": 0.999,  # 変更：このコードが実行されているかテスト
+                "auc_score": 0.999,  # 変更：このコードが実行されているかテスト
                 "loss": 0.35,
                 "val_accuracy": 0.83,
                 "val_loss": 0.38,
@@ -240,18 +242,12 @@ async def get_ml_status():
                 status["model_info"] = model_info
                 logger.info(f"モデル情報追加: {model_info}")
 
-                # 実際のモデルの性能指標を追加（現在は模擬データ）
-                status["performance_metrics"] = {
-                    "accuracy": model_info.get("accuracy", 0.0),
-                    "precision": 0.82,
-                    "recall": 0.88,
-                    "f1_score": 0.85,
-                    "auc_score": 0.91,
-                    "loss": 0.35,
-                    "val_accuracy": 0.83,
-                    "val_loss": 0.38,
-                    "training_time": 120.5,
-                }
+                # 新しい性能指標抽出サービスを使用
+                performance_metrics = performance_extractor.extract_performance_metrics(
+                    latest_model
+                )
+                status["performance_metrics"] = performance_metrics
+                logger.info(f"抽出された性能指標: {performance_metrics}")
             except Exception as e:
                 logger.warning(f"モデル情報取得エラー: {e}")
                 # 基本情報のみ設定
@@ -266,7 +262,7 @@ async def get_ml_status():
                     "feature_count": 0,
                 }
 
-                # エラー時も性能指標を追加
+                # エラー時も性能指標を追加（デフォルト値）
                 status["performance_metrics"] = {
                     "accuracy": 0.0,
                     "precision": 0.0,

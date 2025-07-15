@@ -335,6 +335,10 @@ class BaseMLTrainer(ABC):
             metadata.update(
                 {
                     "accuracy": training_result.get("accuracy", 0.0),
+                    "precision": training_result.get("precision", 0.0),
+                    "recall": training_result.get("recall", 0.0),
+                    "f1_score": training_result.get("f1_score", 0.0),
+                    "auc_score": training_result.get("auc_score", 0.0),
                     "training_samples": training_result.get("train_samples", 0),
                     "test_samples": training_result.get("test_samples", 0),
                     "feature_importance": training_result.get("feature_importance", {}),
