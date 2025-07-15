@@ -9,7 +9,7 @@ import logging
 import pandas as pd
 import numpy as np
 from abc import ABC, abstractmethod
-from typing import Dict, Any, Optional, Tuple
+from typing import Dict, Any, Optional, Tuple, cast
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
 
@@ -275,14 +275,35 @@ class BaseMLTrainer(ABC):
         test_size = training_params.get("test_size", 0.2)
         random_state = training_params.get("random_state", 42)
 
-        return train_test_split(
-            X, y, test_size=test_size, random_state=random_state, stratify=y
+        # 層化抽出は、ラベルが2種類以上ある場合にのみ有効
+        stratify_param = y if y.nunique() > 1 else None
+        if stratify_param is None:
+            logger.warning(
+                "ラベルが1種類以下のため、層化抽出なしでデータを分割します。"
+            )
+
+        # train_test_splitはリストを返すため、一度変数に受けてからキャストする
+        splits = train_test_split(
+            X,
+            y,
+            test_size=test_size,
+            random_state=random_state,
+            stratify=stratify_param,
         )
+
+        # 型チェッカーのために明示的にキャスト
+        X_train = cast(pd.DataFrame, splits[0])
+        X_test = cast(pd.DataFrame, splits[1])
+        y_train = cast(pd.Series, splits[2])
+        y_test = cast(pd.Series, splits[3])
+
+        return X_train, X_test, y_train, y_test
 
     def _preprocess_data(
         self, X_train: pd.DataFrame, X_test: pd.DataFrame
     ) -> Tuple[pd.DataFrame, pd.DataFrame]:
         """データを前処理（スケーリング）"""
+        assert self.scaler is not None, "Scalerが初期化されていません"
         X_train_scaled = pd.DataFrame(
             self.scaler.fit_transform(X_train),
             columns=X_train.columns,
@@ -296,8 +317,8 @@ class BaseMLTrainer(ABC):
         return X_train_scaled, X_test_scaled
 
     def _save_model(
-        self, model_name: str, training_result: Dict[str, Any] = None
-    ) -> str:
+        self, model_name: str, training_result: Optional[Dict[str, Any]] = None
+    ) -> Optional[str]:
         """モデルを保存"""
         if not self.is_trained:
             raise MLModelError("学習済みモデルがありません")

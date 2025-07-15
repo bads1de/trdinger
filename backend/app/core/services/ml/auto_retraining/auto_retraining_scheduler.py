@@ -19,22 +19,24 @@ logger = logging.getLogger(__name__)
 
 class RetrainingTrigger(Enum):
     """再学習トリガー"""
-    SCHEDULED = "scheduled"          # 定期実行
+
+    SCHEDULED = "scheduled"  # 定期実行
     PERFORMANCE_DEGRADATION = "performance_degradation"  # 性能劣化
-    DATA_DRIFT = "data_drift"       # データドリフト
-    MANUAL = "manual"               # 手動実行
+    DATA_DRIFT = "data_drift"  # データドリフト
+    MANUAL = "manual"  # 手動実行
 
 
 @dataclass
 class RetrainingJob:
     """再学習ジョブ"""
+
     job_id: str
     trigger: RetrainingTrigger
     scheduled_time: datetime
     model_type: str
     data_source: str
     status: str = "pending"
-    created_at: datetime = None
+    created_at: Optional[datetime] = None
     started_at: Optional[datetime] = None
     completed_at: Optional[datetime] = None
     error_message: Optional[str] = None
@@ -48,7 +50,7 @@ class RetrainingJob:
 class AutoRetrainingScheduler:
     """
     自動再学習スケジューラー
-    
+
     MLモデルの定期的な再学習、増分学習、
     パフォーマンス監視に基づく再学習を管理します。
     """
@@ -59,34 +61,34 @@ class AutoRetrainingScheduler:
         self.is_running = False
         self.scheduler_thread: Optional[threading.Thread] = None
         self.retraining_callbacks: Dict[str, Callable] = {}
-        
+
         # 設定
         self.config = {
-            "check_interval": 3600,        # チェック間隔（秒）
-            "max_concurrent_jobs": 2,      # 最大同時実行ジョブ数
-            "job_timeout": 7200,           # ジョブタイムアウト（秒）
-            "data_retention_days": 90,     # データ保持期間
+            "check_interval": 3600,  # チェック間隔（秒）
+            "max_concurrent_jobs": 2,  # 最大同時実行ジョブ数
+            "job_timeout": 7200,  # ジョブタイムアウト（秒）
+            "data_retention_days": 90,  # データ保持期間
             "min_training_samples": 1000,  # 最小学習サンプル数
-            "performance_threshold": 0.05, # 性能劣化閾値
+            "performance_threshold": 0.05,  # 性能劣化閾値
         }
-        
+
         # スケジュール設定
         self.schedules = {
             "daily_incremental": {
                 "interval": timedelta(days=1),
                 "model_types": ["ml_signal_generator"],
-                "training_type": "incremental"
+                "training_type": "incremental",
             },
             "weekly_full": {
                 "interval": timedelta(weeks=1),
                 "model_types": ["ml_signal_generator"],
-                "training_type": "full"
+                "training_type": "full",
             },
             "monthly_optimization": {
                 "interval": timedelta(days=30),
                 "model_types": ["all"],
-                "training_type": "optimization"
-            }
+                "training_type": "optimization",
+            },
         }
 
     def start_scheduler(self) -> None:
@@ -96,18 +98,20 @@ class AutoRetrainingScheduler:
             return
 
         self.is_running = True
-        self.scheduler_thread = threading.Thread(target=self._scheduler_loop, daemon=True)
+        self.scheduler_thread = threading.Thread(
+            target=self._scheduler_loop, daemon=True
+        )
         self.scheduler_thread.start()
-        
+
         logger.info("自動再学習スケジューラーを開始しました")
 
     def stop_scheduler(self) -> None:
         """スケジューラーを停止"""
         self.is_running = False
-        
+
         if self.scheduler_thread and self.scheduler_thread.is_alive():
             self.scheduler_thread.join(timeout=5)
-        
+
         logger.info("自動再学習スケジューラーを停止しました")
 
     def schedule_retraining(
@@ -115,7 +119,7 @@ class AutoRetrainingScheduler:
         model_type: str,
         trigger: RetrainingTrigger,
         scheduled_time: Optional[datetime] = None,
-        data_source: str = "default"
+        data_source: str = "default",
     ) -> str:
         """
         再学習をスケジュール
@@ -134,17 +138,17 @@ class AutoRetrainingScheduler:
                 scheduled_time = datetime.now()
 
             job_id = f"{model_type}_{trigger.value}_{int(scheduled_time.timestamp())}"
-            
+
             job = RetrainingJob(
                 job_id=job_id,
                 trigger=trigger,
                 scheduled_time=scheduled_time,
                 model_type=model_type,
-                data_source=data_source
+                data_source=data_source,
             )
 
             self.jobs[job_id] = job
-            
+
             logger.info(f"再学習ジョブをスケジュール: {job_id}")
             return job_id
 
@@ -153,9 +157,7 @@ class AutoRetrainingScheduler:
             raise
 
     def trigger_immediate_retraining(
-        self,
-        model_type: str,
-        reason: str = "manual"
+        self, model_type: str, reason: str = "manual"
     ) -> str:
         """
         即座に再学習を実行
@@ -170,13 +172,11 @@ class AutoRetrainingScheduler:
         return self.schedule_retraining(
             model_type=model_type,
             trigger=RetrainingTrigger.MANUAL,
-            scheduled_time=datetime.now()
+            scheduled_time=datetime.now(),
         )
 
     def register_retraining_callback(
-        self,
-        model_type: str,
-        callback: Callable[[RetrainingJob], Dict[str, Any]]
+        self, model_type: str, callback: Callable[[RetrainingJob], Dict[str, Any]]
     ) -> None:
         """
         再学習コールバックを登録
@@ -212,17 +212,17 @@ class AutoRetrainingScheduler:
             "started_at": job.started_at,
             "completed_at": job.completed_at,
             "error_message": job.error_message,
-            "result": job.result
+            "result": job.result,
         }
 
     def get_active_jobs(self) -> List[Dict[str, Any]]:
         """アクティブなジョブを取得"""
         active_jobs = []
-        
+
         for job in self.jobs.values():
             if job.status in ["pending", "running"]:
                 active_jobs.append(self.get_job_status(job.job_id))
-        
+
         return active_jobs
 
     def detect_model_drift(self, model_type: str, recent_data: pd.DataFrame) -> bool:
@@ -239,21 +239,21 @@ class AutoRetrainingScheduler:
         try:
             # 簡易的なドリフト検出
             # 実際の実装では、より高度な統計的手法を使用
-            
+
             if recent_data.empty or len(recent_data) < 100:
                 return False
 
             # データの統計的特性をチェック
             current_stats = {
-                'mean': recent_data.select_dtypes(include=[np.number]).mean(),
-                'std': recent_data.select_dtypes(include=[np.number]).std(),
-                'skew': recent_data.select_dtypes(include=[np.number]).skew()
+                "mean": recent_data.select_dtypes(include=[np.number]).mean(),
+                "std": recent_data.select_dtypes(include=[np.number]).std(),
+                "skew": recent_data.select_dtypes(include=[np.number]).skew(),
             }
 
             # 過去のベースライン統計と比較（簡易版）
             # 実際の実装では、過去の統計を保存・比較
             drift_threshold = 0.2  # 20%の変化でドリフトとみなす
-            
+
             # ここでは常にFalseを返す（実装例）
             return False
 
@@ -264,21 +264,21 @@ class AutoRetrainingScheduler:
     def _scheduler_loop(self) -> None:
         """スケジューラーのメインループ"""
         logger.info("スケジューラーループを開始")
-        
+
         while self.is_running:
             try:
                 # 定期スケジュールをチェック
                 self._check_scheduled_jobs()
-                
+
                 # 実行待ちジョブを処理
                 self._process_pending_jobs()
-                
+
                 # 完了・失敗ジョブをクリーンアップ
                 self._cleanup_old_jobs()
-                
+
                 # 指定間隔で待機
                 time.sleep(self.config["check_interval"])
-                
+
             except Exception as e:
                 logger.error(f"スケジューラーループエラー: {e}")
                 time.sleep(60)  # エラー時は1分待機
@@ -287,18 +287,18 @@ class AutoRetrainingScheduler:
         """定期スケジュールをチェック"""
         try:
             current_time = datetime.now()
-            
+
             for schedule_name, schedule_config in self.schedules.items():
                 # 最後の実行時刻をチェック（簡易実装）
                 # 実際の実装では、永続化されたスケジュール状態を使用
-                
+
                 for model_type in schedule_config["model_types"]:
                     # スケジュールに基づいてジョブを作成
                     if self._should_create_scheduled_job(schedule_name, model_type):
                         self.schedule_retraining(
                             model_type=model_type,
                             trigger=RetrainingTrigger.SCHEDULED,
-                            scheduled_time=current_time
+                            scheduled_time=current_time,
                         )
 
         except Exception as e:
@@ -308,32 +308,39 @@ class AutoRetrainingScheduler:
         """スケジュールジョブを作成すべきかチェック"""
         # 簡易実装：既存のジョブがない場合のみ作成
         for job in self.jobs.values():
-            if (job.model_type == model_type and 
-                job.trigger == RetrainingTrigger.SCHEDULED and
-                job.status in ["pending", "running"]):
+            if (
+                job.model_type == model_type
+                and job.trigger == RetrainingTrigger.SCHEDULED
+                and job.status in ["pending", "running"]
+            ):
                 return False
-        
+
         return False  # 実装例では常にFalse
 
     def _process_pending_jobs(self) -> None:
         """実行待ちジョブを処理"""
         try:
             current_time = datetime.now()
-            running_jobs = sum(1 for job in self.jobs.values() if job.status == "running")
-            
+            running_jobs = sum(
+                1 for job in self.jobs.values() if job.status == "running"
+            )
+
             if running_jobs >= self.config["max_concurrent_jobs"]:
                 return
 
             # 実行待ちジョブを取得
             pending_jobs = [
-                job for job in self.jobs.values()
+                job
+                for job in self.jobs.values()
                 if job.status == "pending" and job.scheduled_time <= current_time
             ]
 
             # 優先度順にソート（緊急度の高いものから）
             pending_jobs.sort(key=lambda x: (x.trigger.value, x.scheduled_time))
 
-            for job in pending_jobs[:self.config["max_concurrent_jobs"] - running_jobs]:
+            for job in pending_jobs[
+                : self.config["max_concurrent_jobs"] - running_jobs
+            ]:
                 self._execute_job(job)
 
         except Exception as e:
@@ -344,42 +351,46 @@ class AutoRetrainingScheduler:
         try:
             job.status = "running"
             job.started_at = datetime.now()
-            
+
             logger.info(f"再学習ジョブを開始: {job.job_id}")
 
             # コールバック関数を実行
             if job.model_type in self.retraining_callbacks:
                 callback = self.retraining_callbacks[job.model_type]
                 result = callback(job)
-                
+
                 job.result = result
                 job.status = "completed"
                 job.completed_at = datetime.now()
-                
+
                 logger.info(f"再学習ジョブが完了: {job.job_id}")
             else:
                 job.status = "failed"
-                job.error_message = f"コールバックが登録されていません: {job.model_type}"
+                job.error_message = (
+                    f"コールバックが登録されていません: {job.model_type}"
+                )
                 job.completed_at = datetime.now()
-                
+
                 logger.error(f"再学習ジョブが失敗: {job.job_id}")
 
         except Exception as e:
             job.status = "failed"
             job.error_message = str(e)
             job.completed_at = datetime.now()
-            
+
             logger.error(f"再学習ジョブ実行エラー: {job.job_id}, {e}")
 
     def _cleanup_old_jobs(self) -> None:
         """古いジョブをクリーンアップ"""
         try:
             cutoff_time = datetime.now() - timedelta(days=7)
-            
+
             jobs_to_remove = [
-                job_id for job_id, job in self.jobs.items()
-                if job.status in ["completed", "failed"] and 
-                   job.completed_at and job.completed_at < cutoff_time
+                job_id
+                for job_id, job in self.jobs.items()
+                if job.status in ["completed", "failed"]
+                and job.completed_at
+                and job.completed_at < cutoff_time
             ]
 
             for job_id in jobs_to_remove:
