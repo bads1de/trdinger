@@ -11,6 +11,7 @@ export const getValueColorClass = (
   options: { invert?: boolean; threshold?: number } = {}
 ) => {
   const { invert = false, threshold = 0 } = options;
+
   if (value === null || value === undefined || isNaN(value)) {
     return "text-secondary-400";
   }
@@ -19,19 +20,35 @@ export const getValueColorClass = (
   const isNegative = value < threshold;
 
   if (invert) {
-    if (isPositive) return "text-red-400";
-    if (isNegative) return "text-green-400";
+    if (isPositive) {
+      return "text-red-400";
+    }
+
+    if (isNegative) {
+      return "text-green-400";
+    }
   } else {
-    if (isPositive) return "text-green-400";
-    if (isNegative) return "text-red-400";
+    if (isPositive) {
+      return "text-green-400";
+    }
+
+    if (isNegative) {
+      return "text-red-400";
+    }
   }
 
   return "text-secondary-400";
 };
 
 export const getPnlColor = (pnl: number) => {
-  if (pnl > 0) return "green";
-  if (pnl < 0) return "red";
+  if (pnl > 0) {
+    return "green";
+  }
+
+  if (pnl < 0) {
+    return "red";
+  }
+
   return "gray";
 };
 
@@ -44,24 +61,54 @@ export const getPriceChangeColor = (open: number, close: number) => {
 };
 
 export const getReturnColor = (value: number | null) => {
-  if (value === null) return "gray";
-  if (value > 0) return "green";
-  if (value < 0) return "red";
+  if (value === null) {
+    return "gray";
+  }
+
+  if (value > 0) {
+    return "green";
+  }
+
+  if (value < 0) {
+    return "red";
+  }
+
   return "gray";
 };
 
 export const getSharpeColor = (value: number | null) => {
-  if (value === null) return "gray";
-  if (value > 1) return "green";
-  if (value < 0) return "red";
+  if (value === null) {
+    return "gray";
+  }
+
+  if (value > 1) {
+    return "green";
+  }
+
+  if (value < 0) {
+    return "red";
+  }
+
   return "gray";
 };
 
 export const getFundingRateColor = (value: number) => {
-  if (value > 0.0002) return "text-green-400";
-  if (value > 0) return "text-green-600";
-  if (value < -0.0002) return "text-red-400";
-  if (value < 0) return "text-red-600";
+  if (value > 0.0002) {
+    return "text-green-400";
+  }
+
+  if (value > 0) {
+    return "text-green-600";
+  }
+
+  if (value < -0.0002) {
+    return "text-red-400";
+  }
+
+  if (value < 0) {
+    return "text-red-600";
+  }
+
   return "text-gray-400";
 };
 
@@ -71,12 +118,22 @@ export const getFundingRateColor = (value: number) => {
  * @returns Tailwind CSSのカラークラス
  */
 export const getScoreColorClass = (score?: number) => {
-  if (score === undefined || score === null || isNaN(score))
+  if (score === undefined || score === null || isNaN(score)) {
     return "text-gray-400";
+  }
 
-  if (score >= 0.8) return "text-green-400";
-  if (score >= 0.7) return "text-yellow-400";
-  if (score >= 0.6) return "text-orange-400";
+  if (score >= 0.8) {
+    return "text-green-400";
+  }
+
+  if (score >= 0.7) {
+    return "text-yellow-400";
+  }
+
+  if (score >= 0.6) {
+    return "text-orange-400";
+  }
+
   return "text-red-400";
 };
 
@@ -89,6 +146,7 @@ export const getScoreColorClass = (score?: number) => {
 export const getBarColor = (index: number, total: number) => {
   const intensity = 1 - index / total;
   const hue = 180 + intensity * 60;
+
   return `hsl(${hue}, 70%, ${50 + intensity * 20}%)`;
 };
 
@@ -101,12 +159,15 @@ export const getStatusColor = (status: string) => {
   switch (status) {
     case "completed":
       return "text-green-600";
+
     case "error":
       return "text-red-600";
+
     case "training":
     case "loading_data":
     case "initializing":
       return "text-blue-600";
+
     default:
       return "text-gray-600";
   }

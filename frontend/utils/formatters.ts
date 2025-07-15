@@ -4,6 +4,7 @@ export const formatDateTime = (
   if (dateInput === null || dateInput === undefined) {
     return { date: "-", time: "-", dateTime: "-" };
   }
+
   try {
     const date = new Date(dateInput);
 
