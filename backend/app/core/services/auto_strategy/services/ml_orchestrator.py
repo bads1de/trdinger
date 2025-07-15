@@ -14,6 +14,7 @@ from app.core.services.ml.config import ml_config
 from app.core.utils.ml_error_handler import (
     MLErrorHandler,
     MLDataError,
+    MLModelError,
     MLValidationError,
     timeout_decorator,
     safe_ml_operation,
@@ -25,6 +26,7 @@ from app.core.services.ml.feature_engineering.feature_engineering_service import
 from app.core.services.ml.signal_generator import MLSignalGenerator
 from app.core.services.ml.model_manager import model_manager
 from app.core.services.ml.performance_extractor import performance_extractor
+from app.core.services.ml.lightgbm_trainer import LightGBMTrainer
 
 logger = logging.getLogger(__name__)
 
@@ -35,21 +37,33 @@ class MLOrchestrator:
 
     責任を分離した軽量なMLサービス統合クラス。
     特徴量計算、モデル予測、結果の統合を行います。
+
+    MLServiceInterfaceを実装し、統一されたML予測・学習APIを提供します。
     """
 
-    def __init__(self, ml_signal_generator: Optional[MLSignalGenerator] = None):
+    def __init__(
+        self,
+        ml_signal_generator: Optional[MLSignalGenerator] = None,
+        trainer: Optional[LightGBMTrainer] = None,
+    ):
         """
         初期化
 
         Args:
             ml_signal_generator: MLSignalGeneratorインスタンス（オプション）
+            trainer: LightGBMTrainerインスタンス（オプション、学習機能用）
         """
         self.config = ml_config
         self.feature_service = FeatureEngineeringService()
         self.ml_generator = (
             ml_signal_generator if ml_signal_generator else MLSignalGenerator()
         )
-        self.is_model_loaded = False
+        # 学習機能のためのトレーナー（MLIndicatorServiceとの統合）
+        self.trainer = trainer if trainer else LightGBMTrainer()
+        # モデル状態の統合管理
+        self.is_model_loaded = self.trainer.is_trained or getattr(
+            self.ml_generator, "is_trained", False
+        )
         self._last_predictions = self.config.prediction.get_default_predictions()
 
         # 既存の学習済みモデルを自動読み込み
@@ -232,6 +246,102 @@ class MLOrchestrator:
             return self.ml_generator.get_feature_importance(top_n)
         else:
             return {}
+
+    def predict_probabilities(self, features: pd.DataFrame) -> Dict[str, float]:
+        """
+        特徴量から予測確率を計算（MLServiceInterface実装）
+
+        Args:
+            features: 特徴量データ
+
+        Returns:
+            予測確率の辞書 {"up": float, "down": float, "range": float}
+        """
+        return self._safe_ml_prediction(features)
+
+    # MLIndicatorServiceから統合された学習機能
+    def train_model(
+        self,
+        training_data: pd.DataFrame,
+        funding_rate_data: Optional[pd.DataFrame] = None,
+        open_interest_data: Optional[pd.DataFrame] = None,
+        save_model: bool = True,
+        train_test_split: float = 0.8,
+        cross_validation_folds: int = 5,
+        random_state: int = 42,
+        early_stopping_rounds: int = 100,
+        max_depth: int = 10,
+        n_estimators: int = 100,
+        learning_rate: float = 0.1,
+    ) -> Dict[str, Any]:
+        """
+        MLモデルを学習（MLIndicatorServiceから統合）
+
+        Args:
+            training_data: 学習用OHLCVデータ
+            funding_rate_data: ファンディングレートデータ（オプション）
+            open_interest_data: 建玉残高データ（オプション）
+            save_model: モデルを保存するか
+            train_test_split: トレーニング/テスト分割比率
+            cross_validation_folds: クロスバリデーション分割数
+            random_state: ランダムシード
+            early_stopping_rounds: 早期停止ラウンド数
+            max_depth: 最大深度
+            n_estimators: 推定器数
+            learning_rate: 学習率
+
+        Returns:
+            学習結果
+        """
+        try:
+            # BaseMLTrainerに委譲
+            result = self.trainer.train_model(
+                training_data=training_data,
+                funding_rate_data=funding_rate_data,
+                open_interest_data=open_interest_data,
+                save_model=save_model,
+                model_name="auto_strategy_ml_model",
+                test_size=1 - train_test_split,
+                random_state=random_state,
+                n_estimators=n_estimators,
+                max_depth=max_depth,
+                learning_rate=learning_rate,
+            )
+
+            self.is_model_loaded = True
+            logger.info("MLモデル学習完了")
+
+            return result
+
+        except Exception as e:
+            logger.error(f"MLモデル学習エラー: {e}")
+            raise
+
+    def save_model(
+        self, model_name: str, metadata: Optional[Dict[str, Any]] = None
+    ) -> str:
+        """
+        学習済みモデルを保存（MLServiceInterface実装）
+
+        Args:
+            model_name: モデル名
+            metadata: メタデータ（オプション）
+
+        Returns:
+            保存されたモデルのパス
+
+        Raises:
+            MLValidationError: モデルが学習されていない場合
+            MLModelError: モデルの保存に失敗した場合
+        """
+        if not self.trainer.is_trained:
+            raise MLValidationError("学習されていないモデルは保存できません")
+
+        model_path = self.trainer.save_model(model_name, metadata)
+        if model_path is None:
+            raise MLModelError("モデルの保存に失敗しました。")
+
+        return model_path
 
     def _validate_input_data(self, df: pd.DataFrame):
         """入力データの検証"""

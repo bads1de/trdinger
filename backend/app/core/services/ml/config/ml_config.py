@@ -6,6 +6,7 @@ ML関連の設定管理
 """
 
 import os
+import logging
 from typing import Dict, Any, List, Optional
 from dataclasses import dataclass
 
@@ -26,6 +27,12 @@ class DataProcessingConfig:
     # メモリ管理
     MEMORY_WARNING_THRESHOLD: int = 8000
     MEMORY_LIMIT_THRESHOLD: int = 10000
+
+    # デバッグモード
+    DEBUG_MODE: bool = False
+
+    # ログレベル
+    LOG_LEVEL: str = "INFO"
 
 
 @dataclass
@@ -162,6 +169,11 @@ class PredictionConfig:
     DEFAULT_DOWN_PROB: float = 0.33
     DEFAULT_RANGE_PROB: float = 0.34
 
+    # エラー時フォールバック値
+    FALLBACK_UP_PROB: float = 0.33
+    FALLBACK_DOWN_PROB: float = 0.33
+    FALLBACK_RANGE_PROB: float = 0.34
+
     # 予測値検証
     MIN_PROBABILITY: float = 0.0
     MAX_PROBABILITY: float = 1.0
@@ -171,6 +183,9 @@ class PredictionConfig:
     # 予測結果の拡張
     EXPAND_TO_DATA_LENGTH: bool = True
 
+    # データサイズ制限
+    DEFAULT_INDICATOR_LENGTH: int = 100
+
     def get_default_predictions(self) -> Dict[str, float]:
         """デフォルトの予測値を取得"""
         return {
@@ -178,6 +193,111 @@ class PredictionConfig:
             "down": self.DEFAULT_DOWN_PROB,
             "range": self.DEFAULT_RANGE_PROB,
         }
+
+    def get_fallback_predictions(self) -> Dict[str, float]:
+        """エラー時のフォールバック予測値を取得"""
+        return {
+            "up": self.FALLBACK_UP_PROB,
+            "down": self.FALLBACK_DOWN_PROB,
+            "range": self.FALLBACK_RANGE_PROB,
+        }
+
+    def get_default_indicators(self, data_length: int) -> Dict[str, Any]:
+        """デフォルトのML指標を取得"""
+        import numpy as np
+
+        return {
+            "ML_UP_PROB": np.full(data_length, self.DEFAULT_UP_PROB),
+            "ML_DOWN_PROB": np.full(data_length, self.DEFAULT_DOWN_PROB),
+            "ML_RANGE_PROB": np.full(data_length, self.DEFAULT_RANGE_PROB),
+        }
+
+    def validate_predictions(self, predictions: Dict[str, float]) -> bool:
+        """予測値の妥当性を検証"""
+        try:
+            required_keys = ["up", "down", "range"]
+
+            # 必要なキーが存在するか
+            if not all(key in predictions for key in required_keys):
+                return False
+
+            # 値が数値で0-1の範囲内か
+            for key in required_keys:
+                value = predictions[key]
+                if not isinstance(value, (int, float)):
+                    return False
+                if not (self.MIN_PROBABILITY <= value <= self.MAX_PROBABILITY):
+                    return False
+
+            # 合計が妥当な範囲内か
+            total = sum(predictions[key] for key in required_keys)
+            if not (self.PROBABILITY_SUM_MIN <= total <= self.PROBABILITY_SUM_MAX):
+                return False
+
+            return True
+
+        except Exception:
+            return False
+
+    def validate_config(self) -> bool:
+        """設定値の妥当性を検証"""
+        try:
+            # デフォルト値の検証
+            default_predictions = self.get_default_predictions()
+            if not self.validate_predictions(default_predictions):
+                return False
+
+            # フォールバック値の検証
+            fallback_predictions = self.get_fallback_predictions()
+            if not self.validate_predictions(fallback_predictions):
+                return False
+
+            # 範囲値の検証
+            if not (0.0 <= self.MIN_PROBABILITY <= self.MAX_PROBABILITY <= 1.0):
+                return False
+
+            if not (0.0 < self.PROBABILITY_SUM_MIN <= self.PROBABILITY_SUM_MAX <= 2.0):
+                return False
+
+            # データ長の検証
+            if not (1 <= self.DEFAULT_INDICATOR_LENGTH <= 100000):
+                return False
+
+            return True
+
+        except Exception:
+            return False
+
+    def get_validation_errors(self) -> List[str]:
+        """設定値の検証エラーを取得"""
+        errors = []
+
+        try:
+            # デフォルト値の検証
+            default_predictions = self.get_default_predictions()
+            if not self.validate_predictions(default_predictions):
+                errors.append("デフォルト予測値が無効です")
+
+            # フォールバック値の検証
+            fallback_predictions = self.get_fallback_predictions()
+            if not self.validate_predictions(fallback_predictions):
+                errors.append("フォールバック予測値が無効です")
+
+            # 範囲値の検証
+            if not (0.0 <= self.MIN_PROBABILITY <= self.MAX_PROBABILITY <= 1.0):
+                errors.append("確率範囲設定が無効です")
+
+            if not (0.0 < self.PROBABILITY_SUM_MIN <= self.PROBABILITY_SUM_MAX <= 2.0):
+                errors.append("確率合計範囲設定が無効です")
+
+            # データ長の検証
+            if not (1 <= self.DEFAULT_INDICATOR_LENGTH <= 100000):
+                errors.append("デフォルト指標長が無効です")
+
+        except Exception as e:
+            errors.append(f"設定検証中にエラーが発生しました: {e}")
+
+        return errors
 
 
 @dataclass
@@ -214,6 +334,41 @@ class MLConfig:
         self.training = TrainingConfig()
         self.prediction = PredictionConfig()
         self.retraining = RetrainingConfig()
+
+        # 設定の妥当性を検証
+        self._validate_all_configs()
+
+    def _validate_all_configs(self):
+        """全設定の妥当性を検証"""
+        try:
+            # 予測設定の検証
+            if not self.prediction.validate_config():
+                errors = self.prediction.get_validation_errors()
+                logging.warning(f"予測設定に問題があります: {errors}")
+
+            # データ処理設定の検証
+            if self.data_processing.DEBUG_MODE:
+                logging.info("デバッグモードが有効です")
+
+            # ログレベルの設定
+            log_level = getattr(
+                logging, self.data_processing.LOG_LEVEL.upper(), logging.INFO
+            )
+            logging.getLogger().setLevel(log_level)
+
+        except Exception as e:
+            logging.error(f"設定検証中にエラーが発生しました: {e}")
+
+    def get_environment_info(self) -> Dict[str, Any]:
+        """現在の環境設定情報を取得"""
+        return {
+            "debug_mode": self.data_processing.DEBUG_MODE,
+            "log_level": self.data_processing.LOG_LEVEL,
+            "max_ohlcv_rows": self.data_processing.MAX_OHLCV_ROWS,
+            "feature_timeout": self.data_processing.FEATURE_CALCULATION_TIMEOUT,
+            "default_predictions": self.prediction.get_default_predictions(),
+            "validation_enabled": self.prediction.validate_config(),
+        }
 
     def validate(self) -> bool:
         """設定の妥当性を検証"""

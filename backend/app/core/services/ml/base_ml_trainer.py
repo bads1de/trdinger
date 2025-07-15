@@ -101,9 +101,24 @@ class BaseMLTrainer(ABC):
 
             # 8. モデルを保存
             if save_model:
-                model_path = self._save_model(
+                # training_resultからメタデータを構築
+                model_metadata = {
+                    "accuracy": training_result.get("accuracy", 0.0),
+                    "precision": training_result.get("precision", 0.0),
+                    "recall": training_result.get("recall", 0.0),
+                    "f1_score": training_result.get("f1_score", 0.0),
+                    "auc_score": training_result.get("auc_score", 0.0),
+                    "training_samples": training_result.get("train_samples", 0),
+                    "test_samples": training_result.get("test_samples", 0),
+                    "feature_importance": training_result.get("feature_importance", {}),
+                    "classification_report": training_result.get(
+                        "classification_report", {}
+                    ),
+                    "best_iteration": training_result.get("best_iteration", 0),
+                }
+                model_path = self.save_model(
                     model_name or self.config.model.AUTO_STRATEGY_MODEL_NAME,
-                    training_result,
+                    model_metadata,
                 )
                 training_result["model_path"] = model_path
 
@@ -316,43 +331,27 @@ class BaseMLTrainer(ABC):
 
         return X_train_scaled, X_test_scaled
 
-    def _save_model(
-        self, model_name: str, training_result: Optional[Dict[str, Any]] = None
+    def save_model(
+        self, model_name: str, metadata: Optional[Dict[str, Any]] = None
     ) -> Optional[str]:
         """モデルを保存"""
         if not self.is_trained:
             raise MLModelError("学習済みモデルがありません")
 
-        # 学習結果からメタデータを構築
-        metadata = {
+        # 基本的なメタデータを準備
+        final_metadata = {
             "model_type": self.__class__.__name__,
             "feature_count": len(self.feature_columns) if self.feature_columns else 0,
             "is_trained": self.is_trained,
         }
-
-        # 学習結果が提供されている場合、メタデータに追加
-        if training_result:
-            metadata.update(
-                {
-                    "accuracy": training_result.get("accuracy", 0.0),
-                    "precision": training_result.get("precision", 0.0),
-                    "recall": training_result.get("recall", 0.0),
-                    "f1_score": training_result.get("f1_score", 0.0),
-                    "auc_score": training_result.get("auc_score", 0.0),
-                    "training_samples": training_result.get("train_samples", 0),
-                    "test_samples": training_result.get("test_samples", 0),
-                    "feature_importance": training_result.get("feature_importance", {}),
-                    "classification_report": training_result.get(
-                        "classification_report", {}
-                    ),
-                    "best_iteration": training_result.get("best_iteration", 0),
-                }
-            )
+        # 提供されたメタデータで更新
+        if metadata:
+            final_metadata.update(metadata)
 
         model_path = model_manager.save_model(
             model=self.model,
             model_name=model_name,
-            metadata=metadata,
+            metadata=final_metadata,
             scaler=self.scaler,
             feature_columns=self.feature_columns,
         )
