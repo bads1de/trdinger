@@ -10,10 +10,7 @@ import pandas as pd
 from typing import Dict, Any, Optional
 
 from .config import ml_config
-from ...utils.ml_error_handler import (
-    MLErrorHandler, MLDataError, MLModelError,
-    safe_ml_operation, ml_operation_context
-)
+from ...utils.ml_error_handler import safe_ml_operation
 from .lightgbm_trainer import LightGBMTrainer
 from .model_manager import model_manager
 
@@ -33,21 +30,18 @@ class MLTrainingService:
         初期化
 
         Args:
-            trainer_type: 使用するトレーナーのタイプ（"lightgbm" または "randomforest"）
+            trainer_type: 使用するトレーナーのタイプ（現在は"lightgbm"のみサポート）
         """
         self.config = ml_config
 
         # トレーナーを選択
         if trainer_type.lower() == "lightgbm":
             self.trainer = LightGBMTrainer()
-        elif trainer_type.lower() == "randomforest":
-            from .lightgbm_trainer import RandomForestTrainer
-            self.trainer = RandomForestTrainer()
         else:
             raise ValueError(f"サポートされていないトレーナータイプ: {trainer_type}")
 
         self.trainer_type = trainer_type
-    
+
     def train_model(
         self,
         training_data: pd.DataFrame,
@@ -55,7 +49,7 @@ class MLTrainingService:
         open_interest_data: Optional[pd.DataFrame] = None,
         save_model: bool = True,
         model_name: Optional[str] = None,
-        **training_params
+        **training_params,
     ) -> Dict[str, Any]:
         """
         MLモデルを学習
@@ -82,14 +76,14 @@ class MLTrainingService:
             open_interest_data=open_interest_data,
             save_model=save_model,
             model_name=model_name,
-            **training_params
+            **training_params,
         )
-    
+
     def evaluate_model(
         self,
         test_data: pd.DataFrame,
         funding_rate_data: Optional[pd.DataFrame] = None,
-        open_interest_data: Optional[pd.DataFrame] = None
+        open_interest_data: Optional[pd.DataFrame] = None,
     ) -> Dict[str, Any]:
         """
         学習済みモデルを評価
@@ -106,9 +100,9 @@ class MLTrainingService:
         return self.trainer.evaluate_model(
             test_data=test_data,
             funding_rate_data=funding_rate_data,
-            open_interest_data=open_interest_data
+            open_interest_data=open_interest_data,
         )
-    
+
     def get_training_status(self) -> Dict[str, Any]:
         """
         学習状態を取得
@@ -116,7 +110,7 @@ class MLTrainingService:
         Returns:
             学習状態の辞書
         """
-        if hasattr(self.trainer, 'get_model_info'):
+        if hasattr(self.trainer, "get_model_info"):
             model_info = self.trainer.get_model_info()
             model_info["trainer_type"] = self.trainer_type
             return model_info
@@ -124,9 +118,15 @@ class MLTrainingService:
             return {
                 "is_trained": self.trainer.is_trained,
                 "feature_columns": self.trainer.feature_columns,
-                "feature_count": len(self.trainer.feature_columns) if self.trainer.feature_columns else 0,
-                "model_type": type(self.trainer.model).__name__ if self.trainer.model else None,
-                "trainer_type": self.trainer_type
+                "feature_count": (
+                    len(self.trainer.feature_columns)
+                    if self.trainer.feature_columns
+                    else 0
+                ),
+                "model_type": (
+                    type(self.trainer.model).__name__ if self.trainer.model else None
+                ),
+                "trainer_type": self.trainer_type,
             }
 
     def predict(self, features_df: pd.DataFrame) -> Dict[str, Any]:
@@ -143,7 +143,9 @@ class MLTrainingService:
         return {
             "predictions": predictions,
             "model_type": self.trainer_type,
-            "feature_count": len(self.trainer.feature_columns) if self.trainer.feature_columns else 0
+            "feature_count": (
+                len(self.trainer.feature_columns) if self.trainer.feature_columns else 0
+            ),
         }
 
     def get_feature_importance(self) -> Dict[str, float]:
@@ -153,12 +155,14 @@ class MLTrainingService:
         Returns:
             特徴量重要度の辞書
         """
-        if hasattr(self.trainer, 'get_feature_importance'):
+        if hasattr(self.trainer, "get_feature_importance"):
             return self.trainer.get_feature_importance()
         else:
             return {}
-    
-    @safe_ml_operation(default_value=False, error_message="モデル読み込みでエラーが発生しました")
+
+    @safe_ml_operation(
+        default_value=False, error_message="モデル読み込みでエラーが発生しました"
+    )
     def load_model(self, model_path: str) -> bool:
         """
         学習済みモデルを読み込み

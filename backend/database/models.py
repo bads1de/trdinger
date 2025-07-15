@@ -206,9 +206,6 @@ class OpenInterestData(Base):
         }
 
 
-
-
-
 class BacktestResult(Base):
     """
     バックテスト結果テーブル
@@ -466,7 +463,7 @@ class BayesianOptimizationResult(Base):
     # 最適化タイプ（例: "bayesian_ml", "bayesian_ga"）
     optimization_type = Column(String(50), nullable=False, index=True)
 
-    # モデルタイプ（例: "LightGBM", "RandomForest"）
+    # モデルタイプ（例: "LightGBM", "XGBoost"）
     model_type = Column(String(50), nullable=True, index=True)
 
     # 実験名（オプション）
@@ -552,6 +549,3 @@ class BayesianOptimizationResult(Base):
                 self.updated_at.isoformat() if self.updated_at is not None else None
             ),
         }
-
-
-

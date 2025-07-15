@@ -90,8 +90,6 @@ export const useModelInfo = (autoRefreshInterval?: number) => {
     switch (modelType?.toLowerCase()) {
       case "lightgbm":
         return "default";
-      case "randomforest":
-        return "secondary";
       case "xgboost":
         return "outline";
       default:

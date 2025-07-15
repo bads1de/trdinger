@@ -11,7 +11,7 @@ import numpy as np
 import os
 from typing import Dict, Any, Optional
 
-from ...ml.lightgbm_trainer import RandomForestTrainer
+from ...ml.lightgbm_trainer import LightGBMTrainer
 from ...ml.model_manager import model_manager
 
 logger = logging.getLogger(__name__)
@@ -25,14 +25,14 @@ class MLIndicatorService:
     コードの重複を解消し、保守性を向上させます。
     """
 
-    def __init__(self, trainer: Optional[RandomForestTrainer] = None):
+    def __init__(self, trainer: Optional[LightGBMTrainer] = None):
         """
         初期化
 
         Args:
             trainer: 使用するMLトレーナー（オプション）
         """
-        self.trainer = trainer if trainer else RandomForestTrainer()
+        self.trainer = trainer if trainer else LightGBMTrainer()
         self.is_model_loaded = self.trainer.is_trained
         self._last_predictions = {"up": 0.33, "down": 0.33, "range": 0.34}
 
@@ -44,7 +44,7 @@ class MLIndicatorService:
         self,
         df: pd.DataFrame,
         funding_rate_data: Optional[pd.DataFrame] = None,
-        open_interest_data: Optional[pd.DataFrame] = None
+        open_interest_data: Optional[pd.DataFrame] = None,
     ) -> Dict[str, np.ndarray]:
         """
         ML予測確率指標を計算（強化されたエラーハンドリング付き）
@@ -64,18 +64,24 @@ class MLIndicatorService:
 
         # メモリ使用量チェック
         if len(df) > 10000:
-            logger.warning(f"大量のデータ（{len(df)}行）が提供されました。処理を制限します。")
+            logger.warning(
+                f"大量のデータ（{len(df)}行）が提供されました。処理を制限します。"
+            )
             df = df.tail(10000)  # 最新10,000行に制限
 
         try:
             # 必要なカラムの存在確認（大文字・小文字両方に対応）
-            required_columns_lower = ['open', 'high', 'low', 'close', 'volume']
-            required_columns_upper = ['Open', 'High', 'Low', 'Close', 'Volume']
+            required_columns_lower = ["open", "high", "low", "close", "volume"]
+            required_columns_upper = ["Open", "High", "Low", "Close", "Volume"]
 
             # 小文字のカラムが存在するかチェック
-            missing_lower = [col for col in required_columns_lower if col not in df.columns]
+            missing_lower = [
+                col for col in required_columns_lower if col not in df.columns
+            ]
             # 大文字のカラムが存在するかチェック
-            missing_upper = [col for col in required_columns_upper if col not in df.columns]
+            missing_upper = [
+                col for col in required_columns_upper if col not in df.columns
+            ]
 
             # どちらかのセットが完全に存在すればOK
             if len(missing_lower) == 0:
@@ -84,9 +90,14 @@ class MLIndicatorService:
             elif len(missing_upper) == 0:
                 # 大文字のカラムが揃っている場合、小文字に変換
                 df_normalized = df.copy()
-                df_normalized.columns = [col.lower() if col in required_columns_upper else col for col in df_normalized.columns]
+                df_normalized.columns = [
+                    col.lower() if col in required_columns_upper else col
+                    for col in df_normalized.columns
+                ]
             else:
-                logger.error(f"必要なカラムが不足: {missing_lower} (小文字) または {missing_upper} (大文字)")
+                logger.error(
+                    f"必要なカラムが不足: {missing_lower} (小文字) または {missing_upper} (大文字)"
+                )
                 return self._get_default_indicators(len(df))
 
             # 正規化されたデータフレームを使用
@@ -100,13 +111,19 @@ class MLIndicatorService:
                 # Windows環境ではconcurrent.futuresを使用、Unix系ではsignalを使用
                 if platform.system() == "Windows":
                     # Windows環境でのタイムアウト処理
-                    with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
+                    with concurrent.futures.ThreadPoolExecutor(
+                        max_workers=1
+                    ) as executor:
                         future = executor.submit(
                             self.feature_service.calculate_advanced_features,
-                            df, funding_rate_data, open_interest_data
+                            df,
+                            funding_rate_data,
+                            open_interest_data,
                         )
                         try:
-                            features_df = future.result(timeout=30)  # 30秒のタイムアウト
+                            features_df = future.result(
+                                timeout=30
+                            )  # 30秒のタイムアウト
                         except concurrent.futures.TimeoutError:
                             raise TimeoutError("特徴量計算がタイムアウトしました")
                 else:
@@ -138,7 +155,9 @@ class MLIndicatorService:
 
             # 予測確率を全データ長に拡張
             data_length = len(df)
-            ml_indicators = self._expand_predictions_to_data_length(predictions, data_length)
+            ml_indicators = self._expand_predictions_to_data_length(
+                predictions, data_length
+            )
 
             # 結果の妥当性チェック
             if not self._validate_ml_indicators(ml_indicators):
@@ -218,11 +237,11 @@ class MLIndicatorService:
                 open_interest_data=open_interest_data,
                 save_model=save_model,
                 model_name="auto_strategy_ml_model",
-                test_size=1-train_test_split,
+                test_size=1 - train_test_split,
                 random_state=random_state,
                 n_estimators=n_estimators,
                 max_depth=max_depth,
-                learning_rate=learning_rate
+                learning_rate=learning_rate,
             )
 
             self.is_model_loaded = True
@@ -245,8 +264,14 @@ class MLIndicatorService:
             "is_model_loaded": self.is_model_loaded,
             "is_trained": self.trainer.is_trained,
             "last_predictions": self._last_predictions,
-            "feature_count": len(self.trainer.feature_columns) if self.trainer.feature_columns else 0,
-            "model_type": self.trainer.model_type if hasattr(self.trainer, 'model_type') else "Unknown"
+            "feature_count": (
+                len(self.trainer.feature_columns) if self.trainer.feature_columns else 0
+            ),
+            "model_type": (
+                self.trainer.model_type
+                if hasattr(self.trainer, "model_type")
+                else "Unknown"
+            ),
         }
 
     def update_predictions(self, predictions: Dict[str, float]):
@@ -273,10 +298,12 @@ class MLIndicatorService:
             特徴量重要度の辞書
         """
         if self.is_model_loaded and self.trainer.is_trained:
-            if hasattr(self.trainer, 'get_feature_importance'):
+            if hasattr(self.trainer, "get_feature_importance"):
                 importance = self.trainer.get_feature_importance()
                 # 上位N個を取得
-                sorted_importance = sorted(importance.items(), key=lambda x: x[1], reverse=True)
+                sorted_importance = sorted(
+                    importance.items(), key=lambda x: x[1], reverse=True
+                )
                 return dict(sorted_importance[:top_n])
             else:
                 return {}
@@ -320,7 +347,7 @@ class MLIndicatorService:
         return {
             "ML_UP_PROB": np.full(data_length, default_value),
             "ML_DOWN_PROB": np.full(data_length, default_value),
-            "ML_RANGE_PROB": np.full(data_length, default_value + 0.01)
+            "ML_RANGE_PROB": np.full(data_length, default_value + 0.01),
         }
 
     def _safe_ml_prediction(self, features_df: pd.DataFrame) -> Dict[str, float]:
@@ -338,7 +365,7 @@ class MLIndicatorService:
                     predictions = {
                         "down": float(last_prediction[0]),
                         "range": float(last_prediction[1]),
-                        "up": float(last_prediction[2])
+                        "up": float(last_prediction[2]),
                     }
                 elif predictions_array.ndim == 1:
                     # バイナリ分類の場合は3クラスに変換
@@ -346,7 +373,7 @@ class MLIndicatorService:
                     predictions = {
                         "up": float(last_prediction),
                         "down": float(1 - last_prediction),
-                        "range": 0.0
+                        "range": 0.0,
                     }
                 else:
                     # デフォルト値
@@ -360,7 +387,9 @@ class MLIndicatorService:
                     logger.warning("予測値が無効、前回の予測値を使用")
                     return self._last_predictions
             else:
-                logger.warning("MLモデルが読み込まれていません。デフォルト値を使用します。")
+                logger.warning(
+                    "MLモデルが読み込まれていません。デフォルト値を使用します。"
+                )
                 return self._last_predictions
 
         except Exception as e:
@@ -406,20 +435,18 @@ class MLIndicatorService:
             return {
                 "ML_UP_PROB": ml_up_prob,
                 "ML_DOWN_PROB": ml_down_prob,
-                "ML_RANGE_PROB": ml_range_prob
+                "ML_RANGE_PROB": ml_range_prob,
             }
 
         except Exception as e:
             logger.error(f"予測値拡張エラー: {e}")
             return self._get_default_indicators(data_length)
 
-
-
     def _preprocess_training_data(
         self,
         ohlcv_data: pd.DataFrame,
         funding_rate_data: Optional[pd.DataFrame] = None,
-        open_interest_data: Optional[pd.DataFrame] = None
+        open_interest_data: Optional[pd.DataFrame] = None,
     ) -> pd.DataFrame:
         """
         トレーニングデータの前処理
@@ -440,15 +467,19 @@ class MLIndicatorService:
 
         # 追加データがある場合は結合
         if funding_rate_data is not None and not funding_rate_data.empty:
-            funding_rate_data.columns = [col.lower() for col in funding_rate_data.columns]
-            processed = processed.join(funding_rate_data, how='left')
+            funding_rate_data.columns = [
+                col.lower() for col in funding_rate_data.columns
+            ]
+            processed = processed.join(funding_rate_data, how="left")
 
         if open_interest_data is not None and not open_interest_data.empty:
-            open_interest_data.columns = [col.lower() for col in open_interest_data.columns]
-            processed = processed.join(open_interest_data, how='left')
+            open_interest_data.columns = [
+                col.lower() for col in open_interest_data.columns
+            ]
+            processed = processed.join(open_interest_data, how="left")
 
         # 欠損値を前方補完
-        processed = processed.fillna(method='ffill').fillna(method='bfill')
+        processed = processed.fillna(method="ffill").fillna(method="bfill")
 
         return processed
 
@@ -466,40 +497,44 @@ class MLIndicatorService:
         features = pd.DataFrame(index=data.index)
 
         # 価格変動率
-        features['price_change'] = data['close'].pct_change()
-        features['high_low_ratio'] = (data['high'] - data['low']) / data['close']
-        features['volume_change'] = data['volume'].pct_change()
+        features["price_change"] = data["close"].pct_change()
+        features["high_low_ratio"] = (data["high"] - data["low"]) / data["close"]
+        features["volume_change"] = data["volume"].pct_change()
 
         # 移動平均
         for period in [5, 10, 20]:
-            features[f'sma_{period}'] = data['close'].rolling(period).mean()
-            features[f'price_sma_{period}_ratio'] = data['close'] / features[f'sma_{period}']
+            features[f"sma_{period}"] = data["close"].rolling(period).mean()
+            features[f"price_sma_{period}_ratio"] = (
+                data["close"] / features[f"sma_{period}"]
+            )
 
         # RSI
-        delta = data['close'].diff()
+        delta = data["close"].diff()
         gain = (delta.where(delta > 0, 0)).rolling(window=14).mean()
         loss = (-delta.where(delta < 0, 0)).rolling(window=14).mean()
         rs = gain / loss
-        features['rsi'] = 100 - (100 / (1 + rs))
+        features["rsi"] = 100 - (100 / (1 + rs))
 
         # ボリンジャーバンド
-        sma_20 = data['close'].rolling(20).mean()
-        std_20 = data['close'].rolling(20).std()
-        features['bb_upper'] = sma_20 + (std_20 * 2)
-        features['bb_lower'] = sma_20 - (std_20 * 2)
-        features['bb_position'] = (data['close'] - features['bb_lower']) / (features['bb_upper'] - features['bb_lower'])
+        sma_20 = data["close"].rolling(20).mean()
+        std_20 = data["close"].rolling(20).std()
+        features["bb_upper"] = sma_20 + (std_20 * 2)
+        features["bb_lower"] = sma_20 - (std_20 * 2)
+        features["bb_position"] = (data["close"] - features["bb_lower"]) / (
+            features["bb_upper"] - features["bb_lower"]
+        )
 
         # 追加データがある場合の特徴量
-        if 'fundingrate' in data.columns:
-            features['funding_rate'] = data['fundingrate']
-            features['funding_rate_change'] = data['fundingrate'].pct_change()
+        if "fundingrate" in data.columns:
+            features["funding_rate"] = data["fundingrate"]
+            features["funding_rate_change"] = data["fundingrate"].pct_change()
 
-        if 'openinterest' in data.columns:
-            features['open_interest'] = data['openinterest']
-            features['oi_change'] = data['openinterest'].pct_change()
+        if "openinterest" in data.columns:
+            features["open_interest"] = data["openinterest"]
+            features["oi_change"] = data["openinterest"].pct_change()
 
         # ターゲット作成（24時間後の価格変動）
-        future_returns = data['close'].shift(-24).pct_change(24)
+        future_returns = data["close"].shift(-24).pct_change(24)
 
         # 3クラス分類：上昇(0)、下降(1)、横ばい(2)
         targets = pd.Series(index=data.index, dtype=int)
@@ -537,7 +572,7 @@ class MLIndicatorService:
         model_data = {
             "model": self.model,
             "feature_columns": self.feature_columns,
-            "timestamp": timestamp
+            "timestamp": timestamp,
         }
 
         joblib.dump(model_data, model_path)
@@ -583,17 +618,23 @@ class MLIndicatorService:
             latest_model_path = model_manager.get_latest_model("*")
 
             if not latest_model_path:
-                logger.info("学習済みMLモデルが見つかりません。ML機能はデフォルト値で動作します。")
+                logger.info(
+                    "学習済みMLモデルが見つかりません。ML機能はデフォルト値で動作します。"
+                )
                 return False
 
             # モデルを読み込み
             success = self.trainer.load_model(latest_model_path)
             if success:
                 self.is_model_loaded = True
-                logger.info(f"最新のMLモデルを自動読み込みしました: {os.path.basename(latest_model_path)}")
+                logger.info(
+                    f"最新のMLモデルを自動読み込みしました: {os.path.basename(latest_model_path)}"
+                )
                 return True
             else:
-                logger.warning(f"MLモデルの読み込みに失敗しました: {os.path.basename(latest_model_path)}")
+                logger.warning(
+                    f"MLモデルの読み込みに失敗しました: {os.path.basename(latest_model_path)}"
+                )
                 return False
 
         except Exception as e:

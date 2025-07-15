@@ -15,7 +15,7 @@ from sklearn.metrics import classification_report, accuracy_score
 import lightgbm as lgb
 
 from .config import ml_config
-from ...utils.ml_error_handler import  MLModelError
+from ...utils.ml_error_handler import MLModelError
 from .model_manager import model_manager
 
 logger = logging.getLogger(__name__)
@@ -24,7 +24,7 @@ logger = logging.getLogger(__name__)
 class MLSignalGenerator:
     """
     ML信号生成器
-    
+
     特徴量エンジニアリングサービスが生成した特徴量を使用して、
     未来の価格動向（上昇・下落・レンジ）を予測するモデルを構築・運用します。
     """
@@ -51,7 +51,7 @@ class MLSignalGenerator:
         df: pd.DataFrame,
         prediction_horizon: Optional[int] = None,
         threshold_up: Optional[float] = None,
-        threshold_down: Optional[float] = None
+        threshold_down: Optional[float] = None,
     ) -> Tuple[pd.DataFrame, pd.Series]:
         """
         学習用データを準備
@@ -74,20 +74,20 @@ class MLSignalGenerator:
             if threshold_down is None:
                 threshold_down = self.config.training.THRESHOLD_DOWN
             # ターゲットカラムの存在チェック
-            required_target_columns = ['target_up', 'target_down', 'target_range']
+            required_target_columns = ["target_up", "target_down", "target_range"]
             if not all(col in df.columns for col in required_target_columns):
                 raise ValueError("Target columns not found in features_df")
 
             # 未来の価格変化率を計算
-            future_returns = (
-                df['close'].shift(-prediction_horizon) / df['close'] - 1
-            )
+            future_returns = df["close"].shift(-prediction_horizon) / df["close"] - 1
 
             # 3クラス分類のラベルを作成
             labels = pd.Series(index=df.index, dtype=int)
             labels[future_returns >= threshold_up] = 2  # 上昇
             labels[future_returns <= threshold_down] = 0  # 下落
-            labels[(future_returns > threshold_down) & (future_returns < threshold_up)] = 1  # レンジ
+            labels[
+                (future_returns > threshold_down) & (future_returns < threshold_up)
+            ] = 1  # レンジ
 
             # NaNを除去
             valid_mask = ~(future_returns.isna() | labels.isna())
@@ -97,15 +97,22 @@ class MLSignalGenerator:
             # 特徴量カラムを選択（数値カラムのみ）
             feature_columns = []
             for col in df_clean.columns:
-                if col not in ['timestamp', 'open', 'high', 'low', 'close'] and col not in required_target_columns:
-                    if df_clean[col].dtype in ['int64', 'float64']:
+                if (
+                    col not in ["timestamp", "open", "high", "low", "close"]
+                    and col not in required_target_columns
+                ):
+                    if df_clean[col].dtype in ["int64", "float64"]:
                         feature_columns.append(col)
 
             self.feature_columns = feature_columns
             features_df = df_clean[feature_columns].fillna(0)
 
-            logger.info(f"学習データ準備完了: {len(features_df)}サンプル, {len(feature_columns)}特徴量")
-            logger.info(f"ラベル分布: 下落={sum(labels_clean==0)}, レンジ={sum(labels_clean==1)}, 上昇={sum(labels_clean==2)}")
+            logger.info(
+                f"学習データ準備完了: {len(features_df)}サンプル, {len(feature_columns)}特徴量"
+            )
+            logger.info(
+                f"ラベル分布: 下落={sum(labels_clean==0)}, レンジ={sum(labels_clean==1)}, 上昇={sum(labels_clean==2)}"
+            )
 
             return features_df, labels_clean
 
@@ -118,7 +125,7 @@ class MLSignalGenerator:
         features: pd.DataFrame,
         labels: pd.Series,
         test_size: Optional[float] = None,
-        random_state: Optional[int] = None
+        random_state: Optional[int] = None,
     ) -> Dict[str, Any]:
         """
         モデルを学習
@@ -156,35 +163,41 @@ class MLSignalGenerator:
 
             # LightGBMパラメータ（設定から取得）
             params = self.config.lightgbm.to_dict()
-            params['random_state'] = random_state
+            params["random_state"] = random_state
 
             # モデル学習
             self.model = lgb.train(
                 params,
                 train_data,
                 valid_sets=[train_data, valid_data],
-                valid_names=['train', 'valid'],
+                valid_names=["train", "valid"],
                 num_boost_round=self.config.lightgbm.NUM_BOOST_ROUND,
                 callbacks=[
-                    lgb.early_stopping(stopping_rounds=self.config.lightgbm.EARLY_STOPPING_ROUNDS),
-                    lgb.log_evaluation(0)
-                ]
+                    lgb.early_stopping(
+                        stopping_rounds=self.config.lightgbm.EARLY_STOPPING_ROUNDS
+                    ),
+                    lgb.log_evaluation(0),
+                ],
             )
 
             # 予測と評価
-            y_pred = self.model.predict(X_test_scaled, num_iteration=self.model.best_iteration)
+            y_pred = self.model.predict(
+                X_test_scaled, num_iteration=self.model.best_iteration
+            )
             y_pred_class = np.argmax(y_pred, axis=1)
 
             accuracy = accuracy_score(y_test, y_pred_class)
-            class_report = classification_report(y_test, y_pred_class, output_dict=True, zero_division=0)
+            class_report = classification_report(
+                y_test, y_pred_class, output_dict=True, zero_division=0
+            )
 
             # 特徴量重要度（モデルタイプに応じて分岐）
-            if hasattr(self.model, 'feature_importances_'):
-                # scikit-learn互換モデル (e.g., RandomForest)
+            if hasattr(self.model, "feature_importances_"):
+                # scikit-learn互換モデル
                 importances = self.model.feature_importances_
-            elif hasattr(self.model, 'feature_importance'):
+            elif hasattr(self.model, "feature_importance"):
                 # LightGBMモデル
-                importances = self.model.feature_importance(importance_type='gain')
+                importances = self.model.feature_importance(importance_type="gain")
             else:
                 importances = [0] * len(self.feature_columns)
 
@@ -193,12 +206,12 @@ class MLSignalGenerator:
             self.is_trained = True
 
             result = {
-                'accuracy': accuracy,
-                'classification_report': class_report,
-                'feature_importance': feature_importance,
-                'train_samples': len(X_train),
-                'test_samples': len(X_test),
-                'best_iteration': self.model.best_iteration
+                "accuracy": accuracy,
+                "classification_report": class_report,
+                "feature_importance": feature_importance,
+                "train_samples": len(X_train),
+                "test_samples": len(X_test),
+                "best_iteration": self.model.best_iteration,
             }
 
             logger.info(f"モデル学習完了: 精度={accuracy:.4f}")
@@ -226,37 +239,37 @@ class MLSignalGenerator:
 
             if self.feature_columns is None:
                 # 特徴量カラムが設定されていない場合、利用可能な全カラムを使用
-                logger.warning("特徴量カラムが設定されていません。利用可能な全カラムを使用します。")
+                logger.warning(
+                    "特徴量カラムが設定されていません。利用可能な全カラムを使用します。"
+                )
                 features_selected = features.fillna(0)
             else:
                 # 特徴量を選択・整形
-                available_columns = [col for col in self.feature_columns if col in features.columns]
+                available_columns = [
+                    col for col in self.feature_columns if col in features.columns
+                ]
                 if not available_columns:
-                    logger.warning("指定された特徴量カラムが見つかりません。利用可能な全カラムを使用します。")
+                    logger.warning(
+                        "指定された特徴量カラムが見つかりません。利用可能な全カラムを使用します。"
+                    )
                     features_selected = features.fillna(0)
                 else:
                     features_selected = features[available_columns].fillna(0)
-            
+
             # 標準化
             if self.scaler is not None:
                 features_scaled = self.scaler.transform(features_selected)
             else:
-                logger.warning("スケーラーが設定されていません。標準化をスキップします。")
+                logger.warning(
+                    "スケーラーが設定されていません。標準化をスキップします。"
+                )
                 features_scaled = features_selected.values
 
             # 予測（モデルタイプに応じて適切なメソッドを使用）
-            if hasattr(self.model, 'predict_proba'):
-                # 確率予測が可能な場合（RandomForest等）
-                predictions = self.model.predict_proba(features_scaled)
-            elif hasattr(self.model, 'predict') and hasattr(self.model, 'best_iteration'):
-                # LightGBM等の場合
-                predictions = self.model.predict(
-                    features_scaled,
-                    num_iteration=self.model.best_iteration
-                )
-            else:
-                # その他のモデルの場合
-                predictions = self.model.predict(features_scaled)
+            # LightGBMモデルの場合
+            predictions = self.model.predict(
+                features_scaled, num_iteration=self.model.best_iteration
+            )
 
             # 最新の予測結果を取得
             if len(predictions.shape) == 2:
@@ -269,14 +282,14 @@ class MLSignalGenerator:
                 return {
                     "down": float(latest_pred[0]),
                     "range": float(latest_pred[1]),
-                    "up": float(latest_pred[2])
+                    "up": float(latest_pred[2]),
                 }
             elif len(latest_pred) == 2:
                 # 2クラス分類の場合、rangeを中間値として設定
                 return {
                     "down": float(latest_pred[0]),
                     "range": 0.34,
-                    "up": float(latest_pred[1])
+                    "up": float(latest_pred[1]),
                 }
             else:
                 # 予期しない形式の場合、デフォルト値を返す
@@ -303,9 +316,11 @@ class MLSignalGenerator:
 
             # ModelManagerを使用してモデルを保存
             metadata = {
-                'model_type': 'LightGBM',
-                'feature_count': len(self.feature_columns) if self.feature_columns else 0,
-                'is_trained': self.is_trained
+                "model_type": "LightGBM",
+                "feature_count": (
+                    len(self.feature_columns) if self.feature_columns else 0
+                ),
+                "is_trained": self.is_trained,
             }
 
             model_path = model_manager.save_model(
@@ -313,7 +328,7 @@ class MLSignalGenerator:
                 model_name=model_name,
                 metadata=metadata,
                 scaler=self.scaler,
-                feature_columns=self.feature_columns
+                feature_columns=self.feature_columns,
             )
 
             logger.info(f"モデル保存完了: {model_path}")
@@ -341,9 +356,9 @@ class MLSignalGenerator:
                 return False
 
             # モデルデータから各要素を取得
-            self.model = model_data.get('model')
-            self.scaler = model_data.get('scaler')
-            self.feature_columns = model_data.get('feature_columns')
+            self.model = model_data.get("model")
+            self.scaler = model_data.get("scaler")
+            self.feature_columns = model_data.get("feature_columns")
 
             if self.model is None:
                 raise MLModelError("モデルデータにモデルが含まれていません")
@@ -371,14 +386,8 @@ class MLSignalGenerator:
                 return {}
 
             # 特徴量重要度（モデルタイプに応じて分岐）
-            if hasattr(self.model, 'feature_importances_'):
-                # scikit-learn互換モデル (e.g., RandomForest)
-                importances = self.model.feature_importances_
-            elif hasattr(self.model, 'feature_importance'):
-                # LightGBMモデル
-                importances = self.model.feature_importance(importance_type='gain')
-            else:
-                importances = [0] * len(self.feature_columns)
+            # LightGBMモデル
+            importances = self.model.feature_importance(importance_type="gain")
 
             importance = dict(zip(self.feature_columns, importances))
 

@@ -46,14 +46,13 @@ class BayesianOptimizationRepository(BaseRepository):
 
         # 一般的なモデルタイプの正規化
         model_type_mapping = {
-            'lightgbm': 'LightGBM',
-            'xgboost': 'XGBoost',
-            'randomforest': 'RandomForest',
-            'catboost': 'CatBoost',
-            'svm': 'SVM',
-            'logisticregression': 'LogisticRegression',
-            'decisiontree': 'DecisionTree',
-            'gradientboosting': 'GradientBoosting'
+            "lightgbm": "LightGBM",
+            "xgboost": "XGBoost",
+            "catboost": "CatBoost",
+            "svm": "SVM",
+            "logisticregression": "LogisticRegression",
+            "decisiontree": "DecisionTree",
+            "gradientboosting": "GradientBoosting",
         }
 
         return model_type_mapping.get(model_type.lower(), model_type)
@@ -110,8 +109,14 @@ class BayesianOptimizationRepository(BaseRepository):
             optimization_history = self._convert_numpy_types(optimization_history)
 
             # モデルタイプを正規化
-            model_type = self._normalize_model_type(model_type) if model_type else model_type
-            target_model_type = self._normalize_model_type(target_model_type) if target_model_type else self._normalize_model_type(model_type)
+            model_type = (
+                self._normalize_model_type(model_type) if model_type else model_type
+            )
+            target_model_type = (
+                self._normalize_model_type(target_model_type)
+                if target_model_type
+                else self._normalize_model_type(model_type)
+            )
 
             # 同じプロファイル名が存在する場合は更新
             existing_result = self.get_by_profile_name(profile_name)
@@ -162,9 +167,7 @@ class BayesianOptimizationRepository(BaseRepository):
             raise
 
     def update_optimization_result(
-        self,
-        result_id: int,
-        **kwargs
+        self, result_id: int, **kwargs
     ) -> Optional[BayesianOptimizationResult]:
         """
         ベイジアン最適化結果を更新
@@ -177,9 +180,11 @@ class BayesianOptimizationRepository(BaseRepository):
             更新されたベイジアン最適化結果
         """
         try:
-            result = self.db.query(BayesianOptimizationResult).filter(
-                BayesianOptimizationResult.id == result_id
-            ).first()
+            result = (
+                self.db.query(BayesianOptimizationResult)
+                .filter(BayesianOptimizationResult.id == result_id)
+                .first()
+            )
 
             if not result:
                 logger.warning(f"ベイジアン最適化結果が見つかりません: ID={result_id}")
@@ -187,9 +192,18 @@ class BayesianOptimizationRepository(BaseRepository):
 
             # 更新可能なフィールドのみ更新
             updatable_fields = [
-                'best_params', 'best_score', 'total_evaluations', 'optimization_time',
-                'convergence_info', 'optimization_history', 'model_type',
-                'experiment_name', 'description', 'is_active', 'is_default', 'target_model_type'
+                "best_params",
+                "best_score",
+                "total_evaluations",
+                "optimization_time",
+                "convergence_info",
+                "optimization_history",
+                "model_type",
+                "experiment_name",
+                "description",
+                "is_active",
+                "is_default",
+                "target_model_type",
             ]
 
             for field, value in kwargs.items():
@@ -210,7 +224,9 @@ class BayesianOptimizationRepository(BaseRepository):
             logger.error(f"ベイジアン最適化結果更新エラー: {e}")
             raise
 
-    def get_by_profile_name(self, profile_name: str) -> Optional[BayesianOptimizationResult]:
+    def get_by_profile_name(
+        self, profile_name: str
+    ) -> Optional[BayesianOptimizationResult]:
         """
         プロファイル名でベイジアン最適化結果を取得
 
@@ -221,9 +237,11 @@ class BayesianOptimizationRepository(BaseRepository):
             ベイジアン最適化結果（見つからない場合はNone）
         """
         try:
-            return self.db.query(BayesianOptimizationResult).filter(
-                BayesianOptimizationResult.profile_name == profile_name
-            ).first()
+            return (
+                self.db.query(BayesianOptimizationResult)
+                .filter(BayesianOptimizationResult.profile_name == profile_name)
+                .first()
+            )
 
         except Exception as e:
             logger.error(f"プロファイル名による検索エラー: {e}")
@@ -240,9 +258,11 @@ class BayesianOptimizationRepository(BaseRepository):
             ベイジアン最適化結果（見つからない場合はNone）
         """
         try:
-            return self.db.query(BayesianOptimizationResult).filter(
-                BayesianOptimizationResult.id == result_id
-            ).first()
+            return (
+                self.db.query(BayesianOptimizationResult)
+                .filter(BayesianOptimizationResult.id == result_id)
+                .first()
+            )
 
         except Exception as e:
             logger.error(f"ID による検索エラー: {e}")
@@ -253,7 +273,7 @@ class BayesianOptimizationRepository(BaseRepository):
         optimization_type: Optional[str] = None,
         model_type: Optional[str] = None,
         target_model_type: Optional[str] = None,
-        limit: Optional[int] = None
+        limit: Optional[int] = None,
     ) -> List[BayesianOptimizationResult]:
         """
         アクティブなベイジアン最適化結果を取得
@@ -299,9 +319,7 @@ class BayesianOptimizationRepository(BaseRepository):
             return []
 
     def get_all_results(
-        self,
-        include_inactive: bool = False,
-        limit: Optional[int] = None
+        self, include_inactive: bool = False, limit: Optional[int] = None
     ) -> List[BayesianOptimizationResult]:
         """
         すべてのベイジアン最適化結果を取得
@@ -341,12 +359,16 @@ class BayesianOptimizationRepository(BaseRepository):
             削除成功の場合True
         """
         try:
-            result = self.db.query(BayesianOptimizationResult).filter(
-                BayesianOptimizationResult.id == result_id
-            ).first()
+            result = (
+                self.db.query(BayesianOptimizationResult)
+                .filter(BayesianOptimizationResult.id == result_id)
+                .first()
+            )
 
             if not result:
-                logger.warning(f"削除対象のベイジアン最適化結果が見つかりません: ID={result_id}")
+                logger.warning(
+                    f"削除対象のベイジアン最適化結果が見つかりません: ID={result_id}"
+                )
                 return False
 
             self.db.delete(result)
@@ -361,7 +383,9 @@ class BayesianOptimizationRepository(BaseRepository):
             return False
 
     # プロファイル関連のメソッド
-    def get_default_profile(self, target_model_type: str) -> Optional[BayesianOptimizationResult]:
+    def get_default_profile(
+        self, target_model_type: str
+    ) -> Optional[BayesianOptimizationResult]:
         """
         指定されたモデルタイプのデフォルトプロファイルを取得
 
@@ -375,13 +399,18 @@ class BayesianOptimizationRepository(BaseRepository):
             # モデルタイプを正規化
             normalized_model_type = self._normalize_model_type(target_model_type)
 
-            return self.db.query(BayesianOptimizationResult).filter(
-                and_(
-                    BayesianOptimizationResult.target_model_type == normalized_model_type,
-                    BayesianOptimizationResult.is_default == True,
-                    BayesianOptimizationResult.is_active == True
+            return (
+                self.db.query(BayesianOptimizationResult)
+                .filter(
+                    and_(
+                        BayesianOptimizationResult.target_model_type
+                        == normalized_model_type,
+                        BayesianOptimizationResult.is_default == True,
+                        BayesianOptimizationResult.is_active == True,
+                    )
                 )
-            ).first()
+                .first()
+            )
 
         except Exception as e:
             logger.error(f"デフォルトプロファイル取得エラー: {e}")
@@ -403,14 +432,16 @@ class BayesianOptimizationRepository(BaseRepository):
             self.db.query(BayesianOptimizationResult).filter(
                 and_(
                     BayesianOptimizationResult.target_model_type == target_model_type,
-                    BayesianOptimizationResult.is_default == True
+                    BayesianOptimizationResult.is_default == True,
                 )
             ).update({"is_default": False})
 
             # 新しいデフォルトプロファイルを設定
-            result = self.db.query(BayesianOptimizationResult).filter(
-                BayesianOptimizationResult.id == profile_id
-            ).first()
+            result = (
+                self.db.query(BayesianOptimizationResult)
+                .filter(BayesianOptimizationResult.id == profile_id)
+                .first()
+            )
 
             if not result:
                 logger.warning(f"プロファイルが見つかりません: ID={profile_id}")
@@ -420,7 +451,9 @@ class BayesianOptimizationRepository(BaseRepository):
             result.target_model_type = target_model_type
             self.db.commit()
 
-            logger.info(f"デフォルトプロファイルを設定: ID={profile_id}, モデルタイプ={target_model_type}")
+            logger.info(
+                f"デフォルトプロファイルを設定: ID={profile_id}, モデルタイプ={target_model_type}"
+            )
             return True
 
         except Exception as e:
@@ -432,7 +465,7 @@ class BayesianOptimizationRepository(BaseRepository):
         self,
         target_model_type: str,
         include_inactive: bool = False,
-        limit: Optional[int] = None
+        limit: Optional[int] = None,
     ) -> List[BayesianOptimizationResult]:
         """
         指定されたモデルタイプのプロファイルを取得
@@ -458,7 +491,7 @@ class BayesianOptimizationRepository(BaseRepository):
 
             query = query.order_by(
                 desc(BayesianOptimizationResult.is_default),
-                desc(BayesianOptimizationResult.created_at)
+                desc(BayesianOptimizationResult.created_at),
             )
 
             if limit:

@@ -16,6 +16,7 @@ logger = logging.getLogger(__name__)
 
 class AlertLevel(Enum):
     """アラートレベル"""
+
     INFO = "info"
     WARNING = "warning"
     CRITICAL = "critical"
@@ -24,6 +25,7 @@ class AlertLevel(Enum):
 @dataclass
 class PerformanceAlert:
     """パフォーマンスアラート"""
+
     strategy_id: str
     alert_type: str
     level: AlertLevel
@@ -35,6 +37,7 @@ class PerformanceAlert:
 @dataclass
 class PerformanceMetrics:
     """パフォーマンス指標"""
+
     strategy_id: str
     timestamp: datetime
     total_return: float
@@ -52,7 +55,7 @@ class PerformanceMetrics:
 class PerformanceMonitor:
     """
     パフォーマンス監視クラス
-    
+
     戦略の実運用パフォーマンスを継続的に監視し、
     劣化検出やアラート機能を提供します。
     """
@@ -67,14 +70,12 @@ class PerformanceMonitor:
             "min_win_rate": 0.45,
             "min_balance_score": 0.3,
             "performance_window": 30,  # 日数
-            "alert_cooldown": 3600,    # 秒
+            "alert_cooldown": 3600,  # 秒
         }
         self.last_alert_times: Dict[str, datetime] = {}
 
     def add_performance_record(
-        self, 
-        strategy_id: str, 
-        performance_data: Dict[str, Any]
+        self, strategy_id: str, performance_data: Dict[str, Any]
     ) -> None:
         """
         パフォーマンス記録を追加
@@ -97,13 +98,13 @@ class PerformanceMonitor:
                 short_trades=performance_data.get("short_trades", 0),
                 long_pnl=performance_data.get("long_pnl", 0.0),
                 short_pnl=performance_data.get("short_pnl", 0.0),
-                balance_score=performance_data.get("balance_score", 0.0)
+                balance_score=performance_data.get("balance_score", 0.0),
             )
 
             # 履歴に追加
             if strategy_id not in self.performance_history:
                 self.performance_history[strategy_id] = []
-            
+
             self.performance_history[strategy_id].append(metrics)
 
             # 古い記録を削除（メモリ管理）
@@ -118,9 +119,7 @@ class PerformanceMonitor:
             logger.error(f"パフォーマンス記録追加エラー: {e}")
 
     def get_strategy_performance(
-        self, 
-        strategy_id: str, 
-        days: int = 30
+        self, strategy_id: str, days: int = 30
     ) -> Optional[Dict[str, Any]]:
         """
         戦略のパフォーマンス統計を取得
@@ -139,7 +138,8 @@ class PerformanceMonitor:
             # 指定期間のデータを取得
             cutoff_date = datetime.now() - timedelta(days=days)
             recent_records = [
-                record for record in self.performance_history[strategy_id]
+                record
+                for record in self.performance_history[strategy_id]
                 if record.timestamp >= cutoff_date
             ]
 
@@ -164,7 +164,7 @@ class PerformanceMonitor:
                 "avg_balance_score": np.mean(balance_scores),
                 "return_volatility": np.std(returns),
                 "latest_record": recent_records[-1],
-                "performance_trend": self._calculate_trend(recent_records)
+                "performance_trend": self._calculate_trend(recent_records),
             }
 
         except Exception as e:
@@ -193,19 +193,31 @@ class PerformanceMonitor:
             degradation_flags = []
 
             # シャープレシオの劣化
-            if recent_performance["avg_sharpe_ratio"] < self.monitoring_config["min_sharpe_ratio"]:
+            if (
+                recent_performance["avg_sharpe_ratio"]
+                < self.monitoring_config["min_sharpe_ratio"]
+            ):
                 degradation_flags.append("low_sharpe_ratio")
 
             # ドローダウンの悪化
-            if recent_performance["avg_drawdown"] > self.monitoring_config["max_drawdown_threshold"]:
+            if (
+                recent_performance["avg_drawdown"]
+                > self.monitoring_config["max_drawdown_threshold"]
+            ):
                 degradation_flags.append("high_drawdown")
 
             # 勝率の低下
-            if recent_performance["avg_win_rate"] < self.monitoring_config["min_win_rate"]:
+            if (
+                recent_performance["avg_win_rate"]
+                < self.monitoring_config["min_win_rate"]
+            ):
                 degradation_flags.append("low_win_rate")
 
             # バランススコアの悪化
-            if recent_performance["avg_balance_score"] < self.monitoring_config["min_balance_score"]:
+            if (
+                recent_performance["avg_balance_score"]
+                < self.monitoring_config["min_balance_score"]
+            ):
                 degradation_flags.append("poor_balance")
 
             # トレンドの悪化
@@ -219,9 +231,7 @@ class PerformanceMonitor:
             return False
 
     def get_alerts(
-        self, 
-        strategy_id: Optional[str] = None, 
-        level: Optional[AlertLevel] = None
+        self, strategy_id: Optional[str] = None, level: Optional[AlertLevel] = None
     ) -> List[PerformanceAlert]:
         """
         アラートを取得
@@ -251,7 +261,9 @@ class PerformanceMonitor:
             strategy_id: 戦略ID（オプション、指定時はその戦略のみクリア）
         """
         if strategy_id:
-            self.alerts = [alert for alert in self.alerts if alert.strategy_id != strategy_id]
+            self.alerts = [
+                alert for alert in self.alerts if alert.strategy_id != strategy_id
+            ]
         else:
             self.alerts.clear()
 
@@ -266,14 +278,21 @@ class PerformanceMonitor:
 
             if self.detect_performance_degradation(strategy_id):
                 recent_performance = self.get_strategy_performance(strategy_id, days=7)
-                
+
+                # アラートメトリクスを定義
+                alert_metrics: Dict[str, Any]
+                if recent_performance is not None:
+                    alert_metrics = recent_performance
+                else:
+                    alert_metrics = {}
+
                 alert = PerformanceAlert(
                     strategy_id=strategy_id,
                     alert_type="performance_degradation",
                     level=AlertLevel.WARNING,
                     message=f"戦略 {strategy_id} のパフォーマンス劣化を検出",
                     timestamp=datetime.now(),
-                    metrics=recent_performance
+                    metrics=alert_metrics,
                 )
 
                 self.alerts.append(alert)
@@ -293,7 +312,8 @@ class PerformanceMonitor:
             # 90日より古い記録を削除
             cutoff_date = datetime.now() - timedelta(days=90)
             self.performance_history[strategy_id] = [
-                record for record in self.performance_history[strategy_id]
+                record
+                for record in self.performance_history[strategy_id]
                 if record.timestamp >= cutoff_date
             ]
 
@@ -308,7 +328,7 @@ class PerformanceMonitor:
 
             # 直近のリターンの傾向を計算
             returns = [r.total_return for r in records[-10:]]  # 最新10件
-            
+
             if len(returns) < 2:
                 return 0.0
 

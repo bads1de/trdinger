@@ -7,7 +7,8 @@ optimization_profilesテーブルを削除し、bayesian_optimization_resultsに
 
 import sys
 import os
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
+
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..")))
 
 import pytest
 import json
@@ -17,7 +18,9 @@ from fastapi.testclient import TestClient
 
 from database.connection import get_db, SessionLocal
 from database.models import BayesianOptimizationResult
-from database.repositories.bayesian_optimization_repository import BayesianOptimizationRepository
+from database.repositories.bayesian_optimization_repository import (
+    BayesianOptimizationRepository,
+)
 from app.main import app
 
 
@@ -42,16 +45,12 @@ def client():
 def sample_optimization_result(db_session):
     """テスト用ベイジアン最適化結果"""
     repo = BayesianOptimizationRepository(db_session)
-    
+
     result = repo.create_optimization_result(
         profile_name="test_profile_lightgbm",
         optimization_type="bayesian_ml",
         model_type="LightGBM",
-        best_params={
-            "n_estimators": 100,
-            "learning_rate": 0.1,
-            "max_depth": 6
-        },
+        best_params={"n_estimators": 100, "learning_rate": 0.1, "max_depth": 6},
         best_score=0.85,
         total_evaluations=30,
         optimization_time=120.5,
@@ -59,15 +58,15 @@ def sample_optimization_result(db_session):
         optimization_history=[
             {"iteration": 1, "score": 0.75, "params": {"n_estimators": 50}},
             {"iteration": 2, "score": 0.80, "params": {"n_estimators": 75}},
-            {"iteration": 3, "score": 0.85, "params": {"n_estimators": 100}}
+            {"iteration": 3, "score": 0.85, "params": {"n_estimators": 100}},
         ],
         description="LightGBMのテスト用最適化結果",
         target_model_type="LightGBM",
-        is_default=True
+        is_default=True,
     )
-    
+
     yield result
-    
+
     # クリーンアップ
     db_session.delete(result)
     db_session.commit()
@@ -79,28 +78,28 @@ class TestBayesianOptimizationRepository:
     def test_create_optimization_result_with_profile_fields(self, db_session):
         """プロファイルフィールドを含む最適化結果の作成テスト"""
         repo = BayesianOptimizationRepository(db_session)
-        
+
         result = repo.create_optimization_result(
             profile_name="test_create_profile",
             optimization_type="bayesian_ml",
-            model_type="RandomForest",
+            model_type="LightGBM",
             best_params={"n_estimators": 200},
             best_score=0.90,
             total_evaluations=50,
             optimization_time=300.0,
             convergence_info={"converged": True},
             optimization_history=[],
-            target_model_type="RandomForest",
+            target_model_type="LightGBM",
             is_default=False,
-            description="作成テスト用"
+            description="作成テスト用",
         )
-        
+
         assert result is not None
         assert result.profile_name == "test_create_profile"
-        assert result.target_model_type == "RandomForest"
+        assert result.target_model_type == "LightGBM"
         assert result.is_default is False
         assert result.description == "作成テスト用"
-        
+
         # クリーンアップ
         db_session.delete(result)
         db_session.commit()
@@ -108,9 +107,9 @@ class TestBayesianOptimizationRepository:
     def test_get_default_profile(self, db_session, sample_optimization_result):
         """デフォルトプロファイル取得テスト"""
         repo = BayesianOptimizationRepository(db_session)
-        
+
         default_profile = repo.get_default_profile("LightGBM")
-        
+
         assert default_profile is not None
         assert default_profile.target_model_type == "LightGBM"
         assert default_profile.is_default is True
@@ -119,7 +118,7 @@ class TestBayesianOptimizationRepository:
     def test_set_default_profile(self, db_session):
         """デフォルトプロファイル設定テスト"""
         repo = BayesianOptimizationRepository(db_session)
-        
+
         # 2つのプロファイルを作成
         profile1 = repo.create_optimization_result(
             profile_name="profile1_xgboost",
@@ -132,9 +131,9 @@ class TestBayesianOptimizationRepository:
             convergence_info={"converged": True},
             optimization_history=[],
             target_model_type="XGBoost",
-            is_default=True
+            is_default=True,
         )
-        
+
         profile2 = repo.create_optimization_result(
             profile_name="profile2_xgboost",
             optimization_type="bayesian_ml",
@@ -146,20 +145,20 @@ class TestBayesianOptimizationRepository:
             convergence_info={"converged": True},
             optimization_history=[],
             target_model_type="XGBoost",
-            is_default=False
+            is_default=False,
         )
-        
+
         # profile2をデフォルトに設定
         success = repo.set_default_profile(profile2.id, "XGBoost")
         assert success is True
-        
+
         # 確認
         db_session.refresh(profile1)
         db_session.refresh(profile2)
-        
+
         assert profile1.is_default is False
         assert profile2.is_default is True
-        
+
         # クリーンアップ
         db_session.delete(profile1)
         db_session.delete(profile2)
@@ -168,7 +167,7 @@ class TestBayesianOptimizationRepository:
     def test_get_profiles_by_model_type(self, db_session):
         """モデルタイプ別プロファイル取得テスト"""
         repo = BayesianOptimizationRepository(db_session)
-        
+
         # 複数のプロファイルを作成
         profiles = []
         for i in range(3):
@@ -183,17 +182,17 @@ class TestBayesianOptimizationRepository:
                 convergence_info={"converged": True},
                 optimization_history=[],
                 target_model_type="CatBoost",
-                is_default=(i == 0)
+                is_default=(i == 0),
             )
             profiles.append(profile)
-        
+
         # 取得テスト
         retrieved_profiles = repo.get_profiles_by_model_type("CatBoost")
-        
+
         assert len(retrieved_profiles) == 3
         # デフォルトプロファイルが最初に来ることを確認
         assert retrieved_profiles[0].is_default is True
-        
+
         # クリーンアップ
         for profile in profiles:
             db_session.delete(profile)
@@ -220,7 +219,7 @@ class TestBayesianOptimizationIntegration:
             optimization_history=[],
             target_model_type="LightGBM",
             is_default=True,
-            description="統合テスト用プロファイル"
+            description="統合テスト用プロファイル",
         )
 
         assert profile is not None
@@ -236,7 +235,7 @@ class TestBayesianOptimizationIntegration:
         updated_profile = repo.update_optimization_result(
             profile.id,
             description="更新された統合テスト用プロファイル",
-            best_score=0.90
+            best_score=0.90,
         )
 
         assert updated_profile.description == "更新された統合テスト用プロファイル"
@@ -257,7 +256,7 @@ class TestBayesianOptimizationIntegration:
         """複数モデルタイプのワークフローテスト"""
         repo = BayesianOptimizationRepository(db_session)
 
-        model_types = ["LightGBM", "XGBoost", "RandomForest"]
+        model_types = ["LightGBM", "XGBoost"]
         created_profiles = []
 
         # 各モデルタイプのプロファイルを作成
@@ -273,7 +272,7 @@ class TestBayesianOptimizationIntegration:
                 convergence_info={"converged": True},
                 optimization_history=[],
                 target_model_type=model_type,
-                is_default=True
+                is_default=True,
             )
             created_profiles.append(profile)
 
