@@ -9,7 +9,81 @@
 
 import React, { useState } from "react";
 import TabButton from "../common/TabButton";
-import { OptimizationResult } from "@/types/optimization";
+import { formatNumber, formatPercentage } from "@/utils/formatters";
+import { getValueColorClass } from "@/utils/colorUtils";
+
+interface OptimizationResult {
+  strategy_name: string;
+  symbol: string;
+  timeframe: string;
+  initial_capital: number;
+  performance_metrics: {
+    total_return: number;
+    sharpe_ratio: number;
+    max_drawdown: number;
+    win_rate: number;
+    profit_factor: number;
+    total_trades: number;
+  };
+  optimized_parameters?: Record<string, any>;
+  heatmap_summary?: {
+    best_combination: any;
+    best_value: number;
+    worst_combination: any;
+    worst_value: number;
+    mean_value: number;
+    std_value: number;
+    total_combinations: number;
+  };
+  optimization_details?: {
+    method: string;
+    n_calls: number;
+    best_value: number;
+    convergence?: {
+      initial_value: number;
+      final_value: number;
+      improvement: number;
+      convergence_rate: number;
+      plateau_detection: boolean;
+    };
+  };
+  optimization_metadata?: {
+    method: string;
+    maximize: string;
+    parameter_space_size: number;
+    optimization_timestamp: string;
+  };
+  multi_objective_details?: {
+    objectives: string[];
+    weights: number[];
+    individual_scores: Record<string, number>;
+  };
+  robustness_analysis?: {
+    robustness_score: number;
+    successful_periods: number;
+    failed_periods: number;
+    performance_statistics: Record<
+      string,
+      {
+        mean: number;
+        std: number;
+        min: number;
+        max: number;
+        consistency_score: number;
+      }
+    >;
+    parameter_stability: Record<
+      string,
+      {
+        mean: number;
+        std: number;
+        coefficient_of_variation: number;
+      }
+    >;
+  };
+  individual_results?: Record<string, any>;
+  total_periods?: number;
+}
 
 interface OptimizationResultsProps {
   result: OptimizationResult | null;
@@ -31,25 +105,6 @@ export default function OptimizationResults({
       </div>
     );
   }
-
-  const formatNumber = (value: number, decimals: number = 2) => {
-    if (isNaN(value)) return "N/A";
-    return value.toFixed(decimals);
-  };
-
-  const formatPercentage = (value: number) => {
-    if (isNaN(value)) return "N/A";
-    return `${(value * 100).toFixed(2)}%`;
-  };
-
-  const getValueColor = (value: number, isPositive: boolean = true) => {
-    if (isNaN(value)) return "text-secondary-400";
-    if (isPositive) {
-      return value > 0 ? "text-green-400" : "text-red-400";
-    } else {
-      return value < 0 ? "text-green-400" : "text-red-400";
-    }
-  };
 
   const MetricCard = ({
     title,
@@ -115,21 +170,25 @@ export default function OptimizationResults({
                 value={formatPercentage(
                   result.performance_metrics.total_return / 100
                 )}
-                color={getValueColor(result.performance_metrics.total_return)}
+                color={getValueColorClass(
+                  result.performance_metrics.total_return
+                )}
               />
               <MetricCard
                 title="シャープレシオ"
                 value={formatNumber(result.performance_metrics.sharpe_ratio, 3)}
-                color={getValueColor(result.performance_metrics.sharpe_ratio)}
+                color={getValueColorClass(
+                  result.performance_metrics.sharpe_ratio
+                )}
               />
               <MetricCard
                 title="最大ドローダウン"
                 value={formatPercentage(
                   result.performance_metrics.max_drawdown / 100
                 )}
-                color={getValueColor(
+                color={getValueColorClass(
                   result.performance_metrics.max_drawdown,
-                  false
+                  { invert: true }
                 )}
               />
               <MetricCard
@@ -137,7 +196,7 @@ export default function OptimizationResults({
                 value={formatPercentage(
                   result.performance_metrics.win_rate / 100
                 )}
-                color={getValueColor(result.performance_metrics.win_rate)}
+                color={getValueColorClass(result.performance_metrics.win_rate)}
               />
               <MetricCard
                 title="プロフィットファクター"
@@ -145,8 +204,9 @@ export default function OptimizationResults({
                   result.performance_metrics.profit_factor,
                   3
                 )}
-                color={getValueColor(
-                  result.performance_metrics.profit_factor - 1
+                color={getValueColorClass(
+                  result.performance_metrics.profit_factor,
+                  { threshold: 1 }
                 )}
               />
               <MetricCard
@@ -242,7 +302,7 @@ export default function OptimizationResults({
                     result.robustness_analysis.robustness_score,
                     3
                   )}
-                  color={getValueColor(
+                  color={getValueColorClass(
                     result.robustness_analysis.robustness_score
                   )}
                   description="0-1の範囲で、1に近いほど安定"
@@ -363,7 +423,7 @@ export default function OptimizationResults({
                           result.optimization_details.convergence.improvement,
                           3
                         )}
-                        color={getValueColor(
+                        color={getValueColorClass(
                           result.optimization_details.convergence.improvement
                         )}
                       />
@@ -552,7 +612,7 @@ export default function OptimizationResults({
                         <MetricCard
                           title="一貫性スコア"
                           value={formatNumber(stats.consistency_score, 3)}
-                          color={getValueColor(stats.consistency_score)}
+                          color={getValueColorClass(stats.consistency_score)}
                         />
                       </div>
                     </div>

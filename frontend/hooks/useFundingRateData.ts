@@ -1,38 +1,32 @@
 import { useState, useEffect, useCallback } from "react";
 import { FundingRateData, FundingRateResponse } from "@/types/strategy";
+import { useApiCall } from "./useApiCall";
 
 export const useFundingRateData = (symbol: string, initialLimit = 100) => {
   const [data, setData] = useState<FundingRateData[]>([]);
-  const [loading, setLoading] = useState<boolean>(false);
-  const [error, setError] = useState<string>("");
   const [limit, setLimit] = useState<number>(initialLimit);
+  const { execute, loading, error } = useApiCall<FundingRateResponse>();
 
   const fetchFundingRateData = useCallback(async () => {
     if (!symbol) return;
 
-    setLoading(true);
-    setError("");
+    const params = new URLSearchParams({
+      symbol,
+      limit: limit.toString(),
+    });
 
-    try {
-      const params = new URLSearchParams({
-        symbol,
-        limit: limit.toString(),
-      });
-      const response = await fetch(`/api/data/funding-rates?${params}`);
-      const result: FundingRateResponse = await response.json();
-
-      if (result.success) {
-        setData(result.data.funding_rates);
-      } else {
-        setError(result.message || "資金調達データの取得に失敗しました");
+    await execute(`/api/data/funding-rates?${params}`, {
+      method: "GET",
+      onSuccess: (response) => {
+        if (response.success) {
+          setData(response.data.funding_rates);
+        }
+      },
+      onError: (errorMessage) => {
+        console.error("資金調達データの取得中にエラーが発生しました:", errorMessage);
       }
-    } catch (err) {
-      setError("資金調達データの取得中にエラーが発生しました");
-      console.error("資金調達データの取得中にエラーが発生しました:", err);
-    } finally {
-      setLoading(false);
-    }
-  }, [symbol, limit]);
+    });
+  }, [symbol, limit, execute]);
 
   useEffect(() => {
     fetchFundingRateData();

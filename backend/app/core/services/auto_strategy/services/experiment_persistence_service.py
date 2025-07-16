@@ -5,7 +5,7 @@ GA実験に関連するデータのデータベースへの保存、更新、取
 
 import logging
 import re
-from datetime import datetime
+
 from typing import Dict, Any, List, Optional
 from sqlalchemy.orm import Session
 
@@ -91,6 +91,10 @@ class ExperimentPersistenceService:
                 )
                 self._save_other_strategies(db, experiment_info, result, ga_config)
 
+                # 多目的最適化の場合、パレート最適解も保存
+                if ga_config.enable_multi_objective and "pareto_front" in result:
+                    self._save_pareto_front(db, experiment_info, result, ga_config)
+
             logger.info(f"実験結果保存完了: {experiment_id}")
 
         except Exception as e:
@@ -116,11 +120,24 @@ class ExperimentPersistenceService:
         best_strategy = result["best_strategy"]
         best_fitness = result["best_fitness"]
 
+        # 多目的最適化の場合、fitness_valuesも保存
+        fitness_values = None
+        if ga_config.enable_multi_objective and isinstance(best_fitness, (list, tuple)):
+            fitness_values = list(best_fitness)
+            fitness_score = (
+                best_fitness[0] if best_fitness else 0.0
+            )  # 後方互換性のため最初の値を使用
+        else:
+            fitness_score = (
+                best_fitness if isinstance(best_fitness, (int, float)) else 0.0
+            )
+
         best_strategy_record = generated_strategy_repo.save_strategy(
             experiment_id=db_experiment_id,
             gene_data=best_strategy.to_dict(),
             generation=ga_config.generations,
-            fitness_score=best_fitness,
+            fitness_score=fitness_score,
+            fitness_values=fitness_values,
         )
         logger.info(f"最良戦略を保存しました: DB ID {best_strategy_record.id}")
 
@@ -250,6 +267,43 @@ class ExperimentPersistenceService:
             saved_count = generated_strategy_repo.save_strategies_batch(strategies_data)
             logger.info(f"追加戦略を一括保存しました: {saved_count} 件")
 
+    def _save_pareto_front(
+        self,
+        db: Session,
+        experiment_info: Dict[str, Any],
+        result: Dict[str, Any],
+        ga_config: GAConfig,
+    ):
+        """パレート最適解を保存する"""
+        pareto_front = result.get("pareto_front", [])
+        if not pareto_front:
+            return
+
+        db_experiment_id = experiment_info["db_id"]
+        generated_strategy_repo = GeneratedStrategyRepository(db)
+
+        strategies_data = []
+        for solution in pareto_front:
+            strategy = solution.get("strategy")
+            fitness_values = solution.get("fitness_values")
+
+            if strategy and fitness_values:
+                strategies_data.append(
+                    {
+                        "experiment_id": db_experiment_id,
+                        "gene_data": strategy.to_dict(),
+                        "generation": ga_config.generations,
+                        "fitness_score": (
+                            fitness_values[0] if fitness_values else 0.0
+                        ),  # 後方互換性
+                        "fitness_values": fitness_values,
+                    }
+                )
+
+        if strategies_data:
+            saved_count = generated_strategy_repo.save_strategies_batch(strategies_data)
+            logger.info(f"パレート最適解を一括保存しました: {saved_count} 件")
+
     def complete_experiment(self, experiment_id: str):
         """実験を完了状態にする"""
         try:
@@ -286,32 +340,97 @@ class ExperimentPersistenceService:
             pass
 
     def get_experiment_result(self, experiment_id: str) -> Optional[Dict[str, Any]]:
-        """実験結果を取得"""
+        """実験結果を取得（詳細な戦略データを含む）"""
         try:
             with self.db_session_factory() as db:
                 ga_experiment_repo = GAExperimentRepository(db)
-                experiments = ga_experiment_repo.get_experiments_by_status("completed")
+                generated_strategy_repo = GeneratedStrategyRepository(db)
 
+                # 実験を検索
+                experiments = ga_experiment_repo.get_experiments_by_status("completed")
+                experiment = None
                 for exp in experiments:
                     if exp.experiment_name == experiment_id:
-                        return {
-                            "id": exp.id,
-                            "experiment_name": exp.experiment_name,
-                            "status": exp.status,
-                            "created_at": (
-                                exp.created_at.isoformat()
-                                if exp.created_at is not None
-                                else None
-                            ),
-                            "completed_at": (
-                                exp.completed_at.isoformat()
-                                if exp.completed_at is not None
-                                else None
-                            ),
+                        experiment = exp
+                        break
+
+                if not experiment:
+                    return None
+
+                # 基本的な実験情報
+                result = {
+                    "id": experiment.id,
+                    "experiment_name": experiment.experiment_name,
+                    "status": experiment.status,
+                    "created_at": (
+                        experiment.created_at.isoformat()
+                        if experiment.created_at is not None
+                        else None
+                    ),
+                    "completed_at": (
+                        experiment.completed_at.isoformat()
+                        if experiment.completed_at is not None
+                        else None
+                    ),
+                    "best_fitness": experiment.best_fitness,
+                }
+
+                # 生成された戦略を取得
+                strategies = generated_strategy_repo.get_strategies_by_experiment(
+                    experiment.id, limit=50
+                )
+
+                if strategies:
+                    # 最良戦略
+                    best_strategy = strategies[0]  # fitness_scoreでソート済み
+                    result["best_strategy"] = {
+                        "gene_data": best_strategy.gene_data,
+                        "fitness_score": best_strategy.fitness_score,
+                        "fitness_values": best_strategy.fitness_values,
+                    }
+
+                    # 多目的最適化の場合、パレート最適解を抽出
+                    if any(s.fitness_values for s in strategies):
+                        pareto_front = []
+                        objectives = None
+
+                        # GA設定から目的を取得
+                        config_data = experiment.config
+                        if config_data and "ga_config" in config_data:
+                            ga_config_dict = config_data["ga_config"]
+                            if ga_config_dict.get("enable_multi_objective"):
+                                objectives = ga_config_dict.get("objectives", [])
+
+                        # fitness_valuesを持つ戦略をパレート最適解として扱う
+                        for strategy in strategies:
+                            if strategy.fitness_values:
+                                pareto_front.append(
+                                    {
+                                        "strategy": strategy.gene_data,
+                                        "fitness_values": strategy.fitness_values,
+                                    }
+                                )
+
+                        if pareto_front:
+                            result["pareto_front"] = pareto_front
+                            result["objectives"] = objectives
+
+                    # 全戦略のサマリー
+                    result["total_strategies"] = len(strategies)
+                    result["strategies_summary"] = [
+                        {
+                            "id": s.id,
+                            "fitness_score": s.fitness_score,
+                            "fitness_values": s.fitness_values,
+                            "generation": s.generation,
                         }
-                return None
+                        for s in strategies[:10]  # 上位10件
+                    ]
+
+                return result
+
         except Exception as e:
-            logger.error(f"実験結果取得エラー: {e}")
+            logger.error(f"実験結果取得エラー: {e}", exc_info=True)
             return None
 
     def list_experiments(self) -> List[Dict[str, Any]]:

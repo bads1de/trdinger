@@ -22,6 +22,31 @@ import {
 } from "@/types/optimization";
 
 /**
+ * 最適化モーダルのプロパティ
+ */
+interface OptimizationModalProps {
+  /** モーダルの表示状態 */
+  isOpen: boolean;
+  /** モーダルを閉じる関数 */
+  onClose: () => void;
+  /** 拡張最適化実行時のコールバック */
+  onEnhancedOptimization: (config: OptimizationConfig) => void;
+  /** マルチ目的最適化実行時のコールバック */
+  onMultiObjectiveOptimization: (config: MultiObjectiveConfig) => void;
+  /** ロバストネステスト実行時のコールバック */
+  onRobustnessTest: (config: RobustnessConfig) => void;
+  /** GA戦略生成実行時のコールバック */
+  onGAGeneration?: (config: GAConfig) => void;
+
+  /** 最適化実行中かどうか */
+  isLoading?: boolean;
+  /** 選択されたバックテスト結果（設定を引き継ぐため） */
+  selectedResult?: BacktestResult | null;
+  /** 現在のバックテスト設定（基本設定を引き継ぐため） */
+  currentBacktestConfig?: BacktestConfig | null;
+}
+
+/**
  * 最適化設定モーダルコンポーネント
  */
 const OptimizationModal: React.FC<OptimizationModalProps> = ({

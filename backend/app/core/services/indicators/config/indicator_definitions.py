@@ -13,15 +13,29 @@ from .indicator_config import (
 )
 
 from app.core.services.indicators.technical_indicators.trend import TrendIndicators
-from app.core.services.indicators.technical_indicators.momentum import MomentumIndicators
-from app.core.services.indicators.technical_indicators.volatility import VolatilityIndicators
+from app.core.services.indicators.technical_indicators.momentum import (
+    MomentumIndicators,
+)
+from app.core.services.indicators.technical_indicators.volatility import (
+    VolatilityIndicators,
+)
 from app.core.services.indicators.technical_indicators.volume import VolumeIndicators
-from app.core.services.indicators.technical_indicators.price_transform import PriceTransformIndicators
+from app.core.services.indicators.technical_indicators.price_transform import (
+    PriceTransformIndicators,
+)
 from app.core.services.indicators.technical_indicators.cycle import CycleIndicators
-from app.core.services.indicators.technical_indicators.statistics import StatisticsIndicators
-from app.core.services.indicators.technical_indicators.math_transform import MathTransformIndicators
-from app.core.services.indicators.technical_indicators.math_operators import MathOperatorsIndicators
-from app.core.services.indicators.technical_indicators.pattern_recognition import PatternRecognitionIndicators
+from app.core.services.indicators.technical_indicators.statistics import (
+    StatisticsIndicators,
+)
+from app.core.services.indicators.technical_indicators.math_transform import (
+    MathTransformIndicators,
+)
+from app.core.services.indicators.technical_indicators.math_operators import (
+    MathOperatorsIndicators,
+)
+from app.core.services.indicators.technical_indicators.pattern_recognition import (
+    PatternRecognitionIndicators,
+)
 
 
 def setup_momentum_indicators():
@@ -188,7 +202,7 @@ def setup_momentum_indicators():
     # WILLR
     willr_config = IndicatorConfig(
         indicator_name="WILLR",
-        adapter_function=MomentumIndicators.willr,
+        adapter_function=MomentumIndicators.williams_r,
         required_data=["high", "low", "close"],
         result_type=IndicatorResultType.SINGLE,
         scale_type=IndicatorScaleType.OSCILLATOR_PLUS_MINUS_100,
@@ -1400,7 +1414,17 @@ def setup_math_transform_indicators():
     """数学変換系インジケーターの設定"""
 
     # 三角関数系
-    for func_name in ["ACOS", "ASIN", "ATAN", "COS", "COSH", "SIN", "SINH", "TAN", "TANH"]:
+    for func_name in [
+        "ACOS",
+        "ASIN",
+        "ATAN",
+        "COS",
+        "COSH",
+        "SIN",
+        "SINH",
+        "TAN",
+        "TANH",
+    ]:
         config = IndicatorConfig(
             indicator_name=func_name,
             adapter_function=getattr(MathTransformIndicators, func_name.lower()),
@@ -1440,13 +1464,23 @@ def setup_math_operators_indicators():
         indicator_registry.register(config)
 
     # 期間ベース演算子
-    for func_name, default_period in [("MAX", 30), ("MIN", 30), ("MAXINDEX", 30), ("MININDEX", 30), ("SUM", 30)]:
+    for func_name, default_period in [
+        ("MAX", 30),
+        ("MIN", 30),
+        ("MAXINDEX", 30),
+        ("MININDEX", 30),
+        ("SUM", 30),
+    ]:
         config = IndicatorConfig(
             indicator_name=func_name,
             adapter_function=getattr(MathOperatorsIndicators, func_name.lower()),
             required_data=["close"],
             result_type=IndicatorResultType.SINGLE,
-            scale_type=IndicatorScaleType.PRICE_ABSOLUTE if func_name in ["MAX", "MIN", "SUM"] else IndicatorScaleType.OSCILLATOR_0_100,
+            scale_type=(
+                IndicatorScaleType.PRICE_ABSOLUTE
+                if func_name in ["MAX", "MIN", "SUM"]
+                else IndicatorScaleType.OSCILLATOR_0_100
+            ),
             category="math_operators",
         )
         config.add_parameter(
@@ -1506,15 +1540,23 @@ def setup_pattern_recognition_indicators():
 
     # 基本的なキャンドルスティックパターン（パラメータなし）
     basic_patterns = [
-        "CDL_DOJI", "CDL_HAMMER", "CDL_HANGING_MAN", "CDL_SHOOTING_STAR",
-        "CDL_ENGULFING", "CDL_HARAMI", "CDL_PIERCING", "CDL_THREE_BLACK_CROWS",
-        "CDL_THREE_WHITE_SOLDIERS"
+        "CDL_DOJI",
+        "CDL_HAMMER",
+        "CDL_HANGING_MAN",
+        "CDL_SHOOTING_STAR",
+        "CDL_ENGULFING",
+        "CDL_HARAMI",
+        "CDL_PIERCING",
+        "CDL_THREE_BLACK_CROWS",
+        "CDL_THREE_WHITE_SOLDIERS",
     ]
 
     for pattern_name in basic_patterns:
         config = IndicatorConfig(
             indicator_name=pattern_name,
-            adapter_function=getattr(PatternRecognitionIndicators, pattern_name.lower()),
+            adapter_function=getattr(
+                PatternRecognitionIndicators, pattern_name.lower()
+            ),
             required_data=["open_data", "high", "low", "close"],
             result_type=IndicatorResultType.SINGLE,
             scale_type=IndicatorScaleType.OSCILLATOR_PLUS_MINUS_100,
@@ -1585,10 +1627,18 @@ def setup_pattern_recognition_indicators():
 
     # 追加のパターン認識インジケーター
     additional_patterns = [
-        "CDL_ABANDONED_BABY", "CDL_ADVANCE_BLOCK", "CDL_BELT_HOLD",
-        "CDL_BREAKAWAY", "CDL_CLOSING_MARUBOZU", "CDL_CONCEALING_BABY_SWALLOW",
-        "CDL_COUNTERATTACK", "CDL_DRAGONFLY_DOJI", "CDL_GAPSIDE_SIDE_WHITE",
-        "CDL_GRAVESTONE_DOJI", "CDL_HOMINGPIGEON", "CDL_IDENTICAL_THREE_CROWS"
+        "CDL_ABANDONED_BABY",
+        "CDL_ADVANCE_BLOCK",
+        "CDL_BELT_HOLD",
+        "CDL_BREAKAWAY",
+        "CDL_CLOSING_MARUBOZU",
+        "CDL_CONCEALING_BABY_SWALLOW",
+        "CDL_COUNTERATTACK",
+        "CDL_DRAGONFLY_DOJI",
+        "CDL_GAPSIDE_SIDE_WHITE",
+        "CDL_GRAVESTONE_DOJI",
+        "CDL_HOMINGPIGEON",
+        "CDL_IDENTICAL_THREE_CROWS",
     ]
 
     for pattern_name in additional_patterns:
@@ -1608,6 +1658,43 @@ def setup_pattern_recognition_indicators():
             indicator_registry.register(config)
 
 
+def setup_ml_indicators():
+    """ML予測確率指標の設定"""
+
+    # ML_UP_PROB
+    ml_up_prob_config = IndicatorConfig(
+        indicator_name="ML_UP_PROB",
+        adapter_function=None,  # IndicatorCalculatorで直接処理
+        required_data=["close"],
+        result_type=IndicatorResultType.SINGLE,
+        scale_type=IndicatorScaleType.OSCILLATOR_0_1,
+        category="ml_prediction",
+    )
+    indicator_registry.register(ml_up_prob_config)
+
+    # ML_DOWN_PROB
+    ml_down_prob_config = IndicatorConfig(
+        indicator_name="ML_DOWN_PROB",
+        adapter_function=None,  # IndicatorCalculatorで直接処理
+        required_data=["close"],
+        result_type=IndicatorResultType.SINGLE,
+        scale_type=IndicatorScaleType.OSCILLATOR_0_1,
+        category="ml_prediction",
+    )
+    indicator_registry.register(ml_down_prob_config)
+
+    # ML_RANGE_PROB
+    ml_range_prob_config = IndicatorConfig(
+        indicator_name="ML_RANGE_PROB",
+        adapter_function=None,  # IndicatorCalculatorで直接処理
+        required_data=["close"],
+        result_type=IndicatorResultType.SINGLE,
+        scale_type=IndicatorScaleType.OSCILLATOR_0_1,
+        category="ml_prediction",
+    )
+    indicator_registry.register(ml_range_prob_config)
+
+
 def initialize_all_indicators():
     """全インジケーターの設定を初期化"""
     setup_momentum_indicators()
@@ -1620,6 +1707,7 @@ def initialize_all_indicators():
     setup_math_transform_indicators()
     setup_math_operators_indicators()
     setup_pattern_recognition_indicators()
+    setup_ml_indicators()
 
 
 # モジュール読み込み時に初期化

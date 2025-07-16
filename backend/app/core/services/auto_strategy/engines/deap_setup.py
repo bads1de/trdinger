@@ -9,6 +9,7 @@ from typing import Optional
 from deap import base, creator, tools
 
 from ..models.ga_config import GAConfig
+from ..operators import genetic_operators
 
 logger = logging.getLogger(__name__)
 
@@ -16,7 +17,7 @@ logger = logging.getLogger(__name__)
 class DEAPSetup:
     """
     DEAP設定クラス
-    
+
     DEAPライブラリの設定とツールボックスの初期化を担当します。
     """
 
@@ -25,9 +26,16 @@ class DEAPSetup:
         self.toolbox: Optional[base.Toolbox] = None
         self.Individual = None
 
-    def setup_deap(self, config: GAConfig, create_individual_func, evaluate_func, crossover_func, mutate_func):
+    def setup_deap(
+        self,
+        config: GAConfig,
+        create_individual_func,
+        evaluate_func,
+        crossover_func,
+        mutate_func,
+    ):
         """
-        DEAP環境のセットアップ
+        DEAP環境のセットアップ（多目的最適化専用）
 
         Args:
             config: GA設定
@@ -36,13 +44,23 @@ class DEAPSetup:
             crossover_func: 交叉関数
             mutate_func: 突然変異関数
         """
-        # フィットネスクラスの定義（最大化問題）
-        if not hasattr(creator, "FitnessMax"):
-            creator.create("FitnessMax", base.Fitness, weights=(1.0,))
+        # 多目的最適化用フィットネスクラスの定義
+        fitness_class_name = "FitnessMulti"
+        weights = tuple(config.objective_weights)
+        logger.info(f"多目的最適化モード: 目的={config.objectives}, 重み={weights}")
+
+        # 既存のフィットネスクラスを削除（再定義のため）
+        if hasattr(creator, fitness_class_name):
+            delattr(creator, fitness_class_name)
+
+        # フィットネスクラスを作成
+        creator.create(fitness_class_name, base.Fitness, weights=weights)
+        fitness_class = getattr(creator, fitness_class_name)
 
         # 個体クラスの定義
-        if not hasattr(creator, "Individual"):
-            creator.create("Individual", list, fitness=creator.FitnessMax)  # type: ignore
+        if hasattr(creator, "Individual"):
+            delattr(creator, "Individual")
+        creator.create("Individual", list, fitness=fitness_class)  # type: ignore
         self.Individual = creator.Individual  # type: ignore # 生成したクラスをインスタンス変数に格納
 
         # ツールボックスの初期化
@@ -59,10 +77,12 @@ class DEAPSetup:
 
         # 進化演算子の登録（戦略遺伝子レベル）
         self.toolbox.register("mate", crossover_func)
-        self.toolbox.register(
-            "mutate", mutate_func, mutation_rate=config.mutation_rate
-        )
-        self.toolbox.register("select", tools.selTournament, tournsize=3)
+
+        # 突然変異の登録
+        self.toolbox.register("mutate", mutate_func, mutation_rate=config.mutation_rate)
+        # 多目的最適化用選択アルゴリズムの登録（NSGA-II）
+        self.toolbox.register("select", tools.selNSGA2)
+        logger.info("NSGA-II選択アルゴリズムを登録")
 
         logger.info("DEAP環境のセットアップ完了")
 

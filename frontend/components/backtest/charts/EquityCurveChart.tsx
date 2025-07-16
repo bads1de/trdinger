@@ -20,7 +20,8 @@ import {
 } from "recharts";
 import ChartContainer from "./ChartContainer";
 import { chartColors, chartStyles } from "./ChartTheme";
-import { formatCurrency, formatDateTime } from "@/utils/formatters";
+import { formatDateTime } from "@/utils/formatters";
+import { formatCurrency } from "@/utils/financialFormatters";
 import { sampleData } from "@/utils/chartDataTransformers";
 import { ChartEquityPoint } from "@/types/backtest";
 
@@ -192,7 +193,7 @@ const EquityCurveChart: React.FC<EquityCurveChartProps> = ({
             type="number"
             scale="time"
             domain={["dataMin", "dataMax"]}
-            tickFormatter={(timestamp) => formatDateTime(timestamp)}
+            tickFormatter={(timestamp) => formatDateTime(timestamp).dateTime}
             {...chartStyles.axis}
           />
 

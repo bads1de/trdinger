@@ -37,10 +37,13 @@ export default function MultiObjectiveTab({
 
   const createParameterRange = (rangeConfig: number[]) => {
     const [start, end, step] = rangeConfig;
+
     const range = [];
+
     for (let i = start; i <= end; i += step) {
       range.push(i);
     }
+
     return range;
   };
 
@@ -71,9 +74,7 @@ export default function MultiObjectiveTab({
 
   return (
     <div className="space-y-6">
-      <h2 className="text-xl font-semibold text-white">
-        マルチ目的最適化設定
-      </h2>
+      <h2 className="text-xl font-semibold text-white">マルチ目的最適化設定</h2>
       <SelectField
         label="最適化手法"
         value={multiConfig.method}

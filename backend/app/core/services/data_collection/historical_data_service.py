@@ -10,6 +10,8 @@ import ccxt
 from typing import Optional
 from app.core.services.data_collection.market_data_service import BybitMarketDataService
 from database.repositories.ohlcv_repository import OHLCVRepository
+from database.repositories.funding_rate_repository import FundingRateRepository
+from database.repositories.open_interest_repository import OpenInterestRepository
 
 logger = logging.getLogger(__name__)
 
@@ -116,68 +118,228 @@ class HistoricalDataService:
                 f"履歴データ収集中に予期しないエラーが発生しました: {e}"
             ) from e
 
-    async def collect_incremental_data(
+    async def collect_bulk_incremental_data(
         self,
-        symbol: str = "BTC/USDT",
+        symbol: str = "BTC/USDT:USDT",
         timeframe: str = "1h",
-        repository: Optional[OHLCVRepository] = None,
-    ) -> int:
+        ohlcv_repository: Optional[OHLCVRepository] = None,
+        funding_rate_repository: Optional[FundingRateRepository] = None,
+        open_interest_repository: Optional[OpenInterestRepository] = None,
+    ) -> dict:
         """
-        差分データを収集（最新タイムスタンプ以降）
+        一括差分データを収集（OHLCV、FR、OI）
+
+        Args:
+            symbol: 取引ペアシンボル（例: 'BTC/USDT:USDT'）
+            timeframe: 時間軸（例: '1h'）
+            ohlcv_repository: OHLCVRepository（テスト用）
+            funding_rate_repository: FundingRateRepository（テスト用）
+            open_interest_repository: OpenInterestRepository（テスト用）
 
         Returns:
-            保存された件数
-
-        Raises:
-            ValueError: パラメータが無効な場合
-            ccxt.NetworkError: ネットワークエラーの場合
-            ccxt.ExchangeError: 取引所エラーの場合
-            RuntimeError: その他の予期せぬエラー
+            一括差分更新結果を含む辞書
         """
-        if not repository:
-            raise ValueError("リポジトリが必要です")
+        from app.core.services.data_collection.funding_rate_service import (
+            BybitFundingRateService,
+        )
+        from app.core.services.data_collection.open_interest_service import (
+            BybitOpenInterestService,
+        )
 
-        try:
-            latest_timestamp = repository.get_latest_timestamp(symbol, timeframe)
-            since_ms = (
-                int(latest_timestamp.timestamp() * 1000) if latest_timestamp else None
+        logger.info(f"一括差分データ収集開始: {symbol} {timeframe}")
+
+        # 全ての時間足を定義
+        timeframes = ["15m", "30m", "1h", "4h", "1d"]
+        logger.info(f"処理対象時間足: {timeframes}")
+
+        results = {
+            "symbol": symbol,
+            "timeframe": timeframe,
+            "success": True,
+            "data": {},
+            "total_saved_count": 0,
+            "errors": [],
+        }
+
+        # 1. OHLCVデータの差分更新（全時間足）
+        ohlcv_results = {}
+        total_ohlcv_saved = 0
+
+        if ohlcv_repository:
+            for tf in timeframes:
+                try:
+                    logger.info(f"OHLCV差分データ収集開始: {symbol} {tf}")
+
+                    # 最新タイムスタンプを取得
+                    latest_timestamp = ohlcv_repository.get_latest_timestamp(symbol, tf)
+                    since_ms = (
+                        int(latest_timestamp.timestamp() * 1000)
+                        if latest_timestamp
+                        else None
+                    )
+
+                    if since_ms:
+                        logger.info(
+                            f"差分データ収集: {symbol} {tf} (since: {since_ms})"
+                        )
+                    else:
+                        logger.info(f"初回データ収集: {symbol} {tf}")
+
+                    # OHLCVデータを取得
+                    ohlcv_data = await self.market_service.fetch_ohlcv_data(
+                        symbol, tf, 1000, since=since_ms
+                    )
+
+                    if not ohlcv_data:
+                        logger.info(f"新しいデータはありません: {symbol} {tf}")
+                        ohlcv_result = 0
+                    else:
+                        # データベースに保存
+                        ohlcv_result = (
+                            await self.market_service._save_ohlcv_to_database(
+                                ohlcv_data, symbol, tf, ohlcv_repository
+                            )
+                        )
+
+                    ohlcv_results[tf] = {
+                        "symbol": symbol,
+                        "timeframe": tf,
+                        "saved_count": ohlcv_result,
+                        "success": True,
+                    }
+                    total_ohlcv_saved += ohlcv_result
+                    logger.info(
+                        f"OHLCV差分データ収集完了: {symbol} {tf} - {ohlcv_result}件保存"
+                    )
+
+                    # API制限を回避するため少し待機
+                    await asyncio.sleep(0.1)
+
+                except Exception as e:
+                    logger.error(f"OHLCV差分データ収集エラー: {symbol} {tf} - {e}")
+                    ohlcv_results[tf] = {
+                        "symbol": symbol,
+                        "timeframe": tf,
+                        "saved_count": 0,
+                        "success": False,
+                        "error": str(e),
+                    }
+                    results["errors"].append(f"OHLCV {tf}: {str(e)}")
+        else:
+            logger.info(
+                "OHLCVリポジトリが提供されていないため、OHLCVデータ収集をスキップします。"
             )
 
-            if since_ms:
-                logger.info(
-                    f"差分データ収集開始: {symbol} {timeframe} (since: {since_ms})"
+        # OHLCV結果の集計
+        successful_timeframes = [r for r in ohlcv_results.values() if r["success"]]
+        logger.info(
+            f"OHLCV処理完了: 総保存件数={total_ohlcv_saved}, 成功時間足数={len(successful_timeframes)}/{len(timeframes)}"
+        )
+        logger.info(f"時間足別結果: {ohlcv_results}")
+
+        results["data"]["ohlcv"] = {
+            "symbol": symbol,
+            "timeframe": "all",  # 全時間足を示す
+            "saved_count": total_ohlcv_saved,
+            "success": len(successful_timeframes) > 0,
+            "timeframe_results": ohlcv_results,
+        }
+        results["total_saved_count"] += total_ohlcv_saved
+
+        # 少し待機してAPI制限を回避
+        await asyncio.sleep(0.2)
+
+        # 2. ファンディングレートデータの差分更新
+        if funding_rate_repository:
+            try:
+                logger.info(f"FR差分データ収集開始: {symbol}")
+                funding_rate_service = BybitFundingRateService()
+                fr_result = (
+                    await funding_rate_service.fetch_incremental_funding_rate_data(
+                        symbol, funding_rate_repository
+                    )
                 )
-            else:
-                logger.info(f"初回データ収集開始: {symbol} {timeframe}")
 
-            ohlcv_data = await self.market_service.fetch_ohlcv_data(
-                symbol, timeframe, 1000, since=since_ms
+                results["data"]["funding_rate"] = {
+                    "symbol": fr_result["symbol"],
+                    "saved_count": fr_result["saved_count"],
+                    "success": fr_result["success"],
+                    "latest_timestamp": fr_result.get("latest_timestamp"),
+                }
+                results["total_saved_count"] += fr_result["saved_count"]
+                logger.info(f"FR差分データ収集完了: {fr_result['saved_count']}件保存")
+
+            except Exception as e:
+                logger.error(f"FR差分データ収集エラー: {e}")
+                results["data"]["funding_rate"] = {
+                    "symbol": symbol,
+                    "saved_count": 0,
+                    "success": False,
+                    "error": str(e),
+                }
+                results["errors"].append(f"FR: {str(e)}")
+        else:
+            logger.info(
+                "ファンディングレートリポジトリが提供されていないため、FRデータ収集をスキップします。"
             )
+            results["data"]["funding_rate"] = {
+                "symbol": symbol,
+                "saved_count": 0,
+                "success": True,
+                "error": "Repository not provided",
+            }
 
-            if not ohlcv_data:
-                logger.info("新しいデータはありません")
-                return 0
+        # 少し待機してAPI制限を回避
+        await asyncio.sleep(0.2)
 
-            saved_count = await self.market_service._save_ohlcv_to_database(
-                ohlcv_data, symbol, timeframe, repository
+        # 3. オープンインタレストデータの差分更新
+        if open_interest_repository:
+            try:
+                logger.info(f"OI差分データ収集開始: {symbol}")
+                open_interest_service = BybitOpenInterestService()
+                oi_result = (
+                    await open_interest_service.fetch_incremental_open_interest_data(
+                        symbol, open_interest_repository
+                    )
+                )
+
+                results["data"]["open_interest"] = {
+                    "symbol": oi_result["symbol"],
+                    "saved_count": oi_result["saved_count"],
+                    "success": oi_result["success"],
+                    "latest_timestamp": oi_result.get("latest_timestamp"),
+                }
+                results["total_saved_count"] += oi_result["saved_count"]
+                logger.info(f"OI差分データ収集完了: {oi_result['saved_count']}件保存")
+
+            except Exception as e:
+                logger.error(f"OI差分データ収集エラー: {e}")
+                results["data"]["open_interest"] = {
+                    "symbol": symbol,
+                    "saved_count": 0,
+                    "success": False,
+                    "error": str(e),
+                }
+                results["errors"].append(f"OI: {str(e)}")
+        else:
+            logger.info(
+                "オープンインタレストリポジトリが提供されていないため、OIデータ収集をスキップします。"
             )
-            logger.info(f"差分データ収集完了: {saved_count}件保存")
-            return saved_count
+            results["data"]["open_interest"] = {
+                "symbol": symbol,
+                "saved_count": 0,
+                "success": True,
+                "error": "Repository not provided",
+            }
 
-        except ccxt.BadSymbol as e:
-            logger.error(f"無効なシンボルによる差分データ収集エラー: {symbol} - {e}")
-            raise
-        except ccxt.NetworkError as e:
-            logger.error(f"ネットワークエラーによる差分データ収集エラー: {e}")
-            raise
-        except ccxt.ExchangeError as e:
-            logger.error(f"取引所エラーによる差分データ収集エラー: {e}")
-            raise
-        except ValueError as e:
-            logger.error(f"パラメータ検証エラー: {e}")
-            raise
-        except Exception as e:
-            logger.error(f"予期しない差分データ収集エラー: {e}", exc_info=True)
-            raise RuntimeError(
-                f"差分データ収集中に予期しないエラーが発生しました: {e}"
-            ) from e
+        # 全体の成功判定
+        if results["errors"]:
+            results["success"] = False
+            logger.warning(f"一括差分データ収集で一部エラー: {results['errors']}")
+
+        logger.info(
+            f"一括差分データ収集完了: {symbol} {timeframe} - "
+            f"総保存件数: {results['total_saved_count']}件"
+        )
+
+        return results

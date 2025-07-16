@@ -39,6 +39,8 @@ export interface UnifiedStrategy {
   generation?: number;
   /** フィットネススコア（オートストラテジーの場合） */
   fitness_score?: number;
+  /** フィットネス値（多目的最適化の場合） */
+  fitness_values?: number[];
   /** 作成日時 */
   created_at: string;
   /** 更新日時 */

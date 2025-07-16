@@ -231,21 +231,7 @@ class TestIndicatorParameterManager:
         with pytest.raises(ParameterGenerationError):
             self.manager.generate_parameters("DIFFERENT_TYPE", unknown_config)
 
-    def test_backward_compatibility_with_existing_system(self):
-        """既存システムとの後方互換性テスト"""
-
-        # RSIの場合
-        rsi_config = IndicatorConfig(indicator_name="RSI")
-        rsi_config.add_parameter(
-            ParameterConfig(name="period", default_value=14, min_value=5, max_value=50)
-        )
-
-        # 複数回生成して範囲内であることを確認
-        for _ in range(10):
-            params = self.manager.generate_parameters("RSI", rsi_config)
-            assert 5 <= params["period"] <= 50
-
-    def test_parameter_generation_consistency(self):
+def test_parameter_generation_consistency(self):
         """パラメータ生成の一貫性テスト"""
         # 同じ設定で複数回生成しても、すべて有効な範囲内であることを確認
         rsi_config = IndicatorConfig(indicator_name="RSI")

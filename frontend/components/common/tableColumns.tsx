@@ -9,17 +9,16 @@
 import React from "react";
 import { TableColumn } from "@/types/common";
 import { FundingRateData, PriceData, OpenInterestData } from "@/types/strategy";
+import { formatDateTime } from "@/utils/formatters";
 import {
-  formatDateTime,
   formatPrice,
   formatSymbol,
   formatFundingRate,
-  getFundingRateColor,
   formatCurrency,
   formatVolume,
-  getPriceChangeColor,
   formatLargeNumber,
-} from "@/utils/formatters";
+} from "@/utils/financialFormatters";
+import { getFundingRateColor, getPriceChangeColor } from "@/utils/colorUtils";
 
 /**
  * ファンディングレートデータテーブルのカラム定義

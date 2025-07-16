@@ -2,7 +2,8 @@ import React from "react";
 import { BacktestResult } from "@/types/backtest";
 import CollapsibleJson from "@/components/common/CollapsibleJson";
 import StrategyGeneDisplay from "../StrategyGeneDisplay";
-import { formatCurrency, formatPercentage } from "@/utils/formatters";
+import { formatPercentage } from "@/utils/formatters";
+import { formatCurrency } from "@/utils/financialFormatters";
 
 interface ParametersTabProps {
   result: BacktestResult;
@@ -38,7 +39,6 @@ export default function ParametersTab({ result }: ParametersTabProps) {
                   STRATEGY TYPE
                 </h4>
               </div>
-
 
               {/* 戦略遺伝子の有効条件表示 */}
               {result.config_json.strategy_config.parameters?.strategy_gene && (

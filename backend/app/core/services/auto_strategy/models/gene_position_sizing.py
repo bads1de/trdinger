@@ -5,11 +5,13 @@
 TP/SL遺伝子と同様に、GA操作（交叉、突然変異）の対象となります。
 """
 
+import random
+import logging
+
 from dataclasses import dataclass
 from typing import Dict, Any, List, Optional, Tuple
 from enum import Enum
-import random
-import logging
+
 
 logger = logging.getLogger(__name__)
 
@@ -52,7 +54,7 @@ class PositionSizingGene:
 
     # 共通パラメータ
     min_position_size: float = 0.01  # 最小ポジションサイズ
-    max_position_size: float = float('inf')  # 最大ポジションサイズ（無制限）
+    max_position_size: float = float("inf")  # 最大ポジションサイズ（無制限）
     enabled: bool = True  # 有効フラグ
     priority: float = 1.0  # 優先度（0.5-1.5）
 
@@ -87,7 +89,7 @@ class PositionSizingGene:
             fixed_quantity=data.get("fixed_quantity", 1.0),
             min_position_size=data.get("min_position_size", 0.01),
             max_position_size=data.get(
-                "max_position_size", float('inf')
+                "max_position_size", float("inf")
             ),  # クラス定義と一致させる
             enabled=data.get("enabled", True),
             priority=data.get("priority", 1.0),
@@ -421,7 +423,7 @@ def create_random_position_sizing_gene(config=None) -> PositionSizingGene:
         fixed_ratio=random.uniform(fixed_ratio_range[0], fixed_ratio_range[1]),
         fixed_quantity=random.uniform(fixed_quantity_range[0], fixed_quantity_range[1]),
         min_position_size=random.uniform(0.01, 0.05),
-        max_position_size=float('inf'),  # 資金管理で制御するため無制限
+        max_position_size=float("inf"),  # 資金管理で制御するため無制限
         enabled=True,
         priority=random.uniform(0.5, 1.5),
     )

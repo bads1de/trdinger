@@ -4,13 +4,19 @@ pytest設定ファイル
 テスト全体で共有するフィクスチャとセットアップを定義します。
 """
 
+import sys
+import os
+
+# プロジェクトのルートディレクトリをPythonのパスに追加
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'app', 'core')))
+
 import pytest
 import asyncio
 from typing import Generator
 from unittest.mock import Mock
 
 from app.config.settings import settings
-# from app.core.services.market_data_service import BybitMarketDataService
 
 
 @pytest.fixture(scope="session")

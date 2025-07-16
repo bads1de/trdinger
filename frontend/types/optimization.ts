@@ -170,26 +170,143 @@ export interface GAConfig {
       max_drawdown_limit: number;
       min_sharpe_ratio: number;
     };
-    ga_objective: string;
-    stop_loss_range: [number, number];
-    take_profit_range: [number, number];
+    indicator_mode: "technical_only" | "ml_only" | "mixed";
+
+    // 高度な設定
+    enable_fitness_sharing?: boolean;
+    sharing_radius?: number;
+    sharing_alpha?: number;
+
+    // 新しいTP/SL自動決定設定
+    tpsl_strategy?: TPSLStrategy;
+    max_risk_per_trade?: number;
+    preferred_risk_reward_ratio?: number;
+    volatility_sensitivity?: VolatilitySensitivity;
+    enable_advanced_tpsl?: boolean;
+
+    // 統計的TP/SL設定
+    statistical_lookback_days?: number;
+    statistical_min_samples?: number;
+    statistical_confidence_threshold?: number;
+
+    // ボラティリティベース設定
+    atr_period?: number;
+    atr_multiplier_sl?: number;
+    atr_multiplier_tp?: number;
+    adaptive_multiplier?: boolean;
+
+    // 多目的最適化設定
+    enable_multi_objective?: boolean;
+    objectives?: string[];
+    objective_weights?: number[];
+  };
+
+  // GA設定（新しい構造）
+  ga_config: {
+    population_size: number;
+    generations: number;
+    mutation_rate: number;
+    crossover_rate: number;
+    elite_size: number;
+    max_indicators: number;
+    allowed_indicators: string[];
+
+    // 指標モード設定
+    indicator_mode: "technical_only" | "ml_only" | "mixed";
+
+    // 高度な設定
+    enable_fitness_sharing?: boolean;
+    sharing_radius?: number;
+
+    // 多目的最適化設定
+    enable_multi_objective?: boolean;
+    objectives?: string[];
+    objective_weights?: number[];
   };
 }
 
-/**
- * バックテストの設定
- */
-export interface BacktestConfig {
-  strategy_name: string;
-  symbol: string;
-  timeframe: string;
-  start_date: string;
-  end_date: string;
-  initial_capital: number;
-  commission_rate: number;
-  strategy_config: {
-    strategy_type: string;
-    parameters: Record<string, any>;
+// TP/SL戦略の種類
+export type TPSLStrategy =
+  | "legacy"
+  | "random"
+  | "risk_reward"
+  | "volatility_adaptive"
+  | "statistical"
+  | "auto_optimal";
+
+// ボラティリティ感度
+export type VolatilitySensitivity = "low" | "medium" | "high";
+
+// TP/SL自動決定結果
+export interface TPSLResult {
+  stop_loss_pct: number;
+  take_profit_pct: number;
+  risk_reward_ratio: number;
+  strategy_used: string;
+  confidence_score: number;
+  metadata?: Record<string, any>;
+}
+
+// TP/SL設定プリセット
+export interface TPSLPreset {
+  name: string;
+  description: string;
+  strategy: TPSLStrategy;
+  max_risk_per_trade: number;
+  preferred_risk_reward_ratio: number;
+  volatility_sensitivity: VolatilitySensitivity;
+}
+
+// 多目的最適化結果
+export interface MultiObjectiveGAResult {
+  success: boolean;
+  result: {
+    best_strategy: {
+      gene_data: Record<string, any>;
+      fitness_score: number;
+      fitness_values: number[];
+    };
+    pareto_front: Array<{
+      strategy: Record<string, any>;
+      fitness_values: number[];
+    }>;
+    objectives: string[];
+    total_strategies: number;
+    execution_time: number;
+  };
+  message: string;
+}
+
+// パレート最適解
+export interface ParetoSolution {
+  strategy: Record<string, any>;
+  fitness_values: number[];
+  objectives: string[];
+}
+
+// 多目的最適化の目的関数定義
+export interface ObjectiveDefinition {
+  name: string;
+  display_name: string;
+  description: string;
+  type: "maximize" | "minimize";
+  weight: number;
+}
+
+// 簡素化されたGA設定（新しいUI用）
+export interface SimplifiedGAConfig {
+  experiment_name: string;
+  base_config: {
+    strategy_name: string;
+    symbol: string;
+    timeframe: string;
+    start_date: string;
+    end_date: string;
+    initial_capital: number;
+    commission_rate: number;
+    strategy_config: {
+      strategy_type: string;
+      parameters: Record<string, any>;
   };
 }
 

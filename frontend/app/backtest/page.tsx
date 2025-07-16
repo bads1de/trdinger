@@ -7,8 +7,9 @@
 "use client";
 
 import React, { useState } from "react";
-import { InformationCircleIcon } from "@heroicons/react/24/outline";
+import { Info } from "lucide-react";
 import ActionButton from "@/components/common/ActionButton";
+import LoadingSpinner from "@/components/common/LoadingSpinner";
 
 import BacktestResultsTable from "@/components/backtest/BacktestResultsTable";
 import PerformanceMetrics from "@/components/backtest/PerformanceMetrics";
@@ -69,7 +70,7 @@ export default function BacktestPage() {
   };
 
   return (
-    <div className="min-h-screen bg-black text-white">
+    <div className="min-h-screen from-gray-900  text-white">
       <div className="container mx-auto px-4 py-8">
         {/* ヘッダー */}
         <div className="mb-8">
@@ -80,7 +81,7 @@ export default function BacktestPage() {
                 過去データを使用して戦略の有効性を検証します
               </p>
             </div>
-            {/* オートストラテジーへのリンクボタン */}
+            {/* アクションボタン */}
             <div className="flex items-center gap-3">
               <ActionButton
                 onClick={openAutoStrategyModal}
@@ -89,7 +90,7 @@ export default function BacktestPage() {
               >
                 オートストラテジーで生成
               </ActionButton>
-              <InformationCircleIcon
+              <Info
                 className="h-6 w-6 text-gray-400 cursor-pointer hover:text-white"
                 onClick={() => setIsExplanationModalOpen(true)}
               />
@@ -202,12 +203,16 @@ export default function BacktestPage() {
         {isOptimizationLoading && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
             <div className="bg-secondary-950 rounded-lg p-6 text-center border border-secondary-700">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-500 mx-auto mb-4"></div>
-              <p className="text-lg font-medium">
-                {enhancedOptimizationLoading && "拡張最適化実行中..."}
-                {multiOptimizationLoading && "マルチ目的最適化実行中..."}
-                {robustnessTestLoading && "ロバストネステスト実行中..."}
-              </p>
+              <LoadingSpinner
+                size="lg"
+                text={
+                  enhancedOptimizationLoading
+                    ? "拡張最適化実行中..."
+                    : multiOptimizationLoading
+                    ? "マルチ目的最適化実行中..."
+                    : "ロバストネステスト実行中..."
+                }
+              />
               <p className="text-secondary-400 text-sm mt-2">
                 最適化には時間がかかる場合があります
               </p>

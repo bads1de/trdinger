@@ -17,6 +17,8 @@ import {
   SearchIcon,
 } from "@/components/common/Icons";
 import { DataTableProps, TableColumn } from "@/types/common";
+import LoadingSpinner from "@/components/common/LoadingSpinner";
+import ErrorDisplay from "@/components/common/ErrorDisplay";
 
 /**
  * ソート方向
@@ -167,19 +169,8 @@ const DataTable = <T extends Record<string, any>>({
 
   if (error) {
     return (
-      <div className="bg-secondary-950 dark:bg-secondary-950 rounded-enterprise-lg border border-gray-700 dark:border-gray-700 p-8">
-        <div className="text-center">
-          <div className="w-16 h-16 mx-auto mb-4 bg-gray-800 dark:bg-gray-800 rounded-full flex items-center justify-center">
-            <ErrorIcon
-              size="xl"
-              className="text-error-600 dark:text-error-400"
-            />
-          </div>
-          <h3 className="text-lg font-semibold text-error-800 dark:text-error-200 mb-2">
-            📊 データの読み込みに失敗しました
-          </h3>
-          <p className="text-sm text-error-600 dark:text-error-400">{error}</p>
-        </div>
+      <div className="p-8">
+        <ErrorDisplay message={error} />
       </div>
     );
   }
@@ -265,12 +256,7 @@ const DataTable = <T extends Record<string, any>>({
             {loading ? (
               <tr>
                 <td colSpan={columns.length} className="px-6 py-12 text-center">
-                  <div className="flex items-center justify-center">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
-                    <span className="ml-3 text-gray-400 dark:text-gray-400">
-                      データを読み込み中...
-                    </span>
-                  </div>
+                  <LoadingSpinner text="データを読み込み中..." />
                 </td>
               </tr>
             ) : paginatedData.length === 0 ? (

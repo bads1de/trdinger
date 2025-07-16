@@ -1,5 +1,5 @@
 """
-統計系テクニカル指標（オートストラテジー最適化版）
+統計系テクニカル指標
 
 このモジュールはnumpy配列ベースでTa-libを直接使用し、
 backtesting.pyとの完全な互換性を提供します。
@@ -16,7 +16,6 @@ from ..utils import (
     log_indicator_calculation,
     format_indicator_result,
     ensure_numpy_array,
-    TALibError,
 )
 
 
@@ -168,7 +167,9 @@ class StatisticsIndicators:
         """
         data = ensure_numpy_array(data)
         validate_input(data, period)
-        log_indicator_calculation("STDDEV", {"period": period, "nbdev": nbdev}, len(data))
+        log_indicator_calculation(
+            "STDDEV", {"period": period, "nbdev": nbdev}, len(data)
+        )
 
         result = talib.STDDEV(data, timeperiod=period, nbdev=nbdev)
         return cast(np.ndarray, format_indicator_result(result, "STDDEV"))

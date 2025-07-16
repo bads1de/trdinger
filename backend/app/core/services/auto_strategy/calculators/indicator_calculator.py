@@ -10,6 +10,7 @@ from typing import Dict, Any, Union, Tuple
 
 from app.core.services.indicators import TechnicalIndicatorService
 from ..models.gene_strategy import IndicatorGene
+from ..services.ml_orchestrator import MLOrchestrator
 
 logger = logging.getLogger(__name__)
 
@@ -24,6 +25,7 @@ class IndicatorCalculator:
     def __init__(self):
         """初期化"""
         self.technical_indicator_service = TechnicalIndicatorService()
+        self.ml_orchestrator = MLOrchestrator()
 
     def calculate_indicator(
         self, indicator_type: str, parameters: Dict[str, Any], data
@@ -46,6 +48,13 @@ class IndicatorCalculator:
             # データの基本検証
             if df.empty:
                 raise ValueError(f"データが空です: {indicator_type}")
+
+            # ML指標の場合は専用サービスを使用
+            if indicator_type.startswith("ML_"):
+                result = self.ml_orchestrator.calculate_single_ml_indicator(
+                    indicator_type, df
+                )
+                return result
 
             required_columns = ["Open", "High", "Low", "Close", "Volume"]
             missing_columns = [col for col in required_columns if col not in df.columns]

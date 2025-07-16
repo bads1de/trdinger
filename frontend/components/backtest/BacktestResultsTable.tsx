@@ -6,8 +6,14 @@
 
 "use client";
 
-import React from "react";
+import {
+  formatDateTime,
+  formatPercentage,
+  formatNumber,
+} from "@/utils/formatters";
+import { getValueColorClass } from "@/utils/colorUtils";
 import { BacktestResult } from "@/types/backtest";
+import LoadingSpinner from "@/components/common/LoadingSpinner";
 
 interface BacktestResultsTableProps {
   results: BacktestResult[];
@@ -22,46 +28,10 @@ export default function BacktestResultsTable({
   onResultSelect,
   onDelete,
 }: BacktestResultsTableProps) {
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString("ja-JP", {
-      year: "numeric",
-      month: "2-digit",
-      day: "2-digit",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-  };
-
-  const formatPercentage = (value: number | undefined | null) => {
-    if (value === undefined || value === null || isNaN(value)) {
-      return "N/A";
-    }
-    return `${value.toFixed(2)}%`;
-  };
-
-  const formatNumber = (
-    value: number | undefined | null,
-    decimals: number = 2
-  ) => {
-    if (value === undefined || value === null || isNaN(value)) {
-      return "N/A";
-    }
-    return value.toFixed(decimals);
-  };
-
-  const getReturnColor = (value: number | undefined | null) => {
-    if (value === undefined || value === null || isNaN(value))
-      return "text-secondary-400";
-    if (value > 0) return "text-green-400";
-    if (value < 0) return "text-red-400";
-    return "text-gray-400";
-  };
-
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-12">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
-        <span className="ml-2 text-secondary-400">読み込み中...</span>
+      <div className="py-12">
+        <LoadingSpinner text="バックテスト結果を読み込んでいます..." />
       </div>
     );
   }
@@ -140,7 +110,7 @@ export default function BacktestResultsTable({
               </td>
               <td className="px-6 py-4 whitespace-nowrap">
                 <div
-                  className={`text-sm font-medium ${getReturnColor(
+                  className={`text-sm font-medium ${getValueColorClass(
                     result.performance_metrics.total_return
                   )}`}
                 >
@@ -153,7 +123,7 @@ export default function BacktestResultsTable({
                 </div>
               </td>
               <td className="px-6 py-4 whitespace-nowrap">
-                <div className="text-sm text-red-400">
+                <div className="text-sm font-medium text-red-500">
                   {formatPercentage(result.performance_metrics.max_drawdown)}
                 </div>
               </td>
@@ -169,7 +139,7 @@ export default function BacktestResultsTable({
               </td>
               <td className="px-6 py-4 whitespace-nowrap">
                 <div className="text-sm text-secondary-400">
-                  {formatDate(result.created_at)}
+                  {formatDateTime(result.created_at).dateTime}
                 </div>
               </td>
               <td className="px-6 py-4 whitespace-nowrap">

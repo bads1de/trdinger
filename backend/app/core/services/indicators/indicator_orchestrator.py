@@ -10,9 +10,6 @@ import numpy as np
 from typing import Dict, Any, Optional, Union, Tuple
 
 from .config import indicator_registry, IndicatorConfig
-from .technical_indicators.momentum import MomentumIndicators
-from .technical_indicators.trend import TrendIndicators
-from .technical_indicators.volatility import VolatilityIndicators
 
 logger = logging.getLogger(__name__)
 
@@ -101,7 +98,9 @@ class TechnicalIndicatorService:
             logger.error(f"指標関数呼び出しエラー {indicator_type}: {e}", exc_info=True)
             raise
 
-    def _resolve_column_name(self, df: pd.DataFrame, data_key: str, indicator_type: str = None) -> Optional[str]:
+    def _resolve_column_name(
+        self, df: pd.DataFrame, data_key: str, indicator_type: Optional[str] = None
+    ) -> Optional[str]:
         """
         データフレームから適切なカラム名を解決
 
@@ -116,7 +115,7 @@ class TechnicalIndicatorService:
         # 特別なマッピング（指標タイプを考慮）
         special_mappings = {
             "data0": "high",  # デフォルトで高値を使用
-            "data1": "low",   # デフォルトで安値を使用
+            "data1": "low",  # デフォルトで安値を使用
         }
 
         # open_dataの特別な処理
@@ -162,19 +161,72 @@ class TechnicalIndicatorService:
         # 単一データ系指標（required_data=["close"]）は"close"を"data"にマッピング
         single_data_indicators = [
             # トレンド系指標
-            "RSI", "SMA", "EMA", "WMA", "DEMA", "TEMA", "TRIMA", "KAMA", "MAMA", "T3", "MA",
-            "MACD", "MACDEXT", "MACDFIX", "BB", "HT_TRENDLINE", "MIDPOINT",
+            "RSI",
+            "SMA",
+            "EMA",
+            "WMA",
+            "DEMA",
+            "TEMA",
+            "TRIMA",
+            "KAMA",
+            "MAMA",
+            "T3",
+            "MA",
+            "MACD",
+            "MACDEXT",
+            "MACDFIX",
+            "BB",
+            "HT_TRENDLINE",
+            "MIDPOINT",
             # サイクル系指標
-            "HT_DCPERIOD", "HT_DCPHASE", "HT_TRENDMODE", "HT_PHASOR", "HT_SINE",
+            "HT_DCPERIOD",
+            "HT_DCPHASE",
+            "HT_TRENDMODE",
+            "HT_PHASOR",
+            "HT_SINE",
             # 統計系指標（単一データ）
-            "LINEARREG", "STDDEV", "TSF", "VAR", "LINEARREG_ANGLE", "LINEARREG_INTERCEPT", "LINEARREG_SLOPE",
+            "LINEARREG",
+            "STDDEV",
+            "TSF",
+            "VAR",
+            "LINEARREG_ANGLE",
+            "LINEARREG_INTERCEPT",
+            "LINEARREG_SLOPE",
             # 数学変換系指標
-            "ACOS", "ASIN", "ATAN", "COS", "COSH", "SIN", "SINH", "TAN", "TANH",
-            "CEIL", "EXP", "FLOOR", "LN", "LOG10", "SQRT",
+            "ACOS",
+            "ASIN",
+            "ATAN",
+            "COS",
+            "COSH",
+            "SIN",
+            "SINH",
+            "TAN",
+            "TANH",
+            "CEIL",
+            "EXP",
+            "FLOOR",
+            "LN",
+            "LOG10",
+            "SQRT",
             # 期間ベース数学演算子（単一データ）
-            "MAX", "MIN", "MAXINDEX", "MININDEX", "SUM", "MINMAX", "MINMAXINDEX",
+            "MAX",
+            "MIN",
+            "MAXINDEX",
+            "MININDEX",
+            "SUM",
+            "MINMAX",
+            "MINMAXINDEX",
             # モメンタム系指標（単一データ）
-            "ROC", "ROCP", "ROCR", "ROCR100", "MOM", "MOMENTUM", "CMO", "TRIX", "APO", "PPO",
+            "ROC",
+            "ROCP",
+            "ROCR",
+            "ROCR100",
+            "MOM",
+            "MOMENTUM",
+            "CMO",
+            "TRIX",
+            "APO",
+            "PPO",
             "STOCHRSI",
         ]
 

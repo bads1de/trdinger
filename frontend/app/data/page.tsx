@@ -8,13 +8,15 @@
 
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import DataHeader from "@/components/data/DataHeader";
 import DataControls from "@/components/data/DataControls";
 import DataTableContainer from "@/components/data/DataTableContainer";
 import { useOhlcvData } from "@/hooks/useOhlcvData";
 import { useFundingRateData } from "@/hooks/useFundingRateData";
 import { useOpenInterestData } from "@/hooks/useOpenInterestData";
+import { useBulkIncrementalUpdate } from "@/hooks/useBulkIncrementalUpdate";
+import { useApiCall } from "@/hooks/useApiCall";
 import {
   TimeFrame,
   TradingPair,
@@ -38,7 +40,7 @@ const DataPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<
     "ohlcv" | "funding" | "openinterest"
   >("ohlcv");
-  const [updating, setUpdating] = useState<boolean>(false);
+
   const [dataStatus, setDataStatus] = useState<any>(null);
   const [bulkCollectionMessage, setBulkCollectionMessage] =
     useState<string>("");
@@ -53,6 +55,13 @@ const DataPage: React.FC = () => {
 
   // カスタムフックを使用してデータ取得
   const { symbols } = useSymbols();
+  const {
+    bulkUpdate: updateBulkIncrementalData,
+    loading: bulkIncrementalUpdateLoading,
+    error: bulkIncrementalUpdateError,
+  } = useBulkIncrementalUpdate();
+  const { execute: fetchDataStatusApi, loading: dataStatusLoading } =
+    useApiCall();
 
   const {
     data: ohlcvData,
@@ -103,74 +112,65 @@ const DataPage: React.FC = () => {
   };
 
   /**
-   * 差分データ更新
+   * 一括差分データ更新
    */
-  const handleIncrementalUpdate = async () => {
-    try {
-      setUpdating(true);
-      setIncrementalUpdateMessage("");
+  const handleBulkIncrementalUpdate = async () => {
+    setIncrementalUpdateMessage("");
+    await updateBulkIncrementalData(selectedSymbol, selectedTimeFrame, {
+      onSuccess: async (result) => {
 
-      const response = await fetch(
-        `${BACKEND_API_URL}/api/data-collection/update?symbol=${selectedSymbol}&timeframe=${selectedTimeFrame}`,
-        {
-          method: "POST",
+        const totalSavedCount = result.data.total_saved_count || 0;
+        const ohlcvCount = result.data.data.ohlcv.saved_count || 0;
+        const frCount = result.data.data.funding_rate.saved_count || 0;
+        const oiCount = result.data.data.open_interest.saved_count || 0;
+
+        // 時間足別の詳細情報を取得
+        let timeframeDetails = "";
+        if (result.data.data.ohlcv.timeframe_results) {
+          const tfResults = Object.entries(
+            result.data.data.ohlcv.timeframe_results
+          )
+            .map(([tf, res]) => `${tf}:${res.saved_count}`)
+            .join(", ");
+          timeframeDetails = ` [${tfResults}]`;
+        } else {
+          console.warn("時間足別結果が見つかりません");
         }
-      );
 
-      const result = await response.json();
-
-      if (result.success) {
-        // 成功メッセージを表示
-        const savedCount = result.saved_count || 0;
         setIncrementalUpdateMessage(
-          `✅ 差分更新完了！ ${selectedSymbol} ${selectedTimeFrame} - ${savedCount}件のデータを更新しました`
+          `✅ 一括差分更新完了！ ${selectedSymbol} - ` +
+            `総計${totalSavedCount}件 (OHLCV:${ohlcvCount}${timeframeDetails}, FR:${frCount}, OI:${oiCount})`
         );
 
-        // 更新後に全てのデータを再取得
-        await Promise.all([
-          fetchOHLCVData(),
-          fetchFundingRateData(),
-          fetchOpenInterestData(),
-        ]);
-
-        // データ状況も更新
+        // 現在選択されている時間足のデータを再取得
+        await fetchOHLCVData();
         fetchDataStatus();
-
-        // 10秒後にメッセージをクリア
-        setTimeout(() => setIncrementalUpdateMessage(""), 10000);
-      } else {
-        const errorMessage = result.message || "差分更新に失敗しました";
+        setTimeout(() => setIncrementalUpdateMessage(""), 15000);
+      },
+      onError: (errorMessage) => {
         setIncrementalUpdateMessage(`❌ ${errorMessage}`);
-        // 10秒後にメッセージをクリア
+        console.error("一括差分更新エラー:", errorMessage);
         setTimeout(() => setIncrementalUpdateMessage(""), 10000);
-      }
-    } catch (err) {
-      const errorMessage = "差分更新中にエラーが発生しました";
-      setIncrementalUpdateMessage(`❌ ${errorMessage}`);
-      console.error("差分更新エラー:", err);
-      // 10秒後にメッセージをクリア
-      setTimeout(() => setIncrementalUpdateMessage(""), 10000);
-    } finally {
-      setUpdating(false);
-    }
+      },
+    });
   };
 
   /**
-   * データ収集状況を取得
+   * データ収集状況を取得（詳細版）
    */
-  const fetchDataStatus = async () => {
-    try {
-      const url = `${BACKEND_API_URL}/api/data-collection/status/${selectedSymbol}/${selectedTimeFrame}`;
-      const response = await fetch(url);
-      const result = await response.json();
-
-      if (result.success) {
-        setDataStatus(result);
-      }
-    } catch (err) {
-      console.error("データ状況取得エラー:", err);
-    }
-  };
+  const fetchDataStatus = useCallback(() => {
+    const url = `${BACKEND_API_URL}/api/data-reset/status`;
+    fetchDataStatusApi(url, {
+      onSuccess: (result) => {
+        if (result) {
+          setDataStatus(result);
+        }
+      },
+      onError: (err) => {
+        console.error("データ状況取得エラー:", err);
+      },
+    });
+  }, [fetchDataStatusApi]);
 
   /**
    * 一括OHLCVデータ収集開始時のコールバック
@@ -300,27 +300,35 @@ const DataPage: React.FC = () => {
     setTimeout(() => setAllDataCollectionMessage(""), 15000);
   };
 
-  // 選択が変更されたときにデータステータスをフェッチ
+  // コンポーネント初期化時にデータステータスをフェッチ
   useEffect(() => {
-    if (selectedSymbol && selectedTimeFrame) {
-      fetchDataStatus();
-    }
-  }, [selectedSymbol, selectedTimeFrame]);
+    fetchDataStatus();
+  }, [fetchDataStatus]);
 
   return (
-    <div className="min-h-screen bg-secondary-50 dark:bg-secondary-950 animate-fade-in">
+    <div className="min-h-screen  from-gray-900 animate-fade-in">
       <DataHeader
         loading={ohlcvLoading || fundingLoading || openInterestLoading}
-        error={ohlcvError || fundingError || openInterestError}
-        updating={updating}
+        error={
+          ohlcvError ||
+          fundingError ||
+          openInterestError ||
+          bulkIncrementalUpdateError ||
+          ""
+        }
+        updating={false}
+        bulkUpdating={bulkIncrementalUpdateLoading}
         handleRefresh={handleRefresh}
-        handleIncrementalUpdate={handleIncrementalUpdate}
+        handleBulkIncrementalUpdate={handleBulkIncrementalUpdate}
       />
 
       {/* メインコンテンツエリア */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
         {/* エラー表示 */}
-        {(ohlcvError || fundingError || openInterestError) && (
+        {(ohlcvError ||
+          fundingError ||
+          openInterestError ||
+          bulkIncrementalUpdateError) && (
           <div className="enterprise-card border-error-200 dark:border-error-800 bg-error-50 dark:bg-error-900/20 animate-slide-down">
             <div className="p-4">
               <div className="flex items-center">
@@ -342,7 +350,10 @@ const DataPage: React.FC = () => {
                 </h3>
               </div>
               <p className="mt-2 text-sm text-error-700 dark:text-error-300">
-                {ohlcvError || fundingError || openInterestError}
+                {ohlcvError ||
+                  fundingError ||
+                  openInterestError ||
+                  bulkIncrementalUpdateError}
               </p>
             </div>
           </div>
@@ -357,7 +368,7 @@ const DataPage: React.FC = () => {
           loading={ohlcvLoading || fundingLoading || openInterestLoading}
           selectedTimeFrame={selectedTimeFrame}
           handleTimeFrameChange={handleTimeFrameChange}
-          updating={updating}
+          updating={bulkIncrementalUpdateLoading}
           handleAllDataCollectionStart={handleAllDataCollectionStart}
           handleAllDataCollectionError={handleAllDataCollectionError}
           handleBulkCollectionStart={handleBulkCollectionStart}
@@ -380,13 +391,13 @@ const DataPage: React.FC = () => {
           setActiveTab={setActiveTab}
           ohlcvData={ohlcvData}
           loading={ohlcvLoading}
-          error={ohlcvError}
+          error={ohlcvError || ""}
           fundingRateData={fundingRateData}
           fundingLoading={fundingLoading}
-          fundingError={fundingError}
+          fundingError={fundingError || ""}
           openInterestData={openInterestData}
           openInterestLoading={openInterestLoading}
-          openInterestError={openInterestError}
+          openInterestError={openInterestError || ""}
         />
       </div>
     </div>

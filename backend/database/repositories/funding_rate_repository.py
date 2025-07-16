@@ -97,6 +97,18 @@ class FundingRateRepository(BaseRepository):
         """
         return super().get_latest_timestamp("funding_timestamp", {"symbol": symbol})
 
+    def get_oldest_funding_timestamp(self, symbol: str) -> Optional[datetime]:
+        """
+        指定されたシンボルの最古ファンディングタイムスタンプを取得
+
+        Args:
+            symbol: 取引ペア
+
+        Returns:
+            最古のファンディングタイムスタンプ（データがない場合はNone）
+        """
+        return super().get_oldest_timestamp("funding_timestamp", {"symbol": symbol})
+
     def get_funding_rate_count(self, symbol: str) -> int:
         """
         指定されたシンボルのファンディングレートデータ件数を取得

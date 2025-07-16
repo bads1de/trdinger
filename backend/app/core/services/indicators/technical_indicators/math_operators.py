@@ -1,5 +1,5 @@
 """
-数学演算子系テクニカル指標（オートストラテジー最適化版）
+数学演算子系テクニカル指標
 
 このモジュールはnumpy配列ベースでTa-libを直接使用し、
 backtesting.pyとの完全な互換性を提供します。
@@ -11,7 +11,6 @@ import numpy as np
 from typing import Tuple, cast
 from ..utils import (
     validate_input,
-    validate_multi_input,
     handle_talib_errors,
     log_indicator_calculation,
     format_indicator_result,
@@ -43,10 +42,12 @@ class MathOperatorsIndicators:
         """
         data0 = ensure_numpy_array(data0)
         data1 = ensure_numpy_array(data1)
-        
+
         if len(data0) != len(data1):
-            raise TALibError(f"データの長さが一致しません。Data0: {len(data0)}, Data1: {len(data1)}")
-        
+            raise TALibError(
+                f"データの長さが一致しません。Data0: {len(data0)}, Data1: {len(data1)}"
+            )
+
         validate_input(data0, 1)
         log_indicator_calculation("ADD", {}, len(data0))
 
@@ -68,10 +69,12 @@ class MathOperatorsIndicators:
         """
         data0 = ensure_numpy_array(data0)
         data1 = ensure_numpy_array(data1)
-        
+
         if len(data0) != len(data1):
-            raise TALibError(f"データの長さが一致しません。Data0: {len(data0)}, Data1: {len(data1)}")
-        
+            raise TALibError(
+                f"データの長さが一致しません。Data0: {len(data0)}, Data1: {len(data1)}"
+            )
+
         validate_input(data0, 1)
         log_indicator_calculation("DIV", {}, len(data0))
 
@@ -183,7 +186,9 @@ class MathOperatorsIndicators:
 
     @staticmethod
     @handle_talib_errors
-    def minmaxindex(data: np.ndarray, period: int = 30) -> Tuple[np.ndarray, np.ndarray]:
+    def minmaxindex(
+        data: np.ndarray, period: int = 30
+    ) -> Tuple[np.ndarray, np.ndarray]:
         """
         Indexes of lowest and highest values over a specified period (指定期間の最低値と最高値のインデックス)
 
@@ -219,10 +224,12 @@ class MathOperatorsIndicators:
         """
         data0 = ensure_numpy_array(data0)
         data1 = ensure_numpy_array(data1)
-        
+
         if len(data0) != len(data1):
-            raise TALibError(f"データの長さが一致しません。Data0: {len(data0)}, Data1: {len(data1)}")
-        
+            raise TALibError(
+                f"データの長さが一致しません。Data0: {len(data0)}, Data1: {len(data1)}"
+            )
+
         validate_input(data0, 1)
         log_indicator_calculation("MULT", {}, len(data0))
 
@@ -244,10 +251,12 @@ class MathOperatorsIndicators:
         """
         data0 = ensure_numpy_array(data0)
         data1 = ensure_numpy_array(data1)
-        
+
         if len(data0) != len(data1):
-            raise TALibError(f"データの長さが一致しません。Data0: {len(data0)}, Data1: {len(data1)}")
-        
+            raise TALibError(
+                f"データの長さが一致しません。Data0: {len(data0)}, Data1: {len(data1)}"
+            )
+
         validate_input(data0, 1)
         log_indicator_calculation("SUB", {}, len(data0))
 

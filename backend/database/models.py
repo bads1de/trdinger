@@ -12,6 +12,7 @@ from sqlalchemy import (
     Text,
     JSON,
     ForeignKey,
+    Boolean,
 )
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
@@ -205,9 +206,6 @@ class OpenInterestData(Base):
         }
 
 
-
-
-
 class BacktestResult(Base):
     """
     バックテスト結果テーブル
@@ -391,8 +389,11 @@ class GeneratedStrategy(Base):
     # 世代数
     generation = Column(Integer, nullable=False)
 
-    # フィットネススコア
+    # フィットネススコア（単一目的最適化用、後方互換性のため保持）
     fitness_score = Column(Float, nullable=True)
+
+    # フィットネス値（多目的最適化用、JSON配列形式）
+    fitness_values = Column(JSON, nullable=True)
 
     # 親戦略のID（JSON配列）
     parent_ids = Column(JSON, nullable=True)
@@ -417,10 +418,13 @@ class GeneratedStrategy(Base):
     )
 
     def __repr__(self):
+        fitness_str = (
+            f"{self.fitness_score:.4f}" if self.fitness_score is not None else "None"
+        )
         return (
             f"<GeneratedStrategy(experiment_id={self.experiment_id}, "
             f"generation={self.generation}, "
-            f"fitness={self.fitness_score:.4f if self.fitness_score else 'None'})>"
+            f"fitness={fitness_str})>"
         )
 
     def to_dict(self):
@@ -443,5 +447,111 @@ class GeneratedStrategy(Base):
             "trade_history": self.trade_history,
             "created_at": (
                 self.created_at.isoformat() if self.created_at is not None else None
+            ),
+        }
+
+
+class BayesianOptimizationResult(Base):
+    """
+    ベイジアン最適化結果テーブル
+
+    ベイジアン最適化の実行結果を保存し、MLトレーニングのプロファイルとして利用します。
+    """
+
+    __tablename__ = "bayesian_optimization_results"
+
+    # 主キー
+    id = Column(Integer, primary_key=True, autoincrement=True)
+
+    # プロファイル名
+    profile_name = Column(String(255), nullable=False, unique=True)
+
+    # 最適化タイプ（例: "bayesian_ml", "bayesian_ga"）
+    optimization_type = Column(String(50), nullable=False, index=True)
+
+    # モデルタイプ（例: "LightGBM", "XGBoost"）
+    model_type = Column(String(50), nullable=True, index=True)
+
+    # 実験名（オプション）
+    experiment_name = Column(String(255), nullable=True)
+
+    # 最適パラメータ（JSON形式）
+    best_params = Column(JSON, nullable=False)
+
+    # 最高スコア
+    best_score = Column(Float, nullable=False)
+
+    # 総評価回数
+    total_evaluations = Column(Integer, nullable=False)
+
+    # 最適化時間（秒）
+    optimization_time = Column(Float, nullable=False)
+
+    # 収束情報（JSON形式）
+    convergence_info = Column(JSON, nullable=False)
+
+    # 最適化履歴（JSON形式）
+    optimization_history = Column(JSON, nullable=False)
+
+    # アクティブなプロファイルかどうか
+    is_active = Column(Boolean, nullable=False, default=True)
+
+    # デフォルトプロファイルかどうか
+    is_default = Column(Boolean, nullable=False, default=False)
+
+    # 対象モデルタイプ（フィルタリング用）
+    target_model_type = Column(String(50), nullable=True, index=True)
+
+    # 説明
+    description = Column(Text, nullable=True)
+
+    # メタデータ
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
+
+    # インデックス定義
+    __table_args__ = (
+        Index("idx_bayesian_optimization_type", "optimization_type"),
+        Index("idx_bayesian_model_type", "model_type"),
+        Index("idx_bayesian_profile_name", "profile_name"),
+        Index("idx_bayesian_is_active", "is_active"),
+        Index("idx_bayesian_is_default", "is_default"),
+        Index("idx_bayesian_target_model_type", "target_model_type"),
+        Index("idx_bayesian_created_at", "created_at"),
+    )
+
+    def __repr__(self):
+        return (
+            f"<BayesianOptimizationResult(profile_name='{self.profile_name}', "
+            f"optimization_type='{self.optimization_type}', "
+            f"model_type='{self.model_type}', "
+            f"best_score={self.best_score:.4f})>"
+        )
+
+    def to_dict(self):
+        """辞書形式に変換"""
+        return {
+            "id": self.id,
+            "profile_name": self.profile_name,
+            "optimization_type": self.optimization_type,
+            "model_type": self.model_type,
+            "experiment_name": self.experiment_name,
+            "best_params": self.best_params,
+            "best_score": self.best_score,
+            "total_evaluations": self.total_evaluations,
+            "optimization_time": self.optimization_time,
+            "convergence_info": self.convergence_info,
+            "optimization_history": self.optimization_history,
+            "is_active": self.is_active,
+            "is_default": self.is_default,
+            "target_model_type": self.target_model_type,
+            "description": self.description,
+            "created_at": (
+                self.created_at.isoformat() if self.created_at is not None else None
+            ),
+            "updated_at": (
+                self.updated_at.isoformat() if self.updated_at is not None else None
             ),
         }

@@ -15,10 +15,19 @@ import {
   BacktestConfig as BacktestConfigType,
 } from "@/types/optimization";
 import { BaseBacktestConfigForm } from "./BaseBacktestConfigForm";
-import { GA_OBJECTIVE_OPTIONS } from "@/constants/backtest";
+import { GA_INFO_MESSAGES } from "@/constants/info";
+import { ObjectiveSelection } from "./optimization/ObjectiveSelection";
+
+// 指標モードの選択肢
+const INDICATOR_MODE_OPTIONS = [
+  { value: "mixed", label: "混合 (テクニカル + ML)" },
+  { value: "technical_only", label: "テクニカルオンリー" },
+  { value: "ml_only", label: "MLオンリー" },
+];
 
 interface GAConfigFormProps {
   onSubmit: (config: GAConfigType) => void;
+  onClose?: () => void;
   initialConfig?: Partial<GAConfigType>;
   isLoading?: boolean;
   currentBacktestConfig?: BacktestConfigType | null;
@@ -26,6 +35,7 @@ interface GAConfigFormProps {
 
 const GAConfigForm: React.FC<GAConfigFormProps> = ({
   onSubmit,
+  onClose,
   initialConfig = {},
   isLoading = false,
   currentBacktestConfig = null,
@@ -71,14 +81,22 @@ const GAConfigForm: React.FC<GAConfigFormProps> = ({
           max_drawdown_limit: 0.3,
           min_sharpe_ratio: 0.5,
         },
-        ga_objective: initialConfig.ga_params?.ga_objective || "Sharpe Ratio",
-        // 従来のリスク管理パラメータ（Position Sizingシステムにより廃止予定）
-        stop_loss_range: initialConfig.ga_params?.stop_loss_range || [
-          0.02, 0.05,
-        ],
-        take_profit_range: initialConfig.ga_params?.take_profit_range || [
-          0.01, 0.15,
-        ],
+      },
+      ga_config: {
+        population_size: initialConfig.ga_config?.population_size || 10,
+        generations: initialConfig.ga_config?.generations || 10,
+        mutation_rate: initialConfig.ga_config?.mutation_rate || 0.1,
+        crossover_rate: initialConfig.ga_config?.crossover_rate || 0.8,
+        elite_size: initialConfig.ga_config?.elite_size || 5,
+        max_indicators: initialConfig.ga_config?.max_indicators || 5,
+        allowed_indicators: initialConfig.ga_config?.allowed_indicators || [],
+        // 指標モード設定
+        indicator_mode: initialConfig.ga_config?.indicator_mode || "mixed",
+        // 多目的最適化設定
+        enable_multi_objective:
+          initialConfig.ga_config?.enable_multi_objective || false,
+        objectives: initialConfig.ga_config?.objectives || ["total_return"],
+        objective_weights: initialConfig.ga_config?.objective_weights || [1.0],
       },
     };
   });
@@ -99,161 +117,161 @@ const GAConfigForm: React.FC<GAConfigFormProps> = ({
     }));
   };
 
-  const validateConfig = () => {
-    const errors: string[] = [];
-
-    // 従来の取引量範囲バリデーションは削除（Position Sizingシステムにより不要）
-
-    // TP/SL設定はGAが自動最適化するため、バリデーション不要
-    // 従来のTP/SL範囲バリデーション（後方互換性のため保持）
-    if (
-      config.ga_params.stop_loss_range[0] >= config.ga_params.stop_loss_range[1]
-    ) {
-      errors.push("ストップロス範囲: 最小値は最大値より小さくしてください");
-    }
-    if (
-      config.ga_params.stop_loss_range[0] < 0.005 ||
-      config.ga_params.stop_loss_range[1] > 0.1
-    ) {
-      errors.push("ストップロス範囲: 0.5%〜10%の範囲で設定してください");
-    }
-
-    if (
-      config.ga_params.take_profit_range[0] >=
-      config.ga_params.take_profit_range[1]
-    ) {
-      errors.push(
-        "テイクプロフィット範囲: 最小値は最大値より小さくしてください"
-      );
-    }
-    if (
-      config.ga_params.take_profit_range[0] < 0.005 ||
-      config.ga_params.take_profit_range[1] > 0.2
-    ) {
-      errors.push("テイクプロフィット範囲: 0.5%〜20%の範囲で設定してください");
-    }
-
-    return errors;
+  const handleGAConfigChange = (
+    updates: Partial<GAConfigType["ga_config"]>
+  ) => {
+    setConfig((prev) => ({
+      ...prev,
+      ga_config: { ...prev.ga_config, ...updates },
+    }));
+  };
   };
 
   const handleSubmit = () => {
-    const errors = validateConfig();
-    if (errors.length > 0) {
-      alert("設定エラー:\n" + errors.join("\n"));
-      return;
-    }
     onSubmit(config);
   };
 
   return (
-    <form onSubmit={(e) => e.preventDefault()} className="space-y-6">
-      <BaseBacktestConfigForm
-        config={config.base_config}
-        onConfigChange={handleBaseConfigChange}
-        isOptimization={true}
-      />
+    <div className="flex flex-col lg:flex-row min-h-0">
+      {/* Left Column: Main Settings */}
+      <div className="flex-1 p-6 space-y-6 overflow-y-auto">
+        <BaseBacktestConfigForm
+          config={config.base_config}
+          onConfigChange={handleBaseConfigChange}
+          isOptimization={true}
+        />
+        <InputField
+          label="個体数 (population_size)"
+          type="number"
+          value={config.ga_config.population_size}
+          onChange={(value) =>
+            setConfig((prev) => ({
+              ...prev,
+              ga_config: { ...prev.ga_config, population_size: value },
+            }))
+          }
+          min={10}
+          step={10}
+          required
+          description={GA_INFO_MESSAGES.population_size}
+        />
+        <InputField
+          label="世代数 (generations)"
+          type="number"
+          value={config.ga_config.generations}
+          onChange={(value) =>
+            setConfig((prev) => ({
+              ...prev,
+              ga_config: { ...prev.ga_config, generations: value },
+            }))
+          }
+          min={1}
+          step={1}
+          required
+          description={GA_INFO_MESSAGES.generations}
+        />
+        <InputField
+          label="突然変異率 (mutation_rate)"
+          type="number"
+          value={config.ga_config.mutation_rate}
+          onChange={(value) =>
+            setConfig((prev) => ({
+              ...prev,
+              ga_config: { ...prev.ga_config, mutation_rate: value },
+            }))
+          }
+          min={0}
+          max={1}
+          step={0.01}
+          required
+          description={GA_INFO_MESSAGES.mutation_rate}
+        />
+        <InputField
+          label="交叉率 (crossover_rate)"
+          type="number"
+          value={config.ga_config.crossover_rate}
+          onChange={(value) =>
+            setConfig((prev) => ({
+              ...prev,
+              ga_config: { ...prev.ga_config, crossover_rate: value },
+            }))
+          }
+          min={0}
+          max={1}
+          step={0.01}
+          required
+          description={GA_INFO_MESSAGES.crossover_rate}
+        />
+        <SelectField
+          label="指標モード (indicator_mode)"
+          value={config.ga_config.indicator_mode}
+          onChange={(value) =>
+            setConfig((prev) => ({
+              ...prev,
+              ga_config: {
+                ...prev.ga_config,
+                indicator_mode: value as "technical_only" | "ml_only" | "mixed",
+              },
+            }))
+          }
+          options={INDICATOR_MODE_OPTIONS}
+          required
+        />
+      </div>
 
-      <InputField
-        label="個体数 (population_size)"
-        type="number"
-        value={config.ga_params.population_size}
-        onChange={(value) =>
-          setConfig((prev) => ({
-            ...prev,
-            ga_params: { ...prev.ga_params, population_size: value },
-          }))
-        }
-        min={10}
-        step={10}
-        required
-      />
-
-      <InputField
-        label="世代数 (generations)"
-        type="number"
-        value={config.ga_params.generations}
-        onChange={(value) =>
-          setConfig((prev) => ({
-            ...prev,
-            ga_params: { ...prev.ga_params, generations: value },
-          }))
-        }
-        min={1}
-        step={1}
-        required
-      />
-
-      <InputField
-        label="突然変異率 (mutation_rate)"
-        type="number"
-        value={config.ga_params.mutation_rate}
-        onChange={(value) =>
-          setConfig((prev) => ({
-            ...prev,
-            ga_params: { ...prev.ga_params, mutation_rate: value },
-          }))
-        }
-        min={0}
-        max={1}
-        step={0.01}
-        required
-      />
-
-      <InputField
-        label="交叉率 (crossover_rate)"
-        type="number"
-        value={config.ga_params.crossover_rate}
-        onChange={(value) =>
-          setConfig((prev) => ({
-            ...prev,
-            ga_params: { ...prev.ga_params, crossover_rate: value },
-          }))
-        }
-        min={0}
-        max={1}
-        step={0.01}
-        required
-      />
-
-      <SelectField
-        label="最適化目的 (ga_objective)"
-        value={config.ga_params.ga_objective}
-        onChange={(value) =>
-          setConfig((prev) => ({
-            ...prev,
-            ga_params: { ...prev.ga_params, ga_objective: value },
-          }))
-        }
-        options={GA_OBJECTIVE_OPTIONS}
-        required
-      />
-
-      {/* TP/SL & ポジションサイジング自動最適化の説明 */}
-      <div className="space-y-4 p-4 border border-blue-600 rounded-lg bg-blue-900/20">
-        <h3 className="text-lg font-semibold text-blue-300">
-          🤖 リスク管理自動最適化
+      {/* Right Column: Advanced GA Settings */}
+      <div className="flex-1 p-6 space-y-4 bg-secondary-900 border-l border-secondary-700 overflow-y-auto">
+        <h3 className="text-lg font-semibold text-secondary-100 mb-3">
+          🧬 GA詳細設定
         </h3>
-        <p className="text-sm text-blue-200">
-          TP/SL設定とポジションサイズは、テクニカル指標と同様にGAが自動で最適化します。
-          <strong className="text-blue-100">
-            従来のイグジット条件は自動的に無効化され、TP/SL機能が優先されます。
-          </strong>
-          手動設定は不要です。
-        </p>
+
+        {/* 指標モードの説明 */}
+        <div className="p-3 bg-purple-900/30 border border-purple-500/30 rounded-md">
+          <h4 className="font-medium text-purple-300 mb-2">
+            📊 指標モード選択
+          </h4>
+          <div className="text-sm text-purple-200 space-y-1">
+            <div>
+              <strong className="text-purple-100">混合 (推奨):</strong>{" "}
+              テクニカル指標とML予測指標の両方を使用
+            </div>
+            <div>
+              <strong className="text-purple-100">テクニカルオンリー:</strong>{" "}
+              従来のテクニカル指標のみを使用
+            </div>
+            <div>
+              <strong className="text-purple-100">MLオンリー:</strong>{" "}
+              ML予測指標のみを使用
+            </div>
+          </div>
+        </div>
+
+        {/* リスク管理自動最適化 */}
+        <div className="p-3 bg-blue-900/30 border border-blue-500/30 rounded-md">
+          <h4 className="font-medium text-blue-300 mb-2">
+            🤖 リスク管理自動最適化
+          </h4>
+          <p className="text-sm text-blue-200">
+            TP/SLとポジションサイズはGAが自動最適化します。
+            <strong className="text-blue-100">
+              手動でのイグジット条件は無視されます。
+            </strong>
+          </p>
+        </div>
 
         {/* TP/SL自動最適化 */}
         <div className="p-3 bg-pink-900/30 border border-pink-500/30 rounded-md">
           <h4 className="font-medium text-pink-300 mb-2">📈 TP/SL自動最適化</h4>
           <div className="text-xs text-pink-200 space-y-1">
             <div>
-              • <strong>TP/SL決定方式</strong>:
-              固定値、リスクリワード比、ボラティリティベースなど
+              • <strong>決定方式</strong>:
+              固定値、リスクリワード比、ボラティリティベース等
             </div>
             <div>
-              • <strong>リスクリワード比</strong>: 1:1.2 ～ 1:4.0の範囲
+              • <strong>リスクリワード比</strong>: 1:1.2 ～ 1:4.0
             </div>
             <div>
-              • <strong>具体的なパーセンテージ</strong>: SL: 1%-8%, TP: 2%-20%
+              • <strong>パーセンテージ範囲</strong>: SL: 1%-8%, TP: 2%-20%
             </div>
           </div>
         </div>
@@ -261,30 +279,68 @@ const GAConfigForm: React.FC<GAConfigFormProps> = ({
         {/* ポジションサイジング自動最適化 */}
         <div className="p-3 bg-emerald-900/30 border border-emerald-500/30 rounded-md">
           <h4 className="font-medium text-emerald-300 mb-2">
-            � ポジションサイジング自動最適化
+            💰 ポジションサイジング自動最適化
           </h4>
           <div className="text-xs text-emerald-200 space-y-1">
             <div>
-              • <strong>ハーフオプティマルF</strong>:
-              過去データ分析によるリスク最適化
-            </div>
-            <div>
-              • <strong>ボラティリティベース</strong>: ATRを使用したリスク調整
-            </div>
-            <div>
-              • <strong>固定比率</strong>: 口座残高に対する固定比率
-            </div>
-            <div>
-              • <strong>固定枚数</strong>: 設定された固定枚数
+              • <strong>方式</strong>: ハーフオプティマルF,
+              ボラティリティベース, 固定比率/枚数
             </div>
           </div>
         </div>
-      </div>
 
-      <ApiButton onClick={handleSubmit} loading={isLoading}>
-        GA戦略を生成
-      </ApiButton>
-    </form>
+        {/* 高度なGA設定 */}
+        <div className="p-3 bg-indigo-900/30 border border-indigo-500/30 rounded-md">
+          <h4 className="font-medium text-indigo-300 mb-3">⚙️ 高度なGA設定</h4>
+
+          {/* フィットネス共有 */}
+          <div className="mb-2">
+            <label className="flex items-center space-x-2">
+              <input
+                type="checkbox"
+                checked={config.ga_config.enable_fitness_sharing ?? true}
+                onChange={(e) =>
+                  setConfig({
+                    ...config,
+                    ga_config: {
+                      ...config.ga_config,
+                      enable_fitness_sharing: e.target.checked,
+                    },
+                  })
+                }
+                className="rounded border-indigo-500 text-indigo-600 focus:ring-indigo-500"
+              />
+              <span className="text-sm text-indigo-200">
+                フィットネス共有 (戦略の多様性向上)
+              </span>
+            </label>
+          </div>
+
+          {/* 多目的最適化設定 */}
+          <ObjectiveSelection
+            gaConfig={config.ga_config}
+            onGAConfigChange={handleGAConfigChange}
+          />
+        </div>
+
+        {/* Action Buttons */}
+        <div className="pt-6 flex justify-end items-center space-x-4 border-t border-secondary-700 mt-6">
+          <button
+            type="button"
+            onClick={onClose}
+            disabled={isLoading}
+            className="px-4 py-2 text-secondary-400 hover:text-secondary-200 transition-colors disabled:opacity-50"
+          >
+            キャンセル
+          </button>
+          <ApiButton onClick={handleSubmit} loading={isLoading}>
+            {config.ga_config.enable_multi_objective
+              ? "多目的GA戦略を生成"
+              : "GA戦略を生成"}
+          </ApiButton>
+        </div>
+      </div>
+    </div>
   );
 };
 

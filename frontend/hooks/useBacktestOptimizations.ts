@@ -15,10 +15,12 @@ export const useBacktestOptimizations = () => {
     execute: runEnhancedOptimization,
     loading: enhancedOptimizationLoading,
   } = useApiCall();
+  
   const {
     execute: runMultiObjectiveOptimization,
     loading: multiOptimizationLoading,
   } = useApiCall();
+
   const { execute: runRobustnessTest, loading: robustnessTestLoading } =
     useApiCall();
 

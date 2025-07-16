@@ -1,9 +1,16 @@
 "use client";
 
 import React from "react";
+import { Info } from "lucide-react";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 interface InputFieldProps {
   label: string;
+  labelAddon?: React.ReactNode;
   value: any;
   onChange: (value: any) => void;
   type?: string;
@@ -13,10 +20,13 @@ interface InputFieldProps {
   required?: boolean;
   placeholder?: string;
   className?: string;
+  disabled?: boolean;
+  description?: string;
 }
 
 export const InputField: React.FC<InputFieldProps> = ({
   label,
+  labelAddon,
   value,
   onChange,
   type = "text",
@@ -26,11 +36,35 @@ export const InputField: React.FC<InputFieldProps> = ({
   required = false,
   placeholder = "",
   className = "",
+  disabled = false,
+  description,
 }) => (
   <div>
-    <label className="block text-sm font-medium text-gray-300 mb-2">
-      {label}
-    </label>
+    <div className="flex items-center justify-between mb-2">
+      <div className="flex items-center gap-2">
+        <label className="block text-sm font-medium text-gray-300">
+          {label}
+        </label>
+        {description && (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Info
+                size={16}
+                className="text-gray-400 cursor-pointer hover:text-gray-300 transition-colors"
+              />
+            </TooltipTrigger>
+            <TooltipContent
+              className="bg-black text-white border-gray-600 max-w-xs z-[60]"
+              side="top"
+              sideOffset={5}
+            >
+              <p>{description}</p>
+            </TooltipContent>
+          </Tooltip>
+        )}
+      </div>
+      {labelAddon}
+    </div>
     <input
       type={type}
       value={value}
@@ -47,6 +81,7 @@ export const InputField: React.FC<InputFieldProps> = ({
       step={step}
       required={required}
       placeholder={placeholder}
+      disabled={disabled}
     />
   </div>
 );

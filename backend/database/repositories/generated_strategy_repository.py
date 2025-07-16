@@ -28,6 +28,7 @@ class GeneratedStrategyRepository(BaseRepository):
         gene_data: Dict[str, Any],
         generation: int,
         fitness_score: Optional[float] = None,
+        fitness_values: Optional[List[float]] = None,
         parent_ids: Optional[List[int]] = None,
         backtest_result_id: Optional[int] = None,
     ) -> GeneratedStrategy:
@@ -38,7 +39,8 @@ class GeneratedStrategyRepository(BaseRepository):
             experiment_id: 実験ID
             gene_data: 戦略遺伝子データ
             generation: 世代数
-            fitness_score: フィットネススコア
+            fitness_score: フィットネススコア（単一目的用）
+            fitness_values: フィットネス値リスト（多目的最適化用）
             parent_ids: 親戦略のIDリスト
             backtest_result_id: バックテスト結果ID
 
@@ -54,6 +56,7 @@ class GeneratedStrategyRepository(BaseRepository):
                 gene_data=validated_gene_data,
                 generation=generation,
                 fitness_score=fitness_score,
+                fitness_values=fitness_values,
                 parent_ids=parent_ids,
                 backtest_result_id=backtest_result_id,
             )
@@ -95,6 +98,7 @@ class GeneratedStrategyRepository(BaseRepository):
                     gene_data=validated_gene_data,
                     generation=data["generation"],
                     fitness_score=data.get("fitness_score"),
+                    fitness_values=data.get("fitness_values"),
                     parent_ids=data.get("parent_ids"),
                     backtest_result_id=data.get("backtest_result_id"),
                 )

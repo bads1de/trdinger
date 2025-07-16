@@ -20,7 +20,8 @@ import {
 import ChartContainer from "./ChartContainer";
 import { chartColors, chartStyles } from "./ChartTheme";
 import { sampleData } from "@/utils/chartDataTransformers";
-import { formatCurrency, formatDateTime } from "@/utils/formatters";
+import { formatDateTime } from "@/utils/formatters";
+import { formatCurrency } from "@/utils/financialFormatters";
 import { ChartEquityPoint } from "@/types/backtest";
 
 interface DrawdownChartProps {
@@ -170,7 +171,7 @@ const DrawdownChart: React.FC<DrawdownChartProps> = ({
             type="number"
             scale="time"
             domain={["dataMin", "dataMax"]}
-            tickFormatter={(timestamp) => formatDateTime(timestamp)}
+            tickFormatter={(timestamp) => formatDateTime(timestamp).dateTime}
             {...chartStyles.axis}
           />
 

@@ -100,6 +100,18 @@ class OpenInterestRepository(BaseRepository):
         """
         return super().get_latest_timestamp("data_timestamp", {"symbol": symbol})
 
+    def get_oldest_open_interest_timestamp(self, symbol: str) -> Optional[datetime]:
+        """
+        指定されたシンボルの最古オープンインタレストタイムスタンプを取得
+
+        Args:
+            symbol: 取引ペア
+
+        Returns:
+            最古のデータタイムスタンプ（データがない場合はNone）
+        """
+        return super().get_oldest_timestamp("data_timestamp", {"symbol": symbol})
+
     def get_open_interest_count(self, symbol: str) -> int:
         """
         指定されたシンボルのオープンインタレストデータ件数を取得

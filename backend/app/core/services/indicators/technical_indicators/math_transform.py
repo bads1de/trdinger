@@ -1,5 +1,5 @@
 """
-数学変換系テクニカル指標（オートストラテジー最適化版）
+数学変換系テクニカル指標
 
 このモジュールはnumpy配列ベースでTa-libを直接使用し、
 backtesting.pyとの完全な互換性を提供します。
@@ -39,6 +39,7 @@ class MathTransformIndicators:
             ACOS値のnumpy配列
         """
         import logging
+
         logger = logging.getLogger(__name__)
 
         data = ensure_numpy_array(data)
@@ -48,7 +49,9 @@ class MathTransformIndicators:
         # 入力データの範囲チェックとクリッピング
         min_val, max_val = np.nanmin(data), np.nanmax(data)
         if min_val < -1.0 or max_val > 1.0:
-            logger.warning(f"ACOS input data is out of the valid range [-1, 1]. Range: [{min_val:.6f}, {max_val:.6f}]. Clipping to valid range.")
+            logger.warning(
+                f"ACOS input data is out of the valid range [-1, 1]. Range: [{min_val:.6f}, {max_val:.6f}]. Clipping to valid range."
+            )
             # 範囲外の値を[-1, 1]にクリップ
             data = np.clip(data, -1.0, 1.0)
 
@@ -68,6 +71,7 @@ class MathTransformIndicators:
             ASIN値のnumpy配列
         """
         import logging
+
         logger = logging.getLogger(__name__)
 
         data = ensure_numpy_array(data)
@@ -77,7 +81,9 @@ class MathTransformIndicators:
         # 入力データの範囲チェックとクリッピング
         min_val, max_val = np.nanmin(data), np.nanmax(data)
         if min_val < -1.0 or max_val > 1.0:
-            logger.warning(f"ASIN input data is out of the valid range [-1, 1]. Range: [{min_val:.6f}, {max_val:.6f}]. Clipping to valid range.")
+            logger.warning(
+                f"ASIN input data is out of the valid range [-1, 1]. Range: [{min_val:.6f}, {max_val:.6f}]. Clipping to valid range."
+            )
             # 範囲外の値を[-1, 1]にクリップ
             data = np.clip(data, -1.0, 1.0)
 
@@ -211,6 +217,7 @@ class MathTransformIndicators:
             LN値のnumpy配列
         """
         import logging
+
         logger = logging.getLogger(__name__)
 
         data = ensure_numpy_array(data)
@@ -220,7 +227,9 @@ class MathTransformIndicators:
         # 入力データの範囲チェック（正の値のみ有効）
         min_val = np.nanmin(data)
         if min_val <= 0.0:
-            logger.warning(f"LN input data contains non-positive values. Min value: {min_val:.6f}. Replacing with small positive value.")
+            logger.warning(
+                f"LN input data contains non-positive values. Min value: {min_val:.6f}. Replacing with small positive value."
+            )
             # 0以下の値を小さな正の値に置換
             data = np.where(data <= 0.0, 1e-10, data)
 
@@ -240,6 +249,7 @@ class MathTransformIndicators:
             LOG10値のnumpy配列
         """
         import logging
+
         logger = logging.getLogger(__name__)
 
         data = ensure_numpy_array(data)
@@ -249,7 +259,9 @@ class MathTransformIndicators:
         # 入力データの範囲チェック（正の値のみ有効）
         min_val = np.nanmin(data)
         if min_val <= 0.0:
-            logger.warning(f"LOG10 input data contains non-positive values. Min value: {min_val:.6f}. Replacing with small positive value.")
+            logger.warning(
+                f"LOG10 input data contains non-positive values. Min value: {min_val:.6f}. Replacing with small positive value."
+            )
             # 0以下の値を小さな正の値に置換
             data = np.where(data <= 0.0, 1e-10, data)
 
@@ -307,6 +319,7 @@ class MathTransformIndicators:
             SQRT値のnumpy配列
         """
         import logging
+
         logger = logging.getLogger(__name__)
 
         data = ensure_numpy_array(data)
@@ -316,7 +329,9 @@ class MathTransformIndicators:
         # 入力データの範囲チェック（非負の値のみ有効）
         min_val = np.nanmin(data)
         if min_val < 0.0:
-            logger.warning(f"SQRT input data contains negative values. Min value: {min_val:.6f}. Replacing with 0.")
+            logger.warning(
+                f"SQRT input data contains negative values. Min value: {min_val:.6f}. Replacing with 0."
+            )
             # 負の値を0に置換
             data = np.where(data < 0.0, 0.0, data)
 

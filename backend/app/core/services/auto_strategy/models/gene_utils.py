@@ -14,10 +14,17 @@ logger = logging.getLogger(__name__)
 
 
 def get_indicator_ids() -> Dict[str, int]:
-    """指標IDマッピングを取得"""
+    """指標IDマッピングを取得（テクニカル指標 + ML指標）"""
     try:
+        # テクニカル指標を取得
         indicator_service = TechnicalIndicatorService()
-        all_indicators = list(indicator_service.get_supported_indicators().keys())
+        technical_indicators = list(indicator_service.get_supported_indicators().keys())
+
+        # ML指標を追加
+        ml_indicators = ['ML_UP_PROB', 'ML_DOWN_PROB', 'ML_RANGE_PROB']
+
+        # 全指標を結合
+        all_indicators = technical_indicators + ml_indicators
 
         indicator_ids = {"": 0}  # 未使用
         for i, indicator in enumerate(all_indicators, 1):
