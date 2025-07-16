@@ -5,7 +5,6 @@ import { Info } from "lucide-react";
 import {
   Tooltip,
   TooltipContent,
-  TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 
@@ -47,16 +46,21 @@ export const InputField: React.FC<InputFieldProps> = ({
           {label}
         </label>
         {description && (
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Info size={16} className="text-gray-400 cursor-pointer" />
-              </TooltipTrigger>
-              <TooltipContent className="bg-black text-white border-gray-600">
-                <p className="max-w-xs">{description}</p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Info
+                size={16}
+                className="text-gray-400 cursor-pointer hover:text-gray-300 transition-colors"
+              />
+            </TooltipTrigger>
+            <TooltipContent
+              className="bg-black text-white border-gray-600 max-w-xs z-[60]"
+              side="top"
+              sideOffset={5}
+            >
+              <p>{description}</p>
+            </TooltipContent>
+          </Tooltip>
         )}
       </div>
       {labelAddon}

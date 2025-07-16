@@ -122,9 +122,9 @@ const GAConfigForm: React.FC<GAConfigFormProps> = ({
   };
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 h-full">
+    <div className="flex flex-col lg:flex-row min-h-0">
       {/* Left Column: Main Settings */}
-      <div className="p-6 space-y-6">
+      <div className="flex-1 p-6 space-y-6 overflow-y-auto">
         <BaseBacktestConfigForm
           config={config.base_config}
           onConfigChange={handleBaseConfigChange}
@@ -222,7 +222,7 @@ const GAConfigForm: React.FC<GAConfigFormProps> = ({
       </div>
 
       {/* Right Column: Advanced GA Settings */}
-      <div className="p-6 space-y-4 bg-secondary-900 border-l border-secondary-700">
+      <div className="flex-1 p-6 space-y-4 bg-secondary-900 border-l border-secondary-700 overflow-y-auto">
         <h3 className="text-lg font-semibold text-secondary-100 mb-3">
           🧬 GA詳細設定
         </h3>
@@ -324,8 +324,9 @@ const GAConfigForm: React.FC<GAConfigFormProps> = ({
             onGAConfigChange={handleGAConfigChange}
           />
         </div>
+
         {/* Action Buttons */}
-        <div className="pt-6 flex justify-end items-center space-x-4">
+        <div className="pt-6 flex justify-end items-center space-x-4 border-t border-secondary-700 mt-6">
           <button
             type="button"
             onClick={onClose}
