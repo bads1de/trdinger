@@ -193,7 +193,7 @@ const EquityCurveChart: React.FC<EquityCurveChartProps> = ({
             type="number"
             scale="time"
             domain={["dataMin", "dataMax"]}
-            tickFormatter={(timestamp) => formatDateTime(timestamp)}
+            tickFormatter={(timestamp) => formatDateTime(timestamp).dateTime}
             {...chartStyles.axis}
           />
 

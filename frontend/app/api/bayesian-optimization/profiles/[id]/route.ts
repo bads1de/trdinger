@@ -8,26 +8,29 @@ const BACKEND_URL = process.env.BACKEND_URL || "http://localhost:8000";
  */
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = params;
+    const { id } = await params;
 
-    const response = await fetch(`${BACKEND_URL}/api/bayesian-optimization/profiles/${id}`, {
-      method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-      },
-    });
+    const response = await fetch(
+      `${BACKEND_URL}/api/bayesian-optimization/profiles/${id}`,
+      {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      }
+    );
 
     if (!response.ok) {
       const errorData = await response.text();
       console.error("Backend API error:", errorData);
       return NextResponse.json(
-        { 
-          success: false, 
+        {
+          success: false,
           error: "プロファイルの取得に失敗しました",
-          details: errorData 
+          details: errorData,
         },
         { status: response.status }
       );
@@ -35,14 +38,13 @@ export async function GET(
 
     const data = await response.json();
     return NextResponse.json(data);
-
   } catch (error) {
     console.error("プロファイル取得エラー:", error);
     return NextResponse.json(
-      { 
-        success: false, 
+      {
+        success: false,
         error: "プロファイルの取得中にエラーが発生しました",
-        details: error instanceof Error ? error.message : String(error)
+        details: error instanceof Error ? error.message : String(error),
       },
       { status: 500 }
     );
@@ -55,28 +57,31 @@ export async function GET(
  */
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = params;
+    const { id } = await params;
     const body = await request.json();
 
-    const response = await fetch(`${BACKEND_URL}/api/bayesian-optimization/profiles/${id}`, {
-      method: "PUT",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(body),
-    });
+    const response = await fetch(
+      `${BACKEND_URL}/api/bayesian-optimization/profiles/${id}`,
+      {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(body),
+      }
+    );
 
     if (!response.ok) {
       const errorData = await response.text();
       console.error("Backend API error:", errorData);
       return NextResponse.json(
-        { 
-          success: false, 
+        {
+          success: false,
           error: "プロファイルの更新に失敗しました",
-          details: errorData 
+          details: errorData,
         },
         { status: response.status }
       );
@@ -84,14 +89,13 @@ export async function PUT(
 
     const data = await response.json();
     return NextResponse.json(data);
-
   } catch (error) {
     console.error("プロファイル更新エラー:", error);
     return NextResponse.json(
-      { 
-        success: false, 
+      {
+        success: false,
         error: "プロファイルの更新中にエラーが発生しました",
-        details: error instanceof Error ? error.message : String(error)
+        details: error instanceof Error ? error.message : String(error),
       },
       { status: 500 }
     );
@@ -104,26 +108,29 @@ export async function PUT(
  */
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = params;
+    const { id } = await params;
 
-    const response = await fetch(`${BACKEND_URL}/api/bayesian-optimization/profiles/${id}`, {
-      method: "DELETE",
-      headers: {
-        "Content-Type": "application/json",
-      },
-    });
+    const response = await fetch(
+      `${BACKEND_URL}/api/bayesian-optimization/profiles/${id}`,
+      {
+        method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      }
+    );
 
     if (!response.ok) {
       const errorData = await response.text();
       console.error("Backend API error:", errorData);
       return NextResponse.json(
-        { 
-          success: false, 
+        {
+          success: false,
           error: "プロファイルの削除に失敗しました",
-          details: errorData 
+          details: errorData,
         },
         { status: response.status }
       );
@@ -131,14 +138,13 @@ export async function DELETE(
 
     const data = await response.json();
     return NextResponse.json(data);
-
   } catch (error) {
     console.error("プロファイル削除エラー:", error);
     return NextResponse.json(
-      { 
-        success: false, 
+      {
+        success: false,
         error: "プロファイルの削除中にエラーが発生しました",
-        details: error instanceof Error ? error.message : String(error)
+        details: error instanceof Error ? error.message : String(error),
       },
       { status: 500 }
     );

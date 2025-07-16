@@ -67,6 +67,10 @@ class GAGenerationRequest(BaseModel):
                     "elite_size": 2,
                     "max_indicators": 3,
                     "allowed_indicators": ["SMA", "EMA", "RSI", "MACD", "BB", "ATR"],
+                    # 多目的最適化設定（オプション）
+                    "enable_multi_objective": False,
+                    "objectives": ["total_return"],
+                    "objective_weights": [1.0],
                 },
             }
         }
@@ -93,6 +97,16 @@ class GAResultResponse(BaseModel):
 
     success: bool
     result: Optional[Dict[str, Any]] = None
+    message: str
+
+
+class MultiObjectiveResultResponse(BaseModel):
+    """多目的最適化GA結果レスポンス"""
+
+    success: bool
+    result: Optional[Dict[str, Any]] = None
+    pareto_front: Optional[List[Dict[str, Any]]] = None
+    objectives: Optional[List[str]] = None
     message: str
 
 
@@ -208,6 +222,50 @@ async def stop_experiment(
         )
 
     return StopExperimentResponse(success=True, message="実験を停止しました")
+
+
+@router.get("/experiments/{experiment_id}/results", response_model=GAResultResponse)
+async def get_experiment_results(
+    experiment_id: str,
+    auto_strategy_service: AutoStrategyService = Depends(get_auto_strategy_service),
+):
+    """
+    実験結果を取得
+
+    指定された実験IDの結果を取得します。
+    多目的最適化の場合はパレート最適解も含まれます。
+    """
+    try:
+        result = auto_strategy_service.get_experiment_result(experiment_id)
+
+        if result is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"実験 {experiment_id} が見つかりません",
+            )
+
+        # 多目的最適化の結果かどうかを判定
+        if "pareto_front" in result and "objectives" in result:
+            return MultiObjectiveResultResponse(
+                success=True,
+                result=result,
+                pareto_front=result.get("pareto_front"),
+                objectives=result.get("objectives"),
+                message="多目的最適化実験結果を取得しました",
+            )
+        else:
+            return GAResultResponse(
+                success=True,
+                result=result,
+                message="実験結果を取得しました",
+            )
+
+    except Exception as e:
+        logger.error(f"実験結果取得エラー: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"実験結果の取得中にエラーが発生しました: {e}",
+        )
 
 
 @router.post("/test-strategy", response_model=StrategyTestResponse)

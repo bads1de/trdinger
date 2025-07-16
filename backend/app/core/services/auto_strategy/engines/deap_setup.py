@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 class DEAPSetup:
     """
     DEAP設定クラス
-    
+
     DEAPライブラリの設定とツールボックスの初期化を担当します。
     """
 
@@ -26,9 +26,16 @@ class DEAPSetup:
         self.toolbox: Optional[base.Toolbox] = None
         self.Individual = None
 
-    def setup_deap(self, config: GAConfig, create_individual_func, evaluate_func, crossover_func, mutate_func):
+    def setup_deap(
+        self,
+        config: GAConfig,
+        create_individual_func,
+        evaluate_func,
+        crossover_func,
+        mutate_func,
+    ):
         """
-        DEAP環境のセットアップ
+        DEAP環境のセットアップ（単一目的・多目的最適化対応）
 
         Args:
             config: GA設定
@@ -37,13 +44,30 @@ class DEAPSetup:
             crossover_func: 交叉関数
             mutate_func: 突然変異関数
         """
-        # フィットネスクラスの定義（最大化問題）
-        if not hasattr(creator, "FitnessMax"):
-            creator.create("FitnessMax", base.Fitness, weights=(1.0,))
+        # フィットネスクラスの定義（単一目的・多目的対応）
+        if config.enable_multi_objective:
+            # 多目的最適化用フィットネスクラス
+            fitness_class_name = "FitnessMulti"
+            weights = tuple(config.objective_weights)
+            logger.info(f"多目的最適化モード: 目的={config.objectives}, 重み={weights}")
+        else:
+            # 単一目的最適化用フィットネスクラス（後方互換性）
+            fitness_class_name = "FitnessMax"
+            weights = (1.0,)
+            logger.info("単一目的最適化モード")
+
+        # 既存のフィットネスクラスを削除（再定義のため）
+        if hasattr(creator, fitness_class_name):
+            delattr(creator, fitness_class_name)
+
+        # フィットネスクラスを作成
+        creator.create(fitness_class_name, base.Fitness, weights=weights)
+        fitness_class = getattr(creator, fitness_class_name)
 
         # 個体クラスの定義
-        if not hasattr(creator, "Individual"):
-            creator.create("Individual", list, fitness=creator.FitnessMax)  # type: ignore
+        if hasattr(creator, "Individual"):
+            delattr(creator, "Individual")
+        creator.create("Individual", list, fitness=fitness_class)  # type: ignore
         self.Individual = creator.Individual  # type: ignore # 生成したクラスをインスタンス変数に格納
 
         # ツールボックスの初期化
@@ -68,14 +92,22 @@ class DEAPSetup:
                 "mutate",
                 genetic_operators.mutate_with_short_bias,
                 mutation_rate=config.mutation_rate,
-                short_bias_rate=config.short_bias_rate
+                short_bias_rate=config.short_bias_rate,
             )
         else:
             # 通常の突然変異
             self.toolbox.register(
                 "mutate", mutate_func, mutation_rate=config.mutation_rate
             )
-        self.toolbox.register("select", tools.selTournament, tournsize=3)
+        # 選択アルゴリズムの登録（単一目的・多目的対応）
+        if config.enable_multi_objective:
+            # 多目的最適化用選択（NSGA-II）
+            self.toolbox.register("select", tools.selNSGA2)
+            logger.info("NSGA-II選択アルゴリズムを登録")
+        else:
+            # 単一目的最適化用選択（トーナメント選択）
+            self.toolbox.register("select", tools.selTournament, tournsize=3)
+            logger.info("トーナメント選択アルゴリズムを登録")
 
         logger.info("DEAP環境のセットアップ完了")
 

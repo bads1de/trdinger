@@ -389,8 +389,11 @@ class GeneratedStrategy(Base):
     # 世代数
     generation = Column(Integer, nullable=False)
 
-    # フィットネススコア
+    # フィットネススコア（単一目的最適化用、後方互換性のため保持）
     fitness_score = Column(Float, nullable=True)
+
+    # フィットネス値（多目的最適化用、JSON配列形式）
+    fitness_values = Column(JSON, nullable=True)
 
     # 親戦略のID（JSON配列）
     parent_ids = Column(JSON, nullable=True)
@@ -415,10 +418,13 @@ class GeneratedStrategy(Base):
     )
 
     def __repr__(self):
+        fitness_str = (
+            f"{self.fitness_score:.4f}" if self.fitness_score is not None else "None"
+        )
         return (
             f"<GeneratedStrategy(experiment_id={self.experiment_id}, "
             f"generation={self.generation}, "
-            f"fitness={self.fitness_score:.4f if self.fitness_score else 'None'})>"
+            f"fitness={fitness_str})>"
         )
 
     def to_dict(self):

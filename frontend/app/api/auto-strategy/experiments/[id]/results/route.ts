@@ -9,7 +9,7 @@ import { BACKEND_API_URL } from "@/constants";
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const { id } = await params;
@@ -72,10 +72,16 @@ export async function GET(
 
     const data = await response.json();
 
+    // 多目的最適化の結果かどうかを判定
+    const isMultiObjective = data.pareto_front && data.objectives;
+
     // 成功レスポンスを返す
     return NextResponse.json({
       success: true,
       result: data.result || null,
+      pareto_front: data.pareto_front,
+      objectives: data.objectives,
+      is_multi_objective: isMultiObjective,
       message: data.message || "実験結果を取得しました",
       timestamp: new Date().toISOString(),
     });

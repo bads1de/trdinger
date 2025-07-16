@@ -123,12 +123,7 @@ export default function BacktestResultsTable({
                 </div>
               </td>
               <td className="px-6 py-4 whitespace-nowrap">
-                <div
-                  className={`text-sm ${getValueColorClass(
-                    result.performance_metrics.max_drawdown,
-                    { invert: true }
-                  )}`}
-                >
+                <div className="text-sm font-medium text-red-500">
                   {formatPercentage(result.performance_metrics.max_drawdown)}
                 </div>
               </td>

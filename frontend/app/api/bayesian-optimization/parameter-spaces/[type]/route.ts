@@ -9,10 +9,10 @@ import { BACKEND_API_URL } from "@/constants";
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { type: string } }
+  { params }: { params: Promise<{ type: string }> }
 ) {
   try {
-    const { type } = params;
+    const { type } = await params;
 
     // バックエンドAPIを呼び出し
     const response = await fetch(
@@ -42,7 +42,6 @@ export async function GET(
 
     const data = await response.json();
     return NextResponse.json(data);
-
   } catch (error) {
     console.error("デフォルトパラメータ空間取得API error:", error);
     return NextResponse.json(

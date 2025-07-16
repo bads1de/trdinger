@@ -7,7 +7,7 @@ import { BACKEND_API_URL } from "@/constants";
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { symbol: string } }
+  { params }: { params: Promise<{ symbol: string }> }
 ) {
   try {
     const { symbol } = await params;

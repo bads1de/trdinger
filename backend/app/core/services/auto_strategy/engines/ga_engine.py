@@ -130,8 +130,13 @@ class GeneticAlgorithmEngine:
             stats.register("min", np.min)
             stats.register("max", np.max)
 
-            # 進化アルゴリズムの実行
-            if config.enable_fitness_sharing and self.fitness_sharing:
+            # 進化アルゴリズムの実行（単一目的・多目的対応）
+            if config.enable_multi_objective:
+                # 多目的最適化（NSGA-II）
+                population, logbook = self._run_nsga2_evolution(
+                    population, toolbox, config, stats
+                )
+            elif config.enable_fitness_sharing and self.fitness_sharing:
                 # フィットネス共有付き進化
                 population, logbook = self._run_evolution_with_fitness_sharing(
                     population, toolbox, config, stats
@@ -148,29 +153,65 @@ class GeneticAlgorithmEngine:
                     verbose=False,
                 )
 
-            # 最良個体の取得
-            best_individual = tools.selBest(population, 1)[0]
+            # 最良個体の取得（単一目的・多目的対応）
+            if config.enable_multi_objective:
+                # 多目的最適化の場合、パレート最適解を取得
+                pareto_front = tools.ParetoFront()
+                pareto_front.update(population)
+                best_individuals = list(pareto_front)
+                best_individual = (
+                    best_individuals[0] if best_individuals else population[0]
+                )
 
-            # 遺伝子デコード
-            from ..models.gene_encoding import GeneEncoder
-            from ..models.gene_strategy import StrategyGene
+                # 遺伝子デコード
+                from ..models.gene_encoding import GeneEncoder
+                from ..models.gene_strategy import StrategyGene
 
-            gene_encoder = GeneEncoder()
-            best_gene = gene_encoder.decode_list_to_strategy_gene(
-                best_individual, StrategyGene
-            )
+                gene_encoder = GeneEncoder()
+                best_strategies = []
+                for ind in best_individuals[:10]:  # 上位10個のパレート最適解
+                    gene = gene_encoder.decode_list_to_strategy_gene(ind, StrategyGene)
+                    best_strategies.append(
+                        {"strategy": gene, "fitness_values": list(ind.fitness.values)}
+                    )
+
+                best_gene = gene_encoder.decode_list_to_strategy_gene(
+                    best_individual, StrategyGene
+                )
+            else:
+                # 単一目的最適化の場合
+                best_individual = tools.selBest(population, 1)[0]
+
+                # 遺伝子デコード
+                from ..models.gene_encoding import GeneEncoder
+                from ..models.gene_strategy import StrategyGene
+
+                gene_encoder = GeneEncoder()
+                best_gene = gene_encoder.decode_list_to_strategy_gene(
+                    best_individual, StrategyGene
+                )
+                best_strategies = None
 
             execution_time = time.time() - start_time
 
             result = {
                 "best_strategy": best_gene,
-                "best_fitness": best_individual.fitness.values[0],
+                "best_fitness": (
+                    best_individual.fitness.values[0]
+                    if not config.enable_multi_objective
+                    else best_individual.fitness.values
+                ),
                 "population": population,
                 "logbook": logbook,
                 "execution_time": execution_time,
                 "generations_completed": config.generations,
                 "final_population_size": len(population),
             }
+
+            # 多目的最適化の場合、パレート最適解を追加
+            if config.enable_multi_objective:
+                result["pareto_front"] = best_strategies
+                result["objectives"] = config.objectives
 
             logger.info(f"進化完了 - 実行時間: {execution_time:.2f}秒")
             return result
@@ -257,6 +298,96 @@ class GeneticAlgorithmEngine:
         except Exception as e:
             logger.error(f"フィットネス共有付き進化実行エラー: {e}")
             # フォールバック: 通常の進化アルゴリズム
+            return algorithms.eaSimple(
+                population,
+                toolbox,
+                cxpb=config.crossover_rate,
+                mutpb=config.mutation_rate,
+                ngen=config.generations,
+                stats=stats,
+                verbose=False,
+            )
+
+    def _run_nsga2_evolution(self, population, toolbox, config: GAConfig, stats):
+        """
+        NSGA-II多目的最適化アルゴリズムの実行
+
+        Args:
+            population: 初期個体群
+            toolbox: DEAPツールボックス
+            config: GA設定
+            stats: 統計情報
+
+        Returns:
+            (population, logbook): 最終個体群と進化ログ
+        """
+        try:
+            logger.info("NSGA-II多目的最適化アルゴリズムを開始")
+
+            # 統計情報の記録用
+            logbook = tools.Logbook()
+            logbook.header = ["gen", "nevals"] + (stats.fields if stats else [])
+
+            # 初期個体群の評価
+            fitnesses = toolbox.map(toolbox.evaluate, population)
+            for ind, fit in zip(population, fitnesses):
+                ind.fitness.values = fit
+
+            # NSGA-II用の初期化（crowding distance計算）
+            population = toolbox.select(population, len(population))
+
+            # 初期統計の記録
+            if stats:
+                record = stats.compile(population)
+                logbook.record(gen=0, nevals=len(population), **record)
+
+            # 世代ループ
+            for gen in range(1, config.generations + 1):
+                # 親選択（ランダム選択）
+                offspring = [toolbox.clone(ind) for ind in population]
+
+                # 交叉と突然変異
+                for child1, child2 in zip(offspring[::2], offspring[1::2]):
+                    if random.random() < config.crossover_rate:
+                        toolbox.mate(child1, child2)
+                        del child1.fitness.values
+                        del child2.fitness.values
+
+                for mutant in offspring:
+                    if random.random() < config.mutation_rate:
+                        result = toolbox.mutate(mutant)
+                        # 突然変異の返り値を適切に処理
+                        if result is not None:
+                            if isinstance(result, tuple) and len(result) == 1:
+                                mutant[:] = result[0]
+                        del mutant.fitness.values
+
+                # 評価が必要な個体を特定
+                invalid_ind = [ind for ind in offspring if not ind.fitness.valid]
+                fitnesses = toolbox.map(toolbox.evaluate, invalid_ind)
+                for ind, fit in zip(invalid_ind, fitnesses):
+                    ind.fitness.values = fit
+
+                # 親と子を結合
+                combined_population = population + offspring
+
+                # NSGA-II選択で次世代を選択
+                population[:] = toolbox.select(combined_population, len(population))
+
+                # 統計情報の記録
+                if stats:
+                    record = stats.compile(population)
+                    logbook.record(gen=gen, nevals=len(invalid_ind), **record)
+
+                logger.info(f"世代 {gen}/{config.generations} 完了")
+
+            logger.info("NSGA-II多目的最適化アルゴリズム完了")
+            return population, logbook
+
+        except Exception as e:
+            logger.error(f"NSGA-II進化実行エラー: {e}")
+            # フォールバック: 通常の進化アルゴリズム
+            logger.warning("フォールバックとして単一目的最適化を実行")
             return algorithms.eaSimple(
                 population,
                 toolbox,

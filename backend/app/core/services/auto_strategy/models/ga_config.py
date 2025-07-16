@@ -26,7 +26,7 @@ class GAConfig:
     mutation_rate: float = 0.1
     elite_size: int = 2
 
-    # 評価設定
+    # 評価設定（単一目的最適化用、後方互換性のため保持）
     fitness_weights: Dict[str, float] = field(
         default_factory=lambda: {
             "total_return": 0.25,
@@ -45,6 +45,15 @@ class GAConfig:
             "min_sharpe_ratio": 1.0,
         }
     )
+
+    # 多目的最適化設定
+    enable_multi_objective: bool = False  # 多目的最適化を有効にするかどうか
+    objectives: List[str] = field(
+        default_factory=lambda: ["total_return"]  # デフォルトは単一目的
+    )  # 最適化する目的のリスト
+    objective_weights: List[float] = field(
+        default_factory=lambda: [1.0]  # デフォルトは最大化
+    )  # 各目的の重み（1.0=最大化、-1.0=最小化）
 
     # フィットネス共有設定
     enable_fitness_sharing: bool = True
@@ -282,6 +291,10 @@ class GAConfig:
             "fitness_weights": self.fitness_weights,
             "primary_metric": self.primary_metric,
             "max_indicators": self.max_indicators,
+            # 多目的最適化設定
+            "enable_multi_objective": self.enable_multi_objective,
+            "objectives": self.objectives,
+            "objective_weights": self.objective_weights,
             "allowed_indicators": self.allowed_indicators,
             "parameter_ranges": self.parameter_ranges,
             "threshold_ranges": self.threshold_ranges,
@@ -346,6 +359,10 @@ class GAConfig:
             # 指標モード設定
             indicator_mode=data.get("indicator_mode", "mixed"),
             enable_ml_indicators=data.get("enable_ml_indicators", True),
+            # 多目的最適化設定
+            enable_multi_objective=data.get("enable_multi_objective", False),
+            objectives=data.get("objectives", ["total_return"]),
+            objective_weights=data.get("objective_weights", [1.0]),
         )
 
     def to_json(self) -> str:
@@ -383,6 +400,33 @@ class GAConfig:
             mutation_rate=0.05,
             elite_size=20,
             max_indicators=5,
+            log_level="INFO",
+            save_intermediate_results=True,
+        )
+
+    @classmethod
+    def create_multi_objective(
+        cls, objectives: List[str] = None, weights: List[float] = None
+    ) -> "GAConfig":
+        """
+        多目的最適化用設定を作成
+
+        Args:
+            objectives: 最適化する目的のリスト（デフォルト: ["total_return", "max_drawdown"]）
+            weights: 各目的の重み（デフォルト: [1.0, -1.0] = [最大化, 最小化]）
+        """
+        if objectives is None:
+            objectives = ["total_return", "max_drawdown"]
+        if weights is None:
+            weights = [1.0, -1.0]  # total_return最大化、max_drawdown最小化
+
+        return cls(
+            population_size=50,  # 多目的最適化では少し大きめの個体数
+            generations=30,
+            enable_multi_objective=True,
+            objectives=objectives,
+            objective_weights=weights,
+            max_indicators=3,
             log_level="INFO",
             save_intermediate_results=True,
         )

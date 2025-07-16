@@ -14,7 +14,7 @@ import { BACKEND_API_URL } from "@/constants";
  */
 export async function POST(
   request: NextRequest,
-  { params }: { params: { modelId: string } }
+  { params }: { params: Promise<{ modelId: string }> }
 ) {
   try {
     const { modelId } = await params;

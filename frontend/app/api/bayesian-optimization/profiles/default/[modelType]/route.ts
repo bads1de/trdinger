@@ -8,13 +8,15 @@ const BACKEND_URL = process.env.BACKEND_URL || "http://localhost:8000";
  */
 export async function GET(
   request: NextRequest,
-  { params }: { params: { modelType: string } }
+  { params }: { params: Promise<{ modelType: string }> }
 ) {
   try {
-    const { modelType } = params;
+    const { modelType } = await params;
 
     const response = await fetch(
-      `${BACKEND_URL}/api/bayesian-optimization/profiles/default/${encodeURIComponent(modelType)}`,
+      `${BACKEND_URL}/api/bayesian-optimization/profiles/default/${encodeURIComponent(
+        modelType
+      )}`,
       {
         method: "GET",
         headers: {
@@ -27,10 +29,10 @@ export async function GET(
       const errorData = await response.text();
       console.error("Backend API error:", errorData);
       return NextResponse.json(
-        { 
-          success: false, 
+        {
+          success: false,
           error: "デフォルトプロファイルの取得に失敗しました",
-          details: errorData 
+          details: errorData,
         },
         { status: response.status }
       );
@@ -38,14 +40,13 @@ export async function GET(
 
     const data = await response.json();
     return NextResponse.json(data);
-
   } catch (error) {
     console.error("デフォルトプロファイル取得エラー:", error);
     return NextResponse.json(
-      { 
-        success: false, 
+      {
+        success: false,
         error: "デフォルトプロファイルの取得中にエラーが発生しました",
-        details: error instanceof Error ? error.message : String(error)
+        details: error instanceof Error ? error.message : String(error),
       },
       { status: 500 }
     );

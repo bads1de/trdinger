@@ -43,9 +43,9 @@ export default function AutoStrategyModal({
       className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
       onClick={handleBackdropClick}
     >
-      <div className="bg-secondary-950 rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-hidden border border-secondary-700">
+      <div className="bg-secondary-950 rounded-lg shadow-xl max-w-7xl w-full max-h-[90vh] flex flex-col border border-secondary-700">
         {/* ヘッダー */}
-        <div className="flex items-center justify-between p-6 border-b border-secondary-700">
+        <div className="flex items-center justify-between p-6 border-b border-secondary-700 flex-shrink-0">
           <div>
             <h2 className="text-2xl font-bold text-secondary-100">
               🚀 オートストラテジー生成
@@ -64,26 +64,13 @@ export default function AutoStrategyModal({
         </div>
 
         {/* コンテンツ */}
-        <div className="p-6 overflow-y-auto max-h-[calc(90vh-120px)] space-y-6">
+        <div className="flex-grow overflow-hidden">
           <GAConfigForm
             onSubmit={handleSubmit}
+            onClose={onClose}
             isLoading={isLoading}
             currentBacktestConfig={currentBacktestConfig}
           />
-        </div>
-
-        {/* フッター */}
-        <div className="flex items-center justify-between p-6 border-t border-secondary-700 bg-secondary-900">
-          <div className="text-sm text-secondary-400">
-            最適な取引戦略を自動生成します
-          </div>
-          <button
-            onClick={onClose}
-            disabled={isLoading}
-            className="px-4 py-2 text-secondary-400 hover:text-secondary-200 transition-colors disabled:opacity-50"
-          >
-            キャンセル
-          </button>
         </div>
       </div>
     </div>
