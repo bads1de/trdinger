@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { useApiCall } from "./useApiCall";
-import { BacktestConfig, BacktestResult } from "@/types/backtest";
+import { BacktestConfig, BacktestResult } from "@/types/optimization";
 import { UnifiedStrategy } from "@/types/auto-strategy";
 
 export const useOptimizationForm = (
