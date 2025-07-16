@@ -13,7 +13,6 @@ import ApiButton from "@/components/button/ApiButton";
 import { GAConfig as GAConfigType } from "@/types/optimization";
 import { BacktestConfig as BacktestConfigType } from "@/types/backtest";
 import { BaseBacktestConfigForm } from "./BaseBacktestConfigForm";
-import { GA_OBJECTIVE_OPTIONS } from "@/constants/backtest";
 import { GA_INFO_MESSAGES } from "@/constants/info";
 import { ObjectiveSelection } from "./optimization/ObjectiveSelection";
 
@@ -80,7 +79,6 @@ const GAConfigForm: React.FC<GAConfigFormProps> = ({
           max_drawdown_limit: 0.3,
           min_sharpe_ratio: 0.5,
         },
-        ga_objective: initialConfig.ga_config?.ga_objective || "Sharpe Ratio",
         // 指標モード設定
         indicator_mode: initialConfig.ga_config?.indicator_mode || "mixed",
         // 多目的最適化設定
@@ -191,18 +189,6 @@ const GAConfigForm: React.FC<GAConfigFormProps> = ({
           step={0.01}
           required
           description={GA_INFO_MESSAGES.crossover_rate}
-        />
-        <SelectField
-          label="最適化目的 (ga_objective)"
-          value={config.ga_config.ga_objective}
-          onChange={(value) =>
-            setConfig((prev) => ({
-              ...prev,
-              ga_config: { ...prev.ga_config, ga_objective: value },
-            }))
-          }
-          options={GA_OBJECTIVE_OPTIONS}
-          required
         />
         <SelectField
           label="指標モード (indicator_mode)"

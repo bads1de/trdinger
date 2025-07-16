@@ -1,11 +1,3 @@
-export const GA_OBJECTIVE_OPTIONS = [
-  { value: "Sharpe Ratio", label: "シャープレシオ" },
-  { value: "Total Return", label: "総リターン" },
-  { value: "Max Drawdown", label: "最大ドローダウン" },
-  { value: "Profit Factor", label: "プロフィットファクター" },
-  { value: "Win Rate", label: "勝率" },
-];
-
 export const OPTIMIZATION_METHODS = [
   { value: "grid", label: "グリッドサーチ" },
   { value: "sambo", label: "SAMBO (ベイズ最適化)" },

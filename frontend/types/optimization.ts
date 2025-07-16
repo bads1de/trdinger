@@ -101,7 +101,6 @@ export interface GAConfig {
       max_drawdown_limit: number;
       min_sharpe_ratio: number;
     };
-    ga_objective: string;
     indicator_mode: "technical_only" | "ml_only" | "mixed";
 
     // 高度な設定

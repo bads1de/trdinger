@@ -102,11 +102,11 @@ class MomentumIndicators:
         macd, signal, histogram = talib.MACDEXT(
             data,
             fastperiod=fast_period,
-            fastmatype=MA_Type(fast_ma_type),
+            fastmatype=fast_ma_type,
             slowperiod=slow_period,
-            slowmatype=MA_Type(slow_ma_type),
+            slowmatype=slow_ma_type,
             signalperiod=signal_period,
-            signalmatype=MA_Type(signal_ma_type),
+            signalmatype=signal_ma_type,
         )
         return cast(
             Tuple[np.ndarray, np.ndarray, np.ndarray],
@@ -208,7 +208,7 @@ class MomentumIndicators:
             close,
             fastk_period=fastk_period,
             fastd_period=fastd_period,
-            fastd_matype=MA_Type(fastd_matype),
+            fastd_matype=fastd_matype,
         )
         return cast(
             Tuple[np.ndarray, np.ndarray],
@@ -242,7 +242,7 @@ class MomentumIndicators:
             timeperiod=period,
             fastk_period=fastk_period,
             fastd_period=fastd_period,
-            fastd_matype=MA_Type(fastd_matype),
+            fastd_matype=fastd_matype,
         )
         return cast(
             Tuple[np.ndarray, np.ndarray],
@@ -496,7 +496,7 @@ class MomentumIndicators:
             data,
             fastperiod=fastperiod,
             slowperiod=slowperiod,
-            matype=MA_Type(matype),
+            matype=matype,
         )
         return cast(np.ndarray, format_indicator_result(result, "PPO"))
 
@@ -585,6 +585,6 @@ class MomentumIndicators:
             data,
             fastperiod=fastperiod,
             slowperiod=slowperiod,
-            matype=MA_Type(matype),
+            matype=matype,
         )
         return cast(np.ndarray, format_indicator_result(result, "APO"))

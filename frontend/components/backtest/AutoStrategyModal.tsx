@@ -45,7 +45,7 @@ export default function AutoStrategyModal({
         className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
         onClick={handleBackdropClick}
       >
-        <div className="bg-secondary-950 rounded-lg shadow-xl max-w-7xl w-full max-h-[90vh] flex flex-col border border-secondary-700">
+        <div className="bg-secondary-950 rounded-lg shadow-xl max-w-7xl w-full max-h-[95vh] flex flex-col border border-secondary-700">
           {/* ヘッダー */}
           <div className="flex items-center justify-between p-6 border-b border-secondary-700 flex-shrink-0">
             <div>

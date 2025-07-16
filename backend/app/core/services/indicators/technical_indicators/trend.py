@@ -195,7 +195,7 @@ class TrendIndicators:
         data = ensure_numpy_array(data)
         validate_input(data, period)
         log_indicator_calculation("MA", {"period": period, "matype": matype}, len(data))
-        result = talib.MA(data, timeperiod=period, matype=MA_Type(matype))
+        result = talib.MA(data, timeperiod=period, matype=matype)
         return cast(np.ndarray, format_indicator_result(result, "MA"))
 
     @staticmethod
@@ -220,7 +220,7 @@ class TrendIndicators:
             {"minperiod": minperiod, "maxperiod": maxperiod, "matype": matype},
             len(data),
         )
-        result = talib.MAVP(data, periods, minperiod=minperiod, maxperiod=maxperiod, matype=MA_Type(matype))  # type: ignore
+        result = talib.MAVP(data, periods, minperiod=minperiod, maxperiod=maxperiod, matype=matype)  # type: ignore
         return cast(np.ndarray, format_indicator_result(result, "MAVP"))
 
     @staticmethod
