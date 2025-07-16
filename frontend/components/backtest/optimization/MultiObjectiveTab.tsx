@@ -11,7 +11,7 @@ import { SelectField } from "@/components/common/SelectField";
 import ApiButton from "@/components/button/ApiButton";
 import { OPTIMIZATION_METHODS } from "@/constants/backtest";
 import { MultiObjectiveConfig } from "@/types/optimization";
-import { BacktestConfig } from "@/types/backtest";
+import { BacktestConfig } from "@/types/optimization";
 
 interface MultiObjectiveTabProps {
   baseConfig: BacktestConfig;
@@ -20,32 +20,29 @@ interface MultiObjectiveTabProps {
   isLoading: boolean;
 }
 
+interface MultiConfigState {
+  objectives: string[];
+  weights: number[];
+  method: "grid" | "sambo";
+  max_tries: number;
+  n1_range: [number, number, number];
+  n2_range: [number, number, number];
+}
+
 export default function MultiObjectiveTab({
   baseConfig,
   selectedStrategy,
   onRun,
   isLoading,
 }: MultiObjectiveTabProps) {
-  const [multiConfig, setMultiConfig] = useState({
+  const [multiConfig, setMultiConfig] = useState<MultiConfigState>({
     objectives: ["Sharpe Ratio", "Return [%]", "-Max. Drawdown [%]"],
     weights: [0.4, 0.4, 0.2],
-    method: "grid" as "grid" | "sambo",
+    method: "grid",
     max_tries: 80,
     n1_range: [10, 25, 5],
     n2_range: [30, 70, 10],
   });
-
-  const createParameterRange = (rangeConfig: number[]) => {
-    const [start, end, step] = rangeConfig;
-
-    const range = [];
-
-    for (let i = start; i <= end; i += step) {
-      range.push(i);
-    }
-
-    return range;
-  };
 
   const handleSubmit = () => {
     const config: MultiObjectiveConfig = {
@@ -64,8 +61,8 @@ export default function MultiObjectiveTab({
           max_tries: multiConfig.max_tries,
         }),
         parameters: {
-          n1: createParameterRange(multiConfig.n1_range),
-          n2: createParameterRange(multiConfig.n2_range),
+          n1: multiConfig.n1_range,
+          n2: multiConfig.n2_range,
         },
       },
     };
@@ -126,7 +123,7 @@ export default function MultiObjectiveTab({
         onChange={(value) =>
           setMultiConfig((prev) => ({
             ...prev,
-            n1_range: value.split(",").map(Number),
+            n1_range: value.split(",").map(Number) as [number, number, number],
           }))
         }
         placeholder="例: 10, 25, 5"
@@ -137,7 +134,7 @@ export default function MultiObjectiveTab({
         onChange={(value) =>
           setMultiConfig((prev) => ({
             ...prev,
-            n2_range: value.split(",").map(Number),
+            n2_range: value.split(",").map(Number) as [number, number, number],
           }))
         }
         placeholder="例: 30, 70, 10"

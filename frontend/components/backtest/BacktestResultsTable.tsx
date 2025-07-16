@@ -12,7 +12,7 @@ import {
   formatNumber,
 } from "@/utils/formatters";
 import { getValueColorClass } from "@/utils/colorUtils";
-import { BacktestResult } from "@/types/backtest";
+import { BacktestResult } from "@/types/optimization";
 import LoadingSpinner from "@/components/common/LoadingSpinner";
 
 interface BacktestResultsTableProps {
@@ -111,35 +111,41 @@ export default function BacktestResultsTable({
               <td className="px-6 py-4 whitespace-nowrap">
                 <div
                   className={`text-sm font-medium ${getValueColorClass(
-                    result.performance_metrics.total_return
+                    result.total_return
                   )}`}
                 >
-                  {formatPercentage(result.performance_metrics.total_return)}
+                  {formatPercentage(result.total_return)}
                 </div>
               </td>
               <td className="px-6 py-4 whitespace-nowrap">
                 <div className="text-sm text-secondary-300">
-                  {formatNumber(result.performance_metrics.sharpe_ratio)}
+                  {formatNumber(result.sharpe_ratio)}
                 </div>
               </td>
               <td className="px-6 py-4 whitespace-nowrap">
                 <div className="text-sm font-medium text-red-500">
-                  {formatPercentage(result.performance_metrics.max_drawdown)}
+                  {formatPercentage(result.max_drawdown)}
                 </div>
               </td>
               <td className="px-6 py-4 whitespace-nowrap">
                 <div className="text-sm text-secondary-300">
-                  {formatNumber(result.performance_metrics.win_rate)}%
+                  {formatPercentage(result.win_rate)}
                 </div>
               </td>
               <td className="px-6 py-4 whitespace-nowrap">
                 <div className="text-sm text-secondary-300">
-                  {result.performance_metrics.total_trades}
+                  {result.total_trades}
                 </div>
               </td>
               <td className="px-6 py-4 whitespace-nowrap">
                 <div className="text-sm text-secondary-400">
-                  {formatDateTime(result.created_at).dateTime}
+                  {
+                    formatDateTime(
+                      typeof result.created_at === "string"
+                        ? result.created_at
+                        : result.created_at.toISOString()
+                    ).dateTime
+                  }
                 </div>
               </td>
               <td className="px-6 py-4 whitespace-nowrap">

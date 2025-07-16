@@ -9,6 +9,7 @@
 import React, { useState, useEffect } from "react";
 import { InputField } from "@/components/common/InputField";
 import { SelectField } from "@/components/common/SelectField";
+import ActionButton from "@/components/common/ActionButton";
 import ApiButton from "@/components/button/ApiButton";
 import {
   GAConfig as GAConfigType,
@@ -85,9 +86,14 @@ const GAConfigForm: React.FC<GAConfigFormProps> = ({
         },
         // 多目的最適化設定
         enable_multi_objective:
-          initialConfig.ga_config?.enable_multi_objective || true,
-        objectives: initialConfig.ga_config?.objectives || ["total_return"],
-        objective_weights: initialConfig.ga_config?.objective_weights || [1.0],
+          initialConfig.ga_config?.enable_multi_objective ?? true,
+        objectives: initialConfig.ga_config?.objectives || [
+          "win_rate",
+          "max_drawdown",
+        ],
+        objective_weights: initialConfig.ga_config?.objective_weights || [
+          1.0, -1.0,
+        ],
       },
     };
   });
@@ -315,14 +321,14 @@ const GAConfigForm: React.FC<GAConfigFormProps> = ({
 
         {/* Action Buttons */}
         <div className="pt-6 flex justify-end items-center space-x-4 border-t border-secondary-700 mt-6">
-          <button
+          <ActionButton
             type="button"
             onClick={onClose}
             disabled={isLoading}
-            className="px-4 py-2 text-secondary-400 hover:text-secondary-200 transition-colors disabled:opacity-50"
+            variant="secondary"
           >
             キャンセル
-          </button>
+          </ActionButton>
           <ApiButton onClick={handleSubmit} loading={isLoading}>
             {config.ga_config.enable_multi_objective
               ? "多目的GA戦略を生成"
