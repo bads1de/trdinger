@@ -90,7 +90,6 @@ export const formatTrainingTime = (seconds?: number) => {
   return `${secs}秒`;
 };
 
-<<<<<<< HEAD
 export const getFundingRateColor = (value: number) => {
   if (value > 0.0002) {
     return "text-green-400";

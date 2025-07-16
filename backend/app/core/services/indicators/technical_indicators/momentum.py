@@ -78,14 +78,17 @@ class MomentumIndicators:
     def macdext(
         data: np.ndarray,
         fast_period: int = 12,
-        fast_ma_type: MA_Type = MA_Type.SMA,
+        fast_ma_type: int = 0,  # MA_Type.SMA
         slow_period: int = 26,
-        slow_ma_type: MA_Type = MA_Type.SMA,
+        slow_ma_type: int = 0,  # MA_Type.SMA
         signal_period: int = 9,
-        signal_ma_type: MA_Type = MA_Type.SMA,
+        signal_ma_type: int = 0,  # MA_Type.SMA
     ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
         """MACD with controllable MA type"""
         data = ensure_numpy_array(data)
+
+        # matypeは整数値として直接使用
+
         validate_input(data, max(fast_period, slow_period, signal_period))
         log_indicator_calculation(
             "MACDEXT",
@@ -102,11 +105,11 @@ class MomentumIndicators:
         macd, signal, histogram = talib.MACDEXT(
             data,
             fastperiod=fast_period,
-            fastmatype=fast_ma_type,
+            fastmatype=fast_ma_type,  # type: ignore
             slowperiod=slow_period,
-            slowmatype=slow_ma_type,
+            slowmatype=slow_ma_type,  # type: ignore
             signalperiod=signal_period,
-            signalmatype=signal_ma_type,
+            signalmatype=signal_ma_type,  # type: ignore
         )
         return cast(
             Tuple[np.ndarray, np.ndarray, np.ndarray],
@@ -138,9 +141,9 @@ class MomentumIndicators:
         close: np.ndarray,
         fastk_period: int = 5,
         slowk_period: int = 3,
-        slowk_matype: MA_Type = MA_Type.SMA,
+        slowk_matype: int = 0,  # MA_Type.SMA
         slowd_period: int = 3,
-        slowd_matype: MA_Type = MA_Type.SMA,
+        slowd_matype: int = 0,  # MA_Type.SMA
     ) -> Tuple[np.ndarray, np.ndarray]:
         """Stochastic (ストキャスティクス)"""
         high = ensure_numpy_array(high)
@@ -149,6 +152,9 @@ class MomentumIndicators:
         fastk_period = max(2, fastk_period)
         slowk_period = max(2, slowk_period)
         slowd_period = max(2, slowd_period)
+
+        # matypeは整数値として直接使用
+
         validate_multi_input(
             high, low, close, max(fastk_period, slowk_period, slowd_period)
         )
@@ -169,9 +175,9 @@ class MomentumIndicators:
             close,
             fastk_period=fastk_period,
             slowk_period=slowk_period,
-            slowk_matype=slowk_matype,
+            slowk_matype=slowk_matype,  # type: ignore
             slowd_period=slowd_period,
-            slowd_matype=slowd_matype,
+            slowd_matype=slowd_matype,  # type: ignore
         )
         return cast(
             Tuple[np.ndarray, np.ndarray],
@@ -186,12 +192,15 @@ class MomentumIndicators:
         close: np.ndarray,
         fastk_period: int = 5,
         fastd_period: int = 3,
-        fastd_matype: MA_Type = MA_Type.SMA,
+        fastd_matype: int = 0,  # MA_Type.SMA
     ) -> Tuple[np.ndarray, np.ndarray]:
         """Stochastic Fast (高速ストキャスティクス)"""
         high = ensure_numpy_array(high)
         low = ensure_numpy_array(low)
         close = ensure_numpy_array(close)
+
+        # matypeは整数値として直接使用
+
         validate_multi_input(high, low, close, max(fastk_period, fastd_period))
         log_indicator_calculation(
             "STOCHF",
@@ -208,7 +217,7 @@ class MomentumIndicators:
             close,
             fastk_period=fastk_period,
             fastd_period=fastd_period,
-            fastd_matype=fastd_matype,
+            fastd_matype=fastd_matype,  # type: ignore
         )
         return cast(
             Tuple[np.ndarray, np.ndarray],
@@ -222,10 +231,13 @@ class MomentumIndicators:
         period: int = 14,
         fastk_period: int = 5,
         fastd_period: int = 3,
-        fastd_matype: MA_Type = MA_Type.SMA,
+        fastd_matype: int = 0,  # MA_Type.SMA
     ) -> Tuple[np.ndarray, np.ndarray]:
         """Stochastic Relative Strength Index"""
         data = ensure_numpy_array(data)
+
+        # matypeは整数値として直接使用
+
         validate_input(data, max(period, fastk_period, fastd_period))
         log_indicator_calculation(
             "STOCHRSI",
@@ -242,7 +254,7 @@ class MomentumIndicators:
             timeperiod=period,
             fastk_period=fastk_period,
             fastd_period=fastd_period,
-            fastd_matype=fastd_matype,
+            fastd_matype=fastd_matype,  # type: ignore
         )
         return cast(
             Tuple[np.ndarray, np.ndarray],
@@ -485,17 +497,18 @@ class MomentumIndicators:
         data: np.ndarray,
         fastperiod: int = 12,
         slowperiod: int = 26,
-        matype: MA_Type = MA_Type.SMA,
+        matype: int = 0,  # MA_Type.SMA
     ) -> np.ndarray:
         """Percentage Price Oscillator"""
         data = ensure_numpy_array(data)
         validate_input(data, max(fastperiod, slowperiod))
+
         log_indicator_calculation(
             "PPO",
             {
                 "fastperiod": fastperiod,
                 "slowperiod": slowperiod,
-                "matype": matype.name,
+                "matype": matype,
             },
             len(data),
         )
@@ -503,7 +516,7 @@ class MomentumIndicators:
             data,
             fastperiod=fastperiod,
             slowperiod=slowperiod,
-            matype=matype,
+            matype=matype,  # type: ignore
         )
         return cast(np.ndarray, format_indicator_result(result, "PPO"))
 
@@ -581,17 +594,18 @@ class MomentumIndicators:
         data: np.ndarray,
         fastperiod: int = 12,
         slowperiod: int = 26,
-        matype: MA_Type = MA_Type.SMA,
+        matype: int = 0,  # MA_Type.SMA
     ) -> np.ndarray:
         """Absolute Price Oscillator"""
         data = ensure_numpy_array(data)
         validate_input(data, max(fastperiod, slowperiod))
+
         log_indicator_calculation(
             "APO",
             {
                 "fastperiod": fastperiod,
                 "slowperiod": slowperiod,
-                "matype": matype.name,
+                "matype": matype,
             },
             len(data),
         )
@@ -599,6 +613,6 @@ class MomentumIndicators:
             data,
             fastperiod=fastperiod,
             slowperiod=slowperiod,
-            matype=matype,
+            matype=matype,  # type: ignore
         )
         return cast(np.ndarray, format_indicator_result(result, "APO"))

@@ -346,6 +346,15 @@ def setup_momentum_indicators():
             description="低速期間",
         )
     )
+    ppo_config.add_parameter(
+        ParameterConfig(
+            name="matype",
+            default_value=0,
+            min_value=0,
+            max_value=8,
+            description="移動平均タイプ",
+        )
+    )
     indicator_registry.register(ppo_config)
 
     # ROC
@@ -491,6 +500,15 @@ def setup_momentum_indicators():
             min_value=2,
             max_value=200,
             description="低速期間",
+        )
+    )
+    apo_config.add_parameter(
+        ParameterConfig(
+            name="matype",
+            default_value=0,
+            min_value=0,
+            max_value=8,
+            description="移動平均タイプ",
         )
     )
     indicator_registry.register(apo_config)

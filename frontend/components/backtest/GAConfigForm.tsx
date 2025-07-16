@@ -62,26 +62,6 @@ const GAConfigForm: React.FC<GAConfigFormProps> = ({
         .toISOString()
         .slice(0, 10)}_${effectiveBaseConfig.symbol.replace("/", "_")}`,
       base_config: effectiveBaseConfig,
-      ga_params: {
-        population_size: initialConfig.ga_params?.population_size || 10, // 100→50→20に最適化
-        generations: initialConfig.ga_params?.generations || 10, // 50→20→10に最適化
-        mutation_rate: initialConfig.ga_params?.mutation_rate || 0.1,
-        crossover_rate: initialConfig.ga_params?.crossover_rate || 0.8, // 0.7→0.8に調整
-        elite_size: initialConfig.ga_params?.elite_size || 5,
-        max_indicators: initialConfig.ga_params?.max_indicators || 5,
-        allowed_indicators: initialConfig.ga_params?.allowed_indicators || [],
-        fitness_weights: initialConfig.ga_params?.fitness_weights || {
-          total_return: 0.3,
-          sharpe_ratio: 0.4,
-          max_drawdown: 0.2,
-          win_rate: 0.1,
-        },
-        fitness_constraints: initialConfig.ga_params?.fitness_constraints || {
-          min_trades: 10,
-          max_drawdown_limit: 0.3,
-          min_sharpe_ratio: 0.5,
-        },
-      },
       ga_config: {
         population_size: initialConfig.ga_config?.population_size || 10,
         generations: initialConfig.ga_config?.generations || 10,
@@ -92,9 +72,20 @@ const GAConfigForm: React.FC<GAConfigFormProps> = ({
         allowed_indicators: initialConfig.ga_config?.allowed_indicators || [],
         // 指標モード設定
         indicator_mode: initialConfig.ga_config?.indicator_mode || "mixed",
+        fitness_weights: initialConfig.ga_config?.fitness_weights || {
+          total_return: 0.3,
+          sharpe_ratio: 0.4,
+          max_drawdown: 0.2,
+          win_rate: 0.1,
+        },
+        fitness_constraints: initialConfig.ga_config?.fitness_constraints || {
+          min_trades: 10,
+          max_drawdown_limit: 0.3,
+          min_sharpe_ratio: 0.5,
+        },
         // 多目的最適化設定
         enable_multi_objective:
-          initialConfig.ga_config?.enable_multi_objective || false,
+          initialConfig.ga_config?.enable_multi_objective || true,
         objectives: initialConfig.ga_config?.objectives || ["total_return"],
         objective_weights: initialConfig.ga_config?.objective_weights || [1.0],
       },
@@ -124,7 +115,6 @@ const GAConfigForm: React.FC<GAConfigFormProps> = ({
       ...prev,
       ga_config: { ...prev.ga_config, ...updates },
     }));
-  };
   };
 
   const handleSubmit = () => {

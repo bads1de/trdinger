@@ -150,12 +150,13 @@ export interface RobustnessConfig {
  * GA戦略生成の設定
  */
 export interface GAConfig {
+  experiment_name: string;
   base_config: BacktestConfig;
-  ga_params: {
+  ga_config: {
     population_size: number;
     generations: number;
-    crossover_rate: number;
     mutation_rate: number;
+    crossover_rate: number;
     elite_size: number;
     max_indicators: number;
     allowed_indicators: string[];
@@ -170,46 +171,6 @@ export interface GAConfig {
       max_drawdown_limit: number;
       min_sharpe_ratio: number;
     };
-    indicator_mode: "technical_only" | "ml_only" | "mixed";
-
-    // 高度な設定
-    enable_fitness_sharing?: boolean;
-    sharing_radius?: number;
-    sharing_alpha?: number;
-
-    // 新しいTP/SL自動決定設定
-    tpsl_strategy?: TPSLStrategy;
-    max_risk_per_trade?: number;
-    preferred_risk_reward_ratio?: number;
-    volatility_sensitivity?: VolatilitySensitivity;
-    enable_advanced_tpsl?: boolean;
-
-    // 統計的TP/SL設定
-    statistical_lookback_days?: number;
-    statistical_min_samples?: number;
-    statistical_confidence_threshold?: number;
-
-    // ボラティリティベース設定
-    atr_period?: number;
-    atr_multiplier_sl?: number;
-    atr_multiplier_tp?: number;
-    adaptive_multiplier?: boolean;
-
-    // 多目的最適化設定
-    enable_multi_objective?: boolean;
-    objectives?: string[];
-    objective_weights?: number[];
-  };
-
-  // GA設定（新しい構造）
-  ga_config: {
-    population_size: number;
-    generations: number;
-    mutation_rate: number;
-    crossover_rate: number;
-    elite_size: number;
-    max_indicators: number;
-    allowed_indicators: string[];
 
     // 指標モード設定
     indicator_mode: "technical_only" | "ml_only" | "mixed";
@@ -307,6 +268,23 @@ export interface SimplifiedGAConfig {
     strategy_config: {
       strategy_type: string;
       parameters: Record<string, any>;
+    };
+  };
+}
+/**
+ * バックテストの設定
+ */
+export interface BacktestConfig {
+  strategy_name: string;
+  symbol: string;
+  timeframe: string;
+  start_date: string;
+  end_date: string;
+  initial_capital: number;
+  commission_rate: number;
+  strategy_config: {
+    strategy_type: string;
+    parameters: Record<string, any>;
   };
 }
 

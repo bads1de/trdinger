@@ -190,12 +190,14 @@ class TrendIndicators:
 
     @staticmethod
     @handle_talib_errors
-    def ma(data: np.ndarray, period: int, matype: MA_Type = MA_Type.SMA) -> np.ndarray:
+    def ma(data: np.ndarray, period: int, matype: int = 0) -> np.ndarray:  # MA_Type.SMA
         """Moving Average (移動平均 - タイプ指定可能)"""
         data = ensure_numpy_array(data)
         validate_input(data, period)
+
+        # matypeは整数値として直接使用
         log_indicator_calculation("MA", {"period": period, "matype": matype}, len(data))
-        result = talib.MA(data, timeperiod=period, matype=matype)
+        result = talib.MA(data, timeperiod=period, matype=matype)  # type: ignore
         return cast(np.ndarray, format_indicator_result(result, "MA"))
 
     @staticmethod
