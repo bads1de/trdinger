@@ -15,10 +15,7 @@ import { BacktestConfig as BacktestConfigType } from "@/types/backtest";
 import { BaseBacktestConfigForm } from "./BaseBacktestConfigForm";
 import { GA_OBJECTIVE_OPTIONS } from "@/constants/backtest";
 import { GA_INFO_MESSAGES } from "@/constants/info";
-import {
-  AVAILABLE_OBJECTIVES,
-  ObjectiveDefinition,
-} from "@/types/optimization";
+import { ObjectiveSelection } from "./optimization/ObjectiveSelection";
 
 // 指標モードの選択肢
 const INDICATOR_MODE_OPTIONS = [
@@ -111,6 +108,15 @@ const GAConfigForm: React.FC<GAConfigFormProps> = ({
     }));
   };
 
+  const handleGAConfigChange = (
+    updates: Partial<GAConfigType["ga_config"]>
+  ) => {
+    setConfig((prev) => ({
+      ...prev,
+      ga_config: { ...prev.ga_config, ...updates },
+    }));
+  };
+
   const validateConfig = () => {
     const errors: string[] = [];
 
@@ -119,45 +125,6 @@ const GAConfigForm: React.FC<GAConfigFormProps> = ({
     // TP/SL設定はGAが自動最適化するため、バリデーション不要
 
     return errors;
-  };
-
-  const handleObjectiveChange = (objectiveName: string, checked: boolean) => {
-    const currentObjectives = config.ga_config.objectives || [];
-    const currentWeights = config.ga_config.objective_weights || [];
-
-    if (checked) {
-      // 目的を追加
-      const objective = AVAILABLE_OBJECTIVES.find(
-        (obj) => obj.name === objectiveName
-      );
-      if (objective && !currentObjectives.includes(objectiveName)) {
-        const newObjectives = [...currentObjectives, objectiveName];
-        const newWeights = [...currentWeights, objective.weight];
-        setConfig({
-          ...config,
-          ga_config: {
-            ...config.ga_config,
-            objectives: newObjectives,
-            objective_weights: newWeights,
-          },
-        });
-      }
-    } else {
-      // 目的を削除
-      const index = currentObjectives.indexOf(objectiveName);
-      if (index > -1) {
-        const newObjectives = currentObjectives.filter((_, i) => i !== index);
-        const newWeights = currentWeights.filter((_, i) => i !== index);
-        setConfig({
-          ...config,
-          ga_config: {
-            ...config.ga_config,
-            objectives: newObjectives,
-            objective_weights: newWeights,
-          },
-        });
-      }
-    }
   };
 
   const handleSubmit = () => {
@@ -414,241 +381,10 @@ const GAConfigForm: React.FC<GAConfigFormProps> = ({
           )}
 
           {/* 多目的最適化設定 */}
-          <div className="border-t border-indigo-500/20 pt-3 mt-3">
-            <div className="mb-3">
-              <label className="flex items-center space-x-2">
-                <input
-                  type="checkbox"
-                  checked={config.ga_config.enable_multi_objective ?? false}
-                  onChange={(e) =>
-                    setConfig({
-                      ...config,
-                      ga_config: {
-                        ...config.ga_config,
-                        enable_multi_objective: e.target.checked,
-                        objectives: e.target.checked
-                          ? ["total_return", "max_drawdown"]
-                          : ["total_return"],
-                        objective_weights: e.target.checked
-                          ? [1.0, -1.0]
-                          : [1.0],
-                      },
-                    })
-                  }
-                  className="rounded border-indigo-500 text-indigo-600 focus:ring-indigo-500"
-                />
-                <span className="text-sm text-indigo-200">
-                  多目的最適化を有効にする
-                </span>
-              </label>
-              <div className="text-xs text-indigo-300/70 mt-1 ml-6">
-                複数の目的（リターンとリスクなど）を同時に最適化します
-              </div>
-            </div>
-
-            {/* 最適化目的選択 */}
-            {config.ga_config.enable_multi_objective && (
-              <div className="ml-6 space-y-3">
-                <h5 className="text-sm font-medium text-indigo-200">
-                  最適化目的
-                </h5>
-
-                <div className="grid grid-cols-2 gap-3">
-                  {/* 総リターン */}
-                  <div>
-                    <label className="flex items-center space-x-2">
-                      <input
-                        type="checkbox"
-                        checked={
-                          config.ga_config.objectives?.includes(
-                            "total_return"
-                          ) ?? false
-                        }
-                        onChange={(e) =>
-                          handleObjectiveChange(
-                            "total_return",
-                            e.target.checked
-                          )
-                        }
-                        className="rounded border-indigo-500 text-indigo-600 focus:ring-indigo-500"
-                      />
-                      <span className="text-sm text-indigo-200">
-                        総リターン
-                      </span>
-                      <span className="text-xs text-green-400">最大化</span>
-                    </label>
-                    <div className="text-xs text-indigo-300/60 ml-6">
-                      投資期間全体での総リターン率
-                    </div>
-                  </div>
-
-                  {/* シャープレシオ */}
-                  <div>
-                    <label className="flex items-center space-x-2">
-                      <input
-                        type="checkbox"
-                        checked={
-                          config.ga_config.objectives?.includes(
-                            "sharpe_ratio"
-                          ) ?? false
-                        }
-                        onChange={(e) =>
-                          handleObjectiveChange(
-                            "sharpe_ratio",
-                            e.target.checked
-                          )
-                        }
-                        className="rounded border-indigo-500 text-indigo-600 focus:ring-indigo-500"
-                      />
-                      <span className="text-sm text-indigo-200">
-                        シャープレシオ
-                      </span>
-                      <span className="text-xs text-green-400">最大化</span>
-                    </label>
-                    <div className="text-xs text-indigo-300/60 ml-6">
-                      リスク調整後リターンの指標
-                    </div>
-                  </div>
-
-                  {/* 最大ドローダウン */}
-                  <div>
-                    <label className="flex items-center space-x-2">
-                      <input
-                        type="checkbox"
-                        checked={
-                          config.ga_config.objectives?.includes(
-                            "max_drawdown"
-                          ) ?? false
-                        }
-                        onChange={(e) =>
-                          handleObjectiveChange(
-                            "max_drawdown",
-                            e.target.checked
-                          )
-                        }
-                        className="rounded border-indigo-500 text-indigo-600 focus:ring-indigo-500"
-                      />
-                      <span className="text-sm text-indigo-200">
-                        最大ドローダウン
-                      </span>
-                      <span className="text-xs text-red-400">最小化</span>
-                    </label>
-                    <div className="text-xs text-indigo-300/60 ml-6">
-                      最大の資産減少分（最小化したい）
-                    </div>
-                  </div>
-
-                  {/* 勝率 */}
-                  <div>
-                    <label className="flex items-center space-x-2">
-                      <input
-                        type="checkbox"
-                        checked={
-                          config.ga_config.objectives?.includes("win_rate") ??
-                          false
-                        }
-                        onChange={(e) =>
-                          handleObjectiveChange("win_rate", e.target.checked)
-                        }
-                        className="rounded border-indigo-500 text-indigo-600 focus:ring-indigo-500"
-                      />
-                      <span className="text-sm text-indigo-200">勝率</span>
-                      <span className="text-xs text-green-400">最大化</span>
-                    </label>
-                    <div className="text-xs text-indigo-300/60 ml-6">
-                      勝ちトレードの割合
-                    </div>
-                  </div>
-
-                  {/* プロフィットファクター */}
-                  <div>
-                    <label className="flex items-center space-x-2">
-                      <input
-                        type="checkbox"
-                        checked={
-                          config.ga_config.objectives?.includes(
-                            "profit_factor"
-                          ) ?? false
-                        }
-                        onChange={(e) =>
-                          handleObjectiveChange(
-                            "profit_factor",
-                            e.target.checked
-                          )
-                        }
-                        className="rounded border-indigo-500 text-indigo-600 focus:ring-indigo-500"
-                      />
-                      <span className="text-sm text-indigo-200">
-                        プロフィットファクター
-                      </span>
-                      <span className="text-xs text-green-400">最大化</span>
-                    </label>
-                    <div className="text-xs text-indigo-300/60 ml-6">
-                      総利益と総損失の比率
-                    </div>
-                  </div>
-
-                  {/* ソルティーノレシオ */}
-                  <div>
-                    <label className="flex items-center space-x-2">
-                      <input
-                        type="checkbox"
-                        checked={
-                          config.ga_config.objectives?.includes(
-                            "sortino_ratio"
-                          ) ?? false
-                        }
-                        onChange={(e) =>
-                          handleObjectiveChange(
-                            "sortino_ratio",
-                            e.target.checked
-                          )
-                        }
-                        className="rounded border-indigo-500 text-indigo-600 focus:ring-indigo-500"
-                      />
-                      <span className="text-sm text-indigo-200">
-                        ソルティーノレシオ
-                      </span>
-                      <span className="text-xs text-green-400">最大化</span>
-                    </label>
-                    <div className="text-xs text-indigo-300/60 ml-6">
-                      下方リスク調整後リターンの指標
-                    </div>
-                  </div>
-                </div>
-
-                {/* 選択された目的の表示 */}
-                {config.ga_config.objectives &&
-                  config.ga_config.objectives.length > 0 && (
-                    <div className="mt-3 p-2 bg-indigo-800/30 rounded border border-indigo-500/30">
-                      <h6 className="text-xs font-medium text-indigo-200 mb-2">
-                        選択された目的 ({config.ga_config.objectives.length}個)
-                      </h6>
-                      <div className="space-y-1">
-                        {config.ga_config.objectives.map((objective, index) => (
-                          <div
-                            key={objective}
-                            className="flex justify-between items-center text-xs"
-                          >
-                            <span className="text-indigo-200">
-                              {AVAILABLE_OBJECTIVES.find(
-                                (obj) => obj.name === objective
-                              )?.display_name || objective}
-                            </span>
-                            <span className="text-indigo-300">
-                              重み:{" "}
-                              {config.ga_config.objective_weights?.[
-                                index
-                              ]?.toFixed(1) || "1.0"}
-                            </span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-              </div>
-            )}
-          </div>
+          <ObjectiveSelection
+            gaConfig={config.ga_config}
+            onGAConfigChange={handleGAConfigChange}
+          />
         </div>
         {/* Action Buttons */}
         <div className="pt-6 flex justify-end items-center space-x-4">
