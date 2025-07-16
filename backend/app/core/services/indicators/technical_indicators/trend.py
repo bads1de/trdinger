@@ -190,7 +190,7 @@ class TrendIndicators:
 
     @staticmethod
     @handle_talib_errors
-    def ma(data: np.ndarray, period: int, matype: int = 0) -> np.ndarray:
+    def ma(data: np.ndarray, period: int, matype: MA_Type = MA_Type.SMA) -> np.ndarray:
         """Moving Average (移動平均 - タイプ指定可能)"""
         data = ensure_numpy_array(data)
         validate_input(data, period)

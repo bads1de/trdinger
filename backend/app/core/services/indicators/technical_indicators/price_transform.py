@@ -1,5 +1,5 @@
 """
-価格変換系テクニカル指標（オートストラテジー最適化版）
+価格変換系テクニカル指標
 
 このモジュールはnumpy配列ベースでTa-libを直接使用し、
 backtesting.pyとの完全な互換性を提供します。
@@ -30,7 +30,9 @@ class PriceTransformIndicators:
 
     @staticmethod
     @handle_talib_errors
-    def avgprice(open_data: np.ndarray, high: np.ndarray, low: np.ndarray, close: np.ndarray) -> np.ndarray:
+    def avgprice(
+        open_data: np.ndarray, high: np.ndarray, low: np.ndarray, close: np.ndarray
+    ) -> np.ndarray:
         """
         Average Price (平均価格)
 
@@ -47,13 +49,13 @@ class PriceTransformIndicators:
         high = ensure_numpy_array(high)
         low = ensure_numpy_array(low)
         close = ensure_numpy_array(close)
-        
+
         # 全データの長さが一致することを確認
         if not (len(open_data) == len(high) == len(low) == len(close)):
             raise TALibError(
                 f"OHLCデータの長さが一致しません。Open: {len(open_data)}, High: {len(high)}, Low: {len(low)}, Close: {len(close)}"
             )
-        
+
         validate_input(close, 1)
         log_indicator_calculation("AVGPRICE", {}, len(close))
 

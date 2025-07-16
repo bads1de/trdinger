@@ -78,11 +78,11 @@ class MomentumIndicators:
     def macdext(
         data: np.ndarray,
         fast_period: int = 12,
-        fast_ma_type: int = 0,
+        fast_ma_type: MA_Type = MA_Type.SMA,
         slow_period: int = 26,
-        slow_ma_type: int = 0,
+        slow_ma_type: MA_Type = MA_Type.SMA,
         signal_period: int = 9,
-        signal_ma_type: int = 0,
+        signal_ma_type: MA_Type = MA_Type.SMA,
     ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
         """MACD with controllable MA type"""
         data = ensure_numpy_array(data)
@@ -138,9 +138,9 @@ class MomentumIndicators:
         close: np.ndarray,
         fastk_period: int = 5,
         slowk_period: int = 3,
-        slowk_matype: int = 0,
+        slowk_matype: MA_Type = MA_Type.SMA,
         slowd_period: int = 3,
-        slowd_matype: int = 0,
+        slowd_matype: MA_Type = MA_Type.SMA,
     ) -> Tuple[np.ndarray, np.ndarray]:
         """Stochastic (ストキャスティクス)"""
         high = ensure_numpy_array(high)
@@ -169,9 +169,9 @@ class MomentumIndicators:
             close,
             fastk_period=fastk_period,
             slowk_period=slowk_period,
-            slowk_matype=MA_Type(slowk_matype),
+            slowk_matype=slowk_matype,
             slowd_period=slowd_period,
-            slowd_matype=MA_Type(slowd_matype),
+            slowd_matype=slowd_matype,
         )
         return cast(
             Tuple[np.ndarray, np.ndarray],
@@ -186,7 +186,7 @@ class MomentumIndicators:
         close: np.ndarray,
         fastk_period: int = 5,
         fastd_period: int = 3,
-        fastd_matype: int = 0,
+        fastd_matype: MA_Type = MA_Type.SMA,
     ) -> Tuple[np.ndarray, np.ndarray]:
         """Stochastic Fast (高速ストキャスティクス)"""
         high = ensure_numpy_array(high)
@@ -222,7 +222,7 @@ class MomentumIndicators:
         period: int = 14,
         fastk_period: int = 5,
         fastd_period: int = 3,
-        fastd_matype: int = 0,
+        fastd_matype: MA_Type = MA_Type.SMA,
     ) -> Tuple[np.ndarray, np.ndarray]:
         """Stochastic Relative Strength Index"""
         data = ensure_numpy_array(data)
@@ -482,14 +482,21 @@ class MomentumIndicators:
     @staticmethod
     @handle_talib_errors
     def ppo(
-        data: np.ndarray, fastperiod: int = 12, slowperiod: int = 26, matype: int = 0
+        data: np.ndarray,
+        fastperiod: int = 12,
+        slowperiod: int = 26,
+        matype: MA_Type = MA_Type.SMA,
     ) -> np.ndarray:
         """Percentage Price Oscillator"""
         data = ensure_numpy_array(data)
         validate_input(data, max(fastperiod, slowperiod))
         log_indicator_calculation(
             "PPO",
-            {"fastperiod": fastperiod, "slowperiod": slowperiod, "matype": matype},
+            {
+                "fastperiod": fastperiod,
+                "slowperiod": slowperiod,
+                "matype": matype.name,
+            },
             len(data),
         )
         result = talib.PPO(
@@ -571,14 +578,21 @@ class MomentumIndicators:
     @staticmethod
     @handle_talib_errors
     def apo(
-        data: np.ndarray, fastperiod: int = 12, slowperiod: int = 26, matype: int = 0
+        data: np.ndarray,
+        fastperiod: int = 12,
+        slowperiod: int = 26,
+        matype: MA_Type = MA_Type.SMA,
     ) -> np.ndarray:
         """Absolute Price Oscillator"""
         data = ensure_numpy_array(data)
         validate_input(data, max(fastperiod, slowperiod))
         log_indicator_calculation(
             "APO",
-            {"fastperiod": fastperiod, "slowperiod": slowperiod, "matype": matype},
+            {
+                "fastperiod": fastperiod,
+                "slowperiod": slowperiod,
+                "matype": matype.name,
+            },
             len(data),
         )
         result = talib.APO(

@@ -1,5 +1,5 @@
 """
-出来高系テクニカル指標（オートストラテジー最適化版）
+出来高系テクニカル指標
 
 このモジュールはnumpy配列ベースでTa-libを直接使用し、
 backtesting.pyとの完全な互換性を提供します。
@@ -30,7 +30,9 @@ class VolumeIndicators:
 
     @staticmethod
     @handle_talib_errors
-    def ad(high: np.ndarray, low: np.ndarray, close: np.ndarray, volume: np.ndarray) -> np.ndarray:
+    def ad(
+        high: np.ndarray, low: np.ndarray, close: np.ndarray, volume: np.ndarray
+    ) -> np.ndarray:
         """
         Chaikin A/D Line (チャイキンA/Dライン)
 
@@ -47,11 +49,13 @@ class VolumeIndicators:
         low = ensure_numpy_array(low)
         close = ensure_numpy_array(close)
         volume = ensure_numpy_array(volume)
-        
+
         validate_multi_input(high, low, close, 1)
         if len(volume) != len(close):
-            raise TALibError(f"出来高データの長さが一致しません。Volume: {len(volume)}, Close: {len(close)}")
-        
+            raise TALibError(
+                f"出来高データの長さが一致しません。Volume: {len(volume)}, Close: {len(close)}"
+            )
+
         log_indicator_calculation("AD", {}, len(close))
 
         result = talib.AD(high, low, close, volume)
@@ -60,12 +64,12 @@ class VolumeIndicators:
     @staticmethod
     @handle_talib_errors
     def adosc(
-        high: np.ndarray, 
-        low: np.ndarray, 
-        close: np.ndarray, 
-        volume: np.ndarray, 
-        fastperiod: int = 3, 
-        slowperiod: int = 10
+        high: np.ndarray,
+        low: np.ndarray,
+        close: np.ndarray,
+        volume: np.ndarray,
+        fastperiod: int = 3,
+        slowperiod: int = 10,
     ) -> np.ndarray:
         """
         Chaikin A/D Oscillator (チャイキンA/Dオシレーター)
@@ -85,16 +89,20 @@ class VolumeIndicators:
         low = ensure_numpy_array(low)
         close = ensure_numpy_array(close)
         volume = ensure_numpy_array(volume)
-        
+
         validate_multi_input(high, low, close, max(fastperiod, slowperiod))
         if len(volume) != len(close):
-            raise TALibError(f"出来高データの長さが一致しません。Volume: {len(volume)}, Close: {len(close)}")
-        
+            raise TALibError(
+                f"出来高データの長さが一致しません。Volume: {len(volume)}, Close: {len(close)}"
+            )
+
         log_indicator_calculation(
             "ADOSC", {"fastperiod": fastperiod, "slowperiod": slowperiod}, len(close)
         )
 
-        result = talib.ADOSC(high, low, close, volume, fastperiod=fastperiod, slowperiod=slowperiod)
+        result = talib.ADOSC(
+            high, low, close, volume, fastperiod=fastperiod, slowperiod=slowperiod
+        )
         return cast(np.ndarray, format_indicator_result(result, "ADOSC"))
 
     @staticmethod
@@ -112,11 +120,13 @@ class VolumeIndicators:
         """
         close = ensure_numpy_array(close)
         volume = ensure_numpy_array(volume)
-        
+
         validate_input(close, 1)
         if len(volume) != len(close):
-            raise TALibError(f"出来高データの長さが一致しません。Volume: {len(volume)}, Close: {len(close)}")
-        
+            raise TALibError(
+                f"出来高データの長さが一致しません。Volume: {len(volume)}, Close: {len(close)}"
+            )
+
         log_indicator_calculation("OBV", {}, len(close))
 
         result = talib.OBV(close, volume)
