@@ -130,27 +130,16 @@ class GeneticAlgorithmEngine:
             stats.register("min", np.min)
             stats.register("max", np.max)
 
-            # 進化アルゴリズムの実行（単一目的・多目的対応）
-            if config.enable_multi_objective:
-                # 多目的最適化（NSGA-II）
-                population, logbook = self._run_nsga2_evolution(
-                    population, toolbox, config, stats
-                )
-            elif config.enable_fitness_sharing and self.fitness_sharing:
-                # フィットネス共有付き進化
-                population, logbook = self._run_evolution_with_fitness_sharing(
+            # 多目的最適化（NSGA-II）の実行
+            if config.enable_fitness_sharing and self.fitness_sharing:
+                # フィットネス共有付き多目的最適化
+                population, logbook = self._run_nsga2_evolution_with_fitness_sharing(
                     population, toolbox, config, stats
                 )
             else:
-                # 通常の進化アルゴリズム
-                population, logbook = algorithms.eaSimple(
-                    population,
-                    toolbox,
-                    cxpb=config.crossover_rate,
-                    mutpb=config.mutation_rate,
-                    ngen=config.generations,
-                    stats=stats,
-                    verbose=False,
+                # 標準多目的最適化（NSGA-II）
+                population, logbook = self._run_nsga2_evolution(
+                    population, toolbox, config, stats
                 )
 
             # 最良個体の取得（単一目的・多目的対応）
@@ -225,88 +214,6 @@ class GeneticAlgorithmEngine:
     def stop_evolution(self):
         """進化を停止"""
         self.is_running = False
-
-    def _run_evolution_with_fitness_sharing(
-        self, population, toolbox, config: GAConfig, stats
-    ):
-        """
-        フィットネス共有を適用した進化アルゴリズムの実行
-
-        Args:
-            population: 初期個体群
-            toolbox: DEAPツールボックス
-            config: GA設定
-            stats: 統計情報
-
-        Returns:
-            進化後の個体群とログブック
-        """
-        try:
-            logbook = tools.Logbook()
-
-            # 初期個体群の評価
-            fitnesses = toolbox.map(toolbox.evaluate, population)
-            for ind, fit in zip(population, fitnesses):
-                ind.fitness.values = fit
-
-            # フィットネス共有を適用
-            if self.fitness_sharing:
-                population = self.fitness_sharing.apply_fitness_sharing(population)
-
-            if stats:
-                record = stats.compile(population)
-                logbook.record(gen=0, nevals=len(population), **record)
-
-            # 世代ループ
-            for gen in range(1, config.generations + 1):
-                # 選択
-                offspring = toolbox.select(population, len(population))
-                offspring = [toolbox.clone(ind) for ind in offspring]
-
-                # 交叉と突然変異
-                for child1, child2 in zip(offspring[::2], offspring[1::2]):
-                    if random.random() < config.crossover_rate:
-                        toolbox.mate(child1, child2)
-                        del child1.fitness.values
-                        del child2.fitness.values
-
-                for mutant in offspring:
-                    if random.random() < config.mutation_rate:
-                        toolbox.mutate(mutant)
-                        del mutant.fitness.values
-
-                # 評価が必要な個体を特定
-                invalid_ind = [ind for ind in offspring if not ind.fitness.valid]
-                fitnesses = toolbox.map(toolbox.evaluate, invalid_ind)
-                for ind, fit in zip(invalid_ind, fitnesses):
-                    ind.fitness.values = fit
-
-                # フィットネス共有を適用
-                if self.fitness_sharing:
-                    offspring = self.fitness_sharing.apply_fitness_sharing(offspring)
-
-                # 次世代の選択
-                population[:] = offspring
-
-                # 統計情報の記録
-                if stats:
-                    record = stats.compile(population)
-                    logbook.record(gen=gen, nevals=len(invalid_ind), **record)
-
-            return population, logbook
-
-        except Exception as e:
-            logger.error(f"フィットネス共有付き進化実行エラー: {e}")
-            # フォールバック: 通常の進化アルゴリズム
-            return algorithms.eaSimple(
-                population,
-                toolbox,
-                cxpb=config.crossover_rate,
-                mutpb=config.mutation_rate,
-                ngen=config.generations,
-                stats=stats,
-                verbose=False,
-            )
 
     def _run_nsga2_evolution(self, population, toolbox, config: GAConfig, stats):
         """
@@ -386,14 +293,93 @@ class GeneticAlgorithmEngine:
 
         except Exception as e:
             logger.error(f"NSGA-II進化実行エラー: {e}")
-            # フォールバック: 通常の進化アルゴリズム
-            logger.warning("フォールバックとして単一目的最適化を実行")
-            return algorithms.eaSimple(
-                population,
-                toolbox,
-                cxpb=config.crossover_rate,
-                mutpb=config.mutation_rate,
-                ngen=config.generations,
-                stats=stats,
-                verbose=False,
-            )
+            raise
+
+    def _run_nsga2_evolution_with_fitness_sharing(
+        self, population, toolbox, config: GAConfig, stats
+    ):
+        """
+        フィットネス共有付きNSGA-II多目的最適化アルゴリズムの実行
+
+        Args:
+            population: 初期個体群
+            toolbox: DEAPツールボックス
+            config: GA設定
+            stats: 統計情報
+
+        Returns:
+            (population, logbook): 最終個体群と進化ログ
+        """
+        try:
+            logger.info("フィットネス共有付きNSGA-II多目的最適化アルゴリズムを開始")
+
+            # 統計情報の記録用
+            logbook = tools.Logbook()
+            logbook.header = ["gen", "nevals"] + (stats.fields if stats else [])
+
+            # 初期個体群の評価
+            fitnesses = toolbox.map(toolbox.evaluate, population)
+            for ind, fit in zip(population, fitnesses):
+                ind.fitness.values = fit
+
+            # フィットネス共有を適用
+            if self.fitness_sharing:
+                population = self.fitness_sharing.apply_fitness_sharing(population)
+
+            # NSGA-II用の初期化（crowding distance計算）
+            population = toolbox.select(population, len(population))
+
+            # 初期統計の記録
+            if stats:
+                record = stats.compile(population)
+                logbook.record(gen=0, nevals=len(population), **record)
+
+            # 世代ループ
+            for gen in range(1, config.generations + 1):
+                # 親選択（ランダム選択）
+                offspring = [toolbox.clone(ind) for ind in population]
+
+                # 交叉と突然変異
+                for child1, child2 in zip(offspring[::2], offspring[1::2]):
+                    if random.random() < config.crossover_rate:
+                        toolbox.mate(child1, child2)
+                        del child1.fitness.values
+                        del child2.fitness.values
+
+                for mutant in offspring:
+                    if random.random() < config.mutation_rate:
+                        result = toolbox.mutate(mutant)
+                        if result is not None:
+                            if isinstance(result, tuple) and len(result) == 1:
+                                mutant[:] = result[0]
+                        del mutant.fitness.values
+
+                # 評価が必要な個体を特定
+                invalid_ind = [ind for ind in offspring if not ind.fitness.valid]
+                fitnesses = toolbox.map(toolbox.evaluate, invalid_ind)
+                for ind, fit in zip(invalid_ind, fitnesses):
+                    ind.fitness.values = fit
+
+                # フィットネス共有を適用
+                if self.fitness_sharing:
+                    offspring = self.fitness_sharing.apply_fitness_sharing(offspring)
+
+                # 親と子を結合
+                combined_population = population + offspring
+
+                # NSGA-II選択で次世代を選択
+                population[:] = toolbox.select(combined_population, len(population))
+
+                # 統計情報の記録
+                if stats:
+                    record = stats.compile(population)
+                    logbook.record(gen=gen, nevals=len(invalid_ind), **record)
+
+                logger.info(f"世代 {gen}/{config.generations} 完了")
+
+            logger.info("フィットネス共有付きNSGA-II多目的最適化アルゴリズム完了")
+            return population, logbook
+
+        except Exception as e:
+            logger.error(f"フィットネス共有付きNSGA-II進化実行エラー: {e}")
+            raise

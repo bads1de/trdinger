@@ -60,10 +60,6 @@ class GAConfig:
     sharing_radius: float = 0.1
     sharing_alpha: float = 1.0
 
-    # ショートバイアス突然変異設定
-    enable_short_bias_mutation: bool = True
-    short_bias_rate: float = 0.3  # ショートバイアス適用率
-
     # 指標設定
     max_indicators: int = 3
     allowed_indicators: List[str] = field(
@@ -310,9 +306,6 @@ class GAConfig:
             "enable_fitness_sharing": self.enable_fitness_sharing,
             "sharing_radius": self.sharing_radius,
             "sharing_alpha": self.sharing_alpha,
-            # ショートバイアス突然変異設定
-            "enable_short_bias_mutation": self.enable_short_bias_mutation,
-            "short_bias_rate": self.short_bias_rate,
             # 指標モード設定
             "indicator_mode": self.indicator_mode,
             "enable_ml_indicators": self.enable_ml_indicators,
@@ -353,9 +346,6 @@ class GAConfig:
             enable_fitness_sharing=data.get("enable_fitness_sharing", True),
             sharing_radius=data.get("sharing_radius", 0.1),
             sharing_alpha=data.get("sharing_alpha", 1.0),
-            # ショートバイアス突然変異設定
-            enable_short_bias_mutation=data.get("enable_short_bias_mutation", True),
-            short_bias_rate=data.get("short_bias_rate", 0.3),
             # 指標モード設定
             indicator_mode=data.get("indicator_mode", "mixed"),
             enable_ml_indicators=data.get("enable_ml_indicators", True),

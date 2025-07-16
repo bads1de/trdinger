@@ -117,29 +117,14 @@ const GAConfigForm: React.FC<GAConfigFormProps> = ({
     }));
   };
 
-  const validateConfig = () => {
-    const errors: string[] = [];
-
-    // 従来の取引量範囲バリデーションは削除（Position Sizingシステムにより不要）
-
-    // TP/SL設定はGAが自動最適化するため、バリデーション不要
-
-    return errors;
-  };
-
   const handleSubmit = () => {
-    const errors = validateConfig();
-    if (errors.length > 0) {
-      alert("設定エラー:\n" + errors.join("\n"));
-      return;
-    }
     onSubmit(config);
   };
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 h-full">
       {/* Left Column: Main Settings */}
-      <div className="p-6 space-y-6 overflow-y-auto max-h-[calc(90vh-80px)]">
+      <div className="p-6 space-y-6">
         <BaseBacktestConfigForm
           config={config.base_config}
           onConfigChange={handleBaseConfigChange}
@@ -237,7 +222,7 @@ const GAConfigForm: React.FC<GAConfigFormProps> = ({
       </div>
 
       {/* Right Column: Advanced GA Settings */}
-      <div className="p-6 space-y-4 overflow-y-auto max-h-[calc(90vh-80px)] bg-secondary-900 border-l border-secondary-700">
+      <div className="p-6 space-y-4 bg-secondary-900 border-l border-secondary-700">
         <h3 className="text-lg font-semibold text-secondary-100 mb-3">
           🧬 GA詳細設定
         </h3>
@@ -332,53 +317,6 @@ const GAConfigForm: React.FC<GAConfigFormProps> = ({
               </span>
             </label>
           </div>
-
-          {/* ショートバイアス突然変異 */}
-          <div className="mb-3">
-            <label className="flex items-center space-x-2">
-              <input
-                type="checkbox"
-                checked={config.ga_config.enable_short_bias_mutation ?? true}
-                onChange={(e) =>
-                  setConfig({
-                    ...config,
-                    ga_config: {
-                      ...config.ga_config,
-                      enable_short_bias_mutation: e.target.checked,
-                    },
-                  })
-                }
-                className="rounded border-indigo-500 text-indigo-600 focus:ring-indigo-500"
-              />
-              <span className="text-sm text-indigo-200">
-                ショートバイアス突然変異 (ショート戦略強化)
-              </span>
-            </label>
-          </div>
-
-          {/* ショートバイアス率 */}
-          {config.ga_config.enable_short_bias_mutation && (
-            <div className="mt-2 pl-6">
-              <InputField
-                label="ショートバイアス適用率"
-                type="number"
-                value={config.ga_config.short_bias_rate ?? 0.3}
-                onChange={(value) =>
-                  setConfig({
-                    ...config,
-                    ga_config: {
-                      ...config.ga_config,
-                      short_bias_rate: parseFloat(value) || 0.3,
-                    },
-                  })
-                }
-                min={0}
-                max={1}
-                step={0.1}
-                className="text-sm"
-              />
-            </div>
-          )}
 
           {/* 多目的最適化設定 */}
           <ObjectiveSelection

@@ -108,8 +108,6 @@ export interface GAConfig {
     enable_fitness_sharing?: boolean;
     sharing_radius?: number;
     sharing_alpha?: number;
-    enable_short_bias_mutation?: boolean;
-    short_bias_rate?: number;
 
     // 新しいTP/SL自動決定設定
     tpsl_strategy?: TPSLStrategy;

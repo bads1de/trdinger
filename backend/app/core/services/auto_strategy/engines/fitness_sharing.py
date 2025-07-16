@@ -81,12 +81,16 @@ class FitnessSharing:
 
                 niche_counts.append(max(1.0, niche_count))
 
-            # フィットネス値を調整
+            # フィットネス値を調整（多目的最適化対応）
             for i, individual in enumerate(population):
                 if hasattr(individual, "fitness") and individual.fitness.valid:
-                    original_fitness = individual.fitness.values[0]
-                    shared_fitness = original_fitness / niche_counts[i]
-                    individual.fitness.values = (shared_fitness,)
+                    original_fitness_values = individual.fitness.values
+                    # 各目的関数のフィットネス値をニッチカウントで調整
+                    shared_fitness_values = tuple(
+                        fitness_val / niche_counts[i]
+                        for fitness_val in original_fitness_values
+                    )
+                    individual.fitness.values = shared_fitness_values
 
             return population
 
