@@ -9,17 +9,13 @@
 import React, { useState } from "react";
 import { Info } from "lucide-react";
 import ActionButton from "@/components/common/ActionButton";
-import LoadingSpinner from "@/components/common/LoadingSpinner";
 
 import BacktestResultsTable from "@/components/backtest/BacktestResultsTable";
 import PerformanceMetrics from "@/components/backtest/PerformanceMetrics";
-import OptimizationResults from "@/components/backtest/OptimizationResults";
-import OptimizationModal from "@/components/backtest/OptimizationModal";
 import AutoStrategyModal from "@/components/backtest/AutoStrategyModal";
 import AutoStrategyExplanationModal from "@/components/backtest/AutoStrategyExplanationModal";
 
 import { useBacktestResults } from "@/hooks/useBacktestResults";
-import { useBacktestOptimizations } from "@/hooks/useBacktestOptimizations";
 import { useAutoStrategy } from "@/hooks/useAutoStrategy";
 
 export default function BacktestPage() {
@@ -27,32 +23,12 @@ export default function BacktestPage() {
     results,
     selectedResult,
     resultsLoading,
-    deleteLoading,
     deleteAllLoading,
     loadResults,
     handleResultSelect,
     handleDeleteResult,
     handleDeleteAllResults,
-    setSelectedResult,
   } = useBacktestResults();
-
-  const {
-    optimizationResult,
-    optimizationType,
-    isOptimizationModalOpen,
-    currentBacktestConfig,
-    enhancedOptimizationLoading,
-    multiOptimizationLoading,
-    robustnessTestLoading,
-    isOptimizationLoading,
-    setOptimizationResult,
-    setOptimizationType,
-    setIsOptimizationModalOpen,
-    setCurrentBacktestConfig,
-    handleEnhancedOptimization,
-    handleMultiObjectiveOptimization,
-    handleRobustnessTest,
-  } = useBacktestOptimizations();
 
   const {
     showAutoStrategyModal,
@@ -63,11 +39,6 @@ export default function BacktestPage() {
   } = useAutoStrategy(loadResults);
 
   const [isExplanationModalOpen, setIsExplanationModalOpen] = useState(false);
-
-  // GA戦略生成実行
-  const handleGAGeneration = async (config: any) => {
-    // GA実行は別途進捗表示で管理されるため、ここでは設定のログ出力のみ
-  };
 
   return (
     <div className="min-h-screen from-gray-900  text-white">
@@ -141,10 +112,7 @@ export default function BacktestPage() {
                     結果詳細 - {selectedResult.strategy_name}
                   </h2>
                 </div>
-                <PerformanceMetrics
-                  result={selectedResult}
-                  onOptimizationClick={() => setIsOptimizationModalOpen(true)}
-                />
+                <PerformanceMetrics result={selectedResult} />
               </div>
             ) : (
               <div className="flex items-center justify-center h-full bg-secondary-950 rounded-lg p-6 border border-secondary-700 border-dashed">
@@ -153,37 +121,8 @@ export default function BacktestPage() {
                 </p>
               </div>
             )}
-
-            {/* 最適化結果 */}
-            {optimizationResult && (
-              <div className="bg-black rounded-lg p-6 border border-secondary-700">
-                <h2 className="text-xl font-semibold mb-4">
-                  {optimizationType === "enhanced" && "拡張最適化結果"}
-                  {optimizationType === "multi" && "マルチ目的最適化結果"}
-                  {optimizationType === "robustness" &&
-                    "ロバストネステスト結果"}
-                </h2>
-                <OptimizationResults
-                  result={optimizationResult}
-                  resultType={optimizationType}
-                />
-              </div>
-            )}
           </div>
         </div>
-
-        {/* 最適化設定モーダル */}
-        <OptimizationModal
-          isOpen={isOptimizationModalOpen}
-          onClose={() => setIsOptimizationModalOpen(false)}
-          onEnhancedOptimization={handleEnhancedOptimization}
-          onMultiObjectiveOptimization={handleMultiObjectiveOptimization}
-          onRobustnessTest={handleRobustnessTest}
-          onGAGeneration={handleGAGeneration}
-          isLoading={isOptimizationLoading}
-          selectedResult={selectedResult}
-          currentBacktestConfig={currentBacktestConfig}
-        />
 
         {/* オートストラテジーモーダル */}
         <AutoStrategyModal
@@ -191,34 +130,13 @@ export default function BacktestPage() {
           onClose={() => setShowAutoStrategyModal(false)}
           onSubmit={handleAutoStrategy}
           isLoading={autoStrategyLoading}
-          currentBacktestConfig={currentBacktestConfig}
+          currentBacktestConfig={null}
         />
 
         <AutoStrategyExplanationModal
           isOpen={isExplanationModalOpen}
           onClose={() => setIsExplanationModalOpen(false)}
         />
-
-        {/* 最適化ローディング状態 */}
-        {isOptimizationLoading && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-secondary-950 rounded-lg p-6 text-center border border-secondary-700">
-              <LoadingSpinner
-                size="lg"
-                text={
-                  enhancedOptimizationLoading
-                    ? "拡張最適化実行中..."
-                    : multiOptimizationLoading
-                    ? "マルチ目的最適化実行中..."
-                    : "ロバストネステスト実行中..."
-                }
-              />
-              <p className="text-secondary-400 text-sm mt-2">
-                最適化には時間がかかる場合があります
-              </p>
-            </div>
-          </div>
-        )}
       </div>
     </div>
   );

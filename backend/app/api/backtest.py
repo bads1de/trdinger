@@ -45,13 +45,6 @@ class BacktestRequest(BaseModel):
     strategy_config: StrategyConfig = Field(..., description="戦略設定")
 
 
-class EnhancedOptimizationRequest(BaseModel):
-    """拡張最適化リクエスト"""
-
-    base_config: BacktestRequest = Field(..., description="基本設定")
-    optimization_params: Dict[str, Any] = Field(..., description="最適化パラメータ")
-
-
 class BacktestResponse(BaseModel):
     """バックテストレスポンス"""
 
@@ -260,30 +253,3 @@ async def get_supported_strategies():
         return {"success": True, "strategies": strategies}
 
     return await APIErrorHandler.handle_api_exception(_get_strategies)
-
-
-@router.post("/optimize-enhanced", response_model=BacktestResponse)
-async def optimize_strategy_enhanced(
-    request: EnhancedOptimizationRequest, db: Session = Depends(get_db)
-):
-    """
-    戦略を拡張最適化
-
-    Args:
-        request: 拡張最適化リクエスト
-        db: データベースセッション
-
-    Returns:
-        最適化結果
-    """
-
-    async def _optimize_enhanced():
-        backtest_service = BacktestService()
-        base_config = _create_base_config(request.base_config)
-        result = backtest_service.optimize_strategy_enhanced(
-            base_config, request.optimization_params
-        )
-        saved_result = _save_backtest_result(result, db)
-        return {"success": True, "result": saved_result}
-
-    return await APIErrorHandler.handle_api_exception(_optimize_enhanced)
