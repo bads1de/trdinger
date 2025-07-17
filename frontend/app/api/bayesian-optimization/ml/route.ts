@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-
-const BACKEND_URL = process.env.BACKEND_URL || "http://localhost:8000";
+import { BACKEND_API_URL } from "@/constants";
 
 /**
  * MLハイパーパラメータ最適化API（プロファイル保存機能付き）
@@ -21,7 +20,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const response = await fetch(`${BACKEND_URL}/api/bayesian-optimization/ml`, {
+    const response = await fetch(`${BACKEND_API_URL}/api/bayesian-optimization/ml`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",

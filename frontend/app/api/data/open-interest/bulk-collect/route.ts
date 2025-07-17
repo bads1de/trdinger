@@ -12,7 +12,7 @@ import { BACKEND_API_URL } from "@/constants";
 /**
  * POST /api/data/open-interest/bulk-collect
  *
- * BTC・ETHシンボルのOIデータを一括収集します。
+ * BTCのOIデータを一括収集します。
  */
 export async function POST(request: NextRequest) {
   try {

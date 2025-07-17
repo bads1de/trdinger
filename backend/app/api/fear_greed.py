@@ -195,42 +195,6 @@ async def collect_fear_greed_data(
 
 @router.post("/collect-incremental")
 async def collect_incremental_fear_greed_data(
-    limit: int = Query(30, description="取得するデータ数"),
-    db: Session = Depends(get_db),
-) -> Dict:
-    """
-    Fear & Greed Index データを差分収集
-
-    Args:
-        limit: 取得するデータ数
-        db: データベースセッション
-
-    Returns:
-        収集結果
-    """
-    try:
-        async with ExternalMarketDataCollector() as collector:
-            result = await collector.collect_fear_greed_data(limit=limit, db_session=db)
-
-        if result["success"]:
-            return APIResponseHelper.api_response(
-                success=True,
-                message=result["message"],
-                data=result,
-            )
-        else:
-            raise HTTPException(
-                status_code=500,
-                detail=f"データ収集に失敗しました: {result.get('error', 'Unknown error')}",
-            )
-
-    except Exception as e:
-        logger.error(f"Fear & Greed Index 差分データ収集エラー: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
-
-
-@router.post("/collect-incremental")
-async def collect_incremental_fear_greed_data(
     db: Session = Depends(get_db),
 ) -> Dict:
     """

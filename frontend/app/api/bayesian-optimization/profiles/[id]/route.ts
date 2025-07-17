@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-
-const BACKEND_URL = process.env.BACKEND_URL || "http://localhost:8000";
+import { BACKEND_API_URL } from "@/constants";
 
 /**
  * 特定プロファイル取得API
@@ -14,7 +13,7 @@ export async function GET(
     const { id } = await params;
 
     const response = await fetch(
-      `${BACKEND_URL}/api/bayesian-optimization/profiles/${id}`,
+      `${BACKEND_API_URL}/api/bayesian-optimization/profiles/${id}`,
       {
         method: "GET",
         headers: {
@@ -64,7 +63,7 @@ export async function PUT(
     const body = await request.json();
 
     const response = await fetch(
-      `${BACKEND_URL}/api/bayesian-optimization/profiles/${id}`,
+      `${BACKEND_API_URL}/api/bayesian-optimization/profiles/${id}`,
       {
         method: "PUT",
         headers: {
@@ -114,7 +113,7 @@ export async function DELETE(
     const { id } = await params;
 
     const response = await fetch(
-      `${BACKEND_URL}/api/bayesian-optimization/profiles/${id}`,
+      `${BACKEND_API_URL}/api/bayesian-optimization/profiles/${id}`,
       {
         method: "DELETE",
         headers: {

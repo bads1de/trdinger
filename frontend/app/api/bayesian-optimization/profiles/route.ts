@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-
-const BACKEND_URL = process.env.BACKEND_URL || "http://localhost:8000";
+import { BACKEND_API_URL } from "@/constants";
 
 /**
  * プロファイル一覧取得API
@@ -25,7 +24,7 @@ export async function GET(request: NextRequest) {
       params.append("limit", limit);
     }
 
-    const backendUrl = `${BACKEND_URL}/api/bayesian-optimization/profiles${
+    const backendUrl = `${BACKEND_API_URL}/api/bayesian-optimization/profiles${
       params.toString() ? `?${params.toString()}` : ""
     }`;
 
@@ -73,7 +72,7 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
 
-    const response = await fetch(`${BACKEND_URL}/api/bayesian-optimization/profiles`, {
+    const response = await fetch(`${BACKEND_API_URL}/api/bayesian-optimization/profiles`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
