@@ -242,10 +242,16 @@ class MLSignalGenerator:
             予測確率の辞書 {"up": float, "down": float, "range": float}
         """
         try:
+            logger.debug(
+                f"ML予測開始 - モデル学習状態: {self.is_trained}, モデル存在: {self.model is not None}"
+            )
+
             if not self.is_trained or self.model is None:
                 # モデル未学習時は警告レベルでログ出力（エラーレベルから変更）
                 logger.warning("モデルが学習されていません。デフォルト値を返します。")
-                return self.config.prediction.get_default_predictions()  # 早期リターン
+                default_predictions = self.config.prediction.get_default_predictions()
+                logger.debug(f"デフォルト値: {default_predictions}")
+                return default_predictions  # 早期リターン
 
             if self.feature_columns is None:
                 # 特徴量カラムが設定されていない場合、利用可能な全カラムを使用
@@ -258,13 +264,34 @@ class MLSignalGenerator:
                 available_columns = [
                     col for col in self.feature_columns if col in features.columns
                 ]
+                missing_columns = [
+                    col for col in self.feature_columns if col not in features.columns
+                ]
+
+                logger.debug(f"学習時特徴量数: {len(self.feature_columns)}")
+                logger.debug(f"利用可能特徴量数: {len(available_columns)}")
+                logger.debug(f"不足特徴量数: {len(missing_columns)}")
+
+                if len(missing_columns) > 0:
+                    logger.debug(
+                        f"不足している特徴量（最初の10個）: {missing_columns[:10]}"
+                    )
+
                 if not available_columns:
                     logger.warning(
-                        "指定された特徴量カラムが見つかりません。利用可能な全カラムを使用します。"
+                        "指定された特徴量カラムが見つかりません。デフォルト値を返します。"
                     )
-                    features_selected = features.fillna(0)
+                    return self.config.prediction.get_default_predictions()
                 else:
+                    # 利用可能な特徴量のみを使用
                     features_selected = features[available_columns].fillna(0)
+
+                    # 不足している特徴量を0で埋める
+                    for missing_col in missing_columns:
+                        features_selected[missing_col] = 0.0
+
+                    # 学習時と同じ順序で並び替え
+                    features_selected = features_selected[self.feature_columns]
 
             # 標準化
             if self.scaler is not None:
@@ -291,26 +318,34 @@ class MLSignalGenerator:
 
             # 予測結果を3クラス（down, range, up）の確率に変換
             if latest_pred.shape[0] == 3:
-                return {
+                predictions = {
                     "down": float(latest_pred[0]),
                     "range": float(latest_pred[1]),
                     "up": float(latest_pred[2]),
                 }
+                logger.debug(f"3クラス予測結果: {predictions}")
+                return predictions
             elif latest_pred.shape[0] == 2:
                 # 2クラス分類の場合、rangeを中間値として設定
-                return {
+                predictions = {
                     "down": float(latest_pred[0]),
                     "range": 0.34,
                     "up": float(latest_pred[1]),
                 }
+                logger.debug(f"2クラス予測結果: {predictions}")
+                return predictions
             else:
                 # 予期しない形式の場合、デフォルト値を返す
                 logger.warning(f"予期しない予測結果の形式: {latest_pred.shape}")
-                return self.config.prediction.get_default_predictions()
+                default_predictions = self.config.prediction.get_default_predictions()
+                logger.debug(f"形式エラー時のデフォルト値: {default_predictions}")
+                return default_predictions
 
         except Exception as e:
             logger.warning(f"予測エラー: {e}")
-            return self.config.prediction.get_default_predictions()  # デフォルト値
+            default_predictions = self.config.prediction.get_default_predictions()
+            logger.debug(f"エラー時のデフォルト値: {default_predictions}")
+            return default_predictions  # デフォルト値
 
     def save_model(self, model_name: str = "ml_signal_model") -> str:
         """

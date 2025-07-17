@@ -51,8 +51,10 @@ class IndicatorCalculator:
 
             # ML指標の場合は専用サービスを使用
             if indicator_type.startswith("ML_"):
+                # TODO: 将来的にはファンディングレートと建玉残高データも取得して渡す
+                # 現在は不足特徴量を0で埋める処理で対応済み
                 result = self.ml_orchestrator.calculate_single_ml_indicator(
-                    indicator_type, df
+                    indicator_type, df, funding_rate_data=None, open_interest_data=None
                 )
                 return result
 

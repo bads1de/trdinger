@@ -68,6 +68,14 @@ class ConditionEvaluator:
                 condition.right_operand, strategy_instance
             )
 
+            # ML指標の場合はデバッグログを出力
+            if isinstance(
+                condition.left_operand, str
+            ) and condition.left_operand.startswith("ML_"):
+                logger.info(
+                    f"[ML条件評価デバッグ] {condition.left_operand} {condition.operator} {condition.right_operand} => {left_value} {condition.operator} {right_value}"
+                )
+
             # 両方の値が数値であることを確認
             if not isinstance(left_value, (int, float)) or not isinstance(
                 right_value, (int, float)
@@ -79,21 +87,30 @@ class ConditionEvaluator:
                 return False
 
             # 条件評価
+            result = False
             if condition.operator == ">":
-                return left_value > right_value
+                result = left_value > right_value
             elif condition.operator == "<":
-                return left_value < right_value
+                result = left_value < right_value
             elif condition.operator == ">=":
-                return left_value >= right_value
+                result = left_value >= right_value
             elif condition.operator == "<=":
-                return left_value <= right_value
+                result = left_value <= right_value
             elif condition.operator == "==":
-                return bool(np.isclose(left_value, right_value))
+                result = bool(np.isclose(left_value, right_value))
             elif condition.operator == "!=":
-                return not bool(np.isclose(left_value, right_value))
+                result = not bool(np.isclose(left_value, right_value))
             else:
                 logger.warning(f"未対応の演算子: {condition.operator}")
                 return False
+
+            # ML指標の場合は評価結果もログ出力
+            if isinstance(
+                condition.left_operand, str
+            ) and condition.left_operand.startswith("ML_"):
+                logger.info(f"[ML条件評価デバッグ] 評価結果: {result}")
+
+            return result
 
         except Exception as e:
             logger.error(f"条件評価エラー: {e}")
@@ -139,11 +156,17 @@ class ConditionEvaluator:
                         return float(getattr(strategy_instance, operand.lower()))
                     elif hasattr(strategy_instance, "data"):
                         # データフレームから取得
-                        price_data = getattr(strategy_instance.data, operand.capitalize())
+                        price_data = getattr(
+                            strategy_instance.data, operand.capitalize()
+                        )
                         return float(price_data[-1])
 
                 # 指標の場合（Iディクショナリから取得 - 最優先）
-                if hasattr(strategy_instance, "I") and hasattr(strategy_instance.I, '__contains__') and operand in strategy_instance.I:
+                if (
+                    hasattr(strategy_instance, "I")
+                    and hasattr(strategy_instance.I, "__contains__")
+                    and operand in strategy_instance.I
+                ):
                     indicator_value = strategy_instance.I[operand]
                     if hasattr(indicator_value, "__getitem__"):
                         return float(indicator_value[-1])
@@ -173,7 +196,9 @@ class ConditionEvaluator:
                     base_indicator = operand.split("_")[0]
 
                     # STOCHの場合
-                    if base_indicator == "STOCH" and hasattr(strategy_instance, "STOCH_0"):
+                    if base_indicator == "STOCH" and hasattr(
+                        strategy_instance, "STOCH_0"
+                    ):
                         indicator_value = getattr(strategy_instance, "STOCH_0")
                         if hasattr(indicator_value, "__getitem__"):
                             return float(indicator_value[-1])
@@ -208,7 +233,9 @@ class ConditionEvaluator:
                         return float(indicator_value)
 
                     # MACDの場合
-                    if base_indicator == "MACD" and hasattr(strategy_instance, "MACD_0"):
+                    if base_indicator == "MACD" and hasattr(
+                        strategy_instance, "MACD_0"
+                    ):
                         indicator_value = getattr(strategy_instance, "MACD_0")
                         if hasattr(indicator_value, "__getitem__"):
                             return float(indicator_value[-1])

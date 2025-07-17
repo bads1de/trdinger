@@ -27,6 +27,11 @@ from app.core.services.ml.signal_generator import MLSignalGenerator
 from app.core.services.ml.model_manager import model_manager
 from app.core.services.ml.performance_extractor import performance_extractor
 from app.core.services.ml.lightgbm_trainer import LightGBMTrainer
+from app.core.services.backtest_data_service import BacktestDataService
+from database.repositories.ohlcv_repository import OHLCVRepository
+from database.repositories.funding_rate_repository import FundingRateRepository
+from database.repositories.open_interest_repository import OpenInterestRepository
+from database.connection import get_db
 
 logger = logging.getLogger(__name__)
 
@@ -58,6 +63,9 @@ class MLOrchestrator:
         self.ml_generator = (
             ml_signal_generator if ml_signal_generator else MLSignalGenerator()
         )
+
+        # BacktestDataServiceを初期化（完全なデータセット取得用）
+        self._backtest_data_service = None
         # 学習機能のためのトレーナー（MLIndicatorServiceとの統合）
         self.trainer = trainer if trainer else LightGBMTrainer()
         # モデル状態の統合管理
@@ -68,6 +76,23 @@ class MLOrchestrator:
 
         # 既存の学習済みモデルを自動読み込み
         self._try_load_latest_model()
+
+    @property
+    def backtest_data_service(self) -> BacktestDataService:
+        """BacktestDataServiceのインスタンスを取得（遅延初期化）"""
+        if self._backtest_data_service is None:
+            # データベース接続を取得してリポジトリを初期化
+            db = next(get_db())
+            try:
+                ohlcv_repo = OHLCVRepository(db)
+                fr_repo = FundingRateRepository(db)
+                oi_repo = OpenInterestRepository(db)
+                self._backtest_data_service = BacktestDataService(
+                    ohlcv_repo=ohlcv_repo, oi_repo=oi_repo, fr_repo=fr_repo
+                )
+            finally:
+                db.close()
+        return self._backtest_data_service
 
     @timeout_decorator(
         timeout_seconds=ml_config.data_processing.FEATURE_CALCULATION_TIMEOUT
@@ -91,19 +116,37 @@ class MLOrchestrator:
         """
         with ml_operation_context("ML指標計算"):
             try:
-                # 入力データの検証
-                self._validate_input_data(df)
-
                 # データサイズ制限
                 df = self._limit_data_size(df)
 
-                # カラム名の正規化
+                # カラム名の正規化（検証前に実行）
                 df = self._normalize_column_names(df)
+
+                # 入力データの検証（正規化後に実行）
+                self._validate_input_data(df)
+
+                # ファンディングレートと建玉残高データが提供されていない場合は自動取得
+                if funding_rate_data is None or open_interest_data is None:
+                    logger.info("ファンディングレートと建玉残高データを自動取得します")
+                    enhanced_df = self._get_enhanced_data_with_fr_oi(df)
+                    if enhanced_df is not None:
+                        df = enhanced_df
+                        # 拡張データから個別のデータフレームを抽出
+                        funding_rate_data, open_interest_data = (
+                            self._extract_fr_oi_data(df)
+                        )
 
                 # 特徴量計算
                 features_df = self._calculate_features(
                     df, funding_rate_data, open_interest_data
                 )
+
+                # 特徴量計算が失敗した場合はデフォルト値を返す
+                if features_df is None or features_df.empty:
+                    logger.warning(
+                        "特徴量計算が失敗しました。デフォルト値を使用します。"
+                    )
+                    return self._get_default_indicators(len(df))
 
                 # ML予測の実行
                 predictions = self._safe_ml_prediction(features_df)
@@ -126,7 +169,11 @@ class MLOrchestrator:
                 return self._get_default_indicators(len(df))
 
     def calculate_single_ml_indicator(
-        self, indicator_type: str, df: pd.DataFrame
+        self,
+        indicator_type: str,
+        df: pd.DataFrame,
+        funding_rate_data: Optional[pd.DataFrame] = None,
+        open_interest_data: Optional[pd.DataFrame] = None,
     ) -> np.ndarray:
         """
         単一のML指標を計算
@@ -134,6 +181,8 @@ class MLOrchestrator:
         Args:
             indicator_type: 指標タイプ（ML_UP_PROB, ML_DOWN_PROB, ML_RANGE_PROB）
             df: OHLCVデータ
+            funding_rate_data: ファンディングレートデータ（オプション）
+            open_interest_data: 建玉残高データ（オプション）
 
         Returns:
             指標値の配列
@@ -144,7 +193,9 @@ class MLOrchestrator:
                 logger.warning(f"空のデータフレームが提供されました: {indicator_type}")
                 return np.full(100, self.config.prediction.DEFAULT_UP_PROB)
 
-            ml_indicators = self.calculate_ml_indicators(df)
+            ml_indicators = self.calculate_ml_indicators(
+                df, funding_rate_data, open_interest_data
+            )
 
             if indicator_type in ml_indicators:
                 return ml_indicators[indicator_type]
@@ -391,11 +442,39 @@ class MLOrchestrator:
         df: pd.DataFrame,
         funding_rate_data: Optional[pd.DataFrame] = None,
         open_interest_data: Optional[pd.DataFrame] = None,
-    ) -> pd.DataFrame:
+    ) -> Optional[pd.DataFrame]:
         """特徴量を計算"""
-        return self.feature_service.calculate_advanced_features(
-            df, funding_rate_data, open_interest_data
-        )
+        try:
+            logger.debug(f"特徴量計算開始 - データ形状: {df.shape}")
+            logger.debug(f"カラム名: {list(df.columns)}")
+
+            # 特徴量計算用にカラム名を大文字に変換
+            df_for_features = df.copy()
+            column_mapping = {
+                "open": "Open",
+                "high": "High",
+                "low": "Low",
+                "close": "Close",
+                "volume": "Volume",
+            }
+
+            # カラム名を大文字に変換
+            df_for_features.columns = [
+                column_mapping.get(col, col) for col in df_for_features.columns
+            ]
+            logger.debug(f"変換後カラム名: {list(df_for_features.columns)}")
+
+            features_df = self.feature_service.calculate_advanced_features(
+                df_for_features, funding_rate_data, open_interest_data
+            )
+            if features_df is not None:
+                logger.debug(f"特徴量計算完了 - 特徴量形状: {features_df.shape}")
+            else:
+                logger.warning("特徴量計算結果がNone")
+            return features_df
+        except Exception as e:
+            logger.error(f"特徴量計算エラー: {e}")
+            return None
 
     @safe_ml_operation(
         default_value=ml_config.prediction.get_default_predictions(),
@@ -416,14 +495,21 @@ class MLOrchestrator:
     ) -> Dict[str, np.ndarray]:
         """予測値をデータ長に拡張"""
         try:
-            return {
+            logger.debug(f"予測値拡張: {predictions} -> データ長: {data_length}")
+            result = {
                 "ML_UP_PROB": np.full(data_length, predictions["up"]),
                 "ML_DOWN_PROB": np.full(data_length, predictions["down"]),
                 "ML_RANGE_PROB": np.full(data_length, predictions["range"]),
             }
+            logger.debug(
+                f"拡張結果サンプル: UP={result['ML_UP_PROB'][0]}, DOWN={result['ML_DOWN_PROB'][0]}, RANGE={result['ML_RANGE_PROB'][0]}"
+            )
+            return result
         except Exception as e:
             logger.error(f"予測値拡張エラー: {e}")
-            return self._get_default_indicators(data_length)
+            default_result = self._get_default_indicators(data_length)
+            logger.debug(f"デフォルト値使用: {default_result}")
+            return default_result
 
     def _validate_ml_indicators(self, ml_indicators: Dict[str, np.ndarray]):
         """ML指標の妥当性を検証"""
@@ -479,3 +565,80 @@ class MLOrchestrator:
         except Exception as e:
             logger.warning(f"MLモデルの自動読み込み中にエラー: {e}")
             return False
+
+    def _get_enhanced_data_with_fr_oi(self, df: pd.DataFrame) -> Optional[pd.DataFrame]:
+        """
+        ファンディングレートと建玉残高データを含む拡張データを取得
+
+        Args:
+            df: 元のOHLCVデータ
+
+        Returns:
+            拡張されたデータフレーム（FR/OIデータを含む）
+        """
+        try:
+            # データフレームのインデックスから時間範囲を取得
+            if df.empty or not isinstance(df.index, pd.DatetimeIndex):
+                logger.warning("データフレームが空か、DatetimeIndexではありません")
+                return None
+
+            start_date = df.index.min()
+            end_date = df.index.max()
+
+            # シンボルを推定（デフォルトはBTC/USDT）
+            symbol = "BTC/USDT:USDT"  # TODO: 実際のシンボルを取得する方法を実装
+
+            # BacktestDataServiceを使用して拡張データを取得
+            enhanced_df = self.backtest_data_service.get_data_for_backtest(
+                symbol=symbol,
+                timeframe="1h",  # TODO: 実際のタイムフレームを取得
+                start_date=start_date,
+                end_date=end_date,
+            )
+
+            if enhanced_df is not None and not enhanced_df.empty:
+                logger.info(
+                    f"拡張データ取得成功: {len(enhanced_df)}行, カラム: {list(enhanced_df.columns)}"
+                )
+                return enhanced_df
+            else:
+                logger.warning("拡張データの取得に失敗しました")
+                return None
+
+        except Exception as e:
+            logger.error(f"拡張データ取得エラー: {e}")
+            return None
+
+    def _extract_fr_oi_data(
+        self, enhanced_df: pd.DataFrame
+    ) -> tuple[Optional[pd.DataFrame], Optional[pd.DataFrame]]:
+        """
+        拡張データフレームからファンディングレートと建玉残高データを抽出
+
+        Args:
+            enhanced_df: 拡張されたデータフレーム
+
+        Returns:
+            (funding_rate_data, open_interest_data)のタプル
+        """
+        try:
+            funding_rate_data = None
+            open_interest_data = None
+
+            # ファンディングレートデータを抽出
+            if "funding_rate" in enhanced_df.columns:
+                funding_rate_data = enhanced_df[["funding_rate"]].copy()
+                logger.debug(
+                    f"ファンディングレートデータ抽出: {len(funding_rate_data)}行"
+                )
+
+            # 建玉残高データを抽出
+            if "open_interest" in enhanced_df.columns:
+                open_interest_data = enhanced_df[["open_interest"]].copy()
+                logger.debug(f"建玉残高データ抽出: {len(open_interest_data)}行")
+
+            return funding_rate_data, open_interest_data
+
+        except Exception as e:
+            logger.error(f"FR/OIデータ抽出エラー: {e}")
+            return None, None
