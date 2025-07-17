@@ -264,11 +264,17 @@ async def get_data_status(db: Session = Depends(get_db)) -> Dict[str, Any]:
         oi_repo = OpenInterestRepository(db)
 
         # 各データの件数取得
-        from database.models import OHLCVData, FundingRateData, OpenInterestData
+        from database.models import (
+            OHLCVData,
+            FundingRateData,
+            OpenInterestData,
+            FearGreedIndexData,
+        )
 
         ohlcv_count = db.query(OHLCVData).count()
         fr_count = db.query(FundingRateData).count()
         oi_count = db.query(OpenInterestData).count()
+        fg_count = db.query(FearGreedIndexData).count()
 
         # OHLCV詳細情報（時間足別）
         timeframes = ["15m", "30m", "1h", "4h", "1d"]
@@ -299,8 +305,9 @@ async def get_data_status(db: Session = Depends(get_db)) -> Dict[str, Any]:
                 "ohlcv": ohlcv_count,
                 "funding_rates": fr_count,
                 "open_interest": oi_count,
+                "fear_greed_index": fg_count,
             },
-            "total_records": ohlcv_count + fr_count + oi_count,
+            "total_records": ohlcv_count + fr_count + oi_count + fg_count,
             "details": {
                 "ohlcv": {
                     "symbol": symbol,

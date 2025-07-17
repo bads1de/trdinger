@@ -139,7 +139,7 @@ const DataControls: React.FC<DataControlsProps> = ({
             {dataStatus.data.details?.ohlcv?.timeframes && (
               <div className="mb-4">
                 <h3 className="text-lg font-medium text-secondary-800 dark:text-secondary-200 mb-2">
-                  OHLCV時間足別詳細
+                  詳細
                 </h3>
                 <div className="grid grid-cols-1 md:grid-cols-5 gap-2 text-xs">
                   {Object.entries(dataStatus.data.details.ohlcv.timeframes).map(
