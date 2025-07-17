@@ -274,6 +274,68 @@ export const useExternalMarketData = () => {
   );
 
   /**
+   * 外部市場データの履歴データを収集
+   */
+  const collectHistoricalData = useCallback(
+    async (
+      symbols?: string[],
+      period: string = "5y",
+      startDate?: string,
+      endDate?: string
+    ): Promise<ExternalMarketCollectionResult> => {
+      try {
+        const url = new URL(
+          "/api/data/external-market/collect-historical",
+          window.location.origin
+        );
+        url.searchParams.set("period", period);
+
+        if (symbols && symbols.length > 0) {
+          symbols.forEach((symbol) => {
+            url.searchParams.append("symbols", symbol);
+          });
+        }
+
+        if (startDate) {
+          url.searchParams.set("start_date", startDate);
+        }
+
+        if (endDate) {
+          url.searchParams.set("end_date", endDate);
+        }
+
+        const response = await fetch(url.toString(), {
+          method: "POST",
+        });
+
+        const result = await response.json();
+
+        if (!response.ok) {
+          throw new Error(
+            result.message || "外部市場データの履歴収集に失敗しました"
+          );
+        }
+
+        if (result.success) {
+          return result.data;
+        } else {
+          throw new Error(
+            result.message || "外部市場データの履歴収集に失敗しました"
+          );
+        }
+      } catch (err) {
+        const errorMessage =
+          err instanceof Error
+            ? err.message
+            : "外部市場データの履歴収集に失敗しました";
+        console.error("外部市場データ履歴収集エラー:", err);
+        throw new Error(errorMessage);
+      }
+    },
+    []
+  );
+
+  /**
    * 外部市場データの状態を取得
    */
   const fetchStatus = useCallback(async () => {
@@ -324,6 +386,7 @@ export const useExternalMarketData = () => {
     fetchLatestData,
     collectData,
     collectIncrementalData,
+    collectHistoricalData,
     fetchStatus,
     refetch,
   };

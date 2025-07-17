@@ -300,16 +300,44 @@ class ExternalMarketDataCollector:
 
             if latest_timestamp:
                 logger.info(f"最新の外部市場データ: {latest_timestamp}")
-                # 通常は日次更新なので、少数のデータを取得
-                period = "5d"  # 5日分
+
+                # 最新データの翌日から今日までを取得
+                from datetime import datetime, timedelta
+
+                start_date = (latest_timestamp + timedelta(days=1)).strftime("%Y-%m-%d")
+                end_date = datetime.now().strftime("%Y-%m-%d")
+
+                logger.info(f"差分収集期間: {start_date} ～ {end_date}")
+
+                # 日付指定で差分データを取得
+                if not self.external_market_service:
+                    self.external_market_service = ExternalMarketService()
+                    await self.external_market_service.__aenter__()
+
+                result = await self.external_market_service.fetch_and_save_external_market_data(
+                    symbols=symbols,
+                    start_date=start_date,
+                    end_date=end_date,
+                    repository=repository,
+                )
             else:
                 logger.info("外部市場データが存在しません。初回収集を実行します。")
-                # 初回収集時は2020年からのデータを取得するため5年分を取得
-                period = "5y"  # 5年分（2020年からのデータを確実に取得）
+                # 初回収集時は2020年からのデータを取得
+                from datetime import datetime
 
-            result = await self.collect_external_market_data(
-                symbols=symbols, period=period, db_session=session
-            )
+                start_date = "2020-01-01"
+                end_date = datetime.now().strftime("%Y-%m-%d")
+
+                if not self.external_market_service:
+                    self.external_market_service = ExternalMarketService()
+                    await self.external_market_service.__aenter__()
+
+                result = await self.external_market_service.fetch_and_save_external_market_data(
+                    symbols=symbols,
+                    start_date=start_date,
+                    end_date=end_date,
+                    repository=repository,
+                )
 
             # 結果にメタデータを追加
             result["collection_type"] = "incremental"
@@ -336,6 +364,8 @@ class ExternalMarketDataCollector:
         self,
         symbols: Optional[list] = None,
         period: str = "5y",
+        start_date: Optional[str] = None,
+        end_date: Optional[str] = None,
         db_session: Optional[SessionLocal] = None,
     ) -> Dict:
         """
@@ -344,6 +374,8 @@ class ExternalMarketDataCollector:
         Args:
             symbols: 取得するシンボルのリスト
             period: 取得期間
+            start_date: 開始日（YYYY-MM-DD形式、periodより優先）
+            end_date: 終了日（YYYY-MM-DD形式、periodより優先）
             db_session: データベースセッション（オプション）
 
         Returns:
@@ -358,13 +390,31 @@ class ExternalMarketDataCollector:
             data_range = repository.get_data_range()
             logger.info(f"既存の外部市場データ範囲: {data_range}")
 
-            result = await self.collect_external_market_data(
-                symbols=symbols, period=period, db_session=session
-            )
+            # 日付指定がある場合は、external_market_serviceに直接渡す
+            if start_date or end_date:
+                if not self.external_market_service:
+                    self.external_market_service = ExternalMarketService()
+                    await self.external_market_service.__aenter__()
+
+                result = await self.external_market_service.fetch_and_save_external_market_data(
+                    symbols=symbols,
+                    period=period,
+                    start_date=start_date,
+                    end_date=end_date,
+                    repository=repository,
+                )
+            else:
+                result = await self.collect_external_market_data(
+                    symbols=symbols, period=period, db_session=session
+                )
 
             # 結果にメタデータを追加
             result["collection_type"] = "historical"
             result["existing_data_range"] = data_range
+            if start_date:
+                result["start_date"] = start_date
+            if end_date:
+                result["end_date"] = end_date
 
             return result
 

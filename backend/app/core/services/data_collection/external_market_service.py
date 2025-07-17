@@ -186,6 +186,8 @@ class ExternalMarketService:
         self,
         symbols: Optional[List[str]] = None,
         period: str = "1mo",
+        start_date: Optional[str] = None,
+        end_date: Optional[str] = None,
         repository: Optional[ExternalMarketRepository] = None,
     ) -> Dict:
         """
@@ -194,6 +196,8 @@ class ExternalMarketService:
         Args:
             symbols: 取得するシンボルのリスト
             period: 取得期間
+            start_date: 開始日（YYYY-MM-DD形式、periodより優先）
+            end_date: 終了日（YYYY-MM-DD形式、periodより優先）
             repository: データベースリポジトリ
 
         Returns:
@@ -201,7 +205,9 @@ class ExternalMarketService:
         """
         try:
             # データ取得
-            external_market_data = self.fetch_external_market_data(symbols, period)
+            external_market_data = self.fetch_external_market_data(
+                symbols=symbols, period=period, start_date=start_date, end_date=end_date
+            )
 
             if not external_market_data:
                 logger.warning("取得した外部市場データが空です")

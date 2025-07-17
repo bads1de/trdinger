@@ -278,6 +278,12 @@ async def collect_incremental_external_market_data(
 async def collect_historical_external_market_data(
     symbols: Optional[List[str]] = Query(None, description="取得するシンボルのリスト"),
     period: str = Query("5y", description="取得期間"),
+    start_date: Optional[str] = Query(
+        None, description="開始日（YYYY-MM-DD形式、periodより優先）"
+    ),
+    end_date: Optional[str] = Query(
+        None, description="終了日（YYYY-MM-DD形式、periodより優先）"
+    ),
     db: Session = Depends(get_db),
 ) -> Dict:
     """
@@ -286,6 +292,8 @@ async def collect_historical_external_market_data(
     Args:
         symbols: 取得するシンボルのリスト
         period: 取得期間
+        start_date: 開始日（YYYY-MM-DD形式、periodより優先）
+        end_date: 終了日（YYYY-MM-DD形式、periodより優先）
         db: データベースセッション
 
     Returns:
@@ -294,7 +302,11 @@ async def collect_historical_external_market_data(
     try:
         async with ExternalMarketDataCollector() as collector:
             result = await collector.collect_historical_external_market_data(
-                symbols=symbols, period=period, db_session=db
+                symbols=symbols,
+                period=period,
+                start_date=start_date,
+                end_date=end_date,
+                db_session=db,
             )
 
         if result["success"]:
