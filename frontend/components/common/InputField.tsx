@@ -7,8 +7,8 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { Input } from "@/components/ui/input"; // Import Input component
-import { cn } from "@/lib/utils"; // Import cn utility
+import { Input } from "@/components/ui/input";
+import { cn } from "@/lib/utils";
 
 interface InputFieldProps {
   label: string;

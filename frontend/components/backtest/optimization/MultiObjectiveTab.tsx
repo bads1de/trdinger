@@ -11,7 +11,7 @@ import { SelectField } from "@/components/common/SelectField";
 import ApiButton from "@/components/button/ApiButton";
 import { OPTIMIZATION_METHODS } from "@/constants/backtest";
 import { MultiObjectiveConfig } from "@/types/optimization";
-import { BacktestConfig } from "@/types/optimization";
+import { BacktestConfig } from "@/types/backtest";
 
 interface MultiObjectiveTabProps {
   baseConfig: BacktestConfig;

@@ -33,6 +33,7 @@ export interface ChartEquityPoint {
   equity: number;
   drawdown: number;
   formattedDate: string;
+  buyHold?: number;
 }
 
 /**
@@ -103,4 +104,20 @@ export interface BacktestConfig {
     strategy_type: string;
     parameters: Record<string, any>;
   };
+}
+
+/**
+ * チャートコンテナのProps
+ */
+export interface ChartContainerProps {
+  title: string;
+  subtitle?: string;
+  children: React.ReactNode;
+  actions?: React.ReactNode;
+  data: any[] | null | undefined;
+  loading?: boolean;
+  error?: string | null;
+  height?: number;
+  className?: string;
+  theme?: "dark" | "light";
 }

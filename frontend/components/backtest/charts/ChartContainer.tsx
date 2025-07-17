@@ -1,3 +1,5 @@
+// cspell:ignore backtest
+
 /**
  * チャート共通コンテナコンポーネント
  *

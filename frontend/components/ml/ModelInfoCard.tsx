@@ -19,11 +19,8 @@ import {
 } from "lucide-react";
 
 interface ModelInfoCardProps {
-  /** 自動更新間隔（秒） */
   autoRefreshInterval?: number;
-  /** カスタムクラス名 */
   className?: string;
-  /** 詳細情報の初期表示状態 */
   defaultExpanded?: boolean;
 }
 

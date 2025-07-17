@@ -95,6 +95,21 @@ export interface MultiObjectiveGAResult {
   };
   message: string;
 }
+/**
+ * マルチ目的最適化の設定
+ */
+export interface MultiObjectiveConfig {
+  base_config: BacktestConfig;
+  optimization_params: {
+    objectives: string[];
+    weights: number[];
+    method: "grid" | "sambo";
+    max_tries?: number;
+    parameters: {
+      [key: string]: [number, number, number];
+    };
+  };
+}
 
 // パレート最適解
 export interface ParetoSolution {
@@ -129,5 +144,3 @@ export interface SimplifiedGAConfig {
     };
   };
 }
-
-

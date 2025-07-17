@@ -15,15 +15,10 @@ import { SUPPORTED_TIMEFRAMES } from "@/constants";
  * 時間軸選択コンポーネントのプロパティ
  */
 interface TimeFrameSelectorProps {
-  /** 現在選択されている時間軸 */
   selectedTimeFrame: TimeFrame;
-  /** 時間軸変更時のコールバック */
   onTimeFrameChange: (timeFrame: TimeFrame) => void;
-  /** 無効化フラグ */
   disabled?: boolean;
-  /** 表示モード */
   mode?: "dropdown" | "buttons" | "compact";
-  /** カスタムクラス名 */
   className?: string;
 }
 

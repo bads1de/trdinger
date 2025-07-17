@@ -6,7 +6,7 @@ import ActionButton from "@/components/common/ActionButton";
 import { useBayesianOptimization } from "@/hooks/useBayesianOptimization";
 import BayesianOptimizationForm from "./BayesianOptimizationForm";
 import BayesianOptimizationResults from "./BayesianOptimizationResults";
-import { BacktestConfig } from "@/types/optimization";
+import { BacktestConfig } from "@/types/backtest";
 
 interface BayesianOptimizationModalProps {
   isOpen: boolean;

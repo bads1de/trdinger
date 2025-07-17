@@ -10,7 +10,7 @@ import InfoModal from "@/components/common/InfoModal";
 import { useModelPerformance } from "@/hooks/useModelPerformance";
 import { formatTrainingTime } from "@/utils/formatters";
 import { getScoreColorClass } from "@/utils/colorUtils";
-import { ML_METRICS_INFO, METRIC_CATEGORIES } from "@/constants/mlMetricsInfo";
+import { ML_METRICS_INFO } from "@/constants/mlMetricsInfo";
 import {
   TrendingUp,
   Target,
@@ -26,7 +26,6 @@ import {
 } from "lucide-react";
 
 interface ModelPerformanceCardProps {
-  /** カスタムクラス名 */
   className?: string;
 }
 

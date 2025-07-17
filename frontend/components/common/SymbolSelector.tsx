@@ -14,23 +14,14 @@ import { TradingPair } from "@/types/market-data";
  * 通貨ペア選択コンポーネントのプロパティ
  */
 interface SymbolSelectorProps {
-  /** 利用可能な通貨ペアのリスト */
   symbols?: TradingPair[];
-  /** 現在選択されている通貨ペア */
   selectedSymbol: string;
-  /** 通貨ペア変更時のコールバック */
   onSymbolChange: (symbol: string) => void;
-  /** ローディング状態 */
   loading?: boolean;
-  /** 無効化フラグ */
   disabled?: boolean;
-  /** 表示モード */
   mode?: "dropdown" | "buttons" | "compact";
-  /** カテゴリ別表示を有効にするか */
   showCategories?: boolean;
-  /** 検索機能を有効にするか */
   enableSearch?: boolean;
-  /** カスタムクラス名 */
   className?: string;
 }
 

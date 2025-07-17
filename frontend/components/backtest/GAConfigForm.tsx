@@ -11,10 +11,8 @@ import { InputField } from "@/components/common/InputField";
 import { SelectField } from "@/components/common/SelectField";
 import ActionButton from "@/components/common/ActionButton";
 import ApiButton from "@/components/button/ApiButton";
-import {
-  GAConfig as GAConfigType,
-  BacktestConfig as BacktestConfigType,
-} from "@/types/optimization";
+import { GAConfig as GAConfigType } from "@/types/optimization";
+import { BacktestConfig as BacktestConfigType } from "@/types/backtest";
 import { BaseBacktestConfigForm } from "./BaseBacktestConfigForm";
 import { GA_INFO_MESSAGES } from "@/constants/info";
 import { ObjectiveSelection } from "./optimization/ObjectiveSelection";

@@ -7,15 +7,7 @@ import ErrorDisplay from "@/components/common/ErrorDisplay";
 import LoadingSpinner from "@/components/common/LoadingSpinner";
 import { useMLModelStatus } from "@/hooks/useMLModelStatus";
 import { formatProbability } from "@/utils/formatters";
-import {
-  Brain,
-  TrendingUp,
-  Database,
-  CheckCircle,
-  AlertCircle,
-  BarChart3,
-  Activity,
-} from "lucide-react";
+import { Brain, TrendingUp, BarChart3, Activity } from "lucide-react";
 
 /**
  * MLモデル状態表示コンポーネント

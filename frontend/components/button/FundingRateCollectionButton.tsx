@@ -13,7 +13,7 @@ import ApiButton from "./ApiButton";
 import {
   BulkFundingRateCollectionResult,
   FundingRateCollectionResult,
-} from "@/types/strategy";
+} from "@/types/funding-rate";
 
 /**
  * Funding Rate収集ボタンコンポーネントのプロパティ

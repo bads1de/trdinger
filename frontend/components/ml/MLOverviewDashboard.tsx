@@ -17,7 +17,6 @@ import {
   TrendingUp,
   BarChart3,
   RefreshCw,
-  Settings,
   Activity,
   AlertTriangle,
 } from "lucide-react";
