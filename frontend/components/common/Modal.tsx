@@ -1,15 +1,14 @@
-/**
- * 汎用モーダルコンポーネント
- *
- * ポータル機能、オーバーレイ、アニメーション、アクセシビリティ対応を含む
- * 汎用的なモーダルコンポーネントです。
- *
- */
-
 "use client";
 
-import React, { useEffect, useRef } from "react";
-import { createPortal } from "react-dom";
+import React from "react";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogClose,
+} from "@/components/ui/dialog";
+import { cn } from "@/lib/utils";
 import { ModalProps, ModalSize } from "@/types/common";
 
 /**
@@ -40,98 +39,32 @@ const Modal: React.FC<ModalProps> = ({
   headerClassName = "",
   contentClassName = "",
 }) => {
-  const modalRef = useRef<HTMLDivElement>(null);
-
-  // ESCキーでモーダルを閉じる
-  useEffect(() => {
-    if (!closeOnEscape || !isOpen) return;
-
-    const handleEscape = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        onClose();
-      }
-    };
-
-    document.addEventListener("keydown", handleEscape);
-    return () => document.removeEventListener("keydown", handleEscape);
-  }, [isOpen, closeOnEscape, onClose]);
-
-  // モーダルが開いている間はbodyのスクロールを無効化
-  useEffect(() => {
-    if (isOpen) {
-      document.body.style.overflow = "hidden";
-    } else {
-      document.body.style.overflow = "unset";
-    }
-
-    return () => {
-      document.body.style.overflow = "unset";
-    };
-  }, [isOpen]);
-
-  // フォーカス管理
-  useEffect(() => {
-    if (isOpen && modalRef.current) {
-      modalRef.current.focus();
-    }
-  }, [isOpen]);
-
-  // オーバーレイクリックでモーダルを閉じる
-  const handleOverlayClick = (event: React.MouseEvent<HTMLDivElement>) => {
-    if (closeOnOverlayClick && event.target === event.currentTarget) {
-      onClose();
-    }
-  };
-
-  if (!isOpen) return null;
-
-  const modalContent = (
-    <div
-      className={`fixed inset-0 z-50 flex items-center justify-center p-4 ${
-        isOpen ? "animate-fade-in" : "animate-fade-out"
-      }`}
-      onClick={handleOverlayClick}
-    >
-      {/* オーバーレイ背景 */}
-      <div className="absolute inset-0 bg-black bg-opacity-50 backdrop-blur-sm" />
-
-      {/* モーダルコンテンツ */}
-      <div
-        ref={modalRef}
-        tabIndex={-1}
-        className={`
-          relative w-full ${sizeClasses[size]} max-h-[90vh] 
-          bg-black rounded-lg shadow-2xl border border-black
-          flex flex-col overflow-hidden
-          ${isOpen ? "animate-scale-in" : "animate-scale-out"}
-          ${className}
-        `}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby={title ? "modal-title" : undefined}
+  return (
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent
+        className={cn(
+          "fixed left-[50%] top-[50%] z-50 grid w-full translate-x-[-50%] translate-y-[-50%] gap-4 shadow-lg duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%] data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%] sm:rounded-lg",
+          "bg-black rounded-lg shadow-2xl border border-black flex flex-col overflow-hidden",
+          sizeClasses[size],
+          "max-h-[90vh]",
+          className
+        )}
+        onEscapeKeyDown={closeOnEscape ? undefined : (e) => e.preventDefault()}
+        onPointerDownOutside={closeOnOverlayClick ? undefined : (e) => e.preventDefault()}
       >
-        {/* ヘッダー */}
         {(title || showCloseButton) && (
-          <div
-            className={`
-              flex items-center justify-between p-6 border-b border-gray-700
-              ${headerClassName}
-            `}
-          >
+          <DialogHeader className={cn("p-6 border-b border-gray-700", headerClassName)}>
             {title && (
-              <h2 id="modal-title" className="text-xl font-semibold text-white">
+              <DialogTitle className="text-xl font-semibold text-white">
                 {title}
-              </h2>
+              </DialogTitle>
             )}
             {showCloseButton && (
-              <button
-                onClick={onClose}
-                className="
-                  p-2 text-gray-400 hover:text-white hover:bg-gray-800 
-                  rounded-lg transition-colors focus:outline-none focus:ring-2 
-                  focus:ring-blue-500
-                "
-                aria-label="モーダルを閉じる"
+              <DialogClose
+                className={cn(
+                  "absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground",
+                  "p-2 text-gray-400 hover:text-white hover:bg-gray-800 rounded-lg transition-colors focus:ring-blue-500"
+                )}
               >
                 <svg
                   className="w-5 h-5"
@@ -146,26 +79,23 @@ const Modal: React.FC<ModalProps> = ({
                     d="M6 18L18 6M6 6l12 12"
                   />
                 </svg>
-              </button>
+                <span className="sr-only">Close</span>
+              </DialogClose>
             )}
-          </div>
+          </DialogHeader>
         )}
 
-        {/* コンテンツエリア */}
         <div
-          className={`
-            flex-1 overflow-y-auto p-6
-            ${contentClassName}
-          `}
+          className={cn(
+            "flex-1 overflow-y-auto p-6",
+            contentClassName
+          )}
         >
           {children}
         </div>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
-
-  // ポータルを使用してbody直下にレンダリング
-  return createPortal(modalContent, document.body);
 };
 
 export default Modal;

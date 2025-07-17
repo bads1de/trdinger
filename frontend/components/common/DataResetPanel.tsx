@@ -12,6 +12,8 @@ import React from "react";
 import DataResetButton, {
   DataResetResult,
 } from "@/components/button/DataResetButton";
+import { Button } from "@/components/ui/button";
+import { X } from "lucide-react";
 import { useDataReset } from "@/hooks/useDataReset";
 
 /**
@@ -72,24 +74,14 @@ const DataResetPanel: React.FC<DataResetPanelProps> = ({
             </div>
           </div>
           {onClose && (
-            <button
+            <Button
+              variant="ghost"
+              size="icon"
               onClick={onClose}
               className="text-warning-600 hover:text-warning-800 dark:text-warning-400 dark:hover:text-warning-200"
             >
-              <svg
-                className="w-5 h-5"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M6 18L18 6M6 6l12 12"
-                />
-              </svg>
-            </button>
+              <X className="w-5 h-5" />
+            </Button>
           )}
         </div>
 

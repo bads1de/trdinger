@@ -7,6 +7,8 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { Input } from "@/components/ui/input"; // Import Input component
+import { cn } from "@/lib/utils"; // Import cn utility
 
 interface InputFieldProps {
   label: string;
@@ -65,7 +67,7 @@ export const InputField: React.FC<InputFieldProps> = ({
       </div>
       {labelAddon}
     </div>
-    <input
+    <Input // Use the Input component
       type={type}
       value={value}
       onChange={(e) => {
@@ -75,7 +77,10 @@ export const InputField: React.FC<InputFieldProps> = ({
           onChange(e.target.value);
         }
       }}
-      className={`w-full p-3 bg-gray-800 border border-secondary-700 text-white rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent ${className}`}
+      className={cn(
+        "w-full p-3 bg-gray-800 border border-secondary-700 text-white rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent",
+        className
+      )}
       min={min}
       max={max}
       step={step}

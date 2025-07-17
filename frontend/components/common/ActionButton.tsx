@@ -1,4 +1,7 @@
 import React from "react";
+import { Button, ButtonProps } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
+import LoadingSpinner from "./LoadingSpinner"; // Import LoadingSpinner
 
 interface ActionButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: "primary" | "secondary" | "success" | "warning" | "danger";
@@ -8,10 +11,6 @@ interface ActionButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement
   loadingText?: string;
   children: React.ReactNode;
 }
-
-const LoadingSpinner: React.FC = () => (
-  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current" />
-);
 
 const ActionButton: React.FC<ActionButtonProps> = ({
   children,
@@ -26,7 +25,35 @@ const ActionButton: React.FC<ActionButtonProps> = ({
 }) => {
   const isDisabled = disabled || loading;
 
-  const getVariantClasses = () => {
+  const getButtonVariant = (): ButtonProps["variant"] => {
+    switch (variant) {
+      case "primary":
+        return "default";
+      case "secondary":
+        return "secondary";
+      case "danger":
+        return "destructive";
+      case "success":
+      case "warning":
+      default:
+        return "default";
+    }
+  };
+
+  const getButtonSize = (): ButtonProps["size"] => {
+    switch (size) {
+      case "sm":
+        return "sm";
+      case "md":
+        return "default";
+      case "lg":
+        return "lg";
+      default:
+        return "default";
+    }
+  };
+
+  const getCustomClasses = () => {
     switch (variant) {
       case "primary":
         return "bg-cyan-600/90 text-white border-cyan-500 hover:bg-cyan-600 hover:shadow-[0_0_15px_rgba(0,255,255,0.3)] focus:ring-cyan-500 disabled:bg-cyan-800/50 disabled:text-cyan-500/50";
@@ -43,38 +70,21 @@ const ActionButton: React.FC<ActionButtonProps> = ({
     }
   };
 
-  const getSizeClasses = () => {
-    switch (size) {
-      case "sm":
-        return "px-3 py-1.5 text-xs";
-      case "md":
-        return "px-4 py-2 text-sm";
-      case "lg":
-        return "px-6 py-3 text-base";
-      default:
-        return "px-4 py-2 text-sm";
-    }
-  };
-
-  const baseClasses = `
-    inline-flex items-center justify-center gap-2 
-    border rounded-lg font-semibold tracking-wide
-    transition-all duration-200 ease-out
-    focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-900
-    disabled:cursor-not-allowed disabled:shadow-none
-  `
-    .replace(/\s+/g, " ")
-    .trim();
-
   return (
-    <button
-      className={`${baseClasses} ${getSizeClasses()} ${getVariantClasses()} ${className}`}
+    <Button
+      variant={getButtonVariant()}
+      size={getButtonSize()}
+      className={cn(
+        "border rounded-lg font-semibold tracking-wide transition-all duration-200 ease-out focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-900 disabled:cursor-not-allowed disabled:shadow-none",
+        getCustomClasses(),
+        className
+      )}
       disabled={isDisabled}
       {...props}
     >
       {loading ? (
         <>
-          <LoadingSpinner />
+          <LoadingSpinner size="sm" />
           <span className="whitespace-nowrap">{loadingText}</span>
         </>
       ) : (
@@ -83,7 +93,7 @@ const ActionButton: React.FC<ActionButtonProps> = ({
           <span className="whitespace-nowrap">{children}</span>
         </>
       )}
-    </button>
+    </Button>
   );
 };
 

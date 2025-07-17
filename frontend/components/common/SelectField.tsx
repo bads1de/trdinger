@@ -1,6 +1,14 @@
 "use client";
 
 import React from "react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { cn } from "@/lib/utils";
 
 interface SelectFieldProps {
   label: string;
@@ -30,18 +38,22 @@ export const SelectField: React.FC<SelectFieldProps> = ({
       </label>
       {labelAddon}
     </div>
-    <select
-      value={value}
-      onChange={(e) => onChange(e.target.value)}
-      className={`w-full p-3 bg-gray-800 border border-secondary-700 text-white rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent ${className}`}
-      required={required}
-      disabled={disabled}
-    >
-      {options.map((option) => (
-        <option key={option.value} value={option.value}>
-          {option.label}
-        </option>
-      ))}
-    </select>
+    <Select onValueChange={onChange} value={value} disabled={disabled}>
+      <SelectTrigger
+        className={cn(
+          "w-full p-3 bg-gray-800 border border-secondary-700 text-white rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent",
+          className
+        )}
+      >
+        <SelectValue placeholder={label} />
+      </SelectTrigger>
+      <SelectContent>
+        {options.map((option) => (
+          <SelectItem key={option.value} value={option.value}>
+            {option.label}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
   </div>
 );

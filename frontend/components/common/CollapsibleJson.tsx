@@ -14,6 +14,12 @@ import {
   Clipboard,
   Check,
 } from "lucide-react";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
+import { cn } from "@/lib/utils";
 
 interface CollapsibleJsonProps {
   /** 表示するJSONデータ */
@@ -95,75 +101,90 @@ const CollapsibleJson: React.FC<CollapsibleJsonProps> = ({
   const styles = getThemeStyles();
 
   return (
-    <div
-      className={`p-4 rounded-lg border shadow-lg ${styles.container} ${className}`}
+    <Collapsible
+      open={isExpanded}
+      onOpenChange={setIsExpanded}
+      className={cn(
+        "p-4 rounded-lg border shadow-lg",
+        styles.container,
+        className
+      )}
     >
-      {/* ヘッダー */}
-      <div className="flex items-center justify-between mb-3">
-        <div className="flex items-center">
-          <div
-            className={`w-2 h-2 rounded-full mr-2 ${styles.indicator} ${
-              theme === "matrix" ? "animate-pulse" : ""
-            }`}
-          ></div>
-          <h4
-            className={`font-mono text-sm font-semibold tracking-wide ${styles.header}`}
-          >
-            {title}
-          </h4>
-          {isLarge && (
-            <span className={`ml-2 text-xs px-2 py-1 rounded ${styles.button}`}>
-              {(jsonSize / 1024).toFixed(1)}KB
-            </span>
-          )}
-        </div>
-
-        <div className="flex items-center space-x-2">
-          {/* コピーボタン */}
-          <button
-            onClick={handleCopy}
-            className={`flex items-center px-3 py-1 rounded transition-colors ${styles.button}`}
-            aria-label="JSONをコピー"
-            disabled={isCopied}
-          >
-            {isCopied ? (
-              <>
-                <Check className="w-4 h-4 mr-1 text-green-500" />
-                <span className="text-xs">コピー完了</span>
-              </>
-            ) : (
-              <>
-                <Clipboard className="w-4 h-4 mr-1" />
-                <span className="text-xs">コピー</span>
-              </>
+      <CollapsibleTrigger asChild>
+        {/* ヘッダー */}
+        <div className="flex items-center justify-between mb-3 cursor-pointer">
+          <div className="flex items-center">
+            <div
+              className={cn(
+                "w-2 h-2 rounded-full mr-2",
+                styles.indicator,
+                theme === "matrix" && "animate-pulse"
+              )}
+            ></div>
+            <h4
+              className={cn(
+                "font-mono text-sm font-semibold tracking-wide",
+                styles.header
+              )}
+            >
+              {title}
+            </h4>
+            {isLarge && (
+              <span className={cn("ml-2 text-xs px-2 py-1 rounded", styles.button)}>
+                {(jsonSize / 1024).toFixed(1)}KB
+              </span>
             )}
-          </button>
+          </div>
 
-          {/* 展開/折りたたみボタン */}
-          <button
-            onClick={() => setIsExpanded(!isExpanded)}
-            className={`flex items-center px-3 py-1 rounded transition-colors ${styles.button}`}
-            aria-label={isExpanded ? "折りたたむ" : "展開する"}
-          >
-          {isExpanded ? (
-            <>
-              <ChevronDown className="w-4 h-4 mr-1" />
-              <span className="text-xs">折りたたむ</span>
-            </>
-          ) : (
-            <>
-              <ChevronRight className="w-4 h-4 mr-1" />
-              <span className="text-xs">展開する</span>
-            </>
-          )}
-          </button>
+          <div className="flex items-center space-x-2">
+            {/* コピーボタン */}
+            <button
+              onClick={(e) => {
+                e.stopPropagation(); // Prevent collapsible from toggling
+                handleCopy();
+              }}
+              className={cn(
+                "flex items-center px-3 py-1 rounded transition-colors",
+                styles.button
+              )}
+              aria-label="JSONをコピー"
+              disabled={isCopied}
+            >
+              {isCopied ? (
+                <>
+                  <Check className="w-4 h-4 mr-1 text-green-500" />
+                  <span className="text-xs">コピー完了</span>
+                </>
+              ) : (
+                <>
+                  <Clipboard className="w-4 h-4 mr-1" />
+                  <span className="text-xs">コピー</span>
+                </>
+              )}
+            </button>
+
+            {/* 展開/折りたたみアイコン */}
+            <button
+              className={cn(
+                "flex items-center px-3 py-1 rounded transition-colors",
+                styles.button
+              )}
+              aria-label={isExpanded ? "折りたたむ" : "展開する"}
+            >
+              {isExpanded ? (
+                <ChevronDown className="w-4 h-4" />
+              ) : (
+                <ChevronRight className="w-4 h-4" />
+              )}
+            </button>
+          </div>
         </div>
-      </div>
+      </CollapsibleTrigger>
 
       {/* プレビュー（折りたたみ時） */}
       {!isExpanded && (
         <div className="relative">
-          <div className={`p-3 rounded border ${styles.content}`}>
+          <div className={cn("p-3 rounded border", styles.content)}>
             <div className="flex items-center justify-between">
               <span className="text-xs opacity-70">
                 {Object.keys(data || {}).length} 個のプロパティ
@@ -188,11 +209,14 @@ const CollapsibleJson: React.FC<CollapsibleJsonProps> = ({
         </div>
       )}
 
-      {/* 展開されたJSON */}
-      {isExpanded && (
+      <CollapsibleContent asChild>
+        {/* 展開されたJSON */}
         <div className="relative">
           <div
-            className={`overflow-auto ${styles.content} rounded border shadow-inner`}
+            className={cn(
+              "overflow-auto rounded border shadow-inner",
+              styles.content
+            )}
             style={{ maxHeight }}
           >
             <pre className="font-mono text-xs leading-relaxed whitespace-pre-wrap p-3">
@@ -201,10 +225,13 @@ const CollapsibleJson: React.FC<CollapsibleJsonProps> = ({
           </div>
           {/* テーマに応じたオーバーレイ効果 */}
           <div
-            className={`absolute inset-0 rounded pointer-events-none ${styles.overlay}`}
+            className={cn(
+              "absolute inset-0 rounded pointer-events-none",
+              styles.overlay
+            )}
           ></div>
         </div>
-      )}
+      </CollapsibleContent>
 
       {/* フッター情報 */}
       {isExpanded && isLarge && (
@@ -213,8 +240,9 @@ const CollapsibleJson: React.FC<CollapsibleJsonProps> = ({
           <span>{jsonSize.toLocaleString()} 文字</span>
         </div>
       )}
-    </div>
+    </Collapsible>
   );
 };
 
 export default CollapsibleJson;
+
