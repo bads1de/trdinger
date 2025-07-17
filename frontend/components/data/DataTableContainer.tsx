@@ -2,18 +2,22 @@ import React from "react";
 import OHLCVDataTable from "@/components/table/OHLCVDataTable";
 import FundingRateDataTable from "@/components/table/FundingRateDataTable";
 import OpenInterestDataTable from "@/components/table/OpenInterestDataTable";
+import FearGreedDataTable from "@/components/data/FearGreedDataTable";
 import {
   PriceData,
   FundingRateData,
   OpenInterestData,
   TimeFrame,
 } from "@/types/strategy";
+import { FearGreedIndexData } from "@/app/api/data/fear-greed/route";
 
 interface DataTableContainerProps {
   selectedSymbol: string;
   selectedTimeFrame: TimeFrame;
-  activeTab: "ohlcv" | "funding" | "openinterest";
-  setActiveTab: (tab: "ohlcv" | "funding" | "openinterest") => void;
+  activeTab: "ohlcv" | "funding" | "openinterest" | "feargreed";
+  setActiveTab: (
+    tab: "ohlcv" | "funding" | "openinterest" | "feargreed"
+  ) => void;
   ohlcvData: PriceData[];
   loading: boolean;
   error: string;
@@ -23,6 +27,9 @@ interface DataTableContainerProps {
   openInterestData: OpenInterestData[];
   openInterestLoading: boolean;
   openInterestError: string;
+  fearGreedData?: FearGreedIndexData[];
+  fearGreedLoading?: boolean;
+  fearGreedError?: string;
 }
 
 const DataTableContainer: React.FC<DataTableContainerProps> = ({
@@ -39,6 +46,9 @@ const DataTableContainer: React.FC<DataTableContainerProps> = ({
   openInterestData,
   openInterestLoading,
   openInterestError,
+  fearGreedData = [],
+  fearGreedLoading = false,
+  fearGreedError = "",
 }) => {
   return (
     <div className="enterprise-card animate-slide-up">
@@ -79,6 +89,16 @@ const DataTableContainer: React.FC<DataTableContainerProps> = ({
                 }`}
               >
                 OI
+              </button>
+              <button
+                onClick={() => setActiveTab("feargreed")}
+                className={`px-4 py-2 text-sm font-medium rounded-md transition-colors duration-200 ${
+                  activeTab === "feargreed"
+                    ? "bg-primary-600 text-white"
+                    : "text-gray-400 hover:text-gray-100"
+                }`}
+              >
+                😨 F&G
               </button>
             </div>
           </div>
@@ -124,6 +144,33 @@ const DataTableContainer: React.FC<DataTableContainerProps> = ({
                   </span>
                 </>
               )}
+            {activeTab === "feargreed" &&
+              fearGreedData.length > 0 &&
+              !fearGreedLoading && (
+                <>
+                  <span className="badge-primary">
+                    {fearGreedData.length}件
+                  </span>
+                  <span className="badge-info">
+                    最新値: {fearGreedData[0]?.value}/100
+                  </span>
+                  <span
+                    className={`badge-${
+                      fearGreedData[0]?.value <= 20
+                        ? "error"
+                        : fearGreedData[0]?.value <= 40
+                        ? "warning"
+                        : fearGreedData[0]?.value <= 60
+                        ? "info"
+                        : fearGreedData[0]?.value <= 80
+                        ? "success"
+                        : "primary"
+                    }`}
+                  >
+                    {fearGreedData[0]?.value_classification}
+                  </span>
+                </>
+              )}
           </div>
         </div>
 
@@ -150,6 +197,13 @@ const DataTableContainer: React.FC<DataTableContainerProps> = ({
               data={openInterestData}
               loading={openInterestLoading}
               error={openInterestError}
+            />
+          )}
+          {activeTab === "feargreed" && (
+            <FearGreedDataTable
+              data={fearGreedData}
+              loading={fearGreedLoading}
+              error={fearGreedError}
             />
           )}
         </div>

@@ -206,6 +206,73 @@ class OpenInterestData(Base):
         }
 
 
+class FearGreedIndexData(Base):
+    """
+    Fear & Greed Index データテーブル
+
+    Alternative.me APIから取得したセンチメント指標を保存します。
+    TimescaleDBのハイパーテーブルとして最適化されています。
+    """
+
+    __tablename__ = "fear_greed_index_data"
+
+    # 主キー
+    id = Column(Integer, primary_key=True, autoincrement=True)
+
+    # Fear & Greed Index データ
+    value = Column(Integer, nullable=False)
+    value_classification = Column(String(20), nullable=False)
+
+    # タイムスタンプ
+    data_timestamp = Column(DateTime(timezone=True), nullable=False, index=True)
+    timestamp = Column(DateTime(timezone=True), nullable=False, index=True)
+
+    # メタデータ
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
+
+    # インデックス定義
+    __table_args__ = (
+        # 複合インデックス（クエリ最適化）
+        Index("idx_fear_greed_data_timestamp", "data_timestamp"),
+        Index("idx_fear_greed_timestamp", "timestamp"),
+        Index("idx_fear_greed_value", "value"),
+        # ユニーク制約（重複データ防止）
+        Index("uq_fear_greed_data_timestamp", "data_timestamp", unique=True),
+    )
+
+    def __repr__(self):
+        return (
+            f"<FearGreedIndexData(value={self.value}, "
+            f"value_classification='{self.value_classification}', "
+            f"data_timestamp='{self.data_timestamp}')>"
+        )
+
+    def to_dict(self):
+        """辞書形式に変換"""
+        return {
+            "id": self.id,
+            "value": self.value,
+            "value_classification": self.value_classification,
+            "data_timestamp": (
+                self.data_timestamp.isoformat()
+                if self.data_timestamp is not None
+                else None
+            ),
+            "timestamp": (
+                self.timestamp.isoformat() if self.timestamp is not None else None
+            ),
+            "created_at": (
+                self.created_at.isoformat() if self.created_at is not None else None
+            ),
+            "updated_at": (
+                self.updated_at.isoformat() if self.updated_at is not None else None
+            ),
+        }
+
+
 class BacktestResult(Base):
     """
     バックテスト結果テーブル

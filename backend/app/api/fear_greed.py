@@ -1,0 +1,303 @@
+"""
+Fear & Greed Index API エンドポイント
+
+Alternative.me Fear & Greed Index データの取得、収集、管理機能を提供します。
+"""
+
+import logging
+from typing import Dict, Optional
+from datetime import datetime, timezone, timedelta
+from fastapi import APIRouter, Depends, HTTPException, Query
+from sqlalchemy.orm import Session
+
+from database.connection import get_db
+from database.repositories.fear_greed_repository import FearGreedIndexRepository
+from data_collector.external_market_collector import ExternalMarketDataCollector
+from app.core.utils.api_utils import APIResponseHelper
+
+logger = logging.getLogger(__name__)
+
+router = APIRouter(prefix="/fear-greed", tags=["fear-greed"])
+
+
+@router.get("/data")
+async def get_fear_greed_data(
+    start_date: Optional[str] = Query(None, description="開始日時 (ISO format)"),
+    end_date: Optional[str] = Query(None, description="終了日時 (ISO format)"),
+    limit: Optional[int] = Query(30, description="取得件数制限"),
+    db: Session = Depends(get_db),
+) -> Dict:
+    """
+    Fear & Greed Index データを取得
+
+    Args:
+        start_date: 開始日時（ISO形式）
+        end_date: 終了日時（ISO形式）
+        limit: 取得件数制限
+        db: データベースセッション
+
+    Returns:
+        Fear & Greed Index データ
+    """
+    try:
+        repository = FearGreedIndexRepository(db)
+
+        # 日時パラメータの変換
+        start_time = None
+        end_time = None
+
+        if start_date:
+            try:
+                start_time = datetime.fromisoformat(start_date.replace("Z", "+00:00"))
+            except ValueError:
+                raise HTTPException(
+                    status_code=400, detail=f"無効な開始日時形式: {start_date}"
+                )
+
+        if end_date:
+            try:
+                end_time = datetime.fromisoformat(end_date.replace("Z", "+00:00"))
+            except ValueError:
+                raise HTTPException(
+                    status_code=400, detail=f"無効な終了日時形式: {end_date}"
+                )
+
+        # データ取得
+        data = repository.get_fear_greed_data(
+            start_time=start_time,
+            end_time=end_time,
+            limit=limit,
+        )
+
+        # レスポンス形式に変換
+        result_data = [item.to_dict() for item in data]
+
+        return APIResponseHelper.api_response(
+            success=True,
+            message=f"Fear & Greed Index データを {len(result_data)} 件取得しました",
+            data={
+                "data": result_data,
+                "metadata": {
+                    "count": len(result_data),
+                    "start_date": start_date,
+                    "end_date": end_date,
+                    "limit": limit,
+                },
+            },
+        )
+
+    except Exception as e:
+        logger.error(f"Fear & Greed Index データ取得エラー: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/latest")
+async def get_latest_fear_greed_data(
+    limit: int = Query(30, description="取得件数制限"),
+    db: Session = Depends(get_db),
+) -> Dict:
+    """
+    最新のFear & Greed Index データを取得
+
+    Args:
+        limit: 取得件数制限
+        db: データベースセッション
+
+    Returns:
+        最新のFear & Greed Index データ
+    """
+    try:
+        repository = FearGreedIndexRepository(db)
+        data = repository.get_latest_fear_greed_data(limit=limit)
+
+        result_data = [item.to_dict() for item in data]
+
+        return APIResponseHelper.api_response(
+            success=True,
+            message=f"最新のFear & Greed Index データを {len(result_data)} 件取得しました",
+            data={
+                "data": result_data,
+                "metadata": {
+                    "count": len(result_data),
+                    "limit": limit,
+                },
+            },
+        )
+
+    except Exception as e:
+        logger.error(f"最新Fear & Greed Index データ取得エラー: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/status")
+async def get_fear_greed_data_status(
+    db: Session = Depends(get_db),
+) -> Dict:
+    """
+    Fear & Greed Index データの状態を取得
+
+    Args:
+        db: データベースセッション
+
+    Returns:
+        データ状態情報
+    """
+    try:
+        async with ExternalMarketDataCollector() as collector:
+            status = await collector.get_data_status(db_session=db)
+
+        return APIResponseHelper.api_response(
+            success=True,
+            message="Fear & Greed Index データ状態を取得しました",
+            data=status,
+        )
+
+    except Exception as e:
+        logger.error(f"Fear & Greed Index データ状態取得エラー: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/collect")
+async def collect_fear_greed_data(
+    limit: int = Query(30, description="取得するデータ数"),
+    db: Session = Depends(get_db),
+) -> Dict:
+    """
+    Fear & Greed Index データを収集
+
+    Args:
+        limit: 取得するデータ数
+        db: データベースセッション
+
+    Returns:
+        収集結果
+    """
+    try:
+        async with ExternalMarketDataCollector() as collector:
+            result = await collector.collect_fear_greed_data(limit=limit, db_session=db)
+
+        if result["success"]:
+            return APIResponseHelper.api_response(
+                success=True,
+                message=result["message"],
+                data=result,
+            )
+        else:
+            raise HTTPException(
+                status_code=500,
+                detail=f"データ収集に失敗しました: {result.get('error', 'Unknown error')}",
+            )
+
+    except Exception as e:
+        logger.error(f"Fear & Greed Index データ収集エラー: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/collect-incremental")
+async def collect_incremental_fear_greed_data(
+    db: Session = Depends(get_db),
+) -> Dict:
+    """
+    Fear & Greed Index の差分データを収集
+
+    Args:
+        db: データベースセッション
+
+    Returns:
+        差分収集結果
+    """
+    try:
+        async with ExternalMarketDataCollector() as collector:
+            result = await collector.collect_incremental_fear_greed_data(db_session=db)
+
+        if result["success"]:
+            return APIResponseHelper.api_response(
+                success=True,
+                message=result["message"],
+                data=result,
+            )
+        else:
+            raise HTTPException(
+                status_code=500,
+                detail=f"差分データ収集に失敗しました: {result.get('error', 'Unknown error')}",
+            )
+
+    except Exception as e:
+        logger.error(f"Fear & Greed Index 差分データ収集エラー: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/collect-historical")
+async def collect_historical_fear_greed_data(
+    limit: int = Query(1000, description="取得するデータ数の上限"),
+    db: Session = Depends(get_db),
+) -> Dict:
+    """
+    Fear & Greed Index の履歴データを収集
+
+    Args:
+        limit: 取得するデータ数の上限
+        db: データベースセッション
+
+    Returns:
+        履歴収集結果
+    """
+    try:
+        async with ExternalMarketDataCollector() as collector:
+            result = await collector.collect_historical_fear_greed_data(
+                limit=limit, db_session=db
+            )
+
+        if result["success"]:
+            return APIResponseHelper.api_response(
+                success=True,
+                message=result["message"],
+                data=result,
+            )
+        else:
+            raise HTTPException(
+                status_code=500,
+                detail=f"履歴データ収集に失敗しました: {result.get('error', 'Unknown error')}",
+            )
+
+    except Exception as e:
+        logger.error(f"Fear & Greed Index 履歴データ収集エラー: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.delete("/cleanup")
+async def cleanup_old_fear_greed_data(
+    days_to_keep: int = Query(365, description="保持する日数"),
+    db: Session = Depends(get_db),
+) -> Dict:
+    """
+    古いFear & Greed Index データをクリーンアップ
+
+    Args:
+        days_to_keep: 保持する日数
+        db: データベースセッション
+
+    Returns:
+        クリーンアップ結果
+    """
+    try:
+        async with ExternalMarketDataCollector() as collector:
+            result = await collector.cleanup_old_data(
+                days_to_keep=days_to_keep, db_session=db
+            )
+
+        if result["success"]:
+            return APIResponseHelper.api_response(
+                success=True,
+                message=f"{result['deleted_count']} 件の古いデータを削除しました",
+                data=result,
+            )
+        else:
+            raise HTTPException(
+                status_code=500,
+                detail=f"データクリーンアップに失敗しました: {result.get('error', 'Unknown error')}",
+            )
+
+    except Exception as e:
+        logger.error(f"Fear & Greed Index データクリーンアップエラー: {e}")
+        raise HTTPException(status_code=500, detail=str(e))

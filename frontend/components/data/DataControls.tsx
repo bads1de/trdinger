@@ -16,7 +16,9 @@ import {
   OpenInterestCollectionResult,
   BulkOpenInterestCollectionResult,
 } from "@/types/strategy";
+import { FearGreedCollectionResult } from "@/hooks/useFearGreedData";
 import OpenInterestCollectionButton from "@/components/button/OpenInterestCollectionButton";
+import FearGreedCollectionButton from "@/components/button/FearGreedCollectionButton";
 
 interface DataControlsProps {
   symbols: TradingPair[];
@@ -39,9 +41,12 @@ interface DataControlsProps {
     result: BulkOpenInterestCollectionResult | OpenInterestCollectionResult
   ) => void;
   handleOpenInterestCollectionError: (errorMessage: string) => void;
+  handleFearGreedCollectionStart: (result: FearGreedCollectionResult) => void;
+  handleFearGreedCollectionError: (errorMessage: string) => void;
   bulkCollectionMessage: string;
   fundingRateCollectionMessage: string;
   openInterestCollectionMessage: string;
+  fearGreedCollectionMessage: string;
   allDataCollectionMessage: string;
   incrementalUpdateMessage: string;
   dataStatus: any; // TODO: より具体的な型を指定する
@@ -64,9 +69,12 @@ const DataControls: React.FC<DataControlsProps> = ({
   handleFundingRateCollectionError,
   handleOpenInterestCollectionStart,
   handleOpenInterestCollectionError,
+  handleFearGreedCollectionStart,
+  handleFearGreedCollectionError,
   bulkCollectionMessage,
   fundingRateCollectionMessage,
   openInterestCollectionMessage,
+  fearGreedCollectionMessage,
   allDataCollectionMessage,
   incrementalUpdateMessage,
   dataStatus,
@@ -112,6 +120,16 @@ const DataControls: React.FC<DataControlsProps> = ({
                 </span>
                 <span className="font-medium text-secondary-900 dark:text-secondary-100">
                   {dataStatus.data.data_counts?.open_interest?.toLocaleString()}
+                  件
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-secondary-600 dark:text-secondary-400">
+                  Fear & Greed Index:
+                </span>
+                <span className="font-medium text-secondary-900 dark:text-secondary-100">
+                  {dataStatus.data.data_counts?.fear_greed_index?.toLocaleString() ||
+                    0}
                   件
                 </span>
               </div>
@@ -291,39 +309,52 @@ const DataControls: React.FC<DataControlsProps> = ({
                   : "🗑️ データリセット"}
               </button>
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
-              {/* 全データ一括収集ボタン */}
-              <AllDataCollectionButton
-                onCollectionStart={handleAllDataCollectionStart}
-                onCollectionError={handleAllDataCollectionError}
-                disabled={loading || updating}
-                className="h-10 text-sm"
-              />
+            <div className="space-y-3">
+              {/* 上段：主要データ収集ボタン */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                {/* 全データ一括収集ボタン */}
+                <AllDataCollectionButton
+                  onCollectionStart={handleAllDataCollectionStart}
+                  onCollectionError={handleAllDataCollectionError}
+                  disabled={loading || updating}
+                  className="h-10 text-sm"
+                />
 
-              {/* OHLCV収集ボタン */}
-              <OHLCVCollectionButton
-                onCollectionStart={handleBulkCollectionStart}
-                onCollectionError={handleBulkCollectionError}
-                disabled={loading || updating}
-                className="h-10"
-              />
+                {/* OHLCV収集ボタン */}
+                <OHLCVCollectionButton
+                  onCollectionStart={handleBulkCollectionStart}
+                  onCollectionError={handleBulkCollectionError}
+                  disabled={loading || updating}
+                  className="h-10"
+                />
 
-              {/* FR収集ボタン */}
-              <FundingRateCollectionButton
-                onCollectionStart={handleFundingRateCollectionStart}
-                onCollectionError={handleFundingRateCollectionError}
-                disabled={loading || updating}
-                className="h-10"
-              />
+                {/* FR収集ボタン */}
+                <FundingRateCollectionButton
+                  onCollectionStart={handleFundingRateCollectionStart}
+                  onCollectionError={handleFundingRateCollectionError}
+                  disabled={loading || updating}
+                  className="h-10"
+                />
 
-              {/* OI収集ボタン */}
-              <OpenInterestCollectionButton
-                mode="bulk"
-                onCollectionStart={handleOpenInterestCollectionStart}
-                onCollectionError={handleOpenInterestCollectionError}
-                disabled={loading || updating}
-                className="h-10 bg-green-600 hover:bg-green-700 focus:ring-green-500"
-              />
+                {/* OI収集ボタン */}
+                <OpenInterestCollectionButton
+                  mode="bulk"
+                  onCollectionStart={handleOpenInterestCollectionStart}
+                  onCollectionError={handleOpenInterestCollectionError}
+                  disabled={loading || updating}
+                  className="h-10 bg-green-600 hover:bg-green-700 focus:ring-green-500"
+                />
+              </div>
+
+              {/* 下段：Fear & Greed Index収集ボタン */}
+              <div className="border-t border-secondary-200 dark:border-secondary-700 pt-3">
+                <FearGreedCollectionButton
+                  onCollectionStart={handleFearGreedCollectionStart}
+                  onCollectionError={handleFearGreedCollectionError}
+                  disabled={loading || updating}
+                  className="w-full"
+                />
+              </div>
             </div>
           </div>
         </div>
@@ -332,6 +363,7 @@ const DataControls: React.FC<DataControlsProps> = ({
         {(bulkCollectionMessage ||
           fundingRateCollectionMessage ||
           openInterestCollectionMessage ||
+          fearGreedCollectionMessage ||
           allDataCollectionMessage ||
           incrementalUpdateMessage) && (
           <div className="mt-6 pt-4 border-t border-secondary-200 dark:border-secondary-700">
@@ -359,6 +391,11 @@ const DataControls: React.FC<DataControlsProps> = ({
               {openInterestCollectionMessage && (
                 <div className="text-sm text-secondary-600 dark:text-secondary-400">
                   {openInterestCollectionMessage}
+                </div>
+              )}
+              {fearGreedCollectionMessage && (
+                <div className="text-sm text-secondary-600 dark:text-secondary-400">
+                  {fearGreedCollectionMessage}
                 </div>
               )}
             </div>

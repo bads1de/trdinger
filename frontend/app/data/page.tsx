@@ -15,6 +15,10 @@ import DataTableContainer from "@/components/data/DataTableContainer";
 import { useOhlcvData } from "@/hooks/useOhlcvData";
 import { useFundingRateData } from "@/hooks/useFundingRateData";
 import { useOpenInterestData } from "@/hooks/useOpenInterestData";
+import {
+  useFearGreedData,
+  FearGreedCollectionResult,
+} from "@/hooks/useFearGreedData";
 import { useBulkIncrementalUpdate } from "@/hooks/useBulkIncrementalUpdate";
 import { useApiCall } from "@/hooks/useApiCall";
 import {
@@ -38,7 +42,7 @@ const DataPage: React.FC = () => {
   const [selectedSymbol, setSelectedSymbol] = useState<string>("BTC/USDT:USDT");
   const [selectedTimeFrame, setSelectedTimeFrame] = useState<TimeFrame>("1h");
   const [activeTab, setActiveTab] = useState<
-    "ohlcv" | "funding" | "openinterest"
+    "ohlcv" | "funding" | "openinterest" | "feargreed"
   >("ohlcv");
 
   const [dataStatus, setDataStatus] = useState<any>(null);
@@ -47,6 +51,8 @@ const DataPage: React.FC = () => {
   const [fundingRateCollectionMessage, setFundingRateCollectionMessage] =
     useState<string>("");
   const [openInterestCollectionMessage, setOpenInterestCollectionMessage] =
+    useState<string>("");
+  const [fearGreedCollectionMessage, setFearGreedCollectionMessage] =
     useState<string>("");
   const [allDataCollectionMessage, setAllDataCollectionMessage] =
     useState<string>("");
@@ -84,6 +90,14 @@ const DataPage: React.FC = () => {
     refetch: fetchOpenInterestData,
   } = useOpenInterestData(selectedSymbol);
 
+  const {
+    data: fearGreedData,
+    loading: fearGreedLoading,
+    error: fearGreedError,
+    status: fearGreedStatus,
+    fetchLatestData: fetchFearGreedData,
+  } = useFearGreedData();
+
   /**
    * 通貨ペア変更ハンドラ
    */
@@ -118,7 +132,6 @@ const DataPage: React.FC = () => {
     setIncrementalUpdateMessage("");
     await updateBulkIncrementalData(selectedSymbol, selectedTimeFrame, {
       onSuccess: async (result) => {
-
         const totalSavedCount = result.data.total_saved_count || 0;
         const ohlcvCount = result.data.data.ohlcv.saved_count || 0;
         const frCount = result.data.data.funding_rate.saved_count || 0;
@@ -259,6 +272,34 @@ const DataPage: React.FC = () => {
   };
 
   /**
+   * Fear & Greed Index データ収集開始時のコールバック
+   */
+  const handleFearGreedCollectionStart = (
+    result: FearGreedCollectionResult
+  ) => {
+    if (result.success) {
+      setFearGreedCollectionMessage(
+        `🚀 Fear & Greed Index収集完了 (取得:${result.fetched_count}件, 挿入:${result.inserted_count}件)`
+      );
+    } else {
+      setFearGreedCollectionMessage(`❌ ${result.message}`);
+    }
+    // データ状況を更新
+    fetchDataStatus();
+    // 10秒後にメッセージをクリア
+    setTimeout(() => setFearGreedCollectionMessage(""), 10000);
+  };
+
+  /**
+   * Fear & Greed Index データ収集エラー時のコールバック
+   */
+  const handleFearGreedCollectionError = (errorMessage: string) => {
+    setFearGreedCollectionMessage(`❌ ${errorMessage}`);
+    // 10秒後にメッセージをクリア
+    setTimeout(() => setFearGreedCollectionMessage(""), 10000);
+  };
+
+  /**
    * 全データ一括収集開始時のコールバック
    */
   const handleAllDataCollectionStart = (result: AllDataCollectionResult) => {
@@ -377,9 +418,12 @@ const DataPage: React.FC = () => {
           handleFundingRateCollectionError={handleFundingRateCollectionError}
           handleOpenInterestCollectionStart={handleOpenInterestCollectionStart}
           handleOpenInterestCollectionError={handleOpenInterestCollectionError}
+          handleFearGreedCollectionStart={handleFearGreedCollectionStart}
+          handleFearGreedCollectionError={handleFearGreedCollectionError}
           bulkCollectionMessage={bulkCollectionMessage}
           fundingRateCollectionMessage={fundingRateCollectionMessage}
           openInterestCollectionMessage={openInterestCollectionMessage}
+          fearGreedCollectionMessage={fearGreedCollectionMessage}
           allDataCollectionMessage={allDataCollectionMessage}
           incrementalUpdateMessage={incrementalUpdateMessage}
         />
@@ -398,6 +442,9 @@ const DataPage: React.FC = () => {
           openInterestData={openInterestData}
           openInterestLoading={openInterestLoading}
           openInterestError={openInterestError || ""}
+          fearGreedData={fearGreedData}
+          fearGreedLoading={fearGreedLoading}
+          fearGreedError={fearGreedError || ""}
         />
       </div>
     </div>

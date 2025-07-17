@@ -324,3 +324,80 @@ class DataValidator:
         except Exception as e:
             logger.error(f"OHLCVデータの検証中にエラーが発生しました: {e}")
             return False
+
+    @staticmethod
+    def validate_fear_greed_data(fear_greed_records: List[Dict[str, Any]]) -> bool:
+        """
+        Fear & Greed Index データの妥当性を検証
+
+        Args:
+            fear_greed_records: 検証するFear & Greed Indexデータのリスト
+
+        Returns:
+            全て有効な場合True、無効なデータがある場合False
+        """
+        try:
+            for record in fear_greed_records:
+                # 必須フィールドの存在確認
+                required_fields = [
+                    "value",
+                    "value_classification",
+                    "data_timestamp",
+                    "timestamp",
+                ]
+                for field in required_fields:
+                    if field not in record:
+                        logger.error(
+                            f"Fear & Greed Indexデータに必須フィールド '{field}' が不足しています。"
+                        )
+                        return False
+
+                # 値の妥当性確認
+                value = int(record["value"])
+                value_classification = record["value_classification"]
+
+                # 値の範囲確認（0-100）
+                if not (0 <= value <= 100):
+                    logger.error(
+                        f"Fear & Greed Index値が範囲外です: {value} (0-100の範囲である必要があります)"
+                    )
+                    return False
+
+                # 分類の妥当性確認
+                valid_classifications = [
+                    "Extreme Fear",
+                    "Fear",
+                    "Neutral",
+                    "Greed",
+                    "Extreme Greed",
+                ]
+                if value_classification not in valid_classifications:
+                    logger.error(
+                        f"Fear & Greed Index分類が無効です: {value_classification} "
+                        f"(有効な値: {', '.join(valid_classifications)})"
+                    )
+                    return False
+
+                # タイムスタンプの妥当性確認
+                from datetime import datetime
+
+                try:
+                    if isinstance(record["data_timestamp"], str):
+                        datetime.fromisoformat(
+                            record["data_timestamp"].replace("Z", "+00:00")
+                        )
+                    if isinstance(record["timestamp"], str):
+                        datetime.fromisoformat(
+                            record["timestamp"].replace("Z", "+00:00")
+                        )
+                except (ValueError, TypeError) as e:
+                    logger.error(
+                        f"Fear & Greed Indexデータのタイムスタンプが無効です: {e}"
+                    )
+                    return False
+
+            return True
+
+        except Exception as e:
+            logger.error(f"Fear & Greed Indexデータの検証中にエラーが発生しました: {e}")
+            return False

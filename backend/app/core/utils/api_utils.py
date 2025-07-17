@@ -66,6 +66,36 @@ class APIResponseHelper:
         )  # Add timestamp for consistency
         return response
 
+    @staticmethod
+    def success_response(
+        data: Optional[Dict[str, Any]] = None,
+        message: str = "成功",
+        metadata: Optional[Dict[str, Any]] = None,
+    ) -> Dict[str, Any]:
+        """
+        成功レスポンスを生成（後方互換性のため）
+
+        Args:
+            data: レスポンスデータ
+            message: メッセージ
+            metadata: メタデータ
+
+        Returns:
+            成功レスポンス辞書
+        """
+        response_data = data
+        if metadata:
+            if isinstance(data, dict):
+                response_data = {**data, "metadata": metadata}
+            else:
+                response_data = {"data": data, "metadata": metadata}
+
+        return APIResponseHelper.api_response(
+            success=True,
+            message=message,
+            data=response_data,
+        )
+
 
 class APIErrorHandler:
     """API エラーハンドリングの共通ヘルパークラス"""
