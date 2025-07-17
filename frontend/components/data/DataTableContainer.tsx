@@ -98,7 +98,7 @@ const DataTableContainer: React.FC<DataTableContainerProps> = ({
                     : "text-gray-400 hover:text-gray-100"
                 }`}
               >
-                😨 F&G
+                F&G
               </button>
             </div>
           </div>

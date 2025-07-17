@@ -344,15 +344,13 @@ const DataControls: React.FC<DataControlsProps> = ({
                   disabled={loading || updating}
                   className="h-10 bg-green-600 hover:bg-green-700 focus:ring-green-500"
                 />
-              </div>
 
-              {/* 下段：Fear & Greed Index収集ボタン */}
-              <div className="border-t border-secondary-200 dark:border-secondary-700 pt-3">
+                {/* FG収集ボタン */}
                 <FearGreedCollectionButton
                   onCollectionStart={handleFearGreedCollectionStart}
                   onCollectionError={handleFearGreedCollectionError}
                   disabled={loading || updating}
-                  className="w-full"
+                  className="h-10"
                 />
               </div>
             </div>

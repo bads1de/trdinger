@@ -6,6 +6,7 @@
 
 import React from "react";
 import { FearGreedDataStatus } from "@/hooks/useFearGreedData";
+import { formatDateTime } from "@/utils/formatters";
 
 interface FearGreedStatusCardProps {
   status: FearGreedDataStatus | null;
@@ -15,47 +16,13 @@ interface FearGreedStatusCardProps {
 /**
  * 日時をフォーマット
  */
-const formatDateTime = (dateString: string | null): string => {
-  if (!dateString) return "データなし";
-  
-  try {
-    const date = new Date(dateString);
-    return date.toLocaleString("ja-JP", {
-      year: "numeric",
-      month: "2-digit",
-      day: "2-digit",
-      hour: "2-digit",
-      minute: "2-digit",
-      timeZone: "Asia/Tokyo",
-    });
-  } catch {
-    return dateString;
-  }
-};
-
-/**
- * 日付のみをフォーマット
- */
-const formatDate = (dateString: string | null): string => {
-  if (!dateString) return "データなし";
-  
-  try {
-    const date = new Date(dateString);
-    return date.toLocaleDateString("ja-JP", {
-      year: "numeric",
-      month: "2-digit",
-      day: "2-digit",
-      timeZone: "Asia/Tokyo",
-    });
-  } catch {
-    return dateString;
-  }
-};
 
 /**
  * データの新しさを判定
  */
-const getDataFreshness = (latestTimestamp: string | null): {
+const getDataFreshness = (
+  latestTimestamp: string | null
+): {
   status: "fresh" | "stale" | "old" | "none";
   message: string;
   color: string;
@@ -126,7 +93,9 @@ const FearGreedStatusCard: React.FC<FearGreedStatusCardProps> = ({
         <div className="p-4">
           <div className="text-center text-red-600 dark:text-red-400">
             <p className="text-sm font-medium">❌ 状態取得エラー</p>
-            <p className="text-xs mt-1">{status?.error || "状態情報を取得できませんでした"}</p>
+            <p className="text-xs mt-1">
+              {status?.error || "状態情報を取得できませんでした"}
+            </p>
           </div>
         </div>
       </div>
@@ -140,7 +109,7 @@ const FearGreedStatusCard: React.FC<FearGreedStatusCardProps> = ({
       <div className="p-4">
         <div className="flex items-center justify-between mb-3">
           <h4 className="text-lg font-medium text-secondary-900 dark:text-secondary-100">
-            😨 Fear & Greed Index
+            Fear & Greed Index
           </h4>
           <span className={`text-xs font-medium ${freshness.color}`}>
             {freshness.message}
@@ -165,7 +134,7 @@ const FearGreedStatusCard: React.FC<FearGreedStatusCardProps> = ({
                 最古データ:
               </span>
               <span className="text-sm font-medium text-secondary-900 dark:text-secondary-100">
-                {formatDate(status.data_range.oldest_data)}
+                {formatDateTime(status.data_range.oldest_data).date}
               </span>
             </div>
             <div className="flex justify-between items-center">
@@ -173,7 +142,7 @@ const FearGreedStatusCard: React.FC<FearGreedStatusCardProps> = ({
                 最新データ:
               </span>
               <span className="text-sm font-medium text-secondary-900 dark:text-secondary-100">
-                {formatDate(status.data_range.newest_data)}
+                {formatDateTime(status.data_range.newest_data).date}
               </span>
             </div>
           </div>
@@ -184,7 +153,7 @@ const FearGreedStatusCard: React.FC<FearGreedStatusCardProps> = ({
               最終更新:
             </span>
             <span className="text-sm font-medium text-secondary-900 dark:text-secondary-100">
-              {formatDateTime(status.latest_timestamp)}
+              {formatDateTime(status.latest_timestamp).dateTime}
             </span>
           </div>
 
@@ -200,7 +169,10 @@ const FearGreedStatusCard: React.FC<FearGreedStatusCardProps> = ({
                     try {
                       const oldest = new Date(status.data_range.oldest_data);
                       const newest = new Date(status.data_range.newest_data);
-                      const diffDays = Math.ceil((newest.getTime() - oldest.getTime()) / (1000 * 60 * 60 * 24));
+                      const diffDays = Math.ceil(
+                        (newest.getTime() - oldest.getTime()) /
+                          (1000 * 60 * 60 * 24)
+                      );
                       return `${diffDays}日間`;
                     } catch {
                       return "計算不可";
@@ -224,7 +196,8 @@ const FearGreedStatusCard: React.FC<FearGreedStatusCardProps> = ({
         {freshness.status === "old" && (
           <div className="mt-3 p-2 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg">
             <p className="text-xs text-yellow-700 dark:text-yellow-300 text-center">
-              ⚠️ データが古くなっています。「差分データ収集」を実行してください。
+              ⚠️
+              データが古くなっています。「差分データ収集」を実行してください。
             </p>
           </div>
         )}

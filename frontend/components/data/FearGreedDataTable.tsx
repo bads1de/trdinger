@@ -92,7 +92,10 @@ const FearGreedDataTable: React.FC<FearGreedDataTableProps> = ({
           <div className="h-6 bg-secondary-200 dark:bg-secondary-700 rounded mb-4"></div>
           <div className="space-y-3">
             {[...Array(5)].map((_, i) => (
-              <div key={i} className="h-4 bg-secondary-200 dark:bg-secondary-700 rounded"></div>
+              <div
+                key={i}
+                className="h-4 bg-secondary-200 dark:bg-secondary-700 rounded"
+              ></div>
             ))}
           </div>
         </div>
@@ -119,7 +122,9 @@ const FearGreedDataTable: React.FC<FearGreedDataTableProps> = ({
         <div className="p-6">
           <div className="text-center text-secondary-600 dark:text-secondary-400">
             <p className="text-lg font-medium mb-2">📊 データがありません</p>
-            <p className="text-sm">Fear & Greed Index データを収集してください</p>
+            <p className="text-sm">
+              Fear & Greed Index データを収集してください
+            </p>
           </div>
         </div>
       </div>
@@ -131,7 +136,7 @@ const FearGreedDataTable: React.FC<FearGreedDataTableProps> = ({
       <div className="p-6">
         <div className="flex items-center justify-between mb-6">
           <h3 className="text-xl font-semibold text-secondary-900 dark:text-secondary-100">
-            😨 Fear & Greed Index データ
+            Fear & Greed Index データ
           </h3>
           <span className="badge-primary">
             {data.length.toLocaleString()}件
@@ -167,7 +172,11 @@ const FearGreedDataTable: React.FC<FearGreedDataTableProps> = ({
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center">
-                      <span className={`text-2xl font-bold ${getValueColor(item.value)}`}>
+                      <span
+                        className={`text-2xl font-bold ${getValueColor(
+                          item.value
+                        )}`}
+                      >
                         {item.value}
                       </span>
                       <span className="ml-2 text-sm text-secondary-500 dark:text-secondary-400">
@@ -176,7 +185,11 @@ const FearGreedDataTable: React.FC<FearGreedDataTableProps> = ({
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getClassificationBadge(item.value_classification)}`}>
+                    <span
+                      className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getClassificationBadge(
+                        item.value_classification
+                      )}`}
+                    >
                       {item.value_classification}
                     </span>
                   </td>
@@ -191,8 +204,9 @@ const FearGreedDataTable: React.FC<FearGreedDataTableProps> = ({
 
         {data.length > 0 && (
           <div className="mt-4 text-sm text-secondary-500 dark:text-secondary-400 text-center">
-            最新データ: {formatDate(data[0]?.data_timestamp)} | 
-            データ範囲: {formatDate(data[data.length - 1]?.data_timestamp)} ～ {formatDate(data[0]?.data_timestamp)}
+            最新データ: {formatDate(data[0]?.data_timestamp)} | データ範囲:{" "}
+            {formatDate(data[data.length - 1]?.data_timestamp)} ～{" "}
+            {formatDate(data[0]?.data_timestamp)}
           </div>
         )}
       </div>
