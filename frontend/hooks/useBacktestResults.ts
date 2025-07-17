@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useApiCall } from "@/hooks/useApiCall";
-import { BacktestResult } from "@/types/optimization";
+import { BacktestResult } from "@/types/backtest";
 
 export const useBacktestResults = () => {
   const [results, setResults] = useState<BacktestResult[]>([]);

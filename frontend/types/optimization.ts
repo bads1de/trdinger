@@ -2,6 +2,8 @@
  * バックテスト関連の型定義
  */
 
+import { BacktestConfig } from "./backtest";
+
 /**
  * GA戦略生成の設定
  */
@@ -127,55 +129,10 @@ export interface SimplifiedGAConfig {
     };
   };
 }
-/**
- * バックテストの設定
- */
-export interface BacktestConfig {
-  strategy_name: string;
-  symbol: string;
-  timeframe: string;
-  start_date: string;
-  end_date: string;
-  initial_capital: number;
-  commission_rate: number;
-  strategy_config: {
-    strategy_type: string;
-    parameters: Record<string, any>;
-  };
-}
 
 /**
  * バックテストの結果
  */
-export interface BacktestResult {
-  id?: string;
-  strategy_name: string;
-  symbol: string;
-  timeframe: string;
-  start_date: string;
-  end_date: string;
-  initial_capital: number;
-  commission_rate: number;
-  config_json: any;
-  total_return: number;
-  sharpe_ratio: number;
-  max_drawdown: number;
-  win_rate: number;
-  profit_factor: number;
-  total_trades: number;
-  winning_trades?: number;
-  losing_trades?: number;
-  avg_win?: number;
-  avg_loss?: number;
-  equity_curve: EquityPoint[];
-  trade_history: Trade[];
-  execution_time?: number;
-  status?: string;
-  error_message?: string;
-  created_at: Date | string;
-  updated_at?: Date;
-  performance_metrics?: any; // 互換性のため
-}
 
 /**
  * 損益曲線のポイント

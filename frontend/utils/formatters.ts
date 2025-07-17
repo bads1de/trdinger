@@ -90,26 +90,6 @@ export const formatTrainingTime = (seconds?: number) => {
   return `${secs}秒`;
 };
 
-export const getFundingRateColor = (value: number) => {
-  if (value > 0.0002) {
-    return "text-green-400";
-  }
-
-  if (value > 0) {
-    return "text-green-600";
-  }
-
-  if (value < -0.0002) {
-    return "text-red-400";
-  }
-
-  if (value < 0) {
-    return "text-red-600";
-  }
-
-  return "text-gray-400";
-};
-
 export const formatLargeNumber = (num: number, digits = 2) => {
   const lookup = [
     { value: 1, symbol: "" },
@@ -128,9 +108,8 @@ export const formatLargeNumber = (num: number, digits = 2) => {
   }
 
   return (
-    (num / item.value)
-      .toFixed(digits)
-      .replace(/\.0+$|(\.[0-9]*[1-9])0+$/, "$1") + item.symbol
+    (num / item.value).toFixed(digits).replace(/\.0+$|(\.0*[^0])0+$/, "$1") +
+    item.symbol
   );
 };
 

@@ -40,16 +40,8 @@ export const getValueColorClass = (
   return "text-secondary-400";
 };
 
-export const getPnlColor = (pnl: number) => {
-  if (pnl > 0) {
-    return "green";
-  }
-
-  if (pnl < 0) {
-    return "red";
-  }
-
-  return "gray";
+export const getPnlColor = (value: number): "green" | "red" | "gray" => {
+  return getSemanticColor(value);
 };
 
 export const getPnlTextColor = (pnl: number) => {
@@ -60,36 +52,16 @@ export const getPriceChangeColor = (open: number, close: number) => {
   return getValueColorClass(close - open);
 };
 
-export const getReturnColor = (value: number | null) => {
-  if (value === null) {
-    return "gray";
-  }
-
-  if (value > 0) {
-    return "green";
-  }
-
-  if (value < 0) {
-    return "red";
-  }
-
-  return "gray";
+export const getReturnColor = (
+  value: number | null
+): "green" | "red" | "gray" => {
+  return getSemanticColor(value);
 };
 
-export const getSharpeColor = (value: number | null) => {
-  if (value === null) {
-    return "gray";
-  }
-
-  if (value > 1) {
-    return "green";
-  }
-
-  if (value < 0) {
-    return "red";
-  }
-
-  return "gray";
+export const getSharpeColor = (
+  value: number | null
+): "green" | "red" | "gray" => {
+  return getSemanticColor(value, { threshold: 1 });
 };
 
 export const getFundingRateColor = (value: number) => {
@@ -171,4 +143,35 @@ export const getStatusColor = (status: string) => {
     default:
       return "text-gray-600";
   }
+};
+
+export const getSemanticColor = <T extends string = "green" | "red" | "gray">(
+  value: number | null | undefined,
+  options: {
+    threshold?: number;
+    positiveColor?: T;
+    negativeColor?: T;
+    neutralColor?: T;
+  } = {}
+): T => {
+  const {
+    threshold = 0,
+    positiveColor = "green" as T,
+    negativeColor = "red" as T,
+    neutralColor = "gray" as T,
+  } = options;
+
+  if (value === null || value === undefined || isNaN(value)) {
+    return neutralColor;
+  }
+
+  if (value > threshold) {
+    return positiveColor;
+  }
+
+  if (value < threshold) {
+    return negativeColor;
+  }
+
+  return neutralColor;
 };

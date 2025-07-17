@@ -54,10 +54,7 @@ export default function PerformanceMetrics({
         {/* ボタングループ */}
         <div className="flex items-center space-x-3">
           {onOptimizationClick && (
-            <ActionButton
-              onClick={onOptimizationClick}
-              variant="secondary"
-            >
+            <ActionButton onClick={onOptimizationClick} variant="secondary">
               🔧 最適化
             </ActionButton>
           )}

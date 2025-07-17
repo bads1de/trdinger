@@ -31,11 +31,7 @@
 - **データソースと実装:**
   - **ライブラリ:** `yfinance` を利用するのが最も手軽でコスト効率が良い。
   - **実装パス:** `backend/data_collector/external_market_collector.py` を新規作成。
-  - **処理フロー:**
-    1. 定期実行（1 時間ごと）のスクリプトとして実装。
-    2. `yfinance.download()` を使用し、必要なシンボル（`^GSPC`, `^IXIC`, `DX-Y.NYB`など）のデータを取得。
-    3. 取得したデータを整形し、リターンを計算後、専用のデータベーステーブル `external_market_data` に保存。
-    4. `feature_engineering` パイプラインでこのテーブルを読み込み、OHLCV データとタイムスタンプを基準にマージする。
+  - **処理フロー:** 2. `yfinance.download()` を使用し、必要なシンボル（`^GSPC`, `^IXIC`, `DX-Y.NYB`など）のデータを取得。 3. 取得したデータを整形し、リターンを計算後、専用のデータベーステーブル `external_market_data` に保存。 4. `feature_engineering` パイプラインでこのテーブルを読み込み、OHLCV データとタイムスタンプを基準にマージする。
 
 ### カテゴリ 2：センチメント分析
 

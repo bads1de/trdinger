@@ -12,7 +12,7 @@ import {
   formatNumber,
 } from "@/utils/formatters";
 import { getValueColorClass } from "@/utils/colorUtils";
-import { BacktestResult } from "@/types/optimization";
+import { BacktestResult } from "@/types/backtest";
 import LoadingSpinner from "@/components/common/LoadingSpinner";
 
 interface BacktestResultsTableProps {
