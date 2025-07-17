@@ -5,7 +5,7 @@
  * バックテスト設定と組み合わせてBacktestConfigを生成します。
  */
 
-import { BacktestConfig } from "@/types/optimization";
+import { BacktestConfig } from "@/types/backtest";
 
 // StrategyGene関連の型定義
 interface IndicatorGene {

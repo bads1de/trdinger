@@ -2,8 +2,8 @@ import React from "react";
 import OHLCVDataTable from "@/components/table/OHLCVDataTable";
 import FundingRateDataTable from "@/components/table/FundingRateDataTable";
 import OpenInterestDataTable from "@/components/table/OpenInterestDataTable";
-import FearGreedDataTable from "@/components/data/FearGreedDataTable";
-import ExternalMarketDataTable from "@/components/data/ExternalMarketDataTable";
+import FearGreedDataTable from "@/components/table/FearGreedDataTable";
+import ExternalMarketDataTable from "@/components/table/ExternalMarketDataTable";
 import { PriceData, TimeFrame } from "@/types/market-data";
 import { FundingRateData } from "@/types/funding-rate";
 import { OpenInterestData } from "@/types/open-interest";
@@ -118,7 +118,7 @@ const DataTableContainer: React.FC<DataTableContainerProps> = ({
                     : "text-gray-400 hover:text-gray-100"
                 }`}
               >
-                外部市場
+                EM
               </button>
             </div>
           </div>
