@@ -1,7 +1,8 @@
 import { useApiCall } from "./useApiCall";
 import { useCallback } from "react";
 import { BACKEND_API_URL } from "@/constants";
-import { TimeFrame, BulkIncrementalUpdateResponse } from "@/types/strategy";
+import { TimeFrame } from "@/types/market-data";
+import { BulkIncrementalUpdateResponse } from "@/types/data-collection";
 
 interface BulkIncrementalUpdateOptions {
   onSuccess?: (data: BulkIncrementalUpdateResponse) => void;

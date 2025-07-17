@@ -10,7 +10,7 @@ import React from "react";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import "@testing-library/jest-dom";
 import FundingRateDataTable from "@/components/table/FundingRateDataTable";
-import { FundingRateData } from "@/types/strategy";
+import { FundingRateData } from "@/types/funding-rate";
 
 // モックデータの作成
 const createMockFundingRateData = (count: number): FundingRateData[] => {

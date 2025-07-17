@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { OpenInterestData, OpenInterestResponse } from "@/types/strategy";
+import { OpenInterestData, OpenInterestResponse } from "@/types/open-interest";
 import { useApiCall } from "./useApiCall";
 
 export const useOpenInterestData = (symbol: string, initialLimit = 100) => {

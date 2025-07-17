@@ -10,7 +10,7 @@
 
 import React from "react";
 import DataTable from "./DataTable";
-import { OpenInterestData } from "@/types/strategy";
+import { OpenInterestData } from "@/types/open-interest";
 import { openInterestColumns } from "@/components/common/tableColumns";
 
 /**

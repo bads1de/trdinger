@@ -10,7 +10,7 @@ import React from "react";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import "@testing-library/jest-dom";
 import OHLCVDataTable from "@/components/table/OHLCVDataTable";
-import { PriceData } from "@/types/strategy";
+import { PriceData } from "@/types/market-data";
 
 // モックデータの作成
 const createMockOHLCVData = (count: number): PriceData[] => {

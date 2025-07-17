@@ -3,7 +3,7 @@
  *
  */
 
-import { TradingPair, TimeFrameInfo } from "@/types/strategy";
+import { TradingPair, TimeFrameInfo } from "@/types/market-data";
 
 /**
  * バックエンドAPIのベースURL

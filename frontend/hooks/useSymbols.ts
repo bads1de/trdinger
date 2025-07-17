@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { TradingPair } from "@/types/strategy";
+import { TradingPair } from "@/types/market-data";
 import { SUPPORTED_TRADING_PAIRS } from "@/constants";
 
 export const useSymbols = () => {

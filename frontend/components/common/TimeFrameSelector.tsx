@@ -8,7 +8,7 @@
 "use client";
 
 import React from "react";
-import { TimeFrame } from "@/types/strategy";
+import { TimeFrame } from "@/types/market-data";
 import { SUPPORTED_TIMEFRAMES } from "@/constants";
 
 /**

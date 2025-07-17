@@ -10,7 +10,7 @@
 import React from "react";
 import { useDataCollection } from "@/hooks/useDataCollection";
 import ApiButton from "./ApiButton";
-import { BulkOHLCVCollectionResult } from "@/types/strategy";
+import { BulkOHLCVCollectionResult } from "@/types/data-collection";
 
 /**
  * OHLCV収集ボタンコンポーネントのプロパティ

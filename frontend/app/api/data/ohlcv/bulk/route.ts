@@ -7,7 +7,7 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { BulkOHLCVCollectionResult } from "@/types/strategy";
+import { BulkOHLCVCollectionResult } from "@/types/data-collection";
 import { BACKEND_API_URL } from "@/constants";
 
 /**

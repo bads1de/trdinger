@@ -7,7 +7,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { BACKEND_API_URL } from "@/constants";
-import { FundingRateData, FundingRateResponse } from "@/types/strategy";
+import { FundingRateData, FundingRateResponse } from "@/types/funding-rate";
 
 /**
  * バックエンドAPIからFRデータを取得する関数

@@ -10,7 +10,7 @@
 
 import React from "react";
 import DataTable from "./DataTable";
-import { PriceData } from "@/types/strategy";
+import { PriceData } from "@/types/market-data";
 import { ohlcvColumns } from "@/components/common/tableColumns";
 
 /**

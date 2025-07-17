@@ -8,7 +8,7 @@
 "use client";
 
 import React from "react";
-import { TradingPair } from "@/types/strategy";
+import { TradingPair } from "@/types/market-data";
 
 /**
  * 通貨ペア選択コンポーネントのプロパティ

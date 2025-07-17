@@ -7,7 +7,7 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { PriceData, TimeFrame } from "@/types/strategy";
+import { PriceData, TimeFrame } from "@/types/market-data";
 import { BACKEND_API_URL } from "@/constants";
 
 /**

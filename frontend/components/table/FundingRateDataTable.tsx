@@ -10,7 +10,7 @@
 
 import React from "react";
 import DataTable from "./DataTable";
-import { FundingRateData } from "@/types/strategy";
+import { FundingRateData } from "@/types/funding-rate";
 import { fundingRateColumns } from "@/components/common/tableColumns";
 
 /**

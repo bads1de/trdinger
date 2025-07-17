@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { PriceData, TimeFrame, OHLCVResponse } from "@/types/strategy";
+import { PriceData, TimeFrame, OHLCVResponse } from "@/types/market-data";
 import { useApiCall } from "./useApiCall";
 
 export const useOhlcvData = (

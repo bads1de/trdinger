@@ -80,3 +80,13 @@ export interface DataTableProps<T> {
   /** テーブルのクラス名 */
   className?: string;
 }
+
+/**
+ * API エラーレスポンス
+ */
+export interface APIError {
+  success: false;
+  error: string;
+  detail?: string;
+  timestamp: string;
+}

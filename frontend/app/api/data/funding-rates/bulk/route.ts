@@ -7,7 +7,7 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { BulkFundingRateCollectionResult } from "@/types/strategy";
+import { BulkFundingRateCollectionResult } from "@/types/funding-rate";
 import { BACKEND_API_URL } from "@/constants";
 
 /**

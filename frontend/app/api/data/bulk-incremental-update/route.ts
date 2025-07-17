@@ -6,7 +6,8 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { BulkIncrementalUpdateResponse, TimeFrame } from "@/types/strategy";
+import { BulkIncrementalUpdateResponse } from "@/types/data-collection";
+import { TimeFrame } from "@/types/market-data";
 import { BACKEND_API_URL } from "@/constants";
 
 /**

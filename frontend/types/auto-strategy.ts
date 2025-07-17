@@ -236,12 +236,4 @@ export interface StrategyDetail extends UnifiedStrategy {
   experiment_info?: GAExperiment;
 }
 
-/**
- * API エラーレスポンス
- */
-export interface APIError {
-  success: false;
-  error: string;
-  detail?: string;
-  timestamp: string;
-}
+

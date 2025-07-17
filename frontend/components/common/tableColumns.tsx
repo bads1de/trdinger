@@ -8,7 +8,9 @@
 
 import React from "react";
 import { TableColumn } from "@/types/common";
-import { FundingRateData, PriceData, OpenInterestData } from "@/types/strategy";
+import { FundingRateData } from "@/types/funding-rate";
+import { PriceData } from "@/types/market-data";
+import { OpenInterestData } from "@/types/open-interest";
 import { formatDateTime } from "@/utils/formatters";
 import {
   formatPrice,

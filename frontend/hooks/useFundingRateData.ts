@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { FundingRateData, FundingRateResponse } from "@/types/strategy";
+import { FundingRateData, FundingRateResponse } from "@/types/funding-rate";
 import { useApiCall } from "./useApiCall";
 
 export const useFundingRateData = (symbol: string, initialLimit = 100) => {

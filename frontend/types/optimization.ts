@@ -130,28 +130,4 @@ export interface SimplifiedGAConfig {
   };
 }
 
-/**
- * バックテストの結果
- */
 
-/**
- * 損益曲線のポイント
- */
-export interface EquityPoint {
-  timestamp: string;
-  equity: number;
-  drawdown: number;
-}
-
-/**
- * 取引履歴
- */
-export interface Trade {
-  id: string;
-  timestamp: string;
-  type: "buy" | "sell";
-  price: number;
-  quantity: number;
-  commission: number;
-  pnl?: number;
-}
