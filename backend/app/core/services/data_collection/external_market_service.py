@@ -8,7 +8,7 @@ yfinance APIを使用してSP500、NASDAQ、DXY、VIXなどの
 import logging
 import asyncio
 from typing import List, Dict, Optional
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timezone
 
 import yfinance as yf
 import pandas as pd

@@ -39,16 +39,13 @@ export interface ExternalMarketCollectionResponse {
  * バックエンドAPIで外部市場データを収集する関数
  *
  * @param symbols 取得するシンボルのリスト
- * @param period 取得期間
  * @returns 収集結果
  */
 async function collectExternalMarketData(
-  symbols?: string[],
-  period: string = "1mo"
+  symbols?: string[]
 ): Promise<ExternalMarketCollectionResult> {
   // バックエンドAPIのURLを構築
   const apiUrl = new URL("/api/external-market/collect", BACKEND_API_URL);
-  apiUrl.searchParams.set("period", period);
 
   if (symbols && symbols.length > 0) {
     symbols.forEach(symbol => {
@@ -91,17 +88,16 @@ async function collectExternalMarketData(
 export async function POST(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
-    const period = searchParams.get("period") || "1mo";
     
     // シンボルのパラメータを取得（複数可能）
     const symbolsParam = searchParams.getAll("symbols");
     const symbols = symbolsParam.length > 0 ? symbolsParam : undefined;
 
     console.log(
-      `外部市場データ収集リクエスト: symbols=${symbols}, period=${period}`
+      `外部市場データ収集リクエスト: symbols=${symbols}`
     );
 
-    const result = await collectExternalMarketData(symbols, period);
+    const result = await collectExternalMarketData(symbols);
 
     const response: ExternalMarketCollectionResponse = {
       success: true,

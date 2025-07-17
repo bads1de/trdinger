@@ -199,46 +199,6 @@ async def get_external_market_data_status(db: Session = Depends(get_db)) -> Dict
 @router.post("/collect")
 async def collect_external_market_data(
     symbols: Optional[List[str]] = Query(None, description="取得するシンボルのリスト"),
-    period: str = Query("1mo", description="取得期間"),
-    db: Session = Depends(get_db),
-) -> Dict:
-    """
-    外部市場データを収集
-
-    Args:
-        symbols: 取得するシンボルのリスト
-        period: 取得期間
-        db: データベースセッション
-
-    Returns:
-        収集結果
-    """
-    try:
-        async with ExternalMarketDataCollector() as collector:
-            result = await collector.collect_external_market_data(
-                symbols=symbols, period=period, db_session=db
-            )
-
-        if result["success"]:
-            return APIResponseHelper.api_response(
-                success=True,
-                message=result["message"],
-                data=result,
-            )
-        else:
-            raise HTTPException(
-                status_code=500,
-                detail=f"データ収集に失敗しました: {result.get('error', 'Unknown error')}",
-            )
-
-    except Exception as e:
-        logger.error(f"外部市場データ収集エラー: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
-
-
-@router.post("/collect-incremental")
-async def collect_incremental_external_market_data(
-    symbols: Optional[List[str]] = Query(None, description="取得するシンボルのリスト"),
     db: Session = Depends(get_db),
 ) -> Dict:
     """
@@ -271,56 +231,4 @@ async def collect_incremental_external_market_data(
 
     except Exception as e:
         logger.error(f"外部市場データ差分収集エラー: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
-
-
-@router.post("/collect-historical")
-async def collect_historical_external_market_data(
-    symbols: Optional[List[str]] = Query(None, description="取得するシンボルのリスト"),
-    period: str = Query("5y", description="取得期間"),
-    start_date: Optional[str] = Query(
-        None, description="開始日（YYYY-MM-DD形式、periodより優先）"
-    ),
-    end_date: Optional[str] = Query(
-        None, description="終了日（YYYY-MM-DD形式、periodより優先）"
-    ),
-    db: Session = Depends(get_db),
-) -> Dict:
-    """
-    外部市場データの履歴データを収集
-
-    Args:
-        symbols: 取得するシンボルのリスト
-        period: 取得期間
-        start_date: 開始日（YYYY-MM-DD形式、periodより優先）
-        end_date: 終了日（YYYY-MM-DD形式、periodより優先）
-        db: データベースセッション
-
-    Returns:
-        履歴収集結果
-    """
-    try:
-        async with ExternalMarketDataCollector() as collector:
-            result = await collector.collect_historical_external_market_data(
-                symbols=symbols,
-                period=period,
-                start_date=start_date,
-                end_date=end_date,
-                db_session=db,
-            )
-
-        if result["success"]:
-            return APIResponseHelper.api_response(
-                success=True,
-                message=result["message"],
-                data=result,
-            )
-        else:
-            raise HTTPException(
-                status_code=500,
-                detail=f"履歴データ収集に失敗しました: {result.get('error', 'Unknown error')}",
-            )
-
-    except Exception as e:
-        logger.error(f"外部市場データ履歴収集エラー: {e}")
         raise HTTPException(status_code=500, detail=str(e))

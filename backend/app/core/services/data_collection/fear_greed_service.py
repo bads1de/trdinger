@@ -7,8 +7,7 @@ Alternative.me APIを使用してFear & Greed Indexデータを取得し、
 
 import logging
 import aiohttp
-import asyncio
-from typing import Any, Dict, List, Optional
+from typing import List, Optional
 from datetime import datetime, timezone
 from database.repositories.fear_greed_repository import FearGreedIndexRepository
 from app.core.utils.data_converter import DataValidator
@@ -57,12 +56,9 @@ class FearGreedIndexService:
         """
         try:
             session = await self._get_session()
-            
+
             # APIパラメータ
-            params = {
-                "limit": limit,
-                "format": "json"
-            }
+            params = {"limit": limit, "format": "json"}
 
             logger.info(f"Fear & Greed Index データを取得中: limit={limit}")
 
@@ -82,14 +78,18 @@ class FearGreedIndexService:
                     raise ValueError("APIレスポンスに'data'フィールドがありません")
 
                 if not isinstance(data["data"], list):
-                    raise ValueError("APIレスポンスの'data'フィールドがリスト形式ではありません")
+                    raise ValueError(
+                        "APIレスポンスの'data'フィールドがリスト形式ではありません"
+                    )
 
                 # メタデータのエラーチェック
                 if "metadata" in data and data["metadata"].get("error"):
                     raise ValueError(f"API error: {data['metadata']['error']}")
 
                 raw_data = data["data"]
-                logger.info(f"Fear & Greed Index データを {len(raw_data)} 件取得しました")
+                logger.info(
+                    f"Fear & Greed Index データを {len(raw_data)} 件取得しました"
+                )
 
                 # データ変換
                 converted_data = self._convert_api_data_to_db_format(raw_data)
@@ -119,8 +119,13 @@ class FearGreedIndexService:
         for item in api_data:
             try:
                 # 必須フィールドの存在確認
-                if not all(key in item for key in ["value", "value_classification", "timestamp"]):
-                    logger.warning(f"必須フィールドが不足しているデータをスキップ: {item}")
+                if not all(
+                    key in item
+                    for key in ["value", "value_classification", "timestamp"]
+                ):
+                    logger.warning(
+                        f"必須フィールドが不足しているデータをスキップ: {item}"
+                    )
                     continue
 
                 # タイムスタンプの変換（Unix timestamp -> datetime）
@@ -180,7 +185,9 @@ class FearGreedIndexService:
                 inserted_count = repository.insert_fear_greed_data(fear_greed_data)
             else:
                 # 実際の運用時はここでリポジトリを作成
-                logger.warning("リポジトリが提供されていません。データは保存されませんでした。")
+                logger.warning(
+                    "リポジトリが提供されていません。データは保存されませんでした。"
+                )
                 inserted_count = 0
 
             result = {
@@ -194,7 +201,9 @@ class FearGreedIndexService:
             return result
 
         except Exception as e:
-            error_msg = f"Fear & Greed Indexデータの取得・保存中にエラーが発生しました: {e}"
+            error_msg = (
+                f"Fear & Greed Indexデータの取得・保存中にエラーが発生しました: {e}"
+            )
             logger.error(error_msg)
             return {
                 "success": False,
@@ -204,9 +213,7 @@ class FearGreedIndexService:
                 "message": error_msg,
             }
 
-    async def get_latest_data_info(
-        self, repository: FearGreedIndexRepository
-    ) -> dict:
+    async def get_latest_data_info(self, repository: FearGreedIndexRepository) -> dict:
         """
         最新のデータ情報を取得
 
@@ -223,7 +230,9 @@ class FearGreedIndexService:
             return {
                 "success": True,
                 "data_range": data_range,
-                "latest_timestamp": latest_timestamp.isoformat() if latest_timestamp else None,
+                "latest_timestamp": (
+                    latest_timestamp.isoformat() if latest_timestamp else None
+                ),
             }
 
         except Exception as e:
