@@ -33,3 +33,5 @@ export const formatFundingRate = (value: number) => {
 export const formatVolume = (value: number) => {
   return formatLargeNumber(value, 2);
 };
+
+export { formatLargeNumber };

@@ -3,6 +3,7 @@ import OHLCVDataTable from "@/components/table/OHLCVDataTable";
 import FundingRateDataTable from "@/components/table/FundingRateDataTable";
 import OpenInterestDataTable from "@/components/table/OpenInterestDataTable";
 import FearGreedDataTable from "@/components/data/FearGreedDataTable";
+import ExternalMarketDataTable from "@/components/data/ExternalMarketDataTable";
 import {
   PriceData,
   FundingRateData,
@@ -10,13 +11,19 @@ import {
   TimeFrame,
 } from "@/types/strategy";
 import { FearGreedIndexData } from "@/app/api/data/fear-greed/route";
+import { ExternalMarketData } from "@/hooks/useExternalMarketData";
 
 interface DataTableContainerProps {
   selectedSymbol: string;
   selectedTimeFrame: TimeFrame;
-  activeTab: "ohlcv" | "funding" | "openinterest" | "feargreed";
+  activeTab:
+    | "ohlcv"
+    | "funding"
+    | "openinterest"
+    | "feargreed"
+    | "externalmarket";
   setActiveTab: (
-    tab: "ohlcv" | "funding" | "openinterest" | "feargreed"
+    tab: "ohlcv" | "funding" | "openinterest" | "feargreed" | "externalmarket"
   ) => void;
   ohlcvData: PriceData[];
   loading: boolean;
@@ -30,6 +37,9 @@ interface DataTableContainerProps {
   fearGreedData?: FearGreedIndexData[];
   fearGreedLoading?: boolean;
   fearGreedError?: string;
+  externalMarketData?: ExternalMarketData[];
+  externalMarketLoading?: boolean;
+  externalMarketError?: string;
 }
 
 const DataTableContainer: React.FC<DataTableContainerProps> = ({
@@ -49,6 +59,9 @@ const DataTableContainer: React.FC<DataTableContainerProps> = ({
   fearGreedData = [],
   fearGreedLoading = false,
   fearGreedError = "",
+  externalMarketData = [],
+  externalMarketLoading = false,
+  externalMarketError = "",
 }) => {
   return (
     <div className="enterprise-card animate-slide-up">
@@ -99,6 +112,16 @@ const DataTableContainer: React.FC<DataTableContainerProps> = ({
                 }`}
               >
                 F&G
+              </button>
+              <button
+                onClick={() => setActiveTab("externalmarket")}
+                className={`px-4 py-2 text-sm font-medium rounded-md transition-colors duration-200 ${
+                  activeTab === "externalmarket"
+                    ? "bg-primary-600 text-white"
+                    : "text-gray-400 hover:text-gray-100"
+                }`}
+              >
+                外部市場
               </button>
             </div>
           </div>
@@ -171,6 +194,27 @@ const DataTableContainer: React.FC<DataTableContainerProps> = ({
                   </span>
                 </>
               )}
+            {activeTab === "externalmarket" &&
+              externalMarketData.length > 0 &&
+              !externalMarketLoading && (
+                <>
+                  <span className="badge-primary">
+                    {externalMarketData.length}件
+                  </span>
+                  <span className="badge-info">
+                    {new Set(externalMarketData.map((d) => d.symbol)).size}
+                    シンボル
+                  </span>
+                  {externalMarketData[0] && (
+                    <span className="badge-success">
+                      最新:{" "}
+                      {new Date(
+                        externalMarketData[0].data_timestamp
+                      ).toLocaleDateString("ja-JP")}
+                    </span>
+                  )}
+                </>
+              )}
           </div>
         </div>
 
@@ -204,6 +248,13 @@ const DataTableContainer: React.FC<DataTableContainerProps> = ({
               data={fearGreedData}
               loading={fearGreedLoading}
               error={fearGreedError}
+            />
+          )}
+          {activeTab === "externalmarket" && (
+            <ExternalMarketDataTable
+              data={externalMarketData}
+              loading={externalMarketLoading}
+              error={externalMarketError}
             />
           )}
         </div>

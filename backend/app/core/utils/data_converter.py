@@ -401,3 +401,115 @@ class DataValidator:
         except Exception as e:
             logger.error(f"Fear & Greed Indexデータの検証中にエラーが発生しました: {e}")
             return False
+
+    @staticmethod
+    def validate_external_market_data(
+        external_market_records: List[Dict[str, Any]],
+    ) -> bool:
+        """
+        外部市場データの妥当性を検証
+
+        Args:
+            external_market_records: 検証する外部市場データのリスト
+
+        Returns:
+            全て有効な場合True、無効なデータがある場合False
+        """
+        try:
+            for record in external_market_records:
+                # 必須フィールドの存在確認
+                required_fields = [
+                    "symbol",
+                    "open",
+                    "high",
+                    "low",
+                    "close",
+                    "data_timestamp",
+                    "timestamp",
+                ]
+                for field in required_fields:
+                    if field not in record:
+                        logger.error(
+                            f"外部市場データに必須フィールド '{field}' が不足しています。"
+                        )
+                        return False
+
+                # 数値フィールドの妥当性確認
+                try:
+                    open_price = float(record["open"])
+                    high_price = float(record["high"])
+                    low_price = float(record["low"])
+                    close_price = float(record["close"])
+
+                    # volumeは任意フィールド（VIXなどでは存在しない場合がある）
+                    volume = None
+                    if "volume" in record and record["volume"] is not None:
+                        volume = float(record["volume"])
+
+                except (ValueError, TypeError) as e:
+                    logger.error(f"外部市場データの数値変換エラー: {e}")
+                    return False
+
+                # 価格の論理的妥当性確認
+                if high_price < max(open_price, close_price, low_price):
+                    logger.error(
+                        f"高値が他の価格より低いです: high={high_price}, "
+                        f"open={open_price}, close={close_price}, low={low_price}"
+                    )
+                    return False
+
+                if low_price > min(open_price, close_price, high_price):
+                    logger.error(
+                        f"安値が他の価格より高いです: low={low_price}, "
+                        f"open={open_price}, close={close_price}, high={high_price}"
+                    )
+                    return False
+
+                # 負の値の検証（価格は正の値である必要がある）
+                if any(
+                    x <= 0 for x in [open_price, high_price, low_price, close_price]
+                ):
+                    logger.error("外部市場データの価格に0以下の値が含まれています。")
+                    return False
+
+                # 出来高の検証（存在する場合）
+                if volume is not None and volume < 0:
+                    logger.error("外部市場データの出来高に負の値が含まれています。")
+                    return False
+
+                # シンボルの妥当性確認
+                symbol = str(record["symbol"]).strip()
+                if not symbol:
+                    logger.error("外部市場データのシンボルが空です。")
+                    return False
+
+                # 有効なシンボルの確認（計画書に記載されたシンボル）
+                valid_symbols = ["^GSPC", "^IXIC", "DX-Y.NYB", "^VIX"]
+                if symbol not in valid_symbols:
+                    logger.warning(
+                        f"未知のシンボルです: {symbol} "
+                        f"(有効なシンボル: {', '.join(valid_symbols)})"
+                    )
+                    # 警告のみで処理は継続
+
+                # タイムスタンプの妥当性確認
+                from datetime import datetime
+
+                try:
+                    if isinstance(record["data_timestamp"], str):
+                        datetime.fromisoformat(
+                            record["data_timestamp"].replace("Z", "+00:00")
+                        )
+                    if isinstance(record["timestamp"], str):
+                        datetime.fromisoformat(
+                            record["timestamp"].replace("Z", "+00:00")
+                        )
+                except (ValueError, TypeError) as e:
+                    logger.error(f"外部市場データのタイムスタンプが無効です: {e}")
+                    return False
+
+            return True
+
+        except Exception as e:
+            logger.error(f"外部市場データの検証中にエラーが発生しました: {e}")
+            return False

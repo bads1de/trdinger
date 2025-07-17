@@ -5,6 +5,7 @@
 from sqlalchemy import (
     Column,
     Integer,
+    BigInteger,
     String,
     Float,
     DateTime,
@@ -13,6 +14,7 @@ from sqlalchemy import (
     JSON,
     ForeignKey,
     Boolean,
+    UniqueConstraint,
 )
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
@@ -256,6 +258,88 @@ class FearGreedIndexData(Base):
             "id": self.id,
             "value": self.value,
             "value_classification": self.value_classification,
+            "data_timestamp": (
+                self.data_timestamp.isoformat()
+                if self.data_timestamp is not None
+                else None
+            ),
+            "timestamp": (
+                self.timestamp.isoformat() if self.timestamp is not None else None
+            ),
+            "created_at": (
+                self.created_at.isoformat() if self.created_at is not None else None
+            ),
+            "updated_at": (
+                self.updated_at.isoformat() if self.updated_at is not None else None
+            ),
+        }
+
+
+class ExternalMarketData(Base):
+    """
+    外部市場データテーブル
+
+    yfinance APIから取得した株式指数・通貨データを保存します。
+    SP500、NASDAQ、DXY、VIXなどの外部市場データを格納します。
+    TimescaleDBのハイパーテーブルとして最適化されています。
+    """
+
+    __tablename__ = "external_market_data"
+
+    # 主キー
+    id = Column(Integer, primary_key=True, autoincrement=True)
+
+    # シンボル（例: ^GSPC, ^IXIC, DX-Y.NYB, ^VIX）
+    symbol = Column(String(20), nullable=False, index=True)
+
+    # OHLCV データ
+    open = Column(Float, nullable=False)
+    high = Column(Float, nullable=False)
+    low = Column(Float, nullable=False)
+    close = Column(Float, nullable=False)
+    volume = Column(
+        BigInteger, nullable=True
+    )  # VIXなど一部指標では出来高がない場合がある
+
+    # タイムスタンプ
+    data_timestamp = Column(DateTime(timezone=True), nullable=False, index=True)
+    timestamp = Column(DateTime(timezone=True), nullable=False, index=True)
+
+    # メタデータ
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
+
+    # インデックス定義
+    __table_args__ = (
+        # 複合インデックス（クエリ最適化）
+        Index("idx_external_market_symbol_data_timestamp", "symbol", "data_timestamp"),
+        Index("idx_external_market_data_timestamp", "data_timestamp"),
+        Index("idx_external_market_timestamp", "timestamp"),
+        # 重複防止のためのユニーク制約
+        UniqueConstraint(
+            "symbol", "data_timestamp", name="uq_external_market_symbol_data_timestamp"
+        ),
+    )
+
+    def __repr__(self):
+        return (
+            f"<ExternalMarketData(symbol='{self.symbol}', "
+            f"close={self.close}, "
+            f"data_timestamp='{self.data_timestamp}')>"
+        )
+
+    def to_dict(self):
+        """辞書形式に変換"""
+        return {
+            "id": self.id,
+            "symbol": self.symbol,
+            "open": self.open,
+            "high": self.high,
+            "low": self.low,
+            "close": self.close,
+            "volume": self.volume,
             "data_timestamp": (
                 self.data_timestamp.isoformat()
                 if self.data_timestamp is not None

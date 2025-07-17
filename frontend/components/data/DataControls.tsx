@@ -17,8 +17,10 @@ import {
   BulkOpenInterestCollectionResult,
 } from "@/types/strategy";
 import { FearGreedCollectionResult } from "@/hooks/useFearGreedData";
+import { ExternalMarketCollectionResult } from "@/hooks/useExternalMarketData";
 import OpenInterestCollectionButton from "@/components/button/OpenInterestCollectionButton";
 import FearGreedCollectionButton from "@/components/button/FearGreedCollectionButton";
+import ExternalMarketCollectionButton from "@/components/button/ExternalMarketCollectionButton";
 
 interface DataControlsProps {
   symbols: TradingPair[];
@@ -43,10 +45,15 @@ interface DataControlsProps {
   handleOpenInterestCollectionError: (errorMessage: string) => void;
   handleFearGreedCollectionStart: (result: FearGreedCollectionResult) => void;
   handleFearGreedCollectionError: (errorMessage: string) => void;
+  handleExternalMarketCollectionStart: (
+    result: ExternalMarketCollectionResult
+  ) => void;
+  handleExternalMarketCollectionError: (errorMessage: string) => void;
   bulkCollectionMessage: string;
   fundingRateCollectionMessage: string;
   openInterestCollectionMessage: string;
   fearGreedCollectionMessage: string;
+  externalMarketCollectionMessage: string;
   allDataCollectionMessage: string;
   incrementalUpdateMessage: string;
   dataStatus: any; // TODO: より具体的な型を指定する
@@ -71,10 +78,13 @@ const DataControls: React.FC<DataControlsProps> = ({
   handleOpenInterestCollectionError,
   handleFearGreedCollectionStart,
   handleFearGreedCollectionError,
+  handleExternalMarketCollectionStart,
+  handleExternalMarketCollectionError,
   bulkCollectionMessage,
   fundingRateCollectionMessage,
   openInterestCollectionMessage,
   fearGreedCollectionMessage,
+  externalMarketCollectionMessage,
   allDataCollectionMessage,
   incrementalUpdateMessage,
   dataStatus,
@@ -129,6 +139,16 @@ const DataControls: React.FC<DataControlsProps> = ({
                 </span>
                 <span className="font-medium text-secondary-900 dark:text-secondary-100">
                   {dataStatus.data.data_counts?.fear_greed_index?.toLocaleString() ||
+                    0}
+                  件
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-secondary-600 dark:text-secondary-400">
+                  外部市場データ:
+                </span>
+                <span className="font-medium text-secondary-900 dark:text-secondary-100">
+                  {dataStatus.data.data_counts?.external_market_data?.toLocaleString() ||
                     0}
                   件
                 </span>
@@ -311,7 +331,7 @@ const DataControls: React.FC<DataControlsProps> = ({
             </div>
             <div className="space-y-3">
               {/* 上段：主要データ収集ボタン */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
                 {/* 全データ一括収集ボタン */}
                 <AllDataCollectionButton
                   onCollectionStart={handleAllDataCollectionStart}
@@ -352,6 +372,13 @@ const DataControls: React.FC<DataControlsProps> = ({
                   disabled={loading || updating}
                   className="h-10"
                 />
+
+                {/* 外部市場データ収集ボタン */}
+                <ExternalMarketCollectionButton
+                  onCollectionStart={handleExternalMarketCollectionStart}
+                  onCollectionError={handleExternalMarketCollectionError}
+                  disabled={loading || updating}
+                />
               </div>
             </div>
           </div>
@@ -362,6 +389,7 @@ const DataControls: React.FC<DataControlsProps> = ({
           fundingRateCollectionMessage ||
           openInterestCollectionMessage ||
           fearGreedCollectionMessage ||
+          externalMarketCollectionMessage ||
           allDataCollectionMessage ||
           incrementalUpdateMessage) && (
           <div className="mt-6 pt-4 border-t border-secondary-200 dark:border-secondary-700">
@@ -394,6 +422,11 @@ const DataControls: React.FC<DataControlsProps> = ({
               {fearGreedCollectionMessage && (
                 <div className="text-sm text-secondary-600 dark:text-secondary-400">
                   {fearGreedCollectionMessage}
+                </div>
+              )}
+              {externalMarketCollectionMessage && (
+                <div className="text-sm text-secondary-600 dark:text-secondary-400">
+                  {externalMarketCollectionMessage}
                 </div>
               )}
             </div>

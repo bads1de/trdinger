@@ -28,6 +28,9 @@ pytest-asyncio==0.21.1
 # HTTPクライアント
 httpx
 
+# 外部市場データ取得
+yfinance>=0.2.18
+
 # バックテストライブラリ
 backtesting==0.6.4
 

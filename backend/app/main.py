@@ -18,6 +18,7 @@ from app.api.data_collection import router as data_collection_router
 from app.api.funding_rates import router as funding_rates_router
 from app.api.open_interest import router as open_interest_router
 from app.api.fear_greed import router as fear_greed_router
+from app.api.external_market import router as external_market_router
 from app.api.data_reset import router as data_reset_router
 from app.api.backtest import router as backtest_router
 from app.api.auto_strategy import router as auto_strategy_router
@@ -91,6 +92,7 @@ def create_app() -> FastAPI:
     app.include_router(funding_rates_router, prefix="/api")
     app.include_router(open_interest_router, prefix="/api")
     app.include_router(fear_greed_router, prefix="/api")
+    app.include_router(external_market_router, prefix="/api")
     app.include_router(data_reset_router, prefix="/api")
 
     app.include_router(backtest_router)
