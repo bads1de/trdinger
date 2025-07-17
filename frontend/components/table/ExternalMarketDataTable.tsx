@@ -13,7 +13,8 @@ import {
   EXTERNAL_MARKET_SYMBOLS,
 } from "@/hooks/useExternalMarketData";
 import DataTable from "./DataTable";
-import { TableColumn } from "@/types/common";
+import { externalMarketColumns } from "@/components/common/tableColumns";
+import { getSymbolName } from "@/components/common/tableColumns";
 
 interface ExternalMarketDataTableProps {
   data: ExternalMarketData[];
@@ -21,47 +22,6 @@ interface ExternalMarketDataTableProps {
   error: string;
 }
 
-/**
- * 数値をフォーマット
- */
-const formatNumber = (value: number | null, decimals: number = 2): string => {
-  if (value === null || value === undefined) return "-";
-  return value.toLocaleString("ja-JP", {
-    minimumFractionDigits: decimals,
-    maximumFractionDigits: decimals,
-  });
-};
-
-/**
- * 日時をフォーマット
- */
-const formatDateTime = (dateString: string): string => {
-  try {
-    const date = new Date(dateString);
-    return date.toLocaleString("ja-JP", {
-      year: "numeric",
-      month: "2-digit",
-      day: "2-digit",
-      minute: "2-digit",
-    });
-  } catch {
-    return dateString;
-  }
-};
-
-/**
- * シンボル名を取得
- */
-const getSymbolName = (symbol: string): string => {
-  return (
-    EXTERNAL_MARKET_SYMBOLS[symbol as keyof typeof EXTERNAL_MARKET_SYMBOLS] ||
-    symbol
-  );
-};
-
-/**
- * 外部市場データテーブルコンポーネント
- */
 interface EnrichedExternalMarketData extends ExternalMarketData {
   name: string;
 }
@@ -76,63 +36,8 @@ const ExternalMarketDataTable: React.FC<ExternalMarketDataTableProps> = ({
     [data]
   );
 
-  // テーブルカラム定義
-  const columns = useMemo<TableColumn<EnrichedExternalMarketData>[]>(
-    () => [
-      {
-        key: "symbol",
-        header: "シンボル",
-        sortable: true,
-      },
-      {
-        key: "name",
-        header: "名称",
-        sortable: true,
-      },
-      {
-        key: "open",
-        header: "始値",
-        formatter: (value) => formatNumber(value as number),
-        sortable: true,
-        cellClassName: "text-right font-mono",
-      },
-      {
-        key: "high",
-        header: "高値",
-        formatter: (value) => formatNumber(value as number),
-        sortable: true,
-        cellClassName: "text-right font-mono",
-      },
-      {
-        key: "low",
-        header: "安値",
-        formatter: (value) => formatNumber(value as number),
-        sortable: true,
-        cellClassName: "text-right font-mono",
-      },
-      {
-        key: "close",
-        header: "終値",
-        formatter: (value) => formatNumber(value as number),
-        sortable: true,
-        cellClassName: "text-right font-mono",
-      },
-      {
-        key: "volume",
-        header: "出来高",
-        formatter: (value) => formatNumber(value as number, 0),
-        sortable: true,
-        cellClassName: "text-right font-mono",
-      },
-      {
-        key: "data_timestamp",
-        header: "日時",
-        formatter: (value) => formatDateTime(value as string),
-        sortable: true,
-      },
-    ],
-    []
-  );
+  // テーブルカラム定義はtableColumns.tsxからインポート
+  const columns = externalMarketColumns;
 
   // データがない場合の表示
   if (!loading && !error && (!enrichedData || enrichedData.length === 0)) {
