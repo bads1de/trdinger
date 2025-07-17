@@ -1,5 +1,5 @@
 /**
- * OIデータ収集ボタンコンポーネント（共通化版）
+ * OIデータ収集ボタンコンポーネント
  *
  * 共通のDataCollectionButtonコンポーネントを使用したOIデータ収集ボタンです。
  *
@@ -15,22 +15,16 @@ import ApiButton from "./ApiButton";
  * OI収集ボタンコンポーネントのプロパティ
  */
 interface OpenInterestCollectionButtonProps {
-  /** データ収集開始時のコールバック */
   onCollectionStart?: (result: any) => void;
-  /** データ収集エラー時のコールバック */
   onCollectionError?: (error: string) => void;
-  /** ボタンの無効化フラグ */
   disabled?: boolean;
-  /** カスタムクラス名 */
   className?: string;
-  /** 収集モード */
   mode?: "single" | "bulk";
-  /** 単一収集時のシンボル */
   symbol?: string;
 }
 
 /**
- * OIデータ収集ボタンコンポーネント（共通化版）
+ * OIデータ収集ボタンコンポーネント
  */
 const OpenInterestCollectionButton: React.FC<
   OpenInterestCollectionButtonProps

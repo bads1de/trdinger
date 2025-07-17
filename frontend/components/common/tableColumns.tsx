@@ -17,7 +17,6 @@ import {
   EXTERNAL_MARKET_SYMBOLS,
 } from "@/hooks/useExternalMarketData";
 import { formatDateTime } from "@/utils/formatters";
-import { getScoreColorClass, getSemanticColor } from "@/utils/colorUtils";
 import {
   formatPrice,
   formatSymbol,

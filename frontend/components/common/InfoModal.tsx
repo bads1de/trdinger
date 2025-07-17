@@ -1,6 +1,6 @@
 import React from "react";
 import { X, Info } from "lucide-react";
-import Modal from "./Modal"; // Import the common Modal component
+import Modal from "./Modal";
 
 interface InfoModalProps {
   isOpen: boolean;

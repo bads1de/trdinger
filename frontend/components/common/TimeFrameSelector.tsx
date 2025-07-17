@@ -1,5 +1,5 @@
 /**
- * 時間軸選択コンポーネント（共通化版）
+ * 時間軸選択コンポーネント
  *
  * 簡略化された時間軸選択コンポーネントです。
  *
@@ -23,7 +23,7 @@ interface TimeFrameSelectorProps {
 }
 
 /**
- * 時間軸選択コンポーネント（共通化版）
+ * 時間軸選択コンポーネント
  */
 const TimeFrameSelector: React.FC<TimeFrameSelectorProps> = ({
   selectedTimeFrame,

@@ -7,7 +7,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { TrendingUp, TrendingDown, Target, BarChart3, Info } from "lucide-react";
+import { TrendingUp, Target, BarChart3, Info } from "lucide-react";
 import { MultiObjectiveGAResult, ParetoSolution } from "@/types/optimization";
 
 interface MultiObjectiveResultsProps {
@@ -19,7 +19,8 @@ export default function MultiObjectiveResults({
   result,
   onClose,
 }: MultiObjectiveResultsProps) {
-  const [selectedSolution, setSelectedSolution] = useState<ParetoSolution | null>(null);
+  const [selectedSolution, setSelectedSolution] =
+    useState<ParetoSolution | null>(null);
   const [showDetails, setShowDetails] = useState(false);
 
   if (!result.success || !result.result) {
@@ -111,7 +112,9 @@ export default function MultiObjectiveResults({
           <div className="bg-secondary-800 rounded-lg p-4">
             <div className="flex items-center space-x-2 mb-2">
               <BarChart3 className="w-5 h-5 text-green-400" />
-              <span className="text-secondary-200 font-medium">パレート解数</span>
+              <span className="text-secondary-200 font-medium">
+                パレート解数
+              </span>
             </div>
             <div className="text-2xl font-bold text-green-400">
               {pareto_front.length}
@@ -178,11 +181,13 @@ export default function MultiObjectiveResults({
                   ))}
                   <td className="p-3">
                     <button
-                      onClick={() => setSelectedSolution({
-                        strategy: solution.strategy,
-                        fitness_values: solution.fitness_values,
-                        objectives: objectives,
-                      })}
+                      onClick={() =>
+                        setSelectedSolution({
+                          strategy: solution.strategy,
+                          fitness_values: solution.fitness_values,
+                          objectives: objectives,
+                        })
+                      }
                       className="text-primary-400 hover:text-primary-300 transition-colors text-sm"
                     >
                       詳細表示
@@ -197,18 +202,20 @@ export default function MultiObjectiveResults({
         {/* 詳細情報 */}
         {showDetails && (
           <div className="mt-6 bg-secondary-800 rounded-lg p-4">
-            <h4 className="text-white font-medium mb-3">多目的最適化について</h4>
+            <h4 className="text-white font-medium mb-3">
+              多目的最適化について
+            </h4>
             <div className="text-sm text-secondary-300 space-y-2">
               <p>
-                • <strong>パレート最適解</strong>: 
+                • <strong>パレート最適解</strong>:
                 他の解を犠牲にすることなく改善できない解の集合
               </p>
               <p>
-                • <strong>NSGA-II</strong>: 
+                • <strong>NSGA-II</strong>:
                 非支配ソートと混雑距離を用いた多目的遺伝的アルゴリズム
               </p>
               <p>
-                • <strong>トレードオフ</strong>: 
+                • <strong>トレードオフ</strong>:
                 各解は異なる目的間のバランスを表現
               </p>
             </div>
@@ -226,15 +233,28 @@ export default function MultiObjectiveResults({
             <div className="p-6">
               <div className="space-y-4">
                 <div>
-                  <h4 className="text-white font-medium mb-2">フィットネス値</h4>
+                  <h4 className="text-white font-medium mb-2">
+                    フィットネス値
+                  </h4>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                     {selectedSolution.fitness_values.map((value, index) => (
                       <div key={index} className="bg-secondary-800 rounded p-3">
                         <div className="text-secondary-300 text-sm">
-                          {objectiveDisplayNames[selectedSolution.objectives[index]]}
+                          {
+                            objectiveDisplayNames[
+                              selectedSolution.objectives[index]
+                            ]
+                          }
                         </div>
-                        <div className={`text-lg font-bold ${getObjectiveColor(selectedSolution.objectives[index])}`}>
-                          {formatValue(value, selectedSolution.objectives[index])}
+                        <div
+                          className={`text-lg font-bold ${getObjectiveColor(
+                            selectedSolution.objectives[index]
+                          )}`}
+                        >
+                          {formatValue(
+                            value,
+                            selectedSolution.objectives[index]
+                          )}
                         </div>
                       </div>
                     ))}

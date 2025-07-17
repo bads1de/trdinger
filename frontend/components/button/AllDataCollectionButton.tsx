@@ -40,7 +40,7 @@ const AllDataCollectionButton: React.FC<AllDataCollectionButtonProps> = ({
     await apiCall.execute("/api/data/all/bulk-collect", {
       method: "POST",
       confirmMessage:
-        "全データ（OHLCV・FR・OI・TI）を一括取得します。\n\n" +
+        "全データ（OHLCV・FR・OI）を一括取得します。\n\n" +
         "この処理には数分から十数分かかる場合があります。\n" +
         "テクニカル指標も自動計算されます。続行しますか？",
       onSuccess: onCollectionStart,

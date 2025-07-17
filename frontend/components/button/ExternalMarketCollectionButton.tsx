@@ -21,7 +21,12 @@ interface ExternalMarketCollectionButtonProps {
  */
 const ExternalMarketCollectionButton: React.FC<
   ExternalMarketCollectionButtonProps
-> = ({ onCollectionStart, onCollectionError, disabled = false, className = "" }) => {
+> = ({
+  onCollectionStart,
+  onCollectionError,
+  disabled = false,
+  className = "",
+}) => {
   const apiCall = useApiCall<ExternalMarketCollectionResult>();
 
   const handleClick = async () => {
@@ -32,7 +37,6 @@ const ExternalMarketCollectionButton: React.FC<
     });
   };
 
-  const buttonText = "外部市場収集";
   const title = "外部市場データ（SP500、NASDAQ、DXY、VIX）を収集します";
 
   return (
@@ -46,7 +50,7 @@ const ExternalMarketCollectionButton: React.FC<
       className={className}
       title={title}
     >
-      {buttonText}
+      外部市場収集
     </ApiButton>
   );
 };
