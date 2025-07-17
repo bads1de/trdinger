@@ -6,6 +6,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { FearGreedIndexData, FearGreedIndexResponse } from "@/app/api/data/fear-greed/route";
+import { useApiCall } from "./useApiCall";
 
 /**
  * Fear & Greed Index データ状態の型定義
@@ -39,9 +40,11 @@ export interface FearGreedCollectionResult {
  */
 export const useFearGreedData = () => {
   const [data, setData] = useState<FearGreedIndexData[]>([]);
-  const [loading, setLoading] = useState<boolean>(false);
-  const [error, setError] = useState<string | null>(null);
   const [status, setStatus] = useState<FearGreedDataStatus | null>(null);
+
+  const { execute: fetchDataApi, loading, error } = useApiCall<FearGreedIndexResponse>();
+  const { execute: fetchStatusApi } = useApiCall<{ success: boolean; data: FearGreedDataStatus }>();
+  const { execute: collectDataApi } = useApiCall<{ success: boolean; data: FearGreedCollectionResult }>();
 
   /**
    * Fear & Greed Index データを取得
@@ -51,206 +54,102 @@ export const useFearGreedData = () => {
     startDate?: string,
     endDate?: string
   ) => {
-    setLoading(true);
-    setError(null);
+    const params = new URLSearchParams();
+    params.set("limit", limit.toString());
+    if (startDate) params.set("start_date", startDate);
+    if (endDate) params.set("end_date", endDate);
 
-    try {
-      const params = new URLSearchParams();
-      params.set("limit", limit.toString());
-      if (startDate) params.set("start_date", startDate);
-      if (endDate) params.set("end_date", endDate);
-
-      const response = await fetch(`/api/data/fear-greed?${params.toString()}`);
-      
-      if (!response.ok) {
-        throw new Error(`データ取得に失敗しました: ${response.status}`);
-      }
-
-      const result: FearGreedIndexResponse = await response.json();
-      
-      if (result.success) {
-        setData(result.data);
-      } else {
-        throw new Error(result.message);
-      }
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : "データ取得中にエラーが発生しました";
-      setError(errorMessage);
-      console.error("Fear & Greed Index データ取得エラー:", err);
-    } finally {
-      setLoading(false);
+    const result = await fetchDataApi(`/api/data/fear-greed?${params.toString()}`);
+    if (result && result.success) {
+      setData(result.data);
     }
-  }, []);
+  }, [fetchDataApi]);
 
   /**
    * 最新のFear & Greed Index データを取得
    */
   const fetchLatestData = useCallback(async (limit: number = 30) => {
-    setLoading(true);
-    setError(null);
-
-    try {
-      const response = await fetch(`/api/data/fear-greed/latest?limit=${limit}`);
-      
-      if (!response.ok) {
-        throw new Error(`最新データ取得に失敗しました: ${response.status}`);
-      }
-
-      const result: FearGreedIndexResponse = await response.json();
-      
-      if (result.success) {
-        setData(result.data);
-      } else {
-        throw new Error(result.message);
-      }
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : "最新データ取得中にエラーが発生しました";
-      setError(errorMessage);
-      console.error("Fear & Greed Index 最新データ取得エラー:", err);
-    } finally {
-      setLoading(false);
+    const result = await fetchDataApi(`/api/data/fear-greed/latest?limit=${limit}`);
+    if (result && result.success) {
+      setData(result.data);
     }
-  }, []);
+  }, [fetchDataApi]);
 
   /**
    * Fear & Greed Index データの状態を取得
    */
   const fetchStatus = useCallback(async () => {
-    try {
-      const response = await fetch("/api/data/fear-greed/status");
-      
-      if (!response.ok) {
-        throw new Error(`状態取得に失敗しました: ${response.status}`);
-      }
-
-      const result = await response.json();
-      
-      if (result.success) {
-        setStatus(result.data);
-      } else {
-        throw new Error(result.message);
-      }
-    } catch (err) {
-      console.error("Fear & Greed Index 状態取得エラー:", err);
+    const result = await fetchStatusApi("/api/data/fear-greed/status");
+    if (result && result.success) {
+      setStatus(result.data);
     }
-  }, []);
+  }, [fetchStatusApi]);
 
   /**
    * Fear & Greed Index データを収集
    */
   const collectData = useCallback(async (limit: number = 30): Promise<FearGreedCollectionResult> => {
-    try {
-      const response = await fetch(`/api/data/fear-greed/collect?limit=${limit}`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-      });
-      
-      if (!response.ok) {
-        throw new Error(`データ収集に失敗しました: ${response.status}`);
-      }
+    const result = await collectDataApi(`/api/data/fear-greed/collect?limit=${limit}`, {
+      method: "POST",
+    });
 
-      const result = await response.json();
-      
-      if (result.success) {
-        // データ収集後に最新データを再取得
-        await fetchLatestData();
-        await fetchStatus();
-        return result.data;
-      } else {
-        throw new Error(result.message);
-      }
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : "データ収集中にエラーが発生しました";
-      console.error("Fear & Greed Index データ収集エラー:", err);
-      return {
-        success: false,
-        message: errorMessage,
-        fetched_count: 0,
-        inserted_count: 0,
-        error: errorMessage,
-      };
+    if (result && result.success) {
+      await fetchLatestData();
+      await fetchStatus();
+      return result.data;
     }
-  }, [fetchLatestData, fetchStatus]);
+    return {
+      success: false,
+      message: "データ収集に失敗しました",
+      fetched_count: 0,
+      inserted_count: 0,
+      error: error || "Unknown error",
+    };
+  }, [collectDataApi, fetchLatestData, fetchStatus, error]);
 
   /**
    * 履歴データを収集（全期間）
    */
   const collectHistoricalData = useCallback(async (limit: number = 1000): Promise<FearGreedCollectionResult> => {
-    try {
-      const response = await fetch(`/api/data/fear-greed/collect-historical?limit=${limit}`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-      });
-      
-      if (!response.ok) {
-        throw new Error(`履歴データ収集に失敗しました: ${response.status}`);
-      }
+    const result = await collectDataApi(`/api/data/fear-greed/collect-historical?limit=${limit}`, {
+      method: "POST",
+    });
 
-      const result = await response.json();
-      
-      if (result.success) {
-        // データ収集後に最新データを再取得
-        await fetchLatestData();
-        await fetchStatus();
-        return result.data;
-      } else {
-        throw new Error(result.message);
-      }
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : "履歴データ収集中にエラーが発生しました";
-      console.error("Fear & Greed Index 履歴データ収集エラー:", err);
-      return {
-        success: false,
-        message: errorMessage,
-        fetched_count: 0,
-        inserted_count: 0,
-        error: errorMessage,
-      };
+    if (result && result.success) {
+      await fetchLatestData();
+      await fetchStatus();
+      return result.data;
     }
-  }, [fetchLatestData, fetchStatus]);
+    return {
+      success: false,
+      message: "履歴データ収集に失敗しました",
+      fetched_count: 0,
+      inserted_count: 0,
+      error: error || "Unknown error",
+    };
+  }, [collectDataApi, fetchLatestData, fetchStatus, error]);
 
   /**
    * 差分データを収集
    */
   const collectIncrementalData = useCallback(async (): Promise<FearGreedCollectionResult> => {
-    try {
-      const response = await fetch("/api/data/fear-greed/collect-incremental", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-      });
-      
-      if (!response.ok) {
-        throw new Error(`差分データ収集に失敗しました: ${response.status}`);
-      }
+    const result = await collectDataApi("/api/data/fear-greed/collect-incremental", {
+      method: "POST",
+    });
 
-      const result = await response.json();
-      
-      if (result.success) {
-        // データ収集後に最新データを再取得
-        await fetchLatestData();
-        await fetchStatus();
-        return result.data;
-      } else {
-        throw new Error(result.message);
-      }
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : "差分データ収集中にエラーが発生しました";
-      console.error("Fear & Greed Index 差分データ収集エラー:", err);
-      return {
-        success: false,
-        message: errorMessage,
-        fetched_count: 0,
-        inserted_count: 0,
-        error: errorMessage,
-      };
+    if (result && result.success) {
+      await fetchLatestData();
+      await fetchStatus();
+      return result.data;
     }
-  }, [fetchLatestData, fetchStatus]);
+    return {
+      success: false,
+      message: "差分データ収集に失敗しました",
+      fetched_count: 0,
+      inserted_count: 0,
+      error: error || "Unknown error",
+    };
+  }, [collectDataApi, fetchLatestData, fetchStatus, error]);
 
   // 初回データ取得
   useEffect(() => {

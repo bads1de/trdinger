@@ -5,7 +5,7 @@
  */
 
 import { useState, useEffect, useCallback } from "react";
-import { BACKEND_API_URL } from "@/constants";
+import { useApiCall } from "./useApiCall";
 
 /**
  * 外部市場データの型定義
@@ -73,56 +73,32 @@ export type ExternalMarketSymbol = keyof typeof EXTERNAL_MARKET_SYMBOLS;
  */
 export const useExternalMarketData = () => {
   const [data, setData] = useState<ExternalMarketData[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string>("");
   const [status, setStatus] = useState<ExternalMarketDataStatus | null>(null);
+
+  const { execute: fetchDataApi, loading, error } = useApiCall<{ success: boolean; data: ExternalMarketData[] }>();
+  const { execute: collectDataApi } = useApiCall<{ success: boolean; data: ExternalMarketCollectionResult }>();
+  const { execute: fetchStatusApi } = useApiCall<{ success: boolean; data: ExternalMarketDataStatus }>();
 
   /**
    * 外部市場データを取得
    */
   const fetchData = useCallback(
     async (symbol?: string, limit: number = 100) => {
-      setLoading(true);
-      setError("");
+      const url = new URL(
+        "/api/data/external-market",
+        window.location.origin
+      );
+      if (symbol) {
+        url.searchParams.set("symbol", symbol);
+      }
+      url.searchParams.set("limit", limit.toString());
 
-      try {
-        const url = new URL(
-          "/api/data/external-market",
-          window.location.origin
-        );
-        if (symbol) {
-          url.searchParams.set("symbol", symbol);
-        }
-        url.searchParams.set("limit", limit.toString());
-
-        const response = await fetch(url.toString());
-        const result = await response.json();
-
-        if (!response.ok) {
-          throw new Error(
-            result.message || "外部市場データの取得に失敗しました"
-          );
-        }
-
-        if (result.success) {
-          setData(result.data);
-        } else {
-          throw new Error(
-            result.message || "外部市場データの取得に失敗しました"
-          );
-        }
-      } catch (err) {
-        const errorMessage =
-          err instanceof Error
-            ? err.message
-            : "外部市場データの取得に失敗しました";
-        setError(errorMessage);
-        console.error("外部市場データ取得エラー:", err);
-      } finally {
-        setLoading(false);
+      const result = await fetchDataApi(url.toString());
+      if (result && result.success) {
+        setData(result.data);
       }
     },
-    []
+    [fetchDataApi]
   );
 
   /**
@@ -130,47 +106,21 @@ export const useExternalMarketData = () => {
    */
   const fetchLatestData = useCallback(
     async (symbol?: string, limit: number = 30) => {
-      setLoading(true);
-      setError("");
+      const url = new URL(
+        "/api/data/external-market/latest",
+        window.location.origin
+      );
+      if (symbol) {
+        url.searchParams.set("symbol", symbol);
+      }
+      url.searchParams.set("limit", limit.toString());
 
-      try {
-        const url = new URL(
-          "/api/data/external-market/latest",
-          window.location.origin
-        );
-        if (symbol) {
-          url.searchParams.set("symbol", symbol);
-        }
-        url.searchParams.set("limit", limit.toString());
-
-        const response = await fetch(url.toString());
-        const result = await response.json();
-
-        if (!response.ok) {
-          throw new Error(
-            result.message || "最新外部市場データの取得に失敗しました"
-          );
-        }
-
-        if (result.success) {
-          setData(result.data);
-        } else {
-          throw new Error(
-            result.message || "最新外部市場データの取得に失敗しました"
-          );
-        }
-      } catch (err) {
-        const errorMessage =
-          err instanceof Error
-            ? err.message
-            : "最新外部市場データの取得に失敗しました";
-        setError(errorMessage);
-        console.error("最新外部市場データ取得エラー:", err);
-      } finally {
-        setLoading(false);
+      const result = await fetchDataApi(url.toString());
+      if (result && result.success) {
+        setData(result.data);
       }
     },
-    []
+    [fetchDataApi]
   );
 
   /**
@@ -181,48 +131,25 @@ export const useExternalMarketData = () => {
       symbols?: string[],
       period: string = "1mo"
     ): Promise<ExternalMarketCollectionResult> => {
-      try {
-        const url = new URL(
-          "/api/data/external-market/collect",
-          window.location.origin
-        );
-        url.searchParams.set("period", period);
+      const url = new URL(
+        "/api/data/external-market/collect",
+        window.location.origin
+      );
+      url.searchParams.set("period", period);
 
-        if (symbols && symbols.length > 0) {
-          symbols.forEach((symbol) => {
-            url.searchParams.append("symbols", symbol);
-          });
-        }
-
-        const response = await fetch(url.toString(), {
-          method: "POST",
+      if (symbols && symbols.length > 0) {
+        symbols.forEach((symbol) => {
+          url.searchParams.append("symbols", symbol);
         });
-
-        const result = await response.json();
-
-        if (!response.ok) {
-          throw new Error(
-            result.message || "外部市場データの収集に失敗しました"
-          );
-        }
-
-        if (result.success) {
-          return result.data;
-        } else {
-          throw new Error(
-            result.message || "外部市場データの収集に失敗しました"
-          );
-        }
-      } catch (err) {
-        const errorMessage =
-          err instanceof Error
-            ? err.message
-            : "外部市場データの収集に失敗しました";
-        console.error("外部市場データ収集エラー:", err);
-        throw new Error(errorMessage);
       }
+
+      const result = await collectDataApi(url.toString(), { method: "POST" });
+      if (result && result.success) {
+        return result.data;
+      }
+      throw new Error(error || "外部市場データの収集に失敗しました");
     },
-    []
+    [collectDataApi, error]
   );
 
   /**
@@ -230,47 +157,24 @@ export const useExternalMarketData = () => {
    */
   const collectIncrementalData = useCallback(
     async (symbols?: string[]): Promise<ExternalMarketCollectionResult> => {
-      try {
-        const url = new URL(
-          "/api/data/external-market/collect-incremental",
-          window.location.origin
-        );
+      const url = new URL(
+        "/api/data/external-market/collect-incremental",
+        window.location.origin
+      );
 
-        if (symbols && symbols.length > 0) {
-          symbols.forEach((symbol) => {
-            url.searchParams.append("symbols", symbol);
-          });
-        }
-
-        const response = await fetch(url.toString(), {
-          method: "POST",
+      if (symbols && symbols.length > 0) {
+        symbols.forEach((symbol) => {
+          url.searchParams.append("symbols", symbol);
         });
-
-        const result = await response.json();
-
-        if (!response.ok) {
-          throw new Error(
-            result.message || "外部市場データの差分収集に失敗しました"
-          );
-        }
-
-        if (result.success) {
-          return result.data;
-        } else {
-          throw new Error(
-            result.message || "外部市場データの差分収集に失敗しました"
-          );
-        }
-      } catch (err) {
-        const errorMessage =
-          err instanceof Error
-            ? err.message
-            : "外部市場データの差分収集に失敗しました";
-        console.error("外部市場データ差分収集エラー:", err);
-        throw new Error(errorMessage);
       }
+
+      const result = await collectDataApi(url.toString(), { method: "POST" });
+      if (result && result.success) {
+        return result.data;
+      }
+      throw new Error(error || "外部市場データの差分収集に失敗しました");
     },
-    []
+    [collectDataApi, error]
   );
 
   /**
@@ -283,87 +187,48 @@ export const useExternalMarketData = () => {
       startDate?: string,
       endDate?: string
     ): Promise<ExternalMarketCollectionResult> => {
-      try {
-        const url = new URL(
-          "/api/data/external-market/collect-historical",
-          window.location.origin
-        );
-        url.searchParams.set("period", period);
+      const url = new URL(
+        "/api/data/external-market/collect-historical",
+        window.location.origin
+      );
+      url.searchParams.set("period", period);
 
-        if (symbols && symbols.length > 0) {
-          symbols.forEach((symbol) => {
-            url.searchParams.append("symbols", symbol);
-          });
-        }
-
-        if (startDate) {
-          url.searchParams.set("start_date", startDate);
-        }
-
-        if (endDate) {
-          url.searchParams.set("end_date", endDate);
-        }
-
-        const response = await fetch(url.toString(), {
-          method: "POST",
+      if (symbols && symbols.length > 0) {
+        symbols.forEach((symbol) => {
+          url.searchParams.append("symbols", symbol);
         });
-
-        const result = await response.json();
-
-        if (!response.ok) {
-          throw new Error(
-            result.message || "外部市場データの履歴収集に失敗しました"
-          );
-        }
-
-        if (result.success) {
-          return result.data;
-        } else {
-          throw new Error(
-            result.message || "外部市場データの履歴収集に失敗しました"
-          );
-        }
-      } catch (err) {
-        const errorMessage =
-          err instanceof Error
-            ? err.message
-            : "外部市場データの履歴収集に失敗しました";
-        console.error("外部市場データ履歴収集エラー:", err);
-        throw new Error(errorMessage);
       }
+
+      if (startDate) {
+        url.searchParams.set("start_date", startDate);
+      }
+
+      if (endDate) {
+        url.searchParams.set("end_date", endDate);
+      }
+
+      const result = await collectDataApi(url.toString(), { method: "POST" });
+      if (result && result.success) {
+        return result.data;
+      }
+      throw new Error(error || "外部市場データの履歴収集に失敗しました");
     },
-    []
+    [collectDataApi, error]
   );
 
   /**
    * 外部市場データの状態を取得
    */
   const fetchStatus = useCallback(async () => {
-    try {
-      const url = new URL(
-        "/api/data/external-market/status",
-        window.location.origin
-      );
-      const response = await fetch(url.toString());
-      const result = await response.json();
-
-      if (!response.ok) {
-        throw new Error(
-          result.message || "外部市場データ状態の取得に失敗しました"
-        );
-      }
-
-      if (result.success) {
-        setStatus(result.data);
-      } else {
-        throw new Error(
-          result.message || "外部市場データ状態の取得に失敗しました"
-        );
-      }
-    } catch (err) {
-      console.error("外部市場データ状態取得エラー:", err);
+    const url = new URL(
+      "/api/data/external-market/status",
+      window.location.origin
+    );
+    const result = await fetchStatusApi(url.toString());
+    if (result && result.success) {
+      setStatus(result.data);
     }
-  }, []);
+  }, [fetchStatusApi]);
 
   /**
    * データを再取得
