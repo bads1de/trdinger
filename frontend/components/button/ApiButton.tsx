@@ -12,7 +12,12 @@ import React from "react";
 import ActionButton from "../common/ActionButton";
 
 export type ButtonSize = "sm" | "md" | "lg";
-export type ButtonVariant = "primary" | "secondary" | "success" | "warning" | "danger";
+export type ButtonVariant =
+  | "primary"
+  | "secondary"
+  | "success"
+  | "warning"
+  | "danger";
 
 export interface ApiButtonProps {
   children: React.ReactNode;
@@ -24,6 +29,7 @@ export interface ApiButtonProps {
   icon?: React.ReactNode;
   loadingText?: string;
   className?: string;
+  title?: string;
 }
 
 const ApiButton: React.FC<ApiButtonProps> = ({
@@ -36,6 +42,7 @@ const ApiButton: React.FC<ApiButtonProps> = ({
   icon,
   loadingText,
   className = "",
+  title,
 }) => {
   const handleClick = async () => {
     if (disabled || loading) return;
@@ -52,6 +59,7 @@ const ApiButton: React.FC<ApiButtonProps> = ({
       icon={icon}
       loadingText={loadingText}
       className={className}
+      title={title}
     >
       {children}
     </ActionButton>

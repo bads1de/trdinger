@@ -6,16 +6,19 @@ import OHLCVCollectionButton from "@/components/button/OHLCVCollectionButton";
 import FundingRateCollectionButton from "@/components/button/FundingRateCollectionButton";
 import DataResetPanel from "@/components/common/DataResetPanel";
 
+import { TradingPair, TimeFrame } from "@/types/market-data";
 import {
-  TradingPair,
-  TimeFrame,
   AllDataCollectionResult,
   BulkOHLCVCollectionResult,
+} from "@/types/data-collection";
+import {
   BulkFundingRateCollectionResult,
   FundingRateCollectionResult,
-  OpenInterestCollectionResult,
+} from "@/types/funding-rate";
+import {
   BulkOpenInterestCollectionResult,
-} from "@/types/strategy";
+  OpenInterestCollectionResult,
+} from "@/types/open-interest";
 import { FearGreedCollectionResult } from "@/hooks/useFearGreedData";
 import { ExternalMarketCollectionResult } from "@/hooks/useExternalMarketData";
 import OpenInterestCollectionButton from "@/components/button/OpenInterestCollectionButton";
@@ -378,6 +381,7 @@ const DataControls: React.FC<DataControlsProps> = ({
                   onCollectionStart={handleExternalMarketCollectionStart}
                   onCollectionError={handleExternalMarketCollectionError}
                   disabled={loading || updating}
+                  className="h-10"
                 />
               </div>
             </div>

@@ -304,8 +304,8 @@ class ExternalMarketDataCollector:
                 period = "5d"  # 5日分
             else:
                 logger.info("外部市場データが存在しません。初回収集を実行します。")
-                # 初回収集時はより多くのデータを取得
-                period = "1y"  # 1年分
+                # 初回収集時は2020年からのデータを取得するため5年分を取得
+                period = "5y"  # 5年分（2020年からのデータを確実に取得）
 
             result = await self.collect_external_market_data(
                 symbols=symbols, period=period, db_session=session
@@ -335,7 +335,7 @@ class ExternalMarketDataCollector:
     async def collect_historical_external_market_data(
         self,
         symbols: Optional[list] = None,
-        period: str = "2y",
+        period: str = "5y",
         db_session: Optional[SessionLocal] = None,
     ) -> Dict:
         """

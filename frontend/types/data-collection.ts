@@ -145,6 +145,19 @@ export interface BulkIncrementalUpdateResult {
       /** エラーメッセージ（失敗時） */
       error?: string;
     };
+    /** 外部市場データ更新結果 */
+    external_market: {
+      /** 取得件数 */
+      fetched_count: number;
+      /** 挿入件数 */
+      inserted_count: number;
+      /** 成功フラグ */
+      success: boolean;
+      /** 収集タイプ */
+      collection_type?: string;
+      /** エラーメッセージ（失敗時） */
+      error?: string;
+    };
   };
   /** 総保存件数 */
   total_saved_count: number;

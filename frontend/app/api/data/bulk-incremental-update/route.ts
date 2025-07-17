@@ -85,6 +85,11 @@ export async function POST(request: NextRequest) {
               },
               funding_rate: { symbol, saved_count: 0, success: false },
               open_interest: { symbol, saved_count: 0, success: false },
+              external_market: {
+                fetched_count: 0,
+                inserted_count: 0,
+                success: false,
+              },
             },
             total_saved_count: 0,
             timestamp: new Date().toISOString(),

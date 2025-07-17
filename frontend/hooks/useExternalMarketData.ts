@@ -310,7 +310,7 @@ export const useExternalMarketData = () => {
     fetchLatestData();
   }, [fetchLatestData]);
 
-  // 初期化時にデータ状態を取得
+  // 初期化時にデータ状態のみを取得（データは必要に応じて別途取得）
   useEffect(() => {
     fetchStatus();
   }, [fetchStatus]);

@@ -25,16 +25,19 @@ import {
 } from "@/hooks/useExternalMarketData";
 import { useBulkIncrementalUpdate } from "@/hooks/useBulkIncrementalUpdate";
 import { useApiCall } from "@/hooks/useApiCall";
+import { TimeFrame, TradingPair } from "@/types/market-data";
 import {
-  TimeFrame,
-  TradingPair,
   BulkOHLCVCollectionResult,
+  AllDataCollectionResult,
+} from "@/types/data-collection";
+import {
   BulkFundingRateCollectionResult,
   FundingRateCollectionResult,
+} from "@/types/funding-rate";
+import {
   OpenInterestCollectionResult,
   BulkOpenInterestCollectionResult,
-  AllDataCollectionResult,
-} from "@/types/strategy";
+} from "@/types/open-interest";
 import { BACKEND_API_URL } from "@/constants";
 import { useSymbols } from "@/hooks/useSymbols";
 
@@ -112,6 +115,7 @@ const DataPage: React.FC = () => {
     fetchLatestData: fetchExternalMarketData,
     collectData: collectExternalMarketData,
     collectIncrementalData: collectIncrementalExternalMarketData,
+    fetchStatus,
   } = useExternalMarketData();
 
   /**
@@ -168,9 +172,13 @@ const DataPage: React.FC = () => {
           console.warn("時間足別結果が見つかりません");
         }
 
+        // 外部市場データの件数を取得
+        const externalMarketCount =
+          result.data.data.external_market?.inserted_count || 0;
+
         setIncrementalUpdateMessage(
           `✅ 一括差分更新完了！ ${selectedSymbol} - ` +
-            `総計${totalSavedCount}件 (OHLCV:${ohlcvCount}${timeframeDetails}, FR:${frCount}, OI:${oiCount})`
+            `総計${totalSavedCount}件 (OHLCV:${ohlcvCount}${timeframeDetails}, FR:${frCount}, OI:${oiCount}, 外部市場:${externalMarketCount})`
         );
 
         // 現在選択されている時間足のデータを再取得
@@ -395,9 +403,12 @@ const DataPage: React.FC = () => {
   // 外部市場タブが選択された時にデータを自動読み込み
   useEffect(() => {
     if (activeTab === "externalmarket") {
-      fetchExternalMarketData();
+      // 状態とデータを並列で取得
+      Promise.all([fetchStatus(), fetchExternalMarketData()]).catch((error) => {
+        console.error("外部市場データ取得エラー:", error);
+      });
     }
-  }, [activeTab, fetchExternalMarketData]);
+  }, [activeTab, fetchExternalMarketData, fetchStatus]);
 
   return (
     <div className="min-h-screen  from-gray-900 animate-fade-in">

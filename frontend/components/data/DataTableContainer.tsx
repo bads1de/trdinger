@@ -4,12 +4,9 @@ import FundingRateDataTable from "@/components/table/FundingRateDataTable";
 import OpenInterestDataTable from "@/components/table/OpenInterestDataTable";
 import FearGreedDataTable from "@/components/data/FearGreedDataTable";
 import ExternalMarketDataTable from "@/components/data/ExternalMarketDataTable";
-import {
-  PriceData,
-  FundingRateData,
-  OpenInterestData,
-  TimeFrame,
-} from "@/types/strategy";
+import { PriceData, TimeFrame } from "@/types/market-data";
+import { FundingRateData } from "@/types/funding-rate";
+import { OpenInterestData } from "@/types/open-interest";
 import { FearGreedIndexData } from "@/app/api/data/fear-greed/route";
 import { ExternalMarketData } from "@/hooks/useExternalMarketData";
 

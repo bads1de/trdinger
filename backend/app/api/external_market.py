@@ -48,10 +48,12 @@ async def get_external_market_data(
         # 時刻の変換
         start_datetime = None
         end_datetime = None
-        
+
         if start_time:
             try:
-                start_datetime = datetime.fromisoformat(start_time.replace("Z", "+00:00"))
+                start_datetime = datetime.fromisoformat(
+                    start_time.replace("Z", "+00:00")
+                )
             except ValueError as e:
                 raise HTTPException(
                     status_code=400, detail=f"開始時刻の形式が無効です: {e}"
@@ -136,12 +138,15 @@ async def get_available_symbols(db: Session = Depends(get_db)) -> Dict:
     """
     try:
         repository = ExternalMarketRepository(db)
-        
+
         # データベースに存在するシンボル
         db_symbols = repository.get_symbols()
-        
+
         # サービスで定義されているシンボル
-        from app.core.services.data_collection.external_market_service import ExternalMarketService
+        from app.core.services.data_collection.external_market_service import (
+            ExternalMarketService,
+        )
+
         service = ExternalMarketService()
         available_symbols = service.get_available_symbols()
 
@@ -272,7 +277,7 @@ async def collect_incremental_external_market_data(
 @router.post("/collect-historical")
 async def collect_historical_external_market_data(
     symbols: Optional[List[str]] = Query(None, description="取得するシンボルのリスト"),
-    period: str = Query("2y", description="取得期間"),
+    period: str = Query("5y", description="取得期間"),
     db: Session = Depends(get_db),
 ) -> Dict:
     """

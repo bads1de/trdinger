@@ -104,9 +104,10 @@ async def update_bulk_incremental_data(
     symbol: str = "BTC/USDT:USDT", db: Session = Depends(get_db)
 ) -> Dict:
     """
-    一括差分データを更新（OHLCV、FR、OI）
+    一括差分データを更新（OHLCV、FR、OI、外部市場データ）
 
     OHLCVは全時間足（15m, 30m, 1h, 4h, 1d）を自動的に処理します。
+    外部市場データ（SP500、NASDAQ、DXY、VIX）も同時に更新されます。
 
     Args:
         symbol: 取引ペア（デフォルト: BTC/USDT:USDT）
@@ -121,13 +122,14 @@ async def update_bulk_incremental_data(
         funding_rate_repository = FundingRateRepository(db)
         open_interest_repository = OpenInterestRepository(db)
 
-        # 全時間足を自動的に処理
+        # 全時間足を自動的に処理（外部市場データも含む）
         result = await service.collect_bulk_incremental_data(
             symbol=symbol,
             timeframe="1h",  # デフォルト値（実際は全時間足を処理）
             ohlcv_repository=ohlcv_repository,
             funding_rate_repository=funding_rate_repository,
             open_interest_repository=open_interest_repository,
+            include_external_market=True,  # 外部市場データも収集
         )
 
         if result.get("success"):
