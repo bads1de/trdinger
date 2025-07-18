@@ -277,12 +277,24 @@ class FeatureEngineeringService:
                 for col in result_df.columns
                 if col not in ["Open", "High", "Low", "Close", "Volume"]
             ]
+
+            # 最初のクリーンアップ（median補完）
             result_df = DataValidator.validate_and_clean(
                 result_df,
                 column_names=feature_columns,
                 fill_method="median",
                 log_name="特徴量データ",
             )
+
+            # 残存するNaN値を0で補完（最終的な安全策）
+            for col in feature_columns:
+                if col in result_df.columns:
+                    nan_count = result_df[col].isna().sum()
+                    if nan_count > 0:
+                        logger.warning(
+                            f"特徴量 {col} に {nan_count} 個のNaN値が残存、0で補完します"
+                        )
+                        result_df[col] = result_df[col].fillna(0.0)
 
             logger.info(f"特徴量計算完了: {len(result_df.columns)}個の特徴量を生成")
 

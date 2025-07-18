@@ -14,7 +14,9 @@ from typing import Dict, Any, Type, Optional
 from backtesting import Backtest, Strategy
 from .backtest_data_service import BacktestDataService
 from database.repositories.ohlcv_repository import OHLCVRepository
+from database.repositories.backtest_result_repository import BacktestResultRepository
 from database.connection import SessionLocal
+from sqlalchemy.orm import Session
 
 
 logger = logging.getLogger(__name__)
@@ -414,3 +416,40 @@ class BacktestService:
                 "constraints": [],
             }
         }
+
+    def execute_and_save_backtest(self, request, db_session: Session) -> Dict[str, Any]:
+        """
+        バックテストを実行し、結果をデータベースに保存
+
+        Args:
+            request: BacktestRequestオブジェクト
+            db_session: データベースセッション
+
+        Returns:
+            実行結果の辞書
+        """
+        try:
+            # リクエストから設定を作成
+            config = {
+                "strategy_name": request.strategy_name,
+                "symbol": request.symbol,
+                "timeframe": request.timeframe,
+                "start_date": request.start_date,
+                "end_date": request.end_date,
+                "initial_capital": request.initial_capital,
+                "commission_rate": request.commission_rate,
+                "strategy_config": request.strategy_config.dict(),
+            }
+
+            # バックテストを実行
+            result = self.run_backtest(config)
+
+            # 結果をデータベースに保存
+            backtest_repo = BacktestResultRepository(db_session)
+            saved_result = backtest_repo.save_backtest_result(result)
+
+            return {"success": True, "result": saved_result}
+
+        except Exception as e:
+            logger.error(f"バックテスト実行・保存エラー: {e}", exc_info=True)
+            raise

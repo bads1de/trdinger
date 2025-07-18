@@ -1,7 +1,7 @@
 """
-ML統合パフォーマンステスト
+MLパフォーマンステスト
 
-統合前後のパフォーマンス比較テスト
+MLOrchestratorのパフォーマンステスト
 """
 
 import unittest
@@ -14,9 +14,6 @@ import numpy as np
 import gc
 
 from app.core.services.auto_strategy.services.ml_orchestrator import MLOrchestrator
-from app.core.services.auto_strategy.services.ml_indicator_service import (
-    MLIndicatorService,
-)
 
 
 class TestMLPerformance(unittest.TestCase):
@@ -77,133 +74,80 @@ class TestMLPerformance(unittest.TestCase):
 
         # MLOrchestrator
         orchestrator = MLOrchestrator()
-        perf1 = self._measure_performance(
+        perf = self._measure_performance(
             orchestrator.calculate_ml_indicators, self.small_data
         )
 
-        # MLIndicatorService
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore")
-            indicator_service = MLIndicatorService()
-            perf2 = self._measure_performance(
-                indicator_service.calculate_ml_indicators, self.small_data
-            )
-
-        # 結果の一致確認
-        for key in perf1["result"].keys():
-            np.testing.assert_array_equal(perf1["result"][key], perf2["result"][key])
+        # 結果の形式確認
+        self.assertIsInstance(perf["result"], dict)
+        required_keys = ["ML_UP_PROB", "ML_DOWN_PROB", "ML_RANGE_PROB"]
+        for key in required_keys:
+            self.assertIn(key, perf["result"])
 
         # パフォーマンス比較
         print(f"\n=== 小データ (100行) パフォーマンス ===")
         print(
-            f"MLOrchestrator: {perf1['duration_ms']:.2f}ms, メモリ: {perf1['memory_diff_mb']:.2f}MB"
-        )
-        print(
-            f"MLIndicatorService: {perf2['duration_ms']:.2f}ms, メモリ: {perf2['memory_diff_mb']:.2f}MB"
-        )
-        print(
-            f"オーバーヘッド: {((perf2['duration_ms'] / perf1['duration_ms']) - 1) * 100:.1f}%"
+            f"MLOrchestrator: {perf['duration_ms']:.2f}ms, メモリ: {perf['memory_diff_mb']:.2f}MB"
         )
 
-        # プロキシのオーバーヘッドが50%以内であることを確認（処理時間のばらつきを考慮）
-        self.assertLess(perf2["duration_ms"], perf1["duration_ms"] * 1.5)
+        # 処理時間が合理的な範囲内であることを確認（3秒以内）
+        self.assertLess(perf["duration_ms"], 3000)
 
     def test_medium_data_performance(self):
         """中データでのパフォーマンステスト"""
 
         orchestrator = MLOrchestrator()
-        perf1 = self._measure_performance(
+        perf = self._measure_performance(
             orchestrator.calculate_ml_indicators, self.medium_data
         )
 
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore")
-            indicator_service = MLIndicatorService()
-            perf2 = self._measure_performance(
-                indicator_service.calculate_ml_indicators, self.medium_data
-            )
-
         print(f"\n=== 中データ (1000行) パフォーマンス ===")
         print(
-            f"MLOrchestrator: {perf1['duration_ms']:.2f}ms, メモリ: {perf1['memory_diff_mb']:.2f}MB"
-        )
-        print(
-            f"MLIndicatorService: {perf2['duration_ms']:.2f}ms, メモリ: {perf2['memory_diff_mb']:.2f}MB"
-        )
-        print(
-            f"オーバーヘッド: {((perf2['duration_ms'] / perf1['duration_ms']) - 1) * 100:.1f}%"
+            f"MLOrchestrator: {perf['duration_ms']:.2f}ms, メモリ: {perf['memory_diff_mb']:.2f}MB"
         )
 
-        # オーバーヘッドが50%以内であることを確認（処理時間のばらつきを考慮）
-        self.assertLess(perf2["duration_ms"], perf1["duration_ms"] * 1.5)
+        # 処理時間が合理的な範囲内であることを確認（5秒以内）
+        self.assertLess(perf["duration_ms"], 5000)
 
     def test_large_data_performance(self):
         """大データでのパフォーマンステスト"""
 
         orchestrator = MLOrchestrator()
-        perf1 = self._measure_performance(
+        perf = self._measure_performance(
             orchestrator.calculate_ml_indicators, self.large_data
         )
 
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore")
-            indicator_service = MLIndicatorService()
-            perf2 = self._measure_performance(
-                indicator_service.calculate_ml_indicators, self.large_data
-            )
-
         print(f"\n=== 大データ (5000行) パフォーマンス ===")
         print(
-            f"MLOrchestrator: {perf1['duration_ms']:.2f}ms, メモリ: {perf1['memory_diff_mb']:.2f}MB"
-        )
-        print(
-            f"MLIndicatorService: {perf2['duration_ms']:.2f}ms, メモリ: {perf2['memory_diff_mb']:.2f}MB"
-        )
-        print(
-            f"オーバーヘッド: {((perf2['duration_ms'] / perf1['duration_ms']) - 1) * 100:.1f}%"
+            f"MLOrchestrator: {perf['duration_ms']:.2f}ms, メモリ: {perf['memory_diff_mb']:.2f}MB"
         )
 
-        # オーバーヘッドが50%以内であることを確認（処理時間のばらつきを考慮）
-        self.assertLess(perf2["duration_ms"], perf1["duration_ms"] * 1.5)
+        # 処理時間が合理的な範囲内であることを確認（10秒以内）
+        self.assertLess(perf["duration_ms"], 10000)
 
-    def test_memory_usage_comparison(self):
-        """メモリ使用量比較テスト"""
+    def test_memory_usage(self):
+        """メモリ使用量テスト"""
 
         # 複数回実行してメモリ使用量を測定
         orchestrator_memory = []
-        indicator_memory = []
 
         for i in range(5):
             # MLOrchestrator
             orchestrator = MLOrchestrator()
-            perf1 = self._measure_performance(
+            perf = self._measure_performance(
                 orchestrator.calculate_ml_indicators, self.medium_data
             )
-            orchestrator_memory.append(perf1["memory_diff_mb"])
+            orchestrator_memory.append(perf["memory_diff_mb"])
             del orchestrator
-
-            # MLIndicatorService
-            with warnings.catch_warnings():
-                warnings.simplefilter("ignore")
-                indicator_service = MLIndicatorService()
-                perf2 = self._measure_performance(
-                    indicator_service.calculate_ml_indicators, self.medium_data
-                )
-                indicator_memory.append(perf2["memory_diff_mb"])
-                del indicator_service
-
             gc.collect()
 
         avg_orchestrator = np.mean(orchestrator_memory)
-        avg_indicator = np.mean(indicator_memory)
 
-        print(f"\n=== メモリ使用量比較 (5回平均) ===")
+        print(f"\n=== メモリ使用量 (5回平均) ===")
         print(f"MLOrchestrator: {avg_orchestrator:.2f}MB")
-        print(f"MLIndicatorService: {avg_indicator:.2f}MB")
-        print(f"差分: {avg_indicator - avg_orchestrator:.2f}MB")
 
-        # プロキシのメモリオーバーヘッドが1MB以内であることを確認
-        self.assertLess(avg_indicator - avg_orchestrator, 1.0)
+        # メモリ使用量が合理的な範囲内であることを確認（100MB以内）
+        self.assertLess(avg_orchestrator, 100.0)
 
     def test_concurrent_performance(self):
         """並行処理パフォーマンステスト"""
@@ -235,43 +179,18 @@ class TestMLPerformance(unittest.TestCase):
         for thread in threads:
             thread.join()
 
-        # MLIndicatorService
-        indicator_times = queue.Queue()
-        threads = []
-
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore")
-            for i in range(num_threads):
-                indicator_service = MLIndicatorService()
-                thread = threading.Thread(
-                    target=worker,
-                    args=(indicator_service, self.small_data, indicator_times),
-                )
-                threads.append(thread)
-                thread.start()
-
-        for thread in threads:
-            thread.join()
-
         # 結果集計
         orchestrator_results = []
         while not orchestrator_times.empty():
             orchestrator_results.append(orchestrator_times.get())
 
-        indicator_results = []
-        while not indicator_times.empty():
-            indicator_results.append(indicator_times.get())
-
         avg_orchestrator = np.mean(orchestrator_results)
-        avg_indicator = np.mean(indicator_results)
 
         print(f"\n=== 並行処理パフォーマンス ({num_threads}スレッド) ===")
         print(f"MLOrchestrator: {avg_orchestrator:.2f}ms")
-        print(f"MLIndicatorService: {avg_indicator:.2f}ms")
-        print(f"オーバーヘッド: {((avg_indicator / avg_orchestrator) - 1) * 100:.1f}%")
 
-        # 並行処理でもオーバーヘッドが50%以内であることを確認（処理時間のばらつきを考慮）
-        self.assertLess(avg_indicator, avg_orchestrator * 1.5)
+        # 並行処理が合理的な時間内で完了することを確認（10秒以内）
+        self.assertLess(avg_orchestrator, 10000)
 
     def test_single_indicator_performance(self):
         """単一指標パフォーマンステスト"""
@@ -281,34 +200,21 @@ class TestMLPerformance(unittest.TestCase):
         for indicator_type in indicator_types:
             # MLOrchestrator
             orchestrator = MLOrchestrator()
-            perf1 = self._measure_performance(
+            perf = self._measure_performance(
                 orchestrator.calculate_single_ml_indicator,
                 indicator_type,
                 self.medium_data,
             )
 
-            # MLIndicatorService
-            with warnings.catch_warnings():
-                warnings.simplefilter("ignore")
-                indicator_service = MLIndicatorService()
-                perf2 = self._measure_performance(
-                    indicator_service.calculate_single_ml_indicator,
-                    indicator_type,
-                    self.medium_data,
-                )
-
-            # 結果の一致確認
-            np.testing.assert_array_equal(perf1["result"], perf2["result"])
-
             print(f"\n=== {indicator_type} パフォーマンス ===")
-            print(f"MLOrchestrator: {perf1['duration_ms']:.2f}ms")
-            print(f"MLIndicatorService: {perf2['duration_ms']:.2f}ms")
-            print(
-                f"オーバーヘッド: {((perf2['duration_ms'] / perf1['duration_ms']) - 1) * 100:.1f}%"
-            )
+            print(f"MLOrchestrator: {perf['duration_ms']:.2f}ms")
 
-            # オーバーヘッドが50%以内であることを確認（処理時間のばらつきを考慮）
-            self.assertLess(perf2["duration_ms"], perf1["duration_ms"] * 1.5)
+            # 結果の形式確認
+            self.assertIsInstance(perf["result"], np.ndarray)
+            self.assertEqual(len(perf["result"]), len(self.medium_data))
+
+            # 処理時間が合理的な範囲内であることを確認（5秒以内）
+            self.assertLess(perf["duration_ms"], 5000)
 
 
 if __name__ == "__main__":

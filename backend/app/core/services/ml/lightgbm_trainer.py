@@ -131,17 +131,59 @@ class LightGBMTrainer(BaseMLTrainer):
             random_state = training_params.get("random_state", 42)
             params["random_state"] = random_state
 
-            # クラス数を設定
-            num_classes = len(np.unique(y_train))
+            # クラス数を設定と検証
+            unique_classes = np.unique(y_train)
+            num_classes = len(unique_classes)
+
+            # 1クラスしかない場合のエラーハンドリング
+            if num_classes <= 1:
+                raise MLModelError(
+                    f"学習データに{num_classes}種類のクラスしかありません。"
+                    f"機械学習には最低2種類のクラスが必要です。"
+                    f"ラベル生成の閾値を調整してください。"
+                )
+
+            # クラス不均衡の警告
+            class_counts = pd.Series(y_train).value_counts()
+            min_class_ratio = class_counts.min() / len(y_train)
+            max_class_ratio = class_counts.max() / len(y_train)
+
+            if min_class_ratio < 0.05:
+                logger.warning(
+                    f"クラス不均衡が検出されました。最小クラス比率: {min_class_ratio:.3f}"
+                )
+                logger.warning(f"クラス分布: {dict(class_counts)}")
+
+            # LightGBMパラメータの設定
             if num_classes > 2:
                 params["objective"] = "multiclass"
                 params["num_class"] = num_classes
                 params["metric"] = "multi_logloss"
+
+                # クラス不均衡対策（マルチクラス）
+                if min_class_ratio < 0.1:
+                    params["is_unbalance"] = True
+                    logger.info("クラス不均衡対策を有効化（マルチクラス）")
             else:
                 params["objective"] = "binary"
                 params["metric"] = "binary_logloss"
 
+                # クラス不均衡対策（バイナリ）
+                if min_class_ratio < 0.1:
+                    params["is_unbalance"] = True
+                    # クラス重みを計算
+                    pos_weight = (
+                        class_counts[0] / class_counts[1]
+                        if len(class_counts) > 1
+                        else 1.0
+                    )
+                    params["scale_pos_weight"] = pos_weight
+                    logger.info(
+                        f"クラス不均衡対策を有効化（バイナリ）、pos_weight: {pos_weight:.3f}"
+                    )
+
             logger.info(f"LightGBM学習開始: {num_classes}クラス分類")
+            logger.info(f"クラス分布: {dict(class_counts)}")
 
             # モデル学習
             self.model = lgb.train(
@@ -196,6 +238,8 @@ class LightGBMTrainer(BaseMLTrainer):
                 "num_classes": num_classes,
             }
 
+            # 精度を取得（detailed_metricsから）
+            accuracy = detailed_metrics.get("accuracy", 0.0)
             logger.info(f"LightGBMモデル学習完了: 精度={accuracy:.4f}")
             return result
 

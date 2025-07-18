@@ -14,6 +14,7 @@ from database.connection import get_db
 from database.repositories.backtest_result_repository import BacktestResultRepository
 from app.core.services.backtest_service import BacktestService
 from app.core.utils.api_utils import APIErrorHandler
+from app.core.dependencies import get_backtest_service_with_db
 from database.repositories.ga_experiment_repository import GAExperimentRepository
 from database.repositories.generated_strategy_repository import (
     GeneratedStrategyRepository,
@@ -63,27 +64,9 @@ class BacktestResultsResponse(BaseModel):
 
 
 # ヘルパー関数
-def _create_base_config(request: BacktestRequest) -> Dict[str, Any]:
-    """バックテストリクエストから基本設定辞書を作成"""
-    return {
-        "strategy_name": request.strategy_name,
-        "symbol": request.symbol,
-        "timeframe": request.timeframe,
-        "start_date": request.start_date,
-        "end_date": request.end_date,
-        "initial_capital": request.initial_capital,
-        "commission_rate": request.commission_rate,
-        "strategy_config": {
-            "strategy_type": request.strategy_config.strategy_type,
-            "parameters": request.strategy_config.parameters,
-        },
-    }
-
-
-def _save_backtest_result(result: Dict[str, Any], db: Session) -> Dict[str, Any]:
-    """バックテスト結果をデータベースに保存"""
-    backtest_repo = BacktestResultRepository(db)
-    return backtest_repo.save_backtest_result(result)
+# 以下のヘルパー関数は廃止予定（サービス層に移行済み）
+# def _create_base_config(request: BacktestRequest) -> Dict[str, Any]:
+# def _save_backtest_result(result: Dict[str, Any], db: Session) -> Dict[str, Any]:
 
 
 @router.post("/run", response_model=BacktestResponse)
@@ -98,15 +81,12 @@ async def run_backtest(request: BacktestRequest, db: Session = Depends(get_db)):
     Returns:
         バックテスト結果
     """
+    # ビジネスロジックをサービス層に委譲
+    backtest_service = get_backtest_service_with_db(db)
 
-    async def _run():
-        backtest_service = BacktestService()
-        config = _create_base_config(request)
-        result = backtest_service.run_backtest(config)
-        saved_result = _save_backtest_result(result, db)
-        return {"success": True, "result": saved_result}
-
-    return await APIErrorHandler.handle_api_exception(_run)
+    return await APIErrorHandler.handle_api_exception(
+        lambda: backtest_service.execute_and_save_backtest(request, db)
+    )
 
 
 @router.get("/results", response_model=BacktestResultsResponse)

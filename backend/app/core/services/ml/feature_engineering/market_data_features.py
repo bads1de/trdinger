@@ -190,8 +190,13 @@ class MarketDataFeatureCalculator:
                 merged_df[oi_column], window=168
             )
 
-            # 建玉残高トレンド
-            result_df["OI_Trend"] = result_df["OI_MA_24"] / result_df["OI_MA_168"] - 1
+            # 建玉残高トレンド（安全な計算）
+            result_df["OI_Trend"] = (
+                DataValidator.safe_divide(
+                    result_df["OI_MA_24"], result_df["OI_MA_168"], default_value=1.0
+                )
+                - 1
+            )
 
             # 建玉残高と価格の関係（安全な計算）
             price_change = DataValidator.safe_pct_change(result_df["Close"])

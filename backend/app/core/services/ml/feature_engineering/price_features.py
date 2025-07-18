@@ -160,11 +160,13 @@ class PriceFeatureCalculator:
             )
 
             # ATR（Average True Range）
+            # 最初の行のNaN値を避けるため、shift(1)の結果をfillnaで補完
+            prev_close = result_df["Close"].shift(1).fillna(result_df["Close"])
             result_df["TR"] = np.maximum(
                 result_df["High"] - result_df["Low"],
                 np.maximum(
-                    abs(result_df["High"] - result_df["Close"].shift(1)),
-                    abs(result_df["Low"] - result_df["Close"].shift(1)),
+                    abs(result_df["High"] - prev_close),
+                    abs(result_df["Low"] - prev_close),
                 ),
             )
             result_df["ATR_20"] = DataValidator.safe_rolling_mean(
@@ -187,9 +189,11 @@ class PriceFeatureCalculator:
             ).astype(int)
 
             # ボラティリティ変化率（安全な計算）
-            result_df["Vol_Change"] = DataValidator.safe_pct_change(
+            vol_change = DataValidator.safe_pct_change(
                 result_df["Realized_Volatility_20"]
             )
+            # 異常に大きな値をクリップ（±500%に制限）
+            result_df["Vol_Change"] = np.clip(vol_change, -5.0, 5.0)
 
             logger.debug("ボラティリティ特徴量計算完了")
             return result_df
@@ -217,9 +221,14 @@ class PriceFeatureCalculator:
             volume_period = lookback_periods.get("volume", 20)
 
             # 出来高移動平均（安全な計算）
-            result_df[f"Volume_MA_{volume_period}"] = DataValidator.safe_rolling_mean(
+            volume_ma = DataValidator.safe_rolling_mean(
                 result_df["Volume"], window=volume_period
             )
+            # 異常に大きな値をクリップ（最大値を制限）
+            volume_max = (
+                result_df["Volume"].quantile(0.99) * 10
+            )  # 99%分位点の10倍を上限とする
+            result_df[f"Volume_MA_{volume_period}"] = np.clip(volume_ma, 0, volume_max)
 
             # 出来高比率
             result_df["Volume_Ratio"] = DataValidator.safe_divide(

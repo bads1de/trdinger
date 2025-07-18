@@ -52,12 +52,31 @@ class ExternalMarketFeatureCalculator:
 
             # 外部市場データをピボットして各シンボルを列にする
             if "symbol" in external_market_data.columns:
-                pivot_data = external_market_data.pivot_table(
-                    index="data_timestamp", 
-                    columns="symbol", 
-                    values="close",
-                    aggfunc="last"
-                )
+                # インデックスがtimestampの場合とdata_timestampカラムがある場合の両方に対応
+                if (
+                    external_market_data.index.name == "timestamp"
+                    or "timestamp" in str(type(external_market_data.index))
+                ):
+                    # インデックスがtimestampの場合
+                    pivot_data = external_market_data.pivot_table(
+                        index=external_market_data.index,
+                        columns="symbol",
+                        values="close",
+                        aggfunc="last",
+                    )
+                elif "data_timestamp" in external_market_data.columns:
+                    # data_timestampカラムがある場合
+                    pivot_data = external_market_data.pivot_table(
+                        index="data_timestamp",
+                        columns="symbol",
+                        values="close",
+                        aggfunc="last",
+                    )
+                else:
+                    logger.warning(
+                        "外部市場データに適切なタイムスタンプカラムがありません"
+                    )
+                    return result_df
             else:
                 logger.warning("外部市場データにsymbolカラムがありません")
                 return result_df
@@ -66,11 +85,21 @@ class ExternalMarketFeatureCalculator:
             merged_df = result_df.join(pivot_data, how="left", rsuffix="_ext")
 
             # 各外部市場指標の特徴量を計算
-            result_df = self._calculate_sp500_features(result_df, merged_df, lookback_periods)
-            result_df = self._calculate_nasdaq_features(result_df, merged_df, lookback_periods)
-            result_df = self._calculate_dxy_features(result_df, merged_df, lookback_periods)
-            result_df = self._calculate_vix_features(result_df, merged_df, lookback_periods)
-            result_df = self._calculate_composite_features(result_df, merged_df, lookback_periods)
+            result_df = self._calculate_sp500_features(
+                result_df, merged_df, lookback_periods
+            )
+            result_df = self._calculate_nasdaq_features(
+                result_df, merged_df, lookback_periods
+            )
+            result_df = self._calculate_dxy_features(
+                result_df, merged_df, lookback_periods
+            )
+            result_df = self._calculate_vix_features(
+                result_df, merged_df, lookback_periods
+            )
+            result_df = self._calculate_composite_features(
+                result_df, merged_df, lookback_periods
+            )
 
             logger.debug("外部市場特徴量計算完了")
             return result_df
@@ -80,10 +109,10 @@ class ExternalMarketFeatureCalculator:
             return df
 
     def _calculate_sp500_features(
-        self, 
-        result_df: pd.DataFrame, 
-        merged_df: pd.DataFrame, 
-        lookback_periods: Dict[str, int]
+        self,
+        result_df: pd.DataFrame,
+        merged_df: pd.DataFrame,
+        lookback_periods: Dict[str, int],
     ) -> pd.DataFrame:
         """S&P 500関連特徴量を計算"""
         sp500_col = "^GSPC"
@@ -105,9 +134,12 @@ class ExternalMarketFeatureCalculator:
         )
 
         # S&P 500トレンド
-        result_df["SP500_Trend"] = DataValidator.safe_divide(
-            result_df["SP500_MA_20"], result_df["SP500_MA_50"], default_value=1.0
-        ) - 1
+        result_df["SP500_Trend"] = (
+            DataValidator.safe_divide(
+                result_df["SP500_MA_20"], result_df["SP500_MA_50"], default_value=1.0
+            )
+            - 1
+        )
 
         # S&P 500ボラティリティ
         result_df["SP500_Volatility"] = DataValidator.safe_rolling_std(
@@ -117,10 +149,10 @@ class ExternalMarketFeatureCalculator:
         return result_df
 
     def _calculate_nasdaq_features(
-        self, 
-        result_df: pd.DataFrame, 
-        merged_df: pd.DataFrame, 
-        lookback_periods: Dict[str, int]
+        self,
+        result_df: pd.DataFrame,
+        merged_df: pd.DataFrame,
+        lookback_periods: Dict[str, int],
     ) -> pd.DataFrame:
         """NASDAQ関連特徴量を計算"""
         nasdaq_col = "^IXIC"
@@ -131,7 +163,9 @@ class ExternalMarketFeatureCalculator:
         merged_df[nasdaq_col] = merged_df[nasdaq_col].ffill()
 
         # NASDAQリターン
-        result_df["NASDAQ_Return"] = DataValidator.safe_pct_change(merged_df[nasdaq_col])
+        result_df["NASDAQ_Return"] = DataValidator.safe_pct_change(
+            merged_df[nasdaq_col]
+        )
 
         # NASDAQ移動平均
         result_df["NASDAQ_MA_20"] = DataValidator.safe_rolling_mean(
@@ -146,10 +180,10 @@ class ExternalMarketFeatureCalculator:
         return result_df
 
     def _calculate_dxy_features(
-        self, 
-        result_df: pd.DataFrame, 
-        merged_df: pd.DataFrame, 
-        lookback_periods: Dict[str, int]
+        self,
+        result_df: pd.DataFrame,
+        merged_df: pd.DataFrame,
+        lookback_periods: Dict[str, int],
     ) -> pd.DataFrame:
         """DXY（ドル指数）関連特徴量を計算"""
         dxy_col = "DX-Y.NYB"
@@ -175,10 +209,10 @@ class ExternalMarketFeatureCalculator:
         return result_df
 
     def _calculate_vix_features(
-        self, 
-        result_df: pd.DataFrame, 
-        merged_df: pd.DataFrame, 
-        lookback_periods: Dict[str, int]
+        self,
+        result_df: pd.DataFrame,
+        merged_df: pd.DataFrame,
+        lookback_periods: Dict[str, int],
     ) -> pd.DataFrame:
         """VIX（恐怖指数）関連特徴量を計算"""
         vix_col = "^VIX"
@@ -211,35 +245,45 @@ class ExternalMarketFeatureCalculator:
         return result_df
 
     def _calculate_composite_features(
-        self, 
-        result_df: pd.DataFrame, 
-        merged_df: pd.DataFrame, 
-        lookback_periods: Dict[str, int]
+        self,
+        result_df: pd.DataFrame,
+        merged_df: pd.DataFrame,
+        lookback_periods: Dict[str, int],
     ) -> pd.DataFrame:
         """複合特徴量を計算"""
         # 必要な列が存在するかチェック
         required_cols = ["^GSPC", "^IXIC", "DX-Y.NYB", "^VIX"]
         available_cols = [col for col in required_cols if col in merged_df.columns]
-        
+
         if len(available_cols) < 2:
             return result_df
 
         # 株式市場強度（S&P 500 + NASDAQ）
         if "^GSPC" in merged_df.columns and "^IXIC" in merged_df.columns:
-            sp500_norm = DataValidator.safe_normalize(merged_df["^GSPC"], window=50, default_value=0.0)
-            nasdaq_norm = DataValidator.safe_normalize(merged_df["^IXIC"], window=50, default_value=0.0)
+            sp500_norm = DataValidator.safe_normalize(
+                merged_df["^GSPC"], window=50, default_value=0.0
+            )
+            nasdaq_norm = DataValidator.safe_normalize(
+                merged_df["^IXIC"], window=50, default_value=0.0
+            )
             result_df["Equity_Strength"] = (sp500_norm + nasdaq_norm) / 2
 
         # リスクオン・リスクオフ指標（VIX vs 株式）
         if "^VIX" in merged_df.columns and "^GSPC" in merged_df.columns:
             vix_inv = DataValidator.safe_divide(1, merged_df["^VIX"], default_value=0.0)
-            sp500_norm = DataValidator.safe_normalize(merged_df["^GSPC"], window=50, default_value=0.0)
+            sp500_norm = DataValidator.safe_normalize(
+                merged_df["^GSPC"], window=50, default_value=0.0
+            )
             result_df["Risk_On_Off"] = sp500_norm * vix_inv
 
         # ドル強度 vs 株式
         if "DX-Y.NYB" in merged_df.columns and "^GSPC" in merged_df.columns:
-            dxy_norm = DataValidator.safe_normalize(merged_df["DX-Y.NYB"], window=50, default_value=0.0)
-            sp500_norm = DataValidator.safe_normalize(merged_df["^GSPC"], window=50, default_value=0.0)
+            dxy_norm = DataValidator.safe_normalize(
+                merged_df["DX-Y.NYB"], window=50, default_value=0.0
+            )
+            sp500_norm = DataValidator.safe_normalize(
+                merged_df["^GSPC"], window=50, default_value=0.0
+            )
             result_df["USD_Equity_Divergence"] = dxy_norm - sp500_norm
 
         return result_df

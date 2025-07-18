@@ -82,10 +82,35 @@ class TechnicalFeatureCalculator:
             )
 
             # 市場効率性（価格のランダムウォーク度）
-            returns = result_df["Close"].pct_change()
-            result_df["Market_Efficiency"] = returns.rolling(
-                window=volatility_period
-            ).apply(lambda x: np.corrcoef(x[:-1], x[1:])[0, 1] if len(x) > 1 else 0)
+            returns = result_df["Close"].pct_change().fillna(0)
+
+            def safe_correlation(x):
+                try:
+                    if len(x) < 3:  # 最低3つのデータポイントが必要
+                        return 0.0
+                    x_clean = x.dropna()
+                    if len(x_clean) < 3:
+                        return 0.0
+                    x1, x2 = x_clean[:-1], x_clean[1:]
+                    if (
+                        len(x1) == 0
+                        or len(x2) == 0
+                        or np.std(x1) == 0
+                        or np.std(x2) == 0
+                    ):
+                        return 0.0
+                    corr_matrix = np.corrcoef(x1, x2)
+                    if np.isnan(corr_matrix[0, 1]):
+                        return 0.0
+                    return corr_matrix[0, 1]
+                except:
+                    return 0.0
+
+            result_df["Market_Efficiency"] = (
+                returns.rolling(window=volatility_period, min_periods=3)
+                .apply(safe_correlation)
+                .fillna(0.0)
+            )
 
             logger.debug("市場レジーム特徴量計算完了")
             return result_df

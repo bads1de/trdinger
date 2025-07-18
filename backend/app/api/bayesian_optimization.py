@@ -14,6 +14,7 @@ import numpy as np
 
 from database.connection import get_db
 from app.core.services.optimization import BayesianOptimizer
+from app.core.dependencies import get_bayesian_optimizer_with_db
 from database.repositories.bayesian_optimization_repository import (
     BayesianOptimizationRepository,
 )
@@ -92,126 +93,32 @@ async def optimize_ml_hyperparameters(
     Returns:
         最適化結果
     """
+    # ビジネスロジックをサービス層に委譲
+    optimizer = get_bayesian_optimizer_with_db(db)
 
-    async def _optimize_ml():
-        logger.info(
-            f"MLハイパーパラメータのベイジアン最適化を開始: {request.model_type}"
-        )
-
-        # ベイジアン最適化エンジンを初期化
-        optimizer = BayesianOptimizer()
-
-        # 目的関数を定義（MLモデルの性能評価）
-        def objective_function(params: Dict[str, Any]) -> float:
-            try:
-                # TODO: MLモデルの訓練と評価を実装
-                # 現在はダミー実装
-                logger.info(f"MLハイパーパラメータ評価: {params}")
-
-                # ダミースコア（実際にはMLモデルの性能指標を返す）
-                import random
-
-                return random.uniform(0.5, 0.9)
-
-            except Exception as e:
-                logger.warning(f"ML目的関数評価エラー: {e}")
-                return 0.0
-
-        # パラメータ空間を変換
-        parameter_space_dict = None
-        if request.parameter_space:
-            parameter_space_dict = {}
-            for param_name, param_config in request.parameter_space.items():
-                parameter_space_dict[param_name] = {
-                    "type": param_config.type,
-                    "low": param_config.low,
-                    "high": param_config.high,
-                    "categories": param_config.categories,
-                }
-
-        # ベイジアン最適化を実行
-        optimization_result = optimizer.optimize_ml_hyperparameters(
+    def execute_optimization():
+        result = optimizer.execute_ml_optimization(
             model_type=request.model_type,
-            objective_function=objective_function,
-            parameter_space=parameter_space_dict,
+            parameter_space=request.parameter_space,
             n_calls=request.n_calls,
+            save_as_profile=request.save_as_profile,
+            profile_name=request.profile_name,
+            profile_description=request.profile_description,
+            db_session=db,
         )
-
-        # NumPy型をPythonの標準型に変換する関数
-        def convert_numpy_types(obj):
-            """NumPy型をPythonの標準型に再帰的に変換"""
-            if isinstance(obj, np.integer):
-                return int(obj)
-            elif isinstance(obj, np.floating):
-                return float(obj)
-            elif isinstance(obj, np.ndarray):
-                return obj.tolist()
-            elif isinstance(obj, dict):
-                return {key: convert_numpy_types(value) for key, value in obj.items()}
-            elif isinstance(obj, list):
-                return [convert_numpy_types(item) for item in obj]
-            else:
-                return obj
-
-        # 結果を整理（NumPy型を変換）
-        result = {
-            "model_type": request.model_type,
-            "optimization_type": "bayesian_ml",
-            "best_params": convert_numpy_types(optimization_result.best_params),
-            "best_score": convert_numpy_types(optimization_result.best_score),
-            "total_evaluations": convert_numpy_types(
-                optimization_result.total_evaluations
-            ),
-            "optimization_time": convert_numpy_types(
-                optimization_result.optimization_time
-            ),
-            "convergence_info": convert_numpy_types(
-                optimization_result.convergence_info
-            ),
-            "optimization_history": convert_numpy_types(
-                optimization_result.optimization_history
-            ),
-        }
-
-        logger.info(
-            f"MLハイパーパラメータ最適化完了: ベストスコア={optimization_result.best_score:.4f}"
-        )
-
-        # プロファイルとして保存する場合
-        if request.save_as_profile and request.profile_name:
-            try:
-                bayesian_repo = BayesianOptimizationRepository(db)
-                saved_result = bayesian_repo.create_optimization_result(
-                    profile_name=request.profile_name,
-                    optimization_type="bayesian_ml",
-                    model_type=request.model_type,
-                    best_params=result["best_params"],
-                    best_score=result["best_score"],
-                    total_evaluations=result["total_evaluations"],
-                    optimization_time=result["optimization_time"],
-                    convergence_info=result["convergence_info"],
-                    optimization_history=result["optimization_history"],
-                    description=request.profile_description,
-                    target_model_type=request.model_type,
-                )
-
-                result["saved_profile_id"] = saved_result.id
-                logger.info(
-                    f"最適化結果をプロファイルとして保存: {request.profile_name}"
-                )
-
-            except Exception as e:
-                logger.warning(f"プロファイル保存エラー: {e}")
-                # エラーが発生しても最適化結果は返す
 
         return {
             "success": True,
-            "result": result,
+            "result": {
+                "model_type": request.model_type,
+                "optimization_type": "bayesian_ml",
+                **result,
+            },
             "message": "MLハイパーパラメータのベイジアン最適化が完了しました",
             "timestamp": datetime.now().isoformat(),
         }
 
-    return await APIErrorHandler.handle_api_exception(_optimize_ml)
+    return await APIErrorHandler.handle_api_exception(execute_optimization)
 
 
 # プロファイル管理エンドポイント（統合版）

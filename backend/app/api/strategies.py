@@ -12,6 +12,7 @@ from typing import Dict, Any, Optional
 from pydantic import BaseModel, Field
 
 from app.core.services.strategy_integration_service import StrategyIntegrationService
+from app.core.dependencies import get_strategy_integration_service
 from database.connection import get_db
 from app.core.utils.api_utils import APIResponseHelper, APIErrorHandler
 
@@ -78,14 +79,11 @@ async def get_strategies(
         生成された戦略データ
     """
 
-    async def _get_strategies_task():
-        logger.info(
-            f"戦略取得開始: limit={limit}, offset={offset}, category={category}, experiment_id={experiment_id}"
-        )
+    # ビジネスロジックをサービス層に委譲
+    service = get_strategy_integration_service(db)
 
-        service = StrategyIntegrationService(db)
-
-        result = service.get_strategies(
+    return await APIErrorHandler.handle_api_exception(
+        lambda: service.get_strategies_with_response(
             limit=limit,
             offset=offset,
             category=category,
@@ -95,20 +93,7 @@ async def get_strategies(
             sort_by=sort_by,
             sort_order=sort_order,
         )
-
-        logger.info(f"戦略取得完了: {len(result['strategies'])} 件")
-
-        return APIResponseHelper.api_response(
-            success=True,
-            data={
-                "strategies": result["strategies"],
-                "total_count": result["total_count"],
-                "has_more": result["has_more"],
-            },
-            message="戦略を正常に取得しました",
-        )
-
-    return await APIErrorHandler.handle_api_exception(_get_strategies_task)
+    )
 
 
 @router.get("/stats", response_model=StrategyStatsResponse)

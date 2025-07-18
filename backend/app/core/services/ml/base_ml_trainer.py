@@ -36,6 +36,12 @@ from ...utils.ml_error_handler import (
 )
 from .feature_engineering.feature_engineering_service import FeatureEngineeringService
 from .model_manager import model_manager
+from ...utils.label_generation import LabelGenerator, ThresholdMethod
+from database.connection import SessionLocal
+from database.repositories.external_market_repository import (
+    ExternalMarketRepository,
+)
+from database.repositories.fear_greed_repository import FearGreedIndexRepository
 
 logger = logging.getLogger(__name__)
 
@@ -355,10 +361,280 @@ class BaseMLTrainer(ABC):
         funding_rate_data: Optional[pd.DataFrame] = None,
         open_interest_data: Optional[pd.DataFrame] = None,
     ) -> pd.DataFrame:
-        """特徴量を計算"""
-        return self.feature_service.calculate_advanced_features(
-            ohlcv_data, funding_rate_data, open_interest_data
-        )
+        """特徴量を計算（外部市場データとFear & Greed Indexデータを含む）"""
+        try:
+            # 外部市場データを取得
+            external_market_data = self._get_external_market_data(ohlcv_data)
+
+            # Fear & Greed Indexデータを取得
+            fear_greed_data = self._get_fear_greed_data(ohlcv_data)
+
+            # 拡張された特徴量計算
+            return self.feature_service.calculate_advanced_features(
+                ohlcv_data=ohlcv_data,
+                funding_rate_data=funding_rate_data,
+                open_interest_data=open_interest_data,
+                external_market_data=external_market_data,
+                fear_greed_data=fear_greed_data,
+            )
+
+        except Exception as e:
+            logger.warning(f"拡張特徴量計算でエラー、基本特徴量のみ使用: {e}")
+            # フォールバック：基本特徴量のみ
+            return self.feature_service.calculate_advanced_features(
+                ohlcv_data, funding_rate_data, open_interest_data
+            )
+
+    def _get_external_market_data(
+        self, ohlcv_data: pd.DataFrame
+    ) -> Optional[pd.DataFrame]:
+        """
+        外部市場データを取得
+
+        Args:
+            ohlcv_data: OHLCVデータ（期間の参考用）
+
+        Returns:
+            外部市場データのDataFrame（取得できない場合はNone）
+        """
+        try:
+            if ohlcv_data.empty:
+                return None
+
+            # データの期間を取得
+            start_date = (
+                ohlcv_data.index.min()
+                if hasattr(ohlcv_data.index, "min")
+                else ohlcv_data.iloc[0].name
+            )
+            end_date = (
+                ohlcv_data.index.max()
+                if hasattr(ohlcv_data.index, "max")
+                else ohlcv_data.iloc[-1].name
+            )
+
+            # タイムスタンプカラムがある場合はそれを使用
+            if "timestamp" in ohlcv_data.columns:
+                start_date = ohlcv_data["timestamp"].min()
+                end_date = ohlcv_data["timestamp"].max()
+
+            with SessionLocal() as db:
+                repository = ExternalMarketRepository(db)
+
+                # 外部市場データを取得
+                external_data = repository.get_external_market_data(
+                    start_time=start_date, end_time=end_date
+                )
+
+                if not external_data:
+                    logger.info("外部市場データが見つかりませんでした")
+                    return None
+
+                # DataFrameに変換
+                df = pd.DataFrame(
+                    [
+                        {
+                            "timestamp": data.data_timestamp,
+                            "symbol": data.symbol,
+                            "close": data.close,
+                            "volume": data.volume,
+                            "high": data.high,
+                            "low": data.low,
+                            "open": data.open,
+                        }
+                        for data in external_data
+                    ]
+                )
+
+                if df.empty:
+                    return None
+
+                # タイムスタンプをインデックスに設定
+                df["timestamp"] = pd.to_datetime(df["timestamp"])
+                df.set_index("timestamp", inplace=True)
+
+                logger.info(
+                    f"外部市場データを取得: {len(df)}行, シンボル: {df['symbol'].unique()}"
+                )
+                return df
+
+        except Exception as e:
+            logger.warning(f"外部市場データ取得エラー: {e}")
+            return None
+
+    def _get_fear_greed_data(self, ohlcv_data: pd.DataFrame) -> Optional[pd.DataFrame]:
+        """
+        Fear & Greed Indexデータを取得
+
+        Args:
+            ohlcv_data: OHLCVデータ（期間の参考用）
+
+        Returns:
+            Fear & Greed IndexデータのDataFrame（取得できない場合はNone）
+        """
+        try:
+            if ohlcv_data.empty:
+                return None
+
+            # データの期間を取得
+            start_date = (
+                ohlcv_data.index.min()
+                if hasattr(ohlcv_data.index, "min")
+                else ohlcv_data.iloc[0].name
+            )
+            end_date = (
+                ohlcv_data.index.max()
+                if hasattr(ohlcv_data.index, "max")
+                else ohlcv_data.iloc[-1].name
+            )
+
+            # タイムスタンプカラムがある場合はそれを使用
+            if "timestamp" in ohlcv_data.columns:
+                start_date = ohlcv_data["timestamp"].min()
+                end_date = ohlcv_data["timestamp"].max()
+
+            with SessionLocal() as db:
+                repository = FearGreedIndexRepository(db)
+
+                # Fear & Greed Indexデータを取得
+                fear_greed_data = repository.get_fear_greed_data(
+                    start_time=start_date, end_time=end_date
+                )
+
+                if not fear_greed_data:
+                    logger.info("Fear & Greed Indexデータが見つかりませんでした")
+                    return None
+
+                # DataFrameに変換
+                df = pd.DataFrame(
+                    [
+                        {
+                            "timestamp": data.data_timestamp,
+                            "value": data.value,
+                            "value_classification": data.value_classification,
+                        }
+                        for data in fear_greed_data
+                    ]
+                )
+
+                if df.empty:
+                    return None
+
+                # タイムスタンプをインデックスに設定
+                df["timestamp"] = pd.to_datetime(df["timestamp"])
+                df.set_index("timestamp", inplace=True)
+
+                logger.info(f"Fear & Greed Indexデータを取得: {len(df)}行")
+                return df
+
+        except Exception as e:
+            logger.warning(f"Fear & Greed Indexデータ取得エラー: {e}")
+            return None
+
+    def _generate_dynamic_labels(
+        self, price_data: pd.Series, **training_params
+    ) -> Tuple[pd.Series, Dict[str, Any]]:
+        """
+        動的ラベル生成
+
+        Args:
+            price_data: 価格データ（Close価格）
+            **training_params: 学習パラメータ
+
+        Returns:
+            ラベルSeries, 閾値情報の辞書
+        """
+        try:
+            # ラベル生成器を初期化
+            label_generator = LabelGenerator()
+
+            # 閾値計算方法を決定
+            threshold_method_str = training_params.get(
+                "threshold_method", "std_deviation"
+            )
+
+            # 文字列からEnumに変換
+            method_mapping = {
+                "fixed": ThresholdMethod.FIXED,
+                "quantile": ThresholdMethod.QUANTILE,
+                "std_deviation": ThresholdMethod.STD_DEVIATION,
+                "adaptive": ThresholdMethod.ADAPTIVE,
+            }
+
+            threshold_method = method_mapping.get(
+                threshold_method_str, ThresholdMethod.STD_DEVIATION
+            )
+
+            # 目標分布を設定
+            target_distribution = training_params.get(
+                "target_distribution", {"up": 0.33, "down": 0.33, "range": 0.34}
+            )
+
+            # 方法固有のパラメータを準備
+            method_params = {}
+
+            if threshold_method == ThresholdMethod.FIXED:
+                method_params["threshold"] = training_params.get("threshold_up", 0.02)
+            elif threshold_method == ThresholdMethod.STD_DEVIATION:
+                method_params["std_multiplier"] = training_params.get(
+                    "std_multiplier", 0.25
+                )
+            elif threshold_method in [
+                ThresholdMethod.QUANTILE,
+                ThresholdMethod.ADAPTIVE,
+            ]:
+                method_params["target_distribution"] = target_distribution
+
+            # ラベルを生成
+            labels, threshold_info = label_generator.generate_labels(
+                price_data,
+                method=threshold_method,
+                target_distribution=target_distribution,
+                **method_params,
+            )
+
+            # ラベル分布を検証
+            validation_result = LabelGenerator.validate_label_distribution(labels)
+
+            if not validation_result["is_valid"]:
+                logger.warning("ラベル分布に問題があります:")
+                for error in validation_result["errors"]:
+                    logger.warning(f"  エラー: {error}")
+                for warning in validation_result["warnings"]:
+                    logger.warning(f"  警告: {warning}")
+
+                # 1クラスしかない場合は適応的方法にフォールバック
+                if labels.nunique() <= 1:
+                    logger.info("適応的閾値計算にフォールバック")
+                    labels, threshold_info = label_generator.generate_labels(
+                        price_data,
+                        method=ThresholdMethod.ADAPTIVE,
+                        target_distribution=target_distribution,
+                    )
+
+            return labels, threshold_info
+
+        except Exception as e:
+            logger.error(f"動的ラベル生成エラー: {e}")
+            # フォールバック：従来の固定閾値
+            logger.info("従来の固定閾値にフォールバック")
+            price_change = price_data.pct_change().shift(-1)
+            threshold_up = training_params.get("threshold_up", 0.02)
+            threshold_down = training_params.get("threshold_down", -0.02)
+
+            labels = pd.Series(1, index=price_change.index, dtype=int)
+            labels[price_change > threshold_up] = 2
+            labels[price_change < threshold_down] = 0
+            labels = labels.iloc[:-1]
+
+            threshold_info = {
+                "method": "fixed_fallback",
+                "threshold_up": threshold_up,
+                "threshold_down": threshold_down,
+                "description": f"フォールバック固定閾値±{threshold_up*100:.2f}%",
+            }
+
+            return labels, threshold_info
 
     def _prepare_training_data(
         self, features_df: pd.DataFrame, **training_params
@@ -375,20 +651,21 @@ class BaseMLTrainer(ABC):
         # NaNを0で埋める
         features_df_clean = features_df_numeric.fillna(0)
 
-        # 特徴量とラベルを分離（デフォルト：価格変化率をラベルとして生成）
+        # 特徴量とラベルを分離（改善されたラベル生成ロジック）
         if "Close" in features_df_clean.columns:
-            price_change = features_df_clean["Close"].pct_change().shift(-1)
-            threshold_up = training_params.get("threshold_up", 0.02)
-            threshold_down = training_params.get("threshold_down", -0.02)
+            # 動的ラベル生成を使用
+            labels, threshold_info = self._generate_dynamic_labels(
+                features_df_clean["Close"], **training_params
+            )
 
-            # ラベル生成：0=下落、1=レンジ、2=上昇
-            labels = pd.Series(1, index=price_change.index)  # デフォルト：レンジ
-            labels[price_change > threshold_up] = 2  # 上昇
-            labels[price_change < threshold_down] = 0  # 下落
+            # 閾値情報をログ出力
+            logger.info(f"ラベル生成方法: {threshold_info['description']}")
+            logger.info(
+                f"使用閾値: {threshold_info['threshold_down']:.6f} ～ {threshold_info['threshold_up']:.6f}"
+            )
 
             # 最後の行は予測できないので除外
             features_df_clean = features_df_clean.iloc[:-1]
-            labels = labels.iloc[:-1]
         else:
             raise MLDataError("価格データ（Close）が見つかりません")
 

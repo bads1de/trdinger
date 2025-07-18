@@ -211,13 +211,16 @@ class InteractionFeatureCalculator:
 
         # OI_Trend × Price_Momentum_14
         if "OI_Trend" in df.columns and "Price_Momentum_14" in df.columns:
-            oi_trend = df["OI_Trend"].replace([np.inf, -np.inf], np.nan)
-            momentum = df["Price_Momentum_14"].replace([np.inf, -np.inf], np.nan)
+            oi_trend = df["OI_Trend"].replace([np.inf, -np.inf], np.nan).fillna(0.0)
+            momentum = (
+                df["Price_Momentum_14"].replace([np.inf, -np.inf], np.nan).fillna(0.0)
+            )
 
             interaction = oi_trend * momentum
             # 無限大値や極端に大きな値をクリップ
             interaction = np.clip(interaction, -1e6, 1e6)
-            result_df["OI_Momentum_Alignment"] = interaction
+            # NaN値を0で補完
+            result_df["OI_Momentum_Alignment"] = interaction.fillna(0.0)
 
         return result_df
 

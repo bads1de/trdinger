@@ -273,3 +273,64 @@ class StrategyIntegrationService:
             return "medium"
         else:
             return "high"
+
+    def get_strategies_with_response(
+        self,
+        limit: int = 50,
+        offset: int = 0,
+        category: Optional[str] = None,
+        risk_level: Optional[str] = None,
+        experiment_id: Optional[int] = None,
+        min_fitness: Optional[float] = None,
+        sort_by: str = "fitness_score",
+        sort_order: str = "desc",
+    ) -> Dict[str, Any]:
+        """
+        戦略を取得してAPIレスポンス形式で返す
+
+        Args:
+            limit: 取得件数制限
+            offset: オフセット
+            category: カテゴリフィルター
+            risk_level: リスクレベルフィルター
+            experiment_id: 実験IDフィルター
+            min_fitness: 最小フィットネススコア
+            sort_by: ソート項目
+            sort_order: ソート順序
+
+        Returns:
+            APIレスポンス形式の戦略データ
+        """
+        try:
+            logger.info(
+                f"戦略取得開始: limit={limit}, offset={offset}, category={category}, experiment_id={experiment_id}"
+            )
+
+            result = self.get_strategies(
+                limit=limit,
+                offset=offset,
+                category=category,
+                risk_level=risk_level,
+                experiment_id=experiment_id,
+                min_fitness=min_fitness,
+                sort_by=sort_by,
+                sort_order=sort_order,
+            )
+
+            logger.info(f"戦略取得完了: {len(result['strategies'])} 件")
+
+            from app.core.utils.api_utils import APIResponseHelper
+
+            return APIResponseHelper.api_response(
+                success=True,
+                data={
+                    "strategies": result["strategies"],
+                    "total_count": result["total_count"],
+                    "has_more": result["has_more"],
+                },
+                message="戦略を正常に取得しました",
+            )
+
+        except Exception as e:
+            logger.error(f"戦略取得エラー: {e}", exc_info=True)
+            raise

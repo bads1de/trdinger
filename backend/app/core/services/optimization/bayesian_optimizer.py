@@ -207,3 +207,124 @@ class BayesianOptimizer:
                 "param1": {"type": "real", "low": 0.1, "high": 1.0},
                 "param2": {"type": "integer", "low": 1, "high": 10},
             }
+
+    def execute_ml_optimization(
+        self,
+        model_type: str,
+        parameter_space: Optional[Dict[str, Any]] = None,
+        n_calls: int = 30,
+        save_as_profile: bool = False,
+        profile_name: Optional[str] = None,
+        profile_description: Optional[str] = None,
+        db_session=None,
+    ) -> Dict[str, Any]:
+        """
+        MLハイパーパラメータ最適化を実行し、結果を保存
+
+        Args:
+            model_type: モデルタイプ
+            parameter_space: パラメータ空間
+            n_calls: 最適化試行回数
+            save_as_profile: プロファイルとして保存するか
+            profile_name: プロファイル名
+            profile_description: プロファイル説明
+            db_session: データベースセッション
+
+        Returns:
+            最適化結果の辞書
+        """
+        try:
+            logger.info(f"MLハイパーパラメータのベイジアン最適化を開始: {model_type}")
+
+            # 目的関数を定義（MLモデルの性能評価）
+            def objective_function(params: Dict[str, Any]) -> float:
+                try:
+                    # TODO: MLモデルの訓練と評価を実装
+                    # 現在はダミー実装
+                    logger.info(f"MLハイパーパラメータ評価: {params}")
+
+                    # ダミースコア（実際にはMLモデルの性能指標を返す）
+                    import random
+
+                    return random.uniform(0.5, 0.9)
+
+                except Exception as e:
+                    logger.warning(f"ML目的関数評価エラー: {e}")
+                    return 0.0
+
+            # パラメータ空間を変換
+            parameter_space_dict = None
+            if parameter_space:
+                parameter_space_dict = {}
+                for param_name, param_config in parameter_space.items():
+                    parameter_space_dict[param_name] = {
+                        "type": param_config.type,
+                        "low": param_config.low,
+                        "high": param_config.high,
+                        "categories": param_config.categories,
+                    }
+
+            # ベイジアン最適化を実行
+            optimization_result = self.optimize_ml_hyperparameters(
+                model_type=model_type,
+                objective_function=objective_function,
+                parameter_space=parameter_space_dict,
+                n_calls=n_calls,
+            )
+
+            # NumPy型をPythonの標準型に変換
+            def convert_numpy_types(obj):
+                """NumPy型をPythonの標準型に再帰的に変換"""
+                if isinstance(obj, np.integer):
+                    return int(obj)
+                elif isinstance(obj, np.floating):
+                    return float(obj)
+                elif isinstance(obj, np.ndarray):
+                    return obj.tolist()
+                elif isinstance(obj, dict):
+                    return {
+                        key: convert_numpy_types(value) for key, value in obj.items()
+                    }
+                elif isinstance(obj, list):
+                    return [convert_numpy_types(item) for item in obj]
+                else:
+                    return obj
+
+            # 結果を変換
+            result = convert_numpy_types(optimization_result)
+
+            # プロファイルとして保存する場合
+            if save_as_profile and profile_name and db_session:
+                try:
+                    from database.repositories.bayesian_optimization_repository import (
+                        BayesianOptimizationRepository,
+                    )
+
+                    bayesian_repo = BayesianOptimizationRepository(db_session)
+                    saved_result = bayesian_repo.create_optimization_result(
+                        profile_name=profile_name,
+                        optimization_type="bayesian_ml",
+                        model_type=model_type,
+                        best_params=result["best_params"],
+                        best_score=result["best_score"],
+                        total_evaluations=result["total_evaluations"],
+                        optimization_time=result["optimization_time"],
+                        convergence_info=result["convergence_info"],
+                        optimization_history=result["optimization_history"],
+                        description=profile_description,
+                        target_model_type=model_type,
+                    )
+
+                    result["saved_profile_id"] = saved_result.id
+                    logger.info(f"最適化結果をプロファイルとして保存: {profile_name}")
+
+                except Exception as e:
+                    logger.error(f"プロファイル保存エラー: {e}")
+                    # プロファイル保存に失敗しても最適化結果は返す
+
+            logger.info(f"MLハイパーパラメータ最適化完了: {model_type}")
+            return result
+
+        except Exception as e:
+            logger.error(f"MLハイパーパラメータ最適化エラー: {e}", exc_info=True)
+            raise
