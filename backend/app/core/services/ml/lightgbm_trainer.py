@@ -19,7 +19,7 @@ from sklearn.metrics import (
 )
 
 from .base_ml_trainer import BaseMLTrainer
-from ...utils.ml_error_handler import MLModelError
+from ...utils.unified_error_handler import UnifiedModelError
 
 logger = logging.getLogger(__name__)
 
@@ -47,7 +47,7 @@ class LightGBMTrainer(BaseMLTrainer):
             予測確率の配列 [下落確率, レンジ確率, 上昇確率]
         """
         if not self.is_trained or self.model is None:
-            raise MLModelError("学習済みモデルがありません")
+            raise UnifiedModelError("学習済みモデルがありません")
 
         try:
             # 特徴量を選択・前処理
@@ -137,7 +137,7 @@ class LightGBMTrainer(BaseMLTrainer):
 
             # 1クラスしかない場合のエラーハンドリング
             if num_classes <= 1:
-                raise MLModelError(
+                raise UnifiedModelError(
                     f"学習データに{num_classes}種類のクラスしかありません。"
                     f"機械学習には最低2種類のクラスが必要です。"
                     f"ラベル生成の閾値を調整してください。"
@@ -245,7 +245,7 @@ class LightGBMTrainer(BaseMLTrainer):
 
         except Exception as e:
             logger.error(f"LightGBMモデル学習エラー: {e}")
-            raise MLModelError(f"LightGBMモデル学習に失敗しました: {e}")
+            raise UnifiedModelError(f"LightGBMモデル学習に失敗しました: {e}")
 
     def get_feature_importance(self) -> Dict[str, float]:
         """
@@ -255,7 +255,7 @@ class LightGBMTrainer(BaseMLTrainer):
             特徴量重要度の辞書
         """
         if not self.is_trained or self.model is None:
-            raise MLModelError("学習済みモデルがありません")
+            raise UnifiedModelError("学習済みモデルがありません")
 
         if not self.feature_columns:
             return {}

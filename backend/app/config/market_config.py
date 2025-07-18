@@ -1,11 +1,12 @@
 """
-市場データサービスの設定管理
+市場データサービスの設定管理（レガシー）
 
-このモジュールは、CCXT ライブラリを使用した市場データ取得に関する
-設定を管理します。
+このモジュールは後方互換性のために残されています。
+新しいコードでは unified_config.MarketConfig を使用してください。
 """
 
 from dataclasses import dataclass
+from .validators import MarketDataValidator
 
 
 @dataclass
@@ -43,41 +44,31 @@ class MarketDataConfig:
     @classmethod
     def validate_symbol(cls, symbol: str) -> bool:
         """
-        シンボルが有効かどうかを検証します
+        シンボルが有効かどうかを検証します（レガシー）
 
-        Args:
-            symbol: 検証するシンボル
-
-        Returns:
-            有効な場合True、無効な場合False
+        新しいコードでは MarketDataValidator.validate_symbol を使用してください。
         """
-        return symbol in cls.SUPPORTED_SYMBOLS
+        return MarketDataValidator.validate_symbol(symbol, cls.SUPPORTED_SYMBOLS)
 
     @classmethod
     def validate_timeframe(cls, timeframe: str) -> bool:
         """
-        時間軸が有効かどうかを検証します
+        時間軸が有効かどうかを検証します（レガシー）
 
-        Args:
-            timeframe: 検証する時間軸
-
-        Returns:
-            有効な場合True、無効な場合False
+        新しいコードでは MarketDataValidator.validate_timeframe を使用してください。
         """
-        return timeframe in cls.SUPPORTED_TIMEFRAMES
+        return MarketDataValidator.validate_timeframe(
+            timeframe, cls.SUPPORTED_TIMEFRAMES
+        )
 
     @classmethod
     def validate_limit(cls, limit: int) -> bool:
         """
-        制限値が有効かどうかを検証します
+        制限値が有効かどうかを検証します（レガシー）
 
-        Args:
-            limit: 検証する制限値
-
-        Returns:
-            有効な場合True、無効な場合False
+        新しいコードでは MarketDataValidator.validate_limit を使用してください。
         """
-        return cls.MIN_LIMIT <= limit <= cls.MAX_LIMIT
+        return MarketDataValidator.validate_limit(limit, cls.MIN_LIMIT, cls.MAX_LIMIT)
 
     # シンボル正規化マッピング（BTCのみ）
     SYMBOL_MAPPING = {
@@ -92,33 +83,13 @@ class MarketDataConfig:
     @classmethod
     def normalize_symbol(cls, symbol: str) -> str:
         """
-        シンボルを正規化します
+        シンボルを正規化します（レガシー）
 
-        Args:
-            symbol: 正規化するシンボル
-
-        Returns:
-            正規化されたシンボル
-
-        Raises:
-            ValueError: サポートされていないシンボルの場合
+        新しいコードでは MarketDataValidator.normalize_symbol を使用してください。
         """
-        # 大文字に変換し、空白を除去
-        symbol = symbol.strip().upper()
-
-        # マッピングテーブルから検索
-        if symbol in cls.SYMBOL_MAPPING:
-            normalized = cls.SYMBOL_MAPPING[symbol]
-        else:
-            normalized = symbol
-
-        # サポートされているシンボルかチェック
-        if normalized not in cls.SUPPORTED_SYMBOLS:
-            raise ValueError(
-                f"サポートされていないシンボルです: '{symbol}'。サポートされているシンボルは {', '.join(cls.SUPPORTED_SYMBOLS)} です。"
-            )
-
-        return normalized
+        return MarketDataValidator.normalize_symbol(
+            symbol, cls.SYMBOL_MAPPING, cls.SUPPORTED_SYMBOLS
+        )
 
 
 # 設定のインスタンス

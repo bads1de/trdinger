@@ -10,7 +10,7 @@ import pandas as pd
 from typing import Dict, Any, Optional
 
 from .config import ml_config
-from ...utils.ml_error_handler import safe_ml_operation
+from ...utils.unified_error_handler import safe_ml_operation
 from .lightgbm_trainer import LightGBMTrainer
 from .model_manager import model_manager
 
@@ -161,7 +161,7 @@ class MLTrainingService:
             return {}
 
     @safe_ml_operation(
-        default_value=False, error_message="モデル読み込みでエラーが発生しました"
+        default_return=False, context="モデル読み込みでエラーが発生しました"
     )
     def load_model(self, model_path: str) -> bool:
         """

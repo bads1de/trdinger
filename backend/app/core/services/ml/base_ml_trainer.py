@@ -28,9 +28,9 @@ from sklearn.metrics import (
 )
 
 from .config import ml_config
-from ...utils.ml_error_handler import (
-    MLDataError,
-    MLModelError,
+from ...utils.unified_error_handler import (
+    UnifiedDataError,
+    UnifiedModelError,
     safe_ml_operation,
     ml_operation_context,
 )
@@ -63,9 +63,7 @@ class BaseMLTrainer(ABC):
         self.is_trained = False
         self.model = None
 
-    @safe_ml_operation(
-        default_value={}, error_message="MLモデル学習でエラーが発生しました"
-    )
+    @safe_ml_operation(default_return={}, context="MLモデル学習でエラーが発生しました")
     def train_model(
         self,
         training_data: pd.DataFrame,
@@ -90,8 +88,8 @@ class BaseMLTrainer(ABC):
             学習結果の辞書
 
         Raises:
-            MLDataError: データが無効な場合
-            MLModelError: 学習に失敗した場合
+            UnifiedDataError: データが無効な場合
+            UnifiedModelError: 学習に失敗した場合
         """
         with ml_operation_context("MLモデル学習"):
             # 1. 入力データの検証
@@ -148,9 +146,7 @@ class BaseMLTrainer(ABC):
             logger.info("MLモデル学習完了")
             return result
 
-    @safe_ml_operation(
-        default_value={}, error_message="モデル評価でエラーが発生しました"
-    )
+    @safe_ml_operation(default_return={}, context="モデル評価でエラーが発生しました")
     def evaluate_model(
         self,
         test_data: pd.DataFrame,
@@ -169,7 +165,7 @@ class BaseMLTrainer(ABC):
             評価結果の辞書
         """
         if not self.is_trained:
-            raise MLModelError("評価対象の学習済みモデルがありません")
+            raise UnifiedModelError("評価対象の学習済みモデルがありません")
 
         # 特徴量を計算
         features_df = self._calculate_features(
@@ -343,17 +339,17 @@ class BaseMLTrainer(ABC):
     def _validate_training_data(self, training_data: pd.DataFrame) -> None:
         """入力データの検証"""
         if training_data is None or training_data.empty:
-            raise MLDataError("学習データが空です")
+            raise UnifiedDataError("学習データが空です")
 
         required_columns = ["Open", "High", "Low", "Close", "Volume"]
         missing_columns = [
             col for col in required_columns if col not in training_data.columns
         ]
         if missing_columns:
-            raise MLDataError(f"必要なカラムが不足しています: {missing_columns}")
+            raise UnifiedDataError(f"必要なカラムが不足しています: {missing_columns}")
 
         if len(training_data) < 100:
-            raise MLDataError("学習データが不足しています（最低100行必要）")
+            raise UnifiedDataError("学習データが不足しています（最低100行必要）")
 
     def _calculate_features(
         self,
@@ -642,7 +638,7 @@ class BaseMLTrainer(ABC):
         """学習用データを準備（継承クラスでオーバーライド可能）"""
         # デフォルト実装：最後の列をラベルとして使用
         if features_df.empty:
-            raise MLDataError("特徴量データが空です")
+            raise UnifiedDataError("特徴量データが空です")
 
         # 数値列のみを選択
         numeric_columns = features_df.select_dtypes(include=[np.number]).columns
@@ -667,7 +663,7 @@ class BaseMLTrainer(ABC):
             # 最後の行は予測できないので除外
             features_df_clean = features_df_clean.iloc[:-1]
         else:
-            raise MLDataError("価格データ（Close）が見つかりません")
+            raise UnifiedDataError("価格データ（Close）が見つかりません")
 
         # 無効なデータを除外
         valid_mask = ~(features_df_clean.isnull().any(axis=1) | labels.isnull())
@@ -675,7 +671,7 @@ class BaseMLTrainer(ABC):
         labels_clean = labels[valid_mask]
 
         if len(features_clean) == 0:
-            raise MLDataError("有効な学習データがありません")
+            raise UnifiedDataError("有効な学習データがありません")
 
         self.feature_columns = features_clean.columns.tolist()
 
@@ -741,7 +737,7 @@ class BaseMLTrainer(ABC):
     ) -> Optional[str]:
         """モデルを保存"""
         if not self.is_trained:
-            raise MLModelError("学習済みモデルがありません")
+            raise UnifiedModelError("学習済みモデルがありません")
 
         # 基本的なメタデータを準備
         final_metadata = {
@@ -778,7 +774,7 @@ class BaseMLTrainer(ABC):
         return result
 
     @safe_ml_operation(
-        default_value=False, error_message="モデル読み込みでエラーが発生しました"
+        default_return=False, context="モデル読み込みでエラーが発生しました"
     )
     def load_model(self, model_path: str) -> bool:
         """
@@ -801,7 +797,7 @@ class BaseMLTrainer(ABC):
         self.feature_columns = model_data.get("feature_columns")
 
         if self.model is None:
-            raise MLModelError("モデルデータにモデルが含まれていません")
+            raise UnifiedModelError("モデルデータにモデルが含まれていません")
 
         self.is_trained = True
         logger.info(f"モデル読み込み完了: {model_path}")

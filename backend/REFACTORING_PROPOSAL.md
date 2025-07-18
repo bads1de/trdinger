@@ -31,7 +31,6 @@ Phase 1 のリファクタリング完了後、コードベースの深層分析
 
 - **設定ファイルの配置**: 論理的でない分散 (`app/config/settings.py` と `app/config/market_config.py` に設定が分散している)
 - **共通ユーティリティ**: 機能別の整理不足 (例: `MarketDataConfig` 内のバリデーションロジックが設定クラスに混在)
-- **エラーハンドリングファイルの重複**: `app/core/utils/ml_error_handler.py` と `app/core/services/ml/common/error_handler.py` (ただし後者は現在存在しない) のように、類似の機能を持つファイルが異なるパスに存在している。
 - **テストファイル**: 一部でインデントエラー
 
 ### 3. API エンドポイントの重複

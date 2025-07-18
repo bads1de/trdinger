@@ -18,7 +18,7 @@ from app.core.dependencies import get_bayesian_optimizer_with_db
 from database.repositories.bayesian_optimization_repository import (
     BayesianOptimizationRepository,
 )
-from app.core.utils.api_utils import APIErrorHandler
+from app.core.utils.unified_error_handler import UnifiedErrorHandler
 
 logger = logging.getLogger(__name__)
 
@@ -118,7 +118,7 @@ async def optimize_ml_hyperparameters(
             "timestamp": datetime.now().isoformat(),
         }
 
-    return await APIErrorHandler.handle_api_exception(execute_optimization)
+    return await UnifiedErrorHandler.safe_execute_async(execute_optimization)
 
 
 # プロファイル管理エンドポイント（統合版）
@@ -157,7 +157,7 @@ async def get_profiles(
             "timestamp": datetime.now().isoformat(),
         }
 
-    return await APIErrorHandler.handle_api_exception(_get_profiles)
+    return await UnifiedErrorHandler.safe_execute_async(_get_profiles)
 
 
 @router.get("/profiles/{profile_id}")
@@ -183,7 +183,7 @@ async def get_profile(profile_id: int, db: Session = Depends(get_db)):
             "timestamp": datetime.now().isoformat(),
         }
 
-    return await APIErrorHandler.handle_api_exception(_get_profile)
+    return await UnifiedErrorHandler.safe_execute_async(_get_profile)
 
 
 @router.put("/profiles/{profile_id}")
@@ -225,7 +225,7 @@ async def update_profile(
             "timestamp": datetime.now().isoformat(),
         }
 
-    return await APIErrorHandler.handle_api_exception(_update_profile)
+    return await UnifiedErrorHandler.safe_execute_async(_update_profile)
 
 
 @router.delete("/profiles/{profile_id}")
@@ -250,7 +250,7 @@ async def delete_profile(profile_id: int, db: Session = Depends(get_db)):
             "timestamp": datetime.now().isoformat(),
         }
 
-    return await APIErrorHandler.handle_api_exception(_delete_profile)
+    return await UnifiedErrorHandler.safe_execute_async(_delete_profile)
 
 
 @router.get("/profiles/default/{model_type}")
@@ -278,7 +278,7 @@ async def get_default_profile(model_type: str, db: Session = Depends(get_db)):
             "timestamp": datetime.now().isoformat(),
         }
 
-    return await APIErrorHandler.handle_api_exception(_get_default_profile)
+    return await UnifiedErrorHandler.safe_execute_async(_get_default_profile)
 
 
 @router.get("/parameter-spaces/{optimization_type}")
@@ -310,4 +310,4 @@ async def get_default_parameter_space(optimization_type: str):
             "message": f"デフォルトパラメータ空間を取得しました: {optimization_type}",
         }
 
-    return await APIErrorHandler.handle_api_exception(_get_parameter_space)
+    return await UnifiedErrorHandler.safe_execute_async(_get_parameter_space)

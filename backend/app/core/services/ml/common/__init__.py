@@ -4,8 +4,16 @@ ML共通モジュール
 ML関連サービスで共通して使用される機能を提供します。
 """
 
-from app.core.utils.ml_error_handler import (
-    MLErrorHandler,
+from app.core.utils.unified_error_handler import (
+    UnifiedErrorHandler,
+    unified_safe_operation,
+    unified_timeout_decorator,
+    unified_operation_context,
+    UnifiedTimeoutError,
+    UnifiedValidationError,
+    UnifiedDataError,
+    UnifiedModelError,
+    # 標準エイリアス
     safe_ml_operation,
     timeout_decorator,
     ml_operation_context,
@@ -40,8 +48,16 @@ from .metrics import (
 )
 
 __all__ = [
-    # Error handling
-    "MLErrorHandler",
+    # Unified Error handling
+    "UnifiedErrorHandler",
+    "unified_safe_operation",
+    "unified_timeout_decorator",
+    "unified_operation_context",
+    "UnifiedTimeoutError",
+    "UnifiedValidationError",
+    "UnifiedDataError",
+    "UnifiedModelError",
+    # Standard aliases
     "safe_ml_operation",
     "timeout_decorator",
     "ml_operation_context",

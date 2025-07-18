@@ -15,7 +15,8 @@ from sqlalchemy.orm import Session
 from app.config.market_config import MarketDataConfig
 from database.connection import get_db
 from database.repositories.ohlcv_repository import OHLCVRepository
-from app.core.utils.api_utils import DateTimeHelper, APIResponseHelper, APIErrorHandler
+from app.core.utils.api_utils import DateTimeHelper, APIResponseHelper
+from app.core.utils.unified_error_handler import UnifiedErrorHandler
 from app.core.utils.data_converter import OHLCVDataConverter
 
 
@@ -103,6 +104,6 @@ async def get_ohlcv_data(
             message=f"{symbol} の {timeframe} OHLCVデータを取得しました",
         )
 
-    return await APIErrorHandler.handle_api_exception(
+    return await UnifiedErrorHandler.safe_execute_async(
         _get_ohlcv, message="OHLCVデータ取得エラー"
     )

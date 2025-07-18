@@ -17,7 +17,8 @@ from database.repositories.funding_rate_repository import FundingRateRepository
 from app.core.services.data_collection.funding_rate_service import (
     BybitFundingRateService,
 )
-from app.core.utils.api_utils import APIResponseHelper, APIErrorHandler
+from app.core.utils.api_utils import APIResponseHelper
+from app.core.utils.unified_error_handler import UnifiedErrorHandler
 
 logger = logging.getLogger(__name__)
 
@@ -111,7 +112,7 @@ async def get_funding_rates(
             message=f"{len(funding_rates)}件のファンディングレートデータを取得しました",
         )
 
-    return await APIErrorHandler.handle_api_exception(
+    return await UnifiedErrorHandler.safe_execute_async(
         _get_funding_rates_data, message="ファンディングレートデータ取得エラー"
     )
 
@@ -172,7 +173,7 @@ async def collect_funding_rate_data(
             success=True,
         )
 
-    return await APIErrorHandler.handle_api_exception(
+    return await UnifiedErrorHandler.safe_execute_async(
         _collect_rates, message="ファンディングレートデータ収集エラー"
     )
 
@@ -256,6 +257,6 @@ async def bulk_collect_funding_rates(
             message=f"{successful_symbols}/{len(symbols)}シンボル（BTC）で合計{total_saved}件のファンディングレートデータを保存しました",
         )
 
-    return await APIErrorHandler.handle_api_exception(
+    return await UnifiedErrorHandler.safe_execute_async(
         _bulk_collect, message="ファンディングレート一括収集エラー"
     )

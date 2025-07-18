@@ -10,7 +10,7 @@ import pandas as pd
 import numpy as np
 from typing import Dict
 
-from ....utils.ml_error_handler import safe_ml_operation
+from ....utils.unified_error_handler import safe_ml_operation
 from ....utils.data_validation import DataValidator
 
 logger = logging.getLogger(__name__)
@@ -28,7 +28,7 @@ class PriceFeatureCalculator:
         pass
 
     @safe_ml_operation(
-        default_value=None, error_message="価格特徴量計算でエラーが発生しました"
+        default_return=None, context="価格特徴量計算でエラーが発生しました"
     )
     def calculate_price_features(
         self, df: pd.DataFrame, lookback_periods: Dict[str, int]

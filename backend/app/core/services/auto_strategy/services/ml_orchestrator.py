@@ -11,14 +11,14 @@ import numpy as np
 from typing import Dict, Any, Optional
 
 from app.core.services.ml.config import ml_config
-from app.core.utils.ml_error_handler import (
-    MLErrorHandler,
+from app.core.utils.unified_error_handler import (
+    UnifiedErrorHandler,
     MLDataError,
     MLModelError,
     MLValidationError,
-    timeout_decorator,
-    safe_ml_operation,
-    ml_operation_context,
+    unified_timeout_decorator,
+    unified_safe_operation,
+    unified_operation_context,
 )
 from app.core.services.ml.feature_engineering.feature_engineering_service import (
     FeatureEngineeringService,
@@ -94,7 +94,7 @@ class MLOrchestrator:
                 db.close()
         return self._backtest_data_service
 
-    @timeout_decorator(
+    @unified_timeout_decorator(
         timeout_seconds=ml_config.data_processing.FEATURE_CALCULATION_TIMEOUT
     )
     def calculate_ml_indicators(
@@ -114,7 +114,7 @@ class MLOrchestrator:
         Returns:
             ML指標の辞書 {"ML_UP_PROB": array, "ML_DOWN_PROB": array, "ML_RANGE_PROB": array}
         """
-        with ml_operation_context("ML指標計算"):
+        with unified_operation_context("ML指標計算"):
             try:
                 # データサイズ制限
                 df = self._limit_data_size(df)
@@ -277,7 +277,7 @@ class MLOrchestrator:
             predictions: 予測確率の辞書
         """
         try:
-            MLErrorHandler.validate_predictions(predictions)
+            UnifiedErrorHandler.validate_predictions(predictions)
             self._last_predictions = predictions
             logger.debug(f"ML予測値を更新: {predictions}")
         except MLValidationError as e:
@@ -397,7 +397,7 @@ class MLOrchestrator:
     def _validate_input_data(self, df: pd.DataFrame):
         """入力データの検証"""
         required_columns = ["open", "high", "low", "close", "volume"]
-        MLErrorHandler.validate_dataframe(
+        UnifiedErrorHandler.validate_dataframe(
             df, required_columns=required_columns, min_rows=1
         )
 
@@ -476,9 +476,9 @@ class MLOrchestrator:
             logger.error(f"特徴量計算エラー: {e}")
             return None
 
-    @safe_ml_operation(
-        default_value=ml_config.prediction.get_default_predictions(),
-        error_message="ML予測でエラーが発生しました",
+    @unified_safe_operation(
+        default_return=ml_config.prediction.get_default_predictions(),
+        context="ML予測でエラーが発生しました",
     )
     def _safe_ml_prediction(self, features_df: pd.DataFrame) -> Dict[str, float]:
         """安全なML予測実行"""
@@ -486,7 +486,7 @@ class MLOrchestrator:
         predictions = self.ml_generator.predict(features_df)
 
         # 予測値の妥当性チェック
-        MLErrorHandler.validate_predictions(predictions)
+        UnifiedErrorHandler.validate_predictions(predictions)
         self._last_predictions = predictions
         return predictions
 

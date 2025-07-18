@@ -18,7 +18,8 @@ from app.core.services.data_collection.open_interest_service import (
 )
 from database.connection import get_db, ensure_db_initialized
 from database.repositories.open_interest_repository import OpenInterestRepository
-from app.core.utils.api_utils import APIErrorHandler, APIResponseHelper
+from app.core.utils.api_utils import APIResponseHelper
+from app.core.utils.unified_error_handler import UnifiedErrorHandler
 
 # ログ設定
 logger = logging.getLogger(__name__)

@@ -10,7 +10,7 @@ import pandas as pd
 import numpy as np
 from typing import List
 
-from ....utils.ml_error_handler import safe_ml_operation
+from ....utils.unified_error_handler import safe_ml_operation
 
 logger = logging.getLogger(__name__)
 
@@ -48,7 +48,7 @@ class InteractionFeatureCalculator:
         return self._calculate_interaction_features_internal(df)
 
     @safe_ml_operation(
-        default_value=None, error_message="相互作用特徴量計算でエラーが発生しました"
+        default_return=None, context="相互作用特徴量計算でエラーが発生しました"
     )
     def _calculate_interaction_features_internal(
         self, df: pd.DataFrame
@@ -220,7 +220,7 @@ class InteractionFeatureCalculator:
             # 無限大値や極端に大きな値をクリップ
             interaction = np.clip(interaction, -1e6, 1e6)
             # NaN値を0で補完
-            result_df["OI_Momentum_Alignment"] = interaction.fillna(0.0)
+            result_df["OI_Momentum_Alignment"] = np.nan_to_num(interaction, nan=0.0)
 
         return result_df
 

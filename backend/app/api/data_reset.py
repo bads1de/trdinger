@@ -16,7 +16,8 @@ from database.connection import get_db
 from database.repositories.ohlcv_repository import OHLCVRepository
 from database.repositories.funding_rate_repository import FundingRateRepository
 from database.repositories.open_interest_repository import OpenInterestRepository
-from app.core.utils.api_utils import APIResponseHelper, APIErrorHandler
+from app.core.utils.api_utils import APIResponseHelper
+from app.core.utils.unified_error_handler import UnifiedErrorHandler
 
 logger = logging.getLogger(__name__)
 
@@ -83,7 +84,7 @@ async def reset_all_data(db: Session = Depends(get_db)) -> Dict[str, Any]:
         logger.info(f"全データリセット完了: {deleted_counts}")
         return response
 
-    return await APIErrorHandler.handle_api_exception(
+    return await UnifiedErrorHandler.safe_execute_async(
         _reset_all_data, message="全データのリセット中にエラーが発生しました"
     )
 
@@ -112,7 +113,7 @@ async def reset_ohlcv_data(db: Session = Depends(get_db)) -> Dict[str, Any]:
         logger.info(f"OHLCVデータリセット完了: {deleted_count}件")
         return response
 
-    return await APIErrorHandler.handle_api_exception(
+    return await UnifiedErrorHandler.safe_execute_async(
         _reset_ohlcv_data, message="OHLCVデータのリセット中にエラーが発生しました"
     )
 
@@ -141,7 +142,7 @@ async def reset_funding_rate_data(db: Session = Depends(get_db)) -> Dict[str, An
         logger.info(f"ファンディングレートデータリセット完了: {deleted_count}件")
         return response
 
-    return await APIErrorHandler.handle_api_exception(
+    return await UnifiedErrorHandler.safe_execute_async(
         _reset_funding_rate_data,
         message="ファンディングレートデータのリセット中にエラーが発生しました",
     )
@@ -172,7 +173,7 @@ async def reset_open_interest_data(db: Session = Depends(get_db)) -> Dict[str, A
             message=message,
         )
 
-    return await APIErrorHandler.handle_api_exception(
+    return await UnifiedErrorHandler.safe_execute_async(
         _reset_open_interest,
         message="オープンインタレストデータのリセット中にエラーが発生しました",
     )
@@ -243,7 +244,7 @@ async def reset_data_by_symbol(
             message=message,
         )
 
-    return await APIErrorHandler.handle_api_exception(
+    return await UnifiedErrorHandler.safe_execute_async(
         _reset_by_symbol, message="シンボル別データのリセット中にエラーが発生しました"
     )
 
@@ -354,6 +355,6 @@ async def get_data_status(db: Session = Depends(get_db)) -> Dict[str, Any]:
             message="現在のデータ状況を取得しました",
         )
 
-    return await APIErrorHandler.handle_api_exception(
+    return await UnifiedErrorHandler.safe_execute_async(
         _get_status, message="データステータスの取得中にエラーが発生しました"
     )

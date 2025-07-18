@@ -10,7 +10,7 @@ import pandas as pd
 import numpy as np
 from typing import List
 
-from ....utils.ml_error_handler import safe_ml_operation
+from ....utils.unified_error_handler import safe_ml_operation
 
 
 logger = logging.getLogger(__name__)
@@ -50,7 +50,7 @@ class TemporalFeatureCalculator:
         return self._calculate_temporal_features_internal(df)
 
     @safe_ml_operation(
-        default_value=None, error_message="時間的特徴量計算でエラーが発生しました"
+        default_return=None, context="時間的特徴量計算でエラーが発生しました"
     )
     def _calculate_temporal_features_internal(self, df: pd.DataFrame) -> pd.DataFrame:
         """

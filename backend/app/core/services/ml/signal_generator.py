@@ -22,7 +22,7 @@ from sklearn.metrics import (
 import lightgbm as lgb
 
 from .config import ml_config
-from ...utils.ml_error_handler import MLModelError
+from ...utils.unified_error_handler import UnifiedModelError
 from .model_manager import model_manager
 
 logger = logging.getLogger(__name__)
@@ -359,7 +359,7 @@ class MLSignalGenerator:
         """
         try:
             if not self.is_trained:
-                raise MLModelError("学習済みモデルがありません")
+                raise UnifiedModelError("学習済みモデルがありません")
 
             # ModelManagerを使用してモデルを保存
             metadata = {
@@ -379,14 +379,16 @@ class MLSignalGenerator:
             )
 
             if model_path is None:
-                raise MLModelError("モデルの保存に失敗し、パスが返されませんでした。")
+                raise UnifiedModelError(
+                    "モデルの保存に失敗し、パスが返されませんでした。"
+                )
 
             logger.info(f"モデル保存完了: {model_path}")
             return model_path
 
         except Exception as e:
             logger.error(f"モデル保存エラー: {e}")
-            raise MLModelError(f"モデル保存に失敗しました: {e}")
+            raise UnifiedModelError(f"モデル保存に失敗しました: {e}")
 
     def load_model(self, model_path: str) -> bool:
         """
@@ -411,7 +413,7 @@ class MLSignalGenerator:
             self.feature_columns = model_data.get("feature_columns")
 
             if self.model is None:
-                raise MLModelError("モデルデータにモデルが含まれていません")
+                raise UnifiedModelError("モデルデータにモデルが含まれていません")
 
             self.is_trained = True
             logger.info(f"モデル読み込み完了: {model_path}")

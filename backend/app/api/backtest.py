@@ -7,13 +7,14 @@ backtesting.pyライブラリを使用したバックテスト機能のAPIを提
 from datetime import datetime
 from typing import Optional, Dict, Any
 from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi.concurrency import run_in_threadpool
 from sqlalchemy.orm import Session
 from pydantic import BaseModel, Field
 
 from database.connection import get_db
 from database.repositories.backtest_result_repository import BacktestResultRepository
 from app.core.services.backtest_service import BacktestService
-from app.core.utils.api_utils import APIErrorHandler
+from app.core.utils.unified_error_handler import UnifiedErrorHandler
 from app.core.dependencies import get_backtest_service_with_db
 from database.repositories.ga_experiment_repository import GAExperimentRepository
 from database.repositories.generated_strategy_repository import (
@@ -84,9 +85,14 @@ async def run_backtest(request: BacktestRequest, db: Session = Depends(get_db)):
     # ビジネスロジックをサービス層に委譲
     backtest_service = get_backtest_service_with_db(db)
 
-    return await APIErrorHandler.handle_api_exception(
-        lambda: backtest_service.execute_and_save_backtest(request, db)
-    )
+    try:
+        # 同期関数をスレッドプールで実行
+        result = await run_in_threadpool(
+            backtest_service.execute_and_save_backtest, request, db
+        )
+        return result
+    except Exception as e:
+        raise UnifiedErrorHandler.handle_api_error(e, context="バックテストの実行")
 
 
 @router.get("/results", response_model=BacktestResultsResponse)
@@ -124,7 +130,7 @@ async def get_backtest_results(
 
         return {"success": True, "results": results, "total": total}
 
-    return await APIErrorHandler.handle_api_exception(_get_results)
+    return await UnifiedErrorHandler.safe_execute_async(_get_results)
 
 
 @router.delete("/results-all")
@@ -165,7 +171,7 @@ async def delete_all_backtest_results(db: Session = Depends(get_db)):
             },
         }
 
-    return await APIErrorHandler.handle_api_exception(_delete_all_results)
+    return await UnifiedErrorHandler.safe_execute_async(_delete_all_results)
 
 
 @router.get("/results/{result_id}", response_model=BacktestResponse)
@@ -190,7 +196,7 @@ async def get_backtest_result_by_id(result_id: int, db: Session = Depends(get_db
 
         return {"success": True, "result": result}
 
-    return await APIErrorHandler.handle_api_exception(_get_by_id)
+    return await UnifiedErrorHandler.safe_execute_async(_get_by_id)
 
 
 @router.delete("/results/{result_id}")
@@ -215,7 +221,7 @@ async def delete_backtest_result(result_id: int, db: Session = Depends(get_db)):
 
         return {"success": True, "message": "Backtest result deleted successfully"}
 
-    return await APIErrorHandler.handle_api_exception(_delete_result)
+    return await UnifiedErrorHandler.safe_execute_async(_delete_result)
 
 
 @router.get("/strategies")
@@ -232,4 +238,4 @@ async def get_supported_strategies():
         strategies = backtest_service.get_supported_strategies()
         return {"success": True, "strategies": strategies}
 
-    return await APIErrorHandler.handle_api_exception(_get_strategies)
+    return await UnifiedErrorHandler.safe_execute_async(_get_strategies)
