@@ -10,6 +10,7 @@ import pandas as pd
 import numpy as np
 from abc import ABC, abstractmethod
 from typing import Dict, Any, Optional, Tuple, cast
+from datetime import datetime
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
 from sklearn.metrics import (
@@ -208,13 +209,13 @@ class BaseMLTrainer(ABC):
             # 基本的な評価指標
             metrics["accuracy"] = float(accuracy_score(y_true, y_pred))
             metrics["precision"] = float(
-                precision_score(y_true, y_pred, average="weighted", zero_division=0.0)
+                precision_score(y_true, y_pred, average="weighted", zero_division=0)
             )
             metrics["recall"] = float(
-                recall_score(y_true, y_pred, average="weighted", zero_division=0.0)
+                recall_score(y_true, y_pred, average="weighted", zero_division=0)
             )
             metrics["f1_score"] = float(
-                f1_score(y_true, y_pred, average="weighted", zero_division=0.0)
+                f1_score(y_true, y_pred, average="weighted", zero_division=0)
             )
 
             # 新しい評価指標
@@ -398,21 +399,16 @@ class BaseMLTrainer(ABC):
                 return None
 
             # データの期間を取得
-            start_date = (
-                ohlcv_data.index.min()
-                if hasattr(ohlcv_data.index, "min")
-                else ohlcv_data.iloc[0].name
-            )
-            end_date = (
-                ohlcv_data.index.max()
-                if hasattr(ohlcv_data.index, "max")
-                else ohlcv_data.iloc[-1].name
-            )
-
-            # タイムスタンプカラムがある場合はそれを使用
             if "timestamp" in ohlcv_data.columns:
-                start_date = ohlcv_data["timestamp"].min()
-                end_date = ohlcv_data["timestamp"].max()
+                start_date_val = ohlcv_data["timestamp"].min()
+                end_date_val = ohlcv_data["timestamp"].max()
+            else:
+                start_date_val = ohlcv_data.index.min()
+                end_date_val = ohlcv_data.index.max()
+
+            # datetime型に変換
+            start_date = cast(datetime, pd.to_datetime(start_date_val).to_pydatetime())
+            end_date = cast(datetime, pd.to_datetime(end_date_val).to_pydatetime())
 
             with SessionLocal() as db:
                 repository = ExternalMarketRepository(db)
@@ -473,21 +469,16 @@ class BaseMLTrainer(ABC):
                 return None
 
             # データの期間を取得
-            start_date = (
-                ohlcv_data.index.min()
-                if hasattr(ohlcv_data.index, "min")
-                else ohlcv_data.iloc[0].name
-            )
-            end_date = (
-                ohlcv_data.index.max()
-                if hasattr(ohlcv_data.index, "max")
-                else ohlcv_data.iloc[-1].name
-            )
-
-            # タイムスタンプカラムがある場合はそれを使用
             if "timestamp" in ohlcv_data.columns:
-                start_date = ohlcv_data["timestamp"].min()
-                end_date = ohlcv_data["timestamp"].max()
+                start_date_val = ohlcv_data["timestamp"].min()
+                end_date_val = ohlcv_data["timestamp"].max()
+            else:
+                start_date_val = ohlcv_data.index.min()
+                end_date_val = ohlcv_data.index.max()
+
+            # datetime型に変換
+            start_date = cast(datetime, pd.to_datetime(start_date_val).to_pydatetime())
+            end_date = cast(datetime, pd.to_datetime(end_date_val).to_pydatetime())
 
             with SessionLocal() as db:
                 repository = FearGreedIndexRepository(db)

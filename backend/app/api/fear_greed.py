@@ -2,6 +2,7 @@
 Fear & Greed Index API エンドポイント
 
 Alternative.me Fear & Greed Index データの取得、収集、管理機能を提供します。
+責務の分離により、ビジネスロジックはサービス層に委譲されています。
 """
 
 import logging
@@ -12,7 +13,10 @@ from sqlalchemy.orm import Session
 
 from database.connection import get_db
 from database.repositories.fear_greed_repository import FearGreedIndexRepository
-from data_collector.external_market_collector import ExternalMarketDataCollector
+from app.core.services.data_collection.fear_greed_orchestration_service import (
+    FearGreedOrchestrationService,
+)
+from app.core.utils.unified_error_handler import UnifiedErrorHandler
 from app.core.utils.api_utils import APIResponseHelper
 
 logger = logging.getLogger(__name__)
@@ -172,25 +176,13 @@ async def collect_fear_greed_data(
     Returns:
         収集結果
     """
-    try:
-        async with ExternalMarketDataCollector() as collector:
-            result = await collector.collect_fear_greed_data(limit=limit, db_session=db)
 
-        if result["success"]:
-            return APIResponseHelper.api_response(
-                success=True,
-                message=result["message"],
-                data=result,
-            )
-        else:
-            raise HTTPException(
-                status_code=500,
-                detail=f"データ収集に失敗しました: {result.get('error', 'Unknown error')}",
-            )
+    async def _execute():
+        # サービス層に委譲
+        orchestration_service = FearGreedOrchestrationService()
+        return await orchestration_service.collect_fear_greed_data(limit, db)
 
-    except Exception as e:
-        logger.error(f"Fear & Greed Index データ収集エラー: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+    return await UnifiedErrorHandler.safe_execute_async(_execute)
 
 
 @router.post("/collect-incremental")
@@ -206,25 +198,13 @@ async def collect_incremental_fear_greed_data(
     Returns:
         差分収集結果
     """
-    try:
-        async with ExternalMarketDataCollector() as collector:
-            result = await collector.collect_incremental_fear_greed_data(db_session=db)
 
-        if result["success"]:
-            return APIResponseHelper.api_response(
-                success=True,
-                message=result["message"],
-                data=result,
-            )
-        else:
-            raise HTTPException(
-                status_code=500,
-                detail=f"差分データ収集に失敗しました: {result.get('error', 'Unknown error')}",
-            )
+    async def _execute():
+        # サービス層に委譲
+        orchestration_service = FearGreedOrchestrationService()
+        return await orchestration_service.collect_incremental_fear_greed_data(db)
 
-    except Exception as e:
-        logger.error(f"Fear & Greed Index 差分データ収集エラー: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+    return await UnifiedErrorHandler.safe_execute_async(_execute)
 
 
 @router.post("/collect-historical")
@@ -242,27 +222,13 @@ async def collect_historical_fear_greed_data(
     Returns:
         履歴収集結果
     """
-    try:
-        async with ExternalMarketDataCollector() as collector:
-            result = await collector.collect_historical_fear_greed_data(
-                limit=limit, db_session=db
-            )
 
-        if result["success"]:
-            return APIResponseHelper.api_response(
-                success=True,
-                message=result["message"],
-                data=result,
-            )
-        else:
-            raise HTTPException(
-                status_code=500,
-                detail=f"履歴データ収集に失敗しました: {result.get('error', 'Unknown error')}",
-            )
+    async def _execute():
+        # サービス層に委譲
+        orchestration_service = FearGreedOrchestrationService()
+        return await orchestration_service.collect_historical_fear_greed_data(limit, db)
 
-    except Exception as e:
-        logger.error(f"Fear & Greed Index 履歴データ収集エラー: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+    return await UnifiedErrorHandler.safe_execute_async(_execute)
 
 
 @router.delete("/cleanup")
@@ -280,24 +246,10 @@ async def cleanup_old_fear_greed_data(
     Returns:
         クリーンアップ結果
     """
-    try:
-        async with ExternalMarketDataCollector() as collector:
-            result = await collector.cleanup_old_data(
-                days_to_keep=days_to_keep, db_session=db
-            )
 
-        if result["success"]:
-            return APIResponseHelper.api_response(
-                success=True,
-                message=f"{result['deleted_count']} 件の古いデータを削除しました",
-                data=result,
-            )
-        else:
-            raise HTTPException(
-                status_code=500,
-                detail=f"データクリーンアップに失敗しました: {result.get('error', 'Unknown error')}",
-            )
+    async def _execute():
+        # サービス層に委譲
+        orchestration_service = FearGreedOrchestrationService()
+        return await orchestration_service.cleanup_old_fear_greed_data(days_to_keep, db)
 
-    except Exception as e:
-        logger.error(f"Fear & Greed Index データクリーンアップエラー: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+    return await UnifiedErrorHandler.safe_execute_async(_execute)
