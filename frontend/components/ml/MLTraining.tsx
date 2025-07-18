@@ -78,7 +78,7 @@ export default function MLTraining() {
                 onChange={(value) =>
                   setConfig((prev) => ({ ...prev, symbol: value }))
                 }
-                options={[{ value: "BTCUSDT", label: "BTCUSDT" }]}
+                options={[{ value: "BTC/USDT:USDT", label: "BTC/USDT:USDT" }]}
                 disabled={trainingStatus.is_training}
               />
             </div>

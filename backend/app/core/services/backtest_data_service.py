@@ -193,13 +193,13 @@ class BacktestDataService:
 
         # 欠損値を前方データで埋め、それでも残る場合は0で埋める
         if "open_interest" in df.columns:
-            # 型推論を先に実行してからffill/fillnaを適用
-            df["open_interest"] = df["open_interest"].infer_objects(copy=False)
-            df["open_interest"] = df["open_interest"].ffill().fillna(0.0)
+            # FutureWarningを回避するため、明示的に型を指定
+            oi_series = df["open_interest"].astype("float64")
+            df["open_interest"] = oi_series.ffill().fillna(0.0)
         if "funding_rate" in df.columns:
-            # 型推論を先に実行してからffill/fillnaを適用
-            df["funding_rate"] = df["funding_rate"].infer_objects(copy=False)
-            df["funding_rate"] = df["funding_rate"].ffill().fillna(0.0)
+            # FutureWarningを回避するため、明示的に型を指定
+            fr_series = df["funding_rate"].astype("float64")
+            df["funding_rate"] = fr_series.ffill().fillna(0.0)
 
         return df
 
