@@ -11,10 +11,17 @@ import signal
 import concurrent.futures
 import functools
 import time
-from typing import Any, Callable, Optional, Dict
+import traceback
+from typing import Any, Callable, Optional, Dict, TypeVar
 from contextlib import contextmanager
+import pandas as pd
+import numpy as np
+
+from app.core.services.ml.config import ml_config
 
 logger = logging.getLogger(__name__)
+
+T = TypeVar("T")
 
 
 class MLTimeoutError(Exception):
@@ -48,6 +55,64 @@ class MLErrorHandler:
     タイムアウト処理、エラーログ、デフォルト値の提供など、
     ML処理で共通的に必要なエラーハンドリング機能を提供します。
     """
+
+    # --- エラーハンドリングメソッド ---
+
+    @staticmethod
+    def handle_data_error(
+        error: Exception, context: str, data_length: Optional[int] = None
+    ) -> Dict[str, np.ndarray]:
+        """
+        データエラーの統一処理
+        """
+        logger.warning(f"データエラー in {context}: {error}")
+        if data_length is None:
+            data_length = ml_config.prediction.DEFAULT_INDICATOR_LENGTH
+        return ml_config.prediction.get_default_indicators(data_length)
+
+    @staticmethod
+    def handle_prediction_error(error: Exception, context: str) -> Dict[str, float]:
+        """
+        予測エラーの統一処理
+        """
+        logger.error(f"予測エラー in {context}: {error}")
+        return ml_config.prediction.get_fallback_predictions()
+
+    @staticmethod
+    def handle_model_error(
+        error: Exception, context: str, operation: str = "unknown"
+    ) -> Dict[str, Any]:
+        """
+        モデルエラーの統一処理
+        """
+        logger.error(f"モデルエラー in {context} during {operation}: {error}")
+        return {
+            "success": False,
+            "error": str(error),
+            "context": context,
+            "operation": operation,
+            "error_type": type(error).__name__,
+        }
+
+    @staticmethod
+    def handle_timeout_error(
+        error: Exception, context: str, timeout_seconds: float
+    ) -> Dict[str, Any]:
+        """
+        タイムアウトエラーの統一処理
+        """
+        logger.error(
+            f"タイムアウトエラー in {context} after {timeout_seconds}s: {error}"
+        )
+        return {
+            "success": False,
+            "error": "timeout",
+            "timeout_seconds": timeout_seconds,
+            "context": context,
+            "message": f"処理が{timeout_seconds}秒でタイムアウトしました",
+        }
+
+    # --- タイムアウト処理 ---
 
     @staticmethod
     def handle_timeout(func: Callable, timeout_seconds: int, *args, **kwargs) -> Any:
@@ -145,94 +210,68 @@ class MLErrorHandler:
 
     @staticmethod
     def validate_dataframe(
-        df,
+        df: pd.DataFrame,
         required_columns: Optional[list] = None,
         min_rows: int = 1,
-        allow_empty: bool = False,
+        context: str = "データフレーム検証",
     ) -> bool:
         """
-        DataFrameの妥当性を検証
-
-        Args:
-            df: 検証するDataFrame
-            required_columns: 必須カラムのリスト
-            min_rows: 最小行数
-            allow_empty: 空のDataFrameを許可するか
-
-        Returns:
-            妥当性検証の結果
-
-        Raises:
-            MLDataError: データが無効な場合
+        データフレームの統一バリデーション
         """
-        if df is None:
-            if allow_empty:
-                return True
-            raise MLDataError("DataFrameがNoneです")
-
-        if df.empty:
-            if allow_empty:
-                return True
-            raise MLDataError("DataFrameが空です")
-
-        if len(df) < min_rows:
-            raise MLDataError(
-                f"データ行数が不足しています（必要: {min_rows}行, 実際: {len(df)}行）"
+        try:
+            if df is None:
+                logger.warning(f"{context}: データフレームがNoneです")
+                return False
+            if df.empty:
+                logger.warning(f"{context}: データフレームが空です")
+                return False
+            if len(df) < min_rows:
+                logger.warning(
+                    f"{context}: データ行数が不足しています ({len(df)} < {min_rows})"
+                )
+                return False
+            if required_columns:
+                missing_columns = [
+                    col for col in required_columns if col not in df.columns
+                ]
+                if missing_columns:
+                    logger.warning(
+                        f"{context}: 必須カラムが不足しています: {missing_columns}"
+                    )
+                    return False
+            numeric_columns = df.select_dtypes(include=[np.number]).columns
+            if len(numeric_columns) == 0:
+                logger.warning(f"{context}: 数値カラムが見つかりません")
+                return False
+            if df.isnull().all().all():
+                logger.warning(f"{context}: 全てのデータがNaNです")
+                return False
+            return True
+        except Exception as e:
+            MLErrorHandler.handle_model_error(
+                e, context, operation="validate_dataframe"
             )
-
-        if required_columns:
-            missing_columns = [col for col in required_columns if col not in df.columns]
-            if missing_columns:
-                raise MLDataError(f"必要なカラムが不足しています: {missing_columns}")
-
-        return True
+            return False
 
     @staticmethod
-    def validate_predictions(predictions: Dict[str, float]) -> bool:
+    def validate_predictions(
+        predictions: Dict[str, float], context: str = "ML予測値検証"
+    ) -> bool:
         """
-        予測結果の妥当性を検証
-
-        Args:
-            predictions: 予測結果の辞書
-
-        Returns:
-            妥当性検証の結果
-
-        Raises:
-            MLValidationError: 予測結果が無効な場合
+        ML予測値の統一バリデーション
         """
-        required_keys = ["up", "down", "range"]
-
-        # 必要なキーの存在確認
-        missing_keys = [key for key in required_keys if key not in predictions]
-        if missing_keys:
-            raise MLValidationError(
-                f"予測結果に必要なキーが不足しています: {missing_keys}"
+        try:
+            return ml_config.prediction.validate_predictions(predictions)
+        except Exception as e:
+            MLErrorHandler.handle_model_error(
+                e, context, operation="validate_predictions"
             )
-
-        # 値の妥当性確認
-        for key in required_keys:
-            value = predictions[key]
-            if not isinstance(value, (int, float)):
-                raise MLValidationError(f"予測値が数値ではありません: {key}={value}")
-            if not (0 <= value <= 1):
-                raise MLValidationError(
-                    f"予測値が範囲外です: {key}={value} (0-1の範囲である必要があります)"
-                )
-
-        # 合計値の確認
-        total = sum(predictions[key] for key in required_keys)
-        if not (0.8 <= total <= 1.2):
-            raise MLValidationError(
-                f"予測値の合計が範囲外です: {total} (0.8-1.2の範囲である必要があります)"
-            )
-
-        return True
+            return False
 
     @staticmethod
     def get_default_predictions() -> Dict[str, float]:
         """デフォルトの予測値を取得"""
-        return {"up": 0.33, "down": 0.33, "range": 0.34}
+        return ml_config.prediction.get_fallback_predictions()
 
     @staticmethod
     def log_memory_usage(operation_name: str, threshold_mb: int = 1000):
@@ -256,6 +295,46 @@ class MLErrorHandler:
         except Exception as e:
             logger.debug(f"{operation_name}: メモリ使用量の取得に失敗: {e}")
 
+    @staticmethod
+    def validate_ml_indicators(
+        indicators: Dict[str, np.ndarray],
+        expected_length: Optional[int] = None,
+        context: str = "ML指標検証",
+    ) -> bool:
+        """
+        ML指標の統一バリデーション
+        """
+        try:
+            required_indicators = ["ML_UP_PROB", "ML_DOWN_PROB", "ML_RANGE_PROB"]
+            if not all(indicator in indicators for indicator in required_indicators):
+                missing = [ind for ind in required_indicators if ind not in indicators]
+                logger.warning(f"{context}: 必要な指標が不足しています: {missing}")
+                return False
+            for indicator, values in indicators.items():
+                if not isinstance(values, np.ndarray):
+                    logger.warning(f"{context}: {indicator}が配列ではありません")
+                    return False
+                if len(values) == 0:
+                    logger.warning(f"{context}: {indicator}が空の配列です")
+                    return False
+                if not np.all((values >= 0) & (values <= 1)):
+                    logger.warning(f"{context}: {indicator}の値が0-1範囲外です")
+                    return False
+                if np.any(np.isnan(values)) or np.any(np.isinf(values)):
+                    logger.warning(f"{context}: {indicator}に無効な値が含まれています")
+                    return False
+                if expected_length and len(values) != expected_length:
+                    logger.warning(
+                        f"{context}: {indicator}の長さが期待値と異なります ({len(values)} != {expected_length})"
+                    )
+                    return False
+            return True
+        except Exception as e:
+            MLErrorHandler.handle_model_error(
+                e, context, operation="validate_ml_indicators"
+            )
+            return False
+
 
 def timeout_decorator(timeout_seconds: int):
     """タイムアウト処理のデコレータ"""
@@ -270,17 +349,28 @@ def timeout_decorator(timeout_seconds: int):
     return decorator
 
 
-def safe_ml_operation(default_value=None, error_message="ML処理でエラーが発生しました"):
-    """安全なML操作のデコレータ"""
+def safe_ml_operation(
+    default_return: Any = None,
+    error_handler: Optional[Callable] = None,
+    context: str = "ML操作",
+):
+    """
+    ML操作を安全に実行するデコレータ
+    """
 
-    def decorator(func):
+    def decorator(func: Callable[..., T]) -> Callable[..., T]:
         @functools.wraps(func)
-        def wrapper(*args, **kwargs):
-            return MLErrorHandler.safe_execute(
-                lambda: func(*args, **kwargs),
-                default_value=default_value,
-                error_message=error_message,
-            )
+        def wrapper(*args, **kwargs) -> T:
+            try:
+                return func(*args, **kwargs)
+            except Exception as e:
+                if error_handler:
+                    return error_handler(e, context)
+                else:
+                    logger.error(f"エラー in {context}: {e}")
+                    if ml_config.data_processing.DEBUG_MODE:
+                        logger.debug(f"スタックトレース: {traceback.format_exc()}")
+                    return default_return
 
         return wrapper
 
