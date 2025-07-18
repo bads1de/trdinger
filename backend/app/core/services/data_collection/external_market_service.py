@@ -134,16 +134,23 @@ class ExternalMarketService:
 
         for index, row in yfinance_data.iterrows():
             try:
-                # タイムスタンプの処理
-                if hasattr(index, "tz_localize"):
-                    # タイムゾーン情報がない場合はUTCとして扱う
-                    if index.tz is None:
-                        data_timestamp = index.tz_localize("UTC")
+                # タイムスタンプの処理 - 安全な方法で変換
+                try:
+                    # インデックスを文字列に変換してからTimestampに変換
+                    timestamp_str = str(index)
+                    timestamp = pd.to_datetime(timestamp_str)
+
+                    # タイムゾーン処理
+                    if timestamp.tz is None:
+                        data_timestamp = timestamp.tz_localize("UTC")
                     else:
-                        data_timestamp = index.tz_convert("UTC")
-                else:
-                    # 通常のdatetimeの場合
-                    data_timestamp = index.replace(tzinfo=timezone.utc)
+                        data_timestamp = timestamp.tz_convert("UTC")
+                except (ValueError, TypeError):
+                    # フォールバック: 現在時刻をUTCで使用
+                    logger.warning(
+                        f"タイムスタンプ変換エラー: {index}、現在時刻を使用します"
+                    )
+                    data_timestamp = datetime.now(timezone.utc)
 
                 # NaN値の処理
                 open_price = row["Open"] if pd.notna(row["Open"]) else 0.0

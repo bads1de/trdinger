@@ -10,6 +10,7 @@ import asyncio
 from typing import Dict, Optional
 from datetime import datetime, timezone
 
+from sqlalchemy.orm import Session
 from database.connection import SessionLocal
 from database.repositories.fear_greed_repository import FearGreedIndexRepository
 from database.repositories.external_market_repository import ExternalMarketRepository
@@ -50,7 +51,7 @@ class ExternalMarketDataCollector:
     async def collect_fear_greed_data(
         self,
         limit: int = 30,
-        db_session: Optional[SessionLocal] = None,
+        db_session: Optional[Session] = None,
     ) -> Dict:
         """
         Fear & Greed Index データを収集
@@ -91,7 +92,7 @@ class ExternalMarketDataCollector:
 
     async def collect_incremental_fear_greed_data(
         self,
-        db_session: Optional[SessionLocal] = None,
+        db_session: Optional[Session] = None,
     ) -> Dict:
         """
         Fear & Greed Index の差分データを収集
@@ -147,7 +148,7 @@ class ExternalMarketDataCollector:
     async def collect_historical_fear_greed_data(
         self,
         limit: int = 1000,
-        db_session: Optional[SessionLocal] = None,
+        db_session: Optional[Session] = None,
     ) -> Dict:
         """
         Fear & Greed Index の履歴データを収集
@@ -191,7 +192,7 @@ class ExternalMarketDataCollector:
 
     async def get_data_status(
         self,
-        db_session: Optional[SessionLocal] = None,
+        db_session: Optional[Session] = None,
     ) -> Dict:
         """
         データの状態を取得
@@ -233,7 +234,7 @@ class ExternalMarketDataCollector:
         self,
         symbols: Optional[list] = None,
         period: str = "1mo",
-        db_session: Optional[SessionLocal] = None,
+        db_session: Optional[Session] = None,
     ) -> Dict:
         """
         外部市場データを収集
@@ -278,7 +279,7 @@ class ExternalMarketDataCollector:
     async def collect_incremental_external_market_data(
         self,
         symbols: Optional[list] = None,
-        db_session: Optional[SessionLocal] = None,
+        db_session: Optional[Session] = None,
     ) -> Dict:
         """
         外部市場データの差分データを収集
@@ -366,7 +367,7 @@ class ExternalMarketDataCollector:
         period: str = "5y",
         start_date: Optional[str] = None,
         end_date: Optional[str] = None,
-        db_session: Optional[SessionLocal] = None,
+        db_session: Optional[Session] = None,
     ) -> Dict:
         """
         外部市場データの履歴データを収集
@@ -433,7 +434,7 @@ class ExternalMarketDataCollector:
 
     async def get_external_market_data_status(
         self,
-        db_session: Optional[SessionLocal] = None,
+        db_session: Optional[Session] = None,
     ) -> Dict:
         """
         外部市場データの状態を取得
@@ -474,7 +475,7 @@ class ExternalMarketDataCollector:
     async def cleanup_old_data(
         self,
         days_to_keep: int = 365,
-        db_session: Optional[SessionLocal] = None,
+        db_session: Optional[Session] = None,
     ) -> Dict:
         """
         古いデータをクリーンアップ

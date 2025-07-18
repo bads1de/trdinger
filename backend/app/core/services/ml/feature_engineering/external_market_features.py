@@ -7,9 +7,7 @@
 
 import logging
 import pandas as pd
-import numpy as np
-from typing import Dict, Optional
-
+from typing import Dict
 from ....utils.data_validation import DataValidator
 
 logger = logging.getLogger(__name__)
@@ -58,8 +56,12 @@ class ExternalMarketFeatureCalculator:
                     or "timestamp" in str(type(external_market_data.index))
                 ):
                     # インデックスがtimestampの場合
-                    pivot_data = external_market_data.pivot_table(
-                        index=external_market_data.index,
+                    # インデックスをリセットして列に変換し、その列名をpivot_tableに渡すことで、
+                    # 型チェッカーが解決できる形にする
+                    temp_df = external_market_data.reset_index()
+                    index_name = temp_df.columns[0]
+                    pivot_data = temp_df.pivot_table(
+                        index=index_name,
                         columns="symbol",
                         values="close",
                         aggfunc="last",

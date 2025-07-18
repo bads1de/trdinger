@@ -7,7 +7,7 @@ yfinance APIから取得した外部市場データ（SP500、NASDAQ、DXY、VIX
 
 import logging
 from typing import List, Optional, Dict
-from datetime import datetime, timezone, timedelta
+from datetime import datetime
 from sqlalchemy.orm import Session
 
 from database.models import ExternalMarketData
@@ -194,8 +194,18 @@ class ExternalMarketRepository(BaseRepository):
 
             return {
                 "count": count,
-                "oldest_timestamp": oldest_record.data_timestamp.isoformat(),
-                "newest_timestamp": newest_record.data_timestamp.isoformat(),
+                "oldest_timestamp": (
+                    oldest_record.data_timestamp.isoformat()
+                    if oldest_record is not None
+                    and oldest_record.data_timestamp is not None
+                    else None
+                ),
+                "newest_timestamp": (
+                    newest_record.data_timestamp.isoformat()
+                    if newest_record is not None
+                    and newest_record.data_timestamp is not None
+                    else None
+                ),
             }
 
         except Exception as e:
@@ -301,8 +311,18 @@ class ExternalMarketRepository(BaseRepository):
                 "symbols": symbols,
                 "symbol_count": len(symbols),
                 "date_range": {
-                    "oldest": oldest_record.data_timestamp.isoformat(),
-                    "newest": newest_record.data_timestamp.isoformat(),
+                    "oldest": (
+                        oldest_record.data_timestamp.isoformat()
+                        if oldest_record is not None
+                        and oldest_record.data_timestamp is not None
+                        else None
+                    ),
+                    "newest": (
+                        newest_record.data_timestamp.isoformat()
+                        if newest_record is not None
+                        and newest_record.data_timestamp is not None
+                        else None
+                    ),
                 },
             }
 

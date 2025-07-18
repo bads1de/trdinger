@@ -7,7 +7,7 @@ Fear & Greed Index データから市場センチメントを捉える特徴量�
 import logging
 import pandas as pd
 import numpy as np
-from typing import Dict, Optional
+from typing import Dict
 
 from ....utils.data_validation import DataValidator
 
@@ -51,11 +51,11 @@ class FearGreedFeatureCalculator:
 
             # Fear & Greed Index データの準備
             fg_data = fear_greed_data.copy()
-            
+
             # data_timestampをインデックスに設定
             if "data_timestamp" in fg_data.columns:
                 fg_data = fg_data.set_index("data_timestamp")
-            
+
             # valueカラムを確認
             if "value" not in fg_data.columns:
                 logger.warning("Fear & Greed Index データにvalueカラムがありません")
@@ -68,16 +68,24 @@ class FearGreedFeatureCalculator:
             merged_df["value"] = merged_df["value"].ffill()
 
             # 基本的なFear & Greed特徴量を計算
-            result_df = self._calculate_basic_features(result_df, merged_df, lookback_periods)
-            
+            result_df = self._calculate_basic_features(
+                result_df, merged_df, lookback_periods
+            )
+
             # トレンド特徴量を計算
-            result_df = self._calculate_trend_features(result_df, merged_df, lookback_periods)
-            
+            result_df = self._calculate_trend_features(
+                result_df, merged_df, lookback_periods
+            )
+
             # 極値検出特徴量を計算
-            result_df = self._calculate_extreme_features(result_df, merged_df, lookback_periods)
-            
+            result_df = self._calculate_extreme_features(
+                result_df, merged_df, lookback_periods
+            )
+
             # ボラティリティ特徴量を計算
-            result_df = self._calculate_volatility_features(result_df, merged_df, lookback_periods)
+            result_df = self._calculate_volatility_features(
+                result_df, merged_df, lookback_periods
+            )
 
             logger.debug("Fear & Greed Index 特徴量計算完了")
             return result_df
@@ -87,10 +95,10 @@ class FearGreedFeatureCalculator:
             return df
 
     def _calculate_basic_features(
-        self, 
-        result_df: pd.DataFrame, 
-        merged_df: pd.DataFrame, 
-        lookback_periods: Dict[str, int]
+        self,
+        result_df: pd.DataFrame,
+        merged_df: pd.DataFrame,
+        lookback_periods: Dict[str, int],
     ) -> pd.DataFrame:
         """基本的なFear & Greed特徴量を計算"""
         if "value" not in merged_df.columns:
@@ -116,10 +124,10 @@ class FearGreedFeatureCalculator:
         return result_df
 
     def _calculate_trend_features(
-        self, 
-        result_df: pd.DataFrame, 
-        merged_df: pd.DataFrame, 
-        lookback_periods: Dict[str, int]
+        self,
+        result_df: pd.DataFrame,
+        merged_df: pd.DataFrame,
+        lookback_periods: Dict[str, int],
     ) -> pd.DataFrame:
         """トレンド特徴量を計算"""
         if "value" not in merged_df.columns:
@@ -127,9 +135,12 @@ class FearGreedFeatureCalculator:
 
         # Fear & Greed トレンド（短期MA vs 長期MA）
         if "FG_MA_7" in result_df.columns and "FG_MA_30" in result_df.columns:
-            result_df["FG_Trend"] = DataValidator.safe_divide(
-                result_df["FG_MA_7"], result_df["FG_MA_30"], default_value=1.0
-            ) - 1
+            result_df["FG_Trend"] = (
+                DataValidator.safe_divide(
+                    result_df["FG_MA_7"], result_df["FG_MA_30"], default_value=1.0
+                )
+                - 1
+            )
 
         # Fear & Greed モメンタム（5日間の変化）
         result_df["FG_Momentum_5"] = DataValidator.safe_pct_change(
@@ -138,17 +149,16 @@ class FearGreedFeatureCalculator:
 
         # Fear & Greed 方向性（上昇・下降の判定）
         result_df["FG_Direction"] = np.where(
-            result_df["FG_Change"] > 0, 1,
-            np.where(result_df["FG_Change"] < 0, -1, 0)
+            result_df["FG_Change"] > 0, 1, np.where(result_df["FG_Change"] < 0, -1, 0)
         )
 
         return result_df
 
     def _calculate_extreme_features(
-        self, 
-        result_df: pd.DataFrame, 
-        merged_df: pd.DataFrame, 
-        lookback_periods: Dict[str, int]
+        self,
+        result_df: pd.DataFrame,
+        merged_df: pd.DataFrame,
+        lookback_periods: Dict[str, int],
     ) -> pd.DataFrame:
         """極値検出特徴量を計算"""
         if "value" not in merged_df.columns:
@@ -158,28 +168,36 @@ class FearGreedFeatureCalculator:
         result_df["FG_Extreme_Fear"] = (merged_df["value"] <= 25).astype(int)
 
         # 恐怖（26-45）
-        result_df["FG_Fear"] = ((merged_df["value"] > 25) & (merged_df["value"] <= 45)).astype(int)
+        result_df["FG_Fear"] = (
+            (merged_df["value"] > 25) & (merged_df["value"] <= 45)
+        ).astype(int)
 
         # 中立（46-54）
-        result_df["FG_Neutral"] = ((merged_df["value"] > 45) & (merged_df["value"] <= 54)).astype(int)
+        result_df["FG_Neutral"] = (
+            (merged_df["value"] > 45) & (merged_df["value"] <= 54)
+        ).astype(int)
 
         # 強欲（55-74）
-        result_df["FG_Greed"] = ((merged_df["value"] > 54) & (merged_df["value"] <= 74)).astype(int)
+        result_df["FG_Greed"] = (
+            (merged_df["value"] > 54) & (merged_df["value"] <= 74)
+        ).astype(int)
 
         # 極端な強欲（75-100）
         result_df["FG_Extreme_Greed"] = (merged_df["value"] > 74).astype(int)
 
         # 極値の継続期間（連続して極値にある日数）
         extreme_mask = (merged_df["value"] <= 25) | (merged_df["value"] > 74)
-        result_df["FG_Extreme_Duration"] = self._calculate_consecutive_periods(extreme_mask)
+        result_df["FG_Extreme_Duration"] = self._calculate_consecutive_periods(
+            extreme_mask
+        )
 
         return result_df
 
     def _calculate_volatility_features(
-        self, 
-        result_df: pd.DataFrame, 
-        merged_df: pd.DataFrame, 
-        lookback_periods: Dict[str, int]
+        self,
+        result_df: pd.DataFrame,
+        merged_df: pd.DataFrame,
+        lookback_periods: Dict[str, int],
     ) -> pd.DataFrame:
         """ボラティリティ特徴量を計算"""
         if "value" not in merged_df.columns:
@@ -198,8 +216,8 @@ class FearGreedFeatureCalculator:
 
         # Fear & Greed レンジ（期間内の最大値-最小値）
         result_df["FG_Range_20"] = (
-            merged_df["value"].rolling(window=20, min_periods=1).max() -
-            merged_df["value"].rolling(window=20, min_periods=1).min()
+            merged_df["value"].rolling(window=20, min_periods=1).max()
+            - merged_df["value"].rolling(window=20, min_periods=1).min()
         )
 
         # Fear & Greed 位置（期間内での相対位置）

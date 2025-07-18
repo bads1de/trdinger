@@ -160,6 +160,13 @@ class FearGreedIndexRepository(BaseRepository):
                 func.count(FearGreedIndexData.id).label("count"),
             ).first()
 
+            if result is None:
+                return {
+                    "oldest_data": None,
+                    "newest_data": None,
+                    "total_count": 0,
+                }
+
             return {
                 "oldest_data": result.oldest.isoformat() if result.oldest else None,
                 "newest_data": result.newest.isoformat() if result.newest else None,
