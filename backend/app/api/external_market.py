@@ -81,7 +81,7 @@ async def get_external_market_data(
         return APIResponseHelper.api_response(
             success=True,
             message=f"外部市場データを {len(data_dicts)} 件取得しました",
-            data=data_dicts,
+            data={"items": data_dicts},
         )
 
     except Exception as e:
@@ -117,7 +117,7 @@ async def get_latest_external_market_data(
         return APIResponseHelper.api_response(
             success=True,
             message=f"最新の外部市場データを {len(data_dicts)} 件取得しました",
-            data=data_dicts,
+            data={"items": data_dicts},
         )
 
     except Exception as e:

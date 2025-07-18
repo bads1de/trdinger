@@ -14,7 +14,8 @@ from pydantic import BaseModel, Field
 from app.core.services.strategy_integration_service import StrategyIntegrationService
 from app.core.dependencies import get_strategy_integration_service
 from database.connection import get_db
-from app.core.utils.api_utils import APIResponseHelper, APIErrorHandler
+from app.core.utils.api_utils import APIResponseHelper
+from app.core.utils.unified_error_handler import UnifiedErrorHandler
 
 logger = logging.getLogger(__name__)
 
@@ -82,8 +83,8 @@ async def get_strategies(
     # ビジネスロジックをサービス層に委譲
     service = get_strategy_integration_service(db)
 
-    return await APIErrorHandler.handle_api_exception(
-        lambda: service.get_strategies_with_response(
+    async def _get_strategies():
+        return service.get_strategies_with_response(
             limit=limit,
             offset=offset,
             category=category,
@@ -93,7 +94,8 @@ async def get_strategies(
             sort_by=sort_by,
             sort_order=sort_order,
         )
-    )
+
+    return await UnifiedErrorHandler.safe_execute_async(_get_strategies)
 
 
 @router.get("/stats", response_model=StrategyStatsResponse)
@@ -163,7 +165,7 @@ async def get_strategy_statistics(db: Session = Depends(get_db)):
             data=stats, message="戦略統計情報を正常に取得しました", success=True
         )
 
-    return await APIErrorHandler.handle_api_exception(_get_stats)
+    return await UnifiedErrorHandler.safe_execute_async(_get_stats)
 
 
 @router.get("/categories")

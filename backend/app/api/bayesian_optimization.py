@@ -10,7 +10,7 @@ from fastapi import APIRouter, HTTPException, status, Depends
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 from datetime import datetime
-import numpy as np
+
 
 from database.connection import get_db
 from app.core.services.optimization import BayesianOptimizer
@@ -96,7 +96,8 @@ async def optimize_ml_hyperparameters(
     # ビジネスロジックをサービス層に委譲
     optimizer = get_bayesian_optimizer_with_db(db)
 
-    def execute_optimization():
+    async def execute_optimization():
+        # この関数は同期的だが、async def内で呼び出す
         result = optimizer.execute_ml_optimization(
             model_type=request.model_type,
             parameter_space=request.parameter_space,

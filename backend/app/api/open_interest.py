@@ -102,7 +102,7 @@ async def get_open_interest_data(
             success=True,
         )
     except Exception as e:
-        raise APIErrorHandler.handle_generic_error(e, "オープンインタレストデータ取得")
+        raise UnifiedErrorHandler.handle_api_error(e, "オープンインタレストデータ取得")
 
 
 @router.post("/open-interest/collect")
@@ -160,7 +160,7 @@ async def collect_open_interest_data(
             success=True,
         )
     except Exception as e:
-        raise APIErrorHandler.handle_generic_error(e, "オープンインタレストデータ収集")
+        raise UnifiedErrorHandler.handle_api_error(e, "オープンインタレストデータ収集")
 
 
 @router.post("/open-interest/bulk-collect")
@@ -243,4 +243,4 @@ async def bulk_collect_open_interest(
             success=True,
         )
     except Exception as e:
-        raise APIErrorHandler.handle_generic_error(e, "オープンインタレストの一括収集")
+        raise UnifiedErrorHandler.handle_api_error(e, "オープンインタレストの一括収集")

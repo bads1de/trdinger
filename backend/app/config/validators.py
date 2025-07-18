@@ -5,7 +5,7 @@
 単一責任原則に従い、バリデーション機能のみを担当します。
 """
 
-from typing import Dict, List, Any
+from typing import Dict, List
 import logging
 
 logger = logging.getLogger(__name__)
@@ -59,9 +59,7 @@ class MarketDataValidator:
 
     @staticmethod
     def normalize_symbol(
-        symbol: str, 
-        symbol_mapping: Dict[str, str], 
-        supported_symbols: List[str]
+        symbol: str, symbol_mapping: Dict[str, str], supported_symbols: List[str]
     ) -> str:
         """
         シンボルを正規化
@@ -135,10 +133,7 @@ class MLConfigValidator:
 
     @staticmethod
     def validate_probability_range(
-        min_prob: float, 
-        max_prob: float, 
-        sum_min: float, 
-        sum_max: float
+        min_prob: float, max_prob: float, sum_min: float, sum_max: float
     ) -> bool:
         """
         確率範囲設定の妥当性を検証
@@ -209,7 +204,9 @@ class MLConfigValidator:
             errors.append("最大特徴量行数は最大OHLCV行数以上である必要があります")
 
         if training_timeout < feature_timeout:
-            errors.append("学習タイムアウトは特徴量計算タイムアウト以上である必要があります")
+            errors.append(
+                "学習タイムアウトは特徴量計算タイムアウト以上である必要があります"
+            )
 
         return errors
 
@@ -258,10 +255,7 @@ class DatabaseValidator:
 
     @staticmethod
     def validate_connection_params(
-        host: str, 
-        port: int, 
-        name: str, 
-        user: str
+        host: str, port: int, name: str, user: str
     ) -> List[str]:
         """
         データベース接続パラメータの妥当性を検証
@@ -317,7 +311,9 @@ class AppValidator:
 
         # 予約ポートの確認
         if port < 1024:
-            logger.warning(f"ポート{port}は予約ポートです。管理者権限が必要な場合があります。")
+            logger.warning(
+                f"ポート{port}は予約ポートです。管理者権限が必要な場合があります。"
+            )
 
         return errors
 
@@ -340,7 +336,11 @@ class AppValidator:
         for origin in origins:
             if not origin or not origin.strip():
                 errors.append("空のCORSオリジンが含まれています")
-            elif not (origin.startswith("http://") or origin.startswith("https://") or origin == "*"):
+            elif not (
+                origin.startswith("http://")
+                or origin.startswith("https://")
+                or origin == "*"
+            ):
                 errors.append(f"無効なCORSオリジン形式: {origin}")
 
         return errors
