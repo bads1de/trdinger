@@ -1,5 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
-import { useApiCall } from "./useApiCall";
+import { useDataFetching } from "./useDataFetching";
+import { usePostRequest } from "./usePostRequest";
+import { usePutRequest } from "./usePutRequest";
 
 export interface MLConfig {
   data_processing: {
@@ -36,29 +38,37 @@ export interface MLConfig {
 }
 
 export const useMLSettings = () => {
-  const [config, setConfig] = useState<MLConfig | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
   const {
+    data: config,
     loading: isLoading,
     error: fetchError,
-    execute: fetchConfigApi,
-  } = useApiCall<MLConfig>();
+    refetch: fetchConfig,
+    setData: setConfig,
+  } = useDataFetching<MLConfig>({
+    endpoint: "/api/ml/config",
+    transform: (response) => {
+      const { success, ...configData } = response as any;
+      return success ? [configData] : [];
+    },
+  });
+
   const {
-    loading: isSaving,
+    sendPutRequest,
+    isLoading: isSaving,
     error: saveError,
-    execute: saveConfigApi,
-  } = useApiCall();
+  } = usePutRequest<any, MLConfig>();
   const {
-    loading: isResetting,
+    sendPostRequest: sendResetRequest,
+    isLoading: isResetting,
     error: resetError,
-    execute: resetConfigApi,
-  } = useApiCall();
+  } = usePostRequest();
   const {
-    loading: isCleaning,
+    sendPostRequest: sendCleanupRequest,
+    isLoading: isCleaning,
     error: cleanupError,
-    execute: cleanupApi,
-  } = useApiCall();
+  } = usePostRequest();
 
   const error = fetchError || saveError || resetError || cleanupError;
 
@@ -67,64 +77,55 @@ export const useMLSettings = () => {
     setTimeout(() => setSuccessMessage(null), 3000);
   };
 
-  const fetchConfig = useCallback(async () => {
-    const result = await fetchConfigApi("/api/ml/config");
-    if (result) {
-      const { success, ...configData } = result as any;
-      setConfig(configData);
-    }
-  }, [fetchConfigApi]);
-
-  useEffect(() => {
-    fetchConfig();
-  }, [fetchConfig]);
-
   const saveConfig = useCallback(
     async (newConfig: MLConfig) => {
       if (!newConfig) return;
-      await saveConfigApi("/api/ml/config", {
-        method: "PUT",
-        body: newConfig,
-        onSuccess: () => showSuccessMessage("設定が正常に保存されました"),
-      });
+      const { success } = await sendPutRequest("/api/ml/config", newConfig);
+      if (success) {
+        showSuccessMessage("設定が正常に保存されました");
+      }
     },
-    [saveConfigApi]
+    [sendPutRequest]
   );
 
   const resetToDefaults = useCallback(async () => {
-    await resetConfigApi("/api/ml/config/reset", {
-      method: "POST",
-      confirmMessage: "設定をデフォルト値にリセットしますか？",
-      onSuccess: () => {
+    if (window.confirm("設定をデフォルト値にリセットしますか？")) {
+      const { success } = await sendResetRequest("/api/ml/config/reset");
+      if (success) {
         fetchConfig();
         showSuccessMessage("設定がデフォルト値にリセットされました");
-      },
-    });
-  }, [resetConfigApi, fetchConfig]);
+      }
+    }
+  }, [sendResetRequest, fetchConfig]);
 
   const cleanupOldModels = useCallback(async () => {
-    await cleanupApi("/api/ml/models/cleanup", {
-      method: "POST",
-      confirmMessage:
-        "古いモデルファイルを削除しますか？この操作は取り消せません。",
-      onSuccess: () => showSuccessMessage("古いモデルファイルが削除されました"),
-    });
-  }, [cleanupApi]);
+    if (
+      window.confirm(
+        "古いモデルファイルを削除しますか？この操作は取り消せません。"
+      )
+    ) {
+      const { success } = await sendCleanupRequest("/api/ml/models/cleanup");
+      if (success) {
+        showSuccessMessage("古いモデルファイルが削除されました");
+      }
+    }
+  }, [sendCleanupRequest]);
 
   const updateConfig = (section: keyof MLConfig, key: string, value: any) => {
-    if (!config) return;
+    if (!config || config.length === 0) return;
 
-    setConfig((prev) => ({
-      ...prev!,
+    const newConfig = {
+      ...config[0],
       [section]: {
-        ...prev![section],
+        ...config[0][section],
         [key]: value,
       },
-    }));
+    };
+    setConfig([newConfig]);
   };
 
   return {
-    config,
+    config: config && config.length > 0 ? config[0] : null,
     isLoading,
     isSaving,
     isResetting,
@@ -136,6 +137,6 @@ export const useMLSettings = () => {
     resetToDefaults,
     cleanupOldModels,
     updateConfig,
-    setConfig,
+    setConfig: (newConfig: MLConfig | null) => setConfig(newConfig ? [newConfig] : []),
   };
 };

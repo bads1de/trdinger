@@ -9,7 +9,7 @@
 import { useCallback } from "react";
 import { usePostRequest } from "./usePostRequest";
 
-const createCollectionHook = <T,>() => {
+const useCollection = <T>() => {
   const { sendPostRequest, isLoading, error, data } = usePostRequest<T>();
 
   const collect = useCallback(
@@ -38,9 +38,9 @@ const createCollectionHook = <T,>() => {
  * データ収集用の専用フック
  */
 export const useDataCollection = () => {
-  const ohlcv = createCollectionHook();
-  const fundingRate = createCollectionHook();
-  const openInterest = createCollectionHook();
+  const ohlcv = useCollection();
+  const fundingRate = useCollection();
+  const openInterest = useCollection();
 
   const collectOHLCVData = useCallback(
     (onSuccess?: (data: any) => void, onError?: (error: string) => void) => {
