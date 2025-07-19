@@ -19,6 +19,9 @@ from app.core.services.data_collection.funding_rate_service import (
 )
 from app.core.utils.api_utils import APIResponseHelper
 from app.core.utils.unified_error_handler import UnifiedErrorHandler
+from app.core.services.data_collection.funding_rate_orchestration_service import (
+    FundingRateOrchestrationService,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -53,63 +56,13 @@ async def get_funding_rates(
     """
 
     async def _get_funding_rates_data():
-        logger.info(
-            f"ファンディングレートデータ取得リクエスト: symbol={symbol}, limit={limit}"
-        )
-
-        # データベースリポジトリを作成
-        repository = FundingRateRepository(db)
-
-        # 日付パラメータの変換
-        start_time = None
-        end_time = None
-
-        if start_date:
-            start_time = datetime.fromisoformat(start_date.replace("Z", "+00:00"))
-        if end_date:
-            end_time = datetime.fromisoformat(end_date.replace("Z", "+00:00"))
-
-        # シンボルの正規化
-        service = BybitFundingRateService()
-        normalized_symbol = service.normalize_symbol(symbol)
-
-        # データベースからファンディングレートデータを取得
-        funding_rate_records = repository.get_funding_rate_data(
-            symbol=normalized_symbol,
-            start_time=start_time,
-            end_time=end_time,
+        orchestration_service = FundingRateOrchestrationService()
+        return await orchestration_service.get_funding_rate_data(
+            symbol=symbol,
             limit=limit,
-        )
-
-        # レスポンス形式に変換
-        funding_rates = []
-        for record in funding_rate_records:
-            funding_rates.append(
-                {
-                    "symbol": record.symbol,
-                    "funding_rate": record.funding_rate,
-                    "funding_timestamp": record.funding_timestamp.isoformat(),
-                    "timestamp": record.timestamp.isoformat(),
-                    "next_funding_timestamp": (
-                        record.next_funding_timestamp.isoformat()
-                        if record.next_funding_timestamp is not None
-                        else None
-                    ),
-                    "mark_price": record.mark_price,
-                    "index_price": record.index_price,
-                }
-            )
-
-        logger.info(f"ファンディングレートデータ取得成功: {len(funding_rates)}件")
-
-        return APIResponseHelper.api_response(
-            success=True,
-            data={
-                "symbol": normalized_symbol,
-                "count": len(funding_rates),
-                "funding_rates": funding_rates,
-            },
-            message=f"{len(funding_rates)}件のファンディングレートデータを取得しました",
+            start_date=start_date,
+            end_date=end_date,
+            db_session=db,
         )
 
     return await UnifiedErrorHandler.safe_execute_async(
@@ -145,32 +98,18 @@ async def collect_funding_rate_data(
     """
 
     async def _collect_rates():
-        logger.info(
-            f"ファンディングレートデータ収集開始: symbol={symbol}, fetch_all={fetch_all}"
-        )
-
         if not ensure_db_initialized():
             logger.error("データベースの初期化に失敗しました")
             raise HTTPException(
                 status_code=500, detail="データベースの初期化に失敗しました"
             )
 
-        service = BybitFundingRateService()
-        repository = FundingRateRepository(db)
-
-        result = await service.fetch_and_save_funding_rate_data(
+        orchestration_service = FundingRateOrchestrationService()
+        return await orchestration_service.collect_funding_rate_data(
             symbol=symbol,
             limit=limit,
-            repository=repository,
             fetch_all=fetch_all,
-        )
-
-        logger.info(f"ファンディングレートデータ収集完了: {result}")
-
-        return APIResponseHelper.api_response(
-            data=result,
-            message=f"{result['saved_count']}件のファンディングレートデータを保存しました",
-            success=True,
+            db_session=db,
         )
 
     return await UnifiedErrorHandler.safe_execute_async(

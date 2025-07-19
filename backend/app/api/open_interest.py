@@ -20,6 +20,9 @@ from database.connection import get_db, ensure_db_initialized
 from database.repositories.open_interest_repository import OpenInterestRepository
 from app.core.utils.api_utils import APIResponseHelper
 from app.core.utils.unified_error_handler import UnifiedErrorHandler
+from app.core.services.data_collection.open_interest_orchestration_service import (
+    OpenInterestOrchestrationService,
+)
 
 # ログ設定
 logger = logging.getLogger(__name__)
@@ -131,36 +134,25 @@ async def collect_open_interest_data(
     Raises:
         HTTPException: パラメータが無効な場合やAPI/データベースエラーが発生した場合
     """
-    try:
-        logger.info(
-            f"オープンインタレストデータ収集開始: symbol={symbol}, fetch_all={fetch_all}"
-        )
 
+    async def _collect_open_interest():
         if not ensure_db_initialized():
             logger.error("データベースの初期化に失敗しました")
             raise HTTPException(
                 status_code=500, detail="データベースの初期化に失敗しました"
             )
 
-        service = BybitOpenInterestService()
-        repository = OpenInterestRepository(db)
-
-        result = await service.fetch_and_save_open_interest_data(
+        orchestration_service = OpenInterestOrchestrationService()
+        return await orchestration_service.collect_open_interest_data(
             symbol=symbol,
             limit=limit,
-            repository=repository,
             fetch_all=fetch_all,
+            db_session=db,
         )
 
-        logger.info(f"オープンインタレストデータ収集完了: {result}")
-
-        return APIResponseHelper.api_response(
-            data=result,
-            message=f"{result['saved_count']}件のオープンインタレストデータを保存しました",
-            success=True,
-        )
-    except Exception as e:
-        raise UnifiedErrorHandler.handle_api_error(e, "オープンインタレストデータ収集")
+    return await UnifiedErrorHandler.safe_execute_async(
+        _collect_open_interest, message="オープンインタレストデータ収集エラー"
+    )
 
 
 @router.post("/open-interest/bulk-collect")
@@ -182,9 +174,8 @@ async def bulk_collect_open_interest(
     Raises:
         HTTPException: データベースエラーが発生した場合
     """
-    try:
-        logger.info("オープンインタレスト一括収集開始: BTC全期間データ")
 
+    async def _bulk_collect():
         if not ensure_db_initialized():
             logger.error("データベースの初期化に失敗しました")
             raise HTTPException(
@@ -195,52 +186,11 @@ async def bulk_collect_open_interest(
             "BTC/USDT:USDT",
         ]
 
-        service = BybitOpenInterestService()
-        repository = OpenInterestRepository(db)
-
-        results = []
-        total_saved = 0
-        successful_symbols = 0
-        failed_symbols = []
-
-        for symbol in symbols:
-            try:
-                result = await service.fetch_and_save_open_interest_data(
-                    symbol=symbol,
-                    repository=repository,
-                    fetch_all=True,
-                )
-                results.append(result)
-                total_saved += result["saved_count"]
-                successful_symbols += 1
-
-                logger.info(f"✅ {symbol}: {result['saved_count']}件保存")
-
-                import asyncio
-
-                await asyncio.sleep(0.1)
-
-            except Exception as e:
-                logger.error(f"❌ {symbol} 収集エラー: {e}")
-                failed_symbols.append({"symbol": symbol, "error": str(e)})
-
-        logger.info(
-            f"オープンインタレスト一括収集完了: {successful_symbols}/{len(symbols)}成功"
+        orchestration_service = OpenInterestOrchestrationService()
+        return await orchestration_service.collect_bulk_open_interest_data(
+            symbols=symbols, db_session=db
         )
 
-        return APIResponseHelper.api_response(
-            data={
-                "results": results,
-                "summary": {
-                    "total_symbols": len(symbols),
-                    "successful_symbols": successful_symbols,
-                    "failed_symbols": len(failed_symbols),
-                    "total_saved": total_saved,
-                },
-                "failed_symbols": failed_symbols,
-            },
-            message=f"{successful_symbols}/{len(symbols)}シンボル（BTC）で合計{total_saved}件のオープンインタレストデータを保存しました",
-            success=True,
-        )
-    except Exception as e:
-        raise UnifiedErrorHandler.handle_api_error(e, "オープンインタレストの一括収集")
+    return await UnifiedErrorHandler.safe_execute_async(
+        _bulk_collect, message="オープンインタレスト一括収集エラー"
+    )

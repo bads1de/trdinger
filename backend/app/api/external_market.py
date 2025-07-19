@@ -15,6 +15,10 @@ from database.connection import get_db
 from database.repositories.external_market_repository import ExternalMarketRepository
 from data_collector.external_market_collector import ExternalMarketDataCollector
 from app.core.utils.api_utils import APIResponseHelper
+from app.core.utils.unified_error_handler import UnifiedErrorHandler
+from app.core.services.data_collection.external_market_orchestration_service import (
+    ExternalMarketOrchestrationService,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -175,25 +179,14 @@ async def get_external_market_data_status(db: Session = Depends(get_db)) -> Dict
     Returns:
         データ状態情報
     """
-    try:
-        async with ExternalMarketDataCollector() as collector:
-            status = await collector.get_external_market_data_status(db_session=db)
 
-        if status["success"]:
-            return APIResponseHelper.api_response(
-                success=True,
-                message="外部市場データの状態を取得しました",
-                data=status,
-            )
-        else:
-            raise HTTPException(
-                status_code=500,
-                detail=f"データ状態取得に失敗しました: {status.get('error', 'Unknown error')}",
-            )
+    async def _get_status():
+        orchestration_service = ExternalMarketOrchestrationService()
+        return await orchestration_service.get_data_status(db_session=db)
 
-    except Exception as e:
-        logger.error(f"外部市場データ状態取得エラー: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+    return await UnifiedErrorHandler.safe_execute_async(
+        _get_status, message="外部市場データ状態取得エラー"
+    )
 
 
 @router.post("/collect")
@@ -211,24 +204,13 @@ async def collect_external_market_data(
     Returns:
         差分収集結果
     """
-    try:
-        async with ExternalMarketDataCollector() as collector:
-            result = await collector.collect_incremental_external_market_data(
-                symbols=symbols, db_session=db
-            )
 
-        if result["success"]:
-            return APIResponseHelper.api_response(
-                success=True,
-                message=result["message"],
-                data=result,
-            )
-        else:
-            raise HTTPException(
-                status_code=500,
-                detail=f"差分データ収集に失敗しました: {result.get('error', 'Unknown error')}",
-            )
+    async def _collect_data():
+        orchestration_service = ExternalMarketOrchestrationService()
+        return await orchestration_service.collect_incremental_data(
+            symbols=symbols, db_session=db
+        )
 
-    except Exception as e:
-        logger.error(f"外部市場データ差分収集エラー: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+    return await UnifiedErrorHandler.safe_execute_async(
+        _collect_data, message="外部市場データ収集エラー"
+    )
