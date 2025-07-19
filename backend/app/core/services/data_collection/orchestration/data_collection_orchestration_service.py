@@ -85,7 +85,7 @@ class DataCollectionOrchestrationService:
             )
 
         except Exception as e:
-            logger.error("履歴データ収集開始エラー", exc_info=True)
+            logger.error("履歴データ収集開始エラー", e)
             raise
 
     async def execute_bulk_incremental_update(
@@ -96,7 +96,7 @@ class DataCollectionOrchestrationService:
 
         Args:
             symbol: 取引ペア
-            db: データベースセッション
+            db: データベースセッションexc_info=True
 
         Returns:
             一括差分更新結果
@@ -123,7 +123,7 @@ class DataCollectionOrchestrationService:
             )
 
         except Exception as e:
-            logger.error("一括差分更新エラー", exc_info=True)
+            logger.error("一括差分更新エラー", e)
             raise
 
     async def start_bitcoin_full_data_collection(
@@ -156,7 +156,10 @@ class DataCollectionOrchestrationService:
             )
 
         except Exception as e:
-            logger.error("ビットコイン全データ収集開始エラー", exc_info=True)
+            logger.error(
+                "ビットコイン全データ収集開始エラー",
+                e,
+            )
             raise
 
     async def start_bulk_historical_data_collection(
@@ -207,7 +210,7 @@ class DataCollectionOrchestrationService:
             )
 
         except Exception as e:
-            logger.error("一括履歴データ収集開始エラー", exc_info=True)
+            logger.error("一括履歴データ収集開始エラー", e)
             raise
 
     async def start_all_data_bulk_collection(
@@ -227,10 +230,6 @@ class DataCollectionOrchestrationService:
             # 取引ペアと時間軸の定義
             symbols = [
                 "BTC/USDT:USDT",
-                "ETH/USDT:USDT",
-                "SOL/USDT:USDT",
-                "ADA/USDT:USDT",
-                "DOGE/USDT:USDT",
             ]
             timeframes = ["15m", "30m", "1h", "4h", "1d"]
 
@@ -263,7 +262,7 @@ class DataCollectionOrchestrationService:
             )
 
         except Exception as e:
-            logger.error("全データ一括収集開始エラー", exc_info=True)
+            logger.error("全データ一括収集開始エラー", e)
             raise
 
     def _normalize_symbol(self, symbol: str) -> str:
@@ -301,8 +300,7 @@ class DataCollectionOrchestrationService:
 
         except Exception as e:
             logger.error(
-                f"履歴データ収集中にエラーが発生しました: {symbol} {timeframe}",
-                exc_info=True,
+                f"履歴データ収集中にエラーが発生しました: {symbol} {timeframe}", e
             )
 
     async def _collect_all_data_background(
@@ -350,7 +348,7 @@ class DataCollectionOrchestrationService:
                     )
 
             except Exception as e:
-                logger.error(f"Funding Rate収集エラー: {symbol}", exc_info=True)
+                logger.error(f"Funding Rate収集エラー: {symbol}", e)
 
             # 3. Open Interest収集
             try:
@@ -377,16 +375,14 @@ class DataCollectionOrchestrationService:
                     )
 
             except Exception as e:
-                logger.error(
-                    f"Open Interest収集エラー: {symbol} {timeframe}", exc_info=True
-                )
+                logger.error(f"Open Interest収集エラー: {symbol} {timeframe}", e)
 
             logger.info(f"全データ収集完了: {symbol} {timeframe}")
 
         except Exception as e:
             logger.error(
                 f"全データ収集中にエラーが発生しました: {symbol} {timeframe}",
-                exc_info=True,
+                e,
             )
         finally:
             # データベースセッションのクリーンアップ

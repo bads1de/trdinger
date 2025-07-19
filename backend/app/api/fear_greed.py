@@ -225,7 +225,6 @@ async def collect_historical_fear_greed_data(
     """
 
     async def _execute():
-        # サービス層に委譲
         orchestration_service = FearGreedOrchestrationService()
         return await orchestration_service.collect_historical_fear_greed_data(limit, db)
 
@@ -249,7 +248,6 @@ async def cleanup_old_fear_greed_data(
     """
 
     async def _execute():
-        # サービス層に委譲
         orchestration_service = FearGreedOrchestrationService()
         return await orchestration_service.cleanup_old_fear_greed_data(days_to_keep, db)
 
