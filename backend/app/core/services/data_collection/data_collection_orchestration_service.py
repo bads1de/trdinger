@@ -179,10 +179,6 @@ class DataCollectionOrchestrationService:
             # 取引ペアと時間軸の定義
             symbols = [
                 "BTC/USDT:USDT",
-                "ETH/USDT:USDT",
-                "SOL/USDT:USDT",
-                "ADA/USDT:USDT",
-                "DOGE/USDT:USDT",
             ]
             timeframes = ["15m", "30m", "1h", "4h", "1d"]
 
