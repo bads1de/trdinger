@@ -42,6 +42,15 @@ export interface ExternalMarketDataStatus {
   error?: string;
 }
 
+export interface ExternalMarketDataResponse {
+  success: boolean;
+  message: string;
+  data: {
+    items: ExternalMarketData[];
+  };
+  timestamp: string;
+}
+
 export const EXTERNAL_MARKET_SYMBOLS = {
   "^GSPC": "S&P 500",
   "^IXIC": "NASDAQ Composite",
@@ -75,7 +84,9 @@ export const useExternalMarketData = () => {
 
       const result = await fetchDataApi(url.toString());
       if (result && result.success) {
-        setData(result.data.data);
+        // API レスポンス構造に応じてデータを抽出
+        const items = (result.data as any)?.items || result.data?.data || [];
+        setData(Array.isArray(items) ? items : []);
       }
     },
     [fetchDataApi]
@@ -91,7 +102,9 @@ export const useExternalMarketData = () => {
 
       const result = await fetchDataApi(url.toString());
       if (result && result.success) {
-        setData(result.data.data);
+        // API レスポンス構造に応じてデータを抽出
+        const items = (result.data as any)?.items || result.data?.data || [];
+        setData(Array.isArray(items) ? items : []);
       }
     },
     [fetchDataApi]

@@ -307,6 +307,8 @@ const DataPage: React.FC = () => {
       setFearGreedCollectionMessage(
         `🚀 Fear & Greed Index収集完了 (取得:${result.fetched_count}件, 挿入:${result.inserted_count}件)`
       );
+      // データ収集後に Fear & Greed データを再取得
+      fetchFearGreedData();
     } else {
       setFearGreedCollectionMessage(`❌ ${result.message}`);
     }
@@ -335,6 +337,8 @@ const DataPage: React.FC = () => {
       setExternalMarketCollectionMessage(
         `🚀 外部市場データ収集完了 (取得:${result.fetched_count}件, 挿入:${result.inserted_count}件)`
       );
+      // データ収集後に外部市場データを再取得
+      fetchExternalMarketData();
     } else {
       setExternalMarketCollectionMessage(`❌ ${result.message}`);
     }
