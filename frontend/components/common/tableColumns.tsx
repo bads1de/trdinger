@@ -11,7 +11,6 @@ import { TableColumn } from "@/types/common";
 import { FundingRateData } from "@/types/funding-rate";
 import { PriceData } from "@/types/market-data";
 import { OpenInterestData } from "@/types/open-interest";
-import { FearGreedIndexData } from "@/app/api/data/fear-greed/route";
 import {
   ExternalMarketData,
   EXTERNAL_MARKET_SYMBOLS,
@@ -379,7 +378,7 @@ const getClassificationBadge = (classification: string): string => {
 /**
  * Fear & Greed Index データテーブルのカラム定義
  */
-export const fearGreedColumns: TableColumn<FearGreedIndexData>[] = [
+export const fearGreedColumns: TableColumn<any>[] = [
   {
     key: "data_timestamp",
     header: "日付",

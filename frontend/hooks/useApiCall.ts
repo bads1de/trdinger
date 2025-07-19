@@ -12,17 +12,11 @@ import { useState, useCallback } from "react";
  * API呼び出しの設定オプション
  */
 export interface ApiCallOptions {
-  /** HTTPメソッド */
   method?: "GET" | "POST" | "PUT" | "DELETE" | "PATCH";
-  /** リクエストヘッダー */
   headers?: Record<string, string>;
-  /** リクエストボディ */
   body?: any;
-  /** 確認ダイアログのメッセージ */
   confirmMessage?: string;
-  /** 成功時のコールバック */
   onSuccess?: (data: any) => void;
-  /** エラー時のコールバック */
   onError?: (error: string) => void;
 }
 
@@ -77,10 +71,14 @@ export const useApiCall = <T = any>(): ApiCallResult<T> => {
           requestOptions.body =
             typeof body === "string" ? body : JSON.stringify(body);
         }
- 
-        const response = await fetch(url, requestOptions);
+
+        const apiBaseUrl =
+          process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8000";
+        const fullUrl = url.startsWith("/") ? `${apiBaseUrl}${url}` : url;
+
+        const response = await fetch(fullUrl, requestOptions);
         const responseText = await response.text();
-        
+
         let result;
 
         try {
@@ -103,7 +101,7 @@ export const useApiCall = <T = any>(): ApiCallResult<T> => {
           return null;
         }
 
-        if (response.ok && result.success) {
+        if (response.ok && (method === "GET" || result.success)) {
           onSuccess?.(result);
           return result;
         } else {

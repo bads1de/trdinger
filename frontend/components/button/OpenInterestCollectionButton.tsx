@@ -8,7 +8,7 @@
 "use client";
 
 import React from "react";
-import { useApiCall } from "@/hooks/useApiCall";
+import { usePostRequest } from "@/hooks/usePostRequest";
 import ApiButton from "./ApiButton";
 
 /**
@@ -36,31 +36,43 @@ const OpenInterestCollectionButton: React.FC<
   mode = "bulk",
   symbol = "BTC/USDT",
 }) => {
-  const apiCall = useApiCall();
+  const { sendPostRequest, isLoading } = usePostRequest();
 
   const handleClick = async () => {
     const endpoint =
       mode === "bulk"
-        ? "/api/data/open-interest/bulk-collect"
-        : `/api/data/open-interest/collect?symbol=${encodeURIComponent(
+        ? "/api/open-interest/bulk-collect"
+        : `/api/open-interest/collect?symbol=${encodeURIComponent(
             symbol
           )}&fetch_all=true`;
 
-    await apiCall.execute(endpoint, {
-      method: "POST",
-      confirmMessage:
-        mode === "bulk"
-          ? "BTCの全期間OIデータを取得します。\n\nこの処理には数分かかる場合があります。続行しますか？"
-          : undefined,
-      onSuccess: onCollectionStart,
-      onError: onCollectionError,
-    });
+    const confirmMessage =
+      mode === "bulk"
+        ? "BTCの全期間OIデータを取得します。\n\nこの処理には数分かかる場合があります。続行しますか？"
+        : undefined;
+
+    const executeRequest = async () => {
+      const { success, data, error } = await sendPostRequest(endpoint);
+      if (success) {
+        onCollectionStart?.(data);
+      } else {
+        onCollectionError?.(error || "データ収集に失敗しました");
+      }
+    };
+
+    if (confirmMessage) {
+      if (window.confirm(confirmMessage)) {
+        await executeRequest();
+      }
+    } else {
+      await executeRequest();
+    }
   };
 
   return (
     <ApiButton
       onClick={handleClick}
-      loading={apiCall.loading}
+      loading={isLoading}
       disabled={disabled}
       variant="warning"
       size="sm"

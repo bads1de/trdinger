@@ -1,79 +1,112 @@
-import { useState } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { useApiCall } from "@/hooks/useApiCall";
-import { useDataFetching } from "./useDataFetching";
 import { BacktestResult } from "@/types/backtest";
+import { BACKEND_API_URL } from "@/constants";
 
 interface BacktestResultsParams {
   limit: number;
+  offset?: number;
+  symbol?: string;
+  strategy_name?: string;
 }
 
 export const useBacktestResults = () => {
   const [selectedResult, setSelectedResult] = useState<BacktestResult | null>(
     null
   );
+  const [results, setResults] = useState<BacktestResult[]>([]);
+  const [total, setTotal] = useState(0);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [params, setParams] = useState<BacktestResultsParams>({ limit: 20 });
 
-  // 基本的なデータ取得は共通フックを使用
-  const {
-    data: results,
-    loading: resultsLoading,
-    error,
-    refetch: loadResults,
-  } = useDataFetching<BacktestResult, BacktestResultsParams>({
-    endpoint: "/api/backtest/results",
-    initialParams: { limit: 20 },
-    dataPath: "results",
-    errorMessage: "バックテスト結果の取得中にエラーが発生しました",
-  });
+  const { execute: deleteResultApi, loading: deleteLoading } = useApiCall();
+  const { execute: deleteAllResultsApi, loading: deleteAllLoading } =
+    useApiCall();
 
-  // 削除操作用のAPI呼び出し
-  const { execute: deleteResult, loading: deleteLoading } = useApiCall();
-  const { execute: deleteAllResults, loading: deleteAllLoading } = useApiCall();
+  const loadResults = useCallback(
+    async (newParams?: Partial<BacktestResultsParams>) => {
+      const currentParams = { ...params, ...newParams };
+      setParams(currentParams);
+      setLoading(true);
+      setError(null);
+      try {
+        const backendUrl = new URL(`${BACKEND_API_URL}/api/backtest/results/`);
+        backendUrl.searchParams.set("limit", String(currentParams.limit));
+        backendUrl.searchParams.set(
+          "offset",
+          String(currentParams.offset || 0)
+        );
+        if (currentParams.symbol) {
+          backendUrl.searchParams.set("symbol", currentParams.symbol);
+        }
+        if (currentParams.strategy_name) {
+          backendUrl.searchParams.set(
+            "strategy_name",
+            currentParams.strategy_name
+          );
+        }
 
-  // 結果選択
+        const response = await fetch(backendUrl.toString());
+        if (!response.ok) {
+          throw new Error(`Backend API error: ${response.status}`);
+        }
+        const data = await response.json();
+        setResults(data.results || []);
+        setTotal(data.total || 0);
+      } catch (e) {
+        const errorMessage = e instanceof Error ? e.message : "不明なエラー";
+        setError(errorMessage);
+      } finally {
+        setLoading(false);
+      }
+    },
+    [params]
+  );
+
+  useEffect(() => {
+    loadResults();
+  }, []); // Initial load
+
   const handleResultSelect = (result: BacktestResult) => {
     setSelectedResult(result);
   };
 
-  // 結果削除
   const handleDeleteResult = async (result: BacktestResult) => {
-    const response = await deleteResult(`/api/backtest/results/${result.id}`, {
+    await deleteResultApi(`/api/backtest/results/${result.id}`, {
       method: "DELETE",
       confirmMessage: `バックテスト結果「${result.strategy_name}」を削除しますか？\nこの操作は取り消せません。`,
       onSuccess: () => {
-        // 削除成功時は一覧を更新
         loadResults();
-        // 選択中の結果が削除された場合はクリア
         if (selectedResult?.id === result.id) {
           setSelectedResult(null);
         }
       },
-      onError: (error) => {
-        console.error("Delete failed:", error);
+      onError: (err) => {
+        console.error("Delete failed:", err);
       },
     });
   };
 
-  // すべての結果削除
   const handleDeleteAllResults = async () => {
-    const response = await deleteAllResults("/api/backtest/results-all", {
+    await deleteAllResultsApi("/api/backtest/results-all", {
       method: "DELETE",
       confirmMessage: `すべてのバックテスト結果を削除しますか？\n現在${results.length}件の結果があります。\nこの操作は取り消せません。`,
       onSuccess: () => {
-        // 削除成功時は一覧を更新
         loadResults();
-        // 選択中の結果をクリア
         setSelectedResult(null);
       },
-      onError: (error) => {
-        console.error("Delete all failed:", error);
+      onError: (err) => {
+        console.error("Delete all failed:", err);
       },
     });
   };
 
   return {
     results,
+    total,
     selectedResult,
-    resultsLoading,
+    resultsLoading: loading,
     deleteLoading,
     deleteAllLoading,
     error,

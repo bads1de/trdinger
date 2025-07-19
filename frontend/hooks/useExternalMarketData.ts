@@ -1,15 +1,7 @@
-/**
- * 外部市場データ管理フック
- *
- * 外部市場データ（SP500、NASDAQ、DXY、VIX）の取得・収集機能を提供します。
- */
-
-import { useState, useEffect, useCallback } from "react";
+import { useState, useCallback } from "react";
 import { useApiCall } from "./useApiCall";
+import { BACKEND_API_URL } from "@/constants";
 
-/**
- * 外部市場データの型定義
- */
 export interface ExternalMarketData {
   id: number;
   symbol: string;
@@ -24,9 +16,6 @@ export interface ExternalMarketData {
   updated_at: string;
 }
 
-/**
- * 外部市場データ収集結果の型定義
- */
 export interface ExternalMarketCollectionResult {
   success: boolean;
   fetched_count: number;
@@ -37,9 +26,6 @@ export interface ExternalMarketCollectionResult {
   error?: string;
 }
 
-/**
- * 外部市場データ状態の型定義
- */
 export interface ExternalMarketDataStatus {
   success: boolean;
   statistics: {
@@ -56,9 +42,6 @@ export interface ExternalMarketDataStatus {
   error?: string;
 }
 
-/**
- * 利用可能なシンボル
- */
 export const EXTERNAL_MARKET_SYMBOLS = {
   "^GSPC": "S&P 500",
   "^IXIC": "NASDAQ Composite",
@@ -68,26 +51,23 @@ export const EXTERNAL_MARKET_SYMBOLS = {
 
 export type ExternalMarketSymbol = keyof typeof EXTERNAL_MARKET_SYMBOLS;
 
-/**
- * 外部市場データ管理フック
- */
 export const useExternalMarketData = () => {
   const [data, setData] = useState<ExternalMarketData[]>([]);
-  const [status, setStatus] = useState<ExternalMarketDataStatus | null>(null);
+  const status: ExternalMarketDataStatus | null = null;
 
-  const { execute: fetchDataApi, loading, error } = useApiCall<{ success: boolean; data: ExternalMarketData[] }>();
-  const { execute: collectDataApi } = useApiCall<{ success: boolean; data: ExternalMarketCollectionResult }>();
-  const { execute: fetchStatusApi } = useApiCall<{ success: boolean; data: ExternalMarketDataStatus }>();
+  const {
+    execute: fetchDataApi,
+    loading,
+    error,
+  } = useApiCall<{ success: boolean; data: { data: ExternalMarketData[] } }>();
+  const { execute: collectDataApi } = useApiCall<{
+    success: boolean;
+    data: ExternalMarketCollectionResult;
+  }>();
 
-  /**
-   * 外部市場データを取得
-   */
   const fetchData = useCallback(
     async (symbol?: string, limit: number = 100) => {
-      const url = new URL(
-        "/api/data/external-market",
-        window.location.origin
-      );
+      const url = new URL("/api/external-market/", BACKEND_API_URL);
       if (symbol) {
         url.searchParams.set("symbol", symbol);
       }
@@ -95,21 +75,15 @@ export const useExternalMarketData = () => {
 
       const result = await fetchDataApi(url.toString());
       if (result && result.success) {
-        setData(result.data);
+        setData(result.data.data);
       }
     },
     [fetchDataApi]
   );
 
-  /**
-   * 最新の外部市場データを取得
-   */
   const fetchLatestData = useCallback(
     async (symbol?: string, limit: number = 30) => {
-      const url = new URL(
-        "/api/data/external-market/latest",
-        window.location.origin
-      );
+      const url = new URL("/api/external-market/latest", BACKEND_API_URL);
       if (symbol) {
         url.searchParams.set("symbol", symbol);
       }
@@ -117,25 +91,18 @@ export const useExternalMarketData = () => {
 
       const result = await fetchDataApi(url.toString());
       if (result && result.success) {
-        setData(result.data);
+        setData(result.data.data);
       }
     },
     [fetchDataApi]
   );
 
-  /**
-   * 外部市場データを収集
-   */
   const collectData = useCallback(
     async (
       symbols?: string[],
-      period: string = "1mo"
+      _period: string = "1mo" // period is not used in backend, but kept for compatibility
     ): Promise<ExternalMarketCollectionResult> => {
-      const url = new URL(
-        "/api/data/external-market/collect",
-        window.location.origin
-      );
-      url.searchParams.set("period", period);
+      const url = new URL("/api/external-market/collect", BACKEND_API_URL);
 
       if (symbols && symbols.length > 0) {
         symbols.forEach((symbol) => {
@@ -152,95 +119,40 @@ export const useExternalMarketData = () => {
     [collectDataApi, error]
   );
 
-  /**
-   * 外部市場データの差分収集
-   */
   const collectIncrementalData = useCallback(
     async (symbols?: string[]): Promise<ExternalMarketCollectionResult> => {
-      const url = new URL(
-        "/api/data/external-market/collect-incremental",
-        window.location.origin
-      );
-
-      if (symbols && symbols.length > 0) {
-        symbols.forEach((symbol) => {
-          url.searchParams.append("symbols", symbol);
-        });
-      }
-
-      const result = await collectDataApi(url.toString(), { method: "POST" });
-      if (result && result.success) {
-        return result.data;
-      }
-      throw new Error(error || "外部市場データの差分収集に失敗しました");
+      // This now calls the same endpoint as collectData, as there is no specific incremental endpoint
+      return collectData(symbols);
     },
-    [collectDataApi, error]
+    [collectData]
   );
 
-  /**
-   * 外部市場データの履歴データを収集
-   */
   const collectHistoricalData = useCallback(
     async (
       symbols?: string[],
-      period: string = "5y",
-      startDate?: string,
-      endDate?: string
+      _period: string = "5y",
+      _startDate?: string,
+      _endDate?: string
     ): Promise<ExternalMarketCollectionResult> => {
-      const url = new URL(
-        "/api/data/external-market/collect-historical",
-        window.location.origin
-      );
-      url.searchParams.set("period", period);
-
-      if (symbols && symbols.length > 0) {
-        symbols.forEach((symbol) => {
-          url.searchParams.append("symbols", symbol);
-        });
-      }
-
-      if (startDate) {
-        url.searchParams.set("start_date", startDate);
-      }
-
-      if (endDate) {
-        url.searchParams.set("end_date", endDate);
-      }
-
-      const result = await collectDataApi(url.toString(), { method: "POST" });
-      if (result && result.success) {
-        return result.data;
-      }
-      throw new Error(error || "外部市場データの履歴収集に失敗しました");
+      // Backend does not support period, startDate, endDate for historical collection via this endpoint.
+      // It collects based on its own logic. We will call the collect endpoint.
+      return collectData(symbols);
     },
-    [collectDataApi, error]
+    [collectData]
   );
 
-  /**
-   * 外部市場データの状態を取得
-   */
+  // ステータス機能は削除されたエンドポイントのため、一時的に無効化
   const fetchStatus = useCallback(async () => {
-    const url = new URL(
-      "/api/data/external-market/status",
-      window.location.origin
-    );
-    const result = await fetchStatusApi(url.toString());
-    if (result && result.success) {
-      setStatus(result.data);
-    }
-  }, [fetchStatusApi]);
+    // 何もしない
+  }, []);
 
-  /**
-   * データを再取得
-   */
   const refetch = useCallback(() => {
     fetchLatestData();
   }, [fetchLatestData]);
 
-  // 初期化時にデータ状態のみを取得（データは必要に応じて別途取得）
-  useEffect(() => {
-    fetchStatus();
-  }, [fetchStatus]);
+  // useEffect(() => {
+  //   fetchStatus();
+  // }, [fetchStatus]);
 
   return {
     data,

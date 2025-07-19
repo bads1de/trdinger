@@ -29,7 +29,7 @@ router = APIRouter(prefix="/market-data", tags=["market-data"])
 
 @router.get("/ohlcv")
 async def get_ohlcv_data(
-    symbol: str = Query(..., description="取引ペアシンボル（例: BTC/USDT）"),
+    symbol: str = Query(..., description="取引ペアシンボル（例: BTC/USDT:USDT）"),
     timeframe: str = Query(
         unified_config.market.default_timeframe,
         description="時間軸（1m, 5m, 15m, 30m, 1h, 4h, 1d）",

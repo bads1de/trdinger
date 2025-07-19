@@ -1,20 +1,18 @@
-/**
- * Fear & Greed Index データ管理フック
- *
- * Fear & Greed Index データの取得、収集、状態管理を行います。
- */
-
 import { useState, useCallback, useEffect } from "react";
-import {
-  FearGreedIndexData,
-  FearGreedIndexResponse,
-} from "@/app/api/data/fear-greed/route";
-import { useApiCall } from "./useApiCall";
 import { useDataFetching } from "./useDataFetching";
+import { usePostRequest } from "./usePostRequest";
+import { BACKEND_API_URL } from "@/constants";
 
-/**
- * Fear & Greed Index データ状態の型定義
- */
+export interface FearGreedIndexData {
+  id: number;
+  value: number;
+  value_classification: string;
+  data_timestamp: string;
+  timestamp: string;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface FearGreedDataStatus {
   success: boolean;
   data_range: {
@@ -27,9 +25,6 @@ export interface FearGreedDataStatus {
   error?: string;
 }
 
-/**
- * Fear & Greed Index 収集結果の型定義
- */
 export interface FearGreedCollectionResult {
   success: boolean;
   message: string;
@@ -39,166 +34,82 @@ export interface FearGreedCollectionResult {
   error?: string;
 }
 
-interface FearGreedParams {
-  limit: number;
-  start_date?: string;
-  end_date?: string;
-}
-
-/**
- * Fear & Greed Index データ管理フック
- */
 export const useFearGreedData = () => {
-  const [status, setStatus] = useState<FearGreedDataStatus | null>(null);
-
-  // 基本的なデータ取得は共通フックを使用
   const { data, loading, error, params, setParams, refetch } = useDataFetching<
     FearGreedIndexData,
-    FearGreedParams
+    { limit: number; start_date?: string; end_date?: string }
   >({
-    endpoint: "/api/data/fear-greed/latest",
+    endpoint: "/api/fear-greed/latest",
     initialParams: { limit: 30 },
-    dataPath: "data",
-    errorMessage: "Fear & Greed Index データの取得中にエラーが発生しました",
+    dataPath: "data.data",
+    disableAutoFetch: false,
+    errorMessage: "Fear & Greed Index データの取得に失敗しました",
   });
 
-  // 収集機能用のAPI呼び出し
-  const { execute: fetchStatusApi } = useApiCall<{
-    success: boolean;
-    data: FearGreedDataStatus;
-  }>();
-  const { execute: collectDataApi } = useApiCall<{
-    success: boolean;
-    data: FearGreedCollectionResult;
-  }>();
+  // ステータス機能は削除されたエンドポイントのため、一時的に無効化
+  const status: FearGreedDataStatus[] = [];
+  const fetchStatus = useCallback(() => Promise.resolve(), []);
 
-  /**
-   * Fear & Greed Index データを取得（パラメータ指定）
-   */
+  const { sendPostRequest, isLoading: isCollecting } =
+    usePostRequest<FearGreedCollectionResult>();
+
+  const handleCollection = useCallback(
+    async (endpoint: string) => {
+      const { success, data, error } = await sendPostRequest(endpoint);
+      if (success && data) {
+        refetch();
+        fetchStatus();
+        return data;
+      }
+      throw new Error(error || "データ収集に失敗しました");
+    },
+    [sendPostRequest, refetch, fetchStatus]
+  );
+
+  const collectData = useCallback(
+    (limit: number = 30) =>
+      handleCollection(`/api/fear-greed/collect?limit=${limit}`),
+    [handleCollection]
+  );
+
+  const collectHistoricalData = useCallback(
+    (limit: number = 1000) =>
+      handleCollection(`/api/fear-greed/collect-historical?limit=${limit}`),
+    [handleCollection]
+  );
+
+  const collectIncrementalData = useCallback(
+    () => handleCollection("/api/fear-greed/collect"),
+    [handleCollection]
+  );
+
   const fetchData = useCallback(
-    async (limit: number = 30, startDate?: string, endDate?: string) => {
-      setParams({
-        limit,
-        start_date: startDate,
-        end_date: endDate,
-      });
+    (limit: number = 30, startDate?: string, endDate?: string) => {
+      setParams({ limit, start_date: startDate, end_date: endDate });
     },
     [setParams]
   );
 
-  /**
-   * 最新のFear & Greed Index データを取得
-   */
   const fetchLatestData = useCallback(
     async (limit: number = 30) => {
-      setParams({ limit });
-    },
-    [setParams]
-  );
-
-  /**
-   * Fear & Greed Index データの状態を取得
-   */
-  const fetchStatus = useCallback(async () => {
-    const result = await fetchStatusApi("/api/data/fear-greed/status");
-    if (result && result.success) {
-      setStatus(result.data);
-    }
-  }, [fetchStatusApi]);
-
-  /**
-   * Fear & Greed Index データを収集
-   */
-  const collectData = useCallback(
-    async (limit: number = 30): Promise<FearGreedCollectionResult> => {
-      const result = await collectDataApi(
-        `/api/data/fear-greed/collect?limit=${limit}`,
-        {
-          method: "POST",
+      // データが空の場合は、まずデータ収集を試行
+      if (data.length === 0) {
+        try {
+          await collectData(30);
+        } catch (error) {
+          console.warn("自動データ収集に失敗しました:", error);
         }
-      );
-
-      if (result && result.success) {
-        await refetch();
-        await fetchStatus();
-        return result.data;
       }
-      return {
-        success: false,
-        message: "データ収集に失敗しました",
-        fetched_count: 0,
-        inserted_count: 0,
-        error: error || "Unknown error",
-      };
+      setParams({ limit, start_date: undefined, end_date: undefined });
     },
-    [collectDataApi, refetch, fetchStatus, error]
+    [setParams, data.length, collectData]
   );
-
-  /**
-   * 履歴データを収集（全期間）
-   */
-  const collectHistoricalData = useCallback(
-    async (limit: number = 1000): Promise<FearGreedCollectionResult> => {
-      const result = await collectDataApi(
-        `/api/data/fear-greed/collect-historical?limit=${limit}`,
-        {
-          method: "POST",
-        }
-      );
-
-      if (result && result.success) {
-        await refetch();
-        await fetchStatus();
-        return result.data;
-      }
-      return {
-        success: false,
-        message: "履歴データ収集に失敗しました",
-        fetched_count: 0,
-        inserted_count: 0,
-        error: error || "Unknown error",
-      };
-    },
-    [collectDataApi, refetch, fetchStatus, error]
-  );
-
-  /**
-   * 差分データを収集
-   */
-  const collectIncrementalData =
-    useCallback(async (): Promise<FearGreedCollectionResult> => {
-      const result = await collectDataApi(
-        "/api/data/fear-greed/collect-incremental",
-        {
-          method: "POST",
-        }
-      );
-
-      if (result && result.success) {
-        await refetch();
-        await fetchStatus();
-        return result.data;
-      }
-      return {
-        success: false,
-        message: "差分データ収集に失敗しました",
-        fetched_count: 0,
-        inserted_count: 0,
-        error: error || "Unknown error",
-      };
-    }, [collectDataApi, refetch, fetchStatus, error]);
-
-  // 初回データ取得
-  useEffect(() => {
-    fetchLatestData();
-    fetchStatus();
-  }, [fetchLatestData, fetchStatus]);
 
   return {
     data,
-    loading,
+    loading: loading || isCollecting,
     error,
-    status,
+    status: status.length > 0 ? status[0] : null,
     params,
     fetchData,
     fetchLatestData,

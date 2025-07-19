@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { useApiCall } from "./useApiCall";
+import { BACKEND_API_URL } from "@/constants";
 
 export interface MLConfig {
   data_processing: {
@@ -37,30 +37,12 @@ export interface MLConfig {
 
 export const useMLSettings = () => {
   const [config, setConfig] = useState<MLConfig | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [isResetting, setIsResetting] = useState(false);
+  const [isCleaning, setIsCleaning] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
-
-  const {
-    loading: isLoading,
-    error: fetchError,
-    execute: fetchConfigApi,
-  } = useApiCall<MLConfig>();
-  const {
-    loading: isSaving,
-    error: saveError,
-    execute: saveConfigApi,
-  } = useApiCall();
-  const {
-    loading: isResetting,
-    error: resetError,
-    execute: resetConfigApi,
-  } = useApiCall();
-  const {
-    loading: isCleaning,
-    error: cleanupError,
-    execute: cleanupApi,
-  } = useApiCall();
-
-  const error = fetchError || saveError || resetError || cleanupError;
 
   const showSuccessMessage = (message: string) => {
     setSuccessMessage(message);
@@ -68,60 +50,157 @@ export const useMLSettings = () => {
   };
 
   const fetchConfig = useCallback(async () => {
-    const result = await fetchConfigApi("/api/ml/config");
-    if (result) {
-      const { success, ...configData } = result as any;
-      setConfig(configData);
-    }
-  }, [fetchConfigApi]);
+    setIsLoading(true);
+    setError(null);
 
-  useEffect(() => {
-    fetchConfig();
-  }, [fetchConfig]);
-
-  const saveConfig = useCallback(
-    async (newConfig: MLConfig) => {
-      if (!newConfig) return;
-      await saveConfigApi("/api/ml/config", {
-        method: "PUT",
-        body: newConfig,
-        onSuccess: () => showSuccessMessage("設定が正常に保存されました"),
+    try {
+      const response = await fetch(`${BACKEND_API_URL}/api/ml/config`, {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+        },
       });
-    },
-    [saveConfigApi]
-  );
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.detail || "ML設定取得に失敗しました");
+      }
+
+      setConfig(data);
+    } catch (error) {
+      console.error("ML設定取得エラー:", error);
+      setError(
+        error instanceof Error ? error.message : "サーバーエラーが発生しました"
+      );
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  const saveConfig = useCallback(async (newConfig: MLConfig) => {
+    if (!newConfig) return;
+
+    setIsSaving(true);
+    setError(null);
+
+    try {
+      const response = await fetch(`${BACKEND_API_URL}/api/ml/config`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(newConfig),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.detail || "ML設定の更新に失敗しました");
+      }
+
+      setConfig(data);
+      showSuccessMessage("設定が正常に保存されました");
+    } catch (error) {
+      console.error("ML設定更新エラー:", error);
+      setError(
+        error instanceof Error ? error.message : "サーバーエラーが発生しました"
+      );
+    } finally {
+      setIsSaving(false);
+    }
+  }, []);
 
   const resetToDefaults = useCallback(async () => {
-    await resetConfigApi("/api/ml/config/reset", {
-      method: "POST",
-      confirmMessage: "設定をデフォルト値にリセットしますか？",
-      onSuccess: () => {
-        fetchConfig();
+    if (window.confirm("設定をデフォルト値にリセットしますか？")) {
+      setIsResetting(true);
+      setError(null);
+
+      try {
+        const response = await fetch(`${BACKEND_API_URL}/api/ml/config/reset`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.detail || "設定のリセットに失敗しました");
+        }
+
+        setConfig(data);
         showSuccessMessage("設定がデフォルト値にリセットされました");
-      },
-    });
-  }, [resetConfigApi, fetchConfig]);
+      } catch (error) {
+        console.error("ML設定リセットエラー:", error);
+        setError(
+          error instanceof Error
+            ? error.message
+            : "サーバーエラーが発生しました"
+        );
+      } finally {
+        setIsResetting(false);
+      }
+    }
+  }, []);
 
   const cleanupOldModels = useCallback(async () => {
-    await cleanupApi("/api/ml/models/cleanup", {
-      method: "POST",
-      confirmMessage:
-        "古いモデルファイルを削除しますか？この操作は取り消せません。",
-      onSuccess: () => showSuccessMessage("古いモデルファイルが削除されました"),
-    });
-  }, [cleanupApi]);
+    if (
+      window.confirm(
+        "古いモデルファイルを削除しますか？この操作は取り消せません。"
+      )
+    ) {
+      setIsCleaning(true);
+      setError(null);
+
+      try {
+        const response = await fetch(
+          `${BACKEND_API_URL}/api/ml/models/cleanup`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+          }
+        );
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.detail || "モデルファイルの削除に失敗しました");
+        }
+
+        showSuccessMessage("古いモデルファイルが削除されました");
+      } catch (error) {
+        console.error("モデルファイル削除エラー:", error);
+        setError(
+          error instanceof Error
+            ? error.message
+            : "サーバーエラーが発生しました"
+        );
+      } finally {
+        setIsCleaning(false);
+      }
+    }
+  }, []);
 
   const updateConfig = (section: keyof MLConfig, key: string, value: any) => {
     if (!config) return;
 
-    setConfig((prev) => ({
-      ...prev!,
+    const newConfig = {
+      ...config,
       [section]: {
-        ...prev![section],
+        ...config[section],
         [key]: value,
       },
-    }));
+    };
+    setConfig(newConfig);
   };
+
+  useEffect(() => {
+    fetchConfig();
+  }, [fetchConfig]);
 
   return {
     config,

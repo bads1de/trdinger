@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useApiCall } from "@/hooks/useApiCall";
 import { GAConfig } from "@/types/optimization";
+import { BACKEND_API_URL } from "@/constants";
 
 export const useAutoStrategy = (loadResults: () => void) => {
   const [showAutoStrategyModal, setShowAutoStrategyModal] = useState(false);
@@ -12,6 +13,56 @@ export const useAutoStrategy = (loadResults: () => void) => {
    * オートストラテジー実行
    */
   const handleAutoStrategy = async (config: GAConfig) => {
+    // リクエストボディのバリデーション
+    if (!config.experiment_name || !config.base_config || !config.ga_config) {
+      const errorMessage =
+        "必須フィールドが不足しています: experiment_name, base_config, or ga_config";
+      alert(errorMessage);
+      console.error(errorMessage);
+      return;
+    }
+
+    // base_configの必須フィールドをチェック
+    const requiredBaseConfigFields = [
+      "symbol",
+      "timeframe",
+      "start_date",
+      "end_date",
+      "initial_capital",
+      "commission_rate",
+    ];
+
+    for (const field of requiredBaseConfigFields) {
+      if (!(field in config.base_config)) {
+        const errorMessage = `base_configに必須フィールドがありません: ${field}`;
+        alert(errorMessage);
+        console.error(errorMessage);
+        return;
+      }
+    }
+
+    // ga_configの必須フィールドをチェック
+    const requiredGAConfigFields = [
+      "population_size",
+      "generations",
+      "crossover_rate",
+      "mutation_rate",
+      "elite_size",
+    ];
+
+    for (const field of requiredGAConfigFields) {
+      if (
+        config.ga_config[field as keyof typeof config.ga_config] ===
+          undefined ||
+        config.ga_config[field as keyof typeof config.ga_config] === null
+      ) {
+        const errorMessage = `ga_configに必須フィールドがありません: ${field}`;
+        alert(errorMessage);
+        console.error(errorMessage);
+        return;
+      }
+    }
+
     // GAConfigをAPIリクエスト形式に変換
     const requestBody = {
       experiment_name: config.experiment_name,
@@ -19,7 +70,7 @@ export const useAutoStrategy = (loadResults: () => void) => {
       ga_config: config.ga_config,
     };
 
-    const response = await runAutoStrategy("/api/auto-strategy/generate", {
+    await runAutoStrategy(`${BACKEND_API_URL}/api/auto-strategy/generate`, {
       method: "POST",
       body: requestBody,
       onSuccess: (data) => {
@@ -34,6 +85,7 @@ export const useAutoStrategy = (loadResults: () => void) => {
         loadResults();
       },
       onError: (error) => {
+        alert(`オートストラテジーの生成に失敗しました: ${error}`);
         console.error("Auto strategy generation failed:", error);
       },
     });

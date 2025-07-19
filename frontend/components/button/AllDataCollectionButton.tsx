@@ -8,7 +8,7 @@
 "use client";
 
 import React from "react";
-import { useApiCall } from "@/hooks/useApiCall";
+import { usePostRequest } from "@/hooks/usePostRequest";
 import ApiButton from "./ApiButton";
 
 /**
@@ -34,24 +34,30 @@ const AllDataCollectionButton: React.FC<AllDataCollectionButtonProps> = ({
   disabled = false,
   className = "",
 }) => {
-  const apiCall = useApiCall();
+  const { sendPostRequest, isLoading } = usePostRequest();
 
   const handleClick = async () => {
-    await apiCall.execute("/api/data/all/bulk-collect", {
-      method: "POST",
-      confirmMessage:
-        "全データ（OHLCV・FR・OI）を一括取得します。\n\n" +
-        "この処理には数分から十数分かかる場合があります。\n" +
-        "テクニカル指標も自動計算されます。続行しますか？",
-      onSuccess: onCollectionStart,
-      onError: onCollectionError,
-    });
+    const confirmMessage =
+      "全データ（OHLCV・FR・OI）を一括取得します。\n\n" +
+      "この処理には数分から十数分かかる場合があります。\n" +
+      "テクニカル指標も自動計算されます。続行しますか？";
+
+    if (window.confirm(confirmMessage)) {
+      const { success, data, error } = await sendPostRequest(
+        "/api/data-collection/all/bulk-collect"
+      );
+      if (success) {
+        onCollectionStart?.(data);
+      } else {
+        onCollectionError?.(error || "データ収集に失敗しました");
+      }
+    }
   };
 
   return (
     <ApiButton
       onClick={handleClick}
-      loading={apiCall.loading}
+      loading={isLoading}
       disabled={disabled}
       variant="primary"
       size="sm"

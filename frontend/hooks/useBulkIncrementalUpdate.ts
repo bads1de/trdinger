@@ -1,6 +1,5 @@
-import { useApiCall } from "./useApiCall";
+import { usePostRequest } from "./usePostRequest";
 import { useCallback } from "react";
-import { BACKEND_API_URL } from "@/constants";
 import { TimeFrame } from "@/types/market-data";
 import { BulkIncrementalUpdateResponse } from "@/types/data-collection";
 
@@ -17,11 +16,10 @@ interface BulkIncrementalUpdateOptions {
  */
 export const useBulkIncrementalUpdate = () => {
   const {
-    execute: executeUpdate,
-    loading,
+    sendPostRequest,
+    isLoading,
     error,
-    reset,
-  } = useApiCall<BulkIncrementalUpdateResponse>();
+  } = usePostRequest<BulkIncrementalUpdateResponse>();
 
   const bulkUpdate = useCallback(
     async (
@@ -31,26 +29,20 @@ export const useBulkIncrementalUpdate = () => {
     ) => {
       const { onSuccess, onError } = options;
 
-      const url = `/api/data/bulk-incremental-update?symbol=${encodeURIComponent(
+      const url = `/api/data-collection/bulk-incremental-update?symbol=${encodeURIComponent(
         symbol
       )}`;
 
-      await executeUpdate(url, {
-        method: "POST",
-        onSuccess: (result) => {
-          if (onSuccess) {
-            onSuccess(result);
-          }
-        },
-        onError: (errorMessage) => {
-          if (onError) {
-            onError(errorMessage);
-          }
-        },
-      });
+      const { success, data, error: requestError } = await sendPostRequest(url);
+
+      if (success && data) {
+        onSuccess?.(data);
+      } else {
+        onError?.(requestError || "一括差分更新に失敗しました");
+      }
     },
-    [executeUpdate]
+    [sendPostRequest]
   );
 
-  return { bulkUpdate, loading, error, reset };
+  return { bulkUpdate, loading: isLoading, error };
 };
