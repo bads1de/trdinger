@@ -13,7 +13,6 @@ from sqlalchemy.orm import Session
 
 from database.connection import get_db
 from database.repositories.external_market_repository import ExternalMarketRepository
-from data_collector.external_market_collector import ExternalMarketDataCollector
 from app.core.utils.api_utils import APIResponseHelper
 from app.core.utils.unified_error_handler import UnifiedErrorHandler
 from app.core.services.data_collection.orchestration.external_market_orchestration_service import (
@@ -46,7 +45,8 @@ async def get_external_market_data(
     Returns:
         外部市場データのリスト
     """
-    try:
+
+    async def _get_data():
         repository = ExternalMarketRepository(db)
 
         # 時刻の変換
@@ -88,9 +88,9 @@ async def get_external_market_data(
             data={"items": data_dicts},
         )
 
-    except Exception as e:
-        logger.error(f"外部市場データ取得エラー: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+    return await UnifiedErrorHandler.safe_execute_async(
+        _get_data, message="外部市場データ取得エラー"
+    )
 
 
 @router.get("/latest")
@@ -110,7 +110,8 @@ async def get_latest_external_market_data(
     Returns:
         最新の外部市場データのリスト
     """
-    try:
+
+    async def _get_latest_data():
         repository = ExternalMarketRepository(db)
 
         data = repository.get_latest_external_market_data(symbol=symbol, limit=limit)
@@ -124,9 +125,9 @@ async def get_latest_external_market_data(
             data={"items": data_dicts},
         )
 
-    except Exception as e:
-        logger.error(f"最新外部市場データ取得エラー: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+    return await UnifiedErrorHandler.safe_execute_async(
+        _get_latest_data, message="最新外部市場データ取得エラー"
+    )
 
 
 @router.get("/symbols")
@@ -140,7 +141,8 @@ async def get_available_symbols(db: Session = Depends(get_db)) -> Dict:
     Returns:
         シンボル一覧
     """
-    try:
+
+    async def _get_symbols():
         repository = ExternalMarketRepository(db)
 
         # データベースに存在するシンボル
@@ -163,9 +165,9 @@ async def get_available_symbols(db: Session = Depends(get_db)) -> Dict:
             },
         )
 
-    except Exception as e:
-        logger.error(f"シンボル一覧取得エラー: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+    return await UnifiedErrorHandler.safe_execute_async(
+        _get_symbols, message="シンボル一覧取得エラー"
+    )
 
 
 @router.get("/status")

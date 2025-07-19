@@ -10,7 +10,7 @@ import logging
 from datetime import datetime
 from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
 from app.core.services.data_collection.bybit.open_interest_service import (
@@ -57,7 +57,8 @@ async def get_open_interest_data(
     Raises:
         HTTPException: パラメータが無効な場合やデータベースエラーが発生した場合
     """
-    try:
+
+    async def _get_data():
         logger.info(
             f"オープンインタレストデータ取得リクエスト: symbol={symbol}, limit={limit}"
         )
@@ -104,8 +105,10 @@ async def get_open_interest_data(
             message=f"{len(open_interest_data)}件のオープンインタレストデータを取得しました",
             success=True,
         )
-    except Exception as e:
-        raise UnifiedErrorHandler.handle_api_error(e, "オープンインタレストデータ取得")
+
+    return await UnifiedErrorHandler.safe_execute_async(
+        _get_data, message="オープンインタレストデータ取得エラー"
+    )
 
 
 @router.post("/open-interest/collect")
@@ -138,9 +141,7 @@ async def collect_open_interest_data(
     async def _collect_open_interest():
         if not ensure_db_initialized():
             logger.error("データベースの初期化に失敗しました")
-            raise HTTPException(
-                status_code=500, detail="データベースの初期化に失敗しました"
-            )
+            raise Exception("データベースの初期化に失敗しました")
 
         orchestration_service = OpenInterestOrchestrationService()
         return await orchestration_service.collect_open_interest_data(
@@ -178,9 +179,7 @@ async def bulk_collect_open_interest(
     async def _bulk_collect():
         if not ensure_db_initialized():
             logger.error("データベースの初期化に失敗しました")
-            raise HTTPException(
-                status_code=500, detail="データベースの初期化に失敗しました"
-            )
+            raise Exception("データベースの初期化に失敗しました")
 
         symbols = [
             "BTC/USDT:USDT",
