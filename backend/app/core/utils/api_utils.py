@@ -6,7 +6,7 @@ import logging
 
 from fastapi import HTTPException
 from datetime import datetime
-from typing import Any, Dict, Optional, Callable, Awaitable
+from typing import Any, Dict, Optional, Callable, Awaitable, List
 
 
 logger = logging.getLogger(__name__)
@@ -55,16 +55,55 @@ class APIResponseHelper:
     ) -> Dict[str, Any]:
         """
         標準化されたAPIレスポンスを生成するヘルパー関数。
+
+        Args:
+            success: 成功フラグ
+            message: メッセージ
+            status: ステータス文字列（オプション）
+            data: レスポンスデータ（辞書型、オプション）
+
+        Returns:
+            標準化されたAPIレスポンス辞書
         """
         response = {"success": success, "message": message}
         if status:
             response["status"] = status
-        if data:
+        if data is not None:
             response["data"] = data
-        response["timestamp"] = (
-            datetime.now().isoformat()
-        )  # Add timestamp for consistency
+        response["timestamp"] = datetime.now().isoformat()
         return response
+
+    @staticmethod
+    def api_list_response(
+        success: bool,
+        message: str,
+        items: List[Any],
+        status: Optional[str] = None,
+        metadata: Optional[Dict[str, Any]] = None,
+    ) -> Dict[str, Any]:
+        """
+        リストデータ用の標準化されたAPIレスポンスを生成するヘルパー関数。
+
+        Args:
+            success: 成功フラグ
+            message: メッセージ
+            items: リストデータ
+            status: ステータス文字列（オプション）
+            metadata: メタデータ（オプション）
+
+        Returns:
+            標準化されたAPIレスポンス辞書
+        """
+        response_data = {"items": items}
+        if metadata:
+            response_data.update(metadata)
+
+        return APIResponseHelper.api_response(
+            success=success,
+            message=message,
+            status=status,
+            data=response_data,
+        )
 
     @staticmethod
     def success_response(

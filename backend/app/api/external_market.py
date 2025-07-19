@@ -82,10 +82,10 @@ async def get_external_market_data(
         # 辞書形式に変換
         data_dicts = [record.to_dict() for record in data]
 
-        return APIResponseHelper.api_response(
+        return APIResponseHelper.api_list_response(
             success=True,
             message=f"外部市場データを {len(data_dicts)} 件取得しました",
-            data={"items": data_dicts},
+            items=data_dicts,
         )
 
     return await UnifiedErrorHandler.safe_execute_async(
@@ -119,10 +119,10 @@ async def get_latest_external_market_data(
         # 辞書形式に変換
         data_dicts = [record.to_dict() for record in data]
 
-        return APIResponseHelper.api_response(
+        return APIResponseHelper.api_list_response(
             success=True,
             message=f"最新の外部市場データを {len(data_dicts)} 件取得しました",
-            data={"items": data_dicts},
+            items=data_dicts,
         )
 
     return await UnifiedErrorHandler.safe_execute_async(
