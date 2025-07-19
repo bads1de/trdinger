@@ -1,36 +1,36 @@
-import { useState, useEffect, useCallback } from "react";
-import { OpenInterestData, OpenInterestResponse } from "@/types/open-interest";
-import { useApiCall } from "./useApiCall";
+import { OpenInterestData } from "@/types/open-interest";
+import { useDataFetching } from "./useDataFetching";
+
+interface OpenInterestParams {
+  symbol: string;
+  limit: number;
+}
 
 export const useOpenInterestData = (symbol: string, initialLimit = 100) => {
-  const [data, setData] = useState<OpenInterestData[]>([]);
-  const [limit, setLimit] = useState<number>(initialLimit);
-  const { execute, loading, error } = useApiCall<OpenInterestResponse>();
-
-  const fetchOpenInterestData = useCallback(async () => {
-    if (!symbol) return;
-
-    const params = new URLSearchParams({
+  const { data, loading, error, params, setParams, refetch } = useDataFetching<
+    OpenInterestData,
+    OpenInterestParams
+  >({
+    endpoint: "/api/data/open-interest",
+    initialParams: {
       symbol,
-      limit: limit.toString(),
-    });
+      limit: initialLimit,
+    },
+    dataPath: "data.open_interest",
+    dependencies: [symbol],
+    errorMessage: "オープンインタレストのデータ取得中にエラーが発生しました",
+  });
 
-    await execute(`/api/data/open-interest?${params}`, {
-      method: "GET",
-      onSuccess: (response) => {
-        if (response.success) {
-          setData(response.data.open_interest);
-        }
-      },
-      onError: (errorMessage) => {
-        console.error("オープンインタレストのデータ取得中にエラーが発生しました:", errorMessage);
-      }
-    });
-  }, [symbol, limit, execute]);
+  const setLimit = (newLimit: number) => {
+    setParams({ limit: newLimit });
+  };
 
-  useEffect(() => {
-    fetchOpenInterestData();
-  }, [fetchOpenInterestData]);
-
-  return { data, loading, error, refetch: fetchOpenInterestData, setLimit };
+  return {
+    data,
+    loading,
+    error,
+    refetch,
+    setLimit,
+    limit: params.limit,
+  };
 };

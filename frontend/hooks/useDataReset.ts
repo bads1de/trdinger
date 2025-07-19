@@ -1,5 +1,5 @@
-import { useState, useEffect, useCallback } from "react";
-import { useApiCall } from "./useApiCall";
+import { useState, useCallback } from "react";
+import { useDataFetching } from "./useDataFetching";
 import { DataResetResult } from "@/components/button/DataResetButton";
 
 interface DataStatus {
@@ -13,24 +13,24 @@ interface DataStatus {
 }
 
 export const useDataReset = (isVisible: boolean) => {
-  const [dataStatus, setDataStatus] = useState<DataStatus | null>(null);
   const [resetMessage, setResetMessage] = useState<string>("");
+
+  // 基本的なデータ取得は共通フックを使用
   const {
-    execute: fetchStatusApi,
+    data: dataStatusArray,
     loading: isLoading,
-    reset,
-  } = useApiCall<DataStatus>();
+    error,
+    refetch: fetchDataStatus,
+  } = useDataFetching<DataStatus>({
+    endpoint: "/api/data-reset/status",
+    disableAutoFetch: !isVisible, // isVisibleがfalseの場合は自動取得しない
+    dependencies: [isVisible],
+    transform: (response) => [response], // 単一オブジェクトを配列に変換
+    errorMessage: "データステータスの取得中にエラーが発生しました",
+  });
 
-  const fetchDataStatus = useCallback(async () => {
-    reset();
-    const result = await fetchStatusApi("/api/data-reset/status", {
-      method: "GET",
-    });
-
-    if (result) {
-      setDataStatus(result);
-    }
-  }, [fetchStatusApi, reset]);
+  // 配列の最初の要素を取得（単一オブジェクトなので）
+  const dataStatus = dataStatusArray.length > 0 ? dataStatusArray[0] : null;
 
   const handleResetComplete = useCallback(
     (result: DataResetResult) => {
@@ -64,16 +64,11 @@ export const useDataReset = (isVisible: boolean) => {
     }, 10000);
   }, []);
 
-  useEffect(() => {
-    if (isVisible) {
-      fetchDataStatus();
-    }
-  }, [isVisible, fetchDataStatus]);
-
   return {
     dataStatus,
     resetMessage,
     isLoading,
+    error,
     fetchDataStatus,
     handleResetComplete,
     handleResetError,

@@ -1,32 +1,33 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useApiCall } from "@/hooks/useApiCall";
+import { useDataFetching } from "./useDataFetching";
 import { BacktestResult } from "@/types/backtest";
 
+interface BacktestResultsParams {
+  limit: number;
+}
+
 export const useBacktestResults = () => {
-  const [results, setResults] = useState<BacktestResult[]>([]);
   const [selectedResult, setSelectedResult] = useState<BacktestResult | null>(
     null
   );
 
-  const { execute: fetchResults, loading: resultsLoading } = useApiCall<{
-    results: BacktestResult[];
-    total: number;
-  }>();
+  // 基本的なデータ取得は共通フックを使用
+  const {
+    data: results,
+    loading: resultsLoading,
+    error,
+    refetch: loadResults,
+  } = useDataFetching<BacktestResult, BacktestResultsParams>({
+    endpoint: "/api/backtest/results",
+    initialParams: { limit: 20 },
+    dataPath: "results",
+    errorMessage: "バックテスト結果の取得中にエラーが発生しました",
+  });
+
+  // 削除操作用のAPI呼び出し
   const { execute: deleteResult, loading: deleteLoading } = useApiCall();
   const { execute: deleteAllResults, loading: deleteAllLoading } = useApiCall();
-
-  // 結果一覧を取得
-  const loadResults = async () => {
-    const response = await fetchResults("/api/backtest/results?limit=20");
-    if (response) {
-      setResults(response.results);
-    }
-  };
-
-  // ページ読み込み時に結果一覧を取得
-  useEffect(() => {
-    loadResults();
-  }, []);
 
   // 結果選択
   const handleResultSelect = (result: BacktestResult) => {
@@ -54,7 +55,7 @@ export const useBacktestResults = () => {
 
   // すべての結果削除
   const handleDeleteAllResults = async () => {
-    const response = await deleteAllResults("/api/backtest/results/all", {
+    const response = await deleteAllResults("/api/backtest/results-all", {
       method: "DELETE",
       confirmMessage: `すべてのバックテスト結果を削除しますか？\n現在${results.length}件の結果があります。\nこの操作は取り消せません。`,
       onSuccess: () => {
@@ -75,6 +76,7 @@ export const useBacktestResults = () => {
     resultsLoading,
     deleteLoading,
     deleteAllLoading,
+    error,
     loadResults,
     handleResultSelect,
     handleDeleteResult,

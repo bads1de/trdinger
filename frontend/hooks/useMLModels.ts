@@ -1,5 +1,6 @@
-import { useState, useCallback } from "react";
+import { useCallback } from "react";
 import { useApiCall } from "./useApiCall";
+import { useDataFetching } from "./useDataFetching";
 
 export interface MLModel {
   id: string;
@@ -15,30 +16,28 @@ export interface MLModel {
 }
 
 export const useMLModels = (limit?: number) => {
-  const [models, setModels] = useState<MLModel[]>([]);
+  // 基本的なデータ取得は共通フックを使用
   const {
-    execute: fetchModelsApi,
+    data: models,
     loading: isLoading,
     error,
-    reset,
-  } = useApiCall<{ models: MLModel[] }>();
+    refetch: fetchModels,
+  } = useDataFetching<MLModel>({
+    endpoint: "/api/ml/models",
+    dataPath: "models",
+    transform: (response) => {
+      let modelList = response.models || [];
+      if (limit) {
+        modelList = modelList.slice(0, limit);
+      }
+      return modelList;
+    },
+    errorMessage: "MLモデルの取得中にエラーが発生しました",
+  });
+
+  // 削除・バックアップ操作用のAPI呼び出し
   const { execute: deleteModelApi, loading: isDeleting } = useApiCall();
   const { execute: backupModelApi, loading: isBackingUp } = useApiCall();
-
-  const fetchModels = useCallback(() => {
-    reset();
-    fetchModelsApi("/api/ml/models", {
-      onSuccess: (data) => {
-        if (data) {
-          let modelList = data.models || [];
-          if (limit) {
-            modelList = modelList.slice(0, limit);
-          }
-          setModels(modelList);
-        }
-      },
-    });
-  }, [fetchModelsApi, limit, reset]);
 
   const deleteModel = useCallback(
     async (modelId: string) => {

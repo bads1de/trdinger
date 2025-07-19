@@ -1,5 +1,5 @@
-import { useState, useEffect, useCallback, useMemo } from "react";
-import { useApiCall } from "@/hooks/useApiCall";
+import { useState, useEffect, useMemo } from "react";
+import { useDataFetching } from "./useDataFetching";
 import { getBarColor } from "@/utils/colorUtils";
 
 interface FeatureImportanceData {
@@ -8,8 +8,8 @@ interface FeatureImportanceData {
   rank: number;
 }
 
-interface FeatureImportanceResponse {
-  feature_importance: Record<string, number>;
+interface FeatureImportanceParams {
+  top_n: number;
 }
 
 export const useFeatureImportance = (
@@ -18,47 +18,42 @@ export const useFeatureImportance = (
 ) => {
   const [displayCount, setDisplayCount] = useState(topN);
   const [sortOrder, setSortOrder] = useState<"desc" | "asc">("desc");
-  const [data, setData] = useState<FeatureImportanceData[]>([]);
 
+  // 基本的なデータ取得は共通フックを使用
   const {
-    execute: fetchFeatureImportance,
+    data,
     loading,
     error,
-    reset,
-  } = useApiCall<FeatureImportanceResponse>();
-
-  const loadFeatureImportance = useCallback(async () => {
-    reset();
-    await fetchFeatureImportance(
-      `/api/ml/feature-importance?top_n=${displayCount}`,
-      {
-        method: "GET",
-        onSuccess: (response) => {
-          if (response?.feature_importance) {
-            const formattedData = Object.entries(response.feature_importance)
-              .map(([feature_name, importance], index) => ({
-                feature_name,
-                importance: Number(importance),
-                rank: index + 1,
-              }))
-              .sort((a, b) =>
-                sortOrder === "desc"
-                  ? b.importance - a.importance
-                  : a.importance - b.importance
-              );
-            setData(formattedData);
-          }
-        },
-        onError: (errorMessage) => {
-          console.error("特徴量重要度取得エラー:", errorMessage);
-        },
+    params,
+    setParams,
+    refetch: loadFeatureImportance,
+  } = useDataFetching<FeatureImportanceData, FeatureImportanceParams>({
+    endpoint: "/api/ml/feature-importance",
+    initialParams: { top_n: displayCount },
+    transform: (response) => {
+      if (response?.feature_importance) {
+        return Object.entries(response.feature_importance)
+          .map(([feature_name, importance], index) => ({
+            feature_name,
+            importance: Number(importance),
+            rank: index + 1,
+          }))
+          .sort((a, b) =>
+            sortOrder === "desc"
+              ? b.importance - a.importance
+              : a.importance - b.importance
+          );
       }
-    );
-  }, [displayCount, sortOrder, fetchFeatureImportance, reset]);
+      return [];
+    },
+    dependencies: [displayCount, sortOrder],
+    errorMessage: "特徴量重要度の取得中にエラーが発生しました",
+  });
 
+  // displayCountが変更されたらパラメータを更新
   useEffect(() => {
-    loadFeatureImportance();
-  }, [loadFeatureImportance]);
+    setParams({ top_n: displayCount });
+  }, [displayCount, setParams]);
 
   useEffect(() => {
     if (autoRefreshInterval && autoRefreshInterval > 0) {
