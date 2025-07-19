@@ -44,9 +44,7 @@ class ExternalMarketOrchestrationService:
             収集結果を含む辞書
         """
         try:
-            logger.info(
-                f"外部市場データ差分収集開始: symbols={symbols or 'all'}"
-            )
+            logger.info(f"外部市場データ差分収集開始: symbols={symbols or 'all'}")
 
             async with ExternalMarketDataCollector() as collector:
                 result = await collector.collect_incremental_external_market_data(
@@ -207,7 +205,10 @@ class ExternalMarketOrchestrationService:
 
             async with ExternalMarketDataCollector() as collector:
                 # ExternalMarketServiceから利用可能なシンボルを取得
-                if hasattr(collector, 'external_market_service') and collector.external_market_service:
+                if (
+                    hasattr(collector, "external_market_service")
+                    and collector.external_market_service
+                ):
                     symbols = collector.external_market_service.get_available_symbols()
                 else:
                     # フォールバック: デフォルトシンボル

@@ -337,7 +337,7 @@ class HistoricalDataService:
         if include_external_market:
             try:
                 logger.info("外部市場データ差分収集開始")
-                from data_collector.external_market_collector import (
+                from ......data_collector.external_market_collector import (
                     ExternalMarketDataCollector,
                 )
 

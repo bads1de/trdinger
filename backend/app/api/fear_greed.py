@@ -18,6 +18,10 @@ from app.core.services.data_collection.orchestration.fear_greed_orchestration_se
 )
 from app.core.utils.unified_error_handler import UnifiedErrorHandler
 from app.core.utils.api_utils import APIResponseHelper
+import sys
+import os
+
+sys.path.append(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
 from data_collector.external_market_collector import ExternalMarketDataCollector
 
 logger = logging.getLogger(__name__)

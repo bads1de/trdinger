@@ -10,7 +10,7 @@ import logging
 from typing import Any, Dict, List, Optional
 from database.repositories.open_interest_repository import OpenInterestRepository
 from app.core.utils.data_converter import OpenInterestDataConverter
-from app.core.services.data_collection.bybit_service import BybitService
+from app.core.services.data_collection.bybit.bybit_service import BybitService
 
 logger = logging.getLogger(__name__)
 

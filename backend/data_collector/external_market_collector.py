@@ -14,8 +14,10 @@ from sqlalchemy.orm import Session
 from database.connection import SessionLocal
 from database.repositories.fear_greed_repository import FearGreedIndexRepository
 from database.repositories.external_market_repository import ExternalMarketRepository
-from app.core.services.data_collection.fear_greed_service import FearGreedIndexService
-from app.core.services.data_collection.external_market_service import (
+from app.core.services.data_collection.fear_greed.fear_greed_service import (
+    FearGreedIndexService,
+)
+from app.core.services.data_collection.external_market.external_market_service import (
     ExternalMarketService,
 )
 

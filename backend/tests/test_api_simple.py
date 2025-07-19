@@ -1,4 +1,8 @@
 import asyncio
+import sys
+import os
+
+sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
 from data_collector.external_market_collector import ExternalMarketDataCollector
 
 

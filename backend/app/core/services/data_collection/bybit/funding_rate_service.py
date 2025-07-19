@@ -9,7 +9,7 @@ import logging
 from typing import Any, Dict, List, Optional
 from database.repositories.funding_rate_repository import FundingRateRepository
 from app.core.utils.data_converter import FundingRateDataConverter
-from app.core.services.data_collection.bybit_service import BybitService
+from app.core.services.data_collection.bybit.bybit_service import BybitService
 
 logger = logging.getLogger(__name__)
 
