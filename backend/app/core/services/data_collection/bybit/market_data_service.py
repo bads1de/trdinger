@@ -5,7 +5,7 @@ CCXT ライブラリを使用してBybit取引所からOHLCVデータを取得�
 
 import logging
 from typing import List, Optional, Dict, Any
-from app.config.market_config import MarketDataConfig
+from app.config.unified_config import unified_config
 from database.repositories.ohlcv_repository import OHLCVRepository
 from app.core.utils.data_converter import OHLCVDataConverter
 from .bybit_service import BybitService
@@ -153,10 +153,10 @@ class BybitMarketDataService(BybitService):
         Raises:
             ValueError: 時間軸が無効な場合
         """
-        if timeframe not in MarketDataConfig.SUPPORTED_TIMEFRAMES:
+        if timeframe not in unified_config.market.supported_timeframes:
             raise ValueError(
                 f"無効な時間軸: {timeframe}. "
-                f"サポート対象: {', '.join(MarketDataConfig.SUPPORTED_TIMEFRAMES)}"
+                f"サポート対象: {', '.join(unified_config.market.supported_timeframes)}"
             )
 
     def _validate_ohlcv_data(self, data: List[List]) -> None:

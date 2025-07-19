@@ -21,7 +21,7 @@ from database.repositories.ohlcv_repository import OHLCVRepository
 from database.repositories.open_interest_repository import OpenInterestRepository
 from database.repositories.funding_rate_repository import FundingRateRepository
 from database.connection import get_db
-from app.config.market_config import MarketDataConfig
+from app.config.unified_config import unified_config
 
 router = APIRouter(prefix="/ml")
 logger = logging.getLogger(__name__)
@@ -497,7 +497,7 @@ async def run_training_task(config_data: Dict[str, Any]):
         # 設定データから必要な情報を取得
         raw_symbol = config_data.get("symbol", "BTCUSDT")
         # シンボルを正規化（BTCUSDT -> BTC/USDT:USDT）
-        symbol = MarketDataConfig.normalize_symbol(raw_symbol)
+        symbol = unified_config.market.symbol_mapping.get(raw_symbol, raw_symbol)
         timeframe = config_data.get("timeframe", "1h")
         start_date_str = config_data.get("start_date")
         end_date_str = config_data.get("end_date")

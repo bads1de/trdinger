@@ -11,7 +11,7 @@ from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.config.settings import settings
+from app.config import settings
 from app.core.utils.duplicate_filter_handler import DuplicateFilterHandler
 from app.api.market_data import router as market_data_router
 from app.api.data_collection import router as data_collection_router
@@ -32,7 +32,7 @@ def setup_logging():
     """ログ設定を初期化（重複ログフィルター付き）"""
     # ルートロガーを取得
     root_logger = logging.getLogger()
-    root_logger.setLevel(getattr(logging, settings.log_level.upper()))
+    root_logger.setLevel(getattr(logging, settings.logging.level.upper()))
 
     # 既存のハンドラーをクリア
     for handler in root_logger.handlers[:]:
@@ -40,10 +40,10 @@ def setup_logging():
 
     # コンソールハンドラーを作成
     console_handler = logging.StreamHandler()
-    console_handler.setLevel(getattr(logging, settings.log_level.upper()))
+    console_handler.setLevel(getattr(logging, settings.logging.level.upper()))
 
     # フォーマッターを設定
-    formatter = logging.Formatter(settings.log_format)
+    formatter = logging.Formatter(settings.logging.format)
     console_handler.setFormatter(formatter)
 
     # 重複フィルターを作成（1秒間隔で同じメッセージをフィルタリング）
@@ -55,7 +55,7 @@ def setup_logging():
 
     # オートストラテジー専用ロガーの設定
     auto_strategy_logger = logging.getLogger("app.core.services.auto_strategy")
-    auto_strategy_logger.setLevel(getattr(logging, settings.log_level.upper()))
+    auto_strategy_logger.setLevel(getattr(logging, settings.logging.level.upper()))
 
     # ログディレクトリが存在しない場合は作成
     log_dir = "C:/Users/buti3/trading"
@@ -71,16 +71,16 @@ def create_app() -> FastAPI:
 
     # FastAPIアプリケーション作成
     app = FastAPI(
-        title=settings.app_name,
+        title=settings.app.app_name,
         description="CCXT ライブラリを使用した仮想通貨取引データAPI",
-        version=settings.app_version,
-        debug=settings.debug,
+        version=settings.app.app_version,
+        debug=settings.app.debug,
     )
 
     # CORS設定
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=settings.cors_origins,
+        allow_origins=settings.app.cors_origins,
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],
@@ -119,8 +119,8 @@ def create_app() -> FastAPI:
     async def health_check():
         return {
             "status": "ok",
-            "app_name": settings.app_name,
-            "version": settings.app_version,
+            "app_name": settings.app.app_name,
+            "version": settings.app.app_version,
         }
 
     return app

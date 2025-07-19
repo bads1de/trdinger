@@ -14,6 +14,7 @@ from .unified_config import (
     MarketConfig,
     GAConfig,
     MLConfig,
+    settings,
 )
 from .validators import (
     MarketDataValidator,
@@ -21,10 +22,6 @@ from .validators import (
     DatabaseValidator,
     AppValidator,
 )
-
-# 後方互換性のため
-from .settings import settings
-from .market_config import MarketDataConfig
 
 __all__ = [
     # 統一設定システム
@@ -37,12 +34,10 @@ __all__ = [
     "MarketConfig",
     "GAConfig",
     "MLConfig",
+    "settings",
     # バリデーター
     "MarketDataValidator",
     "MLConfigValidator",
     "DatabaseValidator",
     "AppValidator",
-    # 後方互換性
-    "settings",
-    "MarketDataConfig",
 ]

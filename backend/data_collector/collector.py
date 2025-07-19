@@ -9,10 +9,10 @@ import logging
 from database.connection import ensure_db_initialized
 from database.repositories.ohlcv_repository import OHLCVRepository
 
-from ..app.core.services.data_collection.market_data_service import (
+from app.core.services.data_collection.bybit.market_data_service import (
     BybitMarketDataService,
 )
-from app.config.market_config import MarketDataConfig
+from app.config.unified_config import unified_config
 from app.core.utils.data_converter import OHLCVDataConverter
 
 logger = logging.getLogger(__name__)
@@ -86,7 +86,7 @@ class DataCollector:
         total_collected = 0
 
         try:
-            normalized_symbol = MarketDataConfig.normalize_symbol(symbol)
+            normalized_symbol = unified_config.market.symbol_mapping.get(symbol, symbol)
             start_time_data, end_time = await self._determine_collection_range(
                 normalized_symbol, timeframe, days_back
             )

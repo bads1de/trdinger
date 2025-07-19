@@ -272,3 +272,6 @@ class UnifiedConfig(BaseSettings):
 
 # 統一設定のシングルトンインスタンス
 unified_config = UnifiedConfig()
+
+# 後方互換性のためのエイリアス
+settings = unified_config

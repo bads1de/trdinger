@@ -12,7 +12,7 @@ from fastapi import APIRouter, Query, Depends
 from typing import Optional
 from sqlalchemy.orm import Session
 
-from app.config.market_config import MarketDataConfig
+from app.config.unified_config import unified_config
 from database.connection import get_db
 from database.repositories.ohlcv_repository import OHLCVRepository
 from app.core.utils.api_utils import DateTimeHelper, APIResponseHelper
@@ -31,14 +31,14 @@ router = APIRouter(prefix="/market-data", tags=["market-data"])
 async def get_ohlcv_data(
     symbol: str = Query(..., description="取引ペアシンボル（例: BTC/USDT）"),
     timeframe: str = Query(
-        MarketDataConfig.DEFAULT_TIMEFRAME,
+        unified_config.market.default_timeframe,
         description="時間軸（1m, 5m, 15m, 30m, 1h, 4h, 1d）",
     ),
     limit: int = Query(
-        MarketDataConfig.DEFAULT_LIMIT,
-        ge=MarketDataConfig.MIN_LIMIT,
-        le=MarketDataConfig.MAX_LIMIT,
-        description=f"取得するデータ数（{MarketDataConfig.MIN_LIMIT}-{MarketDataConfig.MAX_LIMIT}）",
+        unified_config.market.default_limit,
+        ge=unified_config.market.min_limit,
+        le=unified_config.market.max_limit,
+        description=f"取得するデータ数（{unified_config.market.min_limit}-{unified_config.market.max_limit}）",
     ),
     start_date: Optional[str] = Query(None, description="開始日時（ISO形式）"),
     end_date: Optional[str] = Query(None, description="終了日時（ISO形式）"),

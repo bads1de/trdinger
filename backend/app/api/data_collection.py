@@ -17,7 +17,7 @@ from app.core.services.data_collection.orchestration.data_collection_orchestrati
 from app.core.utils.unified_error_handler import UnifiedErrorHandler
 from database.connection import get_db, ensure_db_initialized
 from database.repositories.ohlcv_repository import OHLCVRepository
-from app.config.market_config import MarketDataConfig
+from app.config.unified_config import unified_config
 from app.core.utils.api_utils import APIResponseHelper
 
 logger = logging.getLogger(__name__)
@@ -55,8 +55,13 @@ async def collect_historical_data(
 
         # シンボルと時間軸のバリデーション
         try:
-            normalized_symbol = MarketDataConfig.normalize_symbol(symbol)
-            if not MarketDataConfig.validate_timeframe(timeframe):
+            # シンボル正規化
+            normalized_symbol = unified_config.market.symbol_mapping.get(symbol, symbol)
+            if normalized_symbol not in unified_config.market.supported_symbols:
+                raise ValueError(f"サポートされていないシンボル: {symbol}")
+
+            # 時間軸検証
+            if timeframe not in unified_config.market.supported_timeframes:
                 raise ValueError(f"無効な時間軸: {timeframe}")
         except ValueError as ve:
             logger.warning(
@@ -189,8 +194,13 @@ async def get_collection_status(
 
         # シンボルと時間軸のバリデーション
         try:
-            normalized_symbol = MarketDataConfig.normalize_symbol(symbol)
-            if not MarketDataConfig.validate_timeframe(timeframe):
+            # シンボル正規化
+            normalized_symbol = unified_config.market.symbol_mapping.get(symbol, symbol)
+            if normalized_symbol not in unified_config.market.supported_symbols:
+                raise ValueError(f"サポートされていないシンボル: {symbol}")
+
+            # 時間軸検証
+            if timeframe not in unified_config.market.supported_timeframes:
                 raise ValueError(f"無効な時間軸: {timeframe}")
         except ValueError as ve:
             logger.warning(
