@@ -23,7 +23,7 @@ from app.core.services.data_collection.orchestration.data_management_orchestrati
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/data-reset", tags=["data-reset"])
+router = APIRouter(prefix="/api/data-reset", tags=["data-reset"])
 
 
 @router.delete("/all")

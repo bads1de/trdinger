@@ -1,9 +1,15 @@
 import React, { useState } from "react";
 import SymbolSelector from "@/components/common/SymbolSelector";
 import TimeFrameSelector from "@/components/common/TimeFrameSelector";
-import AllDataCollectionButton from "@/components/button/AllDataCollectionButton";
-import OHLCVCollectionButton from "@/components/button/OHLCVCollectionButton";
-import FundingRateCollectionButton from "@/components/button/FundingRateCollectionButton";
+import DataCollectionButton from "@/components/button/DataCollectionButton";
+import {
+  allDataCollectionConfig,
+  ohlcvCollectionConfig,
+  fundingRateCollectionConfig,
+  openInterestCollectionConfig,
+  fearGreedCollectionConfig,
+  externalMarketCollectionConfig,
+} from "@/components/button/dataCollectionConfigs";
 import DataResetPanel from "@/components/common/DataResetPanel";
 
 import { TradingPair, TimeFrame } from "@/types/market-data";
@@ -21,9 +27,6 @@ import {
 } from "@/types/open-interest";
 import { FearGreedCollectionResult } from "@/hooks/useFearGreedData";
 import { ExternalMarketCollectionResult } from "@/hooks/useExternalMarketData";
-import OpenInterestCollectionButton from "@/components/button/OpenInterestCollectionButton";
-import FearGreedCollectionButton from "@/components/button/FearGreedCollectionButton";
-import ExternalMarketCollectionButton from "@/components/button/ExternalMarketCollectionButton";
 
 interface DataControlsProps {
   symbols: TradingPair[];
@@ -336,7 +339,8 @@ const DataControls: React.FC<DataControlsProps> = ({
               {/* 上段：主要データ収集ボタン */}
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
                 {/* 全データ一括収集ボタン */}
-                <AllDataCollectionButton
+                <DataCollectionButton
+                  config={allDataCollectionConfig}
                   onCollectionStart={handleAllDataCollectionStart}
                   onCollectionError={handleAllDataCollectionError}
                   disabled={loading || updating}
@@ -344,7 +348,8 @@ const DataControls: React.FC<DataControlsProps> = ({
                 />
 
                 {/* OHLCV収集ボタン */}
-                <OHLCVCollectionButton
+                <DataCollectionButton
+                  config={ohlcvCollectionConfig}
                   onCollectionStart={handleBulkCollectionStart}
                   onCollectionError={handleBulkCollectionError}
                   disabled={loading || updating}
@@ -352,7 +357,8 @@ const DataControls: React.FC<DataControlsProps> = ({
                 />
 
                 {/* FR収集ボタン */}
-                <FundingRateCollectionButton
+                <DataCollectionButton
+                  config={fundingRateCollectionConfig}
                   onCollectionStart={handleFundingRateCollectionStart}
                   onCollectionError={handleFundingRateCollectionError}
                   disabled={loading || updating}
@@ -360,8 +366,8 @@ const DataControls: React.FC<DataControlsProps> = ({
                 />
 
                 {/* OI収集ボタン */}
-                <OpenInterestCollectionButton
-                  mode="bulk"
+                <DataCollectionButton
+                  config={openInterestCollectionConfig}
                   onCollectionStart={handleOpenInterestCollectionStart}
                   onCollectionError={handleOpenInterestCollectionError}
                   disabled={loading || updating}
@@ -369,7 +375,8 @@ const DataControls: React.FC<DataControlsProps> = ({
                 />
 
                 {/* FG収集ボタン */}
-                <FearGreedCollectionButton
+                <DataCollectionButton
+                  config={fearGreedCollectionConfig}
                   onCollectionStart={handleFearGreedCollectionStart}
                   onCollectionError={handleFearGreedCollectionError}
                   disabled={loading || updating}
@@ -377,7 +384,8 @@ const DataControls: React.FC<DataControlsProps> = ({
                 />
 
                 {/* 外部市場データ収集ボタン */}
-                <ExternalMarketCollectionButton
+                <DataCollectionButton
+                  config={externalMarketCollectionConfig}
                   onCollectionStart={handleExternalMarketCollectionStart}
                   onCollectionError={handleExternalMarketCollectionError}
                   disabled={loading || updating}

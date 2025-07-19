@@ -24,7 +24,7 @@ from app.core.services.data_collection.orchestration.funding_rate_orchestration_
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/funding-rates", tags=["funding-rates"])
+router = APIRouter(prefix="/api/funding-rates", tags=["funding-rates"])
 
 
 @router.get("/")

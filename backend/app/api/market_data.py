@@ -24,7 +24,7 @@ from app.core.utils.data_converter import OHLCVDataConverter
 logger = logging.getLogger(__name__)
 
 # ルーター作成
-router = APIRouter(prefix="/market-data", tags=["market-data"])
+router = APIRouter(prefix="/api/market-data", tags=["market-data"])
 
 
 @router.get("/ohlcv")

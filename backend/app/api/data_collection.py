@@ -22,7 +22,7 @@ from app.core.utils.api_utils import APIResponseHelper
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/data-collection", tags=["data-collection"])
+router = APIRouter(prefix="/api/data-collection", tags=["data-collection"])
 
 
 @router.post("/historical")

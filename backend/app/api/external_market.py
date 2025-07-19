@@ -21,7 +21,7 @@ from app.core.services.data_collection.orchestration.external_market_orchestrati
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/external-market", tags=["external-market"])
+router = APIRouter(prefix="/api/external-market", tags=["external-market"])
 
 
 @router.get("/")

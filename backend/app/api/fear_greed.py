@@ -21,7 +21,7 @@ from app.core.utils.api_utils import APIResponseHelper
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/fear-greed", tags=["fear-greed"])
+router = APIRouter(prefix="/api/fear-greed", tags=["fear-greed"])
 
 
 @router.get("/data")

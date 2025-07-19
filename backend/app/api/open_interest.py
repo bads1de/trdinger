@@ -28,7 +28,7 @@ from app.core.services.data_collection.orchestration.open_interest_orchestration
 logger = logging.getLogger(__name__)
 
 # ルーター作成
-router = APIRouter(prefix="/open-interest", tags=["open-interest"])
+router = APIRouter(prefix="/api/open-interest", tags=["open-interest"])
 
 
 @router.get("/")
