@@ -281,6 +281,18 @@ class BayesianOptimizer:
                     return float(obj)
                 elif isinstance(obj, np.ndarray):
                     return obj.tolist()
+                elif isinstance(obj, OptimizationResult):
+                    # OptimizationResultオブジェクトを辞書に変換
+                    return {
+                        "best_params": convert_numpy_types(obj.best_params),
+                        "best_score": convert_numpy_types(obj.best_score),
+                        "optimization_history": convert_numpy_types(
+                            obj.optimization_history
+                        ),
+                        "total_evaluations": convert_numpy_types(obj.total_evaluations),
+                        "optimization_time": convert_numpy_types(obj.optimization_time),
+                        "convergence_info": convert_numpy_types(obj.convergence_info),
+                    }
                 elif isinstance(obj, dict):
                     return {
                         key: convert_numpy_types(value) for key, value in obj.items()
