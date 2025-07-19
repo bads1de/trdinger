@@ -15,6 +15,7 @@ from app.core.services.ml.ml_training_service import ml_training_service
 from app.core.services.auto_strategy.services.ml_orchestrator import MLOrchestrator
 from app.core.services.ml.config import ml_config
 from app.core.services.ml.performance_extractor import performance_extractor
+from app.core.utils.unified_error_handler import UnifiedErrorHandler
 
 from app.core.services.backtest_data_service import BacktestDataService
 from database.repositories.ohlcv_repository import OHLCVRepository
@@ -50,7 +51,8 @@ async def get_models():
     Returns:
         モデル一覧
     """
-    try:
+
+    async def _get_models():
         models = model_manager.list_models("*")
 
         # モデル情報を整形
@@ -70,9 +72,7 @@ async def get_models():
 
         return {"models": formatted_models}
 
-    except Exception as e:
-        logger.error(f"モデル一覧取得エラー: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+    return await UnifiedErrorHandler.safe_execute_async(_get_models)
 
 
 @router.delete("/models/{model_id}")
@@ -83,7 +83,8 @@ async def delete_model(model_id: str):
     Args:
         model_id: モデルID（ファイル名）
     """
-    try:
+
+    async def _delete_model():
         logger.info(f"モデル削除要求: {model_id}")
 
         # モデルIDをデコード（URLエンコードされている場合）
@@ -104,6 +105,8 @@ async def delete_model(model_id: str):
         if not target_model:
             logger.warning(f"モデルが見つかりません: {decoded_model_id}")
             logger.info(f"利用可能なモデル: {[m['name'] for m in models]}")
+            from fastapi import HTTPException
+
             raise HTTPException(
                 status_code=404, detail=f"モデルが見つかりません: {decoded_model_id}"
             )
@@ -113,6 +116,8 @@ async def delete_model(model_id: str):
 
         if not os.path.exists(target_model["path"]):
             logger.warning(f"モデルファイルが存在しません: {target_model['path']}")
+            from fastapi import HTTPException
+
             raise HTTPException(status_code=404, detail="モデルファイルが存在しません")
 
         # バックアップしてから削除
@@ -122,15 +127,13 @@ async def delete_model(model_id: str):
             logger.info(f"モデル削除完了: {decoded_model_id} -> {target_model['path']}")
             return {"message": "モデルが削除されました", "backup_path": backup_path}
         else:
+            from fastapi import HTTPException
+
             raise HTTPException(
                 status_code=500, detail="モデルのバックアップに失敗しました"
             )
 
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"モデル削除エラー: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+    return await UnifiedErrorHandler.safe_execute_async(_delete_model)
 
 
 @router.post("/models/{model_id}/backup")
@@ -141,7 +144,8 @@ async def backup_model(model_id: str):
     Args:
         model_id: モデルID
     """
-    try:
+
+    async def _backup_model():
         # モデルファイルを検索
         models = model_manager.list_models("*")
         target_model = None
@@ -152,19 +156,19 @@ async def backup_model(model_id: str):
                 break
 
         if not target_model:
+            from fastapi import HTTPException
+
             raise HTTPException(status_code=404, detail="モデルが見つかりません")
 
         backup_path = model_manager.backup_model(target_model["path"])
         if backup_path:
             return {"message": "バックアップが完了しました", "backup_path": backup_path}
         else:
+            from fastapi import HTTPException
+
             raise HTTPException(status_code=500, detail="バックアップに失敗しました")
 
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"モデルバックアップエラー: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+    return await UnifiedErrorHandler.safe_execute_async(_backup_model)
 
 
 @router.get("/status")
@@ -176,7 +180,7 @@ async def get_ml_status():
         モデル状態情報
     """
 
-    try:
+    async def _get_ml_status():
         status = ml_orchestrator.get_model_status()
 
         latest_model = model_manager.get_latest_model("*")
@@ -262,9 +266,7 @@ async def get_ml_status():
 
         return status
 
-    except Exception as e:
-        logger.error(f"ML状態取得エラー: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+    return await UnifiedErrorHandler.safe_execute_async(_get_ml_status)
 
 
 @router.get("/training/status")
@@ -275,12 +277,11 @@ async def get_training_status():
     Returns:
         トレーニング状態情報
     """
-    try:
+
+    async def _get_training_status():
         return training_status
 
-    except Exception as e:
-        logger.error(f"トレーニング状態取得エラー: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+    return await UnifiedErrorHandler.safe_execute_async(_get_training_status)
 
 
 @router.get("/feature-importance")
@@ -294,13 +295,12 @@ async def get_feature_importance(top_n: int = 10):
     Returns:
         特徴量重要度
     """
-    try:
+
+    async def _get_feature_importance():
         feature_importance = ml_orchestrator.get_feature_importance(top_n)
         return {"feature_importance": feature_importance}
 
-    except Exception as e:
-        logger.error(f"特徴量重要度取得エラー: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+    return await UnifiedErrorHandler.safe_execute_async(_get_feature_importance)
 
 
 @router.get("/config")
@@ -311,7 +311,8 @@ async def get_ml_config():
     Returns:
         ML設定
     """
-    try:
+
+    async def _get_ml_config():
         config_dict = {
             "data_processing": {
                 "max_ohlcv_rows": ml_config.data_processing.MAX_OHLCV_ROWS,
@@ -348,9 +349,7 @@ async def get_ml_config():
 
         return config_dict
 
-    except Exception as e:
-        logger.error(f"ML設定取得エラー: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+    return await UnifiedErrorHandler.safe_execute_async(_get_ml_config)
 
 
 @router.put("/config")
@@ -361,15 +360,14 @@ async def update_ml_config(config_data: Dict[str, Any]):
     Args:
         config_data: 更新する設定データ
     """
-    try:
+
+    async def _update_ml_config():
         # TODO: 設定の更新ロジックを実装
         # 現在は読み取り専用として扱う
         logger.info(f"ML設定更新要求: {config_data}")
         return {"message": "設定が更新されました（現在は読み取り専用）"}
 
-    except Exception as e:
-        logger.error(f"ML設定更新エラー: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+    return await UnifiedErrorHandler.safe_execute_async(_update_ml_config)
 
 
 @router.post("/config/reset")
@@ -377,16 +375,15 @@ async def reset_ml_config():
     """
     ML設定をデフォルト値にリセット
     """
-    try:
+
+    async def _reset_ml_config():
         # TODO: 設定のリセットロジックを実装
         logger.info("ML設定リセット要求")
         return {
             "message": "設定がデフォルト値にリセットされました（現在は読み取り専用）"
         }
 
-    except Exception as e:
-        logger.error(f"ML設定リセットエラー: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+    return await UnifiedErrorHandler.safe_execute_async(_reset_ml_config)
 
 
 @router.post("/training/start")
@@ -400,8 +397,11 @@ async def start_training(
         background_tasks: バックグラウンドタスク
         config_data: トレーニング設定
     """
-    try:
+
+    async def _start_training():
         if training_status["is_training"]:
+            from fastapi import HTTPException
+
             raise HTTPException(status_code=400, detail="既にトレーニングが実行中です")
 
         # トレーニング状態を更新
@@ -423,11 +423,7 @@ async def start_training(
 
         return {"message": "トレーニングが開始されました"}
 
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"トレーニング開始エラー: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+    return await UnifiedErrorHandler.safe_execute_async(_start_training)
 
 
 @router.post("/training/stop")
@@ -435,8 +431,11 @@ async def stop_training():
     """
     トレーニングを停止
     """
-    try:
+
+    async def _stop_training():
         if not training_status["is_training"]:
+            from fastapi import HTTPException
+
             raise HTTPException(
                 status_code=400, detail="トレーニングが実行されていません"
             )
@@ -453,11 +452,7 @@ async def stop_training():
 
         return {"message": "トレーニングが停止されました"}
 
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"トレーニング停止エラー: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+    return await UnifiedErrorHandler.safe_execute_async(_stop_training)
 
 
 @router.post("/models/cleanup")
@@ -465,13 +460,12 @@ async def cleanup_old_models():
     """
     古いモデルファイルをクリーンアップ
     """
-    try:
+
+    async def _cleanup_old_models():
         model_manager.cleanup_expired_models()
         return {"message": "古いモデルファイルが削除されました"}
 
-    except Exception as e:
-        logger.error(f"モデルクリーンアップエラー: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+    return await UnifiedErrorHandler.safe_execute_async(_cleanup_old_models)
 
 
 def get_data_service():

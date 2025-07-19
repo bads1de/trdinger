@@ -13,6 +13,7 @@ from pydantic import BaseModel, Field
 from app.core.services.ml.ml_training_service import MLTrainingService
 from app.core.services.auto_strategy.services.ml_orchestrator import MLOrchestrator
 from app.core.services.backtest_data_service import BacktestDataService
+from app.core.utils.unified_error_handler import UnifiedErrorHandler
 from database.repositories.ohlcv_repository import OHLCVRepository
 from database.repositories.open_interest_repository import OpenInterestRepository
 from database.repositories.funding_rate_repository import FundingRateRepository
@@ -281,24 +282,22 @@ async def start_ml_training(
     """
     global training_status
 
-    try:
+    async def _start_training():
         # 既にトレーニング中の場合はエラー
         if training_status["is_training"]:
+            from fastapi import HTTPException
+
             raise HTTPException(status_code=400, detail="既にトレーニングが実行中です")
 
         # 設定の検証
-        try:
-            start_date = datetime.fromisoformat(config.start_date)
-            end_date = datetime.fromisoformat(config.end_date)
+        start_date = datetime.fromisoformat(config.start_date)
+        end_date = datetime.fromisoformat(config.end_date)
 
-            if start_date >= end_date:
-                raise ValueError("開始日は終了日より前である必要があります")
+        if start_date >= end_date:
+            raise ValueError("開始日は終了日より前である必要があります")
 
-            if (end_date - start_date).days < 7:
-                raise ValueError("トレーニング期間は最低7日間必要です")
-
-        except ValueError as e:
-            raise HTTPException(status_code=400, detail=str(e))
+        if (end_date - start_date).days < 7:
+            raise ValueError("トレーニング期間は最低7日間必要です")
 
         # バックグラウンドタスクでトレーニング開始
         background_tasks.add_task(train_ml_model_background, config)
@@ -309,11 +308,7 @@ async def start_ml_training(
             training_id=f"training_{datetime.now().strftime('%Y%m%d_%H%M%S')}",
         )
 
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"MLトレーニング開始エラー: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+    return await UnifiedErrorHandler.safe_execute_async(_start_training)
 
 
 @router.get("/training/status", response_model=MLStatusResponse)
@@ -329,7 +324,8 @@ async def get_ml_model_info():
     """
     現在のMLモデル情報を取得
     """
-    try:
+
+    async def _get_model_info():
         ml_orchestrator = MLOrchestrator()
         model_status = ml_orchestrator.get_model_status()
 
@@ -339,9 +335,7 @@ async def get_ml_model_info():
             "last_training": training_status.get("model_info"),
         }
 
-    except Exception as e:
-        logger.error(f"MLモデル情報取得エラー: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+    return await UnifiedErrorHandler.safe_execute_async(_get_model_info)
 
 
 @router.post("/stop")
@@ -351,8 +345,10 @@ async def stop_ml_training():
     """
     global training_status
 
-    try:
+    async def _stop_training():
         if not training_status["is_training"]:
+            from fastapi import HTTPException
+
             raise HTTPException(
                 status_code=400, detail="実行中のトレーニングがありません"
             )
@@ -369,8 +365,4 @@ async def stop_ml_training():
 
         return {"success": True, "message": "トレーニングを停止しました"}
 
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"MLトレーニング停止エラー: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+    return await UnifiedErrorHandler.safe_execute_async(_stop_training)

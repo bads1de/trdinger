@@ -43,7 +43,8 @@ async def get_fear_greed_data(
     Returns:
         Fear & Greed Index データ
     """
-    try:
+
+    async def _get_fear_greed_data():
         repository = FearGreedIndexRepository(db)
 
         # 日時パラメータの変換
@@ -54,6 +55,8 @@ async def get_fear_greed_data(
             try:
                 start_time = datetime.fromisoformat(start_date.replace("Z", "+00:00"))
             except ValueError:
+                from fastapi import HTTPException
+
                 raise HTTPException(
                     status_code=400, detail=f"無効な開始日時形式: {start_date}"
                 )
@@ -62,6 +65,8 @@ async def get_fear_greed_data(
             try:
                 end_time = datetime.fromisoformat(end_date.replace("Z", "+00:00"))
             except ValueError:
+                from fastapi import HTTPException
+
                 raise HTTPException(
                     status_code=400, detail=f"無効な終了日時形式: {end_date}"
                 )
@@ -90,9 +95,7 @@ async def get_fear_greed_data(
             },
         )
 
-    except Exception as e:
-        logger.error(f"Fear & Greed Index データ取得エラー: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+    return await UnifiedErrorHandler.safe_execute_async(_get_fear_greed_data)
 
 
 @router.get("/latest")
@@ -110,7 +113,8 @@ async def get_latest_fear_greed_data(
     Returns:
         最新のFear & Greed Index データ
     """
-    try:
+
+    async def _get_latest_data():
         repository = FearGreedIndexRepository(db)
         data = repository.get_latest_fear_greed_data(limit=limit)
 
@@ -128,9 +132,7 @@ async def get_latest_fear_greed_data(
             },
         )
 
-    except Exception as e:
-        logger.error(f"最新Fear & Greed Index データ取得エラー: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+    return await UnifiedErrorHandler.safe_execute_async(_get_latest_data)
 
 
 @router.get("/status")

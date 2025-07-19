@@ -176,7 +176,8 @@ async def get_strategy_categories():
     Returns:
         カテゴリ一覧
     """
-    try:
+
+    async def _get_categories():
         categories = [
             {"value": "auto_generated", "label": "自動生成"},
             {"value": "hybrid", "label": "ハイブリッド"},
@@ -188,11 +189,7 @@ async def get_strategy_categories():
             "message": "カテゴリが正常に取得されました",
         }
 
-    except Exception as e:
-        logger.error(f"カテゴリ取得中にエラーが発生しました: {e}")
-        raise HTTPException(
-            status_code=500, detail=f"カテゴリの取得に失敗しました: {str(e)}"
-        )
+    return await UnifiedErrorHandler.safe_execute_async(_get_categories)
 
 
 @router.get("/risk-levels")
@@ -203,7 +200,8 @@ async def get_risk_levels():
     Returns:
         リスクレベル一覧
     """
-    try:
+
+    async def _get_risk_levels():
         risk_levels = [
             {
                 "value": "low",
@@ -228,8 +226,4 @@ async def get_risk_levels():
             "message": "リスクレベルが正常に取得されました",
         }
 
-    except Exception as e:
-        logger.error(f"リスクレベル取得中にエラーが発生しました: {e}")
-        raise HTTPException(
-            status_code=500, detail=f"リスクレベルの取得に失敗しました: {str(e)}"
-        )
+    return await UnifiedErrorHandler.safe_execute_async(_get_risk_levels)

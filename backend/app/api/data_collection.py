@@ -49,25 +49,21 @@ async def collect_historical_data(
         # データベース初期化確認
         if not ensure_db_initialized():
             logger.error("データベースの初期化に失敗しました")
+            from fastapi import HTTPException
+
             raise HTTPException(
                 status_code=500, detail="データベースの初期化に失敗しました"
             )
 
         # シンボルと時間軸のバリデーション
-        try:
-            # シンボル正規化
-            normalized_symbol = unified_config.market.symbol_mapping.get(symbol, symbol)
-            if normalized_symbol not in unified_config.market.supported_symbols:
-                raise ValueError(f"サポートされていないシンボル: {symbol}")
+        # シンボル正規化
+        normalized_symbol = unified_config.market.symbol_mapping.get(symbol, symbol)
+        if normalized_symbol not in unified_config.market.supported_symbols:
+            raise ValueError(f"サポートされていないシンボル: {symbol}")
 
-            # 時間軸検証
-            if timeframe not in unified_config.market.supported_timeframes:
-                raise ValueError(f"無効な時間軸: {timeframe}")
-        except ValueError as ve:
-            logger.warning(
-                f"パラメータ検証エラー: {ve} (symbol: {symbol}, timeframe: {timeframe})"
-            )
-            raise HTTPException(status_code=400, detail=str(ve))
+        # 時間軸検証
+        if timeframe not in unified_config.market.supported_timeframes:
+            raise ValueError(f"無効な時間軸: {timeframe}")
 
         # サービス層に委譲
         orchestration_service = DataCollectionOrchestrationService()
@@ -184,33 +180,26 @@ async def get_collection_status(
     Returns:
         データ収集状況
     """
-    try:
+
+    async def _get_collection_status():
         # データベース初期化確認
         if not ensure_db_initialized():
             logger.error("データベースの初期化に失敗しました", exc_info=True)
+            from fastapi import HTTPException
+
             raise HTTPException(
                 status_code=500, detail="データベースの初期化に失敗しました"
             )
 
         # シンボルと時間軸のバリデーション
-        try:
-            # シンボル正規化
-            normalized_symbol = unified_config.market.symbol_mapping.get(symbol, symbol)
-            if normalized_symbol not in unified_config.market.supported_symbols:
-                raise ValueError(f"サポートされていないシンボル: {symbol}")
+        # シンボル正規化
+        normalized_symbol = unified_config.market.symbol_mapping.get(symbol, symbol)
+        if normalized_symbol not in unified_config.market.supported_symbols:
+            raise ValueError(f"サポートされていないシンボル: {symbol}")
 
-            # 時間軸検証
-            if timeframe not in unified_config.market.supported_timeframes:
-                raise ValueError(f"無効な時間軸: {timeframe}")
-        except ValueError as ve:
-            logger.warning(
-                f"パラメータ検証エラー: {ve} (symbol: {symbol}, timeframe: {timeframe})"
-            )
-            logger.warning(
-                f"パラメータ検証エラー: {ve} (symbol: {symbol}, timeframe: {timeframe})",
-                exc_info=True,
-            )
-            raise HTTPException(status_code=400, detail=str(ve))
+        # 時間軸検証
+        if timeframe not in unified_config.market.supported_timeframes:
+            raise ValueError(f"無効な時間軸: {timeframe}")
 
         repository = OHLCVRepository(db)
 
@@ -278,9 +267,7 @@ async def get_collection_status(
             },
         )
 
-    except Exception as e:
-        logger.error("収集状況確認エラー", exc_info=True)
-        raise HTTPException(status_code=500, detail="収集状況確認エラー") from e
+    return await UnifiedErrorHandler.safe_execute_async(_get_collection_status)
 
 
 @router.post("/all/bulk-collect")
@@ -315,7 +302,3 @@ async def collect_all_data_bulk(
         )
 
     return await UnifiedErrorHandler.safe_execute_async(_execute)
-
-
-# 古いヘルパー関数は削除されました
-# ビジネスロジックはDataCollectionOrchestrationServiceに移行されています

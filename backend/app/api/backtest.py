@@ -82,17 +82,20 @@ async def run_backtest(request: BacktestRequest, db: Session = Depends(get_db)):
     Returns:
         バックテスト結果
     """
-    # ビジネスロジックをサービス層に委譲
-    backtest_service = get_backtest_service_with_db(db)
 
-    try:
+    async def _run_backtest():
+        # ビジネスロジックをサービス層に委譲
+        backtest_service = get_backtest_service_with_db(db)
+
         # 同期関数をスレッドプールで実行
         result = await run_in_threadpool(
             backtest_service.execute_and_save_backtest, request, db
         )
         return result
-    except Exception as e:
-        raise UnifiedErrorHandler.handle_api_error(e, context="バックテストの実行")
+
+    return await UnifiedErrorHandler.safe_execute_async(
+        _run_backtest, message="バックテストの実行エラー"
+    )
 
 
 @router.get("/results", response_model=BacktestResultsResponse)

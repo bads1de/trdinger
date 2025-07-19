@@ -8,6 +8,7 @@ from functools import lru_cache
 from app.core.services.auto_strategy import AutoStrategyService
 from app.core.services.auto_strategy.models.ga_config import GAConfig
 from app.core.services.auto_strategy.models.gene_strategy import StrategyGene
+from app.core.utils.unified_error_handler import UnifiedErrorHandler
 
 
 logger = logging.getLogger(__name__)
@@ -160,10 +161,11 @@ async def generate_strategy(
     遺伝的アルゴリズムを使用して取引戦略を自動生成します。
     バックグラウンドで実行され、進捗は別のエンドポイントで確認できます。
     """
-    logger.info("=== GA戦略生成API呼び出し開始 ===")
-    logger.info(f"実験名: {request.experiment_name}")
 
-    try:
+    async def _generate_strategy():
+        logger.info("=== GA戦略生成API呼び出し開始 ===")
+        logger.info(f"実験名: {request.experiment_name}")
+
         # 戦略生成を開始（バックグラウンド実行）
         experiment_id = auto_strategy_service.start_strategy_generation(
             experiment_name=request.experiment_name,
@@ -178,9 +180,8 @@ async def generate_strategy(
             experiment_id=experiment_id,
             message="GA戦略生成を開始しました",
         )
-    except ValueError as e:
-        logger.error(f"設定エラー: {str(e)}", exc_info=True)
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+
+    return await UnifiedErrorHandler.safe_execute_async(_generate_strategy)
 
 
 @router.get("/experiments", response_model=ListExperimentsResponse)
@@ -192,8 +193,12 @@ async def list_experiments(
 
     実行中・完了済みの全実験の一覧を取得します。
     """
-    experiments = auto_strategy_service.list_experiments()
-    return ListExperimentsResponse(experiments=experiments)
+
+    async def _list_experiments():
+        experiments = auto_strategy_service.list_experiments()
+        return ListExperimentsResponse(experiments=experiments)
+
+    return await UnifiedErrorHandler.safe_execute_async(_list_experiments)
 
 
 @router.post(
@@ -210,18 +215,24 @@ async def stop_experiment(
 
     実行中の実験を停止します。
     """
-    success = auto_strategy_service.stop_experiment(experiment_id)
 
-    if not success:
-        logger.warning(
-            f"実験 {experiment_id} を停止できませんでした（存在しないか、既に完了している可能性があります）"
-        )
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="実験を停止できませんでした（存在しないか、既に完了している可能性があります）",
-        )
+    async def _stop_experiment():
+        success = auto_strategy_service.stop_experiment(experiment_id)
 
-    return StopExperimentResponse(success=True, message="実験を停止しました")
+        if not success:
+            logger.warning(
+                f"実験 {experiment_id} を停止できませんでした（存在しないか、既に完了している可能性があります）"
+            )
+            from fastapi import HTTPException
+
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="実験を停止できませんでした（存在しないか、既に完了している可能性があります）",
+            )
+
+        return StopExperimentResponse(success=True, message="実験を停止しました")
+
+    return await UnifiedErrorHandler.safe_execute_async(_stop_experiment)
 
 
 @router.get("/experiments/{experiment_id}/results", response_model=GAResultResponse)
@@ -235,10 +246,13 @@ async def get_experiment_results(
     指定された実験IDの結果を取得します。
     多目的最適化の場合はパレート最適解も含まれます。
     """
-    try:
+
+    async def _get_experiment_results():
         result = auto_strategy_service.get_experiment_result(experiment_id)
 
         if result is None:
+            from fastapi import HTTPException
+
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail=f"実験 {experiment_id} が見つかりません",
@@ -260,12 +274,7 @@ async def get_experiment_results(
                 message="実験結果を取得しました",
             )
 
-    except Exception as e:
-        logger.error(f"実験結果取得エラー: {e}", exc_info=True)
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"実験結果の取得中にエラーが発生しました: {e}",
-        )
+    return await UnifiedErrorHandler.safe_execute_async(_get_experiment_results)
 
 
 @router.post("/test-strategy", response_model=StrategyTestResponse)
@@ -279,7 +288,8 @@ async def test_strategy(
     指定された戦略遺伝子から戦略を生成し、バックテストを実行します。
     GA実行前の戦略検証に使用できます。
     """
-    try:
+
+    async def _test_strategy():
         # 戦略遺伝子の復元
         strategy_gene = StrategyGene.from_dict(request.strategy_gene)
 
@@ -299,12 +309,8 @@ async def test_strategy(
                 errors=result.get("errors"),
                 message="戦略テストに失敗しました",
             )
-    except Exception as e:
-        logger.error(f"戦略テスト実行中に予期せぬエラー: {e}", exc_info=True)
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"戦略テスト実行中にエラーが発生しました: {e}",
-        )
+
+    return await UnifiedErrorHandler.safe_execute_async(_test_strategy)
 
 
 @router.get("/config/default", response_model=DefaultConfigResponse)
@@ -314,8 +320,12 @@ async def get_default_config():
 
     推奨されるGA設定のデフォルト値を返します。
     """
-    default_config = GAConfig.create_default()
-    return DefaultConfigResponse(config=default_config.to_dict())
+
+    async def _get_default_config():
+        default_config = GAConfig.create_default()
+        return DefaultConfigResponse(config=default_config.to_dict())
+
+    return await UnifiedErrorHandler.safe_execute_async(_get_default_config)
 
 
 @router.get("/config/presets", response_model=PresetsResponse)
@@ -325,9 +335,13 @@ async def get_config_presets():
 
     用途別のGA設定プリセット（高速、標準、徹底）を返します。
     """
-    presets = {
-        "fast": GAConfig.create_fast().to_dict(),
-        "default": GAConfig.create_default().to_dict(),
-        "thorough": GAConfig.create_thorough().to_dict(),
-    }
-    return PresetsResponse(presets=presets)
+
+    async def _get_config_presets():
+        presets = {
+            "fast": GAConfig.create_fast().to_dict(),
+            "default": GAConfig.create_default().to_dict(),
+            "thorough": GAConfig.create_thorough().to_dict(),
+        }
+        return PresetsResponse(presets=presets)
+
+    return await UnifiedErrorHandler.safe_execute_async(_get_config_presets)

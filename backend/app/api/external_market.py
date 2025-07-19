@@ -54,22 +54,10 @@ async def get_external_market_data(
         end_datetime = None
 
         if start_time:
-            try:
-                start_datetime = datetime.fromisoformat(
-                    start_time.replace("Z", "+00:00")
-                )
-            except ValueError as e:
-                raise HTTPException(
-                    status_code=400, detail=f"開始時刻の形式が無効です: {e}"
-                )
+            start_datetime = datetime.fromisoformat(start_time.replace("Z", "+00:00"))
 
         if end_time:
-            try:
-                end_datetime = datetime.fromisoformat(end_time.replace("Z", "+00:00"))
-            except ValueError as e:
-                raise HTTPException(
-                    status_code=400, detail=f"終了時刻の形式が無効です: {e}"
-                )
+            end_datetime = datetime.fromisoformat(end_time.replace("Z", "+00:00"))
 
         # データ取得
         data = repository.get_external_market_data(
