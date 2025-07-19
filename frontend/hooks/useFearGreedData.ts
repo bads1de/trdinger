@@ -5,12 +5,29 @@
  */
 
 import { useState, useCallback, useEffect } from "react";
-import {
-  FearGreedIndexData,
-  FearGreedIndexResponse,
-} from "@/app/api/data/fear-greed/route";
 import { useApiCall } from "./useApiCall";
 import { useDataFetching } from "./useDataFetching";
+import { BACKEND_API_URL } from "@/constants";
+
+export interface FearGreedIndexData {
+  timestamp: string;
+  value: number;
+  value_classification: string;
+}
+
+export interface FearGreedIndexResponse {
+  success: boolean;
+  data: {
+    data: FearGreedIndexData[];
+    metadata: {
+      count: number;
+      start_date: string | null;
+      end_date: string | null;
+      limit: number;
+    };
+  };
+  message: string;
+}
 
 /**
  * Fear & Greed Index データ状態の型定義
@@ -56,7 +73,7 @@ export const useFearGreedData = () => {
     FearGreedIndexData,
     FearGreedParams
   >({
-    endpoint: "/api/data/fear-greed/latest",
+    endpoint: "/api/fear-greed/latest",
     initialParams: { limit: 30 },
     dataPath: "data",
     errorMessage: "Fear & Greed Index データの取得中にエラーが発生しました",
@@ -100,7 +117,9 @@ export const useFearGreedData = () => {
    * Fear & Greed Index データの状態を取得
    */
   const fetchStatus = useCallback(async () => {
-    const result = await fetchStatusApi("/api/data/fear-greed/status");
+    const result = await fetchStatusApi(
+      `${BACKEND_API_URL}/api/fear-greed/status`
+    );
     if (result && result.success) {
       setStatus(result.data);
     }
@@ -112,7 +131,7 @@ export const useFearGreedData = () => {
   const collectData = useCallback(
     async (limit: number = 30): Promise<FearGreedCollectionResult> => {
       const result = await collectDataApi(
-        `/api/data/fear-greed/collect?limit=${limit}`,
+        `${BACKEND_API_URL}/api/fear-greed/collect?limit=${limit}`,
         {
           method: "POST",
         }
@@ -140,7 +159,7 @@ export const useFearGreedData = () => {
   const collectHistoricalData = useCallback(
     async (limit: number = 1000): Promise<FearGreedCollectionResult> => {
       const result = await collectDataApi(
-        `/api/data/fear-greed/collect-historical?limit=${limit}`,
+        `${BACKEND_API_URL}/api/fear-greed/collect-historical?limit=${limit}`,
         {
           method: "POST",
         }
@@ -168,7 +187,7 @@ export const useFearGreedData = () => {
   const collectIncrementalData =
     useCallback(async (): Promise<FearGreedCollectionResult> => {
       const result = await collectDataApi(
-        "/api/data/fear-greed/collect-incremental",
+        `${BACKEND_API_URL}/api/fear-greed/collect-incremental`,
         {
           method: "POST",
         }

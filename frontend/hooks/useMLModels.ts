@@ -1,6 +1,7 @@
 import { useCallback } from "react";
 import { useApiCall } from "./useApiCall";
 import { useDataFetching } from "./useDataFetching";
+import { BACKEND_API_URL } from "@/constants";
 
 export interface MLModel {
   id: string;
@@ -41,7 +42,7 @@ export const useMLModels = (limit?: number) => {
 
   const deleteModel = useCallback(
     async (modelId: string) => {
-      await deleteModelApi(`/api/ml/models/${modelId}`, {
+      await deleteModelApi(`${BACKEND_API_URL}/api/ml/models/${modelId}`, {
         method: "DELETE",
         confirmMessage: "このモデルを削除しますか？この操作は取り消せません。",
         onSuccess: () => {
@@ -54,12 +55,15 @@ export const useMLModels = (limit?: number) => {
 
   const backupModel = useCallback(
     async (modelId: string) => {
-      await backupModelApi(`/api/ml/models/${modelId}/backup`, {
-        method: "POST",
-        onSuccess: () => {
-          alert("モデルのバックアップが完了しました");
-        },
-      });
+      await backupModelApi(
+        `${BACKEND_API_URL}/api/ml/models/${modelId}/backup`,
+        {
+          method: "POST",
+          onSuccess: () => {
+            alert("モデルのバックアップが完了しました");
+          },
+        }
+      );
     },
     [backupModelApi]
   );

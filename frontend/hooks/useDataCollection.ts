@@ -8,6 +8,7 @@
 
 import { useCallback } from "react";
 import { useApiCall } from "./useApiCall";
+import { BACKEND_API_URL } from "@/constants";
 
 /**
  * データ収集用の専用フック
@@ -22,7 +23,7 @@ export const useDataCollection = () => {
       onSuccess?: (data: any) => void,
       onError?: (error: string) => void
     ) => {
-      return await ohlcvApi.execute("/api/data/ohlcv/bulk", {
+      return await ohlcvApi.execute(`${BACKEND_API_URL}/api/data/ohlcv/bulk`, {
         method: "POST",
         confirmMessage: "全ペア・全時間軸でOHLCVデータを収集しますか？",
         onSuccess,
@@ -37,12 +38,15 @@ export const useDataCollection = () => {
       onSuccess?: (data: any) => void,
       onError?: (error: string) => void
     ) => {
-      return await fundingRateApi.execute("/api/data/funding-rates/bulk", {
-        method: "POST",
-        confirmMessage: "FRデータを収集しますか？",
-        onSuccess,
-        onError,
-      });
+      return await fundingRateApi.execute(
+        `${BACKEND_API_URL}/api/data/funding-rates/bulk`,
+        {
+          method: "POST",
+          confirmMessage: "FRデータを収集しますか？",
+          onSuccess,
+          onError,
+        }
+      );
     },
     [fundingRateApi]
   );
@@ -52,12 +56,15 @@ export const useDataCollection = () => {
       onSuccess?: (data: any) => void,
       onError?: (error: string) => void
     ) => {
-      return await openInterestApi.execute("/api/data/open-interest/bulk", {
-        method: "POST",
-        confirmMessage: "OIデータを収集しますか？",
-        onSuccess,
-        onError,
-      });
+      return await openInterestApi.execute(
+        `${BACKEND_API_URL}/api/data/open-interest/bulk`,
+        {
+          method: "POST",
+          confirmMessage: "OIデータを収集しますか？",
+          onSuccess,
+          onError,
+        }
+      );
     },
     [openInterestApi]
   );

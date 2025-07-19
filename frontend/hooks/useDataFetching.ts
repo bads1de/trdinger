@@ -7,6 +7,7 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useApiCall } from "./useApiCall";
+import { BACKEND_API_URL } from "@/constants";
 
 /**
  * データ取得設定オプション
@@ -114,9 +115,16 @@ export const useDataFetching = <TData = any, TParams = Record<string, any>>(
    */
   const fetchData = useCallback(async () => {
     try {
+      // エンドポイントを絶対パスに変換（相対パスの場合）
+      const absoluteEndpoint = endpoint.startsWith("/api/")
+        ? `${BACKEND_API_URL}${endpoint}`
+        : endpoint;
+
       // URLを構築
       const searchParams = buildSearchParams(params as Record<string, any>);
-      const url = searchParams ? `${endpoint}?${searchParams}` : endpoint;
+      const url = searchParams
+        ? `${absoluteEndpoint}?${searchParams}`
+        : absoluteEndpoint;
 
       const response = await execute(url, {
         method,

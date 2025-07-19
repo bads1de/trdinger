@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useApiCall } from "./useApiCall";
 import { OptimizationProfile } from "@/types/bayesian-optimization";
+import { BACKEND_API_URL } from "@/constants";
 
 export interface TrainingConfig {
   symbol: string;
@@ -61,7 +62,7 @@ export const useMLTraining = () => {
   const { execute: checkTrainingStatusApi } = useApiCall<TrainingStatus>();
 
   const checkTrainingStatus = useCallback(() => {
-    checkTrainingStatusApi("/api/ml/training/status", {
+    checkTrainingStatusApi(`${BACKEND_API_URL}/api/ml/training/status`, {
       onSuccess: (status) => {
         if (status) {
           setTrainingStatus(status);
@@ -86,7 +87,7 @@ export const useMLTraining = () => {
   const startTraining = useCallback(async () => {
     setError(null);
 
-    await startTrainingApi("/api/ml/training/start", {
+    await startTrainingApi(`${BACKEND_API_URL}/api/ml/training/start`, {
       method: "POST",
       body: config,
       onSuccess: () => {
@@ -105,7 +106,7 @@ export const useMLTraining = () => {
   }, [startTrainingApi, config]);
 
   const stopTraining = useCallback(async () => {
-    await stopTrainingApi("/api/ml/training/stop", {
+    await stopTrainingApi(`${BACKEND_API_URL}/api/ml/training/stop`, {
       method: "POST",
       onSuccess: () => {
         setTrainingStatus((prev) => ({

@@ -8,7 +8,8 @@ import { TradingPair, TimeFrameInfo } from "@/types/market-data";
 /**
  * バックエンドAPIのベースURL
  */
-export const BACKEND_API_URL = "http://127.0.0.1:8000";
+export const BACKEND_API_URL =
+  process.env.NEXT_PUBLIC_BACKEND_API_URL || "http://localhost:8000";
 
 /**
  * サポートされている取引ペア（BTC/USDT:USDT無期限先物のみ）

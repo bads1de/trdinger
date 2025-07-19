@@ -56,19 +56,6 @@ from data_collector.external_market_collector import ExternalMarketDataCollector
 
 ## フロントエンド
 
-### 1. データ取得用カスタムフックの共通化 (High Priority)
-
-#### 現状の問題点
-
-`frontend/hooks` ディレクトリ内に、特定の API エンドポイントからデータを取得するためのカスタムフックが多数存在します（例: `useOhlcvData.ts`, `useFundingRateData.ts`など）。
-
-これらのフックは、内部で汎用的な `useApiCall` フックを呼び出していますが、データ状態の管理（`data`, `limit`など）、データ取得関数の定義、`useEffect` による初期ロードといった点で、多くのコードが重複しています。
-
-#### 解決案
-
-- **共通フックの作成**: データ取得ロジックを抽象化し、より高レベルな共通カスタムフック（例: `useDataFetching.ts`）を作成します。このフックは、API エンドポイントの URL、パラメータ、成功時のデータ整形ロジックなどを引数として受け取るようにします。
-- **既存フックのリファクタリング**: `useOhlcvData` などの既存フックを、この新しい共通フックを利用して書き換えます。これにより、個別のフックは数行のコードで実装できるようになり、コードの重複が大幅に削減されます。
-
 ### 2. 共通コンポーネントの再利用促進 (Medium Priority)
 
 #### 現状の問題点

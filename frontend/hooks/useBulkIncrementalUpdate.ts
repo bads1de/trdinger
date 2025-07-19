@@ -31,7 +31,7 @@ export const useBulkIncrementalUpdate = () => {
     ) => {
       const { onSuccess, onError } = options;
 
-      const url = `/api/data/bulk-incremental-update?symbol=${encodeURIComponent(
+      const url = `${BACKEND_API_URL}/api/data-collection/bulk-incremental-update?symbol=${encodeURIComponent(
         symbol
       )}`;
 

@@ -6,6 +6,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useApiCall } from "./useApiCall";
+import { BACKEND_API_URL } from "@/constants";
 
 /**
  * 外部市場データの型定義
@@ -75,19 +76,26 @@ export const useExternalMarketData = () => {
   const [data, setData] = useState<ExternalMarketData[]>([]);
   const [status, setStatus] = useState<ExternalMarketDataStatus | null>(null);
 
-  const { execute: fetchDataApi, loading, error } = useApiCall<{ success: boolean; data: ExternalMarketData[] }>();
-  const { execute: collectDataApi } = useApiCall<{ success: boolean; data: ExternalMarketCollectionResult }>();
-  const { execute: fetchStatusApi } = useApiCall<{ success: boolean; data: ExternalMarketDataStatus }>();
+  const {
+    execute: fetchDataApi,
+    loading,
+    error,
+  } = useApiCall<{ success: boolean; data: ExternalMarketData[] }>();
+  const { execute: collectDataApi } = useApiCall<{
+    success: boolean;
+    data: ExternalMarketCollectionResult;
+  }>();
+  const { execute: fetchStatusApi } = useApiCall<{
+    success: boolean;
+    data: ExternalMarketDataStatus;
+  }>();
 
   /**
    * 外部市場データを取得
    */
   const fetchData = useCallback(
     async (symbol?: string, limit: number = 100) => {
-      const url = new URL(
-        "/api/data/external-market",
-        window.location.origin
-      );
+      const url = new URL("/api/data/external-market", window.location.origin);
       if (symbol) {
         url.searchParams.set("symbol", symbol);
       }
@@ -131,10 +139,7 @@ export const useExternalMarketData = () => {
       symbols?: string[],
       period: string = "1mo"
     ): Promise<ExternalMarketCollectionResult> => {
-      const url = new URL(
-        "/api/data/external-market/collect",
-        window.location.origin
-      );
+      const url = new URL("/api/external-market/collect", BACKEND_API_URL);
       url.searchParams.set("period", period);
 
       if (symbols && symbols.length > 0) {
@@ -188,8 +193,8 @@ export const useExternalMarketData = () => {
       endDate?: string
     ): Promise<ExternalMarketCollectionResult> => {
       const url = new URL(
-        "/api/data/external-market/collect-historical",
-        window.location.origin
+        "/api/external-market/collect-historical",
+        BACKEND_API_URL
       );
       url.searchParams.set("period", period);
 
