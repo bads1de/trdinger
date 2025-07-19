@@ -5,7 +5,7 @@
  */
 
 import React from "react";
-import { useApiCall } from "@/hooks/useApiCall";
+import { usePostRequest } from "@/hooks/usePostRequest";
 import ApiButton from "./ApiButton";
 import { ExternalMarketCollectionResult } from "@/hooks/useExternalMarketData";
 
@@ -27,14 +27,18 @@ const ExternalMarketCollectionButton: React.FC<
   disabled = false,
   className = "",
 }) => {
-  const apiCall = useApiCall<ExternalMarketCollectionResult>();
+  const { sendPostRequest, isLoading } =
+    usePostRequest<ExternalMarketCollectionResult>();
 
   const handleClick = async () => {
-    await apiCall.execute("/api/data/external-market/collect", {
-      method: "POST",
-      onSuccess: onCollectionStart,
-      onError: onCollectionError,
-    });
+    const { success, data, error } = await sendPostRequest(
+      "/api/external-market/collect"
+    );
+    if (success && data) {
+      onCollectionStart(data);
+    } else {
+      onCollectionError(error || "データ収集に失敗しました");
+    }
   };
 
   const title = "外部市場データ（SP500、NASDAQ、DXY、VIX）を収集します";
@@ -42,7 +46,7 @@ const ExternalMarketCollectionButton: React.FC<
   return (
     <ApiButton
       onClick={handleClick}
-      loading={apiCall.loading}
+      loading={isLoading}
       disabled={disabled}
       variant="secondary"
       size="sm"

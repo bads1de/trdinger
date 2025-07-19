@@ -7,93 +7,95 @@
  */
 
 import { useCallback } from "react";
-import { useApiCall } from "./useApiCall";
+import { usePostRequest } from "./usePostRequest";
+
+const createCollectionHook = <T,>() => {
+  const { sendPostRequest, isLoading, error, data } = usePostRequest<T>();
+
+  const collect = useCallback(
+    async (
+      endpoint: string,
+      confirmMessage: string,
+      onSuccess?: (data: T) => void,
+      onError?: (error: string) => void
+    ) => {
+      if (window.confirm(confirmMessage)) {
+        const { success, data, error } = await sendPostRequest(endpoint);
+        if (success && data) {
+          onSuccess?.(data);
+        } else {
+          onError?.(error || "データ収集に失敗しました");
+        }
+      }
+    },
+    [sendPostRequest]
+  );
+
+  return { isLoading, error, data, collect };
+};
 
 /**
  * データ収集用の専用フック
  */
 export const useDataCollection = () => {
-  const ohlcvApi = useApiCall();
-  const fundingRateApi = useApiCall();
-  const openInterestApi = useApiCall();
+  const ohlcv = createCollectionHook();
+  const fundingRate = createCollectionHook();
+  const openInterest = createCollectionHook();
 
   const collectOHLCVData = useCallback(
-    async (
-      onSuccess?: (data: any) => void,
-      onError?: (error: string) => void
-    ) => {
-      return await ohlcvApi.execute("/api/data/ohlcv/bulk", {
-        method: "POST",
-        confirmMessage: "全ペア・全時間軸でOHLCVデータを収集しますか？",
+    (onSuccess?: (data: any) => void, onError?: (error: string) => void) => {
+      ohlcv.collect(
+        "/api/data-collection/bulk-historical",
+        "全ペア・全時間軸でOHLCVデータを収集しますか？",
         onSuccess,
-        onError,
-      });
+        onError
+      );
     },
-    [ohlcvApi]
+    [ohlcv]
   );
 
   const collectFundingRateData = useCallback(
-    async (
-      onSuccess?: (data: any) => void,
-      onError?: (error: string) => void
-    ) => {
-      return await fundingRateApi.execute("/api/data/funding-rates/bulk", {
-        method: "POST",
-        confirmMessage: "FRデータを収集しますか？",
+    (onSuccess?: (data: any) => void, onError?: (error: string) => void) => {
+      fundingRate.collect(
+        "/api/funding-rates/bulk-collect",
+        "FRデータを収集しますか？",
         onSuccess,
-        onError,
-      });
+        onError
+      );
     },
-    [fundingRateApi]
+    [fundingRate]
   );
 
   const collectOpenInterestData = useCallback(
-    async (
-      onSuccess?: (data: any) => void,
-      onError?: (error: string) => void
-    ) => {
-      return await openInterestApi.execute("/api/data/open-interest/bulk", {
-        method: "POST",
-        confirmMessage: "OIデータを収集しますか？",
+    (onSuccess?: (data: any) => void, onError?: (error: string) => void) => {
+      openInterest.collect(
+        "/api/open-interest/bulk-collect",
+        "OIデータを収集しますか？",
         onSuccess,
-        onError,
-      });
+        onError
+      );
     },
-    [openInterestApi]
+    [openInterest]
   );
 
   return {
-    // 個別のAPI状態
     ohlcv: {
-      loading: ohlcvApi.loading,
-      error: ohlcvApi.error,
+      loading: ohlcv.isLoading,
+      error: ohlcv.error,
       collect: collectOHLCVData,
-      reset: ohlcvApi.reset,
     },
     fundingRate: {
-      loading: fundingRateApi.loading,
-      error: fundingRateApi.error,
+      loading: fundingRate.isLoading,
+      error: fundingRate.error,
       collect: collectFundingRateData,
-      reset: fundingRateApi.reset,
     },
     openInterest: {
-      loading: openInterestApi.loading,
-      error: openInterestApi.error,
+      loading: openInterest.isLoading,
+      error: openInterest.error,
       collect: collectOpenInterestData,
-      reset: openInterestApi.reset,
     },
-    // 全体の状態
     isAnyLoading:
-      ohlcvApi.loading || fundingRateApi.loading || openInterestApi.loading,
-    hasAnyError: !!(
-      ohlcvApi.error ||
-      fundingRateApi.error ||
-      openInterestApi.error
-    ),
-    resetAll: () => {
-      ohlcvApi.reset();
-      fundingRateApi.reset();
-      openInterestApi.reset();
-    },
+      ohlcv.isLoading || fundingRate.isLoading || openInterest.isLoading,
+    hasAnyError: !!(ohlcv.error || fundingRate.error || openInterest.error),
   };
 };

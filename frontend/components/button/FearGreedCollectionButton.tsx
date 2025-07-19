@@ -8,7 +8,7 @@
 "use client";
 
 import React from "react";
-import { useApiCall } from "@/hooks/useApiCall";
+import { usePostRequest } from "@/hooks/usePostRequest";
 import ApiButton from "./ApiButton";
 import { FearGreedCollectionResult } from "@/hooks/useFearGreedData";
 
@@ -25,20 +25,24 @@ const FearGreedCollectionButton: React.FC<FearGreedCollectionButtonProps> = ({
   disabled = false,
   className = "",
 }) => {
-  const apiCall = useApiCall();
+  const { sendPostRequest, isLoading } =
+    usePostRequest<FearGreedCollectionResult>();
 
   const handleClick = async () => {
-    await apiCall.execute("/api/data/fear-greed/collect-incremental", {
-      method: "POST",
-      onSuccess: onCollectionStart,
-      onError: onCollectionError,
-    });
+    const { success, data, error } = await sendPostRequest(
+      "/api/fear-greed/collect-incremental"
+    );
+    if (success && data) {
+      onCollectionStart?.(data);
+    } else {
+      onCollectionError?.(error || "データ収集に失敗しました");
+    }
   };
 
   return (
     <ApiButton
       onClick={handleClick}
-      loading={apiCall.loading}
+      loading={isLoading}
       disabled={disabled}
       variant="warning"
       size="sm"
