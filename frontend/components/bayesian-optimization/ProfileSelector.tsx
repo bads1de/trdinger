@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import {
   Select,
   SelectContent,
@@ -13,13 +13,16 @@ import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { useOptimizationProfiles } from "@/hooks/useOptimizationProfiles";
 import { OptimizationProfile } from "@/types/bayesian-optimization";
-import { Loader2, RefreshCw } from "lucide-react";
+import ProfileDeleteDialog from "./ProfileDeleteDialog";
+import { Loader2, RefreshCw, Settings, Trash2 } from "lucide-react";
 
 interface ProfileSelectorProps {
   selectedProfileId?: number;
   onProfileSelect: (profile: OptimizationProfile | null) => void;
   modelType?: string;
   className?: string;
+  showManagement?: boolean;
+  onManagementClick?: () => void;
 }
 
 const ProfileSelector: React.FC<ProfileSelectorProps> = ({
@@ -27,9 +30,22 @@ const ProfileSelector: React.FC<ProfileSelectorProps> = ({
   onProfileSelect,
   modelType,
   className = "",
+  showManagement = false,
+  onManagementClick,
 }) => {
-  const { profiles, isLoading, error, fetchProfiles } =
-    useOptimizationProfiles(modelType);
+  const {
+    profiles,
+    isLoading,
+    error,
+    fetchProfiles,
+    deleteProfile,
+    deleteLoading,
+    deleteError,
+  } = useOptimizationProfiles(modelType);
+
+  const [selectedProfileForDelete, setSelectedProfileForDelete] =
+    useState<OptimizationProfile | null>(null);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
   const handleProfileChange = (profileId: string) => {
     if (profileId === "none") {
@@ -45,6 +61,34 @@ const ProfileSelector: React.FC<ProfileSelectorProps> = ({
 
   const selectedProfile = profiles.find((p) => p.id === selectedProfileId);
 
+  const handleDeleteClick = (
+    profile: OptimizationProfile,
+    event: React.MouseEvent
+  ) => {
+    event.stopPropagation();
+    setSelectedProfileForDelete(profile);
+    setShowDeleteDialog(true);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!selectedProfileForDelete) return;
+
+    const success = await deleteProfile(selectedProfileForDelete.id);
+    if (success) {
+      // 削除されたプロファイルが選択されていた場合、選択を解除
+      if (selectedProfileId === selectedProfileForDelete.id) {
+        onProfileSelect(null);
+      }
+      setShowDeleteDialog(false);
+      setSelectedProfileForDelete(null);
+    }
+  };
+
+  const handleDeleteCancel = () => {
+    setShowDeleteDialog(false);
+    setSelectedProfileForDelete(null);
+  };
+
   return (
     <div className={`space-y-3 ${className}`}>
       <div className="flex items-center justify-between">
@@ -54,18 +98,34 @@ const ProfileSelector: React.FC<ProfileSelectorProps> = ({
             <span className="text-xs text-gray-500 ml-1">({modelType})</span>
           )}
         </label>
-        <ActionButton
-          variant="secondary"
-          size="sm"
-          onClick={fetchProfiles}
-          disabled={isLoading}
-        >
-          <RefreshCw className={`h-4 w-4 ${isLoading ? "animate-spin" : ""}`} />
-        </ActionButton>
+        <div className="flex items-center space-x-2">
+          {showManagement && onManagementClick && (
+            <ActionButton
+              variant="secondary"
+              size="sm"
+              onClick={onManagementClick}
+              icon={<Settings className="h-4 w-4" />}
+            >
+              管理
+            </ActionButton>
+          )}
+          <ActionButton
+            variant="secondary"
+            size="sm"
+            onClick={fetchProfiles}
+            disabled={isLoading}
+          >
+            <RefreshCw
+              className={`h-4 w-4 ${isLoading ? "animate-spin" : ""}`}
+            />
+          </ActionButton>
+        </div>
       </div>
 
-      {error && (
-        <div className="text-sm text-red-600 dark:text-red-400">{error}</div>
+      {(error || deleteError) && (
+        <div className="text-sm text-red-600 dark:text-red-400">
+          {error || deleteError}
+        </div>
       )}
 
       <Select
@@ -114,6 +174,16 @@ const ProfileSelector: React.FC<ProfileSelectorProps> = ({
                       {profile.optimization_result.best_score.toFixed(3)}
                     </span>
                   )}
+                  {showManagement && (
+                    <ActionButton
+                      variant="danger"
+                      size="sm"
+                      onClick={(e) => handleDeleteClick(profile, e)}
+                      disabled={deleteLoading}
+                      className="h-6 w-6 p-0"
+                      icon={<Trash2 className="h-3 w-3" />}
+                    />
+                  )}
                 </div>
               </div>
             </SelectItem>
@@ -160,6 +230,15 @@ const ProfileSelector: React.FC<ProfileSelectorProps> = ({
           </div>
         </Card>
       )}
+
+      {/* 削除確認ダイアログ */}
+      <ProfileDeleteDialog
+        isOpen={showDeleteDialog}
+        onClose={handleDeleteCancel}
+        onConfirm={handleDeleteConfirm}
+        profile={selectedProfileForDelete}
+        isLoading={deleteLoading}
+      />
     </div>
   );
 };

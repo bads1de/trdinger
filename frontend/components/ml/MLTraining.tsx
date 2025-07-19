@@ -22,12 +22,16 @@ import {
 import BayesianOptimizationModal from "@/components/bayesian-optimization/BayesianOptimizationModal";
 import ProfileSelector from "@/components/bayesian-optimization/ProfileSelector";
 
+interface MLTrainingProps {
+  onTabChange?: (tab: string) => void;
+}
+
 /**
  * MLトレーニングコンポーネント
  *
  * 新しいMLモデルの学習を開始・管理するコンポーネント
  */
-export default function MLTraining() {
+export default function MLTraining({ onTabChange }: MLTrainingProps) {
   const {
     config,
     setConfig,
@@ -192,6 +196,8 @@ export default function MLTraining() {
                 }}
                 modelType="LightGBM"
                 className="mt-2"
+                showManagement={true}
+                onManagementClick={() => onTabChange?.("profiles")}
               />
             )}
           </div>
