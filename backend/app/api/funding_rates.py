@@ -24,10 +24,10 @@ from app.core.services.data_collection.orchestration.funding_rate_orchestration_
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(tags=["funding-rates"])
+router = APIRouter(prefix="/funding-rates", tags=["funding-rates"])
 
 
-@router.get("/funding-rates")
+@router.get("/")
 async def get_funding_rates(
     symbol: str = Query(..., description="取引ペアシンボル（例: 'BTC/USDT'）"),
     limit: Optional[int] = Query(100, description="取得するデータ数（1-1000）"),
@@ -69,7 +69,7 @@ async def get_funding_rates(
     )
 
 
-@router.post("/funding-rates/collect")
+@router.post("/collect")
 async def collect_funding_rate_data(
     symbol: str = Query(..., description="取引ペアシンボル（例: 'BTC/USDT'）"),
     limit: Optional[int] = Query(
@@ -116,7 +116,7 @@ async def collect_funding_rate_data(
     )
 
 
-@router.post("/funding-rates/bulk-collect")
+@router.post("/bulk-collect")
 async def bulk_collect_funding_rates(
     db: Session = Depends(get_db),
 ):

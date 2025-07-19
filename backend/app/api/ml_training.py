@@ -23,7 +23,7 @@ from database.connection import get_db
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/api/ml", tags=["ML Training"])
+router = APIRouter(prefix="/api/ml-training", tags=["ML Training"])
 
 # グローバルなトレーニング状態管理
 training_status = {

@@ -23,7 +23,7 @@ from database.repositories.funding_rate_repository import FundingRateRepository
 from database.connection import get_db
 from app.config.market_config import MarketDataConfig
 
-router = APIRouter()
+router = APIRouter(prefix="/ml")
 logger = logging.getLogger(__name__)
 
 # グローバルインスタンス

@@ -12,7 +12,7 @@ from app.core.services.auto_strategy.models.gene_strategy import StrategyGene
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/api/auto-strategy", tags=["auto-strategy"])
+router = APIRouter(prefix="/auto-strategy", tags=["auto-strategy"])
 
 
 @lru_cache()

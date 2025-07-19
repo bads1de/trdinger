@@ -28,10 +28,10 @@ from app.core.services.data_collection.orchestration.open_interest_orchestration
 logger = logging.getLogger(__name__)
 
 # ルーター作成
-router = APIRouter(tags=["open-interest"])
+router = APIRouter(prefix="/open-interest", tags=["open-interest"])
 
 
-@router.get("/open-interest")
+@router.get("/")
 async def get_open_interest_data(
     symbol: str = Query(..., description="取引ペアシンボル（例: 'BTC/USDT'）"),
     start_date: Optional[str] = Query(None, description="開始日時（ISO形式）"),
@@ -111,7 +111,7 @@ async def get_open_interest_data(
     )
 
 
-@router.post("/open-interest/collect")
+@router.post("/collect")
 async def collect_open_interest_data(
     symbol: str = Query(..., description="取引ペアシンボル（例: 'BTC/USDT'）"),
     limit: Optional[int] = Query(
@@ -156,7 +156,7 @@ async def collect_open_interest_data(
     )
 
 
-@router.post("/open-interest/bulk-collect")
+@router.post("/bulk-collect")
 async def bulk_collect_open_interest(
     db: Session = Depends(get_db),
 ):
