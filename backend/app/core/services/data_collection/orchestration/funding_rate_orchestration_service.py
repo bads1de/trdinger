@@ -11,9 +11,7 @@ from datetime import datetime
 from sqlalchemy.orm import Session
 
 from database.repositories.funding_rate_repository import FundingRateRepository
-from app.core.services.data_collection.funding_rate_service import (
-    BybitFundingRateService,
-)
+from ..bybit.funding_rate_service import BybitFundingRateService
 from app.core.utils.api_utils import APIResponseHelper
 from database.connection import get_db
 

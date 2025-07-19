@@ -11,12 +11,14 @@ from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
 from sqlalchemy.orm import Session
 from typing import Dict
 
-from app.core.services.data_collection.data_collection_orchestration_service import (
+from app.core.services.data_collection.orchestration.data_collection_orchestration_service import (
     DataCollectionOrchestrationService,
 )
 from app.core.utils.unified_error_handler import UnifiedErrorHandler
 from database.connection import get_db, ensure_db_initialized
+from database.repositories.ohlcv_repository import OHLCVRepository
 from app.config.market_config import MarketDataConfig
+from app.core.utils.api_utils import APIResponseHelper
 
 logger = logging.getLogger(__name__)
 
@@ -209,11 +211,9 @@ async def get_collection_status(
         if data_count == 0:
             if auto_fetch and background_tasks:
                 # 自動フェッチを開始
-                background_tasks.add_task(
-                    _collect_historical_background,
-                    normalized_symbol,
-                    timeframe,
-                    db,
+                orchestration_service = DataCollectionOrchestrationService()
+                await orchestration_service.start_historical_data_collection(
+                    normalized_symbol, timeframe, background_tasks, db
                 )
                 logger.info(f"自動フェッチを開始: {normalized_symbol} {timeframe}")
 

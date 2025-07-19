@@ -12,9 +12,7 @@ from datetime import datetime
 from sqlalchemy.orm import Session
 
 from database.repositories.open_interest_repository import OpenInterestRepository
-from app.core.services.data_collection.open_interest_service import (
-    BybitOpenInterestService,
-)
+from ..bybit.open_interest_service import BybitOpenInterestService
 from app.core.utils.api_utils import APIResponseHelper
 
 logger = logging.getLogger(__name__)
@@ -56,6 +54,13 @@ class OpenInterestOrchestrationService:
             logger.info(
                 f"オープンインタレストデータ収集開始: symbol={symbol}, fetch_all={fetch_all}"
             )
+
+            # データベースセッションの取得
+            if db_session is None:
+                from database.connection import get_db
+
+                with next(get_db()) as session:
+                    db_session = session
 
             # サービスとリポジトリの初期化
             service = BybitOpenInterestService()
@@ -128,6 +133,13 @@ class OpenInterestOrchestrationService:
             logger.info(
                 f"オープンインタレストデータ取得開始: symbol={symbol}, limit={limit}"
             )
+
+            # データベースセッションの取得
+            if db_session is None:
+                from database.connection import get_db
+
+                with next(get_db()) as session:
+                    db_session = session
 
             # サービスとリポジトリの初期化
             service = BybitOpenInterestService()
@@ -217,6 +229,13 @@ class OpenInterestOrchestrationService:
         """
         try:
             logger.info(f"オープンインタレスト一括収集開始: {len(symbols)}シンボル")
+
+            # データベースセッションの取得
+            if db_session is None:
+                from database.connection import get_db
+
+                with next(get_db()) as session:
+                    db_session = session
 
             service = BybitOpenInterestService()
             repository = OpenInterestRepository(db_session)

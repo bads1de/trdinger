@@ -6,14 +6,11 @@ APIルーター内に散在していたデータ収集関連のビジネスロ�
 """
 
 import logging
-import asyncio
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any
 from sqlalchemy.orm import Session
 from fastapi import BackgroundTasks
 
-from app.core.services.data_collection.historical_data_service import (
-    HistoricalDataService,
-)
+from ..historical.historical_data_service import HistoricalDataService
 
 # ExternalMarketDataCollectorは現在未使用（将来の拡張用）
 from database.repositories.ohlcv_repository import OHLCVRepository
@@ -334,9 +331,7 @@ class DataCollectionOrchestrationService:
             # 2. Funding Rate収集
             try:
                 logger.info(f"Funding Rate収集開始: {symbol} {timeframe}")
-                from app.core.services.data_collection.funding_rate_service import (
-                    BybitFundingRateService,
-                )
+                from ..bybit.funding_rate_service import BybitFundingRateService
 
                 funding_service = BybitFundingRateService()
                 funding_repository = FundingRateRepository(db)
@@ -360,9 +355,7 @@ class DataCollectionOrchestrationService:
             # 3. Open Interest収集
             try:
                 logger.info(f"Open Interest収集開始: {symbol} {timeframe}")
-                from app.core.services.data_collection.open_interest_service import (
-                    BybitOpenInterestService,
-                )
+                from ..bybit.open_interest_service import BybitOpenInterestService
 
                 oi_service = BybitOpenInterestService()
                 oi_repository = OpenInterestRepository(db)

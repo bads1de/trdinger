@@ -13,11 +13,12 @@ from sqlalchemy.orm import Session
 
 from database.connection import get_db
 from database.repositories.fear_greed_repository import FearGreedIndexRepository
-from app.core.services.data_collection.fear_greed_orchestration_service import (
+from app.core.services.data_collection.orchestration.fear_greed_orchestration_service import (
     FearGreedOrchestrationService,
 )
 from app.core.utils.unified_error_handler import UnifiedErrorHandler
 from app.core.utils.api_utils import APIResponseHelper
+from data_collector.external_market_collector import ExternalMarketDataCollector
 
 logger = logging.getLogger(__name__)
 

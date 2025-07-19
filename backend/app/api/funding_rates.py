@@ -14,12 +14,12 @@ from typing import Optional
 
 from database.connection import get_db, ensure_db_initialized
 from database.repositories.funding_rate_repository import FundingRateRepository
-from app.core.services.data_collection.funding_rate_service import (
+from app.core.services.data_collection.bybit.funding_rate_service import (
     BybitFundingRateService,
 )
 from app.core.utils.api_utils import APIResponseHelper
 from app.core.utils.unified_error_handler import UnifiedErrorHandler
-from app.core.services.data_collection.funding_rate_orchestration_service import (
+from app.core.services.data_collection.orchestration.funding_rate_orchestration_service import (
     FundingRateOrchestrationService,
 )
 

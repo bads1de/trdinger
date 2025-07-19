@@ -16,7 +16,7 @@ from database.repositories.external_market_repository import ExternalMarketRepos
 from data_collector.external_market_collector import ExternalMarketDataCollector
 from app.core.utils.api_utils import APIResponseHelper
 from app.core.utils.unified_error_handler import UnifiedErrorHandler
-from app.core.services.data_collection.external_market_orchestration_service import (
+from app.core.services.data_collection.orchestration.external_market_orchestration_service import (
     ExternalMarketOrchestrationService,
 )
 
@@ -147,7 +147,7 @@ async def get_available_symbols(db: Session = Depends(get_db)) -> Dict:
         db_symbols = repository.get_symbols()
 
         # サービスで定義されているシンボル
-        from app.core.services.data_collection.external_market_service import (
+        from app.core.services.data_collection.external_market.external_market_service import (
             ExternalMarketService,
         )
 

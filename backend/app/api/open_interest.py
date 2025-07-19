@@ -13,14 +13,14 @@ from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
-from app.core.services.data_collection.open_interest_service import (
+from app.core.services.data_collection.bybit.open_interest_service import (
     BybitOpenInterestService,
 )
 from database.connection import get_db, ensure_db_initialized
 from database.repositories.open_interest_repository import OpenInterestRepository
 from app.core.utils.api_utils import APIResponseHelper
 from app.core.utils.unified_error_handler import UnifiedErrorHandler
-from app.core.services.data_collection.open_interest_orchestration_service import (
+from app.core.services.data_collection.orchestration.open_interest_orchestration_service import (
     OpenInterestOrchestrationService,
 )
 

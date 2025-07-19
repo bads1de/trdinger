@@ -8,7 +8,7 @@ import asyncio
 import logging
 import ccxt
 from typing import Optional
-from app.core.services.data_collection.market_data_service import BybitMarketDataService
+from ..bybit.market_data_service import BybitMarketDataService
 from database.repositories.ohlcv_repository import OHLCVRepository
 from database.repositories.funding_rate_repository import FundingRateRepository
 from database.repositories.open_interest_repository import OpenInterestRepository
@@ -141,12 +141,8 @@ class HistoricalDataService:
         Returns:
             一括差分更新結果を含む辞書
         """
-        from app.core.services.data_collection.funding_rate_service import (
-            BybitFundingRateService,
-        )
-        from app.core.services.data_collection.open_interest_service import (
-            BybitOpenInterestService,
-        )
+        from ..bybit.funding_rate_service import BybitFundingRateService
+        from ..bybit.open_interest_service import BybitOpenInterestService
 
         logger.info(f"一括差分データ収集開始: {symbol} {timeframe}")
 
