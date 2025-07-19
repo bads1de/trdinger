@@ -24,7 +24,7 @@ from database.repositories.funding_rate_repository import FundingRateRepository
 from database.connection import get_db
 from app.config.unified_config import unified_config
 
-router = APIRouter(prefix="/ml")
+router = APIRouter(prefix="/api/ml", tags=["ml_management"])
 logger = logging.getLogger(__name__)
 
 # グローバルインスタンス

@@ -13,7 +13,7 @@ from app.core.utils.unified_error_handler import UnifiedErrorHandler
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/auto-strategy", tags=["auto-strategy"])
+router = APIRouter(prefix="/api/auto-strategy", tags=["auto-strategy"])
 
 
 @lru_cache()

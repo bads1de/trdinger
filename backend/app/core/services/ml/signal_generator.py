@@ -286,9 +286,16 @@ class MLSignalGenerator:
                     # 利用可能な特徴量のみを使用
                     features_selected = features[available_columns].fillna(0)
 
-                    # 不足している特徴量を0で埋める
-                    for missing_col in missing_columns:
-                        features_selected[missing_col] = 0.0
+                    # 不足している特徴量を一度にまとめて追加（DataFrame断片化を防ぐ）
+                    if missing_columns:
+                        # 不足特徴量のDataFrameを作成
+                        missing_features_df = pd.DataFrame(
+                            0.0, index=features_selected.index, columns=missing_columns
+                        )
+                        # pd.concatで一度に結合（断片化を防ぐ）
+                        features_selected = pd.concat(
+                            [features_selected, missing_features_df], axis=1
+                        )
 
                     # 学習時と同じ順序で並び替え
                     features_selected = features_selected[self.feature_columns]

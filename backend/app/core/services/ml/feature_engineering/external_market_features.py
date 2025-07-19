@@ -45,8 +45,14 @@ class ExternalMarketFeatureCalculator:
             result_df = df.copy()
 
             if external_market_data is None or external_market_data.empty:
-                logger.warning("外部市場データが空です")
-                return result_df
+                logger.warning("外部市場データが空です。自動取得を試行します。")
+                external_market_data = self._fetch_external_market_data_fallback(df)
+
+                if external_market_data is None or external_market_data.empty:
+                    logger.warning(
+                        "外部市場データの自動取得に失敗しました。デフォルト特徴量を生成します。"
+                    )
+                    return self._generate_default_external_features(result_df)
 
             # 外部市場データをピボットして各シンボルを列にする
             if "symbol" in external_market_data.columns:
@@ -76,12 +82,21 @@ class ExternalMarketFeatureCalculator:
                     )
                 else:
                     logger.warning(
-                        "外部市場データに適切なタイムスタンプカラムがありません"
+                        "外部市場データに適切なタイムスタンプカラムがありません。デフォルト特徴量を生成します。"
                     )
-                    return result_df
+                    return self._generate_default_external_features(result_df)
+
+                # ピボット結果の検証
+                if pivot_data.empty:
+                    logger.warning(
+                        "外部市場データのピボット結果が空です。デフォルト特徴量を生成します。"
+                    )
+                    return self._generate_default_external_features(result_df)
             else:
-                logger.warning("外部市場データにsymbolカラムがありません")
-                return result_df
+                logger.warning(
+                    "外部市場データにsymbolカラムがありません。デフォルト特徴量を生成します。"
+                )
+                return self._generate_default_external_features(result_df)
 
             # インデックスを合わせてマージ
             merged_df = result_df.join(pivot_data, how="left", rsuffix="_ext")
@@ -289,6 +304,88 @@ class ExternalMarketFeatureCalculator:
             result_df["USD_Equity_Divergence"] = dxy_norm - sp500_norm
 
         return result_df
+
+    def _fetch_external_market_data_fallback(self, df: pd.DataFrame) -> pd.DataFrame:
+        """
+        外部市場データの自動取得（フォールバック）
+
+        Args:
+            df: 基本データフレーム（時間範囲の参考用）
+
+        Returns:
+            取得した外部市場データ、または空のDataFrame
+        """
+        try:
+            from ...data_collection.external_market.external_market_service import (
+                ExternalMarketService,
+            )
+
+            # データフレームの時間範囲を取得
+            if df.empty or not isinstance(df.index, pd.DatetimeIndex):
+                logger.warning("基本データフレームが空か、DatetimeIndexではありません")
+                return pd.DataFrame()
+
+            start_date = df.index.min().strftime("%Y-%m-%d")
+            end_date = df.index.max().strftime("%Y-%m-%d")
+
+            logger.info(f"外部市場データを自動取得中: {start_date} ～ {end_date}")
+
+            # ExternalMarketServiceを使用してデータを取得
+            service = ExternalMarketService()
+            external_data = service.fetch_external_market_data(
+                period=None,  # start_date/end_dateを優先
+                start_date=start_date,
+                end_date=end_date,
+                interval="1d",
+            )
+
+            if external_data:
+                # 辞書リストをDataFrameに変換
+                external_df = pd.DataFrame(external_data)
+                if "data_timestamp" in external_df.columns:
+                    external_df["data_timestamp"] = pd.to_datetime(
+                        external_df["data_timestamp"]
+                    )
+                    external_df = external_df.set_index("data_timestamp")
+
+                logger.info(f"外部市場データを {len(external_df)} 件取得しました")
+                return external_df
+            else:
+                logger.warning("外部市場データの取得結果が空でした")
+                return pd.DataFrame()
+
+        except Exception as e:
+            logger.error(f"外部市場データの自動取得エラー: {e}")
+            return pd.DataFrame()
+
+    def _generate_default_external_features(self, df: pd.DataFrame) -> pd.DataFrame:
+        """
+        デフォルトの外部市場特徴量を生成（すべて0で初期化）
+
+        Args:
+            df: 基本データフレーム
+
+        Returns:
+            デフォルト特徴量が追加されたDataFrame
+        """
+        try:
+            result_df = df.copy()
+
+            # 外部市場特徴量名のリストを取得
+            feature_names = self.get_feature_names()
+
+            # すべての特徴量を0で初期化
+            for feature_name in feature_names:
+                result_df[feature_name] = 0.0
+
+            logger.info(
+                f"デフォルト外部市場特徴量を {len(feature_names)} 個生成しました"
+            )
+            return result_df
+
+        except Exception as e:
+            logger.error(f"デフォルト外部市場特徴量生成エラー: {e}")
+            return df
 
     def get_feature_names(self) -> list:
         """

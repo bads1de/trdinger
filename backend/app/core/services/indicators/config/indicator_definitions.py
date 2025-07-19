@@ -544,7 +544,7 @@ def setup_momentum_indicators():
     )
     macdext_config.add_parameter(
         ParameterConfig(
-            name="fastperiod",
+            name="fast_period",
             default_value=12,
             min_value=2,
             max_value=100,
@@ -553,7 +553,7 @@ def setup_momentum_indicators():
     )
     macdext_config.add_parameter(
         ParameterConfig(
-            name="fastmatype",
+            name="fast_ma_type",
             default_value=0,
             min_value=0,
             max_value=8,
@@ -562,7 +562,7 @@ def setup_momentum_indicators():
     )
     macdext_config.add_parameter(
         ParameterConfig(
-            name="slowperiod",
+            name="slow_period",
             default_value=26,
             min_value=2,
             max_value=200,
@@ -571,7 +571,7 @@ def setup_momentum_indicators():
     )
     macdext_config.add_parameter(
         ParameterConfig(
-            name="slowmatype",
+            name="slow_ma_type",
             default_value=0,
             min_value=0,
             max_value=8,
@@ -580,7 +580,7 @@ def setup_momentum_indicators():
     )
     macdext_config.add_parameter(
         ParameterConfig(
-            name="signalperiod",
+            name="signal_period",
             default_value=9,
             min_value=2,
             max_value=100,
@@ -589,7 +589,7 @@ def setup_momentum_indicators():
     )
     macdext_config.add_parameter(
         ParameterConfig(
-            name="signalmatype",
+            name="signal_ma_type",
             default_value=0,
             min_value=0,
             max_value=8,
@@ -609,7 +609,7 @@ def setup_momentum_indicators():
     )
     macdfix_config.add_parameter(
         ParameterConfig(
-            name="signalperiod",
+            name="signal_period",
             default_value=9,
             min_value=2,
             max_value=100,

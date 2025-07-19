@@ -16,6 +16,18 @@ export interface MLModel {
 }
 
 export const useMLModels = (limit?: number) => {
+  // データを変換する関数をメモ化
+  const transformModels = useCallback(
+    (response: any) => {
+      let modelList = response.models || [];
+      if (limit) {
+        modelList = modelList.slice(0, limit);
+      }
+      return modelList;
+    },
+    [limit] // limit が変更されたときのみ関数を再生成
+  );
+
   // 基本的なデータ取得は共通フックを使用
   const {
     data: models,
@@ -25,13 +37,7 @@ export const useMLModels = (limit?: number) => {
   } = useDataFetching<MLModel>({
     endpoint: "/api/ml/models",
     dataPath: "models",
-    transform: (response) => {
-      let modelList = response.models || [];
-      if (limit) {
-        modelList = modelList.slice(0, limit);
-      }
-      return modelList;
-    },
+    transform: transformModels, // メモ化した関数を渡す
     errorMessage: "MLモデルの取得中にエラーが発生しました",
   });
 
