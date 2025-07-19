@@ -8,7 +8,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { useApiCall } from "@/hooks/useApiCall";
+import { useDeleteRequest } from "@/hooks/useDeleteRequest";
 import ApiButton from "./ApiButton";
 import { RESET_CONFIGS } from "@/constants/dataResetConstants";
 
@@ -76,61 +76,43 @@ const DataResetButton: React.FC<DataResetButtonProps> = ({
   size = "sm",
   variant,
 }) => {
-  const apiCall = useApiCall<DataResetResult>();
-  const [isProcessing, setIsProcessing] = useState(false);
+  const { sendDeleteRequest, isLoading } = useDeleteRequest<DataResetResult>();
 
   const config = RESET_CONFIGS[resetType];
   const buttonVariant = variant || config.variant;
 
   const handleReset = async () => {
-    if (isProcessing) return;
+    if (isLoading) return;
 
-    try {
-      setIsProcessing(true);
+    // エンドポイントURLを構築
+    let endpoint = config.endpoint;
+    let confirmMessage = config.confirmMessage;
 
-      // エンドポイントURLを構築
-      let endpoint = config.endpoint;
-      let confirmMessage = config.confirmMessage;
+    if (resetType === "symbol" && symbol) {
+      endpoint = `${endpoint}/${encodeURIComponent(symbol)}`;
+      confirmMessage = confirmMessage.replace(
+        "指定されたシンボル",
+        `シンボル「${symbol}」`
+      );
+    }
 
-      if (resetType === "symbol" && symbol) {
-        endpoint = `${endpoint}/${encodeURIComponent(symbol)}`;
-        confirmMessage = confirmMessage.replace(
-          "指定されたシンボル",
-          `シンボル「${symbol}」`
-        );
+    // 確認メッセージをカスタマイズ
+    if (resetType === "symbol" && symbol) {
+      confirmMessage =
+        `⚠️ シンボル「${symbol}」の全データ（OHLCV・ファンディングレート・オープンインタレスト）を削除します。\n\n` +
+        "この操作は取り消すことができません。\n" +
+        "本当に実行しますか？";
+    }
+
+    if (window.confirm(confirmMessage)) {
+      const { success, data, error } = await sendDeleteRequest(endpoint);
+
+      if (success && data) {
+        onResetComplete?.(data);
+      } else {
+        console.error("データリセットエラー:", error);
+        onResetError?.(error || "データリセット中にエラーが発生しました");
       }
-
-      // 確認メッセージをカスタマイズ
-      if (resetType === "symbol" && symbol) {
-        confirmMessage =
-          `⚠️ シンボル「${symbol}」の全データ（OHLCV・ファンディングレート・オープンインタレスト）を削除します。\n\n` +
-          "この操作は取り消すことができません。\n" +
-          "本当に実行しますか？";
-      }
-
-      const result = await apiCall.execute(endpoint, {
-        method: "DELETE",
-        confirmMessage,
-        onSuccess: (data: DataResetResult) => {
-          onResetComplete?.(data);
-        },
-        onError: (error: string) => {
-          console.error("データリセットエラー:", error);
-          onResetError?.(error);
-        },
-      });
-
-      if (result) {
-      }
-    } catch (error) {
-      console.error("データリセット処理エラー:", error);
-      const errorMessage =
-        error instanceof Error
-          ? error.message
-          : "データリセット中にエラーが発生しました";
-      onResetError?.(errorMessage);
-    } finally {
-      setIsProcessing(false);
     }
   };
 
@@ -145,8 +127,8 @@ const DataResetButton: React.FC<DataResetButtonProps> = ({
   return (
     <ApiButton
       onClick={handleReset}
-      loading={apiCall.loading || isProcessing}
-      disabled={disabled || isProcessing}
+      loading={isLoading}
+      disabled={disabled || isLoading}
       variant={buttonVariant}
       size={size}
       loadingText="削除中..."
