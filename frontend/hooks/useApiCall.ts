@@ -72,7 +72,11 @@ export const useApiCall = <T = any>(): ApiCallResult<T> => {
             typeof body === "string" ? body : JSON.stringify(body);
         }
 
-        const response = await fetch(url, requestOptions);
+        const apiBaseUrl =
+          process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8000";
+        const fullUrl = url.startsWith("/") ? `${apiBaseUrl}${url}` : url;
+
+        const response = await fetch(fullUrl, requestOptions);
         const responseText = await response.text();
 
         let result;

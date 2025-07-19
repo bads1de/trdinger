@@ -30,7 +30,7 @@ const FearGreedCollectionButton: React.FC<FearGreedCollectionButtonProps> = ({
 
   const handleClick = async () => {
     const { success, data, error } = await sendPostRequest(
-      "/api/fear-greed/collect-incremental"
+      "/api/fear-greed/collect"
     );
     if (success && data) {
       onCollectionStart?.(data);

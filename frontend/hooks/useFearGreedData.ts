@@ -1,6 +1,7 @@
 import { useState, useCallback, useEffect } from "react";
 import { useDataFetching } from "./useDataFetching";
 import { usePostRequest } from "./usePostRequest";
+import { BACKEND_API_URL } from "@/constants";
 
 export interface FearGreedIndexData {
   id: number;
@@ -34,26 +35,20 @@ export interface FearGreedCollectionResult {
 }
 
 export const useFearGreedData = () => {
-  const {
-    data,
-    loading,
-    error,
-    params,
-    setParams,
-    refetch,
-  } = useDataFetching<FearGreedIndexData, { limit: number; start_date?: string; end_date?: string; }>({
-    endpoint: "/api/fear-greed/data",
+  const { data, loading, error, params, setParams, refetch } = useDataFetching<
+    FearGreedIndexData,
+    { limit: number; start_date?: string; end_date?: string }
+  >({
+    endpoint: "/api/fear-greed/latest",
     initialParams: { limit: 30 },
-    dataPath: "data",
+    dataPath: "data.data",
+    disableAutoFetch: false,
+    errorMessage: "Fear & Greed Index データの取得に失敗しました",
   });
 
-  const {
-    data: status,
-    refetch: fetchStatus,
-  } = useDataFetching<FearGreedDataStatus>({
-    endpoint: "/api/fear-greed/status",
-    transform: (response) => (response.success ? [response.data] : []),
-  });
+  // ステータス機能は削除されたエンドポイントのため、一時的に無効化
+  const status: FearGreedDataStatus[] = [];
+  const fetchStatus = useCallback(() => Promise.resolve(), []);
 
   const { sendPostRequest, isLoading: isCollecting } =
     usePostRequest<FearGreedCollectionResult>();
@@ -84,7 +79,7 @@ export const useFearGreedData = () => {
   );
 
   const collectIncrementalData = useCallback(
-    () => handleCollection("/api/fear-greed/collect-incremental"),
+    () => handleCollection("/api/fear-greed/collect"),
     [handleCollection]
   );
 
@@ -96,10 +91,18 @@ export const useFearGreedData = () => {
   );
 
   const fetchLatestData = useCallback(
-    (limit: number = 30) => {
+    async (limit: number = 30) => {
+      // データが空の場合は、まずデータ収集を試行
+      if (data.length === 0) {
+        try {
+          await collectData(30);
+        } catch (error) {
+          console.warn("自動データ収集に失敗しました:", error);
+        }
+      }
       setParams({ limit, start_date: undefined, end_date: undefined });
     },
-    [setParams]
+    [setParams, data.length, collectData]
   );
 
   return {

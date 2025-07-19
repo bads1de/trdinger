@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useCallback } from "react";
 import { useApiCall } from "./useApiCall";
 import { BACKEND_API_URL } from "@/constants";
 
@@ -53,20 +53,16 @@ export type ExternalMarketSymbol = keyof typeof EXTERNAL_MARKET_SYMBOLS;
 
 export const useExternalMarketData = () => {
   const [data, setData] = useState<ExternalMarketData[]>([]);
-  const [status, setStatus] = useState<ExternalMarketDataStatus | null>(null);
+  const status: ExternalMarketDataStatus | null = null;
 
   const {
     execute: fetchDataApi,
     loading,
     error,
-  } = useApiCall<{ success: boolean; data: { items: ExternalMarketData[] } }>();
+  } = useApiCall<{ success: boolean; data: { data: ExternalMarketData[] } }>();
   const { execute: collectDataApi } = useApiCall<{
     success: boolean;
     data: ExternalMarketCollectionResult;
-  }>();
-  const { execute: fetchStatusApi } = useApiCall<{
-    success: boolean;
-    data: ExternalMarketDataStatus;
   }>();
 
   const fetchData = useCallback(
@@ -79,7 +75,7 @@ export const useExternalMarketData = () => {
 
       const result = await fetchDataApi(url.toString());
       if (result && result.success) {
-        setData(result.data.items);
+        setData(result.data.data);
       }
     },
     [fetchDataApi]
@@ -95,7 +91,7 @@ export const useExternalMarketData = () => {
 
       const result = await fetchDataApi(url.toString());
       if (result && result.success) {
-        setData(result.data.items);
+        setData(result.data.data);
       }
     },
     [fetchDataApi]
@@ -104,7 +100,7 @@ export const useExternalMarketData = () => {
   const collectData = useCallback(
     async (
       symbols?: string[],
-      period: string = "1mo" // period is not used in backend, but kept for compatibility
+      _period: string = "1mo" // period is not used in backend, but kept for compatibility
     ): Promise<ExternalMarketCollectionResult> => {
       const url = new URL("/api/external-market/collect", BACKEND_API_URL);
 
@@ -134,9 +130,9 @@ export const useExternalMarketData = () => {
   const collectHistoricalData = useCallback(
     async (
       symbols?: string[],
-      period: string = "5y",
-      startDate?: string,
-      endDate?: string
+      _period: string = "5y",
+      _startDate?: string,
+      _endDate?: string
     ): Promise<ExternalMarketCollectionResult> => {
       // Backend does not support period, startDate, endDate for historical collection via this endpoint.
       // It collects based on its own logic. We will call the collect endpoint.
@@ -145,21 +141,18 @@ export const useExternalMarketData = () => {
     [collectData]
   );
 
+  // ステータス機能は削除されたエンドポイントのため、一時的に無効化
   const fetchStatus = useCallback(async () => {
-    const url = new URL("/api/external-market/status", BACKEND_API_URL);
-    const result = await fetchStatusApi(url.toString());
-    if (result && result.success) {
-      setStatus(result.data);
-    }
-  }, [fetchStatusApi]);
+    // 何もしない
+  }, []);
 
   const refetch = useCallback(() => {
     fetchLatestData();
   }, [fetchLatestData]);
 
-  useEffect(() => {
-    fetchStatus();
-  }, [fetchStatus]);
+  // useEffect(() => {
+  //   fetchStatus();
+  // }, [fetchStatus]);
 
   return {
     data,

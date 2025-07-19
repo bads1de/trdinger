@@ -1,7 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { useDataFetching } from "./useDataFetching";
-import { usePostRequest } from "./usePostRequest";
-import { usePutRequest } from "./usePutRequest";
+import { BACKEND_API_URL } from "@/constants";
 
 export interface MLConfig {
   data_processing: {
@@ -38,65 +36,114 @@ export interface MLConfig {
 }
 
 export const useMLSettings = () => {
+  const [config, setConfig] = useState<MLConfig | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [isResetting, setIsResetting] = useState(false);
+  const [isCleaning, setIsCleaning] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
-
-  const {
-    data: config,
-    loading: isLoading,
-    error: fetchError,
-    refetch: fetchConfig,
-    setData: setConfig,
-  } = useDataFetching<MLConfig>({
-    endpoint: "/api/ml/config",
-    transform: (response) => {
-      const { success, ...configData } = response as any;
-      return success ? [configData] : [];
-    },
-  });
-
-  const {
-    sendPutRequest,
-    isLoading: isSaving,
-    error: saveError,
-  } = usePutRequest<any, MLConfig>();
-  const {
-    sendPostRequest: sendResetRequest,
-    isLoading: isResetting,
-    error: resetError,
-  } = usePostRequest();
-  const {
-    sendPostRequest: sendCleanupRequest,
-    isLoading: isCleaning,
-    error: cleanupError,
-  } = usePostRequest();
-
-  const error = fetchError || saveError || resetError || cleanupError;
 
   const showSuccessMessage = (message: string) => {
     setSuccessMessage(message);
     setTimeout(() => setSuccessMessage(null), 3000);
   };
 
-  const saveConfig = useCallback(
-    async (newConfig: MLConfig) => {
-      if (!newConfig) return;
-      const { success } = await sendPutRequest("/api/ml/config", newConfig);
-      if (success) {
-        showSuccessMessage("設定が正常に保存されました");
+  const fetchConfig = useCallback(async () => {
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      const response = await fetch(`${BACKEND_API_URL}/api/ml/config`, {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.detail || "ML設定取得に失敗しました");
       }
-    },
-    [sendPutRequest]
-  );
+
+      setConfig(data);
+    } catch (error) {
+      console.error("ML設定取得エラー:", error);
+      setError(
+        error instanceof Error ? error.message : "サーバーエラーが発生しました"
+      );
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  const saveConfig = useCallback(async (newConfig: MLConfig) => {
+    if (!newConfig) return;
+
+    setIsSaving(true);
+    setError(null);
+
+    try {
+      const response = await fetch(`${BACKEND_API_URL}/api/ml/config`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(newConfig),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.detail || "ML設定の更新に失敗しました");
+      }
+
+      setConfig(data);
+      showSuccessMessage("設定が正常に保存されました");
+    } catch (error) {
+      console.error("ML設定更新エラー:", error);
+      setError(
+        error instanceof Error ? error.message : "サーバーエラーが発生しました"
+      );
+    } finally {
+      setIsSaving(false);
+    }
+  }, []);
 
   const resetToDefaults = useCallback(async () => {
     if (window.confirm("設定をデフォルト値にリセットしますか？")) {
-      const { success } = await sendResetRequest("/api/ml/config/reset");
-      if (success) {
-        fetchConfig();
+      setIsResetting(true);
+      setError(null);
+
+      try {
+        const response = await fetch(`${BACKEND_API_URL}/api/ml/config/reset`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.detail || "設定のリセットに失敗しました");
+        }
+
+        setConfig(data);
         showSuccessMessage("設定がデフォルト値にリセットされました");
+      } catch (error) {
+        console.error("ML設定リセットエラー:", error);
+        setError(
+          error instanceof Error
+            ? error.message
+            : "サーバーエラーが発生しました"
+        );
+      } finally {
+        setIsResetting(false);
       }
     }
-  }, [sendResetRequest, fetchConfig]);
+  }, []);
 
   const cleanupOldModels = useCallback(async () => {
     if (
@@ -104,28 +151,59 @@ export const useMLSettings = () => {
         "古いモデルファイルを削除しますか？この操作は取り消せません。"
       )
     ) {
-      const { success } = await sendCleanupRequest("/api/ml/models/cleanup");
-      if (success) {
+      setIsCleaning(true);
+      setError(null);
+
+      try {
+        const response = await fetch(
+          `${BACKEND_API_URL}/api/ml/models/cleanup`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+          }
+        );
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.detail || "モデルファイルの削除に失敗しました");
+        }
+
         showSuccessMessage("古いモデルファイルが削除されました");
+      } catch (error) {
+        console.error("モデルファイル削除エラー:", error);
+        setError(
+          error instanceof Error
+            ? error.message
+            : "サーバーエラーが発生しました"
+        );
+      } finally {
+        setIsCleaning(false);
       }
     }
-  }, [sendCleanupRequest]);
+  }, []);
 
   const updateConfig = (section: keyof MLConfig, key: string, value: any) => {
-    if (!config || config.length === 0) return;
+    if (!config) return;
 
     const newConfig = {
-      ...config[0],
+      ...config,
       [section]: {
-        ...config[0][section],
+        ...config[section],
         [key]: value,
       },
     };
-    setConfig([newConfig]);
+    setConfig(newConfig);
   };
 
+  useEffect(() => {
+    fetchConfig();
+  }, [fetchConfig]);
+
   return {
-    config: config && config.length > 0 ? config[0] : null,
+    config,
     isLoading,
     isSaving,
     isResetting,
@@ -137,6 +215,6 @@ export const useMLSettings = () => {
     resetToDefaults,
     cleanupOldModels,
     updateConfig,
-    setConfig: (newConfig: MLConfig | null) => setConfig(newConfig ? [newConfig] : []),
+    setConfig,
   };
 };

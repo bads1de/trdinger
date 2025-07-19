@@ -7,7 +7,6 @@ import ExternalMarketDataTable from "@/components/table/ExternalMarketDataTable"
 import { PriceData, TimeFrame } from "@/types/market-data";
 import { FundingRateData } from "@/types/funding-rate";
 import { OpenInterestData } from "@/types/open-interest";
-import { FearGreedIndexData } from "@/app/api/data/fear-greed/route";
 import { ExternalMarketData } from "@/hooks/useExternalMarketData";
 
 interface DataTableContainerProps {
@@ -31,7 +30,7 @@ interface DataTableContainerProps {
   openInterestData: OpenInterestData[];
   openInterestLoading: boolean;
   openInterestError: string;
-  fearGreedData?: FearGreedIndexData[];
+  fearGreedData?: any[];
   fearGreedLoading?: boolean;
   fearGreedError?: string;
   externalMarketData?: ExternalMarketData[];
