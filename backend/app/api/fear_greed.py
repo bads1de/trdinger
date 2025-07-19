@@ -18,11 +18,6 @@ from app.core.services.data_collection.orchestration.fear_greed_orchestration_se
 )
 from app.core.utils.unified_error_handler import UnifiedErrorHandler
 from app.core.utils.api_utils import APIResponseHelper
-import sys
-import os
-
-sys.path.append(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
-from data_collector.external_market_collector import ExternalMarketDataCollector
 
 logger = logging.getLogger(__name__)
 
@@ -151,19 +146,12 @@ async def get_fear_greed_data_status(
     Returns:
         データ状態情報
     """
-    try:
-        async with ExternalMarketDataCollector() as collector:
-            status = await collector.get_data_status(db_session=db)
 
-        return APIResponseHelper.api_response(
-            success=True,
-            message="Fear & Greed Index データ状態を取得しました",
-            data=status,
-        )
+    async def _execute():
+        orchestration_service = FearGreedOrchestrationService()
+        return await orchestration_service.get_fear_greed_data_status(db)
 
-    except Exception as e:
-        logger.error(f"Fear & Greed Index データ状態取得エラー: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+    return await UnifiedErrorHandler.safe_execute_async(_execute)
 
 
 @router.post("/collect")
