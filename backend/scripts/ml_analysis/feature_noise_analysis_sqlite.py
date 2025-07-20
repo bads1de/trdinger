@@ -82,7 +82,7 @@ class FeatureNoiseAnalyzerSQLite:
         logger.info(f"特徴量ノイズ分析を初期化: {symbol} - {timeframe}")
         logger.info(f"データベースファイル: {self.db_path}")
 
-    def load_data(self, limit: int = 5000) -> pd.DataFrame:
+    def load_data(self, limit: int = 10000) -> pd.DataFrame:
         """
         SQLiteから直接データを読み込み
 
@@ -667,7 +667,7 @@ def main():
 
         # 1. データ読み込み
         logger.info("1. データ読み込み")
-        df = analyzer.load_data(limit=1000)  # テスト用に少なめに設定
+        df = analyzer.load_data(limit=10000)
 
         # 2. 特徴量計算
         logger.info("2. 特徴量計算")
