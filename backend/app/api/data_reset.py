@@ -146,14 +146,12 @@ async def get_data_status(db: Session = Depends(get_db)) -> Dict[str, Any]:
             FundingRateData,
             OpenInterestData,
             FearGreedIndexData,
-            ExternalMarketData,
         )
 
         ohlcv_count = db.query(OHLCVData).count()
         fr_count = db.query(FundingRateData).count()
         oi_count = db.query(OpenInterestData).count()
         fg_count = db.query(FearGreedIndexData).count()
-        em_count = db.query(ExternalMarketData).count()
 
         # OHLCV詳細情報（時間足別）
         timeframes = ["15m", "30m", "1h", "4h", "1d"]
@@ -179,24 +177,14 @@ async def get_data_status(db: Session = Depends(get_db)) -> Dict[str, Any]:
         oi_latest = oi_repo.get_latest_open_interest_timestamp(symbol)
         oi_oldest = oi_repo.get_oldest_open_interest_timestamp(symbol)
 
-        # 外部市場データ詳細情報
-        from database.repositories.external_market_repository import (
-            ExternalMarketRepository,
-        )
-
-        em_repo = ExternalMarketRepository(db)
-        em_latest = em_repo.get_latest_data_timestamp()
-        em_statistics = em_repo.get_data_statistics()
-
         response_data = {
             "data_counts": {
                 "ohlcv": ohlcv_count,
                 "funding_rates": fr_count,
                 "open_interest": oi_count,
                 "fear_greed_index": fg_count,
-                "external_market_data": em_count,
             },
-            "total_records": ohlcv_count + fr_count + oi_count + fg_count + em_count,
+            "total_records": ohlcv_count + fr_count + oi_count + fg_count,
             "details": {
                 "ohlcv": {
                     "symbol": symbol,
@@ -214,13 +202,6 @@ async def get_data_status(db: Session = Depends(get_db)) -> Dict[str, Any]:
                     "count": oi_count,
                     "latest_timestamp": oi_latest.isoformat() if oi_latest else None,
                     "oldest_timestamp": oi_oldest.isoformat() if oi_oldest else None,
-                },
-                "external_market_data": {
-                    "count": em_count,
-                    "symbols": em_statistics.get("symbols", []),
-                    "symbol_count": em_statistics.get("symbol_count", 0),
-                    "latest_timestamp": em_latest.isoformat() if em_latest else None,
-                    "date_range": em_statistics.get("date_range"),
                 },
             },
         }

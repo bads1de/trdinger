@@ -39,9 +39,6 @@ from .feature_engineering.feature_engineering_service import FeatureEngineeringS
 from .model_manager import model_manager
 from ...utils.label_generation import LabelGenerator, ThresholdMethod
 from database.connection import SessionLocal
-from database.repositories.external_market_repository import (
-    ExternalMarketRepository,
-)
 from database.repositories.fear_greed_repository import FearGreedIndexRepository
 
 logger = logging.getLogger(__name__)
@@ -358,11 +355,8 @@ class BaseMLTrainer(ABC):
         funding_rate_data: Optional[pd.DataFrame] = None,
         open_interest_data: Optional[pd.DataFrame] = None,
     ) -> pd.DataFrame:
-        """特徴量を計算（外部市場データとFear & Greed Indexデータを含む）"""
+        """特徴量を計算（Fear & Greed Indexデータを含む）"""
         try:
-            # 外部市場データを取得
-            external_market_data = self._get_external_market_data(ohlcv_data)
-
             # Fear & Greed Indexデータを取得
             fear_greed_data = self._get_fear_greed_data(ohlcv_data)
 
@@ -371,7 +365,6 @@ class BaseMLTrainer(ABC):
                 ohlcv_data=ohlcv_data,
                 funding_rate_data=funding_rate_data,
                 open_interest_data=open_interest_data,
-                external_market_data=external_market_data,
                 fear_greed_data=fear_greed_data,
             )
 
@@ -381,78 +374,6 @@ class BaseMLTrainer(ABC):
             return self.feature_service.calculate_advanced_features(
                 ohlcv_data, funding_rate_data, open_interest_data
             )
-
-    def _get_external_market_data(
-        self, ohlcv_data: pd.DataFrame
-    ) -> Optional[pd.DataFrame]:
-        """
-        外部市場データを取得
-
-        Args:
-            ohlcv_data: OHLCVデータ（期間の参考用）
-
-        Returns:
-            外部市場データのDataFrame（取得できない場合はNone）
-        """
-        try:
-            if ohlcv_data.empty:
-                return None
-
-            # データの期間を取得
-            if "timestamp" in ohlcv_data.columns:
-                start_date_val = ohlcv_data["timestamp"].min()
-                end_date_val = ohlcv_data["timestamp"].max()
-            else:
-                start_date_val = ohlcv_data.index.min()
-                end_date_val = ohlcv_data.index.max()
-
-            # datetime型に変換
-            start_date = cast(datetime, pd.to_datetime(start_date_val).to_pydatetime())
-            end_date = cast(datetime, pd.to_datetime(end_date_val).to_pydatetime())
-
-            with SessionLocal() as db:
-                repository = ExternalMarketRepository(db)
-
-                # 外部市場データを取得
-                external_data = repository.get_external_market_data(
-                    start_time=start_date, end_time=end_date
-                )
-
-                if not external_data:
-                    logger.info("外部市場データが見つかりませんでした")
-                    return None
-
-                # DataFrameに変換
-                df = pd.DataFrame(
-                    [
-                        {
-                            "timestamp": data.data_timestamp,
-                            "symbol": data.symbol,
-                            "close": data.close,
-                            "volume": data.volume,
-                            "high": data.high,
-                            "low": data.low,
-                            "open": data.open,
-                        }
-                        for data in external_data
-                    ]
-                )
-
-                if df.empty:
-                    return None
-
-                # タイムスタンプをインデックスに設定
-                df["timestamp"] = pd.to_datetime(df["timestamp"])
-                df.set_index("timestamp", inplace=True)
-
-                logger.info(
-                    f"外部市場データを取得: {len(df)}行, シンボル: {df['symbol'].unique()}"
-                )
-                return df
-
-        except Exception as e:
-            logger.warning(f"外部市場データ取得エラー: {e}")
-            return None
 
     def _get_fear_greed_data(self, ohlcv_data: pd.DataFrame) -> Optional[pd.DataFrame]:
         """

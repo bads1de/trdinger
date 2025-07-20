@@ -17,7 +17,6 @@ from .market_data_features import MarketDataFeatureCalculator
 from .technical_features import TechnicalFeatureCalculator
 from .temporal_features import TemporalFeatureCalculator
 from .interaction_features import InteractionFeatureCalculator
-from .external_market_features import ExternalMarketFeatureCalculator
 from .fear_greed_features import FearGreedFeatureCalculator
 from ....utils.data_validation import DataValidator
 
@@ -44,7 +43,6 @@ class FeatureEngineeringService:
         self.technical_calculator = TechnicalFeatureCalculator()
         self.temporal_calculator = TemporalFeatureCalculator()
         self.interaction_calculator = InteractionFeatureCalculator()
-        self.external_market_calculator = ExternalMarketFeatureCalculator()
         self.fear_greed_calculator = FearGreedFeatureCalculator()
 
     def calculate_advanced_features(
@@ -52,7 +50,6 @@ class FeatureEngineeringService:
         ohlcv_data: pd.DataFrame,
         funding_rate_data: Optional[pd.DataFrame] = None,
         open_interest_data: Optional[pd.DataFrame] = None,
-        external_market_data: Optional[pd.DataFrame] = None,
         fear_greed_data: Optional[pd.DataFrame] = None,
         lookback_periods: Optional[Dict[str, int]] = None,
     ) -> pd.DataFrame:
@@ -86,7 +83,6 @@ class FeatureEngineeringService:
                 ohlcv_data,
                 funding_rate_data,
                 open_interest_data,
-                external_market_data,
                 fear_greed_data,
                 lookback_periods,
             )
@@ -210,27 +206,6 @@ class FeatureEngineeringService:
                         fill_method="median",
                     )
 
-            # 外部市場特徴量（データがある場合）
-            if external_market_data is not None and not external_market_data.empty:
-                result_df = (
-                    self.external_market_calculator.calculate_external_market_features(
-                        result_df, external_market_data, lookback_periods
-                    )
-                )
-                # 中間クリーニング
-                external_market_columns = (
-                    self.external_market_calculator.get_feature_names()
-                )
-                existing_external_columns = [
-                    col for col in external_market_columns if col in result_df.columns
-                ]
-                if existing_external_columns:
-                    result_df = DataValidator.clean_dataframe(
-                        result_df,
-                        column_names=existing_external_columns,
-                        fill_method="median",
-                    )
-
             # Fear & Greed Index 特徴量（データがある場合）
             if fear_greed_data is not None and not fear_greed_data.empty:
                 result_df = self.fear_greed_calculator.calculate_fear_greed_features(
@@ -317,7 +292,6 @@ class FeatureEngineeringService:
         feature_names.extend(self.technical_calculator.get_feature_names())
         feature_names.extend(self.temporal_calculator.get_feature_names())
         feature_names.extend(self.interaction_calculator.get_feature_names())
-        feature_names.extend(self.external_market_calculator.get_feature_names())
         feature_names.extend(self.fear_greed_calculator.get_feature_names())
 
         return feature_names
@@ -327,7 +301,6 @@ class FeatureEngineeringService:
         ohlcv_data: pd.DataFrame,
         funding_rate_data: Optional[pd.DataFrame],
         open_interest_data: Optional[pd.DataFrame],
-        external_market_data: Optional[pd.DataFrame],
         fear_greed_data: Optional[pd.DataFrame],
         lookback_periods: Optional[Dict[str, int]],
     ) -> str:
@@ -346,13 +319,6 @@ class FeatureEngineeringService:
                 open_interest_data.shape if open_interest_data is not None else "None"
             ).encode()
         ).hexdigest()[:8]
-        ext_hash = hashlib.md5(
-            str(
-                external_market_data.shape
-                if external_market_data is not None
-                else "None"
-            ).encode()
-        ).hexdigest()[:8]
         fg_hash = hashlib.md5(
             str(
                 fear_greed_data.shape if fear_greed_data is not None else "None"
@@ -366,7 +332,7 @@ class FeatureEngineeringService:
             ).encode()
         ).hexdigest()[:8]
 
-        return f"features_{ohlcv_hash}_{fr_hash}_{oi_hash}_{ext_hash}_{fg_hash}_{periods_hash}"
+        return f"features_{ohlcv_hash}_{fr_hash}_{oi_hash}_{fg_hash}_{periods_hash}"
 
     def _get_from_cache(self, cache_key: str) -> Optional[pd.DataFrame]:
         """キャッシュから結果を取得"""
