@@ -79,10 +79,9 @@ async def update_bulk_incremental_data(
     symbol: str = "BTC/USDT:USDT", db: Session = Depends(get_db)
 ) -> Dict:
     """
-    一括差分データを更新（OHLCV、FR、OI、外部市場データ）
+    一括差分データを更新（OHLCV、FR、OI）
 
     OHLCVは全時間足（15m, 30m, 1h, 4h, 1d）を自動的に処理します。
-    外部市場データ（SP500、NASDAQ、DXY、VIX）も同時に更新されます。
 
     Args:
         symbol: 取引ペア（デフォルト: BTC/USDT:USDT）

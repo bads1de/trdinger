@@ -60,7 +60,6 @@ class FeatureEngineeringService:
             ohlcv_data: OHLCV価格データ
             funding_rate_data: ファンディングレートデータ（オプション）
             open_interest_data: 建玉残高データ（オプション）
-            external_market_data: 外部市場データ（オプション）
             fear_greed_data: Fear & Greed Index データ（オプション）
             lookback_periods: 各特徴量の計算期間設定
 
@@ -283,7 +282,12 @@ class FeatureEngineeringService:
             raise
 
     def get_feature_names(self) -> List[str]:
-        """生成される特徴量名のリストを取得"""
+        """
+        生成される特徴量名のリストを取得
+
+        Returns:
+            特徴量名のリスト
+        """
         feature_names = []
 
         # 各計算クラスから特徴量名を取得
@@ -304,7 +308,19 @@ class FeatureEngineeringService:
         fear_greed_data: Optional[pd.DataFrame],
         lookback_periods: Optional[Dict[str, int]],
     ) -> str:
-        """キャッシュキーを生成"""
+        """
+        キャッシュキーを生成
+
+        Args:
+            ohlcv_data: OHLCV価格データ
+            funding_rate_data: ファンディングレートデータ（オプション）
+            open_interest_data: 建玉残高データ（オプション）
+            fear_greed_data: Fear & Greed Index データ（オプション）
+            lookback_periods: 各特徴量の計算期間設定
+
+        Returns:
+            生成されたキャッシュキー文字列
+        """
         import hashlib
 
         # データのハッシュを計算
@@ -335,7 +351,15 @@ class FeatureEngineeringService:
         return f"features_{ohlcv_hash}_{fr_hash}_{oi_hash}_{fg_hash}_{periods_hash}"
 
     def _get_from_cache(self, cache_key: str) -> Optional[pd.DataFrame]:
-        """キャッシュから結果を取得"""
+        """
+        キャッシュから結果を取得
+
+        Args:
+            cache_key: キャッシュキー
+
+        Returns:
+            キャッシュされたDataFrame、またはNone
+        """
         try:
             if cache_key in self.feature_cache:
                 cached_data, timestamp = self.feature_cache[cache_key]
@@ -354,7 +378,13 @@ class FeatureEngineeringService:
             return None
 
     def _save_to_cache(self, cache_key: str, data: pd.DataFrame):
-        """結果をキャッシュに保存"""
+        """
+        結果をキャッシュに保存
+
+        Args:
+            cache_key: キャッシュキー
+            data: 保存するDataFrame
+        """
         try:
             # キャッシュサイズ制限
             if len(self.feature_cache) >= self.max_cache_size:
@@ -371,7 +401,15 @@ class FeatureEngineeringService:
             logger.warning(f"キャッシュ保存エラー: {e}")
 
     def _optimize_dtypes(self, df: pd.DataFrame) -> pd.DataFrame:
-        """データ型を最適化してメモリ使用量を削減"""
+        """
+        データ型を最適化してメモリ使用量を削減
+
+        Args:
+            df: 最適化するDataFrame
+
+        Returns:
+            最適化されたDataFrame
+        """
         try:
             optimized_df = df.copy()
 
@@ -397,12 +435,16 @@ class FeatureEngineeringService:
             return df
 
     def clear_cache(self):
-        """キャッシュをクリア"""
+        """
+        キャッシュをクリア
+        """
         self.feature_cache.clear()
         logger.info("特徴量キャッシュをクリアしました")
 
     def get_cache_info(self) -> Dict[str, Any]:
-        """キャッシュ情報を取得"""
+        """
+        キャッシュ情報を取得
+        """
         return {
             "cache_size": len(self.feature_cache),
             "max_cache_size": self.max_cache_size,

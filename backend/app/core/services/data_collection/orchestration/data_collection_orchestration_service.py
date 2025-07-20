@@ -12,7 +12,6 @@ from fastapi import BackgroundTasks
 
 from ..historical.historical_data_service import HistoricalDataService
 
-# ExternalMarketDataCollectorは現在未使用（将来の拡張用）
 from database.repositories.ohlcv_repository import OHLCVRepository
 from database.repositories.funding_rate_repository import FundingRateRepository
 from database.repositories.open_interest_repository import OpenInterestRepository
@@ -106,14 +105,13 @@ class DataCollectionOrchestrationService:
             funding_rate_repository = FundingRateRepository(db)
             open_interest_repository = OpenInterestRepository(db)
 
-            # 全時間足を自動的に処理（外部市場データも含む）
+            # 全時間足を自動的に処理
             result = await self.historical_service.collect_bulk_incremental_data(
                 symbol=symbol,
                 timeframe="1h",  # デフォルト値（実際は全時間足を処理）
                 ohlcv_repository=ohlcv_repository,
                 funding_rate_repository=funding_rate_repository,
                 open_interest_repository=open_interest_repository,
-                include_external_market=True,  # 外部市場データも収集
             )
 
             return APIResponseHelper.api_response(

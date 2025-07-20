@@ -125,10 +125,9 @@ class HistoricalDataService:
         ohlcv_repository: Optional[OHLCVRepository] = None,
         funding_rate_repository: Optional[FundingRateRepository] = None,
         open_interest_repository: Optional[OpenInterestRepository] = None,
-        include_external_market: bool = True,
     ) -> dict:
         """
-        一括差分データを収集（OHLCV、FR、OI、外部市場データ）
+        一括差分データを収集（OHLCV、FR、OI）
 
         Args:
             symbol: 取引ペアシンボル（例: 'BTC/USDT:USDT'）
@@ -136,7 +135,6 @@ class HistoricalDataService:
             ohlcv_repository: OHLCVRepository（テスト用）
             funding_rate_repository: FundingRateRepository（テスト用）
             open_interest_repository: OpenInterestRepository（テスト用）
-            include_external_market: 外部市場データも収集するかどうか
 
         Returns:
             一括差分更新結果を含む辞書
@@ -332,48 +330,6 @@ class HistoricalDataService:
 
         # 少し待機してAPI制限を回避
         await asyncio.sleep(0.2)
-
-        # 4. 外部市場データの差分更新
-        if include_external_market:
-            try:
-                logger.info("外部市場データ差分収集開始")
-                from ......data_collector.external_market_collector import (
-                    ExternalMarketDataCollector,
-                )
-
-                async with ExternalMarketDataCollector() as collector:
-                    em_result = (
-                        await collector.collect_incremental_external_market_data()
-                    )
-
-                results["data"]["external_market"] = {
-                    "fetched_count": em_result["fetched_count"],
-                    "inserted_count": em_result["inserted_count"],
-                    "success": em_result["success"],
-                    "collection_type": em_result.get("collection_type", "incremental"),
-                }
-                results["total_saved_count"] += em_result["inserted_count"]
-                logger.info(
-                    f"外部市場データ差分収集完了: {em_result['inserted_count']}件保存"
-                )
-
-            except Exception as e:
-                logger.error(f"外部市場データ差分収集エラー: {e}")
-                results["data"]["external_market"] = {
-                    "fetched_count": 0,
-                    "inserted_count": 0,
-                    "success": False,
-                    "error": str(e),
-                }
-                results["errors"].append(f"外部市場データ: {str(e)}")
-        else:
-            logger.info("外部市場データ収集をスキップします。")
-            results["data"]["external_market"] = {
-                "fetched_count": 0,
-                "inserted_count": 0,
-                "success": True,
-                "error": "Skipped",
-            }
 
         # 全体の成功判定
         if results["errors"]:
