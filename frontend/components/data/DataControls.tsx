@@ -26,7 +26,6 @@ import {
   OpenInterestCollectionResult,
 } from "@/types/open-interest";
 import { FearGreedCollectionResult } from "@/hooks/useFearGreedData";
-import { ExternalMarketCollectionResult } from "@/hooks/useExternalMarketData";
 
 interface DataControlsProps {
   symbols: TradingPair[];
@@ -51,10 +50,6 @@ interface DataControlsProps {
   handleOpenInterestCollectionError: (errorMessage: string) => void;
   handleFearGreedCollectionStart: (result: FearGreedCollectionResult) => void;
   handleFearGreedCollectionError: (errorMessage: string) => void;
-  handleExternalMarketCollectionStart: (
-    result: ExternalMarketCollectionResult
-  ) => void;
-  handleExternalMarketCollectionError: (errorMessage: string) => void;
   bulkCollectionMessage: string;
   fundingRateCollectionMessage: string;
   openInterestCollectionMessage: string;
@@ -84,8 +79,6 @@ const DataControls: React.FC<DataControlsProps> = ({
   handleOpenInterestCollectionError,
   handleFearGreedCollectionStart,
   handleFearGreedCollectionError,
-  handleExternalMarketCollectionStart,
-  handleExternalMarketCollectionError,
   bulkCollectionMessage,
   fundingRateCollectionMessage,
   openInterestCollectionMessage,
@@ -379,15 +372,6 @@ const DataControls: React.FC<DataControlsProps> = ({
                   config={fearGreedCollectionConfig}
                   onCollectionStart={handleFearGreedCollectionStart}
                   onCollectionError={handleFearGreedCollectionError}
-                  disabled={loading || updating}
-                  className="h-10"
-                />
-
-                {/* 外部市場データ収集ボタン */}
-                <DataCollectionButton
-                  config={externalMarketCollectionConfig}
-                  onCollectionStart={handleExternalMarketCollectionStart}
-                  onCollectionError={handleExternalMarketCollectionError}
                   disabled={loading || updating}
                   className="h-10"
                 />

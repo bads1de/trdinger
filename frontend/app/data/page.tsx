@@ -19,10 +19,6 @@ import {
   useFearGreedData,
   FearGreedCollectionResult,
 } from "@/hooks/useFearGreedData";
-import {
-  useExternalMarketData,
-  ExternalMarketCollectionResult,
-} from "@/hooks/useExternalMarketData";
 import { useBulkIncrementalUpdate } from "@/hooks/useBulkIncrementalUpdate";
 import { useApiCall } from "@/hooks/useApiCall";
 import { TimeFrame, TradingPair } from "@/types/market-data";
@@ -49,7 +45,7 @@ const DataPage: React.FC = () => {
   const [selectedSymbol, setSelectedSymbol] = useState<string>("BTC/USDT:USDT");
   const [selectedTimeFrame, setSelectedTimeFrame] = useState<TimeFrame>("1h");
   const [activeTab, setActiveTab] = useState<
-    "ohlcv" | "funding" | "openinterest" | "feargreed" | "externalmarket"
+    "ohlcv" | "funding" | "openinterest" | "feargreed"
   >("ohlcv");
 
   const [dataStatus, setDataStatus] = useState<any>(null);
@@ -107,17 +103,6 @@ const DataPage: React.FC = () => {
     fetchLatestData: fetchFearGreedData,
   } = useFearGreedData();
 
-  const {
-    data: externalMarketData,
-    loading: externalMarketLoading,
-    error: externalMarketError,
-    status: externalMarketStatus,
-    fetchLatestData: fetchExternalMarketData,
-    collectData: collectExternalMarketData,
-    collectIncrementalData: collectIncrementalExternalMarketData,
-    fetchStatus,
-  } = useExternalMarketData();
-
   /**
    * 通貨ペア変更ハンドラ
    */
@@ -142,8 +127,6 @@ const DataPage: React.FC = () => {
       fetchFundingRateData();
     } else if (activeTab === "openinterest") {
       fetchOpenInterestData();
-    } else if (activeTab === "externalmarket") {
-      fetchExternalMarketData();
     }
   };
 
@@ -328,36 +311,6 @@ const DataPage: React.FC = () => {
   };
 
   /**
-   * 外部市場データ収集開始時のコールバック
-   */
-  const handleExternalMarketCollectionStart = (
-    result: ExternalMarketCollectionResult
-  ) => {
-    if (result.success) {
-      setExternalMarketCollectionMessage(
-        `🚀 外部市場データ収集完了 (取得:${result.fetched_count}件, 挿入:${result.inserted_count}件)`
-      );
-      // データ収集後に外部市場データを再取得
-      fetchExternalMarketData();
-    } else {
-      setExternalMarketCollectionMessage(`❌ ${result.message}`);
-    }
-    // データ状況を更新
-    fetchDataStatus();
-    // 10秒後にメッセージをクリア
-    setTimeout(() => setExternalMarketCollectionMessage(""), 10000);
-  };
-
-  /**
-   * 外部市場データ収集エラー時のコールバック
-   */
-  const handleExternalMarketCollectionError = (errorMessage: string) => {
-    setExternalMarketCollectionMessage(`❌ ${errorMessage}`);
-    // 10秒後にメッセージをクリア
-    setTimeout(() => setExternalMarketCollectionMessage(""), 10000);
-  };
-
-  /**
    * 全データ一括収集開始時のコールバック
    */
   const handleAllDataCollectionStart = (result: AllDataCollectionResult) => {
@@ -403,16 +356,6 @@ const DataPage: React.FC = () => {
   useEffect(() => {
     fetchDataStatus();
   }, [fetchDataStatus]);
-
-  // 外部市場タブが選択された時にデータを自動読み込み
-  useEffect(() => {
-    if (activeTab === "externalmarket") {
-      // 状態とデータを並列で取得
-      Promise.all([fetchStatus(), fetchExternalMarketData()]).catch((error) => {
-        console.error("外部市場データ取得エラー:", error);
-      });
-    }
-  }, [activeTab, fetchExternalMarketData, fetchStatus]);
 
   return (
     <div className="min-h-screen  from-gray-900 animate-fade-in">
@@ -488,12 +431,6 @@ const DataPage: React.FC = () => {
           handleOpenInterestCollectionError={handleOpenInterestCollectionError}
           handleFearGreedCollectionStart={handleFearGreedCollectionStart}
           handleFearGreedCollectionError={handleFearGreedCollectionError}
-          handleExternalMarketCollectionStart={
-            handleExternalMarketCollectionStart
-          }
-          handleExternalMarketCollectionError={
-            handleExternalMarketCollectionError
-          }
           bulkCollectionMessage={bulkCollectionMessage}
           fundingRateCollectionMessage={fundingRateCollectionMessage}
           openInterestCollectionMessage={openInterestCollectionMessage}
@@ -520,9 +457,6 @@ const DataPage: React.FC = () => {
           fearGreedData={fearGreedData}
           fearGreedLoading={fearGreedLoading}
           fearGreedError={fearGreedError || ""}
-          externalMarketData={externalMarketData}
-          externalMarketLoading={externalMarketLoading}
-          externalMarketError={externalMarketError || ""}
         />
       </div>
     </div>

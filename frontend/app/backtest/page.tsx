@@ -77,7 +77,7 @@ export default function BacktestPage() {
               <h2 className="text-xl font-semibold">バックテスト結果一覧</h2>
               <div className="flex gap-2">
                 <ActionButton
-                  onClick={loadResults}
+                  onClick={() => loadResults()}
                   loading={resultsLoading}
                   loadingText="読み込み中..."
                   variant="primary"

@@ -5,32 +5,18 @@ import {
   fundingRateColumns,
   openInterestColumns,
   fearGreedColumns,
-  externalMarketColumns,
-  getSymbolName,
 } from "@/components/common/tableColumns";
 import { PriceData, TimeFrame } from "@/types/market-data";
 import { FundingRateData } from "@/types/funding-rate";
 import { OpenInterestData } from "@/types/open-interest";
-import { ExternalMarketData } from "@/hooks/useExternalMarketData";
-
-/**
- * 外部市場データの拡張型（名前フィールド付き）
- */
-interface EnrichedExternalMarketData extends ExternalMarketData {
-  name: string;
-}
 
 interface DataTableContainerProps {
   selectedSymbol: string;
   selectedTimeFrame: TimeFrame;
-  activeTab:
-    | "ohlcv"
-    | "funding"
-    | "openinterest"
-    | "feargreed"
-    | "externalmarket";
+  activeTab: "ohlcv" | "funding" | "openinterest" | "feargreed";
+
   setActiveTab: (
-    tab: "ohlcv" | "funding" | "openinterest" | "feargreed" | "externalmarket"
+    tab: "ohlcv" | "funding" | "openinterest" | "feargreed"
   ) => void;
   ohlcvData: PriceData[];
   loading: boolean;
@@ -44,9 +30,6 @@ interface DataTableContainerProps {
   fearGreedData?: any[];
   fearGreedLoading?: boolean;
   fearGreedError?: string;
-  externalMarketData?: ExternalMarketData[];
-  externalMarketLoading?: boolean;
-  externalMarketError?: string;
 }
 
 const DataTableContainer: React.FC<DataTableContainerProps> = ({
@@ -66,20 +49,7 @@ const DataTableContainer: React.FC<DataTableContainerProps> = ({
   fearGreedData = [],
   fearGreedLoading = false,
   fearGreedError = "",
-  externalMarketData = [],
-  externalMarketLoading = false,
-  externalMarketError = "",
 }) => {
-  // 外部市場データに名前フィールドを追加
-  const enrichedExternalMarketData = useMemo<EnrichedExternalMarketData[]>(
-    () =>
-      externalMarketData.map((row) => ({
-        ...row,
-        name: getSymbolName(row.symbol),
-      })),
-    [externalMarketData]
-  );
-
   // テーブル設定オブジェクト
   const tableConfigs = {
     ohlcv: {
@@ -113,14 +83,8 @@ const DataTableContainer: React.FC<DataTableContainerProps> = ({
       enableSearch: true,
       searchKeys: ["value_classification"] as (keyof any)[],
     },
-    externalmarket: {
-      columns: externalMarketColumns,
-      title: "外部市場データ",
-      enableExport: true,
-      enableSearch: true,
-      searchKeys: ["symbol", "name"] as (keyof EnrichedExternalMarketData)[],
-    },
   };
+
   return (
     <div className="enterprise-card animate-slide-up">
       <div className="p-6">
@@ -170,16 +134,6 @@ const DataTableContainer: React.FC<DataTableContainerProps> = ({
                 }`}
               >
                 F&G
-              </button>
-              <button
-                onClick={() => setActiveTab("externalmarket")}
-                className={`px-4 py-2 text-sm font-medium rounded-md transition-colors duration-200 ${
-                  activeTab === "externalmarket"
-                    ? "bg-primary-600 text-white"
-                    : "text-gray-400 hover:text-gray-100"
-                }`}
-              >
-                EM
               </button>
             </div>
           </div>
@@ -250,27 +204,6 @@ const DataTableContainer: React.FC<DataTableContainerProps> = ({
                   >
                     {fearGreedData[0]?.value_classification}
                   </span>
-                </>
-              )}
-            {activeTab === "externalmarket" &&
-              externalMarketData.length > 0 &&
-              !externalMarketLoading && (
-                <>
-                  <span className="badge-primary">
-                    {externalMarketData.length}件
-                  </span>
-                  <span className="badge-info">
-                    {new Set(externalMarketData.map((d) => d.symbol)).size}
-                    シンボル
-                  </span>
-                  {externalMarketData[0] && (
-                    <span className="badge-success">
-                      最新:{" "}
-                      {new Date(
-                        externalMarketData[0].data_timestamp
-                      ).toLocaleDateString("ja-JP")}
-                    </span>
-                  )}
                 </>
               )}
           </div>
@@ -345,40 +278,6 @@ const DataTableContainer: React.FC<DataTableContainerProps> = ({
                   enableSearch={tableConfigs.feargreed.enableSearch}
                   searchKeys={tableConfigs.feargreed.searchKeys}
                   className="mb-4"
-                />
-              )}
-            </>
-          )}
-          {activeTab === "externalmarket" && (
-            <>
-              {!externalMarketLoading &&
-              !externalMarketError &&
-              (!externalMarketData || externalMarketData.length === 0) ? (
-                <div className="enterprise-card">
-                  <div className="p-6">
-                    <div className="text-center text-secondary-600 dark:text-secondary-400">
-                      <p className="text-lg font-medium mb-2">
-                        📊 データがありません
-                      </p>
-                      <p className="text-sm">
-                        外部市場データを収集してください
-                      </p>
-                      <p className="mt-1 text-xs text-gray-400 dark:text-gray-500">
-                        SP500、NASDAQ、DXY、VIXの日足データが取得されます。
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              ) : (
-                <DataTable
-                  data={enrichedExternalMarketData}
-                  columns={tableConfigs.externalmarket.columns}
-                  title={tableConfigs.externalmarket.title}
-                  loading={externalMarketLoading}
-                  error={externalMarketError || ""}
-                  enableExport={tableConfigs.externalmarket.enableExport}
-                  enableSearch={tableConfigs.externalmarket.enableSearch}
-                  searchKeys={tableConfigs.externalmarket.searchKeys}
                 />
               )}
             </>

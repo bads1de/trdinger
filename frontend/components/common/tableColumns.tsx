@@ -11,10 +11,6 @@ import { TableColumn } from "@/types/common";
 import { FundingRateData } from "@/types/funding-rate";
 import { PriceData } from "@/types/market-data";
 import { OpenInterestData } from "@/types/open-interest";
-import {
-  ExternalMarketData,
-  EXTERNAL_MARKET_SYMBOLS,
-} from "@/hooks/useExternalMarketData";
 import { formatDateTime } from "@/utils/formatters";
 import {
   formatPrice,
@@ -36,105 +32,6 @@ const formatNumber = (value: number | null, decimals: number = 2): string => {
     maximumFractionDigits: decimals,
   });
 };
-
-/**
- * 日時をフォーマット
- */
-const formatDateTimeExternalMarket = (dateString: string): string => {
-  try {
-    const date = new Date(dateString);
-    return date.toLocaleString("ja-JP", {
-      year: "numeric",
-      month: "2-digit",
-      day: "2-digit",
-      minute: "2-digit",
-    });
-  } catch {
-    return dateString;
-  }
-};
-
-interface EnrichedExternalMarketData extends ExternalMarketData {
-  name: string;
-}
-
-/**
- * シンボル名を取得
- */
-export const getSymbolName = (symbol: string): string => {
-  return (
-    EXTERNAL_MARKET_SYMBOLS[symbol as keyof typeof EXTERNAL_MARKET_SYMBOLS] ||
-    symbol
-  );
-};
-
-/**
- * 外部市場データテーブルのカラム定義
- */
-export const externalMarketColumns: TableColumn<EnrichedExternalMarketData>[] =
-  [
-    {
-      key: "symbol",
-      header: "シンボル",
-      sortable: true,
-      formatter: (value: string, row: EnrichedExternalMarketData) => (
-        <span className="font-semibold text-primary-400">
-          {getSymbolName(row.symbol)}
-        </span>
-      ),
-    },
-    {
-      key: "name",
-      header: "名称",
-      sortable: true,
-      formatter: (value: string, row: EnrichedExternalMarketData) => (
-        <span className="font-semibold text-primary-400">
-          {getSymbolName(row.symbol)}
-        </span>
-      ),
-    },
-    {
-      key: "open",
-      header: "始値",
-      formatter: (value: number) => formatNumber(value),
-      sortable: true,
-      cellClassName: "text-right font-mono",
-    },
-    {
-      key: "high",
-      header: "高値",
-      formatter: (value: number) => formatNumber(value),
-      sortable: true,
-      cellClassName: "text-right font-mono",
-    },
-    {
-      key: "low",
-      header: "安値",
-      formatter: (value: number) => formatNumber(value),
-      sortable: true,
-      cellClassName: "text-right font-mono",
-    },
-    {
-      key: "close",
-      header: "終値",
-      formatter: (value: number) => formatNumber(value),
-      sortable: true,
-      cellClassName: "text-right font-mono",
-    },
-    {
-      key: "volume",
-      header: "出来高",
-      formatter: (value: number) => formatNumber(value, 0),
-      sortable: true,
-      cellClassName: "text-right font-mono",
-    },
-    {
-      key: "data_timestamp",
-      header: "日時",
-      formatter: (value: string) => formatDateTimeExternalMarket(value),
-      sortable: true,
-    },
-  ];
 
 /**
  * ファンディングレートデータテーブルのカラム定義
