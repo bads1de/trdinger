@@ -10,6 +10,7 @@ import {
 } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 import { ModalProps, ModalSize } from "@/types/common";
+import * as VisuallyHidden from "@radix-ui/react-visually-hidden";
 
 /**
  * サイズ別のクラス定義
@@ -50,10 +51,14 @@ const Modal: React.FC<ModalProps> = ({
           className
         )}
         onEscapeKeyDown={closeOnEscape ? undefined : (e) => e.preventDefault()}
-        onPointerDownOutside={closeOnOverlayClick ? undefined : (e) => e.preventDefault()}
+        onPointerDownOutside={
+          closeOnOverlayClick ? undefined : (e) => e.preventDefault()
+        }
       >
         {(title || showCloseButton) && (
-          <DialogHeader className={cn("p-6 border-b border-gray-700", headerClassName)}>
+          <DialogHeader
+            className={cn("p-6 border-b border-gray-700", headerClassName)}
+          >
             {title && (
               <DialogTitle className="text-xl font-semibold text-white">
                 {title}
@@ -84,13 +89,13 @@ const Modal: React.FC<ModalProps> = ({
             )}
           </DialogHeader>
         )}
+        {!title && (
+          <VisuallyHidden.Root>
+            <DialogTitle>Modal</DialogTitle>
+          </VisuallyHidden.Root>
+        )}
 
-        <div
-          className={cn(
-            "flex-1 overflow-y-auto p-6",
-            contentClassName
-          )}
-        >
+        <div className={cn("flex-1 overflow-y-auto p-6", contentClassName)}>
           {children}
         </div>
       </DialogContent>

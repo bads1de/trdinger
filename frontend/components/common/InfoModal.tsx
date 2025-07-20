@@ -19,7 +19,6 @@ const InfoModal: React.FC<InfoModalProps> = ({
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      // InfoModal will manage its own header and close button
       title={undefined}
       showCloseButton={false}
       className="bg-secondary-950 rounded-lg shadow-xl max-w-2xl w-full max-h-[80vh] overflow-hidden border border-secondary-700"
