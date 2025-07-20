@@ -8,7 +8,6 @@ ML モデル管理サービス
 import os
 import glob
 import joblib
-import shutil
 import logging
 from datetime import datetime, timedelta
 from typing import Dict, Any, List, Optional
@@ -36,7 +35,6 @@ class ModelManager:
     def _ensure_directories(self):
         """必要なディレクトリを作成"""
         os.makedirs(self.config.MODEL_SAVE_PATH, exist_ok=True)
-        os.makedirs(self.config.MODEL_BACKUP_PATH, exist_ok=True)
 
     @safe_ml_operation(default_return=None, context="モデル保存でエラーが発生しました")
     def save_model(
@@ -261,45 +259,6 @@ class ModelManager:
             logger.error(f"モデル一覧取得エラー: {e}")
             return []
 
-    def backup_model(self, model_path: str) -> Optional[str]:
-        """
-        モデルをバックアップ
-
-        Args:
-            model_path: バックアップするモデルのパス
-
-        Returns:
-            バックアップファイルのパス
-        """
-        try:
-            logger.info(f"モデルバックアップ開始: {model_path}")
-
-            if not os.path.exists(model_path):
-                logger.error(f"バックアップ対象のモデルが見つかりません: {model_path}")
-                raise UnifiedModelError(
-                    f"バックアップ対象のモデルが見つかりません: {model_path}"
-                )
-
-            # バックアップディレクトリの確認・作成
-            os.makedirs(self.config.MODEL_BACKUP_PATH, exist_ok=True)
-
-            # バックアップファイル名を生成
-            model_name = os.path.basename(model_path)
-            backup_name = (
-                f"backup_{datetime.now().strftime('%Y%m%d_%H%M%S')}_{model_name}"
-            )
-            backup_path = os.path.join(self.config.MODEL_BACKUP_PATH, backup_name)
-
-            # ファイルをコピー
-            shutil.copy2(model_path, backup_path)
-
-            logger.info(f"モデルバックアップ完了: {backup_name} -> {backup_path}")
-            return backup_path
-
-        except Exception as e:
-            logger.error(f"モデルバックアップエラー: {e}")
-            return None
-
     def _cleanup_old_models(self, model_name: str):
         """古いモデルファイルをクリーンアップ"""
         try:
@@ -321,8 +280,6 @@ class ModelManager:
 
             for file_path in files_to_delete:
                 try:
-                    # バックアップしてから削除
-                    self.backup_model(file_path)
                     os.remove(file_path)
                     logger.info(
                         f"古いモデルファイルを削除: {os.path.basename(file_path)}"
@@ -350,8 +307,6 @@ class ModelManager:
                     try:
                         file_time = datetime.fromtimestamp(os.path.getmtime(model_file))
                         if file_time < cutoff_date:
-                            # バックアップしてから削除
-                            self.backup_model(model_file)
                             os.remove(model_file)
                             logger.info(
                                 f"期限切れモデルを削除: {os.path.basename(model_file)}"

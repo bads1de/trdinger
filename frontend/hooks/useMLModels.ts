@@ -44,12 +44,15 @@ export const useMLModels = (limit?: number) => {
 
   // 削除・バックアップ操作用のAPI呼び出し
   const { sendDeleteRequest, isLoading: isDeleting } = useDeleteRequest();
-  const { sendPostRequest, isLoading: isBackingUp } = usePostRequest();
 
   const deleteModel = useCallback(
     async (modelId: string) => {
-      if (window.confirm("このモデルを削除しますか？この操作は取り消せません。")) {
-        const { success } = await sendDeleteRequest(`/api/ml/models/${modelId}`);
+      if (
+        window.confirm("このモデルを削除しますか？この操作は取り消せません。")
+      ) {
+        const { success } = await sendDeleteRequest(
+          `/api/ml/models/${modelId}`
+        );
         if (success) {
           fetchModels(); // リストを更新
         }
@@ -58,26 +61,12 @@ export const useMLModels = (limit?: number) => {
     [sendDeleteRequest, fetchModels]
   );
 
-  const backupModel = useCallback(
-    async (modelId: string) => {
-      const { success } = await sendPostRequest(
-        `/api/ml/models/${modelId}/backup`
-      );
-      if (success) {
-        alert("モデルのバックアップが完了しました");
-      }
-    },
-    [sendPostRequest]
-  );
-
   return {
     models,
     isLoading,
     error,
     isDeleting,
-    isBackingUp,
     fetchModels,
     deleteModel,
-    backupModel,
   };
 };

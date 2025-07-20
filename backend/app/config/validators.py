@@ -213,7 +213,6 @@ class MLConfigValidator:
     @staticmethod
     def validate_model_config(
         model_save_path: str,
-        model_backup_path: str,
         max_versions: int,
         retention_days: int,
     ) -> List[str]:
@@ -222,7 +221,6 @@ class MLConfigValidator:
 
         Args:
             model_save_path: モデル保存パス
-            model_backup_path: モデルバックアップパス
             max_versions: 最大バージョン数
             retention_days: 保持日数
 
@@ -234,9 +232,6 @@ class MLConfigValidator:
         if not model_save_path or not model_save_path.strip():
             errors.append("モデル保存パスが指定されていません")
 
-        if not model_backup_path or not model_backup_path.strip():
-            errors.append("モデルバックアップパスが指定されていません")
-
         if max_versions <= 0:
             errors.append("最大バージョン数は正の値である必要があります")
 
@@ -244,8 +239,6 @@ class MLConfigValidator:
             errors.append("保持日数は正の値である必要があります")
 
         # パスの重複確認
-        if model_save_path == model_backup_path:
-            errors.append("モデル保存パスとバックアップパスは異なる必要があります")
 
         return errors
 

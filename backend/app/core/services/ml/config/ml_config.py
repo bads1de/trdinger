@@ -41,7 +41,6 @@ class ModelConfig:
 
     # モデル保存パス
     MODEL_SAVE_PATH: str = "models/"
-    MODEL_BACKUP_PATH: str = "models/backup/"
 
     # モデルファイル設定
     MODEL_FILE_EXTENSION: str = ".pkl"
@@ -55,7 +54,6 @@ class ModelConfig:
     def __post_init__(self):
         """初期化後処理：ディレクトリ作成"""
         os.makedirs(self.MODEL_SAVE_PATH, exist_ok=True)
-        os.makedirs(self.MODEL_BACKUP_PATH, exist_ok=True)
 
 
 @dataclass

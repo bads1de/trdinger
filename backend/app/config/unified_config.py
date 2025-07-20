@@ -64,7 +64,6 @@ class LoggingConfig(BaseSettings):
     )
     file: str = Field(default="market_data.log", alias="LOG_FILE")
     max_bytes: int = Field(default=10485760, alias="LOG_MAX_BYTES")
-    backup_count: int = Field(default=5, alias="LOG_BACKUP_COUNT")
 
     class Config:
         env_prefix = "LOG_"
@@ -174,7 +173,6 @@ class MLModelConfig:
     """ML モデル設定"""
 
     model_save_path: str = "models/"
-    model_backup_path: str = "models/backup/"
     model_file_extension: str = ".pkl"
     model_name_prefix: str = "ml_signal_model"
     auto_strategy_model_name: str = "auto_strategy_ml_model"
@@ -184,7 +182,6 @@ class MLModelConfig:
     def __post_init__(self):
         """初期化後処理：ディレクトリ作成"""
         os.makedirs(self.model_save_path, exist_ok=True)
-        os.makedirs(self.model_backup_path, exist_ok=True)
 
 
 @dataclass

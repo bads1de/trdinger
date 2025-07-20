@@ -40,7 +40,7 @@ export default function MLModelList({
   showActions = true,
 }: MLModelListProps) {
   const [selectedModel, setSelectedModel] = useState<string | null>(null);
-  const { models, isLoading, error, fetchModels, deleteModel, backupModel } =
+  const { models, isLoading, error, fetchModels, deleteModel } =
     useMLModels(limit);
 
   useEffect(() => {
@@ -149,10 +149,6 @@ export default function MLModelList({
                       </ActionButton>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
-                      <DropdownMenuItem onClick={() => backupModel(model.id)}>
-                        <Archive className="h-4 w-4 mr-2" />
-                        バックアップ
-                      </DropdownMenuItem>
                       <DropdownMenuItem
                         onClick={() => deleteModel(model.id)}
                         className="text-red-500 hover:text-red-400"

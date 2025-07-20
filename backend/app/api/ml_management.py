@@ -4,7 +4,7 @@ ML管理API
 フロントエンド用のML管理機能を提供するAPIエンドポイント
 """
 
-from fastapi import APIRouter, HTTPException, BackgroundTasks
+from fastapi import APIRouter, BackgroundTasks
 from typing import Dict, Any
 import logging
 from datetime import datetime
@@ -120,55 +120,18 @@ async def delete_model(model_id: str):
 
             raise HTTPException(status_code=404, detail="モデルファイルが存在しません")
 
-        # バックアップしてから削除
-        backup_path = model_manager.backup_model(target_model["path"])
-        if backup_path:
+        # モデルを削除
+        try:
             os.remove(target_model["path"])
             logger.info(f"モデル削除完了: {decoded_model_id} -> {target_model['path']}")
-            return {"message": "モデルが削除されました", "backup_path": backup_path}
-        else:
-            from fastapi import HTTPException
-
+            return {"message": "モデルが削除されました"}
+        except Exception as e:
+            logger.error(f"モデルファイル削除エラー: {e}")
             raise HTTPException(
-                status_code=500, detail="モデルのバックアップに失敗しました"
+                status_code=500, detail="モデルファイルの削除に失敗しました"
             )
 
     return await UnifiedErrorHandler.safe_execute_async(_delete_model)
-
-
-@router.post("/models/{model_id}/backup")
-async def backup_model(model_id: str):
-    """
-    指定されたモデルをバックアップ
-
-    Args:
-        model_id: モデルID
-    """
-
-    async def _backup_model():
-        # モデルファイルを検索
-        models = model_manager.list_models("*")
-        target_model = None
-
-        for model in models:
-            if model["name"] == model_id:
-                target_model = model
-                break
-
-        if not target_model:
-            from fastapi import HTTPException
-
-            raise HTTPException(status_code=404, detail="モデルが見つかりません")
-
-        backup_path = model_manager.backup_model(target_model["path"])
-        if backup_path:
-            return {"message": "バックアップが完了しました", "backup_path": backup_path}
-        else:
-            from fastapi import HTTPException
-
-            raise HTTPException(status_code=500, detail="バックアップに失敗しました")
-
-    return await UnifiedErrorHandler.safe_execute_async(_backup_model)
 
 
 @router.get("/status")
