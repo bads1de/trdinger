@@ -174,16 +174,6 @@ const ProfileSelector: React.FC<ProfileSelectorProps> = ({
                       {profile.optimization_result.best_score.toFixed(3)}
                     </span>
                   )}
-                  {showManagement && (
-                    <ActionButton
-                      variant="danger"
-                      size="sm"
-                      onClick={(e) => handleDeleteClick(profile, e)}
-                      disabled={deleteLoading}
-                      className="h-6 w-6 p-0"
-                      icon={<Trash2 className="h-3 w-3" />}
-                    />
-                  )}
                 </div>
               </div>
             </SelectItem>
