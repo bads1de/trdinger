@@ -14,7 +14,7 @@ from datetime import datetime
 
 from database.connection import get_db
 from app.core.services.optimization import BayesianOptimizer
-from app.core.dependencies import get_bayesian_optimizer_with_db
+from app.core.dependencies import get_bayesian_optimizer
 from app.core.utils.unified_error_handler import UnifiedErrorHandler
 
 logger = logging.getLogger(__name__)
@@ -72,7 +72,7 @@ async def optimize_ml_hyperparameters(
         最適化結果
     """
     # ビジネスロジックをサービス層に委譲
-    optimizer = get_bayesian_optimizer_with_db(db)
+    optimizer = get_bayesian_optimizer()
 
     async def execute_optimization():
         # この関数は同期的だが、async def内で呼び出す
@@ -80,7 +80,6 @@ async def optimize_ml_hyperparameters(
             model_type=request.model_type,
             parameter_space=request.parameter_space,
             n_calls=request.n_calls,
-            db_session=db,
         )
 
         return {
@@ -90,7 +89,7 @@ async def optimize_ml_hyperparameters(
                 "optimization_type": "bayesian_ml",
                 **result,
             },
-            "message": "MLハイパーパラメータのベイジアン最適化が完了しました",
+            "message": "MLハイパーパラメータの最適化が完了しました",
             "timestamp": datetime.now().isoformat(),
         }
 
