@@ -250,7 +250,7 @@ export default function MLTraining() {
               </div>
               <div className="text-center">
                 <div className="text-2xl font-bold text-orange-600">
-                  {trainingStatus.model_info.test_samples.toLocaleString()}
+                  {trainingStatus.model_info.test_samples?.toLocaleString()}
                 </div>
                 <div className="text-sm text-gray-600">テストサンプル</div>
               </div>

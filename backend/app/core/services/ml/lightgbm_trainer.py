@@ -127,6 +127,26 @@ class LightGBMTrainer(BaseMLTrainer):
             # LightGBMパラメータ（設定から取得）
             params = self.config.lightgbm.to_dict()
 
+            # 最適化パラメータを適用（training_paramsから）
+            optimization_params = [
+                "learning_rate",
+                "num_leaves",
+                "feature_fraction",
+                "bagging_fraction",
+                "max_depth",
+                "min_data_in_leaf",
+                "n_estimators",
+                "num_boost_round",
+                "early_stopping_rounds",
+            ]
+
+            for param_name in optimization_params:
+                if param_name in training_params:
+                    params[param_name] = training_params[param_name]
+                    logger.info(
+                        f"最適化パラメータを適用: {param_name} = {training_params[param_name]}"
+                    )
+
             # 追加パラメータを適用
             random_state = training_params.get("random_state", 42)
             params["random_state"] = random_state
@@ -185,17 +205,28 @@ class LightGBMTrainer(BaseMLTrainer):
             logger.info(f"LightGBM学習開始: {num_classes}クラス分類")
             logger.info(f"クラス分布: {dict(class_counts)}")
 
+            # num_boost_roundとearly_stopping_roundsを取得（最適化パラメータ優先）
+            num_boost_round = params.get(
+                "num_boost_round", self.config.lightgbm.NUM_BOOST_ROUND
+            )
+            early_stopping_rounds = params.get(
+                "early_stopping_rounds", self.config.lightgbm.EARLY_STOPPING_ROUNDS
+            )
+
+            # paramsから除去（lgb.trainの引数として直接渡すため）
+            params_for_train = params.copy()
+            params_for_train.pop("num_boost_round", None)
+            params_for_train.pop("early_stopping_rounds", None)
+
             # モデル学習
             self.model = lgb.train(
-                params,
+                params_for_train,
                 train_data,
                 valid_sets=[train_data, valid_data],
                 valid_names=["train", "valid"],
-                num_boost_round=self.config.lightgbm.NUM_BOOST_ROUND,
+                num_boost_round=num_boost_round,
                 callbacks=[
-                    lgb.early_stopping(
-                        stopping_rounds=self.config.lightgbm.EARLY_STOPPING_ROUNDS
-                    ),
+                    lgb.early_stopping(stopping_rounds=early_stopping_rounds),
                     lgb.log_evaluation(0),  # ログを抑制
                 ],
             )
