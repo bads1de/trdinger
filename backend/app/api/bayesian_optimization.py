@@ -6,15 +6,9 @@ GAパラメータとMLハイパーパラメータのベイジアン最適化を�
 
 import logging
 from typing import Dict, Any, List, Optional
-from fastapi import APIRouter, HTTPException, status, Depends
+from fastapi import APIRouter, HTTPException, status
 from pydantic import BaseModel, Field
-from sqlalchemy.orm import Session
-from datetime import datetime
-
-
-from database.connection import get_db
 from app.core.services.optimization import BayesianOptimizer
-from app.core.dependencies import get_bayesian_optimizer
 from app.core.utils.unified_error_handler import UnifiedErrorHandler
 
 logger = logging.getLogger(__name__)
@@ -55,10 +49,6 @@ class OptimizationResponse(BaseModel):
     error: Optional[str] = None
     message: str
     timestamp: str
-
-
-# MLハイパーパラメータ最適化は /api/ml-training/train エンドポイントに統合されました
-# このエンドポイントは廃止予定です
 
 
 @router.get("/parameter-spaces/{optimization_type}")

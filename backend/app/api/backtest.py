@@ -7,7 +7,7 @@ backtesting.pyライブラリを使用したバックテスト機能のAPIを提
 from datetime import datetime
 from typing import Optional, Dict, Any
 from fastapi import APIRouter, Depends, HTTPException, Query
-from fastapi.concurrency import run_in_threadpool
+
 from sqlalchemy.orm import Session
 from pydantic import BaseModel, Field
 
@@ -15,7 +15,6 @@ from database.connection import get_db
 from database.repositories.backtest_result_repository import BacktestResultRepository
 from app.core.services.backtest_service import BacktestService
 from app.core.utils.unified_error_handler import UnifiedErrorHandler
-from app.core.dependencies import get_backtest_service_with_db
 from database.repositories.ga_experiment_repository import GAExperimentRepository
 from database.repositories.generated_strategy_repository import (
     GeneratedStrategyRepository,
@@ -62,40 +61,6 @@ class BacktestResultsResponse(BaseModel):
     results: Optional[list] = None
     total: Optional[int] = None
     error: Optional[str] = None
-
-
-# ヘルパー関数
-# 以下のヘルパー関数は廃止予定（サービス層に移行済み）
-# def _create_base_config(request: BacktestRequest) -> Dict[str, Any]:
-# def _save_backtest_result(result: Dict[str, Any], db: Session) -> Dict[str, Any]:
-
-
-@router.post("/run", response_model=BacktestResponse)
-async def run_backtest(request: BacktestRequest, db: Session = Depends(get_db)):
-    """
-    バックテストを実行
-
-    Args:
-        request: バックテストリクエスト
-        db: データベースセッション
-
-    Returns:
-        バックテスト結果
-    """
-
-    async def _run_backtest():
-        # ビジネスロジックをサービス層に委譲
-        backtest_service = get_backtest_service_with_db(db)
-
-        # 同期関数をスレッドプールで実行
-        result = await run_in_threadpool(
-            backtest_service.execute_and_save_backtest, request, db
-        )
-        return result
-
-    return await UnifiedErrorHandler.safe_execute_async(
-        _run_backtest, message="バックテストの実行エラー"
-    )
 
 
 @router.get("/results", response_model=BacktestResultsResponse)

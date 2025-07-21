@@ -8,7 +8,7 @@ Alternative.me Fear & Greed Index データの取得、収集、管理機能を�
 import logging
 from typing import Dict, Optional
 from datetime import datetime
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
 from database.connection import get_db
