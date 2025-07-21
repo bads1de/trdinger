@@ -14,7 +14,6 @@ from database.repositories.funding_rate_repository import FundingRateRepository
 
 from app.core.services.backtest_service import BacktestService
 from app.core.services.backtest_data_service import BacktestDataService
-from app.core.services.optimization.bayesian_optimizer import BayesianOptimizer
 from app.core.services.strategy_integration_service import StrategyIntegrationService
 
 
@@ -40,16 +39,6 @@ def get_backtest_service() -> BacktestService:
         return BacktestService(data_service)
     finally:
         db.close()
-
-
-def get_bayesian_optimizer() -> BayesianOptimizer:
-    """
-    BayesianOptimizerのインスタンスを取得
-
-    Returns:
-        BayesianOptimizerインスタンス
-    """
-    return BayesianOptimizer()
 
 
 def get_backtest_service_with_db(db: Session) -> BacktestService:

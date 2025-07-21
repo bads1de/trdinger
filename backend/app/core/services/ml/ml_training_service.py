@@ -15,24 +15,21 @@ from .config import ml_config
 from ...utils.unified_error_handler import safe_ml_operation
 from .lightgbm_trainer import LightGBMTrainer
 from .model_manager import model_manager
-from ..optimization.optimizer_factory import OptimizerFactory
-from ..optimization.base_optimizer import ParameterSpace
+from ..optimization.optuna_optimizer import OptunaOptimizer, ParameterSpace
 
 logger = logging.getLogger(__name__)
 
 
 class OptimizationSettings:
-    """最適化設定クラス"""
+    """最適化設定クラス（簡素化版）"""
 
     def __init__(
         self,
         enabled: bool = False,
-        method: str = "bayesian",
         n_calls: int = 50,
         parameter_space: Optional[Dict[str, Dict[str, Any]]] = None,
     ):
         self.enabled = enabled
-        self.method = method
         self.n_calls = n_calls
         self.parameter_space = parameter_space or {}
 
@@ -243,18 +240,22 @@ class MLTrainingService:
             学習結果の辞書（最適化情報を含む）
         """
         try:
-            logger.info("🚀 ハイパーパラメータ最適化を開始")
-            logger.info(f"🔧 使用する最適化手法: {optimization_settings.method}")
+            logger.info("🚀 Optuna最適化を開始")
             logger.info(f"🎯 目標試行回数: {optimization_settings.n_calls}")
 
-            # オプティマイザーを作成
-            optimizer = OptimizerFactory.create_optimizer(optimization_settings.method)
-            logger.info(f"✅ {optimizer.__class__.__name__} を作成しました")
+            # Optunaオプティマイザーを作成
+            optimizer = OptunaOptimizer()
+            logger.info("✅ OptunaOptimizer を作成しました")
 
             # パラメータ空間を準備
-            parameter_space = self._prepare_parameter_space(
-                optimization_settings.parameter_space
-            )
+            if not optimization_settings.parameter_space:
+                # デフォルトのLightGBMパラメータ空間を使用
+                parameter_space = optimizer.get_default_parameter_space()
+                logger.info("📊 デフォルトのLightGBMパラメータ空間を使用")
+            else:
+                parameter_space = self._prepare_parameter_space(
+                    optimization_settings.parameter_space
+                )
             logger.info(
                 f"📊 パラメータ空間を準備: {len(parameter_space)}個のパラメータ"
             )
@@ -299,12 +300,11 @@ class MLTrainingService:
 
             # 最適化情報を結果に追加
             final_result["optimization_result"] = {
-                "method": optimization_settings.method,
+                "method": "optuna",
                 "best_params": optimization_result.best_params,
                 "best_score": optimization_result.best_score,
                 "total_evaluations": optimization_result.total_evaluations,
                 "optimization_time": optimization_result.optimization_time,
-                "convergence_info": optimization_result.convergence_info,
             }
 
             return final_result

@@ -91,7 +91,7 @@ def check_system_requirements() -> bool:
         "app/core/services/ml/signal_generator.py",
         "app/core/services/auto_strategy/services/ml_indicator_service.py",
         "app/core/services/auto_strategy/engines/fitness_sharing.py",
-        "app/core/services/optimization/bayesian_optimizer.py",
+        "app/core/services/optimization/optuna_optimizer.py",
     ]
 
     missing_files = []
@@ -164,25 +164,27 @@ def test_phase4_components() -> bool:
         # 自動再学習スケジューラーのテスト
         print("自動再学習スケジューラーのテスト...")
 
-        # ベイズ最適化エンジンのテスト
-        print("ベイズ最適化エンジンのテスト...")
-        from app.core.services.optimization import BayesianOptimizer
+        # Optuna最適化エンジンのテスト
+        print("Optuna最適化エンジンのテスト...")
+        from app.core.services.optimization.optuna_optimizer import (
+            OptunaOptimizer,
+            ParameterSpace,
+        )
 
-        optimizer = BayesianOptimizer()
+        optimizer = OptunaOptimizer()
 
         # 簡単な目的関数でテスト
         def test_objective(params):
             return -((params.get("x", 0) - 0.5) ** 2)  # x=0.5で最大
 
-        # フォールバック最適化でテスト（scikit-optimizeがない場合）
-        result = optimizer._optimize_with_fallback(
-            test_objective, {"x": {"type": "real", "low": 0, "high": 1}}, 10
-        )
+        # Optuna最適化でテスト
+        parameter_space = {"x": ParameterSpace(type="real", low=0.0, high=1.0)}
+        result = optimizer.optimize(test_objective, parameter_space, n_calls=10)
 
-        if result and "best_params" in result:
-            print("✅ ベイズ最適化エンジン")
+        if result and hasattr(result, "best_params"):
+            print("✅ Optuna最適化エンジン")
         else:
-            print("❌ ベイズ最適化エンジン")
+            print("❌ Optuna最適化エンジン")
             return False
 
         print("\nPhase 4 結果: 3/3 成功 (100%)")

@@ -641,7 +641,7 @@ async def run_training_task(config_data: Dict[str, Any]):
         if config_data.get("optimization_settings", {}).get("enabled"):
             logger.info("=" * 60)
             logger.info("🎯 ハイパーパラメータ最適化が有効化されました")
-            method = config_data["optimization_settings"].get("method", "bayesian")
+            method = config_data["optimization_settings"].get("method", "optuna")
             n_calls = config_data["optimization_settings"].get("n_calls", 50)
             parameter_space_config = config_data["optimization_settings"].get(
                 "parameter_space", {}

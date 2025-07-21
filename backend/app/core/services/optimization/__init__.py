@@ -1,9 +1,9 @@
 """
-ベイズ最適化サービス
+Optuna最適化サービス
 
-GAパラメータの自動調整とハイパーパラメータ最適化機能を提供します。
+ハイパーパラメータ最適化機能を提供します。
 """
 
-from .bayesian_optimizer import BayesianOptimizer
+from .optuna_optimizer import OptunaOptimizer, ParameterSpace, OptimizationResult
 
-__all__ = ["BayesianOptimizer"]
+__all__ = ["OptunaOptimizer", "ParameterSpace", "OptimizationResult"]

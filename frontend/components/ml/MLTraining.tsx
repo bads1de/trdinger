@@ -40,7 +40,7 @@ export default function MLTraining() {
   const [optimizationSettings, setOptimizationSettings] =
     useState<OptimizationSettingsConfig>({
       enabled: false,
-      method: "bayesian",
+      method: "optuna",
       n_calls: 50,
       parameter_space: {},
     });

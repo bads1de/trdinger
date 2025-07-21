@@ -14,11 +14,6 @@ from app.core.services.ml.ml_training_service import MLTrainingService
 from app.core.services.auto_strategy.services.ml_orchestrator import MLOrchestrator
 from app.core.services.backtest_data_service import BacktestDataService
 from app.core.utils.unified_error_handler import UnifiedErrorHandler
-from app.core.services.optimization.optimization_presets import (
-    OptimizationPresets,
-    OptimizationLevel,
-    OptimizationMethod,
-)
 from database.repositories.ohlcv_repository import OHLCVRepository
 from database.repositories.open_interest_repository import OpenInterestRepository
 from database.repositories.funding_rate_repository import FundingRateRepository
@@ -43,9 +38,7 @@ class OptimizationSettingsConfig(BaseModel):
     """最適化設定"""
 
     enabled: bool = Field(default=False, description="最適化を有効にするか")
-    method: str = Field(
-        default="bayesian", description="最適化手法 (bayesian, grid, random)"
-    )
+    method: str = Field(default="optuna", description="最適化手法 (optuna)")
     n_calls: int = Field(default=50, description="最適化試行回数")
     parameter_space: Dict[str, ParameterSpaceConfig] = Field(
         default_factory=dict, description="パラメータ空間設定"
@@ -212,7 +205,7 @@ async def train_ml_model_background(config: MLTrainingConfig):
 
             logger.info("=" * 60)
             logger.info("🎯 ハイパーパラメータ最適化が有効化されました")
-            logger.info(f"📊 最適化手法: {config.optimization_settings.method}")
+            logger.info("📊 最適化手法: optuna")
             logger.info(f"🔄 試行回数: {config.optimization_settings.n_calls}")
             logger.info(
                 f"📋 最適化対象パラメータ数: {len(config.optimization_settings.parameter_space)}"
@@ -248,7 +241,6 @@ async def train_ml_model_background(config: MLTrainingConfig):
 
             optimization_settings = OptimizationSettings(
                 enabled=config.optimization_settings.enabled,
-                method=config.optimization_settings.method,
                 n_calls=config.optimization_settings.n_calls,
                 parameter_space=parameter_space_dict,
             )
@@ -402,101 +394,3 @@ async def stop_ml_training():
         return {"success": True, "message": "トレーニングを停止しました"}
 
     return await UnifiedErrorHandler.safe_execute_async(_stop_training)
-
-
-@router.get("/optimization/presets")
-async def get_optimization_presets():
-    """
-    最適化プリセット一覧を取得
-
-    ハイ・ミドル・ローの3段階の最適化プリセットを返します。
-    """
-
-    async def _get_optimization_presets():
-        presets = OptimizationPresets.get_all_presets()
-
-        # プリセットを辞書形式に変換
-        preset_dict = {}
-        for level, preset in presets.items():
-            preset_dict[level] = OptimizationPresets.preset_to_dict(preset)
-
-        return {"success": True, "presets": preset_dict}
-
-    return await UnifiedErrorHandler.safe_execute_async(_get_optimization_presets)
-
-
-@router.get("/optimization/presets/{method}/{level}")
-async def get_optimization_preset(method: str, level: str):
-    """
-    指定された手法とレベルの最適化プリセットを取得
-
-    Args:
-        method: 最適化手法 (bayesian, grid, random)
-        level: 最適化レベル (high, medium, low)
-    """
-
-    async def _get_optimization_preset():
-        try:
-            optimization_method = OptimizationMethod(method)
-            optimization_level = OptimizationLevel(level)
-            preset = OptimizationPresets.get_preset(
-                optimization_method, optimization_level
-            )
-
-            return {
-                "success": True,
-                "preset": OptimizationPresets.preset_to_dict(preset),
-            }
-        except ValueError as e:
-            from fastapi import HTTPException
-
-            raise HTTPException(
-                status_code=400,
-                detail=f"無効なパラメータです: method={method}, level={level}. "
-                f"有効な値: method=(bayesian, grid, random), level=(high, medium, low)",
-            )
-
-    return await UnifiedErrorHandler.safe_execute_async(_get_optimization_preset)
-
-
-@router.get("/optimization/presets/methods")
-async def get_optimization_methods():
-    """
-    利用可能な最適化手法一覧を取得
-    """
-
-    async def _get_optimization_methods():
-        methods = []
-        for method in OptimizationMethod:
-            method_info = {
-                "value": method.value,
-                "name": {
-                    "bayesian": "ベイジアン最適化",
-                    "grid": "グリッドサーチ",
-                    "random": "ランダムサーチ",
-                }[method.value],
-                "description": {
-                    "bayesian": "効率的な最適化",
-                    "grid": "網羅的な探索",
-                    "random": "ランダムな探索",
-                }[method.value],
-                "levels": [],
-            }
-
-            # 各レベルのプリセット情報を追加
-            for level in OptimizationLevel:
-                preset = OptimizationPresets.get_preset(method, level)
-                level_info = {
-                    "value": level.value,
-                    "name": preset.name,
-                    "description": preset.description,
-                    "estimated_time_minutes": preset.estimated_time_minutes,
-                    "n_calls": preset.n_calls,
-                }
-                method_info["levels"].append(level_info)
-
-            methods.append(method_info)
-
-        return {"success": True, "methods": methods}
-
-    return await UnifiedErrorHandler.safe_execute_async(_get_optimization_methods)

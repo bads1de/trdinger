@@ -42,5 +42,6 @@ scikit-learn>=1.3.0
 lightgbm>=4.0.0
 joblib>=1.3.0
 
-# ベイズ最適化ライブラリ 
-scikit-optimize>=0.9.0
+# ハイパーパラメータ最適化ライブラリ
+optuna>=3.4.0
+optuna-dashboard>=0.13.0  # 可視化用（オプション）

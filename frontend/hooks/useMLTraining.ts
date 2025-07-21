@@ -10,7 +10,7 @@ export interface ParameterSpaceConfig {
 
 export interface OptimizationSettingsConfig {
   enabled: boolean;
-  method: "bayesian" | "grid" | "random";
+  method: "optuna";
   n_calls: number;
   parameter_space: Record<string, ParameterSpaceConfig>;
 }
