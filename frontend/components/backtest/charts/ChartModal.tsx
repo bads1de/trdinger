@@ -20,11 +20,8 @@ import TabButton from "../../common/TabButton";
 import { X } from "lucide-react";
 
 interface ChartModalProps {
-  /** モーダルの表示状態 */
   isOpen: boolean;
-  /** モーダルを閉じるコールバック */
   onClose: () => void;
-  /** バックテスト結果データ */
   result: BacktestResult;
 }
 
