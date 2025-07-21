@@ -9,14 +9,14 @@ BaseMLTrainerを使用してコードの重複を解消し、責任を明確化�
 import logging
 import pandas as pd
 from typing import Dict, Any, Optional, Callable
-from sklearn.model_selection import train_test_split
+
 
 from .config import ml_config
 from ...utils.unified_error_handler import safe_ml_operation
 from .lightgbm_trainer import LightGBMTrainer
 from .model_manager import model_manager
 from ..optimization.optimizer_factory import OptimizerFactory
-from ..optimization.base_optimizer import ParameterSpace, OptimizationResult
+from ..optimization.base_optimizer import ParameterSpace
 
 logger = logging.getLogger(__name__)
 
@@ -264,6 +264,7 @@ class MLTrainingService:
                 training_data=training_data,
                 funding_rate_data=funding_rate_data,
                 open_interest_data=open_interest_data,
+                optimization_settings=optimization_settings,
                 **training_params,
             )
             logger.info("🎯 目的関数を作成しました")
@@ -339,6 +340,7 @@ class MLTrainingService:
     def _create_objective_function(
         self,
         training_data: pd.DataFrame,
+        optimization_settings: "OptimizationSettings",
         funding_rate_data: Optional[pd.DataFrame] = None,
         open_interest_data: Optional[pd.DataFrame] = None,
         **base_training_params,

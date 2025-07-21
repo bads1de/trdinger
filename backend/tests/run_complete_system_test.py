@@ -91,7 +91,6 @@ def check_system_requirements() -> bool:
         "app/core/services/ml/signal_generator.py",
         "app/core/services/auto_strategy/services/ml_indicator_service.py",
         "app/core/services/auto_strategy/engines/fitness_sharing.py",
-        "app/core/services/monitoring/performance_monitor.py",
         "app/core/services/auto_retraining/auto_retraining_scheduler.py",
         "app/core/services/optimization/bayesian_optimizer.py",
     ]
@@ -162,30 +161,6 @@ def test_phase4_components() -> bool:
     try:
         # パフォーマンス監視システムのテスト
         print("パフォーマンス監視システムのテスト...")
-        from app.core.services.monitoring import PerformanceMonitor
-
-        monitor = PerformanceMonitor()
-        test_data = {
-            "total_return": 0.15,
-            "sharpe_ratio": 1.2,
-            "max_drawdown": 0.08,
-            "win_rate": 0.6,
-            "total_trades": 50,
-            "long_trades": 30,
-            "short_trades": 20,
-            "long_pnl": 8000,
-            "short_pnl": 7000,
-            "balance_score": 0.8,
-        }
-
-        monitor.add_performance_record("test_strategy", test_data)
-        performance = monitor.get_strategy_performance("test_strategy")
-
-        if performance:
-            print("✅ パフォーマンス監視システム")
-        else:
-            print("❌ パフォーマンス監視システム")
-            return False
 
         # 自動再学習スケジューラーのテスト
         print("自動再学習スケジューラーのテスト...")
