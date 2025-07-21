@@ -69,7 +69,7 @@ export const useMLTraining = () => {
   const { execute: checkTrainingStatusApi } = useApiCall<TrainingStatus>();
 
   const checkTrainingStatus = useCallback(() => {
-    checkTrainingStatusApi("/api/ml/training/status", {
+    checkTrainingStatusApi("/api/ml-training/training/status", {
       onSuccess: (status) => {
         if (status) {
           setTrainingStatus(status);
@@ -91,29 +91,40 @@ export const useMLTraining = () => {
     return () => clearInterval(interval);
   }, [trainingStatus.is_training, checkTrainingStatus]);
 
-  const startTraining = useCallback(async () => {
-    setError(null);
+  const startTraining = useCallback(
+    async (optimizationSettings?: OptimizationSettingsConfig) => {
+      setError(null);
 
-    await startTrainingApi("/api/ml/training/start", {
-      method: "POST",
-      body: config,
-      onSuccess: () => {
-        setTrainingStatus({
-          is_training: true,
-          progress: 0,
-          status: "starting",
-          message: "トレーニングを開始しています...",
-          start_time: new Date().toISOString(),
-        });
-      },
-      onError: (errorMessage) => {
-        setError(errorMessage);
-      },
-    });
-  }, [startTrainingApi, config]);
+      // 最適化設定を含むconfigを作成
+      const trainingConfig = {
+        ...config,
+        optimization_settings: optimizationSettings?.enabled
+          ? optimizationSettings
+          : undefined,
+      };
+
+      await startTrainingApi("/api/ml-training/train", {
+        method: "POST",
+        body: trainingConfig,
+        onSuccess: () => {
+          setTrainingStatus({
+            is_training: true,
+            progress: 0,
+            status: "starting",
+            message: "トレーニングを開始しています...",
+            start_time: new Date().toISOString(),
+          });
+        },
+        onError: (errorMessage) => {
+          setError(errorMessage);
+        },
+      });
+    },
+    [startTrainingApi, config]
+  );
 
   const stopTraining = useCallback(async () => {
-    await stopTrainingApi("/api/ml/training/stop", {
+    await stopTrainingApi("/api/ml-training/stop", {
       method: "POST",
       onSuccess: () => {
         setTrainingStatus((prev) => ({

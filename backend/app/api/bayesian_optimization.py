@@ -57,43 +57,8 @@ class OptimizationResponse(BaseModel):
     timestamp: str
 
 
-@router.post("/ml-hyperparameters", response_model=OptimizationResponse)
-async def optimize_ml_hyperparameters(
-    request: MLOptimizationRequest, db: Session = Depends(get_db)
-):
-    """
-    MLハイパーパラメータのベイジアン最適化
-
-    Args:
-        request: MLハイパーパラメータ最適化リクエスト
-        db: データベースセッション
-
-    Returns:
-        最適化結果
-    """
-    # ビジネスロジックをサービス層に委譲
-    optimizer = get_bayesian_optimizer()
-
-    async def execute_optimization():
-        # この関数は同期的だが、async def内で呼び出す
-        result = optimizer.execute_ml_optimization(
-            model_type=request.model_type,
-            parameter_space=request.parameter_space,
-            n_calls=request.n_calls,
-        )
-
-        return {
-            "success": True,
-            "result": {
-                "model_type": request.model_type,
-                "optimization_type": "bayesian_ml",
-                **result,
-            },
-            "message": "MLハイパーパラメータの最適化が完了しました",
-            "timestamp": datetime.now().isoformat(),
-        }
-
-    return await UnifiedErrorHandler.safe_execute_async(execute_optimization)
+# MLハイパーパラメータ最適化は /api/ml-training/train エンドポイントに統合されました
+# このエンドポイントは廃止予定です
 
 
 @router.get("/parameter-spaces/{optimization_type}")

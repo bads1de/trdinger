@@ -14,8 +14,8 @@ import { BACKEND_API_URL } from "@/constants";
  */
 export async function GET(request: NextRequest) {
   try {
-    // バックエンドAPIに転送（ml_trainingの/training/statusエンドポイントを使用）
-    const backendUrl = `${BACKEND_API_URL}/api/ml/training/status`;
+    // バックエンドAPIに転送（最適化統合済みのエンドポイントを使用）
+    const backendUrl = `${BACKEND_API_URL}/api/ml-training/training/status`;
 
     const response = await fetch(backendUrl, {
       method: "GET",

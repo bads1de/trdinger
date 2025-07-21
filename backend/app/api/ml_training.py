@@ -309,6 +309,8 @@ async def start_ml_training(
     """
     MLモデルのトレーニングを開始
     """
+    logger.info("🚀 /api/ml-training/train エンドポイントが呼び出されました")
+    logger.info(f"📋 最適化設定: {config.optimization_settings}")
     global training_status
 
     async def _start_training():

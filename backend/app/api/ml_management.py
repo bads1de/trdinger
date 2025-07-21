@@ -11,7 +11,10 @@ from datetime import datetime
 import os
 
 from app.core.services.ml.model_manager import model_manager
-from app.core.services.ml.ml_training_service import ml_training_service
+from app.core.services.ml.ml_training_service import (
+    ml_training_service,
+    OptimizationSettings,
+)
 from app.core.services.auto_strategy.services.ml_orchestrator import MLOrchestrator
 from app.core.services.ml.config import ml_config
 from app.core.services.ml.performance_extractor import performance_extractor
@@ -458,44 +461,32 @@ async def reset_ml_config():
     return await UnifiedErrorHandler.safe_execute_async(_reset_ml_config)
 
 
+# このエンドポイントは廃止されました
+# MLトレーニングは /api/ml-training/train エンドポイントを使用してください
 @router.post("/training/start")
-async def start_training(
+async def start_training_deprecated(
     background_tasks: BackgroundTasks, config_data: Dict[str, Any]
 ):
     """
-    モデルトレーニングを開始
+    [廃止予定] モデルトレーニングを開始
 
-    Args:
-        background_tasks: バックグラウンドタスク
-        config_data: トレーニング設定
+    このエンドポイントは廃止されました。
+    代わりに /api/ml-training/train を使用してください。
     """
+    import logging
 
-    async def _start_training():
-        if training_status["is_training"]:
-            from fastapi import HTTPException
+    logger = logging.getLogger(__name__)
+    logger.warning(
+        "⚠️ 廃止されたエンドポイント /api/ml/training/start が呼び出されました"
+    )
+    logger.warning("🔄 正しいエンドポイント: /api/ml-training/train")
 
-            raise HTTPException(status_code=400, detail="既にトレーニングが実行中です")
+    from fastapi import HTTPException
 
-        # トレーニング状態を更新
-        training_status.update(
-            {
-                "is_training": True,
-                "progress": 0,
-                "status": "starting",
-                "message": "トレーニングを開始しています...",
-                "start_time": datetime.now().isoformat(),
-                "end_time": None,
-                "error": None,
-                "model_info": None,
-            }
-        )
-
-        # バックグラウンドでトレーニングを実行
-        background_tasks.add_task(run_training_task, config_data)
-
-        return {"message": "トレーニングが開始されました"}
-
-    return await UnifiedErrorHandler.safe_execute_async(_start_training)
+    raise HTTPException(
+        status_code=410,
+        detail="このエンドポイントは廃止されました。/api/ml-training/train を使用してください。",
+    )
 
 
 @router.post("/training/stop")
@@ -645,6 +636,47 @@ async def run_training_task(config_data: Dict[str, Any]):
         # OHLCVデータのみを抽出
         ohlcv_data = training_data[["Open", "High", "Low", "Close", "Volume"]].copy()
 
+        # 最適化設定を準備
+        optimization_settings = None
+        if config_data.get("optimization_settings", {}).get("enabled"):
+            logger.info("=" * 60)
+            logger.info("🎯 ハイパーパラメータ最適化が有効化されました")
+            method = config_data["optimization_settings"].get("method", "bayesian")
+            n_calls = config_data["optimization_settings"].get("n_calls", 50)
+            parameter_space_config = config_data["optimization_settings"].get(
+                "parameter_space", {}
+            )
+
+            logger.info(f"📊 最適化手法: {method}")
+            logger.info(f"🔄 試行回数: {n_calls}")
+            logger.info(f"📋 最適化対象パラメータ数: {len(parameter_space_config)}")
+
+            # パラメータ空間の詳細をログ出力
+            for param_name, param_config in parameter_space_config.items():
+                param_type = param_config.get("type")
+                if param_type in ["real", "integer"]:
+                    logger.info(
+                        f"  - {param_name} ({param_type}): [{param_config.get('low')}, {param_config.get('high')}]"
+                    )
+                else:
+                    logger.info(
+                        f"  - {param_name} ({param_type}): {param_config.get('categories')}"
+                    )
+            logger.info("=" * 60)
+
+            optimization_settings = OptimizationSettings(
+                enabled=True,
+                method=method,
+                n_calls=n_calls,
+                parameter_space=parameter_space_config,
+            )
+
+            training_status.update(
+                {"message": f"ハイパーパラメータ最適化を実行中 ({method})"}
+            )
+        else:
+            logger.info("📝 通常のMLトレーニングを実行します（最適化なし）")
+
         # トレーニング実行
         training_status.update(
             {
@@ -662,6 +694,7 @@ async def run_training_task(config_data: Dict[str, Any]):
             model_name="ml_training_model",
             test_size=1 - train_test_split,
             random_state=random_state,
+            optimization_settings=optimization_settings,  # ここで最適化設定を渡す
         )
 
         # モデル学習完了後の進捗更新

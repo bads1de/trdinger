@@ -22,8 +22,10 @@ export async function POST(request: NextRequest) {
       body.symbol = convertSymbolForBackend(body.symbol);
     }
 
-    // バックエンドAPIに転送
-    const backendUrl = `${BACKEND_API_URL}/api/ml/training/start`;
+    // バックエンドAPIに転送（最適化統合済みのエンドポイントを使用）
+    const backendUrl = `${BACKEND_API_URL}/api/ml-training/train`;
+    console.log("🔗 Calling backend URL:", backendUrl);
+    console.log("📤 Request body:", JSON.stringify(body, null, 2));
 
     const response = await fetch(backendUrl, {
       method: "POST",

@@ -169,15 +169,8 @@ export default function MLTraining() {
             {!trainingStatus.is_training ? (
               <ActionButton
                 onClick={() => {
-                  // 最適化設定をconfigに含めてトレーニング開始
-                  const updatedConfig = {
-                    ...config,
-                    optimization_settings: optimizationSettings.enabled
-                      ? optimizationSettings
-                      : undefined,
-                  };
-                  setConfig(updatedConfig);
-                  startTraining();
+                  // 最適化設定を直接startTrainingに渡す
+                  startTraining(optimizationSettings);
                 }}
                 variant="primary"
                 icon={<Play className="h-4 w-4" />}
