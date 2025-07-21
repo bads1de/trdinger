@@ -30,9 +30,24 @@ interface OptimizationSettingsProps {
 }
 
 const OPTIMIZATION_METHODS = [
-  { value: "bayesian", label: "ベイジアン最適化", icon: Zap, description: "効率的な最適化" },
-  { value: "grid", label: "グリッドサーチ", icon: Grid, description: "網羅的な探索" },
-  { value: "random", label: "ランダムサーチ", icon: Shuffle, description: "ランダムな探索" },
+  {
+    value: "bayesian",
+    label: "ベイジアン最適化",
+    icon: Zap,
+    description: "効率的な最適化",
+  },
+  {
+    value: "grid",
+    label: "グリッドサーチ",
+    icon: Grid,
+    description: "網羅的な探索",
+  },
+  {
+    value: "random",
+    label: "ランダムサーチ",
+    icon: Shuffle,
+    description: "ランダムな探索",
+  },
 ];
 
 const PARAMETER_TYPES = [
@@ -56,7 +71,9 @@ export default function OptimizationSettings({
   onChange,
 }: OptimizationSettingsProps) {
   const [newParamName, setNewParamName] = useState("");
-  const [newParamType, setNewParamType] = useState<"real" | "integer" | "categorical">("real");
+  const [newParamType, setNewParamType] = useState<
+    "real" | "integer" | "categorical"
+  >("real");
 
   const handleEnabledChange = (enabled: boolean) => {
     onChange({ ...settings, enabled });
@@ -80,7 +97,9 @@ export default function OptimizationSettings({
       type: newParamType,
       ...(newParamType === "real" && { low: 0.01, high: 1.0 }),
       ...(newParamType === "integer" && { low: 1, high: 100 }),
-      ...(newParamType === "categorical" && { categories: ["option1", "option2"] }),
+      ...(newParamType === "categorical" && {
+        categories: ["option1", "option2"],
+      }),
     };
 
     onChange({
@@ -106,9 +125,12 @@ export default function OptimizationSettings({
     value: any
   ) => {
     const updatedParam = { ...settings.parameter_space[paramName] };
-    
+
     if (field === "categories" && typeof value === "string") {
-      updatedParam.categories = value.split(",").map(s => s.trim()).filter(s => s);
+      updatedParam.categories = value
+        .split(",")
+        .map((s) => s.trim())
+        .filter((s) => s);
     } else {
       (updatedParam as any)[field] = value;
     }
@@ -129,7 +151,9 @@ export default function OptimizationSettings({
     });
   };
 
-  const selectedMethod = OPTIMIZATION_METHODS.find(m => m.value === settings.method);
+  const selectedMethod = OPTIMIZATION_METHODS.find(
+    (m) => m.value === settings.method
+  );
 
   return (
     <Card>
@@ -163,7 +187,9 @@ export default function OptimizationSettings({
                   return (
                     <Button
                       key={method.value}
-                      variant={settings.method === method.value ? "default" : "outline"}
+                      variant={
+                        settings.method === method.value ? "default" : "outline"
+                      }
                       className="h-auto p-4 flex flex-col items-center gap-2"
                       onClick={() => handleMethodChange(method.value)}
                     >
@@ -192,9 +218,9 @@ export default function OptimizationSettings({
               value={settings.n_calls.toString()}
               onChange={handleNCallsChange}
               placeholder="50"
-              min="1"
-              max="1000"
-              help="最適化の試行回数を設定します。多いほど良い結果が得られる可能性がありますが、時間がかかります。"
+              min={1}
+              max={1000}
+              description="最適化の試行回数を設定します。多いほど良い結果が得られる可能性がありますが、時間がかかります。"
             />
 
             {/* パラメータ空間設定 */}
@@ -213,59 +239,70 @@ export default function OptimizationSettings({
 
               {/* 既存パラメータ */}
               <div className="space-y-3">
-                {Object.entries(settings.parameter_space).map(([paramName, paramConfig]) => (
-                  <Card key={paramName} className="p-4">
-                    <div className="flex items-center justify-between mb-3">
-                      <div className="flex items-center gap-2">
-                        <Badge variant="secondary">{paramName}</Badge>
-                        <Badge variant="outline">{paramConfig.type}</Badge>
-                      </div>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => removeParameter(paramName)}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                      {paramConfig.type === "real" || paramConfig.type === "integer" ? (
-                        <>
-                          <InputField
-                            label="最小値"
-                            type="number"
-                            value={paramConfig.low?.toString() || ""}
-                            onChange={(value) =>
-                              updateParameter(paramName, "low", parseFloat(value))
-                            }
-                            step={paramConfig.type === "real" ? "0.01" : "1"}
-                          />
-                          <InputField
-                            label="最大値"
-                            type="number"
-                            value={paramConfig.high?.toString() || ""}
-                            onChange={(value) =>
-                              updateParameter(paramName, "high", parseFloat(value))
-                            }
-                            step={paramConfig.type === "real" ? "0.01" : "1"}
-                          />
-                        </>
-                      ) : (
-                        <div className="md:col-span-2">
-                          <InputField
-                            label="カテゴリ (カンマ区切り)"
-                            value={paramConfig.categories?.join(", ") || ""}
-                            onChange={(value) =>
-                              updateParameter(paramName, "categories", value)
-                            }
-                            placeholder="option1, option2, option3"
-                          />
+                {Object.entries(settings.parameter_space).map(
+                  ([paramName, paramConfig]) => (
+                    <Card key={paramName} className="p-4">
+                      <div className="flex items-center justify-between mb-3">
+                        <div className="flex items-center gap-2">
+                          <Badge variant="secondary">{paramName}</Badge>
+                          <Badge variant="outline">{paramConfig.type}</Badge>
                         </div>
-                      )}
-                    </div>
-                  </Card>
-                ))}
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => removeParameter(paramName)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        {paramConfig.type === "real" ||
+                        paramConfig.type === "integer" ? (
+                          <>
+                            <InputField
+                              label="最小値"
+                              type="number"
+                              value={paramConfig.low?.toString() || ""}
+                              onChange={(value) =>
+                                updateParameter(
+                                  paramName,
+                                  "low",
+                                  parseFloat(value)
+                                )
+                              }
+                              step={paramConfig.type === "real" ? 0.01 : 1}
+                            />
+                            <InputField
+                              label="最大値"
+                              type="number"
+                              value={paramConfig.high?.toString() || ""}
+                              onChange={(value) =>
+                                updateParameter(
+                                  paramName,
+                                  "high",
+                                  parseFloat(value)
+                                )
+                              }
+                              step={paramConfig.type === "real" ? 0.01 : 1}
+                            />
+                          </>
+                        ) : (
+                          <div className="md:col-span-2">
+                            <InputField
+                              label="カテゴリ (カンマ区切り)"
+                              value={paramConfig.categories?.join(", ") || ""}
+                              onChange={(value) =>
+                                updateParameter(paramName, "categories", value)
+                              }
+                              placeholder="option1, option2, option3"
+                            />
+                          </div>
+                        )}
+                      </div>
+                    </Card>
+                  )
+                )}
               </div>
 
               {/* 新しいパラメータ追加 */}
