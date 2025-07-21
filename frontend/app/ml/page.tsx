@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Brain, Database, TrendingUp, Settings, Target } from "lucide-react";
+import { Brain, Database, TrendingUp, Settings } from "lucide-react";
 import TabButton from "@/components/common/TabButton";
 import ErrorDisplay from "@/components/common/ErrorDisplay";
 import LoadingSpinner from "@/components/common/LoadingSpinner";
@@ -12,7 +12,6 @@ import MLTraining from "@/components/ml/MLTraining";
 import MLModelStatus from "@/components/ml/MLModelStatus";
 import MLSettings from "@/components/ml/MLSettings";
 import MLOverviewDashboard from "@/components/ml/MLOverviewDashboard";
-import ProfileManagement from "@/components/bayesian-optimization/ProfileManagement";
 
 /**
  * ML管理専用ページ
@@ -101,12 +100,6 @@ export default function MLManagementPage() {
             onClick={() => setActiveTab("settings")}
             icon={<Settings className="h-4 w-4" />}
           />
-          <TabButton
-            label="プロファイル管理"
-            isActive={activeTab === "profiles"}
-            onClick={() => setActiveTab("profiles")}
-            icon={<Target className="h-4 w-4" />}
-          />
         </div>
 
         {/* 概要タブ */}
@@ -134,7 +127,7 @@ export default function MLManagementPage() {
                 <CardTitle>モデルトレーニング</CardTitle>
               </CardHeader>
               <CardContent>
-                <MLTraining onTabChange={setActiveTab} />
+                <MLTraining />
               </CardContent>
             </Card>
           </div>
@@ -149,20 +142,6 @@ export default function MLManagementPage() {
               </CardHeader>
               <CardContent>
                 <MLSettings />
-              </CardContent>
-            </Card>
-          </div>
-        )}
-
-        {/* プロファイル管理タブ */}
-        {activeTab === "profiles" && (
-          <div className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>最適化プロファイル管理</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <ProfileManagement />
               </CardContent>
             </Card>
           </div>

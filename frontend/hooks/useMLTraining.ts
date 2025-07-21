@@ -1,6 +1,19 @@
 import { useState, useEffect, useCallback } from "react";
 import { useApiCall } from "./useApiCall";
-import { OptimizationProfile } from "@/types/bayesian-optimization";
+
+export interface ParameterSpaceConfig {
+  type: "real" | "integer" | "categorical";
+  low?: number;
+  high?: number;
+  categories?: string[];
+}
+
+export interface OptimizationSettingsConfig {
+  enabled: boolean;
+  method: "bayesian" | "grid" | "random";
+  n_calls: number;
+  parameter_space: Record<string, ParameterSpaceConfig>;
+}
 
 export interface TrainingConfig {
   symbol: string;
@@ -10,9 +23,7 @@ export interface TrainingConfig {
   save_model: boolean;
   train_test_split: number;
   random_state: number;
-  use_profile: boolean;
-  profile_id?: number;
-  profile_name?: string;
+  optimization_settings?: OptimizationSettingsConfig;
 }
 
 export interface TrainingStatus {
@@ -40,7 +51,6 @@ export const useMLTraining = () => {
     save_model: true,
     train_test_split: 0.8,
     random_state: 42,
-    use_profile: false,
   });
 
   const [trainingStatus, setTrainingStatus] = useState<TrainingStatus>({
@@ -51,8 +61,6 @@ export const useMLTraining = () => {
   });
 
   const [error, setError] = useState<string | null>(null);
-  const [selectedProfile, setSelectedProfile] =
-    useState<OptimizationProfile | null>(null);
 
   const { execute: startTrainingApi, loading: startTrainingLoading } =
     useApiCall();
@@ -127,8 +135,6 @@ export const useMLTraining = () => {
     trainingStatus,
     error,
     setError,
-    selectedProfile,
-    setSelectedProfile,
     startTrainingLoading,
     stopTrainingLoading,
     startTraining,

@@ -7,7 +7,7 @@ MLトレーニングAPI
 import logging
 from datetime import datetime
 from typing import Dict, Any, Optional
-from fastapi import APIRouter, HTTPException, BackgroundTasks
+from fastapi import APIRouter, BackgroundTasks
 from pydantic import BaseModel, Field
 
 from app.core.services.ml.ml_training_service import MLTrainingService
@@ -17,14 +17,35 @@ from app.core.utils.unified_error_handler import UnifiedErrorHandler
 from database.repositories.ohlcv_repository import OHLCVRepository
 from database.repositories.open_interest_repository import OpenInterestRepository
 from database.repositories.funding_rate_repository import FundingRateRepository
-from database.repositories.bayesian_optimization_repository import (
-    BayesianOptimizationRepository,
-)
+
 from database.connection import get_db
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/ml-training", tags=["ML Training"])
+
+
+class ParameterSpaceConfig(BaseModel):
+    """パラメータ空間設定"""
+
+    type: str = Field(..., description="パラメータ型 (real, integer, categorical)")
+    low: Optional[float] = Field(None, description="最小値 (real, integer)")
+    high: Optional[float] = Field(None, description="最大値 (real, integer)")
+    categories: Optional[list] = Field(None, description="カテゴリ一覧 (categorical)")
+
+
+class OptimizationSettingsConfig(BaseModel):
+    """最適化設定"""
+
+    enabled: bool = Field(default=False, description="最適化を有効にするか")
+    method: str = Field(
+        default="bayesian", description="最適化手法 (bayesian, grid, random)"
+    )
+    n_calls: int = Field(default=50, description="最適化試行回数")
+    parameter_space: Dict[str, ParameterSpaceConfig] = Field(
+        default_factory=dict, description="パラメータ空間設定"
+    )
+
 
 # グローバルなトレーニング状態管理
 training_status = {
@@ -64,10 +85,10 @@ class MLTrainingConfig(BaseModel):
     n_estimators: int = Field(default=100, description="推定器数")
     learning_rate: float = Field(default=0.1, description="学習率")
 
-    # プロファイル適用設定
-    use_profile: bool = Field(default=False, description="プロファイルを使用するか")
-    profile_id: Optional[int] = Field(None, description="使用するプロファイルID")
-    profile_name: Optional[str] = Field(None, description="使用するプロファイル名")
+    # 最適化設定
+    optimization_settings: Optional[OptimizationSettingsConfig] = Field(
+        None, description="ハイパーパラメータ最適化設定"
+    )
 
 
 class MLTrainingResponse(BaseModel):
@@ -157,55 +178,6 @@ async def train_ml_model_background(config: MLTrainingConfig):
 
         ml_service = MLTrainingService()
 
-        # プロファイルからハイパーパラメータを適用
-        training_params = {}
-        if config.use_profile and (config.profile_id or config.profile_name):
-            training_status.update(
-                {
-                    "progress": 25,
-                    "status": "loading_profile",
-                    "message": "プロファイルからハイパーパラメータを読み込んでいます...",
-                }
-            )
-
-            db = next(get_db())
-            try:
-                bayesian_repo = BayesianOptimizationRepository(db)
-                profile = None
-
-                if config.profile_id:
-                    profile = bayesian_repo.get_by_id(config.profile_id)
-                elif config.profile_name:
-                    profile = bayesian_repo.get_by_profile_name(config.profile_name)
-
-                if profile:
-                    # プロファイルからハイパーパラメータを取得
-                    best_params = profile.best_params
-
-                    # 設定を上書き
-                    for param_name, param_value in best_params.items():
-                        if hasattr(config, param_name):
-                            setattr(config, param_name, param_value)
-                            training_params[param_name] = param_value
-
-                    logger.info(
-                        f"プロファイル '{profile.profile_name}' からハイパーパラメータを適用: {training_params}"
-                    )
-                    training_status.update(
-                        {
-                            "message": f"プロファイル '{profile.profile_name}' からハイパーパラメータを適用しました"
-                        }
-                    )
-                else:
-                    logger.warning(
-                        f"指定されたプロファイルが見つかりません: ID={config.profile_id}, Name={config.profile_name}"
-                    )
-
-            except Exception as e:
-                logger.warning(f"プロファイル読み込みエラー: {e}")
-            finally:
-                db.close()
-
         # モデルトレーニング
         training_status.update(
             {
@@ -228,12 +200,69 @@ async def train_ml_model_background(config: MLTrainingConfig):
         # OHLCVデータのみを抽出
         ohlcv_data = training_data[["Open", "High", "Low", "Close", "Volume"]].copy()
 
+        # 最適化設定を準備
+        optimization_settings = None
+        if config.optimization_settings and config.optimization_settings.enabled:
+            from app.core.services.ml.ml_training_service import OptimizationSettings
+
+            logger.info("=" * 60)
+            logger.info("🎯 ハイパーパラメータ最適化が有効化されました")
+            logger.info(f"📊 最適化手法: {config.optimization_settings.method}")
+            logger.info(f"🔄 試行回数: {config.optimization_settings.n_calls}")
+            logger.info(
+                f"📋 最適化対象パラメータ数: {len(config.optimization_settings.parameter_space)}"
+            )
+
+            # パラメータ空間の詳細をログ出力
+            for (
+                param_name,
+                param_config,
+            ) in config.optimization_settings.parameter_space.items():
+                if param_config.type in ["real", "integer"]:
+                    logger.info(
+                        f"  - {param_name} ({param_config.type}): [{param_config.low}, {param_config.high}]"
+                    )
+                else:
+                    logger.info(
+                        f"  - {param_name} ({param_config.type}): {param_config.categories}"
+                    )
+            logger.info("=" * 60)
+
+            # ParameterSpaceConfigを辞書形式に変換
+            parameter_space_dict = {}
+            for (
+                param_name,
+                param_config,
+            ) in config.optimization_settings.parameter_space.items():
+                parameter_space_dict[param_name] = {
+                    "type": param_config.type,
+                    "low": param_config.low,
+                    "high": param_config.high,
+                    "categories": param_config.categories,
+                }
+
+            optimization_settings = OptimizationSettings(
+                enabled=config.optimization_settings.enabled,
+                method=config.optimization_settings.method,
+                n_calls=config.optimization_settings.n_calls,
+                parameter_space=parameter_space_dict,
+            )
+
+            training_status.update(
+                {
+                    "message": f"ハイパーパラメータ最適化を実行中 ({config.optimization_settings.method})"
+                }
+            )
+        else:
+            logger.info("📝 通常のMLトレーニングを実行します（最適化なし）")
+
         # トレーニング実行
         training_result = ml_service.train_model(
             training_data=ohlcv_data,
             funding_rate_data=funding_rate_data,
             open_interest_data=open_interest_data,
             save_model=config.save_model,
+            optimization_settings=optimization_settings,
             # 新しいMLTrainingServiceは設定から自動的にパラメータを取得
             test_size=1 - config.train_test_split,
             random_state=config.random_state,

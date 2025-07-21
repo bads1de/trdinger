@@ -119,19 +119,49 @@ class BaseMLTrainer(ABC):
             if save_model:
                 # training_resultからメタデータを構築
                 model_metadata = {
+                    # 基本性能指標
                     "accuracy": training_result.get("accuracy", 0.0),
                     "precision": training_result.get("precision", 0.0),
                     "recall": training_result.get("recall", 0.0),
                     "f1_score": training_result.get("f1_score", 0.0),
+                    # AUC指標
                     "auc_score": training_result.get("auc_score", 0.0),
+                    "auc_roc": training_result.get("auc_roc", 0.0),
+                    "auc_pr": training_result.get("auc_pr", 0.0),
+                    # 高度な指標
+                    "balanced_accuracy": training_result.get("balanced_accuracy", 0.0),
+                    "matthews_corrcoef": training_result.get("matthews_corrcoef", 0.0),
+                    "cohen_kappa": training_result.get("cohen_kappa", 0.0),
+                    # 専門指標
+                    "specificity": training_result.get("specificity", 0.0),
+                    "sensitivity": training_result.get("sensitivity", 0.0),
+                    "npv": training_result.get("npv", 0.0),
+                    "ppv": training_result.get("ppv", 0.0),
+                    # 確率指標
+                    "log_loss": training_result.get("log_loss", 0.0),
+                    "brier_score": training_result.get("brier_score", 0.0),
+                    # データ情報
                     "training_samples": training_result.get("train_samples", 0),
                     "test_samples": training_result.get("test_samples", 0),
+                    "feature_count": (
+                        len(self.feature_columns) if self.feature_columns else 0
+                    ),
+                    # モデル情報
                     "feature_importance": training_result.get("feature_importance", {}),
                     "classification_report": training_result.get(
                         "classification_report", {}
                     ),
                     "best_iteration": training_result.get("best_iteration", 0),
+                    "num_classes": training_result.get("num_classes", 2),
+                    # 学習パラメータ
+                    "train_test_split": training_params.get("train_test_split", 0.8),
+                    "random_state": training_params.get("random_state", 42),
                 }
+
+                logger.info(
+                    f"モデルメタデータを保存: 精度={model_metadata['accuracy']:.4f}, F1={model_metadata['f1_score']:.4f}"
+                )
+
                 model_path = self.save_model(
                     model_name or self.config.model.AUTO_STRATEGY_MODEL_NAME,
                     model_metadata,

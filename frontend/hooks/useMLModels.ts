@@ -1,7 +1,6 @@
 import { useCallback } from "react";
 import { useDataFetching } from "./useDataFetching";
 import { useDeleteRequest } from "./useDeleteRequest";
-import { usePostRequest } from "./usePostRequest";
 
 export interface MLModel {
   id: string;
@@ -10,9 +9,50 @@ export interface MLModel {
   size_mb: number;
   modified_at: string;
   directory: string;
+
+  // 基本性能指標
   accuracy?: number;
+  precision?: number;
+  recall?: number;
+  f1_score?: number;
+
+  // AUC指標
+  auc_score?: number;
+  auc_roc?: number;
+  auc_pr?: number;
+
+  // 高度な指標
+  balanced_accuracy?: number;
+  matthews_corrcoef?: number;
+  cohen_kappa?: number;
+
+  // 専門指標
+  specificity?: number;
+  sensitivity?: number;
+  npv?: number;
+  ppv?: number;
+
+  // 確率指標
+  log_loss?: number;
+  brier_score?: number;
+
+  // モデル情報
   feature_count?: number;
   model_type?: string;
+  training_samples?: number;
+  test_samples?: number;
+  num_classes?: number;
+  best_iteration?: number;
+
+  // 学習パラメータ
+  train_test_split?: number;
+  random_state?: number;
+
+  // 詳細データ
+  feature_importance?: Record<string, number>;
+  classification_report?: Record<string, any>;
+
+  // 状態
   is_active?: boolean;
 }
 

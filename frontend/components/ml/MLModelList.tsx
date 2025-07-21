@@ -108,16 +108,31 @@ export default function MLModelList({
                     <span>{formatFileSize(model.size_mb)}</span>
                   </div>
 
-                  {model.accuracy && (
+                  {model.accuracy && model.accuracy > 0 && (
                     <div className="flex items-center space-x-1">
                       <TrendingUp className="h-4 w-4" />
                       <span>精度: {(model.accuracy * 100).toFixed(1)}%</span>
                     </div>
                   )}
 
-                  {model.feature_count && (
+                  {model.f1_score && model.f1_score > 0 && (
+                    <div className="flex items-center space-x-1">
+                      <TrendingUp className="h-4 w-4" />
+                      <span>F1: {(model.f1_score * 100).toFixed(1)}%</span>
+                    </div>
+                  )}
+
+                  {model.feature_count && model.feature_count > 0 && (
                     <div className="flex items-center space-x-1">
                       <span>特徴量: {model.feature_count}個</span>
+                    </div>
+                  )}
+
+                  {model.training_samples && model.training_samples > 0 && (
+                    <div className="flex items-center space-x-1">
+                      <span>
+                        学習: {model.training_samples.toLocaleString()}件
+                      </span>
                     </div>
                   )}
                 </div>

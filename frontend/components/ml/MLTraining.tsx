@@ -17,33 +17,33 @@ import {
   CheckCircle,
   AlertCircle,
   Clock,
-  Target,
 } from "lucide-react";
-import BayesianOptimizationModal from "@/components/bayesian-optimization/BayesianOptimizationModal";
-import ProfileSelector from "@/components/bayesian-optimization/ProfileSelector";
-
-interface MLTrainingProps {
-  onTabChange?: (tab: string) => void;
-}
+import OptimizationSettings, {
+  OptimizationSettingsConfig,
+} from "./OptimizationSettings";
 
 /**
  * MLトレーニングコンポーネント
  *
  * 新しいMLモデルの学習を開始・管理するコンポーネント
  */
-export default function MLTraining({ onTabChange }: MLTrainingProps) {
+export default function MLTraining() {
   const {
     config,
     setConfig,
     trainingStatus,
     error,
-    selectedProfile,
-    setSelectedProfile,
     startTraining,
     stopTraining,
   } = useMLTraining();
 
-  const [showBayesianModal, setShowBayesianModal] = useState(false);
+  const [optimizationSettings, setOptimizationSettings] =
+    useState<OptimizationSettingsConfig>({
+      enabled: false,
+      method: "bayesian",
+      n_calls: 50,
+      parameter_space: {},
+    });
 
   const getStatusIcon = () => {
     switch (trainingStatus.status) {
@@ -157,69 +157,35 @@ export default function MLTraining({ onTabChange }: MLTrainingProps) {
             </div>
           </div>
 
-          {/* プロファイル選択 */}
+          {/* 最適化設定 */}
           <div className="mt-6">
-            <div className="flex items-center space-x-2 mb-4">
-              <input
-                type="checkbox"
-                id="use-profile"
-                checked={config.use_profile}
-                onChange={(e) => {
-                  const useProfile = e.target.checked;
-                  setConfig((prev) => ({
-                    ...prev,
-                    use_profile: useProfile,
-                    profile_id: useProfile ? selectedProfile?.id : undefined,
-                    profile_name: useProfile
-                      ? selectedProfile?.profile_name
-                      : undefined,
-                  }));
-                }}
-                disabled={trainingStatus.is_training}
-                className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-              />
-              <label htmlFor="use-profile" className="text-sm font-medium">
-                最適化プロファイルを使用する
-              </label>
-            </div>
-
-            {config.use_profile && (
-              <ProfileSelector
-                selectedProfileId={selectedProfile?.id}
-                onProfileSelect={(profile) => {
-                  setSelectedProfile(profile);
-                  setConfig((prev) => ({
-                    ...prev,
-                    profile_id: profile?.id,
-                    profile_name: profile?.profile_name,
-                  }));
-                }}
-                modelType="LightGBM"
-                className="mt-2"
-                showManagement={true}
-                onManagementClick={() => onTabChange?.("profiles")}
-              />
-            )}
+            <OptimizationSettings
+              settings={optimizationSettings}
+              onChange={setOptimizationSettings}
+            />
           </div>
 
           <div className="flex items-center space-x-4">
             {!trainingStatus.is_training ? (
-              <>
-                <ActionButton
-                  onClick={startTraining}
-                  variant="primary"
-                  icon={<Play className="h-4 w-4" />}
-                >
-                  トレーニング開始
-                </ActionButton>
-                <ActionButton
-                  onClick={() => setShowBayesianModal(true)}
-                  variant="secondary"
-                  icon={<Target className="h-4 w-4" />}
-                >
-                  ハイパーパラメータ最適化
-                </ActionButton>
-              </>
+              <ActionButton
+                onClick={() => {
+                  // 最適化設定をconfigに含めてトレーニング開始
+                  const updatedConfig = {
+                    ...config,
+                    optimization_settings: optimizationSettings.enabled
+                      ? optimizationSettings
+                      : undefined,
+                  };
+                  setConfig(updatedConfig);
+                  startTraining();
+                }}
+                variant="primary"
+                icon={<Play className="h-4 w-4" />}
+              >
+                {optimizationSettings.enabled
+                  ? "最適化付きトレーニング開始"
+                  : "トレーニング開始"}
+              </ActionButton>
             ) : (
               <ActionButton
                 onClick={stopTraining}
@@ -299,12 +265,6 @@ export default function MLTraining({ onTabChange }: MLTrainingProps) {
           )}
         </CardContent>
       </Card>
-
-      {/* ベイジアン最適化モーダル */}
-      <BayesianOptimizationModal
-        isOpen={showBayesianModal}
-        onClose={() => setShowBayesianModal(false)}
-      />
     </div>
   );
 }

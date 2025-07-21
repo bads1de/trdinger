@@ -7,30 +7,19 @@ GAパラメータとMLハイパーパラメータの自動調整を行います�
 import logging
 import numpy as np
 
-from typing import Dict, Any, List, Callable, Optional
-from dataclasses import dataclass
+from typing import Dict, Any, Callable, Optional
 from datetime import datetime
 
 from skopt import gp_minimize
 from skopt.space import Real, Integer, Categorical
 from skopt.utils import use_named_args, OptimizeResult
 
+from .base_optimizer import BaseOptimizer, OptimizationResult, ParameterSpace
+
 logger = logging.getLogger(__name__)
 
 
-@dataclass
-class OptimizationResult:
-    """最適化結果"""
-
-    best_params: Dict[str, Any]
-    best_score: float
-    optimization_history: List[Dict[str, Any]]
-    total_evaluations: int
-    optimization_time: float
-    convergence_info: Dict[str, Any]
-
-
-class BayesianOptimizer:
+class BayesianOptimizer(BaseOptimizer):
     """
     ベイズ最適化エンジン
 
@@ -39,42 +28,42 @@ class BayesianOptimizer:
 
     def __init__(self):
         """初期化"""
-        self.optimization_history: List[Dict[str, Any]] = []
-        self.best_result: Optional[OptimizationResult] = None
+        super().__init__()
 
-        # 最適化設定
+        # ベイジアン最適化固有の設定
         self.config = {
-            "n_calls": 50,  # 最適化試行回数
             "n_initial_points": 10,  # 初期ランダム試行回数
             "acq_func": "EI",  # 獲得関数（Expected Improvement）
             "random_state": 42,  # 乱数シード
             "n_jobs": 1,  # 並列実行数
         }
 
-    def optimize_ml_hyperparameters(
+    def optimize(
         self,
-        model_type: str,
         objective_function: Callable[[Dict[str, Any]], float],
-        parameter_space: Optional[Dict[str, Any]] = None,
-        n_calls: int = 30,
+        parameter_space: Dict[str, ParameterSpace],
+        n_calls: int = 50,
+        **kwargs: Any,
     ) -> OptimizationResult:
         """
-        MLハイパーパラメータの最適化
+        ベイジアン最適化を実行
 
         Args:
-            model_type: モデルタイプ
             objective_function: 目的関数
             parameter_space: パラメータ空間
             n_calls: 最適化試行回数
+            **kwargs: 追加のオプション
 
         Returns:
             最適化結果
         """
         try:
-            if parameter_space is None:
-                parameter_space = self._get_default_ml_parameter_space(model_type)
+            # パラメータ空間と目的関数の妥当性を検証
+            self.validate_parameter_space(parameter_space)
+            self.validate_objective_function(objective_function)
 
-            logger.info(f"{model_type}のハイパーパラメータ最適化を開始")
+            method_name = self.get_method_name()
+            self._log_optimization_start(method_name, n_calls)
             start_time = datetime.now()
 
             result = self._optimize_with_skopt(
@@ -84,29 +73,27 @@ class BayesianOptimizer:
             end_time = datetime.now()
             optimization_time = (end_time - start_time).total_seconds()
 
-            optimization_result = OptimizationResult(
+            optimization_result = self._create_optimization_result(
                 best_params=result["best_params"],
                 best_score=result["best_score"],
-                optimization_history=result["history"],
-                total_evaluations=len(result["history"]),
+                history=result["history"],
                 optimization_time=optimization_time,
                 convergence_info=result.get("convergence_info", {}),
             )
 
-            logger.info(
-                f"{model_type}ハイパーパラメータ最適化完了: ベストスコア={result['best_score']:.4f}"
+            self._log_optimization_end(
+                method_name, result["best_score"], optimization_time
             )
-
             return optimization_result
 
         except Exception as e:
-            logger.error(f"MLハイパーパラメータ最適化中にエラーが発生しました: {e}")
+            logger.error(f"ベイジアン最適化中にエラーが発生しました: {e}")
             raise
 
     def _optimize_with_skopt(
         self,
         objective_function: Callable[[Dict[str, Any]], float],
-        parameter_space: Dict[str, Any],
+        parameter_space: Dict[str, ParameterSpace],
         n_calls: int,
     ) -> Dict[str, Any]:
         """scikit-optimizeを使用した最適化"""
@@ -118,19 +105,17 @@ class BayesianOptimizer:
             for param_name, param_config in parameter_space.items():
                 param_names.append(param_name)
 
-                if param_config["type"] == "real":
+                if param_config.type == "real":
                     dimensions.append(
-                        Real(param_config["low"], param_config["high"], name=param_name)
+                        Real(param_config.low, param_config.high, name=param_name)
                     )
-                elif param_config["type"] == "integer":
+                elif param_config.type == "integer":
                     dimensions.append(
-                        Integer(
-                            param_config["low"], param_config["high"], name=param_name
-                        )
+                        Integer(param_config.low, param_config.high, name=param_name)
                     )
-                elif param_config["type"] == "categorical":
+                elif param_config.type == "categorical":
                     dimensions.append(
-                        Categorical(param_config["categories"], name=param_name)
+                        Categorical(param_config.categories, name=param_name)
                     )
 
             # 目的関数をラップ
@@ -189,154 +174,20 @@ class BayesianOptimizer:
             logger.error(f"scikit-optimize最適化中にエラーが発生しました: {e}")
             raise
 
-    # フォールバックメソッドは削除（scikit-optimizeが確実に利用可能なため）
-
-    def _get_default_ml_parameter_space(self, model_type: str) -> Dict[str, Any]:
+    def get_default_parameter_space(self, model_type: str) -> Dict[str, ParameterSpace]:
         """デフォルトのMLパラメータ空間を取得"""
-        if model_type == "lightgbm":
+        if model_type.lower() == "lightgbm":
             return {
-                "num_leaves": {"type": "integer", "low": 10, "high": 100},
-                "learning_rate": {"type": "real", "low": 0.01, "high": 0.3},
-                "feature_fraction": {"type": "real", "low": 0.5, "high": 1.0},
-                "bagging_fraction": {"type": "real", "low": 0.5, "high": 1.0},
-                "min_data_in_leaf": {"type": "integer", "low": 5, "high": 50},
+                "num_leaves": ParameterSpace(type="integer", low=10, high=100),
+                "learning_rate": ParameterSpace(type="real", low=0.01, high=0.3),
+                "feature_fraction": ParameterSpace(type="real", low=0.5, high=1.0),
+                "bagging_fraction": ParameterSpace(type="real", low=0.5, high=1.0),
+                "min_data_in_leaf": ParameterSpace(type="integer", low=5, high=50),
             }
         else:
             # デフォルト空間
             return {
-                "param1": {"type": "real", "low": 0.1, "high": 1.0},
-                "param2": {"type": "integer", "low": 1, "high": 10},
+                "n_estimators": ParameterSpace(type="integer", low=50, high=500),
+                "learning_rate": ParameterSpace(type="real", low=0.01, high=0.2),
+                "max_depth": ParameterSpace(type="integer", low=3, high=15),
             }
-
-    def execute_ml_optimization(
-        self,
-        model_type: str,
-        parameter_space: Optional[Dict[str, Any]] = None,
-        n_calls: int = 30,
-        save_as_profile: bool = False,
-        profile_name: Optional[str] = None,
-        profile_description: Optional[str] = None,
-        db_session=None,
-    ) -> Dict[str, Any]:
-        """
-        MLハイパーパラメータ最適化を実行し、結果を保存
-
-        Args:
-            model_type: モデルタイプ
-            parameter_space: パラメータ空間
-            n_calls: 最適化試行回数
-            save_as_profile: プロファイルとして保存するか
-            profile_name: プロファイル名
-            profile_description: プロファイル説明
-            db_session: データベースセッション
-
-        Returns:
-            最適化結果の辞書
-        """
-        try:
-            logger.info(f"MLハイパーパラメータのベイジアン最適化を開始: {model_type}")
-
-            # 目的関数を定義（MLモデルの性能評価）
-            def objective_function(params: Dict[str, Any]) -> float:
-                try:
-                    # TODO: MLモデルの訓練と評価を実装
-                    # 現在はダミー実装
-                    logger.info(f"MLハイパーパラメータ評価: {params}")
-
-                    # ダミースコア（実際にはMLモデルの性能指標を返す）
-                    import random
-
-                    return random.uniform(0.5, 0.9)
-
-                except Exception as e:
-                    logger.warning(f"ML目的関数評価エラー: {e}")
-                    return 0.0
-
-            # パラメータ空間を変換
-            parameter_space_dict = None
-            if parameter_space:
-                parameter_space_dict = {}
-                for param_name, param_config in parameter_space.items():
-                    parameter_space_dict[param_name] = {
-                        "type": param_config.type,
-                        "low": param_config.low,
-                        "high": param_config.high,
-                        "categories": param_config.categories,
-                    }
-
-            # ベイジアン最適化を実行
-            optimization_result = self.optimize_ml_hyperparameters(
-                model_type=model_type,
-                objective_function=objective_function,
-                parameter_space=parameter_space_dict,
-                n_calls=n_calls,
-            )
-
-            # NumPy型をPythonの標準型に変換
-            def convert_numpy_types(obj):
-                """NumPy型をPythonの標準型に再帰的に変換"""
-                if isinstance(obj, np.integer):
-                    return int(obj)
-                elif isinstance(obj, np.floating):
-                    return float(obj)
-                elif isinstance(obj, np.ndarray):
-                    return obj.tolist()
-                elif isinstance(obj, OptimizationResult):
-                    # OptimizationResultオブジェクトを辞書に変換
-                    return {
-                        "best_params": convert_numpy_types(obj.best_params),
-                        "best_score": convert_numpy_types(obj.best_score),
-                        "optimization_history": convert_numpy_types(
-                            obj.optimization_history
-                        ),
-                        "total_evaluations": convert_numpy_types(obj.total_evaluations),
-                        "optimization_time": convert_numpy_types(obj.optimization_time),
-                        "convergence_info": convert_numpy_types(obj.convergence_info),
-                    }
-                elif isinstance(obj, dict):
-                    return {
-                        key: convert_numpy_types(value) for key, value in obj.items()
-                    }
-                elif isinstance(obj, list):
-                    return [convert_numpy_types(item) for item in obj]
-                else:
-                    return obj
-
-            # 結果を変換
-            result = convert_numpy_types(optimization_result)
-
-            # プロファイルとして保存する場合
-            if save_as_profile and profile_name and db_session:
-                try:
-                    from database.repositories.bayesian_optimization_repository import (
-                        BayesianOptimizationRepository,
-                    )
-
-                    bayesian_repo = BayesianOptimizationRepository(db_session)
-                    saved_result = bayesian_repo.create_optimization_result(
-                        profile_name=profile_name,
-                        optimization_type="bayesian_ml",
-                        model_type=model_type,
-                        best_params=result["best_params"],
-                        best_score=result["best_score"],
-                        total_evaluations=result["total_evaluations"],
-                        optimization_time=result["optimization_time"],
-                        convergence_info=result["convergence_info"],
-                        optimization_history=result["optimization_history"],
-                        description=profile_description,
-                        target_model_type=model_type,
-                    )
-
-                    result["saved_profile_id"] = saved_result.id
-                    logger.info(f"最適化結果をプロファイルとして保存: {profile_name}")
-
-                except Exception as e:
-                    logger.error(f"プロファイル保存エラー: {e}")
-                    # プロファイル保存に失敗しても最適化結果は返す
-
-            logger.info(f"MLハイパーパラメータ最適化完了: {model_type}")
-            return result
-
-        except Exception as e:
-            logger.error(f"MLハイパーパラメータ最適化エラー: {e}", exc_info=True)
-            raise
