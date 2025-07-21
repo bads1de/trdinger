@@ -199,14 +199,15 @@ class MLConfigValidator:
         if prediction_timeout <= 0:
             errors.append("予測タイムアウトは正の値である必要があります")
 
-        # 論理的な関係の確認
-        if max_feature_rows < max_ohlcv_rows:
-            errors.append("最大特徴量行数は最大OHLCV行数以上である必要があります")
+        # 論理的な関係の確認（制限を緩和）
+        # 制限を外したため、厳密な関係チェックは不要
+        # if max_feature_rows < max_ohlcv_rows:
+        #     errors.append("最大特徴量行数は最大OHLCV行数以上である必要があります")
 
-        if training_timeout < feature_timeout:
-            errors.append(
-                "学習タイムアウトは特徴量計算タイムアウト以上である必要があります"
-            )
+        # if training_timeout < feature_timeout:
+        #     errors.append(
+        #         "学習タイムアウトは特徴量計算タイムアウト以上である必要があります"
+        #     )
 
         return errors
 

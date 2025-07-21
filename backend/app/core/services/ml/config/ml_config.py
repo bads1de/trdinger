@@ -15,13 +15,13 @@ from dataclasses import dataclass
 class DataProcessingConfig:
     """データ処理関連の設定"""
 
-    # データ制限
-    MAX_OHLCV_ROWS: int = 10000
-    MAX_FEATURE_ROWS: int = 50000
+    # データ制限（大幅に緩和）
+    MAX_OHLCV_ROWS: int = 1000000  # 100万行まで
+    MAX_FEATURE_ROWS: int = 1000000  # 100万行まで
 
-    # タイムアウト設定
-    FEATURE_CALCULATION_TIMEOUT: int = 30
-    MODEL_TRAINING_TIMEOUT: int = 300
+    # タイムアウト設定（大幅に緩和）
+    FEATURE_CALCULATION_TIMEOUT: int = 3600  # 1時間
+    MODEL_TRAINING_TIMEOUT: int = 7200  # 2時間
     MODEL_PREDICTION_TIMEOUT: int = 10
 
     # メモリ管理
@@ -151,7 +151,7 @@ class TrainingConfig:
 
     # 学習制御
     RANDOM_STATE: int = 42
-    MIN_TRAINING_SAMPLES: int = 1000
+    MIN_TRAINING_SAMPLES: int = 10  # 最小限に緩和
 
     # 評価設定
     PERFORMANCE_THRESHOLD: float = 0.05

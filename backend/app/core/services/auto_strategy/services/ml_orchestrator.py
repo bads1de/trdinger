@@ -402,11 +402,9 @@ class MLOrchestrator:
         )
 
     def _limit_data_size(self, df: pd.DataFrame) -> pd.DataFrame:
-        """データサイズを制限"""
-        max_rows = self.config.data_processing.MAX_OHLCV_ROWS
-        if len(df) > max_rows:
-            logger.warning(f"大量のデータ（{len(df)}行）、最新{max_rows}行に制限")
-            return df.tail(max_rows)
+        """データサイズ制限を無効化（制限なしでデータをそのまま返す）"""
+        # 制限を外したため、データをそのまま返す
+        logger.info(f"データサイズ: {len(df)}行（制限なし）")
         return df
 
     def _normalize_column_names(self, df: pd.DataFrame) -> pd.DataFrame:

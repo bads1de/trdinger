@@ -157,10 +157,10 @@ class GAConfig(BaseSettings):
 class MLDataProcessingConfig:
     """ML データ処理設定"""
 
-    max_ohlcv_rows: int = 10000
-    max_feature_rows: int = 50000
-    feature_calculation_timeout: int = 30
-    model_training_timeout: int = 300
+    max_ohlcv_rows: int = 1000000  # 100万行まで
+    max_feature_rows: int = 1000000  # 100万行まで
+    feature_calculation_timeout: int = 3600  # 1時間
+    model_training_timeout: int = 7200  # 2時間
     model_prediction_timeout: int = 10
     memory_warning_threshold: int = 8000
     memory_limit_threshold: int = 10000
