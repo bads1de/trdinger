@@ -11,10 +11,8 @@ from sqlalchemy.orm import Session
 from typing import Dict, Any, Optional
 from pydantic import BaseModel, Field
 
-from app.core.services.strategy_integration_service import StrategyIntegrationService
 from app.core.dependencies import get_strategy_integration_service
 from database.connection import get_db
-from app.core.utils.api_utils import APIResponseHelper
 from app.core.utils.unified_error_handler import UnifiedErrorHandler
 
 logger = logging.getLogger(__name__)
@@ -96,73 +94,3 @@ async def get_strategies(
         )
 
     return await UnifiedErrorHandler.safe_execute_async(_get_strategies)
-
-
-@router.get("/stats", response_model=StrategyStatsResponse)
-async def get_strategy_statistics(db: Session = Depends(get_db)):
-    """
-    戦略統計情報を取得
-
-    Args:
-        db: データベースセッション
-
-    Returns:
-        戦略統計データ
-    """
-
-    async def _get_stats():
-        logger.info("戦略統計取得開始")
-
-        integration_service = StrategyIntegrationService(db)
-
-        integration_service = StrategyIntegrationService(db)
-        strategies = integration_service.get_all_strategies_for_stats()
-
-        stats = {
-            "total_strategies": len(strategies),
-            "auto_generated_strategies": len(
-                [s for s in strategies if s["source"] == "auto_strategy"]
-            ),
-            "categories": {},
-            "risk_levels": {},
-            "performance_summary": {
-                "avg_return": 0.0,
-                "avg_sharpe_ratio": 0.0,
-                "avg_max_drawdown": 0.0,
-                "avg_win_rate": 0.0,
-            },
-        }
-
-        for strategy in strategies:
-            category = strategy.get("category", "unknown")
-            stats["categories"][category] = stats["categories"].get(category, 0) + 1
-
-            risk_level = strategy.get("risk_level", "unknown")
-            stats["risk_levels"][risk_level] = (
-                stats["risk_levels"].get(risk_level, 0) + 1
-            )
-
-        if strategies:
-            stats["performance_summary"]["avg_return"] = sum(
-                s.get("expected_return", 0) for s in strategies
-            ) / len(strategies)
-
-            stats["performance_summary"]["avg_sharpe_ratio"] = sum(
-                s.get("sharpe_ratio", 0) for s in strategies
-            ) / len(strategies)
-
-            stats["performance_summary"]["avg_max_drawdown"] = sum(
-                s.get("max_drawdown", 0) for s in strategies
-            ) / len(strategies)
-
-            stats["performance_summary"]["avg_win_rate"] = sum(
-                s.get("win_rate", 0) for s in strategies
-            ) / len(strategies)
-
-        logger.info("戦略統計取得完了")
-
-        return APIResponseHelper.api_response(
-            data=stats, message="戦略統計情報を正常に取得しました", success=True
-        )
-
-    return await UnifiedErrorHandler.safe_execute_async(_get_stats)

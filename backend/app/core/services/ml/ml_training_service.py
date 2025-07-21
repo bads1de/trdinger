@@ -328,10 +328,19 @@ class MLTrainingService:
         parameter_space = {}
 
         for param_name, param_config in parameter_space_config.items():
+            param_type = param_config["type"]
+            low = param_config.get("low")
+            high = param_config.get("high")
+
+            # integer型の場合は、lowとhighを整数に変換
+            if param_type == "integer" and low is not None and high is not None:
+                low = int(low)
+                high = int(high)
+
             parameter_space[param_name] = ParameterSpace(
-                type=param_config["type"],
-                low=param_config.get("low"),
-                high=param_config.get("high"),
+                type=param_type,
+                low=low,
+                high=high,
                 categories=param_config.get("categories"),
             )
 

@@ -19,53 +19,6 @@ sys.path.insert(0, backend_path)
 sys.path.insert(0, os.path.join(backend_path, "app"))
 
 
-def test_basic_tpsl_functionality():
-    """基本的なTP/SL機能のテスト"""
-    print("=== 基本的なTP/SL機能テスト ===")
-
-    try:
-        # 基本的なTP/SL計算のテスト
-        print("✅ 基本的なTP/SL計算:")
-
-        # 固定パーセンテージ方式
-        sl_pct = 0.03  # 3%
-        tp_pct = 0.06  # 6%
-        current_price = 50000
-
-        sl_price = current_price * (1 - sl_pct)
-        tp_price = current_price * (1 + tp_pct)
-
-        print(f"   - 現在価格: ${current_price:,}")
-        print(f"   - SL設定: {sl_pct:.1%} → SL価格: ${sl_price:,.0f}")
-        print(f"   - TP設定: {tp_pct:.1%} → TP価格: ${tp_price:,.0f}")
-
-        # リスクリワード比方式
-        rr_ratio = 2.5
-        tp_from_rr = sl_pct * rr_ratio
-        tp_price_rr = current_price * (1 + tp_from_rr)
-
-        print(
-            f"   - RR比ベース: 1:{rr_ratio} → TP: {tp_from_rr:.1%} (${tp_price_rr:,.0f})"
-        )
-
-        # ボラティリティベース方式（ATR）
-        atr_pct = 0.025  # 2.5%
-        atr_multiplier_sl = 2.0
-        atr_multiplier_tp = 3.0
-
-        sl_volatility = atr_pct * atr_multiplier_sl
-        tp_volatility = atr_pct * atr_multiplier_tp
-
-        print(f"   - ボラティリティベース: ATR={atr_pct:.1%}")
-        print(f"     SL={sl_volatility:.1%}, TP={tp_volatility:.1%}")
-
-        return True
-
-    except Exception as e:
-        print(f"❌ 基本的なTP/SL機能テストエラー: {e}")
-        return False
-
-
 def test_tpsl_methods_simulation():
     """TP/SL決定方式のシミュレーションテスト"""
     print("\n=== TP/SL決定方式シミュレーションテスト ===")
