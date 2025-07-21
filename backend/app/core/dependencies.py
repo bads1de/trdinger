@@ -7,7 +7,7 @@ FastAPIの依存性注入システムで使用するサービスファクトリ�
 from functools import lru_cache
 from sqlalchemy.orm import Session
 
-from database.connection import get_db, SessionLocal
+from database.connection import SessionLocal
 from database.repositories.ohlcv_repository import OHLCVRepository
 from database.repositories.open_interest_repository import OpenInterestRepository
 from database.repositories.funding_rate_repository import FundingRateRepository
@@ -42,23 +42,9 @@ def get_backtest_service() -> BacktestService:
         db.close()
 
 
-@lru_cache()
 def get_bayesian_optimizer() -> BayesianOptimizer:
     """
     BayesianOptimizerのインスタンスを取得
-
-    Returns:
-        BayesianOptimizerインスタンス
-    """
-    return BayesianOptimizer()
-
-
-def get_bayesian_optimizer_with_db(db: Session) -> BayesianOptimizer:
-    """
-    データベースセッション付きのBayesianOptimizerを取得
-
-    Args:
-        db: データベースセッション
 
     Returns:
         BayesianOptimizerインスタンス
