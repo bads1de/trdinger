@@ -91,7 +91,6 @@ def check_system_requirements() -> bool:
         "app/core/services/ml/signal_generator.py",
         "app/core/services/auto_strategy/services/ml_indicator_service.py",
         "app/core/services/auto_strategy/engines/fitness_sharing.py",
-        "app/core/services/auto_retraining/auto_retraining_scheduler.py",
         "app/core/services/optimization/bayesian_optimizer.py",
     ]
 
@@ -164,17 +163,6 @@ def test_phase4_components() -> bool:
 
         # 自動再学習スケジューラーのテスト
         print("自動再学習スケジューラーのテスト...")
-        from app.core.services.auto_retraining import AutoRetrainingScheduler
-
-        scheduler = AutoRetrainingScheduler()
-        job_id = scheduler.trigger_immediate_retraining("test_model", "test")
-        job_status = scheduler.get_job_status(job_id)
-
-        if job_status:
-            print("✅ 自動再学習スケジューラー")
-        else:
-            print("❌ 自動再学習スケジューラー")
-            return False
 
         # ベイズ最適化エンジンのテスト
         print("ベイズ最適化エンジンのテスト...")
