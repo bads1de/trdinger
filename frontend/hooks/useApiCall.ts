@@ -7,6 +7,7 @@
  */
 
 import { useState, useCallback } from "react";
+import { BACKEND_API_URL } from "@/constants";
 
 /**
  * API呼び出しの設定オプション
@@ -24,13 +25,9 @@ export interface ApiCallOptions {
  * API呼び出しの結果
  */
 export interface ApiCallResult<T = any> {
-  /** ローディング状態 */
   loading: boolean;
-  /** エラーメッセージ */
   error: string | null;
-  /** API呼び出し関数 */
   execute: (url: string, options?: ApiCallOptions) => Promise<T | null>;
-  /** 状態をリセットする関数 */
   reset: () => void;
 }
 
@@ -72,9 +69,7 @@ export const useApiCall = <T = any>(): ApiCallResult<T> => {
             typeof body === "string" ? body : JSON.stringify(body);
         }
 
-        const apiBaseUrl =
-          process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8000";
-        const fullUrl = url.startsWith("/") ? `${apiBaseUrl}${url}` : url;
+        const fullUrl = url.startsWith("/") ? `${BACKEND_API_URL}${url}` : url;
 
         const response = await fetch(fullUrl, requestOptions);
         const responseText = await response.text();

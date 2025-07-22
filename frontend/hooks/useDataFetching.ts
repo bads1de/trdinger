@@ -12,25 +12,15 @@ import { useApiCall } from "./useApiCall";
  * データ取得設定オプション
  */
 export interface DataFetchingOptions<TData, TParams = Record<string, any>> {
-  /** APIエンドポイントURL */
   endpoint: string;
-  /** HTTPメソッド（デフォルト: GET） */
   method?: "GET" | "POST" | "PUT" | "DELETE" | "PATCH";
-  /** 初期パラメータ */
   initialParams?: TParams;
-  /** データ変換関数 */
   transform?: (response: any) => TData[];
-  /** データ抽出パス（例: "data.items" または "results"） */
   dataPath?: string;
-  /** 自動初期取得を無効にする */
   disableAutoFetch?: boolean;
-  /** 依存関係（これらが変更されたときに再取得） */
   dependencies?: any[];
-  /** エラー時のデフォルトメッセージ */
   errorMessage?: string;
-  /** 成功時のコールバック */
   onSuccess?: (data: TData[]) => void;
-  /** エラー時のコールバック */
   onError?: (error: string) => void;
 }
 
@@ -38,21 +28,13 @@ export interface DataFetchingOptions<TData, TParams = Record<string, any>> {
  * データ取得結果
  */
 export interface DataFetchingResult<TData, TParams = Record<string, any>> {
-  /** 取得されたデータ */
   data: TData[];
-  /** ローディング状態 */
   loading: boolean;
-  /** エラーメッセージ */
   error: string | null;
-  /** 現在のパラメータ */
   params: TParams;
-  /** パラメータを更新する関数 */
   setParams: (params: Partial<TParams>) => void;
-  /** データを再取得する関数 */
   refetch: () => Promise<void>;
-  /** 状態をリセットする関数 */
   reset: () => void;
-  /** 手動でデータを設定する関数 */
   setData: (data: TData[]) => void;
 }
 

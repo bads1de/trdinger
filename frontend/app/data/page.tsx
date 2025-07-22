@@ -49,20 +49,46 @@ const DataPage: React.FC = () => {
   >("ohlcv");
 
   const [dataStatus, setDataStatus] = useState<any>(null);
-  const [bulkCollectionMessage, setBulkCollectionMessage] =
-    useState<string>("");
-  const [fundingRateCollectionMessage, setFundingRateCollectionMessage] =
-    useState<string>("");
-  const [openInterestCollectionMessage, setOpenInterestCollectionMessage] =
-    useState<string>("");
-  const [fearGreedCollectionMessage, setFearGreedCollectionMessage] =
-    useState<string>("");
-  const [externalMarketCollectionMessage, setExternalMarketCollectionMessage] =
-    useState<string>("");
-  const [allDataCollectionMessage, setAllDataCollectionMessage] =
-    useState<string>("");
-  const [incrementalUpdateMessage, setIncrementalUpdateMessage] =
-    useState<string>("");
+  const [messages, setMessages] = useState<Record<string, string>>({});
+
+  // 定数定義
+  const MESSAGE_DURATION = {
+    SHORT: 10000,
+    MEDIUM: 15000,
+    LONG: 20000,
+  } as const;
+
+  const MESSAGE_KEYS = {
+    BULK_COLLECTION: "bulkCollection",
+    FUNDING_RATE_COLLECTION: "fundingRateCollection",
+    OPEN_INTEREST_COLLECTION: "openInterestCollection",
+    FEAR_GREED_COLLECTION: "fearGreedCollection",
+    ALL_DATA_COLLECTION: "allDataCollection",
+    INCREMENTAL_UPDATE: "incrementalUpdate",
+    EXTERNAL_MARKET_COLLECTION: "externalMarketCollection",
+  } as const;
+
+  type MessageKey = (typeof MESSAGE_KEYS)[keyof typeof MESSAGE_KEYS];
+
+  const setMessage = useCallback(
+    (
+      key: MessageKey,
+      message: string,
+      duration: number = MESSAGE_DURATION.SHORT
+    ) => {
+      setMessages((prev) => ({ ...prev, [key]: message }));
+      if (duration > 0) {
+        setTimeout(() => {
+          setMessages((prev) => {
+            const newMessages = { ...prev };
+            delete newMessages[key];
+            return newMessages;
+          });
+        }, duration);
+      }
+    },
+    []
+  );
 
   // カスタムフックを使用してデータ取得
   const { symbols } = useSymbols();
@@ -134,7 +160,7 @@ const DataPage: React.FC = () => {
    * 一括差分データ更新
    */
   const handleBulkIncrementalUpdate = async () => {
-    setIncrementalUpdateMessage("");
+    setMessage(MESSAGE_KEYS.INCREMENTAL_UPDATE, "");
     await updateBulkIncrementalData(selectedSymbol, selectedTimeFrame, {
       onSuccess: async (result) => {
         const totalSavedCount = result.data.total_saved_count || 0;
@@ -151,28 +177,30 @@ const DataPage: React.FC = () => {
             .map(([tf, res]) => `${tf}:${res.saved_count}`)
             .join(", ");
           timeframeDetails = ` [${tfResults}]`;
-        } else {
-          console.warn("時間足別結果が見つかりません");
         }
 
         // 外部市場データの件数を取得
         const externalMarketCount =
           result.data.data.external_market?.inserted_count || 0;
 
-        setIncrementalUpdateMessage(
+        setMessage(
+          MESSAGE_KEYS.INCREMENTAL_UPDATE,
           `✅ 一括差分更新完了！ ${selectedSymbol} - ` +
-            `総計${totalSavedCount}件 (OHLCV:${ohlcvCount}${timeframeDetails}, FR:${frCount}, OI:${oiCount}, 外部市場:${externalMarketCount})`
+            `総計${totalSavedCount}件 (OHLCV:${ohlcvCount}${timeframeDetails}, FR:${frCount}, OI:${oiCount}, 外部市場:${externalMarketCount})`,
+          MESSAGE_DURATION.MEDIUM
         );
 
         // 現在選択されている時間足のデータを再取得
         await fetchOHLCVData();
         fetchDataStatus();
-        setTimeout(() => setIncrementalUpdateMessage(""), 15000);
       },
       onError: (errorMessage) => {
-        setIncrementalUpdateMessage(`❌ ${errorMessage}`);
+        setMessage(
+          MESSAGE_KEYS.INCREMENTAL_UPDATE,
+          `❌ ${errorMessage}`,
+          MESSAGE_DURATION.SHORT
+        );
         console.error("一括差分更新エラー:", errorMessage);
-        setTimeout(() => setIncrementalUpdateMessage(""), 10000);
       },
     });
   };
@@ -194,162 +222,132 @@ const DataPage: React.FC = () => {
     });
   }, [fetchDataStatusApi]);
 
-  /**
-   * 一括OHLCVデータ収集開始時のコールバック
-   */
+  // 汎用メッセージハンドラ
+  const createMessageHandler = (
+    key: MessageKey,
+    duration: number = MESSAGE_DURATION.SHORT
+  ) => ({
+    onStart: (message: string) => setMessage(key, message, duration),
+    onError: (errorMessage: string) =>
+      setMessage(key, `❌ ${errorMessage}`, duration),
+  });
+
+  // データ収集メッセージ生成関数
+  const generateCollectionMessage = (type: string, result: any): string => {
+    switch (type) {
+      case "bulk":
+        return `🚀 ${result.message} (${result.total_tasks}タスク)`;
+      case "funding":
+        if ("total_symbols" in result) {
+          return `🚀 ${result.message} (${result.successful_symbols}/${result.total_symbols}シンボル成功)`;
+        }
+        return `🚀 ${result.symbol}のFRデータ収集完了 (${result.saved_count}件保存)`;
+      case "openinterest":
+        if ("total_symbols" in result) {
+          return `🚀 ${result.message} (${result.successful_symbols}/${result.total_symbols}シンボル成功)`;
+        }
+        return `🚀 ${result.symbol}のOIデータ収集完了 (${result.saved_count}件保存)`;
+      case "feargreed":
+        return result.success
+          ? `🚀 Fear & Greed Index収集完了 (取得:${result.fetched_count}件, 挿入:${result.inserted_count}件)`
+          : `❌ ${result.message}`;
+      case "alldata":
+        if (result.ohlcv_result?.status === "completed") {
+          const ohlcvCount = result.ohlcv_result?.total_tasks || 0;
+          const fundingCount =
+            result.funding_rate_result?.total_saved_records || 0;
+          const openInterestCount =
+            result.open_interest_result?.total_saved_records || 0;
+          return `🚀 全データ収集完了！ OHLCV:${ohlcvCount}タスク, FR:${fundingCount}件, OI:${openInterestCount}件, TI:自動計算済み`;
+        }
+        return `🔄 ${result.ohlcv_result?.message || "処理中..."} (実行中...)`;
+      default:
+        return `🚀 ${result.message || "処理完了"}`;
+    }
+  };
+
+  // 各種ハンドラを簡潔に定義
   const handleBulkCollectionStart = (result: BulkOHLCVCollectionResult) => {
-    setBulkCollectionMessage(
-      `🚀 ${result.message} (${result.total_tasks}タスク)`
+    setMessage(
+      MESSAGE_KEYS.BULK_COLLECTION,
+      generateCollectionMessage("bulk", result)
     );
-    // データ状況を更新
     fetchDataStatus();
-    // 10秒後にメッセージをクリア
-    setTimeout(() => setBulkCollectionMessage(""), 10000);
   };
 
-  /**
-   * 一括OHLCVデータ収集エラー時のコールバック
-   */
   const handleBulkCollectionError = (errorMessage: string) => {
-    setBulkCollectionMessage(`❌ ${errorMessage}`);
-    // 10秒後にメッセージをクリア
-    setTimeout(() => setBulkCollectionMessage(""), 10000);
+    createMessageHandler(MESSAGE_KEYS.BULK_COLLECTION).onError(errorMessage);
   };
 
-  /**
-   * FRデータ収集開始時のコールバック
-   */
   const handleFundingRateCollectionStart = (
     result: BulkFundingRateCollectionResult | FundingRateCollectionResult
   ) => {
-    if ("total_symbols" in result) {
-      // BulkFundingRateCollectionResult
-      const bulkResult = result as BulkFundingRateCollectionResult;
-      setFundingRateCollectionMessage(
-        `🚀 ${bulkResult.message} (${bulkResult.successful_symbols}/${bulkResult.total_symbols}シンボル成功)`
-      );
-    } else {
-      // FundingRateCollectionResult
-      const singleResult = result as FundingRateCollectionResult;
-      setFundingRateCollectionMessage(
-        `🚀 ${singleResult.symbol}のFRデータ収集完了 (${singleResult.saved_count}件保存)`
-      );
-    }
-    // 10秒後にメッセージをクリア
-    setTimeout(() => setFundingRateCollectionMessage(""), 10000);
+    setMessage(
+      MESSAGE_KEYS.FUNDING_RATE_COLLECTION,
+      generateCollectionMessage("funding", result)
+    );
   };
 
-  /**
-   * FRデータ収集エラー時のコールバック
-   */
   const handleFundingRateCollectionError = (errorMessage: string) => {
-    setFundingRateCollectionMessage(`❌ ${errorMessage}`);
-    // 10秒後にメッセージをクリア
-    setTimeout(() => setFundingRateCollectionMessage(""), 10000);
+    createMessageHandler(MESSAGE_KEYS.FUNDING_RATE_COLLECTION).onError(
+      errorMessage
+    );
   };
 
-  /**
-   * OIデータ収集開始時のコールバック
-   */
   const handleOpenInterestCollectionStart = (
     result: BulkOpenInterestCollectionResult | OpenInterestCollectionResult
   ) => {
-    if ("total_symbols" in result) {
-      // BulkOpenInterestCollectionResult
-      const bulkResult = result as BulkOpenInterestCollectionResult;
-      setOpenInterestCollectionMessage(
-        `🚀 ${bulkResult.message} (${bulkResult.successful_symbols}/${bulkResult.total_symbols}シンボル成功)`
-      );
-    } else {
-      // OpenInterestCollectionResult
-      const singleResult = result as OpenInterestCollectionResult;
-      setOpenInterestCollectionMessage(
-        `🚀 ${singleResult.symbol}のOIデータ収集完了 (${singleResult.saved_count}件保存)`
-      );
-    }
-    // 10秒後にメッセージをクリア
-    setTimeout(() => setOpenInterestCollectionMessage(""), 10000);
+    setMessage(
+      MESSAGE_KEYS.OPEN_INTEREST_COLLECTION,
+      generateCollectionMessage("openinterest", result)
+    );
   };
 
-  /**
-   * OIデータ収集エラー時のコールバック
-   */
   const handleOpenInterestCollectionError = (errorMessage: string) => {
-    setOpenInterestCollectionMessage(`❌ ${errorMessage}`);
-    // 10秒後にメッセージをクリア
-    setTimeout(() => setOpenInterestCollectionMessage(""), 10000);
+    createMessageHandler(MESSAGE_KEYS.OPEN_INTEREST_COLLECTION).onError(
+      errorMessage
+    );
   };
 
-  /**
-   * Fear & Greed Index データ収集開始時のコールバック
-   */
   const handleFearGreedCollectionStart = (
     result: FearGreedCollectionResult
   ) => {
+    setMessage(
+      MESSAGE_KEYS.FEAR_GREED_COLLECTION,
+      generateCollectionMessage("feargreed", result)
+    );
     if (result.success) {
-      setFearGreedCollectionMessage(
-        `🚀 Fear & Greed Index収集完了 (取得:${result.fetched_count}件, 挿入:${result.inserted_count}件)`
-      );
-      // データ収集後に Fear & Greed データを再取得
       fetchFearGreedData();
-    } else {
-      setFearGreedCollectionMessage(`❌ ${result.message}`);
     }
-    // データ状況を更新
     fetchDataStatus();
-    // 10秒後にメッセージをクリア
-    setTimeout(() => setFearGreedCollectionMessage(""), 10000);
   };
 
-  /**
-   * Fear & Greed Index データ収集エラー時のコールバック
-   */
   const handleFearGreedCollectionError = (errorMessage: string) => {
-    setFearGreedCollectionMessage(`❌ ${errorMessage}`);
-    // 10秒後にメッセージをクリア
-    setTimeout(() => setFearGreedCollectionMessage(""), 10000);
+    createMessageHandler(MESSAGE_KEYS.FEAR_GREED_COLLECTION).onError(
+      errorMessage
+    );
   };
 
-  /**
-   * 全データ一括収集開始時のコールバック
-   */
   const handleAllDataCollectionStart = (result: AllDataCollectionResult) => {
-    if (result.ohlcv_result.status === "completed") {
-      const ohlcvCount = result.ohlcv_result?.total_tasks || 0;
-      const fundingCount = result.funding_rate_result?.total_saved_records || 0;
-      const openInterestCount =
-        result.open_interest_result?.total_saved_records || 0;
-
-      setAllDataCollectionMessage(
-        `🚀 全データ収集完了！ OHLCV:${ohlcvCount}タスク, FR:${fundingCount}件, OI:${openInterestCount}件, TI:自動計算済み`
-      );
-    } else {
-      setAllDataCollectionMessage(
-        `🔄 ${result.ohlcv_result.message} (実行中...)`
-      );
-    }
-
-    // データ状況を更新
+    setMessage(
+      MESSAGE_KEYS.ALL_DATA_COLLECTION,
+      generateCollectionMessage("alldata", result),
+      MESSAGE_DURATION.MEDIUM
+    );
     fetchDataStatus();
 
-    // 全データ収集完了後に全てのデータを再取得
     setTimeout(() => {
       fetchOHLCVData();
       fetchFundingRateData();
       fetchOpenInterestData();
     }, 3000);
-
-    // 15秒後にメッセージをクリア
-    setTimeout(() => setAllDataCollectionMessage(""), 15000);
   };
 
-  /**
-   * 全データ一括収集エラー時のコールバック
-   */
   const handleAllDataCollectionError = (errorMessage: string) => {
-    setAllDataCollectionMessage(`❌ ${errorMessage}`);
-    // 15秒後にメッセージをクリア
-    setTimeout(() => setAllDataCollectionMessage(""), 15000);
+    createMessageHandler(
+      MESSAGE_KEYS.ALL_DATA_COLLECTION,
+      MESSAGE_DURATION.MEDIUM
+    ).onError(errorMessage);
   };
 
   // コンポーネント初期化時にデータステータスをフェッチ
@@ -377,39 +375,44 @@ const DataPage: React.FC = () => {
       {/* メインコンテンツエリア */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
         {/* エラー表示 */}
-        {(ohlcvError ||
-          fundingError ||
-          openInterestError ||
-          bulkIncrementalUpdateError) && (
-          <div className="enterprise-card border-error-200 dark:border-error-800 bg-error-50 dark:bg-error-900/20 animate-slide-down">
-            <div className="p-4">
-              <div className="flex items-center">
-                <svg
-                  className="w-5 h-5 text-error-500 mr-3"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                  />
-                </svg>
-                <h3 className="text-sm font-medium text-error-800 dark:text-error-200">
-                  データ取得エラー
-                </h3>
+        {(() => {
+          const errors = [
+            ohlcvError,
+            fundingError,
+            openInterestError,
+            bulkIncrementalUpdateError,
+          ].filter(Boolean);
+
+          if (errors.length === 0) return null;
+
+          return (
+            <div className="enterprise-card border-error-200 dark:border-error-800 bg-error-50 dark:bg-error-900/20 animate-slide-down">
+              <div className="p-4">
+                <div className="flex items-center">
+                  <svg
+                    className="w-5 h-5 text-error-500 mr-3"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                    />
+                  </svg>
+                  <h3 className="text-sm font-medium text-error-800 dark:text-error-200">
+                    データ取得エラー
+                  </h3>
+                </div>
+                <p className="mt-2 text-sm text-error-700 dark:text-error-300">
+                  {errors[0]}
+                </p>
               </div>
-              <p className="mt-2 text-sm text-error-700 dark:text-error-300">
-                {ohlcvError ||
-                  fundingError ||
-                  openInterestError ||
-                  bulkIncrementalUpdateError}
-              </p>
             </div>
-          </div>
-        )}
+          );
+        })()}
 
         <DataControls
           dataStatus={dataStatus}
@@ -431,13 +434,25 @@ const DataPage: React.FC = () => {
           handleOpenInterestCollectionError={handleOpenInterestCollectionError}
           handleFearGreedCollectionStart={handleFearGreedCollectionStart}
           handleFearGreedCollectionError={handleFearGreedCollectionError}
-          bulkCollectionMessage={bulkCollectionMessage}
-          fundingRateCollectionMessage={fundingRateCollectionMessage}
-          openInterestCollectionMessage={openInterestCollectionMessage}
-          fearGreedCollectionMessage={fearGreedCollectionMessage}
-          externalMarketCollectionMessage={externalMarketCollectionMessage}
-          allDataCollectionMessage={allDataCollectionMessage}
-          incrementalUpdateMessage={incrementalUpdateMessage}
+          bulkCollectionMessage={messages[MESSAGE_KEYS.BULK_COLLECTION] || ""}
+          fundingRateCollectionMessage={
+            messages[MESSAGE_KEYS.FUNDING_RATE_COLLECTION] || ""
+          }
+          openInterestCollectionMessage={
+            messages[MESSAGE_KEYS.OPEN_INTEREST_COLLECTION] || ""
+          }
+          fearGreedCollectionMessage={
+            messages[MESSAGE_KEYS.FEAR_GREED_COLLECTION] || ""
+          }
+          externalMarketCollectionMessage={
+            messages[MESSAGE_KEYS.EXTERNAL_MARKET_COLLECTION] || ""
+          }
+          allDataCollectionMessage={
+            messages[MESSAGE_KEYS.ALL_DATA_COLLECTION] || ""
+          }
+          incrementalUpdateMessage={
+            messages[MESSAGE_KEYS.INCREMENTAL_UPDATE] || ""
+          }
         />
 
         <DataTableContainer
