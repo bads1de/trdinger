@@ -1,5 +1,5 @@
 import { useState, useCallback } from "react";
-import { BACKEND_API_URL } from "@/constants";
+import { useApiCall } from "./useApiCall";
 
 type DeleteRequestState<T> = {
   data: T | null;
@@ -7,38 +7,37 @@ type DeleteRequestState<T> = {
   isLoading: boolean;
 };
 
-export const useDeleteRequest = <T,>() => {
-  const [state, setState] = useState<DeleteRequestState<T>>({
-    data: null,
-    error: null,
-    isLoading: false,
-  });
+export const useDeleteRequest = <T>() => {
+  const [data, setData] = useState<T | null>(null);
+  const { execute, loading, error } = useApiCall<T>();
 
-  const sendDeleteRequest = useCallback(async (endpoint: string) => {
-    setState({ data: null, error: null, isLoading: true });
+  const sendDeleteRequest = useCallback(
+    async (endpoint: string) => {
+      setData(null);
 
-    try {
-      const response = await fetch(`${BACKEND_API_URL}${endpoint}`, {
+      const result = await execute(endpoint, {
         method: "DELETE",
-        headers: {
-          "Content-Type": "application/json",
+        onSuccess: (responseData) => {
+          setData(responseData);
         },
       });
 
-      const responseData = await response.json();
-
-      if (!response.ok) {
-        throw new Error(responseData.message || "削除リクエストに失敗しました");
+      if (result) {
+        return { success: true, data: result };
+      } else {
+        return {
+          success: false,
+          error: error || "削除リクエストに失敗しました",
+        };
       }
+    },
+    [execute, error]
+  );
 
-      setState({ data: responseData, error: null, isLoading: false });
-      return { success: true, data: responseData };
-    } catch (error: any) {
-      const errorMessage = error.message || "予期せぬエラーが発生しました";
-      setState({ data: null, error: errorMessage, isLoading: false });
-      return { success: false, error: errorMessage };
-    }
-  }, []);
-
-  return { ...state, sendDeleteRequest };
+  return {
+    data,
+    error,
+    isLoading: loading,
+    sendDeleteRequest,
+  };
 };
