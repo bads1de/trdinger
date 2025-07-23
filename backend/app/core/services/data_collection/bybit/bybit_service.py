@@ -11,7 +11,7 @@ import logging
 from datetime import datetime, timezone
 from typing import Dict, List, Any, Optional, Callable
 from abc import ABC
-from database.connection import SessionLocal
+from database.connection import get_db
 
 logger = logging.getLogger(__name__)
 
@@ -197,9 +197,9 @@ class BybitService(ABC):
                     break
 
                 logger.info(
-                     f"ページ {page_count}: {len(page_data)}件取得 "
-                     f"(累計: {len(all_data) + len(page_data)}件)"
-                 )
+                    f"ページ {page_count}: {len(page_data)}件取得 "
+                    f"(累計: {len(all_data) + len(page_data)}件)"
+                )
 
                 # 重複チェック（タイムスタンプベース）
                 existing_timestamps = {item["timestamp"] for item in all_data}
@@ -249,15 +249,6 @@ class BybitService(ABC):
         logger.info(f"全期間データ取得完了: {len(all_data)}件 ({page_count}ページ)")
         return all_data
 
-    def _get_database_session(self):
-        """
-        データベースセッションを取得
-
-        Returns:
-            データベースセッション
-        """
-        return SessionLocal()
-
     async def _execute_with_db_session(self, func: Callable, **kwargs) -> Any:
         """
         データベースセッションを使用して関数を実行
@@ -267,7 +258,8 @@ class BybitService(ABC):
             # 既存のリポジトリが渡された場合、dbセッションはNoneで呼び出す
             return await func(db=None, **kwargs)
         else:
-            db = self._get_database_session()
+            # get_db()を使用してセッションを取得
+            db = next(get_db())
             try:
                 # 新しいdbセッションを渡す
                 return await func(db=db, **kwargs)

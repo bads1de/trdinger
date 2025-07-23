@@ -7,13 +7,15 @@ MLトレーニングAPI
 import logging
 from datetime import datetime
 from typing import Dict, Any, Optional
-from fastapi import APIRouter, BackgroundTasks
+from fastapi import APIRouter, BackgroundTasks, Depends
 from pydantic import BaseModel, Field
+from sqlalchemy.orm import Session
 
 from app.core.services.ml.ml_training_service import MLTrainingService
 from app.core.services.auto_strategy.services.ml_orchestrator import MLOrchestrator
 from app.core.services.backtest_data_service import BacktestDataService
 from app.core.utils.unified_error_handler import UnifiedErrorHandler
+from app.core.utils.api_utils import APIResponseHelper
 from database.repositories.ohlcv_repository import OHLCVRepository
 from database.repositories.open_interest_repository import OpenInterestRepository
 from database.repositories.funding_rate_repository import FundingRateRepository
@@ -173,16 +175,12 @@ class MLStatusResponse(BaseModel):
     error: Optional[str] = None
 
 
-def get_data_service():
+def get_data_service(db: Session = Depends(get_db)) -> BacktestDataService:
     """データサービスの依存性注入"""
-    db = next(get_db())
-    try:
-        ohlcv_repo = OHLCVRepository(db)
-        oi_repo = OpenInterestRepository(db)
-        fr_repo = FundingRateRepository(db)
-        return BacktestDataService(ohlcv_repo, oi_repo, fr_repo)
-    finally:
-        db.close()
+    ohlcv_repo = OHLCVRepository(db)
+    oi_repo = OpenInterestRepository(db)
+    fr_repo = FundingRateRepository(db)
+    return BacktestDataService(ohlcv_repo, oi_repo, fr_repo)
 
 
 async def train_ml_model_background(config: MLTrainingConfig):
@@ -410,10 +408,12 @@ async def start_ml_training(
         # バックグラウンドタスクでトレーニング開始
         background_tasks.add_task(train_ml_model_background, config)
 
-        return MLTrainingResponse(
+        return APIResponseHelper.api_response(
             success=True,
             message="MLトレーニングを開始しました",
-            training_id=f"training_{datetime.now().strftime('%Y%m%d_%H%M%S')}",
+            data={
+                "training_id": f"training_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+            },
         )
 
     return await UnifiedErrorHandler.safe_execute_async(_start_training)
@@ -437,11 +437,14 @@ async def get_ml_model_info():
         ml_orchestrator = MLOrchestrator()
         model_status = ml_orchestrator.get_model_status()
 
-        return {
-            "success": True,
-            "model_status": model_status,
-            "last_training": training_status.get("model_info"),
-        }
+        return APIResponseHelper.api_response(
+            success=True,
+            message="MLモデル情報を取得しました",
+            data={
+                "model_status": model_status,
+                "last_training": training_status.get("model_info"),
+            },
+        )
 
     return await UnifiedErrorHandler.safe_execute_async(_get_model_info)
 

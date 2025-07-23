@@ -9,6 +9,7 @@ from app.core.services.auto_strategy import AutoStrategyService
 from app.core.services.auto_strategy.models.ga_config import GAConfig
 from app.core.services.auto_strategy.models.gene_strategy import StrategyGene
 from app.core.utils.unified_error_handler import UnifiedErrorHandler
+from app.core.utils.api_utils import APIResponseHelper
 
 
 logger = logging.getLogger(__name__)
@@ -175,10 +176,10 @@ async def generate_strategy(
         )
         logger.info(f"戦略生成タスクをバックグラウンドで開始: {experiment_id}")
 
-        return GAGenerationResponse(
+        return APIResponseHelper.api_response(
             success=True,
-            experiment_id=experiment_id,
             message="GA戦略生成を開始しました",
+            data={"experiment_id": experiment_id},
         )
 
     return await UnifiedErrorHandler.safe_execute_async(_generate_strategy)
@@ -260,18 +261,18 @@ async def get_experiment_results(
 
         # 多目的最適化の結果かどうかを判定
         if "pareto_front" in result and "objectives" in result:
-            return MultiObjectiveResultResponse(
+            return APIResponseHelper.api_response(
                 success=True,
-                result=result,
-                pareto_front=result.get("pareto_front"),
-                objectives=result.get("objectives"),
                 message="多目的最適化実験結果を取得しました",
+                data={
+                    "result": result,
+                    "pareto_front": result.get("pareto_front"),
+                    "objectives": result.get("objectives"),
+                },
             )
         else:
-            return GAResultResponse(
-                success=True,
-                result=result,
-                message="実験結果を取得しました",
+            return APIResponseHelper.api_response(
+                success=True, message="実験結果を取得しました", data={"result": result}
             )
 
     return await UnifiedErrorHandler.safe_execute_async(_get_experiment_results)

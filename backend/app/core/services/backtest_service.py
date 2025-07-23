@@ -15,7 +15,7 @@ from backtesting import Backtest, Strategy
 from .backtest_data_service import BacktestDataService
 from database.repositories.ohlcv_repository import OHLCVRepository
 from database.repositories.backtest_result_repository import BacktestResultRepository
-from database.connection import SessionLocal
+from database.connection import get_db
 from sqlalchemy.orm import Session
 
 
@@ -77,7 +77,7 @@ class BacktestService:
 
             # 2. データサービスの初期化（必要に応じて）
             if self.data_service is None:
-                db = SessionLocal()
+                db = next(get_db())
                 try:
                     ohlcv_repo = OHLCVRepository(db)
                     self.data_service = BacktestDataService(ohlcv_repo)

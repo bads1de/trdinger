@@ -49,17 +49,21 @@
 
 ### 3.3. コードの複雑性と一貫性
 
-#### 課題: 依存性注入とセッション管理の不統一
+#### ✅ 完了: 依存性注入とセッション管理の不統一
 
-- **現状**: `app/core/dependencies.py` でサービスインスタンスを生成するファクトリが定義されていますが、一部の API では直接インスタンスを生成している箇所が見られます。また、DB セッションの取得方法も `get_db()` を使う箇所と `SessionLocal()` を直接呼び出す箇所が混在しています。
-- **提案**:
-  - 全てのサービスインスタンスの取得と DB セッション管理を、FastAPI の依存性注入システム (`Depends`) を通じて行うように統一します。これにより、コードの記述が簡潔になり、テスト時のモック注入も容易になります。
+- **修正内容**:
+  - `app/core/dependencies.py`の`get_backtest_service()`を依存性注入パターンに変更
+  - `app/api/ml_training.py`、`app/api/ml_management.py`の`get_data_service()`を依存性注入パターンに変更
+  - `app/core/services/data_collection/bybit/bybit_service.py`で`SessionLocal()`の直接使用を`get_db()`に変更
+  - `app/core/services/backtest_service.py`で`SessionLocal()`の直接使用を`get_db()`に変更
+  - `app/core/services/auto_strategy/services/ml_orchestrator.py`のセッション管理を改善
 
-#### 課題: API レスポンス形式の不統一
+#### ✅ 完了: API レスポンス形式の不統一
 
-- **現状**: `APIResponseHelper` がありますが、一部のエンドポイントでは手動でレスポンス辞書を作成しています。
-- **提案**:
-  - 全ての API レスポンス生成を `APIResponseHelper` を通じて行うように徹底し、API 全体でレスポンス形式の一貫性を保ちます。
+- **修正内容**:
+  - `app/api/auto_strategy.py`で GAGenerationResponse、MultiObjectiveResultResponse、GAResultResponse を`APIResponseHelper`に変更
+  - `app/api/ml_training.py`で MLTrainingResponse、手動レスポンス辞書を`APIResponseHelper`に変更
+  - `app/api/ml_management.py`で手動レスポンス辞書を`APIResponseHelper`に変更
 
 ## 4. まとめ
 

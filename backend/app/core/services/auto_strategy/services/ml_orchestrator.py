@@ -32,6 +32,7 @@ from database.repositories.ohlcv_repository import OHLCVRepository
 from database.repositories.funding_rate_repository import FundingRateRepository
 from database.repositories.open_interest_repository import OpenInterestRepository
 from database.connection import get_db
+from sqlalchemy.orm import Session
 
 logger = logging.getLogger(__name__)
 
@@ -77,21 +78,15 @@ class MLOrchestrator:
         # 既存の学習済みモデルを自動読み込み
         self._try_load_latest_model()
 
-    @property
-    def backtest_data_service(self) -> BacktestDataService:
-        """BacktestDataServiceのインスタンスを取得（遅延初期化）"""
+    def get_backtest_data_service(self, db: Session) -> BacktestDataService:
+        """BacktestDataServiceのインスタンスを取得（依存性注入対応）"""
         if self._backtest_data_service is None:
-            # データベース接続を取得してリポジトリを初期化
-            db = next(get_db())
-            try:
-                ohlcv_repo = OHLCVRepository(db)
-                fr_repo = FundingRateRepository(db)
-                oi_repo = OpenInterestRepository(db)
-                self._backtest_data_service = BacktestDataService(
-                    ohlcv_repo=ohlcv_repo, oi_repo=oi_repo, fr_repo=fr_repo
-                )
-            finally:
-                db.close()
+            ohlcv_repo = OHLCVRepository(db)
+            fr_repo = FundingRateRepository(db)
+            oi_repo = OpenInterestRepository(db)
+            self._backtest_data_service = BacktestDataService(
+                ohlcv_repo=ohlcv_repo, oi_repo=oi_repo, fr_repo=fr_repo
+            )
         return self._backtest_data_service
 
     @unified_timeout_decorator(
@@ -587,12 +582,19 @@ class MLOrchestrator:
             symbol = "BTC/USDT:USDT"  # TODO: 実際のシンボルを取得する方法を実装
 
             # BacktestDataServiceを使用して拡張データを取得
-            enhanced_df = self.backtest_data_service.get_data_for_backtest(
-                symbol=symbol,
-                timeframe="1h",  # TODO: 実際のタイムフレームを取得
-                start_date=start_date,
-                end_date=end_date,
-            )
+            # 注意: この部分は依存性注入が必要ですが、現在のアーキテクチャでは
+            # セッションを直接取得する必要があります
+            db = next(get_db())
+            try:
+                backtest_service = self.get_backtest_data_service(db)
+                enhanced_df = backtest_service.get_data_for_backtest(
+                    symbol=symbol,
+                    timeframe="1h",  # TODO: 実際のタイムフレームを取得
+                    start_date=start_date,
+                    end_date=end_date,
+                )
+            finally:
+                db.close()
 
             if enhanced_df is not None and not enhanced_df.empty:
                 logger.info(

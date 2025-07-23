@@ -4,9 +4,10 @@ ML管理API
 フロントエンド用のML管理機能を提供するAPIエンドポイント
 """
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
 from typing import Dict, Any
 import logging
+from sqlalchemy.orm import Session
 from datetime import datetime
 import os
 
@@ -17,6 +18,7 @@ from app.core.services.ml.performance_extractor import performance_extractor
 from app.core.utils.unified_error_handler import UnifiedErrorHandler
 
 from app.core.services.backtest_data_service import BacktestDataService
+from backend.app.core.utils.api_utils import APIResponseHelper
 from database.repositories.ohlcv_repository import OHLCVRepository
 from database.repositories.open_interest_repository import OpenInterestRepository
 from database.repositories.funding_rate_repository import FundingRateRepository
@@ -588,7 +590,9 @@ async def update_ml_config(config_data: Dict[str, Any]):
         # TODO: 設定の更新ロジックを実装
         # 現在は読み取り専用として扱う
         logger.info(f"ML設定更新要求: {config_data}")
-        return {"message": "設定が更新されました（現在は読み取り専用）"}
+        return APIResponseHelper.api_response(
+            success=True, message="設定が更新されました（現在は読み取り専用）"
+        )
 
     return await UnifiedErrorHandler.safe_execute_async(_update_ml_config)
 
@@ -622,13 +626,9 @@ async def cleanup_old_models():
     return await UnifiedErrorHandler.safe_execute_async(_cleanup_old_models)
 
 
-def get_data_service():
+def get_data_service(db: Session = Depends(get_db)) -> BacktestDataService:
     """データサービスの依存性注入"""
-    db = next(get_db())
-    try:
-        ohlcv_repo = OHLCVRepository(db)
-        oi_repo = OpenInterestRepository(db)
-        fr_repo = FundingRateRepository(db)
-        return BacktestDataService(ohlcv_repo, oi_repo, fr_repo)
-    finally:
-        db.close()
+    ohlcv_repo = OHLCVRepository(db)
+    oi_repo = OpenInterestRepository(db)
+    fr_repo = FundingRateRepository(db)
+    return BacktestDataService(ohlcv_repo, oi_repo, fr_repo)
