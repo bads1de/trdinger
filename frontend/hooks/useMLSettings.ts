@@ -1,6 +1,28 @@
 import { useState, useEffect, useCallback } from "react";
 import { BACKEND_API_URL } from "@/constants";
 
+export interface AutoMLConfig {
+  tsfresh: {
+    enabled: boolean;
+    feature_selection: boolean;
+    fdr_level: number;
+    feature_count_limit: number;
+    parallel_jobs: number;
+    performance_mode: string;
+  };
+  featuretools: {
+    enabled: boolean;
+    max_depth: number;
+    max_features: number;
+  };
+  autofeat: {
+    enabled: boolean;
+    max_features: number;
+    generations: number;
+    population_size: number;
+  };
+}
+
 export interface MLConfig {
   data_processing: {
     max_ohlcv_rows: number;
@@ -37,10 +59,13 @@ export interface MLConfig {
 
 export const useMLSettings = () => {
   const [config, setConfig] = useState<MLConfig | null>(null);
+  const [automlConfig, setAutomlConfig] = useState<AutoMLConfig | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isResetting, setIsResetting] = useState(false);
   const [isCleaning, setIsCleaning] = useState(false);
+  const [isAutomlLoading, setIsAutomlLoading] = useState(false);
+  const [isAutomlSaving, setIsAutomlSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
@@ -198,16 +223,159 @@ export const useMLSettings = () => {
     setConfig(newConfig);
   };
 
+  // AutoML設定関連の関数
+  const fetchAutoMLConfig = useCallback(async () => {
+    setIsAutomlLoading(true);
+    setError(null);
+
+    try {
+      const response = await fetch(
+        `${BACKEND_API_URL}/api/automl-features/default-config`,
+        {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.detail || "AutoML設定取得に失敗しました");
+      }
+
+      setAutomlConfig(data.config);
+    } catch (error) {
+      console.error("AutoML設定取得エラー:", error);
+      setError(
+        error instanceof Error ? error.message : "サーバーエラーが発生しました"
+      );
+    } finally {
+      setIsAutomlLoading(false);
+    }
+  }, []);
+
+  const validateAutoMLConfig = useCallback(async (config: AutoMLConfig) => {
+    try {
+      const response = await fetch(
+        `${BACKEND_API_URL}/api/automl-features/validate-config`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(config),
+        }
+      );
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.detail || "AutoML設定検証に失敗しました");
+      }
+
+      return data;
+    } catch (error) {
+      console.error("AutoML設定検証エラー:", error);
+      throw error;
+    }
+  }, []);
+
+  const generateAutoMLFeatures = useCallback(
+    async (
+      symbol: string,
+      timeframe: string = "1h",
+      limit: number = 1000,
+      automlConfig?: AutoMLConfig,
+      includeTarget: boolean = false
+    ) => {
+      setIsAutomlSaving(true);
+      setError(null);
+
+      try {
+        const response = await fetch(
+          `${BACKEND_API_URL}/api/automl-features/generate`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              symbol,
+              timeframe,
+              limit,
+              automl_config: automlConfig,
+              include_target: includeTarget,
+            }),
+          }
+        );
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.detail || "AutoML特徴量生成に失敗しました");
+        }
+
+        showSuccessMessage("AutoML特徴量が正常に生成されました");
+        return data;
+      } catch (error) {
+        console.error("AutoML特徴量生成エラー:", error);
+        setError(
+          error instanceof Error
+            ? error.message
+            : "サーバーエラーが発生しました"
+        );
+        throw error;
+      } finally {
+        setIsAutomlSaving(false);
+      }
+    },
+    []
+  );
+
+  const clearAutoMLCache = useCallback(async () => {
+    try {
+      const response = await fetch(
+        `${BACKEND_API_URL}/api/automl-features/clear-cache`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.detail || "AutoMLキャッシュクリアに失敗しました");
+      }
+
+      showSuccessMessage("AutoMLキャッシュがクリアされました");
+      return data;
+    } catch (error) {
+      console.error("AutoMLキャッシュクリアエラー:", error);
+      setError(
+        error instanceof Error ? error.message : "サーバーエラーが発生しました"
+      );
+      throw error;
+    }
+  }, []);
+
   useEffect(() => {
     fetchConfig();
   }, [fetchConfig]);
 
   return {
     config,
+    automlConfig,
     isLoading,
     isSaving,
     isResetting,
     isCleaning,
+    isAutomlLoading,
+    isAutomlSaving,
     error,
     successMessage,
     fetchConfig,
@@ -216,5 +384,11 @@ export const useMLSettings = () => {
     cleanupOldModels,
     updateConfig,
     setConfig,
+    // AutoML関連の関数
+    fetchAutoMLConfig,
+    validateAutoMLConfig,
+    generateAutoMLFeatures,
+    clearAutoMLCache,
+    setAutomlConfig,
   };
 };

@@ -67,7 +67,7 @@ export const InputField: React.FC<InputFieldProps> = ({
       </div>
       {labelAddon}
     </div>
-    <Input // Use the Input component
+    <Input 
       type={type}
       value={value}
       onChange={(e) => {

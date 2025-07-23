@@ -12,9 +12,7 @@ import React from "react";
  * アイコンの基本プロパティ
  */
 interface IconProps {
-  /** アイコンのサイズ */
   size?: "xs" | "sm" | "md" | "lg" | "xl";
-  /** 追加のクラス名 */
   className?: string;
 }
 

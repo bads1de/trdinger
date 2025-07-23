@@ -5,7 +5,6 @@ export * from "./Icons";
 export * from "./InputField";
 export { default as Modal } from "./Modal";
 export * from "./SelectField";
-export { default as SymbolSelector } from "./SymbolSelector";
 export { default as TabButton } from "./TabButton";
 export * from "./tableColumns";
 export { default as TimeFrameSelector } from "./TimeFrameSelector";
