@@ -12,7 +12,6 @@ from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
 from database.connection import get_db
-from database.repositories.fear_greed_repository import FearGreedIndexRepository
 from app.core.services.data_collection.orchestration.fear_greed_orchestration_service import (
     FearGreedOrchestrationService,
 )
@@ -45,54 +44,9 @@ async def get_fear_greed_data(
     """
 
     async def _get_fear_greed_data():
-        repository = FearGreedIndexRepository(db)
-
-        # 日時パラメータの変換
-        start_time = None
-        end_time = None
-
-        if start_date:
-            try:
-                start_time = datetime.fromisoformat(start_date.replace("Z", "+00:00"))
-            except ValueError:
-                from fastapi import HTTPException
-
-                raise HTTPException(
-                    status_code=400, detail=f"無効な開始日時形式: {start_date}"
-                )
-
-        if end_date:
-            try:
-                end_time = datetime.fromisoformat(end_date.replace("Z", "+00:00"))
-            except ValueError:
-                from fastapi import HTTPException
-
-                raise HTTPException(
-                    status_code=400, detail=f"無効な終了日時形式: {end_date}"
-                )
-
-        # データ取得
-        data = repository.get_fear_greed_data(
-            start_time=start_time,
-            end_time=end_time,
-            limit=limit,
-        )
-
-        # レスポンス形式に変換
-        result_data = [item.to_dict() for item in data]
-
-        return APIResponseHelper.api_response(
-            success=True,
-            message=f"Fear & Greed Index データを {len(result_data)} 件取得しました",
-            data={
-                "data": result_data,
-                "metadata": {
-                    "count": len(result_data),
-                    "start_date": start_date,
-                    "end_date": end_date,
-                    "limit": limit,
-                },
-            },
+        service = FearGreedOrchestrationService()
+        return await service.get_fear_greed_data(
+            db=db, start_date=start_date, end_date=end_date, limit=limit
         )
 
     return await UnifiedErrorHandler.safe_execute_async(_get_fear_greed_data)
@@ -115,22 +69,8 @@ async def get_latest_fear_greed_data(
     """
 
     async def _get_latest_data():
-        repository = FearGreedIndexRepository(db)
-        data = repository.get_latest_fear_greed_data(limit=limit)
-
-        result_data = [item.to_dict() for item in data]
-
-        return APIResponseHelper.api_response(
-            success=True,
-            message=f"最新のFear & Greed Index データを {len(result_data)} 件取得しました",
-            data={
-                "data": result_data,
-                "metadata": {
-                    "count": len(result_data),
-                    "limit": limit,
-                },
-            },
-        )
+        service = FearGreedOrchestrationService()
+        return await service.get_latest_fear_greed_data(db=db, limit=limit)
 
     return await UnifiedErrorHandler.safe_execute_async(_get_latest_data)
 

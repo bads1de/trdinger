@@ -190,3 +190,77 @@ class FearGreedOrchestrationService:
         except Exception as e:
             logger.error(f"Fear & Greed Index データクリーンアップエラー: {e}")
             raise
+
+    async def get_fear_greed_data(
+        self,
+        db: Session,
+        start_date: str | None = None,
+        end_date: str | None = None,
+        limit: int | None = 30,
+    ) -> Dict[str, Any]:
+        repository = FearGreedIndexRepository(db)
+
+        start_time = None
+        end_time = None
+
+        if start_date:
+            try:
+                start_time = datetime.fromisoformat(start_date.replace("Z", "+00:00"))
+            except ValueError:
+                from fastapi import HTTPException
+
+                raise HTTPException(
+                    status_code=400, detail=f"無効な開始日時形式: {start_date}"
+                )
+
+        if end_date:
+            try:
+                end_time = datetime.fromisoformat(end_date.replace("Z", "+00:00"))
+            except ValueError:
+                from fastapi import HTTPException
+
+                raise HTTPException(
+                    status_code=400, detail=f"無効な終了日時形式: {end_date}"
+                )
+
+        data = repository.get_fear_greed_data(
+            start_time=start_time,
+            end_time=end_time,
+            limit=limit,
+        )
+
+        result_data = [item.to_dict() for item in data]
+
+        return APIResponseHelper.api_response(
+            success=True,
+            message=f"Fear & Greed Index データを {len(result_data)} 件取得しました",
+            data={
+                "data": result_data,
+                "metadata": {
+                    "count": len(result_data),
+                    "start_date": start_date,
+                    "end_date": end_date,
+                    "limit": limit,
+                },
+            },
+        )
+
+    async def get_latest_fear_greed_data(
+        self, db: Session, limit: int = 30
+    ) -> Dict[str, Any]:
+        repository = FearGreedIndexRepository(db)
+        data = repository.get_latest_fear_greed_data(limit=limit)
+
+        result_data = [item.to_dict() for item in data]
+
+        return APIResponseHelper.api_response(
+            success=True,
+            message=f"最新のFear & Greed Index データを {len(result_data)} 件取得しました",
+            data={
+                "data": result_data,
+                "metadata": {
+                    "count": len(result_data),
+                    "limit": limit,
+                },
+            },
+        )

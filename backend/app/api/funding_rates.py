@@ -12,11 +12,6 @@ from typing import Optional
 
 
 from database.connection import get_db, ensure_db_initialized
-from database.repositories.funding_rate_repository import FundingRateRepository
-from app.core.services.data_collection.bybit.funding_rate_service import (
-    BybitFundingRateService,
-)
-from app.core.utils.api_utils import APIResponseHelper
 from app.core.utils.unified_error_handler import UnifiedErrorHandler
 from app.core.services.data_collection.orchestration.funding_rate_orchestration_service import (
     FundingRateOrchestrationService,
@@ -137,62 +132,17 @@ async def bulk_collect_funding_rates(
     """
 
     async def _bulk_collect():
-        logger.info("ファンディングレート一括収集開始: BTC全期間データ")
-
         if not ensure_db_initialized():
             logger.error("データベースの初期化に失敗しました")
-            raise HTTPException(
-                status_code=500, detail="データベースの初期化に失敗しました"
-            )
+            raise Exception("データベースの初期化に失敗しました")
 
         symbols = [
             "BTC/USDT:USDT",
         ]
 
-        service = BybitFundingRateService()
-        repository = FundingRateRepository(db)
-
-        results = []
-        total_saved = 0
-        successful_symbols = 0
-        failed_symbols = []
-
-        for symbol in symbols:
-            try:
-                result = await service.fetch_and_save_funding_rate_data(
-                    symbol=symbol,
-                    repository=repository,
-                    fetch_all=True,
-                )
-                results.append(result)
-                total_saved += result["saved_count"]
-                successful_symbols += 1
-
-                logger.info(f"✅ {symbol}: {result['saved_count']}件保存")
-
-                import asyncio
-
-                await asyncio.sleep(0.1)
-
-            except Exception as e:
-                logger.error(f"❌ {symbol} 収集エラー: {e}")
-                failed_symbols.append({"symbol": symbol, "error": str(e)})
-
-        logger.info(
-            f"ファンディングレート一括収集完了: {successful_symbols}/{len(symbols)}成功"
-        )
-
-        return APIResponseHelper.api_response(
-            data={
-                "total_symbols": len(symbols),
-                "successful_symbols": successful_symbols,
-                "failed_symbols": len(failed_symbols),
-                "total_saved_records": total_saved,
-                "results": results,
-                "failures": failed_symbols,
-            },
-            success=True,
-            message=f"{successful_symbols}/{len(symbols)}シンボル（BTC）で合計{total_saved}件のファンディングレートデータを保存しました",
+        orchestration_service = FundingRateOrchestrationService()
+        return await orchestration_service.collect_bulk_funding_rate_data(
+            symbols=symbols, db_session=db
         )
 
     return await UnifiedErrorHandler.safe_execute_async(

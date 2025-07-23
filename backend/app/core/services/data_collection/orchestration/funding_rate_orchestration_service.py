@@ -7,6 +7,7 @@ APIルーター内に散在していたファンディングレート関連の�
 
 import logging
 from typing import Dict, Any, Optional
+import asyncio
 from datetime import datetime
 from sqlalchemy.orm import Session
 
@@ -390,4 +391,83 @@ class FundingRateOrchestrationService:
                 ),
                 "symbol_count": len(symbols),
             },
+        )
+
+    async def collect_bulk_funding_rate_data(
+        self,
+        symbols: list[str],
+        db_session: Optional[Session] = None,
+    ) -> Dict[str, Any]:
+        """
+        ファンディングレートデータの一括収集
+
+        Args:
+            symbols: 取引ペアのリスト
+            db_session: データベースセッション
+
+        Returns:
+            収集結果を含む辞書
+        """
+        logger.info(f"ファンディングレート一括収集開始: {len(symbols)}シンボル")
+
+        if db_session is None:
+            with next(get_db()) as session:
+                return await self._collect_bulk_funding_rate_data_with_session(
+                    symbols, session
+                )
+        else:
+            return await self._collect_bulk_funding_rate_data_with_session(
+                symbols, db_session
+            )
+
+    async def _collect_bulk_funding_rate_data_with_session(
+        self,
+        symbols: list[str],
+        db_session: Session,
+    ) -> Dict[str, Any]:
+        """
+        実際のファンディングレートデータ一括収集処理（セッション指定版）
+        """
+        service = BybitFundingRateService()
+        repository = FundingRateRepository(db_session)
+
+        results = []
+        total_saved = 0
+        successful_symbols_count = 0
+        failed_symbols = []
+
+        for symbol in symbols:
+            try:
+                result = await service.fetch_and_save_funding_rate_data(
+                    symbol=symbol,
+                    repository=repository,
+                    fetch_all=True,
+                )
+                results.append(result)
+                total_saved += result["saved_count"]
+                successful_symbols_count += 1
+
+                logger.info(f"✅ {symbol}: {result['saved_count']}件保存")
+
+                await asyncio.sleep(0.1)
+
+            except Exception as e:
+                logger.error(f"❌ {symbol} 収集エラー: {e}")
+                failed_symbols.append({"symbol": symbol, "error": str(e)})
+
+        logger.info(
+            f"ファンディングレート一括収集完了: {successful_symbols_count}/{len(symbols)}成功"
+        )
+
+        return APIResponseHelper.api_response(
+            data={
+                "total_symbols": len(symbols),
+                "successful_symbols": successful_symbols_count,
+                "failed_symbols": len(failed_symbols),
+                "total_saved_records": total_saved,
+                "results": results,
+                "failures": failed_symbols,
+            },
+            success=True,
+            message=f"{successful_symbols_count}/{len(symbols)}シンボルで合計{total_saved}件のファンディングレートデータを保存しました",
         )

@@ -14,10 +14,10 @@ from sqlalchemy.orm import Session
 
 from app.config.unified_config import unified_config
 from database.connection import get_db
-from database.repositories.ohlcv_repository import OHLCVRepository
-from app.core.utils.api_utils import DateTimeHelper, APIResponseHelper
+from app.core.services.data_collection.orchestration.market_data_orchestration_service import (
+    MarketDataOrchestrationService,
+)
 from app.core.utils.unified_error_handler import UnifiedErrorHandler
-from app.core.utils.data_converter import OHLCVDataConverter
 
 
 # ログ設定
@@ -65,43 +65,13 @@ async def get_ohlcv_data(
     """
 
     async def _get_ohlcv():
-        logger.info(
-            f"OHLCVデータ取得リクエスト: symbol={symbol}, timeframe={timeframe}, limit={limit}"
-        )
-
-        repository = OHLCVRepository(db)
-
-        start_time = None
-        end_time = None
-
-        if start_date:
-            start_time = DateTimeHelper.parse_iso_datetime(start_date)
-        if end_date:
-            end_time = DateTimeHelper.parse_iso_datetime(end_date)
-
-        if start_time is None and end_time is None:
-            ohlcv_records = repository.get_latest_ohlcv_data(
-                symbol=symbol,
-                timeframe=timeframe,
-                limit=limit,
-            )
-        else:
-            ohlcv_records = repository.get_ohlcv_data(
-                symbol=symbol,
-                timeframe=timeframe,
-                start_time=start_time,
-                end_time=end_time,
-                limit=limit,
-            )
-
-        ohlcv_data = OHLCVDataConverter.db_to_api_format(ohlcv_records)
-
-        logger.info(f"OHLCVデータ取得成功: {len(ohlcv_data)}件")
-
-        return APIResponseHelper.api_response(
-            success=True,
-            data={"ohlcv_data": ohlcv_data, "symbol": symbol, "timeframe": timeframe},
-            message=f"{symbol} の {timeframe} OHLCVデータを取得しました",
+        service = MarketDataOrchestrationService(db)
+        return await service.get_ohlcv_data(
+            symbol=symbol,
+            timeframe=timeframe,
+            limit=limit,
+            start_date=start_date,
+            end_date=end_date,
         )
 
     return await UnifiedErrorHandler.safe_execute_async(

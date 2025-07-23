@@ -211,6 +211,104 @@ class DataCollectionOrchestrationService:
             logger.error("一括履歴データ収集開始エラー", e)
             raise
 
+    async def get_collection_status(
+        self,
+        symbol: str,
+        timeframe: str,
+        background_tasks: BackgroundTasks,
+        auto_fetch: bool,
+        db: Session,
+    ) -> Dict[str, Any]:
+        """
+        データ収集状況を確認
+
+        Args:
+            symbol: 取引ペア
+            timeframe: 時間軸
+            auto_fetch: データが存在しない場合に自動フェッチを開始するか
+            background_tasks: バックグラウンドタスク
+            db: データベースセッション
+
+        Returns:
+            データ収集状況
+        """
+        from app.config.unified_config import unified_config
+
+        # シンボルと時間軸のバリデーション
+        # シンボル正規化
+        normalized_symbol = unified_config.market.symbol_mapping.get(symbol, symbol)
+        if normalized_symbol not in unified_config.market.supported_symbols:
+            raise ValueError(f"サポートされていないシンボル: {symbol}")
+
+        # 時間軸検証
+        if timeframe not in unified_config.market.supported_timeframes:
+            raise ValueError(f"無効な時間軸: {timeframe}")
+
+        repository = OHLCVRepository(db)
+
+        # 正規化されたシンボルでデータ件数を取得
+        data_count = repository.get_data_count(normalized_symbol, timeframe)
+
+        # データが存在しない場合の処理
+        if data_count == 0:
+            if auto_fetch and background_tasks:
+                # 自動フェッチを開始
+                await self.start_historical_data_collection(
+                    normalized_symbol, timeframe, background_tasks, db
+                )
+                logger.info(f"自動フェッチを開始: {normalized_symbol} {timeframe}")
+
+                return APIResponseHelper.api_response(
+                    success=True,
+                    message=f"{normalized_symbol} {timeframe} のデータが存在しないため、自動収集を開始しました。",
+                    status="auto_fetch_started",
+                    data={
+                        "symbol": normalized_symbol,
+                        "original_symbol": symbol,
+                        "timeframe": timeframe,
+                        "data_count": 0,
+                    },
+                )
+            else:
+                # フェッチを提案
+                return APIResponseHelper.api_response(
+                    success=True,
+                    message=f"{normalized_symbol} {timeframe} のデータが存在しません。新規収集が必要です。",
+                    status="no_data",
+                    data={
+                        "symbol": normalized_symbol,
+                        "original_symbol": symbol,
+                        "timeframe": timeframe,
+                        "data_count": 0,
+                        "suggestion": {
+                            "manual_fetch": f"/api/data-collection/historical?symbol={normalized_symbol}&timeframe={timeframe}",
+                            "auto_fetch": f"/api/data-collection/status/{symbol}/{timeframe}?auto_fetch=true",
+                        },
+                    },
+                )
+
+        # 最新・最古タイムスタンプを取得
+        latest_timestamp = repository.get_latest_timestamp(normalized_symbol, timeframe)
+        oldest_timestamp = repository.get_oldest_timestamp(normalized_symbol, timeframe)
+
+        return APIResponseHelper.api_response(
+            success=True,
+            message="データ収集状況を取得しました。",
+            data={
+                "symbol": normalized_symbol,
+                "original_symbol": symbol,
+                "timeframe": timeframe,
+                "data_count": data_count,
+                "status": "data_exists",
+                "latest_timestamp": (
+                    latest_timestamp.isoformat() if latest_timestamp else None
+                ),
+                "oldest_timestamp": (
+                    oldest_timestamp.isoformat() if oldest_timestamp else None
+                ),
+            },
+        )
+
     async def start_all_data_bulk_collection(
         self, background_tasks: BackgroundTasks, db: Session
     ) -> Dict[str, Any]:

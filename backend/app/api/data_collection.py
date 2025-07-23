@@ -16,9 +16,8 @@ from app.core.services.data_collection.orchestration.data_collection_orchestrati
 )
 from app.core.utils.unified_error_handler import UnifiedErrorHandler
 from database.connection import get_db, ensure_db_initialized
-from database.repositories.ohlcv_repository import OHLCVRepository
-from app.config.unified_config import unified_config
 from app.core.utils.api_utils import APIResponseHelper
+from app.config.unified_config import unified_config
 
 logger = logging.getLogger(__name__)
 
@@ -190,80 +189,13 @@ async def get_collection_status(
                 status_code=500, detail="データベースの初期化に失敗しました"
             )
 
-        # シンボルと時間軸のバリデーション
-        # シンボル正規化
-        normalized_symbol = unified_config.market.symbol_mapping.get(symbol, symbol)
-        if normalized_symbol not in unified_config.market.supported_symbols:
-            raise ValueError(f"サポートされていないシンボル: {symbol}")
-
-        # 時間軸検証
-        if timeframe not in unified_config.market.supported_timeframes:
-            raise ValueError(f"無効な時間軸: {timeframe}")
-
-        repository = OHLCVRepository(db)
-
-        # 正規化されたシンボルでデータ件数を取得
-        data_count = repository.get_data_count(normalized_symbol, timeframe)
-
-        # データが存在しない場合の処理
-        if data_count == 0:
-            if auto_fetch and background_tasks:
-                # 自動フェッチを開始
-                orchestration_service = DataCollectionOrchestrationService()
-                await orchestration_service.start_historical_data_collection(
-                    normalized_symbol, timeframe, background_tasks, db
-                )
-                logger.info(f"自動フェッチを開始: {normalized_symbol} {timeframe}")
-
-                return APIResponseHelper.api_response(
-                    success=True,
-                    message=f"{normalized_symbol} {timeframe} のデータが存在しないため、自動収集を開始しました。",
-                    status="auto_fetch_started",
-                    data={
-                        "symbol": normalized_symbol,
-                        "original_symbol": symbol,
-                        "timeframe": timeframe,
-                        "data_count": 0,
-                    },
-                )
-            else:
-                # フェッチを提案
-                return APIResponseHelper.api_response(
-                    success=True,
-                    message=f"{normalized_symbol} {timeframe} のデータが存在しません。新規収集が必要です。",
-                    status="no_data",
-                    data={
-                        "symbol": normalized_symbol,
-                        "original_symbol": symbol,
-                        "timeframe": timeframe,
-                        "data_count": 0,
-                        "suggestion": {
-                            "manual_fetch": f"/api/data-collection/historical?symbol={normalized_symbol}&timeframe={timeframe}",
-                            "auto_fetch": f"/api/data-collection/status/{symbol}/{timeframe}?auto_fetch=true",
-                        },
-                    },
-                )
-
-        # 最新・最古タイムスタンプを取得
-        latest_timestamp = repository.get_latest_timestamp(normalized_symbol, timeframe)
-        oldest_timestamp = repository.get_oldest_timestamp(normalized_symbol, timeframe)
-
-        return APIResponseHelper.api_response(
-            success=True,
-            message="データ収集状況を取得しました。",
-            data={
-                "symbol": normalized_symbol,
-                "original_symbol": symbol,
-                "timeframe": timeframe,
-                "data_count": data_count,
-                "status": "data_exists",
-                "latest_timestamp": (
-                    latest_timestamp.isoformat() if latest_timestamp else None
-                ),
-                "oldest_timestamp": (
-                    oldest_timestamp.isoformat() if oldest_timestamp else None
-                ),
-            },
+        service = DataCollectionOrchestrationService()
+        return await service.get_collection_status(
+            symbol=symbol,
+            timeframe=timeframe,
+            background_tasks=background_tasks,
+            auto_fetch=auto_fetch,
+            db=db,
         )
 
     return await UnifiedErrorHandler.safe_execute_async(_get_collection_status)
