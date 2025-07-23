@@ -167,6 +167,7 @@ class MLTrainingService:
         Returns:
             学習状態の辞書
         """
+        # トレーナーから基本情報を取得
         if hasattr(self.trainer, "get_model_info"):
             model_info = self.trainer.get_model_info()
             model_info["trainer_type"] = self.trainer_type
