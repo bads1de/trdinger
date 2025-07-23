@@ -11,7 +11,6 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import Navbar from "@/components/navigation/Navbar";
 import MainContent from "@/components/navigation/MainContent";
-import { TooltipProvider } from "@/components/ui/tooltip";
 
 // Google Fontsからインポートしたフォント設定
 // ラテン文字セットのみを読み込んでパフォーマンスを最適化
@@ -37,10 +36,9 @@ export default function RootLayout({
   return (
     <html lang="ja" className="dark">
       <body className={inter.className}>
-        <TooltipProvider>
-          <Navbar />
+        <Navbar>
           <MainContent>{children}</MainContent>
-        </TooltipProvider>
+        </Navbar>
       </body>
     </html>
   );
