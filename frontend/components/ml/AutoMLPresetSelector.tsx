@@ -98,7 +98,7 @@ export default function AutoMLPresetSelector({
 
   if (presetsLoading) {
     return (
-      <Card className={`bg-gray-900/50 border-gray-800 ${className}`}>
+      <Card className={`${className}`}>
         <CardContent className="flex items-center justify-center py-8">
           <LoadingSpinner size="lg" />
         </CardContent>
@@ -108,7 +108,7 @@ export default function AutoMLPresetSelector({
 
   if (presetsError) {
     return (
-      <Card className={`bg-gray-900/50 border-gray-800 ${className}`}>
+      <Card className={`${className}`}>
         <CardContent className="py-8">
           <ErrorDisplay message={presetsError} />
         </CardContent>
@@ -117,7 +117,7 @@ export default function AutoMLPresetSelector({
   }
 
   return (
-    <Card className={`bg-gray-900/50 border-gray-800 ${className}`}>
+    <Card className={`${className}`}>
       <CardHeader>
         <CardTitle className="flex items-center space-x-2">
           <Bot className="h-5 w-5 text-cyan-400" />

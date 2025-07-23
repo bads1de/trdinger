@@ -214,96 +214,97 @@ export default function MLTraining() {
           </div>
 
           {/* AutoML特徴量エンジニアリング設定 */}
-          <div className="mt-6">
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-2">
-                <Bot className="h-5 w-5" />
-                <h3 className="text-lg font-medium">
-                  AutoML特徴量エンジニアリング
-                </h3>
-                <Badge variant={isAutoMLEnabled() ? "default" : "secondary"}>
-                  {isAutoMLEnabled() ? "有効" : "無効"}
-                </Badge>
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <CardTitle className="flex items-center gap-2">
+                  <Bot className="h-5 w-5" />
+                  <span>AutoML特徴量エンジニアリング</span>
+                  <Badge variant={isAutoMLEnabled() ? "default" : "secondary"}>
+                    {isAutoMLEnabled() ? "有効" : "無効"}
+                  </Badge>
+                </CardTitle>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowAutoMLSettings(!showAutoMLSettings)}
+                  disabled={trainingStatus.is_training}
+                >
+                  {showAutoMLSettings ? (
+                    <>
+                      <ChevronUp className="h-4 w-4 mr-1" />
+                      設定を隠す
+                    </>
+                  ) : (
+                    <>
+                      <ChevronDown className="h-4 w-4 mr-1" />
+                      設定を表示
+                    </>
+                  )}
+                </Button>
               </div>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setShowAutoMLSettings(!showAutoMLSettings)}
-                disabled={trainingStatus.is_training}
-              >
-                {showAutoMLSettings ? (
-                  <>
-                    <ChevronUp className="h-4 w-4 mr-1" />
-                    設定を隠す
-                  </>
-                ) : (
-                  <>
-                    <ChevronDown className="h-4 w-4 mr-1" />
-                    設定を表示
-                  </>
-                )}
-              </Button>
-            </div>
+            </CardHeader>
+            <CardContent>
+              {/* AutoML設定プリセットボタン */}
+              <div className="flex gap-2 mb-4">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => applyAutoMLPreset("disabled")}
+                  disabled={trainingStatus.is_training}
+                >
+                  無効
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => applyAutoMLPreset("default")}
+                  disabled={trainingStatus.is_training}
+                >
+                  <Bot className="h-4 w-4 mr-1" />
+                  デフォルト
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => applyAutoMLPreset("financial")}
+                  disabled={trainingStatus.is_training}
+                >
+                  <Zap className="h-4 w-4 mr-1" />
+                  金融最適化
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowAutoMLPresets(!showAutoMLPresets)}
+                  disabled={trainingStatus.is_training}
+                >
+                  <Settings className="h-4 w-4 mr-1" />
+                  プリセット選択
+                </Button>
+              </div>
 
-            {/* AutoML設定プリセットボタン */}
-            <div className="flex gap-2 mb-4">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => applyAutoMLPreset("disabled")}
-                disabled={trainingStatus.is_training}
-              >
-                無効
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => applyAutoMLPreset("default")}
-                disabled={trainingStatus.is_training}
-              >
-                <Bot className="h-4 w-4 mr-1" />
-                デフォルト
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => applyAutoMLPreset("financial")}
-                disabled={trainingStatus.is_training}
-              >
-                <Zap className="h-4 w-4 mr-1" />
-                金融最適化
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setShowAutoMLPresets(!showAutoMLPresets)}
-                disabled={trainingStatus.is_training}
-              >
-                <Settings className="h-4 w-4 mr-1" />
-                プリセット選択
-              </Button>
-            </div>
+              {/* AutoMLプリセット選択 */}
+              {showAutoMLPresets && (
+                <div className="mb-4">
+                  <AutoMLPresetSelector
+                    currentConfig={automlSettings}
+                    onConfigChange={setAutomlSettings}
+                    isLoading={trainingStatus.is_training}
+                  />
+                </div>
+              )}
 
-            {/* AutoMLプリセット選択 */}
-            {showAutoMLPresets && (
-              <div className="mb-4">
-                <AutoMLPresetSelector
-                  currentConfig={automlSettings}
-                  onConfigChange={setAutomlSettings}
+              {/* AutoML詳細設定 */}
+              {showAutoMLSettings && (
+                <AutoMLFeatureSettings
+                  settings={automlSettings}
+                  onChange={setAutomlSettings}
                   isLoading={trainingStatus.is_training}
                 />
-              </div>
-            )}
-
-            {/* AutoML詳細設定 */}
-            {showAutoMLSettings && (
-              <AutoMLFeatureSettings
-                settings={automlSettings}
-                onChange={setAutomlSettings}
-                isLoading={trainingStatus.is_training}
-              />
-            )}
-          </div>
+              )}
+            </CardContent>
+          </Card>
 
           <div className="flex items-center space-x-4">
             {!trainingStatus.is_training ? (

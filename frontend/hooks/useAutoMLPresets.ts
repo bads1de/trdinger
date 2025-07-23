@@ -3,11 +3,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { AutoMLPreset } from "./useMLTraining";
 import { useApiCall } from "./useApiCall";
-import {
-  MARKET_CONDITION_LABELS,
-  TRADING_STRATEGY_LABELS,
-  DATA_SIZE_LABELS,
-} from "@/constants/automl-presets-constants";
 
 interface AutoMLPresetsData {
   presets: AutoMLPreset[];
