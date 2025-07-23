@@ -17,10 +17,23 @@ import {
   CheckCircle,
   AlertCircle,
   Clock,
+  Bot,
+  Zap,
+  ChevronDown,
+  ChevronUp,
 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import OptimizationSettings, {
   OptimizationSettingsConfig,
 } from "./OptimizationSettings";
+import AutoMLFeatureSettings from "./AutoMLFeatureSettings";
+import AutoMLPresetSelector from "./AutoMLPresetSelector";
+import {
+  AutoMLFeatureConfig,
+  getDefaultAutoMLConfig,
+  getFinancialOptimizedAutoMLConfig,
+} from "@/hooks/useMLTraining";
 
 /**
  * MLトレーニングコンポーネント
@@ -44,6 +57,41 @@ export default function MLTraining() {
       n_calls: 50,
       parameter_space: {},
     });
+
+  const [automlSettings, setAutomlSettings] = useState<AutoMLFeatureConfig>(
+    getDefaultAutoMLConfig()
+  );
+
+  const [showAutoMLSettings, setShowAutoMLSettings] = useState(false);
+  const [showAutoMLPresets, setShowAutoMLPresets] = useState(false);
+
+  // AutoML設定プリセット関数
+  const applyAutoMLPreset = (preset: "default" | "financial" | "disabled") => {
+    switch (preset) {
+      case "default":
+        setAutomlSettings(getDefaultAutoMLConfig());
+        break;
+      case "financial":
+        setAutomlSettings(getFinancialOptimizedAutoMLConfig());
+        break;
+      case "disabled":
+        setAutomlSettings({
+          tsfresh: { ...automlSettings.tsfresh, enabled: false },
+          featuretools: { ...automlSettings.featuretools, enabled: false },
+          autofeat: { ...automlSettings.autofeat, enabled: false },
+        });
+        break;
+    }
+  };
+
+  // AutoML設定が有効かどうかを判定
+  const isAutoMLEnabled = () => {
+    return (
+      automlSettings.tsfresh.enabled ||
+      automlSettings.featuretools.enabled ||
+      automlSettings.autofeat.enabled
+    );
+  };
 
   const getStatusIcon = () => {
     switch (trainingStatus.status) {
@@ -165,18 +213,117 @@ export default function MLTraining() {
             />
           </div>
 
+          {/* AutoML特徴量エンジニアリング設定 */}
+          <div className="mt-6">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <Bot className="h-5 w-5" />
+                <h3 className="text-lg font-medium">
+                  AutoML特徴量エンジニアリング
+                </h3>
+                <Badge variant={isAutoMLEnabled() ? "default" : "secondary"}>
+                  {isAutoMLEnabled() ? "有効" : "無効"}
+                </Badge>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowAutoMLSettings(!showAutoMLSettings)}
+                disabled={trainingStatus.is_training}
+              >
+                {showAutoMLSettings ? (
+                  <>
+                    <ChevronUp className="h-4 w-4 mr-1" />
+                    設定を隠す
+                  </>
+                ) : (
+                  <>
+                    <ChevronDown className="h-4 w-4 mr-1" />
+                    設定を表示
+                  </>
+                )}
+              </Button>
+            </div>
+
+            {/* AutoML設定プリセットボタン */}
+            <div className="flex gap-2 mb-4">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => applyAutoMLPreset("disabled")}
+                disabled={trainingStatus.is_training}
+              >
+                無効
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => applyAutoMLPreset("default")}
+                disabled={trainingStatus.is_training}
+              >
+                <Bot className="h-4 w-4 mr-1" />
+                デフォルト
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => applyAutoMLPreset("financial")}
+                disabled={trainingStatus.is_training}
+              >
+                <Zap className="h-4 w-4 mr-1" />
+                金融最適化
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowAutoMLPresets(!showAutoMLPresets)}
+                disabled={trainingStatus.is_training}
+              >
+                <Settings className="h-4 w-4 mr-1" />
+                プリセット選択
+              </Button>
+            </div>
+
+            {/* AutoMLプリセット選択 */}
+            {showAutoMLPresets && (
+              <div className="mb-4">
+                <AutoMLPresetSelector
+                  currentConfig={automlSettings}
+                  onConfigChange={setAutomlSettings}
+                  isLoading={trainingStatus.is_training}
+                />
+              </div>
+            )}
+
+            {/* AutoML詳細設定 */}
+            {showAutoMLSettings && (
+              <AutoMLFeatureSettings
+                settings={automlSettings}
+                onChange={setAutomlSettings}
+                isLoading={trainingStatus.is_training}
+              />
+            )}
+          </div>
+
           <div className="flex items-center space-x-4">
             {!trainingStatus.is_training ? (
               <ActionButton
                 onClick={() => {
-                  // 最適化設定を直接startTrainingに渡す
-                  startTraining(optimizationSettings);
+                  // 最適化設定とAutoML設定を渡す
+                  startTraining(
+                    optimizationSettings,
+                    isAutoMLEnabled() ? automlSettings : undefined
+                  );
                 }}
                 variant="primary"
                 icon={<Play className="h-4 w-4" />}
               >
-                {optimizationSettings.enabled
+                {optimizationSettings.enabled && isAutoMLEnabled()
+                  ? "最適化+AutoML トレーニング開始"
+                  : optimizationSettings.enabled
                   ? "最適化付きトレーニング開始"
+                  : isAutoMLEnabled()
+                  ? "AutoML トレーニング開始"
                   : "トレーニング開始"}
               </ActionButton>
             ) : (

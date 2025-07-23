@@ -30,9 +30,13 @@ interface MainContentProps {
  */
 const getPageTitle = (pathname: string): string => {
   if (pathname === "/") return "Dashboard";
+
   if (pathname.startsWith("/backtest")) return "Backtest";
+
   if (pathname.startsWith("/ml")) return "ML Management";
+
   if (pathname.startsWith("/data")) return "Data Management";
+
   return "Dashboard";
 };
 

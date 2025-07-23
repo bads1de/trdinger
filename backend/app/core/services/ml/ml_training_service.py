@@ -42,18 +42,24 @@ class MLTrainingService:
     コードの重複を解消し、保守性を向上させます。
     """
 
-    def __init__(self, trainer_type: str = "lightgbm"):
+    def __init__(
+        self,
+        trainer_type: str = "lightgbm",
+        automl_config: Optional[Dict[str, Any]] = None,
+    ):
         """
         初期化
 
         Args:
             trainer_type: 使用するトレーナーのタイプ（現在は"lightgbm"のみサポート）
+            automl_config: AutoML設定（辞書形式）
         """
         self.config = ml_config
+        self.automl_config = automl_config
 
-        # トレーナーを選択
+        # トレーナーを選択（AutoML設定を渡す）
         if trainer_type.lower() == "lightgbm":
-            self.trainer = LightGBMTrainer()
+            self.trainer = LightGBMTrainer(automl_config=automl_config)
         else:
             raise ValueError(f"サポートされていないトレーナータイプ: {trainer_type}")
 
@@ -67,6 +73,7 @@ class MLTrainingService:
         save_model: bool = True,
         model_name: Optional[str] = None,
         optimization_settings: Optional[OptimizationSettings] = None,
+        automl_config: Optional[Dict[str, Any]] = None,
         **training_params,
     ) -> Dict[str, Any]:
         """
@@ -79,6 +86,7 @@ class MLTrainingService:
             save_model: モデルを保存するか
             model_name: モデル名（オプション）
             optimization_settings: 最適化設定（オプション）
+            automl_config: AutoML特徴量エンジニアリング設定（オプション）
             **training_params: 追加の学習パラメータ
 
         Returns:
@@ -88,6 +96,23 @@ class MLTrainingService:
             MLDataError: データが無効な場合
             MLModelError: 学習に失敗した場合
         """
+        # AutoML設定の処理
+        effective_automl_config = automl_config or self.automl_config
+        if effective_automl_config:
+            # AutoML設定が提供された場合、新しいトレーナーインスタンスを作成
+            if self.trainer_type.lower() == "lightgbm":
+                trainer = LightGBMTrainer(automl_config=effective_automl_config)
+            else:
+                trainer = self.trainer
+            logger.info(
+                "🤖 AutoML特徴量エンジニアリングを使用してトレーニングを実行します"
+            )
+        else:
+            trainer = self.trainer
+            logger.info(
+                "📊 基本特徴量エンジニアリングを使用してトレーニングを実行します"
+            )
+
         # 最適化が有効な場合は最適化ワークフローを実行
         if optimization_settings and optimization_settings.enabled:
             return self._train_with_optimization(
@@ -97,11 +122,12 @@ class MLTrainingService:
                 save_model=save_model,
                 model_name=model_name,
                 optimization_settings=optimization_settings,
+                trainer=trainer,  # 適切なトレーナーを渡す
                 **training_params,
             )
         else:
             # 通常のトレーニング
-            return self.trainer.train_model(
+            return trainer.train_model(
                 training_data=training_data,
                 funding_rate_data=funding_rate_data,
                 open_interest_data=open_interest_data,
@@ -222,6 +248,7 @@ class MLTrainingService:
         save_model: bool = True,
         model_name: Optional[str] = None,
         optimization_settings: OptimizationSettings = None,
+        trainer: Optional[Any] = None,  # カスタムトレーナーを受け取る
         **training_params,
     ) -> Dict[str, Any]:
         """
@@ -234,14 +261,19 @@ class MLTrainingService:
             save_model: モデルを保存するか
             model_name: モデル名（オプション）
             optimization_settings: 最適化設定
+            trainer: 使用するトレーナー（オプション、指定されない場合はself.trainerを使用）
             **training_params: 追加の学習パラメータ
 
         Returns:
             学習結果の辞書（最適化情報を含む）
         """
         try:
+            # 使用するトレーナーを決定
+            effective_trainer = trainer if trainer is not None else self.trainer
+
             logger.info("🚀 Optuna最適化を開始")
             logger.info(f"🎯 目標試行回数: {optimization_settings.n_calls}")
+            logger.info(f"🤖 使用トレーナー: {type(effective_trainer).__name__}")
 
             # Optunaオプティマイザーを作成
             optimizer = OptunaOptimizer()
@@ -266,6 +298,7 @@ class MLTrainingService:
                 funding_rate_data=funding_rate_data,
                 open_interest_data=open_interest_data,
                 optimization_settings=optimization_settings,
+                trainer=effective_trainer,  # カスタムトレーナーを渡す
                 **training_params,
             )
             logger.info("🎯 目的関数を作成しました")
@@ -289,7 +322,7 @@ class MLTrainingService:
                 **training_params,
                 **optimization_result.best_params,
             }
-            final_result = self.trainer.train_model(
+            final_result = effective_trainer.train_model(  # カスタムトレーナーを使用
                 training_data=training_data,
                 funding_rate_data=funding_rate_data,
                 open_interest_data=open_interest_data,
@@ -352,6 +385,7 @@ class MLTrainingService:
         optimization_settings: "OptimizationSettings",
         funding_rate_data: Optional[pd.DataFrame] = None,
         open_interest_data: Optional[pd.DataFrame] = None,
+        trainer: Optional[Any] = None,  # カスタムトレーナーを受け取る
         **base_training_params,
     ) -> Callable[[Dict[str, Any]], float]:
         """
@@ -366,6 +400,8 @@ class MLTrainingService:
         Returns:
             目的関数（パラメータを受け取りスコアを返す関数）
         """
+        # 使用するトレーナーを決定
+        effective_trainer = trainer if trainer is not None else self.trainer
 
         # 試行回数カウンター
         evaluation_count = 0
@@ -393,7 +429,13 @@ class MLTrainingService:
                 training_params = {**base_training_params, **params}
 
                 # 一時的なトレーナーを作成（元のトレーナーに影響しないように）
-                temp_trainer = LightGBMTrainer()
+                # AutoML設定がある場合はそれを引き継ぐ
+                if hasattr(effective_trainer, "automl_config"):
+                    temp_trainer = LightGBMTrainer(
+                        automl_config=effective_trainer.automl_config
+                    )
+                else:
+                    temp_trainer = LightGBMTrainer()
 
                 # ミニトレーニングを実行（保存はしない）
                 result = temp_trainer.train_model(
@@ -429,5 +471,5 @@ class MLTrainingService:
         return objective_function
 
 
-# グローバルインスタンス（デフォルトはLightGBM）
-ml_training_service = MLTrainingService(trainer_type="lightgbm")
+# グローバルインスタンス（デフォルトはLightGBM、AutoML設定なし）
+ml_training_service = MLTrainingService(trainer_type="lightgbm", automl_config=None)

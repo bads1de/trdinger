@@ -18,11 +18,69 @@ from database.repositories.ohlcv_repository import OHLCVRepository
 from database.repositories.open_interest_repository import OpenInterestRepository
 from database.repositories.funding_rate_repository import FundingRateRepository
 
+# AutoML設定モデルをインポート
+from app.api.routes.automl_features import (
+    AutoMLConfigModel,
+    TSFreshConfigModel,
+    FeaturetoolsConfigModel,
+    AutoFeatConfigModel,
+)
+
 from database.connection import get_db
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/ml-training", tags=["ML Training"])
+
+
+def get_default_automl_config() -> AutoMLConfigModel:
+    """デフォルトのAutoML設定を取得"""
+    return AutoMLConfigModel(
+        tsfresh=TSFreshConfigModel(
+            enabled=True,
+            feature_selection=True,
+            fdr_level=0.05,
+            feature_count_limit=100,
+            parallel_jobs=2,
+        ),
+        featuretools=FeaturetoolsConfigModel(
+            enabled=True,
+            max_depth=2,
+            max_features=50,
+        ),
+        autofeat=AutoFeatConfigModel(
+            enabled=True,
+            max_features=50,
+            generations=10,  # API層ではgenerationsを使用
+            population_size=30,
+            tournament_size=3,
+        ),
+    )
+
+
+def get_financial_optimized_automl_config() -> AutoMLConfigModel:
+    """金融データ最適化AutoML設定を取得"""
+    return AutoMLConfigModel(
+        tsfresh=TSFreshConfigModel(
+            enabled=True,
+            feature_selection=True,
+            fdr_level=0.01,  # より厳しい選択
+            feature_count_limit=200,  # 金融データ用に増加
+            parallel_jobs=4,
+        ),
+        featuretools=FeaturetoolsConfigModel(
+            enabled=True,
+            max_depth=3,  # より深い特徴量合成
+            max_features=100,  # 金融データ用に増加
+        ),
+        autofeat=AutoFeatConfigModel(
+            enabled=True,
+            max_features=100,
+            generations=20,  # より多くの世代（API層ではgenerationsを使用）
+            population_size=50,
+            tournament_size=3,
+        ),
+    )
 
 
 class ParameterSpaceConfig(BaseModel):
@@ -86,6 +144,11 @@ class MLTrainingConfig(BaseModel):
     # 最適化設定
     optimization_settings: Optional[OptimizationSettingsConfig] = Field(
         None, description="ハイパーパラメータ最適化設定"
+    )
+
+    # AutoML特徴量エンジニアリング設定
+    automl_config: Optional[AutoMLConfigModel] = Field(
+        None, description="AutoML特徴量エンジニアリング設定"
     )
 
 
@@ -253,6 +316,22 @@ async def train_ml_model_background(config: MLTrainingConfig):
         else:
             logger.info("📝 通常のMLトレーニングを実行します（最適化なし）")
 
+        # AutoML設定の処理
+        automl_config = config.automl_config
+        if automl_config is None:
+            # デフォルトのAutoML設定を使用
+            automl_config = get_financial_optimized_automl_config()
+            logger.info("🤖 デフォルトの金融最適化AutoML設定を使用します")
+        else:
+            logger.info("🤖 カスタムAutoML設定を使用します")
+
+        # AutoML設定を辞書形式に変換
+        automl_config_dict = {
+            "tsfresh": automl_config.tsfresh.model_dump(),
+            "featuretools": automl_config.featuretools.model_dump(),
+            "autofeat": automl_config.autofeat.model_dump(),
+        }
+
         # トレーニング実行
         training_result = ml_service.train_model(
             training_data=ohlcv_data,
@@ -260,6 +339,7 @@ async def train_ml_model_background(config: MLTrainingConfig):
             open_interest_data=open_interest_data,
             save_model=config.save_model,
             optimization_settings=optimization_settings,
+            automl_config=automl_config_dict,  # AutoML設定を追加
             # 新しいMLTrainingServiceは設定から自動的にパラメータを取得
             test_size=1 - config.train_test_split,
             random_state=config.random_state,

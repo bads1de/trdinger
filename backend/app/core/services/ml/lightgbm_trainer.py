@@ -8,7 +8,7 @@ import logging
 import pandas as pd
 import numpy as np
 import lightgbm as lgb
-from typing import Dict, Any, cast
+from typing import Dict, Any, cast, Optional
 from sklearn.metrics import (
     accuracy_score,
     classification_report,
@@ -20,6 +20,7 @@ from sklearn.metrics import (
 
 from .base_ml_trainer import BaseMLTrainer
 from ...utils.unified_error_handler import UnifiedModelError
+from .feature_engineering.automl_feature_analyzer import AutoMLFeatureAnalyzer
 
 logger = logging.getLogger(__name__)
 
@@ -31,9 +32,14 @@ class LightGBMTrainer(BaseMLTrainer):
     BaseMLTrainerを継承し、LightGBM固有の学習ロジックを実装します。
     """
 
-    def __init__(self):
-        """初期化"""
-        super().__init__()
+    def __init__(self, automl_config: Optional[Dict[str, Any]] = None):
+        """
+        初期化
+
+        Args:
+            automl_config: AutoML設定（辞書形式）
+        """
+        super().__init__(automl_config=automl_config)
         self.model_type = "LightGBM"
 
     def predict(self, features_df: pd.DataFrame) -> np.ndarray:
@@ -254,19 +260,29 @@ class LightGBMTrainer(BaseMLTrainer):
 
             # 特徴量重要度
             feature_importance = {}
+            automl_feature_analysis = {}
             if self.feature_columns:
                 importances = self.model.feature_importance(importance_type="gain")
                 feature_importance = dict(zip(self.feature_columns, importances))
+
+                # AutoML特徴量分析を実行
+                if self.use_automl:
+                    analyzer = AutoMLFeatureAnalyzer()
+                    automl_feature_analysis = analyzer.analyze_feature_importance(
+                        feature_importance, top_n=20
+                    )
 
             result = {
                 **detailed_metrics,  # 詳細な評価指標を展開
                 "classification_report": class_report,
                 "feature_importance": feature_importance,
+                "automl_feature_analysis": automl_feature_analysis,  # AutoML特徴量分析を追加
                 "train_samples": len(X_train),
                 "test_samples": len(X_test),
                 "best_iteration": self.model.best_iteration,
                 "model_type": self.model_type,
                 "num_classes": num_classes,
+                "automl_enabled": self.use_automl,  # AutoML使用フラグを追加
             }
 
             # 精度を取得（detailed_metricsから）

@@ -378,6 +378,187 @@ async def get_feature_importance(top_n: int = 10):
     return await UnifiedErrorHandler.safe_execute_async(_get_feature_importance)
 
 
+@router.get("/automl-feature-analysis")
+async def get_automl_feature_analysis(top_n: int = 20):
+    """
+    AutoML特徴量分析結果を取得
+
+    Args:
+        top_n: 分析する上位特徴量数
+
+    Returns:
+        AutoML特徴量分析結果
+    """
+
+    async def _get_automl_feature_analysis():
+        # 特徴量重要度を取得
+        feature_importance = ml_orchestrator.get_feature_importance(
+            100
+        )  # より多くの特徴量を取得
+
+        if not feature_importance:
+            return {"error": "特徴量重要度データがありません"}
+
+        # AutoML特徴量分析を実行
+        from app.core.services.ml.feature_engineering.automl_feature_analyzer import (
+            AutoMLFeatureAnalyzer,
+        )
+
+        analyzer = AutoMLFeatureAnalyzer()
+        analysis_result = analyzer.analyze_feature_importance(feature_importance, top_n)
+
+        return analysis_result
+
+    return await UnifiedErrorHandler.safe_execute_async(_get_automl_feature_analysis)
+
+
+@router.get("/automl-presets")
+async def get_automl_presets():
+    """
+    AutoML設定プリセット一覧を取得
+
+    Returns:
+        AutoML設定プリセット一覧
+    """
+
+    async def _get_automl_presets():
+        from app.core.services.ml.feature_engineering.automl_preset_service import (
+            AutoMLPresetService,
+        )
+
+        preset_service = AutoMLPresetService()
+        presets = preset_service.get_all_presets()
+
+        return {
+            "presets": [
+                {
+                    "name": preset.name,
+                    "description": preset.description,
+                    "market_condition": preset.market_condition.value,
+                    "trading_strategy": preset.trading_strategy.value,
+                    "data_size": preset.data_size.value,
+                    "config": preset.config,
+                    "performance_notes": preset.performance_notes,
+                }
+                for preset in presets
+            ],
+            "summary": preset_service.get_preset_summary(),
+        }
+
+    return await UnifiedErrorHandler.safe_execute_async(_get_automl_presets)
+
+
+@router.get("/automl-presets/{preset_name}")
+async def get_automl_preset(preset_name: str):
+    """
+    特定のAutoML設定プリセットを取得
+
+    Args:
+        preset_name: プリセット名
+
+    Returns:
+        AutoML設定プリセット
+    """
+
+    async def _get_automl_preset():
+        from app.core.services.ml.feature_engineering.automl_preset_service import (
+            AutoMLPresetService,
+        )
+
+        try:
+            preset_service = AutoMLPresetService()
+            preset = preset_service.get_preset_by_name(preset_name)
+
+            return {
+                "name": preset.name,
+                "description": preset.description,
+                "market_condition": preset.market_condition.value,
+                "trading_strategy": preset.trading_strategy.value,
+                "data_size": preset.data_size.value,
+                "config": preset.config,
+                "performance_notes": preset.performance_notes,
+            }
+        except ValueError as e:
+            return {"error": str(e)}
+
+    return await UnifiedErrorHandler.safe_execute_async(_get_automl_preset)
+
+
+@router.post("/automl-presets/recommend")
+async def recommend_automl_preset(
+    market_condition: str = None, trading_strategy: str = None, data_size: str = None
+):
+    """
+    条件に基づいてAutoML設定プリセットを推奨
+
+    Args:
+        market_condition: 市場条件
+        trading_strategy: 取引戦略
+        data_size: データサイズ
+
+    Returns:
+        推奨AutoML設定プリセット
+    """
+
+    async def _recommend_automl_preset():
+        from app.core.services.ml.feature_engineering.automl_preset_service import (
+            AutoMLPresetService,
+            MarketCondition,
+            TradingStrategy,
+            DataSize,
+        )
+
+        preset_service = AutoMLPresetService()
+
+        # 文字列をEnumに変換
+        market_cond = None
+        if market_condition:
+            try:
+                market_cond = MarketCondition(market_condition)
+            except ValueError:
+                pass
+
+        trading_strat = None
+        if trading_strategy:
+            try:
+                trading_strat = TradingStrategy(trading_strategy)
+            except ValueError:
+                pass
+
+        data_sz = None
+        if data_size:
+            try:
+                data_sz = DataSize(data_size)
+            except ValueError:
+                pass
+
+        # プリセットを推奨
+        preset = preset_service.recommend_preset(
+            market_condition=market_cond,
+            trading_strategy=trading_strat,
+            data_size=data_sz,
+        )
+
+        return {
+            "recommended_preset": {
+                "name": preset.name,
+                "description": preset.description,
+                "market_condition": preset.market_condition.value,
+                "trading_strategy": preset.trading_strategy.value,
+                "data_size": preset.data_size.value,
+                "config": preset.config,
+                "performance_notes": preset.performance_notes,
+            },
+            "recommendation_criteria": {
+                "market_condition": market_condition,
+                "trading_strategy": trading_strategy,
+                "data_size": data_size,
+            },
+        }
+
+    return await UnifiedErrorHandler.safe_execute_async(_recommend_automl_preset)
+
+
 @router.get("/config")
 async def get_ml_config():
     """

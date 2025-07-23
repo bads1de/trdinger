@@ -5,14 +5,19 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
 import {
   Bot,
-  Settings,
   Zap,
   Brain,
   TrendingUp,
@@ -23,33 +28,13 @@ import {
   CheckCircle,
 } from "lucide-react";
 
-interface TSFreshSettings {
-  enabled: boolean;
-  feature_selection: boolean;
-  fdr_level: number;
-  feature_count_limit: number;
-  parallel_jobs: number;
-  performance_mode: string;
-}
+// useMLTrainingフックから型定義をインポート
+import { AutoMLFeatureConfig } from "@/hooks/useMLTraining";
 
-interface FeaturetoolsSettings {
-  enabled: boolean;
-  max_depth: number;
-  max_features: number;
-}
-
-interface AutoFeatSettings {
-  enabled: boolean;
-  max_features: number;
-  generations: number;
-  population_size: number;
-}
-
-interface AutoMLFeatureConfig {
-  tsfresh: TSFreshSettings;
-  featuretools: FeaturetoolsSettings;
-  autofeat: AutoFeatSettings;
-}
+// 型エイリアスを作成
+type TSFreshSettings = AutoMLFeatureConfig["tsfresh"];
+type FeaturetoolsSettings = AutoMLFeatureConfig["featuretools"];
+type AutoFeatSettings = AutoMLFeatureConfig["autofeat"];
 
 interface AutoMLFeatureSettingsProps {
   settings: AutoMLFeatureConfig;
@@ -76,14 +61,17 @@ export default function AutoMLFeatureSettings({
       },
     };
     onChange(newSettings);
-    
+
     // 自動検証
     if (onValidate) {
       onValidate(newSettings).then(setValidationResult);
     }
   };
 
-  const updateFeaturetoolsSettings = (key: keyof FeaturetoolsSettings, value: any) => {
+  const updateFeaturetoolsSettings = (
+    key: keyof FeaturetoolsSettings,
+    value: any
+  ) => {
     const newSettings = {
       ...settings,
       featuretools: {
@@ -107,7 +95,7 @@ export default function AutoMLFeatureSettings({
 
   const getEstimatedProcessingTime = () => {
     let baseTime = 0;
-    
+
     if (settings.tsfresh.enabled) {
       baseTime += settings.tsfresh.feature_count_limit * 0.1;
       if (settings.tsfresh.performance_mode === "comprehensive") {
@@ -116,36 +104,36 @@ export default function AutoMLFeatureSettings({
         baseTime *= 0.5;
       }
     }
-    
+
     if (settings.featuretools.enabled) {
       baseTime += settings.featuretools.max_features * 0.05;
     }
-    
+
     if (settings.autofeat.enabled) {
       baseTime += settings.autofeat.generations * 0.2;
     }
-    
+
     return Math.max(baseTime, 1);
   };
 
   const getComputationalCost = () => {
     let cost = 0;
-    
+
     if (settings.tsfresh.enabled) {
       cost += settings.tsfresh.feature_count_limit / 10;
       cost += settings.tsfresh.parallel_jobs * 2;
     }
-    
+
     if (settings.featuretools.enabled) {
       cost += settings.featuretools.max_depth * 5;
       cost += settings.featuretools.max_features / 20;
     }
-    
+
     if (settings.autofeat.enabled) {
       cost += settings.autofeat.population_size / 10;
       cost += settings.autofeat.generations / 5;
     }
-    
+
     return Math.min(cost, 100);
   };
 
@@ -181,9 +169,11 @@ export default function AutoMLFeatureSettings({
               </div>
               <Progress value={computationalCost} className="h-2" />
             </div>
-            
+
             {validationResult && (
-              <Alert variant={validationResult.valid ? "default" : "destructive"}>
+              <Alert
+                variant={validationResult.valid ? "default" : "destructive"}
+              >
                 <AlertDescription>
                   {validationResult.valid ? (
                     <div className="flex items-center gap-2">
@@ -196,9 +186,13 @@ export default function AutoMLFeatureSettings({
                         <AlertTriangle className="h-4 w-4" />
                         設定に問題があります
                       </div>
-                      {validationResult.errors?.map((error: string, index: number) => (
-                        <div key={index} className="text-xs">• {error}</div>
-                      ))}
+                      {validationResult.errors?.map(
+                        (error: string, index: number) => (
+                          <div key={index} className="text-xs">
+                            • {error}
+                          </div>
+                        )
+                      )}
                     </div>
                   )}
                 </AlertDescription>
@@ -232,7 +226,9 @@ export default function AutoMLFeatureSettings({
               <CardTitle className="flex items-center gap-2">
                 <TrendingUp className="h-5 w-5" />
                 TSFresh時系列特徴量生成
-                <Badge variant={settings.tsfresh.enabled ? "default" : "secondary"}>
+                <Badge
+                  variant={settings.tsfresh.enabled ? "default" : "secondary"}
+                >
                   {settings.tsfresh.enabled ? "有効" : "無効"}
                 </Badge>
               </CardTitle>
@@ -245,10 +241,14 @@ export default function AutoMLFeatureSettings({
                 <Switch
                   id="tsfresh-enabled"
                   checked={settings.tsfresh.enabled}
-                  onCheckedChange={(enabled) => updateTSFreshSettings("enabled", enabled)}
+                  onCheckedChange={(enabled) =>
+                    updateTSFreshSettings("enabled", enabled)
+                  }
                   disabled={isLoading}
                 />
-                <Label htmlFor="tsfresh-enabled">TSFresh特徴量生成を有効にする</Label>
+                <Label htmlFor="tsfresh-enabled">
+                  TSFresh特徴量生成を有効にする
+                </Label>
               </div>
 
               {settings.tsfresh.enabled && (
@@ -257,25 +257,39 @@ export default function AutoMLFeatureSettings({
                     <Label>パフォーマンスモード</Label>
                     <Select
                       value={settings.tsfresh.performance_mode}
-                      onValueChange={(value) => updateTSFreshSettings("performance_mode", value)}
+                      onValueChange={(value) =>
+                        updateTSFreshSettings("performance_mode", value)
+                      }
                     >
                       <SelectTrigger>
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="fast">高速 (基本特徴量のみ)</SelectItem>
-                        <SelectItem value="balanced">バランス (推奨)</SelectItem>
-                        <SelectItem value="financial_optimized">金融最適化</SelectItem>
-                        <SelectItem value="comprehensive">包括的 (全特徴量)</SelectItem>
+                        <SelectItem value="fast">
+                          高速 (基本特徴量のみ)
+                        </SelectItem>
+                        <SelectItem value="balanced">
+                          バランス (推奨)
+                        </SelectItem>
+                        <SelectItem value="financial_optimized">
+                          金融最適化
+                        </SelectItem>
+                        <SelectItem value="comprehensive">
+                          包括的 (全特徴量)
+                        </SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
 
                   <div>
-                    <Label>特徴量数制限: {settings.tsfresh.feature_count_limit}個</Label>
+                    <Label>
+                      特徴量数制限: {settings.tsfresh.feature_count_limit}個
+                    </Label>
                     <Slider
                       value={[settings.tsfresh.feature_count_limit]}
-                      onValueChange={([value]) => updateTSFreshSettings("feature_count_limit", value)}
+                      onValueChange={([value]) =>
+                        updateTSFreshSettings("feature_count_limit", value)
+                      }
                       max={500}
                       min={20}
                       step={10}
@@ -287,7 +301,9 @@ export default function AutoMLFeatureSettings({
                     <Label>並列処理数: {settings.tsfresh.parallel_jobs}</Label>
                     <Slider
                       value={[settings.tsfresh.parallel_jobs]}
-                      onValueChange={([value]) => updateTSFreshSettings("parallel_jobs", value)}
+                      onValueChange={([value]) =>
+                        updateTSFreshSettings("parallel_jobs", value)
+                      }
                       max={8}
                       min={1}
                       step={1}
@@ -299,9 +315,13 @@ export default function AutoMLFeatureSettings({
                     <Switch
                       id="tsfresh-selection"
                       checked={settings.tsfresh.feature_selection}
-                      onCheckedChange={(enabled) => updateTSFreshSettings("feature_selection", enabled)}
+                      onCheckedChange={(enabled) =>
+                        updateTSFreshSettings("feature_selection", enabled)
+                      }
                     />
-                    <Label htmlFor="tsfresh-selection">統計的特徴量選択を有効にする</Label>
+                    <Label htmlFor="tsfresh-selection">
+                      統計的特徴量選択を有効にする
+                    </Label>
                   </div>
 
                   {settings.tsfresh.feature_selection && (
@@ -309,7 +329,9 @@ export default function AutoMLFeatureSettings({
                       <Label>FDRレベル: {settings.tsfresh.fdr_level}</Label>
                       <Slider
                         value={[settings.tsfresh.fdr_level]}
-                        onValueChange={([value]) => updateTSFreshSettings("fdr_level", value)}
+                        onValueChange={([value]) =>
+                          updateTSFreshSettings("fdr_level", value)
+                        }
                         max={0.1}
                         min={0.001}
                         step={0.001}
@@ -333,7 +355,11 @@ export default function AutoMLFeatureSettings({
               <CardTitle className="flex items-center gap-2">
                 <Brain className="h-5 w-5" />
                 Featuretools Deep Feature Synthesis
-                <Badge variant={settings.featuretools.enabled ? "default" : "secondary"}>
+                <Badge
+                  variant={
+                    settings.featuretools.enabled ? "default" : "secondary"
+                  }
+                >
                   {settings.featuretools.enabled ? "有効" : "無効"}
                 </Badge>
               </CardTitle>
@@ -346,10 +372,14 @@ export default function AutoMLFeatureSettings({
                 <Switch
                   id="featuretools-enabled"
                   checked={settings.featuretools.enabled}
-                  onCheckedChange={(enabled) => updateFeaturetoolsSettings("enabled", enabled)}
+                  onCheckedChange={(enabled) =>
+                    updateFeaturetoolsSettings("enabled", enabled)
+                  }
                   disabled={isLoading}
                 />
-                <Label htmlFor="featuretools-enabled">Featuretools DFSを有効にする</Label>
+                <Label htmlFor="featuretools-enabled">
+                  Featuretools DFSを有効にする
+                </Label>
               </div>
 
               {settings.featuretools.enabled && (
@@ -358,7 +388,9 @@ export default function AutoMLFeatureSettings({
                     <Label>最大深度: {settings.featuretools.max_depth}</Label>
                     <Slider
                       value={[settings.featuretools.max_depth]}
-                      onValueChange={([value]) => updateFeaturetoolsSettings("max_depth", value)}
+                      onValueChange={([value]) =>
+                        updateFeaturetoolsSettings("max_depth", value)
+                      }
                       max={5}
                       min={1}
                       step={1}
@@ -370,10 +402,14 @@ export default function AutoMLFeatureSettings({
                   </div>
 
                   <div>
-                    <Label>最大特徴量数: {settings.featuretools.max_features}個</Label>
+                    <Label>
+                      最大特徴量数: {settings.featuretools.max_features}個
+                    </Label>
                     <Slider
                       value={[settings.featuretools.max_features]}
-                      onValueChange={([value]) => updateFeaturetoolsSettings("max_features", value)}
+                      onValueChange={([value]) =>
+                        updateFeaturetoolsSettings("max_features", value)
+                      }
                       max={200}
                       min={10}
                       step={5}
@@ -393,7 +429,9 @@ export default function AutoMLFeatureSettings({
               <CardTitle className="flex items-center gap-2">
                 <Zap className="h-5 w-5" />
                 AutoFeat遺伝的特徴量選択
-                <Badge variant={settings.autofeat.enabled ? "default" : "secondary"}>
+                <Badge
+                  variant={settings.autofeat.enabled ? "default" : "secondary"}
+                >
                   {settings.autofeat.enabled ? "有効" : "無効"}
                 </Badge>
               </CardTitle>
@@ -406,19 +444,27 @@ export default function AutoMLFeatureSettings({
                 <Switch
                   id="autofeat-enabled"
                   checked={settings.autofeat.enabled}
-                  onCheckedChange={(enabled) => updateAutoFeatSettings("enabled", enabled)}
+                  onCheckedChange={(enabled) =>
+                    updateAutoFeatSettings("enabled", enabled)
+                  }
                   disabled={isLoading}
                 />
-                <Label htmlFor="autofeat-enabled">AutoFeat選択を有効にする</Label>
+                <Label htmlFor="autofeat-enabled">
+                  AutoFeat選択を有効にする
+                </Label>
               </div>
 
               {settings.autofeat.enabled && (
                 <div className="space-y-4">
                   <div>
-                    <Label>最大特徴量数: {settings.autofeat.max_features}個</Label>
+                    <Label>
+                      最大特徴量数: {settings.autofeat.max_features}個
+                    </Label>
                     <Slider
                       value={[settings.autofeat.max_features]}
-                      onValueChange={([value]) => updateAutoFeatSettings("max_features", value)}
+                      onValueChange={([value]) =>
+                        updateAutoFeatSettings("max_features", value)
+                      }
                       max={200}
                       min={10}
                       step={5}
@@ -430,7 +476,9 @@ export default function AutoMLFeatureSettings({
                     <Label>世代数: {settings.autofeat.generations}</Label>
                     <Slider
                       value={[settings.autofeat.generations]}
-                      onValueChange={([value]) => updateAutoFeatSettings("generations", value)}
+                      onValueChange={([value]) =>
+                        updateAutoFeatSettings("generations", value)
+                      }
                       max={50}
                       min={5}
                       step={5}
@@ -439,10 +487,14 @@ export default function AutoMLFeatureSettings({
                   </div>
 
                   <div>
-                    <Label>集団サイズ: {settings.autofeat.population_size}</Label>
+                    <Label>
+                      集団サイズ: {settings.autofeat.population_size}
+                    </Label>
                     <Slider
                       value={[settings.autofeat.population_size]}
-                      onValueChange={([value]) => updateAutoFeatSettings("population_size", value)}
+                      onValueChange={([value]) =>
+                        updateAutoFeatSettings("population_size", value)
+                      }
                       max={200}
                       min={20}
                       step={10}

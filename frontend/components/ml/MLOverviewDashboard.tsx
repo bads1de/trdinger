@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import LoadingSpinner from "@/components/common/LoadingSpinner";
 import ErrorDisplay from "@/components/common/ErrorDisplay";
 import FeatureImportanceChart from "./FeatureImportanceChart";
+import AutoMLFeatureAnalysis from "./AutoMLFeatureAnalysis";
 import ModelInfoCard from "./ModelInfoCard";
 import ModelPerformanceCard from "./ModelPerformanceCard";
 import MLModelList from "./MLModelList";
@@ -180,6 +181,12 @@ export default function MLOverviewDashboard({
             key={`feature-importance-${refreshKey}`}
             topN={10}
             height={400}
+          />
+
+          {/* AutoML特徴量分析 */}
+          <AutoMLFeatureAnalysis
+            key={`automl-analysis-${refreshKey}`}
+            topN={20}
           />
         </div>
       </div>

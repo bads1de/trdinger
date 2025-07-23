@@ -44,8 +44,8 @@ class TestMLIntegrationComprehensive:
             autofeat_config=AutoFeatConfig(
                 enabled=False,  # テスト高速化のため無効
                 max_features=5,
-                generations=2,
-                population_size=10,
+                feateng_steps=2,  # generationsではなくfeateng_steps
+                max_gb=0.5,
             ),
         )
 
@@ -192,8 +192,28 @@ class TestMLIntegrationComprehensive:
                 target=test_data["target"],
             )
 
-        # MLトレーニングサービスをテスト
-        ml_service = MLTrainingService()
+        # MLトレーニングサービスをテスト（AutoML設定付き）
+        automl_config = {
+            "tsfresh": {
+                "enabled": True,
+                "feature_selection": False,  # テスト高速化
+                "feature_count_limit": 10,
+                "parallel_jobs": 1,
+            },
+            "featuretools": {
+                "enabled": True,
+                "max_depth": 1,
+                "max_features": 5,
+            },
+            "autofeat": {
+                "enabled": False,  # テスト高速化のため無効
+                "max_features": 5,
+                "generations": 2,
+                "max_gb": 0.5,
+            },
+        }
+
+        ml_service = MLTrainingService(automl_config=automl_config)
 
         # トレーニング実行（モデル保存を無効にしてテスト）
         training_result = ml_service.train_model(
@@ -201,6 +221,7 @@ class TestMLIntegrationComprehensive:
             funding_rate_data=test_data["funding_rate"],
             open_interest_data=test_data["open_interest"],
             save_model=False,  # テスト用
+            automl_config=automl_config,  # AutoML設定を渡す
             test_size=0.3,
             random_state=42,
         )
@@ -215,9 +236,109 @@ class TestMLIntegrationComprehensive:
         assert training_result["feature_count"] >= 100  # 手動特徴量（+AutoML特徴量）
 
         print(
-            f"MLトレーニング完了: 精度={training_result.get('accuracy', 0):.3f}, "
+            f"AutoML MLトレーニング完了: 精度={training_result.get('accuracy', 0):.3f}, "
             f"特徴量数={training_result.get('feature_count', 0)}"
         )
+
+    def test_automl_ml_training_integration(self):
+        """AutoML特徴量エンジニアリングとMLトレーニングの統合テスト"""
+        test_data = self.create_comprehensive_test_data(200)  # より多くのデータでテスト
+
+        # AutoML設定（テスト用に軽量化）
+        automl_config = {
+            "tsfresh": {
+                "enabled": True,
+                "feature_selection": True,
+                "fdr_level": 0.1,  # テスト用に緩く設定
+                "feature_count_limit": 20,
+                "parallel_jobs": 1,
+            },
+            "featuretools": {
+                "enabled": True,
+                "max_depth": 2,
+                "max_features": 15,
+            },
+            "autofeat": {
+                "enabled": True,
+                "max_features": 10,
+                "feateng_steps": 3,  # テスト用に少なく設定
+                "max_gb": 0.5,
+            },
+        }
+
+        # AutoML設定付きMLトレーニングサービス
+        ml_service = MLTrainingService(automl_config=automl_config)
+
+        # トレーニング実行
+        training_result = ml_service.train_model(
+            training_data=test_data["ohlcv"],
+            funding_rate_data=test_data["funding_rate"],
+            open_interest_data=test_data["open_interest"],
+            save_model=False,  # テスト用
+            automl_config=automl_config,
+            test_size=0.3,
+            random_state=42,
+        )
+
+        # 結果の検証
+        assert isinstance(training_result, dict)
+        assert "success" in training_result
+        assert "accuracy" in training_result
+        assert "feature_count" in training_result
+
+        # AutoML特徴量が生成されていることを確認
+        feature_count = training_result.get("feature_count", 0)
+        assert feature_count > 50  # AutoML特徴量により増加していることを期待
+
+        print(
+            f"AutoML統合テスト完了: 精度={training_result.get('accuracy', 0):.3f}, "
+            f"特徴量数={feature_count}"
+        )
+
+    def test_automl_vs_basic_comparison(self):
+        """AutoML特徴量エンジニアリングと基本特徴量エンジニアリングの比較テスト"""
+        test_data = self.create_comprehensive_test_data(150)
+
+        # 基本特徴量エンジニアリングでのトレーニング
+        basic_ml_service = MLTrainingService()  # AutoML設定なし
+        basic_result = basic_ml_service.train_model(
+            training_data=test_data["ohlcv"],
+            funding_rate_data=test_data["funding_rate"],
+            open_interest_data=test_data["open_interest"],
+            save_model=False,
+            test_size=0.3,
+            random_state=42,
+        )
+
+        # AutoML特徴量エンジニアリングでのトレーニング
+        automl_config = {
+            "tsfresh": {"enabled": True, "feature_count_limit": 15, "parallel_jobs": 1},
+            "featuretools": {"enabled": True, "max_depth": 1, "max_features": 10},
+            "autofeat": {"enabled": False},  # テスト高速化のため無効
+        }
+
+        automl_ml_service = MLTrainingService(automl_config=automl_config)
+        automl_result = automl_ml_service.train_model(
+            training_data=test_data["ohlcv"],
+            funding_rate_data=test_data["funding_rate"],
+            open_interest_data=test_data["open_interest"],
+            save_model=False,
+            automl_config=automl_config,
+            test_size=0.3,
+            random_state=42,
+        )
+
+        # 結果の比較
+        basic_features = basic_result.get("feature_count", 0)
+        automl_features = automl_result.get("feature_count", 0)
+
+        print(f"基本特徴量数: {basic_features}")
+        print(f"AutoML特徴量数: {automl_features}")
+
+        # AutoMLの方が特徴量数が多いことを期待
+        assert automl_features >= basic_features
+
+        print("AutoML vs 基本特徴量エンジニアリング比較テスト完了")
 
     def test_ml_orchestrator_integration(self):
         """MLOrchestratorとの統合テスト"""

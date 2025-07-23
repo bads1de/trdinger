@@ -36,6 +36,10 @@ from ...utils.unified_error_handler import (
     ml_operation_context,
 )
 from .feature_engineering.feature_engineering_service import FeatureEngineeringService
+from .feature_engineering.enhanced_feature_engineering_service import (
+    EnhancedFeatureEngineeringService,
+)
+from .feature_engineering.automl_features.automl_config import AutoMLConfig
 from .model_manager import model_manager
 from ...utils.label_generation import LabelGenerator, ThresholdMethod
 from database.connection import SessionLocal
@@ -52,14 +56,86 @@ class BaseMLTrainer(ABC):
     単一責任原則に従い、学習に関する責任のみを持ちます。
     """
 
-    def __init__(self):
-        """初期化"""
+    def __init__(self, automl_config: Optional[Dict[str, Any]] = None):
+        """
+        初期化
+
+        Args:
+            automl_config: AutoML設定（辞書形式）
+        """
         self.config = ml_config
-        self.feature_service = FeatureEngineeringService()
+
+        # AutoML設定の処理
+        if automl_config:
+            # 辞書からAutoMLConfigオブジェクトを作成
+            automl_config_obj = self._create_automl_config_from_dict(automl_config)
+            self.feature_service = EnhancedFeatureEngineeringService(automl_config_obj)
+            self.use_automl = True
+            logger.info("🤖 AutoML特徴量エンジニアリングを有効化しました")
+        else:
+            # 従来の基本特徴量サービスを使用
+            self.feature_service = FeatureEngineeringService()
+            self.use_automl = False
+            logger.info("📊 基本特徴量エンジニアリングを使用します")
+
         self.scaler = StandardScaler()
         self.feature_columns = None
         self.is_trained = False
         self.model = None
+        self.automl_config = automl_config
+
+    def _create_automl_config_from_dict(
+        self, config_dict: Dict[str, Any]
+    ) -> AutoMLConfig:
+        """
+        辞書からAutoMLConfigオブジェクトを作成
+
+        Args:
+            config_dict: AutoML設定辞書
+
+        Returns:
+            AutoMLConfigオブジェクト
+        """
+        from .feature_engineering.automl_features.automl_config import (
+            TSFreshConfig,
+            FeaturetoolsConfig,
+            AutoFeatConfig,
+        )
+
+        # TSFresh設定
+        tsfresh_dict = config_dict.get("tsfresh", {})
+        tsfresh_config = TSFreshConfig(
+            enabled=tsfresh_dict.get("enabled", True),
+            feature_selection=tsfresh_dict.get("feature_selection", True),
+            fdr_level=tsfresh_dict.get("fdr_level", 0.05),
+            feature_count_limit=tsfresh_dict.get("feature_count_limit", 100),
+            parallel_jobs=tsfresh_dict.get("parallel_jobs", 2),
+        )
+
+        # Featuretools設定
+        featuretools_dict = config_dict.get("featuretools", {})
+        featuretools_config = FeaturetoolsConfig(
+            enabled=featuretools_dict.get("enabled", True),
+            max_depth=featuretools_dict.get("max_depth", 2),
+            max_features=featuretools_dict.get("max_features", 50),
+        )
+
+        # AutoFeat設定
+        autofeat_dict = config_dict.get("autofeat", {})
+        autofeat_config = AutoFeatConfig(
+            enabled=autofeat_dict.get("enabled", True),
+            max_features=autofeat_dict.get("max_features", 50),
+            feateng_steps=autofeat_dict.get(
+                "feateng_steps", autofeat_dict.get("generations", 10)
+            ),  # feateng_stepsまたはgenerationsをマッピング
+            max_gb=autofeat_dict.get("max_gb", 1.0),
+        )
+
+        return AutoMLConfig(
+            tsfresh_config=tsfresh_config,
+            featuretools_config=featuretools_config,
+            autofeat_config=autofeat_config,
+        )
 
     @safe_ml_operation(default_return={}, context="MLモデル学習でエラーが発生しました")
     def train_model(
@@ -390,13 +466,31 @@ class BaseMLTrainer(ABC):
             # Fear & Greed Indexデータを取得
             fear_greed_data = self._get_fear_greed_data(ohlcv_data)
 
-            # 拡張された特徴量計算
-            return self.feature_service.calculate_advanced_features(
-                ohlcv_data=ohlcv_data,
-                funding_rate_data=funding_rate_data,
-                open_interest_data=open_interest_data,
-                fear_greed_data=fear_greed_data,
-            )
+            # AutoMLを使用する場合は拡張特徴量計算を実行
+            if self.use_automl and isinstance(
+                self.feature_service, EnhancedFeatureEngineeringService
+            ):
+                # ターゲット変数を計算（AutoML特徴量生成用）
+                target = self._calculate_target_for_automl(ohlcv_data)
+
+                logger.info("🤖 AutoML拡張特徴量計算を実行中...")
+                return self.feature_service.calculate_enhanced_features(
+                    ohlcv_data=ohlcv_data,
+                    funding_rate_data=funding_rate_data,
+                    open_interest_data=open_interest_data,
+                    fear_greed_data=fear_greed_data,
+                    automl_config=self.automl_config,
+                    target=target,
+                )
+            else:
+                # 基本特徴量計算
+                logger.info("📊 基本特徴量計算を実行中...")
+                return self.feature_service.calculate_advanced_features(
+                    ohlcv_data=ohlcv_data,
+                    funding_rate_data=funding_rate_data,
+                    open_interest_data=open_interest_data,
+                    fear_greed_data=fear_greed_data,
+                )
 
         except Exception as e:
             logger.warning(f"拡張特徴量計算でエラー、基本特徴量のみ使用: {e}")
@@ -404,6 +498,55 @@ class BaseMLTrainer(ABC):
             return self.feature_service.calculate_advanced_features(
                 ohlcv_data, funding_rate_data, open_interest_data
             )
+
+    def _calculate_target_for_automl(
+        self, ohlcv_data: pd.DataFrame
+    ) -> Optional[pd.Series]:
+        """
+        AutoML特徴量生成用のターゲット変数を計算
+
+        Args:
+            ohlcv_data: OHLCVデータ
+
+        Returns:
+            ターゲット変数のSeries（計算できない場合はNone）
+        """
+        try:
+            if ohlcv_data.empty or "Close" not in ohlcv_data.columns:
+                logger.warning("ターゲット変数計算用のデータが不足しています")
+                return None
+
+            # 価格変化率を計算（次の期間の価格変化）
+            close_prices = ohlcv_data["Close"].copy()
+
+            # 将来の価格変化率を計算（24時間後の変化率）
+            prediction_horizon = getattr(self.config.training, "PREDICTION_HORIZON", 24)
+            future_returns = close_prices.pct_change(periods=prediction_horizon).shift(
+                -prediction_horizon
+            )
+
+            # 閾値を使用してクラス分類
+            threshold_up = getattr(self.config.training, "THRESHOLD_UP", 0.02)
+            threshold_down = getattr(self.config.training, "THRESHOLD_DOWN", -0.02)
+
+            # 3クラス分類：0=下落、1=横ばい、2=上昇
+            target = pd.Series(1, index=future_returns.index)  # デフォルトは横ばい
+            target[future_returns > threshold_up] = 2  # 上昇
+            target[future_returns < threshold_down] = 0  # 下落
+
+            # NaNを除去
+            target = target.dropna()
+
+            logger.info(f"AutoML用ターゲット変数を計算: {len(target)}サンプル")
+            logger.info(
+                f"クラス分布 - 下落: {(target == 0).sum()}, 横ばい: {(target == 1).sum()}, 上昇: {(target == 2).sum()}"
+            )
+
+            return target
+
+        except Exception as e:
+            logger.warning(f"AutoML用ターゲット変数計算エラー: {e}")
+            return None
 
     def _get_fear_greed_data(self, ohlcv_data: pd.DataFrame) -> Optional[pd.DataFrame]:
         """

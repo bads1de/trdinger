@@ -15,6 +15,28 @@ export interface OptimizationSettingsConfig {
   parameter_space: Record<string, ParameterSpaceConfig>;
 }
 
+export interface AutoMLFeatureConfig {
+  tsfresh: {
+    enabled: boolean;
+    feature_selection: boolean;
+    fdr_level: number;
+    feature_count_limit: number;
+    parallel_jobs: number;
+    performance_mode: string;
+  };
+  featuretools: {
+    enabled: boolean;
+    max_depth: number;
+    max_features: number;
+  };
+  autofeat: {
+    enabled: boolean;
+    max_features: number;
+    generations: number;
+    population_size: number;
+  };
+}
+
 export interface TrainingConfig {
   symbol: string;
   timeframe: string;
@@ -24,6 +46,7 @@ export interface TrainingConfig {
   train_test_split: number;
   random_state: number;
   optimization_settings?: OptimizationSettingsConfig;
+  automl_config?: AutoMLFeatureConfig;
 }
 
 export interface TrainingStatus {
@@ -41,6 +64,70 @@ export interface TrainingStatus {
     test_samples: number;
   };
 }
+
+// デフォルトのAutoML設定を作成
+export const getDefaultAutoMLConfig = (): AutoMLFeatureConfig => ({
+  tsfresh: {
+    enabled: true,
+    feature_selection: true,
+    fdr_level: 0.05,
+    feature_count_limit: 100,
+    parallel_jobs: 2,
+    performance_mode: "balanced",
+  },
+  featuretools: {
+    enabled: true,
+    max_depth: 2,
+    max_features: 50,
+  },
+  autofeat: {
+    enabled: false, // デフォルトでは無効（計算コストが高いため）
+    max_features: 50,
+    generations: 10,
+    population_size: 30,
+  },
+});
+
+// 金融最適化AutoML設定を作成
+export const getFinancialOptimizedAutoMLConfig = (): AutoMLFeatureConfig => ({
+  tsfresh: {
+    enabled: true,
+    feature_selection: true,
+    fdr_level: 0.01,
+    feature_count_limit: 200,
+    parallel_jobs: 4,
+    performance_mode: "financial_optimized",
+  },
+  featuretools: {
+    enabled: true,
+    max_depth: 3,
+    max_features: 100,
+  },
+  autofeat: {
+    enabled: true,
+    max_features: 100,
+    generations: 20,
+    population_size: 50,
+  },
+});
+
+// AutoMLプリセット関連の型定義
+export interface AutoMLPreset {
+  name: string;
+  description: string;
+  market_condition: string;
+  trading_strategy: string;
+  data_size: string;
+  config: AutoMLFeatureConfig;
+  performance_notes: string;
+}
+
+// プリセットからAutoMLConfigを作成
+export const createAutoMLConfigFromPreset = (
+  preset: AutoMLPreset
+): AutoMLFeatureConfig => {
+  return preset.config;
+};
 
 export const useMLTraining = () => {
   const [config, setConfig] = useState<TrainingConfig>({
@@ -92,15 +179,19 @@ export const useMLTraining = () => {
   }, [trainingStatus.is_training, checkTrainingStatus]);
 
   const startTraining = useCallback(
-    async (optimizationSettings?: OptimizationSettingsConfig) => {
+    async (
+      optimizationSettings?: OptimizationSettingsConfig,
+      automlConfig?: AutoMLFeatureConfig
+    ) => {
       setError(null);
 
-      // 最適化設定を含むconfigを作成
+      // 最適化設定とAutoML設定を含むconfigを作成
       const trainingConfig = {
         ...config,
         optimization_settings: optimizationSettings?.enabled
           ? optimizationSettings
           : undefined,
+        automl_config: automlConfig,
       };
 
       await startTrainingApi("/api/ml-training/train", {
