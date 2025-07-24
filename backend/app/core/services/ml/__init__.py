@@ -4,6 +4,6 @@
 オートストラテジー強化のための機械学習機能を提供します。
 """
 
-from .signal_generator import MLSignalGenerator
+from .ml_training_service import MLTrainingService
 
-__all__ = ["MLSignalGenerator"]
+__all__ = ["MLTrainingService"]

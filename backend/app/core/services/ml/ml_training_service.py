@@ -8,6 +8,7 @@ BaseMLTrainerを使用してコードの重複を解消し、責任を明確化�
 
 import logging
 import pandas as pd
+import numpy as np
 from typing import Dict, Any, Optional, Callable
 
 
@@ -240,6 +241,132 @@ class MLTrainingService:
     def list_available_models(self) -> list:
         """利用可能なモデルの一覧を取得"""
         return model_manager.list_models("*")
+
+    def generate_signals(self, features: pd.DataFrame) -> Dict[str, float]:
+        """
+        予測信号を生成（MLSignalGeneratorのpredictメソッドから移植）
+
+        Args:
+            features: 特徴量DataFrame
+
+        Returns:
+            予測確率の辞書 {"up": float, "down": float, "range": float}
+        """
+        try:
+            logger.debug(
+                f"ML予測開始 - モデル学習状態: {self.trainer.is_trained}, モデル存在: {self.trainer.model is not None}"
+            )
+
+            if not self.trainer.is_trained or self.trainer.model is None:
+                # モデル未学習時は警告レベルでログ出力
+                logger.warning("モデルが学習されていません。デフォルト値を返します。")
+                default_predictions = self.config.prediction.get_default_predictions()
+                logger.debug(f"デフォルト値: {default_predictions}")
+                return default_predictions
+
+            if self.trainer.feature_columns is None:
+                # 特徴量カラムが設定されていない場合、利用可能な全カラムを使用
+                logger.warning(
+                    "特徴量カラムが設定されていません。利用可能な全カラムを使用します。"
+                )
+                features_selected = features.fillna(0)
+            else:
+                # 特徴量を選択・整形
+                available_columns = [
+                    col
+                    for col in self.trainer.feature_columns
+                    if col in features.columns
+                ]
+                missing_columns = [
+                    col
+                    for col in self.trainer.feature_columns
+                    if col not in features.columns
+                ]
+
+                logger.debug(f"学習時特徴量数: {len(self.trainer.feature_columns)}")
+                logger.debug(f"利用可能特徴量数: {len(available_columns)}")
+                logger.debug(f"不足特徴量数: {len(missing_columns)}")
+
+                if len(missing_columns) > 0:
+                    logger.debug(
+                        f"不足している特徴量（最初の10個）: {missing_columns[:10]}"
+                    )
+
+                if not available_columns:
+                    logger.warning(
+                        "指定された特徴量カラムが見つかりません。デフォルト値を返します。"
+                    )
+                    return self.config.prediction.get_default_predictions()
+                else:
+                    # 利用可能な特徴量のみを使用
+                    features_selected = features[available_columns].fillna(0)
+
+                    # 不足している特徴量を一度にまとめて追加（DataFrame断片化を防ぐ）
+                    if missing_columns:
+                        # 不足特徴量のDataFrameを作成
+                        missing_features_df = pd.DataFrame(
+                            0.0, index=features_selected.index, columns=missing_columns
+                        )
+                        # pd.concatで一度に結合（断片化を防ぐ）
+                        features_selected = pd.concat(
+                            [features_selected, missing_features_df], axis=1
+                        )
+
+                    # 学習時と同じ順序で並び替え
+                    features_selected = features_selected[self.trainer.feature_columns]
+
+            # 標準化
+            if self.trainer.scaler is not None:
+                features_scaled = self.trainer.scaler.transform(features_selected)
+            else:
+                logger.warning(
+                    "スケーラーが設定されていません。標準化をスキップします。"
+                )
+                features_scaled = features_selected.values
+
+            # 予測（LightGBMモデルの場合）
+            predictions = np.array(
+                self.trainer.model.predict(
+                    features_scaled, num_iteration=self.trainer.model.best_iteration
+                )
+            )
+
+            # 最新の予測結果を取得
+            if predictions.ndim == 2:
+                latest_pred = predictions[-1]  # 最後の行
+            else:
+                latest_pred = predictions
+
+            # 予測結果を3クラス（down, range, up）の確率に変換
+            if latest_pred.shape[0] == 3:
+                predictions = {
+                    "down": float(latest_pred[0]),
+                    "range": float(latest_pred[1]),
+                    "up": float(latest_pred[2]),
+                }
+                logger.debug(f"3クラス予測結果: {predictions}")
+                return predictions
+            elif latest_pred.shape[0] == 2:
+                # 2クラス分類の場合、rangeを中間値として設定
+                predictions = {
+                    "down": float(latest_pred[0]),
+                    "range": 0.34,
+                    "up": float(latest_pred[1]),
+                }
+                logger.debug(f"2クラス予測結果: {predictions}")
+                return predictions
+            else:
+                # 予期しない形式の場合、デフォルト値を返す
+                logger.warning(f"予期しない予測結果の形式: {latest_pred.shape}")
+                default_predictions = self.config.prediction.get_default_predictions()
+                logger.debug(f"形式エラー時のデフォルト値: {default_predictions}")
+                return default_predictions
+
+        except Exception as e:
+            logger.warning(f"予測エラー: {e}")
+            default_predictions = self.config.prediction.get_default_predictions()
+            logger.debug(f"エラー時のデフォルト値: {default_predictions}")
+            return default_predictions
 
     def _train_with_optimization(
         self,

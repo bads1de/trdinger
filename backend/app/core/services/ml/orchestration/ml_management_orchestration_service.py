@@ -11,7 +11,7 @@ from fastapi import HTTPException
 
 from app.core.services.ml.model_manager import model_manager
 from app.core.services.auto_strategy.services.ml_orchestrator import MLOrchestrator
-from app.core.services.ml.performance_extractor import performance_extractor
+
 from app.core.services.ml.feature_engineering.automl_feature_analyzer import (
     AutoMLFeatureAnalyzer,
 )
@@ -229,10 +229,36 @@ class MLManagementOrchestrationService:
                     }
                 status["model_info"] = model_info
 
-                performance_metrics = performance_extractor.extract_performance_metrics(
-                    latest_model
-                )
-                status["performance_metrics"] = performance_metrics
+                # ModelManagerから直接メタデータを取得
+                model_data = model_manager.load_model(latest_model)
+                if model_data and "metadata" in model_data:
+                    metadata = model_data["metadata"]
+                    # 新しい形式の性能指標を抽出
+                    performance_metrics = {
+                        "accuracy": metadata.get("accuracy", 0.0),
+                        "precision": metadata.get("precision", 0.0),
+                        "recall": metadata.get("recall", 0.0),
+                        "f1_score": metadata.get("f1_score", 0.0),
+                        "auc_roc": metadata.get("auc_roc", 0.0),
+                        "auc_pr": metadata.get("auc_pr", 0.0),
+                        "balanced_accuracy": metadata.get("balanced_accuracy", 0.0),
+                        "matthews_corrcoef": metadata.get("matthews_corrcoef", 0.0),
+                        "cohen_kappa": metadata.get("cohen_kappa", 0.0),
+                    }
+                    status["performance_metrics"] = performance_metrics
+                else:
+                    # デフォルト値を設定
+                    status["performance_metrics"] = {
+                        "accuracy": 0.0,
+                        "precision": 0.0,
+                        "recall": 0.0,
+                        "f1_score": 0.0,
+                        "auc_roc": 0.0,
+                        "auc_pr": 0.0,
+                        "balanced_accuracy": 0.0,
+                        "matthews_corrcoef": 0.0,
+                        "cohen_kappa": 0.0,
+                    }
             except Exception as e:
                 logger.warning(f"モデル情報取得エラー: {e}")
                 status["model_info"] = {

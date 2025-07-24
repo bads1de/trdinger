@@ -249,7 +249,9 @@ class LightGBMTrainer(BaseMLTrainer):
                 y_pred_class = (y_pred_proba > 0.5).astype(int)
 
             # 詳細な評価指標を計算
-            detailed_metrics = self.calculate_detailed_metrics(
+            from ...utils.metrics_calculator import calculate_detailed_metrics
+
+            detailed_metrics = calculate_detailed_metrics(
                 y_test, y_pred_class, y_pred_proba
             )
 

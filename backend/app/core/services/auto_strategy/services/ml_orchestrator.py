@@ -25,9 +25,9 @@ from app.core.utils.unified_error_handler import (
 from app.core.services.ml.feature_engineering.feature_engineering_service import (
     FeatureEngineeringService,
 )
-from app.core.services.ml.signal_generator import MLSignalGenerator
+from app.core.services.ml.ml_training_service import MLTrainingService
 from app.core.services.ml.model_manager import model_manager
-from app.core.services.ml.performance_extractor import performance_extractor
+
 from app.core.services.ml.interfaces import MLPredictionInterface
 from app.core.services.backtest_data_service import BacktestDataService
 from database.repositories.ohlcv_repository import OHLCVRepository
@@ -52,24 +52,26 @@ class MLOrchestrator(MLPredictionInterface):
 
     def __init__(
         self,
-        ml_signal_generator: Optional[MLSignalGenerator] = None,
+        ml_training_service: Optional[MLTrainingService] = None,
     ):
         """
         初期化
 
         Args:
-            ml_signal_generator: MLSignalGeneratorインスタンス（オプション）
+            ml_training_service: MLTrainingServiceインスタンス（オプション）
         """
         self.config = ml_config
         self.feature_service = FeatureEngineeringService()
-        self.ml_generator = (
-            ml_signal_generator if ml_signal_generator else MLSignalGenerator()
+        self.ml_training_service = (
+            ml_training_service if ml_training_service else MLTrainingService()
         )
 
         # BacktestDataServiceを初期化（完全なデータセット取得用）
         self._backtest_data_service = None
-        # モデル状態の統合管理（ml_generatorのみ）
-        self.is_model_loaded = getattr(self.ml_generator, "is_trained", False)
+        # モデル状態の統合管理（ml_training_serviceのtrainerを使用）
+        self.is_model_loaded = getattr(
+            self.ml_training_service.trainer, "is_trained", False
+        )
         self._last_predictions = self.config.prediction.get_default_predictions()
 
         # 既存の学習済みモデルを自動読み込み
@@ -211,7 +213,7 @@ class MLOrchestrator(MLPredictionInterface):
             読み込み成功フラグ
         """
         try:
-            success = self.ml_generator.load_model(model_path)
+            success = self.ml_training_service.load_model(model_path)
             if success:
                 self.is_model_loaded = True
                 logger.info(f"MLモデル読み込み成功: {model_path}")
@@ -234,11 +236,13 @@ class MLOrchestrator(MLPredictionInterface):
 
         status = {
             "is_model_loaded": self.is_model_loaded,
-            "is_trained": getattr(self.ml_generator, "is_trained", False),
+            "is_trained": getattr(
+                self.ml_training_service.trainer, "is_trained", False
+            ),
             "last_predictions": self._last_predictions,
             "feature_count": (
-                len(self.ml_generator.feature_columns)
-                if self.ml_generator.feature_columns
+                len(self.ml_training_service.trainer.feature_columns)
+                if self.ml_training_service.trainer.feature_columns
                 else 0
             ),
         }
@@ -248,11 +252,26 @@ class MLOrchestrator(MLPredictionInterface):
             latest_model = model_manager.get_latest_model("*")
             if latest_model:
                 print(f"=== DEBUG: 最新モデルファイル: {latest_model} ===")
-                performance_metrics = performance_extractor.extract_performance_metrics(
-                    latest_model
-                )
-                status["performance_metrics"] = performance_metrics
-                print(f"=== DEBUG: 性能指標を追加: {performance_metrics} ===")
+                # ModelManagerから直接メタデータを取得
+                model_data = model_manager.load_model(latest_model)
+                if model_data and "metadata" in model_data:
+                    metadata = model_data["metadata"]
+                    # 新しい形式の性能指標を抽出
+                    performance_metrics = {
+                        "accuracy": metadata.get("accuracy", 0.0),
+                        "precision": metadata.get("precision", 0.0),
+                        "recall": metadata.get("recall", 0.0),
+                        "f1_score": metadata.get("f1_score", 0.0),
+                        "auc_roc": metadata.get("auc_roc", 0.0),
+                        "auc_pr": metadata.get("auc_pr", 0.0),
+                        "balanced_accuracy": metadata.get("balanced_accuracy", 0.0),
+                        "matthews_corrcoef": metadata.get("matthews_corrcoef", 0.0),
+                        "cohen_kappa": metadata.get("cohen_kappa", 0.0),
+                    }
+                    status["performance_metrics"] = performance_metrics
+                    print(f"=== DEBUG: 性能指標を追加: {performance_metrics} ===")
+                else:
+                    print("=== DEBUG: モデルメタデータが見つかりません ===")
             else:
                 print("=== DEBUG: 最新モデルファイルが見つかりません ===")
         except Exception as e:
@@ -285,8 +304,10 @@ class MLOrchestrator(MLPredictionInterface):
         Returns:
             特徴量重要度の辞書
         """
-        if self.is_model_loaded and getattr(self.ml_generator, "is_trained", False):
-            return self.ml_generator.get_feature_importance(top_n)
+        if self.is_model_loaded and getattr(
+            self.ml_training_service.trainer, "is_trained", False
+        ):
+            return self.ml_training_service.get_feature_importance()
         else:
             return {}
 
@@ -389,7 +410,7 @@ class MLOrchestrator(MLPredictionInterface):
     def _safe_ml_prediction(self, features_df: pd.DataFrame) -> Dict[str, float]:
         """安全なML予測実行"""
         # 予測を実行
-        predictions = self.ml_generator.predict(features_df)
+        predictions = self.ml_training_service.generate_signals(features_df)
 
         # 予測値の妥当性チェック
         UnifiedErrorHandler.validate_predictions(predictions)
@@ -455,7 +476,7 @@ class MLOrchestrator(MLPredictionInterface):
         try:
             latest_model = model_manager.get_latest_model("*")
             if latest_model:
-                success = self.ml_generator.load_model(latest_model)
+                success = self.ml_training_service.load_model(latest_model)
                 if success:
                     self.is_model_loaded = True
                     logger.info(f"最新のMLモデルを自動読み込み: {latest_model}")
