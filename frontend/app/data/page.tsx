@@ -179,14 +179,10 @@ const DataPage: React.FC = () => {
           timeframeDetails = ` [${tfResults}]`;
         }
 
-        // 外部市場データの件数を取得
-        const externalMarketCount =
-          result.data.data.external_market?.inserted_count || 0;
-
         setMessage(
           MESSAGE_KEYS.INCREMENTAL_UPDATE,
           `✅ 一括差分更新完了！ ${selectedSymbol} - ` +
-            `総計${totalSavedCount}件 (OHLCV:${ohlcvCount}${timeframeDetails}, FR:${frCount}, OI:${oiCount}, 外部市場:${externalMarketCount})`,
+            `総計${totalSavedCount}件 (OHLCV:${ohlcvCount}${timeframeDetails}, FR:${frCount}, OI:${oiCount})`,
           MESSAGE_DURATION.MEDIUM
         );
 

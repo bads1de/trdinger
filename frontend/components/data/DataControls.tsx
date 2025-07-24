@@ -142,16 +142,6 @@ const DataControls: React.FC<DataControlsProps> = ({
                   件
                 </span>
               </div>
-              <div className="flex justify-between">
-                <span className="text-secondary-600 dark:text-secondary-400">
-                  外部市場データ:
-                </span>
-                <span className="font-medium text-secondary-900 dark:text-secondary-100">
-                  {dataStatus.data.data_counts?.external_market_data?.toLocaleString() ||
-                    0}
-                  件
-                </span>
-              </div>
             </div>
 
             {/* OHLCV詳細（時間足別） */}

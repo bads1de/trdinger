@@ -7,18 +7,12 @@
 
 import logging
 
-from datetime import datetime
 from typing import Optional
 
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
-from app.core.services.data_collection.bybit.open_interest_service import (
-    BybitOpenInterestService,
-)
 from database.connection import get_db, ensure_db_initialized
-from database.repositories.open_interest_repository import OpenInterestRepository
-from app.core.utils.api_utils import APIResponseHelper
 from app.core.utils.unified_error_handler import UnifiedErrorHandler
 from app.core.services.data_collection.orchestration.open_interest_orchestration_service import (
     OpenInterestOrchestrationService,
@@ -41,69 +35,16 @@ async def get_open_interest_data(
 ):
     """
     オープンインタレストデータを取得します
-
-    データベースに保存されているオープンインタレストデータを指定された条件で取得します。
-
-    Args:
-        symbol: 取引ペアシンボル（例: 'BTC/USDT'）
-        start_date: 開始日時（ISO形式、例: '2024-01-01T00:00:00Z'）
-        end_date: 終了日時（ISO形式、例: '2024-01-31T23:59:59Z'）
-        limit: 取得件数制限（1-1000）
-        db: データベースセッション
-
-    Returns:
-        オープンインタレストデータを含むJSONレスポンス
-
-    Raises:
-        HTTPException: パラメータが無効な場合やデータベースエラーが発生した場合
     """
 
     async def _get_data():
-        logger.info(
-            f"オープンインタレストデータ取得リクエスト: symbol={symbol}, limit={limit}"
-        )
-
-        repository = OpenInterestRepository(db)
-
-        start_time = None
-        end_time = None
-
-        if start_date:
-            start_time = datetime.fromisoformat(start_date.replace("Z", "+00:00"))
-        if end_date:
-            end_time = datetime.fromisoformat(end_date.replace("Z", "+00:00"))
-
-        service = BybitOpenInterestService()
-        normalized_symbol = service.normalize_symbol(symbol)
-
-        open_interest_records = repository.get_open_interest_data(
-            symbol=normalized_symbol,
-            start_time=start_time,
-            end_time=end_time,
+        orchestration_service = OpenInterestOrchestrationService()
+        return await orchestration_service.get_open_interest_data(
+            symbol=symbol,
+            start_date=start_date,
+            end_date=end_date,
             limit=limit,
-        )
-
-        open_interest_data = []
-        for record in open_interest_records:
-            open_interest_data.append(
-                {
-                    "symbol": record.symbol,
-                    "open_interest_value": record.open_interest_value,
-                    "data_timestamp": record.data_timestamp.isoformat(),
-                    "timestamp": record.timestamp.isoformat(),
-                }
-            )
-
-        logger.info(f"オープンインタレストデータ取得成功: {len(open_interest_data)}件")
-
-        return APIResponseHelper.api_response(
-            data={
-                "symbol": normalized_symbol,
-                "count": len(open_interest_data),
-                "open_interest": open_interest_data,
-            },
-            message=f"{len(open_interest_data)}件のオープンインタレストデータを取得しました",
-            success=True,
+            db_session=db,
         )
 
     return await UnifiedErrorHandler.safe_execute_async(

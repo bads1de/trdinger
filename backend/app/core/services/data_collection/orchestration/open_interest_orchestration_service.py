@@ -118,96 +118,68 @@ class OpenInterestOrchestrationService:
     ) -> Dict[str, Any]:
         """
         オープンインタレストデータの取得
-
-        Args:
-            symbol: 取引ペア
-            limit: 取得件数制限（オプション）
-            start_date: 開始日（ISO形式文字列）
-            end_date: 終了日（ISO形式文字列）
-            db_session: データベースセッション
-
-        Returns:
-            取得結果を含む辞書
         """
         try:
             logger.info(
                 f"オープンインタレストデータ取得開始: symbol={symbol}, limit={limit}"
             )
 
-            # データベースセッションの取得
             if db_session is None:
                 from database.connection import get_db
 
-                with next(get_db()) as session:
-                    db_session = session
+                db_session = next(get_db())
 
-            # サービスとリポジトリの初期化
-            service = BybitOpenInterestService()
             repository = OpenInterestRepository(db_session)
+            service = BybitOpenInterestService()
 
-            # 日付パラメータの変換
-            start_time = None
-            end_time = None
-
-            if start_date:
-                start_time = datetime.fromisoformat(start_date.replace("Z", "+00:00"))
-            if end_date:
-                end_time = datetime.fromisoformat(end_date.replace("Z", "+00:00"))
-
-            # シンボルの正規化
+            start_time = (
+                datetime.fromisoformat(start_date.replace("Z", "+00:00"))
+                if start_date
+                else None
+            )
+            end_time = (
+                datetime.fromisoformat(end_date.replace("Z", "+00:00"))
+                if end_date
+                else None
+            )
             normalized_symbol = service.normalize_symbol(symbol)
 
-            # データベースからオープンインタレストデータを取得
-            open_interest_records = repository.get_open_interest_data(
+            records = repository.get_open_interest_data(
                 symbol=normalized_symbol,
                 start_time=start_time,
                 end_time=end_time,
                 limit=limit,
             )
 
-            # データの変換
-            open_interest_data = []
-            for record in open_interest_records:
-                # recordが辞書の場合とオブジェクトの場合の両方に対応
-                if isinstance(record, dict):
-                    open_interest_data.append(
-                        {
-                            "symbol": record.get("symbol"),
-                            "open_interest": float(record.get("open_interest", 0)),
-                            "timestamp": record.get("timestamp"),
-                        }
-                    )
-                else:
-                    open_interest_data.append(
-                        {
-                            "symbol": record.symbol,
-                            "open_interest": float(record.open_interest),
-                            "timestamp": record.timestamp.isoformat(),
-                        }
-                    )
+            data = [
+                {
+                    "symbol": r.symbol,
+                    "open_interest_value": r.open_interest_value,
+                    "data_timestamp": r.data_timestamp.isoformat(),
+                    "timestamp": r.timestamp.isoformat(),
+                }
+                for r in records
+            ]
 
+            logger.info(f"オープンインタレストデータ取得成功: {len(data)}件")
             return APIResponseHelper.api_response(
-                success=True,
-                message=f"オープンインタレストデータを{len(open_interest_data)}件取得しました",
                 data={
-                    "open_interest_data": open_interest_data,
-                    "count": len(open_interest_data),
                     "symbol": normalized_symbol,
-                    "start_date": start_date,
-                    "end_date": end_date,
-                    "limit": limit,
+                    "count": len(data),
+                    "open_interest": data,
                 },
+                message=f"{len(data)}件のオープンインタレストデータを取得しました",
+                success=True,
             )
-
         except Exception as e:
             logger.error(f"オープンインタレストデータ取得エラー: {e}", exc_info=True)
             return APIResponseHelper.api_response(
                 success=False,
                 message=f"オープンインタレストデータ取得中にエラーが発生しました: {str(e)}",
                 data={
-                    "open_interest_data": [],
-                    "count": 0,
                     "symbol": symbol,
+                    "count": 0,
+                    "open_interest": [],
                     "error": str(e),
                 },
             )
