@@ -6,7 +6,7 @@ APIルーター内に散在していたMLトレーニング関連のビジネス
 """
 
 import logging
-from typing import Dict, Any, Optional
+from typing import Dict, Any
 from datetime import datetime
 from sqlalchemy.orm import Session
 
@@ -16,6 +16,7 @@ from app.core.services.backtest_data_service import BacktestDataService
 from database.repositories.ohlcv_repository import OHLCVRepository
 from database.repositories.open_interest_repository import OpenInterestRepository
 from database.repositories.funding_rate_repository import FundingRateRepository
+from database.repositories.fear_greed_repository import FearGreedIndexRepository
 from app.core.utils.api_utils import APIResponseHelper
 
 logger = logging.getLogger(__name__)
@@ -50,7 +51,8 @@ class MLTrainingOrchestrationService:
         ohlcv_repo = OHLCVRepository(db)
         oi_repo = OpenInterestRepository(db)
         fr_repo = FundingRateRepository(db)
-        return BacktestDataService(ohlcv_repo, oi_repo, fr_repo)
+        fear_greed_repo = FearGreedIndexRepository(db)
+        return BacktestDataService(ohlcv_repo, oi_repo, fr_repo, fear_greed_repo)
 
     def validate_training_config(self, config) -> None:
         """
@@ -204,39 +206,28 @@ class MLTrainingOrchestrationService:
 
             # データ取得
             training_status.update(
-                {"progress": 10, "status": "loading_data", "message": "データを読み込み中..."}
+                {
+                    "progress": 10,
+                    "status": "loading_data",
+                    "message": "データを読み込み中...",
+                }
             )
 
-            # OHLCVデータ取得
-            ohlcv_data = data_service.get_ohlcv_data(
+            # 統合されたMLトレーニングデータを取得（OHLCV + OI + FR + Fear & Greed）
+            training_data = data_service.get_ml_training_data(
                 symbol=config.symbol,
                 timeframe=config.timeframe,
-                start_date=config.start_date,
-                end_date=config.end_date,
+                start_date=datetime.fromisoformat(config.start_date),
+                end_date=datetime.fromisoformat(config.end_date),
             )
-
-            # ファンディングレートデータ取得
-            funding_rate_data = None
-            if config.include_funding_rate:
-                funding_rate_data = data_service.get_funding_rate_data(
-                    symbol=config.symbol,
-                    start_date=config.start_date,
-                    end_date=config.end_date,
-                )
-
-            # オープンインタレストデータ取得
-            open_interest_data = None
-            if config.include_open_interest:
-                open_interest_data = data_service.get_open_interest_data(
-                    symbol=config.symbol,
-                    timeframe=config.timeframe,
-                    start_date=config.start_date,
-                    end_date=config.end_date,
-                )
 
             # MLサービスの初期化
             training_status.update(
-                {"progress": 30, "status": "initializing", "message": "MLサービスを初期化中..."}
+                {
+                    "progress": 30,
+                    "status": "initializing",
+                    "message": "MLサービスを初期化中...",
+                }
             )
 
             ml_service = MLTrainingService()
@@ -253,13 +244,15 @@ class MLTrainingOrchestrationService:
 
             # トレーニング実行
             training_status.update(
-                {"progress": 50, "status": "training", "message": "モデルをトレーニング中..."}
+                {
+                    "progress": 50,
+                    "status": "training",
+                    "message": "モデルをトレーニング中...",
+                }
             )
 
             training_result = ml_service.train_model(
-                training_data=ohlcv_data,
-                funding_rate_data=funding_rate_data,
-                open_interest_data=open_interest_data,
+                training_data=training_data,
                 save_model=config.save_model,
                 optimization_settings=optimization_settings,
                 automl_config=automl_config_dict,

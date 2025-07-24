@@ -392,13 +392,15 @@ export default function MLTraining() {
               </div>
               <div className="text-center">
                 <div className="text-2xl font-bold text-purple-600">
-                  {trainingStatus.model_info.training_samples.toLocaleString()}
+                  {trainingStatus.model_info.training_samples?.toLocaleString() ||
+                    "0"}
                 </div>
                 <div className="text-sm text-gray-600">学習サンプル</div>
               </div>
               <div className="text-center">
                 <div className="text-2xl font-bold text-orange-600">
-                  {trainingStatus.model_info.test_samples?.toLocaleString()}
+                  {trainingStatus.model_info.test_samples?.toLocaleString() ||
+                    "0"}
                 </div>
                 <div className="text-sm text-gray-600">テストサンプル</div>
               </div>

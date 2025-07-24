@@ -50,6 +50,70 @@ class FearGreedIndexRepository(BaseRepository):
             return inserted_count
 
         except Exception as e:
+            logger.error(
+                f"Fear & Greed Index データの挿入中にエラーが発生しました: {e}"
+            )
+            raise
+
+    def get_fear_greed_data(
+        self, start_time: datetime, end_time: datetime
+    ) -> List[FearGreedIndexData]:
+        """
+        指定期間のFear & Greed Indexデータを取得
+
+        Args:
+            start_time: 開始日時
+            end_time: 終了日時
+
+        Returns:
+            Fear & Greed Indexデータのリスト
+        """
+        try:
+            query = (
+                self.db.query(FearGreedIndexData)
+                .filter(FearGreedIndexData.data_timestamp >= start_time)
+                .filter(FearGreedIndexData.data_timestamp <= end_time)
+                .order_by(FearGreedIndexData.data_timestamp)
+            )
+
+            results = query.all()
+            logger.info(f"Fear & Greed Indexデータを {len(results)} 件取得しました")
+            return results
+
+        except Exception as e:
+            logger.error(f"Fear & Greed Indexデータの取得中にエラーが発生しました: {e}")
+            raise
+
+    def get_latest_fear_greed_data(self) -> Optional[FearGreedIndexData]:
+        """
+        最新のFear & Greed Indexデータを取得
+
+        Returns:
+            最新のFear & Greed Indexデータ（存在しない場合はNone）
+        """
+        try:
+            result = (
+                self.db.query(FearGreedIndexData)
+                .order_by(FearGreedIndexData.data_timestamp.desc())
+                .first()
+            )
+
+            if result:
+                logger.info(
+                    f"最新のFear & Greed Indexデータを取得しました: {result.value}"
+                )
+            else:
+                logger.warning("Fear & Greed Indexデータが見つかりませんでした")
+
+            return result
+
+        except Exception as e:
+            logger.error(
+                f"最新のFear & Greed Indexデータの取得中にエラーが発生しました: {e}"
+            )
+            raise
+
+        except Exception as e:
             logger.error(f"Fear & Greed Indexデータの挿入中にエラーが発生しました: {e}")
             raise
 

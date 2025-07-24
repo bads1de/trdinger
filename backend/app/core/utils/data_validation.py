@@ -64,8 +64,14 @@ class DataValidator:
                     posinf=default_value,
                     neginf=default_value,
                 )
-            elif np.isinf(result) or np.isnan(result):
-                result = default_value
+            else:
+                # スカラーの場合
+                try:
+                    if np.isinf(result) or np.isnan(result):
+                        result = default_value
+                except (TypeError, ValueError):
+                    # 数値型でない場合はデフォルト値を使用
+                    result = default_value
 
             return result
 
@@ -131,7 +137,11 @@ class DataValidator:
                 result = result.fillna(default_value)
             else:
                 # スカラーの場合
-                if np.isinf(result) or np.isnan(result):
+                try:
+                    if np.isinf(result) or np.isnan(result):
+                        result = default_value
+                except (TypeError, ValueError):
+                    # 数値型でない場合はデフォルト値を使用
                     result = default_value
 
             return result
@@ -300,21 +310,37 @@ class DataValidator:
 
             series = df[col]
 
-            # 無限大値のチェック
-            if np.isinf(series).any():
-                issues["infinite"].append(col)
+            # 数値型のカラムのみチェック
+            if not pd.api.types.is_numeric_dtype(series):
+                continue
+
+            # 無限大値のチェック（数値型のみ）
+            try:
+                if np.isinf(series).any():
+                    issues["infinite"].append(col)
+            except (TypeError, ValueError):
+                # データ型が対応していない場合はスキップ
+                continue
 
             # NaN値のチェック
             if series.isna().any():
                 issues["nan"].append(col)
 
             # 異常に大きな値のチェック
-            if (series > cls.MAX_VALUE_THRESHOLD).any():
-                issues["too_large"].append(col)
+            try:
+                if (series > cls.MAX_VALUE_THRESHOLD).any():
+                    issues["too_large"].append(col)
+            except (TypeError, ValueError):
+                # 比較できない型の場合はスキップ
+                pass
 
             # 異常に小さな値のチェック
-            if (series < cls.MIN_VALUE_THRESHOLD).any():
-                issues["too_small"].append(col)
+            try:
+                if (series < cls.MIN_VALUE_THRESHOLD).any():
+                    issues["too_small"].append(col)
+            except (TypeError, ValueError):
+                # 比較できない型の場合はスキップ
+                pass
 
         is_valid = not any(issues.values())
         return is_valid, issues
@@ -353,15 +379,23 @@ class DataValidator:
 
             series = result_df[col]
 
-            # 無限大値を NaN に変換
-            series = series.replace([np.inf, -np.inf], np.nan)
+            # 数値型のカラムのみ処理
+            if not pd.api.types.is_numeric_dtype(series):
+                continue
 
-            # 異常に大きな値を NaN に変換
-            series = series.where(
-                (series <= cls.MAX_VALUE_THRESHOLD)
-                & (series >= cls.MIN_VALUE_THRESHOLD),
-                np.nan,
-            )
+            try:
+                # 無限大値を NaN に変換
+                series = series.replace([np.inf, -np.inf], np.nan)
+
+                # 異常に大きな値を NaN に変換
+                series = series.where(
+                    (series <= cls.MAX_VALUE_THRESHOLD)
+                    & (series >= cls.MIN_VALUE_THRESHOLD),
+                    np.nan,
+                )
+            except (TypeError, ValueError) as e:
+                logger.warning(f"カラム {col} の処理中にエラー: {e}")
+                continue
 
             # 欠損値の補完
             if fill_method == "median":

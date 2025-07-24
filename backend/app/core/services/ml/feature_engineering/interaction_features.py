@@ -43,9 +43,15 @@ class InteractionFeatureCalculator:
         # 必要な特徴量が存在するかチェック
         if not self._check_required_features(df):
             logger.warning("相互作用特徴量の計算に必要な特徴量が不足しています")
+            # 不足している場合は元のDataFrameをそのまま返す
             return df
 
-        return self._calculate_interaction_features_internal(df)
+        try:
+            return self._calculate_interaction_features_internal(df)
+        except Exception as e:
+            logger.error(f"相互作用特徴量計算でエラー: {e}")
+            # エラーが発生した場合は元のDataFrameを返す
+            return df
 
     @safe_ml_operation(
         default_return=None, context="相互作用特徴量計算でエラーが発生しました"
@@ -75,14 +81,18 @@ class InteractionFeatureCalculator:
 
     def _check_required_features(self, df: pd.DataFrame) -> bool:
         """必要な特徴量が存在するかチェック"""
-        # 最低限必要な特徴量のリスト（実際の特徴量名に合わせて修正）
-        required_features = [
+        # 基本的な特徴量のリスト（必須ではない特徴量は除外）
+        basic_required_features = [
             "Price_Momentum_14",
             "Price_Change_5",
+            "RSI",
+        ]
+
+        # オプション特徴量（存在しなくても処理を続行）
+        optional_features = [
             "Volume_Ratio",
             "Trend_Strength",
             "Breakout_Strength",
-            "RSI",
             "FR_Normalized",
             "OI_Change_Rate",
             "OI_Trend",
@@ -92,19 +102,29 @@ class InteractionFeatureCalculator:
         atr_variants = ["ATR", "ATR_20", "ATR_14"]
         has_atr = any(variant in df.columns for variant in atr_variants)
 
-        missing_features = [
-            feature for feature in required_features if feature not in df.columns
+        # 基本的な特徴量の不足をチェック
+        missing_basic_features = [
+            feature for feature in basic_required_features if feature not in df.columns
         ]
 
-        if missing_features or not has_atr:
-            if missing_features:
-                logger.warning(f"不足している特徴量: {missing_features}")
-            if not has_atr:
-                logger.warning(
-                    f"ATR系の特徴量が見つかりません。利用可能なATR: {[col for col in df.columns if 'ATR' in col]}"
-                )
+        # オプション特徴量の不足を警告として記録
+        missing_optional_features = [
+            feature for feature in optional_features if feature not in df.columns
+        ]
+
+        if missing_basic_features:
+            logger.warning(f"不足している基本特徴量: {missing_basic_features}")
             return False
 
+        if missing_optional_features:
+            logger.warning(f"不足している特徴量: {missing_optional_features}")
+
+        if not has_atr:
+            logger.warning(
+                f"ATR系の特徴量が見つかりません。利用可能なATR: {[col for col in df.columns if 'ATR' in col]}"
+            )
+
+        # 基本特徴量があれば処理を続行
         return True
 
     def _calculate_volatility_momentum_interactions(
@@ -121,21 +141,32 @@ class InteractionFeatureCalculator:
                 break
 
         if atr_column and "Price_Momentum_14" in df.columns:
-            atr_values = df[atr_column].replace([np.inf, -np.inf], np.nan)
-            momentum_values = df["Price_Momentum_14"].replace([np.inf, -np.inf], np.nan)
+            try:
+                # データ型を確認して安全に変換
+                atr_values = self._safe_numeric_conversion(df[atr_column])
+                momentum_values = self._safe_numeric_conversion(df["Price_Momentum_14"])
 
-            interaction = atr_values * momentum_values
-            # 無限大値や極端に大きな値をクリップ
-            interaction = np.clip(interaction, -1e6, 1e6)
-            result_df["Volatility_Momentum_Interaction"] = interaction
+                if atr_values is not None and momentum_values is not None:
+                    interaction = atr_values * momentum_values
+                    # 無限大値や極端に大きな値をクリップ
+                    interaction = np.clip(interaction, -1e6, 1e6)
+                    result_df["Volatility_Momentum_Interaction"] = interaction
+            except Exception as e:
+                logger.warning(f"Volatility_Momentum_Interaction計算エラー: {e}")
 
         # Volatility_Spike × Price_Change_5
         if "Volatility_Spike" in df.columns and "Price_Change_5" in df.columns:
-            price_change = df["Price_Change_5"].replace([np.inf, -np.inf], np.nan)
-            interaction = df["Volatility_Spike"].astype(float) * price_change
-            # 無限大値や極端に大きな値をクリップ
-            interaction = np.clip(interaction, -1e6, 1e6)
-            result_df["Volatility_Spike_Momentum"] = interaction
+            try:
+                volatility_spike = self._safe_numeric_conversion(df["Volatility_Spike"])
+                price_change = self._safe_numeric_conversion(df["Price_Change_5"])
+
+                if volatility_spike is not None and price_change is not None:
+                    interaction = volatility_spike * price_change
+                    # 無限大値や極端に大きな値をクリップ
+                    interaction = np.clip(interaction, -1e6, 1e6)
+                    result_df["Volatility_Spike_Momentum"] = interaction
+            except Exception as e:
+                logger.warning(f"Volatility_Spike_Momentum計算エラー: {e}")
 
         return result_df
 
@@ -145,23 +176,33 @@ class InteractionFeatureCalculator:
 
         # Volume_Ratio × Trend_Strength
         if "Volume_Ratio" in df.columns and "Trend_Strength" in df.columns:
-            volume_ratio = df["Volume_Ratio"].replace([np.inf, -np.inf], np.nan)
-            trend_strength = df["Trend_Strength"].replace([np.inf, -np.inf], np.nan)
+            try:
+                volume_ratio = self._safe_numeric_conversion(df["Volume_Ratio"])
+                trend_strength = self._safe_numeric_conversion(df["Trend_Strength"])
 
-            interaction = volume_ratio * trend_strength
-            # 無限大値や極端に大きな値をクリップ
-            interaction = np.clip(interaction, -1e6, 1e6)
-            result_df["Volume_Trend_Interaction"] = interaction
+                if volume_ratio is not None and trend_strength is not None:
+                    interaction = volume_ratio * trend_strength
+                    # 無限大値や極端に大きな値をクリップ
+                    interaction = np.clip(interaction, -1e6, 1e6)
+                    result_df["Volume_Trend_Interaction"] = interaction
+            except Exception as e:
+                logger.warning(f"Volume_Trend_Interaction計算エラー: {e}")
 
         # Volume_Spike × Breakout_Strength
         if "Volume_Spike" in df.columns and "Breakout_Strength" in df.columns:
-            breakout_strength = df["Breakout_Strength"].replace(
-                [np.inf, -np.inf], np.nan
-            )
-            interaction = df["Volume_Spike"].astype(float) * breakout_strength
-            # 無限大値や極端に大きな値をクリップ
-            interaction = np.clip(interaction, -1e6, 1e6)
-            result_df["Volume_Breakout"] = interaction
+            try:
+                volume_spike = self._safe_numeric_conversion(df["Volume_Spike"])
+                breakout_strength = self._safe_numeric_conversion(
+                    df["Breakout_Strength"]
+                )
+
+                if volume_spike is not None and breakout_strength is not None:
+                    interaction = volume_spike * breakout_strength
+                    # 無限大値や極端に大きな値をクリップ
+                    interaction = np.clip(interaction, -1e6, 1e6)
+                    result_df["Volume_Breakout"] = interaction
+            except Exception as e:
+                logger.warning(f"Volume_Breakout計算エラー: {e}")
 
         return result_df
 
@@ -171,27 +212,42 @@ class InteractionFeatureCalculator:
 
         # FR_Normalized × (RSI - 50)
         if "FR_Normalized" in df.columns and "RSI" in df.columns:
-            fr_normalized = df["FR_Normalized"].replace([np.inf, -np.inf], np.nan)
-            rsi_centered = df["RSI"] - 50
+            try:
+                fr_normalized = self._safe_numeric_conversion(df["FR_Normalized"])
+                rsi_values = self._safe_numeric_conversion(df["RSI"])
 
-            interaction = fr_normalized * rsi_centered
-            # 無限大値や極端に大きな値をクリップ
-            interaction = np.clip(interaction, -1e6, 1e6)
-            result_df["FR_RSI_Extreme"] = interaction
+                if fr_normalized is not None and rsi_values is not None:
+                    rsi_centered = rsi_values - 50
+                    interaction = fr_normalized * rsi_centered
+                    # 無限大値や極端に大きな値をクリップ
+                    interaction = np.clip(interaction, -1e6, 1e6)
+                    result_df["FR_RSI_Extreme"] = interaction
+            except Exception as e:
+                logger.warning(f"FR_RSI_Extreme計算エラー: {e}")
 
         # FR_Extreme_High × (RSI > 70)（実際の特徴量名に合わせて修正）
         if "FR_Extreme_High" in df.columns and "RSI" in df.columns:
-            interaction = df["FR_Extreme_High"].astype(float) * (df["RSI"] > 70).astype(
-                float
-            )
-            result_df["FR_Overbought"] = interaction
+            try:
+                fr_extreme_high = self._safe_numeric_conversion(df["FR_Extreme_High"])
+                rsi_values = self._safe_numeric_conversion(df["RSI"])
+
+                if fr_extreme_high is not None and rsi_values is not None:
+                    interaction = fr_extreme_high * (rsi_values > 70).astype(float)
+                    result_df["FR_Overbought"] = interaction
+            except Exception as e:
+                logger.warning(f"FR_Overbought計算エラー: {e}")
 
         # FR_Extreme_Low × (RSI < 30)（実際の特徴量名に合わせて修正）
         if "FR_Extreme_Low" in df.columns and "RSI" in df.columns:
-            interaction = df["FR_Extreme_Low"].astype(float) * (df["RSI"] < 30).astype(
-                float
-            )
-            result_df["FR_Oversold"] = interaction
+            try:
+                fr_extreme_low = self._safe_numeric_conversion(df["FR_Extreme_Low"])
+                rsi_values = self._safe_numeric_conversion(df["RSI"])
+
+                if fr_extreme_low is not None and rsi_values is not None:
+                    interaction = fr_extreme_low * (rsi_values < 30).astype(float)
+                    result_df["FR_Oversold"] = interaction
+            except Exception as e:
+                logger.warning(f"FR_Oversold計算エラー: {e}")
 
         return result_df
 
@@ -201,28 +257,64 @@ class InteractionFeatureCalculator:
 
         # OI_Change_Rate × Price_Change_5
         if "OI_Change_Rate" in df.columns and "Price_Change_5" in df.columns:
-            oi_change = df["OI_Change_Rate"].replace([np.inf, -np.inf], np.nan)
-            price_change = df["Price_Change_5"].replace([np.inf, -np.inf], np.nan)
+            try:
+                oi_change = self._safe_numeric_conversion(df["OI_Change_Rate"])
+                price_change = self._safe_numeric_conversion(df["Price_Change_5"])
 
-            interaction = oi_change * price_change
-            # 無限大値や極端に大きな値をクリップ
-            interaction = np.clip(interaction, -1e6, 1e6)
-            result_df["OI_Price_Divergence"] = interaction
+                if oi_change is not None and price_change is not None:
+                    interaction = oi_change * price_change
+                    # 無限大値や極端に大きな値をクリップ
+                    interaction = np.clip(interaction, -1e6, 1e6)
+                    result_df["OI_Price_Divergence"] = interaction
+            except Exception as e:
+                logger.warning(f"OI_Price_Divergence計算エラー: {e}")
 
         # OI_Trend × Price_Momentum_14
         if "OI_Trend" in df.columns and "Price_Momentum_14" in df.columns:
-            oi_trend = df["OI_Trend"].replace([np.inf, -np.inf], np.nan).fillna(0.0)
-            momentum = (
-                df["Price_Momentum_14"].replace([np.inf, -np.inf], np.nan).fillna(0.0)
-            )
+            try:
+                oi_trend = self._safe_numeric_conversion(df["OI_Trend"])
+                momentum = self._safe_numeric_conversion(df["Price_Momentum_14"])
 
-            interaction = oi_trend * momentum
-            # 無限大値や極端に大きな値をクリップ
-            interaction = np.clip(interaction, -1e6, 1e6)
-            # NaN値を0で補完
-            result_df["OI_Momentum_Alignment"] = np.nan_to_num(interaction, nan=0.0)
+                if oi_trend is not None and momentum is not None:
+                    interaction = oi_trend * momentum
+                    # 無限大値や極端に大きな値をクリップ
+                    interaction = np.clip(interaction, -1e6, 1e6)
+                    # NaN値を0で補完
+                    result_df["OI_Momentum_Alignment"] = np.nan_to_num(
+                        interaction, nan=0.0
+                    )
+            except Exception as e:
+                logger.warning(f"OI_Momentum_Alignment計算エラー: {e}")
 
         return result_df
+
+    def _safe_numeric_conversion(self, series: pd.Series) -> pd.Series:
+        """
+        安全な数値変換を実行
+
+        Args:
+            series: 変換するSeries
+
+        Returns:
+            変換されたSeries、またはエラーの場合はNone
+        """
+        try:
+            # データ型をチェック
+            if series.dtype == "object":
+                # object型の場合は数値変換を試行
+                series = pd.to_numeric(series, errors="coerce")
+
+            # 無限大値をNaNに置換
+            series = series.replace([np.inf, -np.inf], np.nan)
+
+            # NaN値を0で補完
+            series = series.fillna(0.0)
+
+            return series
+
+        except Exception as e:
+            logger.warning(f"数値変換エラー: {e}")
+            return None
 
     def get_feature_names(self) -> List[str]:
         """生成される特徴量名のリストを取得"""
