@@ -5,7 +5,7 @@
 """
 
 import logging
-from typing import Dict, Any, Optional
+from typing import Dict, Any
 import joblib
 import os
 
@@ -26,40 +26,30 @@ class PerformanceExtractor:
         Returns:
             性能指標の辞書
         """
-        print(f"=== DEBUG: extract_performance_metrics呼び出し ===")
-        print(f"model_path: {model_path}")
 
         try:
             if not os.path.exists(model_path):
                 logger.warning(f"モデルファイルが見つかりません: {model_path}")
-                print(f"=== DEBUG: モデルファイルが見つかりません ===")
                 return PerformanceExtractor._get_default_metrics()
 
-            print(f"=== DEBUG: モデルファイル読み込み開始 ===")
             # モデルデータを読み込み
             model_data = joblib.load(model_path)
 
             if not isinstance(model_data, dict):
                 logger.warning("古い形式のモデルファイル（直接モデルオブジェクト）")
-                print(f"=== DEBUG: 古い形式のモデルファイル ===")
                 return PerformanceExtractor._get_default_metrics()
 
             metadata = model_data.get("metadata", {})
-            print(f"=== DEBUG: メタデータ取得完了 ===")
-            print(f"メタデータキー: {list(metadata.keys())}")
 
             # 新しい形式の性能指標を確認
             if PerformanceExtractor._has_new_format_metrics(metadata):
-                print(f"=== DEBUG: 新しい形式の性能指標を使用 ===")
                 return PerformanceExtractor._extract_new_format_metrics(metadata)
 
-            print(f"=== DEBUG: classification_reportから抽出を開始 ===")
             # 古い形式の場合、classification_reportから抽出
             return PerformanceExtractor._extract_from_classification_report(metadata)
 
         except Exception as e:
             logger.error(f"性能指標抽出エラー: {e}")
-            print(f"=== DEBUG: エラー発生: {e} ===")
             import traceback
 
             traceback.print_exc()
@@ -130,11 +120,6 @@ class PerformanceExtractor:
         logger.info(
             f"classification_reportから抽出: precision={precision}, recall={recall}, f1_score={f1_score}"
         )
-        print(f"=== DEBUG: classification_reportから抽出 ===")
-        print(f"precision: {precision}")
-        print(f"recall: {recall}")
-        print(f"f1_score: {f1_score}")
-        print(f"=== END DEBUG ===")
 
         return {
             # 基本指標

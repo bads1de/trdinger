@@ -8,8 +8,10 @@ APIルーター内に散在していたオートストラテジー関連のビ�
 import logging
 from typing import Dict, Any
 
-from app.core.services.auto_strategy.models.strategy_gene import StrategyGene
-from app.core.services.auto_strategy.services.auto_strategy_service import AutoStrategyService
+from app.core.services.auto_strategy.models.gene_strategy import StrategyGene
+from app.core.services.auto_strategy.services.auto_strategy_service import (
+    AutoStrategyService,
+)
 
 logger = logging.getLogger(__name__)
 

@@ -13,11 +13,6 @@ from typing import Dict, Any, Optional, Tuple
 from sklearn.preprocessing import StandardScaler
 from sklearn.metrics import (
     classification_report,
-    accuracy_score,
-    precision_score,
-    recall_score,
-    f1_score,
-    roc_auc_score,
 )
 import lightgbm as lgb
 
@@ -224,7 +219,7 @@ class MLSignalGenerator:
                 "best_iteration": self.model.best_iteration,
             }
 
-            logger.info(f"モデル学習完了: 精度={accuracy:.4f}")
+            logger.info(f"モデル学習完了: 精度={detailed_metrics['accuracy']:.4f}")
             return result
 
         except Exception as e:

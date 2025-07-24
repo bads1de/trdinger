@@ -10,16 +10,16 @@ from typing import Dict, List, Optional, Any
 import pandas as pd
 import logging
 
-from ...core.services.ml.feature_engineering.enhanced_feature_engineering_service import (
+from app.core.services.ml.feature_engineering.enhanced_feature_engineering_service import (
     EnhancedFeatureEngineeringService,
 )
-from ...core.services.ml.feature_engineering.automl_features.automl_config import (
+from app.core.services.ml.feature_engineering.automl_features.automl_config import (
     AutoMLConfig,
     TSFreshConfig,
     FeaturetoolsConfig,
     AutoFeatConfig,
 )
-from ...core.utils.unified_error_handler import UnifiedErrorHandler
+from app.core.utils.unified_error_handler import UnifiedErrorHandler
 
 logger = logging.getLogger(__name__)
 

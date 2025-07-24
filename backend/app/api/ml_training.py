@@ -17,7 +17,7 @@ from app.core.services.ml.orchestration.ml_training_orchestration_service import
 from app.core.utils.unified_error_handler import UnifiedErrorHandler
 
 # AutoML設定モデルをインポート
-from app.api.routes.automl_features import (
+from app.api.automl_features import (
     AutoMLConfigModel,
     TSFreshConfigModel,
     FeaturetoolsConfigModel,

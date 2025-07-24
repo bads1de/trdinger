@@ -21,19 +21,55 @@ classifiers = [
 ]
 
 dependencies = [
+    # データ分析・数値計算
     "pandas",
     "numpy",
+
+    # 暗号通貨取引所ライブラリ
     "ccxt==4.1.64",
+
+    # データベース関連
     "psycopg2-binary==2.9.9",
-    "python-dotenv==1.0.0",
-    "fastapi==0.104.1",
-    "uvicorn==0.24.0",
-    "pydantic==2.11.5",
-    "httpx",
     "sqlalchemy==2.0.23",
     "alembic==1.13.1",
-    "deap>=1.3.1",
+
+    # 環境変数管理
+    "python-dotenv==1.0.0",
+
+    # Webフレームワーク・サーバー
+    "fastapi==0.104.1",
+    "uvicorn==0.24.0",
+
+    # データバリデーション
+    "pydantic==2.11.5",
+    "pydantic-settings==2.9.1",
+
+    # HTTPクライアント
+    "httpx",
+
+    # 外部市場データ取得
+    "yfinance>=0.2.18",
+
+    # バックテストライブラリ
     "backtesting>=0.6.4",
+
+    # 遺伝的アルゴリズムライブラリ
+    "deap>=1.3.1",
+
+    # 機械学習ライブラリ
+    "scikit-learn>=1.3.0",
+    "lightgbm>=4.0.0",
+    "joblib>=1.3.0",
+
+    # ハイパーパラメータ最適化ライブラリ
+    "optuna>=3.4.0",
+    "optuna-dashboard>=0.13.0",
+
+    # AutoML特徴量エンジニアリングライブラリ
+    "tsfresh>=0.20.0",
+    "featuretools>=1.28.0",
+    "autofeat>=2.1.0",
+    "dask>=2023.10.0",
 ]
 
 [project.optional-dependencies]

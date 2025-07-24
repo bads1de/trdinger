@@ -18,7 +18,7 @@ from app.core.services.ml.performance_extractor import performance_extractor
 from app.core.utils.unified_error_handler import UnifiedErrorHandler
 
 from app.core.services.backtest_data_service import BacktestDataService
-from backend.app.core.utils.api_utils import APIResponseHelper
+from app.core.utils.api_utils import APIResponseHelper
 from database.repositories.ohlcv_repository import OHLCVRepository
 from database.repositories.open_interest_repository import OpenInterestRepository
 from database.repositories.funding_rate_repository import FundingRateRepository
