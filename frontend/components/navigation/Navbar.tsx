@@ -81,17 +81,21 @@ const SidebarNavigation: React.FC = () => {
 
   return (
     <Sidebar variant="inset" collapsible="icon">
-      <SidebarHeader>
+      <SidebarHeader className="gap-4">
         <SidebarMenu>
           <SidebarMenuItem>
-            <SidebarMenuButton size="lg" asChild>
-              <Link href="/">
-                <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
-                  <Zap className="size-4" />
+            <SidebarMenuButton size="lg" asChild className="gap-3">
+              <Link href="/" className="flex items-center gap-3">
+                <div className="flex aspect-square size-10 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
+                  <Zap className="size-5" />
                 </div>
-                <div className="grid flex-1 text-left text-sm leading-tight">
-                  <span className="truncate font-semibold">Trdinger</span>
-                  <span className="truncate text-xs">Trading Platform</span>
+                <div className="flex flex-col gap-1">
+                  <span className="truncate font-semibold text-lg">
+                    Trdinger
+                  </span>
+                  <span className="truncate text-xs text-muted-foreground">
+                    Trading Platform
+                  </span>
                 </div>
               </Link>
             </SidebarMenuButton>
@@ -103,19 +107,19 @@ const SidebarNavigation: React.FC = () => {
         <SidebarGroup>
           <SidebarGroupLabel>Navigation</SidebarGroupLabel>
           <SidebarGroupContent>
-            <SidebarMenu>
+            <SidebarMenu className="gap-2">
               {navItems.map((item) => {
                 const Icon = item.icon;
                 const isActive = isActivePage(item.href, pathname);
 
                 return (
-                  <SidebarMenuItem key={item.href}>
+                  <SidebarMenuItem key={item.href} className="gap-2">
                     <SidebarMenuButton
                       asChild
                       isActive={isActive}
                       tooltip={{
                         children: (
-                          <div>
+                          <div className="flex flex-col gap-1">
                             <div className="font-medium">{item.label}</div>
                             <div className="text-xs text-muted-foreground">
                               {item.description}
@@ -123,10 +127,16 @@ const SidebarNavigation: React.FC = () => {
                           </div>
                         ),
                       }}
+                      className="gap-3 group-data-[collapsible=icon]:gap-0 group-data-[collapsible=icon]:justify-center"
                     >
-                      <Link href={item.href}>
-                        <Icon className="size-4" />
-                        <span>{item.label}</span>
+                      <Link
+                        href={item.href}
+                        className="flex items-center gap-3 group-data-[collapsible=icon]:gap-0"
+                      >
+                        <Icon className="size-5 group-data-[collapsible=icon]:size-6" />
+                        <span className="text-base group-data-[collapsible=icon]:hidden">
+                          {item.label}
+                        </span>
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
@@ -137,12 +147,13 @@ const SidebarNavigation: React.FC = () => {
         </SidebarGroup>
       </SidebarContent>
 
-      <SidebarFooter>
+      <SidebarFooter className="gap-4">
         <SidebarMenu>
           <SidebarMenuItem>
-            <SidebarMenuButton size="sm" asChild>
-              <div className="flex items-center gap-2 text-xs text-sidebar-foreground/70">
-                <span>v1.0.0</span>
+            <SidebarMenuButton size="sm" asChild className="gap-2">
+              <div className="flex items-center gap-2 text-sm text-sidebar-foreground/70">
+                <span className="font-medium">Version</span>
+                <span className="font-mono">v1.0.0</span>
               </div>
             </SidebarMenuButton>
           </SidebarMenuItem>
