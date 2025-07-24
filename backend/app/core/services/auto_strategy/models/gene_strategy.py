@@ -12,7 +12,6 @@ import logging
 
 # 分離されたモジュール
 from .gene_validation import GeneValidator
-from .gene_serialization import GeneSerializer
 from .gene_tpsl import TPSLGene
 from .gene_position_sizing import PositionSizingGene
 
@@ -198,28 +197,6 @@ class StrategyGene:
         """戦略遺伝子の妥当性を検証"""
         validator = GeneValidator()
         return validator.validate_strategy_gene(self)
-
-    def to_dict(self) -> Dict[str, Any]:
-        """戦略遺伝子を辞書形式に変換"""
-        serializer = GeneSerializer()
-        return serializer.strategy_gene_to_dict(self)
-
-    @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> "StrategyGene":
-        """辞書形式から戦略遺伝子を復元"""
-        serializer = GeneSerializer()
-        return serializer.dict_to_strategy_gene(data, cls)
-
-    def to_json(self) -> str:
-        """戦略遺伝子をJSON文字列に変換"""
-        serializer = GeneSerializer()
-        return serializer.strategy_gene_to_json(self)
-
-    @classmethod
-    def from_json(cls, json_str: str) -> "StrategyGene":
-        """JSON文字列から戦略遺伝子を復元"""
-        serializer = GeneSerializer()
-        return serializer.json_to_strategy_gene(json_str, cls)
 
 
 def encode_gene_to_list(gene: StrategyGene) -> List[float]:

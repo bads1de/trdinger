@@ -56,9 +56,14 @@ class IndividualEvaluator:
             )
 
             # 戦略設定を追加（test_strategy_generationと同じ形式）
+            from app.core.services.auto_strategy.models.gene_serialization import (
+                GeneSerializer,
+            )
+
+            serializer = GeneSerializer()
             backtest_config["strategy_config"] = {
                 "strategy_type": "GENERATED_GA",
-                "parameters": {"strategy_gene": gene.to_dict()},
+                "parameters": {"strategy_gene": serializer.strategy_gene_to_dict(gene)},
             }
 
             # strategy_nameフィールドを追加

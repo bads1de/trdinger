@@ -45,7 +45,14 @@ class AutoStrategyOrchestrationService:
         """
         try:
             # 戦略遺伝子の復元
-            strategy_gene = StrategyGene.from_dict(request.strategy_gene)
+            from app.core.services.auto_strategy.models.gene_serialization import (
+                GeneSerializer,
+            )
+
+            serializer = GeneSerializer()
+            strategy_gene = serializer.dict_to_strategy_gene(
+                request.strategy_gene, StrategyGene
+            )
 
             # テスト実行
             result = auto_strategy_service.test_strategy_generation(

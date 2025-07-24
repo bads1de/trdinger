@@ -150,16 +150,21 @@ class ExperimentManager:
             # バックテスト実行
             test_config = backtest_config.copy()
             test_config["strategy_name"] = f"TEST_{gene.id}"
+            from app.core.services.auto_strategy.models.gene_serialization import (
+                GeneSerializer,
+            )
+
+            serializer = GeneSerializer()
             test_config["strategy_config"] = {
                 "strategy_type": "GENERATED_TEST",
-                "parameters": {"strategy_gene": gene.to_dict()},
+                "parameters": {"strategy_gene": serializer.strategy_gene_to_dict(gene)},
             }
 
             result = self.backtest_service.run_backtest(test_config)
 
             return {
                 "success": True,
-                "strategy_gene": gene.to_dict(),
+                "strategy_gene": serializer.strategy_gene_to_dict(gene),
                 "backtest_result": result,
             }
 
@@ -220,7 +225,9 @@ class ExperimentManager:
                 db.close()
 
         except Exception as e:
-            logger.warning(f"取引数0の分析処理中にエラーが発生しました: {e}", exc_info=True)
+            logger.warning(
+                f"取引数0の分析処理中にエラーが発生しました: {e}", exc_info=True
+            )
 
     def _analyze_strategy_gene_for_zero_trades(
         self, strategy_gene_dict: Dict[str, Any], result_id: str
@@ -235,7 +242,6 @@ class ExperimentManager:
             for indicator in indicators:
                 indicator_type = indicator.get("type", "Unknown")
                 parameters = indicator.get("parameters", {})
-        
 
             # エントリー条件分析
             entry_conditions = strategy_gene_dict.get("entry_conditions", [])

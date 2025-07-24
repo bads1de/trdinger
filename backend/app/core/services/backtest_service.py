@@ -248,7 +248,12 @@ class BacktestService:
                 "オートストラテジーの実行には、戦略遺伝子 (strategy_gene) がパラメータとして必要です。"
             )
 
-        strategy_gene = StrategyGene.from_dict(gene_data)
+        from app.core.services.auto_strategy.models.gene_serialization import (
+            GeneSerializer,
+        )
+
+        serializer = GeneSerializer()
+        strategy_gene = serializer.dict_to_strategy_gene(gene_data, StrategyGene)
         factory = StrategyFactory()
         return factory.create_strategy_class(strategy_gene)
 
