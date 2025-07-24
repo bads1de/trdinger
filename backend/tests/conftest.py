@@ -8,8 +8,10 @@ import sys
 import os
 
 # プロジェクトのルートディレクトリをPythonのパスに追加
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'app', 'core')))
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+sys.path.insert(
+    0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "app", "core"))
+)
 
 import pytest
 import asyncio
@@ -132,4 +134,50 @@ def common_backtest_config():
             "strategy_type": "GENERATED_TEST",
             "parameters": {"strategy_gene": {}},
         },
+    }
+
+
+# === pytest マーカー設定 ===
+
+
+def pytest_configure(config):
+    """pytest設定"""
+    # カスタムマーカーの登録
+    config.addinivalue_line("markers", "unit: 単体テスト")
+    config.addinivalue_line("markers", "integration: 統合テスト")
+    config.addinivalue_line("markers", "e2e: エンドツーエンドテスト")
+    config.addinivalue_line("markers", "slow: 実行時間の長いテスト")
+    config.addinivalue_line("markers", "market_validation: 市場検証テスト")
+    config.addinivalue_line("markers", "performance: パフォーマンステスト")
+    config.addinivalue_line("markers", "security: セキュリティテスト")
+
+
+# === テストカテゴリ別実行用のフィクスチャ ===
+
+
+@pytest.fixture(scope="session")
+def test_categories():
+    """テストカテゴリ情報"""
+    return {
+        "unit": "単体テスト - 個別コンポーネントの動作確認",
+        "integration": "統合テスト - コンポーネント間の連携確認",
+        "e2e": "エンドツーエンドテスト - 完全なワークフロー確認",
+        "slow": "時間のかかるテスト - パフォーマンス・負荷テスト",
+        "market_validation": "市場検証テスト - 実際の市場データでの検証",
+        "performance": "パフォーマンステスト - 実行時間・メモリ使用量の確認",
+        "security": "セキュリティテスト - セキュリティ要件の確認",
+    }
+
+
+@pytest.fixture
+def test_execution_summary():
+    """テスト実行サマリー用フィクスチャ"""
+    return {
+        "start_time": None,
+        "end_time": None,
+        "total_tests": 0,
+        "passed_tests": 0,
+        "failed_tests": 0,
+        "skipped_tests": 0,
+        "categories": {},
     }
