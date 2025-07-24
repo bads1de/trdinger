@@ -1,6 +1,7 @@
 import { useState, useCallback, useEffect } from "react";
 import { useDataFetching } from "./useDataFetching";
 import { usePostRequest } from "./usePostRequest";
+import { useApiCall } from "./useApiCall";
 import { BACKEND_API_URL } from "@/constants";
 
 export interface FearGreedIndexData {
@@ -46,9 +47,22 @@ export const useFearGreedData = () => {
     errorMessage: "Fear & Greed Index データの取得に失敗しました",
   });
 
-  // ステータス機能は削除されたエンドポイントのため、一時的に無効化
-  const status: FearGreedDataStatus[] = [];
-  const fetchStatus = useCallback(() => Promise.resolve(), []);
+  // ステータス機能を有効化
+  const [status, setStatus] = useState<FearGreedDataStatus | null>(null);
+  const { execute: fetchStatusData, loading: statusLoading } =
+    useApiCall<FearGreedDataStatus>();
+
+  const fetchStatus = useCallback(async () => {
+    await fetchStatusData("/api/fear-greed/status", {
+      method: "GET",
+      onSuccess: (response) => {
+        setStatus(response);
+      },
+      onError: (error) => {
+        console.error("Fear & Greed Index ステータス取得エラー:", error);
+      },
+    });
+  }, [fetchStatusData]);
 
   const { sendPostRequest, isLoading: isCollecting } =
     usePostRequest<FearGreedCollectionResult>();
@@ -107,9 +121,9 @@ export const useFearGreedData = () => {
 
   return {
     data,
-    loading: loading || isCollecting,
+    loading: loading || isCollecting || statusLoading,
     error,
-    status: status.length > 0 ? status[0] : null,
+    status,
     params,
     fetchData,
     fetchLatestData,

@@ -14,6 +14,7 @@ from contextlib import contextmanager
 from database.repositories.ohlcv_repository import OHLCVRepository
 from database.repositories.funding_rate_repository import FundingRateRepository
 from database.repositories.open_interest_repository import OpenInterestRepository
+from database.repositories.fear_greed_repository import FearGreedIndexRepository
 from app.core.utils.api_utils import APIResponseHelper
 from database.connection import SessionLocal
 from database.models import (
@@ -392,6 +393,7 @@ class DataManagementOrchestrationService:
                 ohlcv_repo = OHLCVRepository(session)
                 fr_repo = FundingRateRepository(session)
                 oi_repo = OpenInterestRepository(session)
+                fg_repo = FearGreedIndexRepository(session)
 
                 # 各データの件数取得
                 ohlcv_count = session.query(OHLCVData).count()
@@ -422,6 +424,14 @@ class DataManagementOrchestrationService:
                 # オープンインタレスト詳細情報
                 oi_latest = oi_repo.get_latest_open_interest_timestamp(symbol)
                 oi_oldest = oi_repo.get_oldest_open_interest_timestamp(symbol)
+
+                # Fear & Greed Index詳細情報
+                fg_latest = fg_repo.get_latest_data_timestamp()
+                fg_oldest = fg_repo.get_data_range().get("oldest_data")
+                if fg_oldest:
+                    from datetime import datetime
+
+                    fg_oldest = datetime.fromisoformat(fg_oldest.replace("Z", "+00:00"))
 
                 response_data = {
                     "data_counts": {
@@ -455,6 +465,15 @@ class DataManagementOrchestrationService:
                             ),
                             "oldest_timestamp": (
                                 oi_oldest.isoformat() if oi_oldest else None
+                            ),
+                        },
+                        "fear_greed_index": {
+                            "count": fg_count,
+                            "latest_timestamp": (
+                                fg_latest.isoformat() if fg_latest else None
+                            ),
+                            "oldest_timestamp": (
+                                fg_oldest.isoformat() if fg_oldest else None
                             ),
                         },
                     },

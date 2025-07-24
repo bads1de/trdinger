@@ -178,8 +178,8 @@ const DataControls: React.FC<DataControlsProps> = ({
               </div>
             )}
 
-            {/* FR・OI詳細 */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+            {/* FR・OI・FG詳細 */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
               {/* ファンディングレート詳細 */}
               {dataStatus.data.details?.funding_rates && (
                 <div className="bg-secondary-100 dark:bg-secondary-800 p-3 rounded">
@@ -260,6 +260,52 @@ const DataControls: React.FC<DataControlsProps> = ({
                         <span>
                           {new Date(
                             dataStatus.data.details.open_interest.oldest_timestamp
+                          ).toLocaleDateString("ja-JP")}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Fear & Greed Index詳細 */}
+              {dataStatus.data.details?.fear_greed_index && (
+                <div className="bg-secondary-100 dark:bg-secondary-800 p-3 rounded">
+                  <h4 className="font-medium text-secondary-900 dark:text-secondary-100 mb-2">
+                    Fear & Greed Index詳細
+                  </h4>
+                  <div className="space-y-1">
+                    <div className="flex justify-between">
+                      <span className="text-secondary-600 dark:text-secondary-400">
+                        件数:
+                      </span>
+                      <span>
+                        {dataStatus.data.details.fear_greed_index.count?.toLocaleString()}
+                        件
+                      </span>
+                    </div>
+                    {dataStatus.data.details.fear_greed_index
+                      .latest_timestamp && (
+                      <div className="flex justify-between">
+                        <span className="text-secondary-600 dark:text-secondary-400">
+                          最新:
+                        </span>
+                        <span>
+                          {new Date(
+                            dataStatus.data.details.fear_greed_index.latest_timestamp
+                          ).toLocaleDateString("ja-JP")}
+                        </span>
+                      </div>
+                    )}
+                    {dataStatus.data.details.fear_greed_index
+                      .oldest_timestamp && (
+                      <div className="flex justify-between">
+                        <span className="text-secondary-600 dark:text-secondary-400">
+                          最古:
+                        </span>
+                        <span>
+                          {new Date(
+                            dataStatus.data.details.fear_greed_index.oldest_timestamp
                           ).toLocaleDateString("ja-JP")}
                         </span>
                       </div>
