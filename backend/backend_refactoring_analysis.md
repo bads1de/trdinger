@@ -65,7 +65,7 @@
   - **シームレスなワークフロー**: `/api/ml-training/train` エンドポイントを拡張し、リクエスト内で最適化設定を直接受け取れるようにします。最適化と最終的なモデル学習を一つのトランザクションとして実行します。
   - **`BaseMLTrainer` の責務分割**: `BaseMLTrainer` をより小さなクラス（例: `FeaturePreprocessor`, `ModelTrainer`, `ModelEvaluator`）に分割し、各クラスの責務を明確にします。
 
-### 3.5. `data_collector` ディレクトリの役割見直し
+### 3.5. `data_collector` ディレクトリの役割見直し　 ✅ **完了**
 
 - **現状**: `data_collector` ディレクトリと `app/core/services/data_collection` ディレクトリの両方にデータ収集関連のロジックが存在します。
 - **問題点**: コードの重複と、どちらを主として使うべきかの混乱を生みます。
