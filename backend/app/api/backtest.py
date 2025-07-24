@@ -2,6 +2,7 @@
 バックテストAPIエンドポイント
 
 backtesting.pyライブラリを使用したバックテスト機能のAPIを提供します。
+責務の分離により、ビジネスロジックはOrchestrationServiceに委譲されています。
 """
 
 from datetime import datetime
@@ -12,13 +13,10 @@ from sqlalchemy.orm import Session
 from pydantic import BaseModel, Field
 
 from database.connection import get_db
-from database.repositories.backtest_result_repository import BacktestResultRepository
-from app.core.services.backtest_service import BacktestService
-from app.core.utils.unified_error_handler import UnifiedErrorHandler
-from database.repositories.ga_experiment_repository import GAExperimentRepository
-from database.repositories.generated_strategy_repository import (
-    GeneratedStrategyRepository,
+from app.core.services.backtest.orchestration.backtest_orchestration_service import (
+    BacktestOrchestrationService,
 )
+from app.core.utils.unified_error_handler import UnifiedErrorHandler
 
 router = APIRouter(prefix="/api/backtest", tags=["backtest"])
 
@@ -86,17 +84,15 @@ async def get_backtest_results(
     """
 
     async def _get_results():
-        backtest_repo = BacktestResultRepository(db)
-
-        results = backtest_repo.get_backtest_results(
-            limit=limit, offset=offset, symbol=symbol, strategy_name=strategy_name
+        # ビジネスロジックをサービス層に委譲
+        orchestration_service = BacktestOrchestrationService()
+        return await orchestration_service.get_backtest_results(
+            db=db,
+            limit=limit,
+            offset=offset,
+            symbol=symbol,
+            strategy_name=strategy_name,
         )
-
-        total = backtest_repo.count_backtest_results(
-            symbol=symbol, strategy_name=strategy_name
-        )
-
-        return {"success": True, "results": results, "total": total}
 
     return await UnifiedErrorHandler.safe_execute_async(_get_results)
 
@@ -114,30 +110,9 @@ async def delete_all_backtest_results(db: Session = Depends(get_db)):
     """
 
     async def _delete_all_results():
-        backtest_repo = BacktestResultRepository(db)
-        ga_experiment_repo = GAExperimentRepository(db)
-        generated_strategy_repo = GeneratedStrategyRepository(db)
-
-        # 関連テーブルのデータをすべて削除
-        deleted_strategies_count = generated_strategy_repo.delete_all_strategies()
-        deleted_experiments_count = ga_experiment_repo.delete_all_experiments()
-        deleted_backtests_count = backtest_repo.delete_all_backtest_results()
-
-        total_deleted = (
-            deleted_strategies_count
-            + deleted_experiments_count
-            + deleted_backtests_count
-        )
-
-        return {
-            "success": True,
-            "message": f"All related data deleted successfully ({total_deleted} records)",
-            "deleted_counts": {
-                "backtest_results": deleted_backtests_count,
-                "ga_experiments": deleted_experiments_count,
-                "generated_strategies": deleted_strategies_count,
-            },
-        }
+        # ビジネスロジックをサービス層に委譲
+        orchestration_service = BacktestOrchestrationService()
+        return await orchestration_service.delete_all_backtest_results(db=db)
 
     return await UnifiedErrorHandler.safe_execute_async(_delete_all_results)
 
@@ -156,13 +131,20 @@ async def get_backtest_result_by_id(result_id: int, db: Session = Depends(get_db
     """
 
     async def _get_by_id():
-        backtest_repo = BacktestResultRepository(db)
-        result = backtest_repo.get_backtest_result_by_id(result_id)
+        # ビジネスロジックをサービス層に委譲
+        orchestration_service = BacktestOrchestrationService()
+        result = await orchestration_service.get_backtest_result_by_id(
+            db=db, result_id=result_id
+        )
 
-        if result is None:
-            raise HTTPException(status_code=404, detail="Backtest result not found")
+        # エラーハンドリング
+        if not result["success"]:
+            raise HTTPException(
+                status_code=result.get("status_code", 500),
+                detail=result.get("error", "Unknown error"),
+            )
 
-        return {"success": True, "result": result}
+        return result
 
     return await UnifiedErrorHandler.safe_execute_async(_get_by_id)
 
@@ -181,13 +163,20 @@ async def delete_backtest_result(result_id: int, db: Session = Depends(get_db)):
     """
 
     async def _delete_result():
-        backtest_repo = BacktestResultRepository(db)
-        success = backtest_repo.delete_backtest_result(result_id)
+        # ビジネスロジックをサービス層に委譲
+        orchestration_service = BacktestOrchestrationService()
+        result = await orchestration_service.delete_backtest_result(
+            db=db, result_id=result_id
+        )
 
-        if not success:
-            raise HTTPException(status_code=404, detail="Backtest result not found")
+        # エラーハンドリング
+        if not result["success"]:
+            raise HTTPException(
+                status_code=result.get("status_code", 500),
+                detail=result.get("error", "Unknown error"),
+            )
 
-        return {"success": True, "message": "Backtest result deleted successfully"}
+        return result
 
     return await UnifiedErrorHandler.safe_execute_async(_delete_result)
 
@@ -202,8 +191,8 @@ async def get_supported_strategies():
     """
 
     async def _get_strategies():
-        backtest_service = BacktestService()
-        strategies = backtest_service.get_supported_strategies()
-        return {"success": True, "strategies": strategies}
+        # ビジネスロジックをサービス層に委譲
+        orchestration_service = BacktestOrchestrationService()
+        return await orchestration_service.get_supported_strategies()
 
     return await UnifiedErrorHandler.safe_execute_async(_get_strategies)

@@ -11,14 +11,10 @@ from fastapi import APIRouter, BackgroundTasks, Depends
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
-from app.core.services.ml.ml_training_service import MLTrainingService
-from app.core.services.auto_strategy.services.ml_orchestrator import MLOrchestrator
-from app.core.services.backtest_data_service import BacktestDataService
+from app.core.services.ml.orchestration.ml_training_orchestration_service import (
+    MLTrainingOrchestrationService,
+)
 from app.core.utils.unified_error_handler import UnifiedErrorHandler
-from app.core.utils.api_utils import APIResponseHelper
-from database.repositories.ohlcv_repository import OHLCVRepository
-from database.repositories.open_interest_repository import OpenInterestRepository
-from database.repositories.funding_rate_repository import FundingRateRepository
 
 # AutoML設定モデルをインポート
 from app.api.routes.automl_features import (
@@ -105,17 +101,7 @@ class OptimizationSettingsConfig(BaseModel):
     )
 
 
-# グローバルなトレーニング状態管理
-training_status = {
-    "is_training": False,
-    "progress": 0,
-    "status": "idle",
-    "message": "",
-    "start_time": None,
-    "end_time": None,
-    "model_info": None,
-    "error": None,
-}
+# グローバル状態管理は削除（OrchestrationServiceに移動）
 
 
 class MLTrainingConfig(BaseModel):
@@ -175,245 +161,26 @@ class MLStatusResponse(BaseModel):
     error: Optional[str] = None
 
 
-def get_data_service(db: Session = Depends(get_db)) -> BacktestDataService:
-    """データサービスの依存性注入"""
-    ohlcv_repo = OHLCVRepository(db)
-    oi_repo = OpenInterestRepository(db)
-    fr_repo = FundingRateRepository(db)
-    return BacktestDataService(ohlcv_repo, oi_repo, fr_repo)
-
-
-async def train_ml_model_background(config: MLTrainingConfig):
-    """バックグラウンドでMLモデルをトレーニング"""
-    global training_status
-
-    try:
-        # トレーニング開始
-        training_status.update(
-            {
-                "is_training": True,
-                "progress": 0,
-                "status": "starting",
-                "message": "トレーニングを開始しています...",
-                "start_time": datetime.now().isoformat(),
-                "end_time": None,
-                "error": None,
-            }
-        )
-
-        # データサービスを初期化
-        data_service = get_data_service()
-
-        # データ取得
-        training_status.update(
-            {
-                "progress": 10,
-                "status": "loading_data",
-                "message": "トレーニングデータを読み込んでいます...",
-            }
-        )
-
-        start_date = datetime.fromisoformat(config.start_date)
-        end_date = datetime.fromisoformat(config.end_date)
-
-        training_data = data_service.get_data_for_backtest(
-            symbol=config.symbol,
-            timeframe=config.timeframe,
-            start_date=start_date,
-            end_date=end_date,
-        )
-
-        if training_data.empty:
-            raise ValueError(f"指定された期間のデータが見つかりません: {config.symbol}")
-
-        # MLサービスを初期化
-        training_status.update(
-            {
-                "progress": 20,
-                "status": "initializing",
-                "message": "MLサービスを初期化しています...",
-            }
-        )
-
-        ml_service = MLTrainingService()
-
-        # モデルトレーニング
-        training_status.update(
-            {
-                "progress": 30,
-                "status": "training",
-                "message": "モデルをトレーニングしています...",
-            }
-        )
-
-        # ファンディングレートとオープンインタレストデータを分離
-        funding_rate_data = None
-        open_interest_data = None
-
-        if "FundingRate" in training_data.columns:
-            funding_rate_data = training_data[["FundingRate"]].copy()
-
-        if "OpenInterest" in training_data.columns:
-            open_interest_data = training_data[["OpenInterest"]].copy()
-
-        # OHLCVデータのみを抽出
-        ohlcv_data = training_data[["Open", "High", "Low", "Close", "Volume"]].copy()
-
-        # 最適化設定を準備
-        optimization_settings = None
-        if config.optimization_settings and config.optimization_settings.enabled:
-            from app.core.services.ml.ml_training_service import OptimizationSettings
-
-            logger.info("=" * 60)
-            logger.info("🎯 ハイパーパラメータ最適化が有効化されました")
-            logger.info("📊 最適化手法: optuna")
-            logger.info(f"🔄 試行回数: {config.optimization_settings.n_calls}")
-            logger.info(
-                f"📋 最適化対象パラメータ数: {len(config.optimization_settings.parameter_space)}"
-            )
-
-            # パラメータ空間の詳細をログ出力
-            for (
-                param_name,
-                param_config,
-            ) in config.optimization_settings.parameter_space.items():
-                if param_config.type in ["real", "integer"]:
-                    logger.info(
-                        f"  - {param_name} ({param_config.type}): [{param_config.low}, {param_config.high}]"
-                    )
-                else:
-                    logger.info(
-                        f"  - {param_name} ({param_config.type}): {param_config.categories}"
-                    )
-            logger.info("=" * 60)
-
-            # ParameterSpaceConfigを辞書形式に変換
-            parameter_space_dict = {}
-            for (
-                param_name,
-                param_config,
-            ) in config.optimization_settings.parameter_space.items():
-                parameter_space_dict[param_name] = {
-                    "type": param_config.type,
-                    "low": param_config.low,
-                    "high": param_config.high,
-                    "categories": param_config.categories,
-                }
-
-            optimization_settings = OptimizationSettings(
-                enabled=config.optimization_settings.enabled,
-                n_calls=config.optimization_settings.n_calls,
-                parameter_space=parameter_space_dict,
-            )
-
-            training_status.update(
-                {
-                    "message": f"ハイパーパラメータ最適化を実行中 ({config.optimization_settings.method})"
-                }
-            )
-        else:
-            logger.info("📝 通常のMLトレーニングを実行します（最適化なし）")
-
-        # AutoML設定の処理
-        automl_config = config.automl_config
-        if automl_config is None:
-            # デフォルトのAutoML設定を使用
-            automl_config = get_financial_optimized_automl_config()
-            logger.info("🤖 デフォルトの金融最適化AutoML設定を使用します")
-        else:
-            logger.info("🤖 カスタムAutoML設定を使用します")
-
-        # AutoML設定を辞書形式に変換
-        automl_config_dict = {
-            "tsfresh": automl_config.tsfresh.model_dump(),
-            "featuretools": automl_config.featuretools.model_dump(),
-            "autofeat": automl_config.autofeat.model_dump(),
-        }
-
-        # トレーニング実行
-        training_result = ml_service.train_model(
-            training_data=ohlcv_data,
-            funding_rate_data=funding_rate_data,
-            open_interest_data=open_interest_data,
-            save_model=config.save_model,
-            optimization_settings=optimization_settings,
-            automl_config=automl_config_dict,  # AutoML設定を追加
-            # 新しいMLTrainingServiceは設定から自動的にパラメータを取得
-            test_size=1 - config.train_test_split,
-            random_state=config.random_state,
-        )
-
-        # トレーニング完了
-        training_status.update(
-            {
-                "progress": 100,
-                "status": "completed",
-                "message": "トレーニングが完了しました",
-                "end_time": datetime.now().isoformat(),
-                "is_training": False,
-                "model_info": {
-                    "accuracy": training_result.get("accuracy", 0.0),
-                    "loss": training_result.get("loss", 0.0),
-                    "model_path": training_result.get("model_path", ""),
-                    "feature_count": training_result.get("feature_count", 0),
-                    "training_samples": len(training_data),
-                    "validation_split": config.validation_split,
-                },
-            }
-        )
-
-        logger.info(f"MLモデルトレーニング完了: {config.symbol}")
-
-    except Exception as e:
-        logger.error(f"MLトレーニングエラー: {e}")
-        training_status.update(
-            {
-                "is_training": False,
-                "status": "error",
-                "message": f"トレーニングエラー: {str(e)}",
-                "end_time": datetime.now().isoformat(),
-                "error": str(e),
-            }
-        )
+# データサービス関数とバックグラウンド関数は削除（OrchestrationServiceに移動）
 
 
 @router.post("/train", response_model=MLTrainingResponse)
 async def start_ml_training(
-    config: MLTrainingConfig, background_tasks: BackgroundTasks
+    config: MLTrainingConfig,
+    background_tasks: BackgroundTasks,
+    db: Session = Depends(get_db),
 ):
     """
     MLモデルのトレーニングを開始
     """
     logger.info("🚀 /api/ml-training/train エンドポイントが呼び出されました")
     logger.info(f"📋 最適化設定: {config.optimization_settings}")
-    global training_status
 
     async def _start_training():
-        # 既にトレーニング中の場合はエラー
-        if training_status["is_training"]:
-            from fastapi import HTTPException
-
-            raise HTTPException(status_code=400, detail="既にトレーニングが実行中です")
-
-        # 設定の検証
-        start_date = datetime.fromisoformat(config.start_date)
-        end_date = datetime.fromisoformat(config.end_date)
-
-        if start_date >= end_date:
-            raise ValueError("開始日は終了日より前である必要があります")
-
-        if (end_date - start_date).days < 7:
-            raise ValueError("トレーニング期間は最低7日間必要です")
-
-        # バックグラウンドタスクでトレーニング開始
-        background_tasks.add_task(train_ml_model_background, config)
-
-        return APIResponseHelper.api_response(
-            success=True,
-            message="MLトレーニングを開始しました",
-            data={
-                "training_id": f"training_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
-            },
+        # ビジネスロジックをサービス層に委譲
+        orchestration_service = MLTrainingOrchestrationService()
+        return await orchestration_service.start_training(
+            config=config, background_tasks=background_tasks, db=db
         )
 
     return await UnifiedErrorHandler.safe_execute_async(_start_training)
@@ -424,7 +191,10 @@ async def get_ml_training_status():
     """
     MLトレーニングの状態を取得
     """
-    return MLStatusResponse(**training_status)
+    # ビジネスロジックをサービス層に委譲
+    orchestration_service = MLTrainingOrchestrationService()
+    status = await orchestration_service.get_training_status()
+    return MLStatusResponse(**status)
 
 
 @router.get("/model-info")
@@ -434,17 +204,9 @@ async def get_ml_model_info():
     """
 
     async def _get_model_info():
-        ml_orchestrator = MLOrchestrator()
-        model_status = ml_orchestrator.get_model_status()
-
-        return APIResponseHelper.api_response(
-            success=True,
-            message="MLモデル情報を取得しました",
-            data={
-                "model_status": model_status,
-                "last_training": training_status.get("model_info"),
-            },
-        )
+        # ビジネスロジックをサービス層に委譲
+        orchestration_service = MLTrainingOrchestrationService()
+        return await orchestration_service.get_model_info()
 
     return await UnifiedErrorHandler.safe_execute_async(_get_model_info)
 
@@ -454,26 +216,10 @@ async def stop_ml_training():
     """
     MLトレーニングを停止
     """
-    global training_status
 
     async def _stop_training():
-        if not training_status["is_training"]:
-            from fastapi import HTTPException
-
-            raise HTTPException(
-                status_code=400, detail="実行中のトレーニングがありません"
-            )
-
-        # トレーニング停止（実際の実装では、トレーニングプロセスを停止する必要があります）
-        training_status.update(
-            {
-                "is_training": False,
-                "status": "stopped",
-                "message": "トレーニングが停止されました",
-                "end_time": datetime.now().isoformat(),
-            }
-        )
-
-        return {"success": True, "message": "トレーニングを停止しました"}
+        # ビジネスロジックをサービス層に委譲
+        orchestration_service = MLTrainingOrchestrationService()
+        return await orchestration_service.stop_training()
 
     return await UnifiedErrorHandler.safe_execute_async(_stop_training)

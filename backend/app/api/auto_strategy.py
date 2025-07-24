@@ -8,6 +8,9 @@ from functools import lru_cache
 from app.core.services.auto_strategy import AutoStrategyService
 from app.core.services.auto_strategy.models.ga_config import GAConfig
 from app.core.services.auto_strategy.models.gene_strategy import StrategyGene
+from app.core.services.auto_strategy.orchestration.auto_strategy_orchestration_service import (
+    AutoStrategyOrchestrationService,
+)
 from app.core.utils.unified_error_handler import UnifiedErrorHandler
 from app.core.utils.api_utils import APIResponseHelper
 
@@ -291,25 +294,18 @@ async def test_strategy(
     """
 
     async def _test_strategy():
-        # 戦略遺伝子の復元
-        strategy_gene = StrategyGene.from_dict(request.strategy_gene)
-
-        # テスト実行
-        result = auto_strategy_service.test_strategy_generation(
-            strategy_gene, request.backtest_config
+        # ビジネスロジックをサービス層に委譲
+        orchestration_service = AutoStrategyOrchestrationService()
+        result = await orchestration_service.test_strategy(
+            request=request, auto_strategy_service=auto_strategy_service
         )
 
-        if result["success"]:
-            return StrategyTestResponse(
-                success=True, result=result, message="戦略テストが完了しました"
-            )
-        else:
-            return StrategyTestResponse(
-                success=False,
-                result=None,
-                errors=result.get("errors"),
-                message="戦略テストに失敗しました",
-            )
+        return StrategyTestResponse(
+            success=result["success"],
+            result=result.get("result"),
+            errors=result.get("errors"),
+            message=result["message"],
+        )
 
     return await UnifiedErrorHandler.safe_execute_async(_test_strategy)
 
