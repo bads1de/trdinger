@@ -16,6 +16,12 @@ from database.repositories.funding_rate_repository import FundingRateRepository
 from database.repositories.open_interest_repository import OpenInterestRepository
 from app.core.utils.api_utils import APIResponseHelper
 from database.connection import SessionLocal
+from database.models import (
+    OHLCVData,
+    FundingRateData,
+    OpenInterestData,
+    FearGreedIndexData,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -354,7 +360,6 @@ class DataManagementOrchestrationService:
                     "timestamp": datetime.now().isoformat(),
                 },
             )
-
         except Exception as e:
             logger.error(f"シンボル別データリセットエラー: {e}", exc_info=True)
             return APIResponseHelper.api_response(
@@ -367,4 +372,103 @@ class DataManagementOrchestrationService:
                     "errors": [str(e)],
                     "timestamp": datetime.now().isoformat(),
                 },
+            )
+
+    async def get_data_status(
+        self, db_session: Optional[Session] = None
+    ) -> Dict[str, Any]:
+        """
+        現在のデータ状況を取得（詳細版）
+
+        Args:
+            db_session: データベースセッション
+
+        Returns:
+            各データタイプの詳細情報（件数、最新・最古データ）
+        """
+        try:
+            with self._get_db_session(db_session) as session:
+                # リポジトリインスタンス作成
+                ohlcv_repo = OHLCVRepository(session)
+                fr_repo = FundingRateRepository(session)
+                oi_repo = OpenInterestRepository(session)
+
+                # 各データの件数取得
+                ohlcv_count = session.query(OHLCVData).count()
+                fr_count = session.query(FundingRateData).count()
+                oi_count = session.query(OpenInterestData).count()
+                fg_count = session.query(FearGreedIndexData).count()
+
+                # OHLCV詳細情報（時間足別）
+                timeframes = ["15m", "30m", "1h", "4h", "1d"]
+                symbol = "BTC/USDT:USDT"
+
+                ohlcv_details = {}
+                for tf in timeframes:
+                    count = ohlcv_repo.get_data_count(symbol, tf)
+                    latest = ohlcv_repo.get_latest_timestamp(symbol, tf)
+                    oldest = ohlcv_repo.get_oldest_timestamp(symbol, tf)
+
+                    ohlcv_details[tf] = {
+                        "count": count,
+                        "latest_timestamp": latest.isoformat() if latest else None,
+                        "oldest_timestamp": oldest.isoformat() if oldest else None,
+                    }
+
+                # ファンディングレート詳細情報
+                fr_latest = fr_repo.get_latest_funding_timestamp(symbol)
+                fr_oldest = fr_repo.get_oldest_funding_timestamp(symbol)
+
+                # オープンインタレスト詳細情報
+                oi_latest = oi_repo.get_latest_open_interest_timestamp(symbol)
+                oi_oldest = oi_repo.get_oldest_open_interest_timestamp(symbol)
+
+                response_data = {
+                    "data_counts": {
+                        "ohlcv": ohlcv_count,
+                        "funding_rates": fr_count,
+                        "open_interest": oi_count,
+                        "fear_greed_index": fg_count,
+                    },
+                    "total_records": ohlcv_count + fr_count + oi_count + fg_count,
+                    "details": {
+                        "ohlcv": {
+                            "symbol": symbol,
+                            "timeframes": ohlcv_details,
+                            "total_count": ohlcv_count,
+                        },
+                        "funding_rates": {
+                            "symbol": symbol,
+                            "count": fr_count,
+                            "latest_timestamp": (
+                                fr_latest.isoformat() if fr_latest else None
+                            ),
+                            "oldest_timestamp": (
+                                fr_oldest.isoformat() if fr_oldest else None
+                            ),
+                        },
+                        "open_interest": {
+                            "symbol": symbol,
+                            "count": oi_count,
+                            "latest_timestamp": (
+                                oi_latest.isoformat() if oi_latest else None
+                            ),
+                            "oldest_timestamp": (
+                                oi_oldest.isoformat() if oi_oldest else None
+                            ),
+                        },
+                    },
+                }
+
+                return APIResponseHelper.api_response(
+                    success=True,
+                    data=response_data,
+                    message="現在のデータ状況を取得しました",
+                )
+        except Exception as e:
+            logger.error(f"データステータス取得エラー: {e}", exc_info=True)
+            return APIResponseHelper.api_response(
+                success=False,
+                message=f"データステータス取得中にエラーが発生しました: {str(e)}",
+                data={"error": str(e)},
             )

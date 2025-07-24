@@ -135,82 +135,8 @@ async def get_data_status(db: Session = Depends(get_db)) -> Dict[str, Any]:
     """
 
     async def _get_status():
-        # リポジトリインスタンス作成
-        ohlcv_repo = OHLCVRepository(db)
-        fr_repo = FundingRateRepository(db)
-        oi_repo = OpenInterestRepository(db)
-
-        # 各データの件数取得
-        from database.models import (
-            OHLCVData,
-            FundingRateData,
-            OpenInterestData,
-            FearGreedIndexData,
-        )
-
-        ohlcv_count = db.query(OHLCVData).count()
-        fr_count = db.query(FundingRateData).count()
-        oi_count = db.query(OpenInterestData).count()
-        fg_count = db.query(FearGreedIndexData).count()
-
-        # OHLCV詳細情報（時間足別）
-        timeframes = ["15m", "30m", "1h", "4h", "1d"]
-        symbol = "BTC/USDT:USDT"
-
-        ohlcv_details = {}
-        for tf in timeframes:
-            count = ohlcv_repo.get_data_count(symbol, tf)
-            latest = ohlcv_repo.get_latest_timestamp(symbol, tf)
-            oldest = ohlcv_repo.get_oldest_timestamp(symbol, tf)
-
-            ohlcv_details[tf] = {
-                "count": count,
-                "latest_timestamp": latest.isoformat() if latest else None,
-                "oldest_timestamp": oldest.isoformat() if oldest else None,
-            }
-
-        # ファンディングレート詳細情報
-        fr_latest = fr_repo.get_latest_funding_timestamp(symbol)
-        fr_oldest = fr_repo.get_oldest_funding_timestamp(symbol)
-
-        # オープンインタレスト詳細情報
-        oi_latest = oi_repo.get_latest_open_interest_timestamp(symbol)
-        oi_oldest = oi_repo.get_oldest_open_interest_timestamp(symbol)
-
-        response_data = {
-            "data_counts": {
-                "ohlcv": ohlcv_count,
-                "funding_rates": fr_count,
-                "open_interest": oi_count,
-                "fear_greed_index": fg_count,
-            },
-            "total_records": ohlcv_count + fr_count + oi_count + fg_count,
-            "details": {
-                "ohlcv": {
-                    "symbol": symbol,
-                    "timeframes": ohlcv_details,
-                    "total_count": ohlcv_count,
-                },
-                "funding_rates": {
-                    "symbol": symbol,
-                    "count": fr_count,
-                    "latest_timestamp": fr_latest.isoformat() if fr_latest else None,
-                    "oldest_timestamp": fr_oldest.isoformat() if fr_oldest else None,
-                },
-                "open_interest": {
-                    "symbol": symbol,
-                    "count": oi_count,
-                    "latest_timestamp": oi_latest.isoformat() if oi_latest else None,
-                    "oldest_timestamp": oi_oldest.isoformat() if oi_oldest else None,
-                },
-            },
-        }
-
-        return APIResponseHelper.api_response(
-            success=True,
-            data=response_data,
-            message="現在のデータ状況を取得しました",
-        )
+        orchestration_service = DataManagementOrchestrationService()
+        return await orchestration_service.get_data_status(db_session=db)
 
     return await UnifiedErrorHandler.safe_execute_async(
         _get_status, message="データステータスの取得中にエラーが発生しました"
