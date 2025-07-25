@@ -125,7 +125,7 @@ class TestMLOptunaIntegration:
 
     def test_optuna_optimization_disabled(self):
         """最適化無効時のテスト"""
-        service = MLTrainingService()
+        service = MLTrainingService(trainer_type="ensemble")
 
         # テストデータを作成
         training_data = create_test_ohlcv_data(100)

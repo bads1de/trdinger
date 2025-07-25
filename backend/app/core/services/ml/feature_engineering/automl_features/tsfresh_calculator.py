@@ -12,25 +12,18 @@ from typing import Dict, List, Optional, Any
 import warnings
 
 from .....utils.unified_error_handler import safe_ml_operation
-from .....utils.data_validation import DataValidator
+
 from .automl_config import TSFreshConfig
 from .feature_settings import FinancialFeatureSettings, MarketRegime
 from .feature_selector import AdvancedFeatureSelector
 from .performance_optimizer import PerformanceOptimizer
-from .feature_settings import FinancialFeatureSettings, MarketRegime
+
+
+from tsfresh import extract_features
+from tsfresh.utilities.dataframe_functions import impute
+
 
 logger = logging.getLogger(__name__)
-
-# TSFreshのインポートを安全に行う
-try:
-    from tsfresh import extract_features, select_features
-    from tsfresh.utilities.dataframe_functions import impute
-    from tsfresh.feature_extraction import ComprehensiveFCParameters
-
-    TSFRESH_AVAILABLE = True
-except ImportError as e:
-    logger.warning(f"TSFreshライブラリが利用できません: {e}")
-    TSFRESH_AVAILABLE = False
 
 
 class TSFreshFeatureCalculator:
@@ -80,11 +73,6 @@ class TSFreshFeatureCalculator:
         Returns:
             TSFresh特徴量が追加されたDataFrame
         """
-        if not TSFRESH_AVAILABLE:
-            logger.warning(
-                "TSFreshライブラリが利用できないため、元のDataFrameを返します"
-            )
-            return df
 
         if df is None or df.empty:
             logger.warning("空のデータが提供されました")
@@ -126,7 +114,7 @@ class TSFreshFeatureCalculator:
             random.seed()  # 現在時刻でシードをリセット
 
             # システムリソースを監視
-            resource_info = self.performance_optimizer.monitor_system_resources()
+            self.performance_optimizer.monitor_system_resources()
 
             # 最適化提案を取得
             optimization_suggestions = self.performance_optimizer.suggest_optimization(

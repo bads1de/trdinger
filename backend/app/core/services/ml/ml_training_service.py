@@ -14,7 +14,7 @@ from typing import Dict, Any, Optional, Callable
 
 from .config import ml_config
 from ...utils.unified_error_handler import safe_ml_operation
-from .lightgbm_trainer import LightGBMTrainer
+from .ensemble.ensemble_trainer import EnsembleTrainer
 from .model_manager import model_manager
 from ..optimization.optuna_optimizer import OptunaOptimizer, ParameterSpace
 
@@ -45,24 +45,51 @@ class MLTrainingService:
 
     def __init__(
         self,
-        trainer_type: str = "lightgbm",
+        trainer_type: str = "ensemble",
         automl_config: Optional[Dict[str, Any]] = None,
+        ensemble_config: Optional[Dict[str, Any]] = None,
     ):
         """
         初期化
 
         Args:
-            trainer_type: 使用するトレーナーのタイプ（現在は"lightgbm"のみサポート）
+            trainer_type: 使用するトレーナーのタイプ（現在は"ensemble"のみサポート）
             automl_config: AutoML設定（辞書形式）
+            ensemble_config: アンサンブル設定（辞書形式）
         """
         self.config = ml_config
         self.automl_config = automl_config
+        self.ensemble_config = ensemble_config
 
-        # トレーナーを選択（AutoML設定を渡す）
-        if trainer_type.lower() == "lightgbm":
-            self.trainer = LightGBMTrainer(automl_config=automl_config)
+        # トレーナーを選択（デフォルトはアンサンブル）
+        if trainer_type.lower() == "ensemble":
+            # デフォルトのアンサンブル設定
+            default_ensemble_config = {
+                "method": "bagging",
+                "bagging_params": {
+                    "n_estimators": 5,
+                    "bootstrap_fraction": 0.8,
+                    "base_model_type": "lightgbm",
+                },
+                "stacking_params": {
+                    "base_models": ["lightgbm", "random_forest"],
+                    "meta_model": "logistic_regression",
+                    "cv_folds": 5,
+                    "use_probas": True,
+                },
+            }
+
+            # 設定をマージ
+            if ensemble_config:
+                default_ensemble_config.update(ensemble_config)
+
+            self.trainer = EnsembleTrainer(
+                ensemble_config=default_ensemble_config, automl_config=automl_config
+            )
         else:
-            raise ValueError(f"サポートされていないトレーナータイプ: {trainer_type}")
+            raise ValueError(
+                f"サポートされていないトレーナータイプ: {trainer_type}。現在はensembleのみサポートしています。"
+            )
 
         self.trainer_type = trainer_type
 
@@ -100,18 +127,25 @@ class MLTrainingService:
         # AutoML設定の処理
         effective_automl_config = automl_config or self.automl_config
         if effective_automl_config:
-            # AutoML設定が提供された場合、新しいトレーナーインスタンスを作成
-            if self.trainer_type.lower() == "lightgbm":
-                trainer = LightGBMTrainer(automl_config=effective_automl_config)
-            else:
-                trainer = self.trainer
+            # AutoML設定が提供された場合、新しいアンサンブルトレーナーインスタンスを作成
+            ensemble_config = self.ensemble_config or {
+                "method": "bagging",
+                "bagging_params": {
+                    "n_estimators": 5,
+                    "bootstrap_fraction": 0.8,
+                    "base_model_type": "lightgbm",
+                },
+            }
+            trainer = EnsembleTrainer(
+                ensemble_config=ensemble_config, automl_config=effective_automl_config
+            )
             logger.info(
-                "🤖 AutoML特徴量エンジニアリングを使用してトレーニングを実行します"
+                "🤖 AutoML特徴量エンジニアリングを使用してアンサンブル学習を実行します"
             )
         else:
             trainer = self.trainer
             logger.info(
-                "📊 基本特徴量エンジニアリングを使用してトレーニングを実行します"
+                "📊 基本特徴量エンジニアリングを使用してアンサンブル学習を実行します"
             )
 
         # 最適化が有効な場合は最適化ワークフローを実行
@@ -556,14 +590,24 @@ class MLTrainingService:
                 # ベースパラメータと最適化パラメータをマージ
                 training_params = {**base_training_params, **params}
 
-                # 一時的なトレーナーを作成（元のトレーナーに影響しないように）
+                # 一時的なアンサンブルトレーナーを作成（元のトレーナーに影響しないように）
                 # AutoML設定がある場合はそれを引き継ぐ
+                temp_ensemble_config = {
+                    "method": "bagging",
+                    "bagging_params": {
+                        "n_estimators": 3,  # 最適化中は高速化のため少なめ
+                        "bootstrap_fraction": 0.8,
+                        "base_model_type": "lightgbm",
+                    },
+                }
+
                 if hasattr(effective_trainer, "automl_config"):
-                    temp_trainer = LightGBMTrainer(
-                        automl_config=effective_trainer.automl_config
+                    temp_trainer = EnsembleTrainer(
+                        ensemble_config=temp_ensemble_config,
+                        automl_config=effective_trainer.automl_config,
                     )
                 else:
-                    temp_trainer = LightGBMTrainer()
+                    temp_trainer = EnsembleTrainer(ensemble_config=temp_ensemble_config)
 
                 # ミニトレーニングを実行（保存はしない）
                 result = temp_trainer.train_model(
@@ -599,5 +643,5 @@ class MLTrainingService:
         return objective_function
 
 
-# グローバルインスタンス（デフォルトはLightGBM、AutoML設定なし）
-ml_training_service = MLTrainingService(trainer_type="lightgbm", automl_config=None)
+# グローバルインスタンス（デフォルトはアンサンブル、AutoML設定なし）
+ml_training_service = MLTrainingService(trainer_type="ensemble", automl_config=None)

@@ -110,6 +110,89 @@ class ModelManager:
             raise UnifiedModelError(f"モデル保存に失敗しました: {e}")
 
     @safe_ml_operation(
+        default_return=None, context="アンサンブルモデル保存でエラーが発生しました"
+    )
+    def save_ensemble_model(
+        self,
+        ensemble_trainer: Any,
+        model_name: str,
+        metadata: Optional[Dict[str, Any]] = None,
+    ) -> Optional[str]:
+        """
+        アンサンブルモデルを保存
+
+        Args:
+            ensemble_trainer: EnsembleTrainerインスタンス
+            model_name: モデル名
+            metadata: メタデータ
+
+        Returns:
+            保存されたモデルのベースパス
+
+        Raises:
+            UnifiedModelError: モデル保存に失敗した場合
+        """
+        try:
+            if ensemble_trainer is None:
+                raise UnifiedModelError("保存するアンサンブルトレーナーがNullです")
+
+            # タイムスタンプ付きディレクトリ名を生成
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            ensemble_dir = f"{model_name}_ensemble_{timestamp}"
+            ensemble_path = os.path.join(self.config.MODEL_SAVE_PATH, ensemble_dir)
+
+            # ディレクトリを作成
+            os.makedirs(ensemble_path, exist_ok=True)
+
+            # ベースパスを設定
+            base_path = os.path.join(ensemble_path, "ensemble_model")
+
+            # アンサンブルモデルを保存
+            success = ensemble_trainer.save_model(base_path)
+
+            if not success:
+                raise UnifiedModelError("アンサンブルモデルの保存に失敗しました")
+
+            # アンサンブル全体のメタデータを保存
+            ensemble_metadata = {
+                "model_name": model_name,
+                "timestamp": timestamp,
+                "ensemble_method": getattr(
+                    ensemble_trainer, "ensemble_method", "unknown"
+                ),
+                "model_type": "EnsembleModel",
+                "created_at": datetime.now().isoformat(),
+                "metadata": metadata or {},
+            }
+
+            # メタデータファイルを保存
+            metadata_path = os.path.join(ensemble_path, "ensemble_metadata.json")
+            import json
+
+            with open(metadata_path, "w", encoding="utf-8") as f:
+                json.dump(ensemble_metadata, f, ensure_ascii=False, indent=2)
+
+            # ディレクトリサイズを計算
+            total_size = sum(
+                os.path.getsize(os.path.join(dirpath, filename))
+                for dirpath, dirnames, filenames in os.walk(ensemble_path)
+                for filename in filenames
+            )
+
+            logger.info(
+                f"アンサンブルモデル保存完了: {ensemble_dir} ({total_size / 1024 / 1024:.2f}MB)"
+            )
+
+            # 古いモデルのクリーンアップ
+            self._cleanup_old_ensemble_models(model_name)
+
+            return ensemble_path
+
+        except Exception as e:
+            logger.error(f"アンサンブルモデル保存エラー: {e}")
+            raise UnifiedModelError(f"アンサンブルモデル保存に失敗しました: {e}")
+
+    @safe_ml_operation(
         default_return=None, context="モデル読み込みでエラーが発生しました"
     )
     def load_model(self, model_path: str) -> Optional[Dict[str, Any]]:
@@ -316,6 +399,95 @@ class ModelManager:
 
         except Exception as e:
             logger.error(f"期限切れモデルクリーンアップエラー: {e}")
+
+    def load_ensemble_model(self, ensemble_path: str) -> Optional[Any]:
+        """
+        アンサンブルモデルを読み込み
+
+        Args:
+            ensemble_path: アンサンブルモデルのディレクトリパス
+
+        Returns:
+            読み込まれたEnsembleTrainerインスタンス
+
+        Raises:
+            UnifiedModelError: モデル読み込みに失敗した場合
+        """
+        try:
+            from .ensemble.ensemble_trainer import EnsembleTrainer
+            import json
+
+            # メタデータを読み込み
+            metadata_path = os.path.join(ensemble_path, "ensemble_metadata.json")
+            if not os.path.exists(metadata_path):
+                raise UnifiedModelError(
+                    "アンサンブルメタデータファイルが見つかりません"
+                )
+
+            with open(metadata_path, "r", encoding="utf-8") as f:
+                ensemble_metadata = json.load(f)
+
+            # ベースパスを設定
+            base_path = os.path.join(ensemble_path, "ensemble_model")
+
+            # EnsembleTrainerを作成（仮の設定で初期化）
+            dummy_config = {
+                "method": ensemble_metadata.get("ensemble_method", "bagging")
+            }
+            ensemble_trainer = EnsembleTrainer(ensemble_config=dummy_config)
+
+            # モデルを読み込み
+            success = ensemble_trainer.load_model(base_path)
+
+            if not success:
+                raise UnifiedModelError("アンサンブルモデルの読み込みに失敗しました")
+
+            logger.info(
+                f"アンサンブルモデル読み込み完了: {os.path.basename(ensemble_path)}"
+            )
+            return ensemble_trainer
+
+        except Exception as e:
+            logger.error(f"アンサンブルモデル読み込みエラー: {e}")
+            raise UnifiedModelError(f"アンサンブルモデル読み込みに失敗しました: {e}")
+
+    def _cleanup_old_ensemble_models(self, model_name: str):
+        """
+        古いアンサンブルモデルをクリーンアップ
+
+        Args:
+            model_name: モデル名
+        """
+        try:
+            # 保持する最大バージョン数を超えた古いモデルを削除
+            ensemble_dirs = []
+
+            for search_path in ml_config.get_model_search_paths():
+                if not os.path.exists(search_path):
+                    continue
+
+                pattern = os.path.join(search_path, f"{model_name}_ensemble_*")
+                for ensemble_dir in glob.glob(pattern):
+                    if os.path.isdir(ensemble_dir):
+                        ensemble_dirs.append(ensemble_dir)
+
+            # 作成日時でソート（新しい順）
+            ensemble_dirs.sort(key=lambda x: os.path.getmtime(x), reverse=True)
+
+            # 保持数を超えた古いモデルを削除
+            for old_dir in ensemble_dirs[self.config.MAX_MODEL_VERSIONS :]:
+                try:
+                    import shutil
+
+                    shutil.rmtree(old_dir)
+                    logger.info(
+                        f"古いアンサンブルモデルを削除: {os.path.basename(old_dir)}"
+                    )
+                except Exception as e:
+                    logger.warning(f"古いアンサンブルモデル削除エラー {old_dir}: {e}")
+
+        except Exception as e:
+            logger.error(f"古いアンサンブルモデルクリーンアップエラー: {e}")
 
 
 # グローバルインスタンス

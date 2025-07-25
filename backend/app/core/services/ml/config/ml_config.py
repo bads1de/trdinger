@@ -8,7 +8,7 @@ ML関連の設定管理
 import os
 import logging
 from typing import Dict, Any, List, Optional
-from dataclasses import dataclass
+from dataclasses import dataclass, field, asdict
 
 
 @dataclass
@@ -316,18 +316,79 @@ class RetrainingConfig:
     DATA_DRIFT_THRESHOLD: float = 0.1
 
 
+@dataclass
+class EnsembleConfig:
+    """アンサンブル学習関連の設定"""
+
+    # デフォルトアンサンブル設定
+    DEFAULT_METHOD: str = "stacking"  # デフォルトのアンサンブル手法（多様性重視）
+
+    # バギング設定
+    BAGGING_N_ESTIMATORS: int = 5  # ベースモデル数
+    BAGGING_BOOTSTRAP_FRACTION: float = 0.8  # ブートストラップサンプリング比率
+    BAGGING_BASE_MODEL: str = "lightgbm"  # ベースモデルタイプ
+
+    # スタッキング設定
+    STACKING_BASE_MODELS: List[str] = field(
+        default_factory=lambda: ["lightgbm", "random_forest"]
+    )
+    STACKING_META_MODEL: str = "logistic_regression"  # メタモデル
+    STACKING_CV_FOLDS: int = 5  # クロスバリデーション分割数
+    STACKING_USE_PROBAS: bool = True  # 確率値を使用するか
+
+    # 最適化設定
+    OPTIMIZATION_N_ESTIMATORS_RANGE: List[int] = field(default_factory=lambda: [3, 10])
+    OPTIMIZATION_BOOTSTRAP_FRACTION_RANGE: List[float] = field(
+        default_factory=lambda: [0.6, 0.9]
+    )
+
+    def to_dict(self) -> Dict[str, Any]:
+        """辞書形式に変換"""
+        return asdict(self)
+
+    def get_default_config(self) -> Dict[str, Any]:
+        """デフォルトのアンサンブル設定を取得（多様性重視のスタッキング）"""
+        return self.get_default_stacking_config()
+
+    def get_default_bagging_config(self) -> Dict[str, Any]:
+        """デフォルトのバギング設定を取得"""
+        return {
+            "method": "bagging",
+            "bagging_params": {
+                "n_estimators": self.BAGGING_N_ESTIMATORS,
+                "bootstrap_fraction": self.BAGGING_BOOTSTRAP_FRACTION,
+                "base_model_type": self.BAGGING_BASE_MODEL,
+            },
+        }
+
+    def get_default_stacking_config(self) -> Dict[str, Any]:
+        """デフォルトのスタッキング設定を取得"""
+        return {
+            "method": "stacking",
+            "stacking_params": {
+                "base_models": self.STACKING_BASE_MODELS,
+                "meta_model": self.STACKING_META_MODEL,
+                "cv_folds": self.STACKING_CV_FOLDS,
+                "use_probas": self.STACKING_USE_PROBAS,
+            },
+        }
+
+
 class MLConfig:
     """
     ML関連の統一設定クラス
 
     全てのML関連サービスがこのクラスを通じて設定にアクセスします。
+    アンサンブル学習をデフォルトとし、複数のモデルを組み合わせて
+    予測精度と頑健性を向上させます。
     """
 
     def __init__(self):
         """設定の初期化"""
         self.data_processing = DataProcessingConfig()
         self.model = ModelConfig()
-        self.lightgbm = LightGBMConfig()
+        self.lightgbm = LightGBMConfig()  # アンサンブル内のベースモデルとして保持
+        self.ensemble = EnsembleConfig()  # アンサンブル学習設定を追加
         self.feature_engineering = FeatureEngineeringConfig()
         self.training = TrainingConfig()
         self.prediction = PredictionConfig()

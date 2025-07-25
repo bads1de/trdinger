@@ -12,47 +12,46 @@ import warnings
 import time
 
 from .....utils.unified_error_handler import safe_ml_operation
-from .....utils.data_validation import DataValidator
 from .automl_config import FeaturetoolsConfig
 
-logger = logging.getLogger(__name__)
+import featuretools as ft
 
-# Featuretoolsのインポートを安全に行う
+# featuretoolsが利用可能かどうかを示すフラグ
 try:
     import featuretools as ft
-    from featuretools.primitives import (
-        Mean,
-        Std,
-        Min,
-        Max,
-        Count,
-        Sum,
-        Skew,
-        Kurtosis,
-        Trend,
-        TimeSinceLast,
-        NumUnique,
-        Mode,
-        PercentTrue,
-        AddNumeric,  # Addの代わり
-        SubtractNumeric,  # Subtractの代わり
-        MultiplyNumeric,  # Multiplyの代わり
-        DivideNumeric,  # Divideの代わり
-        GreaterThan,
-        LessThan,
-        And,
-        Or,
-        Not,
-        Absolute,
-        NaturalLogarithm,  # Logの代わり
-        SquareRoot,  # Sqrtの代わり
-        # Square は利用できないため削除
-    )
 
     FEATURETOOLS_AVAILABLE = True
-except ImportError as e:
-    logger.warning(f"Featuretoolsライブラリが利用できません: {e}")
+except ImportError:
     FEATURETOOLS_AVAILABLE = False
+from featuretools.primitives import (
+    Mean,
+    Std,
+    Min,
+    Max,
+    Count,
+    Sum,
+    Skew,
+    Kurtosis,
+    Trend,
+    NumUnique,
+    Mode,
+    PercentTrue,
+    AddNumeric,
+    SubtractNumeric,
+    MultiplyNumeric,
+    DivideNumeric,
+    GreaterThan,
+    LessThan,
+    And,
+    Or,
+    Not,
+    Absolute,
+    NaturalLogarithm,
+    SquareRoot,
+)
+
+
+logger = logging.getLogger(__name__)
 
 
 class FeaturetoolsCalculator:
@@ -100,11 +99,6 @@ class FeaturetoolsCalculator:
         Returns:
             Featuretools特徴量が追加されたDataFrame
         """
-        if not FEATURETOOLS_AVAILABLE:
-            logger.warning(
-                "Featuretoolsライブラリが利用できないため、元のDataFrameを返します"
-            )
-            return df
 
         if df is None or df.empty:
             logger.warning("空のデータが提供されました")
@@ -402,19 +396,18 @@ class FeaturetoolsCalculator:
 
             # デフォルトの変換プリミティブ（金融データ用）
             default_trans_primitives = [
-                Add,
-                Subtract,
-                Multiply,
-                Divide,
+                AddNumeric,
+                SubtractNumeric,
+                MultiplyNumeric,
+                DivideNumeric,
                 GreaterThan,
                 LessThan,
                 And,
                 Or,
                 Not,
                 Absolute,
-                Log,
-                Sqrt,
-                Square,
+                NaturalLogarithm,
+                SquareRoot,
             ]
 
             # カスタムプリミティブがある場合は追加

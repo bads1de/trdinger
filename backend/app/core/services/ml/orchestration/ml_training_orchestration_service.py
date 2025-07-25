@@ -242,7 +242,24 @@ class MLTrainingOrchestrationService:
                     }
                 )
 
-                ml_service = MLTrainingService()
+                # アンサンブル設定の準備
+                ensemble_config_dict = None
+                trainer_type = "ensemble"  # 常にアンサンブルを使用
+
+                if config.ensemble_config:
+                    ensemble_config_dict = config.ensemble_config.dict()
+                    # アンサンブルが無効でも、アンサンブル内でLightGBMのみを使用
+
+                # AutoML設定の準備
+                automl_config_dict = None
+                if config.automl_config:
+                    automl_config_dict = config.automl_config.dict()
+
+                ml_service = MLTrainingService(
+                    trainer_type=trainer_type,
+                    automl_config=automl_config_dict,
+                    ensemble_config=ensemble_config_dict,
+                )
 
                 # 最適化設定の準備
                 optimization_settings = None
@@ -251,11 +268,6 @@ class MLTrainingOrchestrationService:
                     and config.optimization_settings.enabled
                 ):
                     optimization_settings = config.optimization_settings
-
-                # AutoML設定の準備
-                automl_config_dict = None
-                if config.automl_config:
-                    automl_config_dict = config.automl_config.dict()
 
                 # トレーニング実行
                 training_status.update(

@@ -8,7 +8,7 @@ import logging
 import hashlib
 import pickle
 import time
-from typing import Dict, Any, Optional, Tuple
+from typing import Dict, Any, Optional
 import pandas as pd
 import numpy as np
 from pathlib import Path
@@ -360,7 +360,6 @@ class PerformanceOptimizer:
         """Scikit-learnキャッシュのクリア"""
         try:
             # Scikit-learnのキャッシュをクリア
-            from sklearn.utils import check_random_state
 
             # 可能であればScikit-learnの内部キャッシュをクリア
             pass

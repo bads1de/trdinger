@@ -15,8 +15,8 @@ class TSFreshConfig:
     enabled: bool = True
     feature_selection: bool = True
     fdr_level: float = 0.05
-    feature_count_limit: int = 500  # 生成する特徴量の最大数（大幅増加）
-    parallel_jobs: int = 4
+    feature_count_limit: int = 100
+    parallel_jobs: int = 2
     custom_settings: Optional[Dict[str, Any]] = None
 
 
@@ -26,7 +26,7 @@ class FeaturetoolsConfig:
 
     enabled: bool = True
     max_depth: int = 2
-    max_features: int = 200  # 特徴量数を大幅増加
+    max_features: int = 100
     agg_primitives: Optional[list] = None
     trans_primitives: Optional[list] = None
 
@@ -37,8 +37,8 @@ class AutoFeatConfig:
 
     enabled: bool = True
     max_features: int = 100
-    feateng_steps: int = 2  # 特徴量エンジニアリングのステップ数
-    max_gb: float = 1.0  # 最大メモリ使用量（GB）
+    feateng_steps: int = 2
+    max_gb: float = 1.0
 
 
 @dataclass

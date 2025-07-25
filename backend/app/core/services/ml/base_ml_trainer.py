@@ -677,6 +677,11 @@ class BaseMLTrainer(ABC):
         self, X_train: pd.DataFrame, X_test: pd.DataFrame
     ) -> Tuple[pd.DataFrame, pd.DataFrame]:
         """データを前処理（スケーリング）"""
+        # LightGBMベースのモデルはスケーリング不要
+        if hasattr(self, "model_type") and "LightGBM" in str(self.model_type):
+            return X_train, X_test
+
+        # その他のモデルはスケーリングを実行
         assert self.scaler is not None, "Scalerが初期化されていません"
         X_train_scaled = pd.DataFrame(
             self.scaler.fit_transform(X_train),
@@ -707,13 +712,22 @@ class BaseMLTrainer(ABC):
         if metadata:
             final_metadata.update(metadata)
 
-        model_path = model_manager.save_model(
-            model=self.model,
-            model_name=model_name,
-            metadata=final_metadata,
-            scaler=self.scaler,
-            feature_columns=self.feature_columns,
-        )
+        # アンサンブルモデルの場合は専用の保存メソッドを使用
+        if self.__class__.__name__ == "EnsembleTrainer":
+            model_path = model_manager.save_ensemble_model(
+                ensemble_trainer=self,
+                model_name=model_name,
+                metadata=final_metadata,
+            )
+        else:
+            # 通常のモデル保存
+            model_path = model_manager.save_model(
+                model=self.model,
+                model_name=model_name,
+                metadata=final_metadata,
+                scaler=self.scaler,
+                feature_columns=self.feature_columns,
+            )
 
         logger.info(f"モデル保存完了: {model_path}")
         return model_path

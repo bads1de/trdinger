@@ -145,6 +145,7 @@ class BacktestService:
             stats = bt.run(**strategy_parameters)
             warnings.filterwarnings("default", category=UserWarning)
             execution_time = time.time() - start_time
+            logger.debug(f"バックテスト実行時間: {execution_time:.2f}秒")
 
             # 6. 結果をデータベース形式に変換
 

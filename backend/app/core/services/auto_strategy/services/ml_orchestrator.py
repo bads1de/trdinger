@@ -63,7 +63,9 @@ class MLOrchestrator(MLPredictionInterface):
         self.config = ml_config
         self.feature_service = FeatureEngineeringService()
         self.ml_training_service = (
-            ml_training_service if ml_training_service else MLTrainingService()
+            ml_training_service
+            if ml_training_service
+            else MLTrainingService(trainer_type="ensemble")
         )
 
         # BacktestDataServiceを初期化（完全なデータセット取得用）

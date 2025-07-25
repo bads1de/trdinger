@@ -103,7 +103,7 @@ class TechnicalFeatureCalculator:
                     if np.isnan(corr_matrix[0, 1]):
                         return 0.0
                     return corr_matrix[0, 1]
-                except:
+                except Exception as e:
                     return 0.0
 
             result_df["Market_Efficiency"] = (

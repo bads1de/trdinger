@@ -13,7 +13,7 @@ from .feature_engineering_service import FeatureEngineeringService
 from .automl_features.tsfresh_calculator import TSFreshFeatureCalculator
 from .automl_features.featuretools_calculator import FeaturetoolsCalculator
 from .automl_features.autofeat_calculator import AutoFeatCalculator
-from .automl_features.automl_config import AutoMLConfig, TSFreshConfig
+from .automl_features.automl_config import AutoMLConfig
 from .automl_features.performance_optimizer import PerformanceOptimizer
 from ....utils.unified_error_handler import safe_ml_operation
 

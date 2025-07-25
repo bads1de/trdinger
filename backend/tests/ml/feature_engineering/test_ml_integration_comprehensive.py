@@ -266,8 +266,10 @@ class TestMLIntegrationComprehensive:
             },
         }
 
-        # AutoML設定付きMLトレーニングサービス
-        ml_service = MLTrainingService(automl_config=automl_config)
+        # AutoML設定付きアンサンブル学習サービス
+        ml_service = MLTrainingService(
+            trainer_type="ensemble", automl_config=automl_config
+        )
 
         # トレーニング実行
         training_result = ml_service.train_model(

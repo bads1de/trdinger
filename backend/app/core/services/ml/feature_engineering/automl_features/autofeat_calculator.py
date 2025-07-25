@@ -6,31 +6,21 @@ AutoFeat特徴量選択クラス
 
 import gc
 import logging
-import pandas as pd
-import numpy as np
-from typing import Dict, List, Optional, Any, Tuple
-import warnings
 import time
+import warnings
 from contextlib import contextmanager
-from sklearn.model_selection import cross_val_score
+from typing import Any, Dict, List, Optional, Tuple
+
+import numpy as np
+import pandas as pd
 from sklearn.ensemble import RandomForestRegressor
-from sklearn.metrics import mean_squared_error, r2_score
+from sklearn.model_selection import cross_val_score
 
 from .....utils.unified_error_handler import safe_ml_operation
-from .....utils.data_validation import DataValidator
 from .automl_config import AutoFeatConfig
+from autofeat import AutoFeatRegressor, AutoFeatClassifier
 
 logger = logging.getLogger(__name__)
-
-# AutoFeatのインポートを安全に行う
-try:
-    from autofeat import AutoFeatRegressor, AutoFeatClassifier
-
-    AUTOFEAT_AVAILABLE = True
-    logger.info("AutoFeatライブラリが正常にロードされました")
-except ImportError as e:
-    logger.warning(f"AutoFeatライブラリが利用できません: {e}")
-    AUTOFEAT_AVAILABLE = False
 
 
 class AutoFeatCalculator:
@@ -189,11 +179,6 @@ class AutoFeatCalculator:
         Returns:
             生成された特徴量とメタデータ
         """
-        if not AUTOFEAT_AVAILABLE:
-            logger.warning(
-                "AutoFeatライブラリが利用できないため、元のDataFrameを返します"
-            )
-            return df, {"error": "AutoFeat not available"}
 
         if df is None or df.empty or target is None:
             logger.warning("空のデータまたはターゲットが提供されました")
@@ -223,9 +208,6 @@ class AutoFeatCalculator:
                 if self._should_use_batch_processing(processed_df):
                     logger.info("大量データのためバッチ処理モードを使用します")
                     return self._process_in_batches(processed_df, processed_target)
-
-                # ランダム性を追加して毎回異なる特徴量を生成
-                import random
 
                 # NumPyのランダムシードを現在時刻で設定（AutoFeat内部で使用される）
                 np.random.seed(int(time.time()) % 2147483647)
@@ -364,7 +346,7 @@ class AutoFeatCalculator:
                 feature_variances = processed_df.var().sort_values(ascending=False)
                 selected_cols = feature_variances.head(100).index
                 processed_df = processed_df[selected_cols]
-                logger.info(f"特徴量数を100個に制限しました")
+                logger.info("特徴量数を100個に制限しました")
 
             logger.info(
                 f"前処理完了: {len(processed_df)}行, {len(processed_df.columns)}列"
@@ -480,13 +462,6 @@ class AutoFeatCalculator:
         """最後の生成情報を取得"""
         return self.last_selection_info.copy()
 
-    def clear_model(self):
-        """モデルをクリア"""
-        self.autofeat_model = None
-        self.selected_features = None
-        self.feature_scores = {}
-        self.last_selection_info = {}
-
     def get_feature_scores(self) -> Dict[str, float]:
         """特徴量スコアを取得"""
         return self.feature_scores.copy()
@@ -520,7 +495,6 @@ class AutoFeatCalculator:
             # クロスバリデーションで性能を評価
             if task_type.lower() == "classification":
                 from sklearn.ensemble import RandomForestClassifier
-                from sklearn.metrics import accuracy_score, f1_score
 
                 model = RandomForestClassifier(
                     n_estimators=50, random_state=42, n_jobs=1

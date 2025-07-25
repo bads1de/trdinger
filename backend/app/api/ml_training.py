@@ -6,7 +6,7 @@ MLトレーニングAPI
 
 import logging
 from datetime import datetime
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, List
 from fastapi import APIRouter, BackgroundTasks, Depends
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
@@ -101,11 +101,61 @@ class OptimizationSettingsConfig(BaseModel):
     )
 
 
+class BaggingParamsConfig(BaseModel):
+    """バギングパラメータ設定"""
+
+    n_estimators: int = Field(default=5, description="ベースモデル数")
+    bootstrap_fraction: float = Field(
+        default=0.8, description="ブートストラップサンプリング比率"
+    )
+    base_model_type: str = Field(
+        default="lightgbm",
+        description="ベースモデルタイプ（lightgbm, gradient_boosting, random_forest, xgboost等）",
+    )
+    mixed_models: Optional[List[str]] = Field(
+        default=None,
+        description="混合バギング用モデルリスト（指定時はbase_model_typeより優先、多様性確保）",
+    )
+    random_state: Optional[int] = Field(default=None, description="ランダムシード")
+
+
+class StackingParamsConfig(BaseModel):
+    """スタッキングパラメータ設定"""
+
+    base_models: List[str] = Field(
+        default=["lightgbm", "random_forest"], description="ベースモデルのリスト"
+    )
+    meta_model: str = Field(default="logistic_regression", description="メタモデル")
+    cv_folds: int = Field(default=5, description="クロスバリデーション分割数")
+    use_probas: bool = Field(default=True, description="確率値を使用するか")
+
+
+class EnsembleConfig(BaseModel):
+    """アンサンブル学習設定"""
+
+    enabled: bool = Field(default=True, description="アンサンブル学習を有効にするか")
+    method: str = Field(
+        default="bagging", description="アンサンブル手法 (bagging, stacking)"
+    )
+    bagging_params: BaggingParamsConfig = Field(
+        default_factory=BaggingParamsConfig, description="バギングパラメータ"
+    )
+    stacking_params: StackingParamsConfig = Field(
+        default_factory=StackingParamsConfig, description="スタッキングパラメータ"
+    )
+
+
 # グローバル状態管理は削除（OrchestrationServiceに移動）
 
 
 class MLTrainingConfig(BaseModel):
-    """MLトレーニング設定"""
+    """
+    MLトレーニング設定
+
+    アンサンブル学習をデフォルトとしたML学習の設定を定義します。
+    バギングとスタッキングの両方をサポートし、複数のモデルを組み合わせて
+    予測精度と頑健性を向上させます。
+    """
 
     symbol: str = Field(..., description="取引ペア（例: BTC/USDT:USDT）")
     timeframe: str = Field(default="1h", description="時間軸")
@@ -137,6 +187,27 @@ class MLTrainingConfig(BaseModel):
     # AutoML特徴量エンジニアリング設定
     automl_config: Optional[AutoMLConfigModel] = Field(
         None, description="AutoML特徴量エンジニアリング設定"
+    )
+
+    # アンサンブル学習設定
+    ensemble_config: Optional[EnsembleConfig] = Field(
+        default_factory=lambda: EnsembleConfig(
+            enabled=True,
+            method="stacking",  # デフォルトをスタッキングに変更（多様性重視）
+            bagging_params=BaggingParamsConfig(n_estimators=5, bootstrap_fraction=0.8),
+            stacking_params=StackingParamsConfig(
+                base_models=[
+                    "lightgbm",
+                    "xgboost",
+                    "gradient_boosting",
+                    "random_forest",
+                ],  # 4種類のモデルで多様性確保
+                meta_model="logistic_regression",
+                cv_folds=5,
+                use_probas=True,
+            ),
+        ),
+        description="アンサンブル学習設定（デフォルト: 多様性重視のスタッキング）",
     )
 
 
@@ -171,9 +242,21 @@ async def start_ml_training(
     db: Session = Depends(get_db),
 ):
     """
-    MLモデルのトレーニングを開始
+    アンサンブル学習によるMLモデルのトレーニングを開始
+
+    デフォルトでバギング手法を使用し、複数のLightGBMモデルを組み合わせて
+    予測精度と頑健性を向上させます。スタッキング手法も選択可能です。
+
+    Args:
+        config: MLトレーニング設定（アンサンブル設定を含む）
+        background_tasks: バックグラウンドタスク管理
+        db: データベースセッション
+
+    Returns:
+        MLTrainingResponse: トレーニング開始応答
     """
     logger.info("🚀 /api/ml-training/train エンドポイントが呼び出されました")
+    logger.info(f"📋 アンサンブル設定: {config.ensemble_config}")
     logger.info(f"📋 最適化設定: {config.optimization_settings}")
 
     async def _start_training():
