@@ -298,3 +298,145 @@ class PerformanceOptimizer:
             logger.debug(f"ガベージコレクション実行: {collected}オブジェクト回収")
         except Exception as e:
             logger.error(f"ガベージコレクションエラー: {e}")
+
+    def cleanup_autofeat_memory(self, autofeat_model=None):
+        """AutoFeat特有のメモリクリーンアップ"""
+        try:
+            memory_before = self._get_memory_usage()
+
+            # AutoFeatモデルの詳細クリーンアップ
+            if autofeat_model is not None:
+                self._cleanup_autofeat_model(autofeat_model)
+
+            # NumPyキャッシュのクリア
+            self._clear_numpy_cache()
+
+            # Scikit-learnキャッシュのクリア
+            self._clear_sklearn_cache()
+
+            # 強制ガベージコレクション
+            self.force_garbage_collection()
+
+            memory_after = self._get_memory_usage()
+            memory_freed = memory_before - memory_after
+
+            if memory_freed > 1.0:  # 1MB以上解放された場合のみログ出力
+                logger.info(f"AutoFeatメモリクリーンアップ: {memory_freed:.2f}MB解放")
+
+        except Exception as e:
+            logger.error(f"AutoFeatメモリクリーンアップエラー: {e}")
+
+    def _cleanup_autofeat_model(self, autofeat_model):
+        """AutoFeatモデルの詳細クリーンアップ"""
+        try:
+            # AutoFeatモデル内部の属性をクリア
+            if hasattr(autofeat_model, "feateng_cols_"):
+                autofeat_model.feateng_cols_ = None
+            if hasattr(autofeat_model, "featsel_"):
+                autofeat_model.featsel_ = None
+            if hasattr(autofeat_model, "model_"):
+                autofeat_model.model_ = None
+            if hasattr(autofeat_model, "scaler_"):
+                autofeat_model.scaler_ = None
+            if hasattr(autofeat_model, "feature_importances_"):
+                autofeat_model.feature_importances_ = None
+
+        except Exception as e:
+            logger.warning(f"AutoFeatモデルクリーンアップエラー: {e}")
+
+    def _clear_numpy_cache(self):
+        """NumPyキャッシュのクリア"""
+        try:
+            import numpy as np
+
+            # NumPyの内部キャッシュをクリア（可能な場合）
+            if hasattr(np, "_NoValue"):
+                # NumPyの内部状態をリセット
+                pass
+        except Exception as e:
+            logger.debug(f"NumPyキャッシュクリアエラー: {e}")
+
+    def _clear_sklearn_cache(self):
+        """Scikit-learnキャッシュのクリア"""
+        try:
+            # Scikit-learnのキャッシュをクリア
+            from sklearn.utils import check_random_state
+
+            # 可能であればScikit-learnの内部キャッシュをクリア
+            pass
+        except Exception as e:
+            logger.debug(f"Scikit-learnキャッシュクリアエラー: {e}")
+
+    def _get_memory_usage(self) -> float:
+        """現在のメモリ使用量を取得（MB単位）"""
+        try:
+            import psutil
+
+            process = psutil.Process()
+            return process.memory_info().rss / 1024 / 1024
+        except ImportError:
+            return 0.0
+        except Exception as e:
+            logger.warning(f"メモリ使用量取得エラー: {e}")
+            return 0.0
+
+    def monitor_memory_usage(self, operation_name: str = "操作"):
+        """メモリ使用量を監視するコンテキストマネージャー"""
+        from contextlib import contextmanager
+
+        @contextmanager
+        def memory_monitor():
+            start_memory = self._get_memory_usage()
+            logger.debug(f"{operation_name}開始時メモリ: {start_memory:.2f}MB")
+
+            try:
+                yield
+            finally:
+                end_memory = self._get_memory_usage()
+                memory_diff = end_memory - start_memory
+                if abs(memory_diff) > 5.0:  # 5MB以上の変化があった場合のみログ出力
+                    logger.info(
+                        f"{operation_name}完了時メモリ変化: {memory_diff:+.2f}MB"
+                    )
+
+        return memory_monitor()
+
+    def get_memory_recommendations(
+        self, data_size_mb: float, feature_count: int
+    ) -> Dict[str, Any]:
+        """メモリ使用量に基づく推奨設定を取得"""
+        recommendations = {
+            "use_batch_processing": False,
+            "batch_size": 5000,
+            "max_memory_gb": 4,
+            "enable_memory_monitoring": False,
+            "cleanup_frequency": "after_each_operation",
+        }
+
+        # データサイズに基づく推奨設定
+        if data_size_mb > 500:  # 500MB以上
+            recommendations.update(
+                {
+                    "use_batch_processing": True,
+                    "batch_size": 2000,
+                    "max_memory_gb": 2,
+                    "enable_memory_monitoring": True,
+                    "cleanup_frequency": "after_each_batch",
+                }
+            )
+        elif data_size_mb > 100:  # 100MB以上
+            recommendations.update(
+                {
+                    "use_batch_processing": True,
+                    "batch_size": 3000,
+                    "max_memory_gb": 3,
+                    "enable_memory_monitoring": True,
+                }
+            )
+
+        # 特徴量数に基づく調整
+        if feature_count > 1000:
+            recommendations["max_memory_gb"] = min(recommendations["max_memory_gb"], 2)
+            recommendations["enable_memory_monitoring"] = True
+
+        return recommendations

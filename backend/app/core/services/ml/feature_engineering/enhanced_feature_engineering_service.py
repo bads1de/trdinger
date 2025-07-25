@@ -14,6 +14,7 @@ from .automl_features.tsfresh_calculator import TSFreshFeatureCalculator
 from .automl_features.featuretools_calculator import FeaturetoolsCalculator
 from .automl_features.autofeat_calculator import AutoFeatCalculator
 from .automl_features.automl_config import AutoMLConfig, TSFreshConfig
+from .automl_features.performance_optimizer import PerformanceOptimizer
 from ....utils.unified_error_handler import safe_ml_operation
 
 logger = logging.getLogger(__name__)
@@ -46,6 +47,9 @@ class EnhancedFeatureEngineeringService(FeatureEngineeringService):
             self.automl_config.featuretools
         )
         self.autofeat_calculator = AutoFeatCalculator(self.automl_config.autofeat)
+
+        # パフォーマンス最適化クラス
+        self.performance_optimizer = PerformanceOptimizer()
 
         # 統計情報
         self.last_enhancement_stats = {}
@@ -163,27 +167,48 @@ class EnhancedFeatureEngineeringService(FeatureEngineeringService):
 
                 current_feature_count = len(result_df.columns)
 
-                # AutoFeatで特徴量を生成
-                generated_df, generation_info = (
-                    self.autofeat_calculator.generate_features(
-                        df=result_df,
-                        target=target,
-                        task_type="regression",  # デフォルトは回帰
-                        max_features=self.automl_config.autofeat.max_features,
+                # データサイズに基づくメモリ推奨設定を取得
+                data_size_mb = result_df.memory_usage(deep=True).sum() / 1024 / 1024
+                memory_recommendations = (
+                    self.performance_optimizer.get_memory_recommendations(
+                        data_size_mb, len(result_df.columns)
                     )
                 )
 
-                # 生成された特徴量で置き換え
-                if "error" not in generation_info:
-                    result_df = generated_df
-                    autofeat_feature_count = generation_info.get(
-                        "generated_features", 0
-                    )
+                logger.info(
+                    f"データサイズ: {data_size_mb:.2f}MB, メモリ推奨設定: {memory_recommendations}"
+                )
 
-                    # 生成情報を統計に追加
-                    self.last_enhancement_stats["autofeat_generation_info"] = (
-                        generation_info
-                    )
+                # メモリ監視付きでAutoFeat特徴量生成を実行
+                with self.performance_optimizer.monitor_memory_usage(
+                    "AutoFeat特徴量生成"
+                ):
+                    # AutoFeatCalculatorをコンテキストマネージャーとして使用（メモリリーク防止）
+                    with self.autofeat_calculator as calculator:
+                        # AutoFeatで特徴量を生成
+                        generated_df, generation_info = calculator.generate_features(
+                            df=result_df,
+                            target=target,
+                            task_type="regression",  # デフォルトは回帰
+                            max_features=self.automl_config.autofeat.max_features,
+                        )
+
+                        # 生成された特徴量で置き換え
+                        if "error" not in generation_info:
+                            result_df = generated_df
+                            autofeat_feature_count = generation_info.get(
+                                "generated_features", 0
+                            )
+
+                            # 生成情報を統計に追加
+                            self.last_enhancement_stats["autofeat_generation_info"] = (
+                                generation_info
+                            )
+
+                        # AutoFeatモデルのメモリクリーンアップ
+                        self.performance_optimizer.cleanup_autofeat_memory(
+                            calculator.autofeat_model
+                        )
 
                 autofeat_time = time.time() - autofeat_start_time
                 logger.info(
@@ -217,6 +242,13 @@ class EnhancedFeatureEngineeringService(FeatureEngineeringService):
                 f"Featuretools:{featuretools_feature_count}, AutoFeat:{autofeat_feature_count}) "
                 f"処理時間:{total_time:.2f}秒"
             )
+
+            # 最終的なメモリクリーンアップ
+            self.performance_optimizer.force_garbage_collection()
+
+            # メモリ統計をログ出力
+            memory_stats = self.performance_optimizer._get_memory_usage()
+            logger.info(f"特徴量生成完了時メモリ使用量: {memory_stats:.2f}MB")
 
             return result_df
 

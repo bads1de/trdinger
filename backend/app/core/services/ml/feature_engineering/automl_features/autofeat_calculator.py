@@ -4,12 +4,14 @@ AutoFeat特徴量選択クラス
 遺伝的アルゴリズムによる最適特徴量組み合わせの自動発見を実装します。
 """
 
+import gc
 import logging
 import pandas as pd
 import numpy as np
 from typing import Dict, List, Optional, Any, Tuple
 import warnings
 import time
+from contextlib import contextmanager
 from sklearn.model_selection import cross_val_score
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.metrics import mean_squared_error, r2_score
@@ -50,6 +52,120 @@ class AutoFeatCalculator:
         self.selected_features = None
         self.feature_scores = {}
         self.last_selection_info = {}
+        self._memory_usage_before = 0
+        self._memory_usage_after = 0
+
+    def __enter__(self):
+        """コンテキストマネージャーの開始"""
+        self._memory_usage_before = self._get_memory_usage()
+        logger.debug(
+            f"AutoFeatCalculator開始時メモリ使用量: {self._memory_usage_before:.2f}MB"
+        )
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        """コンテキストマネージャーの終了時にリソースをクリーンアップ"""
+        try:
+            self.clear_model()
+            self._force_garbage_collection()
+            self._memory_usage_after = self._get_memory_usage()
+            memory_freed = self._memory_usage_before - self._memory_usage_after
+            if memory_freed > 0:
+                logger.info(f"AutoFeatCalculator終了時メモリ解放: {memory_freed:.2f}MB")
+        except Exception as e:
+            logger.error(f"AutoFeatCalculatorクリーンアップエラー: {e}")
+
+    def _get_memory_usage(self) -> float:
+        """現在のメモリ使用量を取得（MB単位）"""
+        try:
+            import psutil
+
+            process = psutil.Process()
+            return process.memory_info().rss / 1024 / 1024
+        except ImportError:
+            return 0.0
+        except Exception as e:
+            logger.warning(f"メモリ使用量取得エラー: {e}")
+            return 0.0
+
+    def _force_garbage_collection(self):
+        """強制ガベージコレクション"""
+        try:
+            collected = gc.collect()
+            logger.debug(f"ガベージコレクション実行: {collected}オブジェクト回収")
+        except Exception as e:
+            logger.error(f"ガベージコレクションエラー: {e}")
+
+    @contextmanager
+    def _memory_managed_operation(self, operation_name: str):
+        """メモリ管理付きの操作を実行するコンテキストマネージャー"""
+        start_memory = self._get_memory_usage()
+        logger.debug(f"{operation_name}開始時メモリ: {start_memory:.2f}MB")
+
+        try:
+            yield
+        finally:
+            # 操作完了後にガベージコレクションを実行
+            self._force_garbage_collection()
+            end_memory = self._get_memory_usage()
+            memory_diff = end_memory - start_memory
+            if abs(memory_diff) > 1.0:  # 1MB以上の変化があった場合のみログ出力
+                logger.info(f"{operation_name}完了時メモリ変化: {memory_diff:+.2f}MB")
+
+    def _should_use_batch_processing(self, df: pd.DataFrame) -> bool:
+        """バッチ処理を使用すべきかどうかを判定"""
+        # データサイズが大きい場合はバッチ処理を使用
+        data_size_mb = df.memory_usage(deep=True).sum() / 1024 / 1024
+        row_count = len(df)
+
+        # 100MB以上または10,000行以上の場合はバッチ処理
+        return data_size_mb > 100 or row_count > 10000
+
+    def _process_in_batches(
+        self, df: pd.DataFrame, target: pd.Series, batch_size: int = 5000
+    ) -> Tuple[pd.DataFrame, Dict[str, Any]]:
+        """大量データをバッチ処理で特徴量生成"""
+        logger.info(
+            f"バッチ処理モードで特徴量生成開始: {len(df)}行を{batch_size}行ずつ処理"
+        )
+
+        all_results = []
+        batch_info = []
+
+        for i in range(0, len(df), batch_size):
+            batch_end = min(i + batch_size, len(df))
+            batch_df = df.iloc[i:batch_end].copy()
+            batch_target = target.iloc[i:batch_end].copy()
+
+            logger.debug(f"バッチ {i//batch_size + 1}: {len(batch_df)}行処理中")
+
+            with self._memory_managed_operation(f"バッチ{i//batch_size + 1}処理"):
+                # 小さなバッチで特徴量生成
+                batch_result, batch_meta = self._generate_features_single_batch(
+                    batch_df, batch_target
+                )
+
+                if "error" not in batch_meta:
+                    all_results.append(batch_result)
+                    batch_info.append(batch_meta)
+
+        if not all_results:
+            return df, {"error": "All batches failed"}
+
+        # バッチ結果を結合
+        final_result = pd.concat(all_results, ignore_index=True)
+
+        # メタデータを統合
+        combined_info = {
+            "batch_count": len(batch_info),
+            "total_rows": len(final_result),
+            "batch_processing": True,
+            "generation_time": sum(
+                info.get("generation_time", 0) for info in batch_info
+            ),
+        }
+
+        return final_result, combined_info
 
     @safe_ml_operation(
         default_return=None, context="AutoFeat特徴量生成でエラーが発生しました"
@@ -84,57 +200,67 @@ class AutoFeatCalculator:
             return df, {"error": "Empty data"}
 
         try:
-            start_time = time.time()
+            with self._memory_managed_operation("AutoFeat特徴量生成"):
+                start_time = time.time()
 
-            # 設定の決定
-            max_feat = (
-                max_features if max_features is not None else self.config.max_features
-            )
-
-            logger.info(f"AutoFeat特徴量生成開始: 最大特徴量={max_feat}")
-
-            # データの前処理
-            processed_df, processed_target = self._preprocess_data(df, target)
-
-            if processed_df.empty:
-                logger.warning("前処理後のデータが空です")
-                return df, {"error": "Empty processed data"}
-
-            # ランダム性を追加して毎回異なる特徴量を生成
-            import random
-
-            # NumPyのランダムシードを現在時刻で設定（AutoFeat内部で使用される）
-            np.random.seed(int(time.time()) % 2147483647)
-
-            # AutoFeatモデルを初期化（正しいAPI）
-            if task_type.lower() == "classification":
-                self.autofeat_model = AutoFeatClassifier(
-                    feateng_steps=self.config.feateng_steps,
-                    max_gb=self.config.max_gb,
-                    verbose=1,
-                    featsel_runs=1,  # 特徴量選択の実行回数を減らす
-                )
-            else:
-                self.autofeat_model = AutoFeatRegressor(
-                    feateng_steps=self.config.feateng_steps,
-                    max_gb=self.config.max_gb,
-                    verbose=1,
-                    featsel_runs=1,  # 特徴量選択の実行回数を減らす
+                # 設定の決定
+                max_feat = (
+                    max_features
+                    if max_features is not None
+                    else self.config.max_features
                 )
 
-            # 特徴量生成を実行
-            with warnings.catch_warnings():
-                warnings.simplefilter("ignore")
+                logger.info(f"AutoFeat特徴量生成開始: 最大特徴量={max_feat}")
 
-                logger.info("AutoFeat特徴量生成実行中...")
-                logger.info(f"入力データ形状: {processed_df.shape}")
-                logger.info(f"入力列: {list(processed_df.columns)}")
+                # データの前処理
+                processed_df, processed_target = self._preprocess_data(df, target)
 
-                # AutoFeatは自動的に特徴量を生成し、最適なものを選択
-                self.autofeat_model.fit(processed_df, processed_target)
+                if processed_df.empty:
+                    logger.warning("前処理後のデータが空です")
+                    return df, {"error": "Empty processed data"}
 
-                # 変換されたデータを取得
-                transformed_df = self.autofeat_model.transform(processed_df)
+                # 大量データの場合はバッチ処理を使用
+                if self._should_use_batch_processing(processed_df):
+                    logger.info("大量データのためバッチ処理モードを使用します")
+                    return self._process_in_batches(processed_df, processed_target)
+
+                # ランダム性を追加して毎回異なる特徴量を生成
+                import random
+
+                # NumPyのランダムシードを現在時刻で設定（AutoFeat内部で使用される）
+                np.random.seed(int(time.time()) % 2147483647)
+
+                # AutoFeatモデルを初期化（正しいAPI）
+                with self._memory_managed_operation("AutoFeatモデル初期化"):
+                    if task_type.lower() == "classification":
+                        self.autofeat_model = AutoFeatClassifier(
+                            feateng_steps=self.config.feateng_steps,
+                            max_gb=self.config.max_gb,
+                            verbose=1,
+                            featsel_runs=1,  # 特徴量選択の実行回数を減らす
+                        )
+                    else:
+                        self.autofeat_model = AutoFeatRegressor(
+                            feateng_steps=self.config.feateng_steps,
+                            max_gb=self.config.max_gb,
+                            verbose=1,
+                            featsel_runs=1,  # 特徴量選択の実行回数を減らす
+                        )
+
+                # 特徴量生成を実行
+                with self._memory_managed_operation("AutoFeat学習・変換"):
+                    with warnings.catch_warnings():
+                        warnings.simplefilter("ignore")
+
+                        logger.info("AutoFeat特徴量生成実行中...")
+                        logger.info(f"入力データ形状: {processed_df.shape}")
+                        logger.info(f"入力列: {list(processed_df.columns)}")
+
+                        # AutoFeatは自動的に特徴量を生成し、最適なものを選択
+                        self.autofeat_model.fit(processed_df, processed_target)
+
+                        # 変換されたデータを取得
+                        transformed_df = self.autofeat_model.transform(processed_df)
 
                 logger.info(f"変換後データ形状: {transformed_df.shape}")
                 logger.info(f"変換後列: {list(transformed_df.columns)}")
@@ -427,8 +553,104 @@ class AutoFeatCalculator:
             return {"error": str(e)}
 
     def clear_model(self):
-        """モデルをクリア"""
-        self.autofeat_model = None
-        self.selected_features = None
-        self.feature_scores = {}
-        logger.debug("AutoFeatモデルをクリアしました")
+        """モデルをクリア（メモリリーク防止のため徹底的にクリーンアップ）"""
+        try:
+            # AutoFeatモデルの詳細なクリーンアップ
+            if self.autofeat_model is not None:
+                # AutoFeatモデル内部の属性をクリア
+                if hasattr(self.autofeat_model, "feateng_cols_"):
+                    self.autofeat_model.feateng_cols_ = None
+                if hasattr(self.autofeat_model, "featsel_"):
+                    self.autofeat_model.featsel_ = None
+                if hasattr(self.autofeat_model, "model_"):
+                    self.autofeat_model.model_ = None
+                if hasattr(self.autofeat_model, "scaler_"):
+                    self.autofeat_model.scaler_ = None
+
+                # モデル自体をクリア
+                self.autofeat_model = None
+                logger.debug("AutoFeatモデルの詳細クリーンアップ完了")
+
+            # その他の属性をクリア
+            self.selected_features = None
+            self.feature_scores = {}
+            self.last_selection_info = {}
+
+            # 強制ガベージコレクション
+            self._force_garbage_collection()
+
+            logger.debug("AutoFeatモデルをクリアしました")
+
+        except Exception as e:
+            logger.error(f"モデルクリア中にエラー: {e}")
+            # エラーが発生してもクリーンアップは続行
+            self.autofeat_model = None
+            self.selected_features = None
+            self.feature_scores = {}
+            self.last_selection_info = {}
+
+    def _generate_features_single_batch(
+        self, df: pd.DataFrame, target: pd.Series
+    ) -> Tuple[pd.DataFrame, Dict[str, Any]]:
+        """単一バッチでの特徴量生成（バッチ処理用）"""
+        try:
+            start_time = time.time()
+
+            # ランダム性を追加
+            np.random.seed(int(time.time()) % 2147483647)
+
+            # AutoFeatモデルを初期化
+            autofeat_model = AutoFeatRegressor(
+                feateng_steps=self.config.feateng_steps,
+                max_gb=min(self.config.max_gb, 2),  # バッチ処理では少ないメモリを使用
+                verbose=0,  # バッチ処理では詳細ログを抑制
+                featsel_runs=1,
+            )
+
+            # 特徴量生成を実行
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore")
+
+                # 学習と変換
+                autofeat_model.fit(df, target)
+                transformed_df = autofeat_model.transform(df)
+
+                # 結果をDataFrameに変換
+                result_df = df.copy()
+
+                # インデックスを統一
+                if hasattr(transformed_df, "index"):
+                    transformed_df = transformed_df.reset_index(drop=True)
+                if hasattr(result_df, "index"):
+                    result_df = result_df.reset_index(drop=True)
+
+                # 新しい特徴量を追加
+                for i, col_name in enumerate(transformed_df.columns):
+                    new_col_name = (
+                        f"AF_{col_name}" if not col_name.startswith("AF_") else col_name
+                    )
+                    if len(transformed_df) == len(result_df):
+                        result_df[new_col_name] = transformed_df.iloc[:, i].values
+
+                # 生成情報
+                generation_time = time.time() - start_time
+                new_features = [
+                    col for col in result_df.columns if col.startswith("AF_")
+                ]
+
+                batch_info = {
+                    "original_features": len(df.columns),
+                    "generated_features": len(new_features),
+                    "total_features": len(result_df.columns),
+                    "generation_time": generation_time,
+                }
+
+                # バッチ処理用にモデルを即座にクリア
+                del autofeat_model
+                self._force_garbage_collection()
+
+                return result_df, batch_info
+
+        except Exception as e:
+            logger.error(f"バッチ特徴量生成エラー: {e}")
+            return df, {"error": str(e)}
