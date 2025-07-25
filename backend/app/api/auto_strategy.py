@@ -7,7 +7,6 @@ from functools import lru_cache
 
 from app.core.services.auto_strategy import AutoStrategyService
 from app.core.services.auto_strategy.models.ga_config import GAConfig
-from app.core.services.auto_strategy.models.gene_strategy import StrategyGene
 from app.core.services.auto_strategy.orchestration.auto_strategy_orchestration_service import (
     AutoStrategyOrchestrationService,
 )

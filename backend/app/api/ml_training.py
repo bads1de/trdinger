@@ -5,7 +5,6 @@ MLトレーニングAPI
 """
 
 import logging
-from datetime import datetime
 from typing import Dict, Any, Optional, List
 from fastapi import APIRouter, BackgroundTasks, Depends
 from pydantic import BaseModel, Field
@@ -16,7 +15,7 @@ from app.core.services.ml.orchestration.ml_training_orchestration_service import
 )
 from app.core.utils.unified_error_handler import UnifiedErrorHandler
 
-# AutoML設定モデルをインポート
+
 from app.api.automl_features import (
     AutoMLConfigModel,
     TSFreshConfigModel,

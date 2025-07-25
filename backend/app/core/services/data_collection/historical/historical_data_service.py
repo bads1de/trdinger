@@ -21,7 +21,7 @@ class HistoricalDataService:
 
     def __init__(self, market_service: Optional[BybitMarketDataService] = None):
         self.market_service = market_service or BybitMarketDataService()
-        self.request_delay = 0.2  # APIレート制限対応
+        self.request_delay = 0.2
 
     async def collect_historical_data(
         self,

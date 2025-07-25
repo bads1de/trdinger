@@ -7,7 +7,6 @@ Alternative.me Fear & Greed Index データの取得、収集、管理機能を�
 
 import logging
 from typing import Dict, Optional
-from datetime import datetime
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
@@ -16,7 +15,7 @@ from app.core.services.data_collection.orchestration.fear_greed_orchestration_se
     FearGreedOrchestrationService,
 )
 from app.core.utils.unified_error_handler import UnifiedErrorHandler
-from app.core.utils.api_utils import APIResponseHelper
+
 
 logger = logging.getLogger(__name__)
 

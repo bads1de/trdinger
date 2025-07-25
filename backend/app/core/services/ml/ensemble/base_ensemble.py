@@ -9,8 +9,8 @@ import numpy as np
 import pandas as pd
 import lightgbm as lgb
 from abc import ABC, abstractmethod
-from typing import Dict, Any, List, Optional, Tuple
-from sklearn.model_selection import cross_val_predict, StratifiedKFold
+from typing import Dict, Any, List, Optional
+
 
 from ....utils.unified_error_handler import UnifiedModelError
 
@@ -524,7 +524,6 @@ class BaseEnsemble(ABC):
             保存されたファイルパスのリスト
         """
         import joblib
-        import os
 
         saved_paths = []
 

@@ -6,12 +6,14 @@ APIルーター内に散在していたバックテスト関連のビジネス�
 """
 
 import logging
-from typing import Dict, Any, Optional, List
+from typing import Dict, Any, Optional
 from sqlalchemy.orm import Session
 
 from database.repositories.backtest_result_repository import BacktestResultRepository
 from database.repositories.ga_experiment_repository import GAExperimentRepository
-from database.repositories.generated_strategy_repository import GeneratedStrategyRepository
+from database.repositories.generated_strategy_repository import (
+    GeneratedStrategyRepository,
+)
 from app.core.services.backtest_service import BacktestService
 from app.core.utils.api_utils import APIResponseHelper
 
@@ -185,9 +187,7 @@ class BacktestOrchestrationService:
             logger.error(f"サポート戦略取得エラー: {e}")
             raise
 
-    async def execute_backtest(
-        self, request, db: Session
-    ) -> Dict[str, Any]:
+    async def execute_backtest(self, request, db: Session) -> Dict[str, Any]:
         """
         バックテストを実行し、結果をデータベースに保存
 
