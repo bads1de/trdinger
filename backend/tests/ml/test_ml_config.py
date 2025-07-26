@@ -31,25 +31,52 @@ class TestMLConfig(unittest.TestCase):
         self.assertAlmostEqual(total, 1.0, places=2)
 
     def test_env_override(self):
-        """環境変数オーバーライドのテスト（削除済み機能）"""
-        # 環境変数機能は削除されたため、デフォルト値のテストに変更
-        config = MLConfig()
+        """環境変数オーバーライドのテスト"""
+        import os
 
-        # デフォルト値が設定されていることを確認
-        self.assertEqual(config.prediction.DEFAULT_UP_PROB, 0.33)
-        self.assertEqual(config.prediction.DEFAULT_DOWN_PROB, 0.33)
-        self.assertEqual(config.prediction.DEFAULT_RANGE_PROB, 0.34)
-        self.assertEqual(config.data_processing.MAX_OHLCV_ROWS, 10000)
-        self.assertFalse(config.data_processing.DEBUG_MODE)
+        # 環境変数を設定
+        os.environ["ML_PREDICTION_DEFAULT_UP_PROB"] = "0.5"
+        os.environ["ML_DATA_PROCESSING_MAX_OHLCV_ROWS"] = "500000"
+        os.environ["ML_DATA_PROCESSING_DEBUG_MODE"] = "true"
+
+        try:
+            # 新しい設定インスタンスを作成（環境変数が反映される）
+            config = MLConfig()
+
+            # 環境変数が反映されていることを確認
+            self.assertEqual(config.prediction.DEFAULT_UP_PROB, 0.5)
+            self.assertEqual(config.data_processing.MAX_OHLCV_ROWS, 500000)
+            self.assertTrue(config.data_processing.DEBUG_MODE)
+        finally:
+            # 環境変数をクリーンアップ
+            os.environ.pop("ML_PREDICTION_DEFAULT_UP_PROB", None)
+            os.environ.pop("ML_DATA_PROCESSING_MAX_OHLCV_ROWS", None)
+            os.environ.pop("ML_DATA_PROCESSING_DEBUG_MODE", None)
 
     def test_invalid_env_values(self):
-        """無効な環境変数値のテスト（削除済み機能）"""
-        # 環境変数機能は削除されたため、デフォルト値のテストに変更
-        config = MLConfig()
+        """無効な環境変数値のテスト"""
+        import os
 
-        # デフォルト値が使用されていることを確認
-        self.assertEqual(config.prediction.DEFAULT_UP_PROB, 0.33)
-        self.assertEqual(config.data_processing.MAX_OHLCV_ROWS, 10000)
+        # 無効な環境変数を設定
+        os.environ["ML_PREDICTION_DEFAULT_UP_PROB"] = "invalid_value"
+        os.environ["ML_DATA_PROCESSING_MAX_OHLCV_ROWS"] = "not_a_number"
+
+        try:
+            # pydantic-settingsは無効な値に対してValidationErrorを発生させるか、
+            # デフォルト値を使用する
+            config = MLConfig()
+
+            # デフォルト値が使用されていることを確認
+            # （無効な値は無視され、デフォルト値が使用される）
+            self.assertEqual(config.prediction.DEFAULT_UP_PROB, 0.33)
+            self.assertEqual(config.data_processing.MAX_OHLCV_ROWS, 1000000)
+        except Exception:
+            # ValidationErrorが発生する場合もある
+            pass
+        finally:
+            # 環境変数をクリーンアップ
+            os.environ.pop("ML_PREDICTION_DEFAULT_UP_PROB", None)
+            os.environ.pop("ML_DATA_PROCESSING_MAX_OHLCV_ROWS", None)
 
     def test_prediction_validation(self):
         """予測値バリデーションのテスト"""

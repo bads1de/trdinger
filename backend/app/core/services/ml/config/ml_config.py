@@ -8,78 +8,82 @@ ML関連の設定管理
 import os
 import logging
 from typing import Dict, Any, List, Optional
-from dataclasses import dataclass, field, asdict
+from pydantic import Field, model_validator, ConfigDict
+from pydantic_settings import BaseSettings
 
 
-@dataclass
-class DataProcessingConfig:
+class DataProcessingConfig(BaseSettings):
     """データ処理関連の設定"""
 
     # データ制限（大幅に緩和）
-    MAX_OHLCV_ROWS: int = 1000000  # 100万行まで
-    MAX_FEATURE_ROWS: int = 1000000  # 100万行まで
+    MAX_OHLCV_ROWS: int = Field(default=1000000, description="100万行まで")
+    MAX_FEATURE_ROWS: int = Field(default=1000000, description="100万行まで")
 
     # タイムアウト設定（大幅に緩和）
-    FEATURE_CALCULATION_TIMEOUT: int = 3600  # 1時間
-    MODEL_TRAINING_TIMEOUT: int = 7200  # 2時間
-    MODEL_PREDICTION_TIMEOUT: int = 10
+    FEATURE_CALCULATION_TIMEOUT: int = Field(default=3600, description="1時間")
+    MODEL_TRAINING_TIMEOUT: int = Field(default=7200, description="2時間")
+    MODEL_PREDICTION_TIMEOUT: int = Field(default=10)
 
     # メモリ管理
-    MEMORY_WARNING_THRESHOLD: int = 8000
-    MEMORY_LIMIT_THRESHOLD: int = 10000
+    MEMORY_WARNING_THRESHOLD: int = Field(default=8000)
+    MEMORY_LIMIT_THRESHOLD: int = Field(default=10000)
 
     # デバッグモード
-    DEBUG_MODE: bool = False
+    DEBUG_MODE: bool = Field(default=False)
 
     # ログレベル
-    LOG_LEVEL: str = "INFO"
+    LOG_LEVEL: str = Field(default="INFO")
+
+    model_config = ConfigDict(env_prefix="ML_DATA_PROCESSING_")
 
 
-@dataclass
-class ModelConfig:
+class ModelConfig(BaseSettings):
     """モデル関連の設定"""
 
     # モデル保存パス
-    MODEL_SAVE_PATH: str = "models/"
+    MODEL_SAVE_PATH: str = Field(default="models/")
 
     # モデルファイル設定
-    MODEL_FILE_EXTENSION: str = ".pkl"
-    MODEL_NAME_PREFIX: str = "ml_signal_model"
-    AUTO_STRATEGY_MODEL_NAME: str = "auto_strategy_ml_model"
+    MODEL_FILE_EXTENSION: str = Field(default=".pkl")
+    MODEL_NAME_PREFIX: str = Field(default="ml_signal_model")
+    AUTO_STRATEGY_MODEL_NAME: str = Field(default="auto_strategy_ml_model")
 
     # モデル管理
-    MAX_MODEL_VERSIONS: int = 10
-    MODEL_RETENTION_DAYS: int = 30
+    MAX_MODEL_VERSIONS: int = Field(default=10)
+    MODEL_RETENTION_DAYS: int = Field(default=30)
 
-    def __post_init__(self):
+    model_config = ConfigDict(env_prefix="ML_MODEL_")
+
+    def model_post_init(self, __context: Any) -> None:
         """初期化後処理：ディレクトリ作成"""
         os.makedirs(self.MODEL_SAVE_PATH, exist_ok=True)
 
 
-@dataclass
-class LightGBMConfig:
+class LightGBMConfig(BaseSettings):
     """LightGBM関連の設定"""
 
     # 基本パラメータ
-    OBJECTIVE: str = "multiclass"
-    NUM_CLASS: int = 3
-    METRIC: str = "multi_logloss"
-    BOOSTING_TYPE: str = "gbdt"
+    OBJECTIVE: str = Field(default="multiclass")
+    NUM_CLASS: int = Field(default=3)
+    METRIC: str = Field(default="multi_logloss")
+    BOOSTING_TYPE: str = Field(default="gbdt")
 
     # ハイパーパラメータ
-    NUM_LEAVES: int = 31
-    LEARNING_RATE: float = 0.05
-    FEATURE_FRACTION: float = 0.9
-    BAGGING_FRACTION: float = 0.8
-    BAGGING_FREQ: int = 5
+    NUM_LEAVES: int = Field(default=31)
+    LEARNING_RATE: float = Field(default=0.05)
+    FEATURE_FRACTION: float = Field(default=0.9)
+    BAGGING_FRACTION: float = Field(default=0.8)
+    BAGGING_FREQ: int = Field(default=5)
 
     # 学習制御
-    NUM_BOOST_ROUND: int = 1000
-    EARLY_STOPPING_ROUNDS: int = 50
-    VERBOSE: int = -1
+    NUM_BOOST_ROUND: int = Field(default=1000)
+    EARLY_STOPPING_ROUNDS: int = Field(default=50)
+    VERBOSE: int = Field(default=-1)
 
     # その他
-    RANDOM_STATE: int = 42
+    RANDOM_STATE: int = Field(default=42)
+
+    model_config = ConfigDict(env_prefix="ML_LIGHTGBM_")
 
     def to_dict(self) -> Dict[str, Any]:
         """辞書形式で設定を返す"""
@@ -98,24 +102,25 @@ class LightGBMConfig:
         }
 
 
-@dataclass
-class FeatureEngineeringConfig:
+class FeatureEngineeringConfig(BaseSettings):
     """特徴量エンジニアリング関連の設定"""
 
     # 計算期間のデフォルト値
-    DEFAULT_LOOKBACK_PERIODS: Optional[Dict[str, int]] = None
+    DEFAULT_LOOKBACK_PERIODS: Optional[Dict[str, int]] = Field(default=None)
 
     # キャッシュ設定
-    CACHE_ENABLED: bool = True
-    MAX_CACHE_SIZE: int = 10
-    CACHE_TTL_SECONDS: int = 3600
+    CACHE_ENABLED: bool = Field(default=True)
+    MAX_CACHE_SIZE: int = Field(default=10)
+    CACHE_TTL_SECONDS: int = Field(default=3600)
 
     # 特徴量計算設定
-    PRICE_FEATURE_PERIODS: Optional[List[int]] = None
-    VOLATILITY_PERIODS: Optional[List[int]] = None
-    VOLUME_PERIODS: Optional[List[int]] = None
+    PRICE_FEATURE_PERIODS: Optional[List[int]] = Field(default=None)
+    VOLATILITY_PERIODS: Optional[List[int]] = Field(default=None)
+    VOLUME_PERIODS: Optional[List[int]] = Field(default=None)
 
-    def __post_init__(self):
+    model_config = ConfigDict(env_prefix="ML_FEATURE_")
+
+    def model_post_init(self, __context: Any) -> None:
         """デフォルト値の設定"""
         if self.DEFAULT_LOOKBACK_PERIODS is None:
             self.DEFAULT_LOOKBACK_PERIODS = {
@@ -136,53 +141,55 @@ class FeatureEngineeringConfig:
             self.VOLUME_PERIODS = [10, 20, 30]
 
 
-@dataclass
-class TrainingConfig:
+class TrainingConfig(BaseSettings):
     """学習関連の設定"""
 
     # データ分割
-    TRAIN_TEST_SPLIT: float = 0.8
-    CROSS_VALIDATION_FOLDS: int = 5
+    TRAIN_TEST_SPLIT: float = Field(default=0.8)
+    CROSS_VALIDATION_FOLDS: int = Field(default=5)
 
     # ターゲット作成
-    PREDICTION_HORIZON: int = 24
-    THRESHOLD_UP: float = 0.02
-    THRESHOLD_DOWN: float = -0.02
+    PREDICTION_HORIZON: int = Field(default=24)
+    THRESHOLD_UP: float = Field(default=0.02)
+    THRESHOLD_DOWN: float = Field(default=-0.02)
 
     # 学習制御
-    RANDOM_STATE: int = 42
-    MIN_TRAINING_SAMPLES: int = 10  # 最小限に緩和
+    RANDOM_STATE: int = Field(default=42)
+    MIN_TRAINING_SAMPLES: int = Field(default=10, description="最小限に緩和")
 
     # 評価設定
-    PERFORMANCE_THRESHOLD: float = 0.05
-    VALIDATION_SPLIT: float = 0.2
+    PERFORMANCE_THRESHOLD: float = Field(default=0.05)
+    VALIDATION_SPLIT: float = Field(default=0.2)
+
+    model_config = ConfigDict(env_prefix="ML_TRAINING_")
 
 
-@dataclass
-class PredictionConfig:
+class PredictionConfig(BaseSettings):
     """予測関連の設定"""
 
     # デフォルト予測値
-    DEFAULT_UP_PROB: float = 0.33
-    DEFAULT_DOWN_PROB: float = 0.33
-    DEFAULT_RANGE_PROB: float = 0.34
+    DEFAULT_UP_PROB: float = Field(default=0.33)
+    DEFAULT_DOWN_PROB: float = Field(default=0.33)
+    DEFAULT_RANGE_PROB: float = Field(default=0.34)
 
     # エラー時フォールバック値
-    FALLBACK_UP_PROB: float = 0.33
-    FALLBACK_DOWN_PROB: float = 0.33
-    FALLBACK_RANGE_PROB: float = 0.34
+    FALLBACK_UP_PROB: float = Field(default=0.33)
+    FALLBACK_DOWN_PROB: float = Field(default=0.33)
+    FALLBACK_RANGE_PROB: float = Field(default=0.34)
 
     # 予測値検証
-    MIN_PROBABILITY: float = 0.0
-    MAX_PROBABILITY: float = 1.0
-    PROBABILITY_SUM_MIN: float = 0.8
-    PROBABILITY_SUM_MAX: float = 1.2
+    MIN_PROBABILITY: float = Field(default=0.0)
+    MAX_PROBABILITY: float = Field(default=1.0)
+    PROBABILITY_SUM_MIN: float = Field(default=0.8)
+    PROBABILITY_SUM_MAX: float = Field(default=1.2)
 
     # 予測結果の拡張
-    EXPAND_TO_DATA_LENGTH: bool = True
+    EXPAND_TO_DATA_LENGTH: bool = Field(default=True)
 
     # データサイズ制限
-    DEFAULT_INDICATOR_LENGTH: int = 100
+    DEFAULT_INDICATOR_LENGTH: int = Field(default=100)
+
+    model_config = ConfigDict(env_prefix="ML_PREDICTION_")
 
     def get_default_predictions(self) -> Dict[str, float]:
         """デフォルトの予測値を取得"""
@@ -298,53 +305,59 @@ class PredictionConfig:
         return errors
 
 
-@dataclass
-class RetrainingConfig:
+class RetrainingConfig(BaseSettings):
     """再学習関連の設定"""
 
     # スケジュール設定
-    CHECK_INTERVAL_SECONDS: int = 3600
-    MAX_CONCURRENT_JOBS: int = 2
-    JOB_TIMEOUT_SECONDS: int = 7200
+    CHECK_INTERVAL_SECONDS: int = Field(default=3600)
+    MAX_CONCURRENT_JOBS: int = Field(default=2)
+    JOB_TIMEOUT_SECONDS: int = Field(default=7200)
 
     # データ管理
-    DATA_RETENTION_DAYS: int = 90
-    INCREMENTAL_TRAINING_ENABLED: bool = True
+    DATA_RETENTION_DAYS: int = Field(default=90)
+    INCREMENTAL_TRAINING_ENABLED: bool = Field(default=True)
 
     # 性能監視
-    PERFORMANCE_DEGRADATION_THRESHOLD: float = 0.05
-    DATA_DRIFT_THRESHOLD: float = 0.1
+    PERFORMANCE_DEGRADATION_THRESHOLD: float = Field(default=0.05)
+    DATA_DRIFT_THRESHOLD: float = Field(default=0.1)
+
+    model_config = ConfigDict(env_prefix="ML_RETRAINING_")
 
 
-@dataclass
-class EnsembleConfig:
+class EnsembleConfig(BaseSettings):
     """アンサンブル学習関連の設定"""
 
     # デフォルトアンサンブル設定
-    DEFAULT_METHOD: str = "stacking"  # デフォルトのアンサンブル手法（多様性重視）
+    DEFAULT_METHOD: str = Field(
+        default="stacking", description="デフォルトのアンサンブル手法（多様性重視）"
+    )
 
     # バギング設定
-    BAGGING_N_ESTIMATORS: int = 5  # ベースモデル数
-    BAGGING_BOOTSTRAP_FRACTION: float = 0.8  # ブートストラップサンプリング比率
-    BAGGING_BASE_MODEL: str = "lightgbm"  # ベースモデルタイプ
+    BAGGING_N_ESTIMATORS: int = Field(default=5, description="ベースモデル数")
+    BAGGING_BOOTSTRAP_FRACTION: float = Field(
+        default=0.8, description="ブートストラップサンプリング比率"
+    )
+    BAGGING_BASE_MODEL: str = Field(
+        default="lightgbm", description="ベースモデルタイプ"
+    )
 
     # スタッキング設定
-    STACKING_BASE_MODELS: List[str] = field(
-        default_factory=lambda: ["lightgbm", "random_forest"]
+    STACKING_BASE_MODELS: List[str] = Field(default=["lightgbm", "random_forest"])
+    STACKING_META_MODEL: str = Field(
+        default="logistic_regression", description="メタモデル"
     )
-    STACKING_META_MODEL: str = "logistic_regression"  # メタモデル
-    STACKING_CV_FOLDS: int = 5  # クロスバリデーション分割数
-    STACKING_USE_PROBAS: bool = True  # 確率値を使用するか
+    STACKING_CV_FOLDS: int = Field(default=5, description="クロスバリデーション分割数")
+    STACKING_USE_PROBAS: bool = Field(default=True, description="確率値を使用するか")
 
     # 最適化設定
-    OPTIMIZATION_N_ESTIMATORS_RANGE: List[int] = field(default_factory=lambda: [3, 10])
-    OPTIMIZATION_BOOTSTRAP_FRACTION_RANGE: List[float] = field(
-        default_factory=lambda: [0.6, 0.9]
-    )
+    OPTIMIZATION_N_ESTIMATORS_RANGE: List[int] = Field(default=[3, 10])
+    OPTIMIZATION_BOOTSTRAP_FRACTION_RANGE: List[float] = Field(default=[0.6, 0.9])
+
+    model_config = ConfigDict(env_prefix="ML_ENSEMBLE_")
 
     def to_dict(self) -> Dict[str, Any]:
         """辞書形式に変換"""
-        return asdict(self)
+        return self.model_dump()
 
     def get_default_config(self) -> Dict[str, Any]:
         """デフォルトのアンサンブル設定を取得（多様性重視のスタッキング）"""
