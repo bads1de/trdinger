@@ -24,6 +24,8 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 import OptimizationSettings, {
   OptimizationSettingsConfig,
 } from "./OptimizationSettings";
@@ -82,35 +84,32 @@ export default function MLTraining() {
       },
     });
 
+  const [automlEnabled, setAutomlEnabled] = useState(false);
   const [showAutoMLSettings, setShowAutoMLSettings] = useState(false);
   const [showAutoMLPresets, setShowAutoMLPresets] = useState(false);
 
   // AutoML設定プリセット関数
   const applyAutoMLPreset = (preset: "default" | "financial" | "disabled") => {
-    switch (preset) {
-      case "default":
-        setAutomlSettings(getDefaultAutoMLConfig());
-        break;
-      case "financial":
-        setAutomlSettings(getFinancialOptimizedAutoMLConfig());
-        break;
-      case "disabled":
-        setAutomlSettings({
-          tsfresh: { ...automlSettings.tsfresh, enabled: false },
-          featuretools: { ...automlSettings.featuretools, enabled: false },
-          autofeat: { ...automlSettings.autofeat, enabled: false },
-        });
-        break;
+    if (preset === "disabled") {
+      setAutomlEnabled(false);
+      setAutomlSettings({
+        tsfresh: { ...automlSettings.tsfresh, enabled: false },
+        featuretools: { ...automlSettings.featuretools, enabled: false },
+        autofeat: { ...automlSettings.autofeat, enabled: false },
+      });
+    } else {
+      setAutomlEnabled(true);
+      const newConfig =
+        preset === "default"
+          ? getDefaultAutoMLConfig()
+          : getFinancialOptimizedAutoMLConfig();
+      setAutomlSettings(newConfig);
     }
   };
 
   // AutoML設定が有効かどうかを判定
   const isAutoMLEnabled = () => {
-    return (
-      automlSettings.tsfresh.enabled ||
-      automlSettings.featuretools.enabled ||
-      automlSettings.autofeat.enabled
-    );
+    return automlEnabled;
   };
 
   const getStatusIcon = () => {
@@ -236,92 +235,139 @@ export default function MLTraining() {
           {/* AutoML特徴量エンジニアリング設定 */}
           <Card>
             <CardHeader>
-              <div className="flex items-center justify-between">
-                <CardTitle className="flex items-center gap-2">
-                  <Bot className="h-5 w-5" />
-                  <span>AutoML特徴量エンジニアリング</span>
-                  <Badge variant={isAutoMLEnabled() ? "default" : "secondary"}>
-                    {isAutoMLEnabled() ? "有効" : "無効"}
-                  </Badge>
-                </CardTitle>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setShowAutoMLSettings(!showAutoMLSettings)}
-                  disabled={trainingStatus.is_training}
-                >
-                  {showAutoMLSettings ? (
-                    <>
-                      <ChevronUp className="h-4 w-4 mr-1" />
-                      設定を隠す
-                    </>
-                  ) : (
-                    <>
-                      <ChevronDown className="h-4 w-4 mr-1" />
-                      設定を表示
-                    </>
-                  )}
-                </Button>
-              </div>
+              <CardTitle className="flex items-center gap-2">
+                <Bot className="h-5 w-5" />
+                <span>AutoML特徴量エンジニアリング</span>
+              </CardTitle>
+              <p className="text-sm text-muted-foreground">
+                時系列データから自動で特徴量を生成・選択
+              </p>
             </CardHeader>
-            <CardContent>
-              {/* AutoML設定プリセットボタン */}
-              <div className="flex gap-2 mb-4">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => applyAutoMLPreset("disabled")}
+            <CardContent className="space-y-6">
+              <div className="flex items-center justify-between">
+                <div className="space-y-1">
+                  <Label
+                    htmlFor="automl-enabled"
+                    className="text-sm font-medium"
+                  >
+                    AutoML特徴量エンジニアリングを有効化
+                  </Label>
+                  <p className="text-xs text-muted-foreground">
+                    TSFresh, Featuretools, AutoFeat を使用します
+                  </p>
+                </div>
+                <Switch
+                  id="automl-enabled"
+                  checked={automlEnabled}
+                  onCheckedChange={(checked) => {
+                    setAutomlEnabled(checked);
+                    if (checked) {
+                      setAutomlSettings(getDefaultAutoMLConfig());
+                    } else {
+                      setAutomlSettings({
+                        tsfresh: { ...automlSettings.tsfresh, enabled: false },
+                        featuretools: {
+                          ...automlSettings.featuretools,
+                          enabled: false,
+                        },
+                        autofeat: {
+                          ...automlSettings.autofeat,
+                          enabled: false,
+                        },
+                      });
+                    }
+                  }}
                   disabled={trainingStatus.is_training}
-                >
-                  無効
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => applyAutoMLPreset("default")}
-                  disabled={trainingStatus.is_training}
-                >
-                  <Bot className="h-4 w-4 mr-1" />
-                  デフォルト
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => applyAutoMLPreset("financial")}
-                  disabled={trainingStatus.is_training}
-                >
-                  <Zap className="h-4 w-4 mr-1" />
-                  金融最適化
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setShowAutoMLPresets(!showAutoMLPresets)}
-                  disabled={trainingStatus.is_training}
-                >
-                  <Settings className="h-4 w-4 mr-1" />
-                  プリセット選択
-                </Button>
+                />
               </div>
 
-              {/* AutoMLプリセット選択 */}
-              {showAutoMLPresets && (
-                <div className="mb-4">
-                  <AutoMLPresetSelector
-                    currentConfig={automlSettings}
-                    onConfigChange={setAutomlSettings}
-                    isLoading={trainingStatus.is_training}
-                  />
-                </div>
-              )}
+              {automlEnabled && (
+                <div className="space-y-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+                  <div className="flex items-center justify-between">
+                    <p className="text-sm font-medium">詳細設定とプリセット</p>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setShowAutoMLSettings(!showAutoMLSettings)}
+                      disabled={trainingStatus.is_training}
+                    >
+                      {showAutoMLSettings ? (
+                        <>
+                          <ChevronUp className="h-4 w-4 mr-1" />
+                          隠す
+                        </>
+                      ) : (
+                        <>
+                          <ChevronDown className="h-4 w-4 mr-1" />
+                          表示
+                        </>
+                      )}
+                    </Button>
+                  </div>
 
-              {/* AutoML詳細設定 */}
-              {showAutoMLSettings && (
-                <AutoMLFeatureSettings
-                  settings={automlSettings}
-                  onChange={setAutomlSettings}
-                  isLoading={trainingStatus.is_training}
-                />
+                  {showAutoMLSettings && (
+                    <div className="space-y-4">
+                      {/* AutoML設定プリセットボタン */}
+                      <div className="flex flex-wrap gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => applyAutoMLPreset("disabled")}
+                          disabled={trainingStatus.is_training}
+                        >
+                          無効
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => applyAutoMLPreset("default")}
+                          disabled={trainingStatus.is_training}
+                        >
+                          <Bot className="h-4 w-4 mr-1" />
+                          デフォルト
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => applyAutoMLPreset("financial")}
+                          disabled={trainingStatus.is_training}
+                        >
+                          <Zap className="h-4 w-4 mr-1" />
+                          金融最適化
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() =>
+                            setShowAutoMLPresets(!showAutoMLPresets)
+                          }
+                          disabled={trainingStatus.is_training}
+                        >
+                          <Settings className="h-4 w-4 mr-1" />
+                          プリセット選択
+                        </Button>
+                      </div>
+
+                      {/* AutoMLプリセット選択 */}
+                      {showAutoMLPresets && (
+                        <div className="mb-4">
+                          <AutoMLPresetSelector
+                            currentConfig={automlSettings}
+                            onConfigChange={setAutomlSettings}
+                            isLoading={trainingStatus.is_training}
+                          />
+                        </div>
+                      )}
+
+                      {/* AutoML詳細設定 */}
+                      <AutoMLFeatureSettings
+                        settings={automlSettings}
+                        onChange={setAutomlSettings}
+                        isLoading={trainingStatus.is_training}
+                      />
+                    </div>
+                  )}
+                </div>
               )}
             </CardContent>
           </Card>

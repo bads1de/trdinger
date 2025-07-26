@@ -36,15 +36,23 @@ export default function OptimizationSettings({
       </CardHeader>
       <CardContent className="space-y-6">
         {/* 最適化有効/無効 */}
-        <div className="flex items-center space-x-2">
+        <div className="flex items-center justify-between">
+          <div className="space-y-1">
+            <Label
+              htmlFor="optimization-enabled"
+              className="text-sm font-medium"
+            >
+              ハイパーパラメータ自動最適化を有効にする
+            </Label>
+            <p className="text-xs text-muted-foreground">
+              Optunaが最適なパラメータを自動で探索します
+            </p>
+          </div>
           <Switch
             id="optimization-enabled"
             checked={settings.enabled}
             onCheckedChange={(enabled) => onChange({ ...settings, enabled })}
           />
-          <Label htmlFor="optimization-enabled">
-            ハイパーパラメータ自動最適化を有効にする
-          </Label>
         </div>
 
         {settings.enabled && (
