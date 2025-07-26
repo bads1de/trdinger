@@ -56,14 +56,6 @@
 
 ## 3. ML Services Refactoring Proposal
 
-### 3.1. グローバルな状態管理 (`ml_training_orchestration_service.py`)
-
-- **課題**: ML のトレーニング状態が、単一のグローバル変数 `training_status` によって管理されています。これは、複数のトレーニングリクエストを同時に処理できず、サーバーを複数インスタンスでスケールアウトした場合に状態が共有されないという深刻な問題を抱えています。
-- **提案**:
-  - **状態管理の外部化**: トレーニングジョブの状態を、グローバル変数ではなく、データベース（例: `ml_jobs` テーブル）またはインメモリキャッシュ（Redis など）で管理するように変更します。
-  - **ジョブ ID の導入**: 各トレーニングリクエストに対して一意のジョブ ID を発行し、クライアントはその ID を使って進捗や結果を非同期に問い合わせるアーキテクチャに変更します。
-  - **`BackgroundTaskManager` の活用**: `background_task_manager.py` を活用し、タスクごとのリソースと状態をより堅牢に管理します。
-
 ### 3.2. 複雑な特徴量生成パイプライン (`EnhancedFeatureEngineeringService`)
 
 - **課題**: `calculate_enhanced_features` メソッドが、手動特徴量、TSFresh、Featuretools、AutoFeat の処理を逐次的に呼び出す長大なものになっており、可読性と拡張性が低下しています。
