@@ -1,8 +1,8 @@
-# AutoML メモリ管理最適化 - 設計書
+# AutoML メモリ管理最適化 - 設計書（ライブラリ組み込み機能活用版）
 
 ## 概要
 
-AutoML のメモリリーク問題（メモリ使用率 99%超過）を根本的に解決するため、適切なリソース管理、循環参照の解決、効率的なメモリ使用パターンを実装します。
+AutoML のメモリリーク問題（メモリ使用率 99%超過）を既存ライブラリの組み込みメモリ管理機能を活用して解決します。フルスクラッチでの実装を避け、各ライブラリの最適化機能を組み合わせて効率的なメモリ使用を実現します。
 
 ## アーキテクチャ
 
@@ -10,344 +10,384 @@ AutoML のメモリリーク問題（メモリ使用率 99%超過）を根本的
 
 ```mermaid
 graph TB
-    A[AutoML Request] --> B[Memory Manager]
-    B --> C[Resource Allocator]
-    C --> D[AutoFeat Processor]
-    D --> E[Memory Monitor]
-    E --> F[Cleanup Manager]
-    F --> G[Response]
+    A[AutoML Request] --> B[Library Config Manager]
+    B --> C[AutoFeat Optimizer]
+    C --> D[Pandas Memory Optimizer]
+    D --> E[NumPy Memory Manager]
+    E --> F[Scikit-learn Optimizer]
+    F --> G[Memory Monitor]
+    G --> H[Response]
 
-    B --> H[Memory Pool]
-    C --> I[Batch Controller]
-    E --> J[Leak Detector]
-    F --> K[Emergency Cleanup]
+    B --> I[AutoFeat max_gb Config]
+    C --> J[Pandas Downcast]
+    D --> K[NumPy memmap]
+    E --> L[Joblib Memory Limit]
+    G --> M[Built-in Profiling]
 ```
 
 ### レイヤー構造
 
-1. **Memory Management Layer**: メモリ管理の中核
-2. **Resource Control Layer**: リソース制御とモニタリング
-3. **Processing Layer**: AutoML 処理の実行
-4. **Monitoring Layer**: メモリ監視と診断
+1. **Configuration Layer**: 各ライブラリのメモリ設定管理
+2. **Optimization Layer**: ライブラリ固有の最適化機能活用
+3. **Processing Layer**: 最適化された AutoML 処理実行
+4. **Monitoring Layer**: 組み込み監視機能の活用
+
+## ライブラリ別最適化戦略
+
+### 1. AutoFeat 最適化
+
+**組み込み機能の活用**:
+
+```python
+# AutoFeatの組み込みメモリ制限機能
+autofeat_model = AutoFeatRegressor(
+    max_gb=2.0,  # メモリ使用量を2GBに制限
+    feateng_steps=1,  # 特徴量生成ステップを制限
+    featsel_runs=1,  # 特徴量選択実行回数を制限
+    verbose=0  # ログ出力を最小化
+)
+```
+
+**最適化ポイント**:
+
+- `max_gb`パラメータでメモリ使用量を直接制限
+- `feateng_steps`を減らして計算量を削減
+- `featsel_runs`を最小化してメモリ使用を抑制
+
+### 2. Pandas 最適化
+
+**組み込み機能の活用**:
+
+```python
+# データ型の最適化
+def optimize_pandas_memory(df: pd.DataFrame) -> pd.DataFrame:
+    # 数値型の自動ダウンキャスト
+    for col in df.select_dtypes(include=['int']).columns:
+        df[col] = pd.to_numeric(df[col], downcast='integer')
+
+    for col in df.select_dtypes(include=['float']).columns:
+        df[col] = pd.to_numeric(df[col], downcast='float')
+
+    # カテゴリ型の活用
+    for col in df.select_dtypes(include=['object']).columns:
+        if df[col].nunique() / len(df) < 0.5:  # 50%未満がユニーク
+            df[col] = df[col].astype('category')
+
+    return df
+
+# チャンク読み込み
+def read_data_efficiently(file_path: str, chunk_size: int = 10000):
+    return pd.read_csv(file_path, chunksize=chunk_size)
+```
+
+**最適化ポイント**:
+
+- `pd.to_numeric(downcast=...)`で自動データ型最適化
+- `astype('category')`でカテゴリデータの効率化
+- `chunksize`パラメータでメモリ効率的な読み込み
+
+### 3. NumPy 最適化
+
+**組み込み機能の活用**:
+
+```python
+# メモリマッピングの活用
+def create_memory_mapped_array(shape, dtype=np.float32):
+    return np.memmap('temp_array.dat', dtype=dtype, mode='w+', shape=shape)
+
+# データ型の最適化
+def optimize_numpy_dtype(arr: np.ndarray) -> np.ndarray:
+    if arr.dtype == np.float64:
+        # float64からfloat32への変換（精度が許容範囲内の場合）
+        if np.allclose(arr, arr.astype(np.float32)):
+            return arr.astype(np.float32)
+    return arr
+```
+
+**最適化ポイント**:
+
+- `np.memmap`でディスクベースのメモリ管理
+- データ型の自動最適化（float64→float32）
+- インプレース操作の活用
+
+### 4. Scikit-learn 最適化
+
+**組み込み機能の活用**:
+
+```python
+# Joblibのメモリ制限
+from sklearn.ensemble import RandomForestRegressor
+from joblib import parallel_backend
+
+def train_with_memory_limit():
+    with parallel_backend('threading', n_jobs=2):  # スレッド数制限
+        model = RandomForestRegressor(
+            n_estimators=50,  # 推定器数を制限
+            max_depth=10,     # 深度制限でメモリ使用量削減
+            random_state=42
+        )
+        return model
+
+# モデルの軽量化
+def compress_model(model):
+    # 不要な属性の削除
+    if hasattr(model, 'tree_'):
+        # 決定木の圧縮
+        pass
+    return model
+```
+
+**最適化ポイント**:
+
+- `n_jobs`でパラレル処理の制限
+- モデルパラメータでメモリ使用量制御
+- 不要な属性の削除による軽量化
 
 ## コンポーネント設計
 
-### 1. MemoryManager (メモリマネージャー)
-
-**責任**: AutoML 処理全体のメモリライフサイクル管理
+### 1. LibraryConfigManager (ライブラリ設定管理)
 
 ```python
-class MemoryManager:
-    """AutoML処理のメモリライフサイクルを管理"""
+@dataclass
+class MemoryOptimizationConfig:
+    """各ライブラリのメモリ最適化設定"""
+    autofeat_max_gb: float = 2.0
+    pandas_chunk_size: int = 10000
+    numpy_use_memmap: bool = True
+    sklearn_n_jobs: int = 2
+    enable_dtype_optimization: bool = True
 
-    def __init__(self, max_memory_gb: float = 4.0):
-        self.max_memory_gb = max_memory_gb
-        self.current_allocations = {}
-        self.memory_pool = MemoryPool()
-        self.leak_detector = MemoryLeakDetector()
+class LibraryConfigManager:
+    """ライブラリ設定の統合管理"""
+
+    def __init__(self, config: MemoryOptimizationConfig):
+        self.config = config
+
+    def get_autofeat_config(self) -> Dict[str, Any]:
+        return {
+            'max_gb': self.config.autofeat_max_gb,
+            'feateng_steps': 1,
+            'featsel_runs': 1,
+            'verbose': 0
+        }
+
+    def get_pandas_config(self) -> Dict[str, Any]:
+        return {
+            'chunk_size': self.config.pandas_chunk_size,
+            'optimize_dtypes': self.config.enable_dtype_optimization
+        }
+```
+
+### 2. MemoryEfficientAutoFeatProcessor
+
+```python
+class MemoryEfficientAutoFeatProcessor:
+    """メモリ効率的なAutoFeat処理器"""
+
+    def __init__(self, config_manager: LibraryConfigManager):
+        self.config_manager = config_manager
+        self.memory_monitor = MemoryMonitor()
+
+    def process_with_optimization(self, df: pd.DataFrame, target: pd.Series):
+        # 1. Pandasデータの最適化
+        optimized_df = self._optimize_pandas_data(df)
+
+        # 2. AutoFeat設定の適用
+        autofeat_config = self.config_manager.get_autofeat_config()
+
+        # 3. メモリ監視付き処理
+        with self.memory_monitor.monitor_process():
+            model = AutoFeatRegressor(**autofeat_config)
+            result = model.fit_transform(optimized_df, target)
+
+        return result
+
+    def _optimize_pandas_data(self, df: pd.DataFrame) -> pd.DataFrame:
+        """Pandasデータの最適化"""
+        # データ型の最適化
+        for col in df.select_dtypes(include=['int']).columns:
+            df[col] = pd.to_numeric(df[col], downcast='integer')
+
+        for col in df.select_dtypes(include=['float']).columns:
+            df[col] = pd.to_numeric(df[col], downcast='float')
+
+        return df
+```
+
+### 3. BuiltinMemoryMonitor
+
+```python
+class BuiltinMemoryMonitor:
+    """組み込み機能を活用したメモリ監視"""
+
+    def __init__(self):
+        self.process = psutil.Process()
 
     @contextmanager
-    def managed_processing(self, process_id: str):
-        """メモリ管理付きの処理実行"""
-        # メモリ割り当て
-        # 処理実行
-        # 確実なクリーンアップ
+    def monitor_process(self):
+        """プロセス監視コンテキスト"""
+        start_memory = self.process.memory_info().rss / 1024 / 1024
+
+        try:
+            yield
+        finally:
+            end_memory = self.process.memory_info().rss / 1024 / 1024
+            memory_diff = end_memory - start_memory
+
+            if memory_diff > 100:  # 100MB以上の増加
+                logger.warning(f"メモリ使用量増加: {memory_diff:.1f}MB")
+
+    def get_memory_usage(self) -> float:
+        """現在のメモリ使用量（MB）"""
+        return self.process.memory_info().rss / 1024 / 1024
+
+    def check_memory_threshold(self, threshold: float = 0.9) -> bool:
+        """メモリ使用率のしきい値チェック"""
+        memory_percent = psutil.virtual_memory().percent / 100
+        return memory_percent > threshold
 ```
 
-**主要機能**:
+## 実装戦略
 
-- プロセス単位のメモリ追跡
-- 自動リソース解放
-- メモリリーク検出
-- 緊急時のメモリ保護
-
-### 2. ResourceAllocator (リソース割り当て器)
-
-**責任**: メモリリソースの効率的な割り当てと管理
+### 1. 段階的最適化アプローチ
 
 ```python
-class ResourceAllocator:
-    """メモリリソースの動的割り当て管理"""
+class GradualOptimizationStrategy:
+    """段階的最適化戦略"""
 
-    def allocate_for_dataset(self, data_size: int) -> AllocationPlan:
-        """データサイズに基づく最適なリソース割り当て"""
-
-    def adjust_batch_size(self, available_memory: float) -> int:
-        """利用可能メモリに基づくバッチサイズ調整"""
-
-    def reserve_emergency_memory(self) -> None:
-        """緊急時用メモリの確保"""
+    def optimize_by_data_size(self, data_size_mb: float) -> MemoryOptimizationConfig:
+        """データサイズに基づく最適化設定"""
+        if data_size_mb > 1000:  # 1GB以上
+            return MemoryOptimizationConfig(
+                autofeat_max_gb=1.0,
+                pandas_chunk_size=5000,
+                numpy_use_memmap=True,
+                sklearn_n_jobs=1
+            )
+        elif data_size_mb > 500:  # 500MB以上
+            return MemoryOptimizationConfig(
+                autofeat_max_gb=2.0,
+                pandas_chunk_size=10000,
+                numpy_use_memmap=True,
+                sklearn_n_jobs=2
+            )
+        else:
+            return MemoryOptimizationConfig()  # デフォルト設定
 ```
 
-**主要機能**:
-
-- 動的メモリ割り当て
-- バッチサイズの最適化
-- メモリ予約システム
-- リソース競合の回避
-
-### 3. AutoFeatProcessor (AutoFeat 処理器)
-
-**責任**: メモリ効率的な AutoFeat 処理の実行
+### 2. 自動フォールバック機能
 
 ```python
-class AutoFeatProcessor:
-    """メモリ効率的なAutoFeat処理"""
+class AutoFallbackProcessor:
+    """自動フォールバック処理"""
 
-    def __init__(self, memory_manager: MemoryManager):
-        self.memory_manager = memory_manager
-        self.model_registry = WeakValueDictionary()
+    def process_with_fallback(self, df: pd.DataFrame, target: pd.Series):
+        """メモリ不足時の自動フォールバック"""
 
-    def process_with_memory_control(self, data: pd.DataFrame) -> ProcessResult:
-        """メモリ制御付きの処理実行"""
+        # 通常処理を試行
+        try:
+            return self._process_normal(df, target)
+        except MemoryError:
+            logger.warning("メモリ不足のため軽量モードに切り替え")
+            return self._process_lightweight(df, target)
 
-    def cleanup_model_references(self, model_id: str) -> None:
-        """モデル参照の確実なクリーンアップ"""
-```
+    def _process_lightweight(self, df: pd.DataFrame, target: pd.Series):
+        """軽量モード処理"""
+        # より厳しいメモリ制限
+        config = MemoryOptimizationConfig(
+            autofeat_max_gb=0.5,
+            pandas_chunk_size=2000,
+            sklearn_n_jobs=1
+        )
 
-**主要機能**:
-
-- 弱参照によるモデル管理
-- 段階的メモリ解放
-- 循環参照の防止
-- エラー時の安全なクリーンアップ
-
-### 4. MemoryMonitor (メモリ監視器)
-
-**責任**: リアルタイムメモリ監視と異常検知
-
-```python
-class MemoryMonitor:
-    """リアルタイムメモリ監視システム"""
-
-    def start_monitoring(self, process_id: str) -> None:
-        """プロセス監視開始"""
-
-    def detect_memory_leak(self) -> Optional[LeakReport]:
-        """メモリリーク検出"""
-
-    def generate_memory_report(self) -> MemoryReport:
-        """メモリ使用量レポート生成"""
-```
-
-**主要機能**:
-
-- 継続的メモリ監視
-- リーク検出アルゴリズム
-- パフォーマンス分析
-- アラート生成
-
-### 5. CleanupManager (クリーンアップマネージャー)
-
-**責任**: 確実なリソース解放とクリーンアップ
-
-```python
-class CleanupManager:
-    """リソースクリーンアップの管理"""
-
-    def register_cleanup_handler(self, resource_id: str, handler: Callable) -> None:
-        """クリーンアップハンドラーの登録"""
-
-    def emergency_cleanup(self) -> CleanupResult:
-        """緊急時のメモリクリーンアップ"""
-
-    def scheduled_cleanup(self) -> None:
-        """定期的なクリーンアップ"""
-```
-
-**主要機能**:
-
-- 階層的クリーンアップ
-- 緊急時対応
-- 定期メンテナンス
-- リソース追跡
-
-## データモデル
-
-### MemoryAllocation (メモリ割り当て情報)
-
-```python
-@dataclass
-class MemoryAllocation:
-    process_id: str
-    allocated_mb: float
-    peak_usage_mb: float
-    start_time: datetime
-    end_time: Optional[datetime]
-    status: AllocationStatus
-    cleanup_handlers: List[Callable]
-```
-
-### MemoryReport (メモリレポート)
-
-```python
-@dataclass
-class MemoryReport:
-    process_id: str
-    total_memory_mb: float
-    peak_memory_mb: float
-    memory_efficiency: float
-    leak_detected: bool
-    cleanup_time_ms: int
-    recommendations: List[str]
-```
-
-### LeakReport (リークレポート)
-
-```python
-@dataclass
-class LeakReport:
-    detection_time: datetime
-    suspected_objects: List[str]
-    memory_growth_rate: float
-    stack_trace: Optional[str]
-    severity: LeakSeverity
-```
-
-## インターフェース設計
-
-### 1. Memory Management API
-
-```python
-# メモリ管理付きAutoML処理
-async def process_automl_with_memory_management(
-    data: pd.DataFrame,
-    target: pd.Series,
-    config: AutoMLConfig
-) -> Tuple[pd.DataFrame, MemoryReport]:
-    """メモリ管理付きAutoML処理"""
-
-# メモリ状態の取得
-def get_memory_status() -> MemoryStatus:
-    """現在のメモリ状態を取得"""
-
-# 緊急クリーンアップの実行
-def emergency_memory_cleanup() -> CleanupResult:
-    """緊急メモリクリーンアップ"""
-```
-
-### 2. Configuration Interface
-
-```python
-@dataclass
-class MemoryConfig:
-    max_memory_gb: float = 4.0
-    emergency_threshold: float = 0.95
-    cleanup_interval_seconds: int = 300
-    enable_leak_detection: bool = True
-    batch_size_strategy: BatchSizeStrategy = BatchSizeStrategy.ADAPTIVE
+        processor = MemoryEfficientAutoFeatProcessor(
+            LibraryConfigManager(config)
+        )
+        return processor.process_with_optimization(df, target)
 ```
 
 ## エラーハンドリング
 
-### エラー階層
+### 組み込み機能ベースのエラー処理
 
 ```python
-class MemoryManagementError(Exception):
-    """メモリ管理関連エラーの基底クラス"""
+class LibraryBasedErrorHandler:
+    """ライブラリ組み込み機能を活用したエラー処理"""
 
-class MemoryExhaustionError(MemoryManagementError):
-    """メモリ不足エラー"""
+    def handle_memory_error(self, error: MemoryError, context: str):
+        """メモリエラーの処理"""
+        logger.error(f"メモリエラー発生: {context}")
 
-class MemoryLeakError(MemoryManagementError):
-    """メモリリークエラー"""
+        # 1. 現在のメモリ状況を確認
+        memory_info = psutil.virtual_memory()
+        logger.info(f"メモリ使用率: {memory_info.percent}%")
 
-class ResourceCleanupError(MemoryManagementError):
-    """リソースクリーンアップエラー"""
+        # 2. 自動的に軽量設定に切り替え
+        return self._switch_to_lightweight_mode()
+
+    def _switch_to_lightweight_mode(self):
+        """軽量モードへの切り替え"""
+        return MemoryOptimizationConfig(
+            autofeat_max_gb=0.5,
+            pandas_chunk_size=1000,
+            numpy_use_memmap=True,
+            sklearn_n_jobs=1
+        )
 ```
-
-### エラー処理戦略
-
-1. **予防的エラー処理**: メモリ不足の事前検知
-2. **段階的回復**: 軽量モードへの自動切り替え
-3. **緊急時対応**: システム保護のための強制クリーンアップ
-4. **ログ記録**: 詳細なエラー情報の記録
 
 ## テスト戦略
 
-### 1. メモリリークテスト
+### 組み込み機能のテスト
 
 ```python
-def test_memory_leak_detection():
-    """メモリリーク検出のテスト"""
-    # 意図的にリークを発生させる
-    # リーク検出の確認
-    # クリーンアップの検証
+def test_autofeat_memory_limit():
+    """AutoFeatのメモリ制限テスト"""
+    config = LibraryConfigManager(MemoryOptimizationConfig(autofeat_max_gb=1.0))
+    autofeat_config = config.get_autofeat_config()
+
+    assert autofeat_config['max_gb'] == 1.0
+
+    # 実際のメモリ使用量テスト
+    model = AutoFeatRegressor(**autofeat_config)
+    # メモリ使用量が制限内に収まることを確認
+
+def test_pandas_optimization():
+    """Pandas最適化テスト"""
+    df = create_test_dataframe()
+    original_memory = df.memory_usage(deep=True).sum()
+
+    optimized_df = optimize_pandas_memory(df)
+    optimized_memory = optimized_df.memory_usage(deep=True).sum()
+
+    assert optimized_memory < original_memory
 ```
-
-### 2. ストレステスト
-
-```python
-def test_high_memory_usage():
-    """高メモリ使用量でのテスト"""
-    # 大量データでの処理
-    # メモリ使用量の監視
-    # 安定性の確認
-```
-
-### 3. 並行処理テスト
-
-```python
-def test_concurrent_automl_processing():
-    """並行AutoML処理のテスト"""
-    # 複数プロセスの同時実行
-    # リソース競合の確認
-    # メモリ分離の検証
-```
-
-## パフォーマンス最適化
-
-### 1. メモリプール
-
-- 事前割り当てによる断片化防止
-- 再利用可能なメモリブロック
-- 効率的なメモリ管理
-
-### 2. 遅延評価
-
-- 必要時のみメモリ割り当て
-- ストリーミング処理の活用
-- メモリ使用量の最小化
-
-### 3. キャッシュ戦略
-
-- LRU キャッシュの実装
-- メモリ効率的なキャッシング
-- 自動キャッシュクリーンアップ
-
-## セキュリティ考慮事項
-
-### 1. メモリダンプ保護
-
-- 機密データのメモリクリア
-- セキュアなメモリ解放
-- ダンプファイルの暗号化
-
-### 2. リソース制限
-
-- プロセス単位のメモリ制限
-- 悪意のある処理の防止
-- システムリソースの保護
 
 ## 運用監視
 
-### 1. メトリクス
+### 組み込み監視機能の活用
 
-- メモリ使用率
-- 処理時間
-- エラー発生率
-- クリーンアップ効率
+```python
+class BuiltinMonitoringDashboard:
+    """組み込み監視機能ダッシュボード"""
 
-### 2. アラート
+    def get_library_memory_stats(self) -> Dict[str, Any]:
+        """各ライブラリのメモリ統計"""
+        return {
+            'system_memory': psutil.virtual_memory()._asdict(),
+            'process_memory': psutil.Process().memory_info()._asdict(),
+            'pandas_memory': self._get_pandas_memory_usage(),
+            'numpy_memory': self._get_numpy_memory_usage()
+        }
 
-- メモリ使用率 90%超過
-- メモリリーク検出
-- 処理時間異常
-- システム不安定
+    def _get_pandas_memory_usage(self) -> Dict[str, float]:
+        """Pandasメモリ使用量"""
+        # 現在読み込まれているDataFrameのメモリ使用量を取得
+        return {'total_mb': 0}  # 実装詳細
 
-### 3. ダッシュボード
+    def _get_numpy_memory_usage(self) -> Dict[str, float]:
+        """NumPyメモリ使用量"""
+        # NumPy配列のメモリ使用量を取得
+        return {'total_mb': 0}  # 実装詳細
+```
 
-- リアルタイムメモリ監視
-- 処理状況の可視化
-- 履歴データの分析
-- パフォーマンストレンド
+この設計により、フルスクラッチでの実装を避けながら、各ライブラリの組み込みメモリ管理機能を最大限活用してメモリリーク問題を解決できます。

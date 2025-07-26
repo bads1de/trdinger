@@ -36,13 +36,6 @@
 - **対象ファイル**: `feature_engineering/automl_features/autofeat_calculator.py`, `performance_optimizer.py`
 - **メリット**: ガベージコレクションへの過度な依存を減らし、より安定的で予測可能なメモリ使用量を実現します。
 
-#### 提案 4: 特徴量の冗長性管理の強化
-
-- **現状**: `AdvancedFeatureSelector`で相関の高い特徴量を除去する仕組みがありますが、手動生成された特徴量と AutoML によって生成された特徴量の間での冗長性は考慮されていない可能性があります。
-- **改善案**: `EnhancedFeatureEngineeringService`の最終段階で、すべての特徴量（手動＋ AutoML）を対象として`AdvancedFeatureSelector`を実行し、全体から見た冗長な特徴量（例：`manual_RSI`と`TSF_rsi_...`）を削除するステップを追加します。
-- **対象ファイル**: `feature_engineering/enhanced_feature_engineering_service.py`, `feature_engineering/automl_features/feature_selector.py`
-- **メリット**: モデルの学習効率が向上し、過学習のリスクが低減します。
-
 ### 【運用とオーケストレーション】
 
 #### 提案 8: バックグラウンドタスクの確実な停止メカニズムの導入
