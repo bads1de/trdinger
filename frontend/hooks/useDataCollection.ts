@@ -7,10 +7,10 @@
  */
 
 import { useCallback } from "react";
-import { usePostRequest } from "./usePostRequest";
+import { useApiCall } from "./useApiCall";
 
 const useCollection = <T>() => {
-  const { sendPostRequest, isLoading, error, data } = usePostRequest<T>();
+  const { execute, loading: isLoading, error } = useApiCall<T>();
 
   const collect = useCallback(
     async (
@@ -19,19 +19,19 @@ const useCollection = <T>() => {
       onSuccess?: (data: T) => void,
       onError?: (error: string) => void
     ) => {
-      if (window.confirm(confirmMessage)) {
-        const { success, data, error } = await sendPostRequest(endpoint);
-        if (success && data) {
-          onSuccess?.(data);
-        } else {
+      await execute(endpoint, {
+        method: "POST",
+        confirmMessage,
+        onSuccess,
+        onError: (error) => {
           onError?.(error || "データ収集に失敗しました");
-        }
-      }
+        },
+      });
     },
-    [sendPostRequest]
+    [execute]
   );
 
-  return { isLoading, error, data, collect };
+  return { isLoading, error, collect };
 };
 
 /**

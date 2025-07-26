@@ -8,7 +8,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { useDeleteRequest } from "@/hooks/useDeleteRequest";
+import { useApiCall } from "@/hooks/useApiCall";
 import ApiButton from "./ApiButton";
 import { RESET_CONFIGS } from "@/constants/dataResetConstants";
 
@@ -76,7 +76,7 @@ const DataResetButton: React.FC<DataResetButtonProps> = ({
   size = "sm",
   variant,
 }) => {
-  const { sendDeleteRequest, isLoading } = useDeleteRequest<DataResetResult>();
+  const { execute, loading: isLoading } = useApiCall<DataResetResult>();
 
   const config = RESET_CONFIGS[resetType];
   const buttonVariant = variant || config.variant;
@@ -104,16 +104,17 @@ const DataResetButton: React.FC<DataResetButtonProps> = ({
         "本当に実行しますか？";
     }
 
-    if (window.confirm(confirmMessage)) {
-      const { success, data, error } = await sendDeleteRequest(endpoint);
-
-      if (success && data) {
+    await execute(endpoint, {
+      method: "DELETE",
+      confirmMessage,
+      onSuccess: (data) => {
         onResetComplete?.(data);
-      } else {
+      },
+      onError: (error) => {
         console.error("データリセットエラー:", error);
         onResetError?.(error || "データリセット中にエラーが発生しました");
-      }
-    }
+      },
+    });
   };
 
   // ボタンラベルを動的に生成

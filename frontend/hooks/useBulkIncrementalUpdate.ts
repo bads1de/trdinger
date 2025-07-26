@@ -1,4 +1,4 @@
-import { usePostRequest } from "./usePostRequest";
+import { useApiCall } from "./useApiCall";
 import { useCallback } from "react";
 import { TimeFrame } from "@/types/market-data";
 import { BulkIncrementalUpdateResponse } from "@/types/data-collection";
@@ -15,11 +15,8 @@ interface BulkIncrementalUpdateOptions {
  * 差分データを一括で取得する機能を提供します。
  */
 export const useBulkIncrementalUpdate = () => {
-  const {
-    sendPostRequest,
-    isLoading,
-    error,
-  } = usePostRequest<BulkIncrementalUpdateResponse>();
+  const { execute, loading, error } =
+    useApiCall<BulkIncrementalUpdateResponse>();
 
   const bulkUpdate = useCallback(
     async (
@@ -33,16 +30,16 @@ export const useBulkIncrementalUpdate = () => {
         symbol
       )}`;
 
-      const { success, data, error: requestError } = await sendPostRequest(url);
-
-      if (success && data) {
-        onSuccess?.(data);
-      } else {
-        onError?.(requestError || "一括差分更新に失敗しました");
-      }
+      await execute(url, {
+        method: "POST",
+        onSuccess,
+        onError: (error) => {
+          onError?.(error || "一括差分更新に失敗しました");
+        },
+      });
     },
-    [sendPostRequest]
+    [execute]
   );
 
-  return { bulkUpdate, loading: isLoading, error };
+  return { bulkUpdate, loading, error };
 };

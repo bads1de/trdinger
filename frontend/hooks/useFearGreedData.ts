@@ -1,6 +1,5 @@
 import { useState, useCallback, useEffect } from "react";
 import { useDataFetching } from "./useDataFetching";
-import { usePostRequest } from "./usePostRequest";
 import { useApiCall } from "./useApiCall";
 import { BACKEND_API_URL } from "@/constants";
 
@@ -64,20 +63,24 @@ export const useFearGreedData = () => {
     });
   }, [fetchStatusData]);
 
-  const { sendPostRequest, isLoading: isCollecting } =
-    usePostRequest<FearGreedCollectionResult>();
+  const { execute: executeCollection, loading: isCollecting } =
+    useApiCall<FearGreedCollectionResult>();
 
   const handleCollection = useCallback(
     async (endpoint: string) => {
-      const { success, data, error } = await sendPostRequest(endpoint);
-      if (success && data) {
-        refetch();
-        fetchStatus();
-        return data;
+      const result = await executeCollection(endpoint, {
+        method: "POST",
+        onSuccess: (data) => {
+          refetch();
+          fetchStatus();
+        },
+      });
+      if (result) {
+        return result;
       }
-      throw new Error(error || "データ収集に失敗しました");
+      throw new Error("データ収集に失敗しました");
     },
-    [sendPostRequest, refetch, fetchStatus]
+    [executeCollection, refetch, fetchStatus]
   );
 
   const collectData = useCallback(

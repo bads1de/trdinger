@@ -58,12 +58,28 @@ export interface TrainingStatus {
   start_time?: string;
   end_time?: string;
   error?: string;
+  process_id?: string; // プロセスID追加
   model_info?: {
     accuracy: number;
     feature_count: number;
     training_samples: number;
     test_samples: number;
   };
+}
+
+export interface ProcessInfo {
+  process_id: string;
+  task_name: string;
+  status: string;
+  start_time: string;
+  end_time?: string;
+  metadata: Record<string, any>;
+  is_alive: boolean;
+}
+
+export interface ProcessListResponse {
+  processes: Record<string, ProcessInfo>;
+  count: number;
 }
 
 // デフォルトのAutoML設定を作成
@@ -155,6 +171,8 @@ export const useMLTraining = () => {
   const { execute: stopTrainingApi, loading: stopTrainingLoading } =
     useApiCall();
   const { execute: checkTrainingStatusApi } = useApiCall<TrainingStatus>();
+  const { execute: getActiveProcessesApi } = useApiCall<ProcessListResponse>();
+  const { execute: forceStopProcessApi } = useApiCall();
 
   const checkTrainingStatus = useCallback(() => {
     checkTrainingStatusApi("/api/ml-training/training/status", {
@@ -217,22 +235,73 @@ export const useMLTraining = () => {
     [startTrainingApi, config]
   );
 
-  const stopTraining = useCallback(async () => {
-    await stopTrainingApi("/api/ml-training/stop", {
-      method: "POST",
-      onSuccess: () => {
-        setTrainingStatus((prev) => ({
-          ...prev,
-          is_training: false,
-          status: "stopped",
-          message: "トレーニングが停止されました",
-        }));
-      },
-      onError: (errorMessage) => {
-        setError("トレーニングの停止に失敗しました: " + errorMessage);
-      },
+  const stopTraining = useCallback(
+    async (force: boolean = false) => {
+      const url = force
+        ? "/api/ml-training/stop?force=true"
+        : "/api/ml-training/stop";
+
+      await stopTrainingApi(url, {
+        method: "POST",
+        onSuccess: () => {
+          setTrainingStatus((prev) => ({
+            ...prev,
+            is_training: false,
+            status: force ? "force_stopped" : "stopped",
+            message: force
+              ? "トレーニングが強制停止されました"
+              : "トレーニングが停止されました",
+            process_id: undefined,
+          }));
+        },
+        onError: (errorMessage) => {
+          setError("トレーニングの停止に失敗しました: " + errorMessage);
+        },
+      });
+    },
+    [stopTrainingApi]
+  );
+
+  const getActiveProcesses = useCallback(async () => {
+    return new Promise<ProcessListResponse | null>((resolve) => {
+      getActiveProcessesApi("/api/ml-training/processes", {
+        onSuccess: (data) => {
+          resolve(data);
+        },
+        onError: (errorMessage) => {
+          console.error("プロセス一覧の取得に失敗:", errorMessage);
+          resolve(null);
+        },
+      });
     });
-  }, [stopTrainingApi]);
+  }, [getActiveProcessesApi]);
+
+  const forceStopProcess = useCallback(
+    async (processId: string) => {
+      await forceStopProcessApi(
+        `/api/ml-training/process/${processId}/force-stop`,
+        {
+          method: "POST",
+          onSuccess: () => {
+            // 該当プロセスが現在のトレーニングの場合、状態を更新
+            if (trainingStatus.process_id === processId) {
+              setTrainingStatus((prev) => ({
+                ...prev,
+                is_training: false,
+                status: "force_stopped",
+                message: "プロセスが強制停止されました",
+                process_id: undefined,
+              }));
+            }
+          },
+          onError: (errorMessage) => {
+            setError("プロセスの強制停止に失敗しました: " + errorMessage);
+          },
+        }
+      );
+    },
+    [forceStopProcessApi, trainingStatus.process_id]
+  );
 
   return {
     config,
@@ -244,5 +313,7 @@ export const useMLTraining = () => {
     stopTrainingLoading,
     startTraining,
     stopTraining,
+    getActiveProcesses,
+    forceStopProcess,
   };
 };

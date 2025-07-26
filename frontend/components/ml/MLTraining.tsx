@@ -37,6 +37,7 @@ import {
   getDefaultAutoMLConfig,
   getFinancialOptimizedAutoMLConfig,
 } from "@/hooks/useMLTraining";
+import { StopTrainingDialog } from "@/components/common/ConfirmDialog";
 
 /**
  * MLトレーニングコンポーネント
@@ -51,6 +52,8 @@ export default function MLTraining() {
     error,
     startTraining,
     stopTraining,
+    getActiveProcesses,
+    forceStopProcess,
   } = useMLTraining();
 
   const [optimizationSettings, setOptimizationSettings] =
@@ -87,6 +90,7 @@ export default function MLTraining() {
   const [automlEnabled, setAutomlEnabled] = useState(false);
   const [showAutoMLSettings, setShowAutoMLSettings] = useState(false);
   const [showAutoMLPresets, setShowAutoMLPresets] = useState(false);
+  const [showStopDialog, setShowStopDialog] = useState(false);
 
   // AutoML設定プリセット関数
   const applyAutoMLPreset = (preset: "default" | "financial" | "disabled") => {
@@ -127,10 +131,33 @@ export default function MLTraining() {
     }
   };
 
+  // 停止処理のハンドラー
+  const handleStopTraining = () => {
+    setShowStopDialog(true);
+  };
+
+  const handleConfirmStop = () => {
+    stopTraining(false);
+  };
+
+  const handleForceStop = () => {
+    stopTraining(true);
+  };
+
   return (
     <div className="space-y-6">
       {/* エラー表示 */}
       {error && <ErrorDisplay message={error} />}
+
+      {/* 停止確認ダイアログ */}
+      <StopTrainingDialog
+        open={showStopDialog}
+        onOpenChange={setShowStopDialog}
+        onConfirm={handleConfirmStop}
+        onForceConfirm={handleForceStop}
+        isTraining={trainingStatus.is_training}
+        processId={trainingStatus.process_id}
+      />
 
       {/* トレーニング設定 */}
       <Card>
@@ -406,7 +433,7 @@ export default function MLTraining() {
               </ActionButton>
             ) : (
               <ActionButton
-                onClick={stopTraining}
+                onClick={handleStopTraining}
                 variant="danger"
                 icon={<Square className="h-4 w-4" />}
               >
@@ -450,6 +477,12 @@ export default function MLTraining() {
             <div className="text-sm text-gray-600">
               終了時刻:{" "}
               {new Date(trainingStatus.end_time).toLocaleString("ja-JP")}
+            </div>
+          )}
+
+          {trainingStatus.process_id && (
+            <div className="text-sm text-gray-600">
+              プロセスID: {trainingStatus.process_id}
             </div>
           )}
 

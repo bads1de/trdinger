@@ -1,6 +1,6 @@
 import { useCallback } from "react";
 import { useDataFetching } from "./useDataFetching";
-import { useDeleteRequest } from "./useDeleteRequest";
+import { useApiCall } from "./useApiCall";
 
 export interface MLModel {
   id: string;
@@ -83,22 +83,19 @@ export const useMLModels = (limit?: number) => {
   });
 
   // 削除・バックアップ操作用のAPI呼び出し
-  const { sendDeleteRequest, isLoading: isDeleting } = useDeleteRequest();
+  const { execute, loading: isDeleting } = useApiCall();
 
   const deleteModel = useCallback(
     async (modelId: string) => {
-      if (
-        window.confirm("このモデルを削除しますか？この操作は取り消せません。")
-      ) {
-        const { success } = await sendDeleteRequest(
-          `/api/ml/models/${modelId}`
-        );
-        if (success) {
+      const result = await execute(`/api/ml/models/${modelId}`, {
+        method: "DELETE",
+        confirmMessage: "このモデルを削除しますか？この操作は取り消せません。",
+        onSuccess: () => {
           fetchModels(); // リストを更新
-        }
-      }
+        },
+      });
     },
-    [sendDeleteRequest, fetchModels]
+    [execute, fetchModels]
   );
 
   return {
