@@ -29,6 +29,7 @@ import OptimizationSettings, {
 } from "./OptimizationSettings";
 import AutoMLFeatureSettings from "./AutoMLFeatureSettings";
 import AutoMLPresetSelector from "./AutoMLPresetSelector";
+import EnsembleSettings, { EnsembleSettingsConfig } from "./EnsembleSettings";
 import {
   AutoMLFeatureConfig,
   getDefaultAutoMLConfig,
@@ -61,6 +62,25 @@ export default function MLTraining() {
   const [automlSettings, setAutomlSettings] = useState<AutoMLFeatureConfig>(
     getDefaultAutoMLConfig()
   );
+
+  const [ensembleSettings, setEnsembleSettings] =
+    useState<EnsembleSettingsConfig>({
+      enabled: false,
+      method: "stacking",
+      bagging_params: {
+        n_estimators: 5,
+        bootstrap_fraction: 0.8,
+        base_model_type: "lightgbm",
+        random_state: 42,
+      },
+      stacking_params: {
+        base_models: ["lightgbm", "xgboost"],
+        meta_model: "logistic_regression",
+        cv_folds: 3,
+        use_probas: true,
+        random_state: 42,
+      },
+    });
 
   const [showAutoMLSettings, setShowAutoMLSettings] = useState(false);
   const [showAutoMLPresets, setShowAutoMLPresets] = useState(false);
@@ -306,26 +326,37 @@ export default function MLTraining() {
             </CardContent>
           </Card>
 
+          {/* アンサンブル設定 */}
+          <EnsembleSettings
+            settings={ensembleSettings}
+            onChange={setEnsembleSettings}
+          />
+
           <div className="flex items-center space-x-4">
             {!trainingStatus.is_training ? (
               <ActionButton
                 onClick={() => {
-                  // 最適化設定とAutoML設定を渡す
+                  // 最適化設定、AutoML設定、アンサンブル設定を渡す
                   startTraining(
                     optimizationSettings,
-                    isAutoMLEnabled() ? automlSettings : undefined
+                    isAutoMLEnabled() ? automlSettings : undefined,
+                    ensembleSettings.enabled ? ensembleSettings : undefined
                   );
                 }}
                 variant="primary"
                 icon={<Play className="h-4 w-4" />}
               >
-                {optimizationSettings.enabled && isAutoMLEnabled()
-                  ? "最適化+AutoML トレーニング開始"
-                  : optimizationSettings.enabled
-                  ? "最適化付きトレーニング開始"
-                  : isAutoMLEnabled()
-                  ? "AutoML トレーニング開始"
-                  : "トレーニング開始"}
+                {(() => {
+                  const features = [];
+                  if (optimizationSettings.enabled) features.push("最適化");
+                  if (isAutoMLEnabled()) features.push("AutoML");
+                  if (ensembleSettings.enabled)
+                    features.push(`アンサンブル(${ensembleSettings.method})`);
+
+                  return features.length > 0
+                    ? `${features.join("+")} トレーニング開始`
+                    : "トレーニング開始";
+                })()}
               </ActionButton>
             ) : (
               <ActionButton

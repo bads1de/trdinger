@@ -11,7 +11,7 @@ import numpy as np
 from abc import ABC, abstractmethod
 from typing import Dict, Any, Optional, Tuple, cast
 from datetime import datetime
-from sklearn.model_selection import train_test_split
+from sklearn.model_selection import train_test_split, TimeSeriesSplit
 from sklearn.preprocessing import StandardScaler
 
 
@@ -164,16 +164,52 @@ class BaseMLTrainer(ABC):
             # 3. 学習用データを準備
             X, y = self._prepare_training_data(features_df, **training_params)
 
-            # 4. データを分割
-            X_train, X_test, y_train, y_test = self._split_data(X, y, **training_params)
+            # 4. クロスバリデーションを実行するかチェック
+            use_cross_validation = training_params.get("use_cross_validation", False)
 
-            # 5. データを前処理
-            X_train_scaled, X_test_scaled = self._preprocess_data(X_train, X_test)
+            if use_cross_validation:
+                # 時系列クロスバリデーションを実行
+                cv_result = self._time_series_cross_validate(X, y, **training_params)
 
-            # 6. モデルを学習（継承クラスで実装）
-            training_result = self._train_model_impl(
-                X_train_scaled, X_test_scaled, y_train, y_test, **training_params
-            )
+                # 最終モデルは全データで学習
+                logger.info("🎯 最終モデルを全データで学習中...")
+                X_scaled = self._preprocess_data(X, X)[0]  # 全データをスケーリング
+
+                # ダミーのテストデータ（最後の20%）を作成
+                test_size = training_params.get("test_size", 0.2)
+                n_samples = len(X)
+                train_size = int(n_samples * (1 - test_size))
+
+                X_train_final = X_scaled.iloc[:train_size]
+                X_test_final = X_scaled.iloc[train_size:]
+                y_train_final = y.iloc[:train_size]
+                y_test_final = y.iloc[train_size:]
+
+                training_result = self._train_model_impl(
+                    X_train_final,
+                    X_test_final,
+                    y_train_final,
+                    y_test_final,
+                    **training_params,
+                )
+
+                # クロスバリデーション結果を追加
+                training_result.update(cv_result)
+
+            else:
+                # 通常の単一分割学習
+                # 4. データを分割
+                X_train, X_test, y_train, y_test = self._split_data(
+                    X, y, **training_params
+                )
+
+                # 5. データを前処理
+                X_train_scaled, X_test_scaled = self._preprocess_data(X_train, X_test)
+
+                # 6. モデルを学習（継承クラスで実装）
+                training_result = self._train_model_impl(
+                    X_train_scaled, X_test_scaled, y_train, y_test, **training_params
+                )
 
             # 7. 学習完了フラグを設定（保存前に設定）
             self.is_trained = True
@@ -645,33 +681,166 @@ class BaseMLTrainer(ABC):
     def _split_data(
         self, X: pd.DataFrame, y: pd.Series, **training_params
     ) -> Tuple[pd.DataFrame, pd.DataFrame, pd.Series, pd.Series]:
-        """データを分割"""
+        """
+        データを分割（時系列対応）
+
+        時系列データでは、将来のデータが学習データに含まれることを防ぐため、
+        時間順序を保持した分割を行います。
+        """
         test_size = training_params.get("test_size", 0.2)
         random_state = training_params.get("random_state", 42)
+        use_time_series_split = training_params.get("use_time_series_split", True)
 
-        # 層化抽出は、ラベルが2種類以上ある場合にのみ有効
-        stratify_param = y if y.nunique() > 1 else None
-        if stratify_param is None:
-            logger.warning(
-                "ラベルが1種類以下のため、層化抽出なしでデータを分割します。"
+        if use_time_series_split:
+            # 時系列分割：時間順序を保持して分割
+            logger.info("🕒 時系列分割を使用（データリーク防止）")
+
+            # データの長さを取得
+            n_samples = len(X)
+            train_size = int(n_samples * (1 - test_size))
+
+            # 時間順序を保持して分割
+            X_train = X.iloc[:train_size].copy()
+            X_test = X.iloc[train_size:].copy()
+            y_train = y.iloc[:train_size].copy()
+            y_test = y.iloc[train_size:].copy()
+
+            logger.info(
+                f"時系列分割結果: 学習={len(X_train)}サンプル, テスト={len(X_test)}サンプル"
+            )
+            logger.info(f"学習期間: {X_train.index[0]} ～ {X_train.index[-1]}")
+            logger.info(f"テスト期間: {X_test.index[0]} ～ {X_test.index[-1]}")
+
+        else:
+            # 従来のランダム分割（非推奨）
+            logger.warning("⚠️ ランダム分割を使用（時系列データには非推奨）")
+
+            # 層化抽出は、ラベルが2種類以上ある場合にのみ有効
+            stratify_param = y if y.nunique() > 1 else None
+            if stratify_param is None:
+                logger.warning(
+                    "ラベルが1種類以下のため、層化抽出なしでデータを分割します。"
+                )
+
+            # train_test_splitはリストを返すため、一度変数に受けてからキャストする
+            splits = train_test_split(
+                X,
+                y,
+                test_size=test_size,
+                random_state=random_state,
+                stratify=stratify_param,
             )
 
-        # train_test_splitはリストを返すため、一度変数に受けてからキャストする
-        splits = train_test_split(
-            X,
-            y,
-            test_size=test_size,
-            random_state=random_state,
-            stratify=stratify_param,
-        )
+            # 型チェッカーのために明示的にキャスト
+            X_train = cast(pd.DataFrame, splits[0])
+            X_test = cast(pd.DataFrame, splits[1])
+            y_train = cast(pd.Series, splits[2])
+            y_test = cast(pd.Series, splits[3])
 
-        # 型チェッカーのために明示的にキャスト
-        X_train = cast(pd.DataFrame, splits[0])
-        X_test = cast(pd.DataFrame, splits[1])
-        y_train = cast(pd.Series, splits[2])
-        y_test = cast(pd.Series, splits[3])
+        # 分割後のラベル分布を確認
+        logger.info("学習データのラベル分布:")
+        for label_value in sorted(y_train.unique()):
+            count = (y_train == label_value).sum()
+            percentage = count / len(y_train) * 100
+            logger.info(f"  ラベル {label_value}: {count}サンプル ({percentage:.1f}%)")
+
+        logger.info("テストデータのラベル分布:")
+        for label_value in sorted(y_test.unique()):
+            count = (y_test == label_value).sum()
+            percentage = count / len(y_test) * 100
+            logger.info(f"  ラベル {label_value}: {count}サンプル ({percentage:.1f}%)")
 
         return X_train, X_test, y_train, y_test
+
+    def _time_series_cross_validate(
+        self, X: pd.DataFrame, y: pd.Series, **training_params
+    ) -> Dict[str, Any]:
+        """
+        時系列クロスバリデーション
+
+        ウォークフォワード検証を行い、より堅牢なモデル評価を提供します。
+
+        Args:
+            X: 特徴量DataFrame
+            y: ラベルSeries
+            **training_params: 学習パラメータ
+
+        Returns:
+            クロスバリデーション結果の辞書
+        """
+        n_splits = training_params.get("cv_splits", 5)
+        max_train_size = training_params.get("max_train_size", None)
+
+        logger.info(f"🔄 時系列クロスバリデーション開始（{n_splits}分割）")
+
+        # TimeSeriesSplitを初期化
+        tscv = TimeSeriesSplit(n_splits=n_splits, max_train_size=max_train_size)
+
+        cv_scores = []
+        fold_results = []
+
+        for fold, (train_idx, test_idx) in enumerate(tscv.split(X), 1):
+            logger.info(f"フォールド {fold}/{n_splits} を実行中...")
+
+            # データを分割
+            X_train_cv = X.iloc[train_idx]
+            X_test_cv = X.iloc[test_idx]
+            y_train_cv = y.iloc[train_idx]
+            y_test_cv = y.iloc[test_idx]
+
+            # データを前処理
+            X_train_scaled, X_test_scaled = self._preprocess_data(X_train_cv, X_test_cv)
+
+            try:
+                # モデルを学習（継承クラスで実装）
+                fold_result = self._train_model_impl(
+                    X_train_scaled,
+                    X_test_scaled,
+                    y_train_cv,
+                    y_test_cv,
+                    **training_params,
+                )
+
+                cv_scores.append(fold_result.get("accuracy", 0.0))
+                fold_results.append(
+                    {
+                        "fold": fold,
+                        "train_samples": len(X_train_cv),
+                        "test_samples": len(X_test_cv),
+                        "train_period": f"{X_train_cv.index[0]} ～ {X_train_cv.index[-1]}",
+                        "test_period": f"{X_test_cv.index[0]} ～ {X_test_cv.index[-1]}",
+                        **fold_result,
+                    }
+                )
+
+                logger.info(
+                    f"フォールド {fold} 完了: 精度={fold_result.get('accuracy', 0.0):.4f}"
+                )
+
+            except Exception as e:
+                logger.error(f"フォールド {fold} でエラー: {e}")
+                cv_scores.append(0.0)
+                fold_results.append({"fold": fold, "error": str(e), "accuracy": 0.0})
+
+        # クロスバリデーション結果を集計
+        cv_result = {
+            "cv_scores": cv_scores,
+            "cv_mean": np.mean(cv_scores),
+            "cv_std": np.std(cv_scores),
+            "cv_min": np.min(cv_scores),
+            "cv_max": np.max(cv_scores),
+            "fold_results": fold_results,
+            "n_splits": n_splits,
+        }
+
+        logger.info("時系列クロスバリデーション完了:")
+        logger.info(
+            f"  平均精度: {cv_result['cv_mean']:.4f} ± {cv_result['cv_std']:.4f}"
+        )
+        logger.info(f"  最小精度: {cv_result['cv_min']:.4f}")
+        logger.info(f"  最大精度: {cv_result['cv_max']:.4f}")
+
+        return cv_result
 
     def _preprocess_data(
         self, X_train: pd.DataFrame, X_test: pd.DataFrame

@@ -67,23 +67,16 @@ class EnsembleTrainer(BaseMLTrainer):
             # アンサンブルモデルで予測確率を取得
             predictions = self.ensemble_model.predict_proba(features_scaled)
 
-            # 予測確率の形状を確認・調整
-            if predictions.ndim == 1:
-                # 二値分類の場合、3クラス形式に変換
-                # 仮定: 0.5未満=下落、0.5以上=上昇、レンジは中間値
-                down_prob = np.where(predictions < 0.5, 1 - predictions, 0.1)
-                up_prob = np.where(predictions >= 0.5, predictions, 0.1)
-                range_prob = 1.0 - down_prob - up_prob
-                predictions = np.column_stack([down_prob, range_prob, up_prob])
-            elif predictions.shape[1] == 2:
-                # 二値分類の場合、レンジクラスを追加
-                range_prob = np.full((predictions.shape[0], 1), 0.1)
-                predictions = np.column_stack(
-                    [predictions[:, 0], range_prob, predictions[:, 1]]
+            # 予測確率が3クラス分類であることを確認
+            if predictions.ndim == 2 and predictions.shape[1] == 3:
+                # 3クラス分類の場合、そのまま返す
+                return predictions
+            else:
+                # 予期しない形状の場合はエラー
+                raise UnifiedModelError(
+                    f"予期しない予測確率の形状: {predictions.shape}. "
+                    f"3クラス分類 (down, range, up) の確率が期待されます。"
                 )
-
-            # 確率の正規化
-            predictions = predictions / predictions.sum(axis=1, keepdims=True)
 
             return predictions
 
@@ -157,9 +150,12 @@ class EnsembleTrainer(BaseMLTrainer):
             y_pred_proba = self.ensemble_model.predict_proba(X_test)
             y_pred = self.ensemble_model.predict(X_test)
 
-            # 予測確率の形状調整
-            if y_pred_proba.ndim == 1:
-                y_pred_proba = np.column_stack([1 - y_pred_proba, y_pred_proba])
+            # 予測確率が3クラス分類であることを確認
+            if y_pred_proba.ndim != 2 or y_pred_proba.shape[1] != 3:
+                logger.warning(
+                    f"予測確率の形状が期待と異なります: {y_pred_proba.shape}"
+                )
+                # 3クラス分類でない場合は評価をスキップ
 
             # 詳細な評価指標を計算
             from ....utils.metrics_calculator import calculate_detailed_metrics

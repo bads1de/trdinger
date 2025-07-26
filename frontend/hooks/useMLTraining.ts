@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { useApiCall } from "./useApiCall";
+import { EnsembleSettingsConfig } from "@/components/ml/EnsembleSettings";
 
 export interface ParameterSpaceConfig {
   type: "real" | "integer" | "categorical";
@@ -181,17 +182,19 @@ export const useMLTraining = () => {
   const startTraining = useCallback(
     async (
       optimizationSettings?: OptimizationSettingsConfig,
-      automlConfig?: AutoMLFeatureConfig
+      automlConfig?: AutoMLFeatureConfig,
+      ensembleConfig?: EnsembleSettingsConfig
     ) => {
       setError(null);
 
-      // 最適化設定とAutoML設定を含むconfigを作成
+      // 最適化設定、AutoML設定、アンサンブル設定を含むconfigを作成
       const trainingConfig = {
         ...config,
         optimization_settings: optimizationSettings?.enabled
           ? optimizationSettings
           : undefined,
         automl_config: automlConfig,
+        ensemble_config: ensembleConfig,
       };
 
       await startTrainingApi("/api/ml-training/train", {

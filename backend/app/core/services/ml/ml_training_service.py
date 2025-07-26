@@ -380,18 +380,11 @@ class MLTrainingService:
                 }
                 logger.debug(f"3クラス予測結果: {predictions}")
                 return predictions
-            elif latest_pred.shape[0] == 2:
-                # 2クラス分類の場合、rangeを中間値として設定
-                predictions = {
-                    "down": float(latest_pred[0]),
-                    "range": 0.34,
-                    "up": float(latest_pred[1]),
-                }
-                logger.debug(f"2クラス予測結果: {predictions}")
-                return predictions
             else:
-                # 予期しない形式の場合、デフォルト値を返す
-                logger.warning(f"予期しない予測結果の形式: {latest_pred.shape}")
+                # 3クラス以外の場合はエラー
+                logger.error(
+                    f"予期しない予測結果の形式: {latest_pred.shape}. 3クラス分類が期待されます。"
+                )
                 default_predictions = self.config.prediction.get_default_predictions()
                 logger.debug(f"形式エラー時のデフォルト値: {default_predictions}")
                 return default_predictions

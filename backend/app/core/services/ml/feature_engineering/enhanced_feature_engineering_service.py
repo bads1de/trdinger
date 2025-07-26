@@ -5,8 +5,9 @@
 """
 
 import logging
-from typing import Dict, Optional, Any, List
+from typing import Dict, Optional, Any, List, Tuple
 import pandas as pd
+import numpy as np
 import time
 
 from .feature_engineering_service import FeatureEngineeringService
@@ -243,6 +244,31 @@ class EnhancedFeatureEngineeringService(FeatureEngineeringService):
                 f"処理時間:{total_time:.2f}秒"
             )
 
+            # 5. 統合特徴量選択（手動 + AutoML特徴量の冗長性除去）
+            if target is not None and len(result_df.columns) > 0:
+                logger.info("統合特徴量選択を実行中...")
+                integrated_start_time = time.time()
+
+                result_df, selection_info = self._perform_integrated_feature_selection(
+                    result_df, target, manual_feature_count
+                )
+
+                integrated_time = time.time() - integrated_start_time
+                final_feature_count = len(result_df.columns)
+
+                logger.info(
+                    f"統合特徴量選択完了: {total_features}個 → {final_feature_count}個 "
+                    f"({integrated_time:.2f}秒)"
+                )
+
+                # 選択情報を統計に追加
+                self.last_enhancement_stats["integrated_selection_info"] = (
+                    selection_info
+                )
+
+                # 最終特徴量数を更新
+                total_features = final_feature_count
+
             # 最終的なメモリクリーンアップ
             self.performance_optimizer.force_garbage_collection()
 
@@ -262,6 +288,233 @@ class EnhancedFeatureEngineeringService(FeatureEngineeringService):
                 fear_greed_data=fear_greed_data,
                 lookback_periods=lookback_periods,
             )
+
+    def _perform_integrated_feature_selection(
+        self,
+        features_df: pd.DataFrame,
+        target: pd.Series,
+        manual_feature_count: int,
+        max_features: int = 150,
+    ) -> Tuple[pd.DataFrame, Dict[str, Any]]:
+        """
+        統合特徴量選択を実行
+
+        手動生成特徴量とAutoML特徴量を統合して冗長性を除去し、
+        最も有用な特徴量を選択します。
+
+        Args:
+            features_df: 全特徴量DataFrame
+            target: ターゲット変数
+            manual_feature_count: 手動特徴量の数
+            max_features: 最大特徴量数
+
+        Returns:
+            選択された特徴量とメタデータ
+        """
+        try:
+            from .automl_features.feature_selector import AdvancedFeatureSelector
+
+            # 統合特徴量選択器を初期化
+            integrated_selector = AdvancedFeatureSelector()
+
+            # 特徴量を分類
+            feature_categories = self._categorize_features(
+                features_df, manual_feature_count
+            )
+
+            # 冗長性分析を実行
+            redundancy_info = self._analyze_feature_redundancy(
+                features_df, target, feature_categories
+            )
+
+            # 統合選択を実行
+            selected_features, selection_info = (
+                integrated_selector.select_features_comprehensive(
+                    features_df,
+                    target,
+                    max_features=max_features,
+                    selection_methods=[
+                        "statistical_test",
+                        "correlation_filter",  # 手動+AutoML間の冗長性除去
+                        "mutual_information",
+                        "importance_based",
+                    ],
+                )
+            )
+
+            # 選択結果に冗長性情報を追加
+            selection_info.update(
+                {
+                    "feature_categories": feature_categories,
+                    "redundancy_analysis": redundancy_info,
+                    "integrated_selection": True,
+                }
+            )
+
+            logger.info(
+                f"統合特徴量選択結果: "
+                f"手動:{feature_categories['manual_count']}個, "
+                f"AutoML:{feature_categories['automl_count']}個 → "
+                f"選択:{len(selected_features.columns)}個"
+            )
+
+            return selected_features, selection_info
+
+        except Exception as e:
+            logger.error(f"統合特徴量選択エラー: {e}")
+            # エラー時は元の特徴量を返す
+            return features_df, {"error": str(e), "integrated_selection": False}
+
+    def _categorize_features(
+        self, features_df: pd.DataFrame, manual_feature_count: int
+    ) -> Dict[str, Any]:
+        """
+        特徴量を手動生成とAutoML生成に分類
+
+        Args:
+            features_df: 特徴量DataFrame
+            manual_feature_count: 手動特徴量の数
+
+        Returns:
+            特徴量分類情報
+        """
+        all_columns = features_df.columns.tolist()
+
+        # 手動特徴量（最初のN個）
+        manual_features = all_columns[:manual_feature_count]
+
+        # AutoML特徴量（残り）
+        automl_features = all_columns[manual_feature_count:]
+
+        # AutoML特徴量をツール別に分類
+        tsfresh_features = [col for col in automl_features if col.startswith("TSF_")]
+        featuretools_features = [
+            col for col in automl_features if col.startswith("FT_")
+        ]
+        autofeat_features = [col for col in automl_features if col.startswith("AF_")]
+        other_automl_features = [
+            col
+            for col in automl_features
+            if not any(col.startswith(prefix) for prefix in ["TSF_", "FT_", "AF_"])
+        ]
+
+        return {
+            "manual_features": manual_features,
+            "manual_count": len(manual_features),
+            "automl_features": automl_features,
+            "automl_count": len(automl_features),
+            "tsfresh_features": tsfresh_features,
+            "tsfresh_count": len(tsfresh_features),
+            "featuretools_features": featuretools_features,
+            "featuretools_count": len(featuretools_features),
+            "autofeat_features": autofeat_features,
+            "autofeat_count": len(autofeat_features),
+            "other_automl_features": other_automl_features,
+            "other_automl_count": len(other_automl_features),
+            "total_count": len(all_columns),
+        }
+
+    def _analyze_feature_redundancy(
+        self,
+        features_df: pd.DataFrame,
+        target: pd.Series,
+        feature_categories: Dict[str, Any],
+        correlation_threshold: float = 0.85,
+    ) -> Dict[str, Any]:
+        """
+        特徴量間の冗長性を分析
+
+        特に手動特徴量とAutoML特徴量間の冗長性を重点的に分析します。
+        例: manual_RSI と TSF_rsi_* の冗長性
+
+        Args:
+            features_df: 特徴量DataFrame
+            target: ターゲット変数
+            feature_categories: 特徴量分類情報
+            correlation_threshold: 冗長性判定の相関閾値
+
+        Returns:
+            冗長性分析結果
+        """
+        try:
+            # 相関行列を計算
+            correlation_matrix = features_df.corr().abs()
+
+            # 手動特徴量とAutoML特徴量間の高相関ペアを特定
+            manual_automl_redundancy = []
+            manual_features = feature_categories["manual_features"]
+            automl_features = feature_categories["automl_features"]
+
+            for manual_feat in manual_features:
+                for automl_feat in automl_features:
+                    if (
+                        manual_feat in correlation_matrix.index
+                        and automl_feat in correlation_matrix.columns
+                    ):
+                        corr_value = correlation_matrix.loc[manual_feat, automl_feat]
+                        if corr_value > correlation_threshold:
+                            # ターゲットとの相関も計算
+                            manual_target_corr = abs(
+                                features_df[manual_feat].corr(target)
+                            )
+                            automl_target_corr = abs(
+                                features_df[automl_feat].corr(target)
+                            )
+
+                            manual_automl_redundancy.append(
+                                {
+                                    "manual_feature": manual_feat,
+                                    "automl_feature": automl_feat,
+                                    "correlation": corr_value,
+                                    "manual_target_corr": manual_target_corr,
+                                    "automl_target_corr": automl_target_corr,
+                                    "recommended_removal": (
+                                        manual_feat
+                                        if manual_target_corr < automl_target_corr
+                                        else automl_feat
+                                    ),
+                                }
+                            )
+
+            # AutoML特徴量間の冗長性も分析
+            automl_automl_redundancy = []
+            for i, feat1 in enumerate(automl_features):
+                for feat2 in automl_features[i + 1 :]:
+                    if (
+                        feat1 in correlation_matrix.index
+                        and feat2 in correlation_matrix.columns
+                    ):
+                        corr_value = correlation_matrix.loc[feat1, feat2]
+                        if corr_value > correlation_threshold:
+                            automl_automl_redundancy.append(
+                                {
+                                    "feature1": feat1,
+                                    "feature2": feat2,
+                                    "correlation": corr_value,
+                                }
+                            )
+
+            redundancy_info = {
+                "correlation_threshold": correlation_threshold,
+                "manual_automl_redundancy": manual_automl_redundancy,
+                "manual_automl_redundant_pairs": len(manual_automl_redundancy),
+                "automl_automl_redundancy": automl_automl_redundancy,
+                "automl_automl_redundant_pairs": len(automl_automl_redundancy),
+                "total_redundant_pairs": len(manual_automl_redundancy)
+                + len(automl_automl_redundancy),
+            }
+
+            logger.info(
+                f"冗長性分析完了: "
+                f"手動-AutoML冗長ペア:{len(manual_automl_redundancy)}個, "
+                f"AutoML-AutoML冗長ペア:{len(automl_automl_redundancy)}個"
+            )
+
+            return redundancy_info
+
+        except Exception as e:
+            logger.error(f"冗長性分析エラー: {e}")
+            return {"error": str(e), "analysis_completed": False}
 
     def _update_automl_config(self, config_dict: Dict[str, Any]):
         """AutoML設定を更新"""

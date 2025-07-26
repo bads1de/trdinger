@@ -221,12 +221,10 @@ class StackingEnsemble(BaseEnsemble):
         if hasattr(self.meta_model, "predict") and hasattr(
             self.meta_model, "is_trained"
         ):
-            # LightGBMModel等
+            # LightGBMModel等のカスタムモデル
             meta_features_df = pd.DataFrame(meta_features)
             probabilities = self.meta_model.predict(meta_features_df)
-            if probabilities.ndim == 1:
-                # 二値分類の場合、確率形式に変換
-                probabilities = np.column_stack([1 - probabilities, probabilities])
+            # カスタムモデルは既に適切な形状で確率を返すことを期待
         else:
             # scikit-learn系
             if hasattr(self.meta_model, "predict_proba"):
@@ -237,7 +235,13 @@ class StackingEnsemble(BaseEnsemble):
                 n_classes = len(np.unique(pred))
                 probabilities = np.eye(n_classes)[pred]
 
-        return probabilities
+        # 3クラス分類であることを確認
+        if probabilities.ndim == 2 and probabilities.shape[1] == 3:
+            return probabilities
+        else:
+            raise UnifiedModelError(
+                f"メタモデルの予測確率が3クラス分類ではありません: {probabilities.shape}"
+            )
 
     def _generate_meta_features(self, X: pd.DataFrame, y: pd.Series) -> np.ndarray:
         """
