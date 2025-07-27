@@ -15,14 +15,6 @@ from .....utils.unified_error_handler import safe_ml_operation
 from .automl_config import FeaturetoolsConfig
 
 import featuretools as ft
-
-# featuretoolsが利用可能かどうかを示すフラグ
-try:
-    import featuretools as ft
-
-    FEATURETOOLS_AVAILABLE = True
-except ImportError:
-    FEATURETOOLS_AVAILABLE = False
 from featuretools.primitives import (
     Mean,
     Std,

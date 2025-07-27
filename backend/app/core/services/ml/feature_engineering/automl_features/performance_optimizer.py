@@ -22,7 +22,7 @@ logger = logging.getLogger(__name__)
 
 # memory-profilerのインポート（オプション）
 try:
-    from memory_profiler import profile, memory_usage
+    from memory_profiler import memory_usage
 
     MEMORY_PROFILER_AVAILABLE = True
 except ImportError:
@@ -33,9 +33,9 @@ except ImportError:
 
 # line-profilerのインポート（オプション）
 try:
-    from line_profiler import LineProfiler
+    import importlib.util
 
-    LINE_PROFILER_AVAILABLE = True
+    LINE_PROFILER_AVAILABLE = importlib.util.find_spec("line_profiler") is not None
 except ImportError:
     LINE_PROFILER_AVAILABLE = False
     logger.warning(
@@ -406,7 +406,6 @@ class PerformanceOptimizer:
 
     def monitor_memory_usage(self, operation_name: str = "操作"):
         """メモリ使用量を監視するコンテキストマネージャー"""
-        from contextlib import contextmanager
 
         @contextmanager
         def memory_monitor():

@@ -229,6 +229,7 @@ class BaggingEnsemble(BaseEnsemble):
 
         # 各ベースモデルの予測を取得
         predictions = []
+
         for model in self.base_models:
             if hasattr(model, "predict"):
                 if hasattr(model, "is_trained") and model.is_trained:
