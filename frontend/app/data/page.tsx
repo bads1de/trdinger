@@ -21,7 +21,7 @@ import {
 } from "@/hooks/useFearGreedData";
 import { useBulkIncrementalUpdate } from "@/hooks/useBulkIncrementalUpdate";
 import { useApiCall } from "@/hooks/useApiCall";
-import { TimeFrame, TradingPair } from "@/types/market-data";
+import { TimeFrame } from "@/types/market-data";
 import {
   BulkOHLCVCollectionResult,
   AllDataCollectionResult,
@@ -34,8 +34,7 @@ import {
   OpenInterestCollectionResult,
   BulkOpenInterestCollectionResult,
 } from "@/types/open-interest";
-import { BACKEND_API_URL } from "@/constants";
-import { useSymbols } from "@/hooks/useSymbols";
+import { BACKEND_API_URL, SUPPORTED_TRADING_PAIRS } from "@/constants";
 
 /**
  * データページコンポーネント
@@ -91,7 +90,7 @@ const DataPage: React.FC = () => {
   );
 
   // カスタムフックを使用してデータ取得
-  const { symbols } = useSymbols();
+  const symbols = SUPPORTED_TRADING_PAIRS;
   const {
     bulkUpdate: updateBulkIncrementalData,
     loading: bulkIncrementalUpdateLoading,

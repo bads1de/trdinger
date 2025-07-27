@@ -67,11 +67,6 @@ const AVAILABLE_MODELS = [
     description: "アンサンブル決定木",
   },
   {
-    value: "gradient_boosting",
-    label: "Gradient Boosting",
-    description: "scikit-learn勾配ブースティング",
-  },
-  {
     value: "logistic_regression",
     label: "Logistic Regression",
     description: "ロジスティック回帰",
