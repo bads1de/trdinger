@@ -12,9 +12,11 @@ from sqlalchemy import (
     Text,
     JSON,
     ForeignKey,
+    event,
 )
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
+from datetime import timezone
 from .connection import Base
 
 
@@ -249,6 +251,24 @@ class FearGreedIndexData(Base):
             f"data_timestamp='{self.data_timestamp}')>"
         )
 
+    @property
+    def data_timestamp_utc(self):
+        """タイムゾーン情報を保証したdata_timestampを返す"""
+        if self.data_timestamp and self.data_timestamp.tzinfo is None:
+            from datetime import timezone
+
+            return self.data_timestamp.replace(tzinfo=timezone.utc)
+        return self.data_timestamp
+
+    @property
+    def timestamp_utc(self):
+        """タイムゾーン情報を保証したtimestampを返す"""
+        if self.timestamp and self.timestamp.tzinfo is None:
+            from datetime import timezone
+
+            return self.timestamp.replace(tzinfo=timezone.utc)
+        return self.timestamp
+
     def to_dict(self):
         """辞書形式に変換"""
         return {
@@ -256,12 +276,12 @@ class FearGreedIndexData(Base):
             "value": self.value,
             "value_classification": self.value_classification,
             "data_timestamp": (
-                self.data_timestamp.isoformat()
+                self.data_timestamp_utc.isoformat()
                 if self.data_timestamp is not None
                 else None
             ),
             "timestamp": (
-                self.timestamp.isoformat() if self.timestamp is not None else None
+                self.timestamp_utc.isoformat() if self.timestamp is not None else None
             ),
             "created_at": (
                 self.created_at.isoformat() if self.created_at is not None else None
@@ -270,6 +290,16 @@ class FearGreedIndexData(Base):
                 self.updated_at.isoformat() if self.updated_at is not None else None
             ),
         }
+
+
+# FearGreedIndexDataのタイムゾーン自動修正イベントリスナー
+@event.listens_for(FearGreedIndexData, "load")
+def fix_timezone_on_load(target, context):
+    """データベースから読み込み時にタイムゾーン情報を自動修正"""
+    if target.data_timestamp and target.data_timestamp.tzinfo is None:
+        target.data_timestamp = target.data_timestamp.replace(tzinfo=timezone.utc)
+    if target.timestamp and target.timestamp.tzinfo is None:
+        target.timestamp = target.timestamp.replace(tzinfo=timezone.utc)
 
 
 class BacktestResult(Base):

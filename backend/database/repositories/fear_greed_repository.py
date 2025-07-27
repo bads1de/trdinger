@@ -198,6 +198,7 @@ class FearGreedIndexRepository(BaseRepository):
         """
         try:
             from sqlalchemy import func
+            from datetime import timezone
 
             result = self.db.query(
                 func.min(FearGreedIndexData.data_timestamp).label("oldest"),
@@ -212,9 +213,18 @@ class FearGreedIndexRepository(BaseRepository):
                     "total_count": 0,
                 }
 
+            # タイムゾーン情報が失われている場合はUTCを設定
+            oldest = result.oldest
+            newest = result.newest
+
+            if oldest and oldest.tzinfo is None:
+                oldest = oldest.replace(tzinfo=timezone.utc)
+            if newest and newest.tzinfo is None:
+                newest = newest.replace(tzinfo=timezone.utc)
+
             return {
-                "oldest_data": result.oldest.isoformat() if result.oldest else None,
-                "newest_data": result.newest.isoformat() if result.newest else None,
+                "oldest_data": oldest.isoformat() if oldest else None,
+                "newest_data": newest.isoformat() if newest else None,
                 "total_count": result.count or 0,
             }
 

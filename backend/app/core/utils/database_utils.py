@@ -177,6 +177,7 @@ class DatabaseQueryHelper:
             最新のタイムスタンプ（データがない場合はNone）
         """
         from sqlalchemy import func
+        from datetime import timezone
 
         try:
             query = db.query(func.max(getattr(model_class, timestamp_column)))
@@ -185,7 +186,13 @@ class DatabaseQueryHelper:
                 for column, value in filter_conditions.items():
                     query = query.filter(getattr(model_class, column) == value)
 
-            return query.scalar()
+            result = query.scalar()
+
+            # タイムゾーン情報が失われている場合はUTCを設定
+            if result and result.tzinfo is None:
+                result = result.replace(tzinfo=timezone.utc)
+
+            return result
 
         except Exception as e:
             logger.error(f"最新タイムスタンプの取得中にエラーが発生しました: {e}")
@@ -211,6 +218,7 @@ class DatabaseQueryHelper:
             最古のタイムスタンプ（データがない場合はNone）
         """
         from sqlalchemy import func
+        from datetime import timezone
 
         try:
             query = db.query(func.min(getattr(model_class, timestamp_column)))
@@ -219,7 +227,13 @@ class DatabaseQueryHelper:
                 for column, value in filter_conditions.items():
                     query = query.filter(getattr(model_class, column) == value)
 
-            return query.scalar()
+            result = query.scalar()
+
+            # タイムゾーン情報が失われている場合はUTCを設定
+            if result and result.tzinfo is None:
+                result = result.replace(tzinfo=timezone.utc)
+
+            return result
 
         except Exception as e:
             logger.error(f"最古タイムスタンプの取得中にエラーが発生しました: {e}")
@@ -275,6 +289,7 @@ class DatabaseQueryHelper:
             (最古のタイムスタンプ, 最新のタイムスタンプ)
         """
         from sqlalchemy import func
+        from datetime import timezone
 
         try:
             query = db.query(
@@ -287,7 +302,20 @@ class DatabaseQueryHelper:
                     query = query.filter(getattr(model_class, column) == value)
 
             result = query.first()
-            return result if result else (None, None)
+
+            if result and result[0] and result[1]:
+                # タイムゾーン情報が失われている場合はUTCを設定
+                oldest = result[0]
+                newest = result[1]
+
+                if oldest.tzinfo is None:
+                    oldest = oldest.replace(tzinfo=timezone.utc)
+                if newest.tzinfo is None:
+                    newest = newest.replace(tzinfo=timezone.utc)
+
+                return (oldest, newest)
+
+            return (None, None)
 
         except Exception as e:
             logger.error(f"データ期間の取得中にエラーが発生しました: {e}")
