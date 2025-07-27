@@ -8,12 +8,7 @@
 "use client";
 
 import React, { useState } from "react";
-import {
-  ChevronDown,
-  ChevronRight,
-  Clipboard,
-  Check,
-} from "lucide-react";
+import { ChevronDown, ChevronRight, Clipboard, Check } from "lucide-react";
 import {
   Collapsible,
   CollapsibleContent,
@@ -22,17 +17,11 @@ import {
 import { cn } from "@/lib/utils";
 
 interface CollapsibleJsonProps {
-  /** 表示するJSONデータ */
   data: any;
-  /** タイトル */
   title: string;
-  /** 初期状態で展開するかどうか（デフォルト: false） */
   defaultExpanded?: boolean;
-  /** 最大高さ（展開時、デフォルト: 400px） */
   maxHeight?: string;
-  /** カスタムクラス名 */
   className?: string;
-  /** テーマ（デフォルト: 'matrix'） */
   theme?: "matrix" | "dark" | "light";
 }
 
@@ -130,7 +119,9 @@ const CollapsibleJson: React.FC<CollapsibleJsonProps> = ({
               {title}
             </h4>
             {isLarge && (
-              <span className={cn("ml-2 text-xs px-2 py-1 rounded", styles.button)}>
+              <span
+                className={cn("ml-2 text-xs px-2 py-1 rounded", styles.button)}
+              >
                 {(jsonSize / 1024).toFixed(1)}KB
               </span>
             )}
@@ -245,4 +236,3 @@ const CollapsibleJson: React.FC<CollapsibleJsonProps> = ({
 };
 
 export default CollapsibleJson;
-

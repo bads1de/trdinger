@@ -141,6 +141,10 @@ const MainContent: React.FC<MainContentProps> = ({ children }) => {
   const pageInfo = getPageInfo(pathname);
   const PageIcon = pageInfo.icon;
 
+  const reloadPage = () => {
+    window.location.reload();
+  };
+
   return (
     <SidebarInset>
       <header className="sticky top-0 z-40 flex h-16 shrink-0 items-center gap-2 border-b border-sidebar-border/50 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 transition-[width,height] ease-linear group-has-[[data-collapsible=icon]]/sidebar-wrapper:h-12">
@@ -180,16 +184,10 @@ const MainContent: React.FC<MainContentProps> = ({ children }) => {
               variant="ghost"
               size="sm"
               className="gap-2 hover:bg-sidebar-accent transition-colors"
+              onClick={reloadPage}
             >
               <RefreshCw className="size-4" />
               <span className="hidden sm:inline">Refresh</span>
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="hover:bg-sidebar-accent transition-colors"
-            >
-              <Settings className="size-4" />
             </Button>
           </div>
         </div>

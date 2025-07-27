@@ -274,83 +274,9 @@ const SidebarNavigation: React.FC = () => {
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
-
-        {/* 通知セクション */}
-        <SidebarGroup className="group-data-[collapsible=icon]:hidden">
-          <SidebarGroupLabel className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-            Notifications
-          </SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              <SidebarMenuItem>
-                <SidebarMenuButton className="gap-3 h-10 px-3 rounded-lg hover:bg-sidebar-accent transition-colors">
-                  <div className="flex items-center gap-3 w-full">
-                    <div className="relative">
-                      <Bell className="size-4 text-muted-foreground" />
-                      {mockNotificationCount > 0 && (
-                        <Badge className="absolute -top-1 -right-1 h-4 w-4 p-0 text-xs flex items-center justify-center bg-red-500">
-                          {mockNotificationCount}
-                        </Badge>
-                      )}
-                    </div>
-                    <span className="text-sm font-medium">Alerts</span>
-                  </div>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
       </SidebarContent>
 
       <SidebarFooter className="gap-2 p-2">
-        {/* ユーザープロフィール */}
-        <SidebarMenu>
-          <SidebarMenuItem>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <SidebarMenuButton
-                  size="lg"
-                  className="gap-3 h-12 px-3 rounded-lg hover:bg-sidebar-accent transition-colors group-data-[collapsible=icon]:justify-center"
-                >
-                  <div className="flex items-center gap-3 w-full group-data-[collapsible=icon]:gap-0">
-                    <Avatar className="h-8 w-8">
-                      <AvatarImage src="/placeholder-avatar.jpg" alt="User" />
-                      <AvatarFallback className="bg-gradient-to-br from-blue-500 to-purple-600 text-white text-sm font-semibold">
-                        TR
-                      </AvatarFallback>
-                    </Avatar>
-                    <div className="flex items-center justify-between w-full group-data-[collapsible=icon]:hidden">
-                      <div className="flex flex-col gap-0.5">
-                        <span className="text-sm font-medium">Trader</span>
-                        <span className="text-xs text-muted-foreground">
-                          trader@example.com
-                        </span>
-                      </div>
-                      <ChevronDown className="size-4 text-muted-foreground" />
-                    </div>
-                  </div>
-                </SidebarMenuButton>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-56">
-                <DropdownMenuLabel>My Account</DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem>
-                  <User className="mr-2 h-4 w-4" />
-                  <span>Profile</span>
-                </DropdownMenuItem>
-                <DropdownMenuItem>
-                  <Settings className="mr-2 h-4 w-4" />
-                  <span>Settings</span>
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem className="text-red-600">
-                  <span>Log out</span>
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </SidebarMenuItem>
-        </SidebarMenu>
-
         {/* バージョン情報 */}
         <div className="px-3 py-2 group-data-[collapsible=icon]:hidden">
           <div className="flex items-center justify-between text-xs text-muted-foreground">
