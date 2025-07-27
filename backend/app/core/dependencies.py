@@ -4,7 +4,6 @@
 FastAPIの依存性注入システムで使用するサービスファクトリ関数を提供します。
 """
 
-from functools import lru_cache
 from sqlalchemy.orm import Session
 from fastapi import Depends
 

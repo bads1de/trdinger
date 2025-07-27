@@ -2,10 +2,10 @@
 基底リポジトリクラス
 """
 
-from typing import List, Optional, Type, Dict, Any, TypeVar, Generic, Union, Callable
+from typing import List, Optional, Type, Dict, Any, TypeVar, Generic, Callable
 from datetime import datetime
 from sqlalchemy.orm import Session
-from sqlalchemy import func, desc, asc
+from sqlalchemy import func
 import pandas as pd
 import logging
 
