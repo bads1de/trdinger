@@ -88,11 +88,11 @@ def test_validation_functions():
     print("\n🧪 バリデーション機能テスト")
 
     try:
-        # 予測値バリデーションテスト
-        valid_predictions = {"UP": 0.7, "DOWN": 0.2, "RANGE": 0.1}
+        # 予測値バリデーションテスト（正しいキー名を使用）
+        valid_predictions = {"up": 0.7, "down": 0.2, "range": 0.1}
         assert UnifiedErrorHandler.validate_predictions(valid_predictions) is True
 
-        invalid_predictions = {"UP": 1.5, "DOWN": -0.1}  # 範囲外
+        invalid_predictions = {"up": 1.5, "down": -0.1}  # 範囲外と必須キー不足
         assert UnifiedErrorHandler.validate_predictions(invalid_predictions) is False
 
         # データフレームバリデーションテスト（pandas が利用可能な場合）

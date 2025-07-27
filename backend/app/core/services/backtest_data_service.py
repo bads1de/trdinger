@@ -254,54 +254,10 @@ class BacktestDataService:
         Returns:
             Fear & GreedデータがマージされたDataFrame
         """
-        # Fear & Greedデータをマージ
-        if self.fear_greed_repo:
-            try:
-                fear_greed_data = self.fear_greed_repo.get_fear_greed_data(
-                    start_time=start_date, end_time=end_date
-                )
-                logger.info(
-                    f"😨 取得したFear & Greedデータ件数: {len(fear_greed_data) if fear_greed_data else 0}"
-                )
-
-                if fear_greed_data:
-                    fear_greed_df = self._convert_fear_greed_to_dataframe(
-                        fear_greed_data
-                    )
-                    logger.info(
-                        f"😨 Fear & Greed DataFrame: {len(fear_greed_df)}行, 期間: {fear_greed_df.index.min()} - {fear_greed_df.index.max()}"
-                    )
-
-                    # toleranceを設定（3日以内のデータのみ使用、Fear & Greedは1日間隔）
-                    df = pd.merge_asof(
-                        df.sort_index(),
-                        fear_greed_df.sort_index(),
-                        left_index=True,
-                        right_index=True,
-                        direction="backward",
-                        tolerance=pd.Timedelta(days=3),
-                    )
-
-                    valid_fg_count = df["fear_greed_value"].notna().sum()
-                    logger.info(
-                        f"😨 Fear & Greedデータマージ完了: {valid_fg_count}/{len(df)}行に値あり ({valid_fg_count/len(df)*100:.1f}%)"
-                    )
-                else:
-                    logger.warning("⚠️ Fear & Greedデータが見つかりませんでした。")
-                    df["fear_greed_value"] = pd.NA
-                    df["fear_greed_classification"] = pd.NA
-            except Exception as e:
-                logger.warning(
-                    f"❌ Fear & Greedデータのマージ中にエラーが発生しました: {e}"
-                )
-                df["fear_greed_value"] = pd.NA
-                df["fear_greed_classification"] = pd.NA
-        else:
-            logger.info("ℹ️ Fear & Greedリポジトリが設定されていません")
-            df["fear_greed_value"] = pd.NA
-            df["fear_greed_classification"] = pd.NA
-
-        return df
+        # Fear & Greedデータをマージ（統一実装を使用）
+        return self._merge_fear_greed_data_with_details(
+            df, start_date, end_date, detailed_logging=True
+        )
 
     def _improve_data_interpolation(self, df: pd.DataFrame) -> pd.DataFrame:
         """
@@ -426,7 +382,7 @@ class BacktestDataService:
         self, df: pd.DataFrame, start_date: datetime, end_date: datetime
     ) -> pd.DataFrame:
         """
-        Fear & Greedデータをマージ
+        Fear & Greedデータをマージ（統一実装）
 
         Args:
             df: 既存のDataFrame
@@ -436,44 +392,109 @@ class BacktestDataService:
         Returns:
             Fear & GreedデータがマージされたDataFrame
         """
-        # Fear & Greedデータをマージ
-        if self.fear_greed_repo:
-            try:
-                fear_greed_data = self.fear_greed_repo.get_fear_greed_data(
-                    start_time=start_date, end_time=end_date
+        return self._merge_fear_greed_data_with_details(
+            df, start_date, end_date, detailed_logging=False
+        )
+
+    def _merge_fear_greed_data_with_details(
+        self,
+        df: pd.DataFrame,
+        start_date: datetime,
+        end_date: datetime,
+        detailed_logging: bool = True,
+    ) -> pd.DataFrame:
+        """
+        Fear & Greedデータをマージ（詳細ログ対応）
+
+        Args:
+            df: 既存のDataFrame
+            start_date: 開始日時
+            end_date: 終了日時
+            detailed_logging: 詳細ログを出力するかどうか
+
+        Returns:
+            Fear & GreedデータがマージされたDataFrame
+        """
+        if not self.fear_greed_repo:
+            if detailed_logging:
+                logger.info("Fear & Greedリポジトリが設定されていません")
+            df["fear_greed_value"] = pd.NA
+            df["fear_greed_classification"] = pd.NA
+            return self._fill_fear_greed_missing_values(df)
+
+        try:
+            fear_greed_data = self.fear_greed_repo.get_fear_greed_data(
+                start_time=start_date, end_time=end_date
+            )
+
+            if detailed_logging:
+                logger.info(
+                    f"😨 取得したFear & Greedデータ件数: {len(fear_greed_data) if fear_greed_data else 0}"
                 )
-                if fear_greed_data:
-                    fear_greed_df = self._convert_fear_greed_to_dataframe(
-                        fear_greed_data
+
+            if fear_greed_data:
+                fear_greed_df = self._convert_fear_greed_to_dataframe(fear_greed_data)
+
+                if detailed_logging:
+                    logger.info(
+                        f"😨 Fear & Greed DataFrame: {len(fear_greed_df)}行, "
+                        f"期間: {fear_greed_df.index.min()} - {fear_greed_df.index.max()}"
                     )
-                    df = pd.merge_asof(
-                        df.sort_index(),
-                        fear_greed_df.sort_index(),
-                        left_index=True,
-                        right_index=True,
-                        direction="backward",
+
+                # toleranceを設定（詳細ログ時は3日、通常時は制限なし）
+                tolerance = pd.Timedelta(days=3) if detailed_logging else None
+
+                df = pd.merge_asof(
+                    df.sort_index(),
+                    fear_greed_df.sort_index(),
+                    left_index=True,
+                    right_index=True,
+                    direction="backward",
+                    tolerance=tolerance,
+                )
+
+                if detailed_logging:
+                    valid_fg_count = df["fear_greed_value"].notna().sum()
+                    logger.info(
+                        f"😨 Fear & Greedデータマージ完了: {valid_fg_count}/{len(df)}行に値あり "
+                        f"({valid_fg_count/len(df)*100:.1f}%)"
                     )
+            else:
+                warning_msg = "Fear & Greedデータが見つかりませんでした。"
+                if detailed_logging:
+                    logger.warning(f"⚠️ {warning_msg}")
                 else:
-                    logger.warning("Fear & Greedデータが見つかりませんでした。")
-                    df["fear_greed_value"] = pd.NA
-                    df["fear_greed_classification"] = pd.NA
-            except Exception as e:
-                logger.warning(
-                    f"Fear & Greedデータのマージ中にエラーが発生しました: {e}"
-                )
+                    logger.warning(warning_msg)
                 df["fear_greed_value"] = pd.NA
                 df["fear_greed_classification"] = pd.NA
-        else:
-            logger.info("Fear & Greedリポジトリが設定されていません")
+
+        except Exception as e:
+            logger.warning(f"Fear & Greedデータのマージ中にエラーが発生しました: {e}")
             df["fear_greed_value"] = pd.NA
             df["fear_greed_classification"] = pd.NA
 
+        return self._fill_fear_greed_missing_values(df)
+
+    def _fill_fear_greed_missing_values(self, df: pd.DataFrame) -> pd.DataFrame:
+        """
+        Fear & Greedデータの欠損値を補完
+
+        Args:
+            df: 対象のDataFrame
+
+        Returns:
+            欠損値が補完されたDataFrame
+        """
         # 欠損値を前方データで埋め、それでも残る場合は中立値で埋める
         if "fear_greed_value" in df.columns:
-            fg_series = df["fear_greed_value"].astype("float64")
+            # pd.NAをnp.nanに変換してから型変換
+            fg_series = df["fear_greed_value"].replace({pd.NA: None})
+            fg_series = pd.to_numeric(fg_series, errors="coerce")
             df["fear_greed_value"] = fg_series.ffill().fillna(50.0)  # 中立値50で埋める
         if "fear_greed_classification" in df.columns:
-            fg_class_series = df["fear_greed_classification"].astype("string")
+            # pd.NAをNoneに変換してから型変換
+            fg_class_series = df["fear_greed_classification"].replace({pd.NA: None})
+            fg_class_series = fg_class_series.astype("string")
             df["fear_greed_classification"] = fg_class_series.ffill().fillna("Neutral")
 
         return df

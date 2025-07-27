@@ -218,29 +218,15 @@ class PredictionConfig(BaseSettings):
         }
 
     def validate_predictions(self, predictions: Dict[str, float]) -> bool:
-        """予測値の妥当性を検証"""
+        """
+        予測値の妥当性を検証
+
+        Note: 実装は MLConfigValidator.validate_predictions を使用
+        """
         try:
-            required_keys = ["up", "down", "range"]
+            from app.config.validators import MLConfigValidator
 
-            # 必要なキーが存在するか
-            if not all(key in predictions for key in required_keys):
-                return False
-
-            # 値が数値で0-1の範囲内か
-            for key in required_keys:
-                value = predictions[key]
-                if not isinstance(value, (int, float)):
-                    return False
-                if not (self.MIN_PROBABILITY <= value <= self.MAX_PROBABILITY):
-                    return False
-
-            # 合計が妥当な範囲内か
-            total = sum(predictions[key] for key in required_keys)
-            if not (self.PROBABILITY_SUM_MIN <= total <= self.PROBABILITY_SUM_MAX):
-                return False
-
-            return True
-
+            return MLConfigValidator.validate_predictions(predictions)
         except Exception:
             return False
 

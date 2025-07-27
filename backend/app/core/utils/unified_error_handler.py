@@ -397,6 +397,8 @@ class UnifiedErrorHandler:
         """
         予測値の統一バリデーション
 
+        Note: 実装は MLConfigValidator.validate_predictions を使用
+
         Args:
             predictions: 予測値の辞書
             context: バリデーションコンテキスト
@@ -405,28 +407,23 @@ class UnifiedErrorHandler:
             バリデーション結果
         """
         try:
-            if not isinstance(predictions, dict):
-                logger.warning(f"{context}: 予測値が辞書形式ではありません")
-                return False
+            from app.config.validators import MLConfigValidator
 
-            if not predictions:
-                logger.warning(f"{context}: 予測値が空です")
-                return False
+            # 基本的なバリデーションを実行
+            is_valid = MLConfigValidator.validate_predictions(predictions)
 
-            for key, value in predictions.items():
-                if not isinstance(value, (int, float)):
-                    logger.warning(f"{context}: {key}の値が数値ではありません")
-                    return False
+            if not is_valid:
+                logger.warning(f"{context}: 予測値のバリデーションに失敗しました")
 
-                if not (0 <= value <= 1):
-                    logger.warning(f"{context}: {key}の値が0-1範囲外です")
-                    return False
+            # 追加のNaN/Inf チェック
+            if is_valid:
+                for key, value in predictions.items():
+                    if np.isnan(value) or np.isinf(value):
+                        logger.warning(f"{context}: {key}に無効な値が含まれています")
+                        return False
 
-                if np.isnan(value) or np.isinf(value):
-                    logger.warning(f"{context}: {key}に無効な値が含まれています")
-                    return False
+            return is_valid
 
-            return True
         except Exception as e:
             UnifiedErrorHandler.handle_model_error(
                 e, context, operation="validate_predictions"
