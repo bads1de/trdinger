@@ -6,8 +6,7 @@
 
 import logging
 import pandas as pd
-import numpy as np
-from typing import List, Dict, Any
+from typing import List
 
 logger = logging.getLogger(__name__)
 
@@ -62,9 +61,13 @@ class DataCleaner:
 
         if "fear_greed_classification" in result_df.columns:
             # pd.NAをNoneに変換してから型変換
-            fg_class_series = result_df["fear_greed_classification"].replace({pd.NA: None})
+            fg_class_series = result_df["fear_greed_classification"].replace(
+                {pd.NA: None}
+            )
             fg_class_series = fg_class_series.astype("string")
-            result_df["fear_greed_classification"] = fg_class_series.ffill().fillna("Neutral")
+            result_df["fear_greed_classification"] = fg_class_series.ffill().fillna(
+                "Neutral"
+            )
 
         return result_df
 
@@ -139,7 +142,7 @@ class DataCleaner:
             ValueError: DataFrameが無効な場合
         """
         required_columns = ["Open", "High", "Low", "Close", "Volume"]
-        
+
         # 必須カラムの存在確認
         missing_columns = [col for col in required_columns if col not in df.columns]
         if missing_columns:
@@ -197,10 +200,10 @@ class DataCleaner:
 
     @staticmethod
     def clean_and_validate_data(
-        df: pd.DataFrame, 
+        df: pd.DataFrame,
         required_columns: List[str],
         interpolate: bool = True,
-        optimize: bool = True
+        optimize: bool = True,
     ) -> pd.DataFrame:
         """
         データのクリーニングと検証を一括実行

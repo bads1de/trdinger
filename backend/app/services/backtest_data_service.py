@@ -20,7 +20,7 @@ from database.models import (
     FearGreedIndexData,
 )
 from .data_mergers import OIMerger, FRMerger, FearGreedMerger
-from .utils import DataCleaner
+from app.utils.data_cleaning_utils import DataCleaner
 
 
 logger = logging.getLogger(__name__)
