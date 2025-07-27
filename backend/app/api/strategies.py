@@ -11,7 +11,7 @@ from sqlalchemy.orm import Session
 from typing import Dict, Any, Optional
 from pydantic import BaseModel, Field
 
-from app.dependencies import get_strategy_integration_service
+from app.api.dependencies import get_strategy_integration_service
 from database.connection import get_db
 from app.utils.unified_error_handler import UnifiedErrorHandler
 
