@@ -39,6 +39,71 @@ class AutoFeatConfig:
     max_features: int = 100
     feateng_steps: int = 2
     max_gb: float = 1.0
+    featsel_runs: int = 1  # 特徴量選択の実行回数（メモリ節約のため1に設定）
+    verbose: int = 0  # ログレベル（0=最小限、1=詳細）
+    n_jobs: int = 1  # 並列処理数（メモリ使用量制御のため1に設定）
+
+    def get_memory_optimized_config(self, data_size_mb: float) -> "AutoFeatConfig":
+        """
+        データサイズに基づいてメモリ最適化された設定を取得
+
+        Args:
+            data_size_mb: データサイズ（MB）
+
+        Returns:
+            最適化されたAutoFeatConfig
+        """
+        # データサイズに基づく動的設定（メモリ使用量を大幅に制限）
+        if data_size_mb > 500:  # 500MB以上の大量データ
+            return AutoFeatConfig(
+                enabled=self.enabled,
+                max_features=10,  # 特徴量数を大幅制限
+                feateng_steps=1,  # ステップ数を最小限に
+                max_gb=0.2,  # メモリ使用量を厳しく制限
+                featsel_runs=1,
+                verbose=0,
+                n_jobs=1,
+            )
+        elif data_size_mb > 100:  # 100MB以上の中量データ
+            return AutoFeatConfig(
+                enabled=self.enabled,
+                max_features=15,  # 特徴量数を制限
+                feateng_steps=1,  # ステップ数を最小限に
+                max_gb=0.3,  # メモリ使用量を制限
+                featsel_runs=1,
+                verbose=0,
+                n_jobs=1,
+            )
+        elif data_size_mb > 10:  # 10MB以上の中小量データ
+            return AutoFeatConfig(
+                enabled=self.enabled,
+                max_features=20,
+                feateng_steps=1,
+                max_gb=0.4,
+                featsel_runs=1,
+                verbose=0,
+                n_jobs=1,
+            )
+        elif data_size_mb > 1:  # 1MB以上の小量データ
+            return AutoFeatConfig(
+                enabled=self.enabled,
+                max_features=10,
+                feateng_steps=1,
+                max_gb=0.2,
+                featsel_runs=1,
+                verbose=0,
+                n_jobs=1,
+            )
+        else:  # 極小量データ（1MB未満）
+            return AutoFeatConfig(
+                enabled=self.enabled,
+                max_features=3,  # 極小量データでは最小限の特徴量
+                feateng_steps=1,  # ステップ数を最小限に
+                max_gb=0.05,  # 最小限のメモリ使用量（50MB）
+                featsel_runs=1,
+                verbose=0,
+                n_jobs=1,
+            )
 
 
 @dataclass

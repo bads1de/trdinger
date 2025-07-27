@@ -53,3 +53,8 @@ tsfresh>=0.20.0          # 時系列特徴量自動生成
 featuretools>=1.28.0     # Deep Feature Synthesis
 autofeat>=2.1.0          # 遺伝的アルゴリズム特徴量選択
 dask>=2023.10.0          # 並列処理・大規模データ処理
+
+# メモリプロファイリング・パフォーマンス分析
+memory-profiler>=0.61.0  # メモリ使用量プロファイリング
+line-profiler>=4.1.0     # ライン単位パフォーマンス分析
+psutil>=5.9.0            # システムリソース監視

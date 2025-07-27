@@ -18,6 +18,7 @@ from sklearn.model_selection import cross_val_score
 
 from .....utils.unified_error_handler import safe_ml_operation
 from .automl_config import AutoFeatConfig
+from .performance_optimizer import PerformanceOptimizer
 from autofeat import AutoFeatRegressor, AutoFeatClassifier
 
 logger = logging.getLogger(__name__)
@@ -44,6 +45,12 @@ class AutoFeatCalculator:
         self.last_selection_info = {}
         self._memory_usage_before = 0
         self._memory_usage_after = 0
+
+        # パフォーマンス最適化ツールを初期化
+        self.performance_optimizer = PerformanceOptimizer()
+
+        # メモリプロファイリングを有効にするかどうか
+        self.enable_memory_profiling = True
 
     def __enter__(self):
         """コンテキストマネージャーの開始"""
@@ -112,7 +119,11 @@ class AutoFeatCalculator:
         return data_size_mb > 100 or row_count > 10000
 
     def _process_in_batches(
-        self, df: pd.DataFrame, target: pd.Series, batch_size: int = 5000
+        self,
+        df: pd.DataFrame,
+        target: pd.Series,
+        optimized_config: AutoFeatConfig,
+        batch_size: int = 5000,
     ) -> Tuple[pd.DataFrame, Dict[str, Any]]:
         """大量データをバッチ処理で特徴量生成"""
         logger.info(
@@ -130,9 +141,9 @@ class AutoFeatCalculator:
             logger.debug(f"バッチ {i//batch_size + 1}: {len(batch_df)}行処理中")
 
             with self._memory_managed_operation(f"バッチ{i//batch_size + 1}処理"):
-                # 小さなバッチで特徴量生成
+                # 小さなバッチで特徴量生成（最適化設定を使用）
                 batch_result, batch_meta = self._generate_features_single_batch(
-                    batch_df, batch_target
+                    batch_df, batch_target, optimized_config
                 )
 
                 if "error" not in batch_meta:
@@ -188,17 +199,30 @@ class AutoFeatCalculator:
             with self._memory_managed_operation("AutoFeat特徴量生成"):
                 start_time = time.time()
 
+                # データサイズを計算してメモリ最適化設定を取得
+                data_size_mb = df.memory_usage(deep=True).sum() / 1024 / 1024
+                optimized_config = self.config.get_memory_optimized_config(data_size_mb)
+
+                logger.info(f"データサイズ: {data_size_mb:.2f}MB, 最適化設定適用")
+
                 # 設定の決定
                 max_feat = (
                     max_features
                     if max_features is not None
-                    else self.config.max_features
+                    else optimized_config.max_features
                 )
 
-                logger.info(f"AutoFeat特徴量生成開始: 最大特徴量={max_feat}")
+                logger.info(
+                    f"AutoFeat特徴量生成開始: 最大特徴量={max_feat}, メモリ制限={optimized_config.max_gb}GB"
+                )
 
-                # データの前処理
+                # データの前処理とメモリ最適化
                 processed_df, processed_target = self._preprocess_data(df, target)
+
+                # pandasメモリ最適化を適用
+                processed_df = self.performance_optimizer.optimize_pandas_memory_usage(
+                    processed_df, aggressive=data_size_mb > 100
+                )
 
                 if processed_df.empty:
                     logger.warning("前処理後のデータが空です")
@@ -207,27 +231,49 @@ class AutoFeatCalculator:
                 # 大量データの場合はバッチ処理を使用
                 if self._should_use_batch_processing(processed_df):
                     logger.info("大量データのためバッチ処理モードを使用します")
-                    return self._process_in_batches(processed_df, processed_target)
+                    return self._process_in_batches(
+                        processed_df, processed_target, optimized_config
+                    )
 
                 # NumPyのランダムシードを現在時刻で設定（AutoFeat内部で使用される）
                 np.random.seed(int(time.time()) % 2147483647)
 
-                # AutoFeatモデルを初期化（正しいAPI）
+                # AutoFeatモデルを初期化（最適化された設定を使用）
                 with self._memory_managed_operation("AutoFeatモデル初期化"):
+                    # メモリ制限をさらに厳しく設定（データサイズに基づく）
+                    if data_size_mb < 1:
+                        actual_max_gb = 0.05  # 50MB
+                    elif data_size_mb < 10:
+                        actual_max_gb = 0.1  # 100MB
+                    else:
+                        actual_max_gb = min(
+                            optimized_config.max_gb, 0.2
+                        )  # 最大でも200MB
+
                     if task_type.lower() == "classification":
                         self.autofeat_model = AutoFeatClassifier(
-                            feateng_steps=self.config.feateng_steps,
-                            max_gb=self.config.max_gb,
-                            verbose=1,
-                            featsel_runs=1,  # 特徴量選択の実行回数を減らす
+                            feateng_steps=optimized_config.feateng_steps,
+                            max_gb=actual_max_gb,
+                            verbose=optimized_config.verbose,
+                            featsel_runs=optimized_config.featsel_runs,
+                            n_jobs=optimized_config.n_jobs,  # 並列処理数を制御
+                            units=None,  # 単位を指定しない（メモリ節約）
                         )
                     else:
                         self.autofeat_model = AutoFeatRegressor(
-                            feateng_steps=self.config.feateng_steps,
-                            max_gb=self.config.max_gb,
-                            verbose=1,
-                            featsel_runs=1,  # 特徴量選択の実行回数を減らす
+                            feateng_steps=optimized_config.feateng_steps,
+                            max_gb=actual_max_gb,
+                            verbose=optimized_config.verbose,
+                            featsel_runs=optimized_config.featsel_runs,
+                            n_jobs=optimized_config.n_jobs,  # 並列処理数を制御
+                            units=None,  # 単位を指定しない（メモリ節約）
                         )
+
+                    logger.info(
+                        f"AutoFeatモデル初期化完了: max_gb={actual_max_gb}, "
+                        f"feateng_steps={optimized_config.feateng_steps}, "
+                        f"featsel_runs={optimized_config.featsel_runs}"
+                    )
 
                 # 特徴量生成を実行
                 with self._memory_managed_operation("AutoFeat学習・変換"):
@@ -237,12 +283,31 @@ class AutoFeatCalculator:
                         logger.info("AutoFeat特徴量生成実行中...")
                         logger.info(f"入力データ形状: {processed_df.shape}")
                         logger.info(f"入力列: {list(processed_df.columns)}")
+                        logger.info(
+                            f"AutoFeat設定詳細: feateng_steps={optimized_config.feateng_steps}, "
+                            f"max_gb={actual_max_gb}, max_features={optimized_config.max_features}"
+                        )
 
-                        # AutoFeatは自動的に特徴量を生成し、最適なものを選択
-                        self.autofeat_model.fit(processed_df, processed_target)
+                        # AutoFeatの推奨方法：fit_transformを使用（メモリ効率が良い）
+                        transformed_df = self.autofeat_model.fit_transform(
+                            processed_df, processed_target
+                        )
 
-                        # 変換されたデータを取得
-                        transformed_df = self.autofeat_model.transform(processed_df)
+                        # AutoFeatの内部状態をログ出力
+                        if hasattr(self.autofeat_model, "feateng_cols_"):
+                            feateng_count = (
+                                len(self.autofeat_model.feateng_cols_)
+                                if self.autofeat_model.feateng_cols_
+                                else 0
+                            )
+                            logger.info(f"AutoFeat生成特徴量列: {feateng_count}個")
+                        if hasattr(self.autofeat_model, "featsel_"):
+                            featsel_count = (
+                                len(self.autofeat_model.featsel_)
+                                if self.autofeat_model.featsel_
+                                else 0
+                            )
+                            logger.info(f"AutoFeat選択特徴量: {featsel_count}個")
 
                 logger.info(f"変換後データ形状: {transformed_df.shape}")
                 logger.info(f"変換後列: {list(transformed_df.columns)}")
@@ -250,6 +315,16 @@ class AutoFeatCalculator:
 
                 # AutoFeatプレフィックスを追加して元のDataFrameと結合
                 result_df = df.copy()
+
+                # 元データのNaN値を処理（出力データのクリーンアップ）
+                if result_df.isnull().any().any():
+                    logger.info("元データのNaN値を中央値で補完します")
+                    for col in result_df.select_dtypes(include=[np.number]).columns:
+                        if result_df[col].isnull().any():
+                            median_val = result_df[col].median()
+                            if pd.isna(median_val):
+                                median_val = 0  # 全てNaNの場合は0で補完
+                            result_df[col] = result_df[col].fillna(median_val)
 
                 # インデックスを統一（長さ不一致問題を防ぐ）
                 if hasattr(transformed_df, "index"):
@@ -325,10 +400,29 @@ class AutoFeatCalculator:
             numeric_df = numeric_df.reset_index(drop=True)
             target_reset = target.reset_index(drop=True)
 
-            # NaNを含む行を除去
+            # NaNを含む行を除去（より厳密なチェック）
             valid_mask = numeric_df.notna().all(axis=1) & target_reset.notna()
-            processed_df = numeric_df[valid_mask]
-            processed_target = target_reset[valid_mask]
+
+            # 追加の検証：無限値や異常値のチェック
+            for col in numeric_df.columns:
+                col_valid = (
+                    np.isfinite(numeric_df[col])
+                    & (numeric_df[col] != np.inf)
+                    & (numeric_df[col] != -np.inf)
+                )
+                valid_mask = valid_mask & col_valid
+
+            processed_df = numeric_df[valid_mask].copy()
+            processed_target = target_reset[valid_mask].copy()
+
+            # 最終的なNaNチェック
+            if processed_df.isnull().any().any():
+                logger.warning("前処理後にもNaN値が残っています。fillnaで補完します。")
+                processed_df = processed_df.fillna(processed_df.median())
+
+            if processed_target.isnull().any():
+                logger.warning("ターゲット変数にNaN値があります。中央値で補完します。")
+                processed_target = processed_target.fillna(processed_target.median())
 
             # 定数列を除去
             constant_columns = []
@@ -564,7 +658,7 @@ class AutoFeatCalculator:
             self.last_selection_info = {}
 
     def _generate_features_single_batch(
-        self, df: pd.DataFrame, target: pd.Series
+        self, df: pd.DataFrame, target: pd.Series, optimized_config: AutoFeatConfig
     ) -> Tuple[pd.DataFrame, Dict[str, Any]]:
         """単一バッチでの特徴量生成（バッチ処理用）"""
         try:
@@ -573,21 +667,23 @@ class AutoFeatCalculator:
             # ランダム性を追加
             np.random.seed(int(time.time()) % 2147483647)
 
-            # AutoFeatモデルを初期化
+            # AutoFeatモデルを初期化（バッチ処理用の厳しい制限）
+            batch_max_gb = min(optimized_config.max_gb, 0.2)  # バッチ処理では0.2GB以下
             autofeat_model = AutoFeatRegressor(
-                feateng_steps=self.config.feateng_steps,
-                max_gb=min(self.config.max_gb, 2),  # バッチ処理では少ないメモリを使用
+                feateng_steps=1,  # バッチ処理では常に1ステップ
+                max_gb=batch_max_gb,
                 verbose=0,  # バッチ処理では詳細ログを抑制
-                featsel_runs=1,
+                featsel_runs=1,  # バッチ処理では1回のみ
+                n_jobs=1,  # バッチ処理では並列処理を無効化
+                units=None,  # 単位を指定しない（メモリ節約）
             )
 
             # 特徴量生成を実行
             with warnings.catch_warnings():
                 warnings.simplefilter("ignore")
 
-                # 学習と変換
-                autofeat_model.fit(df, target)
-                transformed_df = autofeat_model.transform(df)
+                # AutoFeatの推奨方法：fit_transformを使用（メモリ効率が良い）
+                transformed_df = autofeat_model.fit_transform(df, target)
 
                 # 結果をDataFrameに変換
                 result_df = df.copy()

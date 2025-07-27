@@ -8,14 +8,39 @@ import logging
 import hashlib
 import pickle
 import time
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, Callable
 import pandas as pd
 import numpy as np
 from pathlib import Path
 import psutil
 import gc
+import functools
+import tracemalloc
+from contextlib import contextmanager
 
 logger = logging.getLogger(__name__)
+
+# memory-profilerのインポート（オプション）
+try:
+    from memory_profiler import profile, memory_usage
+
+    MEMORY_PROFILER_AVAILABLE = True
+except ImportError:
+    MEMORY_PROFILER_AVAILABLE = False
+    logger.warning(
+        "memory-profilerが利用できません。詳細なメモリ分析機能は無効化されます。"
+    )
+
+# line-profilerのインポート（オプション）
+try:
+    from line_profiler import LineProfiler
+
+    LINE_PROFILER_AVAILABLE = True
+except ImportError:
+    LINE_PROFILER_AVAILABLE = False
+    logger.warning(
+        "line-profilerが利用できません。ライン単位の分析機能は無効化されます。"
+    )
 
 
 class PerformanceOptimizer:
@@ -439,3 +464,206 @@ class PerformanceOptimizer:
             recommendations["enable_memory_monitoring"] = True
 
         return recommendations
+
+    def detailed_memory_profile(
+        self, func: Callable, *args, **kwargs
+    ) -> Dict[str, Any]:
+        """
+        詳細なメモリプロファイリングを実行
+
+        Args:
+            func: プロファイリング対象の関数
+            *args: 関数の引数
+            **kwargs: 関数のキーワード引数
+
+        Returns:
+            メモリプロファイリング結果
+        """
+        if not MEMORY_PROFILER_AVAILABLE:
+            logger.warning(
+                "memory-profilerが利用できないため、基本的なメモリ監視のみ実行します"
+            )
+            return self._basic_memory_profile(func, *args, **kwargs)
+
+        try:
+            # tracemalloc開始
+            tracemalloc.start()
+
+            # メモリ使用量の詳細測定
+            start_memory = self._get_memory_usage()
+            start_time = time.time()
+
+            # memory-profilerを使用した詳細分析
+            mem_usage = memory_usage((func, args, kwargs), interval=0.1, timeout=None)
+
+            # 実行時間とメモリ使用量の計算
+            end_time = time.time()
+            end_memory = self._get_memory_usage()
+
+            # tracemalloc統計取得
+            current, peak = tracemalloc.get_traced_memory()
+            tracemalloc.stop()
+
+            # 結果の整理
+            result = {
+                "execution_time": end_time - start_time,
+                "memory_start_mb": start_memory,
+                "memory_end_mb": end_memory,
+                "memory_diff_mb": end_memory - start_memory,
+                "memory_usage_timeline": mem_usage,
+                "peak_memory_mb": max(mem_usage) if mem_usage else end_memory,
+                "tracemalloc_current_mb": current / 1024 / 1024,
+                "tracemalloc_peak_mb": peak / 1024 / 1024,
+                "memory_efficiency": self._calculate_memory_efficiency(mem_usage),
+            }
+
+            logger.info(
+                f"詳細メモリプロファイリング完了: ピーク使用量 {result['peak_memory_mb']:.2f}MB"
+            )
+            return result
+
+        except Exception as e:
+            logger.error(f"詳細メモリプロファイリングエラー: {e}")
+            return self._basic_memory_profile(func, *args, **kwargs)
+
+    def _basic_memory_profile(self, func: Callable, *args, **kwargs) -> Dict[str, Any]:
+        """基本的なメモリプロファイリング（memory-profiler不使用）"""
+        start_memory = self._get_memory_usage()
+        start_time = time.time()
+
+        # 関数実行
+        result = func(*args, **kwargs)
+
+        end_time = time.time()
+        end_memory = self._get_memory_usage()
+
+        return {
+            "execution_time": end_time - start_time,
+            "memory_start_mb": start_memory,
+            "memory_end_mb": end_memory,
+            "memory_diff_mb": end_memory - start_memory,
+            "result": result,
+        }
+
+    def _calculate_memory_efficiency(self, mem_usage: list) -> Dict[str, float]:
+        """メモリ効率性を計算"""
+        if not mem_usage or len(mem_usage) < 2:
+            return {"efficiency_score": 0.0, "stability_score": 0.0}
+
+        # メモリ使用量の変動を分析
+        mem_array = np.array(mem_usage)
+        mean_usage = np.mean(mem_array)
+        std_usage = np.std(mem_array)
+        max_usage = np.max(mem_array)
+        min_usage = np.min(mem_array)
+
+        # 効率性スコア（低いほど良い）
+        efficiency_score = (
+            (max_usage - min_usage) / mean_usage if mean_usage > 0 else 1.0
+        )
+
+        # 安定性スコア（低いほど良い）
+        stability_score = std_usage / mean_usage if mean_usage > 0 else 1.0
+
+        return {
+            "efficiency_score": efficiency_score,
+            "stability_score": stability_score,
+            "mean_usage_mb": mean_usage,
+            "std_usage_mb": std_usage,
+            "max_usage_mb": max_usage,
+            "min_usage_mb": min_usage,
+        }
+
+    def memory_profiling_decorator(self, enable_detailed: bool = True):
+        """
+        メモリプロファイリングデコレータ
+
+        Args:
+            enable_detailed: 詳細プロファイリングを有効にするか
+        """
+
+        def decorator(func: Callable):
+            @functools.wraps(func)
+            def wrapper(*args, **kwargs):
+                if enable_detailed and MEMORY_PROFILER_AVAILABLE:
+                    profile_result = self.detailed_memory_profile(func, *args, **kwargs)
+                    logger.info(f"{func.__name__} メモリプロファイル: {profile_result}")
+                    return profile_result.get("result")
+                else:
+                    with self.monitor_memory_usage(func.__name__):
+                        return func(*args, **kwargs)
+
+            return wrapper
+
+        return decorator
+
+    def optimize_pandas_memory_usage(
+        self, df: pd.DataFrame, aggressive: bool = False
+    ) -> pd.DataFrame:
+        """
+        pandasのメモリ使用量を最適化（公式推奨手法）
+
+        Args:
+            df: 最適化するDataFrame
+            aggressive: より積極的な最適化を行うか
+
+        Returns:
+            最適化されたDataFrame
+        """
+        try:
+            original_memory = df.memory_usage(deep=True).sum()
+            optimized_df = df.copy()
+
+            for col in optimized_df.columns:
+                col_type = optimized_df[col].dtype
+
+                # 数値型の最適化
+                if col_type in ["int64", "int32"]:
+                    # より小さい整数型に変換可能かチェック
+                    c_min = optimized_df[col].min()
+                    c_max = optimized_df[col].max()
+
+                    if c_min > np.iinfo(np.int8).min and c_max < np.iinfo(np.int8).max:
+                        optimized_df[col] = optimized_df[col].astype(np.int8)
+                    elif (
+                        c_min > np.iinfo(np.int16).min
+                        and c_max < np.iinfo(np.int16).max
+                    ):
+                        optimized_df[col] = optimized_df[col].astype(np.int16)
+                    elif (
+                        c_min > np.iinfo(np.int32).min
+                        and c_max < np.iinfo(np.int32).max
+                    ):
+                        optimized_df[col] = optimized_df[col].astype(np.int32)
+
+                elif col_type in ["float64", "float32"]:
+                    # float32で十分な精度かチェック
+                    if aggressive or col_type == "float64":
+                        optimized_df[col] = pd.to_numeric(
+                            optimized_df[col], downcast="float"
+                        )
+
+                # オブジェクト型の最適化
+                elif col_type == "object":
+                    # カテゴリカルデータに変換可能かチェック
+                    num_unique_values = len(optimized_df[col].unique())
+                    num_total_values = len(optimized_df[col])
+
+                    if (
+                        num_unique_values / num_total_values < 0.5
+                    ):  # ユニーク値が50%未満
+                        optimized_df[col] = optimized_df[col].astype("category")
+
+            optimized_memory = optimized_df.memory_usage(deep=True).sum()
+            reduction = (original_memory - optimized_memory) / original_memory * 100
+
+            logger.info(
+                f"pandasメモリ最適化: {reduction:.1f}%削減 "
+                f"({original_memory/1024/1024:.1f}MB → {optimized_memory/1024/1024:.1f}MB)"
+            )
+
+            return optimized_df
+
+        except Exception as e:
+            logger.error(f"pandasメモリ最適化エラー: {e}")
+            return df

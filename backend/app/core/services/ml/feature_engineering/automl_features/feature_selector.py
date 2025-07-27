@@ -116,10 +116,13 @@ class AdvancedFeatureSelector:
         try:
             logger.info("統計的検定による特徴量選択を実行中...")
 
-            # 有効なデータのマスクを作成
-            valid_mask = target.notna() & features.notna().all(axis=1)
-            valid_features = features[valid_mask]
-            valid_target = target[valid_mask]
+            # インデックスを統一してから有効なデータのマスクを作成
+            features_reset = features.reset_index(drop=True)
+            target_reset = target.reset_index(drop=True)
+
+            valid_mask = target_reset.notna() & features_reset.notna().all(axis=1)
+            valid_features = features_reset.loc[valid_mask]
+            valid_target = target_reset.loc[valid_mask]
 
             if len(valid_features) == 0:
                 logger.warning("有効なデータが見つかりません")
@@ -252,10 +255,13 @@ class AdvancedFeatureSelector:
         try:
             logger.info("相互情報量による特徴量選択を実行中...")
 
-            # 有効なデータのマスクを作成
-            valid_mask = target.notna() & features.notna().all(axis=1)
-            valid_features = features[valid_mask]
-            valid_target = target[valid_mask]
+            # インデックスを統一してから有効なデータのマスクを作成
+            features_reset = features.reset_index(drop=True)
+            target_reset = target.reset_index(drop=True)
+
+            valid_mask = target_reset.notna() & features_reset.notna().all(axis=1)
+            valid_features = features_reset.loc[valid_mask]
+            valid_target = target_reset.loc[valid_mask]
 
             if len(valid_features) == 0:
                 logger.warning("有効なデータが見つかりません")
@@ -308,10 +314,13 @@ class AdvancedFeatureSelector:
         try:
             logger.info("重要度ベース特徴量選択を実行中...")
 
-            # 有効なデータのマスクを作成
-            valid_mask = target.notna() & features.notna().all(axis=1)
-            valid_features = features[valid_mask]
-            valid_target = target[valid_mask]
+            # インデックスを統一してから有効なデータのマスクを作成
+            features_reset = features.reset_index(drop=True)
+            target_reset = target.reset_index(drop=True)
+
+            valid_mask = target_reset.notna() & features_reset.notna().all(axis=1)
+            valid_features = features_reset.loc[valid_mask]
+            valid_target = target_reset.loc[valid_mask]
 
             if len(valid_features) == 0:
                 logger.warning("有効なデータが見つかりません")

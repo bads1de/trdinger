@@ -16,6 +16,15 @@ from .automl_features.featuretools_calculator import FeaturetoolsCalculator
 from .automl_features.autofeat_calculator import AutoFeatCalculator
 from .automl_features.automl_config import AutoMLConfig
 from .automl_features.performance_optimizer import PerformanceOptimizer
+from .automl_features.memory_utils import (
+    get_system_memory_info,
+    optimize_dataframe_dtypes,
+    memory_efficient_processing,
+    check_memory_availability,
+    log_memory_usage,
+)
+from .enhanced_crypto_features import EnhancedCryptoFeatures
+from .optimized_crypto_features import OptimizedCryptoFeatures
 from ....utils.unified_error_handler import safe_ml_operation
 
 logger = logging.getLogger(__name__)
@@ -51,6 +60,12 @@ class EnhancedFeatureEngineeringService(FeatureEngineeringService):
 
         # パフォーマンス最適化クラス
         self.performance_optimizer = PerformanceOptimizer()
+
+        # 暗号通貨特化特徴量エンジニアリング
+        self.crypto_features = EnhancedCryptoFeatures()
+
+        # 最適化された特徴量エンジニアリング
+        self.optimized_features = OptimizedCryptoFeatures()
 
         # 統計情報
         self.last_enhancement_stats = {}
@@ -111,6 +126,44 @@ class EnhancedFeatureEngineeringService(FeatureEngineeringService):
             logger.info(
                 f"手動特徴量生成完了: {manual_feature_count}個 ({manual_time:.2f}秒)"
             )
+
+            # 1.5. 暗号通貨特化特徴量を追加
+            logger.info("暗号通貨特化特徴量を計算中...")
+            crypto_start_time = time.time()
+
+            try:
+                result_df = self.crypto_features.create_comprehensive_features(
+                    result_df, lookback_periods
+                )
+                crypto_time = time.time() - crypto_start_time
+                crypto_feature_count = len(result_df.columns) - manual_feature_count
+                logger.info(
+                    f"暗号通貨特化特徴量生成完了: {crypto_feature_count}個 ({crypto_time:.2f}秒)"
+                )
+            except Exception as e:
+                logger.warning(f"暗号通貨特化特徴量生成でエラー: {e}")
+                crypto_time = 0
+                crypto_feature_count = 0
+
+            # 1.6. 最適化された特徴量を追加
+            logger.info("最適化された特徴量を計算中...")
+            optimized_start_time = time.time()
+
+            try:
+                result_df = self.optimized_features.create_optimized_features(
+                    result_df, lookback_periods
+                )
+                optimized_time = time.time() - optimized_start_time
+                optimized_feature_count = (
+                    len(result_df.columns) - manual_feature_count - crypto_feature_count
+                )
+                logger.info(
+                    f"最適化特徴量生成完了: {optimized_feature_count}個 ({optimized_time:.2f}秒)"
+                )
+            except Exception as e:
+                logger.warning(f"最適化特徴量生成でエラー: {e}")
+                optimized_time = 0
+                optimized_feature_count = 0
 
             # 2. TSFresh特徴量を追加
             tsfresh_feature_count = 0
@@ -176,40 +229,66 @@ class EnhancedFeatureEngineeringService(FeatureEngineeringService):
                     )
                 )
 
-                logger.info(
-                    f"データサイズ: {data_size_mb:.2f}MB, メモリ推奨設定: {memory_recommendations}"
+                # システムメモリ情報を取得
+                memory_info = get_system_memory_info()
+                log_memory_usage("AutoFeat処理開始前")
+
+                # メモリ可用性をチェック
+                estimated_memory_mb = data_size_mb * 3  # 概算でデータサイズの3倍
+                if not check_memory_availability(estimated_memory_mb):
+                    logger.warning(
+                        f"メモリ不足の可能性: 推定必要量 {estimated_memory_mb:.1f}MB"
+                    )
+
+                # DataFrameのメモリ最適化を事前に実行
+                result_df = optimize_dataframe_dtypes(
+                    result_df, aggressive=data_size_mb > 100
                 )
 
-                # メモリ監視付きでAutoFeat特徴量生成を実行
-                with self.performance_optimizer.monitor_memory_usage(
-                    "AutoFeat特徴量生成"
-                ):
-                    # AutoFeatCalculatorをコンテキストマネージャーとして使用（メモリリーク防止）
-                    with self.autofeat_calculator as calculator:
-                        # AutoFeatで特徴量を生成
-                        generated_df, generation_info = calculator.generate_features(
-                            df=result_df,
-                            target=target,
-                            task_type="regression",  # デフォルトは回帰
-                            max_features=self.automl_config.autofeat.max_features,
-                        )
+                logger.info(
+                    f"データサイズ: {data_size_mb:.2f}MB, メモリ推奨設定: {memory_recommendations}, "
+                    f"システムメモリ使用率: {memory_info.get('used_percent', 0):.1f}%"
+                )
 
-                        # 生成された特徴量で置き換え
-                        if "error" not in generation_info:
-                            result_df = generated_df
-                            autofeat_feature_count = generation_info.get(
-                                "generated_features", 0
+                # メモリ効率的な処理でAutoFeat特徴量生成を実行
+                with memory_efficient_processing("AutoFeat特徴量生成"):
+                    with self.performance_optimizer.monitor_memory_usage(
+                        "AutoFeat特徴量生成"
+                    ):
+                        # AutoFeatCalculatorをコンテキストマネージャーとして使用（メモリリーク防止）
+                        with self.autofeat_calculator as calculator:
+                            # AutoFeatで特徴量を生成
+                            generated_df, generation_info = (
+                                calculator.generate_features(
+                                    df=result_df,
+                                    target=target,
+                                    task_type="regression",  # デフォルトは回帰
+                                    max_features=self.automl_config.autofeat.max_features,
+                                )
                             )
 
-                            # 生成情報を統計に追加
-                            self.last_enhancement_stats["autofeat_generation_info"] = (
-                                generation_info
+                            # 生成された特徴量で置き換え
+                            if "error" not in generation_info:
+                                # 生成されたDataFrameもメモリ最適化
+                                result_df = optimize_dataframe_dtypes(
+                                    generated_df, aggressive=data_size_mb > 100
+                                )
+                                autofeat_feature_count = generation_info.get(
+                                    "generated_features", 0
+                                )
+
+                                # 生成情報を統計に追加
+                                self.last_enhancement_stats[
+                                    "autofeat_generation_info"
+                                ] = generation_info
+
+                            # AutoFeatモデルのメモリクリーンアップ
+                            self.performance_optimizer.cleanup_autofeat_memory(
+                                calculator.autofeat_model
                             )
 
-                        # AutoFeatモデルのメモリクリーンアップ
-                        self.performance_optimizer.cleanup_autofeat_memory(
-                            calculator.autofeat_model
-                        )
+                            # 処理後のメモリ状況をログ出力
+                            log_memory_usage("AutoFeat処理完了後")
 
                 autofeat_time = time.time() - autofeat_start_time
                 logger.info(
@@ -239,7 +318,8 @@ class EnhancedFeatureEngineeringService(FeatureEngineeringService):
 
             logger.info(
                 f"拡張特徴量生成完了: 総計{total_features}個の特徴量 "
-                f"(手動:{manual_feature_count}, TSFresh:{tsfresh_feature_count}, "
+                f"(手動:{manual_feature_count}, 暗号通貨特化:{crypto_feature_count}, "
+                f"最適化:{optimized_feature_count}, TSFresh:{tsfresh_feature_count}, "
                 f"Featuretools:{featuretools_feature_count}, AutoFeat:{autofeat_feature_count}) "
                 f"処理時間:{total_time:.2f}秒"
             )
