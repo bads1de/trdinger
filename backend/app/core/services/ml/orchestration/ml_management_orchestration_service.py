@@ -15,12 +15,6 @@ from app.core.services.auto_strategy.services.ml_orchestrator import MLOrchestra
 from app.core.services.ml.feature_engineering.automl_feature_analyzer import (
     AutoMLFeatureAnalyzer,
 )
-from app.core.services.ml.feature_engineering.automl_preset_service import (
-    AutoMLPresetService,
-    MarketCondition,
-    TradingStrategy,
-    DataSize,
-)
 
 
 logger = logging.getLogger(__name__)
@@ -314,101 +308,6 @@ class MLManagementOrchestrationService:
         analyzer = AutoMLFeatureAnalyzer()
         analysis_result = analyzer.analyze_feature_importance(feature_importance, top_n)
         return analysis_result
-
-    async def get_automl_presets(self) -> Dict[str, Any]:
-        """
-        AutoML設定プリセット一覧を取得
-        """
-        preset_service = AutoMLPresetService()
-        presets = preset_service.get_all_presets()
-        return {
-            "presets": [
-                {
-                    "name": preset.name,
-                    "description": preset.description,
-                    "market_condition": preset.market_condition.value,
-                    "trading_strategy": preset.trading_strategy.value,
-                    "data_size": preset.data_size.value,
-                    "config": preset.config,
-                    "performance_notes": preset.performance_notes,
-                }
-                for preset in presets
-            ],
-            "summary": preset_service.get_preset_summary(),
-        }
-
-    async def get_automl_preset(self, preset_name: str) -> Dict[str, Any]:
-        """
-        特定のAutoML設定プリセットを取得
-        """
-        try:
-            preset_service = AutoMLPresetService()
-            preset = preset_service.get_preset_by_name(preset_name)
-            return {
-                "name": preset.name,
-                "description": preset.description,
-                "market_condition": preset.market_condition.value,
-                "trading_strategy": preset.trading_strategy.value,
-                "data_size": preset.data_size.value,
-                "config": preset.config,
-                "performance_notes": preset.performance_notes,
-            }
-        except ValueError as e:
-            return {"error": str(e)}
-
-    async def recommend_automl_preset(
-        self,
-        market_condition: str = None,
-        trading_strategy: str = None,
-        data_size: str = None,
-    ) -> Dict[str, Any]:
-        """
-        条件に基づいてAutoML設定プリセットを推奨
-        """
-        preset_service = AutoMLPresetService()
-
-        market_cond = None
-        if market_condition:
-            try:
-                market_cond = MarketCondition(market_condition)
-            except ValueError:
-                pass
-
-        trading_strat = None
-        if trading_strategy:
-            try:
-                trading_strat = TradingStrategy(trading_strategy)
-            except ValueError:
-                pass
-
-        data_sz = None
-        if data_size:
-            try:
-                data_sz = DataSize(data_size)
-            except ValueError:
-                pass
-
-        preset = preset_service.recommend_preset(
-            market_condition=market_cond,
-            trading_strategy=trading_strat,
-            data_size=data_sz,
-        )
-        return {
-            "recommended_preset": {
-                "name": preset.name,
-                "description": preset.description,
-                "market_condition": preset.market_condition.value,
-                "trading_strategy": preset.trading_strategy.value,
-                "data_size": preset.data_size.value,
-                "config": preset.config,
-                "performance_notes": preset.performance_notes,
-            },
-            "recommendation_criteria": {
-                "market_condition": market_condition,
-                "trading_strategy": trading_strategy,
-                "data_size": data_size,
-            },
-        }
 
     async def cleanup_old_models(self) -> Dict[str, str]:
         """

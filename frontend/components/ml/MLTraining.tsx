@@ -30,7 +30,6 @@ import OptimizationSettings, {
   OptimizationSettingsConfig,
 } from "./OptimizationSettings";
 import AutoMLFeatureSettings from "./AutoMLFeatureSettings";
-import AutoMLPresetSelector from "./AutoMLPresetSelector";
 import EnsembleSettings, { EnsembleSettingsConfig } from "./EnsembleSettings";
 import {
   AutoMLFeatureConfig,
@@ -89,27 +88,7 @@ export default function MLTraining() {
 
   const [automlEnabled, setAutomlEnabled] = useState(false);
   const [showAutoMLSettings, setShowAutoMLSettings] = useState(false);
-  const [showAutoMLPresets, setShowAutoMLPresets] = useState(false);
   const [showStopDialog, setShowStopDialog] = useState(false);
-
-  // AutoML設定プリセット関数
-  const applyAutoMLPreset = (preset: "default" | "financial" | "disabled") => {
-    if (preset === "disabled") {
-      setAutomlEnabled(false);
-      setAutomlSettings({
-        tsfresh: { ...automlSettings.tsfresh, enabled: false },
-        featuretools: { ...automlSettings.featuretools, enabled: false },
-        autofeat: { ...automlSettings.autofeat, enabled: false },
-      });
-    } else {
-      setAutomlEnabled(true);
-      const newConfig =
-        preset === "default"
-          ? getDefaultAutoMLConfig()
-          : getFinancialOptimizedAutoMLConfig();
-      setAutomlSettings(newConfig);
-    }
-  };
 
   // AutoML設定が有効かどうかを判定
   const isAutoMLEnabled = () => {
@@ -311,7 +290,7 @@ export default function MLTraining() {
               {automlEnabled && (
                 <div className="space-y-4 pt-4 border-t border-gray-200 dark:border-gray-700">
                   <div className="flex items-center justify-between">
-                    <p className="text-sm font-medium">詳細設定とプリセット</p>
+                    <p className="text-sm font-medium">詳細設定</p>
                     <Button
                       variant="outline"
                       size="sm"
@@ -334,58 +313,6 @@ export default function MLTraining() {
 
                   {showAutoMLSettings && (
                     <div className="space-y-4">
-                      {/* AutoML設定プリセットボタン */}
-                      <div className="flex flex-wrap gap-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => applyAutoMLPreset("disabled")}
-                          disabled={trainingStatus.is_training}
-                        >
-                          無効
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => applyAutoMLPreset("default")}
-                          disabled={trainingStatus.is_training}
-                        >
-                          <Bot className="h-4 w-4 mr-1" />
-                          デフォルト
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => applyAutoMLPreset("financial")}
-                          disabled={trainingStatus.is_training}
-                        >
-                          <Zap className="h-4 w-4 mr-1" />
-                          金融最適化
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() =>
-                            setShowAutoMLPresets(!showAutoMLPresets)
-                          }
-                          disabled={trainingStatus.is_training}
-                        >
-                          <Settings className="h-4 w-4 mr-1" />
-                          プリセット選択
-                        </Button>
-                      </div>
-
-                      {/* AutoMLプリセット選択 */}
-                      {showAutoMLPresets && (
-                        <div className="mb-4">
-                          <AutoMLPresetSelector
-                            currentConfig={automlSettings}
-                            onConfigChange={setAutomlSettings}
-                            isLoading={trainingStatus.is_training}
-                          />
-                        </div>
-                      )}
-
                       {/* AutoML詳細設定 */}
                       <AutoMLFeatureSettings
                         settings={automlSettings}

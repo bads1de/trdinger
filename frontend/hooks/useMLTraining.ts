@@ -128,24 +128,6 @@ export const getFinancialOptimizedAutoMLConfig = (): AutoMLFeatureConfig => ({
   },
 });
 
-// AutoMLプリセット関連の型定義
-export interface AutoMLPreset {
-  name: string;
-  description: string;
-  market_condition: string;
-  trading_strategy: string;
-  data_size: string;
-  config: AutoMLFeatureConfig;
-  performance_notes: string;
-}
-
-// プリセットからAutoMLConfigを作成
-export const createAutoMLConfigFromPreset = (
-  preset: AutoMLPreset
-): AutoMLFeatureConfig => {
-  return preset.config;
-};
-
 export const useMLTraining = () => {
   const [config, setConfig] = useState<TrainingConfig>({
     symbol: "BTC/USDT:USDT",

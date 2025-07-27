@@ -103,46 +103,6 @@ async def get_automl_feature_analysis(top_n: int = 20):
     return await UnifiedErrorHandler.safe_execute_async(_get_automl_feature_analysis)
 
 
-@router.get("/automl-presets")
-async def get_automl_presets():
-    """
-    AutoML設定プリセット一覧を取得
-    """
-
-    async def _get_automl_presets():
-        return await ml_management_service.get_automl_presets()
-
-    return await UnifiedErrorHandler.safe_execute_async(_get_automl_presets)
-
-
-@router.get("/automl-presets/{preset_name}")
-async def get_automl_preset(preset_name: str):
-    """
-    特定のAutoML設定プリセットを取得
-    """
-
-    async def _get_automl_preset():
-        return await ml_management_service.get_automl_preset(preset_name)
-
-    return await UnifiedErrorHandler.safe_execute_async(_get_automl_preset)
-
-
-@router.post("/automl-presets/recommend")
-async def recommend_automl_preset(
-    market_condition: str = None, trading_strategy: str = None, data_size: str = None
-):
-    """
-    条件に基づいてAutoML設定プリセットを推奨
-    """
-
-    async def _recommend_automl_preset():
-        return await ml_management_service.recommend_automl_preset(
-            market_condition, trading_strategy, data_size
-        )
-
-    return await UnifiedErrorHandler.safe_execute_async(_recommend_automl_preset)
-
-
 @router.get("/config")
 async def get_ml_config():
     """
