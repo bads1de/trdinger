@@ -12,11 +12,9 @@ from sqlalchemy import (
     Text,
     JSON,
     ForeignKey,
-    event,
 )
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
-from datetime import timezone
 from .connection import Base
 
 
@@ -290,16 +288,6 @@ class FearGreedIndexData(Base):
                 self.updated_at.isoformat() if self.updated_at is not None else None
             ),
         }
-
-
-# FearGreedIndexDataのタイムゾーン自動修正イベントリスナー
-@event.listens_for(FearGreedIndexData, "load")
-def fix_timezone_on_load(target, context):
-    """データベースから読み込み時にタイムゾーン情報を自動修正"""
-    if target.data_timestamp and target.data_timestamp.tzinfo is None:
-        target.data_timestamp = target.data_timestamp.replace(tzinfo=timezone.utc)
-    if target.timestamp and target.timestamp.tzinfo is None:
-        target.timestamp = target.timestamp.replace(tzinfo=timezone.utc)
 
 
 class BacktestResult(Base):
