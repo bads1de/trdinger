@@ -75,23 +75,16 @@ class OHLCVRepository(BaseRepository):
         Returns:
             OHLCV データのリスト
         """
-        try:
-            filters = {"symbol": symbol, "timeframe": timeframe}
-            return DatabaseQueryHelper.get_filtered_records(
-                db=self.db,
-                model_class=OHLCVData,
-                filters=filters,
-                time_range_column="timestamp",
-                start_time=start_time,
-                end_time=end_time,
-                order_by_column="timestamp",
-                order_asc=True,
-                limit=limit,
-            )
-
-        except Exception as e:
-            logger.error(f"OHLCVデータの取得中にエラーが発生しました: {e}")
-            raise
+        filters = {"symbol": symbol, "timeframe": timeframe}
+        return self.get_filtered_data(
+            filters=filters,
+            time_range_column="timestamp",
+            start_time=start_time,
+            end_time=end_time,
+            order_by_column="timestamp",
+            order_asc=True,
+            limit=limit,
+        )
 
     def get_latest_ohlcv_data(
         self,
@@ -110,23 +103,12 @@ class OHLCVRepository(BaseRepository):
         Returns:
             最新のOHLCV データのリスト（新しい順）
         """
-        try:
-            filters = {"symbol": symbol, "timeframe": timeframe}
-            return DatabaseQueryHelper.get_filtered_records(
-                db=self.db,
-                model_class=OHLCVData,
-                filters=filters,
-                time_range_column="timestamp",
-                start_time=None,
-                end_time=None,
-                order_by_column="timestamp",
-                order_asc=False,
-                limit=limit,
-            )
-
-        except Exception as e:
-            logger.error(f"最新OHLCVデータの取得中にエラーが発生しました: {e}")
-            raise
+        filters = {"symbol": symbol, "timeframe": timeframe}
+        return self.get_latest_records(
+            filters=filters,
+            timestamp_column="timestamp",
+            limit=limit,
+        )
 
     def get_latest_timestamp(self, symbol: str, timeframe: str) -> Optional[datetime]:
         """
@@ -209,27 +191,20 @@ class OHLCVRepository(BaseRepository):
         """
         records = self.get_ohlcv_data(symbol, timeframe, start_time, end_time, limit)
 
-        if not records:
-            return pd.DataFrame(
-                columns=["timestamp", "open", "high", "low", "close", "volume"]
-            )
+        column_mapping = {
+            "timestamp": "timestamp",
+            "open": "open",
+            "high": "high",
+            "low": "low",
+            "close": "close",
+            "volume": "volume",
+        }
 
-        data = []
-        for record in records:
-            data.append(
-                {
-                    "timestamp": record.timestamp,
-                    "open": record.open,
-                    "high": record.high,
-                    "low": record.low,
-                    "close": record.close,
-                    "volume": record.volume,
-                }
-            )
-
-        df = pd.DataFrame(data)
-        df.set_index("timestamp", inplace=True)
-        return df
+        return self.to_dataframe(
+            records=records,
+            column_mapping=column_mapping,
+            index_column="timestamp",
+        )
 
     def validate_ohlcv_data(self, ohlcv_data: List[dict]) -> bool:
         """
@@ -275,13 +250,9 @@ class OHLCVRepository(BaseRepository):
         Returns:
             削除された件数
         """
-        try:
-            deleted_count = self._delete_all_records()
-            logger.info(f"全てのOHLCVデータを削除しました: {deleted_count}件")
-            return deleted_count
-        except Exception as e:
-            logger.error(f"OHLCVデータの全削除中にエラーが発生しました: {e}")
-            raise
+        deleted_count = self._delete_all_records()
+        logger.info(f"全てのOHLCVデータを削除しました: {deleted_count}件")
+        return deleted_count
 
     def clear_ohlcv_data_by_symbol(self, symbol: str) -> int:
         """
@@ -293,17 +264,11 @@ class OHLCVRepository(BaseRepository):
         Returns:
             削除された件数
         """
-        try:
-            deleted_count = self._delete_records_by_filter("symbol", symbol)
-            logger.info(
-                f"シンボル '{symbol}' のOHLCVデータを削除しました: {deleted_count}件"
-            )
-            return deleted_count
-        except Exception as e:
-            logger.error(
-                f"シンボル '{symbol}' のOHLCVデータ削除中にエラーが発生しました: {e}"
-            )
-            raise
+        deleted_count = self._delete_records_by_filter("symbol", symbol)
+        logger.info(
+            f"シンボル '{symbol}' のOHLCVデータを削除しました: {deleted_count}件"
+        )
+        return deleted_count
 
     def clear_ohlcv_data_by_timeframe(self, timeframe: str) -> int:
         """
@@ -315,18 +280,42 @@ class OHLCVRepository(BaseRepository):
         Returns:
             削除された件数
         """
-        try:
-            deleted_count = self._delete_records_by_filter("timeframe", timeframe)
-            logger.info(
-                f"時間足 '{timeframe}' のOHLCVデータを削除しました: {deleted_count}件"
-            )
-            return deleted_count
-        except Exception as e:
-            self.db.rollback()
-            logger.error(
-                f"時間足 '{timeframe}' のOHLCVデータ削除中にエラーが発生しました: {e}"
-            )
-            raise
+        deleted_count = self._delete_records_by_filter("timeframe", timeframe)
+        logger.info(
+            f"時間足 '{timeframe}' のOHLCVデータを削除しました: {deleted_count}件"
+        )
+        return deleted_count
+
+    def clear_ohlcv_data_by_date_range(
+        self,
+        symbol: str,
+        timeframe: str,
+        start_time: Optional[datetime] = None,
+        end_time: Optional[datetime] = None,
+    ) -> int:
+        """
+        指定された期間のOHLCVデータを削除
+
+        Args:
+            symbol: 取引ペア
+            timeframe: 時間軸
+            start_time: 削除開始時刻
+            end_time: 削除終了時刻
+
+        Returns:
+            削除された件数
+        """
+        additional_filters = {"symbol": symbol, "timeframe": timeframe}
+        deleted_count = self.delete_by_date_range(
+            timestamp_column="timestamp",
+            start_time=start_time,
+            end_time=end_time,
+            additional_filters=additional_filters,
+        )
+        logger.info(
+            f"期間指定でOHLCVデータを削除しました ({symbol}, {timeframe}): {deleted_count}件"
+        )
+        return deleted_count
 
     def get_available_timeframes(self, symbol: str) -> List[str]:
         """

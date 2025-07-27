@@ -5,6 +5,7 @@
 from typing import List, Optional
 from datetime import datetime
 from sqlalchemy.orm import Session
+import pandas as pd
 import logging
 
 from .base_repository import BaseRepository
@@ -68,25 +69,16 @@ class OpenInterestRepository(BaseRepository):
         Returns:
             オープンインタレストデータのリスト
         """
-        try:
-            filters = {"symbol": symbol}
-            return DatabaseQueryHelper.get_filtered_records(
-                db=self.db,
-                model_class=OpenInterestData,
-                filters=filters,
-                time_range_column="data_timestamp",
-                start_time=start_time,
-                end_time=end_time,
-                order_by_column="data_timestamp",
-                order_asc=True,
-                limit=limit,
-            )
-
-        except Exception as e:
-            logger.error(
-                f"オープンインタレストデータの取得中にエラーが発生しました: {e}"
-            )
-            raise
+        filters = {"symbol": symbol}
+        return self.get_filtered_data(
+            filters=filters,
+            time_range_column="data_timestamp",
+            start_time=start_time,
+            end_time=end_time,
+            order_by_column="data_timestamp",
+            order_asc=True,
+            limit=limit,
+        )
 
     def get_latest_open_interest_timestamp(self, symbol: str) -> Optional[datetime]:
         """
@@ -131,17 +123,11 @@ class OpenInterestRepository(BaseRepository):
         Returns:
             削除された件数
         """
-        try:
-            deleted_count = self._delete_all_records()
-            logger.info(
-                f"全てのオープンインタレストデータを削除しました: {deleted_count}件"
-            )
-            return deleted_count
-        except Exception as e:
-            logger.error(
-                f"オープンインタレストデータの全削除中にエラーが発生しました: {e}"
-            )
-            raise
+        deleted_count = self._delete_all_records()
+        logger.info(
+            f"全てのオープンインタレストデータを削除しました: {deleted_count}件"
+        )
+        return deleted_count
 
     def clear_open_interest_data_by_symbol(self, symbol: str) -> int:
         """
@@ -153,16 +139,40 @@ class OpenInterestRepository(BaseRepository):
         Returns:
             削除された件数
         """
-        try:
-            deleted_count = self._delete_records_by_filter("symbol", symbol)
-            logger.info(
-                f"シンボル '{symbol}' のオープンインタレストデータを削除しました: {deleted_count}件"
-            )
-            return deleted_count
+        deleted_count = self._delete_records_by_filter("symbol", symbol)
+        logger.info(
+            f"シンボル '{symbol}' のオープンインタレストデータを削除しました: {deleted_count}件"
+        )
+        return deleted_count
 
-        except Exception as e:
-            self.db.rollback()
-            logger.error(
-                f"シンボル '{symbol}' のオープンインタレストデータ削除中にエラーが発生しました: {e}"
-            )
-            raise
+    def get_open_interest_dataframe(
+        self,
+        symbol: str,
+        start_time: Optional[datetime] = None,
+        end_time: Optional[datetime] = None,
+        limit: Optional[int] = None,
+    ) -> pd.DataFrame:
+        """
+        オープンインタレストデータをDataFrameとして取得
+
+        Args:
+            symbol: 取引ペア
+            start_time: 開始時刻
+            end_time: 終了時刻
+            limit: 取得件数制限
+
+        Returns:
+            オープンインタレストデータのDataFrame
+        """
+        records = self.get_open_interest_data(symbol, start_time, end_time, limit)
+
+        column_mapping = {
+            "data_timestamp": "data_timestamp",
+            "open_interest_value": "open_interest_value",
+        }
+
+        return self.to_dataframe(
+            records=records,
+            column_mapping=column_mapping,
+            index_column="data_timestamp",
+        )

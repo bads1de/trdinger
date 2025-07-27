@@ -5,6 +5,7 @@ Fear & Greed Index データのリポジトリクラス
 from typing import List, Optional
 from datetime import datetime
 from sqlalchemy.orm import Session
+import pandas as pd
 import logging
 
 from .base_repository import BaseRepository
@@ -134,22 +135,15 @@ class FearGreedIndexRepository(BaseRepository):
         Returns:
             Fear & Greed Index データのリスト
         """
-        try:
-            return DatabaseQueryHelper.get_filtered_records(
-                db=self.db,
-                model_class=FearGreedIndexData,
-                filters={},
-                time_range_column="data_timestamp",
-                start_time=start_time,
-                end_time=end_time,
-                order_by_column="data_timestamp",
-                order_asc=True,
-                limit=limit,
-            )
-
-        except Exception as e:
-            logger.error(f"Fear & Greed Indexデータの取得中にエラーが発生しました: {e}")
-            raise
+        return self.get_filtered_data(
+            filters={},
+            time_range_column="data_timestamp",
+            start_time=start_time,
+            end_time=end_time,
+            order_by_column="data_timestamp",
+            order_asc=True,
+            limit=limit,
+        )
 
     def get_latest_fear_greed_data(self, limit: int = 30) -> List[FearGreedIndexData]:
         """
@@ -161,24 +155,11 @@ class FearGreedIndexRepository(BaseRepository):
         Returns:
             最新のFear & Greed Index データのリスト
         """
-        try:
-            return DatabaseQueryHelper.get_filtered_records(
-                db=self.db,
-                model_class=FearGreedIndexData,
-                filters={},
-                time_range_column="data_timestamp",
-                start_time=None,
-                end_time=None,
-                order_by_column="data_timestamp",
-                order_asc=False,  # 降順で最新データを取得
-                limit=limit,
-            )
-
-        except Exception as e:
-            logger.error(
-                f"最新Fear & Greed Indexデータの取得中にエラーが発生しました: {e}"
-            )
-            raise
+        return self.get_latest_records(
+            filters={},
+            timestamp_column="data_timestamp",
+            limit=limit,
+        )
 
     def get_latest_data_timestamp(self) -> Optional[datetime]:
         """
@@ -251,20 +232,40 @@ class FearGreedIndexRepository(BaseRepository):
         Returns:
             削除された件数
         """
-        try:
-            deleted_count = (
-                self.db.query(FearGreedIndexData)
-                .filter(FearGreedIndexData.data_timestamp < before_date)
-                .delete()
-            )
-            self.db.commit()
+        deleted_count = super().delete_old_data(
+            timestamp_column="data_timestamp",
+            before_date=before_date,
+        )
+        logger.info(f"古いFear & Greed Indexデータを {deleted_count} 件削除しました")
+        return deleted_count
 
-            logger.info(
-                f"古いFear & Greed Indexデータを {deleted_count} 件削除しました"
-            )
-            return deleted_count
+    def get_fear_greed_dataframe(
+        self,
+        start_time: Optional[datetime] = None,
+        end_time: Optional[datetime] = None,
+        limit: Optional[int] = None,
+    ) -> pd.DataFrame:
+        """
+        Fear & Greed IndexデータをDataFrameとして取得
 
-        except Exception as e:
-            logger.error(f"古いデータの削除中にエラーが発生しました: {e}")
-            self.db.rollback()
-            raise
+        Args:
+            start_time: 開始時刻
+            end_time: 終了時刻
+            limit: 取得件数制限
+
+        Returns:
+            Fear & Greed IndexデータのDataFrame
+        """
+        records = self.get_fear_greed_data(start_time, end_time, limit)
+
+        column_mapping = {
+            "data_timestamp": "data_timestamp",
+            "value": "value",
+            "value_classification": "value_classification",
+        }
+
+        return self.to_dataframe(
+            records=records,
+            column_mapping=column_mapping,
+            index_column="data_timestamp",
+        )

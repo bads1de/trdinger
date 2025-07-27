@@ -67,23 +67,16 @@ class FundingRateRepository(BaseRepository):
         Returns:
             ファンディングレートデータのリスト
         """
-        try:
-            filters = {"symbol": symbol}
-            return DatabaseQueryHelper.get_filtered_records(
-                db=self.db,
-                model_class=FundingRateData,
-                filters=filters,
-                time_range_column="funding_timestamp",
-                start_time=start_time,
-                end_time=end_time,
-                order_by_column="funding_timestamp",
-                order_asc=True,
-                limit=limit,
-            )
-
-        except Exception as e:
-            logger.error(f"ファンディングレートデータ取得エラー: {e}")
-            raise
+        filters = {"symbol": symbol}
+        return self.get_filtered_data(
+            filters=filters,
+            time_range_column="funding_timestamp",
+            start_time=start_time,
+            end_time=end_time,
+            order_by_column="funding_timestamp",
+            order_asc=True,
+            limit=limit,
+        )
 
     def get_latest_funding_timestamp(self, symbol: str) -> Optional[datetime]:
         """
@@ -128,14 +121,11 @@ class FundingRateRepository(BaseRepository):
         Returns:
             削除された件数
         """
-        try:
-            deleted_count = self._delete_all_records()
-            logger.info(
-                f"全てのファンディングレートデータを削除しました: {deleted_count}件"
-            )
-            return deleted_count
-        except Exception as e:
-            self._handle_delete_error(e, "ファンディングレートデータ全削除")
+        deleted_count = self._delete_all_records()
+        logger.info(
+            f"全てのファンディングレートデータを削除しました: {deleted_count}件"
+        )
+        return deleted_count
 
     def clear_funding_rate_data_by_symbol(self, symbol: str) -> int:
         """
@@ -147,17 +137,40 @@ class FundingRateRepository(BaseRepository):
         Returns:
             削除された件数
         """
-        try:
-            deleted_count = self._delete_records_by_filter("symbol", symbol)
-            logger.info(
-                f"シンボル '{symbol}' のファンディングレートデータを削除しました: {deleted_count}件"
-            )
-            return deleted_count
+        deleted_count = self._delete_records_by_filter("symbol", symbol)
+        logger.info(
+            f"シンボル '{symbol}' のファンディングレートデータを削除しました: {deleted_count}件"
+        )
+        return deleted_count
 
-        except Exception as e:
-            self._handle_delete_error(
-                e, "シンボル '{symbol}' のファンディングレートデータ削除", symbol=symbol
-            )
+    def clear_funding_rate_data_by_date_range(
+        self,
+        symbol: str,
+        start_time: Optional[datetime] = None,
+        end_time: Optional[datetime] = None,
+    ) -> int:
+        """
+        指定された期間のファンディングレートデータを削除
+
+        Args:
+            symbol: 取引ペア
+            start_time: 削除開始時刻
+            end_time: 削除終了時刻
+
+        Returns:
+            削除された件数
+        """
+        additional_filters = {"symbol": symbol}
+        deleted_count = self.delete_by_date_range(
+            timestamp_column="funding_timestamp",
+            start_time=start_time,
+            end_time=end_time,
+            additional_filters=additional_filters,
+        )
+        logger.info(
+            f"期間指定でファンディングレートデータを削除しました ({symbol}): {deleted_count}件"
+        )
+        return deleted_count
 
     def get_funding_rate_dataframe(
         self,
@@ -180,27 +193,15 @@ class FundingRateRepository(BaseRepository):
         """
         records = self.get_funding_rate_data(symbol, start_time, end_time, limit)
 
-        if not records:
-            return pd.DataFrame(
-                columns=[
-                    "funding_timestamp",
-                    "funding_rate",
-                    "mark_price",
-                    "index_price",
-                ]
-            )
+        column_mapping = {
+            "funding_timestamp": "funding_timestamp",
+            "funding_rate": "funding_rate",
+            "mark_price": "mark_price",
+            "index_price": "index_price",
+        }
 
-        data = []
-        for record in records:
-            data.append(
-                {
-                    "funding_timestamp": record.funding_timestamp,
-                    "funding_rate": record.funding_rate,
-                    "mark_price": record.mark_price,
-                    "index_price": record.index_price,
-                }
-            )
-
-        df = pd.DataFrame(data)
-        df.set_index("funding_timestamp", inplace=True)
-        return df
+        return self.to_dataframe(
+            records=records,
+            column_mapping=column_mapping,
+            index_column="funding_timestamp",
+        )
