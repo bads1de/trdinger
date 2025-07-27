@@ -154,10 +154,11 @@ class BybitService(ABC):
         page_limit: int = 200,
         max_pages: int = 50,
         latest_existing_timestamp: Optional[int] = None,
+        pagination_strategy: str = "until",
         **fetch_kwargs,
     ) -> List[Dict[str, Any]]:
         """
-        ページネーション処理で全期間データを取得
+        ページネーション処理で全期間データを取得（汎用版）
 
         Args:
             fetch_func: データ取得関数
@@ -165,13 +166,47 @@ class BybitService(ABC):
             page_limit: 1ページあたりの取得件数
             max_pages: 最大ページ数
             latest_existing_timestamp: 既存データの最新タイムスタンプ（差分更新用）
+            pagination_strategy: ページネーション戦略（"until" または "time_range"）
             **fetch_kwargs: fetch_funcに渡す追加引数
 
         Returns:
             全期間のデータリスト
         """
-        logger.info(f"全期間データ取得開始: {symbol}")
+        logger.info(f"全期間データ取得開始: {symbol} (strategy: {pagination_strategy})")
 
+        if pagination_strategy == "until":
+            return await self._fetch_paginated_data_until(
+                fetch_func,
+                symbol,
+                page_limit,
+                max_pages,
+                latest_existing_timestamp,
+                **fetch_kwargs,
+            )
+        elif pagination_strategy == "time_range":
+            return await self._fetch_paginated_data_time_range(
+                fetch_func,
+                symbol,
+                page_limit,
+                max_pages,
+                latest_existing_timestamp,
+                **fetch_kwargs,
+            )
+        else:
+            raise ValueError(f"未対応のページネーション戦略: {pagination_strategy}")
+
+    async def _fetch_paginated_data_until(
+        self,
+        fetch_func: Callable,
+        symbol: str,
+        page_limit: int,
+        max_pages: int,
+        latest_existing_timestamp: Optional[int],
+        **fetch_kwargs,
+    ) -> List[Dict[str, Any]]:
+        """
+        untilパラメータを使用したページネーション（ファンディングレート用）
+        """
         all_data = []
         page_count = 0
         # 最新の時刻から開始（Bybit APIは新しいデータから古いデータの順で返す）
@@ -189,11 +224,13 @@ class BybitService(ABC):
                     symbol,
                     None,  # since（開始時刻は指定しない）
                     page_limit,
-                    {"until": until_time},  # 指定時刻より前のデータを取得
+                    {
+                        "until": until_time,
+                        **fetch_kwargs,
+                    },  # 指定時刻より前のデータを取得
                 )
 
                 if not page_data:
-                    # logger.info(f"ページ {page_count}: データなし。取得終了")
                     break
 
                 logger.info(
@@ -201,36 +238,17 @@ class BybitService(ABC):
                     f"(累計: {len(all_data) + len(page_data)}件)"
                 )
 
-                # 重複チェック（タイムスタンプベース）
-                existing_timestamps = {item["timestamp"] for item in all_data}
-                new_items = [
-                    item
-                    for item in page_data
-                    if item["timestamp"] not in existing_timestamps
-                ]
-
-                # 差分更新: 既存データより古いデータのみ追加
-                if latest_existing_timestamp:
-                    new_items = [
-                        item
-                        for item in new_items
-                        if item["timestamp"] < latest_existing_timestamp
-                    ]
-
-                    if not new_items:
-                        logger.info(
-                            f"ページ {page_count}: 既存データに到達。差分更新完了"
-                        )
-                        break
-
-                all_data.extend(new_items)
-                logger.info(
-                    f"ページ {page_count}: 新規データ {len(new_items)}件追加 "
-                    f"(累計: {len(all_data)}件)"
+                # 共通の重複チェックと差分更新処理
+                new_items = self._process_page_data(
+                    page_data, all_data, latest_existing_timestamp, page_count
                 )
 
+                if new_items is None:  # 差分更新完了
+                    break
+
+                all_data.extend(new_items)
+
                 # 次のページのために until_time を更新
-                # 最も古いデータのタイムスタンプより1ミリ秒前に設定
                 if page_data:
                     until_time = min(item["timestamp"] for item in page_data) - 1
 
@@ -248,6 +266,174 @@ class BybitService(ABC):
         all_data.sort(key=lambda x: x["timestamp"], reverse=True)  # 新しい順にソート
         logger.info(f"全期間データ取得完了: {len(all_data)}件 ({page_count}ページ)")
         return all_data
+
+    async def _fetch_paginated_data_time_range(
+        self,
+        fetch_func: Callable,
+        symbol: str,
+        page_limit: int,
+        max_pages: int,
+        latest_existing_timestamp: Optional[int],
+        interval: str = "1h",
+        **fetch_kwargs,
+    ) -> List[Dict[str, Any]]:
+        """
+        時間範囲を使用したページネーション（オープンインタレスト用）
+        """
+        all_data = []
+        page_count = 0
+        end_time = int(datetime.now(timezone.utc).timestamp() * 1000)
+
+        # 間隔に応じた時間差を計算（ミリ秒）
+        interval_ms = self._get_interval_milliseconds(interval)
+
+        # APIシンボル形式に変換（オープンインタレスト用）
+        api_symbol = self._convert_to_api_symbol(symbol)
+        category = "linear" if symbol.endswith("USDT") else "inverse"
+
+        while page_count < max_pages:
+            page_count += 1
+
+            try:
+                # 時間範囲を計算
+                start_time = end_time - (page_limit * interval_ms)
+
+                # パラメータを構築
+                params = {
+                    "category": category,
+                    "symbol": api_symbol,
+                    "intervalTime": interval,
+                    "startTime": start_time,
+                    "endTime": end_time,
+                    "limit": page_limit,
+                    **fetch_kwargs,
+                }
+
+                # ページごとにデータを取得
+                page_data = await self._handle_ccxt_errors(
+                    f"オープンインタレストページデータ取得 (page={page_count})",
+                    fetch_func,
+                    api_symbol,
+                    since=start_time,
+                    limit=page_limit,
+                    params=params,
+                )
+
+                if not page_data:
+                    logger.info(f"ページ {page_count}: データなし。取得終了")
+                    break
+
+                logger.info(
+                    f"ページ {page_count}: {len(page_data)}件取得 "
+                    f"(累計: {len(all_data) + len(page_data)}件)"
+                )
+
+                # 共通の重複チェックと差分更新処理
+                new_items = self._process_page_data(
+                    page_data, all_data, latest_existing_timestamp, page_count
+                )
+
+                if new_items is None:  # 差分更新完了
+                    break
+
+                all_data.extend(new_items)
+
+                # 取得件数が期待値より少ない場合は最後のページ
+                if len(page_data) < page_limit:
+                    logger.info(
+                        f"ページ {page_count}: 最後のページに到達（件数不足: {len(page_data)} < {page_limit}）"
+                    )
+                    break
+
+                # 次のページの終了時刻を現在のページの開始時刻に設定
+                end_time = start_time - 1
+
+                await asyncio.sleep(0.1)
+
+            except Exception as e:
+                logger.error(f"ページ {page_count} 取得エラー: {e}")
+                break
+
+        logger.info(f"全期間データ取得完了: {len(all_data)}件 ({page_count}ページ)")
+        return all_data
+
+    def _process_page_data(
+        self,
+        page_data: List[Dict[str, Any]],
+        all_data: List[Dict[str, Any]],
+        latest_existing_timestamp: Optional[int],
+        page_count: int,
+    ) -> Optional[List[Dict[str, Any]]]:
+        """
+        ページデータの共通処理（重複チェック、差分更新）
+
+        Args:
+            page_data: 現在のページのデータ
+            all_data: これまでに取得した全データ
+            latest_existing_timestamp: 既存データの最新タイムスタンプ
+            page_count: 現在のページ番号
+
+        Returns:
+            新規データのリスト。差分更新完了の場合はNone
+        """
+        # 重複チェック（タイムスタンプベース）
+        existing_timestamps = {item["timestamp"] for item in all_data}
+        new_items = [
+            item for item in page_data if item["timestamp"] not in existing_timestamps
+        ]
+
+        # 差分更新: 既存データより古いデータのみ追加
+        if latest_existing_timestamp:
+            new_items = [
+                item
+                for item in new_items
+                if item["timestamp"] < latest_existing_timestamp
+            ]
+
+            if not new_items:
+                logger.info(f"ページ {page_count}: 既存データに到達。差分更新完了")
+                return None
+
+        logger.info(f"ページ {page_count}: 新規データ {len(new_items)}件追加")
+
+        return new_items
+
+    def _get_interval_milliseconds(self, interval: str) -> int:
+        """
+        間隔文字列をミリ秒に変換
+
+        Args:
+            interval: 間隔文字列（例: "1h", "5min"）
+
+        Returns:
+            ミリ秒数
+        """
+        interval_map = {
+            "5min": 5 * 60 * 1000,
+            "15min": 15 * 60 * 1000,
+            "30min": 30 * 60 * 1000,
+            "1h": 60 * 60 * 1000,
+            "4h": 4 * 60 * 60 * 1000,
+            "1d": 24 * 60 * 60 * 1000,
+        }
+        return interval_map.get(interval, 60 * 60 * 1000)  # デフォルトは1時間
+
+    def _convert_to_api_symbol(self, symbol: str) -> str:
+        """
+        シンボルをAPI用形式に変換
+
+        Args:
+            symbol: 正規化されたシンボル（例: "BTC/USDT:USDT"）
+
+        Returns:
+            API用シンボル（例: "BTCUSDT"）
+        """
+        # スラッシュを削除
+        api_symbol = symbol.replace("/", "")
+        # コロン以降を削除
+        if ":" in api_symbol:
+            api_symbol = api_symbol.split(":")[0]
+        return api_symbol
 
     async def _execute_with_db_session(self, func: Callable, **kwargs) -> Any:
         """

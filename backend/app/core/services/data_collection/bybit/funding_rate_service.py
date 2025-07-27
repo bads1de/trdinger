@@ -97,6 +97,7 @@ class BybitFundingRateService(BybitService):
             page_limit=200,
             max_pages=50,
             latest_existing_timestamp=latest_timestamp,
+            pagination_strategy="until",
         )
 
     async def fetch_incremental_funding_rate_data(
