@@ -14,7 +14,7 @@ from deap import tools, algorithms
 from ..models.ga_config import GAConfig
 from ..factories.strategy_factory import StrategyFactory
 from ..generators.random_gene_generator import RandomGeneGenerator
-from app.services.backtest_service import BacktestService
+from app.services.backtest.backtest_service import BacktestService
 from .deap_setup import DEAPSetup
 from .individual_evaluator import IndividualEvaluator
 from ..operators.genetic_operators import crossover_strategy_genes, mutate_strategy_gene

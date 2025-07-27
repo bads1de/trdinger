@@ -14,7 +14,7 @@ from database.repositories.ga_experiment_repository import GAExperimentRepositor
 from database.repositories.generated_strategy_repository import (
     GeneratedStrategyRepository,
 )
-from app.services.backtest_service import BacktestService
+from app.services.backtest.backtest_service import BacktestService
 from app.utils.api_utils import APIResponseHelper
 
 logger = logging.getLogger(__name__)

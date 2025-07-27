@@ -320,13 +320,25 @@ class GAConfig:
         )
 
         # デフォルト値を使用してフラットな構造で復元
+        # fitness_weightsが指定されていない場合はデフォルト値を使用
+        default_fitness_weights = {
+            "total_return": 0.25,
+            "sharpe_ratio": 0.35,
+            "max_drawdown": 0.2,
+            "win_rate": 0.1,
+            "balance_score": 0.1,
+        }
+        fitness_weights = data.get("fitness_weights")
+        if not fitness_weights:  # 空の辞書やNoneの場合
+            fitness_weights = default_fitness_weights
+
         return cls(
             population_size=data.get("population_size", 100),
             generations=data.get("generations", 50),
             crossover_rate=data.get("crossover_rate", 0.8),
             mutation_rate=data.get("mutation_rate", 0.1),
             elite_size=data.get("elite_size", 10),
-            fitness_weights=data.get("fitness_weights", {}),
+            fitness_weights=fitness_weights,
             primary_metric=data.get("primary_metric", "sharpe_ratio"),
             fitness_constraints=data.get("fitness_constraints", {}),
             max_indicators=data.get("max_indicators", 5),

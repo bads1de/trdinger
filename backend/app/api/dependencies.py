@@ -12,8 +12,8 @@ from database.repositories.ohlcv_repository import OHLCVRepository
 from database.repositories.open_interest_repository import OpenInterestRepository
 from database.repositories.funding_rate_repository import FundingRateRepository
 
-from app.services.backtest_service import BacktestService
-from app.services.backtest_data_service import BacktestDataService
+from app.services.backtest.backtest_service import BacktestService
+from app.services.backtest.backtest_data_service import BacktestDataService
 from app.services.strategy_integration_service import StrategyIntegrationService
 
 

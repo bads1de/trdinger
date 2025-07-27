@@ -29,7 +29,7 @@ from app.services.ml.ml_training_service import MLTrainingService
 from app.services.ml.model_manager import model_manager
 
 from app.services.ml.interfaces import MLPredictionInterface
-from app.services.backtest_data_service import BacktestDataService
+from app.services.backtest.backtest_data_service import BacktestDataService
 from database.repositories.ohlcv_repository import OHLCVRepository
 from database.repositories.funding_rate_repository import FundingRateRepository
 from database.repositories.open_interest_repository import OpenInterestRepository

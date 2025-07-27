@@ -17,7 +17,7 @@ from app.services.auto_strategy.services.ml_orchestrator import MLOrchestrator
 from app.services.ml.config import ml_config
 from app.utils.unified_error_handler import UnifiedErrorHandler
 
-from app.services.backtest_data_service import BacktestDataService
+from app.services.backtest.backtest_data_service import BacktestDataService
 from app.utils.api_utils import APIResponseHelper
 from database.repositories.ohlcv_repository import OHLCVRepository
 from database.repositories.open_interest_repository import OpenInterestRepository

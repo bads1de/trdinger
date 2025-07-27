@@ -83,9 +83,10 @@ const getPageInfo = (pathname: string) => {
  * リアルタイム時計コンポーネント
  */
 const RealTimeClock: React.FC = () => {
-  const [time, setTime] = useState(new Date());
+  const [time, setTime] = useState<Date | null>(null);
 
   useEffect(() => {
+    setTime(new Date());
     const timer = setInterval(() => {
       setTime(new Date());
     }, 1000);
@@ -97,12 +98,14 @@ const RealTimeClock: React.FC = () => {
     <div className="flex items-center gap-2 px-3 py-1.5 bg-sidebar-accent/50 rounded-lg">
       <Clock className="size-4 text-muted-foreground" />
       <span className="text-sm font-mono text-foreground">
-        {time.toLocaleTimeString("ja-JP", {
-          hour12: false,
-          hour: "2-digit",
-          minute: "2-digit",
-          second: "2-digit",
-        })}
+        {time
+          ? time.toLocaleTimeString("ja-JP", {
+              hour12: false,
+              hour: "2-digit",
+              minute: "2-digit",
+              second: "2-digit",
+            })
+          : "--:--:--"}
       </span>
     </div>
   );

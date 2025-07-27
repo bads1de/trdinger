@@ -93,10 +93,7 @@ const navItems: NavItem[] = [
   },
 ];
 
-// モックデータ - 実際の実装では適切なデータソースから取得
-const mockPortfolioValue = "¥1,234,567";
-const mockPnL = "+2.34%";
-const mockNotificationCount = 3;
+
 
 /**
  * アクティブページかどうかを判定
@@ -108,37 +105,8 @@ const isActivePage = (href: string, pathname: string): boolean => {
   return pathname.startsWith(href);
 };
 
-/**
- * 接続ステータスコンポーネント
- */
-const ConnectionStatus: React.FC = () => {
-  const [isConnected, setIsConnected] = useState(true);
 
-  useEffect(() => {
-    // 実際の実装では、WebSocketやAPIの接続状態を監視
-    const interval = setInterval(() => {
-      setIsConnected(Math.random() > 0.1); // 90%の確率で接続状態
-    }, 5000);
 
-    return () => clearInterval(interval);
-  }, []);
-
-  return (
-    <div className="flex items-center gap-2 px-2 py-1 rounded-md bg-sidebar-accent/50">
-      {isConnected ? (
-        <>
-          <Wifi className="size-3 text-green-500" />
-          <span className="text-xs text-green-500 font-medium">Connected</span>
-        </>
-      ) : (
-        <>
-          <WifiOff className="size-3 text-red-500" />
-          <span className="text-xs text-red-500 font-medium">Disconnected</span>
-        </>
-      )}
-    </div>
-  );
-};
 
 /**
  * サイドバーナビゲーションコンポーネント
@@ -176,37 +144,9 @@ const SidebarNavigation: React.FC = () => {
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>
-
-        {/* 接続ステータス */}
-        <div className="group-data-[collapsible=icon]:hidden">
-          <ConnectionStatus />
-        </div>
       </SidebarHeader>
 
-      <SidebarContent className="px-2">
-        {/* ポートフォリオ情報 */}
-        <SidebarGroup className="group-data-[collapsible=icon]:hidden">
-          <SidebarGroupLabel className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-            Portfolio
-          </SidebarGroupLabel>
-          <SidebarGroupContent>
-            <div className="p-3 rounded-lg bg-gradient-to-r from-green-50 to-blue-50 dark:from-green-950/20 dark:to-blue-950/20 border border-green-200/50 dark:border-green-800/50">
-              <div className="flex items-center justify-between mb-1">
-                <span className="text-sm font-medium text-muted-foreground">
-                  Total Value
-                </span>
-                <Activity className="size-4 text-green-500" />
-              </div>
-              <div className="text-lg font-bold text-foreground">
-                {mockPortfolioValue}
-              </div>
-              <div className="text-sm font-medium text-green-600 dark:text-green-400">
-                {mockPnL}
-              </div>
-            </div>
-          </SidebarGroupContent>
-        </SidebarGroup>
-
+      <SidebarContent className="px-1">
         {/* ナビゲーション */}
         <SidebarGroup>
           <SidebarGroupLabel className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">

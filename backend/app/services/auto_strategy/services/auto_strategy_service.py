@@ -9,8 +9,8 @@ from typing import Dict, Any, List, Optional
 from fastapi import BackgroundTasks
 from ..models.ga_config import GAConfig
 from ..models.gene_strategy import StrategyGene
-from app.services.backtest_service import BacktestService
-from app.services.backtest_data_service import BacktestDataService
+from app.services.backtest.backtest_service import BacktestService
+from app.services.backtest.backtest_data_service import BacktestDataService
 from .experiment_persistence_service import ExperimentPersistenceService
 from ..managers.experiment_manager import ExperimentManager
 from database.connection import SessionLocal
@@ -86,6 +86,7 @@ class AutoStrategyService:
 
     def start_strategy_generation(
         self,
+        experiment_id: str,
         experiment_name: str,
         ga_config_dict: Dict[str, Any],
         backtest_config_dict: Dict[str, Any],
@@ -95,13 +96,14 @@ class AutoStrategyService:
         戦略生成を開始
 
         Args:
+            experiment_id: 実験ID（フロントエンドで生成されたUUID）
             experiment_name: 実験名
             ga_config_dict: GA設定の辞書
             backtest_config_dict: バックテスト設定の辞書
             background_tasks: FastAPIのバックグラウンドタスク
 
         Returns:
-            実験ID
+            実験ID（入力されたものと同じ）
         """
         # logger.info(f"戦略生成開始: {experiment_name}")
 
@@ -126,8 +128,9 @@ class AutoStrategyService:
             # )
 
         # 3. 実験を作成（統合版）
-        experiment_id = self.persistence_service.create_experiment(
-            experiment_name, ga_config, backtest_config
+        # フロントエンドから送信されたexperiment_idを使用
+        created_experiment_id = self.persistence_service.create_experiment(
+            experiment_id, experiment_name, ga_config, backtest_config
         )
 
         # 4. GAエンジンを初期化
@@ -138,7 +141,7 @@ class AutoStrategyService:
         # 5. 実験をバックグラウンドで開始
         background_tasks.add_task(
             self.experiment_manager.run_experiment,
-            experiment_id,
+            experiment_id,  # フロントエンドから送信されたUUIDを使用
             ga_config,
             backtest_config,
         )
@@ -146,7 +149,7 @@ class AutoStrategyService:
         # logger.info(
         #     f"戦略生成実験のバックグラウンドタスクを追加しました: {experiment_id}"
         # )
-        return experiment_id
+        return experiment_id  # フロントエンドから送信されたUUIDを返す
 
     def get_experiment_result(self, experiment_id: str) -> Optional[Dict[str, Any]]:
         """実験結果を取得（統合版）"""

@@ -47,6 +47,7 @@ def get_auto_strategy_service() -> AutoStrategyService:
 class GAGenerationRequest(BaseModel):
     """GA戦略生成リクエスト"""
 
+    experiment_id: str = Field(..., description="実験ID（フロントエンドで生成されたUUID）")
     experiment_name: str = Field(..., description="実験名")
     base_config: Dict[str, Any] = Field(..., description="基本バックテスト設定")
     ga_config: Dict[str, Any] = Field(..., description="GA設定")
@@ -84,8 +85,9 @@ class GAGenerationResponse(BaseModel):
     """GA戦略生成レスポンス"""
 
     success: bool
-    experiment_id: str
     message: str
+    data: Dict[str, Any]
+    timestamp: str
 
 
 class GAProgressResponse(BaseModel):
@@ -100,8 +102,9 @@ class GAResultResponse(BaseModel):
     """GA結果レスポンス"""
 
     success: bool
-    result: Optional[Dict[str, Any]] = None
     message: str
+    data: Optional[Dict[str, Any]] = None
+    timestamp: str
 
 
 class MultiObjectiveResultResponse(BaseModel):
@@ -166,23 +169,34 @@ async def generate_strategy(
     """
 
     async def _generate_strategy():
-        logger.info("=== GA戦略生成API呼び出し開始 ===")
-        logger.info(f"実験名: {request.experiment_name}")
+        try:
+            logger.info("=== GA戦略生成API呼び出し開始 ===")
+            logger.info(f"実験名: {request.experiment_name}")
 
-        # 戦略生成を開始（バックグラウンド実行）
-        experiment_id = auto_strategy_service.start_strategy_generation(
-            experiment_name=request.experiment_name,
-            ga_config_dict=request.ga_config,
-            backtest_config_dict=request.base_config,
-            background_tasks=background_tasks,
-        )
-        logger.info(f"戦略生成タスクをバックグラウンドで開始: {experiment_id}")
+            # 戦略生成を開始（バックグラウンド実行）
+            # フロントエンドから送信されたexperiment_idを使用
+            experiment_id = auto_strategy_service.start_strategy_generation(
+                experiment_id=request.experiment_id,  # フロントエンドで生成されたUUID
+                experiment_name=request.experiment_name,
+                ga_config_dict=request.ga_config,
+                backtest_config_dict=request.base_config,
+                background_tasks=background_tasks,
+            )
+            logger.info(f"戦略生成タスクをバックグラウンドで開始: {experiment_id}")
 
-        return APIResponseHelper.api_response(
-            success=True,
-            message="GA戦略生成を開始しました",
-            data={"experiment_id": experiment_id},
-        )
+            return APIResponseHelper.api_response(
+                success=True,
+                message="GA戦略生成を開始しました",
+                data={"experiment_id": experiment_id},
+            )
+        except Exception as e:
+            logger.error(f"戦略生成エラー: {e}", exc_info=True)
+            # 詳細なエラー情報を返す（デバッグ用）
+            return APIResponseHelper.api_response(
+                success=False,
+                message=f"戦略生成に失敗しました: {str(e)}",
+                data={"error_type": type(e).__name__, "error_details": str(e)},
+            )
 
     return await UnifiedErrorHandler.safe_execute_async(_generate_strategy)
 

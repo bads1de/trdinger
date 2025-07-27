@@ -12,7 +12,7 @@ from sqlalchemy.orm import Session
 
 from app.services.ml.ml_training_service import MLTrainingService
 from app.services.auto_strategy.services.ml_orchestrator import MLOrchestrator
-from app.services.backtest_data_service import BacktestDataService
+from app.services.backtest.backtest_data_service import BacktestDataService
 from app.services.ml.orchestration.background_task_manager import (
     background_task_manager,
 )

@@ -15,7 +15,7 @@ from datetime import datetime
 # プロジェクトルートをパスに追加
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
 
-from app.services.backtest_data_service import BacktestDataService
+from app.services.backtest.backtest_data_service import BacktestDataService
 
 
 class TestBacktestDataServiceRefactor(unittest.TestCase):

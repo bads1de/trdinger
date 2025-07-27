@@ -16,7 +16,7 @@ from database.repositories.generated_strategy_repository import (
 )
 from database.repositories.ga_experiment_repository import GAExperimentRepository
 from database.repositories.backtest_result_repository import BacktestResultRepository
-from app.services.backtest_service import BacktestService
+from app.services.backtest.backtest_service import BacktestService
 from app.services.auto_strategy.models.gene_serialization import GeneSerializer
 
 logger = logging.getLogger(__name__)
@@ -39,10 +39,19 @@ class ExperimentPersistenceService:
         self.backtest_service = backtest_service
 
     def create_experiment(
-        self, experiment_name: str, ga_config: GAConfig, backtest_config: Dict[str, Any]
+        self, experiment_id: str, experiment_name: str, ga_config: GAConfig, backtest_config: Dict[str, Any]
     ) -> str:
         """
         実験を作成
+
+        Args:
+            experiment_id: フロントエンドで生成された実験ID（UUID）
+            experiment_name: 実験名
+            ga_config: GA設定
+            backtest_config: バックテスト設定
+
+        Returns:
+            実験ID（入力されたものと同じ）
         """
         try:
             with self.db_session_factory() as db:
@@ -50,6 +59,7 @@ class ExperimentPersistenceService:
                 config_data = {
                     "ga_config": ga_config.to_dict(),
                     "backtest_config": backtest_config,
+                    "experiment_id": experiment_id,  # フロントエンドで生成されたUUIDを保存
                 }
                 db_experiment = ga_experiment_repo.create_experiment(
                     name=experiment_name,
@@ -58,9 +68,10 @@ class ExperimentPersistenceService:
                     status="running",
                 )
                 logger.info(
-                    f"実験を作成しました: {experiment_name} (DB ID: {db_experiment.id})"
+                    f"実験を作成しました: {experiment_name} (DB ID: {db_experiment.id}, UUID: {experiment_id})"
                 )
-                return str(db_experiment.id)
+                # フロントエンドで生成されたUUIDを返す
+                return experiment_id
         except Exception as e:
             logger.error(f"実験作成エラー: {e}")
             raise

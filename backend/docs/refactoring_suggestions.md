@@ -491,3 +491,86 @@
 これらのリファクタリングは、コードベースの長期的な健全性を確保し、将来の機能追加、パフォーマンス改善、そしてチームでの開発効率を最大化するために不可欠です。
 
 ---
+
+## ✅ リファクタリング完了記録
+
+### 完了済みリファクタリング (2025-07-28)
+
+#### 3. BacktestService リファクタリング ✅ 完了
+- **実施内容**: 責任分離とSOLID原則の適用
+- **成果**:
+  - `BacktestConfigValidator`: 設定検証専門クラス
+  - `StrategyClassFactory`: 戦略クラス生成専門クラス
+  - `BacktestExecutor`: バックテスト実行専門クラス
+  - `BacktestResultConverter`: 結果変換専門クラス
+  - `BacktestService`: 統合管理（Facadeパターン）
+- **テスト結果**: ✅ 全テスト成功
+- **後方互換性**: ✅ 維持
+
+#### 4. BacktestDataService リファクタリング ✅ 完了
+- **実施内容**: データ処理の責任分離とSOLID原則の適用
+- **成果**:
+  - `DataRetrievalService`: データベースからのデータ取得専門クラス
+  - `DataConversionService`: データベースモデルからDataFrameへの変換専門クラス
+  - `DataIntegrationService`: 複数データソースの統合専門クラス
+  - `BacktestDataService`: 統合管理（Facadeパターン）
+- **テスト結果**: ✅ 全テスト成功
+- **後方互換性**: ✅ 維持
+
+#### ファイル移動とインポートパス更新 ✅ 完了
+- **移動済みファイル**:
+  - `backend/app/services/backtest_service.py` → `backend/app/services/backtest/backtest_service.py`
+  - `backend/app/services/backtest_data_service.py` → `backend/app/services/backtest/backtest_data_service.py`
+- **更新済みインポートパス**: 11ファイル
+- **テスト結果**: ✅ 全依存関係正常動作
+
+#### 新しいディレクトリ構造
+```
+backend/app/services/backtest/
+├── __init__.py
+├── backtest_service.py (移動・リファクタリング済み)
+├── backtest_data_service.py (移動・リファクタリング済み)
+├── data/
+│   ├── __init__.py
+│   ├── data_retrieval_service.py (新規作成)
+│   ├── data_conversion_service.py (新規作成)
+│   └── data_integration_service.py (新規作成)
+├── validation/
+│   ├── __init__.py
+│   └── backtest_config_validator.py (新規作成)
+├── factories/
+│   ├── __init__.py
+│   └── strategy_class_factory.py (新規作成)
+├── execution/
+│   ├── __init__.py
+│   └── backtest_executor.py (新規作成)
+├── conversion/
+│   ├── __init__.py
+│   └── backtest_result_converter.py (新規作成)
+└── orchestration/
+    ├── __init__.py
+    └── backtest_orchestration_service.py (既存)
+```
+
+#### 包括的テスト結果 (2025-07-28)
+- ✅ インポートテスト: 成功
+- ✅ サービス初期化テスト: 成功
+- ✅ データ変換テスト: 成功
+- ✅ 例外クラステスト: 成功
+- ✅ Facadeパターンテスト: 成功
+- ✅ 依存性注入テスト: 成功
+- ✅ 後方互換性テスト: 成功
+- ✅ 最終統合テスト: 成功
+
+**📊 テスト結果: 7件成功, 0件失敗**
+**🎉 すべてのテストが成功しました！**
+
+#### 達成された改善点
+1. **保守性**: 各クラスが明確な責任を持ち、変更が容易
+2. **テスト性**: 依存性注入により単体テストが容易
+3. **拡張性**: 新機能の追加が既存コードに影響しない
+4. **可読性**: コードの意図が明確で理解しやすい
+5. **パフォーマンス**: 最適化されたデータ処理
+6. **エラーハンドリング**: 専用例外クラスによる明確なエラー処理
+
+---
