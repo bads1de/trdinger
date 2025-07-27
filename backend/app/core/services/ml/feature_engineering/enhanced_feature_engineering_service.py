@@ -7,7 +7,7 @@
 import logging
 from typing import Dict, Optional, Any, List, Tuple
 import pandas as pd
-import numpy as np
+
 import time
 
 from .feature_engineering_service import FeatureEngineeringService

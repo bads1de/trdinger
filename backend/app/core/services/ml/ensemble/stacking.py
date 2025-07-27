@@ -55,6 +55,7 @@ class StackingEnsemble(BaseEnsemble):
         y_train: pd.Series,
         X_test: Optional[pd.DataFrame] = None,
         y_test: Optional[pd.Series] = None,
+        base_model_params: Optional[Dict[str, Dict[str, Any]]] = None,
     ) -> Dict[str, Any]:
         """
         スタッキングアンサンブルモデルを学習
@@ -64,6 +65,7 @@ class StackingEnsemble(BaseEnsemble):
             y_train: 学習用ターゲット
             X_test: テスト用特徴量（オプション）
             y_test: テスト用ターゲット（オプション）
+            base_model_params: 各ベースモデルの最適化されたパラメータ（オプション）
 
         Returns:
             学習結果の辞書

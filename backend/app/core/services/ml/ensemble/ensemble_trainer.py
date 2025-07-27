@@ -47,6 +47,79 @@ class EnsembleTrainer(BaseMLTrainer):
 
         logger.info(f"EnsembleTrainer初期化: method={self.ensemble_method}")
 
+    def _extract_optimized_parameters(
+        self, training_params: Dict[str, Any]
+    ) -> Dict[str, Dict[str, Any]]:
+        """
+        最適化されたパラメータを各モデル・手法別に分離
+
+        Args:
+            training_params: 最適化されたパラメータを含む学習パラメータ
+
+        Returns:
+            分離されたパラメータ辞書
+        """
+        optimized_params = {
+            "base_models": {
+                "lightgbm": {},
+                "xgboost": {},
+                "randomforest": {},
+                "catboost": {},
+                "tabnet": {},
+            },
+            "bagging": {},
+            "stacking": {},
+        }
+
+        for param_name, param_value in training_params.items():
+            # LightGBMパラメータ
+            if param_name.startswith("lgb_"):
+                clean_name = param_name.replace("lgb_", "")
+                optimized_params["base_models"]["lightgbm"][clean_name] = param_value
+
+            # XGBoostパラメータ
+            elif param_name.startswith("xgb_"):
+                clean_name = param_name.replace("xgb_", "")
+                optimized_params["base_models"]["xgboost"][clean_name] = param_value
+
+            # RandomForestパラメータ
+            elif param_name.startswith("rf_"):
+                clean_name = param_name.replace("rf_", "")
+                optimized_params["base_models"]["randomforest"][
+                    clean_name
+                ] = param_value
+
+            # CatBoostパラメータ
+            elif param_name.startswith("cat_"):
+                clean_name = param_name.replace("cat_", "")
+                optimized_params["base_models"]["catboost"][clean_name] = param_value
+
+            # TabNetパラメータ
+            elif param_name.startswith("tab_"):
+                clean_name = param_name.replace("tab_", "")
+                optimized_params["base_models"]["tabnet"][clean_name] = param_value
+
+            # バギングパラメータ
+            elif param_name.startswith("bagging_"):
+                clean_name = param_name.replace("bagging_", "")
+                optimized_params["bagging"][clean_name] = param_value
+
+            # スタッキングパラメータ
+            elif param_name.startswith("stacking_"):
+                clean_name = param_name.replace("stacking_", "")
+                if clean_name.startswith("meta_"):
+                    # メタモデルパラメータ
+                    meta_param = clean_name.replace("meta_", "")
+                    if "meta_model_params" not in optimized_params["stacking"]:
+                        optimized_params["stacking"]["meta_model_params"] = {}
+                    optimized_params["stacking"]["meta_model_params"][
+                        meta_param
+                    ] = param_value
+                else:
+                    optimized_params["stacking"][clean_name] = param_value
+
+        return optimized_params
+
     def predict(self, features_df: pd.DataFrame) -> np.ndarray:
         """
         アンサンブルモデルで予測を実行
@@ -108,6 +181,9 @@ class EnsembleTrainer(BaseMLTrainer):
         try:
             logger.info(f"アンサンブル学習開始: method={self.ensemble_method}")
 
+            # ハイパーパラメータ最適化からのパラメータを分離
+            optimized_params = self._extract_optimized_parameters(training_params)
+
             # アンサンブル手法に応じてモデルを作成
             if self.ensemble_method.lower() == "bagging":
                 # バギング設定を準備
@@ -115,6 +191,11 @@ class EnsembleTrainer(BaseMLTrainer):
                 # base_model_typeが指定されていない場合のみデフォルトを設定
                 if "base_model_type" not in bagging_config:
                     bagging_config["base_model_type"] = "lightgbm"
+
+                # 最適化されたバギングパラメータを適用
+                if "bagging" in optimized_params:
+                    bagging_config.update(optimized_params["bagging"])
+
                 bagging_config.update(
                     {
                         "random_state": training_params.get("random_state", 42),
@@ -128,6 +209,11 @@ class EnsembleTrainer(BaseMLTrainer):
             elif self.ensemble_method.lower() == "stacking":
                 # スタッキング設定を準備
                 stacking_config = self.ensemble_config.get("stacking_params", {})
+
+                # 最適化されたスタッキングパラメータを適用
+                if "stacking" in optimized_params:
+                    stacking_config.update(optimized_params["stacking"])
+
                 stacking_config.update(
                     {"random_state": training_params.get("random_state", 42)}
                 )
@@ -141,9 +227,16 @@ class EnsembleTrainer(BaseMLTrainer):
                     f"サポートされていないアンサンブル手法: {self.ensemble_method}"
                 )
 
+            # 最適化されたベースモデルパラメータをアンサンブルモデルに渡す
+            base_model_params = optimized_params.get("base_models", {})
+
             # アンサンブルモデルを学習
             training_result = self.ensemble_model.fit(
-                X_train=X_train, y_train=y_train, X_test=X_test, y_test=y_test
+                X_train=X_train,
+                y_train=y_train,
+                X_test=X_test,
+                y_test=y_test,
+                base_model_params=base_model_params,
             )
 
             # 予測と評価
@@ -234,6 +327,10 @@ class EnsembleTrainer(BaseMLTrainer):
 
             # 追加のメタデータを保存
             import joblib
+            from datetime import datetime
+
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            algorithm_name = getattr(self.ensemble_model, "best_algorithm", "unknown")
 
             metadata = {
                 "ensemble_config": self.ensemble_config,
@@ -243,16 +340,23 @@ class EnsembleTrainer(BaseMLTrainer):
                 "feature_columns": self.feature_columns,
                 "scaler": self.scaler,
                 "is_trained": self.is_trained,
+                "best_algorithm": algorithm_name,
+                "best_model_score": getattr(
+                    self.ensemble_model, "best_model_score", None
+                ),
+                "timestamp": timestamp,
             }
 
             # 追加のモデルメタデータがある場合は統合
             if model_metadata:
                 metadata.update(model_metadata)
 
-            metadata_path = f"{model_path}_ensemble_metadata.pkl"
+            metadata_path = f"{model_path}_ensemble_metadata_{timestamp}.pkl"
             joblib.dump(metadata, metadata_path)
 
-            logger.info(f"アンサンブルモデル保存完了: {len(saved_paths)} ファイル")
+            logger.info(
+                f"アンサンブルモデル保存完了: {len(saved_paths)} ファイル, 最高性能アルゴリズム: {algorithm_name}"
+            )
             return True
 
         except Exception as e:
@@ -273,9 +377,22 @@ class EnsembleTrainer(BaseMLTrainer):
             import joblib
             import os
 
-            # メタデータを読み込み
-            metadata_path = f"{model_path}_ensemble_metadata.pkl"
-            if os.path.exists(metadata_path):
+            # メタデータを読み込み（タイムスタンプ付きファイルに対応）
+            import glob
+
+            metadata_patterns = [
+                f"{model_path}_ensemble_metadata_*.pkl",  # 新形式
+                f"{model_path}_ensemble_metadata.pkl",  # 旧形式
+            ]
+
+            metadata_path = None
+            for pattern in metadata_patterns:
+                files = glob.glob(pattern)
+                if files:
+                    metadata_path = sorted(files)[-1]  # 最新のファイルを選択
+                    break
+
+            if metadata_path and os.path.exists(metadata_path):
                 metadata = joblib.load(metadata_path)
                 self.ensemble_config = metadata["ensemble_config"]
                 self.automl_config = metadata["automl_config"]

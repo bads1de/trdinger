@@ -8,7 +8,7 @@ ML関連の設定管理
 import os
 import logging
 from typing import Dict, Any, List, Optional
-from pydantic import Field, model_validator, ConfigDict
+from pydantic import Field, ConfigDict
 from pydantic_settings import BaseSettings
 
 

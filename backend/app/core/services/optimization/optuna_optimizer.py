@@ -127,7 +127,7 @@ class OptunaOptimizer:
 
     @staticmethod
     def get_default_parameter_space() -> Dict[str, ParameterSpace]:
-        """LightGBMのデフォルトパラメータ空間"""
+        """LightGBMのデフォルトパラメータ空間（後方互換性のため）"""
         return {
             "num_leaves": ParameterSpace(type="integer", low=10, high=100),
             "learning_rate": ParameterSpace(type="real", low=0.01, high=0.3),
@@ -136,6 +136,26 @@ class OptunaOptimizer:
             "min_data_in_leaf": ParameterSpace(type="integer", low=5, high=50),
             "max_depth": ParameterSpace(type="integer", low=3, high=15),
         }
+
+    @staticmethod
+    def get_ensemble_parameter_space(
+        ensemble_method: str, enabled_models: list
+    ) -> Dict[str, ParameterSpace]:
+        """
+        アンサンブル学習用のパラメータ空間を取得
+
+        Args:
+            ensemble_method: アンサンブル手法 ("bagging" or "stacking")
+            enabled_models: 有効なベースモデルのリスト
+
+        Returns:
+            アンサンブル用パラメータ空間
+        """
+        from .ensemble_parameter_space import EnsembleParameterSpace
+
+        return EnsembleParameterSpace.get_ensemble_parameter_space(
+            ensemble_method, enabled_models
+        )
 
     def get_method_name(self) -> str:
         """最適化手法名を取得"""

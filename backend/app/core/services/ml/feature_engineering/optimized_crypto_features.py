@@ -11,10 +11,8 @@
 import logging
 import pandas as pd
 import numpy as np
-from typing import Dict, Any, Optional, List
-from datetime import datetime, timedelta
-from scipy import stats
-from sklearn.preprocessing import RobustScaler
+from typing import Dict, Optional, List
+
 
 logger = logging.getLogger(__name__)
 
@@ -157,8 +155,6 @@ class OptimizedCryptoFeatures:
         # 3. ボリンジャーバンド位置（改良版）
         for period in [20, 48]:
             ma = df["Close"].rolling(period).mean()
-            std = df["Close"].rolling(period).std()
-
             # ロバストな標準偏差
             robust_std = df["Close"].rolling(period).apply(lambda x: np.std(x) * 1.4826)
 

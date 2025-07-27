@@ -436,9 +436,24 @@ class MLTrainingService:
 
             # パラメータ空間を準備
             if not optimization_settings.parameter_space:
-                # デフォルトのLightGBMパラメータ空間を使用
-                parameter_space = optimizer.get_default_parameter_space()
-                logger.info("📊 デフォルトのLightGBMパラメータ空間を使用")
+                # アンサンブルトレーナーの場合は専用のパラメータ空間を使用
+                if hasattr(effective_trainer, "ensemble_config"):
+                    ensemble_method = effective_trainer.ensemble_config.get(
+                        "method", "bagging"
+                    )
+                    enabled_models = effective_trainer.ensemble_config.get(
+                        "models", ["lightgbm", "xgboost", "randomforest"]
+                    )
+                    parameter_space = optimizer.get_ensemble_parameter_space(
+                        ensemble_method, enabled_models
+                    )
+                    logger.info(
+                        f"📊 アンサンブル用パラメータ空間を使用: {ensemble_method}, モデル: {enabled_models}"
+                    )
+                else:
+                    # デフォルトのLightGBMパラメータ空間を使用
+                    parameter_space = optimizer.get_default_parameter_space()
+                    logger.info("📊 デフォルトのLightGBMパラメータ空間を使用")
             else:
                 parameter_space = self._prepare_parameter_space(
                     optimization_settings.parameter_space

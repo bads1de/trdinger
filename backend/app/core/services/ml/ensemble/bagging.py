@@ -45,6 +45,10 @@ class BaggingEnsemble(BaseEnsemble):
 
         # 混合バギング設定（多様性確保）
         self.mixed_models = config.get("mixed_models", None)
+
+        # 最高性能モデル情報を保存するための属性
+        self.best_algorithm = None
+        self.best_model_score = -1
         if self.mixed_models:
             # 混合モデルが指定されている場合、n_estimatorsをモデル数に調整
             self.n_estimators = len(self.mixed_models)
@@ -64,6 +68,7 @@ class BaggingEnsemble(BaseEnsemble):
         y_train: pd.Series,
         X_test: Optional[pd.DataFrame] = None,
         y_test: Optional[pd.Series] = None,
+        base_model_params: Optional[Dict[str, Dict[str, Any]]] = None,
     ) -> Dict[str, Any]:
         """
         バギングアンサンブルモデルを学習
@@ -73,6 +78,7 @@ class BaggingEnsemble(BaseEnsemble):
             y_train: 学習用ターゲット
             X_test: テスト用特徴量（オプション）
             y_test: テスト用ターゲット（オプション）
+            base_model_params: 各ベースモデルの最適化されたパラメータ（オプション）
 
         Returns:
             学習結果の辞書
@@ -85,6 +91,11 @@ class BaggingEnsemble(BaseEnsemble):
 
             # 各ベースモデルの学習結果を保存
             model_results = []
+
+            # 最高性能モデル追跡用
+            best_model = None
+            best_score = -1
+            best_algorithm = None
 
             # 複数のベースモデルを学習
             for i in range(self.n_estimators):
@@ -101,6 +112,7 @@ class BaggingEnsemble(BaseEnsemble):
                     logger.info(f"混合バギング: モデル{i+1}={model_type}")
                 else:
                     # 通常のバギング：同じモデルタイプを使用
+                    model_type = self.base_model_type
                     base_model = self._create_base_model(self.base_model_type)
 
                 # モデルを学習
@@ -130,6 +142,9 @@ class BaggingEnsemble(BaseEnsemble):
                     base_model.feature_columns = self.feature_columns
                     model_results.append(result)
 
+                    # 性能評価（accuracyを基準とする）
+                    current_score = result.get("accuracy", 0.0)
+
                 else:
                     # scikit-learn系モデル
                     base_model.fit(X_bootstrap, y_bootstrap)
@@ -146,13 +161,51 @@ class BaggingEnsemble(BaseEnsemble):
                         )
                         model_results.append(result)
 
+                        # 性能評価（accuracyを基準とする）
+                        current_score = result.get("accuracy", 0.0)
+                    else:
+                        current_score = 0.0
+                        result = {}
+
+                # 最高性能モデルの更新
+                if current_score > best_score:
+                    best_score = current_score
+                    best_model = base_model
+                    best_algorithm = model_type
+                    logger.info(
+                        f"新しい最高性能モデル: {model_type} (accuracy: {current_score:.4f})"
+                    )
+
                 self.base_models.append(base_model)
-                logger.info(f"ベースモデル {i+1} の学習完了")
+                logger.info(
+                    f"ベースモデル {i+1} の学習完了: {model_type} (accuracy: {current_score:.4f})"
+                )
+
+            # 最高性能モデルのみを保持
+            if best_model is not None:
+                self.base_models = [best_model]
+                self.best_algorithm = best_algorithm
+                self.best_model_score = best_score
+                logger.info(
+                    f"最高性能モデルを選択: {best_algorithm} (accuracy: {best_score:.4f})"
+                )
+            else:
+                logger.warning("有効なモデルが見つかりませんでした")
 
             self.is_fitted = True
 
-            # アンサンブル全体の評価
+            # アンサンブル全体の評価（最高性能モデルベース）
             ensemble_result = self._evaluate_ensemble(X_test, y_test, model_results)
+
+            # 最高性能モデル情報を結果に追加
+            ensemble_result.update(
+                {
+                    "best_algorithm": best_algorithm,
+                    "best_model_score": best_score,
+                    "selected_model_only": True,
+                    "total_models_trained": self.n_estimators,
+                }
+            )
 
             logger.info("バギングアンサンブル学習完了")
             return ensemble_result

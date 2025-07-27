@@ -271,29 +271,44 @@ class BaseEnsemble(ABC):
             保存されたファイルパスのリスト
         """
         import joblib
+        from datetime import datetime
 
         saved_paths = []
 
+        # タイムスタンプを生成
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+
+        # アルゴリズム名を取得（BaggingEnsembleの場合）
+        algorithm_name = getattr(self, "best_algorithm", "unknown")
+
         # ベースモデルを保存
         for i, model in enumerate(self.base_models):
-            model_path = f"{base_path}_base_model_{i}.pkl"
+            if len(self.base_models) == 1 and hasattr(self, "best_algorithm"):
+                # 最高性能モデル1つのみの場合
+                model_path = f"{base_path}_{algorithm_name}_{timestamp}.pkl"
+            else:
+                # 複数モデルの場合（従来の形式）
+                model_path = f"{base_path}_base_model_{i}.pkl"
+
             # 全てのモデルをjoblibで保存（LightGBMModelも含む）
             joblib.dump(model, model_path)
             saved_paths.append(model_path)
 
         # メタモデルを保存（存在する場合）
         if self.meta_model is not None:
-            meta_path = f"{base_path}_meta_model.pkl"
+            meta_path = f"{base_path}_meta_model_{timestamp}.pkl"
             joblib.dump(self.meta_model, meta_path)
             saved_paths.append(meta_path)
 
         # 設定を保存
-        config_path = f"{base_path}_config.pkl"
+        config_path = f"{base_path}_config_{timestamp}.pkl"
         config_data = {
             "config": self.config,
             "automl_config": self.automl_config,
             "feature_columns": self.feature_columns,
             "is_fitted": self.is_fitted,
+            "best_algorithm": getattr(self, "best_algorithm", None),
+            "best_model_score": getattr(self, "best_model_score", None),
         }
         joblib.dump(config_data, config_path)
         saved_paths.append(config_path)
@@ -312,35 +327,77 @@ class BaseEnsemble(ABC):
         """
         import joblib
         import os
+        import glob
 
         try:
-            # 設定を読み込み
-            config_path = f"{base_path}_config.pkl"
-            if os.path.exists(config_path):
+            # 設定ファイルを検索（タイムスタンプ付きファイルに対応）
+            config_patterns = [
+                f"{base_path}_config_*.pkl",  # 新形式（タイムスタンプ付き）
+                f"{base_path}_config.pkl",  # 旧形式
+            ]
+
+            config_path = None
+            for pattern in config_patterns:
+                files = glob.glob(pattern)
+                if files:
+                    config_path = sorted(files)[-1]  # 最新のファイルを選択
+                    break
+
+            if config_path and os.path.exists(config_path):
                 config_data = joblib.load(config_path)
                 self.config = config_data["config"]
                 self.automl_config = config_data["automl_config"]
                 self.feature_columns = config_data["feature_columns"]
                 self.is_fitted = config_data["is_fitted"]
 
+                # 新しい属性を読み込み（存在する場合）
+                if "best_algorithm" in config_data:
+                    self.best_algorithm = config_data["best_algorithm"]
+                if "best_model_score" in config_data:
+                    self.best_model_score = config_data["best_model_score"]
+
             # ベースモデルを読み込み
             self.base_models = []
-            i = 0
-            while True:
-                model_path = f"{base_path}_base_model_{i}.pkl"
-                if not os.path.exists(model_path):
-                    break
 
-                # モデルは直接joblibで読み込み（モデルラッパーは分離済み）
-                model = joblib.load(model_path)
+            # 新形式（アルゴリズム名付き）のファイルを検索
+            algorithm_pattern = f"{base_path}_*_*.pkl"
+            algorithm_files = [
+                f
+                for f in glob.glob(algorithm_pattern)
+                if not f.endswith("_config.pkl") and not f.endswith("_meta_model.pkl")
+            ]
 
-                self.base_models.append(model)
-                i += 1
+            if algorithm_files:
+                # 新形式のファイルが見つかった場合
+                for model_path in sorted(algorithm_files):
+                    if os.path.exists(model_path):
+                        model = joblib.load(model_path)
+                        self.base_models.append(model)
+            else:
+                # 旧形式のファイルを検索
+                i = 0
+                while True:
+                    model_path = f"{base_path}_base_model_{i}.pkl"
+                    if not os.path.exists(model_path):
+                        break
+
+                    model = joblib.load(model_path)
+                    self.base_models.append(model)
+                    i += 1
 
             # メタモデルを読み込み（存在する場合）
-            meta_path = f"{base_path}_meta_model.pkl"
-            if os.path.exists(meta_path):
-                self.meta_model = joblib.load(meta_path)
+            meta_patterns = [
+                f"{base_path}_meta_model_*.pkl",  # 新形式
+                f"{base_path}_meta_model.pkl",  # 旧形式
+            ]
+
+            for pattern in meta_patterns:
+                files = glob.glob(pattern)
+                if files:
+                    meta_path = sorted(files)[-1]  # 最新のファイルを選択
+                    if os.path.exists(meta_path):
+                        self.meta_model = joblib.load(meta_path)
+                    break
 
             return True
 
