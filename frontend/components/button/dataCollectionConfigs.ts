@@ -13,7 +13,7 @@ export const allDataCollectionConfig: DataCollectionConfig = {
   endpoint: "/api/data-collection/all/bulk-collect",
   buttonText: "全データ取得",
   variant: "primary",
-  confirmMessage: 
+  confirmMessage:
     "全データ（OHLCV・FR・OI）を一括取得します。\n\n" +
     "この処理には数分から十数分かかる場合があります。\n" +
     "テクニカル指標も自動計算されます。続行しますか？",
@@ -49,7 +49,7 @@ export const openInterestCollectionConfig: DataCollectionConfig = {
   buttonText: "OI収集",
   variant: "warning",
   endpoint: "/api/open-interest/bulk-collect",
-  confirmMessage: 
+  confirmMessage:
     "BTCの全期間OIデータを取得します。\n\n" +
     "この処理には数分かかる場合があります。続行しますか？",
   loadingText: "収集中...",
@@ -66,19 +66,11 @@ export const fearGreedCollectionConfig: DataCollectionConfig = {
 };
 
 /**
- * 外部市場データ収集ボタンの設定
- */
-export const externalMarketCollectionConfig: DataCollectionConfig = {
-  endpoint: "/api/external-market/collect",
-  buttonText: "外部市場収集",
-  variant: "secondary",
-  loadingText: "収集中...",
-};
-
-/**
  * 単一シンボル Open Interest収集ボタンの設定を生成
  */
-export const createSingleOpenInterestConfig = (symbol: string): DataCollectionConfig => ({
+export const createSingleOpenInterestConfig = (
+  symbol: string
+): DataCollectionConfig => ({
   endpoint: "/api/open-interest/collect",
   buttonText: `OI収集 (${symbol})`,
   variant: "warning",

@@ -8,7 +8,6 @@ import {
   fundingRateCollectionConfig,
   openInterestCollectionConfig,
   fearGreedCollectionConfig,
-  externalMarketCollectionConfig,
 } from "@/components/button/dataCollectionConfigs";
 import DataResetPanel from "@/components/common/DataResetPanel";
 
