@@ -10,14 +10,14 @@ import numpy as np
 from unittest.mock import patch, MagicMock
 import warnings
 
-from app.core.services.ml.feature_engineering.enhanced_feature_engineering_service import (
+from app.services.ml.feature_engineering.enhanced_feature_engineering_service import (
     EnhancedFeatureEngineeringService,
 )
-from app.core.services.ml.feature_engineering.automl_features.automl_config import (
+from app.services.ml.feature_engineering.automl_features.automl_config import (
     AutoMLConfig,
     TSFreshConfig,
 )
-from app.core.services.ml.feature_engineering.automl_features.tsfresh_calculator import (
+from app.services.ml.feature_engineering.automl_features.tsfresh_calculator import (
     TSFRESH_AVAILABLE,
 )
 

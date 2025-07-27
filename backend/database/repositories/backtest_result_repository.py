@@ -12,7 +12,7 @@ from sqlalchemy import desc
 
 from .base_repository import BaseRepository
 from database.models import BacktestResult
-from app.core.utils.database_utils import DatabaseQueryHelper
+from app.utils.database_utils import DatabaseQueryHelper
 
 logger = logging.getLogger(__name__)
 

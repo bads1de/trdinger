@@ -12,12 +12,12 @@ import pandas as pd
 # プロジェクトルートをパスに追加
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
 
-from app.core.services.auto_strategy.models.gene_strategy import StrategyGene, IndicatorGene, Condition
-from app.core.services.auto_strategy.models.gene_tpsl import TPSLGene, TPSLMethod
-from app.core.services.auto_strategy.factories.strategy_factory import StrategyFactory
-from app.core.services.auto_strategy.generators.random_gene_generator import RandomGeneGenerator
-from app.core.services.auto_strategy.generators.smart_condition_generator import SmartConditionGenerator
-from app.core.services.auto_strategy.models.ga_config import GAConfig
+from app.services.auto_strategy.models.gene_strategy import StrategyGene, IndicatorGene, Condition
+from app.services.auto_strategy.models.gene_tpsl import TPSLGene, TPSLMethod
+from app.services.auto_strategy.factories.strategy_factory import StrategyFactory
+from app.services.auto_strategy.generators.random_gene_generator import RandomGeneGenerator
+from app.services.auto_strategy.generators.smart_condition_generator import SmartConditionGenerator
+from app.services.auto_strategy.models.ga_config import GAConfig
 
 
 def create_test_data():

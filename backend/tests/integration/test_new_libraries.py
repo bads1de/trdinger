@@ -140,7 +140,7 @@ def test_joblib_basic_functionality():
 def test_feature_engineering_service_import():
     """FeatureEngineeringServiceのインポートテスト"""
     try:
-        from app.core.services.feature_engineering import FeatureEngineeringService
+        from app.services.feature_engineering import FeatureEngineeringService
 
         service = FeatureEngineeringService()
         assert service is not None
@@ -154,7 +154,7 @@ def test_feature_engineering_service_import():
 def test_ml_training_service_import():
     """MLTrainingServiceのインポートテスト"""
     try:
-        from app.core.services.ml.ml_training_service import MLTrainingService
+        from app.services.ml.ml_training_service import MLTrainingService
 
         service = MLTrainingService()
         assert service is not None
@@ -168,7 +168,7 @@ def test_ml_training_service_import():
 def test_fitness_sharing_import():
     """FitnessSharingのインポートテスト"""
     try:
-        from app.core.services.auto_strategy.engines.fitness_sharing import (
+        from app.services.auto_strategy.engines.fitness_sharing import (
             FitnessSharing,
         )
 

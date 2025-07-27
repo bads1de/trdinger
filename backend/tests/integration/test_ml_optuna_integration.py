@@ -5,7 +5,7 @@ MLTrainingServiceとOptunaOptimizerの統合テスト
 import pytest
 import pandas as pd
 import numpy as np
-from app.core.services.ml.ml_training_service import (
+from app.services.ml.ml_training_service import (
     MLTrainingService,
     OptimizationSettings,
 )

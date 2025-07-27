@@ -14,7 +14,7 @@ import logging
 # プロジェクトルートをパスに追加
 sys.path.append(os.path.join(os.path.dirname(__file__), 'backend'))
 
-from app.core.services.indicators.technical_indicators.math_transform import MathTransformIndicators
+from app.services.indicators.technical_indicators.math_transform import MathTransformIndicators
 
 # ログ設定
 logging.basicConfig(

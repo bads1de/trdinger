@@ -15,7 +15,7 @@ from datetime import datetime
 # プロジェクトルートをパスに追加
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
 
-from app.core.services.data_mergers import OIMerger, FRMerger, FearGreedMerger
+from app.services.data_mergers import OIMerger, FRMerger, FearGreedMerger
 
 
 class TestOIMerger(unittest.TestCase):

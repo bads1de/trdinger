@@ -10,7 +10,7 @@ import numpy as np
 from datetime import datetime, timedelta
 from unittest.mock import Mock, patch
 
-from backend.app.core.services.ml.base_ml_trainer import BaseMLTrainer
+from backend.app.services.ml.base_ml_trainer import BaseMLTrainer
 
 
 class MockMLTrainer(BaseMLTrainer):
@@ -160,7 +160,7 @@ class TestTimeSeriesSplit:
             assert "test_samples" in fold_result
             assert "accuracy" in fold_result
 
-    @patch("backend.app.core.services.ml.base_ml_trainer.logger")
+    @patch("backend.app.services.ml.base_ml_trainer.logger")
     def test_logging_output(self, mock_logger, sample_time_series_data):
         """ログ出力のテスト"""
         trainer = MockMLTrainer()
@@ -189,7 +189,7 @@ class TestTimeSeriesSplit:
         y = pd.Series([0] * 700 + [1] * 200 + [2] * 100, index=X.index)
 
         with patch(
-            "backend.app.core.services.ml.base_ml_trainer.logger"
+            "backend.app.services.ml.base_ml_trainer.logger"
         ) as mock_logger:
             trainer._split_data(X, y, use_time_series_split=True, test_size=0.2)
 

@@ -11,13 +11,13 @@ import warnings
 import time
 from unittest.mock import patch, MagicMock
 
-from app.core.services.ml.feature_engineering.enhanced_feature_engineering_service import (
+from app.services.ml.feature_engineering.enhanced_feature_engineering_service import (
     EnhancedFeatureEngineeringService,
 )
-from app.core.services.ml.ml_training_service import MLTrainingService
-from app.core.services.ml.base_ml_trainer import BaseMLTrainer
-from app.core.services.auto_strategy.services.ml_orchestrator import MLOrchestrator
-from app.core.services.ml.feature_engineering.automl_features.automl_config import (
+from app.services.ml.ml_training_service import MLTrainingService
+from app.services.ml.base_ml_trainer import BaseMLTrainer
+from app.services.auto_strategy.services.ml_orchestrator import MLOrchestrator
+from app.services.ml.feature_engineering.automl_features.automl_config import (
     AutoMLConfig,
     TSFreshConfig,
     FeaturetoolsConfig,
@@ -382,7 +382,7 @@ class TestMLIntegrationComprehensive:
         test_data = self.create_comprehensive_test_data(100)
 
         # 既存の特徴量エンジニアリング
-        from app.core.services.ml.feature_engineering.feature_engineering_service import (
+        from app.services.ml.feature_engineering.feature_engineering_service import (
             FeatureEngineeringService,
         )
 

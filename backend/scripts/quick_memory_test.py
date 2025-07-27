@@ -16,8 +16,8 @@ from pathlib import Path
 project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 
-from app.core.services.ml.feature_engineering.automl_features.autofeat_calculator import AutoFeatCalculator
-from app.core.services.ml.feature_engineering.automl_features.automl_config import AutoFeatConfig
+from app.services.ml.feature_engineering.automl_features.autofeat_calculator import AutoFeatCalculator
+from app.services.ml.feature_engineering.automl_features.automl_config import AutoFeatConfig
 
 def generate_simple_test_data(rows: int = 1000, features: int = 5) -> tuple[pd.DataFrame, pd.Series]:
     """
@@ -202,7 +202,7 @@ def test_pandas_optimization():
     print(f"最適化前メモリ: {original_memory / 1024 / 1024:.2f}MB")
     
     # メモリ最適化を適用
-    from app.core.services.ml.feature_engineering.automl_features.memory_utils import optimize_dataframe_dtypes
+    from app.services.ml.feature_engineering.automl_features.memory_utils import optimize_dataframe_dtypes
     
     optimized_df = optimize_dataframe_dtypes(df, aggressive=True)
     optimized_memory = optimized_df.memory_usage(deep=True).sum()

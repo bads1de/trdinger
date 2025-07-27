@@ -20,13 +20,13 @@ from sklearn.metrics import mean_squared_error, r2_score, accuracy_score, f1_sco
 from sklearn.preprocessing import StandardScaler
 import lightgbm as lgb
 
-from app.core.services.ml.feature_engineering.enhanced_feature_engineering_service import (
+from app.services.ml.feature_engineering.enhanced_feature_engineering_service import (
     EnhancedFeatureEngineeringService,
 )
-from app.core.services.ml.feature_engineering.feature_engineering_service import (
+from app.services.ml.feature_engineering.feature_engineering_service import (
     FeatureEngineeringService,
 )
-from app.core.services.ml.feature_engineering.automl_features.automl_config import (
+from app.services.ml.feature_engineering.automl_features.automl_config import (
     AutoMLConfig,
     TSFreshConfig,
     FeaturetoolsConfig,

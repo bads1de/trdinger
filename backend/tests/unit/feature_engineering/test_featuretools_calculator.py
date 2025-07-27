@@ -10,11 +10,11 @@ import numpy as np
 from unittest.mock import patch, MagicMock
 import warnings
 
-from app.core.services.ml.feature_engineering.automl_features.featuretools_calculator import (
+from app.services.ml.feature_engineering.automl_features.featuretools_calculator import (
     FeaturetoolsCalculator,
     FEATURETOOLS_AVAILABLE
 )
-from app.core.services.ml.feature_engineering.automl_features.automl_config import FeaturetoolsConfig
+from app.services.ml.feature_engineering.automl_features.automl_config import FeaturetoolsConfig
 
 
 class TestFeaturetoolsCalculator:
@@ -281,7 +281,7 @@ class TestFeaturetoolsCalculator:
         
         assert result_df is None
 
-    @patch('app.core.services.ml.feature_engineering.automl_features.featuretools_calculator.FEATURETOOLS_AVAILABLE', False)
+    @patch('app.services.ml.feature_engineering.automl_features.featuretools_calculator.FEATURETOOLS_AVAILABLE', False)
     def test_calculate_featuretools_features_library_unavailable(self):
         """Featuretoolsライブラリが利用できない場合のテスト"""
         test_data = self.create_test_ohlcv_data(50)

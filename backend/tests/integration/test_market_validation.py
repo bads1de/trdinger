@@ -18,18 +18,18 @@ from decimal import Decimal
 backend_path = os.path.join(os.path.dirname(__file__), "..", "..")
 sys.path.insert(0, backend_path)
 
-from app.core.services.auto_strategy.generators.random_gene_generator import (
+from app.services.auto_strategy.generators.random_gene_generator import (
     RandomGeneGenerator,
 )
-from app.core.services.auto_strategy.calculators.tpsl_calculator import TPSLCalculator
-from app.core.services.auto_strategy.calculators.position_sizing_calculator import (
+from app.services.auto_strategy.calculators.tpsl_calculator import TPSLCalculator
+from app.services.auto_strategy.calculators.position_sizing_calculator import (
     PositionSizingCalculatorService,
 )
-from app.core.services.auto_strategy.evaluators.condition_evaluator import (
+from app.services.auto_strategy.evaluators.condition_evaluator import (
     ConditionEvaluator,
 )
-from app.core.services.auto_strategy.factories.strategy_factory import StrategyFactory
-from app.core.services.auto_strategy.models.ga_config import GAConfig
+from app.services.auto_strategy.factories.strategy_factory import StrategyFactory
+from app.services.auto_strategy.models.ga_config import GAConfig
 
 from tests.utils.data_generators import TestDataGenerator, PerformanceTestHelper
 from tests.utils.helpers import (

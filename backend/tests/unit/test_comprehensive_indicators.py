@@ -11,7 +11,7 @@ import talib
 from unittest.mock import patch
 
 # 全ての指標クラスをインポート
-from app.core.services.indicators import (
+from app.services.indicators import (
     TrendIndicators,
     MomentumIndicators,
     VolatilityIndicators,
@@ -317,8 +317,8 @@ class TestComprehensiveIndicators:
 
     def test_indicator_registry_comprehensive_initialization(self):
         """インジケーターレジストリの包括的初期化テスト"""
-        from app.core.services.indicators.config.indicator_definitions import initialize_all_indicators
-        from app.core.services.indicators.config.indicator_config import indicator_registry
+        from app.services.indicators.config.indicator_definitions import initialize_all_indicators
+        from app.services.indicators.config.indicator_config import indicator_registry
         
         # 初期化前のレジストリをクリア
         indicator_registry._configs.clear()

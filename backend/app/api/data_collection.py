@@ -11,10 +11,10 @@ from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
 from sqlalchemy.orm import Session
 from typing import Dict
 
-from app.core.services.data_collection.orchestration.data_collection_orchestration_service import (
+from app.services.data_collection.orchestration.data_collection_orchestration_service import (
     DataCollectionOrchestrationService,
 )
-from app.core.utils.unified_error_handler import UnifiedErrorHandler
+from app.utils.unified_error_handler import UnifiedErrorHandler
 from database.connection import get_db, ensure_db_initialized
 from app.config.unified_config import unified_config
 

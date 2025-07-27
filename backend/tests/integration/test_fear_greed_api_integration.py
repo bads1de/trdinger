@@ -76,7 +76,7 @@ class TestFearGreedAPIIntegration:
         assert data["data"]["latest_timestamp"] is None
 
     @patch(
-        "app.core.services.data_collection.fear_greed.fear_greed_service.FearGreedIndexService.fetch_and_save_fear_greed_data"
+        "app.services.data_collection.fear_greed.fear_greed_service.FearGreedIndexService.fetch_and_save_fear_greed_data"
     )
     def test_collect_fear_greed_data(
         self, mock_fetch_and_save, client, mock_fear_greed_service_data
@@ -100,7 +100,7 @@ class TestFearGreedAPIIntegration:
         assert "保存しました" in data["message"]
 
     @patch(
-        "app.core.services.data_collection.fear_greed.fear_greed_service.FearGreedIndexService.fetch_and_save_fear_greed_data"
+        "app.services.data_collection.fear_greed.fear_greed_service.FearGreedIndexService.fetch_and_save_fear_greed_data"
     )
     def test_collect_incremental_fear_greed_data(self, mock_fetch_and_save, client):
         """Fear & Greed Index差分データ収集テスト"""
@@ -178,7 +178,7 @@ class TestFearGreedAPIIntegration:
         assert "無効な開始日時形式" in data["detail"]
 
     @patch(
-        "app.core.services.data_collection.fear_greed.fear_greed_service.FearGreedIndexService.fetch_and_save_fear_greed_data"
+        "app.services.data_collection.fear_greed.fear_greed_service.FearGreedIndexService.fetch_and_save_fear_greed_data"
     )
     def test_collect_fear_greed_data_failure(self, mock_fetch_and_save, client):
         """データ収集失敗時のテスト"""
@@ -199,7 +199,7 @@ class TestFearGreedAPIIntegration:
         assert data["success"] is False
 
     @patch(
-        "app.core.services.data_collection.fear_greed.fear_greed_service.FearGreedIndexService"
+        "app.services.data_collection.fear_greed.fear_greed_service.FearGreedIndexService"
     )
     def test_end_to_end_data_flow(self, mock_service_class, client, db_session):
         """エンドツーエンドのデータフロー統合テスト"""

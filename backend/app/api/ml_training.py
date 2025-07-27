@@ -10,10 +10,10 @@ from fastapi import APIRouter, BackgroundTasks, Depends
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
-from app.core.services.ml.orchestration.ml_training_orchestration_service import (
+from app.services.ml.orchestration.ml_training_orchestration_service import (
     MLTrainingOrchestrationService,
 )
-from app.core.utils.unified_error_handler import UnifiedErrorHandler
+from app.utils.unified_error_handler import UnifiedErrorHandler
 
 
 from app.api.automl_features import (

@@ -6,10 +6,10 @@ Bybitサービスの統合テスト
 
 import pytest
 from unittest.mock import Mock, patch, AsyncMock
-from app.core.services.data_collection.bybit.funding_rate_service import (
+from app.services.data_collection.bybit.funding_rate_service import (
     BybitFundingRateService,
 )
-from app.core.services.data_collection.bybit.open_interest_service import (
+from app.services.data_collection.bybit.open_interest_service import (
     BybitOpenInterestService,
 )
 

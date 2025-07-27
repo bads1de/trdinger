@@ -7,17 +7,17 @@
 import pytest
 from unittest.mock import patch, Mock
 
-from backend.app.core.services.indicators.parameter_manager import IndicatorParameterManager
-from backend.app.core.services.indicators.config.indicator_config import (
+from backend.app.services.indicators.parameter_manager import IndicatorParameterManager
+from backend.app.services.indicators.config.indicator_config import (
     IndicatorConfig,
     ParameterConfig,
     IndicatorResultType,
     indicator_registry,
 )
-from backend.app.core.services.auto_strategy.utils.parameter_generators import (
+from backend.app.services.auto_strategy.utils.parameter_generators import (
     generate_indicator_parameters,
 )
-from backend.app.core.services.auto_strategy.models.gene_encoding import GeneEncoder
+from backend.app.services.auto_strategy.models.gene_encoding import GeneEncoder
 
 
 class TestParameterSystemIntegration:
@@ -93,7 +93,7 @@ class TestParameterSystemIntegration:
         new_params = self.manager.generate_parameters("MACD", macd_config)
 
         # 従来システムでの生成（フォールバック）
-        with patch('backend.app.core.services.auto_strategy.utils.parameter_generators.indicator_registry') as mock_registry:
+        with patch('backend.app.services.auto_strategy.utils.parameter_generators.indicator_registry') as mock_registry:
             mock_registry.get_indicator_config.return_value = None
             legacy_params = generate_indicator_parameters("MACD")
 

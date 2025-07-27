@@ -9,7 +9,7 @@ from unittest.mock import Mock, AsyncMock, patch
 from sqlalchemy.orm import Session
 from typing import Dict, Any, List
 
-from app.core.services.data_collection.open_interest_orchestration_service import (
+from app.services.data_collection.open_interest_orchestration_service import (
     OpenInterestOrchestrationService,
 )
 
@@ -52,9 +52,9 @@ class TestOpenInterestOrchestrationService:
         fetch_all = False
 
         with patch(
-            "app.core.services.data_collection.open_interest_orchestration_service.BybitOpenInterestService"
+            "app.services.data_collection.open_interest_orchestration_service.BybitOpenInterestService"
         ) as mock_service_class, patch(
-            "app.core.services.data_collection.open_interest_orchestration_service.OpenInterestRepository"
+            "app.services.data_collection.open_interest_orchestration_service.OpenInterestRepository"
         ) as mock_repo_class:
             # モック設定
             mock_service = AsyncMock()
@@ -98,9 +98,9 @@ class TestOpenInterestOrchestrationService:
         }
 
         with patch(
-            "app.core.services.data_collection.open_interest_orchestration_service.BybitOpenInterestService"
+            "app.services.data_collection.open_interest_orchestration_service.BybitOpenInterestService"
         ) as mock_service_class, patch(
-            "app.core.services.data_collection.open_interest_orchestration_service.OpenInterestRepository"
+            "app.services.data_collection.open_interest_orchestration_service.OpenInterestRepository"
         ) as mock_repo_class:
             mock_service = AsyncMock()
             mock_service.fetch_and_save_open_interest_data.return_value = error_result
@@ -127,9 +127,9 @@ class TestOpenInterestOrchestrationService:
         symbols = ["BTC/USDT:USDT", "ETH/USDT:USDT"]
 
         with patch(
-            "app.core.services.data_collection.open_interest_orchestration_service.BybitOpenInterestService"
+            "app.services.data_collection.open_interest_orchestration_service.BybitOpenInterestService"
         ) as mock_service_class, patch(
-            "app.core.services.data_collection.open_interest_orchestration_service.OpenInterestRepository"
+            "app.services.data_collection.open_interest_orchestration_service.OpenInterestRepository"
         ) as mock_repo_class:
             mock_service = AsyncMock()
             mock_service.fetch_and_save_open_interest_data.return_value = {
@@ -169,9 +169,9 @@ class TestOpenInterestOrchestrationService:
         ]
 
         with patch(
-            "app.core.services.data_collection.open_interest_orchestration_service.BybitOpenInterestService"
+            "app.services.data_collection.open_interest_orchestration_service.BybitOpenInterestService"
         ) as mock_service_class, patch(
-            "app.core.services.data_collection.open_interest_orchestration_service.OpenInterestRepository"
+            "app.services.data_collection.open_interest_orchestration_service.OpenInterestRepository"
         ) as mock_repo_class:
             mock_service = Mock()
             mock_service.normalize_symbol.return_value = symbol
@@ -197,7 +197,7 @@ class TestOpenInterestOrchestrationService:
         symbol = "BTC/USDT:USDT"
 
         with patch(
-            "app.core.services.data_collection.open_interest_orchestration_service.BybitOpenInterestService"
+            "app.services.data_collection.open_interest_orchestration_service.BybitOpenInterestService"
         ) as mock_service_class:
             # 例外を発生させる
             mock_service_class.side_effect = Exception("接続タイムアウト")

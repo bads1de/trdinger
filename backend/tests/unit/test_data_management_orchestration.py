@@ -9,7 +9,7 @@ from unittest.mock import Mock, patch
 from sqlalchemy.orm import Session
 from typing import Dict, Any
 
-from app.core.services.data_collection.data_management_orchestration_service import (
+from app.services.data_collection.data_management_orchestration_service import (
     DataManagementOrchestrationService,
 )
 
@@ -34,11 +34,11 @@ class TestDataManagementOrchestrationService:
     ):
         """全データリセットの成功テスト"""
         with patch(
-            "app.core.services.data_collection.data_management_orchestration_service.OHLCVRepository"
+            "app.services.data_collection.data_management_orchestration_service.OHLCVRepository"
         ) as mock_ohlcv_repo, patch(
-            "app.core.services.data_collection.data_management_orchestration_service.FundingRateRepository"
+            "app.services.data_collection.data_management_orchestration_service.FundingRateRepository"
         ) as mock_fr_repo, patch(
-            "app.core.services.data_collection.data_management_orchestration_service.OpenInterestRepository"
+            "app.services.data_collection.data_management_orchestration_service.OpenInterestRepository"
         ) as mock_oi_repo:
             # モック設定
             mock_ohlcv_repo.return_value.clear_all_ohlcv_data.return_value = 1000
@@ -64,11 +64,11 @@ class TestDataManagementOrchestrationService:
     ):
         """全データリセットの部分失敗テスト"""
         with patch(
-            "app.core.services.data_collection.data_management_orchestration_service.OHLCVRepository"
+            "app.services.data_collection.data_management_orchestration_service.OHLCVRepository"
         ) as mock_ohlcv_repo, patch(
-            "app.core.services.data_collection.data_management_orchestration_service.FundingRateRepository"
+            "app.services.data_collection.data_management_orchestration_service.FundingRateRepository"
         ) as mock_fr_repo, patch(
-            "app.core.services.data_collection.data_management_orchestration_service.OpenInterestRepository"
+            "app.services.data_collection.data_management_orchestration_service.OpenInterestRepository"
         ) as mock_oi_repo:
             # モック設定（一部でエラー）
             mock_ohlcv_repo.return_value.clear_all_ohlcv_data.return_value = 1000
@@ -97,7 +97,7 @@ class TestDataManagementOrchestrationService:
     ):
         """OHLCVデータリセットの成功テスト"""
         with patch(
-            "app.core.services.data_collection.data_management_orchestration_service.OHLCVRepository"
+            "app.services.data_collection.data_management_orchestration_service.OHLCVRepository"
         ) as mock_ohlcv_repo:
             # モック設定
             mock_ohlcv_repo.return_value.clear_all_ohlcv_data.return_value = 1000
@@ -118,7 +118,7 @@ class TestDataManagementOrchestrationService:
     ):
         """ファンディングレートデータリセットの成功テスト"""
         with patch(
-            "app.core.services.data_collection.data_management_orchestration_service.FundingRateRepository"
+            "app.services.data_collection.data_management_orchestration_service.FundingRateRepository"
         ) as mock_fr_repo:
             # モック設定
             mock_fr_repo.return_value.clear_all_funding_rate_data.return_value = 500
@@ -139,7 +139,7 @@ class TestDataManagementOrchestrationService:
     ):
         """オープンインタレストデータリセットの成功テスト"""
         with patch(
-            "app.core.services.data_collection.data_management_orchestration_service.OpenInterestRepository"
+            "app.services.data_collection.data_management_orchestration_service.OpenInterestRepository"
         ) as mock_oi_repo:
             # モック設定
             mock_oi_repo.return_value.clear_all_open_interest_data.return_value = 300
@@ -162,11 +162,11 @@ class TestDataManagementOrchestrationService:
         symbol = "BTC/USDT:USDT"
 
         with patch(
-            "app.core.services.data_collection.data_management_orchestration_service.OHLCVRepository"
+            "app.services.data_collection.data_management_orchestration_service.OHLCVRepository"
         ) as mock_ohlcv_repo, patch(
-            "app.core.services.data_collection.data_management_orchestration_service.FundingRateRepository"
+            "app.services.data_collection.data_management_orchestration_service.FundingRateRepository"
         ) as mock_fr_repo, patch(
-            "app.core.services.data_collection.data_management_orchestration_service.OpenInterestRepository"
+            "app.services.data_collection.data_management_orchestration_service.OpenInterestRepository"
         ) as mock_oi_repo:
             # モック設定
             mock_ohlcv_repo.return_value.clear_ohlcv_data_by_symbol.return_value = 100
@@ -191,7 +191,7 @@ class TestDataManagementOrchestrationService:
     async def test_exception_handling(self, orchestration_service, mock_db_session):
         """例外処理のテスト"""
         with patch(
-            "app.core.services.data_collection.data_management_orchestration_service.OHLCVRepository"
+            "app.services.data_collection.data_management_orchestration_service.OHLCVRepository"
         ) as mock_ohlcv_repo:
             # 例外を発生させる
             mock_ohlcv_repo.side_effect = Exception("データベース接続エラー")

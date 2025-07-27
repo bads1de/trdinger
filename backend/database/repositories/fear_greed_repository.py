@@ -10,7 +10,7 @@ import logging
 
 from .base_repository import BaseRepository
 from database.models import FearGreedIndexData
-from app.core.utils.data_converter import DataValidator
+from app.utils.data_converter import DataValidator
 
 logger = logging.getLogger(__name__)
 

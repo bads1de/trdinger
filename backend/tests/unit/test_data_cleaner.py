@@ -15,7 +15,7 @@ from datetime import datetime
 # プロジェクトルートをパスに追加
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
 
-from app.core.services.utils import DataCleaner
+from app.services.utils import DataCleaner
 
 
 class TestDataCleaner(unittest.TestCase):

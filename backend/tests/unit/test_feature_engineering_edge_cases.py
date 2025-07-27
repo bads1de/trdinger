@@ -11,7 +11,7 @@ import numpy as np
 from datetime import datetime, timezone, timedelta
 import warnings
 
-from app.core.services.ml.feature_engineering.feature_engineering_service import FeatureEngineeringService
+from app.services.ml.feature_engineering.feature_engineering_service import FeatureEngineeringService
 
 
 class TestFeatureEngineeringEdgeCases:

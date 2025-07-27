@@ -9,10 +9,10 @@ import logging
 from unittest.mock import Mock, patch
 from typing import Dict, Any
 
-from app.core.services.auto_strategy.models.ga_config import GAConfig
-from app.core.services.auto_strategy.engines.ga_engine import GeneticAlgorithmEngine
-from app.core.services.auto_strategy.factories.strategy_factory import StrategyFactory
-from app.core.services.auto_strategy.generators.random_gene_generator import (
+from app.services.auto_strategy.models.ga_config import GAConfig
+from app.services.auto_strategy.engines.ga_engine import GeneticAlgorithmEngine
+from app.services.auto_strategy.factories.strategy_factory import StrategyFactory
+from app.services.auto_strategy.generators.random_gene_generator import (
     RandomGeneGenerator,
 )
 

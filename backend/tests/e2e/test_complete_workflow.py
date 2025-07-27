@@ -19,19 +19,19 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 backend_path = os.path.join(os.path.dirname(__file__), "..", "..")
 sys.path.insert(0, backend_path)
 
-from app.core.services.auto_strategy.services.auto_strategy_service import (
+from app.services.auto_strategy.services.auto_strategy_service import (
     AutoStrategyService,
 )
-from app.core.services.auto_strategy.models.ga_config import GAConfig
-from app.core.services.auto_strategy.models.gene_strategy import StrategyGene
-from app.core.services.auto_strategy.generators.random_gene_generator import (
+from app.services.auto_strategy.models.ga_config import GAConfig
+from app.services.auto_strategy.models.gene_strategy import StrategyGene
+from app.services.auto_strategy.generators.random_gene_generator import (
     RandomGeneGenerator,
 )
-from app.core.services.auto_strategy.calculators.tpsl_calculator import TPSLCalculator
-from app.core.services.auto_strategy.calculators.position_sizing_calculator import (
+from app.services.auto_strategy.calculators.tpsl_calculator import TPSLCalculator
+from app.services.auto_strategy.calculators.position_sizing_calculator import (
     PositionSizingCalculatorService,
 )
-from app.core.services.indicators import TechnicalIndicatorService
+from app.services.indicators import TechnicalIndicatorService
 
 from tests.utils.helpers import (
     TestExecutionHelper,

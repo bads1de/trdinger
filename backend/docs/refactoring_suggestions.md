@@ -1,6 +1,6 @@
-# `backend/app/core/services` ディレクトリの多角的・包括的リファクタリング提案
+# `backend/app/services` ディレクトリの多角的・包括的リファクタリング提案
 
-このドキュメントは、`backend/app/core/services` ディレクトリ内の Python ファイルを、設計原則（SOLID、DRY、KISS）、パフォーマンス、スケーラビリティ、保守性、拡張性、テスト容易性、エラーハンドリング、コード品質といった多角的な視点から深く分析し、具体的なリファクタリング提案をまとめたものです。各提案は、「なぜ（問題点と影響）」と「どのように（具体的な解決策）」を明確にすることで、その必要性と実装方法を詳細に説明します。
+このドキュメントは、`backend/app/services` ディレクトリ内の Python ファイルを、設計原則（SOLID、DRY、KISS）、パフォーマンス、スケーラビリティ、保守性、拡張性、テスト容易性、エラーハンドリング、コード品質といった多角的な視点から深く分析し、具体的なリファクタリング提案をまとめたものです。各提案は、「なぜ（問題点と影響）」と「どのように（具体的な解決策）」を明確にすることで、その必要性と実装方法を詳細に説明します。
 
 ---
 
@@ -44,7 +44,7 @@
 
 ---
 
-## 1. `backend/app/core/services/__init__.py`
+## 1. `backend/app/services/__init__.py`
 
 - **現状と課題**:
   - サービス層パッケージを示すシンプルな docstring のみ。
@@ -54,7 +54,7 @@
 
 ---
 
-## 2. `backend/app/core/services/backtest_data_service.py` ✅ **完了**
+## 2. `backend/app/services/backtest_data_service.py` ✅ **完了**
 
 - **現状と課題**:
 
@@ -121,7 +121,7 @@
 
 ---
 
-## 3. `backend/app/core/services/backtest_service.py`
+## 3. `backend/app/services/backtest_service.py`
 
 - **現状と課題**:
 
@@ -166,7 +166,7 @@
 
 ---
 
-## 4. `backend/app/core/services/strategy_integration_service.py`
+## 4. `backend/app/services/strategy_integration_service.py`
 
 - **現状と課題**:
 
@@ -204,7 +204,7 @@
 
 ---
 
-## 5. `backend/app/core/services/auto_strategy/` ディレクトリ
+## 5. `backend/app/services/auto_strategy/` ディレクトリ
 
 - **現状と課題**:
 
@@ -258,7 +258,7 @@
 
 ---
 
-## 6. `backend/app/core/services/data_collection/` ディレクトリ
+## 6. `backend/app/services/data_collection/` ディレクトリ
 
 - **現状と課題**:
 
@@ -307,7 +307,7 @@
 
 ---
 
-## 7. `backend/app/core/services/indicators/` ディレクトリ
+## 7. `backend/app/services/indicators/` ディレクトリ
 
 - **現状と課題**:
 
@@ -353,7 +353,7 @@
 
 ---
 
-## 8. `backend/app/core/services/ml/` ディレクトリ
+## 8. `backend/app/services/ml/` ディレクトリ
 
 - **現状と課題**:
 
@@ -408,7 +408,7 @@
 
 ---
 
-## 9. `backend/app/core/services/optimization/` ディレクトリ
+## 9. `backend/app/services/optimization/` ディレクトリ
 
 - **現状と課題**:
 

@@ -75,13 +75,13 @@ graph TD
 
 ### Step 1: バックエンドの実装
 
-1. **`backend/app/core/services/strategy_insight_service.py` の新規作成**:
+1. **`backend/app/services/strategy_insight_service.py` の新規作成**:
 
    - `StrategyInsightService` クラスを作成します。
    - `analyze_experiment(self, experiment_id: int)` メソッドを実装し、上記のデータフローにおけるバックエンド処理を記述します。
    - `pandas` や `numpy` を活用して効率的に集計処理を行います。
 
-2. **`backend/app/core/services/llm_analysis_service.py` の新規作成**:
+2. **`backend/app/services/llm_analysis_service.py` の新規作成**:
 
    - `LLMAnalysisService` クラスを作成します。
    - `get_insights_from_data(self, analysis_data: dict) -> str` メソッドを実装します。

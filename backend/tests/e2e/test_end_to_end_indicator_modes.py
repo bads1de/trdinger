@@ -49,8 +49,8 @@ def test_ga_execution_with_modes():
     print("=== GA実行 指標モードテスト ===")
     
     try:
-        from app.core.services.auto_strategy.services.auto_strategy_service import AutoStrategyService
-        from app.core.services.auto_strategy.models.ga_config import GAConfig
+        from app.services.auto_strategy.services.auto_strategy_service import AutoStrategyService
+        from app.services.auto_strategy.models.ga_config import GAConfig
         
         service = AutoStrategyService()
         
@@ -124,9 +124,9 @@ def test_strategy_generation_with_modes():
     print("\n=== 戦略生成 指標モードテスト ===")
     
     try:
-        from app.core.services.auto_strategy.generators.random_gene_generator import RandomGeneGenerator
-        from app.core.services.auto_strategy.generators.smart_condition_generator import SmartConditionGenerator
-        from app.core.services.auto_strategy.models.ga_config import GAConfig
+        from app.services.auto_strategy.generators.random_gene_generator import RandomGeneGenerator
+        from app.services.auto_strategy.generators.smart_condition_generator import SmartConditionGenerator
+        from app.services.auto_strategy.models.ga_config import GAConfig
         
         condition_generator = SmartConditionGenerator()
         
@@ -207,7 +207,7 @@ def test_api_request_simulation():
     print("\n=== API リクエストシミュレーション ===")
     
     try:
-        from app.core.services.auto_strategy.models.ga_config import GAConfig
+        from app.services.auto_strategy.models.ga_config import GAConfig
         
         # フロントエンドからのリクエストを模擬
         frontend_requests = [

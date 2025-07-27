@@ -3,7 +3,7 @@ FinancialFeatureSettingsの簡単なテスト
 """
 
 import pytest
-from app.core.services.ml.feature_engineering.automl_features.feature_settings import (
+from app.services.ml.feature_engineering.automl_features.feature_settings import (
     FinancialFeatureSettings,
     FeatureCategory,
     MarketRegime,

@@ -87,11 +87,11 @@ def check_system_requirements() -> bool:
     # 必要ファイルの存在チェック
     required_files = [
         "requirements.txt",
-        "app/core/services/feature_engineering/feature_engineering_service.py",
-        "app/core/services/ml/signal_generator.py",
-        "app/core/services/auto_strategy/services/ml_indicator_service.py",
-        "app/core/services/auto_strategy/engines/fitness_sharing.py",
-        "app/core/services/optimization/optuna_optimizer.py",
+        "app/services/feature_engineering/feature_engineering_service.py",
+        "app/services/ml/signal_generator.py",
+        "app/services/auto_strategy/services/ml_indicator_service.py",
+        "app/services/auto_strategy/engines/fitness_sharing.py",
+        "app/services/optimization/optuna_optimizer.py",
     ]
 
     missing_files = []
@@ -166,7 +166,7 @@ def test_phase4_components() -> bool:
 
         # Optuna最適化エンジンのテスト
         print("Optuna最適化エンジンのテスト...")
-        from app.core.services.optimization.optuna_optimizer import (
+        from app.services.optimization.optuna_optimizer import (
             OptunaOptimizer,
             ParameterSpace,
         )

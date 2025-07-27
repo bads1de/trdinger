@@ -18,9 +18,9 @@ warnings.filterwarnings('ignore')
 project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 
-from app.core.services.ml.feature_engineering.enhanced_crypto_features import EnhancedCryptoFeatures
-from app.core.services.ml.feature_engineering.optimized_crypto_features import OptimizedCryptoFeatures
-from app.core.services.ml.feature_engineering.enhanced_feature_engineering_service import EnhancedFeatureEngineeringService
+from app.services.ml.feature_engineering.enhanced_crypto_features import EnhancedCryptoFeatures
+from app.services.ml.feature_engineering.optimized_crypto_features import OptimizedCryptoFeatures
+from app.services.ml.feature_engineering.enhanced_feature_engineering_service import EnhancedFeatureEngineeringService
 
 def generate_realistic_market_data(hours: int = 720) -> pd.DataFrame:
     """

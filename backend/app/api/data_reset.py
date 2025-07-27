@@ -12,8 +12,8 @@ from typing import Dict, Any
 
 
 from database.connection import get_db
-from app.core.utils.unified_error_handler import UnifiedErrorHandler
-from app.core.services.data_collection.orchestration.data_management_orchestration_service import (
+from app.utils.unified_error_handler import UnifiedErrorHandler
+from app.services.data_collection.orchestration.data_management_orchestration_service import (
     DataManagementOrchestrationService,
 )
 

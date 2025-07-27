@@ -10,11 +10,11 @@ from unittest.mock import Mock, AsyncMock, patch
 from datetime import datetime, timezone
 from typing import List, Dict, Any
 
-from app.core.services.data_collection.bybit.bybit_service import BybitService
-from app.core.services.data_collection.bybit.funding_rate_service import (
+from app.services.data_collection.bybit.bybit_service import BybitService
+from app.services.data_collection.bybit.funding_rate_service import (
     BybitFundingRateService,
 )
-from app.core.services.data_collection.bybit.open_interest_service import (
+from app.services.data_collection.bybit.open_interest_service import (
     BybitOpenInterestService,
 )
 

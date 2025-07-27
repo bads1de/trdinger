@@ -13,8 +13,8 @@ from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
 from database.connection import get_db, ensure_db_initialized
-from app.core.utils.unified_error_handler import UnifiedErrorHandler
-from app.core.services.data_collection.orchestration.open_interest_orchestration_service import (
+from app.utils.unified_error_handler import UnifiedErrorHandler
+from app.services.data_collection.orchestration.open_interest_orchestration_service import (
     OpenInterestOrchestrationService,
 )
 

@@ -12,10 +12,10 @@ import talib
 from unittest.mock import patch
 
 # 新しい指標クラスをインポート
-from backend.app.core.services.indicators.technical_indicators.trend import TrendIndicators
-from backend.app.core.services.indicators.technical_indicators.momentum import MomentumIndicators
-from backend.app.core.services.indicators.technical_indicators.volatility import VolatilityIndicators
-from backend.app.core.services.indicators.utils import (
+from backend.app.services.indicators.technical_indicators.trend import TrendIndicators
+from backend.app.services.indicators.technical_indicators.momentum import MomentumIndicators
+from backend.app.services.indicators.technical_indicators.volatility import VolatilityIndicators
+from backend.app.services.indicators.utils import (
     TALibError,
     validate_input,
     ensure_numpy_array,

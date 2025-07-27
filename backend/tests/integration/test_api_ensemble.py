@@ -19,7 +19,7 @@ from app.api.ml_training import (
     BaggingParamsConfig,
     StackingParamsConfig,
 )
-from app.core.services.ml.orchestration.ml_training_orchestration_service import (
+from app.services.ml.orchestration.ml_training_orchestration_service import (
     MLTrainingOrchestrationService,
 )
 

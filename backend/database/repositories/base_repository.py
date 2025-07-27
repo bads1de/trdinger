@@ -9,7 +9,7 @@ from sqlalchemy import func
 import pandas as pd
 import logging
 
-from app.core.utils.database_utils import DatabaseInsertHelper, DatabaseQueryHelper
+from app.utils.database_utils import DatabaseInsertHelper, DatabaseQueryHelper
 
 
 logger = logging.getLogger(__name__)

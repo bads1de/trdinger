@@ -11,10 +11,10 @@ from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
 from database.connection import get_db
-from app.core.services.data_collection.orchestration.fear_greed_orchestration_service import (
+from app.services.data_collection.orchestration.fear_greed_orchestration_service import (
     FearGreedOrchestrationService,
 )
-from app.core.utils.unified_error_handler import UnifiedErrorHandler
+from app.utils.unified_error_handler import UnifiedErrorHandler
 
 
 logger = logging.getLogger(__name__)

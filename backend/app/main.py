@@ -12,7 +12,7 @@ from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import settings
-from app.core.utils.duplicate_filter_handler import DuplicateFilterHandler
+from app.utils.duplicate_filter_handler import DuplicateFilterHandler
 from app.api.market_data import router as market_data_router
 from app.api.data_collection import router as data_collection_router
 from app.api.funding_rates import router as funding_rates_router
@@ -53,7 +53,7 @@ def setup_logging():
     root_logger.addHandler(console_handler)
 
     # オートストラテジー専用ロガーの設定
-    auto_strategy_logger = logging.getLogger("app.core.services.auto_strategy")
+    auto_strategy_logger = logging.getLogger("app.services.auto_strategy")
     auto_strategy_logger.setLevel(getattr(logging, settings.logging.level.upper()))
 
     # ログディレクトリが存在しない場合は作成

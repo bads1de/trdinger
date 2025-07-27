@@ -12,11 +12,11 @@ from typing import Dict, Any, Optional, List
 backend_path = os.path.join(os.path.dirname(__file__), "..", "..")
 sys.path.insert(0, backend_path)
 
-from app.core.services.auto_strategy.models.gene_position_sizing import (
+from app.services.auto_strategy.models.gene_position_sizing import (
     PositionSizingGene,
     PositionSizingMethod,
 )
-from app.core.services.auto_strategy.calculators.position_sizing_calculator import (
+from app.services.auto_strategy.calculators.position_sizing_calculator import (
     PositionSizingCalculatorService,
 )
 

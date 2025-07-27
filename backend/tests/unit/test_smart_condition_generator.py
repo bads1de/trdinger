@@ -8,14 +8,14 @@ import pytest
 from unittest.mock import Mock, patch
 from typing import List
 
-from app.core.services.auto_strategy.generators.smart_condition_generator import (
+from app.services.auto_strategy.generators.smart_condition_generator import (
     SmartConditionGenerator,
     StrategyType,
     IndicatorType,
     INDICATOR_CHARACTERISTICS,
     COMBINATION_RULES
 )
-from app.core.services.auto_strategy.models.gene_strategy import IndicatorGene, Condition
+from app.services.auto_strategy.models.gene_strategy import IndicatorGene, Condition
 
 
 class TestSmartConditionGenerator:

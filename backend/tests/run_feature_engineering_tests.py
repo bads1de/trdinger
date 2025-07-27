@@ -85,7 +85,7 @@ def run_coverage_tests():
     command = (
         "python -m pytest "
         "backend/tests/ml/test_feature_engineering_comprehensive.py "
-        "--cov=backend.app.core.services.ml.feature_engineering "
+        "--cov=backend.app.services.ml.feature_engineering "
         "--cov-report=term-missing "
         "--cov-report=html:backend/tests/ml/htmlcov"
     )

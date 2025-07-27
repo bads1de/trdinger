@@ -11,9 +11,9 @@ import numpy as np
 from unittest.mock import Mock, patch, MagicMock
 import warnings
 
-from app.core.services.ml.feature_engineering.feature_engineering_service import FeatureEngineeringService
-from app.core.services.ml.feature_engineering.temporal_features import TemporalFeatureCalculator
-from app.core.services.ml.feature_engineering.interaction_features import InteractionFeatureCalculator
+from app.services.ml.feature_engineering.feature_engineering_service import FeatureEngineeringService
+from app.services.ml.feature_engineering.temporal_features import TemporalFeatureCalculator
+from app.services.ml.feature_engineering.interaction_features import InteractionFeatureCalculator
 
 
 class TestFeatureEngineeringIntegrationRobust:

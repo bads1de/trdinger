@@ -10,10 +10,10 @@ from typing import Dict, List, Optional, Any
 import pandas as pd
 import logging
 
-from app.core.services.ml.feature_engineering.enhanced_feature_engineering_service import (
+from app.services.ml.feature_engineering.enhanced_feature_engineering_service import (
     EnhancedFeatureEngineeringService,
 )
-from app.core.services.ml.feature_engineering.automl_features.automl_config import (
+from app.services.ml.feature_engineering.automl_features.automl_config import (
     AutoMLConfig,
 )
 

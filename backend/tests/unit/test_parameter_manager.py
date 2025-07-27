@@ -8,12 +8,12 @@ import pytest
 from typing import Dict, Any
 from unittest.mock import Mock, patch
 
-from app.core.services.indicators.config.indicator_config import (
+from app.services.indicators.config.indicator_config import (
     IndicatorConfig,
     ParameterConfig,
     IndicatorResultType,
 )
-from app.core.services.indicators.parameter_manager import (
+from app.services.indicators.parameter_manager import (
     IndicatorParameterManager,
     ParameterGenerationError,
 )

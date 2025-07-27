@@ -9,7 +9,7 @@ from unittest.mock import Mock, AsyncMock, patch
 from sqlalchemy.orm import Session
 from typing import Dict, Any
 
-from app.core.services.data_collection.funding_rate_orchestration_service import (
+from app.services.data_collection.funding_rate_orchestration_service import (
     FundingRateOrchestrationService,
 )
 
@@ -52,9 +52,9 @@ class TestFundingRateOrchestrationService:
         fetch_all = False
 
         with patch(
-            "app.core.services.data_collection.funding_rate_orchestration_service.BybitFundingRateService"
+            "app.services.data_collection.funding_rate_orchestration_service.BybitFundingRateService"
         ) as mock_service_class, patch(
-            "app.core.services.data_collection.funding_rate_orchestration_service.FundingRateRepository"
+            "app.services.data_collection.funding_rate_orchestration_service.FundingRateRepository"
         ) as mock_repo_class:
             # モック設定
             mock_service = AsyncMock()
@@ -98,9 +98,9 @@ class TestFundingRateOrchestrationService:
         }
 
         with patch(
-            "app.core.services.data_collection.funding_rate_orchestration_service.BybitFundingRateService"
+            "app.services.data_collection.funding_rate_orchestration_service.BybitFundingRateService"
         ) as mock_service_class, patch(
-            "app.core.services.data_collection.funding_rate_orchestration_service.FundingRateRepository"
+            "app.services.data_collection.funding_rate_orchestration_service.FundingRateRepository"
         ) as mock_repo_class:
             mock_service = AsyncMock()
             mock_service.fetch_and_save_funding_rate_data.return_value = error_result
@@ -136,9 +136,9 @@ class TestFundingRateOrchestrationService:
         ]
 
         with patch(
-            "app.core.services.data_collection.funding_rate_orchestration_service.BybitFundingRateService"
+            "app.services.data_collection.funding_rate_orchestration_service.BybitFundingRateService"
         ) as mock_service_class, patch(
-            "app.core.services.data_collection.funding_rate_orchestration_service.FundingRateRepository"
+            "app.services.data_collection.funding_rate_orchestration_service.FundingRateRepository"
         ) as mock_repo_class:
             mock_service = Mock()
             mock_service.normalize_symbol.return_value = symbol
@@ -164,7 +164,7 @@ class TestFundingRateOrchestrationService:
         symbol = "BTC/USDT:USDT"
 
         with patch(
-            "app.core.services.data_collection.funding_rate_orchestration_service.BybitFundingRateService"
+            "app.services.data_collection.funding_rate_orchestration_service.BybitFundingRateService"
         ) as mock_service_class:
             # 例外を発生させる
             mock_service_class.side_effect = Exception("接続タイムアウト")

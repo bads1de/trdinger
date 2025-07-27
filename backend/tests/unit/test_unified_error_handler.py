@@ -14,7 +14,7 @@ from typing import Dict, Any
 sys.path.insert(0, os.path.join(os.path.dirname(__file__)))
 
 try:
-    from app.core.utils.unified_error_handler import (
+    from app.utils.unified_error_handler import (
         UnifiedErrorHandler,
         UnifiedTimeoutError,
         UnifiedValidationError,

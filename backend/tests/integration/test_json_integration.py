@@ -10,13 +10,13 @@ import pandas as pd
 import numpy as np
 from unittest.mock import patch, MagicMock
 
-from backend.app.core.services.indicators.config import (
+from backend.app.services.indicators.config import (
     indicator_registry,
 )
-from backend.app.core.services.indicators.technical_indicators.momentum import MomentumIndicators
-from backend.app.core.services.indicators.technical_indicators.trend import TrendIndicators
-from backend.app.core.services.indicators.technical_indicators.volatility import VolatilityIndicators
-from backend.app.core.services.indicators.technical_indicators.volume import VolumeIndicators
+from backend.app.services.indicators.technical_indicators.momentum import MomentumIndicators
+from backend.app.services.indicators.technical_indicators.trend import TrendIndicators
+from backend.app.services.indicators.technical_indicators.volatility import VolatilityIndicators
+from backend.app.services.indicators.technical_indicators.volume import VolumeIndicators
 
 
 class TestIndicatorJSONIntegration:

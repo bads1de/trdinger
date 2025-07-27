@@ -5,7 +5,7 @@ EnsembleTrainerのハイパーパラメータ最適化機能のユニットテ�
 import pytest
 import pandas as pd
 import numpy as np
-from app.core.services.ml.ensemble.ensemble_trainer import EnsembleTrainer
+from app.services.ml.ensemble.ensemble_trainer import EnsembleTrainer
 
 
 class TestEnsembleTrainerOptimization:

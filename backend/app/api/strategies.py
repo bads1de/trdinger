@@ -11,9 +11,9 @@ from sqlalchemy.orm import Session
 from typing import Dict, Any, Optional
 from pydantic import BaseModel, Field
 
-from app.core.dependencies import get_strategy_integration_service
+from app.dependencies import get_strategy_integration_service
 from database.connection import get_db
-from app.core.utils.unified_error_handler import UnifiedErrorHandler
+from app.utils.unified_error_handler import UnifiedErrorHandler
 
 logger = logging.getLogger(__name__)
 

@@ -9,7 +9,7 @@ import warnings
 import pandas as pd
 import numpy as np
 
-from app.core.services.auto_strategy.services.ml_orchestrator import MLOrchestrator
+from app.services.auto_strategy.services.ml_orchestrator import MLOrchestrator
 
 
 def test_integration():

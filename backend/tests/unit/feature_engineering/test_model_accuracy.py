@@ -28,10 +28,10 @@ except ImportError:
     LIGHTGBM_AVAILABLE = False
     print("LightGBMが利用できません。pip install lightgbm でインストールしてください。")
 
-from app.core.services.ml.feature_engineering.enhanced_feature_engineering_service import (
+from app.services.ml.feature_engineering.enhanced_feature_engineering_service import (
     EnhancedFeatureEngineeringService,
 )
-from app.core.services.ml.feature_engineering.automl_features.automl_config import (
+from app.services.ml.feature_engineering.automl_features.automl_config import (
     AutoMLConfig,
     TSFreshConfig,
     FeaturetoolsConfig,

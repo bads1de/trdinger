@@ -12,7 +12,7 @@ import logging
 
 from .base_repository import BaseRepository
 from database.models import GAExperiment
-from app.core.utils.database_utils import DatabaseQueryHelper
+from app.utils.database_utils import DatabaseQueryHelper
 
 logger = logging.getLogger(__name__)
 

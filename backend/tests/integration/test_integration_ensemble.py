@@ -13,7 +13,7 @@ from sklearn.datasets import make_classification
 # プロジェクトルートをパスに追加
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
-from app.core.services.ml.ml_training_service import MLTrainingService
+from app.services.ml.ml_training_service import MLTrainingService
 
 
 def create_test_data():

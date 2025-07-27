@@ -5,13 +5,13 @@ from typing import Dict, Any, List, Optional
 from pydantic import BaseModel, Field
 from functools import lru_cache
 
-from app.core.services.auto_strategy import AutoStrategyService
-from app.core.services.auto_strategy.models.ga_config import GAConfig
-from app.core.services.auto_strategy.orchestration.auto_strategy_orchestration_service import (
+from app.services.auto_strategy import AutoStrategyService
+from app.services.auto_strategy.models.ga_config import GAConfig
+from app.services.auto_strategy.orchestration.auto_strategy_orchestration_service import (
     AutoStrategyOrchestrationService,
 )
-from app.core.utils.unified_error_handler import UnifiedErrorHandler
-from app.core.utils.api_utils import APIResponseHelper
+from app.utils.unified_error_handler import UnifiedErrorHandler
+from app.utils.api_utils import APIResponseHelper
 
 
 logger = logging.getLogger(__name__)

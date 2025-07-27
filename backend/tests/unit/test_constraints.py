@@ -3,7 +3,7 @@
 """
 
 import pytest
-from app.core.services.indicators.constraints import (
+from app.services.indicators.constraints import (
     OrderConstraint,
     RangeConstraint,
     DependencyConstraint,

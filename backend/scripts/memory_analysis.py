@@ -17,13 +17,13 @@ from pathlib import Path
 project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 
-from app.core.services.ml.feature_engineering.automl_features.autofeat_calculator import (
+from app.services.ml.feature_engineering.automl_features.autofeat_calculator import (
     AutoFeatCalculator,
 )
-from app.core.services.ml.feature_engineering.automl_features.automl_config import (
+from app.services.ml.feature_engineering.automl_features.automl_config import (
     AutoFeatConfig,
 )
-from app.core.services.ml.feature_engineering.automl_features.performance_optimizer import (
+from app.services.ml.feature_engineering.automl_features.performance_optimizer import (
     PerformanceOptimizer,
 )
 

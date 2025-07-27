@@ -15,7 +15,7 @@ from datetime import datetime
 # プロジェクトルートをパスに追加
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
 
-from app.core.services.backtest_data_service import BacktestDataService
+from app.services.backtest_data_service import BacktestDataService
 
 
 class TestBacktestDataServiceRefactor(unittest.TestCase):
@@ -130,7 +130,7 @@ class TestBacktestDataServiceRefactor(unittest.TestCase):
         )
 
         # DataCleanerを使用してテスト実行
-        from app.core.services.utils import DataCleaner
+        from app.services.utils import DataCleaner
 
         result_df = DataCleaner.interpolate_fear_greed_data(test_df)
 

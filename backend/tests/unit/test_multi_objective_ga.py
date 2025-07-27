@@ -9,12 +9,12 @@ import logging
 from unittest.mock import Mock, patch
 from typing import Dict, Any
 
-from app.core.services.auto_strategy.models.ga_config import GAConfig
-from app.core.services.auto_strategy.engines.deap_setup import DEAPSetup
-from app.core.services.auto_strategy.engines.individual_evaluator import (
+from app.services.auto_strategy.models.ga_config import GAConfig
+from app.services.auto_strategy.engines.deap_setup import DEAPSetup
+from app.services.auto_strategy.engines.individual_evaluator import (
     IndividualEvaluator,
 )
-from app.core.services.auto_strategy.engines.ga_engine import GeneticAlgorithmEngine
+from app.services.auto_strategy.engines.ga_engine import GeneticAlgorithmEngine
 
 logger = logging.getLogger(__name__)
 
@@ -117,7 +117,7 @@ class TestMultiObjectiveGA:
 
         # 評価実行
         with patch(
-            "app.core.services.auto_strategy.models.gene_encoding.GeneEncoder"
+            "app.services.auto_strategy.models.gene_encoding.GeneEncoder"
         ) as mock_encoder:
             mock_gene = Mock()
             mock_gene.id = "test_gene_123"

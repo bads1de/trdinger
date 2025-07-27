@@ -13,10 +13,10 @@ from sqlalchemy.orm import Session
 from pydantic import BaseModel, Field
 
 from database.connection import get_db
-from app.core.services.backtest.orchestration.backtest_orchestration_service import (
+from app.services.backtest.orchestration.backtest_orchestration_service import (
     BacktestOrchestrationService,
 )
-from app.core.utils.unified_error_handler import UnifiedErrorHandler
+from app.utils.unified_error_handler import UnifiedErrorHandler
 
 router = APIRouter(prefix="/api/backtest", tags=["backtest"])
 

@@ -13,8 +13,8 @@ from sklearn.datasets import make_classification
 # プロジェクトルートをパスに追加
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
-from app.core.services.ml.ensemble.ensemble_trainer import EnsembleTrainer
-from app.core.services.ml.ml_training_service import MLTrainingService
+from app.services.ml.ensemble.ensemble_trainer import EnsembleTrainer
+from app.services.ml.ml_training_service import MLTrainingService
 
 
 def test_ensemble_trainer_direct():
@@ -172,7 +172,7 @@ def test_global_instance():
     print("\n=== グローバルインスタンステスト ===")
     
     try:
-        from app.core.services.ml.ml_training_service import ml_training_service
+        from app.services.ml.ml_training_service import ml_training_service
         
         print(f"グローバルインスタンス取得成功")
         print(f"トレーナータイプ: {ml_training_service.trainer_type}")

@@ -10,10 +10,10 @@ from typing import Dict, Any, List, Tuple, Optional
 from datetime import datetime, timedelta
 from decimal import Decimal
 
-from app.core.services.auto_strategy.models.ga_config import GAConfig
-from app.core.services.auto_strategy.models.gene_strategy import StrategyGene
-from app.core.services.auto_strategy.models.gene_tpsl import TPSLGene, TPSLMethod
-from app.core.services.auto_strategy.models.gene_position_sizing import (
+from app.services.auto_strategy.models.ga_config import GAConfig
+from app.services.auto_strategy.models.gene_strategy import StrategyGene
+from app.services.auto_strategy.models.gene_tpsl import TPSLGene, TPSLMethod
+from app.services.auto_strategy.models.gene_position_sizing import (
     PositionSizingGene,
     PositionSizingMethod,
 )
@@ -123,7 +123,7 @@ class TestDataGenerator:
     @staticmethod
     def generate_strategy_gene() -> StrategyGene:
         """StrategyGene を生成"""
-        from app.core.services.auto_strategy.generators.random_gene_generator import (
+        from app.services.auto_strategy.generators.random_gene_generator import (
             RandomGeneGenerator,
         )
 

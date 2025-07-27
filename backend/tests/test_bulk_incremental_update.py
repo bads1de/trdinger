@@ -9,7 +9,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
 from database.connection import Base
-from app.core.services.data_collection.orchestration.data_collection_orchestration_service import (
+from app.services.data_collection.orchestration.data_collection_orchestration_service import (
     DataCollectionOrchestrationService,
 )
 

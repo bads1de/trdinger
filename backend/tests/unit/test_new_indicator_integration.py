@@ -9,14 +9,14 @@ import pytest
 import random
 from unittest.mock import patch
 
-from app.core.services.auto_strategy.generators.smart_condition_generator import (
+from app.services.auto_strategy.generators.smart_condition_generator import (
     SmartConditionGenerator,
     IndicatorType,
     INDICATOR_CHARACTERISTICS
 )
-from app.core.services.auto_strategy.generators.random_gene_generator import RandomGeneGenerator
-from app.core.services.auto_strategy.models.gene_strategy import IndicatorGene
-from app.core.services.auto_strategy.models.ga_config import GAConfig
+from app.services.auto_strategy.generators.random_gene_generator import RandomGeneGenerator
+from app.services.auto_strategy.models.gene_strategy import IndicatorGene
+from app.services.auto_strategy.models.ga_config import GAConfig
 
 
 class TestNewIndicatorIntegration:

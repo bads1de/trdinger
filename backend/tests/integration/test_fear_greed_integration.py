@@ -11,10 +11,10 @@ import copy
 from database.connection import Base
 from database.models import FearGreedIndexData
 from database.repositories.fear_greed_repository import FearGreedIndexRepository
-from app.core.services.data_collection.fear_greed.fear_greed_service import (
+from app.services.data_collection.fear_greed.fear_greed_service import (
     FearGreedIndexService,
 )
-from app.core.utils.data_converter import DataValidator
+from app.utils.data_converter import DataValidator
 
 
 class TestFearGreedIntegration:

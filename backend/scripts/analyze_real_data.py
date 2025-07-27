@@ -23,7 +23,7 @@ from database.repositories.ohlcv_repository import OHLCVRepository
 from database.repositories.open_interest_repository import OpenInterestRepository
 from database.repositories.funding_rate_repository import FundingRateRepository
 from database.repositories.fear_greed_repository import FearGreedIndexRepository
-from app.core.services.backtest_data_service import BacktestDataService
+from app.services.backtest_data_service import BacktestDataService
 
 
 def analyze_data_coverage():

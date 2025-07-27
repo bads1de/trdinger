@@ -14,9 +14,9 @@ from sklearn.model_selection import train_test_split
 # プロジェクトルートをパスに追加
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
-from app.core.services.ml.ensemble.bagging import BaggingEnsemble
-from app.core.services.ml.ensemble.stacking import StackingEnsemble
-from app.core.services.ml.ensemble.ensemble_trainer import EnsembleTrainer
+from app.services.ml.ensemble.bagging import BaggingEnsemble
+from app.services.ml.ensemble.stacking import StackingEnsemble
+from app.services.ml.ensemble.ensemble_trainer import EnsembleTrainer
 
 
 def create_test_data():

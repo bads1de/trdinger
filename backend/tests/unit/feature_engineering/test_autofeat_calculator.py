@@ -10,11 +10,11 @@ import numpy as np
 from unittest.mock import patch, MagicMock
 import warnings
 
-from app.core.services.ml.feature_engineering.automl_features.autofeat_calculator import (
+from app.services.ml.feature_engineering.automl_features.autofeat_calculator import (
     AutoFeatCalculator,
     AUTOFEAT_AVAILABLE
 )
-from app.core.services.ml.feature_engineering.automl_features.automl_config import AutoFeatConfig
+from app.services.ml.feature_engineering.automl_features.automl_config import AutoFeatConfig
 
 
 class TestAutoFeatCalculator:
@@ -228,7 +228,7 @@ class TestAutoFeatCalculator:
         assert isinstance(selection_info, dict)
         assert "error" in selection_info
 
-    @patch('app.core.services.ml.feature_engineering.automl_features.autofeat_calculator.AUTOFEAT_AVAILABLE', False)
+    @patch('app.services.ml.feature_engineering.automl_features.autofeat_calculator.AUTOFEAT_AVAILABLE', False)
     def test_select_optimal_features_library_unavailable(self):
         """AutoFeatライブラリが利用できない場合のテスト"""
         features, target_regression, _ = self.create_test_data(50)

@@ -10,11 +10,11 @@ import numpy as np
 from unittest.mock import patch, MagicMock
 import warnings
 
-from app.core.services.ml.feature_engineering.automl_features.tsfresh_calculator import (
+from app.services.ml.feature_engineering.automl_features.tsfresh_calculator import (
     TSFreshFeatureCalculator,
     TSFRESH_AVAILABLE,
 )
-from app.core.services.ml.feature_engineering.automl_features.automl_config import (
+from app.services.ml.feature_engineering.automl_features.automl_config import (
     TSFreshConfig,
 )
 
@@ -250,7 +250,7 @@ class TestTSFreshCalculator:
         assert result_df is None
 
     @patch(
-        "app.core.services.ml.feature_engineering.automl_features.tsfresh_calculator.TSFRESH_AVAILABLE",
+        "app.services.ml.feature_engineering.automl_features.tsfresh_calculator.TSFRESH_AVAILABLE",
         False,
     )
     def test_calculate_tsfresh_features_library_unavailable(self):

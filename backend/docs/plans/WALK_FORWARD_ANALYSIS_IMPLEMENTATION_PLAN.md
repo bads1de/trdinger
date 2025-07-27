@@ -103,7 +103,7 @@ graph TD
 
 ### Step 1: コアロジックの実装 (`WalkForwardAnalyzer`)
 
-- **ファイル**: `backend/app/core/services/walk_forward_analyzer.py` を新規作成します。
+- **ファイル**: `backend/app/services/walk_forward_analyzer.py` を新規作成します。
 - **クラス**: `WalkForwardAnalyzer`
 - **メソッド**:
 - `__init__(self, db_session, backtest_service)`: 依存性を注入します。
@@ -120,7 +120,7 @@ graph TD
 
 ### Step 2: サービスレイヤーの拡張 (`BacktestService`)
 
-- **ファイル**: `backend/app/core/services/backtest_service.py` を修正します。
+- **ファイル**: `backend/app/services/backtest_service.py` を修正します。
 - **メソッド**:
 - `run_walk_forward_analysis(self, config)` を新設します。
 - `WalkForwardAnalyzer` をインスタンス化し、`run()` メソッドを呼び出します。

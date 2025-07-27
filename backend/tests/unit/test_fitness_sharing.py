@@ -19,7 +19,7 @@ sys.path.insert(0, str(project_root))
 def test_fitness_sharing_import():
     """FitnessSharingクラスのインポートテスト"""
     try:
-        from app.core.services.auto_strategy.engines.fitness_sharing import FitnessSharing
+        from app.services.auto_strategy.engines.fitness_sharing import FitnessSharing
         
         fitness_sharing = FitnessSharing()
         assert fitness_sharing is not None
@@ -71,8 +71,8 @@ def create_mock_individual(gene_data: dict) -> Any:
 def test_similarity_calculation():
     """類似度計算のテスト"""
     try:
-        from app.core.services.auto_strategy.engines.fitness_sharing import FitnessSharing
-        from app.core.services.auto_strategy.models.gene_strategy import StrategyGene, IndicatorGene
+        from app.services.auto_strategy.engines.fitness_sharing import FitnessSharing
+        from app.services.auto_strategy.models.gene_strategy import StrategyGene, IndicatorGene
         
         fitness_sharing = FitnessSharing()
         
@@ -131,7 +131,7 @@ def test_similarity_calculation():
 def test_sharing_function():
     """共有関数のテスト"""
     try:
-        from backend.app.core.services.auto_strategy.engines.fitness_sharing import FitnessSharing
+        from backend.app.services.auto_strategy.engines.fitness_sharing import FitnessSharing
         
         fitness_sharing = FitnessSharing(sharing_radius=0.1, alpha=1.0)
         
@@ -155,7 +155,7 @@ def test_sharing_function():
 def test_fitness_sharing_application():
     """フィットネス共有の適用テスト"""
     try:
-        from app.core.services.auto_strategy.engines.fitness_sharing import FitnessSharing
+        from app.services.auto_strategy.engines.fitness_sharing import FitnessSharing
         
         fitness_sharing = FitnessSharing()
         
@@ -204,7 +204,7 @@ def test_fitness_sharing_application():
 def test_diversity_improvement():
     """多様性向上の検証"""
     try:
-        from app.core.services.auto_strategy.engines.fitness_sharing import FitnessSharing
+        from app.services.auto_strategy.engines.fitness_sharing import FitnessSharing
         
         fitness_sharing = FitnessSharing()
         
@@ -253,7 +253,7 @@ def test_diversity_improvement():
 def test_ga_engine_integration():
     """GAエンジンとの統合テスト"""
     try:
-        from app.core.services.auto_strategy.models.ga_config import GAConfig
+        from app.services.auto_strategy.models.ga_config import GAConfig
         
         # フィットネス共有が有効な設定を作成
         config = GAConfig()

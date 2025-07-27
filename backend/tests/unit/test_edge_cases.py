@@ -20,13 +20,13 @@ from unittest.mock import Mock, patch
 # プロジェクトルートをパスに追加
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
 
-from app.core.services.auto_strategy.generators.smart_condition_generator import (
+from app.services.auto_strategy.generators.smart_condition_generator import (
     SmartConditionGenerator,
     StrategyType,
     IndicatorType,
     INDICATOR_CHARACTERISTICS
 )
-from app.core.services.auto_strategy.models.gene_strategy import IndicatorGene, Condition
+from app.services.auto_strategy.models.gene_strategy import IndicatorGene, Condition
 
 
 class TestEdgeCases:

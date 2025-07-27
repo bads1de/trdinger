@@ -11,22 +11,22 @@ import numpy as np
 from unittest.mock import patch
 import warnings
 
-from app.core.services.ml.feature_engineering.feature_engineering_service import (
+from app.services.ml.feature_engineering.feature_engineering_service import (
     FeatureEngineeringService,
 )
-from app.core.services.ml.feature_engineering.price_features import (
+from app.services.ml.feature_engineering.price_features import (
     PriceFeatureCalculator,
 )
-from app.core.services.ml.feature_engineering.technical_features import (
+from app.services.ml.feature_engineering.technical_features import (
     TechnicalFeatureCalculator,
 )
-from app.core.services.ml.feature_engineering.market_data_features import (
+from app.services.ml.feature_engineering.market_data_features import (
     MarketDataFeatureCalculator,
 )
-from app.core.services.ml.feature_engineering.temporal_features import (
+from app.services.ml.feature_engineering.temporal_features import (
     TemporalFeatureCalculator,
 )
-from app.core.services.ml.feature_engineering.interaction_features import (
+from app.services.ml.feature_engineering.interaction_features import (
     InteractionFeatureCalculator,
 )
 

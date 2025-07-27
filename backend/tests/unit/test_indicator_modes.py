@@ -17,7 +17,7 @@ def test_ga_config_indicator_modes():
     print("=== GAConfig 指標モード設定テスト ===")
     
     try:
-        from app.core.services.auto_strategy.models.ga_config import GAConfig
+        from app.services.auto_strategy.models.ga_config import GAConfig
         
         # 各モードの設定テスト
         modes = ["technical_only", "ml_only", "mixed"]
@@ -52,8 +52,8 @@ def test_random_gene_generator_modes():
     print("=== RandomGeneGenerator 指標モード対応テスト ===")
     
     try:
-        from app.core.services.auto_strategy.generators.random_gene_generator import RandomGeneGenerator
-        from app.core.services.auto_strategy.models.ga_config import GAConfig
+        from app.services.auto_strategy.generators.random_gene_generator import RandomGeneGenerator
+        from app.services.auto_strategy.models.ga_config import GAConfig
         
         modes = ["technical_only", "ml_only", "mixed"]
         
@@ -113,8 +113,8 @@ def test_smart_condition_generator_modes():
     print("\n=== SmartConditionGenerator 指標モード対応テスト ===")
     
     try:
-        from app.core.services.auto_strategy.generators.smart_condition_generator import SmartConditionGenerator
-        from app.core.services.auto_strategy.models.gene_strategy import IndicatorGene
+        from app.services.auto_strategy.generators.smart_condition_generator import SmartConditionGenerator
+        from app.services.auto_strategy.models.gene_strategy import IndicatorGene
         
         generator = SmartConditionGenerator()
         
@@ -193,7 +193,7 @@ def test_api_integration():
     print("\n=== API統合テスト ===")
     
     try:
-        from app.core.services.auto_strategy.models.ga_config import GAConfig
+        from app.services.auto_strategy.models.ga_config import GAConfig
         
         # フロントエンドから送信される設定を模擬
         frontend_config = {

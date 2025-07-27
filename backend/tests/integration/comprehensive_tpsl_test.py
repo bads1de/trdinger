@@ -16,8 +16,8 @@ sys.path.insert(0, backend_path)
 backend_path = os.path.join(os.path.dirname(__file__), "..")
 sys.path.insert(0, backend_path)
 
-from app.core.services.auto_strategy.calculators.tpsl_calculator import TPSLCalculator
-from app.core.services.auto_strategy.models.gene_tpsl import TPSLGene, TPSLMethod
+from app.services.auto_strategy.calculators.tpsl_calculator import TPSLCalculator
+from app.services.auto_strategy.models.gene_tpsl import TPSLGene, TPSLMethod
 
 
 class TPSLTestSuite:

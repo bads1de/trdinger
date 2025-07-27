@@ -10,7 +10,7 @@ import pandas as pd
 import numpy as np
 from datetime import datetime, timezone
 
-from app.core.services.ml.feature_engineering.feature_engineering_service import FeatureEngineeringService
+from app.services.ml.feature_engineering.feature_engineering_service import FeatureEngineeringService
 
 
 class TestEnhancedFeatureEngineering:

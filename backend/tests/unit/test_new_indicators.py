@@ -12,13 +12,13 @@ import talib
 from unittest.mock import patch
 
 # 新しい指標クラスをインポート
-from app.core.services.indicators.technical_indicators.trend import TrendIndicators
-from app.core.services.indicators.technical_indicators.momentum import MomentumIndicators
-from app.core.services.indicators.technical_indicators.volatility import VolatilityIndicators
-from app.core.services.indicators.technical_indicators.volume import VolumeIndicators
-from app.core.services.indicators.technical_indicators.price_transform import PriceTransformIndicators
-from app.core.services.indicators.technical_indicators.cycle import CycleIndicators
-from app.core.services.indicators.utils import TALibError
+from app.services.indicators.technical_indicators.trend import TrendIndicators
+from app.services.indicators.technical_indicators.momentum import MomentumIndicators
+from app.services.indicators.technical_indicators.volatility import VolatilityIndicators
+from app.services.indicators.technical_indicators.volume import VolumeIndicators
+from app.services.indicators.technical_indicators.price_transform import PriceTransformIndicators
+from app.services.indicators.technical_indicators.cycle import CycleIndicators
+from app.services.indicators.utils import TALibError
 
 
 class TestNewTrendIndicators:
@@ -320,7 +320,7 @@ class TestIndicatorInitialization:
 
     def test_all_indicators_can_be_imported(self):
         """全てのインジケーターがインポート可能であることを確認"""
-        from app.core.services.indicators import (
+        from app.services.indicators import (
             TrendIndicators,
             MomentumIndicators,
             VolatilityIndicators,
@@ -339,8 +339,8 @@ class TestIndicatorInitialization:
 
     def test_indicator_registry_initialization(self):
         """インジケーターレジストリの初期化テスト"""
-        from app.core.services.indicators.config.indicator_definitions import initialize_all_indicators
-        from app.core.services.indicators.config.indicator_config import indicator_registry
+        from app.services.indicators.config.indicator_definitions import initialize_all_indicators
+        from app.services.indicators.config.indicator_config import indicator_registry
 
         # 初期化前のレジストリをクリア
         indicator_registry._configs.clear()

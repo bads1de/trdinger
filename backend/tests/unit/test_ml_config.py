@@ -6,8 +6,8 @@ ML設定クラスの機能をテストします。
 
 import unittest
 import numpy as np
-from app.core.services.ml.config import ml_config
-from app.core.services.ml.config.ml_config import MLConfig, PredictionConfig
+from app.services.ml.config import ml_config
+from app.services.ml.config.ml_config import MLConfig, PredictionConfig
 
 
 class TestMLConfig(unittest.TestCase):

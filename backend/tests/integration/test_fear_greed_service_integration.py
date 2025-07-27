@@ -10,10 +10,10 @@ from sqlalchemy.orm import sessionmaker
 
 from database.connection import Base
 from database.repositories.fear_greed_repository import FearGreedIndexRepository
-from app.core.services.data_collection.fear_greed.fear_greed_service import (
+from app.services.data_collection.fear_greed.fear_greed_service import (
     FearGreedIndexService,
 )
-from app.core.services.data_collection.orchestration.fear_greed_orchestration_service import (
+from app.services.data_collection.orchestration.fear_greed_orchestration_service import (
     FearGreedOrchestrationService,
 )
 
@@ -151,7 +151,7 @@ class TestFearGreedServiceIntegration:
 
         # FearGreedIndexServiceをモック
         with patch(
-            "app.core.services.data_collection.orchestration.fear_greed_orchestration_service.FearGreedIndexService"
+            "app.services.data_collection.orchestration.fear_greed_orchestration_service.FearGreedIndexService"
         ) as mock_service_class:
             mock_service = AsyncMock()
             mock_service_class.return_value.__aenter__.return_value = mock_service
@@ -190,7 +190,7 @@ class TestFearGreedServiceIntegration:
 
         # FearGreedIndexServiceをモック
         with patch(
-            "app.core.services.data_collection.orchestration.fear_greed_orchestration_service.FearGreedIndexService"
+            "app.services.data_collection.orchestration.fear_greed_orchestration_service.FearGreedIndexService"
         ) as mock_service_class:
             mock_service = AsyncMock()
             mock_service_class.return_value.__aenter__.return_value = mock_service

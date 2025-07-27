@@ -12,8 +12,8 @@ from typing import Optional
 
 
 from database.connection import get_db, ensure_db_initialized
-from app.core.utils.unified_error_handler import UnifiedErrorHandler
-from app.core.services.data_collection.orchestration.funding_rate_orchestration_service import (
+from app.utils.unified_error_handler import UnifiedErrorHandler
+from app.services.data_collection.orchestration.funding_rate_orchestration_service import (
     FundingRateOrchestrationService,
 )
 
