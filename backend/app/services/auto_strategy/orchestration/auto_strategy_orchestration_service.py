@@ -81,3 +81,62 @@ class AutoStrategyOrchestrationService:
                 "errors": [str(e)],
                 "message": f"戦略テスト中にエラーが発生しました: {str(e)}",
             }
+
+    def validate_experiment_stop(
+        self, experiment_id: str, auto_strategy_service: AutoStrategyService
+    ) -> bool:
+        """
+        実験停止のバリデーション
+
+        Args:
+            experiment_id: 実験ID
+            auto_strategy_service: AutoStrategyService
+
+        Returns:
+            停止可能かどうか
+
+        Raises:
+            ValueError: 停止できない場合
+        """
+        success = auto_strategy_service.stop_experiment(experiment_id)
+
+        if not success:
+            logger.warning(
+                f"実験 {experiment_id} を停止できませんでした（存在しないか、既に完了している可能性があります）"
+            )
+            raise ValueError(
+                "実験を停止できませんでした（存在しないか、既に完了している可能性があります）"
+            )
+
+        return success
+
+    def format_experiment_result(self, result: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        実験結果のフォーマット
+
+        Args:
+            result: 実験結果
+
+        Returns:
+            フォーマット済み結果
+        """
+        if result is None:
+            return None
+
+        # 多目的最適化の結果かどうかを判定
+        if "pareto_front" in result and "objectives" in result:
+            return {
+                "success": True,
+                "message": "多目的最適化実験結果を取得しました",
+                "data": {
+                    "result": result,
+                    "pareto_front": result.get("pareto_front"),
+                    "objectives": result.get("objectives"),
+                },
+            }
+        else:
+            return {
+                "success": True,
+                "message": "実験結果を取得しました",
+                "data": {"result": result},
+            }

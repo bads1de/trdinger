@@ -138,50 +138,23 @@ async def get_automl_feature_analysis(
 
 
 @router.get("/config")
-async def get_ml_config():
+async def get_ml_config(
+    ml_service: MLManagementOrchestrationService = Depends(
+        get_ml_management_orchestration_service
+    ),
+):
     """
     ML設定を取得
+
+    Args:
+        ml_service: ML管理サービス（依存性注入）
 
     Returns:
         ML設定
     """
 
     async def _get_ml_config():
-        config_dict = {
-            "data_processing": {
-                "max_ohlcv_rows": ml_config.data_processing.MAX_OHLCV_ROWS,
-                "max_feature_rows": ml_config.data_processing.MAX_FEATURE_ROWS,
-                "feature_calculation_timeout": ml_config.data_processing.FEATURE_CALCULATION_TIMEOUT,
-                "model_training_timeout": ml_config.data_processing.MODEL_TRAINING_TIMEOUT,
-            },
-            "model": {
-                "model_save_path": ml_config.model.MODEL_SAVE_PATH,
-                "max_model_versions": ml_config.model.MAX_MODEL_VERSIONS,
-                "model_retention_days": ml_config.model.MODEL_RETENTION_DAYS,
-            },
-            "lightgbm": {
-                "learning_rate": ml_config.lightgbm.LEARNING_RATE,
-                "num_leaves": ml_config.lightgbm.NUM_LEAVES,
-                "feature_fraction": ml_config.lightgbm.FEATURE_FRACTION,
-                "bagging_fraction": ml_config.lightgbm.BAGGING_FRACTION,
-                "num_boost_round": ml_config.lightgbm.NUM_BOOST_ROUND,
-                "early_stopping_rounds": ml_config.lightgbm.EARLY_STOPPING_ROUNDS,
-            },
-            "training": {
-                "train_test_split": ml_config.training.TRAIN_TEST_SPLIT,
-                "prediction_horizon": ml_config.training.PREDICTION_HORIZON,
-                "threshold_up": ml_config.training.THRESHOLD_UP,
-                "threshold_down": ml_config.training.THRESHOLD_DOWN,
-                "min_training_samples": ml_config.training.MIN_TRAINING_SAMPLES,
-            },
-            "prediction": {
-                "default_up_prob": ml_config.prediction.DEFAULT_UP_PROB,
-                "default_down_prob": ml_config.prediction.DEFAULT_DOWN_PROB,
-                "default_range_prob": ml_config.prediction.DEFAULT_RANGE_PROB,
-            },
-        }
-
-        return config_dict
+        return ml_service.get_ml_config_dict()
 
     return await UnifiedErrorHandler.safe_execute_async(_get_ml_config)
 

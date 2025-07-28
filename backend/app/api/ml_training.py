@@ -30,56 +30,6 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/ml-training", tags=["ML Training"])
 
 
-def get_default_automl_config() -> AutoMLConfigModel:
-    """デフォルトのAutoML設定を取得"""
-    return AutoMLConfigModel(
-        tsfresh=TSFreshConfigModel(
-            enabled=True,
-            feature_selection=True,
-            fdr_level=0.05,
-            feature_count_limit=100,
-            parallel_jobs=2,
-        ),
-        featuretools=FeaturetoolsConfigModel(
-            enabled=True,
-            max_depth=2,
-            max_features=50,
-        ),
-        autofeat=AutoFeatConfigModel(
-            enabled=True,
-            max_features=50,
-            generations=10,  # API層ではgenerationsを使用
-            population_size=30,
-            tournament_size=3,
-        ),
-    )
-
-
-def get_financial_optimized_automl_config() -> AutoMLConfigModel:
-    """金融データ最適化AutoML設定を取得"""
-    return AutoMLConfigModel(
-        tsfresh=TSFreshConfigModel(
-            enabled=True,
-            feature_selection=True,
-            fdr_level=0.01,  # より厳しい選択
-            feature_count_limit=200,  # 金融データ用に増加
-            parallel_jobs=4,
-        ),
-        featuretools=FeaturetoolsConfigModel(
-            enabled=True,
-            max_depth=3,  # より深い特徴量合成
-            max_features=100,  # 金融データ用に増加
-        ),
-        autofeat=AutoFeatConfigModel(
-            enabled=True,
-            max_features=100,
-            generations=20,  # より多くの世代（API層ではgenerationsを使用）
-            population_size=50,
-            tournament_size=3,
-        ),
-    )
-
-
 class ParameterSpaceConfig(BaseModel):
     """パラメータ空間設定"""
 

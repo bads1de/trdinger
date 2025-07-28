@@ -14,7 +14,7 @@ import {
 } from "@/components/ui/select";
 import { InputField } from "@/components/common/InputField";
 import { Badge } from "@/components/ui/badge";
-import { Layers, Info, Settings, Shuffle, BarChart3 } from "lucide-react";
+import { Layers,  Shuffle, BarChart3 } from "lucide-react";
 
 export interface EnsembleSettingsConfig {
   enabled: boolean;

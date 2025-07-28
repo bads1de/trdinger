@@ -210,6 +210,9 @@ async def list_experiments(
 async def stop_experiment(
     experiment_id: str,
     auto_strategy_service: AutoStrategyService = Depends(get_auto_strategy_service),
+    orchestration_service: AutoStrategyOrchestrationService = Depends(
+        get_auto_strategy_orchestration_service
+    ),
 ):
     """
     実験を停止
@@ -218,20 +221,19 @@ async def stop_experiment(
     """
 
     async def _stop_experiment():
-        success = auto_strategy_service.stop_experiment(experiment_id)
-
-        if not success:
-            logger.warning(
-                f"実験 {experiment_id} を停止できませんでした（存在しないか、既に完了している可能性があります）"
+        try:
+            # ビジネスロジックをサービス層に委譲
+            orchestration_service.validate_experiment_stop(
+                experiment_id, auto_strategy_service
             )
+            return StopExperimentResponse(success=True, message="実験を停止しました")
+        except ValueError as e:
             from fastapi import HTTPException
 
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="実験を停止できませんでした（存在しないか、既に完了している可能性があります）",
+                detail=str(e),
             )
-
-        return StopExperimentResponse(success=True, message="実験を停止しました")
 
     return await UnifiedErrorHandler.safe_execute_async(_stop_experiment)
 
@@ -240,6 +242,9 @@ async def stop_experiment(
 async def get_experiment_results(
     experiment_id: str,
     auto_strategy_service: AutoStrategyService = Depends(get_auto_strategy_service),
+    orchestration_service: AutoStrategyOrchestrationService = Depends(
+        get_auto_strategy_orchestration_service
+    ),
 ):
     """
     実験結果を取得
@@ -259,21 +264,8 @@ async def get_experiment_results(
                 detail=f"実験 {experiment_id} が見つかりません",
             )
 
-        # 多目的最適化の結果かどうかを判定
-        if "pareto_front" in result and "objectives" in result:
-            return APIResponseHelper.api_response(
-                success=True,
-                message="多目的最適化実験結果を取得しました",
-                data={
-                    "result": result,
-                    "pareto_front": result.get("pareto_front"),
-                    "objectives": result.get("objectives"),
-                },
-            )
-        else:
-            return APIResponseHelper.api_response(
-                success=True, message="実験結果を取得しました", data={"result": result}
-            )
+        # ビジネスロジックをサービス層に委譲
+        return orchestration_service.format_experiment_result(result)
 
     return await UnifiedErrorHandler.safe_execute_async(_get_experiment_results)
 

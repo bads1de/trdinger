@@ -53,20 +53,10 @@ async def collect_historical_data(
                 status_code=500, detail="データベースの初期化に失敗しました"
             )
 
-        # シンボルと時間軸のバリデーション
-        # シンボル正規化
-        normalized_symbol = unified_config.market.symbol_mapping.get(symbol, symbol)
-        if normalized_symbol not in unified_config.market.supported_symbols:
-            raise ValueError(f"サポートされていないシンボル: {symbol}")
-
-        # 時間軸検証
-        if timeframe not in unified_config.market.supported_timeframes:
-            raise ValueError(f"無効な時間軸: {timeframe}")
-
         # サービス層に委譲
         orchestration_service = DataCollectionOrchestrationService()
         return await orchestration_service.start_historical_data_collection(
-            normalized_symbol, timeframe, background_tasks, db
+            symbol, timeframe, background_tasks, db
         )
 
     return await UnifiedErrorHandler.safe_execute_async(_execute)

@@ -21,6 +21,12 @@ from database.repositories.open_interest_repository import OpenInterestRepositor
 from database.repositories.funding_rate_repository import FundingRateRepository
 from database.repositories.fear_greed_repository import FearGreedIndexRepository
 from app.utils.api_utils import APIResponseHelper
+from app.api.automl_features import (
+    AutoMLConfigModel,
+    TSFreshConfigModel,
+    FeaturetoolsConfigModel,
+    AutoFeatConfigModel,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -48,6 +54,56 @@ class MLTrainingOrchestrationService:
     def __init__(self):
         """初期化"""
         pass
+
+    @staticmethod
+    def get_default_automl_config() -> AutoMLConfigModel:
+        """デフォルトのAutoML設定を取得"""
+        return AutoMLConfigModel(
+            tsfresh=TSFreshConfigModel(
+                enabled=True,
+                feature_selection=True,
+                fdr_level=0.05,
+                feature_count_limit=100,
+                parallel_jobs=2,
+            ),
+            featuretools=FeaturetoolsConfigModel(
+                enabled=True,
+                max_depth=2,
+                max_features=50,
+            ),
+            autofeat=AutoFeatConfigModel(
+                enabled=True,
+                max_features=50,
+                generations=10,  # API層ではgenerationsを使用
+                population_size=30,
+                tournament_size=3,
+            ),
+        )
+
+    @staticmethod
+    def get_financial_optimized_automl_config() -> AutoMLConfigModel:
+        """金融データ最適化AutoML設定を取得"""
+        return AutoMLConfigModel(
+            tsfresh=TSFreshConfigModel(
+                enabled=True,
+                feature_selection=True,
+                fdr_level=0.01,  # より厳しい選択
+                feature_count_limit=200,  # 金融データ用に増加
+                parallel_jobs=4,
+            ),
+            featuretools=FeaturetoolsConfigModel(
+                enabled=True,
+                max_depth=3,  # より深い特徴量合成
+                max_features=100,  # 金融データ用に増加
+            ),
+            autofeat=AutoFeatConfigModel(
+                enabled=True,
+                max_features=100,
+                generations=20,  # より多くの世代（API層ではgenerationsを使用）
+                population_size=50,
+                tournament_size=3,
+            ),
+        )
 
     def get_data_service(self, db: Session) -> BacktestDataService:
         """データサービスの依存性注入"""

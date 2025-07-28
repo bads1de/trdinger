@@ -16,6 +16,7 @@ from database.repositories.ohlcv_repository import OHLCVRepository
 from database.repositories.funding_rate_repository import FundingRateRepository
 from database.repositories.open_interest_repository import OpenInterestRepository
 from app.utils.api_utils import APIResponseHelper
+from app.config.unified_config import unified_config
 
 logger = logging.getLogger(__name__)
 
@@ -31,6 +32,31 @@ class DataCollectionOrchestrationService:
     def __init__(self):
         """初期化"""
         self.historical_service = HistoricalDataService()
+
+    def validate_symbol_and_timeframe(self, symbol: str, timeframe: str) -> str:
+        """
+        シンボルと時間軸のバリデーション
+
+        Args:
+            symbol: 取引ペア
+            timeframe: 時間軸
+
+        Returns:
+            正規化されたシンボル
+
+        Raises:
+            ValueError: バリデーションエラー
+        """
+        # シンボル正規化
+        normalized_symbol = unified_config.market.symbol_mapping.get(symbol, symbol)
+        if normalized_symbol not in unified_config.market.supported_symbols:
+            raise ValueError(f"サポートされていないシンボル: {symbol}")
+
+        # 時間軸検証
+        if timeframe not in unified_config.market.supported_timeframes:
+            raise ValueError(f"無効な時間軸: {timeframe}")
+
+        return normalized_symbol
 
     async def start_historical_data_collection(
         self,
@@ -52,8 +78,8 @@ class DataCollectionOrchestrationService:
             収集開始結果
         """
         try:
-            # シンボル正規化
-            normalized_symbol = self._normalize_symbol(symbol)
+            # シンボルと時間軸のバリデーション
+            normalized_symbol = self.validate_symbol_and_timeframe(symbol, timeframe)
 
             # データ存在チェック
             repository = OHLCVRepository(db)
