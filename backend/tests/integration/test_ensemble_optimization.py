@@ -111,7 +111,7 @@ class TestEnsembleOptimization:
         ensemble_config = {
             "method": "stacking",
             "models": ["lightgbm", "randomforest"],
-            "stacking_params": {"meta_model": "logistic_regression"},
+            "stacking_params": {"meta_model": "lightgbm"},
         }
 
         service = MLTrainingService(

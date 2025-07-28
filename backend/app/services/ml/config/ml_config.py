@@ -330,7 +330,7 @@ class EnsembleConfig(BaseSettings):
     # スタッキング設定
     STACKING_BASE_MODELS: List[str] = Field(default=["lightgbm", "random_forest"])
     STACKING_META_MODEL: str = Field(
-        default="logistic_regression", description="メタモデル"
+        default="lightgbm", description="メタモデル"
     )
     STACKING_CV_FOLDS: int = Field(default=5, description="クロスバリデーション分割数")
     STACKING_USE_PROBAS: bool = Field(default=True, description="確率値を使用するか")

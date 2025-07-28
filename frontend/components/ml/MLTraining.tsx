@@ -79,7 +79,7 @@ export default function MLTraining() {
       },
       stacking_params: {
         base_models: ["lightgbm", "xgboost"],
-        meta_model: "logistic_regression",
+        meta_model: "lightgbm",
         cv_folds: 3,
         use_probas: true,
         random_state: 42,

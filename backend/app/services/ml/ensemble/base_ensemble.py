@@ -139,10 +139,6 @@ class BaseEnsemble(ABC):
             from sklearn.ensemble import RandomForestClassifier
 
             return RandomForestClassifier(n_estimators=100, random_state=42, n_jobs=-1)
-        elif model_type.lower() == "logistic_regression":
-            from sklearn.linear_model import LogisticRegression
-
-            return LogisticRegression(random_state=42, max_iter=1000)
         elif model_type.lower() == "gradient_boosting":
             from sklearn.ensemble import GradientBoostingClassifier
 

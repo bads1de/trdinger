@@ -73,7 +73,7 @@ class MLTrainingService:
                 },
                 "stacking_params": {
                     "base_models": ["lightgbm", "random_forest"],
-                    "meta_model": "logistic_regression",
+                    "meta_model": "lightgbm",
                     "cv_folds": 5,
                     "use_probas": True,
                 },

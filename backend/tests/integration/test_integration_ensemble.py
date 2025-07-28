@@ -126,7 +126,7 @@ def test_stacking_integration():
             "method": "stacking",
             "stacking_params": {
                 "base_models": ["lightgbm", "random_forest"],
-                "meta_model": "logistic_regression",
+                "meta_model": "lightgbm",
                 "cv_folds": 3,
                 "use_probas": True,
             },

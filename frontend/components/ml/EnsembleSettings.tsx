@@ -66,15 +66,9 @@ const AVAILABLE_MODELS = [
     label: "Random Forest",
     description: "アンサンブル決定木",
   },
-  {
-    value: "logistic_regression",
-    label: "Logistic Regression",
-    description: "ロジスティック回帰",
-  },
 ];
 
 const META_MODELS = [
-  { value: "logistic_regression", label: "Logistic Regression" },
   { value: "random_forest", label: "Random Forest" },
   { value: "lightgbm", label: "LightGBM" },
 ];
@@ -255,9 +249,7 @@ export default function EnsembleSettings({
                         使用するモデルを選択してください：
                       </p>
                       <div className="flex flex-wrap gap-2">
-                        {AVAILABLE_MODELS.filter(
-                          (m) => m.value !== "logistic_regression"
-                        ).map((model) => (
+                        {AVAILABLE_MODELS.map((model) => (
                           <Badge
                             key={model.value}
                             variant={
@@ -288,9 +280,7 @@ export default function EnsembleSettings({
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                          {AVAILABLE_MODELS.filter(
-                            (m) => m.value !== "logistic_regression"
-                          ).map((model) => (
+                          {AVAILABLE_MODELS.map((model) => (
                             <SelectItem key={model.value} value={model.value}>
                               <div>
                                 <div className="font-medium">{model.label}</div>
@@ -323,9 +313,7 @@ export default function EnsembleSettings({
                       ベースモデル（2つ以上選択）
                     </Label>
                     <div className="flex flex-wrap gap-2">
-                      {AVAILABLE_MODELS.filter(
-                        (m) => m.value !== "logistic_regression"
-                      ).map((model) => (
+                      {AVAILABLE_MODELS.map((model) => (
                         <Badge
                           key={model.value}
                           variant={

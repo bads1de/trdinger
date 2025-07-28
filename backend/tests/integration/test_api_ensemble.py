@@ -39,7 +39,7 @@ def create_test_config(ensemble_method="bagging"):
             method="stacking",
             stacking_params=StackingParamsConfig(
                 base_models=["lightgbm", "random_forest"],
-                meta_model="logistic_regression",
+                meta_model="lightgbm",
                 cv_folds=3,
                 use_probas=True,
             ),

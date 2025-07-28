@@ -39,7 +39,7 @@ class StackingEnsemble(BaseEnsemble):
 
         # スタッキング固有の設定
         self.base_model_types = config.get("base_models", ["lightgbm", "random_forest"])
-        self.meta_model_type = config.get("meta_model", "logistic_regression")
+        self.meta_model_type = config.get("meta_model", "lightgbm")
         self.cv_folds = config.get("cv_folds", 5)
         self.use_probas = config.get("use_probas", True)
         self.random_state = config.get("random_state", 42)

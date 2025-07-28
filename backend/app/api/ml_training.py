@@ -124,7 +124,7 @@ class StackingParamsConfig(BaseModel):
     base_models: List[str] = Field(
         default=["lightgbm", "random_forest"], description="ベースモデルのリスト"
     )
-    meta_model: str = Field(default="logistic_regression", description="メタモデル")
+    meta_model: str = Field(default="lightgbm", description="メタモデル")
     cv_folds: int = Field(default=5, description="クロスバリデーション分割数")
     use_probas: bool = Field(default=True, description="確率値を使用するか")
 
@@ -201,7 +201,7 @@ class MLTrainingConfig(BaseModel):
                     "gradient_boosting",
                     "random_forest",
                 ],  # 4種類のモデルで多様性確保
-                meta_model="logistic_regression",
+                meta_model="lightgbm",
                 cv_folds=5,
                 use_probas=True,
             ),
