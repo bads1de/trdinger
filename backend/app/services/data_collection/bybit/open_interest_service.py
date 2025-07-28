@@ -11,6 +11,7 @@ from typing import Any, Dict, List, Optional
 from database.repositories.open_interest_repository import OpenInterestRepository
 from app.utils.data_converter import OpenInterestDataConverter
 from app.services.data_collection.bybit.bybit_service import BybitService
+from app.services.data_collection.bybit.data_config import get_open_interest_config
 
 logger = logging.getLogger(__name__)
 
@@ -21,6 +22,7 @@ class BybitOpenInterestService(BybitService):
     def __init__(self):
         """サービスを初期化"""
         super().__init__()
+        self.config = get_open_interest_config()
 
     async def fetch_current_open_interest(self, symbol: str) -> Dict[str, Any]:
         """
@@ -62,17 +64,17 @@ class BybitOpenInterestService(BybitService):
         """
         normalized_symbol = self.normalize_symbol(symbol)
         latest_timestamp = await self._get_latest_timestamp_from_db(
-            repository_class=OpenInterestRepository,
-            get_timestamp_method_name="get_latest_open_interest_timestamp",
+            repository_class=self.config.repository_class,
+            get_timestamp_method_name=self.config.get_timestamp_method_name,
             symbol=normalized_symbol,
         )
         return await self._fetch_paginated_data(
-            fetch_func=self.exchange.fetch_open_interest_history,
+            fetch_func=getattr(self.exchange, self.config.fetch_history_method_name),
             symbol=normalized_symbol,
-            page_limit=200,
-            max_pages=500,
+            page_limit=self.config.page_limit,
+            max_pages=self.config.max_pages,
             latest_existing_timestamp=latest_timestamp,
-            pagination_strategy="time_range",
+            pagination_strategy=self.config.pagination_strategy,
             interval=interval,
         )
 
@@ -95,55 +97,12 @@ class BybitOpenInterestService(BybitService):
         Returns:
             差分更新結果を含む辞書
         """
-        normalized_symbol = self.normalize_symbol(symbol)
-
-        # データベースから最新タイムスタンプを取得
-        latest_timestamp = await self._get_latest_timestamp_from_db(
-            repository_class=OpenInterestRepository,
-            get_timestamp_method_name="get_latest_open_interest_timestamp",
-            symbol=normalized_symbol,
+        return await self.fetch_incremental_data(
+            symbol=symbol,
+            config=self.config,
+            repository=repository,
+            intervalTime=interval,
         )
-
-        if latest_timestamp:
-            logger.info(
-                f"OI差分データ収集開始: {normalized_symbol} (since: {latest_timestamp})"
-            )
-            # 最新タイムスタンプより新しいデータを取得
-            open_interest_history = await self.fetch_open_interest_history(
-                symbol, limit=1000, since=latest_timestamp, interval=interval
-            )
-
-            # 重複を避けるため、最新タイムスタンプより新しいデータのみフィルタ
-            open_interest_history = [
-                item
-                for item in open_interest_history
-                if item["timestamp"] > latest_timestamp
-            ]
-        else:
-            logger.info(f"OI初回データ収集開始: {normalized_symbol}")
-            # データがない場合は最新100件を取得
-            open_interest_history = await self.fetch_open_interest_history(
-                symbol, limit=100, interval=interval
-            )
-
-        async def save_with_db(db, repository):
-            repo = repository or OpenInterestRepository(db)
-            return await self._save_open_interest_to_database(
-                open_interest_history, symbol, repo
-            )
-
-        saved_count = await self._execute_with_db_session(
-            func=save_with_db, repository=repository
-        )
-
-        logger.info(f"OI差分データ収集完了: {saved_count}件保存")
-        return {
-            "symbol": normalized_symbol,
-            "fetched_count": len(open_interest_history),
-            "saved_count": saved_count,
-            "success": True,
-            "latest_timestamp": latest_timestamp,
-        }
 
     async def fetch_and_save_open_interest_data(
         self,
@@ -156,31 +115,14 @@ class BybitOpenInterestService(BybitService):
         """
         オープンインタレストデータを取得してデータベースに保存
         """
-        if fetch_all:
-            open_interest_history = await self.fetch_all_open_interest_history(
-                symbol, interval
-            )
-        else:
-            open_interest_history = await self.fetch_open_interest_history(
-                symbol, limit or 100, interval=interval
-            )
-
-        async def save_with_db(db, repository):
-            repo = repository or OpenInterestRepository(db)
-            return await self._save_open_interest_to_database(
-                open_interest_history, symbol, repo
-            )
-
-        saved_count = await self._execute_with_db_session(
-            func=save_with_db, repository=repository
+        return await self.fetch_and_save_data(
+            symbol=symbol,
+            config=self.config,
+            limit=limit,
+            repository=repository,
+            fetch_all=fetch_all,
+            intervalTime=interval,
         )
-
-        return {
-            "symbol": symbol,
-            "fetched_count": len(open_interest_history),
-            "saved_count": saved_count,
-            "success": True,
-        }
 
     async def _save_open_interest_to_database(
         self,
@@ -190,8 +132,10 @@ class BybitOpenInterestService(BybitService):
     ) -> int:
         """
         オープンインタレストデータをデータベースに保存（内部メソッド）
+
+        注意: このメソッドは後方互換性のために残されています。
+        新しいコードでは基底クラスの_save_data_to_databaseを使用してください。
         """
-        records = OpenInterestDataConverter.ccxt_to_db_format(
-            open_interest_history, self.normalize_symbol(symbol)
+        return await self._save_data_to_database(
+            open_interest_history, symbol, repository, self.config
         )
-        return repository.insert_open_interest_data(records)

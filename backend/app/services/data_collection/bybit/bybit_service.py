@@ -487,3 +487,200 @@ class BybitService(ABC):
         except Exception as e:
             logger.error(f"最新タイムスタンプの取得中にエラーが発生しました: {e}")
             return None
+
+    async def fetch_incremental_data(
+        self,
+        symbol: str,
+        config: Any,
+        repository: Optional[Any] = None,
+        **kwargs,
+    ) -> dict:
+        """
+        差分データを取得してデータベースに保存（汎用版）
+
+        Args:
+            symbol: 取引ペアシンボル
+            config: データサービス設定
+            repository: リポジトリインスタンス（テスト用）
+            **kwargs: fetch_history_methodに渡す追加引数
+
+        Returns:
+            差分更新結果を含む辞書
+        """
+        normalized_symbol = self.normalize_symbol(symbol)
+
+        # データベースから最新タイムスタンプを取得
+        latest_timestamp = await self._get_latest_timestamp_from_db(
+            repository_class=config.repository_class,
+            get_timestamp_method_name=config.get_timestamp_method_name,
+            symbol=normalized_symbol,
+        )
+
+        # 履歴取得メソッドを取得
+        fetch_history_method = getattr(self.exchange, config.fetch_history_method_name)
+
+        if latest_timestamp:
+            logger.info(
+                f"{config.log_prefix}差分データ収集開始: {normalized_symbol} (since: {latest_timestamp})"
+            )
+            # 最新タイムスタンプより新しいデータを取得
+            history_data = await self._handle_ccxt_errors(
+                f"{config.log_prefix}差分履歴取得",
+                fetch_history_method,
+                normalized_symbol,
+                latest_timestamp,
+                1000,
+                kwargs,
+            )
+
+            # 重複を避けるため、最新タイムスタンプより新しいデータのみフィルタ
+            history_data = [
+                item for item in history_data if item["timestamp"] > latest_timestamp
+            ]
+        else:
+            logger.info(f"{config.log_prefix}初回データ収集開始: {normalized_symbol}")
+            # データがない場合は最新データを取得
+            history_data = await self._handle_ccxt_errors(
+                f"{config.log_prefix}初回履歴取得",
+                fetch_history_method,
+                normalized_symbol,
+                None,
+                config.default_limit,
+                kwargs,
+            )
+
+        # データベースに保存
+        async def save_with_db(db, repository):
+            repo = repository or config.repository_class(db)
+            return await self._save_data_to_database(history_data, symbol, repo, config)
+
+        saved_count = await self._execute_with_db_session(
+            func=save_with_db, repository=repository
+        )
+
+        logger.info(f"{config.log_prefix}差分データ収集完了: {saved_count}件保存")
+        return {
+            "symbol": normalized_symbol,
+            "fetched_count": len(history_data),
+            "saved_count": saved_count,
+            "success": True,
+            "latest_timestamp": latest_timestamp,
+        }
+
+    async def fetch_and_save_data(
+        self,
+        symbol: str,
+        config: Any,
+        limit: Optional[int] = None,
+        repository: Optional[Any] = None,
+        fetch_all: bool = False,
+        **kwargs,
+    ) -> dict:
+        """
+        データを取得してデータベースに保存（汎用版）
+
+        Args:
+            symbol: 取引ペアシンボル
+            config: データサービス設定
+            limit: 取得件数制限
+            repository: リポジトリインスタンス（テスト用）
+            fetch_all: 全期間データを取得するかどうか
+            **kwargs: fetch_history_methodに渡す追加引数
+
+        Returns:
+            取得・保存結果を含む辞書
+        """
+        normalized_symbol = self.normalize_symbol(symbol)
+
+        if fetch_all:
+            # 全期間データを取得
+            latest_timestamp = await self._get_latest_timestamp_from_db(
+                repository_class=config.repository_class,
+                get_timestamp_method_name=config.get_timestamp_method_name,
+                symbol=normalized_symbol,
+            )
+
+            fetch_history_method = getattr(
+                self.exchange, config.fetch_history_method_name
+            )
+            history_data = await self._fetch_paginated_data(
+                fetch_func=fetch_history_method,
+                symbol=normalized_symbol,
+                page_limit=config.page_limit,
+                max_pages=config.max_pages,
+                latest_existing_timestamp=latest_timestamp,
+                pagination_strategy=config.pagination_strategy,
+                **kwargs,
+            )
+        else:
+            # 指定件数のデータを取得
+            fetch_history_method = getattr(
+                self.exchange, config.fetch_history_method_name
+            )
+            history_data = await self._handle_ccxt_errors(
+                f"{config.log_prefix}履歴取得",
+                fetch_history_method,
+                normalized_symbol,
+                None,
+                limit or config.default_limit,
+                kwargs,
+            )
+
+        # データベースに保存
+        async def save_with_db(db, repository):
+            repo = repository or config.repository_class(db)
+            return await self._save_data_to_database(history_data, symbol, repo, config)
+
+        saved_count = await self._execute_with_db_session(
+            func=save_with_db, repository=repository
+        )
+
+        return {
+            "symbol": normalized_symbol,
+            "fetched_count": len(history_data),
+            "saved_count": saved_count,
+            "success": True,
+        }
+
+    async def _save_data_to_database(
+        self,
+        history_data: List[Dict[str, Any]],
+        symbol: str,
+        repository: Any,
+        config: Any,
+    ) -> int:
+        """
+        データをデータベースに保存（汎用版）
+
+        Args:
+            history_data: 履歴データ
+            symbol: シンボル
+            repository: リポジトリインスタンス
+            config: データサービス設定
+
+        Returns:
+            保存件数
+        """
+        logger.info(
+            f"{config.log_prefix}データのDB保存開始: {len(history_data)}件のデータを変換中..."
+        )
+
+        # データ変換
+        converter_method = getattr(
+            config.data_converter_class, config.converter_method_name
+        )
+        records = converter_method(history_data, self.normalize_symbol(symbol))
+
+        logger.info(f"データ変換完了: {len(records)}件のレコードをDB挿入開始...")
+
+        # データベース挿入
+        try:
+            insert_method = getattr(repository, config.insert_method_name)
+            inserted_count = insert_method(records)
+            logger.info(
+                f"{config.log_prefix}データのDB保存完了: {inserted_count}件挿入"
+            )
+            return inserted_count
+        except Exception as e:
+            logger.error(f"{config.log_prefix}データのDB保存エラー: {e}")
+            raise
