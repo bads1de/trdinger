@@ -16,6 +16,7 @@ from app.utils.unified_error_handler import UnifiedErrorHandler
 from app.services.data_collection.orchestration.funding_rate_orchestration_service import (
     FundingRateOrchestrationService,
 )
+from app.api.dependencies import get_funding_rate_orchestration_service
 
 logger = logging.getLogger(__name__)
 
@@ -28,6 +29,9 @@ async def get_funding_rates(
     limit: Optional[int] = Query(100, description="取得するデータ数（1-1000）"),
     start_date: Optional[str] = Query(None, description="開始日時（ISO形式）"),
     end_date: Optional[str] = Query(None, description="終了日時（ISO形式）"),
+    orchestration_service: FundingRateOrchestrationService = Depends(
+        get_funding_rate_orchestration_service
+    ),
     db: Session = Depends(get_db),
 ):
     """
@@ -40,6 +44,7 @@ async def get_funding_rates(
         limit: 取得するデータ数（1-1000）
         start_date: 開始日時（ISO形式）
         end_date: 終了日時（ISO形式）
+        orchestration_service: ファンディングレートサービス（依存性注入）
         db: データベースセッション
 
     Returns:
@@ -50,7 +55,15 @@ async def get_funding_rates(
     """
 
     async def _get_funding_rates_data():
-        orchestration_service = FundingRateOrchestrationService()
+        return await orchestration_service.get_funding_rate_data(
+            symbol=symbol,
+            limit=limit,
+            start_date=start_date,
+            end_date=end_date,
+            db_session=db,
+        )
+
+    async def _get_funding_rates_data():
         return await orchestration_service.get_funding_rate_data(
             symbol=symbol,
             limit=limit,
@@ -71,12 +84,15 @@ async def collect_funding_rate_data(
         100, description="取得するデータ数（1-1000、fetch_all=trueの場合は無視）"
     ),
     fetch_all: bool = Query(False, description="全期間のデータを取得するかどうか"),
+    orchestration_service: FundingRateOrchestrationService = Depends(
+        get_funding_rate_orchestration_service
+    ),
     db: Session = Depends(get_db),
 ):
     """
     ファンディングレートデータを収集してデータベースに保存します
 
-    Bybit取引所からファンディングレートデータを取得し、データベースに保存します。
+    取引所からファンディングレートデータを取得し、データベースに保存します。
 
     Args:
         symbol: 取引ペアシンボル（例: 'BTC/USDT'）
@@ -98,7 +114,6 @@ async def collect_funding_rate_data(
                 status_code=500, detail="データベースの初期化に失敗しました"
             )
 
-        orchestration_service = FundingRateOrchestrationService()
         return await orchestration_service.collect_funding_rate_data(
             symbol=symbol,
             limit=limit,
@@ -113,6 +128,9 @@ async def collect_funding_rate_data(
 
 @router.post("/bulk-collect")
 async def bulk_collect_funding_rates(
+    orchestration_service: FundingRateOrchestrationService = Depends(
+        get_funding_rate_orchestration_service
+    ),
     db: Session = Depends(get_db),
 ):
     """
@@ -140,7 +158,6 @@ async def bulk_collect_funding_rates(
             "BTC/USDT:USDT",
         ]
 
-        orchestration_service = FundingRateOrchestrationService()
         return await orchestration_service.collect_bulk_funding_rate_data(
             symbols=symbols, db_session=db
         )

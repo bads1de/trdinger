@@ -17,6 +17,7 @@ from app.utils.unified_error_handler import UnifiedErrorHandler
 from app.services.data_collection.orchestration.open_interest_orchestration_service import (
     OpenInterestOrchestrationService,
 )
+from app.api.dependencies import get_open_interest_orchestration_service
 
 # ログ設定
 logger = logging.getLogger(__name__)
@@ -31,6 +32,9 @@ async def get_open_interest_data(
     start_date: Optional[str] = Query(None, description="開始日時（ISO形式）"),
     end_date: Optional[str] = Query(None, description="終了日時（ISO形式）"),
     limit: Optional[int] = Query(1000, description="取得件数制限（最大1000）"),
+    orchestration_service: OpenInterestOrchestrationService = Depends(
+        get_open_interest_orchestration_service
+    ),
     db: Session = Depends(get_db),
 ):
     """
@@ -38,7 +42,6 @@ async def get_open_interest_data(
     """
 
     async def _get_data():
-        orchestration_service = OpenInterestOrchestrationService()
         return await orchestration_service.get_open_interest_data(
             symbol=symbol,
             start_date=start_date,
@@ -59,6 +62,9 @@ async def collect_open_interest_data(
         100, description="取得するデータ数（1-1000、fetch_all=trueの場合は無視）"
     ),
     fetch_all: bool = Query(False, description="全期間のデータを取得するかどうか"),
+    orchestration_service: OpenInterestOrchestrationService = Depends(
+        get_open_interest_orchestration_service
+    ),
     db: Session = Depends(get_db),
 ):
     """
@@ -84,7 +90,6 @@ async def collect_open_interest_data(
             logger.error("データベースの初期化に失敗しました")
             raise Exception("データベースの初期化に失敗しました")
 
-        orchestration_service = OpenInterestOrchestrationService()
         return await orchestration_service.collect_open_interest_data(
             symbol=symbol,
             limit=limit,
@@ -99,6 +104,9 @@ async def collect_open_interest_data(
 
 @router.post("/bulk-collect")
 async def bulk_collect_open_interest(
+    orchestration_service: OpenInterestOrchestrationService = Depends(
+        get_open_interest_orchestration_service
+    ),
     db: Session = Depends(get_db),
 ):
     """
@@ -126,7 +134,6 @@ async def bulk_collect_open_interest(
             "BTC/USDT:USDT",
         ]
 
-        orchestration_service = OpenInterestOrchestrationService()
         return await orchestration_service.collect_bulk_open_interest_data(
             symbols=symbols, db_session=db
         )

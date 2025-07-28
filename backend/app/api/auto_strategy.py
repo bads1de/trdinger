@@ -10,6 +10,10 @@ from app.services.auto_strategy.models.ga_config import GAConfig
 from app.services.auto_strategy.orchestration.auto_strategy_orchestration_service import (
     AutoStrategyOrchestrationService,
 )
+from app.api.dependencies import (
+    get_auto_strategy_service,
+    get_auto_strategy_orchestration_service,
+)
 from app.utils.unified_error_handler import UnifiedErrorHandler
 from app.utils.api_utils import APIResponseHelper
 
@@ -19,35 +23,15 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/auto-strategy", tags=["auto-strategy"])
 
 
-@lru_cache()
-def get_auto_strategy_service_cached() -> AutoStrategyService:
-    try:
-        return AutoStrategyService()
-    except Exception as e:
-        logger.error(f"AutoStrategyService初期化エラー: {e}", exc_info=True)
-        # この例外は後続の依存関係で捕捉される
-        raise
-
-
-def get_auto_strategy_service() -> AutoStrategyService:
-    """AutoStrategyServiceの依存性注入"""
-    try:
-        service = get_auto_strategy_service_cached()
-        return service
-    except Exception:
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="AutoStrategyServiceが利用できません。サーバーログを確認してください。",
-        )
-
-
 # リクエスト・レスポンスモデル
 
 
 class GAGenerationRequest(BaseModel):
     """GA戦略生成リクエスト"""
 
-    experiment_id: str = Field(..., description="実験ID（フロントエンドで生成されたUUID）")
+    experiment_id: str = Field(
+        ..., description="実験ID（フロントエンドで生成されたUUID）"
+    )
     experiment_name: str = Field(..., description="実験名")
     base_config: Dict[str, Any] = Field(..., description="基本バックテスト設定")
     ga_config: Dict[str, Any] = Field(..., description="GA設定")
@@ -298,6 +282,9 @@ async def get_experiment_results(
 async def test_strategy(
     request: StrategyTestRequest,
     auto_strategy_service: AutoStrategyService = Depends(get_auto_strategy_service),
+    orchestration_service: AutoStrategyOrchestrationService = Depends(
+        get_auto_strategy_orchestration_service
+    ),
 ):
     """
     単一戦略のテスト実行
@@ -308,7 +295,6 @@ async def test_strategy(
 
     async def _test_strategy():
         # ビジネスロジックをサービス層に委譲
-        orchestration_service = AutoStrategyOrchestrationService()
         result = await orchestration_service.test_strategy(
             request=request, auto_strategy_service=auto_strategy_service
         )

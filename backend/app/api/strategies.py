@@ -11,9 +11,9 @@ from sqlalchemy.orm import Session
 from typing import Dict, Any, Optional
 from pydantic import BaseModel, Field
 
-from app.api.dependencies import get_strategy_integration_service
 from database.connection import get_db
 from app.utils.unified_error_handler import UnifiedErrorHandler
+from app.services.strategy_integration_service import StrategyIntegrationService
 
 logger = logging.getLogger(__name__)
 
@@ -78,11 +78,10 @@ async def get_strategies(
         生成された戦略データ
     """
 
-    # ビジネスロジックをサービス層に委譲
-    service = get_strategy_integration_service(db)
-
     async def _get_strategies():
-        return service.get_strategies_with_response(
+        # ビジネスロジックをサービス層に委譲
+        strategy_service = StrategyIntegrationService(db)
+        return strategy_service.get_strategies_with_response(
             limit=limit,
             offset=offset,
             category=category,
