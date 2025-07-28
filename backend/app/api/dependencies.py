@@ -40,6 +40,9 @@ from app.services.data_collection.orchestration.market_data_orchestration_servic
     MarketDataOrchestrationService,
 )
 from app.services.auto_strategy import AutoStrategyService
+from app.services.ml.feature_engineering.automl_feature_generation_service import (
+    AutoMLFeatureGenerationService,
+)
 
 
 def get_backtest_service(db: Session = Depends(get_db)) -> BacktestService:
@@ -195,6 +198,34 @@ def get_auto_strategy_service() -> AutoStrategyService:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="AutoStrategyServiceが利用できません。サーバーログを確認してください。",
+        )
+
+
+def get_automl_feature_generation_service(
+    db: Session = Depends(get_db),
+) -> AutoMLFeatureGenerationService:
+    """
+    AutoMLFeatureGenerationServiceのインスタンスを取得
+
+    Args:
+        db: データベースセッション
+
+    Returns:
+        AutoMLFeatureGenerationServiceインスタンス
+
+    Raises:
+        HTTPException: サービス初期化に失敗した場合
+    """
+    try:
+        return AutoMLFeatureGenerationService(db)
+    except Exception as e:
+        import logging
+
+        logger = logging.getLogger(__name__)
+        logger.error(f"AutoMLFeatureGenerationService初期化エラー: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="AutoMLFeatureGenerationServiceが利用できません。サーバーログを確認してください。",
         )
 
 

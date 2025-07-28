@@ -4,18 +4,20 @@ AutoML特徴量エンジニアリング API エンドポイント
 AutoML特徴量生成・選択機能のREST APIを提供します。
 """
 
-from fastapi import APIRouter, HTTPException, Depends, BackgroundTasks
+from fastapi import APIRouter, Depends, BackgroundTasks
 from pydantic import BaseModel, Field
 from typing import Dict, List, Optional, Any
-import pandas as pd
 import logging
 
-from app.services.ml.feature_engineering.enhanced_feature_engineering_service import (
-    EnhancedFeatureEngineeringService,
+from app.services.ml.feature_engineering.automl_feature_generation_service import (
+    AutoMLFeatureGenerationService,
 )
+from app.api.dependencies import get_automl_feature_generation_service
 from app.services.ml.feature_engineering.automl_features.automl_config import (
     AutoMLConfig,
 )
+from app.utils.unified_error_handler import UnifiedErrorHandler
+from app.services.ml.feature_engineering.enhanced_feature_engineering_service import EnhancedFeatureEngineeringService
 
 
 logger = logging.getLogger(__name__)
@@ -92,17 +94,11 @@ class ConfigValidationResponse(BaseModel):
     warnings: List[str]
 
 
-# 依存性注入
-def get_feature_service() -> EnhancedFeatureEngineeringService:
-    """特徴量エンジニアリングサービスを取得"""
-    return EnhancedFeatureEngineeringService()
-
-
 @router.post("/generate", response_model=FeatureGenerationResponse)
 async def generate_features(
     request: FeatureGenerationRequest,
     background_tasks: BackgroundTasks,
-    service: EnhancedFeatureEngineeringService = Depends(get_feature_service),
+    service: AutoMLFeatureGenerationService = Depends(get_automl_feature_generation_service),
 ):
     """
     AutoML特徴量を生成
@@ -115,53 +111,48 @@ async def generate_features(
     Returns:
         特徴量生成結果
     """
-    try:
+
+    async def _generate():
         logger.info(f"AutoML特徴量生成開始: {request.symbol}, {request.timeframe}")
 
-        # AutoML設定を適用
+        # AutoML設定を辞書形式に変換
+        automl_config_dict = None
         if request.automl_config:
-            config_dict = request.automl_config.dict()
-            service._update_automl_config(config_dict)
+            automl_config_dict = request.automl_config.dict()
 
-        # サンプルデータを生成（実際の実装では外部データソースから取得）
-        sample_data = _generate_sample_ohlcv_data(request.limit)
-
-        # ターゲット変数を生成（必要な場合）
-        target = None
-        if request.include_target:
-            target = _generate_sample_target(len(sample_data))
-
-        # 特徴量生成を実行
-        result_df = service.calculate_enhanced_features(
-            ohlcv_data=sample_data, target=target
+        # AutoMLFeatureGenerationServiceを使用して特徴量を生成
+        result_df, stats = await service.generate_features(
+            symbol=request.symbol,
+            timeframe=request.timeframe,
+            limit=request.limit,
+            automl_config=automl_config_dict,
+            include_target=request.include_target,
         )
 
-        # 統計情報を取得
-        stats = service.get_enhancement_stats()
-
         # 特徴量名を取得
-        feature_names = list(result_df.columns)
+        feature_names = service.get_feature_names(result_df)
+
+        # 処理時間を取得
+        processing_time = service.get_processing_time(stats)
 
         return FeatureGenerationResponse(
             success=True,
             message="特徴量生成が正常に完了しました",
             feature_count=len(feature_names),
-            processing_time=stats.get("total_time", 0),
+            processing_time=processing_time,
             statistics=stats,
             feature_names=feature_names,
         )
 
-    except Exception as e:
-        logger.error(f"特徴量生成エラー: {e}")
-        raise HTTPException(
-            status_code=500, detail=f"特徴量生成に失敗しました: {str(e)}"
-        )
+    return await UnifiedErrorHandler.safe_execute_async(
+        _generate, message="特徴量生成に失敗しました"
+    )
 
 
 @router.post("/validate-config", response_model=ConfigValidationResponse)
 async def validate_config(
     config: AutoMLConfigModel,
-    service: EnhancedFeatureEngineeringService = Depends(get_feature_service),
+    service: EnhancedFeatureEngineeringService = Depends(EnhancedFeatureEngineeringService),
 ):
     """
     AutoML設定を検証
@@ -173,7 +164,8 @@ async def validate_config(
     Returns:
         設定検証結果
     """
-    try:
+
+    async def _validate():
         config_dict = config.dict()
         validation_result = service.validate_automl_config(config_dict)
 
@@ -183,34 +175,10 @@ async def validate_config(
             warnings=validation_result.get("warnings", []),
         )
 
-    except Exception as e:
-        logger.error(f"設定検証エラー: {e}")
-        raise HTTPException(status_code=500, detail=f"設定検証に失敗しました: {str(e)}")
+    return await UnifiedErrorHandler.safe_execute_async(
+        _validate, message="設定検証に失敗しました"
+    )
 
-
-@router.get("/available-features")
-async def get_available_features(
-    service: EnhancedFeatureEngineeringService = Depends(get_feature_service),
-):
-    """
-    利用可能なAutoML特徴量のリストを取得
-
-    Returns:
-        利用可能な特徴量のリスト
-    """
-    try:
-        features = service.get_available_automl_features()
-        return {
-            "success": True,
-            "features": features,
-            "total_count": sum(len(feature_list) for feature_list in features.values()),
-        }
-
-    except Exception as e:
-        logger.error(f"特徴量リスト取得エラー: {e}")
-        raise HTTPException(
-            status_code=500, detail=f"特徴量リスト取得に失敗しました: {str(e)}"
-        )
 
 
 @router.get("/default-config")
@@ -221,20 +189,19 @@ async def get_default_config():
     Returns:
         デフォルト設定
     """
-    try:
+
+    async def _get_config():
         default_config = AutoMLConfig.get_financial_optimized_config()
         return {"success": True, "config": default_config.to_dict()}
 
-    except Exception as e:
-        logger.error(f"デフォルト設定取得エラー: {e}")
-        raise HTTPException(
-            status_code=500, detail=f"デフォルト設定取得に失敗しました: {str(e)}"
-        )
+    return await UnifiedErrorHandler.safe_execute_async(
+        _get_config, message="デフォルト設定取得に失敗しました"
+    )
 
 
 @router.post("/clear-cache")
 async def clear_cache(
-    service: EnhancedFeatureEngineeringService = Depends(get_feature_service),
+    service: EnhancedFeatureEngineeringService = Depends(EnhancedFeatureEngineeringService),
 ):
     """
     AutoMLキャッシュをクリア
@@ -242,76 +209,17 @@ async def clear_cache(
     Returns:
         クリア結果
     """
-    try:
+
+    async def _clear():
         service.clear_automl_cache()
         return {"success": True, "message": "AutoMLキャッシュをクリアしました"}
 
-    except Exception as e:
-        logger.error(f"キャッシュクリアエラー: {e}")
-        raise HTTPException(
-            status_code=500, detail=f"キャッシュクリアに失敗しました: {str(e)}"
-        )
+    return await UnifiedErrorHandler.safe_execute_async(
+        _clear, message="キャッシュクリアに失敗しました"
+    )
 
 
-@router.get("/statistics")
-async def get_statistics(
-    service: EnhancedFeatureEngineeringService = Depends(get_feature_service),
-):
-    """
-    最後の処理統計情報を取得
-
-    Returns:
-        処理統計情報
-    """
-    try:
-        stats = service.get_enhancement_stats()
-        return {"success": True, "statistics": stats}
-
-    except Exception as e:
-        logger.error(f"統計情報取得エラー: {e}")
-        raise HTTPException(
-            status_code=500, detail=f"統計情報取得に失敗しました: {str(e)}"
-        )
 
 
-# ヘルパー関数
-def _generate_sample_ohlcv_data(rows: int) -> pd.DataFrame:
-    """サンプルOHLCVデータを生成"""
-    import numpy as np
-
-    np.random.seed(42)
-    dates = pd.date_range(start="2023-01-01", periods=rows, freq="1h")
-
-    base_price = 50000
-    price_changes = np.random.normal(0, 0.02, rows)
-    prices = [base_price]
-
-    for change in price_changes[1:]:
-        new_price = prices[-1] * (1 + change)
-        prices.append(max(new_price, 1000))
-
-    prices = np.array(prices)
-
-    data = {
-        "Open": prices * (1 + np.random.normal(0, 0.001, rows)),
-        "High": prices * (1 + np.abs(np.random.normal(0, 0.005, rows))),
-        "Low": prices * (1 - np.abs(np.random.normal(0, 0.005, rows))),
-        "Close": prices,
-        "Volume": np.random.lognormal(10, 1, rows),
-    }
-
-    df = pd.DataFrame(data, index=dates)
-
-    # High >= Close >= Low の制約を満たす
-    df["High"] = np.maximum(df["High"], df[["Open", "Close"]].max(axis=1))
-    df["Low"] = np.minimum(df["Low"], df[["Open", "Close"]].min(axis=1))
-
-    return df
 
 
-def _generate_sample_target(rows: int) -> pd.Series:
-    """サンプルターゲット変数を生成"""
-    import numpy as np
-
-    np.random.seed(42)
-    return pd.Series(np.random.choice([0, 1, 2], size=rows), name="target")
