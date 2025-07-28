@@ -1,6 +1,5 @@
-import { useState, useEffect, useCallback } from "react";
-import { useApiCall } from "@/hooks/useApiCall";
-import { formatTrainingTime } from "@/utils/formatters";
+import { useEffect, useCallback } from "react";
+import { useDataFetching } from "./useDataFetching";
 
 interface PerformanceMetrics {
   // 基本指標
@@ -98,33 +97,18 @@ interface ModelStatusResponse {
 }
 
 export const useModelPerformance = () => {
-  const [modelStatus, setModelStatus] = useState<ModelStatusResponse | null>(
-    null
-  );
-
   const {
-    execute: fetchModelStatus,
+    data: modelStatusArray,
     loading,
     error,
-    reset,
-  } = useApiCall<ModelStatusResponse>();
+    refetch: loadModelStatus,
+  } = useDataFetching<ModelStatusResponse>({
+    endpoint: "/api/ml/status",
+    transform: (response) => [response],
+    errorMessage: "モデルパフォーマンスの取得に失敗しました",
+  });
 
-  const loadModelStatus = useCallback(async () => {
-    reset();
-    await fetchModelStatus("/api/ml/status", {
-      method: "GET",
-      onSuccess: (response) => {
-        setModelStatus(response);
-      },
-      onError: (errorMessage) => {
-        console.error("モデル状態取得エラー:", errorMessage);
-      },
-    });
-  }, [fetchModelStatus, reset]);
-
-  useEffect(() => {
-    loadModelStatus();
-  }, [loadModelStatus]);
+  const modelStatus = modelStatusArray.length > 0 ? modelStatusArray[0] : null;
 
   const getScoreBadgeVariant = (score?: number) => {
     if (!score) return "outline";

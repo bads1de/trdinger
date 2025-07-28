@@ -1,6 +1,5 @@
-import { useState, useEffect, useCallback } from "react";
-import { formatDateTime, formatFileSize } from "@/utils/formatters";
-import { useApiCall } from "@/hooks/useApiCall";
+import { useEffect } from "react";
+import { useDataFetching } from "./useDataFetching";
 
 interface ModelInfo {
   model_name?: string;
@@ -68,33 +67,18 @@ interface ModelStatusResponse {
 }
 
 export const useModelInfo = (autoRefreshInterval?: number) => {
-  const [modelStatus, setModelStatus] = useState<ModelStatusResponse | null>(
-    null
-  );
-
   const {
-    execute: fetchModelStatus,
+    data: modelStatusArray,
     loading,
     error,
-    reset,
-  } = useApiCall<ModelStatusResponse>();
+    refetch: loadModelStatus,
+  } = useDataFetching<ModelStatusResponse>({
+    endpoint: "/api/ml/status",
+    transform: (response) => [response],
+    errorMessage: "モデル状態の取得に失敗しました",
+  });
 
-  const loadModelStatus = useCallback(async () => {
-    reset();
-    await fetchModelStatus("/api/ml/status", {
-      method: "GET",
-      onSuccess: (response) => {
-        setModelStatus(response);
-      },
-      onError: (errorMessage) => {
-        console.error("モデル状態取得エラー:", errorMessage);
-      },
-    });
-  }, [fetchModelStatus, reset]);
-
-  useEffect(() => {
-    loadModelStatus();
-  }, [loadModelStatus]);
+  const modelStatus = modelStatusArray.length > 0 ? modelStatusArray[0] : null;
 
   useEffect(() => {
     if (autoRefreshInterval && autoRefreshInterval > 0) {

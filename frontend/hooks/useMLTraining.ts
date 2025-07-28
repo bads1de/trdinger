@@ -133,7 +133,7 @@ export const useMLTraining = () => {
     symbol: "BTC/USDT:USDT",
     timeframe: "1h",
     start_date: "2020-03-05",
-    end_date: "2024-12-31",
+    end_date: "2025-07-01",
     save_model: true,
     train_test_split: 0.8,
     random_state: 42,

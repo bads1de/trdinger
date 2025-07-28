@@ -18,12 +18,10 @@ import {
   AlertCircle,
   Clock,
   Bot,
-  Zap,
   ChevronDown,
   ChevronUp,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import OptimizationSettings, {
@@ -34,7 +32,6 @@ import EnsembleSettings, { EnsembleSettingsConfig } from "./EnsembleSettings";
 import {
   AutoMLFeatureConfig,
   getDefaultAutoMLConfig,
-  getFinancialOptimizedAutoMLConfig,
 } from "@/hooks/useMLTraining";
 import { StopTrainingDialog } from "@/components/common/ConfirmDialog";
 

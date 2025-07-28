@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { BACKEND_API_URL } from "@/constants";
+import { useApiCall } from "./useApiCall";
 
 export interface AutoMLConfig {
   tsfresh: {
@@ -57,17 +57,22 @@ export interface MLConfig {
   };
 }
 
+
 export const useMLSettings = () => {
   const [config, setConfig] = useState<MLConfig | null>(null);
   const [automlConfig, setAutomlConfig] = useState<AutoMLConfig | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
-  const [isSaving, setIsSaving] = useState(false);
-  const [isResetting, setIsResetting] = useState(false);
-  const [isCleaning, setIsCleaning] = useState(false);
-  const [isAutomlLoading, setIsAutomlLoading] = useState(false);
-  const [isAutomlSaving, setIsAutomlSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+
+  const { execute: fetchConfigApi, loading: isLoading, error: fetchError } = useApiCall<MLConfig>();
+  const { execute: saveConfigApi, loading: isSaving, error: saveError } = useApiCall<MLConfig>();
+  const { execute: resetApi, loading: isResetting, error: resetError } = useApiCall<MLConfig>();
+  const { execute: cleanupApi, loading: isCleaning, error: cleanupError } = useApiCall();
+  const { execute: fetchAutoMLConfigApi, loading: isAutomlLoading, error: fetchAutoMLError } = useApiCall<{ config: AutoMLConfig }>();
+  const { execute: validateAutoMLConfigApi, error: validateAutoMLError } = useApiCall();
+  const { execute: generateAutoMLFeaturesApi, loading: isAutomlSaving, error: generateAutoMLError } = useApiCall();
+  const { execute: clearAutoMLCacheApi, error: clearAutoMLCacheError } = useApiCall();
+
+  const error = fetchError || saveError || resetError || cleanupError || fetchAutoMLError || validateAutoMLError || generateAutoMLError || clearAutoMLCacheError;
 
   const showSuccessMessage = (message: string) => {
     setSuccessMessage(message);
@@ -75,293 +80,85 @@ export const useMLSettings = () => {
   };
 
   const fetchConfig = useCallback(async () => {
-    setIsLoading(true);
-    setError(null);
-
-    try {
-      const response = await fetch(`${BACKEND_API_URL}/api/ml/config`, {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-        },
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.detail || "ML設定取得に失敗しました");
-      }
-
-      setConfig(data);
-    } catch (error) {
-      console.error("ML設定取得エラー:", error);
-      setError(
-        error instanceof Error ? error.message : "サーバーエラーが発生しました"
-      );
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
+    await fetchConfigApi("/api/ml/config", {
+      onSuccess: setConfig,
+    });
+  }, [fetchConfigApi]);
 
   const saveConfig = useCallback(async (newConfig: MLConfig) => {
     if (!newConfig) return;
-
-    setIsSaving(true);
-    setError(null);
-
-    try {
-      const response = await fetch(`${BACKEND_API_URL}/api/ml/config`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(newConfig),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.detail || "ML設定の更新に失敗しました");
-      }
-
-      setConfig(data);
-      showSuccessMessage("設定が正常に保存されました");
-    } catch (error) {
-      console.error("ML設定更新エラー:", error);
-      setError(
-        error instanceof Error ? error.message : "サーバーエラーが発生しました"
-      );
-    } finally {
-      setIsSaving(false);
-    }
-  }, []);
+    await saveConfigApi("/api/ml/config", {
+      method: "PUT",
+      body: newConfig,
+      onSuccess: (data) => {
+        setConfig(data);
+        showSuccessMessage("設定が正常に保存されました");
+      },
+    });
+  }, [saveConfigApi]);
 
   const resetToDefaults = useCallback(async () => {
-    if (window.confirm("設定をデフォルト値にリセットしますか？")) {
-      setIsResetting(true);
-      setError(null);
-
-      try {
-        const response = await fetch(`${BACKEND_API_URL}/api/ml/config/reset`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-        });
-
-        const data = await response.json();
-
-        if (!response.ok) {
-          throw new Error(data.detail || "設定のリセットに失敗しました");
+    await resetApi("/api/ml/config/reset", {
+        method: "POST",
+        confirmMessage: "設定をデフォルト値にリセットしますか？",
+        onSuccess: (data) => {
+            setConfig(data);
+            showSuccessMessage("設定がデフォルト値にリセットされました");
         }
-
-        setConfig(data);
-        showSuccessMessage("設定がデフォルト値にリセットされました");
-      } catch (error) {
-        console.error("ML設定リセットエラー:", error);
-        setError(
-          error instanceof Error
-            ? error.message
-            : "サーバーエラーが発生しました"
-        );
-      } finally {
-        setIsResetting(false);
-      }
-    }
-  }, []);
+    });
+  }, [resetApi]);
 
   const cleanupOldModels = useCallback(async () => {
-    if (
-      window.confirm(
-        "古いモデルファイルを削除しますか？この操作は取り消せません。"
-      )
-    ) {
-      setIsCleaning(true);
-      setError(null);
-
-      try {
-        const response = await fetch(
-          `${BACKEND_API_URL}/api/ml/models/cleanup`,
-          {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-          }
-        );
-
-        const data = await response.json();
-
-        if (!response.ok) {
-          throw new Error(data.detail || "モデルファイルの削除に失敗しました");
+    await cleanupApi("/api/ml/models/cleanup", {
+        method: "POST",
+        confirmMessage: "古いモデルファイルを削除しますか？この操作は取り消せません。",
+        onSuccess: () => {
+            showSuccessMessage("古いモデルファイルが削除されました");
         }
-
-        showSuccessMessage("古いモデルファイルが削除されました");
-      } catch (error) {
-        console.error("モデルファイル削除エラー:", error);
-        setError(
-          error instanceof Error
-            ? error.message
-            : "サーバーエラーが発生しました"
-        );
-      } finally {
-        setIsCleaning(false);
-      }
-    }
-  }, []);
+    });
+  }, [cleanupApi]);
 
   const updateConfig = (section: keyof MLConfig, key: string, value: any) => {
     if (!config) return;
-
-    const newConfig = {
-      ...config,
-      [section]: {
-        ...config[section],
-        [key]: value,
-      },
-    };
+    const newConfig = { ...config, [section]: { ...config[section], [key]: value } };
     setConfig(newConfig);
   };
 
-  // AutoML設定関連の関数
   const fetchAutoMLConfig = useCallback(async () => {
-    setIsAutomlLoading(true);
-    setError(null);
-
-    try {
-      const response = await fetch(
-        `${BACKEND_API_URL}/api/automl-features/default-config`,
-        {
-          method: "GET",
-          headers: {
-            "Content-Type": "application/json",
-          },
-        }
-      );
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.detail || "AutoML設定取得に失敗しました");
-      }
-
-      setAutomlConfig(data.config);
-    } catch (error) {
-      console.error("AutoML設定取得エラー:", error);
-      setError(
-        error instanceof Error ? error.message : "サーバーエラーが発生しました"
-      );
-    } finally {
-      setIsAutomlLoading(false);
-    }
-  }, []);
+    await fetchAutoMLConfigApi("/api/automl-features/default-config", {
+      onSuccess: (data) => setAutomlConfig(data.config),
+    });
+  }, [fetchAutoMLConfigApi]);
 
   const validateAutoMLConfig = useCallback(async (config: AutoMLConfig) => {
-    try {
-      const response = await fetch(
-        `${BACKEND_API_URL}/api/automl-features/validate-config`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(config),
-        }
-      );
+    return await validateAutoMLConfigApi("/api/automl-features/validate-config", {
+      method: "POST",
+      body: config,
+    });
+  }, [validateAutoMLConfigApi]);
 
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.detail || "AutoML設定検証に失敗しました");
-      }
-
-      return data;
-    } catch (error) {
-      console.error("AutoML設定検証エラー:", error);
-      throw error;
-    }
-  }, []);
-
-  const generateAutoMLFeatures = useCallback(
-    async (
-      symbol: string,
-      timeframe: string = "1h",
-      limit: number = 1000,
-      automlConfig?: AutoMLConfig,
-      includeTarget: boolean = false
-    ) => {
-      setIsAutomlSaving(true);
-      setError(null);
-
-      try {
-        const response = await fetch(
-          `${BACKEND_API_URL}/api/automl-features/generate`,
-          {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              symbol,
-              timeframe,
-              limit,
-              automl_config: automlConfig,
-              include_target: includeTarget,
-            }),
-          }
-        );
-
-        const data = await response.json();
-
-        if (!response.ok) {
-          throw new Error(data.detail || "AutoML特徴量生成に失敗しました");
-        }
-
-        showSuccessMessage("AutoML特徴量が正常に生成されました");
-        return data;
-      } catch (error) {
-        console.error("AutoML特徴量生成エラー:", error);
-        setError(
-          error instanceof Error
-            ? error.message
-            : "サーバーエラーが発生しました"
-        );
-        throw error;
-      } finally {
-        setIsAutomlSaving(false);
-      }
-    },
-    []
-  );
+  const generateAutoMLFeatures = useCallback(async (
+    symbol: string,
+    timeframe: string = "1h",
+    limit: number = 1000,
+    automlConfig?: AutoMLConfig,
+    includeTarget: boolean = false
+  ) => {
+    const result = await generateAutoMLFeaturesApi("/api/automl-features/generate", {
+      method: "POST",
+      body: { symbol, timeframe, limit, automl_config: automlConfig, include_target: includeTarget },
+      onSuccess: () => showSuccessMessage("AutoML特徴量が正常に生成されました"),
+    });
+    return result;
+  }, [generateAutoMLFeaturesApi]);
 
   const clearAutoMLCache = useCallback(async () => {
-    try {
-      const response = await fetch(
-        `${BACKEND_API_URL}/api/automl-features/clear-cache`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-        }
-      );
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.detail || "AutoMLキャッシュクリアに失敗しました");
-      }
-
-      showSuccessMessage("AutoMLキャッシュがクリアされました");
-      return data;
-    } catch (error) {
-      console.error("AutoMLキャッシュクリアエラー:", error);
-      setError(
-        error instanceof Error ? error.message : "サーバーエラーが発生しました"
-      );
-      throw error;
-    }
-  }, []);
+    const result = await clearAutoMLCacheApi("/api/automl-features/clear-cache", {
+      method: "POST",
+      onSuccess: () => showSuccessMessage("AutoMLキャッシュがクリアされました"),
+    });
+    return result;
+  }, [clearAutoMLCacheApi]);
 
   useEffect(() => {
     fetchConfig();
@@ -384,7 +181,6 @@ export const useMLSettings = () => {
     cleanupOldModels,
     updateConfig,
     setConfig,
-    // AutoML関連の関数
     fetchAutoMLConfig,
     validateAutoMLConfig,
     generateAutoMLFeatures,
