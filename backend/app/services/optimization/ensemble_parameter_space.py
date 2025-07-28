@@ -10,7 +10,7 @@ from .optuna_optimizer import ParameterSpace
 
 
 class EnsembleParameterSpace:
-    """アンサンブル学習用パラ���ータ空間管理クラス"""
+    """アンサンブル学習用パラメータ空間管理クラス"""
 
     @staticmethod
     def get_lightgbm_parameter_space() -> Dict[str, ParameterSpace]:
