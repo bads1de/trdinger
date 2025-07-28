@@ -1,87 +1,122 @@
-# プロジェクト構造
+---
+inclusion: always
+---
 
-## ルートディレクトリレイアウト
+# Project Structure & Organization
+
+## File Placement Rules
+
+### Backend (`backend/`)
+
+- **API Routes**: Place in `backend/app/api/` with descriptive names (e.g., `trading_strategies.py`)
+- **Business Logic**: Core logic goes in `backend/app/core/` organized by domain
+- **Database Models**: SQLAlchemy models in `backend/models/` with one model per file
+- **Configuration**: Environment-specific configs in `backend/app/config/`
+- **Data Collection**: Market data collectors in `backend/data_collector/`
+- **Scripts**: Maintenance and utility scripts in `backend/scripts/`
+- **Tests**: Mirror app structure in `backend/tests/` (e.g., `tests/api/test_trading_strategies.py`)
+
+### Frontend (`frontend/`)
+
+- **Pages**: Next.js App Router pages in `frontend/app/` following route structure
+- **Components**: Reusable UI components in `frontend/components/` with kebab-case names
+- **Hooks**: Custom React hooks in `frontend/hooks/` prefixed with `use`
+- **Types**: TypeScript definitions in `frontend/types/` organized by domain
+- **Utils**: Helper functions in `frontend/utils/` with descriptive names
+- **Constants**: Application constants in `frontend/constants/`
+- **Tests**: Component tests in `frontend/__tests__/` mirroring component structure
+
+## Architecture Patterns
+
+### Backend Patterns
+
+- **Layered Architecture**: API → Service → Repository → Database
+- **Dependency Injection**: Use FastAPI's `Depends()` for all dependencies
+- **Repository Pattern**: Abstract database access behind repository interfaces
+- **Service Layer**: Business logic separated from API handlers
+- **Configuration Management**: Environment-based settings with validation
+
+### Frontend Patterns
+
+- **Component Composition**: Build complex UIs from simple, reusable components
+- **Custom Hooks**: Extract stateful logic into reusable hooks
+- **Type-Safe APIs**: Use TypeScript interfaces for all backend communication
+- **File-Based Routing**: Follow Next.js App Router conventions strictly
+
+## Naming Conventions
+
+### Python
+
+- **Functions/Variables**: `snake_case` (e.g., `calculate_portfolio_value`)
+- **Classes**: `PascalCase` (e.g., `TradingStrategy`)
+- **Constants**: `UPPER_SNAKE_CASE` (e.g., `MAX_POSITION_SIZE`)
+- **Files**: `snake_case.py` (e.g., `trading_strategy.py`)
+
+### TypeScript
+
+- **Functions/Variables**: `camelCase` (e.g., `calculatePortfolioValue`)
+- **Components/Types**: `PascalCase` (e.g., `TradingDashboard`, `PortfolioData`)
+- **Files**: `kebab-case.tsx` for components, `camelCase.ts` for utilities
+
+### Directories
+
+- Use lowercase with hyphens or underscores consistently within each section
+- Backend: `snake_case` directories
+- Frontend: `kebab-case` directories
+
+## Import Organization
+
+### Python
+
+```python
+# Standard library imports
+import asyncio
+from datetime import datetime
+
+# Third-party imports
+from fastapi import FastAPI, Depends
+from sqlalchemy.orm import Session
+
+# Local imports
+from app.core.trading import TradingEngine
+from app.models.portfolio import Portfolio
 ```
-trdinger/
-├── backend/           # Python FastAPIバックエンド
-├── frontend/          # Next.js Reactフロントエンド
-├── venv/             # Python仮想環境
-├── .git/             # Gitリポジトリ
-├── .kiro/            # Kiro IDE設定
-└── .gitignore        # Git無視ルール
+
+### TypeScript
+
+```typescript
+// External libraries
+import React from "react";
+import { NextPage } from "next";
+
+// Internal utilities
+import { formatCurrency } from "@/utils/formatting";
+
+// Components
+import { TradingChart } from "@/components/trading-chart";
+
+// Types
+import type { PortfolioData } from "@/types/portfolio";
 ```
 
-## バックエンド構造 (`backend/`)
-```
-backend/
-├── app/              # メインアプリケーションパッケージ
-│   ├── api/          # APIルートハンドラー
-│   ├── config/       # 設定管理
-│   ├── core/         # コアビジネスロジック
-│   └── main.py       # FastAPIアプリケーションファクトリ
-├── database/         # データベーススキーマとマイグレーション
-├── data_collector/   # 市場データ収集モジュール
-├── models/           # SQLAlchemyデータベースモデル
-├── scripts/          # ユーティリティとメンテナンススクリプト
-├── tests/            # テストスイート
-├── docs/             # APIドキュメント
-├── main.py           # アプリケーションエントリーポイント
-├── requirements.txt  # Python依存関係
-├── pyproject.toml    # Pythonプロジェクト設定
-└── trdinger.db       # SQLiteデータベース（開発用）
-```
+## Directory Structure Rules
 
-## フロントエンド構造 (`frontend/`)
-```
-frontend/
-├── app/              # Next.js App Routerページ
-│   ├── api/          # APIルートハンドラー
-│   ├── backtest/     # バックテストインターフェース
-│   ├── data/         # データ管理ページ
-│   ├── ml/           # MLモデル管理
-│   ├── layout.tsx    # ルートレイアウトコンポーネント
-│   ├── page.tsx      # ホームページ
-│   └── globals.css   # グローバルスタイル
-├── components/       # 再利用可能なUIコンポーネント
-├── hooks/            # カスタムReactフック
-├── lib/              # ユーティリティライブラリ
-├── types/            # TypeScript型定義
-├── utils/            # ヘルパー関数
-├── constants/        # アプリケーション定数
-├── __tests__/        # テストファイル
-├── package.json      # Node.js依存関係
-├── next.config.js    # Next.js設定
-├── tailwind.config.js # Tailwind CSS設定
-└── tsconfig.json     # TypeScript設定
-```
+### When to Create New Directories
 
-## 主要なアーキテクチャパターン
+- **Backend**: Create new directories in `app/` when you have 3+ related modules
+- **Frontend**: Create new component directories when you have shared sub-components
+- **Tests**: Always mirror the structure of the code being tested
 
-### バックエンドパターン
-- **レイヤードアーキテクチャ**: API → コアロジック → データベース
-- **依存性注入**: FastAPIの組み込みDIシステム
-- **リポジトリパターン**: データベースアクセスの抽象化
-- **サービス層**: ビジネスロジックの分離
-- **設定管理**: 環境ベースの設定
+### File Organization
 
-### フロントエンドパターン
-- **コンポーネントベースアーキテクチャ**: 再利用可能なUIコンポーネント
-- **カスタムフック**: 共有ステートフルロジック
-- **型安全API**: バックエンド通信のためのTypeScriptインターフェース
-- **デザインシステム**: Radix + Tailwindによる一貫したUI
-- **ファイルベースルーティング**: Next.js App Routerの規約
+- **One class per file** for models and major components
+- **Group related functions** in utility modules
+- **Separate concerns** - don't mix API logic with business logic
+- **Co-locate tests** with the code they test when possible
 
-## 命名規則
-- **Python**: 関数/変数はsnake_case、クラスはPascalCase
-- **TypeScript**: 関数/変数はcamelCase、コンポーネント/型はPascalCase
-- **ファイル**: コンポーネントファイルはkebab-case、Pythonモジュールはsnake_case
-- **ディレクトリ**: 適切に小文字でハイフンまたはアンダースコア
+## Testing Structure
 
-## インポート整理
-- **Python**: 標準ライブラリ → サードパーティ → ローカルインポート
-- **TypeScript**: 外部ライブラリ → 内部ユーティリティ → コンポーネント → 型
-
-## テスト構造
-- **バックエンド**: `tests/`ディレクトリ内のユニットテスト、アプリ構造をミラー
-- **フロントエンド**: `__tests__/`ディレクトリ内のコンポーネントテスト、コンポーネントと同じ場所に配置
-- **統合**: 重要なユーザーフローのエンドツーエンドテスト
+- **Unit Tests**: Test individual functions and classes in isolation
+- **Integration Tests**: Test API endpoints and database interactions
+- **Component Tests**: Test React components with React Testing Library
+- **E2E Tests**: Test critical user flows across the entire application

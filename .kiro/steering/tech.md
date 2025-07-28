@@ -6,139 +6,110 @@ inclusion: always
 
 ## Core Technology Stack
 
-### Backend (Python)
+**Backend**: FastAPI + SQLAlchemy + CCXT + pandas/numpy/scikit-learn  
+**Frontend**: Next.js 15 + Radix UI + Tailwind + Recharts  
+**Testing**: pytest (backend) + Jest/RTL (frontend)
 
-- **FastAPI + Uvicorn**: Async API framework for high-performance trading operations
-- **SQLAlchemy + Alembic**: ORM with migration support for financial data integrity
-- **CCXT**: Multi-exchange trading library for unified API access
-- **ML Stack**: pandas, numpy, scikit-learn, LightGBM for strategy development
-- **Backtesting**: Custom backtesting framework for strategy validation
-- **Optimization**: DEAP (genetic algorithms), scikit-optimize (Bayesian optimization)
+## Critical Financial Code Requirements
 
-### Frontend (TypeScript/React)
+- **NEVER use `float` for financial calculations** - Always use `Decimal` type
+- **Use 8 decimal precision** for cryptocurrency pairs
+- **Implement `ROUND_HALF_UP`** for all financial rounding operations
+- **Validate all financial calculations** with unit tests using known expected results
 
-- **Next.js 15**: Full-stack React framework with App Router
-- **Radix UI + Tailwind**: Accessible components with custom design system
-- **React Hook Form + Zod**: Type-safe form handling and validation
-- **Recharts**: Financial data visualization and charting
-- **React Context**: State management for trading data
+```python
+from decimal import Decimal, ROUND_HALF_UP
 
-## Development Standards
-
-### Python Code Patterns
-
-- **MUST use async/await** for all I/O operations (database, API calls)
-- **MUST use dependency injection** via FastAPI's Depends system
-- **MUST implement repository pattern** for data access layers
-- **MUST use Pydantic models** for request/response validation
-- **MUST follow service layer pattern** for business logic separation
-
-### TypeScript/React Patterns
-
-- **MUST use TypeScript strict mode** with proper type definitions
-- **MUST create custom hooks** for shared stateful logic
-- **MUST use React.memo** for expensive component re-renders
-- **MUST implement error boundaries** for trading operation failures
-- **MUST use Zod schemas** for runtime type validation
-
-### Code Quality Standards
-
-- **Python**: Run `black`, `isort`, `flake8`, `mypy` before commits
-- **TypeScript**: Use ESLint rules, ensure no TypeScript errors
-- **MUST write unit tests** for all business logic functions
-- **MUST mock external APIs** in tests (exchanges, databases)
-- **MUST use type hints** in all Python function signatures
-
-## Development Workflows
-
-### Backend Development
-
-```bash
-# Environment setup (run once)
-python -m venv venv
-venv\Scripts\activate
-pip install -r requirements.txt
-
-# Daily development cycle
-python main.py                    # Start dev server
-pytest tests/                     # Run tests
-black . && isort . && flake8 .   # Format and lint
-mypy .                           # Type checking
-
-# Database operations
-alembic upgrade head              # Apply migrations
-alembic revision --autogenerate -m "description"  # Create migration
+# Correct financial calculation pattern
+price = Decimal('0.12345678')  # Never float
+amount = price.quantize(Decimal('0.00000001'), rounding=ROUND_HALF_UP)
 ```
 
-### Frontend Development
+## Mandatory Code Patterns
 
-```bash
-# Environment setup (run once)
-npm install
+### Python (Backend)
 
-# Daily development cycle
-npm run dev                      # Start dev server
-npm test                        # Run tests
-npm run lint                    # ESLint checking
-npm run build                   # Verify production build
+- **Always use `async/await`** for I/O operations (database, CCXT, APIs)
+- **Use dependency injection** with FastAPI's `Depends()` system
+- **Type hints required** on all function signatures
+- **Pydantic models** for request/response validation
 
-# Testing workflows
-npm run test:watch              # Watch mode for TDD
-npm run test:coverage           # Coverage reports
+```python
+@router.post("/strategy", response_model=StrategyResponse)
+async def create_strategy(
+    strategy: StrategyCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+) -> StrategyResponse:
+    try:
+        # Implementation with proper error handling
+        pass
+    except Exception as e:
+        # Log with correlation ID for tracing
+        raise HTTPException(status_code=500, detail="Strategy creation failed")
 ```
 
-## Configuration Management
+### TypeScript (Frontend)
 
-### Environment-Based Configuration
+- **TypeScript strict mode** with complete type definitions
+- **Custom hooks** for shared stateful logic
+- **Zod schemas** for runtime validation
+- **Proper spacing** in control structures (if statements, loops)
 
-- **Backend**: Use `python-dotenv` for environment variables
-- **Database**: SQLAlchemy connection strings via environment
-- **API Keys**: Store in environment, never in code or logs
-- **Frontend**: Next.js environment variables with `NEXT_PUBLIC_` prefix
+```typescript
+const { data, error, isLoading } = useSWR<PortfolioData>(
+  "/api/portfolio",
+  fetcher,
+  { refreshInterval: 1000 }
+);
 
-### Development vs Production
+if (error) {
+  // Handle error state with user feedback
+}
+```
 
-- **Development**: SQLite database, mock trading APIs
-- **Production**: PostgreSQL, real exchange connections
-- **MUST use different API keys** per environment
-- **MUST validate configuration** on application startup
+## Performance & Security Standards
 
-## Testing Strategy
+### Performance Targets
 
-### Backend Testing
+- Market data processing: **< 100ms**
+- Strategy signal generation: **< 500ms**
+- Portfolio updates: **< 1 second**
 
-- **Unit Tests**: pytest with async support for business logic
-- **Integration Tests**: Test database operations with test database
-- **API Tests**: FastAPI TestClient for endpoint validation
-- **MUST mock CCXT** exchange calls in tests
-- **MUST use fixtures** for test data setup
+### Required Implementations
 
-### Frontend Testing
+- **Connection pooling** for database and exchange APIs
+- **Caching** for frequently accessed market data
+- **Circuit breakers** for API rate limits
+- **Structured logging** with correlation IDs
 
-- **Component Tests**: React Testing Library for UI components
-- **Hook Tests**: Custom hook testing with renderHook
-- **Integration Tests**: Full user flow testing
-- **MUST mock API calls** using MSW or similar
-- **MUST test error states** and loading states
+### Security Requirements
 
-## Performance Guidelines
+- **Environment variables** for all configuration
+- **Separate API keys** per environment and exchange
+- **Input validation** before processing trading operations
+- **Audit logging** for all portfolio changes
+- **Never log API keys** in responses or error messages
 
-### Backend Performance
+## Development Workflow
 
-- **Use connection pooling** for database and exchange APIs
-- **Implement caching** for frequently accessed market data
-- **Use background tasks** for non-critical operations
-- **Monitor async task queues** to prevent blocking
+```bash
+# Pre-commit checks
+# Python
+black . && isort . && flake8 . && mypy .
 
-### Frontend Performance
+# TypeScript
+npm run lint && npm run type-check && npm test
 
-- **Use React.lazy** for code splitting on route level
-- **Implement virtual scrolling** for large data tables
-- **Cache API responses** using React Query or SWR
-- **Optimize bundle size** with Next.js analyzer
+# Database migrations
+alembic upgrade head
+alembic revision --autogenerate -m "description"
+```
 
-## Required Versions
+## Testing Requirements
 
-- **Python**: 3.10+ (required for modern async features)
-- **Node.js**: 18+ (Next.js 15 compatibility)
-- **PostgreSQL**: 13+ (for production deployments)
+- **Mock all external APIs** (CCXT, databases) in tests
+- **Test financial calculations** with known expected results
+- **Test error states** and loading states in UI components
+- **Test concurrent operations** for race conditions
+- **Use fixtures** for consistent test data setup
