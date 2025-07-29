@@ -40,7 +40,9 @@ class TestLogger:
         self.logger.info(message, extra=kwargs)
 
     def error(self, message: str, **kwargs):
-        self.logger.error(message, extra=kwargs)
+        # Remove exc_info from kwargs to avoid conflict
+        exc_info = kwargs.pop("exc_info", False)
+        self.logger.error(message, exc_info=exc_info, extra=kwargs)
 
     def warning(self, message: str, **kwargs):
         self.logger.warning(message, extra=kwargs)
@@ -210,15 +212,15 @@ class MockDataGenerator:
 
         # Calculate metrics
         total_pnl = sum(trade["pnl"] for trade in trades)
-        returns = [trade["pnl_percent"] for trade in trades]
+        returns = [
+            float(trade["pnl_percent"]) for trade in trades
+        ]  # Convert to float for numpy
 
-        sharpe_ratio = DecimalHelper.create_decimal(
-            str(
-                np.mean(returns) / np.std(returns) * np.sqrt(252)
-                if np.std(returns) > 0
-                else 0
-            )
-        )
+        if len(returns) > 1 and np.std(returns) > 0:
+            sharpe_value = np.mean(returns) / np.std(returns) * np.sqrt(252)
+            sharpe_ratio = DecimalHelper.create_decimal(str(sharpe_value))
+        else:
+            sharpe_ratio = DecimalHelper.create_decimal("0")
 
         # Calculate max drawdown
         peak = DecimalHelper.create_decimal("10000.00")

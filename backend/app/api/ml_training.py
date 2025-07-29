@@ -181,9 +181,6 @@ class MLStatusResponse(BaseModel):
     error: Optional[str] = None
 
 
-# データサービス関数とバックグラウンド関数は削除（OrchestrationServiceに移動）
-
-
 @router.post("/train", response_model=MLTrainingResponse)
 async def start_ml_training(
     config: MLTrainingConfig,
