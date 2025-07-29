@@ -79,7 +79,7 @@ async def get_strategies(
     """
 
     async def _get_strategies():
-        # ビジネスロジックをサービス層に委譲
+        
         strategy_service = StrategyIntegrationService(db)
         return strategy_service.get_strategies_with_response(
             limit=limit,

@@ -222,7 +222,7 @@ async def stop_experiment(
 
     async def _stop_experiment():
         try:
-            # ビジネスロジックをサービス層に委譲
+
             orchestration_service.validate_experiment_stop(
                 experiment_id, auto_strategy_service
             )
@@ -264,7 +264,7 @@ async def get_experiment_results(
                 detail=f"実験 {experiment_id} が見つかりません",
             )
 
-        # ビジネスロジックをサービス層に委譲
+
         return orchestration_service.format_experiment_result(result)
 
     return await UnifiedErrorHandler.safe_execute_async(_get_experiment_results)
@@ -286,7 +286,7 @@ async def test_strategy(
     """
 
     async def _test_strategy():
-        # ビジネスロジックをサービス層に委譲
+
         result = await orchestration_service.test_strategy(
             request=request, auto_strategy_service=auto_strategy_service
         )

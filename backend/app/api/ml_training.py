@@ -205,7 +205,7 @@ async def start_ml_training(
     logger.info(f"📋 最適化設定: {config.optimization_settings}")
 
     async def _start_training():
-        # ビジネスロジックをサービス層に委譲
+
         orchestration_service = MLTrainingOrchestrationService()
         return await orchestration_service.start_training(
             config=config, background_tasks=background_tasks, db=db
@@ -219,7 +219,7 @@ async def get_ml_training_status():
     """
     MLトレーニングの状態を取得
     """
-    # ビジネスロジックをサービス層に委譲
+    
     orchestration_service = MLTrainingOrchestrationService()
     status = await orchestration_service.get_training_status()
     return MLStatusResponse(**status)
@@ -232,7 +232,7 @@ async def get_ml_model_info():
     """
 
     async def _get_model_info():
-        # ビジネスロジックをサービス層に委譲
+
         orchestration_service = MLTrainingOrchestrationService()
         return await orchestration_service.get_model_info()
 
@@ -246,7 +246,7 @@ async def stop_ml_training():
     """
 
     async def _stop_training():
-        # ビジネスロジックをサービス層に委譲
+
         orchestration_service = MLTrainingOrchestrationService()
         return await orchestration_service.stop_training()
 

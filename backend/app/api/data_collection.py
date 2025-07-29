@@ -53,7 +53,7 @@ async def collect_historical_data(
                 status_code=500, detail="データベースの初期化に失敗しました"
             )
 
-        # サービス層に委譲
+
         orchestration_service = DataCollectionOrchestrationService()
         return await orchestration_service.start_historical_data_collection(
             symbol, timeframe, background_tasks, db
@@ -80,7 +80,7 @@ async def update_bulk_incremental_data(
     """
 
     async def _execute():
-        # サービス層に委譲
+
         orchestration_service = DataCollectionOrchestrationService()
         return await orchestration_service.execute_bulk_incremental_update(symbol, db)
 
@@ -103,7 +103,7 @@ async def collect_bitcoin_full_data(
     """
 
     async def _execute():
-        # サービス層に委譲
+
         orchestration_service = DataCollectionOrchestrationService()
         return await orchestration_service.start_bitcoin_full_data_collection(
             background_tasks, db
@@ -137,7 +137,7 @@ async def collect_bulk_historical_data(
                 status_code=500, detail="データベースの初期化に失敗しました"
             )
 
-        # サービス層に委譲
+
         orchestration_service = DataCollectionOrchestrationService()
         return await orchestration_service.start_bulk_historical_data_collection(
             background_tasks, db
@@ -215,7 +215,7 @@ async def collect_all_data_bulk(
                 status_code=500, detail="データベースの初期化に失敗しました"
             )
 
-        # サービス層に委譲
+
         orchestration_service = DataCollectionOrchestrationService()
         return await orchestration_service.start_all_data_bulk_collection(
             background_tasks, db

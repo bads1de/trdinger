@@ -84,7 +84,7 @@ async def get_backtest_results(
     """
 
     async def _get_results():
-        # ビジネスロジックをサービス層に委譲
+        
         orchestration_service = BacktestOrchestrationService()
         return await orchestration_service.get_backtest_results(
             db=db,
@@ -110,7 +110,7 @@ async def delete_all_backtest_results(db: Session = Depends(get_db)):
     """
 
     async def _delete_all_results():
-        # ビジネスロジックをサービス層に委譲
+        
         orchestration_service = BacktestOrchestrationService()
         return await orchestration_service.delete_all_backtest_results(db=db)
 
@@ -131,7 +131,7 @@ async def get_backtest_result_by_id(result_id: int, db: Session = Depends(get_db
     """
 
     async def _get_by_id():
-        # ビジネスロジックをサービス層に委譲
+        
         orchestration_service = BacktestOrchestrationService()
         result = await orchestration_service.get_backtest_result_by_id(
             db=db, result_id=result_id
@@ -163,7 +163,7 @@ async def delete_backtest_result(result_id: int, db: Session = Depends(get_db)):
     """
 
     async def _delete_result():
-        # ビジネスロジックをサービス層に委譲
+        
         orchestration_service = BacktestOrchestrationService()
         result = await orchestration_service.delete_backtest_result(
             db=db, result_id=result_id
@@ -191,7 +191,7 @@ async def get_supported_strategies():
     """
 
     async def _get_strategies():
-        # ビジネスロジックをサービス層に委譲
+        
         orchestration_service = BacktestOrchestrationService()
         return await orchestration_service.get_supported_strategies()
 

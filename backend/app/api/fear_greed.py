@@ -112,7 +112,7 @@ async def collect_fear_greed_data(
     """
 
     async def _execute():
-        # サービス層に委譲
+        
         orchestration_service = FearGreedOrchestrationService()
         return await orchestration_service.collect_fear_greed_data(limit, db)
 
@@ -134,7 +134,7 @@ async def collect_incremental_fear_greed_data(
     """
 
     async def _execute():
-        # サービス層に委譲
+        
         orchestration_service = FearGreedOrchestrationService()
         return await orchestration_service.collect_incremental_fear_greed_data(db)
 
