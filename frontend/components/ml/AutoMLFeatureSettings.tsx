@@ -33,7 +33,6 @@ import { AutoMLFeatureConfig } from "@/hooks/useMLTraining";
 
 // 型エイリアスを作成
 type TSFreshSettings = AutoMLFeatureConfig["tsfresh"];
-type FeaturetoolsSettings = AutoMLFeatureConfig["featuretools"];
 type AutoFeatSettings = AutoMLFeatureConfig["autofeat"];
 
 interface AutoMLFeatureSettingsProps {
@@ -68,19 +67,7 @@ export default function AutoMLFeatureSettings({
     }
   };
 
-  const updateFeaturetoolsSettings = (
-    key: keyof FeaturetoolsSettings,
-    value: any
-  ) => {
-    const newSettings = {
-      ...settings,
-      featuretools: {
-        ...settings.featuretools,
-        [key]: value,
-      },
-    };
-    onChange(newSettings);
-  };
+
 
   const updateAutoFeatSettings = (key: keyof AutoFeatSettings, value: any) => {
     const newSettings = {
@@ -204,14 +191,10 @@ export default function AutoMLFeatureSettings({
 
       {/* 設定タブ */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList className="grid w-full grid-cols-2">
           <TabsTrigger value="tsfresh" className="flex items-center gap-2">
             <TrendingUp className="h-4 w-4" />
             TSFresh
-          </TabsTrigger>
-          <TabsTrigger value="featuretools" className="flex items-center gap-2">
-            <Brain className="h-4 w-4" />
-            Featuretools
           </TabsTrigger>
           <TabsTrigger value="autofeat" className="flex items-center gap-2">
             <Zap className="h-4 w-4" />
@@ -348,79 +331,7 @@ export default function AutoMLFeatureSettings({
           </Card>
         </TabsContent>
 
-        {/* Featuretools設定 */}
-        <TabsContent value="featuretools">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Brain className="h-5 w-5" />
-                Featuretools Deep Feature Synthesis
-                <Badge
-                  variant={
-                    settings.featuretools.enabled ? "default" : "secondary"
-                  }
-                >
-                  {settings.featuretools.enabled ? "有効" : "無効"}
-                </Badge>
-              </CardTitle>
-              <p className="text-sm text-muted-foreground">
-                既存特徴量の高次相互作用を自動発見
-              </p>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="flex items-center space-x-2">
-                <Switch
-                  id="featuretools-enabled"
-                  checked={settings.featuretools.enabled}
-                  onCheckedChange={(enabled) =>
-                    updateFeaturetoolsSettings("enabled", enabled)
-                  }
-                  disabled={isLoading}
-                />
-                <Label htmlFor="featuretools-enabled">
-                  Featuretools DFSを有効にする
-                </Label>
-              </div>
 
-              {settings.featuretools.enabled && (
-                <div className="space-y-4">
-                  <div>
-                    <Label>最大深度: {settings.featuretools.max_depth}</Label>
-                    <Slider
-                      value={[settings.featuretools.max_depth]}
-                      onValueChange={([value]) =>
-                        updateFeaturetoolsSettings("max_depth", value)
-                      }
-                      max={5}
-                      min={1}
-                      step={1}
-                      className="mt-2"
-                    />
-                    <p className="text-xs text-muted-foreground mt-1">
-                      特徴量合成の深度 (高いほど複雑)
-                    </p>
-                  </div>
-
-                  <div>
-                    <Label>
-                      最大特徴量数: {settings.featuretools.max_features}個
-                    </Label>
-                    <Slider
-                      value={[settings.featuretools.max_features]}
-                      onValueChange={([value]) =>
-                        updateFeaturetoolsSettings("max_features", value)
-                      }
-                      max={200}
-                      min={10}
-                      step={5}
-                      className="mt-2"
-                    />
-                  </div>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
 
         {/* AutoFeat設定 */}
         <TabsContent value="autofeat">

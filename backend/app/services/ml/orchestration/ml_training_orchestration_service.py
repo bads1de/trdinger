@@ -61,9 +61,9 @@ class MLTrainingOrchestrationService:
                 "parallel_jobs": 2,
             },
             "featuretools": {
-                "enabled": True,
-                "max_depth": 2,
-                "max_features": 50,
+                "enabled": False,  # Featuretoolsは削除されました
+                "max_depth": 0,
+                "max_features": 0,
             },
             "autofeat": {
                 "enabled": True,
@@ -86,9 +86,9 @@ class MLTrainingOrchestrationService:
                 "parallel_jobs": 4,
             },
             "featuretools": {
-                "enabled": True,
-                "max_depth": 3,
-                "max_features": 100,
+                "enabled": False,  # Featuretoolsは削除されました
+                "max_depth": 0,
+                "max_features": 0,
             },
             "autofeat": {
                 "enabled": True,
@@ -215,6 +215,9 @@ class MLTrainingOrchestrationService:
 
             # AutoMLプロセスのクリーンアップ処理を実行
             self._cleanup_automl_processes()
+
+            # バックグラウンドタスクマネージャーのクリーンアップも実行
+            background_task_manager.cleanup_all_tasks()
 
             # トレーニング停止（実際の実装では、トレーニングプロセスを停止する必要があります）
             training_status.update(
@@ -383,8 +386,10 @@ class MLTrainingOrchestrationService:
 
             # AutoML関連のリソースをクリーンアップ
             self._cleanup_autofeat_resources()
-            self._cleanup_featuretools_resources()
             self._cleanup_tsfresh_resources()
+            self._cleanup_enhanced_feature_service()
+            self._cleanup_ml_training_service()
+            # Featuretoolsは削除されたため、クリーンアップ不要
 
             # 強制ガベージコレクション
             import gc
@@ -407,27 +412,104 @@ class MLTrainingOrchestrationService:
     def _cleanup_autofeat_resources(self):
         """AutoFeat関連リソースのクリーンアップ"""
         try:
-            # グローバルなAutoFeatインスタンスがあればクリア
-            # 実際の実装では、使用中のAutoFeatCalculatorインスタンスを特定してクリア
             logger.debug("AutoFeatリソースをクリーンアップ中")
+
+            # AutoFeatの一時ファイルとキャッシュをクリア
+            import tempfile
+            import shutil
+            import os
+
+            # AutoFeatが作成する一時ディレクトリをクリーンアップ
+            temp_dir = tempfile.gettempdir()
+            for item in os.listdir(temp_dir):
+                if item.startswith('autofeat_'):
+                    temp_path = os.path.join(temp_dir, item)
+                    try:
+                        if os.path.isdir(temp_path):
+                            shutil.rmtree(temp_path)
+                        else:
+                            os.remove(temp_path)
+                        logger.debug(f"AutoFeat一時ファイル削除: {temp_path}")
+                    except Exception as e:
+                        logger.warning(f"AutoFeat一時ファイル削除エラー {temp_path}: {e}")
+
+            logger.debug("AutoFeatリソースクリーンアップ完了")
 
         except Exception as e:
             logger.warning(f"AutoFeatクリーンアップエラー: {e}")
 
     def _cleanup_featuretools_resources(self):
-        """FeatureTools関連リソースのクリーンアップ"""
-        try:
-            # FeatureToolsのエンティティセットやキャッシュをクリア
-            logger.debug("FeatureToolsリソースをクリーンアップ中")
-
-        except Exception as e:
-            logger.warning(f"FeatureToolsクリーンアップエラー: {e}")
+        """FeatureTools関連リソースのクリーンアップ（削除済み）"""
+        # Featuretoolsは削除されたため、このメソッドは何もしない
+        logger.debug("Featuretoolsは削除されたため、クリーンアップをスキップします")
 
     def _cleanup_tsfresh_resources(self):
         """TSFresh関連リソースのクリーンアップ"""
         try:
-            # TSFreshのキャッシュや一時ファイルをクリア
             logger.debug("TSFreshリソースをクリーンアップ中")
+
+            # TSFreshの内部キャッシュをクリア
+            try:
+                from tsfresh.utilities.dataframe_functions import clear_cache
+                clear_cache()
+                logger.debug("TSFreshキャッシュクリア完了")
+            except ImportError:
+                logger.debug("TSFreshキャッシュクリア機能が利用できません")
+            except Exception as e:
+                logger.warning(f"TSFreshキャッシュクリアエラー: {e}")
+
+            # TSFreshの一時ファイルをクリーンアップ
+            import tempfile
+            import os
+
+            temp_dir = tempfile.gettempdir()
+            for item in os.listdir(temp_dir):
+                if item.startswith('tsfresh_') or item.startswith('tmp_tsfresh'):
+                    temp_path = os.path.join(temp_dir, item)
+                    try:
+                        if os.path.isfile(temp_path):
+                            os.remove(temp_path)
+                        logger.debug(f"TSFresh一時ファイル削除: {temp_path}")
+                    except Exception as e:
+                        logger.warning(f"TSFresh一時ファイル削除エラー {temp_path}: {e}")
+
+            logger.debug("TSFreshリソースクリーンアップ完了")
 
         except Exception as e:
             logger.warning(f"TSFreshクリーンアップエラー: {e}")
+
+    def _cleanup_enhanced_feature_service(self):
+        """EnhancedFeatureEngineeringService関連リソースのクリーンアップ"""
+        try:
+            logger.debug("EnhancedFeatureEngineeringServiceリソースをクリーンアップ中")
+
+            # EnhancedFeatureEngineeringServiceのインスタンスを作成してクリーンアップ
+            from app.services.ml.feature_engineering.enhanced_feature_engineering_service import EnhancedFeatureEngineeringService
+
+            # 一時的なインスタンスを作成してクリーンアップメソッドを呼び出し
+            temp_service = EnhancedFeatureEngineeringService()
+            temp_service.cleanup_resources()
+
+            # インスタンスを削除
+            del temp_service
+
+            logger.debug("EnhancedFeatureEngineeringServiceリソースクリーンアップ完了")
+
+        except Exception as e:
+            logger.warning(f"EnhancedFeatureEngineeringServiceクリーンアップエラー: {e}")
+
+    def _cleanup_ml_training_service(self):
+        """MLTrainingService関連リソースのクリーンアップ"""
+        try:
+            logger.debug("MLTrainingServiceリソースをクリーンアップ中")
+
+            # グローバルMLTrainingServiceインスタンスのクリーンアップ
+            from app.services.ml.ml_training_service import ml_training_service
+
+            if hasattr(ml_training_service, 'cleanup_resources'):
+                ml_training_service.cleanup_resources()
+
+            logger.debug("MLTrainingServiceリソースクリーンアップ完了")
+
+        except Exception as e:
+            logger.warning(f"MLTrainingServiceクリーンアップエラー: {e}")

@@ -50,7 +50,6 @@ optuna-dashboard>=0.13.0  # 可視化用（オプション）
 
 # AutoML特徴量エンジニアリングライブラリ
 tsfresh>=0.20.0          # 時系列特徴量自動生成
-featuretools>=1.28.0     # Deep Feature Synthesis
 autofeat>=2.1.0          # 遺伝的アルゴリズム特徴量選択
 dask>=2023.10.0          # 並列処理・大規模データ処理
 

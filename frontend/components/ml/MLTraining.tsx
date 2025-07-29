@@ -28,6 +28,9 @@ import OptimizationSettings, {
   OptimizationSettingsConfig,
 } from "./OptimizationSettings";
 import AutoMLFeatureSettings from "./AutoMLFeatureSettings";
+import DataPreprocessingSettings, {
+  defaultDataPreprocessingConfig
+} from "./DataPreprocessingSettings";
 import EnsembleSettings, { EnsembleSettingsConfig } from "./EnsembleSettings";
 import {
   AutoMLFeatureConfig,
@@ -62,6 +65,10 @@ export default function MLTraining() {
 
   const [automlSettings, setAutomlSettings] = useState<AutoMLFeatureConfig>(
     getDefaultAutoMLConfig()
+  );
+
+  const [preprocessingSettings, setPreprocessingSettings] = useState(
+    defaultDataPreprocessingConfig
   );
 
   const [ensembleSettings, setEnsembleSettings] =
@@ -256,7 +263,7 @@ export default function MLTraining() {
                     AutoML特徴量エンジニアリングを有効化
                   </Label>
                   <p className="text-xs text-muted-foreground">
-                    TSFresh, Featuretools, AutoFeat を使用します
+                    TSFresh, AutoFeat を使用した高度な特徴量生成
                   </p>
                 </div>
                 <Switch
@@ -314,6 +321,13 @@ export default function MLTraining() {
                       <AutoMLFeatureSettings
                         settings={automlSettings}
                         onChange={setAutomlSettings}
+                        isLoading={trainingStatus.is_training}
+                      />
+
+                      {/* データ前処理設定 */}
+                      <DataPreprocessingSettings
+                        settings={preprocessingSettings}
+                        onChange={setPreprocessingSettings}
                         isLoading={trainingStatus.is_training}
                       />
                     </div>

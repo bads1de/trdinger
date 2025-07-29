@@ -22,6 +22,7 @@ from ...utils.unified_error_handler import (
     safe_ml_operation,
     ml_operation_context,
 )
+from ...utils.data_preprocessing import data_preprocessor
 from .feature_engineering.feature_engineering_service import FeatureEngineeringService
 from .feature_engineering.enhanced_feature_engineering_service import (
     EnhancedFeatureEngineeringService,
@@ -85,7 +86,6 @@ class BaseMLTrainer(ABC):
         """
         from .feature_engineering.automl_features.automl_config import (
             TSFreshConfig,
-            FeaturetoolsConfig,
             AutoFeatConfig,
         )
 
@@ -99,13 +99,14 @@ class BaseMLTrainer(ABC):
             parallel_jobs=tsfresh_dict.get("parallel_jobs", 2),
         )
 
-        # Featuretools設定
+        # Featuretools設定（削除されました - 後方互換性のため）
         featuretools_dict = config_dict.get("featuretools", {})
-        featuretools_config = FeaturetoolsConfig(
-            enabled=featuretools_dict.get("enabled", True),
-            max_depth=featuretools_dict.get("max_depth", 2),
-            max_features=featuretools_dict.get("max_features", 50),
-        )
+        # ダミーのFeaturetoolsConfig（常に無効）
+        featuretools_config = type('FeaturetoolsConfig', (), {
+            'enabled': False,
+            'max_depth': 0,
+            'max_features': 0
+        })()
 
         # AutoFeat設定
         autofeat_dict = config_dict.get("autofeat", {})
@@ -120,7 +121,6 @@ class BaseMLTrainer(ABC):
 
         return AutoMLConfig(
             tsfresh_config=tsfresh_config,
-            featuretools_config=featuretools_config,
             autofeat_config=autofeat_config,
         )
 
@@ -638,8 +638,15 @@ class BaseMLTrainer(ABC):
         numeric_columns = features_df.select_dtypes(include=[np.number]).columns
         features_df_numeric = features_df[numeric_columns]
 
-        # NaNを0で埋める
-        features_df_clean = features_df_numeric.fillna(0)
+        # 統計的手法で欠損値を補完
+        logger.info("統計的手法による特徴量前処理を実行中...")
+        features_df_clean = data_preprocessor.preprocess_features(
+            features_df_numeric,
+            imputation_strategy="median",
+            scale_features=False,
+            remove_outliers=True,
+            outlier_threshold=3.0
+        )
 
         # 特徴量とラベルを分離（改善されたラベル生成ロジック）
         if "Close" in features_df_clean.columns:

@@ -20,15 +20,7 @@ class TSFreshConfig:
     custom_settings: Optional[Dict[str, Any]] = None
 
 
-@dataclass
-class FeaturetoolsConfig:
-    """Featuretools設定クラス"""
-
-    enabled: bool = True
-    max_depth: int = 2
-    max_features: int = 100
-    agg_primitives: Optional[list] = None
-    trans_primitives: Optional[list] = None
+# FeaturetoolsConfigは削除されました（メモリ最適化のため）
 
 
 @dataclass
@@ -108,21 +100,22 @@ class AutoFeatConfig:
 
 @dataclass
 class AutoMLConfig:
-    """AutoML全体設定クラス"""
+    """AutoML全体設定クラス（Featuretools削除版）"""
 
     tsfresh: TSFreshConfig
-    featuretools: FeaturetoolsConfig
     autofeat: AutoFeatConfig
 
     def __init__(
         self,
         tsfresh_config: Optional[TSFreshConfig] = None,
-        featuretools_config: Optional[FeaturetoolsConfig] = None,
         autofeat_config: Optional[AutoFeatConfig] = None,
     ):
         self.tsfresh = tsfresh_config or TSFreshConfig()
-        self.featuretools = featuretools_config or FeaturetoolsConfig()
         self.autofeat = autofeat_config or AutoFeatConfig()
+
+        # Featuretoolsは削除されました（メモリ最適化のため）
+        # 後方互換性のためのダミー属性
+        self.featuretools = type('FeaturetoolsConfig', (), {'enabled': False})()
 
     @classmethod
     def get_default_config(cls) -> "AutoMLConfig":
@@ -131,17 +124,13 @@ class AutoMLConfig:
 
     @classmethod
     def get_financial_optimized_config(cls) -> "AutoMLConfig":
-        """金融データ最適化設定を取得"""
+        """金融データ最適化設定を取得（Featuretools削除版）"""
         tsfresh_config = TSFreshConfig(
             enabled=True,
             feature_selection=True,
             fdr_level=0.01,  # より厳しい選択
             feature_count_limit=500,  # 金融データ用に大幅増加
             parallel_jobs=4,
-        )
-
-        featuretools_config = FeaturetoolsConfig(
-            enabled=True, max_depth=3, max_features=200  # 金融データ用に大幅増加
         )
 
         autofeat_config = AutoFeatConfig(
@@ -151,7 +140,7 @@ class AutoMLConfig:
             max_gb=2.0,  # より多くのメモリ使用を許可
         )
 
-        return cls(tsfresh_config, featuretools_config, autofeat_config)
+        return cls(tsfresh_config, autofeat_config)
 
     def to_dict(self) -> Dict[str, Any]:
         """辞書形式に変換"""
@@ -165,11 +154,11 @@ class AutoMLConfig:
                 "custom_settings": self.tsfresh.custom_settings,
             },
             "featuretools": {
-                "enabled": self.featuretools.enabled,
-                "max_depth": self.featuretools.max_depth,
-                "max_features": self.featuretools.max_features,
-                "agg_primitives": self.featuretools.agg_primitives,
-                "trans_primitives": self.featuretools.trans_primitives,
+                "enabled": False,  # Featuretoolsは削除されました
+                "max_depth": 0,
+                "max_features": 0,
+                "agg_primitives": None,
+                "trans_primitives": None,
             },
             "autofeat": {
                 "enabled": self.autofeat.enabled,
@@ -183,7 +172,6 @@ class AutoMLConfig:
     def from_dict(cls, config_dict: Dict[str, Any]) -> "AutoMLConfig":
         """辞書から設定を作成"""
         tsfresh_config = TSFreshConfig(**config_dict.get("tsfresh", {}))
-        featuretools_config = FeaturetoolsConfig(**config_dict.get("featuretools", {}))
         autofeat_config = AutoFeatConfig(**config_dict.get("autofeat", {}))
 
-        return cls(tsfresh_config, featuretools_config, autofeat_config)
+        return cls(tsfresh_config, autofeat_config)

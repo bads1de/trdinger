@@ -17,6 +17,7 @@ from sklearn.ensemble import RandomForestRegressor
 from sklearn.model_selection import cross_val_score
 
 from .....utils.unified_error_handler import safe_ml_operation
+from .....utils.data_preprocessing import data_preprocessor
 from .automl_config import AutoFeatConfig
 from .performance_optimizer import PerformanceOptimizer
 from autofeat import AutoFeatRegressor, AutoFeatClassifier
@@ -316,15 +317,12 @@ class AutoFeatCalculator:
                 # AutoFeatプレフィックスを追加して元のDataFrameと結合
                 result_df = df.copy()
 
-                # 元データのNaN値を処理（出力データのクリーンアップ）
+                # 元データのNaN値を統計的手法で処理
                 if result_df.isnull().any().any():
-                    logger.info("元データのNaN値を中央値で補完します")
-                    for col in result_df.select_dtypes(include=[np.number]).columns:
-                        if result_df[col].isnull().any():
-                            median_val = result_df[col].median()
-                            if pd.isna(median_val):
-                                median_val = 0  # 全てNaNの場合は0で補完
-                            result_df[col] = result_df[col].fillna(median_val)
+                    logger.info("元データのNaN値を統計的手法で補完します")
+                    result_df = data_preprocessor.transform_missing_values(
+                        result_df, strategy="median"
+                    )
 
                 # インデックスを統一（長さ不一致問題を防ぐ）
                 if hasattr(transformed_df, "index"):
@@ -415,14 +413,20 @@ class AutoFeatCalculator:
             processed_df = numeric_df[valid_mask].copy()
             processed_target = target_reset[valid_mask].copy()
 
-            # 最終的なNaNチェック
+            # 最終的なNaNチェックと統計的補完
             if processed_df.isnull().any().any():
-                logger.warning("前処理後にもNaN値が残っています。fillnaで補完します。")
-                processed_df = processed_df.fillna(processed_df.median())
+                logger.warning("前処理後にもNaN値が残っています。統計的手法で補完します。")
+                processed_df = data_preprocessor.transform_missing_values(
+                    processed_df, strategy="median"
+                )
 
             if processed_target.isnull().any():
-                logger.warning("ターゲット変数にNaN値があります。中央値で補完します。")
-                processed_target = processed_target.fillna(processed_target.median())
+                logger.warning("ターゲット変数にNaN値があります。統計的手法で補完します。")
+                target_df = pd.DataFrame({'target': processed_target})
+                target_df = data_preprocessor.transform_missing_values(
+                    target_df, strategy="median"
+                )
+                processed_target = target_df['target']
 
             # 定数列を除去
             constant_columns = []

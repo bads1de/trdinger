@@ -40,11 +40,11 @@ class TSFreshConfigModel(BaseModel):
 
 
 class FeaturetoolsConfigModel(BaseModel):
-    """Featuretools設定モデル"""
+    """Featuretools設定モデル（削除済み - 後方互換性のため）"""
 
-    enabled: bool = True
-    max_depth: int = Field(2, ge=1, le=5)
-    max_features: int = Field(50, ge=10, le=200)
+    enabled: bool = False  # 常に無効
+    max_depth: int = Field(0, ge=0, le=0)
+    max_features: int = Field(0, ge=0, le=0)
 
 
 class AutoFeatConfigModel(BaseModel):

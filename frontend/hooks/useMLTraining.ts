@@ -26,9 +26,9 @@ export interface AutoMLFeatureConfig {
     performance_mode: string;
   };
   featuretools: {
-    enabled: boolean;
-    max_depth: number;
-    max_features: number;
+    enabled: false; // 削除済み - 後方互換性のため
+    max_depth: 0;
+    max_features: 0;
   };
   autofeat: {
     enabled: boolean;
@@ -93,9 +93,9 @@ export const getDefaultAutoMLConfig = (): AutoMLFeatureConfig => ({
     performance_mode: "balanced",
   },
   featuretools: {
-    enabled: true,
-    max_depth: 2,
-    max_features: 50,
+    enabled: false, // Featuretoolsは削除されました（メモリ最適化のため）
+    max_depth: 0,
+    max_features: 0,
   },
   autofeat: {
     enabled: false, // デフォルトでは無効（計算コストが高いため）
@@ -116,9 +116,9 @@ export const getFinancialOptimizedAutoMLConfig = (): AutoMLFeatureConfig => ({
     performance_mode: "financial_optimized",
   },
   featuretools: {
-    enabled: true,
-    max_depth: 3,
-    max_features: 100,
+    enabled: false, // 削除済み - 後方互換性のため
+    max_depth: 0,
+    max_features: 0,
   },
   autofeat: {
     enabled: true,

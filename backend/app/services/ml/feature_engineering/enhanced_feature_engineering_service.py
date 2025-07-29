@@ -12,7 +12,6 @@ import time
 
 from .feature_engineering_service import FeatureEngineeringService
 from .automl_features.tsfresh_calculator import TSFreshFeatureCalculator
-from .automl_features.featuretools_calculator import FeaturetoolsCalculator
 from .automl_features.autofeat_calculator import AutoFeatCalculator
 from .automl_features.automl_config import AutoMLConfig
 from .automl_features.performance_optimizer import PerformanceOptimizer
@@ -53,9 +52,6 @@ class EnhancedFeatureEngineeringService(FeatureEngineeringService):
 
         # AutoML特徴量計算クラス
         self.tsfresh_calculator = TSFreshFeatureCalculator(self.automl_config.tsfresh)
-        self.featuretools_calculator = FeaturetoolsCalculator(
-            self.automl_config.featuretools
-        )
         self.autofeat_calculator = AutoFeatCalculator(self.automl_config.autofeat)
 
         # パフォーマンス最適化クラス
@@ -82,9 +78,10 @@ class EnhancedFeatureEngineeringService(FeatureEngineeringService):
         lookback_periods: Optional[Dict[str, int]] = None,
         automl_config: Optional[Dict] = None,
         target: Optional[pd.Series] = None,
+        max_features_per_step: int = 100,
     ) -> pd.DataFrame:
         """
-        拡張特徴量を計算（手動 + AutoML）
+        拡張特徴量を計算（手動 + AutoML）- ステップ・バイ・ステップ方式
 
         Args:
             ohlcv_data: OHLCV価格データ
@@ -94,6 +91,7 @@ class EnhancedFeatureEngineeringService(FeatureEngineeringService):
             lookback_periods: 計算期間設定
             automl_config: AutoML設定（辞書形式）
             target: ターゲット変数（特徴量選択用）
+            max_features_per_step: 各ステップでの最大特徴量数
 
         Returns:
             拡張特徴量が追加されたDataFrame
@@ -109,257 +107,187 @@ class EnhancedFeatureEngineeringService(FeatureEngineeringService):
             if automl_config:
                 self._update_automl_config(automl_config)
 
-            # 1. 既存の手動特徴量を計算
-            logger.info("手動特徴量を計算中...")
-            manual_start_time = time.time()
+            logger.info("🔄 ステップ・バイ・ステップ特徴量生成を開始")
 
-            result_df = self.calculate_advanced_features(
-                ohlcv_data=ohlcv_data,
-                funding_rate_data=funding_rate_data,
-                open_interest_data=open_interest_data,
-                fear_greed_data=fear_greed_data,
-                lookback_periods=lookback_periods,
+            # ステップ1: 手動特徴量を計算
+            result_df = self._step1_manual_features(
+                ohlcv_data, funding_rate_data, open_interest_data,
+                fear_greed_data, lookback_periods
             )
 
-            manual_time = time.time() - manual_start_time
-            manual_feature_count = len(result_df.columns)
-            logger.info(
-                f"手動特徴量生成完了: {manual_feature_count}個 ({manual_time:.2f}秒)"
-            )
-
-            # 1.5. 暗号通貨特化特徴量を追加
-            logger.info("暗号通貨特化特徴量を計算中...")
-            crypto_start_time = time.time()
-
-            try:
-                result_df = self.crypto_features.create_comprehensive_features(
-                    result_df, lookback_periods
-                )
-                crypto_time = time.time() - crypto_start_time
-                crypto_feature_count = len(result_df.columns) - manual_feature_count
-                logger.info(
-                    f"暗号通貨特化特徴量生成完了: {crypto_feature_count}個 ({crypto_time:.2f}秒)"
-                )
-            except Exception as e:
-                logger.warning(f"暗号通貨特化特徴量生成でエラー: {e}")
-                crypto_time = 0
-                crypto_feature_count = 0
-
-            # 1.6. 最適化された特徴量を追加
-            logger.info("最適化された特徴量を計算中...")
-            optimized_start_time = time.time()
-
-            try:
-                result_df = self.optimized_features.create_optimized_features(
-                    result_df, lookback_periods
-                )
-                optimized_time = time.time() - optimized_start_time
-                optimized_feature_count = (
-                    len(result_df.columns) - manual_feature_count - crypto_feature_count
-                )
-                logger.info(
-                    f"最適化特徴量生成完了: {optimized_feature_count}個 ({optimized_time:.2f}秒)"
-                )
-            except Exception as e:
-                logger.warning(f"最適化特徴量生成でエラー: {e}")
-                optimized_time = 0
-                optimized_feature_count = 0
-
-            # 2. TSFresh特徴量を追加
-            tsfresh_feature_count = 0
-            tsfresh_time = 0
-
+            # ステップ2: TSFresh特徴量を追加 + 特徴量選択
             if self.automl_config.tsfresh.enabled:
-                logger.info("TSFresh特徴量を計算中...")
-                tsfresh_start_time = time.time()
-
-                result_df = self.tsfresh_calculator.calculate_tsfresh_features(
-                    df=result_df,
-                    target=target,
-                    feature_selection=self.automl_config.tsfresh.feature_selection,
+                result_df = self._step2_tsfresh_features(
+                    result_df, target, max_features_per_step
                 )
 
-                tsfresh_time = time.time() - tsfresh_start_time
-                tsfresh_feature_count = len(result_df.columns) - manual_feature_count
-                logger.info(
-                    f"TSFresh特徴量追加完了: {tsfresh_feature_count}個 ({tsfresh_time:.2f}秒)"
+            # ステップ3: AutoFeat特徴量を追加 + 特徴量選択
+            if self.automl_config.autofeat.enabled:
+                result_df = self._step3_autofeat_features(
+                    result_df, target, max_features_per_step
                 )
 
-            # 3. Featuretools特徴量を追加
-            featuretools_feature_count = 0
-            featuretools_time = 0
+            # 最終的な特徴量統計を記録
+            final_feature_count = len(result_df.columns)
+            logger.info(f"🎯 ステップ・バイ・ステップ特徴量生成完了: 最終特徴量数 {final_feature_count}個")
 
-            if self.automl_config.featuretools.enabled:
-                logger.info("Featuretools DFS特徴量を計算中...")
-                featuretools_start_time = time.time()
-
-                current_feature_count = len(result_df.columns)
-
-                result_df = (
-                    self.featuretools_calculator.calculate_featuretools_features(
-                        df=result_df,
-                        max_depth=self.automl_config.featuretools.max_depth,
-                        max_features=self.automl_config.featuretools.max_features,
-                    )
-                )
-
-                featuretools_time = time.time() - featuretools_start_time
-                featuretools_feature_count = (
-                    len(result_df.columns) - current_feature_count
-                )
-                logger.info(
-                    f"Featuretools特徴量追加完了: {featuretools_feature_count}個 ({featuretools_time:.2f}秒)"
-                )
-
-            # 4. AutoFeat特徴量生成を実行
-            autofeat_feature_count = 0
-            autofeat_time = 0
-
-            if self.automl_config.autofeat.enabled and target is not None:
-                logger.info("AutoFeat自動特徴量生成を実行中...")
-                autofeat_start_time = time.time()
-
-                current_feature_count = len(result_df.columns)
-
-                # データサイズに基づくメモリ推奨設定を取得
-                data_size_mb = result_df.memory_usage(deep=True).sum() / 1024 / 1024
-                memory_recommendations = (
-                    self.performance_optimizer.get_memory_recommendations(
-                        data_size_mb, len(result_df.columns)
-                    )
-                )
-
-                # システムメモリ情報を取得
-                memory_info = get_system_memory_info()
-                log_memory_usage("AutoFeat処理開始前")
-
-                # メモリ可用性をチェック
-                estimated_memory_mb = data_size_mb * 3  # 概算でデータサイズの3倍
-                if not check_memory_availability(estimated_memory_mb):
-                    logger.warning(
-                        f"メモリ不足の可能性: 推定必要量 {estimated_memory_mb:.1f}MB"
-                    )
-
-                # DataFrameのメモリ最適化を事前に実行
-                result_df = optimize_dataframe_dtypes(
-                    result_df, aggressive=data_size_mb > 100
-                )
-
-                logger.info(
-                    f"データサイズ: {data_size_mb:.2f}MB, メモリ推奨設定: {memory_recommendations}, "
-                    f"システムメモリ使用率: {memory_info.get('used_percent', 0):.1f}%"
-                )
-
-                # メモリ効率的な処理でAutoFeat特徴量生成を実行
-                with memory_efficient_processing("AutoFeat特徴量生成"):
-                    with self.performance_optimizer.monitor_memory_usage(
-                        "AutoFeat特徴量生成"
-                    ):
-                        # AutoFeatCalculatorをコンテキストマネージャーとして使用（メモリリーク防止）
-                        with self.autofeat_calculator as calculator:
-                            # AutoFeatで特徴量を生成
-                            generated_df, generation_info = (
-                                calculator.generate_features(
-                                    df=result_df,
-                                    target=target,
-                                    task_type="regression",  # デフォルトは回帰
-                                    max_features=self.automl_config.autofeat.max_features,
-                                )
-                            )
-
-                            # 生成された特徴量で置き換え
-                            if "error" not in generation_info:
-                                # 生成されたDataFrameもメモリ最適化
-                                result_df = optimize_dataframe_dtypes(
-                                    generated_df, aggressive=data_size_mb > 100
-                                )
-                                autofeat_feature_count = generation_info.get(
-                                    "generated_features", 0
-                                )
-
-                                # 生成情報を統計に追加
-                                self.last_enhancement_stats[
-                                    "autofeat_generation_info"
-                                ] = generation_info
-
-                            # AutoFeatモデルのメモリクリーンアップ
-                            self.performance_optimizer.cleanup_autofeat_memory(
-                                calculator.autofeat_model
-                            )
-
-                            # 処理後のメモリ状況をログ出力
-                            log_memory_usage("AutoFeat処理完了後")
-
-                autofeat_time = time.time() - autofeat_start_time
-                logger.info(
-                    f"AutoFeat特徴量生成完了: {autofeat_feature_count}個追加 ({autofeat_time:.2f}秒)"
-                )
-
-            # 5. 統計情報を保存
+            # 統計情報を更新
             total_time = time.time() - start_time
-            total_features = len(result_df.columns)
-
-            self.last_enhancement_stats.update(
-                {
-                    "manual_features": manual_feature_count,
-                    "tsfresh_features": tsfresh_feature_count,
-                    "featuretools_features": featuretools_feature_count,
-                    "autofeat_features": autofeat_feature_count,
-                    "total_features": total_features,
-                    "manual_time": manual_time,
-                    "tsfresh_time": tsfresh_time,
-                    "featuretools_time": featuretools_time,
-                    "autofeat_time": autofeat_time,
-                    "total_time": total_time,
-                    "data_rows": len(result_df),
-                    "automl_config_used": self.automl_config.to_dict(),
-                }
-            )
-
-            logger.info(
-                f"拡張特徴量生成完了: 総計{total_features}個の特徴量 "
-                f"(手動:{manual_feature_count}, 暗号通貨特化:{crypto_feature_count}, "
-                f"最適化:{optimized_feature_count}, TSFresh:{tsfresh_feature_count}, "
-                f"Featuretools:{featuretools_feature_count}, AutoFeat:{autofeat_feature_count}) "
-                f"処理時間:{total_time:.2f}秒"
-            )
-
-            # 5. 統合特徴量選択（手動 + AutoML特徴量の冗長性除去）
-            if target is not None and len(result_df.columns) > 0:
-                logger.info("統合特徴量選択を実行中...")
-                integrated_start_time = time.time()
-
-                result_df, selection_info = self._perform_integrated_feature_selection(
-                    result_df, target, manual_feature_count
-                )
-
-                integrated_time = time.time() - integrated_start_time
-                final_feature_count = len(result_df.columns)
-
-                logger.info(
-                    f"統合特徴量選択完了: {total_features}個 → {final_feature_count}個 "
-                    f"({integrated_time:.2f}秒)"
-                )
-
-                # 選択情報を統計に追加
-                self.last_enhancement_stats["integrated_selection_info"] = (
-                    selection_info
-                )
-
-                # 最終特徴量数を更新
-                total_features = final_feature_count
-
-            # 最終的なメモリクリーンアップ
-            self.performance_optimizer.force_garbage_collection()
-
-            # メモリ統計をログ出力
-            memory_stats = self.performance_optimizer._get_memory_usage()
-            logger.info(f"特徴量生成完了時メモリ使用量: {memory_stats:.2f}MB")
+            self.last_enhancement_stats.update({
+                "total_features": final_feature_count,
+                "total_time": total_time,
+                "data_rows": len(result_df),
+                "automl_config_used": self.automl_config.to_dict(),
+                "processing_method": "step_by_step"
+            })
 
             return result_df
 
         except Exception as e:
             logger.error(f"拡張特徴量計算エラー: {e}")
+            raise
+
+    def _step1_manual_features(
+        self,
+        ohlcv_data: pd.DataFrame,
+        funding_rate_data: Optional[pd.DataFrame] = None,
+        open_interest_data: Optional[pd.DataFrame] = None,
+        fear_greed_data: Optional[pd.DataFrame] = None,
+        lookback_periods: Optional[Dict[str, int]] = None,
+    ) -> pd.DataFrame:
+        """ステップ1: 手動特徴量を計算"""
+        logger.info("📊 ステップ1: 手動特徴量を計算中...")
+        start_time = time.time()
+
+        result_df = self.calculate_advanced_features(
+            ohlcv_data=ohlcv_data,
+            funding_rate_data=funding_rate_data,
+            open_interest_data=open_interest_data,
+            fear_greed_data=fear_greed_data,
+            lookback_periods=lookback_periods,
+        )
+
+        manual_time = time.time() - start_time
+        manual_feature_count = len(result_df.columns)
+
+        # 統計情報を記録
+        self.last_enhancement_stats.update({
+            "manual_features": manual_feature_count,
+            "manual_time": manual_time,
+        })
+
+        logger.info(f"✅ ステップ1完了: {manual_feature_count}個の手動特徴量 ({manual_time:.2f}秒)")
+        return result_df
+
+    def _step2_tsfresh_features(
+        self,
+        df: pd.DataFrame,
+        target: Optional[pd.Series],
+        max_features: int = 100,
+    ) -> pd.DataFrame:
+        """ステップ2: TSFresh特徴量を追加 + 特徴量選択"""
+        logger.info("🤖 ステップ2: TSFresh特徴量を計算中...")
+        start_time = time.time()
+        initial_feature_count = len(df.columns)
+
+        # TSFresh特徴量を計算
+        result_df = self.tsfresh_calculator.calculate_tsfresh_features(
+            df=df,
+            target=target,
+            feature_selection=self.automl_config.tsfresh.feature_selection,
+        )
+
+        # 特徴量数が制限を超えている場合は選択を実行
+        if len(result_df.columns) > max_features:
+            logger.info(f"特徴量数が制限({max_features})を超過。特徴量選択を実行中...")
+            result_df = self._select_top_features(result_df, target, max_features)
+
+        tsfresh_time = time.time() - start_time
+        added_features = len(result_df.columns) - initial_feature_count
+
+        # 統計情報を記録
+        self.last_enhancement_stats.update({
+            "tsfresh_features": added_features,
+            "tsfresh_time": tsfresh_time,
+        })
+
+        logger.info(f"✅ ステップ2完了: {added_features}個のTSFresh特徴量追加 ({tsfresh_time:.2f}秒)")
+        return result_df
+
+    def _step3_autofeat_features(
+        self,
+        df: pd.DataFrame,
+        target: Optional[pd.Series],
+        max_features: int = 100,
+    ) -> pd.DataFrame:
+        """ステップ3: AutoFeat特徴量を追加 + 特徴量選択"""
+        if target is None:
+            logger.warning("ターゲット変数がないため、AutoFeat特徴量生成をスキップします")
+            return df
+
+        logger.info("🧬 ステップ3: AutoFeat特徴量を計算中...")
+        start_time = time.time()
+        initial_feature_count = len(df.columns)
+
+        # AutoFeat特徴量を計算
+        result_df, generation_info = self.autofeat_calculator.generate_features(
+            df=df,
+            target=target,
+            task_type="regression",
+            max_features=self.automl_config.autofeat.max_features,
+        )
+
+        # 特徴量数が制限を超えている場合は選択を実行
+        if len(result_df.columns) > max_features:
+            logger.info(f"特徴量数が制限({max_features})を超過。特徴量選択を実行中...")
+            result_df = self._select_top_features(result_df, target, max_features)
+
+        autofeat_time = time.time() - start_time
+        added_features = len(result_df.columns) - initial_feature_count
+
+        # 統計情報を記録
+        self.last_enhancement_stats.update({
+            "autofeat_features": added_features,
+            "autofeat_time": autofeat_time,
+        })
+
+        logger.info(f"✅ ステップ3完了: {added_features}個のAutoFeat特徴量追加 ({autofeat_time:.2f}秒)")
+        return result_df
+
+    def _select_top_features(
+        self,
+        df: pd.DataFrame,
+        target: Optional[pd.Series],
+        max_features: int,
+    ) -> pd.DataFrame:
+        """特徴量選択を実行して上位特徴量を選択"""
+        if target is None or len(df.columns) <= max_features:
+            return df
+
+        try:
+            from sklearn.feature_selection import SelectKBest, f_regression
+            from sklearn.impute import SimpleImputer
+
+            logger.info(f"特徴量選択を実行中: {len(df.columns)} → {max_features}個")
+
+            # 欠損値を補完
+            imputer = SimpleImputer(strategy='median')
+            X_imputed = imputer.fit_transform(df)
+
+            # 特徴量選択を実行
+            selector = SelectKBest(score_func=f_regression, k=max_features)
+            X_selected = selector.fit_transform(X_imputed, target)
+
+            # 選択された特徴量のカラム名を取得
+            selected_features = df.columns[selector.get_support()]
+            result_df = pd.DataFrame(X_selected, columns=selected_features, index=df.index)
+
+            logger.info(f"特徴量選択完了: {len(selected_features)}個の特徴量を選択")
+            return result_df
+
+        except Exception as e:
+            logger.warning(f"特徴量選択でエラー: {e}. 元のDataFrameを返します")
+            return df
             # エラー時は手動特徴量のみ返す
             return self.calculate_advanced_features(
                 ohlcv_data=ohlcv_data,
@@ -610,18 +538,10 @@ class EnhancedFeatureEngineeringService(FeatureEngineeringService):
                     # TSFreshCalculatorの設定も更新
                     self.tsfresh_calculator.config = self.automl_config.tsfresh
 
-            # Featuretools設定の更新
+            # Featuretools設定は削除されました（メモリ最適化のため）
+            # 後方互換性のため設定は無視されます
             if "featuretools" in config_dict:
-                featuretools_config = config_dict["featuretools"]
-                if isinstance(featuretools_config, dict):
-                    for key, value in featuretools_config.items():
-                        if hasattr(self.automl_config.featuretools, key):
-                            setattr(self.automl_config.featuretools, key, value)
-
-                    # FeaturetoolsCalculatorの設定も更新
-                    self.featuretools_calculator.config = (
-                        self.automl_config.featuretools
-                    )
+                logger.info("Featuretools設定は削除されました。設定は無視されます。")
 
             # AutoFeat設定の更新
             if "autofeat" in config_dict:
@@ -656,16 +576,49 @@ class EnhancedFeatureEngineeringService(FeatureEngineeringService):
         """利用可能なAutoML特徴量のリストを取得"""
         return {
             "tsfresh": self.tsfresh_calculator.get_feature_names(),
-            "featuretools": self.featuretools_calculator.get_feature_names(),
             "autofeat": self.autofeat_calculator.get_feature_names(),
         }
 
     def clear_automl_cache(self):
         """AutoML特徴量のキャッシュをクリア"""
-        self.tsfresh_calculator.clear_cache()
-        self.featuretools_calculator.clear_entityset()
-        self.autofeat_calculator.clear_model()
-        logger.info("AutoML特徴量キャッシュをクリアしました")
+        try:
+            self.tsfresh_calculator.clear_cache()
+            self.autofeat_calculator.clear_model()
+
+            # 強制ガベージコレクション
+            import gc
+            collected = gc.collect()
+
+            logger.info(f"AutoML特徴量キャッシュをクリアしました（{collected}オブジェクト回収）")
+        except Exception as e:
+            logger.error(f"AutoMLキャッシュクリアエラー: {e}")
+
+    def cleanup_resources(self):
+        """リソースの完全クリーンアップ"""
+        try:
+            logger.info("EnhancedFeatureEngineeringServiceのリソースクリーンアップを開始")
+
+            # AutoMLキャッシュをクリア
+            self.clear_automl_cache()
+
+            # 統計情報をクリア
+            self.last_enhancement_stats.clear()
+
+            # 各計算機のリソースを個別にクリーンアップ
+            if hasattr(self.tsfresh_calculator, 'cleanup'):
+                self.tsfresh_calculator.cleanup()
+
+            if hasattr(self.autofeat_calculator, 'cleanup'):
+                self.autofeat_calculator.cleanup()
+
+            # パフォーマンス最適化クラスのクリーンアップ
+            if hasattr(self.performance_optimizer, 'cleanup'):
+                self.performance_optimizer.cleanup()
+
+            logger.info("EnhancedFeatureEngineeringServiceのリソースクリーンアップ完了")
+
+        except Exception as e:
+            logger.error(f"EnhancedFeatureEngineeringServiceクリーンアップエラー: {e}")
 
     def validate_automl_config(self, config_dict: Dict[str, Any]) -> Dict[str, Any]:
         """AutoML設定の妥当性を検証"""
@@ -705,31 +658,11 @@ class EnhancedFeatureEngineeringService(FeatureEngineeringService):
                             "parallel_jobsが大きすぎます。システムリソースを確認してください"
                         )
 
-            # Featuretools設定の検証
+            # Featuretools設定は削除されました（メモリ最適化のため）
             if "featuretools" in config_dict:
-                featuretools_config = config_dict["featuretools"]
-
-                if "max_depth" in featuretools_config:
-                    depth = featuretools_config["max_depth"]
-                    if not isinstance(depth, int) or depth <= 0:
-                        validation_result["errors"].append(
-                            "max_depthは正の整数である必要があります"
-                        )
-                    elif depth > 5:
-                        validation_result["warnings"].append(
-                            "max_depthが大きすぎます。計算時間が長くなる可能性があります"
-                        )
-
-                if "max_features" in featuretools_config:
-                    features = featuretools_config["max_features"]
-                    if not isinstance(features, int) or features <= 0:
-                        validation_result["errors"].append(
-                            "max_featuresは正の整数である必要があります"
-                        )
-                    elif features > 200:
-                        validation_result["warnings"].append(
-                            "max_featuresが大きすぎます。メモリ使用量が増加する可能性があります"
-                        )
+                validation_result["warnings"].append(
+                    "Featuretools設定は無視されます（メモリ最適化のため削除されました）"
+                )
 
             validation_result["valid"] = len(validation_result["errors"]) == 0
 

@@ -10,6 +10,7 @@ import logging
 import pandas as pd
 import numpy as np
 from typing import Dict, Optional, List
+from ....utils.data_preprocessing import data_preprocessor
 
 
 logger = logging.getLogger(__name__)
@@ -92,13 +93,14 @@ class EnhancedCryptoFeatures:
         if "fear_greed_value" not in result_df.columns:
             result_df["fear_greed_value"] = 50  # 中立値
 
-        # 前方補完
-        for col in ["open_interest", "funding_rate", "fear_greed_value"]:
-            result_df[col] = (
-                result_df[col]
-                .ffill()
-                .fillna(result_df[col].median() if result_df[col].notna().any() else 0)
-            )
+        # 統計的手法による補完
+        optional_columns = ["open_interest", "funding_rate", "fear_greed_value"]
+        result_df = data_preprocessor.transform_missing_values(
+            result_df,
+            strategy="median",
+            columns=optional_columns,
+            fit_if_needed=True
+        )
 
         return result_df
 
@@ -411,15 +413,14 @@ class EnhancedCryptoFeatures:
         # 無限値をNaNに変換
         result_df = result_df.replace([np.inf, -np.inf], np.nan)
 
-        # 数値カラムのNaN補完
-        numeric_cols = result_df.select_dtypes(include=[np.number]).columns
-        for col in numeric_cols:
-            if result_df[col].isna().any():
-                # 中央値で補完
-                median_val = result_df[col].median()
-                if pd.isna(median_val):
-                    median_val = 0
-                result_df[col] = result_df[col].fillna(median_val)
+        # 統計的手法による数値カラムの補完
+        numeric_cols = result_df.select_dtypes(include=[np.number]).columns.tolist()
+        result_df = data_preprocessor.transform_missing_values(
+            result_df,
+            strategy="median",
+            columns=numeric_cols,
+            fit_if_needed=True
+        )
 
         return result_df
 

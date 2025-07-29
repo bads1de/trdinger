@@ -14,6 +14,7 @@ from typing import Dict, Any, Optional, Callable
 
 from .config import ml_config
 from ...utils.unified_error_handler import safe_ml_operation
+from ...utils.data_preprocessing import data_preprocessor
 from .ensemble.ensemble_trainer import EnsembleTrainer
 from .model_manager import model_manager
 from ..optimization.optuna_optimizer import OptunaOptimizer, ParameterSpace
@@ -303,7 +304,10 @@ class MLTrainingService:
                 logger.warning(
                     "特徴量カラムが設定されていません。利用可能な全カラムを使用します。"
                 )
-                features_selected = features.fillna(0)
+                # 統計的手法で欠損値を補完
+                features_selected = data_preprocessor.transform_missing_values(
+                    features, strategy="median"
+                )
             else:
                 # 特徴量を選択・整形
                 available_columns = [
@@ -332,8 +336,11 @@ class MLTrainingService:
                     )
                     return self.config.prediction.get_default_predictions()
                 else:
-                    # 利用可能な特徴量のみを使用
-                    features_selected = features[available_columns].fillna(0)
+                    # 利用可能な特徴量のみを使用し、統計的手法で欠損値を補完
+                    features_subset = features[available_columns]
+                    features_selected = data_preprocessor.transform_missing_values(
+                        features_subset, strategy="median"
+                    )
 
                     # 不足している特徴量を一度にまとめて追加（DataFrame断片化を防ぐ）
                     if missing_columns:
@@ -649,6 +656,29 @@ class MLTrainingService:
                 return 0.0
 
         return objective_function
+
+    def cleanup_resources(self):
+        """リソースの完全クリーンアップ"""
+        try:
+            logger.info("MLTrainingServiceのリソースクリーンアップを開始")
+
+            # トレーナーのクリーンアップ
+            if hasattr(self.trainer, 'cleanup_resources'):
+                self.trainer.cleanup_resources()
+
+            # 最適化器のクリーンアップ
+            if hasattr(self, 'optimizer') and self.optimizer:
+                if hasattr(self.optimizer, 'cleanup'):
+                    self.optimizer.cleanup()
+
+            # 強制ガベージコレクション
+            import gc
+            collected = gc.collect()
+
+            logger.info(f"MLTrainingServiceのリソースクリーンアップ完了（{collected}オブジェクト回収）")
+
+        except Exception as e:
+            logger.error(f"MLTrainingServiceクリーンアップエラー: {e}")
 
 
 # グローバルインスタンス（デフォルトはアンサンブル、AutoML設定なし）

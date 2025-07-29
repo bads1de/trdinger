@@ -19,7 +19,6 @@ from app.utils.unified_error_handler import UnifiedErrorHandler
 from app.api.automl_features import (
     AutoMLConfigModel,
     TSFreshConfigModel,
-    FeaturetoolsConfigModel,
     AutoFeatConfigModel,
 )
 

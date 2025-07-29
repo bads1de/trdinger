@@ -11,9 +11,9 @@ export interface AutoMLConfig {
     performance_mode: string;
   };
   featuretools: {
-    enabled: boolean;
-    max_depth: number;
-    max_features: number;
+    enabled: false; // 削除済み - 後方互換性のため
+    max_depth: 0;
+    max_features: 0;
   };
   autofeat: {
     enabled: boolean;
