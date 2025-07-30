@@ -55,7 +55,6 @@ class PerformanceOptimizer:
             max_cache_size_mb: 最大キャッシュサイズ（MB）
         """
         self.cache_dir = Path(cache_dir)
-        self.cache_dir.mkdir(parents=True, exist_ok=True)
         self.max_cache_size_mb = max_cache_size_mb
         self.cache_index = {}
         self.performance_stats = {}
