@@ -389,6 +389,7 @@ class MLTrainingOrchestrationService:
             self._cleanup_tsfresh_resources()
             self._cleanup_enhanced_feature_service()
             self._cleanup_ml_training_service()
+            self._cleanup_data_preprocessor()
             # Featuretoolsは削除されたため、クリーンアップ不要
 
             # 強制ガベージコレクション
@@ -513,3 +514,19 @@ class MLTrainingOrchestrationService:
 
         except Exception as e:
             logger.warning(f"MLTrainingServiceクリーンアップエラー: {e}")
+
+    def _cleanup_data_preprocessor(self):
+        """DataPreprocessor関連リソースのクリーンアップ"""
+        try:
+            logger.debug("DataPreprocessorリソースをクリーンアップ中")
+
+            # グローバルDataPreprocessorインスタンスのクリーンアップ
+            from app.utils.data_preprocessing import data_preprocessor
+
+            if hasattr(data_preprocessor, 'clear_cache'):
+                data_preprocessor.clear_cache()
+
+            logger.debug("DataPreprocessorリソースクリーンアップ完了")
+
+        except Exception as e:
+            logger.warning(f"DataPreprocessorクリーンアップエラー: {e}")

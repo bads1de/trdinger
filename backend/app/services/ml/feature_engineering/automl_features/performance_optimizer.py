@@ -666,3 +666,29 @@ class PerformanceOptimizer:
         except Exception as e:
             logger.error(f"pandasメモリ最適化エラー: {e}")
             return df
+
+    def cleanup(self):
+        """
+        PerformanceOptimizerのリソースクリーンアップ
+        EnhancedFeatureEngineeringServiceから呼び出される統一インターフェース
+        """
+        try:
+            logger.debug("PerformanceOptimizerのクリーンアップを開始")
+
+            # キャッシュインデックスをクリア
+            if hasattr(self, 'cache_index'):
+                self.cache_index.clear()
+
+            # NumPyキャッシュのクリア
+            self._clear_numpy_cache()
+
+            # Scikit-learnキャッシュのクリア
+            self._clear_sklearn_cache()
+
+            # 強制ガベージコレクション
+            self.force_garbage_collection()
+
+            logger.debug("PerformanceOptimizerのクリーンアップ完了")
+
+        except Exception as e:
+            logger.error(f"PerformanceOptimizerクリーンアップエラー: {e}")

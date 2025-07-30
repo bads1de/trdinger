@@ -950,3 +950,48 @@ class BaseMLTrainer(ABC):
         self.is_trained = True
         logger.info(f"モデル読み込み完了: {model_path}")
         return True
+
+    def cleanup_resources(self):
+        """
+        BaseMLTrainerのリソースクリーンアップ
+        メモリーリーク防止のため、AutoMLコンポーネントを含む全リソースをクリーンアップ
+        """
+        try:
+            logger.info("BaseMLTrainerのリソースクリーンアップを開始")
+
+            # 特徴量サービスのクリーンアップ
+            if self.feature_service is not None:
+                try:
+                    if hasattr(self.feature_service, 'cleanup_resources'):
+                        self.feature_service.cleanup_resources()
+                    elif hasattr(self.feature_service, 'clear_automl_cache'):
+                        self.feature_service.clear_automl_cache()
+
+                    logger.debug("特徴量サービスをクリーンアップしました")
+
+                except Exception as feature_error:
+                    logger.warning(f"特徴量サービスクリーンアップ警告: {feature_error}")
+
+            # モデルとスケーラーをクリア
+            self.model = None
+            self.scaler = None
+            self.feature_columns = None
+            self.is_trained = False
+
+            # AutoML設定をクリア
+            self.automl_config = None
+
+            # 強制ガベージコレクション
+            import gc
+            collected = gc.collect()
+
+            logger.info(f"BaseMLTrainerリソースクリーンアップ完了（{collected}オブジェクト回収）")
+
+        except Exception as e:
+            logger.error(f"BaseMLTrainerクリーンアップエラー: {e}")
+            # エラーが発生してもクリーンアップは続行
+            self.model = None
+            self.scaler = None
+            self.feature_columns = None
+            self.is_trained = False
+            self.automl_config = None

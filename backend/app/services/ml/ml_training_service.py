@@ -429,6 +429,7 @@ class MLTrainingService:
         Returns:
             学習結果の辞書（最適化情報を含む）
         """
+        optimizer = None
         try:
             # 使用するトレーナーを決定
             effective_trainer = trainer if trainer is not None else self.trainer
@@ -494,6 +495,13 @@ class MLTrainingService:
             logger.info(f"📈 総評価回数: {optimization_result.total_evaluations}")
             logger.info(f"⏱️  最適化時間: {optimization_result.optimization_time:.2f}秒")
 
+            # Optunaリソースをクリーンアップ（メモリーリーク防止）
+            try:
+                optimizer.cleanup()
+                logger.debug("OptunaOptimizer リソースをクリーンアップしました")
+            except Exception as cleanup_error:
+                logger.warning(f"OptunaOptimizer クリーンアップ警告: {cleanup_error}")
+
             # 最適化されたパラメータで最終モデルを学習
             final_training_params = {
                 **training_params,
@@ -522,6 +530,14 @@ class MLTrainingService:
         except Exception as e:
             logger.error(f"最適化学習中にエラーが発生しました: {e}")
             raise
+        finally:
+            # 例外が発生した場合でもOptunaリソースをクリーンアップ
+            if optimizer is not None:
+                try:
+                    optimizer.cleanup()
+                    logger.debug("例外処理でOptunaOptimizer リソースをクリーンアップしました")
+                except Exception as cleanup_error:
+                    logger.warning(f"例外処理でのOptunaOptimizer クリーンアップ警告: {cleanup_error}")
 
     def _prepare_parameter_space(
         self, parameter_space_config: Dict[str, Dict[str, Any]]

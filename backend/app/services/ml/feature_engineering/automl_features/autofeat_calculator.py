@@ -629,15 +629,20 @@ class AutoFeatCalculator:
         try:
             # AutoFeatモデルの詳細なクリーンアップ
             if self.autofeat_model is not None:
-                # AutoFeatモデル内部の属性をクリア
-                if hasattr(self.autofeat_model, "feateng_cols_"):
-                    self.autofeat_model.feateng_cols_ = None
-                if hasattr(self.autofeat_model, "featsel_"):
-                    self.autofeat_model.featsel_ = None
-                if hasattr(self.autofeat_model, "model_"):
-                    self.autofeat_model.model_ = None
-                if hasattr(self.autofeat_model, "scaler_"):
-                    self.autofeat_model.scaler_ = None
+                # AutoFeatモデル内部の属性を徹底的にクリア
+                autofeat_attrs = [
+                    "feateng_cols_", "featsel_", "model_", "scaler_",
+                    "X_", "y_", "feature_names_in_", "n_features_in_",
+                    "feature_importances_", "coef_", "intercept_",
+                    "_feature_names", "_feature_types", "_transformations"
+                ]
+
+                for attr in autofeat_attrs:
+                    if hasattr(self.autofeat_model, attr):
+                        try:
+                            setattr(self.autofeat_model, attr, None)
+                        except Exception as attr_error:
+                            logger.debug(f"属性{attr}のクリア中にエラー: {attr_error}")
 
                 # モデル自体をクリア
                 self.autofeat_model = None
@@ -647,6 +652,14 @@ class AutoFeatCalculator:
             self.selected_features = None
             self.feature_scores = {}
             self.last_selection_info = {}
+
+            # パフォーマンス最適化ツールもクリア
+            if hasattr(self, 'performance_optimizer') and self.performance_optimizer:
+                try:
+                    if hasattr(self.performance_optimizer, 'clear'):
+                        self.performance_optimizer.clear()
+                except Exception as perf_error:
+                    logger.debug(f"パフォーマンス最適化ツールクリア中にエラー: {perf_error}")
 
             # 強制ガベージコレクション
             self._force_garbage_collection()
@@ -660,6 +673,18 @@ class AutoFeatCalculator:
             self.selected_features = None
             self.feature_scores = {}
             self.last_selection_info = {}
+
+    def cleanup(self):
+        """
+        AutoFeatCalculatorのリソースクリーンアップ
+        EnhancedFeatureEngineeringServiceから呼び出される統一インターフェース
+        """
+        try:
+            logger.debug("AutoFeatCalculatorのクリーンアップを開始")
+            self.clear_model()
+            logger.debug("AutoFeatCalculatorのクリーンアップ完了")
+        except Exception as e:
+            logger.error(f"AutoFeatCalculatorクリーンアップエラー: {e}")
 
     def _generate_features_single_batch(
         self, df: pd.DataFrame, target: pd.Series, optimized_config: AutoFeatConfig

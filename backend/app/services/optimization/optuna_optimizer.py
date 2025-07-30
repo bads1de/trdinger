@@ -103,6 +103,35 @@ class OptunaOptimizer:
         )
         return result
 
+    def cleanup(self):
+        """
+        Optunaリソースのクリーンアップ
+        メモリーリーク防止のため、最適化完了後に呼び出す
+        """
+        if self.study is not None:
+            try:
+                # Studyの内部データをクリア
+                if hasattr(self.study, 'trials'):
+                    self.study.trials.clear()
+
+                # Studyオブジェクト自体をクリア
+                self.study = None
+
+                # 強制ガベージコレクション
+                import gc
+                collected = gc.collect()
+                logger.debug(f"OptunaOptimizer クリーンアップ: {collected}オブジェクト回収")
+
+            except Exception as e:
+                logger.error(f"OptunaOptimizer クリーンアップエラー: {e}")
+
+    def __del__(self):
+        """デストラクタでクリーンアップを確実に実行"""
+        try:
+            self.cleanup()
+        except Exception:
+            pass  # デストラクタでは例外を発生させない
+
     def _suggest_parameters(
         self, trial: optuna.Trial, parameter_space: Dict[str, ParameterSpace]
     ) -> Dict[str, Any]:

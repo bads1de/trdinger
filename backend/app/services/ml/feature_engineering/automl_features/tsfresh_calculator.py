@@ -628,3 +628,34 @@ class TSFreshFeatureCalculator:
                 MarketRegime.CALM: "低ボラティリティ、安定市場",
             }.get(self.current_market_regime, "不明"),
         }
+
+    def cleanup(self):
+        """
+        TSFreshCalculatorのリソースクリーンアップ
+        EnhancedFeatureEngineeringServiceから呼び出される統一インターフェース
+        """
+        try:
+            logger.debug("TSFreshCalculatorのクリーンアップを開始")
+
+            # キャッシュをクリア
+            self.clear_cache()
+
+            # その他の属性をクリア
+            self.selected_features = None
+            self.last_extraction_info = {}
+
+            # パフォーマンス最適化ツールのクリーンアップ
+            if hasattr(self.performance_optimizer, 'cleanup'):
+                try:
+                    self.performance_optimizer.cleanup()
+                except Exception as perf_error:
+                    logger.debug(f"パフォーマンス最適化ツールクリア中にエラー: {perf_error}")
+
+            # 強制ガベージコレクション
+            import gc
+            collected = gc.collect()
+
+            logger.debug(f"TSFreshCalculatorのクリーンアップ完了（{collected}オブジェクト回収）")
+
+        except Exception as e:
+            logger.error(f"TSFreshCalculatorクリーンアップエラー: {e}")
