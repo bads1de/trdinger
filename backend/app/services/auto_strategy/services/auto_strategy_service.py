@@ -129,7 +129,7 @@ class AutoStrategyService:
 
         # 3. 実験を作成（統合版）
         # フロントエンドから送信されたexperiment_idを使用
-        created_experiment_id = self.persistence_service.create_experiment(
+        self.persistence_service.create_experiment(
             experiment_id, experiment_name, ga_config, backtest_config
         )
 

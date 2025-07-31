@@ -19,7 +19,6 @@ from app.utils.unified_error_handler import (
     MLDataError,
     MLValidationError,
     unified_timeout_decorator,
-    unified_safe_operation,
     unified_operation_context,
 )
 from app.utils.data_preprocessing import data_preprocessor
@@ -29,7 +28,9 @@ from app.services.ml.feature_engineering.feature_engineering_service import (
 from app.services.ml.feature_engineering.enhanced_feature_engineering_service import (
     EnhancedFeatureEngineeringService,
 )
-from app.services.ml.feature_engineering.automl_features.automl_config import AutoMLConfig
+from app.services.ml.feature_engineering.automl_features.automl_config import (
+    AutoMLConfig,
+)
 from app.services.ml.ml_training_service import MLTrainingService
 from app.services.ml.model_manager import model_manager
 
@@ -104,10 +105,13 @@ class MLOrchestrator(MLPredictionInterface):
         # 既存の学習済みモデルを自動読み込み
         self._try_load_latest_model()
 
-    def _create_automl_config_from_dict(self, config_dict: Dict[str, Any]) -> AutoMLConfig:
+    def _create_automl_config_from_dict(
+        self, config_dict: Dict[str, Any]
+    ) -> AutoMLConfig:
         """辞書からAutoMLConfigオブジェクトを作成"""
         from app.services.ml.feature_engineering.automl_features.automl_config import (
-            TSFreshConfig, AutoFeatConfig
+            TSFreshConfig,
+            AutoFeatConfig,
         )
 
         # TSFresh設定
@@ -194,7 +198,9 @@ class MLOrchestrator(MLPredictionInterface):
 
                 # 特徴量計算が失敗した場合はエラーを発生させる
                 if features_df is None or features_df.empty:
-                    error_msg = "特徴量計算が失敗しました。MLモデルの予測を実行できません。"
+                    error_msg = (
+                        "特徴量計算が失敗しました。MLモデルの予測を実行できません。"
+                    )
                     logger.error(error_msg)
                     raise MLDataError(error_msg)
 
@@ -216,7 +222,9 @@ class MLOrchestrator(MLPredictionInterface):
                 raise  # エラーを再発生させて処理を停止
             except Exception as e:
                 logger.error(f"ML指標計算で予期しないエラー: {e}")
-                raise MLDataError(f"ML指標計算で予期しないエラーが発生しました: {e}") from e
+                raise MLDataError(
+                    f"ML指標計算で予期しないエラーが発生しました: {e}"
+                ) from e
 
     def calculate_single_ml_indicator(
         self,
@@ -285,7 +293,6 @@ class MLOrchestrator(MLPredictionInterface):
         Returns:
             モデル状態の辞書
         """
-        
 
         status = {
             "is_model_loaded": self.is_model_loaded,
@@ -379,9 +386,7 @@ class MLOrchestrator(MLPredictionInterface):
                 if feature_importance:
                     # 上位N個を取得
                     sorted_importance = sorted(
-                        feature_importance.items(),
-                        key=lambda x: x[1],
-                        reverse=True
+                        feature_importance.items(), key=lambda x: x[1], reverse=True
                     )[:top_n]
                     return dict(sorted_importance)
 
@@ -398,9 +403,7 @@ class MLOrchestrator(MLPredictionInterface):
                     if feature_importance:
                         # 上位N個を取得
                         sorted_importance = sorted(
-                            feature_importance.items(),
-                            key=lambda x: x[1],
-                            reverse=True
+                            feature_importance.items(), key=lambda x: x[1], reverse=True
                         )[:top_n]
                         logger.info(f"特徴量重要度を取得: {len(sorted_importance)}個")
                         return dict(sorted_importance)
@@ -493,7 +496,9 @@ class MLOrchestrator(MLPredictionInterface):
             logger.debug(f"変換後カラム名: {list(df_for_features.columns)}")
 
             # AutoML機能が有効な場合は拡張特徴量計算を実行
-            if self.enable_automl and isinstance(self.feature_service, EnhancedFeatureEngineeringService):
+            if self.enable_automl and isinstance(
+                self.feature_service, EnhancedFeatureEngineeringService
+            ):
                 logger.info("🤖 AutoML拡張特徴量計算を実行中...")
 
                 # ターゲット変数を計算（AutoML特徴量生成用）
@@ -523,23 +528,23 @@ class MLOrchestrator(MLPredictionInterface):
     def _calculate_target_for_automl(self, df: pd.DataFrame) -> Optional[pd.Series]:
         """AutoML特徴量生成用のターゲット変数を計算"""
         try:
-            if df is None or df.empty or 'Close' not in df.columns:
+            if df is None or df.empty or "Close" not in df.columns:
                 logger.warning("ターゲット変数計算用のデータが不足しています")
                 return None
 
             # 価格変化率をターゲット変数として使用
-            close_prices = df['Close']
+            close_prices = df["Close"]
             price_change = close_prices.pct_change()
 
             # 将来の価格変化を予測するため、1期間先にシフト
             target = price_change.shift(-1)
 
             # 統計的手法で欠損値を補完
-            target_df = pd.DataFrame({'target': target})
+            target_df = pd.DataFrame({"target": target})
             target_df = data_preprocessor.transform_missing_values(
                 target_df, strategy="median"
             )
-            target = target_df['target']
+            target = target_df["target"]
 
             logger.debug(f"ターゲット変数計算完了 - 形状: {target.shape}")
             return target
@@ -548,7 +553,9 @@ class MLOrchestrator(MLPredictionInterface):
             logger.error(f"ターゲット変数計算エラー: {e}")
             return None
 
-    def set_automl_enabled(self, enabled: bool, automl_config: Optional[Dict[str, Any]] = None):
+    def set_automl_enabled(
+        self, enabled: bool, automl_config: Optional[Dict[str, Any]] = None
+    ):
         """AutoML機能の有効/無効を設定"""
         try:
             self.enable_automl = enabled
@@ -557,19 +564,23 @@ class MLOrchestrator(MLPredictionInterface):
             if enabled:
                 # AutoML設定を作成
                 if automl_config:
-                    automl_config_obj = self._create_automl_config_from_dict(automl_config)
+                    automl_config_obj = self._create_automl_config_from_dict(
+                        automl_config
+                    )
                 else:
                     automl_config_obj = AutoMLConfig.get_financial_optimized_config()
 
                 # 既存のサービスをクリーンアップ
-                if hasattr(self.feature_service, 'cleanup_resources'):
+                if hasattr(self.feature_service, "cleanup_resources"):
                     self.feature_service.cleanup_resources()
 
-                self.feature_service = EnhancedFeatureEngineeringService(automl_config_obj)
+                self.feature_service = EnhancedFeatureEngineeringService(
+                    automl_config_obj
+                )
                 logger.info("🤖 AutoML特徴量エンジニアリングを有効化しました")
             else:
                 # 既存のサービスをクリーンアップ
-                if hasattr(self.feature_service, 'cleanup_resources'):
+                if hasattr(self.feature_service, "cleanup_resources"):
                     self.feature_service.cleanup_resources()
 
                 self.feature_service = FeatureEngineeringService()
@@ -587,9 +598,9 @@ class MLOrchestrator(MLPredictionInterface):
             "config": self.automl_config,
             "available_features": (
                 self.feature_service.get_available_automl_features()
-                if hasattr(self.feature_service, 'get_available_automl_features')
+                if hasattr(self.feature_service, "get_available_automl_features")
                 else {}
-            )
+            ),
         }
 
     def _safe_ml_prediction(self, features_df: pd.DataFrame) -> Dict[str, float]:
@@ -659,7 +670,9 @@ class MLOrchestrator(MLPredictionInterface):
         注意: エラーハンドリングの厳格化により、このメソッドは使用されなくなりました。
         エラー時はデフォルト値を返すのではなく、例外を発生させるべきです。
         """
-        logger.warning("_get_default_indicators は非推奨です。エラー時は例外を発生させてください。")
+        logger.warning(
+            "_get_default_indicators は非推奨です。エラー時は例外を発生させてください。"
+        )
         config = self.config.prediction
         return {
             "ML_UP_PROB": np.full(data_length, config.DEFAULT_UP_PROB),
