@@ -16,7 +16,7 @@ from app.services.data_collection.orchestration.data_collection_orchestration_se
 )
 from app.utils.unified_error_handler import UnifiedErrorHandler
 from database.connection import get_db, ensure_db_initialized
-from app.config.unified_config import unified_config
+
 
 logger = logging.getLogger(__name__)
 
@@ -52,7 +52,6 @@ async def collect_historical_data(
             raise HTTPException(
                 status_code=500, detail="データベースの初期化に失敗しました"
             )
-
 
         orchestration_service = DataCollectionOrchestrationService()
         return await orchestration_service.start_historical_data_collection(
@@ -137,7 +136,6 @@ async def collect_bulk_historical_data(
                 status_code=500, detail="データベースの初期化に失敗しました"
             )
 
-
         orchestration_service = DataCollectionOrchestrationService()
         return await orchestration_service.start_bulk_historical_data_collection(
             background_tasks, db
@@ -214,7 +212,6 @@ async def collect_all_data_bulk(
             raise HTTPException(
                 status_code=500, detail="データベースの初期化に失敗しました"
             )
-
 
         orchestration_service = DataCollectionOrchestrationService()
         return await orchestration_service.start_all_data_bulk_collection(

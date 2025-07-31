@@ -8,9 +8,9 @@ SimpleImputerを使用した高品質な欠損値補完を実装します。
 import logging
 import pandas as pd
 import numpy as np
-from typing import Dict, List, Optional, Union, Tuple
+from typing import Dict, List, Optional
 from sklearn.impute import SimpleImputer
-from sklearn.preprocessing import StandardScaler
+
 
 logger = logging.getLogger(__name__)
 

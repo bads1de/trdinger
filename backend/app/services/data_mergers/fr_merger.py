@@ -7,7 +7,7 @@ Funding Rate データのマージロジックを提供します。
 import logging
 import pandas as pd
 from datetime import datetime
-from typing import List, Optional
+from typing import List
 from database.repositories.funding_rate_repository import FundingRateRepository
 from database.models import FundingRateData
 
@@ -27,11 +27,7 @@ class FRMerger:
         self.fr_repo = fr_repo
 
     def merge_fr_data(
-        self, 
-        df: pd.DataFrame, 
-        symbol: str, 
-        start_date: datetime, 
-        end_date: datetime
+        self, df: pd.DataFrame, symbol: str, start_date: datetime, end_date: datetime
     ) -> pd.DataFrame:
         """
         Funding Rate データをマージ
@@ -49,7 +45,7 @@ class FRMerger:
             fr_data = self.fr_repo.get_funding_rate_data(
                 symbol=symbol, start_time=start_date, end_time=end_date
             )
-            
+
             logger.info(f"取得したFRデータ件数: {len(fr_data) if fr_data else 0}")
 
             if fr_data:
@@ -75,7 +71,9 @@ class FRMerger:
                     f"({valid_fr_count/len(df)*100:.1f}%)"
                 )
             else:
-                logger.warning(f"シンボル {symbol} のFunding Rateデータが見つかりませんでした。")
+                logger.warning(
+                    f"シンボル {symbol} のFunding Rateデータが見つかりませんでした。"
+                )
                 df["funding_rate"] = pd.NA
 
         except Exception as e:

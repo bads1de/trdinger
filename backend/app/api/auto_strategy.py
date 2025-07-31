@@ -1,9 +1,9 @@
 import logging
 
-from fastapi import APIRouter, Depends, BackgroundTasks, HTTPException, status
+from fastapi import APIRouter, Depends, BackgroundTasks, status
 from typing import Dict, Any, List, Optional
 from pydantic import BaseModel, Field
-from functools import lru_cache
+
 
 from app.services.auto_strategy import AutoStrategyService
 from app.services.auto_strategy.models.ga_config import GAConfig
@@ -263,7 +263,6 @@ async def get_experiment_results(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail=f"実験 {experiment_id} が見つかりません",
             )
-
 
         return orchestration_service.format_experiment_result(result)
 

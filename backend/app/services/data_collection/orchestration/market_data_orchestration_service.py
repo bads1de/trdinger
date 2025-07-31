@@ -6,7 +6,6 @@ import logging
 from typing import Dict, Any, Optional
 from sqlalchemy.orm import Session
 
-from app.config.unified_config import unified_config
 from database.repositories.ohlcv_repository import OHLCVRepository
 from app.utils.api_utils import DateTimeHelper, APIResponseHelper
 from app.utils.data_converter import OHLCVDataConverter

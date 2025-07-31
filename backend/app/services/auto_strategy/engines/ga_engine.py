@@ -9,7 +9,7 @@ import logging
 import random
 import numpy as np
 from typing import Dict, Any
-from deap import tools, algorithms
+from deap import tools
 
 from ..models.ga_config import GAConfig
 from ..factories.strategy_factory import StrategyFactory

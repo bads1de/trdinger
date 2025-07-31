@@ -111,8 +111,11 @@ class EnhancedFeatureEngineeringService(FeatureEngineeringService):
 
             # ステップ1: 手動特徴量を計算
             result_df = self._step1_manual_features(
-                ohlcv_data, funding_rate_data, open_interest_data,
-                fear_greed_data, lookback_periods
+                ohlcv_data,
+                funding_rate_data,
+                open_interest_data,
+                fear_greed_data,
+                lookback_periods,
             )
 
             # ステップ2: TSFresh特徴量を追加 + 特徴量選択
@@ -129,17 +132,21 @@ class EnhancedFeatureEngineeringService(FeatureEngineeringService):
 
             # 最終的な特徴量統計を記録
             final_feature_count = len(result_df.columns)
-            logger.info(f"🎯 ステップ・バイ・ステップ特徴量生成完了: 最終特徴量数 {final_feature_count}個")
+            logger.info(
+                f"🎯 ステップ・バイ・ステップ特徴量生成完了: 最終特徴量数 {final_feature_count}個"
+            )
 
             # 統計情報を更新
             total_time = time.time() - start_time
-            self.last_enhancement_stats.update({
-                "total_features": final_feature_count,
-                "total_time": total_time,
-                "data_rows": len(result_df),
-                "automl_config_used": self.automl_config.to_dict(),
-                "processing_method": "step_by_step"
-            })
+            self.last_enhancement_stats.update(
+                {
+                    "total_features": final_feature_count,
+                    "total_time": total_time,
+                    "data_rows": len(result_df),
+                    "automl_config_used": self.automl_config.to_dict(),
+                    "processing_method": "step_by_step",
+                }
+            )
 
             return result_df
 
@@ -171,12 +178,16 @@ class EnhancedFeatureEngineeringService(FeatureEngineeringService):
         manual_feature_count = len(result_df.columns)
 
         # 統計情報を記録
-        self.last_enhancement_stats.update({
-            "manual_features": manual_feature_count,
-            "manual_time": manual_time,
-        })
+        self.last_enhancement_stats.update(
+            {
+                "manual_features": manual_feature_count,
+                "manual_time": manual_time,
+            }
+        )
 
-        logger.info(f"✅ ステップ1完了: {manual_feature_count}個の手動特徴量 ({manual_time:.2f}秒)")
+        logger.info(
+            f"✅ ステップ1完了: {manual_feature_count}個の手動特徴量 ({manual_time:.2f}秒)"
+        )
         return result_df
 
     def _step2_tsfresh_features(
@@ -206,12 +217,16 @@ class EnhancedFeatureEngineeringService(FeatureEngineeringService):
         added_features = len(result_df.columns) - initial_feature_count
 
         # 統計情報を記録
-        self.last_enhancement_stats.update({
-            "tsfresh_features": added_features,
-            "tsfresh_time": tsfresh_time,
-        })
+        self.last_enhancement_stats.update(
+            {
+                "tsfresh_features": added_features,
+                "tsfresh_time": tsfresh_time,
+            }
+        )
 
-        logger.info(f"✅ ステップ2完了: {added_features}個のTSFresh特徴量追加 ({tsfresh_time:.2f}秒)")
+        logger.info(
+            f"✅ ステップ2完了: {added_features}個のTSFresh特徴量追加 ({tsfresh_time:.2f}秒)"
+        )
         return result_df
 
     def _step3_autofeat_features(
@@ -222,7 +237,9 @@ class EnhancedFeatureEngineeringService(FeatureEngineeringService):
     ) -> pd.DataFrame:
         """ステップ3: AutoFeat特徴量を追加 + 特徴量選択"""
         if target is None:
-            logger.warning("ターゲット変数がないため、AutoFeat特徴量生成をスキップします")
+            logger.warning(
+                "ターゲット変数がないため、AutoFeat特徴量生成をスキップします"
+            )
             return df
 
         logger.info("🧬 ステップ3: AutoFeat特徴量を計算中...")
@@ -246,12 +263,16 @@ class EnhancedFeatureEngineeringService(FeatureEngineeringService):
         added_features = len(result_df.columns) - initial_feature_count
 
         # 統計情報を記録
-        self.last_enhancement_stats.update({
-            "autofeat_features": added_features,
-            "autofeat_time": autofeat_time,
-        })
+        self.last_enhancement_stats.update(
+            {
+                "autofeat_features": added_features,
+                "autofeat_time": autofeat_time,
+            }
+        )
 
-        logger.info(f"✅ ステップ3完了: {added_features}個のAutoFeat特徴量追加 ({autofeat_time:.2f}秒)")
+        logger.info(
+            f"✅ ステップ3完了: {added_features}個のAutoFeat特徴量追加 ({autofeat_time:.2f}秒)"
+        )
         return result_df
 
     def _select_top_features(
@@ -271,7 +292,7 @@ class EnhancedFeatureEngineeringService(FeatureEngineeringService):
             logger.info(f"特徴量選択を実行中: {len(df.columns)} → {max_features}個")
 
             # 欠損値を補完
-            imputer = SimpleImputer(strategy='median')
+            imputer = SimpleImputer(strategy="median")
             X_imputed = imputer.fit_transform(df)
 
             # 特徴量選択を実行
@@ -280,7 +301,9 @@ class EnhancedFeatureEngineeringService(FeatureEngineeringService):
 
             # 選択された特徴量のカラム名を取得
             selected_features = df.columns[selector.get_support()]
-            result_df = pd.DataFrame(X_selected, columns=selected_features, index=df.index)
+            result_df = pd.DataFrame(
+                X_selected, columns=selected_features, index=df.index
+            )
 
             logger.info(f"特徴量選択完了: {len(selected_features)}個の特徴量を選択")
             return result_df
@@ -587,16 +610,21 @@ class EnhancedFeatureEngineeringService(FeatureEngineeringService):
 
             # 強制ガベージコレクション
             import gc
+
             collected = gc.collect()
 
-            logger.info(f"AutoML特徴量キャッシュをクリアしました（{collected}オブジェクト回収）")
+            logger.info(
+                f"AutoML特徴量キャッシュをクリアしました（{collected}オブジェクト回収）"
+            )
         except Exception as e:
             logger.error(f"AutoMLキャッシュクリアエラー: {e}")
 
     def cleanup_resources(self):
         """リソースの完全クリーンアップ"""
         try:
-            logger.info("EnhancedFeatureEngineeringServiceのリソースクリーンアップを開始")
+            logger.info(
+                "EnhancedFeatureEngineeringServiceのリソースクリーンアップを開始"
+            )
 
             # AutoMLキャッシュをクリア
             self.clear_automl_cache()
@@ -605,14 +633,14 @@ class EnhancedFeatureEngineeringService(FeatureEngineeringService):
             self.last_enhancement_stats.clear()
 
             # 各計算機のリソースを個別にクリーンアップ
-            if hasattr(self.tsfresh_calculator, 'cleanup'):
+            if hasattr(self.tsfresh_calculator, "cleanup"):
                 self.tsfresh_calculator.cleanup()
 
-            if hasattr(self.autofeat_calculator, 'cleanup'):
+            if hasattr(self.autofeat_calculator, "cleanup"):
                 self.autofeat_calculator.cleanup()
 
             # パフォーマンス最適化クラスのクリーンアップ
-            if hasattr(self.performance_optimizer, 'cleanup'):
+            if hasattr(self.performance_optimizer, "cleanup"):
                 self.performance_optimizer.cleanup()
 
             logger.info("EnhancedFeatureEngineeringServiceのリソースクリーンアップ完了")

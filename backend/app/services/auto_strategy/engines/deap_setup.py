@@ -9,7 +9,7 @@ from typing import Optional
 from deap import base, creator, tools
 
 from ..models.ga_config import GAConfig
-from ..operators import genetic_operators
+
 
 logger = logging.getLogger(__name__)
 

@@ -18,8 +18,6 @@ from app.utils.unified_error_handler import UnifiedErrorHandler
 
 from app.api.automl_features import (
     AutoMLConfigModel,
-    TSFreshConfigModel,
-    AutoFeatConfigModel,
 )
 
 from database.connection import get_db
@@ -98,7 +96,7 @@ class SingleModelConfig(BaseModel):
 
     model_type: str = Field(
         default="lightgbm",
-        description="使用するモデルタイプ (lightgbm, xgboost, catboost, tabnet)"
+        description="使用するモデルタイプ (lightgbm, xgboost, catboost, tabnet)",
     )
 
 
@@ -203,16 +201,22 @@ async def start_ml_training(
     logger.info("🚀 /api/ml-training/train エンドポイントが呼び出されました")
     logger.info(f"📋 受信したconfig全体: {config}")
     logger.info(f"📋 アンサンブル設定: {config.ensemble_config}")
-    logger.info(f"📋 アンサンブル設定enabled: {config.ensemble_config.enabled if config.ensemble_config else 'None'}")
+    logger.info(
+        f"📋 アンサンブル設定enabled: {config.ensemble_config.enabled if config.ensemble_config else 'None'}"
+    )
     logger.info(f"📋 単一モデル設定: {config.single_model_config}")
-    logger.info(f"📋 単一モデルタイプ: {config.single_model_config.model_type if config.single_model_config else 'None'}")
+    logger.info(
+        f"📋 単一モデルタイプ: {config.single_model_config.model_type if config.single_model_config else 'None'}"
+    )
     logger.info(f"📋 最適化設定: {config.optimization_settings}")
 
     # 設定の詳細確認
     if config.ensemble_config:
         ensemble_dict = config.ensemble_config.model_dump()
         logger.info(f"📋 アンサンブル設定辞書: {ensemble_dict}")
-        logger.info(f"📋 enabled値確認: {ensemble_dict.get('enabled')} (型: {type(ensemble_dict.get('enabled'))})")
+        logger.info(
+            f"📋 enabled値確認: {ensemble_dict.get('enabled')} (型: {type(ensemble_dict.get('enabled'))})"
+        )
 
     if config.single_model_config:
         single_dict = config.single_model_config.model_dump()
@@ -233,7 +237,7 @@ async def get_ml_training_status():
     """
     MLトレーニングの状態を取得
     """
-    
+
     orchestration_service = MLTrainingOrchestrationService()
     status = await orchestration_service.get_training_status()
     return MLStatusResponse(**status)
@@ -281,7 +285,7 @@ async def get_available_models():
         return {
             "success": True,
             "available_models": available_models,
-            "message": f"{len(available_models)}個のモデルが利用可能です"
+            "message": f"{len(available_models)}個のモデルが利用可能です",
         }
 
     return await UnifiedErrorHandler.safe_execute_async(_get_available_models)

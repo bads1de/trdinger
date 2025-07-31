@@ -10,7 +10,7 @@ from typing import List, Dict, Any, Union, Optional
 
 import logging
 
-# 分離されたモジュール
+
 from .gene_validation import GeneValidator
 from .gene_tpsl import TPSLGene
 from .gene_position_sizing import PositionSizingGene

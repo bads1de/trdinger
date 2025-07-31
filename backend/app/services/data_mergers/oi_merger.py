@@ -7,7 +7,7 @@ Open Interest データのマージロジックを提供します。
 import logging
 import pandas as pd
 from datetime import datetime
-from typing import List, Optional
+from typing import List
 from database.repositories.open_interest_repository import OpenInterestRepository
 from database.models import OpenInterestData
 
@@ -27,11 +27,7 @@ class OIMerger:
         self.oi_repo = oi_repo
 
     def merge_oi_data(
-        self, 
-        df: pd.DataFrame, 
-        symbol: str, 
-        start_date: datetime, 
-        end_date: datetime
+        self, df: pd.DataFrame, symbol: str, start_date: datetime, end_date: datetime
     ) -> pd.DataFrame:
         """
         Open Interest データをマージ
@@ -49,7 +45,7 @@ class OIMerger:
             oi_data = self.oi_repo.get_open_interest_data(
                 symbol=symbol, start_time=start_date, end_time=end_date
             )
-            
+
             logger.info(f"取得したOIデータ件数: {len(oi_data) if oi_data else 0}")
 
             if oi_data:
@@ -75,7 +71,9 @@ class OIMerger:
                     f"({valid_oi_count/len(df)*100:.1f}%)"
                 )
             else:
-                logger.warning(f"シンボル {symbol} のOpen Interestデータが見つかりませんでした。")
+                logger.warning(
+                    f"シンボル {symbol} のOpen Interestデータが見つかりませんでした。"
+                )
                 df["open_interest"] = pd.NA
 
         except Exception as e:

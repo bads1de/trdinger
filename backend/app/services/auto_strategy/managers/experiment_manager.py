@@ -240,8 +240,10 @@ class ExperimentManager:
             indicators = strategy_gene_dict.get("indicators", [])
 
             for indicator in indicators:
-                indicator_type = indicator.get("type", "Unknown")
-                parameters = indicator.get("parameters", {})
+                # 未使用変数の代入を避け、直接参照してログに出すことで解析の可視性を向上
+                ind_type = indicator.get("type", "Unknown")
+                params = indicator.get("parameters", {})
+                logger.info(f"        インジケーター: type={ind_type}, params={params}")
 
             # エントリー条件分析
             entry_conditions = strategy_gene_dict.get("entry_conditions", [])

@@ -8,15 +8,13 @@ APIエンドポイントからビジネスロジックを分離し、責務を�
 import logging
 import pandas as pd
 from typing import Dict, Optional, Any, Tuple
-from datetime import datetime, timedelta
 from sqlalchemy.orm import Session
 
 from app.services.data_collection.orchestration.market_data_orchestration_service import (
     MarketDataOrchestrationService,
 )
 from .enhanced_feature_engineering_service import EnhancedFeatureEngineeringService
-from .automl_features.automl_config import AutoMLConfig
-from app.utils.unified_error_handler import UnifiedErrorHandler
+
 
 logger = logging.getLogger(__name__)
 
@@ -24,7 +22,7 @@ logger = logging.getLogger(__name__)
 class AutoMLFeatureGenerationService:
     """
     AutoML特徴量生成サービス
-    
+
     OHLCVデータ取得、ターゲット変数生成、特徴量生成の
     統一的な処理を担当します。APIルーターからビジネスロジックを分離し、
     責務を明確化します。
@@ -33,7 +31,7 @@ class AutoMLFeatureGenerationService:
     def __init__(self, db_session: Session):
         """
         初期化
-        
+
         Args:
             db_session: データベースセッション
         """
@@ -51,17 +49,17 @@ class AutoMLFeatureGenerationService:
     ) -> Tuple[pd.DataFrame, Dict[str, Any]]:
         """
         AutoML特徴量を生成
-        
+
         Args:
             symbol: 取引シンボル
             timeframe: 時間枠
             limit: データ数
             automl_config: AutoML設定
             include_target: ターゲット変数を含むか
-            
+
         Returns:
             特徴量DataFrame, 統計情報の辞書
-            
+
         Raises:
             Exception: データ取得または特徴量生成に失敗した場合
         """
@@ -69,7 +67,7 @@ class AutoMLFeatureGenerationService:
 
         # OHLCVデータを取得
         ohlcv_data = await self._get_ohlcv_data(symbol, timeframe, limit)
-        
+
         # ターゲット変数を生成（必要な場合）
         target = None
         if include_target:
@@ -96,15 +94,15 @@ class AutoMLFeatureGenerationService:
     ) -> pd.DataFrame:
         """
         OHLCVデータを取得
-        
+
         Args:
             symbol: 取引シンボル
             timeframe: 時間枠
             limit: データ数
-            
+
         Returns:
             OHLCVデータのDataFrame
-            
+
         Raises:
             Exception: データ取得に失敗した場合
         """
@@ -119,15 +117,19 @@ class AutoMLFeatureGenerationService:
             )
 
             if not data_response.get("success", False):
-                raise Exception(f"OHLCVデータ取得失敗: {data_response.get('message', 'Unknown error')}")
+                raise Exception(
+                    f"OHLCVデータ取得失敗: {data_response.get('message', 'Unknown error')}"
+                )
 
             ohlcv_records = data_response.get("data", [])
             if not ohlcv_records:
-                raise Exception(f"{symbol} {timeframe}のOHLCVデータが見つかりませんでした")
+                raise Exception(
+                    f"{symbol} {timeframe}のOHLCVデータが見つかりませんでした"
+                )
 
             # DataFrameに変換
             ohlcv_data = self._convert_to_dataframe(ohlcv_records)
-            
+
             logger.debug(f"OHLCVデータ取得完了: {len(ohlcv_data)}件")
             return ohlcv_data
 
@@ -138,10 +140,10 @@ class AutoMLFeatureGenerationService:
     def _convert_to_dataframe(self, ohlcv_records: list) -> pd.DataFrame:
         """
         OHLCVレコードをDataFrameに変換
-        
+
         Args:
             ohlcv_records: OHLCVレコードのリスト
-            
+
         Returns:
             OHLCVデータのDataFrame
         """
@@ -152,63 +154,69 @@ class AutoMLFeatureGenerationService:
 
             # 最初のレコードの形式を確認
             first_record = ohlcv_records[0]
-            
-            if hasattr(first_record, '__dict__'):
+
+            if hasattr(first_record, "__dict__"):
                 # SQLAlchemyモデルの場合
                 data = []
                 for record in ohlcv_records:
-                    data.append({
-                        'timestamp': record.timestamp,
-                        'Open': float(record.open),
-                        'High': float(record.high),
-                        'Low': float(record.low),
-                        'Close': float(record.close),
-                        'Volume': float(record.volume),
-                    })
+                    data.append(
+                        {
+                            "timestamp": record.timestamp,
+                            "Open": float(record.open),
+                            "High": float(record.high),
+                            "Low": float(record.low),
+                            "Close": float(record.close),
+                            "Volume": float(record.volume),
+                        }
+                    )
                 df = pd.DataFrame(data)
             elif isinstance(first_record, dict):
                 # 辞書の場合
                 df = pd.DataFrame(ohlcv_records)
                 # カラム名を正規化
                 column_mapping = {
-                    'open': 'Open',
-                    'high': 'High',
-                    'low': 'Low',
-                    'close': 'Close',
-                    'volume': 'Volume'
+                    "open": "Open",
+                    "high": "High",
+                    "low": "Low",
+                    "close": "Close",
+                    "volume": "Volume",
                 }
                 df = df.rename(columns=column_mapping)
             else:
                 raise ValueError(f"未対応のレコード形式: {type(first_record)}")
 
             # timestampをインデックスに設定
-            if 'timestamp' in df.columns:
-                df['timestamp'] = pd.to_datetime(df['timestamp'])
-                df.set_index('timestamp', inplace=True)
+            if "timestamp" in df.columns:
+                df["timestamp"] = pd.to_datetime(df["timestamp"])
+                df.set_index("timestamp", inplace=True)
 
             # データ型を確保
-            numeric_columns = ['Open', 'High', 'Low', 'Close', 'Volume']
+            numeric_columns = ["Open", "High", "Low", "Close", "Volume"]
             for col in numeric_columns:
                 if col in df.columns:
-                    df[col] = pd.to_numeric(df[col], errors='coerce')
+                    df[col] = pd.to_numeric(df[col], errors="coerce")
 
             # NaNを除去
             df = df.dropna()
 
-            logger.debug(f"DataFrame変換完了: shape={df.shape}, columns={list(df.columns)}")
+            logger.debug(
+                f"DataFrame変換完了: shape={df.shape}, columns={list(df.columns)}"
+            )
             return df
 
         except Exception as e:
             logger.error(f"DataFrame変換エラー: {e}")
             raise Exception(f"OHLCVデータのDataFrame変換に失敗しました: {e}")
 
-    def _generate_target_variable(self, ohlcv_data: pd.DataFrame) -> Optional[pd.Series]:
+    def _generate_target_variable(
+        self, ohlcv_data: pd.DataFrame
+    ) -> Optional[pd.Series]:
         """
         ターゲット変数を生成
-        
+
         Args:
             ohlcv_data: OHLCVデータ
-            
+
         Returns:
             ターゲット変数のSeries（計算できない場合はNone）
         """
@@ -254,10 +262,10 @@ class AutoMLFeatureGenerationService:
     def get_feature_names(self, result_df: pd.DataFrame) -> list:
         """
         特徴量名のリストを取得
-        
+
         Args:
             result_df: 特徴量DataFrame
-            
+
         Returns:
             特徴量名のリスト
         """
@@ -266,10 +274,10 @@ class AutoMLFeatureGenerationService:
     def get_processing_time(self, stats: Dict[str, Any]) -> float:
         """
         処理時間を取得
-        
+
         Args:
             stats: 統計情報
-            
+
         Returns:
             処理時間（秒）
         """

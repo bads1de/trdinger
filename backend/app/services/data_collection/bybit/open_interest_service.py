@@ -5,11 +5,9 @@ Bybitオープンインタレストサービス
 オープンインタレスト（建玉残高）データの取得・保存機能を提供します。
 """
 
-import asyncio
 import logging
 from typing import Any, Dict, List, Optional
 from database.repositories.open_interest_repository import OpenInterestRepository
-from app.utils.data_converter import OpenInterestDataConverter
 from app.services.data_collection.bybit.bybit_service import BybitService
 from app.services.data_collection.bybit.data_config import get_open_interest_config
 

@@ -6,7 +6,7 @@ Bybitデータ収集サービスの設定クラス
 """
 
 from dataclasses import dataclass
-from typing import Any, Callable, Type, Optional
+from typing import Any, Type
 
 
 @dataclass

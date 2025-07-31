@@ -7,7 +7,7 @@ Fear & Greed Index データのマージロジックを提供します。
 import logging
 import pandas as pd
 from datetime import datetime
-from typing import List, Optional
+from typing import List
 from database.repositories.fear_greed_repository import FearGreedIndexRepository
 from database.models import FearGreedIndexData
 
@@ -27,11 +27,11 @@ class FearGreedMerger:
         self.fear_greed_repo = fear_greed_repo
 
     def merge_fear_greed_data(
-        self, 
-        df: pd.DataFrame, 
-        start_date: datetime, 
+        self,
+        df: pd.DataFrame,
+        start_date: datetime,
         end_date: datetime,
-        detailed_logging: bool = False
+        detailed_logging: bool = False,
     ) -> pd.DataFrame:
         """
         Fear & Greed Index データをマージ
