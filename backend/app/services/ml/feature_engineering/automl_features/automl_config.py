@@ -20,9 +20,6 @@ class TSFreshConfig:
     custom_settings: Optional[Dict[str, Any]] = None
 
 
-# FeaturetoolsConfigは削除されました（メモリ最適化のため）
-
-
 @dataclass
 class AutoFeatConfig:
     """AutoFeat設定クラス"""

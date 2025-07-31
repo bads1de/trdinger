@@ -4,6 +4,7 @@ GA実行、進捗管理、結果保存を統合的に管理します。
 複雑な分離構造を削除し、直接的で理解しやすい実装に変更しました。
 """
 
+import logging
 from typing import Dict, Any, List, Optional
 
 from fastapi import BackgroundTasks
@@ -14,6 +15,8 @@ from app.services.backtest.backtest_data_service import BacktestDataService
 from .experiment_persistence_service import ExperimentPersistenceService
 from ..managers.experiment_manager import ExperimentManager
 from database.connection import SessionLocal
+
+logger = logging.getLogger(__name__)
 
 
 class AutoStrategyService:
@@ -105,7 +108,7 @@ class AutoStrategyService:
         Returns:
             実験ID（入力されたものと同じ）
         """
-        # logger.info(f"戦略生成開始: {experiment_name}")
+        logger.info(f"戦略生成開始: {experiment_name}")
 
         # 1. GA設定の構築と検証
         try:
@@ -114,7 +117,6 @@ class AutoStrategyService:
             if not is_valid:
                 raise ValueError(f"無効なGA設定です: {', '.join(errors)}")
         except Exception as e:
-            # logger.error(f"GA設定の構築または検証に失敗しました: {e}", exc_info=True)
             raise ValueError(f"GA設定の構築または検証に失敗しました: {e}")
 
         # 2. バックテスト設定のシンボル正規化
@@ -123,9 +125,6 @@ class AutoStrategyService:
         if original_symbol and ":" not in original_symbol:
             normalized_symbol = f"{original_symbol}:USDT"
             backtest_config["symbol"] = normalized_symbol
-            # logger.info(
-            #     f"シンボルを正規化しました: {original_symbol} -> {normalized_symbol}"
-            # )
 
         # 3. 実験を作成（統合版）
         # フロントエンドから送信されたexperiment_idを使用
@@ -141,15 +140,15 @@ class AutoStrategyService:
         # 5. 実験をバックグラウンドで開始
         background_tasks.add_task(
             self.experiment_manager.run_experiment,
-            experiment_id,  # フロントエンドから送信されたUUIDを使用
+            experiment_id,
             ga_config,
             backtest_config,
         )
 
-        # logger.info(
-        #     f"戦略生成実験のバックグラウンドタスクを追加しました: {experiment_id}"
-        # )
-        return experiment_id  # フロントエンドから送信されたUUIDを返す
+        logger.info(
+            f"戦略生成実験のバックグラウンドタスクを追加しました: {experiment_id}"
+        )
+        return experiment_id
 
     def get_experiment_result(self, experiment_id: str) -> Optional[Dict[str, Any]]:
         """実験結果を取得（統合版）"""
