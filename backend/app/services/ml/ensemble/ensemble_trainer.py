@@ -264,6 +264,11 @@ class EnsembleTrainer(BaseMLTrainer):
 
             # 特徴量重要度
             feature_importance = self.ensemble_model.get_feature_importance()
+            if not feature_importance:
+                logger.warning("アンサンブルモデルから特徴量重要度を取得できませんでした")
+                feature_importance = {}
+            else:
+                logger.info(f"特徴量重要度を取得: {len(feature_importance)}個")
 
             # AutoML特徴量分析
             automl_feature_analysis = None

@@ -308,17 +308,33 @@ class MLOrchestrator(MLPredictionInterface):
                 model_data = model_manager.load_model(latest_model)
                 if model_data and "metadata" in model_data:
                     metadata = model_data["metadata"]
-                    # 新しい形式の性能指標を抽出
+                    # 新しい形式の性能指標を抽出（全ての評価指標を含む）
                     performance_metrics = {
+                        # 基本指標
                         "accuracy": metadata.get("accuracy", 0.0),
                         "precision": metadata.get("precision", 0.0),
                         "recall": metadata.get("recall", 0.0),
                         "f1_score": metadata.get("f1_score", 0.0),
+                        # AUC指標
                         "auc_roc": metadata.get("auc_roc", 0.0),
                         "auc_pr": metadata.get("auc_pr", 0.0),
+                        # 高度な指標
                         "balanced_accuracy": metadata.get("balanced_accuracy", 0.0),
                         "matthews_corrcoef": metadata.get("matthews_corrcoef", 0.0),
                         "cohen_kappa": metadata.get("cohen_kappa", 0.0),
+                        # 専門指標
+                        "specificity": metadata.get("specificity", 0.0),
+                        "sensitivity": metadata.get("sensitivity", 0.0),
+                        "npv": metadata.get("npv", 0.0),
+                        "ppv": metadata.get("ppv", 0.0),
+                        # 確率指標
+                        "log_loss": metadata.get("log_loss", 0.0),
+                        "brier_score": metadata.get("brier_score", 0.0),
+                        # その他
+                        "loss": metadata.get("loss", 0.0),
+                        "val_accuracy": metadata.get("val_accuracy", 0.0),
+                        "val_loss": metadata.get("val_loss", 0.0),
+                        "training_time": metadata.get("training_time", 0.0),
                     }
                     status["performance_metrics"] = performance_metrics
                 else:
@@ -354,11 +370,46 @@ class MLOrchestrator(MLPredictionInterface):
         Returns:
             特徴量重要度の辞書
         """
-        if self.is_model_loaded and getattr(
-            self.ml_training_service.trainer, "is_trained", False
-        ):
-            return self.ml_training_service.get_feature_importance()
-        else:
+        try:
+            # 1. 現在読み込まれているモデルから取得を試行
+            if self.is_model_loaded and getattr(
+                self.ml_training_service.trainer, "is_trained", False
+            ):
+                feature_importance = self.ml_training_service.get_feature_importance()
+                if feature_importance:
+                    # 上位N個を取得
+                    sorted_importance = sorted(
+                        feature_importance.items(),
+                        key=lambda x: x[1],
+                        reverse=True
+                    )[:top_n]
+                    return dict(sorted_importance)
+
+            # 2. 最新のモデルファイルから特徴量重要度を取得
+            from ...ml.model_manager import model_manager
+
+            latest_model = model_manager.get_latest_model("*")
+            if latest_model:
+                model_data = model_manager.load_model(latest_model)
+                if model_data and "metadata" in model_data:
+                    metadata = model_data["metadata"]
+                    feature_importance = metadata.get("feature_importance", {})
+
+                    if feature_importance:
+                        # 上位N個を取得
+                        sorted_importance = sorted(
+                            feature_importance.items(),
+                            key=lambda x: x[1],
+                            reverse=True
+                        )[:top_n]
+                        logger.info(f"特徴量重要度を取得: {len(sorted_importance)}個")
+                        return dict(sorted_importance)
+
+            logger.warning("特徴量重要度データが見つかりません")
+            return {}
+
+        except Exception as e:
+            logger.error(f"特徴量重要度取得エラー: {e}")
             return {}
 
     def predict_probabilities(self, features: pd.DataFrame) -> Dict[str, float]:

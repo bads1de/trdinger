@@ -435,7 +435,7 @@ class BaseMLTrainer(ABC):
             )
 
             # 動的閾値を使用してクラス分類
-            from ..utils.label_generation import LabelGenerator, ThresholdMethod
+            from ...utils.label_generation import LabelGenerator, ThresholdMethod
 
             label_generator = LabelGenerator()
 
@@ -926,22 +926,14 @@ class BaseMLTrainer(ABC):
         if metadata:
             final_metadata.update(metadata)
 
-        # アンサンブルモデルの場合は専用の保存メソッドを使用
-        if self.__class__.__name__ == "EnsembleTrainer":
-            model_path = model_manager.save_ensemble_model(
-                ensemble_trainer=self,
-                model_name=model_name,
-                metadata=final_metadata,
-            )
-        else:
-            # 通常のモデル保存
-            model_path = model_manager.save_model(
-                model=self.model,
-                model_name=model_name,
-                metadata=final_metadata,
-                scaler=self.scaler,
-                feature_columns=self.feature_columns,
-            )
+        # 統一されたモデル保存を使用
+        model_path = model_manager.save_model(
+            model=self,  # トレーナー全体を保存
+            model_name=model_name,
+            metadata=final_metadata,
+            scaler=self.scaler,
+            feature_columns=self.feature_columns,
+        )
 
         logger.info(f"モデル保存完了: {model_path}")
         return model_path
@@ -958,6 +950,45 @@ class BaseMLTrainer(ABC):
         }
 
         return result
+
+    def get_feature_importance(self, top_n: int = 10) -> Dict[str, float]:
+        """
+        特徴量重要度を取得
+
+        Args:
+            top_n: 上位N個の特徴量
+
+        Returns:
+            特徴量重要度の辞書
+        """
+        if not self.is_trained:
+            logger.warning("学習済みモデルがありません")
+            return {}
+
+        # モデルが特徴量重要度を提供する場合
+        if hasattr(self.model, 'get_feature_importance'):
+            return self.model.get_feature_importance(top_n)
+
+        # LightGBMモデルの場合
+        if hasattr(self.model, 'feature_importance') and self.feature_columns:
+            try:
+                importance_scores = self.model.feature_importance(importance_type='gain')
+                feature_importance = dict(zip(self.feature_columns, importance_scores))
+
+                # 重要度でソートして上位N個を取得
+                sorted_importance = sorted(
+                    feature_importance.items(),
+                    key=lambda x: x[1],
+                    reverse=True
+                )[:top_n]
+
+                return dict(sorted_importance)
+            except Exception as e:
+                logger.error(f"特徴量重要度取得エラー: {e}")
+                return {}
+
+        logger.warning("このモデルは特徴量重要度をサポートしていません")
+        return {}
 
     @safe_ml_operation(
         default_return=False, context="モデル読み込みでエラーが発生しました"

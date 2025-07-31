@@ -226,35 +226,60 @@ class BaseEnsemble(ABC):
             特徴量重要度の辞書（利用可能な場合）
         """
         if not self.is_fitted or not self.feature_columns:
-            return None
+            logger.warning(f"特徴量重要度取得不可: is_fitted={self.is_fitted}, feature_columns={len(self.feature_columns) if self.feature_columns else 0}")
+            return {}
 
         # ベースモデルから特徴量重要度を集約
         importance_dict = {}
 
         for i, model in enumerate(self.base_models):
-            if hasattr(model, "feature_importances_"):
-                # scikit-learn系モデル
-                importances = model.feature_importances_
-                for j, feature in enumerate(self.feature_columns):
-                    if feature not in importance_dict:
-                        importance_dict[feature] = []
-                    importance_dict[feature].append(importances[j])
-            elif hasattr(model, "model") and hasattr(model.model, "feature_importance"):
-                # LightGBMTrainer
-                importances = model.model.feature_importance(importance_type="gain")
-                for j, feature in enumerate(self.feature_columns):
-                    if feature not in importance_dict:
-                        importance_dict[feature] = []
-                    importance_dict[feature].append(importances[j])
+            try:
+                if hasattr(model, "feature_importances_"):
+                    # scikit-learn系モデル
+                    importances = model.feature_importances_
+                    logger.info(f"モデル{i}: scikit-learn系特徴量重要度を取得 ({len(importances)}個)")
+                    for j, feature in enumerate(self.feature_columns):
+                        if j < len(importances):
+                            if feature not in importance_dict:
+                                importance_dict[feature] = []
+                            importance_dict[feature].append(importances[j])
+
+                elif hasattr(model, "model") and hasattr(model.model, "feature_importance"):
+                    # LightGBMModel (カスタムラッパー)
+                    importances = model.model.feature_importance(importance_type="gain")
+                    logger.info(f"モデル{i}: LightGBM特徴量重要度を取得 ({len(importances)}個)")
+                    for j, feature in enumerate(self.feature_columns):
+                        if j < len(importances):
+                            if feature not in importance_dict:
+                                importance_dict[feature] = []
+                            importance_dict[feature].append(importances[j])
+
+                elif hasattr(model, "get_feature_importance"):
+                    # カスタムget_feature_importanceメソッドを持つモデル
+                    model_importance = model.get_feature_importance()
+                    if model_importance:
+                        logger.info(f"モデル{i}: カスタムメソッドで特徴量重要度を取得 ({len(model_importance)}個)")
+                        for feature, importance in model_importance.items():
+                            if feature not in importance_dict:
+                                importance_dict[feature] = []
+                            importance_dict[feature].append(importance)
+
+                else:
+                    logger.warning(f"モデル{i}: 特徴量重要度を取得できません (type: {type(model)})")
+
+            except Exception as e:
+                logger.error(f"モデル{i}の特徴量重要度取得エラー: {e}")
 
         # 平均を計算
         if importance_dict:
             avg_importance = {
-                feature: np.mean(values) for feature, values in importance_dict.items()
+                feature: float(np.mean(values)) for feature, values in importance_dict.items()
             }
+            logger.info(f"アンサンブル特徴量重要度を計算: {len(avg_importance)}個")
             return avg_importance
 
-        return None
+        logger.warning("特徴量重要度データが見つかりませんでした")
+        return {}
 
     def save_models(self, base_path: str) -> List[str]:
         """

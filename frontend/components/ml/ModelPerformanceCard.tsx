@@ -131,10 +131,8 @@ export default function ModelPerformanceCard({
     label: string,
     icon: React.ReactNode
   ) => {
-    // 損失系指標は0.0でも意味があるので表示する
-    const isLossMetric =
-      metricKey.includes("loss") || metricKey.includes("brier");
-    if (value === undefined || (!isLossMetric && value <= 0.0)) return null;
+    // undefinedの場合のみ非表示、0.0も有効な値として表示
+    if (value === undefined) return null;
 
     return (
       <div className="text-center p-3 bg-gray-800/50 rounded-lg">
@@ -164,10 +162,8 @@ export default function ModelPerformanceCard({
     value: number | undefined,
     label: string
   ) => {
-    // 損失系指標は0.0でも意味があるので表示する
-    const isLossMetric =
-      metricKey.includes("loss") || metricKey.includes("brier");
-    if (value === undefined || (!isLossMetric && value <= 0.0)) return null;
+    // undefinedの場合のみ非表示、0.0も有効な値として表示
+    if (value === undefined) return null;
 
     return (
       <div className="flex justify-between items-center">
@@ -226,21 +222,45 @@ export default function ModelPerformanceCard({
   const originalMetrics = modelStatus?.performance_metrics;
   const modelInfo = modelStatus?.model_info;
 
-  // テスト用：新しい評価指標のダミーデータを追加
+  // メトリクスデータを処理（0.0も有効な値として扱う）
   const metrics = originalMetrics
     ? {
         ...originalMetrics,
-        balanced_accuracy: originalMetrics.balanced_accuracy || 0.99,
-        matthews_corrcoef: originalMetrics.matthews_corrcoef || 0.99,
-        cohen_kappa: originalMetrics.cohen_kappa || 0.99,
-        specificity: originalMetrics.specificity || 0.99,
-        sensitivity:
-          originalMetrics.sensitivity || originalMetrics.recall || 0.99,
-        npv: originalMetrics.npv || 0.99,
-        ppv: originalMetrics.ppv || originalMetrics.precision || 0.99,
-        auc_pr: originalMetrics.auc_pr || 0.99,
-        log_loss: originalMetrics.log_loss || 0.99,
-        brier_score: originalMetrics.brier_score || 0.99,
+        // undefinedの場合のみ代替値を使用、0.0は有効な値として扱う
+        balanced_accuracy: originalMetrics.balanced_accuracy !== undefined
+          ? originalMetrics.balanced_accuracy
+          : undefined,
+        matthews_corrcoef: originalMetrics.matthews_corrcoef !== undefined
+          ? originalMetrics.matthews_corrcoef
+          : undefined,
+        cohen_kappa: originalMetrics.cohen_kappa !== undefined
+          ? originalMetrics.cohen_kappa
+          : undefined,
+        specificity: originalMetrics.specificity !== undefined
+          ? originalMetrics.specificity
+          : undefined,
+        sensitivity: originalMetrics.sensitivity !== undefined
+          ? originalMetrics.sensitivity
+          : originalMetrics.recall !== undefined
+            ? originalMetrics.recall
+            : undefined,
+        npv: originalMetrics.npv !== undefined
+          ? originalMetrics.npv
+          : undefined,
+        ppv: originalMetrics.ppv !== undefined
+          ? originalMetrics.ppv
+          : originalMetrics.precision !== undefined
+            ? originalMetrics.precision
+            : undefined,
+        auc_pr: originalMetrics.auc_pr !== undefined
+          ? originalMetrics.auc_pr
+          : undefined,
+        log_loss: originalMetrics.log_loss !== undefined
+          ? originalMetrics.log_loss
+          : undefined,
+        brier_score: originalMetrics.brier_score !== undefined
+          ? originalMetrics.brier_score
+          : undefined,
       }
     : originalMetrics;
 

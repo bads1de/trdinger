@@ -228,17 +228,33 @@ class MLManagementOrchestrationService:
                 model_data = model_manager.load_model(latest_model)
                 if model_data and "metadata" in model_data:
                     metadata = model_data["metadata"]
-                    # 新しい形式の性能指標を抽出
+                    # 新しい形式の性能指標を抽出（全ての評価指標を含む）
                     performance_metrics = {
+                        # 基本指標
                         "accuracy": metadata.get("accuracy", 0.0),
                         "precision": metadata.get("precision", 0.0),
                         "recall": metadata.get("recall", 0.0),
                         "f1_score": metadata.get("f1_score", 0.0),
+                        # AUC指標
                         "auc_roc": metadata.get("auc_roc", 0.0),
                         "auc_pr": metadata.get("auc_pr", 0.0),
+                        # 高度な指標
                         "balanced_accuracy": metadata.get("balanced_accuracy", 0.0),
                         "matthews_corrcoef": metadata.get("matthews_corrcoef", 0.0),
                         "cohen_kappa": metadata.get("cohen_kappa", 0.0),
+                        # 専門指標
+                        "specificity": metadata.get("specificity", 0.0),
+                        "sensitivity": metadata.get("sensitivity", 0.0),
+                        "npv": metadata.get("npv", 0.0),
+                        "ppv": metadata.get("ppv", 0.0),
+                        # 確率指標
+                        "log_loss": metadata.get("log_loss", 0.0),
+                        "brier_score": metadata.get("brier_score", 0.0),
+                        # その他
+                        "loss": metadata.get("loss", 0.0),
+                        "val_accuracy": metadata.get("val_accuracy", 0.0),
+                        "val_loss": metadata.get("val_loss", 0.0),
+                        "training_time": metadata.get("training_time", 0.0),
                     }
                     status["performance_metrics"] = performance_metrics
                 else:

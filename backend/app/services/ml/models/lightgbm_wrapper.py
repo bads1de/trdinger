@@ -104,28 +104,77 @@ class LightGBMModel:
             else:
                 y_pred_class = (y_pred_proba > 0.5).astype(int)
 
-            # 評価指標を計算
-            from sklearn.metrics import accuracy_score
+            # 詳細な評価指標を計算
+            from ....utils.metrics_calculator import calculate_detailed_metrics
 
-            accuracy = accuracy_score(y_test, y_pred_class)
+            detailed_metrics = calculate_detailed_metrics(y_test, y_pred_class, y_pred_proba)
+
+            # 特徴量重要度を計算
+            feature_importance = {}
+            if self.model and hasattr(self.model, 'feature_importance'):
+                importance_scores = self.model.feature_importance(importance_type='gain')
+                feature_importance = dict(zip(self.feature_columns, importance_scores))
+                logger.info(f"特徴量重要度を計算: {len(feature_importance)}個の特徴量")
 
             self.is_trained = True
 
             logger.info(f"LightGBM学習開始: {num_classes}クラス分類")
             logger.info(f"クラス分布: {dict(y_train.value_counts())}")
-            logger.info(f"LightGBMモデル学習完了: 精度={accuracy:.4f}")
+            logger.info(f"LightGBMモデル学習完了: 精度={detailed_metrics.get('accuracy', 0.0):.4f}")
 
-            return {
-                "accuracy": accuracy,
+            # 詳細な評価指標を含む結果を返す
+            result = {
                 "num_classes": num_classes,
                 "best_iteration": self.model.best_iteration,
                 "train_samples": len(X_train),
                 "test_samples": len(X_test),
+                "feature_importance": feature_importance,  # 特徴量重要度を追加
+                **detailed_metrics,  # 詳細な評価指標を追加
             }
+
+            return result
 
         except Exception as e:
             logger.error(f"LightGBMモデル学習エラー: {e}")
             raise UnifiedModelError(f"LightGBMモデル学習に失敗しました: {e}")
+
+    def get_feature_importance(self, top_n: int = 10) -> Dict[str, float]:
+        """
+        特徴量重要度を取得
+
+        Args:
+            top_n: 上位N個の特徴量
+
+        Returns:
+            特徴量重要度の辞書
+        """
+        if not self.is_trained or not self.model:
+            logger.warning("学習済みモデルがありません")
+            return {}
+
+        try:
+            # LightGBMの特徴量重要度を取得
+            importance_scores = self.model.feature_importance(importance_type='gain')
+
+            if not self.feature_columns or len(importance_scores) != len(self.feature_columns):
+                logger.warning("特徴量カラム情報が不正です")
+                return {}
+
+            # 特徴量名と重要度のペアを作成
+            feature_importance = dict(zip(self.feature_columns, importance_scores))
+
+            # 重要度でソートして上位N個を取得
+            sorted_importance = sorted(
+                feature_importance.items(),
+                key=lambda x: x[1],
+                reverse=True
+            )[:top_n]
+
+            return dict(sorted_importance)
+
+        except Exception as e:
+            logger.error(f"特徴量重要度取得エラー: {e}")
+            return {}
 
     def predict(self, X: pd.DataFrame) -> np.ndarray:
         """
