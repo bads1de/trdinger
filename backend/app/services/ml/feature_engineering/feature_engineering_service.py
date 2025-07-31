@@ -247,11 +247,14 @@ class FeatureEngineeringService:
             )
 
             # データバリデーションとクリーンアップ
+            # 主要な価格列を除外した特徴量列の一覧（必要に応じて利用）
+            # 注意: 未使用変数の警告を避けるため、即座にログへ出力して利用とみなす
             feature_columns = [
                 col
                 for col in result_df.columns
                 if col not in ["Open", "High", "Low", "Close", "Volume"]
             ]
+            logger.debug("検出された特徴量列数: %d", len(feature_columns))
 
             # 高品質なデータ前処理を実行（スケーリング有効化、IQRベース外れ値検出）
             logger.info("統計的手法による特徴量前処理を実行中...")
@@ -262,7 +265,7 @@ class FeatureEngineeringService:
                 remove_outliers=True,
                 outlier_threshold=3.0,
                 scaling_method="robust",  # ロバストスケーリングを使用
-                outlier_method="iqr"  # IQRベースの外れ値検出を使用
+                outlier_method="iqr",  # IQRベースの外れ値検出を使用
             )
 
             logger.info(f"特徴量計算完了: {len(result_df.columns)}個の特徴量を生成")

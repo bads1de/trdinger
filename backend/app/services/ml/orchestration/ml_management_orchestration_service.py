@@ -46,7 +46,7 @@ class MLManagementOrchestrationService:
                 "size_mb": model["size_mb"],
                 "modified_at": model["modified_at"].isoformat(),
                 "directory": model["directory"],
-                "is_active": False,  # TODO: アクティブモデルの判定ロジック
+                "is_active": self._is_active_model(model),  # アクティブモデルの判定
             }
 
             # モデルの詳細情報を取得
@@ -375,3 +375,28 @@ class MLManagementOrchestrationService:
         }
 
         return config_dict
+
+    def _is_active_model(self, model: Dict[str, Any]) -> bool:
+        """
+        モデルがアクティブかどうかを判定
+
+        Args:
+            model: モデル情報辞書
+
+        Returns:
+            アクティブの場合はTrue、そうでない場合はFalse
+        """
+        try:
+            # 最新のモデルファイルと比較してアクティブか判定
+            latest_model = model_manager.get_latest_model("*")
+            if latest_model:
+                # パスが一致する場合はアクティブと判定
+                return model["path"] == latest_model
+
+            # モデルが1つだけの場合はアクティブと判定
+            all_models = model_manager.list_models("*")
+            return len(all_models) == 1 and all_models[0]["path"] == model["path"]
+
+        except Exception as e:
+            logger.warning(f"アクティブモデル判定エラー: {e}")
+            return False

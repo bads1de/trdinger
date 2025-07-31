@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 class SingleModelTrainer(BaseMLTrainer):
     """
     単一モデル学習トレーナー
-    
+
     BaseMLTrainerを継承し、単一の機械学習モデルでのトレーニング機能を提供します。
     アンサンブルを使用せず、指定された単一モデルで学習を行います。
     """
@@ -31,16 +31,16 @@ class SingleModelTrainer(BaseMLTrainer):
     ):
         """
         初期化
-        
+
         Args:
             model_type: 使用するモデルタイプ（lightgbm, xgboost, catboost, tabnet）
             automl_config: AutoML設定（オプション）
         """
         super().__init__(automl_config=automl_config)
-        
+
         self.model_type = model_type.lower()
         self.single_model = None
-        
+
         # サポートされているモデルタイプを確認
         supported_models = ["lightgbm", "xgboost", "catboost", "tabnet"]
         if self.model_type not in supported_models:
@@ -48,7 +48,7 @@ class SingleModelTrainer(BaseMLTrainer):
                 f"サポートされていないモデルタイプ: {self.model_type}. "
                 f"サポートされているモデル: {supported_models}"
             )
-        
+
         logger.info(f"SingleModelTrainer初期化: model_type={self.model_type}")
 
     def _train_model_impl(
@@ -61,32 +61,32 @@ class SingleModelTrainer(BaseMLTrainer):
     ) -> Dict[str, Any]:
         """
         単一モデルの学習を実行
-        
+
         Args:
             X_train: 学習用特徴量
             X_test: テスト用特徴量
             y_train: 学習用ターゲット
             y_test: テスト用ターゲット
             **training_params: 追加の学習パラメータ
-            
+
         Returns:
             学習結果の辞書
         """
         try:
             logger.info(f"🤖 {self.model_type.upper()}モデルでの学習を開始します")
-            
+
             # モデルインスタンスを作成
             self.single_model = self._create_model_instance()
-            
+
             # モデルを学習
             training_result = self.single_model._train_model_impl(
                 X_train, X_test, y_train, y_test, **training_params
             )
-            
+
             # 学習完了フラグを設定
             self.is_trained = True
             self.feature_columns = list(X_train.columns)
-            
+
             # 結果を整形
             result = {
                 "model_type": self.model_type,
@@ -95,36 +95,42 @@ class SingleModelTrainer(BaseMLTrainer):
                 "feature_count": len(X_train.columns),
                 **training_result,
             }
-            
+
             logger.info(f"✅ {self.model_type.upper()}モデルの学習が完了しました")
             return result
-            
+
         except Exception as e:
             logger.error(f"❌ {self.model_type.upper()}モデルの学習に失敗: {e}")
-            raise UnifiedModelError(f"{self.model_type.upper()}モデルの学習に失敗しました: {e}")
+            raise UnifiedModelError(
+                f"{self.model_type.upper()}モデルの学習に失敗しました: {e}"
+            )
 
     def _create_model_instance(self):
         """指定されたモデルタイプのインスタンスを作成"""
         try:
             if self.model_type == "lightgbm":
                 from ..models.lightgbm_wrapper import LightGBMModel
+
                 return LightGBMModel(automl_config=self.automl_config)
-            
+
             elif self.model_type == "xgboost":
                 from ..models.xgboost_wrapper import XGBoostModel
+
                 return XGBoostModel(automl_config=self.automl_config)
-            
+
             elif self.model_type == "catboost":
                 from ..models.catboost_wrapper import CatBoostModel
+
                 return CatBoostModel(automl_config=self.automl_config)
-            
+
             elif self.model_type == "tabnet":
                 from ..models.tabnet_wrapper import TabNetModel
+
                 return TabNetModel(automl_config=self.automl_config)
-            
+
             else:
                 raise UnifiedModelError(f"未対応のモデルタイプ: {self.model_type}")
-                
+
         except ImportError as e:
             logger.error(f"{self.model_type.upper()}の依存関係が不足しています: {e}")
             raise UnifiedModelError(
@@ -135,24 +141,24 @@ class SingleModelTrainer(BaseMLTrainer):
     def predict(self, features_df: pd.DataFrame) -> np.ndarray:
         """
         単一モデルで予測を実行
-        
+
         Args:
             features_df: 特徴量DataFrame
-            
+
         Returns:
             予測確率の配列 [下落確率, レンジ確率, 上昇確率]
         """
         if self.single_model is None or not self.single_model.is_trained:
             raise UnifiedModelError("学習済み単一モデルがありません")
-        
+
         try:
             # 特徴量の順序を学習時と合わせる
             if self.feature_columns:
                 features_df = features_df[self.feature_columns]
-            
+
             # 単一モデルで予測確率を取得
             predictions = self.single_model.predict_proba(features_df)
-            
+
             # 予測確率が3クラス分類であることを確認
             if predictions.ndim == 2 and predictions.shape[1] == 3:
                 return predictions
@@ -161,48 +167,56 @@ class SingleModelTrainer(BaseMLTrainer):
                     f"予期しない予測確率の形状: {predictions.shape}. "
                     f"3クラス分類 (down, range, up) の確率が期待されます。"
                 )
-                
+
         except Exception as e:
             logger.error(f"{self.model_type.upper()}モデルの予測エラー: {e}")
-            raise UnifiedModelError(f"{self.model_type.upper()}モデルの予測に失敗しました: {e}")
+            raise UnifiedModelError(
+                f"{self.model_type.upper()}モデルの予測に失敗しました: {e}"
+            )
 
-    def save_model(self, model_name: str, metadata: Optional[Dict[str, Any]] = None) -> str:
+    def save_model(
+        self, model_name: str, metadata: Optional[Dict[str, Any]] = None
+    ) -> str:
         """
         単一モデルを保存
-        
+
         Args:
             model_name: モデル名
             metadata: メタデータ（オプション）
-            
+
         Returns:
             保存されたモデルのパス
         """
         if self.single_model is None or not self.single_model.is_trained:
             raise UnifiedModelError("保存する学習済みモデルがありません")
-        
+
         try:
             from ..model_manager import model_manager
-            
+
             # メタデータに単一モデル情報を追加
             final_metadata = metadata or {}
-            final_metadata.update({
-                "model_type": self.model_type,
-                "trainer_type": "single_model",
-                "feature_count": len(self.feature_columns) if self.feature_columns else 0,
-            })
-            
+            final_metadata.update(
+                {
+                    "model_type": self.model_type,
+                    "trainer_type": "single_model",
+                    "feature_count": (
+                        len(self.feature_columns) if self.feature_columns else 0
+                    ),
+                }
+            )
+
             # 単一モデルを保存
             model_path = model_manager.save_model(
                 model=self.single_model.model,
                 model_name=model_name,
                 metadata=final_metadata,
-                scaler=getattr(self.single_model, 'scaler', None),
+                scaler=getattr(self.single_model, "scaler", None),
                 feature_columns=self.feature_columns,
             )
-            
+
             logger.info(f"単一モデル保存完了: {model_path}")
             return model_path
-            
+
         except Exception as e:
             logger.error(f"単一モデル保存エラー: {e}")
             raise UnifiedModelError(f"単一モデルの保存に失敗しました: {e}")
@@ -210,32 +224,32 @@ class SingleModelTrainer(BaseMLTrainer):
     def load_model(self, model_path: str) -> bool:
         """
         単一モデルを読み込み
-        
+
         Args:
             model_path: モデルファイルパス
-            
+
         Returns:
             読み込み成功フラグ
         """
         try:
             # モデルインスタンスを作成
             self.single_model = self._create_model_instance()
-            
+
             # モデルを読み込み
             from ..model_manager import model_manager
+
             success = model_manager.load_model(
-                model_path=model_path,
-                model_instance=self.single_model
+                model_path=model_path, model_instance=self.single_model
             )
-            
+
             if success:
                 self.is_trained = True
                 logger.info(f"単一モデル読み込み完了: model_type={self.model_type}")
             else:
                 logger.error("単一モデルの読み込みに失敗")
-            
+
             return success
-            
+
         except Exception as e:
             logger.error(f"単一モデル読み込みエラー: {e}")
             return False
@@ -255,7 +269,7 @@ class SingleModelTrainer(BaseMLTrainer):
     def get_model_info(self) -> Dict[str, Any]:
         """
         モデル情報を取得
-        
+
         Returns:
             モデル情報の辞書
         """
@@ -265,7 +279,7 @@ class SingleModelTrainer(BaseMLTrainer):
                 "is_trained": False,
                 "trainer_type": "single_model",
             }
-        
+
         return {
             "model_type": self.model_type,
             "is_trained": self.single_model.is_trained,
@@ -277,34 +291,42 @@ class SingleModelTrainer(BaseMLTrainer):
     def get_available_models() -> list:
         """
         利用可能な単一モデルのリストを取得
-        
+
         Returns:
             利用可能なモデルタイプのリスト
         """
         available = []
-        
+
         try:
-            from ..models.lightgbm_wrapper import LightGBMModel
-            available.append("lightgbm")
-        except ImportError:
+            import importlib.util
+
+            if importlib.util.find_spec("lightgbm"):
+                available.append("lightgbm")
+        except Exception:
             pass
-        
+
         try:
-            from ..models.xgboost_wrapper import XGBoostModel
-            available.append("xgboost")
-        except ImportError:
+            import importlib.util
+
+            if importlib.util.find_spec("xgboost"):
+                available.append("xgboost")
+        except Exception:
             pass
-        
+
         try:
-            from ..models.catboost_wrapper import CatBoostModel
-            available.append("catboost")
-        except ImportError:
+            import importlib.util
+
+            if importlib.util.find_spec("catboost"):
+                available.append("catboost")
+        except Exception:
             pass
-        
+
         try:
-            from ..models.tabnet_wrapper import TabNetModel
-            available.append("tabnet")
-        except ImportError:
+            import importlib.util
+
+            if importlib.util.find_spec("tabnet"):
+                available.append("tabnet")
+        except Exception:
             pass
-        
+
         return available

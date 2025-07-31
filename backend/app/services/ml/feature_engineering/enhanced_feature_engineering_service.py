@@ -15,13 +15,6 @@ from .automl_features.tsfresh_calculator import TSFreshFeatureCalculator
 from .automl_features.autofeat_calculator import AutoFeatCalculator
 from .automl_features.automl_config import AutoMLConfig
 from .automl_features.performance_optimizer import PerformanceOptimizer
-from .automl_features.memory_utils import (
-    get_system_memory_info,
-    optimize_dataframe_dtypes,
-    memory_efficient_processing,
-    check_memory_availability,
-    log_memory_usage,
-)
 from .enhanced_crypto_features import EnhancedCryptoFeatures
 from .optimized_crypto_features import OptimizedCryptoFeatures
 from ....utils.unified_error_handler import safe_ml_operation
@@ -311,14 +304,6 @@ class EnhancedFeatureEngineeringService(FeatureEngineeringService):
         except Exception as e:
             logger.warning(f"特徴量選択でエラー: {e}. 元のDataFrameを返します")
             return df
-            # エラー時は手動特徴量のみ返す
-            return self.calculate_advanced_features(
-                ohlcv_data=ohlcv_data,
-                funding_rate_data=funding_rate_data,
-                open_interest_data=open_interest_data,
-                fear_greed_data=fear_greed_data,
-                lookback_periods=lookback_periods,
-            )
 
     def _perform_integrated_feature_selection(
         self,

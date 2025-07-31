@@ -99,15 +99,6 @@ class BaseMLTrainer(ABC):
             parallel_jobs=tsfresh_dict.get("parallel_jobs", 2),
         )
 
-        # Featuretools設定（削除されました - 後方互換性のため）
-        featuretools_dict = config_dict.get("featuretools", {})
-        # ダミーのFeaturetoolsConfig（常に無効）
-        featuretools_config = type('FeaturetoolsConfig', (), {
-            'enabled': False,
-            'max_depth': 0,
-            'max_features': 0
-        })()
-
         # AutoFeat設定
         autofeat_dict = config_dict.get("autofeat", {})
         autofeat_config = AutoFeatConfig(
@@ -440,15 +431,21 @@ class BaseMLTrainer(ABC):
             label_generator = LabelGenerator()
 
             # 設定から動的閾値パラメータを取得
-            label_method = getattr(self.config.training, "LABEL_METHOD", "dynamic_volatility")
+            label_method = getattr(
+                self.config.training, "LABEL_METHOD", "dynamic_volatility"
+            )
 
             if label_method == "dynamic_volatility":
                 # 動的ボラティリティベースのラベル生成
                 labels, threshold_info = label_generator.generate_labels(
                     ohlcv_data["Close"],
                     method=ThresholdMethod.DYNAMIC_VOLATILITY,
-                    volatility_window=getattr(self.config.training, "VOLATILITY_WINDOW", 24),
-                    threshold_multiplier=getattr(self.config.training, "THRESHOLD_MULTIPLIER", 0.5),
+                    volatility_window=getattr(
+                        self.config.training, "VOLATILITY_WINDOW", 24
+                    ),
+                    threshold_multiplier=getattr(
+                        self.config.training, "THRESHOLD_MULTIPLIER", 0.5
+                    ),
                     min_threshold=getattr(self.config.training, "MIN_THRESHOLD", 0.005),
                     max_threshold=getattr(self.config.training, "MAX_THRESHOLD", 0.05),
                 )
@@ -561,7 +558,7 @@ class BaseMLTrainer(ABC):
             # 閾値計算方法を決定（デフォルトを動的ボラティリティベースに変更）
             threshold_method_str = training_params.get(
                 "threshold_method",
-                getattr(self.config.training, "LABEL_METHOD", "dynamic_volatility")
+                getattr(self.config.training, "LABEL_METHOD", "dynamic_volatility"),
             )
 
             # 文字列からEnumに変換
@@ -594,16 +591,20 @@ class BaseMLTrainer(ABC):
             elif threshold_method == ThresholdMethod.DYNAMIC_VOLATILITY:
                 # 設定から動的ボラティリティパラメータを取得
                 method_params["volatility_window"] = training_params.get(
-                    "volatility_window", getattr(self.config.training, "VOLATILITY_WINDOW", 24)
+                    "volatility_window",
+                    getattr(self.config.training, "VOLATILITY_WINDOW", 24),
                 )
                 method_params["threshold_multiplier"] = training_params.get(
-                    "threshold_multiplier", getattr(self.config.training, "THRESHOLD_MULTIPLIER", 0.5)
+                    "threshold_multiplier",
+                    getattr(self.config.training, "THRESHOLD_MULTIPLIER", 0.5),
                 )
                 method_params["min_threshold"] = training_params.get(
-                    "min_threshold", getattr(self.config.training, "MIN_THRESHOLD", 0.005)
+                    "min_threshold",
+                    getattr(self.config.training, "MIN_THRESHOLD", 0.005),
                 )
                 method_params["max_threshold"] = training_params.get(
-                    "max_threshold", getattr(self.config.training, "MAX_THRESHOLD", 0.05)
+                    "max_threshold",
+                    getattr(self.config.training, "MAX_THRESHOLD", 0.05),
                 )
             elif threshold_method in [
                 ThresholdMethod.QUANTILE,
@@ -683,7 +684,7 @@ class BaseMLTrainer(ABC):
             remove_outliers=True,
             outlier_threshold=3.0,
             scaling_method="robust",  # ロバストスケーリングを使用
-            outlier_method="iqr"  # IQRベースの外れ値検出を使用
+            outlier_method="iqr",  # IQRベースの外れ値検出を使用
         )
 
         # 特徴量とラベルを分離（改善されたラベル生成ロジック）
@@ -966,20 +967,20 @@ class BaseMLTrainer(ABC):
             return {}
 
         # モデルが特徴量重要度を提供する場合
-        if hasattr(self.model, 'get_feature_importance'):
+        if hasattr(self.model, "get_feature_importance"):
             return self.model.get_feature_importance(top_n)
 
         # LightGBMモデルの場合
-        if hasattr(self.model, 'feature_importance') and self.feature_columns:
+        if hasattr(self.model, "feature_importance") and self.feature_columns:
             try:
-                importance_scores = self.model.feature_importance(importance_type='gain')
+                importance_scores = self.model.feature_importance(
+                    importance_type="gain"
+                )
                 feature_importance = dict(zip(self.feature_columns, importance_scores))
 
                 # 重要度でソートして上位N個を取得
                 sorted_importance = sorted(
-                    feature_importance.items(),
-                    key=lambda x: x[1],
-                    reverse=True
+                    feature_importance.items(), key=lambda x: x[1], reverse=True
                 )[:top_n]
 
                 return dict(sorted_importance)
@@ -1031,9 +1032,9 @@ class BaseMLTrainer(ABC):
             # 特徴量サービスのクリーンアップ
             if self.feature_service is not None:
                 try:
-                    if hasattr(self.feature_service, 'cleanup_resources'):
+                    if hasattr(self.feature_service, "cleanup_resources"):
                         self.feature_service.cleanup_resources()
-                    elif hasattr(self.feature_service, 'clear_automl_cache'):
+                    elif hasattr(self.feature_service, "clear_automl_cache"):
                         self.feature_service.clear_automl_cache()
 
                     logger.debug("特徴量サービスをクリーンアップしました")
@@ -1052,9 +1053,12 @@ class BaseMLTrainer(ABC):
 
             # 強制ガベージコレクション
             import gc
+
             collected = gc.collect()
 
-            logger.info(f"BaseMLTrainerリソースクリーンアップ完了（{collected}オブジェクト回収）")
+            logger.info(
+                f"BaseMLTrainerリソースクリーンアップ完了（{collected}オブジェクト回収）"
+            )
 
         except Exception as e:
             logger.error(f"BaseMLTrainerクリーンアップエラー: {e}")

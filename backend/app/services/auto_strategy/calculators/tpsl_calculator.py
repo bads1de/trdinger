@@ -46,22 +46,28 @@ class TPSLCalculator:
         try:
             # TP/SL遺伝子が利用可能かチェック（GA最適化対象）
             if gene and hasattr(gene, "tpsl_gene") and gene.tpsl_gene:
-                return self.calculate_tpsl_from_gene(current_price, gene.tpsl_gene, position_direction)
+                return self.calculate_tpsl_from_gene(
+                    current_price, gene.tpsl_gene, position_direction
+                )
             # 新しいTP/SL計算方式が使用されているかチェック（従来の高度機能）
             elif self.is_advanced_tpsl_used(risk_management):
                 return self.calculate_advanced_tpsl_prices(
-                    current_price, stop_loss_pct, take_profit_pct, risk_management, position_direction
+                    current_price,
+                    stop_loss_pct,
+                    take_profit_pct,
+                    risk_management,
+                    position_direction,
                 )
             else:
-                # 従来の固定割合ベース計算
-                return self.calculate_legacy_tpsl_prices(
+                # 基本的なTP/SL計算（従来の固定割合ベース計算を統合）
+                return self.calculate_basic_tpsl_prices(
                     current_price, stop_loss_pct, take_profit_pct, position_direction
                 )
 
         except Exception as e:
             logger.error(f"TP/SL価格計算エラー: {e}")
-            # フォールバック: 従来方式
-            return self.calculate_legacy_tpsl_prices(
+            # フォールバック: 基本的な計算方式
+            return self.calculate_basic_tpsl_prices(
                 current_price, stop_loss_pct, take_profit_pct, position_direction
             )
 
@@ -69,14 +75,14 @@ class TPSLCalculator:
         """高度なTP/SL機能が使用されているかチェック"""
         return any(key.startswith("_tpsl_") for key in risk_management.keys())
 
-    def calculate_legacy_tpsl_prices(
+    def calculate_basic_tpsl_prices(
         self,
         current_price: float,
         stop_loss_pct: Optional[float],
         take_profit_pct: Optional[float],
         position_direction: float = 1.0,
     ) -> Tuple[Optional[float], Optional[float]]:
-        """従来の固定割合ベースTP/SL価格計算（エラーハンドリング強化版）"""
+        """基本的なTP/SL価格計算（エラーハンドリング強化版）"""
         try:
             # 入力値検証
             if not self._validate_price(current_price):
@@ -132,11 +138,19 @@ class TPSLCalculator:
 
             # 基本的な価格計算（ポジション方向を考慮）
             if position_direction > 0:  # ロングポジション
-                sl_price = current_price * (1 - stop_loss_pct) if stop_loss_pct else None
-                tp_price = current_price * (1 + take_profit_pct) if take_profit_pct else None
+                sl_price = (
+                    current_price * (1 - stop_loss_pct) if stop_loss_pct else None
+                )
+                tp_price = (
+                    current_price * (1 + take_profit_pct) if take_profit_pct else None
+                )
             else:  # ショートポジション
-                sl_price = current_price * (1 + stop_loss_pct) if stop_loss_pct else None
-                tp_price = current_price * (1 - take_profit_pct) if take_profit_pct else None
+                sl_price = (
+                    current_price * (1 + stop_loss_pct) if stop_loss_pct else None
+                )
+                tp_price = (
+                    current_price * (1 - take_profit_pct) if take_profit_pct else None
+                )
 
             # 戦略固有の調整
             if strategy_used == "volatility_adaptive":
@@ -155,7 +169,7 @@ class TPSLCalculator:
         except Exception as e:
             logger.error(f"高度なTP/SL価格計算エラー: {e}")
             # フォールバック
-            return self.calculate_legacy_tpsl_prices(
+            return self.calculate_basic_tpsl_prices(
                 current_price, stop_loss_pct, take_profit_pct, position_direction
             )
 

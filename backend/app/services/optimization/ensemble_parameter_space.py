@@ -5,7 +5,7 @@
 パラメータ空間を定義します。
 """
 
-from typing import Dict, Any
+from typing import Dict
 from .optuna_optimizer import ParameterSpace
 
 
