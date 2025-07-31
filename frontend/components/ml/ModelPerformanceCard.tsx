@@ -10,7 +10,7 @@ import InfoModal from "@/components/common/InfoModal";
 import { useModelPerformance } from "@/hooks/useModelPerformance";
 import { formatTrainingTime } from "@/utils/formatters";
 import { getScoreColorClass } from "@/utils/colorUtils";
-import { ML_METRICS_INFO } from "@/constants/mlMetricsInfo";
+import { ML_METRICS_INFO } from "@/constants/ml-metrics-info";
 import {
   TrendingUp,
   Target,
@@ -227,44 +227,50 @@ export default function ModelPerformanceCard({
     ? {
         ...originalMetrics,
         // undefinedの場合のみ代替値を使用、0.0は有効な値として扱う
-        balanced_accuracy: originalMetrics.balanced_accuracy !== undefined
-          ? originalMetrics.balanced_accuracy
-          : undefined,
-        matthews_corrcoef: originalMetrics.matthews_corrcoef !== undefined
-          ? originalMetrics.matthews_corrcoef
-          : undefined,
-        cohen_kappa: originalMetrics.cohen_kappa !== undefined
-          ? originalMetrics.cohen_kappa
-          : undefined,
-        specificity: originalMetrics.specificity !== undefined
-          ? originalMetrics.specificity
-          : undefined,
-        sensitivity: originalMetrics.sensitivity !== undefined
-          ? originalMetrics.sensitivity
-          : originalMetrics.recall !== undefined
+        balanced_accuracy:
+          originalMetrics.balanced_accuracy !== undefined
+            ? originalMetrics.balanced_accuracy
+            : undefined,
+        matthews_corrcoef:
+          originalMetrics.matthews_corrcoef !== undefined
+            ? originalMetrics.matthews_corrcoef
+            : undefined,
+        cohen_kappa:
+          originalMetrics.cohen_kappa !== undefined
+            ? originalMetrics.cohen_kappa
+            : undefined,
+        specificity:
+          originalMetrics.specificity !== undefined
+            ? originalMetrics.specificity
+            : undefined,
+        sensitivity:
+          originalMetrics.sensitivity !== undefined
+            ? originalMetrics.sensitivity
+            : originalMetrics.recall !== undefined
             ? originalMetrics.recall
             : undefined,
-        npv: originalMetrics.npv !== undefined
-          ? originalMetrics.npv
-          : undefined,
-        ppv: originalMetrics.ppv !== undefined
-          ? originalMetrics.ppv
-          : originalMetrics.precision !== undefined
+        npv:
+          originalMetrics.npv !== undefined ? originalMetrics.npv : undefined,
+        ppv:
+          originalMetrics.ppv !== undefined
+            ? originalMetrics.ppv
+            : originalMetrics.precision !== undefined
             ? originalMetrics.precision
             : undefined,
-        auc_pr: originalMetrics.auc_pr !== undefined
-          ? originalMetrics.auc_pr
-          : undefined,
-        log_loss: originalMetrics.log_loss !== undefined
-          ? originalMetrics.log_loss
-          : undefined,
-        brier_score: originalMetrics.brier_score !== undefined
-          ? originalMetrics.brier_score
-          : undefined,
+        auc_pr:
+          originalMetrics.auc_pr !== undefined
+            ? originalMetrics.auc_pr
+            : undefined,
+        log_loss:
+          originalMetrics.log_loss !== undefined
+            ? originalMetrics.log_loss
+            : undefined,
+        brier_score:
+          originalMetrics.brier_score !== undefined
+            ? originalMetrics.brier_score
+            : undefined,
       }
     : originalMetrics;
-
-
 
   return (
     <Card

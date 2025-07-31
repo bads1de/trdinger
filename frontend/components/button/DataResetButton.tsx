@@ -10,7 +10,7 @@
 import React, { useState } from "react";
 import { useApiCall } from "@/hooks/useApiCall";
 import ApiButton from "./ApiButton";
-import { RESET_CONFIGS } from "@/constants/dataResetConstants";
+import { RESET_CONFIGS } from "@/constants/data-reset-constants";
 
 /**
  * データリセットの種類
