@@ -11,17 +11,17 @@ import { BulkOpenInterestCollectionResult } from "./open-interest";
 export interface BulkOHLCVCollectionResult {
   /** 処理成功フラグ */
   success: boolean;
-  /** 結果メッセージ */
+  /** 結果メッセージ（概要） */
   message: string;
-  /** 処理開始時刻 */
+  /** 処理開始時刻（ISO文字列） */
   started_at: string;
   /** 処理ステータス */
   status: "started" | "in_progress" | "completed" | "error";
-  /** 総組み合わせ数 */
+  /** 総組み合わせ数（symbols × timeframes の理論上の総数） */
   total_combinations?: number;
-  /** 実際に実行されるタスク数 */
+  /** 実際に実行されるタスク数（除外/重複スキップ後） */
   actual_tasks?: number;
-  /** スキップされたタスク数 */
+  /** スキップされたタスク数（既存/重複など） */
   skipped_tasks?: number;
   /** 失敗したタスク数 */
   failed_tasks?: number;
@@ -40,6 +40,7 @@ export interface BulkOHLCVCollectionResult {
     /** 実行中のタスク */
     executing: Array<{
       symbol: string;
+      /** 取得元の生シンボル（正規化前） */
       original_symbol: string;
       timeframe: string;
     }>;
@@ -48,12 +49,14 @@ export interface BulkOHLCVCollectionResult {
       symbol: string;
       original_symbol: string;
       timeframe: string;
+      /** スキップ理由（例: 既に最新、サポート外など） */
       reason: string;
     }>;
     /** 失敗したタスク */
     failed: Array<{
       symbol: string;
       timeframe: string;
+      /** エラー内容（要約） */
       error: string;
     }>;
   };
@@ -63,7 +66,9 @@ export interface BulkOHLCVCollectionResult {
     timeframe: string;
     success: boolean;
     message: string;
+    /** 保存件数（任意） */
     saved_count?: number;
+    /** スキップ件数（任意） */
     skipped_count?: number;
   }>;
 }
@@ -92,7 +97,7 @@ export interface AllDataCollectionResult {
 export interface BulkIncrementalUpdateResult {
   /** 処理成功フラグ */
   success: boolean;
-  /** 結果メッセージ */
+  /** 結果メッセージ（概要） */
   message: string;
   /** データ詳細 */
   data: {
@@ -100,7 +105,7 @@ export interface BulkIncrementalUpdateResult {
     ohlcv: {
       /** 通貨ペア */
       symbol: string;
-      /** 時間軸（"all"の場合は全時間足） */
+      /** 時間軸（"all"の場合は全時間足を対象） */
       timeframe: string;
       /** 保存件数 */
       saved_count: number;
@@ -108,7 +113,7 @@ export interface BulkIncrementalUpdateResult {
       success: boolean;
       /** エラーメッセージ（失敗時） */
       error?: string;
-      /** 時間足別の結果（全時間足の場合） */
+      /** 時間足別の結果（timeframe="all" 時のみ設定） */
       timeframe_results?: {
         [timeframe: string]: {
           symbol: string;
@@ -127,7 +132,7 @@ export interface BulkIncrementalUpdateResult {
       saved_count: number;
       /** 成功フラグ */
       success: boolean;
-      /** 最新タイムスタンプ */
+      /** 最新タイムスタンプ（epoch ms。未取得時は null） */
       latest_timestamp?: number | null;
       /** エラーメッセージ（失敗時） */
       error?: string;
@@ -140,7 +145,7 @@ export interface BulkIncrementalUpdateResult {
       saved_count: number;
       /** 成功フラグ */
       success: boolean;
-      /** 最新タイムスタンプ */
+      /** 最新タイムスタンプ（epoch ms。未取得時は null） */
       latest_timestamp?: number | null;
       /** エラーメッセージ（失敗時） */
       error?: string;
@@ -153,17 +158,17 @@ export interface BulkIncrementalUpdateResult {
       inserted_count: number;
       /** 成功フラグ */
       success: boolean;
-      /** 収集タイプ */
+      /** 収集タイプ（例: "fear_greed" | "bybit_tickers" など） */
       collection_type?: string;
       /** エラーメッセージ（失敗時） */
       error?: string;
     };
   };
-  /** 総保存件数 */
+  /** 総保存件数（全カテゴリの合算） */
   total_saved_count: number;
-  /** エラーリスト */
+  /** エラーリスト（上位集約のための要約） */
   errors?: string[];
-  /** タイムスタンプ */
+  /** タイムスタンプ（ISO文字列） */
   timestamp: string;
 }
 
@@ -175,10 +180,10 @@ export interface BulkIncrementalUpdateResult {
 export interface BulkIncrementalUpdateResponse {
   /** 成功フラグ */
   success: boolean;
-  /** データ */
+  /** データ本体 */
   data: BulkIncrementalUpdateResult;
-  /** メッセージ */
+  /** メッセージ（警告/補足） */
   message?: string;
-  /** タイムスタンプ */
+  /** レスポンス生成時刻（ISO文字列） */
   timestamp: string;
 }

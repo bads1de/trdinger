@@ -10,7 +10,7 @@
 export interface FundingRateData {
   /** 通貨ペアシンボル（例: "BTC/USDT:USDT"） */
   symbol: string;
-  /** FR（例: -0.00015708） */
+  /** FR（例: -0.00015708。通常は8時間毎などの率） */
   funding_rate: number;
   /** ファンディング時刻（ISO形式） */
   funding_timestamp: string;
@@ -18,9 +18,9 @@ export interface FundingRateData {
   timestamp: string;
   /** 次回ファンディング時刻（ISO形式、オプション） */
   next_funding_timestamp?: string | null;
-  /** マーク価格（オプション） */
+  /** マーク価格（任意。USD建て想定） */
   mark_price?: number | null;
-  /** インデックス価格（オプション） */
+  /** インデックス価格（任意。USD建て想定） */
   index_price?: number | null;
 }
 
@@ -32,15 +32,15 @@ export interface FundingRateData {
 export interface CurrentFundingRateData {
   /** 通貨ペアシンボル（例: "BTC/USDT:USDT"） */
   symbol: string;
-  /** FR（例: -0.00015708） */
+  /** FR（例: -0.00015708。リアルタイムでは未確定の場合あり） */
   funding_rate: number;
-  /** ファンディング時刻（ISO形式） */
+  /** ファンディング時刻（ISO形式。未確定時は null） */
   funding_timestamp?: string | null;
   /** 次回ファンディング時刻（ISO形式） */
   next_funding_timestamp?: string | null;
-  /** マーク価格 */
+  /** マーク価格（USD） */
   mark_price?: number | null;
-  /** インデックス価格 */
+  /** インデックス価格（USD） */
   index_price?: number | null;
   /** データ取得時刻（ISO形式） */
   timestamp?: string | null;
@@ -58,12 +58,12 @@ export interface FundingRateResponse {
   data: {
     /** 通貨ペア */
     symbol: string;
-    /** データ件数 */
+    /** データ件数（返却した funding_rates の件数） */
     count: number;
     /** FRデータの配列 */
     funding_rates: FundingRateData[];
   };
-  /** メッセージ */
+  /** メッセージ（警告/補足） */
   message?: string;
 }
 
@@ -75,9 +75,9 @@ export interface FundingRateResponse {
 export interface FundingRateCollectionResult {
   /** 通貨ペア */
   symbol: string;
-  /** 取得件数 */
+  /** 取得件数（上流から取得した件数） */
   fetched_count: number;
-  /** 保存件数 */
+  /** 保存件数（DBへ実際に保存できた件数） */
   saved_count: number;
   /** 成功フラグ */
   success: boolean;
@@ -93,7 +93,7 @@ export interface FundingRateCollectionResponse {
   success: boolean;
   /** データ */
   data: FundingRateCollectionResult;
-  /** メッセージ */
+  /** メッセージ（警告/補足） */
   message?: string;
 }
 
@@ -105,9 +105,9 @@ export interface FundingRateCollectionResponse {
 export interface BulkFundingRateCollectionResult {
   /** 処理成功フラグ */
   success: boolean;
-  /** 結果メッセージ */
+  /** 結果メッセージ（概要） */
   message: string;
-  /** 処理開始時刻 */
+  /** 処理開始時刻（ISO文字列） */
   started_at?: string;
   /** 処理ステータス */
   status?: "started" | "in_progress" | "completed" | "error";
@@ -117,11 +117,11 @@ export interface BulkFundingRateCollectionResult {
   successful_symbols: number;
   /** 失敗したシンボル数 */
   failed_symbols: number;
-  /** 総保存レコード数 */
+  /** 総保存レコード数（全シンボル合算） */
   total_saved_records: number;
   /** 個別結果 */
   results: FundingRateCollectionResult[];
-  /** 失敗したシンボルの詳細 */
+  /** 失敗したシンボルの詳細（エラー要約） */
   failures: Array<{
     symbol: string;
     error: string;

@@ -19,7 +19,7 @@ export interface PriceData {
   low: number;
   /** 終値（USD） */
   close: number;
-  /** 出来高 */
+  /** 出来高（取引所により通貨/枚数/契約数など定義が異なる点に注意） */
   volume: number;
 }
 
@@ -40,7 +40,7 @@ export interface TimeFrameInfo {
   value: TimeFrame;
   /** 表示名 */
   label: string;
-  /** 説明 */
+  /** 説明（UIのヘルプ/ツールチップ向け） */
   description: string;
 }
 
@@ -61,9 +61,9 @@ export interface OHLCVResponse {
     /** OHLCVデータの配列 */
     ohlcv: PriceData[];
   };
-  /** メッセージ */
+  /** メッセージ（警告/補足） */
   message?: string;
-  /** タイムスタンプ */
+  /** タイムスタンプ（レスポンス生成時刻、ISO文字列） */
   timestamp: string;
 }
 
