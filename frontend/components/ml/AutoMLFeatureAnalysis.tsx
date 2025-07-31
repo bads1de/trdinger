@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React from "react";
+import useAutoMLFeatureAnalysis from "@/hooks/useAutoMLFeatureAnalysis";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -80,43 +81,7 @@ export default function AutoMLFeatureAnalysis({
   autoRefreshInterval,
   className = "",
 }: AutoMLFeatureAnalysisProps) {
-  const [data, setData] = useState<FeatureAnalysisData | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  const fetchAnalysis = async () => {
-    setLoading(true);
-    setError(null);
-
-    try {
-      const response = await fetch(
-        `/api/ml/automl-feature-analysis?top_n=${topN}`
-      );
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const result = await response.json();
-      if (result.error) {
-        setError(result.error);
-      } else {
-        setData(result);
-      }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "分析の取得に失敗しました");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchAnalysis();
-
-    if (autoRefreshInterval && autoRefreshInterval > 0) {
-      const interval = setInterval(fetchAnalysis, autoRefreshInterval * 1000);
-      return () => clearInterval(interval);
-    }
-  }, [topN, autoRefreshInterval]);
+  const { data, loading, error, refetch } = useAutoMLFeatureAnalysis(topN, autoRefreshInterval);
 
   // タイプ別統計をチャート用データに変換
   const typeChartData = data?.type_statistics
@@ -212,13 +177,13 @@ export default function AutoMLFeatureAnalysis({
             <Bot className="h-5 w-5 text-cyan-400" />
             <span>AutoML特徴量分析</span>
             <Badge variant="outline" className="ml-2">
-              {data.total_features}個の特徴量
+              {data?.total_features ?? 0}個の特徴量
             </Badge>
           </CardTitle>
           <Button
             variant="outline"
             size="sm"
-            onClick={fetchAnalysis}
+            onClick={refetch}
             disabled={loading}
           >
             <RefreshCw
@@ -248,7 +213,7 @@ export default function AutoMLFeatureAnalysis({
                     <div>
                       <p className="text-sm text-gray-400">AutoML貢献度</p>
                       <p className="text-lg font-bold text-white">
-                        {data.automl_impact.automl_importance_ratio?.toFixed(1)}
+                        {(data?.automl_impact?.automl_importance_ratio ?? 0).toFixed(1)}
                         %
                       </p>
                     </div>
@@ -263,7 +228,7 @@ export default function AutoMLFeatureAnalysis({
                     <div>
                       <p className="text-sm text-gray-400">AutoML特徴量</p>
                       <p className="text-lg font-bold text-white">
-                        {data.automl_impact.automl_features}個
+                        {data?.automl_impact?.automl_features ?? 0}個
                       </p>
                     </div>
                   </div>
@@ -277,7 +242,7 @@ export default function AutoMLFeatureAnalysis({
                     <div>
                       <p className="text-sm text-gray-400">手動特徴量</p>
                       <p className="text-lg font-bold text-white">
-                        {data.automl_impact.manual_features}個
+                        {data?.automl_impact?.manual_features ?? 0}個
                       </p>
                     </div>
                   </div>
@@ -357,7 +322,7 @@ export default function AutoMLFeatureAnalysis({
 
           <TabsContent value="top-features" className="space-y-4">
             <div className="space-y-2">
-              {data.top_features.slice(0, 10).map((feature, index) => (
+              {(data?.top_features ?? []).slice(0, 10).map((feature, index) => (
                 <div
                   key={feature.feature_name}
                   className="flex items-center justify-between p-3 bg-gray-800/50 rounded-lg border border-gray-700"
@@ -384,12 +349,12 @@ export default function AutoMLFeatureAnalysis({
                       </Badge>
                     </div>
                     <p className="text-xs text-gray-400 mt-1">
-                      {feature.description}
+                      {feature.description ?? ""}
                     </p>
                   </div>
                   <div className="text-right">
                     <p className="text-sm font-medium text-cyan-400">
-                      {feature.importance.toFixed(4)}
+                      {(feature.importance ?? 0).toFixed(4)}
                     </p>
                   </div>
                 </div>
