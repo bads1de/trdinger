@@ -5,7 +5,7 @@ import {
   fundingRateColumns,
   openInterestColumns,
   fearGreedColumns,
-} from "@/components/common/tableColumns";
+} from "@/components/common/TableColumns";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { PriceData, TimeFrame } from "@/types/market-data";
 import { FundingRateData } from "@/types/funding-rate";

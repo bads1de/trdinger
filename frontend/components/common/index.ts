@@ -6,7 +6,7 @@ export * from "./InputField";
 export { default as Modal } from "./Modal";
 export * from "./SelectField";
 export { default as TabButton } from "./TabButton";
-export * from "./tableColumns";
+export * from "./TableColumns";
 export { default as TimeFrameSelector } from "./TimeFrameSelector";
 export { default as LoadingSpinner } from "./LoadingSpinner";
 export { default as ErrorDisplay } from "./ErrorDisplay";
