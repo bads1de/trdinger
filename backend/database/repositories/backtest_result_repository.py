@@ -1,7 +1,6 @@
 """
 バックテスト結果リポジトリ
 
-BacktestResultモデルのデータアクセス機能を提供します。
 """
 
 from typing import List, Optional, Dict, Any, cast

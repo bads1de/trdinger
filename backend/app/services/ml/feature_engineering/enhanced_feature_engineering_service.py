@@ -402,16 +402,17 @@ class EnhancedFeatureEngineeringService(FeatureEngineeringService):
         # AutoML特徴量（残り）
         automl_features = all_columns[manual_feature_count:]
 
-        # AutoML特徴量をツール別に分類
-        tsfresh_features = [col for col in automl_features if col.startswith("TSF_")]
-        featuretools_features = [
-            col for col in automl_features if col.startswith("FT_")
+        # AutoML特徴量をツール別に分類（Featuretoolsは削除済み）
+        tsfresh_features = [
+            col
+            for col in automl_features
+            if col.startswith("TSF_") or col.startswith("TS_")
         ]
         autofeat_features = [col for col in automl_features if col.startswith("AF_")]
         other_automl_features = [
             col
             for col in automl_features
-            if not any(col.startswith(prefix) for prefix in ["TSF_", "FT_", "AF_"])
+            if not any(col.startswith(prefix) for prefix in ["TSF_", "AF_"])
         ]
 
         return {
@@ -421,8 +422,6 @@ class EnhancedFeatureEngineeringService(FeatureEngineeringService):
             "automl_count": len(automl_features),
             "tsfresh_features": tsfresh_features,
             "tsfresh_count": len(tsfresh_features),
-            "featuretools_features": featuretools_features,
-            "featuretools_count": len(featuretools_features),
             "autofeat_features": autofeat_features,
             "autofeat_count": len(autofeat_features),
             "other_automl_features": other_automl_features,
@@ -546,10 +545,10 @@ class EnhancedFeatureEngineeringService(FeatureEngineeringService):
                     # TSFreshCalculatorの設定も更新
                     self.tsfresh_calculator.config = self.automl_config.tsfresh
 
-            # Featuretools設定は削除されました（メモリ最適化のため）
-            # 後方互換性のため設定は無視されます
+            # Featuretools設定は完全削除済み
+            # 互換キーが来ても無視するだけでログは出さない
             if "featuretools" in config_dict:
-                logger.info("Featuretools設定は削除されました。設定は無視されます。")
+                pass
 
             # AutoFeat設定の更新
             if "autofeat" in config_dict:
@@ -671,11 +670,9 @@ class EnhancedFeatureEngineeringService(FeatureEngineeringService):
                             "parallel_jobsが大きすぎます。システムリソースを確認してください"
                         )
 
-            # Featuretools設定は削除されました（メモリ最適化のため）
+            # Featuretools設定キーはサポート外（完全削除済み）だが、互換性のため警告は出さないで無視
             if "featuretools" in config_dict:
-                validation_result["warnings"].append(
-                    "Featuretools設定は無視されます（メモリ最適化のため削除されました）"
-                )
+                pass
 
             validation_result["valid"] = len(validation_result["errors"]) == 0
 

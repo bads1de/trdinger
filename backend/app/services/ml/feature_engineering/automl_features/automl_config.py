@@ -113,9 +113,7 @@ class AutoMLConfig:
         self.tsfresh = tsfresh_config or TSFreshConfig()
         self.autofeat = autofeat_config or AutoFeatConfig()
 
-        # Featuretoolsは削除されました（メモリ最適化のため）
-        # 後方互換性のためのダミー属性
-        self.featuretools = type('FeaturetoolsConfig', (), {'enabled': False})()
+        # Featuretoolsは削除済み（後方互換プロパティは保持しない）
 
     @classmethod
     def get_default_config(cls) -> "AutoMLConfig":
@@ -152,13 +150,6 @@ class AutoMLConfig:
                 "feature_count_limit": self.tsfresh.feature_count_limit,
                 "parallel_jobs": self.tsfresh.parallel_jobs,
                 "custom_settings": self.tsfresh.custom_settings,
-            },
-            "featuretools": {
-                "enabled": False,  # Featuretoolsは削除されました
-                "max_depth": 0,
-                "max_features": 0,
-                "agg_primitives": None,
-                "trans_primitives": None,
             },
             "autofeat": {
                 "enabled": self.autofeat.enabled,

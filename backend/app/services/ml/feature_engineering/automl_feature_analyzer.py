@@ -19,7 +19,7 @@ class FeatureAnalysis:
 
     feature_name: str
     importance: float
-    feature_type: str  # 'manual', 'tsfresh', 'featuretools', 'autofeat'
+    feature_type: str  # 'manual', 'tsfresh',  'autofeat'
     category: str  # 特徴量のカテゴリ
     description: str  # 特徴量の説明
 
@@ -52,19 +52,6 @@ class AutoMLFeatureAnalyzer:
                     r".*__energy_ratio_by_chunks__.*",
                     r".*__linear_trend__.*",
                     r".*__agg_linear_trend__.*",
-                ],
-            },
-            "featuretools": {
-                "prefix": "FT_",
-                "patterns": [
-                    r".*_SUM$",
-                    r".*_MEAN$",
-                    r".*_STD$",
-                    r".*_MAX$",
-                    r".*_MIN$",
-                    r".*_COUNT$",
-                    r".*_TREND$",
-                    r".*_SKEW$",
                 ],
             },
             "autofeat": {
@@ -240,8 +227,6 @@ class AutoMLFeatureAnalyzer:
 
         if feature_type == "tsfresh":
             return f"TSFresh生成: {base_desc}"
-        elif feature_type == "featuretools":
-            return f"Featuretools生成: {base_desc}"
         elif feature_type == "autofeat":
             return f"AutoFeat生成: {base_desc}"
         elif feature_type == "manual":
@@ -310,7 +295,7 @@ class AutoMLFeatureAnalyzer:
 
     def _analyze_automl_impact(self, features: List[FeatureAnalysis]) -> Dict[str, Any]:
         """AutoML効果を分析"""
-        automl_types = ["tsfresh", "featuretools", "autofeat"]
+        automl_types = ["tsfresh", "autofeat"]
         manual_features = [f for f in features if f.feature_type == "manual"]
         automl_features = [f for f in features if f.feature_type in automl_types]
 
