@@ -7,7 +7,6 @@ pandas Seriesの変換は一切行いません。
 """
 
 import talib
-from talib._ta_lib import MA_Type  # type: ignore
 import numpy as np
 from typing import Tuple, cast
 from ..utils import (

@@ -187,11 +187,10 @@ class ConstraintEngine:
         for constraint in constraints:
             try:
                 params = constraint.apply(params)
-                # self.logger.debug(f"Applied constraint: {constraint.get_description()}")
             except Exception as e:
-                # self.logger.warning(
-                #     f"Failed to apply constraint {constraint.get_description()}: {e}"
-                # )
+                self.logger.warning(
+                    f"制約の適用に失敗しました: {constraint.get_description()} エラー内容: {e}"
+                )
                 pass
 
         return params
@@ -203,15 +202,14 @@ class ConstraintEngine:
         for constraint in constraints:
             try:
                 if not constraint.validate(params):
-                    # self.logger.warning(
-                    #     f"Constraint validation failed: {constraint.get_description()}"
-                    # )
+                    self.logger.warning(
+                        f"制約検証に失敗しました: {constraint.get_description()}"
+                    )
                     return False
             except Exception as e:
-                # self.logger.error(
-                #     f"Constraint validation error {constraint.get_description()}: {e}"
+                self.logger.error(f"制約検証エラー {constraint.get_description()}: {e}")
                 pass
-                # )
+
                 return False
 
         return True

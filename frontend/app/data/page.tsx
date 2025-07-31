@@ -8,33 +8,22 @@
 
 "use client";
 
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useCallback } from "react";
 import DataHeader from "@/components/data/DataHeader";
 import DataControls from "@/components/data/DataControls";
 import DataTableContainer from "@/components/data/DataTableContainer";
 import { useOhlcvData } from "@/hooks/useOhlcvData";
 import { useFundingRateData } from "@/hooks/useFundingRateData";
 import { useOpenInterestData } from "@/hooks/useOpenInterestData";
-import {
-  useFearGreedData,
-  FearGreedCollectionResult,
-} from "@/hooks/useFearGreedData";
-import { useBulkIncrementalUpdate } from "@/hooks/useBulkIncrementalUpdate";
-import { useApiCall } from "@/hooks/useApiCall";
+import { useFearGreedData } from "@/hooks/useFearGreedData";
 import { TimeFrame } from "@/types/market-data";
-import {
-  BulkOHLCVCollectionResult,
-  AllDataCollectionResult,
-} from "@/types/data-collection";
-import {
-  BulkFundingRateCollectionResult,
-  FundingRateCollectionResult,
-} from "@/types/funding-rate";
-import {
-  OpenInterestCollectionResult,
-  BulkOpenInterestCollectionResult,
-} from "@/types/open-interest";
-import { BACKEND_API_URL, SUPPORTED_TRADING_PAIRS } from "@/constants";
+import { SUPPORTED_TRADING_PAIRS } from "@/constants";
+
+// 新規フック
+import { useDataStatus } from "@/hooks/useDataStatus";
+import { useMessages, DefaultMessageDurations } from "@/hooks/useMessages";
+import { useIncrementalUpdateHandler } from "@/hooks/useIncrementalUpdateHandler";
+import { useCollectionMessageHandlers } from "@/hooks/useCollectionMessageHandlers";
 
 /**
  * データページコンポーネント
@@ -47,16 +36,8 @@ const DataPage: React.FC = () => {
     "ohlcv" | "funding" | "openinterest" | "feargreed"
   >("ohlcv");
 
-  const [dataStatus, setDataStatus] = useState<any>(null);
-  const [messages, setMessages] = useState<Record<string, string>>({});
-
-  // 定数定義
-  const MESSAGE_DURATION = {
-    SHORT: 10000,
-    MEDIUM: 15000,
-    LONG: 20000,
-  } as const;
-
+  // メッセージとキー定義
+  const MESSAGE_DURATION = DefaultMessageDurations;
   const MESSAGE_KEYS = {
     BULK_COLLECTION: "bulkCollection",
     FUNDING_RATE_COLLECTION: "fundingRateCollection",
@@ -67,38 +48,15 @@ const DataPage: React.FC = () => {
     EXTERNAL_MARKET_COLLECTION: "externalMarketCollection",
   } as const;
 
-  type MessageKey = (typeof MESSAGE_KEYS)[keyof typeof MESSAGE_KEYS];
+  const { messages, setMessage } = useMessages({
+    defaultDurations: MESSAGE_DURATION,
+  });
 
-  const setMessage = useCallback(
-    (
-      key: MessageKey,
-      message: string,
-      duration: number = MESSAGE_DURATION.SHORT
-    ) => {
-      setMessages((prev) => ({ ...prev, [key]: message }));
-      if (duration > 0) {
-        setTimeout(() => {
-          setMessages((prev) => {
-            const newMessages = { ...prev };
-            delete newMessages[key];
-            return newMessages;
-          });
-        }, duration);
-      }
-    },
-    []
-  );
+  // データステータス
+  const { dataStatus, dataStatusLoading, fetchDataStatus } = useDataStatus();
 
-  // カスタムフックを使用してデータ取得
+  // データ取得
   const symbols = SUPPORTED_TRADING_PAIRS;
-  const {
-    bulkUpdate: updateBulkIncrementalData,
-    loading: bulkIncrementalUpdateLoading,
-    error: bulkIncrementalUpdateError,
-  } = useBulkIncrementalUpdate();
-  const { execute: fetchDataStatusApi, loading: dataStatusLoading } =
-    useApiCall();
-
   const {
     data: ohlcvData,
     loading: ohlcvLoading,
@@ -124,28 +82,11 @@ const DataPage: React.FC = () => {
     data: fearGreedData,
     loading: fearGreedLoading,
     error: fearGreedError,
-    status: fearGreedStatus,
     fetchLatestData: fetchFearGreedData,
   } = useFearGreedData();
 
-  /**
-   * 通貨ペア変更ハンドラ
-   */
-  const handleSymbolChange = (symbol: string) => {
-    setSelectedSymbol(symbol);
-  };
-
-  /**
-   * 時間軸変更ハンドラ
-   */
-  const handleTimeFrameChange = (timeFrame: TimeFrame) => {
-    setSelectedTimeFrame(timeFrame);
-  };
-
-  /**
-   * データ更新ハンドラ
-   */
-  const handleRefresh = () => {
+  // リフレッシュ
+  const handleRefresh = useCallback(() => {
     if (activeTab === "ohlcv") {
       fetchOHLCVData();
     } else if (activeTab === "funding") {
@@ -153,207 +94,53 @@ const DataPage: React.FC = () => {
     } else if (activeTab === "openinterest") {
       fetchOpenInterestData();
     }
-  };
+  }, [activeTab, fetchOHLCVData, fetchFundingRateData, fetchOpenInterestData]);
 
-  /**
-   * 一括差分データ更新
-   */
-  const handleBulkIncrementalUpdate = async () => {
-    setMessage(MESSAGE_KEYS.INCREMENTAL_UPDATE, "");
-    await updateBulkIncrementalData(selectedSymbol, selectedTimeFrame, {
-      onSuccess: async (result) => {
-        const totalSavedCount = result.data.total_saved_count || 0;
-        const ohlcvCount = result.data.data.ohlcv.saved_count || 0;
-        const frCount = result.data.data.funding_rate.saved_count || 0;
-        const oiCount = result.data.data.open_interest.saved_count || 0;
-
-        // 時間足別の詳細情報を取得
-        let timeframeDetails = "";
-        if (result.data.data.ohlcv.timeframe_results) {
-          const tfResults = Object.entries(
-            result.data.data.ohlcv.timeframe_results
-          )
-            .map(([tf, res]) => `${tf}:${res.saved_count}`)
-            .join(", ");
-          timeframeDetails = ` [${tfResults}]`;
-        }
-
-        setMessage(
-          MESSAGE_KEYS.INCREMENTAL_UPDATE,
-          `✅ 一括差分更新完了！ ${selectedSymbol} - ` +
-            `総計${totalSavedCount}件 (OHLCV:${ohlcvCount}${timeframeDetails}, FR:${frCount}, OI:${oiCount})`,
-          MESSAGE_DURATION.MEDIUM
-        );
-
-        // 現在選択されている時間足のデータを再取得
-        await fetchOHLCVData();
-        fetchDataStatus();
-      },
-      onError: (errorMessage) => {
-        setMessage(
-          MESSAGE_KEYS.INCREMENTAL_UPDATE,
-          `❌ ${errorMessage}`,
-          MESSAGE_DURATION.SHORT
-        );
-        console.error("一括差分更新エラー:", errorMessage);
-      },
-    });
-  };
-
-  /**
-   * データ収集状況を取得（詳細版）
-   */
-  const fetchDataStatus = useCallback(() => {
-    const url = `${BACKEND_API_URL}/api/data-reset/status`;
-    fetchDataStatusApi(url, {
-      onSuccess: (result) => {
-        if (result) {
-          setDataStatus(result);
-        }
-      },
-      onError: (err) => {
-        console.error("データ状況取得エラー:", err);
-      },
-    });
-  }, [fetchDataStatusApi]);
-
-  // 汎用メッセージハンドラ
-  const createMessageHandler = (
-    key: MessageKey,
-    duration: number = MESSAGE_DURATION.SHORT
-  ) => ({
-    onStart: (message: string) => setMessage(key, message, duration),
-    onError: (errorMessage: string) =>
-      setMessage(key, `❌ ${errorMessage}`, duration),
+  // 一括差分更新
+  const {
+    handleBulkIncrementalUpdate,
+    bulkIncrementalUpdateLoading,
+    bulkIncrementalUpdateError,
+  } = useIncrementalUpdateHandler({
+    setMessage,
+    fetchOHLCVData,
+    fetchDataStatus,
+    MESSAGE_KEYS,
+    MESSAGE_DURATION,
   });
 
-  // データ収集メッセージ生成関数
-  const generateCollectionMessage = (type: string, result: any): string => {
-    switch (type) {
-      case "bulk":
-        return `🚀 ${result.message} (${result.total_tasks}タスク)`;
-      case "funding":
-        if ("total_symbols" in result) {
-          return `🚀 ${result.message} (${result.successful_symbols}/${result.total_symbols}シンボル成功)`;
-        }
-        return `🚀 ${result.symbol}のFRデータ収集完了 (${result.saved_count}件保存)`;
-      case "openinterest":
-        if ("total_symbols" in result) {
-          return `🚀 ${result.message} (${result.successful_symbols}/${result.total_symbols}シンボル成功)`;
-        }
-        return `🚀 ${result.symbol}のOIデータ収集完了 (${result.saved_count}件保存)`;
-      case "feargreed":
-        return result.success
-          ? `🚀 Fear & Greed Index収集完了 (取得:${result.fetched_count}件, 挿入:${result.inserted_count}件)`
-          : `❌ ${result.message}`;
-      case "alldata":
-        if (result.ohlcv_result?.status === "completed") {
-          const ohlcvCount = result.ohlcv_result?.total_tasks || 0;
-          const fundingCount =
-            result.funding_rate_result?.total_saved_records || 0;
-          const openInterestCount =
-            result.open_interest_result?.total_saved_records || 0;
-          return `🚀 全データ収集完了！ OHLCV:${ohlcvCount}タスク, FR:${fundingCount}件, OI:${openInterestCount}件, TI:自動計算済み`;
-        }
-        return `🔄 ${result.ohlcv_result?.message || "処理中..."} (実行中...)`;
-      default:
-        return `🚀 ${result.message || "処理完了"}`;
-    }
-  };
-
-  // 各種ハンドラを簡潔に定義
-  const handleBulkCollectionStart = (result: BulkOHLCVCollectionResult) => {
-    setMessage(
-      MESSAGE_KEYS.BULK_COLLECTION,
-      generateCollectionMessage("bulk", result)
-    );
-    fetchDataStatus();
-  };
-
-  const handleBulkCollectionError = (errorMessage: string) => {
-    createMessageHandler(MESSAGE_KEYS.BULK_COLLECTION).onError(errorMessage);
-  };
-
-  const handleFundingRateCollectionStart = (
-    result: BulkFundingRateCollectionResult | FundingRateCollectionResult
-  ) => {
-    setMessage(
-      MESSAGE_KEYS.FUNDING_RATE_COLLECTION,
-      generateCollectionMessage("funding", result)
-    );
-  };
-
-  const handleFundingRateCollectionError = (errorMessage: string) => {
-    createMessageHandler(MESSAGE_KEYS.FUNDING_RATE_COLLECTION).onError(
-      errorMessage
-    );
-  };
-
-  const handleOpenInterestCollectionStart = (
-    result: BulkOpenInterestCollectionResult | OpenInterestCollectionResult
-  ) => {
-    setMessage(
-      MESSAGE_KEYS.OPEN_INTEREST_COLLECTION,
-      generateCollectionMessage("openinterest", result)
-    );
-  };
-
-  const handleOpenInterestCollectionError = (errorMessage: string) => {
-    createMessageHandler(MESSAGE_KEYS.OPEN_INTEREST_COLLECTION).onError(
-      errorMessage
-    );
-  };
-
-  const handleFearGreedCollectionStart = (
-    result: FearGreedCollectionResult
-  ) => {
-    setMessage(
-      MESSAGE_KEYS.FEAR_GREED_COLLECTION,
-      generateCollectionMessage("feargreed", result)
-    );
-    if (result.success) {
-      fetchFearGreedData();
-    }
-    fetchDataStatus();
-  };
-
-  const handleFearGreedCollectionError = (errorMessage: string) => {
-    createMessageHandler(MESSAGE_KEYS.FEAR_GREED_COLLECTION).onError(
-      errorMessage
-    );
-  };
-
-  const handleAllDataCollectionStart = (result: AllDataCollectionResult) => {
-    setMessage(
-      MESSAGE_KEYS.ALL_DATA_COLLECTION,
-      generateCollectionMessage("alldata", result),
-      MESSAGE_DURATION.MEDIUM
-    );
-    fetchDataStatus();
-
-    setTimeout(() => {
-      fetchOHLCVData();
-      fetchFundingRateData();
-      fetchOpenInterestData();
-    }, 3000);
-  };
-
-  const handleAllDataCollectionError = (errorMessage: string) => {
-    createMessageHandler(
-      MESSAGE_KEYS.ALL_DATA_COLLECTION,
-      MESSAGE_DURATION.MEDIUM
-    ).onError(errorMessage);
-  };
-
-  // コンポーネント初期化時にデータステータスをフェッチ
-  useEffect(() => {
-    fetchDataStatus();
-  }, [fetchDataStatus]);
+  // 収集メッセージ/ハンドラ
+  const {
+    handleBulkCollectionStart,
+    handleBulkCollectionError,
+    handleFundingRateCollectionStart,
+    handleFundingRateCollectionError,
+    handleOpenInterestCollectionStart,
+    handleOpenInterestCollectionError,
+    handleFearGreedCollectionStart,
+    handleFearGreedCollectionError,
+    handleAllDataCollectionStart,
+    handleAllDataCollectionError,
+  } = useCollectionMessageHandlers({
+    setMessage,
+    fetchFearGreedData,
+    fetchDataStatus,
+    fetchOHLCVData,
+    fetchFundingRateData,
+    fetchOpenInterestData,
+    MESSAGE_KEYS,
+    MESSAGE_DURATION,
+  });
 
   return (
     <div className="min-h-screen  from-gray-900 animate-fade-in">
       <DataHeader
-        loading={ohlcvLoading || fundingLoading || openInterestLoading}
+        loading={
+          ohlcvLoading ||
+          fundingLoading ||
+          openInterestLoading ||
+          dataStatusLoading
+        }
         error={
           ohlcvError ||
           fundingError ||
@@ -364,7 +151,9 @@ const DataPage: React.FC = () => {
         updating={false}
         bulkUpdating={bulkIncrementalUpdateLoading}
         handleRefresh={handleRefresh}
-        handleBulkIncrementalUpdate={handleBulkIncrementalUpdate}
+        handleBulkIncrementalUpdate={() =>
+          handleBulkIncrementalUpdate(selectedSymbol, selectedTimeFrame)
+        }
       />
 
       {/* メインコンテンツエリア */}
@@ -402,7 +191,7 @@ const DataPage: React.FC = () => {
                   </h3>
                 </div>
                 <p className="mt-2 text-sm text-error-700 dark:text-error-300">
-                  {errors[0]}
+                  {errors[0] as string}
                 </p>
               </div>
             </div>
@@ -413,11 +202,11 @@ const DataPage: React.FC = () => {
           dataStatus={dataStatus}
           symbols={symbols}
           selectedSymbol={selectedSymbol}
-          handleSymbolChange={handleSymbolChange}
+          handleSymbolChange={setSelectedSymbol}
           symbolsLoading={false}
           loading={ohlcvLoading || fundingLoading || openInterestLoading}
           selectedTimeFrame={selectedTimeFrame}
-          handleTimeFrameChange={handleTimeFrameChange}
+          handleTimeFrameChange={setSelectedTimeFrame}
           updating={bulkIncrementalUpdateLoading}
           handleAllDataCollectionStart={handleAllDataCollectionStart}
           handleAllDataCollectionError={handleAllDataCollectionError}
