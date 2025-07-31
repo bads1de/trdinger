@@ -150,6 +150,15 @@ class TrainingConfig(BaseSettings):
 
     # ターゲット作成
     PREDICTION_HORIZON: int = Field(default=24)
+
+    # ラベル生成設定（動的閾値を使用）
+    LABEL_METHOD: str = Field(default="dynamic_volatility", description="ラベル生成方法")
+    VOLATILITY_WINDOW: int = Field(default=24, description="ボラティリティ計算ウィンドウ")
+    THRESHOLD_MULTIPLIER: float = Field(default=0.5, description="閾値乗数")
+    MIN_THRESHOLD: float = Field(default=0.005, description="最小閾値")
+    MAX_THRESHOLD: float = Field(default=0.05, description="最大閾値")
+
+    # 従来の固定閾値（後方互換性のため保持）
     THRESHOLD_UP: float = Field(default=0.02)
     THRESHOLD_DOWN: float = Field(default=-0.02)
 

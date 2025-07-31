@@ -434,14 +434,34 @@ class BaseMLTrainer(ABC):
                 -prediction_horizon
             )
 
-            # 閾値を使用してクラス分類
-            threshold_up = getattr(self.config.training, "THRESHOLD_UP", 0.02)
-            threshold_down = getattr(self.config.training, "THRESHOLD_DOWN", -0.02)
+            # 動的閾値を使用してクラス分類
+            from ..utils.label_generation import LabelGenerator, ThresholdMethod
 
-            # 3クラス分類：0=下落、1=横ばい、2=上昇
-            target = pd.Series(1, index=future_returns.index)  # デフォルトは横ばい
-            target[future_returns > threshold_up] = 2  # 上昇
-            target[future_returns < threshold_down] = 0  # 下落
+            label_generator = LabelGenerator()
+
+            # 設定から動的閾値パラメータを取得
+            label_method = getattr(self.config.training, "LABEL_METHOD", "dynamic_volatility")
+
+            if label_method == "dynamic_volatility":
+                # 動的ボラティリティベースのラベル生成
+                labels, threshold_info = label_generator.generate_labels(
+                    ohlcv_data["Close"],
+                    method=ThresholdMethod.DYNAMIC_VOLATILITY,
+                    volatility_window=getattr(self.config.training, "VOLATILITY_WINDOW", 24),
+                    threshold_multiplier=getattr(self.config.training, "THRESHOLD_MULTIPLIER", 0.5),
+                    min_threshold=getattr(self.config.training, "MIN_THRESHOLD", 0.005),
+                    max_threshold=getattr(self.config.training, "MAX_THRESHOLD", 0.05),
+                )
+                target = labels
+            else:
+                # 従来の固定閾値（後方互換性）
+                threshold_up = getattr(self.config.training, "THRESHOLD_UP", 0.02)
+                threshold_down = getattr(self.config.training, "THRESHOLD_DOWN", -0.02)
+
+                # 3クラス分類：0=下落、1=横ばい、2=上昇
+                target = pd.Series(1, index=future_returns.index)  # デフォルトは横ばい
+                target[future_returns > threshold_up] = 2  # 上昇
+                target[future_returns < threshold_down] = 0  # 下落
 
             # NaNを除去
             target = target.dropna()
@@ -538,9 +558,10 @@ class BaseMLTrainer(ABC):
             # ラベル生成器を初期化
             label_generator = LabelGenerator()
 
-            # 閾値計算方法を決定
+            # 閾値計算方法を決定（デフォルトを動的ボラティリティベースに変更）
             threshold_method_str = training_params.get(
-                "threshold_method", "std_deviation"
+                "threshold_method",
+                getattr(self.config.training, "LABEL_METHOD", "dynamic_volatility")
             )
 
             # 文字列からEnumに変換
@@ -549,6 +570,7 @@ class BaseMLTrainer(ABC):
                 "quantile": ThresholdMethod.QUANTILE,
                 "std_deviation": ThresholdMethod.STD_DEVIATION,
                 "adaptive": ThresholdMethod.ADAPTIVE,
+                "dynamic_volatility": ThresholdMethod.DYNAMIC_VOLATILITY,
             }
 
             threshold_method = method_mapping.get(
@@ -568,6 +590,20 @@ class BaseMLTrainer(ABC):
             elif threshold_method == ThresholdMethod.STD_DEVIATION:
                 method_params["std_multiplier"] = training_params.get(
                     "std_multiplier", 0.25
+                )
+            elif threshold_method == ThresholdMethod.DYNAMIC_VOLATILITY:
+                # 設定から動的ボラティリティパラメータを取得
+                method_params["volatility_window"] = training_params.get(
+                    "volatility_window", getattr(self.config.training, "VOLATILITY_WINDOW", 24)
+                )
+                method_params["threshold_multiplier"] = training_params.get(
+                    "threshold_multiplier", getattr(self.config.training, "THRESHOLD_MULTIPLIER", 0.5)
+                )
+                method_params["min_threshold"] = training_params.get(
+                    "min_threshold", getattr(self.config.training, "MIN_THRESHOLD", 0.005)
+                )
+                method_params["max_threshold"] = training_params.get(
+                    "max_threshold", getattr(self.config.training, "MAX_THRESHOLD", 0.05)
                 )
             elif threshold_method in [
                 ThresholdMethod.QUANTILE,
@@ -638,14 +674,16 @@ class BaseMLTrainer(ABC):
         numeric_columns = features_df.select_dtypes(include=[np.number]).columns
         features_df_numeric = features_df[numeric_columns]
 
-        # 統計的手法で欠損値を補完
+        # 統計的手法で欠損値を補完（スケーリング有効化、IQRベース外れ値検出）
         logger.info("統計的手法による特徴量前処理を実行中...")
         features_df_clean = data_preprocessor.preprocess_features(
             features_df_numeric,
             imputation_strategy="median",
-            scale_features=False,
+            scale_features=True,  # 特徴量スケーリングを有効化
             remove_outliers=True,
-            outlier_threshold=3.0
+            outlier_threshold=3.0,
+            scaling_method="robust",  # ロバストスケーリングを使用
+            outlier_method="iqr"  # IQRベースの外れ値検出を使用
         )
 
         # 特徴量とラベルを分離（改善されたラベル生成ロジック）

@@ -20,6 +20,7 @@ class ThresholdMethod(Enum):
     QUANTILE = "quantile"  # 分位数ベース
     STD_DEVIATION = "std_deviation"  # 標準偏差ベース
     ADAPTIVE = "adaptive"  # 適応的閾値
+    DYNAMIC_VOLATILITY = "dynamic_volatility"  # 動的ボラティリティベース
 
 
 class LabelGenerator:
@@ -140,6 +141,10 @@ class LabelGenerator:
         elif method == ThresholdMethod.ADAPTIVE:
             return self._calculate_adaptive_thresholds(
                 price_change, target_distribution, **kwargs
+            )
+        elif method == ThresholdMethod.DYNAMIC_VOLATILITY:
+            return self._calculate_dynamic_volatility_thresholds(
+                price_change, **kwargs
             )
         else:
             raise ValueError(f"未対応の閾値計算方法: {method}")
@@ -338,3 +343,105 @@ class LabelGenerator:
             validation_result["is_valid"] = False
 
         return validation_result
+
+    def _calculate_dynamic_volatility_thresholds(
+        self,
+        price_change: pd.Series,
+        volatility_window: int = 24,
+        threshold_multiplier: float = 0.5,
+        min_threshold: float = 0.005,
+        max_threshold: float = 0.05,
+        **kwargs
+    ) -> Dict[str, Any]:
+        """
+        動的ボラティリティベースの閾値を計算
+
+        市場のボラティリティに応じて動的に閾値を調整し、
+        クラス分布の均衡を保つ。
+
+        Args:
+            price_change: 価格変化率データ
+            volatility_window: ボラティリティ計算ウィンドウ
+            threshold_multiplier: 閾値乗数
+            min_threshold: 最小閾値
+            max_threshold: 最大閾値
+
+        Returns:
+            閾値情報の辞書
+        """
+        # ローリングボラティリティを計算
+        volatility = price_change.rolling(window=volatility_window).std()
+
+        # 動的閾値を計算
+        dynamic_threshold = volatility * threshold_multiplier
+
+        # 閾値を最小・最大値でクリップ
+        dynamic_threshold = dynamic_threshold.clip(min_threshold, max_threshold)
+
+        # 平均閾値を計算（NaNを除外）
+        avg_threshold = dynamic_threshold.dropna().mean()
+
+        # 上昇・下落閾値を設定
+        threshold_up = avg_threshold
+        threshold_down = -avg_threshold
+
+        # 統計情報を計算
+        volatility_stats = {
+            'mean_volatility': volatility.dropna().mean(),
+            'std_volatility': volatility.dropna().std(),
+            'min_volatility': volatility.dropna().min(),
+            'max_volatility': volatility.dropna().max(),
+        }
+
+        threshold_stats = {
+            'mean_threshold': avg_threshold,
+            'min_threshold_used': dynamic_threshold.dropna().min(),
+            'max_threshold_used': dynamic_threshold.dropna().max(),
+            'threshold_std': dynamic_threshold.dropna().std(),
+        }
+
+        return {
+            "method": "dynamic_volatility",
+            "threshold_up": threshold_up,
+            "threshold_down": threshold_down,
+            "volatility_window": volatility_window,
+            "threshold_multiplier": threshold_multiplier,
+            "min_threshold": min_threshold,
+            "max_threshold": max_threshold,
+            "volatility_stats": volatility_stats,
+            "threshold_stats": threshold_stats,
+            "description": f"動的ボラティリティベース（平均閾値±{avg_threshold*100:.2f}%）",
+        }
+
+    def generate_labels_with_dynamic_threshold(
+        self,
+        price_data: pd.Series,
+        volatility_window: int = 24,
+        threshold_multiplier: float = 0.5,
+        min_threshold: float = 0.005,
+        max_threshold: float = 0.05,
+    ) -> Tuple[pd.Series, Dict[str, Any]]:
+        """
+        ボラティリティに基づく動的閾値でラベルを生成
+
+        改善計画で提案された動的閾値機能の実装。
+        市場のボラティリティに応じて適応的に閾値を調整する。
+
+        Args:
+            price_data: 価格データ（Close価格）
+            volatility_window: ボラティリティ計算ウィンドウ
+            threshold_multiplier: 閾値乗数
+            min_threshold: 最小閾値
+            max_threshold: 最大閾値
+
+        Returns:
+            ラベルSeries, 閾値情報の辞書
+        """
+        return self.generate_labels(
+            price_data,
+            method=ThresholdMethod.DYNAMIC_VOLATILITY,
+            volatility_window=volatility_window,
+            threshold_multiplier=threshold_multiplier,
+            min_threshold=min_threshold,
+            max_threshold=max_threshold,
+        )

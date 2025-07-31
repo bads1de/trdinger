@@ -253,14 +253,16 @@ class FeatureEngineeringService:
                 if col not in ["Open", "High", "Low", "Close", "Volume"]
             ]
 
-            # 高品質なデータ前処理を実行
+            # 高品質なデータ前処理を実行（スケーリング有効化、IQRベース外れ値検出）
             logger.info("統計的手法による特徴量前処理を実行中...")
             result_df = data_preprocessor.preprocess_features(
                 result_df,
                 imputation_strategy="median",
-                scale_features=False,  # 特徴量スケーリングは無効
+                scale_features=True,  # 特徴量スケーリングを有効化
                 remove_outliers=True,
-                outlier_threshold=3.0
+                outlier_threshold=3.0,
+                scaling_method="robust",  # ロバストスケーリングを使用
+                outlier_method="iqr"  # IQRベースの外れ値検出を使用
             )
 
             logger.info(f"特徴量計算完了: {len(result_df.columns)}個の特徴量を生成")

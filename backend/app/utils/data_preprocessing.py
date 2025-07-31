@@ -155,18 +155,22 @@ class DataPreprocessor:
         imputation_strategy: str = "median",
         scale_features: bool = False,
         remove_outliers: bool = True,
-        outlier_threshold: float = 3.0
+        outlier_threshold: float = 3.0,
+        scaling_method: str = "standard",
+        outlier_method: str = "iqr"
     ) -> pd.DataFrame:
         """
         特徴量の包括的前処理
-        
+
         Args:
             df: 対象DataFrame
             imputation_strategy: 欠損値補完戦略
             scale_features: 特徴量スケーリングを行うか
             remove_outliers: 外れ値除去を行うか
-            outlier_threshold: 外れ値の閾値（標準偏差の倍数）
-            
+            outlier_threshold: 外れ値の閾値（IQRの場合は倍数、Z-scoreの場合は標準偏差の倍数）
+            scaling_method: スケーリング方法（standard, robust, minmax）
+            outlier_method: 外れ値検出方法（iqr, zscore）
+
         Returns:
             前処理されたDataFrame
         """
@@ -184,7 +188,7 @@ class DataPreprocessor:
         
         # 3. 外れ値除去（オプション）
         if remove_outliers:
-            result_df = self._remove_outliers(result_df, numeric_columns, outlier_threshold)
+            result_df = self._remove_outliers(result_df, numeric_columns, outlier_threshold, method=outlier_method)
         
         # 4. 欠損値補完
         result_df = self.transform_missing_values(
@@ -195,7 +199,7 @@ class DataPreprocessor:
         
         # 5. 特徴量スケーリング（オプション）
         if scale_features:
-            result_df = self._scale_features(result_df, numeric_columns)
+            result_df = self._scale_features(result_df, numeric_columns, method=scaling_method)
         
         # 6. 最終検証
         remaining_missing = result_df[numeric_columns].isnull().sum().sum()
@@ -211,66 +215,130 @@ class DataPreprocessor:
         self,
         df: pd.DataFrame,
         columns: List[str],
-        threshold: float = 3.0
+        threshold: float = 3.0,
+        method: str = "iqr"
     ) -> pd.DataFrame:
-        """外れ値を除去（NaNに変換）"""
+        """
+        外れ値を除去（NaNに変換）
+
+        Args:
+            df: 対象DataFrame
+            columns: 処理対象カラム
+            threshold: 閾値（IQRの場合は倍数、Z-scoreの場合は標準偏差の倍数）
+            method: 外れ値検出方法（iqr, zscore）
+        """
         result_df = df.copy()
         outliers_removed = 0
-        
+
         for col in columns:
             if col not in result_df.columns:
                 continue
-                
+
             try:
-                series = result_df[col]
-                mean_val = series.mean()
-                std_val = series.std()
-                
-                if pd.isna(mean_val) or pd.isna(std_val) or std_val == 0:
+                series = result_df[col].dropna()
+                if len(series) == 0:
                     continue
-                
-                # Z-scoreによる外れ値検出
-                z_scores = np.abs((series - mean_val) / std_val)
-                outliers = z_scores > threshold
-                
+
+                if method.lower() == "iqr":
+                    # IQR（四分位範囲）ベースの外れ値検出
+                    Q1 = series.quantile(0.25)
+                    Q3 = series.quantile(0.75)
+                    IQR = Q3 - Q1
+
+                    if IQR == 0:
+                        continue  # IQRが0の場合はスキップ
+
+                    lower_bound = Q1 - threshold * IQR
+                    upper_bound = Q3 + threshold * IQR
+
+                    outliers = (result_df[col] < lower_bound) | (result_df[col] > upper_bound)
+
+                elif method.lower() == "zscore":
+                    # Z-scoreベースの外れ値検出（従来の方法）
+                    mean_val = series.mean()
+                    std_val = series.std()
+
+                    if pd.isna(mean_val) or pd.isna(std_val) or std_val == 0:
+                        continue
+
+                    z_scores = np.abs((result_df[col] - mean_val) / std_val)
+                    outliers = z_scores > threshold
+
+                else:
+                    logger.warning(f"未対応の外れ値検出方法: {method}。IQRを使用します。")
+                    continue
+
                 outlier_count = outliers.sum()
                 if outlier_count > 0:
                     result_df.loc[outliers, col] = np.nan
                     outliers_removed += outlier_count
-                    logger.debug(f"カラム {col}: {outlier_count}個の外れ値を除去")
-                    
+                    logger.debug(f"カラム {col}: {outlier_count}個の外れ値を除去（{method}法）")
+
             except Exception as e:
                 logger.error(f"カラム {col} の外れ値除去エラー: {e}")
-        
+
         if outliers_removed > 0:
-            logger.info(f"外れ値除去完了: {outliers_removed}個の値を除去")
-        
+            logger.info(f"外れ値除去完了: {outliers_removed}個の値を除去（{method}法）")
+
         return result_df
 
     def _scale_features(
         self,
         df: pd.DataFrame,
-        columns: List[str]
+        columns: List[str],
+        method: str = "standard"
     ) -> pd.DataFrame:
-        """特徴量をスケーリング"""
+        """
+        特徴量をスケーリング
+
+        Args:
+            df: 対象DataFrame
+            columns: スケーリング対象カラム
+            method: スケーリング方法（standard, robust, minmax）
+        """
+        from sklearn.preprocessing import StandardScaler, RobustScaler, MinMaxScaler
+
         result_df = df.copy()
-        
+
+        # スケーラーの選択
+        scaler_classes = {
+            "standard": StandardScaler,
+            "robust": RobustScaler,
+            "minmax": MinMaxScaler
+        }
+
+        if method not in scaler_classes:
+            logger.warning(f"未対応のスケーリング方法: {method}。standardを使用します。")
+            method = "standard"
+
+        scaler_class = scaler_classes[method]
+
         for col in columns:
             if col not in result_df.columns:
                 continue
-                
+
             try:
-                if col not in self.scalers:
-                    self.scalers[col] = StandardScaler()
-                    self.scalers[col].fit(result_df[col].values.reshape(-1, 1))
-                
-                result_df[col] = self.scalers[col].transform(
-                    result_df[col].values.reshape(-1, 1)
-                ).flatten()
-                
+                # カラム固有のスケーラーキーを作成
+                scaler_key = f"{col}_{method}"
+
+                if scaler_key not in self.scalers:
+                    self.scalers[scaler_key] = scaler_class()
+                    # 有効なデータのみでフィット
+                    valid_data = result_df[col].dropna().values.reshape(-1, 1)
+                    if len(valid_data) > 0:
+                        self.scalers[scaler_key].fit(valid_data)
+                    else:
+                        logger.warning(f"カラム {col}: 有効なデータがないためスケーリングをスキップ")
+                        continue
+
+                # 変換を実行
+                col_data = result_df[col].values.reshape(-1, 1)
+                result_df[col] = self.scalers[scaler_key].transform(col_data).flatten()
+
             except Exception as e:
                 logger.error(f"カラム {col} のスケーリングエラー: {e}")
-        
+
+        logger.info(f"{method}スケーリング完了: {len(columns)}個の特徴量を処理")
         return result_df
 
     def get_imputation_stats(self) -> Dict:
