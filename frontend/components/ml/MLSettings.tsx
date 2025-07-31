@@ -15,7 +15,6 @@ import {
   Settings,
   Save,
   RotateCcw,
-  Database,
   Clock,
   Brain,
   Trash2,
@@ -75,12 +74,6 @@ export default function MLSettings() {
       if (config.tsfresh.enabled && config.tsfresh.feature_count_limit > 300) {
         warnings.push(
           "TSFresh特徴量数が多すぎます。処理時間が長くなる可能性があります。"
-        );
-      }
-
-      if (config.featuretools.enabled && config.featuretools.max_depth > 3) {
-        warnings.push(
-          "Featuretools深度が深すぎます。計算コストが高くなります。"
         );
       }
 

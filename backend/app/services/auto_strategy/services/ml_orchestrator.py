@@ -285,7 +285,7 @@ class MLOrchestrator(MLPredictionInterface):
         Returns:
             モデル状態の辞書
         """
-        print("=== DEBUG: MLOrchestrator.get_model_status呼び出し ===")
+        
 
         status = {
             "is_model_loaded": self.is_model_loaded,
@@ -304,7 +304,6 @@ class MLOrchestrator(MLPredictionInterface):
         try:
             latest_model = model_manager.get_latest_model("*")
             if latest_model:
-                print(f"=== DEBUG: 最新モデルファイル: {latest_model} ===")
                 # ModelManagerから直接メタデータを取得
                 model_data = model_manager.load_model(latest_model)
                 if model_data and "metadata" in model_data:
@@ -322,13 +321,11 @@ class MLOrchestrator(MLPredictionInterface):
                         "cohen_kappa": metadata.get("cohen_kappa", 0.0),
                     }
                     status["performance_metrics"] = performance_metrics
-                    print(f"=== DEBUG: 性能指標を追加: {performance_metrics} ===")
                 else:
-                    print("=== DEBUG: モデルメタデータが見つかりません ===")
+                    logger.debug("モデルメタデータが見つかりません")
             else:
-                print("=== DEBUG: 最新モデルファイルが見つかりません ===")
+                logger.debug("最新モデルファイルが見つかりません")
         except Exception as e:
-            print(f"=== DEBUG: 性能指標取得エラー: {e} ===")
             logger.error(f"性能指標取得エラー: {e}")
 
         return status

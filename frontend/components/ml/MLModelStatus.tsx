@@ -93,9 +93,12 @@ export default function MLModelStatus() {
       {modelStatus.model_info && (
         <Card>
           <CardContent className="p-4">
-            <div className="flex items-center space-x-2 mb-4">
-              <BarChart3 className="h-5 w-5 text-purple-600" />
-              <h3 className="font-medium text-gray-900">モデル詳細</h3>
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center space-x-2">
+                <BarChart3 className="h-5 w-5 text-purple-600" />
+                <h3 className="font-medium text-gray-900">モデル詳細</h3>
+              </div>
+              {getStatusBadge()}
             </div>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <div className="text-center">
@@ -135,7 +138,7 @@ export default function MLModelStatus() {
           <CardContent className="p-6">
             <div className="flex items-center space-x-2 mb-4">
               <Activity className="h-5 w-5 text-orange-600" />
-              <h3 className="font-medium text-white">
+              <h3 className="font-medium text-gray-900">
                 特徴量重要度 (上位10個)
               </h3>
             </div>
@@ -146,10 +149,10 @@ export default function MLModelStatus() {
                 .map(([feature, importance]) => (
                   <div key={feature} className="flex items-center space-x-2">
                     <div className="flex-1 flex items-center justify-between">
-                      <span className="text-sm text-gray-300 truncate">
+                      <span className="text-sm text-gray-600 truncate">
                         {feature}
                       </span>
-                      <span className="text-sm font-medium text-gray-400">
+                      <span className="text-sm font-medium text-gray-900">
                         {importance.toFixed(3)}
                       </span>
                     </div>
