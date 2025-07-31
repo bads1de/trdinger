@@ -40,6 +40,7 @@ class TabNetModel:
         X_test: pd.DataFrame,
         y_train: pd.Series,
         y_test: pd.Series,
+        **kwargs,
     ) -> Dict[str, Any]:
         """
         TabNetモデルを学習

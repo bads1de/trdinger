@@ -210,7 +210,7 @@ class BacktestService:
                 "end_date": request.end_date,
                 "initial_capital": request.initial_capital,
                 "commission_rate": request.commission_rate,
-                "strategy_config": request.strategy_config.dict(),
+                "strategy_config": request.strategy_config.model_dump(),
             }
 
             # バックテストを実行

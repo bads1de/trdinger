@@ -93,6 +93,15 @@ class EnsembleConfig(BaseModel):
     )
 
 
+class SingleModelConfig(BaseModel):
+    """単一モデル学習設定"""
+
+    model_type: str = Field(
+        default="lightgbm",
+        description="使用するモデルタイプ (lightgbm, xgboost, catboost, tabnet)"
+    )
+
+
 # グローバル状態管理は削除（OrchestrationServiceに移動）
 
 
@@ -139,23 +148,14 @@ class MLTrainingConfig(BaseModel):
 
     # アンサンブル学習設定
     ensemble_config: Optional[EnsembleConfig] = Field(
-        default_factory=lambda: EnsembleConfig(
-            enabled=True,
-            method="stacking",  # デフォルトをスタッキングに変更（多様性重視）
-            bagging_params=BaggingParamsConfig(n_estimators=5, bootstrap_fraction=0.8),
-            stacking_params=StackingParamsConfig(
-                base_models=[
-                    "lightgbm",
-                    "xgboost",
-                    "gradient_boosting",
-                    "random_forest",
-                ],  # 4種類のモデルで多様性確保
-                meta_model="lightgbm",
-                cv_folds=5,
-                use_probas=True,
-            ),
-        ),
-        description="アンサンブル学習設定（デフォルト: 多様性重視のスタッキング）",
+        default=None,  # デフォルトをNoneに変更してフロントエンドからの設定を優先
+        description="アンサンブル学習設定（フロントエンドから明示的に設定）",
+    )
+
+    # 単一モデル学習設定
+    single_model_config: Optional[SingleModelConfig] = Field(
+        default=None,  # デフォルトをNoneに変更してフロントエンドからの設定を優先
+        description="単一モデル学習設定（アンサンブル無効時に使用）",
     )
 
 
@@ -201,8 +201,22 @@ async def start_ml_training(
         MLTrainingResponse: トレーニング開始応答
     """
     logger.info("🚀 /api/ml-training/train エンドポイントが呼び出されました")
+    logger.info(f"📋 受信したconfig全体: {config}")
     logger.info(f"📋 アンサンブル設定: {config.ensemble_config}")
+    logger.info(f"📋 アンサンブル設定enabled: {config.ensemble_config.enabled if config.ensemble_config else 'None'}")
+    logger.info(f"📋 単一モデル設定: {config.single_model_config}")
+    logger.info(f"📋 単一モデルタイプ: {config.single_model_config.model_type if config.single_model_config else 'None'}")
     logger.info(f"📋 最適化設定: {config.optimization_settings}")
+
+    # 設定の詳細確認
+    if config.ensemble_config:
+        ensemble_dict = config.ensemble_config.model_dump()
+        logger.info(f"📋 アンサンブル設定辞書: {ensemble_dict}")
+        logger.info(f"📋 enabled値確認: {ensemble_dict.get('enabled')} (型: {type(ensemble_dict.get('enabled'))})")
+
+    if config.single_model_config:
+        single_dict = config.single_model_config.model_dump()
+        logger.info(f"📋 単一モデル設定辞書: {single_dict}")
 
     async def _start_training():
 
@@ -251,3 +265,23 @@ async def stop_ml_training():
         return await orchestration_service.stop_training()
 
     return await UnifiedErrorHandler.safe_execute_async(_stop_training)
+
+
+@router.get("/available-models")
+async def get_available_models():
+    """
+    利用可能な単一モデルのリストを取得
+    """
+
+    async def _get_available_models():
+        from app.services.ml.ml_training_service import MLTrainingService
+
+        available_models = MLTrainingService.get_available_single_models()
+
+        return {
+            "success": True,
+            "available_models": available_models,
+            "message": f"{len(available_models)}個のモデルが利用可能です"
+        }
+
+    return await UnifiedErrorHandler.safe_execute_async(_get_available_models)

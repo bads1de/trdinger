@@ -14,7 +14,8 @@ import {
 } from "@/components/ui/select";
 import { InputField } from "@/components/common/InputField";
 import { Badge } from "@/components/ui/badge";
-import { Layers,  Shuffle, BarChart3 } from "lucide-react";
+import { Layers, Shuffle, BarChart3, Cpu } from "lucide-react";
+import { SingleModelConfig } from "@/hooks/useMLTraining";
 
 export interface EnsembleSettingsConfig {
   enabled: boolean;
@@ -35,9 +36,16 @@ export interface EnsembleSettingsConfig {
   };
 }
 
+export interface SingleModelSettingsConfig {
+  model_type: string;
+}
+
 interface EnsembleSettingsProps {
   settings: EnsembleSettingsConfig;
   onChange: (settings: EnsembleSettingsConfig) => void;
+  singleModelSettings?: SingleModelSettingsConfig;
+  onSingleModelChange?: (settings: SingleModelSettingsConfig) => void;
+  availableModels?: string[];
 }
 
 const AVAILABLE_MODELS = [
@@ -76,6 +84,9 @@ const META_MODELS = [
 export default function EnsembleSettings({
   settings,
   onChange,
+  singleModelSettings = { model_type: "lightgbm" },
+  onSingleModelChange,
+  availableModels = ["lightgbm", "xgboost", "catboost", "tabnet"],
 }: EnsembleSettingsProps) {
   const updateSettings = (updates: Partial<EnsembleSettingsConfig>) => {
     onChange({ ...settings, ...updates });
@@ -130,21 +141,58 @@ export default function EnsembleSettings({
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-6">
-        {/* アンサンブル有効化 */}
-        <div className="flex items-center justify-between">
-          <div className="space-y-1">
-            <Label htmlFor="ensemble-enabled" className="text-sm font-medium">
-              アンサンブル学習を有効化
-            </Label>
-            <p className="text-xs text-muted-foreground">
-              複数のモデルを組み合わせて予測精度を向上させます
-            </p>
+        {/* トレーニングモード選択 */}
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <div className="space-y-1">
+              <Label htmlFor="ensemble-enabled" className="text-sm font-medium">
+                アンサンブル学習を有効化
+              </Label>
+              <p className="text-xs text-muted-foreground">
+                複数のモデルを組み合わせて予測精度を向上させます
+              </p>
+            </div>
+            <Switch
+              id="ensemble-enabled"
+              checked={settings.enabled}
+              onCheckedChange={(enabled) => updateSettings({ enabled })}
+            />
           </div>
-          <Switch
-            id="ensemble-enabled"
-            checked={settings.enabled}
-            onCheckedChange={(enabled) => updateSettings({ enabled })}
-          />
+
+          {/* シングルモード設定 */}
+          {!settings.enabled && (
+            <div className="space-y-3 p-4 bg-muted/50 rounded-lg border">
+              <div className="flex items-center space-x-2">
+                <Cpu className="h-4 w-4 text-primary" />
+                <Label className="text-sm font-medium">単一モデル設定</Label>
+              </div>
+              <div className="space-y-2">
+                <Label className="text-xs text-muted-foreground">
+                  使用するモデル
+                </Label>
+                <Select
+                  value={singleModelSettings.model_type}
+                  onValueChange={(model_type) =>
+                    onSingleModelChange?.({ model_type })
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="モデルを選択" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {availableModels.map((model) => (
+                      <SelectItem key={model} value={model}>
+                        {model.toUpperCase()}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">
+                  選択したモデルで単独トレーニングを実行します
+                </p>
+              </div>
+            </div>
+          )}
         </div>
 
         {settings.enabled && (

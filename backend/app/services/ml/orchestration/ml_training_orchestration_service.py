@@ -295,24 +295,106 @@ class MLTrainingOrchestrationService:
                     }
                 )
 
-                # アンサンブル設定の準備
+                # トレーナータイプの決定
                 ensemble_config_dict = None
-                trainer_type = "ensemble"  # 常にアンサンブルを使用
+                single_model_config_dict = None
+                trainer_type = "ensemble"  # デフォルト
 
-                if config.ensemble_config:
-                    ensemble_config_dict = config.ensemble_config.dict()
-                    # アンサンブルが無効でも、アンサンブル内でLightGBMのみを使用
+                try:
+                    logger.info("🔍 トレーナータイプ決定プロセス開始")
+
+                    if config.ensemble_config:
+                        logger.info(f"📋 受信したアンサンブル設定: {config.ensemble_config}")
+                        ensemble_config_dict = config.ensemble_config.model_dump()
+                        logger.info(f"📋 変換後のアンサンブル設定辞書: {ensemble_config_dict}")
+
+                        # アンサンブルが無効化されている場合は単一モデルを使用
+                        enabled_value = ensemble_config_dict.get("enabled", True)
+                        logger.info(f"🔍 enabled値の確認: {enabled_value} (型: {type(enabled_value)})")
+
+                        if not enabled_value:
+                            trainer_type = "single"
+                            logger.info("🔄 アンサンブルが無効化されているため、単一モデルトレーニングを使用します")
+                            logger.info(f"📋 アンサンブル設定確認: enabled={enabled_value}")
+                        else:
+                            logger.info("🔗 アンサンブルが有効化されているため、アンサンブルトレーニングを使用します")
+                    else:
+                        logger.info("📋 アンサンブル設定が提供されていません。デフォルト（アンサンブル）を使用します")
+                        # デフォルトのアンサンブル設定を作成
+                        ensemble_config_dict = {
+                            "enabled": True,
+                            "method": "stacking",
+                            "bagging_params": {
+                                "n_estimators": 5,
+                                "bootstrap_fraction": 0.8,
+                                "base_model_type": "lightgbm",
+                                "random_state": 42
+                            },
+                            "stacking_params": {
+                                "base_models": ["lightgbm", "xgboost", "gradient_boosting", "random_forest"],
+                                "meta_model": "lightgbm",
+                                "cv_folds": 5,
+                                "use_probas": True,
+                                "random_state": 42
+                            }
+                        }
+
+                    # 単一モデル設定の準備
+                    if config.single_model_config:
+                        logger.info(f"📋 受信した単一モデル設定: {config.single_model_config}")
+                        single_model_config_dict = config.single_model_config.model_dump()
+                        logger.info(f"📋 変換後の単一モデル設定辞書: {single_model_config_dict}")
+
+                        if trainer_type == "single":
+                            logger.info(f"📋 単一モデル設定を使用: {single_model_config_dict}")
+                    else:
+                        logger.info("📋 単一モデル設定が提供されていません")
+                        if trainer_type == "single":
+                            # 単一モデルが選択されているが設定がない場合はデフォルトを使用
+                            single_model_config_dict = {"model_type": "lightgbm"}
+                            logger.info(f"📋 デフォルト単一モデル設定を使用: {single_model_config_dict}")
+
+                except Exception as e:
+                    logger.error(f"❌ トレーナータイプ決定中にエラーが発生: {e}")
+                    logger.error(f"❌ エラー詳細: {type(e).__name__}: {str(e)}")
+                    logger.warning("⚠️ エラーのため、デフォルト（アンサンブル）を使用します")
+                    trainer_type = "ensemble"
 
                 # AutoML設定の準備
                 automl_config_dict = None
                 if config.automl_config:
-                    automl_config_dict = config.automl_config.dict()
+                    automl_config_dict = config.automl_config.model_dump()
 
-                ml_service = MLTrainingService(
-                    trainer_type=trainer_type,
-                    automl_config=automl_config_dict,
-                    ensemble_config=ensemble_config_dict,
-                )
+                # トレーナータイプの最終確認
+                logger.info(f"🎯 最終決定されたトレーナータイプ: {trainer_type}")
+                if trainer_type == "single":
+                    logger.info("🤖 単一モデルトレーニングを実行します")
+                    logger.info(f"🤖 使用する単一モデル設定: {single_model_config_dict}")
+                else:
+                    logger.info("🔗 アンサンブルトレーニングを実行します")
+                    logger.info(f"🔗 使用するアンサンブル設定: {ensemble_config_dict}")
+
+                try:
+                    logger.info("🔧 MLTrainingService初期化開始")
+                    ml_service = MLTrainingService(
+                        trainer_type=trainer_type,
+                        automl_config=automl_config_dict,
+                        ensemble_config=ensemble_config_dict,
+                        single_model_config=single_model_config_dict,
+                    )
+                    logger.info(f"✅ MLTrainingService初期化完了: trainer_type={ml_service.trainer_type}")
+
+                    # 実際に作成されたトレーナーの確認
+                    trainer_class_name = type(ml_service.trainer).__name__
+                    logger.info(f"✅ 作成されたトレーナー: {trainer_class_name}")
+
+                    if hasattr(ml_service.trainer, 'model_type'):
+                        logger.info(f"✅ モデルタイプ: {ml_service.trainer.model_type}")
+
+                except Exception as e:
+                    logger.error(f"❌ MLTrainingService初期化エラー: {e}")
+                    logger.error(f"❌ エラー詳細: {type(e).__name__}: {str(e)}")
+                    raise
 
                 # 最適化設定の準備
                 optimization_settings = None

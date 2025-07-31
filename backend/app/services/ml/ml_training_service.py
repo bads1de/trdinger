@@ -16,6 +16,7 @@ from .config import ml_config
 from ...utils.unified_error_handler import safe_ml_operation
 from ...utils.data_preprocessing import data_preprocessor
 from .ensemble.ensemble_trainer import EnsembleTrainer
+from .single_model.single_model_trainer import SingleModelTrainer
 from .model_manager import model_manager
 from ..optimization.optuna_optimizer import OptunaOptimizer, ParameterSpace
 
@@ -49,22 +50,25 @@ class MLTrainingService:
         trainer_type: str = "ensemble",
         automl_config: Optional[Dict[str, Any]] = None,
         ensemble_config: Optional[Dict[str, Any]] = None,
+        single_model_config: Optional[Dict[str, Any]] = None,
     ):
         """
         初期化
 
         Args:
-            trainer_type: 使用するトレーナーのタイプ（現在は"ensemble"のみサポート）
+            trainer_type: 使用するトレーナーのタイプ（'ensemble' または 'single'）
             automl_config: AutoML設定（辞書形式）
             ensemble_config: アンサンブル設定（辞書形式）
+            single_model_config: 単一モデル設定（辞書形式）
         """
         self.config = ml_config
         self.automl_config = automl_config
         self.ensemble_config = ensemble_config
+        self.single_model_config = single_model_config
 
-        # トレーナーを選択（デフォルトはアンサンブル）
+        # トレーナーを選択
         if trainer_type.lower() == "ensemble":
-            # デフォルトのアンサンブル設定
+            # アンサンブルトレーナー
             default_ensemble_config = {
                 "method": "bagging",
                 "bagging_params": {
@@ -87,12 +91,53 @@ class MLTrainingService:
             self.trainer = EnsembleTrainer(
                 ensemble_config=default_ensemble_config, automl_config=automl_config
             )
+
+        elif trainer_type.lower() == "single":
+            # 単一モデルトレーナー
+            model_type = "lightgbm"  # デフォルト
+            if single_model_config and "model_type" in single_model_config:
+                model_type = single_model_config["model_type"]
+
+            self.trainer = SingleModelTrainer(
+                model_type=model_type, automl_config=automl_config
+            )
+
         else:
             raise ValueError(
-                f"サポートされていないトレーナータイプ: {trainer_type}。現在はensembleのみサポートしています。"
+                f"サポートされていないトレーナータイプ: {trainer_type}。"
+                f"サポートされているタイプ: 'ensemble', 'single'"
             )
 
         self.trainer_type = trainer_type
+
+        logger.info(f"MLTrainingService初期化完了: trainer_type={trainer_type}")
+        if trainer_type == "single" and single_model_config:
+            logger.info(f"単一モデル設定: {single_model_config}")
+
+    @staticmethod
+    def determine_trainer_type(ensemble_config: Optional[Dict[str, Any]]) -> str:
+        """
+        アンサンブル設定に基づいてトレーナータイプを決定
+
+        Args:
+            ensemble_config: アンサンブル設定
+
+        Returns:
+            トレーナータイプ（'ensemble' または 'single'）
+        """
+        if ensemble_config and ensemble_config.get("enabled", True) is False:
+            return "single"
+        return "ensemble"
+
+    @staticmethod
+    def get_available_single_models() -> list:
+        """
+        利用可能な単一モデルのリストを取得
+
+        Returns:
+            利用可能なモデルタイプのリスト
+        """
+        return SingleModelTrainer.get_available_models()
 
     def train_model(
         self,

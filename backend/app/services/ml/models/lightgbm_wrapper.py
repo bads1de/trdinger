@@ -41,6 +41,7 @@ class LightGBMModel:
         X_test: pd.DataFrame,
         y_train: pd.Series,
         y_test: pd.Series,
+        **kwargs,
     ) -> Dict[str, Any]:
         """
         LightGBMモデルを学習

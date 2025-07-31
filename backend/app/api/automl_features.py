@@ -118,7 +118,7 @@ async def generate_features(
         # AutoML設定を辞書形式に変換
         automl_config_dict = None
         if request.automl_config:
-            automl_config_dict = request.automl_config.dict()
+            automl_config_dict = request.automl_config.model_dump()
 
         # AutoMLFeatureGenerationServiceを使用して特徴量を生成
         result_df, stats = await service.generate_features(
@@ -166,7 +166,7 @@ async def validate_config(
     """
 
     async def _validate():
-        config_dict = config.dict()
+        config_dict = config.model_dump()
         validation_result = service.validate_automl_config(config_dict)
 
         return ConfigValidationResponse(

@@ -31,10 +31,14 @@ import AutoMLFeatureSettings from "./AutoMLFeatureSettings";
 import DataPreprocessingSettings, {
   defaultDataPreprocessingConfig
 } from "./DataPreprocessingSettings";
-import EnsembleSettings, { EnsembleSettingsConfig } from "./EnsembleSettings";
+import EnsembleSettings, {
+  EnsembleSettingsConfig,
+  SingleModelSettingsConfig
+} from "./EnsembleSettings";
 import {
   AutoMLFeatureConfig,
   getDefaultAutoMLConfig,
+  SingleModelConfig,
 } from "@/hooks/useMLTraining";
 import { StopTrainingDialog } from "@/components/common/ConfirmDialog";
 
@@ -53,6 +57,8 @@ export default function MLTraining() {
     stopTraining,
     getActiveProcesses,
     forceStopProcess,
+    availableModels,
+    fetchAvailableModels,
   } = useMLTraining();
 
   const [optimizationSettings, setOptimizationSettings] =
@@ -88,6 +94,11 @@ export default function MLTraining() {
         use_probas: true,
         random_state: 42,
       },
+    });
+
+  const [singleModelSettings, setSingleModelSettings] =
+    useState<SingleModelSettingsConfig>({
+      model_type: "lightgbm",
     });
 
   const [automlEnabled, setAutomlEnabled] = useState(false);
@@ -341,17 +352,21 @@ export default function MLTraining() {
           <EnsembleSettings
             settings={ensembleSettings}
             onChange={setEnsembleSettings}
+            singleModelSettings={singleModelSettings}
+            onSingleModelChange={setSingleModelSettings}
+            availableModels={availableModels}
           />
 
           <div className="flex items-center space-x-4">
             {!trainingStatus.is_training ? (
               <ActionButton
                 onClick={() => {
-                  // 最適化設定、AutoML設定、アンサンブル設定を渡す
+                  // 最適化設定、AutoML設定、アンサンブル設定、単一モデル設定を渡す
                   startTraining(
                     optimizationSettings,
                     isAutoMLEnabled() ? automlSettings : undefined,
-                    ensembleSettings.enabled ? ensembleSettings : undefined
+                    ensembleSettings, // 常にensembleSettingsを送信（enabled: falseの場合も含む）
+                    singleModelSettings // 常にsingleModelSettingsを送信
                   );
                 }}
                 variant="primary"
@@ -361,8 +376,11 @@ export default function MLTraining() {
                   const features = [];
                   if (optimizationSettings.enabled) features.push("最適化");
                   if (isAutoMLEnabled()) features.push("AutoML");
-                  if (ensembleSettings.enabled)
+                  if (ensembleSettings.enabled) {
                     features.push(`アンサンブル(${ensembleSettings.method})`);
+                  } else {
+                    features.push(`単一モデル(${singleModelSettings.model_type.toUpperCase()})`);
+                  }
 
                   return features.length > 0
                     ? `${features.join("+")} トレーニング開始`

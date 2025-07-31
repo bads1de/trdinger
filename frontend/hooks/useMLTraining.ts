@@ -38,6 +38,10 @@ export interface AutoMLFeatureConfig {
   };
 }
 
+export interface SingleModelConfig {
+  model_type: string;
+}
+
 export interface TrainingConfig {
   symbol: string;
   timeframe: string;
@@ -48,6 +52,7 @@ export interface TrainingConfig {
   random_state: number;
   optimization_settings?: OptimizationSettingsConfig;
   automl_config?: AutoMLFeatureConfig;
+  single_model_config?: SingleModelConfig;
 }
 
 export interface TrainingStatus {
@@ -147,6 +152,7 @@ export const useMLTraining = () => {
   });
 
   const [error, setError] = useState<string | null>(null);
+  const [availableModels, setAvailableModels] = useState<string[]>([]);
 
   const { execute: startTrainingApi, loading: startTrainingLoading } =
     useApiCall();
@@ -155,6 +161,7 @@ export const useMLTraining = () => {
   const { execute: checkTrainingStatusApi } = useApiCall<TrainingStatus>();
   const { execute: getActiveProcessesApi } = useApiCall<ProcessListResponse>();
   const { execute: forceStopProcessApi } = useApiCall();
+  const { execute: getAvailableModelsApi } = useApiCall();
 
   const checkTrainingStatus = useCallback(() => {
     checkTrainingStatusApi("/api/ml-training/training/status", {
@@ -169,6 +176,17 @@ export const useMLTraining = () => {
     });
   }, [checkTrainingStatusApi]);
 
+  const fetchAvailableModels = useCallback(() => {
+    getAvailableModelsApi("/api/ml-training/available-models", {
+      onSuccess: (response: any) => {
+        setAvailableModels(response.available_models || []);
+      },
+      onError: (errorMessage) => {
+        console.error("利用可能なモデルの取得に失敗:", errorMessage);
+      },
+    });
+  }, [getAvailableModelsApi]);
+
   useEffect(() => {
     const interval = setInterval(() => {
       if (trainingStatus.is_training) {
@@ -179,23 +197,37 @@ export const useMLTraining = () => {
     return () => clearInterval(interval);
   }, [trainingStatus.is_training, checkTrainingStatus]);
 
+  // 初期化時に利用可能なモデルを取得
+  useEffect(() => {
+    fetchAvailableModels();
+  }, [fetchAvailableModels]);
+
   const startTraining = useCallback(
     async (
       optimizationSettings?: OptimizationSettingsConfig,
       automlConfig?: AutoMLFeatureConfig,
-      ensembleConfig?: EnsembleSettingsConfig
+      ensembleConfig?: EnsembleSettingsConfig,
+      singleModelConfig?: SingleModelConfig
     ) => {
       setError(null);
 
-      // 最適化設定、AutoML設定、アンサンブル設定を含むconfigを作成
+      // 最適化設定、AutoML設定、アンサンブル設定、単一モデル設定を含むconfigを作成
       const trainingConfig = {
         ...config,
         optimization_settings: optimizationSettings?.enabled
           ? optimizationSettings
           : undefined,
         automl_config: automlConfig,
-        ensemble_config: ensembleConfig,
+        ensemble_config: ensembleConfig, // 常にensembleConfigを送信（enabled: falseの場合も含む）
+        single_model_config: singleModelConfig,
       };
+
+      // 送信データをログ出力
+      console.log("🚀 フロントエンドから送信するトレーニング設定:");
+      console.log("📋 ensemble_config:", ensembleConfig);
+      console.log("📋 ensemble_config.enabled:", ensembleConfig?.enabled);
+      console.log("📋 single_model_config:", singleModelConfig);
+      console.log("📋 trainingConfig全体:", trainingConfig);
 
       await startTrainingApi("/api/ml-training/train", {
         method: "POST",
@@ -297,5 +329,7 @@ export const useMLTraining = () => {
     stopTraining,
     getActiveProcesses,
     forceStopProcess,
+    availableModels,
+    fetchAvailableModels,
   };
 };
