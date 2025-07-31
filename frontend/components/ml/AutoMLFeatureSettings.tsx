@@ -92,10 +92,6 @@ export default function AutoMLFeatureSettings({
       }
     }
 
-    if (settings.featuretools.enabled) {
-      baseTime += settings.featuretools.max_features * 0.05;
-    }
-
     if (settings.autofeat.enabled) {
       baseTime += settings.autofeat.generations * 0.2;
     }
@@ -109,11 +105,6 @@ export default function AutoMLFeatureSettings({
     if (settings.tsfresh.enabled) {
       cost += settings.tsfresh.feature_count_limit / 10;
       cost += settings.tsfresh.parallel_jobs * 2;
-    }
-
-    if (settings.featuretools.enabled) {
-      cost += settings.featuretools.max_depth * 5;
-      cost += settings.featuretools.max_features / 20;
     }
 
     if (settings.autofeat.enabled) {

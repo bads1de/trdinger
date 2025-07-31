@@ -60,11 +60,6 @@ class MLTrainingOrchestrationService:
                 "feature_count_limit": 100,
                 "parallel_jobs": 2,
             },
-            "featuretools": {
-                "enabled": False,  # Featuretoolsは削除されました
-                "max_depth": 0,
-                "max_features": 0,
-            },
             "autofeat": {
                 "enabled": True,
                 "max_features": 50,
@@ -84,11 +79,6 @@ class MLTrainingOrchestrationService:
                 "fdr_level": 0.01,
                 "feature_count_limit": 200,
                 "parallel_jobs": 4,
-            },
-            "featuretools": {
-                "enabled": False,  # Featuretoolsは削除されました
-                "max_depth": 0,
-                "max_features": 0,
             },
             "autofeat": {
                 "enabled": True,
@@ -521,10 +511,6 @@ class MLTrainingOrchestrationService:
         except Exception as e:
             logger.warning(f"AutoFeatクリーンアップエラー: {e}")
 
-    def _cleanup_featuretools_resources(self):
-        """FeatureTools関連リソースのクリーンアップ（削除済み）"""
-        # Featuretoolsは削除されたため、このメソッドは何もしない
-        logger.debug("Featuretoolsは削除されたため、クリーンアップをスキップします")
 
     def _cleanup_tsfresh_resources(self):
         """TSFresh関連リソースのクリーンアップ"""

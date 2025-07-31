@@ -10,11 +10,6 @@ export interface AutoMLConfig {
     parallel_jobs: number;
     performance_mode: string;
   };
-  featuretools: {
-    enabled: false; // 削除済み - 後方互換性のため
-    max_depth: 0;
-    max_features: 0;
-  };
   autofeat: {
     enabled: boolean;
     max_features: number;

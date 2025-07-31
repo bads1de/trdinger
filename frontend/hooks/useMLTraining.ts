@@ -25,11 +25,6 @@ export interface AutoMLFeatureConfig {
     parallel_jobs: number;
     performance_mode: string;
   };
-  featuretools: {
-    enabled: false; // 削除済み - 後方互換性のため
-    max_depth: 0;
-    max_features: 0;
-  };
   autofeat: {
     enabled: boolean;
     max_features: number;
@@ -97,11 +92,6 @@ export const getDefaultAutoMLConfig = (): AutoMLFeatureConfig => ({
     parallel_jobs: 2,
     performance_mode: "balanced",
   },
-  featuretools: {
-    enabled: false, // Featuretoolsは削除されました（メモリ最適化のため）
-    max_depth: 0,
-    max_features: 0,
-  },
   autofeat: {
     enabled: false, // デフォルトでは無効（計算コストが高いため）
     max_features: 50,
@@ -119,11 +109,6 @@ export const getFinancialOptimizedAutoMLConfig = (): AutoMLFeatureConfig => ({
     feature_count_limit: 200,
     parallel_jobs: 4,
     performance_mode: "financial_optimized",
-  },
-  featuretools: {
-    enabled: false, // 削除済み - 後方互換性のため
-    max_depth: 0,
-    max_features: 0,
   },
   autofeat: {
     enabled: true,

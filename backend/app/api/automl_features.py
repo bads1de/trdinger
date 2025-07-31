@@ -39,12 +39,7 @@ class TSFreshConfigModel(BaseModel):
     )
 
 
-class FeaturetoolsConfigModel(BaseModel):
-    """Featuretools設定モデル（削除済み - 後方互換性のため）"""
-
-    enabled: bool = False  # 常に無効
-    max_depth: int = Field(0, ge=0, le=0)
-    max_features: int = Field(0, ge=0, le=0)
+# Featuretools は削除済みのため、Pydantic モデル定義からも完全に除去しました
 
 
 class AutoFeatConfigModel(BaseModel):
@@ -61,7 +56,6 @@ class AutoMLConfigModel(BaseModel):
     """AutoML設定モデル"""
 
     tsfresh: TSFreshConfigModel
-    featuretools: FeaturetoolsConfigModel
     autofeat: AutoFeatConfigModel
 
 
