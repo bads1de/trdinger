@@ -1,153 +1,205 @@
 "use client";
-import { useState, useEffect, useRef } from "react";
+
+import Link from "next/link";
+import {
+  ArrowRight,
+  BarChart3,
+  Brain,
+  Database,
+  ShieldCheck,
+  Sparkles,
+  TrendingUp,
+} from "lucide-react";
 
 /**
- * ホームページコンポーネント
+ * 0ベース再設計 ホームページ
  *
- * アプリケーションのメインランディングページです。
- * 主要機能へのナビゲーションリンクと概要を表示します。
- * マウスカーソルの位置に応じて動的に変化するグラデーション背景を実装。
- *
- * 機能:
- * - 戦略定義ページへのリンク
- * - バックテストページへのリンク
- * - 結果分析ページへのリンク
- * - データ管理ページへのリンク
- * - マウス追従型動的グラデーション背景
- *
- * @returns ホームページのJSX要素
+ * 目的:
+ * - プラットフォームの価値提案を明確に伝えるHero
+ * - 主要機能（バックテスト/ML/データ）のわかりやすい導線
+ * - 信頼性・特徴のハイライト
+ * - 既存レイアウト(Navbar/MainContent)と一貫したダークUI
  */
 export default function Home() {
-  // マウス座標を正規化した値（0-1の範囲）で管理
-  const [mousePosition, setMousePosition] = useState({ x: 0.5, y: 0.5 });
-  const animationRef = useRef<number>();
-
-  useEffect(() => {
-    const handleMouseMove = (e: MouseEvent) => {
-      // 前のアニメーションフレームをキャンセル（パフォーマンス最適化）
-      if (animationRef.current) {
-        cancelAnimationFrame(animationRef.current);
-      }
-
-      // requestAnimationFrameを使用してスムーズなアニメーションを実現
-      animationRef.current = requestAnimationFrame(() => {
-        const x = e.clientX / window.innerWidth;
-        const y = e.clientY / window.innerHeight;
-        setMousePosition({ x, y });
-      });
-    };
-
-    // マウスイベントリスナーを追加
-    window.addEventListener("mousemove", handleMouseMove);
-
-    // クリーンアップ処理
-    return () => {
-      window.removeEventListener("mousemove", handleMouseMove);
-      if (animationRef.current) {
-        cancelAnimationFrame(animationRef.current);
-      }
-    };
-  }, []);
-
-  // CSS変数としてマウス座標を設定
-  const dynamicStyle = {
-    "--mouse-x": mousePosition.x,
-    "--mouse-y": mousePosition.y,
-  } as React.CSSProperties;
-  
   return (
-    <main
-      style={dynamicStyle}
-      className="flex min-h-screen flex-col items-center justify-between p-24"
-    >
-      {/* ヘッダー部分 - アプリケーション名を表示 */}
-      <div className="z-10 max-w-5xl w-full items-center justify-between font-mono text-sm lg:flex">
-        <p className="fixed left-0 top-0 flex w-full justify-center border-b border-gray-700 bg-gradient-to-b from-gray-900 pb-6 pt-8 backdrop-blur-2xl dark:border-gray-700 dark:bg-gray-900/30 dark:from-inherit lg:static lg:w-auto  lg:rounded-xl lg:border lg:bg-gray-900 lg:p-4 lg:dark:bg-gray-900/30">
-          Trdinger - Trading Strategy Backtest
-        </p>
-      </div>
-
-      {/* メインタイトル部分 - マウス追従型動的グラデーション背景付き */}
-      <div
-        className="relative flex place-items-center z-[-1]"
-        style={
-          {
-            "--gradient-x": `${(mousePosition.x - 0.5) * 100}px`,
-            "--gradient-y": `${(mousePosition.y - 0.5) * 100}px`,
-          } as React.CSSProperties
-        }
-      >
-        {/* 放射状グラデーション（マウス追従） */}
-        <div
-          className="absolute h-[300px] w-[480px] rounded-full bg-gradient-radial from-white to-transparent blur-2xl transition-transform duration-300 ease-out dark:bg-gradient-to-br dark:from-transparent dark:to-blue-700 dark:opacity-10 lg:h-[360px]"
-          style={{
-            transform: `translate(calc(-50% + var(--gradient-x)), calc(25% + var(--gradient-y)))`,
-          }}
-        />
-        {/* 円錐状グラデーション（マウス追従） */}
-        <div
-          className="absolute -z-20 h-[180px] w-[240px] bg-gradient-conic from-sky-200 via-blue-200 blur-2xl transition-transform duration-300 ease-out dark:from-sky-900 dark:via-[#0141ff] dark:opacity-40"
-          style={{
-            transform: `translate(calc(33% + var(--gradient-x) * 0.8), calc(0% + var(--gradient-y) * 0.8))`,
-          }}
-        />
-        <h1 className="text-4xl font-bold">
-          仮想通貨トレーディング戦略
-          <br />
-          バックテストサービス
-        </h1>
-      </div>
-
-      {/* 機能ナビゲーショングリッド - 4つの主要機能へのリンク */}
-      <div className="mb-32 grid text-center lg:max-w-5xl lg:w-full lg:mb-0 lg:grid-cols-4 lg:text-left">
-        {/* 戦略ショーケースページへのリンク */}
-        <a
-          href="/strategies"
-          className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-600 hover:bg-gray-800 hover:dark:border-gray-600 hover:dark:bg-gray-800/30"
-        >
-          <h2 className={`mb-3 text-2xl font-semibold`}>
-            戦略ショーケース{" "}
-            <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
-              -&gt;
+    <main className="min-h-screen">
+      {/* Hero */}
+      <section className="relative overflow-hidden">
+        {/* 背景の微細グラデーション */}
+        <div className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(60%_60%_at_50%_0%,rgba(37,99,235,0.2),transparent),radial-gradient(40%_40%_at_80%_20%,rgba(147,51,234,0.12),transparent)]" />
+        <div className="mx-auto max-w-7xl px-6 pt-16 pb-10 md:pt-24 md:pb-16">
+          <div className="flex flex-col items-start gap-6">
+            <span className="inline-flex items-center gap-2 rounded-full border border-sidebar-border/60 bg-sidebar-accent/20 px-3 py-1 text-xs font-medium text-muted-foreground">
+              <Sparkles className="h-3.5 w-3.5 text-blue-400" />
+              エンタープライズ向けトレーディング研究基盤
             </span>
-          </h2>
-          <p className={`m-0 max-w-[30ch] text-sm opacity-50`}>
-            AI生成による30種類の投資戦略を比較・検討
-          </p>
-        </a>
+            <h1 className="text-balance bg-gradient-to-r from-blue-500 via-cyan-400 to-indigo-400 bg-clip-text text-4xl font-extrabold leading-tight tracking-tight text-transparent md:text-5xl">
+              仮想通貨トレーディング戦略を
+              <br className="hidden md:block" />
+              科学的に検証・最適化
+            </h1>
+            <p className="max-w-2xl text-pretty text-base text-muted-foreground md:text-lg">
+              高度なバックテスト基盤、機械学習によるモデル管理、マーケットデータ統合をワンストップで。
+              再現性と操作性を両立したワークフローで、研究から実運用までを加速します。
+            </p>
+            <div className="flex flex-wrap gap-3">
+              <Link
+                href="/backtest"
+                className="inline-flex items-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground shadow hover:bg-primary/90 transition-colors"
+              >
+                バックテストを開始
+                <ArrowRight className="h-4 w-4" />
+              </Link>
+              <Link
+                href="/ml"
+                className="inline-flex items-center gap-2 rounded-md border border-border bg-background px-4 py-2 text-sm font-semibold text-foreground hover:bg-accent/10 transition-colors"
+              >
+                ML管理を見る
+              </Link>
+            </div>
+          </div>
+        </div>
+      </section>
 
-        {/* バックテストページへのリンク */}
-        <a
-          href="/backtest"
-          className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-600 hover:bg-gray-800 hover:dark:border-gray-600 hover:dark:bg-gray-800/30"
-        >
-          <h2 className={`mb-3 text-2xl font-semibold`}>
-            バックテスト{" "}
-            <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
-              -&gt;
-            </span>
-          </h2>
-          <p className={`m-0 max-w-[30ch] text-sm opacity-50`}>
-            過去データを使用して戦略の有効性を検証
-          </p>
-        </a>
+      {/* 機能カード */}
+      <section className="mx-auto max-w-7xl px-6 py-8 md:py-12">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+          <FeatureCard
+            href="/backtest"
+            icon={<BarChart3 className="h-5 w-5 text-purple-400" />}
+            title="バックテスト"
+            desc="取引履歴レベルの統計、ドローダウン、分布/散布チャートで戦略を精査。"
+            cta="結果を見る"
+          />
+          <FeatureCard
+            href="/ml"
+            icon={<Brain className="h-5 w-5 text-green-400" />}
+            title="ML管理"
+            desc="特徴量重要度、単一/アンサンブル、学習/評価を統合管理。"
+            cta="モデルを管理"
+          />
+          <FeatureCard
+            href="/data"
+            icon={<Database className="h-5 w-5 text-cyan-400" />}
+            title="データ管理"
+            desc="OHLCV/FR/建玉/恐怖貪欲指数を収集・更新・可視化。"
+            cta="データを見る"
+          />
+        </div>
+      </section>
 
-        {/* データ管理ページへのリンク */}
-        <a
-          href="/data"
-          className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-600 hover:bg-gray-800 hover:dark:border-gray-600 hover:dark:bg-gray-800/30"
-        >
-          <h2 className={`mb-3 text-2xl font-semibold`}>
-            データ管理{" "}
-            <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
-              -&gt;
-            </span>
-          </h2>
-          <p className={`m-0 max-w-[30ch] text-sm opacity-50 text-balance`}>
-            仮想通貨の価格データを管理・更新
+      {/* ハイライト */}
+      <section className="mx-auto max-w-7xl px-6 pb-12 md:pb-16">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+          <Highlight
+            title="再現性の高い分析"
+            icon={<ShieldCheck className="h-5 w-5 text-blue-400" />}
+          >
+            バージョン固定と一貫した前処理で、実験の再現性を担保。
+          </Highlight>
+          <Highlight
+            title="パフォーマンス重視"
+            icon={<TrendingUp className="h-5 w-5 text-emerald-400" />}
+          >
+            計算効率と可視化応答性を両立し、大規模検証を現実的に。
+          </Highlight>
+          <Highlight
+            title="UI/UX 最適化"
+            icon={<Sparkles className="h-5 w-5 text-fuchsia-400" />}
+          >
+            サイドバー/ヘッダ連携の情報設計で、学習コストを最小化。
+          </Highlight>
+        </div>
+      </section>
+
+      {/* フッター */}
+      <footer className="border-t border-sidebar-border/50">
+        <div className="mx-auto max-w-7xl px-6 py-8 flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+          <p className="text-xs text-muted-foreground">
+            © {new Date().getFullYear()} Trdinger. All rights reserved.
           </p>
-        </a>
-      </div>
+          <div className="flex items-center gap-4 text-xs text-muted-foreground">
+            <Link
+              href="/backtest"
+              className="hover:text-foreground transition-colors"
+            >
+              Backtest
+            </Link>
+            <Link
+              href="/ml"
+              className="hover:text-foreground transition-colors"
+            >
+              ML
+            </Link>
+            <Link
+              href="/data"
+              className="hover:text-foreground transition-colors"
+            >
+              Data
+            </Link>
+          </div>
+        </div>
+      </footer>
     </main>
+  );
+}
+
+/**
+ * 機能カード
+ */
+function FeatureCard({
+  href,
+  icon,
+  title,
+  desc,
+  cta,
+}: {
+  href: string;
+  icon: React.ReactNode;
+  title: string;
+  desc: string;
+  cta: string;
+}) {
+  return (
+    <Link
+      href={href}
+      className="group block rounded-xl border border-sidebar-border/60 bg-gradient-to-b from-background to-sidebar-accent/10 p-5 shadow-sm transition-all hover:border-sidebar-border hover:shadow md:p-6"
+    >
+      <div className="flex items-start justify-between">
+        <div className="flex items-center gap-2">
+          <div className="rounded-md bg-sidebar-accent/30 p-2">{icon}</div>
+          <h3 className="text-lg font-semibold">{title}</h3>
+        </div>
+        <ArrowRight className="h-4 w-4 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
+      </div>
+      <p className="mt-3 text-sm text-muted-foreground">{desc}</p>
+      <span className="mt-4 inline-flex items-center gap-1 text-sm font-medium text-blue-400">
+        {cta}
+        <ArrowRight className="h-3.5 w-3.5" />
+      </span>
+    </Link>
+  );
+}
+
+/**
+ * ハイライト項目
+ */
+function Highlight({
+  title,
+  icon,
+  children,
+}: {
+  title: string;
+  icon: React.ReactNode;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="rounded-xl border border-sidebar-border/60 bg-sidebar-accent/10 p-5">
+      <div className="mb-2 flex items-center gap-2">
+        {icon}
+        <h4 className="text-sm font-semibold">{title}</h4>
+      </div>
+      <p className="text-sm text-muted-foreground">{children}</p>
+    </div>
   );
 }
