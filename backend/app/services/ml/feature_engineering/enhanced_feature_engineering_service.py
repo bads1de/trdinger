@@ -670,6 +670,19 @@ class EnhancedFeatureEngineeringService(FeatureEngineeringService):
                             "parallel_jobsが大きすぎます。システムリソースを確認してください"
                         )
 
+                if "performance_mode" in tsfresh_config:
+                    mode = tsfresh_config["performance_mode"]
+                    valid_modes = [
+                        "fast",
+                        "balanced",
+                        "financial_optimized",
+                        "comprehensive",
+                    ]
+                    if not isinstance(mode, str) or mode not in valid_modes:
+                        validation_result["errors"].append(
+                            f"performance_modeは{valid_modes}のいずれかである必要があります"
+                        )
+
             # Featuretools設定キーはサポート外（完全削除済み）だが、互換性のため警告は出さないで無視
             if "featuretools" in config_dict:
                 pass

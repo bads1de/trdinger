@@ -122,6 +122,7 @@ class MLOrchestrator(MLPredictionInterface):
             fdr_level=tsfresh_dict.get("fdr_level", 0.05),
             feature_count_limit=tsfresh_dict.get("feature_count_limit", 100),
             parallel_jobs=tsfresh_dict.get("parallel_jobs", 2),
+            performance_mode=tsfresh_dict.get("performance_mode", "balanced"),
         )
 
         # AutoFeat設定
@@ -131,6 +132,9 @@ class MLOrchestrator(MLPredictionInterface):
             max_features=autofeat_dict.get("max_features", 50),
             feateng_steps=autofeat_dict.get("feateng_steps", 2),
             max_gb=autofeat_dict.get("max_gb", 1.0),
+            generations=autofeat_dict.get("generations", 20),
+            population_size=autofeat_dict.get("population_size", 50),
+            tournament_size=autofeat_dict.get("tournament_size", 3),
         )
 
         return AutoMLConfig(

@@ -17,6 +17,7 @@ class TSFreshConfig:
     fdr_level: float = 0.05
     feature_count_limit: int = 100
     parallel_jobs: int = 2
+    performance_mode: str = "balanced"
     custom_settings: Optional[Dict[str, Any]] = None
 
 
@@ -31,6 +32,9 @@ class AutoFeatConfig:
     featsel_runs: int = 1  # 特徴量選択の実行回数（メモリ節約のため1に設定）
     verbose: int = 0  # ログレベル（0=最小限、1=詳細）
     n_jobs: int = 1  # 並列処理数（メモリ使用量制御のため1に設定）
+    generations: int = 20  # 世代数
+    population_size: int = 50  # 集団サイズ
+    tournament_size: int = 3  # トーナメントサイズ
 
     def get_memory_optimized_config(self, data_size_mb: float) -> "AutoFeatConfig":
         """
@@ -52,6 +56,9 @@ class AutoFeatConfig:
                 featsel_runs=1,
                 verbose=0,
                 n_jobs=1,
+                generations=5,  # 世代数を制限
+                population_size=20,  # 集団サイズを制限
+                tournament_size=2,  # トーナメントサイズを最小に
             )
         elif data_size_mb > 100:  # 100MB以上の中量データ
             return AutoFeatConfig(
@@ -62,6 +69,9 @@ class AutoFeatConfig:
                 featsel_runs=1,
                 verbose=0,
                 n_jobs=1,
+                generations=10,
+                population_size=30,
+                tournament_size=3,
             )
         elif data_size_mb > 10:  # 10MB以上の中小量データ
             return AutoFeatConfig(
@@ -72,6 +82,9 @@ class AutoFeatConfig:
                 featsel_runs=1,
                 verbose=0,
                 n_jobs=1,
+                generations=15,
+                population_size=40,
+                tournament_size=3,
             )
         elif data_size_mb > 1:  # 1MB以上の小量データ
             return AutoFeatConfig(
@@ -82,6 +95,9 @@ class AutoFeatConfig:
                 featsel_runs=1,
                 verbose=0,
                 n_jobs=1,
+                generations=10,
+                population_size=30,
+                tournament_size=3,
             )
         else:  # 極小量データ（1MB未満）
             return AutoFeatConfig(
@@ -92,6 +108,9 @@ class AutoFeatConfig:
                 featsel_runs=1,
                 verbose=0,
                 n_jobs=1,
+                generations=5,
+                population_size=20,
+                tournament_size=2,
             )
 
 
@@ -126,6 +145,7 @@ class AutoMLConfig:
             fdr_level=0.01,  # より厳しい選択
             feature_count_limit=500,  # 金融データ用に大幅増加
             parallel_jobs=4,
+            performance_mode="financial_optimized",
         )
 
         autofeat_config = AutoFeatConfig(
@@ -133,6 +153,9 @@ class AutoMLConfig:
             max_features=100,
             feateng_steps=3,  # より多くの特徴量エンジニアリングステップ
             max_gb=2.0,  # より多くのメモリ使用を許可
+            generations=20,
+            population_size=50,
+            tournament_size=3,
         )
 
         return cls(tsfresh_config, autofeat_config)
@@ -146,6 +169,7 @@ class AutoMLConfig:
                 "fdr_level": self.tsfresh.fdr_level,
                 "feature_count_limit": self.tsfresh.feature_count_limit,
                 "parallel_jobs": self.tsfresh.parallel_jobs,
+                "performance_mode": self.tsfresh.performance_mode,
                 "custom_settings": self.tsfresh.custom_settings,
             },
             "autofeat": {
@@ -153,6 +177,9 @@ class AutoMLConfig:
                 "max_features": self.autofeat.max_features,
                 "feateng_steps": self.autofeat.feateng_steps,
                 "max_gb": self.autofeat.max_gb,
+                "generations": self.autofeat.generations,
+                "population_size": self.autofeat.population_size,
+                "tournament_size": self.autofeat.tournament_size,
             },
         }
 

@@ -112,7 +112,20 @@ export const useApiCall = <T = any>(): ApiCallResult<T> => {
             result,
             errorMessage,
             responseText,
+            requestBody: options.body,
           });
+
+          // 422エラーの場合は詳細なバリデーションエラーを表示
+          if (response.status === 422) {
+            console.error("Validation Error Details:", result);
+            if (result.detail && Array.isArray(result.detail)) {
+              const validationErrors = result.detail
+                .map((err: any) => `${err.loc?.join(".")} - ${err.msg}`)
+                .join(", ");
+              console.error("Validation Errors:", validationErrors);
+            }
+          }
+
           setError(errorMessage);
           onError?.(errorMessage);
           return null;

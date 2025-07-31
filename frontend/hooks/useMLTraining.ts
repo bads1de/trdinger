@@ -30,6 +30,7 @@ export interface AutoMLFeatureConfig {
     max_features: number;
     generations: number;
     population_size: number;
+    tournament_size: number;
   };
 }
 
@@ -97,6 +98,7 @@ export const getDefaultAutoMLConfig = (): AutoMLFeatureConfig => ({
     max_features: 50,
     generations: 10,
     population_size: 30,
+    tournament_size: 3,
   },
 });
 
@@ -115,6 +117,7 @@ export const getFinancialOptimizedAutoMLConfig = (): AutoMLFeatureConfig => ({
     max_features: 100,
     generations: 20,
     population_size: 50,
+    tournament_size: 3,
   },
 });
 

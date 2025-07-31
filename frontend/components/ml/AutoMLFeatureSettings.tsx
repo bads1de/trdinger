@@ -67,8 +67,6 @@ export default function AutoMLFeatureSettings({
     }
   };
 
-
-
   const updateAutoFeatSettings = (key: keyof AutoFeatSettings, value: any) => {
     const newSettings = {
       ...settings,
@@ -322,8 +320,6 @@ export default function AutoMLFeatureSettings({
           </Card>
         </TabsContent>
 
-
-
         {/* AutoFeat設定 */}
         <TabsContent value="autofeat">
           <Card>
@@ -400,6 +396,22 @@ export default function AutoMLFeatureSettings({
                       max={200}
                       min={20}
                       step={10}
+                      className="mt-2"
+                    />
+                  </div>
+
+                  <div>
+                    <Label>
+                      トーナメントサイズ: {settings.autofeat.tournament_size}
+                    </Label>
+                    <Slider
+                      value={[settings.autofeat.tournament_size]}
+                      onValueChange={([value]) =>
+                        updateAutoFeatSettings("tournament_size", value)
+                      }
+                      max={10}
+                      min={2}
+                      step={1}
                       className="mt-2"
                     />
                   </div>

@@ -4,8 +4,8 @@ AutoML特徴量エンジニアリング API エンドポイント
 AutoML特徴量生成・選択機能のREST APIを提供します。
 """
 
-from fastapi import APIRouter, Depends, BackgroundTasks
-from pydantic import BaseModel, Field
+from fastapi import APIRouter, Depends, BackgroundTasks, Request
+from pydantic import BaseModel, Field, ValidationError
 from typing import Dict, List, Optional, Any
 import logging
 
@@ -17,7 +17,9 @@ from app.services.ml.feature_engineering.automl_features.automl_config import (
     AutoMLConfig,
 )
 from app.utils.unified_error_handler import UnifiedErrorHandler
-from app.services.ml.feature_engineering.enhanced_feature_engineering_service import EnhancedFeatureEngineeringService
+from app.services.ml.feature_engineering.enhanced_feature_engineering_service import (
+    EnhancedFeatureEngineeringService,
+)
 
 
 logger = logging.getLogger(__name__)
@@ -83,6 +85,7 @@ class FeatureGenerationResponse(BaseModel):
 class ConfigValidationResponse(BaseModel):
     """設定検証レスポンスモデル"""
 
+    success: bool
     valid: bool
     errors: List[str]
     warnings: List[str]
@@ -92,7 +95,9 @@ class ConfigValidationResponse(BaseModel):
 async def generate_features(
     request: FeatureGenerationRequest,
     background_tasks: BackgroundTasks,
-    service: AutoMLFeatureGenerationService = Depends(get_automl_feature_generation_service),
+    service: AutoMLFeatureGenerationService = Depends(
+        get_automl_feature_generation_service
+    ),
 ):
     """
     AutoML特徴量を生成
@@ -145,14 +150,16 @@ async def generate_features(
 
 @router.post("/validate-config", response_model=ConfigValidationResponse)
 async def validate_config(
-    config: AutoMLConfigModel,
-    service: EnhancedFeatureEngineeringService = Depends(EnhancedFeatureEngineeringService),
+    request: Request,
+    service: EnhancedFeatureEngineeringService = Depends(
+        EnhancedFeatureEngineeringService
+    ),
 ):
     """
     AutoML設定を検証
 
     Args:
-        config: AutoML設定
+        request: HTTPリクエスト
         service: 特徴量エンジニアリングサービス
 
     Returns:
@@ -160,19 +167,42 @@ async def validate_config(
     """
 
     async def _validate():
-        config_dict = config.model_dump()
-        validation_result = service.validate_automl_config(config_dict)
+        try:
+            # 生のリクエストデータを取得（ログには詳細を出さない）
+            raw_data = await request.json()
 
-        return ConfigValidationResponse(
-            valid=validation_result["valid"],
-            errors=validation_result.get("errors", []),
-            warnings=validation_result.get("warnings", []),
-        )
+            # Pydanticモデルでバリデーション（成功時も詳細はログ出力しない）
+            config = AutoMLConfigModel(**raw_data)
+
+            config_dict = config.model_dump()
+            validation_result = service.validate_automl_config(config_dict)
+
+            return ConfigValidationResponse(
+                success=True,
+                valid=validation_result["valid"],
+                errors=validation_result.get("errors", []),
+                warnings=validation_result.get("warnings", []),
+            )
+        except ValidationError as e:
+            logger.error(f"Pydanticバリデーションエラー: {e}")
+            return ConfigValidationResponse(
+                success=False,
+                valid=False,
+                errors=[f"設定形式エラー: {str(e)}"],
+                warnings=[],
+            )
+        except Exception as e:
+            logger.error(f"予期しないエラー: {e}")
+            return ConfigValidationResponse(
+                success=False,
+                valid=False,
+                errors=[f"設定検証エラー: {str(e)}"],
+                warnings=[],
+            )
 
     return await UnifiedErrorHandler.safe_execute_async(
         _validate, message="設定検証に失敗しました"
     )
-
 
 
 @router.get("/default-config")
@@ -195,7 +225,9 @@ async def get_default_config():
 
 @router.post("/clear-cache")
 async def clear_cache(
-    service: EnhancedFeatureEngineeringService = Depends(EnhancedFeatureEngineeringService),
+    service: EnhancedFeatureEngineeringService = Depends(
+        EnhancedFeatureEngineeringService
+    ),
 ):
     """
     AutoMLキャッシュをクリア
@@ -211,9 +243,3 @@ async def clear_cache(
     return await UnifiedErrorHandler.safe_execute_async(
         _clear, message="キャッシュクリアに失敗しました"
     )
-
-
-
-
-
-
