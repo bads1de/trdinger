@@ -36,6 +36,72 @@ class ModelManager:
         """必要なディレクトリを作成"""
         os.makedirs(self.config.MODEL_SAVE_PATH, exist_ok=True)
 
+    def _extract_algorithm_name(
+        self, model: Any, metadata: Optional[Dict[str, Any]] = None
+    ) -> str:
+        """
+        モデルからアルゴリズム名を抽出
+
+        Args:
+            model: モデルオブジェクト
+            metadata: メタデータ
+
+        Returns:
+            アルゴリズム名
+        """
+        try:
+            # メタデータから best_algorithm を取得（アンサンブルの場合）
+            if metadata and "best_algorithm" in metadata:
+                algorithm = metadata["best_algorithm"]
+                if algorithm:
+                    return algorithm.lower()
+
+            # メタデータから model_type を取得
+            if metadata and "model_type" in metadata:
+                model_type = metadata["model_type"]
+                if model_type and model_type != "unknown":
+                    # EnsembleTrainer などのクラス名から推定
+                    if "ensemble" in model_type.lower():
+                        return "ensemble"
+                    elif "single" in model_type.lower():
+                        return "single"
+                    else:
+                        return model_type.lower()
+
+            # モデルオブジェクトのクラス名から推定
+            model_class_name = type(model).__name__.lower()
+
+            # 一般的なアルゴリズム名にマッピング
+            algorithm_mapping = {
+                "lightgbmmodel": "lightgbm",
+                "lgbmclassifier": "lightgbm",
+                "lgbmregressor": "lightgbm",
+                "xgbclassifier": "xgboost",
+                "xgbregressor": "xgboost",
+                "catboostclassifier": "catboost",
+                "catboostregressor": "catboost",
+                "randomforestclassifier": "randomforest",
+                "randomforestregressor": "randomforest",
+                "tabnetclassifier": "tabnet",
+                "tabnetregressor": "tabnet",
+                "ensembletrainer": "ensemble",
+                "singlemodeltrainer": "single",
+                "baggingensemble": "bagging",
+                "stackingensemble": "stacking",
+            }
+
+            # マッピングから検索
+            for key, value in algorithm_mapping.items():
+                if key in model_class_name:
+                    return value
+
+            # デフォルト値
+            return "unknown"
+
+        except Exception as e:
+            logger.warning(f"アルゴリズム名の抽出に失敗: {e}")
+            return "unknown"
+
     @safe_ml_operation(default_return=None, context="モデル保存でエラーが発生しました")
     def save_model(
         self,
@@ -65,18 +131,33 @@ class ModelManager:
             if model is None:
                 raise UnifiedModelError("保存するモデルがNullです")
 
-            # タイムスタンプ付きファイル名を生成
-            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            filename = f"{model_name}_{timestamp}{self.config.MODEL_FILE_EXTENSION}"
+            # アルゴリズム名を取得
+            algorithm_name = self._extract_algorithm_name(model, metadata)
+
+            # 日付のみのタイムスタンプを生成（アルゴリズム名_日付形式）
+            date_stamp = datetime.now().strftime("%Y%m%d")
+            base_filename = f"{algorithm_name}_{date_stamp}"
+
+            # 同じファイル名が存在する場合は連番を追加
+            counter = 1
+            filename = f"{base_filename}{self.config.MODEL_FILE_EXTENSION}"
             model_path = os.path.join(self.config.MODEL_SAVE_PATH, filename)
+
+            while os.path.exists(model_path):
+                filename = (
+                    f"{base_filename}_{counter:02d}{self.config.MODEL_FILE_EXTENSION}"
+                )
+                model_path = os.path.join(self.config.MODEL_SAVE_PATH, filename)
+                counter += 1
 
             # モデルデータを構築
             model_data = {
                 "model": model,
                 "scaler": scaler,
                 "feature_columns": feature_columns,
-                "timestamp": timestamp,
-                "model_name": model_name,
+                "timestamp": date_stamp,
+                "model_name": algorithm_name,  # アルゴリズム名を保存
+                "original_model_name": model_name,  # 元のモデル名も保持
                 "metadata": metadata or {},
             }
 
@@ -98,7 +179,9 @@ class ModelManager:
             model_data["metadata"]["file_size_bytes"] = file_size
             joblib.dump(model_data, model_path)
 
-            logger.info(f"モデル保存完了: {filename} ({file_size / 1024 / 1024:.2f}MB)")
+            logger.info(
+                f"モデル保存完了: {filename} (アルゴリズム: {algorithm_name}, サイズ: {file_size / 1024 / 1024:.2f}MB)"
+            )
 
             # 古いモデルのクリーンアップ
             self._cleanup_old_models(model_name)
@@ -136,10 +219,20 @@ class ModelManager:
             if ensemble_trainer is None:
                 raise UnifiedModelError("保存するアンサンブルトレーナーがNullです")
 
-            # タイムスタンプ付きディレクトリ名を生成
-            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            ensemble_dir = f"{model_name}_ensemble_{timestamp}"
+            # アルゴリズム名と日付でディレクトリ名を生成
+            algorithm_name = self._extract_algorithm_name(ensemble_trainer, metadata)
+            date_stamp = datetime.now().strftime("%Y%m%d")
+            base_ensemble_dir = f"{algorithm_name}_{date_stamp}"
+
+            # 同じディレクトリ名が存在する場合は連番を追加
+            counter = 1
+            ensemble_dir = base_ensemble_dir
             ensemble_path = os.path.join(self.config.MODEL_SAVE_PATH, ensemble_dir)
+
+            while os.path.exists(ensemble_path):
+                ensemble_dir = f"{base_ensemble_dir}_{counter:02d}"
+                ensemble_path = os.path.join(self.config.MODEL_SAVE_PATH, ensemble_dir)
+                counter += 1
 
             # ディレクトリを作成
             os.makedirs(ensemble_path, exist_ok=True)
@@ -155,8 +248,9 @@ class ModelManager:
 
             # アンサンブル全体のメタデータを保存
             ensemble_metadata = {
-                "model_name": model_name,
-                "timestamp": timestamp,
+                "model_name": algorithm_name,
+                "original_model_name": model_name,
+                "timestamp": date_stamp,
                 "ensemble_method": getattr(
                     ensemble_trainer, "ensemble_method", "unknown"
                 ),
@@ -180,7 +274,7 @@ class ModelManager:
             )
 
             logger.info(
-                f"アンサンブルモデル保存完了: {ensemble_dir} ({total_size / 1024 / 1024:.2f}MB)"
+                f"アンサンブルモデル保存完了: {ensemble_dir} (アルゴリズム: {algorithm_name}, サイズ: {total_size / 1024 / 1024:.2f}MB)"
             )
 
             # 古いモデルのクリーンアップ

@@ -134,6 +134,15 @@ export default function ModelPerformanceCard({
     // undefinedの場合のみ非表示、0.0も有効な値として表示
     if (value === undefined) return null;
 
+    // モデルが読み込まれていない場合の表示
+    const isModelNotLoaded = !modelStatus?.is_model_loaded;
+    const displayValue =
+      isModelNotLoaded && value === 0
+        ? "未学習"
+        : metricKey.includes("loss") || metricKey.includes("brier")
+        ? value.toFixed(4)
+        : `${(value * 100).toFixed(2)}%`;
+
     return (
       <div className="text-center p-3 bg-gray-800/50 rounded-lg">
         <div className="flex items-center justify-center mb-2">
@@ -147,10 +156,14 @@ export default function ModelPerformanceCard({
             <Info className="h-3 w-3 text-gray-500 hover:text-blue-400" />
           </button>
         </div>
-        <div className={`text-lg font-bold ${getScoreColorClass(value)}`}>
-          {metricKey.includes("loss") || metricKey.includes("brier")
-            ? value.toFixed(4)
-            : `${(value * 100).toFixed(2)}%`}
+        <div
+          className={`text-lg font-bold ${
+            isModelNotLoaded && value === 0
+              ? "text-gray-500"
+              : getScoreColorClass(value)
+          }`}
+        >
+          {displayValue}
         </div>
       </div>
     );
@@ -309,10 +322,19 @@ export default function ModelPerformanceCard({
         {!modelStatus?.is_model_loaded && !modelStatus?.is_training ? (
           <div className="flex flex-col items-center justify-center py-8 text-gray-400">
             <BarChart3 className="h-12 w-12 mb-4 opacity-50" />
-            <p className="text-lg font-medium mb-2">性能データがありません</p>
-            <p className="text-sm text-center">
-              モデルを学習すると性能指標が表示されます
+            <p className="text-lg font-medium mb-2">
+              学習済みモデルが見つかりません
             </p>
+            <p className="text-sm text-center mb-4">
+              MLモデルの学習を実行して性能指標を表示してください
+            </p>
+            <div className="flex flex-col space-y-2 text-xs text-gray-500">
+              <p>
+                •
+                F1スコア、バランス精度、MCC、PR-AUCなどの指標が利用可能になります
+              </p>
+              <p>• 学習には市場データが必要です</p>
+            </div>
           </div>
         ) : (
           <div className="space-y-6">

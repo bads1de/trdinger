@@ -309,6 +309,46 @@ class MLManagementOrchestrationService:
                     "training_time": 0.0,
                 }
 
+        else:
+            # モデルが見つからない場合のデフォルト情報
+            logger.info("📊 ML Status API - モデルファイルが見つかりません")
+            status["model_info"] = {
+                "accuracy": 0.0,
+                "model_type": "No Model",
+                "last_updated": "未学習",
+                "training_samples": 0,
+                "file_size_mb": 0.0,
+                "feature_count": 0,
+            }
+            # モデルが存在しない場合でもperformance_metricsを含める
+            status["performance_metrics"] = {
+                "accuracy": 0.0,
+                "precision": 0.0,
+                "recall": 0.0,
+                "f1_score": 0.0,
+                "auc_score": 0.0,
+                "auc_roc": 0.0,
+                "auc_pr": 0.0,
+                "balanced_accuracy": 0.0,
+                "matthews_corrcoef": 0.0,
+                "cohen_kappa": 0.0,
+                "specificity": 0.0,
+                "sensitivity": 0.0,
+                "npv": 0.0,
+                "ppv": 0.0,
+                "log_loss": 0.0,
+                "brier_score": 0.0,
+                "loss": 0.0,
+                "val_accuracy": 0.0,
+                "val_loss": 0.0,
+                "training_time": 0.0,
+            }
+            # ステータスメッセージを追加
+            status["status"] = "no_model"
+            status["message"] = (
+                "学習済みモデルが見つかりません。モデルの学習を実行してください。"
+            )
+
         return status
 
     async def get_feature_importance(self, top_n: int = 10) -> Dict[str, Any]:
