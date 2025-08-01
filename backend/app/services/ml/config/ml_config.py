@@ -152,8 +152,12 @@ class TrainingConfig(BaseSettings):
     PREDICTION_HORIZON: int = Field(default=24)
 
     # ラベル生成設定（動的閾値を使用）
-    LABEL_METHOD: str = Field(default="dynamic_volatility", description="ラベル生成方法")
-    VOLATILITY_WINDOW: int = Field(default=24, description="ボラティリティ計算ウィンドウ")
+    LABEL_METHOD: str = Field(
+        default="dynamic_volatility", description="ラベル生成方法"
+    )
+    VOLATILITY_WINDOW: int = Field(
+        default=24, description="ボラティリティ計算ウィンドウ"
+    )
     THRESHOLD_MULTIPLIER: float = Field(default=0.5, description="閾値乗数")
     MIN_THRESHOLD: float = Field(default=0.005, description="最小閾値")
     MAX_THRESHOLD: float = Field(default=0.05, description="最大閾値")
@@ -322,6 +326,17 @@ class RetrainingConfig(BaseSettings):
 class EnsembleConfig(BaseSettings):
     """アンサンブル学習関連の設定"""
 
+    # アンサンブル有効化フラグ
+    ENABLED: bool = Field(default=True, description="アンサンブル学習を有効にするか")
+
+    # アルゴリズムリスト
+    ALGORITHMS: List[str] = Field(
+        default=["lightgbm", "xgboost"], description="使用するアルゴリズム"
+    )
+
+    # 投票方法
+    VOTING_METHOD: str = Field(default="soft", description="投票方法（soft/hard）")
+
     # デフォルトアンサンブル設定
     DEFAULT_METHOD: str = Field(
         default="stacking", description="デフォルトのアンサンブル手法（多様性重視）"
@@ -338,9 +353,7 @@ class EnsembleConfig(BaseSettings):
 
     # スタッキング設定
     STACKING_BASE_MODELS: List[str] = Field(default=["lightgbm", "random_forest"])
-    STACKING_META_MODEL: str = Field(
-        default="lightgbm", description="メタモデル"
-    )
+    STACKING_META_MODEL: str = Field(default="lightgbm", description="メタモデル")
     STACKING_CV_FOLDS: int = Field(default=5, description="クロスバリデーション分割数")
     STACKING_USE_PROBAS: bool = Field(default=True, description="確率値を使用するか")
 

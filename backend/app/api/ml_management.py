@@ -17,9 +17,9 @@ from app.services.ml.orchestration.ml_management_orchestration_service import (
 
 from app.utils.unified_error_handler import UnifiedErrorHandler
 from app.api.dependencies import get_ml_management_orchestration_service
+from app.utils.api_utils import APIResponseHelper
 
 from app.services.backtest.backtest_data_service import BacktestDataService
-from app.utils.api_utils import APIResponseHelper
 from database.repositories.ohlcv_repository import OHLCVRepository
 from database.repositories.open_interest_repository import OpenInterestRepository
 from database.repositories.funding_rate_repository import FundingRateRepository
@@ -160,37 +160,63 @@ async def get_ml_config(
 
 
 @router.put("/config")
-async def update_ml_config(config_data: Dict[str, Any]):
+async def update_ml_config(
+    config_data: Dict[str, Any],
+    ml_service: MLManagementOrchestrationService = Depends(
+        get_ml_management_orchestration_service
+    ),
+):
     """
     ML設定を更新
 
     Args:
         config_data: 更新する設定データ
+        ml_service: ML管理サービス（依存性注入）
     """
 
     async def _update_ml_config():
-        # TODO: 設定の更新ロジックを実装
-        # 現在は読み取り専用として扱う
         logger.info(f"ML設定更新要求: {config_data}")
-        return APIResponseHelper.api_response(
-            success=True, message="設定が更新されました（現在は読み取り専用）"
-        )
+        result = await ml_service.update_ml_config(config_data)
+
+        if result["success"]:
+            return APIResponseHelper.api_response(
+                success=True,
+                message=result["message"],
+                data=result.get("updated_config"),
+            )
+        else:
+            return APIResponseHelper.api_response(
+                success=False, message=result["message"]
+            )
 
     return await UnifiedErrorHandler.safe_execute_async(_update_ml_config)
 
 
 @router.post("/config/reset")
-async def reset_ml_config():
+async def reset_ml_config(
+    ml_service: MLManagementOrchestrationService = Depends(
+        get_ml_management_orchestration_service
+    ),
+):
     """
     ML設定をデフォルト値にリセット
+
+    Args:
+        ml_service: ML管理サービス（依存性注入）
     """
 
     async def _reset_ml_config():
-        # TODO: 設定のリセットロジックを実装
         logger.info("ML設定リセット要求")
-        return {
-            "message": "設定がデフォルト値にリセットされました（現在は読み取り専用）"
-        }
+        result = await ml_service.reset_ml_config()
+
+        if result["success"]:
+            return APIResponseHelper.api_response(
+                success=True, message=result["message"], data=result.get("config")
+            )
+        else:
+            return APIResponseHelper.api_response(
+                success=False, message=result["message"]
+            )
 
     return await UnifiedErrorHandler.safe_execute_async(_reset_ml_config)
 

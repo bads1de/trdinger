@@ -15,7 +15,8 @@ from app.services.auto_strategy.services.ml_orchestrator import MLOrchestrator
 from app.services.ml.feature_engineering.automl_feature_analyzer import (
     AutoMLFeatureAnalyzer,
 )
-from app.services.ml.config import ml_config
+
+from app.services.ml.config.ml_config_manager import ml_config_manager
 
 
 logger = logging.getLogger(__name__)
@@ -340,41 +341,62 @@ class MLManagementOrchestrationService:
         Returns:
             ML設定辞書
         """
-        config_dict = {
-            "data_processing": {
-                "max_ohlcv_rows": ml_config.data_processing.MAX_OHLCV_ROWS,
-                "max_feature_rows": ml_config.data_processing.MAX_FEATURE_ROWS,
-                "feature_calculation_timeout": ml_config.data_processing.FEATURE_CALCULATION_TIMEOUT,
-                "model_training_timeout": ml_config.data_processing.MODEL_TRAINING_TIMEOUT,
-            },
-            "model": {
-                "model_save_path": ml_config.model.MODEL_SAVE_PATH,
-                "max_model_versions": ml_config.model.MAX_MODEL_VERSIONS,
-                "model_retention_days": ml_config.model.MODEL_RETENTION_DAYS,
-            },
-            "lightgbm": {
-                "learning_rate": ml_config.lightgbm.LEARNING_RATE,
-                "num_leaves": ml_config.lightgbm.NUM_LEAVES,
-                "feature_fraction": ml_config.lightgbm.FEATURE_FRACTION,
-                "bagging_fraction": ml_config.lightgbm.BAGGING_FRACTION,
-                "num_boost_round": ml_config.lightgbm.NUM_BOOST_ROUND,
-                "early_stopping_rounds": ml_config.lightgbm.EARLY_STOPPING_ROUNDS,
-            },
-            "training": {
-                "train_test_split": ml_config.training.TRAIN_TEST_SPLIT,
-                "prediction_horizon": ml_config.training.PREDICTION_HORIZON,
-                "threshold_up": ml_config.training.THRESHOLD_UP,
-                "threshold_down": ml_config.training.THRESHOLD_DOWN,
-                "min_training_samples": ml_config.training.MIN_TRAINING_SAMPLES,
-            },
-            "prediction": {
-                "default_up_prob": ml_config.prediction.DEFAULT_UP_PROB,
-                "default_down_prob": ml_config.prediction.DEFAULT_DOWN_PROB,
-                "default_range_prob": ml_config.prediction.DEFAULT_RANGE_PROB,
-            },
-        }
+        return ml_config_manager.get_config_dict()
 
-        return config_dict
+    async def update_ml_config(self, config_updates: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        ML設定を更新
+
+        Args:
+            config_updates: 更新する設定項目
+
+        Returns:
+            更新結果
+        """
+        try:
+            success = ml_config_manager.update_config(config_updates)
+
+            if success:
+                return {
+                    "success": True,
+                    "message": "ML設定が正常に更新されました",
+                    "updated_config": ml_config_manager.get_config_dict(),
+                }
+            else:
+                return {"success": False, "message": "ML設定の更新に失敗しました"}
+
+        except Exception as e:
+            logger.error(f"ML設定更新エラー: {e}")
+            return {
+                "success": False,
+                "message": f"ML設定の更新中にエラーが発生しました: {e}",
+            }
+
+    async def reset_ml_config(self) -> Dict[str, Any]:
+        """
+        ML設定をデフォルト値にリセット
+
+        Returns:
+            リセット結果
+        """
+        try:
+            success = ml_config_manager.reset_config()
+
+            if success:
+                return {
+                    "success": True,
+                    "message": "ML設定がデフォルト値にリセットされました",
+                    "config": ml_config_manager.get_config_dict(),
+                }
+            else:
+                return {"success": False, "message": "ML設定のリセットに失敗しました"}
+
+        except Exception as e:
+            logger.error(f"ML設定リセットエラー: {e}")
+            return {
+                "success": False,
+                "message": f"ML設定のリセット中にエラーが発生しました: {e}",
+            }
 
     def _is_active_model(self, model: Dict[str, Any]) -> bool:
         """

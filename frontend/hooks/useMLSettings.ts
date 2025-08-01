@@ -25,31 +25,62 @@ export interface MLConfig {
     max_feature_rows: number;
     feature_calculation_timeout: number;
     model_training_timeout: number;
+    model_prediction_timeout: number;
+    memory_warning_threshold: number;
+    memory_limit_threshold: number;
+    debug_mode: boolean;
+    log_level: string;
   };
   model: {
     model_save_path: string;
+    model_file_extension: string;
+    model_name_prefix: string;
+    auto_strategy_model_name: string;
     max_model_versions: number;
     model_retention_days: number;
   };
-  lightgbm: {
-    learning_rate: number;
-    num_leaves: number;
-    feature_fraction: number;
-    bagging_fraction: number;
-    num_boost_round: number;
-    early_stopping_rounds: number;
-  };
   training: {
     train_test_split: number;
+    cross_validation_folds: number;
     prediction_horizon: number;
+    label_method: string;
+    volatility_window: number;
+    threshold_multiplier: number;
+    min_threshold: number;
+    max_threshold: number;
     threshold_up: number;
     threshold_down: number;
-    min_training_samples: number;
   };
   prediction: {
     default_up_prob: number;
     default_down_prob: number;
     default_range_prob: number;
+    fallback_up_prob: number;
+    fallback_down_prob: number;
+    fallback_range_prob: number;
+    min_probability: number;
+    max_probability: number;
+    probability_sum_min: number;
+    probability_sum_max: number;
+    expand_to_data_length: boolean;
+    default_indicator_length: number;
+  };
+  ensemble: {
+    enabled: boolean;
+    algorithms: string[];
+    voting_method: string;
+    default_method: string;
+    stacking_cv_folds: number;
+    stacking_use_probas: boolean;
+  };
+  retraining: {
+    check_interval_seconds: number;
+    max_concurrent_jobs: number;
+    job_timeout_seconds: number;
+    data_retention_days: number;
+    incremental_training_enabled: boolean;
+    performance_degradation_threshold: number;
+    data_drift_threshold: number;
   };
 }
 

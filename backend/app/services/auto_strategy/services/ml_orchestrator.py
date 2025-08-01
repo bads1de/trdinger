@@ -725,8 +725,11 @@ class MLOrchestrator(MLPredictionInterface):
             start_date = df.index.min()
             end_date = df.index.max()
 
-            # シンボルを推定（デフォルトはBTC/USDT）
-            symbol = "BTC/USDT:USDT"  # TODO: 実際のシンボルを取得する方法を実装
+            # シンボルとタイムフレームを動的に推定
+            symbol = self._infer_symbol_from_data(df)
+            timeframe = self._infer_timeframe_from_data(df)
+
+            logger.info(f"推定されたシンボル: {symbol}, タイムフレーム: {timeframe}")
 
             # BacktestDataServiceを使用して拡張データを取得
             # 注意: この部分は依存性注入が必要ですが、現在のアーキテクチャでは
@@ -736,7 +739,7 @@ class MLOrchestrator(MLPredictionInterface):
                 backtest_service = self.get_backtest_data_service(db)
                 enhanced_df = backtest_service.get_data_for_backtest(
                     symbol=symbol,
-                    timeframe="1h",  # TODO: 実際のタイムフレームを取得
+                    timeframe=timeframe,
                     start_date=start_date,
                     end_date=end_date,
                 )
@@ -789,6 +792,102 @@ class MLOrchestrator(MLPredictionInterface):
         except Exception as e:
             logger.error(f"FR/OIデータ抽出エラー: {e}")
             return None, None
+
+    def _infer_symbol_from_data(self, df: pd.DataFrame) -> str:
+        """
+        データフレームからシンボルを推定
+
+        Args:
+            df: OHLCVデータフレーム
+
+        Returns:
+            推定されたシンボル
+        """
+        try:
+            # データフレームのメタデータからシンボルを取得を試行
+            if hasattr(df, "attrs") and "symbol" in df.attrs:
+                return df.attrs["symbol"]
+
+            # カラム名からシンボルを推定
+            if hasattr(df, "columns"):
+                for col in df.columns:
+                    if isinstance(col, str) and (
+                        "BTC" in col.upper() or "ETH" in col.upper()
+                    ):
+                        if "BTC" in col.upper():
+                            return "BTC/USDT:USDT"
+                        elif "ETH" in col.upper():
+                            return "ETH/USDT:USDT"
+
+            # 価格レンジからシンボルを推定（BTCは通常高価格）
+            if "Close" in df.columns and not df["Close"].empty:
+                avg_price = df["Close"].mean()
+                if avg_price > 10000:  # BTCの価格レンジ
+                    return "BTC/USDT:USDT"
+                elif avg_price > 1000:  # ETHの価格レンジ
+                    return "ETH/USDT:USDT"
+
+            # デフォルトはBTC
+            logger.info(
+                "シンボルを推定できませんでした。デフォルトのBTC/USDT:USDTを使用します"
+            )
+            return "BTC/USDT:USDT"
+
+        except Exception as e:
+            logger.warning(f"シンボル推定エラー: {e}")
+            return "BTC/USDT:USDT"
+
+    def _infer_timeframe_from_data(self, df: pd.DataFrame) -> str:
+        """
+        データフレームからタイムフレームを推定
+
+        Args:
+            df: OHLCVデータフレーム
+
+        Returns:
+            推定されたタイムフレーム
+        """
+        try:
+            # データフレームのメタデータからタイムフレームを取得を試行
+            if hasattr(df, "attrs") and "timeframe" in df.attrs:
+                return df.attrs["timeframe"]
+
+            # インデックスの時間間隔から推定
+            if isinstance(df.index, pd.DatetimeIndex) and len(df.index) > 1:
+                # 最初の数個の時間差を計算
+                time_diffs = []
+                for i in range(1, min(6, len(df.index))):
+                    diff = df.index[i] - df.index[i - 1]
+                    time_diffs.append(diff.total_seconds() / 60)  # 分単位
+
+                if time_diffs:
+                    avg_diff_minutes = sum(time_diffs) / len(time_diffs)
+
+                    # 時間間隔に基づいてタイムフレームを判定
+                    if abs(avg_diff_minutes - 1) < 0.5:
+                        return "1m"
+                    elif abs(avg_diff_minutes - 5) < 2:
+                        return "5m"
+                    elif abs(avg_diff_minutes - 15) < 5:
+                        return "15m"
+                    elif abs(avg_diff_minutes - 30) < 10:
+                        return "30m"
+                    elif abs(avg_diff_minutes - 60) < 15:
+                        return "1h"
+                    elif abs(avg_diff_minutes - 240) < 30:
+                        return "4h"
+                    elif abs(avg_diff_minutes - 1440) < 60:
+                        return "1d"
+
+            # デフォルトは1時間
+            logger.info(
+                "タイムフレームを推定できませんでした。デフォルトの1hを使用します"
+            )
+            return "1h"
+
+        except Exception as e:
+            logger.warning(f"タイムフレーム推定エラー: {e}")
+            return "1h"
 
 
 # グローバルインスタンス（デフォルトでAutoML有効）
