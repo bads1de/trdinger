@@ -7,13 +7,12 @@
 import logging
 
 from fastapi import APIRouter, Depends, Query
-from sqlalchemy.orm import Session
 from typing import Dict, Any, Optional
 from pydantic import BaseModel, Field
 
-from database.connection import get_db
 from app.utils.unified_error_handler import UnifiedErrorHandler
 from app.services.strategy_integration_service import StrategyIntegrationService
+from app.api.dependencies import get_strategy_integration_service_with_db
 
 logger = logging.getLogger(__name__)
 
@@ -55,7 +54,9 @@ async def get_strategies(
     min_fitness: Optional[float] = Query(None, description="最小フィットネススコア"),
     sort_by: str = Query("fitness_score", description="ソート項目"),
     sort_order: str = Query("desc", regex="^(asc|desc)$", description="ソート順序"),
-    db: Session = Depends(get_db),
+    strategy_service: StrategyIntegrationService = Depends(
+        get_strategy_integration_service_with_db
+    ),
 ):
     """
     生成された戦略の一覧を取得
@@ -72,15 +73,13 @@ async def get_strategies(
         min_fitness: 最小フィットネススコア
         sort_by: ソート項目 (fitness_score, created_at, expected_return, sharpe_ratio, max_drawdown, win_rate)
         sort_order: ソート順序 (asc, desc)
-        db: データベースセッション
+        strategy_service: 戦略統合サービス（依存性注入）
 
     Returns:
         生成された戦略データ
     """
 
     async def _get_strategies():
-        
-        strategy_service = StrategyIntegrationService(db)
         return strategy_service.get_strategies_with_response(
             limit=limit,
             offset=offset,

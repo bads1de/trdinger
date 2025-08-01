@@ -201,6 +201,21 @@ def get_auto_strategy_service() -> AutoStrategyService:
         )
 
 
+def get_strategy_integration_service_with_db(
+    db: Session = Depends(get_db),
+) -> StrategyIntegrationService:
+    """
+    StrategyIntegrationServiceのインスタンスを取得（依存性注入用）
+
+    Args:
+        db: データベースセッション（依存性注入）
+
+    Returns:
+        StrategyIntegrationServiceインスタンス
+    """
+    return StrategyIntegrationService(db)
+
+
 def get_automl_feature_generation_service(
     db: Session = Depends(get_db),
 ) -> AutoMLFeatureGenerationService:

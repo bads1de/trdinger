@@ -265,7 +265,9 @@ class EnsembleTrainer(BaseMLTrainer):
             # 特徴量重要度
             feature_importance = self.ensemble_model.get_feature_importance()
             if not feature_importance:
-                logger.warning("アンサンブルモデルから特徴量重要度を取得できませんでした")
+                logger.warning(
+                    "アンサンブルモデルから特徴量重要度を取得できませんでした"
+                )
                 feature_importance = {}
             else:
                 logger.info(f"特徴量重要度を取得: {len(feature_importance)}個")
@@ -450,9 +452,9 @@ class EnsembleTrainer(BaseMLTrainer):
             # アンサンブルモデルのクリーンアップ
             if self.ensemble_model is not None:
                 try:
-                    if hasattr(self.ensemble_model, 'cleanup_resources'):
+                    if hasattr(self.ensemble_model, "cleanup_resources"):
                         self.ensemble_model.cleanup_resources()
-                    elif hasattr(self.ensemble_model, 'cleanup'):
+                    elif hasattr(self.ensemble_model, "cleanup"):
                         self.ensemble_model.cleanup()
 
                     # アンサンブルモデル自体をクリア
@@ -460,7 +462,9 @@ class EnsembleTrainer(BaseMLTrainer):
                     logger.debug("アンサンブルモデルをクリアしました")
 
                 except Exception as ensemble_error:
-                    logger.warning(f"アンサンブルモデルクリーンアップ警告: {ensemble_error}")
+                    logger.warning(
+                        f"アンサンブルモデルクリーンアップ警告: {ensemble_error}"
+                    )
 
             # BaseMLTrainerのクリーンアップを呼び出し（AutoMLコンポーネントを含む）
             try:
@@ -475,9 +479,12 @@ class EnsembleTrainer(BaseMLTrainer):
 
             # 強制ガベージコレクション
             import gc
+
             collected = gc.collect()
 
-            logger.info(f"EnsembleTrainerリソースクリーンアップ完了（{collected}オブジェクト回収）")
+            logger.info(
+                f"EnsembleTrainerリソースクリーンアップ完了（{collected}オブジェクト回収）"
+            )
 
         except Exception as e:
             logger.error(f"EnsembleTrainerクリーンアップエラー: {e}")

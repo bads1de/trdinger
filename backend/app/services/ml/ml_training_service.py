@@ -580,9 +580,13 @@ class MLTrainingService:
             if optimizer is not None:
                 try:
                     optimizer.cleanup()
-                    logger.debug("例外処理でOptunaOptimizer リソースをクリーンアップしました")
+                    logger.debug(
+                        "例外処理でOptunaOptimizer リソースをクリーンアップしました"
+                    )
                 except Exception as cleanup_error:
-                    logger.warning(f"例外処理でのOptunaOptimizer クリーンアップ警告: {cleanup_error}")
+                    logger.warning(
+                        f"例外処理でのOptunaOptimizer クリーンアップ警告: {cleanup_error}"
+                    )
 
     def _prepare_parameter_space(
         self, parameter_space_config: Dict[str, Dict[str, Any]]
@@ -724,19 +728,22 @@ class MLTrainingService:
             logger.info("MLTrainingServiceのリソースクリーンアップを開始")
 
             # トレーナーのクリーンアップ
-            if hasattr(self.trainer, 'cleanup_resources'):
+            if hasattr(self.trainer, "cleanup_resources"):
                 self.trainer.cleanup_resources()
 
             # 最適化器のクリーンアップ
-            if hasattr(self, 'optimizer') and self.optimizer:
-                if hasattr(self.optimizer, 'cleanup'):
+            if hasattr(self, "optimizer") and self.optimizer:
+                if hasattr(self.optimizer, "cleanup"):
                     self.optimizer.cleanup()
 
             # 強制ガベージコレクション
             import gc
+
             collected = gc.collect()
 
-            logger.info(f"MLTrainingServiceのリソースクリーンアップ完了（{collected}オブジェクト回収）")
+            logger.info(
+                f"MLTrainingServiceのリソースクリーンアップ完了（{collected}オブジェクト回収）"
+            )
 
         except Exception as e:
             logger.error(f"MLTrainingServiceクリーンアップエラー: {e}")

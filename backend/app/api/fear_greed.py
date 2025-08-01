@@ -14,6 +14,7 @@ from database.connection import get_db
 from app.services.data_collection.orchestration.fear_greed_orchestration_service import (
     FearGreedOrchestrationService,
 )
+from app.api.dependencies import get_fear_greed_orchestration_service
 from app.utils.unified_error_handler import UnifiedErrorHandler
 
 
@@ -28,6 +29,9 @@ async def get_fear_greed_data(
     end_date: Optional[str] = Query(None, description="終了日時 (ISO format)"),
     limit: Optional[int] = Query(30, description="取得件数制限"),
     db: Session = Depends(get_db),
+    service: FearGreedOrchestrationService = Depends(
+        get_fear_greed_orchestration_service
+    ),
 ) -> Dict:
     """
     Fear & Greed Index データを取得
@@ -37,13 +41,13 @@ async def get_fear_greed_data(
         end_date: 終了日時（ISO形式）
         limit: 取得件数制限
         db: データベースセッション
+        service: Fear & Greedオーケストレーションサービス（依存性注入）
 
     Returns:
         Fear & Greed Index データ
     """
 
     async def _get_fear_greed_data():
-        service = FearGreedOrchestrationService()
         return await service.get_fear_greed_data(
             db=db, start_date=start_date, end_date=end_date, limit=limit
         )
@@ -55,6 +59,9 @@ async def get_fear_greed_data(
 async def get_latest_fear_greed_data(
     limit: int = Query(30, description="取得件数制限"),
     db: Session = Depends(get_db),
+    service: FearGreedOrchestrationService = Depends(
+        get_fear_greed_orchestration_service
+    ),
 ) -> Dict:
     """
     最新のFear & Greed Index データを取得
@@ -62,13 +69,13 @@ async def get_latest_fear_greed_data(
     Args:
         limit: 取得件数制限
         db: データベースセッション
+        service: Fear & Greedオーケストレーションサービス（依存性注入）
 
     Returns:
         最新のFear & Greed Index データ
     """
 
     async def _get_latest_data():
-        service = FearGreedOrchestrationService()
         return await service.get_latest_fear_greed_data(db=db, limit=limit)
 
     return await UnifiedErrorHandler.safe_execute_async(_get_latest_data)
@@ -99,6 +106,9 @@ async def get_fear_greed_data_status(
 async def collect_fear_greed_data(
     limit: int = Query(30, description="取得するデータ数"),
     db: Session = Depends(get_db),
+    orchestration_service: FearGreedOrchestrationService = Depends(
+        get_fear_greed_orchestration_service
+    ),
 ) -> Dict:
     """
     Fear & Greed Index データを収集
@@ -106,14 +116,13 @@ async def collect_fear_greed_data(
     Args:
         limit: 取得するデータ数
         db: データベースセッション
+        orchestration_service: Fear & Greedオーケストレーションサービス（依存性注入）
 
     Returns:
         収集結果
     """
 
     async def _execute():
-        
-        orchestration_service = FearGreedOrchestrationService()
         return await orchestration_service.collect_fear_greed_data(limit, db)
 
     return await UnifiedErrorHandler.safe_execute_async(_execute)
@@ -134,7 +143,7 @@ async def collect_incremental_fear_greed_data(
     """
 
     async def _execute():
-        
+
         orchestration_service = FearGreedOrchestrationService()
         return await orchestration_service.collect_incremental_fear_greed_data(db)
 

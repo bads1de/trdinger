@@ -69,6 +69,9 @@ async def get_backtest_results(
     symbol: Optional[str] = Query(None, description="取引ペアフィルター"),
     strategy_name: Optional[str] = Query(None, description="戦略名フィルター"),
     db: Session = Depends(get_db),
+    orchestration_service: BacktestOrchestrationService = Depends(
+        get_backtest_orchestration_service
+    ),
 ):
     """
     バックテスト結果一覧を取得
@@ -79,14 +82,13 @@ async def get_backtest_results(
         symbol: 取引ペアフィルター
         strategy_name: 戦略名フィルター
         db: データベースセッション
+        orchestration_service: バックテストオーケストレーションサービス（依存性注入）
 
     Returns:
         バックテスト結果一覧
     """
 
     async def _get_results():
-
-        orchestration_service = BacktestOrchestrationService()
         return await orchestration_service.get_backtest_results(
             db=db,
             limit=limit,
@@ -99,20 +101,24 @@ async def get_backtest_results(
 
 
 @router.delete("/results-all")
-async def delete_all_backtest_results(db: Session = Depends(get_db)):
+async def delete_all_backtest_results(
+    db: Session = Depends(get_db),
+    orchestration_service: BacktestOrchestrationService = Depends(
+        get_backtest_orchestration_service
+    ),
+):
     """
     すべてのバックテスト結果を削除
 
     Args:
         db: データベースセッション
+        orchestration_service: バックテストオーケストレーションサービス（依存性注入）
 
     Returns:
         削除結果
     """
 
     async def _delete_all_results():
-
-        orchestration_service = BacktestOrchestrationService()
         return await orchestration_service.delete_all_backtest_results(db=db)
 
     return await UnifiedErrorHandler.safe_execute_async(_delete_all_results)
@@ -156,21 +162,26 @@ async def get_backtest_result_by_id(
 
 
 @router.delete("/results/{result_id}")
-async def delete_backtest_result(result_id: int, db: Session = Depends(get_db)):
+async def delete_backtest_result(
+    result_id: int,
+    db: Session = Depends(get_db),
+    orchestration_service: BacktestOrchestrationService = Depends(
+        get_backtest_orchestration_service
+    ),
+):
     """
     バックテスト結果を削除
 
     Args:
         result_id: バックテスト結果ID
         db: データベースセッション
+        orchestration_service: バックテストオーケストレーションサービス（依存性注入）
 
     Returns:
         削除結果
     """
 
     async def _delete_result():
-
-        orchestration_service = BacktestOrchestrationService()
         result = await orchestration_service.delete_backtest_result(
             db=db, result_id=result_id
         )
