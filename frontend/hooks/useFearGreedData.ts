@@ -75,9 +75,11 @@ export const useFearGreedData = () => {
           fetchStatus();
         },
       });
+
       if (result) {
         return result;
       }
+
       throw new Error("データ収集に失敗しました");
     },
     [executeCollection, refetch, fetchStatus]
@@ -109,7 +111,6 @@ export const useFearGreedData = () => {
 
   const fetchLatestData = useCallback(
     async (limit: number = 30) => {
-      // データが空の場合は、まずデータ収集を試行
       if (data.length === 0) {
         try {
           await collectData(30);
@@ -117,6 +118,7 @@ export const useFearGreedData = () => {
           console.warn("自動データ収集に失敗しました:", error);
         }
       }
+
       setParams({ limit, start_date: undefined, end_date: undefined });
     },
     [setParams, data.length, collectData]

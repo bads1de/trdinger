@@ -19,7 +19,6 @@ import { useFearGreedData } from "@/hooks/useFearGreedData";
 import { TimeFrame } from "@/types/market-data";
 import { SUPPORTED_TRADING_PAIRS } from "@/constants";
 
-// 新規フック
 import { useDataStatus } from "@/hooks/useDataStatus";
 import { useMessages, DefaultMessageDurations } from "@/hooks/useMessages";
 import { useIncrementalUpdateHandler } from "@/hooks/useIncrementalUpdateHandler";
@@ -110,27 +109,17 @@ const DataPage: React.FC = () => {
   });
 
   // 収集メッセージ/ハンドラ
-  const {
-    handleBulkCollectionStart,
-    handleBulkCollectionError,
-    handleFundingRateCollectionStart,
-    handleFundingRateCollectionError,
-    handleOpenInterestCollectionStart,
-    handleOpenInterestCollectionError,
-    handleFearGreedCollectionStart,
-    handleFearGreedCollectionError,
-    handleAllDataCollectionStart,
-    handleAllDataCollectionError,
-  } = useCollectionMessageHandlers({
-    setMessage,
-    fetchFearGreedData,
-    fetchDataStatus,
-    fetchOHLCVData,
-    fetchFundingRateData,
-    fetchOpenInterestData,
-    MESSAGE_KEYS,
-    MESSAGE_DURATION,
-  });
+  const { handleCollectionStart, handleCollectionError, collectionHandlers } =
+    useCollectionMessageHandlers({
+      setMessage,
+      fetchFearGreedData,
+      fetchDataStatus,
+      fetchOHLCVData,
+      fetchFundingRateData,
+      fetchOpenInterestData,
+      MESSAGE_KEYS,
+      MESSAGE_DURATION,
+    });
 
   return (
     <div className="min-h-screen  from-gray-900 animate-fade-in">
@@ -208,16 +197,9 @@ const DataPage: React.FC = () => {
           selectedTimeFrame={selectedTimeFrame}
           handleTimeFrameChange={setSelectedTimeFrame}
           updating={bulkIncrementalUpdateLoading}
-          handleAllDataCollectionStart={handleAllDataCollectionStart}
-          handleAllDataCollectionError={handleAllDataCollectionError}
-          handleBulkCollectionStart={handleBulkCollectionStart}
-          handleBulkCollectionError={handleBulkCollectionError}
-          handleFundingRateCollectionStart={handleFundingRateCollectionStart}
-          handleFundingRateCollectionError={handleFundingRateCollectionError}
-          handleOpenInterestCollectionStart={handleOpenInterestCollectionStart}
-          handleOpenInterestCollectionError={handleOpenInterestCollectionError}
-          handleFearGreedCollectionStart={handleFearGreedCollectionStart}
-          handleFearGreedCollectionError={handleFearGreedCollectionError}
+          handleCollectionStart={handleCollectionStart}
+          handleCollectionError={handleCollectionError}
+          collectionHandlers={collectionHandlers}
           bulkCollectionMessage={messages[MESSAGE_KEYS.BULK_COLLECTION] || ""}
           fundingRateCollectionMessage={
             messages[MESSAGE_KEYS.FUNDING_RATE_COLLECTION] || ""

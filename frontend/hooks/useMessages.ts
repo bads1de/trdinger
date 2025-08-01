@@ -23,6 +23,7 @@ export const useMessages = (options?: UseMessagesOptions) => {
 
   const clearTimer = useCallback((key: string) => {
     const tid = timersRef.current[key];
+
     if (tid) {
       clearTimeout(tid);
       delete timersRef.current[key];
@@ -32,7 +33,9 @@ export const useMessages = (options?: UseMessagesOptions) => {
   const setMessage = useCallback(
     (key: string, message: string, duration: number = DURATIONS.SHORT) => {
       setMessages((prev) => ({ ...prev, [key]: message }));
+
       clearTimer(key);
+
       if (duration > 0) {
         const tid = window.setTimeout(() => {
           setMessages((prev) => {
@@ -40,8 +43,10 @@ export const useMessages = (options?: UseMessagesOptions) => {
             delete next[key];
             return next;
           });
+
           delete timersRef.current[key];
         }, duration);
+
         timersRef.current[key] = tid;
       }
     },
@@ -68,7 +73,6 @@ export const useMessages = (options?: UseMessagesOptions) => {
 
   useEffect(() => {
     return () => {
-      // cleanup timers on unmount
       Object.keys(timersRef.current).forEach((k) => clearTimer(k));
       timersRef.current = {};
     };

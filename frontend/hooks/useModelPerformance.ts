@@ -9,7 +9,7 @@ interface PerformanceMetrics {
   f1_score?: number;
 
   // AUC指標
-  auc_score?: number; // 後方互換性のため保持
+  auc_score?: number; 
   auc_roc?: number;
   auc_pr?: number;
 

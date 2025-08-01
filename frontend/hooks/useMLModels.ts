@@ -61,9 +61,11 @@ export const useMLModels = (limit?: number) => {
   const transformModels = useCallback(
     (response: any) => {
       let modelList = response.models || [];
+
       if (limit) {
         modelList = modelList.slice(0, limit);
       }
+
       return modelList;
     },
     [limit] // limit が変更されたときのみ関数を再生成
@@ -78,7 +80,7 @@ export const useMLModels = (limit?: number) => {
   } = useDataFetching<MLModel>({
     endpoint: "/api/ml/models",
     dataPath: "models",
-    transform: transformModels, // メモ化した関数を渡す
+    transform: transformModels,
     errorMessage: "MLモデルの取得中にエラーが発生しました",
   });
 
@@ -87,11 +89,11 @@ export const useMLModels = (limit?: number) => {
 
   const deleteModel = useCallback(
     async (modelId: string) => {
-      const result = await execute(`/api/ml/models/${modelId}`, {
+      await execute(`/api/ml/models/${modelId}`, {
         method: "DELETE",
         confirmMessage: "このモデルを削除しますか？この操作は取り消せません。",
         onSuccess: () => {
-          fetchModels(); // リストを更新
+          fetchModels();
         },
       });
     },

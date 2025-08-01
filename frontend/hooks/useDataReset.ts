@@ -55,11 +55,13 @@ export const useDataReset = (isVisible: boolean) => {
     (result: DataResetResult) => {
       if (result.success) {
         let message = `✅ ${result.message}`;
+
         if (result.total_deleted !== undefined) {
           message += ` (${result.total_deleted.toLocaleString()}件削除)`;
         } else if (result.deleted_count !== undefined) {
           message += ` (${result.deleted_count.toLocaleString()}件削除)`;
         }
+
         setResetMessage(message);
       } else {
         setResetMessage(`❌ ${result.message}`);

@@ -100,8 +100,11 @@ export const useModelInfo = (autoRefreshInterval?: number) => {
 
   const getAccuracyBadgeVariant = (accuracy?: number) => {
     if (!accuracy) return "outline";
+
     if (accuracy >= 0.8) return "success";
+
     if (accuracy >= 0.7) return "warning";
+
     return "destructive";
   };
 

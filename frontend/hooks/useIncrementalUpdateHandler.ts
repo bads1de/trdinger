@@ -34,6 +34,7 @@ export const useIncrementalUpdateHandler = ({
           const oiCount = result.data.data.open_interest.saved_count || 0;
 
           let timeframeDetails = "";
+
           if (result.data.data.ohlcv.timeframe_results) {
             const tfResults = Object.entries(
               result.data.data.ohlcv.timeframe_results
@@ -53,6 +54,7 @@ export const useIncrementalUpdateHandler = ({
           );
 
           await fetchOHLCVData();
+
           fetchDataStatus();
         },
         onError: (errorMessage) => {

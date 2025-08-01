@@ -34,203 +34,121 @@ export const useCollectionMessageHandlers = ({
   MESSAGE_KEYS,
   MESSAGE_DURATION,
 }: UseCollectionMessageHandlersDeps) => {
+  const messageGenerators: Record<string, (result: any) => string> = {
+    bulk: (result: BulkOHLCVCollectionResult) =>
+      `🚀 ${result.message} (${result.total_tasks}タスク)`,
+    funding: (
+      result: BulkFundingRateCollectionResult | FundingRateCollectionResult
+    ) => {
+      if ("total_symbols" in result) {
+        return `🚀 ${result.message} (${result.successful_symbols}/${result.total_symbols}シンボル成功)`;
+      }
+      return `🚀 ${result.symbol}のFRデータ収集完了 (${result.saved_count}件保存)`;
+    },
+    openinterest: (
+      result: BulkOpenInterestCollectionResult | OpenInterestCollectionResult
+    ) => {
+      if ("total_symbols" in result) {
+        return `🚀 ${result.message} (${result.successful_symbols}/${result.total_symbols}シンボル成功)`;
+      }
+      return `🚀 ${result.symbol}のOIデータ収集完了 (${result.saved_count}件保存)`;
+    },
+    feargreed: (result: FearGreedCollectionResult) =>
+      result.success
+        ? `🚀 Fear & Greed Index収集完了 (取得:${result.fetched_count}件, 挿入:${result.inserted_count}件)`
+        : `❌ ${result.message}`,
+    alldata: (result: AllDataCollectionResult) => {
+      if (result.ohlcv_result?.status === "completed") {
+        const ohlcvCount = result.ohlcv_result?.total_tasks || 0;
+        const fundingCount =
+          result.funding_rate_result?.total_saved_records || 0;
+        const openInterestCount =
+          result.open_interest_result?.total_saved_records || 0;
+        return `🚀 全データ収集完了！ OHLCV:${ohlcvCount}タスク, FR:${fundingCount}件, OI:${openInterestCount}件, TI:自動計算済み`;
+      }
+      return `🔄 ${result.ohlcv_result?.message || "処理中..."} (実行中...)`;
+    },
+    default: (result: any) => `🚀 ${result.message || "処理完了"}`,
+  };
+
   const generateCollectionMessage = useCallback(
     (type: string, result: any): string => {
-      switch (type) {
-        case "bulk":
-          return `🚀 ${result.message} (${result.total_tasks}タスク)`;
-        case "funding":
-          if ("total_symbols" in result) {
-            return `🚀 ${result.message} (${result.successful_symbols}/${result.total_symbols}シンボル成功)`;
-          }
-          return `🚀 ${result.symbol}のFRデータ収集完了 (${result.saved_count}件保存)`;
-        case "openinterest":
-          if ("total_symbols" in result) {
-            return `🚀 ${result.message} (${result.successful_symbols}/${result.total_symbols}シンボル成功)`;
-          }
-          return `🚀 ${result.symbol}のOIデータ収集完了 (${result.saved_count}件保存)`;
-        case "feargreed":
-          return result.success
-            ? `🚀 Fear & Greed Index収集完了 (取得:${result.fetched_count}件, 挿入:${result.inserted_count}件)`
-            : `❌ ${result.message}`;
-        case "alldata":
-          if (result.ohlcv_result?.status === "completed") {
-            const ohlcvCount = result.ohlcv_result?.total_tasks || 0;
-            const fundingCount =
-              result.funding_rate_result?.total_saved_records || 0;
-            const openInterestCount =
-              result.open_interest_result?.total_saved_records || 0;
-            return `🚀 全データ収集完了！ OHLCV:${ohlcvCount}タスク, FR:${fundingCount}件, OI:${openInterestCount}件, TI:自動計算済み`;
-          }
-          return `🔄 ${
-            result.ohlcv_result?.message || "処理中..."
-          } (実行中...)`;
-        default:
-          return `🚀 ${result.message || "処理完了"}`;
-      }
+      const generator = messageGenerators[type] || messageGenerators.default;
+      return generator(result);
     },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     []
   );
 
-  const handleBulkCollectionStart = useCallback(
-    (result: BulkOHLCVCollectionResult) => {
-      setMessage(
-        MESSAGE_KEYS.BULK_COLLECTION,
-        generateCollectionMessage("bulk", result)
-      );
-      fetchDataStatus();
-    },
-    [
-      setMessage,
-      MESSAGE_KEYS.BULK_COLLECTION,
-      generateCollectionMessage,
-      fetchDataStatus,
-    ]
-  );
-
-  const handleBulkCollectionError = useCallback(
-    (errorMessage: string) => {
-      setMessage(
-        MESSAGE_KEYS.BULK_COLLECTION,
-        `❌ ${errorMessage}`,
-        MESSAGE_DURATION.SHORT
-      );
-    },
-    [setMessage, MESSAGE_KEYS.BULK_COLLECTION, MESSAGE_DURATION.SHORT]
-  );
-
-  const handleFundingRateCollectionStart = useCallback(
-    (result: BulkFundingRateCollectionResult | FundingRateCollectionResult) => {
-      setMessage(
-        MESSAGE_KEYS.FUNDING_RATE_COLLECTION,
-        generateCollectionMessage("funding", result)
-      );
-    },
-    [
-      setMessage,
-      MESSAGE_KEYS.FUNDING_RATE_COLLECTION,
-      generateCollectionMessage,
-    ]
-  );
-
-  const handleFundingRateCollectionError = useCallback(
-    (errorMessage: string) => {
-      setMessage(
-        MESSAGE_KEYS.FUNDING_RATE_COLLECTION,
-        `❌ ${errorMessage}`,
-        MESSAGE_DURATION.SHORT
-      );
-    },
-    [setMessage, MESSAGE_KEYS.FUNDING_RATE_COLLECTION, MESSAGE_DURATION.SHORT]
-  );
-
-  const handleOpenInterestCollectionStart = useCallback(
+  const handleCollectionStart = useCallback(
     (
-      result: BulkOpenInterestCollectionResult | OpenInterestCollectionResult
+      messageKey: string,
+      messageType: string,
+      result: any,
+      duration?: number,
+      onSuccess?: (result: any) => void
     ) => {
       setMessage(
-        MESSAGE_KEYS.OPEN_INTEREST_COLLECTION,
-        generateCollectionMessage("openinterest", result)
+        messageKey,
+        generateCollectionMessage(messageType, result),
+        duration
       );
-    },
-    [
-      setMessage,
-      MESSAGE_KEYS.OPEN_INTEREST_COLLECTION,
-      generateCollectionMessage,
-    ]
-  );
-
-  const handleOpenInterestCollectionError = useCallback(
-    (errorMessage: string) => {
-      setMessage(
-        MESSAGE_KEYS.OPEN_INTEREST_COLLECTION,
-        `❌ ${errorMessage}`,
-        MESSAGE_DURATION.SHORT
-      );
-    },
-    [setMessage, MESSAGE_KEYS.OPEN_INTEREST_COLLECTION, MESSAGE_DURATION.SHORT]
-  );
-
-  const handleFearGreedCollectionStart = useCallback(
-    (result: FearGreedCollectionResult) => {
-      setMessage(
-        MESSAGE_KEYS.FEAR_GREED_COLLECTION,
-        generateCollectionMessage("feargreed", result)
-      );
-      if (result.success) {
-        fetchFearGreedData();
+      if (onSuccess) {
+        onSuccess(result);
       }
-      fetchDataStatus();
     },
-    [
-      setMessage,
-      MESSAGE_KEYS.FEAR_GREED_COLLECTION,
-      generateCollectionMessage,
-      fetchFearGreedData,
-      fetchDataStatus,
-    ]
+    [setMessage, generateCollectionMessage]
   );
 
-  const handleFearGreedCollectionError = useCallback(
-    (errorMessage: string) => {
-      setMessage(
-        MESSAGE_KEYS.FEAR_GREED_COLLECTION,
-        `❌ ${errorMessage}`,
-        MESSAGE_DURATION.SHORT
-      );
+  const handleCollectionError = useCallback(
+    (messageKey: string, errorMessage: string, duration?: number) => {
+      setMessage(messageKey, `❌ ${errorMessage}`, duration);
     },
-    [setMessage, MESSAGE_KEYS.FEAR_GREED_COLLECTION, MESSAGE_DURATION.SHORT]
+    [setMessage]
   );
 
-  const handleAllDataCollectionStart = useCallback(
-    (result: AllDataCollectionResult) => {
-      setMessage(
-        MESSAGE_KEYS.ALL_DATA_COLLECTION,
-        generateCollectionMessage("alldata", result),
-        MESSAGE_DURATION.MEDIUM
-      );
-      fetchDataStatus();
-
-      setTimeout(() => {
-        fetchOHLCVData();
-        fetchFundingRateData();
-        fetchOpenInterestData();
-      }, 3000);
+  const collectionHandlers = {
+    bulk: {
+      key: MESSAGE_KEYS.BULK_COLLECTION,
+      type: "bulk",
+      onSuccess: () => fetchDataStatus(),
     },
-    [
-      setMessage,
-      MESSAGE_KEYS.ALL_DATA_COLLECTION,
-      MESSAGE_DURATION.MEDIUM,
-      generateCollectionMessage,
-      fetchDataStatus,
-      fetchOHLCVData,
-      fetchFundingRateData,
-      fetchOpenInterestData,
-    ]
-  );
-
-  const handleAllDataCollectionError = useCallback(
-    (errorMessage: string) => {
-      setMessage(
-        MESSAGE_KEYS.ALL_DATA_COLLECTION,
-        `❌ ${errorMessage}`,
-        MESSAGE_DURATION.MEDIUM
-      );
+    funding: {
+      key: MESSAGE_KEYS.FUNDING_RATE_COLLECTION,
+      type: "funding",
     },
-    [setMessage, MESSAGE_KEYS.ALL_DATA_COLLECTION, MESSAGE_DURATION.MEDIUM]
-  );
+    openinterest: {
+      key: MESSAGE_KEYS.OPEN_INTEREST_COLLECTION,
+      type: "openinterest",
+    },
+    feargreed: {
+      key: MESSAGE_KEYS.FEAR_GREED_COLLECTION,
+      type: "feargreed",
+      onSuccess: (result: FearGreedCollectionResult) => {
+        if (result.success) {
+          fetchFearGreedData();
+        }
+        fetchDataStatus();
+      },
+    },
+    alldata: {
+      key: MESSAGE_KEYS.ALL_DATA_COLLECTION,
+      type: "alldata",
+      duration: MESSAGE_DURATION.MEDIUM,
+      onSuccess: () => {
+        fetchDataStatus();
+        setTimeout(() => {
+          fetchOHLCVData();
+          fetchFundingRateData();
+          fetchOpenInterestData();
+        }, 3000);
+      },
+    },
+  };
 
   return {
-    generateCollectionMessage,
-    handleBulkCollectionStart,
-    handleBulkCollectionError,
-    handleFundingRateCollectionStart,
-    handleFundingRateCollectionError,
-    handleOpenInterestCollectionStart,
-    handleOpenInterestCollectionError,
-    handleFearGreedCollectionStart,
-    handleFearGreedCollectionError,
-    handleAllDataCollectionStart,
-    handleAllDataCollectionError,
+    handleCollectionStart,
+    handleCollectionError,
+    collectionHandlers,
   };
 };

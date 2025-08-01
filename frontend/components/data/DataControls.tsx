@@ -35,20 +35,27 @@ interface DataControlsProps {
   selectedTimeFrame: TimeFrame;
   handleTimeFrameChange: (timeFrame: TimeFrame) => void;
   updating: boolean;
-  handleAllDataCollectionStart: (result: AllDataCollectionResult) => void;
-  handleAllDataCollectionError: (errorMessage: string) => void;
-  handleBulkCollectionStart: (result: BulkOHLCVCollectionResult) => void;
-  handleBulkCollectionError: (errorMessage: string) => void;
-  handleFundingRateCollectionStart: (
-    result: BulkFundingRateCollectionResult | FundingRateCollectionResult
+  handleCollectionStart: (
+    messageKey: string,
+    messageType: string,
+    result: any,
+    duration?: number,
+    onSuccess?: (result: any) => void
   ) => void;
-  handleFundingRateCollectionError: (errorMessage: string) => void;
-  handleOpenInterestCollectionStart: (
-    result: BulkOpenInterestCollectionResult | OpenInterestCollectionResult
+  handleCollectionError: (
+    messageKey: string,
+    errorMessage: string,
+    duration?: number
   ) => void;
-  handleOpenInterestCollectionError: (errorMessage: string) => void;
-  handleFearGreedCollectionStart: (result: FearGreedCollectionResult) => void;
-  handleFearGreedCollectionError: (errorMessage: string) => void;
+  collectionHandlers: Record<
+    string,
+    {
+      key: string;
+      type: string;
+      duration?: number;
+      onSuccess?: (result: any) => void;
+    }
+  >;
   bulkCollectionMessage: string;
   fundingRateCollectionMessage: string;
   openInterestCollectionMessage: string;
@@ -68,16 +75,9 @@ const DataControls: React.FC<DataControlsProps> = ({
   selectedTimeFrame,
   handleTimeFrameChange,
   updating,
-  handleAllDataCollectionStart,
-  handleAllDataCollectionError,
-  handleBulkCollectionStart,
-  handleBulkCollectionError,
-  handleFundingRateCollectionStart,
-  handleFundingRateCollectionError,
-  handleOpenInterestCollectionStart,
-  handleOpenInterestCollectionError,
-  handleFearGreedCollectionStart,
-  handleFearGreedCollectionError,
+  handleCollectionStart,
+  handleCollectionError,
+  collectionHandlers,
   bulkCollectionMessage,
   fundingRateCollectionMessage,
   openInterestCollectionMessage,
@@ -369,8 +369,23 @@ const DataControls: React.FC<DataControlsProps> = ({
                 {/* 全データ一括収集ボタン */}
                 <DataCollectionButton
                   config={allDataCollectionConfig}
-                  onCollectionStart={handleAllDataCollectionStart}
-                  onCollectionError={handleAllDataCollectionError}
+                  onCollectionStart={(result) => {
+                    const handler = collectionHandlers.alldata;
+                    handleCollectionStart(
+                      handler.key,
+                      handler.type,
+                      result,
+                      handler.duration,
+                      handler.onSuccess
+                    );
+                  }}
+                  onCollectionError={(errorMessage) =>
+                    handleCollectionError(
+                      collectionHandlers.alldata.key,
+                      errorMessage,
+                      collectionHandlers.alldata.duration
+                    )
+                  }
                   disabled={loading || updating}
                   className="h-10 text-sm"
                 />
@@ -378,8 +393,22 @@ const DataControls: React.FC<DataControlsProps> = ({
                 {/* OHLCV収集ボタン */}
                 <DataCollectionButton
                   config={ohlcvCollectionConfig}
-                  onCollectionStart={handleBulkCollectionStart}
-                  onCollectionError={handleBulkCollectionError}
+                  onCollectionStart={(result) => {
+                    const handler = collectionHandlers.bulk;
+                    handleCollectionStart(
+                      handler.key,
+                      handler.type,
+                      result,
+                      handler.duration,
+                      handler.onSuccess
+                    );
+                  }}
+                  onCollectionError={(errorMessage) =>
+                    handleCollectionError(
+                      collectionHandlers.bulk.key,
+                      errorMessage
+                    )
+                  }
                   disabled={loading || updating}
                   className="h-10"
                 />
@@ -387,8 +416,22 @@ const DataControls: React.FC<DataControlsProps> = ({
                 {/* FR収集ボタン */}
                 <DataCollectionButton
                   config={fundingRateCollectionConfig}
-                  onCollectionStart={handleFundingRateCollectionStart}
-                  onCollectionError={handleFundingRateCollectionError}
+                  onCollectionStart={(result) => {
+                    const handler = collectionHandlers.funding;
+                    handleCollectionStart(
+                      handler.key,
+                      handler.type,
+                      result,
+                      handler.duration,
+                      handler.onSuccess
+                    );
+                  }}
+                  onCollectionError={(errorMessage) =>
+                    handleCollectionError(
+                      collectionHandlers.funding.key,
+                      errorMessage
+                    )
+                  }
                   disabled={loading || updating}
                   className="h-10"
                 />
@@ -396,8 +439,22 @@ const DataControls: React.FC<DataControlsProps> = ({
                 {/* OI収集ボタン */}
                 <DataCollectionButton
                   config={openInterestCollectionConfig}
-                  onCollectionStart={handleOpenInterestCollectionStart}
-                  onCollectionError={handleOpenInterestCollectionError}
+                  onCollectionStart={(result) => {
+                    const handler = collectionHandlers.openinterest;
+                    handleCollectionStart(
+                      handler.key,
+                      handler.type,
+                      result,
+                      handler.duration,
+                      handler.onSuccess
+                    );
+                  }}
+                  onCollectionError={(errorMessage) =>
+                    handleCollectionError(
+                      collectionHandlers.openinterest.key,
+                      errorMessage
+                    )
+                  }
                   disabled={loading || updating}
                   className="h-10 bg-green-600 hover:bg-green-700 focus:ring-green-500"
                 />
@@ -405,8 +462,22 @@ const DataControls: React.FC<DataControlsProps> = ({
                 {/* FG収集ボタン */}
                 <DataCollectionButton
                   config={fearGreedCollectionConfig}
-                  onCollectionStart={handleFearGreedCollectionStart}
-                  onCollectionError={handleFearGreedCollectionError}
+                  onCollectionStart={(result) => {
+                    const handler = collectionHandlers.feargreed;
+                    handleCollectionStart(
+                      handler.key,
+                      handler.type,
+                      result,
+                      handler.duration,
+                      handler.onSuccess
+                    );
+                  }}
+                  onCollectionError={(errorMessage) =>
+                    handleCollectionError(
+                      collectionHandlers.feargreed.key,
+                      errorMessage
+                    )
+                  }
                   disabled={loading || updating}
                   className="h-10"
                 />
