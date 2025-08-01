@@ -19,6 +19,7 @@ export interface ApiCallOptions {
   confirmMessage?: string;
   onSuccess?: (data: any) => void;
   onError?: (error: string) => void;
+  onFinally?: () => void;
 }
 
 /**
@@ -47,6 +48,7 @@ export const useApiCall = <T = any>(): ApiCallResult<T> => {
         confirmMessage,
         onSuccess,
         onError,
+        onFinally,
       } = options;
 
       // 確認ダイアログがある場合は表示
@@ -142,6 +144,7 @@ export const useApiCall = <T = any>(): ApiCallResult<T> => {
         return null;
       } finally {
         setLoading(false);
+        onFinally?.();
       }
     },
     []

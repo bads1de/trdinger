@@ -337,6 +337,140 @@ class MLManagementOrchestrationService:
         model_manager.cleanup_expired_models()
         return {"message": "古いモデルファイルが削除されました"}
 
+    async def get_models_list(self) -> Dict[str, Any]:
+        """
+        利用可能なモデル一覧を取得
+        """
+        try:
+            models = model_manager.list_models()
+
+            # モデル情報を整形
+            models_info = []
+            for model in models:
+                # メタデータを取得
+                try:
+                    model_data = model_manager.load_model(model["path"])
+                    metadata = model_data.get("metadata", {}) if model_data else {}
+
+                    model_info = {
+                        "name": model["name"],
+                        "path": model["path"],
+                        "size_mb": model["size_mb"],
+                        "modified_at": model["modified_at"].isoformat(),
+                        "model_type": metadata.get("model_type", "unknown"),
+                        "trainer_type": metadata.get("trainer_type", "unknown"),
+                        "feature_count": metadata.get("feature_count", 0),
+                        "has_feature_importance": bool(
+                            metadata.get("feature_importance")
+                        ),
+                        "feature_importance_count": len(
+                            metadata.get("feature_importance", {})
+                        ),
+                    }
+                    models_info.append(model_info)
+                except Exception as e:
+                    logger.warning(f"モデルメタデータ取得エラー {model['name']}: {e}")
+                    # メタデータ取得に失敗してもモデル情報は追加
+                    model_info = {
+                        "name": model["name"],
+                        "path": model["path"],
+                        "size_mb": model["size_mb"],
+                        "modified_at": model["modified_at"].isoformat(),
+                        "model_type": "unknown",
+                        "trainer_type": "unknown",
+                        "feature_count": 0,
+                        "has_feature_importance": False,
+                        "feature_importance_count": 0,
+                    }
+                    models_info.append(model_info)
+
+            # 最新順にソート
+            models_info.sort(key=lambda x: x["modified_at"], reverse=True)
+
+            return {"models": models_info, "total_count": len(models_info)}
+
+        except Exception as e:
+            logger.error(f"モデル一覧取得エラー: {e}")
+            return {"models": [], "total_count": 0, "error": str(e)}
+
+    async def load_model(self, model_name: str) -> Dict[str, Any]:
+        """
+        指定されたモデルを読み込み
+        """
+        try:
+            # モデルファイルのパスを特定
+            models = model_manager.list_models()
+            target_model = None
+
+            for model in models:
+                if model["name"] == model_name or model_name in model["path"]:
+                    target_model = model
+                    break
+
+            if not target_model:
+                return {
+                    "success": False,
+                    "error": f"モデルが見つかりません: {model_name}",
+                }
+
+            # MLOrchestratorでモデルを読み込み
+            success = self.ml_orchestrator.load_model(target_model["path"])
+
+            if success:
+                # 現在のモデル情報を取得
+                current_model_info = await self.get_current_model_info()
+                return {
+                    "success": True,
+                    "message": f"モデルを読み込みました: {model_name}",
+                    "current_model": current_model_info,
+                }
+            else:
+                return {
+                    "success": False,
+                    "error": f"モデル読み込みに失敗しました: {model_name}",
+                }
+
+        except Exception as e:
+            logger.error(f"モデル読み込みエラー: {e}")
+            return {"success": False, "error": str(e)}
+
+    async def get_current_model_info(self) -> Dict[str, Any]:
+        """
+        現在読み込まれているモデル情報を取得
+        """
+        try:
+            if not self.ml_orchestrator.is_model_loaded:
+                return {"loaded": False, "message": "モデルが読み込まれていません"}
+
+            # 現在のモデル情報を取得
+            trainer = self.ml_orchestrator.ml_training_service.trainer
+
+            model_info = {
+                "loaded": True,
+                "trainer_type": type(trainer).__name__,
+                "is_trained": getattr(trainer, "is_trained", False),
+                "model_type": getattr(trainer, "model_type", "unknown"),
+            }
+
+            # 特徴量重要度の有無を確認
+            try:
+                feature_importance = self.ml_orchestrator.get_feature_importance(
+                    top_n=1
+                )
+                model_info["has_feature_importance"] = bool(feature_importance)
+                model_info["feature_importance_count"] = (
+                    len(feature_importance) if feature_importance else 0
+                )
+            except Exception:
+                model_info["has_feature_importance"] = False
+                model_info["feature_importance_count"] = 0
+
+            return model_info
+
+        except Exception as e:
+            logger.error(f"現在のモデル情報取得エラー: {e}")
+            return {"loaded": False, "error": str(e)}
+
     def get_ml_config_dict(self) -> Dict[str, Any]:
         """
         ML設定を辞書形式で取得

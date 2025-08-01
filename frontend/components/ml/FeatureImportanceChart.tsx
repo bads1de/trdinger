@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useRef } from "react";
 import {
   BarChart,
   Bar,
@@ -17,7 +17,7 @@ import { Button } from "@/components/ui/button";
 import LoadingSpinner from "@/components/common/LoadingSpinner";
 import ErrorDisplay from "@/components/common/ErrorDisplay";
 import { useFeatureImportance } from "@/hooks/useFeatureImportance";
-import { TrendingUp, BarChart3, RefreshCw } from "lucide-react";
+import { TrendingUp, BarChart3, RefreshCw, Download } from "lucide-react";
 
 interface FeatureImportanceChartProps {
   /** 表示する特徴量の数 */
@@ -42,6 +42,8 @@ export default function FeatureImportanceChart({
   autoRefreshInterval,
   className = "",
 }: FeatureImportanceChartProps) {
+  const chartRef = useRef<HTMLDivElement>(null);
+
   const {
     data,
     chartData,
@@ -54,6 +56,32 @@ export default function FeatureImportanceChart({
     loadFeatureImportance,
     getBarColor,
   } = useFeatureImportance(topN, autoRefreshInterval);
+
+  // グラフを画像として保存する関数
+  const handleSaveChart = async () => {
+    if (!chartRef.current) return;
+
+    try {
+      // 動的インポートでhtml2canvasを読み込み
+      const html2canvas = (await import("html2canvas")).default;
+
+      const canvas = await html2canvas(chartRef.current, {
+        backgroundColor: "#1f2937", // ダークテーマの背景色
+        scale: 2, // 高解像度
+        useCORS: true,
+      });
+
+      // Canvasを画像として保存
+      const link = document.createElement("a");
+      link.download = `feature-importance-${
+        new Date().toISOString().split("T")[0]
+      }.png`;
+      link.href = canvas.toDataURL();
+      link.click();
+    } catch (error) {
+      console.error("グラフの保存に失敗しました:", error);
+    }
+  };
 
   // カスタムツールチップ
   const CustomTooltip = ({ active, payload, label }: any) => {
@@ -116,6 +144,7 @@ export default function FeatureImportanceChart({
 
   return (
     <Card
+      ref={chartRef}
       className={`bg-gray-900/50 border-gray-800 transition-all duration-300 hover:border-cyan-500/60 ${className}`}
     >
       <CardHeader>
@@ -153,6 +182,17 @@ export default function FeatureImportanceChart({
               <TrendingUp
                 className={`h-4 w-4 ${sortOrder === "asc" ? "rotate-180" : ""}`}
               />
+            </Button>
+
+            {/* グラフ保存 */}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleSaveChart}
+              className="border-gray-700 hover:border-cyan-500"
+              disabled={data.length === 0}
+            >
+              <Download className="h-4 w-4" />
             </Button>
 
             {/* 手動更新 */}

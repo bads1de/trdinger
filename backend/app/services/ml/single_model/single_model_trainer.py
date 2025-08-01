@@ -205,6 +205,17 @@ class SingleModelTrainer(BaseMLTrainer):
                 }
             )
 
+            # 特徴量重要度をメタデータに追加
+            try:
+                feature_importance = self.get_feature_importance(top_n=100)
+                if feature_importance:
+                    final_metadata["feature_importance"] = feature_importance
+                    logger.info(
+                        f"特徴量重要度をメタデータに追加: {len(feature_importance)}個"
+                    )
+            except Exception as e:
+                logger.warning(f"特徴量重要度の取得に失敗: {e}")
+
             # 単一モデルを保存
             model_path = model_manager.save_model(
                 model=self.single_model.model,
@@ -330,3 +341,31 @@ class SingleModelTrainer(BaseMLTrainer):
             pass
 
         return available
+
+    def get_feature_importance(self, top_n: int = 10) -> Dict[str, float]:
+        """
+        特徴量重要度を取得
+
+        Args:
+            top_n: 上位N個の特徴量
+
+        Returns:
+            特徴量重要度の辞書
+        """
+        if not self.is_trained or self.single_model is None:
+            logger.warning("学習済み単一モデルがありません")
+            return {}
+
+        try:
+            # 単一モデルから特徴量重要度を取得
+            if hasattr(self.single_model, "get_feature_importance"):
+                return self.single_model.get_feature_importance(top_n)
+            else:
+                logger.warning(
+                    f"{self.model_type}モデルは特徴量重要度をサポートしていません"
+                )
+                return {}
+
+        except Exception as e:
+            logger.error(f"単一モデル特徴量重要度取得エラー: {e}")
+            return {}

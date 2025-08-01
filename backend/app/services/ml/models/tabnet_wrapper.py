@@ -181,3 +181,47 @@ class TabNetModel:
             予測確率
         """
         return self.predict(X)
+
+    def get_feature_importance(self, top_n: int = 10) -> Dict[str, float]:
+        """
+        特徴量重要度を取得
+
+        Args:
+            top_n: 上位N個の特徴量
+
+        Returns:
+            特徴量重要度の辞書
+        """
+        if not self.is_trained or not self.model:
+            logger.warning("学習済みモデルがありません")
+            return {}
+
+        try:
+            # TabNetの特徴量重要度を取得
+            if hasattr(self.model, "feature_importances_"):
+                importance_scores = self.model.feature_importances_
+            else:
+                logger.warning("TabNetモデルに特徴量重要度がありません")
+                return {}
+
+            if not self.feature_columns or len(importance_scores) != len(
+                self.feature_columns
+            ):
+                logger.warning("特徴量カラム情報が不正です")
+                return {}
+
+            # 特徴量名と重要度のペアを作成
+            feature_importance = dict(zip(self.feature_columns, importance_scores))
+
+            # 重要度でソートして上位N個を取得
+            sorted_importance = sorted(
+                feature_importance.items(), key=lambda x: x[1], reverse=True
+            )[:top_n]
+
+            result = dict(sorted_importance)
+            logger.info(f"TabNet特徴量重要度を取得: {len(result)}個")
+            return result
+
+        except Exception as e:
+            logger.error(f"TabNet特徴量重要度取得エラー: {e}")
+            return {}

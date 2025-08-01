@@ -382,35 +382,58 @@ class MLOrchestrator(MLPredictionInterface):
             特徴量重要度の辞書
         """
         try:
+            logger.info(f"特徴量重要度取得開始: top_n={top_n}")
+
             # 1. 現在読み込まれているモデルから取得を試行
             if self.is_model_loaded and getattr(
                 self.ml_training_service.trainer, "is_trained", False
             ):
+                logger.info(
+                    f"現在読み込まれているモデルから特徴量重要度を取得: trainer_type={type(self.ml_training_service.trainer).__name__}"
+                )
                 feature_importance = self.ml_training_service.get_feature_importance()
                 if feature_importance:
+                    logger.info(
+                        f"現在のモデルから特徴量重要度を取得: {len(feature_importance)}個"
+                    )
                     # 上位N個を取得
                     sorted_importance = sorted(
                         feature_importance.items(), key=lambda x: x[1], reverse=True
                     )[:top_n]
                     return dict(sorted_importance)
+                else:
+                    logger.warning("現在のモデルから特徴量重要度を取得できませんでした")
 
             # 2. 最新のモデルファイルから特徴量重要度を取得
             from ...ml.model_manager import model_manager
 
+            logger.info("最新のモデルファイルから特徴量重要度を取得を試行")
             latest_model = model_manager.get_latest_model("*")
             if latest_model:
+                logger.info(f"最新モデルファイル: {latest_model}")
                 model_data = model_manager.load_model(latest_model)
                 if model_data and "metadata" in model_data:
                     metadata = model_data["metadata"]
                     feature_importance = metadata.get("feature_importance", {})
+                    logger.info(
+                        f"メタデータから特徴量重要度を確認: {len(feature_importance)}個"
+                    )
 
                     if feature_importance:
                         # 上位N個を取得
                         sorted_importance = sorted(
                             feature_importance.items(), key=lambda x: x[1], reverse=True
                         )[:top_n]
-                        logger.info(f"特徴量重要度を取得: {len(sorted_importance)}個")
+                        logger.info(
+                            f"メタデータから特徴量重要度を取得: {len(sorted_importance)}個"
+                        )
                         return dict(sorted_importance)
+                    else:
+                        logger.warning("メタデータに特徴量重要度が含まれていません")
+                else:
+                    logger.warning("モデルデータまたはメタデータが見つかりません")
+            else:
+                logger.warning("最新のモデルファイルが見つかりません")
 
             logger.warning("特徴量重要度データが見つかりません")
             return {}

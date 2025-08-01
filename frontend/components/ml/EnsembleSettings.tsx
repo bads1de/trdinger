@@ -15,7 +15,6 @@ import {
 import { InputField } from "@/components/common/InputField";
 import { Badge } from "@/components/ui/badge";
 import { Layers, Shuffle, BarChart3, Cpu } from "lucide-react";
-import { SingleModelConfig } from "@/hooks/useMLTraining";
 
 export interface EnsembleSettingsConfig {
   enabled: boolean;
@@ -80,6 +79,10 @@ const META_MODELS = [
   { value: "random_forest", label: "Random Forest" },
   { value: "lightgbm", label: "LightGBM" },
 ];
+
+import SingleModelSettings, {
+  SingleModelSettingsConfig as ExtractedSingleModelSettingsConfig,
+} from "./SingleModelSettings";
 
 export default function EnsembleSettings({
   settings,
@@ -161,37 +164,11 @@ export default function EnsembleSettings({
 
           {/* シングルモード設定 */}
           {!settings.enabled && (
-            <div className="space-y-3 p-4 bg-muted/50 rounded-lg border">
-              <div className="flex items-center space-x-2">
-                <Cpu className="h-4 w-4 text-primary" />
-                <Label className="text-sm font-medium">単一モデル設定</Label>
-              </div>
-              <div className="space-y-2">
-                <Label className="text-xs text-muted-foreground">
-                  使用するモデル
-                </Label>
-                <Select
-                  value={singleModelSettings.model_type}
-                  onValueChange={(model_type) =>
-                    onSingleModelChange?.({ model_type })
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="モデルを選択" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {availableModels.map((model) => (
-                      <SelectItem key={model} value={model}>
-                        {model.toUpperCase()}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <p className="text-xs text-muted-foreground">
-                  選択したモデルで単独トレーニングを実行します
-                </p>
-              </div>
-            </div>
+            <SingleModelSettings
+              singleModelSettings={singleModelSettings}
+              onSingleModelChange={onSingleModelChange}
+              availableModels={availableModels}
+            />
           )}
         </div>
 

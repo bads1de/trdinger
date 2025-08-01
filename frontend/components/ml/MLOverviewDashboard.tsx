@@ -10,7 +10,7 @@ import FeatureImportanceChart from "./FeatureImportanceChart";
 import AutoMLFeatureAnalysis from "./AutoMLFeatureAnalysis";
 import ModelInfoCard from "./ModelInfoCard";
 import ModelPerformanceCard from "./ModelPerformanceCard";
-import MLModelList from "./MLModelList";
+import ModelManagement from "./ModelManagement";
 import { useMLModels } from "@/hooks/useMLModels";
 import {
   Brain,
@@ -191,45 +191,8 @@ export default function MLOverviewDashboard({
         </div>
       </div>
 
-      {/* 最近のモデル一覧 */}
-      <Card className="bg-gray-900/50 border-gray-800">
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <CardTitle className="flex items-center space-x-2">
-              <Database className="h-5 w-5 text-cyan-400" />
-              <span>最近のモデル</span>
-              <Badge variant="outline" className="ml-2">
-                最新 {models.length} 件
-              </Badge>
-            </CardTitle>
-
-            {modelsError && (
-              <div className="flex items-center space-x-2 text-red-400">
-                <AlertTriangle className="h-4 w-4" />
-                <span className="text-sm">データ取得エラー</span>
-              </div>
-            )}
-          </div>
-        </CardHeader>
-
-        <CardContent>
-          {modelsLoading ? (
-            <LoadingSpinner text="モデル一覧を読み込んでいます..." size="md" />
-          ) : modelsError ? (
-            <ErrorDisplay message={modelsError} onRetry={fetchModels} />
-          ) : models.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-8 text-gray-400">
-              <Database className="h-12 w-12 mb-4 opacity-50" />
-              <p className="text-lg font-medium mb-2">モデルがありません</p>
-              <p className="text-sm text-center">
-                トレーニングタブでモデルを学習してください
-              </p>
-            </div>
-          ) : (
-            <MLModelList limit={5} showActions={false} />
-          )}
-        </CardContent>
-      </Card>
+      {/* モデル管理セクション */}
+      <ModelManagement key={`model-management-${refreshKey}`} />
 
       {/* フッター情報 */}
       <div className="text-center text-xs text-gray-500 pt-4 border-t border-gray-800">

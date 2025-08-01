@@ -931,6 +931,17 @@ class BaseMLTrainer(ABC):
         if metadata:
             final_metadata.update(metadata)
 
+        # 特徴量重要度をメタデータに追加
+        try:
+            feature_importance = self.get_feature_importance(top_n=100)
+            if feature_importance:
+                final_metadata["feature_importance"] = feature_importance
+                logger.info(
+                    f"特徴量重要度をメタデータに追加: {len(feature_importance)}個"
+                )
+        except Exception as e:
+            logger.warning(f"特徴量重要度の取得に失敗: {e}")
+
         # 統一されたモデル保存を使用
         model_path = model_manager.save_model(
             model=self,  # トレーナー全体を保存

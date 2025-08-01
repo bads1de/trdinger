@@ -29,12 +29,12 @@ import OptimizationSettings, {
 } from "./OptimizationSettings";
 import AutoMLFeatureSettings from "./AutoMLFeatureSettings";
 import DataPreprocessingSettings, {
-  defaultDataPreprocessingConfig
+  defaultDataPreprocessingConfig,
 } from "./DataPreprocessingSettings";
-import EnsembleSettings, {
-  EnsembleSettingsConfig,
-  SingleModelSettingsConfig
-} from "./EnsembleSettings";
+import EnsembleSettings, { EnsembleSettingsConfig } from "./EnsembleSettings";
+import SingleModelSettings, {
+  SingleModelSettingsConfig,
+} from "./SingleModelSettings";
 import {
   AutoMLFeatureConfig,
   getDefaultAutoMLConfig,
@@ -287,10 +287,6 @@ export default function MLTraining() {
                     } else {
                       setAutomlSettings({
                         tsfresh: { ...automlSettings.tsfresh, enabled: false },
-                        featuretools: {
-                          ...automlSettings.featuretools,
-                          enabled: false,
-                        },
                         autofeat: {
                           ...automlSettings.autofeat,
                           enabled: false,
@@ -357,6 +353,17 @@ export default function MLTraining() {
             availableModels={availableModels}
           />
 
+          {/* 単一モデル設定（分離コンポーネントの直接利用例: UI的に分けたい場合は以下を残し、不要なら削除可） */}
+          {/*
+          {!ensembleSettings.enabled && (
+            <SingleModelSettings
+              singleModelSettings={singleModelSettings}
+              onSingleModelChange={setSingleModelSettings}
+              availableModels={availableModels}
+            />
+          )}
+          */}
+
           <div className="flex items-center space-x-4">
             {!trainingStatus.is_training ? (
               <ActionButton
@@ -379,7 +386,9 @@ export default function MLTraining() {
                   if (ensembleSettings.enabled) {
                     features.push(`アンサンブル(${ensembleSettings.method})`);
                   } else {
-                    features.push(`単一モデル(${singleModelSettings.model_type.toUpperCase()})`);
+                    features.push(
+                      `単一モデル(${singleModelSettings.model_type.toUpperCase()})`
+                    );
                   }
 
                   return features.length > 0

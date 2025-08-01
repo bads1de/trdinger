@@ -116,6 +116,58 @@ async def get_feature_importance(
     return await UnifiedErrorHandler.safe_execute_async(_get_feature_importance)
 
 
+@router.get("/models")
+async def get_models_list(
+    ml_service: MLManagementOrchestrationService = Depends(
+        get_ml_management_orchestration_service
+    ),
+):
+    """
+    利用可能なモデル一覧を取得
+    """
+
+    async def _get_models_list():
+        return await ml_service.get_models_list()
+
+    return await UnifiedErrorHandler.safe_execute_async(_get_models_list)
+
+
+@router.post("/models/{model_name}/load")
+async def load_model(
+    model_name: str,
+    ml_service: MLManagementOrchestrationService = Depends(
+        get_ml_management_orchestration_service
+    ),
+):
+    """
+    指定されたモデルを読み込み
+
+    Args:
+        model_name: 読み込むモデル名
+    """
+
+    async def _load_model():
+        return await ml_service.load_model(model_name)
+
+    return await UnifiedErrorHandler.safe_execute_async(_load_model)
+
+
+@router.get("/models/current")
+async def get_current_model(
+    ml_service: MLManagementOrchestrationService = Depends(
+        get_ml_management_orchestration_service
+    ),
+):
+    """
+    現在読み込まれているモデル情報を取得
+    """
+
+    async def _get_current_model():
+        return await ml_service.get_current_model_info()
+
+    return await UnifiedErrorHandler.safe_execute_async(_get_current_model)
+
+
 @router.get("/automl-feature-analysis")
 async def get_automl_feature_analysis(
     top_n: int = 20,
