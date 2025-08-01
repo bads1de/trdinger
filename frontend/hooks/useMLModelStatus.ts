@@ -1,5 +1,5 @@
-import { useState, useEffect, useCallback } from "react";
-import { useApiCall } from "./useApiCall";
+import { useEffect, useCallback } from "react";
+import { useDataFetching } from "./useDataFetching";
 
 interface ModelStatus {
   is_model_loaded: boolean;
@@ -23,52 +23,51 @@ interface FeatureImportance {
 }
 
 export const useMLModelStatus = () => {
-  const [modelStatus, setModelStatus] = useState<ModelStatus | null>(null);
-  const [featureImportance, setFeatureImportance] = useState<FeatureImportance>(
-    {}
-  );
+  // /api/ml/status を useDataFetching に置換（単一オブジェクトを配列化）
   const {
-    execute: fetchStatus,
-    loading: isLoading,
-    error,
-  } = useApiCall<ModelStatus>();
-  const { execute: fetchImportance, loading: isLoadingImportance } =
-    useApiCall<{ feature_importance: FeatureImportance }>();
+    data: statusArray,
+    loading: statusLoading,
+    error: statusError,
+    refetch: refetchStatus,
+  } = useDataFetching<ModelStatus>({
+    endpoint: "/api/ml/status",
+    transform: (response) => [response],
+    errorMessage: "モデル状態の取得に失敗しました",
+  });
 
-  const fetchModelStatus = useCallback(async () => {
-    await fetchStatus("/api/ml/status", {
-      method: "GET",
-      onSuccess: (data) => {
-        setModelStatus(data);
-      },
-      onError: (errorMessage) => {
-        console.error("モデル状態の取得に失敗しました:", errorMessage);
-      },
-    });
-  }, [fetchStatus]);
+  const modelStatus = statusArray.length > 0 ? statusArray[0] : null;
 
-  const fetchFeatureImportance = useCallback(async () => {
-    await fetchImportance("/api/ml/feature-importance", {
-      method: "GET",
-      onSuccess: (data) => {
-        setFeatureImportance(data.feature_importance || {});
-      },
-      onError: (errorMessage) => {
-        console.error("特徴量重要度の取得に失敗:", errorMessage);
-      },
-    });
-  }, [fetchImportance]);
+  // /api/ml/feature-importance も useDataFetching で取得
+  const {
+    data: importanceArray,
+    loading: importanceLoading,
+    error: importanceError,
+    refetch: refetchImportance,
+  } = useDataFetching<{ feature_importance: FeatureImportance }>({
+    endpoint: "/api/ml/feature-importance",
+    transform: (response) => [response],
+    errorMessage: "特徴量重要度の取得に失敗しました",
+  });
 
-  useEffect(() => {
-    fetchModelStatus();
-    fetchFeatureImportance();
-  }, [fetchModelStatus, fetchFeatureImportance]);
+  const featureImportance =
+    importanceArray.length > 0
+      ? importanceArray[0]?.feature_importance || {}
+      : {};
+
+  // 既存APIと同じ外部インターフェースを保つため、refetch関数を公開
+  const fetchModelStatus = useCallback(() => {
+    return refetchStatus();
+  }, [refetchStatus]);
+
+  const fetchFeatureImportance = useCallback(() => {
+    return refetchImportance();
+  }, [refetchImportance]);
 
   return {
     modelStatus,
     featureImportance,
-    isLoading: isLoading || isLoadingImportance,
-    error,
+    isLoading: statusLoading || importanceLoading,
+    error: statusError || importanceError || null,
     fetchModelStatus,
     fetchFeatureImportance,
   };
