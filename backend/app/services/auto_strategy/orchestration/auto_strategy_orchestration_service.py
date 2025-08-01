@@ -110,18 +110,24 @@ class AutoStrategyOrchestrationService:
 
         return success
 
-    def format_experiment_result(self, result: Dict[str, Any]) -> Dict[str, Any]:
+    from typing import Optional
+
+    def format_experiment_result(self, result: Optional[Dict[str, Any]]) -> Dict[str, Any]:
         """
         実験結果のフォーマット
 
         Args:
-            result: 実験結果
+            result: 実験結果（None の可能性あり）
 
         Returns:
-            フォーマット済み結果
+            フォーマット済み結果（必ず Dict を返す）
         """
         if result is None:
-            return None
+            return {
+                "success": False,
+                "message": "実験結果が見つかりませんでした",
+                "data": {"result": None},
+            }
 
         # 多目的最適化の結果かどうかを判定
         if "pareto_front" in result and "objectives" in result:

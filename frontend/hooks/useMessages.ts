@@ -16,6 +16,48 @@ export const DefaultMessageDurations = {
   LONG: 20000,
 } as const;
 
+/**
+ * メッセージ管理フック
+ *
+ * アプリケーション内のメッセージ表示を管理します。
+ * メッセージの設定、自動削除、クリアなどの機能を提供します。
+ * タイマーによる自動消去や、手動でのメッセージ操作をサポートします。
+ *
+ * @example
+ * ```tsx
+ * const {
+ *   messages,
+ *   setMessage,
+ *   removeMessage,
+ *   clearAllMessages,
+ *   durations
+ * } = useMessages({
+ *   defaultDurations: {
+ *     SHORT: 5000,
+ *     MEDIUM: 10000,
+ *     LONG: 15000
+ *   }
+ * });
+ *
+ * // メッセージを設定
+ * setMessage('success', '操作が成功しました', durations.MEDIUM);
+ *
+ * // メッセージを削除
+ * removeMessage('success');
+ *
+ * // 全メッセージをクリア
+ * clearAllMessages();
+ * ```
+ *
+ * @param {UseMessagesOptions} [options] - メッセージ管理オプション
+ * @returns {{
+ *   messages: MessageMap,
+ *   setMessage: (key: string, message: string, duration?: number) => void,
+ *   removeMessage: (key: string) => void,
+ *   clearAllMessages: () => void,
+ *   durations: Record<"SHORT" | "MEDIUM" | "LONG", number>
+ * }} メッセージ管理関連の状態と操作関数
+ */
 export const useMessages = (options?: UseMessagesOptions) => {
   const [messages, setMessages] = useState<MessageMap>({});
   const timersRef = useRef<Record<string, number>>({});
@@ -79,10 +121,15 @@ export const useMessages = (options?: UseMessagesOptions) => {
   }, [clearTimer]);
 
   return {
+    /** メッセージのマップ */
     messages,
+    /** メッセージを設定する関数 */
     setMessage,
+    /** メッセージを削除する関数 */
     removeMessage,
+    /** 全メッセージをクリアする関数 */
     clearAllMessages,
+    /** メッセージ表示期間の設定 */
     durations: DURATIONS,
   };
 };

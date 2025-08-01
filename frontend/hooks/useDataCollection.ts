@@ -36,6 +36,39 @@ const useCollection = <T>() => {
 
 /**
  * データ収集用の専用フック
+ *
+ * OHLCV、ファンディングレート、オープンインタレストデータの収集機能を提供します。
+ * 各データタイプの収集状態を個別に管理し、統一的なインターフェースを提供します。
+ *
+ * @example
+ * ```tsx
+ * const {
+ *   ohlcv,
+ *   fundingRate,
+ *   openInterest,
+ *   isAnyLoading,
+ *   hasAnyError
+ * } = useDataCollection();
+ *
+ * // OHLCVデータを収集
+ * ohlcv.collect(
+ *   (data) => console.log('収集完了:', data),
+ *   (error) => console.error('収集失敗:', error)
+ * );
+ *
+ * // 全体のローディング状態を確認
+ * if (isAnyLoading) {
+ *   return <LoadingSpinner />;
+ * }
+ * ```
+ *
+ * @returns {{
+ *   ohlcv: { loading: boolean, error: string | null, collect: (onSuccess?: (data: any) => void, onError?: (error: string) => void) => void },
+ *   fundingRate: { loading: boolean, error: string | null, collect: (onSuccess?: (data: any) => void, onError?: (error: string) => void) => void },
+ *   openInterest: { loading: boolean, error: string | null, collect: (onSuccess?: (data: any) => void, onError?: (error: string) => void) => void },
+ *   isAnyLoading: boolean,
+ *   hasAnyError: boolean
+ * }} データ収集関連の状態と操作関数
  */
 export const useDataCollection = () => {
   const ohlcv = useCollection();
@@ -79,23 +112,37 @@ export const useDataCollection = () => {
   );
 
   return {
+    /** OHLCVデータ収集関連の状態と操作関数 */
     ohlcv: {
+      /** OHLCVデータ収集中のローディング状態 */
       loading: ohlcv.isLoading,
+      /** OHLCVデータ収集のエラーメッセージ */
       error: ohlcv.error,
+      /** OHLCVデータを収集する関数 */
       collect: collectOHLCVData,
     },
+    /** ファンディングレートデータ収集関連の状態と操作関数 */
     fundingRate: {
+      /** ファンディングレートデータ収集中のローディング状態 */
       loading: fundingRate.isLoading,
+      /** ファンディングレートデータ収集のエラーメッセージ */
       error: fundingRate.error,
+      /** ファンディングレートデータを収集する関数 */
       collect: collectFundingRateData,
     },
+    /** オープンインタレストデータ収集関連の状態と操作関数 */
     openInterest: {
+      /** オープンインタレストデータ収集中のローディング状態 */
       loading: openInterest.isLoading,
+      /** オープンインタレストデータ収集のエラーメッセージ */
       error: openInterest.error,
+      /** オープンインタレストデータを収集する関数 */
       collect: collectOpenInterestData,
     },
+    /** いずれかのデータ収集中かどうか */
     isAnyLoading:
       ohlcv.isLoading || fundingRate.isLoading || openInterest.isLoading,
+    /** いずれかのデータ収集でエラーが発生しているかどうか */
     hasAnyError: !!(ohlcv.error || fundingRate.error || openInterest.error),
   };
 };

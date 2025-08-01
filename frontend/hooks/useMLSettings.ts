@@ -84,6 +84,63 @@ export interface MLConfig {
   };
 }
 
+/**
+ * ML設定管理フック
+ *
+ * 機械学習関連の各種設定を取得・管理します。
+ * 基本設定、AutoML設定、設定の保存・リセット、モデルのクリーンアップなどの機能を提供します。
+ *
+ * @example
+ * ```tsx
+ * const {
+ *   config,
+ *   automlConfig,
+ *   isLoading,
+ *   isSaving,
+ *   fetchConfig,
+ *   saveConfig,
+ *   resetToDefaults,
+ *   cleanupOldModels,
+ *   fetchAutoMLConfig,
+ *   validateAutoMLConfig,
+ *   generateAutoMLFeatures,
+ *   clearAutoMLCache
+ * } = useMLSettings();
+ *
+ * // 設定を取得
+ * fetchConfig();
+ *
+ * // 設定を保存
+ * saveConfig(newConfig);
+ *
+ * // AutoML特徴量を生成
+ * generateAutoMLFeatures('BTC/USDT:USDT', '1h', 1000);
+ * ```
+ *
+ * @returns {{
+ *   config: MLConfig | null,
+ *   automlConfig: AutoMLConfig | null,
+ *   isLoading: boolean,
+ *   isSaving: boolean,
+ *   isResetting: boolean,
+ *   isCleaning: boolean,
+ *   isAutomlLoading: boolean,
+ *   isAutomlSaving: boolean,
+ *   error: string | null,
+ *   successMessage: string | null,
+ *   fetchConfig: () => Promise<void>,
+ *   saveConfig: (newConfig: MLConfig) => Promise<void>,
+ *   resetToDefaults: () => Promise<void>,
+ *   cleanupOldModels: () => Promise<void>,
+ *   updateConfig: (section: keyof MLConfig, key: string, value: any) => void,
+ *   setConfig: (config: MLConfig) => void,
+ *   fetchAutoMLConfig: () => Promise<void>,
+ *   validateAutoMLConfig: (config: AutoMLConfig) => Promise<any>,
+ *   generateAutoMLFeatures: (symbol: string, timeframe: string, limit: number, automlConfig?: AutoMLConfig, includeTarget?: boolean) => Promise<any>,
+ *   clearAutoMLCache: () => Promise<any>,
+ *   setAutomlConfig: (config: AutoMLConfig) => void
+ * }} ML設定管理関連の状態と操作関数
+ */
 export const useMLSettings = () => {
   const [config, setConfig] = useState<MLConfig | null>(null);
   const [automlConfig, setAutomlConfig] = useState<AutoMLConfig | null>(null);

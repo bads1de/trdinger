@@ -1,8 +1,46 @@
+/**
+ * オートストラテジー用カスタムフック
+ *
+ * 遺伝的アルゴリズム（GA）を使用した自動戦略生成機能を提供します。
+ * 戦略生成の実行、モーダル表示、設定検証などの機能を統合的に管理します。
+ */
+
 import { useState } from "react";
 import { useApiCall } from "@/hooks/useApiCall";
 import { GAConfig } from "@/types/optimization";
 import { BACKEND_API_URL } from "@/constants";
 
+/**
+ * オートストラテジーフック
+ *
+ * 遺伝的アルゴリズム（GA）を使用した自動戦略生成機能を提供します。
+ * 戦略生成の実行、モーダル表示、設定検証などの機能を統合的に管理します。
+ *
+ * @example
+ * ```tsx
+ * const {
+ *   showAutoStrategyModal,
+ *   autoStrategyLoading,
+ *   handleAutoStrategy,
+ *   openAutoStrategyModal
+ * } = useAutoStrategy(loadResults);
+ *
+ * // 戦略生成を実行
+ * handleAutoStrategy(gaConfig);
+ *
+ * // モーダルを開く
+ * openAutoStrategyModal();
+ * ```
+ *
+ * @param {() => void} loadResults - 戦略生成完了後に結果一覧を更新する関数
+ * @returns {{
+ *   showAutoStrategyModal: boolean,
+ *   autoStrategyLoading: boolean,
+ *   handleAutoStrategy: (config: GAConfig) => Promise<void>,
+ *   openAutoStrategyModal: () => void,
+ *   setShowAutoStrategyModal: (show: boolean) => void
+ * }} オートストラテジー関連の状態と操作関数
+ */
 export const useAutoStrategy = (loadResults: () => void) => {
   const [showAutoStrategyModal, setShowAutoStrategyModal] = useState(false);
 
@@ -104,10 +142,15 @@ export const useAutoStrategy = (loadResults: () => void) => {
   };
 
   return {
+    /** オートストラテジーモーダルの表示状態 */
     showAutoStrategyModal,
+    /** 戦略生成実行中のローディング状態 */
     autoStrategyLoading,
+    /** 戦略生成を実行する関数 */
     handleAutoStrategy,
+    /** オートストラテジーモーダルを開く関数 */
     openAutoStrategyModal,
+    /** オートストラテジーモーダルの表示状態を設定する関数 */
     setShowAutoStrategyModal,
   };
 };

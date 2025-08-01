@@ -1,3 +1,11 @@
+/**
+ * データ収集メッセージハンドラー用カスタムフック
+ *
+ * 各種データ収集処理の結果に応じたメッセージ生成とハンドリング機能を提供します。
+ * OHLCV、ファンディングレート、オープンインタレスト、Fear & Greed Indexなどの
+ * データ収集結果を統一的に処理します。
+ */
+
 import { useCallback } from "react";
 import {
   BulkOHLCVCollectionResult,
@@ -13,17 +21,66 @@ import {
 } from "@/types/open-interest";
 import { FearGreedCollectionResult } from "@/hooks/useFearGreedData";
 
+/**
+ * データ収集メッセージハンドラーの依存関係の型
+ */
 export interface UseCollectionMessageHandlersDeps {
+  /** メッセージを設定する関数 */
   setMessage: (key: string, message: string, duration?: number) => void;
+  /** Fear & Greedデータを取得する関数 */
   fetchFearGreedData: () => Promise<void> | void;
+  /** データステータスを取得する関数 */
   fetchDataStatus: () => void;
+  /** OHLCVデータを取得する関数 */
   fetchOHLCVData: () => Promise<void> | void;
+  /** ファンディングレートデータを取得する関数 */
   fetchFundingRateData: () => Promise<void> | void;
+  /** オープンインタレストデータを取得する関数 */
   fetchOpenInterestData: () => Promise<void> | void;
+  /** メッセージキーの定義 */
   MESSAGE_KEYS: Record<string, string>;
+  /** メッセージ表示期間の定義 */
   MESSAGE_DURATION: Record<"SHORT" | "MEDIUM" | "LONG", number>;
 }
 
+/**
+ * データ収集メッセージハンドラーフック
+ *
+ * 各種データ収集処理の結果に応じたメッセージ生成とハンドリング機能を提供します。
+ * OHLCV、ファンディングレート、オープンインタレスト、Fear & Greed Indexなどの
+ * データ収集結果を統一的に処理します。
+ *
+ * @example
+ * ```tsx
+ * const {
+ *   handleCollectionStart,
+ *   handleCollectionError,
+ *   collectionHandlers
+ * } = useCollectionMessageHandlers({
+ *   setMessage,
+ *   fetchFearGreedData,
+ *   fetchDataStatus,
+ *   fetchOHLCVData,
+ *   fetchFundingRateData,
+ *   fetchOpenInterestData,
+ *   MESSAGE_KEYS,
+ *   MESSAGE_DURATION
+ * });
+ *
+ * // データ収集開始時の処理
+ * handleCollectionStart('BULK_COLLECTION', 'bulk', result, 5000);
+ *
+ * // エラー時の処理
+ * handleCollectionError('BULK_COLLECTION', '収集に失敗しました');
+ * ```
+ *
+ * @param {UseCollectionMessageHandlersDeps} deps - 依存関係オブジェクト
+ * @returns {{
+ *   handleCollectionStart: (messageKey: string, messageType: string, result: any, duration?: number, onSuccess?: (result: any) => void) => void,
+ *   handleCollectionError: (messageKey: string, errorMessage: string, duration?: number) => void,
+ *   collectionHandlers: Record<string, any>
+ * }} メッセージハンドリング関連の関数
+ */
 export const useCollectionMessageHandlers = ({
   setMessage,
   fetchFearGreedData,
@@ -147,8 +204,11 @@ export const useCollectionMessageHandlers = ({
   };
 
   return {
+    /** データ収集開始時のメッセージハンドラー */
     handleCollectionStart,
+    /** データ収集エラー時のメッセージハンドラー */
     handleCollectionError,
+    /** 各種データ収集ハンドラーの定義 */
     collectionHandlers,
   };
 };

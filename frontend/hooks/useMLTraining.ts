@@ -2,88 +2,189 @@ import { useState, useEffect, useCallback } from "react";
 import { useApiCall } from "./useApiCall";
 import { EnsembleSettingsConfig } from "@/components/ml/EnsembleSettings";
 
+/**
+ * パラメータ空間設定インターフェース
+ *
+ * 最適化アルゴリズムが探索するパラメータの範囲とタイプを定義します。
+ */
 export interface ParameterSpaceConfig {
+  /** パラメータのタイプ（実数、整数、カテゴリカル） */
   type: "real" | "integer" | "categorical";
+  /** 数値パラメータの下限（real/integerの場合） */
   low?: number;
+  /** 数値パラメータの上限（real/integerの場合） */
   high?: number;
+  /** カテゴリカルパラメータの選択肢（categoricalの場合） */
   categories?: string[];
 }
 
+/**
+ * 最適化設定インターフェース
+ *
+ * ハイパーパラメータ最適化の設定を定義します。
+ */
 export interface OptimizationSettingsConfig {
+  /** 最適化を有効にするかどうか */
   enabled: boolean;
+  /** 最適化手法（現在はoptunaのみ対応） */
   method: "optuna";
+  /** 最適化の試行回数 */
   n_calls: number;
+  /** 最適化対象のパラメータ空間定義 */
   parameter_space: Record<string, ParameterSpaceConfig>;
 }
 
+/**
+ * AutoML特徴量設定インターフェース
+ *
+ * 自動特徴量エンジニアリングの設定を定義します。
+ * tsfreshとautofeatの2つの特徴量生成手法をサポートしています。
+ */
 export interface AutoMLFeatureConfig {
+  /** tsfresh特徴量生成設定 */
   tsfresh: {
+    /** tsfreshを有効にするかどうか */
     enabled: boolean;
+    /** 特徴量選択を行うかどうか */
     feature_selection: boolean;
+    /** False Discovery Rateレベル */
     fdr_level: number;
+    /** 特徴量数の上限 */
     feature_count_limit: number;
+    /** 並列処理ジョブ数 */
     parallel_jobs: number;
+    /** パフォーマンスモード */
     performance_mode: string;
   };
+  /** autofeat特徴量生成設定 */
   autofeat: {
+    /** autofeatを有効にするかどうか */
     enabled: boolean;
+    /** 最大特徴量数 */
     max_features: number;
+    /** 世代数 */
     generations: number;
+    /** 集団サイズ */
     population_size: number;
+    /** トーナメントサイズ */
     tournament_size: number;
   };
 }
 
+/**
+ * 単一モデル設定インターフェース
+ *
+ * 単一の機械学習モデルの設定を定義します。
+ */
 export interface SingleModelConfig {
+  /** モデルタイプ */
   model_type: string;
 }
 
+/**
+ * トレーニング設定インターフェース
+ *
+ * 機械学習モデルのトレーニングに必要な設定を定義します。
+ */
 export interface TrainingConfig {
+  /** 取引シンボル */
   symbol: string;
+  /** 時間枠 */
   timeframe: string;
+  /** トレーニング開始日 */
   start_date: string;
+  /** トレーニング終了日 */
   end_date: string;
+  /** モデルを保存するかどうか */
   save_model: boolean;
+  /** トレーニングデータとテストデータの分割比率 */
   train_test_split: number;
+  /** 乱数シード */
   random_state: number;
+  /** 最適化設定（オプション） */
   optimization_settings?: OptimizationSettingsConfig;
+  /** AutoML特徴量設定（オプション） */
   automl_config?: AutoMLFeatureConfig;
+  /** 単一モデル設定（オプション） */
   single_model_config?: SingleModelConfig;
 }
 
+/**
+ * トレーニング状態インターフェース
+ *
+ * 現在のトレーニングの状態情報を保持します。
+ */
 export interface TrainingStatus {
+  /** トレーニング中かどうか */
   is_training: boolean;
+  /** トレーニングの進捗（0-100） */
   progress: number;
+  /** トレーニングの状態 */
   status: string;
+  /** 状態メッセージ */
   message: string;
+  /** トレーニング開始時刻 */
   start_time?: string;
+  /** トレーニング終了時刻 */
   end_time?: string;
+  /** エラーメッセージ */
   error?: string;
-  process_id?: string; // プロセスID追加
+  /** プロセスID */
+  process_id?: string;
+  /** モデル情報 */
   model_info?: {
+    /** モデルの精度 */
     accuracy: number;
+    /** 特徴量数 */
     feature_count: number;
+    /** トレーニングサンプル数 */
     training_samples: number;
+    /** テストサンプル数 */
     test_samples: number;
   };
 }
 
+/**
+ * プロセス情報インターフェース
+ *
+ * 実行中のトレーニングプロセスの情報を保持します。
+ */
 export interface ProcessInfo {
+  /** プロセスID */
   process_id: string;
+  /** タスク名 */
   task_name: string;
+  /** プロセス状態 */
   status: string;
+  /** 開始時刻 */
   start_time: string;
+  /** 終了時刻 */
   end_time?: string;
+  /** メタデータ */
   metadata: Record<string, any>;
+  /** プロセスが生存しているかどうか */
   is_alive: boolean;
 }
 
+/**
+ * プロセス一覧レスポンスインターフェース
+ *
+ * 実行中の全プロセスの一覧情報を保持します。
+ */
 export interface ProcessListResponse {
+  /** プロセス情報のマップ（キー：プロセスID、値：プロセス情報） */
   processes: Record<string, ProcessInfo>;
+  /** プロセス数 */
   count: number;
 }
 
-// デフォルトのAutoML設定を作成
+/**
+ * デフォルトのAutoML設定を作成
+ *
+ * 標準的なAutoML設定を返します。tsfreshが有効でautofeatは無効です。
+ *
+ * @returns {AutoMLFeatureConfig} デフォルトのAutoML設定
+ */
 export const getDefaultAutoMLConfig = (): AutoMLFeatureConfig => ({
   tsfresh: {
     enabled: true,
@@ -102,7 +203,14 @@ export const getDefaultAutoMLConfig = (): AutoMLFeatureConfig => ({
   },
 });
 
-// 金融最適化AutoML設定を作成
+/**
+ * 金融最適化AutoML設定を作成
+ *
+ * 金融データに最適化されたAutoML設定を返します。
+ * tsfreshとautofeatの両方が有効で、より多くの特徴量を生成します。
+ *
+ * @returns {AutoMLFeatureConfig} 金融最適化されたAutoML設定
+ */
 export const getFinancialOptimizedAutoMLConfig = (): AutoMLFeatureConfig => ({
   tsfresh: {
     enabled: true,
@@ -121,6 +229,48 @@ export const getFinancialOptimizedAutoMLConfig = (): AutoMLFeatureConfig => ({
   },
 });
 
+/**
+ * MLトレーニング管理フック
+ *
+ * 機械学習モデルのトレーニングを管理します。
+ * トレーニングの開始、停止、状態監視、プロセス管理などの機能を提供します。
+ *
+ * @example
+ * ```tsx
+ * const {
+ *   config,
+ *   trainingStatus,
+ *   startTraining,
+ *   stopTraining,
+ *   availableModels
+ * } = useMLTraining();
+ *
+ * // トレーニングを開始
+ * startTraining(optimizationSettings, automlConfig);
+ *
+ * // トレーニングを停止
+ * stopTraining();
+ *
+ * // 利用可能なモデルを取得
+ * fetchAvailableModels();
+ * ```
+ *
+ * @returns {{
+ *   config: TrainingConfig,
+ *   setConfig: (config: TrainingConfig) => void,
+ *   trainingStatus: TrainingStatus,
+ *   error: string | null,
+ *   setError: (error: string | null) => void,
+ *   startTrainingLoading: boolean,
+ *   stopTrainingLoading: boolean,
+ *   startTraining: (optimizationSettings?: OptimizationSettingsConfig, automlConfig?: AutoMLFeatureConfig, ensembleConfig?: EnsembleSettingsConfig, singleModelConfig?: SingleModelConfig) => Promise<void>,
+ *   stopTraining: (force?: boolean) => Promise<void>,
+ *   getActiveProcesses: () => Promise<ProcessListResponse | null>,
+ *   forceStopProcess: (processId: string) => Promise<void>,
+ *   availableModels: string[],
+ *   fetchAvailableModels: () => void
+ * }} MLトレーニング管理関連の状態と操作関数
+ */
 export const useMLTraining = () => {
   const [config, setConfig] = useState<TrainingConfig>({
     symbol: "BTC/USDT:USDT",
@@ -306,18 +456,31 @@ export const useMLTraining = () => {
   );
 
   return {
+    /** トレーニング設定 */
     config,
+    /** トレーニング設定を更新する関数 */
     setConfig,
+    /** トレーニング状態 */
     trainingStatus,
+    /** エラーメッセージ */
     error,
+    /** エラーメッセージを設定する関数 */
     setError,
+    /** トレーニング開始中かどうか */
     startTrainingLoading,
+    /** トレーニング停止中かどうか */
     stopTrainingLoading,
+    /** トレーニングを開始する関数 */
     startTraining,
+    /** トレーニングを停止する関数 */
     stopTraining,
+    /** アクティブなプロセス一覧を取得する関数 */
     getActiveProcesses,
+    /** プロセスを強制停止する関数 */
     forceStopProcess,
+    /** 利用可能なモデル一覧 */
     availableModels,
+    /** 利用可能なモデル一覧を取得する関数 */
     fetchAvailableModels,
   };
 };

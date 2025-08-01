@@ -12,6 +12,52 @@ interface FeatureImportanceParams {
   top_n: number;
 }
 
+/**
+ * 特徴量重要度管理フック
+ *
+ * 機械学習モデルの特徴量重要度を取得・管理します。
+ * 表示件数の変更、ソート順の切り替え、自動更新などの機能をサポートします。
+ * チャート表示用のデータ変換も提供します。
+ *
+ * @example
+ * ```tsx
+ * const {
+ *   data,
+ *   chartData,
+ *   loading,
+ *   error,
+ *   displayCount,
+ *   sortOrder,
+ *   setDisplayCount,
+ *   setSortOrder,
+ *   loadFeatureImportance
+ * } = useFeatureImportance(20, 30);
+ *
+ * // 表示件数を変更
+ * setDisplayCount(50);
+ *
+ * // ソート順を切り替え
+ * setSortOrder('asc');
+ *
+ * // 手動で再取得
+ * loadFeatureImportance();
+ * ```
+ *
+ * @param {number} topN - 取得する上位特徴量の数
+ * @param {number} [autoRefreshInterval] - 自動更新間隔（秒）、指定しない場合は自動更新しない
+ * @returns {{
+ *   data: FeatureImportanceData[],
+ *   chartData: any[],
+ *   loading: boolean,
+ *   error: string | null,
+ *   displayCount: number,
+ *   sortOrder: "desc" | "asc",
+ *   setDisplayCount: (count: number) => void,
+ *   setSortOrder: (order: "desc" | "asc") => void,
+ *   loadFeatureImportance: () => Promise<void>,
+ *   getBarColor: (index: number) => string
+ * }} 特徴量重要度管理関連の状態と操作関数
+ */
 export const useFeatureImportance = (
   topN: number,
   autoRefreshInterval?: number
@@ -88,15 +134,25 @@ export const useFeatureImportance = (
   }, [data]);
 
   return {
+    /** 特徴量重要度データの配列 */
     data,
+    /** チャート表示用の変換済みデータ */
     chartData,
+    /** データ取得中のローディング状態 */
     loading,
+    /** エラーメッセージ */
     error,
+    /** 表示件数 */
     displayCount,
+    /** ソート順 */
     sortOrder,
+    /** 表示件数を設定する関数 */
     setDisplayCount,
+    /** ソート順を設定する関数 */
     setSortOrder,
+    /** 特徴量重要度を再取得する関数 */
     loadFeatureImportance,
+    /** バーの色を取得する関数 */
     getBarColor,
   };
 };

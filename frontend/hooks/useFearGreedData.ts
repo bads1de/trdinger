@@ -34,6 +34,50 @@ export interface FearGreedCollectionResult {
   error?: string;
 }
 
+/**
+ * Fear & Greed Indexデータ管理フック
+ *
+ * Fear & Greed Indexデータの取得、収集、ステータス管理機能を提供します。
+ * データの取得、収集、ステータス確認、パラメータ設定などの機能を統合的に管理します。
+ *
+ * @example
+ * ```tsx
+ * const {
+ *   data,
+ *   loading,
+ *   error,
+ *   status,
+ *   fetchData,
+ *   fetchLatestData,
+ *   collectData,
+ *   refetch
+ * } = useFearGreedData();
+ *
+ * // 最新データを取得
+ * fetchLatestData(30);
+ *
+ * // データを収集
+ * collectData(50);
+ *
+ * // 手動で再取得
+ * refetch();
+ * ```
+ *
+ * @returns {{
+ *   data: FearGreedIndexData[],
+ *   loading: boolean,
+ *   error: string | null,
+ *   status: FearGreedDataStatus | null,
+ *   params: { limit: number; start_date?: string; end_date?: string },
+ *   fetchData: (limit: number, startDate?: string, endDate?: string) => void,
+ *   fetchLatestData: (limit: number) => Promise<void>,
+ *   fetchStatus: () => Promise<void>,
+ *   collectData: (limit: number) => Promise<void>,
+ *   collectHistoricalData: (limit: number) => Promise<void>,
+ *   collectIncrementalData: () => Promise<void>,
+ *   refetch: () => Promise<void>
+ * }} Fear & Greed Indexデータ管理関連の状態と操作関数
+ */
 export const useFearGreedData = () => {
   const { data, loading, error, params, setParams, refetch } = useDataFetching<
     FearGreedIndexData,
@@ -125,17 +169,29 @@ export const useFearGreedData = () => {
   );
 
   return {
+    /** Fear & Greed Indexデータの配列 */
     data,
+    /** データ取得中・収集中・ステータス取得中のローディング状態 */
     loading: loading || isCollecting || statusLoading,
+    /** エラーメッセージ */
     error,
+    /** データステータス情報 */
     status,
+    /** 現在のクエリパラメータ */
     params,
+    /** データを取得する関数 */
     fetchData,
+    /** 最新データを取得する関数 */
     fetchLatestData,
+    /** ステータスを取得する関数 */
     fetchStatus,
+    /** データを収集する関数 */
     collectData,
+    /** 履歴データを収集する関数 */
     collectHistoricalData,
+    /** 差分データを収集する関数 */
     collectIncrementalData,
+    /** データを再取得する関数 */
     refetch,
   };
 };

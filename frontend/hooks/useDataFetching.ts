@@ -66,6 +66,38 @@ const buildSearchParams = (params: Record<string, any>): string => {
 
 /**
  * 汎用データ取得フック
+ *
+ * データ取得ロジックを抽象化し、API エンドポイントからのデータ取得、
+ * 状態管理、エラーハンドリングを統一的に提供します。
+ * パラメータ変更に応じた自動再取得や、データ変換機能をサポートします。
+ *
+ * @example
+ * ```tsx
+ * const {
+ *   data,
+ *   loading,
+ *   error,
+ *   params,
+ *   setParams,
+ *   refetch
+ * } = useDataFetching<User, { limit: number; offset: number }>({
+ *   endpoint: "/api/users",
+ *   initialParams: { limit: 20, offset: 0 },
+ *   transform: (response) => response.users,
+ *   errorMessage: "ユーザーデータの取得に失敗しました"
+ * });
+ *
+ * // パラメータを更新
+ * setParams({ limit: 50 });
+ *
+ * // 手動で再取得
+ * refetch();
+ * ```
+ *
+ * @typeParam TData - 取得するデータの型
+ * @typeParam TParams - クエリパラメータの型
+ * @param {DataFetchingOptions<TData, TParams>} options - データ取得設定オプション
+ * @returns {DataFetchingResult<TData, TParams>} データ取得関連の状態と操作関数
  */
 export const useDataFetching = <TData = any, TParams = Record<string, any>>(
   options: DataFetchingOptions<TData, TParams>
@@ -210,6 +242,21 @@ export const useDataFetching = <TData = any, TParams = Record<string, any>>(
 
 /**
  * 簡単なデータ取得フック（基本的なGETリクエスト用）
+ *
+ * エンドポイントとオプションを指定するだけで、簡単にデータ取得ができるフックです。
+ * 基本的なGETリクエストに特化しており、最小限の設定で利用できます。
+ *
+ * @example
+ * ```tsx
+ * const { data, loading, error } = useSimpleDataFetching<User>("/api/users", {
+ *   errorMessage: "ユーザーデータの取得に失敗しました"
+ * });
+ * ```
+ *
+ * @typeParam TData - 取得するデータの型
+ * @param {string} endpoint - APIエンドポイント
+ * @param {Partial<DataFetchingOptions<TData>>} options - データ取得オプション
+ * @returns {DataFetchingResult<TData>} データ取得関連の状態と操作関数
  */
 export const useSimpleDataFetching = <TData = any>(
   endpoint: string,
@@ -223,6 +270,31 @@ export const useSimpleDataFetching = <TData = any>(
 
 /**
  * パラメータ付きデータ取得フック
+ *
+ * 初期パラメータを指定してデータ取得を行うフックです。
+ * ページネーションやフィルタリングなど、パラメータを動的に変更する場合に便利です。
+ *
+ * @example
+ * ```tsx
+ * const { data, loading, error, params, setParams } = useParameterizedDataFetching<User, { limit: number; offset: number }>(
+ *   "/api/users",
+ *   { limit: 20, offset: 0 },
+ *   {
+ *     transform: (response) => response.users,
+ *     errorMessage: "ユーザーデータの取得に失敗しました"
+ *   }
+ * );
+ *
+ * // ページネーション
+ * const nextPage = () => setParams({ limit: 20, offset: params.offset + 20 });
+ * ```
+ *
+ * @typeParam TData - 取得するデータの型
+ * @typeParam TParams - クエリパラメータの型
+ * @param {string} endpoint - APIエンドポイント
+ * @param {TParams} initialParams - 初期パラメータ
+ * @param {Partial<DataFetchingOptions<TData, TParams>>} options - データ取得オプション
+ * @returns {DataFetchingResult<TData, TParams>} データ取得関連の状態と操作関数
  */
 export const useParameterizedDataFetching = <
   TData = any,

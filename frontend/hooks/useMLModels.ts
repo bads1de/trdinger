@@ -56,6 +56,40 @@ export interface MLModel {
   is_active?: boolean;
 }
 
+/**
+ * MLモデル管理フック
+ *
+ * 機械学習モデルの取得、削除、管理機能を提供します。
+ * モデル一覧の取得、個別モデルの削除、ローディング状態の管理などをサポートします。
+ *
+ * @example
+ * ```tsx
+ * const {
+ *   models,
+ *   isLoading,
+ *   error,
+ *   isDeleting,
+ *   fetchModels,
+ *   deleteModel
+ * } = useMLModels(50);
+ *
+ * // モデル一覧を再取得
+ * fetchModels();
+ *
+ * // モデルを削除
+ * deleteModel('model-id');
+ * ```
+ *
+ * @param {number} [limit] - 取得するモデルの最大件数、指定しない場合は全件取得
+ * @returns {{
+ *   models: MLModel[],
+ *   isLoading: boolean,
+ *   error: string | null,
+ *   isDeleting: boolean,
+ *   fetchModels: () => Promise<void>,
+ *   deleteModel: (modelId: string) => Promise<void>
+ * }} MLモデル管理関連の状態と操作関数
+ */
 export const useMLModels = (limit?: number) => {
   // データを変換する関数をメモ化
   const transformModels = useCallback(
@@ -101,11 +135,17 @@ export const useMLModels = (limit?: number) => {
   );
 
   return {
+    /** MLモデルの配列 */
     models,
+    /** モデル取得中のローディング状態 */
     isLoading,
+    /** エラーメッセージ */
     error,
+    /** モデル削除中のローディング状態 */
     isDeleting,
+    /** モデル一覧を再取得する関数 */
     fetchModels,
+    /** モデルを削除する関数 */
     deleteModel,
   };
 };

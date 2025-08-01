@@ -31,6 +31,43 @@ interface DataStatus {
   timestamp: string;
 }
 
+/**
+ * データリセット管理フック
+ *
+ * データのリセット機能とリセット後の状態管理を提供します。
+ * データステータスの取得、リセット完了時のメッセージ表示、
+ * エラーハンドリングなどの機能を統合的に管理します。
+ *
+ * @example
+ * ```tsx
+ * const {
+ *   dataStatus,
+ *   resetMessage,
+ *   isLoading,
+ *   error,
+ *   fetchDataStatus,
+ *   handleResetComplete,
+ *   handleResetError
+ * } = useDataReset(true);
+ *
+ * // リセット完了時の処理
+ * handleResetComplete({ success: true, message: "リセット完了", total_deleted: 1000 });
+ *
+ * // エラー時の処理
+ * handleResetError("リセットに失敗しました");
+ * ```
+ *
+ * @param {boolean} isVisible - コンポーネントが表示されているかどうか
+ * @returns {{
+ *   dataStatus: DataStatus | null,
+ *   resetMessage: string,
+ *   isLoading: boolean,
+ *   error: string | null,
+ *   fetchDataStatus: () => Promise<void>,
+ *   handleResetComplete: (result: DataResetResult) => void,
+ *   handleResetError: (error: string) => void
+ * }} データリセット管理関連の状態と操作関数
+ */
 export const useDataReset = (isVisible: boolean) => {
   const [resetMessage, setResetMessage] = useState<string>("");
 
@@ -86,12 +123,19 @@ export const useDataReset = (isVisible: boolean) => {
   }, []);
 
   return {
+    /** データステータス情報 */
     dataStatus,
+    /** リセットメッセージ */
     resetMessage,
+    /** データ取得中のローディング状態 */
     isLoading,
+    /** エラーメッセージ */
     error,
+    /** データステータスを取得する関数 */
     fetchDataStatus,
+    /** リセット完了時のハンドラー */
     handleResetComplete,
+    /** リセットエラー時のハンドラー */
     handleResetError,
   };
 };
