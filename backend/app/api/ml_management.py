@@ -25,9 +25,9 @@ from database.repositories.open_interest_repository import OpenInterestRepositor
 from database.repositories.funding_rate_repository import FundingRateRepository
 from database.connection import get_db
 
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/ml", tags=["ml_management"])
-logger = logging.getLogger(__name__)
 
 
 @router.get("/models")

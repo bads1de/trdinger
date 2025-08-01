@@ -19,10 +19,8 @@ from app.services.data_collection.orchestration.open_interest_orchestration_serv
 )
 from app.api.dependencies import get_open_interest_orchestration_service
 
-# ログ設定
 logger = logging.getLogger(__name__)
 
-# ルーター作成
 router = APIRouter(prefix="/api/open-interest", tags=["open-interest"])
 
 

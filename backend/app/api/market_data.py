@@ -20,10 +20,8 @@ from app.services.data_collection.orchestration.market_data_orchestration_servic
 from app.utils.unified_error_handler import UnifiedErrorHandler
 
 
-# ログ設定
 logger = logging.getLogger(__name__)
 
-# ルーター作成
 router = APIRouter(prefix="/api/market-data", tags=["market-data"])
 
 

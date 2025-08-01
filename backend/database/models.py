@@ -22,7 +22,6 @@ class OHLCVData(Base):
     """
     OHLCV価格データテーブル
 
-    TimescaleDBのハイパーテーブルとして最適化されています。
     """
 
     __tablename__ = "ohlcv_data"
@@ -79,7 +78,6 @@ class FundingRateData(Base):
     ファンディングレートデータテーブル
 
     無期限契約のファンディングレート履歴を保存します。
-    TimescaleDBのハイパーテーブルとして最適化されています。
     """
 
     __tablename__ = "funding_rate_data"
@@ -139,7 +137,6 @@ class OpenInterestData(Base):
     オープンインタレスト（建玉残高）データテーブル
 
     無期限契約のオープンインタレスト履歴を保存します。
-    TimescaleDBのハイパーテーブルとして最適化されています。
     """
 
     __tablename__ = "open_interest_data"
@@ -210,7 +207,6 @@ class FearGreedIndexData(Base):
     Fear & Greed Index データテーブル
 
     Alternative.me APIから取得したセンチメント指標を保存します。
-    TimescaleDBのハイパーテーブルとして最適化されています。
     """
 
     __tablename__ = "fear_greed_index_data"

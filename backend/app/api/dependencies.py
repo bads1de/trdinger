@@ -17,7 +17,6 @@ from app.services.backtest.backtest_service import BacktestService
 from app.services.backtest.backtest_data_service import BacktestDataService
 from app.services.strategy_integration_service import StrategyIntegrationService
 
-# Orchestration Services
 from app.services.backtest.orchestration.backtest_orchestration_service import (
     BacktestOrchestrationService,
 )
@@ -98,9 +97,6 @@ def get_strategy_integration_service(db: Session) -> StrategyIntegrationService:
         StrategyIntegrationServiceインスタンス
     """
     return StrategyIntegrationService(db)
-
-
-# Orchestration Service Dependencies
 
 
 def get_backtest_orchestration_service() -> BacktestOrchestrationService:

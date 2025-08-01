@@ -23,9 +23,6 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/auto-strategy", tags=["auto-strategy"])
 
 
-# リクエスト・レスポンスモデル
-
-
 class GAGenerationRequest(BaseModel):
     """GA戦略生成リクエスト"""
 

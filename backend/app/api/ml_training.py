@@ -16,10 +16,7 @@ from app.services.ml.orchestration.ml_training_orchestration_service import (
 from app.utils.unified_error_handler import UnifiedErrorHandler
 
 
-from app.api.automl_features import (
-    AutoMLConfigModel,
-)
-
+from app.api.automl_features import AutoMLConfigModel
 from database.connection import get_db
 
 logger = logging.getLogger(__name__)
