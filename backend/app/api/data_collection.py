@@ -16,6 +16,7 @@ from app.services.data_collection.orchestration.data_collection_orchestration_se
 )
 from app.utils.unified_error_handler import UnifiedErrorHandler
 from database.connection import get_db, ensure_db_initialized
+from app.api.dependencies import get_data_collection_orchestration_service
 
 
 logger = logging.getLogger(__name__)
@@ -29,6 +30,9 @@ async def collect_historical_data(
     symbol: str = "BTC/USDT",
     timeframe: str = "1h",
     db: Session = Depends(get_db),
+    orchestration_service: DataCollectionOrchestrationService = Depends(
+        get_data_collection_orchestration_service
+    ),
 ) -> Dict:
     """
     履歴データを包括的に収集
@@ -53,7 +57,6 @@ async def collect_historical_data(
                 status_code=500, detail="データベースの初期化に失敗しました"
             )
 
-        orchestration_service = DataCollectionOrchestrationService()
         return await orchestration_service.start_historical_data_collection(
             symbol, timeframe, background_tasks, db
         )
@@ -88,7 +91,11 @@ async def update_bulk_incremental_data(
 
 @router.post("/bitcoin-full")
 async def collect_bitcoin_full_data(
-    background_tasks: BackgroundTasks, db: Session = Depends(get_db)
+    background_tasks: BackgroundTasks,
+    db: Session = Depends(get_db),
+    orchestration_service: DataCollectionOrchestrationService = Depends(
+        get_data_collection_orchestration_service
+    ),
 ) -> Dict:
     """
     ビットコインの全時間軸データを収集（ベータ版機能）
@@ -102,8 +109,6 @@ async def collect_bitcoin_full_data(
     """
 
     async def _execute():
-
-        orchestration_service = DataCollectionOrchestrationService()
         return await orchestration_service.start_bitcoin_full_data_collection(
             background_tasks, db
         )
@@ -113,7 +118,11 @@ async def collect_bitcoin_full_data(
 
 @router.post("/bulk-historical")
 async def collect_bulk_historical_data(
-    background_tasks: BackgroundTasks, db: Session = Depends(get_db)
+    background_tasks: BackgroundTasks,
+    db: Session = Depends(get_db),
+    orchestration_service: DataCollectionOrchestrationService = Depends(
+        get_data_collection_orchestration_service
+    ),
 ) -> Dict:
     """
     全ての取引ペアと全ての時間軸でOHLCVデータを一括収集
@@ -136,7 +145,6 @@ async def collect_bulk_historical_data(
                 status_code=500, detail="データベースの初期化に失敗しました"
             )
 
-        orchestration_service = DataCollectionOrchestrationService()
         return await orchestration_service.start_bulk_historical_data_collection(
             background_tasks, db
         )
@@ -190,7 +198,11 @@ async def get_collection_status(
 
 @router.post("/all/bulk-collect")
 async def collect_all_data_bulk(
-    background_tasks: BackgroundTasks, db: Session = Depends(get_db)
+    background_tasks: BackgroundTasks,
+    db: Session = Depends(get_db),
+    orchestration_service: DataCollectionOrchestrationService = Depends(
+        get_data_collection_orchestration_service
+    ),
 ) -> Dict:
     """
     全データ（OHLCV・Funding Rate・Open Interest）を一括収集
@@ -213,7 +225,6 @@ async def collect_all_data_bulk(
                 status_code=500, detail="データベースの初期化に失敗しました"
             )
 
-        orchestration_service = DataCollectionOrchestrationService()
         return await orchestration_service.start_all_data_bulk_collection(
             background_tasks, db
         )

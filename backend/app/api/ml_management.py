@@ -116,22 +116,6 @@ async def get_feature_importance(
     return await UnifiedErrorHandler.safe_execute_async(_get_feature_importance)
 
 
-@router.get("/models")
-async def get_models_list(
-    ml_service: MLManagementOrchestrationService = Depends(
-        get_ml_management_orchestration_service
-    ),
-):
-    """
-    利用可能なモデル一覧を取得
-    """
-
-    async def _get_models_list():
-        return await ml_service.get_models_list()
-
-    return await UnifiedErrorHandler.safe_execute_async(_get_models_list)
-
-
 @router.post("/models/{model_name}/load")
 async def load_model(
     model_name: str,

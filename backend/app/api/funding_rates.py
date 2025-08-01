@@ -63,15 +63,6 @@ async def get_funding_rates(
             db_session=db,
         )
 
-    async def _get_funding_rates_data():
-        return await orchestration_service.get_funding_rate_data(
-            symbol=symbol,
-            limit=limit,
-            start_date=start_date,
-            end_date=end_date,
-            db_session=db,
-        )
-
     return await UnifiedErrorHandler.safe_execute_async(
         _get_funding_rates_data, message="ファンディングレートデータ取得エラー"
     )

@@ -6,9 +6,8 @@ SOLID原則に従い、各設定カテゴリを明確に分離し、責任を明
 """
 
 from typing import Optional, List, Dict, Any
-from pydantic import Field
+from pydantic import Field, model_validator
 from pydantic_settings import BaseSettings
-from dataclasses import dataclass
 import os
 
 
@@ -153,53 +152,60 @@ class GAConfig(BaseSettings):
         extra = "ignore"
 
 
-@dataclass
-class MLDataProcessingConfig:
+class MLDataProcessingConfig(BaseSettings):
     """ML データ処理設定"""
 
-    max_ohlcv_rows: int = 1000000  # 100万行まで
-    max_feature_rows: int = 1000000  # 100万行まで
-    feature_calculation_timeout: int = 3600  # 1時間
-    model_training_timeout: int = 7200  # 2時間
-    model_prediction_timeout: int = 10
-    memory_warning_threshold: int = 8000
-    memory_limit_threshold: int = 10000
-    debug_mode: bool = False
-    log_level: str = "INFO"
+    max_ohlcv_rows: int = Field(default=1000000, description="100万行まで")
+    max_feature_rows: int = Field(default=1000000, description="100万行まで")
+    feature_calculation_timeout: int = Field(default=3600, description="1時間")
+    model_training_timeout: int = Field(default=7200, description="2時間")
+    model_prediction_timeout: int = Field(default=10)
+    memory_warning_threshold: int = Field(default=8000)
+    memory_limit_threshold: int = Field(default=10000)
+    debug_mode: bool = Field(default=False)
+    log_level: str = Field(default="INFO")
+
+    class Config:
+        env_prefix = "ML_DATA_PROCESSING_"
+        extra = "ignore"
 
 
-@dataclass
-class MLModelConfig:
+class MLModelConfig(BaseSettings):
     """ML モデル設定"""
 
-    model_save_path: str = "models/"
-    model_file_extension: str = ".pkl"
-    model_name_prefix: str = "ml_signal_model"
-    auto_strategy_model_name: str = "auto_strategy_ml_model"
-    max_model_versions: int = 10
-    model_retention_days: int = 30
+    model_save_path: str = Field(default="models/")
+    model_file_extension: str = Field(default=".pkl")
+    model_name_prefix: str = Field(default="ml_signal_model")
+    auto_strategy_model_name: str = Field(default="auto_strategy_ml_model")
+    max_model_versions: int = Field(default=10)
+    model_retention_days: int = Field(default=30)
 
-    def __post_init__(self):
+    @model_validator(mode="after")
+    def create_model_directory(self):
         """初期化後処理：ディレクトリ作成"""
         os.makedirs(self.model_save_path, exist_ok=True)
+        return self
+
+    class Config:
+        env_prefix = "ML_MODEL_"
+        extra = "ignore"
 
 
-@dataclass
-class MLPredictionConfig:
+class MLPredictionConfig(BaseSettings):
     """ML 予測設定"""
 
-    default_up_prob: float = 0.33
-    default_down_prob: float = 0.33
-    default_range_prob: float = 0.34
-    fallback_up_prob: float = 0.33
-    fallback_down_prob: float = 0.33
-    fallback_range_prob: float = 0.34
-    min_probability: float = 0.0
-    max_probability: float = 1.0
-    probability_sum_min: float = 0.8
-    probability_sum_max: float = 1.2
-    expand_to_data_length: bool = True
-    default_indicator_length: int = 100
+    default_up_prob: float = Field(default=0.33)
+    default_down_prob: float = Field(default=0.33)
+    default_range_prob: float = Field(default=0.34)
+    fallback_up_prob: float = Field(default=0.33)
+    fallback_down_prob: float = Field(default=0.33)
+    fallback_range_prob: float = Field(default=0.34)
+    min_probability: float = Field(default=0.0)
+    max_probability: float = Field(default=1.0)
+    probability_sum_min: float = Field(default=0.8)
+    probability_sum_max: float = Field(default=1.2)
+    expand_to_data_length: bool = Field(default=True)
+    default_indicator_length: int = Field(default=100)
 
     def get_default_predictions(self) -> Dict[str, float]:
         """デフォルトの予測値を取得"""
@@ -217,14 +223,23 @@ class MLPredictionConfig:
             "range": self.fallback_range_prob,
         }
 
+    class Config:
+        env_prefix = "ML_PREDICTION_"
+        extra = "ignore"
 
-class MLConfig:
+
+class MLConfig(BaseSettings):
     """ML 統一設定クラス"""
 
-    def __init__(self):
-        self.data_processing = MLDataProcessingConfig()
-        self.model = MLModelConfig()
-        self.prediction = MLPredictionConfig()
+    data_processing: MLDataProcessingConfig = Field(
+        default_factory=MLDataProcessingConfig
+    )
+    model: MLModelConfig = Field(default_factory=MLModelConfig)
+    prediction: MLPredictionConfig = Field(default_factory=MLPredictionConfig)
+
+    class Config:
+        env_prefix = "ML_"
+        extra = "ignore"
 
 
 class UnifiedConfig(BaseSettings):

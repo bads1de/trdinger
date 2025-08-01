@@ -16,6 +16,7 @@ from database.connection import get_db
 from app.services.backtest.orchestration.backtest_orchestration_service import (
     BacktestOrchestrationService,
 )
+from app.api.dependencies import get_backtest_orchestration_service
 from app.utils.unified_error_handler import UnifiedErrorHandler
 
 router = APIRouter(prefix="/api/backtest", tags=["backtest"])
@@ -84,7 +85,7 @@ async def get_backtest_results(
     """
 
     async def _get_results():
-        
+
         orchestration_service = BacktestOrchestrationService()
         return await orchestration_service.get_backtest_results(
             db=db,
@@ -110,7 +111,7 @@ async def delete_all_backtest_results(db: Session = Depends(get_db)):
     """
 
     async def _delete_all_results():
-        
+
         orchestration_service = BacktestOrchestrationService()
         return await orchestration_service.delete_all_backtest_results(db=db)
 
@@ -118,21 +119,26 @@ async def delete_all_backtest_results(db: Session = Depends(get_db)):
 
 
 @router.get("/results/{result_id}", response_model=BacktestResponse)
-async def get_backtest_result_by_id(result_id: int, db: Session = Depends(get_db)):
+async def get_backtest_result_by_id(
+    result_id: int,
+    db: Session = Depends(get_db),
+    orchestration_service: BacktestOrchestrationService = Depends(
+        get_backtest_orchestration_service
+    ),
+):
     """
     ID指定でバックテスト結果を取得
 
     Args:
         result_id: バックテスト結果ID
         db: データベースセッション
+        orchestration_service: バックテストオーケストレーションサービス（依存性注入）
 
     Returns:
         バックテスト結果
     """
 
     async def _get_by_id():
-        
-        orchestration_service = BacktestOrchestrationService()
         result = await orchestration_service.get_backtest_result_by_id(
             db=db, result_id=result_id
         )
@@ -163,7 +169,7 @@ async def delete_backtest_result(result_id: int, db: Session = Depends(get_db)):
     """
 
     async def _delete_result():
-        
+
         orchestration_service = BacktestOrchestrationService()
         result = await orchestration_service.delete_backtest_result(
             db=db, result_id=result_id
@@ -182,17 +188,22 @@ async def delete_backtest_result(result_id: int, db: Session = Depends(get_db)):
 
 
 @router.get("/strategies")
-async def get_supported_strategies():
+async def get_supported_strategies(
+    orchestration_service: BacktestOrchestrationService = Depends(
+        get_backtest_orchestration_service
+    ),
+):
     """
     サポートされている戦略一覧を取得
+
+    Args:
+        orchestration_service: バックテストオーケストレーションサービス（依存性注入）
 
     Returns:
         戦略一覧
     """
 
     async def _get_strategies():
-        
-        orchestration_service = BacktestOrchestrationService()
         return await orchestration_service.get_supported_strategies()
 
     return await UnifiedErrorHandler.safe_execute_async(_get_strategies)
