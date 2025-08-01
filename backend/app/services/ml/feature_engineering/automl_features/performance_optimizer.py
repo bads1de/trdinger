@@ -17,30 +17,10 @@ import gc
 import functools
 import tracemalloc
 from contextlib import contextmanager
+from memory_profiler import memory_usage  # type: ignore
+
 
 logger = logging.getLogger(__name__)
-
-# memory-profilerのインポート（オプション）
-try:
-    from memory_profiler import memory_usage
-
-    MEMORY_PROFILER_AVAILABLE = True
-except ImportError:
-    MEMORY_PROFILER_AVAILABLE = False
-    logger.warning(
-        "memory-profilerが利用できません。詳細なメモリ分析機能は無効化されます。"
-    )
-
-# line-profilerのインポート（オプション）
-try:
-    import importlib.util
-
-    LINE_PROFILER_AVAILABLE = importlib.util.find_spec("line_profiler") is not None
-except ImportError:
-    LINE_PROFILER_AVAILABLE = False
-    logger.warning(
-        "line-profilerが利用できません。ライン単位の分析機能は無効化されます。"
-    )
 
 
 class PerformanceOptimizer:
@@ -477,11 +457,6 @@ class PerformanceOptimizer:
         Returns:
             メモリプロファイリング結果
         """
-        if not MEMORY_PROFILER_AVAILABLE:
-            logger.warning(
-                "memory-profilerが利用できないため、基本的なメモリ監視のみ実行します"
-            )
-            return self._basic_memory_profile(func, *args, **kwargs)
 
         try:
             # tracemalloc開始
@@ -583,7 +558,7 @@ class PerformanceOptimizer:
         def decorator(func: Callable):
             @functools.wraps(func)
             def wrapper(*args, **kwargs):
-                if enable_detailed and MEMORY_PROFILER_AVAILABLE:
+                if enable_detailed:
                     profile_result = self.detailed_memory_profile(func, *args, **kwargs)
                     logger.info(f"{func.__name__} メモリプロファイル: {profile_result}")
                     return profile_result.get("result")
@@ -675,7 +650,7 @@ class PerformanceOptimizer:
             logger.debug("PerformanceOptimizerのクリーンアップを開始")
 
             # キャッシュインデックスをクリア
-            if hasattr(self, 'cache_index'):
+            if hasattr(self, "cache_index"):
                 self.cache_index.clear()
 
             # NumPyキャッシュのクリア

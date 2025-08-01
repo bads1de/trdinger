@@ -11,6 +11,7 @@ from fastapi import HTTPException
 
 from app.services.ml.model_manager import model_manager
 from app.services.auto_strategy.services.ml_orchestrator import MLOrchestrator
+from app.utils.api_utils import APIResponseHelper
 
 from app.services.ml.feature_engineering.automl_feature_analyzer import (
     AutoMLFeatureAnalyzer,
@@ -141,7 +142,9 @@ class MLManagementOrchestrationService:
         try:
             os.remove(target_model["path"])
             logger.info(f"モデル削除完了: {decoded_model_id} -> {target_model['path']}")
-            return {"message": "モデルが削除されました"}
+            return APIResponseHelper.api_response(
+                success=True, message="モデルが削除されました"
+            )
         except Exception as e:
             logger.error(f"モデルファイル削除エラー: {e}")
             raise HTTPException(
