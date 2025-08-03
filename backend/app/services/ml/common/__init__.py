@@ -32,7 +32,6 @@ from .logger import (
     log_info,
     log_warning,
     log_error,
-    log_debug,
 )
 
 from .metrics import (
@@ -74,7 +73,6 @@ __all__ = [
     "log_info",
     "log_warning",
     "log_error",
-    "log_debug",
     # Metrics
     "MLMetricsCollector",
     "MetricData",

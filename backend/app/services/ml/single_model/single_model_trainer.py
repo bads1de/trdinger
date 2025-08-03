@@ -42,7 +42,19 @@ class SingleModelTrainer(BaseMLTrainer):
         self.single_model = None
 
         # サポートされているモデルタイプを確認
-        supported_models = ["lightgbm", "xgboost", "catboost", "tabnet"]
+        supported_models = [
+            "lightgbm",
+            "xgboost",
+            "catboost",
+            "tabnet",
+            "randomforest",
+            "extratrees",
+            "gradientboosting",
+            "adaboost",
+            "ridge",
+            "naivebayes",
+            "knn",
+        ]
         if self.model_type not in supported_models:
             raise UnifiedModelError(
                 f"サポートされていないモデルタイプ: {self.model_type}. "
@@ -127,6 +139,41 @@ class SingleModelTrainer(BaseMLTrainer):
                 from ..models.tabnet_wrapper import TabNetModel
 
                 return TabNetModel(automl_config=self.automl_config)
+
+            elif self.model_type == "randomforest":
+                from ..models.randomforest_wrapper import RandomForestModel
+
+                return RandomForestModel(automl_config=self.automl_config)
+
+            elif self.model_type == "extratrees":
+                from ..models.extratrees_wrapper import ExtraTreesModel
+
+                return ExtraTreesModel(automl_config=self.automl_config)
+
+            elif self.model_type == "gradientboosting":
+                from ..models.gradientboosting_wrapper import GradientBoostingModel
+
+                return GradientBoostingModel(automl_config=self.automl_config)
+
+            elif self.model_type == "adaboost":
+                from ..models.adaboost_wrapper import AdaBoostModel
+
+                return AdaBoostModel(automl_config=self.automl_config)
+
+            elif self.model_type == "ridge":
+                from ..models.ridge_wrapper import RidgeModel
+
+                return RidgeModel(automl_config=self.automl_config)
+
+            elif self.model_type == "naivebayes":
+                from ..models.naivebayes_wrapper import NaiveBayesModel
+
+                return NaiveBayesModel(automl_config=self.automl_config)
+
+            elif self.model_type == "knn":
+                from ..models.knn_wrapper import KNNModel
+
+                return KNNModel(automl_config=self.automl_config)
 
             else:
                 raise UnifiedModelError(f"未対応のモデルタイプ: {self.model_type}")
@@ -308,6 +355,7 @@ class SingleModelTrainer(BaseMLTrainer):
         """
         available = []
 
+        # 既存のライブラリベースモデル
         try:
             import importlib.util
 
@@ -339,6 +387,57 @@ class SingleModelTrainer(BaseMLTrainer):
                 available.append("tabnet")
         except Exception:
             pass
+
+        # scikit-learnベースの新しいアルゴリズム（常に利用可能）
+        sklearn_models = [
+            "randomforest",
+            "extratrees",
+            "gradientboosting",
+            "adaboost",
+            "ridge",
+            "naivebayes",
+            "knn",
+        ]
+
+        try:
+            import sklearn
+
+            # scikit-learnが利用可能な場合、すべてのsklearnベースモデルを追加
+            available.extend(sklearn_models)
+        except ImportError:
+            # scikit-learnが利用できない場合は個別にチェック
+            for model in sklearn_models:
+                try:
+                    if model == "randomforest":
+                        from sklearn.ensemble import RandomForestClassifier
+
+                        available.append("randomforest")
+                    elif model == "extratrees":
+                        from sklearn.ensemble import ExtraTreesClassifier
+
+                        available.append("extratrees")
+                    elif model == "gradientboosting":
+                        from sklearn.ensemble import GradientBoostingClassifier
+
+                        available.append("gradientboosting")
+                    elif model == "adaboost":
+                        from sklearn.ensemble import AdaBoostClassifier
+
+                        available.append("adaboost")
+                    elif model == "ridge":
+                        from sklearn.linear_model import RidgeClassifier
+
+                        available.append("ridge")
+                    elif model == "naivebayes":
+                        from sklearn.naive_bayes import GaussianNB
+
+                        available.append("naivebayes")
+                    elif model == "knn":
+                        from sklearn.neighbors import KNeighborsClassifier
+
+                        available.append("knn")
+                except ImportError:
+                    pass
 
         return available
 

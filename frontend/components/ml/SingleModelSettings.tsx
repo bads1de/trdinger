@@ -28,10 +28,34 @@ interface SingleModelSettingsProps {
 export default function SingleModelSettings({
   singleModelSettings,
   onSingleModelChange,
-  availableModels = ["lightgbm", "xgboost", "catboost", "tabnet"],
+  availableModels = [
+    "lightgbm",
+    "xgboost",
+    "catboost",
+    "tabnet",
+    "randomforest",
+    "extratrees",
+    "gradientboosting",
+    "adaboost",
+    "ridge",
+    "naivebayes",
+    "knn",
+  ],
 }: SingleModelSettingsProps) {
   const normalizedModels = useMemo(() => {
-    const fallback = ["lightgbm", "xgboost", "catboost", "tabnet"];
+    const fallback = [
+      "lightgbm",
+      "xgboost",
+      "catboost",
+      "tabnet",
+      "randomforest",
+      "extratrees",
+      "gradientboosting",
+      "adaboost",
+      "ridge",
+      "naivebayes",
+      "knn",
+    ];
     const fromProps = (availableModels || []).map((m) =>
       String(m).toLowerCase().trim()
     );

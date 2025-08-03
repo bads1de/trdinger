@@ -456,7 +456,7 @@ class MLConfigManager:
             if not isinstance(algorithms, list) or not algorithms:
                 errors.append("algorithms は空でないリストである必要があります")
             else:
-                valid_algorithms = ["lightgbm", "xgboost", "catboost", "tabnet"]
+                valid_algorithms = ["lightgbm", "xgboost", "catboost", "tabnet", "knn"]
                 for algo in algorithms:
                     if algo not in valid_algorithms:
                         errors.append(

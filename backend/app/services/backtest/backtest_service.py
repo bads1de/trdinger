@@ -87,7 +87,6 @@ class BacktestService:
         try:
             # 1. 設定の検証
             self._validator.validate_config(config)
-            logger.debug(f"設定検証完了: {config['strategy_name']}")
 
             # 2. データサービスの初期化（必要に応じて）
             self._ensure_data_service_initialized()

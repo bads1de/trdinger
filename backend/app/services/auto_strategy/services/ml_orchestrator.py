@@ -349,9 +349,9 @@ class MLOrchestrator(MLPredictionInterface):
                     }
                     status["performance_metrics"] = performance_metrics
                 else:
-                    logger.debug("モデルメタデータが見つかりません")
+                    pass
             else:
-                logger.debug("最新モデルファイルが見つかりません")
+                pass
         except Exception as e:
             logger.error(f"性能指標取得エラー: {e}")
 
@@ -367,7 +367,6 @@ class MLOrchestrator(MLPredictionInterface):
         try:
             UnifiedErrorHandler.validate_predictions(predictions)
             self._last_predictions = predictions
-            logger.debug(f"ML予測値を更新: {predictions}")
         except MLValidationError as e:
             logger.warning(f"無効な予測値形式: {e}")
 
@@ -503,8 +502,6 @@ class MLOrchestrator(MLPredictionInterface):
     ) -> Optional[pd.DataFrame]:
         """特徴量を計算（AutoML統合版）"""
         try:
-            logger.debug(f"特徴量計算開始 - データ形状: {df.shape}")
-            logger.debug(f"カラム名: {list(df.columns)}")
 
             # 特徴量計算用にカラム名を大文字に変換
             df_for_features = df.copy()
@@ -520,7 +517,6 @@ class MLOrchestrator(MLPredictionInterface):
             df_for_features.columns = [
                 column_mapping.get(col, col) for col in df_for_features.columns
             ]
-            logger.debug(f"変換後カラム名: {list(df_for_features.columns)}")
 
             # AutoML機能が有効な場合は拡張特徴量計算を実行
             if self.enable_automl and isinstance(
@@ -544,9 +540,10 @@ class MLOrchestrator(MLPredictionInterface):
                     df_for_features, funding_rate_data, open_interest_data
                 )
             if features_df is not None:
-                logger.debug(f"特徴量計算完了 - 特徴量形状: {features_df.shape}")
+                logger.info(f"特徴量計算結果: {len(features_df)}行")
             else:
                 logger.warning("特徴量計算結果がNone")
+
             return features_df
         except Exception as e:
             logger.error(f"特徴量計算エラー: {e}")
@@ -573,7 +570,6 @@ class MLOrchestrator(MLPredictionInterface):
             )
             target = target_df["target"]
 
-            logger.debug(f"ターゲット変数計算完了 - 形状: {target.shape}")
             return target
 
         except Exception as e:
@@ -650,20 +646,15 @@ class MLOrchestrator(MLPredictionInterface):
     ) -> Dict[str, np.ndarray]:
         """予測値をデータ長に拡張"""
         try:
-            logger.debug(f"予測値拡張: {predictions} -> データ長: {data_length}")
             result = {
                 "ML_UP_PROB": np.full(data_length, predictions["up"]),
                 "ML_DOWN_PROB": np.full(data_length, predictions["down"]),
                 "ML_RANGE_PROB": np.full(data_length, predictions["range"]),
             }
-            logger.debug(
-                f"拡張結果サンプル: UP={result['ML_UP_PROB'][0]}, DOWN={result['ML_DOWN_PROB'][0]}, RANGE={result['ML_RANGE_PROB'][0]}"
-            )
             return result
         except Exception as e:
             logger.error(f"予測値拡張エラー: {e}")
             default_result = self._get_default_indicators(data_length)
-            logger.debug(f"デフォルト値使用: {default_result}")
             return default_result
 
     def _validate_ml_indicators(self, ml_indicators: Dict[str, np.ndarray]):
@@ -801,14 +792,10 @@ class MLOrchestrator(MLPredictionInterface):
             # ファンディングレートデータを抽出
             if "funding_rate" in enhanced_df.columns:
                 funding_rate_data = enhanced_df[["funding_rate"]].copy()
-                logger.debug(
-                    f"ファンディングレートデータ抽出: {len(funding_rate_data)}行"
-                )
 
             # 建玉残高データを抽出
             if "open_interest" in enhanced_df.columns:
                 open_interest_data = enhanced_df[["open_interest"]].copy()
-                logger.debug(f"建玉残高データ抽出: {len(open_interest_data)}行")
 
             return funding_rate_data, open_interest_data
 

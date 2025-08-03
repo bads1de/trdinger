@@ -294,22 +294,36 @@ class MLTrainingOrchestrationService:
                     logger.info("🔍 トレーナータイプ決定プロセス開始")
 
                     if config.ensemble_config:
-                        logger.info(f"📋 受信したアンサンブル設定: {config.ensemble_config}")
+                        logger.info(
+                            f"📋 受信したアンサンブル設定: {config.ensemble_config}"
+                        )
                         ensemble_config_dict = config.ensemble_config.model_dump()
-                        logger.info(f"📋 変換後のアンサンブル設定辞書: {ensemble_config_dict}")
+                        logger.info(
+                            f"📋 変換後のアンサンブル設定辞書: {ensemble_config_dict}"
+                        )
 
                         # アンサンブルが無効化されている場合は単一モデルを使用
                         enabled_value = ensemble_config_dict.get("enabled", True)
-                        logger.info(f"🔍 enabled値の確認: {enabled_value} (型: {type(enabled_value)})")
+                        logger.info(
+                            f"🔍 enabled値の確認: {enabled_value} (型: {type(enabled_value)})"
+                        )
 
                         if not enabled_value:
                             trainer_type = "single"
-                            logger.info("🔄 アンサンブルが無効化されているため、単一モデルトレーニングを使用します")
-                            logger.info(f"📋 アンサンブル設定確認: enabled={enabled_value}")
+                            logger.info(
+                                "🔄 アンサンブルが無効化されているため、単一モデルトレーニングを使用します"
+                            )
+                            logger.info(
+                                f"📋 アンサンブル設定確認: enabled={enabled_value}"
+                            )
                         else:
-                            logger.info("🔗 アンサンブルが有効化されているため、アンサンブルトレーニングを使用します")
+                            logger.info(
+                                "🔗 アンサンブルが有効化されているため、アンサンブルトレーニングを使用します"
+                            )
                     else:
-                        logger.info("📋 アンサンブル設定が提供されていません。デフォルト（アンサンブル）を使用します")
+                        logger.info(
+                            "📋 アンサンブル設定が提供されていません。デフォルト（アンサンブル）を使用します"
+                        )
                         # デフォルトのアンサンブル設定を作成
                         ensemble_config_dict = {
                             "enabled": True,
@@ -318,36 +332,53 @@ class MLTrainingOrchestrationService:
                                 "n_estimators": 5,
                                 "bootstrap_fraction": 0.8,
                                 "base_model_type": "lightgbm",
-                                "random_state": 42
+                                "random_state": 42,
                             },
                             "stacking_params": {
-                                "base_models": ["lightgbm", "xgboost", "gradient_boosting", "random_forest"],
+                                "base_models": [
+                                    "lightgbm",
+                                    "xgboost",
+                                    "gradient_boosting",
+                                    "random_forest",
+                                ],
                                 "meta_model": "lightgbm",
                                 "cv_folds": 5,
                                 "use_probas": True,
-                                "random_state": 42
-                            }
+                                "random_state": 42,
+                            },
                         }
 
                     # 単一モデル設定の準備
                     if config.single_model_config:
-                        logger.info(f"📋 受信した単一モデル設定: {config.single_model_config}")
-                        single_model_config_dict = config.single_model_config.model_dump()
-                        logger.info(f"📋 変換後の単一モデル設定辞書: {single_model_config_dict}")
+                        logger.info(
+                            f"📋 受信した単一モデル設定: {config.single_model_config}"
+                        )
+                        single_model_config_dict = (
+                            config.single_model_config.model_dump()
+                        )
+                        logger.info(
+                            f"📋 変換後の単一モデル設定辞書: {single_model_config_dict}"
+                        )
 
                         if trainer_type == "single":
-                            logger.info(f"📋 単一モデル設定を使用: {single_model_config_dict}")
+                            logger.info(
+                                f"📋 単一モデル設定を使用: {single_model_config_dict}"
+                            )
                     else:
                         logger.info("📋 単一モデル設定が提供されていません")
                         if trainer_type == "single":
                             # 単一モデルが選択されているが設定がない場合はデフォルトを使用
                             single_model_config_dict = {"model_type": "lightgbm"}
-                            logger.info(f"📋 デフォルト単一モデル設定を使用: {single_model_config_dict}")
+                            logger.info(
+                                f"📋 デフォルト単一モデル設定を使用: {single_model_config_dict}"
+                            )
 
                 except Exception as e:
                     logger.error(f"❌ トレーナータイプ決定中にエラーが発生: {e}")
                     logger.error(f"❌ エラー詳細: {type(e).__name__}: {str(e)}")
-                    logger.warning("⚠️ エラーのため、デフォルト（アンサンブル）を使用します")
+                    logger.warning(
+                        "⚠️ エラーのため、デフォルト（アンサンブル）を使用します"
+                    )
                     trainer_type = "ensemble"
 
                 # AutoML設定の準備
@@ -359,7 +390,9 @@ class MLTrainingOrchestrationService:
                 logger.info(f"🎯 最終決定されたトレーナータイプ: {trainer_type}")
                 if trainer_type == "single":
                     logger.info("🤖 単一モデルトレーニングを実行します")
-                    logger.info(f"🤖 使用する単一モデル設定: {single_model_config_dict}")
+                    logger.info(
+                        f"🤖 使用する単一モデル設定: {single_model_config_dict}"
+                    )
                 else:
                     logger.info("🔗 アンサンブルトレーニングを実行します")
                     logger.info(f"🔗 使用するアンサンブル設定: {ensemble_config_dict}")
@@ -372,13 +405,15 @@ class MLTrainingOrchestrationService:
                         ensemble_config=ensemble_config_dict,
                         single_model_config=single_model_config_dict,
                     )
-                    logger.info(f"✅ MLTrainingService初期化完了: trainer_type={ml_service.trainer_type}")
+                    logger.info(
+                        f"✅ MLTrainingService初期化完了: trainer_type={ml_service.trainer_type}"
+                    )
 
                     # 実際に作成されたトレーナーの確認
                     trainer_class_name = type(ml_service.trainer).__name__
                     logger.info(f"✅ 作成されたトレーナー: {trainer_class_name}")
 
-                    if hasattr(ml_service.trainer, 'model_type'):
+                    if hasattr(ml_service.trainer, "model_type"):
                         logger.info(f"✅ モデルタイプ: {ml_service.trainer.model_type}")
 
                 except Exception as e:
@@ -462,7 +497,6 @@ class MLTrainingOrchestrationService:
             self._cleanup_enhanced_feature_service()
             self._cleanup_ml_training_service()
             self._cleanup_data_preprocessor()
-            # Featuretoolsは削除されたため、クリーンアップ不要
 
             # 強制ガベージコレクション
             import gc
@@ -485,7 +519,6 @@ class MLTrainingOrchestrationService:
     def _cleanup_autofeat_resources(self):
         """AutoFeat関連リソースのクリーンアップ"""
         try:
-            logger.debug("AutoFeatリソースをクリーンアップ中")
 
             # AutoFeatの一時ファイルとキャッシュをクリア
             import tempfile
@@ -495,31 +528,32 @@ class MLTrainingOrchestrationService:
             # AutoFeatが作成する一時ディレクトリをクリーンアップ
             temp_dir = tempfile.gettempdir()
             for item in os.listdir(temp_dir):
-                if item.startswith('autofeat_'):
+                if item.startswith("autofeat_"):
                     temp_path = os.path.join(temp_dir, item)
                     try:
                         if os.path.isdir(temp_path):
                             shutil.rmtree(temp_path)
                         else:
                             os.remove(temp_path)
-                        logger.debug(f"AutoFeat一時ファイル削除: {temp_path}")
+
                     except Exception as e:
-                        logger.warning(f"AutoFeat一時ファイル削除エラー {temp_path}: {e}")
+                        logger.warning(
+                            f"AutoFeat一時ファイル削除エラー {temp_path}: {e}"
+                        )
 
             logger.debug("AutoFeatリソースクリーンアップ完了")
 
         except Exception as e:
             logger.warning(f"AutoFeatクリーンアップエラー: {e}")
 
-
     def _cleanup_tsfresh_resources(self):
         """TSFresh関連リソースのクリーンアップ"""
         try:
-            logger.debug("TSFreshリソースをクリーンアップ中")
 
             # TSFreshの内部キャッシュをクリア
             try:
                 from tsfresh.utilities.dataframe_functions import clear_cache
+
                 clear_cache()
                 logger.debug("TSFreshキャッシュクリア完了")
             except ImportError:
@@ -533,14 +567,16 @@ class MLTrainingOrchestrationService:
 
             temp_dir = tempfile.gettempdir()
             for item in os.listdir(temp_dir):
-                if item.startswith('tsfresh_') or item.startswith('tmp_tsfresh'):
+                if item.startswith("tsfresh_") or item.startswith("tmp_tsfresh"):
                     temp_path = os.path.join(temp_dir, item)
                     try:
                         if os.path.isfile(temp_path):
                             os.remove(temp_path)
                         logger.debug(f"TSFresh一時ファイル削除: {temp_path}")
                     except Exception as e:
-                        logger.warning(f"TSFresh一時ファイル削除エラー {temp_path}: {e}")
+                        logger.warning(
+                            f"TSFresh一時ファイル削除エラー {temp_path}: {e}"
+                        )
 
             logger.debug("TSFreshリソースクリーンアップ完了")
 
@@ -553,7 +589,9 @@ class MLTrainingOrchestrationService:
             logger.debug("EnhancedFeatureEngineeringServiceリソースをクリーンアップ中")
 
             # EnhancedFeatureEngineeringServiceのインスタンスを作成してクリーンアップ
-            from app.services.ml.feature_engineering.enhanced_feature_engineering_service import EnhancedFeatureEngineeringService
+            from app.services.ml.feature_engineering.enhanced_feature_engineering_service import (
+                EnhancedFeatureEngineeringService,
+            )
 
             # 一時的なインスタンスを作成してクリーンアップメソッドを呼び出し
             temp_service = EnhancedFeatureEngineeringService()
@@ -565,7 +603,9 @@ class MLTrainingOrchestrationService:
             logger.debug("EnhancedFeatureEngineeringServiceリソースクリーンアップ完了")
 
         except Exception as e:
-            logger.warning(f"EnhancedFeatureEngineeringServiceクリーンアップエラー: {e}")
+            logger.warning(
+                f"EnhancedFeatureEngineeringServiceクリーンアップエラー: {e}"
+            )
 
     def _cleanup_ml_training_service(self):
         """MLTrainingService関連リソースのクリーンアップ"""
@@ -575,7 +615,7 @@ class MLTrainingOrchestrationService:
             # グローバルMLTrainingServiceインスタンスのクリーンアップ
             from app.services.ml.ml_training_service import ml_training_service
 
-            if hasattr(ml_training_service, 'cleanup_resources'):
+            if hasattr(ml_training_service, "cleanup_resources"):
                 ml_training_service.cleanup_resources()
 
             logger.debug("MLTrainingServiceリソースクリーンアップ完了")
@@ -591,7 +631,7 @@ class MLTrainingOrchestrationService:
             # グローバルDataPreprocessorインスタンスのクリーンアップ
             from app.utils.data_preprocessing import data_preprocessor
 
-            if hasattr(data_preprocessor, 'clear_cache'):
+            if hasattr(data_preprocessor, "clear_cache"):
                 data_preprocessor.clear_cache()
 
             logger.debug("DataPreprocessorリソースクリーンアップ完了")

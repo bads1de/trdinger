@@ -47,7 +47,22 @@ interface EnsembleSettingsProps {
   availableModels?: string[];
 }
 
+// 新しいアルゴリズムを含む利用可能なモデル
 const AVAILABLE_MODELS = [
+  "lightgbm",
+  "xgboost",
+  "catboost",
+  "tabnet",
+  "randomforest",
+  "extratrees",
+  "gradientboosting",
+  "adaboost",
+  "ridge",
+  "naivebayes",
+  "knn",
+];
+
+const LEGACY_AVAILABLE_MODELS = [
   {
     value: "lightgbm",
     label: "LightGBM",
@@ -69,15 +84,47 @@ const AVAILABLE_MODELS = [
     description: "表形式データ用ニューラルネットワーク",
   },
   {
-    value: "random_forest",
+    value: "randomforest",
     label: "Random Forest",
     description: "アンサンブル決定木",
+  },
+  {
+    value: "extratrees",
+    label: "Extra Trees",
+    description: "ランダム性強化決定木",
+  },
+  {
+    value: "gradientboosting",
+    label: "Gradient Boosting",
+    description: "勾配ブースティング",
+  },
+  {
+    value: "adaboost",
+    label: "AdaBoost",
+    description: "適応的ブースティング",
+  },
+  {
+    value: "ridge",
+    label: "Ridge Classifier",
+    description: "L2正則化線形分類器",
+  },
+  {
+    value: "naivebayes",
+    label: "Naive Bayes",
+    description: "ベイズ分類器",
+  },
+  {
+    value: "knn",
+    label: "K-Nearest Neighbors",
+    description: "K近傍法",
   },
 ];
 
 const META_MODELS = [
-  { value: "random_forest", label: "Random Forest" },
+  { value: "randomforest", label: "Random Forest" },
   { value: "lightgbm", label: "LightGBM" },
+  { value: "ridge", label: "Ridge Classifier" },
+  { value: "naivebayes", label: "Naive Bayes" },
 ];
 
 import SingleModelSettings, {
@@ -89,7 +136,7 @@ export default function EnsembleSettings({
   onChange,
   singleModelSettings = { model_type: "lightgbm" },
   onSingleModelChange,
-  availableModels = ["lightgbm", "xgboost", "catboost", "tabnet"],
+  availableModels = AVAILABLE_MODELS,
 }: EnsembleSettingsProps) {
   const updateSettings = (updates: Partial<EnsembleSettingsConfig>) => {
     onChange({ ...settings, ...updates });

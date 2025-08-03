@@ -93,7 +93,7 @@ class SingleModelConfig(BaseModel):
 
     model_type: str = Field(
         default="lightgbm",
-        description="使用するモデルタイプ (lightgbm, xgboost, catboost, tabnet)",
+        description="使用するモデルタイプ (lightgbm, xgboost, catboost, tabnet, knn)",
     )
 
 
@@ -220,6 +220,20 @@ async def start_ml_training(
         logger.info(f"📋 単一モデル設定辞書: {single_dict}")
 
     async def _start_training():
+        # アルゴリズム名の検証
+        if config.single_model_config:
+            from app.services.ml.models.algorithm_registry import algorithm_registry
+
+            model_type = config.single_model_config.model_type
+            available_algorithms = algorithm_registry.get_available_algorithms()
+
+            if model_type not in available_algorithms:
+                return {
+                    "success": False,
+                    "error": f"指定されたアルゴリズム '{model_type}' は利用できません",
+                    "available_algorithms": available_algorithms,
+                    "message": f"利用可能なアルゴリズム: {', '.join(available_algorithms)}",
+                }
 
         orchestration_service = MLTrainingOrchestrationService()
         return await orchestration_service.start_training(
@@ -286,3 +300,65 @@ async def get_available_models():
         }
 
     return await UnifiedErrorHandler.safe_execute_async(_get_available_models)
+
+
+@router.get("/algorithms")
+async def get_available_algorithms():
+    """
+    利用可能なアルゴリズム名のリストを取得（軽量版）
+    フロントエンドは定数を使用するため、検証用の簡単なリストのみ返す
+    """
+
+    async def _get_available_algorithms():
+        try:
+            from app.services.ml.models.algorithm_registry import algorithm_registry
+        except ImportError as e:
+            return {
+                "success": False,
+                "error": f"アルゴリズムレジストリのインポートに失敗: {e}",
+                "algorithms": [],
+                "message": "アルゴリズム情報を取得できませんでした",
+            }
+
+        # アルゴリズム名のリストのみ取得
+        algorithms = algorithm_registry.get_available_algorithms()
+
+        return {
+            "success": True,
+            "algorithms": algorithms,
+            "total_count": len(algorithms),
+            "message": f"{len(algorithms)}個のアルゴリズムが利用可能です",
+        }
+
+    return await UnifiedErrorHandler.safe_execute_async(_get_available_algorithms)
+
+
+@router.get("/algorithms/{algorithm_name}")
+async def validate_algorithm(algorithm_name: str):
+    """
+    指定されたアルゴリズムが利用可能かどうかを検証
+    フロントエンドは定数を使用するため、検証のみ行う
+    """
+
+    async def _validate_algorithm():
+        from app.services.ml.models.algorithm_registry import algorithm_registry
+
+        available_algorithms = algorithm_registry.get_available_algorithms()
+        is_valid = algorithm_name in available_algorithms
+
+        if not is_valid:
+            return {
+                "success": False,
+                "error": f"アルゴリズム '{algorithm_name}' が見つかりません",
+                "available_algorithms": available_algorithms,
+                "message": f"利用可能なアルゴリズム: {', '.join(available_algorithms)}",
+            }
+
+        return {
+            "success": True,
+            "algorithm_name": algorithm_name,
+            "is_valid": True,
+            "message": f"アルゴリズム '{algorithm_name}' は利用可能です",
+        }
+
+    return await UnifiedErrorHandler.safe_execute_async(_validate_algorithm)

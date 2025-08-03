@@ -77,7 +77,7 @@ class MLTrainingService:
                     "base_model_type": "lightgbm",
                 },
                 "stacking_params": {
-                    "base_models": ["lightgbm", "random_forest"],
+                    "base_models": ["lightgbm", "randomforest", "xgboost"],
                     "meta_model": "lightgbm",
                     "cv_folds": 5,
                     "use_probas": True,
@@ -333,15 +333,11 @@ class MLTrainingService:
             予測確率の辞書 {"up": float, "down": float, "range": float}
         """
         try:
-            logger.debug(
-                f"ML予測開始 - モデル学習状態: {self.trainer.is_trained}, モデル存在: {self.trainer.model is not None}"
-            )
 
             if not self.trainer.is_trained or self.trainer.model is None:
                 # モデル未学習時は警告レベルでログ出力
                 logger.warning("モデルが学習されていません。デフォルト値を返します。")
                 default_predictions = self.config.prediction.get_default_predictions()
-                logger.debug(f"デフォルト値: {default_predictions}")
                 return default_predictions
 
             if self.trainer.feature_columns is None:
@@ -366,14 +362,8 @@ class MLTrainingService:
                     if col not in features.columns
                 ]
 
-                logger.debug(f"学習時特徴量数: {len(self.trainer.feature_columns)}")
-                logger.debug(f"利用可能特徴量数: {len(available_columns)}")
-                logger.debug(f"不足特徴量数: {len(missing_columns)}")
-
                 if len(missing_columns) > 0:
-                    logger.debug(
-                        f"不足している特徴量（最初の10個）: {missing_columns[:10]}"
-                    )
+                    logger.warning(f"欠損している特徴量カラム: {missing_columns}")
 
                 if not available_columns:
                     logger.warning(
@@ -430,7 +420,6 @@ class MLTrainingService:
                     "range": float(latest_pred[1]),
                     "up": float(latest_pred[2]),
                 }
-                logger.debug(f"3クラス予測結果: {predictions}")
                 return predictions
             else:
                 # 3クラス以外の場合はエラー
@@ -438,13 +427,11 @@ class MLTrainingService:
                     f"予期しない予測結果の形式: {latest_pred.shape}. 3クラス分類が期待されます。"
                 )
                 default_predictions = self.config.prediction.get_default_predictions()
-                logger.debug(f"形式エラー時のデフォルト値: {default_predictions}")
                 return default_predictions
 
         except Exception as e:
             logger.warning(f"予測エラー: {e}")
             default_predictions = self.config.prediction.get_default_predictions()
-            logger.debug(f"エラー時のデフォルト値: {default_predictions}")
             return default_predictions
 
     def _train_with_optimization(
@@ -543,7 +530,6 @@ class MLTrainingService:
             # Optunaリソースをクリーンアップ（メモリーリーク防止）
             try:
                 optimizer.cleanup()
-                logger.debug("OptunaOptimizer リソースをクリーンアップしました")
             except Exception as cleanup_error:
                 logger.warning(f"OptunaOptimizer クリーンアップ警告: {cleanup_error}")
 
@@ -580,9 +566,6 @@ class MLTrainingService:
             if optimizer is not None:
                 try:
                     optimizer.cleanup()
-                    logger.debug(
-                        "例外処理でOptunaOptimizer リソースをクリーンアップしました"
-                    )
                 except Exception as cleanup_error:
                     logger.warning(
                         f"例外処理でのOptunaOptimizer クリーンアップ警告: {cleanup_error}"

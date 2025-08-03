@@ -18,6 +18,7 @@ from .technical_features import TechnicalFeatureCalculator
 from .temporal_features import TemporalFeatureCalculator
 from .interaction_features import InteractionFeatureCalculator
 from .fear_greed_features import FearGreedFeatureCalculator
+from .data_frequency_manager import DataFrequencyManager
 from ....utils.data_validation import DataValidator
 from ....utils.data_preprocessing import data_preprocessor
 
@@ -45,6 +46,9 @@ class FeatureEngineeringService:
         self.temporal_calculator = TemporalFeatureCalculator()
         self.interaction_calculator = InteractionFeatureCalculator()
         self.fear_greed_calculator = FearGreedFeatureCalculator()
+
+        # データ頻度統一マネージャー
+        self.frequency_manager = DataFrequencyManager()
 
     def calculate_advanced_features(
         self,
@@ -90,8 +94,28 @@ class FeatureEngineeringService:
             # キャッシュから結果を取得
             cached_result = self._get_from_cache(cache_key)
             if cached_result is not None:
-                logger.debug("キャッシュから特徴量を取得")
                 return cached_result
+
+            # データ頻度統一処理（最優先問題の解決）
+            logger.info("データ頻度統一処理を開始")
+            ohlcv_timeframe = self.frequency_manager.detect_ohlcv_timeframe(ohlcv_data)
+
+            # データ整合性検証
+            validation_result = self.frequency_manager.validate_data_alignment(
+                ohlcv_data, funding_rate_data, open_interest_data
+            )
+
+            if not validation_result["is_valid"]:
+                logger.warning("データ整合性に問題があります:")
+                for error in validation_result["errors"]:
+                    logger.warning(f"  エラー: {error}")
+
+            # データ頻度を統一
+            funding_rate_data, open_interest_data = (
+                self.frequency_manager.align_data_frequencies(
+                    ohlcv_data, funding_rate_data, open_interest_data, ohlcv_timeframe
+                )
+            )
 
             # デフォルトの計算期間
             if lookback_periods is None:
@@ -254,7 +278,6 @@ class FeatureEngineeringService:
                 for col in result_df.columns
                 if col not in ["Open", "High", "Low", "Close", "Volume"]
             ]
-            logger.debug("検出された特徴量列数: %d", len(feature_columns))
 
             # 高品質なデータ前処理を実行（スケーリング有効化、IQRベース外れ値検出）
             logger.info("統計的手法による特徴量前処理を実行中...")
