@@ -12,7 +12,6 @@ import logging
 
 from .base_repository import BaseRepository
 from database.models import GAExperiment
-from app.utils.database_utils import DatabaseQueryHelper
 
 logger = logging.getLogger(__name__)
 
@@ -84,16 +83,17 @@ class GAExperimentRepository(BaseRepository):
             更新成功フラグ
         """
         try:
-            experiment = (
-                self.db.query(GAExperiment)
-                .filter(GAExperiment.id == experiment_id)
-                .first()
+            # BaseRepositoryの汎用メソッドを使用して実験を取得
+            experiments = self.get_filtered_data(
+                filters={"id": experiment_id},
+                limit=1,
             )
 
-            if not experiment:
+            if not experiments:
                 logger.warning(f"指定されたIDの実験が見つかりません: {experiment_id}")
                 return False
 
+            experiment = experiments[0]
             experiment.current_generation = current_generation  # type: ignore
             experiment.progress = progress  # type: ignore
 
@@ -126,16 +126,17 @@ class GAExperimentRepository(BaseRepository):
             更新成功フラグ
         """
         try:
-            experiment = (
-                self.db.query(GAExperiment)
-                .filter(GAExperiment.id == experiment_id)
-                .first()
+            # BaseRepositoryの汎用メソッドを使用して実験を取得
+            experiments = self.get_filtered_data(
+                filters={"id": experiment_id},
+                limit=1,
             )
 
-            if not experiment:
+            if not experiments:
                 logger.warning(f"指定されたIDの実験が見つかりません: {experiment_id}")
                 return False
 
+            experiment = experiments[0]
             experiment.status = status  # type: ignore
 
             if completed_at:
@@ -163,11 +164,12 @@ class GAExperimentRepository(BaseRepository):
             GA実験（存在しない場合はNone）
         """
         try:
-            return (
-                self.db.query(GAExperiment)
-                .filter(GAExperiment.id == experiment_id)
-                .first()
+            # BaseRepositoryの汎用メソッドを使用
+            experiments = self.get_filtered_data(
+                filters={"id": experiment_id},
+                limit=1,
             )
+            return experiments[0] if experiments else None
 
         except Exception as e:
             logger.error(f"実験の取得中にエラーが発生しました: {e}")
@@ -187,11 +189,9 @@ class GAExperimentRepository(BaseRepository):
             GA実験のリスト
         """
         try:
-            filters = {"status": status}
-            return DatabaseQueryHelper.get_filtered_records(
-                db=self.db,
-                model_class=GAExperiment,
-                filters=filters,
+            # BaseRepositoryの汎用メソッドを使用
+            return self.get_filtered_data(
+                filters={"status": status},
                 order_by_column="created_at",
                 order_asc=False,
                 limit=limit,
@@ -212,11 +212,9 @@ class GAExperimentRepository(BaseRepository):
             GA実験のリスト
         """
         try:
-            return DatabaseQueryHelper.get_filtered_records(
-                db=self.db,
-                model_class=GAExperiment,
-                order_by_column="created_at",
-                order_asc=False,
+            # BaseRepositoryの汎用メソッドを使用
+            return self.get_latest_records(
+                timestamp_column="created_at",
                 limit=limit,
             )
 

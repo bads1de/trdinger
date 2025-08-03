@@ -12,6 +12,10 @@ from datetime import datetime, timezone
 from typing import Dict, List, Any, Optional, Callable
 from abc import ABC
 from database.connection import get_db
+from app.utils.unified_error_handler import (
+    UnifiedErrorHandler,
+    UnifiedDataError,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -115,11 +119,25 @@ class BybitService(ABC):
             ccxt.NetworkError: ネットワークエラーの場合
             ccxt.ExchangeError: 取引所エラーの場合
         """
-        try:
-            logger.info(f"{operation_name}を実行中...")
+        return await UnifiedErrorHandler.safe_execute(
+            func=lambda: self._handle_ccxt_errors_impl(
+                operation_name, func, *args, **kwargs
+            ),
+            default_return=None,
+            error_message=f"CCXT操作: {operation_name}",
+            log_level="error",
+            is_api_call=False,
+        )
 
-            # 非同期で実行
-            # run_in_executorはキーワード引数を直接渡せないため、lambdaを使用
+    async def _handle_ccxt_errors_impl(
+        self, operation_name: str, func: Callable, *args, **kwargs
+    ) -> Any:
+        """CCXT操作の実装"""
+        logger.info(f"{operation_name}を実行中...")
+
+        # 非同期で実行
+        # run_in_executorはキーワード引数を直接渡せないため、lambdaを使用
+        try:
             if kwargs:
                 result = await asyncio.get_event_loop().run_in_executor(
                     None, lambda: func(*args, **kwargs)
@@ -134,16 +152,16 @@ class BybitService(ABC):
 
         except ccxt.BadSymbol as e:
             logger.error(f"無効なシンボル: {e}")
-            raise ccxt.BadSymbol(f"無効なシンボル: {e}") from e
+            raise UnifiedDataError(f"無効なシンボル: {e}") from e
         except ccxt.NetworkError as e:
             logger.error(f"ネットワークエラー: {e}")
-            raise
+            raise UnifiedDataError(f"ネットワークエラー: {e}") from e
         except ccxt.ExchangeError as e:
             logger.error(f"取引所エラー: {e}")
-            raise
+            raise UnifiedDataError(f"取引所エラー: {e}") from e
         except Exception as e:
             logger.error(f"予期しないエラー: {e}")
-            raise ccxt.ExchangeError(
+            raise UnifiedDataError(
                 f"{operation_name}中にエラーが発生しました: {e}"
             ) from e
 

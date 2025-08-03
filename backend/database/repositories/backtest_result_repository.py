@@ -3,15 +3,13 @@
 
 """
 
-from typing import List, Optional, Dict, Any, cast
+from typing import List, Optional, Dict, Any
 from datetime import datetime, timedelta
 import logging
 from sqlalchemy.orm import Session
-from sqlalchemy import desc
 
 from .base_repository import BaseRepository
 from database.models import BacktestResult
-from app.utils.database_utils import DatabaseQueryHelper
 
 logger = logging.getLogger(__name__)
 
@@ -130,28 +128,23 @@ class BacktestResultRepository(BaseRepository):
             バックテスト結果のリスト
         """
         try:
-            query = self.db.query(BacktestResult)
-
-            # フィルター適用
-            # symbolまたはstrategy_nameが指定された場合、対応する条件でクエリをフィルタリングします。
-            # これにより、特定の取引ペアや戦略の結果のみを検索できます。
+            # フィルター条件を構築
+            filters = {}
             if symbol:
-                query = query.filter(BacktestResult.symbol == symbol)
+                filters["symbol"] = symbol
             if strategy_name:
-                query = query.filter(BacktestResult.strategy_name == strategy_name)
+                filters["strategy_name"] = strategy_name
 
-            # 作成日時の降順でソート
-            # 最新のバックテスト結果が最初に表示されるように、作成日時で降順にソートします。
-            query = query.order_by(desc(BacktestResult.created_at))
+            # BaseRepositoryの汎用メソッドを使用
+            results = self.get_filtered_data(
+                filters=filters,
+                order_by_column="created_at",
+                order_asc=False,
+                limit=limit,
+                offset=offset,
+            )
 
-            # ページネーション
-            # offsetとlimitを使用して、結果のサブセット（ページ）を取得します。
-            # これにより、大量のデータでも効率的にクライアントに提供できます。
-            query = query.offset(offset).limit(limit)
-
-            results = query.all()
-
-            # 辞書形式に変換（to_dictメソッドがない場合に備えて）
+            # 辞書形式に変換
             return [result.to_dict() for result in results]
 
         except Exception as e:
@@ -168,17 +161,15 @@ class BacktestResultRepository(BaseRepository):
             バックテスト結果、見つからない場合はNone
         """
         try:
-            results = DatabaseQueryHelper.get_filtered_records(
-                db=self.db,
-                model_class=BacktestResult,
+            # BaseRepositoryの汎用メソッドを使用
+            results = self.get_filtered_data(
                 filters={"id": result_id},
                 limit=1,
             )
             if results:
-                # DatabaseQueryHelper.get_filtered_recordsはジェネリックな型を返すため、
-                # BacktestResult型として明示的にキャストしています。これにより、
-                # 返されたオブジェクトがBacktestResultの属性を持つことが保証されます。
-                result = cast(BacktestResult, results[0])
+                # BaseRepositoryのget_filtered_dataは適切な型を返すため、
+                # キャストは不要です。
+                result = results[0]
                 return result.to_dict()
             return None
 
@@ -326,9 +317,8 @@ class BacktestResultRepository(BaseRepository):
         """
         最近のバックテスト結果を取得
 
-        このメソッドは、DatabaseQueryHelperという汎用的なユーティリティクラスを利用して、
-        最新のバックテスト結果を効率的に取得します。これにより、クエリロジックの重複を防ぎ、
-        コードの再利用性と保守性を高めています。
+        BaseRepositoryの汎用メソッドを利用して、最新のバックテスト結果を効率的に取得します。
+        これにより、クエリロジックの重複を防ぎ、コードの再利用性と保守性を高めています。
 
         Args:
             limit: 取得件数
@@ -337,11 +327,9 @@ class BacktestResultRepository(BaseRepository):
             バックテスト結果のリスト
         """
         try:
-            results = DatabaseQueryHelper.get_filtered_records(
-                db=self.db,
-                model_class=BacktestResult,
-                order_by_column="created_at",
-                order_asc=False,
+            # BaseRepositoryの汎用メソッドを使用
+            results = self.get_latest_records(
+                timestamp_column="created_at",
                 limit=limit,
             )
             # 取得した結果を辞書形式のリストに変換して返します。

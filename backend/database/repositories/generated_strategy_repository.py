@@ -11,7 +11,6 @@ import logging
 
 from .base_repository import BaseRepository
 from database.models import GeneratedStrategy
-from app.utils.database_utils import DatabaseQueryHelper
 
 logger = logging.getLogger(__name__)
 
@@ -140,9 +139,8 @@ class GeneratedStrategyRepository(BaseRepository):
             if generation is not None:
                 filters["generation"] = generation
 
-            return DatabaseQueryHelper.get_filtered_records(
-                db=self.db,
-                model_class=GeneratedStrategy,
+            # BaseRepositoryの汎用メソッドを使用
+            return self.get_filtered_data(
                 filters=filters,
                 order_by_column="fitness_score",
                 order_asc=False,
@@ -196,11 +194,9 @@ class GeneratedStrategyRepository(BaseRepository):
             戦略のリスト
         """
         try:
-            filters = {"experiment_id": experiment_id, "generation": generation}
-            return DatabaseQueryHelper.get_filtered_records(
-                db=self.db,
-                model_class=GeneratedStrategy,
-                filters=filters,
+            # BaseRepositoryの汎用メソッドを使用
+            return self.get_filtered_data(
+                filters={"experiment_id": experiment_id, "generation": generation},
                 order_by_column="fitness_score",
                 order_asc=False,
             )

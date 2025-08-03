@@ -183,6 +183,7 @@ class BaseRepository(Generic[T]):
         order_by_column: Optional[str] = None,
         order_asc: bool = True,
         limit: Optional[int] = None,
+        offset: Optional[int] = None,
     ) -> List[T]:
         """
         汎用的なフィルタリングデータ取得メソッド
@@ -195,6 +196,7 @@ class BaseRepository(Generic[T]):
             order_by_column: ソート用カラム名
             order_asc: 昇順ソートかどうか
             limit: 取得件数制限
+            offset: オフセット（ページネーション用）
 
         Returns:
             フィルタリングされたレコードのリスト
@@ -210,6 +212,7 @@ class BaseRepository(Generic[T]):
                 order_by_column=order_by_column,
                 order_asc=order_asc,
                 limit=limit,
+                offset=offset,
             )
         except Exception as e:
             logger.error(

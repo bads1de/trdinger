@@ -11,6 +11,11 @@ from typing import List, Optional
 from datetime import datetime, timezone
 from database.repositories.fear_greed_repository import FearGreedIndexRepository
 from app.utils.data_converter import DataValidator
+from app.utils.unified_error_handler import (
+    UnifiedErrorHandler,
+    unified_safe_operation,
+    UnifiedDataError,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -54,54 +59,54 @@ class FearGreedIndexService:
             aiohttp.ClientError: HTTP通信エラーの場合
             ValueError: APIレスポンスが無効な場合
         """
-        try:
-            session = await self._get_session()
+        return await UnifiedErrorHandler.safe_execute(
+            func=self._fetch_fear_greed_data_impl,
+            default_return=[],
+            error_message="Fear & Greed Index データ取得",
+            log_level="error",
+            is_api_call=False,
+        )(limit)
 
-            # APIパラメータ
-            params = {"limit": limit, "format": "json"}
+    async def _fetch_fear_greed_data_impl(self, limit: int) -> List[dict]:
+        """Fear & Greed Index データ取得の実装"""
+        session = await self._get_session()
 
-            logger.info(f"Fear & Greed Index データを取得中: limit={limit}")
+        # APIパラメータ
+        params = {"limit": limit, "format": "json"}
 
-            async with session.get(self.api_url, params=params) as response:
-                if response.status != 200:
-                    raise aiohttp.ClientError(
-                        f"API request failed with status {response.status}: {await response.text()}"
-                    )
+        logger.info(f"Fear & Greed Index データを取得中: limit={limit}")
 
-                data = await response.json()
-
-                # レスポンス構造の検証
-                if not isinstance(data, dict):
-                    raise ValueError("APIレスポンスが辞書形式ではありません")
-
-                if "data" not in data:
-                    raise ValueError("APIレスポンスに'data'フィールドがありません")
-
-                if not isinstance(data["data"], list):
-                    raise ValueError(
-                        "APIレスポンスの'data'フィールドがリスト形式ではありません"
-                    )
-
-                # メタデータのエラーチェック
-                if "metadata" in data and data["metadata"].get("error"):
-                    raise ValueError(f"API error: {data['metadata']['error']}")
-
-                raw_data = data["data"]
-                logger.info(
-                    f"Fear & Greed Index データを {len(raw_data)} 件取得しました"
+        async with session.get(self.api_url, params=params) as response:
+            if response.status != 200:
+                raise UnifiedDataError(
+                    f"API request failed with status {response.status}: {await response.text()}"
                 )
 
-                # データ変換
-                converted_data = self._convert_api_data_to_db_format(raw_data)
+            data = await response.json()
 
-                return converted_data
+            # レスポンス構造の検証
+            if not isinstance(data, dict):
+                raise UnifiedDataError("APIレスポンスが辞書形式ではありません")
 
-        except aiohttp.ClientError as e:
-            logger.error(f"Fear & Greed Index API通信エラー: {e}")
-            raise
-        except Exception as e:
-            logger.error(f"Fear & Greed Index データ取得エラー: {e}")
-            raise
+            if "data" not in data:
+                raise UnifiedDataError("APIレスポンスに'data'フィールドがありません")
+
+            if not isinstance(data["data"], list):
+                raise UnifiedDataError(
+                    "APIレスポンスの'data'フィールドがリスト形式ではありません"
+                )
+
+            # メタデータのエラーチェック
+            if "metadata" in data and data["metadata"].get("error"):
+                raise UnifiedDataError(f"API error: {data['metadata']['error']}")
+
+            raw_data = data["data"]
+            logger.info(f"Fear & Greed Index データを {len(raw_data)} 件取得しました")
+
+            # データ変換
+            converted_data = self._convert_api_data_to_db_format(raw_data)
+
+            return converted_data
 
     def _convert_api_data_to_db_format(self, api_data: List[dict]) -> List[dict]:
         """
@@ -163,56 +168,68 @@ class FearGreedIndexService:
         Returns:
             処理結果を含む辞書
         """
-        try:
-            # データ取得
-            fear_greed_data = await self.fetch_fear_greed_data(limit)
-
-            if not fear_greed_data:
-                logger.warning("取得したFear & Greed Indexデータが空です")
-                return {
-                    "success": True,
-                    "fetched_count": 0,
-                    "inserted_count": 0,
-                    "message": "取得データが空でした",
-                }
-
-            # データ検証
-            if not DataValidator.validate_fear_greed_data(fear_greed_data):
-                raise ValueError("取得したFear & Greed Indexデータが無効です")
-
-            # データベースに保存
-            if repository:
-                inserted_count = repository.insert_fear_greed_data(fear_greed_data)
-            else:
-                # 実際の運用時はここでリポジトリを作成
-                logger.warning(
-                    "リポジトリが提供されていません。データは保存されませんでした。"
-                )
-                inserted_count = 0
-
-            result = {
-                "success": True,
-                "fetched_count": len(fear_greed_data),
-                "inserted_count": inserted_count,
-                "message": f"Fear & Greed Indexデータを {inserted_count} 件保存しました",
-            }
-
-            logger.info(result["message"])
-            return result
-
-        except Exception as e:
-            error_msg = (
-                f"Fear & Greed Indexデータの取得・保存中にエラーが発生しました: {e}"
-            )
-            logger.error(error_msg)
-            return {
+        return UnifiedErrorHandler.safe_execute(
+            func=lambda: self._fetch_and_save_fear_greed_data_impl(limit, repository),
+            default_return={
                 "success": False,
                 "fetched_count": 0,
                 "inserted_count": 0,
-                "error": str(e),
-                "message": error_msg,
+                "error": "処理中にエラーが発生しました",
+                "message": "Fear & Greed Indexデータの取得・保存に失敗しました",
+            },
+            error_message="Fear & Greed Index データ取得・保存",
+            log_level="error",
+            is_api_call=False,
+        )
+
+    async def _fetch_and_save_fear_greed_data_impl(
+        self, limit: int, repository: FearGreedIndexRepository
+    ) -> dict:
+        """Fear & Greed Index データ取得・保存の実装"""
+        # データ取得
+        fear_greed_data = await self.fetch_fear_greed_data(limit)
+
+        if not fear_greed_data:
+            logger.warning("取得したFear & Greed Indexデータが空です")
+            return {
+                "success": True,
+                "fetched_count": 0,
+                "inserted_count": 0,
+                "message": "取得データが空でした",
             }
 
+        # データ検証
+        if not DataValidator.validate_fear_greed_data(fear_greed_data):
+            raise UnifiedDataError("取得したFear & Greed Indexデータが無効です")
+
+        # データベースに保存
+        if repository:
+            inserted_count = repository.insert_fear_greed_data(fear_greed_data)
+        else:
+            # 実際の運用時はここでリポジトリを作成
+            logger.warning(
+                "リポジトリが提供されていません。データは保存されませんでした。"
+            )
+            inserted_count = 0
+
+        result = {
+            "success": True,
+            "fetched_count": len(fear_greed_data),
+            "inserted_count": inserted_count,
+            "message": f"Fear & Greed Indexデータを {inserted_count} 件保存しました",
+        }
+
+        logger.info(result["message"])
+        return result
+
+    @unified_safe_operation(
+        default_return={
+            "success": False,
+            "error": "処理中にエラーが発生しました",
+        },
+        context="最新データ情報取得",
+        is_api_call=False,
+    )
     async def get_latest_data_info(self, repository: FearGreedIndexRepository) -> dict:
         """
         最新のデータ情報を取得
@@ -223,24 +240,16 @@ class FearGreedIndexService:
         Returns:
             最新データ情報
         """
-        try:
-            data_range = repository.get_data_range()
-            latest_timestamp = repository.get_latest_data_timestamp()
+        data_range = repository.get_data_range()
+        latest_timestamp = repository.get_latest_data_timestamp()
 
-            return {
-                "success": True,
-                "data_range": data_range,
-                "latest_timestamp": (
-                    latest_timestamp.isoformat() if latest_timestamp else None
-                ),
-            }
-
-        except Exception as e:
-            logger.error(f"最新データ情報の取得中にエラーが発生しました: {e}")
-            return {
-                "success": False,
-                "error": str(e),
-            }
+        return {
+            "success": True,
+            "data_range": data_range,
+            "latest_timestamp": (
+                latest_timestamp.isoformat() if latest_timestamp else None
+            ),
+        }
 
     async def close(self):
         """リソースのクリーンアップ"""

@@ -11,6 +11,11 @@ import numpy as np
 import pandas as pd
 from functools import wraps
 from typing import Union
+from app.utils.unified_error_handler import (
+    UnifiedErrorHandler,
+    unified_safe_operation,
+    UnifiedDataError,
+)
 
 logger = logging.getLogger(__name__)
 

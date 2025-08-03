@@ -332,6 +332,7 @@ class DatabaseQueryHelper:
         order_by_column: Optional[str] = None,
         order_asc: bool = True,
         limit: Optional[int] = None,
+        offset: Optional[int] = None,
     ) -> List[Any]:
         """
         指定された条件でレコードを取得
@@ -346,6 +347,7 @@ class DatabaseQueryHelper:
             order_by_column: ソート対象のカラム名
             order_asc: 昇順ソートの場合True、降順の場合False
             limit: 取得件数制限
+            offset: オフセット（ページネーション用）
 
         Returns:
             条件に一致するレコードのリスト
@@ -374,6 +376,9 @@ class DatabaseQueryHelper:
                     query = query.order_by(asc(getattr(model_class, order_by_column)))
                 else:
                     query = query.order_by(desc(getattr(model_class, order_by_column)))
+
+            if offset:
+                query = query.offset(offset)
 
             if limit:
                 query = query.limit(limit)
