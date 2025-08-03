@@ -13,7 +13,6 @@ from ..utils import (
     validate_input,
     validate_multi_input,
     handle_talib_errors,
-    log_indicator_calculation,
     format_indicator_result,
     ensure_numpy_array,
     TALibError,
@@ -56,8 +55,6 @@ class VolumeIndicators:
                 f"出来高データの長さが一致しません。Volume: {len(volume)}, Close: {len(close)}"
             )
 
-        log_indicator_calculation("AD", {}, len(close))
-
         result = talib.AD(high, low, close, volume)
         return cast(np.ndarray, format_indicator_result(result, "AD"))
 
@@ -96,10 +93,6 @@ class VolumeIndicators:
                 f"出来高データの長さが一致しません。Volume: {len(volume)}, Close: {len(close)}"
             )
 
-        log_indicator_calculation(
-            "ADOSC", {"fastperiod": fastperiod, "slowperiod": slowperiod}, len(close)
-        )
-
         result = talib.ADOSC(
             high, low, close, volume, fastperiod=fastperiod, slowperiod=slowperiod
         )
@@ -126,8 +119,6 @@ class VolumeIndicators:
             raise TALibError(
                 f"出来高データの長さが一致しません。Volume: {len(volume)}, Close: {len(close)}"
             )
-
-        log_indicator_calculation("OBV", {}, len(close))
 
         result = talib.OBV(close, volume)
         return cast(np.ndarray, format_indicator_result(result, "OBV"))

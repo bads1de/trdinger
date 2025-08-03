@@ -5,9 +5,6 @@
 新しいnumpy配列ベースのオートストラテジー最適化版も含みます。
 """
 
-from typing import Dict, Any
-
-# 新しいnumpy配列ベース指標クラス（オートストラテジー最適化版）
 from .technical_indicators.trend import TrendIndicators
 from .technical_indicators.momentum import MomentumIndicators
 from .technical_indicators.volatility import VolatilityIndicators
@@ -24,11 +21,9 @@ from .utils import TALibError, validate_input, ensure_numpy_array
 from .indicator_orchestrator import TechnicalIndicatorService
 
 
-
-
 # 公開API
 __all__ = [
-    # 新しいnumpy配列ベース指標クラス（オートストラテジー最適化版）
+    # 新しいnumpy配列ベース指標クラス
     "TrendIndicators",
     "MomentumIndicators",
     "VolatilityIndicators",

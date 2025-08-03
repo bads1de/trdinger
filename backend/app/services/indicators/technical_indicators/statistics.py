@@ -13,7 +13,6 @@ from ..utils import (
     validate_input,
     validate_multi_input,
     handle_talib_errors,
-    log_indicator_calculation,
     format_indicator_result,
     ensure_numpy_array,
 )
@@ -44,8 +43,6 @@ class StatisticsIndicators:
         high = ensure_numpy_array(high)
         low = ensure_numpy_array(low)
         validate_multi_input(high, low, high, period)
-        log_indicator_calculation("BETA", {"period": period}, len(high))
-
         result = talib.BETA(high, low, timeperiod=period)
         return cast(np.ndarray, format_indicator_result(result, "BETA"))
 
@@ -66,8 +63,6 @@ class StatisticsIndicators:
         high = ensure_numpy_array(high)
         low = ensure_numpy_array(low)
         validate_multi_input(high, low, high, period)
-        log_indicator_calculation("CORREL", {"period": period}, len(high))
-
         result = talib.CORREL(high, low, timeperiod=period)
         return cast(np.ndarray, format_indicator_result(result, "CORREL"))
 
@@ -86,8 +81,6 @@ class StatisticsIndicators:
         """
         data = ensure_numpy_array(data)
         validate_input(data, period)
-        log_indicator_calculation("LINEARREG", {"period": period}, len(data))
-
         result = talib.LINEARREG(data, timeperiod=period)
         return cast(np.ndarray, format_indicator_result(result, "LINEARREG"))
 
@@ -106,8 +99,6 @@ class StatisticsIndicators:
         """
         data = ensure_numpy_array(data)
         validate_input(data, period)
-        log_indicator_calculation("LINEARREG_ANGLE", {"period": period}, len(data))
-
         result = talib.LINEARREG_ANGLE(data, timeperiod=period)
         return cast(np.ndarray, format_indicator_result(result, "LINEARREG_ANGLE"))
 
@@ -126,8 +117,6 @@ class StatisticsIndicators:
         """
         data = ensure_numpy_array(data)
         validate_input(data, period)
-        log_indicator_calculation("LINEARREG_INTERCEPT", {"period": period}, len(data))
-
         result = talib.LINEARREG_INTERCEPT(data, timeperiod=period)
         return cast(np.ndarray, format_indicator_result(result, "LINEARREG_INTERCEPT"))
 
@@ -146,8 +135,6 @@ class StatisticsIndicators:
         """
         data = ensure_numpy_array(data)
         validate_input(data, period)
-        log_indicator_calculation("LINEARREG_SLOPE", {"period": period}, len(data))
-
         result = talib.LINEARREG_SLOPE(data, timeperiod=period)
         return cast(np.ndarray, format_indicator_result(result, "LINEARREG_SLOPE"))
 
@@ -167,10 +154,6 @@ class StatisticsIndicators:
         """
         data = ensure_numpy_array(data)
         validate_input(data, period)
-        log_indicator_calculation(
-            "STDDEV", {"period": period, "nbdev": nbdev}, len(data)
-        )
-
         result = talib.STDDEV(data, timeperiod=period, nbdev=nbdev)
         return cast(np.ndarray, format_indicator_result(result, "STDDEV"))
 
@@ -189,8 +172,6 @@ class StatisticsIndicators:
         """
         data = ensure_numpy_array(data)
         validate_input(data, period)
-        log_indicator_calculation("TSF", {"period": period}, len(data))
-
         result = talib.TSF(data, timeperiod=period)
         return cast(np.ndarray, format_indicator_result(result, "TSF"))
 
@@ -210,7 +191,5 @@ class StatisticsIndicators:
         """
         data = ensure_numpy_array(data)
         validate_input(data, period)
-        log_indicator_calculation("VAR", {"period": period, "nbdev": nbdev}, len(data))
-
         result = talib.VAR(data, timeperiod=period, nbdev=nbdev)
         return cast(np.ndarray, format_indicator_result(result, "VAR"))

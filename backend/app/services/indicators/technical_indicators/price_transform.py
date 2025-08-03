@@ -13,7 +13,6 @@ from ..utils import (
     validate_input,
     validate_multi_input,
     handle_talib_errors,
-    log_indicator_calculation,
     format_indicator_result,
     ensure_numpy_array,
     TALibError,
@@ -57,8 +56,6 @@ class PriceTransformIndicators:
             )
 
         validate_input(close, 1)
-        log_indicator_calculation("AVGPRICE", {}, len(close))
-
         result = talib.AVGPRICE(open_data, high, low, close)
         return cast(np.ndarray, format_indicator_result(result, "AVGPRICE"))
 
@@ -78,8 +75,6 @@ class PriceTransformIndicators:
         high = ensure_numpy_array(high)
         low = ensure_numpy_array(low)
         validate_multi_input(high, low, high, 1)
-        log_indicator_calculation("MEDPRICE", {}, len(high))
-
         result = talib.MEDPRICE(high, low)
         return cast(np.ndarray, format_indicator_result(result, "MEDPRICE"))
 
@@ -101,8 +96,6 @@ class PriceTransformIndicators:
         low = ensure_numpy_array(low)
         close = ensure_numpy_array(close)
         validate_multi_input(high, low, close, 1)
-        log_indicator_calculation("TYPPRICE", {}, len(close))
-
         result = talib.TYPPRICE(high, low, close)
         return cast(np.ndarray, format_indicator_result(result, "TYPPRICE"))
 
@@ -124,7 +117,5 @@ class PriceTransformIndicators:
         low = ensure_numpy_array(low)
         close = ensure_numpy_array(close)
         validate_multi_input(high, low, close, 1)
-        log_indicator_calculation("WCLPRICE", {}, len(close))
-
         result = talib.WCLPRICE(high, low, close)
         return cast(np.ndarray, format_indicator_result(result, "WCLPRICE"))

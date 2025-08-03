@@ -12,7 +12,6 @@ from typing import cast
 from ..utils import (
     validate_input,
     handle_talib_errors,
-    log_indicator_calculation,
     format_indicator_result,
     ensure_numpy_array,
     TALibError,
@@ -55,8 +54,6 @@ class PatternRecognitionIndicators:
             )
 
         validate_input(close, 1)
-        log_indicator_calculation("CDL_DOJI", {}, len(close))
-
         result = talib.CDLDOJI(open_data, high, low, close)
         return cast(np.ndarray, format_indicator_result(result, "CDL_DOJI"))
 
@@ -88,8 +85,6 @@ class PatternRecognitionIndicators:
             )
 
         validate_input(close, 1)
-        log_indicator_calculation("CDL_HAMMER", {}, len(close))
-
         result = talib.CDLHAMMER(open_data, high, low, close)
         return cast(np.ndarray, format_indicator_result(result, "CDL_HAMMER"))
 
@@ -121,8 +116,6 @@ class PatternRecognitionIndicators:
             )
 
         validate_input(close, 1)
-        log_indicator_calculation("CDL_HANGING_MAN", {}, len(close))
-
         result = talib.CDLHANGINGMAN(open_data, high, low, close)
         return cast(np.ndarray, format_indicator_result(result, "CDL_HANGING_MAN"))
 
@@ -154,8 +147,6 @@ class PatternRecognitionIndicators:
             )
 
         validate_input(close, 1)
-        log_indicator_calculation("CDL_SHOOTING_STAR", {}, len(close))
-
         result = talib.CDLSHOOTINGSTAR(open_data, high, low, close)
         return cast(np.ndarray, format_indicator_result(result, "CDL_SHOOTING_STAR"))
 
@@ -187,8 +178,6 @@ class PatternRecognitionIndicators:
             )
 
         validate_input(close, 2)  # 包み線は2本のローソク足が必要
-        log_indicator_calculation("CDL_ENGULFING", {}, len(close))
-
         result = talib.CDLENGULFING(open_data, high, low, close)
         return cast(np.ndarray, format_indicator_result(result, "CDL_ENGULFING"))
 
@@ -220,8 +209,6 @@ class PatternRecognitionIndicators:
             )
 
         validate_input(close, 2)  # はらみ線は2本のローソク足が必要
-        log_indicator_calculation("CDL_HARAMI", {}, len(close))
-
         result = talib.CDLHARAMI(open_data, high, low, close)
         return cast(np.ndarray, format_indicator_result(result, "CDL_HARAMI"))
 
@@ -253,8 +240,6 @@ class PatternRecognitionIndicators:
             )
 
         validate_input(close, 2)
-        log_indicator_calculation("CDL_PIERCING", {}, len(close))
-
         result = talib.CDLPIERCING(open_data, high, low, close)
         return cast(np.ndarray, format_indicator_result(result, "CDL_PIERCING"))
 
@@ -291,10 +276,6 @@ class PatternRecognitionIndicators:
             )
 
         validate_input(close, 2)
-        log_indicator_calculation(
-            "CDL_DARK_CLOUD_COVER", {"penetration": penetration}, len(close)
-        )
-
         result = talib.CDLDARKCLOUDCOVER(
             open_data, high, low, close, penetration=penetration
         )
@@ -333,10 +314,6 @@ class PatternRecognitionIndicators:
             )
 
         validate_input(close, 3)  # 明けの明星は3本のローソク足が必要
-        log_indicator_calculation(
-            "CDL_MORNING_STAR", {"penetration": penetration}, len(close)
-        )
-
         result = talib.CDLMORNINGSTAR(
             open_data, high, low, close, penetration=penetration
         )
@@ -375,10 +352,6 @@ class PatternRecognitionIndicators:
             )
 
         validate_input(close, 3)  # 宵の明星は3本のローソク足が必要
-        log_indicator_calculation(
-            "CDL_EVENING_STAR", {"penetration": penetration}, len(close)
-        )
-
         result = talib.CDLEVENINGSTAR(
             open_data, high, low, close, penetration=penetration
         )
@@ -412,8 +385,6 @@ class PatternRecognitionIndicators:
             )
 
         validate_input(close, 3)  # 三羽烏は3本のローソク足が必要
-        log_indicator_calculation("CDL_THREE_BLACK_CROWS", {}, len(close))
-
         result = talib.CDL3BLACKCROWS(open_data, high, low, close)
         return cast(
             np.ndarray, format_indicator_result(result, "CDL_THREE_BLACK_CROWS")
@@ -447,8 +418,6 @@ class PatternRecognitionIndicators:
             )
 
         validate_input(close, 3)  # 三兵は3本のローソク足が必要
-        log_indicator_calculation("CDL_THREE_WHITE_SOLDIERS", {}, len(close))
-
         result = talib.CDL3WHITESOLDIERS(open_data, high, low, close)
         return cast(
             np.ndarray, format_indicator_result(result, "CDL_THREE_WHITE_SOLDIERS")

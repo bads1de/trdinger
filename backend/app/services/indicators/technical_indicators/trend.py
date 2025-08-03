@@ -13,7 +13,6 @@ from ..utils import (
     validate_input,
     validate_multi_input,
     handle_talib_errors,
-    log_indicator_calculation,
     format_indicator_result,
     ensure_numpy_array,
     TALibError,
@@ -34,7 +33,6 @@ class TrendIndicators:
         """Simple Moving Average (単純移動平均)"""
         data = ensure_numpy_array(data)
         validate_input(data, period)
-        log_indicator_calculation("SMA", {"period": period}, len(data))
         result = talib.SMA(data, timeperiod=period)
         return cast(np.ndarray, format_indicator_result(result, "SMA"))
 
@@ -44,7 +42,6 @@ class TrendIndicators:
         """Exponential Moving Average (指数移動平均)"""
         data = ensure_numpy_array(data)
         validate_input(data, period)
-        log_indicator_calculation("EMA", {"period": period}, len(data))
         result = talib.EMA(data, timeperiod=period)
         return cast(np.ndarray, format_indicator_result(result, "EMA"))
 
@@ -54,7 +51,6 @@ class TrendIndicators:
         """Triple Exponential Moving Average (三重指数移動平均)"""
         data = ensure_numpy_array(data)
         validate_input(data, period)
-        log_indicator_calculation("TEMA", {"period": period}, len(data))
         result = talib.TEMA(data, timeperiod=period)
         return cast(np.ndarray, format_indicator_result(result, "TEMA"))
 
@@ -64,7 +60,6 @@ class TrendIndicators:
         """Double Exponential Moving Average (二重指数移動平均)"""
         data = ensure_numpy_array(data)
         validate_input(data, period)
-        log_indicator_calculation("DEMA", {"period": period}, len(data))
         result = talib.DEMA(data, timeperiod=period)
         return cast(np.ndarray, format_indicator_result(result, "DEMA"))
 
@@ -74,7 +69,6 @@ class TrendIndicators:
         """Weighted Moving Average (加重移動平均)"""
         data = ensure_numpy_array(data)
         validate_input(data, period)
-        log_indicator_calculation("WMA", {"period": period}, len(data))
         result = talib.WMA(data, timeperiod=period)
         return cast(np.ndarray, format_indicator_result(result, "WMA"))
 
@@ -84,7 +78,6 @@ class TrendIndicators:
         """Triangular Moving Average (三角移動平均)"""
         data = ensure_numpy_array(data)
         validate_input(data, period)
-        log_indicator_calculation("TRIMA", {"period": period}, len(data))
         result = talib.TRIMA(data, timeperiod=period)
         return cast(np.ndarray, format_indicator_result(result, "TRIMA"))
 
@@ -94,7 +87,6 @@ class TrendIndicators:
         """Kaufman Adaptive Moving Average (カウフマン適応移動平均)"""
         data = ensure_numpy_array(data)
         validate_input(data, period)
-        log_indicator_calculation("KAMA", {"period": period}, len(data))
         result = talib.KAMA(data, timeperiod=period)
         return cast(np.ndarray, format_indicator_result(result, "KAMA"))
 
@@ -106,9 +98,6 @@ class TrendIndicators:
         """MESA Adaptive Moving Average (MESA適応移動平均)"""
         data = ensure_numpy_array(data)
         validate_input(data, 2)  # 最小期間は2
-        log_indicator_calculation(
-            "MAMA", {"fastlimit": fastlimit, "slowlimit": slowlimit}, len(data)
-        )
         mama, fama = talib.MAMA(data, fastlimit=fastlimit, slowlimit=slowlimit)
         return cast(
             Tuple[np.ndarray, np.ndarray],
@@ -121,9 +110,6 @@ class TrendIndicators:
         """Triple Exponential Moving Average (T3)"""
         data = ensure_numpy_array(data)
         validate_input(data, period)
-        log_indicator_calculation(
-            "T3", {"period": period, "vfactor": vfactor}, len(data)
-        )
         result = talib.T3(data, timeperiod=period, vfactor=vfactor)
         return cast(np.ndarray, format_indicator_result(result, "T3"))
 
@@ -139,9 +125,6 @@ class TrendIndicators:
         high = ensure_numpy_array(high)
         low = ensure_numpy_array(low)
         validate_multi_input(high, low, high, 2)
-        log_indicator_calculation(
-            "SAR", {"acceleration": acceleration, "maximum": maximum}, len(high)
-        )
         result = talib.SAR(high, low, acceleration=acceleration, maximum=maximum)
         return cast(np.ndarray, format_indicator_result(result, "SAR"))
 
@@ -173,7 +156,6 @@ class TrendIndicators:
             "accelerationshort": accelerationshort,
             "accelerationmaxshort": accelerationmaxshort,
         }
-        log_indicator_calculation("SAREXT", params, len(high))
         result = talib.SAREXT(high, low, **params)
         return cast(np.ndarray, format_indicator_result(result, "SAREXT"))
 
@@ -183,7 +165,6 @@ class TrendIndicators:
         """Hilbert Transform - Instantaneous Trendline"""
         data = ensure_numpy_array(data)
         validate_input(data, 2)
-        log_indicator_calculation("HT_TRENDLINE", {}, len(data))
         result = talib.HT_TRENDLINE(data)
         return cast(np.ndarray, format_indicator_result(result, "HT_TRENDLINE"))
 
@@ -195,7 +176,6 @@ class TrendIndicators:
         validate_input(data, period)
 
         # matypeは整数値として直接使用
-        log_indicator_calculation("MA", {"period": period, "matype": matype}, len(data))
         result = talib.MA(data, timeperiod=period, matype=matype)  # type: ignore
         return cast(np.ndarray, format_indicator_result(result, "MA"))
 
@@ -216,11 +196,6 @@ class TrendIndicators:
                 f"データと期間の長さが一致しません。Data: {len(data)}, Periods: {len(periods)}"
             )
         validate_input(data, minperiod)
-        log_indicator_calculation(
-            "MAVP",
-            {"minperiod": minperiod, "maxperiod": maxperiod, "matype": matype},
-            len(data),
-        )
         result = talib.MAVP(data, periods, minperiod=minperiod, maxperiod=maxperiod, matype=matype)  # type: ignore
         return cast(np.ndarray, format_indicator_result(result, "MAVP"))
 
@@ -230,7 +205,6 @@ class TrendIndicators:
         """MidPoint over period (期間中点)"""
         data = ensure_numpy_array(data)
         validate_input(data, period)
-        log_indicator_calculation("MIDPOINT", {"period": period}, len(data))
         result = talib.MIDPOINT(data, timeperiod=period)
         return cast(np.ndarray, format_indicator_result(result, "MIDPOINT"))
 
@@ -241,6 +215,5 @@ class TrendIndicators:
         high = ensure_numpy_array(high)
         low = ensure_numpy_array(low)
         validate_multi_input(high, low, high, period)
-        log_indicator_calculation("MIDPRICE", {"period": period}, len(high))
         result = talib.MIDPRICE(high, low, timeperiod=period)
         return cast(np.ndarray, format_indicator_result(result, "MIDPRICE"))

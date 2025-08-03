@@ -12,7 +12,6 @@ from typing import Tuple, cast
 from ..utils import (
     validate_input,
     handle_talib_errors,
-    log_indicator_calculation,
     format_indicator_result,
     ensure_numpy_array,
     TALibError,
@@ -49,8 +48,6 @@ class MathOperatorsIndicators:
             )
 
         validate_input(data0, 1)
-        log_indicator_calculation("ADD", {}, len(data0))
-
         result = talib.ADD(data0, data1)
         return cast(np.ndarray, format_indicator_result(result, "ADD"))
 
@@ -76,8 +73,6 @@ class MathOperatorsIndicators:
             )
 
         validate_input(data0, 1)
-        log_indicator_calculation("DIV", {}, len(data0))
-
         result = talib.DIV(data0, data1)
         return cast(np.ndarray, format_indicator_result(result, "DIV"))
 
@@ -96,8 +91,6 @@ class MathOperatorsIndicators:
         """
         data = ensure_numpy_array(data)
         validate_input(data, period)
-        log_indicator_calculation("MAX", {"period": period}, len(data))
-
         result = talib.MAX(data, timeperiod=period)
         return cast(np.ndarray, format_indicator_result(result, "MAX"))
 
@@ -116,8 +109,6 @@ class MathOperatorsIndicators:
         """
         data = ensure_numpy_array(data)
         validate_input(data, period)
-        log_indicator_calculation("MAXINDEX", {"period": period}, len(data))
-
         result = talib.MAXINDEX(data, timeperiod=period)
         return cast(np.ndarray, format_indicator_result(result, "MAXINDEX"))
 
@@ -136,8 +127,6 @@ class MathOperatorsIndicators:
         """
         data = ensure_numpy_array(data)
         validate_input(data, period)
-        log_indicator_calculation("MIN", {"period": period}, len(data))
-
         result = talib.MIN(data, timeperiod=period)
         return cast(np.ndarray, format_indicator_result(result, "MIN"))
 
@@ -156,8 +145,6 @@ class MathOperatorsIndicators:
         """
         data = ensure_numpy_array(data)
         validate_input(data, period)
-        log_indicator_calculation("MININDEX", {"period": period}, len(data))
-
         result = talib.MININDEX(data, timeperiod=period)
         return cast(np.ndarray, format_indicator_result(result, "MININDEX"))
 
@@ -176,8 +163,6 @@ class MathOperatorsIndicators:
         """
         data = ensure_numpy_array(data)
         validate_input(data, period)
-        log_indicator_calculation("MINMAX", {"period": period}, len(data))
-
         min_val, max_val = talib.MINMAX(data, timeperiod=period)
         return cast(
             Tuple[np.ndarray, np.ndarray],
@@ -201,8 +186,6 @@ class MathOperatorsIndicators:
         """
         data = ensure_numpy_array(data)
         validate_input(data, period)
-        log_indicator_calculation("MINMAXINDEX", {"period": period}, len(data))
-
         min_idx, max_idx = talib.MINMAXINDEX(data, timeperiod=period)
         return cast(
             Tuple[np.ndarray, np.ndarray],
@@ -231,8 +214,6 @@ class MathOperatorsIndicators:
             )
 
         validate_input(data0, 1)
-        log_indicator_calculation("MULT", {}, len(data0))
-
         result = talib.MULT(data0, data1)
         return cast(np.ndarray, format_indicator_result(result, "MULT"))
 
@@ -258,8 +239,6 @@ class MathOperatorsIndicators:
             )
 
         validate_input(data0, 1)
-        log_indicator_calculation("SUB", {}, len(data0))
-
         result = talib.SUB(data0, data1)
         return cast(np.ndarray, format_indicator_result(result, "SUB"))
 
@@ -278,7 +257,5 @@ class MathOperatorsIndicators:
         """
         data = ensure_numpy_array(data)
         validate_input(data, period)
-        log_indicator_calculation("SUM", {"period": period}, len(data))
-
         result = talib.SUM(data, timeperiod=period)
         return cast(np.ndarray, format_indicator_result(result, "SUM"))

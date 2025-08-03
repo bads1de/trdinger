@@ -13,7 +13,6 @@ from ..utils import (
     validate_input,
     validate_multi_input,
     handle_talib_errors,
-    log_indicator_calculation,
     format_indicator_result,
     ensure_numpy_array,
 )
@@ -48,8 +47,6 @@ class VolatilityIndicators:
         low = ensure_numpy_array(low)
         close = ensure_numpy_array(close)
         validate_multi_input(high, low, close, period)
-        log_indicator_calculation("ATR", {"period": period}, len(close))
-
         result = talib.ATR(high, low, close, timeperiod=period)
         return cast(np.ndarray, format_indicator_result(result, "ATR"))
 
@@ -74,8 +71,6 @@ class VolatilityIndicators:
         low = ensure_numpy_array(low)
         close = ensure_numpy_array(close)
         validate_multi_input(high, low, close, period)
-        log_indicator_calculation("NATR", {"period": period}, len(close))
-
         result = talib.NATR(high, low, close, timeperiod=period)
         return cast(np.ndarray, format_indicator_result(result, "NATR"))
 
@@ -94,8 +89,6 @@ class VolatilityIndicators:
             TRANGE値のnumpy配列
         """
         validate_multi_input(high, low, close, 1)
-        log_indicator_calculation("TRANGE", {}, len(close))
-
         result = talib.TRANGE(high, low, close)
         return cast(np.ndarray, format_indicator_result(result, "TRANGE"))
 
@@ -124,8 +117,6 @@ class VolatilityIndicators:
             "nbdevdn": std_dev,
             "matype": matype,
         }
-        log_indicator_calculation("BBANDS", params, len(data))
-
         upper, middle, lower = talib.BBANDS(data, **params)  # type: ignore
         return cast(
             Tuple[np.ndarray, np.ndarray, np.ndarray],
@@ -147,10 +138,6 @@ class VolatilityIndicators:
             STDDEV値のnumpy配列
         """
         validate_input(data, period)
-        log_indicator_calculation(
-            "STDDEV", {"period": period, "nbdev": nbdev}, len(data)
-        )
-
         result = talib.STDDEV(data, timeperiod=period, nbdev=nbdev)
         return cast(np.ndarray, format_indicator_result(result, "STDDEV"))
 
@@ -169,8 +156,6 @@ class VolatilityIndicators:
             VAR値のnumpy配列
         """
         validate_input(data, period)
-        log_indicator_calculation("VAR", {"period": period, "nbdev": nbdev}, len(data))
-
         result = talib.VAR(data, timeperiod=period, nbdev=nbdev)
         return cast(np.ndarray, format_indicator_result(result, "VAR"))
 
@@ -192,8 +177,6 @@ class VolatilityIndicators:
             ADX値のnumpy配列
         """
         validate_multi_input(high, low, close, period)
-        log_indicator_calculation("ADX", {"period": period}, len(close))
-
         result = talib.ADX(high, low, close, timeperiod=period)
         return cast(np.ndarray, format_indicator_result(result, "ADX"))
 
@@ -215,8 +198,6 @@ class VolatilityIndicators:
             ADXR値のnumpy配列
         """
         validate_multi_input(high, low, close, period)
-        log_indicator_calculation("ADXR", {"period": period}, len(close))
-
         result = talib.ADXR(high, low, close, timeperiod=period)
         return cast(np.ndarray, format_indicator_result(result, "ADXR"))
 
@@ -238,8 +219,6 @@ class VolatilityIndicators:
             DX値のnumpy配列
         """
         validate_multi_input(high, low, close, period)
-        log_indicator_calculation("DX", {"period": period}, len(close))
-
         result = talib.DX(high, low, close, timeperiod=period)
         return cast(np.ndarray, format_indicator_result(result, "DX"))
 
@@ -261,8 +240,6 @@ class VolatilityIndicators:
             MINUS_DI値のnumpy配列
         """
         validate_multi_input(high, low, close, period)
-        log_indicator_calculation("MINUS_DI", {"period": period}, len(close))
-
         result = talib.MINUS_DI(high, low, close, timeperiod=period)
         return cast(np.ndarray, format_indicator_result(result, "MINUS_DI"))
 
@@ -284,8 +261,6 @@ class VolatilityIndicators:
             PLUS_DI値のnumpy配列
         """
         validate_multi_input(high, low, close, period)
-        log_indicator_calculation("PLUS_DI", {"period": period}, len(close))
-
         result = talib.PLUS_DI(high, low, close, timeperiod=period)
         return cast(np.ndarray, format_indicator_result(result, "PLUS_DI"))
 
@@ -304,8 +279,6 @@ class VolatilityIndicators:
             MINUS_DM値のnumpy配列
         """
         validate_multi_input(high, low, high, period)  # closeの代わりにhighを使用
-        log_indicator_calculation("MINUS_DM", {"period": period}, len(high))
-
         result = talib.MINUS_DM(high, low, timeperiod=period)
         return cast(np.ndarray, format_indicator_result(result, "MINUS_DM"))
 
@@ -324,8 +297,6 @@ class VolatilityIndicators:
             PLUS_DM値のnumpy配列
         """
         validate_multi_input(high, low, high, period)  # closeの代わりにhighを使用
-        log_indicator_calculation("PLUS_DM", {"period": period}, len(high))
-
         result = talib.PLUS_DM(high, low, timeperiod=period)
         return cast(np.ndarray, format_indicator_result(result, "PLUS_DM"))
 
@@ -346,8 +317,6 @@ class VolatilityIndicators:
             (Aroon Down, Aroon Up)のtuple
         """
         validate_multi_input(high, low, high, period)  # closeの代わりにhighを使用
-        log_indicator_calculation("AROON", {"period": period}, len(high))
-
         aroondown, aroonup = talib.AROON(high, low, timeperiod=period)
         return cast(
             Tuple[np.ndarray, np.ndarray],
@@ -369,7 +338,5 @@ class VolatilityIndicators:
             AROONOSC値のnumpy配列
         """
         validate_multi_input(high, low, high, period)  # closeの代わりにhighを使用
-        log_indicator_calculation("AROONOSC", {"period": period}, len(high))
-
         result = talib.AROONOSC(high, low, timeperiod=period)
         return cast(np.ndarray, format_indicator_result(result, "AROONOSC"))

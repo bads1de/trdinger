@@ -12,7 +12,6 @@ from typing import Tuple, cast
 from ..utils import (
     validate_input,
     handle_talib_errors,
-    log_indicator_calculation,
     format_indicator_result,
     ensure_numpy_array,
 )
@@ -40,8 +39,6 @@ class CycleIndicators:
         """
         data = ensure_numpy_array(data)
         validate_input(data, 2)
-        log_indicator_calculation("HT_DCPERIOD", {}, len(data))
-
         result = talib.HT_DCPERIOD(data)
         return cast(np.ndarray, format_indicator_result(result, "HT_DCPERIOD"))
 
@@ -59,8 +56,6 @@ class CycleIndicators:
         """
         data = ensure_numpy_array(data)
         validate_input(data, 2)
-        log_indicator_calculation("HT_DCPHASE", {}, len(data))
-
         result = talib.HT_DCPHASE(data)
         return cast(np.ndarray, format_indicator_result(result, "HT_DCPHASE"))
 
@@ -78,8 +73,6 @@ class CycleIndicators:
         """
         data = ensure_numpy_array(data)
         validate_input(data, 2)
-        log_indicator_calculation("HT_PHASOR", {}, len(data))
-
         inphase, quadrature = talib.HT_PHASOR(data)
         return cast(
             Tuple[np.ndarray, np.ndarray],
@@ -100,8 +93,6 @@ class CycleIndicators:
         """
         data = ensure_numpy_array(data)
         validate_input(data, 2)
-        log_indicator_calculation("HT_SINE", {}, len(data))
-
         sine, leadsine = talib.HT_SINE(data)
         return cast(
             Tuple[np.ndarray, np.ndarray],
@@ -122,7 +113,5 @@ class CycleIndicators:
         """
         data = ensure_numpy_array(data)
         validate_input(data, 2)
-        log_indicator_calculation("HT_TRENDMODE", {}, len(data))
-
         result = talib.HT_TRENDMODE(data)
         return cast(np.ndarray, format_indicator_result(result, "HT_TRENDMODE"))

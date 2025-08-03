@@ -12,7 +12,6 @@ from typing import cast
 from ..utils import (
     validate_input,
     handle_talib_errors,
-    log_indicator_calculation,
     format_indicator_result,
     ensure_numpy_array,
 )
@@ -44,8 +43,6 @@ class MathTransformIndicators:
 
         data = ensure_numpy_array(data)
         validate_input(data, 1)
-        log_indicator_calculation("ACOS", {}, len(data))
-
         # 入力データの範囲チェックとクリッピング
         min_val, max_val = np.nanmin(data), np.nanmax(data)
         if min_val < -1.0 or max_val > 1.0:
@@ -76,8 +73,6 @@ class MathTransformIndicators:
 
         data = ensure_numpy_array(data)
         validate_input(data, 1)
-        log_indicator_calculation("ASIN", {}, len(data))
-
         # 入力データの範囲チェックとクリッピング
         min_val, max_val = np.nanmin(data), np.nanmax(data)
         if min_val < -1.0 or max_val > 1.0:
@@ -104,8 +99,6 @@ class MathTransformIndicators:
         """
         data = ensure_numpy_array(data)
         validate_input(data, 1)
-        log_indicator_calculation("ATAN", {}, len(data))
-
         result = talib.ATAN(data)
         return cast(np.ndarray, format_indicator_result(result, "ATAN"))
 
@@ -123,8 +116,6 @@ class MathTransformIndicators:
         """
         data = ensure_numpy_array(data)
         validate_input(data, 1)
-        log_indicator_calculation("CEIL", {}, len(data))
-
         result = talib.CEIL(data)
         return cast(np.ndarray, format_indicator_result(result, "CEIL"))
 
@@ -142,8 +133,6 @@ class MathTransformIndicators:
         """
         data = ensure_numpy_array(data)
         validate_input(data, 1)
-        log_indicator_calculation("COS", {}, len(data))
-
         result = talib.COS(data)
         return cast(np.ndarray, format_indicator_result(result, "COS"))
 
@@ -161,8 +150,6 @@ class MathTransformIndicators:
         """
         data = ensure_numpy_array(data)
         validate_input(data, 1)
-        log_indicator_calculation("COSH", {}, len(data))
-
         result = talib.COSH(data)
         return cast(np.ndarray, format_indicator_result(result, "COSH"))
 
@@ -180,8 +167,6 @@ class MathTransformIndicators:
         """
         data = ensure_numpy_array(data)
         validate_input(data, 1)
-        log_indicator_calculation("EXP", {}, len(data))
-
         result = talib.EXP(data)
         return cast(np.ndarray, format_indicator_result(result, "EXP"))
 
@@ -199,8 +184,6 @@ class MathTransformIndicators:
         """
         data = ensure_numpy_array(data)
         validate_input(data, 1)
-        log_indicator_calculation("FLOOR", {}, len(data))
-
         result = talib.FLOOR(data)
         return cast(np.ndarray, format_indicator_result(result, "FLOOR"))
 
@@ -222,8 +205,6 @@ class MathTransformIndicators:
 
         data = ensure_numpy_array(data)
         validate_input(data, 1)
-        log_indicator_calculation("LN", {}, len(data))
-
         # 入力データの範囲チェック（正の値のみ有効）
         min_val = np.nanmin(data)
         if min_val <= 0.0:
@@ -254,8 +235,6 @@ class MathTransformIndicators:
 
         data = ensure_numpy_array(data)
         validate_input(data, 1)
-        log_indicator_calculation("LOG10", {}, len(data))
-
         # 入力データの範囲チェック（正の値のみ有効）
         min_val = np.nanmin(data)
         if min_val <= 0.0:
@@ -282,8 +261,6 @@ class MathTransformIndicators:
         """
         data = ensure_numpy_array(data)
         validate_input(data, 1)
-        log_indicator_calculation("SIN", {}, len(data))
-
         result = talib.SIN(data)
         return cast(np.ndarray, format_indicator_result(result, "SIN"))
 
@@ -301,8 +278,6 @@ class MathTransformIndicators:
         """
         data = ensure_numpy_array(data)
         validate_input(data, 1)
-        log_indicator_calculation("SINH", {}, len(data))
-
         result = talib.SINH(data)
         return cast(np.ndarray, format_indicator_result(result, "SINH"))
 
@@ -324,8 +299,6 @@ class MathTransformIndicators:
 
         data = ensure_numpy_array(data)
         validate_input(data, 1)
-        log_indicator_calculation("SQRT", {}, len(data))
-
         # 入力データの範囲チェック（非負の値のみ有効）
         min_val = np.nanmin(data)
         if min_val < 0.0:
@@ -352,8 +325,6 @@ class MathTransformIndicators:
         """
         data = ensure_numpy_array(data)
         validate_input(data, 1)
-        log_indicator_calculation("TAN", {}, len(data))
-
         result = talib.TAN(data)
         return cast(np.ndarray, format_indicator_result(result, "TAN"))
 
@@ -371,7 +342,5 @@ class MathTransformIndicators:
         """
         data = ensure_numpy_array(data)
         validate_input(data, 1)
-        log_indicator_calculation("TANH", {}, len(data))
-
         result = talib.TANH(data)
         return cast(np.ndarray, format_indicator_result(result, "TANH"))

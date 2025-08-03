@@ -181,22 +181,6 @@ def ensure_numpy_array(data: Union[np.ndarray, list, "pd.Series"]) -> np.ndarray
         raise TALibError(f"データをnumpy配列に変換できません: {e}")
 
 
-def log_indicator_calculation(
-    indicator_name: str, parameters: dict, data_length: int
-) -> None:
-    """
-    指標計算のログ出力
-
-    Args:
-        indicator_name: 指標名
-        parameters: パラメータ辞書
-        data_length: データ長
-    """
-    # logger.debug(
-    #     f"指標計算開始: {indicator_name}, パラメータ: {parameters}, データ長: {data_length}"
-    # )
-    pass
-
 
 def format_indicator_result(
     result: Union[np.ndarray, tuple], indicator_name: str
