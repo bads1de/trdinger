@@ -181,42 +181,17 @@ def ensure_numpy_array(data: Union[np.ndarray, list, "pd.Series"]) -> np.ndarray
         raise TALibError(f"データをnumpy配列に変換できません: {e}")
 
 
-
 def format_indicator_result(
-    result: Union[np.ndarray, tuple], indicator_name: str
+    result: Union[np.ndarray, tuple]
 ) -> Union[np.ndarray, tuple]:
     """
-    指標計算結果のフォーマット
+    指標計算結果のフォーマット（現在はプレースホルダー）
 
     Args:
         result: 計算結果
-        indicator_name: 指標名
 
     Returns:
         フォーマット済みの結果
     """
-    if isinstance(result, np.ndarray):
-        # NaNの数をログ出力
-        nan_count = np.sum(np.isnan(result))
-        if nan_count > 0:
-            # logger.debug(f"{indicator_name}: {nan_count}個のNaN値があります")
-            pass
-
-        return result
-
-    elif isinstance(result, tuple):
-        # tupleの各要素をチェック
-        formatted_results = []
-        for i, arr in enumerate(result):
-            if isinstance(arr, np.ndarray):
-                nan_count = np.sum(np.isnan(arr))
-                if nan_count > 0:
-                    # logger.debug(
-                    #     f"{indicator_name}[{i}]: {nan_count}個のNaN値があります"
-                    # )
-                    pass
-            formatted_results.append(arr)
-
-        return tuple(formatted_results)
-
+    # 現在は特に処理を行わず、そのまま返す
     return result

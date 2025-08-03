@@ -107,7 +107,6 @@ class AutoMLFeatureGenerationService:
             Exception: データ取得に失敗した場合
         """
         try:
-            logger.debug(f"OHLCVデータ取得開始: {symbol}, {timeframe}, limit={limit}")
 
             # MarketDataOrchestrationServiceを使用してデータを取得
             data_response = await self.market_data_service.get_ohlcv_data(
@@ -130,7 +129,6 @@ class AutoMLFeatureGenerationService:
             # DataFrameに変換
             ohlcv_data = self._convert_to_dataframe(ohlcv_records)
 
-            logger.debug(f"OHLCVデータ取得完了: {len(ohlcv_data)}件")
             return ohlcv_data
 
         except Exception as e:
@@ -221,8 +219,6 @@ class AutoMLFeatureGenerationService:
             if ohlcv_data.empty or "Close" not in ohlcv_data.columns:
                 logger.warning("ターゲット変数計算用のデータが不足しています")
                 return None
-
-            logger.debug("ターゲット変数生成開始")
 
             # 価格変化率を計算（次の期間の価格変化）
             close_prices = ohlcv_data["Close"].copy()

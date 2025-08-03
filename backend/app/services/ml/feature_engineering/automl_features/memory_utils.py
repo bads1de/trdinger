@@ -157,7 +157,9 @@ def memory_efficient_processing(operation_name: str = "処理"):
         gc.collect()
         end_memory = psutil.Process().memory_info().rss / 1024 / 1024
         memory_diff = end_memory - start_memory
-        # ここでの詳細デバッグログ出力は抑制
+        logger.debug(
+            f"{operation_name}終了時メモリ: {end_memory:.2f}MB (差分: {memory_diff:+.2f}MB)"
+        )
 
 
 def memory_monitor_decorator(func: Callable) -> Callable:

@@ -174,9 +174,6 @@ class ConstraintEngine:
     ):
         """インディケーターの制約を登録"""
         self.constraint_registry[indicator_name] = constraints
-        # self.logger.debug(
-        #     f"Registered {len(constraints)} constraints for {indicator_name}"
-        # )
 
     def apply_constraints(
         self, indicator_name: str, params: Dict[str, Any]

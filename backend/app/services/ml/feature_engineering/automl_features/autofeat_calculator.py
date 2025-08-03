@@ -410,18 +410,22 @@ class AutoFeatCalculator:
 
             # 最終的なNaNチェックと統計的補完
             if processed_df.isnull().any().any():
-                logger.warning("前処理後にもNaN値が残っています。統計的手法で補完します。")
+                logger.warning(
+                    "前処理後にもNaN値が残っています。統計的手法で補完します。"
+                )
                 processed_df = data_preprocessor.transform_missing_values(
                     processed_df, strategy="median"
                 )
 
             if processed_target.isnull().any():
-                logger.warning("ターゲット変数にNaN値があります。統計的手法で補完します。")
-                target_df = pd.DataFrame({'target': processed_target})
+                logger.warning(
+                    "ターゲット変数にNaN値があります。統計的手法で補完します。"
+                )
+                target_df = pd.DataFrame({"target": processed_target})
                 target_df = data_preprocessor.transform_missing_values(
                     target_df, strategy="median"
                 )
-                processed_target = target_df['target']
+                processed_target = target_df["target"]
 
             # 定数列を除去
             constant_columns = []
@@ -626,10 +630,20 @@ class AutoFeatCalculator:
             if self.autofeat_model is not None:
                 # AutoFeatモデル内部の属性を徹底的にクリア
                 autofeat_attrs = [
-                    "feateng_cols_", "featsel_", "model_", "scaler_",
-                    "X_", "y_", "feature_names_in_", "n_features_in_",
-                    "feature_importances_", "coef_", "intercept_",
-                    "_feature_names", "_feature_types", "_transformations"
+                    "feateng_cols_",
+                    "featsel_",
+                    "model_",
+                    "scaler_",
+                    "X_",
+                    "y_",
+                    "feature_names_in_",
+                    "n_features_in_",
+                    "feature_importances_",
+                    "coef_",
+                    "intercept_",
+                    "_feature_names",
+                    "_feature_types",
+                    "_transformations",
                 ]
 
                 for attr in autofeat_attrs:
@@ -637,7 +651,9 @@ class AutoFeatCalculator:
                         try:
                             setattr(self.autofeat_model, attr, None)
                         except Exception as attr_error:
-                            pass
+                            logger.debug(
+                                f"属性 '{attr}' のクリア中にエラー: {attr_error}"
+                            )
 
                 # モデル自体をクリア
                 self.autofeat_model = None
@@ -648,12 +664,14 @@ class AutoFeatCalculator:
             self.last_selection_info = {}
 
             # パフォーマンス最適化ツールもクリア
-            if hasattr(self, 'performance_optimizer') and self.performance_optimizer:
+            if hasattr(self, "performance_optimizer") and self.performance_optimizer:
                 try:
-                    if hasattr(self.performance_optimizer, 'clear'):
+                    if hasattr(self.performance_optimizer, "clear"):
                         self.performance_optimizer.clear()
                 except Exception as perf_error:
-                    logger.debug(f"パフォーマンス最適化ツールクリア中にエラー: {perf_error}")
+                    logger.error(
+                        f"パフォーマンス最適化ツールクリア中にエラー: {perf_error}"
+                    )
 
             # 強制ガベージコレクション
             self._force_garbage_collection()

@@ -129,16 +129,6 @@ class MLTrainingService:
             return "single"
         return "ensemble"
 
-    @staticmethod
-    def get_available_single_models() -> list:
-        """
-        利用可能な単一モデルのリストを取得
-
-        Returns:
-            利用可能なモデルタイプのリスト
-        """
-        return SingleModelTrainer.get_available_models()
-
     def train_model(
         self,
         training_data: pd.DataFrame,

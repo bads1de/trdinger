@@ -17,7 +17,7 @@ import gc
 import functools
 import tracemalloc
 from contextlib import contextmanager
-from memory_profiler import memory_usage  # type: ignore
+from memory_profiler import memory_usage
 
 
 logger = logging.getLogger(__name__)

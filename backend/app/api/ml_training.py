@@ -282,26 +282,6 @@ async def stop_ml_training():
     return await UnifiedErrorHandler.safe_execute_async(_stop_training)
 
 
-@router.get("/available-models")
-async def get_available_models():
-    """
-    利用可能な単一モデルのリストを取得
-    """
-
-    async def _get_available_models():
-        from app.services.ml.ml_training_service import MLTrainingService
-
-        available_models = MLTrainingService.get_available_single_models()
-
-        return {
-            "success": True,
-            "available_models": available_models,
-            "message": f"{len(available_models)}個のモデルが利用可能です",
-        }
-
-    return await UnifiedErrorHandler.safe_execute_async(_get_available_models)
-
-
 @router.get("/algorithms")
 async def get_available_algorithms():
     """

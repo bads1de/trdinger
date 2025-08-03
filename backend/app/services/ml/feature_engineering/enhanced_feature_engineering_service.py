@@ -402,7 +402,7 @@ class EnhancedFeatureEngineeringService(FeatureEngineeringService):
         # AutoML特徴量（残り）
         automl_features = all_columns[manual_feature_count:]
 
-        # AutoML特徴量をツール別に分類（Featuretoolsは削除済み）
+        # AutoML特徴量をツール別に分類
         tsfresh_features = [
             col
             for col in automl_features
@@ -545,11 +545,6 @@ class EnhancedFeatureEngineeringService(FeatureEngineeringService):
                     # TSFreshCalculatorの設定も更新
                     self.tsfresh_calculator.config = self.automl_config.tsfresh
 
-            # Featuretools設定は完全削除済み
-            # 互換キーが来ても無視するだけでログは出さない
-            if "featuretools" in config_dict:
-                pass
-
             # AutoFeat設定の更新
             if "autofeat" in config_dict:
                 autofeat_config = config_dict["autofeat"]
@@ -561,7 +556,7 @@ class EnhancedFeatureEngineeringService(FeatureEngineeringService):
                     # AutoFeatCalculatorの設定も更新
                     self.autofeat_calculator.config = self.automl_config.autofeat
 
-            logger.debug("AutoML設定を更新しました")
+            logger.info("AutoML設定を更新しました")
 
         except Exception as e:
             logger.error(f"AutoML設定更新エラー: {e}")

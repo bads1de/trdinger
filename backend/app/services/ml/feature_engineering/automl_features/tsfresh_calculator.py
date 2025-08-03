@@ -6,21 +6,21 @@ TSFresh特徴量計算クラス
 """
 
 import logging
-import pandas as pd
-import numpy as np
-from typing import Dict, List, Optional, Any
 import warnings
+from typing import Any, Dict, List, Optional
+
+import numpy as np
+import pandas as pd
+
+from tsfresh import extract_features
+from tsfresh.utilities.dataframe_functions import impute
 
 from .....utils.unified_error_handler import safe_ml_operation
 
 from .automl_config import TSFreshConfig
-from .feature_settings import FinancialFeatureSettings, MarketRegime
 from .feature_selector import AdvancedFeatureSelector
+from .feature_settings import FinancialFeatureSettings, MarketRegime
 from .performance_optimizer import PerformanceOptimizer
-
-
-from tsfresh import extract_features
-from tsfresh.utilities.dataframe_functions import impute
 
 
 logger = logging.getLogger(__name__)
@@ -645,17 +645,22 @@ class TSFreshFeatureCalculator:
             self.last_extraction_info = {}
 
             # パフォーマンス最適化ツールのクリーンアップ
-            if hasattr(self.performance_optimizer, 'cleanup'):
+            if hasattr(self.performance_optimizer, "cleanup"):
                 try:
                     self.performance_optimizer.cleanup()
                 except Exception as perf_error:
-                    logger.debug(f"パフォーマンス最適化ツールクリア中にエラー: {perf_error}")
+                    logger.debug(
+                        f"パフォーマンス最適化ツールクリア中にエラー: {perf_error}"
+                    )
 
             # 強制ガベージコレクション
             import gc
+
             collected = gc.collect()
 
-            logger.debug(f"TSFreshCalculatorのクリーンアップ完了（{collected}オブジェクト回収）")
+            logger.debug(
+                f"TSFreshCalculatorのクリーンアップ完了（{collected}オブジェクト回収）"
+            )
 
         except Exception as e:
             logger.error(f"TSFreshCalculatorクリーンアップエラー: {e}")

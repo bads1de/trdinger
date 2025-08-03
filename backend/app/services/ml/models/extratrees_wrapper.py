@@ -152,23 +152,17 @@ class ExtraTreesModel:
                 # 基本指標
                 "train_accuracy": train_accuracy,
                 "test_accuracy": test_accuracy,
-                "accuracy": test_accuracy,  # フロントエンド用の統一キー
                 "train_balanced_accuracy": train_balanced_acc,
                 "test_balanced_accuracy": test_balanced_acc,
-                "balanced_accuracy": test_balanced_acc,  # フロントエンド用の統一キー
                 "train_f1_score": train_f1,
                 "test_f1_score": test_f1,
-                "f1_score": test_f1,  # フロントエンド用の統一キー
                 # 追加指標
                 "train_mcc": train_mcc,
                 "test_mcc": test_mcc,
-                "matthews_corrcoef": test_mcc,  # フロントエンド用の統一キー
                 "train_roc_auc": train_roc_auc,
                 "test_roc_auc": test_roc_auc,
-                "auc_roc": test_roc_auc,  # フロントエンド用の統一キー
                 "train_pr_auc": train_pr_auc,
                 "test_pr_auc": test_pr_auc,
-                "auc_pr": test_pr_auc,  # フロントエンド用の統一キー
                 # モデル情報
                 "feature_importance": feature_importance,
                 "n_estimators": self.model.n_estimators,

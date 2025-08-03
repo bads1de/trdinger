@@ -209,12 +209,6 @@ class EnsembleModelManager:
 
                 # 予測
                 y_pred = model.predict(X_test)
-                y_proba = (
-                    model.predict_proba(X_test)
-                    if hasattr(model, "predict_proba")
-                    else None
-                )
-
                 # 評価
                 results[name] = {
                     "accuracy": accuracy_score(y_test, y_pred),
