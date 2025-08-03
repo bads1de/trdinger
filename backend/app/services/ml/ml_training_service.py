@@ -115,6 +115,11 @@ class MLTrainingService:
             logger.info(f"単一モデル設定: {single_model_config}")
 
     @staticmethod
+    def get_available_single_models() -> list:
+        """利用可能な単一モデルのリストを取得"""
+        return SingleModelTrainer.get_available_models()
+
+    @staticmethod
     def determine_trainer_type(ensemble_config: Optional[Dict[str, Any]]) -> str:
         """
         アンサンブル設定に基づいてトレーナータイプを決定

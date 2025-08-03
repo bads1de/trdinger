@@ -1,6 +1,8 @@
 import { useState, useEffect, useCallback } from "react";
 import { useApiCall } from "./useApiCall";
 import { EnsembleSettingsConfig } from "@/components/ml/EnsembleSettings";
+// 利用可能モデルはフロント定数で管理
+import { ALGORITHMS } from "../constants/algorithms";
 
 /**
  * パラメータ空間設定インターフェース
@@ -299,7 +301,8 @@ export const useMLTraining = () => {
   const { execute: checkTrainingStatusApi } = useApiCall<TrainingStatus>();
   const { execute: getActiveProcessesApi } = useApiCall<ProcessListResponse>();
   const { execute: forceStopProcessApi } = useApiCall();
-  const { execute: getAvailableModelsApi } = useApiCall();
+  // バックエンドAPI廃止に伴い、利用可能モデルはフロント定数から取得
+  // ここでのimportは構文上不正のため、ファイル先頭レベルへ移動しました
 
   const checkTrainingStatus = useCallback(() => {
     checkTrainingStatusApi("/api/ml-training/training/status", {
@@ -315,15 +318,15 @@ export const useMLTraining = () => {
   }, [checkTrainingStatusApi]);
 
   const fetchAvailableModels = useCallback(() => {
-    getAvailableModelsApi("/api/ml-training/available-models", {
-      onSuccess: (response: any) => {
-        setAvailableModels(response.available_models || []);
-      },
-      onError: (errorMessage) => {
-        console.error("利用可能なモデルの取得に失敗:", errorMessage);
-      },
-    });
-  }, [getAvailableModelsApi]);
+    try {
+      // フロント定数（constants/algorithms）からキー一覧を使用
+      const models = Object.keys(ALGORITHMS);
+      setAvailableModels(models);
+    } catch (error) {
+      console.error("利用可能なモデルの取得に失敗:", error);
+      setAvailableModels([]);
+    }
+  }, []);
 
   useEffect(() => {
     const interval = setInterval(() => {

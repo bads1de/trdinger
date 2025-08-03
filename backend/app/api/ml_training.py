@@ -220,21 +220,7 @@ async def start_ml_training(
         logger.info(f"📋 単一モデル設定辞書: {single_dict}")
 
     async def _start_training():
-        # アルゴリズム名の検証（algorithm_registry 非依存）
-        if config.single_model_config:
-            from app.services.ml.ml_training_service import MLTrainingService
-
-            model_type = config.single_model_config.model_type
-            available_models = MLTrainingService.get_available_single_models()
-
-            if model_type not in available_models:
-                return {
-                    "success": False,
-                    "error": f"指定されたアルゴリズム '{model_type}' は利用できません",
-                    "available_models": available_models,
-                    "message": f"利用可能なモデル: {', '.join(available_models)}",
-                }
-
+        # サーバ側でのアルゴリズム一覧取得・検証は廃止（フロントの定数で管理）
         orchestration_service = MLTrainingOrchestrationService()
         return await orchestration_service.start_training(
             config=config, background_tasks=background_tasks, db=db
@@ -282,56 +268,7 @@ async def stop_ml_training():
     return await UnifiedErrorHandler.safe_execute_async(_stop_training)
 
 
-@router.get("/algorithms")
-async def get_available_algorithms():
-    """
-    利用可能なアルゴリズム名のリストを取得（軽量版）
-    フロントエンドは定数を使用するため、検証用の簡単なリストのみ返す
-    """
-
-    async def _get_available_algorithms():
-        # algorithm_registry からは取得せず、MLTrainingServiceの一覧を使用
-        from app.services.ml.ml_training_service import MLTrainingService
-
-        algorithms = MLTrainingService.get_available_single_models()
-
-        return {
-            "success": True,
-            "algorithms": algorithms,
-            "total_count": len(algorithms),
-            "message": f"{len(algorithms)}個のアルゴリズムが利用可能です",
-        }
-
-    return await UnifiedErrorHandler.safe_execute_async(_get_available_algorithms)
+# フロント側定数管理へ移行のため、利用可能アルゴリズム一覧APIは削除しました
 
 
-@router.get("/algorithms/{algorithm_name}")
-async def validate_algorithm(algorithm_name: str):
-    """
-    指定されたアルゴリズムが利用可能かどうかを検証
-    フロントエンドは定数を使用するため、検証のみ行う
-    """
-
-    async def _validate_algorithm():
-        # algorithm_registry 非依存で検証
-        from app.services.ml.ml_training_service import MLTrainingService
-
-        available_algorithms = MLTrainingService.get_available_single_models()
-        is_valid = algorithm_name in available_algorithms
-
-        if not is_valid:
-            return {
-                "success": False,
-                "error": f"アルゴリズム '{algorithm_name}' が見つかりません",
-                "available_algorithms": available_algorithms,
-                "message": f"利用可能なアルゴリズム: {', '.join(available_algorithms)}",
-            }
-
-        return {
-            "success": True,
-            "algorithm_name": algorithm_name,
-            "is_valid": True,
-            "message": f"アルゴリズム '{algorithm_name}' は利用可能です",
-        }
-
-    return await UnifiedErrorHandler.safe_execute_async(_validate_algorithm)
+# フロント側定数管理へ移行のため、アルゴリズム検証APIは削除しました
