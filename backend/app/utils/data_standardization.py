@@ -30,7 +30,6 @@ def standardize_ohlcv_columns(df: pd.DataFrame) -> pd.DataFrame:
         "low": "Low",
         "close": "Close",
         "volume": "Volume",
-        # 他の可能な形式も対応
         "o": "Open",
         "h": "High",
         "l": "Low",

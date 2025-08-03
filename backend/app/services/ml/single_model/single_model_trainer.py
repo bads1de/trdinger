@@ -40,6 +40,7 @@ class SingleModelTrainer(BaseMLTrainer):
 
         self.model_type = model_type.lower()
         self.single_model = None
+        self.last_training_results = None  # 最後の学習結果を保持
 
         # サポートされているモデルタイプを確認
         supported_models = [
@@ -107,6 +108,9 @@ class SingleModelTrainer(BaseMLTrainer):
                 "feature_count": len(X_train.columns),
                 **training_result,
             }
+
+            # 学習結果を保存（save_modelで使用）
+            self.last_training_results = result
 
             logger.info(f"✅ {self.model_type.upper()}モデルの学習が完了しました")
             return result
@@ -251,6 +255,40 @@ class SingleModelTrainer(BaseMLTrainer):
                     ),
                 }
             )
+
+            # 学習結果の評価指標をメタデータに追加
+            if self.last_training_results:
+                # 主要な評価指標を抽出
+                performance_metrics = {}
+                for key in [
+                    "accuracy",
+                    "balanced_accuracy",
+                    "f1_score",
+                    "matthews_corrcoef",
+                    "auc_roc",
+                    "auc_pr",
+                    "test_accuracy",
+                    "test_balanced_accuracy",
+                    "test_f1_score",
+                    "test_mcc",
+                    "test_roc_auc",
+                    "test_pr_auc",
+                ]:
+                    if key in self.last_training_results:
+                        performance_metrics[key] = self.last_training_results[key]
+
+                # メタデータに追加
+                final_metadata.update(performance_metrics)
+                final_metadata["training_samples"] = self.last_training_results.get(
+                    "training_samples", 0
+                )
+                final_metadata["test_samples"] = self.last_training_results.get(
+                    "test_samples", 0
+                )
+
+                logger.info(
+                    f"評価指標をメタデータに追加: {len(performance_metrics)}個の指標"
+                )
 
             # 特徴量重要度をメタデータに追加
             try:

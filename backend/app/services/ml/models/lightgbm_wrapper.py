@@ -106,13 +106,30 @@ class LightGBMModel:
 
             # 詳細な評価指標を計算
             from ....utils.metrics_calculator import calculate_detailed_metrics
+            from sklearn.metrics import average_precision_score
 
-            detailed_metrics = calculate_detailed_metrics(y_test, y_pred_class, y_pred_proba)
+            detailed_metrics = calculate_detailed_metrics(
+                y_test, y_pred_class, y_pred_proba
+            )
+
+            # 多クラス分類でのPR-AUC計算を追加
+            if num_classes > 2:
+                pr_aucs = []
+                for i in range(num_classes):
+                    y_binary = (y_test == i).astype(int)
+                    if y_pred_proba.ndim > 1:
+                        pr_auc = average_precision_score(y_binary, y_pred_proba[:, i])
+                    else:
+                        pr_auc = 0.0  # 単一クラスの場合
+                    pr_aucs.append(pr_auc)
+                detailed_metrics["auc_pr"] = float(np.mean(pr_aucs))
 
             # 特徴量重要度を計算
             feature_importance = {}
-            if self.model and hasattr(self.model, 'feature_importance'):
-                importance_scores = self.model.feature_importance(importance_type='gain')
+            if self.model and hasattr(self.model, "feature_importance"):
+                importance_scores = self.model.feature_importance(
+                    importance_type="gain"
+                )
                 feature_importance = dict(zip(self.feature_columns, importance_scores))
                 logger.info(f"特徴量重要度を計算: {len(feature_importance)}個の特徴量")
 
@@ -120,14 +137,18 @@ class LightGBMModel:
 
             logger.info(f"LightGBM学習開始: {num_classes}クラス分類")
             logger.info(f"クラス分布: {dict(y_train.value_counts())}")
-            logger.info(f"LightGBMモデル学習完了: 精度={detailed_metrics.get('accuracy', 0.0):.4f}")
+            logger.info(
+                f"LightGBMモデル学習完了: 精度={detailed_metrics.get('accuracy', 0.0):.4f}"
+            )
 
             # 詳細な評価指標を含む結果を返す
             result = {
+                "algorithm": "lightgbm",  # アルゴリズム名を追加
                 "num_classes": num_classes,
                 "best_iteration": self.model.best_iteration,
                 "train_samples": len(X_train),
                 "test_samples": len(X_test),
+                "feature_count": len(self.feature_columns),
                 "feature_importance": feature_importance,  # 特徴量重要度を追加
                 **detailed_metrics,  # 詳細な評価指標を追加
             }
@@ -154,9 +175,11 @@ class LightGBMModel:
 
         try:
             # LightGBMの特徴量重要度を取得
-            importance_scores = self.model.feature_importance(importance_type='gain')
+            importance_scores = self.model.feature_importance(importance_type="gain")
 
-            if not self.feature_columns or len(importance_scores) != len(self.feature_columns):
+            if not self.feature_columns or len(importance_scores) != len(
+                self.feature_columns
+            ):
                 logger.warning("特徴量カラム情報が不正です")
                 return {}
 
@@ -165,9 +188,7 @@ class LightGBMModel:
 
             # 重要度でソートして上位N個を取得
             sorted_importance = sorted(
-                feature_importance.items(),
-                key=lambda x: x[1],
-                reverse=True
+                feature_importance.items(), key=lambda x: x[1], reverse=True
             )[:top_n]
 
             return dict(sorted_importance)

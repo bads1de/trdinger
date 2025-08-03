@@ -10,7 +10,14 @@ import numpy as np
 import pandas as pd
 from typing import Dict, Any, Optional, List
 from sklearn.ensemble import RandomForestClassifier
-from sklearn.metrics import accuracy_score, balanced_accuracy_score, f1_score
+from sklearn.metrics import (
+    accuracy_score,
+    balanced_accuracy_score,
+    f1_score,
+    matthews_corrcoef,
+    roc_auc_score,
+    average_precision_score,
+)
 
 from ....utils.unified_error_handler import UnifiedModelError
 
@@ -84,13 +91,54 @@ class RandomForestModel:
             y_pred_train = self.model.predict(X_train)
             y_pred_test = self.model.predict(X_test)
 
-            # 評価指標計算
+            # 確率予測（RandomForestは確率予測をサポート）
+            y_pred_proba_train = self.model.predict_proba(X_train)
+            y_pred_proba_test = self.model.predict_proba(X_test)
+
+            # 基本評価指標計算
             train_accuracy = accuracy_score(y_train, y_pred_train)
             test_accuracy = accuracy_score(y_test, y_pred_test)
             train_balanced_acc = balanced_accuracy_score(y_train, y_pred_train)
             test_balanced_acc = balanced_accuracy_score(y_test, y_pred_test)
             train_f1 = f1_score(y_train, y_pred_train, average="weighted")
             test_f1 = f1_score(y_test, y_pred_test, average="weighted")
+
+            # 追加評価指標計算
+            train_mcc = matthews_corrcoef(y_train, y_pred_train)
+            test_mcc = matthews_corrcoef(y_test, y_pred_test)
+
+            # AUC指標（多クラス対応）
+            n_classes = len(np.unique(y_train))
+            if n_classes == 2:
+                # 二値分類
+                train_roc_auc = roc_auc_score(y_train, y_pred_proba_train[:, 1])
+                test_roc_auc = roc_auc_score(y_test, y_pred_proba_test[:, 1])
+                train_pr_auc = average_precision_score(
+                    y_train, y_pred_proba_train[:, 1]
+                )
+                test_pr_auc = average_precision_score(y_test, y_pred_proba_test[:, 1])
+            else:
+                # 多クラス分類
+                train_roc_auc = roc_auc_score(
+                    y_train, y_pred_proba_train, multi_class="ovr", average="weighted"
+                )
+                test_roc_auc = roc_auc_score(
+                    y_test, y_pred_proba_test, multi_class="ovr", average="weighted"
+                )
+                # 多クラスPR-AUCは各クラスの平均
+                train_pr_aucs = []
+                test_pr_aucs = []
+                for i in range(n_classes):
+                    train_binary = (y_train == i).astype(int)
+                    test_binary = (y_test == i).astype(int)
+                    train_pr_aucs.append(
+                        average_precision_score(train_binary, y_pred_proba_train[:, i])
+                    )
+                    test_pr_aucs.append(
+                        average_precision_score(test_binary, y_pred_proba_test[:, i])
+                    )
+                train_pr_auc = np.mean(train_pr_aucs)
+                test_pr_auc = np.mean(test_pr_aucs)
 
             # 特徴量重要度
             feature_importance = dict(
@@ -101,18 +149,34 @@ class RandomForestModel:
 
             results = {
                 "algorithm": "randomforest",
+                # 基本指標
                 "train_accuracy": train_accuracy,
                 "test_accuracy": test_accuracy,
+                "accuracy": test_accuracy,  # フロントエンド用の統一キー
                 "train_balanced_accuracy": train_balanced_acc,
                 "test_balanced_accuracy": test_balanced_acc,
+                "balanced_accuracy": test_balanced_acc,  # フロントエンド用の統一キー
                 "train_f1_score": train_f1,
                 "test_f1_score": test_f1,
+                "f1_score": test_f1,  # フロントエンド用の統一キー
+                # 追加指標
+                "train_mcc": train_mcc,
+                "test_mcc": test_mcc,
+                "matthews_corrcoef": test_mcc,  # フロントエンド用の統一キー
+                "train_roc_auc": train_roc_auc,
+                "test_roc_auc": test_roc_auc,
+                "auc_roc": test_roc_auc,  # フロントエンド用の統一キー
+                "train_pr_auc": train_pr_auc,
+                "test_pr_auc": test_pr_auc,
+                "auc_pr": test_pr_auc,  # フロントエンド用の統一キー
+                # モデル情報
                 "feature_importance": feature_importance,
                 "n_estimators": self.model.n_estimators,
                 "max_depth": self.model.max_depth,
                 "feature_count": len(self.feature_columns),
                 "train_samples": len(X_train),
                 "test_samples": len(X_test),
+                "num_classes": n_classes,
             }
 
             logger.info(f"✅ RandomForest学習完了 - テスト精度: {test_accuracy:.4f}")

@@ -98,24 +98,63 @@ class XGBoostModel:
             else:
                 y_pred_class = (y_pred_proba > 0.5).astype(int)
 
-            # 評価指標を計算
-            from sklearn.metrics import accuracy_score
+            # 詳細な評価指標を計算
+            from ....utils.metrics_calculator import calculate_detailed_metrics
+            from sklearn.metrics import average_precision_score
 
-            accuracy = accuracy_score(y_test, y_pred_class)
+            detailed_metrics = calculate_detailed_metrics(
+                y_test, y_pred_class, y_pred_proba
+            )
+
+            # 多クラス分類でのPR-AUC計算を追加
+            if num_classes > 2:
+                pr_aucs = []
+                for i in range(num_classes):
+                    y_binary = (y_test == i).astype(int)
+                    if y_pred_proba.ndim > 1:
+                        pr_auc = average_precision_score(y_binary, y_pred_proba[:, i])
+                    else:
+                        pr_auc = 0.0  # 単一クラスの場合
+                    pr_aucs.append(pr_auc)
+                detailed_metrics["auc_pr"] = float(np.mean(pr_aucs))
+
+            # 特徴量重要度を計算
+            feature_importance = {}
+            if self.model and hasattr(self.model, "get_score"):
+                try:
+                    importance_scores = self.model.get_score(importance_type="gain")
+                    # XGBoostの特徴量名をDataFrameのカラム名にマッピング
+                    feature_importance = {}
+                    for i, col in enumerate(self.feature_columns):
+                        feature_key = f"f{i}"
+                        if feature_key in importance_scores:
+                            feature_importance[col] = importance_scores[feature_key]
+                        else:
+                            feature_importance[col] = 0.0
+                except Exception as e:
+                    logger.warning(f"特徴量重要度の計算に失敗: {e}")
 
             self.is_trained = True
 
             logger.info(f"XGBoost学習開始: {num_classes}クラス分類")
             logger.info(f"クラス分布: {dict(y_train.value_counts())}")
-            logger.info(f"XGBoostモデル学習完了: 精度={accuracy:.4f}")
+            logger.info(
+                f"XGBoostモデル学習完了: 精度={detailed_metrics.get('accuracy', 0.0):.4f}"
+            )
 
-            return {
-                "accuracy": accuracy,
+            # 詳細な評価指標を含む結果を返す
+            result = {
+                "algorithm": "xgboost",  # アルゴリズム名を追加
                 "num_classes": num_classes,
                 "best_iteration": self.model.best_iteration,
                 "train_samples": len(X_train),
                 "test_samples": len(X_test),
+                "feature_count": len(self.feature_columns),
+                "feature_importance": feature_importance,  # 特徴量重要度を追加
+                **detailed_metrics,  # 詳細な評価指標を追加
             }
+
+            return result
 
         except ImportError:
             logger.error(

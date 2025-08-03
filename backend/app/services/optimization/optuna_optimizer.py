@@ -111,7 +111,7 @@ class OptunaOptimizer:
         if self.study is not None:
             try:
                 # Studyの内部データをクリア
-                if hasattr(self.study, 'trials'):
+                if hasattr(self.study, "trials"):
                     self.study.trials.clear()
 
                 # Studyオブジェクト自体をクリア
@@ -119,8 +119,8 @@ class OptunaOptimizer:
 
                 # 強制ガベージコレクション
                 import gc
-                collected = gc.collect()
-                logger.debug(f"OptunaOptimizer クリーンアップ: {collected}オブジェクト回収")
+
+                gc.collect()
 
             except Exception as e:
                 logger.error(f"OptunaOptimizer クリーンアップエラー: {e}")

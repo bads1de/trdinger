@@ -407,6 +407,13 @@ export default function ModelPerformanceCard({
               {renderMetricItem(
                 "auc_pr",
                 metrics?.auc_pr,
+                "AUC-PR",
+                <Activity className="h-4 w-4 text-pink-400 mr-1" />
+              )}
+
+              {renderMetricItem(
+                "auc_pr",
+                metrics?.auc_pr,
                 "PR-AUC",
                 <TrendingUp className="h-4 w-4 text-pink-400 mr-1" />
               )}

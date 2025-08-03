@@ -10,7 +10,12 @@ import numpy as np
 import pandas as pd
 from typing import Dict, Any, Optional, List
 from sklearn.linear_model import RidgeClassifier
-from sklearn.metrics import accuracy_score, balanced_accuracy_score, f1_score
+from sklearn.metrics import (
+    accuracy_score,
+    balanced_accuracy_score,
+    f1_score,
+    matthews_corrcoef,
+)
 
 from ....utils.unified_error_handler import UnifiedModelError
 
@@ -81,13 +86,20 @@ class RidgeModel:
             y_pred_train = self.model.predict(X_train)
             y_pred_test = self.model.predict(X_test)
 
-            # 評価指標計算
+            # 基本評価指標計算
             train_accuracy = accuracy_score(y_train, y_pred_train)
             test_accuracy = accuracy_score(y_test, y_pred_test)
             train_balanced_acc = balanced_accuracy_score(y_train, y_pred_train)
             test_balanced_acc = balanced_accuracy_score(y_test, y_pred_test)
             train_f1 = f1_score(y_train, y_pred_train, average="weighted")
             test_f1 = f1_score(y_test, y_pred_test, average="weighted")
+
+            # 追加評価指標計算（AUC指標は除外：RidgeClassifierはpredict_probaをサポートしない）
+            train_mcc = matthews_corrcoef(y_train, y_pred_train)
+            test_mcc = matthews_corrcoef(y_test, y_pred_test)
+
+            # クラス数を取得
+            n_classes = len(np.unique(y_train))
 
             # 特徴量重要度（係数の絶対値）
             if hasattr(self.model, "coef_"):
@@ -111,18 +123,28 @@ class RidgeModel:
 
             results = {
                 "algorithm": "ridge",
+                # 基本指標
                 "train_accuracy": train_accuracy,
                 "test_accuracy": test_accuracy,
+                "accuracy": test_accuracy,  # フロントエンド用の統一キー
                 "train_balanced_accuracy": train_balanced_acc,
                 "test_balanced_accuracy": test_balanced_acc,
+                "balanced_accuracy": test_balanced_acc,  # フロントエンド用の統一キー
                 "train_f1_score": train_f1,
                 "test_f1_score": test_f1,
+                "f1_score": test_f1,  # フロントエンド用の統一キー
+                # 追加指標（AUC指標は除外）
+                "train_mcc": train_mcc,
+                "test_mcc": test_mcc,
+                "matthews_corrcoef": test_mcc,  # フロントエンド用の統一キー
+                # モデル情報
                 "feature_importance": feature_importance,
                 "alpha": self.model.alpha,
                 "max_iter": self.model.max_iter,
                 "feature_count": len(self.feature_columns),
                 "train_samples": len(X_train),
                 "test_samples": len(X_test),
+                "num_classes": n_classes,
                 "has_predict_proba": False,  # RidgeClassifierは確率予測なし
             }
 
