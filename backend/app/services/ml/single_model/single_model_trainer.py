@@ -383,6 +383,39 @@ class SingleModelTrainer(BaseMLTrainer):
             "feature_count": len(self.feature_columns) if self.feature_columns else 0,
         }
 
+    @staticmethod
+    def get_available_models() -> list:
+        """
+        利用可能な単一モデルのリストを取得
+
+        Returns:
+            利用可能なモデルタイプのリスト
+        """
+        available = []
+        import importlib.util
+
+        # 依存ライブラリベースのモデル
+        libs = ["lightgbm", "xgboost", "catboost", "tabnet"]
+        for lib in libs:
+            if importlib.util.find_spec(lib):
+                available.append(lib)
+
+        # scikit-learnベースのモデル
+        sklearn_models = [
+            "randomforest",
+            "extratrees",
+            "gradientboosting",
+            "adaboost",
+            "ridge",
+            "naivebayes",
+            "knn",
+        ]
+
+        # scikit-learn自体がインストールされているかチェック
+        if importlib.util.find_spec("sklearn"):
+            available.extend(sklearn_models)
+
+        return available
 
     def get_feature_importance(self, top_n: int = 10) -> Dict[str, float]:
         """
