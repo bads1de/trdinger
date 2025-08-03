@@ -14,7 +14,6 @@ from database.connection import get_db
 from app.services.data_collection.orchestration.fear_greed_orchestration_service import (
     FearGreedOrchestrationService,
 )
-from app.api.dependencies import get_fear_greed_orchestration_service
 from app.utils.unified_error_handler import UnifiedErrorHandler
 
 
@@ -29,9 +28,7 @@ async def get_fear_greed_data(
     end_date: Optional[str] = Query(None, description="終了日時 (ISO format)"),
     limit: Optional[int] = Query(30, description="取得件数制限"),
     db: Session = Depends(get_db),
-    service: FearGreedOrchestrationService = Depends(
-        get_fear_greed_orchestration_service
-    ),
+    service: FearGreedOrchestrationService = Depends(FearGreedOrchestrationService),
 ) -> Dict:
     """
     Fear & Greed Index データを取得
@@ -59,9 +56,7 @@ async def get_fear_greed_data(
 async def get_latest_fear_greed_data(
     limit: int = Query(30, description="取得件数制限"),
     db: Session = Depends(get_db),
-    service: FearGreedOrchestrationService = Depends(
-        get_fear_greed_orchestration_service
-    ),
+    service: FearGreedOrchestrationService = Depends(FearGreedOrchestrationService),
 ) -> Dict:
     """
     最新のFear & Greed Index データを取得
@@ -107,7 +102,7 @@ async def collect_fear_greed_data(
     limit: int = Query(30, description="取得するデータ数"),
     db: Session = Depends(get_db),
     orchestration_service: FearGreedOrchestrationService = Depends(
-        get_fear_greed_orchestration_service
+        FearGreedOrchestrationService
     ),
 ) -> Dict:
     """

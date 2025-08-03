@@ -17,7 +17,6 @@ from app.utils.unified_error_handler import UnifiedErrorHandler
 from app.services.data_collection.orchestration.open_interest_orchestration_service import (
     OpenInterestOrchestrationService,
 )
-from app.api.dependencies import get_open_interest_orchestration_service
 
 logger = logging.getLogger(__name__)
 
@@ -31,7 +30,7 @@ async def get_open_interest_data(
     end_date: Optional[str] = Query(None, description="終了日時（ISO形式）"),
     limit: Optional[int] = Query(1000, description="取得件数制限（最大1000）"),
     orchestration_service: OpenInterestOrchestrationService = Depends(
-        get_open_interest_orchestration_service
+        OpenInterestOrchestrationService
     ),
     db: Session = Depends(get_db),
 ):
@@ -61,7 +60,7 @@ async def collect_open_interest_data(
     ),
     fetch_all: bool = Query(False, description="全期間のデータを取得するかどうか"),
     orchestration_service: OpenInterestOrchestrationService = Depends(
-        get_open_interest_orchestration_service
+        OpenInterestOrchestrationService
     ),
     db: Session = Depends(get_db),
 ):
@@ -103,7 +102,7 @@ async def collect_open_interest_data(
 @router.post("/bulk-collect")
 async def bulk_collect_open_interest(
     orchestration_service: OpenInterestOrchestrationService = Depends(
-        get_open_interest_orchestration_service
+        OpenInterestOrchestrationService
     ),
     db: Session = Depends(get_db),
 ):

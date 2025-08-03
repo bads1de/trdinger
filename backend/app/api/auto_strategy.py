@@ -12,7 +12,6 @@ from app.services.auto_strategy.orchestration.auto_strategy_orchestration_servic
 )
 from app.api.dependencies import (
     get_auto_strategy_service,
-    get_auto_strategy_orchestration_service,
 )
 from app.utils.unified_error_handler import UnifiedErrorHandler
 from app.utils.api_utils import APIResponseHelper
@@ -208,7 +207,7 @@ async def stop_experiment(
     experiment_id: str,
     auto_strategy_service: AutoStrategyService = Depends(get_auto_strategy_service),
     orchestration_service: AutoStrategyOrchestrationService = Depends(
-        get_auto_strategy_orchestration_service
+        AutoStrategyOrchestrationService
     ),
 ):
     """
@@ -240,7 +239,7 @@ async def get_experiment_results(
     experiment_id: str,
     auto_strategy_service: AutoStrategyService = Depends(get_auto_strategy_service),
     orchestration_service: AutoStrategyOrchestrationService = Depends(
-        get_auto_strategy_orchestration_service
+        AutoStrategyOrchestrationService
     ),
 ):
     """
@@ -271,7 +270,7 @@ async def test_strategy(
     request: StrategyTestRequest,
     auto_strategy_service: AutoStrategyService = Depends(get_auto_strategy_service),
     orchestration_service: AutoStrategyOrchestrationService = Depends(
-        get_auto_strategy_orchestration_service
+        AutoStrategyOrchestrationService
     ),
 ):
     """

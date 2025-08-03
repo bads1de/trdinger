@@ -16,7 +16,6 @@ from database.connection import get_db
 from app.services.backtest.orchestration.backtest_orchestration_service import (
     BacktestOrchestrationService,
 )
-from app.api.dependencies import get_backtest_orchestration_service
 from app.utils.unified_error_handler import UnifiedErrorHandler
 
 router = APIRouter(prefix="/api/backtest", tags=["backtest"])
@@ -70,7 +69,7 @@ async def get_backtest_results(
     strategy_name: Optional[str] = Query(None, description="戦略名フィルター"),
     db: Session = Depends(get_db),
     orchestration_service: BacktestOrchestrationService = Depends(
-        get_backtest_orchestration_service
+        BacktestOrchestrationService
     ),
 ):
     """
@@ -104,7 +103,7 @@ async def get_backtest_results(
 async def delete_all_backtest_results(
     db: Session = Depends(get_db),
     orchestration_service: BacktestOrchestrationService = Depends(
-        get_backtest_orchestration_service
+        BacktestOrchestrationService
     ),
 ):
     """
@@ -129,7 +128,7 @@ async def get_backtest_result_by_id(
     result_id: int,
     db: Session = Depends(get_db),
     orchestration_service: BacktestOrchestrationService = Depends(
-        get_backtest_orchestration_service
+        BacktestOrchestrationService
     ),
 ):
     """
@@ -166,7 +165,7 @@ async def delete_backtest_result(
     result_id: int,
     db: Session = Depends(get_db),
     orchestration_service: BacktestOrchestrationService = Depends(
-        get_backtest_orchestration_service
+        BacktestOrchestrationService
     ),
 ):
     """
@@ -201,7 +200,7 @@ async def delete_backtest_result(
 @router.get("/strategies")
 async def get_supported_strategies(
     orchestration_service: BacktestOrchestrationService = Depends(
-        get_backtest_orchestration_service
+        BacktestOrchestrationService
     ),
 ):
     """

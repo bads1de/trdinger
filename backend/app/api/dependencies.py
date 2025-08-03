@@ -17,24 +17,7 @@ from app.services.backtest.backtest_service import BacktestService
 from app.services.backtest.backtest_data_service import BacktestDataService
 from app.services.strategy_integration_service import StrategyIntegrationService
 
-from app.services.backtest.orchestration.backtest_orchestration_service import (
-    BacktestOrchestrationService,
-)
-from app.services.data_collection.orchestration.data_collection_orchestration_service import (
-    DataCollectionOrchestrationService,
-)
-from app.services.ml.orchestration.ml_training_orchestration_service import (
-    MLTrainingOrchestrationService,
-)
-from app.services.ml.orchestration.ml_management_orchestration_service import (
-    MLManagementOrchestrationService,
-)
-from app.services.auto_strategy.orchestration.auto_strategy_orchestration_service import (
-    AutoStrategyOrchestrationService,
-)
-from app.services.data_collection.orchestration.fear_greed_orchestration_service import (
-    FearGreedOrchestrationService,
-)
+
 from app.services.data_collection.orchestration.market_data_orchestration_service import (
     MarketDataOrchestrationService,
 )
@@ -97,66 +80,6 @@ def get_strategy_integration_service(db: Session) -> StrategyIntegrationService:
         StrategyIntegrationServiceインスタンス
     """
     return StrategyIntegrationService(db)
-
-
-def get_backtest_orchestration_service() -> BacktestOrchestrationService:
-    """
-    BacktestOrchestrationServiceのインスタンスを取得
-
-    Returns:
-        BacktestOrchestrationServiceインスタンス
-    """
-    return BacktestOrchestrationService()
-
-
-def get_data_collection_orchestration_service() -> DataCollectionOrchestrationService:
-    """
-    DataCollectionOrchestrationServiceのインスタンスを取得
-
-    Returns:
-        DataCollectionOrchestrationServiceインスタンス
-    """
-    return DataCollectionOrchestrationService()
-
-
-def get_ml_training_orchestration_service() -> MLTrainingOrchestrationService:
-    """
-    MLTrainingOrchestrationServiceのインスタンスを取得
-
-    Returns:
-        MLTrainingOrchestrationServiceインスタンス
-    """
-    return MLTrainingOrchestrationService()
-
-
-def get_ml_management_orchestration_service() -> MLManagementOrchestrationService:
-    """
-    MLManagementOrchestrationServiceのインスタンスを取得
-
-    Returns:
-        MLManagementOrchestrationServiceインスタンス
-    """
-    return MLManagementOrchestrationService()
-
-
-def get_auto_strategy_orchestration_service() -> AutoStrategyOrchestrationService:
-    """
-    AutoStrategyOrchestrationServiceのインスタンスを取得
-
-    Returns:
-        AutoStrategyOrchestrationServiceインスタンス
-    """
-    return AutoStrategyOrchestrationService()
-
-
-def get_fear_greed_orchestration_service() -> FearGreedOrchestrationService:
-    """
-    FearGreedOrchestrationServiceのインスタンスを取得
-
-    Returns:
-        FearGreedOrchestrationServiceインスタンス
-    """
-    return FearGreedOrchestrationService()
 
 
 def get_market_data_orchestration_service(
@@ -238,31 +161,3 @@ def get_automl_feature_generation_service(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="AutoMLFeatureGenerationServiceが利用できません。サーバーログを確認してください。",
         )
-
-
-def get_funding_rate_orchestration_service():
-    """
-    FundingRateOrchestrationServiceのインスタンスを取得
-
-    Returns:
-        FundingRateOrchestrationServiceインスタンス
-    """
-    from app.services.data_collection.orchestration.funding_rate_orchestration_service import (
-        FundingRateOrchestrationService,
-    )
-
-    return FundingRateOrchestrationService()
-
-
-def get_open_interest_orchestration_service():
-    """
-    OpenInterestOrchestrationServiceのインスタンスを取得
-
-    Returns:
-        OpenInterestOrchestrationServiceインスタンス
-    """
-    from app.services.data_collection.orchestration.open_interest_orchestration_service import (
-        OpenInterestOrchestrationService,
-    )
-
-    return OpenInterestOrchestrationService()

@@ -16,7 +16,6 @@ from app.services.data_collection.orchestration.data_collection_orchestration_se
 )
 from app.utils.unified_error_handler import UnifiedErrorHandler
 from database.connection import get_db, ensure_db_initialized
-from app.api.dependencies import get_data_collection_orchestration_service
 
 
 logger = logging.getLogger(__name__)
@@ -31,7 +30,7 @@ async def collect_historical_data(
     timeframe: str = "1h",
     db: Session = Depends(get_db),
     orchestration_service: DataCollectionOrchestrationService = Depends(
-        get_data_collection_orchestration_service
+        DataCollectionOrchestrationService
     ),
 ) -> Dict:
     """
@@ -94,7 +93,7 @@ async def collect_bitcoin_full_data(
     background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
     orchestration_service: DataCollectionOrchestrationService = Depends(
-        get_data_collection_orchestration_service
+        DataCollectionOrchestrationService
     ),
 ) -> Dict:
     """
@@ -121,7 +120,7 @@ async def collect_bulk_historical_data(
     background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
     orchestration_service: DataCollectionOrchestrationService = Depends(
-        get_data_collection_orchestration_service
+        DataCollectionOrchestrationService
     ),
 ) -> Dict:
     """
@@ -201,7 +200,7 @@ async def collect_all_data_bulk(
     background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
     orchestration_service: DataCollectionOrchestrationService = Depends(
-        get_data_collection_orchestration_service
+        DataCollectionOrchestrationService
     ),
 ) -> Dict:
     """
