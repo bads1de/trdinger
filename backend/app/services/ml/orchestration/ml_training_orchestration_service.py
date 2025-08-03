@@ -21,6 +21,7 @@ from database.repositories.open_interest_repository import OpenInterestRepositor
 from database.repositories.funding_rate_repository import FundingRateRepository
 from database.repositories.fear_greed_repository import FearGreedIndexRepository
 from app.utils.api_utils import APIResponseHelper
+from app.utils.unified_error_handler import safe_ml_operation
 
 logger = logging.getLogger(__name__)
 
@@ -397,88 +398,11 @@ class MLTrainingOrchestrationService:
                     logger.info("🔗 アンサンブルトレーニングを実行します")
                     logger.info(f"🔗 使用するアンサンブル設定: {ensemble_config_dict}")
 
-                try:
-                    logger.info("🔧 MLTrainingService初期化開始")
-                    ml_service = MLTrainingService(
-                        trainer_type=trainer_type,
-                        automl_config=automl_config_dict,
-                        ensemble_config=ensemble_config_dict,
-                        single_model_config=single_model_config_dict,
-                    )
-                    logger.info(
-                        f"✅ MLTrainingService初期化完了: trainer_type={ml_service.trainer_type}"
-                    )
-
-                    # 実際に作成されたトレーナーの確認
-                    trainer_class_name = type(ml_service.trainer).__name__
-                    logger.info(f"✅ 作成されたトレーナー: {trainer_class_name}")
-
-                    if hasattr(ml_service.trainer, "model_type"):
-                        logger.info(f"✅ モデルタイプ: {ml_service.trainer.model_type}")
-
-                except Exception as e:
-                    logger.error(f"❌ MLTrainingService初期化エラー: {e}")
-                    logger.error(f"❌ エラー詳細: {type(e).__name__}: {str(e)}")
-                    raise
-
-                # 最適化設定の準備
-                optimization_settings = None
-                if (
-                    config.optimization_settings
-                    and config.optimization_settings.enabled
-                ):
-                    optimization_settings = config.optimization_settings
-
-                # トレーニング実行
-                training_status.update(
-                    {
-                        "progress": 50,
-                        "status": "training",
-                        "message": "モデルをトレーニング中...",
-                    }
+                # MLサービス初期化とトレーニング実行
+                self._execute_ml_training_with_error_handling(
+                    trainer_type, automl_config_dict, ensemble_config_dict,
+                    single_model_config_dict, config, training_data
                 )
-
-                training_result = ml_service.train_model(
-                    training_data=training_data,
-                    save_model=config.save_model,
-                    optimization_settings=optimization_settings,
-                    automl_config=automl_config_dict,
-                    test_size=1 - config.train_test_split,
-                    random_state=config.random_state,
-                )
-
-                # トレーニング完了後のクリーンアップ処理
-                self._cleanup_automl_processes()
-
-                # トレーニング完了
-                training_status.update(
-                    {
-                        "is_training": False,
-                        "progress": 100,
-                        "status": "completed",
-                        "message": "トレーニングが完了しました",
-                        "end_time": datetime.now().isoformat(),
-                        "model_info": training_result,
-                    }
-                )
-
-                logger.info("✅ MLトレーニング完了")
-
-            except Exception as e:
-                # エラー発生時もクリーンアップ処理を実行
-                self._cleanup_automl_processes()
-
-                # エラー処理
-                training_status.update(
-                    {
-                        "is_training": False,
-                        "status": "error",
-                        "message": f"トレーニング中にエラーが発生しました: {str(e)}",
-                        "end_time": datetime.now().isoformat(),
-                        "error": str(e),
-                    }
-                )
-                logger.error(f"❌ MLトレーニングエラー: {e}", exc_info=True)
 
     def _cleanup_automl_processes(self):
         """AutoMLプロセスのクリーンアップ処理"""
@@ -626,3 +550,93 @@ class MLTrainingOrchestrationService:
 
         except Exception as e:
             logger.warning(f"DataPreprocessorクリーンアップエラー: {e}")
+
+    @safe_ml_operation(context="MLトレーニング実行")
+    def _execute_ml_training_with_error_handling(
+        self,
+        trainer_type: str,
+        automl_config_dict: Dict[str, Any],
+        ensemble_config_dict: Dict[str, Any],
+        single_model_config_dict: Dict[str, Any],
+        config,
+        training_data,
+    ) -> None:
+        """
+        エラーハンドリング付きMLトレーニング実行
+
+        Args:
+            trainer_type: トレーナータイプ
+            automl_config_dict: AutoML設定辞書
+            ensemble_config_dict: アンサンブル設定辞書
+            single_model_config_dict: 単一モデル設定辞書
+            config: トレーニング設定
+            training_data: 学習データ
+        """
+        global training_status
+
+        try:
+            logger.info("🔧 MLTrainingService初期化開始")
+            ml_service = MLTrainingService(
+                trainer_type=trainer_type,
+                automl_config=automl_config_dict,
+                ensemble_config=ensemble_config_dict,
+                single_model_config=single_model_config_dict,
+            )
+            logger.info(
+                f"✅ MLTrainingService初期化完了: trainer_type={ml_service.trainer_type}"
+            )
+
+            # 実際に作成されたトレーナーの確認
+            trainer_class_name = type(ml_service.trainer).__name__
+            logger.info(f"✅ 作成されたトレーナー: {trainer_class_name}")
+
+            if hasattr(ml_service.trainer, "model_type"):
+                logger.info(f"✅ モデルタイプ: {ml_service.trainer.model_type}")
+
+        except Exception as e:
+            logger.error(f"❌ MLTrainingService初期化エラー: {e}")
+            logger.error(f"❌ エラー詳細: {type(e).__name__}: {str(e)}")
+            raise
+
+        # 最適化設定の準備
+        optimization_settings = None
+        if (
+            config.optimization_settings
+            and config.optimization_settings.enabled
+        ):
+            optimization_settings = config.optimization_settings
+
+        # トレーニング実行
+        training_status.update(
+            {
+                "progress": 50,
+                "status": "training",
+                "message": "モデルをトレーニング中...",
+            }
+        )
+
+        training_result = ml_service.train_model(
+            training_data=training_data,
+            save_model=config.save_model,
+            optimization_settings=optimization_settings,
+            automl_config=automl_config_dict,
+            test_size=1 - config.train_test_split,
+            random_state=config.random_state,
+        )
+
+        # トレーニング完了後のクリーンアップ処理
+        self._cleanup_automl_processes()
+
+        # トレーニング完了
+        training_status.update(
+            {
+                "is_training": False,
+                "progress": 100,
+                "status": "completed",
+                "message": "トレーニングが完了しました",
+                "end_time": datetime.now().isoformat(),
+                "model_info": training_result,
+            }
+        )
+
+        logger.info("✅ MLトレーニング完了")

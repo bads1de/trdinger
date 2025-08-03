@@ -20,6 +20,7 @@ from app.utils.unified_error_handler import (
     MLValidationError,
     unified_timeout_decorator,
     unified_operation_context,
+    safe_ml_operation,
 )
 from app.utils.data_preprocessing import data_preprocessor
 from app.services.ml.feature_engineering.feature_engineering_service import (
@@ -626,20 +627,18 @@ class MLOrchestrator(MLPredictionInterface):
             ),
         }
 
+    @safe_ml_operation(context="ML予測実行")
     def _safe_ml_prediction(self, features_df: pd.DataFrame) -> Dict[str, float]:
         """厳格なML予測実行（エラー時はデフォルト値を返さない）"""
-        try:
-            # 予測を実行
-            predictions = self.ml_training_service.generate_signals(features_df)
+        # 予測を実行
+        predictions = self.ml_training_service.generate_signals(features_df)
 
-            # 予測値の妥当性チェック
-            UnifiedErrorHandler.validate_predictions(predictions)
-            self._last_predictions = predictions
-            return predictions
-        except Exception as e:
-            error_msg = f"ML予測でエラーが発生しました: {e}"
-            logger.error(error_msg)
-            raise MLDataError(error_msg) from e
+        # 予測値の妥当性チェック
+        if not UnifiedErrorHandler.validate_predictions(predictions):
+            raise MLDataError("予測値のバリデーションに失敗しました")
+
+        self._last_predictions = predictions
+        return predictions
 
     def _expand_predictions_to_data_length(
         self, predictions: Dict[str, float], data_length: int

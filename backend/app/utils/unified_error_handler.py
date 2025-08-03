@@ -56,7 +56,57 @@ class UnifiedErrorHandler:
     APIErrorHandler と MLErrorHandler の重複機能を統合しています。
     """
 
+    # 統一エラーメッセージテンプレート
+    ERROR_TEMPLATES = {
+        # API関連エラー
+        "API_VALIDATION_ERROR": "入力データの検証に失敗しました: {details}",
+        "API_DATABASE_ERROR": "データベース操作でエラーが発生しました",
+        "API_EXTERNAL_ERROR": "外部APIとの通信でエラーが発生しました",
+        "API_INTERNAL_ERROR": "サーバー内部でエラーが発生しました",
+        # ML関連エラー
+        "ML_DATA_ERROR": "ML処理用データでエラーが発生しました: {details}",
+        "ML_MODEL_ERROR": "MLモデル処理でエラーが発生しました: {details}",
+        "ML_PREDICTION_ERROR": "ML予測処理でエラーが発生しました: {details}",
+        "ML_TRAINING_ERROR": "MLモデル学習でエラーが発生しました: {details}",
+        "ML_VALIDATION_ERROR": "MLデータ検証でエラーが発生しました: {details}",
+        # データ関連エラー
+        "DATA_NOT_FOUND": "指定されたデータが見つかりません",
+        "DATA_INVALID_FORMAT": "データ形式が無効です: {details}",
+        "DATA_INSUFFICIENT": "データが不足しています: {details}",
+        # 設定関連エラー
+        "CONFIG_INVALID": "設定が無効です: {details}",
+        "CONFIG_MISSING": "必要な設定が不足しています: {details}",
+        # タイムアウトエラー
+        "TIMEOUT_ERROR": "処理がタイムアウトしました: {details}",
+    }
+
     # --- 統一エラーレスポンス生成 ---
+
+    @staticmethod
+    def get_error_message(
+        error_template_key: str,
+        details: Optional[str] = None,
+        fallback_message: Optional[str] = None,
+    ) -> str:
+        """
+        統一エラーメッセージテンプレートからメッセージを生成
+
+        Args:
+            error_template_key: エラーテンプレートキー
+            details: エラー詳細
+            fallback_message: テンプレートが見つからない場合のフォールバックメッセージ
+
+        Returns:
+            統一されたエラーメッセージ
+        """
+        template = UnifiedErrorHandler.ERROR_TEMPLATES.get(
+            error_template_key, fallback_message or "エラーが発生しました"
+        )
+
+        if details and "{details}" in template:
+            return template.format(details=details)
+        else:
+            return template.replace(": {details}", "")
 
     @staticmethod
     def create_error_response(

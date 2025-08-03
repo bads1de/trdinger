@@ -14,8 +14,6 @@ from app.services.ml.orchestration.ml_training_orchestration_service import (
     MLTrainingOrchestrationService,
 )
 from app.utils.unified_error_handler import UnifiedErrorHandler
-
-
 from app.api.automl_features import AutoMLConfigModel
 from database.connection import get_db
 
@@ -266,9 +264,3 @@ async def stop_ml_training():
         return await orchestration_service.stop_training()
 
     return await UnifiedErrorHandler.safe_execute_async(_stop_training)
-
-
-# フロント側定数管理へ移行のため、利用可能アルゴリズム一覧APIは削除しました
-
-
-# フロント側定数管理へ移行のため、アルゴリズム検証APIは削除しました

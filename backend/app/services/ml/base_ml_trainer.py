@@ -842,36 +842,20 @@ class BaseMLTrainer(ABC):
             # データを前処理
             X_train_scaled, X_test_scaled = self._preprocess_data(X_train_cv, X_test_cv)
 
-            try:
-                # モデルを学習（継承クラスで実装）
-                fold_result = self._train_model_impl(
-                    X_train_scaled,
-                    X_test_scaled,
-                    y_train_cv,
-                    y_test_cv,
-                    **training_params,
-                )
+            # フォールド学習を実行
+            fold_result = self._train_fold_with_error_handling(
+                fold,
+                X_train_scaled,
+                X_test_scaled,
+                y_train_cv,
+                y_test_cv,
+                X_train_cv,
+                X_test_cv,
+                training_params,
+            )
 
-                cv_scores.append(fold_result.get("accuracy", 0.0))
-                fold_results.append(
-                    {
-                        "fold": fold,
-                        "train_samples": len(X_train_cv),
-                        "test_samples": len(X_test_cv),
-                        "train_period": f"{X_train_cv.index[0]} ～ {X_train_cv.index[-1]}",
-                        "test_period": f"{X_test_cv.index[0]} ～ {X_test_cv.index[-1]}",
-                        **fold_result,
-                    }
-                )
-
-                logger.info(
-                    f"フォールド {fold} 完了: 精度={fold_result.get('accuracy', 0.0):.4f}"
-                )
-
-            except Exception as e:
-                logger.error(f"フォールド {fold} でエラー: {e}")
-                cv_scores.append(0.0)
-                fold_results.append({"fold": fold, "error": str(e), "accuracy": 0.0})
+            cv_scores.append(fold_result.get("accuracy", 0.0))
+            fold_results.append(fold_result)
 
         # クロスバリデーション結果を集計
         cv_result = {
@@ -1084,3 +1068,64 @@ class BaseMLTrainer(ABC):
             self.feature_columns = None
             self.is_trained = False
             self.automl_config = None
+
+    @safe_ml_operation(
+        default_return={
+            "fold": 0,
+            "error": "フォールド学習でエラーが発生しました",
+            "accuracy": 0.0,
+        },
+        context="フォールド学習",
+    )
+    def _train_fold_with_error_handling(
+        self,
+        fold: int,
+        X_train_scaled: pd.DataFrame,
+        X_test_scaled: pd.DataFrame,
+        y_train_cv: pd.Series,
+        y_test_cv: pd.Series,
+        X_train_cv: pd.DataFrame,
+        X_test_cv: pd.DataFrame,
+        training_params: Dict[str, Any],
+    ) -> Dict[str, Any]:
+        """
+        エラーハンドリング付きフォールド学習
+
+        Args:
+            fold: フォールド番号
+            X_train_scaled: スケーリング済み学習用特徴量
+            X_test_scaled: スケーリング済みテスト用特徴量
+            y_train_cv: 学習用ラベル
+            y_test_cv: テスト用ラベル
+            X_train_cv: 元の学習用特徴量（期間情報用）
+            X_test_cv: 元のテスト用特徴量（期間情報用）
+            training_params: 学習パラメータ
+
+        Returns:
+            フォールド学習結果の辞書
+        """
+        # モデルを学習（継承クラスで実装）
+        fold_result = self._train_model_impl(
+            X_train_scaled,
+            X_test_scaled,
+            y_train_cv,
+            y_test_cv,
+            **training_params,
+        )
+
+        # フォールド情報を追加
+        fold_result.update(
+            {
+                "fold": fold,
+                "train_samples": len(X_train_cv),
+                "test_samples": len(X_test_cv),
+                "train_period": f"{X_train_cv.index[0]} ～ {X_train_cv.index[-1]}",
+                "test_period": f"{X_test_cv.index[0]} ～ {X_test_cv.index[-1]}",
+            }
+        )
+
+        logger.info(
+            f"フォールド {fold} 完了: 精度={fold_result.get('accuracy', 0.0):.4f}"
+        )
+
+        return fold_result
