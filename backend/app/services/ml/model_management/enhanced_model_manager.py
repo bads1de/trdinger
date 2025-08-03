@@ -443,7 +443,8 @@ class EnhancedModelManager:
         try:
             major, minor, patch = map(int, latest_version[1:].split("."))
             return f"v{major}.{minor}.{patch + 1}"
-        except:
+        except ValueError:
+            # 期待するフォーマット 'vX.Y.Z' を満たさない場合は後方互換のフォールバック
             return f"v1.0.{len(existing_versions)}"
 
     def _calculate_data_hash(self, data: pd.DataFrame) -> str:
@@ -451,7 +452,8 @@ class EnhancedModelManager:
         try:
             data_str = data.to_string()
             return hashlib.md5(data_str.encode()).hexdigest()
-        except:
+        except Exception:
+            # DataFrame でない/シリアライズ失敗などの場合のフォールバック
             return "unknown"
 
     def _save_metadata(self, metadata: ModelMetadata):

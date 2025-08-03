@@ -271,13 +271,8 @@ class FeatureEngineeringService:
             )
 
             # データバリデーションとクリーンアップ
-            # 主要な価格列を除外した特徴量列の一覧（必要に応じて利用）
-            # 注意: 未使用変数の警告を避けるため、即座にログへ出力して利用とみなす
-            feature_columns = [
-                col
-                for col in result_df.columns
-                if col not in ["Open", "High", "Low", "Close", "Volume"]
-            ]
+            # 主要な価格列を除外した特徴量列の一覧が必要な場合のみ、その場で計算すること
+            # （未使用変数を避けるため、ここでは保持しません）
 
             # 高品質なデータ前処理を実行（スケーリング有効化、IQRベース外れ値検出）
             logger.info("統計的手法による特徴量前処理を実行中...")

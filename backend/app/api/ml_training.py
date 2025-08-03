@@ -220,19 +220,19 @@ async def start_ml_training(
         logger.info(f"📋 単一モデル設定辞書: {single_dict}")
 
     async def _start_training():
-        # アルゴリズム名の検証
+        # アルゴリズム名の検証（algorithm_registry 非依存）
         if config.single_model_config:
-            from app.services.ml.models.algorithm_registry import algorithm_registry
+            from app.services.ml.ml_training_service import MLTrainingService
 
             model_type = config.single_model_config.model_type
-            available_algorithms = algorithm_registry.get_available_algorithms()
+            available_models = MLTrainingService.get_available_single_models()
 
-            if model_type not in available_algorithms:
+            if model_type not in available_models:
                 return {
                     "success": False,
                     "error": f"指定されたアルゴリズム '{model_type}' は利用できません",
-                    "available_algorithms": available_algorithms,
-                    "message": f"利用可能なアルゴリズム: {', '.join(available_algorithms)}",
+                    "available_models": available_models,
+                    "message": f"利用可能なモデル: {', '.join(available_models)}",
                 }
 
         orchestration_service = MLTrainingOrchestrationService()
@@ -310,18 +310,10 @@ async def get_available_algorithms():
     """
 
     async def _get_available_algorithms():
-        try:
-            from app.services.ml.models.algorithm_registry import algorithm_registry
-        except ImportError as e:
-            return {
-                "success": False,
-                "error": f"アルゴリズムレジストリのインポートに失敗: {e}",
-                "algorithms": [],
-                "message": "アルゴリズム情報を取得できませんでした",
-            }
+        # algorithm_registry からは取得せず、MLTrainingServiceの一覧を使用
+        from app.services.ml.ml_training_service import MLTrainingService
 
-        # アルゴリズム名のリストのみ取得
-        algorithms = algorithm_registry.get_available_algorithms()
+        algorithms = MLTrainingService.get_available_single_models()
 
         return {
             "success": True,
@@ -341,9 +333,10 @@ async def validate_algorithm(algorithm_name: str):
     """
 
     async def _validate_algorithm():
-        from app.services.ml.models.algorithm_registry import algorithm_registry
+        # algorithm_registry 非依存で検証
+        from app.services.ml.ml_training_service import MLTrainingService
 
-        available_algorithms = algorithm_registry.get_available_algorithms()
+        available_algorithms = MLTrainingService.get_available_single_models()
         is_valid = algorithm_name in available_algorithms
 
         if not is_valid:

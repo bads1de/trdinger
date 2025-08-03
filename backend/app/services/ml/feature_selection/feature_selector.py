@@ -8,10 +8,9 @@
 import logging
 import numpy as np
 import pandas as pd
-from typing import Dict, Any, List, Optional, Tuple, Union
+from typing import Dict, Any, List, Optional, Tuple
 from sklearn.feature_selection import (
     SelectKBest,
-    SelectPercentile,
     f_classif,
     chi2,
     mutual_info_classif,
@@ -24,7 +23,7 @@ from sklearn.linear_model import LassoCV
 from sklearn.inspection import permutation_importance
 from dataclasses import dataclass
 from enum import Enum
-import warnings
+
 
 logger = logging.getLogger(__name__)
 
