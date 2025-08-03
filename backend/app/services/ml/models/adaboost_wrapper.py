@@ -47,7 +47,7 @@ class AdaBoostModel:
             "estimator": self.base_estimator,
             "n_estimators": 100,
             "learning_rate": 1.0,
-            "algorithm": "SAMME.R",
+            "algorithm": "SAMME",  # SAMME.R -> SAMME に変更（新しいscikit-learnバージョンでサポート）
             "random_state": 42,
         }
 

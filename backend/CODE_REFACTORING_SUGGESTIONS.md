@@ -14,101 +14,6 @@
 
 ## 3. 改善提案一覧
 
----
-
-### 提案 2: データ収集サービスのロジック共通化
-
-- **現状の課題**:
-  `funding_rate_service.py` と `open_interest_service.py` には、データの取得、ページネーション、保存に関する類似したロジックが個別に実装されています。これはコードの重複であり、将来的な仕様変更時のメンテナンスコストを増大させます。
-
-- **具体的な修正案**:
-  `BybitService` 基底クラスに、データ収集と保存のための汎用的なメソッド（例: `_fetch_and_save_data`, `_fetch_incremental_data`）を実装します。各サブクラス（`BybitFundingRateService` など）は、`data_config.py` で定義されたデータソース固有の設定をこの汎用メソッドに渡すだけにします。
-
-  **修正案 (`app/services/data_collection/bybit/bybit_service.py`)**:
-
-  ```python
-  # BybitServiceに汎用メソッドを追加
-  async def fetch_and_save_data(
-      self,
-      symbol: str,
-      config: DataServiceConfig, # データソース固有の設定
-      limit: Optional[int] = None,
-      fetch_all: bool = False,
-      **kwargs,
-  ) -> dict:
-      # ... 共通のデータ取得・保存ロジック ...
-      fetch_history_method = getattr(self.exchange, config.fetch_history_method_name)
-      # ...
-  ```
-
-  **修正案 (`app/services/data_collection/bybit/funding_rate_service.py`)**:
-
-  ```python
-  # サブクラスは設定を渡すだけ
-  class BybitFundingRateService(BybitService):
-      def __init__(self):
-          super().__init__()
-          self.config = get_funding_rate_config()
-
-      async def fetch_and_save_funding_rate_data(self, ...):
-          return await self.fetch_and_save_data(
-              symbol=symbol,
-              config=self.config,
-              # ...
-          )
-  ```
-
-- **期待される効果**:
-  - データ収集ロジックの重複を排除し、コード量を削減。
-  - 新しいデータソースの追加が容易になる。
-  - エラーハンドリングとページネーションロジックを一元管理できる。
-
----
-
-### 提案 3: リポジトリ層における `BaseRepository` の活用徹底
-
-- **現状の課題**:
-  `backtest_result_repository.py` など一部のリポジトリでは、`BaseRepository` で提供されている汎用的なクエリヘルパー (`get_filtered_records` など) を利用せず、独自のクエリを実装している箇所があります。
-
-- **具体的な修正案**:
-  すべてのリポジトリクラスで、`BaseRepository` の汎用メソッドを最大限に活用するようにリファクタリングします。
-
-  **修正前 (`database/repositories/backtest_result_repository.py`)**:
-
-  ```python
-  def get_backtest_results(self, ...):
-      query = self.db.query(BacktestResult)
-      if symbol:
-          query = query.filter(BacktestResult.symbol == symbol)
-      # ...
-      return query.all()
-  ```
-
-  **修正後 (`database/repositories/backtest_result_repository.py`)**:
-
-  ```python
-  def get_backtest_results(self, ...):
-      filters = {}
-      if symbol:
-          filters["symbol"] = symbol
-      if strategy_name:
-          filters["strategy_name"] = strategy_name
-
-      return self.get_filtered_data(
-          filters=filters,
-          order_by_column="created_at",
-          order_asc=False,
-          limit=limit,
-          offset=offset # BaseRepositoryにoffsetの追加が必要
-      )
-  ```
-
-- **期待される効果**:
-  - 各リポジトリのコードが簡潔になり、可読性と保守性が向上する。
-  - クエリロジックが一元化され、バグの発生リスクが低減する。
-
----
-
 ### 提案 4: ML モデルラッパーの評価ロジック共通化
 
 - **現状の課題**:
@@ -152,6 +57,7 @@
   `app/services/ml/models/` 配下の各ラッパークラス (`randomforest_wrapper.py`, `ridge_wrapper.py` など) では、`default_params` という辞書を個別に持っています。同様のキーが繰り返し定義されており、ハイパーパラメータを調整する際に複数ファイルを修正する必要が生じます。
 
 - **具体的な修正案**:
+
   1. `app/services/ml/configs/model_default_params.py` を新規作成し、アルゴリズム名をキーとしたデフォルトパラメータのマッピングを保持します。
   2. 各モデルラッパーでは `from ...configs.model_default_params import MODEL_DEFAULT_PARAMS` をインポートし、`self.default_params = MODEL_DEFAULT_PARAMS["randomforest"]` のように取得します。
   3. ハイパーパラメータのオーバーライドが必要な場合は、`training_params` 引数で上書きする方針を統一します。
@@ -190,6 +96,7 @@
   多くのサービス・リポジトリ・モデルクラスで、`try / except Exception as e` のブロックと `logger.error()` を毎回記述しています。同様のエラーメッセージ組み立てロジックが散在し、コードが冗長になっています。
 
 - **具体的な修正案**:
+
   1. `app/utils/decorators.py` に `@log_exceptions` デコレータを実装し、関数名・スタックトレースを自動で出力する汎用ロギング処理をまとめます。
   2. 既存の `try / except` ブロックを削減し、メソッドや関数にデコレータを付与して例外ハンドリングを一元化します。
 
@@ -233,6 +140,7 @@
   各テストファイルや一部のスクリプト内で `logging.basicConfig()` を個別に呼び出しています。ログフォーマットが統一されておらず、同じ設定を繰り返し記述しているため冗長です。
 
 - **具体的な修正案**:
+
   1. `app/logging_config.py` を作成し、`dictConfig` ベースでハンドラ・フォーマッタ・ロガーを定義します。
   2. `main.py` 起動時に `logging.config.dictConfig(LOGGING_CONFIG)` を一度だけ実行。以降のモジュールは `import logging` し `logger = logging.getLogger(__name__)` とするだけで統一フォーマットが適用されます。
   3. テストでは `conftest.py` で同じ設定を読み込むことで、テスト出力も同フォーマットに統一します。
