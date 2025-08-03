@@ -838,9 +838,6 @@ class MLOrchestrator(MLPredictionInterface):
                     return "ETH/USDT:USDT"
 
             # デフォルトはBTC
-            logger.info(
-                "シンボルを推定できませんでした。デフォルトのBTC/USDT:USDTを使用します"
-            )
             return "BTC/USDT:USDT"
 
         except Exception as e:
@@ -890,9 +887,6 @@ class MLOrchestrator(MLPredictionInterface):
                         return "1d"
 
             # デフォルトは1時間
-            logger.info(
-                "タイムフレームを推定できませんでした。デフォルトの1hを使用します"
-            )
             return "1h"
 
         except Exception as e:

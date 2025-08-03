@@ -113,7 +113,7 @@ class KNNModel:
                 "feature_importance": feature_importance,
                 "n_neighbors": self.model.n_neighbors,
                 "weights": self.model.weights,
-                "algorithm": self.model.algorithm,
+                "algorithm_type": self.model.algorithm,
                 "metric": self.model.metric,
                 "feature_count": len(self.feature_columns),
                 "train_samples": len(X_train),

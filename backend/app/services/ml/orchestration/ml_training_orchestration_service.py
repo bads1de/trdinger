@@ -586,8 +586,6 @@ class MLTrainingOrchestrationService:
     def _cleanup_enhanced_feature_service(self):
         """EnhancedFeatureEngineeringService関連リソースのクリーンアップ"""
         try:
-            logger.debug("EnhancedFeatureEngineeringServiceリソースをクリーンアップ中")
-
             # EnhancedFeatureEngineeringServiceのインスタンスを作成してクリーンアップ
             from app.services.ml.feature_engineering.enhanced_feature_engineering_service import (
                 EnhancedFeatureEngineeringService,
@@ -600,8 +598,6 @@ class MLTrainingOrchestrationService:
             # インスタンスを削除
             del temp_service
 
-            logger.debug("EnhancedFeatureEngineeringServiceリソースクリーンアップ完了")
-
         except Exception as e:
             logger.warning(
                 f"EnhancedFeatureEngineeringServiceクリーンアップエラー: {e}"
@@ -610,15 +606,11 @@ class MLTrainingOrchestrationService:
     def _cleanup_ml_training_service(self):
         """MLTrainingService関連リソースのクリーンアップ"""
         try:
-            logger.debug("MLTrainingServiceリソースをクリーンアップ中")
-
             # グローバルMLTrainingServiceインスタンスのクリーンアップ
             from app.services.ml.ml_training_service import ml_training_service
 
             if hasattr(ml_training_service, "cleanup_resources"):
                 ml_training_service.cleanup_resources()
-
-            logger.debug("MLTrainingServiceリソースクリーンアップ完了")
 
         except Exception as e:
             logger.warning(f"MLTrainingServiceクリーンアップエラー: {e}")
@@ -626,15 +618,11 @@ class MLTrainingOrchestrationService:
     def _cleanup_data_preprocessor(self):
         """DataPreprocessor関連リソースのクリーンアップ"""
         try:
-            logger.debug("DataPreprocessorリソースをクリーンアップ中")
-
             # グローバルDataPreprocessorインスタンスのクリーンアップ
             from app.utils.data_preprocessing import data_preprocessor
 
             if hasattr(data_preprocessor, "clear_cache"):
                 data_preprocessor.clear_cache()
-
-            logger.debug("DataPreprocessorリソースクリーンアップ完了")
 
         except Exception as e:
             logger.warning(f"DataPreprocessorクリーンアップエラー: {e}")

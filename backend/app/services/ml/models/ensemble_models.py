@@ -8,7 +8,7 @@ RandomForestの40.55%からXGBoost+アンサンブルで55%以上を目指しま
 import logging
 import numpy as np
 import pandas as pd
-from typing import Dict, Any, List, Optional, Tuple, Union
+from typing import Dict, Any, Optional
 from sklearn.ensemble import (
     RandomForestClassifier,
     VotingClassifier,
@@ -26,22 +26,9 @@ from sklearn.model_selection import cross_val_score
 from sklearn.metrics import accuracy_score, balanced_accuracy_score, f1_score
 import warnings
 
-# XGBoost, LightGBM のインポート（オプション）
-try:
-    import xgboost as xgb
 
-    XGBOOST_AVAILABLE = True
-except ImportError:
-    XGBOOST_AVAILABLE = False
-    logger.warning("XGBoost not available. Install with: pip install xgboost")
-
-try:
-    import lightgbm as lgb
-
-    LIGHTGBM_AVAILABLE = True
-except ImportError:
-    LIGHTGBM_AVAILABLE = False
-    logger.warning("LightGBM not available. Install with: pip install lightgbm")
+import xgboost as xgb
+import lightgbm as lgb
 
 logger = logging.getLogger(__name__)
 
@@ -73,35 +60,33 @@ class EnsembleModelManager:
             n_jobs=-1,
         )
 
-        # 2. XGBoost（利用可能な場合）
-        if XGBOOST_AVAILABLE:
-            models["xgb"] = xgb.XGBClassifier(
-                n_estimators=200,
-                max_depth=8,
-                learning_rate=0.1,
-                subsample=0.8,
-                colsample_bytree=0.8,
-                reg_alpha=0.1,
-                reg_lambda=0.1,
-                random_state=42,
-                eval_metric="mlogloss",
-                use_label_encoder=False,
-            )
+        # 2. XGBoost
+        models["xgb"] = xgb.XGBClassifier(
+            n_estimators=200,
+            max_depth=8,
+            learning_rate=0.1,
+            subsample=0.8,
+            colsample_bytree=0.8,
+            reg_alpha=0.1,
+            reg_lambda=0.1,
+            random_state=42,
+            eval_metric="mlogloss",
+            use_label_encoder=False,
+        )
 
-        # 3. LightGBM（利用可能な場合）
-        if LIGHTGBM_AVAILABLE:
-            models["lgb"] = lgb.LGBMClassifier(
-                n_estimators=200,
-                max_depth=8,
-                learning_rate=0.1,
-                subsample=0.8,
-                colsample_bytree=0.8,
-                reg_alpha=0.1,
-                reg_lambda=0.1,
-                class_weight="balanced",
-                random_state=42,
-                verbose=-1,
-            )
+        # 3. LightGBM
+        models["lgb"] = lgb.LGBMClassifier(
+            n_estimators=200,
+            max_depth=8,
+            learning_rate=0.1,
+            subsample=0.8,
+            colsample_bytree=0.8,
+            reg_alpha=0.1,
+            reg_lambda=0.1,
+            class_weight="balanced",
+            random_state=42,
+            verbose=-1,
+        )
 
         # 4. Logistic Regression
         models["lr"] = LogisticRegression(
@@ -333,7 +318,7 @@ class EnsembleModelManager:
         """ハイパーパラメータ最適化（簡易版）"""
         logger.info(f"🔧 {model_type}のハイパーパラメータ最適化中...")
 
-        if model_type == "xgb" and XGBOOST_AVAILABLE:
+        if model_type == "xgb":
             # XGBoostのグリッドサーチ（簡易版）
             param_grid = {
                 "n_estimators": [100, 200],
@@ -384,28 +369,27 @@ class EnsembleModelManager:
         models = {}
 
         # 1. 最適化されたXGBoost
-        if XGBOOST_AVAILABLE:
-            if optimize:
-                best_params = self.optimize_hyperparameters(X_train, y_train, "xgb")
-                models["xgb_optimized"] = xgb.XGBClassifier(
-                    **best_params,
-                    subsample=0.8,
-                    colsample_bytree=0.8,
-                    reg_alpha=0.1,
-                    reg_lambda=0.1,
-                    random_state=42,
-                    eval_metric="mlogloss",
-                    use_label_encoder=False,
-                )
-            else:
-                models["xgb"] = xgb.XGBClassifier(
-                    n_estimators=200,
-                    max_depth=8,
-                    learning_rate=0.1,
-                    random_state=42,
-                    eval_metric="mlogloss",
-                    use_label_encoder=False,
-                )
+        if optimize:
+            best_params = self.optimize_hyperparameters(X_train, y_train, "xgb")
+            models["xgb_optimized"] = xgb.XGBClassifier(
+                **best_params,
+                subsample=0.8,
+                colsample_bytree=0.8,
+                reg_alpha=0.1,
+                reg_lambda=0.1,
+                random_state=42,
+                eval_metric="mlogloss",
+                use_label_encoder=False,
+            )
+        else:
+            models["xgb"] = xgb.XGBClassifier(
+                n_estimators=200,
+                max_depth=8,
+                learning_rate=0.1,
+                random_state=42,
+                eval_metric="mlogloss",
+                use_label_encoder=False,
+            )
 
         # 2. 改良されたRandom Forest
         models["rf_improved"] = RandomForestClassifier(
@@ -420,17 +404,16 @@ class EnsembleModelManager:
         )
 
         # 3. LightGBM
-        if LIGHTGBM_AVAILABLE:
-            models["lgb"] = lgb.LGBMClassifier(
-                n_estimators=200,
-                max_depth=10,
-                learning_rate=0.1,
-                subsample=0.8,
-                colsample_bytree=0.8,
-                class_weight="balanced",
-                random_state=42,
-                verbose=-1,
-            )
+        models["lgb"] = lgb.LGBMClassifier(
+            n_estimators=200,
+            max_depth=10,
+            learning_rate=0.1,
+            subsample=0.8,
+            colsample_bytree=0.8,
+            class_weight="balanced",
+            random_state=42,
+            verbose=-1,
+        )
 
         # スタッキングアンサンブル
         estimators = [(name, model) for name, model in models.items()]

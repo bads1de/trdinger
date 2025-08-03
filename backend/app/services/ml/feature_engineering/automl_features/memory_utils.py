@@ -154,15 +154,10 @@ def memory_efficient_processing(operation_name: str = "処理"):
         yield
     finally:
         # 終了時のクリーンアップ
-        collected = gc.collect()
+        gc.collect()
         end_memory = psutil.Process().memory_info().rss / 1024 / 1024
         memory_diff = end_memory - start_memory
-
-        if abs(memory_diff) > 10:  # 10MB以上の変化があった場合のみログ出力
-            logger.info(
-                f"{operation_name}完了: メモリ変化 {memory_diff:+.2f}MB, "
-                f"GC回収 {collected}オブジェクト"
-            )
+        # ここでの詳細デバッグログ出力は抑制
 
 
 def memory_monitor_decorator(func: Callable) -> Callable:
@@ -313,8 +308,7 @@ def cleanup_autofeat_memory(autofeat_model=None):
                 autofeat_model.scaler_ = None
 
         # 強制ガベージコレクション
-        collected = gc.collect()
-        logger.debug(f"AutoFeatメモリクリーンアップ: {collected}オブジェクト回収")
+        gc.collect()
 
     except Exception as e:
         logger.error(f"AutoFeatメモリクリーンアップエラー: {e}")

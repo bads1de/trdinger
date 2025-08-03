@@ -56,9 +56,6 @@ class AutoFeatCalculator:
     def __enter__(self):
         """コンテキストマネージャーの開始"""
         self._memory_usage_before = self._get_memory_usage()
-        logger.debug(
-            f"AutoFeatCalculator開始時メモリ使用量: {self._memory_usage_before:.2f}MB"
-        )
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
@@ -89,8 +86,7 @@ class AutoFeatCalculator:
     def _force_garbage_collection(self):
         """強制ガベージコレクション"""
         try:
-            collected = gc.collect()
-            logger.debug(f"ガベージコレクション実行: {collected}オブジェクト回収")
+            gc.collect()
         except Exception as e:
             logger.error(f"ガベージコレクションエラー: {e}")
 
@@ -98,7 +94,6 @@ class AutoFeatCalculator:
     def _memory_managed_operation(self, operation_name: str):
         """メモリ管理付きの操作を実行するコンテキストマネージャー"""
         start_memory = self._get_memory_usage()
-        logger.debug(f"{operation_name}開始時メモリ: {start_memory:.2f}MB")
 
         try:
             yield
@@ -642,11 +637,10 @@ class AutoFeatCalculator:
                         try:
                             setattr(self.autofeat_model, attr, None)
                         except Exception as attr_error:
-                            logger.debug(f"属性{attr}のクリア中にエラー: {attr_error}")
+                            pass
 
                 # モデル自体をクリア
                 self.autofeat_model = None
-                logger.debug("AutoFeatモデルの詳細クリーンアップ完了")
 
             # その他の属性をクリア
             self.selected_features = None
@@ -664,8 +658,6 @@ class AutoFeatCalculator:
             # 強制ガベージコレクション
             self._force_garbage_collection()
 
-            logger.debug("AutoFeatモデルをクリアしました")
-
         except Exception as e:
             logger.error(f"モデルクリア中にエラー: {e}")
             # エラーが発生してもクリーンアップは続行
@@ -680,9 +672,7 @@ class AutoFeatCalculator:
         EnhancedFeatureEngineeringServiceから呼び出される統一インターフェース
         """
         try:
-            logger.debug("AutoFeatCalculatorのクリーンアップを開始")
             self.clear_model()
-            logger.debug("AutoFeatCalculatorのクリーンアップ完了")
         except Exception as e:
             logger.error(f"AutoFeatCalculatorクリーンアップエラー: {e}")
 

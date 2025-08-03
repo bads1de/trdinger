@@ -199,9 +199,6 @@ class AutoMLFeatureGenerationService:
             # NaNを除去
             df = df.dropna()
 
-            logger.debug(
-                f"DataFrame変換完了: shape={df.shape}, columns={list(df.columns)}"
-            )
             return df
 
         except Exception as e:
