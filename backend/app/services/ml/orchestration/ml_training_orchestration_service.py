@@ -403,6 +403,17 @@ class MLTrainingOrchestrationService:
                     trainer_type, automl_config_dict, ensemble_config_dict,
                     single_model_config_dict, config, training_data
                 )
+            except Exception as e:
+                logger.error(f"MLトレーニングのバックグラウンド処理でエラーが発生: {e}", exc_info=True)
+                training_status.update(
+                    {
+                        "is_training": False,
+                        "status": "error",
+                        "message": f"トレーニング中にエラーが発生しました: {e}",
+                        "end_time": datetime.now().isoformat(),
+                        "error": str(e),
+                    }
+                )
 
     def _cleanup_automl_processes(self):
         """AutoMLプロセスのクリーンアップ処理"""
