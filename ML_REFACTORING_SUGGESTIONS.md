@@ -51,7 +51,7 @@
   - `orchestration/background_task_manager.py` の機能を拡張し、トレーニングの状態（進捗、ステータス、メッセージなど）も管理できるようにします。
   - `MLTrainingOrchestrationService` は `background_task_manager` を通じて状態の読み書きを行い、グローバル変数への依存をなくします。これにより、コードの見通しが良くなり、テスト容易性も向上します。
 
-- [ ] ### 2.7. Feature Engineering サービスの階層重複
+- [x] ### 2.7. Feature Engineering サービスの階層重複
 
 - **課題**:
   - `FeatureEngineeringService`、`EnhancedFeatureEngineeringService`、`AutoMLFeatureGenerationService` の 3 つのサービスが存在し、責務が重複・分散しています。
@@ -62,39 +62,6 @@
   - `FeatureEngineeringService` を基底クラスとして残し、AutoML 機能を統合した単一の `UnifiedFeatureEngineeringService` を作成します。
   - `AutoMLFeatureGenerationService` の機能を `UnifiedFeatureEngineeringService` に統合し、API レイヤーから直接呼び出せるようにします。
   - 継承ではなくコンポジションパターンを使用し、AutoML 機能を必要に応じて注入できる設計に変更します。
-
-- [ ] ### 2.9. メトリクス収集機能の重複
-
-- **課題**:
-  - `common/metrics.py` の `MLMetricsCollector` と `evaluation/enhanced_metrics.py` の `EnhancedMetricsCalculator` が、メトリクス関連の機能を重複して実装しています。
-  - `MLMetricsCollector` はパフォーマンスメトリクスの収集に特化していますが、`EnhancedMetricsCalculator` はモデル評価メトリクスに特化しており、統合の余地があります。
-- **提案**:
-
-  - `EnhancedMetricsCalculator` をモデル評価専用クラスとして維持し、`MLMetricsCollector` をシステム全体のメトリクス収集クラスとして位置づけます。
-  - `MLMetricsCollector` に `EnhancedMetricsCalculator` の結果を記録する機能を追加し、統一的なメトリクス管理を実現します。
-  - 両クラス間でメトリクス名やフォーマットの標準化を行い、一貫性を保ちます。
-
-- **課題**:
-  - `MLTrainingService` と `BaseMLTrainer` が似たような責務を持っており、学習ロジックが分散しています。
-  - `MLTrainingService` は `BaseMLTrainer` を使用していますが、実際には多くの学習ロジックを重複して実装しています。
-  - `SingleModelTrainer` と `EnsembleTrainer` の初期化・学習パターンが非常に似ており、共通化の余地があります。
-- **提案**:
-
-  - `MLTrainingService` を軽量なファサードクラスとして再設計し、実際の学習ロジックは `BaseMLTrainer` の継承クラスに集約します。
-  - `SingleModelTrainer` と `EnsembleTrainer` の共通部分を `BaseMLTrainer` に移動し、重複を削減します。
-  - トレーナーの選択ロジックをファクトリーパターンで実装し、設定に基づいて適切なトレーナーを動的に生成できるようにします。
-
-- [ ] ### 2.12. AutoML 設定の重複定義
-
-- **課題**:
-  - `MLTrainingOrchestrationService.get_default_automl_config()` と `AutoMLConfig.get_default_config()` で同じような設定が重複定義されています。
-  - `get_financial_optimized_automl_config()` も複数箇所で似たような実装が存在します。
-  - 設定の変更時に複数箇所を修正する必要があり、保守性に問題があります。
-- **提案**:
-
-  - `AutoMLConfig` クラスを唯一の設定管理クラスとして統一し、他の箇所からの重複定義を削除します。
-  - 設定のプリセット（デフォルト、金融最適化など）は `AutoMLConfig` のクラスメソッドとして集約します。
-  - 他のサービスクラスは `AutoMLConfig` のインスタンスを受け取るか、プリセットメソッドを呼び出すように変更します。
 
 - [ ] ### 2.13. 特徴量計算クラスの構造重複
 
@@ -202,12 +169,6 @@
 
 本リファクタリング提案では、**25 項目**の包括的な改善点を特定しました。これらの改善により、ML コードベースの品質が大幅に向上し、開発効率とシステムの安定性が向上することが期待されます。
 
-## 5. 総括
-
-本提案は、ML コードベースの保守性・拡張性・性能を総合的に高めるための改善項目を体系化しました。特に「モデルラッパーの統一」「特徴量計算の共通化」「設定/ログ/リソース管理の標準化」により、追加開発と運用の両面でコスト削減と品質向上が期待できます。
-
-本リファクタリング提案では、**21 項目**の包括的な改善点を特定しました。これらの改善により、ML コードベースの品質が大幅に向上し、開発効率とシステムの安定性が向上することが期待されます。
-
 ### 改善効果の期待値
 
 1. **コード重複の削減**: 推定 40-50%のコード重複を解消
@@ -224,10 +185,136 @@
 
 **中優先度（次のスプリントで実装）:**
 
-- 2.1. 評価ロジックの統一
 - 2.13. 特徴量計算クラスの構造重複
 
 **低優先度（長期的な改善）:**
 
 - 2.20. ログメッセージの重複パターン
 - 2.24. テストコードの重複パターン
+
+## 3. utils 配下のリファクタリング提案（追加）
+
+以下は `backend/app/utils/` 配下のコード（API 応答/日時、DB 挿入・クエリ、データクリーニング・前処理・標準化・変換・検証、ラベル生成、メトリクス、エラーハンドリング、重複ログフィルタ）を精査したうえでの具体的な改善提案です。ML コード全体の品質・可観測性・再利用性を高めるために優先度順で記載します。
+
+- [ ] 3.1. data_preprocessing と data_validation の重複・境界の再定義
+
+  - 課題:
+    - 欠損値補完や外れ値処理が [`data_preprocessing.DataPreprocessor.preprocess_features()`](backend/app/utils/data_preprocessing.py:157) と [`data_validation.DataValidator.clean_dataframe()`](backend/app/utils/data_validation.py:349) に分散・重複。
+    - どちらにも「NaN/inf 処理・閾値クリーニング・中央値/平均埋め」などが存在し、呼び順によって挙動が変わるリスクがある。
+  - 提案:
+    - 境界の定義を明確化し、責務分離を徹底。
+      - validation 系は「検出と報告（および最小限の安全置換）」に限定。
+      - preprocessing 系は「意図的な補完・外れ値除去・スケーリング」のみ担当。
+    - 具体策:
+      - DataValidator に「検出専用 API」を追加し、副作用のある補完分岐を削減（clean_dataframe は軽量フォールバック中心に）。
+      - DataPreprocessor 側に「前処理パイプライン（検出 → 補完 → 標準化）」を一本化し、validation の結果を受けて明示的に処置を適用。
+    - 期待効果: 前処理順序の一意化、テスト容易性向上、二重処理防止。
+
+- [ ] 3.2. data_cleaning_utils の補間ロジックの共通化とパイプライン化
+
+  - 課題: [`DataCleaner.interpolate_*`](backend/app/utils/data_cleaning_utils.py:20) が OI/FR と Fear&Greed で似た補間パターン（ffill→ 統計補完）を別々に実装。
+  - 提案:
+    - 共通補間ヘルパーを DataPreprocessor に移し、カラム名と戦略を受け取って処理する関数へ一般化。
+    - DataCleaner は「ドメイン別の列名セット/既定値」を定義する薄いラッパーとし、実処理は共通関数を呼ぶ。
+  - 期待効果: 重複削減、欠損戦略の一元管理、後続テストの簡素化。
+
+- [ ] 3.3. 型・スキーマ整合性の標準化（standardize_ohlcv_columns の強化）
+
+  - 課題: [`data_standardization.standardize_ohlcv_columns()`](backend/app/utils/data_standardization.py:10) は列名正規化のみで型/インデックス/ソートを保証していない。これに対して [`DataCleaner.validate_ohlcv_data()`](backend/app/utils/data_cleaning_utils.py:160) で別途検証している。
+  - 提案:
+    - standardize_ohlcv_columns に以下のオプション引数を追加し、標準化の網羅度を拡張:
+      - ensure_datetime_index=True（DatetimeIndex でない場合に変換）
+      - sort_index=True（時間順ソート）
+      - coerce_dtypes=True（数値列の型強制: float32/float64 方針を選択可能）
+    - DataCleaner 側の検証は「標準化後の整合性監査」に縮小。
+  - 期待効果: データ受け渡し点での一回の標準化で後段の前処理・学習の前提が安定。
+
+- [ ] 3.4. data_converter と data_utils のフォーマット/精度の統一
+
+  - 課題:
+    - [`data_converter.OHLCVDataConverter`](backend/app/utils/data_converter.py:12) などで float キャストが散在し、精度・dtype の一貫性がコンテキスト依存。
+    - [`data_utils.ensure_series/ensure_numeric_series`](backend/app/utils/data_utils.py:23) とも役割が近いが責務境界が曖昧。
+  - 提案:
+    - 変換時の dtype ポリシーを一本化（例: 学習前は float32、評価・保存は float64 などを「方針」として定義）。
+    - Series/Array 変換の入口を data_utils に集約。data_converter は「外部->内部表現」「内部->API/DB 表現」のマッピングに限定。
+    - 変換ポリシーを設定化（config 経由）し、変換関数は明示的な引数で override 可能に。
+  - 期待効果: 精度/メモリの統制、一貫したデータ表現で不具合低減。
+
+- [ ] 3.5. data_validation.Safe\* 系関数の戻り型統一と NaN/Inf 処理方針の明確化
+
+  - 課題: [`safe_normalize`](backend/app/utils/data_validation.py:250) は戻りが Series/ndarray/float の場合があり、最後に Series へ寄せる処理が入っている。ほかの safe\_\* もスカラー/Series の混在がある。
+  - 提案:
+    - すべての safe\_\* は戻りを pd.Series に統一（index を引数の基準 Series から継承）。スカラー演算は内部で Series 化。
+    - NaN/Inf の置換ポリシーを DataValidator のクラス定数として集約（デフォルト値、epsilon、閾値など）。呼び出し側で上書き可能。
+  - 期待効果: 呼び出し側の分岐削減、型安定性の向上。
+
+- [ ] 3.6. metrics_calculator の非推奨 API の整理と委譲
+
+  - 課題: [`calculate_detailed_metrics`](backend/app/utils/metrics_calculator.py:30) が deprecated コメントで外部クラスへの移行を案内しているが、利用側での移行完了が不明。デフォルト辞書 [`get_default_metrics()`](backend/app/utils/metrics_calculator.py:151) との責務関係も曖昧。
+  - 提案:
+    - 本関数に PendingDeprecationWarning を追加し、次期リリースで完全削除をアナウンス。検索して利用箇所を置換（`EnhancedMetricsCalculator` へ移行）。
+    - get_default_metrics は「評価結果の初期化」に特化して残し、モデル評価は evaluation 層へ全面委譲。
+  - 期待効果: メトリクス計算経路を一本化、保守コスト削減。
+
+- [ ] 3.7. unified_error_handler の API/ML 分岐と戻り値契約の厳格化
+
+  - 課題: [`safe_execute()`](backend/app/utils/unified_error_handler.py:272) が API/ML の分岐を内包し戻り値が default_return/HTTPException のミックスになり得る。利用側が想定を外すと取り扱いが難しい。
+  - 提案:
+    - API 用（例外送出）と ML 用（値返却）の 2 系統に明確分岐した関数を公開（safe_execute_api / safe_execute_ml）。現行 safe_execute は内部委譲しつつ将来的に非推奨化。
+    - create_error_response のスキーマを JSON-Schema 的に固定し、details/context の型を統一。timestamp は UTC ISO で固定。
+  - 期待効果: 例外/戻り値契約の明瞭化によりハンドリングの分岐が単純化。
+
+- [ ] 3.8. database_utils の DB 方言吸収レイヤの拡張とテスト強化
+
+  - 課題: [`bulk_insert_with_conflict_handling`](backend/app/utils/database_utils.py:18) で SQLite と PostgreSQL で分岐しているが、MySQL 等の将来拡張が想定されていない。SQLite バッチ個別リトライは堅牢だがユニットテストが重要。
+  - 提案:
+    - DB 方言抽象（DialectStrategy）を導入して、方言別の conflict/insert 戦略をプラガブルに（PostgreSQL/SQLite 実装を分離）。
+    - 例外の粒度（IntegrityError 等）での分岐を明示してログを整備。バッチサイズは設定で注入可能に。
+    - テスト: 疑似 DB セッションのモックで「重複/部分成功/コミット失敗/個別再試行」を網羅。ログの期待文言も検証。
+
+- [ ] 3.9. label_generation の分布最適化と計算のストリーミング化
+
+  - 課題: ラベル生成で複数メソッドの試行（[`_calculate_adaptive_thresholds`](backend/app/utils/label_generation.py:212)）を行うが、データ長に比例して計算量が増える。分布検証 [`validate_label_distribution`](backend/app/utils/label_generation.py:292) は有用だが、スケール時のパフォーマンスに注意。
+  - 提案:
+    - 目標分布に対するスコア計算をベクトル化・一回算出の統計量をキャッシュ（std/quantile など）。
+    - 大規模データではローリング窓のサンプルリング（または分位近似: t-digest 等）で近似加速。
+    - 戻りのメタ情報（threshold_stats 等）はスキーマ（Dict[str, Any] -> TypedDict/Dataclass）へ。
+  - 期待効果: 大規模データでのスループット改善、メタ情報の型安全性向上。
+
+- [ ] 3.10. duplicate_filter_handler の機能拡張（統計/抑制ログ出力）
+
+  - 課題: 連続抑制された回数が利用者に見えにくい。容量到達時の削除戦略は LRU だが明示ログがない。
+  - 提案:
+    - interval 内で抑制された回数が一定閾値を超えた際にサマリーログを定期的に出すオプションを追加（例: "message='X' suppressed N times in last T sec"）。
+    - capacity 超過で削除されたメッセージキーと削除理由を debug ログに記録（オプトイン）。
+  - 期待効果: 運用時の観測性向上、サイレントドロップの原因究明が容易。
+
+- [ ] 3.11. API ユーティリティの時刻/タイムゾーン取り扱いの統一
+
+  - 課題: [`api_utils.APIResponseHelper`](backend/app/utils/api_utils.py:12) と他ユーティリティで datetime.now().isoformat() などが混在。UTC 固定/タイムゾーン付き ISO の統一を徹底したい。
+  - 提案:
+    - DateTimeHelper に `now_utc_iso()` を追加し、全レスポンス timestamp を UTC+Z で統一（例: `datetime.now(timezone.utc).isoformat()`）。
+    - APIResponseHelper/error_response/api_response は内部で DateTimeHelper を使用し、重複処理を削減。
+  - 期待効果: 監視・集計・フロント表示の一貫性向上。
+
+- [ ] 3.12. ユーティリティ間の循環依存の回避と import 方針
+
+  - 課題: [`data_cleaning_utils` が `data_preprocessing` を参照](backend/app/utils/data_cleaning_utils.py:12)。将来的な再配置で循環依存が生じやすい構成。
+  - 提案:
+    - 「共通低層（core_utils/transform）」と「ドメイン別（cleaners）」に層分割し、上位が下位にのみ依存する構造へ整理。
+    - 実装ファイル内 import を遅延（ローカル import）するポリシーを最小限で活用し循環を回避。
+  - 期待効果: 再配置・分割時のリスク低減。
+
+- [ ] 3.13. ログ文言・レベルの標準化（utils 全体）
+
+  - 課題: info/warning/error の使い分けにばらつき。ユーザー向け/開発者向けの文言が混在。
+  - 提案:
+    - `utils` 共通のログガイドラインを定義し、info は進捗・件数、warning は回復可能異常、error は失敗時に限定。
+    - 閾値・件数・ウィンドウなど重要パラメータは構造化ログ（extra フィールド）に添付。
+  - 期待効果: 運用時のノイズ低減、問題追跡の効率化。
+
+- [ ] 3.14. テスト整備（単体/プロパティ/回帰）
+  - 提案（横断的）:
+    - property-based testing（hypothesis など）で `safe_*` 系の数値安定性を検証（ゼロ除算、極小値、Inf、巨大値）。
+    - 時系列一貫性テスト（標準化 → 検証 → 前処理の順で結果が変わらないこと）。
+    - DB バルク挿入のリトライ/混在成功シナリオのモックテスト。

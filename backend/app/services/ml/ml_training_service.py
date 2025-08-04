@@ -15,11 +15,10 @@ import pandas as pd
 from ...utils.data_preprocessing import data_preprocessor
 from ...utils.unified_error_handler import safe_ml_operation
 from ..optimization.optuna_optimizer import OptunaOptimizer, ParameterSpace
+from .base_ml_trainer import BaseMLTrainer
 from .common.base_resource_manager import BaseResourceManager, CleanupLevel
 from .config import ml_config
-from .ensemble.ensemble_trainer import EnsembleTrainer
 from .model_manager import model_manager
-from .single_model.single_model_trainer import SingleModelTrainer
 
 logger = logging.getLogger(__name__)
 
@@ -70,9 +69,43 @@ class MLTrainingService(BaseResourceManager):
         self.ensemble_config = ensemble_config
         self.single_model_config = single_model_config
 
-        # トレーナーを選択
+        # 統合されたトレーナー設定を作成
+        trainer_config = self._create_trainer_config(
+            trainer_type, ensemble_config, single_model_config
+        )
+
+        # 統合されたBaseMLTrainerを直接使用
+        self.trainer = BaseMLTrainer(
+            automl_config=automl_config, trainer_config=trainer_config
+        )
+
+        self.trainer_type = trainer_type
+
+        logger.info(
+            f"MLTrainingService初期化完了（簡素化版）: trainer_type={trainer_type}"
+        )
+        if trainer_type == "single" and single_model_config:
+            logger.info(f"単一モデル設定: {single_model_config}")
+
+    def _create_trainer_config(
+        self,
+        trainer_type: str,
+        ensemble_config: Optional[Dict[str, Any]],
+        single_model_config: Optional[Dict[str, Any]],
+    ) -> Dict[str, Any]:
+        """
+        統合されたトレーナー設定を作成
+
+        Args:
+            trainer_type: トレーナータイプ
+            ensemble_config: アンサンブル設定
+            single_model_config: 単一モデル設定
+
+        Returns:
+            トレーナー設定辞書
+        """
         if trainer_type.lower() == "ensemble":
-            # アンサンブルトレーナー
+            # アンサンブル設定のデフォルト値
             default_ensemble_config = {
                 "method": "bagging",
                 "bagging_params": {
@@ -80,43 +113,36 @@ class MLTrainingService(BaseResourceManager):
                     "bootstrap_fraction": 0.8,
                     "base_model_type": "lightgbm",
                 },
-                "stacking_params": {
-                    "base_models": ["lightgbm", "randomforest", "xgboost"],
-                    "meta_model": "lightgbm",
-                    "cv_folds": 5,
-                    "use_probas": True,
-                },
             }
 
             # 設定をマージ
+            final_ensemble_config = default_ensemble_config.copy()
             if ensemble_config:
-                default_ensemble_config.update(ensemble_config)
+                final_ensemble_config.update(ensemble_config)
 
-            self.trainer = EnsembleTrainer(
-                ensemble_config=default_ensemble_config, automl_config=automl_config
-            )
+            return {
+                "type": "ensemble",
+                "model_type": final_ensemble_config.get("method", "bagging"),
+                "ensemble_config": final_ensemble_config,
+            }
 
         elif trainer_type.lower() == "single":
-            # 単一モデルトレーナー
-            model_type = "lightgbm"  # デフォルト
+            # 単一モデル設定のデフォルト値
+            model_type = "lightgbm"
             if single_model_config and "model_type" in single_model_config:
                 model_type = single_model_config["model_type"]
 
-            self.trainer = SingleModelTrainer(
-                model_type=model_type, automl_config=automl_config
-            )
+            return {
+                "type": "single",
+                "model_type": model_type,
+                "model_params": single_model_config,
+            }
 
         else:
             raise ValueError(
                 f"サポートされていないトレーナータイプ: {trainer_type}。"
                 f"サポートされているタイプ: 'ensemble', 'single'"
             )
-
-        self.trainer_type = trainer_type
-
-        logger.info(f"MLTrainingService初期化完了: trainer_type={trainer_type}")
-        if trainer_type == "single" and single_model_config:
-            logger.info(f"単一モデル設定: {single_model_config}")
 
     @staticmethod
     def get_available_single_models() -> list:

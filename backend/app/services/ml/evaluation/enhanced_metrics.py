@@ -1,14 +1,20 @@
 """
-拡張評価指標システム
+統合評価指標システム
 
 分析報告書で提案された包括的な評価指標を実装。
-不均衡データに対する適切な評価指標を提供します。
+不均衡データに対する適切な評価指標を提供し、
+システム全体のメトリクス収集・管理機能も統合します。
 """
 
+import json
 import logging
+import threading
+import time
 import warnings
-from dataclasses import dataclass
-from typing import Any, Dict, List, Optional
+from collections import defaultdict, deque
+from dataclasses import dataclass, field
+from datetime import datetime, timedelta
+from typing import Any, Callable, Dict, List, Optional
 
 import numpy as np
 from sklearn.metrics import (
@@ -37,22 +43,69 @@ class MetricsConfig:
     zero_division: int = 0
 
 
+@dataclass
+class MetricData:
+    """メトリクスデータ"""
+
+    name: str
+    value: float
+    timestamp: datetime
+    tags: Dict[str, str] = field(default_factory=dict)
+    context: Dict[str, Any] = field(default_factory=dict)
+
+
+@dataclass
+class PerformanceMetrics:
+    """パフォーマンスメトリクス"""
+
+    operation: str
+    duration_ms: float
+    memory_mb: float
+    cpu_percent: float
+    success: bool
+    timestamp: datetime
+    error_message: Optional[str] = None
+
+
+@dataclass
+class ModelEvaluationMetrics:
+    """モデル評価メトリクス"""
+
+    model_name: str
+    model_type: str
+    metrics: Dict[str, Any]
+    timestamp: datetime
+    dataset_info: Dict[str, Any] = field(default_factory=dict)
+    training_params: Dict[str, Any] = field(default_factory=dict)
+
+
 class EnhancedMetricsCalculator:
     """
-    拡張評価指標計算器
+    統合評価指標計算器・収集器
 
     不均衡データに適した包括的な評価指標を提供し、
     モデルの性能を多角的に評価します。
+    また、システム全体のメトリクス収集・管理機能も統合しています。
     """
 
-    def __init__(self, config: MetricsConfig = None):
+    def __init__(self, config: MetricsConfig = None, max_history: int = 1000):
         """
         初期化
 
         Args:
             config: 評価指標設定
+            max_history: メトリクス履歴の最大保持数
         """
         self.config = config or MetricsConfig()
+
+        # メトリクス収集機能の初期化
+        self.max_history = max_history
+        self._metrics: Dict[str, deque] = defaultdict(lambda: deque(maxlen=max_history))
+        self._performance_metrics: deque = deque(maxlen=max_history)
+        self._model_evaluation_metrics: deque = deque(maxlen=max_history)
+        self._error_counts: Dict[str, int] = defaultdict(int)
+        self._operation_counts: Dict[str, int] = defaultdict(int)
+        self._lock = threading.Lock()
 
     def calculate_comprehensive_metrics(
         self,
@@ -118,6 +171,222 @@ class EnhancedMetricsCalculator:
             metrics["error"] = str(e)
 
         return metrics
+
+    def record_metric(
+        self,
+        name: str,
+        value: float,
+        tags: Optional[Dict[str, str]] = None,
+        context: Optional[Dict[str, Any]] = None,
+    ):
+        """
+        メトリクスを記録
+
+        Args:
+            name: メトリクス名
+            value: 値
+            tags: タグ
+            context: コンテキスト情報
+        """
+        with self._lock:
+            metric = MetricData(
+                name=name,
+                value=value,
+                timestamp=datetime.now(),
+                tags=tags or {},
+                context=context or {},
+            )
+            self._metrics[name].append(metric)
+
+    def record_performance(
+        self,
+        operation: str,
+        duration_ms: float,
+        memory_mb: float = 0.0,
+        cpu_percent: float = 0.0,
+        success: bool = True,
+        error_message: Optional[str] = None,
+    ):
+        """
+        パフォーマンスメトリクスを記録
+
+        Args:
+            operation: 操作名
+            duration_ms: 処理時間（ミリ秒）
+            memory_mb: メモリ使用量（MB）
+            cpu_percent: CPU使用率（%）
+            success: 成功フラグ
+            error_message: エラーメッセージ
+        """
+        with self._lock:
+            perf_metric = PerformanceMetrics(
+                operation=operation,
+                duration_ms=duration_ms,
+                memory_mb=memory_mb,
+                cpu_percent=cpu_percent,
+                success=success,
+                timestamp=datetime.now(),
+                error_message=error_message,
+            )
+            self._performance_metrics.append(perf_metric)
+
+            # 操作カウント
+            self._operation_counts[operation] += 1
+
+            # エラーカウント
+            if not success:
+                self._error_counts[operation] += 1
+
+    def record_error(self, operation: str, error_type: str, error_message: str):
+        """
+        エラーを記録
+
+        Args:
+            operation: 操作名
+            error_type: エラータイプ
+            error_message: エラーメッセージ
+        """
+        with self._lock:
+            self._error_counts[f"{operation}_{error_type}"] += 1
+
+        # ログにも出力
+        logger.error(
+            f"Operation: {operation}, Error: {error_type}, Message: {error_message}"
+        )
+
+    def record_model_evaluation_metrics(
+        self,
+        model_name: str,
+        model_type: str,
+        evaluation_metrics: Dict[str, Any],
+        dataset_info: Optional[Dict[str, Any]] = None,
+        training_params: Optional[Dict[str, Any]] = None,
+    ):
+        """
+        モデル評価メトリクスを記録
+
+        Args:
+            model_name: モデル名
+            model_type: モデルタイプ
+            evaluation_metrics: 評価メトリクス
+            dataset_info: データセット情報
+            training_params: 学習パラメータ
+        """
+        with self._lock:
+            # 個別メトリクスも記録
+            for metric_name, value in evaluation_metrics.items():
+                if isinstance(value, (int, float)):
+                    self.record_metric(
+                        name=metric_name,
+                        value=float(value),
+                        tags={
+                            "model_name": model_name,
+                            "model_type": model_type,
+                            "metric_category": "model_evaluation",
+                        },
+                        context={
+                            "dataset_info": dataset_info or {},
+                            "training_params": training_params or {},
+                        },
+                    )
+
+            # モデル評価メトリクス全体を記録
+            model_eval_metric = ModelEvaluationMetrics(
+                model_name=model_name,
+                model_type=model_type,
+                metrics=evaluation_metrics,
+                timestamp=datetime.now(),
+                dataset_info=dataset_info or {},
+                training_params=training_params or {},
+            )
+            self._model_evaluation_metrics.append(model_eval_metric)
+
+    def evaluate_and_record_model(
+        self,
+        model_name: str,
+        model_type: str,
+        y_true: np.ndarray,
+        y_pred: np.ndarray,
+        y_proba: Optional[np.ndarray] = None,
+        class_names: Optional[List[str]] = None,
+        dataset_info: Optional[Dict[str, Any]] = None,
+        training_params: Optional[Dict[str, Any]] = None,
+        training_time: Optional[float] = None,
+        memory_usage: Optional[float] = None,
+    ) -> Dict[str, Any]:
+        """
+        モデルを評価し、結果を記録
+
+        Args:
+            model_name: モデル名
+            model_type: モデルタイプ
+            y_true: 真のラベル
+            y_pred: 予測ラベル
+            y_proba: 予測確率（オプション）
+            class_names: クラス名のリスト（オプション）
+            dataset_info: データセット情報（オプション）
+            training_params: 学習パラメータ（オプション）
+            training_time: 学習時間（秒）（オプション）
+            memory_usage: メモリ使用量（MB）（オプション）
+
+        Returns:
+            評価結果の辞書
+        """
+        try:
+            logger.info(f"📊 統合メトリクス評価開始: {model_name} ({model_type})")
+
+            # 包括的な評価を実行
+            evaluation_metrics = self.calculate_comprehensive_metrics(
+                y_true=y_true,
+                y_pred=y_pred,
+                y_proba=y_proba,
+                class_names=class_names,
+            )
+
+            # パフォーマンス情報を追加
+            if training_time is not None:
+                evaluation_metrics["training_time"] = training_time
+                # パフォーマンスメトリクスとしても記録
+                self.record_performance(
+                    operation=f"model_training_{model_type}",
+                    duration_ms=training_time * 1000,  # 秒をミリ秒に変換
+                    memory_mb=memory_usage or 0.0,
+                    success=True,
+                )
+
+            if memory_usage is not None:
+                evaluation_metrics["memory_usage"] = memory_usage
+
+            # モデル評価結果を記録
+            self.record_model_evaluation_metrics(
+                model_name=model_name,
+                model_type=model_type,
+                evaluation_metrics=evaluation_metrics,
+                dataset_info=dataset_info,
+                training_params=training_params,
+            )
+
+            # 主要メトリクスをログ出力
+            accuracy = evaluation_metrics.get("accuracy", 0.0)
+            f1_score = evaluation_metrics.get("f1_score", 0.0)
+            balanced_accuracy = evaluation_metrics.get("balanced_accuracy", 0.0)
+
+            logger.info(
+                f"✅ モデル評価完了: {model_name} - "
+                f"精度={accuracy:.4f}, F1={f1_score:.4f}, バランス精度={balanced_accuracy:.4f}"
+            )
+
+            return evaluation_metrics
+
+        except Exception as e:
+            logger.error(f"❌ 統合メトリクス評価エラー: {model_name} - {e}")
+            # エラーを記録
+            self.record_error(
+                operation=f"model_evaluation_{model_type}",
+                error_type=type(e).__name__,
+                error_message=str(e),
+            )
+            raise
 
     def _calculate_basic_metrics(
         self, y_true: np.ndarray, y_pred: np.ndarray
@@ -424,5 +693,53 @@ class EnhancedMetricsCalculator:
             logger.error(f"レポート保存エラー: {e}")
 
 
-# グローバルインスタンス
+# グローバルインスタンス（統合されたメトリクス計算器・収集器）
 enhanced_metrics_calculator = EnhancedMetricsCalculator()
+
+
+# 便利な関数エイリアス（後方互換性のため）
+def record_metric(name: str, value: float, **kwargs):
+    """メトリクス記録"""
+    enhanced_metrics_calculator.record_metric(name, value, **kwargs)
+
+
+def record_performance(operation: str, duration_ms: float, **kwargs):
+    """パフォーマンス記録"""
+    enhanced_metrics_calculator.record_performance(operation, duration_ms, **kwargs)
+
+
+def record_error(operation: str, error_type: str, error_message: str):
+    """エラー記録"""
+    enhanced_metrics_calculator.record_error(operation, error_type, error_message)
+
+
+def record_model_evaluation_metrics(
+    model_name: str,
+    model_type: str,
+    evaluation_metrics: Dict[str, Any],
+    dataset_info: Optional[Dict[str, Any]] = None,
+    training_params: Optional[Dict[str, Any]] = None,
+):
+    """モデル評価メトリクス記録"""
+    enhanced_metrics_calculator.record_model_evaluation_metrics(
+        model_name, model_type, evaluation_metrics, dataset_info, training_params
+    )
+
+
+def evaluate_and_record_model(
+    model_name: str,
+    model_type: str,
+    y_true: np.ndarray,
+    y_pred: np.ndarray,
+    y_proba: Optional[np.ndarray] = None,
+    **kwargs,
+) -> Dict[str, Any]:
+    """モデル評価と記録の便利関数"""
+    return enhanced_metrics_calculator.evaluate_and_record_model(
+        model_name, model_type, y_true, y_pred, y_proba, **kwargs
+    )
+
+
+# 後方互換性のためのエイリアス
+MLMetricsCollector = EnhancedMetricsCalculator
+metrics_collector = enhanced_metrics_calculator

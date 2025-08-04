@@ -7,7 +7,7 @@ ML学習基盤クラス
 """
 
 import logging
-from abc import ABC, abstractmethod
+from abc import ABC
 from datetime import datetime
 from typing import Any, Dict, Optional, Tuple, cast
 
@@ -47,12 +47,17 @@ class BaseMLTrainer(BaseResourceManager, ABC):
     単一責任原則に従い、学習に関する責任のみを持ちます。
     """
 
-    def __init__(self, automl_config: Optional[Dict[str, Any]] = None):
+    def __init__(
+        self,
+        automl_config: Optional[Dict[str, Any]] = None,
+        trainer_config: Optional[Dict[str, Any]] = None,
+    ):
         """
         初期化
 
         Args:
             automl_config: AutoML設定（辞書形式）
+            trainer_config: トレーナー設定（単一モデル/アンサンブル設定）
         """
         # BaseResourceManagerの初期化
         super().__init__()
@@ -72,12 +77,26 @@ class BaseMLTrainer(BaseResourceManager, ABC):
             self.use_automl = False
             logger.info("📊 基本特徴量エンジニアリングを使用します")
 
+        # トレーナー設定の処理
+        self.trainer_config = trainer_config or {}
+        self.trainer_type = self.trainer_config.get(
+            "type", "single"
+        )  # "single" or "ensemble"
+        self.model_type = self.trainer_config.get("model_type", "lightgbm")
+        self.ensemble_config = self.trainer_config.get("ensemble_config", {})
+
         self.scaler = StandardScaler()
         self.feature_columns = None
         self.is_trained = False
         self.model = None
+        self.models = {}  # アンサンブル用の複数モデル格納
         # 呼び出し元が辞書を渡す想定のため、そのまま保持（特徴量サービス内ではオブジェクトを使用）
         self.automl_config = automl_config
+        self.last_training_results = None  # 最後の学習結果を保持
+
+        logger.info(
+            f"統合トレーナー初期化: type={self.trainer_type}, model_type={self.model_type}"
+        )
 
     # 重複ロジック削除:
     # _create_automl_config_from_dict は AutoMLConfig.from_dict に統一したため不要
@@ -270,10 +289,9 @@ class BaseMLTrainer(BaseResourceManager, ABC):
 
         return evaluation_result
 
-    @abstractmethod
     def predict(self, features_df: pd.DataFrame) -> np.ndarray:
         """
-        予測を実行（継承クラスで実装）
+        統合された予測実行
 
         Args:
             features_df: 特徴量DataFrame
@@ -281,8 +299,14 @@ class BaseMLTrainer(BaseResourceManager, ABC):
         Returns:
             予測結果
         """
+        if not self.is_trained:
+            raise ValueError("モデルが学習されていません")
 
-    @abstractmethod
+        if self.trainer_type == "ensemble":
+            return self._predict_ensemble(features_df)
+        else:
+            return self._predict_single(features_df)
+
     def _train_model_impl(
         self,
         X_train: pd.DataFrame,
@@ -292,7 +316,7 @@ class BaseMLTrainer(BaseResourceManager, ABC):
         **training_params,
     ) -> Dict[str, Any]:
         """
-        モデル学習の具体的な実装（継承クラスで実装）
+        統合されたモデル学習実装
 
         Args:
             X_train: 学習用特徴量
@@ -304,6 +328,280 @@ class BaseMLTrainer(BaseResourceManager, ABC):
         Returns:
             学習結果
         """
+        if self.trainer_type == "ensemble":
+            return self._train_ensemble_model(
+                X_train, X_test, y_train, y_test, **training_params
+            )
+        else:
+            return self._train_single_model(
+                X_train, X_test, y_train, y_test, **training_params
+            )
+
+    def _evaluate_model_with_unified_metrics(
+        self,
+        y_true: np.ndarray,
+        y_pred: np.ndarray,
+        y_proba: Optional[np.ndarray] = None,
+        model_name: Optional[str] = None,
+        dataset_info: Optional[Dict[str, Any]] = None,
+        training_params: Optional[Dict[str, Any]] = None,
+        training_time: Optional[float] = None,
+        memory_usage: Optional[float] = None,
+    ) -> Dict[str, Any]:
+        """
+        統一メトリクス管理システムを使用してモデルを評価
+
+        Args:
+            y_true: 真のラベル
+            y_pred: 予測ラベル
+            y_proba: 予測確率（オプション）
+            model_name: モデル名（オプション）
+            dataset_info: データセット情報（オプション）
+            training_params: 学習パラメータ（オプション）
+            training_time: 学習時間（秒）（オプション）
+            memory_usage: メモリ使用量（MB）（オプション）
+
+        Returns:
+            評価結果の辞書
+        """
+        try:
+            # 統合されたメトリクス計算器を使用
+            from .evaluation.enhanced_metrics import enhanced_metrics_calculator
+            from datetime import datetime
+
+            # モデル名が指定されていない場合はデフォルト名を使用
+            if model_name is None:
+                model_name = (
+                    f"{self.model_type}_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+                )
+
+            # 統合メトリクス評価を実行
+            evaluation_metrics = enhanced_metrics_calculator.evaluate_and_record_model(
+                model_name=model_name,
+                model_type=self.model_type,
+                y_true=y_true,
+                y_pred=y_pred,
+                y_proba=y_proba,
+                class_names=["Down", "Hold", "Up"],  # 3クラス分類のデフォルト
+                dataset_info=dataset_info,
+                training_params=training_params,
+                training_time=training_time,
+                memory_usage=memory_usage,
+            )
+
+            return evaluation_metrics
+
+        except Exception as e:
+            logger.error(f"統一メトリクス評価エラー: {e}")
+            # フォールバック: 基本的な評価のみ実行
+            from sklearn.metrics import accuracy_score, f1_score
+
+            return {
+                "accuracy": accuracy_score(y_true, y_pred),
+                "f1_score": f1_score(y_true, y_pred, average="weighted"),
+                "error": str(e),
+            }
+
+    def _train_single_model(
+        self,
+        X_train: pd.DataFrame,
+        X_test: pd.DataFrame,
+        y_train: pd.Series,
+        y_test: pd.Series,
+        **training_params,
+    ) -> Dict[str, Any]:
+        """
+        単一モデルの学習
+
+        Args:
+            X_train: 学習用特徴量
+            X_test: テスト用特徴量
+            y_train: 学習用ラベル
+            y_test: テスト用ラベル
+            **training_params: 学習パラメータ
+
+        Returns:
+            学習結果
+        """
+        try:
+            logger.info(f"🤖 単一モデル学習開始: {self.model_type}")
+
+            # モデルの作成と学習
+            from .single_model.single_model_trainer import SingleModelTrainer
+
+            # 一時的にSingleModelTrainerを使用（後で統合）
+            trainer = SingleModelTrainer(
+                model_type=self.model_type, automl_config=self.automl_config
+            )
+
+            # 学習データを結合
+            X_combined = pd.concat([X_train, X_test])
+            y_combined = pd.concat([y_train, y_test])
+            training_data = X_combined.copy()
+            training_data["target"] = y_combined
+
+            # 学習実行
+            result = trainer.train_model(training_data, **training_params)
+
+            # モデルを保存
+            self.model = trainer.model
+            self.is_trained = True
+
+            logger.info(f"✅ 単一モデル学習完了: {self.model_type}")
+            return result
+
+        except Exception as e:
+            logger.error(f"❌ 単一モデル学習エラー: {e}")
+            raise
+
+    def _train_ensemble_model(
+        self,
+        X_train: pd.DataFrame,
+        X_test: pd.DataFrame,
+        y_train: pd.Series,
+        y_test: pd.Series,
+        **training_params,
+    ) -> Dict[str, Any]:
+        """
+        アンサンブルモデルの学習
+
+        Args:
+            X_train: 学習用特徴量
+            X_test: テスト用特徴量
+            y_train: 学習用ラベル
+            y_test: テスト用ラベル
+            **training_params: 学習パラメータ
+
+        Returns:
+            学習結果
+        """
+        try:
+            logger.info(
+                f"🎯 アンサンブル学習開始: {self.ensemble_config.get('method', 'bagging')}"
+            )
+
+            # アンサンブルトレーナーの作成と学習
+            from .ensemble.ensemble_trainer import EnsembleTrainer
+
+            # 一時的にEnsembleTrainerを使用（後で統合）
+            trainer = EnsembleTrainer(
+                ensemble_config=self.ensemble_config, automl_config=self.automl_config
+            )
+
+            # 学習データを結合
+            X_combined = pd.concat([X_train, X_test])
+            y_combined = pd.concat([y_train, y_test])
+            training_data = X_combined.copy()
+            training_data["target"] = y_combined
+
+            # 学習実行
+            result = trainer.train_model(training_data, **training_params)
+
+            # モデルを保存
+            self.models = trainer.models
+            self.model = trainer  # アンサンブルトレーナー自体を保存
+            self.is_trained = True
+
+            logger.info(
+                f"✅ アンサンブル学習完了: {self.ensemble_config.get('method', 'bagging')}"
+            )
+            return result
+
+        except Exception as e:
+            logger.error(f"❌ アンサンブル学習エラー: {e}")
+            raise
+
+    def _predict_single(self, features_df: pd.DataFrame) -> np.ndarray:
+        """
+        単一モデルの予測
+
+        Args:
+            features_df: 特徴量DataFrame
+
+        Returns:
+            予測結果
+        """
+        if self.model is None:
+            raise ValueError("単一モデルが学習されていません")
+
+        try:
+            # 特徴量の前処理
+            processed_features = self._preprocess_features_for_prediction(features_df)
+
+            # 予測実行
+            if hasattr(self.model, "predict"):
+                predictions = self.model.predict(processed_features)
+            else:
+                # SingleModelTrainerの場合
+                predictions = self.model.predict(features_df)
+
+            return predictions
+
+        except Exception as e:
+            logger.error(f"❌ 単一モデル予測エラー: {e}")
+            raise
+
+    def _predict_ensemble(self, features_df: pd.DataFrame) -> np.ndarray:
+        """
+        アンサンブルモデルの予測
+
+        Args:
+            features_df: 特徴量DataFrame
+
+        Returns:
+            予測結果
+        """
+        if self.model is None:
+            raise ValueError("アンサンブルモデルが学習されていません")
+
+        try:
+            # EnsembleTrainerの予測メソッドを使用
+            predictions = self.model.predict(features_df)
+            return predictions
+
+        except Exception as e:
+            logger.error(f"❌ アンサンブル予測エラー: {e}")
+            raise
+
+    def _preprocess_features_for_prediction(
+        self, features_df: pd.DataFrame
+    ) -> pd.DataFrame:
+        """
+        予測用の特徴量前処理
+
+        Args:
+            features_df: 特徴量DataFrame
+
+        Returns:
+            前処理済み特徴量
+        """
+        try:
+            # 特徴量カラムの選択
+            if self.feature_columns is not None:
+                # 学習時の特徴量カラムのみを使用
+                available_columns = [
+                    col for col in self.feature_columns if col in features_df.columns
+                ]
+                processed_features = features_df[available_columns].copy()
+            else:
+                processed_features = features_df.copy()
+
+            # スケーリング（必要に応じて）
+            if hasattr(self, "scaler") and self.scaler is not None:
+                try:
+                    processed_features = pd.DataFrame(
+                        self.scaler.transform(processed_features),
+                        columns=processed_features.columns,
+                        index=processed_features.index,
+                    )
+                except Exception as e:
+                    logger.warning(f"スケーリングをスキップ: {e}")
+
+            return processed_features
+
+        except Exception as e:
+            logger.error(f"特徴量前処理エラー: {e}")
+            return features_df
 
     def _validate_training_data(self, training_data: pd.DataFrame) -> None:
         """入力データの検証"""

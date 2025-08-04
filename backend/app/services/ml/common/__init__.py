@@ -32,16 +32,20 @@ from .logger import (
     log_warning,
     ml_logger,
 )
-from .metrics import (
+
+# メトリクス機能は evaluation/enhanced_metrics.py に統合されました
+# 後方互換性のため、enhanced_metrics からインポート
+from ..evaluation.enhanced_metrics import (
     MetricData,
-    MLMetricsCollector,
+    ModelEvaluationMetrics,
     PerformanceMetrics,
-    get_metrics_summary,
-    metrics_collector,
-    performance_monitor,
+    enhanced_metrics_calculator as metrics_collector,
     record_error,
     record_metric,
+    record_model_evaluation_metrics,
     record_performance,
+    # 後方互換性エイリアス
+    MLMetricsCollector,
 )
 
 __all__ = [
