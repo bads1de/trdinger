@@ -274,6 +274,7 @@ class AutoMLConfig:
         辞書から設定を作成
 
         シリアライズされた設定辞書からAutoMLConfigオブジェクトを復元します。
+        旧キー名の後方互換（例: 'generations' -> 'feateng_steps'）にも対応します。
 
         Args:
             config_dict (Dict[str, Any]): 設定辞書
@@ -282,9 +283,17 @@ class AutoMLConfig:
             AutoMLConfig: 復元された設定オブジェクト
 
         Note:
-            辞書に存在しないキーはデフォルト値で初期化されます
+            - 不明なキーは無視され、デフォルト値が使用されます
+            - 'autofeat.generations' が存在し 'feateng_steps' が無い場合は、feateng_steps に転記します
         """
-        tsfresh_config = TSFreshConfig(**config_dict.get("tsfresh", {}))
-        autofeat_config = AutoFeatConfig(**config_dict.get("autofeat", {}))
+        tsfresh_raw = dict(config_dict.get("tsfresh", {}))
+        autofeat_raw = dict(config_dict.get("autofeat", {}))
+
+        # 後方互換: generations -> feateng_steps
+        if "feateng_steps" not in autofeat_raw and "generations" in autofeat_raw:
+            autofeat_raw["feateng_steps"] = autofeat_raw.get("generations")
+
+        tsfresh_config = TSFreshConfig(**tsfresh_raw)
+        autofeat_config = AutoFeatConfig(**autofeat_raw)
 
         return cls(tsfresh_config, autofeat_config)

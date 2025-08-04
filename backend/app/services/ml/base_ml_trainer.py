@@ -57,8 +57,8 @@ class BaseMLTrainer(ABC):
 
         # AutoML設定の処理
         if automl_config:
-            # 辞書からAutoMLConfigオブジェクトを作成
-            automl_config_obj = self._create_automl_config_from_dict(automl_config)
+            # AutoMLConfig.from_dict に統一
+            automl_config_obj = AutoMLConfig.from_dict(automl_config)
             self.feature_service = EnhancedFeatureEngineeringService(automl_config_obj)
             self.use_automl = True
             logger.info("🤖 AutoML特徴量エンジニアリングを有効化しました")
@@ -72,54 +72,11 @@ class BaseMLTrainer(ABC):
         self.feature_columns = None
         self.is_trained = False
         self.model = None
+        # 呼び出し元が辞書を渡す想定のため、そのまま保持（特徴量サービス内ではオブジェクトを使用）
         self.automl_config = automl_config
 
-    def _create_automl_config_from_dict(
-        self, config_dict: Dict[str, Any]
-    ) -> AutoMLConfig:
-        """
-        辞書からAutoMLConfigオブジェクトを作成
-
-        Args:
-            config_dict: AutoML設定辞書
-
-        Returns:
-            AutoMLConfigオブジェクト
-        """
-        from .feature_engineering.automl_features.automl_config import (
-            AutoFeatConfig,
-            TSFreshConfig,
-        )
-
-        # TSFresh設定
-        tsfresh_dict = config_dict.get("tsfresh", {})
-        tsfresh_config = TSFreshConfig(
-            enabled=tsfresh_dict.get("enabled", True),
-            feature_selection=tsfresh_dict.get("feature_selection", True),
-            fdr_level=tsfresh_dict.get("fdr_level", 0.05),
-            feature_count_limit=tsfresh_dict.get("feature_count_limit", 100),
-            parallel_jobs=tsfresh_dict.get("parallel_jobs", 2),
-            performance_mode=tsfresh_dict.get("performance_mode", "balanced"),
-        )
-
-        # AutoFeat設定
-        autofeat_dict = config_dict.get("autofeat", {})
-        autofeat_config = AutoFeatConfig(
-            enabled=autofeat_dict.get("enabled", True),
-            max_features=autofeat_dict.get("max_features", 50),
-            feateng_steps=autofeat_dict.get(
-                "feateng_steps", autofeat_dict.get("generations", 10)
-            ),  # feateng_stepsまたはgenerationsをマッピング
-            max_gb=autofeat_dict.get("max_gb", 1.0),
-            generations=autofeat_dict.get("generations", 20),
-            population_size=autofeat_dict.get("population_size", 50),
-            tournament_size=autofeat_dict.get("tournament_size", 3),
-        )
-
-        return AutoMLConfig(
-            tsfresh_config=tsfresh_config,
-            autofeat_config=autofeat_config,
-        )
+    # 重複ロジック削除:
+    # _create_automl_config_from_dict は AutoMLConfig.from_dict に統一したため不要
 
     @safe_ml_operation(default_return={}, context="MLモデル学習でエラーが発生しました")
     def train_model(

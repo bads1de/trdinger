@@ -77,9 +77,9 @@ class MLOrchestrator(MLPredictionInterface):
 
         # AutoML機能の有効/無効に応じて特徴量サービスを選択
         if enable_automl:
-            # AutoML設定を作成
+            # AutoML設定を作成（from_dict に統一）
             if automl_config:
-                automl_config_obj = self._create_automl_config_from_dict(automl_config)
+                automl_config_obj = AutoMLConfig.from_dict(automl_config)
             else:
                 automl_config_obj = AutoMLConfig.get_financial_optimized_config()
 
@@ -106,42 +106,8 @@ class MLOrchestrator(MLPredictionInterface):
         # 既存の学習済みモデルを自動読み込み
         self._try_load_latest_model()
 
-    def _create_automl_config_from_dict(
-        self, config_dict: Dict[str, Any]
-    ) -> AutoMLConfig:
-        """辞書からAutoMLConfigオブジェクトを作成"""
-        from app.services.ml.feature_engineering.automl_features.automl_config import (
-            AutoFeatConfig,
-            TSFreshConfig,
-        )
-
-        # TSFresh設定
-        tsfresh_dict = config_dict.get("tsfresh", {})
-        tsfresh_config = TSFreshConfig(
-            enabled=tsfresh_dict.get("enabled", True),
-            feature_selection=tsfresh_dict.get("feature_selection", True),
-            fdr_level=tsfresh_dict.get("fdr_level", 0.05),
-            feature_count_limit=tsfresh_dict.get("feature_count_limit", 100),
-            parallel_jobs=tsfresh_dict.get("parallel_jobs", 2),
-            performance_mode=tsfresh_dict.get("performance_mode", "balanced"),
-        )
-
-        # AutoFeat設定
-        autofeat_dict = config_dict.get("autofeat", {})
-        autofeat_config = AutoFeatConfig(
-            enabled=autofeat_dict.get("enabled", True),
-            max_features=autofeat_dict.get("max_features", 50),
-            feateng_steps=autofeat_dict.get("feateng_steps", 2),
-            max_gb=autofeat_dict.get("max_gb", 1.0),
-            generations=autofeat_dict.get("generations", 20),
-            population_size=autofeat_dict.get("population_size", 50),
-            tournament_size=autofeat_dict.get("tournament_size", 3),
-        )
-
-        return AutoMLConfig(
-            tsfresh_config=tsfresh_config,
-            autofeat_config=autofeat_config,
-        )
+    # 重複ロジック削除:
+    # _create_automl_config_from_dict は AutoMLConfig.from_dict に統一したため不要
 
     def get_backtest_data_service(self, db: Session) -> BacktestDataService:
         """BacktestDataServiceのインスタンスを取得（依存性注入対応）"""
@@ -586,11 +552,9 @@ class MLOrchestrator(MLPredictionInterface):
             self.automl_config = automl_config
 
             if enabled:
-                # AutoML設定を作成
+                # AutoML設定を作成（from_dict に統一）
                 if automl_config:
-                    automl_config_obj = self._create_automl_config_from_dict(
-                        automl_config
-                    )
+                    automl_config_obj = AutoMLConfig.from_dict(automl_config)
                 else:
                     automl_config_obj = AutoMLConfig.get_financial_optimized_config()
 
