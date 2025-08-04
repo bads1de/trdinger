@@ -17,7 +17,7 @@ import os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from app.services.ml.feature_engineering.advanced_features import AdvancedFeatureEngineer
-from app.services.ml.models.ensemble_models import EnsembleModelManager
+from app.services.ml.ensemble.ensemble_trainer import EnsembleTrainer
 
 logger = logging.getLogger(__name__)
 
@@ -27,7 +27,16 @@ class AdvancedAccuracyImprovementTest:
 
     def __init__(self):
         self.feature_engineer = AdvancedFeatureEngineer()
-        self.ensemble_manager = EnsembleModelManager()
+        # EnsembleTrainerの設定
+        ensemble_config = {
+            "method": "stacking",
+            "stacking_params": {
+                "base_models": ["lightgbm", "random_forest", "xgboost"],
+                "meta_model": "lightgbm",
+                "cv_folds": 3
+            }
+        }
+        self.ensemble_trainer = EnsembleTrainer(ensemble_config=ensemble_config)
 
     def create_enhanced_dataset(self, n_samples=1000):
         """拡張されたデータセットを作成"""
@@ -237,20 +246,22 @@ class AdvancedAccuracyImprovementTest:
         logger.info("🟢 アンサンブル学習性能テスト（高度特徴量 + アンサンブル）")
         
         # アンサンブルモデルの学習・評価
-        ensemble_results = self.ensemble_manager.train_and_evaluate_models(
+        training_result = self.ensemble_trainer._train_model_impl(
             X_train, X_test, y_train, y_test
         )
         
-        # 最高性能モデルを特定
-        best_model = None
-        best_score = 0
-        best_method = ""
+        # 結果を整形（EnsembleTrainerの結果をensemble_resultsの形式に変換）
+        ensemble_results = {
+            "stacking_ensemble": {
+                "accuracy": training_result.get("accuracy", 0),
+                "balanced_accuracy": training_result.get("balanced_accuracy", 0),
+                "f1_score": training_result.get("f1_score", 0)
+            }
+        }
         
-        for method, scores in ensemble_results.items():
-            if scores['balanced_accuracy'] > best_score:
-                best_score = scores['balanced_accuracy']
-                best_method = method
-                best_model = scores
+        # 最高性能モデルを特定
+        best_method = "stacking_ensemble"
+        best_model = ensemble_results["stacking_ensemble"]
         
         logger.info(f"🏆 最高性能モデル: {best_method}")
         logger.info(f"  精度: {best_model['accuracy']:.4f}")
@@ -327,6 +338,7 @@ class AdvancedAccuracyImprovementTest:
         logger.info(f"\n🤖 アンサンブルモデル比較:")
         for method, scores in all_ensemble.items():
             logger.info(f"  {method}: {scores['balanced_accuracy']:.4f}")
+        logger.info("  注: EnsembleTrainerはスタッキングアンサンブルのみを実装しています")
         
         # 目標達成度
         target_accuracy = 0.55  # 55%目標

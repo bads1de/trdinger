@@ -17,7 +17,7 @@ import os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from app.services.ml.feature_engineering.advanced_features import AdvancedFeatureEngineer
-from app.services.ml.models.ensemble_models import EnsembleModelManager
+from app.services.ml.ensemble.ensemble_trainer import EnsembleTrainer
 
 logger = logging.getLogger(__name__)
 
@@ -27,7 +27,16 @@ class ExpandedEnsembleTest:
 
     def __init__(self):
         self.feature_engineer = AdvancedFeatureEngineer()
-        self.ensemble_manager = EnsembleModelManager()
+        # EnsembleTrainerの設定
+        ensemble_config = {
+            "method": "stacking",
+            "stacking_params": {
+                "base_models": ["lightgbm", "random_forest", "xgboost"],
+                "meta_model": "lightgbm",
+                "cv_folds": 3
+            }
+        }
+        self.ensemble_trainer = EnsembleTrainer(ensemble_config=ensemble_config)
 
     def create_test_dataset(self, n_samples=1000):
         """テストデータセットを作成"""
@@ -168,9 +177,18 @@ class ExpandedEnsembleTest:
         logger.info(f"選択特徴量: {len(top_features)}個")
         
         # 拡張アンサンブル学習・評価
-        ensemble_results = self.ensemble_manager.train_and_evaluate_models(
+        training_result = self.ensemble_trainer._train_model_impl(
             X_train_selected, X_test_selected, y_train, y_test
         )
+        
+        # 結果を整形（EnsembleTrainerの結果をensemble_resultsの形式に変換）
+        ensemble_results = {
+            "stacking_ensemble": {
+                "accuracy": training_result.get("accuracy", 0),
+                "balanced_accuracy": training_result.get("balanced_accuracy", 0),
+                "f1_score": training_result.get("f1_score", 0)
+            }
+        }
         
         # 結果分析
         self._analyze_expanded_results(ensemble_results)

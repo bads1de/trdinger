@@ -22,7 +22,7 @@ import os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from app.services.ml.feature_engineering.advanced_features import AdvancedFeatureEngineer
-from app.services.ml.models.ensemble_models import EnsembleModelManager
+from app.services.ml.ensemble.ensemble_trainer import EnsembleTrainer
 
 logger = logging.getLogger(__name__)
 
@@ -32,7 +32,16 @@ class RobustMultifacetedEvaluation:
 
     def __init__(self):
         self.feature_engineer = AdvancedFeatureEngineer()
-        self.ensemble_manager = EnsembleModelManager()
+        # EnsembleTrainerの設定
+        ensemble_config = {
+            "method": "stacking",
+            "stacking_params": {
+                "base_models": ["lightgbm", "random_forest", "xgboost"],
+                "meta_model": "lightgbm",
+                "cv_folds": 3
+            }
+        }
+        self.ensemble_trainer = EnsembleTrainer(ensemble_config=ensemble_config)
         self.evaluation_results = {}
 
     def create_diverse_test_scenarios(self):
@@ -180,11 +189,16 @@ class RobustMultifacetedEvaluation:
                 index=X_test_fold.index
             )
             
-            # モデル学習・予測
+            # モデル予測（EnsembleTrainerは既に学習済み）
             with warnings.catch_warnings():
                 warnings.simplefilter("ignore")
-                model.fit(X_train_scaled, y_train_fold)
-                y_pred = model.predict(X_test_scaled)
+                if hasattr(model, 'predict'):
+                    y_pred = model.predict(X_test_scaled)
+                    if y_pred.ndim > 1:
+                        y_pred = np.argmax(y_pred, axis=1)
+                else:
+                    # 予測メソッドがない場合はエラー
+                    raise ValueError("Model does not have predict method")
             
             # 評価指標計算
             fold_result = {
@@ -241,12 +255,17 @@ class RobustMultifacetedEvaluation:
             index=X_test.index
         )
         
-        # モデル学習・予測
+        # モデル予測（EnsembleTrainerは既に学習済み）
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
-            model.fit(X_train_scaled, y_train)
-            y_pred = model.predict(X_test_scaled)
-            y_proba = model.predict_proba(X_test_scaled) if hasattr(model, 'predict_proba') else None
+            if hasattr(model, 'predict'):
+                y_pred = model.predict(X_test_scaled)
+                if y_pred.ndim > 1:
+                    y_pred = np.argmax(y_pred, axis=1)
+                y_proba = model.predict_proba(X_test_scaled) if hasattr(model, 'predict_proba') else None
+            else:
+                # 予測メソッドがない場合はエラー
+                raise ValueError("Model does not have predict method")
         
         # クラス別詳細評価
         class_report = classification_report(y_test, y_pred, output_dict=True, zero_division=0)
@@ -303,13 +322,13 @@ class RobustMultifacetedEvaluation:
                 index=X_train.index
             )
             
-            # モデル学習
-            with warnings.catch_warnings():
-                warnings.simplefilter("ignore")
-                model.fit(X_train_scaled, y_train)
-            
-            # 特徴量重要度取得
-            if hasattr(model, 'feature_importances_'):
+            # モデルは既に学習済みなので、特徴量重要度を直接取得
+            if hasattr(model, 'ensemble_model') and hasattr(model.ensemble_model, 'get_feature_importance'):
+                importance_dict = model.ensemble_model.get_feature_importance()
+                if importance_dict:
+                    importance = pd.Series(importance_dict, index=X_train_scaled.columns)
+                    importance_results.append(importance)
+            elif hasattr(model, 'feature_importances_'):
                 importance = pd.Series(model.feature_importances_, index=X_train_scaled.columns)
                 importance_results.append(importance)
         
@@ -351,12 +370,17 @@ class RobustMultifacetedEvaluation:
             index=X_test.index
         )
         
-        # モデル学習・予測
+        # モデル予測（EnsembleTrainerは既に学習済み）
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
-            model.fit(X_train_scaled, y_train)
-            y_pred = model.predict(X_test_scaled)
-            y_proba = model.predict_proba(X_test_scaled) if hasattr(model, 'predict_proba') else None
+            if hasattr(model, 'predict'):
+                y_pred = model.predict(X_test_scaled)
+                if y_pred.ndim > 1:
+                    y_pred = np.argmax(y_pred, axis=1)
+                y_proba = model.predict_proba(X_test_scaled) if hasattr(model, 'predict_proba') else None
+            else:
+                # 予測メソッドがない場合はエラー
+                raise ValueError("Model does not have predict method")
         
         # 取引シミュレーション
         capital = initial_capital
@@ -432,11 +456,8 @@ class RobustMultifacetedEvaluation:
         scenarios = self.create_diverse_test_scenarios()
         
         # 最適なモデルを作成
-        best_model = self.ensemble_manager.create_optimized_ensemble(
-            scenarios['normal_market']['ohlcv'], 
-            scenarios['normal_market']['target'],
-            optimize=False
-        )
+        # EnsembleTrainerは直接モデルを作成せず、学習メソッドを通じてモデルを構築
+        self.best_model = None
         
         evaluation_results = {}
         
@@ -486,8 +507,21 @@ class RobustMultifacetedEvaluation:
             scenario_results = {}
             
             # 1. 時系列安定性評価
+            # EnsembleTrainerで学習を実行
+            split_point = int(len(X_selected) * 0.7)
+            X_train = X_selected.iloc[:split_point]
+            X_test = X_selected.iloc[split_point:]
+            y_train = y.iloc[:split_point]
+            y_test = y.iloc[split_point:]
+            
+            # 学習を実行
+            training_result = self.ensemble_trainer._train_model_impl(
+                X_train, X_test, y_train, y_test
+            )
+            
+            # 学習済みのEnsembleTrainerを評価メソッドに渡す
             stability_summary, fold_results = self.evaluate_time_series_stability(
-                X_selected, y, best_model
+                X_selected, y, self.ensemble_trainer
             )
             scenario_results['time_series_stability'] = {
                 'summary': stability_summary,
@@ -496,19 +530,19 @@ class RobustMultifacetedEvaluation:
             
             # 2. クラス不均衡ロバストネス
             imbalance_results = self.evaluate_class_imbalance_robustness(
-                X_selected, y, best_model
+                X_selected, y, self.ensemble_trainer
             )
             scenario_results['class_imbalance_robustness'] = imbalance_results
             
             # 3. 特徴量重要度安定性
             importance_stability = self.evaluate_feature_importance_stability(
-                X_selected, y, best_model
+                X_selected, y, self.ensemble_trainer
             )
             scenario_results['feature_importance_stability'] = importance_stability
             
             # 4. 取引パフォーマンス
             trading_performance = self.simulate_trading_performance(
-                X_selected, y, best_model
+                X_selected, y, self.ensemble_trainer
             )
             scenario_results['trading_performance'] = trading_performance
             

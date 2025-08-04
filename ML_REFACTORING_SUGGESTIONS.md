@@ -84,14 +84,6 @@
       return cls(**data)
   ```
 
-- [ ] ### 2.5. デッドコードの削除
-
-- **課題**: `models/ensemble_models.py` は、多くの scikit-learn モデルをインスタンス化していますが、プロジェクト内の他のファイル（`EnsembleTrainer`など）からは直接利用されておらず、デッドコードである可能性が高いです。
-- **提案**:
-
-  - `models/ensemble_models.py` の利用箇所を検索し、もしどこからも参照されていない場合は、このファイルを削除します。
-  - 代わりに、`EnsembleTrainer` や `SingleModelTrainer` で利用されている各モデルラッパー (`lightgbm_wrapper.py` など) が、モデルのインスタンス化の責任を担っていることを明確にします。
-
 - [ ] ### 2.6. 状態管理の改善
 
 - **課題**: `orchestration/ml_training_orchestration_service.py` は、グローバル変数 `training_status` を使ってトレーニングの状態を管理しており、ステートフルでテストが困難です。
