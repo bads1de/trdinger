@@ -54,15 +54,6 @@
   - **データ準備**: `_prepare_training_data` メソッド内の欠損値補完やラベル生成ロジックは、`utils/data_preprocessing.py` や `utils/label_generation.py` の汎用関数を利用するようにし、`BaseMLTrainer` から具体的な処理を分離します。
   - **メタデータ構築**: `train_model` 内の冗長なメタデータ構築ロジックを、`ModelMetadata` のような `dataclass` を活用して簡潔にします。
 
-- [ ] ### 2.3. モデル管理の統一
-
-- **課題**: `model_manager.py` と `model_management/enhanced_model_manager.py` の 2 つのモデル管理クラスが存在し、機能が重複しています。特に `enhanced_model_manager.py` はバージョン管理やパフォーマンス監視など高機能ですが、`model_manager.py` が各所で利用されており、機能が分断されています。
-- **提案**:
-
-  - `enhanced_model_manager.py` を正式なモデル管理クラスとし、`model_manager.py` の機能を統合・廃止します。
-  - `save_model` や `load_model` の呼び出し箇所を全て `enhanced_model_manager` のインスタンス経由に変更します。
-  - `ml_management_orchestration_service.py` でモデル情報を取得する際に、毎回 `load_model` を呼ぶのではなく、`enhanced_model_manager` が保持するレジストリ（`model_registry.json`）からメタデータを直接読み込むように変更し、パフォーマンスを向上させます。
-
 - [ ] ### 2.4. 設定管理の改善
 
 - **課題**:
@@ -114,19 +105,6 @@
   - `EnhancedMetricsCalculator` をモデル評価専用クラスとして維持し、`MLMetricsCollector` をシステム全体のメトリクス収集クラスとして位置づけます。
   - `MLMetricsCollector` に `EnhancedMetricsCalculator` の結果を記録する機能を追加し、統一的なメトリクス管理を実現します。
   - 両クラス間でメトリクス名やフォーマットの標準化を行い、一貫性を保ちます。
-
-- [ ] ### 2.10. 未使用ファイルとデッドコードの特定
-
-- **課題**:
-  - `__pycache__` ディレクトリに多数の `.cpython-310.pyc` と `.cpython-312.pyc` ファイルが混在しており、異なる Python バージョンでの実行履歴が残っています。
-  - 一部のファイル（例：`automl_preset_service.cpython-312.pyc`）に対応する `.py` ファイルが見当たらず、削除されたファイルのキャッシュが残っている可能性があります。
-- **提案**:
-
-  - プロジェクト全体で `__pycache__` ディレクトリをクリーンアップし、`.gitignore` に適切に追加されていることを確認します。
-  - 存在しない `.py` ファイルに対応するキャッシュファイルを特定し、削除します。
-  - 定期的なコードベースの整理を自動化するスクリプトを作成します。
-
-- [ ] ### 2.11. トレーナーサービスの責務重複
 
 - **課題**:
   - `MLTrainingService` と `BaseMLTrainer` が似たような責務を持っており、学習ロジックが分散しています。

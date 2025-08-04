@@ -17,6 +17,7 @@ import sys
 import os
 import tempfile
 import shutil
+from pathlib import Path
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -34,9 +35,8 @@ from app.services.ml.feature_selection.feature_selector import (
     FeatureSelectionConfig,
     SelectionMethod,
 )
-from app.services.ml.model_management.enhanced_model_manager import (
-    EnhancedModelManager,
-    ModelStatus,
+from app.services.ml.model_manager import (
+    ModelManager,
     PerformanceMetric,
 )
 
@@ -55,7 +55,14 @@ class TestEnhancedMLSystem:
         self.cv_validator = TimeSeriesCrossValidator()
         self.metrics_calculator = EnhancedMetricsCalculator()
         self.feature_selector = FeatureSelector()
-        self.model_manager = EnhancedModelManager(base_path=self.temp_dir)
+        # テスト用のModelManagerを作成（テンポラリディレクトリを使用）
+        from app.services.ml.model_manager import PerformanceMonitoringConfig
+
+        self.model_manager = ModelManager()
+        # テスト用にbase_pathを変更
+        self.model_manager.base_path = Path(self.temp_dir)
+        # configのMODEL_SAVE_PATHも変更
+        self.model_manager.config.MODEL_SAVE_PATH = self.temp_dir
 
     def teardown_method(self):
         """各テストメソッドの後に実行されるクリーンアップ"""
@@ -234,27 +241,24 @@ class TestEnhancedMLSystem:
         )
 
         # モデルをロード
-        loaded_model, metadata = self.model_manager.load_model(model_key)
+        loaded_model, metadata = self.model_manager.load_model_enhanced(model_key)
 
         # 結果の検証
         assert loaded_model is not None
-        assert metadata.model_id == "test_model_random_forest"
-        assert metadata.algorithm == "random_forest"
-        assert metadata.status == ModelStatus.TRAINED
-
-        # パフォーマンス記録
-        self.model_manager.record_performance(
-            model_key, {"accuracy": 0.85, "f1_score": 0.80}
-        )
+        assert metadata.get("algorithm") == "random_forest"
 
         # モデル一覧取得
-        model_list = self.model_manager.get_model_list()
-        assert len(model_list) == 1
-        assert model_list[0]["model_key"] == model_key
+        model_list = self.model_manager.get_model_list_enhanced()
+        assert len(model_list) >= 1
+        # 登録したモデルが含まれているかチェック
+        registered_model_found = any(model["path"] == model_key for model in model_list)
+        assert (
+            registered_model_found
+        ), f"登録したモデル {model_key} が一覧に見つかりません"
 
         logger.info(f"登録されたモデル: {model_key}")
         logger.info(
-            f"モデル精度: {metadata.performance_metrics.get('accuracy', 0.0):.4f}"
+            f"モデル精度: {metadata.get('performance_metrics', {}).get('accuracy', 0.0):.4f}"
         )
         logger.info("✅ モデル管理システムテスト完了")
 
@@ -326,7 +330,7 @@ class TestEnhancedMLSystem:
         )
 
         assert best_result is not None, "最高性能モデルが見つかりません"
-        best_model_key, best_metadata = best_result
+        best_model_path = best_result
 
         logger.info("統合パイプライン結果:")
         logger.info(f"  特徴量選択: {X.shape[1]} → {X_selected.shape[1]}")

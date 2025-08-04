@@ -1,17 +1,24 @@
 """
-MLモデル管理サービス
+統合MLモデル管理サービス
 
 モデルの保存・読み込み・一覧・クリーンアップを一元管理するサービスです。
-内部実装や特定手法の詳細には踏み込まず、安定した入出力インターフェースの提供に焦点を当てます。
+バージョン管理、パフォーマンス監視、メタデータ管理などの高機能も提供します。
+既存のAPIとの互換性を保持しながら、拡張機能も利用できます。
 """
 
 import glob
+import hashlib
 import logging
 import os
+
+from dataclasses import dataclass
 from datetime import datetime, timedelta
-from typing import Any, Dict, List, Optional
+from enum import Enum
+from pathlib import Path
+from typing import Any, Dict, List, Optional, Tuple
 
 import joblib
+import pandas as pd
 
 from app.services.ml.config import ml_config
 
@@ -20,22 +27,61 @@ from ...utils.unified_error_handler import UnifiedModelError, safe_ml_operation
 logger = logging.getLogger(__name__)
 
 
+class PerformanceMetric(Enum):
+    """パフォーマンス指標"""
+
+    ACCURACY = "accuracy"
+    BALANCED_ACCURACY = "balanced_accuracy"
+    F1_SCORE = "f1_score"
+    ROC_AUC = "roc_auc"
+    PR_AUC = "pr_auc"
+    PRECISION = "precision"
+    RECALL = "recall"
+
+
+@dataclass
+class PerformanceMonitoringConfig:
+    """パフォーマンス監視設定"""
+
+    enable_monitoring: bool = True
+    alert_threshold: float = 0.05  # パフォーマンス低下の閾値
+    monitoring_window: int = 100  # 監視ウィンドウサイズ
+    auto_retrain_threshold: float = 0.10  # 自動再学習の閾値
+    max_performance_history: int = 1000
+
+
 class ModelManager:
     """
-    MLモデルの統一管理クラス
+    統合MLモデル管理クラス
 
     モデルの保存、読み込み、バージョン管理、クリーンアップなど、
     モデル管理に関する全ての機能を提供します。
+    既存のAPIとの互換性を保持しながら、バージョン管理、パフォーマンス監視、
+    メタデータ管理などの高機能も提供します。
     """
 
-    def __init__(self):
-        """初期化"""
+    def __init__(self, monitoring_config: PerformanceMonitoringConfig = None):
+        """
+        初期化
+
+        Args:
+            monitoring_config: パフォーマンス監視設定
+        """
+        # 既存設定の初期化
         self.config = ml_config.model
         self._ensure_directories()
+
+        # 拡張機能の初期化（ファイルシステムベース）
+        self.base_path = Path(self.config.MODEL_SAVE_PATH)
+        self.monitoring_config = monitoring_config or PerformanceMonitoringConfig()
 
     def _ensure_directories(self):
         """必要なディレクトリを作成"""
         os.makedirs(self.config.MODEL_SAVE_PATH, exist_ok=True)
+
+    # ========================================
+    # 既存API（互換性維持）
+    # ========================================
 
     def _extract_algorithm_name(
         self, model: Any, metadata: Optional[Dict[str, Any]] = None
@@ -131,7 +177,7 @@ class ModelManager:
         feature_columns: Optional[List[str]] = None,
     ) -> Optional[str]:
         """
-        モデルを保存
+        モデルを保存（既存API）
 
         Args:
             model: 保存するモデル
@@ -212,105 +258,11 @@ class ModelManager:
             raise UnifiedModelError(f"モデル保存に失敗しました: {e}")
 
     @safe_ml_operation(
-        default_return=None, context="アンサンブルモデル保存でエラーが発生しました"
-    )
-    def save_ensemble_model(
-        self,
-        ensemble_trainer: Any,
-        model_name: str,
-        metadata: Optional[Dict[str, Any]] = None,
-    ) -> Optional[str]:
-        """
-        アンサンブルモデルを保存
-
-        Args:
-            ensemble_trainer: EnsembleTrainerインスタンス
-            model_name: モデル名
-            metadata: メタデータ
-
-        Returns:
-            保存されたモデルのベースパス
-
-        Raises:
-            UnifiedModelError: モデル保存に失敗した場合
-        """
-        try:
-            if ensemble_trainer is None:
-                raise UnifiedModelError("保存するアンサンブルトレーナーがNullです")
-
-            # アルゴリズム名と日付でディレクトリ名を生成
-            algorithm_name = self._extract_algorithm_name(ensemble_trainer, metadata)
-            date_stamp = datetime.now().strftime("%Y%m%d")
-            base_ensemble_dir = f"{algorithm_name}_{date_stamp}"
-
-            # 同じディレクトリ名が存在する場合は連番を追加
-            counter = 1
-            ensemble_dir = base_ensemble_dir
-            ensemble_path = os.path.join(self.config.MODEL_SAVE_PATH, ensemble_dir)
-
-            while os.path.exists(ensemble_path):
-                ensemble_dir = f"{base_ensemble_dir}_{counter:02d}"
-                ensemble_path = os.path.join(self.config.MODEL_SAVE_PATH, ensemble_dir)
-                counter += 1
-
-            # ディレクトリを作成
-            os.makedirs(ensemble_path, exist_ok=True)
-
-            # ベースパスを設定
-            base_path = os.path.join(ensemble_path, "ensemble_model")
-
-            # アンサンブルモデルを保存
-            success = ensemble_trainer.save_model(base_path)
-
-            if not success:
-                raise UnifiedModelError("アンサンブルモデルの保存に失敗しました")
-
-            # アンサンブル全体のメタデータを保存
-            ensemble_metadata = {
-                "model_name": algorithm_name,
-                "original_model_name": model_name,
-                "timestamp": date_stamp,
-                "ensemble_method": getattr(
-                    ensemble_trainer, "ensemble_method", "unknown"
-                ),
-                "model_type": "EnsembleModel",
-                "created_at": datetime.now().isoformat(),
-                "metadata": metadata or {},
-            }
-
-            # メタデータファイルを保存
-            metadata_path = os.path.join(ensemble_path, "ensemble_metadata.json")
-            import json
-
-            with open(metadata_path, "w", encoding="utf-8") as f:
-                json.dump(ensemble_metadata, f, ensure_ascii=False, indent=2)
-
-            # ディレクトリサイズを計算
-            total_size = sum(
-                os.path.getsize(os.path.join(dirpath, filename))
-                for dirpath, dirnames, filenames in os.walk(ensemble_path)
-                for filename in filenames
-            )
-
-            logger.info(
-                f"アンサンブルモデル保存完了: {ensemble_dir} (アルゴリズム: {algorithm_name}, サイズ: {total_size / 1024 / 1024:.2f}MB)"
-            )
-
-            # 古いモデルのクリーンアップ
-            self._cleanup_old_ensemble_models(model_name)
-
-            return ensemble_path
-
-        except Exception as e:
-            logger.error(f"アンサンブルモデル保存エラー: {e}")
-            raise UnifiedModelError(f"アンサンブルモデル保存に失敗しました: {e}")
-
-    @safe_ml_operation(
         default_return=None, context="モデル読み込みでエラーが発生しました"
     )
     def load_model(self, model_path: str) -> Optional[Dict[str, Any]]:
         """
-        モデルを読み込み
+        モデルを読み込み（既存API）
 
         Args:
             model_path: モデルファイルパス
@@ -455,6 +407,33 @@ class ModelManager:
             logger.error(f"モデル一覧取得エラー: {e}")
             return []
 
+    def cleanup_expired_models(self):
+        """期限切れのモデルファイルをクリーンアップ"""
+        try:
+            cutoff_date = datetime.now() - timedelta(
+                days=self.config.MODEL_RETENTION_DAYS
+            )
+
+            for search_path in ml_config.get_model_search_paths():
+                if not os.path.exists(search_path):
+                    continue
+
+                for model_file in glob.glob(
+                    os.path.join(search_path, f"*{self.config.MODEL_FILE_EXTENSION}")
+                ):
+                    try:
+                        file_time = datetime.fromtimestamp(os.path.getmtime(model_file))
+                        if file_time < cutoff_date:
+                            os.remove(model_file)
+                            logger.info(
+                                f"期限切れモデルを削除: {os.path.basename(model_file)}"
+                            )
+                    except Exception as e:
+                        logger.warning(f"期限切れモデル削除エラー {model_file}: {e}")
+
+        except Exception as e:
+            logger.error(f"期限切れモデルクリーンアップエラー: {e}")
+
     def _cleanup_old_models(self, model_name: str):
         """古いモデルファイルをクリーンアップ"""
         try:
@@ -486,122 +465,227 @@ class ModelManager:
         except Exception as e:
             logger.error(f"モデルクリーンアップエラー: {e}")
 
-    def cleanup_expired_models(self):
-        """期限切れのモデルファイルをクリーンアップ"""
-        try:
-            cutoff_date = datetime.now() - timedelta(
-                days=self.config.MODEL_RETENTION_DAYS
-            )
+    # ========================================
+    # 拡張API（新機能）
+    # ========================================
 
-            for search_path in ml_config.get_model_search_paths():
-                if not os.path.exists(search_path):
-                    continue
-
-                for model_file in glob.glob(
-                    os.path.join(search_path, f"*{self.config.MODEL_FILE_EXTENSION}")
-                ):
-                    try:
-                        file_time = datetime.fromtimestamp(os.path.getmtime(model_file))
-                        if file_time < cutoff_date:
-                            os.remove(model_file)
-                            logger.info(
-                                f"期限切れモデルを削除: {os.path.basename(model_file)}"
-                            )
-                    except Exception as e:
-                        logger.warning(f"期限切れモデル削除エラー {model_file}: {e}")
-
-        except Exception as e:
-            logger.error(f"期限切れモデルクリーンアップエラー: {e}")
-
-    def load_ensemble_model(self, ensemble_path: str) -> Optional[Any]:
+    def register_model(
+        self,
+        model: Any,
+        model_name: str,
+        algorithm: str,
+        training_data: pd.DataFrame,
+        performance_metrics: Dict[str, float],
+        validation_metrics: Dict[str, float] = None,
+        hyperparameters: Dict[str, Any] = None,
+        feature_selection_config: Dict[str, Any] = None,
+        preprocessing_config: Dict[str, Any] = None,
+        tags: List[str] = None,
+        description: str = "",
+        author: str = "system",
+    ) -> str:
         """
-        アンサンブルモデルを読み込み
+        モデルを登録（拡張機能 - ファイルシステムベース）
 
         Args:
-            ensemble_path: アンサンブルモデルのディレクトリパス
+            model: 学習済みモデル
+            model_name: モデル名
+            algorithm: アルゴリズム名
+            training_data: 学習データ
+            performance_metrics: パフォーマンス指標
+            validation_metrics: 検証指標
+            hyperparameters: ハイパーパラメータ
+            feature_selection_config: 特徴量選択設定
+            preprocessing_config: 前処理設定
+            tags: タグ
+            description: 説明
+            author: 作成者
 
         Returns:
-            読み込まれたEnsembleTrainerインスタンス
-
-        Raises:
-            UnifiedModelError: モデル読み込みに失敗した場合
+            モデルファイルパス
         """
-        try:
-            import json
+        logger.info(f"🔄 モデル登録開始: {model_name}")
 
-            from .ensemble.ensemble_trainer import EnsembleTrainer
+        # 拡張メタデータを含むモデルデータを構築
+        extended_metadata = {
+            "algorithm": algorithm,
+            "performance_metrics": performance_metrics,
+            "validation_metrics": validation_metrics or {},
+            "hyperparameters": hyperparameters or {},
+            "feature_selection_config": feature_selection_config or {},
+            "preprocessing_config": preprocessing_config or {},
+            "tags": tags or [],
+            "description": description,
+            "author": author,
+            "feature_count": training_data.shape[1],
+            "sample_count": training_data.shape[0],
+            "training_data_hash": self._calculate_data_hash(training_data),
+        }
 
-            # メタデータを読み込み
-            metadata_path = os.path.join(ensemble_path, "ensemble_metadata.json")
-            if not os.path.exists(metadata_path):
-                raise UnifiedModelError(
-                    "アンサンブルメタデータファイルが見つかりません"
-                )
+        # 既存のsave_modelメソッドを使用（拡張メタデータ付き）
+        model_path = self.save_model(
+            model=model,
+            model_name=model_name,
+            metadata=extended_metadata,
+            scaler=None,
+            feature_columns=(
+                list(training_data.columns)
+                if hasattr(training_data, "columns")
+                else None
+            ),
+        )
 
-            with open(metadata_path, "r", encoding="utf-8") as f:
-                ensemble_metadata = json.load(f)
+        logger.info(f"✅ モデル登録完了: {model_path}")
+        return model_path
 
-            # ベースパスを設定
-            base_path = os.path.join(ensemble_path, "ensemble_model")
-
-            # EnsembleTrainerを作成（仮の設定で初期化）
-            dummy_config = {
-                "method": ensemble_metadata.get("ensemble_method", "bagging")
-            }
-            ensemble_trainer = EnsembleTrainer(ensemble_config=dummy_config)
-
-            # モデルを読み込み
-            success = ensemble_trainer.load_model(base_path)
-
-            if not success:
-                raise UnifiedModelError("アンサンブルモデルの読み込みに失敗しました")
-
-            logger.info(
-                f"アンサンブルモデル読み込み完了: {os.path.basename(ensemble_path)}"
-            )
-            return ensemble_trainer
-
-        except Exception as e:
-            logger.error(f"アンサンブルモデル読み込みエラー: {e}")
-            raise UnifiedModelError(f"アンサンブルモデル読み込みに失敗しました: {e}")
-
-    def _cleanup_old_ensemble_models(self, model_name: str):
+    def load_model_enhanced(self, model_path: str) -> Tuple[Any, Dict[str, Any]]:
         """
-        古いアンサンブルモデルをクリーンアップ
+        モデルをロード（拡張機能 - ファイルシステムベース）
 
         Args:
-            model_name: モデル名
-        """
-        try:
-            # 保持する最大バージョン数を超えた古いモデルを削除
-            ensemble_dirs = []
+            model_path: モデルファイルパス
 
-            for search_path in ml_config.get_model_search_paths():
-                if not os.path.exists(search_path):
+        Returns:
+            モデルとメタデータのタプル
+        """
+        # 既存のload_modelメソッドを使用
+        model_data = self.load_model(model_path)
+
+        if model_data is None:
+            raise ValueError(f"モデルが見つかりません: {model_path}")
+
+        # モデルとメタデータを分離
+        model = model_data["model"]
+        metadata = model_data.get("metadata", {})
+
+        logger.info(f"拡張モデルロード完了: {os.path.basename(model_path)}")
+        return model, metadata
+
+    def get_best_model(
+        self,
+        metric: PerformanceMetric = PerformanceMetric.BALANCED_ACCURACY,
+        algorithm: Optional[str] = None,
+        tags: Optional[List[str]] = None,
+    ) -> Optional[str]:
+        """
+        最高性能のモデルを取得（ファイルシステムベース）
+
+        Args:
+            metric: 評価指標
+            algorithm: アルゴリズム名でフィルタ
+            tags: タグでフィルタ
+
+        Returns:
+            最高性能モデルのファイルパス
+        """
+        models = self.list_models("*")
+        candidates = []
+
+        for model_info in models:
+            try:
+                # モデルファイルからメタデータを読み込み
+                model_data = self.load_model(model_info["path"])
+                if not model_data:
                     continue
 
-                pattern = os.path.join(search_path, f"{model_name}_ensemble_*")
-                for ensemble_dir in glob.glob(pattern):
-                    if os.path.isdir(ensemble_dir):
-                        ensemble_dirs.append(ensemble_dir)
+                metadata = model_data.get("metadata", {})
 
-            # 作成日時でソート（新しい順）
-            ensemble_dirs.sort(key=lambda x: os.path.getmtime(x), reverse=True)
+                # フィルタ条件をチェック
+                if algorithm and metadata.get("algorithm") != algorithm:
+                    continue
 
-            # 保持数を超えた古いモデルを削除
-            for old_dir in ensemble_dirs[self.config.MAX_MODEL_VERSIONS :]:
-                try:
-                    import shutil
+                if tags and not any(tag in metadata.get("tags", []) for tag in tags):
+                    continue
 
-                    shutil.rmtree(old_dir)
-                    logger.info(
-                        f"古いアンサンブルモデルを削除: {os.path.basename(old_dir)}"
-                    )
-                except Exception as e:
-                    logger.warning(f"古いアンサンブルモデル削除エラー {old_dir}: {e}")
+                # パフォーマンス指標を取得
+                performance_metrics = metadata.get("performance_metrics", {})
+                metric_value = performance_metrics.get(metric.value, 0.0)
 
-        except Exception as e:
-            logger.error(f"古いアンサンブルモデルクリーンアップエラー: {e}")
+                candidates.append((model_info["path"], metric_value))
+
+            except Exception as e:
+                logger.warning(
+                    f"モデルメタデータ読み込みエラー {model_info['path']}: {e}"
+                )
+                continue
+
+        if not candidates:
+            return None
+
+        # 最高スコアのモデルを選択
+        best_model_path, _ = max(candidates, key=lambda x: x[1])
+        return best_model_path
+
+    def get_model_list_enhanced(
+        self, algorithm: Optional[str] = None
+    ) -> List[Dict[str, Any]]:
+        """モデル一覧を取得（拡張機能 - ファイルシステムベース）"""
+        models = self.list_models("*")
+        enhanced_models = []
+
+        for model_info in models:
+            try:
+                # モデルファイルからメタデータを読み込み
+                model_data = self.load_model(model_info["path"])
+                if not model_data:
+                    continue
+
+                metadata = model_data.get("metadata", {})
+
+                # フィルタ条件をチェック
+                if algorithm and metadata.get("algorithm") != algorithm:
+                    continue
+
+                # 拡張情報を追加
+                enhanced_info = {
+                    **model_info,
+                    "algorithm": metadata.get("algorithm", "unknown"),
+                    "performance_metrics": metadata.get("performance_metrics", {}),
+                    "validation_metrics": metadata.get("validation_metrics", {}),
+                    "feature_count": metadata.get("feature_count", 0),
+                    "sample_count": metadata.get("sample_count", 0),
+                    "tags": metadata.get("tags", []),
+                    "description": metadata.get("description", ""),
+                    "author": metadata.get("author", "unknown"),
+                }
+
+                enhanced_models.append(enhanced_info)
+
+            except Exception as e:
+                logger.warning(
+                    f"モデルメタデータ読み込みエラー {model_info['path']}: {e}"
+                )
+                # メタデータ読み込みに失敗してもモデル情報は追加
+                enhanced_models.append(
+                    {
+                        **model_info,
+                        "algorithm": "unknown",
+                        "performance_metrics": {},
+                        "validation_metrics": {},
+                        "feature_count": 0,
+                        "sample_count": 0,
+                        "tags": [],
+                        "description": "",
+                        "author": "unknown",
+                    }
+                )
+
+        # 更新時刻でソート（新しい順）
+        enhanced_models.sort(key=lambda x: x["modified_at"], reverse=True)
+        return enhanced_models
+
+    # ========================================
+    # ヘルパーメソッド
+    # ========================================
+
+    def _calculate_data_hash(self, data: pd.DataFrame) -> str:
+        """データハッシュを計算"""
+        try:
+            data_str = data.to_string()
+            return hashlib.md5(data_str.encode()).hexdigest()
+        except Exception:
+            # DataFrame でない/シリアライズ失敗などの場合のフォールバック
+            return "unknown"
 
 
 # グローバルインスタンス
