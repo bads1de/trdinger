@@ -32,12 +32,10 @@ class MLConfigManager:
             config_file_path: 設定ファイルのパス
         """
         self.config_file_path = Path(config_file_path)
-        self.backup_dir = Path("config/backups")
         self._ml_config = MLConfig()
 
         # ディレクトリ作成
         self.config_file_path.parent.mkdir(parents=True, exist_ok=True)
-        self.backup_dir.mkdir(parents=True, exist_ok=True)
 
         # 設定ファイルが存在する場合は読み込み
         if self.config_file_path.exists():
@@ -122,9 +120,6 @@ class MLConfigManager:
             保存成功フラグ
         """
         try:
-            # バックアップを作成
-            self._create_backup()
-
             # 設定を辞書形式に変換
             config_dict = self.get_config_dict()
 
@@ -220,9 +215,6 @@ class MLConfigManager:
             リセット成功フラグ
         """
         try:
-            # バックアップを作成
-            self._create_backup()
-
             # デフォルト設定を作成
             self._ml_config = MLConfig()
 
@@ -571,23 +563,6 @@ class MLConfigManager:
                 merged[section] = section_updates
 
         return merged
-
-    def _create_backup(self):
-        """現在の設定ファイルのバックアップを作成"""
-        try:
-            if self.config_file_path.exists():
-                timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-                backup_path = self.backup_dir / f"ml_config_backup_{timestamp}.json"
-
-                import shutil
-
-                shutil.copy2(self.config_file_path, backup_path)
-
-                logger.info(f"設定ファイルのバックアップを作成しました: {backup_path}")
-
-        except Exception as e:
-            logger.warning(f"バックアップの作成に失敗しました: {e}")
-
 
 # グローバルインスタンス
 ml_config_manager = MLConfigManager()

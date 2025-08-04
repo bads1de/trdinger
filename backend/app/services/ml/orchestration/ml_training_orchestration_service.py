@@ -400,11 +400,18 @@ class MLTrainingOrchestrationService:
 
                 # MLサービス初期化とトレーニング実行
                 self._execute_ml_training_with_error_handling(
-                    trainer_type, automl_config_dict, ensemble_config_dict,
-                    single_model_config_dict, config, training_data
+                    trainer_type,
+                    automl_config_dict,
+                    ensemble_config_dict,
+                    single_model_config_dict,
+                    config,
+                    training_data,
                 )
             except Exception as e:
-                logger.error(f"MLトレーニングのバックグラウンド処理でエラーが発生: {e}", exc_info=True)
+                logger.error(
+                    f"MLトレーニングのバックグラウンド処理でエラーが発生: {e}",
+                    exc_info=True,
+                )
                 training_status.update(
                     {
                         "is_training": False,
@@ -519,24 +526,22 @@ class MLTrainingOrchestrationService:
             logger.warning(f"TSFreshクリーンアップエラー: {e}")
 
     def _cleanup_enhanced_feature_service(self):
-        """EnhancedFeatureEngineeringService関連リソースのクリーンアップ"""
+        """FeatureEngineeringService関連リソースのクリーンアップ"""
         try:
-            # EnhancedFeatureEngineeringServiceのインスタンスを作成してクリーンアップ
-            from app.services.ml.feature_engineering.enhanced_feature_engineering_service import (
-                EnhancedFeatureEngineeringService,
+            # FeatureEngineeringServiceのインスタンスを作成してクリーンアップ
+            from app.services.ml.feature_engineering.feature_engineering_service import (
+                FeatureEngineeringService,
             )
 
             # 一時的なインスタンスを作成してクリーンアップメソッドを呼び出し
-            temp_service = EnhancedFeatureEngineeringService()
+            temp_service = FeatureEngineeringService()
             temp_service.cleanup_resources()
 
             # インスタンスを削除
             del temp_service
 
         except Exception as e:
-            logger.warning(
-                f"EnhancedFeatureEngineeringServiceクリーンアップエラー: {e}"
-            )
+            logger.warning(f"FeatureEngineeringServiceクリーンアップエラー: {e}")
 
     def _cleanup_ml_training_service(self):
         """MLTrainingService関連リソースのクリーンアップ"""
@@ -611,10 +616,7 @@ class MLTrainingOrchestrationService:
 
         # 最適化設定の準備
         optimization_settings = None
-        if (
-            config.optimization_settings
-            and config.optimization_settings.enabled
-        ):
+        if config.optimization_settings and config.optimization_settings.enabled:
             optimization_settings = config.optimization_settings
 
         # トレーニング実行

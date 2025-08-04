@@ -15,7 +15,7 @@ from app.services.data_collection.orchestration.market_data_orchestration_servic
     MarketDataOrchestrationService,
 )
 
-from .enhanced_feature_engineering_service import EnhancedFeatureEngineeringService
+from .feature_engineering_service import FeatureEngineeringService
 
 logger = logging.getLogger(__name__)
 
@@ -38,7 +38,11 @@ class AutoMLFeatureGenerationService:
         """
         self.db_session = db_session
         self.market_data_service = MarketDataOrchestrationService(db_session)
-        self.feature_service = EnhancedFeatureEngineeringService()
+        # AutoML機能を有効にしてFeatureEngineeringServiceを初期化
+        from .automl_features.automl_config import AutoMLConfig
+
+        automl_config = AutoMLConfig.get_financial_optimized_config()
+        self.feature_service = FeatureEngineeringService(automl_config=automl_config)
 
     async def generate_features(
         self,

@@ -51,18 +51,6 @@
   - `orchestration/background_task_manager.py` の機能を拡張し、トレーニングの状態（進捗、ステータス、メッセージなど）も管理できるようにします。
   - `MLTrainingOrchestrationService` は `background_task_manager` を通じて状態の読み書きを行い、グローバル変数への依存をなくします。これにより、コードの見通しが良くなり、テスト容易性も向上します。
 
-- [] ### 2.7. Feature Engineering サービスの階層重複
-
-- **課題**:
-  - `FeatureEngineeringService`、`EnhancedFeatureEngineeringService`、`AutoMLFeatureGenerationService` の 3 つのサービスが存在し、責務が重複・分散しています。
-  - `EnhancedFeatureEngineeringService` は `FeatureEngineeringService` を継承していますが、実際には大部分の機能を再実装しており、継承の利点が活かされていません。
-  - `AutoMLFeatureGenerationService` は単なるファサードクラスとして機能しており、独立したサービスとしての価値が低いです。
-- **提案**:
-
-  - `FeatureEngineeringService` を基底クラスとして残し、AutoML 機能を統合した単一の `UnifiedFeatureEngineeringService` を作成します。
-  - `AutoMLFeatureGenerationService` の機能を `UnifiedFeatureEngineeringService` に統合し、API レイヤーから直接呼び出せるようにします。
-  - 継承ではなくコンポジションパターンを使用し、AutoML 機能を必要に応じて注入できる設計に変更します。
-
 - [ ] ### 2.13. 特徴量計算クラスの構造重複
 
 - **課題**:

@@ -231,23 +231,5 @@ class TestMLConfigManager:
         assert any("voting_method" in error for error in errors)
         assert any("stacking_cv_folds" in error for error in errors)
     
-    def test_backup_creation(self):
-        """バックアップ作成のテスト"""
-        # 初期設定を保存
-        self.config_manager.save_config()
-        
-        # バックアップディレクトリが存在することを確認
-        backup_dir = self.config_manager.backup_dir
-        assert backup_dir.exists()
-        
-        # 設定を更新（バックアップが作成される）
-        updates = {"data_processing": {"max_ohlcv_rows": 999999}}
-        self.config_manager.update_config(updates)
-        
-        # バックアップファイルが作成されたことを確認
-        backup_files = list(backup_dir.glob("ml_config_backup_*.json"))
-        assert len(backup_files) > 0
-
-
 if __name__ == "__main__":
     pytest.main([__file__])

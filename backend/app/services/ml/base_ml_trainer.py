@@ -30,9 +30,6 @@ from ...utils.unified_error_handler import (
 from .config import ml_config
 from .common.base_resource_manager import BaseResourceManager, CleanupLevel
 from .feature_engineering.automl_features.automl_config import AutoMLConfig
-from .feature_engineering.enhanced_feature_engineering_service import (
-    EnhancedFeatureEngineeringService,
-)
 from .feature_engineering.feature_engineering_service import FeatureEngineeringService
 from .model_manager import model_manager
 
@@ -68,7 +65,9 @@ class BaseMLTrainer(BaseResourceManager, ABC):
         if automl_config:
             # AutoMLConfig.from_dict に統一
             automl_config_obj = AutoMLConfig.from_dict(automl_config)
-            self.feature_service = EnhancedFeatureEngineeringService(automl_config_obj)
+            self.feature_service = FeatureEngineeringService(
+                automl_config=automl_config_obj
+            )
             self.use_automl = True
             logger.info("🤖 AutoML特徴量エンジニアリングを有効化しました")
         else:
@@ -630,8 +629,8 @@ class BaseMLTrainer(BaseResourceManager, ABC):
             fear_greed_data = self._get_fear_greed_data(ohlcv_data)
 
             # AutoMLを使用する場合は拡張特徴量計算を実行
-            if self.use_automl and isinstance(
-                self.feature_service, EnhancedFeatureEngineeringService
+            if self.use_automl and hasattr(
+                self.feature_service, "calculate_enhanced_features"
             ):
                 # ターゲット変数を計算（AutoML特徴量生成用）
                 target = self._calculate_target_for_automl(ohlcv_data)

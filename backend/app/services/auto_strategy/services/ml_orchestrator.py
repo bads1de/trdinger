@@ -20,9 +20,6 @@ from app.services.ml.config import ml_config
 from app.services.ml.feature_engineering.automl_features.automl_config import (
     AutoMLConfig,
 )
-from app.services.ml.feature_engineering.enhanced_feature_engineering_service import (
-    EnhancedFeatureEngineeringService,
-)
 from app.services.ml.feature_engineering.feature_engineering_service import (
     FeatureEngineeringService,
 )
@@ -83,7 +80,9 @@ class MLOrchestrator(MLPredictionInterface):
             else:
                 automl_config_obj = AutoMLConfig.get_financial_optimized_config()
 
-            self.feature_service = EnhancedFeatureEngineeringService(automl_config_obj)
+            self.feature_service = FeatureEngineeringService(
+                automl_config=automl_config_obj
+            )
             logger.info("🤖 AutoML特徴量エンジニアリングを有効化しました")
         else:
             self.feature_service = FeatureEngineeringService()
@@ -486,8 +485,8 @@ class MLOrchestrator(MLPredictionInterface):
             ]
 
             # AutoML機能が有効な場合は拡張特徴量計算を実行
-            if self.enable_automl and isinstance(
-                self.feature_service, EnhancedFeatureEngineeringService
+            if self.enable_automl and hasattr(
+                self.feature_service, "calculate_enhanced_features"
             ):
                 logger.info("🤖 AutoML拡張特徴量計算を実行中...")
 
@@ -562,8 +561,8 @@ class MLOrchestrator(MLPredictionInterface):
                 if hasattr(self.feature_service, "cleanup_resources"):
                     self.feature_service.cleanup_resources()
 
-                self.feature_service = EnhancedFeatureEngineeringService(
-                    automl_config_obj
+                self.feature_service = FeatureEngineeringService(
+                    automl_config=automl_config_obj
                 )
                 logger.info("🤖 AutoML特徴量エンジニアリングを有効化しました")
             else:
