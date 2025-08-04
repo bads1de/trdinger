@@ -434,6 +434,82 @@ class DataPreprocessor:
         """補完統計情報を取得"""
         return self.imputation_stats.copy()
 
+    def interpolate_columns(
+        self,
+        df: pd.DataFrame,
+        columns: List[str],
+        strategy: str = "median",
+        forward_fill: bool = True,
+        dtype: Optional[str] = "float64",
+        default_fill_values: Optional[Dict[str, float]] = None,
+        fit_if_needed: bool = True,
+    ) -> pd.DataFrame:
+        """
+        指定カラムに対して共通の補間パターン（型正規化 → ffill → 統計補完 → 既定値フォールバック）を適用
+
+        Args:
+            df: 対象DataFrame
+            columns: 対象カラム名のリスト（存在しないカラムはスキップ）
+            strategy: 統計補完戦略（'mean' | 'median' | 'most_frequent' | 'constant'）
+            forward_fill: True の場合は前方補完を先に実施
+            dtype: 数値補完する場合の目標dtype（例: 'float64'）。None の場合は型変換を行わない
+            default_fill_values: 列ごとの最終フォールバック値マップ（欠損が残った場合に fillna で適用）
+            fit_if_needed: transform_missing_values 呼び出し時に必要に応じて学習を行うか
+
+        Returns:
+            補間適用後のDataFrame
+        """
+        if df is None or df.empty or not columns:
+            return df
+
+        result_df = df.copy()
+        default_fill_values = default_fill_values or {}
+
+        # まず型正規化と前方補完を行う
+        for col in columns:
+            if col not in result_df.columns:
+                continue
+            try:
+                series = result_df[col]
+
+                # pd.NA を None/NaN に正規化
+                series = series.replace({pd.NA: None})
+
+                # 数値型を想定する場合は to_numeric で強制変換（非数値は NaN へ）
+                if dtype is not None:
+                    series = pd.to_numeric(series, errors="coerce")
+                    try:
+                        series = series.astype(dtype)
+                    except Exception:
+                        # 型変換に失敗しても続行
+                        pass
+
+                # 前方補完
+                if forward_fill:
+                    series = series.ffill()
+
+                result_df[col] = series
+            except Exception as e:
+                logger.warning(f"列 {col} の前処理（型/ffill）でエラー: {e}")
+
+        # 統計補完を適用
+        try:
+            result_df = self.transform_missing_values(
+                result_df,
+                strategy=strategy,
+                columns=[c for c in columns if c in result_df.columns],
+                fit_if_needed=fit_if_needed,
+            )
+        except Exception as e:
+            logger.error(f"統計補完の適用に失敗: {e}")
+
+        # 最終フォールバック（列ごと既定値）
+        for col, def_val in default_fill_values.items():
+            if col in result_df.columns and result_df[col].isnull().any():
+                result_df[col] = result_df[col].fillna(def_val)
+
+        return result_df
+
     def clear_cache(self):
         """キャッシュをクリア"""
         self.imputers.clear()

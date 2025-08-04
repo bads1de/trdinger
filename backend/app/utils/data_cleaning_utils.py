@@ -30,29 +30,18 @@ class DataCleaner:
         """
         result_df = df.copy()
 
-        # Open Interest: 統計的手法で補間
-        if "open_interest" in result_df.columns:
-            oi_series = result_df["open_interest"].astype("float64")
-            # 前方補完後、統計的補完
-            oi_series = oi_series.ffill()
-            if oi_series.isnull().any():
-                oi_df = pd.DataFrame({'open_interest': oi_series})
-                oi_df = data_preprocessor.transform_missing_values(oi_df, strategy="median")
-                result_df["open_interest"] = oi_df['open_interest']
-            else:
-                result_df["open_interest"] = oi_series
-
-        # Funding Rate: 統計的手法で補間
-        if "funding_rate" in result_df.columns:
-            fr_series = result_df["funding_rate"].astype("float64")
-            # 前方補完後、統計的補完
-            fr_series = fr_series.ffill()
-            if fr_series.isnull().any():
-                fr_df = pd.DataFrame({'funding_rate': fr_series})
-                fr_df = data_preprocessor.transform_missing_values(fr_df, strategy="median")
-                result_df["funding_rate"] = fr_df['funding_rate']
-            else:
-                result_df["funding_rate"] = fr_series
+        # 共通補間ヘルパーで OI / FR を処理（ffill → 統計補完）
+        target_cols = [c for c in ["open_interest", "funding_rate"] if c in result_df.columns]
+        if target_cols:
+            result_df = data_preprocessor.interpolate_columns(
+                result_df,
+                columns=target_cols,
+                strategy="median",
+                forward_fill=True,
+                dtype="float64",
+                default_fill_values=None,
+                fit_if_needed=True,
+            )
 
         return result_df
 
@@ -69,31 +58,23 @@ class DataCleaner:
         """
         result_df = df.copy()
 
-        # Fear & Greed: 統計的手法で補間（中立値50をデフォルト）
+        # Fear & Greed 数値列: 共通補間ヘルパー適用（デフォルト50.0）
         if "fear_greed_value" in result_df.columns:
-            # pd.NAをnp.nanに変換してから型変換
-            fg_series = result_df["fear_greed_value"].replace({pd.NA: None})
-            fg_series = pd.to_numeric(fg_series, errors="coerce")
-            # 前方補間後、統計的補完
-            fg_series = fg_series.ffill()
-            if fg_series.isnull().any():
-                fg_df = pd.DataFrame({'fear_greed_value': fg_series})
-                fg_df = data_preprocessor.transform_missing_values(fg_df, strategy="median")
-                # 統計的補完でも値がない場合は中立値50を使用
-                fg_df['fear_greed_value'] = fg_df['fear_greed_value'].fillna(50.0)
-                result_df["fear_greed_value"] = fg_df['fear_greed_value']
-            else:
-                result_df["fear_greed_value"] = fg_series
+            result_df = data_preprocessor.interpolate_columns(
+                result_df,
+                columns=["fear_greed_value"],
+                strategy="median",
+                forward_fill=True,
+                dtype="float64",
+                default_fill_values={"fear_greed_value": 50.0},
+                fit_if_needed=True,
+            )
 
+        # Fear & Greed クラス列: 文字列列のため簡易前方補完＋既定値
         if "fear_greed_classification" in result_df.columns:
-            # pd.NAをNoneに変換してから型変換
-            fg_class_series = result_df["fear_greed_classification"].replace(
-                {pd.NA: None}
-            )
+            fg_class_series = result_df["fear_greed_classification"].replace({pd.NA: None})
             fg_class_series = fg_class_series.astype("string")
-            result_df["fear_greed_classification"] = fg_class_series.ffill().fillna(
-                "Neutral"
-            )
+            result_df["fear_greed_classification"] = fg_class_series.ffill().fillna("Neutral")
 
         return result_df
 

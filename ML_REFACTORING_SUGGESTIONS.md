@@ -136,14 +136,6 @@
       - DataPreprocessor 側に「前処理パイプライン（検出 → 補完 → 標準化）」を一本化し、validation の結果を受けて明示的に処置を適用。
     - **期待効果**: 前処理順序の一意化、テスト容易性向上、二重処理防止。
 
-- [ ] ### 3.2. data_cleaning_utils の補間ロジックの共通化とパイプライン化
-
-  - **課題**: [`DataCleaner.interpolate_*`](backend/app/utils/data_cleaning_utils.py:20) が OI/FR と Fear&Greed で似た補間パターン（ffill→ 統計補完）を別々に実装。
-  - **提案**:
-    - 共通補間ヘルパーを DataPreprocessor に移し、カラム名と戦略を受け取って処理する関数へ一般化。
-    - DataCleaner は「ドメイン別の列名セット/既定値」を定義する薄いラッパーとし、実処理は共通関数を呼ぶ。
-  - **期待効果**: 重複削減、欠損戦略の一元管理、後続テストの簡素化。
-
 - [ ] ### 3.3. 型・スキーマ整合性の標準化（standardize_ohlcv_columns の強化）
 
   - **課題**: [`data_standardization.standardize_ohlcv_columns()`](backend/app/utils/data_standardization.py:10) は列名正規化のみで型/インデックス/ソートを保証していない。これに対して [`DataCleaner.validate_ohlcv_data()`](backend/app/utils/data_cleaning_utils.py:160) で別途検証している。
