@@ -87,20 +87,13 @@ class LightGBMConfig(BaseSettings):
     model_config = ConfigDict(env_prefix="ML_LIGHTGBM_")
 
     def to_dict(self) -> Dict[str, Any]:
-        """辞書形式で設定を返す"""
-        return {
-            "objective": self.OBJECTIVE,
-            "num_class": self.NUM_CLASS,
-            "metric": self.METRIC,
-            "boosting_type": self.BOOSTING_TYPE,
-            "num_leaves": self.NUM_LEAVES,
-            "learning_rate": self.LEARNING_RATE,
-            "feature_fraction": self.FEATURE_FRACTION,
-            "bagging_fraction": self.BAGGING_FRACTION,
-            "bagging_freq": self.BAGGING_FREQ,
-            "verbose": self.VERBOSE,
-            "random_state": self.RANDOM_STATE,
-        }
+        """
+        辞書形式で設定を返す（Pydantic自動シリアライゼーション使用）
+
+        手動マッピングを削除し、Pydanticの model_dump() を活用して
+        保守性を向上させました。
+        """
+        return self.model_dump()
 
 
 class FeatureEngineeringConfig(BaseSettings):
@@ -418,6 +411,61 @@ class MLConfig:
 
         # 設定の妥当性を検証
         self._validate_all_configs()
+
+    def to_dict(self) -> Dict[str, Any]:
+        """
+        全設定を辞書形式に変換（統一的なシリアライゼーション）
+
+        各設定クラスのPydantic model_dump()を活用して、
+        手動マッピングを排除し保守性を向上させました。
+        """
+        return {
+            "data_processing": self.data_processing.model_dump(),
+            "model": self.model.model_dump(),
+            "lightgbm": self.lightgbm.model_dump(),
+            "ensemble": self.ensemble.model_dump(),
+            "feature_engineering": self.feature_engineering.model_dump(),
+            "training": self.training.model_dump(),
+            "prediction": self.prediction.model_dump(),
+            "retraining": self.retraining.model_dump(),
+        }
+
+    @classmethod
+    def from_dict(cls, config_dict: Dict[str, Any]) -> "MLConfig":
+        """
+        辞書から設定を復元（統一的なデシリアライゼーション）
+
+        Args:
+            config_dict: 設定辞書
+
+        Returns:
+            復元されたMLConfigインスタンス
+        """
+        instance = cls()
+
+        # 各設定セクションを復元
+        if "data_processing" in config_dict:
+            instance.data_processing = DataProcessingConfig(
+                **config_dict["data_processing"]
+            )
+        if "model" in config_dict:
+            instance.model = ModelConfig(**config_dict["model"])
+        if "lightgbm" in config_dict:
+            instance.lightgbm = LightGBMConfig(**config_dict["lightgbm"])
+        if "ensemble" in config_dict:
+            instance.ensemble = EnsembleConfig(**config_dict["ensemble"])
+        if "feature_engineering" in config_dict:
+            instance.feature_engineering = FeatureEngineeringConfig(
+                **config_dict["feature_engineering"]
+            )
+        if "training" in config_dict:
+            instance.training = TrainingConfig(**config_dict["training"])
+        if "prediction" in config_dict:
+            instance.prediction = PredictionConfig(**config_dict["prediction"])
+        if "retraining" in config_dict:
+            instance.retraining = RetrainingConfig(**config_dict["retraining"])
+
+        return instance
 
     def _validate_all_configs(self):
         """全設定の妥当性を検証"""

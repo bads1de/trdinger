@@ -6,11 +6,12 @@ SimpleImputerを使用した高品質な欠損値補完を実装します。
 """
 
 import logging
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Tuple
 
 import numpy as np
 import pandas as pd
 from sklearn.impute import SimpleImputer
+from sklearn.preprocessing import MinMaxScaler, RobustScaler, StandardScaler
 
 logger = logging.getLogger(__name__)
 
@@ -217,6 +218,83 @@ class DataPreprocessor:
 
         logger.info("特徴量の包括的前処理完了")
         return result_df
+
+    def prepare_training_data(
+        self, features_df: pd.DataFrame, label_generator, **training_params
+    ) -> Tuple[pd.DataFrame, pd.Series]:
+        """
+        学習用データを準備（BaseMLTrainerから分離された汎用関数）
+
+        Args:
+            features_df: 特徴量DataFrame
+            label_generator: ラベル生成器のインスタンス
+            **training_params: 学習パラメータ
+
+        Returns:
+            前処理済み特徴量DataFrame, ラベルSeries
+        """
+        logger.info("学習用データ準備を開始")
+
+        # デフォルト実装：最後の列をラベルとして使用
+        if features_df.empty:
+            from ..exceptions.unified_exceptions import UnifiedDataError
+
+            raise UnifiedDataError("特徴量データが空です")
+
+        # 数値列のみを選択
+        numeric_columns = features_df.select_dtypes(include=[np.number]).columns
+        features_df_numeric = features_df[numeric_columns]
+
+        # 統計的手法で欠損値を補完（スケーリング有効化、IQRベース外れ値検出）
+        logger.info("統計的手法による特徴量前処理を実行中...")
+        features_df_clean = self.preprocess_features(
+            features_df_numeric,
+            imputation_strategy="median",
+            scale_features=True,  # 特徴量スケーリングを有効化
+            remove_outliers=True,
+            outlier_threshold=3.0,
+            scaling_method="robust",  # ロバストスケーリングを使用
+            outlier_method="iqr",  # IQRベースの外れ値検出を使用
+        )
+
+        # 特徴量とラベルを分離（改善されたラベル生成ロジック）
+        if "Close" in features_df_clean.columns:
+            # 動的ラベル生成を使用
+            labels, threshold_info = label_generator.generate_dynamic_labels(
+                features_df_clean["Close"], **training_params
+            )
+
+            # 閾値情報をログ出力
+            logger.info(f"ラベル生成方法: {threshold_info['description']}")
+            logger.info(
+                f"使用閾値: {threshold_info['threshold_down']:.6f} ～ {threshold_info['threshold_up']:.6f}"
+            )
+
+            # 最後の行は予測できないので除外
+            features_df_clean = features_df_clean.iloc[:-1]
+        else:
+            from ..exceptions.unified_exceptions import UnifiedDataError
+
+            raise UnifiedDataError("価格データ（Close）が見つかりません")
+
+        # 無効なデータを除外
+        valid_mask = ~(features_df_clean.isnull().any(axis=1) | labels.isnull())
+        features_clean = features_df_clean[valid_mask]
+        labels_clean = labels[valid_mask]
+
+        if len(features_clean) == 0:
+            from ..exceptions.unified_exceptions import UnifiedDataError
+
+            raise UnifiedDataError("有効な学習データがありません")
+
+        logger.info(
+            f"学習データ準備完了: {len(features_clean)}サンプル, {len(features_clean.columns)}特徴量"
+        )
+        logger.info(
+            f"ラベル分布: 下落={sum(labels_clean==0)}, レンジ={sum(labels_clean==1)}, 上昇={sum(labels_clean==2)}"
+        )
+
+        return features_clean, labels_clean, threshold_info
 
     def _remove_outliers(
         self,

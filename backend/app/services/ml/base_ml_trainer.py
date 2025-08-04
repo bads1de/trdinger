@@ -16,9 +16,7 @@ import pandas as pd
 from sklearn.model_selection import TimeSeriesSplit, train_test_split
 from sklearn.preprocessing import StandardScaler
 
-from database.connection import SessionLocal
-from database.repositories.fear_greed_repository import FearGreedIndexRepository
-
+from .ml_metadata import ModelMetadata, TrainingMetadata
 from ...utils.data_preprocessing import data_preprocessor
 from ...utils.label_generation import LabelGenerator, ThresholdMethod
 from ...utils.unified_error_handler import (
@@ -34,6 +32,21 @@ from .feature_engineering.feature_engineering_service import FeatureEngineeringS
 from .model_manager import model_manager
 
 logger = logging.getLogger(__name__)
+
+
+class LabelGeneratorWrapper:
+    """
+    BaseMLTrainerの_generate_dynamic_labelsメソッドをラップするクラス
+
+    utils/data_preprocessing.pyから呼び出すためのアダプター
+    """
+
+    def __init__(self, trainer):
+        self.trainer = trainer
+
+    def generate_dynamic_labels(self, price_data: pd.Series, **training_params):
+        """BaseMLTrainerの_generate_dynamic_labelsメソッドを呼び出し"""
+        return self.trainer._generate_dynamic_labels(price_data, **training_params)
 
 
 class BaseMLTrainer(BaseResourceManager, ABC):
@@ -193,53 +206,31 @@ class BaseMLTrainer(BaseResourceManager, ABC):
             # 8. モデルを保存
             if save_model:
                 # training_resultからメタデータを構築
-                model_metadata = {
-                    # 基本性能指標
-                    "accuracy": training_result.get("accuracy", 0.0),
-                    "precision": training_result.get("precision", 0.0),
-                    "recall": training_result.get("recall", 0.0),
-                    "f1_score": training_result.get("f1_score", 0.0),
-                    # AUC指標
-                    "auc_score": training_result.get("auc_score", 0.0),
-                    "auc_roc": training_result.get("auc_roc", 0.0),
-                    "auc_pr": training_result.get("auc_pr", 0.0),
-                    # 高度な指標
-                    "balanced_accuracy": training_result.get("balanced_accuracy", 0.0),
-                    "matthews_corrcoef": training_result.get("matthews_corrcoef", 0.0),
-                    "cohen_kappa": training_result.get("cohen_kappa", 0.0),
-                    # 専門指標
-                    "specificity": training_result.get("specificity", 0.0),
-                    "sensitivity": training_result.get("sensitivity", 0.0),
-                    "npv": training_result.get("npv", 0.0),
-                    "ppv": training_result.get("ppv", 0.0),
-                    # 確率指標
-                    "log_loss": training_result.get("log_loss", 0.0),
-                    "brier_score": training_result.get("brier_score", 0.0),
-                    # データ情報
-                    "training_samples": training_result.get("train_samples", 0),
-                    "test_samples": training_result.get("test_samples", 0),
-                    "feature_count": (
+                # ModelMetadata dataclassを使用してメタデータを構築
+                model_metadata = ModelMetadata.from_training_result(
+                    training_result=training_result,
+                    training_params=training_params,
+                    model_type=self.__class__.__name__,
+                    feature_count=(
                         len(self.feature_columns) if self.feature_columns else 0
                     ),
-                    # モデル情報
-                    "feature_importance": training_result.get("feature_importance", {}),
-                    "classification_report": training_result.get(
-                        "classification_report", {}
-                    ),
-                    "best_iteration": training_result.get("best_iteration", 0),
-                    "num_classes": training_result.get("num_classes", 2),
-                    # 学習パラメータ
-                    "train_test_split": training_params.get("train_test_split", 0.8),
-                    "random_state": training_params.get("random_state", 42),
-                }
-
-                logger.info(
-                    f"モデルメタデータを保存: 精度={model_metadata['accuracy']:.4f}, F1={model_metadata['f1_score']:.4f}"
                 )
+
+                # メタデータのサマリーをログ出力
+                model_metadata.log_summary()
+
+                # メタデータの妥当性を検証
+                validation_result = model_metadata.validate()
+                if not validation_result["is_valid"]:
+                    logger.warning("モデルメタデータに問題があります:")
+                    for error in validation_result["errors"]:
+                        logger.warning(f"  エラー: {error}")
+                for warning in validation_result["warnings"]:
+                    logger.warning(f"  警告: {warning}")
 
                 model_path = self.save_model(
                     model_name or self.config.model.AUTO_STRATEGY_MODEL_NAME,
-                    model_metadata,
+                    model_metadata.to_dict(),
                 )
                 training_result["model_path"] = model_path
 
@@ -623,11 +614,13 @@ class BaseMLTrainer(BaseResourceManager, ABC):
         funding_rate_data: Optional[pd.DataFrame] = None,
         open_interest_data: Optional[pd.DataFrame] = None,
     ) -> pd.DataFrame:
-        """特徴量を計算（Fear & Greed Indexデータを含む）"""
-        try:
-            # Fear & Greed Indexデータを取得
-            fear_greed_data = self._get_fear_greed_data(ohlcv_data)
+        """
+        特徴量を計算（FeatureEngineeringServiceに完全委譲）
 
+        責務分割により、具体的な特徴量計算ロジックは
+        FeatureEngineeringServiceに移譲されました。
+        """
+        try:
             # AutoMLを使用する場合は拡張特徴量計算を実行
             if self.use_automl and hasattr(
                 self.feature_service, "calculate_enhanced_features"
@@ -640,25 +633,27 @@ class BaseMLTrainer(BaseResourceManager, ABC):
                     ohlcv_data=ohlcv_data,
                     funding_rate_data=funding_rate_data,
                     open_interest_data=open_interest_data,
-                    fear_greed_data=fear_greed_data,
                     automl_config=self.automl_config,
                     target=target,
                 )
             else:
-                # 基本特徴量計算
+                # 基本特徴量計算（Fear & Greed データ自動取得を有効化）
                 logger.info("📊 基本特徴量計算を実行中...")
                 return self.feature_service.calculate_advanced_features(
                     ohlcv_data=ohlcv_data,
                     funding_rate_data=funding_rate_data,
                     open_interest_data=open_interest_data,
-                    fear_greed_data=fear_greed_data,
+                    auto_fetch_fear_greed=True,  # 自動取得を有効化
                 )
 
         except Exception as e:
             logger.warning(f"拡張特徴量計算でエラー、基本特徴量のみ使用: {e}")
             # フォールバック：基本特徴量のみ
             return self.feature_service.calculate_advanced_features(
-                ohlcv_data, funding_rate_data, open_interest_data
+                ohlcv_data,
+                funding_rate_data,
+                open_interest_data,
+                auto_fetch_fear_greed=False,
             )
 
     def _calculate_target_for_automl(
@@ -736,69 +731,7 @@ class BaseMLTrainer(BaseResourceManager, ABC):
             logger.warning(f"AutoML用ターゲット変数計算エラー: {e}")
             return None
 
-    def _get_fear_greed_data(self, ohlcv_data: pd.DataFrame) -> Optional[pd.DataFrame]:
-        """
-        Fear & Greed Indexデータを取得
-
-        Args:
-            ohlcv_data: OHLCVデータ（期間の参考用）
-
-        Returns:
-            Fear & Greed IndexデータのDataFrame（取得できない場合はNone）
-        """
-        try:
-            if ohlcv_data.empty:
-                return None
-
-            # データの期間を取得
-            if "timestamp" in ohlcv_data.columns:
-                start_date_val = ohlcv_data["timestamp"].min()
-                end_date_val = ohlcv_data["timestamp"].max()
-            else:
-                start_date_val = ohlcv_data.index.min()
-                end_date_val = ohlcv_data.index.max()
-
-            # datetime型に変換
-            start_date = cast(datetime, pd.to_datetime(start_date_val).to_pydatetime())
-            end_date = cast(datetime, pd.to_datetime(end_date_val).to_pydatetime())
-
-            with SessionLocal() as db:
-                repository = FearGreedIndexRepository(db)
-
-                # Fear & Greed Indexデータを取得
-                fear_greed_data = repository.get_fear_greed_data(
-                    start_time=start_date, end_time=end_date
-                )
-
-                if not fear_greed_data:
-                    logger.info("Fear & Greed Indexデータが見つかりませんでした")
-                    return None
-
-                # DataFrameに変換
-                df = pd.DataFrame(
-                    [
-                        {
-                            "timestamp": data.data_timestamp,
-                            "value": data.value,
-                            "value_classification": data.value_classification,
-                        }
-                        for data in fear_greed_data
-                    ]
-                )
-
-                if df.empty:
-                    return None
-
-                # タイムスタンプをインデックスに設定
-                df["timestamp"] = pd.to_datetime(df["timestamp"])
-                df.set_index("timestamp", inplace=True)
-
-                logger.info(f"Fear & Greed Indexデータを取得: {len(df)}行")
-                return df
-
-        except Exception as e:
-            logger.warning(f"Fear & Greed Indexデータ取得エラー: {e}")
-            return None
+    # _get_fear_greed_data メソッドは FeatureEngineeringService に移動されました
 
     def _generate_dynamic_labels(
         self, price_data: pd.Series, **training_params
@@ -928,61 +861,24 @@ class BaseMLTrainer(BaseResourceManager, ABC):
     def _prepare_training_data(
         self, features_df: pd.DataFrame, **training_params
     ) -> Tuple[pd.DataFrame, pd.Series]:
-        """学習用データを準備（継承クラスでオーバーライド可能）"""
-        # デフォルト実装：最後の列をラベルとして使用
-        if features_df.empty:
-            raise UnifiedDataError("特徴量データが空です")
+        """
+        学習用データを準備（utils/data_preprocessing.pyに委譲）
 
-        # 数値列のみを選択
-        numeric_columns = features_df.select_dtypes(include=[np.number]).columns
-        features_df_numeric = features_df[numeric_columns]
+        責務分割により、具体的なデータ前処理ロジックは
+        utils/data_preprocessing.pyに移譲されました。
+        """
+        # ラベル生成器を初期化
+        label_generator = LabelGeneratorWrapper(self)
 
-        # 統計的手法で欠損値を補完（スケーリング有効化、IQRベース外れ値検出）
-        logger.info("統計的手法による特徴量前処理を実行中...")
-        features_df_clean = data_preprocessor.preprocess_features(
-            features_df_numeric,
-            imputation_strategy="median",
-            scale_features=True,  # 特徴量スケーリングを有効化
-            remove_outliers=True,
-            outlier_threshold=3.0,
-            scaling_method="robust",  # ロバストスケーリングを使用
-            outlier_method="iqr",  # IQRベースの外れ値検出を使用
+        # データ前処理を委譲
+        features_clean, labels_clean, threshold_info = (
+            data_preprocessor.prepare_training_data(
+                features_df, label_generator, **training_params
+            )
         )
 
-        # 特徴量とラベルを分離（改善されたラベル生成ロジック）
-        if "Close" in features_df_clean.columns:
-            # 動的ラベル生成を使用
-            labels, threshold_info = self._generate_dynamic_labels(
-                features_df_clean["Close"], **training_params
-            )
-
-            # 閾値情報をログ出力
-            logger.info(f"ラベル生成方法: {threshold_info['description']}")
-            logger.info(
-                f"使用閾値: {threshold_info['threshold_down']:.6f} ～ {threshold_info['threshold_up']:.6f}"
-            )
-
-            # 最後の行は予測できないので除外
-            features_df_clean = features_df_clean.iloc[:-1]
-        else:
-            raise UnifiedDataError("価格データ（Close）が見つかりません")
-
-        # 無効なデータを除外
-        valid_mask = ~(features_df_clean.isnull().any(axis=1) | labels.isnull())
-        features_clean = features_df_clean[valid_mask]
-        labels_clean = labels[valid_mask]
-
-        if len(features_clean) == 0:
-            raise UnifiedDataError("有効な学習データがありません")
-
+        # 特徴量カラムを保存
         self.feature_columns = features_clean.columns.tolist()
-
-        logger.info(
-            f"学習データ準備完了: {len(features_clean)}サンプル, {len(self.feature_columns)}特徴量"
-        )
-        logger.info(
-            f"ラベル分布: 下落={sum(labels_clean==0)}, レンジ={sum(labels_clean==1)}, 上昇={sum(labels_clean==2)}"
-        )
 
         return features_clean, labels_clean
 

@@ -240,33 +240,17 @@ class AutoMLConfig:
 
     def to_dict(self) -> Dict[str, Any]:
         """
-        設定を辞書形式に変換
+        設定を辞書形式に変換（dataclass自動シリアライゼーション使用）
 
-        設定をJSONなどに保存可能な辞書形式にシリアライズします。
+        手動マッピングを削除し、dataclassの asdict() を活用して
+        保守性を向上させました。
 
         Returns:
             Dict[str, Any]: シリアライズされた設定辞書
         """
-        return {
-            "tsfresh": {
-                "enabled": self.tsfresh.enabled,
-                "feature_selection": self.tsfresh.feature_selection,
-                "fdr_level": self.tsfresh.fdr_level,
-                "feature_count_limit": self.tsfresh.feature_count_limit,
-                "parallel_jobs": self.tsfresh.parallel_jobs,
-                "performance_mode": self.tsfresh.performance_mode,
-                "custom_settings": self.tsfresh.custom_settings,
-            },
-            "autofeat": {
-                "enabled": self.autofeat.enabled,
-                "max_features": self.autofeat.max_features,
-                "feateng_steps": self.autofeat.feateng_steps,
-                "max_gb": self.autofeat.max_gb,
-                "generations": self.autofeat.generations,
-                "population_size": self.autofeat.population_size,
-                "tournament_size": self.autofeat.tournament_size,
-            },
-        }
+        from dataclasses import asdict
+
+        return asdict(self)
 
     @classmethod
     def from_dict(cls, config_dict: Dict[str, Any]) -> "AutoMLConfig":

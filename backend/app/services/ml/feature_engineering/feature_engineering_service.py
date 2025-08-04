@@ -114,6 +114,7 @@ class FeatureEngineeringService:
         open_interest_data: Optional[pd.DataFrame] = None,
         fear_greed_data: Optional[pd.DataFrame] = None,
         lookback_periods: Optional[Dict[str, int]] = None,
+        auto_fetch_fear_greed: bool = True,
     ) -> pd.DataFrame:
         """
         高度な特徴量を計算
@@ -124,6 +125,7 @@ class FeatureEngineeringService:
             open_interest_data: 建玉残高データ（オプション）
             fear_greed_data: Fear & Greed Index データ（オプション）
             lookback_periods: 各特徴量の計算期間設定
+            auto_fetch_fear_greed: Fear & Greed データを自動取得するか
 
         Returns:
             特徴量が追加されたDataFrame
@@ -186,6 +188,10 @@ class FeatureEngineeringService:
 
             # 結果DataFrameを初期化（メモリ効率化）
             result_df = ohlcv_data.copy()
+
+            # Fear & Greed データを自動取得（必要に応じて）
+            if auto_fetch_fear_greed and fear_greed_data is None:
+                fear_greed_data = self._get_fear_greed_data(ohlcv_data)
 
             # データ型を最適化
             result_df = self._optimize_dtypes(result_df)
@@ -694,6 +700,43 @@ class FeatureEngineeringService:
 
         except Exception as e:
             logger.warning(f"キャッシュ保存エラー: {e}")
+
+    def _get_fear_greed_data(self, ohlcv_data: pd.DataFrame) -> Optional[pd.DataFrame]:
+        """
+        Fear & Greed Index データを取得
+
+        BaseMLTrainerから移動されたロジック
+
+        Args:
+            ohlcv_data: OHLCV価格データ
+
+        Returns:
+            Fear & Greed Index データ（取得できない場合はNone）
+        """
+        try:
+            from ...data.fear_greed_service import FearGreedService
+
+            fear_greed_service = FearGreedService()
+
+            # データの期間を取得
+            start_date = ohlcv_data.index.min()
+            end_date = ohlcv_data.index.max()
+
+            # Fear & Greed データを取得
+            fear_greed_data = fear_greed_service.get_fear_greed_data(
+                start_date=start_date, end_date=end_date
+            )
+
+            if fear_greed_data is not None and not fear_greed_data.empty:
+                logger.info(f"Fear & Greed データを取得: {len(fear_greed_data)}件")
+                return fear_greed_data
+            else:
+                logger.warning("Fear & Greed データの取得に失敗")
+                return None
+
+        except Exception as e:
+            logger.warning(f"Fear & Greed データ取得エラー: {e}")
+            return None
 
     def _optimize_dtypes(self, df: pd.DataFrame) -> pd.DataFrame:
         """

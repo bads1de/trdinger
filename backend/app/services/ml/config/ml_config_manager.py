@@ -46,70 +46,19 @@ class MLConfigManager:
         return self._ml_config
 
     def get_config_dict(self) -> Dict[str, Any]:
-        """設定を辞書形式で取得"""
+        """
+        設定を辞書形式で取得（Pydantic自動シリアライゼーション使用）
+
+        手動マッピングを削除し、Pydanticの model_dump() を活用して
+        保守性を向上させました。
+        """
         return {
-            "data_processing": {
-                "max_ohlcv_rows": self._ml_config.data_processing.MAX_OHLCV_ROWS,
-                "max_feature_rows": self._ml_config.data_processing.MAX_FEATURE_ROWS,
-                "feature_calculation_timeout": self._ml_config.data_processing.FEATURE_CALCULATION_TIMEOUT,
-                "model_training_timeout": self._ml_config.data_processing.MODEL_TRAINING_TIMEOUT,
-                "model_prediction_timeout": self._ml_config.data_processing.MODEL_PREDICTION_TIMEOUT,
-                "memory_warning_threshold": self._ml_config.data_processing.MEMORY_WARNING_THRESHOLD,
-                "memory_limit_threshold": self._ml_config.data_processing.MEMORY_LIMIT_THRESHOLD,
-                "debug_mode": self._ml_config.data_processing.DEBUG_MODE,
-                "log_level": self._ml_config.data_processing.LOG_LEVEL,
-            },
-            "model": {
-                "model_save_path": self._ml_config.model.MODEL_SAVE_PATH,
-                "model_file_extension": self._ml_config.model.MODEL_FILE_EXTENSION,
-                "model_name_prefix": self._ml_config.model.MODEL_NAME_PREFIX,
-                "auto_strategy_model_name": self._ml_config.model.AUTO_STRATEGY_MODEL_NAME,
-                "max_model_versions": self._ml_config.model.MAX_MODEL_VERSIONS,
-                "model_retention_days": self._ml_config.model.MODEL_RETENTION_DAYS,
-            },
-            "training": {
-                "train_test_split": self._ml_config.training.TRAIN_TEST_SPLIT,
-                "cross_validation_folds": self._ml_config.training.CROSS_VALIDATION_FOLDS,
-                "prediction_horizon": self._ml_config.training.PREDICTION_HORIZON,
-                "label_method": self._ml_config.training.LABEL_METHOD,
-                "volatility_window": self._ml_config.training.VOLATILITY_WINDOW,
-                "threshold_multiplier": self._ml_config.training.THRESHOLD_MULTIPLIER,
-                "min_threshold": self._ml_config.training.MIN_THRESHOLD,
-                "max_threshold": self._ml_config.training.MAX_THRESHOLD,
-                "threshold_up": self._ml_config.training.THRESHOLD_UP,
-                "threshold_down": self._ml_config.training.THRESHOLD_DOWN,
-            },
-            "prediction": {
-                "default_up_prob": self._ml_config.prediction.DEFAULT_UP_PROB,
-                "default_down_prob": self._ml_config.prediction.DEFAULT_DOWN_PROB,
-                "default_range_prob": self._ml_config.prediction.DEFAULT_RANGE_PROB,
-                "fallback_up_prob": self._ml_config.prediction.FALLBACK_UP_PROB,
-                "fallback_down_prob": self._ml_config.prediction.FALLBACK_DOWN_PROB,
-                "fallback_range_prob": self._ml_config.prediction.FALLBACK_RANGE_PROB,
-                "min_probability": self._ml_config.prediction.MIN_PROBABILITY,
-                "max_probability": self._ml_config.prediction.MAX_PROBABILITY,
-                "probability_sum_min": self._ml_config.prediction.PROBABILITY_SUM_MIN,
-                "probability_sum_max": self._ml_config.prediction.PROBABILITY_SUM_MAX,
-                "expand_to_data_length": self._ml_config.prediction.EXPAND_TO_DATA_LENGTH,
-                "default_indicator_length": self._ml_config.prediction.DEFAULT_INDICATOR_LENGTH,
-            },
-            "ensemble": {
-                "enabled": self._ml_config.ensemble.ENABLED,
-                "algorithms": self._ml_config.ensemble.ALGORITHMS,
-                "voting_method": self._ml_config.ensemble.VOTING_METHOD,
-                "default_method": self._ml_config.ensemble.DEFAULT_METHOD,
-                "stacking_cv_folds": self._ml_config.ensemble.STACKING_CV_FOLDS,
-                "stacking_use_probas": self._ml_config.ensemble.STACKING_USE_PROBAS,
-            },
-            "retraining": {
-                "check_interval_seconds": self._ml_config.retraining.CHECK_INTERVAL_SECONDS,
-                "max_concurrent_jobs": self._ml_config.retraining.MAX_CONCURRENT_JOBS,
-                "job_timeout_seconds": self._ml_config.retraining.JOB_TIMEOUT_SECONDS,
-                "data_retention_days": self._ml_config.retraining.DATA_RETENTION_DAYS,
-                "incremental_training_enabled": self._ml_config.retraining.INCREMENTAL_TRAINING_ENABLED,
-                "performance_degradation_threshold": self._ml_config.retraining.PERFORMANCE_DEGRADATION_THRESHOLD,
-                "data_drift_threshold": self._ml_config.retraining.DATA_DRIFT_THRESHOLD,
-            },
+            "data_processing": self._ml_config.data_processing.model_dump(),
+            "model": self._ml_config.model.model_dump(),
+            "training": self._ml_config.training.model_dump(),
+            "prediction": self._ml_config.prediction.model_dump(),
+            "ensemble": self._ml_config.ensemble.model_dump(),
+            "retraining": self._ml_config.retraining.model_dump(),
         }
 
     def save_config(self) -> bool:
@@ -502,53 +451,14 @@ class MLConfigManager:
         return errors
 
     def _apply_config_dict(self, config_dict: Dict[str, Any]):
-        """設定辞書をMLConfigオブジェクトに適用"""
-        # 新しいMLConfigインスタンスを作成
-        new_config = MLConfig()
+        """
+        設定辞書をMLConfigオブジェクトに適用（統一的なデシリアライゼーション使用）
 
-        # データ処理設定を適用
-        if "data_processing" in config_dict:
-            dp = config_dict["data_processing"]
-            for key, value in dp.items():
-                if hasattr(new_config.data_processing, key.upper()):
-                    setattr(new_config.data_processing, key.upper(), value)
-
-        # モデル設定を適用
-        if "model" in config_dict:
-            model = config_dict["model"]
-            for key, value in model.items():
-                if hasattr(new_config.model, key.upper()):
-                    setattr(new_config.model, key.upper(), value)
-
-        # 学習設定を適用
-        if "training" in config_dict:
-            training = config_dict["training"]
-            for key, value in training.items():
-                if hasattr(new_config.training, key.upper()):
-                    setattr(new_config.training, key.upper(), value)
-
-        # 予測設定を適用
-        if "prediction" in config_dict:
-            prediction = config_dict["prediction"]
-            for key, value in prediction.items():
-                if hasattr(new_config.prediction, key.upper()):
-                    setattr(new_config.prediction, key.upper(), value)
-
-        # アンサンブル設定を適用
-        if "ensemble" in config_dict:
-            ensemble = config_dict["ensemble"]
-            for key, value in ensemble.items():
-                if hasattr(new_config.ensemble, key.upper()):
-                    setattr(new_config.ensemble, key.upper(), value)
-
-        # 再学習設定を適用
-        if "retraining" in config_dict:
-            retraining = config_dict["retraining"]
-            for key, value in retraining.items():
-                if hasattr(new_config.retraining, key.upper()):
-                    setattr(new_config.retraining, key.upper(), value)
-
-        self._ml_config = new_config
+        手動マッピングを削除し、MLConfig.from_dict()を活用して
+        保守性を向上させました。
+        """
+        # MLConfigの統一的なfrom_dictメソッドを使用
+        self._ml_config = MLConfig.from_dict(config_dict)
 
     def _merge_config_updates(
         self, current_config: Dict[str, Any], updates: Dict[str, Any]
@@ -563,6 +473,7 @@ class MLConfigManager:
                 merged[section] = section_updates
 
         return merged
+
 
 # グローバルインスタンス
 ml_config_manager = MLConfigManager()
