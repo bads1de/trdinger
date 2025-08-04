@@ -51,7 +51,7 @@
   - `orchestration/background_task_manager.py` の機能を拡張し、トレーニングの状態（進捗、ステータス、メッセージなど）も管理できるようにします。
   - `MLTrainingOrchestrationService` は `background_task_manager` を通じて状態の読み書きを行い、グローバル変数への依存をなくします。これにより、コードの見通しが良くなり、テスト容易性も向上します。
 
-- [x] ### 2.7. Feature Engineering サービスの階層重複
+- [] ### 2.7. Feature Engineering サービスの階層重複
 
 - **課題**:
   - `FeatureEngineeringService`、`EnhancedFeatureEngineeringService`、`AutoMLFeatureGenerationService` の 3 つのサービスが存在し、責務が重複・分散しています。

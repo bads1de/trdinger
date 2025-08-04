@@ -6,15 +6,14 @@
 システム全体のメトリクス収集・管理機能も統合します。
 """
 
-import json
 import logging
 import threading
-import time
+
 import warnings
 from collections import defaultdict, deque
 from dataclasses import dataclass, field
-from datetime import datetime, timedelta
-from typing import Any, Callable, Dict, List, Optional
+from datetime import datetime
+from typing import Any, Dict, List, Optional
 
 import numpy as np
 from sklearn.metrics import (
