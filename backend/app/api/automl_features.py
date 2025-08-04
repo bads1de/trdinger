@@ -17,8 +17,8 @@ from app.services.ml.feature_engineering.automl_feature_generation_service impor
 from app.services.ml.feature_engineering.automl_features.automl_config import (
     AutoMLConfig,
 )
-from app.services.ml.feature_engineering.enhanced_feature_engineering_service import (
-    EnhancedFeatureEngineeringService,
+from app.services.ml.feature_engineering.feature_engineering_service import (
+    FeatureEngineeringService,
 )
 from app.utils.unified_error_handler import UnifiedErrorHandler
 
@@ -151,8 +151,8 @@ async def generate_features(
 @router.post("/validate-config", response_model=ConfigValidationResponse)
 async def validate_config(
     request: Request,
-    service: EnhancedFeatureEngineeringService = Depends(
-        EnhancedFeatureEngineeringService
+    service: FeatureEngineeringService = Depends(
+        FeatureEngineeringService
     ),
 ):
     """
@@ -225,8 +225,8 @@ async def get_default_config():
 
 @router.post("/clear-cache")
 async def clear_cache(
-    service: EnhancedFeatureEngineeringService = Depends(
-        EnhancedFeatureEngineeringService
+    service: FeatureEngineeringService = Depends(
+        FeatureEngineeringService
     ),
 ):
     """

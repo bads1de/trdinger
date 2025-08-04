@@ -402,9 +402,11 @@ class EnsembleTrainer(BaseMLTrainer):
             # メタデータを読み込み（タイムスタンプ付きファイルに対応）
             import glob
             import os
-
+            import warnings
+ 
             import joblib
-
+            from sklearn.exceptions import InconsistentVersionWarning
+ 
             metadata_patterns = [
                 f"{model_path}_ensemble_metadata_*.pkl",  # 新形式
                 f"{model_path}_ensemble_metadata.pkl",  # 旧形式
@@ -418,7 +420,9 @@ class EnsembleTrainer(BaseMLTrainer):
                     break
 
             if metadata_path and os.path.exists(metadata_path):
-                metadata = joblib.load(metadata_path)
+                with warnings.catch_warnings():
+                    warnings.simplefilter("ignore", InconsistentVersionWarning)
+                    metadata = joblib.load(metadata_path)
                 self.ensemble_config = metadata["ensemble_config"]
                 self.automl_config = metadata["automl_config"]
                 self.model_type = metadata["model_type"]

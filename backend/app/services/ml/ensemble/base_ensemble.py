@@ -6,6 +6,7 @@
 
 import logging
 from abc import ABC, abstractmethod
+import warnings
 from typing import Any, Dict, List, Optional
 
 import numpy as np
@@ -343,7 +344,8 @@ class BaseEnsemble(ABC):
         import os
 
         import joblib
-
+        from sklearn.exceptions import InconsistentVersionWarning
+ 
         try:
             # 設定ファイルを検索（タイムスタンプ付きファイルに対応）
             config_patterns = [
@@ -359,7 +361,9 @@ class BaseEnsemble(ABC):
                     break
 
             if config_path and os.path.exists(config_path):
-                config_data = joblib.load(config_path)
+                with warnings.catch_warnings():
+                    warnings.simplefilter("ignore", InconsistentVersionWarning)
+                    config_data = joblib.load(config_path)
                 self.config = config_data["config"]
                 self.automl_config = config_data["automl_config"]
                 self.feature_columns = config_data["feature_columns"]
@@ -386,7 +390,9 @@ class BaseEnsemble(ABC):
                 # 新形式のファイルが見つかった場合
                 for model_path in sorted(algorithm_files):
                     if os.path.exists(model_path):
-                        model = joblib.load(model_path)
+                        with warnings.catch_warnings():
+                            warnings.simplefilter("ignore", InconsistentVersionWarning)
+                            model = joblib.load(model_path)
                         self.base_models.append(model)
             else:
                 # 旧形式のファイルを検索
@@ -396,7 +402,9 @@ class BaseEnsemble(ABC):
                     if not os.path.exists(model_path):
                         break
 
-                    model = joblib.load(model_path)
+                    with warnings.catch_warnings():
+                        warnings.simplefilter("ignore", InconsistentVersionWarning)
+                        model = joblib.load(model_path)
                     self.base_models.append(model)
                     i += 1
 
@@ -411,7 +419,9 @@ class BaseEnsemble(ABC):
                 if files:
                     meta_path = sorted(files)[-1]  # 最新のファイルを選択
                     if os.path.exists(meta_path):
-                        self.meta_model = joblib.load(meta_path)
+                        with warnings.catch_warnings():
+                            warnings.simplefilter("ignore", InconsistentVersionWarning)
+                            self.meta_model = joblib.load(meta_path)
                     break
 
             return True

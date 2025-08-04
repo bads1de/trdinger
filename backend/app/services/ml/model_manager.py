@@ -10,7 +10,8 @@ import glob
 import hashlib
 import logging
 import os
-
+import warnings
+ 
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from enum import Enum
@@ -247,8 +248,11 @@ class ModelManager:
                 raise UnifiedModelError(f"モデルファイルが見つかりません: {model_path}")
 
             # モデルデータを読み込み
-            model_data = joblib.load(model_path)
-
+            from sklearn.exceptions import InconsistentVersionWarning
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore", InconsistentVersionWarning)
+                model_data = joblib.load(model_path)
+ 
             # 古い形式との互換性を保つ
             if not isinstance(model_data, dict):
                 # 古い形式（直接モデルオブジェクト）の場合
