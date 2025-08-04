@@ -31,6 +31,9 @@ class RandomForestModel:
 
     scikit-learnのRandomForestClassifierを使用してアンサンブル専用に最適化されたモデル
     """
+    
+    # アルゴリズム名（AlgorithmRegistryから取得）
+    ALGORITHM_NAME = "randomforest"
 
     def __init__(self, automl_config: Optional[Dict[str, Any]] = None):
         """
@@ -149,7 +152,7 @@ class RandomForestModel:
             self.is_trained = True
 
             results = {
-                "algorithm": "randomforest",
+                "algorithm": self.ALGORITHM_NAME,
                 # 基本指標
                 "train_accuracy": train_accuracy,
                 "test_accuracy": test_accuracy,
@@ -273,7 +276,7 @@ class RandomForestModel:
             return {"status": "not_trained"}
 
         return {
-            "algorithm": "randomforest",
+            "algorithm": self.ALGORITHM_NAME,
             "n_estimators": self.model.n_estimators,
             "max_depth": self.model.max_depth,
             "min_samples_split": self.model.min_samples_split,

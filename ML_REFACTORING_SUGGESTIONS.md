@@ -13,38 +13,6 @@
 
 ## 2. 個別のリファクタリング提案
 
-- [ ] ### 2.1. 評価ロジックの統一
-
-- **課題**:
-  - `base_ensemble.py` の `_evaluate_predictions` メソッドと `evaluation/enhanced_metrics.py` の `EnhancedMetricsCalculator` は、モデル評価という同じ責務を持ちながら、実装が重複・分散しています。
-  - 各モデルラッパー (`lightgbm_wrapper.py` など) 内でも、個別に評価指標の計算ロジックが実装されており、冗長です。
-- **提案**:
-
-  - `evaluation/enhanced_metrics.py` の `EnhancedMetricsCalculator` を唯一の評価指標計算クラスとして利用するように統一します。
-  - 各モデルラッパーやアンサンブルクラスは、予測結果（`y_pred`, `y_pred_proba`）を `EnhancedMetricsCalculator` に渡し、評価結果の辞書を受け取るように変更します。これにより、評価ロジックが一元管理され、新しい指標の追加や変更が容易になります。
-
-  **実装例 (`base_ensemble.py`):**
-
-  ```python
-  # 変更前
-  # from sklearn.metrics import accuracy_score, ...
-  # self._evaluate_predictions(...)
-
-  # 変更後
-  from ..evaluation.enhanced_metrics import enhanced_metrics_calculator
-
-  def _evaluate_ensemble(self, ...):
-      # ...
-      y_pred = self.predict(X_test)
-      y_pred_proba = self.predict_proba(X_test)
-      # 統一された評価クラスを呼び出す
-      ensemble_metrics = enhanced_metrics_calculator.calculate_comprehensive_metrics(
-          y_test, y_pred, y_pred_proba
-      )
-      result.update(ensemble_metrics)
-      # ...
-  ```
-
 - [ ] ### 2.2. `BaseMLTrainer` の責務分割
 
 - **課題**: `base_ml_trainer.py` は、特徴量計算、データ準備、モデル学習、評価、保存など、多くの責務を担っており、クラスが肥大化しています。

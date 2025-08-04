@@ -251,10 +251,26 @@ class EnsembleTrainer(BaseMLTrainer):
                 )
                 # 3クラス分類でない場合は評価をスキップ
 
-            # 詳細な評価指標を計算
-            from ....utils.metrics_calculator import calculate_detailed_metrics
+            # 統一された評価指標計算器を使用
+            from ..evaluation.enhanced_metrics import (
+                EnhancedMetricsCalculator,
+                MetricsConfig,
+            )
 
-            detailed_metrics = calculate_detailed_metrics(y_test, y_pred, y_pred_proba)
+            config = MetricsConfig(
+                include_balanced_accuracy=True,
+                include_pr_auc=True,
+                include_roc_auc=True,
+                include_confusion_matrix=True,
+                include_classification_report=True,
+                average_method="weighted",
+                zero_division=0,
+            )
+
+            metrics_calculator = EnhancedMetricsCalculator(config)
+            detailed_metrics = metrics_calculator.calculate_comprehensive_metrics(
+                y_test, y_pred, y_pred_proba
+            )
 
             # 分類レポート
             from sklearn.metrics import classification_report

@@ -11,13 +11,11 @@ from typing import Any, Dict, List, Optional
 import numpy as np
 import pandas as pd
 from sklearn.linear_model import RidgeClassifier
-from sklearn.metrics import (
-    accuracy_score,
-    balanced_accuracy_score,
-    f1_score,
-    matthews_corrcoef,
-)
 
+from ..evaluation.enhanced_metrics import (
+    EnhancedMetricsCalculator,
+    MetricsConfig,
+)
 from ....utils.unified_error_handler import UnifiedModelError
 
 logger = logging.getLogger(__name__)
@@ -30,6 +28,8 @@ class RidgeModel:
     scikit-learnのRidgeClassifierを使用してアンサンブル専用に最適化されたモデル
     注意: RidgeClassifierはpredict_probaメソッドを持たないため、アンサンブルでは制限あり
     """
+
+    ALGORITHM_NAME = "ridge"
 
     def __init__(self, automl_config: Optional[Dict[str, Any]] = None):
         """
@@ -87,17 +87,29 @@ class RidgeModel:
             y_pred_train = self.model.predict(X_train)
             y_pred_test = self.model.predict(X_test)
 
-            # 基本評価指標計算
-            train_accuracy = accuracy_score(y_train, y_pred_train)
-            test_accuracy = accuracy_score(y_test, y_pred_test)
-            train_balanced_acc = balanced_accuracy_score(y_train, y_pred_train)
-            test_balanced_acc = balanced_accuracy_score(y_test, y_pred_test)
-            train_f1 = f1_score(y_train, y_pred_train, average="weighted")
-            test_f1 = f1_score(y_test, y_pred_test, average="weighted")
+            # 統一された評価指標計算器を使用
+            config = MetricsConfig(
+                include_balanced_accuracy=True,
+                include_pr_auc=False,  # RidgeClassifierは確率予測をサポートしない
+                include_roc_auc=False,  # RidgeClassifierは確率予測をサポートしない
+                include_confusion_matrix=True,
+                include_classification_report=True,
+                average_method="weighted",
+                zero_division=0,
+            )
 
-            # 追加評価指標計算（AUC指標は除外：RidgeClassifierはpredict_probaをサポートしない）
-            train_mcc = matthews_corrcoef(y_train, y_pred_train)
-            test_mcc = matthews_corrcoef(y_test, y_pred_test)
+            metrics_calculator = EnhancedMetricsCalculator(config)
+
+            # 包括的な評価指標を計算（テストデータ）
+            # RidgeClassifierは確率予測をサポートしないため、y_probaはNone
+            test_metrics = metrics_calculator.calculate_comprehensive_metrics(
+                y_test, y_pred_test, y_proba=None
+            )
+
+            # 包括的な評価指標を計算（学習データ）
+            train_metrics = metrics_calculator.calculate_comprehensive_metrics(
+                y_train, y_pred_train, y_proba=None
+            )
 
             # クラス数を取得
             n_classes = len(np.unique(y_train))
@@ -122,34 +134,43 @@ class RidgeModel:
 
             self.is_trained = True
 
+            # クラス数を取得
+            n_classes = len(np.unique(y_train))
+
             results = {
-                "algorithm": "ridge",
-                # 基本指標
-                "train_accuracy": train_accuracy,
-                "test_accuracy": test_accuracy,
-                "accuracy": test_accuracy,  # フロントエンド用の統一キー
-                "train_balanced_accuracy": train_balanced_acc,
-                "test_balanced_accuracy": test_balanced_acc,
-                "balanced_accuracy": test_balanced_acc,  # フロントエンド用の統一キー
-                "train_f1_score": train_f1,
-                "test_f1_score": test_f1,
-                "f1_score": test_f1,  # フロントエンド用の統一キー
-                # 追加指標（AUC指標は除外）
-                "train_mcc": train_mcc,
-                "test_mcc": test_mcc,
-                "matthews_corrcoef": test_mcc,  # フロントエンド用の統一キー
-                # モデル情報
-                "feature_importance": feature_importance,
+                "algorithm": self.ALGORITHM_NAME,
                 "alpha": self.model.alpha,
                 "max_iter": self.model.max_iter,
                 "feature_count": len(self.feature_columns),
                 "train_samples": len(X_train),
                 "test_samples": len(X_test),
                 "num_classes": n_classes,
-                "has_predict_proba": False,  # RidgeClassifierは確率予測なし
+                "feature_importance": feature_importance,
             }
 
-            logger.info(f"✅ Ridge学習完了 - テスト精度: {test_accuracy:.4f}")
+            # テストデータの評価指標を追加（プレフィックス付き）
+            for key, value in test_metrics.items():
+                if key not in ["error"]:  # エラー情報は除外
+                    results[f"test_{key}"] = value
+                    # フロントエンド用の統一キー（test_なしのキー）
+                    if key in [
+                        "accuracy",
+                        "balanced_accuracy",
+                        "f1_score",
+                        "matthews_corrcoef",
+                    ]:
+                        results[key] = value
+
+            # 学習データの評価指標を追加（プレフィックス付き）
+            for key, value in train_metrics.items():
+                if key not in ["error"]:  # エラー情報は除外
+                    results[f"train_{key}"] = value
+
+            results["has_predict_proba"] = False  # RidgeClassifierは確率予測なし
+
+            logger.info(
+                f"✅ Ridge学習完了 - テスト精度: {test_metrics['accuracy']:.4f}"
+            )
             return results
 
         except Exception as e:
@@ -244,7 +265,7 @@ class RidgeModel:
             return {"status": "not_trained"}
 
         return {
-            "algorithm": "ridge",
+            "algorithm": self.ALGORITHM_NAME,
             "alpha": self.model.alpha,
             "max_iter": self.model.max_iter,
             "class_weight": "balanced",

@@ -118,47 +118,14 @@ class ModelManager:
             # モデルオブジェクトのクラス名から推定
             model_class_name = type(model).__name__.lower()
 
-            # 一般的なアルゴリズム名にマッピング
-            algorithm_mapping = {
-                "lightgbmmodel": "lightgbm",
-                "lgbmclassifier": "lightgbm",
-                "lgbmregressor": "lightgbm",
-                "xgbclassifier": "xgboost",
-                "xgbregressor": "xgboost",
-                "catboostclassifier": "catboost",
-                "catboostregressor": "catboost",
-                "randomforestclassifier": "randomforest",
-                "randomforestregressor": "randomforest",
-                "randomforestmodel": "randomforest",
-                "extratreesclassifier": "extratrees",
-                "extratreesregressor": "extratrees",
-                "extratreesmodel": "extratrees",
-                "gradientboostingclassifier": "gradientboosting",
-                "gradientboostingregressor": "gradientboosting",
-                "gradientboostingmodel": "gradientboosting",
-                "adaboostclassifier": "adaboost",
-                "adaboostregressor": "adaboost",
-                "adaboostmodel": "adaboost",
-                "ridgeclassifier": "ridge",
-                "ridgeregressor": "ridge",
-                "ridgemodel": "ridge",
-                "gaussiannb": "naivebayes",
-                "naivebayesmodel": "naivebayes",
-                "kneighborsclassifier": "knn",
-                "kneighborsregressor": "knn",
-                "knnmodel": "knn",
-                "tabnetclassifier": "tabnet",
-                "tabnetregressor": "tabnet",
-                "ensembletrainer": "ensemble",
-                "singlemodeltrainer": "single",
-                "baggingensemble": "bagging",
-                "stackingensemble": "stacking",
-            }
-
-            # マッピングから検索
-            for key, value in algorithm_mapping.items():
-                if key in model_class_name:
-                    return value
+            # AlgorithmRegistry を使用してアルゴリズム名を取得
+            from .common.algorithm_registry import algorithm_registry
+            
+            algorithm_name = algorithm_registry.get_algorithm_name(model_class_name)
+            
+            if algorithm_name != "unknown":
+                logger.debug(f"AlgorithmRegistryからアルゴリズム名を取得: {model_class_name} -> {algorithm_name}")
+                return algorithm_name
 
             # デフォルト値
             return "unknown"

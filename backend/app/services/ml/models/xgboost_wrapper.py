@@ -10,6 +10,7 @@ from typing import Any, Dict, Optional
 
 import numpy as np
 import pandas as pd
+import xgboost as xgb
 
 from ....utils.unified_error_handler import UnifiedModelError
 
@@ -22,6 +23,9 @@ class XGBoostModel:
 
     XGBoostを使用してアンサンブル専用に最適化されたモデル
     """
+
+    # アルゴリズム名（AlgorithmRegistryから取得）
+    ALGORITHM_NAME = "xgboost"
 
     def __init__(self, automl_config: Optional[Dict[str, Any]] = None):
         """
@@ -56,8 +60,6 @@ class XGBoostModel:
             学習結果
         """
         try:
-            import xgboost as xgb
-
             # 特徴量カラムを保存
             self.feature_columns = X_train.columns.tolist()
 
@@ -99,26 +101,28 @@ class XGBoostModel:
             else:
                 y_pred_class = (y_pred_proba > 0.5).astype(int)
 
-            # 詳細な評価指標を計算
-            from sklearn.metrics import average_precision_score
-
-            from ....utils.metrics_calculator import calculate_detailed_metrics
-
-            detailed_metrics = calculate_detailed_metrics(
-                y_test, y_pred_class, y_pred_proba
+            # 統一された評価指標計算器を使用
+            from ..evaluation.enhanced_metrics import (
+                EnhancedMetricsCalculator,
+                MetricsConfig,
             )
 
-            # 多クラス分類でのPR-AUC計算を追加
-            if num_classes > 2:
-                pr_aucs = []
-                for i in range(num_classes):
-                    y_binary = (y_test == i).astype(int)
-                    if y_pred_proba.ndim > 1:
-                        pr_auc = average_precision_score(y_binary, y_pred_proba[:, i])
-                    else:
-                        pr_auc = 0.0  # 単一クラスの場合
-                    pr_aucs.append(pr_auc)
-                detailed_metrics["auc_pr"] = float(np.mean(pr_aucs))
+            config = MetricsConfig(
+                include_balanced_accuracy=True,
+                include_pr_auc=True,
+                include_roc_auc=True,
+                include_confusion_matrix=True,
+                include_classification_report=True,
+                average_method="weighted",
+                zero_division=0,
+            )
+
+            metrics_calculator = EnhancedMetricsCalculator(config)
+
+            # 包括的な評価指標を計算
+            detailed_metrics = metrics_calculator.calculate_comprehensive_metrics(
+                y_test, y_pred_class, y_pred_proba
+            )
 
             # 特徴量重要度を計算
             feature_importance = {}
@@ -146,7 +150,7 @@ class XGBoostModel:
 
             # 詳細な評価指標を含む結果を返す
             result = {
-                "algorithm": "xgboost",  # アルゴリズム名を追加
+                "algorithm": self.ALGORITHM_NAME,  # アルゴリズム名を追加
                 "num_classes": num_classes,
                 "best_iteration": self.model.best_iteration,
                 "train_samples": len(X_train),
@@ -180,14 +184,9 @@ class XGBoostModel:
         if not self.is_trained or self.model is None:
             raise UnifiedModelError("学習済みモデルがありません")
 
-        try:
-            import xgboost as xgb
-
-            dtest = xgb.DMatrix(X)
-            predictions = self.model.predict(dtest)
-            return predictions
-        except ImportError:
-            raise UnifiedModelError("XGBoostがインストールされていません")
+        dtest = xgb.DMatrix(X)
+        predictions = self.model.predict(dtest)
+        return predictions
 
     def predict_proba(self, X: pd.DataFrame) -> np.ndarray:
         """

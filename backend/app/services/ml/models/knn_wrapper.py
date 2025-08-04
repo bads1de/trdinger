@@ -10,14 +10,6 @@ from typing import Any, Dict, List, Optional
 
 import numpy as np
 import pandas as pd
-from sklearn.metrics import (
-    accuracy_score,
-    average_precision_score,
-    balanced_accuracy_score,
-    f1_score,
-    matthews_corrcoef,
-    roc_auc_score,
-)
 from sklearn.neighbors import KNeighborsClassifier
 
 from ....utils.unified_error_handler import UnifiedModelError
@@ -31,6 +23,9 @@ class KNNModel:
 
     scikit-learnのKNeighborsClassifierを使用してアンサンブル専用に最適化されたモデル
     """
+
+    # アルゴリズム名（AlgorithmRegistryから取得）
+    ALGORITHM_NAME = "knn"
 
     def __init__(self, automl_config: Optional[Dict[str, Any]] = None):
         """
@@ -94,50 +89,33 @@ class KNNModel:
             y_pred_proba_train = self.model.predict_proba(X_train)
             y_pred_proba_test = self.model.predict_proba(X_test)
 
-            # 基本評価指標計算
-            train_accuracy = accuracy_score(y_train, y_pred_train)
-            test_accuracy = accuracy_score(y_test, y_pred_test)
-            train_balanced_acc = balanced_accuracy_score(y_train, y_pred_train)
-            test_balanced_acc = balanced_accuracy_score(y_test, y_pred_test)
-            train_f1 = f1_score(y_train, y_pred_train, average="weighted")
-            test_f1 = f1_score(y_test, y_pred_test, average="weighted")
+            # 統一された評価指標計算器を使用
+            from ..evaluation.enhanced_metrics import (
+                EnhancedMetricsCalculator,
+                MetricsConfig,
+            )
 
-            # 追加評価指標計算
-            train_mcc = matthews_corrcoef(y_train, y_pred_train)
-            test_mcc = matthews_corrcoef(y_test, y_pred_test)
+            config = MetricsConfig(
+                include_balanced_accuracy=True,
+                include_pr_auc=True,
+                include_roc_auc=True,
+                include_confusion_matrix=True,
+                include_classification_report=True,
+                average_method="weighted",
+                zero_division=0,
+            )
 
-            # AUC指標（多クラス対応）
-            n_classes = len(np.unique(y_train))
-            if n_classes == 2:
-                # 二値分類
-                train_roc_auc = roc_auc_score(y_train, y_pred_proba_train[:, 1])
-                test_roc_auc = roc_auc_score(y_test, y_pred_proba_test[:, 1])
-                train_pr_auc = average_precision_score(
-                    y_train, y_pred_proba_train[:, 1]
-                )
-                test_pr_auc = average_precision_score(y_test, y_pred_proba_test[:, 1])
-            else:
-                # 多クラス分類
-                train_roc_auc = roc_auc_score(
-                    y_train, y_pred_proba_train, multi_class="ovr", average="weighted"
-                )
-                test_roc_auc = roc_auc_score(
-                    y_test, y_pred_proba_test, multi_class="ovr", average="weighted"
-                )
-                # 多クラスPR-AUCは各クラスの平均
-                train_pr_aucs = []
-                test_pr_aucs = []
-                for i in range(n_classes):
-                    train_binary = (y_train == i).astype(int)
-                    test_binary = (y_test == i).astype(int)
-                    train_pr_aucs.append(
-                        average_precision_score(train_binary, y_pred_proba_train[:, i])
-                    )
-                    test_pr_aucs.append(
-                        average_precision_score(test_binary, y_pred_proba_test[:, i])
-                    )
-                train_pr_auc = np.mean(train_pr_aucs)
-                test_pr_auc = np.mean(test_pr_aucs)
+            metrics_calculator = EnhancedMetricsCalculator(config)
+
+            # 包括的な評価指標を計算（テストデータ）
+            test_metrics = metrics_calculator.calculate_comprehensive_metrics(
+                y_test, y_pred_test, y_pred_proba_test
+            )
+
+            # 包括的な評価指標を計算（学習データ）
+            train_metrics = metrics_calculator.calculate_comprehensive_metrics(
+                y_train, y_pred_train, y_pred_proba_train
+            )
 
             # 特徴量重要度（KNNでは直接的な重要度なし）
             # 各特徴量の分散を重要度として近似
@@ -152,29 +130,7 @@ class KNNModel:
             self.is_trained = True
 
             results = {
-                "algorithm": "knn",
-                # 基本指標
-                "train_accuracy": train_accuracy,
-                "test_accuracy": test_accuracy,
-                "accuracy": test_accuracy,  # フロントエンド用の統一キー
-                "train_balanced_accuracy": train_balanced_acc,
-                "test_balanced_accuracy": test_balanced_acc,
-                "balanced_accuracy": test_balanced_acc,  # フロントエンド用の統一キー
-                "train_f1_score": train_f1,
-                "test_f1_score": test_f1,
-                "f1_score": test_f1,  # フロントエンド用の統一キー
-                # 追加指標
-                "train_mcc": train_mcc,
-                "test_mcc": test_mcc,
-                "matthews_corrcoef": test_mcc,  # フロントエンド用の統一キー
-                "train_roc_auc": train_roc_auc,
-                "test_roc_auc": test_roc_auc,
-                "auc_roc": test_roc_auc,  # フロントエンド用の統一キー
-                "train_pr_auc": train_pr_auc,
-                "test_pr_auc": test_pr_auc,
-                "auc_pr": test_pr_auc,  # フロントエンド用の統一キー
-                # モデル情報
-                "feature_importance": feature_importance,
+                "algorithm": self.ALGORITHM_NAME,
                 "n_neighbors": self.model.n_neighbors,
                 "weights": self.model.weights,
                 "algorithm_type": self.model.algorithm,
@@ -182,10 +138,35 @@ class KNNModel:
                 "feature_count": len(self.feature_columns),
                 "train_samples": len(X_train),
                 "test_samples": len(X_test),
-                "num_classes": n_classes,
+                "num_classes": len(self.model.classes_) if hasattr(self.model, "classes_") else 0,
+                "feature_importance": feature_importance,
             }
 
-            logger.info(f"✅ KNN学習完了 - テスト精度: {test_accuracy:.4f}")
+            # テストデータの評価指標を追加（プレフィックス付き）
+            for key, value in test_metrics.items():
+                if key not in ["error"]:  # エラー情報は除外
+                    results[f"test_{key}"] = value
+                    # フロントエンド用の統一キー（test_なしのキー）
+                    if key in [
+                        "accuracy",
+                        "balanced_accuracy",
+                        "f1_score",
+                        "matthews_corrcoef",
+                    ]:
+                        results[key] = value
+                    elif key == "roc_auc" or key == "roc_auc_ovr":
+                        results["auc_roc"] = value
+                    elif key == "pr_auc" or key == "pr_auc_macro":
+                        results["auc_pr"] = value
+
+            # 学習データの評価指標を追加（プレフィックス付き）
+            for key, value in train_metrics.items():
+                if key not in ["error"]:  # エラー情報は除外
+                    results[f"train_{key}"] = value
+
+            logger.info(
+                f"✅ KNN学習完了 - テスト精度: {test_metrics.get('accuracy', 0.0):.4f}"
+            )
             return results
 
         except Exception as e:
@@ -288,7 +269,7 @@ class KNNModel:
             return {"status": "not_trained"}
 
         return {
-            "algorithm": "knn",
+            "algorithm": self.ALGORITHM_NAME,
             "n_neighbors": self.model.n_neighbors,
             "weights": self.model.weights,
             "algorithm_type": self.model.algorithm,

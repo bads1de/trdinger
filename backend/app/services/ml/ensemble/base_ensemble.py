@@ -167,51 +167,33 @@ class BaseEnsemble(ABC):
         Returns:
             評価指標の辞書
         """
-        from sklearn.metrics import (
-            accuracy_score,
-            classification_report,
-            confusion_matrix,
-            f1_score,
-            precision_score,
-            recall_score,
+        from ..evaluation.enhanced_metrics import (
+            EnhancedMetricsCalculator,
+            MetricsConfig,
         )
 
-        # 基本的な評価指標
-        accuracy = accuracy_score(y_true, y_pred)
-        precision = precision_score(y_true, y_pred, average="weighted", zero_division=0)
-        recall = recall_score(y_true, y_pred, average="weighted", zero_division=0)
-        f1 = f1_score(y_true, y_pred, average="weighted", zero_division=0)
-
-        # 分類レポート
-        class_report = classification_report(
-            y_true, y_pred, output_dict=True, zero_division=0
+        # 統一された評価指標計算器を使用
+        config = MetricsConfig(
+            include_balanced_accuracy=True,
+            include_pr_auc=True,
+            include_roc_auc=True,
+            include_confusion_matrix=True,
+            include_classification_report=True,
+            average_method="weighted",
+            zero_division=0,
         )
 
-        # 混同行列
-        conf_matrix = confusion_matrix(y_true, y_pred)
+        metrics_calculator = EnhancedMetricsCalculator(config)
 
-        result = {
-            "accuracy": accuracy,
-            "precision": precision,
-            "recall": recall,
-            "f1_score": f1,
-            "classification_report": class_report,
-            "confusion_matrix": conf_matrix.tolist(),
-        }
+        # numpy配列に変換（pandas Seriesの場合）
+        y_true_array = y_true.values if hasattr(y_true, "values") else y_true
 
-        # ROC-AUCスコア（確率予測がある場合）
-        if y_pred_proba is not None:
-            try:
-                from sklearn.metrics import roc_auc_score
+        # 包括的な評価指標を計算
+        result = metrics_calculator.calculate_comprehensive_metrics(
+            y_true_array, y_pred, y_pred_proba
+        )
 
-                if len(np.unique(y_true)) == 2:  # 二値分類
-                    roc_auc = roc_auc_score(y_true, y_pred_proba[:, 1])
-                else:  # 多クラス分類
-                    roc_auc = roc_auc_score(y_true, y_pred_proba, multi_class="ovr")
-                result["roc_auc"] = roc_auc
-            except Exception as e:
-                logger.warning(f"ROC-AUCスコアの計算に失敗: {e}")
-                result["roc_auc"] = None
+        logger.info("✅ アンサンブル評価指標計算完了（EnhancedMetricsCalculator使用）")
 
         return result
 
