@@ -11,8 +11,8 @@ AutoML特徴量エンジニアリングモジュール
 注意: FeaturetoolsCalculatorはメモリ問題のため削除されました。
 """
 
-from .tsfresh_calculator import TSFreshFeatureCalculator
 from .autofeat_calculator import AutoFeatCalculator
+from .tsfresh_calculator import TSFreshFeatureCalculator
 
 __all__ = [
     "TSFreshFeatureCalculator",

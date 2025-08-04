@@ -5,13 +5,11 @@
 TP/SL遺伝子と同様に、GA操作（交叉、突然変異）の対象となります。
 """
 
-import random
 import logging
-
+import random
 from dataclasses import dataclass
-from typing import Dict, Any, List, Optional, Tuple
 from enum import Enum
-
+from typing import Any, Dict, List, Optional, Tuple
 
 logger = logging.getLogger(__name__)
 

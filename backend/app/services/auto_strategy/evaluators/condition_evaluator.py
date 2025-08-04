@@ -5,8 +5,9 @@
 """
 
 import logging
+from typing import Any, Dict, List, Union
+
 import numpy as np
-from typing import List, Union, Dict, Any
 
 from ..models.gene_strategy import Condition
 

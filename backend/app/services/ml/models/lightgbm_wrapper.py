@@ -6,10 +6,11 @@ LightGBMTrainerの機能を簡略化してアンサンブル専用に最適化�
 """
 
 import logging
+from typing import Any, Dict, Optional
+
+import lightgbm as lgb
 import numpy as np
 import pandas as pd
-import lightgbm as lgb
-from typing import Dict, Any, Optional
 
 from ....utils.unified_error_handler import UnifiedModelError
 
@@ -105,8 +106,9 @@ class LightGBMModel:
                 y_pred_class = (y_pred_proba > 0.5).astype(int)
 
             # 詳細な評価指標を計算
-            from ....utils.metrics_calculator import calculate_detailed_metrics
             from sklearn.metrics import average_precision_score
+
+            from ....utils.metrics_calculator import calculate_detailed_metrics
 
             detailed_metrics = calculate_detailed_metrics(
                 y_test, y_pred_class, y_pred_proba

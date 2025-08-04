@@ -6,9 +6,10 @@ XGBoostを使用してアンサンブル専用に最適化されたモデルで�
 """
 
 import logging
+from typing import Any, Dict, Optional
+
 import numpy as np
 import pandas as pd
-from typing import Dict, Any, Optional
 
 from ....utils.unified_error_handler import UnifiedModelError
 
@@ -99,8 +100,9 @@ class XGBoostModel:
                 y_pred_class = (y_pred_proba > 0.5).astype(int)
 
             # 詳細な評価指標を計算
-            from ....utils.metrics_calculator import calculate_detailed_metrics
             from sklearn.metrics import average_precision_score
+
+            from ....utils.metrics_calculator import calculate_detailed_metrics
 
             detailed_metrics = calculate_detailed_metrics(
                 y_test, y_pred_class, y_pred_proba

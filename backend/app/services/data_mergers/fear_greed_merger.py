@@ -5,11 +5,13 @@ Fear & Greed Index データのマージロジックを提供します。
 """
 
 import logging
-import pandas as pd
 from datetime import datetime
 from typing import List
-from database.repositories.fear_greed_repository import FearGreedIndexRepository
+
+import pandas as pd
+
 from database.models import FearGreedIndexData
+from database.repositories.fear_greed_repository import FearGreedIndexRepository
 
 logger = logging.getLogger(__name__)
 

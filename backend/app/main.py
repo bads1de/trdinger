@@ -8,23 +8,23 @@ import logging
 import os
 
 from fastapi import FastAPI, Request
-from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 
+from app.api.auto_strategy import router as auto_strategy_router
+from app.api.automl_features import router as automl_features_router
+from app.api.backtest import router as backtest_router
+from app.api.data_collection import router as data_collection_router
+from app.api.data_reset import router as data_reset_router
+from app.api.fear_greed import router as fear_greed_router
+from app.api.funding_rates import router as funding_rates_router
+from app.api.market_data import router as market_data_router
+from app.api.ml_management import router as ml_management_router
+from app.api.ml_training import router as ml_training_router
+from app.api.open_interest import router as open_interest_router
+from app.api.strategies import router as strategies_router
 from app.config import settings
 from app.utils.duplicate_filter_handler import DuplicateFilterHandler
-from app.api.market_data import router as market_data_router
-from app.api.data_collection import router as data_collection_router
-from app.api.funding_rates import router as funding_rates_router
-from app.api.open_interest import router as open_interest_router
-from app.api.fear_greed import router as fear_greed_router
-from app.api.data_reset import router as data_reset_router
-from app.api.backtest import router as backtest_router
-from app.api.auto_strategy import router as auto_strategy_router
-from app.api.strategies import router as strategies_router
-from app.api.ml_training import router as ml_training_router
-from app.api.ml_management import router as ml_management_router
-from app.api.automl_features import router as automl_features_router
 
 
 def setup_logging():

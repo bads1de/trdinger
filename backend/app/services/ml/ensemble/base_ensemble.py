@@ -5,11 +5,11 @@
 """
 
 import logging
+from abc import ABC, abstractmethod
+from typing import Any, Dict, List, Optional
+
 import numpy as np
 import pandas as pd
-from abc import ABC, abstractmethod
-from typing import Dict, Any, List, Optional
-
 
 from ....utils.unified_error_handler import UnifiedModelError
 
@@ -61,7 +61,6 @@ class BaseEnsemble(ABC):
         Returns:
             学習結果の辞書
         """
-        pass
 
     @abstractmethod
     def predict(self, X: pd.DataFrame) -> np.ndarray:
@@ -74,7 +73,6 @@ class BaseEnsemble(ABC):
         Returns:
             予測結果
         """
-        pass
 
     @abstractmethod
     def predict_proba(self, X: pd.DataFrame) -> np.ndarray:
@@ -87,7 +85,6 @@ class BaseEnsemble(ABC):
         Returns:
             予測確率の配列
         """
-        pass
 
     def _create_base_model(self, model_type: str) -> Any:
         """
@@ -172,11 +169,11 @@ class BaseEnsemble(ABC):
         """
         from sklearn.metrics import (
             accuracy_score,
-            precision_score,
-            recall_score,
-            f1_score,
             classification_report,
             confusion_matrix,
+            f1_score,
+            precision_score,
+            recall_score,
         )
 
         # 基本的な評価指標
@@ -304,8 +301,9 @@ class BaseEnsemble(ABC):
         Returns:
             保存されたファイルパスのリスト
         """
-        import joblib
         from datetime import datetime
+
+        import joblib
 
         saved_paths = []
 
@@ -359,9 +357,10 @@ class BaseEnsemble(ABC):
         Returns:
             読み込み成功フラグ
         """
-        import joblib
-        import os
         import glob
+        import os
+
+        import joblib
 
         try:
             # 設定ファイルを検索（タイムスタンプ付きファイルに対応）

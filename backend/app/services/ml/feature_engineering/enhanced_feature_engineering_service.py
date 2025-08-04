@@ -5,19 +5,19 @@
 """
 
 import logging
-from typing import Dict, Optional, Any, List, Tuple
+import time
+from typing import Any, Dict, List, Optional, Tuple
+
 import pandas as pd
 
-import time
-
-from .feature_engineering_service import FeatureEngineeringService
-from .automl_features.tsfresh_calculator import TSFreshFeatureCalculator
+from ....utils.unified_error_handler import safe_ml_operation
 from .automl_features.autofeat_calculator import AutoFeatCalculator
 from .automl_features.automl_config import AutoMLConfig
 from .automl_features.performance_optimizer import PerformanceOptimizer
+from .automl_features.tsfresh_calculator import TSFreshFeatureCalculator
 from .enhanced_crypto_features import EnhancedCryptoFeatures
+from .feature_engineering_service import FeatureEngineeringService
 from .optimized_crypto_features import OptimizedCryptoFeatures
-from ....utils.unified_error_handler import safe_ml_operation
 
 logger = logging.getLogger(__name__)
 

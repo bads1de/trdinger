@@ -5,14 +5,14 @@
 """
 
 import logging
+from typing import Any, Dict, Optional
 
 from fastapi import APIRouter, Depends, Query
-from typing import Dict, Any, Optional
 from pydantic import BaseModel, Field
 
-from app.utils.unified_error_handler import UnifiedErrorHandler
-from app.services.strategy_integration_service import StrategyIntegrationService
 from app.api.dependencies import get_strategy_integration_service_with_db
+from app.services.strategy_integration_service import StrategyIntegrationService
+from app.utils.unified_error_handler import UnifiedErrorHandler
 
 logger = logging.getLogger(__name__)
 

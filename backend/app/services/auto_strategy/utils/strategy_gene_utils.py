@@ -20,7 +20,7 @@ def create_default_strategy_gene(strategy_gene_class) -> Any:
     """
     try:
 
-        from ..models.gene_strategy import IndicatorGene, Condition
+        from ..models.gene_strategy import Condition, IndicatorGene
 
         # デフォルト指標
         indicators = [

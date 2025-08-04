@@ -7,11 +7,11 @@ backtesting.pyとの完全な互換性を保ちます。
 """
 
 import logging
-import numpy as np
-import pandas as pd
 from functools import wraps
 from typing import Union
 
+import numpy as np
+import pandas as pd
 
 logger = logging.getLogger(__name__)
 
@@ -19,7 +19,6 @@ logger = logging.getLogger(__name__)
 class TALibError(Exception):
     """Ta-lib計算エラー"""
 
-    pass
 
 
 def validate_input(data: np.ndarray, period: int) -> None:

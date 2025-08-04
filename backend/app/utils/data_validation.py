@@ -6,9 +6,10 @@
 """
 
 import logging
-import pandas as pd
+from typing import Dict, List, Optional, Tuple, Union
+
 import numpy as np
-from typing import Dict, List, Tuple, Optional, Union
+import pandas as pd
 
 logger = logging.getLogger(__name__)
 
@@ -26,7 +27,6 @@ class DataValidator:
 
     def __init__(self):
         """初期化"""
-        pass
 
     @staticmethod
     def safe_divide(

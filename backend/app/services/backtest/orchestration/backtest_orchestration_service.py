@@ -6,16 +6,17 @@ APIルーター内に散在していたバックテスト関連のビジネス�
 """
 
 import logging
-from typing import Dict, Any, Optional
+from typing import Any, Dict, Optional
+
 from sqlalchemy.orm import Session
 
+from app.services.backtest.backtest_service import BacktestService
+from app.utils.api_utils import APIResponseHelper
 from database.repositories.backtest_result_repository import BacktestResultRepository
 from database.repositories.ga_experiment_repository import GAExperimentRepository
 from database.repositories.generated_strategy_repository import (
     GeneratedStrategyRepository,
 )
-from app.services.backtest.backtest_service import BacktestService
-from app.utils.api_utils import APIResponseHelper
 
 logger = logging.getLogger(__name__)
 
@@ -30,7 +31,6 @@ class BacktestOrchestrationService:
 
     def __init__(self):
         """初期化"""
-        pass
 
     async def get_backtest_results(
         self,

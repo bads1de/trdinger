@@ -6,23 +6,24 @@ APIルーター内に散在していたデータ削除・管理関連のビジ�
 """
 
 import logging
-from typing import Dict, Any, Optional
-from datetime import datetime
-from sqlalchemy.orm import Session
 from contextlib import contextmanager
+from datetime import datetime
+from typing import Any, Dict, Optional
 
-from database.repositories.ohlcv_repository import OHLCVRepository
-from database.repositories.funding_rate_repository import FundingRateRepository
-from database.repositories.open_interest_repository import OpenInterestRepository
-from database.repositories.fear_greed_repository import FearGreedIndexRepository
+from sqlalchemy.orm import Session
+
 from app.utils.api_utils import APIResponseHelper
 from database.connection import SessionLocal
 from database.models import (
-    OHLCVData,
-    FundingRateData,
-    OpenInterestData,
     FearGreedIndexData,
+    FundingRateData,
+    OHLCVData,
+    OpenInterestData,
 )
+from database.repositories.fear_greed_repository import FearGreedIndexRepository
+from database.repositories.funding_rate_repository import FundingRateRepository
+from database.repositories.ohlcv_repository import OHLCVRepository
+from database.repositories.open_interest_repository import OpenInterestRepository
 
 logger = logging.getLogger(__name__)
 
@@ -38,7 +39,6 @@ class DataManagementOrchestrationService:
 
     def __init__(self):
         """初期化"""
-        pass
 
     @contextmanager
     def _get_db_session(self, db_session: Optional[Session] = None):

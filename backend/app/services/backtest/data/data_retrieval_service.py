@@ -8,23 +8,22 @@ import logging
 from datetime import datetime
 from typing import List, Optional
 
-from database.repositories.ohlcv_repository import OHLCVRepository
-from database.repositories.open_interest_repository import OpenInterestRepository
-from database.repositories.funding_rate_repository import FundingRateRepository
-from database.repositories.fear_greed_repository import FearGreedIndexRepository
 from database.models import (
+    FearGreedIndexData,
+    FundingRateData,
     OHLCVData,
     OpenInterestData,
-    FundingRateData,
-    FearGreedIndexData,
 )
+from database.repositories.fear_greed_repository import FearGreedIndexRepository
+from database.repositories.funding_rate_repository import FundingRateRepository
+from database.repositories.ohlcv_repository import OHLCVRepository
+from database.repositories.open_interest_repository import OpenInterestRepository
 
 logger = logging.getLogger(__name__)
 
 
 class DataRetrievalError(Exception):
     """データ取得エラー"""
-    pass
 
 
 class DataRetrievalService:

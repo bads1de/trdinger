@@ -5,10 +5,11 @@
 """
 
 import logging
-from typing import Dict, Any
+from typing import Any, Dict
+
+from app.services.backtest.backtest_service import BacktestService
 
 from ..models.ga_config import GAConfig
-from app.services.backtest.backtest_service import BacktestService
 
 logger = logging.getLogger(__name__)
 

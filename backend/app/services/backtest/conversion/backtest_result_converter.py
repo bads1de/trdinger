@@ -6,7 +6,7 @@ backtesting.pyの結果をデータベース保存用形式に変換します。
 
 import logging
 from datetime import datetime
-from typing import Dict, Any, List, Optional
+from typing import Any, Dict, List, Optional
 
 import pandas as pd
 
@@ -15,7 +15,6 @@ logger = logging.getLogger(__name__)
 
 class BacktestResultConversionError(Exception):
     """バックテスト結果変換エラー"""
-    pass
 
 
 class BacktestResultConverter:

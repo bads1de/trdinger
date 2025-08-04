@@ -8,10 +8,10 @@
 - スタッキング (Stacking): 複数の異なるアルゴリズムの予測をメタモデルで統合
 """
 
-from .base_ensemble import BaseEnsemble
 from .bagging import BaggingEnsemble
-from .stacking import StackingEnsemble
+from .base_ensemble import BaseEnsemble
 from .ensemble_trainer import EnsembleTrainer
+from .stacking import StackingEnsemble
 
 __all__ = [
     "BaseEnsemble",

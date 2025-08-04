@@ -6,15 +6,17 @@ backtesting.pyとの完全な互換性を提供します。
 pandas Seriesの変換は一切行いません。
 """
 
-import talib
-import numpy as np
 from typing import cast
+
+import numpy as np
+import talib
+
 from ..utils import (
-    validate_input,
-    handle_talib_errors,
-    format_indicator_result,
-    ensure_numpy_array,
     TALibError,
+    ensure_numpy_array,
+    format_indicator_result,
+    handle_talib_errors,
+    validate_input,
 )
 
 

@@ -5,11 +5,13 @@ Funding Rate データのマージロジックを提供します。
 """
 
 import logging
-import pandas as pd
 from datetime import datetime
 from typing import List
-from database.repositories.funding_rate_repository import FundingRateRepository
+
+import pandas as pd
+
 from database.models import FundingRateData
+from database.repositories.funding_rate_repository import FundingRateRepository
 
 logger = logging.getLogger(__name__)
 

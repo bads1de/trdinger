@@ -6,22 +6,23 @@ APIルーター内に散在していたMLトレーニング関連のビジネス
 """
 
 import logging
-from typing import Dict, Any
 from datetime import datetime
+from typing import Any, Dict
+
 from sqlalchemy.orm import Session
 
-from app.services.ml.ml_training_service import MLTrainingService
 from app.services.auto_strategy.services.ml_orchestrator import MLOrchestrator
 from app.services.backtest.backtest_data_service import BacktestDataService
+from app.services.ml.ml_training_service import MLTrainingService
 from app.services.ml.orchestration.background_task_manager import (
     background_task_manager,
 )
-from database.repositories.ohlcv_repository import OHLCVRepository
-from database.repositories.open_interest_repository import OpenInterestRepository
-from database.repositories.funding_rate_repository import FundingRateRepository
-from database.repositories.fear_greed_repository import FearGreedIndexRepository
 from app.utils.api_utils import APIResponseHelper
 from app.utils.unified_error_handler import safe_ml_operation
+from database.repositories.fear_greed_repository import FearGreedIndexRepository
+from database.repositories.funding_rate_repository import FundingRateRepository
+from database.repositories.ohlcv_repository import OHLCVRepository
+from database.repositories.open_interest_repository import OpenInterestRepository
 
 logger = logging.getLogger(__name__)
 
@@ -48,7 +49,6 @@ class MLTrainingOrchestrationService:
 
     def __init__(self):
         """初期化"""
-        pass
 
     @staticmethod
     def get_default_automl_config() -> Dict[str, Any]:
@@ -445,9 +445,9 @@ class MLTrainingOrchestrationService:
         try:
 
             # AutoFeatの一時ファイルとキャッシュをクリア
-            import tempfile
-            import shutil
             import os
+            import shutil
+            import tempfile
 
             # AutoFeatが作成する一時ディレクトリをクリーンアップ
             temp_dir = tempfile.gettempdir()
@@ -486,8 +486,8 @@ class MLTrainingOrchestrationService:
                 logger.warning(f"TSFreshキャッシュクリアエラー: {e}")
 
             # TSFreshの一時ファイルをクリーンアップ
-            import tempfile
             import os
+            import tempfile
 
             temp_dir = tempfile.gettempdir()
             for item in os.listdir(temp_dir):

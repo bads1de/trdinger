@@ -5,15 +5,13 @@
 責任を分離し、各機能を専用モジュールに委譲します。
 """
 
-from dataclasses import dataclass, field
-from typing import List, Dict, Any, Union, Optional
-
 import logging
+from dataclasses import dataclass, field
+from typing import Any, Dict, List, Optional, Union
 
-
-from .gene_validation import GeneValidator
-from .gene_tpsl import TPSLGene
 from .gene_position_sizing import PositionSizingGene
+from .gene_tpsl import TPSLGene
+from .gene_validation import GeneValidator
 
 logger = logging.getLogger(__name__)
 
@@ -155,7 +153,6 @@ class StrategyGene:
         # 明示的にロング・ショート条件が設定されていない場合のみ、
         # 既存のentry_conditionsを使用（後方互換性）
         # ただし、long_entry_conditionsやshort_entry_conditionsは変更しない
-        pass
 
     def get_effective_long_conditions(self) -> List[Condition]:
         """有効なロング条件を取得（後方互換性を考慮）"""

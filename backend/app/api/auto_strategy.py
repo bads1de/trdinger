@@ -1,21 +1,19 @@
 import logging
+from typing import Any, Dict, List, Optional
 
-from fastapi import APIRouter, Depends, BackgroundTasks, status
-from typing import Dict, Any, List, Optional
+from fastapi import APIRouter, BackgroundTasks, Depends, status
 from pydantic import BaseModel, Field
 
-
+from app.api.dependencies import (
+    get_auto_strategy_service,
+)
 from app.services.auto_strategy import AutoStrategyService
 from app.services.auto_strategy.models.ga_config import GAConfig
 from app.services.auto_strategy.orchestration.auto_strategy_orchestration_service import (
     AutoStrategyOrchestrationService,
 )
-from app.api.dependencies import (
-    get_auto_strategy_service,
-)
-from app.utils.unified_error_handler import UnifiedErrorHandler
 from app.utils.api_utils import APIResponseHelper
-
+from app.utils.unified_error_handler import UnifiedErrorHandler
 
 logger = logging.getLogger(__name__)
 

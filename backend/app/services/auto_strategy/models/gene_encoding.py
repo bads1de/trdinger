@@ -6,11 +6,11 @@ GA用の戦略遺伝子エンコード/デコード機能への統一インタ�
 """
 
 import logging
-from typing import List, Dict
+from typing import Dict, List
 
-from .gene_encoder import GeneEncoder as Encoder
-from .gene_decoder import GeneDecoder as Decoder
 from . import gene_utils
+from .gene_decoder import GeneDecoder as Decoder
+from .gene_encoder import GeneEncoder as Encoder
 
 logger = logging.getLogger(__name__)
 

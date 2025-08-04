@@ -5,10 +5,11 @@ ML関連の設定管理
 各MLサービスはこの設定を参照することで、一貫性のある動作を保証します。
 """
 
-import os
 import logging
-from typing import Dict, Any, List, Optional
-from pydantic import Field, ConfigDict
+import os
+from typing import Any, Dict, List, Optional
+
+from pydantic import ConfigDict, Field
 from pydantic_settings import BaseSettings
 
 

@@ -7,9 +7,9 @@ GA用の戦略遺伝子エンコード機能を担当するモジュール。
 import logging
 from typing import List, Optional
 
-from .gene_tpsl import TPSLGene, TPSLMethod
-from .gene_position_sizing import PositionSizingGene, PositionSizingMethod
 from . import gene_utils
+from .gene_position_sizing import PositionSizingGene, PositionSizingMethod
+from .gene_tpsl import TPSLGene, TPSLMethod
 
 logger = logging.getLogger(__name__)
 

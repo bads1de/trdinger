@@ -6,7 +6,7 @@ Take Profit/Stop Loss価格の計算を担当します。
 
 import logging
 import math
-from typing import Dict, Any, Optional, Tuple
+from typing import Any, Dict, Optional, Tuple
 
 from ..models.gene_tpsl import TPSLGene
 

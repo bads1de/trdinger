@@ -7,9 +7,9 @@ TP/SL自動決定サービス
 
 import logging
 import random
-from typing import Dict, Any, Optional
-from enum import Enum
 from dataclasses import dataclass, field
+from enum import Enum
+from typing import Any, Dict, Optional
 
 logger = logging.getLogger(__name__)
 

@@ -5,23 +5,23 @@ OI/FRデータを含む多様な戦略遺伝子をランダムに生成します
 スケール不一致問題を解決するため、オペランドグループ化システムを使用します。
 """
 
-import random
-from typing import List, Dict
-
 import logging
+import random
+from typing import Dict, List
 
-from ..models.gene_strategy import StrategyGene, IndicatorGene, Condition
-from ..models.ga_config import GAConfig
-from ..models.gene_tpsl import TPSLGene, TPSLMethod, create_random_tpsl_gene
-from ..models.gene_decoder import GeneDecoder
 from app.services.indicators import TechnicalIndicatorService
-from .smart_condition_generator import SmartConditionGenerator
+
 from ...indicators.config import indicator_registry
 from ...indicators.config.indicator_config import IndicatorScaleType
+from ..models.ga_config import GAConfig
+from ..models.gene_decoder import GeneDecoder
+from ..models.gene_strategy import Condition, IndicatorGene, StrategyGene
+from ..models.gene_tpsl import TPSLGene, TPSLMethod, create_random_tpsl_gene
+from ..utils.operand_grouping import operand_grouping_system
 from ..utils.parameter_generators import (
     generate_indicator_parameters,
 )
-from ..utils.operand_grouping import operand_grouping_system
+from .smart_condition_generator import SmartConditionGenerator
 
 logger = logging.getLogger(__name__)
 
@@ -493,7 +493,6 @@ class RandomGeneGenerator:
                 logger.error(f"遺伝子{i}の生成に失敗しました: {e}")
                 # フォールバックを追加
                 population.append(create_default_strategy_gene(StrategyGene))
-                pass
 
         # logger.info(f"{len(population)}個の遺伝子の個体群を生成しました")
         return population

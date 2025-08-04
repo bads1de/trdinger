@@ -5,8 +5,8 @@
 単一責任原則に従い、バリデーション機能のみを担当します。
 """
 
-from typing import Dict, List
 import logging
+from typing import Dict, List
 
 logger = logging.getLogger(__name__)
 

@@ -5,16 +5,17 @@ MLトレーニングAPI
 """
 
 import logging
-from typing import Dict, Any, Optional, List
+from typing import Any, Dict, List, Optional
+
 from fastapi import APIRouter, BackgroundTasks, Depends
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
+from app.api.automl_features import AutoMLConfigModel
 from app.services.ml.orchestration.ml_training_orchestration_service import (
     MLTrainingOrchestrationService,
 )
 from app.utils.unified_error_handler import UnifiedErrorHandler
-from app.api.automl_features import AutoMLConfigModel
 from database.connection import get_db
 
 logger = logging.getLogger(__name__)

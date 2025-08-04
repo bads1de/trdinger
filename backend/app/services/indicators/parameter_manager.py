@@ -4,11 +4,10 @@
 パラメータ生成とバリデーションを一元化するモジュール
 """
 
-import random
 import logging
-
-from typing import Dict, Any, Union
+import random
 from dataclasses import dataclass
+from typing import Any, Dict, Union
 
 from app.services.indicators.config.indicator_config import (
     IndicatorConfig,
@@ -21,7 +20,6 @@ logger = logging.getLogger(__name__)
 class ParameterGenerationError(Exception):
     """パラメータ生成エラー"""
 
-    pass
 
 
 @dataclass

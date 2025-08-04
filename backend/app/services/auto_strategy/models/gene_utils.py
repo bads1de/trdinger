@@ -8,6 +8,7 @@ from typing import Dict
 from app.services.indicators.indicator_orchestrator import (
     TechnicalIndicatorService,
 )
+
 from .gene_tpsl import TPSLMethod
 
 logger = logging.getLogger(__name__)

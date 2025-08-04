@@ -5,15 +5,16 @@ MLモデル管理サービス
 内部実装や特定手法の詳細には踏み込まず、安定した入出力インターフェースの提供に焦点を当てます。
 """
 
-import os
 import glob
-import joblib
 import logging
+import os
 from datetime import datetime, timedelta
-from typing import Dict, Any, List, Optional
+from typing import Any, Dict, List, Optional
 
+import joblib
 
 from app.services.ml.config import ml_config
+
 from ...utils.unified_error_handler import UnifiedModelError, safe_ml_operation
 
 logger = logging.getLogger(__name__)
@@ -526,8 +527,9 @@ class ModelManager:
             UnifiedModelError: モデル読み込みに失敗した場合
         """
         try:
-            from .ensemble.ensemble_trainer import EnsembleTrainer
             import json
+
+            from .ensemble.ensemble_trainer import EnsembleTrainer
 
             # メタデータを読み込み
             metadata_path = os.path.join(ensemble_path, "ensemble_metadata.json")

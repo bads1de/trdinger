@@ -7,8 +7,8 @@ backtesting.pyライブラリを使用したバックテスト実行を担当し
 import logging
 import time
 import warnings
-from typing import Dict, Any, Type
 from datetime import datetime
+from typing import Any, Dict, Type
 
 import pandas as pd
 from backtesting import Backtest, Strategy
@@ -20,7 +20,6 @@ logger = logging.getLogger(__name__)
 
 class BacktestExecutionError(Exception):
     """バックテスト実行エラー"""
-    pass
 
 
 class BacktestExecutor:

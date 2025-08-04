@@ -7,10 +7,9 @@
 """
 
 import logging
-from typing import Dict, Any, Tuple, Optional, List
 from dataclasses import dataclass, field
 from enum import Enum
-
+from typing import Any, Dict, List, Optional, Tuple
 
 logger = logging.getLogger(__name__)
 

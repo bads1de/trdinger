@@ -4,10 +4,10 @@
 戦略遺伝子の交叉・突然変異ロジックを担当します。
 """
 
-import random
 import copy
-import uuid
 import logging
+import random
+import uuid
 from typing import Union, overload
 
 from ..models.gene_strategy import StrategyGene

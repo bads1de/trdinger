@@ -7,32 +7,33 @@ ML学習基盤クラス
 """
 
 import logging
-import pandas as pd
-import numpy as np
 from abc import ABC, abstractmethod
-from typing import Dict, Any, Optional, Tuple, cast
 from datetime import datetime
-from sklearn.model_selection import train_test_split, TimeSeriesSplit
+from typing import Any, Dict, Optional, Tuple, cast
+
+import numpy as np
+import pandas as pd
+from sklearn.model_selection import TimeSeriesSplit, train_test_split
 from sklearn.preprocessing import StandardScaler
 
+from database.connection import SessionLocal
+from database.repositories.fear_greed_repository import FearGreedIndexRepository
 
-from .config import ml_config
+from ...utils.data_preprocessing import data_preprocessor
+from ...utils.label_generation import LabelGenerator, ThresholdMethod
 from ...utils.unified_error_handler import (
     UnifiedDataError,
     UnifiedModelError,
-    safe_ml_operation,
     ml_operation_context,
+    safe_ml_operation,
 )
-from ...utils.data_preprocessing import data_preprocessor
-from .feature_engineering.feature_engineering_service import FeatureEngineeringService
+from .config import ml_config
+from .feature_engineering.automl_features.automl_config import AutoMLConfig
 from .feature_engineering.enhanced_feature_engineering_service import (
     EnhancedFeatureEngineeringService,
 )
-from .feature_engineering.automl_features.automl_config import AutoMLConfig
+from .feature_engineering.feature_engineering_service import FeatureEngineeringService
 from .model_manager import model_manager
-from ...utils.label_generation import LabelGenerator, ThresholdMethod
-from database.connection import SessionLocal
-from database.repositories.fear_greed_repository import FearGreedIndexRepository
 
 logger = logging.getLogger(__name__)
 
@@ -86,8 +87,8 @@ class BaseMLTrainer(ABC):
             AutoMLConfigオブジェクト
         """
         from .feature_engineering.automl_features.automl_config import (
-            TSFreshConfig,
             AutoFeatConfig,
+            TSFreshConfig,
         )
 
         # TSFresh設定
@@ -319,7 +320,6 @@ class BaseMLTrainer(ABC):
         Returns:
             予測結果
         """
-        pass
 
     @abstractmethod
     def _train_model_impl(
@@ -343,7 +343,6 @@ class BaseMLTrainer(ABC):
         Returns:
             学習結果
         """
-        pass
 
     def _validate_training_data(self, training_data: pd.DataFrame) -> None:
         """入力データの検証"""

@@ -6,8 +6,8 @@ AutoML特徴量エンジニアリングの設定を管理します。
 設定を管理し、データサイズに応じた動的な最適化機能を提供します。
 """
 
-from typing import Dict, Any, Optional
 from dataclasses import dataclass
+from typing import Any, Dict, Optional
 
 
 @dataclass

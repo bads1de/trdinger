@@ -13,14 +13,14 @@ from typing import Any, Dict, List, Optional, Tuple
 
 import numpy as np
 import pandas as pd
+from autofeat import AutoFeatClassifier, AutoFeatRegressor
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.model_selection import cross_val_score
 
-from .....utils.unified_error_handler import safe_ml_operation
 from .....utils.data_preprocessing import data_preprocessor
+from .....utils.unified_error_handler import safe_ml_operation
 from .automl_config import AutoFeatConfig
 from .performance_optimizer import PerformanceOptimizer
-from autofeat import AutoFeatRegressor, AutoFeatClassifier
 
 logger = logging.getLogger(__name__)
 

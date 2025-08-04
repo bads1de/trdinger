@@ -6,14 +6,15 @@ BaseMLTrainerを継承し、アンサンブル学習のオーケストレーシ�
 """
 
 import logging
+from typing import Any, Dict, Optional
+
 import numpy as np
 import pandas as pd
-from typing import Dict, Any, Optional
 
+from ....utils.unified_error_handler import UnifiedModelError
 from ..base_ml_trainer import BaseMLTrainer
 from .bagging import BaggingEnsemble
 from .stacking import StackingEnsemble
-from ....utils.unified_error_handler import UnifiedModelError
 
 logger = logging.getLogger(__name__)
 
@@ -333,8 +334,9 @@ class EnsembleTrainer(BaseMLTrainer):
             saved_paths = self.ensemble_model.save_models(model_path)
 
             # 追加のメタデータを保存
-            import joblib
             from datetime import datetime
+
+            import joblib
 
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
             algorithm_name = getattr(self.ensemble_model, "best_algorithm", "unknown")
@@ -381,11 +383,11 @@ class EnsembleTrainer(BaseMLTrainer):
             読み込み成功フラグ
         """
         try:
-            import joblib
-            import os
-
             # メタデータを読み込み（タイムスタンプ付きファイルに対応）
             import glob
+            import os
+
+            import joblib
 
             metadata_patterns = [
                 f"{model_path}_ensemble_metadata_*.pkl",  # 新形式

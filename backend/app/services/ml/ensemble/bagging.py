@@ -6,13 +6,14 @@
 """
 
 import logging
+from typing import Any, Dict, List, Optional
+
 import numpy as np
 import pandas as pd
-from typing import Dict, Any, List, Optional
 from sklearn.utils import resample
 
-from .base_ensemble import BaseEnsemble
 from ....utils.unified_error_handler import UnifiedModelError
+from .base_ensemble import BaseEnsemble
 
 logger = logging.getLogger(__name__)
 

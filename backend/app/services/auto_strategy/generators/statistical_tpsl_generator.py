@@ -7,11 +7,11 @@
 """
 
 import logging
-from typing import Dict, Any, Optional, List
 from dataclasses import dataclass, field
 from enum import Enum
-import numpy as np
+from typing import Any, Dict, List, Optional
 
+import numpy as np
 
 logger = logging.getLogger(__name__)
 

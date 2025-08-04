@@ -5,10 +5,10 @@ TP/SL設定をGA最適化対象として表現するための遺伝子モデル�
 テクニカル指標パラメータと同様に、GA操作（交叉、突然変異）の対象となります。
 """
 
-from dataclasses import dataclass, field
-from typing import Dict, Any, List, Optional
-from enum import Enum
 import random
+from dataclasses import dataclass, field
+from enum import Enum
+from typing import Any, Dict, List, Optional
 
 
 class TPSLMethod(Enum):

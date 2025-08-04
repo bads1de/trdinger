@@ -5,19 +5,20 @@ GA実験に関連するデータのデータベースへの保存、更新、取
 
 import logging
 import re
+from typing import Any, Dict, List, Optional
 
-from typing import Dict, Any, List, Optional
 from sqlalchemy.orm import Session
 
-from ..models.ga_config import GAConfig
-from ..models.gene_strategy import StrategyGene
+from app.services.auto_strategy.models.gene_serialization import GeneSerializer
+from app.services.backtest.backtest_service import BacktestService
+from database.repositories.backtest_result_repository import BacktestResultRepository
+from database.repositories.ga_experiment_repository import GAExperimentRepository
 from database.repositories.generated_strategy_repository import (
     GeneratedStrategyRepository,
 )
-from database.repositories.ga_experiment_repository import GAExperimentRepository
-from database.repositories.backtest_result_repository import BacktestResultRepository
-from app.services.backtest.backtest_service import BacktestService
-from app.services.auto_strategy.models.gene_serialization import GeneSerializer
+
+from ..models.ga_config import GAConfig
+from ..models.gene_strategy import StrategyGene
 
 logger = logging.getLogger(__name__)
 
@@ -113,7 +114,6 @@ class ExperimentPersistenceService:
             logger.error(
                 f"GA実験結果の保存中にエラーが発生しました: {e}", exc_info=True
             )
-            pass
 
     def _save_best_strategy_and_run_detailed_backtest(
         self,
@@ -333,7 +333,6 @@ class ExperimentPersistenceService:
                 )
         except Exception as e:
             logger.error(f"実験完了処理エラー: {e}")
-            pass
 
     def fail_experiment(self, experiment_id: str):
         """実験を失敗状態にする"""
@@ -344,7 +343,6 @@ class ExperimentPersistenceService:
                 ga_experiment_repo.update_experiment_status(db_experiment_id, "failed")
         except Exception as e:
             logger.error(f"実験失敗処理エラー: {e}")
-            pass
 
     def stop_experiment(self, experiment_id: str):
         """実験を停止状態にする"""
@@ -355,7 +353,6 @@ class ExperimentPersistenceService:
                 ga_experiment_repo.update_experiment_status(db_experiment_id, "stopped")
         except Exception as e:
             logger.error(f"実験停止処理エラー: {e}")
-            pass
 
     def get_experiment_result(self, experiment_id: str) -> Optional[Dict[str, Any]]:
         """実験結果を取得（詳細な戦略データを含む）"""

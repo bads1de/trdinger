@@ -6,7 +6,7 @@ GA実行時の各種パラメータを単一のクラスで管理します。
 
 import json
 from dataclasses import dataclass, field
-from typing import Dict, Any, List, Optional, Callable
+from typing import Any, Callable, Dict, List, Optional
 
 from app.services.indicators import TechnicalIndicatorService
 

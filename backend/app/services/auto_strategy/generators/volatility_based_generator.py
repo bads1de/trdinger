@@ -7,9 +7,9 @@
 """
 
 import logging
-from typing import Dict, Any, Tuple
 from dataclasses import dataclass, field
 from enum import Enum
+from typing import Any, Dict, Tuple
 
 import numpy as np
 

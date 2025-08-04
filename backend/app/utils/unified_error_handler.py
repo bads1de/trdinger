@@ -5,19 +5,19 @@ APIErrorHandler と MLErrorHandler の重複機能を統合し、
 一貫性のあるエラー処理とログ出力を提供します。
 """
 
+import concurrent.futures
+import functools
 import logging
 import platform
 import signal
-import concurrent.futures
-import functools
 import time
-from typing import Any, Callable, Optional, Dict, TypeVar, Awaitable
 from contextlib import contextmanager
-import pandas as pd
-import numpy as np
-
-from fastapi import HTTPException
 from datetime import datetime
+from typing import Any, Awaitable, Callable, Dict, Optional, TypeVar
+
+import numpy as np
+import pandas as pd
+from fastapi import HTTPException
 
 logger = logging.getLogger(__name__)
 
@@ -27,25 +27,21 @@ T = TypeVar("T")
 class UnifiedTimeoutError(Exception):
     """統一タイムアウトエラー"""
 
-    pass
 
 
 class UnifiedValidationError(Exception):
     """統一バリデーションエラー"""
 
-    pass
 
 
 class UnifiedDataError(Exception):
     """統一データエラー"""
 
-    pass
 
 
 class UnifiedModelError(Exception):
     """統一モデルエラー"""
 
-    pass
 
 
 class UnifiedErrorHandler:

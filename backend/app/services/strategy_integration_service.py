@@ -6,13 +6,15 @@
 """
 
 import logging
-from typing import Dict, Any, List, Optional, cast
+from typing import Any, Dict, List, Optional, cast
+
 from sqlalchemy.orm import Session
-from database.models import GeneratedStrategy, BacktestResult
+
+from database.models import BacktestResult, GeneratedStrategy
+from database.repositories.backtest_result_repository import BacktestResultRepository
 from database.repositories.generated_strategy_repository import (
     GeneratedStrategyRepository,
 )
-from database.repositories.backtest_result_repository import BacktestResultRepository
 
 logger = logging.getLogger(__name__)
 

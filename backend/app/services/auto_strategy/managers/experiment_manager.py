@@ -5,18 +5,18 @@ GA実験の実行と管理を担当します。
 """
 
 import logging
-from typing import Dict, Any, List, Optional
+from typing import Any, Dict, List, Optional
 
-from ..models.ga_config import GAConfig
-from ..models.gene_strategy import StrategyGene
-from ..engines.ga_engine import GeneticAlgorithmEngine
-from ..factories.strategy_factory import StrategyFactory
-from ..generators.random_gene_generator import RandomGeneGenerator
 from app.services.backtest.backtest_service import BacktestService
-from ..services.experiment_persistence_service import ExperimentPersistenceService
 from database.connection import get_db
 from database.repositories.backtest_result_repository import BacktestResultRepository
 
+from ..engines.ga_engine import GeneticAlgorithmEngine
+from ..factories.strategy_factory import StrategyFactory
+from ..generators.random_gene_generator import RandomGeneGenerator
+from ..models.ga_config import GAConfig
+from ..models.gene_strategy import StrategyGene
+from ..services.experiment_persistence_service import ExperimentPersistenceService
 
 logger = logging.getLogger(__name__)
 

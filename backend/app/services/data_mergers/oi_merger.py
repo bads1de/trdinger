@@ -5,11 +5,13 @@ Open Interest データのマージロジックを提供します。
 """
 
 import logging
-import pandas as pd
 from datetime import datetime
 from typing import List
-from database.repositories.open_interest_repository import OpenInterestRepository
+
+import pandas as pd
+
 from database.models import OpenInterestData
+from database.repositories.open_interest_repository import OpenInterestRepository
 
 logger = logging.getLogger(__name__)
 

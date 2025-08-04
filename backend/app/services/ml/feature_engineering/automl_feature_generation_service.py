@@ -6,15 +6,16 @@ APIエンドポイントからビジネスロジックを分離し、責務を�
 """
 
 import logging
+from typing import Any, Dict, Optional, Tuple
+
 import pandas as pd
-from typing import Dict, Optional, Any, Tuple
 from sqlalchemy.orm import Session
 
 from app.services.data_collection.orchestration.market_data_orchestration_service import (
     MarketDataOrchestrationService,
 )
-from .enhanced_feature_engineering_service import EnhancedFeatureEngineeringService
 
+from .enhanced_feature_engineering_service import EnhancedFeatureEngineeringService
 
 logger = logging.getLogger(__name__)
 

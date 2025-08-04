@@ -112,56 +112,6 @@
   - `AutoMLFeatureGenerationService` の機能を `UnifiedFeatureEngineeringService` に統合し、API レイヤーから直接呼び出せるようにします。
   - 継承ではなくコンポジションパターンを使用し、AutoML 機能を必要に応じて注入できる設計に変更します。
 
-- [ ] ### 2.8. モデルラッパークラスの大量重複
-
-- **課題**:
-  - `models/` ディレクトリに 12 個のモデルラッパークラス（`LightGBMModel`, `XGBoostModel`, `CatBoostModel` など）が存在し、全て同じ構造を持っています。
-  - 各クラスは `__init__`, `_train_model_impl`, `predict`, `predict_proba` などの同じメソッドを実装しており、コードの重複が深刻です。
-  - パラメータ設定やエラーハンドリングのロジックも各クラスで重複しています。
-- **提案**:
-
-  - 抽象基底クラス `BaseModelWrapper` を作成し、共通のインターフェースと実装を定義します。
-  - 各モデル固有の設定は設定ファイルまたは辞書として外部化し、`BaseModelWrapper` が動的にモデルを生成できるようにします。
-  - ファクトリーパターンを使用して、モデル名から適切なラッパーインスタンスを生成する `ModelWrapperFactory` を実装します。
-
-  **実装例:**
-
-  ```python
-  # base_model_wrapper.py
-  from abc import ABC, abstractmethod
-
-  class BaseModelWrapper(ABC):
-      def __init__(self, model_config: Dict[str, Any]):
-          self.model = None
-          self.is_trained = False
-          self.feature_columns = None
-          self.model_config = model_config
-
-      @abstractmethod
-      def _create_model(self) -> Any:
-          """モデル固有のインスタンス生成"""
-          pass
-
-      @abstractmethod
-      def _get_model_params(self, num_classes: int) -> Dict[str, Any]:
-          """モデル固有のパラメータ取得"""
-          pass
-
-      def train(self, X_train, X_test, y_train, y_test, **kwargs):
-          # 共通の学習ロジック
-          pass
-
-  # model_wrapper_factory.py
-  class ModelWrapperFactory:
-      @staticmethod
-      def create_wrapper(model_name: str, config: Dict[str, Any]) -> BaseModelWrapper:
-          if model_name == "lightgbm":
-              return LightGBMWrapper(config)
-          elif model_name == "xgboost":
-              return XGBoostWrapper(config)
-          # ...
-  ```
-
 - [ ] ### 2.9. メトリクス収集機能の重複
 
 - **課題**:
@@ -277,39 +227,6 @@
   - カスタムシリアライゼーションが必要な場合は、Pydantic のフィールド設定やカスタムシリアライザーを使用します。
   - 手動マッピングロジックを削除し、保守性を向上させます。
 
-- [ ] ### 2.17. インポート文の最適化
-
-- **課題**:
-  - 多くのファイルで未使用のインポート文が存在する可能性があります。
-  - 相対インポートと絶対インポートが混在しており、一貫性に欠けます。
-- **提案**:
-
-  - `isort` と `autoflake` を使用して、未使用インポートの削除とインポート順序の統一を行います。
-  - プロジェクト全体で絶対インポートを使用するように統一します。
-  - pre-commit フックを設定して、今後のコミット時に自動的にインポート文を整理します。
-
-- [x] ### 2.18. 重複インポート文の修正
-
-- **課題**:
-
-  - `backend/app/api/ml_training.py` で同じインポート文が重複しています：
-
-    ```python
-    from app.services.ml.orchestration.ml_training_orchestration_service import (
-    from app.services.ml.orchestration.ml_training_orchestration_service import (
-        MLTrainingOrchestrationService,
-    )
-    ```
-
-  - `AutoMLConfigModel` も重複してインポートされています。
-  - テストファイル `backend/tests/test_single_model_training.py` でも `MLTrainingService` が 3 回重複してインポートされています。
-
-- **提案**:
-
-  - 重複したインポート文を削除し、1 つのインポート文にまとめます。
-  - `isort` と `autoflake` を使用して、プロジェクト全体の重複インポートを自動検出・修正します。
-  - pre-commit フックを設定して、今後の重複インポートを防止します。
-
 - [ ] ### 2.19. AutoMLConfig 作成ロジックの重複
 
 - **課題**:
@@ -392,54 +309,9 @@
 
 本リファクタリング提案では、**25 項目**の包括的な改善点を特定しました。これらの改善により、ML コードベースの品質が大幅に向上し、開発効率とシステムの安定性が向上することが期待されます。
 
-- [x] ### 2.25. エラーハンドリングパターンの重複
-
-- **課題**:
-
-  - 多くの ML クラスで同じような `try-except` 構造が重複しています：
-
-    ```python
-    try:
-        # 処理
-    except Exception as e:
-        logger.error(f"〇〇エラー: {e}")
-        raise UnifiedModelError(f"〇〇に失敗しました: {e}")
-    ```
-
-  - `UnifiedModelError` の使用パターンが統一されておらず、似たようなエラーメッセージが複数箇所で定義されています。
-  - 設定検証エラー（`ValueError`）の処理が複数箇所で重複しています。
-
-- **提案**:
-
-  - エラーハンドリング専用のデコレータ `@ml_error_handler` を作成し、共通のエラー処理ロジックを集約します。
-  - エラーメッセージテンプレートを定義し、一貫したエラーメッセージフォーマットを提供します。
-  - エラーの分類（設定エラー、データエラー、モデルエラーなど）に応じた専用ハンドラーを実装します。
-
-  **実装例:**
-
-  ```python
-  # error_handlers.py
-  def ml_error_handler(operation_name: str, error_type: Type[Exception] = UnifiedModelError):
-      def decorator(func):
-          @wraps(func)
-          def wrapper(*args, **kwargs):
-              try:
-                  return func(*args, **kwargs)
-              except Exception as e:
-                  logger.error(f"{operation_name}エラー: {e}")
-                  raise error_type(f"{operation_name}に失敗しました: {e}")
-          return wrapper
-      return decorator
-
-  # 使用例
-  @ml_error_handler("単一モデル学習")
-  def _train_model_impl(self, X_train, X_test, y_train, y_test, **kwargs):
-      # 学習処理
-  ```
-
 ## 総括
 
-本リファクタリング提案では、**25 項目**の包括的な改善点を特定しました。これらの改善により、ML コードベースの品質が大幅に向上し、開発効率とシステムの安定性が向上することが期待されます。
+本リファクタリング提案では、**21 項目**の包括的な改善点を特定しました。これらの改善により、ML コードベースの品質が大幅に向上し、開発効率とシステムの安定性が向上することが期待されます。
 
 ### 改善効果の期待値
 
@@ -453,9 +325,7 @@
 
 **高優先度（即座に実装すべき）:**
 
-- 2.8. モデルラッパークラスの大量重複
-- 2.18. 重複インポート文の修正
-- 2.25. エラーハンドリングパターンの重複
+（完了済み）
 
 **中優先度（次のスプリントで実装）:**
 

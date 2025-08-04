@@ -8,10 +8,9 @@
 """
 
 import logging
+from typing import Any, Dict, Optional, Tuple
+
 import pandas as pd
-
-from typing import Dict, Optional, Tuple, Any
-
 
 logger = logging.getLogger(__name__)
 

@@ -6,17 +6,16 @@
 """
 
 import logging
-
-from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
-from sqlalchemy.orm import Session
 from typing import Dict
+
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
+from sqlalchemy.orm import Session
 
 from app.services.data_collection.orchestration.data_collection_orchestration_service import (
     DataCollectionOrchestrationService,
 )
 from app.utils.unified_error_handler import UnifiedErrorHandler
-from database.connection import get_db, ensure_db_initialized
-
+from database.connection import ensure_db_initialized, get_db
 
 logger = logging.getLogger(__name__)
 

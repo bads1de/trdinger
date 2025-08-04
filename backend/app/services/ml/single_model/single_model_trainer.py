@@ -6,12 +6,13 @@ LightGBM、XGBoost、CatBoost、TabNetをサポートします。
 """
 
 import logging
+from typing import Any, Dict, Optional
+
 import numpy as np
 import pandas as pd
-from typing import Dict, Any, Optional
 
-from ..base_ml_trainer import BaseMLTrainer
 from ....utils.unified_error_handler import UnifiedModelError
+from ..base_ml_trainer import BaseMLTrainer
 
 logger = logging.getLogger(__name__)
 
@@ -360,7 +361,6 @@ class SingleModelTrainer(BaseMLTrainer):
         """学習済みモデルを設定（互換性のため）"""
         # BaseMLTrainerとの互換性のため、setterを提供
         # 実際の設定は_train_model_implで行われる
-        pass
 
     def get_model_info(self) -> Dict[str, Any]:
         """

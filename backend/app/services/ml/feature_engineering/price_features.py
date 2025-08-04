@@ -6,12 +6,13 @@ OHLCV価格データから基本的な価格関連特徴量を計算します。
 """
 
 import logging
-import pandas as pd
-import numpy as np
 from typing import Dict
 
-from ....utils.unified_error_handler import safe_ml_operation
+import numpy as np
+import pandas as pd
+
 from ....utils.data_validation import DataValidator
+from ....utils.unified_error_handler import safe_ml_operation
 
 logger = logging.getLogger(__name__)
 
@@ -25,7 +26,6 @@ class PriceFeatureCalculator:
 
     def __init__(self):
         """初期化"""
-        pass
 
     @safe_ml_operation(
         default_return=None, context="価格特徴量計算でエラーが発生しました"

@@ -6,12 +6,15 @@
 
 import asyncio
 import logging
-import ccxt
 from typing import Optional
-from ..bybit.market_data_service import BybitMarketDataService
-from database.repositories.ohlcv_repository import OHLCVRepository
+
+import ccxt
+
 from database.repositories.funding_rate_repository import FundingRateRepository
+from database.repositories.ohlcv_repository import OHLCVRepository
 from database.repositories.open_interest_repository import OpenInterestRepository
+
+from ..bybit.market_data_service import BybitMarketDataService
 
 logger = logging.getLogger(__name__)
 

@@ -6,10 +6,10 @@ IndicatorParameterManagerを使用した統一されたパラメータ生成シ�
 """
 
 import logging
-from typing import Dict, Any
+from typing import Any, Dict
 
-from app.services.indicators.parameter_manager import IndicatorParameterManager
 from app.services.indicators.config.indicator_config import indicator_registry
+from app.services.indicators.parameter_manager import IndicatorParameterManager
 
 logger = logging.getLogger(__name__)
 

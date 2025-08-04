@@ -6,16 +6,18 @@ Alternative.me APIを使用してFear & Greed Indexデータを取得し、
 """
 
 import logging
-import aiohttp
-from typing import List, Optional
 from datetime import datetime, timezone
-from database.repositories.fear_greed_repository import FearGreedIndexRepository
+from typing import List, Optional
+
+import aiohttp
+
 from app.utils.data_converter import DataValidator
 from app.utils.unified_error_handler import (
+    UnifiedDataError,
     UnifiedErrorHandler,
     unified_safe_operation,
-    UnifiedDataError,
 )
+from database.repositories.fear_greed_repository import FearGreedIndexRepository
 
 logger = logging.getLogger(__name__)
 

@@ -5,10 +5,12 @@
 """
 
 import logging
+from typing import Any, Dict, Tuple, Union
+
 import numpy as np
-from typing import Dict, Any, Union, Tuple
 
 from app.services.indicators import TechnicalIndicatorService
+
 from ..models.gene_strategy import IndicatorGene
 from ..services.ml_orchestrator import MLOrchestrator
 

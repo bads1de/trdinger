@@ -6,9 +6,10 @@
 """
 
 import logging
+from typing import Optional
+
 import numpy as np
 import pandas as pd
-from typing import Optional
 import talib
 from scipy import stats
 from sklearn.preprocessing import StandardScaler

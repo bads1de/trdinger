@@ -5,9 +5,8 @@
 """
 
 import json
-
 import logging
-from typing import TYPE_CHECKING, Dict, Any, Optional, Type
+from typing import TYPE_CHECKING, Any, Dict, Optional, Type
 
 if TYPE_CHECKING:
     from .gene_strategy import Condition, IndicatorGene, StrategyGene
@@ -26,7 +25,6 @@ class GeneSerializer:
 
     def __init__(self):
         """初期化"""
-        pass
 
     def strategy_gene_to_dict(self, strategy_gene) -> Dict[str, Any]:
         """
@@ -455,7 +453,6 @@ class GeneSerializer:
             version = data.get("serialization_version", "1.0")
             if version != "1.0":
                 logger.warning(f"異なるシリアライゼーションバージョン: {version}")
-                pass
 
             # 不要なメタデータを除去
             clean_data = {

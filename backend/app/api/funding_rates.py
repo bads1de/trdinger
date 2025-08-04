@@ -5,17 +5,16 @@
 """
 
 import logging
+from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
-from typing import Optional
 
-
-from database.connection import get_db, ensure_db_initialized
-from app.utils.unified_error_handler import UnifiedErrorHandler
 from app.services.data_collection.orchestration.funding_rate_orchestration_service import (
     FundingRateOrchestrationService,
 )
+from app.utils.unified_error_handler import UnifiedErrorHandler
+from database.connection import ensure_db_initialized, get_db
 
 logger = logging.getLogger(__name__)
 

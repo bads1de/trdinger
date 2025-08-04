@@ -7,14 +7,13 @@
 import logging
 from typing import List
 
-
 import pandas as pd
 
 from database.models import (
+    FearGreedIndexData,
+    FundingRateData,
     OHLCVData,
     OpenInterestData,
-    FundingRateData,
-    FearGreedIndexData,
 )
 
 logger = logging.getLogger(__name__)
@@ -23,7 +22,6 @@ logger = logging.getLogger(__name__)
 class DataConversionError(Exception):
     """データ変換エラー"""
 
-    pass
 
 
 class DataConversionService:

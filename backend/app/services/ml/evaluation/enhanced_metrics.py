@@ -6,19 +6,20 @@
 """
 
 import logging
+import warnings
+from dataclasses import dataclass
+from typing import Any, Dict, List, Optional
+
 import numpy as np
-from typing import Dict, Any, List, Optional
 from sklearn.metrics import (
     accuracy_score,
+    average_precision_score,
     balanced_accuracy_score,
+    classification_report,
+    confusion_matrix,
     precision_recall_fscore_support,
     roc_auc_score,
-    average_precision_score,
-    confusion_matrix,
-    classification_report,
 )
-from dataclasses import dataclass
-import warnings
 
 logger = logging.getLogger(__name__)
 

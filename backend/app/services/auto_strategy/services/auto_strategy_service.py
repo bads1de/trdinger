@@ -5,16 +5,18 @@ GA実行、進捗管理、結果保存を統合的に管理します。
 """
 
 import logging
-from typing import Dict, Any, List, Optional
+from typing import Any, Dict, List, Optional
 
 from fastapi import BackgroundTasks
+
+from app.services.backtest.backtest_data_service import BacktestDataService
+from app.services.backtest.backtest_service import BacktestService
+from database.connection import SessionLocal
+
+from ..managers.experiment_manager import ExperimentManager
 from ..models.ga_config import GAConfig
 from ..models.gene_strategy import StrategyGene
-from app.services.backtest.backtest_service import BacktestService
-from app.services.backtest.backtest_data_service import BacktestDataService
 from .experiment_persistence_service import ExperimentPersistenceService
-from ..managers.experiment_manager import ExperimentManager
-from database.connection import SessionLocal
 
 logger = logging.getLogger(__name__)
 
@@ -56,12 +58,12 @@ class AutoStrategyService:
         try:
             # データベースリポジトリの初期化
             with self.db_session_factory() as db:
+                from database.repositories.funding_rate_repository import (
+                    FundingRateRepository,
+                )
                 from database.repositories.ohlcv_repository import OHLCVRepository
                 from database.repositories.open_interest_repository import (
                     OpenInterestRepository,
-                )
-                from database.repositories.funding_rate_repository import (
-                    FundingRateRepository,
                 )
 
                 ohlcv_repo = OHLCVRepository(db)

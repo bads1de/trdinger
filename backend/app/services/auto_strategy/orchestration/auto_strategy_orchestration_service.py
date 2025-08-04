@@ -6,7 +6,7 @@ APIルーター内に散在していたオートストラテジー関連のビ�
 """
 
 import logging
-from typing import Dict, Any
+from typing import Any, Dict
 
 from app.services.auto_strategy.models.gene_strategy import StrategyGene
 from app.services.auto_strategy.services.auto_strategy_service import (
@@ -26,7 +26,6 @@ class AutoStrategyOrchestrationService:
 
     def __init__(self):
         """初期化"""
-        pass
 
     async def test_strategy(
         self, request, auto_strategy_service: AutoStrategyService

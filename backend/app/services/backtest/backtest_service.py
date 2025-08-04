@@ -7,32 +7,30 @@
 
 import logging
 from datetime import datetime
-from typing import Dict, Any, Optional
+from typing import Any, Dict, Optional
 
 from sqlalchemy.orm import Session
 
-from .backtest_data_service import BacktestDataService
-from .validation.backtest_config_validator import (
-    BacktestConfigValidator,
-    BacktestConfigValidationError
-)
-from .factories.strategy_class_factory import (
-    StrategyClassFactory,
-    StrategyClassCreationError
-)
-from .execution.backtest_executor import (
-    BacktestExecutor,
-    BacktestExecutionError
-)
-from .conversion.backtest_result_converter import (
-    BacktestResultConverter,
-    BacktestResultConversionError
-)
+from database.connection import get_db
+from database.repositories.backtest_result_repository import BacktestResultRepository
+from database.repositories.funding_rate_repository import FundingRateRepository
 from database.repositories.ohlcv_repository import OHLCVRepository
 from database.repositories.open_interest_repository import OpenInterestRepository
-from database.repositories.funding_rate_repository import FundingRateRepository
-from database.repositories.backtest_result_repository import BacktestResultRepository
-from database.connection import get_db
+
+from .backtest_data_service import BacktestDataService
+from .conversion.backtest_result_converter import (
+    BacktestResultConversionError,
+    BacktestResultConverter,
+)
+from .execution.backtest_executor import BacktestExecutionError, BacktestExecutor
+from .factories.strategy_class_factory import (
+    StrategyClassCreationError,
+    StrategyClassFactory,
+)
+from .validation.backtest_config_validator import (
+    BacktestConfigValidationError,
+    BacktestConfigValidator,
+)
 
 logger = logging.getLogger(__name__)
 

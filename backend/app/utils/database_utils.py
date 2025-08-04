@@ -3,11 +3,11 @@
 """
 
 import logging
-
-from typing import List, Type, Optional, Dict, Any
-from sqlalchemy.orm import Session
-from sqlalchemy.dialects.postgresql import insert
 from datetime import datetime
+from typing import Any, Dict, List, Optional, Type
+
+from sqlalchemy.dialects.postgresql import insert
+from sqlalchemy.orm import Session
 
 logger = logging.getLogger(__name__)
 
@@ -176,8 +176,9 @@ class DatabaseQueryHelper:
         Returns:
             最新のタイムスタンプ（データがない場合はNone）
         """
-        from sqlalchemy import func
         from datetime import timezone
+
+        from sqlalchemy import func
 
         try:
             query = db.query(func.max(getattr(model_class, timestamp_column)))
@@ -217,8 +218,9 @@ class DatabaseQueryHelper:
         Returns:
             最古のタイムスタンプ（データがない場合はNone）
         """
-        from sqlalchemy import func
         from datetime import timezone
+
+        from sqlalchemy import func
 
         try:
             query = db.query(func.min(getattr(model_class, timestamp_column)))
@@ -288,8 +290,9 @@ class DatabaseQueryHelper:
         Returns:
             (最古のタイムスタンプ, 最新のタイムスタンプ)
         """
-        from sqlalchemy import func
         from datetime import timezone
+
+        from sqlalchemy import func
 
         try:
             query = db.query(

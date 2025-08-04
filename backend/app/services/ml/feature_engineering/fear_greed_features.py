@@ -5,9 +5,10 @@ Fear & Greed Index データから市場センチメントを捉える特徴量�
 """
 
 import logging
-import pandas as pd
-import numpy as np
 from typing import Dict
+
+import numpy as np
+import pandas as pd
 
 from ....utils.data_validation import DataValidator
 
@@ -23,7 +24,6 @@ class FearGreedFeatureCalculator:
 
     def __init__(self):
         """初期化"""
-        pass
 
     def calculate_fear_greed_features(
         self,

@@ -5,13 +5,13 @@ GA用の戦略遺伝子デコード機能を担当するモジュール。
 """
 
 import logging
-from typing import List, Dict
+from typing import Dict, List
 
-from .gene_tpsl import TPSLGene, TPSLMethod
+from ..generators.smart_condition_generator import SmartConditionGenerator
+from . import gene_utils
 from .gene_position_sizing import PositionSizingGene, PositionSizingMethod
 from .gene_strategy import Condition, IndicatorGene
-from . import gene_utils
-from ..generators.smart_condition_generator import SmartConditionGenerator
+from .gene_tpsl import TPSLGene, TPSLMethod
 
 logger = logging.getLogger(__name__)
 

@@ -6,12 +6,12 @@
 """
 
 import logging
-import pandas as pd
-import numpy as np
 from typing import List
 
-from ....utils.unified_error_handler import safe_ml_operation
+import numpy as np
+import pandas as pd
 
+from ....utils.unified_error_handler import safe_ml_operation
 
 logger = logging.getLogger(__name__)
 
@@ -25,7 +25,6 @@ class TemporalFeatureCalculator:
 
     def __init__(self):
         """初期化"""
-        pass
 
     def calculate_temporal_features(self, df: pd.DataFrame) -> pd.DataFrame:
         """

@@ -4,23 +4,23 @@ AutoML特徴量エンジニアリング API エンドポイント
 AutoML特徴量生成・選択機能のREST APIを提供します。
 """
 
-from fastapi import APIRouter, Depends, BackgroundTasks, Request
-from pydantic import BaseModel, Field, ValidationError
-from typing import Dict, List, Optional, Any
 import logging
+from typing import Any, Dict, List, Optional
 
+from fastapi import APIRouter, BackgroundTasks, Depends, Request
+from pydantic import BaseModel, Field, ValidationError
+
+from app.api.dependencies import get_automl_feature_generation_service
 from app.services.ml.feature_engineering.automl_feature_generation_service import (
     AutoMLFeatureGenerationService,
 )
-from app.api.dependencies import get_automl_feature_generation_service
 from app.services.ml.feature_engineering.automl_features.automl_config import (
     AutoMLConfig,
 )
-from app.utils.unified_error_handler import UnifiedErrorHandler
 from app.services.ml.feature_engineering.enhanced_feature_engineering_service import (
     EnhancedFeatureEngineeringService,
 )
-
+from app.utils.unified_error_handler import UnifiedErrorHandler
 
 logger = logging.getLogger(__name__)
 

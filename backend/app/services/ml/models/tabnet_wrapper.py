@@ -6,9 +6,10 @@ TabNetを使用してアンサンブル専用に最適化されたモデルで�
 """
 
 import logging
+from typing import Any, Dict, Optional
+
 import numpy as np
 import pandas as pd
-from typing import Dict, Any, Optional
 
 from ....utils.unified_error_handler import UnifiedModelError
 
@@ -135,11 +136,11 @@ class TabNetModel:
             # 詳細な評価指標を計算
             from sklearn.metrics import (
                 accuracy_score,
+                average_precision_score,
                 balanced_accuracy_score,
                 f1_score,
                 matthews_corrcoef,
                 roc_auc_score,
-                average_precision_score,
             )
 
             # 基本評価指標計算

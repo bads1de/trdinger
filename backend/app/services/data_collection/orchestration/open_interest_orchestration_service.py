@@ -5,15 +5,17 @@ APIルーター内に散在していたオープンインタレスト関連の�
 責務の分離とSOLID原則に基づいた設計を実現します。
 """
 
-import logging
 import asyncio
-from typing import Dict, Any, Optional, List
+import logging
 from datetime import datetime
+from typing import Any, Dict, List, Optional
+
 from sqlalchemy.orm import Session
 
-from database.repositories.open_interest_repository import OpenInterestRepository
-from ..bybit.open_interest_service import BybitOpenInterestService
 from app.utils.api_utils import APIResponseHelper
+from database.repositories.open_interest_repository import OpenInterestRepository
+
+from ..bybit.open_interest_service import BybitOpenInterestService
 
 logger = logging.getLogger(__name__)
 
@@ -29,7 +31,6 @@ class OpenInterestOrchestrationService:
 
     def __init__(self):
         """初期化"""
-        pass
 
     async def collect_open_interest_data(
         self,

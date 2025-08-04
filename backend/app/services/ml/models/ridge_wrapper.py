@@ -6,9 +6,10 @@ scikit-learnのRidgeClassifierを使用してアンサンブル専用に最適�
 """
 
 import logging
+from typing import Any, Dict, List, Optional
+
 import numpy as np
 import pandas as pd
-from typing import Dict, Any, Optional, List
 from sklearn.linear_model import RidgeClassifier
 from sklearn.metrics import (
     accuracy_score,

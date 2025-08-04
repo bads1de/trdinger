@@ -4,10 +4,10 @@
 金融データに特化した高度な特徴量設定を管理します。
 """
 
-from typing import Dict, Any, List, Optional
+import json
 from dataclasses import dataclass
 from enum import Enum
-import json
+from typing import Any, Dict, List, Optional
 
 
 class FeatureCategory(Enum):

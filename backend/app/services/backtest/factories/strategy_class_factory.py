@@ -5,7 +5,7 @@
 """
 
 import logging
-from typing import Dict, Any, Type
+from typing import Any, Dict, Type
 
 from backtesting import Strategy
 
@@ -15,7 +15,6 @@ logger = logging.getLogger(__name__)
 class StrategyClassCreationError(Exception):
     """戦略クラス生成エラー"""
 
-    pass
 
 
 class StrategyClassFactory:

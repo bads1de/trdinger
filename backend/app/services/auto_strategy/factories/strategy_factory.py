@@ -5,14 +5,15 @@ StrategyGeneから動的にbacktesting.py互換のStrategy継承クラスを生�
 """
 
 import logging
-from typing import Type, Tuple
+from typing import Tuple, Type
 
 from backtesting import Strategy
-from ..models.gene_strategy import StrategyGene, IndicatorGene
-from ..evaluators.condition_evaluator import ConditionEvaluator
+
 from ..calculators.indicator_calculator import IndicatorCalculator
-from ..calculators.tpsl_calculator import TPSLCalculator
 from ..calculators.position_sizing_helper import PositionSizingHelper
+from ..calculators.tpsl_calculator import TPSLCalculator
+from ..evaluators.condition_evaluator import ConditionEvaluator
+from ..models.gene_strategy import IndicatorGene, StrategyGene
 
 logger = logging.getLogger(__name__)
 
@@ -103,7 +104,6 @@ class StrategyFactory:
 
                 except Exception as e:
                     logger.error(f"戦略初期化エラー: {e}", exc_info=True)
-                    pass
                     raise
 
             def next(self):
@@ -221,7 +221,6 @@ class StrategyFactory:
 
                 except Exception as e:
                     logger.error(f"売買ロジックエラー: {e}", exc_info=True)
-                    pass
 
             def _adjust_position_size_for_backtesting(self, size: float) -> float:
                 """

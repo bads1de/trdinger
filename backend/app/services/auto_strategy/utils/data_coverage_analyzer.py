@@ -4,12 +4,12 @@
 OI/FRデータのカバレッジを分析し、戦略の適応度計算にペナルティを反映します。
 """
 
-from typing import Dict, Any
+import logging
+from typing import Any, Dict
+
 import pandas as pd
 
-import logging
-
-from ..models.gene_strategy import StrategyGene, Condition
+from ..models.gene_strategy import Condition, StrategyGene
 
 logger = logging.getLogger(__name__)
 

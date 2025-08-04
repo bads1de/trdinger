@@ -6,15 +6,16 @@ APIルーター内に散在していたFear & Greed Index関連のビジネス�
 """
 
 import logging
-from typing import Dict, Any
+from datetime import datetime, timezone
+from typing import Any, Dict
+
 from sqlalchemy.orm import Session
 
-from datetime import datetime, timezone
-from database.repositories.fear_greed_repository import FearGreedIndexRepository
 from app.services.data_collection.fear_greed.fear_greed_service import (
     FearGreedIndexService,
 )
 from app.utils.api_utils import APIResponseHelper
+from database.repositories.fear_greed_repository import FearGreedIndexRepository
 
 logger = logging.getLogger(__name__)
 
@@ -29,7 +30,6 @@ class FearGreedOrchestrationService:
 
     def __init__(self):
         """初期化"""
-        pass
 
     async def get_fear_greed_data_status(self, db: Session) -> Dict[str, Any]:
         """

@@ -7,18 +7,17 @@
 """
 
 import logging
-
-from fastapi import APIRouter, Query, Depends
 from typing import Optional
+
+from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
 from app.config.unified_config import unified_config
-from database.connection import get_db
 from app.services.data_collection.orchestration.market_data_orchestration_service import (
     MarketDataOrchestrationService,
 )
 from app.utils.unified_error_handler import UnifiedErrorHandler
-
+from database.connection import get_db
 
 logger = logging.getLogger(__name__)
 

@@ -7,11 +7,10 @@ backtesting.pyの_Arrayオブジェクト、pandas.Series、numpy配列、リス
 """
 
 import logging
+from typing import Any, Optional, Union
 
-import pandas as pd
 import numpy as np
-from typing import Union, Any, Optional
-
+import pandas as pd
 
 logger = logging.getLogger(__name__)
 
@@ -19,7 +18,6 @@ logger = logging.getLogger(__name__)
 class DataConversionError(Exception):
     """データ変換エラー"""
 
-    pass
 
 
 def ensure_series(

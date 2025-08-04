@@ -9,39 +9,39 @@ MLPredictionInterfaceを実装し、統一されたML予測APIを提供します
 """
 
 import logging
-import pandas as pd
-import numpy as np
-from typing import Dict, Any, Optional
+from typing import Any, Dict, Optional
 
+import numpy as np
+import pandas as pd
+from sqlalchemy.orm import Session
+
+from app.services.backtest.backtest_data_service import BacktestDataService
 from app.services.ml.config import ml_config
-from app.utils.unified_error_handler import (
-    UnifiedErrorHandler,
-    MLDataError,
-    MLValidationError,
-    unified_timeout_decorator,
-    unified_operation_context,
-    safe_ml_operation,
-)
-from app.utils.data_preprocessing import data_preprocessor
-from app.services.ml.feature_engineering.feature_engineering_service import (
-    FeatureEngineeringService,
+from app.services.ml.feature_engineering.automl_features.automl_config import (
+    AutoMLConfig,
 )
 from app.services.ml.feature_engineering.enhanced_feature_engineering_service import (
     EnhancedFeatureEngineeringService,
 )
-from app.services.ml.feature_engineering.automl_features.automl_config import (
-    AutoMLConfig,
+from app.services.ml.feature_engineering.feature_engineering_service import (
+    FeatureEngineeringService,
 )
+from app.services.ml.interfaces import MLPredictionInterface
 from app.services.ml.ml_training_service import MLTrainingService
 from app.services.ml.model_manager import model_manager
-
-from app.services.ml.interfaces import MLPredictionInterface
-from app.services.backtest.backtest_data_service import BacktestDataService
-from database.repositories.ohlcv_repository import OHLCVRepository
-from database.repositories.funding_rate_repository import FundingRateRepository
-from database.repositories.open_interest_repository import OpenInterestRepository
+from app.utils.data_preprocessing import data_preprocessor
+from app.utils.unified_error_handler import (
+    MLDataError,
+    MLValidationError,
+    UnifiedErrorHandler,
+    safe_ml_operation,
+    unified_operation_context,
+    unified_timeout_decorator,
+)
 from database.connection import get_db
-from sqlalchemy.orm import Session
+from database.repositories.funding_rate_repository import FundingRateRepository
+from database.repositories.ohlcv_repository import OHLCVRepository
+from database.repositories.open_interest_repository import OpenInterestRepository
 
 logger = logging.getLogger(__name__)
 
@@ -111,8 +111,8 @@ class MLOrchestrator(MLPredictionInterface):
     ) -> AutoMLConfig:
         """辞書からAutoMLConfigオブジェクトを作成"""
         from app.services.ml.feature_engineering.automl_features.automl_config import (
-            TSFreshConfig,
             AutoFeatConfig,
+            TSFreshConfig,
         )
 
         # TSFresh設定

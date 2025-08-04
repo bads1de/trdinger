@@ -5,9 +5,11 @@
 """
 
 import logging
-import pandas as pd
-from .data_preprocessing import data_preprocessor
 from typing import List
+
+import pandas as pd
+
+from .data_preprocessing import data_preprocessor
 
 logger = logging.getLogger(__name__)
 

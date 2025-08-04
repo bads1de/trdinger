@@ -6,11 +6,11 @@ SimpleImputerを使用した高品質な欠損値補完を実装します。
 """
 
 import logging
-import pandas as pd
-import numpy as np
 from typing import Dict, List, Optional
-from sklearn.impute import SimpleImputer
 
+import numpy as np
+import pandas as pd
+from sklearn.impute import SimpleImputer
 
 logger = logging.getLogger(__name__)
 
@@ -303,7 +303,7 @@ class DataPreprocessor:
             columns: スケーリング対象カラム
             method: スケーリング方法（standard, robust, minmax）
         """
-        from sklearn.preprocessing import StandardScaler, RobustScaler, MinMaxScaler
+        from sklearn.preprocessing import MinMaxScaler, RobustScaler, StandardScaler
 
         result_df = df.copy()
 

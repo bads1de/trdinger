@@ -5,16 +5,18 @@ APIルーター内に散在していたファンディングレート関連の�
 責務の分離とSOLID原則に基づいた設計を実現します。
 """
 
-import logging
-from typing import Dict, Any, Optional
 import asyncio
+import logging
 from datetime import datetime
+from typing import Any, Dict, Optional
+
 from sqlalchemy.orm import Session
 
-from database.repositories.funding_rate_repository import FundingRateRepository
-from ..bybit.funding_rate_service import BybitFundingRateService
 from app.utils.api_utils import APIResponseHelper
 from database.connection import get_db
+from database.repositories.funding_rate_repository import FundingRateRepository
+
+from ..bybit.funding_rate_service import BybitFundingRateService
 
 logger = logging.getLogger(__name__)
 
@@ -30,7 +32,6 @@ class FundingRateOrchestrationService:
 
     def __init__(self):
         """初期化"""
-        pass
 
     async def collect_funding_rate_data(
         self,

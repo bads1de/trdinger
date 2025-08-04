@@ -6,9 +6,10 @@
 """
 
 import logging
-import pandas as pd
-import numpy as np
 from typing import Dict
+
+import numpy as np
+import pandas as pd
 
 from ....utils.data_validation import DataValidator
 
@@ -24,7 +25,6 @@ class MarketDataFeatureCalculator:
 
     def __init__(self):
         """初期化"""
-        pass
 
     def calculate_funding_rate_features(
         self,

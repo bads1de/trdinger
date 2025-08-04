@@ -4,37 +4,37 @@
 各インジケーターの設定を定義し、レジストリに登録します。
 """
 
-from .indicator_config import (
-    IndicatorConfig,
-    ParameterConfig,
-    IndicatorResultType,
-    IndicatorScaleType,
-    indicator_registry,
-)
-
-from app.services.indicators.technical_indicators.trend import TrendIndicators
-from app.services.indicators.technical_indicators.momentum import (
-    MomentumIndicators,
-)
-from app.services.indicators.technical_indicators.volatility import (
-    VolatilityIndicators,
-)
-from app.services.indicators.technical_indicators.volume import VolumeIndicators
-from app.services.indicators.technical_indicators.price_transform import (
-    PriceTransformIndicators,
-)
 from app.services.indicators.technical_indicators.cycle import CycleIndicators
-from app.services.indicators.technical_indicators.statistics import (
-    StatisticsIndicators,
+from app.services.indicators.technical_indicators.math_operators import (
+    MathOperatorsIndicators,
 )
 from app.services.indicators.technical_indicators.math_transform import (
     MathTransformIndicators,
 )
-from app.services.indicators.technical_indicators.math_operators import (
-    MathOperatorsIndicators,
+from app.services.indicators.technical_indicators.momentum import (
+    MomentumIndicators,
 )
 from app.services.indicators.technical_indicators.pattern_recognition import (
     PatternRecognitionIndicators,
+)
+from app.services.indicators.technical_indicators.price_transform import (
+    PriceTransformIndicators,
+)
+from app.services.indicators.technical_indicators.statistics import (
+    StatisticsIndicators,
+)
+from app.services.indicators.technical_indicators.trend import TrendIndicators
+from app.services.indicators.technical_indicators.volatility import (
+    VolatilityIndicators,
+)
+from app.services.indicators.technical_indicators.volume import VolumeIndicators
+
+from .indicator_config import (
+    IndicatorConfig,
+    IndicatorResultType,
+    IndicatorScaleType,
+    ParameterConfig,
+    indicator_registry,
 )
 
 

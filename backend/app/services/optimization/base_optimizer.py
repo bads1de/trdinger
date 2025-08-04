@@ -6,8 +6,8 @@
 
 import logging
 from abc import ABC, abstractmethod
-from typing import Dict, Any, List, Callable, Optional
 from dataclasses import dataclass
+from typing import Any, Callable, Dict, List, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -78,7 +78,6 @@ class BaseOptimizer(ABC):
             ValueError: パラメータが無効な場合
             RuntimeError: 最適化に失敗した場合
         """
-        pass
 
     def validate_parameter_space(self, parameter_space: Dict[str, ParameterSpace]) -> None:
         """

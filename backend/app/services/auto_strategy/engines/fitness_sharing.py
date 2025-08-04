@@ -6,8 +6,8 @@
 """
 
 import logging
+from typing import Any, Dict, List
 
-from typing import List, Dict, Any
 from ..models.gene_encoding import GeneEncoder
 from ..models.gene_strategy import StrategyGene
 

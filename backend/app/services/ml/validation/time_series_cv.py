@@ -6,17 +6,18 @@
 """
 
 import logging
+from dataclasses import dataclass
+from enum import Enum
+from typing import Any, Dict, List, Optional
+
 import numpy as np
 import pandas as pd
-from typing import Dict, Any, List, Optional
-from sklearn.model_selection import TimeSeriesSplit
 from sklearn.metrics import (
     accuracy_score,
     precision_recall_fscore_support,
     roc_auc_score,
 )
-from dataclasses import dataclass
-from enum import Enum
+from sklearn.model_selection import TimeSeriesSplit
 
 logger = logging.getLogger(__name__)
 
@@ -374,4 +375,3 @@ class TimeSeriesCrossValidator:
     def plot_cv_scores(self, metric: str = "accuracy"):
         """クロスバリデーションスコアをプロット（実装は省略）"""
         # 実装は必要に応じて追加
-        pass

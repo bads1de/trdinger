@@ -5,22 +5,22 @@
 """
 
 from .unified_config import (
-    unified_config,
-    UnifiedConfig,
     AppConfig,
     DatabaseConfig,
-    LoggingConfig,
-    SecurityConfig,
-    MarketConfig,
     GAConfig,
+    LoggingConfig,
+    MarketConfig,
     MLConfig,
+    SecurityConfig,
+    UnifiedConfig,
     settings,
+    unified_config,
 )
 from .validators import (
+    AppValidator,
+    DatabaseValidator,
     MarketDataValidator,
     MLConfigValidator,
-    DatabaseValidator,
-    AppValidator,
 )
 
 __all__ = [

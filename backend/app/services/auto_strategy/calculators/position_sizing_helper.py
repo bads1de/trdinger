@@ -5,8 +5,9 @@
 """
 
 import logging
+from typing import Any, Dict, List
+
 import numpy as np
-from typing import Dict, Any, List
 
 from ..models.gene_strategy import StrategyGene
 from .position_sizing_calculator import PositionSizingCalculatorService

@@ -41,70 +41,70 @@ def get_available_models():
     available = []
 
     try:
-        from .lightgbm_wrapper import LightGBMModel
+        pass
 
         available.append("lightgbm")
     except ImportError:
         pass
 
     try:
-        from .xgboost_wrapper import XGBoostModel
+        pass
 
         available.append("xgboost")
     except ImportError:
         pass
 
     try:
-        from .catboost_wrapper import CatBoostModel
+        pass
 
         available.append("catboost")
     except ImportError:
         pass
 
     try:
-        from .tabnet_wrapper import TabNetModel
+        pass
 
         available.append("tabnet")
     except ImportError:
         pass
 
     try:
-        from .randomforest_wrapper import RandomForestModel
+        pass
 
         available.append("randomforest")
     except ImportError:
         pass
 
     try:
-        from .extratrees_wrapper import ExtraTreesModel
+        pass
 
         available.append("extratrees")
     except ImportError:
         pass
 
     try:
-        from .gradientboosting_wrapper import GradientBoostingModel
+        pass
 
         available.append("gradientboosting")
     except ImportError:
         pass
 
     try:
-        from .adaboost_wrapper import AdaBoostModel
+        pass
 
         available.append("adaboost")
     except ImportError:
         pass
 
     try:
-        from .ridge_wrapper import RidgeModel
+        pass
 
         available.append("ridge")
     except ImportError:
         pass
 
     try:
-        from .naivebayes_wrapper import NaiveBayesModel
+        pass
 
         available.append("naivebayes")
     except ImportError:

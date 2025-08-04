@@ -4,13 +4,13 @@ ML統一メトリクス収集機能
 ML関連サービス共通のメトリクス収集とレポート機能を提供します。
 """
 
-import time
+import json
 import threading
-from typing import Dict, Any, Optional, Callable
+import time
+from collections import defaultdict, deque
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
-from collections import defaultdict, deque
-import json
+from typing import Any, Callable, Dict, Optional
 
 from .logger import ml_logger
 

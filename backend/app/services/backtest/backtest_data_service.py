@@ -11,14 +11,14 @@ from typing import Optional
 
 import pandas as pd
 
+from database.repositories.fear_greed_repository import FearGreedIndexRepository
+from database.repositories.funding_rate_repository import FundingRateRepository
 from database.repositories.ohlcv_repository import OHLCVRepository
 from database.repositories.open_interest_repository import OpenInterestRepository
-from database.repositories.funding_rate_repository import FundingRateRepository
-from database.repositories.fear_greed_repository import FearGreedIndexRepository
 
-from .data.data_retrieval_service import DataRetrievalService
 from .data.data_conversion_service import DataConversionService
-from .data.data_integration_service import DataIntegrationService, DataIntegrationError
+from .data.data_integration_service import DataIntegrationError, DataIntegrationService
+from .data.data_retrieval_service import DataRetrievalService
 
 logger = logging.getLogger(__name__)
 

@@ -7,10 +7,9 @@ ML設定の永続化、更新、リセット機能を提供します。
 
 import json
 import logging
-
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, Any, List
+from typing import Any, Dict, List
 
 from app.services.ml.config.ml_config import MLConfig
 from app.utils.unified_error_handler import UnifiedValidationError

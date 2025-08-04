@@ -4,22 +4,24 @@
 DEAPライブラリを使用したGA実装。
 """
 
-import time
 import logging
 import random
+import time
+from typing import Any, Dict
+
 import numpy as np
-from typing import Dict, Any
 from deap import tools
 
-from ..models.ga_config import GAConfig
+from app.services.backtest.backtest_service import BacktestService
+
 from ..factories.strategy_factory import StrategyFactory
 from ..generators.random_gene_generator import RandomGeneGenerator
-from app.services.backtest.backtest_service import BacktestService
-from .deap_setup import DEAPSetup
-from .individual_evaluator import IndividualEvaluator
+from ..models.ga_config import GAConfig
 from ..operators.genetic_operators import crossover_strategy_genes, mutate_strategy_gene
-from .individual_creator import IndividualCreator
+from .deap_setup import DEAPSetup
 from .fitness_sharing import FitnessSharing
+from .individual_creator import IndividualCreator
+from .individual_evaluator import IndividualEvaluator
 
 logger = logging.getLogger(__name__)
 

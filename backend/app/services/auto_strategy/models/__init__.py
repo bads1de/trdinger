@@ -4,8 +4,8 @@
 戦略遺伝子、GA設定、フィットネス評価などのモデルを定義します。
 """
 
-from .gene_strategy import StrategyGene, IndicatorGene, Condition
 from .ga_config import GAConfig
+from .gene_strategy import Condition, IndicatorGene, StrategyGene
 
 __all__ = [
     "StrategyGene",

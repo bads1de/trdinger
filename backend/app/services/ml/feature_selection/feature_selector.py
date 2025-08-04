@@ -6,24 +6,24 @@
 """
 
 import logging
+from dataclasses import dataclass
+from enum import Enum
+from typing import Any, Dict, List, Optional, Tuple
+
 import numpy as np
 import pandas as pd
-from typing import Dict, Any, List, Optional, Tuple
+from sklearn.ensemble import RandomForestClassifier
 from sklearn.feature_selection import (
-    SelectKBest,
-    f_classif,
-    chi2,
-    mutual_info_classif,
     RFE,
     RFECV,
     SelectFromModel,
+    SelectKBest,
+    chi2,
+    f_classif,
+    mutual_info_classif,
 )
-from sklearn.ensemble import RandomForestClassifier
-from sklearn.linear_model import LassoCV
 from sklearn.inspection import permutation_importance
-from dataclasses import dataclass
-from enum import Enum
-
+from sklearn.linear_model import LassoCV
 
 logger = logging.getLogger(__name__)
 

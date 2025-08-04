@@ -6,9 +6,10 @@
 """
 
 import logging
-import pandas as pd
-from typing import Dict, Any, Tuple, Optional
 from enum import Enum
+from typing import Any, Dict, Optional, Tuple
+
+import pandas as pd
 
 logger = logging.getLogger(__name__)
 
@@ -33,7 +34,6 @@ class LabelGenerator:
 
     def __init__(self):
         """初期化"""
-        pass
 
     def generate_labels(
         self,

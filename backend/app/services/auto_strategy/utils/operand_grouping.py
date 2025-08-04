@@ -5,10 +5,9 @@
 意味のある比較条件の生成を支援します。
 """
 
-from typing import Dict, List, Tuple
-from enum import Enum
-
 import logging
+from enum import Enum
+from typing import Dict, List, Tuple
 
 logger = logging.getLogger(__name__)
 

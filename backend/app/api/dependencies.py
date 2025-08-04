@@ -5,26 +5,23 @@ FastAPIの依存性注入システムで使用するサービスファクトリ�
 Orchestration Serviceパターンに基づいて、API層とサービス層の結合を解消します。
 """
 
-from sqlalchemy.orm import Session
 from fastapi import Depends, HTTPException, status
+from sqlalchemy.orm import Session
 
-from database.connection import get_db
-from database.repositories.ohlcv_repository import OHLCVRepository
-from database.repositories.open_interest_repository import OpenInterestRepository
-from database.repositories.funding_rate_repository import FundingRateRepository
-
-from app.services.backtest.backtest_service import BacktestService
+from app.services.auto_strategy import AutoStrategyService
 from app.services.backtest.backtest_data_service import BacktestDataService
-from app.services.strategy_integration_service import StrategyIntegrationService
-
-
+from app.services.backtest.backtest_service import BacktestService
 from app.services.data_collection.orchestration.market_data_orchestration_service import (
     MarketDataOrchestrationService,
 )
-from app.services.auto_strategy import AutoStrategyService
 from app.services.ml.feature_engineering.automl_feature_generation_service import (
     AutoMLFeatureGenerationService,
 )
+from app.services.strategy_integration_service import StrategyIntegrationService
+from database.connection import get_db
+from database.repositories.funding_rate_repository import FundingRateRepository
+from database.repositories.ohlcv_repository import OHLCVRepository
+from database.repositories.open_interest_repository import OpenInterestRepository
 
 
 def get_backtest_service(db: Session = Depends(get_db)) -> BacktestService:

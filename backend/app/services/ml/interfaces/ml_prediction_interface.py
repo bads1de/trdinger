@@ -4,9 +4,10 @@ ML予測インターフェース
 ML予測機能の標準インターフェースを定義します。
 """
 
-from typing import Protocol, Dict, Any, Optional
-import pandas as pd
+from typing import Any, Dict, Optional, Protocol
+
 import numpy as np
+import pandas as pd
 
 
 class MLPredictionInterface(Protocol):
@@ -195,7 +196,6 @@ class MLServiceInterface(MLPredictionInterface, MLTrainingInterface, Protocol):
     
     予測と学習の両方の機能を提供するサービスのインターフェース
     """
-    pass
 
 
 # 型エイリアス

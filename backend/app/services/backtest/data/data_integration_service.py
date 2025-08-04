@@ -10,10 +10,11 @@ from typing import Optional
 
 import pandas as pd
 
-from .data_retrieval_service import DataRetrievalService, DataRetrievalError
-from .data_conversion_service import DataConversionService, DataConversionError
-from ...data_mergers import OIMerger, FRMerger, FearGreedMerger
 from app.utils.data_cleaning_utils import DataCleaner
+
+from ...data_mergers import FearGreedMerger, FRMerger, OIMerger
+from .data_conversion_service import DataConversionError, DataConversionService
+from .data_retrieval_service import DataRetrievalError, DataRetrievalService
 
 logger = logging.getLogger(__name__)
 
@@ -21,7 +22,6 @@ logger = logging.getLogger(__name__)
 class DataIntegrationError(Exception):
     """データ統合エラー"""
 
-    pass
 
 
 class DataIntegrationService:

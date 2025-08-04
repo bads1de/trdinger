@@ -6,10 +6,10 @@ DEAPライブラリの設定とツールボックスの初期化を担当しま�
 
 import logging
 from typing import Optional
+
 from deap import base, creator, tools
 
 from ..models.ga_config import GAConfig
-
 
 logger = logging.getLogger(__name__)
 
