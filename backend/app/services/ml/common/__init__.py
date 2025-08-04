@@ -4,7 +4,7 @@ ML共通モジュール
 ML関連サービスで共通して使用される機能を提供します。
 """
 
-from app.utils.unified_error_handler import (  # 標準エイリアス
+from ....utils.unified_error_handler import (  # 標準エイリアス
     MLDataError,
     MLModelError,
     MLTimeoutError,

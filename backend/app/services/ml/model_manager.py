@@ -20,7 +20,7 @@ from typing import Any, Dict, List, Optional, Tuple
 import joblib
 import pandas as pd
 
-from app.services.ml.config import ml_config
+from .config import ml_config
 
 from ...utils.unified_error_handler import UnifiedModelError, safe_ml_operation
 
@@ -120,11 +120,13 @@ class ModelManager:
 
             # AlgorithmRegistry を使用してアルゴリズム名を取得
             from .common.algorithm_registry import algorithm_registry
-            
+
             algorithm_name = algorithm_registry.get_algorithm_name(model_class_name)
-            
+
             if algorithm_name != "unknown":
-                logger.debug(f"AlgorithmRegistryからアルゴリズム名を取得: {model_class_name} -> {algorithm_name}")
+                logger.debug(
+                    f"AlgorithmRegistryからアルゴリズム名を取得: {model_class_name} -> {algorithm_name}"
+                )
                 return algorithm_name
 
             # デフォルト値

@@ -6,17 +6,17 @@
 """
 
 import logging
-from typing import Dict
+from typing import Any, Dict
 
 import numpy as np
 import pandas as pd
 
-from ....utils.data_validation import DataValidator
+from .base_feature_calculator import BaseFeatureCalculator
 
 logger = logging.getLogger(__name__)
 
 
-class TechnicalFeatureCalculator:
+class TechnicalFeatureCalculator(BaseFeatureCalculator):
     """
     テクニカル指標特徴量計算クラス
 
@@ -25,6 +25,29 @@ class TechnicalFeatureCalculator:
 
     def __init__(self):
         """初期化"""
+        super().__init__()
+
+    def calculate_features(
+        self, df: pd.DataFrame, config: Dict[str, Any]
+    ) -> pd.DataFrame:
+        """
+        テクニカル特徴量を計算（BaseFeatureCalculatorの抽象メソッド実装）
+
+        Args:
+            df: OHLCV価格データ
+            config: 計算設定（lookback_periodsを含む）
+
+        Returns:
+            テクニカル特徴量が追加されたDataFrame
+        """
+        lookback_periods = config.get("lookback_periods", {})
+
+        # 複数のテクニカル特徴量を順次計算
+        result_df = self.calculate_market_regime_features(df, lookback_periods)
+        result_df = self.calculate_momentum_features(result_df, lookback_periods)
+        result_df = self.calculate_pattern_features(result_df, lookback_periods)
+
+        return result_df
 
     def calculate_market_regime_features(
         self, df: pd.DataFrame, lookback_periods: Dict[str, int]
@@ -40,20 +63,23 @@ class TechnicalFeatureCalculator:
             市場レジーム特徴量が追加されたDataFrame
         """
         try:
-            result_df = df.copy()
+            if not self.validate_input_data(df, ["Close", "High", "Low"]):
+                return df
+
+            result_df = self.create_result_dataframe(df)
 
             # トレンド強度
             short_ma = lookback_periods.get("short_ma", 10)
             long_ma = lookback_periods.get("long_ma", 50)
 
-            ma_short = DataValidator.safe_rolling_mean(
+            ma_short = self.safe_rolling_mean_calculation(
                 result_df["Close"], window=short_ma
             )
-            ma_long = DataValidator.safe_rolling_mean(
+            ma_long = self.safe_rolling_mean_calculation(
                 result_df["Close"], window=long_ma
             )
 
-            result_df["Trend_Strength"] = DataValidator.safe_divide(
+            result_df["Trend_Strength"] = self.safe_ratio_calculation(
                 ma_short - ma_long, ma_long, default_value=0.0
             )
 
@@ -66,7 +92,7 @@ class TechnicalFeatureCalculator:
                 result_df["Low"].rolling(window=volatility_period, min_periods=1).min()
             )
 
-            result_df["Range_Bound_Ratio"] = DataValidator.safe_divide(
+            result_df["Range_Bound_Ratio"] = self.safe_ratio_calculation(
                 result_df["Close"] - low_20, high_20 - low_20, default_value=0.5
             )
 
@@ -133,13 +159,16 @@ class TechnicalFeatureCalculator:
             モメンタム特徴量が追加されたDataFrame
         """
         try:
-            result_df = df.copy()
+            if not self.validate_input_data(df, ["Close", "High", "Low"]):
+                return df
+
+            result_df = self.create_result_dataframe(df)
 
             # RSI（安全な計算）
             delta = result_df["Close"].diff().fillna(0.0).astype(float)
-            gain = DataValidator.safe_rolling_mean(delta.clip(lower=0), window=14)
-            loss = DataValidator.safe_rolling_mean(-delta.clip(upper=0), window=14)
-            rs = DataValidator.safe_divide(gain, loss, default_value=1.0)
+            gain = self.safe_rolling_mean_calculation(delta.clip(lower=0), window=14)
+            loss = self.safe_rolling_mean_calculation(-delta.clip(upper=0), window=14)
+            rs = self.safe_ratio_calculation(gain, loss, default_value=1.0)
             result_df["RSI"] = 100 - (100 / (1 + rs))
 
             # MACD
@@ -154,15 +183,15 @@ class TechnicalFeatureCalculator:
             low_14 = result_df["Low"].rolling(window=period, min_periods=1).min()
             high_14 = result_df["High"].rolling(window=period, min_periods=1).max()
 
-            result_df["Stochastic_K"] = 100 * DataValidator.safe_divide(
+            result_df["Stochastic_K"] = 100 * self.safe_ratio_calculation(
                 result_df["Close"] - low_14, high_14 - low_14, default_value=0.5
             )
-            result_df["Stochastic_D"] = DataValidator.safe_rolling_mean(
+            result_df["Stochastic_D"] = self.safe_rolling_mean_calculation(
                 result_df["Stochastic_K"], window=3
             )
 
             # ウィリアムズ%R（安全な計算）
-            result_df["Williams_R"] = -100 * DataValidator.safe_divide(
+            result_df["Williams_R"] = -100 * self.safe_ratio_calculation(
                 high_14 - result_df["Close"], high_14 - low_14, default_value=0.5
             )
 
@@ -170,21 +199,24 @@ class TechnicalFeatureCalculator:
             typical_price = (
                 result_df["High"] + result_df["Low"] + result_df["Close"]
             ) / 3
-            sma_tp = DataValidator.safe_rolling_mean(typical_price, window=20)
+            sma_tp = self.safe_rolling_mean_calculation(typical_price, window=20)
             mad = typical_price.rolling(window=20, min_periods=1).apply(
                 lambda x: np.mean(np.abs(x - x.mean()))
             )
-            result_df["CCI"] = DataValidator.safe_divide(
+            result_df["CCI"] = self.safe_ratio_calculation(
                 typical_price - sma_tp, 0.015 * mad, default_value=0.0
             )
 
             # ROC（Rate of Change）（安全な計算）
-            result_df["ROC"] = (
-                DataValidator.safe_pct_change(result_df["Close"], periods=12) * 100
+            roc_change = self.safe_ratio_calculation(
+                result_df["Close"] - result_df["Close"].shift(12),
+                result_df["Close"].shift(12),
+                default_value=0.0,
             )
+            result_df["ROC"] = roc_change * 100
 
             # モメンタム（安全な計算）
-            result_df["Momentum"] = DataValidator.safe_divide(
+            result_df["Momentum"] = self.safe_ratio_calculation(
                 result_df["Close"], result_df["Close"].shift(10), default_value=1.0
             )
 
@@ -245,10 +277,10 @@ class TechnicalFeatureCalculator:
             recent_high = result_df["High"].rolling(window=period).max()
             recent_low = result_df["Low"].rolling(window=period).min()
 
-            result_df["Support_Distance"] = DataValidator.safe_divide(
+            result_df["Support_Distance"] = self.safe_ratio_calculation(
                 result_df["Close"] - recent_low, result_df["Close"]
             )
-            result_df["Resistance_Distance"] = DataValidator.safe_divide(
+            result_df["Resistance_Distance"] = self.safe_ratio_calculation(
                 recent_high - result_df["Close"], result_df["Close"]
             )
 
@@ -258,7 +290,7 @@ class TechnicalFeatureCalculator:
             prev_close = result_df["Close"].shift(1)
 
             pivot = (prev_high + prev_low + prev_close) / 3
-            result_df["Pivot_Distance"] = DataValidator.safe_divide(
+            result_df["Pivot_Distance"] = self.safe_ratio_calculation(
                 result_df["Close"] - pivot, pivot
             )
 
@@ -270,14 +302,14 @@ class TechnicalFeatureCalculator:
             for level in fib_levels:
                 fib_price = swing_low + (swing_high - swing_low) * level
                 result_df[f"Fib_{int(level*1000)}_Distance"] = (
-                    DataValidator.safe_divide(
+                    self.safe_ratio_calculation(
                         abs(result_df["Close"] - fib_price), result_df["Close"]
                     )
                 )
 
             # ギャップ分析
             gap = result_df["Open"] - result_df["Close"].shift(1)
-            gap_pct = DataValidator.safe_divide(gap, result_df["Close"].shift(1))
+            gap_pct = self.safe_ratio_calculation(gap, result_df["Close"].shift(1))
 
             result_df["Gap_Up"] = (pd.Series(gap_pct) > 0.01).astype(int)
             result_df["Gap_Down"] = (pd.Series(gap_pct) < -0.01).astype(int)

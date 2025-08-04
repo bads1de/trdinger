@@ -13,6 +13,8 @@ import pandas as pd
 from sklearn.impute import SimpleImputer
 from sklearn.preprocessing import MinMaxScaler, RobustScaler, StandardScaler
 
+from .unified_error_handler import UnifiedDataError
+
 logger = logging.getLogger(__name__)
 
 
@@ -237,8 +239,6 @@ class DataPreprocessor:
 
         # デフォルト実装：最後の列をラベルとして使用
         if features_df.empty:
-            from ..exceptions.unified_exceptions import UnifiedDataError
-
             raise UnifiedDataError("特徴量データが空です")
 
         # 数値列のみを選択
@@ -273,8 +273,6 @@ class DataPreprocessor:
             # 最後の行は予測できないので除外
             features_df_clean = features_df_clean.iloc[:-1]
         else:
-            from ..exceptions.unified_exceptions import UnifiedDataError
-
             raise UnifiedDataError("価格データ（Close）が見つかりません")
 
         # 無効なデータを除外
@@ -283,8 +281,6 @@ class DataPreprocessor:
         labels_clean = labels[valid_mask]
 
         if len(features_clean) == 0:
-            from ..exceptions.unified_exceptions import UnifiedDataError
-
             raise UnifiedDataError("有効な学習データがありません")
 
         logger.info(
@@ -381,8 +377,6 @@ class DataPreprocessor:
             columns: スケーリング対象カラム
             method: スケーリング方法（standard, robust, minmax）
         """
-        from sklearn.preprocessing import MinMaxScaler, RobustScaler, StandardScaler
-
         result_df = df.copy()
 
         # スケーラーの選択
