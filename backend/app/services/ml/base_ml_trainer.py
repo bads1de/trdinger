@@ -28,6 +28,7 @@ from ...utils.unified_error_handler import (
     safe_ml_operation,
 )
 from .config import ml_config
+from .common.base_resource_manager import BaseResourceManager, CleanupLevel
 from .feature_engineering.automl_features.automl_config import AutoMLConfig
 from .feature_engineering.enhanced_feature_engineering_service import (
     EnhancedFeatureEngineeringService,
@@ -38,7 +39,7 @@ from .model_manager import model_manager
 logger = logging.getLogger(__name__)
 
 
-class BaseMLTrainer(ABC):
+class BaseMLTrainer(BaseResourceManager, ABC):
     """
     ML学習基盤クラス
 
@@ -53,6 +54,9 @@ class BaseMLTrainer(ABC):
         Args:
             automl_config: AutoML設定（辞書形式）
         """
+        # BaseResourceManagerの初期化
+        super().__init__()
+
         self.config = ml_config
 
         # AutoML設定の処理
@@ -977,26 +981,30 @@ class BaseMLTrainer(ABC):
         logger.info(f"モデル読み込み完了: {model_path}")
         return True
 
-    def cleanup_resources(self):
-        """
-        BaseMLTrainerのリソースクリーンアップ
-        メモリーリーク防止のため、AutoMLコンポーネントを含む全リソースをクリーンアップ
-        """
-        try:
-            logger.info("BaseMLTrainerのリソースクリーンアップを開始")
+    def _cleanup_temporary_files(self, level: CleanupLevel):
+        """一時ファイルのクリーンアップ"""
+        # BaseMLTrainerでは特に一時ファイルは作成しないため、パス
+        pass
 
+    def _cleanup_cache(self, level: CleanupLevel):
+        """キャッシュのクリーンアップ"""
+        try:
+            # 特徴量サービスのキャッシュクリーンアップ
+            if self.feature_service is not None:
+                if hasattr(self.feature_service, "clear_automl_cache"):
+                    self.feature_service.clear_automl_cache()
+                    logger.debug("特徴量サービスキャッシュをクリアしました")
+        except Exception as e:
+            logger.warning(f"キャッシュクリーンアップ警告: {e}")
+
+    def _cleanup_models(self, level: CleanupLevel):
+        """モデルオブジェクトのクリーンアップ"""
+        try:
             # 特徴量サービスのクリーンアップ
             if self.feature_service is not None:
-                try:
-                    if hasattr(self.feature_service, "cleanup_resources"):
-                        self.feature_service.cleanup_resources()
-                    elif hasattr(self.feature_service, "clear_automl_cache"):
-                        self.feature_service.clear_automl_cache()
-
+                if hasattr(self.feature_service, "cleanup_resources"):
+                    self.feature_service.cleanup_resources()
                     logger.debug("特徴量サービスをクリーンアップしました")
-
-                except Exception as feature_error:
-                    logger.warning(f"特徴量サービスクリーンアップ警告: {feature_error}")
 
             # モデルとスケーラーをクリア
             self.model = None
@@ -1004,26 +1012,19 @@ class BaseMLTrainer(ABC):
             self.feature_columns = None
             self.is_trained = False
 
-            # AutoML設定をクリア
-            self.automl_config = None
-
-            # 強制ガベージコレクション
-            import gc
-
-            collected = gc.collect()
-
-            logger.info(
-                f"BaseMLTrainerリソースクリーンアップ完了（{collected}オブジェクト回収）"
-            )
+            # AutoML設定をクリア（THOROUGH レベルの場合のみ）
+            if level == CleanupLevel.THOROUGH:
+                self.automl_config = None
 
         except Exception as e:
-            logger.error(f"BaseMLTrainerクリーンアップエラー: {e}")
+            logger.warning(f"モデルクリーンアップ警告: {e}")
             # エラーが発生してもクリーンアップは続行
             self.model = None
             self.scaler = None
             self.feature_columns = None
             self.is_trained = False
-            self.automl_config = None
+            if level == CleanupLevel.THOROUGH:
+                self.automl_config = None
 
     @safe_ml_operation(
         default_return={

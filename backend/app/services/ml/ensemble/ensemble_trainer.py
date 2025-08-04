@@ -459,14 +459,14 @@ class EnsembleTrainer(BaseMLTrainer):
             logger.error(f"アンサンブルモデル読み込みエラー: {e}")
             return False
 
-    def cleanup_resources(self):
+    def _cleanup_models(self, level):
         """
-        EnsembleTrainerのリソースクリーンアップ
-        メモリーリーク防止のため、AutoMLコンポーネントを含む全リソースをクリーンアップ
+        EnsembleTrainer固有のモデルクリーンアップ
+
+        Args:
+            level: クリーンアップレベル
         """
         try:
-            logger.info("EnsembleTrainerのリソースクリーンアップを開始")
-
             # アンサンブルモデルのクリーンアップ
             if self.ensemble_model is not None:
                 try:
@@ -484,30 +484,10 @@ class EnsembleTrainer(BaseMLTrainer):
                         f"アンサンブルモデルクリーンアップ警告: {ensemble_error}"
                     )
 
-            # BaseMLTrainerのクリーンアップを呼び出し（AutoMLコンポーネントを含む）
-            try:
-                super().cleanup_resources()
-            except Exception as base_error:
-                logger.warning(f"BaseMLTrainerクリーンアップ警告: {base_error}")
-
-            # その他の属性をクリア
-            self.feature_columns = None
-            self.scaler = None
-            self.is_trained = False
-
-            # 強制ガベージコレクション
-            import gc
-
-            collected = gc.collect()
-
-            logger.info(
-                f"EnsembleTrainerリソースクリーンアップ完了（{collected}オブジェクト回収）"
-            )
+            # 親クラスのモデルクリーンアップを呼び出し
+            super()._cleanup_models(level)
 
         except Exception as e:
-            logger.error(f"EnsembleTrainerクリーンアップエラー: {e}")
+            logger.warning(f"EnsembleTrainerモデルクリーンアップエラー: {e}")
             # エラーが発生してもクリーンアップは続行
             self.ensemble_model = None
-            self.feature_columns = None
-            self.scaler = None
-            self.is_trained = False
