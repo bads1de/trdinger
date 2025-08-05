@@ -10,7 +10,7 @@ from typing import Optional
 
 import pandas as pd
 
-from app.utils.data_cleaning_utils import DataCleaner
+from app.utils.data_processing import DataProcessor
 
 from ...data_mergers import FearGreedMerger, FRMerger, OIMerger
 from .data_conversion_service import DataConversionError, DataConversionService
@@ -21,7 +21,6 @@ logger = logging.getLogger(__name__)
 
 class DataIntegrationError(Exception):
     """データ統合エラー"""
-
 
 
 class DataIntegrationService:
@@ -241,7 +240,8 @@ class DataIntegrationService:
                 )
 
             # データクリーニングと検証
-            df = DataCleaner.clean_and_validate_data(
+            data_processor = DataProcessor()
+            df = data_processor.clean_and_validate_data(
                 df,
                 required_columns=required_columns,
                 interpolate=True,

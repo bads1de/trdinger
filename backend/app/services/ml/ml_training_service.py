@@ -12,13 +12,15 @@ from typing import Any, Callable, Dict, Optional
 import numpy as np
 import pandas as pd
 
-from ...utils.data_preprocessing import data_preprocessor
+from ...utils.data_processing import data_processor as data_preprocessor
 from ...utils.unified_error_handler import safe_ml_operation
 from ..optimization.optuna_optimizer import OptunaOptimizer, ParameterSpace
 from .base_ml_trainer import BaseMLTrainer
 from .common.base_resource_manager import BaseResourceManager, CleanupLevel
 from .config import ml_config
 from .model_manager import model_manager
+from .single_model.single_model_trainer import SingleModelTrainer
+from .ensemble.ensemble_trainer import EnsembleTrainer
 
 logger = logging.getLogger(__name__)
 

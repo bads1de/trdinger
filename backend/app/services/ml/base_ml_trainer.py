@@ -8,7 +8,6 @@ ML学習基盤クラス
 
 import logging
 from abc import ABC
-from datetime import datetime
 from typing import Any, Dict, Optional, Tuple, cast
 
 import numpy as np
@@ -16,8 +15,8 @@ import pandas as pd
 from sklearn.model_selection import TimeSeriesSplit, train_test_split
 from sklearn.preprocessing import StandardScaler
 
-from .ml_metadata import ModelMetadata, TrainingMetadata
-from ...utils.data_preprocessing import data_preprocessor
+from .ml_metadata import ModelMetadata
+from ...utils.data_processing import data_processor as data_preprocessor
 from ...utils.label_generation import LabelGenerator, ThresholdMethod
 from ...utils.unified_error_handler import (
     UnifiedDataError,
@@ -38,7 +37,7 @@ class LabelGeneratorWrapper:
     """
     BaseMLTrainerの_generate_dynamic_labelsメソッドをラップするクラス
 
-    utils/data_preprocessing.pyから呼び出すためのアダプター
+    utils/data_processing.pyから呼び出すためのアダプター
     """
 
     def __init__(self, trainer):
@@ -862,10 +861,10 @@ class BaseMLTrainer(BaseResourceManager, ABC):
         self, features_df: pd.DataFrame, **training_params
     ) -> Tuple[pd.DataFrame, pd.Series]:
         """
-        学習用データを準備（utils/data_preprocessing.pyに委譲）
+        学習用データを準備（utils/data_processing.pyに委譲）
 
         責務分割により、具体的なデータ前処理ロジックは
-        utils/data_preprocessing.pyに移譲されました。
+        utils/data_processing.pyに移譲されました。
         """
         # ラベル生成器を初期化
         label_generator = LabelGeneratorWrapper(self)

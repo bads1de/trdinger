@@ -15,7 +15,7 @@ from typing import Any, Dict, List, Optional
 
 import pandas as pd
 
-from ....utils.data_preprocessing import data_preprocessor
+from ....utils.data_processing import data_processor as data_preprocessor
 from ....utils.data_validation import DataValidator
 from ....utils.unified_error_handler import safe_ml_operation
 from .data_frequency_manager import DataFrequencyManager
@@ -714,7 +714,9 @@ class FeatureEngineeringService:
             Fear & Greed Index データ（取得できない場合はNone）
         """
         try:
-            from ...data.fear_greed_service import FearGreedService
+            from ...data_collection.fear_greed.fear_greed_service import (
+                FearGreedService,
+            )
 
             fear_greed_service = FearGreedService()
 

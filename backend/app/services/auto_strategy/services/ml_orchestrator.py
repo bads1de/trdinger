@@ -26,7 +26,7 @@ from app.services.ml.feature_engineering.feature_engineering_service import (
 from app.services.ml.interfaces import MLPredictionInterface
 from app.services.ml.ml_training_service import MLTrainingService
 from app.services.ml.model_manager import model_manager
-from app.utils.data_preprocessing import data_preprocessor
+from app.utils.data_processing import data_processor as data_preprocessor
 from app.utils.unified_error_handler import (
     MLDataError,
     MLValidationError,

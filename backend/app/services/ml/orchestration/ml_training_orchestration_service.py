@@ -559,7 +559,7 @@ class MLTrainingOrchestrationService:
         """DataPreprocessor関連リソースのクリーンアップ"""
         try:
             # グローバルDataPreprocessorインスタンスのクリーンアップ
-            from app.utils.data_preprocessing import data_preprocessor
+            from app.utils.data_processing import data_processor as data_preprocessor
 
             if hasattr(data_preprocessor, "clear_cache"):
                 data_preprocessor.clear_cache()

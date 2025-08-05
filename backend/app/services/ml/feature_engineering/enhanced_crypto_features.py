@@ -12,7 +12,7 @@ from typing import Dict, List, Optional
 import numpy as np
 import pandas as pd
 
-from ....utils.data_preprocessing import data_preprocessor
+from ....utils.data_processing import data_processor as data_preprocessor
 
 logger = logging.getLogger(__name__)
 
@@ -97,10 +97,7 @@ class EnhancedCryptoFeatures:
         # 統計的手法による補完
         optional_columns = ["open_interest", "funding_rate", "fear_greed_value"]
         result_df = data_preprocessor.transform_missing_values(
-            result_df,
-            strategy="median",
-            columns=optional_columns,
-            fit_if_needed=True
+            result_df, strategy="median", columns=optional_columns, fit_if_needed=True
         )
 
         return result_df
@@ -417,10 +414,7 @@ class EnhancedCryptoFeatures:
         # 統計的手法による数値カラムの補完
         numeric_cols = result_df.select_dtypes(include=[np.number]).columns.tolist()
         result_df = data_preprocessor.transform_missing_values(
-            result_df,
-            strategy="median",
-            columns=numeric_cols,
-            fit_if_needed=True
+            result_df, strategy="median", columns=numeric_cols, fit_if_needed=True
         )
 
         return result_df

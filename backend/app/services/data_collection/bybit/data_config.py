@@ -41,7 +41,7 @@ class DataServiceConfig:
 # 遅延インポートを使用してクラス参照を設定
 def get_funding_rate_config():
     """ファンディングレート設定を取得"""
-    from app.utils.data_converter import FundingRateDataConverter
+    from app.utils.data_conversion import FundingRateDataConverter
     from database.repositories.funding_rate_repository import FundingRateRepository
 
     return DataServiceConfig(
@@ -62,7 +62,7 @@ def get_funding_rate_config():
 
 def get_open_interest_config():
     """オープンインタレスト設定を取得"""
-    from app.utils.data_converter import OpenInterestDataConverter
+    from app.utils.data_conversion import OpenInterestDataConverter
     from database.repositories.open_interest_repository import OpenInterestRepository
 
     return DataServiceConfig(
