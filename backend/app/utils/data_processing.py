@@ -6,7 +6,7 @@ data_cleaning_utils.py と data_preprocessing.py を統合したモジュール�
 """
 
 import logging
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 import numpy as np
 import pandas as pd
@@ -575,6 +575,84 @@ class DataProcessor:
                 result_df[col] = result_df[col].fillna(default_fill_values[col])
 
         return result_df
+
+    def prepare_training_data(
+        self, features_df: pd.DataFrame, label_generator, **training_params
+    ) -> Tuple[pd.DataFrame, pd.Series, Dict[str, Any]]:
+        """
+        学習用データを準備
+
+        Args:
+            features_df: 特徴量DataFrame
+            label_generator: ラベル生成器（LabelGeneratorWrapper）
+            **training_params: 学習パラメータ
+
+        Returns:
+            features_clean: クリーンな特徴量DataFrame
+            labels_clean: クリーンなラベルSeries
+            threshold_info: 閾値情報の辞書
+        """
+        try:
+            logger.info("学習用データの準備を開始")
+
+            # 1. 特徴量の前処理
+            logger.info("特徴量の前処理を実行中...")
+            features_processed = self.preprocess_features(
+                features_df,
+                imputation_strategy=training_params.get(
+                    "imputation_strategy", "median"
+                ),
+                scale_features=training_params.get("scale_features", True),
+                remove_outliers=training_params.get("remove_outliers", True),
+                outlier_threshold=training_params.get("outlier_threshold", 3.0),
+                scaling_method=training_params.get("scaling_method", "robust"),
+                outlier_method=training_params.get("outlier_method", "iqr"),
+            )
+
+            # 2. ラベル生成のための価格データを取得
+            if "Close" not in features_processed.columns:
+                raise ValueError("Close価格データが特徴量に含まれていません")
+
+            price_data = features_processed["Close"]
+
+            # 3. ラベル生成
+            logger.info("ラベル生成を実行中...")
+            labels, threshold_info = label_generator.generate_dynamic_labels(
+                price_data, **training_params
+            )
+
+            # 4. 特徴量とラベルのインデックスを整合
+            logger.info("データの整合性を確保中...")
+            common_index = features_processed.index.intersection(labels.index)
+
+            if len(common_index) == 0:
+                raise ValueError("特徴量とラベルに共通のインデックスがありません")
+
+            features_clean = features_processed.loc[common_index]
+            labels_clean = labels.loc[common_index]
+
+            # 5. NaNを含む行を除去
+            valid_mask = features_clean.notna().all(axis=1) & labels_clean.notna()
+            features_clean = features_clean[valid_mask]
+            labels_clean = labels_clean[valid_mask]
+
+            # 6. 最終的なデータ検証
+            if len(features_clean) == 0 or len(labels_clean) == 0:
+                raise ValueError("有効な学習データが存在しません")
+
+            if len(features_clean) != len(labels_clean):
+                raise ValueError("特徴量とラベルの長さが一致しません")
+
+            logger.info(
+                f"学習用データの準備が完了: {len(features_clean)}行, {len(features_clean.columns)}特徴量"
+            )
+            logger.info(f"ラベル分布: {labels_clean.value_counts().to_dict()}")
+
+            return features_clean, labels_clean, threshold_info
+
+        except Exception as e:
+            logger.error(f"学習用データの準備でエラーが発生: {e}")
+            raise
 
     def clear_cache(self):
         """キャッシュをクリア"""
