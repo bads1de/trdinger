@@ -60,6 +60,8 @@ class BaseMLTrainer(BaseResourceManager, ABC):
         self,
         automl_config: Optional[Dict[str, Any]] = None,
         trainer_config: Optional[Dict[str, Any]] = None,
+        trainer_type: Optional[str] = None,
+        model_type: Optional[str] = None,
     ):
         """
         初期化
@@ -67,6 +69,8 @@ class BaseMLTrainer(BaseResourceManager, ABC):
         Args:
             automl_config: AutoML設定（辞書形式）
             trainer_config: トレーナー設定（単一モデル/アンサンブル設定）
+            trainer_type: トレーナータイプ（脆弱性修正）
+            model_type: モデルタイプ（脆弱性修正）
         """
         # BaseResourceManagerの初期化
         super().__init__()
@@ -88,12 +92,17 @@ class BaseMLTrainer(BaseResourceManager, ABC):
             self.use_automl = False
             logger.info("📊 基本特徴量エンジニアリングを使用します")
 
-        # トレーナー設定の処理
+        # トレーナー設定の処理（脆弱性修正）
         self.trainer_config = trainer_config or {}
-        self.trainer_type = self.trainer_config.get(
+
+        # パラメーターの優先順位: 直接指定 > trainer_config > デフォルト
+        self.trainer_type = trainer_type or self.trainer_config.get(
             "type", "single"
         )  # "single" or "ensemble"
-        self.model_type = self.trainer_config.get("model_type", "lightgbm")
+
+        self.model_type = model_type or self.trainer_config.get(
+            "model_type", "lightgbm"
+        )
         self.ensemble_config = self.trainer_config.get("ensemble_config", {})
 
         self.scaler = StandardScaler()

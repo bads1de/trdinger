@@ -134,6 +134,26 @@ class FeatureEngineeringService:
             if ohlcv_data.empty:
                 raise ValueError("OHLCVデータが空です")
 
+            # DataFrameのインデックスをDatetimeIndexに変換（脆弱性修正）
+            if not isinstance(ohlcv_data.index, pd.DatetimeIndex):
+                if "timestamp" in ohlcv_data.columns:
+                    ohlcv_data = ohlcv_data.set_index("timestamp")
+                    logger.info("timestampカラムをインデックスに設定しました")
+                else:
+                    # timestampカラムがない場合は、現在の時刻から生成
+                    logger.warning(
+                        "timestampカラムが見つからないため、仮のDatetimeIndexを生成します"
+                    )
+                    ohlcv_data.index = pd.date_range(
+                        start="2024-01-01", periods=len(ohlcv_data), freq="1H"
+                    )
+
+            # インデックスがDatetimeIndexであることを確認
+            if not isinstance(ohlcv_data.index, pd.DatetimeIndex):
+                raise ValueError(
+                    "DataFrameのインデックスはDatetimeIndexである必要があります"
+                )
+
             # メモリ使用量制限
             if len(ohlcv_data) > 50000:
                 logger.warning(

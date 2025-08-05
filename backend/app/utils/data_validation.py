@@ -6,7 +6,7 @@
 """
 
 import logging
-from typing import Dict, List, Optional, Tuple, Union
+from typing import Any, Dict, List, Optional, Tuple, Union
 
 import numpy as np
 import pandas as pd
@@ -480,3 +480,135 @@ class DataValidator:
             )
 
         return cleaned_df
+
+    @classmethod
+    def validate_ohlcv_data(
+        cls, df: pd.DataFrame, strict_mode: bool = False
+    ) -> Dict[str, Any]:
+        """
+        OHLCVデータの妥当性を検証（脆弱性修正）
+
+        Args:
+            df: OHLCVデータのDataFrame
+            strict_mode: 厳密モード（デフォルト: False）
+
+        Returns:
+            検証結果の辞書
+        """
+        validation_result = {
+            "is_valid": True,
+            "errors": [],
+            "warnings": [],
+            "ohlc_violations": 0,
+            "negative_volumes": 0,
+            "missing_data_ratio": 0.0,
+            "data_quality_score": 100.0,
+        }
+
+        try:
+            if df.empty:
+                validation_result["is_valid"] = False
+                validation_result["errors"].append("データが空です")
+                validation_result["data_quality_score"] = 0.0
+                return validation_result
+
+            # 必要なカラムの存在確認
+            required_columns = ["Open", "High", "Low", "Close", "Volume"]
+            missing_columns = [col for col in required_columns if col not in df.columns]
+
+            if missing_columns:
+                validation_result["is_valid"] = False
+                validation_result["errors"].append(
+                    f"必要なカラムが不足: {missing_columns}"
+                )
+                validation_result["data_quality_score"] -= 30.0
+
+            # OHLC論理の検証
+            if all(col in df.columns for col in ["Open", "High", "Low", "Close"]):
+                # High >= max(Open, Close) and Low <= min(Open, Close)
+                high_violations = (
+                    (df["High"] < df["Open"]) | (df["High"] < df["Close"])
+                ).sum()
+
+                low_violations = (
+                    (df["Low"] > df["Open"]) | (df["Low"] > df["Close"])
+                ).sum()
+
+                total_violations = high_violations + low_violations
+                validation_result["ohlc_violations"] = total_violations
+
+                if total_violations > 0:
+                    violation_ratio = total_violations / len(df)
+                    if violation_ratio > 0.05:  # 5%以上の違反で無効
+                        validation_result["is_valid"] = False
+                        validation_result["errors"].append(
+                            f"OHLC論理違反が多すぎます: {total_violations}件 ({violation_ratio:.2%})"
+                        )
+                    else:
+                        validation_result["warnings"].append(
+                            f"OHLC論理違反: {total_violations}件"
+                        )
+
+                    validation_result["data_quality_score"] -= min(
+                        50.0, violation_ratio * 100
+                    )
+
+            # ボリュームの検証
+            if "Volume" in df.columns:
+                negative_volumes = (df["Volume"] < 0).sum()
+                validation_result["negative_volumes"] = negative_volumes
+
+                if negative_volumes > 0:
+                    neg_vol_ratio = negative_volumes / len(df)
+                    if neg_vol_ratio > 0.01:  # 1%以上で警告
+                        validation_result["warnings"].append(
+                            f"負のボリューム: {negative_volumes}件"
+                        )
+                        validation_result["data_quality_score"] -= min(
+                            20.0, neg_vol_ratio * 100
+                        )
+
+            # 欠損データの検証
+            missing_ratio = df.isnull().sum().sum() / (len(df) * len(df.columns))
+            validation_result["missing_data_ratio"] = missing_ratio
+
+            if missing_ratio > 0.1:  # 10%以上の欠損で警告
+                validation_result["warnings"].append(
+                    f"欠損データが多い: {missing_ratio:.2%}"
+                )
+                validation_result["data_quality_score"] -= min(
+                    30.0, missing_ratio * 100
+                )
+
+            # 厳密モードでの追加チェック
+            if strict_mode:
+                # 価格の異常値チェック
+                for col in ["Open", "High", "Low", "Close"]:
+                    if col in df.columns:
+                        extreme_values = (
+                            (df[col] <= 0) | (df[col] > 1e6) | df[col].isnull()
+                        ).sum()
+
+                        if extreme_values > 0:
+                            validation_result["warnings"].append(
+                                f"{col}に異常値: {extreme_values}件"
+                            )
+
+            # 最終的な品質スコアの調整
+            validation_result["data_quality_score"] = max(
+                0.0, validation_result["data_quality_score"]
+            )
+
+            # 品質スコアが低すぎる場合は無効とする
+            if validation_result["data_quality_score"] < 30.0:
+                validation_result["is_valid"] = False
+                validation_result["errors"].append(
+                    f"データ品質スコアが低すぎます: {validation_result['data_quality_score']:.1f}%"
+                )
+
+        except Exception as e:
+            validation_result["is_valid"] = False
+            validation_result["errors"].append(f"検証中にエラーが発生: {str(e)}")
+            validation_result["data_quality_score"] = 0.0
+
+        return validation_result
