@@ -17,7 +17,9 @@ from app.services.data_collection.orchestration.market_data_orchestration_servic
 from app.services.ml.feature_engineering.automl_feature_generation_service import (
     AutoMLFeatureGenerationService,
 )
-from app.services.strategy_integration_service import StrategyIntegrationService
+from app.services.auto_strategy.utils.strategy_integration_service import (
+    StrategyIntegrationService,
+)
 from database.connection import get_db
 from database.repositories.funding_rate_repository import FundingRateRepository
 from database.repositories.ohlcv_repository import OHLCVRepository
