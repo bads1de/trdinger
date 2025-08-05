@@ -353,17 +353,6 @@ export default function MLTraining() {
             availableModels={availableModels}
           />
 
-          {/* 単一モデル設定（分離コンポーネントの直接利用例: UI的に分けたい場合は以下を残し、不要なら削除可） */}
-          {/*
-          {!ensembleSettings.enabled && (
-            <SingleModelSettings
-              singleModelSettings={singleModelSettings}
-              onSingleModelChange={setSingleModelSettings}
-              availableModels={availableModels}
-            />
-          )}
-          */}
-
           <div className="flex items-center space-x-4">
             {!trainingStatus.is_training ? (
               <ActionButton
