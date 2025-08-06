@@ -98,14 +98,14 @@ class FeatureEngineeringService:
             # 統計情報
             self.last_enhancement_stats = {}
 
-            logger.info("🤖 AutoML特徴量エンジニアリングが有効化されました")
+            logger.debug("🤖 AutoML特徴量エンジニアリングが有効化されました")
         else:
             self.automl_config = None
             if automl_config is not None and not AUTOML_AVAILABLE:
                 logger.warning(
                     "AutoML設定が指定されましたが、AutoMLモジュールが利用できません"
                 )
-            logger.info("📊 基本特徴量エンジニアリングを使用します")
+            logger.debug("📊 基本特徴量エンジニアリングを使用します")
 
     def calculate_advanced_features(
         self,

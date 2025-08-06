@@ -358,7 +358,7 @@ class MLManagementOrchestrationService:
 
         else:
             # モデルが見つからない場合のデフォルト情報
-            logger.info("📊 ML Status API - モデルファイルが見つかりません")
+            logger.debug("📊 ML Status API - モデルファイルが見つかりません")
             status["model_info"] = {
                 "accuracy": 0.0,
                 "model_type": "No Model",

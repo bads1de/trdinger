@@ -83,10 +83,10 @@ class MLOrchestrator(MLPredictionInterface):
             self.feature_service = FeatureEngineeringService(
                 automl_config=automl_config_obj
             )
-            logger.info("🤖 AutoML特徴量エンジニアリングを有効化しました")
+            logger.debug("🤖 AutoML特徴量エンジニアリングを有効化しました")
         else:
             self.feature_service = FeatureEngineeringService()
-            logger.info("📊 基本特徴量エンジニアリングを使用します")
+            logger.debug("📊 基本特徴量エンジニアリングを使用します")
 
         self.ml_training_service = (
             ml_training_service
@@ -564,14 +564,14 @@ class MLOrchestrator(MLPredictionInterface):
                 self.feature_service = FeatureEngineeringService(
                     automl_config=automl_config_obj
                 )
-                logger.info("🤖 AutoML特徴量エンジニアリングを有効化しました")
+                logger.debug("🤖 AutoML特徴量エンジニアリングを有効化しました")
             else:
                 # 既存のサービスをクリーンアップ
                 if hasattr(self.feature_service, "cleanup_resources"):
                     self.feature_service.cleanup_resources()
 
                 self.feature_service = FeatureEngineeringService()
-                logger.info("📊 基本特徴量エンジニアリングに切り替えました")
+                logger.debug("📊 基本特徴量エンジニアリングに切り替えました")
 
         except Exception as e:
             logger.error(f"AutoML設定変更エラー: {e}")
@@ -673,7 +673,7 @@ class MLOrchestrator(MLPredictionInterface):
                 else:
                     logger.warning(f"MLモデルの読み込みに失敗: {latest_model}")
             else:
-                logger.info(
+                logger.debug(
                     "学習済みMLモデルが見つかりません。ML機能はデフォルト値で動作します。"
                 )
             return False
