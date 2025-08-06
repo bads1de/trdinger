@@ -15,10 +15,8 @@ sys.path.insert(0, backend_dir)
 import pytest
 import pandas as pd
 import numpy as np
-import asyncio
 import time
 import concurrent.futures
-from datetime import datetime, timedelta
 import logging
 
 logger = logging.getLogger(__name__)

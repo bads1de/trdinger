@@ -6,7 +6,7 @@
 """
 
 import logging
-from typing import Any, Dict, List
+from typing import Any, Dict
 
 import pandas as pd
 import pytest
@@ -77,7 +77,7 @@ class TestAutoStrategyErrorHandling:
         
         try:
             from app.services.auto_strategy.services.ml_orchestrator import MLOrchestrator
-            from app.services.ml.exceptions import MLDataError, MLValidationError
+            from app.services.ml.exceptions import MLDataError
             
             ml_orchestrator = MLOrchestrator(enable_automl=False)
             
@@ -392,7 +392,6 @@ class TestAutoStrategyErrorHandling:
         
         try:
             import threading
-            import time
             
             from app.services.auto_strategy.services.auto_strategy_service import AutoStrategyService
             

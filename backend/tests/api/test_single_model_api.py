@@ -5,8 +5,6 @@ APIエンドポイントが単一モデル設定を正しく処理し、
 アンサンブル無効化時に単一モデルトレーニングが実行されることを確認する。
 """
 
-import pytest
-import json
 import logging
 import sys
 import os

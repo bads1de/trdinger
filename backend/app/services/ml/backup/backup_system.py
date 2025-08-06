@@ -6,12 +6,10 @@
 
 import logging
 import os
-import shutil
 import json
-import gzip
 import hashlib
 from datetime import datetime, timedelta
-from typing import Dict, List, Optional, Any, Tuple
+from typing import Dict, List, Optional, Any
 from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path

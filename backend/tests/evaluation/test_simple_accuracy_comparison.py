@@ -7,12 +7,11 @@
 
 import pandas as pd
 import numpy as np
-from datetime import datetime, timedelta
 import logging
 from sklearn.ensemble import RandomForestClassifier
-from sklearn.model_selection import train_test_split, cross_val_score
-from sklearn.metrics import accuracy_score, balanced_accuracy_score, f1_score, classification_report
-from sklearn.preprocessing import StandardScaler, RobustScaler
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import accuracy_score, balanced_accuracy_score, f1_score
+from sklearn.preprocessing import RobustScaler
 import sys
 import os
 

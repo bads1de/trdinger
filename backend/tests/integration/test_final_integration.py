@@ -8,7 +8,6 @@ import sys
 sys.path.append('.')
 
 import numpy as np
-import pandas as pd
 
 def test_metrics_integration():
     """メトリクス統合テスト"""
@@ -17,7 +16,6 @@ def test_metrics_integration():
     try:
         # 統合されたメトリクス計算器のテスト
         from app.services.ml.evaluation.enhanced_metrics import (
-            enhanced_metrics_calculator,
             record_metric,
             record_performance,
             evaluate_and_record_model,
@@ -113,7 +111,6 @@ def test_backward_compatibility():
     try:
         # 旧インポートパスのテスト
         from app.services.ml.common import (
-            metrics_collector,
             record_metric,
             record_performance,
             MLMetricsCollector

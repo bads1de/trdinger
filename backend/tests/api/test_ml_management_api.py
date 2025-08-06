@@ -5,7 +5,6 @@ ML設定の更新・リセットAPIエンドポイントをテストします。
 """
 
 import pytest
-import json
 from fastapi.testclient import TestClient
 from unittest.mock import patch, MagicMock
 

@@ -10,7 +10,7 @@ import time
 import logging
 import traceback
 from datetime import datetime
-from typing import Dict, List, Any
+from typing import Dict, Any
 import psutil
 
 # プロジェクトルートをパスに追加

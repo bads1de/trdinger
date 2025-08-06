@@ -5,8 +5,6 @@
 import sys
 sys.path.append('.')
 
-import pandas as pd
-import numpy as np
 from app.services.ml.base_ml_trainer import BaseMLTrainer
 
 def test_unified_trainer():

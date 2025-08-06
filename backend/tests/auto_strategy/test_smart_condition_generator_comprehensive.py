@@ -7,8 +7,7 @@ SmartConditionGeneratorの条件生成ロジック、指標特性活用、
 
 import logging
 import pytest
-from unittest.mock import Mock, patch
-from typing import List, Tuple
+from unittest.mock import Mock
 
 from app.services.auto_strategy.generators.smart_condition_generator import (
     SmartConditionGenerator,

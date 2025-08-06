@@ -12,8 +12,7 @@ import pandas as pd
 import uuid
 import threading
 import time
-from unittest.mock import Mock, patch, MagicMock
-from typing import Dict, Any, List
+from unittest.mock import Mock, patch
 
 from app.services.auto_strategy.services.auto_strategy_service import AutoStrategyService
 from app.services.auto_strategy.services.ml_orchestrator import MLOrchestrator

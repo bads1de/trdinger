@@ -5,7 +5,6 @@
 クラス不均衡問題を解決するかを検証する。
 """
 
-import pytest
 import pandas as pd
 import numpy as np
 import logging

@@ -5,9 +5,6 @@
 """
 
 import requests
-import json
-import time
-from typing import Dict, Any
 
 BACKEND_URL = "http://127.0.0.1:8001"
 FRONTEND_URL = "http://localhost:3000"

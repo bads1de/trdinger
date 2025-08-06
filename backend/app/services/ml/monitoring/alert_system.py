@@ -8,12 +8,11 @@ import logging
 import smtplib
 import json
 from datetime import datetime, timedelta
-from typing import Dict, List, Optional, Any, Callable
+from typing import Dict, List, Any, Callable
 from dataclasses import dataclass
 from enum import Enum
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
-import asyncio
 import aiohttp
 
 from .realtime_monitor import Alert, AlertLevel

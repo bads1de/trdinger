@@ -6,20 +6,17 @@ MLTrainingServiceのAutoML機能（アンサンブル学習、バギング、自
 BTC取引環境（15分〜1日足、TP/SL自動設定）を想定した実用的なテストを実施。
 """
 
-import pytest
 import numpy as np
 import pandas as pd
 import logging
 import time
 import sys
 import os
-from typing import Dict, List, Tuple, Optional, Any
 
 # プロジェクトルートをパスに追加
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from app.services.ml.ml_training_service import MLTrainingService
-from app.services.ml.ensemble.ensemble_trainer import EnsembleTrainer
 from app.services.ml.feature_engineering.feature_engineering_service import FeatureEngineeringService
 from app.services.ml.feature_engineering.automl_features.automl_config import AutoMLConfig
 from app.utils.index_alignment import MLWorkflowIndexManager

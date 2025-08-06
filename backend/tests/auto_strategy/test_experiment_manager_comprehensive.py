@@ -5,12 +5,10 @@ ExperimentManagerのGA実行、進捗管理、結果保存、
 バックグラウンド処理の包括的テストを実施します。
 """
 
-import asyncio
 import logging
 import pytest
 import uuid
-from unittest.mock import Mock, patch, AsyncMock
-from typing import Dict, Any
+from unittest.mock import Mock, patch
 
 from app.services.auto_strategy.ga.experiment_manager import ExperimentManager
 from app.services.auto_strategy.models.ga_config import GAConfig
@@ -260,7 +258,6 @@ class TestExperimentManagerComprehensive:
         experiment_manager.persistence_service = mock_persistence
         
         import threading
-        import time
         
         results = []
         errors = []

@@ -6,19 +6,17 @@
 """
 
 import logging
-import asyncio
 import psutil
 import time
 from datetime import datetime, timedelta
 from typing import Dict, List, Optional, Any, Callable
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from enum import Enum
 import threading
 from collections import deque
 
-from .data_drift_detector import DataDriftDetector, DriftType
+from .data_drift_detector import DataDriftDetector
 from ..model_manager import ModelManager
-from ....utils.unified_error_handler import safe_ml_operation
 
 logger = logging.getLogger(__name__)
 

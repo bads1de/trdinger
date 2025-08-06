@@ -10,7 +10,6 @@ import pytest
 import pandas as pd
 import numpy as np
 from unittest.mock import Mock, patch
-from typing import Dict, Any
 
 from app.services.backtest.backtest_service import BacktestService
 from app.services.auto_strategy.models.gene_strategy import StrategyGene
@@ -356,7 +355,6 @@ class TestBacktestIntegrationComprehensive:
     def test_concurrent_backtest_execution(self, backtest_service, sample_strategy_gene, sample_backtest_config):
         """並行バックテスト実行テスト"""
         import threading
-        import time
         
         results = []
         errors = []

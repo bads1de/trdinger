@@ -84,5 +84,8 @@ __all__ = [
     "record_metric",
     "record_performance",
     "record_error",
+    "record_model_evaluation_metrics",
+    "ModelEvaluationMetrics",
     "get_metrics_summary",
 ]
+

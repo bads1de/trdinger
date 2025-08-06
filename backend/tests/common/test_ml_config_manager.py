@@ -5,14 +5,10 @@ ML設定の更新、リセット、バリデーション機能をテストしま
 """
 
 import pytest
-import json
 import tempfile
 import os
-from pathlib import Path
-from unittest.mock import patch, MagicMock
 
 from app.services.ml.config.ml_config_manager import MLConfigManager
-from app.utils.unified_error_handler import UnifiedValidationError
 
 
 class TestMLConfigManager:

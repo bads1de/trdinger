@@ -5,9 +5,6 @@ useMLSettingsフックとバックエンドML設定管理APIの連携をテス�
 """
 
 import requests
-import json
-import time
-from typing import Dict, Any
 
 BACKEND_URL = "http://127.0.0.1:8001"
 

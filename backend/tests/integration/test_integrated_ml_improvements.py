@@ -5,7 +5,6 @@
 改善効果を検証する。
 """
 
-import pytest
 import pandas as pd
 import numpy as np
 import logging

@@ -6,10 +6,8 @@
 
 import gc
 import logging
-import threading
 import time
 from concurrent.futures import ThreadPoolExecutor, TimeoutError
-from typing import List
 
 import numpy as np
 import pandas as pd

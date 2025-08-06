@@ -8,13 +8,12 @@
 import pandas as pd
 import numpy as np
 import logging
-from datetime import datetime, timedelta
-from sklearn.model_selection import TimeSeriesSplit, cross_val_score
+from sklearn.model_selection import TimeSeriesSplit
 from sklearn.metrics import (
     accuracy_score, balanced_accuracy_score, f1_score, precision_score, recall_score,
-    roc_auc_score, average_precision_score, classification_report, confusion_matrix
+    roc_auc_score, classification_report, confusion_matrix
 )
-from sklearn.preprocessing import RobustScaler, StandardScaler
+from sklearn.preprocessing import RobustScaler
 import warnings
 import sys
 import os

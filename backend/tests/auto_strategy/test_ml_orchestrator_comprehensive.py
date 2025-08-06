@@ -9,11 +9,9 @@ import logging
 import pytest
 import pandas as pd
 import numpy as np
-from unittest.mock import Mock, patch, MagicMock
-from typing import Dict, Any, Optional
+from unittest.mock import Mock, patch
 
 from app.services.auto_strategy.services.ml_orchestrator import MLOrchestrator
-from app.services.ml.ml_training_service import MLTrainingService
 
 logger = logging.getLogger(__name__)
 

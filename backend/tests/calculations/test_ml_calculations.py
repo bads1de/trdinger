@@ -5,12 +5,10 @@ MLトレーニング系の計算正確性テスト
 計算の精度、数値安定性、エッジケースでの動作を包括的に検証します。
 """
 
-import pytest
 import numpy as np
 import pandas as pd
 import logging
-from typing import Dict, List, Tuple, Any
-from decimal import Decimal, getcontext
+from decimal import getcontext
 import sys
 import os
 
@@ -18,7 +16,6 @@ import os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from app.utils.data_processing import DataProcessor
-from app.services.ml.feature_engineering.feature_engineering_service import FeatureEngineeringService
 
 logger = logging.getLogger(__name__)
 

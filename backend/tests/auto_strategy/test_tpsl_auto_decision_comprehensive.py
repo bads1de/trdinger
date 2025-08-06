@@ -7,9 +7,6 @@ TPSLAutoDecisionServiceの各戦略（リスクリワード、ボラティリテ
 
 import logging
 import pytest
-import numpy as np
-from unittest.mock import Mock, patch
-from typing import Dict, Any, Optional
 
 from app.services.auto_strategy.services.tpsl_auto_decision_service import (
     TPSLAutoDecisionService,
@@ -332,7 +329,6 @@ class TestTPSLAutoDecisionServiceComprehensive:
     def test_concurrent_tpsl_generation(self, tpsl_service, base_config, sample_market_data):
         """並行TP/SL生成テスト"""
         import threading
-        import time
         
         results = []
         errors = []

@@ -8,7 +8,7 @@ import logging
 import numpy as np
 import pandas as pd
 from datetime import datetime, timedelta
-from typing import Dict, List, Optional, Any, Tuple
+from typing import Dict, List, Optional, Any
 from dataclasses import dataclass
 
 from .market_regime_detector import MarketRegimeDetector, MarketRegime, RegimeDetectionResult

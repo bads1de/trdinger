@@ -8,10 +8,8 @@
 - モデル管理システム
 """
 
-import pytest
 import pandas as pd
 import numpy as np
-from datetime import datetime, timedelta
 import logging
 import sys
 import os
@@ -56,7 +54,6 @@ class TestEnhancedMLSystem:
         self.metrics_calculator = EnhancedMetricsCalculator()
         self.feature_selector = FeatureSelector()
         # テスト用のModelManagerを作成（テンポラリディレクトリを使用）
-        from app.services.ml.model_manager import PerformanceMonitoringConfig
 
         self.model_manager = ModelManager()
         # テスト用にbase_pathを変更

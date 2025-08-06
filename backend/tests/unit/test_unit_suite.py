@@ -14,10 +14,9 @@ import logging
 import pandas as pd
 import numpy as np
 import time
-import pytest
-from unittest.mock import Mock, patch, MagicMock
-from typing import Dict, List, Any, Tuple
-from dataclasses import dataclass, field
+from unittest.mock import Mock, patch
+from typing import List
+from dataclasses import dataclass
 
 # プロジェクトルートをパスに追加
 backend_path = os.path.dirname(

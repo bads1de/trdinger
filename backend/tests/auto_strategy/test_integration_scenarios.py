@@ -21,8 +21,7 @@ import threading
 import concurrent.futures
 import gc
 import logging
-from datetime import datetime, timedelta
-from typing import Dict, Any, List
+from typing import Dict, Any
 import sqlite3
 
 logger = logging.getLogger(__name__)

@@ -15,7 +15,6 @@ sys.path.insert(0, backend_dir)
 
 import logging
 import time
-from datetime import datetime
 import traceback
 
 # テストモジュールをインポート

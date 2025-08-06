@@ -6,12 +6,8 @@
 import os
 import tempfile
 import unittest
-import pandas as pd
 import numpy as np
 import sys
-import glob
-import asyncio
-from unittest.mock import patch, MagicMock
 
 # プロジェクトルートをパスに追加
 sys.path.append(os.path.join(os.path.dirname(__file__), ".."))

@@ -5,10 +5,8 @@ DataFrequencyManagerのテスト
 解決策であるDataFrequencyManagerクラスの動作を検証します。
 """
 
-import pytest
 import pandas as pd
 import numpy as np
-from datetime import datetime, timedelta
 import logging
 
 import sys

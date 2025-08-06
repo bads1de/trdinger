@@ -9,8 +9,6 @@ import pytest
 import pandas as pd
 import numpy as np
 import logging
-from unittest.mock import Mock, patch
-from datetime import datetime, timedelta
 import sys
 import os
 
@@ -20,10 +18,8 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from app.services.ml.feature_engineering.feature_engineering_service import (
     FeatureEngineeringService,
 )
-from app.utils.data_processing import DataProcessor
 from app.utils.label_generation import LabelGenerator, ThresholdMethod
 from app.services.ml.config.ml_config import TrainingConfig
-from app.services.ml.ml_training_service import MLTrainingService
 
 logger = logging.getLogger(__name__)
 

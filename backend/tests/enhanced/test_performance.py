@@ -5,14 +5,13 @@ MLトレーニングシステムのパフォーマンスを検証するテスト
 処理時間、メモリ使用量、スケーラビリティを測定・評価します。
 """
 
-import pytest
 import numpy as np
 import pandas as pd
 import logging
 import time
 import psutil
 import os
-from typing import Dict, List, Tuple, Any
+from typing import Dict
 import sys
 
 # プロジェクトルートをパスに追加

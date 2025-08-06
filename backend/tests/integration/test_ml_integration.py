@@ -16,7 +16,6 @@ from app.services.ml.common.base_resource_manager import (
     CleanupLevel,
     managed_ml_operation,
 )
-from app.services.ml.base_ml_trainer import BaseMLTrainer
 from app.services.ml.ensemble.ensemble_trainer import EnsembleTrainer
 from app.services.ml.ml_training_service import MLTrainingService
 

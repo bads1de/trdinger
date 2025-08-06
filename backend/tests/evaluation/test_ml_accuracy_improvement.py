@@ -5,10 +5,8 @@ MLモデル精度改善効果の検証テスト
 改善前後のモデル性能を比較し、各改善項目の効果を定量的に測定します。
 """
 
-import pytest
 import pandas as pd
 import numpy as np
-from datetime import datetime, timedelta
 import logging
 import sys
 import os

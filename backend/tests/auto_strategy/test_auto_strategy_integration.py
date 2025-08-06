@@ -15,11 +15,8 @@ sys.path.insert(0, backend_dir)
 import pytest
 import pandas as pd
 import numpy as np
-import asyncio
-import json
 import tempfile
 from datetime import datetime, timedelta
-from pathlib import Path
 import logging
 
 logger = logging.getLogger(__name__)

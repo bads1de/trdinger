@@ -13,7 +13,6 @@ backend_dir = os.path.dirname(os.path.dirname(current_dir))
 sys.path.insert(0, backend_dir)
 
 import pytest
-import pandas as pd
 import numpy as np
 import time
 import threading
@@ -23,7 +22,7 @@ import websockets
 import json
 import logging
 from datetime import datetime, timedelta
-from typing import Dict, Any, List, Optional
+from typing import Dict, List
 from collections import deque
 import concurrent.futures
 

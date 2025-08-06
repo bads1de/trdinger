@@ -9,11 +9,9 @@ import logging
 import pytest
 import uuid
 from unittest.mock import Mock, patch
-from typing import Dict, Any
 
 from app.services.auto_strategy.persistence.experiment_persistence_service import ExperimentPersistenceService
 from app.services.auto_strategy.models.ga_config import GAConfig
-from database.connection import SessionLocal
 
 logger = logging.getLogger(__name__)
 
@@ -248,7 +246,6 @@ class TestExperimentPersistenceServiceComprehensive:
     def test_concurrent_experiment_creation(self, persistence_service, valid_ga_config, valid_backtest_config):
         """並行実験作成テスト"""
         import threading
-        import time
         
         results = []
         errors = []

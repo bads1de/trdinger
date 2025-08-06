@@ -16,7 +16,6 @@ sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
 
 from app.services.ml.ensemble.stacking import StackingEnsemble
 from app.services.ml.ensemble.bagging import BaggingEnsemble
-from app.services.ml.ensemble.ensemble_trainer import EnsembleTrainer
 
 
 class TestEnsembleSingleModel(unittest.TestCase):

@@ -7,7 +7,6 @@ TP/SL自動決定サービス、各種戦略（RANDOM、RISK_REWARD、VOLATILITY
 
 import logging
 import random
-from typing import Any, Dict, Optional
 
 import pytest
 
@@ -31,7 +30,7 @@ class TestAutoStrategyTPSLIntegration:
         
         try:
             from app.services.auto_strategy.services.tpsl_auto_decision_service import (
-                TPSLAutoDecisionService, TPSLConfig, TPSLStrategy
+                TPSLAutoDecisionService
             )
             
             # サービスの初期化

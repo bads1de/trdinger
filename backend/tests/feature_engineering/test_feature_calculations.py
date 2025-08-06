@@ -5,11 +5,9 @@
 技術指標、統計的特徴量、時系列特徴量、相互作用特徴量の正確性を包括的に検証します。
 """
 
-import pytest
 import numpy as np
 import pandas as pd
 import logging
-from typing import Dict, List, Tuple, Any
 import talib
 import sys
 import os

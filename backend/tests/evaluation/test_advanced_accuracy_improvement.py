@@ -8,7 +8,6 @@
 import pandas as pd
 import numpy as np
 import logging
-from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score, balanced_accuracy_score, f1_score
 from sklearn.preprocessing import RobustScaler
 import sys

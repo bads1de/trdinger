@@ -5,11 +5,9 @@ MLトレーニングシステムのエラーハンドリング機能を検証す
 異常なデータ、不正な引数、リソース不足などの状況での動作を検証します。
 """
 
-import pytest
 import numpy as np
 import pandas as pd
 import logging
-from typing import Dict, List, Tuple, Any
 import sys
 import os
 

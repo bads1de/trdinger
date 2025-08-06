@@ -10,10 +10,9 @@ useAutoStrategy.tsフックとバックエンドAPIの統合、
 
 import logging
 import pytest
-import json
 import uuid
 import time
-from unittest.mock import Mock, patch, AsyncMock
+from unittest.mock import patch
 from typing import Dict, Any, List
 
 # フロントエンドAPIコールをシミュレートするためのモック

@@ -5,7 +5,6 @@
 特徴量のスケール不整合問題が解決されるかを検証する。
 """
 
-import pytest
 import pandas as pd
 import numpy as np
 import logging
@@ -18,7 +17,6 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from app.services.ml.feature_engineering.feature_engineering_service import (
     FeatureEngineeringService,
 )
-from app.utils.data_processing import DataProcessor
 
 logger = logging.getLogger(__name__)
 

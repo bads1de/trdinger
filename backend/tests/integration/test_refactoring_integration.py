@@ -7,8 +7,6 @@
 import logging
 import numpy as np
 import pandas as pd
-import pytest
-from datetime import datetime
 
 from app.services.ml.common.metrics_constants import (
     StandardMetricNames,
@@ -25,11 +23,6 @@ from app.services.ml.common.trainer_factory import (
     TrainerType,
     create_single_model_trainer,
     create_ensemble_trainer,
-    trainer_factory,
-)
-from app.services.ml.evaluation.enhanced_metrics import (
-    EnhancedMetricsCalculator,
-    MetricsConfig,
 )
 
 logger = logging.getLogger(__name__)

@@ -4,7 +4,6 @@
 アンサンブル設定をオフにしても実際にはアンサンブルが実行される問題を調査する。
 """
 
-import pytest
 import logging
 import sys
 import os
@@ -13,7 +12,6 @@ import os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from app.api.ml_training import MLTrainingConfig, EnsembleConfig, SingleModelConfig
-from app.services.ml.orchestration.ml_training_orchestration_service import MLTrainingOrchestrationService
 from app.services.ml.ml_training_service import MLTrainingService
 
 logger = logging.getLogger(__name__)

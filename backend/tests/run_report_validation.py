@@ -4,7 +4,6 @@
 pytestの代わりに直接実行してレポートの品質を検証します。
 """
 
-import os
 import re
 import sys
 from pathlib import Path

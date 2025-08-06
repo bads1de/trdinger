@@ -5,12 +5,10 @@ AutoStrategyServiceの戦略生成、GA設定検証、バックグラウンド�
 エラーハンドリングの包括的テストを実施します。
 """
 
-import asyncio
 import logging
 import pytest
 import uuid
-from unittest.mock import Mock, patch, AsyncMock
-from typing import Dict, Any
+from unittest.mock import Mock, patch
 
 from app.services.auto_strategy.services.auto_strategy_service import AutoStrategyService
 from app.services.auto_strategy.models.ga_config import GAConfig

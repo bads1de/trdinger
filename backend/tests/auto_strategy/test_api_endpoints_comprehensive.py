@@ -7,9 +7,8 @@ auto_strategy.py APIエンドポイントのリクエスト処理、レスポン
 
 import logging
 import pytest
-import json
 import uuid
-from unittest.mock import Mock, patch, AsyncMock
+from unittest.mock import patch
 from fastapi.testclient import TestClient
 from fastapi import status
 
@@ -407,7 +406,6 @@ class TestAutoStrategyAPIEndpointsComprehensive:
             pytest.skip("テストクライアントが利用できません")
         
         import threading
-        import time
         
         responses = []
         errors = []

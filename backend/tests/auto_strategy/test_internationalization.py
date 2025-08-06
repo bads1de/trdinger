@@ -13,13 +13,11 @@ backend_dir = os.path.dirname(os.path.dirname(current_dir))
 sys.path.insert(0, backend_dir)
 
 import pytest
-import pandas as pd
 import numpy as np
 import time
 import pytz
 import logging
 from datetime import datetime, timedelta
-from typing import Dict, Any, List, Optional
 from decimal import Decimal, getcontext
 import locale
 
@@ -397,7 +395,6 @@ class TestInternationalization:
             return 1
         
         # 科学記数法で表現
-        import math
         if number < 0:
             number = -number
         

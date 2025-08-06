@@ -5,7 +5,6 @@ SmartConditionGeneratorの包括的テスト
 """
 
 import logging
-from typing import List
 
 import pytest
 

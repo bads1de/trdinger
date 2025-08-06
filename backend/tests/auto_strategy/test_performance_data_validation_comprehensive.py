@@ -12,7 +12,6 @@ import numpy as np
 import pandas as pd
 import uuid
 from unittest.mock import Mock, patch
-from typing import Dict, Any, List
 
 from app.services.auto_strategy.services.auto_strategy_service import AutoStrategyService
 from app.services.auto_strategy.services.ml_orchestrator import MLOrchestrator
@@ -173,7 +172,6 @@ class TestPerformanceDataValidationComprehensive:
 
     def test_concurrent_processing_scalability(self, auto_strategy_service):
         """並行処理スケーラビリティテスト"""
-        import threading
         import concurrent.futures
         
         def run_strategy_generation(thread_id):

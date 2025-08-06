@@ -5,7 +5,6 @@ IQRベースの外れ値検出により
 金融時系列データの重要なシグナルが保持されるかを検証する。
 """
 
-import pytest
 import pandas as pd
 import numpy as np
 import logging

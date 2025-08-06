@@ -11,7 +11,7 @@ import sys
 import time
 import warnings
 from dataclasses import dataclass
-from typing import Any, Dict, List, Optional
+from typing import List
 
 # プロジェクトルートをPythonパスに追加
 backend_path = os.path.dirname(

@@ -15,11 +15,7 @@ sys.path.insert(0, backend_dir)
 import pytest
 import pandas as pd
 import numpy as np
-import asyncio
 import tempfile
-import json
-from datetime import datetime, timedelta
-from pathlib import Path
 import logging
 
 logger = logging.getLogger(__name__)
@@ -71,7 +67,6 @@ class TestAutoStrategyComprehensive:
         
         try:
             from app.services.auto_strategy.services.ml_orchestrator import MLOrchestrator
-            from app.services.auto_strategy.services.auto_strategy_service import AutoStrategyService
             
             # MLオーケストレーターの初期化
             ml_orchestrator = MLOrchestrator(enable_automl=True)
@@ -269,7 +264,6 @@ class TestAutoStrategyComprehensive:
         
         try:
             from app.services.auto_strategy.models.gene_strategy import StrategyGene
-            from app.services.auto_strategy.models.gene_tpsl import TPSLGene
             
             # 戦略遺伝子作成
             strategy_gene = StrategyGene()

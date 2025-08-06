@@ -17,10 +17,6 @@ import pandas as pd
 import numpy as np
 import time
 import logging
-from datetime import datetime, timedelta
-from typing import Dict, Any, List, Tuple
-from scipy import stats
-import math
 
 logger = logging.getLogger(__name__)
 
@@ -131,7 +127,6 @@ class TestPrecisionQuality:
         logger.info("🔍 バックテスト再現性テスト開始")
         
         try:
-            from app.services.backtest.backtest_service import BacktestService
             
             # 同じ設定で複数回バックテストを実行
             config = {

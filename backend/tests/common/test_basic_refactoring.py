@@ -6,12 +6,10 @@ import sys
 
 sys.path.append(".")
 
-import numpy as np
 from app.services.ml.common.metrics_constants import (
     StandardMetricNames,
     MetricValidation,
 )
-from app.services.ml.common.unified_metrics_manager import unified_metrics_manager
 from app.services.ml.common.trainer_factory import (
     create_single_model_trainer,
     create_ensemble_trainer,

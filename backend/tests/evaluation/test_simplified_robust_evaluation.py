@@ -11,7 +11,7 @@ import logging
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.linear_model import LogisticRegression
 from sklearn.model_selection import TimeSeriesSplit
-from sklearn.metrics import accuracy_score, balanced_accuracy_score, f1_score, classification_report
+from sklearn.metrics import accuracy_score, balanced_accuracy_score, f1_score
 from sklearn.preprocessing import RobustScaler
 import warnings
 import sys

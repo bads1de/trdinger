@@ -5,7 +5,6 @@ ML設定管理APIの手動テストスクリプト
 """
 
 import requests
-import json
 import time
 
 BASE_URL = "http://127.0.0.1:8001"

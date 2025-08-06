@@ -5,11 +5,9 @@
 各前処理手法の理論的性質と実装の一致を包括的に検証します。
 """
 
-import pytest
 import numpy as np
 import pandas as pd
 import logging
-from typing import Dict, List, Tuple, Any
 from sklearn.preprocessing import StandardScaler, RobustScaler, MinMaxScaler
 from scipy import stats
 import sys

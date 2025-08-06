@@ -12,11 +12,9 @@
 import sys
 import os
 import logging
-import subprocess
 import time
-import json
 from datetime import datetime
-from typing import Dict, List, Any, Tuple
+from typing import Dict, List, Any
 from dataclasses import dataclass, field
 
 # プロジェクトルートをパスに追加
