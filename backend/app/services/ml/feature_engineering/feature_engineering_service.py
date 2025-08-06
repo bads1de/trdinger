@@ -256,6 +256,10 @@ class FeatureEngineeringService:
                         column_names=existing_fr_columns,
                         fill_method="median",
                     )
+            else:
+                # ファンディングレートデータが不足している場合、疑似データを生成
+                logger.warning("ファンディングレートデータが不足しています。疑似特徴量を生成します。")
+                result_df = self._generate_pseudo_funding_rate_features(result_df, lookback_periods)
 
             # 建玉残高特徴量（データがある場合）
             if open_interest_data is not None and not open_interest_data.empty:
@@ -285,6 +289,10 @@ class FeatureEngineeringService:
                         column_names=existing_oi_columns,
                         fill_method="median",
                     )
+            else:
+                # 建玉残高データが不足している場合、疑似データを生成
+                logger.warning("建玉残高データが不足しています。疑似特徴量を生成します。")
+                result_df = self._generate_pseudo_open_interest_features(result_df, lookback_periods)
 
             # 複合特徴量（FR + OI）
             if (
@@ -735,10 +743,10 @@ class FeatureEngineeringService:
         """
         try:
             from ...data_collection.fear_greed.fear_greed_service import (
-                FearGreedService,
+                FearGreedIndexService,
             )
 
-            fear_greed_service = FearGreedService()
+            fear_greed_service = FearGreedIndexService()
 
             # データの期間を取得
             start_date = ohlcv_data.index.min()
@@ -800,6 +808,108 @@ class FeatureEngineeringService:
         """
         self.feature_cache.clear()
         logger.info("特徴量キャッシュをクリアしました")
+
+    def _generate_pseudo_funding_rate_features(self, df: pd.DataFrame, lookback_periods: Dict[str, int]) -> pd.DataFrame:
+        """
+        ファンディングレート疑似特徴量を生成
+
+        Args:
+            df: 価格データ
+            lookback_periods: 計算期間設定
+
+        Returns:
+            疑似特徴量が追加されたDataFrame
+        """
+        try:
+            result_df = df.copy()
+
+            # 価格変動率ベースの疑似ファンディングレート
+            returns = result_df["Close"].pct_change()
+
+            # 疑似ファンディングレート（価格勢いベース）
+            pseudo_fr = returns.rolling(8).mean() * 0.1
+
+            # FR特徴量を生成
+            result_df["FR_MA_24"] = pseudo_fr.rolling(24).mean()
+            result_df["FR_MA_168"] = pseudo_fr.rolling(168).mean()
+            result_df["FR_Change"] = pseudo_fr.diff()
+            result_df["FR_Change_Rate"] = pseudo_fr.pct_change()
+            result_df["Price_FR_Divergence"] = returns - pseudo_fr
+            result_df["FR_Normalized"] = (pseudo_fr - pseudo_fr.rolling(168).mean()) / pseudo_fr.rolling(168).std()
+            result_df["FR_Trend"] = result_df["FR_MA_24"] / result_df["FR_MA_168"] - 1
+            result_df["FR_Volatility"] = pseudo_fr.rolling(24).std()
+
+            # NaN値を0で補完
+            fr_columns = ["FR_MA_24", "FR_MA_168", "FR_Change", "FR_Change_Rate",
+                         "Price_FR_Divergence", "FR_Normalized", "FR_Trend", "FR_Volatility"]
+            for col in fr_columns:
+                if col in result_df.columns:
+                    result_df[col] = result_df[col].fillna(0)
+
+            logger.info("ファンディングレート疑似特徴量を生成しました")
+            return result_df
+
+        except Exception as e:
+            logger.error(f"ファンディングレート疑似特徴量生成エラー: {e}")
+            return df
+
+    def _generate_pseudo_open_interest_features(self, df: pd.DataFrame, lookback_periods: Dict[str, int]) -> pd.DataFrame:
+        """
+        建玉残高疑似特徴量を生成
+
+        Args:
+            df: 価格データ
+            lookback_periods: 計算期間設定
+
+        Returns:
+            疑似特徴量が追加されたDataFrame
+        """
+        try:
+            result_df = df.copy()
+
+            # ボリュームベースの疑似建玉残高
+            pseudo_oi = result_df["Volume"].rolling(24).mean() * 10
+
+            # OI特徴量を生成
+            result_df["OI_Change_Rate"] = pseudo_oi.pct_change()
+            result_df["OI_Change_Rate_24h"] = pseudo_oi.pct_change(24)
+
+            # OI急増（ボリューム急増ベース）
+            oi_threshold = pseudo_oi.rolling(168).quantile(0.9)
+            result_df["OI_Surge"] = (pseudo_oi > oi_threshold).astype(int)
+
+            # ボラティリティ調整建玉残高
+            volatility = result_df["Close"].pct_change().rolling(24).std()
+            result_df["Volatility_Adjusted_OI"] = pseudo_oi / (volatility + 1e-8)
+
+            # OI移動平均
+            result_df["OI_MA_24"] = pseudo_oi.rolling(24).mean()
+            result_df["OI_MA_168"] = pseudo_oi.rolling(168).mean()
+
+            # OIトレンド
+            result_df["OI_Trend"] = result_df["OI_MA_24"] / result_df["OI_MA_168"] - 1
+
+            # OI価格相関（簡易実装）
+            price_change = result_df["Close"].pct_change()
+            oi_change = result_df["OI_Change_Rate"]
+            result_df["OI_Price_Correlation"] = price_change * oi_change
+
+            # OI正規化
+            result_df["OI_Normalized"] = (pseudo_oi - pseudo_oi.rolling(168).mean()) / pseudo_oi.rolling(168).std()
+
+            # NaN値を0で補完
+            oi_columns = ["OI_Change_Rate", "OI_Change_Rate_24h", "OI_Surge", "Volatility_Adjusted_OI",
+                         "OI_MA_24", "OI_MA_168", "OI_Trend", "OI_Price_Correlation", "OI_Normalized"]
+            for col in oi_columns:
+                if col in result_df.columns:
+                    result_df[col] = result_df[col].fillna(0)
+
+            logger.info("建玉残高疑似特徴量を生成しました")
+            return result_df
+
+        except Exception as e:
+            logger.error(f"建玉残高疑似特徴量生成エラー: {e}")
+            return df
 
     def get_cache_info(self) -> Dict[str, Any]:
         """

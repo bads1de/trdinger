@@ -31,10 +31,10 @@ class TSFreshConfig:
 
     enabled: bool = True
     feature_selection: bool = True
-    fdr_level: float = 0.05
-    feature_count_limit: int = 100
+    fdr_level: float = 0.1  # より緩い閾値で多くの特徴量を選択
+    feature_count_limit: int = 200  # 特徴量数制限を拡大
     parallel_jobs: int = 2
-    performance_mode: str = "balanced"
+    performance_mode: str = "comprehensive"  # より包括的なモードに変更
     custom_settings: Optional[Dict[str, Any]] = None
 
 

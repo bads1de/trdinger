@@ -362,7 +362,7 @@ class DataProcessor:
         method: str = "iqr",
     ) -> pd.DataFrame:
         """
-        外れ値を除去
+        外れ値を除去（最適化版）
 
         Args:
             df: 対象DataFrame
@@ -375,32 +375,57 @@ class DataProcessor:
         """
         result_df = df.copy()
 
-        for col in columns:
-            if col not in result_df.columns:
-                continue
+        # 存在するカラムのみをフィルタ
+        valid_columns = [col for col in columns if col in result_df.columns]
+        if not valid_columns:
+            return result_df
 
-            col_data = result_df[col]
-            if col_data.isna().all():
-                continue
+        # 数値カラムのみを対象
+        numeric_columns = result_df[valid_columns].select_dtypes(include=[np.number]).columns.tolist()
+        if not numeric_columns:
+            return result_df
 
+        try:
             if method == "iqr":
-                Q1 = col_data.quantile(0.25)
-                Q3 = col_data.quantile(0.75)
+                # ベクトル化されたIQR計算
+                Q1 = result_df[numeric_columns].quantile(0.25)
+                Q3 = result_df[numeric_columns].quantile(0.75)
                 IQR = Q3 - Q1
-                lower_bound = Q1 - threshold * IQR
-                upper_bound = Q3 + threshold * IQR
-                outlier_mask = (col_data < lower_bound) | (col_data > upper_bound)
+                lower_bounds = Q1 - threshold * IQR
+                upper_bounds = Q3 + threshold * IQR
+
+                # 一括で外れ値マスクを計算
+                outlier_mask = (
+                    (result_df[numeric_columns] < lower_bounds) |
+                    (result_df[numeric_columns] > upper_bounds)
+                )
+
             elif method == "zscore":
-                z_scores = np.abs((col_data - col_data.mean()) / col_data.std())
+                # ベクトル化されたZ-score計算
+                means = result_df[numeric_columns].mean()
+                stds = result_df[numeric_columns].std()
+                z_scores = np.abs((result_df[numeric_columns] - means) / stds)
                 outlier_mask = z_scores > threshold
+
             else:
                 logger.warning(f"未知の外れ値検出方法: {method}")
-                continue
+                return result_df
 
-            outlier_count = outlier_mask.sum()
-            if outlier_count > 0:
-                result_df.loc[outlier_mask, col] = np.nan
-                logger.info(f"カラム {col}: {outlier_count}個の外れ値を除去 ({method})")
+            # 一括で外れ値をNaNに設定
+            total_outliers = 0
+            for col in numeric_columns:
+                if col in outlier_mask.columns:
+                    col_outliers = outlier_mask[col].sum()
+                    if col_outliers > 0:
+                        result_df.loc[outlier_mask[col], col] = np.nan
+                        total_outliers += col_outliers
+
+            if total_outliers > 0:
+                logger.info(f"外れ値除去完了: {total_outliers}個の外れ値を除去 ({method})")
+
+        except Exception as e:
+            logger.warning(f"外れ値除去でエラーが発生: {e}")
+            return df
 
         return result_df
 
