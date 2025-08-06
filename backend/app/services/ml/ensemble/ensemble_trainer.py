@@ -329,64 +329,82 @@ class EnsembleTrainer(BaseMLTrainer):
             raise UnifiedModelError(f"アンサンブルモデル学習に失敗しました: {e}")
 
     def save_model(
-        self, model_path: str, model_metadata: Optional[Dict[str, Any]] = None
-    ) -> bool:
+        self, model_name: str, metadata: Optional[Dict[str, Any]] = None
+    ) -> str:
         """
-        アンサンブルモデルを保存
+        アンサンブルモデルを統一されたモデル管理システムで保存
 
         Args:
-            model_path: 保存先パス
-            model_metadata: モデルメタデータ（オプション）
+            model_name: モデル名
+            metadata: モデルメタデータ（オプション）
 
         Returns:
-            保存成功フラグ
+            保存されたモデルのパス
         """
+        if self.ensemble_model is None or not self.is_trained:
+            raise UnifiedModelError("保存する学習済みアンサンブルモデルがありません")
+
         try:
-            if self.ensemble_model is None:
-                logger.warning("保存するアンサンブルモデルがありません")
-                return False
+            from ..model_manager import model_manager
 
-            # アンサンブルモデルを保存
-            saved_paths = self.ensemble_model.save_models(model_path)
-
-            # 追加のメタデータを保存
-            from datetime import datetime
-
-            import joblib
-
-            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            # アンサンブル用メタデータを準備
             algorithm_name = getattr(self.ensemble_model, "best_algorithm", "unknown")
 
-            metadata = {
-                "ensemble_config": self.ensemble_config,
-                "automl_config": self.automl_config,
-                "model_type": self.model_type,
-                "ensemble_method": self.ensemble_method,
-                "feature_columns": self.feature_columns,
-                "scaler": self.scaler,
-                "is_trained": self.is_trained,
-                "best_algorithm": algorithm_name,
-                "best_model_score": getattr(
-                    self.ensemble_model, "best_model_score", None
-                ),
-                "timestamp": timestamp,
-            }
-
-            # 追加のモデルメタデータがある場合は統合
-            if model_metadata:
-                metadata.update(model_metadata)
-
-            metadata_path = f"{model_path}_ensemble_metadata_{timestamp}.pkl"
-            joblib.dump(metadata, metadata_path)
-
-            logger.info(
-                f"アンサンブルモデル保存完了: {len(saved_paths)} ファイル, 最高性能アルゴリズム: {algorithm_name}"
+            final_metadata = metadata or {}
+            final_metadata.update(
+                {
+                    "model_type": algorithm_name,  # 最高性能アルゴリズム名を使用
+                    "trainer_type": "ensemble",
+                    "ensemble_method": self.ensemble_method,
+                    "feature_count": (
+                        len(self.feature_columns) if self.feature_columns else 0
+                    ),
+                    "best_algorithm": algorithm_name,
+                    "best_model_score": getattr(
+                        self.ensemble_model, "best_model_score", None
+                    ),
+                    "selected_model_only": True,
+                    "ensemble_config": self.ensemble_config,
+                    "automl_config": self.automl_config,
+                }
             )
-            return True
+
+            # 特徴量重要度をメタデータに追加
+            try:
+                feature_importance = self.get_feature_importance(top_n=100)
+                if feature_importance:
+                    final_metadata["feature_importance"] = feature_importance
+                    logger.info(
+                        f"特徴量重要度をメタデータに追加: {len(feature_importance)}個"
+                    )
+            except Exception as e:
+                logger.warning(f"特徴量重要度の取得に失敗: {e}")
+
+            # 最高性能モデル1つのみを保存
+            if len(self.ensemble_model.base_models) == 1:
+                best_model = self.ensemble_model.base_models[0]
+
+                # 統一されたモデル保存を使用
+                model_path = model_manager.save_model(
+                    model=best_model,
+                    model_name=model_name,
+                    metadata=final_metadata,
+                    scaler=self.scaler,
+                    feature_columns=self.feature_columns,
+                )
+
+                logger.info(
+                    f"アンサンブル最高性能モデル保存完了: {model_path} (アルゴリズム: {algorithm_name})"
+                )
+                return model_path
+            else:
+                raise UnifiedModelError(
+                    "アンサンブルモデルが最高性能モデル1つのみを保持していません"
+                )
 
         except Exception as e:
             logger.error(f"アンサンブルモデル保存エラー: {e}")
-            return False
+            raise UnifiedModelError(f"アンサンブルモデルの保存に失敗しました: {e}")
 
     def load_model(self, model_path: str) -> bool:
         """
@@ -403,10 +421,10 @@ class EnsembleTrainer(BaseMLTrainer):
             import glob
             import os
             import warnings
- 
+
             import joblib
             from sklearn.exceptions import InconsistentVersionWarning
- 
+
             metadata_patterns = [
                 f"{model_path}_ensemble_metadata_*.pkl",  # 新形式
                 f"{model_path}_ensemble_metadata.pkl",  # 旧形式

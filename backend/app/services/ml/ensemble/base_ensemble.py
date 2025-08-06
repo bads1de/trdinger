@@ -296,37 +296,56 @@ class BaseEnsemble(ABC):
         # アルゴリズム名を取得（BaggingEnsembleの場合）
         algorithm_name = getattr(self, "best_algorithm", "unknown")
 
-        # ベースモデルを保存
-        for i, model in enumerate(self.base_models):
-            if len(self.base_models) == 1 and hasattr(self, "best_algorithm"):
-                # 最高性能モデル1つのみの場合
-                model_path = f"{base_path}_{algorithm_name}_{timestamp}.pkl"
-            else:
-                # 複数モデルの場合（従来の形式）
-                model_path = f"{base_path}_base_model_{i}.pkl"
+        # 最高性能モデル1つのみを保存
+        if len(self.base_models) == 1 and hasattr(self, "best_algorithm"):
+            # 最高性能モデル1つのみの場合
+            model_path = f"{base_path}_{algorithm_name}_{timestamp}.pkl"
 
-            # 全てのモデルをjoblibで保存（LightGBMModelも含む）
-            joblib.dump(model, model_path)
+            # モデルと設定を統合して保存
+            model_data = {
+                "model": self.base_models[0],
+                "config": self.config,
+                "automl_config": self.automl_config,
+                "feature_columns": self.feature_columns,
+                "is_fitted": self.is_fitted,
+                "best_algorithm": algorithm_name,
+                "best_model_score": getattr(self, "best_model_score", None),
+                "ensemble_type": self.__class__.__name__,
+                "selected_model_only": True,
+            }
+
+            joblib.dump(model_data, model_path)
             saved_paths.append(model_path)
 
-        # メタモデルを保存（存在する場合）
-        if self.meta_model is not None:
-            meta_path = f"{base_path}_meta_model_{timestamp}.pkl"
-            joblib.dump(self.meta_model, meta_path)
-            saved_paths.append(meta_path)
+            logger.info(f"最高性能モデルを単一ファイルで保存: {model_path}")
 
-        # 設定を保存
-        config_path = f"{base_path}_config_{timestamp}.pkl"
-        config_data = {
-            "config": self.config,
-            "automl_config": self.automl_config,
-            "feature_columns": self.feature_columns,
-            "is_fitted": self.is_fitted,
-            "best_algorithm": getattr(self, "best_algorithm", None),
-            "best_model_score": getattr(self, "best_model_score", None),
-        }
-        joblib.dump(config_data, config_path)
-        saved_paths.append(config_path)
+        else:
+            # 従来の複数ファイル保存（後方互換性のため）
+            logger.warning("複数モデルが存在するため従来の保存方式を使用")
+
+            for i, model in enumerate(self.base_models):
+                model_path = f"{base_path}_base_model_{i}_{timestamp}.pkl"
+                joblib.dump(model, model_path)
+                saved_paths.append(model_path)
+
+            # メタモデルを保存（存在する場合）
+            if self.meta_model is not None:
+                meta_path = f"{base_path}_meta_model_{timestamp}.pkl"
+                joblib.dump(self.meta_model, meta_path)
+                saved_paths.append(meta_path)
+
+            # 設定を保存
+            config_path = f"{base_path}_config_{timestamp}.pkl"
+            config_data = {
+                "config": self.config,
+                "automl_config": self.automl_config,
+                "feature_columns": self.feature_columns,
+                "is_fitted": self.is_fitted,
+                "best_algorithm": getattr(self, "best_algorithm", None),
+                "best_model_score": getattr(self, "best_model_score", None),
+            }
+            joblib.dump(config_data, config_path)
+            saved_paths.append(config_path)
 
         return saved_paths
 
@@ -345,9 +364,49 @@ class BaseEnsemble(ABC):
 
         import joblib
         from sklearn.exceptions import InconsistentVersionWarning
- 
+
         try:
-            # 設定ファイルを検索（タイムスタンプ付きファイルに対応）
+            # まず統合ファイル形式を試す（新形式）
+            algorithm_pattern = f"{base_path}_*_*.pkl"
+            unified_files = [
+                f
+                for f in glob.glob(algorithm_pattern)
+                if not f.endswith("_config.pkl") and not f.endswith("_meta_model.pkl")
+            ]
+
+            if unified_files:
+                # 統合ファイル形式で読み込み
+                unified_file = sorted(unified_files)[-1]  # 最新のファイルを選択
+                logger.info(f"統合ファイル形式でモデルを読み込み: {unified_file}")
+
+                with warnings.catch_warnings():
+                    warnings.simplefilter("ignore", InconsistentVersionWarning)
+                    model_data = joblib.load(unified_file)
+
+                # 統合ファイルからデータを復元
+                if isinstance(model_data, dict) and "model" in model_data:
+                    self.base_models = [model_data["model"]]
+                    self.config = model_data.get("config", {})
+                    self.automl_config = model_data.get("automl_config", {})
+                    self.feature_columns = model_data.get("feature_columns", [])
+                    self.is_fitted = model_data.get("is_fitted", False)
+                    self.best_algorithm = model_data.get("best_algorithm", "unknown")
+                    self.best_model_score = model_data.get("best_model_score", 0.0)
+                    self.meta_model = None  # 統合ファイルではメタモデルは使用しない
+
+                    logger.info(
+                        f"統合ファイルから最高性能モデルを読み込み: {self.best_algorithm}"
+                    )
+                    return True
+                else:
+                    # 古い形式の単一モデルファイル
+                    self.base_models = [model_data]
+                    logger.info("古い形式の単一モデルファイルを読み込み")
+
+            # 従来の分離ファイル形式で読み込み（後方互換性）
+            logger.info("従来の分離ファイル形式で読み込みを試行")
+
+            # 設定ファイルを検索
             config_patterns = [
                 f"{base_path}_config_*.pkl",  # 新形式（タイムスタンプ付き）
                 f"{base_path}_config.pkl",  # 旧形式
@@ -375,38 +434,21 @@ class BaseEnsemble(ABC):
                 if "best_model_score" in config_data:
                     self.best_model_score = config_data["best_model_score"]
 
-            # ベースモデルを読み込み
+            # ベースモデルを読み込み（従来形式）
             self.base_models = []
 
-            # 新形式（アルゴリズム名付き）のファイルを検索
-            algorithm_pattern = f"{base_path}_*_*.pkl"
-            algorithm_files = [
-                f
-                for f in glob.glob(algorithm_pattern)
-                if not f.endswith("_config.pkl") and not f.endswith("_meta_model.pkl")
-            ]
+            # 旧形式のファイルを検索
+            i = 0
+            while True:
+                model_path = f"{base_path}_base_model_{i}.pkl"
+                if not os.path.exists(model_path):
+                    break
 
-            if algorithm_files:
-                # 新形式のファイルが見つかった場合
-                for model_path in sorted(algorithm_files):
-                    if os.path.exists(model_path):
-                        with warnings.catch_warnings():
-                            warnings.simplefilter("ignore", InconsistentVersionWarning)
-                            model = joblib.load(model_path)
-                        self.base_models.append(model)
-            else:
-                # 旧形式のファイルを検索
-                i = 0
-                while True:
-                    model_path = f"{base_path}_base_model_{i}.pkl"
-                    if not os.path.exists(model_path):
-                        break
-
-                    with warnings.catch_warnings():
-                        warnings.simplefilter("ignore", InconsistentVersionWarning)
-                        model = joblib.load(model_path)
-                    self.base_models.append(model)
-                    i += 1
+                with warnings.catch_warnings():
+                    warnings.simplefilter("ignore", InconsistentVersionWarning)
+                    model = joblib.load(model_path)
+                self.base_models.append(model)
+                i += 1
 
             # メタモデルを読み込み（存在する場合）
             meta_patterns = [
@@ -424,6 +466,9 @@ class BaseEnsemble(ABC):
                             self.meta_model = joblib.load(meta_path)
                     break
 
+            logger.info(
+                f"従来形式でモデルを読み込み: ベースモデル{len(self.base_models)}個"
+            )
             return True
 
         except Exception as e:

@@ -132,32 +132,52 @@ class StackingEnsemble(BaseEnsemble):
 
                 self.base_models.append(base_model)
 
-            # Step 3: メタモデルを学習
-            logger.info(f"メタモデル {self.meta_model_type} を学習中...")
-            self.meta_model = self._create_base_model(self.meta_model_type)
+            # Step 3: ベースモデルから最高性能のものを選択
+            logger.info("ベースモデルの性能を評価して最高性能モデルを選択中...")
 
-            if hasattr(self.meta_model, "_train_model_impl"):
-                # LightGBMModel等の場合
-                meta_features_df = pd.DataFrame(meta_features_train)
-                from sklearn.model_selection import train_test_split
+            best_model = None
+            best_algorithm = None
+            best_score = -1.0
+            best_result = {}
 
-                X_meta_train, X_meta_val, y_meta_train, y_meta_val = train_test_split(
-                    meta_features_df,
-                    y_train,
-                    test_size=0.2,
-                    random_state=self.random_state,
+            for i, (model, result) in enumerate(
+                zip(self.base_models, base_model_results)
+            ):
+                current_score = result.get("accuracy", 0.0)
+                model_type = (
+                    self.base_model_types[i]
+                    if i < len(self.base_model_types)
+                    else "unknown"
                 )
-                meta_result = self.meta_model._train_model_impl(
-                    X_meta_train, X_meta_val, y_meta_train, y_meta_val
+
+                logger.info(
+                    f"ベースモデル {i+1} ({model_type}): accuracy={current_score:.4f}"
                 )
-                self.meta_model.is_trained = True
-                self.meta_model.feature_columns = [
-                    f"meta_feature_{i}" for i in range(meta_features_train.shape[1])
-                ]
+
+                if current_score > best_score:
+                    best_score = current_score
+                    best_model = model
+                    best_algorithm = model_type
+                    best_result = result
+                    logger.info(
+                        f"新しい最高性能モデル: {model_type} (accuracy: {current_score:.4f})"
+                    )
+
+            # 最高性能モデルのみを保持（メタモデルは使用しない）
+            if best_model is not None:
+                self.base_models = [best_model]
+                self.best_algorithm = best_algorithm
+                self.best_model_score = best_score
+                self.meta_model = None  # メタモデルは使用しない
+                logger.info(
+                    f"最高性能モデルを選択: {best_algorithm} (accuracy: {best_score:.4f})"
+                )
+
+                # 最高性能モデルの結果をメタ結果として使用
+                meta_result = best_result
             else:
-                # scikit-learn系の場合
-                self.meta_model.fit(meta_features_train, y_train)
-                meta_result = {"meta_model_type": self.meta_model_type}
+                logger.warning("有効なベースモデルが見つかりませんでした")
+                meta_result = {"meta_model_type": "none"}
 
             self.is_fitted = True
 
@@ -165,6 +185,17 @@ class StackingEnsemble(BaseEnsemble):
             ensemble_result = self._evaluate_ensemble(
                 X_test, y_test, base_model_results, meta_result
             )
+
+            # 最高性能モデル情報を結果に追加
+            if best_model is not None:
+                ensemble_result.update(
+                    {
+                        "best_algorithm": best_algorithm,
+                        "best_model_score": best_score,
+                        "selected_model_only": True,
+                        "total_models_trained": len(self.base_model_types),
+                    }
+                )
 
             logger.info("スタッキングアンサンブル学習完了")
             return ensemble_result
@@ -186,21 +217,23 @@ class StackingEnsemble(BaseEnsemble):
         if not self.is_fitted:
             raise UnifiedModelError("モデルが学習されていません")
 
-        # ベースモデルの予測からメタ特徴量を生成
-        meta_features = self._generate_meta_features_predict(X)
+        # 最高性能モデル1つのみで予測を実行
+        if len(self.base_models) != 1:
+            raise UnifiedModelError(
+                "スタッキングアンサンブルは最高性能モデル1つのみを保持する必要があります"
+            )
 
-        # メタモデルで最終予測
-        if hasattr(self.meta_model, "predict") and hasattr(
-            self.meta_model, "is_trained"
-        ):
+        best_model = self.base_models[0]
+
+        # 最高性能モデルで直接予測
+        if hasattr(best_model, "predict") and hasattr(best_model, "is_trained"):
             # LightGBMModel等
-            meta_features_df = pd.DataFrame(meta_features)
-            predictions = self.meta_model.predict(meta_features_df)
+            predictions = best_model.predict(X)
             if predictions.ndim > 1:
                 predictions = np.argmax(predictions, axis=1)
         else:
             # scikit-learn系
-            predictions = self.meta_model.predict(meta_features)
+            predictions = best_model.predict(X)
 
         return predictions
 
@@ -217,24 +250,26 @@ class StackingEnsemble(BaseEnsemble):
         if not self.is_fitted:
             raise UnifiedModelError("モデルが学習されていません")
 
-        # ベースモデルの予測からメタ特徴量を生成
-        meta_features = self._generate_meta_features_predict(X)
+        # 最高性能モデル1つのみで予測確率を取得
+        if len(self.base_models) != 1:
+            raise UnifiedModelError(
+                "スタッキングアンサンブルは最高性能モデル1つのみを保持する必要があります"
+            )
 
-        # メタモデルで予測確率を取得
-        if hasattr(self.meta_model, "predict") and hasattr(
-            self.meta_model, "is_trained"
-        ):
+        best_model = self.base_models[0]
+
+        # 最高性能モデルで直接予測確率を取得
+        if hasattr(best_model, "predict") and hasattr(best_model, "is_trained"):
             # LightGBMModel等のカスタムモデル
-            meta_features_df = pd.DataFrame(meta_features)
-            probabilities = self.meta_model.predict(meta_features_df)
+            probabilities = best_model.predict(X)
             # カスタムモデルは既に適切な形状で確率を返すことを期待
         else:
             # scikit-learn系
-            if hasattr(self.meta_model, "predict_proba"):
-                probabilities = self.meta_model.predict_proba(meta_features)
+            if hasattr(best_model, "predict_proba"):
+                probabilities = best_model.predict_proba(X)
             else:
                 # predict_probaがない場合はpredictの結果をワンホット化
-                pred = self.meta_model.predict(meta_features)
+                pred = best_model.predict(X)
                 n_classes = len(np.unique(pred))
                 probabilities = np.eye(n_classes)[pred]
 
@@ -243,7 +278,7 @@ class StackingEnsemble(BaseEnsemble):
             return probabilities
         else:
             raise UnifiedModelError(
-                f"メタモデルの予測確率が3クラス分類ではありません: {probabilities.shape}"
+                f"最高性能モデルの予測確率が3クラス分類ではありません: {probabilities.shape}"
             )
 
     def _generate_meta_features(self, X: pd.DataFrame, y: pd.Series) -> np.ndarray:
