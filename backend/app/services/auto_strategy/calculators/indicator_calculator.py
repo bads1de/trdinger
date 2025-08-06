@@ -24,10 +24,10 @@ class IndicatorCalculator:
     テクニカル指標の計算を担当します。
     """
 
-    def __init__(self):
+    def __init__(self, ml_orchestrator=None, technical_indicator_service=None):
         """初期化"""
-        self.technical_indicator_service = TechnicalIndicatorService()
-        self.ml_orchestrator = MLOrchestrator()
+        self.technical_indicator_service = technical_indicator_service or TechnicalIndicatorService()
+        self.ml_orchestrator = ml_orchestrator or MLOrchestrator()
 
     def calculate_indicator(
         self, indicator_type: str, parameters: Dict[str, Any], data

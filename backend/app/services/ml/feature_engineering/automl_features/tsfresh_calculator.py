@@ -543,18 +543,23 @@ class TSFreshFeatureCalculator:
             elif performance_mode == "comprehensive":
                 return self.feature_settings.get_comprehensive_settings()
             elif performance_mode == "financial_optimized":
-                return self.feature_settings.get_financial_optimized_settings()
+                # 金融最適化設定を取得（デフォルトでTRENDINGレジームを使用）
+                from .feature_settings import MarketRegime
+                return self.feature_settings.get_optimized_settings_for_regime(
+                    MarketRegime.TRENDING, max_computational_cost=8, max_features=80
+                )
             else:  # balanced
                 # 市場レジームに適したプロファイルを選択
                 # get_market_regime_profilesメソッドが存在しない場合のフォールバック
                 try:
-                    suitable_profiles = (
-                        self.feature_settings.get_market_regime_profiles(regime)
-                    )
+                    # get_profiles_by_market_regimeメソッドを使用
+                    suitable_profiles = self.feature_settings.get_profiles_by_market_regime(regime)
+                    # プロファイル名のリストを取得
+                    suitable_profiles = [profile.name for profile in suitable_profiles]
                 except AttributeError:
                     # メソッドが存在しない場合は基本設定を使用
                     logger.warning(
-                        "get_market_regime_profilesメソッドが見つかりません。基本設定を使用します。"
+                        "get_profiles_by_market_regimeメソッドが見つかりません。基本設定を使用します。"
                     )
                     return self._get_financial_feature_settings()
 
@@ -588,12 +593,13 @@ class TSFreshFeatureCalculator:
                         f"選択されたプロファイル: {selected_profiles} (総コスト: {total_cost})"
                     )
                     try:
-                        return self.feature_settings.get_combined_settings(
-                            selected_profiles
+                        # create_custom_settingsメソッドを使用
+                        return self.feature_settings.create_custom_settings(
+                            selected_profiles, max_computational_cost=10, max_features=100
                         )
                     except AttributeError:
                         logger.warning(
-                            "get_combined_settingsメソッドが見つかりません。基本設定を使用します。"
+                            "create_custom_settingsメソッドが見つかりません。基本設定を使用します。"
                         )
                         return self._get_financial_feature_settings()
                 else:

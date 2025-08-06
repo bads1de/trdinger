@@ -428,11 +428,17 @@ class MLTrainingService(BaseResourceManager):
                 features_scaled = features_selected.values
 
             # 予測（LightGBMモデルの場合）
-            predictions = np.array(
-                self.trainer.model.predict(
-                    features_scaled, num_iteration=self.trainer.model.best_iteration
+            # best_iteration属性の存在を確認してから使用
+            if hasattr(self.trainer.model, 'best_iteration'):
+                predictions = np.array(
+                    self.trainer.model.predict(
+                        features_scaled, num_iteration=self.trainer.model.best_iteration
+                    )
                 )
-            )
+            else:
+                predictions = np.array(
+                    self.trainer.model.predict(features_scaled)
+                )
 
             # 最新の予測結果を取得
             if predictions.ndim == 2:
