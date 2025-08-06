@@ -40,7 +40,7 @@ export default function MLModelList({
   showActions = true,
 }: MLModelListProps) {
   const [selectedModel, setSelectedModel] = useState<string | null>(null);
-  const { models, isLoading, error, fetchModels, deleteModel } =
+  const { models, isLoading, error, fetchModels, deleteModel, deleteAllModels } =
     useMLModels(limit);
 
   useEffect(() => {
@@ -81,6 +81,21 @@ export default function MLModelList({
 
   return (
     <div className="space-y-4">
+      {/* 全削除ボタン */}
+      {showActions && models.length > 0 && (
+        <div className="flex justify-end">
+          <ActionButton
+            variant="danger"
+            size="sm"
+            onClick={deleteAllModels}
+            loading={isLoading}
+            icon={<Trash2 className="h-4 w-4" />}
+          >
+            すべてのモデルを削除
+          </ActionButton>
+        </div>
+      )}
+
       {models.map((model) => (
         <Card
           key={model.id}

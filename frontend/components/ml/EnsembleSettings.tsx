@@ -48,7 +48,7 @@ interface EnsembleSettingsProps {
 }
 
 // 新しいアルゴリズムを含む利用可能なモデル
-const AVAILABLE_MODELS = [
+const AVAILABLE_MODEL_NAMES = [
   "lightgbm",
   "xgboost",
   "catboost",
@@ -62,7 +62,7 @@ const AVAILABLE_MODELS = [
   "knn",
 ];
 
-const LEGACY_AVAILABLE_MODELS = [
+const AVAILABLE_MODELS = [
   {
     value: "lightgbm",
     label: "LightGBM",
@@ -136,7 +136,7 @@ export default function EnsembleSettings({
   onChange,
   singleModelSettings = { model_type: "lightgbm" },
   onSingleModelChange,
-  availableModels = AVAILABLE_MODELS,
+  availableModels = AVAILABLE_MODEL_NAMES,
 }: EnsembleSettingsProps) {
   const updateSettings = (updates: Partial<EnsembleSettingsConfig>) => {
     onChange({ ...settings, ...updates });
@@ -321,9 +321,9 @@ export default function EnsembleSettings({
                         使用するモデルを選択してください：
                       </p>
                       <div className="flex flex-wrap gap-2">
-                        {AVAILABLE_MODELS.map((model) => (
+                        {AVAILABLE_MODELS.map((model, index) => (
                           <Badge
-                            key={model.value}
+                            key={`bagging-model-${model.value}-${index}`}
                             variant={
                               settings.bagging_params.mixed_models?.includes(
                                 model.value
@@ -352,8 +352,8 @@ export default function EnsembleSettings({
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                          {AVAILABLE_MODELS.map((model) => (
-                            <SelectItem key={model.value} value={model.value}>
+                          {AVAILABLE_MODELS.map((model, index) => (
+                            <SelectItem key={`base-model-${model.value}-${index}`} value={model.value}>
                               <div>
                                 <div className="font-medium">{model.label}</div>
                                 <div className="text-xs text-muted-foreground">
@@ -385,9 +385,9 @@ export default function EnsembleSettings({
                       ベースモデル（2つ以上選択）
                     </Label>
                     <div className="flex flex-wrap gap-2">
-                      {AVAILABLE_MODELS.map((model) => (
+                      {AVAILABLE_MODELS.map((model, index) => (
                         <Badge
-                          key={model.value}
+                          key={`stacking-model-${model.value}-${index}`}
                           variant={
                             settings.stacking_params.base_models.includes(
                               model.value
@@ -418,8 +418,8 @@ export default function EnsembleSettings({
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                          {META_MODELS.map((model) => (
-                            <SelectItem key={model.value} value={model.value}>
+                          {META_MODELS.map((model, index) => (
+                            <SelectItem key={`meta-model-${model.value}-${index}`} value={model.value}>
                               {model.label}
                             </SelectItem>
                           ))}

@@ -78,6 +78,9 @@ export interface MLModel {
  *
  * // モデルを削除
  * deleteModel('model-id');
+ *
+ * // すべてのモデルを削除
+ * deleteAllModels();
  * ```
  *
  * @param {number} [limit] - 取得するモデルの最大件数、指定しない場合は全件取得
@@ -87,7 +90,8 @@ export interface MLModel {
  *   error: string | null,
  *   isDeleting: boolean,
  *   fetchModels: () => Promise<void>,
- *   deleteModel: (modelId: string) => Promise<void>
+ *   deleteModel: (modelId: string) => Promise<void>,
+ *   deleteAllModels: () => Promise<void>
  * }} MLモデル管理関連の状態と操作関数
  */
 export const useMLModels = (limit?: number) => {
@@ -134,6 +138,19 @@ export const useMLModels = (limit?: number) => {
     [execute, fetchModels]
   );
 
+  const deleteAllModels = useCallback(
+    async () => {
+      await execute(`/api/ml/models/all`, {
+        method: "DELETE",
+        confirmMessage: "すべてのモデルを削除しますか？この操作は取り消せません。",
+        onSuccess: () => {
+          fetchModels();
+        },
+      });
+    },
+    [execute, fetchModels]
+  );
+
   return {
     /** MLモデルの配列 */
     models,
@@ -147,5 +164,7 @@ export const useMLModels = (limit?: number) => {
     fetchModels,
     /** モデルを削除する関数 */
     deleteModel,
+    /** すべてのモデルを削除する関数 */
+    deleteAllModels,
   };
 };

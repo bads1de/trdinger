@@ -381,7 +381,9 @@ class DataProcessor:
             return result_df
 
         # 数値カラムのみを対象
-        numeric_columns = result_df[valid_columns].select_dtypes(include=[np.number]).columns.tolist()
+        numeric_columns = (
+            result_df[valid_columns].select_dtypes(include=[np.number]).columns.tolist()
+        )
         if not numeric_columns:
             return result_df
 
@@ -395,9 +397,8 @@ class DataProcessor:
                 upper_bounds = Q3 + threshold * IQR
 
                 # 一括で外れ値マスクを計算
-                outlier_mask = (
-                    (result_df[numeric_columns] < lower_bounds) |
-                    (result_df[numeric_columns] > upper_bounds)
+                outlier_mask = (result_df[numeric_columns] < lower_bounds) | (
+                    result_df[numeric_columns] > upper_bounds
                 )
 
             elif method == "zscore":
@@ -421,7 +422,9 @@ class DataProcessor:
                         total_outliers += col_outliers
 
             if total_outliers > 0:
-                logger.info(f"外れ値除去完了: {total_outliers}個の外れ値を除去 ({method})")
+                logger.info(
+                    f"外れ値除去完了: {total_outliers}個の外れ値を除去 ({method})"
+                )
 
         except Exception as e:
             logger.warning(f"外れ値除去でエラーが発生: {e}")
@@ -511,27 +514,143 @@ class DataProcessor:
         # 1. 無限値をNaNに変換
         result_df = result_df.replace([np.inf, -np.inf], np.nan)
 
-        # 2. 数値カラムを特定
+        # 2. カテゴリカル変数のエンコーディング
+        result_df = self._encode_categorical_variables(result_df)
+
+        # 3. 数値カラムを特定（カテゴリカル変数エンコーディング後）
         numeric_columns = result_df.select_dtypes(include=[np.number]).columns.tolist()
 
-        # 3. 外れ値除去（オプション）
+        # 4. 外れ値除去（オプション）
         if remove_outliers:
             result_df = self._remove_outliers(
                 result_df, numeric_columns, outlier_threshold, method=outlier_method
             )
 
-        # 4. 欠損値補完
+        # 5. 欠損値補完
         result_df = self.transform_missing_values(
             result_df, strategy=imputation_strategy, columns=numeric_columns
         )
 
-        # 5. 特徴量スケーリング（オプション）
+        # 6. 特徴量スケーリング（オプション）
         if scale_features:
             result_df = self._scale_features(
                 result_df, numeric_columns, method=scaling_method
             )
 
         logger.info("特徴量の包括的前処理が完了")
+        return result_df
+
+    def _encode_categorical_variables(self, df: pd.DataFrame) -> pd.DataFrame:
+        """
+        カテゴリカル変数を数値にエンコーディング
+
+        Args:
+            df: 対象のDataFrame
+
+        Returns:
+            エンコーディング済みのDataFrame
+        """
+        try:
+            result_df = df.copy()
+
+            # カテゴリカル変数を特定（文字列型、object型）
+            categorical_columns = result_df.select_dtypes(
+                include=["object", "string", "category"]
+            ).columns.tolist()
+
+            if not categorical_columns:
+                return result_df
+
+            logger.info(f"カテゴリカル変数をエンコーディング: {categorical_columns}")
+
+            for col in categorical_columns:
+                try:
+                    # 特定のカラムに対する特別な処理
+                    if col == "fear_greed_classification":
+                        result_df = self._encode_fear_greed_classification(
+                            result_df, col
+                        )
+                    else:
+                        # 一般的なカテゴリカル変数のエンコーディング
+                        result_df = self._encode_general_categorical(result_df, col)
+
+                except Exception as e:
+                    logger.warning(f"カラム {col} のエンコーディングでエラー: {e}")
+                    # エラーが発生した場合はカラムを削除
+                    result_df = result_df.drop(columns=[col])
+
+            logger.info("カテゴリカル変数のエンコーディングが完了")
+            return result_df
+
+        except Exception as e:
+            logger.error(f"カテゴリカル変数エンコーディングエラー: {e}")
+            return df
+
+    def _encode_fear_greed_classification(
+        self, df: pd.DataFrame, col: str
+    ) -> pd.DataFrame:
+        """
+        Fear & Greed Classification の特別なエンコーディング
+
+        Args:
+            df: 対象のDataFrame
+            col: カラム名
+
+        Returns:
+            エンコーディング済みのDataFrame
+        """
+        result_df = df.copy()
+
+        # Fear & Greed Classification の標準的なマッピング
+        fg_mapping = {
+            "Extreme Fear": 0,
+            "Fear": 1,
+            "Neutral": 2,
+            "Greed": 3,
+            "Extreme Greed": 4,
+        }
+
+        # 欠損値を 'Neutral' で埋める
+        result_df[col] = result_df[col].fillna("Neutral")
+
+        # マッピングを適用
+        result_df[col + "_encoded"] = result_df[col].map(fg_mapping)
+
+        # マッピングできなかった値は 'Neutral' (2) にする
+        result_df[col + "_encoded"] = result_df[col + "_encoded"].fillna(2)
+
+        # 元のカラムを削除
+        result_df = result_df.drop(columns=[col])
+
+        # エンコード済みカラムの名前を元の名前に変更
+        result_df = result_df.rename(columns={col + "_encoded": col})
+
+        logger.info(f"Fear & Greed Classification エンコーディング完了: {fg_mapping}")
+        return result_df
+
+    def _encode_general_categorical(self, df: pd.DataFrame, col: str) -> pd.DataFrame:
+        """
+        一般的なカテゴリカル変数のエンコーディング
+
+        Args:
+            df: 対象のDataFrame
+            col: カラム名
+
+        Returns:
+            エンコーディング済みのDataFrame
+        """
+        from sklearn.preprocessing import LabelEncoder
+
+        result_df = df.copy()
+
+        # 欠損値を文字列で埋める
+        result_df[col] = result_df[col].fillna("Unknown")
+
+        # LabelEncoderを使用
+        le = LabelEncoder()
+        result_df[col] = le.fit_transform(result_df[col].astype(str))
+
+        logger.info(f"一般カテゴリカル変数エンコーディング完了: {col}")
         return result_df
 
     def interpolate_columns(

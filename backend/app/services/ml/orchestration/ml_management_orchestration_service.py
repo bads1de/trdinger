@@ -149,6 +149,55 @@ class MLManagementOrchestrationService:
                 status_code=500, detail="モデルファイルの削除に失敗しました"
             )
 
+    async def delete_all_models(self) -> Dict[str, Any]:
+        """
+        すべてのモデルを削除
+        """
+        logger.info("全モデル削除要求")
+
+        models = model_manager.list_models("*")
+
+        if not models:
+            logger.info("削除するモデルがありません")
+            return {
+                "success": True,
+                "message": "削除するモデルがありませんでした",
+                "deleted_count": 0,
+            }
+
+        deleted_count = 0
+        failed_models = []
+
+        for model in models:
+            try:
+                if os.path.exists(model["path"]):
+                    os.remove(model["path"])
+                    deleted_count += 1
+                    logger.info(f"モデル削除完了: {model['name']} -> {model['path']}")
+                else:
+                    logger.warning(f"モデルファイルが存在しません: {model['path']}")
+                    failed_models.append(model["name"])
+            except Exception as e:
+                logger.error(f"モデル削除エラー: {model['name']} -> {e}")
+                failed_models.append(model["name"])
+
+        if failed_models:
+            message = f"{deleted_count}個のモデルを削除しました。{len(failed_models)}個のモデルで削除に失敗しました: {', '.join(failed_models)}"
+        else:
+            message = f"すべてのモデル（{deleted_count}個）が削除されました"
+
+        logger.info(
+            f"全モデル削除完了: 削除数={deleted_count}, 失敗数={len(failed_models)}"
+        )
+
+        return {
+            "success": True,
+            "message": message,
+            "deleted_count": deleted_count,
+            "failed_count": len(failed_models),
+            "failed_models": failed_models,
+        }
+
     async def get_ml_status(self) -> Dict[str, Any]:
         """
         MLモデルの現在の状態を取得
