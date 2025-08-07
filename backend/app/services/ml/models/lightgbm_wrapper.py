@@ -22,22 +22,87 @@ class LightGBMModel:
     アンサンブル内で使用するLightGBMモデルラッパー
 
     LightGBMTrainerの機能を簡略化してアンサンブル専用に最適化
+    sklearn互換のインターフェースを提供
     """
 
     # アルゴリズム名（AlgorithmRegistryから取得）
     ALGORITHM_NAME = "lightgbm"
 
-    def __init__(self, automl_config: Optional[Dict[str, Any]] = None):
+    def __init__(
+        self,
+        automl_config: Optional[Dict[str, Any]] = None,
+        random_state: int = 42,
+        n_estimators: int = 100,
+        learning_rate: float = 0.1,
+        **kwargs,
+    ):
         """
         初期化
 
         Args:
             automl_config: AutoML設定（現在は未使用）
+            random_state: ランダムシード
+            n_estimators: エスティメータ数
+            learning_rate: 学習率
+            **kwargs: その他のパラメータ
         """
         self.model = None
         self.is_trained = False
         self.feature_columns = None
         self.automl_config = automl_config
+        self.classes_ = None  # sklearn互換性のため
+
+        # sklearn互換性のためのパラメータ
+        self.random_state = random_state
+        self.n_estimators = n_estimators
+        self.learning_rate = learning_rate
+
+        # その他のパラメータを設定
+        for key, value in kwargs.items():
+            setattr(self, key, value)
+
+    def fit(self, X, y) -> "LightGBMModel":
+        """
+        sklearn互換のfitメソッド
+
+        Args:
+            X: 学習用特徴量（DataFrame or numpy array）
+            y: 学習用ターゲット（Series or numpy array）
+
+        Returns:
+            self: 学習済みモデル
+        """
+        try:
+            # numpy配列をDataFrameに変換
+            if not isinstance(X, pd.DataFrame):
+                if hasattr(self, "feature_columns") and self.feature_columns:
+                    X = pd.DataFrame(X, columns=self.feature_columns)
+                else:
+                    X = pd.DataFrame(
+                        X, columns=[f"feature_{i}" for i in range(X.shape[1])]
+                    )
+
+            if not isinstance(y, pd.Series):
+                y = pd.Series(y)
+
+            # データを80:20で分割（バリデーション用）
+            from sklearn.model_selection import train_test_split
+
+            X_train, X_val, y_train, y_val = train_test_split(
+                X, y, test_size=0.2, random_state=42, stratify=y
+            )
+
+            # 内部の学習メソッドを呼び出し
+            self._train_model_impl(X_train, X_val, y_train, y_val)
+
+            # classes_属性を設定（sklearn互換性のため）
+            self.classes_ = np.unique(y)
+
+            return self
+
+        except Exception as e:
+            logger.error(f"sklearn互換fit実行エラー: {e}")
+            raise UnifiedModelError(f"LightGBMモデルのfit実行に失敗しました: {e}")
 
     def _train_model_impl(
         self,
@@ -204,12 +269,54 @@ class LightGBMModel:
             logger.error(f"特徴量重要度取得エラー: {e}")
             return {}
 
-    def predict(self, X: pd.DataFrame) -> np.ndarray:
+    def predict(self, X) -> np.ndarray:
         """
-        予測を実行
+        sklearn互換の予測メソッド（クラス予測）
 
         Args:
-            X: 特徴量DataFrame
+            X: 特徴量（DataFrame or numpy array）
+
+        Returns:
+            予測クラス
+        """
+        if not self.is_trained or self.model is None:
+            raise UnifiedModelError("学習済みモデルがありません")
+
+        try:
+            # numpy配列をDataFrameに変換
+            if not isinstance(X, pd.DataFrame):
+                if hasattr(self, "feature_columns") and self.feature_columns:
+                    X = pd.DataFrame(X, columns=self.feature_columns)
+                else:
+                    X = pd.DataFrame(
+                        X, columns=[f"feature_{i}" for i in range(X.shape[1])]
+                    )
+
+            # 予測確率を取得
+            predictions_proba = self.model.predict(
+                X, num_iteration=self.model.best_iteration
+            )
+
+            # クラス数を判定
+            if predictions_proba.ndim == 1:
+                # 二値分類の場合
+                predictions = (predictions_proba > 0.5).astype(int)
+            else:
+                # 多クラス分類の場合
+                predictions = np.argmax(predictions_proba, axis=1)
+
+            return predictions
+
+        except Exception as e:
+            logger.error(f"予測実行エラー: {e}")
+            raise UnifiedModelError(f"予測実行に失敗しました: {e}")
+
+    def predict_proba(self, X) -> np.ndarray:
+        """
+        予測確率を取得
+
+        Args:
+            X: 特徴量（DataFrame or numpy array）
 
         Returns:
             予測確率
@@ -217,17 +324,88 @@ class LightGBMModel:
         if not self.is_trained or self.model is None:
             raise UnifiedModelError("学習済みモデルがありません")
 
-        predictions = self.model.predict(X, num_iteration=self.model.best_iteration)
-        return predictions
+        try:
+            # numpy配列をDataFrameに変換
+            if not isinstance(X, pd.DataFrame):
+                if hasattr(self, "feature_columns") and self.feature_columns:
+                    X = pd.DataFrame(X, columns=self.feature_columns)
+                else:
+                    X = pd.DataFrame(
+                        X, columns=[f"feature_{i}" for i in range(X.shape[1])]
+                    )
 
-    def predict_proba(self, X: pd.DataFrame) -> np.ndarray:
+            predictions = self.model.predict(X, num_iteration=self.model.best_iteration)
+
+            # 二値分類の場合、確率を[1-p, p]の形式に変換
+            if predictions.ndim == 1:
+                predictions_proba = np.column_stack([1 - predictions, predictions])
+                return predictions_proba
+            else:
+                # 多クラス分類の場合はそのまま返す
+                return predictions
+
+        except Exception as e:
+            logger.error(f"予測確率取得エラー: {e}")
+            raise UnifiedModelError(f"予測確率取得に失敗しました: {e}")
+
+    def get_params(self, deep: bool = True) -> Dict[str, Any]:
         """
-        予測確率を取得
+        sklearn互換のパラメータ取得メソッド
 
         Args:
-            X: 特徴量DataFrame
+            deep: 深いコピーを行うかどうか
 
         Returns:
-            予測確率
+            パラメータの辞書
         """
-        return self.predict(X)
+        # 基本パラメータ
+        params = {
+            "automl_config": self.automl_config,
+            "random_state": self.random_state,
+            "n_estimators": self.n_estimators,
+            "learning_rate": self.learning_rate,
+        }
+
+        # 動的に追加されたパラメータも含める
+        for attr_name in dir(self):
+            if (
+                not attr_name.startswith("_")
+                and attr_name not in params
+                and attr_name
+                not in [
+                    "model",
+                    "is_trained",
+                    "feature_columns",
+                    "fit",
+                    "predict",
+                    "predict_proba",
+                    "get_params",
+                    "set_params",
+                    "get_feature_importance",
+                ]
+            ):
+                try:
+                    attr_value = getattr(self, attr_name)
+                    if not callable(attr_value):
+                        params[attr_name] = attr_value
+                except:
+                    pass
+
+        return params
+
+    def set_params(self, **params) -> "LightGBMModel":
+        """
+        sklearn互換のパラメータ設定メソッド
+
+        Args:
+            **params: 設定するパラメータ
+
+        Returns:
+            self: 設定後のモデル
+        """
+        for param, value in params.items():
+            if hasattr(self, param):
+                setattr(self, param, value)
+            else:
+                logger.warning(f"未知のパラメータ: {param}")
+        return self

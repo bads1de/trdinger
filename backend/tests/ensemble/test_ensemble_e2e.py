@@ -42,7 +42,7 @@ class TestEnsembleE2E(unittest.TestCase):
         """バギングアンサンブルのエンドツーエンドテスト"""
         print("\n=== バギングアンサンブル E2E テスト ===")
 
-        # MLトレーニング設定を作成
+        # MLトレーニング設定を作成（scikit-learn BaggingClassifier対応）
         ensemble_config = EnsembleConfig(
             enabled=True,
             method="bagging",
@@ -50,6 +50,7 @@ class TestEnsembleE2E(unittest.TestCase):
                 base_model_type="lightgbm",
                 n_estimators=2,
                 bootstrap_fraction=0.8,
+                n_jobs=1,  # テスト用に1に設定
                 random_state=42,
             ),
         )
@@ -80,15 +81,16 @@ class TestEnsembleE2E(unittest.TestCase):
         """スタッキングアンサンブルのエンドツーエンドテスト"""
         print("\n=== スタッキングアンサンブル E2E テスト ===")
 
-        # MLトレーニング設定を作成
+        # MLトレーニング設定を作成（scikit-learn StackingClassifier対応）
         ensemble_config = EnsembleConfig(
             enabled=True,
             method="stacking",
             stacking_params=StackingParamsConfig(
                 base_models=["lightgbm", "random_forest"],
-                meta_model="lightgbm",
+                meta_model="logistic_regression",
                 cv_folds=2,
-                use_probas=True,
+                stack_method="predict_proba",
+                n_jobs=1,  # テスト用に1に設定
                 random_state=42,
             ),
         )
@@ -125,12 +127,15 @@ class TestEnsembleE2E(unittest.TestCase):
         # オーケストレーションサービスを初期化
         service = MLTrainingOrchestrationService()
 
-        # アンサンブル設定を作成
+        # アンサンブル設定を作成（scikit-learn BaggingClassifier対応）
         ensemble_config = EnsembleConfig(
             enabled=True,
             method="bagging",
             bagging_params=BaggingParamsConfig(
-                base_model_type="lightgbm", n_estimators=2, random_state=42
+                base_model_type="lightgbm",
+                n_estimators=2,
+                n_jobs=1,  # テスト用に1に設定
+                random_state=42,
             ),
         )
 
@@ -188,7 +193,7 @@ class TestEnsembleE2E(unittest.TestCase):
         """アンサンブル設定の検証テスト"""
         print("\n=== アンサンブル設定検証テスト ===")
 
-        # 有効なバギング設定
+        # 有効なバギング設定（scikit-learn BaggingClassifier対応）
         valid_bagging_config = EnsembleConfig(
             enabled=True,
             method="bagging",
@@ -196,6 +201,7 @@ class TestEnsembleE2E(unittest.TestCase):
                 base_model_type="lightgbm",
                 n_estimators=3,
                 bootstrap_fraction=0.8,
+                n_jobs=1,  # テスト用に1に設定
                 random_state=42,
             ),
         )

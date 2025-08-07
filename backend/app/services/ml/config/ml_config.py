@@ -333,23 +333,36 @@ class EnsembleConfig(BaseSettings):
 
     # デフォルトアンサンブル設定
     DEFAULT_METHOD: str = Field(
-        default="stacking", description="デフォルトのアンサンブル手法（多様性重視）"
+        default="bagging", description="デフォルトのアンサンブル手法（安定性重視）"
     )
 
-    # バギング設定
+    # バギング設定（scikit-learn BaggingClassifier対応）
     BAGGING_N_ESTIMATORS: int = Field(default=5, description="ベースモデル数")
     BAGGING_BOOTSTRAP_FRACTION: float = Field(
-        default=0.8, description="ブートストラップサンプリング比率"
+        default=0.8, description="ブートストラップサンプリング比率（max_samples）"
     )
     BAGGING_BASE_MODEL: str = Field(
         default="lightgbm", description="ベースモデルタイプ"
     )
+    BAGGING_N_JOBS: int = Field(default=-1, description="並列処理数")
+    BAGGING_BOOTSTRAP: bool = Field(
+        default=True, description="ブートストラップサンプリング使用"
+    )
+    BAGGING_MAX_FEATURES: float = Field(default=1.0, description="特徴量使用割合")
 
-    # スタッキング設定
+    # スタッキング設定（scikit-learn StackingClassifier対応）
     STACKING_BASE_MODELS: List[str] = Field(default=["lightgbm", "random_forest"])
-    STACKING_META_MODEL: str = Field(default="lightgbm", description="メタモデル")
+    STACKING_META_MODEL: str = Field(
+        default="logistic_regression", description="メタモデル"
+    )
     STACKING_CV_FOLDS: int = Field(default=5, description="クロスバリデーション分割数")
-    STACKING_USE_PROBAS: bool = Field(default=True, description="確率値を使用するか")
+    STACKING_STACK_METHOD: str = Field(
+        default="predict_proba", description="スタック方法"
+    )
+    STACKING_N_JOBS: int = Field(default=-1, description="並列処理数")
+    STACKING_PASSTHROUGH: bool = Field(
+        default=False, description="元特徴量をメタモデルに渡すか"
+    )
 
     # 最適化設定
     OPTIMIZATION_N_ESTIMATORS_RANGE: List[int] = Field(default=[3, 10])
@@ -362,29 +375,36 @@ class EnsembleConfig(BaseSettings):
         return self.model_dump()
 
     def get_default_config(self) -> Dict[str, Any]:
-        """デフォルトのアンサンブル設定を取得（多様性重視のスタッキング）"""
-        return self.get_default_stacking_config()
+        """デフォルトのアンサンブル設定を取得（安定性重視のバギング）"""
+        return self.get_default_bagging_config()
 
     def get_default_bagging_config(self) -> Dict[str, Any]:
-        """デフォルトのバギング設定を取得"""
+        """デフォルトのバギング設定を取得（scikit-learn BaggingClassifier対応）"""
         return {
             "method": "bagging",
             "bagging_params": {
                 "n_estimators": self.BAGGING_N_ESTIMATORS,
                 "bootstrap_fraction": self.BAGGING_BOOTSTRAP_FRACTION,
                 "base_model_type": self.BAGGING_BASE_MODEL,
+                "n_jobs": self.BAGGING_N_JOBS,
+                "bootstrap": self.BAGGING_BOOTSTRAP,
+                "max_features": self.BAGGING_MAX_FEATURES,
+                "random_state": 42,
             },
         }
 
     def get_default_stacking_config(self) -> Dict[str, Any]:
-        """デフォルトのスタッキング設定を取得"""
+        """デフォルトのスタッキング設定を取得（scikit-learn StackingClassifier対応）"""
         return {
             "method": "stacking",
             "stacking_params": {
                 "base_models": self.STACKING_BASE_MODELS,
                 "meta_model": self.STACKING_META_MODEL,
                 "cv_folds": self.STACKING_CV_FOLDS,
-                "use_probas": self.STACKING_USE_PROBAS,
+                "stack_method": self.STACKING_STACK_METHOD,
+                "n_jobs": self.STACKING_N_JOBS,
+                "passthrough": self.STACKING_PASSTHROUGH,
+                "random_state": 42,
             },
         }
 

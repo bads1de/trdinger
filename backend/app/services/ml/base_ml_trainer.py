@@ -212,7 +212,9 @@ class BaseMLTrainer(BaseResourceManager, ABC):
             self.is_trained = True
 
             # 8. モデルを保存
-            if save_model:
+            # save_modelパラメータの安全な処理
+            should_save_model = bool(save_model) if save_model is not None else True
+            if should_save_model:
                 # training_resultからメタデータを構築
                 # ModelMetadata dataclassを使用してメタデータを構築
                 model_metadata = ModelMetadata.from_training_result(

@@ -186,7 +186,3 @@ class OptunaOptimizer:
         return EnsembleParameterSpace.get_ensemble_parameter_space(
             ensemble_method, enabled_models
         )
-
-    def get_method_name(self) -> str:
-        """最適化手法名を取得"""
-        return "Optuna"

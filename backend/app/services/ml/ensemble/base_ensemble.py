@@ -133,11 +133,17 @@ class BaseEnsemble(ABC):
                 raise UnifiedModelError(
                     "TabNetモデルラッパーのインポートに失敗しました"
                 )
-        elif model_type.lower() == "random_forest":
+        elif (
+            model_type.lower() == "random_forest"
+            or model_type.lower() == "randomforest"
+        ):
             from sklearn.ensemble import RandomForestClassifier
 
             return RandomForestClassifier(n_estimators=100, random_state=42, n_jobs=-1)
-        elif model_type.lower() == "gradient_boosting":
+        elif (
+            model_type.lower() == "gradient_boosting"
+            or model_type.lower() == "gradientboosting"
+        ):
             from sklearn.ensemble import GradientBoostingClassifier
 
             return GradientBoostingClassifier(
@@ -148,6 +154,47 @@ class BaseEnsemble(ABC):
                 random_state=42,
                 verbose=0,  # ログ抑制
             )
+        elif model_type.lower() == "extratrees":
+            try:
+                from ..models.extratrees_wrapper import ExtraTreesModel
+
+                return ExtraTreesModel(automl_config=self.automl_config)
+            except ImportError:
+                raise UnifiedModelError(
+                    "ExtraTreesモデルラッパーのインポートに失敗しました"
+                )
+        elif model_type.lower() == "adaboost":
+            try:
+                from ..models.adaboost_wrapper import AdaBoostModel
+
+                return AdaBoostModel(automl_config=self.automl_config)
+            except ImportError:
+                raise UnifiedModelError(
+                    "AdaBoostモデルラッパーのインポートに失敗しました"
+                )
+        elif model_type.lower() == "ridge":
+            try:
+                from ..models.ridge_wrapper import RidgeModel
+
+                return RidgeModel(automl_config=self.automl_config)
+            except ImportError:
+                raise UnifiedModelError("Ridgeモデルラッパーのインポートに失敗しました")
+        elif model_type.lower() == "naivebayes":
+            try:
+                from ..models.naivebayes_wrapper import NaiveBayesModel
+
+                return NaiveBayesModel(automl_config=self.automl_config)
+            except ImportError:
+                raise UnifiedModelError(
+                    "NaiveBayesモデルラッパーのインポートに失敗しました"
+                )
+        elif model_type.lower() == "knn":
+            try:
+                from ..models.knn_wrapper import KNNModel
+
+                return KNNModel(automl_config=self.automl_config)
+            except ImportError:
+                raise UnifiedModelError("KNNモデルラッパーのインポートに失敗しました")
         else:
             raise UnifiedModelError(f"サポートされていないモデルタイプ: {model_type}")
 
@@ -276,7 +323,7 @@ class BaseEnsemble(ABC):
 
     def save_models(self, base_path: str) -> List[str]:
         """
-        アンサンブルモデルを保存
+        アンサンブルモデルを保存（scikit-learn実装対応）
 
         Args:
             base_path: 保存先ベースパス
@@ -285,73 +332,100 @@ class BaseEnsemble(ABC):
             保存されたファイルパスのリスト
         """
         from datetime import datetime
-
         import joblib
 
         saved_paths = []
-
-        # タイムスタンプを生成
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
 
-        # アルゴリズム名を取得（BaggingEnsembleの場合）
-        algorithm_name = getattr(self, "best_algorithm", "unknown")
-
-        # 最高性能モデル1つのみを保存
-        if len(self.base_models) == 1 and hasattr(self, "best_algorithm"):
-            # 最高性能モデル1つのみの場合
-            model_path = f"{base_path}_{algorithm_name}_{timestamp}.pkl"
-
-            # モデルと設定を統合して保存
+        # scikit-learn実装の場合
+        if hasattr(self, "bagging_classifier") and self.bagging_classifier is not None:
+            # BaggingClassifier保存
+            model_path = f"{base_path}_bagging_classifier_{timestamp}.pkl"
             model_data = {
-                "model": self.base_models[0],
+                "ensemble_classifier": self.bagging_classifier,
                 "config": self.config,
                 "automl_config": self.automl_config,
                 "feature_columns": self.feature_columns,
                 "is_fitted": self.is_fitted,
-                "best_algorithm": algorithm_name,
-                "best_model_score": getattr(self, "best_model_score", None),
-                "ensemble_type": self.__class__.__name__,
-                "selected_model_only": True,
+                "ensemble_type": "BaggingEnsemble",
+                "sklearn_implementation": True,
             }
-
             joblib.dump(model_data, model_path)
             saved_paths.append(model_path)
+            logger.info(f"BaggingClassifierを保存: {model_path}")
 
-            logger.info(f"最高性能モデルを単一ファイルで保存: {model_path}")
-
-        else:
-            # 従来の複数ファイル保存（後方互換性のため）
-            logger.warning("複数モデルが存在するため従来の保存方式を使用")
-
-            for i, model in enumerate(self.base_models):
-                model_path = f"{base_path}_base_model_{i}_{timestamp}.pkl"
-                joblib.dump(model, model_path)
-                saved_paths.append(model_path)
-
-            # メタモデルを保存（存在する場合）
-            if self.meta_model is not None:
-                meta_path = f"{base_path}_meta_model_{timestamp}.pkl"
-                joblib.dump(self.meta_model, meta_path)
-                saved_paths.append(meta_path)
-
-            # 設定を保存
-            config_path = f"{base_path}_config_{timestamp}.pkl"
-            config_data = {
+        elif (
+            hasattr(self, "stacking_classifier")
+            and self.stacking_classifier is not None
+        ):
+            # StackingClassifier保存
+            model_path = f"{base_path}_stacking_classifier_{timestamp}.pkl"
+            model_data = {
+                "ensemble_classifier": self.stacking_classifier,
                 "config": self.config,
                 "automl_config": self.automl_config,
                 "feature_columns": self.feature_columns,
                 "is_fitted": self.is_fitted,
-                "best_algorithm": getattr(self, "best_algorithm", None),
-                "best_model_score": getattr(self, "best_model_score", None),
+                "ensemble_type": "StackingEnsemble",
+                "sklearn_implementation": True,
             }
-            joblib.dump(config_data, config_path)
-            saved_paths.append(config_path)
+            joblib.dump(model_data, model_path)
+            saved_paths.append(model_path)
+            logger.info(f"StackingClassifierを保存: {model_path}")
+
+        else:
+            # 従来の実装（後方互換性のため）
+            logger.warning("従来のアンサンブル実装を保存")
+
+            # 最高性能モデル1つのみを保存
+            if len(self.base_models) == 1 and hasattr(self, "best_algorithm"):
+                algorithm_name = getattr(self, "best_algorithm", "unknown")
+                model_path = f"{base_path}_{algorithm_name}_{timestamp}.pkl"
+
+                model_data = {
+                    "model": self.base_models[0],
+                    "config": self.config,
+                    "automl_config": self.automl_config,
+                    "feature_columns": self.feature_columns,
+                    "is_fitted": self.is_fitted,
+                    "best_algorithm": algorithm_name,
+                    "best_model_score": getattr(self, "best_model_score", None),
+                    "ensemble_type": self.__class__.__name__,
+                    "selected_model_only": True,
+                }
+                joblib.dump(model_data, model_path)
+                saved_paths.append(model_path)
+                logger.info(f"最高性能モデルを保存: {model_path}")
+
+            else:
+                # 複数ファイル保存
+                for i, model in enumerate(self.base_models):
+                    model_path = f"{base_path}_base_model_{i}_{timestamp}.pkl"
+                    joblib.dump(model, model_path)
+                    saved_paths.append(model_path)
+
+                if self.meta_model is not None:
+                    meta_path = f"{base_path}_meta_model_{timestamp}.pkl"
+                    joblib.dump(self.meta_model, meta_path)
+                    saved_paths.append(meta_path)
+
+                config_path = f"{base_path}_config_{timestamp}.pkl"
+                config_data = {
+                    "config": self.config,
+                    "automl_config": self.automl_config,
+                    "feature_columns": self.feature_columns,
+                    "is_fitted": self.is_fitted,
+                    "best_algorithm": getattr(self, "best_algorithm", None),
+                    "best_model_score": getattr(self, "best_model_score", None),
+                }
+                joblib.dump(config_data, config_path)
+                saved_paths.append(config_path)
 
         return saved_paths
 
     def load_models(self, base_path: str) -> bool:
         """
-        アンサンブルモデルを読み込み
+        アンサンブルモデルを読み込み（scikit-learn実装対応）
 
         Args:
             base_path: 読み込み元ベースパス
@@ -361,17 +435,59 @@ class BaseEnsemble(ABC):
         """
         import glob
         import os
-
+        import warnings
         import joblib
         from sklearn.exceptions import InconsistentVersionWarning
 
         try:
-            # まず統合ファイル形式を試す（新形式）
+            # scikit-learn実装のファイルを検索
+            sklearn_patterns = [
+                f"{base_path}_bagging_classifier_*.pkl",
+                f"{base_path}_stacking_classifier_*.pkl",
+            ]
+
+            sklearn_files = []
+            for pattern in sklearn_patterns:
+                sklearn_files.extend(glob.glob(pattern))
+
+            if sklearn_files:
+                # scikit-learn実装ファイルで読み込み
+                sklearn_file = sorted(sklearn_files)[-1]  # 最新のファイルを選択
+                logger.info(
+                    f"scikit-learn実装ファイルでモデルを読み込み: {sklearn_file}"
+                )
+
+                with warnings.catch_warnings():
+                    warnings.simplefilter("ignore", InconsistentVersionWarning)
+                    model_data = joblib.load(sklearn_file)
+
+                # scikit-learn実装からデータを復元
+                if isinstance(model_data, dict) and "ensemble_classifier" in model_data:
+                    # BaggingClassifierまたはStackingClassifierを復元
+                    if "bagging_classifier" in sklearn_file:
+                        self.bagging_classifier = model_data["ensemble_classifier"]
+                        logger.info("BaggingClassifierを復元")
+                    elif "stacking_classifier" in sklearn_file:
+                        self.stacking_classifier = model_data["ensemble_classifier"]
+                        logger.info("StackingClassifierを復元")
+
+                    self.config = model_data.get("config", {})
+                    self.automl_config = model_data.get("automl_config", {})
+                    self.feature_columns = model_data.get("feature_columns", [])
+                    self.is_fitted = model_data.get("is_fitted", False)
+
+                    logger.info("scikit-learn実装モデルの読み込み完了")
+                    return True
+
+            # 従来の統合ファイル形式を試す
             algorithm_pattern = f"{base_path}_*_*.pkl"
             unified_files = [
                 f
                 for f in glob.glob(algorithm_pattern)
-                if not f.endswith("_config.pkl") and not f.endswith("_meta_model.pkl")
+                if not f.endswith("_config.pkl")
+                and not f.endswith("_meta_model.pkl")
+                and "bagging_classifier" not in f
+                and "stacking_classifier" not in f
             ]
 
             if unified_files:

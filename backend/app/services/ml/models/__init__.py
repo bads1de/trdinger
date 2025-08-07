@@ -110,4 +110,11 @@ def get_available_models():
     except ImportError:
         pass
 
+    try:
+        pass
+
+        available.append("knn")
+    except ImportError:
+        pass
+
     return available

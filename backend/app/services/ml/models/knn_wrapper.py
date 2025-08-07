@@ -27,27 +27,100 @@ class KNNModel:
     # アルゴリズム名（AlgorithmRegistryから取得）
     ALGORITHM_NAME = "knn"
 
-    def __init__(self, automl_config: Optional[Dict[str, Any]] = None):
+    def __init__(
+        self,
+        automl_config: Optional[Dict[str, Any]] = None,
+        n_neighbors: int = 5,
+        weights: str = "distance",
+        algorithm: str = "auto",
+        metric: str = "minkowski",
+        p: int = 2,
+        n_jobs: int = -1,
+        **kwargs,
+    ):
         """
         初期化
 
         Args:
             automl_config: AutoML設定（現在は未使用）
+            n_neighbors: 近傍数
+            weights: 重み付け方法
+            algorithm: アルゴリズム
+            metric: 距離メトリック
+            p: ミンコフスキー距離のパラメータ
+            n_jobs: 並列処理数
+            **kwargs: その他のパラメータ
         """
         self.model = None
         self.is_trained = False
         self.feature_columns = None
         self.automl_config = automl_config
+        self.classes_ = None  # sklearn互換性のため
+
+        # sklearn互換性のためのパラメータ
+        self.n_neighbors = n_neighbors
+        self.weights = weights
+        self.algorithm = algorithm
+        self.metric = metric
+        self.p = p
+        self.n_jobs = n_jobs
 
         # デフォルトパラメータ
         self.default_params = {
-            "n_neighbors": 5,
-            "weights": "distance",
-            "algorithm": "auto",
-            "metric": "minkowski",
-            "p": 2,  # ユークリッド距離
-            "n_jobs": -1,
+            "n_neighbors": self.n_neighbors,
+            "weights": self.weights,
+            "algorithm": self.algorithm,
+            "metric": self.metric,
+            "p": self.p,
+            "n_jobs": self.n_jobs,
         }
+
+        # その他のパラメータを設定
+        for key, value in kwargs.items():
+            setattr(self, key, value)
+
+    def fit(self, X, y) -> "KNNModel":
+        """
+        sklearn互換のfitメソッド
+
+        Args:
+            X: 学習用特徴量（DataFrame or numpy array）
+            y: 学習用ターゲット（Series or numpy array）
+
+        Returns:
+            self: 学習済みモデル
+        """
+        try:
+            # numpy配列をDataFrameに変換
+            if not isinstance(X, pd.DataFrame):
+                if hasattr(self, "feature_columns") and self.feature_columns:
+                    X = pd.DataFrame(X, columns=self.feature_columns)
+                else:
+                    X = pd.DataFrame(
+                        X, columns=[f"feature_{i}" for i in range(X.shape[1])]
+                    )
+
+            if not isinstance(y, pd.Series):
+                y = pd.Series(y)
+
+            # 特徴量カラムを保存
+            self.feature_columns = list(X.columns)
+
+            # モデル初期化
+            self.model = KNeighborsClassifier(**self.default_params)
+
+            # 学習実行（KNNは遅延学習なので実際はデータを保存するだけ）
+            self.model.fit(X, y)
+
+            # classes_属性を設定（sklearn互換性のため）
+            self.classes_ = np.unique(y)
+            self.is_trained = True
+
+            return self
+
+        except Exception as e:
+            logger.error(f"sklearn互換fit実行エラー: {e}")
+            raise UnifiedModelError(f"KNNモデルのfit実行に失敗しました: {e}")
 
     def _train_model_impl(
         self,
@@ -138,7 +211,9 @@ class KNNModel:
                 "feature_count": len(self.feature_columns),
                 "train_samples": len(X_train),
                 "test_samples": len(X_test),
-                "num_classes": len(self.model.classes_) if hasattr(self.model, "classes_") else 0,
+                "num_classes": (
+                    len(self.model.classes_) if hasattr(self.model, "classes_") else 0
+                ),
                 "feature_importance": feature_importance,
             }
 
@@ -173,12 +248,12 @@ class KNNModel:
             logger.error(f"❌ KNN学習エラー: {e}")
             raise UnifiedModelError(f"KNN学習に失敗しました: {e}")
 
-    def predict(self, X: pd.DataFrame) -> np.ndarray:
+    def predict(self, X) -> np.ndarray:
         """
-        予測を実行
+        sklearn互換の予測メソッド
 
         Args:
-            X: 特徴量DataFrame
+            X: 特徴量（DataFrame or numpy array）
 
         Returns:
             予測結果
@@ -187,6 +262,15 @@ class KNNModel:
             raise UnifiedModelError("モデルが学習されていません")
 
         try:
+            # numpy配列をDataFrameに変換
+            if not isinstance(X, pd.DataFrame):
+                if hasattr(self, "feature_columns") and self.feature_columns:
+                    X = pd.DataFrame(X, columns=self.feature_columns)
+                else:
+                    X = pd.DataFrame(
+                        X, columns=[f"feature_{i}" for i in range(X.shape[1])]
+                    )
+
             # 特徴量の順序を確認
             if self.feature_columns:
                 X = X[self.feature_columns]
@@ -198,12 +282,12 @@ class KNNModel:
             logger.error(f"KNN予測エラー: {e}")
             raise UnifiedModelError(f"予測に失敗しました: {e}")
 
-    def predict_proba(self, X: pd.DataFrame) -> np.ndarray:
+    def predict_proba(self, X) -> np.ndarray:
         """
-        予測確率を取得
+        sklearn互換の予測確率メソッド
 
         Args:
-            X: 特徴量DataFrame
+            X: 特徴量（DataFrame or numpy array）
 
         Returns:
             予測確率の配列
@@ -212,6 +296,15 @@ class KNNModel:
             raise UnifiedModelError("モデルが学習されていません")
 
         try:
+            # numpy配列をDataFrameに変換
+            if not isinstance(X, pd.DataFrame):
+                if hasattr(self, "feature_columns") and self.feature_columns:
+                    X = pd.DataFrame(X, columns=self.feature_columns)
+                else:
+                    X = pd.DataFrame(
+                        X, columns=[f"feature_{i}" for i in range(X.shape[1])]
+                    )
+
             # 特徴量の順序を確認
             if self.feature_columns:
                 X = X[self.feature_columns]
@@ -222,6 +315,75 @@ class KNNModel:
         except Exception as e:
             logger.error(f"KNN確率予測エラー: {e}")
             raise UnifiedModelError(f"確率予測に失敗しました: {e}")
+
+    def get_params(self, deep: bool = True) -> Dict[str, Any]:
+        """
+        sklearn互換のパラメータ取得メソッド
+
+        Args:
+            deep: 深いコピーを行うかどうか
+
+        Returns:
+            パラメータの辞書
+        """
+        # 基本パラメータ
+        params = {
+            "automl_config": self.automl_config,
+            "n_neighbors": self.n_neighbors,
+            "weights": self.weights,
+            "algorithm": self.algorithm,
+            "metric": self.metric,
+            "p": self.p,
+            "n_jobs": self.n_jobs,
+        }
+
+        # 動的に追加されたパラメータも含める
+        for attr_name in dir(self):
+            if (
+                not attr_name.startswith("_")
+                and attr_name not in params
+                and attr_name
+                not in [
+                    "model",
+                    "is_trained",
+                    "feature_columns",
+                    "classes_",
+                    "default_params",
+                    "fit",
+                    "predict",
+                    "predict_proba",
+                    "get_params",
+                    "set_params",
+                ]
+            ):
+                try:
+                    attr_value = getattr(self, attr_name)
+                    if not callable(attr_value):
+                        params[attr_name] = attr_value
+                except:
+                    pass
+
+        return params
+
+    def set_params(self, **params) -> "KNNModel":
+        """
+        sklearn互換のパラメータ設定メソッド
+
+        Args:
+            **params: 設定するパラメータ
+
+        Returns:
+            self: 設定後のモデル
+        """
+        for param, value in params.items():
+            if hasattr(self, param):
+                setattr(self, param, value)
+                # default_paramsも更新
+                if param in self.default_params:
+                    self.default_params[param] = value
+            else:
+                logger.warning(f"未知のパラメータ: {param}")
+        return self
 
     @property
     def feature_columns(self) -> List[str]:

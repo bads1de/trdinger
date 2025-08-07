@@ -14,7 +14,8 @@ import pandas as pd
 from ....utils.unified_error_handler import UnifiedModelError
 from ..base_ml_trainer import BaseMLTrainer
 from .bagging import BaggingEnsemble
-from .stacking import StackingEnsemble
+
+# from .stacking import StackingEnsemble  # 一時的にコメントアウト
 
 logger = logging.getLogger(__name__)
 
@@ -182,6 +183,20 @@ class EnsembleTrainer(BaseMLTrainer):
         try:
             logger.info(f"アンサンブル学習開始: method={self.ensemble_method}")
 
+            # 入力データの検証
+            if X_train is None or X_train.empty:
+                raise ValueError("学習用特徴量データが空です")
+            if y_train is None or len(y_train) == 0:
+                raise ValueError("学習用ターゲットデータが空です")
+            if len(X_train) != len(y_train):
+                raise ValueError("特徴量とターゲットの長さが一致しません")
+
+            logger.info(
+                f"学習データサイズ: {len(X_train)}行, {len(X_train.columns)}特徴量"
+            )
+            logger.info(f"テストデータサイズ: {len(X_test)}行")
+            logger.info(f"ターゲット分布: {y_train.value_counts().to_dict()}")
+
             # ハイパーパラメータ最適化からのパラメータを分離
             optimized_params = self._extract_optimized_parameters(training_params)
 
@@ -200,6 +215,7 @@ class EnsembleTrainer(BaseMLTrainer):
                 bagging_config.update(
                     {
                         "random_state": training_params.get("random_state", 42),
+                        "n_jobs": training_params.get("n_jobs", -1),  # 並列処理を有効化
                     }
                 )
 
@@ -216,12 +232,17 @@ class EnsembleTrainer(BaseMLTrainer):
                     stacking_config.update(optimized_params["stacking"])
 
                 stacking_config.update(
-                    {"random_state": training_params.get("random_state", 42)}
+                    {
+                        "random_state": training_params.get("random_state", 42),
+                        "n_jobs": training_params.get("n_jobs", -1),  # 並列処理を有効化
+                    }
                 )
 
-                self.ensemble_model = StackingEnsemble(
-                    config=stacking_config, automl_config=self.automl_config
-                )
+                # 一時的にコメントアウト
+                # self.ensemble_model = StackingEnsemble(
+                #     config=stacking_config, automl_config=self.automl_config
+                # )
+                raise UnifiedModelError("StackingEnsembleは現在メンテナンス中です")
 
             else:
                 raise UnifiedModelError(
@@ -232,13 +253,19 @@ class EnsembleTrainer(BaseMLTrainer):
             base_model_params = optimized_params.get("base_models", {})
 
             # アンサンブルモデルを学習
-            training_result = self.ensemble_model.fit(
-                X_train=X_train,
-                y_train=y_train,
-                X_test=X_test,
-                y_test=y_test,
-                base_model_params=base_model_params,
-            )
+            try:
+                logger.info("アンサンブルモデルの学習を開始")
+                training_result = self.ensemble_model.fit(
+                    X_train=X_train,
+                    y_train=y_train,
+                    X_test=X_test,
+                    y_test=y_test,
+                    base_model_params=base_model_params,
+                )
+                logger.info("アンサンブルモデルの学習が完了")
+            except Exception as e:
+                logger.error(f"アンサンブルモデル学習エラー: {e}")
+                raise UnifiedModelError(f"アンサンブルモデルの学習に失敗しました: {e}")
 
             # 予測と評価
             y_pred_proba = self.ensemble_model.predict_proba(X_test)
@@ -341,8 +368,15 @@ class EnsembleTrainer(BaseMLTrainer):
         Returns:
             保存されたモデルのパス
         """
-        if self.ensemble_model is None or not self.is_trained:
-            raise UnifiedModelError("保存する学習済みアンサンブルモデルがありません")
+        if self.ensemble_model is None:
+            raise UnifiedModelError("アンサンブルモデルが初期化されていません")
+        if not self.is_trained:
+            raise UnifiedModelError("アンサンブルモデルが学習されていません")
+        if (
+            not hasattr(self.ensemble_model, "is_fitted")
+            or not self.ensemble_model.is_fitted
+        ):
+            raise UnifiedModelError("アンサンブルモデルの学習が完了していません")
 
         try:
             from ..model_manager import model_manager
@@ -380,8 +414,9 @@ class EnsembleTrainer(BaseMLTrainer):
             except Exception as e:
                 logger.warning(f"特徴量重要度の取得に失敗: {e}")
 
-            # 最高性能モデル1つのみを保存
+            # アンサンブルモデルの保存
             if len(self.ensemble_model.base_models) == 1:
+                # 単一モデル（通常のアンサンブル）の場合
                 best_model = self.ensemble_model.base_models[0]
 
                 # 統一されたモデル保存を使用
@@ -397,9 +432,29 @@ class EnsembleTrainer(BaseMLTrainer):
                     f"アンサンブル最高性能モデル保存完了: {model_path} (アルゴリズム: {algorithm_name})"
                 )
                 return model_path
+            elif (
+                hasattr(self.ensemble_model, "bagging_classifier")
+                and self.ensemble_model.bagging_classifier is not None
+            ):
+                # BaggingClassifierの場合
+                bagging_model = self.ensemble_model.bagging_classifier
+
+                # 統一されたモデル保存を使用
+                model_path = model_manager.save_model(
+                    model=bagging_model,
+                    model_name=model_name,
+                    metadata=final_metadata,
+                    scaler=self.scaler,
+                    feature_columns=self.feature_columns,
+                )
+
+                logger.info(
+                    f"バギングアンサンブルモデル保存完了: {model_path} (アルゴリズム: {algorithm_name})"
+                )
+                return model_path
             else:
                 raise UnifiedModelError(
-                    "アンサンブルモデルが最高性能モデル1つのみを保持していません"
+                    f"アンサンブルモデルが保存可能な形式ではありません。base_models数: {len(self.ensemble_model.base_models)}"
                 )
 
         except Exception as e:
@@ -457,9 +512,11 @@ class EnsembleTrainer(BaseMLTrainer):
                 )
             elif self.ensemble_method.lower() == "stacking":
                 stacking_config = self.ensemble_config.get("stacking_params", {})
-                self.ensemble_model = StackingEnsemble(
-                    config=stacking_config, automl_config=self.automl_config
-                )
+                # 一時的にコメントアウト
+                # self.ensemble_model = StackingEnsemble(
+                #     config=stacking_config, automl_config=self.automl_config
+                # )
+                raise UnifiedModelError("StackingEnsembleは現在メンテナンス中です")
             else:
                 raise UnifiedModelError(
                     f"サポートされていないアンサンブル手法: {self.ensemble_method}"

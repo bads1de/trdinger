@@ -44,32 +44,49 @@ class OptimizationSettingsConfig(BaseModel):
 
 
 class BaggingParamsConfig(BaseModel):
-    """バギングパラメータ設定"""
+    """バギングパラメータ設定（scikit-learn BaggingClassifier対応）"""
 
     n_estimators: int = Field(default=5, description="ベースモデル数")
     bootstrap_fraction: float = Field(
-        default=0.8, description="ブートストラップサンプリング比率"
+        default=0.8, description="ブートストラップサンプリング比率（max_samples）"
     )
     base_model_type: str = Field(
         default="lightgbm",
-        description="ベースモデルタイプ（lightgbm, gradient_boosting, random_forest, xgboost等）",
+        description="ベースモデルタイプ（lightgbm, xgboost, catboost, tabnet, randomforest, extratrees, gradientboosting, adaboost, ridge, naivebayes, knn等）",
     )
     mixed_models: Optional[List[str]] = Field(
         default=None,
         description="混合バギング用モデルリスト（指定時はbase_model_typeより優先、多様性確保）",
     )
-    random_state: Optional[int] = Field(default=None, description="ランダムシード")
+    random_state: Optional[int] = Field(default=42, description="ランダムシード")
+    n_jobs: int = Field(default=-1, description="並列処理数（-1で全CPU使用）")
+    bootstrap: bool = Field(
+        default=True, description="ブートストラップサンプリングを使用するか"
+    )
+    max_features: float = Field(
+        default=1.0, description="各ベースモデルで使用する特徴量の割合"
+    )
 
 
 class StackingParamsConfig(BaseModel):
-    """スタッキングパラメータ設定"""
+    """スタッキングパラメータ設定（scikit-learn StackingClassifier対応）"""
 
     base_models: List[str] = Field(
         default=["lightgbm", "random_forest"], description="ベースモデルのリスト"
     )
-    meta_model: str = Field(default="lightgbm", description="メタモデル")
+    meta_model: str = Field(
+        default="logistic_regression",
+        description="メタモデル（logistic_regression, lightgbm, random_forest）",
+    )
     cv_folds: int = Field(default=5, description="クロスバリデーション分割数")
-    use_probas: bool = Field(default=True, description="確率値を使用するか")
+    stack_method: str = Field(
+        default="predict_proba", description="スタック方法（predict_proba, predict）"
+    )
+    random_state: Optional[int] = Field(default=42, description="ランダムシード")
+    n_jobs: int = Field(default=-1, description="並列処理数（-1で全CPU使用）")
+    passthrough: bool = Field(
+        default=False, description="元の特徴量をメタモデルに渡すか"
+    )
 
 
 class EnsembleConfig(BaseModel):
@@ -92,7 +109,7 @@ class SingleModelConfig(BaseModel):
 
     model_type: str = Field(
         default="lightgbm",
-        description="使用するモデルタイプ (lightgbm, xgboost, catboost, tabnet, knn)",
+        description="使用するモデルタイプ (lightgbm, xgboost, catboost, tabnet, randomforest, extratrees, gradientboosting, adaboost, ridge, naivebayes, knn)",
     )
 
 
@@ -194,7 +211,7 @@ async def start_ml_training(
     Returns:
         MLTrainingResponse: トレーニング開始応答
     """
-    logger.info("🚀 /api/ml-training/train エンドポイントが呼び出されました")
+
     logger.info(f"📋 受信したconfig全体: {config}")
     logger.info(f"📋 アンサンブル設定: {config.ensemble_config}")
     logger.info(

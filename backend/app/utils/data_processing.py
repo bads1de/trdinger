@@ -738,8 +738,15 @@ class DataProcessor:
         """
         try:
             logger.info("学習用データの準備を開始")
+            logger.info(
+                f"入力データサイズ: {len(features_df)}行, {len(features_df.columns)}列"
+            )
 
-            # 1. 特徴量の前処理
+            # 1. 入力データの基本検証
+            if features_df is None or features_df.empty:
+                raise ValueError("入力特徴量データが空です")
+
+            # 2. 特徴量の前処理
             logger.info("特徴量の前処理を実行中...")
             features_processed = self.preprocess_features(
                 features_df,
@@ -753,35 +760,74 @@ class DataProcessor:
                 outlier_method=training_params.get("outlier_method", "iqr"),
             )
 
-            # 2. ラベル生成のための価格データを取得
+            logger.info(
+                f"前処理後データサイズ: {len(features_processed)}行, {len(features_processed.columns)}列"
+            )
+
+            # 3. ラベル生成のための価格データを取得
             if "Close" not in features_processed.columns:
+                logger.error(f"利用可能なカラム: {list(features_processed.columns)}")
                 raise ValueError("Close価格データが特徴量に含まれていません")
 
             price_data = features_processed["Close"]
-
-            # 3. ラベル生成
-            logger.info("ラベル生成を実行中...")
-            labels, threshold_info = label_generator.generate_dynamic_labels(
-                price_data, **training_params
+            logger.info(f"価格データサイズ: {len(price_data)}行")
+            logger.info(
+                f"価格データの範囲: {price_data.min():.2f} - {price_data.max():.2f}"
             )
 
-            # 4. 特徴量とラベルのインデックスを整合
+            # 4. ラベル生成
+            logger.info("ラベル生成を実行中...")
+            try:
+                labels, threshold_info = label_generator.generate_dynamic_labels(
+                    price_data, **training_params
+                )
+                logger.info(f"ラベル生成完了: {len(labels)}行")
+            except Exception as label_error:
+                logger.error(f"ラベル生成エラー: {label_error}")
+                raise ValueError(f"ラベル生成に失敗しました: {label_error}")
+
+            # 5. 特徴量とラベルのインデックスを整合
             logger.info("データの整合性を確保中...")
+            logger.info(
+                f"特徴量インデックス範囲: {features_processed.index.min()} - {features_processed.index.max()}"
+            )
+            logger.info(
+                f"ラベルインデックス範囲: {labels.index.min()} - {labels.index.max()}"
+            )
+
             common_index = features_processed.index.intersection(labels.index)
+            logger.info(f"共通インデックス数: {len(common_index)}")
 
             if len(common_index) == 0:
+                logger.error("特徴量とラベルに共通のインデックスがありません")
+                logger.error(
+                    f"特徴量インデックス: {features_processed.index[:10].tolist()}..."
+                )
+                logger.error(f"ラベルインデックス: {labels.index[:10].tolist()}...")
                 raise ValueError("特徴量とラベルに共通のインデックスがありません")
 
             features_clean = features_processed.loc[common_index]
             labels_clean = labels.loc[common_index]
+            logger.info(f"インデックス整合後: {len(features_clean)}行")
 
-            # 5. NaNを含む行を除去
+            # 6. NaNを含む行を除去
+            logger.info("NaN値の除去を実行中...")
+            features_nan_count = features_clean.isna().sum().sum()
+            labels_nan_count = labels_clean.isna().sum()
+            logger.info(
+                f"特徴量のNaN数: {features_nan_count}, ラベルのNaN数: {labels_nan_count}"
+            )
+
             valid_mask = features_clean.notna().all(axis=1) & labels_clean.notna()
             features_clean = features_clean[valid_mask]
             labels_clean = labels_clean[valid_mask]
+            logger.info(f"NaN除去後: {len(features_clean)}行")
 
-            # 6. 最終的なデータ検証
+            # 7. 最終的なデータ検証
             if len(features_clean) == 0 or len(labels_clean) == 0:
+                logger.error("有効な学習データが存在しません")
+                logger.error(f"最終的な特徴量サイズ: {len(features_clean)}")
+                logger.error(f"最終的なラベルサイズ: {len(labels_clean)}")
                 raise ValueError("有効な学習データが存在しません")
 
             if len(features_clean) != len(labels_clean):
