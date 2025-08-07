@@ -12,8 +12,9 @@ from pathlib import Path
 def test_report_quality():
     """レポートの品質を検証"""
     
-    # レポートファイルのパス
-    report_path = Path("tests/reports/ml_comprehensive_validation_report.md")
+    # レポートファイルのパス（このファイル位置を基準に解決）
+    current_dir = Path(__file__).resolve().parent
+    report_path = (current_dir / "reports" / "ml_comprehensive_validation_report.md").resolve()
     
     if not report_path.exists():
         print("❌ レポートファイルが存在しません")

@@ -15,8 +15,8 @@ class TestMLValidationReport:
     
     @pytest.fixture
     def report_path(self):
-        """レポートファイルのパス"""
-        return Path("backend/tests/reports/ml_comprehensive_validation_report.md")
+        """レポートファイルのパス（このテストファイル位置を基準に解決）"""
+        return (Path(__file__).resolve().parent / "reports" / "ml_comprehensive_validation_report.md").resolve()
     
     @pytest.fixture
     def report_content(self, report_path):

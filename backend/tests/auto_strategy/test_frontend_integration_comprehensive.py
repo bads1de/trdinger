@@ -80,6 +80,7 @@ class MockFrontendAPIClient:
 logger = logging.getLogger(__name__)
 
 
+@pytest.mark.integration
 class TestFrontendIntegrationComprehensive:
     """フロントエンド統合包括的テストクラス"""
 
@@ -338,6 +339,7 @@ class TestFrontendIntegrationComprehensive:
         cache["last_updated"] = time.time() - 400  # 400秒前
         assert not is_cache_valid()
 
+    @pytest.mark.performance
     @pytest.mark.asyncio
     async def test_concurrent_frontend_requests(self, mock_api_client):
         """並行フロントエンドリクエストテスト"""
