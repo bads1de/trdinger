@@ -1135,9 +1135,36 @@ class BaseMLTrainer(BaseResourceManager, ABC):
             logger.warning("学習済みモデルがありません")
             return {}
 
+        # アンサンブルトレーナーが存在する場合は、そちらに委譲
+        if hasattr(self, "_ensemble_trainer") and self._ensemble_trainer:
+            if hasattr(self._ensemble_trainer, "get_feature_importance"):
+                try:
+                    feature_importance = self._ensemble_trainer.get_feature_importance()
+                    if feature_importance:
+                        # 上位N個を取得
+                        sorted_importance = sorted(
+                            feature_importance.items(), key=lambda x: x[1], reverse=True
+                        )[:top_n]
+                        logger.info(
+                            f"アンサンブルトレーナーから特徴量重要度を取得: {len(sorted_importance)}個"
+                        )
+                        return dict(sorted_importance)
+                except Exception as e:
+                    logger.error(
+                        f"アンサンブルトレーナーからの特徴量重要度取得エラー: {e}"
+                    )
+
         # モデルが特徴量重要度を提供する場合
         if hasattr(self.model, "get_feature_importance"):
-            return self.model.get_feature_importance(top_n)
+            try:
+                feature_importance = self.model.get_feature_importance(top_n)
+                if feature_importance:
+                    logger.info(
+                        f"モデルから特徴量重要度を取得: {len(feature_importance)}個"
+                    )
+                    return feature_importance
+            except Exception as e:
+                logger.error(f"モデルからの特徴量重要度取得エラー: {e}")
 
         # LightGBMモデルの場合
         if hasattr(self.model, "feature_importance") and self.feature_columns:
@@ -1152,9 +1179,12 @@ class BaseMLTrainer(BaseResourceManager, ABC):
                     feature_importance.items(), key=lambda x: x[1], reverse=True
                 )[:top_n]
 
+                logger.info(
+                    f"LightGBMから特徴量重要度を取得: {len(sorted_importance)}個"
+                )
                 return dict(sorted_importance)
             except Exception as e:
-                logger.error(f"特徴量重要度取得エラー: {e}")
+                logger.error(f"LightGBM特徴量重要度取得エラー: {e}")
                 return {}
 
         logger.warning("このモデルは特徴量重要度をサポートしていません")

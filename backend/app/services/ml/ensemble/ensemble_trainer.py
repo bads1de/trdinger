@@ -513,3 +513,40 @@ class EnsembleTrainer(BaseMLTrainer):
             logger.warning(f"EnsembleTrainerモデルクリーンアップエラー: {e}")
             # エラーが発生してもクリーンアップは続行
             self.ensemble_model = None
+
+    def get_feature_importance(self, top_n: int = 100) -> Dict[str, float]:
+        """
+        アンサンブルモデルから特徴量重要度を取得
+
+        Args:
+            top_n: 上位N個の特徴量
+
+        Returns:
+            特徴量重要度の辞書
+        """
+        if not self.is_trained or not self.ensemble_model:
+            logger.warning("学習済みアンサンブルモデルがありません")
+            return {}
+
+        try:
+            # アンサンブルモデルから特徴量重要度を取得
+            feature_importance = self.ensemble_model.get_feature_importance()
+            if not feature_importance:
+                logger.warning(
+                    "アンサンブルモデルから特徴量重要度を取得できませんでした"
+                )
+                return {}
+
+            # 上位N個を取得
+            sorted_importance = sorted(
+                feature_importance.items(), key=lambda x: x[1], reverse=True
+            )[:top_n]
+
+            logger.info(
+                f"アンサンブルから特徴量重要度を取得: {len(sorted_importance)}個"
+            )
+            return dict(sorted_importance)
+
+        except Exception as e:
+            logger.error(f"アンサンブル特徴量重要度取得エラー: {e}")
+            return {}
