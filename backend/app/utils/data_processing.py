@@ -10,8 +10,16 @@ from typing import Any, Dict, List, Optional, Tuple
 
 import numpy as np
 import pandas as pd
+from sklearn.compose import ColumnTransformer, make_column_selector
 from sklearn.impute import SimpleImputer
-from sklearn.preprocessing import MinMaxScaler, RobustScaler, StandardScaler
+from sklearn.pipeline import Pipeline, make_pipeline
+from sklearn.preprocessing import (
+    FunctionTransformer,
+    LabelEncoder,
+    MinMaxScaler,
+    RobustScaler,
+    StandardScaler,
+)
 
 from .unified_error_handler import UnifiedDataError
 
@@ -30,6 +38,8 @@ class DataProcessor:
         self.imputers = {}  # カラムごとのimputer
         self.scalers = {}  # カラムごとのscaler
         self.imputation_stats = {}  # 補完統計情報
+        self.preprocessing_pipeline = None  # Pipeline-based前処理パイプライン
+        self.fitted_pipelines = {}  # 用途別のfittedパイプライン
 
     def interpolate_oi_fr_data(self, df: pd.DataFrame) -> pd.DataFrame:
         """
@@ -59,6 +69,210 @@ class DataProcessor:
             )
 
         return result_df
+
+    def create_preprocessing_pipeline(
+        self,
+        numeric_strategy: str = "median",
+        categorical_strategy: str = "most_frequent",
+        scaling_method: str = "robust",
+        remove_outliers: bool = True,
+        outlier_threshold: float = 3.0,
+        outlier_method: str = "iqr",
+    ) -> Pipeline:
+        """
+        scikit-learnのPipelineとColumnTransformerを使った宣言的な前処理パイプライン作成
+
+        レポート3.6で指摘された問題を解決：
+        - 独立した前処理関数を統合
+        - 処理順序の明確化
+        - カラム管理の簡素化
+        - 宣言的で見通しの良い実装
+
+        Args:
+            numeric_strategy: 数値カラムの欠損値補完戦略
+            categorical_strategy: カテゴリカルカラムの欠損値補完戦略
+            scaling_method: スケーリング方法
+            remove_outliers: 外れ値除去を行うか
+            outlier_threshold: 外れ値の閾値
+            outlier_method: 外れ値検出方法
+
+        Returns:
+            前処理パイプライン
+        """
+        # 数値カラム用の前処理パイプライン
+        numeric_pipeline_steps = []
+
+        # 1. 無限値をNaNに変換
+        numeric_pipeline_steps.append(
+            (
+                "inf_to_nan",
+                FunctionTransformer(
+                    func=lambda X: np.where(np.isinf(X), np.nan, X), validate=False
+                ),
+            )
+        )
+
+        # 2. 外れ値除去（オプション）
+        if remove_outliers:
+            if outlier_method == "iqr":
+                outlier_func = self._create_iqr_outlier_remover(outlier_threshold)
+            elif outlier_method == "zscore":
+                outlier_func = self._create_zscore_outlier_remover(outlier_threshold)
+            else:
+                outlier_func = lambda X: X  # 何もしない
+
+            numeric_pipeline_steps.append(
+                (
+                    "outlier_removal",
+                    FunctionTransformer(func=outlier_func, validate=False),
+                )
+            )
+
+        # 3. 欠損値補完
+        numeric_pipeline_steps.append(
+            ("imputer", SimpleImputer(strategy=numeric_strategy))
+        )
+
+        # 4. スケーリング
+        if scaling_method == "standard":
+            scaler = StandardScaler()
+        elif scaling_method == "robust":
+            scaler = RobustScaler()
+        elif scaling_method == "minmax":
+            scaler = MinMaxScaler()
+        else:
+            scaler = StandardScaler()  # デフォルト
+
+        numeric_pipeline_steps.append(("scaler", scaler))
+
+        # 数値パイプラインを作成
+        numeric_pipeline = Pipeline(numeric_pipeline_steps)
+
+        # カテゴリカルカラム用の前処理パイプライン
+        categorical_pipeline = Pipeline(
+            [
+                (
+                    "imputer",
+                    SimpleImputer(strategy=categorical_strategy, fill_value="Unknown"),
+                ),
+                (
+                    "encoder",
+                    FunctionTransformer(
+                        func=self._encode_categorical_safe, validate=False
+                    ),
+                ),
+            ]
+        )
+
+        # ColumnTransformerで数値とカテゴリカルを統合
+        preprocessor = ColumnTransformer(
+            transformers=[
+                (
+                    "numeric",
+                    numeric_pipeline,
+                    make_column_selector(dtype_include=np.number),
+                ),
+                (
+                    "categorical",
+                    categorical_pipeline,
+                    make_column_selector(dtype_include=object),
+                ),
+            ],
+            remainder="passthrough",  # その他のカラムはそのまま通す
+            verbose_feature_names_out=False,
+        )
+
+        # 最終的なパイプライン
+        pipeline = Pipeline(
+            [
+                ("preprocessor", preprocessor),
+                (
+                    "final_cleanup",
+                    FunctionTransformer(func=self._final_cleanup, validate=False),
+                ),
+            ]
+        )
+
+        return pipeline
+
+    def _create_iqr_outlier_remover(self, threshold: float):
+        """IQR法による外れ値除去関数を作成"""
+
+        def remove_outliers_iqr(X):
+            if X.ndim == 1:
+                X = X.reshape(-1, 1)
+
+            result = X.copy()
+            for i in range(X.shape[1]):
+                col_data = X[:, i]
+                if not np.issubdtype(col_data.dtype, np.number):
+                    continue
+
+                Q1 = np.nanquantile(col_data, 0.25)
+                Q3 = np.nanquantile(col_data, 0.75)
+                IQR = Q3 - Q1
+                lower_bound = Q1 - threshold * IQR
+                upper_bound = Q3 + threshold * IQR
+
+                outlier_mask = (col_data < lower_bound) | (col_data > upper_bound)
+                result[outlier_mask, i] = np.nan
+
+            return result
+
+        return remove_outliers_iqr
+
+    def _create_zscore_outlier_remover(self, threshold: float):
+        """Z-score法による外れ値除去関数を作成"""
+
+        def remove_outliers_zscore(X):
+            if X.ndim == 1:
+                X = X.reshape(-1, 1)
+
+            result = X.copy()
+            for i in range(X.shape[1]):
+                col_data = X[:, i]
+                if not np.issubdtype(col_data.dtype, np.number):
+                    continue
+
+                mean = np.nanmean(col_data)
+                std = np.nanstd(col_data)
+                if std == 0:
+                    continue
+
+                z_scores = np.abs((col_data - mean) / std)
+                outlier_mask = z_scores > threshold
+                result[outlier_mask, i] = np.nan
+
+            return result
+
+        return remove_outliers_zscore
+
+    def _encode_categorical_safe(self, X):
+        """安全なカテゴリカル変数エンコーディング"""
+        if X.ndim == 1:
+            X = X.reshape(-1, 1)
+
+        result = np.zeros((X.shape[0], X.shape[1]), dtype=float)
+
+        for i in range(X.shape[1]):
+            col_data = X[:, i]
+            try:
+                # LabelEncoderを使用
+                le = LabelEncoder()
+                # 文字列に変換してからエンコード
+                str_data = [str(x) if x is not None else "Unknown" for x in col_data]
+                result[:, i] = le.fit_transform(str_data)
+            except Exception as e:
+                logger.warning(f"カテゴリカルエンコーディングエラー (列{i}): {e}")
+                # エラーの場合は0で埋める
+                result[:, i] = 0
+
+        return result
+
+    def _final_cleanup(self, X):
+        """最終的なクリーンアップ"""
+        # 残っているNaNを0で埋める
+        return np.nan_to_num(X, nan=0.0, posinf=0.0, neginf=0.0)
 
     def interpolate_fear_greed_data(self, df: pd.DataFrame) -> pd.DataFrame:
         """
@@ -771,9 +985,6 @@ class DataProcessor:
 
             price_data = features_processed["Close"]
             logger.info(f"価格データサイズ: {len(price_data)}行")
-            logger.info(
-                f"価格データの範囲: {price_data.min():.2f} - {price_data.max():.2f}"
-            )
 
             # 4. ラベル生成
             logger.info("ラベル生成を実行中...")
@@ -788,15 +999,8 @@ class DataProcessor:
 
             # 5. 特徴量とラベルのインデックスを整合
             logger.info("データの整合性を確保中...")
-            logger.info(
-                f"特徴量インデックス範囲: {features_processed.index.min()} - {features_processed.index.max()}"
-            )
-            logger.info(
-                f"ラベルインデックス範囲: {labels.index.min()} - {labels.index.max()}"
-            )
 
             common_index = features_processed.index.intersection(labels.index)
-            logger.info(f"共通インデックス数: {len(common_index)}")
 
             if len(common_index) == 0:
                 logger.error("特徴量とラベルに共通のインデックスがありません")
@@ -808,20 +1012,12 @@ class DataProcessor:
 
             features_clean = features_processed.loc[common_index]
             labels_clean = labels.loc[common_index]
-            logger.info(f"インデックス整合後: {len(features_clean)}行")
 
             # 6. NaNを含む行を除去
             logger.info("NaN値の除去を実行中...")
-            features_nan_count = features_clean.isna().sum().sum()
-            labels_nan_count = labels_clean.isna().sum()
-            logger.info(
-                f"特徴量のNaN数: {features_nan_count}, ラベルのNaN数: {labels_nan_count}"
-            )
-
             valid_mask = features_clean.notna().all(axis=1) & labels_clean.notna()
             features_clean = features_clean[valid_mask]
             labels_clean = labels_clean[valid_mask]
-            logger.info(f"NaN除去後: {len(features_clean)}行")
 
             # 7. 最終的なデータ検証
             if len(features_clean) == 0 or len(labels_clean) == 0:
@@ -833,22 +1029,158 @@ class DataProcessor:
             if len(features_clean) != len(labels_clean):
                 raise ValueError("特徴量とラベルの長さが一致しません")
 
-            logger.info(
-                f"学習用データの準備が完了: {len(features_clean)}行, {len(features_clean.columns)}特徴量"
-            )
-            logger.info(f"ラベル分布: {labels_clean.value_counts().to_dict()}")
-
             return features_clean, labels_clean, threshold_info
 
         except Exception as e:
             logger.error(f"学習用データの準備でエラーが発生: {e}")
             raise
 
+    def preprocess_with_pipeline(
+        self,
+        df: pd.DataFrame,
+        pipeline_name: str = "default",
+        fit_pipeline: bool = True,
+        **pipeline_params,
+    ) -> pd.DataFrame:
+        """
+        Pipelineベースの前処理実行
+
+        レポート3.6の改善：宣言的で見通しの良い前処理実装
+
+        Args:
+            df: 対象DataFrame
+            pipeline_name: パイプライン名（キャッシュ用）
+            fit_pipeline: パイプラインをfitするか（Falseの場合は既存のfittedパイプラインを使用）
+            **pipeline_params: パイプライン作成パラメータ
+
+        Returns:
+            前処理されたDataFrame
+        """
+        try:
+            logger.info(f"Pipelineベース前処理開始: {pipeline_name}")
+
+            if fit_pipeline or pipeline_name not in self.fitted_pipelines:
+                # 新しいパイプラインを作成
+                pipeline = self.create_preprocessing_pipeline(**pipeline_params)
+
+                # パイプラインをfitして保存
+                logger.info("パイプラインをfitting中...")
+                fitted_pipeline = pipeline.fit(df)
+                self.fitted_pipelines[pipeline_name] = fitted_pipeline
+
+                logger.info(f"パイプライン '{pipeline_name}' をfitして保存しました")
+            else:
+                # 既存のfittedパイプラインを使用
+                fitted_pipeline = self.fitted_pipelines[pipeline_name]
+                logger.info(f"既存のパイプライン '{pipeline_name}' を使用")
+
+            # 変換実行
+            logger.info("データ変換実行中...")
+            transformed_data = fitted_pipeline.transform(df)
+
+            # 結果をDataFrameに変換
+            if hasattr(transformed_data, "toarray"):
+                # sparse matrixの場合
+                transformed_data = transformed_data.toarray()
+
+            # カラム名を生成
+            try:
+                feature_names = fitted_pipeline.get_feature_names_out()
+            except Exception:
+                # feature名が取得できない場合は自動生成
+                feature_names = [
+                    f"feature_{i}" for i in range(transformed_data.shape[1])
+                ]
+
+            result_df = pd.DataFrame(
+                transformed_data, index=df.index, columns=feature_names
+            )
+
+            logger.info(
+                f"Pipeline前処理完了: {len(result_df)}行, {len(result_df.columns)}列"
+            )
+            return result_df
+
+        except Exception as e:
+            logger.error(f"Pipeline前処理エラー: {e}")
+            # フォールバック：従来の方法
+            logger.warning("従来の前処理方法にフォールバック")
+            return self.preprocess_features(df, **pipeline_params)
+
+    def create_ml_preprocessing_pipeline(
+        self,
+        target_column: str = "Close",
+        feature_selection: bool = False,
+        n_features: Optional[int] = None,
+    ) -> Pipeline:
+        """
+        機械学習用の特化したパイプライン作成
+
+        Args:
+            target_column: ターゲットカラム名
+            feature_selection: 特徴選択を行うか
+            n_features: 選択する特徴数
+
+        Returns:
+            ML用前処理パイプライン
+        """
+        from sklearn.feature_selection import SelectKBest, f_regression
+
+        # 基本的な前処理パイプライン
+        base_pipeline = self.create_preprocessing_pipeline(
+            scaling_method="robust",  # MLには頑健なスケーリングを使用
+            remove_outliers=True,
+            outlier_method="iqr",
+        )
+
+        steps = [("base_preprocessing", base_pipeline)]
+
+        # 特徴選択（オプション）
+        if feature_selection and n_features:
+            steps.append(
+                (
+                    "feature_selection",
+                    SelectKBest(score_func=f_regression, k=n_features),
+                )
+            )
+
+        return Pipeline(steps)
+
+    def get_pipeline_info(self, pipeline_name: str) -> Dict[str, Any]:
+        """
+        パイプライン情報を取得
+
+        Args:
+            pipeline_name: パイプライン名
+
+        Returns:
+            パイプライン情報の辞書
+        """
+        if pipeline_name not in self.fitted_pipelines:
+            return {"exists": False}
+
+        pipeline = self.fitted_pipelines[pipeline_name]
+
+        info = {
+            "exists": True,
+            "steps": [step[0] for step in pipeline.steps],
+            "n_features_in": getattr(pipeline, "n_features_in_", None),
+            "feature_names_in": getattr(pipeline, "feature_names_in_", None),
+        }
+
+        try:
+            info["feature_names_out"] = pipeline.get_feature_names_out().tolist()
+        except Exception:
+            info["feature_names_out"] = None
+
+        return info
+
     def clear_cache(self):
         """キャッシュをクリア"""
         self.imputers.clear()
         self.scalers.clear()
         self.imputation_stats.clear()
+        self.fitted_pipelines.clear()  # Pipelineキャッシュもクリア
         logger.info("DataProcessorのキャッシュをクリアしました")
 
 

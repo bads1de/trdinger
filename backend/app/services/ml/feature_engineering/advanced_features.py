@@ -11,7 +11,6 @@ from typing import Optional
 import numpy as np
 import pandas as pd
 import talib
-from scipy import stats
 from sklearn.preprocessing import StandardScaler
 
 logger = logging.getLogger(__name__)
@@ -199,18 +198,19 @@ class AdvancedFeatureEngineer:
             ma = data["Close"].rolling(window).mean()
             data[f"Close_deviation_from_ma_{window}"] = (data["Close"] - ma) / ma
 
-        # トレンド強度
+        # トレンド強度（効率的な実装）
         for window in [10, 20, 50]:
+            # NumPyのpolyfitを使用してより効率的に線形回帰の傾きを計算
+            def calculate_trend_strength(series):
+                if len(series) == window and not series.isna().any():
+                    x = np.arange(len(series))
+                    # polyfit(degree=1)で線形回帰の傾きを直接計算
+                    slope = np.polyfit(x, series, 1)[0]
+                    return slope
+                return np.nan
+
             data[f"Trend_strength_{window}"] = (
-                data["Close"]
-                .rolling(window)
-                .apply(
-                    lambda x: (
-                        stats.linregress(range(len(x)), x)[0]
-                        if len(x) == window
-                        else np.nan
-                    )
-                )
+                data["Close"].rolling(window).apply(calculate_trend_strength, raw=False)
             )
 
         return data

@@ -9,7 +9,9 @@ import logging
 from enum import Enum
 from typing import Any, Dict, Optional, Tuple
 
+import numpy as np
 import pandas as pd
+from sklearn.preprocessing import KBinsDiscretizer
 
 logger = logging.getLogger(__name__)
 
@@ -22,6 +24,7 @@ class ThresholdMethod(Enum):
     STD_DEVIATION = "std_deviation"  # 標準偏差ベース
     ADAPTIVE = "adaptive"  # 適応的閾値
     DYNAMIC_VOLATILITY = "dynamic_volatility"  # 動的ボラティリティベース
+    KBINS_DISCRETIZER = "kbins_discretizer"  # KBinsDiscretizerベース
 
 
 class LabelGenerator:
@@ -143,8 +146,10 @@ class LabelGenerator:
                 price_change, target_distribution, **kwargs
             )
         elif method == ThresholdMethod.DYNAMIC_VOLATILITY:
-            return self._calculate_dynamic_volatility_thresholds(
-                price_change, **kwargs
+            return self._calculate_dynamic_volatility_thresholds(price_change, **kwargs)
+        elif method == ThresholdMethod.KBINS_DISCRETIZER:
+            return self._calculate_kbins_discretizer_thresholds(
+                price_change, target_distribution, **kwargs
             )
         else:
             raise ValueError(f"未対応の閾値計算方法: {method}")
@@ -351,7 +356,7 @@ class LabelGenerator:
         threshold_multiplier: float = 0.5,
         min_threshold: float = 0.005,
         max_threshold: float = 0.05,
-        **kwargs
+        **kwargs,
     ) -> Dict[str, Any]:
         """
         動的ボラティリティベースの閾値を計算
@@ -387,17 +392,17 @@ class LabelGenerator:
 
         # 統計情報を計算
         volatility_stats = {
-            'mean_volatility': volatility.dropna().mean(),
-            'std_volatility': volatility.dropna().std(),
-            'min_volatility': volatility.dropna().min(),
-            'max_volatility': volatility.dropna().max(),
+            "mean_volatility": volatility.dropna().mean(),
+            "std_volatility": volatility.dropna().std(),
+            "min_volatility": volatility.dropna().min(),
+            "max_volatility": volatility.dropna().max(),
         }
 
         threshold_stats = {
-            'mean_threshold': avg_threshold,
-            'min_threshold_used': dynamic_threshold.dropna().min(),
-            'max_threshold_used': dynamic_threshold.dropna().max(),
-            'threshold_std': dynamic_threshold.dropna().std(),
+            "mean_threshold": avg_threshold,
+            "min_threshold_used": dynamic_threshold.dropna().min(),
+            "max_threshold_used": dynamic_threshold.dropna().max(),
+            "threshold_std": dynamic_threshold.dropna().std(),
         }
 
         return {
@@ -444,4 +449,105 @@ class LabelGenerator:
             threshold_multiplier=threshold_multiplier,
             min_threshold=min_threshold,
             max_threshold=max_threshold,
+        )
+
+    def _calculate_kbins_discretizer_thresholds(
+        self,
+        price_change: pd.Series,
+        target_distribution: Optional[Dict[str, float]] = None,
+        strategy: str = "quantile",
+        **kwargs,
+    ) -> Dict[str, Any]:
+        """
+        KBinsDiscretizerを使った閾値計算
+
+        scikit-learnのKBinsDiscretizerを使用して、複雑な条件分岐を
+        簡素化し、より効率的で保守性の高い実装を提供します。
+
+        Args:
+            price_change: 価格変化率データ
+            target_distribution: 目標分布（使用されませんが互換性のため保持）
+            strategy: 分割戦略 ('uniform', 'quantile', 'kmeans')
+            **kwargs: その他のパラメータ
+
+        Returns:
+            閾値情報の辞書
+        """
+        try:
+            # 価格変化率を2次元配列に変換（KBinsDiscretizerの要求）
+            price_change_clean = price_change.dropna()
+            if len(price_change_clean) == 0:
+                raise ValueError("有効な価格変化率データがありません")
+
+            X = price_change_clean.values.reshape(-1, 1)
+
+            # KBinsDiscretizerで3つのビンに分割
+            discretizer = KBinsDiscretizer(
+                n_bins=3,
+                encode="ordinal",
+                strategy=strategy,
+                subsample=None,  # 全データを使用
+            )
+
+            # フィットして境界値を取得
+            discretizer.fit(X)
+            bin_edges = discretizer.bin_edges_[0]  # 最初の特徴量の境界値
+
+            # 閾値を設定（下落/レンジ/上昇の境界）
+            threshold_down = bin_edges[1]  # 下落とレンジの境界
+            threshold_up = bin_edges[2]  # レンジと上昇の境界
+
+            # 実際の分布を計算
+            up_count = (price_change_clean > threshold_up).sum()
+            down_count = (price_change_clean < threshold_down).sum()
+            range_count = len(price_change_clean) - up_count - down_count
+            total_count = len(price_change_clean)
+
+            actual_distribution = {
+                "up": up_count / total_count,
+                "down": down_count / total_count,
+                "range": range_count / total_count,
+            }
+
+            return {
+                "method": "kbins_discretizer",
+                "threshold_up": threshold_up,
+                "threshold_down": threshold_down,
+                "strategy": strategy,
+                "bin_edges": bin_edges.tolist(),
+                "actual_distribution": actual_distribution,
+                "n_samples": total_count,
+                "description": f"KBinsDiscretizer（{strategy}戦略、3ビン分割）",
+            }
+
+        except Exception as e:
+            logger.error(f"KBinsDiscretizer閾値計算エラー: {e}")
+            # フォールバック：分位数ベース
+            logger.warning("KBinsDiscretizer計算が失敗、分位数ベースにフォールバック")
+            return self._calculate_quantile_thresholds(
+                price_change, target_distribution
+            )
+
+    def generate_labels_with_kbins_discretizer(
+        self,
+        price_data: pd.Series,
+        strategy: str = "quantile",
+    ) -> Tuple[pd.Series, Dict[str, Any]]:
+        """
+        KBinsDiscretizerを使用したラベル生成
+
+        レポートで提案されたKBinsDiscretizerによる簡素化実装。
+        複雑な条件分岐を排除し、scikit-learnの標準機能を活用します。
+
+        Args:
+            price_data: 価格データ（Close価格）
+            strategy: 分割戦略 ('uniform', 'quantile', 'kmeans')
+
+        Returns:
+            ラベルSeries, 閾値情報の辞書
+        """
+        return self.generate_labels(
+            price_data,
+            method=ThresholdMethod.KBINS_DISCRETIZER,
+            strategy=strategy,
         )
