@@ -252,7 +252,7 @@ class DataValidator:
         data: pd.Series, window: int, default_value: float = 0.0
     ) -> Union[pd.Series, np.ndarray, float]:
         """
-        安全な正規化処理（Z-score）- pandasの組み込み関数を使用
+        安全な正規化処理（Z-score）- scikit-learn StandardScaler使用
 
         Args:
             data: 正規化するデータ
@@ -263,25 +263,76 @@ class DataValidator:
             正規化されたデータ
         """
         try:
-            # pandasの組み込み関数を使用してローリング統計を計算
-            rolling_mean = data.rolling(window=window, min_periods=1).mean()
-            rolling_std = data.rolling(window=window, min_periods=1).std()
+            from sklearn.preprocessing import StandardScaler
 
-            # 標準偏差が0または非常に小さい場合を考慮
-            rolling_std = rolling_std.where(rolling_std > 1e-8, 1e-8)
+            # scikit-learnのStandardScalerを使用したローリング正規化
+            normalized_values = []
 
-            # Z-score正規化
-            normalized = (data - rolling_mean) / rolling_std
+            for i in range(len(data)):
+                start_idx = max(0, i - window + 1)
+                window_data = data.iloc[start_idx : i + 1]
 
-            # 無限値とNaN値を置換
-            normalized = normalized.replace([np.inf, -np.inf], default_value)
-            normalized = normalized.fillna(default_value)
+                if len(window_data) < 2:
+                    normalized_values.append(default_value)
+                    continue
 
-            return normalized
+                try:
+                    # StandardScalerで正規化
+                    scaler = StandardScaler()
+                    window_array = window_data.values.reshape(-1, 1)
+
+                    # 定数データの場合
+                    if window_data.std() == 0:
+                        normalized_values.append(default_value)
+                        continue
+
+                    # 正規化実行
+                    scaler.fit(window_array)
+                    current_value = data.iloc[i]
+                    normalized_value = scaler.transform([[current_value]])[0, 0]
+
+                    # 無限値チェック
+                    if np.isfinite(normalized_value):
+                        normalized_values.append(normalized_value)
+                    else:
+                        normalized_values.append(default_value)
+
+                except Exception:
+                    normalized_values.append(default_value)
+
+            result = pd.Series(normalized_values, index=data.index)
+
+            # 最終的な無限値とNaN値の置換
+            result = result.replace([np.inf, -np.inf], default_value)
+            result = result.fillna(default_value)
+
+            return result
 
         except Exception as e:
-            logger.warning(f"正規化処理でエラーが発生しました: {e}")
-            return pd.Series(np.full(len(data), default_value), index=data.index)
+            logger.warning(
+                f"scikit-learn正規化処理エラー、フォールバック実装を使用: {e}"
+            )
+            # フォールバック: 元の実装
+            try:
+                # pandasの組み込み関数を使用してローリング統計を計算
+                rolling_mean = data.rolling(window=window, min_periods=1).mean()
+                rolling_std = data.rolling(window=window, min_periods=1).std()
+
+                # 標準偏差が0または非常に小さい場合を考慮
+                rolling_std = rolling_std.where(rolling_std > 1e-8, 1e-8)
+
+                # Z-score正規化
+                normalized = (data - rolling_mean) / rolling_std
+
+                # 無限値とNaN値を置換
+                normalized = normalized.replace([np.inf, -np.inf], default_value)
+                normalized = normalized.fillna(default_value)
+
+                return normalized
+
+            except Exception as e2:
+                logger.warning(f"フォールバック正規化処理エラー: {e2}")
+                return pd.Series(np.full(len(data), default_value), index=data.index)
 
     @classmethod
     def validate_dataframe(

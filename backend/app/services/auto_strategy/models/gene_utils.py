@@ -22,7 +22,7 @@ def get_indicator_ids() -> Dict[str, int]:
         technical_indicators = list(indicator_service.get_supported_indicators().keys())
 
         # ML指標を追加
-        ml_indicators = ['ML_UP_PROB', 'ML_DOWN_PROB', 'ML_RANGE_PROB']
+        ml_indicators = ["ML_UP_PROB", "ML_DOWN_PROB", "ML_RANGE_PROB"]
 
         # 全指標を結合
         all_indicators = technical_indicators + ml_indicators
@@ -45,22 +45,88 @@ def get_id_to_indicator(indicator_ids: Dict[str, int]) -> Dict[int, str]:
 def normalize_parameter(
     value: float, min_val: float = 1, max_val: float = 200
 ) -> float:
-    """パラメータを0-1の範囲に正規化"""
+    """
+    パラメータを0-1の範囲に正規化（scikit-learn MinMaxScaler互換）
+
+    Args:
+        value: 正規化する値
+        min_val: 最小値
+        max_val: 最大値
+
+    Returns:
+        正規化された値（0-1の範囲）
+    """
     try:
-        return (value - min_val) / (max_val - min_val)
-    except ZeroDivisionError:
-        return 0.0
+        from sklearn.preprocessing import MinMaxScaler
+        import numpy as np
+
+        # scikit-learnのMinMaxScalerを使用
+        scaler = MinMaxScaler(feature_range=(0, 1))
+
+        # 単一値の場合の処理
+        if min_val == max_val:
+            return 0.0
+
+        # 値を配列に変換してスケーリング
+        values = np.array([[min_val], [max_val], [value]])
+        scaled_values = scaler.fit_transform(values)
+
+        return float(scaled_values[2, 0])
+
+    except Exception as e:
+        # フォールバック: 手動実装
+        try:
+            if max_val == min_val:
+                return 0.0
+            return (value - min_val) / (max_val - min_val)
+        except ZeroDivisionError:
+            return 0.0
 
 
 def denormalize_parameter(
     normalized_val: float, min_val: float = 1, max_val: float = 200
 ) -> int:
-    """正規化されたパラメータを元の範囲に戻す"""
+    """
+    正規化されたパラメータを元の範囲に戻す（scikit-learn MinMaxScaler互換）
+
+    Args:
+        normalized_val: 正規化された値（0-1の範囲）
+        min_val: 元の最小値
+        max_val: 元の最大値
+
+    Returns:
+        元の範囲に戻された整数値
+    """
     try:
-        value = min_val + normalized_val * (max_val - min_val)
+        from sklearn.preprocessing import MinMaxScaler
+        import numpy as np
+
+        # scikit-learnのMinMaxScalerを使用
+        scaler = MinMaxScaler(feature_range=(0, 1))
+
+        # 単一値の場合の処理
+        if min_val == max_val:
+            return int(min_val)
+
+        # 範囲を学習
+        range_values = np.array([[min_val], [max_val]])
+        scaler.fit(range_values)
+
+        # 逆変換
+        denormalized = scaler.inverse_transform([[normalized_val]])
+        value = denormalized[0, 0]
+
         return int(max(min_val, min(max_val, int(value))))
-    except Exception:
-        return int(min_val)
+
+    except Exception as e:
+        # フォールバック: 手動実装
+        try:
+            if max_val == min_val:
+                return int(min_val)
+            value = min_val + normalized_val * (max_val - min_val)
+            return int(max(min_val, min(max_val, int(value))))
+        except Exception:
+            return int(min_val)
 
 
 def get_encoding_info(indicator_ids: Dict[str, int]) -> Dict:

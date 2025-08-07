@@ -10,6 +10,7 @@ from typing import Any, Dict
 
 import numpy as np
 import pandas as pd
+import talib
 
 from .base_feature_calculator import BaseFeatureCalculator
 
@@ -164,61 +165,170 @@ class TechnicalFeatureCalculator(BaseFeatureCalculator):
 
             result_df = self.create_result_dataframe(df)
 
-            # RSI（安全な計算）
-            delta = result_df["Close"].diff().fillna(0.0).astype(float)
-            gain = self.safe_rolling_mean_calculation(delta.clip(lower=0), window=14)
-            loss = self.safe_rolling_mean_calculation(-delta.clip(upper=0), window=14)
-            rs = self.safe_ratio_calculation(gain, loss, default_value=1.0)
-            result_df["RSI"] = 100 - (100 / (1 + rs))
+            # RSI（TA-lib使用）
+            try:
+                close_values = result_df["Close"].values.astype(np.float64)
+                rsi_values = talib.RSI(close_values, timeperiod=14)
+                result_df["RSI"] = pd.Series(rsi_values, index=result_df.index).fillna(
+                    50.0
+                )
+            except Exception as e:
+                logger.warning(f"TA-lib RSI計算エラー、フォールバック実装を使用: {e}")
+                # フォールバック実装
+                delta = result_df["Close"].diff().fillna(0.0).astype(float)
+                gain = self.safe_rolling_mean_calculation(
+                    delta.clip(lower=0), window=14
+                )
+                loss = self.safe_rolling_mean_calculation(
+                    -delta.clip(upper=0), window=14
+                )
+                rs = self.safe_ratio_calculation(gain, loss, default_value=1.0)
+                result_df["RSI"] = 100 - (100 / (1 + rs))
 
-            # MACD
-            ema_12 = result_df["Close"].ewm(span=12).mean()
-            ema_26 = result_df["Close"].ewm(span=26).mean()
-            result_df["MACD"] = ema_12 - ema_26
-            result_df["MACD_Signal"] = result_df["MACD"].ewm(span=9).mean()
-            result_df["MACD_Histogram"] = result_df["MACD"] - result_df["MACD_Signal"]
+            # MACD（TA-lib使用）
+            try:
+                close_values = result_df["Close"].values.astype(np.float64)
+                macd, macd_signal, macd_histogram = talib.MACD(
+                    close_values, fastperiod=12, slowperiod=26, signalperiod=9
+                )
+                result_df["MACD"] = pd.Series(macd, index=result_df.index).fillna(0.0)
+                result_df["MACD_Signal"] = pd.Series(
+                    macd_signal, index=result_df.index
+                ).fillna(0.0)
+                result_df["MACD_Histogram"] = pd.Series(
+                    macd_histogram, index=result_df.index
+                ).fillna(0.0)
+            except Exception as e:
+                logger.warning(f"TA-lib MACD計算エラー、フォールバック実装を使用: {e}")
+                # フォールバック実装
+                ema_12 = result_df["Close"].ewm(span=12).mean()
+                ema_26 = result_df["Close"].ewm(span=26).mean()
+                result_df["MACD"] = ema_12 - ema_26
+                result_df["MACD_Signal"] = result_df["MACD"].ewm(span=9).mean()
+                result_df["MACD_Histogram"] = (
+                    result_df["MACD"] - result_df["MACD_Signal"]
+                )
 
-            # ストキャスティクス（安全な計算）
-            period = 14
-            low_14 = result_df["Low"].rolling(window=period, min_periods=1).min()
-            high_14 = result_df["High"].rolling(window=period, min_periods=1).max()
+            # ストキャスティクス（TA-lib使用）
+            try:
+                high_values = result_df["High"].values.astype(np.float64)
+                low_values = result_df["Low"].values.astype(np.float64)
+                close_values = result_df["Close"].values.astype(np.float64)
+                slowk, slowd = talib.STOCH(
+                    high_values,
+                    low_values,
+                    close_values,
+                    fastk_period=14,
+                    slowk_period=3,
+                    slowk_matype=0,
+                    slowd_period=3,
+                    slowd_matype=0,
+                )
+                result_df["Stochastic_K"] = pd.Series(
+                    slowk, index=result_df.index
+                ).fillna(50.0)
+                result_df["Stochastic_D"] = pd.Series(
+                    slowd, index=result_df.index
+                ).fillna(50.0)
+            except Exception as e:
+                logger.warning(
+                    f"TA-lib Stochastic計算エラー、フォールバック実装を使用: {e}"
+                )
+                # フォールバック実装
+                period = 14
+                low_14 = result_df["Low"].rolling(window=period, min_periods=1).min()
+                high_14 = result_df["High"].rolling(window=period, min_periods=1).max()
+                result_df["Stochastic_K"] = 100 * self.safe_ratio_calculation(
+                    result_df["Close"] - low_14, high_14 - low_14, default_value=0.5
+                )
+                result_df["Stochastic_D"] = self.safe_rolling_mean_calculation(
+                    result_df["Stochastic_K"], window=3
+                )
 
-            result_df["Stochastic_K"] = 100 * self.safe_ratio_calculation(
-                result_df["Close"] - low_14, high_14 - low_14, default_value=0.5
-            )
-            result_df["Stochastic_D"] = self.safe_rolling_mean_calculation(
-                result_df["Stochastic_K"], window=3
-            )
+            # ウィリアムズ%R（TA-lib使用）
+            try:
+                high_values = result_df["High"].values.astype(np.float64)
+                low_values = result_df["Low"].values.astype(np.float64)
+                close_values = result_df["Close"].values.astype(np.float64)
+                willr_values = talib.WILLR(
+                    high_values, low_values, close_values, timeperiod=14
+                )
+                result_df["Williams_R"] = pd.Series(
+                    willr_values, index=result_df.index
+                ).fillna(-50.0)
+            except Exception as e:
+                logger.warning(
+                    f"TA-lib Williams %R計算エラー、フォールバック実装を使用: {e}"
+                )
+                # フォールバック実装（high_14, low_14は上のStochasticで計算済み）
+                try:
+                    high_14 = result_df["High"].rolling(window=14, min_periods=1).max()
+                    low_14 = result_df["Low"].rolling(window=14, min_periods=1).min()
+                    result_df["Williams_R"] = -100 * self.safe_ratio_calculation(
+                        high_14 - result_df["Close"],
+                        high_14 - low_14,
+                        default_value=0.5,
+                    )
+                except Exception:
+                    result_df["Williams_R"] = -50.0
 
-            # ウィリアムズ%R（安全な計算）
-            result_df["Williams_R"] = -100 * self.safe_ratio_calculation(
-                high_14 - result_df["Close"], high_14 - low_14, default_value=0.5
-            )
+            # CCI（Commodity Channel Index）（TA-lib使用）
+            try:
+                high_values = result_df["High"].values.astype(np.float64)
+                low_values = result_df["Low"].values.astype(np.float64)
+                close_values = result_df["Close"].values.astype(np.float64)
+                cci_values = talib.CCI(
+                    high_values, low_values, close_values, timeperiod=20
+                )
+                result_df["CCI"] = pd.Series(cci_values, index=result_df.index).fillna(
+                    0.0
+                )
+            except Exception as e:
+                logger.warning(f"TA-lib CCI計算エラー、フォールバック実装を使用: {e}")
+                # フォールバック実装
+                typical_price = (
+                    result_df["High"] + result_df["Low"] + result_df["Close"]
+                ) / 3
+                sma_tp = self.safe_rolling_mean_calculation(typical_price, window=20)
+                mad = typical_price.rolling(window=20, min_periods=1).apply(
+                    lambda x: np.mean(np.abs(x - x.mean()))
+                )
+                result_df["CCI"] = self.safe_ratio_calculation(
+                    typical_price - sma_tp, 0.015 * mad, default_value=0.0
+                )
 
-            # CCI（Commodity Channel Index）（安全な計算）
-            typical_price = (
-                result_df["High"] + result_df["Low"] + result_df["Close"]
-            ) / 3
-            sma_tp = self.safe_rolling_mean_calculation(typical_price, window=20)
-            mad = typical_price.rolling(window=20, min_periods=1).apply(
-                lambda x: np.mean(np.abs(x - x.mean()))
-            )
-            result_df["CCI"] = self.safe_ratio_calculation(
-                typical_price - sma_tp, 0.015 * mad, default_value=0.0
-            )
+            # ROC（Rate of Change）（TA-lib使用）
+            try:
+                close_values = result_df["Close"].values.astype(np.float64)
+                roc_values = talib.ROC(close_values, timeperiod=12)
+                result_df["ROC"] = pd.Series(roc_values, index=result_df.index).fillna(
+                    0.0
+                )
+            except Exception as e:
+                logger.warning(f"TA-lib ROC計算エラー、フォールバック実装を使用: {e}")
+                # フォールバック実装
+                roc_change = self.safe_ratio_calculation(
+                    result_df["Close"] - result_df["Close"].shift(12),
+                    result_df["Close"].shift(12),
+                    default_value=0.0,
+                )
+                result_df["ROC"] = roc_change * 100
 
-            # ROC（Rate of Change）（安全な計算）
-            roc_change = self.safe_ratio_calculation(
-                result_df["Close"] - result_df["Close"].shift(12),
-                result_df["Close"].shift(12),
-                default_value=0.0,
-            )
-            result_df["ROC"] = roc_change * 100
-
-            # モメンタム（安全な計算）
-            result_df["Momentum"] = self.safe_ratio_calculation(
-                result_df["Close"], result_df["Close"].shift(10), default_value=1.0
-            )
+            # モメンタム（TA-lib使用）
+            try:
+                close_values = result_df["Close"].values.astype(np.float64)
+                momentum_values = talib.MOM(close_values, timeperiod=10)
+                result_df["Momentum"] = pd.Series(
+                    momentum_values, index=result_df.index
+                ).fillna(0.0)
+            except Exception as e:
+                logger.warning(
+                    f"TA-lib Momentum計算エラー、フォールバック実装を使用: {e}"
+                )
+                # フォールバック実装
+                result_df["Momentum"] = self.safe_ratio_calculation(
+                    result_df["Close"], result_df["Close"].shift(10), default_value=1.0
+                )
 
             logger.debug("モメンタム特徴量計算完了")
             return result_df
@@ -323,12 +433,19 @@ class TechnicalFeatureCalculator(BaseFeatureCalculator):
             return df
 
     def _calculate_rsi(self, df: pd.DataFrame, period: int = 14) -> pd.Series:
-        """RSIを計算（内部使用）"""
-        delta = df["Close"].diff().fillna(0.0).astype(float)
-        gain = (delta.clip(lower=0)).rolling(window=period).mean()
-        loss = (-delta.clip(upper=0)).rolling(window=period).mean()
-        rs = gain / (loss + 1e-8)
-        return 100 - (100 / (1 + rs))
+        """RSIを計算（内部使用）- TA-lib使用"""
+        try:
+            close_values = df["Close"].values.astype(np.float64)
+            rsi_values = talib.RSI(close_values, timeperiod=period)
+            return pd.Series(rsi_values, index=df.index).fillna(50.0)
+        except Exception as e:
+            logger.warning(f"TA-lib RSI計算エラー、フォールバック実装を使用: {e}")
+            # フォールバック実装
+            delta = df["Close"].diff().fillna(0.0).astype(float)
+            gain = (delta.clip(lower=0)).rolling(window=period).mean()
+            loss = (-delta.clip(upper=0)).rolling(window=period).mean()
+            rs = gain / (loss + 1e-8)
+            return 100 - (100 / (1 + rs))
 
     def get_feature_names(self) -> list:
         """
