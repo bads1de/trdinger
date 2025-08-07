@@ -13,16 +13,19 @@ from unittest.mock import patch, Mock
 import sys
 import os
 
-sys.path.append(os.path.join(os.path.dirname(__file__), "..", "app"))
+# ルートを追加してアプリ内モジュールを正規パスで参照
+sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 
-from services.ml.feature_engineering.advanced_features import AdvancedFeatureEngineer
-from utils.label_generation import LabelGenerator, ThresholdMethod
-from services.ml.feature_engineering.optimized_crypto_features import (
+from app.services.ml.feature_engineering.advanced_features import (
+    AdvancedFeatureEngineer,
+)
+from app.utils.label_generation import LabelGenerator, ThresholdMethod
+from app.services.ml.feature_engineering.optimized_crypto_features import (
     OptimizedCryptoFeatures,
 )
-from utils.data_validation import DataValidator
-from services.ml.models.knn_wrapper import KNNModel
-from services.optimization.ensemble_parameter_space import EnsembleParameterSpace
+from app.utils.data_validation import DataValidator
+from app.services.ml.models.knn_wrapper import KNNModel
+from app.services.optimization.ensemble_parameter_space import EnsembleParameterSpace
 
 
 class TestAdvancedFeatureEngineer:
