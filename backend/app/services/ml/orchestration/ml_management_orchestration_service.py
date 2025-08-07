@@ -153,12 +153,9 @@ class MLManagementOrchestrationService:
         """
         すべてのモデルを削除
         """
-        logger.info("全モデル削除要求")
-
         models = model_manager.list_models("*")
 
         if not models:
-            logger.info("削除するモデルがありません")
             return {
                 "success": True,
                 "message": "削除するモデルがありませんでした",
@@ -173,7 +170,6 @@ class MLManagementOrchestrationService:
                 if os.path.exists(model["path"]):
                     os.remove(model["path"])
                     deleted_count += 1
-                    logger.info(f"モデル削除完了: {model['name']} -> {model['path']}")
                 else:
                     logger.warning(f"モデルファイルが存在しません: {model['path']}")
                     failed_models.append(model["name"])
@@ -185,10 +181,6 @@ class MLManagementOrchestrationService:
             message = f"{deleted_count}個のモデルを削除しました。{len(failed_models)}個のモデルで削除に失敗しました: {', '.join(failed_models)}"
         else:
             message = f"すべてのモデル（{deleted_count}個）が削除されました"
-
-        logger.info(
-            f"全モデル削除完了: 削除数={deleted_count}, 失敗数={len(failed_models)}"
-        )
 
         return {
             "success": True,

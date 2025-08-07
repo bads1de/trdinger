@@ -83,10 +83,8 @@ class MLOrchestrator(MLPredictionInterface):
             self.feature_service = FeatureEngineeringService(
                 automl_config=automl_config_obj
             )
-            logger.debug("🤖 AutoML特徴量エンジニアリングを有効化しました")
         else:
             self.feature_service = FeatureEngineeringService()
-            logger.debug("📊 基本特徴量エンジニアリングを使用します")
 
         self.ml_training_service = (
             ml_training_service

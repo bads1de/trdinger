@@ -36,7 +36,6 @@ class BaseFeatureCalculator(ABC):
         DataValidatorインスタンスを作成し、共通の設定を行います。
         """
         self.validator = DataValidator()
-        logger.debug(f"{self.__class__.__name__} を初期化しました")
 
     def validate_input_data(
         self, df: pd.DataFrame, required_columns: Optional[list] = None

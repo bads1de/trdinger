@@ -61,8 +61,6 @@ async def delete_all_models(
     Args:
         ml_service: ML管理サービス（依存性注入）
     """
-    logger.info("🗑️ 全モデル削除エンドポイントが呼び出されました")
-
     async def _delete_all_models():
         return await ml_service.delete_all_models()
 
@@ -82,8 +80,6 @@ async def delete_all_models_legacy(
     Args:
         ml_service: ML管理サービス（依存性注入）
     """
-    logger.info("🗑️ 全モデル削除エンドポイント（レガシー）が呼び出されました")
-
     async def _delete_all_models():
         return await ml_service.delete_all_models()
 
