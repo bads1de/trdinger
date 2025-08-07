@@ -20,8 +20,12 @@ from sklearn.metrics import (
     accuracy_score,
     average_precision_score,
     balanced_accuracy_score,
+    brier_score_loss,
     classification_report,
+    cohen_kappa_score,
     confusion_matrix,
+    log_loss,
+    matthews_corrcoef,
     precision_recall_fscore_support,
     roc_auc_score,
 )
@@ -423,6 +427,10 @@ class EnhancedMetricsCalculator:
             metrics["recall_macro"] = recall_macro
             metrics["f1_score_macro"] = f1_macro
 
+            # 追加の基本指標
+            metrics["matthews_corrcoef"] = matthews_corrcoef(y_true, y_pred)
+            metrics["cohen_kappa"] = cohen_kappa_score(y_true, y_pred)
+
         except Exception as e:
             logger.warning(f"基本指標計算エラー: {e}")
 
@@ -462,39 +470,127 @@ class EnhancedMetricsCalculator:
                 # ROC-AUC
                 if n_classes == 2:
                     # 二値分類
-                    metrics["roc_auc"] = roc_auc_score(y_true, y_proba[:, 1])
+                    try:
+                        y_prob_positive = (
+                            y_proba[:, 1]
+                            if y_proba.ndim > 1 and y_proba.shape[1] > 1
+                            else y_proba.ravel()
+                        )
+                        metrics["roc_auc"] = roc_auc_score(y_true, y_prob_positive)
+                    except ValueError as e:
+                        logger.warning(f"二値分類ROC-AUC計算エラー: {e}")
+                        metrics["roc_auc"] = 0.0
                 else:
                     # 多クラス分類
                     with warnings.catch_warnings():
                         warnings.simplefilter("ignore")
-                        metrics["roc_auc_ovr"] = roc_auc_score(
-                            y_true, y_proba, multi_class="ovr", average="weighted"
-                        )
-                        metrics["roc_auc_ovo"] = roc_auc_score(
-                            y_true, y_proba, multi_class="ovo", average="weighted"
-                        )
+                        try:
+                            metrics["roc_auc"] = roc_auc_score(
+                                y_true, y_proba, multi_class="ovr", average="weighted"
+                            )
+                            # 追加の詳細指標
+                            metrics["roc_auc_ovr"] = metrics["roc_auc"]
+                            metrics["roc_auc_ovo"] = roc_auc_score(
+                                y_true, y_proba, multi_class="ovo", average="weighted"
+                            )
+                        except ValueError as e:
+                            logger.warning(f"多クラスROC-AUC計算エラー: {e}")
+                            metrics["roc_auc"] = 0.0
+                            metrics["roc_auc_ovr"] = 0.0
+                            metrics["roc_auc_ovo"] = 0.0
 
             if self.config.include_pr_auc:
                 # PR-AUC（分析報告書で推奨）
                 if n_classes == 2:
                     # 二値分類
-                    metrics["pr_auc"] = average_precision_score(y_true, y_proba[:, 1])
+                    try:
+                        y_prob_positive = (
+                            y_proba[:, 1]
+                            if y_proba.ndim > 1 and y_proba.shape[1] > 1
+                            else y_proba.ravel()
+                        )
+                        metrics["pr_auc"] = average_precision_score(
+                            y_true, y_prob_positive
+                        )
+                    except ValueError as e:
+                        logger.warning(f"二値分類PR-AUC計算エラー: {e}")
+                        metrics["pr_auc"] = 0.0
                 else:
                     # 多クラス分類：各クラスのPR-AUCを計算
-                    pr_aucs = []
+                    try:
+                        pr_aucs = []
+                        for i in range(n_classes):
+                            y_true_binary = (y_true == i).astype(int)
+                            if (
+                                np.sum(y_true_binary) > 0
+                            ):  # クラスが存在する場合のみ計算
+                                pr_auc = average_precision_score(
+                                    y_true_binary, y_proba[:, i]
+                                )
+                                pr_aucs.append(pr_auc)
+                                metrics[f"pr_auc_class_{i}"] = pr_auc
+                            else:
+                                metrics[f"pr_auc_class_{i}"] = 0.0
+
+                        if pr_aucs:
+                            metrics["pr_auc"] = np.mean(pr_aucs)  # メイン指標として使用
+                            metrics["pr_auc_macro"] = np.mean(pr_aucs)
+                            metrics["pr_auc_weighted"] = np.average(
+                                pr_aucs,
+                                weights=np.bincount(y_true)[np.bincount(y_true) > 0],
+                            )
+                        else:
+                            metrics["pr_auc"] = 0.0
+                            metrics["pr_auc_macro"] = 0.0
+                            metrics["pr_auc_weighted"] = 0.0
+                    except Exception as e:
+                        logger.warning(f"多クラスPR-AUC計算エラー: {e}")
+                        metrics["pr_auc"] = 0.0
+                        metrics["pr_auc_macro"] = 0.0
+                        metrics["pr_auc_weighted"] = 0.0
+
+            # Log Loss
+            try:
+                metrics["log_loss"] = log_loss(y_true, y_proba)
+            except ValueError as e:
+                logger.warning(f"Log Loss計算エラー: {e}")
+                metrics["log_loss"] = 0.0
+
+            # Brier Score
+            if n_classes == 2:
+                # 二値分類
+                try:
+                    y_prob_positive = (
+                        y_proba[:, 1]
+                        if y_proba.ndim > 1 and y_proba.shape[1] > 1
+                        else y_proba.ravel()
+                    )
+                    metrics["brier_score"] = brier_score_loss(y_true, y_prob_positive)
+                except ValueError as e:
+                    logger.warning(f"二値分類Brier Score計算エラー: {e}")
+                    metrics["brier_score"] = 0.0
+            else:
+                # 多クラス分類では各クラスのBrier Scoreを計算して平均
+                try:
+                    brier_scores = []
                     for i in range(n_classes):
                         y_true_binary = (y_true == i).astype(int)
-                        pr_auc = average_precision_score(y_true_binary, y_proba[:, i])
-                        pr_aucs.append(pr_auc)
-                        metrics[f"pr_auc_class_{i}"] = pr_auc
-
-                    metrics["pr_auc_macro"] = np.mean(pr_aucs)
-                    metrics["pr_auc_weighted"] = np.average(
-                        pr_aucs, weights=np.bincount(y_true)
-                    )
+                        brier_score = brier_score_loss(y_true_binary, y_proba[:, i])
+                        brier_scores.append(brier_score)
+                    metrics["brier_score"] = np.mean(brier_scores)
+                except Exception as e:
+                    logger.warning(f"多クラスBrier Score計算エラー: {e}")
+                    metrics["brier_score"] = 0.0
 
         except Exception as e:
             logger.warning(f"確率指標計算エラー: {e}")
+            # エラー時はデフォルト値を設定
+            metrics.update(
+                {
+                    "log_loss": 0.0,
+                    "brier_score": 0.0,
+                }
+            )
 
         return metrics
 
@@ -532,6 +628,44 @@ class EnhancedMetricsCalculator:
                 metrics["specificity"] = tn / (tn + fp) if (tn + fp) > 0 else 0.0
                 # 感度（再現率と同じ）
                 metrics["sensitivity"] = tp / (tp + fn) if (tp + fn) > 0 else 0.0
+                # NPV, PPV
+                metrics["npv"] = tn / (tn + fn) if (tn + fn) > 0 else 0.0
+                metrics["ppv"] = tp / (tp + fp) if (tp + fp) > 0 else 0.0
+            else:  # 多クラス分類の場合
+                # 各クラスの特異度と感度を計算し、平均を取る
+                n_classes = cm.shape[0]
+                specificities = []
+                sensitivities = []
+                npvs = []
+                ppvs = []
+
+                for i in range(n_classes):
+                    # クラスiに対する二値分類として計算
+                    tp = cm[i, i]
+                    fn = np.sum(cm[i, :]) - tp
+                    fp = np.sum(cm[:, i]) - tp
+                    tn = np.sum(cm) - tp - fn - fp
+
+                    specificity = tn / (tn + fp) if (tn + fp) > 0 else 0.0
+                    sensitivity = tp / (tp + fn) if (tp + fn) > 0 else 0.0
+                    npv = tn / (tn + fn) if (tn + fn) > 0 else 0.0
+                    ppv = tp / (tp + fp) if (tp + fp) > 0 else 0.0
+
+                    specificities.append(specificity)
+                    sensitivities.append(sensitivity)
+                    npvs.append(npv)
+                    ppvs.append(ppv)
+
+                # 重み付き平均を計算（クラス頻度で重み付け）
+                class_weights = np.bincount(y_true) / len(y_true)
+                metrics["specificity"] = float(
+                    np.average(specificities, weights=class_weights)
+                )
+                metrics["sensitivity"] = float(
+                    np.average(sensitivities, weights=class_weights)
+                )
+                metrics["npv"] = float(np.average(npvs, weights=class_weights))
+                metrics["ppv"] = float(np.average(ppvs, weights=class_weights))
 
         except Exception as e:
             logger.warning(f"混同行列計算エラー: {e}")

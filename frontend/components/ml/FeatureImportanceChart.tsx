@@ -92,9 +92,21 @@ export default function FeatureImportanceChart({
           <p className="text-cyan-300 font-medium mb-1">{data.feature_name}</p>
           <div className="space-y-1 text-sm">
             <div className="flex justify-between items-center">
-              <span className="text-gray-400">重要度:</span>
+              <span className="text-gray-400">相対重要度:</span>
               <span className="text-white font-medium">
                 {data.importancePercent}%
+              </span>
+            </div>
+            <div className="flex justify-between items-center">
+              <span className="text-gray-400">絶対重要度:</span>
+              <span className="text-cyan-400 font-medium">
+                {data.absoluteImportancePercent}%
+              </span>
+            </div>
+            <div className="flex justify-between items-center">
+              <span className="text-gray-400">実際の値:</span>
+              <span className="text-gray-300 font-mono text-xs">
+                {data.rawImportance}
               </span>
             </div>
             <div className="flex justify-between items-center">
@@ -291,7 +303,7 @@ export default function FeatureImportanceChart({
                   {chartData.length > 0
                     ? (
                         chartData.reduce(
-                          (sum, d) => sum + parseFloat(d.importancePercent),
+                          (sum, d) => sum + parseFloat(d.absoluteImportancePercent),
                           0
                         ) / chartData.length
                       ).toFixed(2)

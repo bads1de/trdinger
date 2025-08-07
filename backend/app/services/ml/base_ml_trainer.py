@@ -495,10 +495,13 @@ class BaseMLTrainer(BaseResourceManager, ABC):
             # 学習実行
             result = trainer.train_model(training_data, **training_params)
 
-            # モデルを保存
+            # モデルを保存（EnsembleTrainerに委譲し、BaseMLTrainerでは保存しない）
             self.models = trainer.models
             self.model = trainer  # アンサンブルトレーナー自体を保存
             self.is_trained = True
+
+            # EnsembleTrainerが既にモデルを保存しているため、BaseMLTrainerでは重複保存を避ける
+            self._ensemble_trainer = trainer  # 参照を保持
 
             logger.info(
                 f"✅ アンサンブル学習完了: {self.ensemble_config.get('method', 'bagging')}"
@@ -1066,6 +1069,11 @@ class BaseMLTrainer(BaseResourceManager, ABC):
         """モデルを保存"""
         if not self.is_trained:
             raise UnifiedModelError("学習済みモデルがありません")
+
+        # アンサンブルトレーナーが存在する場合は、そちらに委譲
+        if hasattr(self, "_ensemble_trainer") and self._ensemble_trainer:
+            logger.info("アンサンブルトレーナーに保存を委譲します")
+            return self._ensemble_trainer.save_model(model_name, metadata)
 
         # 基本的なメタデータを準備
         final_metadata = {

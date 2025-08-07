@@ -34,8 +34,8 @@ class MLConfigManager:
         self.config_file_path = Path(config_file_path)
         self._ml_config = MLConfig()
 
-        # ディレクトリ作成
-        self.config_file_path.parent.mkdir(parents=True, exist_ok=True)
+        # ディレクトリの自動作成は行わない（勝手にconfigディレクトリを作成しない方針）
+        # 必要に応じて呼び出し側でディレクトリを用意すること
 
         # 設定ファイルが存在する場合は読み込み
         if self.config_file_path.exists():

@@ -114,6 +114,7 @@ export const useFeatureImportance = (
   const chartData = useMemo(() => {
     // 特徴量重要度を正規化（最大値を100%とする）
     const maxImportance = Math.max(...data.map((d) => d.importance));
+    const totalImportance = data.reduce((sum, d) => sum + d.importance, 0);
 
     return data.map((item, index) => ({
       ...item,
@@ -121,14 +122,21 @@ export const useFeatureImportance = (
         item.feature_name.length > 15
           ? `${item.feature_name.substring(0, 12)}...`
           : item.feature_name,
-      // 正規化された重要度をパーセンテージで表示
+      // 正規化された重要度をパーセンテージで表示（相対値）
       importancePercent:
         maxImportance > 0
           ? ((item.importance / maxImportance) * 100).toFixed(2)
           : "0.00",
+      // 絶対値での重要度をパーセンテージで表示
+      absoluteImportancePercent:
+        totalImportance > 0
+          ? ((item.importance / totalImportance) * 100).toFixed(2)
+          : "0.00",
       // チャート用には正規化された値（0-1の範囲）を使用
       normalizedImportance:
         maxImportance > 0 ? item.importance / maxImportance : 0,
+      // 実際の重要度値
+      rawImportance: item.importance.toFixed(6),
       colorIndex: index,
     }));
   }, [data]);
