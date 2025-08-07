@@ -90,6 +90,93 @@ class EnsembleParameterSpace:
         }
 
     @staticmethod
+    def get_adaboost_parameter_space() -> Dict[str, ParameterSpace]:
+        """AdaBoostのパラメータ空間"""
+        return {
+            "ada_n_estimators": ParameterSpace(type="integer", low=50, high=300),
+            "ada_learning_rate": ParameterSpace(type="real", low=0.01, high=2.0),
+            "ada_algorithm": ParameterSpace(
+                type="categorical", categories=["SAMME", "SAMME.R"]
+            ),
+        }
+
+    @staticmethod
+    def get_extratrees_parameter_space() -> Dict[str, ParameterSpace]:
+        """ExtraTreesのパラメータ空間"""
+        return {
+            "et_n_estimators": ParameterSpace(type="integer", low=50, high=300),
+            "et_max_depth": ParameterSpace(type="integer", low=3, high=20),
+            "et_min_samples_split": ParameterSpace(type="integer", low=2, high=20),
+            "et_min_samples_leaf": ParameterSpace(type="integer", low=1, high=10),
+            "et_max_features": ParameterSpace(
+                type="categorical", categories=["sqrt", "log2", "auto"]
+            ),
+            "et_bootstrap": ParameterSpace(
+                type="categorical", categories=[True, False]
+            ),
+        }
+
+    @staticmethod
+    def get_gradientboosting_parameter_space() -> Dict[str, ParameterSpace]:
+        """GradientBoostingのパラメータ空間"""
+        return {
+            "gb_n_estimators": ParameterSpace(type="integer", low=50, high=300),
+            "gb_learning_rate": ParameterSpace(type="real", low=0.01, high=0.3),
+            "gb_max_depth": ParameterSpace(type="integer", low=3, high=15),
+            "gb_min_samples_split": ParameterSpace(type="integer", low=2, high=20),
+            "gb_min_samples_leaf": ParameterSpace(type="integer", low=1, high=10),
+            "gb_subsample": ParameterSpace(type="real", low=0.5, high=1.0),
+            "gb_max_features": ParameterSpace(
+                type="categorical", categories=["sqrt", "log2", "auto"]
+            ),
+        }
+
+    @staticmethod
+    def get_knn_parameter_space() -> Dict[str, ParameterSpace]:
+        """KNNのパラメータ空間"""
+        return {
+            "knn_n_neighbors": ParameterSpace(type="integer", low=3, high=20),
+            "knn_weights": ParameterSpace(
+                type="categorical", categories=["uniform", "distance"]
+            ),
+            "knn_algorithm": ParameterSpace(
+                type="categorical", categories=["auto", "ball_tree", "kd_tree", "brute"]
+            ),
+            "knn_leaf_size": ParameterSpace(type="integer", low=10, high=50),
+            "knn_p": ParameterSpace(type="integer", low=1, high=2),
+        }
+
+    @staticmethod
+    def get_ridge_parameter_space() -> Dict[str, ParameterSpace]:
+        """Ridgeのパラメータ空間"""
+        return {
+            "ridge_alpha": ParameterSpace(type="real", low=0.01, high=100.0),
+            "ridge_solver": ParameterSpace(
+                type="categorical",
+                categories=[
+                    "auto",
+                    "svd",
+                    "cholesky",
+                    "lsqr",
+                    "sparse_cg",
+                    "sag",
+                    "saga",
+                ],
+            ),
+            "ridge_max_iter": ParameterSpace(type="integer", low=100, high=2000),
+        }
+
+    @staticmethod
+    def get_naivebayes_parameter_space() -> Dict[str, ParameterSpace]:
+        """NaiveBayesのパラメータ空間"""
+        return {
+            "nb_alpha": ParameterSpace(type="real", low=0.01, high=10.0),
+            "nb_fit_prior": ParameterSpace(
+                type="categorical", categories=[True, False]
+            ),
+        }
+
+    @staticmethod
     def get_bagging_parameter_space() -> Dict[str, ParameterSpace]:
         """バギングアンサンブル固有のパラメータ空間"""
         return {
@@ -145,6 +232,24 @@ class EnsembleParameterSpace:
 
         if "tabnet" in enabled_models:
             parameter_space.update(self.get_tabnet_parameter_space())
+
+        if "adaboost" in enabled_models:
+            parameter_space.update(self.get_adaboost_parameter_space())
+
+        if "extratrees" in enabled_models:
+            parameter_space.update(self.get_extratrees_parameter_space())
+
+        if "gradientboosting" in enabled_models:
+            parameter_space.update(self.get_gradientboosting_parameter_space())
+
+        if "knn" in enabled_models:
+            parameter_space.update(self.get_knn_parameter_space())
+
+        if "ridge" in enabled_models:
+            parameter_space.update(self.get_ridge_parameter_space())
+
+        if "naivebayes" in enabled_models:
+            parameter_space.update(self.get_naivebayes_parameter_space())
 
         # アンサンブル手法固有のパラメータを追加
         if ensemble_method == "bagging":
