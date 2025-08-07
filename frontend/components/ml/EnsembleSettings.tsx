@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
@@ -14,7 +14,14 @@ import {
 } from "@/components/ui/select";
 import { InputField } from "@/components/common/InputField";
 import { Badge } from "@/components/ui/badge";
-import { Layers, Shuffle, BarChart3, Cpu } from "lucide-react";
+import { Layers, Shuffle, BarChart3,  Info } from "lucide-react";
+import InfoModal from "@/components/common/InfoModal";
+import { ML_INFO_MESSAGES } from "@/constants/info";
+import {
+  AVAILABLE_MODEL_NAMES,
+  AVAILABLE_MODELS,
+  META_MODELS,
+} from "@/constants/models";
 
 export interface EnsembleSettingsConfig {
   enabled: boolean;
@@ -47,86 +54,6 @@ interface EnsembleSettingsProps {
   availableModels?: string[];
 }
 
-// 新しいアルゴリズムを含む利用可能なモデル
-const AVAILABLE_MODEL_NAMES = [
-  "lightgbm",
-  "xgboost",
-  "catboost",
-  "tabnet",
-  "randomforest",
-  "extratrees",
-  "gradientboosting",
-  "adaboost",
-  "ridge",
-  "naivebayes",
-  "knn",
-];
-
-const AVAILABLE_MODELS = [
-  {
-    value: "lightgbm",
-    label: "LightGBM",
-    description: "高速で高精度な勾配ブースティング",
-  },
-  {
-    value: "xgboost",
-    label: "XGBoost",
-    description: "強力な勾配ブースティング",
-  },
-  {
-    value: "catboost",
-    label: "CatBoost",
-    description: "カテゴリ特徴量に強い勾配ブースティング",
-  },
-  {
-    value: "tabnet",
-    label: "TabNet",
-    description: "表形式データ用ニューラルネットワーク",
-  },
-  {
-    value: "randomforest",
-    label: "Random Forest",
-    description: "アンサンブル決定木",
-  },
-  {
-    value: "extratrees",
-    label: "Extra Trees",
-    description: "ランダム性強化決定木",
-  },
-  {
-    value: "gradientboosting",
-    label: "Gradient Boosting",
-    description: "勾配ブースティング",
-  },
-  {
-    value: "adaboost",
-    label: "AdaBoost",
-    description: "適応的ブースティング",
-  },
-  {
-    value: "ridge",
-    label: "Ridge Classifier",
-    description: "L2正則化線形分類器",
-  },
-  {
-    value: "naivebayes",
-    label: "Naive Bayes",
-    description: "ベイズ分類器",
-  },
-  {
-    value: "knn",
-    label: "K-Nearest Neighbors",
-    description: "K近傍法",
-  },
-];
-
-const META_MODELS = [
-  { value: "randomforest", label: "Random Forest" },
-  { value: "lightgbm", label: "LightGBM" },
-  { value: "ridge", label: "Ridge Classifier" },
-  { value: "naivebayes", label: "Naive Bayes" },
-];
-
 import SingleModelSettings, {
   SingleModelSettingsConfig as ExtractedSingleModelSettingsConfig,
 } from "./SingleModelSettings";
@@ -138,8 +65,21 @@ export default function EnsembleSettings({
   onSingleModelChange,
   availableModels = AVAILABLE_MODEL_NAMES,
 }: EnsembleSettingsProps) {
+  // InfoModal state
+  const [isInfoModalOpen, setIsInfoModalOpen] = useState(false);
+  const [modalContent, setModalContent] = useState<{
+    title: string;
+    content: string;
+  } | null>(null);
+
   const updateSettings = (updates: Partial<EnsembleSettingsConfig>) => {
     onChange({ ...settings, ...updates });
+  };
+
+  // InfoModalを開く関数
+  const openInfoModal = (title: string, content: string) => {
+    setModalContent({ title, content });
+    setIsInfoModalOpen(true);
   };
 
   const updateBaggingParams = (
@@ -407,7 +347,18 @@ export default function EnsembleSettings({
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {/* メタモデル選択 */}
                     <div className="space-y-2">
-                      <Label className="text-sm">メタモデル</Label>
+                      <div className="flex items-center space-x-2">
+                        <Label className="text-sm">メタモデル</Label>
+                        <Info
+                          className="h-4 w-4 text-gray-400 cursor-pointer hover:text-gray-300"
+                          onClick={() =>
+                            openInfoModal(
+                              "メタモデル",
+                              ML_INFO_MESSAGES.metaModel
+                            )
+                          }
+                        />
+                      </div>
                       <Select
                         value={settings.stacking_params.meta_model}
                         onValueChange={(value) =>
@@ -436,6 +387,17 @@ export default function EnsembleSettings({
                       value={settings.stacking_params.cv_folds}
                       onChange={(value) =>
                         updateStackingParams({ cv_folds: Number(value) })
+                      }
+                      labelAddon={
+                        <Info
+                          className="h-4 w-4 text-gray-400 cursor-pointer hover:text-gray-300"
+                          onClick={() =>
+                            openInfoModal(
+                              "クロスバリデーション分割数",
+                              ML_INFO_MESSAGES.crossValidationFolds
+                            )
+                          }
+                        />
                       }
                     />
                   </div>
@@ -494,6 +456,19 @@ export default function EnsembleSettings({
           </>
         )}
       </CardContent>
+
+      {/* InfoModal */}
+      {modalContent && (
+        <InfoModal
+          isOpen={isInfoModalOpen}
+          onClose={() => setIsInfoModalOpen(false)}
+          title={modalContent.title}
+        >
+          <div className="text-secondary-300">
+            {modalContent.content}
+          </div>
+        </InfoModal>
+      )}
     </Card>
   );
 }
