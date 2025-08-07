@@ -14,8 +14,7 @@ import pandas as pd
 from ....utils.unified_error_handler import UnifiedModelError
 from ..base_ml_trainer import BaseMLTrainer
 from .bagging import BaggingEnsemble
-
-# from .stacking import StackingEnsemble  # 一時的にコメントアウト
+from .stacking import StackingEnsemble
 
 logger = logging.getLogger(__name__)
 
@@ -238,11 +237,9 @@ class EnsembleTrainer(BaseMLTrainer):
                     }
                 )
 
-                # 一時的にコメントアウト
-                # self.ensemble_model = StackingEnsemble(
-                #     config=stacking_config, automl_config=self.automl_config
-                # )
-                raise UnifiedModelError("StackingEnsembleは現在メンテナンス中です")
+                self.ensemble_model = StackingEnsemble(
+                    config=stacking_config, automl_config=self.automl_config
+                )
 
             else:
                 raise UnifiedModelError(
@@ -512,11 +509,9 @@ class EnsembleTrainer(BaseMLTrainer):
                 )
             elif self.ensemble_method.lower() == "stacking":
                 stacking_config = self.ensemble_config.get("stacking_params", {})
-                # 一時的にコメントアウト
-                # self.ensemble_model = StackingEnsemble(
-                #     config=stacking_config, automl_config=self.automl_config
-                # )
-                raise UnifiedModelError("StackingEnsembleは現在メンテナンス中です")
+                self.ensemble_model = StackingEnsemble(
+                    config=stacking_config, automl_config=self.automl_config
+                )
             else:
                 raise UnifiedModelError(
                     f"サポートされていないアンサンブル手法: {self.ensemble_method}"

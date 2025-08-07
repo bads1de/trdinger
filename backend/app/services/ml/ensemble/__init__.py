@@ -11,11 +11,11 @@
 from .bagging import BaggingEnsemble
 from .base_ensemble import BaseEnsemble
 from .ensemble_trainer import EnsembleTrainer
-
-# from .stacking import StackingEnsemble  # 一時的にコメントアウト
+from .stacking import StackingEnsemble
 
 __all__ = [
     "BaseEnsemble",
     "BaggingEnsemble",
     "EnsembleTrainer",
-]  # StackingEnsemble一時的に削除
+    "StackingEnsemble",
+]

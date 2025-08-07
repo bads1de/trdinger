@@ -10,6 +10,7 @@ from typing import Any, Dict, List, Optional, Tuple, Union
 
 import numpy as np
 import pandas as pd
+from sklearn.preprocessing import StandardScaler
 
 logger = logging.getLogger(__name__)
 
@@ -251,7 +252,7 @@ class DataValidator:
         data: pd.Series, window: int, default_value: float = 0.0
     ) -> Union[pd.Series, np.ndarray, float]:
         """
-        安全な正規化処理（Z-score）
+        安全な正規化処理（Z-score）- pandasの組み込み関数を使用
 
         Args:
             data: 正規化するデータ
@@ -262,17 +263,20 @@ class DataValidator:
             正規化されたデータ
         """
         try:
-            mean = DataValidator.safe_rolling_mean(data, window)
-            std = DataValidator.safe_rolling_std(data, window)
+            # pandasの組み込み関数を使用してローリング統計を計算
+            rolling_mean = data.rolling(window=window, min_periods=1).mean()
+            rolling_std = data.rolling(window=window, min_periods=1).std()
 
-            # 標準偏差が0の場合を考慮
-            normalized = DataValidator.safe_divide(
-                data - mean, std, default_value=default_value
-            )
+            # 標準偏差が0または非常に小さい場合を考慮
+            rolling_std = rolling_std.where(rolling_std > 1e-8, 1e-8)
 
-            # 戻り値の型をpd.Seriesに統一する
-            if isinstance(normalized, (np.ndarray, float)):
-                return pd.Series(normalized, index=data.index)
+            # Z-score正規化
+            normalized = (data - rolling_mean) / rolling_std
+
+            # 無限値とNaN値を置換
+            normalized = normalized.replace([np.inf, -np.inf], default_value)
+            normalized = normalized.fillna(default_value)
+
             return normalized
 
         except Exception as e:

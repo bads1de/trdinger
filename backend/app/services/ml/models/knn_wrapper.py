@@ -10,7 +10,8 @@ from typing import Any, Dict, List, Optional
 
 import numpy as np
 import pandas as pd
-from sklearn.neighbors import KNeighborsClassifier
+from sklearn.neighbors import KNeighborsClassifier, NearestNeighbors
+from sklearn.metrics.pairwise import pairwise_distances
 
 from ....utils.unified_error_handler import UnifiedModelError
 
@@ -65,7 +66,7 @@ class KNNModel:
         self.p = p
         self.n_jobs = n_jobs
 
-        # デフォルトパラメータ
+        # デフォルトパラメータ（最適化された設定）
         self.default_params = {
             "n_neighbors": self.n_neighbors,
             "weights": self.weights,
@@ -73,6 +74,7 @@ class KNNModel:
             "metric": self.metric,
             "p": self.p,
             "n_jobs": self.n_jobs,
+            "leaf_size": 30,  # 効率的な検索のためのリーフサイズ
         }
 
         # その他のパラメータを設定
@@ -397,7 +399,7 @@ class KNNModel:
 
     def get_feature_importance(self) -> Dict[str, float]:
         """
-        特徴量重要度を取得（分散ベース）
+        特徴量重要度を取得（距離ベースの重要度計算）
 
         Returns:
             特徴量重要度の辞書
@@ -408,15 +410,61 @@ class KNNModel:
         if not self.feature_columns:
             raise UnifiedModelError("特徴量カラムが設定されていません")
 
-        # 学習データから分散を計算（近似的重要度）
+        # 学習データから距離ベースの重要度を計算
         if hasattr(self.model, "_fit_X"):
             X_train = pd.DataFrame(self.model._fit_X, columns=self.feature_columns)
+
+            # 各特徴量の分散を重要度として使用（改良版）
             feature_variance = X_train.var()
-            total_variance = feature_variance.sum()
-            if total_variance > 0:
-                return dict(
-                    zip(self.feature_columns, feature_variance / total_variance)
+
+            # 特徴量間の相関を考慮した重要度計算
+            try:
+                # 各特徴量の近傍距離への寄与度を計算
+                nn = NearestNeighbors(
+                    n_neighbors=min(5, len(X_train)), metric=self.metric, p=self.p
                 )
+                nn.fit(X_train)
+                distances, _ = nn.kneighbors(X_train)
+
+                # 各特徴量の距離への寄与度を計算
+                feature_importance = {}
+                for i, col in enumerate(self.feature_columns):
+                    # 特徴量を除いた場合の距離変化を計算
+                    X_without_feature = X_train.drop(columns=[col])
+                    if X_without_feature.shape[1] > 0:
+                        nn_without = NearestNeighbors(
+                            n_neighbors=min(5, len(X_train)),
+                            metric=self.metric,
+                            p=self.p,
+                        )
+                        nn_without.fit(X_without_feature)
+                        distances_without, _ = nn_without.kneighbors(X_without_feature)
+
+                        # 距離の変化を重要度として使用
+                        importance = np.mean(
+                            np.abs(
+                                distances.mean(axis=1) - distances_without.mean(axis=1)
+                            )
+                        )
+                        feature_importance[col] = importance
+                    else:
+                        feature_importance[col] = feature_variance.iloc[i]
+
+                # 正規化
+                total_importance = sum(feature_importance.values())
+                if total_importance > 0:
+                    return {
+                        k: v / total_importance for k, v in feature_importance.items()
+                    }
+
+            except Exception as e:
+                logger.warning(f"距離ベース重要度計算でエラー: {e}")
+                # フォールバック：分散ベースの重要度
+                total_variance = feature_variance.sum()
+                if total_variance > 0:
+                    return dict(
+                        zip(self.feature_columns, feature_variance / total_variance)
+                    )
 
         return {}
 

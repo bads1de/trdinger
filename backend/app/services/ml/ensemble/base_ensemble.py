@@ -195,6 +195,16 @@ class BaseEnsemble(ABC):
                 return KNNModel(automl_config=self.automl_config)
             except ImportError:
                 raise UnifiedModelError("KNNモデルラッパーのインポートに失敗しました")
+        elif model_type.lower() == "logistic_regression":
+            # scikit-learnのLogisticRegressionを直接使用
+            from sklearn.linear_model import LogisticRegression
+
+            return LogisticRegression(
+                random_state=42,
+                max_iter=1000,  # 収束を確実にするため
+                solver="lbfgs",  # 多クラス分類に適したソルバー
+                verbose=0,  # ログ抑制
+            )
         else:
             raise UnifiedModelError(f"サポートされていないモデルタイプ: {model_type}")
 

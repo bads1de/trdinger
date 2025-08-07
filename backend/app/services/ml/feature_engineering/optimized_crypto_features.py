@@ -155,8 +155,8 @@ class OptimizedCryptoFeatures:
         # 3. ボリンジャーバンド位置（改良版）
         for period in [20, 48]:
             ma = df["Close"].rolling(period).mean()
-            # ロバストな標準偏差
-            robust_std = df["Close"].rolling(period).apply(lambda x: np.std(x) * 1.4826)
+            # ロバストな標準偏差（pandasの組み込み関数を使用）
+            robust_std = df["Close"].rolling(period).std() * 1.4826
 
             bb_upper = ma + (robust_std * 2)
             bb_lower = ma - (robust_std * 2)
@@ -311,10 +311,10 @@ class OptimizedCryptoFeatures:
             price_momentum * 0.5 + volume_momentum * 0.3 + oi_momentum * 0.2
         )
 
-        # 2. 市場効率性指標
+        # 2. 市場効率性指標（pandasの組み込み関数を使用）
         returns = df["Close"].pct_change()
         autocorr_1 = returns.rolling(periods["medium"]).apply(
-            lambda x: x.autocorr(lag=1)
+            lambda x: x.autocorr(lag=1) if len(x) >= 2 else np.nan
         )
         result_df["market_efficiency"] = 1 - autocorr_1.abs()
 
@@ -358,13 +358,23 @@ class OptimizedCryptoFeatures:
                 smoothed = df[col].ewm(alpha=0.3).mean()
                 result_df[f"{col}_smooth"] = smoothed
 
-                # トレンド抽出
+                # トレンド抽出（線形回帰の傾きを計算）
+                def calculate_trend(x):
+                    if len(x) < 2:
+                        return 0
+                    try:
+                        # 線形回帰の傾きを計算
+                        n = len(x)
+                        x_vals = np.arange(n)
+                        slope = (n * (x_vals * x).sum() - x_vals.sum() * x.sum()) / (
+                            n * (x_vals**2).sum() - x_vals.sum() ** 2
+                        )
+                        return slope
+                    except (ZeroDivisionError, ValueError):
+                        return 0
+
                 trend = smoothed.rolling(periods["medium"]).apply(
-                    lambda x: (
-                        np.polyfit(range(len(x)), x, 1)[0]
-                        if len(x) == periods["medium"]
-                        else 0
-                    )
+                    calculate_trend, raw=True
                 )
                 result_df[f"{col}_trend"] = trend
 
@@ -374,21 +384,13 @@ class OptimizedCryptoFeatures:
         result_df["price_denoised"] = price_smooth
         result_df["price_noise"] = df["Close"] - price_smooth
 
-        # 3. ロバストな変動率
+        # 3. ロバストな変動率（pandasの組み込み関数を使用）
         for period in [periods["short"], periods["medium"]]:
             # 中央値ベースの変動率
-            median_change = (
-                df["Close"]
-                .rolling(period)
-                .apply(
-                    lambda x: (
-                        (x.iloc[-1] - x.median()) / x.median()
-                        if len(x) == period
-                        else 0
-                    )
-                )
-            )
-            result_df[f"robust_return_{period}h"] = median_change
+            rolling_median = df["Close"].rolling(period).median()
+            current_price = df["Close"]
+            median_change = (current_price - rolling_median) / rolling_median
+            result_df[f"robust_return_{period}h"] = median_change.fillna(0)
 
         self.feature_groups["smoothed_market_data"].extend(
             [
@@ -485,28 +487,25 @@ class OptimizedCryptoFeatures:
             + (np.sign(momentum_4h) == np.sign(momentum_24h)).astype(int)
         ) / 2.0
 
-        # 3. 時間軸間の発散
-        short_trend = (
-            df["Close"]
-            .rolling(periods["short"])
-            .apply(
-                lambda x: (
-                    np.polyfit(range(len(x)), x, 1)[0]
-                    if len(x) == periods["short"]
-                    else 0
+        # 3. 時間軸間の発散（線形回帰の傾きを計算）
+        def calculate_trend_slope(x):
+            if len(x) < 2:
+                return 0
+            try:
+                n = len(x)
+                x_vals = np.arange(n)
+                slope = (n * (x_vals * x).sum() - x_vals.sum() * x.sum()) / (
+                    n * (x_vals**2).sum() - x_vals.sum() ** 2
                 )
-            )
+                return slope
+            except (ZeroDivisionError, ValueError):
+                return 0
+
+        short_trend = (
+            df["Close"].rolling(periods["short"]).apply(calculate_trend_slope, raw=True)
         )
         long_trend = (
-            df["Close"]
-            .rolling(periods["long"])
-            .apply(
-                lambda x: (
-                    np.polyfit(range(len(x)), x, 1)[0]
-                    if len(x) == periods["long"]
-                    else 0
-                )
-            )
+            df["Close"].rolling(periods["long"]).apply(calculate_trend_slope, raw=True)
         )
 
         result_df["timeframe_divergence"] = (short_trend - long_trend).rolling(5).mean()

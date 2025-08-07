@@ -2,10 +2,11 @@
 アンサンブル学習用ハイパーパラメータ空間定義
 
 アンサンブル学習で使用される各ベースモデルとアンサンブル手法固有の
-パラメータ空間を定義します。
+パラメータ空間を定義します。Optunaの高度な最適化機能を活用。
 """
 
-from typing import Dict
+from typing import Dict, List, Optional
+import optuna
 
 from .optuna_optimizer import ParameterSpace
 
@@ -133,7 +134,7 @@ class EnsembleParameterSpace:
 
     @staticmethod
     def get_knn_parameter_space() -> Dict[str, ParameterSpace]:
-        """KNNのパラメータ空間"""
+        """KNNのパラメータ空間（最適化された設定）"""
         return {
             "knn_n_neighbors": ParameterSpace(type="integer", low=3, high=20),
             "knn_weights": ParameterSpace(
@@ -144,6 +145,10 @@ class EnsembleParameterSpace:
             ),
             "knn_leaf_size": ParameterSpace(type="integer", low=10, high=50),
             "knn_p": ParameterSpace(type="integer", low=1, high=2),
+            "knn_metric": ParameterSpace(
+                type="categorical",
+                categories=["minkowski", "euclidean", "manhattan", "chebyshev"],
+            ),
         }
 
     @staticmethod
@@ -258,3 +263,138 @@ class EnsembleParameterSpace:
             parameter_space.update(self.get_stacking_parameter_space())
 
         return parameter_space
+
+    @classmethod
+    def suggest_optimized_parameters(
+        cls, trial: optuna.Trial, ensemble_method: str, enabled_models: List[str]
+    ) -> Dict[str, any]:
+        """
+        Optunaの高度な最適化機能を活用したパラメータ提案
+
+        Args:
+            trial: Optunaトライアルオブジェクト
+            ensemble_method: アンサンブル手法
+            enabled_models: 有効なベースモデルのリスト
+
+        Returns:
+            最適化されたパラメータの辞書
+        """
+        params = {}
+
+        # ベースモデルのパラメータを提案
+        if "lightgbm" in enabled_models:
+            params.update(cls._suggest_lightgbm_params(trial))
+
+        if "xgboost" in enabled_models:
+            params.update(cls._suggest_xgboost_params(trial))
+
+        if "randomforest" in enabled_models:
+            params.update(cls._suggest_randomforest_params(trial))
+
+        if "knn" in enabled_models:
+            params.update(cls._suggest_knn_params(trial))
+
+        # アンサンブル手法固有のパラメータを提案
+        if ensemble_method == "bagging":
+            params.update(cls._suggest_bagging_params(trial))
+        elif ensemble_method == "stacking":
+            params.update(cls._suggest_stacking_params(trial))
+
+        return params
+
+    @staticmethod
+    def _suggest_lightgbm_params(trial: optuna.Trial) -> Dict[str, any]:
+        """LightGBMパラメータの提案"""
+        return {
+            "lgb_num_leaves": trial.suggest_int("lgb_num_leaves", 10, 100),
+            "lgb_learning_rate": trial.suggest_float(
+                "lgb_learning_rate", 0.01, 0.3, log=True
+            ),
+            "lgb_feature_fraction": trial.suggest_float(
+                "lgb_feature_fraction", 0.5, 1.0
+            ),
+            "lgb_bagging_fraction": trial.suggest_float(
+                "lgb_bagging_fraction", 0.5, 1.0
+            ),
+            "lgb_min_data_in_leaf": trial.suggest_int("lgb_min_data_in_leaf", 5, 50),
+            "lgb_max_depth": trial.suggest_int("lgb_max_depth", 3, 15),
+            "lgb_reg_alpha": trial.suggest_float("lgb_reg_alpha", 0.0, 1.0),
+            "lgb_reg_lambda": trial.suggest_float("lgb_reg_lambda", 0.0, 1.0),
+        }
+
+    @staticmethod
+    def _suggest_xgboost_params(trial: optuna.Trial) -> Dict[str, any]:
+        """XGBoostパラメータの提案"""
+        return {
+            "xgb_max_depth": trial.suggest_int("xgb_max_depth", 3, 15),
+            "xgb_learning_rate": trial.suggest_float(
+                "xgb_learning_rate", 0.01, 0.3, log=True
+            ),
+            "xgb_subsample": trial.suggest_float("xgb_subsample", 0.5, 1.0),
+            "xgb_colsample_bytree": trial.suggest_float(
+                "xgb_colsample_bytree", 0.5, 1.0
+            ),
+            "xgb_min_child_weight": trial.suggest_int("xgb_min_child_weight", 1, 10),
+            "xgb_reg_alpha": trial.suggest_float("xgb_reg_alpha", 0.0, 1.0),
+            "xgb_reg_lambda": trial.suggest_float("xgb_reg_lambda", 0.0, 1.0),
+            "xgb_gamma": trial.suggest_float("xgb_gamma", 0.0, 0.5),
+        }
+
+    @staticmethod
+    def _suggest_randomforest_params(trial: optuna.Trial) -> Dict[str, any]:
+        """RandomForestパラメータの提案"""
+        return {
+            "rf_n_estimators": trial.suggest_int("rf_n_estimators", 50, 300),
+            "rf_max_depth": trial.suggest_int("rf_max_depth", 3, 20),
+            "rf_min_samples_split": trial.suggest_int("rf_min_samples_split", 2, 20),
+            "rf_min_samples_leaf": trial.suggest_int("rf_min_samples_leaf", 1, 10),
+            "rf_max_features": trial.suggest_categorical(
+                "rf_max_features", ["sqrt", "log2", "auto"]
+            ),
+            "rf_bootstrap": trial.suggest_categorical("rf_bootstrap", [True, False]),
+        }
+
+    @staticmethod
+    def _suggest_knn_params(trial: optuna.Trial) -> Dict[str, any]:
+        """KNNパラメータの提案（最適化された距離計算）"""
+        return {
+            "knn_n_neighbors": trial.suggest_int("knn_n_neighbors", 3, 20),
+            "knn_weights": trial.suggest_categorical(
+                "knn_weights", ["uniform", "distance"]
+            ),
+            "knn_algorithm": trial.suggest_categorical(
+                "knn_algorithm", ["auto", "ball_tree", "kd_tree", "brute"]
+            ),
+            "knn_leaf_size": trial.suggest_int("knn_leaf_size", 10, 50),
+            "knn_p": trial.suggest_int("knn_p", 1, 2),
+            "knn_metric": trial.suggest_categorical(
+                "knn_metric", ["minkowski", "euclidean", "manhattan", "chebyshev"]
+            ),
+        }
+
+    @staticmethod
+    def _suggest_bagging_params(trial: optuna.Trial) -> Dict[str, any]:
+        """バギングパラメータの提案"""
+        return {
+            "bagging_n_estimators": trial.suggest_int("bagging_n_estimators", 3, 10),
+            "bagging_max_samples": trial.suggest_float("bagging_max_samples", 0.5, 1.0),
+            "bagging_max_features": trial.suggest_float(
+                "bagging_max_features", 0.5, 1.0
+            ),
+        }
+
+    @staticmethod
+    def _suggest_stacking_params(trial: optuna.Trial) -> Dict[str, any]:
+        """スタッキングパラメータの提案"""
+        return {
+            "stacking_meta_C": trial.suggest_float(
+                "stacking_meta_C", 0.01, 10.0, log=True
+            ),
+            "stacking_meta_penalty": trial.suggest_categorical(
+                "stacking_meta_penalty", ["l1", "l2", "elasticnet"]
+            ),
+            "stacking_meta_solver": trial.suggest_categorical(
+                "stacking_meta_solver", ["liblinear", "saga"]
+            ),
+            "stacking_cv_folds": trial.suggest_int("stacking_cv_folds", 3, 10),
+        }
