@@ -431,7 +431,7 @@ export default function AutoMLFeatureSettings({
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
             <div className="space-y-2">
               <h4 className="font-medium">TSFresh</h4>
               <ul className="text-muted-foreground space-y-1">
@@ -439,15 +439,6 @@ export default function AutoMLFeatureSettings({
                 <li>• 周波数領域特徴量</li>
                 <li>• エントロピー・複雑性</li>
                 <li>• 自己相関・トレンド</li>
-              </ul>
-            </div>
-            <div className="space-y-2">
-              <h4 className="font-medium">Featuretools</h4>
-              <ul className="text-muted-foreground space-y-1">
-                <li>• 特徴量の相互作用</li>
-                <li>• 集約・変換操作</li>
-                <li>• 時間窓ベース特徴量</li>
-                <li>• カスタム関数適用</li>
               </ul>
             </div>
             <div className="space-y-2">

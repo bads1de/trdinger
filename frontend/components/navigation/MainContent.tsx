@@ -102,30 +102,6 @@ const RealTimeClock: React.FC = () => {
   );
 };
 
-/**
- * 市場ステータスコンポーネント
- */
-const MarketStatus: React.FC = () => {
-  const [isMarketOpen, setIsMarketOpen] = useState(true);
-
-  return (
-    <div className="flex items-center gap-2">
-      <Badge
-        variant={isMarketOpen ? "default" : "secondary"}
-        className={`gap-1 ${
-          isMarketOpen ? "bg-green-500 hover:bg-green-600" : "bg-gray-500"
-        }`}
-      >
-        <div
-          className={`w-2 h-2 rounded-full ${
-            isMarketOpen ? "bg-white animate-pulse" : "bg-gray-300"
-          }`}
-        />
-        {isMarketOpen ? "Market Open" : "Market Closed"}
-      </Badge>
-    </div>
-  );
-};
 
 /**
  * メインコンテンツラッパーコンポーネント
@@ -171,7 +147,6 @@ const MainContent: React.FC<MainContentProps> = ({ children }) => {
 
           {/* 右側: ステータス情報 */}
           <div className="flex items-center gap-3">
-            <MarketStatus />
             <RealTimeClock />
             <Separator orientation="vertical" className="h-4" />
             <Button

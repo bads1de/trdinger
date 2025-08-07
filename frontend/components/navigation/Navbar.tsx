@@ -42,15 +42,8 @@ import {
   SidebarRail,
 } from "@/components/ui/sidebar";
 import { Badge } from "@/components/ui/badge";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+
+
 
 interface NavItem {
   href: string;
@@ -82,7 +75,6 @@ const navItems: NavItem[] = [
     icon: Brain,
     description: "機械学習モデル管理",
     color: "text-green-500",
-    badge: "AI",
   },
   {
     href: "/data",
