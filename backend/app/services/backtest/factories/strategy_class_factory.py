@@ -16,7 +16,6 @@ class StrategyClassCreationError(Exception):
     """戦略クラス生成エラー"""
 
 
-
 class StrategyClassFactory:
     """
     戦略クラスファクトリー
@@ -95,7 +94,10 @@ class StrategyClassFactory:
 
         try:
             # 戦略遺伝子を復元
-            gene = GeneSerializer.deserialize(gene_data)
+            from app.services.auto_strategy.models.gene_strategy import StrategyGene
+
+            serializer = GeneSerializer()
+            gene = serializer.dict_to_strategy_gene(gene_data, StrategyGene)
 
             # 戦略ファクトリーで戦略クラスを生成
             strategy_factory = StrategyFactory()

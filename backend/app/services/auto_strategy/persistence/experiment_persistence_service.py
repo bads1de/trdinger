@@ -40,7 +40,11 @@ class ExperimentPersistenceService:
         self.backtest_service = backtest_service
 
     def create_experiment(
-        self, experiment_id: str, experiment_name: str, ga_config: GAConfig, backtest_config: Dict[str, Any]
+        self,
+        experiment_id: str,
+        experiment_name: str,
+        ga_config: GAConfig,
+        backtest_config: Dict[str, Any],
     ) -> str:
         """
         実験を作成
@@ -325,9 +329,13 @@ class ExperimentPersistenceService:
     def complete_experiment(self, experiment_id: str):
         """実験を完了状態にする"""
         try:
+            experiment_info = self.get_experiment_info(experiment_id)
+            if not experiment_info:
+                logger.error(f"実験情報が見つかりません: {experiment_id}")
+                return
             with self.db_session_factory() as db:
                 ga_experiment_repo = GAExperimentRepository(db)
-                db_experiment_id = int(experiment_id)
+                db_experiment_id = experiment_info["db_id"]
                 ga_experiment_repo.update_experiment_status(
                     db_experiment_id, "completed"
                 )
@@ -337,9 +345,13 @@ class ExperimentPersistenceService:
     def fail_experiment(self, experiment_id: str):
         """実験を失敗状態にする"""
         try:
+            experiment_info = self.get_experiment_info(experiment_id)
+            if not experiment_info:
+                logger.error(f"実験情報が見つかりません: {experiment_id}")
+                return
             with self.db_session_factory() as db:
                 ga_experiment_repo = GAExperimentRepository(db)
-                db_experiment_id = int(experiment_id)
+                db_experiment_id = experiment_info["db_id"]
                 ga_experiment_repo.update_experiment_status(db_experiment_id, "failed")
         except Exception as e:
             logger.error(f"実験失敗処理エラー: {e}")
@@ -347,9 +359,13 @@ class ExperimentPersistenceService:
     def stop_experiment(self, experiment_id: str):
         """実験を停止状態にする"""
         try:
+            experiment_info = self.get_experiment_info(experiment_id)
+            if not experiment_info:
+                logger.error(f"実験情報が見つかりません: {experiment_id}")
+                return
             with self.db_session_factory() as db:
                 ga_experiment_repo = GAExperimentRepository(db)
-                db_experiment_id = int(experiment_id)
+                db_experiment_id = experiment_info["db_id"]
                 ga_experiment_repo.update_experiment_status(db_experiment_id, "stopped")
         except Exception as e:
             logger.error(f"実験停止処理エラー: {e}")
@@ -365,7 +381,15 @@ class ExperimentPersistenceService:
                 experiments = ga_experiment_repo.get_experiments_by_status("completed")
                 experiment = None
                 for exp in experiments:
-                    if exp.experiment_name == experiment_id:
+                    # UUID一致（configに保存したexperiment_id）で照合
+                    try:
+                        cfg = exp.config or {}
+                    except Exception:
+                        cfg = {}
+                    if (
+                        cfg.get("experiment_id") == experiment_id
+                        or exp.name == experiment_id
+                    ):
                         experiment = exp
                         break
 
@@ -375,7 +399,7 @@ class ExperimentPersistenceService:
                 # 基本的な実験情報
                 result = {
                     "id": experiment.id,
-                    "experiment_name": experiment.experiment_name,
+                    "experiment_name": experiment.name,
                     "status": experiment.status,
                     "created_at": (
                         experiment.created_at.isoformat()
