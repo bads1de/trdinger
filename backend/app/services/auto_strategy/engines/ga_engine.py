@@ -10,7 +10,7 @@ import time
 from typing import Any, Dict
 
 import numpy as np
-from deap import tools
+from deap import tools, algorithms
 
 from app.services.backtest.backtest_service import BacktestService
 
@@ -254,49 +254,31 @@ class GeneticAlgorithmEngine:
                 record = stats.compile(population)
                 logbook.record(gen=0, nevals=len(population), **record)
 
-            # 世代ループ
-            for gen in range(1, config.generations + 1):
-                # 親選択（ランダム選択）
-                offspring = [toolbox.clone(ind) for ind in population]
+            # 選択ラッパー（フィットネス共有を選択直前に適用）
+            if config.enable_fitness_sharing and self.fitness_sharing:
+                original_select = toolbox.select
 
-                # 交叉と突然変異
-                for child1, child2 in zip(offspring[::2], offspring[1::2]):
-                    if random.random() < config.crossover_rate:
-                        toolbox.mate(child1, child2)
-                        del child1.fitness.values
-                        del child2.fitness.values
+                def _select_with_sharing(pop, k):
+                    pop = self.fitness_sharing.apply_fitness_sharing(pop)
+                    return original_select(pop, k)
 
-                for mutant in offspring:
-                    if random.random() < config.mutation_rate:
-                        result = toolbox.mutate(mutant)
-                        # 突然変異の返り値を適切に処理
-                        if result is not None:
-                            if isinstance(result, tuple) and len(result) == 1:
-                                mutant[:] = result[0]
-                        del mutant.fitness.values
+                toolbox.select = _select_with_sharing  # type: ignore
 
-                # 評価が必要な個体を特定
-                invalid_ind = [ind for ind in offspring if not ind.fitness.valid]
-                fitnesses = toolbox.map(toolbox.evaluate, invalid_ind)
-                for ind, fit in zip(invalid_ind, fitnesses):
-                    ind.fitness.values = fit
-
-                # フィットネス共有を適用（有効な場合のみ）
-                if config.enable_fitness_sharing and self.fitness_sharing:
-                    offspring = self.fitness_sharing.apply_fitness_sharing(offspring)
-
-                # 親と子を結合
-                combined_population = population + offspring
-
-                # NSGA-II選択で次世代を選択
-                population[:] = toolbox.select(combined_population, len(population))
-
-                # 統計情報の記録
-                if stats:
-                    record = stats.compile(population)
-                    logbook.record(gen=gen, nevals=len(invalid_ind), **record)
-
-                logger.info(f"世代 {gen}/{config.generations} 完了")
+            # DEAP標準アルゴリズム（mu+lambda）を使用
+            mu = len(population)
+            lambda_ = len(population)
+            population, logbook = algorithms.eaMuPlusLambda(
+                population,
+                toolbox,
+                mu,
+                lambda_,
+                cxpb=config.crossover_rate,
+                mutpb=config.mutation_rate,
+                ngen=config.generations,
+                stats=stats,
+                halloffame=None,
+                verbose=False,
+            )
 
             logger.info(f"{algorithm_name}完了")
             return population, logbook

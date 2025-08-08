@@ -773,6 +773,9 @@ class MLOrchestrator(MLPredictionInterface):
         Returns:
             推定されたシンボル
         """
+        # Noneが渡された場合は仕様に従い AttributeError を送出
+        if df is None:
+            raise AttributeError("df is None")
         try:
             # データフレームのメタデータからシンボルを取得を試行
             if hasattr(df, "attrs") and "symbol" in df.attrs:
@@ -790,7 +793,11 @@ class MLOrchestrator(MLPredictionInterface):
                             return "ETH/USDT:USDT"
 
             # 価格レンジからシンボルを推定（BTCは通常高価格）
-            if "Close" in df.columns and not df["Close"].empty:
+            if (
+                hasattr(df, "columns")
+                and "Close" in df.columns
+                and not df["Close"].empty
+            ):
                 avg_price = df["Close"].mean()
                 if avg_price > 10000:  # BTCの価格レンジ
                     return "BTC/USDT:USDT"
@@ -800,6 +807,10 @@ class MLOrchestrator(MLPredictionInterface):
             # デフォルトはBTC
             return "BTC/USDT:USDT"
 
+        except AttributeError as e:
+            # テスト仕様: None等の明確な属性エラーは透過させる
+            logger.warning(f"シンボル推定エラー(属性): {e}")
+            raise
         except Exception as e:
             logger.warning(f"シンボル推定エラー: {e}")
             return "BTC/USDT:USDT"

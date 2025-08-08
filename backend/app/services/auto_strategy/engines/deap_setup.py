@@ -78,8 +78,14 @@ class DEAPSetup:
         # 進化演算子の登録（戦略遺伝子レベル）
         self.toolbox.register("mate", crossover_func)
 
-        # 突然変異の登録
-        self.toolbox.register("mutate", mutate_func, mutation_rate=config.mutation_rate)
+        # 突然変異の登録（DEAP互換の返り値 (ind,) を保証するラッパー）
+        def _mutate_wrapper(individual):
+            res = mutate_func(individual, mutation_rate=config.mutation_rate)
+            if isinstance(res, tuple):
+                return res
+            return (res,)
+
+        self.toolbox.register("mutate", _mutate_wrapper)
         # 多目的最適化用選択アルゴリズムの登録（NSGA-II）
         self.toolbox.register("select", tools.selNSGA2)
         logger.info("NSGA-II選択アルゴリズムを登録")

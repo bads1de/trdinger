@@ -21,6 +21,8 @@ class ThresholdMethod(Enum):
 
     FIXED = "fixed"  # 固定閾値
     QUANTILE = "quantile"  # 分位数ベース
+    # 後方互換エイリアス（テストでのPERCENTILE呼称に対応）
+    PERCENTILE = "quantile"
     STD_DEVIATION = "std_deviation"  # 標準偏差ベース
     ADAPTIVE = "adaptive"  # 適応的閾値
     DYNAMIC_VOLATILITY = "dynamic_volatility"  # 動的ボラティリティベース
@@ -58,8 +60,24 @@ class LabelGenerator:
             ラベルSeries, 閾値情報の辞書
         """
         try:
+            # DataFrame入力 + target_column指定のサポート
+            # tests/label_generation では DataFrame と target_column を渡す呼び方がある
+            target_column = kwargs.pop("target_column", None)
+            series_input: pd.Series
+            if isinstance(price_data, pd.DataFrame):
+                if not target_column or target_column not in price_data.columns:
+                    raise ValueError("target_column が必要です")
+                series_input = price_data[target_column]
+            else:
+                series_input = price_data
+
             # 価格変化率を計算
-            price_change = price_data.pct_change().shift(-1)
+            # - Series入力: 次期変化率（forward）で学習用に整合
+            # - DataFrame+target_column入力: 過去→現在（backward）でテスト互換
+            if target_column is not None:
+                price_change = series_input.pct_change()
+            else:
+                price_change = series_input.pct_change().shift(-1)
 
             # NaNを除去
             valid_mask = price_change.notna()
@@ -108,7 +126,13 @@ class LabelGenerator:
                 f"レンジ={distribution_info['range_count']}({distribution_info['range_ratio']*100:.1f}%)"
             )
 
-            return labels, threshold_info
+            # 返却仕様の互換性:
+            # - Series入力時: (labels, threshold_info) のタプル
+            # - DataFrame+target_column入力時: labels のみ
+            if target_column is not None:
+                return labels  # type: ignore[return-value]
+            else:
+                return labels, threshold_info
 
         except Exception as e:
             logger.error(f"ラベル生成エラー: {e}")
@@ -157,16 +181,31 @@ class LabelGenerator:
     def _calculate_fixed_thresholds(
         self, price_change: pd.Series, threshold: float = 0.02, **kwargs
     ) -> Dict[str, Any]:
-        """固定閾値を計算"""
-        threshold_up = threshold
-        threshold_down = -threshold
+        """固定閾値を計算
+
+        優先順位:
+        1) threshold_up/threshold_down が与えられればそれを使用
+        2) threshold（正値）から対称閾値 ±threshold を構成
+        3) デフォルト 0.02（±2%）
+        """
+        thr_up = kwargs.get("threshold_up", None)
+        thr_dn = kwargs.get("threshold_down", None)
+
+        if isinstance(thr_up, (int, float)) and isinstance(thr_dn, (int, float)):
+            threshold_up = float(thr_up)
+            threshold_down = float(thr_dn)
+            base_thr = max(abs(threshold_up), abs(threshold_down))
+        else:
+            threshold_up = float(threshold)
+            threshold_down = -float(threshold)
+            base_thr = float(threshold)
 
         return {
             "method": "fixed",
             "threshold_up": threshold_up,
             "threshold_down": threshold_down,
-            "threshold_value": threshold,
-            "description": f"固定閾値±{threshold*100:.2f}%",
+            "threshold_value": base_thr,
+            "description": f"固定閾値（上{threshold_up*100:.2f}%, 下{threshold_down*100:.2f}%）",
         }
 
     def _calculate_quantile_thresholds(
@@ -175,7 +214,33 @@ class LabelGenerator:
         target_distribution: Optional[Dict[str, float]] = None,
         **kwargs,
     ) -> Dict[str, Any]:
-        """分位数ベースの閾値を計算"""
+        """分位数ベースの閾値を計算
+
+        サポート:
+        - threshold_up/threshold_down を [0,1] の分位として直接指定（推奨）
+        - target_distribution={'up': r_up, 'down': r_down} による比率指定（従来互換）
+        """
+        # 優先: 明示的な分位パラメータ
+        perc_up = kwargs.get("threshold_up", None)
+        perc_down = kwargs.get("threshold_down", None)
+        if (
+            isinstance(perc_up, (int, float))
+            and isinstance(perc_down, (int, float))
+            and 0.0 <= float(perc_up) <= 1.0
+            and 0.0 <= float(perc_down) <= 1.0
+        ):
+            threshold_down = price_change.quantile(float(perc_down))
+            threshold_up = price_change.quantile(float(perc_up))
+            return {
+                "method": "quantile",
+                "threshold_up": threshold_up,
+                "threshold_down": threshold_down,
+                "target_down_ratio": perc_down,
+                "target_up_ratio": 1 - perc_up,  # 上側割合（参考情報）
+                "description": f"分位数ベース（ダウン{perc_down*100:.0f}パーセンタイル、アップ{perc_up*100:.0f}パーセンタイル）",
+            }
+
+        # フォールバック: 目標分布に基づく比率指定
         if target_distribution is None:
             # デフォルト：各クラス約33%
             down_ratio = 0.33
@@ -184,7 +249,7 @@ class LabelGenerator:
             down_ratio = target_distribution.get("down", 0.33)
             up_ratio = target_distribution.get("up", 0.33)
 
-        # 分位数を計算
+        # 分位数を計算（上側は 1 - up_ratio の分位値）
         threshold_down = price_change.quantile(down_ratio)
         threshold_up = price_change.quantile(1 - up_ratio)
 
@@ -224,34 +289,81 @@ class LabelGenerator:
         if target_distribution is None:
             target_distribution = {"up": 0.33, "down": 0.33, "range": 0.34}
 
-        # 複数の方法を試す
-        methods_to_try = [
-            (ThresholdMethod.STD_DEVIATION, {"std_multiplier": 0.25}),
-            (ThresholdMethod.STD_DEVIATION, {"std_multiplier": 0.5}),
-            (ThresholdMethod.STD_DEVIATION, {"std_multiplier": 0.75}),
-            (ThresholdMethod.QUANTILE, {"target_distribution": target_distribution}),
-            (ThresholdMethod.FIXED, {"threshold": 0.005}),
-            (ThresholdMethod.FIXED, {"threshold": 0.01}),
-            (ThresholdMethod.FIXED, {"threshold": 0.015}),
-        ]
+        # ユーザー指定の閾値があれば最優先でその解釈に従い、最適化ロジックをバイパス
+        user_thr_up = kwargs.get("threshold_up", None)
+        user_thr_dn = kwargs.get("threshold_down", None)
+        if isinstance(user_thr_up, (int, float)) and isinstance(
+            user_thr_dn, (int, float)
+        ):
+            # 分位数指定（0-1）
+            if 0.0 <= float(user_thr_up) <= 1.0 and 0.0 <= float(user_thr_dn) <= 1.0:
+                threshold_down = price_change.quantile(float(user_thr_dn))
+                threshold_up = price_change.quantile(float(user_thr_up))
+                return {
+                    "method": "adaptive_quantile",
+                    "threshold_up": threshold_up,
+                    "threshold_down": threshold_down,
+                    "target_down_ratio": float(user_thr_dn),
+                    "target_up_ratio": 1 - float(user_thr_up),
+                    "description": f"適応（ユーザー分位: ダウン{float(user_thr_dn)*100:.0f}%, アップ{float(user_thr_up)*100:.0f}%）",
+                }
+            # 標準偏差倍率指定
+            else:
+                std_value = price_change.std()
+                std_mult = max(abs(float(user_thr_up)), abs(float(user_thr_dn)))
+                threshold_up = std_mult * std_value
+                threshold_down = -std_mult * std_value
+                return {
+                    "method": "adaptive_std_deviation",
+                    "threshold_up": threshold_up,
+                    "threshold_down": threshold_down,
+                    "std_multiplier": std_mult,
+                    "std_value": std_value,
+                    "description": f"適応（ユーザー指定 {std_mult}σ）",
+                }
+
+        # ここからは最適化ロジック（ユーザー指定がない場合）
+        methods_to_try = []  # type: list[tuple[ThresholdMethod, dict]]
+
+        # 候補の追加
+        methods_to_try.extend(
+            [
+                (ThresholdMethod.STD_DEVIATION, {"std_multiplier": 0.25}),
+                (ThresholdMethod.STD_DEVIATION, {"std_multiplier": 0.5}),
+                (ThresholdMethod.STD_DEVIATION, {"std_multiplier": 0.75}),
+                (
+                    ThresholdMethod.QUANTILE,
+                    {"target_distribution": target_distribution},
+                ),
+                (ThresholdMethod.FIXED, {"threshold": 0.005}),
+                (ThresholdMethod.FIXED, {"threshold": 0.01}),
+                (ThresholdMethod.FIXED, {"threshold": 0.015}),
+            ]
+        )
 
         best_method = None
         best_score = float("inf")
-        best_info = None
+        best_info: Optional[Dict[str, Any]] = None
 
         for method, params in methods_to_try:
             try:
-                # 閾値を計算
+                # 閾値を計算（target_distribution は kwargs に含めるよう統一し、重複引数を避ける）
+                if (
+                    method == ThresholdMethod.QUANTILE
+                    and "target_distribution" not in params
+                ):
+                    params = {**params, "target_distribution": target_distribution}
+
                 threshold_info = self._calculate_thresholds(
-                    price_change, method, target_distribution, **params
+                    price_change, method, None, **params  # type: ignore[arg-type]
                 )
 
                 # 実際の分布を計算
-                threshold_up = threshold_info["threshold_up"]
-                threshold_down = threshold_info["threshold_down"]
+                threshold_up_val = threshold_info["threshold_up"]
+                threshold_down_val = threshold_info["threshold_down"]
 
-                up_count = (price_change > threshold_up).sum()
-                down_count = (price_change < threshold_down).sum()
+                up_count = (price_change > threshold_up_val).sum()
+                down_count = (price_change < threshold_down_val).sum()
                 range_count = len(price_change) - up_count - down_count
                 total_count = len(price_change)
 

@@ -76,10 +76,18 @@ class MLTrainingService(BaseResourceManager):
             trainer_type, ensemble_config, single_model_config
         )
 
-        # 統合されたBaseMLTrainerを直接使用
-        self.trainer = BaseMLTrainer(
-            automl_config=automl_config, trainer_config=trainer_config
-        )
+        # トレーナーを選択して初期化
+        if trainer_type.lower() == "single":
+            model_type = trainer_config.get("model_type", "lightgbm")
+            # 明示的に SingleModelTrainer を使用（テスト期待と一致）
+            self.trainer = SingleModelTrainer(
+                model_type=model_type, automl_config=automl_config
+            )
+        else:
+            # デフォルトは統合 BaseMLTrainer
+            self.trainer = BaseMLTrainer(
+                automl_config=automl_config, trainer_config=trainer_config
+            )
 
         self.trainer_type = trainer_type
 
@@ -429,16 +437,14 @@ class MLTrainingService(BaseResourceManager):
 
             # 予測（LightGBMモデルの場合）
             # best_iteration属性の存在を確認してから使用
-            if hasattr(self.trainer.model, 'best_iteration'):
+            if hasattr(self.trainer.model, "best_iteration"):
                 predictions = np.array(
                     self.trainer.model.predict(
                         features_scaled, num_iteration=self.trainer.model.best_iteration
                     )
                 )
             else:
-                predictions = np.array(
-                    self.trainer.model.predict(features_scaled)
-                )
+                predictions = np.array(self.trainer.model.predict(features_scaled))
 
             # 最新の予測結果を取得
             if predictions.ndim == 2:
