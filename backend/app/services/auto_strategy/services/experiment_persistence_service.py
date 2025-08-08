@@ -508,11 +508,20 @@ class ExperimentPersistenceService:
                 ga_experiment_repo = GAExperimentRepository(db)
                 experiments = ga_experiment_repo.get_recent_experiments(limit=100)
                 for exp in experiments:
+                    # UUID一致（configに保存したexperiment_id）や名称/ID一致で照合
+                    try:
+                        cfg = exp.config or {}
+                    except Exception:
+                        cfg = {}
                     if (
-                        hasattr(exp, "name")
-                        and exp.name is not None
-                        and experiment_id in exp.name
-                    ) or str(exp.id) == experiment_id:
+                        cfg.get("experiment_id") == experiment_id
+                        or (
+                            hasattr(exp, "name")
+                            and exp.name is not None
+                            and exp.name == experiment_id
+                        )
+                        or str(exp.id) == experiment_id
+                    ):
                         return {
                             "db_id": exp.id,
                             "name": exp.name,

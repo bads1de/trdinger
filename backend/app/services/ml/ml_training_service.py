@@ -91,9 +91,6 @@ class MLTrainingService(BaseResourceManager):
 
         self.trainer_type = trainer_type
 
-        logger.info(
-            f"MLTrainingService初期化完了（簡素化版）: trainer_type={trainer_type}"
-        )
         if trainer_type == "single" and single_model_config:
             logger.info(f"単一モデル設定: {single_model_config}")
 

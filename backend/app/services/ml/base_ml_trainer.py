@@ -90,7 +90,6 @@ class BaseMLTrainer(BaseResourceManager, ABC):
             # 従来の基本特徴量サービスを使用
             self.feature_service = FeatureEngineeringService()
             self.use_automl = False
-            logger.debug("📊 基本特徴量エンジニアリングを使用します")
 
         # トレーナー設定の処理（脆弱性修正）
         self.trainer_config = trainer_config or {}
@@ -114,9 +113,6 @@ class BaseMLTrainer(BaseResourceManager, ABC):
         self.automl_config = automl_config
         self.last_training_results = None  # 最後の学習結果を保持
 
-        logger.info(
-            f"統合トレーナー初期化: type={self.trainer_type}, model_type={self.model_type}"
-        )
 
     # 重複ロジック削除:
     # _create_automl_config_from_dict は AutoMLConfig.from_dict に統一したため不要

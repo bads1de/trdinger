@@ -11,6 +11,7 @@ import numpy as np
 import pandas as pd
 
 from .config import IndicatorConfig, indicator_registry
+from .utils import ensure_numpy_array
 
 logger = logging.getLogger(__name__)
 
@@ -57,7 +58,6 @@ class TechnicalIndicatorService:
         config = self._get_indicator_config(indicator_type)
         indicator_func = config.adapter_function
 
-
         assert (
             indicator_func is not None
         ), "Adapter function cannot be None at this point."
@@ -76,7 +76,8 @@ class TechnicalIndicatorService:
 
             # データキーを適切な関数パラメータ名にマッピング
             param_name = self._map_data_key_to_param(indicator_type, data_key)
-            required_data[param_name] = df[actual_column].to_numpy()
+            array = df[actual_column].to_numpy()
+            required_data[param_name] = ensure_numpy_array(array)
 
         # パラメータとデータを結合して関数を呼び出し
         all_args = {**required_data, **params}

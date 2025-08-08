@@ -4,9 +4,12 @@
 """
 
 from typing import List, Optional, Dict, Any
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, date, time
 import logging
+from decimal import Decimal
 from sqlalchemy.orm import Session
+import numpy as np
+import pandas as pd
 
 from .base_repository import BaseRepository
 from database.models import BacktestResult
@@ -19,6 +22,38 @@ class BacktestResultRepository(BaseRepository):
 
     def __init__(self, db: Session):
         super().__init__(db, BacktestResult)
+
+    def _to_json_safe(self, obj: Any) -> Any:
+        """JSONにシリアライズ可能な形へ再帰的に変換"""
+        try:
+            # Noneやプリミティブ型
+            if obj is None or isinstance(obj, (str, int, float, bool)):
+                return obj
+            # 日付・時刻
+            if isinstance(obj, (datetime, date, time)):
+                return obj.isoformat()
+            # pandas Timestamp
+            if isinstance(obj, pd.Timestamp):
+                return obj.isoformat()
+            # Decimal
+            if isinstance(obj, Decimal):
+                return float(obj)
+            # numpyスカラ
+            if isinstance(obj, np.generic):
+                return obj.item()
+            # numpy配列
+            if isinstance(obj, np.ndarray):
+                return obj.tolist()
+            # 辞書
+            if isinstance(obj, dict):
+                return {k: self._to_json_safe(v) for k, v in obj.items()}
+            # リスト/タプル/セット
+            if isinstance(obj, (list, tuple, set)):
+                return [self._to_json_safe(v) for v in obj]
+            # それ以外は文字列化の最後の手段
+            return obj
+        except Exception:
+            return str(obj)
 
     def _normalize_result_data(self, result_data: Dict[str, Any]) -> Dict[str, Any]:
         """入力データを正規化し、BacktestResultモデルの形式に変換する"""
@@ -57,6 +92,12 @@ class BacktestResultRepository(BaseRepository):
             result_data.get("results_json", {}).get("trade_history", []),
         )
 
+        # JSON列はシリアライズ可能に正規化
+        config_json = self._to_json_safe(result_data.get("config_json", {}))
+        performance_metrics = self._to_json_safe(performance_metrics)
+        equity_curve = self._to_json_safe(equity_curve)
+        trade_history = self._to_json_safe(trade_history)
+
         return {
             "strategy_name": result_data["strategy_name"],
             "symbol": result_data["symbol"],
@@ -65,7 +106,7 @@ class BacktestResultRepository(BaseRepository):
             "end_date": end_date,
             "initial_capital": result_data["initial_capital"],
             "commission_rate": result_data.get("commission_rate", 0.001),
-            "config_json": result_data.get("config_json", {}),
+            "config_json": config_json,
             "performance_metrics": performance_metrics,
             "equity_curve": equity_curve,
             "trade_history": trade_history,

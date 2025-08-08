@@ -107,7 +107,6 @@ class BacktestExecutor:
                     f"{symbol} {timeframe}のデータが見つかりませんでした。"
                 )
             
-            logger.debug(f"データ取得完了: {len(data)}行, 期間: {start_date} - {end_date}")
             return data
             
         except Exception as e:
@@ -133,7 +132,6 @@ class BacktestExecutor:
                 margin=1.0,              # マージン要件を1.0に設定（レバレッジなし）
             )
             
-            logger.debug(f"バックテストインスタンス作成完了: 初期資金={initial_capital}, 手数料={commission_rate}")
             return bt
             
         except Exception as e:

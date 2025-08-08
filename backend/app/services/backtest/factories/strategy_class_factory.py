@@ -103,9 +103,6 @@ class StrategyClassFactory:
             strategy_factory = StrategyFactory()
             strategy_class = strategy_factory.create_strategy_class(gene)
 
-            logger.debug(
-                f"オートストラテジークラスを生成しました: {strategy_class.__name__}"
-            )
             return strategy_class
 
         except Exception as e:

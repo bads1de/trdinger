@@ -20,7 +20,6 @@ class TALibError(Exception):
     """Ta-lib計算エラー"""
 
 
-
 def validate_input(data: np.ndarray, period: int) -> None:
     """
     入力データの基本検証（numpy配列版）
@@ -181,13 +180,15 @@ def ensure_numpy_array(data: Union[np.ndarray, list, "pd.Series"]) -> np.ndarray
 
 
 def format_indicator_result(
-    result: Union[np.ndarray, tuple]
+    result: Union[np.ndarray, tuple],
+    indicator_name: str | None = None,
 ) -> Union[np.ndarray, tuple]:
     """
     指標計算結果のフォーマット（現在はプレースホルダー）
 
     Args:
         result: 計算結果
+        indicator_name: 任意の指標名（ログ・将来の拡張用、未使用）
 
     Returns:
         フォーマット済みの結果
