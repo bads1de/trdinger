@@ -195,3 +195,28 @@ def format_indicator_result(
     """
     # 現在は特に処理を行わず、そのまま返す
     return result
+
+
+def normalize_data_for_trig(data: np.ndarray) -> np.ndarray:
+    """
+    三角関数（ASIN, ACOS）の入力用にデータを[-1, 1]の範囲に正規化します。
+
+    Args:
+        data: 正規化対象のnumpy配列
+
+    Returns:
+        正規化されたnumpy配列
+    """
+    min_val = np.nanmin(data)
+    max_val = np.nanmax(data)
+
+    # 全て同じ値の場合（ゼロ除算を避ける）
+    if min_val == max_val:
+        # 範囲内に収まるように0または適切な値を返す
+        return np.full_like(data, 0.0)
+
+    # Min-Maxスケーリングで[0, 1]に正規化し、その後[-1, 1]に変換
+    normalized_data = 2 * (data - min_val) / (max_val - min_val) - 1
+
+    # 計算誤差により範囲外になる可能性を考慮し、クリッピング
+    return np.clip(normalized_data, -1.0, 1.0)

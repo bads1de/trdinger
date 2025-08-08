@@ -48,8 +48,6 @@ class FRMerger:
                 symbol=symbol, start_time=start_date, end_time=end_date
             )
 
-            logger.info(f"取得したFRデータ件数: {len(fr_data) if fr_data else 0}")
-
             if fr_data:
                 fr_df = self._convert_fr_to_dataframe(fr_data)
                 logger.info(

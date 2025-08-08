@@ -64,9 +64,6 @@ class GeneratedStrategyRepository(BaseRepository):
             self.db.commit()
             self.db.refresh(strategy)
 
-            logger.debug(
-                f"戦略を保存しました: 実験{experiment_id}, 世代{generation}, ID{strategy.id}"
-            )
             return strategy
 
         except Exception as e:

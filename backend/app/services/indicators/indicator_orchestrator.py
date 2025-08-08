@@ -11,7 +11,7 @@ import numpy as np
 import pandas as pd
 
 from .config import IndicatorConfig, indicator_registry
-from .utils import ensure_numpy_array
+from .utils import ensure_numpy_array, normalize_data_for_trig
 
 logger = logging.getLogger(__name__)
 
@@ -78,6 +78,11 @@ class TechnicalIndicatorService:
             param_name = self._map_data_key_to_param(indicator_type, data_key)
             array = df[actual_column].to_numpy()
             required_data[param_name] = ensure_numpy_array(array)
+
+        # 必要に応じて入力データを正規化
+        if config.needs_normalization:
+            for key, data_array in required_data.items():
+                required_data[key] = normalize_data_for_trig(data_array)
 
         # パラメータとデータを結合して関数を呼び出し
         all_args = {**required_data, **params}

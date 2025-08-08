@@ -1451,6 +1451,8 @@ def setup_math_transform_indicators():
             scale_type=IndicatorScaleType.MOMENTUM_ZERO_CENTERED,
             category="math_transform",
         )
+        if func_name in ["ACOS", "ASIN"]:
+            config.needs_normalization = True
         indicator_registry.register(config)
 
     # その他の数学関数

@@ -23,7 +23,6 @@ class DataConversionError(Exception):
     """データ変換エラー"""
 
 
-
 class DataConversionService:
     """
     データ変換サービス
@@ -65,7 +64,6 @@ class DataConversionService:
             # データ型を最適化
             df = self._optimize_ohlcv_dtypes(df)
 
-            logger.debug(f"OHLCV DataFrame変換完了: {len(df)}行")
             return df
 
         except Exception as e:

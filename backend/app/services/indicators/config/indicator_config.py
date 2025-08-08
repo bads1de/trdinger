@@ -74,6 +74,7 @@ class IndicatorConfig:
     # メタデータ（遺伝子生成用）
     scale_type: Optional[IndicatorScaleType] = None  # スケールタイプ
     category: Optional[str] = None  # 指標カテゴリ（例: trend, momentum）
+    needs_normalization: bool = False  # 入力データの正規化が必要か
 
     def add_parameter(self, param_config: ParameterConfig) -> None:
         """パラメータを追加"""

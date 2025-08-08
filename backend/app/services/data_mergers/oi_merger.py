@@ -48,8 +48,6 @@ class OIMerger:
                 symbol=symbol, start_time=start_date, end_time=end_date
             )
 
-            logger.info(f"取得したOIデータ件数: {len(oi_data) if oi_data else 0}")
-
             if oi_data:
                 oi_df = self._convert_oi_to_dataframe(oi_data)
                 logger.info(
