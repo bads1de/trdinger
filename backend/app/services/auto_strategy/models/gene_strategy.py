@@ -190,11 +190,11 @@ class StrategyGene:
             and len(self.short_entry_conditions) > 0
         )
 
-    def validate(self) -> bool:
-        """戦略遺伝子の妥当性を検証"""
+    def validate(self):
+        """戦略遺伝子の妥当性を検証し、(is_valid, errors) を返す"""
         validator = GeneValidator()
         is_valid, errors = validator.validate_strategy_gene(self)
-        return is_valid
+        return is_valid, errors
 
 
 def encode_gene_to_list(gene: StrategyGene) -> List[float]:
