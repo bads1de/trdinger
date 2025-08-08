@@ -156,10 +156,12 @@ class ExperimentPersistenceService:
             fitness_score=fitness_score,
             fitness_values=fitness_values,
         )
+
         logger.info(f"最良戦略を保存しました: DB ID {best_strategy_record.id}")
 
         try:
             logger.info("最良戦略の詳細バックテストと結果保存を開始...")
+
             detailed_backtest_config = self._prepare_detailed_backtest_config(
                 best_strategy, experiment_info, backtest_config
             )

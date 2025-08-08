@@ -6,7 +6,8 @@ import logging
 from datetime import datetime
 from typing import Any, Dict, List, Optional, Type
 
-from sqlalchemy.dialects.postgresql import insert
+from sqlalchemy.dialects.postgresql import insert as postgresql_insert
+from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 from sqlalchemy.orm import Session
 
 logger = logging.getLogger(__name__)
@@ -43,8 +44,9 @@ class DatabaseInsertHelper:
         try:
             if "sqlite" in database_url.lower():
                 # SQLiteの場合は一件ずつINSERT OR IGNOREで処理
+                # SQLiteの場合は一件ずつINSERT OR IGNOREで処理
                 return DatabaseInsertHelper._sqlite_insert_with_ignore(
-                    db, model_class, records
+                    db, model_class, records, conflict_columns
                 )
             else:
                 # PostgreSQL の ON CONFLICT を使用して重複を無視
@@ -59,95 +61,40 @@ class DatabaseInsertHelper:
 
     @staticmethod
     def _sqlite_insert_with_ignore(
-        db: Session, model_class: Type, records: List[dict]
+        db: Session,
+        model_class: Type,
+        records: List[dict],
+        conflict_columns: List[str],
     ) -> int:
-        """SQLite用の重複無視挿入（バッチ処理対応）"""
+        """SQLite用の重複無視挿入（SQLAlchemyのon_conflict_do_nothingを使用）"""
         if not records:
             return 0
 
-        inserted_count = 0
-        batch_size = 100  # バッチサイズを設定
-        total_records = len(records)
+        logger.info(f"SQLite一括挿入開始: {len(records)}件のデータを処理")
 
-        logger.info(
-            f"SQLite一括挿入開始: {total_records}件のデータを{batch_size}件ずつ処理"
-        )
-
-        # レコードをバッチに分割して処理
-        for i in range(0, total_records, batch_size):
-            batch = records[i : i + batch_size]
-            batch_num = (i // batch_size) + 1
-            total_batches = (total_records + batch_size - 1) // batch_size
-
-            logger.info(f"バッチ {batch_num}/{total_batches}: {len(batch)}件処理中...")
-
-            try:
-                # バッチ内の各レコードを追加
-                batch_inserted = 0
-                batch_skipped = 0
-
-                for record in batch:
-                    try:
-                        obj = model_class(**record)
-                        db.add(obj)
-                        batch_inserted += 1
-                    except Exception as e:
-                        # 重複エラーなどの場合は該当レコードをスキップ
-                        batch_skipped += 1
-                        logger.debug(f"レコードスキップ: {e}")
-                        continue
-
-                # バッチ単位でコミット
-                try:
-                    if batch_inserted > 0:
-                        db.commit()
-                        inserted_count += batch_inserted
-                        logger.info(
-                            f"バッチ {batch_num}: {batch_inserted}件挿入完了 (スキップ: {batch_skipped}件)"
-                        )
-                    else:
-                        logger.info(
-                            f"バッチ {batch_num}: 新規挿入データなし (スキップ: {batch_skipped}件)"
-                        )
-                except Exception as commit_error:
-                    # コミット時のエラー（重複制約など）
-                    db.rollback()
-                    logger.warning(
-                        f"バッチ {batch_num} コミットエラー、個別処理に切り替え: {commit_error}"
-                    )
-
-                    # 個別処理で重複を回避
-                    individual_inserted = 0
-                    for record in batch:
-                        try:
-                            obj = model_class(**record)
-                            db.add(obj)
-                            db.commit()
-                            individual_inserted += 1
-                        except Exception:
-                            db.rollback()
-                            continue
-
-                    inserted_count += individual_inserted
-                    logger.info(
-                        f"バッチ {batch_num}: 個別処理で {individual_inserted}件挿入完了"
-                    )
-
-            except Exception as e:
-                # バッチ全体でエラーが発生した場合はロールバック
-                db.rollback()
-                logger.warning(f"バッチ {batch_num} でエラー発生、ロールバック: {e}")
-                continue
-
-        logger.info(f"SQLite一括挿入完了: {inserted_count}/{total_records}件挿入")
-        return inserted_count
+        try:
+            stmt = sqlite_insert(model_class).values(records)
+            stmt = stmt.on_conflict_do_nothing(index_elements=conflict_columns)
+            result = db.execute(stmt)
+            db.commit()
+            inserted_count = result.rowcount
+            logger.info(
+                f"SQLite一括挿入完了: {inserted_count}/{len(records)}件挿入"
+            )
+            return inserted_count
+        except Exception as e:
+            db.rollback()
+            logger.error(f"SQLite一括挿入エラー: {e}")
+            # エラーが発生した場合は、元の個別処理にフォールバックすることも検討できる
+            # ここではシンプルにエラーをraiseする
+            raise
 
     @staticmethod
     def _postgresql_insert_with_conflict(
         db: Session, model_class: Type, records: List[dict], conflict_columns: List[str]
     ) -> int:
         """PostgreSQL用の重複無視挿入"""
-        stmt = insert(model_class).values(records)
+        stmt = postgresql_insert(model_class).values(records)
         stmt = stmt.on_conflict_do_nothing(index_elements=conflict_columns)
         result = db.execute(stmt)
         db.commit()

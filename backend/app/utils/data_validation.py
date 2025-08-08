@@ -34,7 +34,6 @@ class DataValidator:
         numerator: Union[pd.Series, np.ndarray, float],
         denominator: Union[pd.Series, np.ndarray, float],
         default_value: float = 0.0,
-        epsilon: float = 1e-8,
     ) -> Union[pd.Series, np.ndarray, float]:
         """
         安全な除算処理
@@ -42,46 +41,34 @@ class DataValidator:
         Args:
             numerator: 分子
             denominator: 分母
-            default_value: 分母が0の場合のデフォルト値
-            epsilon: 分母に加える小さな値
+            default_value: 分母が0または結果が無限/NaNの場合のデフォルト値
 
         Returns:
             除算結果
         """
         try:
-            # 分母にepsilonを加えて0除算を防ぐ
-            safe_denominator = denominator + epsilon
-            result = numerator / safe_denominator
+            with np.errstate(divide="ignore", invalid="ignore"):
+                result = np.divide(numerator, denominator)
 
-            # 無限大値・NaN値をデフォルト値に置換
             if isinstance(result, pd.Series):
-                result = result.replace([np.inf, -np.inf], default_value).fillna(
-                    default_value
-                )
+                return result.replace([np.inf, -np.inf], np.nan).fillna(default_value)
             elif isinstance(result, np.ndarray):
-                result = np.nan_to_num(
+                return np.nan_to_num(
                     result,
                     nan=default_value,
                     posinf=default_value,
                     neginf=default_value,
                 )
-            else:
-                # スカラーの場合
-                try:
-                    if np.isinf(result) or np.isnan(result):
-                        result = default_value
-                except (TypeError, ValueError):
-                    # 数値型でない場合はデフォルト値を使用
-                    result = default_value
-
+            # スカラー値の場合
+            if np.isinf(result) or np.isnan(result):
+                return default_value
             return result
 
         except Exception as e:
             logger.warning(f"除算処理でエラーが発生しました: {e}")
             if isinstance(numerator, (pd.Series, np.ndarray)):
                 return np.full_like(numerator, default_value, dtype=float)
-            else:
-                return default_value
+            return default_value
 
     @staticmethod
     def safe_correlation(
@@ -101,13 +88,7 @@ class DataValidator:
         """
         try:
             correlation = x.rolling(window=window).corr(y)
-
-            # NaN値と無限大値をデフォルト値に置換
-            correlation = correlation.fillna(default_value)
-            correlation = correlation.replace([np.inf, -np.inf], default_value)
-
-            return correlation
-
+            return correlation.replace([np.inf, -np.inf], np.nan).fillna(default_value)
         except Exception as e:
             logger.warning(f"相関計算でエラーが発生しました: {e}")
             return pd.Series(np.full(len(x), default_value), index=x.index)
@@ -131,68 +112,35 @@ class DataValidator:
         """
         try:
             result = a * b
-
             if isinstance(result, pd.Series):
-                # 無限値とNaN値を置換
-                result = result.replace([np.inf, -np.inf], default_value)
-                result = result.fillna(default_value)
-            else:
-                # スカラーの場合
-                try:
-                    if np.isinf(result) or np.isnan(result):
-                        result = default_value
-                except (TypeError, ValueError):
-                    # 数値型でない場合はデフォルト値を使用
-                    result = default_value
-
+                return result.replace([np.inf, -np.inf], np.nan).fillna(default_value)
+            if np.isinf(result) or np.isnan(result):
+                return default_value
             return result
-
         except Exception as e:
             logger.warning(f"乗算処理でエラーが発生しました: {e}")
             if isinstance(a, pd.Series):
                 return pd.Series(np.full(len(a), default_value), index=a.index)
-            else:
-                return default_value
+            return default_value
 
     @staticmethod
     def safe_pct_change(
-        data: pd.Series,
-        periods: int = 1,
-        fill_value: float = 0.0,
-        min_threshold: float = 1e-10,
+        data: pd.Series, periods: int = 1, fill_value: float = 0.0
     ) -> pd.Series:
         """
-        安全な変化率計算（0除算を避ける）
+        安全な変化率計算
 
         Args:
             data: 変化率を計算するデータ
             periods: 期間
             fill_value: 無限値やNaN値の置換値
-            min_threshold: 除算の最小閾値
 
         Returns:
             安全に計算された変化率
         """
         try:
-            # 前の値を取得
-            prev_data = data.shift(periods)
-
-            # 0や極小値を閾値で置換
-            prev_data_safe = prev_data.where(
-                np.abs(prev_data) >= min_threshold,
-                min_threshold
-                * np.where(np.sign(prev_data) == 0, 1, np.sign(prev_data)),
-            )
-
-            # 変化率を計算
-            pct_change = (data - prev_data) / prev_data_safe
-
-            # 無限値とNaN値を置換
-            pct_change = pct_change.replace([np.inf, -np.inf], fill_value)
-            pct_change = pct_change.fillna(fill_value)
-
-            return pct_change
-
+            pct_change = data.pct_change(periods=periods)
+            return pct_change.replace([np.inf, -np.inf], np.nan).fillna(fill_value)
         except Exception as e:
             logger.warning(f"変化率計算でエラーが発生しました: {e}")
             return pd.Series(np.full(len(data), fill_value), index=data.index)
@@ -214,10 +162,11 @@ class DataValidator:
             安全に計算されたローリング平均
         """
         try:
-            rolling_mean = data.rolling(window=window, min_periods=min_periods).mean()
-            rolling_mean = rolling_mean.fillna(fill_value)
-            return rolling_mean
-
+            return (
+                data.rolling(window=window, min_periods=min_periods)
+                .mean()
+                .fillna(fill_value)
+            )
         except Exception as e:
             logger.warning(f"ローリング平均計算でエラーが発生しました: {e}")
             return pd.Series(np.full(len(data), fill_value), index=data.index)
@@ -239,10 +188,11 @@ class DataValidator:
             安全に計算されたローリング標準偏差
         """
         try:
-            rolling_std = data.rolling(window=window, min_periods=min_periods).std()
-            rolling_std = rolling_std.fillna(fill_value)
-            return rolling_std
-
+            return (
+                data.rolling(window=window, min_periods=min_periods)
+                .std()
+                .fillna(fill_value)
+            )
         except Exception as e:
             logger.warning(f"ローリング標準偏差計算でエラーが発生しました: {e}")
             return pd.Series(np.full(len(data), fill_value), index=data.index)
@@ -250,89 +200,34 @@ class DataValidator:
     @staticmethod
     def safe_normalize(
         data: pd.Series, window: int, default_value: float = 0.0
-    ) -> Union[pd.Series, np.ndarray, float]:
+    ) -> pd.Series:
         """
-        安全な正規化処理（Z-score）- scikit-learn StandardScaler使用
+        安全な正規化処理（Z-score）
 
         Args:
             data: 正規化するデータ
             window: 計算ウィンドウ
-            default_value: 標準偏差が0の場合のデフォルト値
+            default_value: 標準偏差が0または結果が無限/NaNの場合のデフォルト値
 
         Returns:
             正規化されたデータ
         """
         try:
-            from sklearn.preprocessing import StandardScaler
+            rolling_mean = data.rolling(window=window, min_periods=1).mean()
+            rolling_std = data.rolling(window=window, min_periods=1).std()
 
-            # scikit-learnのStandardScalerを使用したローリング正規化
-            normalized_values = []
+            # 標準偏差が0または非常に小さい場合は、除算結果が無限大またはNaNになるのを防ぐ
+            # ここでは分母を1にすることで、(data - rolling_mean) の値をそのまま使う（実質的に正規化しない）
+            # もしくは、小さな値 (e.g., 1e-8) で置き換えることも可能
+            denominator = rolling_std.where(rolling_std > 1e-8, 1)
 
-            for i in range(len(data)):
-                start_idx = max(0, i - window + 1)
-                window_data = data.iloc[start_idx : i + 1]
+            normalized = (data - rolling_mean) / denominator
 
-                if len(window_data) < 2:
-                    normalized_values.append(default_value)
-                    continue
-
-                try:
-                    # StandardScalerで正規化
-                    scaler = StandardScaler()
-                    window_array = window_data.values.reshape(-1, 1)
-
-                    # 定数データの場合
-                    if window_data.std() == 0:
-                        normalized_values.append(default_value)
-                        continue
-
-                    # 正規化実行
-                    scaler.fit(window_array)
-                    current_value = data.iloc[i]
-                    normalized_value = scaler.transform([[current_value]])[0, 0]
-
-                    # 無限値チェック
-                    if np.isfinite(normalized_value):
-                        normalized_values.append(normalized_value)
-                    else:
-                        normalized_values.append(default_value)
-
-                except Exception:
-                    normalized_values.append(default_value)
-
-            result = pd.Series(normalized_values, index=data.index)
-
-            # 最終的な無限値とNaN値の置換
-            result = result.replace([np.inf, -np.inf], default_value)
-            result = result.fillna(default_value)
-
-            return result
+            return normalized.replace([np.inf, -np.inf], np.nan).fillna(default_value)
 
         except Exception as e:
-            logger.warning(
-                f"scikit-learn正規化処理エラー、フォールバック実装を使用: {e}"
-            )
-            # フォールバック: 元の実装
-            try:
-                # pandasの組み込み関数を使用してローリング統計を計算
-                rolling_mean = data.rolling(window=window, min_periods=1).mean()
-                rolling_std = data.rolling(window=window, min_periods=1).std()
-
-                # 標準偏差が0または非常に小さい場合を考慮
-                rolling_std = rolling_std.where(rolling_std > 1e-8, 1e-8)
-
-                # Z-score正規化
-                normalized = (data - rolling_mean) / rolling_std
-
-                # 無限値とNaN値を置換
-                normalized = normalized.replace([np.inf, -np.inf], default_value)
-                normalized = normalized.fillna(default_value)
-
-                return normalized
-
-            except Exception as e2:
-                logger.warning(f"フォールバック正規化処理エラー: {e2}")
-                return pd.Series(np.full(len(data), default_value), index=data.index)
+            logger.warning(f"正規化処理でエラーが発生しました: {e}")
+            return pd.Series(np.full(len(data), default_value), index=data.index)
 
     @classmethod
     def validate_dataframe(

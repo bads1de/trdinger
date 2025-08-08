@@ -32,10 +32,8 @@ class BaseFeatureCalculator(ABC):
     def __init__(self):
         """
         初期化
-
-        DataValidatorインスタンスを作成し、共通の設定を行います。
         """
-        self.validator = DataValidator()
+        pass
 
     def validate_input_data(
         self, df: pd.DataFrame, required_columns: Optional[list] = None
@@ -78,105 +76,6 @@ class BaseFeatureCalculator(ABC):
         """
         return df.copy()
 
-    def safe_rolling_mean_calculation(
-        self, series: pd.Series, window: int
-    ) -> pd.Series:
-        """
-        安全な移動平均計算
-
-        Args:
-            series: 計算対象のSeries
-            window: ウィンドウサイズ
-
-        Returns:
-            移動平均のSeries
-        """
-        return DataValidator.safe_rolling_mean(series, window=window)
-
-    def safe_ratio_calculation(
-        self,
-        numerator: Union[pd.Series, np.ndarray, float],
-        denominator: Union[pd.Series, np.ndarray, float],
-        default_value: float = 1.0,
-    ) -> Union[pd.Series, np.ndarray, float]:
-        """
-        安全な比率計算
-
-        Args:
-            numerator: 分子
-            denominator: 分母
-            default_value: 分母が0の場合のデフォルト値
-
-        Returns:
-            比率の計算結果
-        """
-        return DataValidator.safe_divide(
-            numerator, denominator, default_value=default_value
-        )
-
-    def safe_pct_change_calculation(self, series: pd.Series) -> pd.Series:
-        """
-        安全な変化率計算
-
-        Args:
-            series: 計算対象のSeries
-
-        Returns:
-            変化率のSeries
-        """
-        return DataValidator.safe_pct_change(series)
-
-    def safe_normalize_calculation(
-        self, data: pd.Series, window: int, default_value: float = 0.0
-    ) -> Union[pd.Series, np.ndarray, float]:
-        """
-        安全な正規化計算
-
-        Args:
-            data: 正規化するデータ
-            window: 計算ウィンドウ
-            default_value: 標準偏差が0の場合のデフォルト値
-
-        Returns:
-            正規化されたデータ
-        """
-        return DataValidator.safe_normalize(
-            data, window=window, default_value=default_value
-        )
-
-    def safe_multiply_calculation(
-        self,
-        series1: Union[pd.Series, np.ndarray, float],
-        series2: Union[pd.Series, np.ndarray, float],
-        default_value: float = 0.0,
-    ) -> Union[pd.Series, np.ndarray, float]:
-        """
-        安全な乗算計算
-
-        Args:
-            series1: 第1オペランド
-            series2: 第2オペランド
-            default_value: エラー時のデフォルト値
-
-        Returns:
-            乗算の計算結果
-        """
-        return DataValidator.safe_multiply(
-            series1, series2, default_value=default_value
-        )
-
-    def safe_rolling_std_calculation(self, series: pd.Series, window: int) -> pd.Series:
-        """
-        安全な移動標準偏差計算
-
-        Args:
-            series: 計算対象のSeries
-            window: ウィンドウサイズ
-
-        Returns:
-            移動標準偏差のSeries
-        """
-        return DataValidator.safe_rolling_std(series, window=window)
 
     def handle_calculation_error(
         self, error: Exception, context: str, fallback_df: pd.DataFrame
