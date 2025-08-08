@@ -98,7 +98,7 @@ class EnhancedCryptoFeatures:
         # 統計的手法による補完
         optional_columns = ["open_interest", "funding_rate", "fear_greed_value"]
         result_df = data_preprocessor.transform_missing_values(
-            result_df, strategy="median", columns=optional_columns, fit_if_needed=True
+            result_df, strategy="median", columns=optional_columns
         )
 
         return result_df
@@ -296,84 +296,44 @@ class EnhancedCryptoFeatures:
         """テクニカル指標"""
         result_df = df.copy()
 
-        # RSI（TA-lib使用）
+        # RSI（TA-lib使用・フォールバックなし）
         for period in [14, 24]:
-            try:
-                close_values = df["Close"].values.astype(np.float64)
-                rsi_values = talib.RSI(close_values, timeperiod=period)
-                result_df[f"rsi_{period}"] = pd.Series(
-                    rsi_values, index=df.index
-                ).fillna(50.0)
-            except Exception as e:
-                logger.warning(
-                    f"TA-lib RSI({period})計算エラー、フォールバック実装を使用: {e}"
-                )
-                # フォールバック実装
-                delta = df["Close"].diff()
-                gain = (delta.where(delta > 0, 0)).rolling(period).mean()
-                loss = (-delta.where(delta < 0, 0)).rolling(period).mean()
-                rs = gain / (loss + 1e-10)  # ゼロ除算回避
-                result_df[f"rsi_{period}"] = 100 - (100 / (1 + rs))
-
-        # ボリンジャーバンド（TA-lib使用）
-        for period in [20, 48]:
-            try:
-                close_values = df["Close"].values.astype(np.float64)
-                upper, middle, lower = talib.BBANDS(
-                    close_values, timeperiod=period, nbdevup=2, nbdevdn=2, matype=0
-                )
-                result_df[f"bb_upper_{period}"] = pd.Series(
-                    upper, index=df.index
-                ).fillna(df["Close"])
-                result_df[f"bb_lower_{period}"] = pd.Series(
-                    lower, index=df.index
-                ).fillna(df["Close"])
-                # BB Position計算
-                bb_width = (
-                    result_df[f"bb_upper_{period}"] - result_df[f"bb_lower_{period}"]
-                )
-                result_df[f"bb_position_{period}"] = (
-                    (
-                        (df["Close"] - result_df[f"bb_lower_{period}"])
-                        / (bb_width + 1e-10)
-                    )
-                    .clip(0, 1)
-                    .fillna(0.5)
-                )
-            except Exception as e:
-                logger.warning(
-                    f"TA-lib Bollinger Bands({period})計算エラー、フォールバック実装を使用: {e}"
-                )
-                # フォールバック実装
-                ma = df["Close"].rolling(period).mean()
-                std = df["Close"].rolling(period).std()
-                result_df[f"bb_upper_{period}"] = ma + (std * 2)
-                result_df[f"bb_lower_{period}"] = ma - (std * 2)
-                result_df[f"bb_position_{period}"] = (
-                    (df["Close"] - (ma - std * 2)) / (std * 4)
-                ).clip(0, 1)
-
-        # MACD（TA-lib使用）
-        try:
             close_values = df["Close"].values.astype(np.float64)
-            macd, macd_signal, macd_histogram = talib.MACD(
-                close_values, fastperiod=12, slowperiod=26, signalperiod=9
+            rsi_values = talib.RSI(close_values, timeperiod=period)
+            result_df[f"rsi_{period}"] = pd.Series(rsi_values, index=df.index).fillna(
+                50.0
             )
-            result_df["macd"] = pd.Series(macd, index=df.index).fillna(0.0)
-            result_df["macd_signal"] = pd.Series(macd_signal, index=df.index).fillna(
-                0.0
+
+        # ボリンジャーバンド（TA-lib使用・フォールバックなし）
+        for period in [20, 48]:
+            close_values = df["Close"].values.astype(np.float64)
+            upper, middle, lower = talib.BBANDS(
+                close_values, timeperiod=period, nbdevup=2, nbdevdn=2, matype=0
             )
-            result_df["macd_histogram"] = pd.Series(
-                macd_histogram, index=df.index
-            ).fillna(0.0)
-        except Exception as e:
-            logger.warning(f"TA-lib MACD計算エラー、フォールバック実装を使用: {e}")
-            # フォールバック実装
-            ema12 = df["Close"].ewm(span=12).mean()
-            ema26 = df["Close"].ewm(span=26).mean()
-            result_df["macd"] = ema12 - ema26
-            result_df["macd_signal"] = result_df["macd"].ewm(span=9).mean()
-            result_df["macd_histogram"] = result_df["macd"] - result_df["macd_signal"]
+            result_df[f"bb_upper_{period}"] = pd.Series(upper, index=df.index).fillna(
+                df["Close"]
+            )
+            result_df[f"bb_lower_{period}"] = pd.Series(lower, index=df.index).fillna(
+                df["Close"]
+            )
+            # BB Position計算
+            bb_width = result_df[f"bb_upper_{period}"] - result_df[f"bb_lower_{period}"]
+            result_df[f"bb_position_{period}"] = (
+                ((df["Close"] - result_df[f"bb_lower_{period}"]) / (bb_width + 1e-10))
+                .clip(0, 1)
+                .fillna(0.5)
+            )
+
+        # MACD（TA-lib使用・フォールバックなし）
+        close_values = df["Close"].values.astype(np.float64)
+        macd, macd_signal, macd_histogram = talib.MACD(
+            close_values, fastperiod=12, slowperiod=26, signalperiod=9
+        )
+        result_df["macd"] = pd.Series(macd, index=df.index).fillna(0.0)
+        result_df["macd_signal"] = pd.Series(macd_signal, index=df.index).fillna(0.0)
+        result_df["macd_histogram"] = pd.Series(macd_histogram, index=df.index).fillna(
+            0.0
+        )
 
         self.feature_groups["technical"].extend(
             [
@@ -469,7 +429,7 @@ class EnhancedCryptoFeatures:
         # 統計的手法による数値カラムの補完
         numeric_cols = result_df.select_dtypes(include=[np.number]).columns.tolist()
         result_df = data_preprocessor.transform_missing_values(
-            result_df, strategy="median", columns=numeric_cols, fit_if_needed=True
+            result_df, strategy="median", columns=numeric_cols
         )
 
         return result_df
