@@ -157,25 +157,29 @@ class LabelGenerator:
         Returns:
             閾値情報の辞書
         """
-        if method == ThresholdMethod.FIXED:
-            return self._calculate_fixed_thresholds(price_change, **kwargs)
-        elif method == ThresholdMethod.QUANTILE:
-            return self._calculate_quantile_thresholds(
+        dispatch = {
+            ThresholdMethod.FIXED: lambda: self._calculate_fixed_thresholds(
+                price_change, **kwargs
+            ),
+            ThresholdMethod.QUANTILE: lambda: self._calculate_quantile_thresholds(
                 price_change, target_distribution, **kwargs
-            )
-        elif method == ThresholdMethod.STD_DEVIATION:
-            return self._calculate_std_thresholds(price_change, **kwargs)
-        elif method == ThresholdMethod.ADAPTIVE:
-            return self._calculate_adaptive_thresholds(
+            ),
+            ThresholdMethod.STD_DEVIATION: lambda: self._calculate_std_thresholds(
+                price_change, **kwargs
+            ),
+            ThresholdMethod.ADAPTIVE: lambda: self._calculate_adaptive_thresholds(
                 price_change, target_distribution, **kwargs
-            )
-        elif method == ThresholdMethod.DYNAMIC_VOLATILITY:
-            return self._calculate_dynamic_volatility_thresholds(price_change, **kwargs)
-        elif method == ThresholdMethod.KBINS_DISCRETIZER:
-            return self._calculate_kbins_discretizer_thresholds(
+            ),
+            ThresholdMethod.DYNAMIC_VOLATILITY: lambda: self._calculate_dynamic_volatility_thresholds(
+                price_change, **kwargs
+            ),
+            ThresholdMethod.KBINS_DISCRETIZER: lambda: self._calculate_kbins_discretizer_thresholds(
                 price_change, target_distribution, **kwargs
-            )
-        else:
+            ),
+        }
+        try:
+            return dispatch[method]()
+        except KeyError:
             raise ValueError(f"未対応の閾値計算方法: {method}")
 
     def _calculate_fixed_thresholds(
@@ -240,27 +244,39 @@ class LabelGenerator:
                 "description": f"分位数ベース（ダウン{perc_down*100:.0f}パーセンタイル、アップ{perc_up*100:.0f}パーセンタイル）",
             }
 
-        # フォールバック: 目標分布に基づく比率指定
-        if target_distribution is None:
-            # デフォルト：各クラス約33%
-            down_ratio = 0.33
-            up_ratio = 0.33
-        else:
-            down_ratio = target_distribution.get("down", 0.33)
-            up_ratio = target_distribution.get("up", 0.33)
-
-        # 分位数を計算（上側は 1 - up_ratio の分位値）
-        threshold_down = price_change.quantile(down_ratio)
-        threshold_up = price_change.quantile(1 - up_ratio)
-
-        return {
-            "method": "quantile",
-            "threshold_up": threshold_up,
-            "threshold_down": threshold_down,
-            "target_down_ratio": down_ratio,
-            "target_up_ratio": up_ratio,
-            "description": f"分位数ベース（下落{down_ratio*100:.0f}%、上昇{up_ratio*100:.0f}%）",
-        }
+        # フォールバック: 明示分位が無い場合はKBinsDiscretizer(quantile)に委譲
+        try:
+            kbins_info = self._calculate_kbins_discretizer_thresholds(
+                price_change,
+                target_distribution=target_distribution,
+                strategy="quantile",
+            )
+            # KBinsの結果をquantileメソッドとして返す（説明を更新）
+            return {
+                "method": "quantile",
+                "threshold_up": kbins_info["threshold_up"],
+                "threshold_down": kbins_info["threshold_down"],
+                "strategy": "quantile",
+                "description": "KBinsDiscretizer(quantile) により算出された分位閾値",
+            }
+        except Exception:
+            # 最終フォールバック：従来の単純比率（互換性維持）
+            if target_distribution is None:
+                down_ratio = 0.33
+                up_ratio = 0.33
+            else:
+                down_ratio = target_distribution.get("down", 0.33)
+                up_ratio = target_distribution.get("up", 0.33)
+            threshold_down = price_change.quantile(down_ratio)
+            threshold_up = price_change.quantile(1 - up_ratio)
+            return {
+                "method": "quantile",
+                "threshold_up": threshold_up,
+                "threshold_down": threshold_down,
+                "target_down_ratio": down_ratio,
+                "target_up_ratio": up_ratio,
+                "description": f"分位数ベース（下落{down_ratio*100:.0f}%、上昇{up_ratio*100:.0f}%）",
+            }
 
     def _calculate_std_thresholds(
         self, price_change: pd.Series, std_multiplier: float = 0.25, **kwargs

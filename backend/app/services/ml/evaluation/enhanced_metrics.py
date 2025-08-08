@@ -28,6 +28,7 @@ from sklearn.metrics import (
     matthews_corrcoef,
     precision_recall_fscore_support,
     roc_auc_score,
+    multilabel_confusion_matrix,
 )
 
 logger = logging.getLogger(__name__)
@@ -631,41 +632,34 @@ class EnhancedMetricsCalculator:
                 # NPV, PPV
                 metrics["npv"] = tn / (tn + fn) if (tn + fn) > 0 else 0.0
                 metrics["ppv"] = tp / (tp + fp) if (tp + fp) > 0 else 0.0
-            else:  # 多クラス分類の場合
-                # 各クラスの特異度と感度を計算し、平均を取る
-                n_classes = cm.shape[0]
-                specificities = []
-                sensitivities = []
-                npvs = []
-                ppvs = []
+            else:  # 多クラス分類の場合（multilabel_confusion_matrixでベクトル化）
+                labels = np.unique(y_true)
+                mcm = multilabel_confusion_matrix(y_true, y_pred, labels=labels)
+                tn = mcm[:, 0, 0].astype(float)
+                fp = mcm[:, 0, 1].astype(float)
+                fn = mcm[:, 1, 0].astype(float)
+                tp = mcm[:, 1, 1].astype(float)
 
-                for i in range(n_classes):
-                    # クラスiに対する二値分類として計算
-                    tp = cm[i, i]
-                    fn = np.sum(cm[i, :]) - tp
-                    fp = np.sum(cm[:, i]) - tp
-                    tn = np.sum(cm) - tp - fn - fp
+                eps = 1e-12
+                specificity_vec = tn / (tn + fp + eps)
+                sensitivity_vec = tp / (tp + fn + eps)
+                npv_vec = tn / (tn + fn + eps)
+                ppv_vec = tp / (tp + fp + eps)
 
-                    specificity = tn / (tn + fp) if (tn + fp) > 0 else 0.0
-                    sensitivity = tp / (tp + fn) if (tp + fn) > 0 else 0.0
-                    npv = tn / (tn + fn) if (tn + fn) > 0 else 0.0
-                    ppv = tp / (tp + fp) if (tp + fp) > 0 else 0.0
+                # 重み付き平均（クラス頻度で重み付け）
+                counts = np.array(
+                    [(y_true == lab).sum() for lab in labels], dtype=float
+                )
+                weights = counts / (counts.sum() + eps)
 
-                    specificities.append(specificity)
-                    sensitivities.append(sensitivity)
-                    npvs.append(npv)
-                    ppvs.append(ppv)
-
-                # 重み付き平均を計算（クラス頻度で重み付け）
-                class_weights = np.bincount(y_true) / len(y_true)
                 metrics["specificity"] = float(
-                    np.average(specificities, weights=class_weights)
+                    np.average(specificity_vec, weights=weights)
                 )
                 metrics["sensitivity"] = float(
-                    np.average(sensitivities, weights=class_weights)
+                    np.average(sensitivity_vec, weights=weights)
                 )
-                metrics["npv"] = float(np.average(npvs, weights=class_weights))
-                metrics["ppv"] = float(np.average(ppvs, weights=class_weights))
+                metrics["npv"] = float(np.average(npv_vec, weights=weights))
+                metrics["ppv"] = float(np.average(ppv_vec, weights=weights))
 
         except Exception as e:
             logger.warning(f"混同行列計算エラー: {e}")
