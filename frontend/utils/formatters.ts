@@ -1,3 +1,5 @@
+import { format, intervalToDuration } from "date-fns";
+
 /**
  * 日時をフォーマットする
  * @param dateInput - フォーマットする日時 (文字列、数値、またはnull)
@@ -15,25 +17,12 @@ export const formatDateTime = (
 
   try {
     const date = new Date(dateInput);
-
     if (isNaN(date.getTime())) {
       return { date: String(dateInput), time: "", dateTime: String(dateInput) };
     }
 
-    const dateString = new Intl.DateTimeFormat("ja-JP", {
-      year: "numeric",
-      month: "2-digit",
-      day: "2-digit",
-    })
-      .format(date)
-      .replace(/\//g, "-");
-
-    const timeString = new Intl.DateTimeFormat("ja-JP", {
-      hour: "2-digit",
-      minute: "2-digit",
-      second: "2-digit",
-      hour12: false,
-    }).format(date);
+    const dateString = format(date, "yyyy-MM-dd");
+    const timeString = format(date, "HH:mm:ss");
 
     return {
       date: dateString,
@@ -117,19 +106,13 @@ export const formatFileSize = (sizeInMB?: number) => {
 export const formatTrainingTime = (seconds?: number) => {
   if (seconds === undefined || seconds === null) return "不明";
 
-  const hours = Math.floor(seconds / 3600);
-  const minutes = Math.floor((seconds % 3600) / 60);
-  const secs = Math.floor(seconds % 60);
+  const duration = intervalToDuration({ start: 0, end: seconds * 1000 });
+  const parts = [];
+  if (duration.hours) parts.push(`${duration.hours}時間`);
+  if (duration.minutes) parts.push(`${duration.minutes}分`);
+  if (duration.seconds) parts.push(`${duration.seconds}秒`);
 
-  if (hours > 0) {
-    return `${hours}時間${minutes}分${secs}秒`;
-  }
-
-  if (minutes > 0) {
-    return `${minutes}分${secs}秒`;
-  }
-
-  return `${secs}秒`;
+  return parts.length > 0 ? parts.join("") : "0秒";
 };
 
 /**
@@ -193,10 +176,12 @@ export const formatDuration = (seconds?: number) => {
     return `${seconds.toFixed(1)}秒`;
   }
 
-  const minutes = Math.floor(seconds / 60);
-  const remainingSeconds = seconds % 60;
+  const duration = intervalToDuration({ start: 0, end: seconds * 1000 });
+  const parts = [];
+  if (duration.minutes) parts.push(`${duration.minutes}分`);
+  if (duration.seconds) parts.push(`${duration.seconds.toFixed(0)}秒`);
 
-  return `${minutes}分 ${remainingSeconds.toFixed(0)}秒`;
+  return parts.length > 0 ? parts.join(" ") : "0秒";
 };
 
 /**

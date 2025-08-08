@@ -17,7 +17,28 @@
 
 多くの箇所で各種ライブラリが効果的に使用されていますが、特にアルゴリズムの中核部分やデータフローの管理において、ライブラリが提供する高レベルな機能を活用することで、さらなるコードの改善が見込めます。
 
+## 3. 指摘事項詳細
 
+### 3.4 フロントのデータ取得・キャッシュ管理の手実装
+
+- 該当ファイル: `frontend/hooks/useApiCall.ts`, `frontend/hooks/useDataFetching.ts`
+- 現状実装: フェッチ/エラー/ローディング/リトライ/キャッシュ/依存配列による再取得を自前実装。
+- 置換候補:
+  - TanStack Query (React Query) または SWR
+- 移行メリット: キャッシュ/再検証/リトライ/データの重複排除/並行リクエスト制御を標準機能で提供。保守容易。
+- 参考:
+  - TanStack Query: https://tanstack.com/query/latest/docs/react/overview
+  - SWR: https://swr.vercel.app/
+
+### 3.7 パーセンタイル算出の手実装
+
+- 該当ファイル: `backend/app/services/ml/adaptive_learning/market_regime_detector.py`（`_calculate_percentile`）
+- 現状実装: `(series <= value).mean()`による簡易パーセンタイル。
+- 置換候補:
+  - SciPy: `scipy.stats.percentileofscore`
+- 備考: 精度要件が高くなければ現状で許容。厳密化が必要な場合のみ置換を検討。
+- 参考:
+  - percentileofscore: https://docs.scipy.org/doc/scipy/reference/generated/scipy.stats.percentileofscore.html
 
 ## 4. 改善の優先度
 

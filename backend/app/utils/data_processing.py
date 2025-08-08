@@ -78,6 +78,7 @@ class DataProcessor:
         remove_outliers: bool = True,
         outlier_threshold: float = 3.0,
         outlier_method: str = "iqr",
+        outlier_transform: Optional[str] = None,  # 'robust' | 'quantile' | 'power'
     ) -> Pipeline:
         """
         scikit-learnのPipelineとColumnTransformerを使った宣言的な前処理パイプライン作成
@@ -133,15 +134,30 @@ class DataProcessor:
             ("imputer", SimpleImputer(strategy=numeric_strategy))
         )
 
-        # 4. スケーリング
-        if scaling_method == "standard":
-            scaler = StandardScaler()
-        elif scaling_method == "robust":
+        # 4. スケーリング（外れ値に強い変換への差し替えも可能）
+        if outlier_transform == "robust":
+            # 中央値/IQRで頑健にスケーリング
             scaler = RobustScaler()
-        elif scaling_method == "minmax":
-            scaler = MinMaxScaler()
+        elif outlier_transform == "quantile":
+            from sklearn.preprocessing import QuantileTransformer
+
+            # ランク変換して外れ値の影響を緩和（正規分布にマップ）
+            scaler = QuantileTransformer(output_distribution="normal", random_state=42)
+        elif outlier_transform == "power":
+            from sklearn.preprocessing import PowerTransformer
+
+            # 歪度の補正（Yeo-Johnsonは負値対応）
+            scaler = PowerTransformer(method="yeo-johnson", standardize=True)
         else:
-            scaler = StandardScaler()  # デフォルト
+            # 既存のscaling_methodに従う
+            if scaling_method == "standard":
+                scaler = StandardScaler()
+            elif scaling_method == "robust":
+                scaler = RobustScaler()
+            elif scaling_method == "minmax":
+                scaler = MinMaxScaler()
+            else:
+                scaler = StandardScaler()  # デフォルト
 
         numeric_pipeline_steps.append(("scaler", scaler))
 

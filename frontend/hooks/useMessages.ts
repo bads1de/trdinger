@@ -1,4 +1,5 @@
-import { useCallback, useRef, useEffect, useState } from "react";
+import { useCallback } from "react";
+import { toast } from "sonner";
 
 export type MessageMap = Record<string, string>;
 
@@ -17,112 +18,64 @@ export const DefaultMessageDurations = {
 } as const;
 
 /**
- * メッセージ管理フック
+ * メッセージ管理フック (sonner/toast版)
  *
- * アプリケーション内のメッセージ表示を管理します。
- * メッセージの設定、自動削除、クリアなどの機能を提供します。
- * タイマーによる自動消去や、手動でのメッセージ操作をサポートします。
- *
- * @example
- * ```tsx
- * const {
- *   messages,
- *   setMessage,
- *   removeMessage,
- *   clearAllMessages,
- *   durations
- * } = useMessages({
- *   defaultDurations: {
- *     SHORT: 5000,
- *     MEDIUM: 10000,
- *     LONG: 15000
- *   }
- * });
- *
- * // メッセージを設定
- * setMessage('success', '操作が成功しました', durations.MEDIUM);
- *
- * // メッセージを削除
- * removeMessage('success');
- *
- * // 全メッセージをクリア
- * clearAllMessages();
- * ```
+ * アプリケーション内のメッセージ表示を `sonner/toast` を用いて管理します。
  *
  * @param {UseMessagesOptions} [options] - メッセージ管理オプション
  * @returns {{
  *   messages: MessageMap,
- *   setMessage: (key: string, message: string, duration?: number) => void,
+ *   setMessage: (key: string, message: string, duration?: number, type?: 'success' | 'error' | 'info' | 'warning') => void,
  *   removeMessage: (key: string) => void,
  *   clearAllMessages: () => void,
  *   durations: Record<"SHORT" | "MEDIUM" | "LONG", number>
  * }} メッセージ管理関連の状態と操作関数
  */
 export const useMessages = (options?: UseMessagesOptions) => {
-  const [messages, setMessages] = useState<MessageMap>({});
-  const timersRef = useRef<Record<string, number>>({});
   const DURATIONS = options?.defaultDurations || DefaultMessageDurations;
 
-  const clearTimer = useCallback((key: string) => {
-    const tid = timersRef.current[key];
-
-    if (tid) {
-      clearTimeout(tid);
-      delete timersRef.current[key];
-    }
-  }, []);
-
   const setMessage = useCallback(
-    (key: string, message: string, duration: number = DURATIONS.SHORT) => {
-      setMessages((prev) => ({ ...prev, [key]: message }));
+    (
+      key: string,
+      message: string,
+      duration: number = DURATIONS.SHORT,
+      type: "success" | "error" | "info" | "warning" = "info"
+    ) => {
+      const toastOptions = {
+        id: key,
+        duration: duration > 0 ? duration : Infinity,
+      };
 
-      clearTimer(key);
-
-      if (duration > 0) {
-        const tid = window.setTimeout(() => {
-          setMessages((prev) => {
-            const next = { ...prev };
-            delete next[key];
-            return next;
-          });
-
-          delete timersRef.current[key];
-        }, duration);
-
-        timersRef.current[key] = tid;
+      switch (type) {
+        case "success":
+          toast.success(message, toastOptions);
+          break;
+        case "error":
+          toast.error(message, toastOptions);
+          break;
+        case "warning":
+          toast.warning(message, toastOptions);
+          break;
+        case "info":
+        default:
+          toast.info(message, toastOptions);
+          break;
       }
     },
-    [DURATIONS.SHORT, clearTimer]
+    [DURATIONS]
   );
 
-  const removeMessage = useCallback(
-    (key: string) => {
-      clearTimer(key);
-      setMessages((prev) => {
-        const next = { ...prev };
-        delete next[key];
-        return next;
-      });
-    },
-    [clearTimer]
-  );
+  const removeMessage = useCallback((key: string) => {
+    toast.dismiss(key);
+  }, []);
 
   const clearAllMessages = useCallback(() => {
-    Object.keys(timersRef.current).forEach((k) => clearTimer(k));
-    timersRef.current = {};
-    setMessages({});
-  }, [clearTimer]);
-
-  useEffect(() => {
-    return () => {
-      Object.keys(timersRef.current).forEach((k) => clearTimer(k));
-      timersRef.current = {};
-    };
-  }, [clearTimer]);
+    toast.dismiss();
+  }, []);
 
   return {
-    /** メッセージのマップ */
-    messages,
+    /** メッセージのマップ (sonnerに移行したため、常に空) */
+    messages: {},
     /** メッセージを設定する関数 */
     setMessage,
     /** メッセージを削除する関数 */

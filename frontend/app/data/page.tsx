@@ -47,7 +47,7 @@ const DataPage: React.FC = () => {
     EXTERNAL_MARKET_COLLECTION: "externalMarketCollection",
   } as const;
 
-  const { messages, setMessage } = useMessages({
+  const { setMessage } = useMessages({
     defaultDurations: MESSAGE_DURATION,
   });
 
@@ -200,25 +200,13 @@ const DataPage: React.FC = () => {
           handleCollectionStart={handleCollectionStart}
           handleCollectionError={handleCollectionError}
           collectionHandlers={collectionHandlers}
-          bulkCollectionMessage={messages[MESSAGE_KEYS.BULK_COLLECTION] || ""}
-          fundingRateCollectionMessage={
-            messages[MESSAGE_KEYS.FUNDING_RATE_COLLECTION] || ""
-          }
-          openInterestCollectionMessage={
-            messages[MESSAGE_KEYS.OPEN_INTEREST_COLLECTION] || ""
-          }
-          fearGreedCollectionMessage={
-            messages[MESSAGE_KEYS.FEAR_GREED_COLLECTION] || ""
-          }
-          externalMarketCollectionMessage={
-            messages[MESSAGE_KEYS.EXTERNAL_MARKET_COLLECTION] || ""
-          }
-          allDataCollectionMessage={
-            messages[MESSAGE_KEYS.ALL_DATA_COLLECTION] || ""
-          }
-          incrementalUpdateMessage={
-            messages[MESSAGE_KEYS.INCREMENTAL_UPDATE] || ""
-          }
+          bulkCollectionMessage={""}
+          fundingRateCollectionMessage={""}
+          openInterestCollectionMessage={""}
+          fearGreedCollectionMessage={""}
+          externalMarketCollectionMessage={""}
+          allDataCollectionMessage={""}
+          incrementalUpdateMessage={""}
         />
 
         <DataTableContainer

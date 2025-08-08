@@ -3,7 +3,12 @@ import { TimeFrame } from "@/types/market-data";
 import { useBulkIncrementalUpdate } from "@/hooks/useBulkIncrementalUpdate";
 
 export interface IncrementalUpdateDeps {
-  setMessage: (key: string, message: string, duration?: number) => void;
+  setMessage: (
+    key: string,
+    message: string,
+    duration?: number,
+    type?: "success" | "error" | "info" | "warning"
+  ) => void;
   fetchOHLCVData: () => Promise<void> | void;
   fetchDataStatus: () => void;
   MESSAGE_KEYS: Record<string, string>;
@@ -81,8 +86,9 @@ export const useIncrementalUpdateHandler = ({
 
           setMessage(
             MESSAGE_KEYS.INCREMENTAL_UPDATE,
-            `✅ 一括差分更新完了！ ${selectedSymbol} - 総計${totalSavedCount}件 (OHLCV:${ohlcvCount}${timeframeDetails}, FR:${frCount}, OI:${oiCount})`,
-            MESSAGE_DURATION.MEDIUM
+            `一括差分更新完了！ ${selectedSymbol} - 総計${totalSavedCount}件 (OHLCV:${ohlcvCount}${timeframeDetails}, FR:${frCount}, OI:${oiCount})`,
+            MESSAGE_DURATION.MEDIUM,
+            "success"
           );
 
           await fetchOHLCVData();
@@ -92,8 +98,9 @@ export const useIncrementalUpdateHandler = ({
         onError: (errorMessage) => {
           setMessage(
             MESSAGE_KEYS.INCREMENTAL_UPDATE,
-            `❌ ${errorMessage}`,
-            MESSAGE_DURATION.SHORT
+            `${errorMessage}`,
+            MESSAGE_DURATION.SHORT,
+            "error"
           );
           console.error("一括差分更新エラー:", errorMessage);
         },

@@ -26,7 +26,12 @@ import { FearGreedCollectionResult } from "@/hooks/useFearGreedData";
  */
 export interface UseCollectionMessageHandlersDeps {
   /** メッセージを設定する関数 */
-  setMessage: (key: string, message: string, duration?: number) => void;
+  setMessage: (
+    key: string,
+    message: string,
+    duration?: number,
+    type?: "success" | "error" | "info" | "warning"
+  ) => void;
   /** Fear & Greedデータを取得する関数 */
   fetchFearGreedData: () => Promise<void> | void;
   /** データステータスを取得する関数 */
@@ -112,8 +117,8 @@ export const useCollectionMessageHandlers = ({
     },
     feargreed: (result: FearGreedCollectionResult) =>
       result.success
-        ? `🚀 Fear & Greed Index収集完了 (取得:${result.fetched_count}件, 挿入:${result.inserted_count}件)`
-        : `❌ ${result.message}`,
+        ? `Fear & Greed Index収集完了 (取得:${result.fetched_count}件, 挿入:${result.inserted_count}件)`
+        : `${result.message}`,
     alldata: (result: AllDataCollectionResult) => {
       if (result.ohlcv_result?.status === "completed") {
         const ohlcvCount = result.ohlcv_result?.total_tasks || 0;
@@ -145,11 +150,9 @@ export const useCollectionMessageHandlers = ({
       duration?: number,
       onSuccess?: (result: any) => void
     ) => {
-      setMessage(
-        messageKey,
-        generateCollectionMessage(messageType, result),
-        duration
-      );
+      const message = generateCollectionMessage(messageType, result);
+      const type = message.includes("完了") ? "success" : "info";
+      setMessage(messageKey, message, duration, type);
       if (onSuccess) {
         onSuccess(result);
       }
@@ -159,7 +162,7 @@ export const useCollectionMessageHandlers = ({
 
   const handleCollectionError = useCallback(
     (messageKey: string, errorMessage: string, duration?: number) => {
-      setMessage(messageKey, `❌ ${errorMessage}`, duration);
+      setMessage(messageKey, errorMessage, duration, "error");
     },
     [setMessage]
   );
