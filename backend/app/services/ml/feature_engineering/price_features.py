@@ -169,15 +169,24 @@ class PriceFeatureCalculator(BaseFeatureCalculator):
 
             volatility_period = lookback_periods.get("volatility", 20)
 
-            # リターンを計算（安全な計算）
-            result_df["Returns"] = DataValidator.safe_pct_change(result_df["Close"])
+            # リターンを計算（TA-Lib ROCP: fractional rate of change）
+            import talib
 
-            # 実現ボラティリティ（安全な計算）
-            result_df["Realized_Volatility_20"] = DataValidator.safe_rolling_std(
-                result_df["Returns"], window=volatility_period
-            ) * np.sqrt(24)
+            close_vals = result_df["Close"].values.astype(np.float64)
+            returns_arr = talib.ROCP(close_vals)
+            result_df["Returns"] = pd.Series(returns_arr, index=result_df.index).fillna(
+                0.0
+            )
 
-            # ボラティリティスパイク（安全な計算）
+            # 実現ボラティリティ（TA-Lib STDDEV of returns, nbdev=1）
+            stddev_arr = talib.STDDEV(
+                returns_arr, timeperiod=volatility_period, nbdev=1
+            )
+            result_df["Realized_Volatility_20"] = pd.Series(
+                stddev_arr, index=result_df.index
+            ).fillna(0.0) * np.sqrt(24)
+
+            # ボラティリティスパイク（移動平均は従来の安全計算でOK）
             vol_ma = DataValidator.safe_rolling_mean(
                 result_df["Realized_Volatility_20"], window=volatility_period
             )
@@ -185,19 +194,13 @@ class PriceFeatureCalculator(BaseFeatureCalculator):
                 result_df["Realized_Volatility_20"], vol_ma, default_value=1.0
             )
 
-            # ATR（Average True Range）
-            # 最初の行のNaN値を避けるため、shift(1)の結果をfillnaで補完
-            prev_close = result_df["Close"].shift(1).fillna(result_df["Close"])
-            result_df["TR"] = np.maximum(
-                result_df["High"] - result_df["Low"],
-                np.maximum(
-                    abs(result_df["High"] - prev_close),
-                    abs(result_df["Low"] - prev_close),
-                ),
+            # ATR（Average True Range）- TA-Lib
+            high_vals = result_df["High"].values.astype(np.float64)
+            low_vals = result_df["Low"].values.astype(np.float64)
+            atr_arr = talib.ATR(
+                high_vals, low_vals, close_vals, timeperiod=volatility_period
             )
-            result_df["ATR_20"] = DataValidator.safe_rolling_mean(
-                result_df["TR"], window=volatility_period
-            )
+            result_df["ATR_20"] = pd.Series(atr_arr, index=result_df.index).fillna(0.0)
 
             # 正規化ATR（安全な計算）
             result_df["ATR_Normalized"] = DataValidator.safe_divide(

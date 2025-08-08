@@ -12,6 +12,7 @@ from enum import Enum
 from typing import Any, Dict, Tuple
 
 import numpy as np
+import talib
 
 logger = logging.getLogger(__name__)
 
@@ -245,21 +246,22 @@ class VolatilityBasedGenerator:
     def _calculate_atr(
         self, high: np.ndarray, low: np.ndarray, close: np.ndarray, period: int
     ) -> float:
-        """ATRを計算"""
+        """ATRを計算 (TA-Lib使用)"""
         try:
-            # True Range の計算
-            high_low = high - low
-            high_close_prev = np.abs(high - np.roll(close, 1))
-            low_close_prev = np.abs(low - np.roll(close, 1))
+            # talib.ATRは十分な長さの配列を必要とする
+            if len(high) < period:
+                logger.warning(f"ATR計算のためのデータが不足しています: {len(high)} < {period}")
+                return 0.02 * close[-1]
 
-            true_range = np.maximum(
-                high_low, np.maximum(high_close_prev, low_close_prev)
-            )
+            atr_values = talib.ATR(high, low, close, timeperiod=period)
 
-            # ATRの計算（単純移動平均）
-            atr = np.mean(true_range[-period:])
+            # nanを除外して最後の有効な値を取得
+            valid_atr_values = atr_values[~np.isnan(atr_values)]
+            if valid_atr_values.size > 0:
+                return float(valid_atr_values[-1])
 
-            return float(atr)
+            logger.warning("ATR計算結果がすべてnanでした。")
+            return 0.02 * close[-1]  # フォールバック
 
         except Exception as e:
             logger.error(f"ATR計算エラー: {e}")

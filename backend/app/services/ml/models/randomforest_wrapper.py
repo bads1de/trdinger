@@ -12,7 +12,7 @@ import numpy as np
 import pandas as pd
 from sklearn.ensemble import RandomForestClassifier
 from ....utils.unified_error_handler import UnifiedModelError
-from ...evaluation.enhanced_metrics import (
+from ..evaluation.enhanced_metrics import (
     EnhancedMetricsCalculator,
     MetricsConfig,
 )
@@ -26,7 +26,7 @@ class RandomForestModel:
 
     scikit-learnのRandomForestClassifierを使用してアンサンブル専用に最適化されたモデル
     """
-    
+
     # アルゴリズム名（AlgorithmRegistryから取得）
     ALGORITHM_NAME = "randomforest"
 
@@ -105,7 +105,7 @@ class RandomForestModel:
                 zero_division=0,
             )
             metrics_calculator = EnhancedMetricsCalculator(config)
-            
+
             train_metrics = metrics_calculator.calculate_comprehensive_metrics(
                 y_train, y_pred_train, y_pred_proba_train
             )
@@ -119,7 +119,7 @@ class RandomForestModel:
             )
 
             self.is_trained = True
-            
+
             n_classes = len(np.unique(y_train))
 
             results = {
@@ -141,7 +141,9 @@ class RandomForestModel:
                 "num_classes": n_classes,
             }
 
-            logger.info(f"✅ RandomForest学習完了 - テスト精度: {results['accuracy']:.4f}")
+            logger.info(
+                f"✅ RandomForest学習完了 - テスト精度: {results['accuracy']:.4f}"
+            )
             return results
 
         except Exception as e:

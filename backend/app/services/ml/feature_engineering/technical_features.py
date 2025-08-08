@@ -69,42 +69,46 @@ class TechnicalFeatureCalculator(BaseFeatureCalculator):
 
             result_df = self.create_result_dataframe(df)
 
-            # トレンド強度
+            # トレンド強度（TA-Lib SMA使用）
             short_ma = lookback_periods.get("short_ma", 10)
             long_ma = lookback_periods.get("long_ma", 50)
 
-            ma_short = self.safe_rolling_mean_calculation(
-                result_df["Close"], window=short_ma
-            )
-            ma_long = self.safe_rolling_mean_calculation(
-                result_df["Close"], window=long_ma
-            )
+            close_vals = result_df["Close"].values.astype(np.float64)
+            ma_short_arr = talib.SMA(close_vals, timeperiod=short_ma)
+            ma_long_arr = talib.SMA(close_vals, timeperiod=long_ma)
+            ma_short = pd.Series(ma_short_arr, index=result_df.index)
+            ma_long = pd.Series(ma_long_arr, index=result_df.index)
 
-            result_df["Trend_Strength"] = self.safe_ratio_calculation(
+            # Trend_Strength = (MA_short - MA_long) / MA_long
+            from ....utils.data_validation import DataValidator
+
+            result_df["Trend_Strength"] = DataValidator.safe_divide(
                 ma_short - ma_long, ma_long, default_value=0.0
             )
 
-            # レンジ相場判定
+            # レンジ相場判定（TA-Lib MAX/MIN使用）
             volatility_period = lookback_periods.get("volatility", 20)
-            high_20 = (
-                result_df["High"].rolling(window=volatility_period, min_periods=1).max()
-            )
-            low_20 = (
-                result_df["Low"].rolling(window=volatility_period, min_periods=1).min()
-            )
+            high_vals = result_df["High"].values.astype(np.float64)
+            low_vals = result_df["Low"].values.astype(np.float64)
+            high_20_arr = talib.MAX(high_vals, timeperiod=volatility_period)
+            low_20_arr = talib.MIN(low_vals, timeperiod=volatility_period)
+            high_20 = pd.Series(high_20_arr, index=result_df.index)
+            low_20 = pd.Series(low_20_arr, index=result_df.index)
 
-            result_df["Range_Bound_Ratio"] = self.safe_ratio_calculation(
+            result_df["Range_Bound_Ratio"] = DataValidator.safe_divide(
                 result_df["Close"] - low_20, high_20 - low_20, default_value=0.5
             )
 
-            # ブレイクアウト強度
+            # ブレイクアウト強度（直前の高値・安値を使用）
+            prev_high_20 = high_20.shift(1)
+            prev_low_20 = low_20.shift(1)
             result_df["Breakout_Strength"] = np.where(
-                result_df["Close"] > high_20.shift(1),
-                (result_df["Close"] - high_20.shift(1)) / high_20.shift(1),
+                result_df["Close"] > prev_high_20,
+                (result_df["Close"] - prev_high_20) / prev_high_20,
                 np.where(
-                    result_df["Close"] < low_20.shift(1),
-                    (low_20.shift(1) - result_df["Close"]) / low_20.shift(1),
-                    0,
+                    result_df["Close"] < prev_low_20,
+                    (prev_low_20 - result_df["Close"]) / prev_low_20,
+                    0.0,
                 ),
             )
 
@@ -264,15 +268,12 @@ class TechnicalFeatureCalculator(BaseFeatureCalculator):
                 else self._calculate_rsi(result_df)
             )
 
-            # 価格とRSIのダイバージェンス
-            price_trend = (
-                result_df["Close"]
-                .rolling(window=10)
-                .apply(lambda x: np.polyfit(range(len(x)), x, 1)[0])
-            )
-            rsi_trend = rsi.rolling(window=10).apply(
-                lambda x: np.polyfit(range(len(x)), x, 1)[0]
-            )
+            # 価格とRSIのダイバージェンス（TA-Libによる効率的な実装）
+            close_values = result_df["Close"].values.astype(np.float64)
+            rsi_values = rsi.values.astype(np.float64)
+
+            price_trend = talib.LINEARREG_SLOPE(close_values, timeperiod=10)
+            rsi_trend = talib.LINEARREG_SLOPE(rsi_values, timeperiod=10)
 
             # ベアダイバージェンス（価格上昇、RSI下降）
             result_df["Bear_Divergence"] = ((price_trend > 0) & (rsi_trend < 0)).astype(

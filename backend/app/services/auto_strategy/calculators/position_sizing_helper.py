@@ -8,6 +8,9 @@ import logging
 from typing import Any, Dict, List
 
 import numpy as np
+from app.services.indicators.technical_indicators.volatility import (
+    VolatilityIndicators,
+)
 
 from ..models.gene_strategy import StrategyGene
 from .position_sizing_calculator import PositionSizingCalculatorService
@@ -136,14 +139,14 @@ class PositionSizingHelper:
 
     def _calculate_atr_from_data(self, data, period: int = 14) -> float:
         """
-        市場データからATRを計算
+        市場データからATRを計算（TA-Lib経由の実装に変更）
 
         Args:
-            data: OHLC市場データ
+            data: OHLC市場データ（pandas DataFrame 互換: High/Low/Close カラム）
             period: ATR計算期間
 
         Returns:
-            計算されたATR値
+            計算されたATR値（最終要素）
         """
         try:
             if (
@@ -153,26 +156,23 @@ class PositionSizingHelper:
             ):
                 return 0.0
 
-            # 利用可能なデータ期間を調整
-            available_period = min(period, len(data.Close) - 1)
-            if available_period < 2:
+            highs = np.asarray(data.High, dtype=np.float64)
+            lows = np.asarray(data.Low, dtype=np.float64)
+            closes = np.asarray(data.Close, dtype=np.float64)
+
+            if (
+                highs.size < max(2, period + 1)
+                or lows.size != highs.size
+                or closes.size != highs.size
+            ):
                 return 0.0
 
-            # True Range計算
-            high_low = data.High[-available_period:] - data.Low[-available_period:]
-            high_close = np.abs(
-                data.High[-available_period:] - data.Close[-available_period - 1 : -1]
-            )
-            low_close = np.abs(
-                data.Low[-available_period:] - data.Close[-available_period - 1 : -1]
-            )
-
-            true_range = np.maximum(high_low, np.maximum(high_close, low_close))
-
-            # ATR計算（単純移動平均）
-            atr_value = np.mean(true_range)
-
-            return float(atr_value) if atr_value > 0 else 0.0
+            atr_arr = VolatilityIndicators.atr(highs, lows, closes, period=period)
+            # TA-Libの出力は先頭にNaNが入ることがあるため、有限値の最後を採用
+            finite = atr_arr[~np.isnan(atr_arr)]
+            if finite.size == 0:
+                return 0.0
+            return float(finite[-1])
 
         except Exception as e:
             logger.error(f"ATR計算エラー: {e}")
