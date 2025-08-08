@@ -11,7 +11,7 @@ import hashlib
 import logging
 import os
 import warnings
- 
+
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from enum import Enum
@@ -249,10 +249,11 @@ class ModelManager:
 
             # モデルデータを読み込み
             from sklearn.exceptions import InconsistentVersionWarning
+
             with warnings.catch_warnings():
                 warnings.simplefilter("ignore", InconsistentVersionWarning)
                 model_data = joblib.load(model_path)
- 
+
             # 古い形式との互換性を保つ
             if not isinstance(model_data, dict):
                 # 古い形式（直接モデルオブジェクト）の場合
@@ -273,7 +274,6 @@ class ModelManager:
             model_data.setdefault("feature_columns", None)
             model_data.setdefault("metadata", {})
 
-            logger.info(f"モデル読み込み完了: {os.path.basename(model_path)}")
             return model_data
 
         except Exception as e:
@@ -314,7 +314,6 @@ class ModelManager:
 
             # 最新のモデルファイルを取得（更新時刻でソート）
             latest_model = max(all_model_files, key=os.path.getmtime)
-            logger.debug(f"最新モデルを発見: {os.path.basename(latest_model)}")
 
             return latest_model
 

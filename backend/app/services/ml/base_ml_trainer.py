@@ -113,7 +113,6 @@ class BaseMLTrainer(BaseResourceManager, ABC):
         self.automl_config = automl_config
         self.last_training_results = None  # 最後の学習結果を保持
 
-
     # 重複ロジック削除:
     # _create_automl_config_from_dict は AutoMLConfig.from_dict に統一したため不要
 
@@ -1215,7 +1214,6 @@ class BaseMLTrainer(BaseResourceManager, ABC):
             raise UnifiedModelError("モデルデータにモデルが含まれていません")
 
         self.is_trained = True
-        logger.info(f"モデル読み込み完了: {model_path}")
         return True
 
     def _cleanup_temporary_files(self, level: CleanupLevel):
