@@ -14,7 +14,7 @@ from ..utils import (
     PandasTAError,
     ensure_numpy_array,
     format_indicator_result,
-    handle_talib_errors,
+    handle_pandas_ta_errors,
     validate_input,
     validate_multi_input,
 )
@@ -77,7 +77,7 @@ class MomentumIndicators:
         return pandas_ta_macd(data, fast_period, slow_period, signal_period)
 
     @staticmethod
-    @handle_talib_errors
+    @handle_pandas_ta_errors
     def macdext(
         data: np.ndarray,
         fast_period: int = 12,
@@ -108,7 +108,7 @@ class MomentumIndicators:
         )
 
     @staticmethod
-    @handle_talib_errors
+    @handle_pandas_ta_errors
     def macdfix(
         data: np.ndarray, signal_period: int = 9
     ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
@@ -141,7 +141,7 @@ class MomentumIndicators:
         return pandas_ta_stoch(high, low, close, k, d, smooth_k)
 
     @staticmethod
-    @handle_talib_errors
+    @handle_pandas_ta_errors
     def stochf(
         high: np.ndarray,
         low: np.ndarray,
@@ -172,13 +172,13 @@ class MomentumIndicators:
         )
 
     @staticmethod
-    @handle_talib_errors
+    @handle_pandas_ta_errors
     def stochrsi(
         data: np.ndarray,
         period: int = 14,
         fastk_period: int = 5,
         fastd_period: int = 3,
-        fastd_matype: int = 0,  # MA_Type.SMA
+        fastd_matype: int = 0,
     ) -> Tuple[np.ndarray, np.ndarray]:
         """Stochastic Relative Strength Index"""
         data = ensure_numpy_array(data)
@@ -213,7 +213,7 @@ class MomentumIndicators:
         return pandas_ta_cci(high, low, close, period)
 
     @staticmethod
-    @handle_talib_errors
+    @handle_pandas_ta_errors
     def cmo(data: np.ndarray, period: int = 14) -> np.ndarray:
         """Chande Momentum Oscillator"""
         data = ensure_numpy_array(data)
@@ -227,7 +227,7 @@ class MomentumIndicators:
         return pandas_ta_roc(data, period)
 
     @staticmethod
-    @handle_talib_errors
+    @handle_pandas_ta_errors
     def rocp(data: np.ndarray, period: int = 10) -> np.ndarray:
         """Rate of change Percentage"""
         data = ensure_numpy_array(data)
@@ -236,7 +236,7 @@ class MomentumIndicators:
         return cast(np.ndarray, format_indicator_result(result, "ROCP"))
 
     @staticmethod
-    @handle_talib_errors
+    @handle_pandas_ta_errors
     def rocr(data: np.ndarray, period: int = 10) -> np.ndarray:
         """Rate of change ratio"""
         data = ensure_numpy_array(data)
@@ -245,7 +245,7 @@ class MomentumIndicators:
         return cast(np.ndarray, format_indicator_result(result, "ROCR"))
 
     @staticmethod
-    @handle_talib_errors
+    @handle_pandas_ta_errors
     def rocr100(data: np.ndarray, period: int = 10) -> np.ndarray:
         """Rate of change ratio 100 scale"""
         data = ensure_numpy_array(data)
@@ -266,7 +266,7 @@ class MomentumIndicators:
         return pandas_ta_adx(high, low, close, period)
 
     @staticmethod
-    @handle_talib_errors
+    @handle_pandas_ta_errors
     def adxr(
         high: np.ndarray, low: np.ndarray, close: np.ndarray, period: int = 14
     ) -> np.ndarray:
@@ -279,7 +279,7 @@ class MomentumIndicators:
         return cast(np.ndarray, format_indicator_result(result, "ADXR"))
 
     @staticmethod
-    @handle_talib_errors
+    @handle_pandas_ta_errors
     def aroon(
         high: np.ndarray, low: np.ndarray, period: int = 14
     ) -> Tuple[np.ndarray, np.ndarray]:
@@ -294,7 +294,7 @@ class MomentumIndicators:
         )
 
     @staticmethod
-    @handle_talib_errors
+    @handle_pandas_ta_errors
     def aroonosc(high: np.ndarray, low: np.ndarray, period: int = 14) -> np.ndarray:
         """Aroon Oscillator (アルーンオシレーター)"""
         high = ensure_numpy_array(high)
@@ -304,7 +304,7 @@ class MomentumIndicators:
         return cast(np.ndarray, format_indicator_result(result, "AROONOSC"))
 
     @staticmethod
-    @handle_talib_errors
+    @handle_pandas_ta_errors
     def dx(
         high: np.ndarray, low: np.ndarray, close: np.ndarray, period: int = 14
     ) -> np.ndarray:
@@ -328,7 +328,7 @@ class MomentumIndicators:
         return pandas_ta_mfi(high, low, close, volume, period)
 
     @staticmethod
-    @handle_talib_errors
+    @handle_pandas_ta_errors
     def plus_di(
         high: np.ndarray, low: np.ndarray, close: np.ndarray, period: int = 14
     ) -> np.ndarray:
@@ -341,7 +341,7 @@ class MomentumIndicators:
         return cast(np.ndarray, format_indicator_result(result, "PLUS_DI"))
 
     @staticmethod
-    @handle_talib_errors
+    @handle_pandas_ta_errors
     def minus_di(
         high: np.ndarray, low: np.ndarray, close: np.ndarray, period: int = 14
     ) -> np.ndarray:
@@ -354,7 +354,7 @@ class MomentumIndicators:
         return cast(np.ndarray, format_indicator_result(result, "MINUS_DI"))
 
     @staticmethod
-    @handle_talib_errors
+    @handle_pandas_ta_errors
     def plus_dm(high: np.ndarray, low: np.ndarray, period: int = 14) -> np.ndarray:
         """Plus Directional Movement"""
         high = ensure_numpy_array(high)
@@ -364,7 +364,7 @@ class MomentumIndicators:
         return cast(np.ndarray, format_indicator_result(result, "PLUS_DM"))
 
     @staticmethod
-    @handle_talib_errors
+    @handle_pandas_ta_errors
     def minus_dm(high: np.ndarray, low: np.ndarray, period: int = 14) -> np.ndarray:
         """Minus Directional Movement"""
         high = ensure_numpy_array(high)
@@ -374,7 +374,7 @@ class MomentumIndicators:
         return cast(np.ndarray, format_indicator_result(result, "MINUS_DM"))
 
     @staticmethod
-    @handle_talib_errors
+    @handle_pandas_ta_errors
     def ppo(
         data: np.ndarray,
         fastperiod: int = 12,
@@ -393,7 +393,7 @@ class MomentumIndicators:
         return cast(np.ndarray, format_indicator_result(result, "PPO"))
 
     @staticmethod
-    @handle_talib_errors
+    @handle_pandas_ta_errors
     def trix(data: np.ndarray, period: int = 30) -> np.ndarray:
         """1-day Rate-Of-Change (ROC) of a Triple Smooth EMA"""
         data = ensure_numpy_array(data)
@@ -402,7 +402,7 @@ class MomentumIndicators:
         return cast(np.ndarray, format_indicator_result(result, "TRIX"))
 
     @staticmethod
-    @handle_talib_errors
+    @handle_pandas_ta_errors
     def ultosc(
         high: np.ndarray,
         low: np.ndarray,
@@ -429,7 +429,7 @@ class MomentumIndicators:
         return cast(np.ndarray, format_indicator_result(result, "ULTOSC"))
 
     @staticmethod
-    @handle_talib_errors
+    @handle_pandas_ta_errors
     def bop(
         open_data: np.ndarray,
         high: np.ndarray,
@@ -450,7 +450,7 @@ class MomentumIndicators:
         return cast(np.ndarray, format_indicator_result(result, "BOP"))
 
     @staticmethod
-    @handle_talib_errors
+    @handle_pandas_ta_errors
     def apo(
         data: np.ndarray,
         fastperiod: int = 12,

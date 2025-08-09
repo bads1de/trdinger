@@ -14,7 +14,7 @@ from ..utils import (
     PandasTAError,
     ensure_numpy_array,
     format_indicator_result,
-    handle_talib_errors,
+    handle_pandas_ta_errors,
     validate_input,
     validate_multi_input,
 )

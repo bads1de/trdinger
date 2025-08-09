@@ -14,7 +14,7 @@ from ..utils import (
     PandasTAError,
     ensure_numpy_array,
     format_indicator_result,
-    handle_talib_errors,
+    handle_pandas_ta_errors,
     validate_input,
     validate_multi_input,
 )
@@ -94,7 +94,7 @@ class TrendIndicators:
         return pandas_ta_sar(high, low, acceleration, maximum)
 
     @staticmethod
-    @handle_talib_errors
+    @handle_pandas_ta_errors
     def sarext(
         high: np.ndarray,
         low: np.ndarray,
@@ -125,7 +125,7 @@ class TrendIndicators:
         return cast(np.ndarray, format_indicator_result(result, "SAREXT"))
 
     @staticmethod
-    @handle_talib_errors
+    @handle_pandas_ta_errors
     def ht_trendline(data: np.ndarray) -> np.ndarray:
         """Hilbert Transform - Instantaneous Trendline"""
         data = ensure_numpy_array(data)
@@ -179,7 +179,7 @@ class TrendIndicators:
         )
 
     @staticmethod
-    @handle_talib_errors
+    @handle_pandas_ta_errors
     def midpoint(data: np.ndarray, period: int) -> np.ndarray:
         """MidPoint over period (期間中点)"""
         data = ensure_numpy_array(data)
@@ -188,7 +188,7 @@ class TrendIndicators:
         return cast(np.ndarray, format_indicator_result(result, "MIDPOINT"))
 
     @staticmethod
-    @handle_talib_errors
+    @handle_pandas_ta_errors
     def midprice(high: np.ndarray, low: np.ndarray, period: int) -> np.ndarray:
         """Midpoint Price over period (期間中値価格)"""
         high = ensure_numpy_array(high)

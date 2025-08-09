@@ -32,7 +32,7 @@ __all__ = [
     "MathTransformIndicators",
     "MathOperatorsIndicators",
     "PatternRecognitionIndicators",
-    "TALibError",
+    "PandasTAError",
     "validate_input",
     "ensure_numpy_array",
     # 既存クラス（互換性維持）

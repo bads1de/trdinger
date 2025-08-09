@@ -1,9 +1,8 @@
 """
-Ta-lib指標計算用共通ユーティリティ
+指標計算用共通ユーティリティ
 
-このモジュールはnumpy配列ベースのTa-lib指標計算に必要な
-共通機能を提供します。pandas Seriesの変換は一切行わず、
-backtesting.pyとの完全な互換性を保ちます。
+このモジュールはnumpy配列ベースの指標計算に必要な
+共通機能を提供します。
 """
 
 import logging
@@ -222,6 +221,3 @@ def normalize_data_for_trig(data: np.ndarray) -> np.ndarray:
     return np.clip(normalized_data, -1.0, 1.0)
 
 
-# 後方互換性のためのエイリアス
-TALibError = PandasTAError
-handle_talib_errors = handle_pandas_ta_errors

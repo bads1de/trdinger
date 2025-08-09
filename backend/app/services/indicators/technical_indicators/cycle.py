@@ -14,7 +14,7 @@ from scipy import signal
 from ..utils import (
     ensure_numpy_array,
     format_indicator_result,
-    handle_talib_errors,
+    handle_pandas_ta_errors,
     validate_input,
 )
 
@@ -28,7 +28,7 @@ class CycleIndicators:
     """
 
     @staticmethod
-    @handle_talib_errors
+    @handle_pandas_ta_errors
     def ht_dcperiod(data: np.ndarray) -> np.ndarray:
         """
         Hilbert Transform - Dominant Cycle Period (ヒルベルト変換支配的サイクル期間)
@@ -60,7 +60,7 @@ class CycleIndicators:
         return cast(np.ndarray, format_indicator_result(result, "HT_DCPERIOD"))
 
     @staticmethod
-    @handle_talib_errors
+    @handle_pandas_ta_errors
     def ht_dcphase(data: np.ndarray) -> np.ndarray:
         """
         Hilbert Transform - Dominant Cycle Phase (ヒルベルト変換支配的サイクル位相)
@@ -85,7 +85,7 @@ class CycleIndicators:
         return cast(np.ndarray, format_indicator_result(result, "HT_DCPHASE"))
 
     @staticmethod
-    @handle_talib_errors
+    @handle_pandas_ta_errors
     def ht_phasor(data: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
         """
         Hilbert Transform - Phasor Components (ヒルベルト変換フェーザー成分)
@@ -111,7 +111,7 @@ class CycleIndicators:
         )
 
     @staticmethod
-    @handle_talib_errors
+    @handle_pandas_ta_errors
     def ht_sine(data: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
         """
         Hilbert Transform - SineWave (ヒルベルト変換サイン波)
@@ -140,7 +140,7 @@ class CycleIndicators:
         )
 
     @staticmethod
-    @handle_talib_errors
+    @handle_pandas_ta_errors
     def ht_trendmode(data: np.ndarray) -> np.ndarray:
         """
         Hilbert Transform - Trend vs Cycle Mode (ヒルベルト変換トレンド対サイクルモード)

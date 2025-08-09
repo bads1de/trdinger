@@ -13,7 +13,6 @@ from typing import Any, Dict, Tuple
 
 import numpy as np
 
-# import talib  # pandas-taに移行済み
 
 logger = logging.getLogger(__name__)
 

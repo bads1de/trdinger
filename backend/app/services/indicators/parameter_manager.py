@@ -12,7 +12,6 @@ from typing import Any, Dict, Union
 from app.services.indicators.config.indicator_config import (
     IndicatorConfig,
 )
-from app.services.indicators.constraints import constraint_engine
 
 logger = logging.getLogger(__name__)
 
@@ -72,11 +71,6 @@ class IndicatorParameterManager:
             # 標準的なパラメータ生成
             generated_params = self._generate_standard_parameters(config)
 
-            # 制約エンジンを使用してパラメータを調整
-            generated_params = constraint_engine.apply_constraints(
-                indicator_type, generated_params
-            )
-
             # 生成されたパラメータをバリデーション
             if not self.validate_parameters(indicator_type, generated_params, config):
                 raise ParameterGenerationError(
@@ -132,10 +126,6 @@ class IndicatorParameterManager:
                         f"{indicator_type} に予期しないパラメータ '{param_name}' が含まれています"
                     )
                     return False
-
-            # 制約エンジンを使用した追加バリデーション
-            if not constraint_engine.validate_constraints(indicator_type, parameters):
-                return False
 
             return True
 

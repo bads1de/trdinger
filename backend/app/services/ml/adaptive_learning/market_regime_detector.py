@@ -12,7 +12,6 @@ from typing import Dict, List, Optional, Tuple
 from enum import Enum
 from dataclasses import dataclass
 
-# import talib  # pandas-taに移行済み
 
 logger = logging.getLogger(__name__)
 

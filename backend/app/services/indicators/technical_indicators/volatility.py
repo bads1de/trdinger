@@ -10,12 +10,10 @@ from typing import Tuple, cast
 
 import numpy as np
 
-# import talib  # pandas-taに移行済み
-
 from ..utils import (
     ensure_numpy_array,
     format_indicator_result,
-    handle_talib_errors,
+    handle_pandas_ta_errors,
     validate_input,
     validate_multi_input,
 )
@@ -171,7 +169,7 @@ class VolatilityIndicators:
         return pandas_ta_adx(high, low, close, period)
 
     @staticmethod
-    @handle_talib_errors
+    @handle_pandas_ta_errors
     def adxr(
         high: np.ndarray, low: np.ndarray, close: np.ndarray, period: int = 14
     ) -> np.ndarray:
@@ -195,7 +193,7 @@ class VolatilityIndicators:
         return pandas_ta_adx(high, low, close, period)
 
     @staticmethod
-    @handle_talib_errors
+    @handle_pandas_ta_errors
     def dx(
         high: np.ndarray, low: np.ndarray, close: np.ndarray, period: int = 14
     ) -> np.ndarray:
@@ -218,7 +216,7 @@ class VolatilityIndicators:
         return pandas_ta_dx(high, low, close, period)
 
     @staticmethod
-    @handle_talib_errors
+    @handle_pandas_ta_errors
     def minus_di(
         high: np.ndarray, low: np.ndarray, close: np.ndarray, period: int = 14
     ) -> np.ndarray:
@@ -241,7 +239,7 @@ class VolatilityIndicators:
         return pandas_ta_minus_di(high, low, close, period)
 
     @staticmethod
-    @handle_talib_errors
+    @handle_pandas_ta_errors
     def plus_di(
         high: np.ndarray, low: np.ndarray, close: np.ndarray, period: int = 14
     ) -> np.ndarray:
