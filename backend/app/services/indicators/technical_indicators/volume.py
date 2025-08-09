@@ -11,7 +11,7 @@ from typing import cast
 import numpy as np
 
 from ..utils import (
-    TALibError,
+    PandasTAError,
     ensure_numpy_array,
     format_indicator_result,
     handle_talib_errors,

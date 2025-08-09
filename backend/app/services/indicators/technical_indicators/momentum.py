@@ -11,7 +11,7 @@ from typing import Tuple, cast
 import numpy as np
 
 from ..utils import (
-    TALibError,
+    PandasTAError,
     ensure_numpy_array,
     format_indicator_result,
     handle_talib_errors,
@@ -442,7 +442,7 @@ class MomentumIndicators:
         low = ensure_numpy_array(low)
         close = ensure_numpy_array(close)
         if not (len(open_data) == len(high) == len(low) == len(close)):
-            raise TALibError(
+            raise PandasTAError(
                 f"OHLCデータの長さが一致しません。Open: {len(open_data)}, High: {len(high)}, Low: {len(low)}, Close: {len(close)}"
             )
         validate_input(close, 1)

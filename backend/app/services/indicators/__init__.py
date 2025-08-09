@@ -17,7 +17,7 @@ from .technical_indicators.statistics import StatisticsIndicators
 from .technical_indicators.trend import TrendIndicators
 from .technical_indicators.volatility import VolatilityIndicators
 from .technical_indicators.volume import VolumeIndicators
-from .utils import TALibError, ensure_numpy_array, validate_input
+from .utils import PandasTAError, ensure_numpy_array, validate_input
 
 # 公開API
 __all__ = [

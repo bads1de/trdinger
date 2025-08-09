@@ -10,8 +10,7 @@ from typing import Any, Dict
 
 import numpy as np
 import pandas as pd
-
-# import talib  # pandas-taに移行済み
+import pandas_ta as ta
 
 from .base_feature_calculator import BaseFeatureCalculator
 
@@ -86,14 +85,12 @@ class TechnicalFeatureCalculator(BaseFeatureCalculator):
                 ma_short - ma_long, ma_long, default_value=0.0
             )
 
-            # レンジ相場判定（TA-Lib MAX/MIN使用）
+            # レンジ相場判定（pandas-ta MAX/MIN使用）
             volatility_period = lookback_periods.get("volatility", 20)
-            high_vals = result_df["High"].values.astype(np.float64)
-            low_vals = result_df["Low"].values.astype(np.float64)
-            high_20_arr = talib.MAX(high_vals, timeperiod=volatility_period)
-            low_20_arr = talib.MIN(low_vals, timeperiod=volatility_period)
-            high_20 = pd.Series(high_20_arr, index=result_df.index)
-            low_20 = pd.Series(low_20_arr, index=result_df.index)
+            high_vals = result_df["High"]
+            low_vals = result_df["Low"]
+            high_20 = high_vals.rolling(window=volatility_period).max()
+            low_20 = low_vals.rolling(window=volatility_period).min()
 
             result_df["Range_Bound_Ratio"] = DataValidator.safe_divide(
                 result_df["Close"] - low_20, high_20 - low_20, default_value=0.5

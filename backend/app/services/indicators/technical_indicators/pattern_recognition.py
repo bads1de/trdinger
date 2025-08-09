@@ -9,7 +9,7 @@ pandas Seriesの変換は一切行いません。
 import numpy as np
 
 from ..utils import (
-    TALibError,
+    PandasTAError,
     ensure_numpy_array,
     validate_input,
 )
@@ -59,7 +59,7 @@ class PatternRecognitionIndicators:
         close = ensure_numpy_array(close)
 
         if not (len(open_data) == len(high) == len(low) == len(close)):
-            raise TALibError(
+            raise PandasTAError(
                 f"OHLCデータの長さが一致しません。Open: {len(open_data)}, High: {len(high)}, Low: {len(low)}, Close: {len(close)}"
             )
 
@@ -88,7 +88,7 @@ class PatternRecognitionIndicators:
         close = ensure_numpy_array(close)
 
         if not (len(open_data) == len(high) == len(low) == len(close)):
-            raise TALibError(
+            raise PandasTAError(
                 f"OHLCデータの長さが一致しません。Open: {len(open_data)}, High: {len(high)}, Low: {len(low)}, Close: {len(close)}"
             )
 
@@ -117,7 +117,7 @@ class PatternRecognitionIndicators:
         close = ensure_numpy_array(close)
 
         if not (len(open_data) == len(high) == len(low) == len(close)):
-            raise TALibError(
+            raise PandasTAError(
                 f"OHLCデータの長さが一致しません。Open: {len(open_data)}, High: {len(high)}, Low: {len(low)}, Close: {len(close)}"
             )
 
@@ -164,7 +164,7 @@ class PatternRecognitionIndicators:
         close = ensure_numpy_array(close)
 
         if not (len(open_data) == len(high) == len(low) == len(close)):
-            raise TALibError(
+            raise PandasTAError(
                 f"OHLCデータの長さが一致しません。Open: {len(open_data)}, High: {len(high)}, Low: {len(low)}, Close: {len(close)}"
             )
 
@@ -193,7 +193,7 @@ class PatternRecognitionIndicators:
         close = ensure_numpy_array(close)
 
         if not (len(open_data) == len(high) == len(low) == len(close)):
-            raise TALibError(
+            raise PandasTAError(
                 f"OHLCデータの長さが一致しません。Open: {len(open_data)}, High: {len(high)}, Low: {len(low)}, Close: {len(close)}"
             )
 
@@ -221,7 +221,7 @@ class PatternRecognitionIndicators:
         close = ensure_numpy_array(close)
 
         if not (len(open_data) == len(high) == len(low) == len(close)):
-            raise TALibError(
+            raise PandasTAError(
                 f"OHLCデータの長さが一致しません。Open: {len(open_data)}, High: {len(high)}, Low: {len(low)}, Close: {len(close)}"
             )
 
@@ -254,7 +254,7 @@ class PatternRecognitionIndicators:
         close = ensure_numpy_array(close)
 
         if not (len(open_data) == len(high) == len(low) == len(close)):
-            raise TALibError(
+            raise PandasTAError(
                 f"OHLCデータの長さが一致しません。Open: {len(open_data)}, High: {len(high)}, Low: {len(low)}, Close: {len(close)}"
             )
 
@@ -287,7 +287,7 @@ class PatternRecognitionIndicators:
         close = ensure_numpy_array(close)
 
         if not (len(open_data) == len(high) == len(low) == len(close)):
-            raise TALibError(
+            raise PandasTAError(
                 f"OHLCデータの長さが一致しません。Open: {len(open_data)}, High: {len(high)}, Low: {len(low)}, Close: {len(close)}"
             )
 
@@ -320,7 +320,7 @@ class PatternRecognitionIndicators:
         close = ensure_numpy_array(close)
 
         if not (len(open_data) == len(high) == len(low) == len(close)):
-            raise TALibError(
+            raise PandasTAError(
                 f"OHLCデータの長さが一致しません。Open: {len(open_data)}, High: {len(high)}, Low: {len(low)}, Close: {len(close)}"
             )
 
@@ -348,7 +348,7 @@ class PatternRecognitionIndicators:
         close = ensure_numpy_array(close)
 
         if not (len(open_data) == len(high) == len(low) == len(close)):
-            raise TALibError(
+            raise PandasTAError(
                 f"OHLCデータの長さが一致しません。Open: {len(open_data)}, High: {len(high)}, Low: {len(low)}, Close: {len(close)}"
             )
 
@@ -376,7 +376,7 @@ class PatternRecognitionIndicators:
         close = ensure_numpy_array(close)
 
         if not (len(open_data) == len(high) == len(low) == len(close)):
-            raise TALibError(
+            raise PandasTAError(
                 f"OHLCデータの長さが一致しません。Open: {len(open_data)}, High: {len(high)}, Low: {len(low)}, Close: {len(close)}"
             )
 

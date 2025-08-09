@@ -16,8 +16,8 @@ import pandas as pd
 logger = logging.getLogger(__name__)
 
 
-class TALibError(Exception):
-    """Ta-lib計算エラー"""
+class PandasTAError(Exception):
+    """pandas-ta計算エラー"""
 
 
 def validate_input(data: np.ndarray, period: int) -> None:
@@ -29,31 +29,31 @@ def validate_input(data: np.ndarray, period: int) -> None:
         period: 期間パラメータ
 
     Raises:
-        TALibError: 入力データが無効な場合
+        PandasTAError: 入力データが無効な場合
     """
     if data is None:
-        raise TALibError("入力データがNoneです")
+        raise PandasTAError("入力データがNoneです")
 
     if not isinstance(data, np.ndarray):
-        raise TALibError(
+        raise PandasTAError(
             f"入力データはnumpy配列である必要があります。実際の型: {type(data)}"
         )
 
     if len(data) == 0:
-        raise TALibError("入力データが空です")
+        raise PandasTAError("入力データが空です")
 
     if period <= 0:
-        raise TALibError(f"期間は正の整数である必要があります: {period}")
+        raise PandasTAError(f"期間は正の整数である必要があります: {period}")
 
     if len(data) < period:
-        raise TALibError(f"データ長({len(data)})が期間({period})より短いです")
+        raise PandasTAError(f"データ長({len(data)})が期間({period})より短いです")
 
     # NaNや無限大の値をチェック
     if np.any(np.isnan(data)):
         logger.warning("入力データにNaN値が含まれています")
 
     if np.any(np.isinf(data)):
-        raise TALibError("入力データに無限大の値が含まれています")
+        raise PandasTAError("入力データに無限大の値が含まれています")
 
 
 def validate_multi_input(
@@ -69,7 +69,7 @@ def validate_multi_input(
         period: 期間パラメータ
 
     Raises:
-        TALibError: 入力データが無効な場合
+        PandasTAError: 入力データが無効な場合
     """
     # 各データの基本検証
     validate_input(high, period)
@@ -78,23 +78,23 @@ def validate_multi_input(
 
     # データ長の一致確認
     if not (len(high) == len(low) == len(close)):
-        raise TALibError(
+        raise PandasTAError(
             f"価格データの長さが一致しません。High: {len(high)}, Low: {len(low)}, Close: {len(close)}"
         )
 
     # 価格の論理的整合性チェック
     if np.any(high < low):
-        raise TALibError("高値が安値より低い箇所があります")
+        raise PandasTAError("高値が安値より低い箇所があります")
 
     if np.any((close > high) | (close < low)):
         logger.warning("終値が高値・安値の範囲外の箇所があります")
 
 
-def handle_talib_errors(func):
+def handle_pandas_ta_errors(func):
     """
-    Ta-libエラーハンドリングデコレーター
+    pandas-taエラーハンドリングデコレーター
 
-    Ta-lib関数の実行時エラーをキャッチし、
+    pandas-ta関数の実行時エラーをキャッチし、
     適切なログ出力とエラーメッセージを提供します。
     """
 
@@ -105,12 +105,12 @@ def handle_talib_errors(func):
 
             # 結果の基本検証
             if result is None:
-                raise TALibError(f"{func.__name__}: 計算結果がNoneです")
+                raise PandasTAError(f"{func.__name__}: 計算結果がNoneです")
 
             # numpy配列の場合の検証
             if isinstance(result, np.ndarray):
                 if len(result) == 0:
-                    raise TALibError(f"{func.__name__}: 計算結果が空の配列です")
+                    raise PandasTAError(f"{func.__name__}: 計算結果が空の配列です")
 
                 # 全てNaNの場合は警告
                 if np.all(np.isnan(result)):
@@ -120,7 +120,7 @@ def handle_talib_errors(func):
             elif isinstance(result, tuple):
                 for i, arr in enumerate(result):
                     if arr is None or len(arr) == 0:
-                        raise TALibError(
+                        raise PandasTAError(
                             f"{func.__name__}: 計算結果のインデックス{i}が無効です"
                         )
 
@@ -131,14 +131,14 @@ def handle_talib_errors(func):
             error_msg = str(e).lower()
             if any(
                 keyword in error_msg
-                for keyword in ["talib", "period", "length", "array"]
+                for keyword in ["pandas", "ta", "period", "length", "array"]
             ):
-                logger.error(f"{func.__name__} Ta-lib計算エラー: {e}")
-                raise TALibError(f"{func.__name__} 計算失敗: {e}")
+                logger.error(f"{func.__name__} pandas-ta計算エラー: {e}")
+                raise PandasTAError(f"{func.__name__} 計算失敗: {e}")
             else:
                 # 予期しないエラー
                 logger.error(f"{func.__name__} 予期しないエラー: {e}")
-                raise TALibError(f"{func.__name__} 予期しないエラー: {e}")
+                raise PandasTAError(f"{func.__name__} 予期しないエラー: {e}")
 
     return wrapper
 
@@ -154,10 +154,10 @@ def ensure_numpy_array(data: Union[np.ndarray, list, "pd.Series"]) -> np.ndarray
         float64型のnumpy配列
 
     Note:
-        Ta-libはfloat64型を要求するため、必ずfloat64に変換します。
+        pandas-taはfloat64型を要求するため、必ずfloat64に変換します。
     """
     if data is None:
-        raise TALibError("データがNoneです")
+        raise PandasTAError("データがNoneです")
 
     try:
         # pandas Seriesの場合
@@ -170,13 +170,13 @@ def ensure_numpy_array(data: Union[np.ndarray, list, "pd.Series"]) -> np.ndarray
         else:
             array = np.asarray(data, dtype=np.float64)
 
-        # Ta-lib用にfloat64に変換
+        # pandas-ta用にfloat64に変換
         if array.dtype != np.float64:
             return array.astype(np.float64)
         return array
 
     except (ValueError, TypeError) as e:
-        raise TALibError(f"データをnumpy配列に変換できません: {e}")
+        raise PandasTAError(f"データをnumpy配列に変換できません: {e}")
 
 
 def format_indicator_result(
@@ -220,3 +220,8 @@ def normalize_data_for_trig(data: np.ndarray) -> np.ndarray:
 
     # 計算誤差により範囲外になる可能性を考慮し、クリッピング
     return np.clip(normalized_data, -1.0, 1.0)
+
+
+# 後方互換性のためのエイリアス
+TALibError = PandasTAError
+handle_talib_errors = handle_pandas_ta_errors

@@ -11,7 +11,7 @@ from typing import cast
 import numpy as np
 
 from ..utils import (
-    TALibError,
+    PandasTAError,
     ensure_numpy_array,
     format_indicator_result,
     handle_talib_errors,
@@ -169,7 +169,7 @@ class TrendIndicators:
         data = ensure_numpy_array(data)
         periods = ensure_numpy_array(periods)
         if len(data) != len(periods):
-            raise TALibError(
+            raise PandasTAError(
                 f"データと期間の長さが一致しません。Data: {len(data)}, Periods: {len(periods)}"
             )
         validate_input(data, minperiod)
