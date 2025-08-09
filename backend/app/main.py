@@ -24,7 +24,7 @@ from app.api.ml_training import router as ml_training_router
 from app.api.open_interest import router as open_interest_router
 from app.api.strategies import router as strategies_router
 from app.config import settings
-from app.utils.duplicate_filter_handler import DuplicateFilterHandler
+from app.utils.duplicate_filter_handler import DuplicateFilter
 
 
 def setup_logging():
@@ -46,7 +46,7 @@ def setup_logging():
     console_handler.setFormatter(formatter)
 
     # 重複フィルターを作成（1秒間隔で同じメッセージをフィルタリング）
-    duplicate_filter = DuplicateFilterHandler(capacity=200, interval=1.0)
+    duplicate_filter = DuplicateFilter(capacity=200, interval=1.0)
     console_handler.addFilter(duplicate_filter)
 
     # ハンドラーをルートロガーに追加

@@ -48,12 +48,6 @@
     - **問題点**: SQLAlchemyは`on_conflict_do_nothing`を提供しており、DB方言を吸収してくれます。
     - **改善案**: SQLAlchemyの機能を直接利用し、DBごとの分岐をなくすことで、より汎用的なUpsert関数にリファクタリングします。
 
-### 6. `duplicate_filter_handler.py`
-
-- **`DuplicateFilterHandler`**: 重複ログをフィルタリングするカスタムクラスです。
-    - **問題点**: Pythonの標準`logging`モジュールでも同様の機能は実現可能です。
-    - **改善案**: `logging.Filter`を継承したシンプルなクラスで、重複メッセージを記録し、フィルタリングロジックを実装することで、より簡潔に記述できます。
-
 ### 7. `index_alignment.py`
 
 - **`IndexAlignmentManager`**: MLワークフローでのインデックス整合性を管理します。
