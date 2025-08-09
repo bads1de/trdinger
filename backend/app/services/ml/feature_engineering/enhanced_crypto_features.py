@@ -296,24 +296,19 @@ class EnhancedCryptoFeatures:
         """テクニカル指標"""
         result_df = df.copy()
 
-        # RSI（TA-lib使用・フォールバックなし）
-        for period in [14, 24]:
-            close_values = df["Close"].values.astype(np.float64)
-            rsi_values = talib.RSI(close_values, timeperiod=period)
-            result_df[f"rsi_{period}"] = pd.Series(rsi_values, index=df.index).fillna(
-                50.0
-            )
+        # RSI（pandas-ta使用）
+        import pandas_ta as ta
 
-        # ボリンジャーバンド（TA-lib使用・フォールバックなし）
+        for period in [14, 24]:
+            result_df[f"rsi_{period}"] = ta.rsi(df["Close"], length=period).fillna(50.0)
+
+        # ボリンジャーバンド（pandas-ta使用）
         for period in [20, 48]:
-            close_values = df["Close"].values.astype(np.float64)
-            upper, middle, lower = talib.BBANDS(
-                close_values, timeperiod=period, nbdevup=2, nbdevdn=2, matype=0
-            )
-            result_df[f"bb_upper_{period}"] = pd.Series(upper, index=df.index).fillna(
+            bb_result = ta.bbands(df["Close"], length=period, std=2)
+            result_df[f"bb_upper_{period}"] = bb_result[f"BBU_{period}_2.0"].fillna(
                 df["Close"]
             )
-            result_df[f"bb_lower_{period}"] = pd.Series(lower, index=df.index).fillna(
+            result_df[f"bb_lower_{period}"] = bb_result[f"BBL_{period}_2.0"].fillna(
                 df["Close"]
             )
             # BB Position計算
@@ -324,16 +319,11 @@ class EnhancedCryptoFeatures:
                 .fillna(0.5)
             )
 
-        # MACD（TA-lib使用・フォールバックなし）
-        close_values = df["Close"].values.astype(np.float64)
-        macd, macd_signal, macd_histogram = talib.MACD(
-            close_values, fastperiod=12, slowperiod=26, signalperiod=9
-        )
-        result_df["macd"] = pd.Series(macd, index=df.index).fillna(0.0)
-        result_df["macd_signal"] = pd.Series(macd_signal, index=df.index).fillna(0.0)
-        result_df["macd_histogram"] = pd.Series(macd_histogram, index=df.index).fillna(
-            0.0
-        )
+        # MACD（pandas-ta使用）
+        macd_result = ta.macd(df["Close"], fast=12, slow=26, signal=9)
+        result_df["macd"] = macd_result[f"MACD_12_26_9"].fillna(0.0)
+        result_df["macd_signal"] = macd_result[f"MACDs_12_26_9"].fillna(0.0)
+        result_df["macd_histogram"] = macd_result[f"MACDh_12_26_9"].fillna(0.0)
 
         self.feature_groups["technical"].extend(
             [

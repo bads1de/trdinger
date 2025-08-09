@@ -10,7 +10,8 @@ from typing import Optional
 
 import numpy as np
 import pandas as pd
-import talib
+
+# import talib  # pandas-taに移行済み
 from sklearn.preprocessing import StandardScaler
 
 logger = logging.getLogger(__name__)
@@ -110,40 +111,91 @@ class AdvancedFeatureEngineer:
         volume = data["Volume"].values
 
         try:
-            # モメンタム指標
-            data["Stochastic_K"], data["Stochastic_D"] = talib.STOCH(high, low, close)
-            data["Williams_R"] = talib.WILLR(high, low, close)
-            data["CCI"] = talib.CCI(high, low, close)
-            data["MFI"] = talib.MFI(high, low, close, volume)
-            data["Ultimate_Oscillator"] = talib.ULTOSC(high, low, close)
+            import pandas_ta as ta
 
-            # トレンド指標
-            data["ADX"] = talib.ADX(high, low, close)
-            data["ADXR"] = talib.ADXR(high, low, close)
-            data["DI_Plus"] = talib.PLUS_DI(high, low, close)
-            data["DI_Minus"] = talib.MINUS_DI(high, low, close)
-            data["Aroon_Up"], data["Aroon_Down"] = talib.AROON(high, low)
-            data["AROONOSC"] = talib.AROONOSC(high, low)
+            # モメンタム指標（pandas-ta使用）
+            stoch_result = ta.stoch(
+                high=data["High"], low=data["Low"], close=data["Close"]
+            )
+            data["Stochastic_K"] = stoch_result.iloc[:, 0]  # STOCHk
+            data["Stochastic_D"] = stoch_result.iloc[:, 1]  # STOCHd
+            data["Williams_R"] = ta.willr(
+                high=data["High"], low=data["Low"], close=data["Close"]
+            )
+            data["CCI"] = ta.cci(
+                high=data["High"], low=data["Low"], close=data["Close"]
+            )
+            data["MFI"] = ta.mfi(
+                high=data["High"],
+                low=data["Low"],
+                close=data["Close"],
+                volume=data["Volume"],
+            )
+            data["Ultimate_Oscillator"] = ta.uo(
+                high=data["High"], low=data["Low"], close=data["Close"]
+            )
 
-            # ボラティリティ指標
-            data["ATR"] = talib.ATR(high, low, close)
-            data["NATR"] = talib.NATR(high, low, close)
-            data["TRANGE"] = talib.TRANGE(high, low, close)
+            # トレンド指標（pandas-ta使用）
+            adx_result = ta.adx(high=data["High"], low=data["Low"], close=data["Close"])
+            data["ADX"] = adx_result[f"ADX_14"]
+            data["DI_Plus"] = adx_result[f"DMP_14"]
+            data["DI_Minus"] = adx_result[f"DMN_14"]
 
-            # 出来高指標
-            data["OBV"] = talib.OBV(close, volume)
-            data["AD"] = talib.AD(high, low, close, volume)
-            data["ADOSC"] = talib.ADOSC(high, low, close, volume)
+            aroon_result = ta.aroon(high=data["High"], low=data["Low"])
+            data["Aroon_Up"] = aroon_result[f"AROONU_14"]
+            data["Aroon_Down"] = aroon_result[f"AROOND_14"]
+            data["AROONOSC"] = ta.aroon(high=data["High"], low=data["Low"], scalar=100)[
+                f"AROONOSC_14"
+            ]
 
-            # パターン認識（一部）
-            data["DOJI"] = talib.CDLDOJI(data["Open"], high, low, close)
-            data["HAMMER"] = talib.CDLHAMMER(data["Open"], high, low, close)
-            data["SHOOTING_STAR"] = talib.CDLSHOOTINGSTAR(
-                data["Open"], high, low, close
+            # ボラティリティ指標（pandas-ta使用）
+            data["ATR"] = ta.atr(
+                high=data["High"], low=data["Low"], close=data["Close"]
+            )
+            data["NATR"] = ta.natr(
+                high=data["High"], low=data["Low"], close=data["Close"]
+            )
+            data["TRANGE"] = ta.true_range(
+                high=data["High"], low=data["Low"], close=data["Close"]
+            )
+
+            # 出来高指標（pandas-ta使用）
+            data["OBV"] = ta.obv(close=data["Close"], volume=data["Volume"])
+            data["AD"] = ta.ad(
+                high=data["High"],
+                low=data["Low"],
+                close=data["Close"],
+                volume=data["Volume"],
+            )
+            data["ADOSC"] = ta.adosc(
+                high=data["High"],
+                low=data["Low"],
+                close=data["Close"],
+                volume=data["Volume"],
+            )
+
+            # パターン認識（pandas-ta使用）
+            data["DOJI"] = ta.cdl_doji(
+                open_=data["Open"],
+                high=data["High"],
+                low=data["Low"],
+                close=data["Close"],
+            )
+            data["HAMMER"] = ta.cdl_hammer(
+                open_=data["Open"],
+                high=data["High"],
+                low=data["Low"],
+                close=data["Close"],
+            )
+            data["SHOOTING_STAR"] = ta.cdl_shooting_star(
+                open_=data["Open"],
+                high=data["High"],
+                low=data["Low"],
+                close=data["Close"],
             )
 
         except Exception as e:
-            logger.warning(f"TALib指標計算エラー: {e}")
+            logger.warning(f"pandas-ta指標計算エラー: {e}")
 
         return data
 
@@ -198,11 +250,10 @@ class AdvancedFeatureEngineer:
             ma = data["Close"].rolling(window).mean()
             data[f"Close_deviation_from_ma_{window}"] = (data["Close"] - ma) / ma
 
-        # トレンド強度（TA-Libによる効率的な実装）
-        close_values = data["Close"].values.astype(np.float64)
+        # トレンド強度（pandas-ta使用）
         for window in [10, 20, 50]:
-            data[f"Trend_strength_{window}"] = talib.LINEARREG_SLOPE(
-                close_values, timeperiod=window
+            data[f"Trend_strength_{window}"] = ta.linreg(
+                data["Close"], length=window, slope=True
             )
 
         return data

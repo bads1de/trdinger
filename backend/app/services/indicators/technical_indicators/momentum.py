@@ -9,7 +9,8 @@ numpy配列ベースのインターフェースを維持しています。
 from typing import Tuple, cast
 
 import numpy as np
-import talib
+
+# import talib  # pandas-taに移行済み
 
 from ..utils import (
     TALibError,
@@ -19,7 +20,17 @@ from ..utils import (
     validate_input,
     validate_multi_input,
 )
-from ..pandas_ta_utils import pandas_ta_rsi, pandas_ta_macd
+from ..pandas_ta_utils import (
+    rsi as pandas_ta_rsi,
+    macd as pandas_ta_macd,
+    stoch as pandas_ta_stoch,
+    adx as pandas_ta_adx,
+    willr as pandas_ta_willr,
+    cci as pandas_ta_cci,
+    roc as pandas_ta_roc,
+    mom as pandas_ta_mom,
+    mfi as pandas_ta_mfi,
+)
 
 
 class MomentumIndicators:
@@ -91,44 +102,23 @@ class MomentumIndicators:
         )
 
     @staticmethod
-    @handle_talib_errors
     def stoch(
         high: np.ndarray,
         low: np.ndarray,
         close: np.ndarray,
         fastk_period: int = 5,
         slowk_period: int = 3,
-        slowk_matype: int = 0,  # MA_Type.SMA
+        slowk_matype: int = 0,  # MA_Type.SMA（pandas-taでは無視される）
         slowd_period: int = 3,
-        slowd_matype: int = 0,  # MA_Type.SMA
+        slowd_matype: int = 0,  # MA_Type.SMA（pandas-taでは無視される）
     ) -> Tuple[np.ndarray, np.ndarray]:
-        """Stochastic (ストキャスティクス)"""
-        high = ensure_numpy_array(high)
-        low = ensure_numpy_array(low)
-        close = ensure_numpy_array(close)
-        fastk_period = max(2, fastk_period)
-        slowk_period = max(2, slowk_period)
-        slowd_period = max(2, slowd_period)
+        """Stochastic (ストキャスティクス) - pandas-ta版"""
+        # pandas-taのパラメータに変換
+        k = fastk_period
+        d = slowd_period
+        smooth_k = slowk_period
 
-        # matypeは整数値として直接使用
-
-        validate_multi_input(
-            high, low, close, max(fastk_period, slowk_period, slowd_period)
-        )
-        slowk, slowd = talib.STOCH(
-            high,
-            low,
-            close,
-            fastk_period=fastk_period,
-            slowk_period=slowk_period,
-            slowk_matype=slowk_matype,  # type: ignore
-            slowd_period=slowd_period,
-            slowd_matype=slowd_matype,  # type: ignore
-        )
-        return cast(
-            Tuple[np.ndarray, np.ndarray],
-            format_indicator_result((slowk, slowd), "STOCH"),
-        )
+        return pandas_ta_stoch(high, low, close, k, d, smooth_k)
 
     @staticmethod
     @handle_talib_errors
@@ -189,30 +179,18 @@ class MomentumIndicators:
         )
 
     @staticmethod
-    @handle_talib_errors
     def williams_r(
         high: np.ndarray, low: np.ndarray, close: np.ndarray, period: int = 14
     ) -> np.ndarray:
-        """Williams' %R (ウィリアムズ%R)"""
-        high = ensure_numpy_array(high)
-        low = ensure_numpy_array(low)
-        close = ensure_numpy_array(close)
-        validate_multi_input(high, low, close, period)
-        result = talib.WILLR(high, low, close, timeperiod=period)
-        return cast(np.ndarray, format_indicator_result(result, "WILLR"))
+        """Williams' %R (ウィリアムズ%R) - pandas-ta版"""
+        return pandas_ta_willr(high, low, close, period)
 
     @staticmethod
-    @handle_talib_errors
     def cci(
         high: np.ndarray, low: np.ndarray, close: np.ndarray, period: int = 14
     ) -> np.ndarray:
-        """Commodity Channel Index (商品チャネル指数)"""
-        high = ensure_numpy_array(high)
-        low = ensure_numpy_array(low)
-        close = ensure_numpy_array(close)
-        validate_multi_input(high, low, close, period)
-        result = talib.CCI(high, low, close, timeperiod=period)
-        return cast(np.ndarray, format_indicator_result(result, "CCI"))
+        """Commodity Channel Index (商品チャネル指数) - pandas-ta版"""
+        return pandas_ta_cci(high, low, close, period)
 
     @staticmethod
     @handle_talib_errors
@@ -224,13 +202,9 @@ class MomentumIndicators:
         return cast(np.ndarray, format_indicator_result(result, "CMO"))
 
     @staticmethod
-    @handle_talib_errors
     def roc(data: np.ndarray, period: int = 10) -> np.ndarray:
-        """Rate of change"""
-        data = ensure_numpy_array(data)
-        validate_input(data, period)
-        result = talib.ROC(data, timeperiod=period)
-        return cast(np.ndarray, format_indicator_result(result, "ROC"))
+        """Rate of change - pandas-ta版"""
+        return pandas_ta_roc(data, period)
 
     @staticmethod
     @handle_talib_errors
@@ -260,26 +234,16 @@ class MomentumIndicators:
         return cast(np.ndarray, format_indicator_result(result, "ROCR100"))
 
     @staticmethod
-    @handle_talib_errors
     def mom(data: np.ndarray, period: int = 10) -> np.ndarray:
-        """Momentum (モメンタム)"""
-        data = ensure_numpy_array(data)
-        validate_input(data, period)
-        result = talib.MOM(data, timeperiod=period)
-        return cast(np.ndarray, format_indicator_result(result, "MOM"))
+        """Momentum (モメンタム) - pandas-ta版"""
+        return pandas_ta_mom(data, period)
 
     @staticmethod
-    @handle_talib_errors
     def adx(
         high: np.ndarray, low: np.ndarray, close: np.ndarray, period: int = 14
     ) -> np.ndarray:
-        """Average Directional Movement Index"""
-        high = ensure_numpy_array(high)
-        low = ensure_numpy_array(low)
-        close = ensure_numpy_array(close)
-        validate_multi_input(high, low, close, period)
-        result = talib.ADX(high, low, close, timeperiod=period)
-        return cast(np.ndarray, format_indicator_result(result, "ADX"))
+        """Average Directional Movement Index - pandas-ta版"""
+        return pandas_ta_adx(high, low, close, period)
 
     @staticmethod
     @handle_talib_errors
@@ -333,7 +297,6 @@ class MomentumIndicators:
         return cast(np.ndarray, format_indicator_result(result, "DX"))
 
     @staticmethod
-    @handle_talib_errors
     def mfi(
         high: np.ndarray,
         low: np.ndarray,
@@ -341,18 +304,8 @@ class MomentumIndicators:
         volume: np.ndarray,
         period: int = 14,
     ) -> np.ndarray:
-        """Money Flow Index (マネーフローインデックス)"""
-        high = ensure_numpy_array(high)
-        low = ensure_numpy_array(low)
-        close = ensure_numpy_array(close)
-        volume = ensure_numpy_array(volume)
-        validate_multi_input(high, low, close, period)
-        if len(volume) != len(close):
-            raise TALibError(
-                f"出来高データの長さが一致しません。Volume: {len(volume)}, Close: {len(close)}"
-            )
-        result = talib.MFI(high, low, close, volume, timeperiod=period)
-        return cast(np.ndarray, format_indicator_result(result, "MFI"))
+        """Money Flow Index (マネーフローインデックス) - pandas-ta版"""
+        return pandas_ta_mfi(high, low, close, volume, period)
 
     @staticmethod
     @handle_talib_errors

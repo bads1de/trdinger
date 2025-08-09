@@ -1,14 +1,15 @@
 """
-pandas-ta用ユーティリティ関数
+pandas-ta統合ユーティリティ
 
-TA-libからpandas-taへの移行をサポートするユーティリティ関数群
+pandas-taライブラリを使用したテクニカル指標計算の統一インターフェース
+backtesting.py互換性を保ちながら、pandas-taの利点を活用
 """
 
 import logging
 import numpy as np
 import pandas as pd
 import pandas_ta as ta
-from typing import Union, Optional, Tuple, cast
+from typing import Union, Optional, Tuple
 from functools import wraps
 
 logger = logging.getLogger(__name__)
@@ -20,388 +21,357 @@ class PandasTAError(Exception):
     pass
 
 
-def ensure_pandas_series(
-    data: Union[np.ndarray, pd.Series], index: Optional[pd.Index] = None
-) -> pd.Series:
-    """
-    データをpandas Seriesに変換
-
-    Args:
-        data: 入力データ（numpy配列またはpandas Series）
-        index: インデックス（numpy配列の場合）
-
-    Returns:
-        pandas Series
-    """
+def _to_series(data: Union[np.ndarray, pd.Series]) -> pd.Series:
+    """データをpandas Seriesに変換"""
     if isinstance(data, pd.Series):
         return data
     elif isinstance(data, np.ndarray):
-        if index is None:
-            index = pd.RangeIndex(len(data))
-        return pd.Series(data, index=index)
+        return pd.Series(data)
     else:
         raise PandasTAError(f"サポートされていないデータ型: {type(data)}")
 
 
-def ensure_numpy_array_from_series(series: pd.Series) -> np.ndarray:
-    """
-    pandas SeriesをNumPy配列に変換（backtesting.py互換性のため）
-
-    Args:
-        series: pandas Series
-
-    Returns:
-        numpy配列
-    """
-    return series.values
-
-
-def validate_pandas_input(data: pd.Series, min_length: int = 1) -> None:
-    """
-    pandas Series入力データの検証
-
-    Args:
-        data: 入力データ
-        min_length: 最小データ長
-
-    Raises:
-        PandasTAError: 入力データが無効な場合
-    """
-    if not isinstance(data, pd.Series):
-        raise PandasTAError(f"pandas Seriesが必要です。実際の型: {type(data)}")
-
+def _validate_data(data: pd.Series, min_length: int = 1) -> None:
+    """データの基本検証"""
     if len(data) < min_length:
-        raise PandasTAError(
-            f"データ長が不足しています。必要: {min_length}, 実際: {len(data)}"
-        )
-
+        raise PandasTAError(f"データ長が不足: 必要{min_length}, 実際{len(data)}")
     if data.isna().all():
-        raise PandasTAError("全てのデータがNaNです")
+        raise PandasTAError("全てのデータがNaN")
 
 
-def validate_pandas_multi_input(*series: pd.Series, min_length: int = 1) -> None:
-    """
-    複数のpandas Series入力データの検証
-
-    Args:
-        *series: 複数のpandas Series
-        min_length: 最小データ長
-
-    Raises:
-        PandasTAError: 入力データが無効な場合
-    """
-    if not series:
-        raise PandasTAError("少なくとも1つのSeriesが必要です")
-
-    # 各Seriesの基本検証
-    for i, s in enumerate(series):
-        try:
-            validate_pandas_input(s, min_length)
-        except PandasTAError as e:
-            raise PandasTAError(f"Series {i}: {str(e)}")
-
-    # 長さの一致確認
-    lengths = [len(s) for s in series]
-    if len(set(lengths)) > 1:
-        raise PandasTAError(f"Seriesの長さが一致しません: {lengths}")
-
-    # インデックスの一致確認（警告のみ）
-    first_index = series[0].index
-    for i, s in enumerate(series[1:], 1):
-        if not first_index.equals(s.index):
-            logger.warning(f"Series {i}のインデックスが一致しません")
-
-
-def handle_pandas_ta_errors(func):
-    """
-    pandas-taエラーハンドリングデコレーター
-
-    pandas-ta関数の実行時エラーをキャッチし、
-    適切なログ出力とエラーメッセージを提供します。
-    """
+def _handle_errors(func):
+    """エラーハンドリングデコレーター"""
 
     @wraps(func)
     def wrapper(*args, **kwargs):
         try:
             return func(*args, **kwargs)
         except Exception as e:
-            func_name = func.__name__
-            logger.error(f"pandas-ta関数 {func_name} でエラーが発生しました: {str(e)}")
-
-            # 具体的なエラータイプに応じた処理
-            if isinstance(e, (ValueError, TypeError)):
-                raise PandasTAError(f"{func_name}: 入力パラメータエラー - {str(e)}")
-            elif isinstance(e, KeyError):
-                raise PandasTAError(f"{func_name}: データアクセスエラー - {str(e)}")
-            else:
-                raise PandasTAError(f"{func_name}: 予期しないエラー - {str(e)}")
+            raise PandasTAError(f"{func.__name__}: {str(e)}")
 
     return wrapper
 
 
-def format_pandas_ta_result(
-    result: Union[pd.Series, pd.DataFrame], indicator_name: str
-) -> Union[pd.Series, pd.DataFrame]:
-    """
-    pandas-ta結果のフォーマット
-
-    Args:
-        result: pandas-taの計算結果
-        indicator_name: 指標名
-
-    Returns:
-        フォーマットされた結果
-    """
-    if result is None:
-        raise PandasTAError(f"{indicator_name}: 計算結果がNoneです")
-
-    if isinstance(result, pd.Series):
-        # NaN値の処理
-        if result.isna().all():
-            logger.warning(f"{indicator_name}: 全ての値がNaNです")
-        return result
-
-    elif isinstance(result, pd.DataFrame):
-        # DataFrameの場合、各列をチェック
-        for col in result.columns:
-            if result[col].isna().all():
-                logger.warning(f"{indicator_name}.{col}: 全ての値がNaNです")
-        return result
-
-    else:
-        raise PandasTAError(
-            f"{indicator_name}: サポートされていない結果型: {type(result)}"
-        )
+# 基本指標関数群
 
 
-def convert_to_numpy_for_backtesting(
-    result: Union[pd.Series, pd.DataFrame],
-) -> Union[np.ndarray, Tuple[np.ndarray, ...]]:
-    """
-    pandas-taの結果をbacktesting.py互換のnumpy配列に変換
-
-    Args:
-        result: pandas-taの計算結果
-
-    Returns:
-        numpy配列または複数のnumpy配列のタプル
-    """
-    if isinstance(result, pd.Series):
-        return result.values
-    elif isinstance(result, pd.DataFrame):
-        if len(result.columns) == 1:
-            return result.iloc[:, 0].values
-        else:
-            return tuple(result[col].values for col in result.columns)
-    else:
-        raise PandasTAError(f"サポートされていない結果型: {type(result)}")
-
-
-# pandas-ta関数のラッパー関数群
-
-
-@handle_pandas_ta_errors
-def pandas_ta_sma(
-    data: Union[np.ndarray, pd.Series], length: int, index: Optional[pd.Index] = None
-) -> np.ndarray:
-    """
-    pandas-ta版SMA（backtesting.py互換）
-
-    Args:
-        data: 価格データ
-        length: 期間
-        index: インデックス（numpy配列の場合）
-
-    Returns:
-        SMA値のnumpy配列
-    """
-    # pandas Seriesに変換
-    series = ensure_pandas_series(data, index)
-    validate_pandas_input(series, length)
-
-    # pandas-taでSMA計算
+@_handle_errors
+def sma(data: Union[np.ndarray, pd.Series], length: int) -> np.ndarray:
+    """単純移動平均"""
+    series = _to_series(data)
+    _validate_data(series, length)
     result = ta.sma(series, length=length)
-    result = format_pandas_ta_result(result, "SMA")
-
-    # numpy配列に変換してbacktesting.py互換性を保つ
-    return ensure_numpy_array_from_series(result)
+    return result.values
 
 
-@handle_pandas_ta_errors
-def pandas_ta_ema(
-    data: Union[np.ndarray, pd.Series], length: int, index: Optional[pd.Index] = None
-) -> np.ndarray:
-    """
-    pandas-ta版EMA（backtesting.py互換）
-
-    Args:
-        data: 価格データ
-        length: 期間
-        index: インデックス（numpy配列の場合）
-
-    Returns:
-        EMA値のnumpy配列
-    """
-    # pandas Seriesに変換
-    series = ensure_pandas_series(data, index)
-    validate_pandas_input(series, length)
-
-    # pandas-taでEMA計算
+@_handle_errors
+def ema(data: Union[np.ndarray, pd.Series], length: int) -> np.ndarray:
+    """指数移動平均"""
+    series = _to_series(data)
+    _validate_data(series, length)
     result = ta.ema(series, length=length)
-    result = format_pandas_ta_result(result, "EMA")
-
-    # numpy配列に変換してbacktesting.py互換性を保つ
-    return ensure_numpy_array_from_series(result)
+    return result.values
 
 
-@handle_pandas_ta_errors
-def pandas_ta_rsi(
-    data: Union[np.ndarray, pd.Series],
-    length: int = 14,
-    index: Optional[pd.Index] = None,
-) -> np.ndarray:
-    """
-    pandas-ta版RSI（backtesting.py互換）
-
-    Args:
-        data: 価格データ
-        length: 期間
-        index: インデックス（numpy配列の場合）
-
-    Returns:
-        RSI値のnumpy配列
-    """
-    # pandas Seriesに変換
-    series = ensure_pandas_series(data, index)
-    validate_pandas_input(series, length + 1)  # RSIは期間+1が必要
-
-    # pandas-taでRSI計算
+@_handle_errors
+def rsi(data: Union[np.ndarray, pd.Series], length: int = 14) -> np.ndarray:
+    """相対力指数"""
+    series = _to_series(data)
+    _validate_data(series, length + 1)
     result = ta.rsi(series, length=length)
-    result = format_pandas_ta_result(result, "RSI")
-
-    # numpy配列に変換してbacktesting.py互換性を保つ
-    return ensure_numpy_array_from_series(result)
+    return result.values
 
 
-@handle_pandas_ta_errors
-def pandas_ta_macd(
-    data: Union[np.ndarray, pd.Series],
-    fast: int = 12,
-    slow: int = 26,
-    signal: int = 9,
-    index: Optional[pd.Index] = None,
+@_handle_errors
+def macd(
+    data: Union[np.ndarray, pd.Series], fast: int = 12, slow: int = 26, signal: int = 9
 ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
-    """
-    pandas-ta版MACD（backtesting.py互換）
-
-    Args:
-        data: 価格データ
-        fast: 高速期間
-        slow: 低速期間
-        signal: シグナル期間
-        index: インデックス（numpy配列の場合）
-
-    Returns:
-        (MACD, Signal, Histogram)のタプル
-    """
-    # pandas Seriesに変換
-    series = ensure_pandas_series(data, index)
-    validate_pandas_input(series, slow + signal)
-
-    # pandas-taでMACD計算
+    """MACD"""
+    series = _to_series(data)
+    _validate_data(series, slow + signal)
     result = ta.macd(series, fast=fast, slow=slow, signal=signal)
-    result = format_pandas_ta_result(result, "MACD")
 
-    # 複数の戻り値をnumpy配列のタプルに変換
-    if isinstance(result, pd.DataFrame):
-        macd_col = f"MACD_{fast}_{slow}_{signal}"
-        signal_col = f"MACDs_{fast}_{slow}_{signal}"
-        hist_col = f"MACDh_{fast}_{slow}_{signal}"
+    macd_col = f"MACD_{fast}_{slow}_{signal}"
+    signal_col = f"MACDs_{fast}_{slow}_{signal}"
+    hist_col = f"MACDh_{fast}_{slow}_{signal}"
 
-        return (
-            result[macd_col].values,
-            result[signal_col].values,
-            result[hist_col].values,
-        )
-    else:
-        raise PandasTAError("MACDの結果がDataFrameではありません")
+    return (result[macd_col].values, result[signal_col].values, result[hist_col].values)
 
 
-@handle_pandas_ta_errors
-def pandas_ta_atr(
+@_handle_errors
+def atr(
     high: Union[np.ndarray, pd.Series],
     low: Union[np.ndarray, pd.Series],
     close: Union[np.ndarray, pd.Series],
     length: int = 14,
-    index: Optional[pd.Index] = None,
 ) -> np.ndarray:
-    """
-    pandas-ta版ATR（backtesting.py互換）
+    """平均真の値幅"""
+    high_series = _to_series(high)
+    low_series = _to_series(low)
+    close_series = _to_series(close)
 
-    Args:
-        high: 高値データ
-        low: 安値データ
-        close: 終値データ
-        length: 期間
-        index: インデックス（numpy配列の場合）
+    _validate_data(high_series, length)
+    _validate_data(low_series, length)
+    _validate_data(close_series, length)
 
-    Returns:
-        ATR値のnumpy配列
-    """
-    # pandas Seriesに変換
-    high_series = ensure_pandas_series(high, index)
-    low_series = ensure_pandas_series(low, index)
-    close_series = ensure_pandas_series(close, index)
+    result = ta.atr(high=high_series, low=low_series, close=close_series, length=length)
+    return result.values
 
-    validate_pandas_multi_input(
-        high_series, low_series, close_series, min_length=length
+
+@_handle_errors
+def bbands(
+    data: Union[np.ndarray, pd.Series], length: int = 20, std: float = 2.0
+) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """ボリンジャーバンド"""
+    series = _to_series(data)
+    _validate_data(series, length)
+    result = ta.bbands(series, length=length, std=std)
+
+    upper_col = f"BBU_{length}_{std}"
+    middle_col = f"BBM_{length}_{std}"
+    lower_col = f"BBL_{length}_{std}"
+
+    return (
+        result[upper_col].values,
+        result[middle_col].values,
+        result[lower_col].values,
     )
 
-    # pandas-taでATR計算
-    result = ta.atr(high=high_series, low=low_series, close=close_series, length=length)
-    result = format_pandas_ta_result(result, "ATR")
 
-    # numpy配列に変換してbacktesting.py互換性を保つ
-    return ensure_numpy_array_from_series(result)
+@_handle_errors
+def stoch(
+    high: Union[np.ndarray, pd.Series],
+    low: Union[np.ndarray, pd.Series],
+    close: Union[np.ndarray, pd.Series],
+    k: int = 14,
+    d: int = 3,
+    smooth_k: int = 3,
+) -> Tuple[np.ndarray, np.ndarray]:
+    """ストキャスティクス"""
+    high_series = _to_series(high)
+    low_series = _to_series(low)
+    close_series = _to_series(close)
+
+    _validate_data(high_series, k)
+    _validate_data(low_series, k)
+    _validate_data(close_series, k)
+
+    result = ta.stoch(
+        high=high_series,
+        low=low_series,
+        close=close_series,
+        k=k,
+        d=d,
+        smooth_k=smooth_k,
+    )
+
+    k_col = f"STOCHk_{k}_{d}_{smooth_k}"
+    d_col = f"STOCHd_{k}_{d}_{smooth_k}"
+
+    return (result[k_col].values, result[d_col].values)
 
 
-@handle_pandas_ta_errors
-def pandas_ta_bbands(
-    data: Union[np.ndarray, pd.Series],
+@_handle_errors
+def adx(
+    high: Union[np.ndarray, pd.Series],
+    low: Union[np.ndarray, pd.Series],
+    close: Union[np.ndarray, pd.Series],
+    length: int = 14,
+) -> np.ndarray:
+    """平均方向性指数"""
+    high_series = _to_series(high)
+    low_series = _to_series(low)
+    close_series = _to_series(close)
+
+    _validate_data(high_series, length)
+    _validate_data(low_series, length)
+    _validate_data(close_series, length)
+
+    result = ta.adx(high=high_series, low=low_series, close=close_series, length=length)
+    return result[f"ADX_{length}"].values
+
+
+@_handle_errors
+def tema(data: Union[np.ndarray, pd.Series], length: int) -> np.ndarray:
+    """三重指数移動平均"""
+    series = _to_series(data)
+    _validate_data(series, length)
+    result = ta.tema(series, length=length)
+    return result.values
+
+
+@_handle_errors
+def dema(data: Union[np.ndarray, pd.Series], length: int) -> np.ndarray:
+    """二重指数移動平均"""
+    series = _to_series(data)
+    _validate_data(series, length)
+    result = ta.dema(series, length=length)
+    return result.values
+
+
+@_handle_errors
+def wma(data: Union[np.ndarray, pd.Series], length: int) -> np.ndarray:
+    """加重移動平均"""
+    series = _to_series(data)
+    _validate_data(series, length)
+    result = ta.wma(series, length=length)
+    return result.values
+
+
+@_handle_errors
+def trima(data: Union[np.ndarray, pd.Series], length: int) -> np.ndarray:
+    """三角移動平均"""
+    series = _to_series(data)
+    _validate_data(series, length)
+    result = ta.trima(series, length=length)
+    return result.values
+
+
+@_handle_errors
+def kama(data: Union[np.ndarray, pd.Series], length: int = 30) -> np.ndarray:
+    """カウフマン適応移動平均"""
+    series = _to_series(data)
+    _validate_data(series, length)
+    result = ta.kama(series, length=length)
+    return result.values
+
+
+@_handle_errors
+def t3(
+    data: Union[np.ndarray, pd.Series], length: int = 5, a: float = 0.7
+) -> np.ndarray:
+    """T3移動平均"""
+    series = _to_series(data)
+    _validate_data(series, length)
+    result = ta.t3(series, length=length, a=a)
+    return result.values
+
+
+@_handle_errors
+def sar(
+    high: Union[np.ndarray, pd.Series],
+    low: Union[np.ndarray, pd.Series],
+    af: float = 0.02,
+    max_af: float = 0.2,
+) -> np.ndarray:
+    """パラボリックSAR"""
+    high_series = _to_series(high)
+    low_series = _to_series(low)
+
+    _validate_data(high_series, 2)
+    _validate_data(low_series, 2)
+
+    result = ta.psar(high=high_series, low=low_series, af0=af, af=af, max_af=max_af)
+    return result[f"PSARl_{af}_{max_af}"].fillna(result[f"PSARs_{af}_{max_af}"]).values
+
+
+@_handle_errors
+def willr(
+    high: Union[np.ndarray, pd.Series],
+    low: Union[np.ndarray, pd.Series],
+    close: Union[np.ndarray, pd.Series],
+    length: int = 14,
+) -> np.ndarray:
+    """ウィリアムズ%R"""
+    high_series = _to_series(high)
+    low_series = _to_series(low)
+    close_series = _to_series(close)
+
+    _validate_data(high_series, length)
+    _validate_data(low_series, length)
+    _validate_data(close_series, length)
+
+    result = ta.willr(
+        high=high_series, low=low_series, close=close_series, length=length
+    )
+    return result.values
+
+
+@_handle_errors
+def cci(
+    high: Union[np.ndarray, pd.Series],
+    low: Union[np.ndarray, pd.Series],
+    close: Union[np.ndarray, pd.Series],
     length: int = 20,
-    std: float = 2.0,
-    index: Optional[pd.Index] = None,
-) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
-    """
-    pandas-ta版Bollinger Bands（backtesting.py互換）
+) -> np.ndarray:
+    """商品チャネル指数"""
+    high_series = _to_series(high)
+    low_series = _to_series(low)
+    close_series = _to_series(close)
 
-    Args:
-        data: 価格データ
-        length: 期間
-        std: 標準偏差の倍数
-        index: インデックス（numpy配列の場合）
+    _validate_data(high_series, length)
+    _validate_data(low_series, length)
+    _validate_data(close_series, length)
 
-    Returns:
-        (Upper Band, Middle Band, Lower Band)のタプル
-    """
-    # pandas Seriesに変換
-    series = ensure_pandas_series(data, index)
-    validate_pandas_input(series, length)
+    result = ta.cci(high=high_series, low=low_series, close=close_series, length=length)
+    return result.values
 
-    # pandas-taでBollinger Bands計算
-    result = ta.bbands(series, length=length, std=std)
-    result = format_pandas_ta_result(result, "BBANDS")
 
-    # 複数の戻り値をnumpy配列のタプルに変換
-    if isinstance(result, pd.DataFrame):
-        upper_col = f"BBU_{length}_{std}"
-        middle_col = f"BBM_{length}_{std}"
-        lower_col = f"BBL_{length}_{std}"
+@_handle_errors
+def roc(data: Union[np.ndarray, pd.Series], length: int = 10) -> np.ndarray:
+    """変化率"""
+    series = _to_series(data)
+    _validate_data(series, length)
+    result = ta.roc(series, length=length)
+    return result.values
 
-        return (
-            result[upper_col].values,
-            result[middle_col].values,
-            result[lower_col].values,
-        )
-    else:
-        raise PandasTAError("Bollinger Bandsの結果がDataFrameではありません")
+
+@_handle_errors
+def mom(data: Union[np.ndarray, pd.Series], length: int = 10) -> np.ndarray:
+    """モメンタム"""
+    series = _to_series(data)
+    _validate_data(series, length)
+    result = ta.mom(series, length=length)
+    return result.values
+
+
+@_handle_errors
+def mfi(
+    high: Union[np.ndarray, pd.Series],
+    low: Union[np.ndarray, pd.Series],
+    close: Union[np.ndarray, pd.Series],
+    volume: Union[np.ndarray, pd.Series],
+    length: int = 14,
+) -> np.ndarray:
+    """マネーフローインデックス"""
+    high_series = _to_series(high)
+    low_series = _to_series(low)
+    close_series = _to_series(close)
+    volume_series = _to_series(volume)
+
+    _validate_data(high_series, length)
+    _validate_data(low_series, length)
+    _validate_data(close_series, length)
+    _validate_data(volume_series, length)
+
+    result = ta.mfi(
+        high=high_series,
+        low=low_series,
+        close=close_series,
+        volume=volume_series,
+        length=length,
+    )
+    return result.values
+
+
+# 後方互換性のためのエイリアス（段階的に削除予定）
+pandas_ta_sma = sma
+pandas_ta_ema = ema
+pandas_ta_rsi = rsi
+pandas_ta_macd = macd
+pandas_ta_atr = atr
+pandas_ta_bbands = bbands
+pandas_ta_stoch = stoch
+pandas_ta_adx = adx
+pandas_ta_tema = tema
+pandas_ta_dema = dema
+pandas_ta_wma = wma
+pandas_ta_trima = trima
+pandas_ta_kama = kama
+pandas_ta_t3 = t3
+pandas_ta_sar = sar
+pandas_ta_willr = willr
+pandas_ta_cci = cci
+pandas_ta_roc = roc
+pandas_ta_mom = mom
+pandas_ta_mfi = mfi

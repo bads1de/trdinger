@@ -10,7 +10,8 @@ from typing import Any, Dict
 
 import numpy as np
 import pandas as pd
-import talib
+
+# import talib  # pandas-taに移行済み
 
 from .base_feature_calculator import BaseFeatureCalculator
 
@@ -69,15 +70,14 @@ class TechnicalFeatureCalculator(BaseFeatureCalculator):
 
             result_df = self.create_result_dataframe(df)
 
-            # トレンド強度（TA-Lib SMA使用）
+            # トレンド強度（pandas-ta SMA使用）
             short_ma = lookback_periods.get("short_ma", 10)
             long_ma = lookback_periods.get("long_ma", 50)
 
-            close_vals = result_df["Close"].values.astype(np.float64)
-            ma_short_arr = talib.SMA(close_vals, timeperiod=short_ma)
-            ma_long_arr = talib.SMA(close_vals, timeperiod=long_ma)
-            ma_short = pd.Series(ma_short_arr, index=result_df.index)
-            ma_long = pd.Series(ma_long_arr, index=result_df.index)
+            import pandas_ta as ta
+
+            ma_short = ta.sma(result_df["Close"], length=short_ma)
+            ma_long = ta.sma(result_df["Close"], length=long_ma)
 
             # Trend_Strength = (MA_short - MA_long) / MA_long
             from ....utils.data_validation import DataValidator
@@ -169,74 +169,53 @@ class TechnicalFeatureCalculator(BaseFeatureCalculator):
 
             result_df = self.create_result_dataframe(df)
 
-            # RSI（TA-Lib使用・フォールバックなし）
-            close_values = result_df["Close"].values.astype(np.float64)
-            rsi_values = talib.RSI(close_values, timeperiod=14)
-            result_df["RSI"] = pd.Series(rsi_values, index=result_df.index).fillna(50.0)
+            # RSI（pandas-ta使用）
+            rsi_values = ta.rsi(result_df["Close"], length=14)
+            result_df["RSI"] = rsi_values.fillna(50.0)
 
-            # MACD（TA-Lib使用・フォールバックなし）
-            close_values = result_df["Close"].values.astype(np.float64)
-            macd, macd_signal, macd_histogram = talib.MACD(
-                close_values, fastperiod=12, slowperiod=26, signalperiod=9
+            # MACD（pandas-ta使用）
+            macd_result = ta.macd(result_df["Close"], fast=12, slow=26, signal=9)
+            result_df["MACD"] = macd_result[f"MACD_12_26_9"].fillna(0.0)
+            result_df["MACD_Signal"] = macd_result[f"MACDs_12_26_9"].fillna(0.0)
+            result_df["MACD_Histogram"] = macd_result[f"MACDh_12_26_9"].fillna(0.0)
+
+            # ストキャスティクス（pandas-ta使用）
+            stoch_result = ta.stoch(
+                high=result_df["High"],
+                low=result_df["Low"],
+                close=result_df["Close"],
+                k=14,
+                d=3,
+                smooth_k=3,
             )
-            result_df["MACD"] = pd.Series(macd, index=result_df.index).fillna(0.0)
-            result_df["MACD_Signal"] = pd.Series(
-                macd_signal, index=result_df.index
-            ).fillna(0.0)
-            result_df["MACD_Histogram"] = pd.Series(
-                macd_histogram, index=result_df.index
-            ).fillna(0.0)
+            result_df["Stochastic_K"] = stoch_result[f"STOCHk_14_3_3"].fillna(50.0)
+            result_df["Stochastic_D"] = stoch_result[f"STOCHd_14_3_3"].fillna(50.0)
 
-            # ストキャスティクス（TA-Lib使用・フォールバックなし）
-            high_values = result_df["High"].values.astype(np.float64)
-            low_values = result_df["Low"].values.astype(np.float64)
-            close_values = result_df["Close"].values.astype(np.float64)
-            slowk, slowd = talib.STOCH(
-                high_values,
-                low_values,
-                close_values,
-                fastk_period=14,
-                slowk_period=3,
-                slowk_matype=0,
-                slowd_period=3,
-                slowd_matype=0,
+            # ウィリアムズ%R（pandas-ta使用）
+            willr_values = ta.willr(
+                high=result_df["High"],
+                low=result_df["Low"],
+                close=result_df["Close"],
+                length=14,
             )
-            result_df["Stochastic_K"] = pd.Series(slowk, index=result_df.index).fillna(
-                50.0
+            result_df["Williams_R"] = willr_values.fillna(-50.0)
+
+            # CCI（Commodity Channel Index）（pandas-ta使用）
+            cci_values = ta.cci(
+                high=result_df["High"],
+                low=result_df["Low"],
+                close=result_df["Close"],
+                length=20,
             )
-            result_df["Stochastic_D"] = pd.Series(slowd, index=result_df.index).fillna(
-                50.0
-            )
+            result_df["CCI"] = cci_values.fillna(0.0)
 
-            # ウィリアムズ%R（TA-Lib使用・フォールバックなし）
-            high_values = result_df["High"].values.astype(np.float64)
-            low_values = result_df["Low"].values.astype(np.float64)
-            close_values = result_df["Close"].values.astype(np.float64)
-            willr_values = talib.WILLR(
-                high_values, low_values, close_values, timeperiod=14
-            )
-            result_df["Williams_R"] = pd.Series(
-                willr_values, index=result_df.index
-            ).fillna(-50.0)
+            # ROC（Rate of Change）（pandas-ta使用）
+            roc_values = ta.roc(result_df["Close"], length=12)
+            result_df["ROC"] = roc_values.fillna(0.0)
 
-            # CCI（Commodity Channel Index）（TA-Lib使用・フォールバックなし）
-            high_values = result_df["High"].values.astype(np.float64)
-            low_values = result_df["Low"].values.astype(np.float64)
-            close_values = result_df["Close"].values.astype(np.float64)
-            cci_values = talib.CCI(high_values, low_values, close_values, timeperiod=20)
-            result_df["CCI"] = pd.Series(cci_values, index=result_df.index).fillna(0.0)
-
-            # ROC（Rate of Change）（TA-Lib使用・フォールバックなし）
-            close_values = result_df["Close"].values.astype(np.float64)
-            roc_values = talib.ROC(close_values, timeperiod=12)
-            result_df["ROC"] = pd.Series(roc_values, index=result_df.index).fillna(0.0)
-
-            # モメンタム（TA-Lib使用・フォールバックなし）
-            close_values = result_df["Close"].values.astype(np.float64)
-            momentum_values = talib.MOM(close_values, timeperiod=10)
-            result_df["Momentum"] = pd.Series(
-                momentum_values, index=result_df.index
-            ).fillna(0.0)
+            # モメンタム（pandas-ta使用）
+            momentum_values = ta.mom(result_df["Close"], length=10)
+            result_df["Momentum"] = momentum_values.fillna(0.0)
 
             logger.debug("モメンタム特徴量計算完了")
             return result_df
@@ -268,12 +247,11 @@ class TechnicalFeatureCalculator(BaseFeatureCalculator):
                 else self._calculate_rsi(result_df)
             )
 
-            # 価格とRSIのダイバージェンス（TA-Libによる効率的な実装）
-            close_values = result_df["Close"].values.astype(np.float64)
-            rsi_values = rsi.values.astype(np.float64)
+            # 価格とRSIのダイバージェンス（pandas-ta使用）
+            import pandas_ta as ta
 
-            price_trend = talib.LINEARREG_SLOPE(close_values, timeperiod=10)
-            rsi_trend = talib.LINEARREG_SLOPE(rsi_values, timeperiod=10)
+            price_trend = ta.linreg(result_df["Close"], length=10, slope=True)
+            rsi_trend = ta.linreg(rsi, length=10, slope=True)
 
             # ベアダイバージェンス（価格上昇、RSI下降）
             result_df["Bear_Divergence"] = ((price_trend > 0) & (rsi_trend < 0)).astype(
@@ -338,10 +316,11 @@ class TechnicalFeatureCalculator(BaseFeatureCalculator):
             return df
 
     def _calculate_rsi(self, df: pd.DataFrame, period: int = 14) -> pd.Series:
-        """RSIを計算（内部使用）- TA-Lib使用・フォールバックなし"""
-        close_values = df["Close"].values.astype(np.float64)
-        rsi_values = talib.RSI(close_values, timeperiod=period)
-        return pd.Series(rsi_values, index=df.index).fillna(50.0)
+        """RSIを計算（内部使用）- pandas-ta使用"""
+        import pandas_ta as ta
+
+        rsi_values = ta.rsi(df["Close"], length=period)
+        return rsi_values.fillna(50.0)
 
     def get_feature_names(self) -> list:
         """

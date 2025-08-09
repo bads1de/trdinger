@@ -2,6 +2,7 @@
 pandas
 pandas-ta
 numpy
+scipy
 
 # 暗号通貨取引所ライブラリ
 ccxt==4.1.64

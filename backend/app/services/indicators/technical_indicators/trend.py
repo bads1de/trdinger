@@ -9,7 +9,8 @@ numpy配列ベースのインターフェースを維持しています。
 from typing import Tuple, cast
 
 import numpy as np
-import talib
+
+# import talib  # pandas-taに移行済み
 
 from ..utils import (
     TALibError,
@@ -19,7 +20,17 @@ from ..utils import (
     validate_input,
     validate_multi_input,
 )
-from ..pandas_ta_utils import pandas_ta_sma, pandas_ta_ema
+from ..pandas_ta_utils import (
+    sma as pandas_ta_sma,
+    ema as pandas_ta_ema,
+    tema as pandas_ta_tema,
+    dema as pandas_ta_dema,
+    wma as pandas_ta_wma,
+    trima as pandas_ta_trima,
+    kama as pandas_ta_kama,
+    t3 as pandas_ta_t3,
+    sar as pandas_ta_sar,
+)
 
 
 class TrendIndicators:
@@ -41,87 +52,52 @@ class TrendIndicators:
         return pandas_ta_ema(data, period)
 
     @staticmethod
-    @handle_talib_errors
     def tema(data: np.ndarray, period: int) -> np.ndarray:
-        """Triple Exponential Moving Average (三重指数移動平均)"""
-        data = ensure_numpy_array(data)
-        validate_input(data, period)
-        result = talib.TEMA(data, timeperiod=period)
-        return cast(np.ndarray, format_indicator_result(result, "TEMA"))
+        """Triple Exponential Moving Average (三重指数移動平均) - pandas-ta版"""
+        return pandas_ta_tema(data, period)
 
     @staticmethod
-    @handle_talib_errors
     def dema(data: np.ndarray, period: int) -> np.ndarray:
-        """Double Exponential Moving Average (二重指数移動平均)"""
-        data = ensure_numpy_array(data)
-        validate_input(data, period)
-        result = talib.DEMA(data, timeperiod=period)
-        return cast(np.ndarray, format_indicator_result(result, "DEMA"))
+        """Double Exponential Moving Average (二重指数移動平均) - pandas-ta版"""
+        return pandas_ta_dema(data, period)
 
     @staticmethod
-    @handle_talib_errors
     def wma(data: np.ndarray, period: int) -> np.ndarray:
-        """Weighted Moving Average (加重移動平均)"""
-        data = ensure_numpy_array(data)
-        validate_input(data, period)
-        result = talib.WMA(data, timeperiod=period)
-        return cast(np.ndarray, format_indicator_result(result, "WMA"))
+        """Weighted Moving Average (加重移動平均) - pandas-ta版"""
+        return pandas_ta_wma(data, period)
 
     @staticmethod
-    @handle_talib_errors
     def trima(data: np.ndarray, period: int) -> np.ndarray:
-        """Triangular Moving Average (三角移動平均)"""
-        data = ensure_numpy_array(data)
-        validate_input(data, period)
-        result = talib.TRIMA(data, timeperiod=period)
-        return cast(np.ndarray, format_indicator_result(result, "TRIMA"))
+        """Triangular Moving Average (三角移動平均) - pandas-ta版"""
+        return pandas_ta_trima(data, period)
 
     @staticmethod
-    @handle_talib_errors
     def kama(data: np.ndarray, period: int = 30) -> np.ndarray:
-        """Kaufman Adaptive Moving Average (カウフマン適応移動平均)"""
-        data = ensure_numpy_array(data)
-        validate_input(data, period)
-        result = talib.KAMA(data, timeperiod=period)
-        return cast(np.ndarray, format_indicator_result(result, "KAMA"))
+        """Kaufman Adaptive Moving Average (カウフマン適応移動平均) - pandas-ta版"""
+        return pandas_ta_kama(data, period)
+
+    # @staticmethod
+    # def mama(
+    #     data: np.ndarray, fastlimit: float = 0.5, slowlimit: float = 0.05
+    # ) -> Tuple[np.ndarray, np.ndarray]:
+    #     """MESA Adaptive Moving Average (MESA適応移動平均) - 未実装"""
+    #     # pandas-taにMAMAが存在しないため、一時的に無効化
+    #     raise NotImplementedError("MAMA is not available in pandas-ta")
 
     @staticmethod
-    @handle_talib_errors
-    def mama(
-        data: np.ndarray, fastlimit: float = 0.5, slowlimit: float = 0.05
-    ) -> Tuple[np.ndarray, np.ndarray]:
-        """MESA Adaptive Moving Average (MESA適応移動平均)"""
-        data = ensure_numpy_array(data)
-        validate_input(data, 2)  # 最小期間は2
-        mama, fama = talib.MAMA(data, fastlimit=fastlimit, slowlimit=slowlimit)
-        return cast(
-            Tuple[np.ndarray, np.ndarray],
-            format_indicator_result((mama, fama), "MAMA"),
-        )
-
-    @staticmethod
-    @handle_talib_errors
     def t3(data: np.ndarray, period: int = 5, vfactor: float = 0.7) -> np.ndarray:
-        """Triple Exponential Moving Average (T3)"""
-        data = ensure_numpy_array(data)
-        validate_input(data, period)
-        result = talib.T3(data, timeperiod=period, vfactor=vfactor)
-        return cast(np.ndarray, format_indicator_result(result, "T3"))
+        """Triple Exponential Moving Average (T3) - pandas-ta版"""
+        return pandas_ta_t3(data, period, vfactor)
 
     @staticmethod
-    @handle_talib_errors
     def sar(
         high: np.ndarray,
         low: np.ndarray,
         acceleration: float = 0.02,
         maximum: float = 0.2,
     ) -> np.ndarray:
-        """Parabolic SAR (パラボリックSAR)"""
-        high = ensure_numpy_array(high)
-        low = ensure_numpy_array(low)
-        validate_multi_input(high, low, high, 2)
-        result = talib.SAR(high, low, acceleration=acceleration, maximum=maximum)
-        return cast(np.ndarray, format_indicator_result(result, "SAR"))
+        """Parabolic SAR (パラボリックSAR) - pandas-ta版"""
+        return pandas_ta_sar(high, low, acceleration, maximum)
 
     @staticmethod
     @handle_talib_errors
@@ -164,15 +140,28 @@ class TrendIndicators:
         return cast(np.ndarray, format_indicator_result(result, "HT_TRENDLINE"))
 
     @staticmethod
-    @handle_talib_errors
     def ma(data: np.ndarray, period: int, matype: int = 0) -> np.ndarray:  # MA_Type.SMA
-        """Moving Average (移動平均 - タイプ指定可能)"""
-        data = ensure_numpy_array(data)
-        validate_input(data, period)
-
-        # matypeは整数値として直接使用
-        result = talib.MA(data, timeperiod=period, matype=matype)  # type: ignore
-        return cast(np.ndarray, format_indicator_result(result, "MA"))
+        """Moving Average (移動平均 - タイプ指定可能) - pandas-ta版"""
+        # matypeに応じて適切な移動平均を選択
+        if matype == 0:  # SMA
+            return pandas_ta_sma(data, period)
+        elif matype == 1:  # EMA
+            return pandas_ta_ema(data, period)
+        elif matype == 2:  # WMA
+            return pandas_ta_wma(data, period)
+        elif matype == 3:  # DEMA
+            return pandas_ta_dema(data, period)
+        elif matype == 4:  # TEMA
+            return pandas_ta_tema(data, period)
+        elif matype == 5:  # TRIMA
+            return pandas_ta_trima(data, period)
+        elif matype == 6:  # KAMA
+            return pandas_ta_kama(data, period)
+        elif matype == 8:  # T3
+            return pandas_ta_t3(data, period)
+        else:
+            # デフォルトはSMA
+            return pandas_ta_sma(data, period)
 
     @staticmethod
     @handle_talib_errors

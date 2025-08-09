@@ -1,34 +1,38 @@
 """
-数学変換系テクニカル指標
+数学変換系テクニカル指標（NumPy標準関数版）
 
-このモジュールはnumpy配列ベースでTa-libを直接使用し、
+このモジュールはNumPy標準関数を使用し、
 backtesting.pyとの完全な互換性を提供します。
-pandas Seriesの変換は一切行いません。
+TA-libの数学変換関数をNumPy標準関数で置き換えています。
 """
 
-from typing import cast
-
+import logging
 import numpy as np
-import talib
+from typing import Union
 
-from ..utils import (
-    ensure_numpy_array,
-    format_indicator_result,
-    handle_talib_errors,
-    validate_input,
-)
+logger = logging.getLogger(__name__)
+
+
+def _validate_input(data: Union[np.ndarray, list], min_length: int = 1) -> np.ndarray:
+    """入力データの検証とnumpy配列への変換"""
+    if not isinstance(data, np.ndarray):
+        data = np.array(data, dtype=float)
+
+    if len(data) < min_length:
+        raise ValueError(f"データ長が不足: 必要{min_length}, 実際{len(data)}")
+
+    return data
 
 
 class MathTransformIndicators:
     """
-    数学変換系指標クラス（オートストラテジー最適化）
+    数学変換系指標クラス（NumPy標準関数版）
 
-    全ての指標はnumpy配列を直接処理し、Ta-libの性能を最大限活用します。
+    全ての指標はNumPy標準関数を使用し、TA-libへの依存を排除しています。
     backtesting.pyでの使用に最適化されています。
     """
 
     @staticmethod
-    @handle_talib_errors
     def acos(data: np.ndarray) -> np.ndarray:
         """
         Vector Trigonometric ACos (ベクトル三角関数ACos)
@@ -39,310 +43,125 @@ class MathTransformIndicators:
         Returns:
             ACOS値のnumpy配列
         """
-        import logging
+        data = _validate_input(data)
 
-        logger = logging.getLogger(__name__)
-
-        data = ensure_numpy_array(data)
-        validate_input(data, 1)
         # 入力データの範囲チェックとクリッピング
         min_val, max_val = np.nanmin(data), np.nanmax(data)
         if min_val < -1.0 or max_val > 1.0:
             logger.warning(
-                f"ACOS input data is out of the valid range [-1, 1]. Range: [{min_val:.6f}, {max_val:.6f}]. Clipping to valid range."
+                f"ACOS入力値が範囲外: [{min_val:.6f}, {max_val:.6f}] -> [-1, 1]にクリップ"
             )
-            # 範囲外の値を[-1, 1]にクリップ
             data = np.clip(data, -1.0, 1.0)
 
-        result = talib.ACOS(data)
-        return cast(np.ndarray, format_indicator_result(result, "ACOS"))
+        return np.arccos(data)
 
     @staticmethod
-    @handle_talib_errors
     def asin(data: np.ndarray) -> np.ndarray:
-        """
-        Vector Trigonometric ASin (ベクトル三角関数ASin)
+        """Vector Trigonometric ASin (ベクトル三角関数ASin)"""
+        data = _validate_input(data)
 
-        Args:
-            data: 入力データ（numpy配列）
-
-        Returns:
-            ASIN値のnumpy配列
-        """
-        import logging
-
-        logger = logging.getLogger(__name__)
-
-        data = ensure_numpy_array(data)
-        validate_input(data, 1)
-        # 入力データの範囲チェックとクリッピング
         min_val, max_val = np.nanmin(data), np.nanmax(data)
         if min_val < -1.0 or max_val > 1.0:
             logger.warning(
-                f"ASIN input data is out of the valid range [-1, 1]. Range: [{min_val:.6f}, {max_val:.6f}]. Clipping to valid range."
+                f"ASIN入力値が範囲外: [{min_val:.6f}, {max_val:.6f}] -> [-1, 1]にクリップ"
             )
-            # 範囲外の値を[-1, 1]にクリップ
             data = np.clip(data, -1.0, 1.0)
 
-        result = talib.ASIN(data)
-        return cast(np.ndarray, format_indicator_result(result, "ASIN"))
+        return np.arcsin(data)
 
     @staticmethod
-    @handle_talib_errors
     def atan(data: np.ndarray) -> np.ndarray:
-        """
-        Vector Trigonometric ATan (ベクトル三角関数ATan)
-
-        Args:
-            data: 入力データ（numpy配列）
-
-        Returns:
-            ATAN値のnumpy配列
-        """
-        data = ensure_numpy_array(data)
-        validate_input(data, 1)
-        result = talib.ATAN(data)
-        return cast(np.ndarray, format_indicator_result(result, "ATAN"))
+        """Vector Trigonometric ATan (ベクトル三角関数ATan)"""
+        data = _validate_input(data)
+        return np.arctan(data)
 
     @staticmethod
-    @handle_talib_errors
     def ceil(data: np.ndarray) -> np.ndarray:
-        """
-        Vector Ceil (ベクトル天井関数)
-
-        Args:
-            data: 入力データ（numpy配列）
-
-        Returns:
-            CEIL値のnumpy配列
-        """
-        data = ensure_numpy_array(data)
-        validate_input(data, 1)
-        result = talib.CEIL(data)
-        return cast(np.ndarray, format_indicator_result(result, "CEIL"))
+        """Vector Ceiling (ベクトル天井関数)"""
+        data = _validate_input(data)
+        return np.ceil(data)
 
     @staticmethod
-    @handle_talib_errors
     def cos(data: np.ndarray) -> np.ndarray:
-        """
-        Vector Trigonometric Cos (ベクトル三角関数Cos)
-
-        Args:
-            data: 入力データ（numpy配列）
-
-        Returns:
-            COS値のnumpy配列
-        """
-        data = ensure_numpy_array(data)
-        validate_input(data, 1)
-        result = talib.COS(data)
-        return cast(np.ndarray, format_indicator_result(result, "COS"))
+        """Vector Trigonometric Cos (ベクトル三角関数Cos)"""
+        data = _validate_input(data)
+        return np.cos(data)
 
     @staticmethod
-    @handle_talib_errors
     def cosh(data: np.ndarray) -> np.ndarray:
-        """
-        Vector Trigonometric Cosh (ベクトル双曲線関数Cosh)
-
-        Args:
-            data: 入力データ（numpy配列）
-
-        Returns:
-            COSH値のnumpy配列
-        """
-        data = ensure_numpy_array(data)
-        validate_input(data, 1)
-        result = talib.COSH(data)
-        return cast(np.ndarray, format_indicator_result(result, "COSH"))
+        """Vector Trigonometric Cosh (ベクトル双曲線余弦)"""
+        data = _validate_input(data)
+        return np.cosh(data)
 
     @staticmethod
-    @handle_talib_errors
     def exp(data: np.ndarray) -> np.ndarray:
-        """
-        Vector Arithmetic Exp (ベクトル指数関数)
-
-        Args:
-            data: 入力データ（numpy配列）
-
-        Returns:
-            EXP値のnumpy配列
-        """
-        data = ensure_numpy_array(data)
-        validate_input(data, 1)
-        result = talib.EXP(data)
-        return cast(np.ndarray, format_indicator_result(result, "EXP"))
+        """Vector Arithmetic Exp (ベクトル指数関数)"""
+        data = _validate_input(data)
+        return np.exp(data)
 
     @staticmethod
-    @handle_talib_errors
     def floor(data: np.ndarray) -> np.ndarray:
-        """
-        Vector Floor (ベクトル床関数)
-
-        Args:
-            data: 入力データ（numpy配列）
-
-        Returns:
-            FLOOR値のnumpy配列
-        """
-        data = ensure_numpy_array(data)
-        validate_input(data, 1)
-        result = talib.FLOOR(data)
-        return cast(np.ndarray, format_indicator_result(result, "FLOOR"))
+        """Vector Floor (ベクトル床関数)"""
+        data = _validate_input(data)
+        return np.floor(data)
 
     @staticmethod
-    @handle_talib_errors
     def ln(data: np.ndarray) -> np.ndarray:
-        """
-        Vector Log Natural (ベクトル自然対数)
+        """Vector Log Natural (ベクトル自然対数)"""
+        data = _validate_input(data)
 
-        Args:
-            data: 入力データ（numpy配列）
-
-        Returns:
-            LN値のnumpy配列
-        """
-        import logging
-
-        logger = logging.getLogger(__name__)
-
-        data = ensure_numpy_array(data)
-        validate_input(data, 1)
-        # 入力データの範囲チェック（正の値のみ有効）
-        min_val = np.nanmin(data)
-        if min_val <= 0.0:
+        # 負の値や0の値をチェック
+        if np.any(data <= 0):
             logger.warning(
-                f"LN input data contains non-positive values. Min value: {min_val:.6f}. Replacing with small positive value."
+                "LN: 負の値または0が含まれています。NaNが生成される可能性があります。"
             )
-            # 0以下の値を小さな正の値に置換
-            data = np.where(data <= 0.0, 1e-10, data)
 
-        result = talib.LN(data)
-        return cast(np.ndarray, format_indicator_result(result, "LN"))
+        return np.log(data)
 
     @staticmethod
-    @handle_talib_errors
     def log10(data: np.ndarray) -> np.ndarray:
-        """
-        Vector Log10 (ベクトル常用対数)
+        """Vector Log10 (ベクトル常用対数)"""
+        data = _validate_input(data)
 
-        Args:
-            data: 入力データ（numpy配列）
-
-        Returns:
-            LOG10値のnumpy配列
-        """
-        import logging
-
-        logger = logging.getLogger(__name__)
-
-        data = ensure_numpy_array(data)
-        validate_input(data, 1)
-        # 入力データの範囲チェック（正の値のみ有効）
-        min_val = np.nanmin(data)
-        if min_val <= 0.0:
+        if np.any(data <= 0):
             logger.warning(
-                f"LOG10 input data contains non-positive values. Min value: {min_val:.6f}. Replacing with small positive value."
+                "LOG10: 負の値または0が含まれています。NaNが生成される可能性があります。"
             )
-            # 0以下の値を小さな正の値に置換
-            data = np.where(data <= 0.0, 1e-10, data)
 
-        result = talib.LOG10(data)
-        return cast(np.ndarray, format_indicator_result(result, "LOG10"))
+        return np.log10(data)
 
     @staticmethod
-    @handle_talib_errors
     def sin(data: np.ndarray) -> np.ndarray:
-        """
-        Vector Trigonometric Sin (ベクトル三角関数Sin)
-
-        Args:
-            data: 入力データ（numpy配列）
-
-        Returns:
-            SIN値のnumpy配列
-        """
-        data = ensure_numpy_array(data)
-        validate_input(data, 1)
-        result = talib.SIN(data)
-        return cast(np.ndarray, format_indicator_result(result, "SIN"))
+        """Vector Trigonometric Sin (ベクトル三角関数Sin)"""
+        data = _validate_input(data)
+        return np.sin(data)
 
     @staticmethod
-    @handle_talib_errors
     def sinh(data: np.ndarray) -> np.ndarray:
-        """
-        Vector Trigonometric Sinh (ベクトル双曲線関数Sinh)
-
-        Args:
-            data: 入力データ（numpy配列）
-
-        Returns:
-            SINH値のnumpy配列
-        """
-        data = ensure_numpy_array(data)
-        validate_input(data, 1)
-        result = talib.SINH(data)
-        return cast(np.ndarray, format_indicator_result(result, "SINH"))
+        """Vector Trigonometric Sinh (ベクトル双曲線正弦)"""
+        data = _validate_input(data)
+        return np.sinh(data)
 
     @staticmethod
-    @handle_talib_errors
     def sqrt(data: np.ndarray) -> np.ndarray:
-        """
-        Vector Square Root (ベクトル平方根)
+        """Vector Square Root (ベクトル平方根)"""
+        data = _validate_input(data)
 
-        Args:
-            data: 入力データ（numpy配列）
-
-        Returns:
-            SQRT値のnumpy配列
-        """
-        import logging
-
-        logger = logging.getLogger(__name__)
-
-        data = ensure_numpy_array(data)
-        validate_input(data, 1)
-        # 入力データの範囲チェック（非負の値のみ有効）
-        min_val = np.nanmin(data)
-        if min_val < 0.0:
+        if np.any(data < 0):
             logger.warning(
-                f"SQRT input data contains negative values. Min value: {min_val:.6f}. Replacing with 0."
+                "SQRT: 負の値が含まれています。NaNが生成される可能性があります。"
             )
-            # 負の値を0に置換
-            data = np.where(data < 0.0, 0.0, data)
 
-        result = talib.SQRT(data)
-        return cast(np.ndarray, format_indicator_result(result, "SQRT"))
+        return np.sqrt(data)
 
     @staticmethod
-    @handle_talib_errors
     def tan(data: np.ndarray) -> np.ndarray:
-        """
-        Vector Trigonometric Tan (ベクトル三角関数Tan)
-
-        Args:
-            data: 入力データ（numpy配列）
-
-        Returns:
-            TAN値のnumpy配列
-        """
-        data = ensure_numpy_array(data)
-        validate_input(data, 1)
-        result = talib.TAN(data)
-        return cast(np.ndarray, format_indicator_result(result, "TAN"))
+        """Vector Trigonometric Tan (ベクトル三角関数Tan)"""
+        data = _validate_input(data)
+        return np.tan(data)
 
     @staticmethod
-    @handle_talib_errors
     def tanh(data: np.ndarray) -> np.ndarray:
-        """
-        Vector Trigonometric Tanh (ベクトル双曲線関数Tanh)
-
-        Args:
-            data: 入力データ（numpy配列）
-
-        Returns:
-            TANH値のnumpy配列
-        """
-        data = ensure_numpy_array(data)
-        validate_input(data, 1)
-        result = talib.TANH(data)
-        return cast(np.ndarray, format_indicator_result(result, "TANH"))
+        """Vector Trigonometric Tanh (ベクトル双曲線正接)"""
+        data = _validate_input(data)
+        return np.tanh(data)

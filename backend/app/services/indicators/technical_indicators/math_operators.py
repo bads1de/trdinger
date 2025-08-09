@@ -1,263 +1,111 @@
 """
-数学演算子系テクニカル指標
+数学演算子系テクニカル指標（NumPy標準関数版）
 
-このモジュールはnumpy配列ベースでTa-libを直接使用し、
+このモジュールはNumPy標準関数を使用し、
 backtesting.pyとの完全な互換性を提供します。
-pandas Seriesの変換は一切行いません。
+TA-libの数学演算子関数をNumPy標準関数で置き換えています。
 """
 
-from typing import Tuple, cast
-
+import logging
 import numpy as np
-import talib
+from typing import Union
 
-from ..utils import (
-    TALibError,
-    ensure_numpy_array,
-    format_indicator_result,
-    handle_talib_errors,
-    validate_input,
-)
+logger = logging.getLogger(__name__)
+
+
+def _validate_input(data: Union[np.ndarray, list], min_length: int = 1) -> np.ndarray:
+    """入力データの検証とnumpy配列への変換"""
+    if not isinstance(data, np.ndarray):
+        data = np.array(data, dtype=float)
+
+    if len(data) < min_length:
+        raise ValueError(f"データ長が不足: 必要{min_length}, 実際{len(data)}")
+
+    return data
+
+
+def _validate_dual_input(data0: np.ndarray, data1: np.ndarray) -> None:
+    """2つの入力データの長さ一致確認"""
+    if len(data0) != len(data1):
+        raise ValueError(
+            f"データの長さが一致しません。Data0: {len(data0)}, Data1: {len(data1)}"
+        )
 
 
 class MathOperatorsIndicators:
     """
-    数学演算子系指標クラス（オートストラテジー最適化）
+    数学演算子系指標クラス（NumPy標準関数版）
 
-    全ての指標はnumpy配列を直接処理し、Ta-libの性能を最大限活用します。
+    全ての指標はNumPy標準関数を使用し、TA-libへの依存を排除しています。
     backtesting.pyでの使用に最適化されています。
     """
 
     @staticmethod
-    @handle_talib_errors
     def add(data0: np.ndarray, data1: np.ndarray) -> np.ndarray:
-        """
-        Vector Arithmetic Add (ベクトル算術加算)
-
-        Args:
-            data0: 第1データ（numpy配列）
-            data1: 第2データ（numpy配列）
-
-        Returns:
-            ADD値のnumpy配列
-        """
-        data0 = ensure_numpy_array(data0)
-        data1 = ensure_numpy_array(data1)
-
-        if len(data0) != len(data1):
-            raise TALibError(
-                f"データの長さが一致しません。Data0: {len(data0)}, Data1: {len(data1)}"
-            )
-
-        validate_input(data0, 1)
-        result = talib.ADD(data0, data1)
-        return cast(np.ndarray, format_indicator_result(result, "ADD"))
+        """Vector Arithmetic Add (ベクトル算術加算)"""
+        data0 = _validate_input(data0)
+        data1 = _validate_input(data1)
+        _validate_dual_input(data0, data1)
+        return data0 + data1
 
     @staticmethod
-    @handle_talib_errors
-    def div(data0: np.ndarray, data1: np.ndarray) -> np.ndarray:
-        """
-        Vector Arithmetic Div (ベクトル算術除算)
-
-        Args:
-            data0: 第1データ（numpy配列）
-            data1: 第2データ（numpy配列）
-
-        Returns:
-            DIV値のnumpy配列
-        """
-        data0 = ensure_numpy_array(data0)
-        data1 = ensure_numpy_array(data1)
-
-        if len(data0) != len(data1):
-            raise TALibError(
-                f"データの長さが一致しません。Data0: {len(data0)}, Data1: {len(data1)}"
-            )
-
-        validate_input(data0, 1)
-        result = talib.DIV(data0, data1)
-        return cast(np.ndarray, format_indicator_result(result, "DIV"))
-
-    @staticmethod
-    @handle_talib_errors
-    def max(data: np.ndarray, period: int = 30) -> np.ndarray:
-        """
-        Highest value over a specified period (指定期間の最高値)
-
-        Args:
-            data: 入力データ（numpy配列）
-            period: 期間（デフォルト: 30）
-
-        Returns:
-            MAX値のnumpy配列
-        """
-        data = ensure_numpy_array(data)
-        validate_input(data, period)
-        result = talib.MAX(data, timeperiod=period)
-        return cast(np.ndarray, format_indicator_result(result, "MAX"))
-
-    @staticmethod
-    @handle_talib_errors
-    def maxindex(data: np.ndarray, period: int = 30) -> np.ndarray:
-        """
-        Index of highest value over a specified period (指定期間の最高値のインデックス)
-
-        Args:
-            data: 入力データ（numpy配列）
-            period: 期間（デフォルト: 30）
-
-        Returns:
-            MAXINDEX値のnumpy配列
-        """
-        data = ensure_numpy_array(data)
-        validate_input(data, period)
-        result = talib.MAXINDEX(data, timeperiod=period)
-        return cast(np.ndarray, format_indicator_result(result, "MAXINDEX"))
-
-    @staticmethod
-    @handle_talib_errors
-    def min(data: np.ndarray, period: int = 30) -> np.ndarray:
-        """
-        Lowest value over a specified period (指定期間の最低値)
-
-        Args:
-            data: 入力データ（numpy配列）
-            period: 期間（デフォルト: 30）
-
-        Returns:
-            MIN値のnumpy配列
-        """
-        data = ensure_numpy_array(data)
-        validate_input(data, period)
-        result = talib.MIN(data, timeperiod=period)
-        return cast(np.ndarray, format_indicator_result(result, "MIN"))
-
-    @staticmethod
-    @handle_talib_errors
-    def minindex(data: np.ndarray, period: int = 30) -> np.ndarray:
-        """
-        Index of lowest value over a specified period (指定期間の最低値のインデックス)
-
-        Args:
-            data: 入力データ（numpy配列）
-            period: 期間（デフォルト: 30）
-
-        Returns:
-            MININDEX値のnumpy配列
-        """
-        data = ensure_numpy_array(data)
-        validate_input(data, period)
-        result = talib.MININDEX(data, timeperiod=period)
-        return cast(np.ndarray, format_indicator_result(result, "MININDEX"))
-
-    @staticmethod
-    @handle_talib_errors
-    def minmax(data: np.ndarray, period: int = 30) -> Tuple[np.ndarray, np.ndarray]:
-        """
-        Lowest and highest values over a specified period (指定期間の最低値と最高値)
-
-        Args:
-            data: 入力データ（numpy配列）
-            period: 期間（デフォルト: 30）
-
-        Returns:
-            (MIN, MAX)のtuple
-        """
-        data = ensure_numpy_array(data)
-        validate_input(data, period)
-        min_val, max_val = talib.MINMAX(data, timeperiod=period)
-        return cast(
-            Tuple[np.ndarray, np.ndarray],
-            format_indicator_result((min_val, max_val), "MINMAX"),
-        )
-
-    @staticmethod
-    @handle_talib_errors
-    def minmaxindex(
-        data: np.ndarray, period: int = 30
-    ) -> Tuple[np.ndarray, np.ndarray]:
-        """
-        Indexes of lowest and highest values over a specified period (指定期間の最低値と最高値のインデックス)
-
-        Args:
-            data: 入力データ（numpy配列）
-            period: 期間（デフォルト: 30）
-
-        Returns:
-            (MININDEX, MAXINDEX)のtuple
-        """
-        data = ensure_numpy_array(data)
-        validate_input(data, period)
-        min_idx, max_idx = talib.MINMAXINDEX(data, timeperiod=period)
-        return cast(
-            Tuple[np.ndarray, np.ndarray],
-            format_indicator_result((min_idx, max_idx), "MINMAXINDEX"),
-        )
-
-    @staticmethod
-    @handle_talib_errors
-    def mult(data0: np.ndarray, data1: np.ndarray) -> np.ndarray:
-        """
-        Vector Arithmetic Mult (ベクトル算術乗算)
-
-        Args:
-            data0: 第1データ（numpy配列）
-            data1: 第2データ（numpy配列）
-
-        Returns:
-            MULT値のnumpy配列
-        """
-        data0 = ensure_numpy_array(data0)
-        data1 = ensure_numpy_array(data1)
-
-        if len(data0) != len(data1):
-            raise TALibError(
-                f"データの長さが一致しません。Data0: {len(data0)}, Data1: {len(data1)}"
-            )
-
-        validate_input(data0, 1)
-        result = talib.MULT(data0, data1)
-        return cast(np.ndarray, format_indicator_result(result, "MULT"))
-
-    @staticmethod
-    @handle_talib_errors
     def sub(data0: np.ndarray, data1: np.ndarray) -> np.ndarray:
-        """
-        Vector Arithmetic Subtraction (ベクトル算術減算)
-
-        Args:
-            data0: 第1データ（numpy配列）
-            data1: 第2データ（numpy配列）
-
-        Returns:
-            SUB値のnumpy配列
-        """
-        data0 = ensure_numpy_array(data0)
-        data1 = ensure_numpy_array(data1)
-
-        if len(data0) != len(data1):
-            raise TALibError(
-                f"データの長さが一致しません。Data0: {len(data0)}, Data1: {len(data1)}"
-            )
-
-        validate_input(data0, 1)
-        result = talib.SUB(data0, data1)
-        return cast(np.ndarray, format_indicator_result(result, "SUB"))
+        """Vector Arithmetic Subtraction (ベクトル算術減算)"""
+        data0 = _validate_input(data0)
+        data1 = _validate_input(data1)
+        _validate_dual_input(data0, data1)
+        return data0 - data1
 
     @staticmethod
-    @handle_talib_errors
-    def sum(data: np.ndarray, period: int = 30) -> np.ndarray:
-        """
-        Summation (合計)
+    def mult(data0: np.ndarray, data1: np.ndarray) -> np.ndarray:
+        """Vector Arithmetic Multiplication (ベクトル算術乗算)"""
+        data0 = _validate_input(data0)
+        data1 = _validate_input(data1)
+        _validate_dual_input(data0, data1)
+        return data0 * data1
 
-        Args:
-            data: 入力データ（numpy配列）
-            period: 期間（デフォルト: 30）
+    @staticmethod
+    def div(data0: np.ndarray, data1: np.ndarray) -> np.ndarray:
+        """Vector Arithmetic Division (ベクトル算術除算)"""
+        data0 = _validate_input(data0)
+        data1 = _validate_input(data1)
+        _validate_dual_input(data0, data1)
 
-        Returns:
-            SUM値のnumpy配列
-        """
-        data = ensure_numpy_array(data)
-        validate_input(data, period)
-        result = talib.SUM(data, timeperiod=period)
-        return cast(np.ndarray, format_indicator_result(result, "SUM"))
+        # ゼロ除算の警告
+        if np.any(data1 == 0):
+            logger.warning("DIV: ゼロ除算が発生する可能性があります")
+
+        return np.divide(data0, data1)
+
+    @staticmethod
+    def max_value(data: np.ndarray, period: int) -> np.ndarray:
+        """Highest value over a specified period (指定期間の最大値)"""
+        data = _validate_input(data, period)
+        result = np.full_like(data, np.nan)
+
+        for i in range(period - 1, len(data)):
+            result[i] = np.max(data[i - period + 1 : i + 1])
+
+        return result
+
+    @staticmethod
+    def min_value(data: np.ndarray, period: int) -> np.ndarray:
+        """Lowest value over a specified period (指定期間の最小値)"""
+        data = _validate_input(data, period)
+        result = np.full_like(data, np.nan)
+
+        for i in range(period - 1, len(data)):
+            result[i] = np.min(data[i - period + 1 : i + 1])
+
+        return result
+
+    @staticmethod
+    def sum_values(data: np.ndarray, period: int) -> np.ndarray:
+        """Summation (合計)"""
+        data = _validate_input(data, period)
+        result = np.full_like(data, np.nan)
+
+        for i in range(period - 1, len(data)):
+            result[i] = np.sum(data[i - period + 1 : i + 1])
+
+        return result

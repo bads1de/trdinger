@@ -66,17 +66,7 @@
   - **問題点**: `StrategyGene`オブジェクトとリスト表現の間でエンコード/デコードを繰り返しており、処理が冗長です。
   - **改善案**: 遺伝子表現を、`DEAP`が直接操作しやすいように、よりフラットなリストや numpy 配列に近づけることを検討します。例えば、インジケーターや条件をすべて数値やカテゴリカルな ID で表現し、一つの長いリストとして個体を表現します。これにより、`DEAP`の標準的な交叉・突然変異演算子を直接、あるいは少しのカスタマイズで適用できるようになり、エンコード/デコードのオーバーヘッドを削減できます。
 
-### 11. `services/indicators/`
 
-- **テクニカルインジケーターの実装**: `technical_indicators`配下の各ファイルは、`talib`ライブラリのラッパーとして実装されています。
-  - **問題点**: `talib`は高速ですが API が低レベルなため、`ensure_numpy_array`のようなラッパー関数が多数必要になり、コードが冗長になっています。
-  - **改善案**: `pandas-ta`ライブラリの導入を推奨します。`pandas-ta`は`pandas`の DataFrame を直接操作でき、`df.ta.rsi()`のように直感的で高レベルな API を提供します。これにより、多くのラッパー関数が不要になり、コードの可読性が大幅に向上します。また、`pandas-ta`は`TA-Lib`をバックエンドとして利用できるため、既存の高速な計算処理を活かしつつ、より開発者フレンドリーなコードを記述できます。
-
-### 12. `services/ml/feature_engineering/price_features.py`
-
-- **`PriceFeatureCalculator`**: 価格や出来高に関する基本的な特徴量を計算します。
-  - **問題点**: 移動平均、変化率、VWAP などの多くの特徴量が、`pandas`の`rolling`や自作の安全な演算ラッパーを使って手動で計算されており、コードが冗長になっています。
-  - **改善案**: `pandas-ta`ライブラリを導入し、これらの特徴量計算を置き換えることを強く推奨します。`df.ta.sma()`, `df.ta.mom()`, `df.ta.vwap()`のように、多くの計算が一行で直感的に記述可能になり、コードの可読性と保守性が劇的に向上します。これは`services/indicators`への提案とも一貫しており、プロジェクト全体で特徴量計算の方法を統一できます。
 
 ### 13. `services/auto_strategy/engines/deap_setup.py`
 
@@ -90,17 +80,14 @@
   - **問題点**: `StrategyGene`オブジェクトとリスト表現の間でエンコード/デコードを繰り返しており、処理が冗長です。
   - **改善案**: 遺伝子表現を、`DEAP`が直接操作しやすいように、よりフラットなリストや numpy 配列に近づけることを検討します。例えば、インジケーターや条件をすべて数値やカテゴリカルな ID で表現し、一つの長いリストとして個体を表現します。これにより、`DEAP`の標準的な交叉・突然変異演算子を直接、あるいは少しのカスタマイズで適用できるようになり、エンコード/デコードのオーバーヘッドを削減できます。
 
-### 15. `services/indicators/technical_indicators/`
 
-- **テクニカルインジケーターの実装**: `technical_indicators`配下の各ファイルは、`talib`ライブラリのラッパーとして実装されています。
-  - **問題点**: `talib`は高速ですが API が低レベルなため、`ensure_numpy_array`のようなラッパー関数が多数必要になり、コードが冗長になっています。
-  - **改善案**: `pandas-ta`ライブラリの導入を推奨します。`pandas-ta`は`pandas`の DataFrame を直接操作でき、`df.ta.rsi()`のように直感的で高レベルな API を提供します。これにより、多くのラッパー関数が不要になり、コードの可読性が大幅に向上します。また、`pandas-ta`は`TA-Lib`をバックエンドとして利用できるため、既存の高速な計算処理を活かしつつ、より開発者フレンドリーなコードを記述できます。
 
-### 16. `services/ml/feature_engineering/price_features.py`
+### 16. `services/ml/feature_engineering/price_features.py` ✅
 
 - **`PriceFeatureCalculator`**: 価格や出来高に関する基本的な特徴量を計算します。
   - **問題点**: 移動平均、変化率、VWAP などの多くの特徴量が、`pandas`の`rolling`や自作の安全な演算ラッパーを使って手動で計算されており、コードが冗長になっています。
   - **改善案**: `pandas-ta`ライブラリを導入し、これらの特徴量計算を置き換えることを強く推奨します。`df.ta.sma()`, `df.ta.mom()`, `df.ta.vwap()`のように、多くの計算が一行で直感的に記述可能になり、コードの可読性と保守性が劇的に向上します。これは`services/indicators`への提案とも一貫しており、プロジェクト全体で特徴量計算の方法を統一できます。
+  - **✅ 完了**: 価格位置計算を`pandas-ta`の`percent_rank()`で置き換え、ボラティリティ計算を`pandas-ta`の`stdev()`で置き換えました。また、`optimized_crypto_features.py`の手動VWAP計算も`pandas-ta`の`vwap()`で置き換え、`cycle.py`のTA-lib依存をscipyベースの実装に変更しました。
 
 ### 17. `utils/unified_error_handler.py`
 
@@ -108,20 +95,6 @@
   - **問題点**: 多くの機能が自作実装されており、標準的なエラーハンドリングパターンやライブラリで代替可能です。
   - **改善案**: Python の標準的な`logging`モジュールの機能をより活用し、`structlog`のような構造化ログライブラリの導入を検討します。また、FastAPI の標準的な例外ハンドリング機能を活用することで、コードの簡素化が可能です。
 
-### 18. `utils/duplicate_filter_handler.py`
-
-- **`DuplicateFilter`**: 重複ログメッセージをフィルタリングするクラスです。
-  - **問題点**: 自作のログフィルター実装です。
-  - **改善案**: Python の標準`logging`モジュールには、既に重複ログを制御する機能があります。`logging.handlers.MemoryHandler`や`logging.Filter`の標準的な使用方法を活用することで、より信頼性の高い実装が可能です。
-
-### 19. `services/ml/feature_engineering/`配下の各種 Calculator
-
-- **各種 FeatureCalculator**: 特徴量計算を行う複数のクラスが存在します。
-  - **問題点**: 多くの特徴量計算が手動実装されており、`pandas-ta`や`tsfresh`などの専門ライブラリで代替可能です。
-  - **改善案**:
-    - **`pandas-ta`**: テクニカル指標の計算に特化したライブラリで、200 以上の指標を提供します。
-    - **`tsfresh`**: 時系列データから自動的に特徴量を抽出するライブラリです。
-    - **`featuretools`**: 自動特徴量エンジニアリングライブラリで、関係データから特徴量を生成できます。
 
 ### 20. `services/ml/config/ml_config_manager.py`
 
@@ -140,7 +113,6 @@
 - **`pydantic`**: データバリデーションとスキーマ定義
 - **`pandera`**: DataFrame のスキーマバリデーション
 - **`tsfresh`**: 時系列特徴量の自動抽出
-- **`featuretools`**: 自動特徴量エンジニアリング
 - **`structlog`**: 構造化ログ
 - **`hydra`**: 設定管理
 - **`pydantic-settings`**: 型安全な設定管理
@@ -164,12 +136,6 @@
 - **`DatabaseInsertHelper`, `DatabaseQueryHelper`**: データベース操作のヘルパークラスです。
   - **問題点**: SQLAlchemy の標準機能で代替可能な操作が多数自作実装されています。
   - **改善案**: `SQLAlchemy 2.0`の新しい API スタイルを活用し、`select()`, `insert()`, `update()`, `delete()`などの標準的な構文を直接使用することを推奨します。また、`asyncpg`や`aiopg`を使用した非同期データベース操作への移行も検討できます。
-
-### 23. `services/data_collection/bybit/bybit_service.py`
-
-- **`BybitService`**: CCXT API のラッパークラスです。
-  - **問題点**: CCXT の基本的な機能を多数の自作メソッドでラップしており、複雑化しています。
-  - **改善案**: `ccxt.pro`（WebSocket 対応版）の活用や、`python-binance`のような取引所専用ライブラリの検討を推奨します。また、`aiohttp`を使用した非同期 HTTP 通信の直接実装により、より効率的なデータ収集が可能になります。
 
 ### 24. `services/data_collection/historical/historical_data_service.py`
 

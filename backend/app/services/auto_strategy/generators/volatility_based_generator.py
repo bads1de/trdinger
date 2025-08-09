@@ -12,7 +12,8 @@ from enum import Enum
 from typing import Any, Dict, Tuple
 
 import numpy as np
-import talib
+
+# import talib  # pandas-taに移行済み
 
 logger = logging.getLogger(__name__)
 
@@ -246,19 +247,31 @@ class VolatilityBasedGenerator:
     def _calculate_atr(
         self, high: np.ndarray, low: np.ndarray, close: np.ndarray, period: int
     ) -> float:
-        """ATRを計算 (TA-Lib使用)"""
+        """ATRを計算 (pandas-ta使用)"""
         try:
-            # talib.ATRは十分な長さの配列を必要とする
+            import pandas_ta as ta
+            import pandas as pd
+
+            # pandas-taは十分な長さの配列を必要とする
             if len(high) < period:
-                logger.warning(f"ATR計算のためのデータが不足しています: {len(high)} < {period}")
+                logger.warning(
+                    f"ATR計算のためのデータが不足しています: {len(high)} < {period}"
+                )
                 return 0.02 * close[-1]
 
-            atr_values = talib.ATR(high, low, close, timeperiod=period)
+            # pandas Seriesに変換
+            high_series = pd.Series(high)
+            low_series = pd.Series(low)
+            close_series = pd.Series(close)
+
+            atr_values = ta.atr(
+                high=high_series, low=low_series, close=close_series, length=period
+            )
 
             # nanを除外して最後の有効な値を取得
-            valid_atr_values = atr_values[~np.isnan(atr_values)]
-            if valid_atr_values.size > 0:
-                return float(valid_atr_values[-1])
+            valid_atr_values = atr_values.dropna()
+            if len(valid_atr_values) > 0:
+                return float(valid_atr_values.iloc[-1])
 
             logger.warning("ATR計算結果がすべてnanでした。")
             return 0.02 * close[-1]  # フォールバック

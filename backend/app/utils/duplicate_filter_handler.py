@@ -1,23 +1,22 @@
 import logging
 import time
-from collections import OrderedDict
 
 
 class DuplicateFilter(logging.Filter):
     """
     一定期間内の重複ログメッセージをフィルタリングする。
+    標準のlogging.Filterを使い、よりシンプルな実装にします。
     """
 
-    def __init__(self, interval: float = 1.0, capacity: int = 100):
+    def __init__(self, name: str = "", interval: float = 1.0):
         """
         Args:
+            name (str): フィルター名。
             interval (float): 同じメッセージが再度許可されるまでの最小時間（秒）。
-            capacity (int): 記憶する最新のログメッセージの最大数。
         """
-        super().__init__()
+        super().__init__(name)
         self.interval = interval
-        self.capacity = capacity
-        self.last_logs: "OrderedDict[str, float]" = OrderedDict()
+        self._last_log_time_by_msg: dict[str, float] = {}
 
     def filter(self, record: logging.LogRecord) -> bool:
         """
@@ -29,24 +28,13 @@ class DuplicateFilter(logging.Filter):
         Returns:
             bool: ログを出力する場合はTrue、スキップする場合はFalse
         """
-        try:
-            message = record.getMessage()
-        except Exception:
-            return True
-
+        message = record.getMessage()
         current_time = time.time()
 
-        if message in self.last_logs:
-            last_time = self.last_logs[message]
-            if current_time - last_time < self.interval:
-                return False  # 抑制
-            # Move to end to mark as most recently used
-            self.last_logs.move_to_end(message)
+        last_time = self._last_log_time_by_msg.get(message)
 
-        self.last_logs[message] = current_time
+        if last_time and (current_time - last_time) < self.interval:
+            return False  # 期間内なので抑制
 
-        # LRUキャッシュのサイズを制限
-        if len(self.last_logs) > self.capacity:
-            self.last_logs.popitem(last=False)
-
+        self._last_log_time_by_msg[message] = current_time
         return True

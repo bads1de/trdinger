@@ -66,15 +66,17 @@ class PriceFeatureCalculator(BaseFeatureCalculator):
 
         result_df = self.create_result_dataframe(df)
 
-        # 移動平均比率
+        # 移動平均比率（pandas-ta使用）
+        import pandas_ta as ta
+
         short_ma = lookback_periods.get("short_ma", 10)
         long_ma = lookback_periods.get("long_ma", 50)
 
-        result_df[f"MA_{short_ma}"] = DataValidator.safe_rolling_mean(
-            result_df["Close"], window=short_ma
-        )
-        result_df[f"MA_{long_ma}"] = DataValidator.safe_rolling_mean(
-            result_df["Close"], window=long_ma
+        result_df[f"MA_{short_ma}"] = ta.sma(
+            result_df["Close"], length=short_ma
+        ).fillna(result_df["Close"])
+        result_df[f"MA_{long_ma}"] = ta.sma(result_df["Close"], length=long_ma).fillna(
+            result_df["Close"]
         )
 
         result_df["Price_MA_Ratio_Short"] = DataValidator.safe_divide(
@@ -84,11 +86,11 @@ class PriceFeatureCalculator(BaseFeatureCalculator):
             result_df["Close"], result_df[f"MA_{long_ma}"], default_value=1.0
         )
 
-        # 価格モメンタム（安全な計算）
+        # 価格モメンタム（pandas-ta使用）
         momentum_period = lookback_periods.get("momentum", 14)
-        result_df["Price_Momentum_14"] = DataValidator.safe_pct_change(
-            result_df["Close"], periods=momentum_period
-        )
+        result_df["Price_Momentum_14"] = ta.mom(
+            result_df["Close"], length=momentum_period
+        ).fillna(0.0)
 
         # 高値・安値ポジション
         result_df["High_Low_Position"] = DataValidator.safe_divide(
@@ -97,14 +99,10 @@ class PriceFeatureCalculator(BaseFeatureCalculator):
             default_value=0.5,
         )
 
-        # 価格変化率（安全な計算）
-        result_df["Price_Change_1"] = DataValidator.safe_pct_change(result_df["Close"])
-        result_df["Price_Change_5"] = DataValidator.safe_pct_change(
-            result_df["Close"], periods=5
-        )
-        result_df["Price_Change_20"] = DataValidator.safe_pct_change(
-            result_df["Close"], periods=20
-        )
+        # 価格変化率（pandas-ta使用）
+        result_df["Price_Change_1"] = ta.roc(result_df["Close"], length=1).fillna(0.0)
+        result_df["Price_Change_5"] = ta.roc(result_df["Close"], length=5).fillna(0.0)
+        result_df["Price_Change_20"] = ta.roc(result_df["Close"], length=20).fillna(0.0)
 
         # 価格レンジ
         result_df["Price_Range"] = DataValidator.safe_divide(
@@ -130,13 +128,11 @@ class PriceFeatureCalculator(BaseFeatureCalculator):
             default_value=0.0,
         )
 
-        # 価格位置（期間内での相対位置）
+        # 価格位置（期間内での相対位置）（pandas-ta使用）
         period = lookback_periods.get("volatility", 20)
-        close_min = result_df["Close"].rolling(window=period, min_periods=1).min()
-        close_max = result_df["Close"].rolling(window=period, min_periods=1).max()
-        result_df["Price_Position"] = DataValidator.safe_divide(
-            result_df["Close"] - close_min, close_max - close_min, default_value=0.5
-        )
+        result_df["Price_Position"] = ta.percent_rank(
+            result_df["Close"], length=period
+        ).fillna(0.5)
 
         # ギャップ（前日終値との差）
         result_df["Gap"] = DataValidator.safe_divide(
@@ -169,21 +165,16 @@ class PriceFeatureCalculator(BaseFeatureCalculator):
 
             volatility_period = lookback_periods.get("volatility", 20)
 
-            # リターンを計算（TA-Lib ROCP: fractional rate of change）
-            import talib
+            # リターンを計算（pandas-ta ROCP: fractional rate of change）
+            import pandas_ta as ta
 
-            close_vals = result_df["Close"].values.astype(np.float64)
-            returns_arr = talib.ROCP(close_vals)
-            result_df["Returns"] = pd.Series(returns_arr, index=result_df.index).fillna(
-                0.0
+            result_df["Returns"] = (
+                ta.roc(result_df["Close"], length=1).fillna(0.0) / 100.0
             )
 
-            # 実現ボラティリティ（TA-Lib STDDEV of returns, nbdev=1）
-            stddev_arr = talib.STDDEV(
-                returns_arr, timeperiod=volatility_period, nbdev=1
-            )
-            result_df["Realized_Volatility_20"] = pd.Series(
-                stddev_arr, index=result_df.index
+            # 実現ボラティリティ（pandas-ta使用）
+            result_df["Realized_Volatility_20"] = ta.stdev(
+                result_df["Returns"], length=volatility_period
             ).fillna(0.0) * np.sqrt(24)
 
             # ボラティリティスパイク（移動平均は従来の安全計算でOK）
@@ -194,13 +185,13 @@ class PriceFeatureCalculator(BaseFeatureCalculator):
                 result_df["Realized_Volatility_20"], vol_ma, default_value=1.0
             )
 
-            # ATR（Average True Range）- TA-Lib
-            high_vals = result_df["High"].values.astype(np.float64)
-            low_vals = result_df["Low"].values.astype(np.float64)
-            atr_arr = talib.ATR(
-                high_vals, low_vals, close_vals, timeperiod=volatility_period
-            )
-            result_df["ATR_20"] = pd.Series(atr_arr, index=result_df.index).fillna(0.0)
+            # ATR（Average True Range）- pandas-ta
+            result_df["ATR_20"] = ta.atr(
+                high=result_df["High"],
+                low=result_df["Low"],
+                close=result_df["Close"],
+                length=volatility_period,
+            ).fillna(0.0)
 
             # 正規化ATR（安全な計算）
             result_df["ATR_Normalized"] = DataValidator.safe_divide(
@@ -251,9 +242,9 @@ class PriceFeatureCalculator(BaseFeatureCalculator):
 
             volume_period = lookback_periods.get("volume", 20)
 
-            # 出来高移動平均（安全な計算）
-            volume_ma = DataValidator.safe_rolling_mean(
-                result_df["Volume"], window=volume_period
+            # 出来高移動平均（pandas-ta使用）
+            volume_ma = ta.sma(result_df["Volume"], length=volume_period).fillna(
+                result_df["Volume"]
             )
             # 異常に大きな値をクリップ（最大値を制限）
             volume_max = (
@@ -268,26 +259,19 @@ class PriceFeatureCalculator(BaseFeatureCalculator):
                 default_value=1.0,
             )
 
-            # 価格・出来高トレンド（安全な計算）
-            price_change = DataValidator.safe_pct_change(result_df["Close"])
-            volume_change = DataValidator.safe_pct_change(result_df["Volume"])
-            result_df["Price_Volume_Trend"] = DataValidator.safe_multiply(
-                price_change, volume_change
-            )
+            # 価格・出来高トレンド（pandas-ta使用）
+            price_change = ta.roc(result_df["Close"], length=1).fillna(0.0)
+            volume_change = ta.roc(result_df["Volume"], length=1).fillna(0.0)
+            result_df["Price_Volume_Trend"] = price_change * volume_change
 
-            # 出来高加重平均価格（VWAP）
-            typical_price = (
-                result_df["High"] + result_df["Low"] + result_df["Close"]
-            ) / 3
-            result_df["VWAP"] = DataValidator.safe_divide(
-                (typical_price * result_df["Volume"])
-                .rolling(window=volume_period)
-                .sum(),
-                result_df["Volume"].rolling(window=volume_period).sum(),
-                default_value=np.nan,
-            )
-            # NaNになったVWAP値をtypical_priceで埋める
-            result_df["VWAP"] = result_df["VWAP"].fillna(typical_price)
+            # 出来高加重平均価格（VWAP）（pandas-ta使用）
+            result_df["VWAP"] = ta.vwap(
+                high=result_df["High"],
+                low=result_df["Low"],
+                close=result_df["Close"],
+                volume=result_df["Volume"],
+                length=volume_period,
+            ).fillna(result_df["Close"])
 
             # VWAPからの乖離
             result_df["VWAP_Deviation"] = DataValidator.safe_divide(

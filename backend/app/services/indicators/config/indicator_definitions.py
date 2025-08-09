@@ -1484,16 +1484,14 @@ def setup_math_operators_indicators():
         indicator_registry.register(config)
 
     # 期間ベース演算子
-    for func_name, default_period in [
-        ("MAX", 30),
-        ("MIN", 30),
-        ("MAXINDEX", 30),
-        ("MININDEX", 30),
-        ("SUM", 30),
+    for func_name, method_name, default_period in [
+        ("MAX", "max_value", 30),
+        ("MIN", "min_value", 30),
+        ("SUM", "sum_values", 30),
     ]:
         config = IndicatorConfig(
             indicator_name=func_name,
-            adapter_function=getattr(MathOperatorsIndicators, func_name.lower()),
+            adapter_function=getattr(MathOperatorsIndicators, method_name),
             required_data=["close"],
             result_type=IndicatorResultType.SINGLE,
             scale_type=(
@@ -1513,46 +1511,6 @@ def setup_math_operators_indicators():
             )
         )
         indicator_registry.register(config)
-
-    # MINMAX
-    minmax_config = IndicatorConfig(
-        indicator_name="MINMAX",
-        adapter_function=MathOperatorsIndicators.minmax,
-        required_data=["close"],
-        result_type=IndicatorResultType.COMPLEX,
-        scale_type=IndicatorScaleType.PRICE_ABSOLUTE,
-        category="math_operators",
-    )
-    minmax_config.add_parameter(
-        ParameterConfig(
-            name="period",
-            default_value=30,
-            min_value=2,
-            max_value=200,
-            description="MINMAX計算期間",
-        )
-    )
-    indicator_registry.register(minmax_config)
-
-    # MINMAXINDEX
-    minmaxindex_config = IndicatorConfig(
-        indicator_name="MINMAXINDEX",
-        adapter_function=MathOperatorsIndicators.minmaxindex,
-        required_data=["close"],
-        result_type=IndicatorResultType.COMPLEX,
-        scale_type=IndicatorScaleType.OSCILLATOR_0_100,
-        category="math_operators",
-    )
-    minmaxindex_config.add_parameter(
-        ParameterConfig(
-            name="period",
-            default_value=30,
-            min_value=2,
-            max_value=200,
-            description="MINMAXINDEX計算期間",
-        )
-    )
-    indicator_registry.register(minmaxindex_config)
 
 
 def setup_pattern_recognition_indicators():

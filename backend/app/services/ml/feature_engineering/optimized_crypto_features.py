@@ -135,22 +135,28 @@ class OptimizedCryptoFeatures:
             np.minimum(df.index.dayofweek, 7 - df.index.dayofweek) / 7.0
         )
 
-        # 2. VWAP系特徴量（高安定性）
+        # 2. VWAP系特徴量（高安定性）（pandas-ta使用）
+        import pandas_ta as ta
+
         for period in [12, 24, 48, 72]:
-            typical_price = (df["High"] + df["Low"] + df["Close"]) / 3
-            vwap = (typical_price * df["Volume"]).rolling(period).sum() / df[
-                "Volume"
-            ].rolling(period).sum()
+            # pandas-taのVWAP計算を使用
+            vwap = ta.vwap(
+                high=df["High"],
+                low=df["Low"],
+                close=df["Close"],
+                volume=df["Volume"],
+                length=period,
+            ).fillna(df["Close"])
 
             # スムージング適用
-            vwap_smooth = vwap.rolling(3, center=True).mean().fillna(vwap)
+            vwap_smooth = ta.sma(vwap, length=3).fillna(vwap)
             result_df[f"vwap_smooth_{period}h"] = vwap_smooth
 
             # 価格との関係（ロバスト版）
             price_vwap_ratio = df["Close"] / vwap_smooth
-            result_df[f"price_vwap_ratio_robust_{period}h"] = price_vwap_ratio.rolling(
-                3
-            ).median()
+            result_df[f"price_vwap_ratio_robust_{period}h"] = (
+                price_vwap_ratio.rolling(3).median().fillna(price_vwap_ratio)
+            )
 
         # 3. ボリンジャーバンド位置（改良版）
         for period in [20, 48]:

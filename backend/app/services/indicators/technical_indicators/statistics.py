@@ -1,197 +1,186 @@
 """
-統計系テクニカル指標
+統計系テクニカル指標（NumPy標準関数版）
 
-このモジュールはnumpy配列ベースでTa-libを直接使用し、
+このモジュールはNumPy標準関数を使用し、
 backtesting.pyとの完全な互換性を提供します。
-pandas Seriesの変換は一切行いません。
+TA-libの統計関数をNumPy標準関数で置き換えています。
 """
 
-from typing import cast
-
+import logging
 import numpy as np
-import talib
+from typing import Union
 
-from ..utils import (
-    ensure_numpy_array,
-    format_indicator_result,
-    handle_talib_errors,
-    validate_input,
-    validate_multi_input,
-)
+logger = logging.getLogger(__name__)
+
+
+def _validate_input(data: Union[np.ndarray, list], min_length: int = 1) -> np.ndarray:
+    """入力データの検証とnumpy配列への変換"""
+    if not isinstance(data, np.ndarray):
+        data = np.array(data, dtype=float)
+
+    if len(data) < min_length:
+        raise ValueError(f"データ長が不足: 必要{min_length}, 実際{len(data)}")
+
+    return data
+
+
+def _validate_dual_input(data0: np.ndarray, data1: np.ndarray) -> None:
+    """2つの入力データの長さ一致確認"""
+    if len(data0) != len(data1):
+        raise ValueError(
+            f"データの長さが一致しません。Data0: {len(data0)}, Data1: {len(data1)}"
+        )
 
 
 class StatisticsIndicators:
     """
-    統計系指標クラス（オートストラテジー最適化）
+    統計系指標クラス（NumPy標準関数版）
 
-    全ての指標はnumpy配列を直接処理し、Ta-libの性能を最大限活用します。
+    全ての指標はNumPy標準関数を使用し、TA-libへの依存を排除しています。
     backtesting.pyでの使用に最適化されています。
     """
 
     @staticmethod
-    @handle_talib_errors
     def beta(high: np.ndarray, low: np.ndarray, period: int = 5) -> np.ndarray:
-        """
-        Beta (ベータ)
+        """Beta (ベータ) - 簡易実装"""
+        high = _validate_input(high, period)
+        low = _validate_input(low, period)
+        _validate_dual_input(high, low)
 
-        Args:
-            high: 高値データ（numpy配列）
-            low: 安値データ（numpy配列）
-            period: 期間（デフォルト: 5）
+        result = np.full_like(high, np.nan)
 
-        Returns:
-            BETA値のnumpy配列
-        """
-        high = ensure_numpy_array(high)
-        low = ensure_numpy_array(low)
-        validate_multi_input(high, low, high, period)
-        result = talib.BETA(high, low, timeperiod=period)
-        return cast(np.ndarray, format_indicator_result(result, "BETA"))
+        for i in range(period - 1, len(high)):
+            high_window = high[i - period + 1 : i + 1]
+            low_window = low[i - period + 1 : i + 1]
+
+            # 簡易ベータ計算（高値と安値の相関）
+            if np.std(low_window) > 0:
+                result[i] = np.corrcoef(high_window, low_window)[0, 1]
+            else:
+                result[i] = 0.0
+
+        return result
 
     @staticmethod
-    @handle_talib_errors
     def correl(high: np.ndarray, low: np.ndarray, period: int = 30) -> np.ndarray:
-        """
-        Pearson's Correlation Coefficient (ピアソン相関係数)
+        """Pearson's Correlation Coefficient (ピアソン相関係数)"""
+        high = _validate_input(high, period)
+        low = _validate_input(low, period)
+        _validate_dual_input(high, low)
 
-        Args:
-            high: 高値データ（numpy配列）
-            low: 安値データ（numpy配列）
-            period: 期間（デフォルト: 30）
+        result = np.full_like(high, np.nan)
 
-        Returns:
-            CORREL値のnumpy配列
-        """
-        high = ensure_numpy_array(high)
-        low = ensure_numpy_array(low)
-        validate_multi_input(high, low, high, period)
-        result = talib.CORREL(high, low, timeperiod=period)
-        return cast(np.ndarray, format_indicator_result(result, "CORREL"))
+        for i in range(period - 1, len(high)):
+            high_window = high[i - period + 1 : i + 1]
+            low_window = low[i - period + 1 : i + 1]
+
+            if np.std(high_window) > 0 and np.std(low_window) > 0:
+                result[i] = np.corrcoef(high_window, low_window)[0, 1]
+            else:
+                result[i] = 0.0
+
+        return result
 
     @staticmethod
-    @handle_talib_errors
     def linearreg(data: np.ndarray, period: int = 14) -> np.ndarray:
-        """
-        Linear Regression (線形回帰)
+        """Linear Regression (線形回帰)"""
+        data = _validate_input(data, period)
+        result = np.full_like(data, np.nan)
 
-        Args:
-            data: 価格データ（numpy配列）
-            period: 期間（デフォルト: 14）
+        for i in range(period - 1, len(data)):
+            y = data[i - period + 1 : i + 1]
+            x = np.arange(period)
 
-        Returns:
-            LINEARREG値のnumpy配列
-        """
-        data = ensure_numpy_array(data)
-        validate_input(data, period)
-        result = talib.LINEARREG(data, timeperiod=period)
-        return cast(np.ndarray, format_indicator_result(result, "LINEARREG"))
+            # 線形回帰の計算
+            slope, intercept = np.polyfit(x, y, 1)
+            result[i] = slope * (period - 1) + intercept
+
+        return result
 
     @staticmethod
-    @handle_talib_errors
     def linearreg_angle(data: np.ndarray, period: int = 14) -> np.ndarray:
-        """
-        Linear Regression Angle (線形回帰角度)
+        """Linear Regression Angle (線形回帰角度)"""
+        data = _validate_input(data, period)
+        result = np.full_like(data, np.nan)
 
-        Args:
-            data: 価格データ（numpy配列）
-            period: 期間（デフォルト: 14）
+        for i in range(period - 1, len(data)):
+            y = data[i - period + 1 : i + 1]
+            x = np.arange(period)
 
-        Returns:
-            LINEARREG_ANGLE値のnumpy配列
-        """
-        data = ensure_numpy_array(data)
-        validate_input(data, period)
-        result = talib.LINEARREG_ANGLE(data, timeperiod=period)
-        return cast(np.ndarray, format_indicator_result(result, "LINEARREG_ANGLE"))
+            # 線形回帰の傾きを角度に変換
+            slope, _ = np.polyfit(x, y, 1)
+            result[i] = np.arctan(slope) * 180 / np.pi
+
+        return result
 
     @staticmethod
-    @handle_talib_errors
     def linearreg_intercept(data: np.ndarray, period: int = 14) -> np.ndarray:
-        """
-        Linear Regression Intercept (線形回帰切片)
+        """Linear Regression Intercept (線形回帰切片)"""
+        data = _validate_input(data, period)
+        result = np.full_like(data, np.nan)
 
-        Args:
-            data: 価格データ（numpy配列）
-            period: 期間（デフォルト: 14）
+        for i in range(period - 1, len(data)):
+            y = data[i - period + 1 : i + 1]
+            x = np.arange(period)
 
-        Returns:
-            LINEARREG_INTERCEPT値のnumpy配列
-        """
-        data = ensure_numpy_array(data)
-        validate_input(data, period)
-        result = talib.LINEARREG_INTERCEPT(data, timeperiod=period)
-        return cast(np.ndarray, format_indicator_result(result, "LINEARREG_INTERCEPT"))
+            # 線形回帰の切片
+            _, intercept = np.polyfit(x, y, 1)
+            result[i] = intercept
+
+        return result
 
     @staticmethod
-    @handle_talib_errors
     def linearreg_slope(data: np.ndarray, period: int = 14) -> np.ndarray:
-        """
-        Linear Regression Slope (線形回帰傾き)
+        """Linear Regression Slope (線形回帰傾き)"""
+        data = _validate_input(data, period)
+        result = np.full_like(data, np.nan)
 
-        Args:
-            data: 価格データ（numpy配列）
-            period: 期間（デフォルト: 14）
+        for i in range(period - 1, len(data)):
+            y = data[i - period + 1 : i + 1]
+            x = np.arange(period)
 
-        Returns:
-            LINEARREG_SLOPE値のnumpy配列
-        """
-        data = ensure_numpy_array(data)
-        validate_input(data, period)
-        result = talib.LINEARREG_SLOPE(data, timeperiod=period)
-        return cast(np.ndarray, format_indicator_result(result, "LINEARREG_SLOPE"))
+            # 線形回帰の傾き
+            slope, _ = np.polyfit(x, y, 1)
+            result[i] = slope
+
+        return result
 
     @staticmethod
-    @handle_talib_errors
     def stddev(data: np.ndarray, period: int = 5, nbdev: float = 1.0) -> np.ndarray:
-        """
-        Standard Deviation (標準偏差)
+        """Standard Deviation (標準偏差)"""
+        data = _validate_input(data, period)
+        result = np.full_like(data, np.nan)
 
-        Args:
-            data: 価格データ（numpy配列）
-            period: 期間（デフォルト: 5）
-            nbdev: 偏差数（デフォルト: 1.0）
+        for i in range(period - 1, len(data)):
+            window = data[i - period + 1 : i + 1]
+            result[i] = np.std(window, ddof=1) * nbdev
 
-        Returns:
-            STDDEV値のnumpy配列
-        """
-        data = ensure_numpy_array(data)
-        validate_input(data, period)
-        result = talib.STDDEV(data, timeperiod=period, nbdev=nbdev)
-        return cast(np.ndarray, format_indicator_result(result, "STDDEV"))
+        return result
 
     @staticmethod
-    @handle_talib_errors
     def tsf(data: np.ndarray, period: int = 14) -> np.ndarray:
-        """
-        Time Series Forecast (時系列予測)
+        """Time Series Forecast (時系列予測)"""
+        data = _validate_input(data, period)
+        result = np.full_like(data, np.nan)
 
-        Args:
-            data: 価格データ（numpy配列）
-            period: 期間（デフォルト: 14）
+        for i in range(period - 1, len(data)):
+            y = data[i - period + 1 : i + 1]
+            x = np.arange(period)
 
-        Returns:
-            TSF値のnumpy配列
-        """
-        data = ensure_numpy_array(data)
-        validate_input(data, period)
-        result = talib.TSF(data, timeperiod=period)
-        return cast(np.ndarray, format_indicator_result(result, "TSF"))
+            # 線形回帰による次の値の予測
+            slope, intercept = np.polyfit(x, y, 1)
+            result[i] = slope * period + intercept
+
+        return result
 
     @staticmethod
-    @handle_talib_errors
     def var(data: np.ndarray, period: int = 5, nbdev: float = 1.0) -> np.ndarray:
-        """
-        Variance (分散)
+        """Variance (分散)"""
+        data = _validate_input(data, period)
+        result = np.full_like(data, np.nan)
 
-        Args:
-            data: 価格データ（numpy配列）
-            period: 期間（デフォルト: 5）
-            nbdev: 偏差数（デフォルト: 1.0）
+        for i in range(period - 1, len(data)):
+            window = data[i - period + 1 : i + 1]
+            result[i] = np.var(window, ddof=1) * nbdev
 
-        Returns:
-            VAR値のnumpy配列
-        """
-        data = ensure_numpy_array(data)
-        validate_input(data, period)
-        result = talib.VAR(data, timeperiod=period, nbdev=nbdev)
-        return cast(np.ndarray, format_indicator_result(result, "VAR"))
+        return result

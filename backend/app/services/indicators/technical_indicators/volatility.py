@@ -9,7 +9,8 @@ numpy配列ベースのインターフェースを維持しています。
 from typing import Tuple, cast
 
 import numpy as np
-import talib
+
+# import talib  # pandas-taに移行済み
 
 from ..utils import (
     ensure_numpy_array,
@@ -18,7 +19,7 @@ from ..utils import (
     validate_input,
     validate_multi_input,
 )
-from ..pandas_ta_utils import pandas_ta_atr, pandas_ta_bbands
+from ..pandas_ta_utils import atr as pandas_ta_atr, bbands as pandas_ta_bbands
 
 
 class VolatilityIndicators:

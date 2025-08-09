@@ -12,7 +12,7 @@ from typing import Dict, List, Optional, Tuple
 from enum import Enum
 from dataclasses import dataclass
 
-import talib
+# import talib  # pandas-taに移行済み
 
 logger = logging.getLogger(__name__)
 
@@ -259,32 +259,29 @@ class MarketRegimeDetector:
     def _calculate_atr(
         self, high: pd.Series, low: pd.Series, close: pd.Series, period: int = 14
     ) -> float:
-        """ATR（Average True Range）を計算（TA-Lib使用）"""
-        high_values = high.values.astype(np.float64)
-        low_values = low.values.astype(np.float64)
-        close_values = close.values.astype(np.float64)
-        atr = talib.ATR(high_values, low_values, close_values, timeperiod=period)
-        return float(atr[-1])
+        """ATR（Average True Range）を計算（pandas-ta使用）"""
+        import pandas_ta as ta
+
+        atr = ta.atr(high=high, low=low, close=close, length=period)
+        return float(atr.iloc[-1])
 
     def _calculate_rsi(self, close: pd.Series, period: int = 14) -> float:
-        """RSI（Relative Strength Index）を計算（TA-Lib使用）"""
-        close_values = close.values.astype(np.float64)
-        rsi = talib.RSI(close_values, timeperiod=period)
-        return float(rsi[-1])
+        """RSI（Relative Strength Index）を計算（pandas-ta使用）"""
+        import pandas_ta as ta
+
+        rsi = ta.rsi(close, length=period)
+        return float(rsi.iloc[-1])
 
     def _calculate_bollinger_bands(
         self, close: pd.Series, period: int = 20, std_dev: float = 2
     ) -> Tuple[float, float]:
-        """ボリンジャーバンドを計算（TA-Lib使用）"""
-        close_values = close.values.astype(np.float64)
-        upper, middle, lower = talib.BBANDS(
-            close_values,
-            timeperiod=period,
-            nbdevup=std_dev,
-            nbdevdn=std_dev,
-            matype=0,
-        )
-        return float(upper[-1]), float(lower[-1])
+        """ボリンジャーバンドを計算（pandas-ta使用）"""
+        import pandas_ta as ta
+
+        bb_result = ta.bbands(close, length=period, std=std_dev)
+        upper = bb_result[f"BBU_{period}_{std_dev}"].iloc[-1]
+        lower = bb_result[f"BBL_{period}_{std_dev}"].iloc[-1]
+        return float(upper), float(lower)
 
     def _calculate_percentile(self, series: pd.Series, value: float) -> float:
         """値のパーセンタイルを計算"""
