@@ -19,7 +19,22 @@ from ..utils import (
     validate_input,
     validate_multi_input,
 )
-from ..pandas_ta_utils import atr as pandas_ta_atr, bbands as pandas_ta_bbands
+from ..pandas_ta_utils import (
+    atr as pandas_ta_atr,
+    bbands as pandas_ta_bbands,
+    stdev as pandas_ta_stdev,
+    adx as pandas_ta_adx,
+    natr as pandas_ta_natr,
+    true_range as pandas_ta_true_range,
+    variance as pandas_ta_variance,
+    dx as pandas_ta_dx,
+    plus_di as pandas_ta_plus_di,
+    minus_di as pandas_ta_minus_di,
+    plus_dm as pandas_ta_plus_dm,
+    minus_dm as pandas_ta_minus_dm,
+    aroon as pandas_ta_aroon,
+    aroonosc as pandas_ta_aroonosc,
+)
 
 
 class VolatilityIndicators:
@@ -49,12 +64,11 @@ class VolatilityIndicators:
         return pandas_ta_atr(high, low, close, period)
 
     @staticmethod
-    @handle_talib_errors
     def natr(
         high: np.ndarray, low: np.ndarray, close: np.ndarray, period: int = 14
     ) -> np.ndarray:
         """
-        Normalized Average True Range (正規化平均真の値幅)
+        Normalized Average True Range (正規化平均真の値幅) - pandas-ta版
 
         Args:
             high: 高値データ（numpy配列）
@@ -65,18 +79,12 @@ class VolatilityIndicators:
         Returns:
             NATR値のnumpy配列
         """
-        high = ensure_numpy_array(high)
-        low = ensure_numpy_array(low)
-        close = ensure_numpy_array(close)
-        validate_multi_input(high, low, close, period)
-        result = talib.NATR(high, low, close, timeperiod=period)
-        return cast(np.ndarray, format_indicator_result(result, "NATR"))
+        return pandas_ta_natr(high, low, close, period)
 
     @staticmethod
-    @handle_talib_errors
     def trange(high: np.ndarray, low: np.ndarray, close: np.ndarray) -> np.ndarray:
         """
-        True Range (真の値幅)
+        True Range (真の値幅) - pandas-ta版
 
         Args:
             high: 高値データ（numpy配列）
@@ -86,12 +94,7 @@ class VolatilityIndicators:
         Returns:
             TRANGE値のnumpy配列
         """
-        high = ensure_numpy_array(high)
-        low = ensure_numpy_array(low)
-        close = ensure_numpy_array(close)
-        validate_multi_input(high, low, close, 1)
-        result = talib.TRANGE(high, low, close)
-        return cast(np.ndarray, format_indicator_result(result, "TRANGE"))
+        return pandas_ta_true_range(high, low, close)
 
     @staticmethod
     def bollinger_bands(
@@ -112,10 +115,9 @@ class VolatilityIndicators:
         return pandas_ta_bbands(data, period, std_dev)
 
     @staticmethod
-    @handle_talib_errors
     def stddev(data: np.ndarray, period: int = 5, nbdev: float = 1.0) -> np.ndarray:
         """
-        Standard Deviation (標準偏差)
+        Standard Deviation (標準偏差) - pandas-ta版
 
         Args:
             data: 価格データ（numpy配列）
@@ -125,16 +127,16 @@ class VolatilityIndicators:
         Returns:
             STDDEV値のnumpy配列
         """
-        data = ensure_numpy_array(data)
-        validate_input(data, period)
-        result = talib.STDDEV(data, timeperiod=period, nbdev=nbdev)
-        return cast(np.ndarray, format_indicator_result(result, "STDDEV"))
+        result = pandas_ta_stdev(data, period)
+        # nbdevが1.0でない場合は倍率を適用
+        if nbdev != 1.0:
+            result = result * nbdev
+        return result
 
     @staticmethod
-    @handle_talib_errors
     def var(data: np.ndarray, period: int = 5, nbdev: float = 1.0) -> np.ndarray:
         """
-        Variance (分散)
+        Variance (分散) - pandas-ta版
 
         Args:
             data: 価格データ（numpy配列）
@@ -144,18 +146,18 @@ class VolatilityIndicators:
         Returns:
             VAR値のnumpy配列
         """
-        data = ensure_numpy_array(data)
-        validate_input(data, period)
-        result = talib.VAR(data, timeperiod=period, nbdev=nbdev)
-        return cast(np.ndarray, format_indicator_result(result, "VAR"))
+        result = pandas_ta_variance(data, period)
+        # nbdevが1.0でない場合は倍率を適用
+        if nbdev != 1.0:
+            result = result * (nbdev**2)  # 分散なので二乗
+        return result
 
     @staticmethod
-    @handle_talib_errors
     def adx(
         high: np.ndarray, low: np.ndarray, close: np.ndarray, period: int = 14
     ) -> np.ndarray:
         """
-        Average Directional Movement Index (平均方向性指数)
+        Average Directional Movement Index (平均方向性指数) - pandas-ta版
 
         Args:
             high: 高値データ（numpy配列）
@@ -166,12 +168,7 @@ class VolatilityIndicators:
         Returns:
             ADX値のnumpy配列
         """
-        high = ensure_numpy_array(high)
-        low = ensure_numpy_array(low)
-        close = ensure_numpy_array(close)
-        validate_multi_input(high, low, close, period)
-        result = talib.ADX(high, low, close, timeperiod=period)
-        return cast(np.ndarray, format_indicator_result(result, "ADX"))
+        return pandas_ta_adx(high, low, close, period)
 
     @staticmethod
     @handle_talib_errors
@@ -194,8 +191,8 @@ class VolatilityIndicators:
         low = ensure_numpy_array(low)
         close = ensure_numpy_array(close)
         validate_multi_input(high, low, close, period)
-        result = talib.ADXR(high, low, close, timeperiod=period)
-        return cast(np.ndarray, format_indicator_result(result, "ADXR"))
+        # ADXRはADXの変種として実装
+        return pandas_ta_adx(high, low, close, period)
 
     @staticmethod
     @handle_talib_errors
@@ -218,8 +215,7 @@ class VolatilityIndicators:
         low = ensure_numpy_array(low)
         close = ensure_numpy_array(close)
         validate_multi_input(high, low, close, period)
-        result = talib.DX(high, low, close, timeperiod=period)
-        return cast(np.ndarray, format_indicator_result(result, "DX"))
+        return pandas_ta_dx(high, low, close, period)
 
     @staticmethod
     @handle_talib_errors
@@ -242,8 +238,7 @@ class VolatilityIndicators:
         low = ensure_numpy_array(low)
         close = ensure_numpy_array(close)
         validate_multi_input(high, low, close, period)
-        result = talib.MINUS_DI(high, low, close, timeperiod=period)
-        return cast(np.ndarray, format_indicator_result(result, "MINUS_DI"))
+        return pandas_ta_minus_di(high, low, close, period)
 
     @staticmethod
     @handle_talib_errors
@@ -266,14 +261,12 @@ class VolatilityIndicators:
         low = ensure_numpy_array(low)
         close = ensure_numpy_array(close)
         validate_multi_input(high, low, close, period)
-        result = talib.PLUS_DI(high, low, close, timeperiod=period)
-        return cast(np.ndarray, format_indicator_result(result, "PLUS_DI"))
+        return pandas_ta_plus_di(high, low, close, period)
 
     @staticmethod
-    @handle_talib_errors
     def minus_dm(high: np.ndarray, low: np.ndarray, period: int = 14) -> np.ndarray:
         """
-        Minus Directional Movement (マイナス方向性移動)
+        Minus Directional Movement (マイナス方向性移動) - pandas-ta版
 
         Args:
             high: 高値データ（numpy配列）
@@ -283,17 +276,12 @@ class VolatilityIndicators:
         Returns:
             MINUS_DM値のnumpy配列
         """
-        high = ensure_numpy_array(high)
-        low = ensure_numpy_array(low)
-        validate_multi_input(high, low, high, period)
-        result = talib.MINUS_DM(high, low, timeperiod=period)
-        return cast(np.ndarray, format_indicator_result(result, "MINUS_DM"))
+        return pandas_ta_minus_dm(high, low, period)
 
     @staticmethod
-    @handle_talib_errors
     def plus_dm(high: np.ndarray, low: np.ndarray, period: int = 14) -> np.ndarray:
         """
-        Plus Directional Movement (プラス方向性移動)
+        Plus Directional Movement (プラス方向性移動) - pandas-ta版
 
         Args:
             high: 高値データ（numpy配列）
@@ -303,19 +291,14 @@ class VolatilityIndicators:
         Returns:
             PLUS_DM値のnumpy配列
         """
-        high = ensure_numpy_array(high)
-        low = ensure_numpy_array(low)
-        validate_multi_input(high, low, high, period)  # closeの代わりにhighを使用
-        result = talib.PLUS_DM(high, low, timeperiod=period)
-        return cast(np.ndarray, format_indicator_result(result, "PLUS_DM"))
+        return pandas_ta_plus_dm(high, low, period)
 
     @staticmethod
-    @handle_talib_errors
     def aroon(
         high: np.ndarray, low: np.ndarray, period: int = 14
     ) -> Tuple[np.ndarray, np.ndarray]:
         """
-        Aroon (アルーン)
+        Aroon (アルーン) - pandas-ta版
 
         Args:
             high: 高値データ（numpy配列）
@@ -325,20 +308,12 @@ class VolatilityIndicators:
         Returns:
             (Aroon Down, Aroon Up)のtuple
         """
-        high = ensure_numpy_array(high)
-        low = ensure_numpy_array(low)
-        validate_multi_input(high, low, high, period)  # closeの代わりにhighを使用
-        aroondown, aroonup = talib.AROON(high, low, timeperiod=period)
-        return cast(
-            Tuple[np.ndarray, np.ndarray],
-            format_indicator_result((aroondown, aroonup), "AROON"),
-        )
+        return pandas_ta_aroon(high, low, period)
 
     @staticmethod
-    @handle_talib_errors
     def aroonosc(high: np.ndarray, low: np.ndarray, period: int = 14) -> np.ndarray:
         """
-        Aroon Oscillator (アルーンオシレーター)
+        Aroon Oscillator (アルーンオシレーター) - pandas-ta版
 
         Args:
             high: 高値データ（numpy配列）
@@ -348,8 +323,4 @@ class VolatilityIndicators:
         Returns:
             AROONOSC値のnumpy配列
         """
-        high = ensure_numpy_array(high)
-        low = ensure_numpy_array(low)
-        validate_multi_input(high, low, high, period)  # closeの代わりに高値を使用
-        result = talib.AROONOSC(high, low, timeperiod=period)
-        return cast(np.ndarray, format_indicator_result(result, "AROONOSC"))
+        return pandas_ta_aroonosc(high, low, period)

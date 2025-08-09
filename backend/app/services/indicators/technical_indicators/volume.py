@@ -1,9 +1,9 @@
 """
-出来高系テクニカル指標
+出来高系テクニカル指標（pandas-ta移行版）
 
-このモジュールはnumpy配列ベースでTa-libを直接使用し、
+このモジュールはpandas-taライブラリを使用し、
 backtesting.pyとの完全な互換性を提供します。
-pandas Seriesの変換は一切行いません。
+numpy配列ベースのインターフェースを維持しています。
 """
 
 from typing import cast
@@ -18,6 +18,11 @@ from ..utils import (
     validate_input,
     validate_multi_input,
 )
+from ..pandas_ta_utils import (
+    ad as pandas_ta_ad,
+    adosc as pandas_ta_adosc,
+    obv as pandas_ta_obv,
+)
 
 
 class VolumeIndicators:
@@ -29,12 +34,11 @@ class VolumeIndicators:
     """
 
     @staticmethod
-    @handle_talib_errors
     def ad(
         high: np.ndarray, low: np.ndarray, close: np.ndarray, volume: np.ndarray
     ) -> np.ndarray:
         """
-        Chaikin A/D Line (チャイキンA/Dライン)
+        Chaikin A/D Line (チャイキンA/Dライン) - pandas-ta版
 
         Args:
             high: 高値データ（numpy配列）
@@ -45,22 +49,9 @@ class VolumeIndicators:
         Returns:
             AD値のnumpy配列
         """
-        high = ensure_numpy_array(high)
-        low = ensure_numpy_array(low)
-        close = ensure_numpy_array(close)
-        volume = ensure_numpy_array(volume)
-
-        validate_multi_input(high, low, close, 1)
-        if len(volume) != len(close):
-            raise TALibError(
-                f"出来高データの長さが一致しません。Volume: {len(volume)}, Close: {len(close)}"
-            )
-
-        result = talib.AD(high, low, close, volume)
-        return cast(np.ndarray, format_indicator_result(result, "AD"))
+        return pandas_ta_ad(high, low, close, volume)
 
     @staticmethod
-    @handle_talib_errors
     def adosc(
         high: np.ndarray,
         low: np.ndarray,
@@ -70,7 +61,7 @@ class VolumeIndicators:
         slowperiod: int = 10,
     ) -> np.ndarray:
         """
-        Chaikin A/D Oscillator (チャイキンA/Dオシレーター)
+        Chaikin A/D Oscillator (チャイキンA/Dオシレーター) - pandas-ta版
 
         Args:
             high: 高値データ（numpy配列）
@@ -83,27 +74,12 @@ class VolumeIndicators:
         Returns:
             ADOSC値のnumpy配列
         """
-        high = ensure_numpy_array(high)
-        low = ensure_numpy_array(low)
-        close = ensure_numpy_array(close)
-        volume = ensure_numpy_array(volume)
-
-        validate_multi_input(high, low, close, max(fastperiod, slowperiod))
-        if len(volume) != len(close):
-            raise TALibError(
-                f"出来高データの長さが一致しません。Volume: {len(volume)}, Close: {len(close)}"
-            )
-
-        result = talib.ADOSC(
-            high, low, close, volume, fastperiod=fastperiod, slowperiod=slowperiod
-        )
-        return cast(np.ndarray, format_indicator_result(result, "ADOSC"))
+        return pandas_ta_adosc(high, low, close, volume, fastperiod, slowperiod)
 
     @staticmethod
-    @handle_talib_errors
     def obv(close: np.ndarray, volume: np.ndarray) -> np.ndarray:
         """
-        On Balance Volume (オンバランスボリューム)
+        On Balance Volume (オンバランスボリューム) - pandas-ta版
 
         Args:
             close: 終値データ（numpy配列）
@@ -112,14 +88,4 @@ class VolumeIndicators:
         Returns:
             OBV値のnumpy配列
         """
-        close = ensure_numpy_array(close)
-        volume = ensure_numpy_array(volume)
-
-        validate_input(close, 1)
-        if len(volume) != len(close):
-            raise TALibError(
-                f"出来高データの長さが一致しません。Volume: {len(volume)}, Close: {len(close)}"
-            )
-
-        result = talib.OBV(close, volume)
-        return cast(np.ndarray, format_indicator_result(result, "OBV"))
+        return pandas_ta_obv(close, volume)

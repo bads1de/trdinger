@@ -1,9 +1,9 @@
 """
-価格変換系テクニカル指標
+価格変換系テクニカル指標（pandas-ta移行版）
 
-このモジュールはnumpy配列ベースでTa-libを直接使用し、
+このモジュールはpandas-taライブラリを使用し、
 backtesting.pyとの完全な互換性を提供します。
-pandas Seriesの変換は一切行いません。
+numpy配列ベースのインターフェースを維持しています。
 """
 
 from typing import cast
@@ -18,23 +18,28 @@ from ..utils import (
     validate_input,
     validate_multi_input,
 )
+from ..pandas_ta_utils import (
+    ohlc4 as pandas_ta_ohlc4,
+    hl2 as pandas_ta_hl2,
+    hlc3 as pandas_ta_hlc3,
+    wcp as pandas_ta_wcp,
+)
 
 
 class PriceTransformIndicators:
     """
     価格変換系指標クラス（オートストラテジー最適化）
 
-    全ての指標はnumpy配列を直接処理し、Ta-libの性能を最大限活用します。
+    全ての指標はnumpy配列を直接処理し、pandas-taの性能を最大限活用します。
     backtesting.pyでの使用に最適化されています。
     """
 
     @staticmethod
-    @handle_talib_errors
     def avgprice(
         open_data: np.ndarray, high: np.ndarray, low: np.ndarray, close: np.ndarray
     ) -> np.ndarray:
         """
-        Average Price (平均価格)
+        Average Price (平均価格) - pandas-ta版
 
         Args:
             open_data: 始値データ（numpy配列）
@@ -45,26 +50,12 @@ class PriceTransformIndicators:
         Returns:
             AVGPRICE値のnumpy配列
         """
-        open_data = ensure_numpy_array(open_data)
-        high = ensure_numpy_array(high)
-        low = ensure_numpy_array(low)
-        close = ensure_numpy_array(close)
-
-        # 全データの長さが一致することを確認
-        if not (len(open_data) == len(high) == len(low) == len(close)):
-            raise TALibError(
-                f"OHLCデータの長さが一致しません。Open: {len(open_data)}, High: {len(high)}, Low: {len(low)}, Close: {len(close)}"
-            )
-
-        validate_input(close, 1)
-        result = talib.AVGPRICE(open_data, high, low, close)
-        return cast(np.ndarray, format_indicator_result(result, "AVGPRICE"))
+        return pandas_ta_ohlc4(open_data, high, low, close)
 
     @staticmethod
-    @handle_talib_errors
     def medprice(high: np.ndarray, low: np.ndarray) -> np.ndarray:
         """
-        Median Price (中央値価格)
+        Median Price (中央値価格) - pandas-ta版
 
         Args:
             high: 高値データ（numpy配列）
@@ -73,17 +64,12 @@ class PriceTransformIndicators:
         Returns:
             MEDPRICE値のnumpy配列
         """
-        high = ensure_numpy_array(high)
-        low = ensure_numpy_array(low)
-        validate_multi_input(high, low, high, 1)
-        result = talib.MEDPRICE(high, low)
-        return cast(np.ndarray, format_indicator_result(result, "MEDPRICE"))
+        return pandas_ta_hl2(high, low)
 
     @staticmethod
-    @handle_talib_errors
     def typprice(high: np.ndarray, low: np.ndarray, close: np.ndarray) -> np.ndarray:
         """
-        Typical Price (典型価格)
+        Typical Price (典型価格) - pandas-ta版
 
         Args:
             high: 高値データ（numpy配列）
@@ -93,18 +79,12 @@ class PriceTransformIndicators:
         Returns:
             TYPPRICE値のnumpy配列
         """
-        high = ensure_numpy_array(high)
-        low = ensure_numpy_array(low)
-        close = ensure_numpy_array(close)
-        validate_multi_input(high, low, close, 1)
-        result = talib.TYPPRICE(high, low, close)
-        return cast(np.ndarray, format_indicator_result(result, "TYPPRICE"))
+        return pandas_ta_hlc3(high, low, close)
 
     @staticmethod
-    @handle_talib_errors
     def wclprice(high: np.ndarray, low: np.ndarray, close: np.ndarray) -> np.ndarray:
         """
-        Weighted Close Price (加重終値価格)
+        Weighted Close Price (加重終値価格) - pandas-ta版
 
         Args:
             high: 高値データ（numpy配列）
@@ -114,9 +94,4 @@ class PriceTransformIndicators:
         Returns:
             WCLPRICE値のnumpy配列
         """
-        high = ensure_numpy_array(high)
-        low = ensure_numpy_array(low)
-        close = ensure_numpy_array(close)
-        validate_multi_input(high, low, close, 1)
-        result = talib.WCLPRICE(high, low, close)
-        return cast(np.ndarray, format_indicator_result(result, "WCLPRICE"))
+        return pandas_ta_wcp(high, low, close)
