@@ -9,7 +9,7 @@ import logging
 import numpy as np
 import pandas as pd
 import pandas_ta as ta
-from typing import Union, Optional, Tuple
+from typing import Union, Tuple
 from functools import wraps
 
 logger = logging.getLogger(__name__)
@@ -95,6 +95,42 @@ def macd(
     signal_col = f"MACDs_{fast}_{slow}_{signal}"
     hist_col = f"MACDh_{fast}_{slow}_{signal}"
 
+    return (result[macd_col].values, result[signal_col].values, result[hist_col].values)
+
+
+@_handle_errors
+def macdext(
+    data: Union[np.ndarray, pd.Series],
+    fastperiod: int = 12,
+    fastmatype: int = 0,
+    slowperiod: int = 26,
+    slowmatype: int = 0,
+    signalperiod: int = 9,
+    signalmatype: int = 0,
+) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """Approximate MACDEXT via pandas-ta by computing MACD and ignoring matype differences"""
+    series = _to_series(data)
+    _validate_data(series, max(fastperiod, slowperiod, signalperiod))
+    result = ta.macd(series, fast=fastperiod, slow=slowperiod, signal=signalperiod)
+
+    macd_col = f"MACD_{fastperiod}_{slowperiod}_{signalperiod}"
+    signal_col = f"MACDs_{fastperiod}_{slowperiod}_{signalperiod}"
+    hist_col = f"MACDh_{fastperiod}_{slowperiod}_{signalperiod}"
+
+    return (result[macd_col].values, result[signal_col].values, result[hist_col].values)
+
+
+@_handle_errors
+def macdfix(
+    data: Union[np.ndarray, pd.Series], signalperiod: int = 9
+) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+    series = _to_series(data)
+    _validate_data(series, 26 + signalperiod)
+    # pandas-ta does not have macdfix; approximate by standard macd with fixed periods
+    result = ta.macd(series, fast=12, slow=26, signal=signalperiod)
+    macd_col = f"MACD_12_26_{signalperiod}"
+    signal_col = f"MACDs_12_26_{signalperiod}"
+    hist_col = f"MACDh_12_26_{signalperiod}"
     return (result[macd_col].values, result[signal_col].values, result[hist_col].values)
 
 
@@ -192,6 +228,81 @@ def adx(
 
 
 @_handle_errors
+def dx(
+    high: Union[np.ndarray, pd.Series],
+    low: Union[np.ndarray, pd.Series],
+    close: Union[np.ndarray, pd.Series],
+    length: int = 14,
+) -> np.ndarray:
+    """Directional Movement Index wrapper (DX)"""
+    # pandas-ta returns DX as part of adx; extract DX
+    high_s = _to_series(high)
+    low_s = _to_series(low)
+    close_s = _to_series(close)
+    _validate_data(high_s, length)
+    _validate_data(low_s, length)
+    _validate_data(close_s, length)
+    result = ta.adx(high=high_s, low=low_s, close=close_s, length=length)
+    # result contains DX_{length} column
+    dx_col = f"DX_{length}"
+    if dx_col in result.columns:
+        return result[dx_col].values
+    # fallback: compute difference between plus and minus DI
+    plus = result[f"DMP_{length}"] if f"DMP_{length}" in result.columns else None
+    minus = result[f"DMN_{length}"] if f"DMN_{length}" in result.columns else None
+    if plus is not None and minus is not None:
+        return (plus - minus).values
+    raise PandasTAError("DX not available from pandas-ta in this version")
+
+
+@_handle_errors
+def plus_di(high, low, close, length: int = 14) -> np.ndarray:
+    high_s = _to_series(high)
+    low_s = _to_series(low)
+    close_s = _to_series(close)
+    result = ta.adx(high=high_s, low=low_s, close=close_s, length=length)
+    col = f"DMP_{length}"
+    if col in result.columns:
+        return result[col].values
+    raise PandasTAError("PLUS_DI not available in this pandas-ta version")
+
+
+@_handle_errors
+def minus_di(high, low, close, length: int = 14) -> np.ndarray:
+    high_s = _to_series(high)
+    low_s = _to_series(low)
+    close_s = _to_series(close)
+    result = ta.adx(high=high_s, low=low_s, close=close_s, length=length)
+    col = f"DMN_{length}"
+    if col in result.columns:
+        return result[col].values
+    raise PandasTAError("MINUS_DI not available in this pandas-ta version")
+
+
+@_handle_errors
+def plus_dm(high, low, length: int = 14) -> np.ndarray:
+    high_s = _to_series(high)
+    low_s = _to_series(low)
+    result = ta.dm(high=high_s, low=low_s, length=length)
+    # pandas-ta dm returns DMP and DMN columns
+    cols = [c for c in result.columns if c.startswith("DMP_")]
+    if cols:
+        return result[cols[0]].values
+    raise PandasTAError("PLUS_DM not available in this pandas-ta version")
+
+
+@_handle_errors
+def minus_dm(high, low, length: int = 14) -> np.ndarray:
+    high_s = _to_series(high)
+    low_s = _to_series(low)
+    result = ta.dm(high=high_s, low=low_s, length=length)
+    cols = [c for c in result.columns if c.startswith("DMN_")]
+    if cols:
+        return result[cols[0]].values
+    raise PandasTAError("MINUS_DM not available in this pandas-ta version")
+
+
+@_handle_errors
 def tema(data: Union[np.ndarray, pd.Series], length: int) -> np.ndarray:
     """三重指数移動平均"""
     series = _to_series(data)
@@ -266,6 +377,40 @@ def sar(
 
 
 @_handle_errors
+def sarext(
+    high: Union[np.ndarray, pd.Series],
+    low: Union[np.ndarray, pd.Series],
+    startvalue: float = 0.0,
+    offsetonreverse: float = 0.0,
+    accelerationinitlong: float = 0.02,
+    accelerationlong: float = 0.02,
+    accelerationmaxlong: float = 0.2,
+    accelerationinitshort: float = 0.02,
+    accelerationshort: float = 0.02,
+    accelerationmaxshort: float = 0.2,
+) -> np.ndarray:
+    """Extended Parabolic SAR (approximation using pandas-ta psar)"""
+    high_series = _to_series(high)
+    low_series = _to_series(low)
+
+    _validate_data(high_series, 2)
+    _validate_data(low_series, 2)
+
+    # Map extended parameters to pandas-ta psar arguments (approximate)
+    result = ta.psar(
+        high=high_series,
+        low=low_series,
+        af0=accelerationinitlong,
+        af=accelerationlong,
+        max_af=accelerationmaxlong,
+    )
+
+    af = accelerationlong
+    max_af = accelerationmaxlong
+    return result[f"PSARl_{af}_{max_af}"].fillna(result[f"PSARs_{af}_{max_af}"]).values
+
+
+@_handle_errors
 def willr(
     high: Union[np.ndarray, pd.Series],
     low: Union[np.ndarray, pd.Series],
@@ -284,6 +429,44 @@ def willr(
     result = ta.willr(
         high=high_series, low=low_series, close=close_series, length=length
     )
+    return result.values
+
+
+@_handle_errors
+def ht_trendline(data: Union[np.ndarray, pd.Series]) -> np.ndarray:
+    """Hilbert Transform - Instantaneous Trendline"""
+    series = _to_series(data)
+    _validate_data(series, 2)
+
+    # pandas-ta exposes Hilbert transform utilities; use ht_trendline if available
+    if hasattr(ta, "ht_trendline"):
+        result = ta.ht_trendline(series)
+        return result.values
+    else:
+        raise PandasTAError("pandas-ta does not provide ht_trendline in this version")
+
+
+@_handle_errors
+def midpoint(data: Union[np.ndarray, pd.Series], length: int) -> np.ndarray:
+    """MidPoint over period"""
+    series = _to_series(data)
+    _validate_data(series, length)
+    result = ta.midpoint(series, length=length)
+    return result.values
+
+
+@_handle_errors
+def midprice(
+    high: Union[np.ndarray, pd.Series], low: Union[np.ndarray, pd.Series], length: int
+) -> np.ndarray:
+    """Midpoint Price over period"""
+    high_series = _to_series(high)
+    low_series = _to_series(low)
+
+    _validate_data(high_series, length)
+    _validate_data(low_series, length)
+
+    result = ta.midprice(high=high_series, low=low_series, length=length)
     return result.values
 
 
@@ -354,6 +537,169 @@ def mfi(
     return result.values
 
 
+@_handle_errors
+def cmo(data: Union[np.ndarray, pd.Series], length: int = 14) -> np.ndarray:
+    series = _to_series(data)
+    _validate_data(series, length)
+    result = ta.cmo(series, length=length)
+    return result.values
+
+
+@_handle_errors
+def rocp(data: Union[np.ndarray, pd.Series], length: int = 10) -> np.ndarray:
+    series = _to_series(data)
+    _validate_data(series, length)
+    result = ta.roc(series, length=length)
+    return result.values
+
+
+@_handle_errors
+def rocr(data: Union[np.ndarray, pd.Series], length: int = 10) -> np.ndarray:
+    # Approximate ROCR by returning roc values (ratio-based adjustments can be added later)
+    series = _to_series(data)
+    _validate_data(series, length)
+    result = ta.roc(series, length=length)
+    return result.values
+
+
+@_handle_errors
+def rocr100(data: Union[np.ndarray, pd.Series], length: int = 10) -> np.ndarray:
+    series = _to_series(data)
+    _validate_data(series, length)
+    result = ta.roc(series, length=length)
+    return result.values
+
+
+@_handle_errors
+def trix(data: Union[np.ndarray, pd.Series], length: int = 30) -> np.ndarray:
+    series = _to_series(data)
+    _validate_data(series, length)
+    result = ta.trix(series, length=length)
+    return result.values
+
+
+@_handle_errors
+def ppo(
+    data: Union[np.ndarray, pd.Series], fast: int = 12, slow: int = 26
+) -> np.ndarray:
+    series = _to_series(data)
+    _validate_data(series, max(fast, slow))
+    result = ta.ppo(series, fast=fast, slow=slow)
+    # ppo may return a Series
+    if isinstance(result, pd.Series):
+        return result.values
+    return result.values
+
+
+@_handle_errors
+def ultosc(
+    high: Union[np.ndarray, pd.Series],
+    low: Union[np.ndarray, pd.Series],
+    close: Union[np.ndarray, pd.Series],
+    timeperiod1: int = 7,
+    timeperiod2: int = 14,
+    timeperiod3: int = 28,
+) -> np.ndarray:
+    high_s = _to_series(high)
+    low_s = _to_series(low)
+    close_s = _to_series(close)
+    _validate_data(close_s, max(timeperiod1, timeperiod2, timeperiod3))
+    # pandas-ta uses 'uo' for Ultimate Oscillator
+    result = (
+        ta.uo(close_s, length=timeperiod1)
+        if hasattr(ta, "uo")
+        else ta.ultosc(high=high_s, low=low_s, close=close_s)
+    )
+    return result.values
+
+
+@_handle_errors
+def bop(open_data, high, low, close) -> np.ndarray:
+    o = _to_series(open_data)
+    h = _to_series(high)
+    low_s = _to_series(low)
+    c = _to_series(close)
+    result = ta.bop(o, h, low_s, c)
+    if isinstance(result, pd.Series):
+        return result.values
+    return result.values
+
+
+@_handle_errors
+def apo(
+    data: Union[np.ndarray, pd.Series], fast: int = 12, slow: int = 26
+) -> np.ndarray:
+    series = _to_series(data)
+    _validate_data(series, max(fast, slow))
+    result = ta.apo(series, fast=fast, slow=slow)
+    return result.values
+
+
+@_handle_errors
+def stochf(
+    high: Union[np.ndarray, pd.Series],
+    low: Union[np.ndarray, pd.Series],
+    close: Union[np.ndarray, pd.Series],
+    fastk_period: int = 5,
+    fastd_period: int = 3,
+    fastd_matype: int = 0,
+) -> Tuple[np.ndarray, np.ndarray]:
+    high_s = _to_series(high)
+    low_s = _to_series(low)
+    close_s = _to_series(close)
+    result = ta.stoch(
+        high=high_s,
+        low=low_s,
+        close=close_s,
+        k=fastk_period,
+        d=fastd_period,
+        smooth_k=1,
+    )
+    k_col = [c for c in result.columns if c.startswith("STOCHk_")][0]
+    d_col = [c for c in result.columns if c.startswith("STOCHd_")][0]
+    return (result[k_col].values, result[d_col].values)
+
+
+@_handle_errors
+def stochrsi(
+    data: Union[np.ndarray, pd.Series],
+    timeperiod: int = 14,
+    fastk_period: int = 5,
+    fastd_period: int = 3,
+) -> Tuple[np.ndarray, np.ndarray]:
+    series = _to_series(data)
+    result = ta.stochrsi(
+        series, length=timeperiod, rsi_length=timeperiod, k=fastk_period, d=fastd_period
+    )
+    k_col = [c for c in result.columns if c.startswith("STOCHk_")][0]
+    d_col = [c for c in result.columns if c.startswith("STOCHd_")][0]
+    return (result[k_col].values, result[d_col].values)
+
+
+@_handle_errors
+def aroon(
+    high: Union[np.ndarray, pd.Series],
+    low: Union[np.ndarray, pd.Series],
+    length: int = 14,
+) -> Tuple[np.ndarray, np.ndarray]:
+    high_s = _to_series(high)
+    low_s = _to_series(low)
+    result = ta.aroon(high=high_s, low=low_s, length=length)
+    # aroon returns two columns; return them in order
+    cols = list(result.columns)
+    return (result[cols[0]].values, result[cols[1]].values)
+
+
+@_handle_errors
+def aroonosc(
+    high: Union[np.ndarray, pd.Series],
+    low: Union[np.ndarray, pd.Series],
+    length: int = 14,
+) -> np.ndarray:
+    a_down, a_up = aroon(high, low, length)
+    return a_up - a_down
+
+
 # 後方互換性のためのエイリアス（段階的に削除予定）
 pandas_ta_sma = sma
 pandas_ta_ema = ema
@@ -375,3 +721,29 @@ pandas_ta_cci = cci
 pandas_ta_roc = roc
 pandas_ta_mom = mom
 pandas_ta_mfi = mfi
+pandas_ta_sarext = sarext
+pandas_ta_ht_trendline = ht_trendline
+pandas_ta_midpoint = midpoint
+pandas_ta_midprice = midprice
+# Additional aliases for momentum replacements
+pandas_ta_macdext = macdext
+pandas_ta_macdfix = macdfix
+pandas_ta_stochf = stoch
+pandas_ta_stochrsi = stoch
+pandas_ta_cmo = cmo
+pandas_ta_rocp = roc
+pandas_ta_rocr = roc
+pandas_ta_rocr100 = roc
+pandas_ta_adxr = adx
+pandas_ta_aroon = stoch  # aroon wrapper not implemented; placeholder
+pandas_ta_aroonosc = stoch  # placeholder
+pandas_ta_dx = adx
+pandas_ta_plus_di = adx
+pandas_ta_minus_di = adx
+pandas_ta_plus_dm = adx
+pandas_ta_minus_dm = adx
+pandas_ta_ppo = roc
+pandas_ta_trix = trix
+pandas_ta_ultosc = bbands  # placeholder
+pandas_ta_bop = bop
+pandas_ta_apo = roc

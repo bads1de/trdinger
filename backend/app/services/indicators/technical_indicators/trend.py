@@ -6,11 +6,9 @@ backtesting.pyとの完全な互換性を提供します。
 numpy配列ベースのインターフェースを維持しています。
 """
 
-from typing import Tuple, cast
+from typing import cast
 
 import numpy as np
-
-# import talib  # pandas-taに移行済み
 
 from ..utils import (
     TALibError,
@@ -30,6 +28,10 @@ from ..pandas_ta_utils import (
     kama as pandas_ta_kama,
     t3 as pandas_ta_t3,
     sar as pandas_ta_sar,
+    sarext as pandas_ta_sarext,
+    ht_trendline as pandas_ta_ht_trendline,
+    midpoint as pandas_ta_midpoint,
+    midprice as pandas_ta_midprice,
 )
 
 
@@ -76,14 +78,6 @@ class TrendIndicators:
         """Kaufman Adaptive Moving Average (カウフマン適応移動平均) - pandas-ta版"""
         return pandas_ta_kama(data, period)
 
-    # @staticmethod
-    # def mama(
-    #     data: np.ndarray, fastlimit: float = 0.5, slowlimit: float = 0.05
-    # ) -> Tuple[np.ndarray, np.ndarray]:
-    #     """MESA Adaptive Moving Average (MESA適応移動平均) - 未実装"""
-    #     # pandas-taにMAMAが存在しないため、一時的に無効化
-    #     raise NotImplementedError("MAMA is not available in pandas-ta")
-
     @staticmethod
     def t3(data: np.ndarray, period: int = 5, vfactor: float = 0.7) -> np.ndarray:
         """Triple Exponential Moving Average (T3) - pandas-ta版"""
@@ -127,7 +121,7 @@ class TrendIndicators:
             "accelerationshort": accelerationshort,
             "accelerationmaxshort": accelerationmaxshort,
         }
-        result = talib.SAREXT(high, low, **params)
+        result = pandas_ta_sarext(high, low, **params)
         return cast(np.ndarray, format_indicator_result(result, "SAREXT"))
 
     @staticmethod
@@ -136,11 +130,11 @@ class TrendIndicators:
         """Hilbert Transform - Instantaneous Trendline"""
         data = ensure_numpy_array(data)
         validate_input(data, 2)
-        result = talib.HT_TRENDLINE(data)
+        result = pandas_ta_ht_trendline(data)
         return cast(np.ndarray, format_indicator_result(result, "HT_TRENDLINE"))
 
     @staticmethod
-    def ma(data: np.ndarray, period: int, matype: int = 0) -> np.ndarray:  # MA_Type.SMA
+    def ma(data: np.ndarray, period: int, matype: int = 0) -> np.ndarray:
         """Moving Average (移動平均 - タイプ指定可能) - pandas-ta版"""
         # matypeに応じて適切な移動平均を選択
         if matype == 0:  # SMA
@@ -164,7 +158,6 @@ class TrendIndicators:
             return pandas_ta_sma(data, period)
 
     @staticmethod
-    @handle_talib_errors
     def mavp(
         data: np.ndarray,
         periods: np.ndarray,
@@ -180,8 +173,10 @@ class TrendIndicators:
                 f"データと期間の長さが一致しません。Data: {len(data)}, Periods: {len(periods)}"
             )
         validate_input(data, minperiod)
-        result = talib.MAVP(data, periods, minperiod=minperiod, maxperiod=maxperiod, matype=matype)  # type: ignore
-        return cast(np.ndarray, format_indicator_result(result, "MAVP"))
+        # MAVP has no direct pandas-ta equivalent; raise error to flag manual handling
+        raise NotImplementedError(
+            "MAVP is not implemented in pandas-ta and requires custom implementation"
+        )
 
     @staticmethod
     @handle_talib_errors
@@ -189,7 +184,7 @@ class TrendIndicators:
         """MidPoint over period (期間中点)"""
         data = ensure_numpy_array(data)
         validate_input(data, period)
-        result = talib.MIDPOINT(data, timeperiod=period)
+        result = pandas_ta_midpoint(data, period)
         return cast(np.ndarray, format_indicator_result(result, "MIDPOINT"))
 
     @staticmethod
@@ -199,5 +194,5 @@ class TrendIndicators:
         high = ensure_numpy_array(high)
         low = ensure_numpy_array(low)
         validate_multi_input(high, low, high, period)
-        result = talib.MIDPRICE(high, low, timeperiod=period)
+        result = pandas_ta_midprice(high, low, period)
         return cast(np.ndarray, format_indicator_result(result, "MIDPRICE"))

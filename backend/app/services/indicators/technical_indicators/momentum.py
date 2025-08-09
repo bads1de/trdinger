@@ -10,8 +10,6 @@ from typing import Tuple, cast
 
 import numpy as np
 
-# import talib  # pandas-taに移行済み
-
 from ..utils import (
     TALibError,
     ensure_numpy_array,
@@ -20,6 +18,7 @@ from ..utils import (
     validate_input,
     validate_multi_input,
 )
+
 from ..pandas_ta_utils import (
     rsi as pandas_ta_rsi,
     macd as pandas_ta_macd,
@@ -30,6 +29,27 @@ from ..pandas_ta_utils import (
     roc as pandas_ta_roc,
     mom as pandas_ta_mom,
     mfi as pandas_ta_mfi,
+    macdext as pandas_ta_macdext,
+    macdfix as pandas_ta_macdfix,
+    stochf as pandas_ta_stochf,
+    stochrsi as pandas_ta_stochrsi,
+    cmo as pandas_ta_cmo,
+    rocp as pandas_ta_rocp,
+    rocr as pandas_ta_rocr,
+    rocr100 as pandas_ta_rocr100,
+    adx as pandas_ta_adxr,
+    aroon as pandas_ta_aroon,
+    aroonosc as pandas_ta_aroonosc,
+    dx as pandas_ta_dx,
+    plus_di as pandas_ta_plus_di,
+    minus_di as pandas_ta_minus_di,
+    plus_dm as pandas_ta_plus_dm,
+    minus_dm as pandas_ta_minus_dm,
+    ppo as pandas_ta_ppo,
+    trix as pandas_ta_trix,
+    ultosc as pandas_ta_ultosc,
+    bop as pandas_ta_bop,
+    apo as pandas_ta_apo,
 )
 
 
@@ -73,14 +93,14 @@ class MomentumIndicators:
         # matypeは整数値として直接使用
 
         validate_input(data, max(fast_period, slow_period, signal_period))
-        macd, signal, histogram = talib.MACDEXT(
+        macd, signal, histogram = pandas_ta_macdext(
             data,
             fastperiod=fast_period,
-            fastmatype=fast_ma_type,  # type: ignore
+            fastmatype=fast_ma_type,
             slowperiod=slow_period,
-            slowmatype=slow_ma_type,  # type: ignore
+            slowmatype=slow_ma_type,
             signalperiod=signal_period,
-            signalmatype=signal_ma_type,  # type: ignore
+            signalmatype=signal_ma_type,
         )
         return cast(
             Tuple[np.ndarray, np.ndarray, np.ndarray],
@@ -95,7 +115,7 @@ class MomentumIndicators:
         """Moving Average Convergence/Divergence Fix 12/26"""
         data = ensure_numpy_array(data)
         validate_input(data, max(26, signal_period))
-        macd, signal, histogram = talib.MACDFIX(data, signalperiod=signal_period)
+        macd, signal, histogram = pandas_ta_macdfix(data, signalperiod=signal_period)
         return cast(
             Tuple[np.ndarray, np.ndarray, np.ndarray],
             format_indicator_result((macd, signal, histogram), "MACDFIX"),
@@ -138,7 +158,7 @@ class MomentumIndicators:
         # matypeは整数値として直接使用
 
         validate_multi_input(high, low, close, max(fastk_period, fastd_period))
-        fastk, fastd = talib.STOCHF(
+        fastk, fastd = pandas_ta_stochf(
             high,
             low,
             close,
@@ -166,12 +186,12 @@ class MomentumIndicators:
         # matypeは整数値として直接使用
 
         validate_input(data, max(period, fastk_period, fastd_period))
-        fastk, fastd = talib.STOCHRSI(
+        fastk, fastd = pandas_ta_stochrsi(
             data,
             timeperiod=period,
             fastk_period=fastk_period,
             fastd_period=fastd_period,
-            fastd_matype=fastd_matype,  # type: ignore
+            fastd_matype=fastd_matype,
         )
         return cast(
             Tuple[np.ndarray, np.ndarray],
@@ -198,7 +218,7 @@ class MomentumIndicators:
         """Chande Momentum Oscillator"""
         data = ensure_numpy_array(data)
         validate_input(data, period)
-        result = talib.CMO(data, timeperiod=period)
+        result = pandas_ta_cmo(data, period)
         return cast(np.ndarray, format_indicator_result(result, "CMO"))
 
     @staticmethod
@@ -212,7 +232,7 @@ class MomentumIndicators:
         """Rate of change Percentage"""
         data = ensure_numpy_array(data)
         validate_input(data, period)
-        result = talib.ROCP(data, timeperiod=period)
+        result = pandas_ta_rocp(data, period)
         return cast(np.ndarray, format_indicator_result(result, "ROCP"))
 
     @staticmethod
@@ -221,7 +241,7 @@ class MomentumIndicators:
         """Rate of change ratio"""
         data = ensure_numpy_array(data)
         validate_input(data, period)
-        result = talib.ROCR(data, timeperiod=period)
+        result = pandas_ta_rocr(data, period)
         return cast(np.ndarray, format_indicator_result(result, "ROCR"))
 
     @staticmethod
@@ -230,7 +250,7 @@ class MomentumIndicators:
         """Rate of change ratio 100 scale"""
         data = ensure_numpy_array(data)
         validate_input(data, period)
-        result = talib.ROCR100(data, timeperiod=period)
+        result = pandas_ta_rocr100(data, period)
         return cast(np.ndarray, format_indicator_result(result, "ROCR100"))
 
     @staticmethod
@@ -255,7 +275,7 @@ class MomentumIndicators:
         low = ensure_numpy_array(low)
         close = ensure_numpy_array(close)
         validate_multi_input(high, low, close, period)
-        result = talib.ADXR(high, low, close, timeperiod=period)
+        result = pandas_ta_adxr(high, low, close, period)
         return cast(np.ndarray, format_indicator_result(result, "ADXR"))
 
     @staticmethod
@@ -267,7 +287,7 @@ class MomentumIndicators:
         high = ensure_numpy_array(high)
         low = ensure_numpy_array(low)
         validate_multi_input(high, low, high, period)
-        aroondown, aroonup = talib.AROON(high, low, timeperiod=period)
+        aroondown, aroonup = pandas_ta_aroon(high, low, period)
         return cast(
             Tuple[np.ndarray, np.ndarray],
             format_indicator_result((aroondown, aroonup), "AROON"),
@@ -280,7 +300,7 @@ class MomentumIndicators:
         high = ensure_numpy_array(high)
         low = ensure_numpy_array(low)
         validate_multi_input(high, low, high, period)
-        result = talib.AROONOSC(high, low, timeperiod=period)
+        result = pandas_ta_aroonosc(high, low, period)
         return cast(np.ndarray, format_indicator_result(result, "AROONOSC"))
 
     @staticmethod
@@ -293,7 +313,7 @@ class MomentumIndicators:
         low = ensure_numpy_array(low)
         close = ensure_numpy_array(close)
         validate_multi_input(high, low, close, period)
-        result = talib.DX(high, low, close, timeperiod=period)
+        result = pandas_ta_dx(high, low, close, period)
         return cast(np.ndarray, format_indicator_result(result, "DX"))
 
     @staticmethod
@@ -317,7 +337,7 @@ class MomentumIndicators:
         low = ensure_numpy_array(low)
         close = ensure_numpy_array(close)
         validate_multi_input(high, low, close, period)
-        result = talib.PLUS_DI(high, low, close, timeperiod=period)
+        result = pandas_ta_plus_di(high, low, close, period)
         return cast(np.ndarray, format_indicator_result(result, "PLUS_DI"))
 
     @staticmethod
@@ -330,7 +350,7 @@ class MomentumIndicators:
         low = ensure_numpy_array(low)
         close = ensure_numpy_array(close)
         validate_multi_input(high, low, close, period)
-        result = talib.MINUS_DI(high, low, close, timeperiod=period)
+        result = pandas_ta_minus_di(high, low, close, period)
         return cast(np.ndarray, format_indicator_result(result, "MINUS_DI"))
 
     @staticmethod
@@ -340,7 +360,7 @@ class MomentumIndicators:
         high = ensure_numpy_array(high)
         low = ensure_numpy_array(low)
         validate_multi_input(high, low, high, period)
-        result = talib.PLUS_DM(high, low, timeperiod=period)
+        result = pandas_ta_plus_dm(high, low, period)
         return cast(np.ndarray, format_indicator_result(result, "PLUS_DM"))
 
     @staticmethod
@@ -350,7 +370,7 @@ class MomentumIndicators:
         high = ensure_numpy_array(high)
         low = ensure_numpy_array(low)
         validate_multi_input(high, low, high, period)
-        result = talib.MINUS_DM(high, low, timeperiod=period)
+        result = pandas_ta_minus_dm(high, low, period)
         return cast(np.ndarray, format_indicator_result(result, "MINUS_DM"))
 
     @staticmethod
@@ -364,11 +384,11 @@ class MomentumIndicators:
         """Percentage Price Oscillator"""
         data = ensure_numpy_array(data)
         validate_input(data, max(fastperiod, slowperiod))
-        result = talib.PPO(
+        result = pandas_ta_ppo(
             data,
             fastperiod=fastperiod,
             slowperiod=slowperiod,
-            matype=matype,  # type: ignore
+            matype=matype,
         )
         return cast(np.ndarray, format_indicator_result(result, "PPO"))
 
@@ -378,7 +398,7 @@ class MomentumIndicators:
         """1-day Rate-Of-Change (ROC) of a Triple Smooth EMA"""
         data = ensure_numpy_array(data)
         validate_input(data, period)
-        result = talib.TRIX(data, timeperiod=period)
+        result = pandas_ta_trix(data, period)
         return cast(np.ndarray, format_indicator_result(result, "TRIX"))
 
     @staticmethod
@@ -398,7 +418,7 @@ class MomentumIndicators:
         validate_multi_input(
             high, low, close, max(timeperiod1, timeperiod2, timeperiod3)
         )
-        result = talib.ULTOSC(
+        result = pandas_ta_ultosc(
             high,
             low,
             close,
@@ -426,7 +446,7 @@ class MomentumIndicators:
                 f"OHLCデータの長さが一致しません。Open: {len(open_data)}, High: {len(high)}, Low: {len(low)}, Close: {len(close)}"
             )
         validate_input(close, 1)
-        result = talib.BOP(open_data, high, low, close)
+        result = pandas_ta_bop(open_data, high, low, close)
         return cast(np.ndarray, format_indicator_result(result, "BOP"))
 
     @staticmethod
@@ -440,10 +460,10 @@ class MomentumIndicators:
         """Absolute Price Oscillator"""
         data = ensure_numpy_array(data)
         validate_input(data, max(fastperiod, slowperiod))
-        result = talib.APO(
+        result = pandas_ta_apo(
             data,
             fastperiod=fastperiod,
             slowperiod=slowperiod,
-            matype=matype,  # type: ignore
+            matype=matype,
         )
         return cast(np.ndarray, format_indicator_result(result, "APO"))
