@@ -285,7 +285,7 @@ class VolatilityIndicators:
         """
         high = ensure_numpy_array(high)
         low = ensure_numpy_array(low)
-        validate_multi_input(high, low, high, period)  # closeの代わりにhighを使用
+        validate_multi_input(high, low, high, period)
         result = talib.MINUS_DM(high, low, timeperiod=period)
         return cast(np.ndarray, format_indicator_result(result, "MINUS_DM"))
 

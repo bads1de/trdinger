@@ -164,7 +164,7 @@ class MomentumIndicators:
             close,
             fastk_period=fastk_period,
             fastd_period=fastd_period,
-            fastd_matype=fastd_matype,  # type: ignore
+            fastd_matype=fastd_matype,
         )
         return cast(
             Tuple[np.ndarray, np.ndarray],
