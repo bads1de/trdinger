@@ -9,7 +9,6 @@ pandas Seriesの変換は一切行いません。
 from typing import cast
 
 import numpy as np
-import talib
 
 from ..utils import (
     TALibError,

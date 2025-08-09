@@ -11,7 +11,6 @@ from typing import Dict, List, Optional
 
 import numpy as np
 import pandas as pd
-import talib
 
 from ....utils.data_processing import data_processor as data_preprocessor
 
@@ -321,9 +320,9 @@ class EnhancedCryptoFeatures:
 
         # MACD（pandas-ta使用）
         macd_result = ta.macd(df["Close"], fast=12, slow=26, signal=9)
-        result_df["macd"] = macd_result[f"MACD_12_26_9"].fillna(0.0)
-        result_df["macd_signal"] = macd_result[f"MACDs_12_26_9"].fillna(0.0)
-        result_df["macd_histogram"] = macd_result[f"MACDh_12_26_9"].fillna(0.0)
+        result_df["macd"] = macd_result["MACD_12_26_9"].fillna(0.0)
+        result_df["macd_signal"] = macd_result["MACDs_12_26_9"].fillna(0.0)
+        result_df["macd_histogram"] = macd_result["MACDh_12_26_9"].fillna(0.0)
 
         self.feature_groups["technical"].extend(
             [
