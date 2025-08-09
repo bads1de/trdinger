@@ -1,9 +1,9 @@
 """
-ボラティリティ系テクニカル指標
+ボラティリティ系テクニカル指標（pandas-ta移行版）
 
-このモジュールはnumpy配列ベースでTa-libを直接使用し、
+このモジュールはpandas-taライブラリを使用し、
 backtesting.pyとの完全な互換性を提供します。
-pandas Seriesの変換は一切行いません。
+numpy配列ベースのインターフェースを維持しています。
 """
 
 from typing import Tuple, cast
@@ -18,6 +18,7 @@ from ..utils import (
     validate_input,
     validate_multi_input,
 )
+from ..pandas_ta_utils import pandas_ta_atr, pandas_ta_bbands
 
 
 class VolatilityIndicators:
@@ -29,12 +30,11 @@ class VolatilityIndicators:
     """
 
     @staticmethod
-    @handle_talib_errors
     def atr(
         high: np.ndarray, low: np.ndarray, close: np.ndarray, period: int = 14
     ) -> np.ndarray:
         """
-        Average True Range (平均真の値幅)
+        Average True Range (平均真の値幅) - pandas-ta版
 
         Args:
             high: 高値データ（numpy配列）
@@ -45,12 +45,7 @@ class VolatilityIndicators:
         Returns:
             ATR値のnumpy配列
         """
-        high = ensure_numpy_array(high)
-        low = ensure_numpy_array(low)
-        close = ensure_numpy_array(close)
-        validate_multi_input(high, low, close, period)
-        result = talib.ATR(high, low, close, timeperiod=period)
-        return cast(np.ndarray, format_indicator_result(result, "ATR"))
+        return pandas_ta_atr(high, low, close, period)
 
     @staticmethod
     @handle_talib_errors
@@ -98,36 +93,22 @@ class VolatilityIndicators:
         return cast(np.ndarray, format_indicator_result(result, "TRANGE"))
 
     @staticmethod
-    @handle_talib_errors
     def bollinger_bands(
         data: np.ndarray, period: int = 20, std_dev: float = 2.0, matype: int = 0
     ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
         """
-        Bollinger Bands (ボリンジャーバンド)
+        Bollinger Bands (ボリンジャーバンド) - pandas-ta版
 
         Args:
             data: 価格データ（numpy配列）
             period: 期間（デフォルト: 20）
             std_dev: 標準偏差倍率（デフォルト: 2.0）
-            matype: 移動平均種別（デフォルト: 0=SMA）
+            matype: 移動平均種別（pandas-taでは無視される）
 
         Returns:
             (Upper Band, Middle Band, Lower Band)のtuple
         """
-        data = ensure_numpy_array(data)
-        validate_input(data, period)
-
-        params = {
-            "timeperiod": period,
-            "nbdevup": std_dev,
-            "nbdevdn": std_dev,
-            "matype": matype,
-        }
-        upper, middle, lower = talib.BBANDS(data, **params)  # type: ignore
-        return cast(
-            Tuple[np.ndarray, np.ndarray, np.ndarray],
-            format_indicator_result((upper, middle, lower), "BBANDS"),
-        )
+        return pandas_ta_bbands(data, period, std_dev)
 
     @staticmethod
     @handle_talib_errors

@@ -1,9 +1,9 @@
 """
-モメンタム系テクニカル指標（オートストラテジー最適化版）
+モメンタム系テクニカル指標（pandas-ta移行版）
 
-このモジュールはnumpy配列ベースでTa-libを直接使用し、
+このモジュールはpandas-taライブラリを使用し、
 backtesting.pyとの完全な互換性を提供します。
-pandas Seriesの変換は一切行いません。
+numpy配列ベースのインターフェースを維持しています。
 """
 
 from typing import Tuple, cast
@@ -19,6 +19,7 @@ from ..utils import (
     validate_input,
     validate_multi_input,
 )
+from ..pandas_ta_utils import pandas_ta_rsi, pandas_ta_macd
 
 
 class MomentumIndicators:
@@ -30,38 +31,19 @@ class MomentumIndicators:
     """
 
     @staticmethod
-    @handle_talib_errors
     def rsi(data: np.ndarray, period: int = 14) -> np.ndarray:
-        """Relative Strength Index (相対力指数)"""
-        data = ensure_numpy_array(data)
-        validate_input(data, period)
-        result = talib.RSI(data, timeperiod=period)
-        return cast(np.ndarray, format_indicator_result(result, "RSI"))
+        """Relative Strength Index (相対力指数) - pandas-ta版"""
+        return pandas_ta_rsi(data, period)
 
     @staticmethod
-    @handle_talib_errors
     def macd(
         data: np.ndarray,
         fast_period: int = 12,
         slow_period: int = 26,
         signal_period: int = 9,
     ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
-        """Moving Average Convergence Divergence (MACD)"""
-        data = ensure_numpy_array(data)
-        fast_period = max(2, fast_period)
-        slow_period = max(fast_period + 1, slow_period)
-        signal_period = max(2, signal_period)
-        validate_input(data, max(fast_period, slow_period, signal_period))
-        macd, signal_line, histogram = talib.MACD(
-            data,
-            fastperiod=fast_period,
-            slowperiod=slow_period,
-            signalperiod=signal_period,
-        )
-        return cast(
-            Tuple[np.ndarray, np.ndarray, np.ndarray],
-            format_indicator_result((macd, signal_line, histogram), "MACD"),
-        )
+        """Moving Average Convergence Divergence (MACD) - pandas-ta版"""
+        return pandas_ta_macd(data, fast_period, slow_period, signal_period)
 
     @staticmethod
     @handle_talib_errors

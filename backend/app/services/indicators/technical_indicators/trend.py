@@ -1,9 +1,9 @@
 """
-トレンド系テクニカル指標（オートストラテジー最適化版）
+トレンド系テクニカル指標（pandas-ta移行版）
 
-このモジュールはnumpy配列ベースでTa-libを直接使用し、
+このモジュールはpandas-taライブラリを使用し、
 backtesting.pyとの完全な互換性を提供します。
-pandas Seriesの変換は一切行いません。
+numpy配列ベースのインターフェースを維持しています。
 """
 
 from typing import Tuple, cast
@@ -19,6 +19,7 @@ from ..utils import (
     validate_input,
     validate_multi_input,
 )
+from ..pandas_ta_utils import pandas_ta_sma, pandas_ta_ema
 
 
 class TrendIndicators:
@@ -30,22 +31,14 @@ class TrendIndicators:
     """
 
     @staticmethod
-    @handle_talib_errors
     def sma(data: np.ndarray, period: int) -> np.ndarray:
-        """Simple Moving Average (単純移動平均)"""
-        data = ensure_numpy_array(data)
-        validate_input(data, period)
-        result = talib.SMA(data, timeperiod=period)
-        return cast(np.ndarray, format_indicator_result(result, "SMA"))
+        """Simple Moving Average (単純移動平均) - pandas-ta版"""
+        return pandas_ta_sma(data, period)
 
     @staticmethod
-    @handle_talib_errors
     def ema(data: np.ndarray, period: int) -> np.ndarray:
-        """Exponential Moving Average (指数移動平均)"""
-        data = ensure_numpy_array(data)
-        validate_input(data, period)
-        result = talib.EMA(data, timeperiod=period)
-        return cast(np.ndarray, format_indicator_result(result, "EMA"))
+        """Exponential Moving Average (指数移動平均) - pandas-ta版"""
+        return pandas_ta_ema(data, period)
 
     @staticmethod
     @handle_talib_errors
