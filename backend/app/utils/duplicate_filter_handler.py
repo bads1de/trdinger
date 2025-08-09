@@ -1,7 +1,7 @@
 import logging
 import time
 from collections import OrderedDict
-from typing import Dict, Tuple
+
 
 class DuplicateFilter(logging.Filter):
     """
@@ -42,7 +42,7 @@ class DuplicateFilter(logging.Filter):
                 return False  # 抑制
             # Move to end to mark as most recently used
             self.last_logs.move_to_end(message)
-        
+
         self.last_logs[message] = current_time
 
         # LRUキャッシュのサイズを制限

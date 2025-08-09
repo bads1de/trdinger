@@ -1,5 +1,6 @@
 # データ分析・数値計算
 pandas
+pandas-ta
 numpy
 
 # 暗号通貨取引所ライブラリ

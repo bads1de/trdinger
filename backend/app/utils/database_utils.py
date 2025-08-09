@@ -6,8 +6,7 @@ import logging
 from datetime import datetime
 from typing import Any, Dict, List, Optional, Type
 
-from sqlalchemy.dialects.postgresql import insert as postgresql_insert
-from sqlalchemy.dialects.sqlite import insert as sqlite_insert
+from sqlalchemy import insert
 from sqlalchemy.orm import Session
 
 logger = logging.getLogger(__name__)
@@ -17,22 +16,20 @@ class DatabaseInsertHelper:
     """データベース挿入処理の共通ヘルパークラス"""
 
     @staticmethod
-    def bulk_insert_with_conflict_handling(
+    def bulk_upsert_records(
         db: Session,
         model_class: Type,
         records: List[dict],
         conflict_columns: List[str],
-        database_url: str,
     ) -> int:
         """
-        データベースタイプに応じた重複処理付き一括挿入
+        重複処理付き一括挿入（DB方言に依存しない汎用実装）
 
         Args:
             db: データベースセッション
             model_class: SQLAlchemyモデルクラス
             records: 挿入するレコードのリスト
             conflict_columns: 重複チェック対象のカラム
-            database_url: データベースURL
 
         Returns:
             挿入された件数
@@ -42,63 +39,24 @@ class DatabaseInsertHelper:
             return 0
 
         try:
-            if "sqlite" in database_url.lower():
-                # SQLiteの場合は一件ずつINSERT OR IGNOREで処理
-                # SQLiteの場合は一件ずつINSERT OR IGNOREで処理
-                return DatabaseInsertHelper._sqlite_insert_with_ignore(
-                    db, model_class, records, conflict_columns
-                )
-            else:
-                # PostgreSQL の ON CONFLICT を使用して重複を無視
-                return DatabaseInsertHelper._postgresql_insert_with_conflict(
-                    db, model_class, records, conflict_columns
-                )
+            logger.info(f"一括挿入開始: {len(records)}件のデータを処理")
+
+            # SQLAlchemyの汎用insert文を使用（DB方言を自動判定）
+            stmt = insert(model_class).values(records)
+            stmt = stmt.on_conflict_do_nothing(index_elements=conflict_columns)
+
+            result = db.execute(stmt)
+            db.commit()
+
+            inserted_count = result.rowcount
+            logger.info(f"一括挿入完了: {inserted_count}/{len(records)}件挿入")
+
+            return inserted_count
 
         except Exception as e:
             db.rollback()
             logger.error(f"データベースへのデータ挿入中にエラーが発生しました: {e}")
             raise
-
-    @staticmethod
-    def _sqlite_insert_with_ignore(
-        db: Session,
-        model_class: Type,
-        records: List[dict],
-        conflict_columns: List[str],
-    ) -> int:
-        """SQLite用の重複無視挿入（SQLAlchemyのon_conflict_do_nothingを使用）"""
-        if not records:
-            return 0
-
-        logger.info(f"SQLite一括挿入開始: {len(records)}件のデータを処理")
-
-        try:
-            stmt = sqlite_insert(model_class).values(records)
-            stmt = stmt.on_conflict_do_nothing(index_elements=conflict_columns)
-            result = db.execute(stmt)
-            db.commit()
-            inserted_count = result.rowcount
-            logger.info(
-                f"SQLite一括挿入完了: {inserted_count}/{len(records)}件挿入"
-            )
-            return inserted_count
-        except Exception as e:
-            db.rollback()
-            logger.error(f"SQLite一括挿入エラー: {e}")
-            # エラーが発生した場合は、元の個別処理にフォールバックすることも検討できる
-            # ここではシンプルにエラーをraiseする
-            raise
-
-    @staticmethod
-    def _postgresql_insert_with_conflict(
-        db: Session, model_class: Type, records: List[dict], conflict_columns: List[str]
-    ) -> int:
-        """PostgreSQL用の重複無視挿入"""
-        stmt = postgresql_insert(model_class).values(records)
-        stmt = stmt.on_conflict_do_nothing(index_elements=conflict_columns)
-        result = db.execute(stmt)
-        db.commit()
-        return result.rowcount
 
 
 class DatabaseQueryHelper:
