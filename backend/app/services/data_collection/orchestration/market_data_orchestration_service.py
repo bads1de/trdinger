@@ -3,11 +3,12 @@
 """
 
 import logging
+from datetime import datetime
 from typing import Any, Dict, Optional
 
 from sqlalchemy.orm import Session
 
-from app.utils.api_utils import APIResponseHelper, DateTimeHelper
+from app.utils.api_utils import APIResponseHelper
 from app.utils.data_conversion import OHLCVDataConverter
 from database.repositories.ohlcv_repository import OHLCVRepository
 
@@ -35,9 +36,9 @@ class MarketDataOrchestrationService:
         end_time = None
 
         if start_date:
-            start_time = DateTimeHelper.parse_iso_datetime(start_date)
+            start_time = datetime.fromisoformat(start_date.replace("Z", "+00:00"))
         if end_date:
-            end_time = DateTimeHelper.parse_iso_datetime(end_date)
+            end_time = datetime.fromisoformat(end_date.replace("Z", "+00:00"))
 
         if start_time is None and end_time is None:
             ohlcv_records = self.repository.get_latest_ohlcv_data(

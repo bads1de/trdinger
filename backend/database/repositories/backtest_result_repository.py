@@ -8,6 +8,7 @@ from datetime import datetime, timedelta, date, time
 import logging
 from decimal import Decimal
 from sqlalchemy.orm import Session
+from sqlalchemy import desc, select, func, delete
 import numpy as np
 import pandas as pd
 
@@ -308,18 +309,15 @@ class BacktestResultRepository(BaseRepository):
             バックテスト結果のリスト
         """
         try:
-            results = (
-                self.db.query(BacktestResult)
-                .filter(BacktestResult.strategy_name == strategy_name)
+            # SQLAlchemy 2.0の標準的なselect文を使用
+            stmt = (
+                select(BacktestResult)
+                .where(BacktestResult.strategy_name == strategy_name)
                 .order_by(desc(BacktestResult.created_at))
-                .all()
             )
+            results = list(self.db.scalars(stmt).all())
 
-            # get_filtered_recordsがジェネリックな型を返す可能性を考慮し、
-            # BacktestResultのリストとして明示的にキャストしています。これにより、
-            # リスト内の各要素がto_dictメソッドを持つことが保証されます。
-            typed_results = cast(List[BacktestResult], results)
-            return [result.to_dict() for result in typed_results]
+            return [result.to_dict() for result in results]
 
         except Exception as e:
             raise Exception(
@@ -391,8 +389,10 @@ class BacktestResultRepository(BaseRepository):
             パフォーマンスサマリー
         """
         try:
-            # 総バックテスト結果数を取得
-            total_results = self.db.query(BacktestResult).count()
+            # 総バックテスト結果数を取得（SQLAlchemy 2.0 標準API使用）
+            total_results = (
+                self.db.scalar(select(func.count()).select_from(BacktestResult)) or 0
+            )
 
             if total_results == 0:
                 # 結果がない場合は、デフォルトのサマリーを返す
@@ -404,15 +404,15 @@ class BacktestResultRepository(BaseRepository):
                     "strategies_count": 0,
                 }
 
-            # 基本統計を計算（JSONBフィールドから値を抽出）
-            from sqlalchemy import func
-
-            # 戦略数
+            # 戦略数を取得（SQLAlchemy 2.0 標準API使用）
             # func.distinctを使用して、重複しない戦略名の数をカウントします。
             # これにより、異なる戦略がいくつ実行されたかを把握できます。
-            strategies_count = self.db.query(
-                func.count(func.distinct(BacktestResult.strategy_name))
-            ).scalar()
+            strategies_count = (
+                self.db.scalar(
+                    select(func.count(func.distinct(BacktestResult.strategy_name)))
+                )
+                or 0
+            )
 
             return {
                 "total_results": total_results,
@@ -444,11 +444,10 @@ class BacktestResultRepository(BaseRepository):
             cutoff_date = datetime.now() - timedelta(days=days_to_keep)
             logger.debug(f"削除対象の基準日: {cutoff_date}")
 
-            deleted_count = (
-                self.db.query(BacktestResult)
-                .filter(BacktestResult.created_at < cutoff_date)
-                .delete(synchronize_session=False)
-            )
+            # SQLAlchemy 2.0の標準的なdelete文を使用
+            stmt = delete(BacktestResult).where(BacktestResult.created_at < cutoff_date)
+            result = self.db.execute(stmt)
+            deleted_count = result.rowcount
 
             self.db.commit()
 

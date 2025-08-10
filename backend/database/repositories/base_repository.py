@@ -3,13 +3,11 @@
 """
 
 from typing import List, Optional, Type, Dict, Any, TypeVar, Generic, Callable
-from datetime import datetime
+from datetime import datetime, timezone
 from sqlalchemy.orm import Session
-from sqlalchemy import func
+from sqlalchemy import func, select, insert, delete, asc, desc
 import pandas as pd
 import logging
-
-from app.utils.database_utils import DatabaseInsertHelper, DatabaseQueryHelper
 
 
 logger = logging.getLogger(__name__)
@@ -28,7 +26,7 @@ class BaseRepository(Generic[T]):
         self, records: List[Dict[str, Any]], conflict_columns: List[str]
     ) -> int:
         """
-        重複処理付き一括挿入
+        重複処理付き一括挿入（SQLAlchemy 2.0 標準API使用）
 
         Args:
             records: 挿入するレコードのリスト
@@ -37,17 +35,49 @@ class BaseRepository(Generic[T]):
         Returns:
             挿入された件数
         """
-        from database.connection import DATABASE_URL
+        if not records:
+            logger.warning("挿入するレコードが指定されていません。")
+            return 0
 
-        return DatabaseInsertHelper.bulk_insert_with_conflict_handling(
-            self.db, self.model_class, records, conflict_columns, DATABASE_URL
-        )
+        try:
+            logger.info(f"一括挿入開始: {len(records)}件のデータを処理")
+
+            # SQLAlchemy 2.0の標準的なinsert文を使用
+            stmt = insert(self.model_class)
+
+            # PostgreSQLの場合はon_conflict_do_nothingを使用
+            # その他のDBの場合は個別に処理（簡易実装）
+            try:
+                # PostgreSQL用の重複処理
+                stmt = stmt.on_conflict_do_nothing(index_elements=conflict_columns)
+                result = self.db.execute(stmt, records)
+                inserted_count = result.rowcount
+            except AttributeError:
+                # PostgreSQL以外のDB用の代替処理
+                inserted_count = 0
+                for record in records:
+                    try:
+                        result = self.db.execute(stmt, record)
+                        if result.rowcount > 0:
+                            inserted_count += 1
+                    except Exception:
+                        # 重複エラーは無視
+                        continue
+
+            self.db.commit()
+            logger.info(f"一括挿入完了: {inserted_count}/{len(records)}件挿入")
+            return inserted_count
+
+        except Exception as e:
+            self.db.rollback()
+            logger.error(f"データベースへのデータ挿入中にエラーが発生しました: {e}")
+            raise
 
     def get_latest_timestamp(
         self, timestamp_column: str, filter_conditions: Optional[Dict[str, Any]] = None
     ) -> Optional[datetime]:
         """
-        最新タイムスタンプを取得
+        最新タイムスタンプを取得（SQLAlchemy 2.0 標準API使用）
 
         Args:
             timestamp_column: タイムスタンプカラム名
@@ -56,15 +86,31 @@ class BaseRepository(Generic[T]):
         Returns:
             最新のタイムスタンプ（データがない場合はNone）
         """
-        return DatabaseQueryHelper.get_latest_timestamp(
-            self.db, self.model_class, timestamp_column, filter_conditions
-        )
+        try:
+            # SQLAlchemy 2.0の標準的なselect文を使用
+            stmt = select(func.max(getattr(self.model_class, timestamp_column)))
+
+            if filter_conditions:
+                for column, value in filter_conditions.items():
+                    stmt = stmt.where(getattr(self.model_class, column) == value)
+
+            result = self.db.scalar(stmt)
+
+            # タイムゾーン情報が失われている場合はUTCを設定
+            if result and result.tzinfo is None:
+                result = result.replace(tzinfo=timezone.utc)
+
+            return result
+
+        except Exception as e:
+            logger.error(f"最新タイムスタンプの取得中にエラーが発生しました: {e}")
+            raise
 
     def get_oldest_timestamp(
         self, timestamp_column: str, filter_conditions: Optional[Dict[str, Any]] = None
     ) -> Optional[datetime]:
         """
-        最古タイムスタンプを取得
+        最古タイムスタンプを取得（SQLAlchemy 2.0 標準API使用）
 
         Args:
             timestamp_column: タイムスタンプカラム名
@@ -73,15 +119,31 @@ class BaseRepository(Generic[T]):
         Returns:
             最古のタイムスタンプ（データがない場合はNone）
         """
-        return DatabaseQueryHelper.get_oldest_timestamp(
-            self.db, self.model_class, timestamp_column, filter_conditions
-        )
+        try:
+            # SQLAlchemy 2.0の標準的なselect文を使用
+            stmt = select(func.min(getattr(self.model_class, timestamp_column)))
+
+            if filter_conditions:
+                for column, value in filter_conditions.items():
+                    stmt = stmt.where(getattr(self.model_class, column) == value)
+
+            result = self.db.scalar(stmt)
+
+            # タイムゾーン情報が失われている場合はUTCを設定
+            if result and result.tzinfo is None:
+                result = result.replace(tzinfo=timezone.utc)
+
+            return result
+
+        except Exception as e:
+            logger.error(f"最古タイムスタンプの取得中にエラーが発生しました: {e}")
+            raise
 
     def get_record_count(
         self, filter_conditions: Optional[Dict[str, Any]] = None
     ) -> int:
         """
-        レコード数を取得
+        レコード数を取得（SQLAlchemy 2.0 標準API使用）
 
         Args:
             filter_conditions: フィルター条件
@@ -89,15 +151,25 @@ class BaseRepository(Generic[T]):
         Returns:
             レコード数
         """
-        return DatabaseQueryHelper.get_record_count(
-            self.db, self.model_class, filter_conditions
-        )
+        try:
+            # SQLAlchemy 2.0の標準的なselect文を使用
+            stmt = select(func.count()).select_from(self.model_class)
+
+            if filter_conditions:
+                for column, value in filter_conditions.items():
+                    stmt = stmt.where(getattr(self.model_class, column) == value)
+
+            return self.db.scalar(stmt) or 0
+
+        except Exception as e:
+            logger.error(f"レコード数の取得中にエラーが発生しました: {e}")
+            raise
 
     def get_date_range(
         self, timestamp_column: str, filter_conditions: Optional[Dict[str, Any]] = None
     ):
         """
-        データ期間を取得
+        データ期間を取得（SQLAlchemy 2.0 標準API使用）
 
         Args:
             timestamp_column: タイムスタンプカラム名
@@ -106,9 +178,14 @@ class BaseRepository(Generic[T]):
         Returns:
             (最古のタイムスタンプ, 最新のタイムスタンプ)
         """
-        return DatabaseQueryHelper.get_date_range(
-            self.db, self.model_class, timestamp_column, filter_conditions
-        )
+        try:
+            oldest = self.get_oldest_timestamp(timestamp_column, filter_conditions)
+            latest = self.get_latest_timestamp(timestamp_column, filter_conditions)
+            return oldest, latest
+
+        except Exception as e:
+            logger.error(f"データ期間の取得中にエラーが発生しました: {e}")
+            raise
 
     def get_available_symbols(self, symbol_column: str = "symbol") -> List[str]:
         """
@@ -121,10 +198,10 @@ class BaseRepository(Generic[T]):
             シンボルのリスト
         """
         try:
-            symbols = (
-                self.db.query(getattr(self.model_class, symbol_column)).distinct().all()
-            )
-            return [symbol[0] for symbol in symbols]
+            # SQLAlchemy 2.0の標準的なselect文を使用
+            stmt = select(getattr(self.model_class, symbol_column)).distinct()
+            symbols = self.db.scalars(stmt).all()
+            return list(symbols)
 
         except Exception as e:
             logger.error(f"利用可能シンボル取得エラー: {e}")
@@ -132,10 +209,13 @@ class BaseRepository(Generic[T]):
 
     def _delete_all_records(self) -> int:
         """
-        全てのレコードを削除する汎用メソッド。
+        全てのレコードを削除する汎用メソッド（SQLAlchemy 2.0 標準API使用）
         """
         try:
-            deleted_count = self.db.query(self.model_class).delete()
+            # SQLAlchemy 2.0の標準的なdelete文を使用
+            stmt = delete(self.model_class)
+            result = self.db.execute(stmt)
+            deleted_count = result.rowcount
             self.db.commit()
             return deleted_count
         except Exception as e:
@@ -145,14 +225,15 @@ class BaseRepository(Generic[T]):
 
     def _delete_records_by_filter(self, filter_column: str, filter_value: Any) -> int:
         """
-        指定されたカラムと値に基づいてレコードを削除する汎用メソッド。
+        指定されたカラムと値に基づいてレコードを削除する汎用メソッド（SQLAlchemy 2.0 標準API使用）
         """
         try:
-            deleted_count = (
-                self.db.query(self.model_class)
-                .filter(getattr(self.model_class, filter_column) == filter_value)
-                .delete()
+            # SQLAlchemy 2.0の標準的なdelete文を使用
+            stmt = delete(self.model_class).where(
+                getattr(self.model_class, filter_column) == filter_value
             )
+            result = self.db.execute(stmt)
+            deleted_count = result.rowcount
             self.db.commit()
             return deleted_count
         except Exception as e:
@@ -202,18 +283,44 @@ class BaseRepository(Generic[T]):
             フィルタリングされたレコードのリスト
         """
         try:
-            return DatabaseQueryHelper.get_filtered_records(
-                db=self.db,
-                model_class=self.model_class,
-                filters=filters or {},
-                time_range_column=time_range_column,
-                start_time=start_time,
-                end_time=end_time,
-                order_by_column=order_by_column,
-                order_asc=order_asc,
-                limit=limit,
-                offset=offset,
-            )
+            # SQLAlchemy 2.0の標準的なselect文を使用
+            stmt = select(self.model_class)
+
+            # フィルター条件を適用
+            if filters:
+                for column, value in filters.items():
+                    stmt = stmt.where(getattr(self.model_class, column) == value)
+
+            # 時間範囲フィルターを適用
+            if time_range_column:
+                if start_time:
+                    stmt = stmt.where(
+                        getattr(self.model_class, time_range_column) >= start_time
+                    )
+                if end_time:
+                    stmt = stmt.where(
+                        getattr(self.model_class, time_range_column) <= end_time
+                    )
+
+            # ソート条件を適用
+            if order_by_column:
+                if order_asc:
+                    stmt = stmt.order_by(
+                        asc(getattr(self.model_class, order_by_column))
+                    )
+                else:
+                    stmt = stmt.order_by(
+                        desc(getattr(self.model_class, order_by_column))
+                    )
+
+            # ページネーション
+            if offset:
+                stmt = stmt.offset(offset)
+            if limit:
+                stmt = stmt.limit(limit)
+
+            return list(self.db.scalars(stmt).all())
+
         except Exception as e:
             logger.error(
                 f"フィルタリングデータ取得エラー ({self.model_class.__name__}): {e}"
@@ -345,21 +452,23 @@ class BaseRepository(Generic[T]):
             削除された件数
         """
         try:
-            query = self.db.query(self.model_class)
+            # SQLAlchemy 2.0の標準的なdelete文を使用
+            stmt = delete(self.model_class)
 
             # 時間範囲フィルター
             timestamp_attr = getattr(self.model_class, timestamp_column)
             if start_time:
-                query = query.filter(timestamp_attr >= start_time)
+                stmt = stmt.where(timestamp_attr >= start_time)
             if end_time:
-                query = query.filter(timestamp_attr <= end_time)
+                stmt = stmt.where(timestamp_attr <= end_time)
 
             # 追加フィルター
             if additional_filters:
                 for column, value in additional_filters.items():
-                    query = query.filter(getattr(self.model_class, column) == value)
+                    stmt = stmt.where(getattr(self.model_class, column) == value)
 
-            deleted_count = query.delete()
+            result = self.db.execute(stmt)
+            deleted_count = result.rowcount
             self.db.commit()
 
             logger.info(
@@ -411,20 +520,21 @@ class BaseRepository(Generic[T]):
             統計情報の辞書
         """
         try:
-            query = self.db.query(self.model_class)
+            # SQLAlchemy 2.0の標準的なselect文を使用
+            timestamp_attr = getattr(self.model_class, timestamp_column)
+
+            stmt = select(
+                func.count(self.model_class.id).label("total_count"),
+                func.min(timestamp_attr).label("oldest_timestamp"),
+                func.max(timestamp_attr).label("newest_timestamp"),
+            ).select_from(self.model_class)
 
             # フィルター適用
             if filters:
                 for column, value in filters.items():
-                    query = query.filter(getattr(self.model_class, column) == value)
+                    stmt = stmt.where(getattr(self.model_class, column) == value)
 
-            timestamp_attr = getattr(self.model_class, timestamp_column)
-
-            result = query.with_entities(
-                func.count(self.model_class.id).label("total_count"),
-                func.min(timestamp_attr).label("oldest_timestamp"),
-                func.max(timestamp_attr).label("newest_timestamp"),
-            ).first()
+            result = self.db.execute(stmt).first()
 
             return {
                 "total_count": result.total_count or 0,
