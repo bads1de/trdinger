@@ -8,14 +8,20 @@ TA-libの統計関数をNumPy標準関数で置き換えています。
 
 import logging
 import numpy as np
+import pandas as pd
 from typing import Union
 
 logger = logging.getLogger(__name__)
 
 
-def _validate_input(data: Union[np.ndarray, list], min_length: int = 1) -> np.ndarray:
-    """入力データの検証とnumpy配列への変換"""
-    if not isinstance(data, np.ndarray):
+def _validate_input(
+    data: Union[np.ndarray, pd.Series, list], min_length: int = 1
+) -> np.ndarray:
+    """入力データの検証とnumpy配列への変換（pandas.Series対応版）"""
+    # pandas.Seriesの場合はnumpy配列に変換
+    if isinstance(data, pd.Series):
+        data = data.to_numpy()
+    elif not isinstance(data, np.ndarray):
         data = np.array(data, dtype=float)
 
     if len(data) < min_length:
@@ -24,7 +30,7 @@ def _validate_input(data: Union[np.ndarray, list], min_length: int = 1) -> np.nd
     return data
 
 
-def _validate_dual_input(data0: np.ndarray, data1: np.ndarray) -> None:
+def _validate_dual_input(data0: Union[np.ndarray, pd.Series], data1: Union[np.ndarray, pd.Series]) -> None:
     """2つの入力データの長さ一致確認"""
     if len(data0) != len(data1):
         raise ValueError(
@@ -82,7 +88,7 @@ class StatisticsIndicators:
         return result
 
     @staticmethod
-    def linearreg(data: np.ndarray, period: int = 14) -> np.ndarray:
+    def linearreg(data: Union[np.ndarray, pd.Series], period: int = 14) -> np.ndarray:
         """Linear Regression (線形回帰)"""
         data = _validate_input(data, period)
         result = np.full_like(data, np.nan)
@@ -98,7 +104,7 @@ class StatisticsIndicators:
         return result
 
     @staticmethod
-    def linearreg_angle(data: np.ndarray, period: int = 14) -> np.ndarray:
+    def linearreg_angle(data: Union[np.ndarray, pd.Series], period: int = 14) -> np.ndarray:
         """Linear Regression Angle (線形回帰角度)"""
         data = _validate_input(data, period)
         result = np.full_like(data, np.nan)
@@ -114,7 +120,7 @@ class StatisticsIndicators:
         return result
 
     @staticmethod
-    def linearreg_intercept(data: np.ndarray, period: int = 14) -> np.ndarray:
+    def linearreg_intercept(data: Union[np.ndarray, pd.Series], period: int = 14) -> np.ndarray:
         """Linear Regression Intercept (線形回帰切片)"""
         data = _validate_input(data, period)
         result = np.full_like(data, np.nan)
@@ -130,7 +136,7 @@ class StatisticsIndicators:
         return result
 
     @staticmethod
-    def linearreg_slope(data: np.ndarray, period: int = 14) -> np.ndarray:
+    def linearreg_slope(data: Union[np.ndarray, pd.Series], period: int = 14) -> np.ndarray:
         """Linear Regression Slope (線形回帰傾き)"""
         data = _validate_input(data, period)
         result = np.full_like(data, np.nan)
@@ -146,7 +152,7 @@ class StatisticsIndicators:
         return result
 
     @staticmethod
-    def stddev(data: np.ndarray, period: int = 5, nbdev: float = 1.0) -> np.ndarray:
+    def stddev(data: Union[np.ndarray, pd.Series], period: int = 5, nbdev: float = 1.0) -> np.ndarray:
         """Standard Deviation (標準偏差)"""
         data = _validate_input(data, period)
         result = np.full_like(data, np.nan)
@@ -158,7 +164,7 @@ class StatisticsIndicators:
         return result
 
     @staticmethod
-    def tsf(data: np.ndarray, period: int = 14) -> np.ndarray:
+    def tsf(data: Union[np.ndarray, pd.Series], period: int = 14) -> np.ndarray:
         """Time Series Forecast (時系列予測)"""
         data = _validate_input(data, period)
         result = np.full_like(data, np.nan)
@@ -174,7 +180,7 @@ class StatisticsIndicators:
         return result
 
     @staticmethod
-    def var(data: np.ndarray, period: int = 5, nbdev: float = 1.0) -> np.ndarray:
+    def var(data: Union[np.ndarray, pd.Series], period: int = 5, nbdev: float = 1.0) -> np.ndarray:
         """Variance (分散)"""
         data = _validate_input(data, period)
         result = np.full_like(data, np.nan)

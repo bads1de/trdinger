@@ -11,8 +11,7 @@ import numpy as np
 import pandas as pd
 
 from .config import IndicatorConfig, indicator_registry
-from .pandas_ta_utils import PandasTAError
-from .utils import ensure_numpy_array, normalize_data_for_trig
+from .utils import PandasTAError, normalize_data_for_trig
 
 logger = logging.getLogger(__name__)
 
@@ -77,16 +76,31 @@ class TechnicalIndicatorService:
 
             # データキーを適切な関数パラメータ名にマッピング
             param_name = self._map_data_key_to_param(indicator_type, data_key)
-            array = df[actual_column].to_numpy()
-            required_data[param_name] = ensure_numpy_array(array)
+            # 型変換をなくし、Seriesを直接渡す
+            required_data[param_name] = df[actual_column]
 
         # 必要に応じて入力データを正規化
         if config.needs_normalization:
-            for key, data_array in required_data.items():
-                required_data[key] = normalize_data_for_trig(data_array)
+            for key, data_series in required_data.items():
+                # Seriesからnumpy配列に変換して正規化し、再度Seriesに戻す
+                normalized_array = normalize_data_for_trig(data_series.to_numpy())
+                required_data[key] = pd.Series(
+                    normalized_array, index=data_series.index
+                )
+
+        # パラメータ名の変換（period -> length、ただし一部の指標は除外）
+        converted_params = {}
+        # lengthパラメータを使わない指標のリスト
+        period_based_indicators = ["MA", "MAVP"]
+
+        for key, value in params.items():
+            if key == "period" and indicator_type not in period_based_indicators:
+                converted_params["length"] = value
+            else:
+                converted_params[key] = value
 
         # パラメータとデータを結合して関数を呼び出し
-        all_args = {**required_data, **params}
+        all_args = {**required_data, **converted_params}
 
         try:
             result = indicator_func(**all_args)

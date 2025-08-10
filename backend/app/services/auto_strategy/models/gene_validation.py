@@ -90,12 +90,6 @@ class GeneValidator:
                 "OBV",
                 "AD",
                 "ADOSC",
-                # サイクル系指標
-                "HT_DCPERIOD",
-                "HT_DCPHASE",
-                "HT_TRENDMODE",
-                "HT_PHASOR",
-                "HT_SINE",
                 # 統計系指標
                 "BETA",
                 "CORREL",

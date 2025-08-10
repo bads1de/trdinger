@@ -23,7 +23,7 @@ class IndicatorType(Enum):
     MOMENTUM = "momentum"  # モメンタム系
     TREND = "trend"  # トレンド系
     VOLATILITY = "volatility"  # ボラティリティ系
-    CYCLE = "cycle"  # サイクル系
+
     STATISTICS = "statistics"  # 統計系
     MATH_TRANSFORM = "math_transform"  # 数学変換系
     MATH_OPERATORS = "math_operators"  # 数学演算子系
@@ -93,38 +93,6 @@ INDICATOR_CHARACTERISTICS = {
         "type": IndicatorType.VOLATILITY,
         "range": (0, None),
         "volatility_measure": True,
-    },
-    # サイクル系インジケータ
-    "HT_DCPERIOD": {
-        "type": IndicatorType.CYCLE,
-        "range": (10, 50),  # 一般的なサイクル期間
-        "cycle_analysis": True,
-        "trend_following": False,
-    },
-    "HT_DCPHASE": {
-        "type": IndicatorType.CYCLE,
-        "range": (-180, 180),  # 位相角度
-        "zero_cross": True,
-        "cycle_analysis": True,
-    },
-    "HT_PHASOR": {
-        "type": IndicatorType.CYCLE,
-        "range": None,  # 複数値出力
-        "components": ["inphase", "quadrature"],
-        "cycle_analysis": True,
-    },
-    "HT_SINE": {
-        "type": IndicatorType.CYCLE,
-        "range": (-1, 1),  # サイン波
-        "zero_cross": True,
-        "components": ["sine", "leadsine"],
-        "cycle_analysis": True,
-    },
-    "HT_TRENDMODE": {
-        "type": IndicatorType.CYCLE,
-        "range": (0, 1),  # バイナリ出力
-        "trend_mode": True,
-        "binary_signal": True,
     },
     # 統計系インジケータ
     "BETA": {
@@ -692,12 +660,6 @@ class SmartConditionGenerator:
                     )
 
             # 新しいカテゴリのインジケータを活用
-            # サイクル系指標の追加（ロング条件のみ）
-            if indicators_by_type[IndicatorType.CYCLE]:
-                cycle_indicator = random.choice(indicators_by_type[IndicatorType.CYCLE])
-                long_conditions.extend(
-                    self._create_cycle_long_conditions(cycle_indicator)
-                )
 
             # 統計系指標の追加（ロング条件のみ）
             if indicators_by_type[IndicatorType.STATISTICS]:
@@ -782,33 +744,6 @@ class SmartConditionGenerator:
             # MACD: ゼロライン上抜けでロング
             return [
                 Condition(left_operand=indicator_name, operator=">", right_operand=0)
-            ]
-        else:
-            return []
-
-    def _create_cycle_long_conditions(
-        self, indicator: IndicatorGene
-    ) -> List[Condition]:
-        """サイクル系指標のロング条件を生成"""
-        indicator_name = f"{indicator.type}_{indicator.parameters.get('period', 14)}"
-
-        if indicator.type == "HT_DCPHASE":
-            # 位相が上昇トレンドでロング
-            threshold = random.uniform(-90, 0)
-            return [
-                Condition(
-                    left_operand=indicator_name, operator=">", right_operand=threshold
-                )
-            ]
-        elif indicator.type == "HT_SINE":
-            # サイン波が下から上へクロスでロング
-            return [
-                Condition(left_operand=indicator_name, operator=">", right_operand=0)
-            ]
-        elif indicator.type == "HT_TRENDMODE":
-            # トレンドモードでロング
-            return [
-                Condition(left_operand=indicator_name, operator=">", right_operand=0.5)
             ]
         else:
             return []
@@ -1134,8 +1069,7 @@ class SmartConditionGenerator:
                         long_conds = self._create_momentum_long_conditions(indicator)
                     elif indicator_type == IndicatorType.TREND:
                         long_conds = self._create_trend_long_conditions(indicator)
-                    elif indicator_type == IndicatorType.CYCLE:
-                        long_conds = self._create_cycle_long_conditions(indicator)
+
                     elif indicator_type == IndicatorType.STATISTICS:
                         long_conds = self._create_statistics_long_conditions(indicator)
                     elif indicator_type == IndicatorType.PATTERN_RECOGNITION:

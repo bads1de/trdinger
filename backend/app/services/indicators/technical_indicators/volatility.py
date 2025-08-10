@@ -15,7 +15,7 @@ import pandas_ta as ta
 from ..utils import (
     PandasTAError,
     handle_pandas_ta_errors,
-    to_pandas_series,
+    ensure_series_minimal_conversion,
     validate_series_data,
     validate_indicator_parameters,
 )
@@ -38,15 +38,17 @@ class VolatilityIndicators:
         length: int = 14,
     ) -> np.ndarray:
         """平均真の値幅"""
-        high_series = to_pandas_series(high)
-        low_series = to_pandas_series(low)
-        close_series = to_pandas_series(close)
+        high_series = ensure_series_minimal_conversion(high)
+        low_series = ensure_series_minimal_conversion(low)
+        close_series = ensure_series_minimal_conversion(close)
 
         validate_series_data(high_series, length)
         validate_series_data(low_series, length)
         validate_series_data(close_series, length)
 
-        result = ta.atr(high=high_series, low=low_series, close=close_series, length=length)
+        result = ta.atr(
+            high=high_series, low=low_series, close=close_series, length=length
+        )
         return result.values
 
     @staticmethod
@@ -58,9 +60,9 @@ class VolatilityIndicators:
         length: int = 14,
     ) -> np.ndarray:
         """正規化平均実効値幅"""
-        high_series = to_pandas_series(high)
-        low_series = to_pandas_series(low)
-        close_series = to_pandas_series(close)
+        high_series = ensure_series_minimal_conversion(high)
+        low_series = ensure_series_minimal_conversion(low)
+        close_series = ensure_series_minimal_conversion(close)
 
         validate_series_data(high_series, length)
         validate_series_data(low_series, length)
@@ -79,9 +81,9 @@ class VolatilityIndicators:
         close: Union[np.ndarray, pd.Series],
     ) -> np.ndarray:
         """真の値幅"""
-        high_series = to_pandas_series(high)
-        low_series = to_pandas_series(low)
-        close_series = to_pandas_series(close)
+        high_series = ensure_series_minimal_conversion(high)
+        low_series = ensure_series_minimal_conversion(low)
+        close_series = ensure_series_minimal_conversion(close)
 
         validate_series_data(high_series, 1)
         validate_series_data(low_series, 1)
@@ -96,13 +98,17 @@ class VolatilityIndicators:
         data: Union[np.ndarray, pd.Series], length: int = 20, std: float = 2.0
     ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
         """ボリンジャーバンド"""
-        series = to_pandas_series(data)
+        series = ensure_series_minimal_conversion(data)
         validate_series_data(series, length)
         result = ta.bbands(series, length=length, std=std)
 
-        upper_col = f"BBU_{length}_{std}"
-        middle_col = f"BBM_{length}_{std}"
-        lower_col = f"BBL_{length}_{std}"
+        # 列名を動的に取得（pandas-taのバージョンによって異なる可能性がある）
+        columns = result.columns.tolist()
+
+        # 上位、中位、下位バンドを特定
+        upper_col = [col for col in columns if "BBU" in col][0]
+        middle_col = [col for col in columns if "BBM" in col][0]
+        lower_col = [col for col in columns if "BBL" in col][0]
 
         return (
             result[upper_col].values,
@@ -116,7 +122,7 @@ class VolatilityIndicators:
         data: Union[np.ndarray, pd.Series], length: int = 5, ddof: int = 1
     ) -> np.ndarray:
         """標準偏差"""
-        series = to_pandas_series(data)
+        series = ensure_series_minimal_conversion(data)
         validate_series_data(series, length)
         result = ta.stdev(series, length=length, ddof=ddof)
         return result.values
@@ -127,7 +133,7 @@ class VolatilityIndicators:
         data: Union[np.ndarray, pd.Series], length: int = 5, ddof: int = 1
     ) -> np.ndarray:
         """分散"""
-        series = to_pandas_series(data)
+        series = ensure_series_minimal_conversion(data)
         validate_series_data(series, length)
         result = ta.variance(series, length=length, ddof=ddof)
         return result.values
@@ -141,15 +147,17 @@ class VolatilityIndicators:
         length: int = 14,
     ) -> np.ndarray:
         """平均方向性指数"""
-        high_series = to_pandas_series(high)
-        low_series = to_pandas_series(low)
-        close_series = to_pandas_series(close)
+        high_series = ensure_series_minimal_conversion(high)
+        low_series = ensure_series_minimal_conversion(low)
+        close_series = ensure_series_minimal_conversion(close)
 
         validate_series_data(high_series, length)
         validate_series_data(low_series, length)
         validate_series_data(close_series, length)
 
-        result = ta.adx(high=high_series, low=low_series, close=close_series, length=length)
+        result = ta.adx(
+            high=high_series, low=low_series, close=close_series, length=length
+        )
         return result[f"ADX_{length}"].values
 
     @staticmethod
@@ -161,9 +169,9 @@ class VolatilityIndicators:
         length: int = 14,
     ) -> np.ndarray:
         """ADX評価"""
-        high_series = to_pandas_series(high)
-        low_series = to_pandas_series(low)
-        close_series = to_pandas_series(close)
+        high_series = ensure_series_minimal_conversion(high)
+        low_series = ensure_series_minimal_conversion(low)
+        close_series = ensure_series_minimal_conversion(close)
 
         validate_series_data(high_series, length)
         validate_series_data(low_series, length)
@@ -184,9 +192,9 @@ class VolatilityIndicators:
     ) -> np.ndarray:
         """Directional Movement Index wrapper (DX)"""
         # pandas-ta returns DX as part of adx; extract DX
-        high_s = to_pandas_series(high)
-        low_s = to_pandas_series(low)
-        close_s = to_pandas_series(close)
+        high_s = ensure_series_minimal_conversion(high)
+        low_s = ensure_series_minimal_conversion(low)
+        close_s = ensure_series_minimal_conversion(close)
         validate_series_data(high_s, length)
         validate_series_data(low_s, length)
         validate_series_data(close_s, length)
@@ -205,9 +213,9 @@ class VolatilityIndicators:
     @staticmethod
     @handle_pandas_ta_errors
     def minus_di(high, low, close, length: int = 14) -> np.ndarray:
-        high_s = to_pandas_series(high)
-        low_s = to_pandas_series(low)
-        close_s = to_pandas_series(close)
+        high_s = ensure_series_minimal_conversion(high)
+        low_s = ensure_series_minimal_conversion(low)
+        close_s = ensure_series_minimal_conversion(close)
         result = ta.adx(high=high_s, low=low_s, close=close_s, length=length)
         col = f"DMN_{length}"
         if col in result.columns:
@@ -217,9 +225,9 @@ class VolatilityIndicators:
     @staticmethod
     @handle_pandas_ta_errors
     def plus_di(high, low, close, length: int = 14) -> np.ndarray:
-        high_s = to_pandas_series(high)
-        low_s = to_pandas_series(low)
-        close_s = to_pandas_series(close)
+        high_s = ensure_series_minimal_conversion(high)
+        low_s = ensure_series_minimal_conversion(low)
+        close_s = ensure_series_minimal_conversion(close)
         result = ta.adx(high=high_s, low=low_s, close=close_s, length=length)
         col = f"DMP_{length}"
         if col in result.columns:
@@ -229,8 +237,8 @@ class VolatilityIndicators:
     @staticmethod
     @handle_pandas_ta_errors
     def minus_dm(high, low, length: int = 14) -> np.ndarray:
-        high_s = to_pandas_series(high)
-        low_s = to_pandas_series(low)
+        high_s = ensure_series_minimal_conversion(high)
+        low_s = ensure_series_minimal_conversion(low)
         result = ta.dm(high=high_s, low=low_s, length=length)
         # pandas-ta dm returns DMP and DMN columns
         cols = [c for c in result.columns if c.startswith("DMN_")]
@@ -241,8 +249,8 @@ class VolatilityIndicators:
     @staticmethod
     @handle_pandas_ta_errors
     def plus_dm(high, low, length: int = 14) -> np.ndarray:
-        high_s = to_pandas_series(high)
-        low_s = to_pandas_series(low)
+        high_s = ensure_series_minimal_conversion(high)
+        low_s = ensure_series_minimal_conversion(low)
         result = ta.dm(high=high_s, low=low_s, length=length)
         # pandas-ta dm returns DMP and DMN columns
         cols = [c for c in result.columns if c.startswith("DMP_")]
@@ -258,8 +266,8 @@ class VolatilityIndicators:
         length: int = 14,
     ) -> Tuple[np.ndarray, np.ndarray]:
         """アルーン"""
-        high_series = to_pandas_series(high)
-        low_series = to_pandas_series(low)
+        high_series = ensure_series_minimal_conversion(high)
+        low_series = ensure_series_minimal_conversion(low)
 
         validate_series_data(high_series, length)
         validate_series_data(low_series, length)
@@ -275,8 +283,8 @@ class VolatilityIndicators:
         length: int = 14,
     ) -> np.ndarray:
         """アルーンオシレーター"""
-        high_series = to_pandas_series(high)
-        low_series = to_pandas_series(low)
+        high_series = ensure_series_minimal_conversion(high)
+        low_series = ensure_series_minimal_conversion(low)
 
         validate_series_data(high_series, length)
         validate_series_data(low_series, length)

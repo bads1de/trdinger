@@ -15,7 +15,7 @@ import pandas_ta as ta
 from ..utils import (
     PandasTAError,
     handle_pandas_ta_errors,
-    to_pandas_series,
+    ensure_series_minimal_conversion,
     validate_series_data,
 )
 
@@ -37,10 +37,10 @@ class PriceTransformIndicators:
         close: Union[np.ndarray, pd.Series],
     ) -> np.ndarray:
         """平均価格"""
-        open_series = to_pandas_series(open_data)
-        high_series = to_pandas_series(high)
-        low_series = to_pandas_series(low)
-        close_series = to_pandas_series(close)
+        open_series = ensure_series_minimal_conversion(open_data)
+        high_series = ensure_series_minimal_conversion(high)
+        low_series = ensure_series_minimal_conversion(low)
+        close_series = ensure_series_minimal_conversion(close)
 
         validate_series_data(open_series, 1)
         validate_series_data(high_series, 1)
@@ -58,8 +58,8 @@ class PriceTransformIndicators:
         high: Union[np.ndarray, pd.Series], low: Union[np.ndarray, pd.Series]
     ) -> np.ndarray:
         """中央値価格"""
-        high_series = to_pandas_series(high)
-        low_series = to_pandas_series(low)
+        high_series = ensure_series_minimal_conversion(high)
+        low_series = ensure_series_minimal_conversion(low)
 
         validate_series_data(high_series, 1)
         validate_series_data(low_series, 1)
@@ -75,9 +75,9 @@ class PriceTransformIndicators:
         close: Union[np.ndarray, pd.Series],
     ) -> np.ndarray:
         """典型価格"""
-        high_series = to_pandas_series(high)
-        low_series = to_pandas_series(low)
-        close_series = to_pandas_series(close)
+        high_series = ensure_series_minimal_conversion(high)
+        low_series = ensure_series_minimal_conversion(low)
+        close_series = ensure_series_minimal_conversion(close)
 
         validate_series_data(high_series, 1)
         validate_series_data(low_series, 1)
@@ -94,9 +94,9 @@ class PriceTransformIndicators:
         close: Union[np.ndarray, pd.Series],
     ) -> np.ndarray:
         """加重終値価格"""
-        high_series = to_pandas_series(high)
-        low_series = to_pandas_series(low)
-        close_series = to_pandas_series(close)
+        high_series = ensure_series_minimal_conversion(high)
+        low_series = ensure_series_minimal_conversion(low)
+        close_series = ensure_series_minimal_conversion(close)
 
         validate_series_data(high_series, 1)
         validate_series_data(low_series, 1)

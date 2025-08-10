@@ -19,12 +19,12 @@ class PandasTAError(Exception):
     """pandas-ta関連のエラー"""
 
 
-def validate_input(data: np.ndarray, period: int) -> None:
+def validate_input(data: Union[np.ndarray, pd.Series], period: int) -> None:
     """
-    入力データの基本検証（numpy配列版）
+    入力データの基本検証（numpy配列・pandas.Series対応版）
 
     Args:
-        data: 検証対象のnumpy配列
+        data: 検証対象のデータ（numpy配列またはpandas.Series）
         period: 期間パラメータ
 
     Raises:
@@ -33,9 +33,9 @@ def validate_input(data: np.ndarray, period: int) -> None:
     if data is None:
         raise PandasTAError("入力データがNoneです")
 
-    if not isinstance(data, np.ndarray):
+    if not isinstance(data, (np.ndarray, pd.Series)):
         raise PandasTAError(
-            f"入力データはnumpy配列である必要があります。実際の型: {type(data)}"
+            f"入力データはnumpy配列またはpandas.Seriesである必要があります。実際の型: {type(data)}"
         )
 
     if len(data) == 0:
@@ -48,23 +48,31 @@ def validate_input(data: np.ndarray, period: int) -> None:
         raise PandasTAError(f"データ長({len(data)})が期間({period})より短いです")
 
     # NaNや無限大の値をチェック
-    if np.any(np.isnan(data)):
-        logger.warning("入力データにNaN値が含まれています")
-
-    if np.any(np.isinf(data)):
-        raise PandasTAError("入力データに無限大の値が含まれています")
+    if isinstance(data, pd.Series):
+        if data.isna().any():
+            logger.warning("入力データにNaN値が含まれています")
+        if np.isinf(data).any():
+            raise PandasTAError("入力データに無限大の値が含まれています")
+    else:  # numpy配列の場合
+        if np.any(np.isnan(data)):
+            logger.warning("入力データにNaN値が含まれています")
+        if np.any(np.isinf(data)):
+            raise PandasTAError("入力データに無限大の値が含まれています")
 
 
 def validate_multi_input(
-    high: np.ndarray, low: np.ndarray, close: np.ndarray, period: int
+    high: Union[np.ndarray, pd.Series],
+    low: Union[np.ndarray, pd.Series],
+    close: Union[np.ndarray, pd.Series],
+    period: int,
 ) -> None:
     """
-    複数の価格データの検証（OHLC系指標用）
+    複数の価格データの検証（OHLC系指標用・pandas.Series対応版）
 
     Args:
-        high: 高値データ
-        low: 安値データ
-        close: 終値データ
+        high: 高値データ（numpy配列またはpandas.Series）
+        low: 安値データ（numpy配列またはpandas.Series）
+        close: 終値データ（numpy配列またはpandas.Series）
         period: 期間パラメータ
 
     Raises:
@@ -81,12 +89,32 @@ def validate_multi_input(
             f"価格データの長さが一致しません。High: {len(high)}, Low: {len(low)}, Close: {len(close)}"
         )
 
-    # 価格の論理的整合性チェック
-    if np.any(high < low):
-        raise PandasTAError("高値が安値より低い箇所があります")
+    # 価格の論理的整合性チェック（pandas.Series対応）
+    if isinstance(high, pd.Series) and isinstance(low, pd.Series):
+        if (high < low).any():
+            raise PandasTAError("高値が安値より低い箇所があります")
+    else:
+        # numpy配列の場合
+        high_array = high.to_numpy() if isinstance(high, pd.Series) else high
+        low_array = low.to_numpy() if isinstance(low, pd.Series) else low
+        if np.any(high_array < low_array):
+            raise PandasTAError("高値が安値より低い箇所があります")
 
-    if np.any((close > high) | (close < low)):
-        logger.warning("終値が高値・安値の範囲外の箇所があります")
+    # 終値の範囲チェック
+    if (
+        isinstance(high, pd.Series)
+        and isinstance(low, pd.Series)
+        and isinstance(close, pd.Series)
+    ):
+        if ((close > high) | (close < low)).any():
+            logger.warning("終値が高値・安値の範囲外の箇所があります")
+    else:
+        # numpy配列の場合
+        high_array = high.to_numpy() if isinstance(high, pd.Series) else high
+        low_array = low.to_numpy() if isinstance(low, pd.Series) else low
+        close_array = close.to_numpy() if isinstance(close, pd.Series) else close
+        if np.any((close_array > high_array) | (close_array < low_array)):
+            logger.warning("終値が高値・安値の範囲外の箇所があります")
 
 
 def handle_pandas_ta_errors(func):
@@ -142,40 +170,142 @@ def handle_pandas_ta_errors(func):
     return wrapper
 
 
-def ensure_numpy_array(data: Union[np.ndarray, list, "pd.Series"]) -> np.ndarray:
+def validate_series_data(series: pd.Series, min_length: int) -> None:
     """
-    データをnumpy配列に変換（オートストラテジー最適化）
+    pandas.Seriesデータの検証
 
     Args:
-        data: 変換対象のデータ
+        series: 検証対象のpandas.Series
+        min_length: 最小データ長
+
+    Raises:
+        PandasTAError: データが無効な場合
+    """
+    if series is None:
+        raise PandasTAError("SeriesデータがNoneです")
+
+    if not isinstance(series, pd.Series):
+        raise PandasTAError(
+            f"pandas.Seriesである必要があります。実際の型: {type(series)}"
+        )
+
+    if len(series) == 0:
+        raise PandasTAError("Seriesデータが空です")
+
+    if min_length <= 0:
+        raise PandasTAError(f"最小長は正の整数である必要があります: {min_length}")
+
+    if len(series) < min_length:
+        raise PandasTAError(
+            f"データ長({len(series)})が最小長({min_length})より短いです"
+        )
+
+    # NaNや無限大の値をチェック
+    if series.isna().any():
+        logger.warning("SeriesデータにNaN値が含まれています")
+
+    if np.isinf(series).any():
+        raise PandasTAError("Seriesデータに無限大の値が含まれています")
+
+
+def validate_indicator_parameters(*args, **kwargs) -> None:
+    """
+    インジケーターパラメータの検証
+
+    Args:
+        *args: 位置引数（通常は期間パラメータ）
+        **kwargs: キーワード引数
+
+    Raises:
+        PandasTAError: パラメータが無効な場合
+    """
+    # 位置引数の検証（通常は期間パラメータ）
+    for i, arg in enumerate(args):
+        if isinstance(arg, (int, float)):
+            if arg <= 0:
+                raise PandasTAError(
+                    f"パラメータ{i+1}は正の値である必要があります: {arg}"
+                )
+        elif arg is not None:
+            # None以外の非数値パラメータは警告
+            logger.warning(f"パラメータ{i+1}が数値ではありません: {type(arg)}")
+
+    # キーワード引数の検証
+    for key, value in kwargs.items():
+        if isinstance(value, (int, float)) and value <= 0:
+            raise PandasTAError(
+                f"パラメータ'{key}'は正の値である必要があります: {value}"
+            )
+
+
+def normalize_data_for_trig(data: Union[np.ndarray, pd.Series]) -> np.ndarray:
+    """
+    三角関数用のデータ正規化（-1から1の範囲にクリップ）
+
+    Args:
+        data: 正規化対象のデータ
 
     Returns:
-        float64型のnumpy配列
+        正規化されたnumpy配列
 
     Note:
-        pandas-taはfloat64型を要求するため、必ずfloat64に変換します。
+        ASIN、ACOSなどの三角関数で使用するため、値を-1から1の範囲にクリップします。
     """
-    if data is None:
-        raise PandasTAError("データがNoneです")
+    if isinstance(data, pd.Series):
+        array = data.to_numpy()
+    elif isinstance(data, np.ndarray):
+        array = data
+    else:
+        array = np.asarray(data, dtype=np.float64)
 
-    try:
-        # pandas Seriesの場合
-        if isinstance(data, pd.Series):
-            array = data.to_numpy()
-        # 既にnumpy配列の場合
-        elif isinstance(data, np.ndarray):
-            array = data
-        # listやその他のシーケンス型の場合
-        else:
-            array = np.asarray(data, dtype=np.float64)
+    # -1から1の範囲にクリップ
+    return np.clip(array, -1.0, 1.0)
 
-        # pandas-ta用にfloat64に変換
-        if array.dtype != np.float64:
-            return array.astype(np.float64)
-        return array
 
-    except (ValueError, TypeError) as e:
-        raise PandasTAError(f"データをnumpy配列に変換できません: {e}")
+def ensure_series_minimal_conversion(data: Union[np.ndarray, pd.Series]) -> pd.Series:
+    """
+    最小限の型変換でpandas.Seriesを確保（型変換最小化版）
+
+    Args:
+        data: 入力データ
+
+    Returns:
+        pandas.Series
+
+    Note:
+        既にpandas.Seriesの場合は変換せずそのまま返します。
+        numpy配列の場合のみpandas.Seriesに変換します。
+    """
+    if isinstance(data, pd.Series):
+        return data
+    elif isinstance(data, np.ndarray):
+        return pd.Series(data, dtype=np.float64)
+    else:
+        # その他の型（list等）の場合
+        return pd.Series(data, dtype=np.float64)
+
+
+def ensure_numpy_minimal_conversion(data: Union[np.ndarray, pd.Series]) -> np.ndarray:
+    """
+    最小限の型変換でnumpy配列を確保（型変換最小化版）
+
+    Args:
+        data: 入力データ
+
+    Returns:
+        numpy配列
+
+    Note:
+        既にnumpy配列の場合は変換せずそのまま返します。
+        pandas.Seriesの場合のみnumpy配列に変換します。
+    """
+    if isinstance(data, np.ndarray):
+        return data
+    elif isinstance(data, pd.Series):
+        return data.to_numpy()
+    else:
+        # その他の型（list等）の場合
+        return np.asarray(data, dtype=np.float64)
 
 
 def format_indicator_result(
@@ -219,5 +349,3 @@ def normalize_data_for_trig(data: np.ndarray) -> np.ndarray:
 
     # 計算誤差により範囲外になる可能性を考慮し、クリッピング
     return np.clip(normalized_data, -1.0, 1.0)
-
-

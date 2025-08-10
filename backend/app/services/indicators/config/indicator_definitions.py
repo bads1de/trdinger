@@ -4,7 +4,6 @@
 各インジケーターの設定を定義し、レジストリに登録します。
 """
 
-from app.services.indicators.technical_indicators.cycle import CycleIndicators
 from app.services.indicators.technical_indicators.math_operators import (
     MathOperatorsIndicators,
 )
@@ -202,7 +201,7 @@ def setup_momentum_indicators():
     # WILLR
     willr_config = IndicatorConfig(
         indicator_name="WILLR",
-        adapter_function=MomentumIndicators.williams_r,
+        adapter_function=MomentumIndicators.willr,
         required_data=["high", "low", "close"],
         result_type=IndicatorResultType.SINGLE,
         scale_type=IndicatorScaleType.OSCILLATOR_PLUS_MINUS_100,
@@ -1005,7 +1004,7 @@ def setup_volatility_indicators():
     # Bollinger Bands
     bb_config = IndicatorConfig(
         indicator_name="BB",
-        adapter_function=VolatilityIndicators.bollinger_bands,
+        adapter_function=VolatilityIndicators.bbands,
         required_data=["close"],
         result_type=IndicatorResultType.COMPLEX,
         result_handler="bb_handler",
@@ -1165,65 +1164,6 @@ def setup_price_transform_indicators():
         category="price_transform",
     )
     indicator_registry.register(wclprice_config)
-
-
-def setup_cycle_indicators():
-    """サイクル系インジケーターの設定"""
-
-    # HT_DCPERIOD
-    ht_dcperiod_config = IndicatorConfig(
-        indicator_name="HT_DCPERIOD",
-        adapter_function=CycleIndicators.ht_dcperiod,
-        required_data=["close"],
-        result_type=IndicatorResultType.SINGLE,
-        scale_type=IndicatorScaleType.PRICE_ABSOLUTE,
-        category="cycle",
-    )
-    indicator_registry.register(ht_dcperiod_config)
-
-    # HT_DCPHASE
-    ht_dcphase_config = IndicatorConfig(
-        indicator_name="HT_DCPHASE",
-        adapter_function=CycleIndicators.ht_dcphase,
-        required_data=["close"],
-        result_type=IndicatorResultType.SINGLE,
-        scale_type=IndicatorScaleType.MOMENTUM_ZERO_CENTERED,
-        category="cycle",
-    )
-    indicator_registry.register(ht_dcphase_config)
-
-    # HT_TRENDMODE
-    ht_trendmode_config = IndicatorConfig(
-        indicator_name="HT_TRENDMODE",
-        adapter_function=CycleIndicators.ht_trendmode,
-        required_data=["close"],
-        result_type=IndicatorResultType.SINGLE,
-        scale_type=IndicatorScaleType.OSCILLATOR_0_100,
-        category="cycle",
-    )
-    indicator_registry.register(ht_trendmode_config)
-
-    # HT_PHASOR
-    ht_phasor_config = IndicatorConfig(
-        indicator_name="HT_PHASOR",
-        adapter_function=CycleIndicators.ht_phasor,
-        required_data=["close"],
-        result_type=IndicatorResultType.COMPLEX,
-        scale_type=IndicatorScaleType.MOMENTUM_ZERO_CENTERED,
-        category="cycle",
-    )
-    indicator_registry.register(ht_phasor_config)
-
-    # HT_SINE
-    ht_sine_config = IndicatorConfig(
-        indicator_name="HT_SINE",
-        adapter_function=CycleIndicators.ht_sine,
-        required_data=["close"],
-        result_type=IndicatorResultType.COMPLEX,
-        scale_type=IndicatorScaleType.MOMENTUM_ZERO_CENTERED,
-        category="cycle",
-    )
-    indicator_registry.register(ht_sine_config)
 
 
 def setup_statistics_indicators():
@@ -1680,7 +1620,7 @@ def initialize_all_indicators():
     setup_volatility_indicators()
     setup_volume_indicators()
     setup_price_transform_indicators()
-    setup_cycle_indicators()
+
     setup_statistics_indicators()
     setup_math_transform_indicators()
     setup_math_operators_indicators()

@@ -15,7 +15,7 @@ import pandas_ta as ta
 from ..utils import (
     PandasTAError,
     handle_pandas_ta_errors,
-    to_pandas_series,
+    ensure_series_minimal_conversion,
     validate_series_data,
 )
 
@@ -37,10 +37,10 @@ class VolumeIndicators:
         volume: Union[np.ndarray, pd.Series],
     ) -> np.ndarray:
         """チャイキンA/Dライン"""
-        high_series = to_pandas_series(high)
-        low_series = to_pandas_series(low)
-        close_series = to_pandas_series(close)
-        volume_series = to_pandas_series(volume)
+        high_series = ensure_series_minimal_conversion(high)
+        low_series = ensure_series_minimal_conversion(low)
+        close_series = ensure_series_minimal_conversion(close)
+        volume_series = ensure_series_minimal_conversion(volume)
 
         validate_series_data(high_series, 1)
         validate_series_data(low_series, 1)
@@ -66,10 +66,10 @@ class VolumeIndicators:
         slow: int = 10,
     ) -> np.ndarray:
         """チャイキンA/Dオシレーター"""
-        high_series = to_pandas_series(high)
-        low_series = to_pandas_series(low)
-        close_series = to_pandas_series(close)
-        volume_series = to_pandas_series(volume)
+        high_series = ensure_series_minimal_conversion(high)
+        low_series = ensure_series_minimal_conversion(low)
+        close_series = ensure_series_minimal_conversion(close)
+        volume_series = ensure_series_minimal_conversion(volume)
 
         validate_series_data(high_series, slow)
         validate_series_data(low_series, slow)
@@ -92,8 +92,8 @@ class VolumeIndicators:
         close: Union[np.ndarray, pd.Series], volume: Union[np.ndarray, pd.Series]
     ) -> np.ndarray:
         """オンバランスボリューム"""
-        close_series = to_pandas_series(close)
-        volume_series = to_pandas_series(volume)
+        close_series = ensure_series_minimal_conversion(close)
+        volume_series = ensure_series_minimal_conversion(volume)
 
         validate_series_data(close_series, 1)
         validate_series_data(volume_series, 1)

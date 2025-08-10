@@ -14,7 +14,7 @@ import pandas_ta as ta
 from ..utils import (
     PandasTAError,
     handle_pandas_ta_errors,
-    to_pandas_series,
+    ensure_series_minimal_conversion,
     validate_series_data,
 )
 
@@ -36,13 +36,18 @@ class PatternRecognitionIndicators:
         close: Union[np.ndarray, pd.Series],
     ) -> np.ndarray:
         """同事"""
-        open_series = to_pandas_series(open_data)
-        high_series = to_pandas_series(high)
-        low_series = to_pandas_series(low)
-        close_series = to_pandas_series(close)
+        open_series = ensure_series_minimal_conversion(open_data)
+        high_series = ensure_series_minimal_conversion(high)
+        low_series = ensure_series_minimal_conversion(low)
+        close_series = ensure_series_minimal_conversion(close)
 
         df = pd.DataFrame(
-            {"open": open_series, "high": high_series, "low": low_series, "close": close_series}
+            {
+                "open": open_series,
+                "high": high_series,
+                "low": low_series,
+                "close": close_series,
+            }
         )
         result = df.ta.cdl_doji()
         return result.values
@@ -62,7 +67,12 @@ class PatternRecognitionIndicators:
         close_series = to_pandas_series(close)
 
         df = pd.DataFrame(
-            {"open": open_series, "high": high_series, "low": low_series, "close": close_series}
+            {
+                "open": open_series,
+                "high": high_series,
+                "low": low_series,
+                "close": close_series,
+            }
         )
         result = df.ta.cdl_hammer()
         return result.values
@@ -82,7 +92,12 @@ class PatternRecognitionIndicators:
         close_series = to_pandas_series(close)
 
         df = pd.DataFrame(
-            {"open": open_series, "high": high_series, "low": low_series, "close": close_series}
+            {
+                "open": open_series,
+                "high": high_series,
+                "low": low_series,
+                "close": close_series,
+            }
         )
         result = df.ta.cdl_hanging_man()
         return result.values
@@ -102,7 +117,12 @@ class PatternRecognitionIndicators:
         close_series = to_pandas_series(close)
 
         df = pd.DataFrame(
-            {"open": open_series, "high": high_series, "low": low_series, "close": close_series}
+            {
+                "open": open_series,
+                "high": high_series,
+                "low": low_series,
+                "close": close_series,
+            }
         )
         result = df.ta.cdl_shooting_star()
         return result.values
@@ -122,7 +142,12 @@ class PatternRecognitionIndicators:
         close_series = to_pandas_series(close)
 
         df = pd.DataFrame(
-            {"open": open_series, "high": high_series, "low": low_series, "close": close_series}
+            {
+                "open": open_series,
+                "high": high_series,
+                "low": low_series,
+                "close": close_series,
+            }
         )
         result = df.ta.cdl_engulfing()
         return result.values
@@ -142,7 +167,12 @@ class PatternRecognitionIndicators:
         close_series = to_pandas_series(close)
 
         df = pd.DataFrame(
-            {"open": open_series, "high": high_series, "low": low_series, "close": close_series}
+            {
+                "open": open_series,
+                "high": high_series,
+                "low": low_series,
+                "close": close_series,
+            }
         )
         result = df.ta.cdl_harami()
         return result.values
@@ -162,7 +192,12 @@ class PatternRecognitionIndicators:
         close_series = to_pandas_series(close)
 
         df = pd.DataFrame(
-            {"open": open_series, "high": high_series, "low": low_series, "close": close_series}
+            {
+                "open": open_series,
+                "high": high_series,
+                "low": low_series,
+                "close": close_series,
+            }
         )
         result = df.ta.cdl_piercing()
         return result.values
@@ -182,7 +217,12 @@ class PatternRecognitionIndicators:
         close_series = to_pandas_series(close)
 
         df = pd.DataFrame(
-            {"open": open_series, "high": high_series, "low": low_series, "close": close_series}
+            {
+                "open": open_series,
+                "high": high_series,
+                "low": low_series,
+                "close": close_series,
+            }
         )
         result = df.ta.cdl_dark_cloud_cover()
         return result.values
@@ -202,7 +242,12 @@ class PatternRecognitionIndicators:
         close_series = to_pandas_series(close)
 
         df = pd.DataFrame(
-            {"open": open_series, "high": high_series, "low": low_series, "close": close_series}
+            {
+                "open": open_series,
+                "high": high_series,
+                "low": low_series,
+                "close": close_series,
+            }
         )
         result = df.ta.cdl_morning_star()
         return result.values
@@ -222,7 +267,12 @@ class PatternRecognitionIndicators:
         close_series = to_pandas_series(close)
 
         df = pd.DataFrame(
-            {"open": open_series, "high": high_series, "low": low_series, "close": close_series}
+            {
+                "open": open_series,
+                "high": high_series,
+                "low": low_series,
+                "close": close_series,
+            }
         )
         result = df.ta.cdl_evening_star()
         return result.values
@@ -242,7 +292,12 @@ class PatternRecognitionIndicators:
         close_series = to_pandas_series(close)
 
         df = pd.DataFrame(
-            {"open": open_series, "high": high_series, "low": low_series, "close": close_series}
+            {
+                "open": open_series,
+                "high": high_series,
+                "low": low_series,
+                "close": close_series,
+            }
         )
         result = df.ta.cdl_three_black_crows()
         return result.values
@@ -262,7 +317,12 @@ class PatternRecognitionIndicators:
         close_series = to_pandas_series(close)
 
         df = pd.DataFrame(
-            {"open": open_series, "high": high_series, "low": low_series, "close": close_series}
+            {
+                "open": open_series,
+                "high": high_series,
+                "low": low_series,
+                "close": close_series,
+            }
         )
         result = df.ta.cdl_three_white_soldiers()
         return result.values

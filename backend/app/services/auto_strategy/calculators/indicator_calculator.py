@@ -26,19 +26,21 @@ class IndicatorCalculator:
 
     def __init__(self, ml_orchestrator=None, technical_indicator_service=None):
         """初期化"""
-        self.technical_indicator_service = technical_indicator_service or TechnicalIndicatorService()
+        self.technical_indicator_service = (
+            technical_indicator_service or TechnicalIndicatorService()
+        )
         self.ml_orchestrator = ml_orchestrator or MLOrchestrator()
 
     def calculate_indicator(
-        self, indicator_type: str, parameters: Dict[str, Any], data
+        self, data, indicator_type: str, parameters: Dict[str, Any]
     ) -> Union[np.ndarray, Tuple[np.ndarray, ...], None]:
         """
         指標計算
 
         Args:
+            data: backtesting.pyのデータオブジェクト
             indicator_type: 指標タイプ
             parameters: パラメータ
-            data: backtesting.pyのデータオブジェクト
 
         Returns:
             計算結果（numpy配列）
@@ -88,7 +90,7 @@ class IndicatorCalculator:
         try:
             # 指標計算を直接実行
             result = self.calculate_indicator(
-                indicator_gene.type, indicator_gene.parameters, strategy_instance.data
+                strategy_instance.data, indicator_gene.type, indicator_gene.parameters
             )
 
             if result is not None:

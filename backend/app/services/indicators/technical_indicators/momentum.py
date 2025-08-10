@@ -6,7 +6,7 @@ backtesting.pyとの完全な互換性を提供します。
 numpy配列ベースのインターフェースを維持しています。
 """
 
-from typing import Tuple, cast, Union
+from typing import Tuple, Union
 
 import numpy as np
 import pandas as pd
@@ -15,7 +15,7 @@ import pandas_ta as ta
 from ..utils import (
     PandasTAError,
     handle_pandas_ta_errors,
-    to_pandas_series,
+    ensure_series_minimal_conversion,
     validate_series_data,
     validate_indicator_parameters,
 )
@@ -34,7 +34,7 @@ class MomentumIndicators:
     def rsi(data: Union[np.ndarray, pd.Series], length: int = 14) -> np.ndarray:
         """相対力指数"""
         validate_indicator_parameters(length)
-        series = to_pandas_series(data)
+        series = ensure_series_minimal_conversion(data)
         validate_series_data(series, length + 1)
         result = ta.rsi(series, length=length)
         return result.values
@@ -42,10 +42,13 @@ class MomentumIndicators:
     @staticmethod
     @handle_pandas_ta_errors
     def macd(
-        data: Union[np.ndarray, pd.Series], fast: int = 12, slow: int = 26, signal: int = 9
+        data: Union[np.ndarray, pd.Series],
+        fast: int = 12,
+        slow: int = 26,
+        signal: int = 9,
     ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
         """MACD"""
-        series = to_pandas_series(data)
+        series = ensure_series_minimal_conversion(data)
         validate_series_data(series, slow + signal)
         result = ta.macd(series, fast=fast, slow=slow, signal=signal)
 
@@ -53,7 +56,11 @@ class MomentumIndicators:
         signal_col = f"MACDs_{fast}_{slow}_{signal}"
         hist_col = f"MACDh_{fast}_{slow}_{signal}"
 
-        return (result[macd_col].values, result[signal_col].values, result[hist_col].values)
+        return (
+            result[macd_col].values,
+            result[signal_col].values,
+            result[hist_col].values,
+        )
 
     @staticmethod
     @handle_pandas_ta_errors
@@ -67,7 +74,7 @@ class MomentumIndicators:
         signalmatype: int = 0,
     ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
         """Approximate MACDEXT via pandas-ta by computing MACD and ignoring matype differences"""
-        series = to_pandas_series(data)
+        series = ensure_series_minimal_conversion(data)
         validate_series_data(series, max(fastperiod, slowperiod, signalperiod))
         result = ta.macd(series, fast=fastperiod, slow=slowperiod, signal=signalperiod)
 
@@ -75,21 +82,29 @@ class MomentumIndicators:
         signal_col = f"MACDs_{fastperiod}_{slowperiod}_{signalperiod}"
         hist_col = f"MACDh_{fastperiod}_{slowperiod}_{signalperiod}"
 
-        return (result[macd_col].values, result[signal_col].values, result[hist_col].values)
+        return (
+            result[macd_col].values,
+            result[signal_col].values,
+            result[hist_col].values,
+        )
 
     @staticmethod
     @handle_pandas_ta_errors
     def macdfix(
         data: Union[np.ndarray, pd.Series], signalperiod: int = 9
     ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
-        series = to_pandas_series(data)
+        series = ensure_series_minimal_conversion(data)
         validate_series_data(series, 26 + signalperiod)
         # pandas-ta does not have macdfix; approximate by standard macd with fixed periods
         result = ta.macd(series, fast=12, slow=26, signal=signalperiod)
         macd_col = f"MACD_12_26_{signalperiod}"
         signal_col = f"MACDs_12_26_{signalperiod}"
         hist_col = f"MACDh_12_26_{signalperiod}"
-        return (result[macd_col].values, result[signal_col].values, result[hist_col].values)
+        return (
+            result[macd_col].values,
+            result[signal_col].values,
+            result[hist_col].values,
+        )
 
     @staticmethod
     @handle_pandas_ta_errors
@@ -102,9 +117,9 @@ class MomentumIndicators:
         smooth_k: int = 3,
     ) -> Tuple[np.ndarray, np.ndarray]:
         """ストキャスティクス"""
-        high_series = to_pandas_series(high)
-        low_series = to_pandas_series(low)
-        close_series = to_pandas_series(close)
+        high_series = ensure_series_minimal_conversion(high)
+        low_series = ensure_series_minimal_conversion(low)
+        close_series = ensure_series_minimal_conversion(close)
 
         validate_series_data(high_series, k)
         validate_series_data(low_series, k)
@@ -134,9 +149,9 @@ class MomentumIndicators:
         d: int = 3,
     ) -> Tuple[np.ndarray, np.ndarray]:
         """高速ストキャスティクス"""
-        high_series = to_pandas_series(high)
-        low_series = to_pandas_series(low)
-        close_series = to_pandas_series(close)
+        high_series = ensure_series_minimal_conversion(high)
+        low_series = ensure_series_minimal_conversion(low)
+        close_series = ensure_series_minimal_conversion(close)
 
         validate_series_data(high_series, k)
         validate_series_data(low_series, k)
@@ -156,10 +171,13 @@ class MomentumIndicators:
         d: int = 3,
     ) -> Tuple[np.ndarray, np.ndarray]:
         """ストキャスティクスRSI"""
-        series = to_pandas_series(data)
+        series = ensure_series_minimal_conversion(data)
         validate_series_data(series, length + k + d)
         result = ta.stochrsi(series, length=length, k=k, d=d)
-        return result[f"STOCHRSIk_{length}_{k}_{d}"].values, result[f"STOCHRSId_{length}_{k}_{d}"].values
+        return (
+            result[f"STOCHRSIk_{length}_{k}_{d}"].values,
+            result[f"STOCHRSId_{length}_{k}_{d}"].values,
+        )
 
     @staticmethod
     @handle_pandas_ta_errors
@@ -170,9 +188,9 @@ class MomentumIndicators:
         length: int = 14,
     ) -> np.ndarray:
         """ウィリアムズ%R"""
-        high_series = to_pandas_series(high)
-        low_series = to_pandas_series(low)
-        close_series = to_pandas_series(close)
+        high_series = ensure_series_minimal_conversion(high)
+        low_series = ensure_series_minimal_conversion(low)
+        close_series = ensure_series_minimal_conversion(close)
 
         validate_series_data(high_series, length)
         validate_series_data(low_series, length)
@@ -192,22 +210,24 @@ class MomentumIndicators:
         length: int = 20,
     ) -> np.ndarray:
         """商品チャネル指数"""
-        high_series = to_pandas_series(high)
-        low_series = to_pandas_series(low)
-        close_series = to_pandas_series(close)
+        high_series = ensure_series_minimal_conversion(high)
+        low_series = ensure_series_minimal_conversion(low)
+        close_series = ensure_series_minimal_conversion(close)
 
         validate_series_data(high_series, length)
         validate_series_data(low_series, length)
         validate_series_data(close_series, length)
 
-        result = ta.cci(high=high_series, low=low_series, close=close_series, length=length)
+        result = ta.cci(
+            high=high_series, low=low_series, close=close_series, length=length
+        )
         return result.values
 
     @staticmethod
     @handle_pandas_ta_errors
     def cmo(data: Union[np.ndarray, pd.Series], length: int = 14) -> np.ndarray:
         """チェンジモメンタムオシレーター"""
-        series = to_pandas_series(data)
+        series = ensure_series_minimal_conversion(data)
         validate_series_data(series, length)
         result = ta.cmo(series, length=length)
         return result.values
@@ -216,7 +236,7 @@ class MomentumIndicators:
     @handle_pandas_ta_errors
     def roc(data: Union[np.ndarray, pd.Series], length: int = 10) -> np.ndarray:
         """変化率"""
-        series = to_pandas_series(data)
+        series = ensure_series_minimal_conversion(data)
         validate_indicator_parameters(length)
         validate_series_data(series, length)
         result = ta.roc(series, length=length)
@@ -226,7 +246,7 @@ class MomentumIndicators:
     @handle_pandas_ta_errors
     def rocp(data: Union[np.ndarray, pd.Series], length: int = 10) -> np.ndarray:
         """変化率（%）"""
-        series = to_pandas_series(data)
+        series = ensure_series_minimal_conversion(data)
         validate_series_data(series, length)
         result = ta.rocp(series, length=length)
         return result.values
@@ -235,7 +255,7 @@ class MomentumIndicators:
     @handle_pandas_ta_errors
     def rocr(data: Union[np.ndarray, pd.Series], length: int = 10) -> np.ndarray:
         """変化率（比率）"""
-        series = to_pandas_series(data)
+        series = ensure_series_minimal_conversion(data)
         validate_series_data(series, length)
         result = ta.rocr(series, length=length)
         return result.values
@@ -244,7 +264,7 @@ class MomentumIndicators:
     @handle_pandas_ta_errors
     def rocr100(data: Union[np.ndarray, pd.Series], length: int = 10) -> np.ndarray:
         """変化率（比率100スケール）"""
-        series = to_pandas_series(data)
+        series = ensure_series_minimal_conversion(data)
         validate_series_data(series, length)
         result = ta.rocr(series, length=length, scalar=100)
         return result.values
@@ -253,7 +273,7 @@ class MomentumIndicators:
     @handle_pandas_ta_errors
     def mom(data: Union[np.ndarray, pd.Series], length: int = 10) -> np.ndarray:
         """モメンタム"""
-        series = to_pandas_series(data)
+        series = ensure_series_minimal_conversion(data)
         validate_indicator_parameters(length)
         validate_series_data(series, length)
         result = ta.mom(series, length=length)
@@ -268,15 +288,17 @@ class MomentumIndicators:
         length: int = 14,
     ) -> np.ndarray:
         """平均方向性指数"""
-        high_series = to_pandas_series(high)
-        low_series = to_pandas_series(low)
-        close_series = to_pandas_series(close)
+        high_series = ensure_series_minimal_conversion(high)
+        low_series = ensure_series_minimal_conversion(low)
+        close_series = ensure_series_minimal_conversion(close)
 
         validate_series_data(high_series, length)
         validate_series_data(low_series, length)
         validate_series_data(close_series, length)
 
-        result = ta.adx(high=high_series, low=low_series, close=close_series, length=length)
+        result = ta.adx(
+            high=high_series, low=low_series, close=close_series, length=length
+        )
         return result[f"ADX_{length}"].values
 
     @staticmethod
@@ -288,9 +310,9 @@ class MomentumIndicators:
         length: int = 14,
     ) -> np.ndarray:
         """ADX評価"""
-        high_series = to_pandas_series(high)
-        low_series = to_pandas_series(low)
-        close_series = to_pandas_series(close)
+        high_series = ensure_series_minimal_conversion(high)
+        low_series = ensure_series_minimal_conversion(low)
+        close_series = ensure_series_minimal_conversion(close)
 
         validate_series_data(high_series, length)
         validate_series_data(low_series, length)
@@ -309,8 +331,8 @@ class MomentumIndicators:
         length: int = 14,
     ) -> Tuple[np.ndarray, np.ndarray]:
         """アルーン"""
-        high_series = to_pandas_series(high)
-        low_series = to_pandas_series(low)
+        high_series = ensure_series_minimal_conversion(high)
+        low_series = ensure_series_minimal_conversion(low)
 
         validate_series_data(high_series, length)
         validate_series_data(low_series, length)
@@ -326,8 +348,8 @@ class MomentumIndicators:
         length: int = 14,
     ) -> np.ndarray:
         """アルーンオシレーター"""
-        high_series = to_pandas_series(high)
-        low_series = to_pandas_series(low)
+        high_series = ensure_series_minimal_conversion(high)
+        low_series = ensure_series_minimal_conversion(low)
 
         validate_series_data(high_series, length)
         validate_series_data(low_series, length)
@@ -345,9 +367,9 @@ class MomentumIndicators:
     ) -> np.ndarray:
         """Directional Movement Index wrapper (DX)"""
         # pandas-ta returns DX as part of adx; extract DX
-        high_s = to_pandas_series(high)
-        low_s = to_pandas_series(low)
-        close_s = to_pandas_series(close)
+        high_s = ensure_series_minimal_conversion(high)
+        low_s = ensure_series_minimal_conversion(low)
+        close_s = ensure_series_minimal_conversion(close)
         validate_series_data(high_s, length)
         validate_series_data(low_s, length)
         validate_series_data(close_s, length)
@@ -373,10 +395,10 @@ class MomentumIndicators:
         length: int = 14,
     ) -> np.ndarray:
         """マネーフローインデックス"""
-        high_series = to_pandas_series(high)
-        low_series = to_pandas_series(low)
-        close_series = to_pandas_series(close)
-        volume_series = to_pandas_series(volume)
+        high_series = ensure_series_minimal_conversion(high)
+        low_series = ensure_series_minimal_conversion(low)
+        close_series = ensure_series_minimal_conversion(close)
+        volume_series = ensure_series_minimal_conversion(volume)
 
         validate_series_data(high_series, length)
         validate_series_data(low_series, length)
@@ -395,9 +417,9 @@ class MomentumIndicators:
     @staticmethod
     @handle_pandas_ta_errors
     def plus_di(high, low, close, length: int = 14) -> np.ndarray:
-        high_s = to_pandas_series(high)
-        low_s = to_pandas_series(low)
-        close_s = to_pandas_series(close)
+        high_s = ensure_series_minimal_conversion(high)
+        low_s = ensure_series_minimal_conversion(low)
+        close_s = ensure_series_minimal_conversion(close)
         result = ta.adx(high=high_s, low=low_s, close=close_s, length=length)
         col = f"DMP_{length}"
         if col in result.columns:
@@ -407,9 +429,9 @@ class MomentumIndicators:
     @staticmethod
     @handle_pandas_ta_errors
     def minus_di(high, low, close, length: int = 14) -> np.ndarray:
-        high_s = to_pandas_series(high)
-        low_s = to_pandas_series(low)
-        close_s = to_pandas_series(close)
+        high_s = ensure_series_minimal_conversion(high)
+        low_s = ensure_series_minimal_conversion(low)
+        close_s = ensure_series_minimal_conversion(close)
         result = ta.adx(high=high_s, low=low_s, close=close_s, length=length)
         col = f"DMN_{length}"
         if col in result.columns:
@@ -419,8 +441,8 @@ class MomentumIndicators:
     @staticmethod
     @handle_pandas_ta_errors
     def plus_dm(high, low, length: int = 14) -> np.ndarray:
-        high_s = to_pandas_series(high)
-        low_s = to_pandas_series(low)
+        high_s = ensure_series_minimal_conversion(high)
+        low_s = ensure_series_minimal_conversion(low)
         result = ta.dm(high=high_s, low=low_s, length=length)
         # pandas-ta dm returns DMP and DMN columns
         cols = [c for c in result.columns if c.startswith("DMP_")]
@@ -431,8 +453,8 @@ class MomentumIndicators:
     @staticmethod
     @handle_pandas_ta_errors
     def minus_dm(high, low, length: int = 14) -> np.ndarray:
-        high_s = to_pandas_series(high)
-        low_s = to_pandas_series(low)
+        high_s = ensure_series_minimal_conversion(high)
+        low_s = ensure_series_minimal_conversion(low)
         result = ta.dm(high=high_s, low=low_s, length=length)
         cols = [c for c in result.columns if c.startswith("DMN_")]
         if cols:
@@ -448,7 +470,7 @@ class MomentumIndicators:
         signal: int = 9,
     ) -> np.ndarray:
         """パーセンテージ価格オシレーター"""
-        series = to_pandas_series(data)
+        series = ensure_series_minimal_conversion(data)
         validate_series_data(series, slow)
         result = ta.ppo(series, fast=fast, slow=slow, signal=signal)
         return result[f"PPO_{fast}_{slow}_{signal}"].values
@@ -457,7 +479,7 @@ class MomentumIndicators:
     @handle_pandas_ta_errors
     def trix(data: Union[np.ndarray, pd.Series], length: int = 30) -> np.ndarray:
         """TRIX"""
-        series = to_pandas_series(data)
+        series = ensure_series_minimal_conversion(data)
         validate_series_data(series, length)
         result = ta.trix(series, length=length)
         return result[f"TRIX_{length}_9"].values
@@ -473,9 +495,9 @@ class MomentumIndicators:
         slow: int = 28,
     ) -> np.ndarray:
         """アルティメットオシレーター"""
-        high_series = to_pandas_series(high)
-        low_series = to_pandas_series(low)
-        close_series = to_pandas_series(close)
+        high_series = ensure_series_minimal_conversion(high)
+        low_series = ensure_series_minimal_conversion(low)
+        close_series = ensure_series_minimal_conversion(close)
 
         validate_series_data(high_series, slow)
         validate_series_data(low_series, slow)
@@ -500,10 +522,10 @@ class MomentumIndicators:
         close: Union[np.ndarray, pd.Series],
     ) -> np.ndarray:
         """バランスオブパワー"""
-        open_series = to_pandas_series(open_data)
-        high_series = to_pandas_series(high)
-        low_series = to_pandas_series(low)
-        close_series = to_pandas_series(close)
+        open_series = ensure_series_minimal_conversion(open_data)
+        high_series = ensure_series_minimal_conversion(high)
+        low_series = ensure_series_minimal_conversion(low)
+        close_series = ensure_series_minimal_conversion(close)
 
         validate_series_data(open_series, 1)
         validate_series_data(high_series, 1)
@@ -523,7 +545,7 @@ class MomentumIndicators:
         slow: int = 26,
     ) -> np.ndarray:
         """アブソリュートプライスオシレーター"""
-        series = to_pandas_series(data)
+        series = ensure_series_minimal_conversion(data)
         validate_series_data(series, slow)
         result = ta.apo(series, fast=fast, slow=slow)
         return result.values

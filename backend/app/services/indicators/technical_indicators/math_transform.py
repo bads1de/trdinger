@@ -8,14 +8,20 @@ TA-libの数学変換関数をNumPy標準関数で置き換えています。
 
 import logging
 import numpy as np
+import pandas as pd
 from typing import Union
 
 logger = logging.getLogger(__name__)
 
 
-def _validate_input(data: Union[np.ndarray, list], min_length: int = 1) -> np.ndarray:
-    """入力データの検証とnumpy配列への変換"""
-    if not isinstance(data, np.ndarray):
+def _validate_input(
+    data: Union[np.ndarray, pd.Series, list], min_length: int = 1
+) -> np.ndarray:
+    """入力データの検証とnumpy配列への変換（pandas.Series対応版）"""
+    # pandas.Seriesの場合はnumpy配列に変換
+    if isinstance(data, pd.Series):
+        data = data.to_numpy()
+    elif not isinstance(data, np.ndarray):
         data = np.array(data, dtype=float)
 
     if len(data) < min_length:
@@ -33,7 +39,7 @@ class MathTransformIndicators:
     """
 
     @staticmethod
-    def acos(data: np.ndarray) -> np.ndarray:
+    def acos(data: Union[np.ndarray, pd.Series]) -> np.ndarray:
         """
         Vector Trigonometric ACos (ベクトル三角関数ACos)
 
@@ -56,7 +62,7 @@ class MathTransformIndicators:
         return np.arccos(data)
 
     @staticmethod
-    def asin(data: np.ndarray) -> np.ndarray:
+    def asin(data: Union[np.ndarray, pd.Series]) -> np.ndarray:
         """Vector Trigonometric ASin (ベクトル三角関数ASin)"""
         data = _validate_input(data)
 
@@ -70,43 +76,43 @@ class MathTransformIndicators:
         return np.arcsin(data)
 
     @staticmethod
-    def atan(data: np.ndarray) -> np.ndarray:
+    def atan(data: Union[np.ndarray, pd.Series]) -> np.ndarray:
         """Vector Trigonometric ATan (ベクトル三角関数ATan)"""
         data = _validate_input(data)
         return np.arctan(data)
 
     @staticmethod
-    def ceil(data: np.ndarray) -> np.ndarray:
+    def ceil(data: Union[np.ndarray, pd.Series]) -> np.ndarray:
         """Vector Ceiling (ベクトル天井関数)"""
         data = _validate_input(data)
         return np.ceil(data)
 
     @staticmethod
-    def cos(data: np.ndarray) -> np.ndarray:
+    def cos(data: Union[np.ndarray, pd.Series]) -> np.ndarray:
         """Vector Trigonometric Cos (ベクトル三角関数Cos)"""
         data = _validate_input(data)
         return np.cos(data)
 
     @staticmethod
-    def cosh(data: np.ndarray) -> np.ndarray:
+    def cosh(data: Union[np.ndarray, pd.Series]) -> np.ndarray:
         """Vector Trigonometric Cosh (ベクトル双曲線余弦)"""
         data = _validate_input(data)
         return np.cosh(data)
 
     @staticmethod
-    def exp(data: np.ndarray) -> np.ndarray:
+    def exp(data: Union[np.ndarray, pd.Series]) -> np.ndarray:
         """Vector Arithmetic Exp (ベクトル指数関数)"""
         data = _validate_input(data)
         return np.exp(data)
 
     @staticmethod
-    def floor(data: np.ndarray) -> np.ndarray:
+    def floor(data: Union[np.ndarray, pd.Series]) -> np.ndarray:
         """Vector Floor (ベクトル床関数)"""
         data = _validate_input(data)
         return np.floor(data)
 
     @staticmethod
-    def ln(data: np.ndarray) -> np.ndarray:
+    def ln(data: Union[np.ndarray, pd.Series]) -> np.ndarray:
         """Vector Log Natural (ベクトル自然対数)"""
         data = _validate_input(data)
 
@@ -119,7 +125,7 @@ class MathTransformIndicators:
         return np.log(data)
 
     @staticmethod
-    def log10(data: np.ndarray) -> np.ndarray:
+    def log10(data: Union[np.ndarray, pd.Series]) -> np.ndarray:
         """Vector Log10 (ベクトル常用対数)"""
         data = _validate_input(data)
 
@@ -131,19 +137,19 @@ class MathTransformIndicators:
         return np.log10(data)
 
     @staticmethod
-    def sin(data: np.ndarray) -> np.ndarray:
+    def sin(data: Union[np.ndarray, pd.Series]) -> np.ndarray:
         """Vector Trigonometric Sin (ベクトル三角関数Sin)"""
         data = _validate_input(data)
         return np.sin(data)
 
     @staticmethod
-    def sinh(data: np.ndarray) -> np.ndarray:
+    def sinh(data: Union[np.ndarray, pd.Series]) -> np.ndarray:
         """Vector Trigonometric Sinh (ベクトル双曲線正弦)"""
         data = _validate_input(data)
         return np.sinh(data)
 
     @staticmethod
-    def sqrt(data: np.ndarray) -> np.ndarray:
+    def sqrt(data: Union[np.ndarray, pd.Series]) -> np.ndarray:
         """Vector Square Root (ベクトル平方根)"""
         data = _validate_input(data)
 
@@ -155,13 +161,13 @@ class MathTransformIndicators:
         return np.sqrt(data)
 
     @staticmethod
-    def tan(data: np.ndarray) -> np.ndarray:
+    def tan(data: Union[np.ndarray, pd.Series]) -> np.ndarray:
         """Vector Trigonometric Tan (ベクトル三角関数Tan)"""
         data = _validate_input(data)
         return np.tan(data)
 
     @staticmethod
-    def tanh(data: np.ndarray) -> np.ndarray:
+    def tanh(data: Union[np.ndarray, pd.Series]) -> np.ndarray:
         """Vector Trigonometric Tanh (ベクトル双曲線正接)"""
         data = _validate_input(data)
         return np.tanh(data)

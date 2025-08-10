@@ -8,14 +8,20 @@ TA-libの数学演算子関数をNumPy標準関数で置き換えています。
 
 import logging
 import numpy as np
+import pandas as pd
 from typing import Union
 
 logger = logging.getLogger(__name__)
 
 
-def _validate_input(data: Union[np.ndarray, list], min_length: int = 1) -> np.ndarray:
-    """入力データの検証とnumpy配列への変換"""
-    if not isinstance(data, np.ndarray):
+def _validate_input(
+    data: Union[np.ndarray, pd.Series, list], min_length: int = 1
+) -> np.ndarray:
+    """入力データの検証とnumpy配列への変換（pandas.Series対応版）"""
+    # pandas.Seriesの場合はnumpy配列に変換
+    if isinstance(data, pd.Series):
+        data = data.to_numpy()
+    elif not isinstance(data, np.ndarray):
         data = np.array(data, dtype=float)
 
     if len(data) < min_length:
@@ -24,7 +30,7 @@ def _validate_input(data: Union[np.ndarray, list], min_length: int = 1) -> np.nd
     return data
 
 
-def _validate_dual_input(data0: np.ndarray, data1: np.ndarray) -> None:
+def _validate_dual_input(data0: Union[np.ndarray, pd.Series], data1: Union[np.ndarray, pd.Series]) -> None:
     """2つの入力データの長さ一致確認"""
     if len(data0) != len(data1):
         raise ValueError(
@@ -41,7 +47,9 @@ class MathOperatorsIndicators:
     """
 
     @staticmethod
-    def add(data0: np.ndarray, data1: np.ndarray) -> np.ndarray:
+    def add(
+        data0: Union[np.ndarray, pd.Series], data1: Union[np.ndarray, pd.Series]
+    ) -> np.ndarray:
         """Vector Arithmetic Add (ベクトル算術加算)"""
         data0 = _validate_input(data0)
         data1 = _validate_input(data1)
@@ -49,7 +57,9 @@ class MathOperatorsIndicators:
         return data0 + data1
 
     @staticmethod
-    def sub(data0: np.ndarray, data1: np.ndarray) -> np.ndarray:
+    def sub(
+        data0: Union[np.ndarray, pd.Series], data1: Union[np.ndarray, pd.Series]
+    ) -> np.ndarray:
         """Vector Arithmetic Subtraction (ベクトル算術減算)"""
         data0 = _validate_input(data0)
         data1 = _validate_input(data1)
@@ -57,7 +67,7 @@ class MathOperatorsIndicators:
         return data0 - data1
 
     @staticmethod
-    def mult(data0: np.ndarray, data1: np.ndarray) -> np.ndarray:
+    def mult(data0: Union[np.ndarray, pd.Series], data1: Union[np.ndarray, pd.Series]) -> np.ndarray:
         """Vector Arithmetic Multiplication (ベクトル算術乗算)"""
         data0 = _validate_input(data0)
         data1 = _validate_input(data1)
@@ -65,7 +75,7 @@ class MathOperatorsIndicators:
         return data0 * data1
 
     @staticmethod
-    def div(data0: np.ndarray, data1: np.ndarray) -> np.ndarray:
+    def div(data0: Union[np.ndarray, pd.Series], data1: Union[np.ndarray, pd.Series]) -> np.ndarray:
         """Vector Arithmetic Division (ベクトル算術除算)"""
         data0 = _validate_input(data0)
         data1 = _validate_input(data1)
