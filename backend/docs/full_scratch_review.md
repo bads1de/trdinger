@@ -59,12 +59,6 @@
   - **改善案**: `pydantic-settings`や`hydra`のような設定管理ライブラリを活用することで、型安全性と設定の検証機能を向上させることができます。
 
 
-### 9. `database/repositories/base_repository.py`
-
-- **`BaseRepository`**: データベース操作の基底クラスです。
-  - **問題点**: SQLAlchemy の基本的な操作を多数の自作メソッドでラップしており、冗長です。
-  - **改善案**: `SQLAlchemy-Utils`や`SQLModel`の活用を推奨します。また、`Alembic`の自動マイグレーション機能をより活用することで、データベーススキーマ管理を簡素化できます。さらに、`FastAPI-Users`のようなライブラリを使用することで、認証・認可機能付きの CRUD 操作を標準化できます。
-
 ### 10. `services/data_collection/historical/historical_data_service.py`
 
 - **`HistoricalDataService`**: 履歴データ収集サービスです。
