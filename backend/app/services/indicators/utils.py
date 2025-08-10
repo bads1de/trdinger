@@ -7,7 +7,7 @@
 
 import logging
 from functools import wraps
-from typing import Union
+from typing import Union, cast
 
 import numpy as np
 import pandas as pd
@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 
 
 class PandasTAError(Exception):
-    """pandas-ta計算エラー"""
+    """pandas-ta関連のエラー"""
 
 
 def validate_input(data: np.ndarray, period: int) -> None:

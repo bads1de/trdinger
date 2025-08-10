@@ -6,32 +6,18 @@ backtesting.pyとの完全な互換性を提供します。
 numpy配列ベースのインターフェースを維持しています。
 """
 
-from typing import cast
+from typing import cast, Union
 
 import numpy as np
+import pandas as pd
+import pandas_ta as ta
 
 from ..utils import (
     PandasTAError,
-    ensure_numpy_array,
-    format_indicator_result,
     handle_pandas_ta_errors,
-    validate_input,
-    validate_multi_input,
-)
-from ..pandas_ta_utils import (
-    sma as pandas_ta_sma,
-    ema as pandas_ta_ema,
-    tema as pandas_ta_tema,
-    dema as pandas_ta_dema,
-    wma as pandas_ta_wma,
-    trima as pandas_ta_trima,
-    kama as pandas_ta_kama,
-    t3 as pandas_ta_t3,
-    sar as pandas_ta_sar,
-    sarext as pandas_ta_sarext,
-    ht_trendline as pandas_ta_ht_trendline,
-    midpoint as pandas_ta_midpoint,
-    midprice as pandas_ta_midprice,
+    to_pandas_series,
+    validate_series_data,
+    validate_indicator_parameters,
 )
 
 
@@ -44,60 +30,104 @@ class TrendIndicators:
     """
 
     @staticmethod
-    def sma(data: np.ndarray, period: int) -> np.ndarray:
-        """Simple Moving Average (単純移動平均) - pandas-ta版"""
-        return pandas_ta_sma(data, period)
+    @handle_pandas_ta_errors
+    def sma(data: Union[np.ndarray, pd.Series], length: int) -> np.ndarray:
+        """単純移動平均"""
+        validate_indicator_parameters(length)
+        series = to_pandas_series(data)
+        validate_series_data(series, length)
+        result = ta.sma(series, length=length)
+        return result.values
 
     @staticmethod
-    def ema(data: np.ndarray, period: int) -> np.ndarray:
-        """Exponential Moving Average (指数移動平均) - pandas-ta版"""
-        return pandas_ta_ema(data, period)
+    @handle_pandas_ta_errors
+    def ema(data: Union[np.ndarray, pd.Series], length: int) -> np.ndarray:
+        """指数移動平均"""
+        validate_indicator_parameters(length)
+        series = to_pandas_series(data)
+        validate_series_data(series, length)
+        result = ta.ema(series, length=length)
+        return result.values
 
     @staticmethod
-    def tema(data: np.ndarray, period: int) -> np.ndarray:
-        """Triple Exponential Moving Average (三重指数移動平均) - pandas-ta版"""
-        return pandas_ta_tema(data, period)
+    @handle_pandas_ta_errors
+    def tema(data: Union[np.ndarray, pd.Series], length: int) -> np.ndarray:
+        """三重指数移動平均"""
+        series = to_pandas_series(data)
+        validate_series_data(series, length)
+        result = ta.tema(series, length=length)
+        return result.values
 
     @staticmethod
-    def dema(data: np.ndarray, period: int) -> np.ndarray:
-        """Double Exponential Moving Average (二重指数移動平均) - pandas-ta版"""
-        return pandas_ta_dema(data, period)
+    @handle_pandas_ta_errors
+    def dema(data: Union[np.ndarray, pd.Series], length: int) -> np.ndarray:
+        """二重指数移動平均"""
+        series = to_pandas_series(data)
+        validate_series_data(series, length)
+        result = ta.dema(series, length=length)
+        return result.values
 
     @staticmethod
-    def wma(data: np.ndarray, period: int) -> np.ndarray:
-        """Weighted Moving Average (加重移動平均) - pandas-ta版"""
-        return pandas_ta_wma(data, period)
+    @handle_pandas_ta_errors
+    def wma(data: Union[np.ndarray, pd.Series], length: int) -> np.ndarray:
+        """加重移動平均"""
+        series = to_pandas_series(data)
+        validate_series_data(series, length)
+        result = ta.wma(series, length=length)
+        return result.values
 
     @staticmethod
-    def trima(data: np.ndarray, period: int) -> np.ndarray:
-        """Triangular Moving Average (三角移動平均) - pandas-ta版"""
-        return pandas_ta_trima(data, period)
+    @handle_pandas_ta_errors
+    def trima(data: Union[np.ndarray, pd.Series], length: int) -> np.ndarray:
+        """三角移動平均"""
+        series = to_pandas_series(data)
+        validate_series_data(series, length)
+        result = ta.trima(series, length=length)
+        return result.values
 
     @staticmethod
-    def kama(data: np.ndarray, period: int = 30) -> np.ndarray:
-        """Kaufman Adaptive Moving Average (カウフマン適応移動平均) - pandas-ta版"""
-        return pandas_ta_kama(data, period)
+    @handle_pandas_ta_errors
+    def kama(data: Union[np.ndarray, pd.Series], length: int = 30) -> np.ndarray:
+        """カウフマン適応移動平均"""
+        series = to_pandas_series(data)
+        validate_series_data(series, length)
+        result = ta.kama(series, length=length)
+        return result.values
 
     @staticmethod
-    def t3(data: np.ndarray, period: int = 5, vfactor: float = 0.7) -> np.ndarray:
-        """Triple Exponential Moving Average (T3) - pandas-ta版"""
-        return pandas_ta_t3(data, period, vfactor)
-
-    @staticmethod
-    def sar(
-        high: np.ndarray,
-        low: np.ndarray,
-        acceleration: float = 0.02,
-        maximum: float = 0.2,
+    @handle_pandas_ta_errors
+    def t3(
+        data: Union[np.ndarray, pd.Series], length: int = 5, a: float = 0.7
     ) -> np.ndarray:
-        """Parabolic SAR (パラボリックSAR) - pandas-ta版"""
-        return pandas_ta_sar(high, low, acceleration, maximum)
+        """T3移動平均"""
+        series = to_pandas_series(data)
+        validate_series_data(series, length)
+        result = ta.t3(series, length=length, a=a)
+        return result.values
+
+    @staticmethod
+    @handle_pandas_ta_errors
+    def sar(
+        high: Union[np.ndarray, pd.Series],
+        low: Union[np.ndarray, pd.Series],
+        af: float = 0.02,
+        max_af: float = 0.2,
+    ) -> np.ndarray:
+        """パラボリックSAR"""
+        high_series = to_pandas_series(high)
+        low_series = to_pandas_series(low)
+
+        validate_series_data(high_series, 2)
+        validate_series_data(low_series, 2)
+
+        result = ta.psar(high=high_series, low=low_series, af0=af, af=af, max_af=max_af)
+        return result[f"PSARl_{af}_{max_af}"].fillna(result[f"PSARs_{af}_{max_af}"]).values
 
     @staticmethod
     @handle_pandas_ta_errors
     def sarext(
-        high: np.ndarray,
-        low: np.ndarray,
+        high: Union[np.ndarray, pd.Series],
+        low: Union[np.ndarray, pd.Series],
         startvalue: float = 0.0,
         offsetonreverse: float = 0.0,
         accelerationinitlong: float = 0.02,
@@ -107,55 +137,63 @@ class TrendIndicators:
         accelerationshort: float = 0.02,
         accelerationmaxshort: float = 0.2,
     ) -> np.ndarray:
-        """Parabolic SAR - Extended (拡張パラボリックSAR)"""
-        high = ensure_numpy_array(high)
-        low = ensure_numpy_array(low)
-        validate_multi_input(high, low, high, 2)
-        params = {
-            "startvalue": startvalue,
-            "offsetonreverse": offsetonreverse,
-            "accelerationinitlong": accelerationinitlong,
-            "accelerationlong": accelerationlong,
-            "accelerationmaxlong": accelerationmaxlong,
-            "accelerationinitshort": accelerationinitshort,
-            "accelerationshort": accelerationshort,
-            "accelerationmaxshort": accelerationmaxshort,
-        }
-        result = pandas_ta_sarext(high, low, **params)
-        return cast(np.ndarray, format_indicator_result(result, "SAREXT"))
+        """Extended Parabolic SAR (approximation using pandas-ta psar)"""
+        high_series = to_pandas_series(high)
+        low_series = to_pandas_series(low)
+
+        validate_series_data(high_series, 2)
+        validate_series_data(low_series, 2)
+
+        # Map extended parameters to pandas-ta psar arguments (approximate)
+        result = ta.psar(
+            high=high_series,
+            low=low_series,
+            af0=accelerationinitlong,
+            af=accelerationlong,
+            max_af=accelerationmaxlong,
+        )
+
+        af = accelerationlong
+        max_af = accelerationmaxlong
+        return result[f"PSARl_{af}_{max_af}"].fillna(result[f"PSARs_{af}_{max_af}"]).values
 
     @staticmethod
     @handle_pandas_ta_errors
-    def ht_trendline(data: np.ndarray) -> np.ndarray:
+    def ht_trendline(data: Union[np.ndarray, pd.Series]) -> np.ndarray:
         """Hilbert Transform - Instantaneous Trendline"""
-        data = ensure_numpy_array(data)
-        validate_input(data, 2)
-        result = pandas_ta_ht_trendline(data)
-        return cast(np.ndarray, format_indicator_result(result, "HT_TRENDLINE"))
+        series = to_pandas_series(data)
+        validate_series_data(series, 2)
+
+        # pandas-ta exposes Hilbert transform utilities; use ht_trendline if available
+        if hasattr(ta, "ht_trendline"):
+            result = ta.ht_trendline(series)
+            return result.values
+        else:
+            raise PandasTAError("pandas-ta does not provide ht_trendline in this version")
 
     @staticmethod
     def ma(data: np.ndarray, period: int, matype: int = 0) -> np.ndarray:
         """Moving Average (移動平均 - タイプ指定可能) - pandas-ta版"""
         # matypeに応じて適切な移動平均を選択
         if matype == 0:  # SMA
-            return pandas_ta_sma(data, period)
+            return TrendIndicators.sma(data, period)
         elif matype == 1:  # EMA
-            return pandas_ta_ema(data, period)
+            return TrendIndicators.ema(data, period)
         elif matype == 2:  # WMA
-            return pandas_ta_wma(data, period)
+            return TrendIndicators.wma(data, period)
         elif matype == 3:  # DEMA
-            return pandas_ta_dema(data, period)
+            return TrendIndicators.dema(data, period)
         elif matype == 4:  # TEMA
-            return pandas_ta_tema(data, period)
+            return TrendIndicators.tema(data, period)
         elif matype == 5:  # TRIMA
-            return pandas_ta_trima(data, period)
+            return TrendIndicators.trima(data, period)
         elif matype == 6:  # KAMA
-            return pandas_ta_kama(data, period)
+            return TrendIndicators.kama(data, period)
         elif matype == 8:  # T3
-            return pandas_ta_t3(data, period)
+            return TrendIndicators.t3(data, period)
         else:
             # デフォルトはSMA
-            return pandas_ta_sma(data, period)
+            return TrendIndicators.sma(data, period)
 
     @staticmethod
     def mavp(
@@ -180,19 +218,24 @@ class TrendIndicators:
 
     @staticmethod
     @handle_pandas_ta_errors
-    def midpoint(data: np.ndarray, period: int) -> np.ndarray:
-        """MidPoint over period (期間中点)"""
-        data = ensure_numpy_array(data)
-        validate_input(data, period)
-        result = pandas_ta_midpoint(data, period)
-        return cast(np.ndarray, format_indicator_result(result, "MIDPOINT"))
+    def midpoint(data: Union[np.ndarray, pd.Series], length: int) -> np.ndarray:
+        """MidPoint over period"""
+        series = to_pandas_series(data)
+        validate_series_data(series, length)
+        result = ta.midpoint(series, length=length)
+        return result.values
 
     @staticmethod
     @handle_pandas_ta_errors
-    def midprice(high: np.ndarray, low: np.ndarray, period: int) -> np.ndarray:
-        """Midpoint Price over period (期間中値価格)"""
-        high = ensure_numpy_array(high)
-        low = ensure_numpy_array(low)
-        validate_multi_input(high, low, high, period)
-        result = pandas_ta_midprice(high, low, period)
-        return cast(np.ndarray, format_indicator_result(result, "MIDPRICE"))
+    def midprice(
+        high: Union[np.ndarray, pd.Series], low: Union[np.ndarray, pd.Series], length: int
+    ) -> np.ndarray:
+        """Midpoint Price over period"""
+        high_series = to_pandas_series(high)
+        low_series = to_pandas_series(low)
+
+        validate_series_data(high_series, length)
+        validate_series_data(low_series, length)
+
+        result = ta.midprice(high=high_series, low=low_series, length=length)
+        return result.values

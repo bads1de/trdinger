@@ -6,22 +6,17 @@ backtesting.pyとの完全な互換性を提供します。
 numpy配列ベースのインターフェースを維持しています。
 """
 
-from typing import cast
+from typing import cast, Union
 
 import numpy as np
+import pandas as pd
+import pandas_ta as ta
 
 from ..utils import (
     PandasTAError,
-    ensure_numpy_array,
-    format_indicator_result,
     handle_pandas_ta_errors,
-    validate_input,
-    validate_multi_input,
-)
-from ..pandas_ta_utils import (
-    ad as pandas_ta_ad,
-    adosc as pandas_ta_adosc,
-    obv as pandas_ta_obv,
+    to_pandas_series,
+    validate_series_data,
 )
 
 
@@ -34,58 +29,74 @@ class VolumeIndicators:
     """
 
     @staticmethod
+    @handle_pandas_ta_errors
     def ad(
-        high: np.ndarray, low: np.ndarray, close: np.ndarray, volume: np.ndarray
+        high: Union[np.ndarray, pd.Series],
+        low: Union[np.ndarray, pd.Series],
+        close: Union[np.ndarray, pd.Series],
+        volume: Union[np.ndarray, pd.Series],
     ) -> np.ndarray:
-        """
-        Chaikin A/D Line (チャイキンA/Dライン) - pandas-ta版
+        """チャイキンA/Dライン"""
+        high_series = to_pandas_series(high)
+        low_series = to_pandas_series(low)
+        close_series = to_pandas_series(close)
+        volume_series = to_pandas_series(volume)
 
-        Args:
-            high: 高値データ（numpy配列）
-            low: 安値データ（numpy配列）
-            close: 終値データ（numpy配列）
-            volume: 出来高データ（numpy配列）
+        validate_series_data(high_series, 1)
+        validate_series_data(low_series, 1)
+        validate_series_data(close_series, 1)
+        validate_series_data(volume_series, 1)
 
-        Returns:
-            AD値のnumpy配列
-        """
-        return pandas_ta_ad(high, low, close, volume)
+        result = ta.ad(
+            high=high_series,
+            low=low_series,
+            close=close_series,
+            volume=volume_series,
+        )
+        return result.values
 
     @staticmethod
+    @handle_pandas_ta_errors
     def adosc(
-        high: np.ndarray,
-        low: np.ndarray,
-        close: np.ndarray,
-        volume: np.ndarray,
-        fastperiod: int = 3,
-        slowperiod: int = 10,
+        high: Union[np.ndarray, pd.Series],
+        low: Union[np.ndarray, pd.Series],
+        close: Union[np.ndarray, pd.Series],
+        volume: Union[np.ndarray, pd.Series],
+        fast: int = 3,
+        slow: int = 10,
     ) -> np.ndarray:
-        """
-        Chaikin A/D Oscillator (チャイキンA/Dオシレーター) - pandas-ta版
+        """チャイキンA/Dオシレーター"""
+        high_series = to_pandas_series(high)
+        low_series = to_pandas_series(low)
+        close_series = to_pandas_series(close)
+        volume_series = to_pandas_series(volume)
 
-        Args:
-            high: 高値データ（numpy配列）
-            low: 安値データ（numpy配列）
-            close: 終値データ（numpy配列）
-            volume: 出来高データ（numpy配列）
-            fastperiod: 高速期間（デフォルト: 3）
-            slowperiod: 低速期間（デフォルト: 10）
+        validate_series_data(high_series, slow)
+        validate_series_data(low_series, slow)
+        validate_series_data(close_series, slow)
+        validate_series_data(volume_series, slow)
 
-        Returns:
-            ADOSC値のnumpy配列
-        """
-        return pandas_ta_adosc(high, low, close, volume, fastperiod, slowperiod)
+        result = ta.adosc(
+            high=high_series,
+            low=low_series,
+            close=close_series,
+            volume=volume_series,
+            fast=fast,
+            slow=slow,
+        )
+        return result.values
 
     @staticmethod
-    def obv(close: np.ndarray, volume: np.ndarray) -> np.ndarray:
-        """
-        On Balance Volume (オンバランスボリューム) - pandas-ta版
+    @handle_pandas_ta_errors
+    def obv(
+        close: Union[np.ndarray, pd.Series], volume: Union[np.ndarray, pd.Series]
+    ) -> np.ndarray:
+        """オンバランスボリューム"""
+        close_series = to_pandas_series(close)
+        volume_series = to_pandas_series(volume)
 
-        Args:
-            close: 終値データ（numpy配列）
-            volume: 出来高データ（numpy配列）
+        validate_series_data(close_series, 1)
+        validate_series_data(volume_series, 1)
 
-        Returns:
-            OBV値のnumpy配列
-        """
-        return pandas_ta_obv(close, volume)
+        result = ta.obv(close=close_series, volume=volume_series)
+        return result.values

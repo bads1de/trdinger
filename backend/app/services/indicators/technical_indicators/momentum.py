@@ -6,50 +6,18 @@ backtesting.pyとの完全な互換性を提供します。
 numpy配列ベースのインターフェースを維持しています。
 """
 
-from typing import Tuple, cast
+from typing import Tuple, cast, Union
 
 import numpy as np
+import pandas as pd
+import pandas_ta as ta
 
 from ..utils import (
     PandasTAError,
-    ensure_numpy_array,
-    format_indicator_result,
     handle_pandas_ta_errors,
-    validate_input,
-    validate_multi_input,
-)
-
-from ..pandas_ta_utils import (
-    rsi as pandas_ta_rsi,
-    macd as pandas_ta_macd,
-    stoch as pandas_ta_stoch,
-    adx as pandas_ta_adx,
-    willr as pandas_ta_willr,
-    cci as pandas_ta_cci,
-    roc as pandas_ta_roc,
-    mom as pandas_ta_mom,
-    mfi as pandas_ta_mfi,
-    macdext as pandas_ta_macdext,
-    macdfix as pandas_ta_macdfix,
-    stochf as pandas_ta_stochf,
-    stochrsi as pandas_ta_stochrsi,
-    cmo as pandas_ta_cmo,
-    rocp as pandas_ta_rocp,
-    rocr as pandas_ta_rocr,
-    rocr100 as pandas_ta_rocr100,
-    adx as pandas_ta_adxr,
-    aroon as pandas_ta_aroon,
-    aroonosc as pandas_ta_aroonosc,
-    dx as pandas_ta_dx,
-    plus_di as pandas_ta_plus_di,
-    minus_di as pandas_ta_minus_di,
-    plus_dm as pandas_ta_plus_dm,
-    minus_dm as pandas_ta_minus_dm,
-    ppo as pandas_ta_ppo,
-    trix as pandas_ta_trix,
-    ultosc as pandas_ta_ultosc,
-    bop as pandas_ta_bop,
-    apo as pandas_ta_apo,
+    to_pandas_series,
+    validate_series_data,
+    validate_indicator_parameters,
 )
 
 
@@ -62,408 +30,500 @@ class MomentumIndicators:
     """
 
     @staticmethod
-    def rsi(data: np.ndarray, period: int = 14) -> np.ndarray:
-        """Relative Strength Index (相対力指数) - pandas-ta版"""
-        return pandas_ta_rsi(data, period)
+    @handle_pandas_ta_errors
+    def rsi(data: Union[np.ndarray, pd.Series], length: int = 14) -> np.ndarray:
+        """相対力指数"""
+        validate_indicator_parameters(length)
+        series = to_pandas_series(data)
+        validate_series_data(series, length + 1)
+        result = ta.rsi(series, length=length)
+        return result.values
 
     @staticmethod
+    @handle_pandas_ta_errors
     def macd(
-        data: np.ndarray,
-        fast_period: int = 12,
-        slow_period: int = 26,
-        signal_period: int = 9,
+        data: Union[np.ndarray, pd.Series], fast: int = 12, slow: int = 26, signal: int = 9
     ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
-        """Moving Average Convergence Divergence (MACD) - pandas-ta版"""
-        return pandas_ta_macd(data, fast_period, slow_period, signal_period)
+        """MACD"""
+        series = to_pandas_series(data)
+        validate_series_data(series, slow + signal)
+        result = ta.macd(series, fast=fast, slow=slow, signal=signal)
+
+        macd_col = f"MACD_{fast}_{slow}_{signal}"
+        signal_col = f"MACDs_{fast}_{slow}_{signal}"
+        hist_col = f"MACDh_{fast}_{slow}_{signal}"
+
+        return (result[macd_col].values, result[signal_col].values, result[hist_col].values)
 
     @staticmethod
     @handle_pandas_ta_errors
     def macdext(
-        data: np.ndarray,
-        fast_period: int = 12,
-        fast_ma_type: int = 0,  # MA_Type.SMA
-        slow_period: int = 26,
-        slow_ma_type: int = 0,  # MA_Type.SMA
-        signal_period: int = 9,
-        signal_ma_type: int = 0,  # MA_Type.SMA
+        data: Union[np.ndarray, pd.Series],
+        fastperiod: int = 12,
+        fastmatype: int = 0,
+        slowperiod: int = 26,
+        slowmatype: int = 0,
+        signalperiod: int = 9,
+        signalmatype: int = 0,
     ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
-        """MACD with controllable MA type"""
-        data = ensure_numpy_array(data)
+        """Approximate MACDEXT via pandas-ta by computing MACD and ignoring matype differences"""
+        series = to_pandas_series(data)
+        validate_series_data(series, max(fastperiod, slowperiod, signalperiod))
+        result = ta.macd(series, fast=fastperiod, slow=slowperiod, signal=signalperiod)
 
-        # matypeは整数値として直接使用
+        macd_col = f"MACD_{fastperiod}_{slowperiod}_{signalperiod}"
+        signal_col = f"MACDs_{fastperiod}_{slowperiod}_{signalperiod}"
+        hist_col = f"MACDh_{fastperiod}_{slowperiod}_{signalperiod}"
 
-        validate_input(data, max(fast_period, slow_period, signal_period))
-        macd, signal, histogram = pandas_ta_macdext(
-            data,
-            fastperiod=fast_period,
-            fastmatype=fast_ma_type,
-            slowperiod=slow_period,
-            slowmatype=slow_ma_type,
-            signalperiod=signal_period,
-            signalmatype=signal_ma_type,
-        )
-        return cast(
-            Tuple[np.ndarray, np.ndarray, np.ndarray],
-            format_indicator_result((macd, signal, histogram), "MACDEXT"),
-        )
+        return (result[macd_col].values, result[signal_col].values, result[hist_col].values)
 
     @staticmethod
     @handle_pandas_ta_errors
     def macdfix(
-        data: np.ndarray, signal_period: int = 9
+        data: Union[np.ndarray, pd.Series], signalperiod: int = 9
     ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
-        """Moving Average Convergence/Divergence Fix 12/26"""
-        data = ensure_numpy_array(data)
-        validate_input(data, max(26, signal_period))
-        macd, signal, histogram = pandas_ta_macdfix(data, signalperiod=signal_period)
-        return cast(
-            Tuple[np.ndarray, np.ndarray, np.ndarray],
-            format_indicator_result((macd, signal, histogram), "MACDFIX"),
-        )
+        series = to_pandas_series(data)
+        validate_series_data(series, 26 + signalperiod)
+        # pandas-ta does not have macdfix; approximate by standard macd with fixed periods
+        result = ta.macd(series, fast=12, slow=26, signal=signalperiod)
+        macd_col = f"MACD_12_26_{signalperiod}"
+        signal_col = f"MACDs_12_26_{signalperiod}"
+        hist_col = f"MACDh_12_26_{signalperiod}"
+        return (result[macd_col].values, result[signal_col].values, result[hist_col].values)
 
     @staticmethod
+    @handle_pandas_ta_errors
     def stoch(
-        high: np.ndarray,
-        low: np.ndarray,
-        close: np.ndarray,
-        fastk_period: int = 5,
-        slowk_period: int = 3,
-        slowk_matype: int = 0,  # MA_Type.SMA（pandas-taでは無視される）
-        slowd_period: int = 3,
-        slowd_matype: int = 0,  # MA_Type.SMA（pandas-taでは無視される）
+        high: Union[np.ndarray, pd.Series],
+        low: Union[np.ndarray, pd.Series],
+        close: Union[np.ndarray, pd.Series],
+        k: int = 14,
+        d: int = 3,
+        smooth_k: int = 3,
     ) -> Tuple[np.ndarray, np.ndarray]:
-        """Stochastic (ストキャスティクス) - pandas-ta版"""
-        # pandas-taのパラメータに変換
-        k = fastk_period
-        d = slowd_period
-        smooth_k = slowk_period
+        """ストキャスティクス"""
+        high_series = to_pandas_series(high)
+        low_series = to_pandas_series(low)
+        close_series = to_pandas_series(close)
 
-        return pandas_ta_stoch(high, low, close, k, d, smooth_k)
+        validate_series_data(high_series, k)
+        validate_series_data(low_series, k)
+        validate_series_data(close_series, k)
+
+        result = ta.stoch(
+            high=high_series,
+            low=low_series,
+            close=close_series,
+            k=k,
+            d=d,
+            smooth_k=smooth_k,
+        )
+
+        k_col = f"STOCHk_{k}_{d}_{smooth_k}"
+        d_col = f"STOCHd_{k}_{d}_{smooth_k}"
+
+        return (result[k_col].values, result[d_col].values)
 
     @staticmethod
     @handle_pandas_ta_errors
     def stochf(
-        high: np.ndarray,
-        low: np.ndarray,
-        close: np.ndarray,
-        fastk_period: int = 5,
-        fastd_period: int = 3,
-        fastd_matype: int = 0,  # MA_Type.SMA
+        high: Union[np.ndarray, pd.Series],
+        low: Union[np.ndarray, pd.Series],
+        close: Union[np.ndarray, pd.Series],
+        k: int = 5,
+        d: int = 3,
     ) -> Tuple[np.ndarray, np.ndarray]:
-        """Stochastic Fast (高速ストキャスティクス)"""
-        high = ensure_numpy_array(high)
-        low = ensure_numpy_array(low)
-        close = ensure_numpy_array(close)
+        """高速ストキャスティクス"""
+        high_series = to_pandas_series(high)
+        low_series = to_pandas_series(low)
+        close_series = to_pandas_series(close)
 
-        # matypeは整数値として直接使用
+        validate_series_data(high_series, k)
+        validate_series_data(low_series, k)
+        validate_series_data(close_series, k)
 
-        validate_multi_input(high, low, close, max(fastk_period, fastd_period))
-        fastk, fastd = pandas_ta_stochf(
-            high,
-            low,
-            close,
-            fastk_period=fastk_period,
-            fastd_period=fastd_period,
-            fastd_matype=fastd_matype,
+        result = ta.stochf(
+            high=high_series, low=low_series, close=close_series, k=k, d=d
         )
-        return cast(
-            Tuple[np.ndarray, np.ndarray],
-            format_indicator_result((fastk, fastd), "STOCHF"),
-        )
+        return result[f"STOCHFk_{k}_{d}"].values, result[f"STOCHFd_{k}_{d}"].values
 
     @staticmethod
     @handle_pandas_ta_errors
     def stochrsi(
-        data: np.ndarray,
-        period: int = 14,
-        fastk_period: int = 5,
-        fastd_period: int = 3,
-        fastd_matype: int = 0,
+        data: Union[np.ndarray, pd.Series],
+        length: int = 14,
+        k: int = 5,
+        d: int = 3,
     ) -> Tuple[np.ndarray, np.ndarray]:
-        """Stochastic Relative Strength Index"""
-        data = ensure_numpy_array(data)
-
-        # matypeは整数値として直接使用
-
-        validate_input(data, max(period, fastk_period, fastd_period))
-        fastk, fastd = pandas_ta_stochrsi(
-            data,
-            timeperiod=period,
-            fastk_period=fastk_period,
-            fastd_period=fastd_period,
-            fastd_matype=fastd_matype,
-        )
-        return cast(
-            Tuple[np.ndarray, np.ndarray],
-            format_indicator_result((fastk, fastd), "STOCHRSI"),
-        )
+        """ストキャスティクスRSI"""
+        series = to_pandas_series(data)
+        validate_series_data(series, length + k + d)
+        result = ta.stochrsi(series, length=length, k=k, d=d)
+        return result[f"STOCHRSIk_{length}_{k}_{d}"].values, result[f"STOCHRSId_{length}_{k}_{d}"].values
 
     @staticmethod
-    def williams_r(
-        high: np.ndarray, low: np.ndarray, close: np.ndarray, period: int = 14
+    @handle_pandas_ta_errors
+    def willr(
+        high: Union[np.ndarray, pd.Series],
+        low: Union[np.ndarray, pd.Series],
+        close: Union[np.ndarray, pd.Series],
+        length: int = 14,
     ) -> np.ndarray:
-        """Williams' %R (ウィリアムズ%R) - pandas-ta版"""
-        return pandas_ta_willr(high, low, close, period)
+        """ウィリアムズ%R"""
+        high_series = to_pandas_series(high)
+        low_series = to_pandas_series(low)
+        close_series = to_pandas_series(close)
+
+        validate_series_data(high_series, length)
+        validate_series_data(low_series, length)
+        validate_series_data(close_series, length)
+
+        result = ta.willr(
+            high=high_series, low=low_series, close=close_series, length=length
+        )
+        return result.values
 
     @staticmethod
+    @handle_pandas_ta_errors
     def cci(
-        high: np.ndarray, low: np.ndarray, close: np.ndarray, period: int = 14
+        high: Union[np.ndarray, pd.Series],
+        low: Union[np.ndarray, pd.Series],
+        close: Union[np.ndarray, pd.Series],
+        length: int = 20,
     ) -> np.ndarray:
-        """Commodity Channel Index (商品チャネル指数) - pandas-ta版"""
-        return pandas_ta_cci(high, low, close, period)
+        """商品チャネル指数"""
+        high_series = to_pandas_series(high)
+        low_series = to_pandas_series(low)
+        close_series = to_pandas_series(close)
+
+        validate_series_data(high_series, length)
+        validate_series_data(low_series, length)
+        validate_series_data(close_series, length)
+
+        result = ta.cci(high=high_series, low=low_series, close=close_series, length=length)
+        return result.values
 
     @staticmethod
     @handle_pandas_ta_errors
-    def cmo(data: np.ndarray, period: int = 14) -> np.ndarray:
-        """Chande Momentum Oscillator"""
-        data = ensure_numpy_array(data)
-        validate_input(data, period)
-        result = pandas_ta_cmo(data, period)
-        return cast(np.ndarray, format_indicator_result(result, "CMO"))
-
-    @staticmethod
-    def roc(data: np.ndarray, period: int = 10) -> np.ndarray:
-        """Rate of change - pandas-ta版"""
-        return pandas_ta_roc(data, period)
+    def cmo(data: Union[np.ndarray, pd.Series], length: int = 14) -> np.ndarray:
+        """チェンジモメンタムオシレーター"""
+        series = to_pandas_series(data)
+        validate_series_data(series, length)
+        result = ta.cmo(series, length=length)
+        return result.values
 
     @staticmethod
     @handle_pandas_ta_errors
-    def rocp(data: np.ndarray, period: int = 10) -> np.ndarray:
-        """Rate of change Percentage"""
-        data = ensure_numpy_array(data)
-        validate_input(data, period)
-        result = pandas_ta_rocp(data, period)
-        return cast(np.ndarray, format_indicator_result(result, "ROCP"))
+    def roc(data: Union[np.ndarray, pd.Series], length: int = 10) -> np.ndarray:
+        """変化率"""
+        series = to_pandas_series(data)
+        validate_indicator_parameters(length)
+        validate_series_data(series, length)
+        result = ta.roc(series, length=length)
+        return result.values
 
     @staticmethod
     @handle_pandas_ta_errors
-    def rocr(data: np.ndarray, period: int = 10) -> np.ndarray:
-        """Rate of change ratio"""
-        data = ensure_numpy_array(data)
-        validate_input(data, period)
-        result = pandas_ta_rocr(data, period)
-        return cast(np.ndarray, format_indicator_result(result, "ROCR"))
+    def rocp(data: Union[np.ndarray, pd.Series], length: int = 10) -> np.ndarray:
+        """変化率（%）"""
+        series = to_pandas_series(data)
+        validate_series_data(series, length)
+        result = ta.rocp(series, length=length)
+        return result.values
 
     @staticmethod
     @handle_pandas_ta_errors
-    def rocr100(data: np.ndarray, period: int = 10) -> np.ndarray:
-        """Rate of change ratio 100 scale"""
-        data = ensure_numpy_array(data)
-        validate_input(data, period)
-        result = pandas_ta_rocr100(data, period)
-        return cast(np.ndarray, format_indicator_result(result, "ROCR100"))
+    def rocr(data: Union[np.ndarray, pd.Series], length: int = 10) -> np.ndarray:
+        """変化率（比率）"""
+        series = to_pandas_series(data)
+        validate_series_data(series, length)
+        result = ta.rocr(series, length=length)
+        return result.values
 
     @staticmethod
-    def mom(data: np.ndarray, period: int = 10) -> np.ndarray:
-        """Momentum (モメンタム) - pandas-ta版"""
-        return pandas_ta_mom(data, period)
+    @handle_pandas_ta_errors
+    def rocr100(data: Union[np.ndarray, pd.Series], length: int = 10) -> np.ndarray:
+        """変化率（比率100スケール）"""
+        series = to_pandas_series(data)
+        validate_series_data(series, length)
+        result = ta.rocr(series, length=length, scalar=100)
+        return result.values
 
     @staticmethod
+    @handle_pandas_ta_errors
+    def mom(data: Union[np.ndarray, pd.Series], length: int = 10) -> np.ndarray:
+        """モメンタム"""
+        series = to_pandas_series(data)
+        validate_indicator_parameters(length)
+        validate_series_data(series, length)
+        result = ta.mom(series, length=length)
+        return result.values
+
+    @staticmethod
+    @handle_pandas_ta_errors
     def adx(
-        high: np.ndarray, low: np.ndarray, close: np.ndarray, period: int = 14
+        high: Union[np.ndarray, pd.Series],
+        low: Union[np.ndarray, pd.Series],
+        close: Union[np.ndarray, pd.Series],
+        length: int = 14,
     ) -> np.ndarray:
-        """Average Directional Movement Index - pandas-ta版"""
-        return pandas_ta_adx(high, low, close, period)
+        """平均方向性指数"""
+        high_series = to_pandas_series(high)
+        low_series = to_pandas_series(low)
+        close_series = to_pandas_series(close)
+
+        validate_series_data(high_series, length)
+        validate_series_data(low_series, length)
+        validate_series_data(close_series, length)
+
+        result = ta.adx(high=high_series, low=low_series, close=close_series, length=length)
+        return result[f"ADX_{length}"].values
 
     @staticmethod
     @handle_pandas_ta_errors
     def adxr(
-        high: np.ndarray, low: np.ndarray, close: np.ndarray, period: int = 14
+        high: Union[np.ndarray, pd.Series],
+        low: Union[np.ndarray, pd.Series],
+        close: Union[np.ndarray, pd.Series],
+        length: int = 14,
     ) -> np.ndarray:
-        """Average Directional Movement Index Rating"""
-        high = ensure_numpy_array(high)
-        low = ensure_numpy_array(low)
-        close = ensure_numpy_array(close)
-        validate_multi_input(high, low, close, period)
-        result = pandas_ta_adxr(high, low, close, period)
-        return cast(np.ndarray, format_indicator_result(result, "ADXR"))
+        """ADX評価"""
+        high_series = to_pandas_series(high)
+        low_series = to_pandas_series(low)
+        close_series = to_pandas_series(close)
+
+        validate_series_data(high_series, length)
+        validate_series_data(low_series, length)
+        validate_series_data(close_series, length)
+
+        result = ta.adx(
+            high=high_series, low=low_series, close=close_series, length=length
+        )
+        return result[f"ADXR_{length}"].values
 
     @staticmethod
     @handle_pandas_ta_errors
     def aroon(
-        high: np.ndarray, low: np.ndarray, period: int = 14
+        high: Union[np.ndarray, pd.Series],
+        low: Union[np.ndarray, pd.Series],
+        length: int = 14,
     ) -> Tuple[np.ndarray, np.ndarray]:
-        """Aroon (アルーン)"""
-        high = ensure_numpy_array(high)
-        low = ensure_numpy_array(low)
-        validate_multi_input(high, low, high, period)
-        aroondown, aroonup = pandas_ta_aroon(high, low, period)
-        return cast(
-            Tuple[np.ndarray, np.ndarray],
-            format_indicator_result((aroondown, aroonup), "AROON"),
-        )
+        """アルーン"""
+        high_series = to_pandas_series(high)
+        low_series = to_pandas_series(low)
+
+        validate_series_data(high_series, length)
+        validate_series_data(low_series, length)
+
+        result = ta.aroon(high=high_series, low=low_series, length=length)
+        return result[f"AROOND_{length}"].values, result[f"AROONU_{length}"].values
 
     @staticmethod
     @handle_pandas_ta_errors
-    def aroonosc(high: np.ndarray, low: np.ndarray, period: int = 14) -> np.ndarray:
-        """Aroon Oscillator (アルーンオシレーター)"""
-        high = ensure_numpy_array(high)
-        low = ensure_numpy_array(low)
-        validate_multi_input(high, low, high, period)
-        result = pandas_ta_aroonosc(high, low, period)
-        return cast(np.ndarray, format_indicator_result(result, "AROONOSC"))
+    def aroonosc(
+        high: Union[np.ndarray, pd.Series],
+        low: Union[np.ndarray, pd.Series],
+        length: int = 14,
+    ) -> np.ndarray:
+        """アルーンオシレーター"""
+        high_series = to_pandas_series(high)
+        low_series = to_pandas_series(low)
+
+        validate_series_data(high_series, length)
+        validate_series_data(low_series, length)
+
+        result = ta.aroon(high=high_series, low=low_series, length=length)
+        return result[f"AROONOSC_{length}"].values
 
     @staticmethod
     @handle_pandas_ta_errors
     def dx(
-        high: np.ndarray, low: np.ndarray, close: np.ndarray, period: int = 14
+        high: Union[np.ndarray, pd.Series],
+        low: Union[np.ndarray, pd.Series],
+        close: Union[np.ndarray, pd.Series],
+        length: int = 14,
     ) -> np.ndarray:
-        """Directional Movement Index"""
-        high = ensure_numpy_array(high)
-        low = ensure_numpy_array(low)
-        close = ensure_numpy_array(close)
-        validate_multi_input(high, low, close, period)
-        result = pandas_ta_dx(high, low, close, period)
-        return cast(np.ndarray, format_indicator_result(result, "DX"))
+        """Directional Movement Index wrapper (DX)"""
+        # pandas-ta returns DX as part of adx; extract DX
+        high_s = to_pandas_series(high)
+        low_s = to_pandas_series(low)
+        close_s = to_pandas_series(close)
+        validate_series_data(high_s, length)
+        validate_series_data(low_s, length)
+        validate_series_data(close_s, length)
+        result = ta.adx(high=high_s, low=low_s, close=close_s, length=length)
+        # result contains DX_{length} column
+        dx_col = f"DX_{length}"
+        if dx_col in result.columns:
+            return result[dx_col].values
+        # fallback: compute difference between plus and minus DI
+        plus = result[f"DMP_{length}"] if f"DMP_{length}" in result.columns else None
+        minus = result[f"DMN_{length}"] if f"DMN_{length}" in result.columns else None
+        if plus is not None and minus is not None:
+            return (plus - minus).values
+        raise PandasTAError("DX not available from pandas-ta in this version")
 
     @staticmethod
+    @handle_pandas_ta_errors
     def mfi(
-        high: np.ndarray,
-        low: np.ndarray,
-        close: np.ndarray,
-        volume: np.ndarray,
-        period: int = 14,
+        high: Union[np.ndarray, pd.Series],
+        low: Union[np.ndarray, pd.Series],
+        close: Union[np.ndarray, pd.Series],
+        volume: Union[np.ndarray, pd.Series],
+        length: int = 14,
     ) -> np.ndarray:
-        """Money Flow Index (マネーフローインデックス) - pandas-ta版"""
-        return pandas_ta_mfi(high, low, close, volume, period)
+        """マネーフローインデックス"""
+        high_series = to_pandas_series(high)
+        low_series = to_pandas_series(low)
+        close_series = to_pandas_series(close)
+        volume_series = to_pandas_series(volume)
+
+        validate_series_data(high_series, length)
+        validate_series_data(low_series, length)
+        validate_series_data(close_series, length)
+        validate_series_data(volume_series, length)
+
+        result = ta.mfi(
+            high=high_series,
+            low=low_series,
+            close=close_series,
+            volume=volume_series,
+            length=length,
+        )
+        return result.values
 
     @staticmethod
     @handle_pandas_ta_errors
-    def plus_di(
-        high: np.ndarray, low: np.ndarray, close: np.ndarray, period: int = 14
-    ) -> np.ndarray:
-        """Plus Directional Indicator"""
-        high = ensure_numpy_array(high)
-        low = ensure_numpy_array(low)
-        close = ensure_numpy_array(close)
-        validate_multi_input(high, low, close, period)
-        result = pandas_ta_plus_di(high, low, close, period)
-        return cast(np.ndarray, format_indicator_result(result, "PLUS_DI"))
+    def plus_di(high, low, close, length: int = 14) -> np.ndarray:
+        high_s = to_pandas_series(high)
+        low_s = to_pandas_series(low)
+        close_s = to_pandas_series(close)
+        result = ta.adx(high=high_s, low=low_s, close=close_s, length=length)
+        col = f"DMP_{length}"
+        if col in result.columns:
+            return result[col].values
+        raise PandasTAError("PLUS_DI not available in this pandas-ta version")
 
     @staticmethod
     @handle_pandas_ta_errors
-    def minus_di(
-        high: np.ndarray, low: np.ndarray, close: np.ndarray, period: int = 14
-    ) -> np.ndarray:
-        """Minus Directional Indicator"""
-        high = ensure_numpy_array(high)
-        low = ensure_numpy_array(low)
-        close = ensure_numpy_array(close)
-        validate_multi_input(high, low, close, period)
-        result = pandas_ta_minus_di(high, low, close, period)
-        return cast(np.ndarray, format_indicator_result(result, "MINUS_DI"))
+    def minus_di(high, low, close, length: int = 14) -> np.ndarray:
+        high_s = to_pandas_series(high)
+        low_s = to_pandas_series(low)
+        close_s = to_pandas_series(close)
+        result = ta.adx(high=high_s, low=low_s, close=close_s, length=length)
+        col = f"DMN_{length}"
+        if col in result.columns:
+            return result[col].values
+        raise PandasTAError("MINUS_DI not available in this pandas-ta version")
 
     @staticmethod
     @handle_pandas_ta_errors
-    def plus_dm(high: np.ndarray, low: np.ndarray, period: int = 14) -> np.ndarray:
-        """Plus Directional Movement"""
-        high = ensure_numpy_array(high)
-        low = ensure_numpy_array(low)
-        validate_multi_input(high, low, high, period)
-        result = pandas_ta_plus_dm(high, low, period)
-        return cast(np.ndarray, format_indicator_result(result, "PLUS_DM"))
+    def plus_dm(high, low, length: int = 14) -> np.ndarray:
+        high_s = to_pandas_series(high)
+        low_s = to_pandas_series(low)
+        result = ta.dm(high=high_s, low=low_s, length=length)
+        # pandas-ta dm returns DMP and DMN columns
+        cols = [c for c in result.columns if c.startswith("DMP_")]
+        if cols:
+            return result[cols[0]].values
+        raise PandasTAError("PLUS_DM not available in this pandas-ta version")
 
     @staticmethod
     @handle_pandas_ta_errors
-    def minus_dm(high: np.ndarray, low: np.ndarray, period: int = 14) -> np.ndarray:
-        """Minus Directional Movement"""
-        high = ensure_numpy_array(high)
-        low = ensure_numpy_array(low)
-        validate_multi_input(high, low, high, period)
-        result = pandas_ta_minus_dm(high, low, period)
-        return cast(np.ndarray, format_indicator_result(result, "MINUS_DM"))
+    def minus_dm(high, low, length: int = 14) -> np.ndarray:
+        high_s = to_pandas_series(high)
+        low_s = to_pandas_series(low)
+        result = ta.dm(high=high_s, low=low_s, length=length)
+        cols = [c for c in result.columns if c.startswith("DMN_")]
+        if cols:
+            return result[cols[0]].values
+        raise PandasTAError("MINUS_DM not available in this pandas-ta version")
 
     @staticmethod
     @handle_pandas_ta_errors
     def ppo(
-        data: np.ndarray,
-        fastperiod: int = 12,
-        slowperiod: int = 26,
-        matype: int = 0,  # MA_Type.SMA
+        data: Union[np.ndarray, pd.Series],
+        fast: int = 12,
+        slow: int = 26,
+        signal: int = 9,
     ) -> np.ndarray:
-        """Percentage Price Oscillator"""
-        data = ensure_numpy_array(data)
-        validate_input(data, max(fastperiod, slowperiod))
-        result = pandas_ta_ppo(
-            data,
-            fastperiod=fastperiod,
-            slowperiod=slowperiod,
-            matype=matype,
-        )
-        return cast(np.ndarray, format_indicator_result(result, "PPO"))
+        """パーセンテージ価格オシレーター"""
+        series = to_pandas_series(data)
+        validate_series_data(series, slow)
+        result = ta.ppo(series, fast=fast, slow=slow, signal=signal)
+        return result[f"PPO_{fast}_{slow}_{signal}"].values
 
     @staticmethod
     @handle_pandas_ta_errors
-    def trix(data: np.ndarray, period: int = 30) -> np.ndarray:
-        """1-day Rate-Of-Change (ROC) of a Triple Smooth EMA"""
-        data = ensure_numpy_array(data)
-        validate_input(data, period)
-        result = pandas_ta_trix(data, period)
-        return cast(np.ndarray, format_indicator_result(result, "TRIX"))
+    def trix(data: Union[np.ndarray, pd.Series], length: int = 30) -> np.ndarray:
+        """TRIX"""
+        series = to_pandas_series(data)
+        validate_series_data(series, length)
+        result = ta.trix(series, length=length)
+        return result[f"TRIX_{length}_9"].values
 
     @staticmethod
     @handle_pandas_ta_errors
     def ultosc(
-        high: np.ndarray,
-        low: np.ndarray,
-        close: np.ndarray,
-        timeperiod1: int = 7,
-        timeperiod2: int = 14,
-        timeperiod3: int = 28,
+        high: Union[np.ndarray, pd.Series],
+        low: Union[np.ndarray, pd.Series],
+        close: Union[np.ndarray, pd.Series],
+        fast: int = 7,
+        medium: int = 14,
+        slow: int = 28,
     ) -> np.ndarray:
-        """Ultimate Oscillator"""
-        high = ensure_numpy_array(high)
-        low = ensure_numpy_array(low)
-        close = ensure_numpy_array(close)
-        validate_multi_input(
-            high, low, close, max(timeperiod1, timeperiod2, timeperiod3)
+        """アルティメットオシレーター"""
+        high_series = to_pandas_series(high)
+        low_series = to_pandas_series(low)
+        close_series = to_pandas_series(close)
+
+        validate_series_data(high_series, slow)
+        validate_series_data(low_series, slow)
+        validate_series_data(close_series, slow)
+
+        result = ta.ultosc(
+            high=high_series,
+            low=low_series,
+            close=close_series,
+            fast=fast,
+            medium=medium,
+            slow=slow,
         )
-        result = pandas_ta_ultosc(
-            high,
-            low,
-            close,
-            timeperiod1=timeperiod1,
-            timeperiod2=timeperiod2,
-            timeperiod3=timeperiod3,
-        )
-        return cast(np.ndarray, format_indicator_result(result, "ULTOSC"))
+        return result.values
 
     @staticmethod
     @handle_pandas_ta_errors
     def bop(
-        open_data: np.ndarray,
-        high: np.ndarray,
-        low: np.ndarray,
-        close: np.ndarray,
+        open_data: Union[np.ndarray, pd.Series],
+        high: Union[np.ndarray, pd.Series],
+        low: Union[np.ndarray, pd.Series],
+        close: Union[np.ndarray, pd.Series],
     ) -> np.ndarray:
-        """Balance Of Power"""
-        open_data = ensure_numpy_array(open_data)
-        high = ensure_numpy_array(high)
-        low = ensure_numpy_array(low)
-        close = ensure_numpy_array(close)
-        if not (len(open_data) == len(high) == len(low) == len(close)):
-            raise PandasTAError(
-                f"OHLCデータの長さが一致しません。Open: {len(open_data)}, High: {len(high)}, Low: {len(low)}, Close: {len(close)}"
-            )
-        validate_input(close, 1)
-        result = pandas_ta_bop(open_data, high, low, close)
-        return cast(np.ndarray, format_indicator_result(result, "BOP"))
+        """バランスオブパワー"""
+        open_series = to_pandas_series(open_data)
+        high_series = to_pandas_series(high)
+        low_series = to_pandas_series(low)
+        close_series = to_pandas_series(close)
+
+        validate_series_data(open_series, 1)
+        validate_series_data(high_series, 1)
+        validate_series_data(low_series, 1)
+        validate_series_data(close_series, 1)
+
+        result = ta.bop(
+            open=open_series, high=high_series, low=low_series, close=close_series
+        )
+        return result.values
 
     @staticmethod
     @handle_pandas_ta_errors
     def apo(
-        data: np.ndarray,
-        fastperiod: int = 12,
-        slowperiod: int = 26,
-        matype: int = 0,  # MA_Type.SMA
+        data: Union[np.ndarray, pd.Series],
+        fast: int = 12,
+        slow: int = 26,
     ) -> np.ndarray:
-        """Absolute Price Oscillator"""
-        data = ensure_numpy_array(data)
-        validate_input(data, max(fastperiod, slowperiod))
-        result = pandas_ta_apo(
-            data,
-            fastperiod=fastperiod,
-            slowperiod=slowperiod,
-            matype=matype,
-        )
-        return cast(np.ndarray, format_indicator_result(result, "APO"))
+        """アブソリュートプライスオシレーター"""
+        series = to_pandas_series(data)
+        validate_series_data(series, slow)
+        result = ta.apo(series, fast=fast, slow=slow)
+        return result.values

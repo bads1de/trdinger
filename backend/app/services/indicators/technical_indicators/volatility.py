@@ -6,33 +6,18 @@ backtesting.pyとの完全な互換性を提供します。
 numpy配列ベースのインターフェースを維持しています。
 """
 
-from typing import Tuple, cast
+from typing import Tuple, cast, Union
 
 import numpy as np
+import pandas as pd
+import pandas_ta as ta
 
 from ..utils import (
     PandasTAError,
-    ensure_numpy_array,
-    format_indicator_result,
     handle_pandas_ta_errors,
-    validate_input,
-    validate_multi_input,
-)
-from ..pandas_ta_utils import (
-    atr as pandas_ta_atr,
-    bbands as pandas_ta_bbands,
-    stdev as pandas_ta_stdev,
-    adx as pandas_ta_adx,
-    natr as pandas_ta_natr,
-    true_range as pandas_ta_true_range,
-    variance as pandas_ta_variance,
-    dx as pandas_ta_dx,
-    plus_di as pandas_ta_plus_di,
-    minus_di as pandas_ta_minus_di,
-    plus_dm as pandas_ta_plus_dm,
-    minus_dm as pandas_ta_minus_dm,
-    aroon as pandas_ta_aroon,
-    aroonosc as pandas_ta_aroonosc,
+    to_pandas_series,
+    validate_series_data,
+    validate_indicator_parameters,
 )
 
 
@@ -45,281 +30,256 @@ class VolatilityIndicators:
     """
 
     @staticmethod
+    @handle_pandas_ta_errors
     def atr(
-        high: np.ndarray, low: np.ndarray, close: np.ndarray, period: int = 14
+        high: Union[np.ndarray, pd.Series],
+        low: Union[np.ndarray, pd.Series],
+        close: Union[np.ndarray, pd.Series],
+        length: int = 14,
     ) -> np.ndarray:
-        """
-        Average True Range (平均真の値幅) - pandas-ta版
+        """平均真の値幅"""
+        high_series = to_pandas_series(high)
+        low_series = to_pandas_series(low)
+        close_series = to_pandas_series(close)
 
-        Args:
-            high: 高値データ（numpy配列）
-            low: 安値データ（numpy配列）
-            close: 終値データ（numpy配列）
-            period: 期間（デフォルト: 14）
+        validate_series_data(high_series, length)
+        validate_series_data(low_series, length)
+        validate_series_data(close_series, length)
 
-        Returns:
-            ATR値のnumpy配列
-        """
-        return pandas_ta_atr(high, low, close, period)
+        result = ta.atr(high=high_series, low=low_series, close=close_series, length=length)
+        return result.values
 
     @staticmethod
+    @handle_pandas_ta_errors
     def natr(
-        high: np.ndarray, low: np.ndarray, close: np.ndarray, period: int = 14
+        high: Union[np.ndarray, pd.Series],
+        low: Union[np.ndarray, pd.Series],
+        close: Union[np.ndarray, pd.Series],
+        length: int = 14,
     ) -> np.ndarray:
-        """
-        Normalized Average True Range (正規化平均真の値幅) - pandas-ta版
+        """正規化平均実効値幅"""
+        high_series = to_pandas_series(high)
+        low_series = to_pandas_series(low)
+        close_series = to_pandas_series(close)
 
-        Args:
-            high: 高値データ（numpy配列）
-            low: 安値データ（numpy配列）
-            close: 終値データ（numpy配列）
-            period: 期間（デフォルト: 14）
+        validate_series_data(high_series, length)
+        validate_series_data(low_series, length)
+        validate_series_data(close_series, length)
 
-        Returns:
-            NATR値のnumpy配列
-        """
-        return pandas_ta_natr(high, low, close, period)
-
-    @staticmethod
-    def trange(high: np.ndarray, low: np.ndarray, close: np.ndarray) -> np.ndarray:
-        """
-        True Range (真の値幅) - pandas-ta版
-
-        Args:
-            high: 高値データ（numpy配列）
-            low: 安値データ（numpy配列）
-            close: 終値データ（numpy配列）
-
-        Returns:
-            TRANGE値のnumpy配列
-        """
-        return pandas_ta_true_range(high, low, close)
+        result = ta.natr(
+            high=high_series, low=low_series, close=close_series, length=length
+        )
+        return result.values
 
     @staticmethod
-    def bollinger_bands(
-        data: np.ndarray, period: int = 20, std_dev: float = 2.0, matype: int = 0
+    @handle_pandas_ta_errors
+    def trange(
+        high: Union[np.ndarray, pd.Series],
+        low: Union[np.ndarray, pd.Series],
+        close: Union[np.ndarray, pd.Series],
+    ) -> np.ndarray:
+        """真の値幅"""
+        high_series = to_pandas_series(high)
+        low_series = to_pandas_series(low)
+        close_series = to_pandas_series(close)
+
+        validate_series_data(high_series, 1)
+        validate_series_data(low_series, 1)
+        validate_series_data(close_series, 1)
+
+        result = ta.true_range(high=high_series, low=low_series, close=close_series)
+        return result.values
+
+    @staticmethod
+    @handle_pandas_ta_errors
+    def bbands(
+        data: Union[np.ndarray, pd.Series], length: int = 20, std: float = 2.0
     ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
-        """
-        Bollinger Bands (ボリンジャーバンド) - pandas-ta版
+        """ボリンジャーバンド"""
+        series = to_pandas_series(data)
+        validate_series_data(series, length)
+        result = ta.bbands(series, length=length, std=std)
 
-        Args:
-            data: 価格データ（numpy配列）
-            period: 期間（デフォルト: 20）
-            std_dev: 標準偏差倍率（デフォルト: 2.0）
-            matype: 移動平均種別（pandas-taでは無視される）
+        upper_col = f"BBU_{length}_{std}"
+        middle_col = f"BBM_{length}_{std}"
+        lower_col = f"BBL_{length}_{std}"
 
-        Returns:
-            (Upper Band, Middle Band, Lower Band)のtuple
-        """
-        return pandas_ta_bbands(data, period, std_dev)
-
-    @staticmethod
-    def stddev(data: np.ndarray, period: int = 5, nbdev: float = 1.0) -> np.ndarray:
-        """
-        Standard Deviation (標準偏差) - pandas-ta版
-
-        Args:
-            data: 価格データ（numpy配列）
-            period: 期間（デフォルト: 5）
-            nbdev: 標準偏差倍率（デフォルト: 1.0）
-
-        Returns:
-            STDDEV値のnumpy配列
-        """
-        result = pandas_ta_stdev(data, period)
-        # nbdevが1.0でない場合は倍率を適用
-        if nbdev != 1.0:
-            result = result * nbdev
-        return result
+        return (
+            result[upper_col].values,
+            result[middle_col].values,
+            result[lower_col].values,
+        )
 
     @staticmethod
-    def var(data: np.ndarray, period: int = 5, nbdev: float = 1.0) -> np.ndarray:
-        """
-        Variance (分散) - pandas-ta版
-
-        Args:
-            data: 価格データ（numpy配列）
-            period: 期間（デフォルト: 5）
-            nbdev: 標準偏差倍率（デフォルト: 1.0）
-
-        Returns:
-            VAR値のnumpy配列
-        """
-        result = pandas_ta_variance(data, period)
-        # nbdevが1.0でない場合は倍率を適用
-        if nbdev != 1.0:
-            result = result * (nbdev**2)  # 分散なので二乗
-        return result
-
-    @staticmethod
-    def adx(
-        high: np.ndarray, low: np.ndarray, close: np.ndarray, period: int = 14
+    @handle_pandas_ta_errors
+    def stddev(
+        data: Union[np.ndarray, pd.Series], length: int = 5, ddof: int = 1
     ) -> np.ndarray:
-        """
-        Average Directional Movement Index (平均方向性指数) - pandas-ta版
+        """標準偏差"""
+        series = to_pandas_series(data)
+        validate_series_data(series, length)
+        result = ta.stdev(series, length=length, ddof=ddof)
+        return result.values
 
-        Args:
-            high: 高値データ（numpy配列）
-            low: 安値データ（numpy配列）
-            close: 終値データ（numpy配列）
-            period: 期間（デフォルト: 14）
+    @staticmethod
+    @handle_pandas_ta_errors
+    def var(
+        data: Union[np.ndarray, pd.Series], length: int = 5, ddof: int = 1
+    ) -> np.ndarray:
+        """分散"""
+        series = to_pandas_series(data)
+        validate_series_data(series, length)
+        result = ta.variance(series, length=length, ddof=ddof)
+        return result.values
 
-        Returns:
-            ADX値のnumpy配列
-        """
-        return pandas_ta_adx(high, low, close, period)
+    @staticmethod
+    @handle_pandas_ta_errors
+    def adx(
+        high: Union[np.ndarray, pd.Series],
+        low: Union[np.ndarray, pd.Series],
+        close: Union[np.ndarray, pd.Series],
+        length: int = 14,
+    ) -> np.ndarray:
+        """平均方向性指数"""
+        high_series = to_pandas_series(high)
+        low_series = to_pandas_series(low)
+        close_series = to_pandas_series(close)
+
+        validate_series_data(high_series, length)
+        validate_series_data(low_series, length)
+        validate_series_data(close_series, length)
+
+        result = ta.adx(high=high_series, low=low_series, close=close_series, length=length)
+        return result[f"ADX_{length}"].values
 
     @staticmethod
     @handle_pandas_ta_errors
     def adxr(
-        high: np.ndarray, low: np.ndarray, close: np.ndarray, period: int = 14
+        high: Union[np.ndarray, pd.Series],
+        low: Union[np.ndarray, pd.Series],
+        close: Union[np.ndarray, pd.Series],
+        length: int = 14,
     ) -> np.ndarray:
-        """
-        Average Directional Movement Index Rating (ADX評価)
+        """ADX評価"""
+        high_series = to_pandas_series(high)
+        low_series = to_pandas_series(low)
+        close_series = to_pandas_series(close)
 
-        Args:
-            high: 高値データ（numpy配列）
-            low: 安値データ（numpy配列）
-            close: 終値データ（numpy配列）
-            period: 期間（デフォルト: 14）
+        validate_series_data(high_series, length)
+        validate_series_data(low_series, length)
+        validate_series_data(close_series, length)
 
-        Returns:
-            ADXR値のnumpy配列
-        """
-        high = ensure_numpy_array(high)
-        low = ensure_numpy_array(low)
-        close = ensure_numpy_array(close)
-        validate_multi_input(high, low, close, period)
-        # ADXRはADXの変種として実装
-        return pandas_ta_adx(high, low, close, period)
+        result = ta.adx(
+            high=high_series, low=low_series, close=close_series, length=length
+        )
+        return result[f"ADXR_{length}"].values
 
     @staticmethod
     @handle_pandas_ta_errors
     def dx(
-        high: np.ndarray, low: np.ndarray, close: np.ndarray, period: int = 14
+        high: Union[np.ndarray, pd.Series],
+        low: Union[np.ndarray, pd.Series],
+        close: Union[np.ndarray, pd.Series],
+        length: int = 14,
     ) -> np.ndarray:
-        """
-        Directional Movement Index (方向性指数)
-
-        Args:
-            high: 高値データ（numpy配列）
-            low: 安値データ（numpy配列）
-            close: 終値データ（numpy配列）
-            period: 期間（デフォルト: 14）
-
-        Returns:
-            DX値のnumpy配列
-        """
-        high = ensure_numpy_array(high)
-        low = ensure_numpy_array(low)
-        close = ensure_numpy_array(close)
-        validate_multi_input(high, low, close, period)
-        return pandas_ta_dx(high, low, close, period)
+        """Directional Movement Index wrapper (DX)"""
+        # pandas-ta returns DX as part of adx; extract DX
+        high_s = to_pandas_series(high)
+        low_s = to_pandas_series(low)
+        close_s = to_pandas_series(close)
+        validate_series_data(high_s, length)
+        validate_series_data(low_s, length)
+        validate_series_data(close_s, length)
+        result = ta.adx(high=high_s, low=low_s, close=close_s, length=length)
+        # result contains DX_{length} column
+        dx_col = f"DX_{length}"
+        if dx_col in result.columns:
+            return result[dx_col].values
+        # fallback: compute difference between plus and minus DI
+        plus = result[f"DMP_{length}"] if f"DMP_{length}" in result.columns else None
+        minus = result[f"DMN_{length}"] if f"DMN_{length}" in result.columns else None
+        if plus is not None and minus is not None:
+            return (plus - minus).values
+        raise PandasTAError("DX not available from pandas-ta in this version")
 
     @staticmethod
     @handle_pandas_ta_errors
-    def minus_di(
-        high: np.ndarray, low: np.ndarray, close: np.ndarray, period: int = 14
-    ) -> np.ndarray:
-        """
-        Minus Directional Indicator (マイナス方向性指標)
-
-        Args:
-            high: 高値データ（numpy配列）
-            low: 安値データ（numpy配列）
-            close: 終値データ（numpy配列）
-            period: 期間（デフォルト: 14）
-
-        Returns:
-            MINUS_DI値のnumpy配列
-        """
-        high = ensure_numpy_array(high)
-        low = ensure_numpy_array(low)
-        close = ensure_numpy_array(close)
-        validate_multi_input(high, low, close, period)
-        return pandas_ta_minus_di(high, low, close, period)
+    def minus_di(high, low, close, length: int = 14) -> np.ndarray:
+        high_s = to_pandas_series(high)
+        low_s = to_pandas_series(low)
+        close_s = to_pandas_series(close)
+        result = ta.adx(high=high_s, low=low_s, close=close_s, length=length)
+        col = f"DMN_{length}"
+        if col in result.columns:
+            return result[col].values
+        raise PandasTAError("MINUS_DI not available in this pandas-ta version")
 
     @staticmethod
     @handle_pandas_ta_errors
-    def plus_di(
-        high: np.ndarray, low: np.ndarray, close: np.ndarray, period: int = 14
-    ) -> np.ndarray:
-        """
-        Plus Directional Indicator (プラス方向性指標)
-
-        Args:
-            high: 高値データ（numpy配列）
-            low: 安値データ（numpy配列）
-            close: 終値データ（numpy配列）
-            period: 期間（デフォルト: 14）
-
-        Returns:
-            PLUS_DI値のnumpy配列
-        """
-        high = ensure_numpy_array(high)
-        low = ensure_numpy_array(low)
-        close = ensure_numpy_array(close)
-        validate_multi_input(high, low, close, period)
-        return pandas_ta_plus_di(high, low, close, period)
+    def plus_di(high, low, close, length: int = 14) -> np.ndarray:
+        high_s = to_pandas_series(high)
+        low_s = to_pandas_series(low)
+        close_s = to_pandas_series(close)
+        result = ta.adx(high=high_s, low=low_s, close=close_s, length=length)
+        col = f"DMP_{length}"
+        if col in result.columns:
+            return result[col].values
+        raise PandasTAError("PLUS_DI not available in this pandas-ta version")
 
     @staticmethod
-    def minus_dm(high: np.ndarray, low: np.ndarray, period: int = 14) -> np.ndarray:
-        """
-        Minus Directional Movement (マイナス方向性移動) - pandas-ta版
-
-        Args:
-            high: 高値データ（numpy配列）
-            low: 安値データ（numpy配列）
-            period: 期間（デフォルト: 14）
-
-        Returns:
-            MINUS_DM値のnumpy配列
-        """
-        return pandas_ta_minus_dm(high, low, period)
+    @handle_pandas_ta_errors
+    def minus_dm(high, low, length: int = 14) -> np.ndarray:
+        high_s = to_pandas_series(high)
+        low_s = to_pandas_series(low)
+        result = ta.dm(high=high_s, low=low_s, length=length)
+        # pandas-ta dm returns DMP and DMN columns
+        cols = [c for c in result.columns if c.startswith("DMN_")]
+        if cols:
+            return result[cols[0]].values
+        raise PandasTAError("MINUS_DM not available in this pandas-ta version")
 
     @staticmethod
-    def plus_dm(high: np.ndarray, low: np.ndarray, period: int = 14) -> np.ndarray:
-        """
-        Plus Directional Movement (プラス方向性移動) - pandas-ta版
-
-        Args:
-            high: 高値データ（numpy配列）
-            low: 安値データ（numpy配列）
-            period: 期間（デフォルト: 14）
-
-        Returns:
-            PLUS_DM値のnumpy配列
-        """
-        return pandas_ta_plus_dm(high, low, period)
+    @handle_pandas_ta_errors
+    def plus_dm(high, low, length: int = 14) -> np.ndarray:
+        high_s = to_pandas_series(high)
+        low_s = to_pandas_series(low)
+        result = ta.dm(high=high_s, low=low_s, length=length)
+        # pandas-ta dm returns DMP and DMN columns
+        cols = [c for c in result.columns if c.startswith("DMP_")]
+        if cols:
+            return result[cols[0]].values
+        raise PandasTAError("PLUS_DM not available in this pandas-ta version")
 
     @staticmethod
+    @handle_pandas_ta_errors
     def aroon(
-        high: np.ndarray, low: np.ndarray, period: int = 14
+        high: Union[np.ndarray, pd.Series],
+        low: Union[np.ndarray, pd.Series],
+        length: int = 14,
     ) -> Tuple[np.ndarray, np.ndarray]:
-        """
-        Aroon (アルーン) - pandas-ta版
+        """アルーン"""
+        high_series = to_pandas_series(high)
+        low_series = to_pandas_series(low)
 
-        Args:
-            high: 高値データ（numpy配列）
-            low: 安値データ（numpy配列）
-            period: 期間（デフォルト: 14）
+        validate_series_data(high_series, length)
+        validate_series_data(low_series, length)
 
-        Returns:
-            (Aroon Down, Aroon Up)のtuple
-        """
-        return pandas_ta_aroon(high, low, period)
+        result = ta.aroon(high=high_series, low=low_series, length=length)
+        return result[f"AROOND_{length}"].values, result[f"AROONU_{length}"].values
 
     @staticmethod
-    def aroonosc(high: np.ndarray, low: np.ndarray, period: int = 14) -> np.ndarray:
-        """
-        Aroon Oscillator (アルーンオシレーター) - pandas-ta版
+    @handle_pandas_ta_errors
+    def aroonosc(
+        high: Union[np.ndarray, pd.Series],
+        low: Union[np.ndarray, pd.Series],
+        length: int = 14,
+    ) -> np.ndarray:
+        """アルーンオシレーター"""
+        high_series = to_pandas_series(high)
+        low_series = to_pandas_series(low)
 
-        Args:
-            high: 高値データ（numpy配列）
-            low: 安値データ（numpy配列）
-            period: 期間（デフォルト: 14）
+        validate_series_data(high_series, length)
+        validate_series_data(low_series, length)
 
-        Returns:
-            AROONOSC値のnumpy配列
-        """
-        return pandas_ta_aroonosc(high, low, period)
+        result = ta.aroon(high=high_series, low=low_series, length=length)
+        return result[f"AROONOSC_{length}"].values

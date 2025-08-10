@@ -6,23 +6,17 @@ backtesting.pyとの完全な互換性を提供します。
 numpy配列ベースのインターフェースを維持しています。
 """
 
-from typing import cast
+from typing import cast, Union
 
 import numpy as np
+import pandas as pd
+import pandas_ta as ta
 
 from ..utils import (
     PandasTAError,
-    ensure_numpy_array,
-    format_indicator_result,
     handle_pandas_ta_errors,
-    validate_input,
-    validate_multi_input,
-)
-from ..pandas_ta_utils import (
-    ohlc4 as pandas_ta_ohlc4,
-    hl2 as pandas_ta_hl2,
-    hlc3 as pandas_ta_hlc3,
-    wcp as pandas_ta_wcp,
+    to_pandas_series,
+    validate_series_data,
 )
 
 
@@ -35,63 +29,78 @@ class PriceTransformIndicators:
     """
 
     @staticmethod
+    @handle_pandas_ta_errors
     def avgprice(
-        open_data: np.ndarray, high: np.ndarray, low: np.ndarray, close: np.ndarray
+        open_data: Union[np.ndarray, pd.Series],
+        high: Union[np.ndarray, pd.Series],
+        low: Union[np.ndarray, pd.Series],
+        close: Union[np.ndarray, pd.Series],
     ) -> np.ndarray:
-        """
-        Average Price (平均価格) - pandas-ta版
+        """平均価格"""
+        open_series = to_pandas_series(open_data)
+        high_series = to_pandas_series(high)
+        low_series = to_pandas_series(low)
+        close_series = to_pandas_series(close)
 
-        Args:
-            open_data: 始値データ（numpy配列）
-            high: 高値データ（numpy配列）
-            low: 安値データ（numpy配列）
-            close: 終値データ（numpy配列）
+        validate_series_data(open_series, 1)
+        validate_series_data(high_series, 1)
+        validate_series_data(low_series, 1)
+        validate_series_data(close_series, 1)
 
-        Returns:
-            AVGPRICE値のnumpy配列
-        """
-        return pandas_ta_ohlc4(open_data, high, low, close)
-
-    @staticmethod
-    def medprice(high: np.ndarray, low: np.ndarray) -> np.ndarray:
-        """
-        Median Price (中央値価格) - pandas-ta版
-
-        Args:
-            high: 高値データ（numpy配列）
-            low: 安値データ（numpy配列）
-
-        Returns:
-            MEDPRICE値のnumpy配列
-        """
-        return pandas_ta_hl2(high, low)
+        result = ta.ohlc4(
+            open=open_series, high=high_series, low=low_series, close=close_series
+        )
+        return result.values
 
     @staticmethod
-    def typprice(high: np.ndarray, low: np.ndarray, close: np.ndarray) -> np.ndarray:
-        """
-        Typical Price (典型価格) - pandas-ta版
+    @handle_pandas_ta_errors
+    def medprice(
+        high: Union[np.ndarray, pd.Series], low: Union[np.ndarray, pd.Series]
+    ) -> np.ndarray:
+        """中央値価格"""
+        high_series = to_pandas_series(high)
+        low_series = to_pandas_series(low)
 
-        Args:
-            high: 高値データ（numpy配列）
-            low: 安値データ（numpy配列）
-            close: 終値データ（numpy配列）
+        validate_series_data(high_series, 1)
+        validate_series_data(low_series, 1)
 
-        Returns:
-            TYPPRICE値のnumpy配列
-        """
-        return pandas_ta_hlc3(high, low, close)
+        result = ta.hl2(high=high_series, low=low_series)
+        return result.values
 
     @staticmethod
-    def wclprice(high: np.ndarray, low: np.ndarray, close: np.ndarray) -> np.ndarray:
-        """
-        Weighted Close Price (加重終値価格) - pandas-ta版
+    @handle_pandas_ta_errors
+    def typprice(
+        high: Union[np.ndarray, pd.Series],
+        low: Union[np.ndarray, pd.Series],
+        close: Union[np.ndarray, pd.Series],
+    ) -> np.ndarray:
+        """典型価格"""
+        high_series = to_pandas_series(high)
+        low_series = to_pandas_series(low)
+        close_series = to_pandas_series(close)
 
-        Args:
-            high: 高値データ（numpy配列）
-            low: 安値データ（numpy配列）
-            close: 終値データ（numpy配列）
+        validate_series_data(high_series, 1)
+        validate_series_data(low_series, 1)
+        validate_series_data(close_series, 1)
 
-        Returns:
-            WCLPRICE値のnumpy配列
-        """
-        return pandas_ta_wcp(high, low, close)
+        result = ta.hlc3(high=high_series, low=low_series, close=close_series)
+        return result.values
+
+    @staticmethod
+    @handle_pandas_ta_errors
+    def wclprice(
+        high: Union[np.ndarray, pd.Series],
+        low: Union[np.ndarray, pd.Series],
+        close: Union[np.ndarray, pd.Series],
+    ) -> np.ndarray:
+        """加重終値価格"""
+        high_series = to_pandas_series(high)
+        low_series = to_pandas_series(low)
+        close_series = to_pandas_series(close)
+
+        validate_series_data(high_series, 1)
+        validate_series_data(low_series, 1)
+        validate_series_data(close_series, 1)
+
+        result = ta.wcp(high=high_series, low=low_series, close=close_series)
+        return result.values
