@@ -10,7 +10,7 @@ import numpy as np
 import pandas as pd
 import pandas_ta as ta
 from typing import Union, Tuple
-from functools import wraps
+from .utils import handle_pandas_ta_errors
 
 logger = logging.getLogger(__name__)
 
@@ -53,23 +53,10 @@ def _validate_parameters(length: int, min_length: int = 1) -> None:
         raise PandasTAError(f"期間が小さすぎます: 最小{min_length}, 実際{length}")
 
 
-def _handle_errors(func):
-    """エラーハンドリングデコレーター"""
-
-    @wraps(func)
-    def wrapper(*args, **kwargs):
-        try:
-            return func(*args, **kwargs)
-        except Exception as e:
-            raise PandasTAError(f"{func.__name__}: {str(e)}")
-
-    return wrapper
-
-
 # 基本指標関数群
 
 
-@_handle_errors
+@handle_pandas_ta_errors
 def sma(data: Union[np.ndarray, pd.Series], length: int) -> np.ndarray:
     """単純移動平均"""
     _validate_parameters(length)
@@ -79,7 +66,7 @@ def sma(data: Union[np.ndarray, pd.Series], length: int) -> np.ndarray:
     return result.values
 
 
-@_handle_errors
+@handle_pandas_ta_errors
 def ema(data: Union[np.ndarray, pd.Series], length: int) -> np.ndarray:
     """指数移動平均"""
     _validate_parameters(length)
@@ -89,7 +76,7 @@ def ema(data: Union[np.ndarray, pd.Series], length: int) -> np.ndarray:
     return result.values
 
 
-@_handle_errors
+@handle_pandas_ta_errors
 def rsi(data: Union[np.ndarray, pd.Series], length: int = 14) -> np.ndarray:
     """相対力指数"""
     _validate_parameters(length)
@@ -99,7 +86,7 @@ def rsi(data: Union[np.ndarray, pd.Series], length: int = 14) -> np.ndarray:
     return result.values
 
 
-@_handle_errors
+@handle_pandas_ta_errors
 def macd(
     data: Union[np.ndarray, pd.Series], fast: int = 12, slow: int = 26, signal: int = 9
 ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
@@ -115,7 +102,7 @@ def macd(
     return (result[macd_col].values, result[signal_col].values, result[hist_col].values)
 
 
-@_handle_errors
+@handle_pandas_ta_errors
 def macdext(
     data: Union[np.ndarray, pd.Series],
     fastperiod: int = 12,
@@ -137,7 +124,7 @@ def macdext(
     return (result[macd_col].values, result[signal_col].values, result[hist_col].values)
 
 
-@_handle_errors
+@handle_pandas_ta_errors
 def macdfix(
     data: Union[np.ndarray, pd.Series], signalperiod: int = 9
 ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
@@ -151,7 +138,7 @@ def macdfix(
     return (result[macd_col].values, result[signal_col].values, result[hist_col].values)
 
 
-@_handle_errors
+@handle_pandas_ta_errors
 def atr(
     high: Union[np.ndarray, pd.Series],
     low: Union[np.ndarray, pd.Series],
@@ -171,7 +158,7 @@ def atr(
     return result.values
 
 
-@_handle_errors
+@handle_pandas_ta_errors
 def bbands(
     data: Union[np.ndarray, pd.Series], length: int = 20, std: float = 2.0
 ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
@@ -191,7 +178,7 @@ def bbands(
     )
 
 
-@_handle_errors
+@handle_pandas_ta_errors
 def stoch(
     high: Union[np.ndarray, pd.Series],
     low: Union[np.ndarray, pd.Series],
@@ -224,7 +211,7 @@ def stoch(
     return (result[k_col].values, result[d_col].values)
 
 
-@_handle_errors
+@handle_pandas_ta_errors
 def adx(
     high: Union[np.ndarray, pd.Series],
     low: Union[np.ndarray, pd.Series],
@@ -244,7 +231,7 @@ def adx(
     return result[f"ADX_{length}"].values
 
 
-@_handle_errors
+@handle_pandas_ta_errors
 def dx(
     high: Union[np.ndarray, pd.Series],
     low: Union[np.ndarray, pd.Series],
@@ -272,7 +259,7 @@ def dx(
     raise PandasTAError("DX not available from pandas-ta in this version")
 
 
-@_handle_errors
+@handle_pandas_ta_errors
 def plus_di(high, low, close, length: int = 14) -> np.ndarray:
     high_s = _to_series(high)
     low_s = _to_series(low)
@@ -284,7 +271,7 @@ def plus_di(high, low, close, length: int = 14) -> np.ndarray:
     raise PandasTAError("PLUS_DI not available in this pandas-ta version")
 
 
-@_handle_errors
+@handle_pandas_ta_errors
 def minus_di(high, low, close, length: int = 14) -> np.ndarray:
     high_s = _to_series(high)
     low_s = _to_series(low)
@@ -296,7 +283,7 @@ def minus_di(high, low, close, length: int = 14) -> np.ndarray:
     raise PandasTAError("MINUS_DI not available in this pandas-ta version")
 
 
-@_handle_errors
+@handle_pandas_ta_errors
 def plus_dm(high, low, length: int = 14) -> np.ndarray:
     high_s = _to_series(high)
     low_s = _to_series(low)
@@ -308,7 +295,7 @@ def plus_dm(high, low, length: int = 14) -> np.ndarray:
     raise PandasTAError("PLUS_DM not available in this pandas-ta version")
 
 
-@_handle_errors
+@handle_pandas_ta_errors
 def minus_dm(high, low, length: int = 14) -> np.ndarray:
     high_s = _to_series(high)
     low_s = _to_series(low)
@@ -319,7 +306,7 @@ def minus_dm(high, low, length: int = 14) -> np.ndarray:
     raise PandasTAError("MINUS_DM not available in this pandas-ta version")
 
 
-@_handle_errors
+@handle_pandas_ta_errors
 def tema(data: Union[np.ndarray, pd.Series], length: int) -> np.ndarray:
     """三重指数移動平均"""
     series = _to_series(data)
@@ -328,7 +315,7 @@ def tema(data: Union[np.ndarray, pd.Series], length: int) -> np.ndarray:
     return result.values
 
 
-@_handle_errors
+@handle_pandas_ta_errors
 def dema(data: Union[np.ndarray, pd.Series], length: int) -> np.ndarray:
     """二重指数移動平均"""
     series = _to_series(data)
@@ -337,7 +324,7 @@ def dema(data: Union[np.ndarray, pd.Series], length: int) -> np.ndarray:
     return result.values
 
 
-@_handle_errors
+@handle_pandas_ta_errors
 def wma(data: Union[np.ndarray, pd.Series], length: int) -> np.ndarray:
     """加重移動平均"""
     series = _to_series(data)
@@ -346,7 +333,7 @@ def wma(data: Union[np.ndarray, pd.Series], length: int) -> np.ndarray:
     return result.values
 
 
-@_handle_errors
+@handle_pandas_ta_errors
 def trima(data: Union[np.ndarray, pd.Series], length: int) -> np.ndarray:
     """三角移動平均"""
     series = _to_series(data)
@@ -355,7 +342,7 @@ def trima(data: Union[np.ndarray, pd.Series], length: int) -> np.ndarray:
     return result.values
 
 
-@_handle_errors
+@handle_pandas_ta_errors
 def kama(data: Union[np.ndarray, pd.Series], length: int = 30) -> np.ndarray:
     """カウフマン適応移動平均"""
     series = _to_series(data)
@@ -364,7 +351,7 @@ def kama(data: Union[np.ndarray, pd.Series], length: int = 30) -> np.ndarray:
     return result.values
 
 
-@_handle_errors
+@handle_pandas_ta_errors
 def t3(
     data: Union[np.ndarray, pd.Series], length: int = 5, a: float = 0.7
 ) -> np.ndarray:
@@ -375,7 +362,7 @@ def t3(
     return result.values
 
 
-@_handle_errors
+@handle_pandas_ta_errors
 def sar(
     high: Union[np.ndarray, pd.Series],
     low: Union[np.ndarray, pd.Series],
@@ -393,7 +380,7 @@ def sar(
     return result[f"PSARl_{af}_{max_af}"].fillna(result[f"PSARs_{af}_{max_af}"]).values
 
 
-@_handle_errors
+@handle_pandas_ta_errors
 def sarext(
     high: Union[np.ndarray, pd.Series],
     low: Union[np.ndarray, pd.Series],
@@ -427,7 +414,7 @@ def sarext(
     return result[f"PSARl_{af}_{max_af}"].fillna(result[f"PSARs_{af}_{max_af}"]).values
 
 
-@_handle_errors
+@handle_pandas_ta_errors
 def willr(
     high: Union[np.ndarray, pd.Series],
     low: Union[np.ndarray, pd.Series],
@@ -449,7 +436,7 @@ def willr(
     return result.values
 
 
-@_handle_errors
+@handle_pandas_ta_errors
 def ht_trendline(data: Union[np.ndarray, pd.Series]) -> np.ndarray:
     """Hilbert Transform - Instantaneous Trendline"""
     series = _to_series(data)
@@ -463,7 +450,7 @@ def ht_trendline(data: Union[np.ndarray, pd.Series]) -> np.ndarray:
         raise PandasTAError("pandas-ta does not provide ht_trendline in this version")
 
 
-@_handle_errors
+@handle_pandas_ta_errors
 def midpoint(data: Union[np.ndarray, pd.Series], length: int) -> np.ndarray:
     """MidPoint over period"""
     series = _to_series(data)
@@ -472,7 +459,7 @@ def midpoint(data: Union[np.ndarray, pd.Series], length: int) -> np.ndarray:
     return result.values
 
 
-@_handle_errors
+@handle_pandas_ta_errors
 def midprice(
     high: Union[np.ndarray, pd.Series], low: Union[np.ndarray, pd.Series], length: int
 ) -> np.ndarray:
@@ -487,7 +474,7 @@ def midprice(
     return result.values
 
 
-@_handle_errors
+@handle_pandas_ta_errors
 def cci(
     high: Union[np.ndarray, pd.Series],
     low: Union[np.ndarray, pd.Series],
@@ -507,7 +494,7 @@ def cci(
     return result.values
 
 
-@_handle_errors
+@handle_pandas_ta_errors
 def roc(data: Union[np.ndarray, pd.Series], length: int = 10) -> np.ndarray:
     """変化率"""
     series = _to_series(data)
@@ -516,7 +503,7 @@ def roc(data: Union[np.ndarray, pd.Series], length: int = 10) -> np.ndarray:
     return result.values
 
 
-@_handle_errors
+@handle_pandas_ta_errors
 def mom(data: Union[np.ndarray, pd.Series], length: int = 10) -> np.ndarray:
     """モメンタム"""
     series = _to_series(data)
@@ -525,7 +512,7 @@ def mom(data: Union[np.ndarray, pd.Series], length: int = 10) -> np.ndarray:
     return result.values
 
 
-@_handle_errors
+@handle_pandas_ta_errors
 def mfi(
     high: Union[np.ndarray, pd.Series],
     low: Union[np.ndarray, pd.Series],
@@ -554,7 +541,7 @@ def mfi(
     return result.values
 
 
-@_handle_errors
+@handle_pandas_ta_errors
 def cmo(data: Union[np.ndarray, pd.Series], length: int = 14) -> np.ndarray:
     series = _to_series(data)
     _validate_data(series, length)
@@ -562,7 +549,7 @@ def cmo(data: Union[np.ndarray, pd.Series], length: int = 14) -> np.ndarray:
     return result.values
 
 
-@_handle_errors
+@handle_pandas_ta_errors
 def rocp(data: Union[np.ndarray, pd.Series], length: int = 10) -> np.ndarray:
     series = _to_series(data)
     _validate_data(series, length)
@@ -570,7 +557,7 @@ def rocp(data: Union[np.ndarray, pd.Series], length: int = 10) -> np.ndarray:
     return result.values
 
 
-@_handle_errors
+@handle_pandas_ta_errors
 def rocr(data: Union[np.ndarray, pd.Series], length: int = 10) -> np.ndarray:
     # Approximate ROCR by returning roc values (ratio-based adjustments can be added later)
     series = _to_series(data)
@@ -579,7 +566,7 @@ def rocr(data: Union[np.ndarray, pd.Series], length: int = 10) -> np.ndarray:
     return result.values
 
 
-@_handle_errors
+@handle_pandas_ta_errors
 def rocr100(data: Union[np.ndarray, pd.Series], length: int = 10) -> np.ndarray:
     series = _to_series(data)
     _validate_data(series, length)
@@ -587,7 +574,7 @@ def rocr100(data: Union[np.ndarray, pd.Series], length: int = 10) -> np.ndarray:
     return result.values
 
 
-@_handle_errors
+@handle_pandas_ta_errors
 def trix(data: Union[np.ndarray, pd.Series], length: int = 30) -> np.ndarray:
     series = _to_series(data)
     _validate_data(series, length)
@@ -595,7 +582,7 @@ def trix(data: Union[np.ndarray, pd.Series], length: int = 30) -> np.ndarray:
     return result.values
 
 
-@_handle_errors
+@handle_pandas_ta_errors
 def ppo(
     data: Union[np.ndarray, pd.Series], fast: int = 12, slow: int = 26
 ) -> np.ndarray:
@@ -608,7 +595,7 @@ def ppo(
     return result.values
 
 
-@_handle_errors
+@handle_pandas_ta_errors
 def ultosc(
     high: Union[np.ndarray, pd.Series],
     low: Union[np.ndarray, pd.Series],
@@ -630,7 +617,7 @@ def ultosc(
     return result.values
 
 
-@_handle_errors
+@handle_pandas_ta_errors
 def bop(open_data, high, low, close) -> np.ndarray:
     o = _to_series(open_data)
     h = _to_series(high)
@@ -642,7 +629,7 @@ def bop(open_data, high, low, close) -> np.ndarray:
     return result.values
 
 
-@_handle_errors
+@handle_pandas_ta_errors
 def apo(
     data: Union[np.ndarray, pd.Series], fast: int = 12, slow: int = 26
 ) -> np.ndarray:
@@ -652,7 +639,7 @@ def apo(
     return result.values
 
 
-@_handle_errors
+@handle_pandas_ta_errors
 def stochf(
     high: Union[np.ndarray, pd.Series],
     low: Union[np.ndarray, pd.Series],
@@ -677,7 +664,7 @@ def stochf(
     return (result[k_col].values, result[d_col].values)
 
 
-@_handle_errors
+@handle_pandas_ta_errors
 def stochrsi(
     data: Union[np.ndarray, pd.Series],
     timeperiod: int = 14,
@@ -693,7 +680,7 @@ def stochrsi(
     return (result[k_col].values, result[d_col].values)
 
 
-@_handle_errors
+@handle_pandas_ta_errors
 def aroon(
     high: Union[np.ndarray, pd.Series],
     low: Union[np.ndarray, pd.Series],
@@ -707,7 +694,7 @@ def aroon(
     return (result[cols[0]].values, result[cols[1]].values)
 
 
-@_handle_errors
+@handle_pandas_ta_errors
 def aroonosc(
     high: Union[np.ndarray, pd.Series],
     low: Union[np.ndarray, pd.Series],
@@ -720,7 +707,7 @@ def aroonosc(
 # 価格変換関数群
 
 
-@_handle_errors
+@handle_pandas_ta_errors
 def ohlc4(
     open_data: Union[np.ndarray, pd.Series],
     high: Union[np.ndarray, pd.Series],
@@ -739,7 +726,7 @@ def ohlc4(
     return result.values
 
 
-@_handle_errors
+@handle_pandas_ta_errors
 def hl2(
     high: Union[np.ndarray, pd.Series],
     low: Union[np.ndarray, pd.Series],
@@ -752,7 +739,7 @@ def hl2(
     return result.values
 
 
-@_handle_errors
+@handle_pandas_ta_errors
 def hlc3(
     high: Union[np.ndarray, pd.Series],
     low: Union[np.ndarray, pd.Series],
@@ -767,7 +754,7 @@ def hlc3(
     return result.values
 
 
-@_handle_errors
+@handle_pandas_ta_errors
 def wcp(
     high: Union[np.ndarray, pd.Series],
     low: Union[np.ndarray, pd.Series],
@@ -785,7 +772,7 @@ def wcp(
 # ボラティリティ関数群
 
 
-@_handle_errors
+@handle_pandas_ta_errors
 def stdev(data: Union[np.ndarray, pd.Series], length: int = 5) -> np.ndarray:
     """Standard Deviation (標準偏差)"""
     series = _to_series(data)
@@ -794,7 +781,7 @@ def stdev(data: Union[np.ndarray, pd.Series], length: int = 5) -> np.ndarray:
     return result.values
 
 
-@_handle_errors
+@handle_pandas_ta_errors
 def natr(
     high: Union[np.ndarray, pd.Series],
     low: Union[np.ndarray, pd.Series],
@@ -816,7 +803,7 @@ def natr(
     return result.values
 
 
-@_handle_errors
+@handle_pandas_ta_errors
 def true_range(
     high: Union[np.ndarray, pd.Series],
     low: Union[np.ndarray, pd.Series],
@@ -835,7 +822,7 @@ def true_range(
     return result.values
 
 
-@_handle_errors
+@handle_pandas_ta_errors
 def variance(data: Union[np.ndarray, pd.Series], length: int = 5) -> np.ndarray:
     """Variance (分散)"""
     series = _to_series(data)
@@ -847,7 +834,7 @@ def variance(data: Union[np.ndarray, pd.Series], length: int = 5) -> np.ndarray:
 # 出来高関数群
 
 
-@_handle_errors
+@handle_pandas_ta_errors
 def ad(
     high: Union[np.ndarray, pd.Series],
     low: Union[np.ndarray, pd.Series],
@@ -871,7 +858,7 @@ def ad(
     return result.values
 
 
-@_handle_errors
+@handle_pandas_ta_errors
 def adosc(
     high: Union[np.ndarray, pd.Series],
     low: Union[np.ndarray, pd.Series],
@@ -902,7 +889,7 @@ def adosc(
     return result.values
 
 
-@_handle_errors
+@handle_pandas_ta_errors
 def obv(
     close: Union[np.ndarray, pd.Series],
     volume: Union[np.ndarray, pd.Series],
@@ -921,7 +908,7 @@ def obv(
 # ローソク足パターン関数群
 
 
-@_handle_errors
+@handle_pandas_ta_errors
 def cdl_doji(
     open_data: Union[np.ndarray, pd.Series],
     high: Union[np.ndarray, pd.Series],
@@ -947,7 +934,7 @@ def cdl_doji(
     return result.values
 
 
-@_handle_errors
+@handle_pandas_ta_errors
 def cdl_hammer(
     open_data: Union[np.ndarray, pd.Series],
     high: Union[np.ndarray, pd.Series],
@@ -1005,7 +992,7 @@ def cdl_hammer(
 def _create_simple_pattern_detector(pattern_name: str):
     """簡単なローソク足パターン検出器を作成"""
 
-    @_handle_errors
+    @handle_pandas_ta_errors
     def pattern_detector(
         open_data: Union[np.ndarray, pd.Series],
         high: Union[np.ndarray, pd.Series],
