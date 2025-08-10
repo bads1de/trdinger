@@ -362,4 +362,8 @@ class TechnicalFeatureCalculator(BaseFeatureCalculator):
 
 # 互換性のための別名（旧名: TechnicalFeatureEngineer）
 class TechnicalFeatureEngineer(TechnicalFeatureCalculator):
-    pass
+    # 旧API互換
+    def create_features(self, df: pd.DataFrame, config=None) -> pd.DataFrame:
+        if config is None:
+            config = {"lookback_periods": {}}
+        return self.calculate_features(df, config)

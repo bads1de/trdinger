@@ -24,6 +24,10 @@ class AdvancedFeatureEngineer:
         """初期化"""
         self.scaler = StandardScaler()
 
+    # 旧API互換（create_features -> create_advanced_features）
+    def create_features(self, ohlcv_data: pd.DataFrame) -> pd.DataFrame:
+        return self.create_advanced_features(ohlcv_data)
+
     def create_advanced_features(
         self,
         ohlcv_data: pd.DataFrame,

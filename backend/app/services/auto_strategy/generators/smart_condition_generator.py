@@ -353,6 +353,14 @@ INDICATOR_CHARACTERISTICS = {
         "continuation_pattern": True,
         "bullish_pattern": True,
     },
+    "CDL_DARK_CLOUD_COVER": {
+        "type": IndicatorType.PATTERN_RECOGNITION,
+        "range": (-100, 100),
+        "pattern_recognition": True,
+        "binary_like": True,
+        "reversal_pattern": True,
+        "bearish_pattern": True,
+    },
 }
 
 # 組み合わせルール（計画書の設計に基づく）

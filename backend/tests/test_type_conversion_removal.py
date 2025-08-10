@@ -208,9 +208,10 @@ class TestTypeConversionRemoval:
         """エラーハンドリングのテスト"""
         close_series = sample_data["Close"]
 
-        # 期間が長すぎる場合
+        # 期間が長すぎる場合（データ長10に対して期間20）
+        short_series = close_series.head(10)
         with pytest.raises(Exception):
-            TrendIndicators.sma(close_series, 20)  # データ長10に対して期間20
+            TrendIndicators.sma(short_series, 20)
 
         # 無効なパラメータ
         with pytest.raises(Exception):

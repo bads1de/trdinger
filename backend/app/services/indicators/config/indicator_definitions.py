@@ -27,7 +27,8 @@ from app.services.indicators.technical_indicators.volatility import (
     VolatilityIndicators,
 )
 from app.services.indicators.technical_indicators.volume import VolumeIndicators
-from app.services.indicators.technical_indicators.ml import MLIndicators
+
+
 from app.services.indicators.technical_indicators.additions_momentum import (
     MoreMomentumIndicators,
 )
@@ -1559,19 +1560,19 @@ def setup_math_operators_indicators():
 def setup_pattern_recognition_indicators():
     """パターン認識系インジケーターの設定"""
 
-    # 基本的なキャンドルスティックパターン（パラメータなし）
-    # pandas-ta の cdl_pattern でサポートされていない名称は除外
+    # キャンドルスティックパターン（pandas-ta の cdl/cdl_pattern に準拠）
+    # ここに記載の名称は PatternRecognitionIndicators に実装されている必要があります
     basic_patterns = [
         "CDL_DOJI",
         "CDL_ENGULFING",
         "CDL_HARAMI",
-        # 以下は cdl_pattern 未サポートのため登録しない
-        # "CDL_HAMMER",
-        # "CDL_HANGING_MAN",
-        # "CDL_SHOOTING_STAR",
-        # "CDL_PIERCING",
-        # "CDL_THREE_BLACK_CROWS",
-        # "CDL_THREE_WHITE_SOLDIERS",
+        "CDL_HAMMER",
+        "CDL_HANGING_MAN",
+        "CDL_SHOOTING_STAR",
+        "CDL_PIERCING",
+        "CDL_THREE_BLACK_CROWS",
+        "CDL_THREE_WHITE_SOLDIERS",
+        "CDL_DARK_CLOUD_COVER",
     ]
 
     for pattern_name in basic_patterns:
@@ -1615,7 +1616,7 @@ def setup_pattern_recognition_indicators():
             config = IndicatorConfig(
                 indicator_name=pattern_name,
                 adapter_function=getattr(PatternRecognitionIndicators, method_name),
-                required_data=["open", "high", "low", "close"],
+                required_data=["open_data", "high", "low", "close"],
                 result_type=IndicatorResultType.SINGLE,
                 scale_type=IndicatorScaleType.OSCILLATOR_PLUS_MINUS_100,
                 category="pattern_recognition",
@@ -1624,7 +1625,12 @@ def setup_pattern_recognition_indicators():
 
 
 def setup_ml_indicators():
-    """ML予測確率指標の設定"""
+    """ML予測確率指標の設定（存在する場合のみ登録）"""
+    try:
+        from app.services.indicators.technical_indicators.ml import MLIndicators  # type: ignore
+    except Exception:
+        # ML モジュールが存在しない場合はスキップ
+        return
 
     # ML_UP_PROB
     ml_up_prob_config = IndicatorConfig(

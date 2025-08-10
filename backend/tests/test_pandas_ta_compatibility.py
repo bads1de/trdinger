@@ -224,6 +224,8 @@ class TestPandasTACompatibility:
         pandas_ta_result = ta.stoch(
             high_series, low_series, close_series, k=k_period, d=d_period
         )
+        # インデックスを入力に合わせて揃える（pandas-taのstochは先頭をドロップするため短くなる）
+        pandas_ta_result = pandas_ta_result.reindex(close_series.index)
 
         # 結果の比較（列名を動的に取得）
         columns = pandas_ta_result.columns.tolist()

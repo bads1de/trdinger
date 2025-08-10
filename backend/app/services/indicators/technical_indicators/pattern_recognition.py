@@ -28,6 +28,32 @@ class PatternRecognitionIndicators:
     """
 
     @staticmethod
+    def _build_ohlc_df(
+        open_series, high_series, low_series, close_series
+    ) -> pd.DataFrame:
+        return pd.DataFrame(
+            {
+                "open": open_series,
+                "high": high_series,
+                "low": low_series,
+                "close": close_series,
+            }
+        )
+
+    @staticmethod
+    def _cdl_pattern_values(df: pd.DataFrame, name: str) -> np.ndarray:
+        """pandas-ta の cdl_pattern を使って 1 次元 ndarray を返す共通処理"""
+        if hasattr(df.ta, "cdl_pattern"):
+            result = df.ta.cdl_pattern(name=name)
+            # DataFrame/Series いずれにも対応して 1 次元に揃える
+            if isinstance(result, pd.DataFrame):
+                return result.iloc[:, 0].values
+            if isinstance(result, pd.Series):
+                return result.values
+            return np.asarray(result).ravel()
+        raise PandasTAError("pandas-ta に cdl_pattern がありません")
+
+    @staticmethod
     @handle_pandas_ta_errors
     def cdl_doji(
         open_data: Union[np.ndarray, pd.Series],
@@ -41,22 +67,13 @@ class PatternRecognitionIndicators:
         low_series = ensure_series_minimal_conversion(low)
         close_series = ensure_series_minimal_conversion(close)
 
-        df = pd.DataFrame(
-            {
-                "open": open_series,
-                "high": high_series,
-                "low": low_series,
-                "close": close_series,
-            }
+        df = PatternRecognitionIndicators._build_ohlc_df(
+            open_series, high_series, low_series, close_series
         )
-        # pandas-ta v0.3以降では cdl または cdl_pattern を利用
+        # pandas-ta v0.3 互換: cdl または cdl_pattern
         if hasattr(df.ta, "cdl"):
-            result = df.ta.cdl("doji")
-            return result.values
-        if hasattr(df.ta, "cdl_pattern"):
-            result = df.ta.cdl_pattern(name="doji")
-            return result.values
-        raise PandasTAError("pandas-ta に cdl/cdl_pattern がありません")
+            return df.ta.cdl("doji").values
+        return PatternRecognitionIndicators._cdl_pattern_values(df, name="doji")
 
     @staticmethod
     @handle_pandas_ta_errors
@@ -72,21 +89,12 @@ class PatternRecognitionIndicators:
         low_series = ensure_series_minimal_conversion(low)
         close_series = ensure_series_minimal_conversion(close)
 
-        df = pd.DataFrame(
-            {
-                "open": open_series,
-                "high": high_series,
-                "low": low_series,
-                "close": close_series,
-            }
+        df = PatternRecognitionIndicators._build_ohlc_df(
+            open_series, high_series, low_series, close_series
         )
         if hasattr(df.ta, "cdl"):
-            result = df.ta.cdl("hammer")
-            return result.values
-        if hasattr(df.ta, "cdl_pattern"):
-            result = df.ta.cdl_pattern(name="hammer")
-            return result.values
-        raise PandasTAError("pandas-ta に cdl/cdl_pattern がありません")
+            return df.ta.cdl("hammer").values
+        return PatternRecognitionIndicators._cdl_pattern_values(df, name="hammer")
 
     @staticmethod
     @handle_pandas_ta_errors
@@ -102,15 +110,10 @@ class PatternRecognitionIndicators:
         low_series = ensure_series_minimal_conversion(low)
         close_series = ensure_series_minimal_conversion(close)
 
-        df = pd.DataFrame(
-            {
-                "open": open_series,
-                "high": high_series,
-                "low": low_series,
-                "close": close_series,
-            }
+        df = PatternRecognitionIndicators._build_ohlc_df(
+            open_series, high_series, low_series, close_series
         )
-        raise PandasTAError("cdl_hanging_man はサポート対象外です")
+        return PatternRecognitionIndicators._cdl_pattern_values(df, name="hangingman")
 
     @staticmethod
     @handle_pandas_ta_errors
@@ -121,7 +124,14 @@ class PatternRecognitionIndicators:
         close: Union[np.ndarray, pd.Series],
     ) -> np.ndarray:
         """流れ星"""
-        raise PandasTAError("cdl_shooting_star はサポート対象外です")
+        open_series = ensure_series_minimal_conversion(open_data)
+        high_series = ensure_series_minimal_conversion(high)
+        low_series = ensure_series_minimal_conversion(low)
+        close_series = ensure_series_minimal_conversion(close)
+        df = PatternRecognitionIndicators._build_ohlc_df(
+            open_series, high_series, low_series, close_series
+        )
+        return PatternRecognitionIndicators._cdl_pattern_values(df, name="shootingstar")
 
     @staticmethod
     @handle_pandas_ta_errors
@@ -137,18 +147,10 @@ class PatternRecognitionIndicators:
         low_series = ensure_series_minimal_conversion(low)
         close_series = ensure_series_minimal_conversion(close)
 
-        df = pd.DataFrame(
-            {
-                "open": open_series,
-                "high": high_series,
-                "low": low_series,
-                "close": close_series,
-            }
+        df = PatternRecognitionIndicators._build_ohlc_df(
+            open_series, high_series, low_series, close_series
         )
-        if hasattr(df.ta, "cdl_pattern"):
-            result = df.ta.cdl_pattern(name="engulfing")
-            return result.values
-        raise PandasTAError("pandas-ta に cdl_pattern がありません")
+        return PatternRecognitionIndicators._cdl_pattern_values(df, name="engulfing")
 
     @staticmethod
     @handle_pandas_ta_errors
@@ -164,19 +166,11 @@ class PatternRecognitionIndicators:
         low_series = ensure_series_minimal_conversion(low)
         close_series = ensure_series_minimal_conversion(close)
 
-        df = pd.DataFrame(
-            {
-                "open": open_series,
-                "high": high_series,
-                "low": low_series,
-                "close": close_series,
-            }
+        df = PatternRecognitionIndicators._build_ohlc_df(
+            open_series, high_series, low_series, close_series
         )
-        if hasattr(df.ta, "cdl_pattern"):
-            # pandas-taでは"inside" が対応（harami相当）
-            result = df.ta.cdl_pattern(name="inside")
-            return result.values
-        raise PandasTAError("pandas-ta に cdl_pattern がありません")
+        # TA-Lib の Harami を直接利用
+        return PatternRecognitionIndicators._cdl_pattern_values(df, name="harami")
 
     @staticmethod
     @handle_pandas_ta_errors
@@ -187,7 +181,14 @@ class PatternRecognitionIndicators:
         close: Union[np.ndarray, pd.Series],
     ) -> np.ndarray:
         """切り込み線"""
-        raise PandasTAError("cdl_piercing はサポート対象外です")
+        open_series = ensure_series_minimal_conversion(open_data)
+        high_series = ensure_series_minimal_conversion(high)
+        low_series = ensure_series_minimal_conversion(low)
+        close_series = ensure_series_minimal_conversion(close)
+        df = PatternRecognitionIndicators._build_ohlc_df(
+            open_series, high_series, low_series, close_series
+        )
+        return PatternRecognitionIndicators._cdl_pattern_values(df, name="piercing")
 
     @staticmethod
     @handle_pandas_ta_errors
@@ -198,7 +199,16 @@ class PatternRecognitionIndicators:
         close: Union[np.ndarray, pd.Series],
     ) -> np.ndarray:
         """かぶせ線"""
-        raise PandasTAError("cdl_dark_cloud_cover はサポート対象外です")
+        open_series = ensure_series_minimal_conversion(open_data)
+        high_series = ensure_series_minimal_conversion(high)
+        low_series = ensure_series_minimal_conversion(low)
+        close_series = ensure_series_minimal_conversion(close)
+        df = PatternRecognitionIndicators._build_ohlc_df(
+            open_series, high_series, low_series, close_series
+        )
+        return PatternRecognitionIndicators._cdl_pattern_values(
+            df, name="darkcloudcover"
+        )
 
     @staticmethod
     @handle_pandas_ta_errors
@@ -209,7 +219,14 @@ class PatternRecognitionIndicators:
         close: Union[np.ndarray, pd.Series],
     ) -> np.ndarray:
         """明けの明星"""
-        raise PandasTAError("cdl_morning_star はサポート対象外です")
+        open_series = ensure_series_minimal_conversion(open_data)
+        high_series = ensure_series_minimal_conversion(high)
+        low_series = ensure_series_minimal_conversion(low)
+        close_series = ensure_series_minimal_conversion(close)
+        df = PatternRecognitionIndicators._build_ohlc_df(
+            open_series, high_series, low_series, close_series
+        )
+        return PatternRecognitionIndicators._cdl_pattern_values(df, name="morningstar")
 
     @staticmethod
     @handle_pandas_ta_errors
@@ -220,7 +237,14 @@ class PatternRecognitionIndicators:
         close: Union[np.ndarray, pd.Series],
     ) -> np.ndarray:
         """宵の明星"""
-        raise PandasTAError("cdl_evening_star はサポート対象外です")
+        open_series = ensure_series_minimal_conversion(open_data)
+        high_series = ensure_series_minimal_conversion(high)
+        low_series = ensure_series_minimal_conversion(low)
+        close_series = ensure_series_minimal_conversion(close)
+        df = PatternRecognitionIndicators._build_ohlc_df(
+            open_series, high_series, low_series, close_series
+        )
+        return PatternRecognitionIndicators._cdl_pattern_values(df, name="eveningstar")
 
     @staticmethod
     @handle_pandas_ta_errors
@@ -236,16 +260,10 @@ class PatternRecognitionIndicators:
         low_series = ensure_series_minimal_conversion(low)
         close_series = ensure_series_minimal_conversion(close)
 
-        df = pd.DataFrame(
-            {
-                "open": open_series,
-                "high": high_series,
-                "low": low_series,
-                "close": close_series,
-            }
+        df = PatternRecognitionIndicators._build_ohlc_df(
+            open_series, high_series, low_series, close_series
         )
-        result = df.ta.cdl_three_black_crows()
-        return result.values
+        return PatternRecognitionIndicators._cdl_pattern_values(df, name="3blackcrows")
 
     @staticmethod
     @handle_pandas_ta_errors
@@ -261,13 +279,9 @@ class PatternRecognitionIndicators:
         low_series = ensure_series_minimal_conversion(low)
         close_series = ensure_series_minimal_conversion(close)
 
-        df = pd.DataFrame(
-            {
-                "open": open_series,
-                "high": high_series,
-                "low": low_series,
-                "close": close_series,
-            }
+        df = PatternRecognitionIndicators._build_ohlc_df(
+            open_series, high_series, low_series, close_series
         )
-        result = df.ta.cdl_three_white_soldiers()
-        return result.values
+        return PatternRecognitionIndicators._cdl_pattern_values(
+            df, name="3whitesoldiers"
+        )

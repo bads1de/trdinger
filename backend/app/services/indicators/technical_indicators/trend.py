@@ -36,16 +36,20 @@ class TrendIndicators:
         validate_indicator_parameters(length)
         # 最小限の型変換でpandas.Seriesを確保
         series = ensure_series_minimal_conversion(data)
+        # 型チェック: 数値に変換できない場合は明確にエラー
+        if not np.issubdtype(series.dtype, np.number):
+            raise PandasTAError(f"sma: 数値データが必要です dtype={series.dtype}")
         # length=1 の場合はそのまま返す（TA-Libエラー回避）
         if length == 1:
             return series.to_numpy()
-        # 最小データセット（len==length）のときはpandas-ta側の制約により、lengthを1短縮
-        if len(series) == length and length > 1:
-            result = ta.sma(series, length=length - 1)
-            return result.values
-        validate_series_data(series, length)
-        result = ta.sma(series, length=length)
-        return result.values
+        # TA-Lib は length>=2 を要求するため length==1 は早期リターン済み。
+        # len(series) == length の場合でもそのまま length を渡して OK（NaN 含む可能性は許容）。
+        # データ長が期間より短い場合のみ厳密検証
+        if len(series) < length:
+            validate_series_data(series, length)
+        # pandasのロールング平均でNaN混入時でも妥当な出力を得る
+        result = series.rolling(window=length, min_periods=length).mean()
+        return result.to_numpy()
 
     @staticmethod
     @handle_pandas_ta_errors
@@ -233,9 +237,17 @@ class TrendIndicators:
 
     @staticmethod
     @handle_pandas_ta_errors
-    def midpoint(data: Union[np.ndarray, pd.Series], length: int) -> np.ndarray:
+    def midpoint(
+        data: Union[np.ndarray, pd.Series],
+        length: int | None = None,
+        period: int | None = None,
+    ) -> np.ndarray:
         """MidPoint over period"""
         series = ensure_series_minimal_conversion(data)
+        # period エイリアス対応
+        length = period if period is not None else length
+        if length is None:
+            raise PandasTAError("midpoint: length/period が指定されていません")
         validate_series_data(series, length)
         result = ta.midpoint(series, length=length)
         return result.values
@@ -245,11 +257,17 @@ class TrendIndicators:
     def midprice(
         high: Union[np.ndarray, pd.Series],
         low: Union[np.ndarray, pd.Series],
-        length: int,
+        length: int | None = None,
+        period: int | None = None,
     ) -> np.ndarray:
         """Midpoint Price over period"""
         high_series = ensure_series_minimal_conversion(high)
         low_series = ensure_series_minimal_conversion(low)
+
+        # period エイリアス対応
+        length = period if period is not None else length
+        if length is None:
+            raise PandasTAError("midprice: length/period が指定されていません")
 
         validate_series_data(high_series, length)
         validate_series_data(low_series, length)

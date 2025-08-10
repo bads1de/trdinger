@@ -139,9 +139,9 @@ def handle_pandas_ta_errors(func):
                 if len(result) == 0:
                     raise PandasTAError(f"{func.__name__}: 計算結果が空の配列です")
 
-                # 全てNaNの場合は警告
+                # 全てNaNの場合はエラー
                 if np.all(np.isnan(result)):
-                    logger.warning(f"{func.__name__}: 計算結果が全てNaNです")
+                    raise PandasTAError(f"{func.__name__}: 計算結果が全てNaNです")
 
             # tupleの場合（MACD、Bollinger Bandsなど）
             elif isinstance(result, tuple):
@@ -149,6 +149,15 @@ def handle_pandas_ta_errors(func):
                     if arr is None or len(arr) == 0:
                         raise PandasTAError(
                             f"{func.__name__}: 計算結果のインデックス{i}が無効です"
+                        )
+                    # タプル要素が全NaNならエラー
+                    if (
+                        isinstance(arr, np.ndarray)
+                        and len(arr) > 0
+                        and np.all(np.isnan(arr))
+                    ):
+                        raise PandasTAError(
+                            f"{func.__name__}: 計算結果のインデックス{i}が全てNaNです"
                         )
 
             return result
@@ -195,8 +204,9 @@ def validate_series_data(series: pd.Series, min_length: int) -> None:
     if min_length <= 0:
         raise PandasTAError(f"最小長は正の整数である必要があります: {min_length}")
 
-    if len(series) <= min_length:
-        raise PandasTAError(f"データ長({len(series)})が最小長({min_length})以下です")
+    # 最小長に満たない場合は明確にエラー
+    if len(series) < min_length:
+        raise PandasTAError(f"データ長({len(series)})が最小長({min_length})未満です")
 
     # 数値型チェック
     if not pd.api.types.is_numeric_dtype(series):

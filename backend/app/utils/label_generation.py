@@ -1015,17 +1015,22 @@ def optimize_label_generation_with_gridsearch(
     base_pipeline = create_label_pipeline()
 
     # 価格変化率を計算（ターゲット用）
-    price_change = price_data.pct_change().dropna()
+    price_change = price_data.pct_change()
 
     # 簡単なターゲット（価格上昇/下降の2値分類）を作成
     simple_target = (price_change > 0).astype(int)
+
+    # 学習データとターゲットの整合（同一長・同一インデックス）
+    aligned = pd.concat({"X": price_data, "y": simple_target}, axis=1).dropna()
+    X_aligned = aligned["X"]
+    y_aligned = aligned["y"].astype(int)
 
     # GridSearchCVを実行
     grid_search = GridSearchCV(
         base_pipeline, param_grid=param_grid, cv=cv, scoring=scoring, n_jobs=-1
     )
 
-    grid_search.fit(price_data, simple_target)
+    grid_search.fit(X_aligned, y_aligned)
 
     # 最適なパラメータでラベル生成
     best_pipeline = grid_search.best_estimator_
