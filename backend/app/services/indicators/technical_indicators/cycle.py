@@ -12,6 +12,7 @@ import numpy as np
 from scipy import signal
 
 from ..utils import (
+    PandasTAError,
     ensure_numpy_array,
     format_indicator_result,
     handle_pandas_ta_errors,

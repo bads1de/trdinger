@@ -19,9 +19,6 @@ from pydantic import BaseModel, Field, validator
 logger = logging.getLogger(__name__)
 
 
-# 新しいスキーマベースのバリデーション（推奨アプローチ）
-
-
 class OHLCVDataModel(BaseModel):
     """
     OHLCV データのPydanticモデル

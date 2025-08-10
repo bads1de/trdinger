@@ -33,10 +33,24 @@ def _to_series(data: Union[np.ndarray, pd.Series]) -> pd.Series:
 
 def _validate_data(data: pd.Series, min_length: int = 1) -> None:
     """データの基本検証"""
+    if len(data) == 0:
+        raise PandasTAError("データが空です")
     if len(data) < min_length:
         raise PandasTAError(f"データ長が不足: 必要{min_length}, 実際{len(data)}")
     if data.isna().all():
         raise PandasTAError("全てのデータがNaN")
+
+
+def _validate_parameters(length: int, min_length: int = 1) -> None:
+    """パラメータの検証"""
+    if not isinstance(length, int):
+        raise PandasTAError(f"期間は整数である必要があります: {type(length)}")
+
+    if length <= 0:
+        raise PandasTAError(f"期間は正の値である必要があります: {length}")
+
+    if length < min_length:
+        raise PandasTAError(f"期間が小さすぎます: 最小{min_length}, 実際{length}")
 
 
 def _handle_errors(func):
@@ -58,6 +72,7 @@ def _handle_errors(func):
 @_handle_errors
 def sma(data: Union[np.ndarray, pd.Series], length: int) -> np.ndarray:
     """単純移動平均"""
+    _validate_parameters(length)
     series = _to_series(data)
     _validate_data(series, length)
     result = ta.sma(series, length=length)
@@ -67,6 +82,7 @@ def sma(data: Union[np.ndarray, pd.Series], length: int) -> np.ndarray:
 @_handle_errors
 def ema(data: Union[np.ndarray, pd.Series], length: int) -> np.ndarray:
     """指数移動平均"""
+    _validate_parameters(length)
     series = _to_series(data)
     _validate_data(series, length)
     result = ta.ema(series, length=length)
@@ -76,6 +92,7 @@ def ema(data: Union[np.ndarray, pd.Series], length: int) -> np.ndarray:
 @_handle_errors
 def rsi(data: Union[np.ndarray, pd.Series], length: int = 14) -> np.ndarray:
     """相対力指数"""
+    _validate_parameters(length)
     series = _to_series(data)
     _validate_data(series, length + 1)
     result = ta.rsi(series, length=length)

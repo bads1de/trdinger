@@ -11,6 +11,7 @@ import numpy as np
 import pandas as pd
 
 from .config import IndicatorConfig, indicator_registry
+from .pandas_ta_utils import PandasTAError
 from .utils import ensure_numpy_array, normalize_data_for_trig
 
 logger = logging.getLogger(__name__)
@@ -70,7 +71,7 @@ class TechnicalIndicatorService:
             # カラム名の大文字小文字を適切に処理
             actual_column = self._resolve_column_name(df, data_key, indicator_type)
             if actual_column is None:
-                raise ValueError(
+                raise PandasTAError(
                     f"必要なカラム '{data_key}' がDataFrameにありません。利用可能なカラム: {list(df.columns)}"
                 )
 
@@ -143,6 +144,45 @@ class TechnicalIndicatorService:
 
         return None
 
+    def _map_data_key_to_param(self, indicator_type: str, data_key: str) -> str:
+        """
+        データキーを関数パラメータ名にマッピング
+
+        Args:
+            indicator_type: 指標タイプ
+            data_key: データキー（'close', 'high', 'low', 'open', 'volume'）
+
+        Returns:
+            関数パラメータ名
+        """
+        # 基本的なマッピング
+        basic_mapping = {
+            "close": "data",  # 多くの指標でcloseデータはdataパラメータとして渡される
+            "high": "high",
+            "low": "low",
+            "open": "open",
+            "volume": "volume",
+        }
+
+        # 指標固有のマッピング（必要に応じて拡張）
+        indicator_specific_mapping = {
+            "ATR": {"high": "high", "low": "low", "close": "close"},
+            "STOCH": {"high": "high", "low": "low", "close": "close"},
+            "WILLR": {"high": "high", "low": "low", "close": "close"},
+            "SMA": {"close": "data"},
+            "EMA": {"close": "data"},
+            "RSI": {"close": "data"},
+            "MACD": {"close": "data"},
+        }
+
+        # 指標固有のマッピングがある場合はそれを使用
+        if indicator_type in indicator_specific_mapping:
+            specific_mapping = indicator_specific_mapping[indicator_type]
+            if data_key in specific_mapping:
+                return specific_mapping[data_key]
+
+        # 基本マッピングを使用
+        return basic_mapping.get(data_key.lower(), data_key)
 
     def get_supported_indicators(self) -> Dict[str, Any]:
         """
