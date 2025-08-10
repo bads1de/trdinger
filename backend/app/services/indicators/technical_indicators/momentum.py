@@ -4,6 +4,10 @@
 このモジュールはpandas-taライブラリを使用し、
 backtesting.pyとの完全な互換性を提供します。
 numpy配列ベースのインターフェースを維持しています。
+
+含まれる指標:
+- RSI, MACD, Stochastics, Williams %R, CCI, CMO, ROC, ADX, Aroon, MFI, PPO, TRIX, Ultimate Oscillator, BOP, APO
+- AO, KDJ, RVGI, QQE, SMI, KST, STC
 """
 
 from typing import Tuple, Union
@@ -519,49 +523,48 @@ class MomentumIndicators:
     @staticmethod
     @handle_pandas_ta_errors
     def plus_di(high, low, close, length: int = 14) -> np.ndarray:
-        high_s = ensure_series_minimal_conversion(high)
-        low_s = ensure_series_minimal_conversion(low)
-        close_s = ensure_series_minimal_conversion(close)
-        result = ta.adx(high=high_s, low=low_s, close=close_s, length=length)
-        col = f"DMP_{length}"
-        if col in result.columns:
-            return result[col].values
-        raise PandasTAError("PLUS_DI not available in this pandas-ta version")
+        """Plus Directional Indicator (DI)"""
+        result = ta.adx(
+            high=ensure_series_minimal_conversion(high),
+            low=ensure_series_minimal_conversion(low),
+            close=ensure_series_minimal_conversion(close),
+            length=length,
+        )
+        return result[f"DMP_{length}"].values
 
     @staticmethod
     @handle_pandas_ta_errors
     def minus_di(high, low, close, length: int = 14) -> np.ndarray:
-        high_s = ensure_series_minimal_conversion(high)
-        low_s = ensure_series_minimal_conversion(low)
-        close_s = ensure_series_minimal_conversion(close)
-        result = ta.adx(high=high_s, low=low_s, close=close_s, length=length)
-        col = f"DMN_{length}"
-        if col in result.columns:
-            return result[col].values
-        raise PandasTAError("MINUS_DI not available in this pandas-ta version")
+        """Minus Directional Indicator (DI)"""
+        result = ta.adx(
+            high=ensure_series_minimal_conversion(high),
+            low=ensure_series_minimal_conversion(low),
+            close=ensure_series_minimal_conversion(close),
+            length=length,
+        )
+        return result[f"DMN_{length}"].values
 
     @staticmethod
     @handle_pandas_ta_errors
     def plus_dm(high, low, length: int = 14) -> np.ndarray:
-        high_s = ensure_series_minimal_conversion(high)
-        low_s = ensure_series_minimal_conversion(low)
-        result = ta.dm(high=high_s, low=low_s, length=length)
-        # pandas-ta dm returns DMP and DMN columns
-        cols = [c for c in result.columns if c.startswith("DMP_")]
-        if cols:
-            return result[cols[0]].values
-        raise PandasTAError("PLUS_DM not available in this pandas-ta version")
+        """Plus Directional Movement (DM)"""
+        result = ta.dm(
+            high=ensure_series_minimal_conversion(high),
+            low=ensure_series_minimal_conversion(low),
+            length=length,
+        )
+        return result[f"DMP_{length}"].values
 
     @staticmethod
     @handle_pandas_ta_errors
     def minus_dm(high, low, length: int = 14) -> np.ndarray:
-        high_s = ensure_series_minimal_conversion(high)
-        low_s = ensure_series_minimal_conversion(low)
-        result = ta.dm(high=high_s, low=low_s, length=length)
-        cols = [c for c in result.columns if c.startswith("DMN_")]
-        if cols:
-            return result[cols[0]].values
-        raise PandasTAError("MINUS_DM not available in this pandas-ta version")
+        """Minus Directional Movement (DM)"""
+        result = ta.dm(
+            high=ensure_series_minimal_conversion(high),
+            low=ensure_series_minimal_conversion(low),
+            length=length,
+        )
+        return result[f"DMN_{length}"].values
 
     @staticmethod
     @handle_pandas_ta_errors
@@ -570,19 +573,23 @@ class MomentumIndicators:
         fast: int = 12,
         slow: int = 26,
         signal: int = 9,
-    ) -> np.ndarray:
-        """パーセンテージ価格オシレーター"""
+    ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+        """Percentage Price Oscillator"""
         series = ensure_series_minimal_conversion(data)
-        validate_series_data(series, slow)
+        validate_series_data(series, slow + signal)
         result = ta.ppo(series, fast=fast, slow=slow, signal=signal)
-        return result[f"PPO_{fast}_{slow}_{signal}"].values
+        return (
+            result[f"PPO_{fast}_{slow}_{signal}"].values,
+            result[f"PPOh_{fast}_{slow}_{signal}"].values,
+            result[f"PPOs_{fast}_{slow}_{signal}"].values,
+        )
 
     @staticmethod
     @handle_pandas_ta_errors
     def trix(data: Union[np.ndarray, pd.Series], length: int = 30) -> np.ndarray:
         """TRIX"""
         series = ensure_series_minimal_conversion(data)
-        validate_series_data(series, length)
+        validate_series_data(series, length * 3)
         result = ta.trix(series, length=length)
         return result[f"TRIX_{length}_9"].values
 
@@ -592,110 +599,201 @@ class MomentumIndicators:
         high: Union[np.ndarray, pd.Series],
         low: Union[np.ndarray, pd.Series],
         close: Union[np.ndarray, pd.Series],
-        period1: int | None = None,
-        period2: int | None = None,
-        period3: int | None = None,
-        timeperiod1: int = 7,
-        timeperiod2: int = 14,
-        timeperiod3: int = 28,
+        fast: int = 7,
+        medium: int = 14,
+        slow: int = 28,
     ) -> np.ndarray:
-        """アルティメットオシレーター"""
+        """Ultimate Oscillator"""
         high_series = ensure_series_minimal_conversion(high)
         low_series = ensure_series_minimal_conversion(low)
         close_series = ensure_series_minimal_conversion(close)
 
-        # パラメータ名互換（period1/2/3 または timeperiod1/2/3）
-        s = period1 if period1 is not None else timeperiod1
-        m = period2 if period2 is not None else timeperiod2
-        l = period3 if period3 is not None else timeperiod3
+        validate_series_data(high_series, slow)
+        validate_series_data(low_series, slow)
+        validate_series_data(close_series, slow)
 
-        # 最大期間でバリデーション
-        max_len = max(s, m, l)
-        validate_series_data(high_series, max_len)
-        validate_series_data(low_series, max_len)
-        validate_series_data(close_series, max_len)
-
-        # pandas-ta に ultosc が無い場合は手動実装
-        if hasattr(ta, "ultosc"):
-            result = ta.ultosc(
-                high=high_series,
-                low=low_series,
-                close=close_series,
-                s=s,
-                m=m,
-                l=l,
-            )
-            return result.values
-        else:
-            pc = close_series.shift(1)
-            min_l_pc = pd.concat([low_series, pc], axis=1).min(axis=1)
-            max_h_pc = pd.concat([high_series, pc], axis=1).max(axis=1)
-            bp = close_series - min_l_pc
-            tr = max_h_pc - min_l_pc
-
-            sum_bp_s = bp.rolling(window=s).sum()
-            sum_tr_s = tr.rolling(window=s).sum()
-            sum_bp_m = bp.rolling(window=m).sum()
-            sum_tr_m = tr.rolling(window=m).sum()
-            sum_bp_l = bp.rolling(window=l).sum()
-            sum_tr_l = tr.rolling(window=l).sum()
-
-            avg_s = sum_bp_s / sum_tr_s
-            avg_m = sum_bp_m / sum_tr_m
-            avg_l = sum_bp_l / sum_tr_l
-
-            uo = 100.0 * (4 * avg_s + 2 * avg_m + 1 * avg_l) / 7.0
-            return uo.to_numpy()
+        result = ta.uo(
+            high=high_series,
+            low=low_series,
+            close=close_series,
+            fast=fast,
+            medium=medium,
+            slow=slow,
+        )
+        return result.values
 
     @staticmethod
     @handle_pandas_ta_errors
     def bop(
-        open_data: Union[np.ndarray, pd.Series],
+        open_: Union[np.ndarray, pd.Series],
         high: Union[np.ndarray, pd.Series],
         low: Union[np.ndarray, pd.Series],
         close: Union[np.ndarray, pd.Series],
     ) -> np.ndarray:
-        """バランスオブパワー"""
-        open_series = ensure_series_minimal_conversion(open_data)
+        """Balance of Power"""
+        open_series = ensure_series_minimal_conversion(open_)
         high_series = ensure_series_minimal_conversion(high)
         low_series = ensure_series_minimal_conversion(low)
         close_series = ensure_series_minimal_conversion(close)
 
-        validate_series_data(open_series, 1)
-        validate_series_data(high_series, 1)
-        validate_series_data(low_series, 1)
-        validate_series_data(close_series, 1)
-
-        # pandas-ta v0.3.14+ は引数名 open_ を使用
-        if hasattr(ta, "bop"):
-            try:
-                result = ta.bop(
-                    open_=open_series,
-                    high=high_series,
-                    low=low_series,
-                    close=close_series,
-                )
-            except TypeError:
-                # バージョン差異で open 引数名の場合
-                result = ta.bop(
-                    open=open_series,
-                    high=high_series,
-                    low=low_series,
-                    close=close_series,
-                )
-        else:
-            raise PandasTAError("pandas-ta に b op が存在しません")
+        # pandas-taのbopはscalar引数を取る場合がある
+        try:
+            result = ta.bop(
+                open_=open_series,
+                high=high_series,
+                low=low_series,
+                close=close_series,
+                scalar=1,
+            )
+        except TypeError:
+            result = ta.bop(
+                open_=open_series,
+                high=high_series,
+                low=low_series,
+                close=close_series,
+            )
         return result.values
 
     @staticmethod
     @handle_pandas_ta_errors
     def apo(
-        data: Union[np.ndarray, pd.Series],
-        fast: int = 12,
-        slow: int = 26,
+        data: Union[np.ndarray, pd.Series], fast: int = 12, slow: int = 26
     ) -> np.ndarray:
-        """アブソリュートプライスオシレーター"""
+        """Absolute Price Oscillator"""
         series = ensure_series_minimal_conversion(data)
         validate_series_data(series, slow)
         result = ta.apo(series, fast=fast, slow=slow)
         return result.values
+
+    @staticmethod
+    @handle_pandas_ta_errors
+    def ao(
+        high: Union[np.ndarray, pd.Series], low: Union[np.ndarray, pd.Series]
+    ) -> np.ndarray:
+        """Awesome Oscillator"""
+        high_s = ensure_series_minimal_conversion(high)
+        low_s = ensure_series_minimal_conversion(low)
+        validate_series_data(high_s, 5)
+        validate_series_data(low_s, 5)
+        result = ta.ao(high=high_s, low=low_s)
+        return result.values
+
+    @staticmethod
+    @handle_pandas_ta_errors
+    def kdj(
+        high: Union[np.ndarray, pd.Series],
+        low: Union[np.ndarray, pd.Series],
+        close: Union[np.ndarray, pd.Series],
+        k: int = 14,
+        d: int = 3,
+        j_scalar: float = 3.0,
+    ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+        """KDJ: pandas-taではstochから計算"""
+        high_s = ensure_series_minimal_conversion(high)
+        low_s = ensure_series_minimal_conversion(low)
+        close_s = ensure_series_minimal_conversion(close)
+        validate_series_data(close_s, k + d)
+        stoch_df = ta.stoch(high=high_s, low=low_s, close=close_s, k=k, d=d, smooth_k=3)
+        # pandas-taが先頭NaN区間で短縮する場合に備え、インデックスを合わせる
+        stoch_df = stoch_df.reindex(close_s.index)
+        # 列検出
+        k_col = next((c for c in stoch_df.columns if "k" in c.lower()), None)
+        d_col = next((c for c in stoch_df.columns if "d" in c.lower()), None)
+        if k_col is None or d_col is None:
+            raise PandasTAError("KDJの元となるstoch列が見つかりません")
+        k_vals = stoch_df[k_col].values
+        d_vals = stoch_df[d_col].values
+        j_vals = j_scalar * k_vals - 2 * d_vals
+        return k_vals, d_vals, j_vals
+
+    @staticmethod
+    @handle_pandas_ta_errors
+    def rvgi(
+        open_: Union[np.ndarray, pd.Series],
+        high: Union[np.ndarray, pd.Series],
+        low: Union[np.ndarray, pd.Series],
+        close: Union[np.ndarray, pd.Series],
+        length: int = 14,
+    ) -> Tuple[np.ndarray, np.ndarray]:
+        """Relative Vigor Index"""
+        o = ensure_series_minimal_conversion(open_)
+        h = ensure_series_minimal_conversion(high)
+        l = ensure_series_minimal_conversion(low)
+        c = ensure_series_minimal_conversion(close)
+        validate_series_data(c, length + 1)
+        df = ta.rvgi(open_=o, high=h, low=l, close=c, length=length)
+        r_col = next(
+            (c for c in df.columns if c.lower().endswith("rvi")), df.columns[0]
+        )
+        s_col = next(
+            (c for c in df.columns if c.lower().endswith("signal")), df.columns[-1]
+        )
+        return df[r_col].values, df[s_col].values
+
+    @staticmethod
+    @handle_pandas_ta_errors
+    def qqe(data: Union[np.ndarray, pd.Series], length: int = 14) -> np.ndarray:
+        """Qualitative Quantitative Estimation"""
+        s = ensure_series_minimal_conversion(data)
+        validate_series_data(s, length + 1)
+        df = ta.qqe(s, length=length)
+        # 単列
+        return df.values if hasattr(df, "values") else np.asarray(df)
+
+    @staticmethod
+    @handle_pandas_ta_errors
+    def smi(
+        data: Union[np.ndarray, pd.Series],
+        fast: int = 13,
+        slow: int = 25,
+        signal: int = 2,
+    ) -> Tuple[np.ndarray, np.ndarray]:
+        """Stochastic Momentum Index"""
+        s = ensure_series_minimal_conversion(data)
+        validate_series_data(s, fast + slow + signal)
+        df = ta.smi(s, fast=fast, slow=slow, signal=signal)
+        # 2列想定
+        cols = list(df.columns)
+        return df[cols[0]].values, df[cols[1]].values
+
+    @staticmethod
+    @handle_pandas_ta_errors
+    def kst(
+        data: Union[np.ndarray, pd.Series],
+        r1: int = 10,
+        r2: int = 15,
+        r3: int = 20,
+        r4: int = 30,
+        n1: int = 10,
+        n2: int = 10,
+        n3: int = 10,
+        n4: int = 15,
+        signal: int = 9,
+    ) -> Tuple[np.ndarray, np.ndarray]:
+        """Know Sure Thing"""
+        s = ensure_series_minimal_conversion(data)
+        validate_series_data(s, max(r1, r2, r3, r4, signal))
+        df = ta.kst(
+            s, r1=r1, r2=r2, r3=r3, r4=r4, n1=n1, n2=n2, n3=n3, n4=n4, signal=signal
+        )
+        k_col = next((c for c in df.columns if c.lower().endswith("kst")), None)
+        s_col = next((c for c in df.columns if c.lower().endswith("signal")), None)
+        if k_col is None or s_col is None:
+            cols = list(df.columns)
+            return df[cols[0]].values, df[cols[-1]].values
+        return df[k_col].values, df[s_col].values
+
+    @staticmethod
+    @handle_pandas_ta_errors
+    def stc(
+        data: Union[np.ndarray, pd.Series],
+        tclength: int = 10,
+        fast: int = 23,
+        slow: int = 50,
+        factor: float = 0.5,
+    ) -> np.ndarray:
+        """Schaff Trend Cycle"""
+        s = ensure_series_minimal_conversion(data)
+        validate_series_data(s, slow + tclength)
+        df = ta.stc(s, tclength=tclength, fast=fast, slow=slow, factor=factor)
+        return df.values if hasattr(df, "values") else np.asarray(df)

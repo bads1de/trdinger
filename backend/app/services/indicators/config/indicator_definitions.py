@@ -29,9 +29,6 @@ from app.services.indicators.technical_indicators.volatility import (
 from app.services.indicators.technical_indicators.volume import VolumeIndicators
 
 
-from app.services.indicators.technical_indicators.additions_momentum import (
-    MoreMomentumIndicators,
-)
 
 
 from .indicator_config import (
@@ -147,7 +144,7 @@ def setup_momentum_indicators():
     # AO
     ao_config = IndicatorConfig(
         indicator_name="AO",
-        adapter_function=MoreMomentumIndicators.ao,
+        adapter_function=MomentumIndicators.ao,
         required_data=["high", "low"],
         result_type=IndicatorResultType.SINGLE,
         scale_type=IndicatorScaleType.OSCILLATOR_PLUS_MINUS_100,
@@ -158,7 +155,7 @@ def setup_momentum_indicators():
     # KDJ
     kdj_config = IndicatorConfig(
         indicator_name="KDJ",
-        adapter_function=MoreMomentumIndicators.kdj,
+        adapter_function=MomentumIndicators.kdj,
         required_data=["high", "low", "close"],
         result_type=IndicatorResultType.COMPLEX,
         scale_type=IndicatorScaleType.OSCILLATOR_0_100,
@@ -175,7 +172,7 @@ def setup_momentum_indicators():
     # RVGI
     rvgi_config = IndicatorConfig(
         indicator_name="RVGI",
-        adapter_function=MoreMomentumIndicators.rvgi,
+        adapter_function=MomentumIndicators.rvgi,
         required_data=["open_data", "high", "low", "close"],
         result_type=IndicatorResultType.COMPLEX,
         scale_type=IndicatorScaleType.OSCILLATOR_PLUS_MINUS_100,
@@ -189,7 +186,7 @@ def setup_momentum_indicators():
     # QQE
     qqe_config = IndicatorConfig(
         indicator_name="QQE",
-        adapter_function=MoreMomentumIndicators.qqe,
+        adapter_function=MomentumIndicators.qqe,
         required_data=["close"],
         result_type=IndicatorResultType.SINGLE,
         scale_type=IndicatorScaleType.OSCILLATOR_0_100,
@@ -203,7 +200,7 @@ def setup_momentum_indicators():
     # SMI
     smi_config = IndicatorConfig(
         indicator_name="SMI",
-        adapter_function=MoreMomentumIndicators.smi,
+        adapter_function=MomentumIndicators.smi,
         required_data=["close"],
         result_type=IndicatorResultType.COMPLEX,
         scale_type=IndicatorScaleType.OSCILLATOR_0_100,
@@ -223,7 +220,7 @@ def setup_momentum_indicators():
     # KST
     kst_config = IndicatorConfig(
         indicator_name="KST",
-        adapter_function=MoreMomentumIndicators.kst,
+        adapter_function=MomentumIndicators.kst,
         required_data=["close"],
         result_type=IndicatorResultType.COMPLEX,
         scale_type=IndicatorScaleType.OSCILLATOR_PLUS_MINUS_100,
@@ -234,7 +231,7 @@ def setup_momentum_indicators():
     # STC
     stc_config = IndicatorConfig(
         indicator_name="STC",
-        adapter_function=MoreMomentumIndicators.stc,
+        adapter_function=MomentumIndicators.stc,
         required_data=["close"],
         result_type=IndicatorResultType.SINGLE,
         scale_type=IndicatorScaleType.OSCILLATOR_0_100,
