@@ -47,9 +47,15 @@ class PriceTransformIndicators:
         validate_series_data(low_series, 1)
         validate_series_data(close_series, 1)
 
-        result = ta.ohlc4(
-            open=open_series, high=high_series, low=low_series, close=close_series
-        )
+        # pandas-taの引数名はopen_の場合がある
+        try:
+            result = ta.ohlc4(
+                open=open_series, high=high_series, low=low_series, close=close_series
+            )
+        except TypeError:
+            result = ta.ohlc4(
+                open_=open_series, high=high_series, low=low_series, close=close_series
+            )
         return result.values
 
     @staticmethod

@@ -358,3 +358,8 @@ class TechnicalFeatureCalculator(BaseFeatureCalculator):
             "Gap_Down",
             "Gap_Size",
         ]
+
+
+# 互換性のための別名（旧名: TechnicalFeatureEngineer）
+class TechnicalFeatureEngineer(TechnicalFeatureCalculator):
+    pass

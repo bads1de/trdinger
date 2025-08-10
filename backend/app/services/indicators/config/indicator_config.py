@@ -247,6 +247,11 @@ class IndicatorConfigRegistry:
         """サポートされている指標の名前のリストを取得 (新規追加)"""
         return list(self._configs.keys())
 
+    # 互換メソッド（既存テスト向け）
+    def get_all_indicator_names(self) -> List[str]:
+        """登録済みの全指標名を返す（互換用エイリアス）"""
+        return self.get_supported_indicator_names()
+
     def is_indicator_supported(self, indicator_name: str) -> bool:
         """指標が直接サポートされているかチェック (新規追加)"""
         return indicator_name in self._configs

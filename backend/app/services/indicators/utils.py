@@ -195,13 +195,18 @@ def validate_series_data(series: pd.Series, min_length: int) -> None:
     if min_length <= 0:
         raise PandasTAError(f"最小長は正の整数である必要があります: {min_length}")
 
-    if len(series) < min_length:
-        raise PandasTAError(
-            f"データ長({len(series)})が最小長({min_length})より短いです"
-        )
+    if len(series) <= min_length:
+        raise PandasTAError(f"データ長({len(series)})が最小長({min_length})以下です")
+
+    # 数値型チェック
+    if not pd.api.types.is_numeric_dtype(series):
+        raise PandasTAError("Seriesデータは数値型である必要があります")
 
     # NaNや無限大の値をチェック
-    if series.isna().any():
+    if series.isna().all():
+        # 全てNaNは明確にエラー
+        raise PandasTAError("Seriesデータが全てNaNです")
+    elif series.isna().any():
         logger.warning("SeriesデータにNaN値が含まれています")
 
     if np.isinf(series).any():
@@ -221,21 +226,57 @@ def validate_indicator_parameters(*args, **kwargs) -> None:
     """
     # 位置引数の検証（通常は期間パラメータ）
     for i, arg in enumerate(args):
-        if isinstance(arg, (int, float)):
+        if isinstance(arg, (int, np.integer)):
             if arg <= 0:
                 raise PandasTAError(
                     f"パラメータ{i+1}は正の値である必要があります: {arg}"
                 )
+        elif isinstance(arg, float):
+            if arg <= 0:
+                raise PandasTAError(
+                    f"パラメータ{i+1}は正の値である必要があります: {arg}"
+                )
+            if not float(arg).is_integer():
+                raise PandasTAError(f"パラメータ{i+1}は整数である必要があります: {arg}")
         elif arg is not None:
             # None以外の非数値パラメータは警告
             logger.warning(f"パラメータ{i+1}が数値ではありません: {type(arg)}")
 
     # キーワード引数の検証
+    period_keys = {
+        "length",
+        "period",
+        "timeperiod",
+        "timeperiod1",
+        "timeperiod2",
+        "timeperiod3",
+        "k",
+        "d",
+        "smooth_k",
+        "fast",
+        "medium",
+        "slow",
+        "k_period",
+        "d_period",
+        "period1",
+        "period2",
+        "period3",
+    }
     for key, value in kwargs.items():
-        if isinstance(value, (int, float)) and value <= 0:
-            raise PandasTAError(
-                f"パラメータ'{key}'は正の値である必要があります: {value}"
-            )
+        if isinstance(value, (int, np.integer)):
+            if value <= 0:
+                raise PandasTAError(
+                    f"パラメータ'{key}'は正の値である必要があります: {value}"
+                )
+        elif isinstance(value, float):
+            if value <= 0:
+                raise PandasTAError(
+                    f"パラメータ'{key}'は正の値である必要があります: {value}"
+                )
+            if key in period_keys and not float(value).is_integer():
+                raise PandasTAError(
+                    f"パラメータ'{key}'は整数である必要があります: {value}"
+                )
 
 
 def normalize_data_for_trig(data: Union[np.ndarray, pd.Series]) -> np.ndarray:
@@ -324,28 +365,3 @@ def format_indicator_result(
     """
     # 現在は特に処理を行わず、そのまま返す
     return result
-
-
-def normalize_data_for_trig(data: np.ndarray) -> np.ndarray:
-    """
-    三角関数（ASIN, ACOS）の入力用にデータを[-1, 1]の範囲に正規化します。
-
-    Args:
-        data: 正規化対象のnumpy配列
-
-    Returns:
-        正規化されたnumpy配列
-    """
-    min_val = np.nanmin(data)
-    max_val = np.nanmax(data)
-
-    # 全て同じ値の場合（ゼロ除算を避ける）
-    if min_val == max_val:
-        # 範囲内に収まるように0または適切な値を返す
-        return np.full_like(data, 0.0)
-
-    # Min-Maxスケーリングで[0, 1]に正規化し、その後[-1, 1]に変換
-    normalized_data = 2 * (data - min_val) / (max_val - min_val) - 1
-
-    # 計算誤差により範囲外になる可能性を考慮し、クリッピング
-    return np.clip(normalized_data, -1.0, 1.0)

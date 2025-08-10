@@ -27,6 +27,11 @@ from app.services.indicators.technical_indicators.volatility import (
     VolatilityIndicators,
 )
 from app.services.indicators.technical_indicators.volume import VolumeIndicators
+from app.services.indicators.technical_indicators.ml import MLIndicators
+from app.services.indicators.technical_indicators.additions_momentum import (
+    MoreMomentumIndicators,
+)
+
 
 from .indicator_config import (
     IndicatorConfig,
@@ -137,6 +142,104 @@ def setup_momentum_indicators():
         )
     )
     indicator_registry.register(stoch_config)
+
+    # AO
+    ao_config = IndicatorConfig(
+        indicator_name="AO",
+        adapter_function=MoreMomentumIndicators.ao,
+        required_data=["high", "low"],
+        result_type=IndicatorResultType.SINGLE,
+        scale_type=IndicatorScaleType.OSCILLATOR_PLUS_MINUS_100,
+        category="momentum",
+    )
+    indicator_registry.register(ao_config)
+
+    # KDJ
+    kdj_config = IndicatorConfig(
+        indicator_name="KDJ",
+        adapter_function=MoreMomentumIndicators.kdj,
+        required_data=["high", "low", "close"],
+        result_type=IndicatorResultType.COMPLEX,
+        scale_type=IndicatorScaleType.OSCILLATOR_0_100,
+        category="momentum",
+    )
+    kdj_config.add_parameter(
+        ParameterConfig(name="k", default_value=14, min_value=2, max_value=100)
+    )
+    kdj_config.add_parameter(
+        ParameterConfig(name="d", default_value=3, min_value=1, max_value=50)
+    )
+    indicator_registry.register(kdj_config)
+
+    # RVGI
+    rvgi_config = IndicatorConfig(
+        indicator_name="RVGI",
+        adapter_function=MoreMomentumIndicators.rvgi,
+        required_data=["open_data", "high", "low", "close"],
+        result_type=IndicatorResultType.COMPLEX,
+        scale_type=IndicatorScaleType.OSCILLATOR_PLUS_MINUS_100,
+        category="momentum",
+    )
+    rvgi_config.add_parameter(
+        ParameterConfig(name="length", default_value=14, min_value=2, max_value=200)
+    )
+    indicator_registry.register(rvgi_config)
+
+    # QQE
+    qqe_config = IndicatorConfig(
+        indicator_name="QQE",
+        adapter_function=MoreMomentumIndicators.qqe,
+        required_data=["close"],
+        result_type=IndicatorResultType.SINGLE,
+        scale_type=IndicatorScaleType.OSCILLATOR_0_100,
+        category="momentum",
+    )
+    qqe_config.add_parameter(
+        ParameterConfig(name="length", default_value=14, min_value=2, max_value=200)
+    )
+    indicator_registry.register(qqe_config)
+
+    # SMI
+    smi_config = IndicatorConfig(
+        indicator_name="SMI",
+        adapter_function=MoreMomentumIndicators.smi,
+        required_data=["close"],
+        result_type=IndicatorResultType.COMPLEX,
+        scale_type=IndicatorScaleType.OSCILLATOR_0_100,
+        category="momentum",
+    )
+    smi_config.add_parameter(
+        ParameterConfig(name="fast", default_value=13, min_value=2, max_value=50)
+    )
+    smi_config.add_parameter(
+        ParameterConfig(name="slow", default_value=25, min_value=3, max_value=100)
+    )
+    smi_config.add_parameter(
+        ParameterConfig(name="signal", default_value=2, min_value=1, max_value=20)
+    )
+    indicator_registry.register(smi_config)
+
+    # KST
+    kst_config = IndicatorConfig(
+        indicator_name="KST",
+        adapter_function=MoreMomentumIndicators.kst,
+        required_data=["close"],
+        result_type=IndicatorResultType.COMPLEX,
+        scale_type=IndicatorScaleType.OSCILLATOR_PLUS_MINUS_100,
+        category="momentum",
+    )
+    indicator_registry.register(kst_config)
+
+    # STC
+    stc_config = IndicatorConfig(
+        indicator_name="STC",
+        adapter_function=MoreMomentumIndicators.stc,
+        required_data=["close"],
+        result_type=IndicatorResultType.SINGLE,
+        scale_type=IndicatorScaleType.OSCILLATOR_0_100,
+        category="momentum",
+    )
+    indicator_registry.register(stc_config)
 
     # CCI
     cci_config = IndicatorConfig(
@@ -1457,16 +1560,18 @@ def setup_pattern_recognition_indicators():
     """パターン認識系インジケーターの設定"""
 
     # 基本的なキャンドルスティックパターン（パラメータなし）
+    # pandas-ta の cdl_pattern でサポートされていない名称は除外
     basic_patterns = [
         "CDL_DOJI",
-        "CDL_HAMMER",
-        "CDL_HANGING_MAN",
-        "CDL_SHOOTING_STAR",
         "CDL_ENGULFING",
         "CDL_HARAMI",
-        "CDL_PIERCING",
-        "CDL_THREE_BLACK_CROWS",
-        "CDL_THREE_WHITE_SOLDIERS",
+        # 以下は cdl_pattern 未サポートのため登録しない
+        # "CDL_HAMMER",
+        # "CDL_HANGING_MAN",
+        # "CDL_SHOOTING_STAR",
+        # "CDL_PIERCING",
+        # "CDL_THREE_BLACK_CROWS",
+        # "CDL_THREE_WHITE_SOLDIERS",
     ]
 
     for pattern_name in basic_patterns:
@@ -1482,66 +1587,8 @@ def setup_pattern_recognition_indicators():
         )
         indicator_registry.register(config)
 
-    # パラメータ付きパターン
-    # DARK_CLOUD_COVER
-    dark_cloud_config = IndicatorConfig(
-        indicator_name="CDL_DARK_CLOUD_COVER",
-        adapter_function=PatternRecognitionIndicators.cdl_dark_cloud_cover,
-        required_data=["open_data", "high", "low", "close"],
-        result_type=IndicatorResultType.SINGLE,
-        scale_type=IndicatorScaleType.OSCILLATOR_PLUS_MINUS_100,
-        category="pattern_recognition",
-    )
-    dark_cloud_config.add_parameter(
-        ParameterConfig(
-            name="penetration",
-            default_value=0.5,
-            min_value=0.1,
-            max_value=1.0,
-            description="浸透率",
-        )
-    )
-    indicator_registry.register(dark_cloud_config)
-
-    # MORNING_STAR
-    morning_star_config = IndicatorConfig(
-        indicator_name="CDL_MORNING_STAR",
-        adapter_function=PatternRecognitionIndicators.cdl_morning_star,
-        required_data=["open", "high", "low", "close"],
-        result_type=IndicatorResultType.SINGLE,
-        scale_type=IndicatorScaleType.OSCILLATOR_PLUS_MINUS_100,
-        category="pattern_recognition",
-    )
-    morning_star_config.add_parameter(
-        ParameterConfig(
-            name="penetration",
-            default_value=0.3,
-            min_value=0.1,
-            max_value=1.0,
-            description="浸透率",
-        )
-    )
-    indicator_registry.register(morning_star_config)
-
-    # EVENING_STAR
-    evening_star_config = IndicatorConfig(
-        indicator_name="CDL_EVENING_STAR",
-        adapter_function=PatternRecognitionIndicators.cdl_evening_star,
-        required_data=["open", "high", "low", "close"],
-        result_type=IndicatorResultType.SINGLE,
-        scale_type=IndicatorScaleType.OSCILLATOR_PLUS_MINUS_100,
-        category="pattern_recognition",
-    )
-    evening_star_config.add_parameter(
-        ParameterConfig(
-            name="penetration",
-            default_value=0.3,
-            min_value=0.1,
-            max_value=1.0,
-            description="浸透率",
-        )
-    )
-    indicator_registry.register(evening_star_config)
+    # パラメータ付きパターンは未サポートとして登録しない
+    # （pandas-ta の cdl_pattern との互換不足のため）
 
     # 追加のパターン認識インジケーター
     additional_patterns = [
@@ -1582,7 +1629,7 @@ def setup_ml_indicators():
     # ML_UP_PROB
     ml_up_prob_config = IndicatorConfig(
         indicator_name="ML_UP_PROB",
-        adapter_function=None,  # IndicatorCalculatorで直接処理
+        adapter_function=MLIndicators.up_prob,
         required_data=["close"],
         result_type=IndicatorResultType.SINGLE,
         scale_type=IndicatorScaleType.OSCILLATOR_0_1,
@@ -1593,7 +1640,7 @@ def setup_ml_indicators():
     # ML_DOWN_PROB
     ml_down_prob_config = IndicatorConfig(
         indicator_name="ML_DOWN_PROB",
-        adapter_function=None,  # IndicatorCalculatorで直接処理
+        adapter_function=MLIndicators.down_prob,
         required_data=["close"],
         result_type=IndicatorResultType.SINGLE,
         scale_type=IndicatorScaleType.OSCILLATOR_0_1,
@@ -1604,7 +1651,7 @@ def setup_ml_indicators():
     # ML_RANGE_PROB
     ml_range_prob_config = IndicatorConfig(
         indicator_name="ML_RANGE_PROB",
-        adapter_function=None,  # IndicatorCalculatorで直接処理
+        adapter_function=MLIndicators.range_prob,
         required_data=["close"],
         result_type=IndicatorResultType.SINGLE,
         scale_type=IndicatorScaleType.OSCILLATOR_0_1,

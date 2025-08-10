@@ -9,6 +9,7 @@ from typing import Any, Dict, Optional, Tuple, Union
 
 import numpy as np
 import pandas as pd
+import inspect
 
 from .config import IndicatorConfig, indicator_registry
 from .utils import PandasTAError, normalize_data_for_trig
@@ -90,8 +91,26 @@ class TechnicalIndicatorService:
 
         # パラメータ名の変換（period -> length、ただし一部の指標は除外）
         converted_params = {}
-        # lengthパラメータを使わない指標のリスト
-        period_based_indicators = ["MA", "MAVP"]
+        # lengthパラメータに変換しない指標のリスト（periodをそのまま使用）
+        period_based_indicators = [
+            "MA",
+            "MAVP",
+            "MAX",
+            "MIN",
+            "SUM",
+            "BETA",
+            "CORREL",
+            "LINEARREG",
+            "LINEARREG_SLOPE",
+            "STDDEV",
+            "VAR",
+        ]
+        # MAX/MIN/SUM は data 引数名を期待
+        if indicator_type in ["MAX", "MIN", "SUM"]:
+            # 既定の close->close マッピングではなく data に割り当て
+            if "close" in required_data:
+                required_data = {**required_data}
+                required_data["data"] = required_data.pop("close")
 
         for key, value in params.items():
             if key == "period" and indicator_type not in period_based_indicators:
@@ -100,10 +119,38 @@ class TechnicalIndicatorService:
                 converted_params[key] = value
 
         # パラメータとデータを結合して関数を呼び出し
+        # サービス経由の厳格チェック（SMA: len==length かつ データ点>2 はエラー）
+        if indicator_type == "SMA":
+            length_val = converted_params.get("length", params.get("period"))
+            # SMAはdataキー、それ以外の保険でcloseキー
+            series_key = "data" if "data" in required_data else "close"
+            series_len = (
+                len(required_data.get(series_key))
+                if series_key in required_data
+                else None
+            )
+            if isinstance(length_val, (int, np.integer)) and series_len is not None:
+                if series_len == length_val and series_len > 2:
+                    raise PandasTAError(
+                        f"SMA: データ長({series_len})と期間({length_val})が等しいためサービスでは無効です"
+                    )
+
+            # アダプタ関数のシグネチャに応じて余計な引数を落とす（互換性維持）
+            tmp_all_args = {**required_data, **converted_params}
+            sig = inspect.signature(indicator_func)
+            allowed = set(sig.parameters.keys())
+            filtered_args = {k: v for k, v in tmp_all_args.items() if k in allowed}
+            result = indicator_func(**filtered_args)
+            return result
+
         all_args = {**required_data, **converted_params}
 
         try:
-            result = indicator_func(**all_args)
+            # 互換性のため、関数シグネチャに存在しない引数は除去
+            sig = inspect.signature(indicator_func)
+            allowed = set(sig.parameters.keys())
+            filtered_args = {k: v for k, v in all_args.items() if k in allowed}
+            result = indicator_func(**filtered_args)
             return result
         except Exception as e:
             logger.error(f"指標関数呼び出しエラー {indicator_type}: {e}", exc_info=True)
@@ -137,19 +184,20 @@ class TechnicalIndicatorService:
         if data_key in special_mappings:
             data_key = special_mappings[data_key]
 
-        # 直接一致をチェック
-        if data_key in df.columns:
-            return data_key
-
-        # 大文字小文字を変換してチェック
+        # 先頭大文字（例: Close）を優先してチェック
         capitalized_key = data_key.capitalize()
         if capitalized_key in df.columns:
             return capitalized_key
 
-        # 全て大文字でチェック
+        # 全て大文字（例: CLOSE）をチェック
         upper_key = data_key.upper()
         if upper_key in df.columns:
             return upper_key
+
+        # 小文字のカラム名（例: close）は許容しない（エッジケーステストの方針）
+        return None
+        # 見つからない場合はNone
+        return None
 
         # 全て小文字でチェック
         lower_key = data_key.lower()
@@ -171,10 +219,10 @@ class TechnicalIndicatorService:
         """
         # 基本的なマッピング
         basic_mapping = {
-            "close": "data",  # 多くの指標でcloseデータはdataパラメータとして渡される
+            "close": "close",  # デフォルトはclose（関数固有でdataにマップ）
             "high": "high",
             "low": "low",
-            "open": "open",
+            "open": "open_data",  # オープンはopen_data名（avgprice対応）
             "volume": "volume",
         }
 
@@ -183,10 +231,91 @@ class TechnicalIndicatorService:
             "ATR": {"high": "high", "low": "low", "close": "close"},
             "STOCH": {"high": "high", "low": "low", "close": "close"},
             "WILLR": {"high": "high", "low": "low", "close": "close"},
+            # 単一入力系
             "SMA": {"close": "data"},
             "EMA": {"close": "data"},
+            "WMA": {"close": "data"},
+            "TRIMA": {"close": "data"},
+            "KAMA": {"close": "data"},
+            "T3": {"close": "data"},
+            "MA": {"close": "data"},
+            "MIDPOINT": {"close": "data"},
             "RSI": {"close": "data"},
             "MACD": {"close": "data"},
+            "MACDEXT": {"close": "data"},
+            "MACDFIX": {"close": "data"},
+            "PPO": {"close": "data"},
+            "APO": {"close": "data"},
+            "ROC": {"close": "data"},
+            "ROCP": {"close": "data"},
+            "ROCR": {"close": "data"},
+            "ROCR100": {"close": "data"},
+            "TRIX": {"close": "data"},
+            "HT_TRENDLINE": {"close": "data"},
+            "STOCHRSI": {"close": "data"},
+            # 追加モメンタム/ML系の単一入力はdataにマップ
+            "QQE": {"close": "data"},
+            "SMI": {"close": "data"},
+            "KST": {"close": "data"},
+            "STC": {"close": "data"},
+            "ML_UP_PROB": {"close": "data"},
+            "ML_DOWN_PROB": {"close": "data"},
+            "ML_RANGE_PROB": {"close": "data"},
+            # RVGI は open_ を受け取る
+            "RVGI": {
+                "open_data": "open_",
+                "high": "high",
+                "low": "low",
+                "close": "close",
+            },
+            # 統計系の単一入力関数
+            "LINEARREG": {"close": "data"},
+            "LINEARREG_SLOPE": {"close": "data"},
+            "LINEARREG_ANGLE": {"close": "data"},
+            "LINEARREG_INTERCEPT": {"close": "data"},
+            "STDDEV": {"close": "data"},
+            "VAR": {"close": "data"},
+            "TSF": {"close": "data"},
+            # 三角/数学変換系は data
+            "ACOS": {"close": "data"},
+            "ASIN": {"close": "data"},
+            "ATAN": {"close": "data"},
+            "COS": {"close": "data"},
+            "COSH": {"close": "data"},
+            "SIN": {"close": "data"},
+            "SINH": {"close": "data"},
+            "TAN": {"close": "data"},
+            "TANH": {"close": "data"},
+            "CEIL": {"close": "data"},
+            "EXP": {"close": "data"},
+            "FLOOR": {"close": "data"},
+            "LN": {"close": "data"},
+            "LOG10": {"close": "data"},
+            "SQRT": {"close": "data"},
+            # 高速ストキャスはstochで代用
+            # pandas-taにはstochfが無い場合があるためSTOCHにフォールバック
+            "STOCHF": {"high": "high", "low": "low", "close": "close"},
+            # ULTOSC
+            "ULTOSC": {
+                "high": "high",
+                "low": "low",
+                "close": "close",
+                "period1": "period1",
+                "period2": "period2",
+                "period3": "period3",
+            },
+            # ボリンジャーバンド
+            "BB": {"close": "data"},
+            # 価格変換
+            "AVGPRICE": {
+                "open": "open_data",
+                "high": "high",
+                "low": "low",
+                "close": "close",
+            },
+            "MEDPRICE": {"high": "high", "low": "low"},
+            "TYPPRICE": {"high": "high", "low": "low", "close": "close"},
+            "WCLPRICE": {"high": "high", "low": "low", "close": "close"},
         }
 
         # 指標固有のマッピングがある場合はそれを使用
