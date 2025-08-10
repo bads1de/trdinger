@@ -6,13 +6,174 @@
 """
 
 import logging
+import warnings
 from typing import Any, Dict, List, Optional, Tuple, Union
 
 import numpy as np
 import pandas as pd
 from sklearn.preprocessing import StandardScaler
+import pandera as pa
+from pandera import Column, DataFrameSchema, Check
+from pydantic import BaseModel, Field, validator
 
 logger = logging.getLogger(__name__)
+
+
+# 新しいスキーマベースのバリデーション（推奨アプローチ）
+
+
+class OHLCVDataModel(BaseModel):
+    """
+    OHLCV データのPydanticモデル
+
+    宣言的なスキーマ定義により、データの妥当性を保証。
+    """
+
+    Open: float = Field(gt=0, description="始値（正の値）")
+    High: float = Field(gt=0, description="高値（正の値）")
+    Low: float = Field(gt=0, description="安値（正の値）")
+    Close: float = Field(gt=0, description="終値（正の値）")
+    Volume: float = Field(ge=0, description="出来高（非負の値）")
+
+    @validator("High")
+    def high_must_be_highest(cls, v, values):
+        """高値は他の価格より高いか等しい必要がある"""
+        if "Open" in values and v < values["Open"]:
+            raise ValueError("高値は始値以上である必要があります")
+        if "Low" in values and v < values["Low"]:
+            raise ValueError("高値は安値以上である必要があります")
+        if "Close" in values and v < values["Close"]:
+            raise ValueError("高値は終値以上である必要があります")
+        return v
+
+    @validator("Low")
+    def low_must_be_lowest(cls, v, values):
+        """安値は他の価格より低いか等しい必要がある"""
+        if "Open" in values and v > values["Open"]:
+            raise ValueError("安値は始値以下である必要があります")
+        if "Close" in values and v > values["Close"]:
+            raise ValueError("安値は終値以下である必要があります")
+        return v
+
+
+# Panderaスキーマ定義
+OHLCV_SCHEMA = DataFrameSchema(
+    {
+        "Open": Column(
+            float,
+            checks=[
+                Check.greater_than(0),
+                Check.less_than(1e6),  # 異常に大きな値を除外
+            ],
+        ),
+        "High": Column(float, checks=[Check.greater_than(0), Check.less_than(1e6)]),
+        "Low": Column(float, checks=[Check.greater_than(0), Check.less_than(1e6)]),
+        "Close": Column(float, checks=[Check.greater_than(0), Check.less_than(1e6)]),
+        "Volume": Column(
+            float, checks=[Check.greater_than_or_equal_to(0), Check.less_than(1e12)]
+        ),
+    },
+    index=pa.Index("datetime64[ns]", name="timestamp"),
+)
+
+EXTENDED_MARKET_DATA_SCHEMA = DataFrameSchema(
+    {
+        "Open": Column(float, checks=[Check.greater_than(0)]),
+        "High": Column(float, checks=[Check.greater_than(0)]),
+        "Low": Column(float, checks=[Check.greater_than(0)]),
+        "Close": Column(float, checks=[Check.greater_than(0)]),
+        "Volume": Column(float, checks=[Check.greater_than_or_equal_to(0)]),
+        "open_interest": Column(
+            float, checks=[Check.greater_than_or_equal_to(0)], nullable=True
+        ),
+        "funding_rate": Column(
+            float,
+            checks=[
+                Check.greater_than(-1),  # -100%以上
+                Check.less_than(1),  # 100%未満
+            ],
+            nullable=True,
+        ),
+        "fear_greed_value": Column(
+            float,
+            checks=[
+                Check.greater_than_or_equal_to(0),
+                Check.less_than_or_equal_to(100),
+            ],
+            nullable=True,
+        ),
+        "fear_greed_classification": Column(str, nullable=True),
+    },
+    index=pa.Index("datetime64[ns]", name="timestamp"),
+)
+
+
+def validate_dataframe_with_schema(
+    df: pd.DataFrame, schema: DataFrameSchema, lazy: bool = True
+) -> Tuple[bool, List[str]]:
+    """
+    Panderaスキーマを使用したDataFrameバリデーション（推奨アプローチ）
+
+    Args:
+        df: 検証対象のDataFrame
+        schema: Panderaスキーマ
+        lazy: 遅延評価（全エラーを収集）
+
+    Returns:
+        (検証成功フラグ, エラーメッセージリスト)
+    """
+    try:
+        schema.validate(df, lazy=lazy)
+        return True, []
+    except pa.errors.SchemaErrors as e:
+        error_messages = []
+        for error in e.schema_errors:
+            error_messages.append(str(error))
+        return False, error_messages
+    except Exception as e:
+        return False, [f"予期しないエラー: {str(e)}"]
+
+
+def clean_dataframe_with_schema(
+    df: pd.DataFrame, schema: DataFrameSchema, drop_invalid_rows: bool = True
+) -> pd.DataFrame:
+    """
+    スキーマに基づくDataFrameクリーニング（推奨アプローチ）
+
+    Args:
+        df: クリーニング対象のDataFrame
+        schema: Panderaスキーマ
+        drop_invalid_rows: 無効な行を削除するか
+
+    Returns:
+        クリーニング済みのDataFrame
+    """
+    try:
+        # スキーマに基づく型変換とバリデーション
+        cleaned_df = schema.validate(df, lazy=False)
+        return cleaned_df
+    except pa.errors.SchemaError as e:
+        logger.warning(f"スキーマエラー: {e}")
+        if drop_invalid_rows:
+            # 無効な行を特定して削除
+            try:
+                # 各行を個別に検証
+                valid_rows = []
+                for idx, row in df.iterrows():
+                    try:
+                        schema.validate(pd.DataFrame([row]), lazy=False)
+                        valid_rows.append(idx)
+                    except:
+                        continue
+
+                cleaned_df = df.loc[valid_rows]
+                logger.info(f"無効な行を削除: {len(df) - len(cleaned_df)}行")
+                return cleaned_df
+            except Exception as inner_e:
+                logger.error(f"行削除中にエラー: {inner_e}")
+                return df
+        else:
+            return df
 
 
 class DataValidator:
@@ -36,7 +197,10 @@ class DataValidator:
         default_value: float = 0.0,
     ) -> Union[pd.Series, np.ndarray, float]:
         """
-        安全な除算処理
+        安全な除算処理（非推奨）
+
+        注意: この関数は非推奨です。pandasの標準演算と.fillna()を直接使用してください。
+        例: (numerator / denominator).fillna(default_value)
 
         Args:
             numerator: 分子
@@ -46,6 +210,13 @@ class DataValidator:
         Returns:
             除算結果
         """
+        warnings.warn(
+            "safe_divide()は非推奨です。pandasの標準演算と.fillna()を使用してください。"
+            "例: (numerator / denominator).fillna(default_value)",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+
         try:
             with np.errstate(divide="ignore", invalid="ignore"):
                 result = np.divide(numerator, denominator)
@@ -75,7 +246,10 @@ class DataValidator:
         x: pd.Series, y: pd.Series, window: int, default_value: float = 0.0
     ) -> pd.Series:
         """
-        安全な相関計算
+        安全な相関計算（非推奨）
+
+        注意: この関数は非推奨です。pandasの標準機能を直接使用してください。
+        例: x.rolling(window).corr(y).fillna(default_value)
 
         Args:
             x: 系列1
@@ -86,6 +260,12 @@ class DataValidator:
         Returns:
             相関係数の系列
         """
+        warnings.warn(
+            "safe_correlation()は非推奨です。pandasの標準機能を使用してください。"
+            "例: x.rolling(window).corr(y).fillna(default_value)",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         try:
             correlation = x.rolling(window=window).corr(y)
             return correlation.replace([np.inf, -np.inf], np.nan).fillna(default_value)
@@ -100,7 +280,10 @@ class DataValidator:
         default_value: float = 0.0,
     ) -> Union[pd.Series, float]:
         """
-        安全な乗算処理（無限値やNaN値を避ける）
+        安全な乗算処理（非推奨）
+
+        注意: この関数は非推奨です。pandasの標準演算と.fillna()を直接使用してください。
+        例: (a * b).fillna(default_value)
 
         Args:
             a: 第1オペランド
@@ -110,6 +293,12 @@ class DataValidator:
         Returns:
             乗算結果
         """
+        warnings.warn(
+            "safe_multiply()は非推奨です。pandasの標準演算と.fillna()を使用してください。"
+            "例: (a * b).fillna(default_value)",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         try:
             result = a * b
             if isinstance(result, pd.Series):
@@ -128,7 +317,10 @@ class DataValidator:
         data: pd.Series, periods: int = 1, fill_value: float = 0.0
     ) -> pd.Series:
         """
-        安全な変化率計算
+        安全な変化率計算（非推奨）
+
+        注意: この関数は非推奨です。pandasの標準機能を直接使用してください。
+        例: data.pct_change(periods).fillna(fill_value)
 
         Args:
             data: 変化率を計算するデータ
@@ -138,6 +330,12 @@ class DataValidator:
         Returns:
             安全に計算された変化率
         """
+        warnings.warn(
+            "safe_pct_change()は非推奨です。pandasの標準機能を使用してください。"
+            "例: data.pct_change(periods).fillna(fill_value)",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         try:
             pct_change = data.pct_change(periods=periods)
             return pct_change.replace([np.inf, -np.inf], np.nan).fillna(fill_value)
@@ -150,7 +348,10 @@ class DataValidator:
         data: pd.Series, window: int, min_periods: int = 1, fill_value: float = 0.0
     ) -> pd.Series:
         """
-        安全なローリング平均計算
+        安全なローリング平均計算（非推奨）
+
+        注意: この関数は非推奨です。pandasの標準機能を直接使用してください。
+        例: data.rolling(window, min_periods=min_periods).mean().fillna(fill_value)
 
         Args:
             data: 計算対象データ
@@ -161,6 +362,12 @@ class DataValidator:
         Returns:
             安全に計算されたローリング平均
         """
+        warnings.warn(
+            "safe_rolling_mean()は非推奨です。pandasの標準機能を使用してください。"
+            "例: data.rolling(window, min_periods=min_periods).mean().fillna(fill_value)",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         try:
             return (
                 data.rolling(window=window, min_periods=min_periods)
@@ -202,7 +409,10 @@ class DataValidator:
         data: pd.Series, window: int, default_value: float = 0.0
     ) -> pd.Series:
         """
-        安全な正規化処理（Z-score）
+        安全な正規化処理（非推奨）
+
+        注意: この関数は非推奨です。pandasの標準機能を直接使用してください。
+        例: ((data - data.rolling(window).mean()) / data.rolling(window).std()).fillna(default_value)
 
         Args:
             data: 正規化するデータ
@@ -212,6 +422,12 @@ class DataValidator:
         Returns:
             正規化されたデータ
         """
+        warnings.warn(
+            "safe_normalize()は非推奨です。pandasの標準機能を使用してください。"
+            "例: ((data - data.rolling(window).mean()) / data.rolling(window).std()).fillna(default_value)",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         try:
             rolling_mean = data.rolling(window=window, min_periods=1).mean()
             rolling_std = data.rolling(window=window, min_periods=1).std()
@@ -234,7 +450,9 @@ class DataValidator:
         cls, df: pd.DataFrame, column_names: Optional[List[str]] = None
     ) -> Tuple[bool, Dict[str, List[str]]]:
         """
-        DataFrameの妥当性チェック
+        DataFrameの妥当性チェック（非推奨）
+
+        注意: この方法は非推奨です。代わりにvalidate_dataframe_with_schema()を使用してください。
 
         Args:
             df: チェック対象のDataFrame
@@ -243,6 +461,11 @@ class DataValidator:
         Returns:
             (妥当性フラグ, 問題のあるカラムの詳細)
         """
+        warnings.warn(
+            "validate_dataframe()は非推奨です。validate_dataframe_with_schema()を使用してください。",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         if df is None or df.empty:
             return False, {"empty": ["DataFrame is empty or None"]}
 
@@ -303,7 +526,9 @@ class DataValidator:
         fill_method: str = "median",
     ) -> pd.DataFrame:
         """
-        DataFrameのクリーンアップ
+        DataFrameのクリーンアップ（非推奨）
+
+        注意: この方法は非推奨です。代わりにclean_dataframe_with_schema()を使用してください。
 
         Args:
             df: クリーンアップ対象のDataFrame
@@ -313,6 +538,11 @@ class DataValidator:
         Returns:
             クリーンアップされたDataFrame
         """
+        warnings.warn(
+            "clean_dataframe()は非推奨です。clean_dataframe_with_schema()を使用してください。",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         if df is None or df.empty:
             return df
 

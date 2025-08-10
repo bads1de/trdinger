@@ -2,16 +2,19 @@
 ラベル生成ユーティリティ
 
 価格変化率から適切なラベルを生成するためのユーティリティ関数を提供します。
-動的閾値計算機能により、データの特性に応じた最適なラベル分布を実現します。
+scikit-learnのKBinsDiscretizerとPipelineを活用し、シンプルで効率的な実装を実現します。
 """
 
 import logging
 from enum import Enum
-from typing import Any, Dict, Optional, Tuple
+from typing import Any, Dict, Optional, Tuple, Union
 
 import numpy as np
 import pandas as pd
 from sklearn.preprocessing import KBinsDiscretizer
+from sklearn.pipeline import Pipeline
+from sklearn.model_selection import GridSearchCV
+from sklearn.base import BaseEstimator, TransformerMixin
 
 logger = logging.getLogger(__name__)
 
@@ -20,13 +23,213 @@ class ThresholdMethod(Enum):
     """閾値計算方法"""
 
     FIXED = "fixed"  # 固定閾値
-    QUANTILE = "quantile"  # 分位数ベース
+    QUANTILE = "quantile"  # 分位数ベース（KBinsDiscretizerのquantile戦略）
     # 後方互換エイリアス（テストでのPERCENTILE呼称に対応）
     PERCENTILE = "quantile"
     STD_DEVIATION = "std_deviation"  # 標準偏差ベース
-    ADAPTIVE = "adaptive"  # 適応的閾値
+    ADAPTIVE = "adaptive"  # 適応的閾値（GridSearchCVを使用）
     DYNAMIC_VOLATILITY = "dynamic_volatility"  # 動的ボラティリティベース
-    KBINS_DISCRETIZER = "kbins_discretizer"  # KBinsDiscretizerベース
+    KBINS_DISCRETIZER = "kbins_discretizer"  # KBinsDiscretizerベース（推奨）
+
+
+class PriceChangeTransformer(BaseEstimator, TransformerMixin):
+    """
+    価格データから価格変化率を計算するTransformer
+
+    scikit-learnのPipelineで使用するためのTransformer実装。
+    """
+
+    def __init__(self, periods: int = 1):
+        """
+        Args:
+            periods: 価格変化率計算の期間
+        """
+        self.periods = periods
+
+    def fit(self, X, y=None):
+        """フィット（何もしない）"""
+        return self
+
+    def transform(self, X: Union[pd.Series, pd.DataFrame]) -> np.ndarray:
+        """
+        価格データから価格変化率を計算
+
+        Args:
+            X: 価格データ（Series or DataFrame）
+
+        Returns:
+            価格変化率の2次元配列
+        """
+        if isinstance(X, pd.DataFrame):
+            # DataFrameの場合、最初の列を使用
+            price_series = X.iloc[:, 0]
+        else:
+            price_series = X
+
+        # 価格変化率を計算
+        price_change = price_series.pct_change(periods=self.periods).dropna()
+
+        # 2次元配列として返す（scikit-learn要件）
+        return price_change.values.reshape(-1, 1)
+
+
+class SimpleLabelGenerator:
+    """
+    シンプルなラベル生成クラス
+
+    scikit-learnのKBinsDiscretizerとPipelineを活用した効率的な実装。
+    複雑な条件分岐を排除し、保守性と可読性を向上。
+    """
+
+    def __init__(
+        self, n_bins: int = 3, strategy: str = "quantile", encode: str = "ordinal"
+    ):
+        """
+        Args:
+            n_bins: ビン数（デフォルト3: 下落、レンジ、上昇）
+            strategy: 分割戦略（'uniform', 'quantile', 'kmeans'）
+            encode: エンコード方法（'ordinal', 'onehot'）
+        """
+        self.n_bins = n_bins
+        self.strategy = strategy
+        self.encode = encode
+        self.pipeline = None
+        self._is_fitted = False
+
+    def create_pipeline(self) -> Pipeline:
+        """
+        ラベル生成用のPipelineを作成
+
+        Returns:
+            scikit-learnのPipeline
+        """
+        pipeline = Pipeline(
+            [
+                ("price_change", PriceChangeTransformer()),
+                (
+                    "discretizer",
+                    KBinsDiscretizer(
+                        n_bins=self.n_bins,
+                        encode=self.encode,
+                        strategy=self.strategy,
+                        subsample=None,  # 全データを使用
+                    ),
+                ),
+            ]
+        )
+        return pipeline
+
+    def fit(self, price_data: pd.Series) -> "SimpleLabelGenerator":
+        """
+        価格データでPipelineをフィット
+
+        Args:
+            price_data: 価格データ（Close価格）
+
+        Returns:
+            self
+        """
+        logger.info(
+            f"ラベル生成器フィット開始: {len(price_data)}行, 戦略={self.strategy}"
+        )
+
+        self.pipeline = self.create_pipeline()
+
+        # フィット実行
+        self.pipeline.fit(price_data)
+        self._is_fitted = True
+
+        logger.info("ラベル生成器フィット完了")
+        return self
+
+    def transform(self, price_data: pd.Series) -> pd.Series:
+        """
+        価格データからラベルを生成
+
+        Args:
+            price_data: 価格データ（Close価格）
+
+        Returns:
+            ラベルSeries
+        """
+        if not self._is_fitted:
+            raise ValueError("fit()を先に実行してください")
+
+        # 変換実行
+        labels_array = self.pipeline.transform(price_data)
+
+        # 価格変化率のインデックスを取得（最初の行は除外される）
+        price_change_index = price_data.pct_change().dropna().index
+
+        # Seriesとして返す
+        labels = pd.Series(labels_array.flatten(), index=price_change_index, dtype=int)
+
+        return labels
+
+    def fit_transform(self, price_data: pd.Series) -> Tuple[pd.Series, Dict[str, Any]]:
+        """
+        フィットと変換を同時実行
+
+        Args:
+            price_data: 価格データ（Close価格）
+
+        Returns:
+            ラベルSeries, 情報辞書のタプル
+        """
+        logger.info(f"ラベル生成開始: {len(price_data)}行, 戦略={self.strategy}")
+
+        # フィットと変換
+        self.fit(price_data)
+        labels = self.transform(price_data)
+
+        # 統計情報を計算
+        info = self._calculate_statistics(labels, price_data)
+
+        logger.info(
+            f"ラベル生成完了: {len(labels)}行 "
+            f"(上昇:{info['up_ratio']*100:.1f}%, "
+            f"下落:{info['down_ratio']*100:.1f}%, "
+            f"レンジ:{info['range_ratio']*100:.1f}%)"
+        )
+
+        return labels, info
+
+    def _calculate_statistics(
+        self, labels: pd.Series, price_data: pd.Series
+    ) -> Dict[str, Any]:
+        """統計情報を計算"""
+        label_counts = labels.value_counts().sort_index()
+        total_count = len(labels)
+
+        # KBinsDiscretizerの境界値を取得
+        discretizer = self.pipeline.named_steps["discretizer"]
+        bin_edges = (
+            discretizer.bin_edges_[0] if hasattr(discretizer, "bin_edges_") else None
+        )
+
+        return {
+            "method": "kbins_discretizer",
+            "strategy": self.strategy,
+            "n_bins": self.n_bins,
+            "down_count": label_counts.get(0, 0),
+            "range_count": label_counts.get(1, 0),
+            "up_count": label_counts.get(2, 0),
+            "down_ratio": (
+                label_counts.get(0, 0) / total_count if total_count > 0 else 0
+            ),
+            "range_ratio": (
+                label_counts.get(1, 0) / total_count if total_count > 0 else 0
+            ),
+            "up_ratio": label_counts.get(2, 0) / total_count if total_count > 0 else 0,
+            "total_count": total_count,
+            "bin_edges": bin_edges.tolist() if bin_edges is not None else None,
+            "threshold_down": (
+                bin_edges[1] if bin_edges is not None and len(bin_edges) > 1 else None
+            ),
+            "threshold_up": (
+                bin_edges[2] if bin_edges is not None and len(bin_edges) > 2 else None
+            ),
+        }
 
 
 class LabelGenerator:
@@ -679,3 +882,174 @@ class LabelGenerator:
             method=ThresholdMethod.KBINS_DISCRETIZER,
             strategy=strategy,
         )
+
+
+# 関数ベースのユーティリティ（推奨アプローチ）
+def create_label_pipeline(
+    n_bins: int = 3, strategy: str = "quantile", encode: str = "ordinal"
+) -> Pipeline:
+    """
+    ラベル生成用のPipelineを作成（関数ベース）
+
+    Args:
+        n_bins: ビン数（デフォルト3: 下落、レンジ、上昇）
+        strategy: 分割戦略（'uniform', 'quantile', 'kmeans'）
+        encode: エンコード方法（'ordinal', 'onehot'）
+
+    Returns:
+        scikit-learnのPipeline
+    """
+    return Pipeline(
+        [
+            ("price_change", PriceChangeTransformer()),
+            (
+                "discretizer",
+                KBinsDiscretizer(
+                    n_bins=n_bins, encode=encode, strategy=strategy, subsample=None
+                ),
+            ),
+        ]
+    )
+
+
+def generate_labels_with_pipeline(
+    price_data: pd.Series, strategy: str = "quantile", n_bins: int = 3
+) -> Tuple[pd.Series, Dict[str, Any]]:
+    """
+    Pipelineを使用したラベル生成（関数ベース）
+
+    推奨される新しいアプローチ。KBinsDiscretizerとPipelineを活用し、
+    複雑な条件分岐を排除した効率的な実装。
+
+    Args:
+        price_data: 価格データ（Close価格）
+        strategy: 分割戦略（'uniform', 'quantile', 'kmeans'）
+        n_bins: ビン数
+
+    Returns:
+        ラベルSeries, 情報辞書のタプル
+    """
+    logger.info(f"Pipeline ラベル生成開始: {len(price_data)}行, 戦略={strategy}")
+
+    # Pipelineを作成
+    pipeline = create_label_pipeline(n_bins=n_bins, strategy=strategy)
+
+    # フィットと変換
+    labels_array = pipeline.fit_transform(price_data)
+
+    # 価格変化率のインデックスを取得
+    price_change_index = price_data.pct_change().dropna().index
+
+    # Seriesとして変換
+    labels = pd.Series(labels_array.flatten(), index=price_change_index, dtype=int)
+
+    # 統計情報を計算
+    label_counts = labels.value_counts().sort_index()
+    total_count = len(labels)
+
+    # KBinsDiscretizerの境界値を取得
+    discretizer = pipeline.named_steps["discretizer"]
+    bin_edges = (
+        discretizer.bin_edges_[0] if hasattr(discretizer, "bin_edges_") else None
+    )
+
+    info = {
+        "method": "pipeline_kbins_discretizer",
+        "strategy": strategy,
+        "n_bins": n_bins,
+        "down_count": label_counts.get(0, 0),
+        "range_count": label_counts.get(1, 0),
+        "up_count": label_counts.get(2, 0),
+        "down_ratio": label_counts.get(0, 0) / total_count if total_count > 0 else 0,
+        "range_ratio": label_counts.get(1, 0) / total_count if total_count > 0 else 0,
+        "up_ratio": label_counts.get(2, 0) / total_count if total_count > 0 else 0,
+        "total_count": total_count,
+        "bin_edges": bin_edges.tolist() if bin_edges is not None else None,
+        "threshold_down": (
+            bin_edges[1] if bin_edges is not None and len(bin_edges) > 1 else None
+        ),
+        "threshold_up": (
+            bin_edges[2] if bin_edges is not None and len(bin_edges) > 2 else None
+        ),
+    }
+
+    logger.info(
+        f"Pipeline ラベル生成完了: {len(labels)}行 "
+        f"(上昇:{info['up_ratio']*100:.1f}%, "
+        f"下落:{info['down_ratio']*100:.1f}%, "
+        f"レンジ:{info['range_ratio']*100:.1f}%)"
+    )
+
+    return labels, info
+
+
+def optimize_label_generation_with_gridsearch(
+    price_data: pd.Series,
+    param_grid: Optional[Dict[str, Any]] = None,
+    cv: int = 3,
+    scoring: str = "balanced_accuracy",
+) -> Tuple[Pipeline, Dict[str, Any]]:
+    """
+    GridSearchCVを使用したラベル生成の最適化
+
+    ハイパーパラメータ最適化をPipelineに組み込んだ高度なアプローチ。
+
+    Args:
+        price_data: 価格データ（Close価格）
+        param_grid: パラメータグリッド
+        cv: クロスバリデーションの分割数
+        scoring: スコアリング方法
+
+    Returns:
+        最適化されたPipeline, 結果情報の辞書
+    """
+    if param_grid is None:
+        param_grid = {
+            "discretizer__strategy": ["uniform", "quantile", "kmeans"],
+            "discretizer__n_bins": [3, 4, 5],
+        }
+
+    logger.info(f"GridSearch ラベル生成最適化開始: {len(price_data)}行")
+
+    # ベースPipelineを作成
+    base_pipeline = create_label_pipeline()
+
+    # 価格変化率を計算（ターゲット用）
+    price_change = price_data.pct_change().dropna()
+
+    # 簡単なターゲット（価格上昇/下降の2値分類）を作成
+    simple_target = (price_change > 0).astype(int)
+
+    # GridSearchCVを実行
+    grid_search = GridSearchCV(
+        base_pipeline, param_grid=param_grid, cv=cv, scoring=scoring, n_jobs=-1
+    )
+
+    grid_search.fit(price_data, simple_target)
+
+    # 最適なパラメータでラベル生成
+    best_pipeline = grid_search.best_estimator_
+    labels_array = best_pipeline.transform(price_data)
+
+    # 価格変化率のインデックスを取得
+    price_change_index = price_data.pct_change().dropna().index
+
+    # Seriesとして変換
+    labels = pd.Series(labels_array.flatten(), index=price_change_index, dtype=int)
+
+    # 結果情報
+    info = {
+        "method": "gridsearch_optimized",
+        "best_params": grid_search.best_params_,
+        "best_score": grid_search.best_score_,
+        "cv_results": grid_search.cv_results_,
+        "labels": labels,
+    }
+
+    logger.info(
+        f"GridSearch ラベル生成最適化完了: "
+        f"最適パラメータ={grid_search.best_params_}, "
+        f"スコア={grid_search.best_score_:.3f}"
+    )
+
+    return best_pipeline, info

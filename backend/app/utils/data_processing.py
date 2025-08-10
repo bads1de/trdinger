@@ -6,24 +6,332 @@ data_cleaning_utils.py と data_preprocessing.py を統合したモジュール�
 """
 
 import logging
+import warnings
 from typing import Any, Dict, List, Optional, Tuple
 
 import numpy as np
 import pandas as pd
 from sklearn.compose import ColumnTransformer, make_column_selector
 from sklearn.impute import SimpleImputer
-from sklearn.pipeline import Pipeline, make_pipeline
+from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import (
     FunctionTransformer,
     LabelEncoder,
+    OneHotEncoder,
     MinMaxScaler,
     RobustScaler,
     StandardScaler,
 )
+from sklearn.ensemble import IsolationForest
+from sklearn.neighbors import LocalOutlierFactor
+from sklearn.base import BaseEstimator, TransformerMixin
 
 from .unified_error_handler import UnifiedDataError
 
 logger = logging.getLogger(__name__)
+
+
+class OutlierRemovalTransformer(BaseEstimator, TransformerMixin):
+    """
+    scikit-learnの標準外れ値検出アルゴリズムを使用したTransformer
+
+    IsolationForestやLocalOutlierFactorを活用し、Pipeline内で使用可能。
+    """
+
+    def __init__(self, method="isolation_forest", contamination=0.1, **kwargs):
+        """
+        Args:
+            method: 外れ値検出方法 ('isolation_forest', 'local_outlier_factor')
+            contamination: 外れ値の割合
+            **kwargs: 各アルゴリズム固有のパラメータ
+        """
+        self.method = method
+        self.contamination = contamination
+        self.kwargs = kwargs
+        self.detector = None
+        self.outlier_mask_ = None
+
+    def fit(self, X, y=None):
+        """外れ値検出器をフィット"""
+        if self.method == "isolation_forest":
+            self.detector = IsolationForest(
+                contamination=self.contamination, random_state=42, **self.kwargs
+            )
+            self.detector.fit(X)
+            # 外れ値マスクを計算（-1が外れ値、1が正常値）
+            predictions = self.detector.predict(X)
+            self.outlier_mask_ = predictions == -1
+
+        elif self.method == "local_outlier_factor":
+            self.detector = LocalOutlierFactor(
+                contamination=self.contamination, **self.kwargs
+            )
+            # LOFは fit_predict を使用
+            predictions = self.detector.fit_predict(X)
+            self.outlier_mask_ = predictions == -1
+
+        else:
+            raise ValueError(f"未対応の外れ値検出方法: {self.method}")
+
+        return self
+
+    def transform(self, X):
+        """外れ値をNaNに置き換え"""
+        if self.detector is None:
+            raise ValueError("fit()を先に実行してください")
+
+        X_transformed = X.copy()
+
+        if self.method == "isolation_forest":
+            # 新しいデータに対する予測
+            predictions = self.detector.predict(X_transformed)
+            outlier_mask = predictions == -1
+        elif self.method == "local_outlier_factor":
+            # LOFは学習データでのみ外れ値マスクを使用
+            if hasattr(self, "outlier_mask_") and len(X_transformed) == len(
+                self.outlier_mask_
+            ):
+                outlier_mask = self.outlier_mask_
+            else:
+                # 新しいデータの場合は変換しない
+                return X_transformed
+
+        # 外れ値をNaNに置き換え
+        if isinstance(X_transformed, pd.DataFrame):
+            X_transformed.loc[outlier_mask] = np.nan
+        else:
+            X_transformed[outlier_mask] = np.nan
+
+        return X_transformed
+
+
+class CategoricalEncoderTransformer(BaseEstimator, TransformerMixin):
+    """
+    カテゴリカル変数エンコーディング用のTransformer
+
+    scikit-learnの標準エンコーダーを使用し、Pipeline内で利用可能。
+    """
+
+    def __init__(self, encoding_type="label", handle_unknown="ignore"):
+        """
+        Args:
+            encoding_type: エンコーディング方法 ('label', 'onehot')
+            handle_unknown: 未知のカテゴリの処理方法
+        """
+        self.encoding_type = encoding_type
+        self.handle_unknown = handle_unknown
+        self.encoders_ = {}
+        self.feature_names_out_ = None
+
+    def fit(self, X, y=None):
+        """エンコーダーをフィット"""
+        if isinstance(X, pd.DataFrame):
+            categorical_columns = X.select_dtypes(
+                include=["object", "category"]
+            ).columns
+        else:
+            # numpy配列の場合は全列をカテゴリカルとして扱う
+            categorical_columns = range(X.shape[1])
+
+        for col in categorical_columns:
+            if self.encoding_type == "label":
+                encoder = LabelEncoder()
+                if isinstance(X, pd.DataFrame):
+                    # 欠損値を文字列で埋める
+                    data = X[col].fillna("Unknown").astype(str)
+                else:
+                    data = X[:, col]
+                encoder.fit(data)
+                self.encoders_[col] = encoder
+
+            elif self.encoding_type == "onehot":
+                encoder = OneHotEncoder(
+                    handle_unknown=self.handle_unknown, sparse_output=False
+                )
+                if isinstance(X, pd.DataFrame):
+                    data = X[[col]].fillna("Unknown").astype(str)
+                else:
+                    data = X[:, [col]]
+                encoder.fit(data)
+                self.encoders_[col] = encoder
+
+        return self
+
+    def transform(self, X):
+        """カテゴリカル変数をエンコード"""
+        if not self.encoders_:
+            return X
+
+        X_transformed = X.copy()
+
+        for col, encoder in self.encoders_.items():
+            try:
+                if isinstance(X_transformed, pd.DataFrame):
+                    data = X_transformed[col].fillna("Unknown").astype(str)
+                    if self.encoding_type == "label":
+                        # 未知のカテゴリを処理
+                        known_classes = set(encoder.classes_)
+                        data = data.apply(
+                            lambda x: x if x in known_classes else "Unknown"
+                        )
+                        X_transformed[col] = encoder.transform(data)
+                    elif self.encoding_type == "onehot":
+                        encoded = encoder.transform(data.values.reshape(-1, 1))
+                        # OneHotの結果を元のDataFrameに統合
+                        feature_names = [
+                            f"{col}_{cls}" for cls in encoder.categories_[0]
+                        ]
+                        encoded_df = pd.DataFrame(
+                            encoded, columns=feature_names, index=X_transformed.index
+                        )
+                        X_transformed = X_transformed.drop(columns=[col])
+                        X_transformed = pd.concat([X_transformed, encoded_df], axis=1)
+                else:
+                    # numpy配列の場合
+                    if self.encoding_type == "label":
+                        X_transformed[:, col] = encoder.transform(X_transformed[:, col])
+
+            except Exception as e:
+                logger.warning(f"カラム {col} のエンコーディングでエラー: {e}")
+                if isinstance(X_transformed, pd.DataFrame):
+                    X_transformed[col] = 0  # デフォルト値
+                else:
+                    X_transformed[:, col] = 0
+
+        return X_transformed
+
+
+# 推奨される新しいユーティリティ関数
+def create_outlier_removal_pipeline(
+    method="isolation_forest", contamination=0.1, **kwargs
+) -> Pipeline:
+    """
+    外れ値除去用のPipelineを作成（推奨アプローチ）
+
+    Args:
+        method: 外れ値検出方法 ('isolation_forest', 'local_outlier_factor')
+        contamination: 外れ値の割合
+        **kwargs: 各アルゴリズム固有のパラメータ
+
+    Returns:
+        外れ値除去Pipeline
+    """
+    return Pipeline(
+        [
+            (
+                "outlier_removal",
+                OutlierRemovalTransformer(
+                    method=method, contamination=contamination, **kwargs
+                ),
+            ),
+            ("imputer", SimpleImputer(strategy="median")),  # 外れ値除去後の欠損値補完
+        ]
+    )
+
+
+def create_categorical_encoding_pipeline(
+    encoding_type="label", handle_unknown="ignore"
+) -> Pipeline:
+    """
+    カテゴリカルエンコーディング用のPipelineを作成（推奨アプローチ）
+
+    Args:
+        encoding_type: エンコーディング方法 ('label', 'onehot')
+        handle_unknown: 未知のカテゴリの処理方法
+
+    Returns:
+        カテゴリカルエンコーディングPipeline
+    """
+    return Pipeline(
+        [
+            ("imputer", SimpleImputer(strategy="constant", fill_value="Unknown")),
+            (
+                "encoder",
+                CategoricalEncoderTransformer(
+                    encoding_type=encoding_type, handle_unknown=handle_unknown
+                ),
+            ),
+        ]
+    )
+
+
+def create_comprehensive_preprocessing_pipeline(
+    outlier_method="isolation_forest",
+    outlier_contamination=0.1,
+    categorical_encoding="label",
+    scaling_method="robust",
+) -> Pipeline:
+    """
+    包括的な前処理Pipelineを作成（推奨アプローチ）
+
+    scikit-learnの標準機能を活用した効率的で保守性の高い実装。
+
+    Args:
+        outlier_method: 外れ値検出方法
+        outlier_contamination: 外れ値の割合
+        categorical_encoding: カテゴリカルエンコーディング方法
+        scaling_method: スケーリング方法
+
+    Returns:
+        包括的な前処理Pipeline
+    """
+    # 数値カラム用の前処理
+    numeric_pipeline = Pipeline(
+        [
+            (
+                "outlier_removal",
+                OutlierRemovalTransformer(
+                    method=outlier_method, contamination=outlier_contamination
+                ),
+            ),
+            ("imputer", SimpleImputer(strategy="median")),
+            (
+                "scaler",
+                RobustScaler() if scaling_method == "robust" else StandardScaler(),
+            ),
+        ]
+    )
+
+    # カテゴリカルカラム用の前処理
+    categorical_pipeline = Pipeline(
+        [
+            ("imputer", SimpleImputer(strategy="constant", fill_value="Unknown")),
+            (
+                "encoder",
+                CategoricalEncoderTransformer(encoding_type=categorical_encoding),
+            ),
+        ]
+    )
+
+    # ColumnTransformerで統合
+    preprocessor = ColumnTransformer(
+        [
+            (
+                "numeric",
+                numeric_pipeline,
+                make_column_selector(dtype_include=np.number),
+            ),
+            (
+                "categorical",
+                categorical_pipeline,
+                make_column_selector(dtype_include=object),
+            ),
+        ],
+        remainder="passthrough",
+    )
+
+    return Pipeline(
+        [
+            ("preprocessor", preprocessor),
+            (
+                "final_cleanup",
+                FunctionTransformer(
+                    func=lambda X: np.nan_to_num(X, nan=0.0, posinf=0.0, neginf=0.0),
+                    validate=False,
+                ),
+            ),
+        ]
+    )
 
 
 class DataProcessor:
@@ -113,21 +421,46 @@ class DataProcessor:
             )
         )
 
-        # 2. 外れ値除去（オプション）
+        # 2. 外れ値除去（オプション）- scikit-learn標準アルゴリズムを使用
         if remove_outliers:
-            if outlier_method == "iqr":
-                outlier_func = self._create_iqr_outlier_remover(outlier_threshold)
-            elif outlier_method == "zscore":
-                outlier_func = self._create_zscore_outlier_remover(outlier_threshold)
-            else:
-                outlier_func = lambda X: X  # 何もしない
-
-            numeric_pipeline_steps.append(
-                (
-                    "outlier_removal",
-                    FunctionTransformer(func=outlier_func, validate=False),
+            if outlier_method == "isolation_forest":
+                outlier_transformer = OutlierRemovalTransformer(
+                    method="isolation_forest",
+                    contamination=(
+                        outlier_threshold / 100.0
+                        if outlier_threshold > 1
+                        else outlier_threshold
+                    ),
+                    n_estimators=100,
                 )
-            )
+            elif outlier_method == "local_outlier_factor":
+                outlier_transformer = OutlierRemovalTransformer(
+                    method="local_outlier_factor",
+                    contamination=(
+                        outlier_threshold / 100.0
+                        if outlier_threshold > 1
+                        else outlier_threshold
+                    ),
+                    n_neighbors=20,
+                )
+            elif outlier_method == "iqr":
+                # 後方互換性のため、IQR方法も残す
+                outlier_func = self._create_iqr_outlier_remover(outlier_threshold)
+                outlier_transformer = FunctionTransformer(
+                    func=outlier_func, validate=False
+                )
+            elif outlier_method == "zscore":
+                # 後方互換性のため、Z-score方法も残す
+                outlier_func = self._create_zscore_outlier_remover(outlier_threshold)
+                outlier_transformer = FunctionTransformer(
+                    func=outlier_func, validate=False
+                )
+            else:
+                outlier_transformer = FunctionTransformer(
+                    func=lambda X: X, validate=False
+                )
+
+            numeric_pipeline_steps.append(("outlier_removal", outlier_transformer))
 
         # 3. 欠損値補完
         numeric_pipeline_steps.append(
@@ -164,7 +497,7 @@ class DataProcessor:
         # 数値パイプラインを作成
         numeric_pipeline = Pipeline(numeric_pipeline_steps)
 
-        # カテゴリカルカラム用の前処理パイプライン
+        # カテゴリカルカラム用の前処理パイプライン - scikit-learn標準エンコーダーを使用
         categorical_pipeline = Pipeline(
             [
                 (
@@ -173,9 +506,7 @@ class DataProcessor:
                 ),
                 (
                     "encoder",
-                    FunctionTransformer(
-                        func=self._encode_categorical_safe, validate=False
-                    ),
+                    CategoricalEncoderTransformer(encoding_type="label"),
                 ),
             ]
         )
@@ -212,7 +543,18 @@ class DataProcessor:
         return pipeline
 
     def _create_iqr_outlier_remover(self, threshold: float):
-        """IQR法による外れ値除去関数を作成"""
+        """
+        IQR法による外れ値除去関数を作成（非推奨）
+
+        注意: この方法は非推奨です。代わりにOutlierRemovalTransformerの
+        'isolation_forest'または'local_outlier_factor'を使用してください。
+        """
+        warnings.warn(
+            "IQR法による外れ値除去は非推奨です。OutlierRemovalTransformerの"
+            "'isolation_forest'または'local_outlier_factor'を使用してください。",
+            DeprecationWarning,
+            stacklevel=2,
+        )
 
         def remove_outliers_iqr(X):
             if X.ndim == 1:
@@ -238,7 +580,18 @@ class DataProcessor:
         return remove_outliers_iqr
 
     def _create_zscore_outlier_remover(self, threshold: float):
-        """Z-score法による外れ値除去関数を作成"""
+        """
+        Z-score法による外れ値除去関数を作成（非推奨）
+
+        注意: この方法は非推奨です。代わりにOutlierRemovalTransformerの
+        'isolation_forest'または'local_outlier_factor'を使用してください。
+        """
+        warnings.warn(
+            "Z-score法による外れ値除去は非推奨です。OutlierRemovalTransformerの"
+            "'isolation_forest'または'local_outlier_factor'を使用してください。",
+            DeprecationWarning,
+            stacklevel=2,
+        )
 
         def remove_outliers_zscore(X):
             if X.ndim == 1:
@@ -264,7 +617,16 @@ class DataProcessor:
         return remove_outliers_zscore
 
     def _encode_categorical_safe(self, X):
-        """安全なカテゴリカル変数エンコーディング"""
+        """
+        安全なカテゴリカル変数エンコーディング（非推奨）
+
+        注意: この方法は非推奨です。代わりにCategoricalEncoderTransformerを使用してください。
+        """
+        warnings.warn(
+            "この方法は非推奨です。CategoricalEncoderTransformerを使用してください。",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         if X.ndim == 1:
             X = X.reshape(-1, 1)
 
@@ -772,7 +1134,9 @@ class DataProcessor:
 
     def _encode_categorical_variables(self, df: pd.DataFrame) -> pd.DataFrame:
         """
-        カテゴリカル変数を数値にエンコーディング
+        カテゴリカル変数を数値にエンコーディング（非推奨）
+
+        注意: この方法は非推奨です。代わりにCategoricalEncoderTransformerを使用してください。
 
         Args:
             df: 対象のDataFrame
@@ -780,6 +1144,11 @@ class DataProcessor:
         Returns:
             エンコーディング済みのDataFrame
         """
+        warnings.warn(
+            "この方法は非推奨です。CategoricalEncoderTransformerを使用してください。",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         try:
             result_df = df.copy()
 
