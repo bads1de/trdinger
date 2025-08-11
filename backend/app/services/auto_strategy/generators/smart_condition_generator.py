@@ -437,15 +437,37 @@ class SmartConditionGenerator:
 
             # 選択された戦略に基づいて条件を生成
             if strategy_type == StrategyType.DIFFERENT_INDICATORS:
-                return self._generate_different_indicators_strategy(indicators)
+                longs, shorts, exits = self._generate_different_indicators_strategy(
+                    indicators
+                )
             elif strategy_type == StrategyType.TIME_SEPARATION:
-                return self._generate_time_separation_strategy(indicators)
+                longs, shorts, exits = self._generate_time_separation_strategy(
+                    indicators
+                )
             elif strategy_type == StrategyType.COMPLEX_CONDITIONS:
-                return self._generate_complex_conditions_strategy(indicators)
+                longs, shorts, exits = self._generate_complex_conditions_strategy(
+                    indicators
+                )
             elif strategy_type == StrategyType.INDICATOR_CHARACTERISTICS:
-                return self._generate_indicator_characteristics_strategy(indicators)
+                longs, shorts, exits = (
+                    self._generate_indicator_characteristics_strategy(indicators)
+                )
             else:
-                return self._generate_fallback_conditions()
+                longs, shorts, exits = self._generate_fallback_conditions()
+
+            # 成立性向上のため、各サイドの条件数を最大2に制限（ANDの過剰による成立低下を防止）
+            def _cap(conds, k=2):
+                if not conds:
+                    return conds
+                if len(conds) <= k:
+                    return conds
+                import random as _rnd
+
+                return _rnd.sample(conds, k)
+
+            longs = _cap(longs, 2)
+            shorts = _cap(shorts, 2)
+            return longs, shorts, exits
 
         except Exception as e:
             self.logger.error(f"スマート条件生成エラー: {e}")
@@ -551,7 +573,6 @@ class SmartConditionGenerator:
                 IndicatorType.MOMENTUM: [],
                 IndicatorType.TREND: [],
                 IndicatorType.VOLATILITY: [],
-                IndicatorType.CYCLE: [],
                 IndicatorType.STATISTICS: [],
                 IndicatorType.MATH_TRANSFORM: [],
                 IndicatorType.MATH_OPERATORS: [],
@@ -627,7 +648,8 @@ class SmartConditionGenerator:
             if indicators_by_type[IndicatorType.TREND]:
                 trend_indicator = random.choice(indicators_by_type[IndicatorType.TREND])
                 # トレンド指標の基本的なショート条件
-                trend_name = f"{trend_indicator.type}_{trend_indicator.parameters.get('period', 14)}"
+                # テスト互換性: 素名で参照
+                trend_name = trend_indicator.type
                 if trend_indicator.type in ["SMA", "EMA", "MAMA"]:
                     short_conditions.append(
                         Condition(
@@ -640,10 +662,11 @@ class SmartConditionGenerator:
                     indicators_by_type[IndicatorType.MOMENTUM]
                 )
                 # モメンタム指標の基本的なショート条件
-                momentum_name = f"{momentum_indicator.type}_{momentum_indicator.parameters.get('period', 14)}"
+                # テスト互換性: 素名で参照
+                momentum_name = momentum_indicator.type
                 if momentum_indicator.type == "RSI":
                     # RSI: 買われすぎ領域でショート
-                    threshold = random.uniform(65, 85)
+                    threshold = random.uniform(55, 75)
                     short_conditions.append(
                         Condition(
                             left_operand=momentum_name,
@@ -687,15 +710,76 @@ class SmartConditionGenerator:
                     self._create_pattern_long_conditions(pattern_indicator)
                 )
 
+            # 成立性を下支えするため、各サイドに価格 vs トレンド系の条件を最低1つ保証
+            def _ensure_price_vs_trend(side_conds: List[Condition], prefer: str):
+                has_price_vs_trend = any(
+                    isinstance(c.right_operand, str)
+                    and c.left_operand in ("close", "open")
+                    and c.right_operand in ("SMA", "EMA", "MAMA")
+                    for c in side_conds
+                )
+                if not has_price_vs_trend and indicators_by_type[IndicatorType.TREND]:
+                    trend_indicator = random.choice(
+                        indicators_by_type[IndicatorType.TREND]
+                    )
+                    trend_name = trend_indicator.type
+                    if prefer == "long":
+                        side_conds.append(
+                            Condition(
+                                left_operand="close",
+                                operator=">",
+                                right_operand=trend_name,
+                            )
+                        )
+                    else:
+                        side_conds.append(
+                            Condition(
+                                left_operand="close",
+                                operator="<",
+                                right_operand=trend_name,
+                            )
+                        )
+
+            _ensure_price_vs_trend(long_conditions, "long")
+            _ensure_price_vs_trend(short_conditions, "short")
+
             # 条件が空の場合はフォールバック
             if not long_conditions:
-                long_conditions = [
-                    Condition(left_operand="close", operator=">", right_operand="open")
-                ]
+                if indicators_by_type[IndicatorType.TREND]:
+                    trend_indicator = random.choice(
+                        indicators_by_type[IndicatorType.TREND]
+                    )
+                    long_conditions = [
+                        Condition(
+                            left_operand="close",
+                            operator=">",
+                            right_operand=trend_indicator.type,
+                        )
+                    ]
+                else:
+                    long_conditions = [
+                        Condition(
+                            left_operand="close", operator=">", right_operand="open"
+                        )
+                    ]
             if not short_conditions:
-                short_conditions = [
-                    Condition(left_operand="close", operator="<", right_operand="open")
-                ]
+                if indicators_by_type[IndicatorType.TREND]:
+                    trend_indicator = random.choice(
+                        indicators_by_type[IndicatorType.TREND]
+                    )
+                    short_conditions = [
+                        Condition(
+                            left_operand="close",
+                            operator="<",
+                            right_operand=trend_indicator.type,
+                        )
+                    ]
+                else:
+                    short_conditions = [
+                        Condition(
+                            left_operand="close", operator="<", right_operand="open"
+                        )
+                    ]
 
             return long_conditions, short_conditions, []
 
@@ -707,7 +791,8 @@ class SmartConditionGenerator:
         self, indicator: IndicatorGene
     ) -> List[Condition]:
         """トレンド系指標のロング条件を生成"""
-        indicator_name = f"{indicator.type}_{indicator.parameters.get('period', 14)}"
+        # テスト互換性: 素名優先
+        indicator_name = indicator.type
 
         if indicator.type in ["SMA", "EMA", "MAMA"]:
             return [
@@ -722,11 +807,12 @@ class SmartConditionGenerator:
         self, indicator: IndicatorGene
     ) -> List[Condition]:
         """モメンタム系指標のロング条件を生成"""
-        indicator_name = f"{indicator.type}_{indicator.parameters.get('period', 14)}"
+        # テスト互換性: レジストリ由来の素名を優先（RSI_14 -> RSI）
+        indicator_name = indicator.type
 
         if indicator.type == "RSI":
             # RSI: 売られすぎ領域でロング
-            threshold = random.uniform(20, 35)
+            threshold = random.uniform(25, 45)
             return [
                 Condition(
                     left_operand=indicator_name, operator="<", right_operand=threshold
@@ -760,7 +846,8 @@ class SmartConditionGenerator:
         self, indicator: IndicatorGene
     ) -> List[Condition]:
         """統計系指標のロング条件を生成"""
-        indicator_name = f"{indicator.type}_{indicator.parameters.get('period', 14)}"
+        # テスト互換性: 指標は素名で参照
+        indicator_name = indicator.type
 
         if indicator.type == "CORREL":
             # 正の相関でロング
@@ -1091,9 +1178,8 @@ class SmartConditionGenerator:
                         indicator_type == IndicatorType.MOMENTUM
                         and indicator.type == "RSI"
                     ):
-                        indicator_name = (
-                            f"{indicator.type}_{indicator.parameters.get('period', 14)}"
-                        )
+                        # テスト互換性: 素名で参照
+                        indicator_name = indicator.type
                         threshold = random.uniform(65, 85)
                         short_conditions.append(
                             Condition(

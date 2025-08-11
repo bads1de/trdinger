@@ -65,11 +65,18 @@ class TrendIndicators:
     @staticmethod
     @handle_pandas_ta_errors
     def tema(data: Union[np.ndarray, pd.Series], length: int) -> np.ndarray:
-        """三重指数移動平均"""
+        """三重指数移動平均
+        注意: 一部のデータ・長さ設定で全NaNとなるケースがあるため、EMAにフォールバックする。
+        """
         series = ensure_series_minimal_conversion(data)
         validate_series_data(series, length)
         result = ta.tema(series, length=length)
-        return result.values
+        values = result.values
+        # 全NaNの場合はEMAへフォールバックして安定化
+        if np.all(np.isnan(values)):
+            ema = ta.ema(series, length=length)
+            return ema.values
+        return values
 
     @staticmethod
     @handle_pandas_ta_errors

@@ -123,16 +123,22 @@ class StrategyFactory:
                     short_entry_result = self._check_short_entry_conditions()
 
                     # デバッグログ: ロング・ショート条件の評価結果
-                    if hasattr(self, '_debug_counter'):
+                    if hasattr(self, "_debug_counter"):
                         self._debug_counter += 1
                     else:
                         self._debug_counter = 1
 
                     # 100回に1回ログを出力（パフォーマンス考慮）
                     if self._debug_counter % 100 == 0:
-                        logger.info(f"[DEBUG] ロング条件: {long_entry_result}, ショート条件: {short_entry_result}")
-                        logger.info(f"[DEBUG] ロング条件数: {len(self.gene.get_effective_long_conditions())}")
-                        logger.info(f"[DEBUG] ショート条件数: {len(self.gene.get_effective_short_conditions())}")
+                        logger.info(
+                            f"[DEBUG] ロング条件: {long_entry_result}, ショート条件: {short_entry_result}"
+                        )
+                        logger.info(
+                            f"[DEBUG] ロング条件数: {len(self.gene.get_effective_long_conditions())}"
+                        )
+                        logger.info(
+                            f"[DEBUG] ショート条件数: {len(self.gene.get_effective_short_conditions())}"
+                        )
 
                     if not self.position and (long_entry_result or short_entry_result):
                         # backtesting.pyのマージン問題を回避するため、非常に小さな固定サイズを使用
@@ -146,6 +152,7 @@ class StrategyFactory:
                         if long_entry_result and short_entry_result:
                             # 両方の条件が満たされた場合はランダムに選択（より公平）
                             import random
+
                             position_direction = random.choice([1.0, -1.0])
                         elif long_entry_result:
                             position_direction = 1.0  # ロング
@@ -157,20 +164,24 @@ class StrategyFactory:
 
                         # デバッグログ: ポジション方向決定
                         if self._debug_counter % 100 == 0:
-                            logger.info(f"[DEBUG] ポジション方向: {position_direction} (ロング={long_entry_result}, ショート={short_entry_result})")
+                            logger.info(
+                                f"[DEBUG] ポジション方向: {position_direction} (ロング={long_entry_result}, ショート={short_entry_result})"
+                            )
 
                         # ポジション方向がNoneの場合はエントリーしない
                         if position_direction is None:
                             return
 
                         # ストップロスとテイクプロフィットの価格を計算（ポジション方向を考慮）
-                        sl_price, tp_price = factory.tpsl_calculator.calculate_tpsl_prices(
-                            current_price,
-                            stop_loss_pct,
-                            take_profit_pct,
-                            risk_management,
-                            gene,
-                            position_direction,
+                        sl_price, tp_price = (
+                            factory.tpsl_calculator.calculate_tpsl_prices(
+                                current_price,
+                                stop_loss_pct,
+                                take_profit_pct,
+                                risk_management,
+                                gene,
+                                position_direction,
+                            )
                         )
 
                         # 動的ポジションサイズ計算
@@ -185,32 +196,61 @@ class StrategyFactory:
 
                         # デバッグログ: 最終ポジションサイズ
                         if self._debug_counter % 100 == 0:
-                            logger.info(f"[DEBUG] 計算サイズ: {calculated_size}, 最終サイズ: {final_size}")
+                            logger.info(
+                                f"[DEBUG] 計算サイズ: {calculated_size}, 最終サイズ: {final_size}"
+                            )
 
                         # backtesting.pyの制約に合わせてポジションサイズを調整
-                        adjusted_size = self._adjust_position_size_for_backtesting(final_size)
+                        adjusted_size = self._adjust_position_size_for_backtesting(
+                            final_size
+                        )
 
-                        # 利用可能現金で購入可能かチェック（ショートの場合も絶対値で計算）
-                        required_cash = abs(adjusted_size) * current_price
-                        if required_cash <= available_cash * 0.99 and adjusted_size != 0:
-                            # 計算されたサイズで注文を実行
-                            # TP/SL遺伝子が存在する場合はSL/TPを設定
-                            if self.gene.tpsl_gene and self.gene.tpsl_gene.enabled:
-                                # 既に計算済みのTP/SL価格を使用（二重計算を避ける）
-                                # ポジション方向に応じてbuy()またはsell()を呼び出し、SL/TPも設定
-                                if adjusted_size > 0:
-                                    self.buy(size=adjusted_size, sl=sl_price, tp=tp_price)
-                                else:
-                                    self.sell(size=abs(adjusted_size), sl=sl_price, tp=tp_price)
-                            else:
-                                # TP/SL遺伝子がない場合は従来通り（SL/TPなし）
-                                # ポジション方向に応じてbuy()またはsell()を呼び出す
-                                if adjusted_size > 0:
-                                    self.buy(size=adjusted_size)
-                                else:
-                                    self.sell(size=abs(adjusted_size))
+                        # 利用可能現金で購入可能かチェック
+                        # backtesting.pyの仕様:
+                        # - size < 1 の場合: 現金の割合として解釈（例: 0.5 は 50% を割当）
+                        # - size >= 1 の場合: 単位数として解釈（例: 2 は 2ユニット）
+                        abs_size = abs(adjusted_size)
+                        if abs_size < 1:
+                            required_cash = available_cash * abs_size
                         else:
-                            pass
+                            required_cash = abs_size * current_price
+
+                        if adjusted_size != 0 and required_cash > available_cash * 0.99:
+                            # 買付可能な最大サイズに縮小してでもエントリーを試みる
+                            if abs_size < 1:
+                                # 割合指定の場合は99%にクリップ
+                                adjusted_size = (adjusted_size / abs_size) * 0.99
+                            else:
+                                # 単位指定の場合は現金で買える最大ユニット数に切り下げ
+                                max_units = int(
+                                    (available_cash * 0.99) // current_price
+                                )
+                                if max_units <= 0:
+                                    # 単位で買えない場合は資産比率で99%を割当
+                                    adjusted_size = 0.99 if adjusted_size > 0 else -0.99
+                                else:
+                                    adjusted_size = (
+                                        1 if adjusted_size > 0 else -1
+                                    ) * max_units
+
+                        if adjusted_size == 0:
+                            return
+
+                        # 計算されたサイズで注文を実行
+                        if self.gene.tpsl_gene and self.gene.tpsl_gene.enabled:
+                            # 既に計算済みのTP/SL価格を使用（二重計算を避ける）
+                            if adjusted_size > 0:
+                                self.buy(size=adjusted_size, sl=sl_price, tp=tp_price)
+                            else:
+                                self.sell(
+                                    size=abs(adjusted_size), sl=sl_price, tp=tp_price
+                                )
+                        else:
+                            # TP/SL遺伝子がない場合は従来通り（SL/TPなし）
+                            if adjusted_size > 0:
+                                self.buy(size=adjusted_size)
+                            else:
+                                self.sell(size=abs(adjusted_size))
                     # イグジット条件チェック（TP/SL遺伝子が存在しない場合のみ）
                     elif self.position:
                         # TP/SL遺伝子が存在する場合はイグジット条件をスキップ
@@ -295,9 +335,13 @@ class StrategyFactory:
                 short_conditions = self.gene.get_effective_short_conditions()
 
                 # デバッグログ: ショート条件の詳細
-                if hasattr(self, '_debug_counter') and self._debug_counter % 100 == 0:
-                    logger.info(f"[DEBUG] ショート条件詳細: {[str(c.__dict__) for c in short_conditions]}")
-                    logger.info(f"[DEBUG] ロング・ショート分離: {self.gene.has_long_short_separation()}")
+                if hasattr(self, "_debug_counter") and self._debug_counter % 100 == 0:
+                    logger.info(
+                        f"[DEBUG] ショート条件詳細: {[str(c.__dict__) for c in short_conditions]}"
+                    )
+                    logger.info(
+                        f"[DEBUG] ロング・ショート分離: {self.gene.has_long_short_separation()}"
+                    )
 
                 if not short_conditions:
                     # ショート条件が空の場合は、entry_conditionsを使用
@@ -312,7 +356,7 @@ class StrategyFactory:
                 )
 
                 # デバッグログ: ショート条件評価結果
-                if hasattr(self, '_debug_counter') and self._debug_counter % 100 == 0:
+                if hasattr(self, "_debug_counter") and self._debug_counter % 100 == 0:
                     logger.info(f"[DEBUG] ショート条件評価結果: {result}")
 
                 return result

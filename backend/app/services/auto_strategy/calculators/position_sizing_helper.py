@@ -167,7 +167,7 @@ class PositionSizingHelper:
             ):
                 return 0.0
 
-            atr_arr = VolatilityIndicators.atr(highs, lows, closes, period=period)
+            atr_arr = VolatilityIndicators.atr(highs, lows, closes, length=period)
             # TA-Libの出力は先頭にNaNが入ることがあるため、有限値の最後を採用
             finite = atr_arr[~np.isnan(atr_arr)]
             if finite.size == 0:

@@ -217,6 +217,45 @@ class RandomGeneGenerator:
                         )
                     )
 
+            # 成立性の底上げ: 少なくとも1つはトレンド系（SMA/EMA/MAMA/MAのいずれか）を含める
+            try:
+                from app.services.indicators.config.indicator_registry import (
+                    indicator_registry,
+                )
+
+                def _is_trend(name: str) -> bool:
+                    cfg = indicator_registry.get_indicator_config(name)
+                    return bool(cfg and getattr(cfg, "category", None) == "trend")
+
+                has_trend = any(_is_trend(ind.type) for ind in indicators)
+                if not has_trend:
+                    # SMAを追加（期間は適度に短中期から選択）
+                    sma_period = random.choice([10, 14, 20, 30, 50])
+                    indicators.append(
+                        IndicatorGene(
+                            type="SMA", parameters={"period": sma_period}, enabled=True
+                        )
+                    )
+
+                    # 上限超過なら非トレンドを1つ削除
+                    if len(indicators) > self.max_indicators:
+                        for j, ind in enumerate(indicators):
+                            if not _is_trend(ind.type):
+                                indicators.pop(j)
+                                break
+            except Exception:
+                # レジストリ取得が失敗しても安全にSMAを追加
+                if all(
+                    ind.type not in ("SMA", "EMA", "MAMA", "MA") for ind in indicators
+                ):
+                    indicators.append(
+                        IndicatorGene(
+                            type="SMA", parameters={"period": 20}, enabled=True
+                        )
+                    )
+                    if len(indicators) > self.max_indicators:
+                        indicators = indicators[: self.max_indicators]
+
             return indicators
 
         except Exception as e:
