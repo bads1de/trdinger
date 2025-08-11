@@ -11,31 +11,9 @@ import numpy as np
 import pandas as pd
 from typing import Union
 
+from ..utils import validate_numpy_input, validate_numpy_dual_input
+
 logger = logging.getLogger(__name__)
-
-
-def _validate_input(
-    data: Union[np.ndarray, pd.Series, list], min_length: int = 1
-) -> np.ndarray:
-    """入力データの検証とnumpy配列への変換（pandas.Series対応版）"""
-    # pandas.Seriesの場合はnumpy配列に変換
-    if isinstance(data, pd.Series):
-        data = data.to_numpy()
-    elif not isinstance(data, np.ndarray):
-        data = np.array(data, dtype=float)
-
-    if len(data) < min_length:
-        raise ValueError(f"データ長が不足: 必要{min_length}, 実際{len(data)}")
-
-    return data
-
-
-def _validate_dual_input(data0: Union[np.ndarray, pd.Series], data1: Union[np.ndarray, pd.Series]) -> None:
-    """2つの入力データの長さ一致確認"""
-    if len(data0) != len(data1):
-        raise ValueError(
-            f"データの長さが一致しません。Data0: {len(data0)}, Data1: {len(data1)}"
-        )
 
 
 class StatisticsIndicators:
@@ -49,9 +27,9 @@ class StatisticsIndicators:
     @staticmethod
     def beta(high: np.ndarray, low: np.ndarray, period: int = 5) -> np.ndarray:
         """Beta (ベータ) - 簡易実装"""
-        high = _validate_input(high, period)
-        low = _validate_input(low, period)
-        _validate_dual_input(high, low)
+        high = validate_numpy_input(high, period)
+        low = validate_numpy_input(low, period)
+        validate_numpy_dual_input(high, low)
 
         result = np.full_like(high, np.nan)
 
@@ -70,9 +48,9 @@ class StatisticsIndicators:
     @staticmethod
     def correl(high: np.ndarray, low: np.ndarray, period: int = 30) -> np.ndarray:
         """Pearson's Correlation Coefficient (ピアソン相関係数)"""
-        high = _validate_input(high, period)
-        low = _validate_input(low, period)
-        _validate_dual_input(high, low)
+        high = validate_numpy_input(high, period)
+        low = validate_numpy_input(low, period)
+        validate_numpy_dual_input(high, low)
 
         result = np.full_like(high, np.nan)
 
@@ -90,7 +68,7 @@ class StatisticsIndicators:
     @staticmethod
     def linearreg(data: Union[np.ndarray, pd.Series], period: int = 14) -> np.ndarray:
         """Linear Regression (線形回帰)"""
-        data = _validate_input(data, period)
+        data = validate_numpy_input(data, period)
         result = np.full_like(data, np.nan)
 
         for i in range(period - 1, len(data)):
@@ -106,7 +84,7 @@ class StatisticsIndicators:
     @staticmethod
     def linearreg_angle(data: Union[np.ndarray, pd.Series], period: int = 14) -> np.ndarray:
         """Linear Regression Angle (線形回帰角度)"""
-        data = _validate_input(data, period)
+        data = validate_numpy_input(data, period)
         result = np.full_like(data, np.nan)
 
         for i in range(period - 1, len(data)):
@@ -122,7 +100,7 @@ class StatisticsIndicators:
     @staticmethod
     def linearreg_intercept(data: Union[np.ndarray, pd.Series], period: int = 14) -> np.ndarray:
         """Linear Regression Intercept (線形回帰切片)"""
-        data = _validate_input(data, period)
+        data = validate_numpy_input(data, period)
         result = np.full_like(data, np.nan)
 
         for i in range(period - 1, len(data)):
@@ -138,7 +116,7 @@ class StatisticsIndicators:
     @staticmethod
     def linearreg_slope(data: Union[np.ndarray, pd.Series], period: int = 14) -> np.ndarray:
         """Linear Regression Slope (線形回帰傾き)"""
-        data = _validate_input(data, period)
+        data = validate_numpy_input(data, period)
         result = np.full_like(data, np.nan)
 
         for i in range(period - 1, len(data)):
@@ -154,7 +132,7 @@ class StatisticsIndicators:
     @staticmethod
     def stddev(data: Union[np.ndarray, pd.Series], period: int = 5, nbdev: float = 1.0) -> np.ndarray:
         """Standard Deviation (標準偏差)"""
-        data = _validate_input(data, period)
+        data = validate_numpy_input(data, period)
         result = np.full_like(data, np.nan)
 
         for i in range(period - 1, len(data)):
@@ -166,7 +144,7 @@ class StatisticsIndicators:
     @staticmethod
     def tsf(data: Union[np.ndarray, pd.Series], period: int = 14) -> np.ndarray:
         """Time Series Forecast (時系列予測)"""
-        data = _validate_input(data, period)
+        data = validate_numpy_input(data, period)
         result = np.full_like(data, np.nan)
 
         for i in range(period - 1, len(data)):
@@ -182,7 +160,7 @@ class StatisticsIndicators:
     @staticmethod
     def var(data: Union[np.ndarray, pd.Series], period: int = 5, nbdev: float = 1.0) -> np.ndarray:
         """Variance (分散)"""
-        data = _validate_input(data, period)
+        data = validate_numpy_input(data, period)
         result = np.full_like(data, np.nan)
 
         for i in range(period - 1, len(data)):

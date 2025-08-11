@@ -51,18 +51,6 @@ class TestCleanupDetection:
         else:
             print("\n使用されていないインポートは見つかりませんでした。")
 
-    def test_detect_obsolete_aliases(self):
-        """削除可能な後方互換性エイリアスを検出"""
-        obsolete_aliases = self._find_obsolete_aliases()
-        
-        if obsolete_aliases:
-            print("\n削除可能な後方互換性エイリアス:")
-            for file_path, aliases in obsolete_aliases.items():
-                print(f"  {file_path}:")
-                for alias in aliases:
-                    print(f"    - {alias}")
-        else:
-            print("\n削除可能なエイリアスは見つかりませんでした。")
 
     def test_detect_duplicate_implementations(self):
         """重複する実装を検出"""
@@ -150,36 +138,6 @@ class TestCleanupDetection:
         
         return unused_imports
 
-    def _find_obsolete_aliases(self) -> Dict[str, List[str]]:
-        """削除可能な後方互換性エイリアスを検索"""
-        obsolete_aliases = {}
-        
-        # pandas_ta_utils.pyの後方互換性エイリアスをチェック
-        utils_file = self.backend_path / 'app' / 'services' / 'indicators' / 'pandas_ta_utils.py'
-        
-        if utils_file.exists():
-            try:
-                with open(utils_file, 'r', encoding='utf-8') as f:
-                    content = f.read()
-                
-                # 後方互換性エイリアスのパターンを検索
-                alias_pattern = r'pandas_ta_(\w+)\s*=\s*(\w+)'
-                matches = re.findall(alias_pattern, content)
-                
-                if matches:
-                    aliases = []
-                    for old_name, new_name in matches:
-                        # エイリアスが実際に使用されているかチェック
-                        if not self._is_alias_used(f"pandas_ta_{old_name}"):
-                            aliases.append(f"pandas_ta_{old_name} = {new_name}")
-                    
-                    if aliases:
-                        obsolete_aliases[str(utils_file)] = aliases
-                        
-            except Exception:
-                pass
-        
-        return obsolete_aliases
 
     def _find_duplicate_implementations(self) -> Dict[str, List[str]]:
         """重複する実装を検索"""

@@ -11,23 +11,9 @@ import numpy as np
 import pandas as pd
 from typing import Union
 
+from ..utils import validate_numpy_input
+
 logger = logging.getLogger(__name__)
-
-
-def _validate_input(
-    data: Union[np.ndarray, pd.Series, list], min_length: int = 1
-) -> np.ndarray:
-    """入力データの検証とnumpy配列への変換（pandas.Series対応版）"""
-    # pandas.Seriesの場合はnumpy配列に変換
-    if isinstance(data, pd.Series):
-        data = data.to_numpy()
-    elif not isinstance(data, np.ndarray):
-        data = np.array(data, dtype=float)
-
-    if len(data) < min_length:
-        raise ValueError(f"データ長が不足: 必要{min_length}, 実際{len(data)}")
-
-    return data
 
 
 class MathTransformIndicators:
@@ -49,7 +35,7 @@ class MathTransformIndicators:
         Returns:
             ACOS値のnumpy配列
         """
-        data = _validate_input(data)
+        data = validate_numpy_input(data)
 
         # 入力データの範囲チェックとクリッピング
         min_val, max_val = np.nanmin(data), np.nanmax(data)
@@ -64,7 +50,7 @@ class MathTransformIndicators:
     @staticmethod
     def asin(data: Union[np.ndarray, pd.Series]) -> np.ndarray:
         """Vector Trigonometric ASin (ベクトル三角関数ASin)"""
-        data = _validate_input(data)
+        data = validate_numpy_input(data)
 
         min_val, max_val = np.nanmin(data), np.nanmax(data)
         if min_val < -1.0 or max_val > 1.0:
@@ -78,43 +64,43 @@ class MathTransformIndicators:
     @staticmethod
     def atan(data: Union[np.ndarray, pd.Series]) -> np.ndarray:
         """Vector Trigonometric ATan (ベクトル三角関数ATan)"""
-        data = _validate_input(data)
+        data = validate_numpy_input(data)
         return np.arctan(data)
 
     @staticmethod
     def ceil(data: Union[np.ndarray, pd.Series]) -> np.ndarray:
         """Vector Ceiling (ベクトル天井関数)"""
-        data = _validate_input(data)
+        data = validate_numpy_input(data)
         return np.ceil(data)
 
     @staticmethod
     def cos(data: Union[np.ndarray, pd.Series]) -> np.ndarray:
         """Vector Trigonometric Cos (ベクトル三角関数Cos)"""
-        data = _validate_input(data)
+        data = validate_numpy_input(data)
         return np.cos(data)
 
     @staticmethod
     def cosh(data: Union[np.ndarray, pd.Series]) -> np.ndarray:
         """Vector Trigonometric Cosh (ベクトル双曲線余弦)"""
-        data = _validate_input(data)
+        data = validate_numpy_input(data)
         return np.cosh(data)
 
     @staticmethod
     def exp(data: Union[np.ndarray, pd.Series]) -> np.ndarray:
         """Vector Arithmetic Exp (ベクトル指数関数)"""
-        data = _validate_input(data)
+        data = validate_numpy_input(data)
         return np.exp(data)
 
     @staticmethod
     def floor(data: Union[np.ndarray, pd.Series]) -> np.ndarray:
         """Vector Floor (ベクトル床関数)"""
-        data = _validate_input(data)
+        data = validate_numpy_input(data)
         return np.floor(data)
 
     @staticmethod
     def ln(data: Union[np.ndarray, pd.Series]) -> np.ndarray:
         """Vector Log Natural (ベクトル自然対数)"""
-        data = _validate_input(data)
+        data = validate_numpy_input(data)
 
         # 負の値や0の値をチェック
         if np.any(data <= 0):
@@ -127,7 +113,7 @@ class MathTransformIndicators:
     @staticmethod
     def log10(data: Union[np.ndarray, pd.Series]) -> np.ndarray:
         """Vector Log10 (ベクトル常用対数)"""
-        data = _validate_input(data)
+        data = validate_numpy_input(data)
 
         if np.any(data <= 0):
             logger.warning(
@@ -139,19 +125,19 @@ class MathTransformIndicators:
     @staticmethod
     def sin(data: Union[np.ndarray, pd.Series]) -> np.ndarray:
         """Vector Trigonometric Sin (ベクトル三角関数Sin)"""
-        data = _validate_input(data)
+        data = validate_numpy_input(data)
         return np.sin(data)
 
     @staticmethod
     def sinh(data: Union[np.ndarray, pd.Series]) -> np.ndarray:
         """Vector Trigonometric Sinh (ベクトル双曲線正弦)"""
-        data = _validate_input(data)
+        data = validate_numpy_input(data)
         return np.sinh(data)
 
     @staticmethod
     def sqrt(data: Union[np.ndarray, pd.Series]) -> np.ndarray:
         """Vector Square Root (ベクトル平方根)"""
-        data = _validate_input(data)
+        data = validate_numpy_input(data)
 
         if np.any(data < 0):
             logger.warning(
@@ -163,11 +149,11 @@ class MathTransformIndicators:
     @staticmethod
     def tan(data: Union[np.ndarray, pd.Series]) -> np.ndarray:
         """Vector Trigonometric Tan (ベクトル三角関数Tan)"""
-        data = _validate_input(data)
+        data = validate_numpy_input(data)
         return np.tan(data)
 
     @staticmethod
     def tanh(data: Union[np.ndarray, pd.Series]) -> np.ndarray:
         """Vector Trigonometric Tanh (ベクトル双曲線正接)"""
-        data = _validate_input(data)
+        data = validate_numpy_input(data)
         return np.tanh(data)
