@@ -1,5 +1,5 @@
 """
-価格変換系テクニカル指標（pandas-ta移行版）
+価格変換系テクニカル指標
 
 このモジュールはpandas-taライブラリを使用し、
 backtesting.pyとの完全な互換性を提供します。
@@ -110,3 +110,79 @@ class PriceTransformIndicators:
 
         result = ta.wcp(high=high_series, low=low_series, close=close_series)
         return result.values
+
+    @staticmethod
+    @handle_pandas_ta_errors
+    def ha_close(
+        open_data: Union[np.ndarray, pd.Series],
+        high: Union[np.ndarray, pd.Series],
+        low: Union[np.ndarray, pd.Series],
+        close: Union[np.ndarray, pd.Series],
+    ) -> np.ndarray:
+        """Heikin Ashi Close（平均足終値）
+        pandas-ta の ha を用いてHAの終値のみ返す。
+        """
+        open_series = ensure_series_minimal_conversion(open_data)
+        high_series = ensure_series_minimal_conversion(high)
+        low_series = ensure_series_minimal_conversion(low)
+        close_series = ensure_series_minimal_conversion(close)
+
+        validate_series_data(open_series, 1)
+        validate_series_data(high_series, 1)
+        validate_series_data(low_series, 1)
+        validate_series_data(close_series, 1)
+
+        try:
+            ha_df = ta.ha(
+                open=open_series, high=high_series, low=low_series, close=close_series
+            )
+        except TypeError:
+            ha_df = ta.ha(
+                open_=open_series, high=high_series, low=low_series, close=close_series
+            )
+
+        # 列名はバージョンにより異なり得るため末尾一致で選択
+        close_col = [c for c in ha_df.columns if str(c).lower().endswith("close")]
+        col = close_col[0] if close_col else ha_df.columns[-1]
+        return ha_df[col].values
+
+    @staticmethod
+    @handle_pandas_ta_errors
+    def ha_ohlc(
+        open_data: Union[np.ndarray, pd.Series],
+        high: Union[np.ndarray, pd.Series],
+        low: Union[np.ndarray, pd.Series],
+        close: Union[np.ndarray, pd.Series],
+    ) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+        """Heikin Ashi の OHLC をタプルで返す (open, high, low, close)"""
+        open_series = ensure_series_minimal_conversion(open_data)
+        high_series = ensure_series_minimal_conversion(high)
+        low_series = ensure_series_minimal_conversion(low)
+        close_series = ensure_series_minimal_conversion(close)
+
+        validate_series_data(open_series, 1)
+        validate_series_data(high_series, 1)
+        validate_series_data(low_series, 1)
+        validate_series_data(close_series, 1)
+
+        try:
+            ha_df = ta.ha(
+                open=open_series, high=high_series, low=low_series, close=close_series
+            )
+        except TypeError:
+            ha_df = ta.ha(
+                open_=open_series, high=high_series, low=low_series, close=close_series
+            )
+
+        # 列並びを open, high, low, close 順に選択
+        def pick_col(suffix: str):
+            candidates = [c for c in ha_df.columns if str(c).lower().endswith(suffix)]
+            return (
+                ha_df[candidates[0]].values if candidates else ha_df.iloc[:, 0].values
+            )
+
+        ha_open = pick_col("open")
+        ha_high = pick_col("high")
+        ha_low = pick_col("low")
+        ha_close = pick_col("close")
+        return ha_open, ha_high, ha_low, ha_close

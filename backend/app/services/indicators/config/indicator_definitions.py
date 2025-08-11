@@ -29,8 +29,6 @@ from app.services.indicators.technical_indicators.volatility import (
 from app.services.indicators.technical_indicators.volume import VolumeIndicators
 
 
-
-
 from .indicator_config import (
     IndicatorConfig,
     IndicatorResultType,
@@ -1265,6 +1263,28 @@ def setup_price_transform_indicators():
         category="price_transform",
     )
     indicator_registry.register(wclprice_config)
+
+    # HA_CLOSE (Heikin Ashi Close)
+    ha_close_config = IndicatorConfig(
+        indicator_name="HA_CLOSE",
+        adapter_function=PriceTransformIndicators.ha_close,
+        required_data=["open", "high", "low", "close"],
+        result_type=IndicatorResultType.SINGLE,
+        scale_type=IndicatorScaleType.PRICE_ABSOLUTE,
+        category="price_transform",
+    )
+    indicator_registry.register(ha_close_config)
+
+    # HA_OHLC (Heikin Ashi OHLC)
+    ha_ohlc_config = IndicatorConfig(
+        indicator_name="HA_OHLC",
+        adapter_function=PriceTransformIndicators.ha_ohlc,
+        required_data=["open", "high", "low", "close"],
+        result_type=IndicatorResultType.COMPLEX,
+        scale_type=IndicatorScaleType.PRICE_ABSOLUTE,
+        category="price_transform",
+    )
+    indicator_registry.register(ha_ohlc_config)
 
 
 def setup_statistics_indicators():

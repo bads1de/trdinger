@@ -26,7 +26,7 @@ import importlib.util
 sys.path.append(str(Path(__file__).parent.parent))
 
 from app.services.indicators import TechnicalIndicatorService
-from app.services.indicators.pandas_ta_utils import PandasTAError
+from app.services.indicators.utils import PandasTAError
 from app.services.indicators.technical_indicators.trend import TrendIndicators
 from app.services.indicators.technical_indicators.momentum import MomentumIndicators
 from app.services.indicators.technical_indicators.volatility import VolatilityIndicators

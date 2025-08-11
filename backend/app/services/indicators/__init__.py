@@ -18,6 +18,9 @@ from .technical_indicators.trend import TrendIndicators
 from .technical_indicators.volatility import VolatilityIndicators
 from .technical_indicators.volume import VolumeIndicators
 from .utils import (
+    # 互換レイヤー: 旧テストが参照する pandas_ta_utils からの PandasTAError を吸収
+    # from app.services.indicators.pandas_ta_utils import PandasTAError ではなく
+    # app.services.indicators.utils.PandasTAError を公開してテスト互換をとる
     PandasTAError,
     validate_input,
     validate_series_data,

@@ -268,6 +268,13 @@ class TechnicalIndicatorService:
                 "low": "low",
                 "close": "close",
             },
+            # BOP も open_ を受け取る
+            "BOP": {
+                "open_data": "open_",
+                "high": "high",
+                "low": "low",
+                "close": "close",
+            },
             # 統計系の単一入力関数
             "LINEARREG": {"close": "data"},
             "LINEARREG_SLOPE": {"close": "data"},
@@ -316,6 +323,19 @@ class TechnicalIndicatorService:
             "MEDPRICE": {"high": "high", "low": "low"},
             "TYPPRICE": {"high": "high", "low": "low", "close": "close"},
             "WCLPRICE": {"high": "high", "low": "low", "close": "close"},
+            # Heikin Ashi
+            "HA_CLOSE": {
+                "open": "open_data",
+                "high": "high",
+                "low": "low",
+                "close": "close",
+            },
+            "HA_OHLC": {
+                "open": "open_data",
+                "high": "high",
+                "low": "low",
+                "close": "close",
+            },
         }
 
         # 指標固有のマッピングがある場合はそれを使用
