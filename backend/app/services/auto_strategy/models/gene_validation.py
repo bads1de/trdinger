@@ -558,29 +558,35 @@ class GeneValidator:
                     errors.append(f"指標{i}が無効です: {indicator.type}")
 
             # 条件の妥当性チェック（クリーニング付き）
-            for i, condition in enumerate(strategy_gene.entry_conditions):
-                # 条件をクリーニング
-                self.clean_condition(condition)
-                is_valid, error_detail = self.validate_condition(condition)
-                if not is_valid:
-                    errors.append(f"エントリー条件{i}が無効です: {error_detail}")
+            from .condition_group import ConditionGroup
 
+            def _validate_mixed_conditions(cond_list, label_prefix: str):
+                for i, condition in enumerate(cond_list):
+                    if isinstance(condition, ConditionGroup):
+                        # ORグループ内の各条件を検証
+                        for j, c in enumerate(condition.conditions):
+                            self.clean_condition(c)
+                            is_valid, error_detail = self.validate_condition(c)
+                            if not is_valid:
+                                errors.append(
+                                    f"{label_prefix}OR子条件{j}が無効です: {error_detail}"
+                                )
+                    else:
+                        self.clean_condition(condition)
+                        is_valid, error_detail = self.validate_condition(condition)
+                        if not is_valid:
+                            errors.append(
+                                f"{label_prefix}{i}が無効です: {error_detail}"
+                            )
+
+            _validate_mixed_conditions(strategy_gene.entry_conditions, "エントリー条件")
             # ロング・ショート条件の妥当性チェック（クリーニング付き）
-            for i, condition in enumerate(strategy_gene.long_entry_conditions):
-                # 条件をクリーニング
-                self.clean_condition(condition)
-                is_valid, error_detail = self.validate_condition(condition)
-                if not is_valid:
-                    errors.append(f"ロングエントリー条件{i}が無効です: {error_detail}")
-
-            for i, condition in enumerate(strategy_gene.short_entry_conditions):
-                # 条件をクリーニング
-                self.clean_condition(condition)
-                is_valid, error_detail = self.validate_condition(condition)
-                if not is_valid:
-                    errors.append(
-                        f"ショートエントリー条件{i}が無効です: {error_detail}"
-                    )
+            _validate_mixed_conditions(
+                strategy_gene.long_entry_conditions, "ロングエントリー条件"
+            )
+            _validate_mixed_conditions(
+                strategy_gene.short_entry_conditions, "ショートエントリー条件"
+            )
 
             for i, condition in enumerate(strategy_gene.exit_conditions):
                 # 条件をクリーニング

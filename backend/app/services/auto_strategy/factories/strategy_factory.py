@@ -301,7 +301,45 @@ class StrategyFactory:
                 """単一指標の初期化（統合版）"""
                 try:
                     # 指標計算器を使用して初期化
-                    factory.indicator_calculator.init_indicator(indicator_gene, self)
+                    try:
+                        factory.indicator_calculator.init_indicator(
+                            indicator_gene, self
+                        )
+                        return
+                    except Exception:
+                        # フォールバック: SMA/RSIの最小構成でリカバーを試みる
+                        fb = None
+                        if indicator_gene.type not in ("SMA", "RSI"):
+                            from ..models.gene_strategy import IndicatorGene as IG
+
+                            period = indicator_gene.parameters.get("period", 14)
+                            if period <= 0:
+                                period = 14
+                            # SMAを優先
+                            fb = IG(
+                                type="SMA", parameters={"period": period}, enabled=True
+                            )
+                        if fb:
+                            try:
+                                factory.indicator_calculator.init_indicator(fb, self)
+                                logger.warning(
+                                    f"フォールバック指標を適用: {indicator_gene.type} -> SMA({fb.parameters['period']})"
+                                )
+                                return
+                            except Exception:
+                                pass
+                        # 最後の手段: RSI(14)
+                        try:
+                            from ..models.gene_strategy import IndicatorGene as IG
+
+                            fb2 = IG(
+                                type="RSI", parameters={"period": 14}, enabled=True
+                            )
+                            factory.indicator_calculator.init_indicator(fb2, self)
+                            logger.warning("フォールバック指標を適用: RSI(14)")
+                            return
+                        except Exception:
+                            pass
 
                 except Exception as e:
                     logger.error(

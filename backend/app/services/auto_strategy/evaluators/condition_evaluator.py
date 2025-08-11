@@ -10,6 +10,7 @@ from typing import Any, Dict, List, Union
 import numpy as np
 
 from ..models.gene_strategy import Condition
+from ..models.condition_group import ConditionGroup
 
 logger = logging.getLogger(__name__)
 
@@ -22,29 +23,44 @@ class ConditionEvaluator:
     """
 
     def evaluate_conditions(
-        self, conditions: List[Condition], strategy_instance
+        self, conditions: List[Union[Condition, ConditionGroup]], strategy_instance
     ) -> bool:
         """
-        条件評価
+        条件評価（AND）
 
-        Args:
-            conditions: 評価する条件リスト
-            strategy_instance: 戦略インスタンス
-
-        Returns:
-            全条件がTrueかどうか
+        - 通常のConditionはそのまま評価（AND）
+        - ConditionGroupは内部のORで評価し、グループ全体を1つの条件として扱う
         """
         try:
             if not conditions:
                 return True
 
-            for condition in conditions:
-                if not self.evaluate_single_condition(condition, strategy_instance):
-                    return False
+            for cond in conditions:
+                if isinstance(cond, ConditionGroup):
+                    if not self._evaluate_condition_group(cond, strategy_instance):
+                        return False
+                else:
+                    if not self.evaluate_single_condition(cond, strategy_instance):
+                        return False
             return True
 
         except Exception as e:
             logger.error(f"条件評価エラー: {e}")
+            return False
+
+    def _evaluate_condition_group(
+        self, group: ConditionGroup, strategy_instance
+    ) -> bool:
+        """ORグループ: 内部のいずれかがTrueならTrue"""
+        try:
+            if not group or group.is_empty():
+                return False
+            for c in group.conditions:
+                if self.evaluate_single_condition(c, strategy_instance):
+                    return True
+            return False
+        except Exception as e:
+            logger.error(f"条件グループ評価エラー: {e}")
             return False
 
     def evaluate_single_condition(
@@ -172,13 +188,15 @@ class ConditionEvaluator:
 
                 # 価格データの場合
                 if operand.lower() in ["close", "high", "low", "open"]:
-                    if hasattr(strategy_instance, operand.lower()):
-                        return _last_finite(getattr(strategy_instance, operand.lower()))
-                    elif hasattr(strategy_instance, "data"):
+                    # backtesting.pyのStrategyは属性名が小文字の価格を持たないため、data経由を優先
+                    if hasattr(strategy_instance, "data"):
                         price_data = getattr(
                             strategy_instance.data, operand.capitalize()
                         )
                         return _last_finite(price_data)
+                    # 念の為、戦略インスタンス直下の属性もフェイルセーフで参照
+                    if hasattr(strategy_instance, operand.lower()):
+                        return _last_finite(getattr(strategy_instance, operand.lower()))
 
                 # 指標の場合（直接属性が最優先: IndicatorCalculatorで登録済み）
                 if hasattr(strategy_instance, operand):
@@ -208,12 +226,15 @@ class ConditionEvaluator:
 
                     # BB: Upper/Middle/Lower -> 2/1/0
                     if operand.startswith("BB_"):
-                        if "Upper" in operand and hasattr(strategy_instance, "BB_2"):
-                            return _last_finite(getattr(strategy_instance, "BB_2"))
-                        if "Middle" in operand and hasattr(strategy_instance, "BB_1"):
-                            return _last_finite(getattr(strategy_instance, "BB_1"))
-                        if "Lower" in operand and hasattr(strategy_instance, "BB_0"):
+                        # 想定フォーマット: BB_Upper_{period} / BB_Middle_{period} / BB_Lower_{period}
+                        # IndicatorCalculatorの登録順: 0=Upper, 1=Middle, 2=Lower
+                        base = operand.split("_")[1]
+                        if base == "Upper" and hasattr(strategy_instance, "BB_0"):
                             return _last_finite(getattr(strategy_instance, "BB_0"))
+                        if base == "Middle" and hasattr(strategy_instance, "BB_1"):
+                            return _last_finite(getattr(strategy_instance, "BB_1"))
+                        if base == "Lower" and hasattr(strategy_instance, "BB_2"):
+                            return _last_finite(getattr(strategy_instance, "BB_2"))
 
                 # 単純名のマッピング（MACD, BB, STOCH）
                 if operand == "MACD" and hasattr(strategy_instance, "MACD_0"):

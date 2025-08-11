@@ -10,6 +10,7 @@ from typing import TYPE_CHECKING, Any, Dict, Optional, Type
 
 if TYPE_CHECKING:
     from .gene_strategy import Condition, IndicatorGene, StrategyGene
+    from .condition_group import ConditionGroup
 
 from .gene_tpsl import TPSLGene
 
@@ -48,19 +49,19 @@ class GeneSerializer:
                     self.indicator_gene_to_dict(ind) for ind in strategy_gene.indicators
                 ],
                 "entry_conditions": [
-                    self.condition_to_dict(cond)
+                    self.condition_or_group_to_dict(cond)
                     for cond in strategy_gene.entry_conditions
                 ],
                 "long_entry_conditions": [
-                    self.condition_to_dict(cond)
+                    self.condition_or_group_to_dict(cond)
                     for cond in strategy_gene.long_entry_conditions
                 ],
                 "short_entry_conditions": [
-                    self.condition_to_dict(cond)
+                    self.condition_or_group_to_dict(cond)
                     for cond in strategy_gene.short_entry_conditions
                 ],
                 "exit_conditions": [
-                    self.condition_to_dict(cond)
+                    self.condition_or_group_to_dict(cond)
                     for cond in strategy_gene.exit_conditions
                 ],
                 "risk_management": clean_risk_management,
@@ -103,22 +104,22 @@ class GeneSerializer:
             ]
 
             entry_conditions = [
-                self.dict_to_condition(cond_data)
+                self.dict_to_condition_or_group(cond_data)
                 for cond_data in data.get("entry_conditions", [])
             ]
 
             long_entry_conditions = [
-                self.dict_to_condition(cond_data)
+                self.dict_to_condition_or_group(cond_data)
                 for cond_data in data.get("long_entry_conditions", [])
             ]
 
             short_entry_conditions = [
-                self.dict_to_condition(cond_data)
+                self.dict_to_condition_or_group(cond_data)
                 for cond_data in data.get("short_entry_conditions", [])
             ]
 
             exit_conditions = [
-                self.dict_to_condition(cond_data)
+                self.dict_to_condition_or_group(cond_data)
                 for cond_data in data.get("exit_conditions", [])
             ]
 
@@ -238,10 +239,28 @@ class GeneSerializer:
                 operator=data["operator"],
                 right_operand=data["right_operand"],
             )
-
         except Exception as e:
             logger.error(f"条件復元エラー: {e}")
             raise ValueError(f"条件の復元に失敗: {e}")
+
+    def condition_or_group_to_dict(self, obj) -> Dict[str, Any]:
+        """Condition または ConditionGroup を辞書に変換"""
+        try:
+            from .condition_group import ConditionGroup
+            from .gene_strategy import Condition
+
+            if isinstance(obj, ConditionGroup):
+                return {
+                    "type": "OR_GROUP",
+                    "conditions": [self.condition_to_dict(c) for c in obj.conditions],
+                }
+            elif isinstance(obj, Condition):
+                return self.condition_to_dict(obj)
+            else:
+                raise TypeError(f"未知の条件型: {type(obj)}")
+        except Exception as e:
+            logger.error(f"条件/グループ辞書変換エラー: {e}")
+            raise ValueError(f"条件の辞書変換に失敗: {e}")
 
     def tpsl_gene_to_dict(self, tpsl_gene) -> Optional[Dict[str, Any]]:
         """
@@ -399,6 +418,13 @@ class GeneSerializer:
             strategy_gene_class: StrategyGeneクラス
 
         Returns:
+        try:
+            data = json.loads(json_str)
+            return self.dict_to_strategy_gene(data, strategy_gene_class)
+        except Exception as e:
+            logger.error(f"戦略遺伝子JSON復元エラー: {e}")
+            raise ValueError(f"戦略遺伝子のJSON復元に失敗: {e}")
+
             戦略遺伝子オブジェクト
         """
         try:

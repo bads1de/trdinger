@@ -8,6 +8,7 @@ from app.services.auto_strategy.generators.smart_condition_generator import (
     SmartConditionGenerator,
 )
 from app.services.auto_strategy.models.gene_strategy import IndicatorGene, Condition
+from app.services.auto_strategy.models.condition_group import ConditionGroup
 
 
 def make_ohlcv(n: int = 400) -> pd.DataFrame:
@@ -124,8 +125,31 @@ def test_smart_condition_generator_integration_with_registry():
 
     for cond_list in (long_conds, short_conds):
         for c in cond_list:
-            assert isinstance(c, Condition)
-            assert c.operator in {">", "<", ">=", "<=", "==", "!=", "above", "below"}
-            assert _is_valid_operand(c.left_operand)
+            if isinstance(c, ConditionGroup):
+                for sc in c.conditions:
+                    assert sc.operator in {
+                        ">",
+                        "<",
+                        ">=",
+                        "<=",
+                        "==",
+                        "!=",
+                        "above",
+                        "below",
+                    }
+                    assert _is_valid_operand(sc.left_operand)
+            else:
+                assert isinstance(c, Condition)
+                assert c.operator in {
+                    ">",
+                    "<",
+                    ">=",
+                    "<=",
+                    "==",
+                    "!=",
+                    "above",
+                    "below",
+                }
+                assert _is_valid_operand(c.left_operand)
 
     # ここではエラーなく条件生成が行われることを重視

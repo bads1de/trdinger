@@ -3,9 +3,14 @@ import numpy as np
 import pytest
 
 from app.services.auto_strategy.models.ga_config import GAConfig
-from app.services.auto_strategy.generators.random_gene_generator import RandomGeneGenerator
-from app.services.auto_strategy.generators.smart_condition_generator import SmartConditionGenerator
+from app.services.auto_strategy.generators.random_gene_generator import (
+    RandomGeneGenerator,
+)
+from app.services.auto_strategy.generators.smart_condition_generator import (
+    SmartConditionGenerator,
+)
 from app.services.auto_strategy.models.gene_strategy import IndicatorGene, Condition
+from app.services.auto_strategy.models.condition_group import ConditionGroup
 from app.services.indicators.config import indicator_registry
 
 
@@ -29,7 +34,9 @@ def test_random_gene_generator_technical_only_generates_strategy():
 
     # インジケータが1つ以上生成され、ML系が含まれないこと
     assert gene.indicators, "少なくとも1つのインジケータが必要です"
-    assert all(not ind.type.startswith("ML_") for ind in gene.indicators), "ML系は含めない"
+    assert all(
+        not ind.type.startswith("ML_") for ind in gene.indicators
+    ), "ML系は含めない"
 
     # ロング/ショート条件が生成されること（どちらかは1件以上）
     assert isinstance(gene.long_entry_conditions, list)
@@ -62,11 +69,34 @@ def test_smart_condition_generator_with_basic_technical_indicators():
     for lst in (long_conds, short_conds, exit_conds):
         assert isinstance(lst, list)
         for c in lst:
-            assert isinstance(c, Condition)
-            assert c.operator in {">", "<", ">=", "<=", "==", "!=", "above", "below"}
-            assert isinstance(c.left_operand, (str, float, dict))
-            assert isinstance(c.right_operand, (str, float, dict))
+            if isinstance(c, ConditionGroup):
+                for sc in c.conditions:
+                    assert sc.operator in {
+                        ">",
+                        "<",
+                        ">=",
+                        "<=",
+                        "==",
+                        "!=",
+                        "above",
+                        "below",
+                    }
+                    assert isinstance(sc.left_operand, (str, float, dict))
+                    assert isinstance(sc.right_operand, (str, float, dict))
+            else:
+                assert isinstance(c, Condition)
+                assert c.operator in {
+                    ">",
+                    "<",
+                    ">=",
+                    "<=",
+                    "==",
+                    "!=",
+                    "above",
+                    "below",
+                }
+                assert isinstance(c.left_operand, (str, float, dict))
+                assert isinstance(c.right_operand, (str, float, dict))
 
     # ロングかショートのどちらかには最低1つ生成されること
     assert len(long_conds) + len(short_conds) >= 1
-

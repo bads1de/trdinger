@@ -456,18 +456,197 @@ class SmartConditionGenerator:
                 longs, shorts, exits = self._generate_fallback_conditions()
 
             # 成立性向上のため、各サイドの条件数を最大2に制限（ANDの過剰による成立低下を防止）
-            def _cap(conds, k=2):
+            import random as _rnd
+
+            def _prefer_condition(conds, prefer: str):
+                """成立しやすい条件を優先して1つ選ぶ。なければランダム。"""
                 if not conds:
-                    return conds
-                if len(conds) <= k:
-                    return conds
-                import random as _rnd
+                    return []
 
-                return _rnd.sample(conds, k)
+                def is_price_vs_trend(c):
+                    return (
+                        isinstance(c.right_operand, str)
+                        and c.left_operand in ("close", "open")
+                        and any(
+                            name in str(c.right_operand)
+                            for name in (
+                                "SMA",
+                                "EMA",
+                                "MA",
+                                "HT_TRENDLINE",
+                                "LINEARREG",
+                                "TSF",
+                                "BB_Middle",
+                            )
+                        )
+                        and (
+                            (prefer == "long" and c.operator == ">")
+                            or (prefer == "short" and c.operator == "<")
+                        )
+                    )
 
-            longs = _cap(longs, 2)
-            shorts = _cap(shorts, 2)
+                def is_macd_zero_cross(c):
+                    return (
+                        isinstance(c.left_operand, str)
+                        and c.left_operand.startswith("MACD")
+                        and isinstance(c.right_operand, (int, float))
+                        and (
+                            (
+                                prefer == "long"
+                                and c.operator == ">"
+                                and c.right_operand == 0
+                            )
+                            or (
+                                prefer == "short"
+                                and c.operator == "<"
+                                and c.right_operand == 0
+                            )
+                        )
+                    )
+
+                def is_rsi_threshold(c):
+                    return (
+                        isinstance(c.left_operand, str)
+                        and c.left_operand.startswith("RSI")
+                        and isinstance(c.right_operand, (int, float))
+                        and (
+                            (
+                                prefer == "long"
+                                and c.operator == "<"
+                                and c.right_operand <= 45
+                            )
+                            or (
+                                prefer == "short"
+                                and c.operator == ">"
+                                and c.right_operand >= 55
+                            )
+                        )
+                    )
+
+                def is_price_vs_open(c):
+                    return (
+                        isinstance(c.right_operand, str)
+                        and c.right_operand == "open"
+                        and c.left_operand == "close"
+                        and (
+                            (prefer == "long" and c.operator == ">")
+                            or (prefer == "short" and c.operator == "<")
+                        )
+                    )
+
+                # 優先順にフィルター
+                for chooser in (
+                    is_price_vs_trend,
+                    is_macd_zero_cross,
+                    is_rsi_threshold,
+                    is_price_vs_open,
+                ):
+                    filtered = [c for c in conds if chooser(c)]
+                    if filtered:
+                        return [_rnd.choice(filtered)]
+
+                # 見つからなければランダム
+                return [_rnd.choice(conds)]
+
+            # ORグループ候補保存（削減前の候補を保持）
+            long_candidates = list(longs)
+            short_candidates = list(shorts)
+
+            # 各サイド1条件に制限しつつ、優先ロジックで選定
+            longs = _prefer_condition(longs, "long")
+            shorts = _prefer_condition(shorts, "short")
+
+            # OR条件グループを追加して A AND (B OR C) の形を試みる
+            try:
+                from app.services.auto_strategy.models.condition_group import (
+                    ConditionGroup as _CG,
+                )
+
+                # ロング側
+                lg_or = self.generate_or_group("long", long_candidates)
+                if lg_or and all(not isinstance(x, _CG) for x in longs):
+                    longs = longs + lg_or
+                # ショート側
+                sh_or = self.generate_or_group("short", short_candidates)
+                if sh_or and all(not isinstance(x, _CG) for x in shorts):
+                    shorts = shorts + sh_or
+            except Exception:
+                pass
+
+            # 万一どちらかが空の場合は、成立しやすいデフォルトを適用
+            if not longs:
+                longs = [
+                    Condition(left_operand="close", operator=">", right_operand="open")
+                ]
+            if not shorts:
+                shorts = [
+                    Condition(left_operand="close", operator="<", right_operand="open")
+                ]
+
             return longs, shorts, exits
+
+        except Exception as e:
+            self.logger.error(f"スマート条件生成エラー: {e}")
+            return self._generate_fallback_conditions()
+
+    def generate_or_group(self, prefer, candidates):
+        """(B OR C) のORグループを1つ作って返す。見つからなければ空。"""
+        try:
+            # price vs trend 系を優先して2候補取り、無ければRSI/MACD系、最後に価格vs open
+            import random as _rnd
+
+            def is_price_vs_trend(c):
+                return (
+                    isinstance(c.right_operand, str)
+                    and c.left_operand in ("close", "open")
+                    and any(
+                        name in str(c.right_operand)
+                        for name in (
+                            "SMA",
+                            "EMA",
+                            "MA",
+                            "HT_TRENDLINE",
+                            "LINEARREG",
+                            "TSF",
+                            "BB_Middle",
+                        )
+                    )
+                )
+
+            def is_rsi_or_macd(c):
+                return isinstance(c.left_operand, str) and (
+                    c.left_operand.startswith("RSI")
+                    or c.left_operand.startswith("MACD")
+                )
+
+            pool = [c for c in candidates if is_price_vs_trend(c)]
+            if len(pool) < 2:
+                pool += [c for c in candidates if is_rsi_or_macd(c) and c not in pool]
+            if len(pool) < 2:
+                pool += [
+                    c
+                    for c in candidates
+                    if (isinstance(c.right_operand, str) and c.right_operand == "open")
+                    and c not in pool
+                ]
+
+            pool = [c for c in pool if c in candidates]
+            if len(pool) >= 2:
+                selected = _rnd.sample(pool, 2)
+            elif len(pool) == 1:
+                selected = pool
+            else:
+                selected = []
+
+            if selected:
+                from app.services.auto_strategy.models.condition_group import (
+                    ConditionGroup,
+                )
+
+                return [ConditionGroup(conditions=selected)]
+            return []
+        except Exception:
+            return []
 
         except Exception as e:
             self.logger.error(f"スマート条件生成エラー: {e}")
