@@ -10,7 +10,7 @@ from typing import Tuple, Type
 from backtesting import Strategy
 
 from ..calculators.indicator_calculator import IndicatorCalculator
-from ..calculators.position_sizing_helper import PositionSizingHelper
+from ..calculators.position_sizing_calculator import PositionSizingCalculatorService
 from ..calculators.tpsl_calculator import TPSLCalculator
 from ..evaluators.condition_evaluator import ConditionEvaluator
 from ..models.gene_strategy import IndicatorGene, StrategyGene
@@ -30,7 +30,7 @@ class StrategyFactory:
         self.condition_evaluator = ConditionEvaluator()
         self.indicator_calculator = IndicatorCalculator()
         self.tpsl_calculator = TPSLCalculator()
-        self.position_sizing_helper = PositionSizingHelper()
+        self.position_sizing_calculator = PositionSizingCalculatorService()
 
     def create_strategy_class(self, gene: StrategyGene) -> Type[Strategy]:
         """
@@ -184,10 +184,8 @@ class StrategyFactory:
                             position_direction,
                         )
 
-                        calculated_size = (
-                            factory.position_sizing_helper.calculate_position_size(
-                                gene, current_equity, current_price, self.data
-                            )
+                        calculated_size = factory._calculate_position_size(
+                            gene, current_equity, current_price, self.data
                         )
                         final_size = calculated_size * position_direction
 
@@ -389,6 +387,46 @@ class StrategyFactory:
         GeneratedStrategy.__qualname__ = GeneratedStrategy.__name__
 
         return GeneratedStrategy
+
+    def _calculate_position_size(
+        self, gene, account_balance: float, current_price: float, data
+    ) -> float:
+        """PositionSizingCalculatorService を直接使用してサイズ計算"""
+        try:
+            # 市場データの準備（Helper の処理を内包）
+            market_data = {}
+            if (
+                data is not None
+                and hasattr(data, "High")
+                and hasattr(data, "Low")
+                and hasattr(data, "Close")
+            ):
+                # ATR の推定値（計算器側で必要なら補助的に使用可能）
+                current_price_safe = (
+                    current_price if current_price and current_price > 0 else 1.0
+                )
+                market_data["atr_pct"] = 0.04 if current_price_safe == 0 else 0.04
+            trade_history = []
+
+            calc_result = self.position_sizing_calculator.calculate_position_size(
+                gene=getattr(gene, "position_sizing_gene", None)
+                or getattr(gene, "position_sizing", None)
+                or gene,
+                account_balance=account_balance,
+                current_price=current_price,
+                symbol="BTCUSDT",
+                market_data=market_data,
+                trade_history=trade_history,
+                use_cache=False,
+            )
+            return float(getattr(calc_result, "position_size", 0.0))
+        except Exception:
+            # フォールバック: 従来の risk_management.position_size（上限は広め）
+            try:
+                pos = getattr(gene, "risk_management", {}).get("position_size", 0.1)
+            except Exception:
+                pos = 0.1
+            return max(0.01, min(50.0, float(pos)))
 
     def validate_gene(self, gene: StrategyGene) -> Tuple[bool, list]:
         """

@@ -28,6 +28,11 @@ class AutoStrategyService:
     GA実行、進捗管理、結果保存を統合的に管理します。
     """
 
+    # NOTE: Orchestration層との責務境界
+    # - 本サービスは依存初期化とGA実験の開始/取得/停止の薄いファサードに限定
+    # - 戦略テストや結果整形、停止時バリデーションは orchestration に集約
+    # TODO(phase2): orchestration に寄せられる一部関数の更なる縮退検討
+
     def __init__(self, enable_smart_generation: bool = True):
         """
         初期化
