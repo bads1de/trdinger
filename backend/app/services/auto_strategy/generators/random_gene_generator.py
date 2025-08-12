@@ -20,7 +20,7 @@ from ..utils.operand_grouping import operand_grouping_system
 from ..utils.parameter_generators import (
     generate_indicator_parameters,
 )
-from ..utils.constants import OPERATORS, DATA_SOURCES
+from ..config.shared_constants import OPERATORS, DATA_SOURCES
 from .smart_condition_generator import SmartConditionGenerator
 
 logger = logging.getLogger(__name__)
@@ -179,9 +179,11 @@ class RandomGeneGenerator:
             logger.error(f"ランダム戦略遺伝子生成失敗: {e}", exc_info=True)
             # フォールバック: 最小限の遺伝子を生成
             # logger.info("フォールバック戦略遺伝子を生成")
-            from ..utils.strategy_gene_utils import create_default_strategy_gene
+            from ..utils.auto_strategy_utils import AutoStrategyUtils
 
-            return create_default_strategy_gene(StrategyGene)
+            return AutoStrategyUtils.create_default_strategy_gene(
+                strategy_gene_class=StrategyGene
+            )
 
     def _setup_indicators_by_mode(self, config: GAConfig) -> List[str]:
         """
@@ -775,7 +777,7 @@ class RandomGeneGenerator:
         """
         population = []
 
-        from ..utils.strategy_gene_utils import create_default_strategy_gene
+        from ..utils.auto_strategy_utils import AutoStrategyUtils
 
         for i in range(size):
             try:
@@ -789,7 +791,11 @@ class RandomGeneGenerator:
             except Exception as e:
                 logger.error(f"遺伝子{i}の生成に失敗しました: {e}")
                 # フォールバックを追加
-                population.append(create_default_strategy_gene(StrategyGene))
+                population.append(
+                    AutoStrategyUtils.create_default_strategy_gene(
+                        strategy_gene_class=StrategyGene
+                    )
+                )
 
         # logger.info(f"{len(population)}個の遺伝子の個体群を生成しました")
         return population

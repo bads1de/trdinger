@@ -13,7 +13,7 @@ from unittest.mock import Mock, patch
 # プロジェクトルートをパスに追加
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
-from app.services.auto_strategy.utils.constants import (
+from app.services.auto_strategy.config.shared_constants import (
     OPERATORS,
     DATA_SOURCES,
     VALID_INDICATOR_TYPES,

@@ -95,9 +95,11 @@ class BaseGeneGenerator(ABC):
 
     def _create_fallback_gene(self) -> StrategyGene:
         """フォールバック遺伝子を作成"""
-        from ..utils.strategy_gene_utils import create_default_strategy_gene
+        from ..utils.auto_strategy_utils import AutoStrategyUtils
 
-        return create_default_strategy_gene(StrategyGene)
+        return AutoStrategyUtils.create_default_strategy_gene(
+            strategy_gene_class=StrategyGene
+        )
 
 
 class RandomGeneGenerator(BaseGeneGenerator):

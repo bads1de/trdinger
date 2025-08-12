@@ -807,9 +807,11 @@ class GeneSerializer:
 
         except Exception as e:
             logger.error(f"戦略遺伝子デコードエラー: {e}")
-            from ..utils.strategy_gene_utils import create_default_strategy_gene
+            from ..utils.auto_strategy_utils import AutoStrategyUtils
 
-            return create_default_strategy_gene(strategy_gene_class)
+            return AutoStrategyUtils.create_default_strategy_gene(
+                strategy_gene_class=strategy_gene_class
+            )
 
     def _generate_indicator_parameters(
         self, indicator_type: str, param_val: float

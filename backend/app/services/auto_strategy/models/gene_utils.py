@@ -15,128 +15,39 @@ logger = logging.getLogger(__name__)
 
 
 def get_indicator_ids() -> Dict[str, int]:
-    """指標IDマッピングを取得（テクニカル指標 + ML指標）"""
-    try:
-        # テクニカル指標を取得
-        indicator_service = TechnicalIndicatorService()
-        technical_indicators = list(indicator_service.get_supported_indicators().keys())
+    """指標IDマッピングを取得（shared_constants.pyに統合済み）"""
+    from ..config.shared_constants import get_all_indicator_ids
 
-        # ML指標を追加
-        ml_indicators = ["ML_UP_PROB", "ML_DOWN_PROB", "ML_RANGE_PROB"]
-
-        # 全指標を結合
-        all_indicators = technical_indicators + ml_indicators
-
-        indicator_ids = {"": 0}  # 未使用
-        for i, indicator in enumerate(all_indicators, 1):
-            indicator_ids[indicator] = i
-
-        return indicator_ids
-    except Exception as e:
-        logger.error(f"指標IDの取得に失敗しました: {e}")
-        return {"": 0}
+    return get_all_indicator_ids()
 
 
 def get_id_to_indicator(indicator_ids: Dict[str, int]) -> Dict[int, str]:
-    """ID→指標の逆引きマッピングを取得"""
-    return {v: k for k, v in indicator_ids.items()}
+    """ID→指標の逆引きマッピングを取得（shared_constants.pyに統合済み）"""
+    from ..config.shared_constants import get_id_to_indicator_mapping
+
+    return get_id_to_indicator_mapping(indicator_ids)
 
 
 def normalize_parameter(
     value: float, min_val: float = 1, max_val: float = 200
 ) -> float:
-    """
-    パラメータを0-1の範囲に正規化（scikit-learn MinMaxScaler互換）
+    """パラメータを0-1の範囲に正規化（auto_strategy_utils.pyに統合済み）"""
+    from ..utils.auto_strategy_utils import AutoStrategyUtils
 
-    Args:
-        value: 正規化する値
-        min_val: 最小値
-        max_val: 最大値
-
-    Returns:
-        正規化された値（0-1の範囲）
-    """
-    try:
-        from sklearn.preprocessing import MinMaxScaler
-        import numpy as np
-
-        # scikit-learnのMinMaxScalerを使用
-        scaler = MinMaxScaler(feature_range=(0, 1))
-
-        # 単一値の場合の処理
-        if min_val == max_val:
-            return 0.0
-
-        # 値を配列に変換してスケーリング
-        values = np.array([[min_val], [max_val], [value]])
-        scaled_values = scaler.fit_transform(values)
-
-        return float(scaled_values[2, 0])
-
-    except Exception as e:
-        # フォールバック: 手動実装
-        try:
-            if max_val == min_val:
-                return 0.0
-            return (value - min_val) / (max_val - min_val)
-        except ZeroDivisionError:
-            return 0.0
+    return AutoStrategyUtils.normalize_parameter(value, min_val, max_val)
 
 
 def denormalize_parameter(
     normalized_val: float, min_val: float = 1, max_val: float = 200
 ) -> int:
-    """
-    正規化されたパラメータを元の範囲に戻す（scikit-learn MinMaxScaler互換）
+    """正規化されたパラメータを元の範囲に戻す（auto_strategy_utils.pyに統合済み）"""
+    from ..utils.auto_strategy_utils import AutoStrategyUtils
 
-    Args:
-        normalized_val: 正規化された値（0-1の範囲）
-        min_val: 元の最小値
-        max_val: 元の最大値
-
-    Returns:
-        元の範囲に戻された整数値
-    """
-    try:
-        from sklearn.preprocessing import MinMaxScaler
-        import numpy as np
-
-        # scikit-learnのMinMaxScalerを使用
-        scaler = MinMaxScaler(feature_range=(0, 1))
-
-        # 単一値の場合の処理
-        if min_val == max_val:
-            return int(min_val)
-
-        # 範囲を学習
-        range_values = np.array([[min_val], [max_val]])
-        scaler.fit(range_values)
-
-        # 逆変換
-        denormalized = scaler.inverse_transform([[normalized_val]])
-        value = denormalized[0, 0]
-
-        return int(max(min_val, min(max_val, int(value))))
-
-    except Exception as e:
-        # フォールバック: 手動実装
-        try:
-            if max_val == min_val:
-                return int(min_val)
-            value = min_val + normalized_val * (max_val - min_val)
-            return int(max(min_val, min(max_val, int(value))))
-        except Exception:
-            return int(min_val)
+    return AutoStrategyUtils.denormalize_parameter(normalized_val, min_val, max_val)
 
 
 def get_encoding_info(indicator_ids: Dict[str, int]) -> Dict:
-    """エンコーディング情報を取得"""
-    return {
-        "indicator_count": len(indicator_ids) - 1,
-        "max_indicators": 5,
-        "encoding_length": 32,  # 5指標×2 + 条件×6 + TP/SL×8 + ポジションサイジング×8
-        "tpsl_encoding_length": 8,
-        "position_sizing_encoding_length": 8,
-        "supported_indicators": list(indicator_ids.keys())[1:],
-        "supported_tpsl_methods": [method.value for method in TPSLMethod],
-    }
+    """エンコーディング情報を取得（auto_strategy_utils.pyに統合済み）"""
+    from ..utils.auto_strategy_utils import AutoStrategyUtils
+
+    return AutoStrategyUtils.get_encoding_info(indicator_ids)
