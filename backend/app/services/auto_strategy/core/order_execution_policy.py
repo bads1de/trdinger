@@ -50,7 +50,9 @@ class OrderExecutionPolicy:
         return adjusted_size
 
     @staticmethod
-    def compute_tpsl_prices(factory, current_price: float, risk_management, gene, position_direction: float) -> Tuple[Optional[float], Optional[float]]:
+    def compute_tpsl_prices(
+        factory, current_price: float, risk_management, gene, position_direction: float
+    ) -> Tuple[Optional[float], Optional[float]]:
         stop_loss_pct = risk_management.get("stop_loss")
         take_profit_pct = risk_management.get("take_profit")
         sl_price, tp_price = factory.tpsl_calculator.calculate_tpsl_prices(
@@ -63,3 +65,26 @@ class OrderExecutionPolicy:
         )
         return sl_price, tp_price
 
+    @staticmethod
+    def compute_final_position_size(
+        factory,
+        gene,
+        current_price: float,
+        current_equity: float,
+        available_cash: float,
+        data,
+        raw_size: float,
+    ) -> float:
+        """ファクトリーのサイズ算出を受けて、bt制約と買付可能性まで一括反映して最終サイズを返す。"""
+        # backtestingの制約調整
+        adjusted_size = OrderExecutionPolicy.adjust_position_size_for_backtesting(
+            raw_size
+        )
+        # 購入可能性チェック
+        ctx = ExecutionContext(
+            current_price=current_price,
+            current_equity=current_equity,
+            available_cash=available_cash,
+        )
+        final = OrderExecutionPolicy.ensure_affordable_size(adjusted_size, ctx)
+        return final

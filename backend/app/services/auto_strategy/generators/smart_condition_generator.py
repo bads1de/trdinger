@@ -4,10 +4,9 @@ from enum import Enum
 from typing import List, Tuple
 from app.services.indicators.config import indicator_registry
 from app.services.indicators.config.indicator_config import IndicatorScaleType
+from app.services.auto_strategy.core.threshold_policy import ThresholdPolicy
 
 from ..models.gene_strategy import Condition, IndicatorGene
-from app.services.indicators.config import indicator_registry
-from app.services.indicators.config.indicator_config import IndicatorScaleType
 
 
 logger = logging.getLogger(__name__)
@@ -948,22 +947,14 @@ class SmartConditionGenerator:
                 else "normal"
             )
             if name in {"RSI", "STOCH", "STOCHRSI", "KDJ", "QQE", "MFI"}:
-                # aggressive: 51, normal: 54, conservative: 58（ロング側をやや緩めて成立性を向上）
-                thr = 54
-                if profile == "aggressive":
-                    thr = 51
-                elif profile == "conservative":
-                    thr = 58
+                # プロファイルごとの閾値は ThresholdPolicy に一元化
+                thr = ThresholdPolicy.get(profile).rsi_long_lt
                 return [
                     Condition(left_operand=name, operator=">", right_operand=float(thr))
                 ]
             if name == "ADX":
                 # ADXは方向ではなくトレンド強度 → フィルタとして利用
-                thr = (
-                    20
-                    if profile == "aggressive"
-                    else (25 if profile == "conservative" else 20)
-                )
+                thr = ThresholdPolicy.get(profile).adx_trend_min
                 return [
                     Condition(left_operand=name, operator=">", right_operand=float(thr))
                 ]
@@ -1096,12 +1087,8 @@ class SmartConditionGenerator:
                     Condition(left_operand=name, operator="<", right_operand=float(thr))
                 ]
             if name == "ADX":
-                # トレンド強度フィルタ（方向性は持たない） → 高すぎる時のみ回避したい場合は別ロジック
-                thr = float(
-                    55
-                    if profile == "aggressive"
-                    else (50 if profile == "normal" else 45)
-                )
+                # トレンド強度フィルタ（方向性は持たない）
+                thr = float(100 - ThresholdPolicy.get(profile).adx_trend_min)
                 return [
                     Condition(left_operand=name, operator="<", right_operand=float(thr))
                 ]

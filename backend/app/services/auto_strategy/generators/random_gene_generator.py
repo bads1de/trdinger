@@ -10,9 +10,8 @@ import random
 from typing import Dict, List
 
 from app.services.indicators import TechnicalIndicatorService
-
-from ...indicators.config import indicator_registry
-from ...indicators.config.indicator_config import IndicatorScaleType
+from app.services.indicators.config import indicator_registry
+from app.services.indicators.config.indicator_config import IndicatorScaleType
 from ..models.ga_config import GAConfig
 from ..models.gene_decoder import GeneDecoder
 from ..models.gene_strategy import Condition, IndicatorGene, StrategyGene
@@ -86,6 +85,16 @@ class RandomGeneGenerator:
         # 利用可能な指標タイプを指標モードに応じて設定
         self.indicator_service = TechnicalIndicatorService()
         self.available_indicators = self._setup_indicators_by_mode(config)
+
+        # カバレッジ向上: allowed_indicators が指定されている場合、
+        # 生成呼び出し毎にリストを巡回して少なくとも1つは未登場指標を含める
+        try:
+            self._coverage_cycle = list(getattr(config, "allowed_indicators", []) or [])
+            if self._coverage_cycle:
+                random.shuffle(self._coverage_cycle)
+        except Exception:
+            self._coverage_cycle = []
+        self._coverage_idx = 0
 
         # 利用可能なデータソース
         self.available_data_sources = [
@@ -243,10 +252,15 @@ class RandomGeneGenerator:
             available_indicators = [
                 ind for ind in available_indicators if ind not in experimental
             ]
-        # レジーム判定に利用するCHOPは有用なのでテクニカルオンリーでは候補に戻す
+        # レジーム判定に利用するCHOPは有用だが、allowed 指定時は尊重する
         try:
             ind_mode = getattr(self.config, "indicator_mode", "mixed")
-            if ind_mode == "technical_only" and "CHOP" not in available_indicators:
+            allowed = set(getattr(self.config, "allowed_indicators", []) or [])
+            if (
+                ind_mode == "technical_only"
+                and not allowed
+                and "CHOP" not in available_indicators
+            ):
                 available_indicators.append("CHOP")
         except Exception:
             pass
@@ -293,6 +307,23 @@ class RandomGeneGenerator:
                     "SMA_SLOPE",
                     "PRICE_EMA_RATIO",
                 }
+            # カバレッジモード: allowed 指定時は1つは巡回候補を確実に含める
+            coverage_pick = None
+            try:
+                if self._coverage_cycle:
+                    coverage_pick = self._coverage_cycle[
+                        self._coverage_idx % len(self._coverage_cycle)
+                    ]
+                    self._coverage_idx += 1
+            except Exception:
+                coverage_pick = None
+
+            # curated での厳選は allowed 指定がない場合のみ適用
+            try:
+                allowed = set(getattr(config, "allowed_indicators", []) or [])
+            except Exception:
+                allowed = set()
+            if not allowed and indicator_mode == "technical_only":
                 available_indicators = [
                     ind for ind in available_indicators if ind in curated
                 ]
@@ -302,10 +333,43 @@ class RandomGeneGenerator:
     def _generate_random_indicators(self) -> List[IndicatorGene]:
         """ランダムな指標リストを生成"""
         try:
+            # coverage_pick は上位で準備済み
+            coverage_pick = locals().get("coverage_pick", None)
+
             num_indicators = random.randint(self.min_indicators, self.max_indicators)
             indicators = []
 
-            for i in range(num_indicators):
+            # 1つ目は coverage_pick を優先
+            if coverage_pick and coverage_pick in self.available_indicators:
+                first_type = coverage_pick
+            else:
+                first_type = (
+                    random.choice(self.available_indicators)
+                    if self.available_indicators
+                    else "SMA"
+                )
+
+            try:
+                # 1本目
+                indicator_type = first_type
+                parameters = generate_indicator_parameters(indicator_type)
+                indicator_gene = IndicatorGene(
+                    type=indicator_type, parameters=parameters, enabled=True
+                )
+                try:
+                    json_config = indicator_gene.get_json_config()
+                    indicator_gene.json_config = json_config
+                except Exception:
+                    pass
+                indicators.append(indicator_gene)
+            except Exception as e:
+                logger.error(f"指標1生成エラー: {e}")
+                indicators.append(
+                    IndicatorGene(type="SMA", parameters={"period": 20}, enabled=True)
+                )
+
+            # 残り
+            for i in range(1, num_indicators):
                 try:
                     indicator_type = random.choice(self.available_indicators)
 
@@ -334,11 +398,16 @@ class RandomGeneGenerator:
                         )
                     )
 
+                # allowed_indicators が明示指定されている場合は、均一サンプリングを尊重し、
+                # 成立性底上げの補助ロジック（トレンド強制/MA追加）はスキップする
+                try:
+                    if getattr(self.config, "allowed_indicators", None):
+                        return indicators
+                except Exception:
+                    pass
+
             # 成立性の底上げ: 少なくとも1つはトレンド系（SMA/EMA/MAMA/MAのいずれか）を含める
             try:
-                from app.services.indicators.config.indicator_registry import (
-                    indicator_registry,
-                )
 
                 def _is_trend(name: str) -> bool:
                     cfg = indicator_registry.get_indicator_config(name)
@@ -802,5 +871,5 @@ class RandomGeneGenerator:
                 take_profit_pct=0.06,
                 risk_reward_ratio=2.0,
                 base_stop_loss=0.03,
-                enabled=True,  # 有効化を明示的に設定
+                enabled=True,
             )

@@ -130,13 +130,13 @@ class StrategyFactory:
 
                     # 100回に1回ログを出力（パフォーマンス考慮）
                     if self._debug_counter % 100 == 0:
-                        logger.info(
+                        logger.debug(
                             f"[DEBUG] ロング条件: {long_entry_result}, ショート条件: {short_entry_result}"
                         )
-                        logger.info(
+                        logger.debug(
                             f"[DEBUG] ロング条件数: {len(self.gene.get_effective_long_conditions())}"
                         )
-                        logger.info(
+                        logger.debug(
                             f"[DEBUG] ショート条件数: {len(self.gene.get_effective_short_conditions())}"
                         )
 
@@ -164,7 +164,7 @@ class StrategyFactory:
 
                         # デバッグログ: ポジション方向決定
                         if self._debug_counter % 100 == 0:
-                            logger.info(
+                            logger.debug(
                                 f"[DEBUG] ポジション方向: {position_direction} (ロング={long_entry_result}, ショート={short_entry_result})"
                             )
 
@@ -190,38 +190,36 @@ class StrategyFactory:
                         final_size = calculated_size * position_direction
 
                         if self._debug_counter % 100 == 0:
-                            logger.info(
+                            logger.debug(
                                 f"[DEBUG] 計算サイズ: {calculated_size}, 最終サイズ: {final_size}"
                             )
 
-                        adjusted_size = (
-                            OrderExecutionPolicy.adjust_position_size_for_backtesting(
-                                final_size
+                        final_size_bt = (
+                            OrderExecutionPolicy.compute_final_position_size(
+                                factory,
+                                gene,
+                                current_price=current_price,
+                                current_equity=current_equity,
+                                available_cash=available_cash,
+                                data=self.data,
+                                raw_size=final_size,
                             )
                         )
-                        ctx = ExecutionContext(
-                            current_price=current_price,
-                            current_equity=current_equity,
-                            available_cash=available_cash,
-                        )
-                        adjusted_size = OrderExecutionPolicy.ensure_affordable_size(
-                            adjusted_size, ctx
-                        )
-                        if adjusted_size == 0:
+                        if final_size_bt == 0:
                             return
 
                         if self.gene.tpsl_gene and self.gene.tpsl_gene.enabled:
-                            if adjusted_size > 0:
-                                self.buy(size=adjusted_size, sl=sl_price, tp=tp_price)
+                            if final_size_bt > 0:
+                                self.buy(size=final_size_bt, sl=sl_price, tp=tp_price)
                             else:
                                 self.sell(
-                                    size=abs(adjusted_size), sl=sl_price, tp=tp_price
+                                    size=abs(final_size_bt), sl=sl_price, tp=tp_price
                                 )
                         else:
-                            if adjusted_size > 0:
-                                self.buy(size=adjusted_size)
+                            if final_size_bt > 0:
+                                self.buy(size=final_size_bt)
                             else:
-                                self.sell(size=abs(adjusted_size))
+                                self.sell(size=abs(final_size_bt))
                     # イグジット条件チェック（TP/SL遺伝子が存在しない場合のみ）
                     elif self.position:
                         # TP/SL遺伝子が存在する場合はイグジット条件をスキップ
@@ -345,10 +343,10 @@ class StrategyFactory:
 
                 # デバッグログ: ショート条件の詳細
                 if hasattr(self, "_debug_counter") and self._debug_counter % 100 == 0:
-                    logger.info(
+                    logger.debug(
                         f"[DEBUG] ショート条件詳細: {[str(c.__dict__) for c in short_conditions]}"
                     )
-                    logger.info(
+                    logger.debug(
                         f"[DEBUG] ロング・ショート分離: {self.gene.has_long_short_separation()}"
                     )
 
@@ -366,7 +364,7 @@ class StrategyFactory:
 
                 # デバッグログ: ショート条件評価結果
                 if hasattr(self, "_debug_counter") and self._debug_counter % 100 == 0:
-                    logger.info(f"[DEBUG] ショート条件評価結果: {result}")
+                    logger.debug(f"[DEBUG] ショート条件評価結果: {result}")
 
                 return result
 
