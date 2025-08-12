@@ -10,8 +10,8 @@ from typing import Tuple, Type
 from backtesting import Strategy
 
 from ..calculators.indicator_calculator import IndicatorCalculator
-from ..calculators.position_sizing_calculator import PositionSizingCalculatorService
-from ..calculators.tpsl_calculator import TPSLCalculator
+from ..services.position_sizing_service import PositionSizingService
+from ..services.tpsl_service import TPSLService
 from ..evaluators.condition_evaluator import ConditionEvaluator
 from ..models.gene_strategy import IndicatorGene, StrategyGene
 
@@ -29,8 +29,8 @@ class StrategyFactory:
         """初期化"""
         self.condition_evaluator = ConditionEvaluator()
         self.indicator_calculator = IndicatorCalculator()
-        self.tpsl_calculator = TPSLCalculator()
-        self.position_sizing_calculator = PositionSizingCalculatorService()
+        self.tpsl_service = TPSLService()
+        self.position_sizing_service = PositionSizingService()
 
     def create_strategy_class(self, gene: StrategyGene) -> Type[Strategy]:
         """
@@ -389,7 +389,7 @@ class StrategyFactory:
     def _calculate_position_size(
         self, gene, account_balance: float, current_price: float, data
     ) -> float:
-        """PositionSizingCalculatorService を直接使用してサイズ計算"""
+        """PositionSizingService を直接使用してサイズ計算"""
         try:
             # 市場データの準備（Helper の処理を内包）
             market_data = {}
@@ -406,7 +406,7 @@ class StrategyFactory:
                 market_data["atr_pct"] = 0.04 if current_price_safe == 0 else 0.04
             trade_history = []
 
-            calc_result = self.position_sizing_calculator.calculate_position_size(
+            calc_result = self.position_sizing_service.calculate_position_size(
                 gene=getattr(gene, "position_sizing_gene", None)
                 or getattr(gene, "position_sizing", None)
                 or gene,

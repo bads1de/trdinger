@@ -1,31 +1,46 @@
 """
-遺伝子シリアライゼーション
+統一遺伝子シリアライゼーション
 
-戦略遺伝子のシリアライゼーション・デシリアライゼーションを担当するモジュール。
+戦略遺伝子のシリアライゼーション・デシリアライゼーション、エンコード・デコードを担当するモジュール。
+GeneEncoder、GeneDecoder、GeneSerializerの機能を統合しています。
 """
 
 import json
 import logging
-from typing import TYPE_CHECKING, Any, Dict, Optional, Type
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Type
 
 if TYPE_CHECKING:
     from .gene_strategy import Condition, IndicatorGene, StrategyGene
     from .condition_group import ConditionGroup
 
-from .gene_tpsl import TPSLGene
+from .gene_tpsl import TPSLGene, TPSLMethod
+from .gene_position_sizing import PositionSizingGene, PositionSizingMethod
+from . import gene_utils
 
 logger = logging.getLogger(__name__)
 
 
 class GeneSerializer:
     """
-    遺伝子シリアライザー
+    統一遺伝子シリアライザー
 
-    戦略遺伝子のシリアライゼーション・デシリアライゼーションを担当します。
+    戦略遺伝子のシリアライゼーション・デシリアライゼーション、エンコード・デコードを担当します。
+    GeneEncoder、GeneDecoder、GeneSerializerの機能を統合しています。
     """
 
-    def __init__(self):
-        """初期化"""
+    def __init__(self, enable_smart_generation: bool = True):
+        """
+        初期化
+
+        Args:
+            enable_smart_generation: SmartConditionGeneratorを使用するか
+        """
+        self.indicator_ids = gene_utils.get_indicator_ids()
+        self.id_to_indicator = gene_utils.get_id_to_indicator(self.indicator_ids)
+
+        # SmartConditionGeneratorの遅延インポート（循環インポート回避）
+        self.enable_smart_generation = enable_smart_generation
+        self._smart_condition_generator = None
 
     def strategy_gene_to_dict(self, strategy_gene) -> Dict[str, Any]:
         """
@@ -573,3 +588,344 @@ class GeneSerializer:
         except Exception as e:
             logger.error(f"シリアライズデータ検証エラー: {e}")
             return False
+
+    # 以下、旧GeneEncoderから統合されたメソッド
+
+    @property
+    def smart_condition_generator(self):
+        """SmartConditionGeneratorの遅延初期化"""
+        if self._smart_condition_generator is None and self.enable_smart_generation:
+            from ..generators.smart_condition_generator import SmartConditionGenerator
+
+            self._smart_condition_generator = SmartConditionGenerator(True)
+        return self._smart_condition_generator
+
+    def to_list(self, strategy_gene) -> List[float]:
+        """
+        戦略遺伝子を固定長の数値リストにエンコード（旧encode_strategy_gene_to_list）
+
+        Args:
+            strategy_gene: 戦略遺伝子オブジェクト
+
+        Returns:
+            エンコードされた数値リスト
+        """
+        try:
+            encoded = []
+            max_indicators = getattr(strategy_gene, "MAX_INDICATORS", 5)
+
+            # 指標部分（指標数 × 2値 = 10要素）
+            for i in range(max_indicators):
+                if (
+                    i < len(strategy_gene.indicators)
+                    and strategy_gene.indicators[i].enabled
+                ):
+                    indicator = strategy_gene.indicators[i]
+                    indicator_id = self.indicator_ids.get(indicator.type, 0)
+                    # パラメータを正規化（期間の場合は1-200を0-1に変換）
+                    param_val = gene_utils.normalize_parameter(
+                        indicator.parameters.get("period", 20)
+                    )
+                else:
+                    indicator_id = 0  # 未使用
+                    param_val = 0.0
+
+                # 指標IDを0-1の範囲に正規化してエンコード
+                normalized_id = (
+                    indicator_id / len(self.indicator_ids) if indicator_id > 0 else 0.0
+                )
+                encoded.extend([normalized_id, param_val])
+
+            # エントリー条件（簡略化: 最初の条件のみ）
+            if strategy_gene.entry_conditions:
+                entry_cond = strategy_gene.entry_conditions[0]
+                entry_encoded = self._encode_condition(entry_cond)
+            else:
+                entry_encoded = [0, 0, 0]  # デフォルト
+
+            # イグジット条件（簡略化: 最初の条件のみ）
+            if strategy_gene.exit_conditions:
+                exit_cond = strategy_gene.exit_conditions[0]
+                exit_encoded = self._encode_condition(exit_cond)
+            else:
+                exit_encoded = [0, 0, 0]  # デフォルト
+
+            encoded.extend(entry_encoded)
+            encoded.extend(exit_encoded)
+
+            # TP/SL遺伝子のエンコード
+            tpsl_encoded = self._encode_tpsl_gene(strategy_gene.tpsl_gene)
+            encoded.extend(tpsl_encoded)
+
+            # ポジションサイジング遺伝子のエンコード
+            position_sizing_encoded = self._encode_position_sizing_gene(
+                getattr(strategy_gene, "position_sizing_gene", None)
+            )
+            encoded.extend(position_sizing_encoded)
+
+            return encoded
+
+        except Exception as e:
+            logger.error(f"戦略遺伝子エンコードエラー: {e}")
+            # エラー時はデフォルトエンコードを返す
+            return [0.0] * 32  # 5指標×2 + 条件×6 + TP/SL×8 + ポジションサイジング×8
+
+    def from_list(self, encoded: List[float], strategy_gene_class):
+        """
+        数値リストから戦略遺伝子にデコード（旧decode_list_to_strategy_gene）
+
+        Args:
+            encoded: エンコードされた数値リスト
+            strategy_gene_class: StrategyGeneクラス
+
+        Returns:
+            デコードされた戦略遺伝子オブジェクト
+        """
+        try:
+            max_indicators = 5  # デフォルト値
+            indicators = []
+
+            # 指標部分をデコード（多様性を確保）
+            for i in range(max_indicators):
+                idx = i * 2
+                if idx + 1 < len(encoded):
+                    if encoded[idx] < 0.01:
+                        continue
+
+                    indicator_id = int(encoded[idx] * len(self.indicator_ids))
+                    max_id = len(self.indicator_ids) - 1
+                    indicator_id = max(1, min(max_id, indicator_id))
+                    param_val = encoded[idx + 1]
+
+                    indicator_type = self.id_to_indicator.get(indicator_id, "")
+                    if indicator_type and indicator_type != "":
+                        parameters = self._generate_indicator_parameters(
+                            indicator_type, param_val
+                        )
+                        from .gene_strategy import IndicatorGene
+
+                        indicators.append(
+                            IndicatorGene(
+                                type=indicator_type,
+                                parameters=parameters,
+                                enabled=True,
+                            )
+                        )
+
+            # 条件部分をデコード（SmartConditionGeneratorを使用）
+            if indicators:
+                if self.smart_condition_generator:
+                    long_entry_conditions, short_entry_conditions, exit_conditions = (
+                        self.smart_condition_generator.generate_balanced_conditions(
+                            indicators
+                        )
+                    )
+                else:
+                    # SmartConditionGeneratorが無効な場合のフォールバック
+                    from .gene_strategy import Condition
+
+                    long_entry_conditions = [
+                        Condition(
+                            left_operand="close", operator=">", right_operand="open"
+                        )
+                    ]
+                    short_entry_conditions = [
+                        Condition(
+                            left_operand="close", operator="<", right_operand="open"
+                        )
+                    ]
+                    exit_conditions = [
+                        Condition(
+                            left_operand="close", operator="==", right_operand="open"
+                        )
+                    ]
+                # 後方互換性のためのentry_conditions
+                entry_conditions = long_entry_conditions
+            else:
+                # フォールバック条件
+                from .gene_strategy import Condition
+
+                long_entry_conditions = [
+                    Condition(left_operand="close", operator=">", right_operand="open")
+                ]
+                short_entry_conditions = [
+                    Condition(left_operand="close", operator="<", right_operand="open")
+                ]
+                exit_conditions = [
+                    Condition(left_operand="close", operator="==", right_operand="open")
+                ]
+                entry_conditions = long_entry_conditions
+
+            # リスク管理設定
+            risk_management = {
+                "stop_loss": 0.03,
+                "take_profit": 0.15,
+                "position_size": 0.1,
+            }
+
+            # TP/SL遺伝子をデコード
+            tpsl_gene = None
+            if len(encoded) >= 24:
+                tpsl_encoded = encoded[16:24]
+                tpsl_gene = self._decode_tpsl_gene(tpsl_encoded)
+
+            # TP/SL遺伝子が有効な場合はexit_conditionsを空にする
+            if tpsl_gene and tpsl_gene.enabled:
+                exit_conditions = []
+
+            # ポジションサイジング遺伝子をデコード
+            position_sizing_gene = None
+            if len(encoded) >= 32:
+                position_sizing_encoded = encoded[24:32]
+                position_sizing_gene = self._decode_position_sizing_gene(
+                    position_sizing_encoded
+                )
+
+            # メタデータ
+            metadata = {
+                "generated_by": "GeneSerializer_decode",
+                "source": (
+                    "fallback_individual" if len(indicators) <= 1 else "normal_decode"
+                ),
+                "indicators_count": len(indicators),
+                "decoded_from_length": len(encoded),
+                "tpsl_gene_included": tpsl_gene is not None,
+                "position_sizing_gene_included": position_sizing_gene is not None,
+            }
+
+            return strategy_gene_class(
+                indicators=indicators,
+                entry_conditions=entry_conditions,
+                long_entry_conditions=long_entry_conditions,
+                short_entry_conditions=short_entry_conditions,
+                exit_conditions=exit_conditions,
+                risk_management=risk_management,
+                tpsl_gene=tpsl_gene,
+                position_sizing_gene=position_sizing_gene,
+                metadata=metadata,
+            )
+
+        except Exception as e:
+            logger.error(f"戦略遺伝子デコードエラー: {e}")
+            from ..utils.strategy_gene_utils import create_default_strategy_gene
+
+            return create_default_strategy_gene(strategy_gene_class)
+
+    def _generate_indicator_parameters(
+        self, indicator_type: str, param_val: float
+    ) -> Dict[str, Any]:
+        """指標パラメータを生成"""
+        try:
+            # 基本的なパラメータ生成
+            period = max(1, min(200, int(param_val * 200)))
+
+            # 指標タイプ別の特別なパラメータ
+            if indicator_type in ["BBANDS", "KELTNER"]:
+                return {"period": period, "std_dev": 2.0}
+            elif indicator_type in ["MACD"]:
+                return {"fast_period": 12, "slow_period": 26, "signal_period": 9}
+            elif indicator_type in ["STOCH", "STOCHRSI"]:
+                return {"k_period": period, "d_period": 3}
+            else:
+                return {"period": period}
+
+        except Exception as e:
+            logger.error(f"指標パラメータ生成エラー: {e}")
+            return {"period": 20}
+
+    def _encode_condition(self, condition) -> List[float]:
+        """条件をエンコード（簡略化）"""
+        try:
+            # 簡単な条件エンコード（実際の実装では詳細化が必要）
+            if hasattr(condition, "operator"):
+                if condition.operator == ">":
+                    return [1.0, 0.0, 0.0]
+                elif condition.operator == "<":
+                    return [0.0, 1.0, 0.0]
+                else:
+                    return [0.0, 0.0, 1.0]
+            return [0.5, 0.5, 0.0]
+        except:
+            return [0.0, 0.0, 0.0]
+
+    def _encode_tpsl_gene(self, tpsl_gene) -> List[float]:
+        """TP/SL遺伝子をエンコード"""
+        try:
+            if not tpsl_gene or not tpsl_gene.enabled:
+                return [0.0] * 8
+
+            # 基本的なエンコード
+            encoded = [
+                1.0 if tpsl_gene.enabled else 0.0,
+                tpsl_gene.stop_loss_pct or 0.03,
+                tpsl_gene.take_profit_pct or 0.06,
+                tpsl_gene.risk_reward_ratio or 2.0,
+                tpsl_gene.atr_multiplier_sl or 2.0,
+                tpsl_gene.atr_multiplier_tp or 3.0,
+                (tpsl_gene.atr_period or 14) / 100.0,
+                (tpsl_gene.lookback_period or 100) / 1000.0,
+            ]
+            return encoded[:8]
+        except:
+            return [0.0] * 8
+
+    def _encode_position_sizing_gene(self, ps_gene) -> List[float]:
+        """ポジションサイジング遺伝子をエンコード"""
+        try:
+            if not ps_gene or not ps_gene.enabled:
+                return [0.0] * 8
+
+            # 基本的なエンコード
+            encoded = [
+                1.0 if ps_gene.enabled else 0.0,
+                ps_gene.risk_per_trade or 0.02,
+                ps_gene.fixed_ratio or 0.1,
+                ps_gene.fixed_quantity or 0.01,
+                ps_gene.atr_multiplier or 2.0,
+                ps_gene.optimal_f_multiplier or 0.5,
+                (ps_gene.lookback_period or 30) / 100.0,
+                ps_gene.min_position_size or 0.001,
+            ]
+            return encoded[:8]
+        except:
+            return [0.0] * 8
+
+    def _decode_tpsl_gene(self, encoded: List[float]):
+        """TP/SL遺伝子をデコード"""
+        try:
+            if len(encoded) < 8 or encoded[0] < 0.5:
+                return None
+
+            return TPSLGene(
+                enabled=True,
+                method=TPSLMethod.RISK_REWARD_RATIO,
+                stop_loss_pct=encoded[1],
+                take_profit_pct=encoded[2],
+                risk_reward_ratio=encoded[3],
+                atr_multiplier_sl=encoded[4],
+                atr_multiplier_tp=encoded[5],
+                atr_period=int(encoded[6] * 100),
+                lookback_period=int(encoded[7] * 1000),
+            )
+        except:
+            return None
+
+    def _decode_position_sizing_gene(self, encoded: List[float]):
+        """ポジションサイジング遺伝子をデコード"""
+        try:
+            if len(encoded) < 8 or encoded[0] < 0.5:
+                return None
+
+            return PositionSizingGene(
+                enabled=True,
+                method=PositionSizingMethod.VOLATILITY_BASED,
+                risk_per_trade=encoded[1],
+                fixed_ratio=encoded[2],
+                fixed_quantity=encoded[3],
+                atr_multiplier=encoded[4],
+                optimal_f_multiplier=encoded[5],
+                lookback_period=int(encoded[6] * 100),
+                min_position_size=encoded[7],
+            )
+        except:
+            return None

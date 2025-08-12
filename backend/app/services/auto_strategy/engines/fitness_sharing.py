@@ -8,7 +8,7 @@
 import logging
 from typing import Any, Dict, List
 
-from ..models.gene_decoder import GeneDecoder
+from ..models.gene_serialization import GeneSerializer
 from ..models.gene_strategy import StrategyGene
 
 logger = logging.getLogger(__name__)
@@ -32,7 +32,7 @@ class FitnessSharing:
         """
         self.sharing_radius = sharing_radius
         self.alpha = alpha
-        self.gene_decoder = GeneDecoder()
+        self.gene_serializer = GeneSerializer()
 
     def apply_fitness_sharing(self, population: List[Any]) -> List[Any]:
         """
@@ -52,9 +52,7 @@ class FitnessSharing:
             genes = []
             for individual in population:
                 try:
-                    gene = self.gene_decoder.decode_list_to_strategy_gene(
-                        individual, StrategyGene
-                    )
+                    gene = self.gene_serializer.from_list(individual, StrategyGene)
                     genes.append(gene)
                 except Exception as e:
                     logger.warning(f"個体のデコードに失敗: {e}")

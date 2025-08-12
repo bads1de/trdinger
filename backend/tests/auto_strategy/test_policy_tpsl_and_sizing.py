@@ -4,12 +4,12 @@ from app.services.auto_strategy.core.order_execution_policy import (
     OrderExecutionPolicy,
     ExecutionContext,
 )
-from app.services.auto_strategy.calculators.tpsl_calculator import TPSLCalculator
+from app.services.auto_strategy.services.tpsl_service import TPSLService
 
 
 class _FactoryStub:
     def __init__(self):
-        self.tpsl_calculator = TPSLCalculator()
+        self.tpsl_service = TPSLService()
 
 
 def test_compute_tpsl_prices_long_and_short_ordering():
@@ -51,7 +51,9 @@ def test_adjust_position_size_for_backtesting_rounding_and_fraction():
 
 def test_ensure_affordable_size_caps_units_and_fraction():
     # Units case: cap to affordable integer units
-    ctx = ExecutionContext(current_price=100.0, current_equity=1000.0, available_cash=1000.0)
+    ctx = ExecutionContext(
+        current_price=100.0, current_equity=1000.0, available_cash=1000.0
+    )
     size = 20.0  # 20 units would require 2000 cash
     capped = OrderExecutionPolicy.ensure_affordable_size(size, ctx)
     # 0.99 safety, max affordable units = int(990 // 100) = 9
@@ -65,4 +67,3 @@ def test_ensure_affordable_size_caps_units_and_fraction():
     # Fractional within allowance stays
     ok_frac = 0.5  # requires 500 <= 990
     assert OrderExecutionPolicy.ensure_affordable_size(ok_frac, ctx) == ok_frac
-

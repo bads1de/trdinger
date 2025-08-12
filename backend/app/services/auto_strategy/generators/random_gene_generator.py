@@ -13,7 +13,7 @@ from app.services.indicators import TechnicalIndicatorService
 from app.services.indicators.config import indicator_registry
 from app.services.indicators.config.indicator_config import IndicatorScaleType
 from ..models.ga_config import GAConfig
-from ..models.gene_decoder import GeneDecoder
+from ..models.gene_serialization import GeneSerializer
 from ..models.gene_strategy import Condition, IndicatorGene, StrategyGene
 from ..models.gene_tpsl import TPSLGene, TPSLMethod, create_random_tpsl_gene
 from ..utils.operand_grouping import operand_grouping_system
@@ -48,9 +48,9 @@ class RandomGeneGenerator:
             smart_context: スマート条件生成のコンテキスト（timeframe/symbol/threshold_profile/regime_gating）
         """
         self.config = config
-        self.decoder = GeneDecoder(
+        self.serializer = GeneSerializer(
             enable_smart_generation
-        )  # GeneDecoderのインスタンスを作成
+        )  # GeneSerializerのインスタンスを作成
         self.smart_condition_generator = SmartConditionGenerator(
             enable_smart_generation
         )

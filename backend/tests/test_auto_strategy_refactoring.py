@@ -20,14 +20,13 @@ from app.services.auto_strategy.models.gene_validation import GeneValidator
 from app.services.auto_strategy.core.indicator_name_resolver import (
     IndicatorNameResolver,
 )
-from app.services.auto_strategy.services.tpsl_calculator_service import (
-    TPSLCalculatorService,
+from app.services.auto_strategy.services.tpsl_service import (
+    TPSLService,
 )
 from app.services.auto_strategy.services.position_sizing_service import (
     PositionSizingService,
 )
-from app.services.auto_strategy.models.gene_encoder import GeneEncoder
-from app.services.auto_strategy.models.gene_decoder import GeneDecoder
+from app.services.auto_strategy.models.gene_serialization import GeneSerializer
 from app.services.auto_strategy.models.gene_strategy import StrategyGene, IndicatorGene
 from app.services.auto_strategy.models.gene_tpsl import TPSLGene, TPSLMethod
 from app.services.auto_strategy.models.gene_position_sizing import (
@@ -118,7 +117,7 @@ class TestCalculationServices:
 
     def test_tpsl_calculator_service(self):
         """TP/SL計算サービステスト"""
-        service = TPSLCalculatorService()
+        service = TPSLService()
 
         # 基本的なTP/SL計算テスト
         current_price = 50000.0
@@ -136,7 +135,7 @@ class TestCalculationServices:
 
     def test_tpsl_calculator_with_gene(self):
         """TP/SL遺伝子を使用した計算テスト"""
-        service = TPSLCalculatorService()
+        service = TPSLService()
 
         tpsl_gene = TPSLGene(
             method=TPSLMethod.FIXED_PERCENTAGE,
@@ -159,14 +158,15 @@ class TestCalculationServices:
         """ポジションサイジングサービステスト"""
         service = PositionSizingService()
 
-        # 基本的なポジションサイズ計算テスト
-        result = service.calculate_position_size(
-            account_balance=100000.0, current_price=50000.0, method="fixed_ratio"
+        # 基本的なポジションサイズ計算テスト（簡易版）
+        position_size = service.calculate_position_size_simple(
+            method="fixed_ratio",
+            account_balance=100000.0,
+            current_price=50000.0,
+            fixed_ratio=0.1,
         )
 
-        assert result.position_size > 0
-        assert result.method_used is not None
-        assert result.confidence_score >= 0
+        assert position_size > 0
 
     def test_position_sizing_with_gene(self):
         """ポジションサイジング遺伝子を使用した計算テスト"""
@@ -177,7 +177,7 @@ class TestCalculationServices:
         )
 
         result = service.calculate_position_size(
-            position_sizing_gene=position_sizing_gene,
+            gene=position_sizing_gene,
             account_balance=100000.0,
             current_price=50000.0,
         )
@@ -191,7 +191,7 @@ class TestEncodingDecoding:
 
     def test_direct_encoder_usage(self):
         """Encoderクラスの直接使用テスト"""
-        encoder = GeneEncoder()
+        serializer = GeneSerializer()
 
         # テスト用の戦略遺伝子を作成
         strategy_gene = StrategyGene(
@@ -201,27 +201,26 @@ class TestEncodingDecoding:
         )
 
         # エンコードテスト
-        encoded = encoder.encode_strategy_gene_to_list(strategy_gene)
+        encoded = serializer.to_list(strategy_gene)
         assert isinstance(encoded, list)
         assert len(encoded) > 0
         assert all(isinstance(x, (int, float)) for x in encoded)
 
     def test_direct_decoder_usage(self):
         """Decoderクラスの直接使用テスト"""
-        decoder = GeneDecoder()
+        serializer = GeneSerializer()
 
         # テスト用のエンコードデータ
         encoded = [0.5, 0.7] + [0.0] * 30  # 32要素のテストデータ
 
         # デコードテスト
-        decoded_gene = decoder.decode_list_to_strategy_gene(encoded, StrategyGene)
+        decoded_gene = serializer.from_list(encoded, StrategyGene)
         assert isinstance(decoded_gene, StrategyGene)
         assert len(decoded_gene.indicators) >= 0
 
     def test_encode_decode_roundtrip(self):
         """エンコード→デコードの往復テスト"""
-        encoder = GeneEncoder()
-        decoder = GeneDecoder()
+        serializer = GeneSerializer()
 
         # 元の戦略遺伝子
         original_gene = StrategyGene(
@@ -234,8 +233,8 @@ class TestEncodingDecoding:
         )
 
         # エンコード→デコード
-        encoded = encoder.encode_strategy_gene_to_list(original_gene)
-        decoded_gene = decoder.decode_list_to_strategy_gene(encoded, StrategyGene)
+        encoded = serializer.to_list(original_gene)
+        decoded_gene = serializer.from_list(encoded, StrategyGene)
 
         # 基本的な構造が保持されているかチェック
         assert isinstance(decoded_gene, StrategyGene)
@@ -280,16 +279,15 @@ class TestIntegration:
         assert is_valid, f"Validation errors: {errors}"
 
         # 3. エンコード/デコード
-        encoder = GeneEncoder()
-        decoder = GeneDecoder()
+        serializer = GeneSerializer()
 
-        encoded = encoder.encode_strategy_gene_to_list(strategy_gene)
-        decoded = decoder.decode_list_to_strategy_gene(encoded, StrategyGene)
+        encoded = serializer.to_list(strategy_gene)
+        decoded = serializer.from_list(encoded, StrategyGene)
 
         assert isinstance(decoded, StrategyGene)
 
         # 4. 計算サービスの使用
-        tpsl_service = TPSLCalculatorService()
+        tpsl_service = TPSLService()
         position_service = PositionSizingService()
 
         sl_price, tp_price = tpsl_service.calculate_tpsl_prices(
@@ -297,7 +295,7 @@ class TestIntegration:
         )
 
         position_result = position_service.calculate_position_size(
-            position_sizing_gene=decoded.position_sizing_gene,
+            gene=decoded.position_sizing_gene,
             account_balance=100000.0,
             current_price=50000.0,
         )

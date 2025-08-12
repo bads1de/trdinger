@@ -55,13 +55,13 @@ class OrderExecutionPolicy:
     ) -> Tuple[Optional[float], Optional[float]]:
         stop_loss_pct = risk_management.get("stop_loss")
         take_profit_pct = risk_management.get("take_profit")
-        sl_price, tp_price = factory.tpsl_calculator.calculate_tpsl_prices(
-            current_price,
-            stop_loss_pct,
-            take_profit_pct,
-            risk_management,
-            gene,
-            position_direction,
+        sl_price, tp_price = factory.tpsl_service.calculate_tpsl_prices(
+            current_price=current_price,
+            tpsl_gene=gene,
+            stop_loss_pct=stop_loss_pct,
+            take_profit_pct=take_profit_pct,
+            risk_management=risk_management,
+            position_direction=position_direction,
         )
         return sl_price, tp_price
 

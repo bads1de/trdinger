@@ -160,32 +160,28 @@ class GeneticAlgorithmEngine:
                 )
 
                 # 遺伝子デコード（リファクタリング改善）
-                from ..models.gene_decoder import GeneDecoder
+                from ..models.gene_serialization import GeneSerializer
                 from ..models.gene_strategy import StrategyGene
 
-                gene_decoder = GeneDecoder()
+                gene_serializer = GeneSerializer()
                 best_strategies = []
                 for ind in best_individuals[:10]:  # 上位10個のパレート最適解
-                    gene = gene_decoder.decode_list_to_strategy_gene(ind, StrategyGene)
+                    gene = gene_serializer.from_list(ind, StrategyGene)
                     best_strategies.append(
                         {"strategy": gene, "fitness_values": list(ind.fitness.values)}
                     )
 
-                best_gene = gene_decoder.decode_list_to_strategy_gene(
-                    best_individual, StrategyGene
-                )
+                best_gene = gene_serializer.from_list(best_individual, StrategyGene)
             else:
                 # 単一目的最適化の場合
                 best_individual = tools.selBest(population, 1)[0]
 
                 # 遺伝子デコード（リファクタリング改善）
-                from ..models.gene_decoder import GeneDecoder
+                from ..models.gene_serialization import GeneSerializer
                 from ..models.gene_strategy import StrategyGene
 
-                gene_decoder = GeneDecoder()
-                best_gene = gene_decoder.decode_list_to_strategy_gene(
-                    best_individual, StrategyGene
-                )
+                gene_serializer = GeneSerializer()
+                best_gene = gene_serializer.from_list(best_individual, StrategyGene)
                 best_strategies = None
 
             execution_time = time.time() - start_time

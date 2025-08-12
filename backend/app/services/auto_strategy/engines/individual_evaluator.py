@@ -43,11 +43,11 @@ class IndividualEvaluator:
         """
         try:
             # 遺伝子デコード（リファクタリング改善）
-            from ..models.gene_decoder import GeneDecoder
+            from ..models.gene_serialization import GeneSerializer
             from ..models.gene_strategy import StrategyGene
 
-            gene_decoder = GeneDecoder()
-            gene = gene_decoder.decode_list_to_strategy_gene(individual, StrategyGene)
+            gene_serializer = GeneSerializer()
+            gene = gene_serializer.from_list(individual, StrategyGene)
 
             # バックテスト実行用の設定を構築
             backtest_config = (

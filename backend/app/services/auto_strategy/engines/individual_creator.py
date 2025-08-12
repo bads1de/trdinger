@@ -30,10 +30,10 @@ class IndividualCreator:
             gene = self.gene_generator.generate_random_gene()
 
             # 遺伝子をエンコード（リファクタリング改善）
-            from ..models.gene_encoder import GeneEncoder
+            from ..models.gene_serialization import GeneSerializer
 
-            gene_encoder = GeneEncoder()
-            encoded_gene = gene_encoder.encode_strategy_gene_to_list(gene)
+            gene_serializer = GeneSerializer()
+            encoded_gene = gene_serializer.to_list(gene)
 
             if not self.Individual:
                 raise TypeError("個体クラス 'Individual' が初期化されていません。")

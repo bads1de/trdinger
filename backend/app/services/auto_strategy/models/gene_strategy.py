@@ -209,15 +209,15 @@ class StrategyGene:
 
 def encode_gene_to_list(gene: StrategyGene) -> List[float]:
     """戦略遺伝子をGA用数値リストにエンコード（リファクタリング改善）"""
-    from .gene_encoder import GeneEncoder
+    from .gene_serialization import GeneSerializer
 
-    encoder = GeneEncoder()
-    return encoder.encode_strategy_gene_to_list(gene)
+    serializer = GeneSerializer()
+    return serializer.to_list(gene)
 
 
 def decode_list_to_gene(encoded: List[float]) -> StrategyGene:
     """GA用数値リストから戦略遺伝子にデコード（リファクタリング改善）"""
-    from .gene_decoder import GeneDecoder
+    from .gene_serialization import GeneSerializer
 
-    decoder = GeneDecoder()
-    return decoder.decode_list_to_strategy_gene(encoded, StrategyGene)
+    serializer = GeneSerializer()
+    return serializer.from_list(encoded, StrategyGene)
