@@ -169,86 +169,40 @@ class ConditionEvaluator:
                     return 0.0
 
         try:
-            # 辞書の場合（指標を表す）
+            # dict: {"indicator": "SMA"} など
             if isinstance(operand, dict):
                 indicator_name = operand.get("indicator")
                 if indicator_name and hasattr(strategy_instance, indicator_name):
-                    indicator_value = getattr(strategy_instance, indicator_name)
-                    return _last_finite(indicator_value)
+                    from ..core.indicator_name_resolver import IndicatorNameResolver
 
-            # 数値の場合
+                    resolved, value = IndicatorNameResolver.try_resolve_value(
+                        indicator_name, strategy_instance
+                    )
+                    if resolved:
+                        return value
+
+            # 数値はそのまま
             if isinstance(operand, (int, float)):
                 return float(operand)
 
-            # 文字列の場合
+            # 文字列はResolverへ
             if isinstance(operand, str):
-                # 数値文字列の場合
-                if operand.replace(".", "").replace("-", "").isdigit():
-                    return float(operand)
+                from ..core.indicator_name_resolver import IndicatorNameResolver
 
-                # 価格データの場合
-                if operand.lower() in ["close", "high", "low", "open"]:
-                    # backtesting.pyのStrategyは属性名が小文字の価格を持たないため、data経由を優先
-                    if hasattr(strategy_instance, "data"):
-                        price_data = getattr(
-                            strategy_instance.data, operand.capitalize()
-                        )
-                        return _last_finite(price_data)
-                    # 念の為、戦略インスタンス直下の属性もフェイルセーフで参照
-                    if hasattr(strategy_instance, operand.lower()):
-                        return _last_finite(getattr(strategy_instance, operand.lower()))
+                resolved, value = IndicatorNameResolver.try_resolve_value(
+                    operand, strategy_instance
+                )
+                if resolved:
+                    return value
+                # 未解決の場合のみ警告
+                logger.warning(
+                    f"未対応のオペランド: {operand} (利用可能な属性: "
+                    f"{[attr for attr in dir(strategy_instance) if not attr.startswith('_')]})"
+                )
+                return 0.0
 
-                # 指標の場合（直接属性が最優先: IndicatorCalculatorで登録済み）
-                if hasattr(strategy_instance, operand):
-                    return _last_finite(getattr(strategy_instance, operand))
-
-                # 複数出力指標や期間付き表記のマッピング
-                if "_" in operand:
-                    base_indicator = operand.split("_")[0]
-
-                    # STOCH: %Kを使用
-                    if base_indicator == "STOCH" and hasattr(
-                        strategy_instance, "STOCH_0"
-                    ):
-                        return _last_finite(getattr(strategy_instance, "STOCH_0"))
-
-                    # CCI, RSI, SMA, EMA: ベース名にマップ
-                    if base_indicator in ["CCI", "RSI", "SMA", "EMA"] and hasattr(
-                        strategy_instance, base_indicator
-                    ):
-                        return _last_finite(getattr(strategy_instance, base_indicator))
-
-                    # MACD: メインライン
-                    if base_indicator == "MACD" and hasattr(
-                        strategy_instance, "MACD_0"
-                    ):
-                        return _last_finite(getattr(strategy_instance, "MACD_0"))
-
-                    # BB: Upper/Middle/Lower -> 2/1/0
-                    if operand.startswith("BB_"):
-                        # 想定フォーマット: BB_Upper_{period} / BB_Middle_{period} / BB_Lower_{period}
-                        # IndicatorCalculatorの登録順: 0=Upper, 1=Middle, 2=Lower
-                        base = operand.split("_")[1]
-                        if base == "Upper" and hasattr(strategy_instance, "BB_0"):
-                            return _last_finite(getattr(strategy_instance, "BB_0"))
-                        if base == "Middle" and hasattr(strategy_instance, "BB_1"):
-                            return _last_finite(getattr(strategy_instance, "BB_1"))
-                        if base == "Lower" and hasattr(strategy_instance, "BB_2"):
-                            return _last_finite(getattr(strategy_instance, "BB_2"))
-
-                # 単純名のマッピング（MACD, BB, STOCH）
-                if operand == "MACD" and hasattr(strategy_instance, "MACD_0"):
-                    return _last_finite(getattr(strategy_instance, "MACD_0"))
-                if operand == "BB" and hasattr(strategy_instance, "BB_1"):
-                    return _last_finite(getattr(strategy_instance, "BB_1"))
-                if operand == "STOCH" and hasattr(strategy_instance, "STOCH_0"):
-                    return _last_finite(getattr(strategy_instance, "STOCH_0"))
-
-            logger.warning(
-                f"未対応のオペランド: {operand} (利用可能な属性: {[attr for attr in dir(strategy_instance) if not attr.startswith('_')]})"
-            )
+            # それ以外は失敗
             return 0.0
-
         except Exception as e:
             logger.error(f"オペランド値取得エラー: {e}")
             return -1  # エラーを示す値

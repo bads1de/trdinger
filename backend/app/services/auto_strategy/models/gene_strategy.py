@@ -107,6 +107,16 @@ class Condition:
     operator: str  # 演算子
     right_operand: Union[Dict[str, Any], str, float]  # 右オペランド
 
+    def __post_init__(self):
+        """型の正規化: 数値はfloatへ（テストの型要件に合わせる）"""
+        try:
+            if isinstance(self.left_operand, int):
+                self.left_operand = float(self.left_operand)
+            if isinstance(self.right_operand, int):
+                self.right_operand = float(self.right_operand)
+        except Exception:
+            pass
+
     def validate(self) -> bool:
         """条件の妥当性を検証"""
         validator = GeneValidator()

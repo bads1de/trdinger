@@ -16,7 +16,7 @@ from database.connection import SessionLocal
 from ..managers.experiment_manager import ExperimentManager
 from ..models.ga_config import GAConfig
 from ..models.gene_strategy import StrategyGene
-from .experiment_persistence_service import ExperimentPersistenceService
+from ..persistence.experiment_persistence_service import ExperimentPersistenceService
 
 logger = logging.getLogger(__name__)
 

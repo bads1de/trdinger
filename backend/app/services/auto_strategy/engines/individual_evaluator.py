@@ -123,7 +123,17 @@ class IndividualEvaluator:
                 logger.warning("取引回数が0のため、低いフィットネス値を設定")
                 return 0.1  # 完全に0ではなく、わずかな値を返す
 
-            # 制約チェック
+            # 追加の制約チェック
+            min_trades_req = int(config.fitness_constraints.get("min_trades", 0))
+            if total_trades < min_trades_req:
+                return 0.0
+
+            max_dd_limit = config.fitness_constraints.get("max_drawdown_limit", None)
+            if isinstance(max_dd_limit, (float, int)) and max_drawdown > float(
+                max_dd_limit
+            ):
+                return 0.0
+
             if total_return < 0 or sharpe_ratio < config.fitness_constraints.get(
                 "min_sharpe_ratio", 0
             ):

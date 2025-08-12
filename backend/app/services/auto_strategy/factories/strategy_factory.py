@@ -168,77 +168,51 @@ class StrategyFactory:
                                 f"[DEBUG] ポジション方向: {position_direction} (ロング={long_entry_result}, ショート={short_entry_result})"
                             )
 
-                        # ポジション方向がNoneの場合はエントリーしない
+                        # ポリシーに委譲
                         if position_direction is None:
                             return
-
-                        # ストップロスとテイクプロフィットの価格を計算（ポジション方向を考慮）
-                        sl_price, tp_price = (
-                            factory.tpsl_calculator.calculate_tpsl_prices(
-                                current_price,
-                                stop_loss_pct,
-                                take_profit_pct,
-                                risk_management,
-                                gene,
-                                position_direction,
-                            )
+                        from app.services.auto_strategy.core.order_execution_policy import (
+                            OrderExecutionPolicy,
+                            ExecutionContext,
                         )
 
-                        # 動的ポジションサイズ計算
+                        sl_price, tp_price = OrderExecutionPolicy.compute_tpsl_prices(
+                            factory,
+                            current_price,
+                            risk_management,
+                            gene,
+                            position_direction,
+                        )
+
                         calculated_size = (
                             factory.position_sizing_helper.calculate_position_size(
                                 gene, current_equity, current_price, self.data
                             )
                         )
-
-                        # ポジション方向を適用
                         final_size = calculated_size * position_direction
 
-                        # デバッグログ: 最終ポジションサイズ
                         if self._debug_counter % 100 == 0:
                             logger.info(
                                 f"[DEBUG] 計算サイズ: {calculated_size}, 最終サイズ: {final_size}"
                             )
 
-                        # backtesting.pyの制約に合わせてポジションサイズを調整
-                        adjusted_size = self._adjust_position_size_for_backtesting(
-                            final_size
+                        adjusted_size = (
+                            OrderExecutionPolicy.adjust_position_size_for_backtesting(
+                                final_size
+                            )
                         )
-
-                        # 利用可能現金で購入可能かチェック
-                        # backtesting.pyの仕様:
-                        # - size < 1 の場合: 現金の割合として解釈（例: 0.5 は 50% を割当）
-                        # - size >= 1 の場合: 単位数として解釈（例: 2 は 2ユニット）
-                        abs_size = abs(adjusted_size)
-                        if abs_size < 1:
-                            required_cash = available_cash * abs_size
-                        else:
-                            required_cash = abs_size * current_price
-
-                        if adjusted_size != 0 and required_cash > available_cash * 0.99:
-                            # 買付可能な最大サイズに縮小してでもエントリーを試みる
-                            if abs_size < 1:
-                                # 割合指定の場合は99%にクリップ
-                                adjusted_size = (adjusted_size / abs_size) * 0.99
-                            else:
-                                # 単位指定の場合は現金で買える最大ユニット数に切り下げ
-                                max_units = int(
-                                    (available_cash * 0.99) // current_price
-                                )
-                                if max_units <= 0:
-                                    # 単位で買えない場合は資産比率で99%を割当
-                                    adjusted_size = 0.99 if adjusted_size > 0 else -0.99
-                                else:
-                                    adjusted_size = (
-                                        1 if adjusted_size > 0 else -1
-                                    ) * max_units
-
+                        ctx = ExecutionContext(
+                            current_price=current_price,
+                            current_equity=current_equity,
+                            available_cash=available_cash,
+                        )
+                        adjusted_size = OrderExecutionPolicy.ensure_affordable_size(
+                            adjusted_size, ctx
+                        )
                         if adjusted_size == 0:
                             return
 
-                        # 計算されたサイズで注文を実行
                         if self.gene.tpsl_gene and self.gene.tpsl_gene.enabled:
-                            # 既に計算済みのTP/SL価格を使用（二重計算を避ける）
                             if adjusted_size > 0:
                                 self.buy(size=adjusted_size, sl=sl_price, tp=tp_price)
                             else:
@@ -246,7 +220,6 @@ class StrategyFactory:
                                     size=abs(adjusted_size), sl=sl_price, tp=tp_price
                                 )
                         else:
-                            # TP/SL遺伝子がない場合は従来通り（SL/TPなし）
                             if adjusted_size > 0:
                                 self.buy(size=adjusted_size)
                             else:

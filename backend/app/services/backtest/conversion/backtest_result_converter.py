@@ -128,6 +128,10 @@ class BacktestResultConverter:
                 "buy_hold_return": self._safe_float_conversion(
                     stats.get("Buy & Hold Return [%]", 0)
                 ),
+                # Profit Factor（backtesting.py標準キー）
+                "profit_factor": self._safe_float_conversion(
+                    stats.get("Profit Factor", 0)
+                ),
             }
         except Exception as e:
             logger.warning(f"統計情報の抽出中にエラー: {e}")

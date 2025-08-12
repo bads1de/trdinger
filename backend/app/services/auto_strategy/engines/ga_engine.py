@@ -115,6 +115,17 @@ class GeneticAlgorithmEngine:
             # バックテスト設定を保存
             self.individual_evaluator.set_backtest_config(backtest_config)
 
+            # GeneGeneratorにtimeframe/symbolコンテキストを注入（STG生成のしきい値調整用）
+            try:
+                tf = backtest_config.get("timeframe")
+                sym = backtest_config.get("symbol")
+                if hasattr(self.gene_generator, "smart_condition_generator"):
+                    self.gene_generator.smart_condition_generator.set_context(
+                        timeframe=tf, symbol=sym
+                    )
+            except Exception:
+                pass
+
             # DEAP環境のセットアップ
             self.setup_deap(config)
 

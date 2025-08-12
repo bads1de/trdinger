@@ -70,6 +70,12 @@ INDICATOR_CHARACTERISTICS = {
         "zero_cross": True,
         "signal_line": True,
     },
+    "MACDEXT": {
+        "type": IndicatorType.MOMENTUM,
+        "range": None,  # 価格依存
+        "zero_cross": True,
+        "signal_line": True,
+    },
     "SMA": {
         "type": IndicatorType.TREND,
         "price_comparison": True,
@@ -417,6 +423,40 @@ class SmartConditionGenerator:
         """
         self.enable_smart_generation = enable_smart_generation
         self.logger = logger
+        # 生成時の相場・実行コンテキスト（timeframeやsymbol）
+        # regime_gating: レジーム条件をAND前置するか（デフォルトは無効化して約定性を優先）
+        # threshold_profile: 'aggressive' | 'normal' | 'conservative' で閾値チューニング
+        self.context = {
+            "timeframe": None,
+            "symbol": None,
+            "regime_gating": False,
+            "threshold_profile": "normal",
+        }
+        # geneに含まれる指標一覧をオプションで保持（素名比較時の安全な参照に利用）
+        self.indicators: List[IndicatorGene] | None = None
+
+    def set_context(
+        self,
+        *,
+        timeframe: str | None = None,
+        symbol: str | None = None,
+        regime_gating: bool | None = None,
+        threshold_profile: str | None = None,
+    ):
+        """生成コンテキストを設定（RSI閾値やレジーム切替に利用）"""
+        try:
+            if timeframe is not None:
+                self.context["timeframe"] = timeframe
+            if symbol is not None:
+                self.context["symbol"] = symbol
+            if regime_gating is not None:
+                self.context["regime_gating"] = bool(regime_gating)
+            if threshold_profile is not None:
+                if threshold_profile not in ("aggressive", "normal", "conservative"):
+                    threshold_profile = "normal"
+                self.context["threshold_profile"] = threshold_profile
+        except Exception:
+            pass
 
     def generate_balanced_conditions(
         self, indicators: List[IndicatorGene]
@@ -493,7 +533,10 @@ class SmartConditionGenerator:
                 def is_macd_zero_cross(c):
                     return (
                         isinstance(c.left_operand, str)
-                        and c.left_operand.startswith("MACD")
+                        and (
+                            c.left_operand.startswith("MACD")
+                            or c.left_operand.startswith("MACDEXT")
+                        )
                         and isinstance(c.right_operand, (int, float))
                         and (
                             (
@@ -620,6 +663,42 @@ class SmartConditionGenerator:
                 sh_or = self.generate_or_group("short", short_candidates)
                 if sh_or and all(not isinstance(x, _CG) for x in shorts):
                     shorts = shorts + sh_or
+
+                # レジーム切替（オプトイン: context.regime_gating=True のときのみ）
+                try:
+                    if getattr(self, "context", None) and self.context.get(
+                        "regime_gating"
+                    ):
+                        present = {ind.type for ind in indicators if ind.enabled}
+                        # トレンドゲート: ADX>25（あれば） + CHOP<50（あれば）
+                        trend_gate: list[Condition] = []
+                        if "ADX" in present:
+                            trend_gate.append(
+                                Condition(
+                                    left_operand="ADX", operator=">", right_operand=25
+                                )
+                            )
+                        if "CHOP" in present:
+                            trend_gate.append(
+                                Condition(
+                                    left_operand="CHOP", operator="<", right_operand=50
+                                )
+                            )
+                        # レンジゲート: CHOP>55（あれば）
+                        range_gate: list[Condition] = []
+                        if "CHOP" in present:
+                            range_gate.append(
+                                Condition(
+                                    left_operand="CHOP", operator=">", right_operand=55
+                                )
+                            )
+                        # ゲートは対象インジケータがある場合のみ適用（ANDで前置）
+                        if longs and trend_gate:
+                            longs = trend_gate + longs
+                        if shorts and range_gate:
+                            shorts = range_gate + shorts
+                except Exception:
+                    pass
             except Exception:
                 pass
 
@@ -667,6 +746,7 @@ class SmartConditionGenerator:
                 return isinstance(c.left_operand, str) and (
                     c.left_operand.startswith("RSI")
                     or c.left_operand.startswith("MACD")
+                    or c.left_operand.startswith("MACDEXT")
                 )
 
             pool = [c for c in candidates if is_price_vs_trend(c)]
@@ -828,32 +908,262 @@ class SmartConditionGenerator:
         return categorized
 
     def _generic_long_conditions(self, ind: IndicatorGene) -> List[Condition]:
-        """レジストリのスケール/カテゴリを使った汎用ロング条件"""
+        """レジストリのスケール/特性ベースで汎用ロング条件を生成（閾値拡充）"""
         name = ind.type
         cfg = indicator_registry.get_indicator_config(name)
-        if (
-            cfg
-            and getattr(cfg, "scale_type", None) == IndicatorScaleType.OSCILLATOR_0_100
+        scale = getattr(cfg, "scale_type", None) if cfg else None
+
+        # 価格系は素直に価格比較
+        if name in (
+            "SMA",
+            "EMA",
+            "MAMA",
+            "MA",
+            "HT_TRENDLINE",
+            "WMA",
+            "KAMA",
+            "ZLEMA",
+            "TEMA",
+            "DEMA",
+            "TRIMA",
+            "MIDPOINT",
+            "VWMA",
         ):
-            # 0-100系は中立→上抜け
-            return [Condition(left_operand=name, operator=">", right_operand=50)]
-        # price ratio/absolute 系は価格比較に寄せる
-        if name in ("SMA", "EMA", "MAMA", "MA", "HT_TRENDLINE"):
-            return [Condition(left_operand="close", operator=">", right_operand=name)]
-        # その他はシンプルにゼロ上
-        return [Condition(left_operand=name, operator=">", right_operand=0)]
+            # 右オペランドは gene に含まれるトレンド名に限定。無ければ 'open' に退避
+            trend_names_in_gene = [
+                ind.type
+                for ind in (self.indicators or [])
+                if getattr(ind, "enabled", True)
+            ]
+            right_name = name if name in trend_names_in_gene else "open"
+            return [
+                Condition(left_operand="close", operator=">", right_operand=right_name)
+            ]
+
+        # 0-100オシレーター系（RSI/MFI/STOCH/KDJ/QQE/ADX等）
+        if scale == IndicatorScaleType.OSCILLATOR_0_100:
+            profile = (
+                (self.context or {}).get("threshold_profile", "normal")
+                if hasattr(self, "context")
+                else "normal"
+            )
+            if name in {"RSI", "STOCH", "STOCHRSI", "KDJ", "QQE", "MFI"}:
+                # aggressive: 51, normal: 54, conservative: 58（ロング側をやや緩めて成立性を向上）
+                thr = 54
+                if profile == "aggressive":
+                    thr = 51
+                elif profile == "conservative":
+                    thr = 58
+                return [
+                    Condition(left_operand=name, operator=">", right_operand=float(thr))
+                ]
+            if name == "ADX":
+                # ADXは方向ではなくトレンド強度 → フィルタとして利用
+                thr = (
+                    20
+                    if profile == "aggressive"
+                    else (25 if profile == "conservative" else 20)
+                )
+                return [
+                    Condition(left_operand=name, operator=">", right_operand=float(thr))
+                ]
+            # デフォルト
+            thr = (
+                48
+                if profile == "aggressive"
+                else (52 if profile == "conservative" else 50)
+            )
+            return [
+                Condition(left_operand=name, operator=">", right_operand=float(thr))
+            ]
+
+        # ±100系（CCI/WILLR/AROONOSC等）
+        if scale == IndicatorScaleType.OSCILLATOR_PLUS_MINUS_100:
+            profile = (
+                (self.context or {}).get("threshold_profile", "normal")
+                if hasattr(self, "context")
+                else "normal"
+            )
+            if name == "CCI":
+                # 方向性のある強めのしきい値
+                thr = (
+                    -5
+                    if profile == "aggressive"
+                    else (5 if profile == "conservative" else 0)
+                )
+                return [
+                    Condition(left_operand=name, operator=">", right_operand=float(thr))
+                ]
+            if name == "WILLR":
+                # -100..0（-50の上は相対的に強め）
+                thr = (
+                    -60
+                    if profile == "aggressive"
+                    else (-40 if profile == "conservative" else -50)
+                )
+                return [
+                    Condition(left_operand=name, operator=">", right_operand=float(thr))
+                ]
+            # AO, AROONOSC 等はゼロ上
+            thr = (
+                -2
+                if profile == "aggressive"
+                else (2 if profile == "conservative" else 0)
+            )
+            return [
+                Condition(left_operand=name, operator=">", right_operand=float(thr))
+            ]
+
+        # ゼロセンター系（MACD/PPO/APO/TRIX/TSIなど）
+        if scale == IndicatorScaleType.MOMENTUM_ZERO_CENTERED:
+            thr = (
+                -0.0
+                if (
+                    hasattr(self, "context")
+                    and (self.context or {}).get("threshold_profile") == "aggressive"
+                )
+                else 0
+            )
+            return [
+                Condition(left_operand=name, operator=">", right_operand=float(thr))
+            ]
+
+        # 比率/絶対価格
+        # 注意: PRICE_RATIO/PRICE_ABSOLUTE の中でもトレンド系以外（ATR/TRANGE/STDDEV等）は価格との直接比較は不適切
+        # ここでは汎用生成を行わずスキップし、他のロジック（価格vsトレンド補完等）に委ねる
+        if scale in {IndicatorScaleType.PRICE_RATIO, IndicatorScaleType.PRICE_ABSOLUTE}:
+            return []
+
+        # フォールバック
+        thr = (
+            -0.0
+            if (
+                hasattr(self, "context")
+                and (self.context or {}).get("threshold_profile") == "aggressive"
+            )
+            else 0
+        )
+        return [Condition(left_operand=name, operator=">", right_operand=float(thr))]
 
     def _generic_short_conditions(self, ind: IndicatorGene) -> List[Condition]:
+        """レジストリのスケール/特性ベースで汎用ショート条件を生成（閾値拡充）"""
         name = ind.type
         cfg = indicator_registry.get_indicator_config(name)
-        if (
-            cfg
-            and getattr(cfg, "scale_type", None) == IndicatorScaleType.OSCILLATOR_0_100
+        scale = getattr(cfg, "scale_type", None) if cfg else None
+
+        # 価格系は素直に価格比較
+        if name in (
+            "SMA",
+            "EMA",
+            "MAMA",
+            "MA",
+            "HT_TRENDLINE",
+            "WMA",
+            "KAMA",
+            "ZLEMA",
+            "TEMA",
+            "DEMA",
+            "TRIMA",
+            "MIDPOINT",
+            "VWMA",
         ):
-            return [Condition(left_operand=name, operator="<", right_operand=50)]
-        if name in ("SMA", "EMA", "MAMA", "MA", "HT_TRENDLINE"):
-            return [Condition(left_operand="close", operator="<", right_operand=name)]
-        return [Condition(left_operand=name, operator="<", right_operand=0)]
+            # 右オペランドは gene に含まれるトレンド名に限定。無ければ 'open' に退避
+            trend_names_in_gene = [
+                ind.type
+                for ind in (self.indicators or [])
+                if getattr(ind, "enabled", True)
+            ]
+            right_name = name if name in trend_names_in_gene else "open"
+            return [
+                Condition(left_operand="close", operator="<", right_operand=right_name)
+            ]
+
+        # 0-100オシレーター系
+        if scale == IndicatorScaleType.OSCILLATOR_0_100:
+            profile = (
+                (self.context or {}).get("threshold_profile", "normal")
+                if hasattr(self, "context")
+                else "normal"
+            )
+            if name in {"RSI", "STOCH", "STOCHRSI", "KDJ", "QQE", "MFI"}:
+                # aggressive: 49, normal: 46, conservative: 42（ショート側もやや緩め）
+                thr = 46
+                if profile == "aggressive":
+                    thr = 49
+                elif profile == "conservative":
+                    thr = 42
+                return [
+                    Condition(left_operand=name, operator="<", right_operand=float(thr))
+                ]
+            if name == "ADX":
+                # トレンド強度フィルタ（方向性は持たない） → 高すぎる時のみ回避したい場合は別ロジック
+                thr = float(
+                    55
+                    if profile == "aggressive"
+                    else (50 if profile == "normal" else 45)
+                )
+                return [
+                    Condition(left_operand=name, operator="<", right_operand=float(thr))
+                ]
+            thr = (
+                52
+                if profile == "aggressive"
+                else (48 if profile == "conservative" else 50)
+            )
+            return [
+                Condition(left_operand=name, operator="<", right_operand=float(thr))
+            ]
+
+        # ±100系
+        if scale == IndicatorScaleType.OSCILLATOR_PLUS_MINUS_100:
+            profile = (
+                (self.context or {}).get("threshold_profile", "normal")
+                if hasattr(self, "context")
+                else "normal"
+            )
+            if name == "CCI":
+                thr = (
+                    5
+                    if profile == "aggressive"
+                    else (-5 if profile == "conservative" else 0)
+                )
+                return [
+                    Condition(left_operand=name, operator="<", right_operand=float(thr))
+                ]
+            if name == "WILLR":
+                thr = (
+                    -40
+                    if profile == "aggressive"
+                    else (-60 if profile == "conservative" else -50)
+                )
+                return [
+                    Condition(left_operand=name, operator="<", right_operand=float(thr))
+                ]
+            thr = (
+                2
+                if profile == "aggressive"
+                else (-2 if profile == "conservative" else 0)
+            )
+            return [
+                Condition(left_operand=name, operator="<", right_operand=float(thr))
+            ]
+
+        # ゼロセンター系
+        if scale == IndicatorScaleType.MOMENTUM_ZERO_CENTERED:
+            thr = 0.0
+            return [
+                Condition(left_operand=name, operator="<", right_operand=float(thr))
+            ]
+
+        # 比率/絶対価格
+        # 注意: PRICE_RATIO/PRICE_ABSOLUTE の中でもトレンド系以外（ATR/TRANGE/STDDEV等）は価格との直接比較は不適切
+        # ここでは汎用生成を行わずスキップ
+        if scale in {IndicatorScaleType.PRICE_RATIO, IndicatorScaleType.PRICE_ABSOLUTE}:
+            return []
+
+        # フォールバック
+        thr = 0.0
+        return [Condition(left_operand=name, operator="<", right_operand=float(thr))]
 
     def _ma_candidates(self, indicators: List[IndicatorGene]) -> List[IndicatorGene]:
         ma_types = {
@@ -1054,10 +1364,21 @@ class SmartConditionGenerator:
                             right_operand=threshold,
                         )
                     )
-                elif momentum_name in {"MACD", "PPO", "APO", "TRIX", "TSI"}:
+                elif momentum_name in {"MACD", "MACDEXT", "PPO", "APO", "TRIX", "TSI"}:
+                    # MACD/MACDEXTショートはゼロ下 or シグナル下で評価器が扱えるようにメイン名で
                     short_conditions.append(
                         Condition(
-                            left_operand=momentum_name, operator="<", right_operand=0
+                            left_operand=(
+                                "MACD_0"
+                                if momentum_name == "MACD"
+                                else (
+                                    "MACDEXT_0"
+                                    if momentum_name == "MACDEXT"
+                                    else momentum_name
+                                )
+                            ),
+                            operator="<",
+                            right_operand=0,
                         )
                     )
 
@@ -1095,32 +1416,33 @@ class SmartConditionGenerator:
                     and c.right_operand in ("SMA", "EMA", "MAMA", "MA", "HT_TRENDLINE")
                     for c in side_conds
                 )
-                if not has_price_vs_trend and indicators_by_type[IndicatorType.TREND]:
-                    # 優先: SMA/EMA/MAMA/MA -> 無ければ任意のトレンド
-                    pref_names = {"SMA", "EMA", "MAMA", "MA"}
-                    trend_pool = [
-                        ind
-                        for ind in indicators_by_type[IndicatorType.TREND]
-                        if ind.type in pref_names
-                    ] or list(indicators_by_type[IndicatorType.TREND])
-                    trend_indicator = random.choice(trend_pool)
-                    trend_name = trend_indicator.type
-                    if prefer == "long":
-                        side_conds.append(
-                            Condition(
-                                left_operand="close",
-                                operator=">",
-                                right_operand=trend_name,
-                            )
+                if not has_price_vs_trend:
+                    # トレンド指標があればそれを優先、無ければ価格系列(open)に退避
+                    chosen_name = None
+                    if indicators_by_type[IndicatorType.TREND]:
+                        # gene に含まれるトレンド系のみを使う
+                        pref_names = {"SMA", "EMA", "MAMA", "MA"}
+                        trend_names_in_gene = [
+                            ind.type
+                            for ind in indicators_by_type[IndicatorType.TREND]
+                            if ind.enabled and ind.type in pref_names
+                        ] or [
+                            ind.type
+                            for ind in indicators_by_type[IndicatorType.TREND]
+                            if ind.enabled
+                        ]
+                        if trend_names_in_gene:
+                            chosen_name = random.choice(trend_names_in_gene)
+                    if not chosen_name:
+                        chosen_name = "open"
+
+                    side_conds.append(
+                        Condition(
+                            left_operand="close",
+                            operator=">" if prefer == "long" else "<",
+                            right_operand=chosen_name,
                         )
-                    else:
-                        side_conds.append(
-                            Condition(
-                                left_operand="close",
-                                operator="<",
-                                right_operand=trend_name,
-                            )
-                        )
+                    )
 
             _ensure_price_vs_trend(long_conditions, "long")
             _ensure_price_vs_trend(short_conditions, "short")
@@ -1193,20 +1515,34 @@ class SmartConditionGenerator:
         indicator_name = indicator.type
 
         if indicator.type == "RSI":
-            # RSI: 売られすぎ領域でロング
-            threshold = random.uniform(25, 45)
+            # RSI: 時間軸依存閾値（例: 15m/1h/4hで 55/60/65 を中心にゾーン化）
+            tf = (
+                (self.context or {}).get("timeframe")
+                if hasattr(self, "context")
+                else None
+            )
+            if tf in ("15m", "15min", "15"):
+                base = 55
+            elif tf in ("1h", "60"):
+                base = 60
+            elif tf in ("4h", "240"):
+                base = 65
+            else:
+                base = 60
+            # ロングは売られすぎ or 中立下限割れからの回復狙い
             return [
                 Condition(
-                    left_operand=indicator_name, operator="<", right_operand=threshold
+                    left_operand=indicator_name,
+                    operator="<",
+                    right_operand=max(25, base - 25),
                 )
             ]
         elif indicator.type == "STOCH":
-            # STOCH: 売られすぎ領域でロング
-            threshold = random.uniform(15, 25)
+            # STOCH: %K/%D クロス + ゾーン（20/80）
+            # 評価器側の簡便性のため、%K(=STOCH_0), %D(=STOCH_1) 名で扱う
             return [
-                Condition(
-                    left_operand=indicator_name, operator="<", right_operand=threshold
-                )
+                # ゾーン条件（売られすぎ）
+                Condition(left_operand="STOCH_0", operator="<", right_operand=20),
             ]
         elif indicator.type == "CCI":
             # CCI: 売られすぎ領域でロング
@@ -1216,10 +1552,17 @@ class SmartConditionGenerator:
                     left_operand=indicator_name, operator="<", right_operand=threshold
                 )
             ]
-        elif indicator.type == "MACD":
-            # MACD: ゼロライン上抜けでロング
+        elif indicator.type in {"MACD", "MACDEXT"}:
+            # MACD/MACDEXT: ゼロライン or シグナルクロスのハイブリッド
+            # 評価器では *_0=メイン, *_1=シグナル
             return [
-                Condition(left_operand=indicator_name, operator=">", right_operand=0)
+                Condition(
+                    left_operand=(
+                        "MACD_0" if indicator.type == "MACD" else "MACDEXT_0"
+                    ),
+                    operator=">",
+                    right_operand=0,
+                )
             ]
         else:
             return []
