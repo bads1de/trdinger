@@ -70,6 +70,9 @@ def setup_momentum_indicators():
         result_handler="macd_handler",
         scale_type=IndicatorScaleType.MOMENTUM_ZERO_CENTERED,
         category="momentum",
+        output_names=["MACD_0", "MACD_1", "MACD_2"],  # MACD, Signal, Histogram
+        default_output="MACD_0",
+        aliases=["MACD"],
     )
     macd_config.add_parameter(
         ParameterConfig(
@@ -109,6 +112,9 @@ def setup_momentum_indicators():
         result_handler="stoch_handler",
         scale_type=IndicatorScaleType.OSCILLATOR_0_100,
         category="momentum",
+        output_names=["STOCH_0", "STOCH_1"],  # %K, %D
+        default_output="STOCH_0",  # %K
+        aliases=["STOCH"],
     )
     stoch_config.add_parameter(
         ParameterConfig(
@@ -1109,6 +1115,9 @@ def setup_volatility_indicators():
         result_handler="bb_handler",
         scale_type=IndicatorScaleType.PRICE_RATIO,
         category="volatility",
+        output_names=["BB_0", "BB_1", "BB_2"],  # Upper, Middle, Lower
+        default_output="BB_1",  # Middle band
+        aliases=["BB", "BBANDS", "BB_Middle"],
     )
     bb_config.add_parameter(
         ParameterConfig(

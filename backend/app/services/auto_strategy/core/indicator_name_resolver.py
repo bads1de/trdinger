@@ -3,11 +3,18 @@ IndicatorNameResolver
 
 - 文字列オペランドを Strategy インスタンスの属性に解決し、値を取得する責務を一元化
 - ConditionEvaluator から切り離してテーブル化/関数化しやすくする
+- 動的解決により、ハードコードされたマッピングを排除（リファクタリング改善）
 """
+
 from __future__ import annotations
 
+import logging
 from typing import Tuple
 import numpy as np
+
+from app.services.indicators.config.indicator_config import indicator_registry
+
+logger = logging.getLogger(__name__)
 
 
 class IndicatorNameResolver:
@@ -47,98 +54,101 @@ class IndicatorNameResolver:
                     price_data = getattr(strategy_instance.data, operand.capitalize())
                     return True, cls._last_finite(price_data)
                 if hasattr(strategy_instance, operand.lower()):
-                    return True, cls._last_finite(getattr(strategy_instance, operand.lower()))
+                    return True, cls._last_finite(
+                        getattr(strategy_instance, operand.lower())
+                    )
 
             # Strategy 直下の属性（IndicatorCalculator登録済み）
             if hasattr(strategy_instance, operand):
                 return True, cls._last_finite(getattr(strategy_instance, operand))
 
-            # 複数出力・期間付き表記
-            if "_" in operand:
-                base_indicator = operand.split("_")[0]
-
-                # STOCH 系: %Kを使用
-                if base_indicator == "STOCH" and hasattr(strategy_instance, "STOCH_0"):
-                    return True, cls._last_finite(getattr(strategy_instance, "STOCH_0"))
-                if base_indicator == "STOCHF" and hasattr(strategy_instance, "STOCHF_0"):
-                    return True, cls._last_finite(getattr(strategy_instance, "STOCHF_0"))
-                if base_indicator == "STOCHRSI" and hasattr(strategy_instance, "STOCHRSI_0"):
-                    return True, cls._last_finite(getattr(strategy_instance, "STOCHRSI_0"))
-
-                # CCI, RSI, SMA, EMA: ベース名にマップ
-                if base_indicator in ["CCI", "RSI", "SMA", "EMA"] and hasattr(
-                    strategy_instance, base_indicator
-                ):
-                    return True, cls._last_finite(getattr(strategy_instance, base_indicator))
-
-                # MACD/MACDEXT: メインライン
-                if base_indicator == "MACD" and hasattr(strategy_instance, "MACD_0"):
-                    return True, cls._last_finite(getattr(strategy_instance, "MACD_0"))
-                if base_indicator == "MACDEXT" and hasattr(strategy_instance, "MACDEXT_0"):
-                    return True, cls._last_finite(getattr(strategy_instance, "MACDEXT_0"))
-
-                # BB: Upper/Middle/Lower -> 0/1/2
-                if operand.startswith("BB_"):
-                    base = operand.split("_")[1]
-                    if base == "Upper" and hasattr(strategy_instance, "BB_0"):
-                        return True, cls._last_finite(getattr(strategy_instance, "BB_0"))
-                    if base == "Middle" and hasattr(strategy_instance, "BB_1"):
-                        return True, cls._last_finite(getattr(strategy_instance, "BB_1"))
-                    if base == "Lower" and hasattr(strategy_instance, "BB_2"):
-                        return True, cls._last_finite(getattr(strategy_instance, "BB_2"))
-
-            # 単純名/コンポーネント名のマッピング
-            if operand in ("MACD", "MACD_0") and hasattr(strategy_instance, "MACD_0"):
-                return True, cls._last_finite(getattr(strategy_instance, "MACD_0"))
-            if operand == "MACD_1" and hasattr(strategy_instance, "MACD_1"):
-                return True, cls._last_finite(getattr(strategy_instance, "MACD_1"))
-            if operand in ("MACDEXT", "MACDEXT_0") and hasattr(
-                strategy_instance, "MACDEXT_0"
-            ):
-                return True, cls._last_finite(getattr(strategy_instance, "MACDEXT_0"))
-            if operand == "MACDEXT_1" and hasattr(strategy_instance, "MACDEXT_1"):
-                return True, cls._last_finite(getattr(strategy_instance, "MACDEXT_1"))
-            if operand == "BB" and hasattr(strategy_instance, "BB_1"):
-                return True, cls._last_finite(getattr(strategy_instance, "BB_1"))
-            # KELTNER: Middle をデフォルト
-            if operand == "KELTNER" and hasattr(strategy_instance, "KELTNER_1"):
-                return True, cls._last_finite(getattr(strategy_instance, "KELTNER_1"))
-
-            if operand in ("STOCH", "STOCH_0") and hasattr(strategy_instance, "STOCH_0"):
-                return True, cls._last_finite(getattr(strategy_instance, "STOCH_0"))
-            if operand == "STOCH_1" and hasattr(strategy_instance, "STOCH_1"):
-                return True, cls._last_finite(getattr(strategy_instance, "STOCH_1"))
-            if operand in ("STOCHF", "STOCHF_0") and hasattr(strategy_instance, "STOCHF_0"):
-                return True, cls._last_finite(getattr(strategy_instance, "STOCHF_0"))
-            if operand == "STOCHF_1" and hasattr(strategy_instance, "STOCHF_1"):
-                return True, cls._last_finite(getattr(strategy_instance, "STOCHF_1"))
-            if operand in ("STOCHRSI", "STOCHRSI_0") and hasattr(
-                strategy_instance, "STOCHRSI_0"
-            ):
-                return True, cls._last_finite(getattr(strategy_instance, "STOCHRSI_0"))
-            if operand == "STOCHRSI_1" and hasattr(strategy_instance, "STOCHRSI_1"):
-                return True, cls._last_finite(getattr(strategy_instance, "STOCHRSI_1"))
-
-            # AROON（Up/Downの2本）: base名はUp(=0)
-            if operand in ("AROON", "AROON_0") and hasattr(strategy_instance, "AROON_0"):
-                return True, cls._last_finite(getattr(strategy_instance, "AROON_0"))
-            if operand == "AROON_1" and hasattr(strategy_instance, "AROON_1"):
-                return True, cls._last_finite(getattr(strategy_instance, "AROON_1"))
-
-            # RVGI（メイン/シグナルの2本）: base=0
-            if operand in ("RVGI", "RVGI_0") and hasattr(strategy_instance, "RVGI_0"):
-                return True, cls._last_finite(getattr(strategy_instance, "RVGI_0"))
-            if operand == "RVGI_1" and hasattr(strategy_instance, "RVGI_1"):
-                return True, cls._last_finite(getattr(strategy_instance, "RVGI_1"))
-
-            # その他ゼロセンター系（PPO/APO/TRIX/TSIなど）
-            if operand in ("PPO", "APO", "TRIX", "TSI") and hasattr(
-                strategy_instance, operand
-            ):
-                return True, cls._last_finite(getattr(strategy_instance, operand))
+            # 動的指標名解決（リファクタリング改善）
+            resolved_name = cls._resolve_indicator_name_dynamically(
+                operand, strategy_instance
+            )
+            if resolved_name:
+                return True, cls._last_finite(getattr(strategy_instance, resolved_name))
 
             # 未解決
             return False, 0.0
-        except Exception:
+        except Exception as e:
+            logger.warning(f"Error resolving operand '{operand}': {e}")
             return False, 0.0
 
+    @classmethod
+    def _resolve_indicator_name_dynamically(
+        cls, operand: str, strategy_instance
+    ) -> str:
+        """
+        動的指標名解決（リファクタリング改善）
+
+        指標レジストリを使用してハードコードされたマッピングを排除し、
+        動的に指標名を解決します。
+
+        Args:
+            operand: 解決対象の名前（例: "MACD_0", "BB_1", "RSI"）
+            strategy_instance: Strategy インスタンス
+
+        Returns:
+            解決された属性名、または None
+        """
+        try:
+            # 指標レジストリから解決を試行
+            resolved_indicator = indicator_registry.resolve_indicator_name(operand)
+            if resolved_indicator:
+                # 出力インデックスを取得
+                output_index = indicator_registry.get_output_index(operand)
+
+                if output_index is not None:
+                    # インデックス付き名前（例: "MACD_0"）
+                    attr_name = f"{resolved_indicator}_{output_index}"
+                    if hasattr(strategy_instance, attr_name):
+                        return attr_name
+                else:
+                    # 単純名またはデフォルト出力
+                    # まず単純名を試行
+                    if hasattr(strategy_instance, resolved_indicator):
+                        return resolved_indicator
+
+                    # デフォルト出力名を試行
+                    default_output = indicator_registry.get_default_output_name(
+                        resolved_indicator
+                    )
+                    if default_output and hasattr(strategy_instance, default_output):
+                        return default_output
+
+            # 特別なケース: BB の Upper/Middle/Lower マッピング
+            if operand.startswith("BB_"):
+                parts = operand.split("_")
+                if len(parts) >= 2:
+                    base = parts[1]
+                    mapping = {"Upper": "BB_0", "Middle": "BB_1", "Lower": "BB_2"}
+                    mapped_name = mapping.get(base)
+                    if mapped_name and hasattr(strategy_instance, mapped_name):
+                        return mapped_name
+
+            # 複数出力指標の処理
+            if "_" in operand:
+                base_indicator = operand.split("_")[0]
+
+                # 指標レジストリから基本指標を解決
+                resolved_base = indicator_registry.resolve_indicator_name(
+                    base_indicator
+                )
+                if resolved_base:
+                    # デフォルト出力を使用
+                    default_output = indicator_registry.get_default_output_name(
+                        resolved_base
+                    )
+                    if default_output and hasattr(strategy_instance, default_output):
+                        return default_output
+
+                    # ベース名を直接試行
+                    if hasattr(strategy_instance, resolved_base):
+                        return resolved_base
+
+            return None
+
+        except Exception as e:
+            logger.warning(f"動的指標名解決エラー '{operand}': {e}")
+            return None

@@ -208,56 +208,16 @@ class StrategyGene:
 
 
 def encode_gene_to_list(gene: StrategyGene) -> List[float]:
-    """戦略遺伝子をGA用数値リストにエンコード"""
-    from .gene_encoding import GeneEncoder
+    """戦略遺伝子をGA用数値リストにエンコード（リファクタリング改善）"""
+    from .gene_encoder import GeneEncoder
 
     encoder = GeneEncoder()
     return encoder.encode_strategy_gene_to_list(gene)
 
 
 def decode_list_to_gene(encoded: List[float]) -> StrategyGene:
-    """GA用数値リストから戦略遺伝子にデコード"""
-    from .gene_encoding import GeneEncoder
+    """GA用数値リストから戦略遺伝子にデコード（リファクタリング改善）"""
+    from .gene_decoder import GeneDecoder
 
-    encoder = GeneEncoder()
-    return encoder.decode_list_to_strategy_gene(encoded, StrategyGene)
-
-
-def crossover_strategy_genes(
-    parent1: StrategyGene, parent2: StrategyGene
-) -> tuple[StrategyGene, StrategyGene]:
-    """
-    戦略遺伝子の交叉
-
-    指標遺伝子、条件、TP/SL遺伝子すべてを含む完全な交叉を実行します。
-
-    Args:
-        parent1: 親1の戦略遺伝子
-        parent2: 親2の戦略遺伝子
-
-    Returns:
-        交叉後の子1、子2の戦略遺伝子のタプル
-    """
-    from ..operators.genetic_operators import crossover_strategy_genes as _crossover
-
-    return _crossover(parent1, parent2)
-
-
-def mutate_strategy_gene(
-    gene: StrategyGene, mutation_rate: float = 0.1
-) -> StrategyGene:
-    """
-    戦略遺伝子の突然変異
-
-    指標遺伝子、条件、TP/SL遺伝子すべてを含む完全な突然変異を実行します。
-
-    Args:
-        gene: 突然変異対象の戦略遺伝子
-        mutation_rate: 突然変異率
-
-    Returns:
-        突然変異後の戦略遺伝子
-    """
-    from ..operators.genetic_operators import mutate_strategy_gene as _mutate
-
-    return _mutate(gene, mutation_rate)
+    decoder = GeneDecoder()
+    return decoder.decode_list_to_strategy_gene(encoded, StrategyGene)

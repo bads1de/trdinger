@@ -79,6 +79,15 @@ class IndicatorConfig:
     category: Optional[str] = None  # 指標カテゴリ（例: trend, momentum）
     needs_normalization: bool = False  # 入力データの正規化が必要か
 
+    # 名前解決用メタデータ（リファクタリング追加）
+    output_names: List[str] = field(
+        default_factory=list
+    )  # 出力名リスト（例: ["MACD_0", "MACD_1", "MACD_2"]）
+    default_output: Optional[str] = None  # デフォルト出力名（例: "MACD_0"）
+    aliases: List[str] = field(
+        default_factory=list
+    )  # エイリアス（例: ["MACD", "BB_Middle"]）
+
     def add_parameter(self, param_config: ParameterConfig) -> None:
         """パラメータを追加"""
         self.parameters[param_config.name] = param_config
@@ -289,6 +298,85 @@ class IndicatorConfigRegistry:
 
         # 設定が見つからない場合のフォールバック
         return indicator_name
+
+    def resolve_indicator_name(self, name: str) -> Optional[str]:
+        """
+        指標名を動的に解決
+
+        Args:
+            name: 解決対象の名前（例: "MACD_0", "BB_1", "RSI"）
+
+        Returns:
+            解決された指標名、または None
+        """
+        # 直接的な指標名チェック
+        if name in self._configs:
+            return name
+
+        # エイリアスチェック
+        for indicator_name, config in self._configs.items():
+            if name in config.aliases:
+                return indicator_name
+
+        # 出力名チェック（例: "MACD_0" -> "MACD"）
+        for indicator_name, config in self._configs.items():
+            if name in config.output_names:
+                return indicator_name
+
+        # パターンマッチング（例: "MACD_0" -> "MACD"）
+        if "_" in name:
+            base_name = name.split("_")[0]
+            if base_name in self._configs:
+                return base_name
+
+        # フォールバック指標チェック
+        if name in self._fallback_indicators:
+            fallback_name = self._fallback_indicators[name]
+            logger.info(f"未対応指標 {name} を {fallback_name} で代替")
+            return fallback_name
+
+        return None
+
+    def get_output_index(self, name: str) -> Optional[int]:
+        """
+        出力インデックスを取得
+
+        Args:
+            name: 出力名（例: "MACD_0", "BB_1"）
+
+        Returns:
+            出力インデックス、または None
+        """
+        # パターンマッチング（例: "MACD_0" -> 0）
+        if "_" in name:
+            parts = name.split("_")
+            if len(parts) >= 2:
+                try:
+                    return int(parts[-1])
+                except ValueError:
+                    pass
+
+        # 設定から検索
+        for config in self._configs.values():
+            if name in config.output_names:
+                return config.output_names.index(name)
+
+        return None
+
+    def get_default_output_name(self, indicator_name: str) -> Optional[str]:
+        """
+        デフォルト出力名を取得
+
+        Args:
+            indicator_name: 指標名
+
+        Returns:
+            デフォルト出力名、または None
+        """
+        config = self.get_indicator_config(indicator_name)
+        if config:
+            return config.default_output or config.indicator_name
+        return None
 
 
 # グローバルレジストリインスタンス

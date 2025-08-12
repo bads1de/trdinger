@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 class IndividualCreator:
     """
     個体生成器
-    
+
     遺伝的アルゴリズムの個体生成を担当します。
     """
 
@@ -29,8 +29,8 @@ class IndividualCreator:
             # RandomGeneGeneratorを使用して遺伝子を生成
             gene = self.gene_generator.generate_random_gene()
 
-            # 遺伝子をエンコード
-            from ..models.gene_encoding import GeneEncoder
+            # 遺伝子をエンコード（リファクタリング改善）
+            from ..models.gene_encoder import GeneEncoder
 
             gene_encoder = GeneEncoder()
             encoded_gene = gene_encoder.encode_strategy_gene_to_list(gene)

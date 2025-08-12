@@ -23,157 +23,12 @@ class GeneValidator:
 
     def __init__(self):
         """初期化"""
-        self.valid_indicator_types = self._get_valid_indicator_types()
-        self.valid_operators = self._get_valid_operators()
-        self.valid_data_sources = self._get_valid_data_sources()
-
-    def _get_valid_indicator_types(self) -> List[str]:
-        """有効な指標タイプのリストを取得"""
         # 共通定数から取得して一貫性を保つ
-        try:
-            from app.services.indicators.config.indicator_config import (
-                indicator_registry,
-            )
+        from ..utils.constants import OPERATORS, DATA_SOURCES, VALID_INDICATOR_TYPES
 
-            return indicator_registry.list_indicators()
-        except ImportError:
-            # フォールバック: 包括的な指標リスト
-            return [
-                # トレンド系指標
-                "SMA",
-                "EMA",
-                "WMA",
-                "DEMA",
-                "TEMA",
-                "TRIMA",
-                "KAMA",
-                "MAMA",
-                "T3",
-                "MA",
-                "MACD",
-                "MACDEXT",
-                "MACDFIX",
-                "BB",
-                "HT_TRENDLINE",
-                # モメンタム系指標
-                "RSI",
-                "STOCH",
-                "STOCHF",
-                "STOCHRSI",
-                "CCI",
-                "ADX",
-                "ADXR",
-                "DX",
-                "PLUS_DI",
-                "MINUS_DI",
-                "PLUS_DM",
-                "MINUS_DM",
-                "WILLR",
-                "MFI",
-                "BOP",
-                "ROC",
-                "ROCP",
-                "ROCR",
-                "ROCR100",
-                "MOM",
-                "MOMENTUM",
-                "CMO",
-                "TRIX",
-                "APO",
-                "PPO",
-                "ULTOSC",
-                "AROON",
-                "AROONOSC",
-                # ボラティリティ系指標
-                "ATR",
-                "NATR",
-                "TRANGE",
-                "STDDEV",
-                "VAR",
-                # ボリューム系指標
-                "OBV",
-                "AD",
-                "ADOSC",
-                # 統計系指標
-                "BETA",
-                "CORREL",
-                "LINEARREG",
-                "LINEARREG_ANGLE",
-                "LINEARREG_INTERCEPT",
-                "LINEARREG_SLOPE",
-                "TSF",
-                # 数学変換系指標
-                "ACOS",
-                "ASIN",
-                "ATAN",
-                "COS",
-                "COSH",
-                "SIN",
-                "SINH",
-                "TAN",
-                "TANH",
-                "CEIL",
-                "EXP",
-                "FLOOR",
-                "LN",
-                "LOG10",
-                "SQRT",
-                # 数学演算子
-                "ADD",
-                "DIV",
-                "MULT",
-                "SUB",
-                "MAX",
-                "MIN",
-                "MAXINDEX",
-                "MININDEX",
-                "SUM",
-                "MINMAX",
-                "MINMAXINDEX",
-                # 価格変換系指標
-                "AVGPRICE",
-                "MEDPRICE",
-                "TYPPRICE",
-                "WCLPRICE",
-                # オーバーレイ系指標
-                "SAR",
-                # パターン認識系指標
-                "CDL_DOJI",
-                "CDL_HAMMER",
-                "CDL_HANGING_MAN",
-                "CDL_SHOOTING_STAR",
-                "CDL_ENGULFING",
-                "CDL_HARAMI",
-                "CDL_PIERCING",
-                "CDL_THREE_BLACK_CROWS",
-                "CDL_THREE_WHITE_SOLDIERS",
-                "CDL_DARK_CLOUD_COVER",
-            ]
-
-    def _get_valid_operators(self) -> List[str]:
-        """有効な演算子のリストを取得"""
-        return [
-            ">",
-            "<",
-            ">=",
-            "<=",
-            "==",
-            "!=",  # 基本比較演算子
-            "above",
-            "below",  # フロントエンド用演算子
-        ]
-
-    def _get_valid_data_sources(self) -> List[str]:
-        """有効なデータソースのリストを取得"""
-        return [
-            "close",
-            "open",
-            "high",
-            "low",
-            "volume",
-            "OpenInterest",
-            "FundingRate",
-        ]
+        self.valid_indicator_types = VALID_INDICATOR_TYPES
+        self.valid_operators = OPERATORS
+        self.valid_data_sources = DATA_SOURCES
 
     def validate_indicator_gene(self, indicator_gene) -> bool:
         """
@@ -406,10 +261,9 @@ class GeneValidator:
             logger.error(error_msg)
             return False, error_msg
 
-        # 後方互換API: 公開メソッドとして提供
-        def is_valid_indicator_name(self, name: str) -> bool:
-            """公開APIラッパー（旧テスト互換）"""
-            return self._is_indicator_name(name)
+    def is_valid_indicator_name(self, name: str) -> bool:
+        """公開APIラッパー（旧テスト互換）"""
+        return self._is_indicator_name(name)
 
     def _is_indicator_name(self, name: str) -> bool:
         """

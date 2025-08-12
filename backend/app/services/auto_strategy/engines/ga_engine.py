@@ -159,31 +159,31 @@ class GeneticAlgorithmEngine:
                     best_individuals[0] if best_individuals else population[0]
                 )
 
-                # 遺伝子デコード
-                from ..models.gene_encoding import GeneEncoder
+                # 遺伝子デコード（リファクタリング改善）
+                from ..models.gene_decoder import GeneDecoder
                 from ..models.gene_strategy import StrategyGene
 
-                gene_encoder = GeneEncoder()
+                gene_decoder = GeneDecoder()
                 best_strategies = []
                 for ind in best_individuals[:10]:  # 上位10個のパレート最適解
-                    gene = gene_encoder.decode_list_to_strategy_gene(ind, StrategyGene)
+                    gene = gene_decoder.decode_list_to_strategy_gene(ind, StrategyGene)
                     best_strategies.append(
                         {"strategy": gene, "fitness_values": list(ind.fitness.values)}
                     )
 
-                best_gene = gene_encoder.decode_list_to_strategy_gene(
+                best_gene = gene_decoder.decode_list_to_strategy_gene(
                     best_individual, StrategyGene
                 )
             else:
                 # 単一目的最適化の場合
                 best_individual = tools.selBest(population, 1)[0]
 
-                # 遺伝子デコード
-                from ..models.gene_encoding import GeneEncoder
+                # 遺伝子デコード（リファクタリング改善）
+                from ..models.gene_decoder import GeneDecoder
                 from ..models.gene_strategy import StrategyGene
 
-                gene_encoder = GeneEncoder()
-                best_gene = gene_encoder.decode_list_to_strategy_gene(
+                gene_decoder = GeneDecoder()
+                best_gene = gene_decoder.decode_list_to_strategy_gene(
                     best_individual, StrategyGene
                 )
                 best_strategies = None

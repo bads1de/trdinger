@@ -77,16 +77,16 @@ class StatisticalTPSLGenerator:
         # データベース接続（将来的な実装用）
         self.db_path = db_path or "data/statistical_tpsl.db"
 
-        # サンプル統計データ（実際の実装では外部データソースから取得）
-        self.sample_data = self._initialize_sample_data()
-
-        # 市場レジーム分類
+        # 市場レジーム分類（サンプルデータ初期化前に定義）
         self.market_regimes = {
             "bull_market": {"trend": "up", "volatility": "low"},
             "bear_market": {"trend": "down", "volatility": "high"},
             "sideways": {"trend": "neutral", "volatility": "medium"},
             "high_volatility": {"trend": "mixed", "volatility": "very_high"},
         }
+
+        # サンプル統計データ（実際の実装では外部データソースから取得）
+        self.sample_data = self._initialize_sample_data()
 
     def generate_statistical_tpsl(
         self,
