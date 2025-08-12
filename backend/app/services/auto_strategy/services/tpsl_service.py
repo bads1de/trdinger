@@ -1,13 +1,13 @@
 """
-統一TP/SL計算サービス
+TP/SL計算サービス
 
 TP/SL計算ロジックを一元化し、異なる計算方式を統一的なインターフェースで提供します。
-TPSLCalculatorとTPSLCalculatorServiceの機能を統合した統一サービスです。
 """
 
 import logging
 import math
 from typing import Any, Dict, Optional, Tuple
+from enum import Enum
 
 from ..calculators.risk_reward_calculator import RiskRewardCalculator, RiskRewardConfig
 from ..generators.statistical_tpsl_generator import (
@@ -23,17 +23,52 @@ from ..models.gene_tpsl import TPSLGene, TPSLMethod
 logger = logging.getLogger(__name__)
 
 
+class TPSLCalculationMethod(Enum):
+    """TP/SL計算方式"""
+
+    FIXED_PERCENTAGE = "fixed_percentage"
+    RISK_REWARD_RATIO = "risk_reward_ratio"
+    VOLATILITY_BASED = "volatility_based"
+    STATISTICAL = "statistical"
+
+
+class TPSLResult:
+    """TP/SL計算結果"""
+
+    def __init__(
+        self,
+        stop_loss_pct: float,
+        take_profit_pct: float,
+        method: TPSLCalculationMethod,
+        confidence_score: float = 0.0,
+        metadata: Optional[Dict[str, Any]] = None,
+    ):
+        self.stop_loss_pct = stop_loss_pct
+        self.take_profit_pct = take_profit_pct
+        self.method = method
+        self.confidence_score = confidence_score
+        self.metadata = metadata or {}
+
+    def to_dict(self) -> Dict[str, Any]:
+        """辞書形式に変換"""
+        return {
+            "stop_loss_pct": self.stop_loss_pct,
+            "take_profit_pct": self.take_profit_pct,
+            "method": self.method.value,
+            "confidence_score": self.confidence_score,
+            "metadata": self.metadata,
+        }
+
+
 class TPSLService:
     """
-    統一TP/SL計算サービス
+    TP/SL計算サービス
 
-    異なるTP/SL計算方式を統一的なインターフェースで提供し、
-    計算ロジックの一元化を実現します。
-    TPSLCalculatorとTPSLCalculatorServiceの機能を統合しています。
+    複数の計算方式を統一的なインターフェースで提供します。
     """
 
     def __init__(self):
-        """サービスを初期化"""
+        """初期化"""
         self.risk_reward_calculator = RiskRewardCalculator()
         self.statistical_generator = StatisticalTPSLGenerator()
         self.volatility_generator = VolatilityBasedGenerator()
@@ -83,6 +118,22 @@ class TPSLService:
             logger.error(f"TP/SL価格計算エラー: {e}")
             # フォールバック: 基本計算
             return self._calculate_fallback(current_price, position_direction)
+
+    def _convert_to_prices(
+        self, result: TPSLResult, current_price: float, position_direction: float
+    ) -> Tuple[Optional[float], Optional[float]]:
+        """TPSLResultを価格に変換"""
+        try:
+            if position_direction > 0:  # ロング
+                sl_price = current_price * (1 - result.stop_loss_pct)
+                tp_price = current_price * (1 + result.take_profit_pct)
+            else:  # ショート
+                sl_price = current_price * (1 + result.stop_loss_pct)
+                tp_price = current_price * (1 - result.take_profit_pct)
+            return sl_price, tp_price
+        except Exception as e:
+            logger.error(f"価格変換エラー: {e}")
+            return None, None
 
     def _calculate_from_gene(
         self,

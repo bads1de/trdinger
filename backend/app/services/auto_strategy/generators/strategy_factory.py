@@ -12,7 +12,7 @@ from backtesting import Strategy
 from ..calculators.indicator_calculator import IndicatorCalculator
 from ..services.position_sizing_service import PositionSizingService
 from ..services.tpsl_service import TPSLService
-from ..evaluators.condition_evaluator import ConditionEvaluator
+from ..core.condition_evaluator import ConditionEvaluator
 from ..models.gene_strategy import IndicatorGene, StrategyGene
 
 logger = logging.getLogger(__name__)

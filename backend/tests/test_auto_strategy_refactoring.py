@@ -2,11 +2,13 @@
 auto_strategy リファクタリング検証テスト
 
 リファクタリング後の動作確認を行うテストスイート
+統合されたエラーハンドリング、ユーティリティ、設定クラスをテストします。
 """
 
 import pytest
 import sys
 import os
+from unittest.mock import Mock, patch
 
 # プロジェクトルートをパスに追加
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
@@ -16,6 +18,14 @@ from app.services.auto_strategy.utils.constants import (
     DATA_SOURCES,
     VALID_INDICATOR_TYPES,
 )
+from app.services.auto_strategy.utils.error_handling import AutoStrategyErrorHandler
+from app.services.auto_strategy.utils.auto_strategy_utils import AutoStrategyUtils
+from app.services.auto_strategy.config.base_config import BaseConfig
+from app.services.auto_strategy.config.shared_constants import (
+    validate_symbol,
+    validate_timeframe,
+)
+from app.services.auto_strategy.models.ga_config import GAConfig
 from app.services.auto_strategy.models.gene_validation import GeneValidator
 from app.services.auto_strategy.core.indicator_name_resolver import (
     IndicatorNameResolver,
@@ -303,6 +313,134 @@ class TestIntegration:
         assert sl_price is not None
         assert tp_price is not None
         assert position_result.position_size > 0
+
+
+class TestRefactoredComponents:
+    """リファクタリング後のコンポーネントテスト"""
+
+    def test_auto_strategy_error_handler(self):
+        """統合エラーハンドラーのテスト"""
+        # GA エラーハンドリング
+        error = ValueError("テストエラー")
+        result = AutoStrategyErrorHandler.handle_ga_error(error, "テストコンテキスト")
+
+        assert result["error_code"] == "GA_ERROR"
+        assert "テストエラー" in result["message"]
+        assert result["context"] == "テストコンテキスト"
+
+        # 戦略生成エラーハンドリング
+        strategy_data = {"test": "data"}
+        result = AutoStrategyErrorHandler.handle_strategy_generation_error(
+            error, strategy_data, "テスト戦略生成"
+        )
+
+        assert result["success"] is False
+        assert result["strategy"] is None
+        assert "テストエラー" in result["error"]
+
+    def test_auto_strategy_utils(self):
+        """統合ユーティリティのテスト"""
+        # データ変換テスト
+        assert AutoStrategyUtils.safe_convert_to_float("123.45") == 123.45
+        assert AutoStrategyUtils.safe_convert_to_float("invalid", 0.0) == 0.0
+
+        # シンボル正規化テスト
+        assert AutoStrategyUtils.normalize_symbol("BTC") == "BTC:USDT"
+        assert AutoStrategyUtils.normalize_symbol("BTC:USDT") == "BTC:USDT"
+
+        # 検証テスト
+        assert AutoStrategyUtils.validate_range(5, 1, 10) is True
+        assert AutoStrategyUtils.validate_range(15, 1, 10) is False
+
+    def test_base_config_integration(self):
+        """BaseConfig統合のテスト"""
+
+        class TestConfig(BaseConfig):
+            def __init__(self, test_field=None, enabled=True):
+                super().__init__(enabled=enabled)
+                self.test_field = test_field
+                self.validation_rules = {
+                    "required_fields": ["test_field"],
+                    "ranges": {"test_field": (1, 10)},
+                }
+
+            def get_default_values(self):
+                return {"enabled": True, "test_field": 5}
+
+        # 正常ケース
+        config = TestConfig(test_field=5)
+        is_valid, errors = config.validate()
+        assert is_valid is True
+
+        # 辞書からの作成
+        data = {"test_field": 7, "enabled": False}
+        config = TestConfig.from_dict(data)
+        assert config.test_field == 7
+        assert config.enabled is False
+
+    def test_ga_config_base_config_inheritance(self):
+        """GAConfigのBaseConfig継承テスト"""
+        config = GAConfig()
+
+        # BaseConfigのメソッドが使用可能か確認
+        assert hasattr(config, "validate")
+        assert hasattr(config, "get_default_values")
+        assert hasattr(config, "to_dict")
+
+        # 検証機能のテスト
+        is_valid, errors = config.validate()
+        assert is_valid is True
+
+        # デフォルト値の取得
+        defaults = config.get_default_values()
+        assert "population_size" in defaults
+        assert defaults["population_size"] == 10
+
+    def test_shared_constants_integration(self):
+        """共通定数統合のテスト"""
+        # 定数の存在確認
+        assert ">" in OPERATORS
+        assert "close" in DATA_SOURCES
+        assert "SMA" in VALID_INDICATOR_TYPES
+
+        # 検証関数のテスト
+        assert validate_symbol("BTC/USDT:USDT") is True
+        assert validate_symbol("INVALID") is False
+        assert validate_timeframe("1h") is True
+        assert validate_timeframe("5m") is False
+
+    @patch("app.services.indicators.TechnicalIndicatorService")
+    def test_indicator_id_integration(self, mock_service):
+        """指標ID統合のテスト"""
+        mock_instance = Mock()
+        mock_instance.get_supported_indicators.return_value = {"SMA": {}, "RSI": {}}
+        mock_service.return_value = mock_instance
+
+        result = AutoStrategyUtils.get_all_indicator_ids()
+
+        assert "" in result
+        assert result[""] == 0
+        assert "SMA" in result
+        assert "ML_UP_PROB" in result
+
+    def test_error_handling_backward_compatibility(self):
+        """エラーハンドリングの後方互換性テスト"""
+
+        # 既存のsafe_execute関数が動作するか確認
+        def success_func():
+            return "成功"
+
+        result = AutoStrategyErrorHandler.safe_execute(success_func)
+        assert result == "成功"
+
+        # エラーケース
+        def error_func():
+            raise ValueError("テストエラー")
+
+        result = AutoStrategyErrorHandler.safe_execute(
+            error_func, fallback_value="フォールバック"
+        )
+        assert result == "フォールバック"
 
 
 if __name__ == "__main__":

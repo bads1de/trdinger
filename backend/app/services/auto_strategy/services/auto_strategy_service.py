@@ -1,7 +1,7 @@
 """
 自動戦略生成サービス
-GA実行、進捗管理、結果保存を統合的に管理します。
-複雑な分離構造を削除し、直接的で理解しやすい実装に変更しました。
+
+GA実行、進捗管理、結果保存、戦略テストを統合的に管理します。
 """
 
 import logging
@@ -13,10 +13,10 @@ from app.services.backtest.backtest_data_service import BacktestDataService
 from app.services.backtest.backtest_service import BacktestService
 from database.connection import SessionLocal
 
-from ..managers.experiment_manager import ExperimentManager
+from .experiment_manager import ExperimentManager
 from ..models.ga_config import GAConfig
 from ..models.gene_strategy import StrategyGene
-from ..persistence.experiment_persistence_service import ExperimentPersistenceService
+from .experiment_persistence_service import ExperimentPersistenceService
 
 logger = logging.getLogger(__name__)
 
@@ -25,13 +25,8 @@ class AutoStrategyService:
     """
     自動戦略生成サービス
 
-    GA実行、進捗管理、結果保存を統合的に管理します。
+    GA実行、進捗管理、結果保存、戦略テストを統合的に管理します。
     """
-
-    # NOTE: Orchestration層との責務境界
-    # - 本サービスは依存初期化とGA実験の開始/取得/停止の薄いファサードに限定
-    # - 戦略テストや結果整形、停止時バリデーションは orchestration に集約
-    # TODO(phase2): orchestration に寄せられる一部関数の更なる縮退検討
 
     def __init__(self, enable_smart_generation: bool = True):
         """
@@ -58,7 +53,6 @@ class AutoStrategyService:
         サービスの初期化
 
         必要最小限のサービス初期化を行います。
-        複雑な依存関係管理を削除し、シンプルな実装に変更しました。
         """
         try:
             # データベースリポジトリの初期化
@@ -91,7 +85,8 @@ class AutoStrategyService:
                 self.backtest_service, self.persistence_service
             )
 
-        except Exception:
+        except Exception as e:
+            logger.error(f"サービス初期化エラー: {e}")
             raise
 
     def start_strategy_generation(
@@ -155,52 +150,141 @@ class AutoStrategyService:
         logger.info(
             f"戦略生成実験のバックグラウンドタスクを追加しました: {experiment_id}"
         )
+
         return experiment_id
 
-    def get_experiment_result(self, experiment_id: str) -> Optional[Dict[str, Any]]:
-        """実験結果を取得（統合版）"""
-        return self.persistence_service.get_experiment_result(experiment_id)
-
     def list_experiments(self) -> List[Dict[str, Any]]:
-        """実験一覧を取得（統合版）"""
-        return self.persistence_service.list_experiments()
-
-    def stop_experiment(self, experiment_id: str) -> bool:
-        """実験を停止"""
-        if not self.experiment_manager:
-            return False
-        return self.experiment_manager.stop_experiment(experiment_id)
-
-    def validate_strategy_gene(self, gene: StrategyGene) -> tuple[bool, List[str]]:
         """
-        戦略遺伝子の妥当性を検証
-
-        Args:
-            gene: 検証する戦略遺伝子
+        実験一覧を取得
 
         Returns:
-            (is_valid, error_messages)
+            実験一覧のリスト
         """
-        if not self.experiment_manager:
-            return False, ["実験管理マネージャーが初期化されていません。"]
-        return self.experiment_manager.validate_strategy_gene(gene)
+        try:
+            return self.persistence_service.list_experiments()
+        except Exception as e:
+            logger.error(f"実験一覧取得エラー: {e}")
+            return []
 
-    def test_strategy_generation(
-        self, gene: StrategyGene, backtest_config: Dict[str, Any]
-    ) -> Dict[str, Any]:
+    def get_experiment_status(self, experiment_id: str) -> Dict[str, Any]:
         """
-        単一戦略のテスト生成・実行
+        実験ステータスを取得
 
         Args:
-            gene: テストする戦略遺伝子
-            backtest_config: バックテスト設定
+            experiment_id: 実験ID
+
+        Returns:
+            実験ステータス情報
+        """
+        try:
+            # get_experiment_infoメソッドを使用
+            experiment_info = self.persistence_service.get_experiment_info(
+                experiment_id
+            )
+            if experiment_info:
+                return {
+                    "status": experiment_info.get("status", "unknown"),
+                    "progress": experiment_info.get("progress", 0),
+                    "message": experiment_info.get("message", "実験情報を取得しました"),
+                    "experiment_info": experiment_info,
+                }
+            else:
+                return {"status": "not_found", "message": "実験が見つかりません"}
+        except Exception as e:
+            logger.error(f"実験ステータス取得エラー: {e}")
+            return {"status": "error", "message": str(e)}
+
+    def stop_experiment(self, experiment_id: str) -> Dict[str, Any]:
+        """
+        実験を停止
+
+        Args:
+            experiment_id: 実験ID
+
+        Returns:
+            停止結果
+        """
+        try:
+            if self.experiment_manager:
+                return self.experiment_manager.stop_experiment(experiment_id)
+            else:
+                return {
+                    "success": False,
+                    "message": "実験管理マネージャーが初期化されていません",
+                }
+        except Exception as e:
+            logger.error(f"実験停止エラー: {e}")
+            return {"success": False, "message": str(e)}
+
+    def get_default_config(self) -> Dict[str, Any]:
+        """
+        デフォルト設定を取得
+
+        Returns:
+            デフォルト設定
+        """
+        try:
+            return GAConfig().to_dict()
+        except Exception as e:
+            logger.error(f"デフォルト設定取得エラー: {e}")
+            return {}
+
+    def get_presets(self) -> Dict[str, Any]:
+        """
+        プリセット設定を取得
+
+        Returns:
+            プリセット設定
+        """
+        try:
+            return GAConfig.get_presets()
+        except Exception as e:
+            logger.error(f"プリセット取得エラー: {e}")
+            return {}
+
+    async def test_strategy(self, request) -> Dict[str, Any]:
+        """
+        単一戦略のテスト実行
+
+        指定された戦略遺伝子から戦略を生成し、バックテストを実行します。
+
+        Args:
+            request: StrategyTestRequest
 
         Returns:
             テスト結果
         """
-        if not self.experiment_manager:
+        try:
+            logger.info("戦略テスト開始")
+
+            # 戦略遺伝子の復元
+            from ..models.gene_serialization import GeneSerializer
+
+            strategy_gene = GeneSerializer.from_dict(request.strategy_gene)
+
+            # バックテスト設定の正規化
+            backtest_config = request.backtest_config.copy()
+            original_symbol = backtest_config.get("symbol")
+            if original_symbol and ":" not in original_symbol:
+                normalized_symbol = f"{original_symbol}:USDT"
+                backtest_config["symbol"] = normalized_symbol
+
+            # バックテスト実行
+            result = self.backtest_service.run_backtest_with_gene(
+                strategy_gene, backtest_config
+            )
+
+            logger.info("戦略テスト完了")
+            return {
+                "success": True,
+                "result": result,
+                "message": "戦略テストが正常に完了しました",
+            }
+
+        except Exception as e:
+            logger.error(f"戦略テストエラー: {e}", exc_info=True)
             return {
                 "success": False,
-                "error": "実験管理マネージャーが初期化されていません。",
+                "errors": [str(e)],
+                "message": f"戦略テストに失敗しました: {str(e)}",
             }
-        return self.experiment_manager.test_strategy_generation(gene, backtest_config)

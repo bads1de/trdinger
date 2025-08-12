@@ -2,17 +2,22 @@
 遺伝的アルゴリズム設定モデル
 
 GA実行時の各種パラメータを単一のクラスで管理します。
+BaseConfigを継承し、統一された設定管理機能を提供します。
 """
 
 import json
+import logging
 from dataclasses import dataclass, field
 from typing import Any, Callable, Dict, List, Optional
 
 from app.services.indicators import TechnicalIndicatorService
+from ..config.base_config import BaseConfig
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
-class GAConfig:
+class GAConfig(BaseConfig):
     """
     遺伝的アルゴリズム設定
 
@@ -394,15 +399,30 @@ class GAConfig:
         if profile in profiles:
             self.fitness_weights = profiles[profile].copy()
 
+    def get_default_values(self) -> Dict[str, Any]:
+        """BaseConfig用のデフォルト値を取得"""
+        return {
+            "population_size": 10,
+            "generations": 5,
+            "crossover_rate": 0.8,
+            "mutation_rate": 0.1,
+            "elite_size": 2,
+            "max_indicators": 3,
+            "min_indicators": 1,
+            "min_conditions": 1,
+            "max_conditions": 3,
+            "enabled": True,
+        }
+
+    # BaseConfigのメソッドをオーバーライド（既存機能を保持）
     def to_json(self) -> str:
-        """JSON文字列に変換"""
-        return json.dumps(self.to_dict(), ensure_ascii=False, indent=2)
+        """JSON文字列に変換（BaseConfigの機能を活用）"""
+        return super().to_json()
 
     @classmethod
     def from_json(cls, json_str: str) -> "GAConfig":
-        """JSON文字列から復元"""
-        data = json.loads(json_str)
-        return cls.from_dict(data)
+        """JSON文字列から復元（BaseConfigの機能を活用）"""
+        return super().from_json(json_str)
 
     @classmethod
     def create_default(cls) -> "GAConfig":

@@ -9,9 +9,6 @@ from app.api.dependencies import (
 )
 from app.services.auto_strategy import AutoStrategyService
 from app.services.auto_strategy.models.ga_config import GAConfig
-from app.services.auto_strategy.orchestration.auto_strategy_orchestration_service import (
-    AutoStrategyOrchestrationService,
-)
 from app.utils.api_utils import APIResponseHelper
 from app.utils.unified_error_handler import UnifiedErrorHandler
 
@@ -204,9 +201,6 @@ async def list_experiments(
 async def stop_experiment(
     experiment_id: str,
     auto_strategy_service: AutoStrategyService = Depends(get_auto_strategy_service),
-    orchestration_service: AutoStrategyOrchestrationService = Depends(
-        AutoStrategyOrchestrationService
-    ),
 ):
     """
     実験を停止
@@ -216,11 +210,11 @@ async def stop_experiment(
 
     async def _stop_experiment():
         try:
-
-            orchestration_service.validate_experiment_stop(
-                experiment_id, auto_strategy_service
+            result = auto_strategy_service.stop_experiment(experiment_id)
+            return StopExperimentResponse(
+                success=result.get("success", False),
+                message=result.get("message", "実験を停止しました"),
             )
-            return StopExperimentResponse(success=True, message="実験を停止しました")
         except ValueError as e:
             from fastapi import HTTPException
 
@@ -236,9 +230,6 @@ async def stop_experiment(
 async def get_experiment_results(
     experiment_id: str,
     auto_strategy_service: AutoStrategyService = Depends(get_auto_strategy_service),
-    orchestration_service: AutoStrategyOrchestrationService = Depends(
-        AutoStrategyOrchestrationService
-    ),
 ):
     """
     実験結果を取得
@@ -248,9 +239,9 @@ async def get_experiment_results(
     """
 
     async def _get_experiment_results():
-        result = auto_strategy_service.get_experiment_result(experiment_id)
+        result = auto_strategy_service.get_experiment_status(experiment_id)
 
-        if result is None:
+        if result is None or result.get("status") == "error":
             from fastapi import HTTPException
 
             raise HTTPException(
@@ -258,7 +249,7 @@ async def get_experiment_results(
                 detail=f"実験 {experiment_id} が見つかりません",
             )
 
-        return orchestration_service.format_experiment_result(result)
+        return result
 
     return await UnifiedErrorHandler.safe_execute_async(_get_experiment_results)
 
@@ -267,9 +258,6 @@ async def get_experiment_results(
 async def test_strategy(
     request: StrategyTestRequest,
     auto_strategy_service: AutoStrategyService = Depends(get_auto_strategy_service),
-    orchestration_service: AutoStrategyOrchestrationService = Depends(
-        AutoStrategyOrchestrationService
-    ),
 ):
     """
     単一戦略のテスト実行
@@ -279,10 +267,7 @@ async def test_strategy(
     """
 
     async def _test_strategy():
-
-        result = await orchestration_service.test_strategy(
-            request=request, auto_strategy_service=auto_strategy_service
-        )
+        result = await auto_strategy_service.test_strategy(request)
 
         return StrategyTestResponse(
             success=result["success"],

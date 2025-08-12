@@ -11,12 +11,12 @@ from app.services.backtest.backtest_service import BacktestService
 from database.connection import get_db
 from database.repositories.backtest_result_repository import BacktestResultRepository
 
-from ..engines.ga_engine import GeneticAlgorithmEngine
-from ..factories.strategy_factory import StrategyFactory
+from ..core.ga_engine import GeneticAlgorithmEngine
+from ..generators.strategy_factory import StrategyFactory
 from ..generators.random_gene_generator import RandomGeneGenerator
 from ..models.ga_config import GAConfig
 from ..models.gene_strategy import StrategyGene
-from ..persistence.experiment_persistence_service import ExperimentPersistenceService
+from .experiment_persistence_service import ExperimentPersistenceService
 
 logger = logging.getLogger(__name__)
 

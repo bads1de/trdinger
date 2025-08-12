@@ -14,10 +14,10 @@ from deap import tools, algorithms
 
 from app.services.backtest.backtest_service import BacktestService
 
-from ..factories.strategy_factory import StrategyFactory
+from ..generators.strategy_factory import StrategyFactory
 from ..generators.random_gene_generator import RandomGeneGenerator
 from ..models.ga_config import GAConfig
-from ..operators.genetic_operators import crossover_strategy_genes, mutate_strategy_gene
+from .genetic_operators import crossover_strategy_genes, mutate_strategy_gene
 from .deap_setup import DEAPSetup
 from .fitness_sharing import FitnessSharing
 from .individual_creator import IndividualCreator
