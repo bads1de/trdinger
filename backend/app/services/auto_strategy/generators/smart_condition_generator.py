@@ -2,8 +2,13 @@ import logging
 import random
 from enum import Enum
 from typing import List, Tuple
+from app.services.indicators.config import indicator_registry
+from app.services.indicators.config.indicator_config import IndicatorScaleType
 
 from ..models.gene_strategy import Condition, IndicatorGene
+from app.services.indicators.config import indicator_registry
+from app.services.indicators.config.indicator_config import IndicatorScaleType
+
 
 logger = logging.getLogger(__name__)
 
@@ -556,6 +561,51 @@ class SmartConditionGenerator:
             longs = _prefer_condition(longs, "long")
             shorts = _prefer_condition(shorts, "short")
 
+            # 追加保証: 価格vsトレンド条件が両サイドに全く無い場合はロング側に1つ注入
+            try:
+
+                def _has_price_vs_trend(conds):
+                    from app.services.auto_strategy.models.condition_group import (
+                        ConditionGroup as _CG,
+                    )
+
+                    return any(
+                        (
+                            isinstance(c, Condition)
+                            and c.left_operand in ("close", "open")
+                            and isinstance(c.right_operand, str)
+                            and c.right_operand
+                            in ("SMA", "EMA", "MAMA", "MA", "HT_TRENDLINE")
+                        )
+                        for c in conds
+                        if not isinstance(c, _CG)
+                    )
+
+                if not _has_price_vs_trend(longs) and not _has_price_vs_trend(shorts):
+                    # 指標からトレンド候補を選択
+                    trend_names = [
+                        ind.type
+                        for ind in indicators
+                        if ind.enabled
+                        and INDICATOR_CHARACTERISTICS.get(ind.type, {}).get("type")
+                        == IndicatorType.TREND
+                    ]
+                    pref = [n for n in trend_names if n in ("SMA", "EMA", "MAMA", "MA")]
+                    chosen = (
+                        pref[0] if pref else (trend_names[0] if trend_names else None)
+                    )
+                    if chosen:
+                        longs = longs + [
+                            Condition(
+                                left_operand="close", operator=">", right_operand=chosen
+                            )
+                        ]
+                        # 最大2条件までに抑制
+                        if len(longs) > 2:
+                            longs = longs[:2]
+            except Exception:
+                pass
+
             # OR条件グループを追加して A AND (B OR C) の形を試みる
             try:
                 from app.services.auto_strategy.models.condition_group import (
@@ -648,10 +698,6 @@ class SmartConditionGenerator:
         except Exception:
             return []
 
-        except Exception as e:
-            self.logger.error(f"スマート条件生成エラー: {e}")
-            return self._generate_fallback_conditions()
-
     def _select_strategy_type(self, indicators: List[IndicatorGene]) -> StrategyType:
         """
         利用可能な指標に基づいて戦略タイプを選択
@@ -730,9 +776,167 @@ class SmartConditionGenerator:
         short_conditions = [
             Condition(left_operand="close", operator="<", right_operand="open")
         ]
-        exit_conditions = []
-
+        exit_conditions: List[Condition] = []
         return long_conditions, short_conditions, exit_conditions
+
+    def _dynamic_classify(self, indicators: List[IndicatorGene]) -> dict:
+        """レジストリ情報に基づいて指標を動的に分類（未特性化を拾う）"""
+        categorized = {
+            IndicatorType.MOMENTUM: [],
+            IndicatorType.TREND: [],
+            IndicatorType.VOLATILITY: [],
+            IndicatorType.STATISTICS: [],
+            IndicatorType.MATH_TRANSFORM: [],
+            IndicatorType.MATH_OPERATORS: [],
+            IndicatorType.PATTERN_RECOGNITION: [],
+        }
+        for ind in indicators:
+            if not ind.enabled:
+                continue
+            cfg = indicator_registry.get_indicator_config(ind.type)
+            if cfg and getattr(cfg, "category", None):
+                try:
+                    # config.category は str のはず
+                    cat = getattr(cfg, "category")
+                    if cat == "momentum":
+                        categorized[IndicatorType.MOMENTUM].append(ind)
+                    elif cat == "trend":
+                        categorized[IndicatorType.TREND].append(ind)
+                    elif cat == "volatility":
+                        categorized[IndicatorType.VOLATILITY].append(ind)
+                    elif cat == "statistics":
+                        categorized[IndicatorType.STATISTICS].append(ind)
+                    elif cat == "math_transform":
+                        categorized[IndicatorType.MATH_TRANSFORM].append(ind)
+                    elif cat == "math_operators":
+                        categorized[IndicatorType.MATH_OPERATORS].append(ind)
+                    elif cat == "pattern_recognition":
+                        categorized[IndicatorType.PATTERN_RECOGNITION].append(ind)
+                    else:
+                        # 未知カテゴリは一旦トレンドに寄せる（価格系多めのため）
+                        categorized[IndicatorType.TREND].append(ind)
+                except Exception:
+                    categorized[IndicatorType.TREND].append(ind)
+            else:
+                # INDICATOR_CHARACTERISTICS にあれば既存分類
+                if ind.type in INDICATOR_CHARACTERISTICS:
+                    char = INDICATOR_CHARACTERISTICS[ind.type]
+                    categorized[char["type"]].append(ind)
+                else:
+                    # それでも分類不可ならトレンドへ
+                    categorized[IndicatorType.TREND].append(ind)
+        return categorized
+
+    def _generic_long_conditions(self, ind: IndicatorGene) -> List[Condition]:
+        """レジストリのスケール/カテゴリを使った汎用ロング条件"""
+        name = ind.type
+        cfg = indicator_registry.get_indicator_config(name)
+        if (
+            cfg
+            and getattr(cfg, "scale_type", None) == IndicatorScaleType.OSCILLATOR_0_100
+        ):
+            # 0-100系は中立→上抜け
+            return [Condition(left_operand=name, operator=">", right_operand=50)]
+        # price ratio/absolute 系は価格比較に寄せる
+        if name in ("SMA", "EMA", "MAMA", "MA", "HT_TRENDLINE"):
+            return [Condition(left_operand="close", operator=">", right_operand=name)]
+        # その他はシンプルにゼロ上
+        return [Condition(left_operand=name, operator=">", right_operand=0)]
+
+    def _generic_short_conditions(self, ind: IndicatorGene) -> List[Condition]:
+        name = ind.type
+        cfg = indicator_registry.get_indicator_config(name)
+        if (
+            cfg
+            and getattr(cfg, "scale_type", None) == IndicatorScaleType.OSCILLATOR_0_100
+        ):
+            return [Condition(left_operand=name, operator="<", right_operand=50)]
+        if name in ("SMA", "EMA", "MAMA", "MA", "HT_TRENDLINE"):
+            return [Condition(left_operand="close", operator="<", right_operand=name)]
+        return [Condition(left_operand=name, operator="<", right_operand=0)]
+
+    def _ma_candidates(self, indicators: List[IndicatorGene]) -> List[IndicatorGene]:
+        ma_types = {
+            "SMA",
+            "EMA",
+            "WMA",
+            "KAMA",
+            "ZLEMA",
+            "TEMA",
+            "DEMA",
+            "TRIMA",
+            "MIDPOINT",
+            "VWMA",
+            "MAMA",
+            "MA",
+            "HT_TRENDLINE",
+        }
+        return [ind for ind in indicators if ind.enabled and ind.type in ma_types]
+
+    def _generate_ma_crossover(
+        self, ma_inds: List[IndicatorGene]
+    ) -> Tuple[List[Condition], List[Condition]]:
+        long_conds: List[Condition] = []
+        short_conds: List[Condition] = []
+        if len(ma_inds) < 2:
+            return long_conds, short_conds
+        # 異なるタイプのMAで periods があるものを選ぶ
+        pairs = []
+        for i in range(len(ma_inds)):
+            for j in range(i + 1, len(ma_inds)):
+                a, b = ma_inds[i], ma_inds[j]
+                if a.type == b.type:
+                    continue  # 同タイプは曖昧さ回避
+                pa = (
+                    a.parameters.get("period")
+                    if isinstance(a.parameters, dict)
+                    else None
+                )
+                pb = (
+                    b.parameters.get("period")
+                    if isinstance(b.parameters, dict)
+                    else None
+                )
+                if pa is None or pb is None:
+                    continue
+                pairs.append((a, b))
+        if not pairs:
+            return long_conds, short_conds
+        # 期間が短い方をfast、長い方をslow
+        a, b = min(
+            pairs,
+            key=lambda p: (
+                p[0].parameters.get("period", 0) + p[1].parameters.get("period", 0)
+            ),
+        )
+        pa = a.parameters.get("period", 0)
+        pb = b.parameters.get("period", 0)
+        fast, slow = (a, b) if pa < pb else (b, a)
+        long_conds.append(
+            Condition(left_operand=fast.type, operator=">", right_operand=slow.type)
+        )
+        short_conds.append(
+            Condition(left_operand=fast.type, operator="<", right_operand=slow.type)
+        )
+        return long_conds, short_conds
+
+    def _build_or_group_from_momentum(self, indicators: List[IndicatorGene]):
+        try:
+            from app.services.auto_strategy.models.condition_group import ConditionGroup
+        except Exception:
+            return None
+        # モメンタム/オシレーターから最大2つ
+        cfgd = self._dynamic_classify(indicators)
+        candidates = list(cfgd.get(IndicatorType.MOMENTUM, []))
+        if len(candidates) < 2:
+            return None
+        selected = random.sample(candidates, 2)
+        conds: List[Condition] = []
+        for ind in selected:
+            conds.extend(self._generic_long_conditions(ind))
+        if not conds:
+            return None
+        return ConditionGroup(conditions=conds)
 
     def _generate_different_indicators_strategy(
         self, indicators: List[IndicatorGene]
@@ -747,21 +951,8 @@ class SmartConditionGenerator:
             (long_entry_conditions, short_entry_conditions, exit_conditions)のタプル
         """
         try:
-            # 指標をタイプ別に分類
-            indicators_by_type = {
-                IndicatorType.MOMENTUM: [],
-                IndicatorType.TREND: [],
-                IndicatorType.VOLATILITY: [],
-                IndicatorType.STATISTICS: [],
-                IndicatorType.MATH_TRANSFORM: [],
-                IndicatorType.MATH_OPERATORS: [],
-                IndicatorType.PATTERN_RECOGNITION: [],
-            }
-
-            for indicator in indicators:
-                if indicator.enabled and indicator.type in INDICATOR_CHARACTERISTICS:
-                    char = INDICATOR_CHARACTERISTICS[indicator.type]
-                    indicators_by_type[char["type"]].append(indicator)
+            # 指標をタイプ別に分類（未特性化はレジストリから動的分類）
+            indicators_by_type = self._dynamic_classify(indicators)
 
             # トレンド系 + モメンタム系の組み合わせを優先
             long_conditions = []
@@ -823,29 +1014,30 @@ class SmartConditionGenerator:
                 ml_long_conditions = self._create_ml_long_conditions(ml_indicators)
                 long_conditions.extend(ml_long_conditions)
 
-            # 基本的なショート条件の生成
-            if indicators_by_type[IndicatorType.TREND]:
-                trend_indicator = random.choice(indicators_by_type[IndicatorType.TREND])
-                # トレンド指標の基本的なショート条件
-                # テスト互換性: 素名で参照
+            # 基本的なショート条件の生成（常に有効な形に限定）
+            # 価格 vs トレンド系のショート条件を優先して1つ作成
+            trend_pool_all = list(indicators_by_type[IndicatorType.TREND])
+            pref_names = {"SMA", "EMA", "MAMA", "MA"}
+            trend_pool = [
+                ind for ind in trend_pool_all if ind.type in pref_names
+            ] or trend_pool_all
+            if trend_pool:
+                trend_indicator = random.choice(trend_pool)
                 trend_name = trend_indicator.type
-                if trend_indicator.type in ["SMA", "EMA", "MAMA"]:
-                    short_conditions.append(
-                        Condition(
-                            left_operand="close", operator="<", right_operand=trend_name
-                        )
+                short_conditions.append(
+                    Condition(
+                        left_operand="close", operator="<", right_operand=trend_name
                     )
+                )
 
+            # モメンタム系からも1つだけ追加（閾値はレンジに基づく）
             if indicators_by_type[IndicatorType.MOMENTUM]:
                 momentum_indicator = random.choice(
                     indicators_by_type[IndicatorType.MOMENTUM]
                 )
-                # モメンタム指標の基本的なショート条件
-                # テスト互換性: 素名で参照
                 momentum_name = momentum_indicator.type
-                if momentum_indicator.type == "RSI":
-                    # RSI: 買われすぎ領域でショート
-                    threshold = random.uniform(55, 75)
+                if momentum_name == "RSI":
+                    threshold = random.uniform(60, 75)
                     short_conditions.append(
                         Condition(
                             left_operand=momentum_name,
@@ -853,21 +1045,27 @@ class SmartConditionGenerator:
                             right_operand=threshold,
                         )
                     )
-                elif momentum_indicator.type == "MACD":
-                    # MACD: ゼロライン下抜けでショート
+                elif momentum_name in {"STOCH", "STOCHRSI"}:
+                    threshold = random.uniform(70, 90)
+                    short_conditions.append(
+                        Condition(
+                            left_operand=momentum_name,
+                            operator=">",
+                            right_operand=threshold,
+                        )
+                    )
+                elif momentum_name in {"MACD", "PPO", "APO", "TRIX", "TSI"}:
                     short_conditions.append(
                         Condition(
                             left_operand=momentum_name, operator="<", right_operand=0
                         )
                     )
 
-                # 拡張ショート条件が生成されなかった場合でも、最低1つのショート条件を保証
-                if not short_conditions:
-                    short_conditions.append(
-                        Condition(
-                            left_operand="close", operator="<", right_operand="open"
-                        )
-                    )
+            # 最低1つのショート条件を保証
+            if not short_conditions:
+                short_conditions.append(
+                    Condition(left_operand="close", operator="<", right_operand="open")
+                )
 
             # 新しいカテゴリのインジケータを活用
 
@@ -894,13 +1092,18 @@ class SmartConditionGenerator:
                 has_price_vs_trend = any(
                     isinstance(c.right_operand, str)
                     and c.left_operand in ("close", "open")
-                    and c.right_operand in ("SMA", "EMA", "MAMA")
+                    and c.right_operand in ("SMA", "EMA", "MAMA", "MA", "HT_TRENDLINE")
                     for c in side_conds
                 )
                 if not has_price_vs_trend and indicators_by_type[IndicatorType.TREND]:
-                    trend_indicator = random.choice(
-                        indicators_by_type[IndicatorType.TREND]
-                    )
+                    # 優先: SMA/EMA/MAMA/MA -> 無ければ任意のトレンド
+                    pref_names = {"SMA", "EMA", "MAMA", "MA"}
+                    trend_pool = [
+                        ind
+                        for ind in indicators_by_type[IndicatorType.TREND]
+                        if ind.type in pref_names
+                    ] or list(indicators_by_type[IndicatorType.TREND])
+                    trend_indicator = random.choice(trend_pool)
                     trend_name = trend_indicator.type
                     if prefer == "long":
                         side_conds.append(
@@ -1368,9 +1571,17 @@ class SmartConditionGenerator:
                             )
                         )
 
-            # 条件が空の場合はフォールバック
+            # 条件が空の場合は汎用条件で補完（AND増加で厳しくならないよう空の場合のみ）
             if not long_conditions:
-                return self._generate_fallback_conditions()
+                for indicator in indicators[:2]:
+                    if not indicator.enabled:
+                        continue
+                    long_conditions.extend(self._generic_long_conditions(indicator))
+                    short_conditions.extend(self._generic_short_conditions(indicator))
+
+                # それでも空ならフォールバック
+                if not long_conditions:
+                    return self._generate_fallback_conditions()
 
             return long_conditions, short_conditions, []
 

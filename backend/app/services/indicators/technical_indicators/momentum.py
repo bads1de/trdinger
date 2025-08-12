@@ -837,3 +837,159 @@ class MomentumIndicators:
         validate_series_data(s, slow + tclength)
         df = ta.stc(s, tclength=tclength, fast=fast, slow=slow, factor=factor)
         return df.values if hasattr(df, "values") else np.asarray(df)
+
+    @staticmethod
+    @handle_pandas_ta_errors
+    def rsi_ema_cross(
+        data: Union[np.ndarray, pd.Series], rsi_length: int = 14, ema_length: int = 9
+    ) -> Tuple[np.ndarray, np.ndarray]:
+        """Custom: RSI and its EMA signal line"""
+        s = ensure_series_minimal_conversion(data)
+        validate_series_data(s, rsi_length + ema_length)
+        rsi_vals = ta.rsi(s, length=rsi_length)
+        # use pandas ewm to avoid env-specific issues
+        rsi_series = pd.Series(
+            rsi_vals.values if hasattr(rsi_vals, "values") else np.asarray(rsi_vals),
+            index=getattr(s, "index", None),
+        )
+        signal = rsi_series.ewm(span=ema_length, adjust=False).mean()
+        return rsi_series.to_numpy(), signal.to_numpy()
+
+    @staticmethod
+    @handle_pandas_ta_errors
+    def tsi(
+        data: Union[np.ndarray, pd.Series], fast: int = 13, slow: int = 25
+    ) -> np.ndarray:
+        """True Strength Index"""
+        s = ensure_series_minimal_conversion(data)
+        validate_series_data(s, fast + slow)
+        df = ta.tsi(s, fast=fast, slow=slow)
+        return df.values if hasattr(df, "values") else np.asarray(df)
+
+    @staticmethod
+    @handle_pandas_ta_errors
+    def rvi(
+        open_: Union[np.ndarray, pd.Series],
+        high: Union[np.ndarray, pd.Series],
+        low: Union[np.ndarray, pd.Series],
+        close: Union[np.ndarray, pd.Series],
+        length: int = 10,
+    ) -> np.ndarray:
+        """Relative Volatility Index via pandas-ta rvi"""
+        o = ensure_series_minimal_conversion(open_)
+        h = ensure_series_minimal_conversion(high)
+        l = ensure_series_minimal_conversion(low)
+        c = ensure_series_minimal_conversion(close)
+        validate_series_data(c, length)
+        df = ta.rvi(open_=o, high=h, low=l, close=c, length=length)
+        return df.values if hasattr(df, "values") else np.asarray(df)
+
+    @staticmethod
+    @handle_pandas_ta_errors
+    def pvo(
+        close: Union[np.ndarray, pd.Series],
+        volume: Union[np.ndarray, pd.Series],
+        fast: int = 12,
+        slow: int = 26,
+        signal: int = 9,
+    ) -> Tuple[np.ndarray, np.ndarray]:
+        """Percentage Volume Oscillator"""
+        c = ensure_series_minimal_conversion(close)
+        v = ensure_series_minimal_conversion(volume)
+        validate_series_data(c, slow + signal)
+        validate_series_data(v, slow + signal)
+        df = ta.pvo(close=c, volume=v, fast=fast, slow=slow, signal=signal)
+        pvo_col = next(
+            (col for col in df.columns if col.upper().startswith("PVO_")), df.columns[0]
+        )
+        sig_col = next(
+            (
+                col
+                for col in df.columns
+                if col.upper().startswith("PVOs_") or "signal" in col.lower()
+            ),
+            df.columns[-1],
+        )
+        return df[pvo_col].values, df[sig_col].values
+
+    @staticmethod
+    @handle_pandas_ta_errors
+    def cfo(data: Union[np.ndarray, pd.Series], length: int = 9) -> np.ndarray:
+        """Chande Forecast Oscillator"""
+        s = ensure_series_minimal_conversion(data)
+        validate_series_data(s, length)
+        df = ta.cfo(s, length=length)
+        return df.values if hasattr(df, "values") else np.asarray(df)
+
+    @staticmethod
+    @handle_pandas_ta_errors
+    def cti(data: Union[np.ndarray, pd.Series], length: int = 20) -> np.ndarray:
+        """Chande Trend Index"""
+        s = ensure_series_minimal_conversion(data)
+        validate_series_data(s, length)
+        df = ta.cti(s, length=length)
+        return df.values if hasattr(df, "values") else np.asarray(df)
+
+    @staticmethod
+    @handle_pandas_ta_errors
+    def rmi(
+        data: Union[np.ndarray, pd.Series], length: int = 20, mom: int = 20
+    ) -> np.ndarray:
+        """Relative Momentum Index"""
+        s = ensure_series_minimal_conversion(data)
+        validate_series_data(s, length + mom)
+        if hasattr(ta, "rmi"):
+            df = ta.rmi(s, length=length, mom=mom)
+            return df.values if hasattr(df, "values") else np.asarray(df)
+        # Fallback: RMI ≈ RSI of momentum (price change over mom)
+        diff = s - s.shift(mom)
+        rsi = ta.rsi(diff, length=length)
+        return rsi.values if hasattr(rsi, "values") else np.asarray(rsi)
+
+    @staticmethod
+    @handle_pandas_ta_errors
+    def dpo(data: Union[np.ndarray, pd.Series], length: int = 20) -> np.ndarray:
+        """Detrended Price Oscillator"""
+        s = ensure_series_minimal_conversion(data)
+        validate_series_data(s, length)
+        df = ta.dpo(s, length=length)
+        return df.values if hasattr(df, "values") else np.asarray(df)
+
+    @staticmethod
+    @handle_pandas_ta_errors
+    def chop(
+        high: Union[np.ndarray, pd.Series],
+        low: Union[np.ndarray, pd.Series],
+        close: Union[np.ndarray, pd.Series],
+        length: int = 14,
+    ) -> np.ndarray:
+        """Choppiness Index"""
+        h = ensure_series_minimal_conversion(high)
+        l = ensure_series_minimal_conversion(low)
+        c = ensure_series_minimal_conversion(close)
+        validate_series_data(c, length)
+        df = ta.chop(high=h, low=l, close=c, length=length)
+        return df.values if hasattr(df, "values") else np.asarray(df)
+
+    @staticmethod
+    @handle_pandas_ta_errors
+    def vortex(
+        high: Union[np.ndarray, pd.Series],
+        low: Union[np.ndarray, pd.Series],
+        close: Union[np.ndarray, pd.Series],
+        length: int = 14,
+    ) -> Tuple[np.ndarray, np.ndarray]:
+        """Vortex Indicator: returns (+VI, -VI)"""
+        h = ensure_series_minimal_conversion(high)
+        l = ensure_series_minimal_conversion(low)
+        c = ensure_series_minimal_conversion(close)
+        validate_series_data(c, length)
+        df = ta.vortex(high=h, low=l, close=c, length=length)
+        cols = list(df.columns)
+        pos_col = next(
+            (col for col in cols if "+" in str(col) or "VIp" in str(col)), cols[0]
+        )
+        neg_col = next(
+            (col for col in cols if "-" in str(col) or "VIm" in str(col)), cols[-1]
+        )
+        return df[pos_col].values, df[neg_col].values

@@ -281,3 +281,134 @@ class TrendIndicators:
 
         result = ta.midprice(high=high_series, low=low_series, length=length)
         return result.values
+
+    @staticmethod
+    @handle_pandas_ta_errors
+    def hma(data: Union[np.ndarray, pd.Series], length: int = 20) -> np.ndarray:
+        """Hull Moving Average"""
+        series = ensure_series_minimal_conversion(data)
+        validate_series_data(series, length)
+        result = ta.hma(series, length=length)
+        return result.values
+
+    @staticmethod
+    @handle_pandas_ta_errors
+    def zlma(data: Union[np.ndarray, pd.Series], length: int = 20) -> np.ndarray:
+        """Zero-Lag Exponential Moving Average (ZLMA/ZLEMA)"""
+        series = ensure_series_minimal_conversion(data)
+        validate_series_data(series, length)
+        # pandas-ta provides zlma. Some versions alias zlema -> zlma
+        if hasattr(ta, "zlma"):
+            result = ta.zlma(series, length=length)
+        else:
+            # Fallback: approximate with ema of ema difference
+            ema1 = ta.ema(series, length=length)
+            lag = int((length - 1) / 2)
+            shifted = series.shift(lag)
+            adjusted = series + (series - shifted)
+            result = ta.ema(adjusted, length=length)
+        return result.values if hasattr(result, "values") else result.to_numpy()
+
+    @staticmethod
+    @handle_pandas_ta_errors
+    def vwma(
+        data: Union[np.ndarray, pd.Series],
+        volume: Union[np.ndarray, pd.Series],
+        length: int = 20,
+    ) -> np.ndarray:
+        """Volume Weighted Moving Average"""
+        price = ensure_series_minimal_conversion(data)
+        vol = ensure_series_minimal_conversion(volume)
+        validate_series_data(price, length)
+        validate_series_data(vol, length)
+        result = ta.vwma(price, volume=vol, length=length)
+        return result.values
+
+    @staticmethod
+    @handle_pandas_ta_errors
+    def swma(data: Union[np.ndarray, pd.Series], length: int = 10) -> np.ndarray:
+        """Symmetric Weighted Moving Average"""
+        series = ensure_series_minimal_conversion(data)
+        validate_series_data(series, length)
+        result = ta.swma(series, length=length)
+        return result.values
+
+    @staticmethod
+    @handle_pandas_ta_errors
+    def alma(
+        data: Union[np.ndarray, pd.Series],
+        length: int = 9,
+        sigma: float = 6.0,
+        offset: float = 0.85,
+    ) -> np.ndarray:
+        """Arnaud Legoux Moving Average"""
+        series = ensure_series_minimal_conversion(data)
+        validate_series_data(series, length)
+        result = ta.alma(series, length=length, sigma=sigma, offset=offset)
+        return result.values
+
+    @staticmethod
+    @handle_pandas_ta_errors
+    def rma(data: Union[np.ndarray, pd.Series], length: int = 14) -> np.ndarray:
+        """Smoothed Moving Average (RMA)"""
+        series = ensure_series_minimal_conversion(data)
+        validate_series_data(series, length)
+        result = ta.rma(series, length=length)
+        return result.values
+
+    @staticmethod
+    @handle_pandas_ta_errors
+    def ichimoku(
+        high: Union[np.ndarray, pd.Series],
+        low: Union[np.ndarray, pd.Series],
+        close: Union[np.ndarray, pd.Series],
+        tenkan: int = 9,
+        kijun: int = 26,
+        senkou: int = 52,
+    ) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+        """Ichimoku Cloud: returns (conversion, base, span_a, span_b, lagging)
+        pandas-taの返却差に依存せず、標準定義に基づき自前で安定計算する。
+        """
+        h = ensure_series_minimal_conversion(high)
+        l = ensure_series_minimal_conversion(low)
+        c = ensure_series_minimal_conversion(close)
+        maxlen = max(tenkan, kijun, senkou)
+        validate_series_data(h, maxlen)
+        validate_series_data(l, maxlen)
+        validate_series_data(c, maxlen)
+        conv = (h.rolling(tenkan).max() + l.rolling(tenkan).min()) / 2.0
+        base = (h.rolling(kijun).max() + l.rolling(kijun).min()) / 2.0
+        span_a = ((conv + base) / 2.0).shift(kijun)
+        span_b = ((h.rolling(senkou).max() + l.rolling(senkou).min()) / 2.0).shift(
+            kijun
+        )
+        lag = c.shift(-kijun)
+        return (
+            conv.to_numpy(),
+            base.to_numpy(),
+            span_a.to_numpy(),
+            span_b.to_numpy(),
+            lag.to_numpy(),
+        )
+
+    # ---- Custom original indicators ----
+    @staticmethod
+    def sma_slope(data: Union[np.ndarray, pd.Series], length: int = 20) -> np.ndarray:
+        """Custom: slope of SMA over the last N periods (per-bar first difference)."""
+        s = ensure_series_minimal_conversion(data)
+        validate_series_data(s, length)
+        sma_vals = pd.Series(TrendIndicators.sma(s, length))
+        slope = sma_vals.diff()
+        return slope.to_numpy()
+
+    @staticmethod
+    def price_ema_ratio(
+        data: Union[np.ndarray, pd.Series], length: int = 20
+    ) -> np.ndarray:
+        """Custom: (Close / EMA(length)) - 1"""
+        s = ensure_series_minimal_conversion(data)
+        validate_series_data(s, length)
+        ema_vals = TrendIndicators.ema(s, length)
+        ema_series = pd.Series(ema_vals, index=getattr(s, "index", None))
+        ratio = (pd.Series(s) / ema_series) - 1.0
+        return ratio.to_numpy()

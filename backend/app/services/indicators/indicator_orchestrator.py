@@ -261,8 +261,32 @@ class TechnicalIndicatorService:
             "ML_UP_PROB": {"close": "data"},
             "ML_DOWN_PROB": {"close": "data"},
             "ML_RANGE_PROB": {"close": "data"},
+            # 追加: 本対応で新規追加した単一入力指標
+            "HMA": {"close": "data"},
+            "ZLMA": {"close": "data"},
+            "SWMA": {"close": "data"},
+            "ALMA": {"close": "data"},
+            "RMA": {"close": "data"},
+            "TSI": {"close": "data"},
+            "CFO": {"close": "data"},
+            "CTI": {"close": "data"},
+            "SMA_SLOPE": {"close": "data"},
+            "PRICE_EMA_RATIO": {"close": "data"},
+            "RSI_EMA_CROSS": {"close": "data"},
+            # 新規追加の単一入力系
+            "RMI": {"close": "data"},
+            "DPO": {"close": "data"},
+            # VWMA は close->data, volume->volume
+            "VWMA": {"close": "data", "volume": "volume"},
             # RVGI は open_ を受け取る
             "RVGI": {
+                "open_data": "open_",
+                "high": "high",
+                "low": "low",
+                "close": "close",
+            },
+            # RVI も open_ を受け取る
+            "RVI": {
                 "open_data": "open_",
                 "high": "high",
                 "low": "low",
@@ -311,6 +335,11 @@ class TechnicalIndicatorService:
                 "period2": "period2",
                 "period3": "period3",
             },
+            # Additional volume & momentum mappings
+            "EOM": {"high": "high", "low": "low", "close": "close", "volume": "volume"},
+            "KVO": {"high": "high", "low": "low", "close": "close", "volume": "volume"},
+            "CMF": {"high": "high", "low": "low", "close": "close", "volume": "volume"},
+            "VORTEX": {"high": "high", "low": "low", "close": "close"},
             # ボリンジャーバンド
             "BB": {"close": "data"},
             # 価格変換

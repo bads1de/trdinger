@@ -91,17 +91,14 @@ class RandomGeneGenerator:
             # TP/SL遺伝子を先に生成してイグジット条件生成を調整
             tpsl_gene = self._generate_tpsl_gene()
 
-            # MLオンリーモードの場合は常にTP/SL遺伝子を有効化
-            indicator_mode = getattr(self.config, "indicator_mode", "mixed")
-            if indicator_mode == "ml_only" and tpsl_gene:
+            # Auto-StrategyではTP/SLを常に有効化し、エグジット条件は冗長のため生成しない
+            if tpsl_gene:
                 tpsl_gene.enabled = True
 
             # TP/SL遺伝子が有効な場合はイグジット条件を最小化
             if tpsl_gene and tpsl_gene.enabled:
-                # TP/SL機能が有効な場合は空のイグジット条件を生成
                 exit_conditions = []
             else:
-                # TP/SL機能が無効な場合は従来通りイグジット条件を生成
                 exit_conditions = self._generate_random_conditions(indicators, "exit")
 
             # ロング・ショート条件を生成（SmartConditionGeneratorを使用）
@@ -180,6 +177,75 @@ class RandomGeneGenerator:
                 f"指標モード: 混合 (テクニカル: {len(technical_indicators)}, ML: {len(ml_indicators)})"
             )
 
+        # allowed_indicators によりさらに絞り込み（安全性と一貫性のため）
+        try:
+            allowed = set(getattr(config, "allowed_indicators", []) or [])
+            if allowed:
+                available_indicators = [
+                    ind for ind in available_indicators if ind in allowed
+                ]
+        except Exception:
+            pass
+
+        # 安定性のため、デフォルトでは実験的インジケータを除外（allowed_indicators 指定時は尊重）
+        experimental = {"RMI", "DPO", "CHOP", "VORTEX", "EOM", "KVO", "PVT", "CMF"}
+        try:
+            allowed = set(getattr(self.config, "allowed_indicators", []) or [])
+            if not allowed:
+                available_indicators = [
+                    ind for ind in available_indicators if ind not in experimental
+                ]
+        except Exception:
+            available_indicators = [
+                ind for ind in available_indicators if ind not in experimental
+            ]
+        # テクニカルオンリー時のデフォルト候補を厳選して成立性を底上げ（allowed_indicators 指定時は尊重）
+        if indicator_mode == "technical_only":
+            try:
+                allowed = set(getattr(config, "allowed_indicators", []) or [])
+            except Exception:
+                allowed = set()
+            if not allowed:
+                curated = {
+                    "SMA",
+                    "EMA",
+                    "WMA",
+                    "RMA",
+                    "MA",
+                    "MIDPOINT",
+                    "MACD",
+                    "MACDFIX",
+                    "MACDEXT",
+                    "RSI",
+                    "STOCH",
+                    "STOCHRSI",
+                    "CCI",
+                    "ADX",
+                    "MFI",
+                    "ATR",
+                    "BB",
+                    "ULTOSC",
+                    "KAMA",
+                    "T3",
+                    "TRIMA",
+                    "HMA",
+                    "ALMA",
+                    "VWMA",
+                    "VWAP",
+                    "PPO",
+                    "APO",
+                    "ROC",
+                    "TRIX",
+                    "TSI",
+                    "RVI",
+                    "ICHIMOKU",
+                    "SMA_SLOPE",
+                    "PRICE_EMA_RATIO",
+                }
+                available_indicators = [
+                    ind for ind in available_indicators if ind in curated
+                ]
+
         return available_indicators
 
     def _generate_random_indicators(self) -> List[IndicatorGene]:
@@ -229,25 +295,89 @@ class RandomGeneGenerator:
 
                 has_trend = any(_is_trend(ind.type) for ind in indicators)
                 if not has_trend:
-                    # SMAを追加（期間は適度に短中期から選択）
-                    sma_period = random.choice([10, 14, 20, 30, 50])
-                    indicators.append(
-                        IndicatorGene(
-                            type="SMA", parameters={"period": sma_period}, enabled=True
+                    # allowed_indicators/available_indicators を尊重してトレンド補完
+                    trend_pool = [
+                        name for name in self.available_indicators if _is_trend(name)
+                    ]
+                    if trend_pool:
+                        chosen = random.choice(trend_pool)
+                        # period が必要なものにのみデフォルトperiodを与える（SMA/EMA 等）
+                        default_params = (
+                            {"period": random.choice([10, 14, 20, 30, 50])}
+                            if chosen in ("SMA", "EMA", "MAMA", "MA")
+                            else {}
                         )
-                    )
+                        indicators.append(
+                            IndicatorGene(
+                                type=chosen, parameters=default_params, enabled=True
+                            )
+                        )
+                        # 上限超過なら非トレンドを1つ削除
+                        if len(indicators) > self.max_indicators:
+                            for j, ind in enumerate(indicators):
+                                if not _is_trend(ind.type):
+                                    indicators.pop(j)
+                                    break
+                # MA系が2本未満ならクロス戦略を可能にするために追加
+                try:
 
-                    # 上限超過なら非トレンドを1つ削除
-                    if len(indicators) > self.max_indicators:
-                        for j, ind in enumerate(indicators):
-                            if not _is_trend(ind.type):
-                                indicators.pop(j)
-                                break
+                    def _is_ma(name: str) -> bool:
+                        return name in {
+                            "SMA",
+                            "EMA",
+                            "WMA",
+                            "RMA",
+                            "TRIMA",
+                            "KAMA",
+                            "T3",
+                            "HMA",
+                            "ZLMA",
+                            "MA",
+                        }
+
+                    ma_count = sum(1 for ind in indicators if _is_ma(ind.type))
+                    if ma_count < 2:
+                        # 追加するMAを選択
+                        ma_pool = [
+                            name for name in self.available_indicators if _is_ma(name)
+                        ]
+                        if ma_pool:
+                            # 既存のMAのperiodと被らないように
+                            existing_periods = set(
+                                ind.parameters.get("period")
+                                for ind in indicators
+                                if _is_ma(ind.type) and isinstance(ind.parameters, dict)
+                            )
+                            chosen = random.choice(ma_pool)
+                            period_choices = [7, 10, 12, 14, 20, 30, 50]
+                            period = random.choice(
+                                [p for p in period_choices if p not in existing_periods]
+                                or [14]
+                            )
+                            indicators.append(
+                                IndicatorGene(
+                                    type=chosen,
+                                    parameters={"period": period},
+                                    enabled=True,
+                                )
+                            )
+                            # 上限超過なら非MAを1つ削除
+                            if len(indicators) > self.max_indicators:
+                                for j, ind in enumerate(indicators):
+                                    if not _is_ma(ind.type):
+                                        indicators.pop(j)
+                                        break
+                except Exception:
+                    pass
+                    # trend_pool が無ければ補完はスキップ（allowed_indicators を厳守）
             except Exception:
-                # レジストリ取得が失敗しても安全にSMAを追加
-                if all(
-                    ind.type not in ("SMA", "EMA", "MAMA", "MA") for ind in indicators
+                # レジストリ取得が失敗しても安全にSMAを追加（ただしavailable_indicatorsにSMAが含まれる場合のみ）
+                if (
+                    any(ind.type in ("SMA", "EMA", "MAMA", "MA") for ind in indicators)
+                    or "SMA" not in self.available_indicators
                 ):
+                    pass
+                else:
                     indicators.append(
                         IndicatorGene(
                             type="SMA", parameters={"period": 20}, enabled=True

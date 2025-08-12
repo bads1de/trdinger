@@ -1700,3 +1700,414 @@ def initialize_all_indicators():
 
 # モジュール読み込み時に初期化
 initialize_all_indicators()
+
+# ---- Append new pandas-ta indicators and custom ones ----
+# Trend additions
+hma_config = IndicatorConfig(
+    indicator_name="HMA",
+    adapter_function=TrendIndicators.hma,
+    required_data=["close"],
+    result_type=IndicatorResultType.SINGLE,
+    scale_type=IndicatorScaleType.PRICE_RATIO,
+    category="trend",
+)
+hma_config.add_parameter(
+    ParameterConfig(name="period", default_value=20, min_value=2, max_value=200)
+)
+indicator_registry.register(hma_config)
+
+zlma_config = IndicatorConfig(
+    indicator_name="ZLMA",
+    adapter_function=TrendIndicators.zlma,
+    required_data=["close"],
+    result_type=IndicatorResultType.SINGLE,
+    scale_type=IndicatorScaleType.PRICE_RATIO,
+    category="trend",
+)
+zlma_config.add_parameter(
+    ParameterConfig(name="period", default_value=20, min_value=2, max_value=200)
+)
+indicator_registry.register(zlma_config)
+
+vwma_config = IndicatorConfig(
+    indicator_name="VWMA",
+    adapter_function=TrendIndicators.vwma,
+    required_data=["close", "volume"],
+    result_type=IndicatorResultType.SINGLE,
+    scale_type=IndicatorScaleType.PRICE_RATIO,
+    category="trend",
+)
+vwma_config.add_parameter(
+    ParameterConfig(name="period", default_value=20, min_value=2, max_value=200)
+)
+indicator_registry.register(vwma_config)
+
+swma_config = IndicatorConfig(
+    indicator_name="SWMA",
+    adapter_function=TrendIndicators.swma,
+    required_data=["close"],
+    result_type=IndicatorResultType.SINGLE,
+    scale_type=IndicatorScaleType.PRICE_RATIO,
+    category="trend",
+)
+swma_config.add_parameter(
+    ParameterConfig(name="period", default_value=10, min_value=2, max_value=200)
+)
+indicator_registry.register(swma_config)
+
+alma_config = IndicatorConfig(
+    indicator_name="ALMA",
+    adapter_function=TrendIndicators.alma,
+    required_data=["close"],
+    result_type=IndicatorResultType.SINGLE,
+    scale_type=IndicatorScaleType.PRICE_RATIO,
+    category="trend",
+)
+alma_config.add_parameter(
+    ParameterConfig(name="period", default_value=9, min_value=2, max_value=200)
+)
+indicator_registry.register(alma_config)
+
+rma_config = IndicatorConfig(
+    indicator_name="RMA",
+    adapter_function=TrendIndicators.rma,
+    required_data=["close"],
+    result_type=IndicatorResultType.SINGLE,
+    scale_type=IndicatorScaleType.PRICE_RATIO,
+    category="trend",
+)
+rma_config.add_parameter(
+    ParameterConfig(name="period", default_value=14, min_value=2, max_value=200)
+)
+indicator_registry.register(rma_config)
+
+e1_config = IndicatorConfig(
+    indicator_name="ICHIMOKU",
+    adapter_function=TrendIndicators.ichimoku,
+    required_data=["high", "low", "close"],
+    result_type=IndicatorResultType.COMPLEX,
+    scale_type=IndicatorScaleType.PRICE_ABSOLUTE,
+    category="trend",
+)
+e1_config.add_parameter(
+    ParameterConfig(name="tenkan", default_value=9, min_value=2, max_value=100)
+)
+e1_config.add_parameter(
+    ParameterConfig(name="kijun", default_value=26, min_value=2, max_value=200)
+)
+e1_config.add_parameter(
+    ParameterConfig(name="senkou", default_value=52, min_value=2, max_value=300)
+)
+indicator_registry.register(e1_config)
+
+# Volatility additions
+kc_config = IndicatorConfig(
+    indicator_name="KELTNER",
+    adapter_function=VolatilityIndicators.keltner,
+    required_data=["high", "low", "close"],
+    result_type=IndicatorResultType.COMPLEX,
+    scale_type=IndicatorScaleType.PRICE_RATIO,
+    category="volatility",
+)
+kc_config.add_parameter(
+    ParameterConfig(name="period", default_value=20, min_value=2, max_value=200)
+)
+kc_config.add_parameter(
+    ParameterConfig(name="scalar", default_value=2.0, min_value=0.5, max_value=5.0)
+)
+indicator_registry.register(kc_config)
+
+donch_config = IndicatorConfig(
+    indicator_name="DONCHIAN",
+    adapter_function=VolatilityIndicators.donchian,
+    required_data=["high", "low"],
+    result_type=IndicatorResultType.COMPLEX,
+    scale_type=IndicatorScaleType.PRICE_ABSOLUTE,
+    category="volatility",
+)
+donch_config.add_parameter(
+    ParameterConfig(name="period", default_value=20, min_value=2, max_value=200)
+)
+indicator_registry.register(donch_config)
+
+supertrend_config = IndicatorConfig(
+    indicator_name="SUPERTREND",
+    adapter_function=VolatilityIndicators.supertrend,
+    required_data=["high", "low", "close"],
+    result_type=IndicatorResultType.COMPLEX,
+    scale_type=IndicatorScaleType.PRICE_ABSOLUTE,
+    category="volatility",
+)
+supertrend_config.add_parameter(
+    ParameterConfig(name="period", default_value=10, min_value=2, max_value=200)
+)
+supertrend_config.add_parameter(
+    ParameterConfig(name="multiplier", default_value=3.0, min_value=1.0, max_value=10.0)
+)
+indicator_registry.register(supertrend_config)
+
+# Volume additions
+nvi_config = IndicatorConfig(
+    indicator_name="NVI",
+    adapter_function=VolumeIndicators.nvi,
+    required_data=["close", "volume"],
+    result_type=IndicatorResultType.SINGLE,
+    scale_type=IndicatorScaleType.VOLUME,
+    category="volume",
+)
+indicator_registry.register(nvi_config)
+
+pvi_config = IndicatorConfig(
+    indicator_name="PVI",
+    adapter_function=VolumeIndicators.pvi,
+    required_data=["close", "volume"],
+    result_type=IndicatorResultType.SINGLE,
+    scale_type=IndicatorScaleType.VOLUME,
+    category="volume",
+)
+indicator_registry.register(pvi_config)
+
+vwap_config = IndicatorConfig(
+    indicator_name="VWAP",
+    adapter_function=VolumeIndicators.vwap,
+    required_data=["high", "low", "close", "volume"],
+    result_type=IndicatorResultType.SINGLE,
+    scale_type=IndicatorScaleType.PRICE_ABSOLUTE,
+    category="volume",
+)
+indicator_registry.register(vwap_config)
+
+# Momentum additions
+tsi_config = IndicatorConfig(
+    indicator_name="TSI",
+    adapter_function=MomentumIndicators.tsi,
+    required_data=["close"],
+    result_type=IndicatorResultType.SINGLE,
+    scale_type=IndicatorScaleType.MOMENTUM_ZERO_CENTERED,
+    category="momentum",
+)
+tsi_config.add_parameter(
+    ParameterConfig(name="fastperiod", default_value=13, min_value=2, max_value=100)
+)
+tsi_config.add_parameter(
+    ParameterConfig(name="slowperiod", default_value=25, min_value=2, max_value=200)
+)
+indicator_registry.register(tsi_config)
+
+rvi_config = IndicatorConfig(
+    indicator_name="RVI",
+    adapter_function=MomentumIndicators.rvi,
+    required_data=["open_data", "high", "low", "close"],
+    result_type=IndicatorResultType.SINGLE,
+    scale_type=IndicatorScaleType.OSCILLATOR_0_100,
+    category="momentum",
+)
+rvi_config.add_parameter(
+    ParameterConfig(name="period", default_value=10, min_value=2, max_value=200)
+)
+indicator_registry.register(rvi_config)
+
+pvo_config = IndicatorConfig(
+    indicator_name="PVO",
+    adapter_function=MomentumIndicators.pvo,
+    required_data=["close", "volume"],
+    result_type=IndicatorResultType.COMPLEX,
+    scale_type=IndicatorScaleType.MOMENTUM_ZERO_CENTERED,
+    category="momentum",
+)
+pvo_config.add_parameter(
+    ParameterConfig(name="fastperiod", default_value=12, min_value=2, max_value=100)
+)
+
+# Additional momentum registrations
+rmi_config = IndicatorConfig(
+    indicator_name="RMI",
+    adapter_function=MomentumIndicators.rmi,
+    required_data=["close"],
+    result_type=IndicatorResultType.SINGLE,
+    scale_type=IndicatorScaleType.OSCILLATOR_0_100,
+    category="momentum",
+)
+rmi_config.add_parameter(
+    ParameterConfig(name="length", default_value=20, min_value=2, max_value=200)
+)
+rmi_config.add_parameter(
+    ParameterConfig(name="mom", default_value=20, min_value=1, max_value=100)
+)
+indicator_registry.register(rmi_config)
+
+dpo_cfg = IndicatorConfig(
+    indicator_name="DPO",
+    adapter_function=MomentumIndicators.dpo,
+    required_data=["close"],
+    result_type=IndicatorResultType.SINGLE,
+    scale_type=IndicatorScaleType.MOMENTUM_ZERO_CENTERED,
+    category="momentum",
+)
+dpo_cfg.add_parameter(
+    ParameterConfig(name="length", default_value=20, min_value=2, max_value=200)
+)
+indicator_registry.register(dpo_cfg)
+
+chop_cfg = IndicatorConfig(
+    indicator_name="CHOP",
+    adapter_function=MomentumIndicators.chop,
+    required_data=["high", "low", "close"],
+    result_type=IndicatorResultType.SINGLE,
+    scale_type=IndicatorScaleType.OSCILLATOR_0_100,
+    category="momentum",
+)
+chop_cfg.add_parameter(
+    ParameterConfig(name="length", default_value=14, min_value=2, max_value=200)
+)
+indicator_registry.register(chop_cfg)
+
+vi_cfg = IndicatorConfig(
+    indicator_name="VORTEX",
+    adapter_function=MomentumIndicators.vortex,
+    required_data=["high", "low", "close"],
+    result_type=IndicatorResultType.COMPLEX,
+    scale_type=IndicatorScaleType.OSCILLATOR_PLUS_MINUS_100,
+    category="momentum",
+)
+vi_cfg.add_parameter(
+    ParameterConfig(name="length", default_value=14, min_value=2, max_value=200)
+)
+indicator_registry.register(vi_cfg)
+
+# Additional volume registrations
+eom_cfg = IndicatorConfig(
+    indicator_name="EOM",
+    adapter_function=VolumeIndicators.eom,
+    required_data=["high", "low", "close", "volume"],
+    result_type=IndicatorResultType.SINGLE,
+    scale_type=IndicatorScaleType.VOLUME,
+    category="volume",
+)
+eom_cfg.add_parameter(
+    ParameterConfig(name="length", default_value=14, min_value=2, max_value=200)
+)
+indicator_registry.register(eom_cfg)
+
+kvo_cfg = IndicatorConfig(
+    indicator_name="KVO",
+    adapter_function=VolumeIndicators.kvo,
+    required_data=["high", "low", "close", "volume"],
+    result_type=IndicatorResultType.SINGLE,
+    scale_type=IndicatorScaleType.VOLUME,
+    category="volume",
+)
+kvo_cfg.add_parameter(
+    ParameterConfig(name="fast", default_value=34, min_value=2, max_value=100)
+)
+kvo_cfg.add_parameter(
+    ParameterConfig(name="slow", default_value=55, min_value=2, max_value=200)
+)
+indicator_registry.register(kvo_cfg)
+
+pvt_cfg = IndicatorConfig(
+    indicator_name="PVT",
+    adapter_function=VolumeIndicators.pvt,
+    required_data=["close", "volume"],
+    result_type=IndicatorResultType.SINGLE,
+    scale_type=IndicatorScaleType.VOLUME,
+    category="volume",
+)
+indicator_registry.register(pvt_cfg)
+pvo_config.add_parameter(
+    ParameterConfig(name="slowperiod", default_value=26, min_value=2, max_value=200)
+)
+
+pvo_config.add_parameter(
+    ParameterConfig(name="signal", default_value=9, min_value=2, max_value=100)
+)
+indicator_registry.register(pvo_config)
+
+
+cmf_cfg = IndicatorConfig(
+    indicator_name="CMF",
+    adapter_function=VolumeIndicators.cmf,
+    required_data=["high", "low", "close", "volume"],
+    result_type=IndicatorResultType.SINGLE,
+    scale_type=IndicatorScaleType.VOLUME,
+    category="volume",
+)
+cmf_cfg.add_parameter(
+    ParameterConfig(name="length", default_value=20, min_value=2, max_value=200)
+)
+indicator_registry.register(cmf_cfg)
+
+
+pvo_config.add_parameter(
+    ParameterConfig(name="signal", default_value=9, min_value=2, max_value=100)
+)
+indicator_registry.register(pvo_config)
+
+cfo_config = IndicatorConfig(
+    indicator_name="CFO",
+    adapter_function=MomentumIndicators.cfo,
+    required_data=["close"],
+    result_type=IndicatorResultType.SINGLE,
+    scale_type=IndicatorScaleType.MOMENTUM_ZERO_CENTERED,
+    category="momentum",
+)
+cfo_config.add_parameter(
+    ParameterConfig(name="period", default_value=9, min_value=2, max_value=200)
+)
+indicator_registry.register(cfo_config)
+
+cti_config = IndicatorConfig(
+    indicator_name="CTI",
+    adapter_function=MomentumIndicators.cti,
+    required_data=["close"],
+    result_type=IndicatorResultType.SINGLE,
+    scale_type=IndicatorScaleType.MOMENTUM_ZERO_CENTERED,
+    category="momentum",
+)
+cti_config.add_parameter(
+    ParameterConfig(name="period", default_value=20, min_value=2, max_value=200)
+)
+indicator_registry.register(cti_config)
+
+# Custom originals
+sma_slope_config = IndicatorConfig(
+    indicator_name="SMA_SLOPE",
+    adapter_function=TrendIndicators.sma_slope,
+    required_data=["close"],
+    result_type=IndicatorResultType.SINGLE,
+    scale_type=IndicatorScaleType.MOMENTUM_ZERO_CENTERED,
+    category="trend",
+)
+sma_slope_config.add_parameter(
+    ParameterConfig(name="period", default_value=20, min_value=2, max_value=200)
+)
+indicator_registry.register(sma_slope_config)
+
+price_ema_ratio_config = IndicatorConfig(
+    indicator_name="PRICE_EMA_RATIO",
+    adapter_function=TrendIndicators.price_ema_ratio,
+    required_data=["close"],
+    result_type=IndicatorResultType.SINGLE,
+    scale_type=IndicatorScaleType.MOMENTUM_ZERO_CENTERED,
+    category="trend",
+)
+price_ema_ratio_config.add_parameter(
+    ParameterConfig(name="period", default_value=20, min_value=2, max_value=200)
+)
+indicator_registry.register(price_ema_ratio_config)
+
+rsi_ema_cross_config = IndicatorConfig(
+    indicator_name="RSI_EMA_CROSS",
+    adapter_function=MomentumIndicators.rsi_ema_cross,
+    required_data=["close"],
+    result_type=IndicatorResultType.COMPLEX,
+    scale_type=IndicatorScaleType.OSCILLATOR_0_100,
+    category="momentum",
+)
+rsi_ema_cross_config.add_parameter(
+    ParameterConfig(name="rsi_length", default_value=14, min_value=2, max_value=200)
+)
+rsi_ema_cross_config.add_parameter(
+    ParameterConfig(name="ema_length", default_value=9, min_value=2, max_value=200)
+)
+indicator_registry.register(rsi_ema_cross_config)
