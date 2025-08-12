@@ -20,6 +20,7 @@ from ..utils.operand_grouping import operand_grouping_system
 from ..utils.parameter_generators import (
     generate_indicator_parameters,
 )
+from ..constants import OPERATORS, DATA_SOURCES
 from .smart_condition_generator import SmartConditionGenerator
 
 logger = logging.getLogger(__name__)
@@ -97,18 +98,10 @@ class RandomGeneGenerator:
         self._coverage_idx = 0
 
         # 利用可能なデータソース
-        self.available_data_sources = [
-            "close",
-            "open",
-            "high",
-            "low",
-            "volume",
-            "OpenInterest",
-            "FundingRate",
-        ]
+        self.available_data_sources = DATA_SOURCES
 
         # 利用可能な演算子
-        self.available_operators = [">", "<", ">=", "<="]
+        self.available_operators = OPERATORS
 
     def generate_random_gene(self) -> StrategyGene:
         """
@@ -241,7 +234,13 @@ class RandomGeneGenerator:
             pass
 
         # 安定性のため、デフォルトでは実験的インジケータを除外（allowed_indicators 指定時は尊重）
-        experimental = {"RMI", "DPO", "CHOP", "VORTEX", "EOM", "KVO", "PVT", "CMF"}
+        # 実験的インジケータはレジストリ定義に従う
+        try:
+            from app.services.indicators.config import indicator_registry
+
+            experimental = indicator_registry.experimental_indicators
+        except Exception:
+            experimental = {"RMI", "DPO", "CHOP", "VORTEX", "EOM", "KVO", "PVT", "CMF"}
         try:
             allowed = set(getattr(self.config, "allowed_indicators", []) or [])
             if not allowed:

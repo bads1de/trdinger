@@ -90,52 +90,16 @@ class TechnicalIndicatorService:
                 )
 
         # パラメータ名の変換（period -> length、ただし一部の指標は除外）
-        converted_params = {}
-        # lengthパラメータに変換しない指標のリスト（periodをそのまま使用）
-        period_based_indicators = [
-            "MA",
-            "MAVP",
-            "MAX",
-            "MIN",
-            "SUM",
-            "BETA",
-            "CORREL",
-            "LINEARREG",
-            "LINEARREG_SLOPE",
-            "STDDEV",
-            "VAR",
-        ]
         # MAX/MIN/SUM は data 引数名を期待
         if indicator_type in ["MAX", "MIN", "SUM"]:
-            # 既定の close->close マッピングではなく data に割り当て
             if "close" in required_data:
                 required_data = {**required_data}
                 required_data["data"] = required_data.pop("close")
 
-        for key, value in params.items():
-            if key == "period" and indicator_type not in period_based_indicators:
-                converted_params["length"] = value
-            else:
-                converted_params[key] = value
+        # パラメータ正規化（period->length & デフォルト補完）
+        from .parameter_normalizer import normalize_params
 
-        # フォールバック: length を要求するアダプタに length が無い場合はデフォルト値を補う
-        try:
-            sig = inspect.signature(indicator_func)
-            needs_length = "length" in sig.parameters
-            if needs_length and "length" not in converted_params:
-                # 優先1: 入力paramsのperiod、優先2: configのperiod/lengthデフォルト、最終: 14
-                default_len = params.get("period")
-                if default_len is None:
-                    if "period" in config.parameters:
-                        default_len = config.parameters["period"].default_value
-                    elif "length" in config.parameters:
-                        default_len = config.parameters["length"].default_value
-                    else:
-                        default_len = 14
-                converted_params["length"] = default_len
-        except Exception:
-            # シグネチャ取得やconfig参照に失敗しても黙って続行（呼び出し時に検出される）
-            pass
+        converted_params = normalize_params(indicator_type, params, config)
 
         # パラメータとデータを結合して関数を呼び出し
         # サービス経由の厳格チェック（SMA: len==length かつ データ点>2 はエラー）
@@ -385,6 +349,15 @@ class TechnicalIndicatorService:
                 "close": "close",
             },
         }
+
+        # Config 側に param_map があればそれを最優先
+        config = self._get_indicator_config(indicator_type)
+        try:
+            if config and getattr(config, "param_map", None):
+                if data_key in config.param_map:
+                    return config.param_map[data_key]
+        except Exception:
+            pass
 
         # 指標固有のマッピングがある場合はそれを使用
         if indicator_type in indicator_specific_mapping:

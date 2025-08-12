@@ -948,7 +948,12 @@ class SmartConditionGenerator:
             )
             if name in {"RSI", "STOCH", "STOCHRSI", "KDJ", "QQE", "MFI"}:
                 # プロファイルごとの閾値は ThresholdPolicy に一元化
-                thr = ThresholdPolicy.get(profile).rsi_long_lt
+                policy = ThresholdPolicy.get(profile)
+                thr = (
+                    policy.rsi_long_lt
+                    if name != "MFI"
+                    else (policy.mfi_long_lt or policy.rsi_long_lt)
+                )
                 return [
                     Condition(left_operand=name, operator=">", right_operand=float(thr))
                 ]
@@ -976,22 +981,19 @@ class SmartConditionGenerator:
                 else "normal"
             )
             if name == "CCI":
-                # 方向性のある強めのしきい値
-                thr = (
-                    -5
-                    if profile == "aggressive"
-                    else (5 if profile == "conservative" else 0)
-                )
+                # 方向性のある強めのしきい値（ポリシー化）
+                lim = ThresholdPolicy.get(profile).cci_abs_limit or 100
                 return [
-                    Condition(left_operand=name, operator=">", right_operand=float(thr))
+                    Condition(
+                        left_operand=name,
+                        operator=">",
+                        right_operand=float(-lim / 20.0),
+                    )
                 ]
             if name == "WILLR":
-                # -100..0（-50の上は相対的に強め）
-                thr = (
-                    -60
-                    if profile == "aggressive"
-                    else (-40 if profile == "conservative" else -50)
-                )
+                # -100..0（-50の上は相対的に強め）→ ポリシー化
+                p = ThresholdPolicy.get(profile)
+                thr = -p.willr_long_lt if p.willr_long_lt is not None else -50
                 return [
                     Condition(left_operand=name, operator=">", right_operand=float(thr))
                 ]
@@ -1077,12 +1079,12 @@ class SmartConditionGenerator:
                 else "normal"
             )
             if name in {"RSI", "STOCH", "STOCHRSI", "KDJ", "QQE", "MFI"}:
-                # aggressive: 49, normal: 46, conservative: 42（ショート側もやや緩め）
-                thr = 46
-                if profile == "aggressive":
-                    thr = 49
-                elif profile == "conservative":
-                    thr = 42
+                p = ThresholdPolicy.get(profile)
+                thr = (
+                    p.rsi_short_gt
+                    if name != "MFI"
+                    else (p.mfi_short_gt or p.rsi_short_gt)
+                )
                 return [
                     Condition(left_operand=name, operator="<", right_operand=float(thr))
                 ]

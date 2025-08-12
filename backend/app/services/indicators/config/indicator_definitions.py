@@ -1741,6 +1741,8 @@ vwma_config.add_parameter(
     ParameterConfig(name="period", default_value=20, min_value=2, max_value=200)
 )
 indicator_registry.register(vwma_config)
+vwma_config.param_map = {"close": "data", "volume": "volume"}
+
 
 swma_config = IndicatorConfig(
     indicator_name="SWMA",

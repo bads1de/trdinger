@@ -71,6 +71,9 @@ class IndicatorConfig:
     # 結果処理設定
     result_handler: Optional[str] = None  # 複数値結果の処理ハンドラー
 
+    # データキー→関数引数名マッピング（オーバーライド用。未設定なら従来マッピングを使用）
+    param_map: Dict[str, str] = field(default_factory=dict)
+
     # メタデータ（遺伝子生成用）
     scale_type: Optional[IndicatorScaleType] = None  # スケールタイプ
     category: Optional[str] = None  # 指標カテゴリ（例: trend, momentum）
@@ -175,6 +178,18 @@ class IndicatorConfigRegistry:
 
     def __init__(self):
         self._configs: Dict[str, IndicatorConfig] = {}
+        # 実験的インジケータ集合（ジェネレーターから参照）
+        self.experimental_indicators = {
+            "RMI",
+            "DPO",
+            "CHOP",
+            "VORTEX",
+            "EOM",
+            "KVO",
+            "PVT",
+            "CMF",
+        }
+
         # フォールバックマッピングをレジストリ内に定義
         self._fallback_indicators = self._setup_fallback_indicators()
 
