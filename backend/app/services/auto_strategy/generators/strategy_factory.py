@@ -45,13 +45,20 @@ class StrategyFactory:
         Raises:
             ValueError: 遺伝子が無効な場合
         """
+        logger.warning(f"🏭 戦略クラス作成開始: 指標数={len(gene.indicators)}")
+        logger.warning(f"戦略遺伝子詳細: {[ind.type for ind in gene.indicators]}")
+
         # 遺伝子の妥当性検証
         is_valid, errors = gene.validate()
         if not is_valid:
             raise ValueError(f"Invalid strategy gene: {', '.join(errors)}")
 
+        logger.warning(f"戦略遺伝子検証成功")
+
         # ファクトリー参照を保存
         factory = self
+
+        logger.warning(f"動的クラス生成開始")
 
         # 動的クラス生成
         class GeneratedStrategy(Strategy):
@@ -77,6 +84,10 @@ class StrategyFactory:
                 return checked_params
 
             def __init__(self, broker=None, data=None, params=None):
+                logger.warning(
+                    f"戦略__init__開始: broker={broker is not None}, data={data is not None}, params={params}"
+                )
+
                 # paramsがNoneの場合は空辞書を設定
                 if params is None:
                     params = {}
@@ -88,24 +99,51 @@ class StrategyFactory:
                 if params and "strategy_gene" in params:
                     self.strategy_gene = params["strategy_gene"]
                     self.gene = params["strategy_gene"]
+                    logger.warning(
+                        f"戦略遺伝子をparamsから設定: {self.strategy_gene.indicators[0].type if self.strategy_gene.indicators else 'なし'}"
+                    )
                 else:
                     # デフォルトとして元のgeneを使用
                     self.strategy_gene = gene
                     self.gene = gene
+                    logger.warning(
+                        f"戦略遺伝子をデフォルトから設定: {gene.indicators[0].type if gene.indicators else 'なし'}"
+                    )
 
                 self.indicators = {}
                 self.factory = factory  # ファクトリーへの参照
 
+                logger.warning(f"戦略__init__完了")
+
             def init(self):
                 """指標の初期化"""
-                try:
-                    # 各指標を初期化
-                    for i, indicator_gene in enumerate(gene.indicators):
-                        if indicator_gene.enabled:
-                            self._init_indicator(indicator_gene)
-                        else:
-                            pass
+                logger.warning(f"🚀 init()メソッド実行開始！")
+                logger.warning(f"戦略遺伝子確認: {self.strategy_gene}")
+                logger.warning(
+                    f"戦略遺伝子指標数: {len(self.strategy_gene.indicators) if hasattr(self.strategy_gene, 'indicators') else 'なし'}"
+                )
 
+                try:
+                    logger.warning(
+                        f"戦略初期化開始: 指標数={len(self.strategy_gene.indicators)}"
+                    )
+
+                    # 各指標を初期化
+                    for i, indicator_gene in enumerate(self.strategy_gene.indicators):
+                        logger.warning(
+                            f"指標処理 {i+1}/{len(self.strategy_gene.indicators)}: {indicator_gene.type}, enabled={indicator_gene.enabled}"
+                        )
+
+                        if indicator_gene.enabled:
+                            logger.warning(f"指標初期化実行開始: {indicator_gene.type}")
+                            self._init_indicator(indicator_gene)
+                            logger.warning(f"指標初期化実行完了: {indicator_gene.type}")
+                        else:
+                            logger.warning(
+                                f"指標スキップ（無効）: {indicator_gene.type}"
+                            )
+
+                    logger.warning(f"戦略初期化完了")
                 except Exception as e:
                     logger.error(f"戦略初期化エラー: {e}", exc_info=True)
                     raise
@@ -273,13 +311,25 @@ class StrategyFactory:
             def _init_indicator(self, indicator_gene: IndicatorGene):
                 """単一指標の初期化（統合版）"""
                 try:
+                    logger.warning(f"_init_indicator開始: {indicator_gene.type}")
+
                     # 指標計算器を使用して初期化
                     try:
+                        logger.warning(
+                            f"indicator_calculator.init_indicator呼び出し: {indicator_gene.type}"
+                        )
                         factory.indicator_calculator.init_indicator(
                             indicator_gene, self
                         )
+                        logger.warning(
+                            f"indicator_calculator.init_indicator成功: {indicator_gene.type}"
+                        )
                         return
-                    except Exception:
+                    except Exception as e:
+                        logger.error(
+                            f"indicator_calculator.init_indicator失敗: {indicator_gene.type}, エラー: {e}"
+                        )
+
                         # フォールバック: SMA/RSIの最小構成でリカバーを試みる
                         fb = None
                         if indicator_gene.type not in ("SMA", "RSI"):
@@ -292,15 +342,23 @@ class StrategyFactory:
                             fb = IG(
                                 type="SMA", parameters={"period": period}, enabled=True
                             )
+                            logger.warning(
+                                f"フォールバック指標作成: {indicator_gene.type} -> SMA({period})"
+                            )
+
                         if fb:
                             try:
+                                logger.warning(
+                                    f"フォールバック指標実行: SMA({fb.parameters['period']})"
+                                )
                                 factory.indicator_calculator.init_indicator(fb, self)
                                 logger.warning(
                                     f"フォールバック指標を適用: {indicator_gene.type} -> SMA({fb.parameters['period']})"
                                 )
                                 return
-                            except Exception:
-                                pass
+                            except Exception as fb_e:
+                                logger.error(f"フォールバック指標失敗: {fb_e}")
+
                         # 最後の手段: RSI(14)
                         try:
                             from ..models.gene_strategy import IndicatorGene as IG
@@ -308,11 +366,12 @@ class StrategyFactory:
                             fb2 = IG(
                                 type="RSI", parameters={"period": 14}, enabled=True
                             )
+                            logger.warning("最終フォールバック指標実行: RSI(14)")
                             factory.indicator_calculator.init_indicator(fb2, self)
                             logger.warning("フォールバック指標を適用: RSI(14)")
                             return
-                        except Exception:
-                            pass
+                        except Exception as fb2_e:
+                            logger.error(f"最終フォールバック指標失敗: {fb2_e}")
 
                 except Exception as e:
                     logger.error(
@@ -387,6 +446,13 @@ class StrategyFactory:
         short_id = str(gene.id).split("-")[0]
         GeneratedStrategy.__name__ = f"GS_{short_id}"
         GeneratedStrategy.__qualname__ = GeneratedStrategy.__name__
+
+        logger.warning(f"✅ 戦略クラス作成完了: {GeneratedStrategy.__name__}")
+        logger.warning(f"戦略クラス型: {type(GeneratedStrategy)}")
+        logger.warning(f"戦略クラスMRO: {GeneratedStrategy.__mro__}")
+        logger.warning(
+            f"戦略クラス属性: {[attr for attr in dir(GeneratedStrategy) if not attr.startswith('_')]}"
+        )
 
         return GeneratedStrategy
 

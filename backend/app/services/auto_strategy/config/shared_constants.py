@@ -49,78 +49,8 @@ SUPPORTED_TIMEFRAMES = [
 DEFAULT_TIMEFRAME = "1h"
 
 # === テクニカル指標定数 ===
+# indicator_registryに登録されているすべての指標を含む完全なリスト
 VALID_INDICATOR_TYPES = [
-    # トレンド系指標
-    "SMA",
-    "EMA",
-    "WMA",
-    "DEMA",
-    "TEMA",
-    "TRIMA",
-    "KAMA",
-    "MAMA",
-    "T3",
-    # モメンタム系指標
-    "RSI",
-    "STOCH",
-    "STOCHF",
-    "STOCHRSI",
-    "MACD",
-    "MACDEXT",
-    "MACDFIX",
-    "PPO",
-    "APO",
-    "CMO",
-    "ROC",
-    "ROCP",
-    "ROCR",
-    "ROCR100",
-    "MOM",
-    "TSI",
-    "UO",
-    "WILLR",
-    "CCI",
-    "DX",
-    "MINUS_DI",
-    "PLUS_DI",
-    "MINUS_DM",
-    "PLUS_DM",
-    "ADX",
-    "ADXR",
-    "AROON",
-    "AROONOSC",
-    "BOP",
-    "MFI",
-    "TRIX",
-    "RVGI",
-    # ボラティリティ系指標
-    "ATR",
-    "NATR",
-    "TRANGE",
-    "BBANDS",
-    "BB",  # ボリンジャーバンドの別名
-    "KELTNER",
-    "DONCHIAN",
-    # ボリューム系指標
-    "AD",
-    "ADOSC",
-    "OBV",
-    # サイクル系指標
-    "HT_DCPERIOD",
-    "HT_DCPHASE",
-    "HT_PHASOR",
-    "HT_SINE",
-    "HT_TRENDMODE",
-    # 統計系指標
-    "BETA",
-    "CORREL",
-    "LINEARREG",
-    "LINEARREG_ANGLE",
-    "LINEARREG_INTERCEPT",
-    "LINEARREG_SLOPE",
-    "STDDEV",
-    "TSF",
-    "VAR",
     # 数学変換系指標
     "ACOS",
     "ASIN",
@@ -137,6 +67,17 @@ VALID_INDICATOR_TYPES = [
     "SQRT",
     "TAN",
     "TANH",
+    # ボリューム系指標
+    "AD",
+    "ADOSC",
+    "OBV",
+    "EOM",
+    "KVO",
+    "CMF",
+    "NVI",
+    "PVI",
+    "PVT",
+    "VWAP",
     # 数学演算子
     "ADD",
     "DIV",
@@ -144,18 +85,97 @@ VALID_INDICATOR_TYPES = [
     "SUB",
     "MAX",
     "MIN",
-    "MAXINDEX",
-    "MININDEX",
     "SUM",
-    "MINMAX",
-    "MINMAXINDEX",
+    # モメンタム系指標
+    "ADX",
+    "ADXR",
+    "AO",
+    "APO",
+    "AROON",
+    "AROONOSC",
+    "BOP",
+    "CCI",
+    "CFO",
+    "CHOP",
+    "CTI",
+    "DPO",
+    "DX",
+    "MFI",
+    "MINUS_DI",
+    "MINUS_DM",
+    "PLUS_DI",
+    "PLUS_DM",
+    "PPO",
+    "QQE",
+    "RMI",
+    "ROC",
+    "ROCP",
+    "ROCR",
+    "ROCR100",
+    "RSI",
+    "RSI_EMA_CROSS",
+    "RVGI",
+    "RVI",
+    "SMI",
+    "STC",
+    "STOCH",
+    "STOCHF",
+    "STOCHRSI",
+    "TRIX",
+    "TSI",
+    "ULTOSC",
+    "VORTEX",
+    "WILLR",
+    "MACD",
+    "MACDEXT",
+    "MACDFIX",
+    "KDJ",
+    "KST",
+    "PVO",
+    # トレンド系指標
+    "SMA",
+    "EMA",
+    "WMA",
+    "TRIMA",
+    "KAMA",
+    "ALMA",
+    "HMA",
+    "RMA",
+    "SWMA",
+    "ZLMA",
+    "MA",
+    "MIDPOINT",
+    "MIDPRICE",
+    "SAR",
+    "HT_TRENDLINE",
+    "PRICE_EMA_RATIO",
+    "SMA_SLOPE",
+    "VWMA",
+    # ボラティリティ系指標
+    "ATR",
+    "NATR",
+    "TRANGE",
+    "BB",
+    "DONCHIAN",
+    "KELTNER",
+    "SUPERTREND",
+    # 統計系指標
+    "BETA",
+    "CORREL",
+    "LINEARREG",
+    "LINEARREG_ANGLE",
+    "LINEARREG_INTERCEPT",
+    "LINEARREG_SLOPE",
+    "STDDEV",
+    "TSF",
+    "VAR",
     # 価格変換系指標
     "AVGPRICE",
     "MEDPRICE",
     "TYPPRICE",
     "WCLPRICE",
-    # オーバーレイ系指標
-    "SAR",
+    "HA_CLOSE",
+    "HA_OHLC",
     # パターン認識系指標
     "CDL_DOJI",
     "CDL_HAMMER",
@@ -167,6 +187,26 @@ VALID_INDICATOR_TYPES = [
     "CDL_THREE_BLACK_CROWS",
     "CDL_THREE_WHITE_SOLDIERS",
     "CDL_DARK_CLOUD_COVER",
+    # 複合指標
+    "ICHIMOKU",
+    # 従来の指標（互換性維持）
+    "BBANDS",  # BBの別名
+    "CMO",  # 未実装だが互換性維持
+    "DEMA",  # 未実装だが互換性維持
+    "TEMA",  # 未実装だが互換性維持
+    "MAMA",  # 未実装だが互換性維持
+    "T3",  # 未実装だが互換性維持
+    "UO",  # 未実装だが互換性維持
+    "MOM",  # 未実装だが互換性維持
+    "MAXINDEX",  # 未実装だが互換性維持
+    "MININDEX",  # 未実装だが互換性維持
+    "MINMAX",  # 未実装だが互換性維持
+    "MINMAXINDEX",  # 未実装だが互換性維持
+    "HT_DCPERIOD",  # 未実装だが互換性維持
+    "HT_DCPHASE",  # 未実装だが互換性維持
+    "HT_PHASOR",  # 未実装だが互換性維持
+    "HT_SINE",  # 未実装だが互換性維持
+    "HT_TRENDMODE",  # 未実装だが互換性維持
 ]
 
 # === ML指標定数 ===
