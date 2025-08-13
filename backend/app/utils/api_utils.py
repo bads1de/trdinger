@@ -1,18 +1,22 @@
 """
 API共通ユーティリティ
 """
- 
+
 import logging
-from datetime import datetime
 from typing import Any, Dict, List, Optional
-from .response import make_error_response, make_api_response, make_list_response, make_success_response
- 
+from .response import (
+    make_error_response,
+    make_api_response,
+    make_list_response,
+    make_success_response,
+)
+
 logger = logging.getLogger(__name__)
- 
- 
+
+
 class APIResponseHelper:
     """API レスポンス形式の共通ヘルパークラス（薄いラッパ）"""
- 
+
     @staticmethod
     def error_response(
         message: str,
@@ -22,7 +26,9 @@ class APIResponseHelper:
         """
         エラーレスポンスを生成（共通ユーティリティへ委譲）
         """
-        return make_error_response(message=message, error_code=error_code, details=details)
+        return make_error_response(
+            message=message, error_code=error_code, details=details
+        )
 
     @staticmethod
     def api_response(
@@ -34,7 +40,9 @@ class APIResponseHelper:
         """
         標準化されたAPIレスポンスを生成（共通ユーティリティへ委譲）
         """
-        return make_api_response(success=success, message=message, status=status, data=data)
+        return make_api_response(
+            success=success, message=message, status=status, data=data
+        )
 
     @staticmethod
     def api_list_response(
@@ -47,7 +55,13 @@ class APIResponseHelper:
         """
         リストデータ用の標準化されたAPIレスポンスを生成（共通ユーティリティへ委譲）
         """
-        return make_list_response(success=success, message=message, items=items, status=status, metadata=metadata)
+        return make_list_response(
+            success=success,
+            message=message,
+            items=items,
+            status=status,
+            metadata=metadata,
+        )
 
     @staticmethod
     def success_response(

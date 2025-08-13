@@ -6,9 +6,8 @@ TP/SL計算ロジックを一元化し、異なる計算方式を統一的なイ
 
 import logging
 import math
-from typing import Any, Dict, Optional, Tuple, List
-from enum import Enum
-from dataclasses import dataclass, field
+from typing import Any, Dict, Optional, Tuple
+
 from ..generators.statistical_tpsl_generator import (
     StatisticalTPSLGenerator,
     StatisticalConfig,
@@ -20,17 +19,10 @@ from ..generators.volatility_tpsl_generator import (
 from ..generators.risk_reward_tpsl_generator import (
     RiskRewardTPSLGenerator,
     RiskRewardConfig,
-    RiskRewardProfile,
-    RiskRewardResult,
 )
 from ..models.gene_tpsl import TPSLGene, TPSLMethod
 
 logger = logging.getLogger(__name__)
-
-# RR関連のクラス・ロジックはジェネレーターに移動しました
-
-
-# 重複していた列挙は gene_tpsl.TPSLMethod を使用する（後方互換のためこのファイル内のEnumは削除）
 
 
 class TPSLResult:

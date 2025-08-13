@@ -6,10 +6,9 @@
 """
 
 import logging
-import warnings
+
 from typing import Any, Dict, List, Optional, Tuple
 
-import numpy as np
 import pandas as pd
 import pandera as pa
 from pandera import Column, DataFrameSchema, Check
@@ -196,79 +195,6 @@ class DataValidator:
     # These helpers were removed to simplify the codebase and rely on pandas semantics.
 
     @classmethod
-    def validate_dataframe(
-        cls, df: pd.DataFrame, column_names: Optional[List[str]] = None
-    ) -> Tuple[bool, Dict[str, List[str]]]:
-        """
-        DataFrameの妥当性チェック（非推奨）
-
-        注意: この方法は非推奨です。代わりにvalidate_dataframe_with_schema()を使用してください。
-
-        Args:
-            df: チェック対象のDataFrame
-            column_names: チェック対象のカラム名（Noneの場合は全カラム）
-
-        Returns:
-            (妥当性フラグ, 問題のあるカラムの詳細)
-        """
-        warnings.warn(
-            "validate_dataframe()は非推奨です。validate_dataframe_with_schema()を使用してください。",
-            DeprecationWarning,
-            stacklevel=2,
-        )
-        if df is None or df.empty:
-            return False, {"empty": ["DataFrame is empty or None"]}
-
-        issues = {"infinite": [], "nan": [], "too_large": [], "too_small": []}
-
-        check_columns = (
-            column_names
-            if column_names
-            else df.select_dtypes(include=[np.number]).columns
-        )
-
-        for col in check_columns:
-            if col not in df.columns:
-                continue
-
-            series = df[col]
-
-            # 数値型のカラムのみチェック
-            if not pd.api.types.is_numeric_dtype(series):
-                continue
-
-            # 無限大値のチェック（数値型のみ）
-            try:
-                if np.isinf(series).any():
-                    issues["infinite"].append(col)
-            except (TypeError, ValueError):
-                # データ型が対応していない場合はスキップ
-                continue
-
-            # NaN値のチェック
-            if series.isna().any():
-                issues["nan"].append(col)
-
-            # 異常に大きな値のチェック
-            try:
-                if (series > cls.MAX_VALUE_THRESHOLD).any():
-                    issues["too_large"].append(col)
-            except (TypeError, ValueError):
-                # 比較できない型の場合はスキップ
-                pass
-
-            # 異常に小さな値のチェック
-            try:
-                if (series < cls.MIN_VALUE_THRESHOLD).any():
-                    issues["too_small"].append(col)
-            except (TypeError, ValueError):
-                # 比較できない型の場合はスキップ
-                pass
-
-        is_valid = not any(issues.values())
-        return is_valid, issues
-
-    @classmethod
     def clean_dataframe(
         cls,
         df: pd.DataFrame,
@@ -338,15 +264,23 @@ class DataValidator:
         Returns:
             クリーンアップされたDataFrame
         """
+        # 動的にPanderaスキーマを生成
+        schema_columns = (
+            {col: Column(pa.Any, nullable=True) for col in column_names}
+            if column_names
+            else {}
+        )
+        schema = DataFrameSchema(schema_columns, strict=False)
+
         # バリデーション実行
-        validation_results = cls.validate_dataframe(df, column_names)
+        validation_results = validate_dataframe_with_schema(df, schema)
         cls.log_validation_results(validation_results, log_name)
 
         # クリーンアップ実行
         cleaned_df = cls.clean_dataframe(df, column_names, fill_method)
 
         # クリーンアップ後の再バリデーション
-        post_validation = cls.validate_dataframe(cleaned_df, column_names)
+        post_validation = validate_dataframe_with_schema(cleaned_df, schema)
         if not post_validation[0]:
             logger.error(f"{log_name}: クリーンアップ後もデータに問題があります")
             cls.log_validation_results(

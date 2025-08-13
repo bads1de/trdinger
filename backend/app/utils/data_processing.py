@@ -541,12 +541,6 @@ class DataProcessor:
 
         return pipeline
 
-    # 従来のIQRベース外れ値除去は削除しました。OutlierRemovalTransformerを使用してください。
-
-    # 従来のZ-scoreベース外れ値除去は削除しました。OutlierRemovalTransformerを使用してください。
-
-    # _encode_categorical_safe は削除され、CategoricalEncoderTransformerを使ってください。
-
     def _final_cleanup(self, X):
         """最終的なクリーンアップ"""
         # 残っているNaNを0で埋める
