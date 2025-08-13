@@ -10,8 +10,6 @@ from typing import Any, Dict
 
 import numpy as np
 import pandas as pd
-
-from ....utils.data_validation import DataValidator
 from .base_feature_calculator import BaseFeatureCalculator
 
 logger = logging.getLogger(__name__)
@@ -105,22 +103,36 @@ class MarketDataFeatureCalculator(BaseFeatureCalculator):
             # 欠損値を前方補完
             merged_df[fr_column] = merged_df[fr_column].ffill()
 
-            # ファンディングレート移動平均（安全な計算）
-            result_df["FR_MA_24"] = DataValidator.safe_rolling_mean(
-                merged_df[fr_column], window=24
+            # ファンディングレート移動平均（pandas rolling を使用）
+            result_df["FR_MA_24"] = (
+                merged_df[fr_column]
+                .rolling(window=24, min_periods=1)
+                .mean()
+                .fillna(0.0)
             )
-            result_df["FR_MA_168"] = DataValidator.safe_rolling_mean(
-                merged_df[fr_column], window=168
-            )  # 1週間
+            result_df["FR_MA_168"] = (
+                merged_df[fr_column]
+                .rolling(window=168, min_periods=1)
+                .mean()
+                .fillna(0.0)
+            )
 
             # ファンディングレート変化（安全な計算）
             result_df["FR_Change"] = merged_df[fr_column].diff().fillna(0.0)
-            result_df["FR_Change_Rate"] = DataValidator.safe_pct_change(
+            result_df["FR_Change_Rate"] = (
                 merged_df[fr_column]
+                .pct_change()
+                .replace([np.inf, -np.inf], np.nan)
+                .fillna(0.0)
             )
 
             # ファンディングレートと価格の乖離（安全な計算）
-            price_change = DataValidator.safe_pct_change(result_df["Close"])
+            price_change = (
+                result_df["Close"]
+                .pct_change()
+                .replace([np.inf, -np.inf], np.nan)
+                .fillna(0.0)
+            )
             result_df["Price_FR_Divergence"] = price_change - merged_df[fr_column]
 
             # ファンディングレートの極値
@@ -135,16 +147,25 @@ class MarketDataFeatureCalculator(BaseFeatureCalculator):
             ).astype(int)
 
             # ファンディングレートの正規化
-            result_df["FR_Normalized"] = DataValidator.safe_normalize(
-                merged_df[fr_column], window=168, default_value=0.0
+            fr_mean = merged_df[fr_column].rolling(window=168, min_periods=1).mean()
+            fr_std = (
+                merged_df[fr_column]
+                .rolling(window=168, min_periods=1)
+                .std()
+                .replace(0, np.nan)
+            )
+            result_df["FR_Normalized"] = (
+                ((merged_df[fr_column] - fr_mean) / fr_std)
+                .replace([np.inf, -np.inf], np.nan)
+                .fillna(0.0)
             )
 
             # ファンディングレートトレンド
             result_df["FR_Trend"] = result_df["FR_MA_24"] - result_df["FR_MA_168"]
 
-            # ファンディングレートボラティリティ（安全な計算）
-            result_df["FR_Volatility"] = DataValidator.safe_rolling_std(
-                merged_df[fr_column], window=24
+            # ファンディングレートボラティリティ
+            result_df["FR_Volatility"] = (
+                merged_df[fr_column].rolling(window=24, min_periods=1).std().fillna(0.0)
             )
 
             logger.debug("ファンディングレート特徴量計算完了")
@@ -196,11 +217,17 @@ class MarketDataFeatureCalculator(BaseFeatureCalculator):
             merged_df[oi_column] = merged_df[oi_column].ffill()
 
             # 建玉残高変化率（安全な計算）
-            result_df["OI_Change_Rate"] = DataValidator.safe_pct_change(
+            result_df["OI_Change_Rate"] = (
                 merged_df[oi_column]
+                .pct_change()
+                .replace([np.inf, -np.inf], np.nan)
+                .fillna(0.0)
             )
-            result_df["OI_Change_Rate_24h"] = DataValidator.safe_pct_change(
-                merged_df[oi_column], periods=24
+            result_df["OI_Change_Rate_24h"] = (
+                merged_df[oi_column]
+                .pct_change(periods=24)
+                .replace([np.inf, -np.inf], np.nan)
+                .fillna(0.0)
             )
 
             # 建玉残高急増
@@ -208,47 +235,70 @@ class MarketDataFeatureCalculator(BaseFeatureCalculator):
             result_df["OI_Surge"] = (merged_df[oi_column] > oi_threshold).astype(int)
 
             # ボラティリティ調整建玉残高（安全な計算）
-            price_change = DataValidator.safe_pct_change(result_df["Close"])
-            volatility = DataValidator.safe_rolling_std(price_change, window=24)
-            result_df["Volatility_Adjusted_OI"] = DataValidator.safe_divide(
-                merged_df[oi_column],
-                volatility,
-                default_value=np.nan,  # デフォルト値をnp.nanに設定
+            price_change = (
+                result_df["Close"]
+                .pct_change()
+                .replace([np.inf, -np.inf], np.nan)
+                .fillna(0.0)
             )
+            volatility = (
+                price_change.rolling(window=24, min_periods=1).std().fillna(0.0)
+            )
+            result_df["Volatility_Adjusted_OI"] = (
+                merged_df[oi_column] / volatility
+            ).replace([np.inf, -np.inf], np.nan)
             # NaNになった値を元のOIデータで埋める
             result_df["Volatility_Adjusted_OI"] = result_df[
                 "Volatility_Adjusted_OI"
             ].fillna(merged_df[oi_column])
 
-            # 建玉残高移動平均（安全な計算）
-            result_df["OI_MA_24"] = DataValidator.safe_rolling_mean(
-                merged_df[oi_column], window=24
+            # 建玉残高移動平均
+            result_df["OI_MA_24"] = (
+                merged_df[oi_column]
+                .rolling(window=24, min_periods=1)
+                .mean()
+                .fillna(0.0)
             )
-            result_df["OI_MA_168"] = DataValidator.safe_rolling_mean(
-                merged_df[oi_column], window=168
+            result_df["OI_MA_168"] = (
+                merged_df[oi_column]
+                .rolling(window=168, min_periods=1)
+                .mean()
+                .fillna(0.0)
             )
 
             # 建玉残高トレンド（安全な計算）
             result_df["OI_Trend"] = (
-                DataValidator.safe_divide(
-                    result_df["OI_MA_24"], result_df["OI_MA_168"], default_value=1.0
-                )
-                - 1
-            )
+                result_df["OI_MA_24"] / result_df["OI_MA_168"]
+            ).replace([np.inf, -np.inf], np.nan).fillna(1.0) - 1
 
-            # 建玉残高と価格の関係（安全な計算）
-            price_change = DataValidator.safe_pct_change(result_df["Close"])
+            # 建玉残高と価格の関係
+            price_change = (
+                result_df["Close"]
+                .pct_change()
+                .replace([np.inf, -np.inf], np.nan)
+                .fillna(0.0)
+            )
             oi_change = result_df["OI_Change_Rate"]
 
-            # 建玉残高と価格の相関（簡易実装）
-            # 相関計算は複雑なため、共分散ベースの簡易実装を使用
-            result_df["OI_Price_Correlation"] = DataValidator.safe_multiply(
-                price_change, oi_change, default_value=0.0
+            # 共分散ベースの簡易相関（ここでは単純な積を使用）
+            result_df["OI_Price_Correlation"] = (
+                (price_change * oi_change)
+                .replace([np.inf, -np.inf], np.nan)
+                .fillna(0.0)
             )
 
             # 建玉残高の正規化
-            result_df["OI_Normalized"] = DataValidator.safe_normalize(
-                merged_df[oi_column], window=168, default_value=0.0
+            oi_mean = merged_df[oi_column].rolling(window=168, min_periods=1).mean()
+            oi_std = (
+                merged_df[oi_column]
+                .rolling(window=168, min_periods=1)
+                .std()
+                .replace(0, np.nan)
+            )
+            result_df["OI_Normalized"] = (
+                ((merged_df[oi_column] - oi_mean) / oi_std)
+                .replace([np.inf, -np.inf], np.nan)
+                .fillna(0.0)
             )
 
             logger.debug("建玉残高特徴量計算完了")
@@ -313,22 +363,49 @@ class MarketDataFeatureCalculator(BaseFeatureCalculator):
             merged_df[oi_column] = merged_df[oi_column].ffill()
 
             # FR/OI比率
-            result_df["FR_OI_Ratio"] = DataValidator.safe_divide(
-                merged_df[fr_column], merged_df[oi_column], default_value=0.0
+            result_df["FR_OI_Ratio"] = (
+                (merged_df[fr_column] / merged_df[oi_column])
+                .replace([np.inf, -np.inf], np.nan)
+                .fillna(0.0)
             )
 
-            # 市場ヒートインデックス（FR * OI変化率）（安全な計算）
-            oi_change = DataValidator.safe_pct_change(merged_df[oi_column])
-            result_df["Market_Heat_Index"] = DataValidator.safe_multiply(
-                merged_df[fr_column], oi_change, default_value=0.0
+            # 市場ヒートインデックス（FR * OI変化率）
+            oi_change = (
+                merged_df[oi_column]
+                .pct_change()
+                .replace([np.inf, -np.inf], np.nan)
+                .fillna(0.0)
+            )
+            result_df["Market_Heat_Index"] = (
+                (merged_df[fr_column] * oi_change)
+                .replace([np.inf, -np.inf], np.nan)
+                .fillna(0.0)
             )
 
             # 市場ストレス指標
-            fr_normalized = DataValidator.safe_normalize(
-                merged_df[fr_column], window=168, default_value=0.0
+            fr_mean = merged_df[fr_column].rolling(window=168, min_periods=1).mean()
+            fr_std = (
+                merged_df[fr_column]
+                .rolling(window=168, min_periods=1)
+                .std()
+                .replace(0, np.nan)
             )
-            oi_normalized = DataValidator.safe_normalize(
-                merged_df[oi_column], window=168, default_value=0.0
+            fr_normalized = (
+                ((merged_df[fr_column] - fr_mean) / fr_std)
+                .replace([np.inf, -np.inf], np.nan)
+                .fillna(0.0)
+            )
+            oi_mean = merged_df[oi_column].rolling(window=168, min_periods=1).mean()
+            oi_std = (
+                merged_df[oi_column]
+                .rolling(window=168, min_periods=1)
+                .std()
+                .replace(0, np.nan)
+            )
+            oi_normalized = (
+                ((merged_df[oi_column] - oi_mean) / oi_std)
+                .replace([np.inf, -np.inf], np.nan)
+                .fillna(0.0)
             )
             result_df["Market_Stress"] = np.sqrt(fr_normalized**2 + oi_normalized**2)
 

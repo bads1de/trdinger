@@ -16,7 +16,8 @@ from typing import Any, Dict, List, Optional
 import pandas as pd
 
 from ....utils.data_processing import data_processor as data_preprocessor
-from ....utils.data_validation import DataValidator
+
+# DataValidator の deprecated メソッドは段階的に除去済み。必要な処理はローカルで実装します。
 from ....utils.unified_error_handler import safe_ml_operation
 from .data_frequency_manager import DataFrequencyManager
 from .fear_greed_features import FearGreedFeatureCalculator
@@ -249,15 +250,22 @@ class FeatureEngineeringService:
                     col for col in fr_columns if col in result_df.columns
                 ]
                 if existing_fr_columns:
-                    result_df = DataValidator.clean_dataframe(
-                        result_df,
-                        column_names=existing_fr_columns,
-                        fill_method="median",
-                    )
+                    try:
+                        # median で欠損を補完
+                        medians = result_df[existing_fr_columns].median()
+                        result_df[existing_fr_columns] = result_df[
+                            existing_fr_columns
+                        ].fillna(medians)
+                    except Exception as e:
+                        logger.warning(f"FR中間クリーニングでエラー: {e}")
             else:
                 # ファンディングレートデータが不足している場合、疑似データを生成
-                logger.warning("ファンディングレートデータが不足しています。疑似特徴量を生成します。")
-                result_df = self._generate_pseudo_funding_rate_features(result_df, lookback_periods)
+                logger.warning(
+                    "ファンディングレートデータが不足しています。疑似特徴量を生成します。"
+                )
+                result_df = self._generate_pseudo_funding_rate_features(
+                    result_df, lookback_periods
+                )
 
             # 建玉残高特徴量（データがある場合）
             if open_interest_data is not None and not open_interest_data.empty:
@@ -282,15 +290,21 @@ class FeatureEngineeringService:
                     col for col in oi_columns if col in result_df.columns
                 ]
                 if existing_oi_columns:
-                    result_df = DataValidator.clean_dataframe(
-                        result_df,
-                        column_names=existing_oi_columns,
-                        fill_method="median",
-                    )
+                    try:
+                        medians = result_df[existing_oi_columns].median()
+                        result_df[existing_oi_columns] = result_df[
+                            existing_oi_columns
+                        ].fillna(medians)
+                    except Exception as e:
+                        logger.warning(f"OI中間クリーニングでエラー: {e}")
             else:
                 # 建玉残高データが不足している場合、疑似データを生成
-                logger.warning("建玉残高データが不足しています。疑似特徴量を生成します。")
-                result_df = self._generate_pseudo_open_interest_features(result_df, lookback_periods)
+                logger.warning(
+                    "建玉残高データが不足しています。疑似特徴量を生成します。"
+                )
+                result_df = self._generate_pseudo_open_interest_features(
+                    result_df, lookback_periods
+                )
 
             # 複合特徴量（FR + OI）
             if (
@@ -313,11 +327,13 @@ class FeatureEngineeringService:
                     col for col in composite_columns if col in result_df.columns
                 ]
                 if existing_composite_columns:
-                    result_df = DataValidator.clean_dataframe(
-                        result_df,
-                        column_names=existing_composite_columns,
-                        fill_method="median",
-                    )
+                    try:
+                        medians = result_df[existing_composite_columns].median()
+                        result_df[existing_composite_columns] = result_df[
+                            existing_composite_columns
+                        ].fillna(medians)
+                    except Exception as e:
+                        logger.warning(f"Composite中間クリーニングでエラー: {e}")
 
             # Fear & Greed Index 特徴量（データがある場合）
             if fear_greed_data is not None and not fear_greed_data.empty:
@@ -330,11 +346,13 @@ class FeatureEngineeringService:
                     col for col in fear_greed_columns if col in result_df.columns
                 ]
                 if existing_fg_columns:
-                    result_df = DataValidator.clean_dataframe(
-                        result_df,
-                        column_names=existing_fg_columns,
-                        fill_method="median",
-                    )
+                    try:
+                        medians = result_df[existing_fg_columns].median()
+                        result_df[existing_fg_columns] = result_df[
+                            existing_fg_columns
+                        ].fillna(medians)
+                    except Exception as e:
+                        logger.warning(f"FG中間クリーニングでエラー: {e}")
 
             # 市場レジーム特徴量
             result_df = self.technical_calculator.calculate_market_regime_features(
@@ -807,7 +825,9 @@ class FeatureEngineeringService:
         self.feature_cache.clear()
         logger.info("特徴量キャッシュをクリアしました")
 
-    def _generate_pseudo_funding_rate_features(self, df: pd.DataFrame, lookback_periods: Dict[str, int]) -> pd.DataFrame:
+    def _generate_pseudo_funding_rate_features(
+        self, df: pd.DataFrame, lookback_periods: Dict[str, int]
+    ) -> pd.DataFrame:
         """
         ファンディングレート疑似特徴量を生成
 
@@ -833,13 +853,23 @@ class FeatureEngineeringService:
             result_df["FR_Change"] = pseudo_fr.diff()
             result_df["FR_Change_Rate"] = pseudo_fr.pct_change()
             result_df["Price_FR_Divergence"] = returns - pseudo_fr
-            result_df["FR_Normalized"] = (pseudo_fr - pseudo_fr.rolling(168).mean()) / pseudo_fr.rolling(168).std()
+            result_df["FR_Normalized"] = (
+                pseudo_fr - pseudo_fr.rolling(168).mean()
+            ) / pseudo_fr.rolling(168).std()
             result_df["FR_Trend"] = result_df["FR_MA_24"] / result_df["FR_MA_168"] - 1
             result_df["FR_Volatility"] = pseudo_fr.rolling(24).std()
 
             # NaN値を0で補完
-            fr_columns = ["FR_MA_24", "FR_MA_168", "FR_Change", "FR_Change_Rate",
-                         "Price_FR_Divergence", "FR_Normalized", "FR_Trend", "FR_Volatility"]
+            fr_columns = [
+                "FR_MA_24",
+                "FR_MA_168",
+                "FR_Change",
+                "FR_Change_Rate",
+                "Price_FR_Divergence",
+                "FR_Normalized",
+                "FR_Trend",
+                "FR_Volatility",
+            ]
             for col in fr_columns:
                 if col in result_df.columns:
                     result_df[col] = result_df[col].fillna(0)
@@ -851,7 +881,9 @@ class FeatureEngineeringService:
             logger.error(f"ファンディングレート疑似特徴量生成エラー: {e}")
             return df
 
-    def _generate_pseudo_open_interest_features(self, df: pd.DataFrame, lookback_periods: Dict[str, int]) -> pd.DataFrame:
+    def _generate_pseudo_open_interest_features(
+        self, df: pd.DataFrame, lookback_periods: Dict[str, int]
+    ) -> pd.DataFrame:
         """
         建玉残高疑似特徴量を生成
 
@@ -893,11 +925,22 @@ class FeatureEngineeringService:
             result_df["OI_Price_Correlation"] = price_change * oi_change
 
             # OI正規化
-            result_df["OI_Normalized"] = (pseudo_oi - pseudo_oi.rolling(168).mean()) / pseudo_oi.rolling(168).std()
+            result_df["OI_Normalized"] = (
+                pseudo_oi - pseudo_oi.rolling(168).mean()
+            ) / pseudo_oi.rolling(168).std()
 
             # NaN値を0で補完
-            oi_columns = ["OI_Change_Rate", "OI_Change_Rate_24h", "OI_Surge", "Volatility_Adjusted_OI",
-                         "OI_MA_24", "OI_MA_168", "OI_Trend", "OI_Price_Correlation", "OI_Normalized"]
+            oi_columns = [
+                "OI_Change_Rate",
+                "OI_Change_Rate_24h",
+                "OI_Surge",
+                "Volatility_Adjusted_OI",
+                "OI_MA_24",
+                "OI_MA_168",
+                "OI_Trend",
+                "OI_Price_Correlation",
+                "OI_Normalized",
+            ]
             for col in oi_columns:
                 if col in result_df.columns:
                     result_df[col] = result_df[col].fillna(0)

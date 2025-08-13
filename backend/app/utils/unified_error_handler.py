@@ -12,7 +12,6 @@ import platform
 import signal
 import time
 from contextlib import contextmanager
-from datetime import datetime
 from typing import Any, Awaitable, Callable, Dict, Optional, TypeVar
 
 import numpy as np
@@ -28,20 +27,16 @@ class UnifiedTimeoutError(Exception):
     """統一タイムアウトエラー"""
 
 
-
 class UnifiedValidationError(Exception):
     """統一バリデーションエラー"""
-
 
 
 class UnifiedDataError(Exception):
     """統一データエラー"""
 
 
-
 class UnifiedModelError(Exception):
     """統一モデルエラー"""
-
 
 
 class UnifiedErrorHandler:
@@ -125,7 +120,10 @@ class UnifiedErrorHandler:
         """
         # delegate to shared response util to ensure consistent format
         from .response import make_error_response
-        return make_error_response(message=message, error_code=error_code, details=details, context=context)
+
+        return make_error_response(
+            message=message, error_code=error_code, details=details, context=context
+        )
 
     # --- API エラーハンドリング ---
 

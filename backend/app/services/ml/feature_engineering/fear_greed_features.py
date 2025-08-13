@@ -10,7 +10,7 @@ from typing import Dict
 import numpy as np
 import pandas as pd
 
-from ....utils.data_validation import DataValidator
+# DataValidator の非推奨メソッドは pandas 標準 API に置換済み
 
 logger = logging.getLogger(__name__)
 
@@ -108,14 +108,19 @@ class FearGreedFeatureCalculator:
         result_df["FG_Level"] = merged_df["value"]
 
         # Fear & Greed 変化率
-        result_df["FG_Change"] = DataValidator.safe_pct_change(merged_df["value"])
+        result_df["FG_Change"] = (
+            merged_df["value"]
+            .pct_change()
+            .replace([np.inf, -np.inf], np.nan)
+            .fillna(0.0)
+        )
 
         # Fear & Greed 移動平均（短期・長期）
-        result_df["FG_MA_7"] = DataValidator.safe_rolling_mean(
-            merged_df["value"], window=7
+        result_df["FG_MA_7"] = (
+            merged_df["value"].rolling(window=7, min_periods=1).mean().fillna(0.0)
         )
-        result_df["FG_MA_30"] = DataValidator.safe_rolling_mean(
-            merged_df["value"], window=30
+        result_df["FG_MA_30"] = (
+            merged_df["value"].rolling(window=30, min_periods=1).mean().fillna(0.0)
         )
 
         # Fear & Greed 正規化値（0-1スケール）
@@ -136,15 +141,15 @@ class FearGreedFeatureCalculator:
         # Fear & Greed トレンド（短期MA vs 長期MA）
         if "FG_MA_7" in result_df.columns and "FG_MA_30" in result_df.columns:
             result_df["FG_Trend"] = (
-                DataValidator.safe_divide(
-                    result_df["FG_MA_7"], result_df["FG_MA_30"], default_value=1.0
-                )
-                - 1
-            )
+                result_df["FG_MA_7"] / result_df["FG_MA_30"]
+            ).replace([np.inf, -np.inf], np.nan).fillna(1.0) - 1
 
         # Fear & Greed モメンタム（5日間の変化）
-        result_df["FG_Momentum_5"] = DataValidator.safe_pct_change(
-            merged_df["value"], periods=5
+        result_df["FG_Momentum_5"] = (
+            merged_df["value"]
+            .pct_change(periods=5)
+            .replace([np.inf, -np.inf], np.nan)
+            .fillna(0.0)
         )
 
         # Fear & Greed 方向性（上昇・下降の判定）
@@ -204,14 +209,17 @@ class FearGreedFeatureCalculator:
             return result_df
 
         # Fear & Greed ボラティリティ（20日間の標準偏差）
-        result_df["FG_Volatility_20"] = DataValidator.safe_rolling_std(
-            merged_df["value"], window=20
+        result_df["FG_Volatility_20"] = (
+            merged_df["value"].rolling(window=20, min_periods=1).std().fillna(0.0)
         )
 
         # Fear & Greed 変化率のボラティリティ
         if "FG_Change" in result_df.columns:
-            result_df["FG_Change_Volatility"] = DataValidator.safe_rolling_std(
-                result_df["FG_Change"], window=20
+            result_df["FG_Change_Volatility"] = (
+                result_df["FG_Change"]
+                .rolling(window=20, min_periods=1)
+                .std()
+                .fillna(0.0)
             )
 
         # Fear & Greed レンジ（期間内の最大値-最小値）
@@ -223,8 +231,10 @@ class FearGreedFeatureCalculator:
         # Fear & Greed 位置（期間内での相対位置）
         fg_min = merged_df["value"].rolling(window=20, min_periods=1).min()
         fg_max = merged_df["value"].rolling(window=20, min_periods=1).max()
-        result_df["FG_Position"] = DataValidator.safe_divide(
-            merged_df["value"] - fg_min, fg_max - fg_min, default_value=0.5
+        result_df["FG_Position"] = (
+            ((merged_df["value"] - fg_min) / (fg_max - fg_min))
+            .replace([np.inf, -np.inf], np.nan)
+            .fillna(0.5)
         )
 
         return result_df

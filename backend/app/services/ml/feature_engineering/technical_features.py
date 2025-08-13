@@ -79,10 +79,10 @@ class TechnicalFeatureCalculator(BaseFeatureCalculator):
             ma_long = ta.sma(result_df["Close"], length=long_ma)
 
             # Trend_Strength = (MA_short - MA_long) / MA_long
-            from ....utils.data_validation import DataValidator
-
-            result_df["Trend_Strength"] = DataValidator.safe_divide(
-                ma_short - ma_long, ma_long, default_value=0.0
+            result_df["Trend_Strength"] = (
+                ((ma_short - ma_long) / ma_long)
+                .replace([np.inf, -np.inf], np.nan)
+                .fillna(0.0)
             )
 
             # レンジ相場判定（pandas-ta MAX/MIN使用）
@@ -92,8 +92,10 @@ class TechnicalFeatureCalculator(BaseFeatureCalculator):
             high_20 = high_vals.rolling(window=volatility_period).max()
             low_20 = low_vals.rolling(window=volatility_period).min()
 
-            result_df["Range_Bound_Ratio"] = DataValidator.safe_divide(
-                result_df["Close"] - low_20, high_20 - low_20, default_value=0.5
+            result_df["Range_Bound_Ratio"] = (
+                ((result_df["Close"] - low_20) / (high_20 - low_20))
+                .replace([np.inf, -np.inf], np.nan)
+                .fillna(0.5)
             )
 
             # ブレイクアウト強度（直前の高値・安値を使用）

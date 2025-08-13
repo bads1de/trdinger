@@ -11,7 +11,7 @@ from typing import Any, Dict
 import numpy as np
 import pandas as pd
 
-from ....utils.data_validation import DataValidator
+
 from ....utils.unified_error_handler import safe_ml_operation
 from .base_feature_calculator import BaseFeatureCalculator
 
@@ -79,11 +79,15 @@ class PriceFeatureCalculator(BaseFeatureCalculator):
             result_df["Close"]
         )
 
-        result_df["Price_MA_Ratio_Short"] = DataValidator.safe_divide(
-            result_df["Close"], result_df[f"MA_{short_ma}"], default_value=1.0
+        result_df["Price_MA_Ratio_Short"] = (
+            (result_df["Close"] / result_df[f"MA_{short_ma}"])
+            .replace([np.inf, -np.inf], np.nan)
+            .fillna(1.0)
         )
-        result_df["Price_MA_Ratio_Long"] = DataValidator.safe_divide(
-            result_df["Close"], result_df[f"MA_{long_ma}"], default_value=1.0
+        result_df["Price_MA_Ratio_Long"] = (
+            (result_df["Close"] / result_df[f"MA_{long_ma}"])
+            .replace([np.inf, -np.inf], np.nan)
+            .fillna(1.0)
         )
 
         # 価格モメンタム（pandas-ta使用）
@@ -93,10 +97,13 @@ class PriceFeatureCalculator(BaseFeatureCalculator):
         ).fillna(0.0)
 
         # 高値・安値ポジション
-        result_df["High_Low_Position"] = DataValidator.safe_divide(
-            result_df["Close"] - result_df["Low"],
-            result_df["High"] - result_df["Low"],
-            default_value=0.5,
+        result_df["High_Low_Position"] = (
+            (
+                (result_df["Close"] - result_df["Low"])
+                / (result_df["High"] - result_df["Low"])
+            )
+            .replace([np.inf, -np.inf], np.nan)
+            .fillna(0.5)
         )
 
         # 価格変化率（pandas-ta使用）
@@ -105,27 +112,35 @@ class PriceFeatureCalculator(BaseFeatureCalculator):
         result_df["Price_Change_20"] = ta.roc(result_df["Close"], length=20).fillna(0.0)
 
         # 価格レンジ
-        result_df["Price_Range"] = DataValidator.safe_divide(
-            result_df["High"] - result_df["Low"], result_df["Close"], default_value=0.0
+        result_df["Price_Range"] = (
+            ((result_df["High"] - result_df["Low"]) / result_df["Close"])
+            .replace([np.inf, -np.inf], np.nan)
+            .fillna(0.0)
         )
 
         # ボディサイズ（実体の大きさ）
-        result_df["Body_Size"] = DataValidator.safe_divide(
-            abs(result_df["Close"] - result_df["Open"]),
-            result_df["Close"],
-            default_value=0.0,
+        result_df["Body_Size"] = (
+            (abs(result_df["Close"] - result_df["Open"]) / result_df["Close"])
+            .replace([np.inf, -np.inf], np.nan)
+            .fillna(0.0)
         )
 
         # 上ヒゲ・下ヒゲ
-        result_df["Upper_Shadow"] = DataValidator.safe_divide(
-            result_df["High"] - np.maximum(result_df["Open"], result_df["Close"]),
-            result_df["Close"],
-            default_value=0.0,
+        result_df["Upper_Shadow"] = (
+            (
+                (result_df["High"] - np.maximum(result_df["Open"], result_df["Close"]))
+                / result_df["Close"]
+            )
+            .replace([np.inf, -np.inf], np.nan)
+            .fillna(0.0)
         )
-        result_df["Lower_Shadow"] = DataValidator.safe_divide(
-            np.minimum(result_df["Open"], result_df["Close"]) - result_df["Low"],
-            result_df["Close"],
-            default_value=0.0,
+        result_df["Lower_Shadow"] = (
+            (
+                (np.minimum(result_df["Open"], result_df["Close"]) - result_df["Low"])
+                / result_df["Close"]
+            )
+            .replace([np.inf, -np.inf], np.nan)
+            .fillna(0.0)
         )
 
         # 価格位置（期間内での相対位置）（pandas-ta使用）
@@ -135,10 +150,13 @@ class PriceFeatureCalculator(BaseFeatureCalculator):
         ).fillna(0.5)
 
         # ギャップ（前日終値との差）
-        result_df["Gap"] = DataValidator.safe_divide(
-            result_df["Open"] - result_df["Close"].shift(1),
-            result_df["Close"].shift(1),
-            default_value=0.0,
+        result_df["Gap"] = (
+            (
+                (result_df["Open"] - result_df["Close"].shift(1))
+                / result_df["Close"].shift(1)
+            )
+            .replace([np.inf, -np.inf], np.nan)
+            .fillna(0.0)
         )
 
         logger.debug("価格特徴量計算完了")
@@ -177,12 +195,17 @@ class PriceFeatureCalculator(BaseFeatureCalculator):
                 result_df["Returns"], length=volatility_period
             ).fillna(0.0) * np.sqrt(24)
 
-            # ボラティリティスパイク（移動平均は従来の安全計算でOK）
-            vol_ma = DataValidator.safe_rolling_mean(
-                result_df["Realized_Volatility_20"], window=volatility_period
+            # ボラティリティスパイク（移動平均はpandasのrollingで計算）
+            vol_ma = (
+                result_df["Realized_Volatility_20"]
+                .rolling(window=volatility_period, min_periods=1)
+                .mean()
+                .fillna(0.0)
             )
-            result_df["Volatility_Spike"] = DataValidator.safe_divide(
-                result_df["Realized_Volatility_20"], vol_ma, default_value=1.0
+            result_df["Volatility_Spike"] = (
+                (result_df["Realized_Volatility_20"] / vol_ma)
+                .replace([np.inf, -np.inf], np.nan)
+                .fillna(1.0)
             )
 
             # ATR（Average True Range）- pandas-ta
@@ -194,8 +217,10 @@ class PriceFeatureCalculator(BaseFeatureCalculator):
             ).fillna(0.0)
 
             # 正規化ATR（安全な計算）
-            result_df["ATR_Normalized"] = DataValidator.safe_divide(
-                result_df["ATR_20"], result_df["Close"], default_value=0.01
+            result_df["ATR_Normalized"] = (
+                (result_df["ATR_20"] / result_df["Close"])
+                .replace([np.inf, -np.inf], np.nan)
+                .fillna(0.01)
             )
 
             # ボラティリティレジーム
@@ -208,9 +233,12 @@ class PriceFeatureCalculator(BaseFeatureCalculator):
                 result_df["Realized_Volatility_20"] > vol_quantile
             ).astype(int)
 
-            # ボラティリティ変化率（安全な計算）
-            vol_change = DataValidator.safe_pct_change(
+            # ボラティリティ変化率
+            vol_change = (
                 result_df["Realized_Volatility_20"]
+                .pct_change()
+                .replace([np.inf, -np.inf], np.nan)
+                .fillna(0.0)
             )
             # 異常に大きな値をクリップ（±500%に制限）
             result_df["Vol_Change"] = self.clip_extreme_values(vol_change, -5.0, 5.0)
@@ -256,10 +284,10 @@ class PriceFeatureCalculator(BaseFeatureCalculator):
             result_df[f"Volume_MA_{volume_period}"] = np.clip(volume_ma, 0, volume_max)
 
             # 出来高比率
-            result_df["Volume_Ratio"] = DataValidator.safe_divide(
-                result_df["Volume"],
-                result_df[f"Volume_MA_{volume_period}"],
-                default_value=1.0,
+            result_df["Volume_Ratio"] = (
+                (result_df["Volume"] / result_df[f"Volume_MA_{volume_period}"])
+                .replace([np.inf, -np.inf], np.nan)
+                .fillna(1.0)
             )
 
             # 価格・出来高トレンド（pandas-ta使用）
@@ -277,10 +305,10 @@ class PriceFeatureCalculator(BaseFeatureCalculator):
             ).fillna(result_df["Close"])
 
             # VWAPからの乖離
-            result_df["VWAP_Deviation"] = DataValidator.safe_divide(
-                result_df["Close"] - result_df["VWAP"],
-                result_df["VWAP"],
-                default_value=0.0,
+            result_df["VWAP_Deviation"] = (
+                ((result_df["Close"] - result_df["VWAP"]) / result_df["VWAP"])
+                .replace([np.inf, -np.inf], np.nan)
+                .fillna(0.0)
             )
 
             # 出来高スパイク
@@ -292,10 +320,13 @@ class PriceFeatureCalculator(BaseFeatureCalculator):
             )
 
             # 出来高トレンド
-            result_df["Volume_Trend"] = DataValidator.safe_divide(
-                result_df["Volume"].rolling(window=5).mean(),
-                result_df["Volume"].rolling(window=volume_period).mean(),
-                default_value=1.0,
+            result_df["Volume_Trend"] = (
+                (
+                    result_df["Volume"].rolling(window=5).mean()
+                    / result_df["Volume"].rolling(window=volume_period).mean()
+                )
+                .replace([np.inf, -np.inf], np.nan)
+                .fillna(1.0)
             )
 
             self.log_feature_calculation_complete("出来高")
