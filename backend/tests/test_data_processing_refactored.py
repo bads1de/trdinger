@@ -422,13 +422,12 @@ class TestBackwardCompatibility:
         with warnings.catch_warnings(record=True) as w:
             warnings.simplefilter("always")
 
-            # 非推奨メソッドを使用
+            # 非推奨メソッドを使用（clean_dataframe は削除済のため validate のみ）
             validator.validate_dataframe(sample_data)
-            validator.clean_dataframe(sample_data)
 
-            # 警告が出力されていることを確認
-            assert len(w) >= 2
-            assert all("非推奨" in str(warning.message) for warning in w)
+            # 警告が出力されていることを確認（少なくとも1つの非推奨警告）
+            assert len(w) >= 1
+            assert any("非推奨" in str(warning.message) for warning in w)
 
 
 if __name__ == "__main__":

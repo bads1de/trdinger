@@ -288,67 +288,11 @@ class DataValidator:
         Returns:
             クリーンアップされたDataFrame
         """
-        warnings.warn(
-            "clean_dataframe()は非推奨です。clean_dataframe_with_schema()を使用してください。",
-            DeprecationWarning,
-            stacklevel=2,
+        # clean_dataframe は削除されました。
+        # 代替として schema ベースの clean_dataframe_with_schema() を利用してください。
+        raise AttributeError(
+            "clean_dataframe() は削除されました。clean_dataframe_with_schema() を使用してください。"
         )
-        if df is None or df.empty:
-            return df
-
-        result_df = df.copy()
-        check_columns = (
-            column_names
-            if column_names
-            else df.select_dtypes(include=[np.number]).columns
-        )
-
-        for col in check_columns:
-            if col not in result_df.columns:
-                continue
-
-            series = result_df[col]
-
-            # 数値型のカラムのみ処理
-            if not pd.api.types.is_numeric_dtype(series):
-                continue
-
-            try:
-                # 無限大値を NaN に変換
-                series = series.replace([np.inf, -np.inf], np.nan)
-
-                # 異常に大きな値を NaN に変換
-                series = series.where(
-                    (series <= cls.MAX_VALUE_THRESHOLD)
-                    & (series >= cls.MIN_VALUE_THRESHOLD),
-                    np.nan,
-                )
-            except (TypeError, ValueError) as e:
-                logger.warning(f"カラム {col} の処理中にエラー: {e}")
-                continue
-
-            # 欠損値の補完
-            if fill_method == "median":
-                fill_value = series.median()
-            elif fill_method == "mean":
-                fill_value = series.mean()
-            elif fill_method == "zero":
-                fill_value = 0.0
-            elif fill_method == "forward_fill":
-                series = series.ffill()
-                fill_value = 0.0  # 最初の値がNaNの場合のフォールバック
-            else:
-                fill_value = 0.0
-
-            # まだNaNが残っている場合は指定された値で補完
-            if fill_method != "forward_fill":
-                series = series.fillna(fill_value)
-            else:
-                series = series.fillna(fill_value)
-
-            result_df[col] = series
-
-        return result_df
 
     @classmethod
     def log_validation_results(
