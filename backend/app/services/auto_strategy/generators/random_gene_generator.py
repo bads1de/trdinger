@@ -273,7 +273,7 @@ class RandomGeneGenerator:
                 allowed = set()
             if not allowed:
                 # VALID_INDICATOR_TYPESに含まれる安全な指標のみを使用
-                from ..config.shared_constants import VALID_INDICATOR_TYPES
+                from ..config.constants import VALID_INDICATOR_TYPES
 
                 curated = {
                     "SMA",
@@ -566,7 +566,7 @@ class RandomGeneGenerator:
 
         グループ化システムを考慮した重み付き選択を行います。
         """
-        from ..config.shared_constants import VALID_INDICATOR_TYPES
+        from ..config.constants import VALID_INDICATOR_TYPES
 
         choices = []
 

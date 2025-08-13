@@ -15,7 +15,10 @@ if TYPE_CHECKING:
 
 from .gene_tpsl import TPSLGene, TPSLMethod
 from .gene_position_sizing import PositionSizingGene, PositionSizingMethod
-from . import gene_utils
+from ..config.constants import (
+    get_all_indicator_ids,
+    get_id_to_indicator_mapping,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -35,8 +38,8 @@ class GeneSerializer:
         Args:
             enable_smart_generation: SmartConditionGeneratorを使用するか
         """
-        self.indicator_ids = gene_utils.get_indicator_ids()
-        self.id_to_indicator = gene_utils.get_id_to_indicator(self.indicator_ids)
+        self.indicator_ids = get_all_indicator_ids()
+        self.id_to_indicator = get_id_to_indicator_mapping(self.indicator_ids)
 
         # SmartConditionGeneratorの遅延インポート（循環インポート回避）
         self.enable_smart_generation = enable_smart_generation
@@ -623,7 +626,9 @@ class GeneSerializer:
                     indicator = strategy_gene.indicators[i]
                     indicator_id = self.indicator_ids.get(indicator.type, 0)
                     # パラメータを正規化（期間の場合は1-200を0-1に変換）
-                    param_val = gene_utils.normalize_parameter(
+                    from ..utils.auto_strategy_utils import AutoStrategyUtils
+
+                    param_val = AutoStrategyUtils.normalize_parameter(
                         indicator.parameters.get("period", 20)
                     )
                 else:

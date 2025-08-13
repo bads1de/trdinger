@@ -4,7 +4,10 @@
 """
 
 from app.services.indicators.config import indicator_registry
-from app.services.auto_strategy.config.shared_constants import VALID_INDICATOR_TYPES, ML_INDICATOR_TYPES
+from app.services.auto_strategy.config.constants import (
+    VALID_INDICATOR_TYPES,
+    ML_INDICATOR_TYPES,
+)
 
 print("=== 登録されているすべてのテクニカル指標 ===")
 
@@ -24,7 +27,9 @@ print(f"ML指標: {sorted(ML_INDICATOR_TYPES)}")
 print(f"\n=== 差分分析 ===")
 
 # indicator_registryにあるがVALID_INDICATOR_TYPESにない指標
-registry_only = set(registered_indicators) - set(VALID_INDICATOR_TYPES) - set(ML_INDICATOR_TYPES)
+registry_only = (
+    set(registered_indicators) - set(VALID_INDICATOR_TYPES) - set(ML_INDICATOR_TYPES)
+)
 print(f"registryにあるがVALID_INDICATOR_TYPESにない指標 ({len(registry_only)}個):")
 for indicator in sorted(registry_only):
     print(f"  - {indicator}")
@@ -42,7 +47,9 @@ for indicator in sorted(common):
     print(f"  - {indicator}")
 
 print(f"\n=== 総計 ===")
-all_indicators = set(registered_indicators) | set(VALID_INDICATOR_TYPES) | set(ML_INDICATOR_TYPES)
+all_indicators = (
+    set(registered_indicators) | set(VALID_INDICATOR_TYPES) | set(ML_INDICATOR_TYPES)
+)
 print(f"すべての指標の総数: {len(all_indicators)}")
 
 # 各指標の詳細情報を取得
