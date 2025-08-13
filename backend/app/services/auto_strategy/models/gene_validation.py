@@ -17,10 +17,6 @@ class GeneValidator:
     戦略遺伝子の妥当性検証を担当します。
     """
 
-    def is_valid_indicator_name(self, name: str) -> bool:
-        """公開APIラッパー（旧テスト互換）"""
-        return self._is_indicator_name(name)
-
     def __init__(self):
         """初期化"""
         # 共通定数から取得して一貫性を保つ
@@ -264,10 +260,6 @@ class GeneValidator:
             error_msg = f"辞書オペランド検証エラー: {e}"
             logger.error(error_msg)
             return False, error_msg
-
-    def is_valid_indicator_name(self, name: str) -> bool:
-        """公開APIラッパー（旧テスト互換）"""
-        return self._is_indicator_name(name)
 
     def _is_indicator_name(self, name: str) -> bool:
         """

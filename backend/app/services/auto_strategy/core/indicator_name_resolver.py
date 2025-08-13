@@ -12,7 +12,6 @@ import logging
 from typing import Tuple
 import numpy as np
 
-from app.services.indicators.config.indicator_config import indicator_registry
 
 logger = logging.getLogger(__name__)
 

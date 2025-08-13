@@ -5,7 +5,6 @@ GA実行時の各種パラメータを単一のクラスで管理します。
 BaseConfigを継承し、統一された設定管理機能を提供します。
 """
 
-import json
 import logging
 from dataclasses import dataclass, field
 from typing import Any, Callable, Dict, List, Optional

@@ -8,7 +8,7 @@ import logging
 import random
 from abc import ABC, abstractmethod
 from enum import Enum
-from typing import Dict, List, Optional, Any
+from typing import Dict, List
 
 from ..models.ga_config import GAConfig
 from ..models.gene_strategy import Condition, IndicatorGene, StrategyGene
@@ -146,7 +146,6 @@ class RandomGeneGenerator(BaseGeneGenerator):
     ) -> tuple[List[Condition], List[Condition], List[Condition]]:
         """ランダムに条件を生成"""
         try:
-            from ..utils.operand_grouping import operand_grouping_system
 
             # 基本的なランダム条件生成
             entry_conditions = []

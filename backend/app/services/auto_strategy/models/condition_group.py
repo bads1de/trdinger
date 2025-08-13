@@ -1,5 +1,5 @@
 from dataclasses import dataclass, field
-from typing import List, Union
+from typing import List
 
 from .gene_strategy import Condition
 
@@ -21,10 +21,10 @@ class ConditionGroup:
 
     def validate(self) -> bool:
         from .gene_validation import GeneValidator
+
         v = GeneValidator()
         for c in self.conditions:
             ok, _ = v.validate_condition(c)
             if not ok:
                 return False
         return True
-

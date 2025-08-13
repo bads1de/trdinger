@@ -53,12 +53,12 @@ class StrategyFactory:
         if not is_valid:
             raise ValueError(f"Invalid strategy gene: {', '.join(errors)}")
 
-        logger.warning(f"戦略遺伝子検証成功")
+        logger.warning("戦略遺伝子検証成功")
 
         # ファクトリー参照を保存
         factory = self
 
-        logger.warning(f"動的クラス生成開始")
+        logger.warning("動的クラス生成開始")
 
         # 動的クラス生成
         class GeneratedStrategy(Strategy):
@@ -113,12 +113,12 @@ class StrategyFactory:
                 self.indicators = {}
                 self.factory = factory  # ファクトリーへの参照
 
-                logger.warning(f"戦略__init__完了")
+                logger.warning("戦略__init__完了")
 
             def init(self):
                 """指標の初期化"""
-                logger.warning(f"🚀 init()メソッド実行開始！")
-                logger.warning(f"戦略遺伝子確認: {self.strategy_gene}")
+                logger.warning("🚀 init()メソッド実行開始！")
+                logger.warning("戦略遺伝子確認: {self.strategy_gene}")
                 logger.warning(
                     f"戦略遺伝子指標数: {len(self.strategy_gene.indicators) if hasattr(self.strategy_gene, 'indicators') else 'なし'}"
                 )
@@ -143,9 +143,9 @@ class StrategyFactory:
                                 f"指標スキップ（無効）: {indicator_gene.type}"
                             )
 
-                    logger.warning(f"戦略初期化完了")
-                except Exception as e:
-                    logger.error(f"戦略初期化エラー: {e}", exc_info=True)
+                    logger.warning("戦略初期化完了")
+                except Exception:
+                    logger.error("戦略初期化エラー: {e}", exc_info=True)
                     raise
 
             def next(self):
@@ -215,7 +215,6 @@ class StrategyFactory:
                             return
                         from app.services.auto_strategy.core.order_execution_policy import (
                             OrderExecutionPolicy,
-                            ExecutionContext,
                         )
 
                         sl_price, tp_price = OrderExecutionPolicy.compute_tpsl_prices(

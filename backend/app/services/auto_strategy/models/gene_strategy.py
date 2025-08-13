@@ -7,7 +7,7 @@
 
 import logging
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional, Union, Iterable
+from typing import Any, Dict, List, Optional, Union
 
 from .gene_position_sizing import PositionSizingGene
 from .gene_tpsl import TPSLGene

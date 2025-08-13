@@ -8,7 +8,6 @@ common_utils.py、strategy_gene_utils.py、gene_utils.pyの機能を統合して
 import logging
 from typing import Any, Dict, List, Optional
 
-from app.services.indicators import TechnicalIndicatorService
 
 logger = logging.getLogger(__name__)
 
@@ -192,6 +191,7 @@ class AutoStrategyUtils:
             return float(scaled_values[2, 0])
 
         except Exception as e:
+            logger.error(f"正規化エラー: {e}")
             # フォールバック: 手動実装
             try:
                 if max_val == min_val:
@@ -237,6 +237,7 @@ class AutoStrategyUtils:
             return int(max(min_val, min(max_val, int(value))))
 
         except Exception as e:
+            logger.error(f"非正規化エラー: {e}")
             # フォールバック: 手動実装
             try:
                 if max_val == min_val:

@@ -4,7 +4,7 @@
 """
 
 from app.services.indicators.config import indicator_registry
-from app.services.auto_strategy.config.constants import (
+from backend.app.services.auto_strategy.config.constants import (
     VALID_INDICATOR_TYPES,
     ML_INDICATOR_TYPES,
 )

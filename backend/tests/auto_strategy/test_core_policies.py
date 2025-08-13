@@ -1,25 +1,39 @@
 import numpy as np
 
-from app.services.auto_strategy.core.indicator_name_resolver import IndicatorNameResolver
-from app.services.auto_strategy.core.threshold_policy import ThresholdPolicy
-from app.services.auto_strategy.core.price_trend_policy import PriceTrendPolicy
+from app.services.auto_strategy.core.indicator_name_resolver import (
+    IndicatorNameResolver,
+)
+from app.services.auto_strategy.core.indicator_policies import (
+    ThresholdPolicy,
+    PriceTrendPolicy,
+)
 from app.services.auto_strategy.core.condition_assembly import ConditionAssembly
 from app.services.auto_strategy.models.gene_strategy import IndicatorGene, Condition
 
 
 class _S:
     def __init__(self):
-        self.data = type("D", (), {
-            "Close": np.array([1, 2, 3, 4, 5], dtype=float),
-        })()
+        self.data = type(
+            "D",
+            (),
+            {
+                "Close": np.array([1, 2, 3, 4, 5], dtype=float),
+            },
+        )()
         self.SMA = np.array([1, 2, 3, 4, 5], dtype=float)
         self.MACD_0 = np.array([np.nan, 0, 1, 2, 3], dtype=float)
         self.BB_1 = np.array([10, 11, 12, 13, 14], dtype=float)
 
 
 def test_threshold_policy_profiles():
-    assert ThresholdPolicy.get("aggressive").rsi_long_lt < ThresholdPolicy.get("normal").rsi_long_lt
-    assert ThresholdPolicy.get("conservative").adx_trend_min > ThresholdPolicy.get("normal").adx_trend_min
+    assert (
+        ThresholdPolicy.get("aggressive").rsi_long_lt
+        < ThresholdPolicy.get("normal").rsi_long_lt
+    )
+    assert (
+        ThresholdPolicy.get("conservative").adx_trend_min
+        > ThresholdPolicy.get("normal").adx_trend_min
+    )
 
 
 def test_price_trend_policy_pick():
@@ -41,7 +55,9 @@ def test_condition_assembly_or_and_fallback():
             flat.extend(c.conditions)
         else:
             flat.append(c)
-    assert any(c.left_operand == "close" and isinstance(c.right_operand, str) for c in flat)
+    assert any(
+        c.left_operand == "close" and isinstance(c.right_operand, str) for c in flat
+    )
 
 
 def test_indicator_name_resolver_integration():
@@ -50,4 +66,3 @@ def test_indicator_name_resolver_integration():
     assert ok and v == 14
     ok, v = IndicatorNameResolver.try_resolve_value("MACD", s)
     assert ok and v == 3
-

@@ -4,7 +4,7 @@ from typing import List
 
 from app.services.auto_strategy.models.condition_group import ConditionGroup
 from app.services.auto_strategy.models.gene_strategy import Condition
-from .price_trend_policy import PriceTrendPolicy
+from .indicator_policies import PriceTrendPolicy
 
 
 class ConditionAssembly:

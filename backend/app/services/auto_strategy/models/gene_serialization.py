@@ -7,12 +7,10 @@ GeneEncoder、GeneDecoder、GeneSerializerの機能を統合しています。
 
 import json
 import logging
-from typing import TYPE_CHECKING, Any, Dict, List, Optional, Type
+from typing import Any, Dict, List, Optional, Type
 
-if TYPE_CHECKING:
-    from .gene_strategy import Condition, IndicatorGene, StrategyGene
-    from .condition_group import ConditionGroup
 
+from .gene_strategy import Condition, IndicatorGene, StrategyGene
 from .gene_tpsl import TPSLGene, TPSLMethod
 from .gene_position_sizing import PositionSizingGene, PositionSizingMethod
 from ..config.constants import (
@@ -852,7 +850,8 @@ class GeneSerializer:
                 else:
                     return [0.0, 0.0, 1.0]
             return [0.5, 0.5, 0.0]
-        except:
+        except Exception as e:
+            logger.error(f"条件エンコードエラー: {e}")
             return [0.0, 0.0, 0.0]
 
     def _encode_tpsl_gene(self, tpsl_gene) -> List[float]:
@@ -873,7 +872,8 @@ class GeneSerializer:
                 (tpsl_gene.lookback_period or 100) / 1000.0,
             ]
             return encoded[:8]
-        except:
+        except Exception as e:
+            logger.error(f"TP/SL遺伝子エンコードエラー: {e}")
             return [0.0] * 8
 
     def _encode_position_sizing_gene(self, ps_gene) -> List[float]:
@@ -894,7 +894,8 @@ class GeneSerializer:
                 ps_gene.min_position_size or 0.001,
             ]
             return encoded[:8]
-        except:
+        except Exception as e:
+            logger.error(f"ポジションサイジング遺伝子エンコードエラー: {e}")
             return [0.0] * 8
 
     def _decode_tpsl_gene(self, encoded: List[float]):
@@ -914,7 +915,8 @@ class GeneSerializer:
                 atr_period=int(encoded[6] * 100),
                 lookback_period=int(encoded[7] * 1000),
             )
-        except:
+        except Exception as e:
+            logger.error(f"TP/SL遺伝子デコードエラー: {e}")
             return None
 
     def _decode_position_sizing_gene(self, encoded: List[float]):
@@ -934,5 +936,6 @@ class GeneSerializer:
                 lookback_period=int(encoded[6] * 100),
                 min_position_size=encoded[7],
             )
-        except:
+        except Exception as e:
+            logger.error(f"ポジションサイジング遺伝子デコードエラー: {e}")
             return None

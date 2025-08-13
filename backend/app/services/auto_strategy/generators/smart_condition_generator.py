@@ -4,7 +4,7 @@ from enum import Enum
 from typing import List, Tuple
 from app.services.indicators.config import indicator_registry
 from app.services.indicators.config.indicator_config import IndicatorScaleType
-from app.services.auto_strategy.core.threshold_policy import ThresholdPolicy
+from app.services.auto_strategy.core.indicator_policies import ThresholdPolicy
 
 from ..models.gene_strategy import Condition, IndicatorGene
 
