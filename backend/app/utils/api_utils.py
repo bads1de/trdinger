@@ -1,17 +1,18 @@
 """
 API共通ユーティリティ
 """
-
+ 
 import logging
 from datetime import datetime
 from typing import Any, Dict, List, Optional
-
+from .response import make_error_response, make_api_response, make_list_response, make_success_response
+ 
 logger = logging.getLogger(__name__)
-
-
+ 
+ 
 class APIResponseHelper:
-    """API レスポンス形式の共通ヘルパークラス"""
-
+    """API レスポンス形式の共通ヘルパークラス（薄いラッパ）"""
+ 
     @staticmethod
     def error_response(
         message: str,
@@ -19,29 +20,9 @@ class APIResponseHelper:
         details: Optional[Dict[str, Any]] = None,
     ) -> Dict[str, Any]:
         """
-        エラーレスポンスを生成
-
-        Args:
-            message: エラーメッセージ
-            error_code: エラーコード
-            details: エラー詳細
-
-        Returns:
-            エラーレスポンス辞書
+        エラーレスポンスを生成（共通ユーティリティへ委譲）
         """
-        response = {
-            "success": False,
-            "message": message,
-            "timestamp": datetime.now().isoformat(),
-        }
-
-        if error_code:
-            response["error_code"] = error_code
-
-        if details:
-            response["details"] = details
-
-        return response
+        return make_error_response(message=message, error_code=error_code, details=details)
 
     @staticmethod
     def api_response(
@@ -51,24 +32,9 @@ class APIResponseHelper:
         data: Optional[Dict[str, Any]] = None,
     ) -> Dict[str, Any]:
         """
-        標準化されたAPIレスポンスを生成するヘルパー関数。
-
-        Args:
-            success: 成功フラグ
-            message: メッセージ
-            status: ステータス文字列（オプション）
-            data: レスポンスデータ（辞書型、オプション）
-
-        Returns:
-            標準化されたAPIレスポンス辞書
+        標準化されたAPIレスポンスを生成（共通ユーティリティへ委譲）
         """
-        response = {"success": success, "message": message}
-        if status:
-            response["status"] = status
-        if data is not None:
-            response["data"] = data
-        response["timestamp"] = datetime.now().isoformat()
-        return response
+        return make_api_response(success=success, message=message, status=status, data=data)
 
     @staticmethod
     def api_list_response(
@@ -79,28 +45,9 @@ class APIResponseHelper:
         metadata: Optional[Dict[str, Any]] = None,
     ) -> Dict[str, Any]:
         """
-        リストデータ用の標準化されたAPIレスポンスを生成するヘルパー関数。
-
-        Args:
-            success: 成功フラグ
-            message: メッセージ
-            items: リストデータ
-            status: ステータス文字列（オプション）
-            metadata: メタデータ（オプション）
-
-        Returns:
-            標準化されたAPIレスポンス辞書
+        リストデータ用の標準化されたAPIレスポンスを生成（共通ユーティリティへ委譲）
         """
-        response_data = {"items": items}
-        if metadata:
-            response_data.update(metadata)
-
-        return APIResponseHelper.api_response(
-            success=success,
-            message=message,
-            status=status,
-            data=response_data,
-        )
+        return make_list_response(success=success, message=message, items=items, status=status, metadata=metadata)
 
     @staticmethod
     def success_response(
@@ -110,24 +57,5 @@ class APIResponseHelper:
     ) -> Dict[str, Any]:
         """
         成功レスポンスを生成（後方互換性のため）
-
-        Args:
-            data: レスポンスデータ
-            message: メッセージ
-            metadata: メタデータ
-
-        Returns:
-            成功レスポンス辞書
         """
-        response_data = data
-        if metadata:
-            if isinstance(data, dict):
-                response_data = {**data, "metadata": metadata}
-            else:
-                response_data = {"data": data, "metadata": metadata}
-
-        return APIResponseHelper.api_response(
-            success=True,
-            message=message,
-            data=response_data,
-        )
+        return make_success_response(data=data, message=message, metadata=metadata)

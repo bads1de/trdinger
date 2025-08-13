@@ -112,7 +112,7 @@ class UnifiedErrorHandler:
         context: Optional[str] = None,
     ) -> Dict[str, Any]:
         """
-        統一エラーレスポンスを生成
+        統一エラーレスポンスを生成（response.make_error_responseへ委譲）
 
         Args:
             message: エラーメッセージ
@@ -123,22 +123,9 @@ class UnifiedErrorHandler:
         Returns:
             統一エラーレスポンス辞書
         """
-        response = {
-            "success": False,
-            "message": message,
-            "timestamp": datetime.now().isoformat(),
-        }
-
-        if error_code:
-            response["error_code"] = error_code
-
-        if details:
-            response["details"] = details
-
-        if context:
-            response["context"] = context
-
-        return response
+        # delegate to shared response util to ensure consistent format
+        from .response import make_error_response
+        return make_error_response(message=message, error_code=error_code, details=details, context=context)
 
     # --- API エラーハンドリング ---
 
