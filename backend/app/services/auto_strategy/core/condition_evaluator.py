@@ -147,32 +147,13 @@ class ConditionEvaluator:
             オペランドの値（末尾の有限値を優先して返す）
         """
 
-        def _last_finite(x) -> float:
-            try:
-                import numpy as _np
-
-                # シーケンス/配列
-                if hasattr(x, "__getitem__") and not isinstance(x, (str, bytes)):
-                    arr = _np.asarray(x, dtype=float)
-                    # 後方から有限値を探索
-                    for v in arr[::-1]:
-                        if _np.isfinite(v):
-                            return float(v)
-                    return 0.0
-                # スカラー
-                val = float(x)
-                return val if _np.isfinite(val) else 0.0
-            except Exception:
-                try:
-                    return float(x)
-                except Exception:
-                    return 0.0
+        # 値の末尾有限値取得は IndicatorNameResolver に集約
 
         try:
-            # dict: {"indicator": "SMA"} など
+            # dictオペランドの処理は Resolver に完全委譲
             if isinstance(operand, dict):
                 indicator_name = operand.get("indicator")
-                if indicator_name and hasattr(strategy_instance, indicator_name):
+                if indicator_name:
                     from ..core.indicator_name_resolver import IndicatorNameResolver
 
                     resolved, value = IndicatorNameResolver.try_resolve_value(

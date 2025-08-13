@@ -113,37 +113,59 @@ class TPSLGene:
         """遺伝子の妥当性を検証"""
         errors = []
 
-        # パーセンテージ範囲チェック
-        if not (0.005 <= self.stop_loss_pct <= 0.15):
-            errors.append("stop_loss_pct must be between 0.5% and 15%")
+        from ..config.constants import TPSL_LIMITS
 
-        if not (0.01 <= self.take_profit_pct <= 0.3):
-            errors.append("take_profit_pct must be between 1% and 30%")
+        # パーセンテージ・期間系は定数から範囲を取得
+        sl_min, sl_max = TPSL_LIMITS["stop_loss_pct"]
+        tp_min, tp_max = TPSL_LIMITS["take_profit_pct"]
+        base_sl_min, base_sl_max = TPSL_LIMITS["base_stop_loss"]
+        atr_sl_min, atr_sl_max = TPSL_LIMITS["atr_multiplier_sl"]
+        atr_tp_min, atr_tp_max = TPSL_LIMITS["atr_multiplier_tp"]
+        atr_p_min, atr_p_max = TPSL_LIMITS["atr_period"]
+        lb_min, lb_max = TPSL_LIMITS["lookback_period"]
+        conf_min, conf_max = TPSL_LIMITS["confidence_threshold"]
 
-        if not (0.005 <= self.base_stop_loss <= 0.15):
-            errors.append("base_stop_loss must be between 0.5% and 15%")
+        if not (sl_min <= self.stop_loss_pct <= sl_max):
+            errors.append(
+                f"stop_loss_pct must be between {sl_min*100:.1f}% and {sl_max*100:.0f}%"
+            )
 
-        # リスクリワード比チェック
+        if not (tp_min <= self.take_profit_pct <= tp_max):
+            errors.append(
+                f"take_profit_pct must be between {tp_min*100:.0f}% and {tp_max*100:.0f}%"
+            )
+
+        if not (base_sl_min <= self.base_stop_loss <= base_sl_max):
+            errors.append(
+                f"base_stop_loss must be between {base_sl_min*100:.1f}% and {base_sl_max*100:.0f}%"
+            )
+
+        # リスクリワード比チェック（値は既定のまま）
         if not (0.5 <= self.risk_reward_ratio <= 10.0):
             errors.append("risk_reward_ratio must be between 0.5 and 10.0")
 
-        # ATR倍率チェック
-        if not (0.5 <= self.atr_multiplier_sl <= 5.0):
-            errors.append("atr_multiplier_sl must be between 0.5 and 5.0")
+        # ATR関連
+        if not (atr_sl_min <= self.atr_multiplier_sl <= atr_sl_max):
+            errors.append(
+                f"atr_multiplier_sl must be between {atr_sl_min} and {atr_sl_max}"
+            )
 
-        if not (1.0 <= self.atr_multiplier_tp <= 10.0):
-            errors.append("atr_multiplier_tp must be between 1.0 and 10.0")
+        if not (atr_tp_min <= self.atr_multiplier_tp <= atr_tp_max):
+            errors.append(
+                f"atr_multiplier_tp must be between {atr_tp_min} and {atr_tp_max}"
+            )
 
-        # ATR期間チェック
-        if not (5 <= self.atr_period <= 50):
-            errors.append("atr_period must be between 5 and 50")
+        if not (atr_p_min <= self.atr_period <= atr_p_max):
+            errors.append(f"atr_period must be between {atr_p_min} and {atr_p_max}")
 
-        # 統計パラメータチェック
-        if not (20 <= self.lookback_period <= 500):
-            errors.append("lookback_period must be between 20 and 500")
+        # 統計系
+        if not (lb_min <= self.lookback_period <= lb_max):
+            errors.append(f"lookback_period must be between {lb_min} and {lb_max}")
 
-        if not (0.1 <= self.confidence_threshold <= 1.0):
-            errors.append("confidence_threshold must be between 0.1 and 1.0")
+        if not (conf_min <= self.confidence_threshold <= conf_max):
+            errors.append(
+                f"confidence_threshold must be between {conf_min} and {conf_max}"
+            )
 
         # 重み合計チェック
         if self.method_weights:

@@ -102,32 +102,57 @@ class PositionSizingGene:
         """
         errors = []
 
-        # 基本パラメータの検証
-        if self.lookback_period < 10 or self.lookback_period > 500:
-            errors.append("lookback_periodは10-500の範囲である必要があります")
+        from ..config.constants import POSITION_SIZING_LIMITS
 
-        if self.optimal_f_multiplier < 0.1 or self.optimal_f_multiplier > 1.0:
-            errors.append("optimal_f_multiplierは0.1-1.0の範囲である必要があります")
+        # 基本パラメータの検証（定数から範囲を参照）
+        lb_min, lb_max = POSITION_SIZING_LIMITS["lookback_period"]
+        of_min, of_max = POSITION_SIZING_LIMITS["optimal_f_multiplier"]
+        atrp_min, atrp_max = POSITION_SIZING_LIMITS["atr_period"]
+        atrm_min, atrm_max = POSITION_SIZING_LIMITS["atr_multiplier"]
+        rpt_min, rpt_max = POSITION_SIZING_LIMITS["risk_per_trade"]
+        fr_min, fr_max = POSITION_SIZING_LIMITS["fixed_ratio"]
+        fq_min, fq_max = POSITION_SIZING_LIMITS["fixed_quantity"]
+        minpos_min, minpos_max = POSITION_SIZING_LIMITS["min_position_size"]
 
-        if self.atr_period < 5 or self.atr_period > 50:
-            errors.append("atr_periodは5-50の範囲である必要があります")
+        if not (lb_min <= self.lookback_period <= lb_max):
+            errors.append(
+                f"lookback_periodは{lb_min}-{lb_max}の範囲である必要があります"
+            )
 
-        if self.atr_multiplier < 0.5 or self.atr_multiplier > 10.0:
-            errors.append("atr_multiplierは0.5-10.0の範囲である必要があります")
+        if not (of_min <= self.optimal_f_multiplier <= of_max):
+            errors.append(
+                f"optimal_f_multiplierは{of_min}-{of_max}の範囲である必要があります"
+            )
 
-        if self.risk_per_trade < 0.001 or self.risk_per_trade > 0.1:
-            errors.append("risk_per_tradeは0.1%-10%の範囲である必要があります")
+        if not (atrp_min <= self.atr_period <= atrp_max):
+            errors.append(
+                f"atr_periodは{atrp_min}-{atrp_max}の範囲である必要があります"
+            )
 
-        if self.fixed_ratio < 0.01 or self.fixed_ratio > 10.0:
-            errors.append("fixed_ratioは1%-1000%の範囲である必要があります")
+        if not (atrm_min <= self.atr_multiplier <= atrm_max):
+            errors.append(
+                f"atr_multiplierは{atrm_min}-{atrm_max}の範囲である必要があります"
+            )
 
-        if (
-            self.fixed_quantity < 0.01 or self.fixed_quantity > 1000.0
-        ):  # 上限を1000.0に拡大
-            errors.append("fixed_quantityは0.01-1000.0の範囲である必要があります")
+        if not (rpt_min <= self.risk_per_trade <= rpt_max):
+            errors.append(
+                f"risk_per_tradeは{int(rpt_min*1000)/10}% - {int(rpt_max*100)}%の範囲である必要があります"
+            )
 
-        if self.min_position_size < 0.001 or self.min_position_size > 1.0:
-            errors.append("min_position_sizeは0.001-1.0の範囲である必要があります")
+        if not (fr_min <= self.fixed_ratio <= fr_max):
+            errors.append(
+                f"fixed_ratioは{int(fr_min*100)}%-{int(fr_max*100)}%の範囲である必要があります"
+            )
+
+        if not (fq_min <= self.fixed_quantity <= fq_max):
+            errors.append(
+                f"fixed_quantityは{fq_min}-{fq_max}の範囲である必要があります"
+            )
+
+        if not (minpos_min <= self.min_position_size <= minpos_max):
+            errors.append(
+                f"min_position_sizeは{minpos_min}-{minpos_max}の範囲である必要があります"
+            )
 
         if self.max_position_size < self.min_position_size:
             errors.append(

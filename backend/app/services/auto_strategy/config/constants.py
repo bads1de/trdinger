@@ -384,3 +384,47 @@ def get_id_to_indicator_mapping(indicator_ids: Dict[str, int]) -> Dict[int, str]
 def validate_indicator_type(indicator_type: str) -> bool:
     """指標タイプの妥当性を検証"""
     return indicator_type in get_all_indicators()
+
+
+# === インジケータ解決支援定数 ===
+# 複数出力インジケータのデフォルト解決マッピング（例: MACD -> MACD_0）
+MULTI_OUTPUT_DEFAULT_MAPPING: Dict[str, str] = {
+    "AROON": "AROON_0",
+    "MACD": "MACD_0",
+    "STOCH": "STOCH_0",
+    "BBANDS": "BBANDS_1",  # Middle をデフォルト
+}
+
+# 基本的な移動平均インジケータ名のリスト（存在チェックなどに使用）
+BASIC_MA_INDICATORS: List[str] = [
+    "SMA",
+    "EMA",
+    "WMA",
+    "TRIMA",
+    "KAMA",
+    "T3",
+]
+
+
+# === TPSL/Position Sizing 範囲・既定値（散逸防止用） ===
+TPSL_LIMITS = {
+    "stop_loss_pct": (0.005, 0.15),
+    "take_profit_pct": (0.01, 0.3),
+    "base_stop_loss": (0.005, 0.15),
+    "atr_multiplier_sl": (0.5, 5.0),
+    "atr_multiplier_tp": (1.0, 10.0),
+    "atr_period": (5, 50),
+    "lookback_period": (20, 500),
+    "confidence_threshold": (0.1, 1.0),
+}
+
+POSITION_SIZING_LIMITS = {
+    "lookback_period": (10, 500),
+    "optimal_f_multiplier": (0.1, 1.0),
+    "atr_period": (5, 50),
+    "atr_multiplier": (0.5, 10.0),
+    "risk_per_trade": (0.001, 0.1),
+    "fixed_ratio": (0.01, 10.0),
+    "fixed_quantity": (0.01, 1000.0),
+    "min_position_size": (0.001, 1.0),
+}

@@ -5,11 +5,7 @@
 import logging
 from typing import Dict
 
-from app.services.indicators.indicator_orchestrator import (
-    TechnicalIndicatorService,
-)
-
-from .gene_tpsl import TPSLMethod
+# 不要なインポートを削除（統合済みの機能）
 
 logger = logging.getLogger(__name__)
 

@@ -61,16 +61,11 @@ class IndicatorNameResolver:
             if hasattr(strategy_instance, operand):
                 return True, cls._last_finite(getattr(strategy_instance, operand))
 
-            # 複数値指標の基本名解決（AROON -> AROON_0など）
-            multi_output_mapping = {
-                "AROON": "AROON_0",  # デフォルトでAROON_0を使用
-                "MACD": "MACD_0",  # デフォルトでMACD_0を使用
-                "STOCH": "STOCH_0",  # デフォルトでSTOCH_0を使用
-                "BBANDS": "BBANDS_1",  # デフォルトでBBANDS_1（Middle）を使用
-            }
+            # 複数値指標デフォルト解決（定数に移管）
+            from ..config.constants import MULTI_OUTPUT_DEFAULT_MAPPING
 
-            if operand in multi_output_mapping:
-                mapped_name = multi_output_mapping[operand]
+            if operand in MULTI_OUTPUT_DEFAULT_MAPPING:
+                mapped_name = MULTI_OUTPUT_DEFAULT_MAPPING[operand]
                 if hasattr(strategy_instance, mapped_name):
                     return True, cls._last_finite(
                         getattr(strategy_instance, mapped_name)
@@ -165,9 +160,10 @@ class IndicatorNameResolver:
                 f"指標名解決失敗: '{operand}', 利用可能属性: {available_attrs}"
             )
 
-            # 特に基本的な移動平均指標の存在を確認
-            ma_indicators = ["SMA", "EMA", "WMA", "TRIMA", "KAMA", "T3"]
-            for ma in ma_indicators:
+            # 基本的な移動平均指標の存在を確認（定数に移管）
+            from ..config.constants import BASIC_MA_INDICATORS
+
+            for ma in BASIC_MA_INDICATORS:
                 if hasattr(strategy_instance, ma):
                     logger.warning(f"基本指標確認: {ma} は存在します")
                 else:

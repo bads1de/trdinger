@@ -21,58 +21,49 @@ class AutoStrategyUtils:
     def safe_convert_to_float(value: Any, default: float = 0.0) -> float:
         """安全なfloat変換（Auto Strategy用）"""
         try:
-            if isinstance(value, str) and value.strip() == "":
+            # 共通ユーティリティへ委譲（重複排除）
+            from .common_utils import DataConverter
+
+            return DataConverter.ensure_float(value, default)
+        except Exception:
+            try:
+                return float(value)
+            except Exception:
                 return default
-            return float(value)
-        except (ValueError, TypeError, AttributeError):
-            logger.warning(f"float変換失敗: {value} -> {default}")
-            return default
 
     @staticmethod
     def safe_convert_to_int(value: Any, default: int = 0) -> int:
         """安全なint変換（Auto Strategy用）"""
         try:
-            if isinstance(value, str) and value.strip() == "":
+            from .common_utils import DataConverter
+
+            return DataConverter.ensure_int(value, default)
+        except Exception:
+            try:
+                return int(value)
+            except Exception:
                 return default
-            return int(value)
-        except (ValueError, TypeError, AttributeError):
-            logger.warning(f"int変換失敗: {value} -> {default}")
-            return default
 
     @staticmethod
     def ensure_list(value: Any, default: Optional[List] = None) -> List:
         """値をリストに安全に変換"""
-        if default is None:
-            default = []
+        from .common_utils import DataConverter
 
-        if isinstance(value, list):
-            return value
-        elif value is None:
-            return default
-        else:
-            return [value]
+        return DataConverter.ensure_list(value, default)
 
     @staticmethod
     def ensure_dict(value: Any, default: Optional[Dict] = None) -> Dict:
         """値を辞書に安全に変換"""
-        if default is None:
-            default = {}
+        from .common_utils import DataConverter
 
-        if isinstance(value, dict):
-            return value
-        else:
-            return default
+        return DataConverter.ensure_dict(value, default)
 
     @staticmethod
     def normalize_symbol(symbol: str) -> str:
         """シンボルを正規化"""
-        if not symbol:
-            return "BTC:USDT"
+        from .common_utils import DataConverter
 
-        if ":" not in symbol:
-            return f"{symbol}:USDT"
-
-        return symbol
+        return DataConverter.normalize_symbol(symbol)
 
     # === 戦略遺伝子関連ユーティリティ ===
 
