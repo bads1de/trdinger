@@ -23,7 +23,7 @@ from app.utils.label_generation import (
 )
 
 # 既存のクラス（後方互換性確認）
-from app.utils.index_alignment import MLWorkflowIndexManager
+# MLWorkflowIndexManager は削除されたため、テスト内で関数ベース実装を利用します
 from app.utils.label_generation import LabelGenerator, ThresholdMethod
 
 logger = logging.getLogger(__name__)

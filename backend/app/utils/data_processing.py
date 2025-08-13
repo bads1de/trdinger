@@ -6,7 +6,6 @@ data_cleaning_utils.py と data_preprocessing.py を統合したモジュール�
 """
 
 import logging
-import warnings
 from typing import Any, Dict, List, Optional, Tuple
 
 import numpy as np
@@ -443,17 +442,17 @@ class DataProcessor:
                     ),
                     n_neighbors=20,
                 )
-            elif outlier_method == "iqr":
-                # 後方互換性のため、IQR方法も残す
-                outlier_func = self._create_iqr_outlier_remover(outlier_threshold)
-                outlier_transformer = FunctionTransformer(
-                    func=outlier_func, validate=False
-                )
-            elif outlier_method == "zscore":
-                # 後方互換性のため、Z-score方法も残す
-                outlier_func = self._create_zscore_outlier_remover(outlier_threshold)
-                outlier_transformer = FunctionTransformer(
-                    func=outlier_func, validate=False
+            elif outlier_method in ("iqr", "zscore"):
+                # IQR / Z-score の従来手法は非推奨化したため、
+                # 安定したscikit-learnベースの外れ値検出器にフォールバックします。
+                outlier_transformer = OutlierRemovalTransformer(
+                    method="isolation_forest",
+                    contamination=(
+                        outlier_threshold / 100.0
+                        if outlier_threshold > 1
+                        else outlier_threshold
+                    ),
+                    n_estimators=100,
                 )
             else:
                 outlier_transformer = FunctionTransformer(
@@ -542,110 +541,11 @@ class DataProcessor:
 
         return pipeline
 
-    def _create_iqr_outlier_remover(self, threshold: float):
-        """
-        IQR法による外れ値除去関数を作成（非推奨）
+    # 従来のIQRベース外れ値除去は削除しました。OutlierRemovalTransformerを使用してください。
 
-        注意: この方法は非推奨です。代わりにOutlierRemovalTransformerの
-        'isolation_forest'または'local_outlier_factor'を使用してください。
-        """
-        warnings.warn(
-            "IQR法による外れ値除去は非推奨です。OutlierRemovalTransformerの"
-            "'isolation_forest'または'local_outlier_factor'を使用してください。",
-            DeprecationWarning,
-            stacklevel=2,
-        )
+    # 従来のZ-scoreベース外れ値除去は削除しました。OutlierRemovalTransformerを使用してください。
 
-        def remove_outliers_iqr(X):
-            if X.ndim == 1:
-                X = X.reshape(-1, 1)
-
-            result = X.copy()
-            for i in range(X.shape[1]):
-                col_data = X[:, i]
-                if not np.issubdtype(col_data.dtype, np.number):
-                    continue
-
-                Q1 = np.nanquantile(col_data, 0.25)
-                Q3 = np.nanquantile(col_data, 0.75)
-                IQR = Q3 - Q1
-                lower_bound = Q1 - threshold * IQR
-                upper_bound = Q3 + threshold * IQR
-
-                outlier_mask = (col_data < lower_bound) | (col_data > upper_bound)
-                result[outlier_mask, i] = np.nan
-
-            return result
-
-        return remove_outliers_iqr
-
-    def _create_zscore_outlier_remover(self, threshold: float):
-        """
-        Z-score法による外れ値除去関数を作成（非推奨）
-
-        注意: この方法は非推奨です。代わりにOutlierRemovalTransformerの
-        'isolation_forest'または'local_outlier_factor'を使用してください。
-        """
-        warnings.warn(
-            "Z-score法による外れ値除去は非推奨です。OutlierRemovalTransformerの"
-            "'isolation_forest'または'local_outlier_factor'を使用してください。",
-            DeprecationWarning,
-            stacklevel=2,
-        )
-
-        def remove_outliers_zscore(X):
-            if X.ndim == 1:
-                X = X.reshape(-1, 1)
-
-            result = X.copy()
-            for i in range(X.shape[1]):
-                col_data = X[:, i]
-                if not np.issubdtype(col_data.dtype, np.number):
-                    continue
-
-                mean = np.nanmean(col_data)
-                std = np.nanstd(col_data)
-                if std == 0:
-                    continue
-
-                z_scores = np.abs((col_data - mean) / std)
-                outlier_mask = z_scores > threshold
-                result[outlier_mask, i] = np.nan
-
-            return result
-
-        return remove_outliers_zscore
-
-    def _encode_categorical_safe(self, X):
-        """
-        安全なカテゴリカル変数エンコーディング（非推奨）
-
-        注意: この方法は非推奨です。代わりにCategoricalEncoderTransformerを使用してください。
-        """
-        warnings.warn(
-            "この方法は非推奨です。CategoricalEncoderTransformerを使用してください。",
-            DeprecationWarning,
-            stacklevel=2,
-        )
-        if X.ndim == 1:
-            X = X.reshape(-1, 1)
-
-        result = np.zeros((X.shape[0], X.shape[1]), dtype=float)
-
-        for i in range(X.shape[1]):
-            col_data = X[:, i]
-            try:
-                # LabelEncoderを使用
-                le = LabelEncoder()
-                # 文字列に変換してからエンコード
-                str_data = [str(x) if x is not None else "Unknown" for x in col_data]
-                result[:, i] = le.fit_transform(str_data)
-            except Exception as e:
-                logger.warning(f"カテゴリカルエンコーディングエラー (列{i}): {e}")
-                # エラーの場合は0で埋める
-                result[:, i] = 0
-
-        return result
+    # _encode_categorical_safe は削除され、CategoricalEncoderTransformerを使ってください。
 
     def _final_cleanup(self, X):
         """最終的なクリーンアップ"""
@@ -1144,15 +1044,10 @@ class DataProcessor:
         Returns:
             エンコーディング済みのDataFrame
         """
-        warnings.warn(
-            "この方法は非推奨です。CategoricalEncoderTransformerを使用してください。",
-            DeprecationWarning,
-            stacklevel=2,
-        )
+        # 新しいTransformerベースのエンコーディングを使用する実装に置き換え
         try:
             result_df = df.copy()
 
-            # カテゴリカル変数を特定（文字列型、object型）
             categorical_columns = result_df.select_dtypes(
                 include=["object", "string", "category"]
             ).columns.tolist()
@@ -1160,25 +1055,40 @@ class DataProcessor:
             if not categorical_columns:
                 return result_df
 
-            logger.info(f"カテゴリカル変数をエンコーディング: {categorical_columns}")
+            logger.info(
+                f"カテゴリカル変数をエンコーディング (Transformer使用): {categorical_columns}"
+            )
 
-            for col in categorical_columns:
+            # パイプラインを作成して適用
+            pipeline = create_categorical_encoding_pipeline(encoding_type="label")
+            encoded = pipeline.fit_transform(result_df[categorical_columns])
+
+            if isinstance(encoded, pd.DataFrame):
+                encoded_df = encoded
+            else:
+                # numpy配列の場合はエンコーダから特徴名を組み立てる
                 try:
-                    # 特定のカラムに対する特別な処理
-                    if col == "fear_greed_classification":
-                        result_df = self._encode_fear_greed_classification(
-                            result_df, col
-                        )
+                    encoder = pipeline.named_steps["encoder"]
+                    if getattr(encoder, "encoding_type", None) == "onehot":
+                        feature_names = []
+                        for col, enc in encoder.encoders_.items():
+                            cats = getattr(enc, "categories_", [[]])[0]
+                            for cls in cats:
+                                feature_names.append(f"{col}_{cls}")
                     else:
-                        # 一般的なカテゴリカル変数のエンコーディング
-                        result_df = self._encode_general_categorical(result_df, col)
+                        feature_names = [str(col) for col in categorical_columns]
+                except Exception:
+                    feature_names = [f"cat_{i}" for i in range(encoded.shape[1])]
 
-                except Exception as e:
-                    logger.warning(f"カラム {col} のエンコーディングでエラー: {e}")
-                    # エラーが発生した場合はカラムを削除
-                    result_df = result_df.drop(columns=[col])
+                encoded_df = pd.DataFrame(
+                    encoded, columns=feature_names, index=result_df.index
+                )
 
-            logger.info("カテゴリカル変数のエンコーディングが完了")
+            # 元のカテゴリカルカラムを削除して結合
+            result_df = result_df.drop(columns=categorical_columns)
+            result_df = pd.concat([result_df, encoded_df], axis=1)
+
+            logger.info("カテゴリカル変数のエンコーディングが完了 (Transformer使用)")
             return result_df
 
         except Exception as e:

@@ -614,8 +614,9 @@ class MLOrchestrator(MLPredictionInterface):
             return result
         except Exception as e:
             logger.error(f"予測値拡張エラー: {e}")
-            default_result = self._get_default_indicators(data_length)
-            return default_result
+            # 非推奨のデフォルト指標は削除しました。エラーを伝播します。
+            logger.error("予測拡張中にエラーが発生しました。デフォルト値は返却しません。")
+            raise MLDataError("予測拡張エラー: 内部エラーによりデフォルト指標を返却できませんでした")
 
     def _validate_ml_indicators(self, ml_indicators: Dict[str, np.ndarray]):
         """ML指標の妥当性を検証"""
@@ -641,22 +642,7 @@ class MLOrchestrator(MLPredictionInterface):
                     f"ML指標に無効な値が含まれています: {indicator}"
                 )
 
-    def _get_default_indicators(self, data_length: int) -> Dict[str, np.ndarray]:
-        """
-        デフォルトのML指標を取得（非推奨）
-
-        注意: エラーハンドリングの厳格化により、このメソッドは使用されなくなりました。
-        エラー時はデフォルト値を返すのではなく、例外を発生させるべきです。
-        """
-        logger.warning(
-            "_get_default_indicators は非推奨です。エラー時は例外を発生させてください。"
-        )
-        config = self.config.prediction
-        return {
-            "ML_UP_PROB": np.full(data_length, config.DEFAULT_UP_PROB),
-            "ML_DOWN_PROB": np.full(data_length, config.DEFAULT_DOWN_PROB),
-            "ML_RANGE_PROB": np.full(data_length, config.DEFAULT_RANGE_PROB),
-        }
+    # _get_default_indicators は削除され、エラー発生時は例外を投げる実装に変更しました。
 
     def _try_load_latest_model(self) -> bool:
         """最新の学習済みモデルを自動読み込み"""

@@ -12,13 +12,12 @@ from unittest.mock import patch, MagicMock
 import logging
 
 # リファクタリング後のモジュールをインポート
-from app.utils.index_alignment import (
+    from app.utils.index_alignment import (
     align_data,
     validate_alignment,
     preserve_index_during_processing,
     reindex_with_intersection,
     get_index_statistics,
-    MLWorkflowIndexManager,  # 後方互換性テスト用
 )
 
 from app.utils.label_generation import (
@@ -187,16 +186,13 @@ class TestIndexAlignmentRefactored:
         assert 0 <= stats["coverage_in_labels"] <= 1
 
     def test_backward_compatibility_mlworkflow_manager(self, sample_features):
-        """後方互換性テスト - MLWorkflowIndexManager"""
-        with patch("app.utils.index_alignment.logger") as mock_logger:
-            manager = MLWorkflowIndexManager()
-
-            # 非推奨警告が出力されることを確認
-            mock_logger.warning.assert_called_once()
-
-            # 基本機能が動作することを確認
-            manager.initialize_workflow(sample_features)
-            assert manager.workflow_state["original_data"] is not None
+        """後方互換性テスト - 関数ベースの互換性確認"""
+        # MLWorkflowIndexManager は削除されたため、関数ベース実装で同等の動作を確認
+        aligned_features, aligned_labels = align_data(
+            sample_features, pd.Series([0]*len(sample_features), index=sample_features.index)
+        )
+        # align_data が正常に動作することを確認
+        assert aligned_features.index.equals(aligned_labels.index)
 
 
 class TestLabelGenerationRefactored:

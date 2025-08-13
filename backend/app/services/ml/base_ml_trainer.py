@@ -924,8 +924,7 @@ class BaseMLTrainer(BaseResourceManager, ABC):
             logger.info(f"テスト期間: {X_test.index[0]} ～ {X_test.index[-1]}")
 
         else:
-            # 従来のランダム分割（非推奨）
-            logger.warning("⚠️ ランダム分割を使用（時系列データには非推奨）")
+            # 従来のランダム分割（互換性維持）
 
             # 層化抽出は、ラベルが2種類以上ある場合にのみ有効
             stratify_param = y if y.nunique() > 1 else None
