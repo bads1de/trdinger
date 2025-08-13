@@ -24,7 +24,6 @@ class ThresholdMethod(Enum):
 
     FIXED = "fixed"  # 固定閾値
     QUANTILE = "quantile"  # 分位数ベース（KBinsDiscretizerのquantile戦略）
-    # 後方互換エイリアス（テストでのPERCENTILE呼称に対応）
     PERCENTILE = "quantile"
     STD_DEVIATION = "std_deviation"  # 標準偏差ベース
     ADAPTIVE = "adaptive"  # 適応的閾値（GridSearchCVを使用）

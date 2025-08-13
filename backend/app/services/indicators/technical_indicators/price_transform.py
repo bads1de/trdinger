@@ -6,14 +6,13 @@ backtesting.pyとの完全な互換性を提供します。
 numpy配列ベースのインターフェースを維持しています。
 """
 
-from typing import cast, Union
+from typing import Union
 
 import numpy as np
 import pandas as pd
 import pandas_ta as ta
 
 from ..utils import (
-    PandasTAError,
     handle_pandas_ta_errors,
     ensure_series_minimal_conversion,
     validate_series_data,

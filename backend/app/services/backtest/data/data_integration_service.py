@@ -12,7 +12,7 @@ import pandas as pd
 
 from app.utils.data_processing import DataProcessor
 
-from ...data_mergers import FearGreedMerger, FRMerger, OIMerger
+from ...data_collection.mergers import FearGreedMerger, FRMerger, OIMerger
 from .data_conversion_service import DataConversionError, DataConversionService
 from .data_retrieval_service import DataRetrievalError, DataRetrievalService
 

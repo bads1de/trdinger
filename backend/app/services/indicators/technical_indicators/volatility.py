@@ -6,18 +6,16 @@ backtesting.pyとの完全な互換性を提供します。
 numpy配列ベースのインターフェースを維持しています。
 """
 
-from typing import Tuple, cast, Union
+from typing import Tuple, Union
 
 import numpy as np
 import pandas as pd
 import pandas_ta as ta
 
 from ..utils import (
-    PandasTAError,
     handle_pandas_ta_errors,
     ensure_series_minimal_conversion,
     validate_series_data,
-    validate_indicator_parameters,
 )
 
 
@@ -127,10 +125,10 @@ class VolatilityIndicators:
     ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
         """Keltner Channels: returns (upper, middle, lower)"""
         h = ensure_series_minimal_conversion(high)
-        l = ensure_series_minimal_conversion(low)
+        low_series = ensure_series_minimal_conversion(low)
         c = ensure_series_minimal_conversion(close)
         validate_series_data(c, length)
-        df = ta.kc(high=h, low=l, close=c, length=length, scalar=scalar)
+        df = ta.kc(high=h, low=low_series, close=c, length=length, scalar=scalar)
         cols = list(df.columns)
         upper = df[next((c for c in cols if "KCu" in c), cols[0])].values
         middle = df[
@@ -151,10 +149,10 @@ class VolatilityIndicators:
     ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
         """Donchian Channels: returns (upper, middle, lower)"""
         h = ensure_series_minimal_conversion(high)
-        l = ensure_series_minimal_conversion(low)
+        low_series = ensure_series_minimal_conversion(low)
         validate_series_data(h, length)
-        validate_series_data(l, length)
-        df = ta.donchian(high=h, low=l, length=length)
+        validate_series_data(low_series, length)
+        df = ta.donchian(high=h, low=low_series, length=length)
         cols = list(df.columns)
         upper = df[
             next((c for c in cols if "DCHU" in c or "upper" in c.lower()), cols[0])
@@ -181,10 +179,12 @@ class VolatilityIndicators:
     ) -> Tuple[np.ndarray, np.ndarray]:
         """Supertrend: returns (supertrend, direction)"""
         h = ensure_series_minimal_conversion(high)
-        l = ensure_series_minimal_conversion(low)
+        low_series = ensure_series_minimal_conversion(low)
         c = ensure_series_minimal_conversion(close)
         validate_series_data(c, length)
-        df = ta.supertrend(high=h, low=l, close=c, length=length, multiplier=multiplier)
+        df = ta.supertrend(
+            high=h, low=low_series, close=c, length=length, multiplier=multiplier
+        )
         cols = list(df.columns)
         st_col = next(
             (c for c in cols if "SUPERT_" in c.upper() or "supertrend" in c.lower()),

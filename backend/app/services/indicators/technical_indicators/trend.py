@@ -6,7 +6,7 @@ backtesting.pyとの完全な互換性を提供します。
 numpy配列ベースのインターフェースを維持しています。
 """
 
-from typing import cast, Union
+from typing import Union
 
 import numpy as np
 import pandas as pd
@@ -302,7 +302,6 @@ class TrendIndicators:
             result = ta.zlma(series, length=length)
         else:
             # Fallback: approximate with ema of ema difference
-            ema1 = ta.ema(series, length=length)
             lag = int((length - 1) / 2)
             shifted = series.shift(lag)
             adjusted = series + (series - shifted)
@@ -370,18 +369,18 @@ class TrendIndicators:
         pandas-taの返却差に依存せず、標準定義に基づき自前で安定計算する。
         """
         h = ensure_series_minimal_conversion(high)
-        l = ensure_series_minimal_conversion(low)
+        low_series = ensure_series_minimal_conversion(low)
         c = ensure_series_minimal_conversion(close)
         maxlen = max(tenkan, kijun, senkou)
         validate_series_data(h, maxlen)
-        validate_series_data(l, maxlen)
+        validate_series_data(low_series, maxlen)
         validate_series_data(c, maxlen)
-        conv = (h.rolling(tenkan).max() + l.rolling(tenkan).min()) / 2.0
-        base = (h.rolling(kijun).max() + l.rolling(kijun).min()) / 2.0
+        conv = (h.rolling(tenkan).max() + low_series.rolling(tenkan).min()) / 2.0
+        base = (h.rolling(kijun).max() + low_series.rolling(kijun).min()) / 2.0
         span_a = ((conv + base) / 2.0).shift(kijun)
-        span_b = ((h.rolling(senkou).max() + l.rolling(senkou).min()) / 2.0).shift(
-            kijun
-        )
+        span_b = (
+            (h.rolling(senkou).max() + low_series.rolling(senkou).min()) / 2.0
+        ).shift(kijun)
         lag = c.shift(-kijun)
         return (
             conv.to_numpy(),

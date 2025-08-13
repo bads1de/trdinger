@@ -718,10 +718,10 @@ class MomentumIndicators:
         """Relative Vigor Index"""
         o = ensure_series_minimal_conversion(open_)
         h = ensure_series_minimal_conversion(high)
-        l = ensure_series_minimal_conversion(low)
+        low_series = ensure_series_minimal_conversion(low)
         c = ensure_series_minimal_conversion(close)
         validate_series_data(c, length + 1)
-        df = ta.rvgi(open_=o, high=h, low=l, close=c, length=length)
+        df = ta.rvgi(open_=o, high=h, low=low_series, close=c, length=length)
         r_col = next(
             (c for c in df.columns if c.lower().endswith("rvi")), df.columns[0]
         )
@@ -878,10 +878,10 @@ class MomentumIndicators:
         """Relative Volatility Index via pandas-ta rvi"""
         o = ensure_series_minimal_conversion(open_)
         h = ensure_series_minimal_conversion(high)
-        l = ensure_series_minimal_conversion(low)
+        low_series = ensure_series_minimal_conversion(low)
         c = ensure_series_minimal_conversion(close)
         validate_series_data(c, length)
-        df = ta.rvi(open_=o, high=h, low=l, close=c, length=length)
+        df = ta.rvi(open_=o, high=h, low=low_series, close=c, length=length)
         return df.values if hasattr(df, "values") else np.asarray(df)
 
     @staticmethod
@@ -965,10 +965,10 @@ class MomentumIndicators:
     ) -> np.ndarray:
         """Choppiness Index"""
         h = ensure_series_minimal_conversion(high)
-        l = ensure_series_minimal_conversion(low)
+        low_series = ensure_series_minimal_conversion(low)
         c = ensure_series_minimal_conversion(close)
         validate_series_data(c, length)
-        df = ta.chop(high=h, low=l, close=c, length=length)
+        df = ta.chop(high=h, low=low_series, close=c, length=length)
         return df.values if hasattr(df, "values") else np.asarray(df)
 
     @staticmethod
@@ -981,10 +981,10 @@ class MomentumIndicators:
     ) -> Tuple[np.ndarray, np.ndarray]:
         """Vortex Indicator: returns (+VI, -VI)"""
         h = ensure_series_minimal_conversion(high)
-        l = ensure_series_minimal_conversion(low)
+        low_series = ensure_series_minimal_conversion(low)
         c = ensure_series_minimal_conversion(close)
         validate_series_data(c, length)
-        df = ta.vortex(high=h, low=l, close=c, length=length)
+        df = ta.vortex(high=h, low=low_series, close=c, length=length)
         cols = list(df.columns)
         pos_col = next(
             (col for col in cols if "+" in str(col) or "VIp" in str(col)), cols[0]

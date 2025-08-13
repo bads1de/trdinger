@@ -6,14 +6,13 @@ backtesting.pyとの完全な互換性を提供します。
 numpy配列ベースのインターフェースを維持しています。
 """
 
-from typing import cast, Union
+from typing import Union
 
 import numpy as np
 import pandas as pd
 import pandas_ta as ta
 
 from ..utils import (
-    PandasTAError,
     handle_pandas_ta_errors,
     ensure_series_minimal_conversion,
     validate_series_data,
@@ -138,11 +137,11 @@ class VolumeIndicators:
     ) -> np.ndarray:
         """Volume Weighted Average Price"""
         h = ensure_series_minimal_conversion(high)
-        l = ensure_series_minimal_conversion(low)
+        low_series = ensure_series_minimal_conversion(low)
         c = ensure_series_minimal_conversion(close)
         v = ensure_series_minimal_conversion(volume)
         validate_series_data(c, 2)
-        df = ta.vwap(high=h, low=l, close=c, volume=v, anchor=anchor)
+        df = ta.vwap(high=h, low=low_series, close=c, volume=v, anchor=anchor)
         return df.values if hasattr(df, "values") else np.asarray(df)
 
     @staticmethod
@@ -156,11 +155,11 @@ class VolumeIndicators:
     ) -> np.ndarray:
         """Ease of Movement"""
         h = ensure_series_minimal_conversion(high)
-        l = ensure_series_minimal_conversion(low)
+        low_series = ensure_series_minimal_conversion(low)
         c = ensure_series_minimal_conversion(close)
         v = ensure_series_minimal_conversion(volume)
         validate_series_data(c, length)
-        df = ta.eom(high=h, low=l, close=c, volume=v, length=length)
+        df = ta.eom(high=h, low=low_series, close=c, volume=v, length=length)
         return df.values if hasattr(df, "values") else np.asarray(df)
 
     @staticmethod
@@ -175,11 +174,11 @@ class VolumeIndicators:
     ) -> np.ndarray:
         """Klinger Volume Oscillator"""
         h = ensure_series_minimal_conversion(high)
-        l = ensure_series_minimal_conversion(low)
+        low_series = ensure_series_minimal_conversion(low)
         c = ensure_series_minimal_conversion(close)
         v = ensure_series_minimal_conversion(volume)
         validate_series_data(c, slow)
-        df = ta.kvo(high=h, low=l, close=c, volume=v, fast=fast, slow=slow)
+        df = ta.kvo(high=h, low=low_series, close=c, volume=v, fast=fast, slow=slow)
         return df.values if hasattr(df, "values") else np.asarray(df)
 
     @staticmethod
@@ -205,9 +204,9 @@ class VolumeIndicators:
     ) -> np.ndarray:
         """Chaikin Money Flow"""
         h = ensure_series_minimal_conversion(high)
-        l = ensure_series_minimal_conversion(low)
+        low_series = ensure_series_minimal_conversion(low)
         c = ensure_series_minimal_conversion(close)
         v = ensure_series_minimal_conversion(volume)
         validate_series_data(c, length)
-        df = ta.cmf(high=h, low=l, close=c, volume=v, length=length)
+        df = ta.cmf(high=h, low=low_series, close=c, volume=v, length=length)
         return df.values if hasattr(df, "values") else np.asarray(df)
