@@ -30,13 +30,7 @@ logger = logging.getLogger(__name__)
 # RR関連のクラス・ロジックはジェネレーターに移動しました
 
 
-class TPSLCalculationMethod(Enum):
-    """TP/SL計算方式"""
-
-    FIXED_PERCENTAGE = "fixed_percentage"
-    RISK_REWARD_RATIO = "risk_reward_ratio"
-    VOLATILITY_BASED = "volatility_based"
-    STATISTICAL = "statistical"
+# 重複していた列挙は gene_tpsl.TPSLMethod を使用する（後方互換のためこのファイル内のEnumは削除）
 
 
 class TPSLResult:
@@ -46,7 +40,7 @@ class TPSLResult:
         self,
         stop_loss_pct: float,
         take_profit_pct: float,
-        method: TPSLCalculationMethod,
+        method: TPSLMethod,
         confidence_score: float = 0.0,
         metadata: Optional[Dict[str, Any]] = None,
     ):
@@ -61,7 +55,8 @@ class TPSLResult:
         return {
             "stop_loss_pct": self.stop_loss_pct,
             "take_profit_pct": self.take_profit_pct,
-            "method": self.method.value,
+            # TPSLMethod 以外（文字列など）が来ても安全に文字列へ
+            "method": getattr(self.method, "value", self.method),
             "confidence_score": self.confidence_score,
             "metadata": self.metadata,
         }
@@ -540,10 +535,24 @@ class TPSLService:
         if not math.isfinite(percentage):
             return False
 
-        # SLは0-100%、TPは0-1000%まで許容
-        if label == "SL":
-            return 0 <= percentage <= 1.0
-        elif label == "TP":
-            return 0 <= percentage <= 10.0
-        else:
-            return 0 <= percentage <= 1.0
+        # 定数で定義された妥当範囲に統一
+        try:
+            from ..config.constants import TPSL_LIMITS
+
+            if label == "SL":
+                min_v, max_v = TPSL_LIMITS["stop_loss_pct"]
+            elif label == "TP":
+                min_v, max_v = TPSL_LIMITS["take_profit_pct"]
+            else:
+                # デフォルトは 0-1 の保守的な範囲
+                min_v, max_v = 0.0, 1.0
+
+            return min_v <= float(percentage) <= max_v
+        except Exception:
+            # フォールバック: 安全なデフォルト
+            if label == "SL":
+                return 0 <= percentage <= 1.0
+            elif label == "TP":
+                return 0 <= percentage <= 10.0
+            else:
+                return 0 <= percentage <= 1.0

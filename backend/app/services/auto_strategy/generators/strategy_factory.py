@@ -272,41 +272,6 @@ class StrategyFactory:
                 except Exception as e:
                     logger.error(f"売買ロジックエラー: {e}", exc_info=True)
 
-            def _adjust_position_size_for_backtesting(self, size: float) -> float:
-                """
-                backtesting.pyの制約に合わせてポジションサイズを調整
-
-                制約:
-                - 0 < size < 1 (資産の割合として) または
-                - size >= 1 かつ 整数 (単位数として)
-
-                Args:
-                    size: 元のポジションサイズ
-
-                Returns:
-                    調整されたポジションサイズ
-                """
-                if size == 0:
-                    return 0
-
-                abs_size = abs(size)
-                sign = 1 if size > 0 else -1
-
-                # 1未満の場合は割合として扱う（そのまま使用）
-                if abs_size < 1:
-                    # 最小値チェック（backtesting.pyは0より大きい必要がある）
-                    if abs_size <= 0:
-                        return 0
-                    return size
-
-                # 1以上の場合は整数に丸める（単位数として扱う）
-                else:
-                    rounded_size = round(abs_size)
-                    # 丸めた結果が0になった場合は1にする
-                    if rounded_size == 0:
-                        rounded_size = 1
-                    return sign * rounded_size
-
             def _init_indicator(self, indicator_gene: IndicatorGene):
                 """単一指標の初期化（統合版）"""
                 try:
