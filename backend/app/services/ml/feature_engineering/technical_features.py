@@ -172,9 +172,9 @@ class TechnicalFeatureCalculator(BaseFeatureCalculator):
 
             # MACD（pandas-ta使用）
             macd_result = ta.macd(result_df["Close"], fast=12, slow=26, signal=9)
-            result_df["MACD"] = macd_result[f"MACD_12_26_9"].fillna(0.0)
-            result_df["MACD_Signal"] = macd_result[f"MACDs_12_26_9"].fillna(0.0)
-            result_df["MACD_Histogram"] = macd_result[f"MACDh_12_26_9"].fillna(0.0)
+            result_df["MACD"] = macd_result["MACD_12_26_9"].fillna(0.0)
+            result_df["MACD_Signal"] = macd_result["MACDs_12_26_9"].fillna(0.0)
+            result_df["MACD_Histogram"] = macd_result["MACDh_12_26_9"].fillna(0.0)
 
             # ストキャスティクス（pandas-ta使用）
             stoch_result = ta.stoch(
@@ -185,8 +185,8 @@ class TechnicalFeatureCalculator(BaseFeatureCalculator):
                 d=3,
                 smooth_k=3,
             )
-            result_df["Stochastic_K"] = stoch_result[f"STOCHk_14_3_3"].fillna(50.0)
-            result_df["Stochastic_D"] = stoch_result[f"STOCHd_14_3_3"].fillna(50.0)
+            result_df["Stochastic_K"] = stoch_result["STOCHk_14_3_3"].fillna(50.0)
+            result_df["Stochastic_D"] = stoch_result["STOCHd_14_3_3"].fillna(50.0)
 
             # ウィリアムズ%R（pandas-ta使用）
             willr_values = ta.willr(

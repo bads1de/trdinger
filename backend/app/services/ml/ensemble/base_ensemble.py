@@ -6,7 +6,6 @@
 
 import logging
 from abc import ABC, abstractmethod
-import warnings
 from typing import Any, Dict, List, Optional
 
 import numpy as np

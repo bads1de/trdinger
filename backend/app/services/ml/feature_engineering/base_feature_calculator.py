@@ -7,12 +7,10 @@
 
 import logging
 from abc import ABC, abstractmethod
-from typing import Any, Dict, Optional, Union
+from typing import Any, Dict, Optional
 
 import numpy as np
 import pandas as pd
-
-from ....utils.data_validation import DataValidator
 
 
 logger = logging.getLogger(__name__)
@@ -75,7 +73,6 @@ class BaseFeatureCalculator(ABC):
             コピーされたDataFrame
         """
         return df.copy()
-
 
     def handle_calculation_error(
         self, error: Exception, context: str, fallback_df: pd.DataFrame

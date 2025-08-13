@@ -7,7 +7,7 @@
 
 import logging
 from functools import wraps
-from typing import Union, cast
+from typing import Union
 
 import numpy as np
 import pandas as pd

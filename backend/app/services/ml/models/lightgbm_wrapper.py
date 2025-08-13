@@ -388,7 +388,8 @@ class LightGBMModel:
                     attr_value = getattr(self, attr_name)
                     if not callable(attr_value):
                         params[attr_name] = attr_value
-                except:
+                except Exception:
+                    # 取得不能な属性があってもスキップ
                     pass
 
         return params

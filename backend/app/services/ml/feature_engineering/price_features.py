@@ -242,6 +242,9 @@ class PriceFeatureCalculator(BaseFeatureCalculator):
 
             volume_period = lookback_periods.get("volume", 20)
 
+            # pandas-ta のローカルインポート（この関数内でのみ使用）
+            import pandas_ta as ta
+
             # 出来高移動平均（pandas-ta使用）
             volume_ma = ta.sma(result_df["Volume"], length=volume_period).fillna(
                 result_df["Volume"]

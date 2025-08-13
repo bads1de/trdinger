@@ -7,27 +7,26 @@ scikit-learnのクラスタリング（KMeans、DBSCAN）とhmmlearnのHMMを使
 
 import logging
 import warnings
-from datetime import datetime, timedelta
+from datetime import datetime
 from enum import Enum
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional
 
 import numpy as np
 import pandas as pd
 from sklearn.cluster import DBSCAN, KMeans
 from sklearn.preprocessing import StandardScaler
 
-logger = logging.getLogger(__name__)
 
-# HMMライブラリのインポート（オプション）
 try:
     from hmmlearn import hmm
 
     HMM_AVAILABLE = True
-except ImportError:
+except Exception:
+    hmm = None
     HMM_AVAILABLE = False
-    logger.warning(
-        "hmmlearnライブラリが利用できません。HMMベースの判定は無効化されます。"
-    )
+
+
+logger = logging.getLogger(__name__)
 
 
 class MarketRegime(Enum):

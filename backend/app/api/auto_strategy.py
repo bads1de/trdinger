@@ -1,3 +1,9 @@
+"""
+自動戦略生成APIエンドポイント
+
+遺伝的アルゴリズムを用いた取引戦略の自動生成、管理、テストに関するAPIを提供します。
+"""
+
 import logging
 from typing import Any, Dict, List, Optional
 

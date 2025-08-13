@@ -5,7 +5,6 @@ backtesting.pyライブラリを使用したバックテスト実行を担当し
 """
 
 import logging
-import time
 import warnings
 from datetime import datetime
 from typing import Any, Dict, Type
@@ -138,7 +137,6 @@ class BacktestExecutor:
     def _run_backtest(self, bt: Backtest, strategy_parameters: Dict[str, Any]) -> Any:
         """バックテストを実行"""
         try:
-            start_time = time.time()
 
             # 警告を一時的に無効化
             with warnings.catch_warnings():

@@ -7,12 +7,12 @@ scikit-learnのBaggingClassifierを使用した標準的なバギング実装。
 """
 
 import logging
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, Optional
 
 import numpy as np
 import pandas as pd
 from sklearn.ensemble import BaggingClassifier
-from sklearn.model_selection import train_test_split
+
 
 from ....utils.unified_error_handler import UnifiedModelError
 from .base_ensemble import BaseEnsemble

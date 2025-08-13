@@ -74,7 +74,7 @@ class StrategyClassFactory:
         """
         # 遅延インポートで循環参照を回避
         try:
-            from app.services.auto_strategy.factories.strategy_factory import (
+            from app.services.auto_strategy.generators.strategy_factory import (
                 StrategyFactory,
             )
             from app.services.auto_strategy.models.gene_serialization import (

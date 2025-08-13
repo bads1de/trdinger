@@ -11,7 +11,7 @@ from typing import Any, Dict, List, Optional
 import numpy as np
 import pandas as pd
 from sklearn.neighbors import KNeighborsClassifier, NearestNeighbors
-from sklearn.metrics.pairwise import pairwise_distances
+
 
 from ....utils.unified_error_handler import UnifiedModelError
 
@@ -362,7 +362,8 @@ class KNNModel:
                     attr_value = getattr(self, attr_name)
                     if not callable(attr_value):
                         params[attr_name] = attr_value
-                except:
+                except Exception:
+                    # 属性取得に失敗した場合は無視
                     pass
 
         return params

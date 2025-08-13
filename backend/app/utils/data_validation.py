@@ -11,7 +11,6 @@ from typing import Any, Dict, List, Optional, Tuple, Union
 
 import numpy as np
 import pandas as pd
-from sklearn.preprocessing import StandardScaler
 import pandera as pa
 from pandera import Column, DataFrameSchema, Check
 from pydantic import BaseModel, Field, validator
@@ -160,7 +159,8 @@ def clean_dataframe_with_schema(
                     try:
                         schema.validate(pd.DataFrame([row]), lazy=False)
                         valid_rows.append(idx)
-                    except:
+                    except Exception:
+                        # 個別行の検証で予期しない例外が出ても次行へ
                         continue
 
                 cleaned_df = df.loc[valid_rows]

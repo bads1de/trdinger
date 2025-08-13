@@ -286,7 +286,7 @@ class MarketRegimeDetector:
         """値のパーセンタイルを計算"""
         try:
             return (series <= value).mean()
-        except:
+        except Exception:
             return 0.5
 
     def get_regime_stability(self, window: int = 10) -> float:

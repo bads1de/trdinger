@@ -109,10 +109,10 @@ class AdvancedFeatureEngineer:
         """高度な技術指標を追加"""
         logger.info("📈 高度な技術指標を追加中...")
 
-        high = data["High"].values
-        low = data["Low"].values
-        close = data["Close"].values
-        volume = data["Volume"].values
+        data["High"].values
+        data["Low"].values
+        data["Close"].values
+        data["Volume"].values
 
         try:
             import pandas_ta as ta
@@ -141,15 +141,15 @@ class AdvancedFeatureEngineer:
 
             # トレンド指標（pandas-ta使用）
             adx_result = ta.adx(high=data["High"], low=data["Low"], close=data["Close"])
-            data["ADX"] = adx_result[f"ADX_14"]
-            data["DI_Plus"] = adx_result[f"DMP_14"]
-            data["DI_Minus"] = adx_result[f"DMN_14"]
+            data["ADX"] = adx_result["ADX_14"]
+            data["DI_Plus"] = adx_result["DMP_14"]
+            data["DI_Minus"] = adx_result["DMN_14"]
 
             aroon_result = ta.aroon(high=data["High"], low=data["Low"])
-            data["Aroon_Up"] = aroon_result[f"AROONU_14"]
-            data["Aroon_Down"] = aroon_result[f"AROOND_14"]
+            data["Aroon_Up"] = aroon_result["AROONU_14"]
+            data["Aroon_Down"] = aroon_result["AROOND_14"]
             data["AROONOSC"] = ta.aroon(high=data["High"], low=data["Low"], scalar=100)[
-                f"AROONOSC_14"
+                "AROONOSC_14"
             ]
 
             # ボラティリティ指標（pandas-ta使用）
