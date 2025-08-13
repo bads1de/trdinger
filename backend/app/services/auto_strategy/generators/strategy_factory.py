@@ -9,7 +9,7 @@ from typing import Tuple, Type
 
 from backtesting import Strategy
 
-from ..calculators.indicator_calculator import IndicatorCalculator
+from ..services.indicator_service import IndicatorCalculator
 from ..services.position_sizing_service import PositionSizingService
 from ..services.tpsl_service import TPSLService
 from ..core.condition_evaluator import ConditionEvaluator

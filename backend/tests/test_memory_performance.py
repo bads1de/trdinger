@@ -15,7 +15,7 @@ from typing import List, Tuple
 from app.services.indicators.indicator_orchestrator import TechnicalIndicatorService
 from app.services.indicators.technical_indicators.trend import TrendIndicators
 from app.services.indicators.technical_indicators.momentum import MomentumIndicators
-from app.services.auto_strategy.calculators.indicator_calculator import (
+from app.services.auto_strategy.services.indicator_service import (
     IndicatorCalculator,
 )
 

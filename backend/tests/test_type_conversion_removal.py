@@ -17,7 +17,7 @@ from app.services.indicators.technical_indicators.math_operators import (
     MathOperatorsIndicators,
 )
 from app.services.indicators.technical_indicators.statistics import StatisticsIndicators
-from app.services.auto_strategy.calculators.indicator_calculator import (
+from app.services.auto_strategy.services.indicator_service import (
     IndicatorCalculator,
 )
 

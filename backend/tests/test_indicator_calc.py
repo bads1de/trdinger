@@ -3,7 +3,7 @@
 指標計算テスト - 戦略ファクトリー統合版
 """
 
-from app.services.auto_strategy.calculators.indicator_calculator import (
+from app.services.auto_strategy.services.indicator_service import (
     IndicatorCalculator,
 )
 from app.services.auto_strategy.models.gene_strategy import IndicatorGene, StrategyGene

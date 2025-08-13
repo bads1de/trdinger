@@ -1,7 +1,7 @@
 import numpy as np
 import pandas as pd
 
-from app.services.auto_strategy.calculators.indicator_calculator import (
+from app.services.auto_strategy.services.indicator_service import (
     IndicatorCalculator,
 )
 

@@ -1,5 +1,5 @@
 """
-指標計算器
+指標計算器（サービス統合版）
 
 テクニカル指標の計算を担当します。
 """
@@ -12,7 +12,7 @@ import numpy as np
 from app.services.indicators import TechnicalIndicatorService
 
 from ..models.gene_strategy import IndicatorGene
-from ..services.ml_orchestrator import MLOrchestrator
+from .ml_orchestrator import MLOrchestrator
 
 logger = logging.getLogger(__name__)
 

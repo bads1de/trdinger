@@ -2,10 +2,12 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from app.services.auto_strategy.calculators.indicator_calculator import IndicatorCalculator
+from app.services.auto_strategy.services.indicator_service import IndicatorCalculator
 from app.services.auto_strategy.evaluators.condition_evaluator import ConditionEvaluator
 from app.services.auto_strategy.models.gene_strategy import Condition, IndicatorGene
-from app.services.auto_strategy.generators.smart_condition_generator import SmartConditionGenerator
+from app.services.auto_strategy.generators.smart_condition_generator import (
+    SmartConditionGenerator,
+)
 
 
 class _FakeStrategy:
@@ -100,7 +102,9 @@ def test_smart_generator_handles_macdext_zero_center():
             if (
                 isinstance(c, Condition)
                 and isinstance(c.left_operand, str)
-                and (c.left_operand.startswith("MACDEXT") or c.left_operand == "MACDEXT")
+                and (
+                    c.left_operand.startswith("MACDEXT") or c.left_operand == "MACDEXT"
+                )
                 and isinstance(c.right_operand, (int, float))
                 and c.right_operand == 0
             ):
@@ -108,4 +112,3 @@ def test_smart_generator_handles_macdext_zero_center():
         return False
 
     assert _contains_zero_center_check(longs) or _contains_zero_center_check(shorts)
-

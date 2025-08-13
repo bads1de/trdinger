@@ -12,7 +12,7 @@ from app.services.auto_strategy.generators.random_gene_generator import (
 from app.services.auto_strategy.models.ga_config import GAConfig
 from app.services.auto_strategy.models.gene_strategy import StrategyGene, Condition
 from app.services.auto_strategy.models.condition_group import ConditionGroup
-from app.services.auto_strategy.calculators.indicator_calculator import (
+from app.services.auto_strategy.services.indicator_service import (
     IndicatorCalculator,
 )
 from app.services.auto_strategy.evaluators.condition_evaluator import ConditionEvaluator
