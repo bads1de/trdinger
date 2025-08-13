@@ -1,9 +1,7 @@
 """
-ボラティリティベースのTP/SL生成機能
+ボラティリティベースのTP/SL生成機能（統一ファイル名: volatility_tpsl_generator）
 
-このモジュールは、ATR（Average True Range）やその他のボラティリティ指標を使用して、
-市場のボラティリティに応じたテイクプロフィット（TP）とストップロス（SL）を
-動的に設定する機能を提供します。
+ATR等のボラティリティ指標に応じてTP/SLを生成します。
 """
 
 import logging
@@ -123,8 +121,6 @@ class VolatilityBasedGenerator:
             ボラティリティベース計算結果
         """
         try:
-            # self.logger.info("ボラティリティベースTP/SL生成開始")
-
             # ATR値の取得または計算
             atr_value, atr_pct = self._get_or_calculate_atr(
                 market_data, config, current_price
@@ -194,11 +190,6 @@ class VolatilityBasedGenerator:
                 },
             )
 
-            # self.logger.info(
-            #     f"ボラティリティベース生成完了: SL={sl_pct:.3f}, TP={tp_pct:.3f}, "
-            #     f"レジーム={volatility_regime.value}"
-            # )
-
             return result
 
         except Exception as e:
@@ -213,13 +204,11 @@ class VolatilityBasedGenerator:
     ) -> Tuple[float, float]:
         """ATR値を取得または計算"""
         try:
-            # 既にATR値が提供されている場合
             if "atr" in market_data:
                 atr_value = market_data["atr"]
                 atr_pct = atr_value / current_price
                 return atr_value, atr_pct
 
-            # OHLC データからATRを計算
             if all(key in market_data for key in ["high", "low", "close"]):
                 atr_value = self._calculate_atr(
                     market_data["high"],
@@ -230,16 +219,13 @@ class VolatilityBasedGenerator:
                 atr_pct = atr_value / current_price
                 return atr_value, atr_pct
 
-            # フォールバック: 推定ATR
-            estimated_atr_pct = 0.02  # 2%のデフォルト
+            estimated_atr_pct = 0.02
             estimated_atr_value = estimated_atr_pct * current_price
-
             logger.warning("ATR計算用データ不足、推定値を使用")
             return estimated_atr_value, estimated_atr_pct
 
         except Exception as e:
             logger.error(f"ATR取得/計算エラー: {e}")
-            # エラー時のフォールバック
             fallback_atr_pct = 0.02
             return fallback_atr_pct * current_price, fallback_atr_pct
 
@@ -251,14 +237,12 @@ class VolatilityBasedGenerator:
             import pandas_ta as ta
             import pandas as pd
 
-            # pandas-taは十分な長さの配列を必要とする
             if len(high) < period:
                 logger.warning(
                     f"ATR計算のためのデータが不足しています: {len(high)} < {period}"
                 )
                 return 0.02 * close[-1]
 
-            # pandas Seriesに変換
             high_series = pd.Series(high)
             low_series = pd.Series(low)
             close_series = pd.Series(close)
@@ -267,17 +251,16 @@ class VolatilityBasedGenerator:
                 high=high_series, low=low_series, close=close_series, length=period
             )
 
-            # nanを除外して最後の有効な値を取得
             valid_atr_values = atr_values.dropna()
             if len(valid_atr_values) > 0:
                 return float(valid_atr_values.iloc[-1])
 
             logger.warning("ATR計算結果がすべてnanでした。")
-            return 0.02 * close[-1]  # フォールバック
+            return 0.02 * close[-1]
 
         except Exception as e:
             logger.error(f"ATR計算エラー: {e}")
-            return 0.02 * close[-1]  # フォールバック
+            return 0.02 * close[-1]
 
     def _determine_volatility_regime(
         self,
@@ -287,17 +270,14 @@ class VolatilityBasedGenerator:
     ) -> VolatilityRegime:
         """ボラティリティレジームを判定"""
         try:
-            # 過去のATR値から基準を計算
             if "atr_history" in market_data:
                 atr_history = market_data["atr_history"]
                 atr_mean = np.mean(atr_history)
                 atr_std = np.std(atr_history)
             else:
-                # デフォルト基準値
-                atr_mean = 0.02  # 2%
-                atr_std = 0.01  # 1%
+                atr_mean = 0.02
+                atr_std = 0.01
 
-            # Z-スコアベースの判定
             z_score = (current_atr_pct - atr_mean) / atr_std if atr_std > 0 else 0
 
             if z_score < -1.5:
@@ -313,7 +293,7 @@ class VolatilityBasedGenerator:
 
         except Exception as e:
             logger.error(f"ボラティリティレジーム判定エラー: {e}")
-            return VolatilityRegime.NORMAL  # デフォルト
+            return VolatilityRegime.NORMAL
 
     def _apply_adaptive_adjustment(
         self,
@@ -324,10 +304,7 @@ class VolatilityBasedGenerator:
     ) -> Tuple[float, float]:
         """適応的倍率調整を適用"""
         try:
-            # トレンド強度による調整
             trend_strength = market_data.get("trend_strength", 0.5)
-
-            # 強いトレンドの場合はTPを拡大、SLを縮小
             if trend_strength > 0.7:
                 tp_multiplier *= 1.1
                 sl_multiplier *= 0.9
@@ -335,13 +312,10 @@ class VolatilityBasedGenerator:
                 tp_multiplier *= 0.9
                 sl_multiplier *= 1.1
 
-            # ボリュームによる調整
             volume_ratio = market_data.get("volume_ratio", 1.0)
-            if volume_ratio > 1.5:  # 高ボリューム
-                # 高ボリューム時は信頼度が高いので倍率を調整
+            if volume_ratio > 1.5:
                 tp_multiplier *= 1.05
-            elif volume_ratio < 0.5:  # 低ボリューム
-                # 低ボリューム時は保守的に
+            elif volume_ratio < 0.5:
                 sl_multiplier *= 0.95
                 tp_multiplier *= 0.95
 
@@ -361,21 +335,18 @@ class VolatilityBasedGenerator:
         try:
             base_confidence = self.regime_settings[regime]["confidence"]
 
-            # データ品質による調整
             data_quality = 1.0
             if "atr" not in market_data:
-                data_quality *= 0.8  # ATR値が直接提供されていない
-
+                data_quality *= 0.8
             if not all(key in market_data for key in ["high", "low", "close"]):
-                data_quality *= 0.7  # OHLC データが不完全
+                data_quality *= 0.7
 
-            # 最終信頼度
             final_confidence = base_confidence * data_quality
             return max(0.1, min(1.0, final_confidence))
 
         except Exception as e:
             logger.error(f"信頼度計算エラー: {e}")
-            return 0.5  # デフォルト
+            return 0.5
 
     def _generate_fallback_result(
         self, config: VolatilityConfig, current_price: float

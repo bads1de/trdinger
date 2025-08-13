@@ -9,7 +9,8 @@ from .gene_factory import GeneGeneratorFactory
 from .random_gene_generator import RandomGeneGenerator
 from .smart_condition_generator import SmartConditionGenerator
 from .statistical_tpsl_generator import StatisticalTPSLGenerator
-from .volatility_based_generator import VolatilityBasedGenerator
+from .volatility_tpsl_generator import VolatilityBasedGenerator
+from .risk_reward_tpsl_generator import RiskRewardTPSLGenerator
 
 # factories からの統合
 from .strategy_factory import StrategyFactory
@@ -20,6 +21,7 @@ __all__ = [
     "SmartConditionGenerator",
     "StatisticalTPSLGenerator",
     "VolatilityBasedGenerator",
+    "RiskRewardTPSLGenerator",
     # Factories
     "StrategyFactory",
 ]
