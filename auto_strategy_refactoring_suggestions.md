@@ -16,7 +16,7 @@
 `utils`ディレクトリ内に `auto_strategy_utils.py`, `common_utils.py`, `gene_utils.py`, `error_handling.py` など、複数のユーティリティファイルが存在し、責務の境界がやや曖昧になっています。特に `gene_utils.py` の機能は他のモジュールに吸収されつつあり、ファイル自体が冗長になっています。
 
 **提案:**
-- **`gene_utils.py`の廃止:** このファイルの機能は`models/gene_serialization.py`や`config/shared_constants.py`に完全に移譲し、ファイルを削除します。
+- **`gene_utils.py`の廃止:** このファイルの機能は`models/gene_serialization.py`や`config/constants.py`に完全に移譲し、ファイルを削除します。
 - **`auto_strategy_utils.py`への集約:** `auto_strategy`モジュール固有のユーティリティ関数（遺伝子操作、パラメータ正規化など）は`auto_strategy_utils.py`に集約します。
 - **`common_utils.py`の役割見直し:** プロジェクト全体で汎用的に使える関数（安全な型変換など）のみを`common_utils.py`に残し、`app/utils/`ディレクトリへの移動を検討します。
 

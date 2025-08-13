@@ -20,7 +20,7 @@ from ..utils.operand_grouping import operand_grouping_system
 from ..utils.parameter_generators import (
     generate_indicator_parameters,
 )
-from ..config.shared_constants import OPERATORS, DATA_SOURCES
+from ..config.constants import OPERATORS, DATA_SOURCES
 from .smart_condition_generator import SmartConditionGenerator
 
 logger = logging.getLogger(__name__)

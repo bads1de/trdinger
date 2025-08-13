@@ -138,7 +138,7 @@ class AutoStrategyUtils:
     @staticmethod
     def get_all_indicator_ids() -> Dict[str, int]:
         """全指標のIDマッピングを取得（shared_constants.pyに統合済み）"""
-        from ..config.shared_constants import get_all_indicator_ids
+        from ..config.constants import get_all_indicator_ids
 
         return get_all_indicator_ids()
 

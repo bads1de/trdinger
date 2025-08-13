@@ -5,7 +5,6 @@ DEAPライブラリを使用したGA実装。
 """
 
 import logging
-import random
 import time
 from typing import Any, Dict
 
