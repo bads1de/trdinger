@@ -98,6 +98,7 @@ VALID_INDICATOR_TYPES = [
     "NATR",
     "TRANGE",
     "BBANDS",
+    "BB",  # ボリンジャーバンドの別名
     "KELTNER",
     "DONCHIAN",
     # ボリューム系指標

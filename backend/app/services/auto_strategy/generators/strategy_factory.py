@@ -58,7 +58,7 @@ class StrategyFactory:
             """動的生成された戦略クラス"""
 
             # backtesting.pyがパラメータを認識できるようにクラス変数として定義
-            strategy_gene = None
+            strategy_gene = gene  # デフォルト値として元のgeneを設定
 
             def _check_params(self, params):
                 # backtesting.pyの厳格なパラメータチェックを回避するため、
@@ -84,10 +84,14 @@ class StrategyFactory:
                 # super().__init__は渡されたparamsを検証し、インスタンス変数として設定する
                 super().__init__(broker, data, params)
 
-                # self.strategy_geneはbacktesting.pyによって設定される
-                # 渡されていればそれを使用し、なければ元のgeneを使用する
-                current_gene = getattr(self, "strategy_gene", None)
-                self.gene = current_gene if current_gene is not None else gene
+                # 戦略遺伝子を設定（backtesting.pyからパラメータとして渡される場合もある）
+                if params and "strategy_gene" in params:
+                    self.strategy_gene = params["strategy_gene"]
+                    self.gene = params["strategy_gene"]
+                else:
+                    # デフォルトとして元のgeneを使用
+                    self.strategy_gene = gene
+                    self.gene = gene
 
                 self.indicators = {}
                 self.factory = factory  # ファクトリーへの参照

@@ -183,40 +183,63 @@ class IndicatorCalculator:
                     f"指標計算結果取得: {indicator_gene.type}, タイプ: {type(result)}"
                 )
 
-                # 指標をstrategy.I()で登録
+                # 指標をstrategy.I()で登録（クロージャ問題を完全に回避）
                 if isinstance(result, tuple):
                     # 複数の出力がある指標（MACD等）
                     for i, output in enumerate(result):
                         indicator_name = f"{indicator_gene.type}_{i}"
 
-                        # クロージャ問題を回避するため、デフォルト引数を使用
-                        def create_indicator_func(data=output):
-                            return data
+                        # 複数の方法で指標を登録（backtesting.py対応）
+                        # 1. 直接属性として設定
+                        setattr(strategy_instance, indicator_name, output)
 
-                        setattr(
-                            strategy_instance,
-                            indicator_name,
-                            strategy_instance.I(create_indicator_func),
-                        )
+                        # 2. indicators辞書にも保存（永続化）
+                        if not hasattr(strategy_instance, "indicators"):
+                            strategy_instance.indicators = {}
+                        strategy_instance.indicators[indicator_name] = output
+
+                        # 3. クラス変数としても設定（backtesting.py対応）
+                        setattr(strategy_instance.__class__, indicator_name, output)
+
                         logger.warning(f"複数出力指標登録: {indicator_name}")
                 else:
                     # 単一出力の指標
+                    # 複数の方法で指標を登録（backtesting.py対応）
+                    # 1. 直接属性として設定
+                    setattr(strategy_instance, indicator_gene.type, result)
 
-                    def create_indicator_func(data=result):
-                        return data
+                    # 2. indicators辞書にも保存（永続化）
+                    if not hasattr(strategy_instance, "indicators"):
+                        strategy_instance.indicators = {}
+                    strategy_instance.indicators[indicator_gene.type] = result
 
-                    setattr(
-                        strategy_instance,
-                        indicator_gene.type,
-                        strategy_instance.I(create_indicator_func),
-                    )
+                    # 3. クラス変数としても設定（backtesting.py対応）
+                    setattr(strategy_instance.__class__, indicator_gene.type, result)
+
                     logger.warning(f"単一出力指標登録: {indicator_gene.type}")
 
-                # 登録確認
-                if hasattr(strategy_instance, indicator_gene.type):
-                    logger.warning(f"指標登録確認成功: {indicator_gene.type}")
+                # 登録確認（複数出力指標対応）
+                if isinstance(result, tuple):
+                    # 複数出力指標の場合、各出力の登録を確認
+                    all_registered = True
+                    for i in range(len(result)):
+                        indicator_name = f"{indicator_gene.type}_{i}"
+                        if not hasattr(strategy_instance, indicator_name):
+                            all_registered = False
+                            break
+
+                    if all_registered:
+                        logger.warning(
+                            f"複数出力指標登録確認成功: {indicator_gene.type}"
+                        )
+                    else:
+                        logger.error(f"複数出力指標登録確認失敗: {indicator_gene.type}")
                 else:
-                    logger.error(f"指標登録確認失敗: {indicator_gene.type}")
+                    # 単一出力指標の場合
+                    if hasattr(strategy_instance, indicator_gene.type):
+                        logger.warning(f"指標登録確認成功: {indicator_gene.type}")
+                    else:
+                        logger.error(f"指標登録確認失敗: {indicator_gene.type}")
             else:
                 logger.error(f"指標計算結果がNullです: {indicator_gene.type}")
                 raise ValueError(f"指標計算に失敗しました: {indicator_gene.type}")
