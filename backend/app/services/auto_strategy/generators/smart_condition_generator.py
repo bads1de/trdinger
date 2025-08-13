@@ -516,11 +516,11 @@ class SmartConditionGenerator:
                             for name in (
                                 "SMA",
                                 "EMA",
-                                "MA",
-                                "HT_TRENDLINE",
-                                "LINEARREG",
-                                "TSF",
-                                "BB_Middle",
+                                "WMA",
+                                "TRIMA",
+                                "KAMA",
+                                "T3",
+                                "BBANDS",
                             )
                         )
                         and (
@@ -617,7 +617,7 @@ class SmartConditionGenerator:
                             and c.left_operand in ("close", "open")
                             and isinstance(c.right_operand, str)
                             and c.right_operand
-                            in ("SMA", "EMA", "MAMA", "MA", "HT_TRENDLINE")
+                            in ("SMA", "EMA", "WMA", "TRIMA", "KAMA")
                         )
                         for c in conds
                         if not isinstance(c, _CG)
@@ -632,7 +632,9 @@ class SmartConditionGenerator:
                         and INDICATOR_CHARACTERISTICS.get(ind.type, {}).get("type")
                         == IndicatorType.TREND
                     ]
-                    pref = [n for n in trend_names if n in ("SMA", "EMA", "MAMA", "MA")]
+                    pref = [
+                        n for n in trend_names if n in ("SMA", "EMA", "WMA", "TRIMA")
+                    ]
                     chosen = (
                         pref[0] if pref else (trend_names[0] if trend_names else None)
                     )
@@ -732,11 +734,11 @@ class SmartConditionGenerator:
                         for name in (
                             "SMA",
                             "EMA",
-                            "MA",
-                            "HT_TRENDLINE",
-                            "LINEARREG",
-                            "TSF",
-                            "BB_Middle",
+                            "WMA",
+                            "TRIMA",
+                            "KAMA",
+                            "T3",
+                            "BBANDS",
                         )
                     )
                 )
@@ -912,21 +914,15 @@ class SmartConditionGenerator:
         cfg = indicator_registry.get_indicator_config(name)
         scale = getattr(cfg, "scale_type", None) if cfg else None
 
-        # 価格系は素直に価格比較
+        # 価格系は素直に価格比較（VALID_INDICATOR_TYPESに含まれる指標のみ）
         if name in (
             "SMA",
             "EMA",
-            "MAMA",
-            "MA",
-            "HT_TRENDLINE",
             "WMA",
             "KAMA",
-            "ZLEMA",
-            "TEMA",
-            "DEMA",
+            "T3",
             "TRIMA",
             "MIDPOINT",
-            "VWMA",
         ):
             # 右オペランドは gene に含まれるトレンド名に限定。無ければ 'open' に退避
             trend_names_in_gene = [
@@ -1048,17 +1044,11 @@ class SmartConditionGenerator:
         if name in (
             "SMA",
             "EMA",
-            "MAMA",
-            "MA",
-            "HT_TRENDLINE",
             "WMA",
             "KAMA",
-            "ZLEMA",
-            "TEMA",
-            "DEMA",
+            "T3",
             "TRIMA",
             "MIDPOINT",
-            "VWMA",
         ):
             # 右オペランドは gene に含まれるトレンド名に限定。無ければ 'open' に退避
             trend_names_in_gene = [
@@ -1155,20 +1145,15 @@ class SmartConditionGenerator:
         return [Condition(left_operand=name, operator="<", right_operand=float(thr))]
 
     def _ma_candidates(self, indicators: List[IndicatorGene]) -> List[IndicatorGene]:
+        # VALID_INDICATOR_TYPESに含まれる移動平均系指標のみ
         ma_types = {
             "SMA",
             "EMA",
             "WMA",
             "KAMA",
-            "ZLEMA",
-            "TEMA",
-            "DEMA",
+            "T3",
             "TRIMA",
             "MIDPOINT",
-            "VWMA",
-            "MAMA",
-            "MA",
-            "HT_TRENDLINE",
         }
         return [ind for ind in indicators if ind.enabled and ind.type in ma_types]
 
@@ -1316,7 +1301,7 @@ class SmartConditionGenerator:
             # 基本的なショート条件の生成（常に有効な形に限定）
             # 価格 vs トレンド系のショート条件を優先して1つ作成
             trend_pool_all = list(indicators_by_type[IndicatorType.TREND])
-            pref_names = {"SMA", "EMA", "MAMA", "MA"}
+            pref_names = {"SMA", "EMA", "WMA", "TRIMA"}
             trend_pool = [
                 ind for ind in trend_pool_all if ind.type in pref_names
             ] or trend_pool_all
@@ -1402,7 +1387,7 @@ class SmartConditionGenerator:
                 has_price_vs_trend = any(
                     isinstance(c.right_operand, str)
                     and c.left_operand in ("close", "open")
-                    and c.right_operand in ("SMA", "EMA", "MAMA", "MA", "HT_TRENDLINE")
+                    and c.right_operand in ("SMA", "EMA", "WMA", "TRIMA", "KAMA")
                     for c in side_conds
                 )
                 if not has_price_vs_trend:
@@ -1410,7 +1395,7 @@ class SmartConditionGenerator:
                     chosen_name = None
                     if indicators_by_type[IndicatorType.TREND]:
                         # gene に含まれるトレンド系のみを使う
-                        pref_names = {"SMA", "EMA", "MAMA", "MA"}
+                        pref_names = {"SMA", "EMA", "WMA", "TRIMA"}
                         trend_names_in_gene = [
                             ind.type
                             for ind in indicators_by_type[IndicatorType.TREND]
@@ -1487,7 +1472,7 @@ class SmartConditionGenerator:
         # テスト互換性: 素名優先
         indicator_name = indicator.type
 
-        if indicator.type in ["SMA", "EMA", "MAMA"]:
+        if indicator.type in ["SMA", "EMA", "WMA", "TRIMA"]:
             return [
                 Condition(
                     left_operand="close", operator=">", right_operand=indicator_name

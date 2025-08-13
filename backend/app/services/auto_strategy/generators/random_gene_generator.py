@@ -272,13 +272,13 @@ class RandomGeneGenerator:
             except Exception:
                 allowed = set()
             if not allowed:
+                # VALID_INDICATOR_TYPESに含まれる安全な指標のみを使用
+                from ..config.shared_constants import VALID_INDICATOR_TYPES
+
                 curated = {
                     "SMA",
                     "EMA",
                     "WMA",
-                    "RMA",
-                    "MA",
-                    "MIDPOINT",
                     "MACD",
                     "MACDFIX",
                     "MACDEXT",
@@ -289,25 +289,27 @@ class RandomGeneGenerator:
                     "ADX",
                     "MFI",
                     "ATR",
-                    "BB",
-                    "ULTOSC",
+                    "BBANDS",
                     "KAMA",
                     "T3",
                     "TRIMA",
-                    "HMA",
-                    "ALMA",
-                    "VWMA",
-                    "VWAP",
                     "PPO",
                     "APO",
                     "ROC",
                     "TRIX",
-                    "TSI",
-                    "RVI",
-                    "ICHIMOKU",
-                    "SMA_SLOPE",
-                    "PRICE_EMA_RATIO",
+                    "UO",
+                    "CMO",
+                    "DX",
+                    "MINUS_DI",
+                    "PLUS_DI",
+                    "WILLR",
+                    "AROON",
+                    "AROONOSC",
+                    "BOP",
+                    "MOM",
                 }
+                # VALID_INDICATOR_TYPESに含まれる指標のみに絞り込み
+                curated = {ind for ind in curated if ind in VALID_INDICATOR_TYPES}
             # カバレッジモード: allowed 指定時は1つは巡回候補を確実に含める
             coverage_pick = None
             try:
@@ -425,7 +427,7 @@ class RandomGeneGenerator:
                         # period が必要なものにのみデフォルトperiodを与える（SMA/EMA 等）
                         default_params = (
                             {"period": random.choice([10, 14, 20, 30, 50])}
-                            if chosen in ("SMA", "EMA", "MAMA", "MA")
+                            if chosen in ("SMA", "EMA", "WMA", "TRIMA", "KAMA", "T3")
                             else {}
                         )
                         indicators.append(
@@ -443,17 +445,14 @@ class RandomGeneGenerator:
                 try:
 
                     def _is_ma(name: str) -> bool:
+                        # VALID_INDICATOR_TYPESに含まれる移動平均系指標のみ
                         return name in {
                             "SMA",
                             "EMA",
                             "WMA",
-                            "RMA",
                             "TRIMA",
                             "KAMA",
                             "T3",
-                            "HMA",
-                            "ZLMA",
-                            "MA",
                         }
 
                     ma_count = sum(1 for ind in indicators if _is_ma(ind.type))
@@ -567,13 +566,16 @@ class RandomGeneGenerator:
 
         グループ化システムを考慮した重み付き選択を行います。
         """
+        from ..config.shared_constants import VALID_INDICATOR_TYPES
+
         choices = []
 
         # テクニカル指標名を追加（JSON形式：パラメータなし）
         for indicator_gene in indicators:
             indicator_type = indicator_gene.type
-            # JSON形式では指標名にパラメータを含めない
-            choices.append(indicator_type)
+            # VALID_INDICATOR_TYPESに含まれる指標のみを使用
+            if indicator_type in VALID_INDICATOR_TYPES:
+                choices.append(indicator_type)
 
         # 基本データソースを追加（価格データ）
         basic_sources = ["close", "open", "high", "low"]

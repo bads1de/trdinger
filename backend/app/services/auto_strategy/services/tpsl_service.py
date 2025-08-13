@@ -100,7 +100,7 @@ class TPSLService:
         """
         try:
             # TP/SL遺伝子が利用可能な場合（GA最適化対象）
-            if tpsl_gene and tpsl_gene.enabled:
+            if tpsl_gene and hasattr(tpsl_gene, "enabled") and tpsl_gene.enabled:
                 return self._calculate_from_gene(
                     current_price, tpsl_gene, market_data, position_direction
                 )

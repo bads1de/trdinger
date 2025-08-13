@@ -67,15 +67,96 @@ class IndicatorCalculator:
             if missing_columns:
                 logger.warning(f"不足しているカラム: {missing_columns}")
 
-            # TechnicalIndicatorServiceを使用して計算
-            result = self.technical_indicator_service.calculate_indicator(
-                df, indicator_type, parameters
+            # パラメータマッピング（period -> length）
+            mapped_parameters = parameters.copy()
+            if "period" in mapped_parameters and "length" not in mapped_parameters:
+                mapped_parameters["length"] = mapped_parameters["period"]
+
+            logger.warning(
+                f"指標計算開始: {indicator_type}, 元パラメータ: {parameters}, マップ後: {mapped_parameters}"
             )
 
+            # TechnicalIndicatorServiceを使用して計算
+            result = self.technical_indicator_service.calculate_indicator(
+                df, indicator_type, mapped_parameters
+            )
+
+            logger.warning(
+                f"指標計算成功: {indicator_type}, 結果タイプ: {type(result)}"
+            )
             return result
 
         except Exception as e:
             logger.error(f"指標計算エラー {indicator_type}: {e}", exc_info=True)
+
+            # 基本的な移動平均指標の場合はフォールバック処理を試行
+            if indicator_type in ["SMA", "EMA", "WMA"] and "period" in parameters:
+                try:
+                    logger.warning(
+                        f"フォールバック処理を試行: {indicator_type}, パラメータ: {parameters}"
+                    )
+                    period = parameters["period"]
+
+                    # 期間の妥当性チェック
+                    if not isinstance(period, (int, float)) or period <= 0:
+                        logger.error(f"無効な期間: {period}")
+                        raise ValueError(f"無効な期間: {period}")
+
+                    period = int(period)
+                    close_data = df["Close"].values
+
+                    # データ長の妥当性チェック
+                    if len(close_data) < period:
+                        logger.error(
+                            f"データ長({len(close_data)})が期間({period})より短い"
+                        )
+                        raise ValueError(
+                            f"データ長({len(close_data)})が期間({period})より短い"
+                        )
+
+                    if indicator_type == "SMA":
+                        # 簡易SMA計算
+                        result = np.convolve(
+                            close_data, np.ones(period) / period, mode="valid"
+                        )
+                        # 元の長さに合わせてNaNでパディング
+                        padded_result = np.full(len(close_data), np.nan)
+                        padded_result[period - 1 :] = result
+                        logger.info(
+                            f"フォールバックSMA計算成功: 期間={period}, 結果長={len(padded_result)}"
+                        )
+                        return padded_result
+                    elif indicator_type == "EMA":
+                        # 簡易EMA計算
+                        alpha = 2.0 / (period + 1)
+                        result = np.full(len(close_data), np.nan)
+                        result[0] = close_data[0]
+                        for i in range(1, len(close_data)):
+                            if not np.isnan(result[i - 1]):
+                                result[i] = (
+                                    alpha * close_data[i] + (1 - alpha) * result[i - 1]
+                                )
+                        logger.info(
+                            f"フォールバックEMA計算成功: 期間={period}, 結果長={len(result)}"
+                        )
+                        return result
+                    elif indicator_type == "WMA":
+                        # 簡易WMA計算（重み付き移動平均）
+                        weights = np.arange(1, period + 1)
+                        weights = weights / weights.sum()
+                        result = np.convolve(close_data, weights[::-1], mode="valid")
+                        padded_result = np.full(len(close_data), np.nan)
+                        padded_result[period - 1 :] = result
+                        logger.info(
+                            f"フォールバックWMA計算成功: 期間={period}, 結果長={len(padded_result)}"
+                        )
+                        return padded_result
+
+                except Exception as fallback_error:
+                    logger.error(
+                        f"フォールバック処理も失敗 {indicator_type}: {fallback_error}"
+                    )
+
             # エラーを再発生させて上位で適切に処理
             raise
 
@@ -88,12 +169,20 @@ class IndicatorCalculator:
             strategy_instance: 戦略インスタンス
         """
         try:
+            logger.warning(
+                f"指標初期化開始: {indicator_gene.type}, パラメータ: {indicator_gene.parameters}"
+            )
+
             # 指標計算を直接実行
             result = self.calculate_indicator(
                 strategy_instance.data, indicator_gene.type, indicator_gene.parameters
             )
 
             if result is not None:
+                logger.warning(
+                    f"指標計算結果取得: {indicator_gene.type}, タイプ: {type(result)}"
+                )
+
                 # 指標をstrategy.I()で登録
                 if isinstance(result, tuple):
                     # 複数の出力がある指標（MACD等）
@@ -109,6 +198,7 @@ class IndicatorCalculator:
                             indicator_name,
                             strategy_instance.I(create_indicator_func),
                         )
+                        logger.warning(f"複数出力指標登録: {indicator_name}")
                 else:
                     # 単一出力の指標
 
@@ -120,6 +210,13 @@ class IndicatorCalculator:
                         indicator_gene.type,
                         strategy_instance.I(create_indicator_func),
                     )
+                    logger.warning(f"単一出力指標登録: {indicator_gene.type}")
+
+                # 登録確認
+                if hasattr(strategy_instance, indicator_gene.type):
+                    logger.warning(f"指標登録確認成功: {indicator_gene.type}")
+                else:
+                    logger.error(f"指標登録確認失敗: {indicator_gene.type}")
             else:
                 logger.error(f"指標計算結果がNullです: {indicator_gene.type}")
                 raise ValueError(f"指標計算に失敗しました: {indicator_gene.type}")

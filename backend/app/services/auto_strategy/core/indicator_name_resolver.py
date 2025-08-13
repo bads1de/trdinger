@@ -62,6 +62,21 @@ class IndicatorNameResolver:
             if hasattr(strategy_instance, operand):
                 return True, cls._last_finite(getattr(strategy_instance, operand))
 
+            # 複数値指標の基本名解決（AROON -> AROON_0など）
+            multi_output_mapping = {
+                "AROON": "AROON_0",  # デフォルトでAROON_0を使用
+                "MACD": "MACD_0",  # デフォルトでMACD_0を使用
+                "STOCH": "STOCH_0",  # デフォルトでSTOCH_0を使用
+                "BBANDS": "BBANDS_1",  # デフォルトでBBANDS_1（Middle）を使用
+            }
+
+            if operand in multi_output_mapping:
+                mapped_name = multi_output_mapping[operand]
+                if hasattr(strategy_instance, mapped_name):
+                    return True, cls._last_finite(
+                        getattr(strategy_instance, mapped_name)
+                    )
+
             # 動的指標名解決（リファクタリング改善）
             resolved_name = cls._resolve_indicator_name_dynamically(
                 operand, strategy_instance
@@ -80,10 +95,9 @@ class IndicatorNameResolver:
         cls, operand: str, strategy_instance
     ) -> str:
         """
-        動的指標名解決（リファクタリング改善）
+        動的指標名解決（簡素化版）
 
-        指標レジストリを使用してハードコードされたマッピングを排除し、
-        動的に指標名を解決します。
+        戦略インスタンスの属性を直接検索して指標名を解決します。
 
         Args:
             operand: 解決対象の名前（例: "MACD_0", "BB_1", "RSI"）
@@ -93,59 +107,72 @@ class IndicatorNameResolver:
             解決された属性名、または None
         """
         try:
-            # 指標レジストリから解決を試行
-            resolved_indicator = indicator_registry.resolve_indicator_name(operand)
-            if resolved_indicator:
-                # 出力インデックスを取得
-                output_index = indicator_registry.get_output_index(operand)
+            # 1. 完全一致を最初に試行
+            if hasattr(strategy_instance, operand):
+                return operand
 
-                if output_index is not None:
-                    # インデックス付き名前（例: "MACD_0"）
-                    attr_name = f"{resolved_indicator}_{output_index}"
-                    if hasattr(strategy_instance, attr_name):
-                        return attr_name
-                else:
-                    # 単純名またはデフォルト出力
-                    # まず単純名を試行
-                    if hasattr(strategy_instance, resolved_indicator):
-                        return resolved_indicator
+            # 2. 戦略インスタンスの全属性を取得（より詳細）
+            all_attrs = dir(strategy_instance)
+            available_attrs = []
+            for attr in all_attrs:
+                if not attr.startswith("_"):
+                    try:
+                        attr_value = getattr(strategy_instance, attr, None)
+                        # callableでない属性のみ追加
+                        if not callable(attr_value):
+                            available_attrs.append(attr)
+                    except Exception:
+                        # 属性取得でエラーが発生した場合はスキップ
+                        continue
 
-                    # デフォルト出力名を試行
-                    default_output = indicator_registry.get_default_output_name(
-                        resolved_indicator
-                    )
-                    if default_output and hasattr(strategy_instance, default_output):
-                        return default_output
+            # 3. 大文字小文字を無視した一致を試行
+            operand_lower = operand.lower()
+            for attr in available_attrs:
+                if attr.lower() == operand_lower:
+                    return attr
 
-            # 特別なケース: BB の Upper/Middle/Lower マッピング
-            if operand.startswith("BB_"):
-                parts = operand.split("_")
-                if len(parts) >= 2:
-                    base = parts[1]
-                    mapping = {"Upper": "BB_0", "Middle": "BB_1", "Lower": "BB_2"}
-                    mapped_name = mapping.get(base)
-                    if mapped_name and hasattr(strategy_instance, mapped_name):
-                        return mapped_name
-
-            # 複数出力指標の処理
+            # 4. 部分一致を試行（指標名の基本部分）
             if "_" in operand:
-                base_indicator = operand.split("_")[0]
+                base_name = operand.split("_")[0]
+                # 基本名の完全一致
+                if hasattr(strategy_instance, base_name):
+                    return base_name
 
-                # 指標レジストリから基本指標を解決
-                resolved_base = indicator_registry.resolve_indicator_name(
-                    base_indicator
-                )
-                if resolved_base:
-                    # デフォルト出力を使用
-                    default_output = indicator_registry.get_default_output_name(
-                        resolved_base
-                    )
-                    if default_output and hasattr(strategy_instance, default_output):
-                        return default_output
+                # 基本名の大文字小文字を無視した一致
+                base_lower = base_name.lower()
+                for attr in available_attrs:
+                    if attr.lower() == base_lower:
+                        return attr
 
-                    # ベース名を直接試行
-                    if hasattr(strategy_instance, resolved_base):
-                        return resolved_base
+            # 5. 指標名を含む属性を検索
+            for attr in available_attrs:
+                # 指標名が属性名に含まれているかチェック
+                if operand.lower() in attr.lower() or attr.lower() in operand.lower():
+                    return attr
+
+            # 6. 特別なケース: BBands の Upper/Middle/Lower マッピング
+            if operand.startswith("BB_") or operand.startswith("BBANDS_"):
+                bb_attrs = [
+                    attr
+                    for attr in available_attrs
+                    if attr.startswith(("BB", "BBANDS"))
+                ]
+                if bb_attrs:
+                    # 最初に見つかったBB関連属性を返す
+                    return bb_attrs[0]
+
+            # 7. デバッグ情報をログ出力（詳細版）
+            logger.warning(
+                f"指標名解決失敗: '{operand}', 利用可能属性: {available_attrs}"
+            )
+
+            # 特に基本的な移動平均指標の存在を確認
+            ma_indicators = ["SMA", "EMA", "WMA", "TRIMA", "KAMA", "T3"]
+            for ma in ma_indicators:
+                if hasattr(strategy_instance, ma):
+                    logger.warning(f"基本指標確認: {ma} は存在します")
+                else:
+                    logger.warning(f"基本指標確認: {ma} は存在しません")
 
             return None
 

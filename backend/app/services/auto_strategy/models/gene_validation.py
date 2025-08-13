@@ -24,7 +24,11 @@ class GeneValidator:
     def __init__(self):
         """初期化"""
         # 共通定数から取得して一貫性を保つ
-        from ..utils.constants import OPERATORS, DATA_SOURCES, VALID_INDICATOR_TYPES
+        from ..config.shared_constants import (
+            OPERATORS,
+            DATA_SOURCES,
+            VALID_INDICATOR_TYPES,
+        )
 
         self.valid_indicator_types = VALID_INDICATOR_TYPES
         self.valid_operators = OPERATORS

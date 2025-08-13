@@ -102,21 +102,14 @@ class TechnicalIndicatorService:
         converted_params = normalize_params(indicator_type, params, config)
 
         # パラメータとデータを結合して関数を呼び出し
-        # サービス経由の厳格チェック（SMA: len==length かつ データ点>2 はエラー）
-        if indicator_type == "SMA":
+        # 基本的な検証のみ実行（過度に厳格な検証を緩和）
+        if indicator_type in ["SMA", "EMA", "WMA"]:
             length_val = converted_params.get("length", params.get("period"))
-            # SMAはdataキー、それ以外の保険でcloseキー
-            series_key = "data" if "data" in required_data else "close"
-            series_len = (
-                len(required_data.get(series_key))
-                if series_key in required_data
-                else None
-            )
-            if isinstance(length_val, (int, np.integer)) and series_len is not None:
-                if series_len == length_val and series_len > 2:
-                    raise PandasTAError(
-                        f"SMA: データ長({series_len})と期間({length_val})が等しいためサービスでは無効です"
-                    )
+            # 基本的な期間検証のみ
+            if isinstance(length_val, (int, np.integer)) and length_val <= 0:
+                raise PandasTAError(
+                    f"{indicator_type}: 期間は正の整数である必要があります: {length_val}"
+                )
 
             # アダプタ関数のシグネチャに応じて余計な引数を落とす（互換性維持）
             tmp_all_args = {**required_data, **converted_params}
@@ -234,7 +227,7 @@ class TechnicalIndicatorService:
             "ROCR": {"close": "data"},
             "ROCR100": {"close": "data"},
             "TRIX": {"close": "data"},
-            "HT_TRENDLINE": {"close": "data"},
+            # "HT_TRENDLINE": {"close": "data"},  # VALID_INDICATOR_TYPESに含まれていないため除去
             "STOCHRSI": {"close": "data"},
             # 追加モメンタム/ML系の単一入力はdataにマップ
             "QQE": {"close": "data"},
@@ -244,12 +237,12 @@ class TechnicalIndicatorService:
             "ML_UP_PROB": {"close": "data"},
             "ML_DOWN_PROB": {"close": "data"},
             "ML_RANGE_PROB": {"close": "data"},
-            # 追加: 本対応で新規追加した単一入力指標
-            "HMA": {"close": "data"},
-            "ZLMA": {"close": "data"},
-            "SWMA": {"close": "data"},
-            "ALMA": {"close": "data"},
-            "RMA": {"close": "data"},
+            # 追加: 本対応で新規追加した単一入力指標（VALID_INDICATOR_TYPESに含まれるもののみ）
+            # "HMA": {"close": "data"},  # VALID_INDICATOR_TYPESに含まれていないため除去
+            # "ZLMA": {"close": "data"},  # VALID_INDICATOR_TYPESに含まれていないため除去
+            # "SWMA": {"close": "data"},  # VALID_INDICATOR_TYPESに含まれていないため除去
+            # "ALMA": {"close": "data"},  # VALID_INDICATOR_TYPESに含まれていないため除去
+            # "RMA": {"close": "data"},  # VALID_INDICATOR_TYPESに含まれていないため除去
             "TSI": {"close": "data"},
             "CFO": {"close": "data"},
             "CTI": {"close": "data"},
