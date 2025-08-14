@@ -1,7 +1,7 @@
 """
-パターン認識系テクニカル指標（修正版）
+パターン認識系テクニカル指標（簡素化版）
 
-pandas-taのcdl_pattern関数を使用した正しい実装。
+pandas-taを直接活用し、冗長なラッパーを削除した効率的な実装。
 軽量エラーハンドリングで品質とパフォーマンスを両立。
 """
 
@@ -16,9 +16,10 @@ from ..utils import handle_pandas_ta_errors
 
 class PatternRecognitionIndicators:
     """
-    パターン認識系指標クラス（修正版）
+    パターン認識系指標クラス（簡素化版）
 
-    pandas-taのcdl_pattern関数を使用して効率的に実装。
+    重要なキャンドルスティックパターンには軽量エラーハンドリングを適用し、
+    pandas-taを直接活用して効率的に実装。
     """
 
     @staticmethod
@@ -37,18 +38,9 @@ class PatternRecognitionIndicators:
         low_series = pd.Series(low) if isinstance(low, np.ndarray) else low
         close_series = pd.Series(close) if isinstance(close, np.ndarray) else close
 
-        result = ta.cdl_pattern(
-            open_=open_series,
-            high=high_series,
-            low=low_series,
-            close=close_series,
-            name="doji",
-        )
-        return (
-            result.iloc[:, 0].values
-            if result is not None and not result.empty
-            else np.zeros(len(open_series))
-        )
+        return ta.cdl_doji(
+            open_=open_series, high=high_series, low=low_series, close=close_series
+        ).values
 
     @staticmethod
     @handle_pandas_ta_errors
@@ -66,18 +58,9 @@ class PatternRecognitionIndicators:
         low_series = pd.Series(low) if isinstance(low, np.ndarray) else low
         close_series = pd.Series(close) if isinstance(close, np.ndarray) else close
 
-        result = ta.cdl_pattern(
-            open_=open_series,
-            high=high_series,
-            low=low_series,
-            close=close_series,
-            name="hammer",
-        )
-        return (
-            result.iloc[:, 0].values
-            if result is not None and not result.empty
-            else np.zeros(len(open_series))
-        )
+        return ta.cdl_hammer(
+            open_=open_series, high=high_series, low=low_series, close=close_series
+        ).values
 
     @staticmethod
     def cdl_hanging_man(
@@ -94,18 +77,9 @@ class PatternRecognitionIndicators:
         low_series = pd.Series(low) if isinstance(low, np.ndarray) else low
         close_series = pd.Series(close) if isinstance(close, np.ndarray) else close
 
-        result = ta.cdl_pattern(
-            open_=open_series,
-            high=high_series,
-            low=low_series,
-            close=close_series,
-            name="hangingman",
-        )
-        return (
-            result.iloc[:, 0].values
-            if result is not None and not result.empty
-            else np.zeros(len(open_series))
-        )
+        return ta.cdl_hangingman(
+            open_=open_series, high=high_series, low=low_series, close=close_series
+        ).values
 
     @staticmethod
     def cdl_shooting_star(
@@ -122,18 +96,9 @@ class PatternRecognitionIndicators:
         low_series = pd.Series(low) if isinstance(low, np.ndarray) else low
         close_series = pd.Series(close) if isinstance(close, np.ndarray) else close
 
-        result = ta.cdl_pattern(
-            open_=open_series,
-            high=high_series,
-            low=low_series,
-            close=close_series,
-            name="shootingstar",
-        )
-        return (
-            result.iloc[:, 0].values
-            if result is not None and not result.empty
-            else np.zeros(len(open_series))
-        )
+        return ta.cdl_shootingstar(
+            open_=open_series, high=high_series, low=low_series, close=close_series
+        ).values
 
     @staticmethod
     @handle_pandas_ta_errors
@@ -151,18 +116,9 @@ class PatternRecognitionIndicators:
         low_series = pd.Series(low) if isinstance(low, np.ndarray) else low
         close_series = pd.Series(close) if isinstance(close, np.ndarray) else close
 
-        result = ta.cdl_pattern(
-            open_=open_series,
-            high=high_series,
-            low=low_series,
-            close=close_series,
-            name="engulfing",
-        )
-        return (
-            result.iloc[:, 0].values
-            if result is not None and not result.empty
-            else np.zeros(len(open_series))
-        )
+        return ta.cdl_engulfing(
+            open_=open_series, high=high_series, low=low_series, close=close_series
+        ).values
 
     @staticmethod
     def cdl_harami(
@@ -179,18 +135,9 @@ class PatternRecognitionIndicators:
         low_series = pd.Series(low) if isinstance(low, np.ndarray) else low
         close_series = pd.Series(close) if isinstance(close, np.ndarray) else close
 
-        result = ta.cdl_pattern(
-            open_=open_series,
-            high=high_series,
-            low=low_series,
-            close=close_series,
-            name="harami",
-        )
-        return (
-            result.iloc[:, 0].values
-            if result is not None and not result.empty
-            else np.zeros(len(open_series))
-        )
+        return ta.cdl_harami(
+            open_=open_series, high=high_series, low=low_series, close=close_series
+        ).values
 
     @staticmethod
     def cdl_piercing(
@@ -207,18 +154,9 @@ class PatternRecognitionIndicators:
         low_series = pd.Series(low) if isinstance(low, np.ndarray) else low
         close_series = pd.Series(close) if isinstance(close, np.ndarray) else close
 
-        result = ta.cdl_pattern(
-            open_=open_series,
-            high=high_series,
-            low=low_series,
-            close=close_series,
-            name="piercing",
-        )
-        return (
-            result.iloc[:, 0].values
-            if result is not None and not result.empty
-            else np.zeros(len(open_series))
-        )
+        return ta.cdl_piercing(
+            open_=open_series, high=high_series, low=low_series, close=close_series
+        ).values
 
     @staticmethod
     def cdl_dark_cloud_cover(
@@ -235,18 +173,9 @@ class PatternRecognitionIndicators:
         low_series = pd.Series(low) if isinstance(low, np.ndarray) else low
         close_series = pd.Series(close) if isinstance(close, np.ndarray) else close
 
-        result = ta.cdl_pattern(
-            open_=open_series,
-            high=high_series,
-            low=low_series,
-            close=close_series,
-            name="darkcloudcover",
-        )
-        return (
-            result.iloc[:, 0].values
-            if result is not None and not result.empty
-            else np.zeros(len(open_series))
-        )
+        return ta.cdl_darkcloudcover(
+            open_=open_series, high=high_series, low=low_series, close=close_series
+        ).values
 
     @staticmethod
     @handle_pandas_ta_errors
@@ -264,18 +193,9 @@ class PatternRecognitionIndicators:
         low_series = pd.Series(low) if isinstance(low, np.ndarray) else low
         close_series = pd.Series(close) if isinstance(close, np.ndarray) else close
 
-        result = ta.cdl_pattern(
-            open_=open_series,
-            high=high_series,
-            low=low_series,
-            close=close_series,
-            name="morningstar",
-        )
-        return (
-            result.iloc[:, 0].values
-            if result is not None and not result.empty
-            else np.zeros(len(open_series))
-        )
+        return ta.cdl_morningstar(
+            open_=open_series, high=high_series, low=low_series, close=close_series
+        ).values
 
     @staticmethod
     @handle_pandas_ta_errors
@@ -293,18 +213,9 @@ class PatternRecognitionIndicators:
         low_series = pd.Series(low) if isinstance(low, np.ndarray) else low
         close_series = pd.Series(close) if isinstance(close, np.ndarray) else close
 
-        result = ta.cdl_pattern(
-            open_=open_series,
-            high=high_series,
-            low=low_series,
-            close=close_series,
-            name="eveningstar",
-        )
-        return (
-            result.iloc[:, 0].values
-            if result is not None and not result.empty
-            else np.zeros(len(open_series))
-        )
+        return ta.cdl_eveningstar(
+            open_=open_series, high=high_series, low=low_series, close=close_series
+        ).values
 
     @staticmethod
     def cdl_three_black_crows(
@@ -321,18 +232,9 @@ class PatternRecognitionIndicators:
         low_series = pd.Series(low) if isinstance(low, np.ndarray) else low
         close_series = pd.Series(close) if isinstance(close, np.ndarray) else close
 
-        result = ta.cdl_pattern(
-            open_=open_series,
-            high=high_series,
-            low=low_series,
-            close=close_series,
-            name="3blackcrows",
-        )
-        return (
-            result.iloc[:, 0].values
-            if result is not None and not result.empty
-            else np.zeros(len(open_series))
-        )
+        return ta.cdl_3blackcrows(
+            open_=open_series, high=high_series, low=low_series, close=close_series
+        ).values
 
     @staticmethod
     def cdl_three_white_soldiers(
@@ -349,20 +251,11 @@ class PatternRecognitionIndicators:
         low_series = pd.Series(low) if isinstance(low, np.ndarray) else low
         close_series = pd.Series(close) if isinstance(close, np.ndarray) else close
 
-        result = ta.cdl_pattern(
-            open_=open_series,
-            high=high_series,
-            low=low_series,
-            close=close_series,
-            name="3whitesoldiers",
-        )
-        return (
-            result.iloc[:, 0].values
-            if result is not None and not result.empty
-            else np.zeros(len(open_series))
-        )
+        return ta.cdl_3whitesoldiers(
+            open_=open_series, high=high_series, low=low_series, close=close_series
+        ).values
 
-    # 簡易実装（pandas-taにない場合のフォールバック）
+    # 追加の重要パターン
     @staticmethod
     def cdl_marubozu(
         open_data: Union[np.ndarray, pd.Series],
@@ -370,7 +263,7 @@ class PatternRecognitionIndicators:
         low: Union[np.ndarray, pd.Series],
         close: Union[np.ndarray, pd.Series],
     ) -> np.ndarray:
-        """Marubozu（簡易実装）"""
+        """Marubozu（軽量実装）"""
         open_series = (
             pd.Series(open_data) if isinstance(open_data, np.ndarray) else open_data
         )
@@ -378,18 +271,9 @@ class PatternRecognitionIndicators:
         low_series = pd.Series(low) if isinstance(low, np.ndarray) else low
         close_series = pd.Series(close) if isinstance(close, np.ndarray) else close
 
-        # 簡易Marubozu判定（実体が全体の90%以上）
-        body = np.abs(close_series - open_series)
-        range_hl = high_series - low_series
-
-        # ゼロ除算を避ける
-        range_hl = np.where(range_hl == 0, 1e-10, range_hl)
-
-        marubozu = np.where(
-            body / range_hl > 0.9, np.where(close_series > open_series, 100, -100), 0
-        )
-
-        return marubozu
+        return ta.cdl_marubozu(
+            open_=open_series, high=high_series, low=low_series, close=close_series
+        ).values
 
     @staticmethod
     def cdl_spinning_top(
@@ -398,7 +282,7 @@ class PatternRecognitionIndicators:
         low: Union[np.ndarray, pd.Series],
         close: Union[np.ndarray, pd.Series],
     ) -> np.ndarray:
-        """Spinning Top（簡易実装）"""
+        """Spinning Top（軽量実装）"""
         open_series = (
             pd.Series(open_data) if isinstance(open_data, np.ndarray) else open_data
         )
@@ -406,21 +290,9 @@ class PatternRecognitionIndicators:
         low_series = pd.Series(low) if isinstance(low, np.ndarray) else low
         close_series = pd.Series(close) if isinstance(close, np.ndarray) else close
 
-        # 簡易Spinning Top判定（小さな実体と長いヒゲ）
-        body = np.abs(close_series - open_series)
-        upper_shadow = high_series - np.maximum(open_series, close_series)
-        lower_shadow = np.minimum(open_series, close_series) - low_series
-
-        # 実体が小さく、上下のヒゲが長い
-        spinning_top = np.where(
-            (body < (upper_shadow + lower_shadow) * 0.3)
-            & (upper_shadow > body * 2)
-            & (lower_shadow > body * 2),
-            100,
-            0,
-        )
-
-        return spinning_top
+        return ta.cdl_spinningtop(
+            open_=open_series, high=high_series, low=low_series, close=close_series
+        ).values
 
     # 後方互換性のためのエイリアス
     @staticmethod
