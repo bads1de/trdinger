@@ -119,10 +119,9 @@ def validate_multi_input(
 
 def handle_pandas_ta_errors(func):
     """
-    pandas-taエラーハンドリングデコレーター
+    pandas-taエラーハンドリングデコレーター（簡素化版）
 
-    pandas-ta関数の実行時エラーをキャッチし、
-    適切なログ出力とエラーメッセージを提供します。
+    重要な異常ケースのみをチェックし、パフォーマンスを重視。
     """
 
     @wraps(func)
@@ -130,51 +129,32 @@ def handle_pandas_ta_errors(func):
         try:
             result = func(*args, **kwargs)
 
-            # 結果の基本検証
+            # 重要な異常ケースのみチェック
             if result is None:
                 raise PandasTAError(f"{func.__name__}: 計算結果がNoneです")
 
-            # numpy配列の場合の検証
+            # numpy配列の検証（簡素化）
             if isinstance(result, np.ndarray):
                 if len(result) == 0:
-                    raise PandasTAError(f"{func.__name__}: 計算結果が空の配列です")
-
-                # 全てNaNの場合はエラー
-                if np.all(np.isnan(result)):
+                    raise PandasTAError(f"{func.__name__}: 計算結果が空です")
+                # 全NaNチェック（重要）
+                if len(result) > 0 and np.all(np.isnan(result)):
                     raise PandasTAError(f"{func.__name__}: 計算結果が全てNaNです")
 
-            # tupleの場合（MACD、Bollinger Bandsなど）
+            # tupleの場合（MACD等）
             elif isinstance(result, tuple):
                 for i, arr in enumerate(result):
-                    if arr is None or len(arr) == 0:
-                        raise PandasTAError(
-                            f"{func.__name__}: 計算結果のインデックス{i}が無効です"
-                        )
-                    # タプル要素が全NaNならエラー
-                    if (
-                        isinstance(arr, np.ndarray)
-                        and len(arr) > 0
-                        and np.all(np.isnan(arr))
-                    ):
-                        raise PandasTAError(
-                            f"{func.__name__}: 計算結果のインデックス{i}が全てNaNです"
-                        )
+                    if arr is None or (hasattr(arr, "__len__") and len(arr) == 0):
+                        raise PandasTAError(f"{func.__name__}: 結果[{i}]が無効です")
 
             return result
 
+        except PandasTAError:
+            # 既にPandasTAErrorの場合は再発生
+            raise
         except Exception as e:
-            # Ta-lib固有のエラーかどうかを判定
-            error_msg = str(e).lower()
-            if any(
-                keyword in error_msg
-                for keyword in ["pandas", "ta", "period", "length", "array"]
-            ):
-                logger.error(f"{func.__name__} pandas-ta計算エラー: {e}")
-                raise PandasTAError(f"{func.__name__} 計算失敗: {e}")
-            else:
-                # 予期しないエラー
-                logger.error(f"{func.__name__} 予期しないエラー: {e}")
-                raise PandasTAError(f"{func.__name__} 予期しないエラー: {e}")
+            # その他のエラーは簡潔に処理
+            raise PandasTAError(f"{func.__name__} 計算エラー: {e}")
 
     return wrapper
 

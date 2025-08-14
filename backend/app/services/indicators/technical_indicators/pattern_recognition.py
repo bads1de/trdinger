@@ -22,7 +22,7 @@ class PatternRecognitionIndicators:
     """
     パターン認識系指標クラス（オートストラテジー最適化）
 
-    全ての指標はnumpy配列を直接処理し、Ta-libの性能を最大限活用します。
+    全ての指標はnumpy配列を直接処理し、性能を最大限活用します。
     backtesting.pyでの使用に最適化されています。
     """
 
@@ -168,7 +168,7 @@ class PatternRecognitionIndicators:
         df = PatternRecognitionIndicators._build_ohlc_df(
             open_series, high_series, low_series, close_series
         )
-        # TA-Lib の Harami を直接利用
+        # Harami を直接利用
         return PatternRecognitionIndicators._cdl_pattern_values(df, name="harami")
 
     @staticmethod

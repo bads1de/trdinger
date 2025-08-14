@@ -3,7 +3,7 @@
 
 このモジュールはNumPy標準関数を使用し、
 backtesting.pyとの完全な互換性を提供します。
-TA-libの数学演算子関数をNumPy標準関数で置き換えています。
+数学演算子関数をNumPy標準関数で置き換えています。
 """
 
 import logging
@@ -20,7 +20,7 @@ class MathOperatorsIndicators:
     """
     数学演算子系指標クラス（NumPy標準関数版）
 
-    全ての指標はNumPy標準関数を使用し、TA-libへの依存を排除しています。
+    全ての指標はNumPy標準関数を使用し、依存を排除しています。
     backtesting.pyでの使用に最適化されています。
     """
 

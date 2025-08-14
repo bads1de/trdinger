@@ -1,5 +1,5 @@
 """
-テクニカル指標統合サービス（簡素化版）
+テクニカル指標統合サービス
 
 pandas-taを直接活用し、冗長なラッパーを削除した効率的な実装。
 """
@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 
 
 class TechnicalIndicatorService:
-    """テクニカル指標統合サービス（簡素化版）"""
+    """テクニカル指標統合サービス"""
 
     def __init__(self):
         """サービスを初期化"""
@@ -34,7 +34,7 @@ class TechnicalIndicatorService:
         self, df: pd.DataFrame, indicator_type: str, params: Dict[str, Any]
     ) -> Union[np.ndarray, tuple]:
         """
-        指定された指標を計算（簡素化版）
+        指定された指標を計算
 
         pandas-taを直接使用し、複雑なマッピング処理を削除。
         """

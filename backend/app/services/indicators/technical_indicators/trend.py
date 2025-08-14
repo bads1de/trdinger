@@ -21,15 +21,25 @@ class TrendIndicators:
 
     @staticmethod
     def sma(data: Union[np.ndarray, pd.Series], length: int) -> np.ndarray:
-        """単純移動平均"""
+        """単純移動平均（軽量エラーハンドリング付き）"""
         if length <= 0:
             raise ValueError(f"length must be positive: {length}")
 
         series = pd.Series(data) if isinstance(data, np.ndarray) else data
+
+        # 基本的な入力検証
+        if len(series) == 0:
+            raise ValueError("データが空です")
+
         if length == 1:
             return series.values
 
         result = series.rolling(window=length, min_periods=1).mean()
+
+        # 結果検証（重要な異常ケースのみ）
+        if result.isna().all():
+            raise ValueError("計算結果が全てNaNです")
+
         return result.values
 
     @staticmethod
