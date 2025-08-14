@@ -62,11 +62,13 @@ class BacktestOrchestrationService:
                 symbol=symbol, strategy_name=strategy_name
             )
 
-            return {"success": True, "results": results, "total": total}
+            return api_response(
+                success=True, data={"results": results, "total": total}
+            )
 
         except Exception as e:
             logger.error(f"バックテスト結果取得エラー: {e}")
-            raise
+            return api_response(success=False, error=str(e), status_code=500)
 
     async def get_backtest_result_by_id(
         self, db: Session, result_id: int
@@ -86,17 +88,15 @@ class BacktestOrchestrationService:
             result = backtest_repo.get_backtest_result_by_id(result_id)
 
             if result is None:
-                return {
-                    "success": False,
-                    "error": "Backtest result not found",
-                    "status_code": 404,
-                }
+                return api_response(
+                    success=False, error="Backtest result not found", status_code=404
+                )
 
-            return {"success": True, "result": result}
+            return api_response(success=True, data=result)
 
         except Exception as e:
             logger.error(f"バックテスト結果取得エラー (ID: {result_id}): {e}")
-            raise
+            return api_response(success=False, error=str(e), status_code=500)
 
     async def delete_backtest_result(
         self, db: Session, result_id: int
@@ -116,17 +116,15 @@ class BacktestOrchestrationService:
             success = backtest_repo.delete_backtest_result(result_id)
 
             if not success:
-                return {
-                    "success": False,
-                    "error": "Backtest result not found",
-                    "status_code": 404,
-                }
+                return api_response(
+                    success=False, error="Backtest result not found", status_code=404
+                )
 
             return api_response(success=True, message="バックテスト結果を削除しました")
 
         except Exception as e:
             logger.error(f"バックテスト結果削除エラー (ID: {result_id}): {e}")
-            raise
+            return api_response(success=False, error=str(e), status_code=500)
 
     async def delete_all_backtest_results(self, db: Session) -> Dict[str, Any]:
         """
@@ -165,7 +163,7 @@ class BacktestOrchestrationService:
 
         except Exception as e:
             logger.error(f"全バックテスト結果削除エラー: {e}")
-            raise
+            return api_response(success=False, error=str(e), status_code=500)
 
     async def get_supported_strategies(self) -> Dict[str, Any]:
         """
@@ -177,11 +175,11 @@ class BacktestOrchestrationService:
         try:
             backtest_service = BacktestService()
             strategies = backtest_service.get_supported_strategies()
-            return {"success": True, "strategies": strategies}
+            return api_response(success=True, data={"strategies": strategies})
 
         except Exception as e:
             logger.error(f"サポート戦略取得エラー: {e}")
-            raise
+            return api_response(success=False, error=str(e), status_code=500)
 
     async def execute_backtest(self, request, db: Session) -> Dict[str, Any]:
         """
@@ -201,4 +199,4 @@ class BacktestOrchestrationService:
 
         except Exception as e:
             logger.error(f"バックテスト実行エラー: {e}")
-            raise
+            return api_response(success=False, error=str(e), status_code=500)

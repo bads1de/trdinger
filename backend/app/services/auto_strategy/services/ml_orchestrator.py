@@ -103,9 +103,6 @@ class MLOrchestrator(MLPredictionInterface):
         # 既存の学習済みモデルを自動読み込み
         self._try_load_latest_model()
 
-    # 重複ロジック削除:
-    # _create_automl_config_from_dict は AutoMLConfig.from_dict に統一したため不要
-
     def get_backtest_data_service(self, db: Session) -> BacktestDataService:
         """BacktestDataServiceのインスタンスを取得（依存性注入対応）"""
         if self._backtest_data_service is None:
@@ -644,8 +641,6 @@ class MLOrchestrator(MLPredictionInterface):
                 raise MLValidationError(
                     f"ML指標に無効な値が含まれています: {indicator}"
                 )
-
-    # _get_default_indicators は削除され、エラー発生時は例外を投げる実装に変更しました。
 
     def _try_load_latest_model(self) -> bool:
         """最新の学習済みモデルを自動読み込み"""

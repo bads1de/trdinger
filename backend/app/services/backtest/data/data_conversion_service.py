@@ -1,7 +1,6 @@
 """
 データ変換サービス
 
-データベースモデルからpandas.DataFrameへの変換を専門に担当します。
 """
 
 import logging
