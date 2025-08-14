@@ -443,8 +443,6 @@ class DataProcessor:
                     n_neighbors=20,
                 )
             elif outlier_method in ("iqr", "zscore"):
-                # IQR / Z-score の従来手法は非推奨化したため、
-                # 安定したscikit-learnベースの外れ値検出器にフォールバックします。
                 outlier_transformer = OutlierRemovalTransformer(
                     method="isolation_forest",
                     contamination=(

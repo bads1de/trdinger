@@ -614,9 +614,12 @@ class MLOrchestrator(MLPredictionInterface):
             return result
         except Exception as e:
             logger.error(f"予測値拡張エラー: {e}")
-            # 非推奨のデフォルト指標は削除しました。エラーを伝播します。
-            logger.error("予測拡張中にエラーが発生しました。デフォルト値は返却しません。")
-            raise MLDataError("予測拡張エラー: 内部エラーによりデフォルト指標を返却できませんでした")
+            logger.error(
+                "予測拡張中にエラーが発生しました。デフォルト値は返却しません。"
+            )
+            raise MLDataError(
+                "予測拡張エラー: 内部エラーによりデフォルト指標を返却できませんでした"
+            )
 
     def _validate_ml_indicators(self, ml_indicators: Dict[str, np.ndarray]):
         """ML指標の妥当性を検証"""

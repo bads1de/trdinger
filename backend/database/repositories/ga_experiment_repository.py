@@ -94,12 +94,11 @@ class GAExperimentRepository(BaseRepository):
                 return False
 
             experiment = experiments[0]
-            experiment.current_generation = current_generation  # type: ignore
-            experiment.progress = progress  # type: ignore
+            experiment.current_generation = current_generation
+            experiment.progress = progress
 
             if best_fitness is not None:
-                experiment.best_fitness = best_fitness  # type: ignore
-
+                experiment.best_fitness = best_fitness
             self.db.commit()
             logger.debug(
                 f"実験進捗を更新: {experiment_id} (世代: {current_generation}, 進捗: {progress:.2%})"
