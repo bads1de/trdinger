@@ -195,32 +195,6 @@ class DataValidator:
     # These helpers were removed to simplify the codebase and rely on pandas semantics.
 
     @classmethod
-    def clean_dataframe(
-        cls,
-        df: pd.DataFrame,
-        column_names: Optional[List[str]] = None,
-        fill_method: str = "median",
-    ) -> pd.DataFrame:
-        """
-        DataFrameのクリーンアップ（非推奨）
-
-        注意: この方法は非推奨です。代わりにclean_dataframe_with_schema()を使用してください。
-
-        Args:
-            df: クリーンアップ対象のDataFrame
-            column_names: クリーンアップ対象のカラム名（Noneの場合は全カラム）
-            fill_method: 欠損値の補完方法（median, mean, zero, forward_fill）
-
-        Returns:
-            クリーンアップされたDataFrame
-        """
-        # clean_dataframe は削除されました。
-        # 代替として schema ベースの clean_dataframe_with_schema() を利用してください。
-        raise AttributeError(
-            "clean_dataframe() は削除されました。clean_dataframe_with_schema() を使用してください。"
-        )
-
-    @classmethod
     def log_validation_results(
         cls,
         validation_results: Tuple[bool, Dict[str, List[str]]],
@@ -243,51 +217,6 @@ class DataValidator:
             for issue_type, columns in issues.items():
                 if columns:
                     logger.warning(f"  {issue_type}: {columns}")
-
-    @classmethod
-    def validate_and_clean(
-        cls,
-        df: pd.DataFrame,
-        column_names: Optional[List[str]] = None,
-        fill_method: str = "median",
-        log_name: str = "DataFrame",
-    ) -> pd.DataFrame:
-        """
-        バリデーションとクリーンアップを一括実行
-
-        Args:
-            df: 対象のDataFrame
-            column_names: 対象カラム名
-            fill_method: 補完方法
-            log_name: ログ用の名前
-
-        Returns:
-            クリーンアップされたDataFrame
-        """
-        # 動的にPanderaスキーマを生成
-        schema_columns = (
-            {col: Column(pa.Any, nullable=True) for col in column_names}
-            if column_names
-            else {}
-        )
-        schema = DataFrameSchema(schema_columns, strict=False)
-
-        # バリデーション実行
-        validation_results = validate_dataframe_with_schema(df, schema)
-        cls.log_validation_results(validation_results, log_name)
-
-        # クリーンアップ実行
-        cleaned_df = cls.clean_dataframe(df, column_names, fill_method)
-
-        # クリーンアップ後の再バリデーション
-        post_validation = validate_dataframe_with_schema(cleaned_df, schema)
-        if not post_validation[0]:
-            logger.error(f"{log_name}: クリーンアップ後もデータに問題があります")
-            cls.log_validation_results(
-                post_validation, f"{log_name} (クリーンアップ後)"
-            )
-
-        return cleaned_df
 
     @classmethod
     def validate_ohlcv_data(

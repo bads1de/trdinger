@@ -106,7 +106,7 @@ class TechnicalIndicatorService:
                 required_data[data_key] = df[column_name]
 
         # パラメータ正規化
-        from .parameter_normalizer import normalize_params
+        from .parameter_manager import normalize_params
 
         converted_params = normalize_params(indicator_type, params, config)
 

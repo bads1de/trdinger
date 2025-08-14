@@ -269,59 +269,6 @@ def validate_indicator_parameters(*args, **kwargs) -> None:
                 )
 
 
-def normalize_data_for_trig(data: Union[np.ndarray, pd.Series]) -> np.ndarray:
-    """
-    三角関数用のデータ正規化（-1から1の範囲にクリップ）
-
-    Args:
-        data: 正規化対象のデータ
-
-    Returns:
-        正規化されたnumpy配列
-
-    Note:
-        ASIN、ACOSなどの三角関数で使用するため、値を-1から1の範囲にクリップします。
-    """
-    if isinstance(data, pd.Series):
-        array = data.to_numpy()
-    elif isinstance(data, np.ndarray):
-        array = data
-    else:
-        array = np.asarray(data, dtype=np.float64)
-
-    # -1から1の範囲にクリップ
-    return np.clip(array, -1.0, 1.0)
-
-def ensure_numpy_minimal_conversion(data: Union[np.ndarray, pd.Series]) -> np.ndarray:
-    """
-    最小限の型変換でnumpy配列を確保（簡素化版）
-
-    data_conversion.pyのensure_arrayと統一。
-    """
-    # data_conversion.pyのensure_arrayを使用
-    from ...utils.data_conversion import ensure_array
-
-    return ensure_array(data, raise_on_error=True)
-
-
-def format_indicator_result(
-    result: Union[np.ndarray, tuple],
-    indicator_name: str | None = None,
-) -> Union[np.ndarray, tuple]:
-    """
-    指標計算結果のフォーマット（現在はプレースホルダー）
-
-    Args:
-        result: 計算結果
-        indicator_name: 任意の指標名（ログ・将来の拡張用、未使用）
-
-    Returns:
-        フォーマット済みの結果
-    """
-    # 現在は特に処理を行わず、そのまま返す
-    return result
-
-
 def validate_numpy_input(
     data: Union[np.ndarray, pd.Series, list, float, int], min_length: int = 1
 ) -> np.ndarray:

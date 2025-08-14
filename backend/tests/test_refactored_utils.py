@@ -12,7 +12,7 @@ from unittest.mock import patch, MagicMock
 import logging
 
 # リファクタリング後のモジュールをインポート
-    from app.utils.index_alignment import (
+from app.utils.index_alignment import (
     align_data,
     validate_alignment,
     preserve_index_during_processing,
