@@ -1,184 +1,140 @@
 """
-テクニカル指標統合サービス
+テクニカル指標統合サービス（簡素化版）
 
-Numpyベースの指標計算関数を呼び出し、結果を整形する責務を担います。
+pandas-taを直接活用し、冗長なラッパーを削除した効率的な実装。
 """
 
 import logging
-from typing import Any, Dict, Optional, Tuple, Union
+from typing import Any, Dict, Optional, Union
 
 import numpy as np
 import pandas as pd
-import inspect
+import pandas_ta as ta
 
 from .config import IndicatorConfig, indicator_registry
-from .utils import PandasTAError, normalize_data_for_trig
 
 logger = logging.getLogger(__name__)
 
 
 class TechnicalIndicatorService:
-    """テクニカル指標統合サービス"""
+    """テクニカル指標統合サービス（簡素化版）"""
 
     def __init__(self):
         """サービスを初期化"""
         self.registry = indicator_registry
 
     def _get_indicator_config(self, indicator_type: str) -> IndicatorConfig:
-        """
-        指標設定を取得
-        """
+        """指標設定を取得"""
         config = self.registry.get_indicator_config(indicator_type)
-        if not config or not config.adapter_function:
-            supported = [
-                name
-                for name, cfg in self.registry._configs.items()
-                if cfg.adapter_function
-            ]
-            raise ValueError(
-                f"サポートされていない、またはアダプターが設定されていない指標タイプです: {indicator_type}. "
-                f"サポート対象: {supported}"
-            )
+        if not config:
+            raise ValueError(f"サポートされていない指標タイプ: {indicator_type}")
         return config
 
     def calculate_indicator(
         self, df: pd.DataFrame, indicator_type: str, params: Dict[str, Any]
-    ) -> Union[np.ndarray, Tuple[np.ndarray, ...]]:
+    ) -> Union[np.ndarray, tuple]:
         """
-        指定された指標を計算します。
+        指定された指標を計算（簡素化版）
 
-        Args:
-            df: OHLCVデータを含むPandas DataFrame
-            indicator_type: 計算する指標のタイプ (例: "RSI", "MACD")
-            params: 指標計算に必要なパラメータ
-
-        Returns:
-            計算結果 (numpy配列または配列のタプル)
+        pandas-taを直接使用し、複雑なマッピング処理を削除。
         """
+        try:
+            # 基本的なパラメータ検証
+            if indicator_type in ["SMA", "EMA", "WMA", "RSI"]:
+                length = params.get("length", params.get("period", 14))
+                if length <= 0:
+                    raise ValueError(f"{indicator_type}: 期間は正の値が必要: {length}")
 
-        config = self._get_indicator_config(indicator_type)
-        indicator_func = config.adapter_function
+            # pandas-taを直接使用
+            if indicator_type == "RSI":
+                length = params.get("length", params.get("period", 14))
+                return ta.rsi(df["Close"], length=length).values
 
-        assert (
-            indicator_func is not None
-        ), "Adapter function cannot be None at this point."
+            elif indicator_type == "SMA":
+                length = params.get("length", params.get("period", 20))
+                return ta.sma(df["Close"], length=length).values
 
-        # 必要なデータをDataFrameからNumpy配列として抽出
-        # backtesting.pyは大文字カラム名（Close, Open等）を使用するため、
-        # 小文字の設定を大文字に変換して対応
+            elif indicator_type == "EMA":
+                length = params.get("length", params.get("period", 20))
+                return ta.ema(df["Close"], length=length).values
+
+            elif indicator_type == "MACD":
+                fast = params.get("fast", 12)
+                slow = params.get("slow", 26)
+                signal = params.get("signal", 9)
+                result = ta.macd(df["Close"], fast=fast, slow=slow, signal=signal)
+                return (
+                    result.iloc[:, 0].values,  # MACD
+                    result.iloc[:, 1].values,  # Signal
+                    result.iloc[:, 2].values,  # Histogram
+                )
+
+            elif indicator_type == "BBANDS":
+                length = params.get("length", params.get("period", 20))
+                std = params.get("std", 2.0)
+                result = ta.bbands(df["Close"], length=length, std=std)
+                return (
+                    result.iloc[:, 0].values,  # Upper
+                    result.iloc[:, 1].values,  # Middle
+                    result.iloc[:, 2].values,  # Lower
+                )
+
+            # その他の指標は従来の方法で処理
+            config = self._get_indicator_config(indicator_type)
+            if config.adapter_function:
+                return self._calculate_with_adapter(df, indicator_type, params, config)
+            else:
+                raise ValueError(f"指標 {indicator_type} の実装が見つかりません")
+
+        except Exception as e:
+            logger.error(f"指標計算エラー {indicator_type}: {e}")
+            raise
+
+    def _calculate_with_adapter(
+        self,
+        df: pd.DataFrame,
+        indicator_type: str,
+        params: Dict[str, Any],
+        config: IndicatorConfig,
+    ):
+        """アダプター関数を使用した指標計算（後方互換性用）"""
+        # 従来のロジックを簡素化して維持
         required_data = {}
         for data_key in config.required_data:
-            # カラム名の大文字小文字を適切に処理
-            actual_column = self._resolve_column_name(df, data_key, indicator_type)
-            if actual_column is None:
-                raise PandasTAError(
-                    f"必要なカラム '{data_key}' がDataFrameにありません。利用可能なカラム: {list(df.columns)}"
-                )
+            column_name = self._resolve_column_name(df, data_key)
+            if column_name:
+                required_data[data_key] = df[column_name]
 
-            # データキーを適切な関数パラメータ名にマッピング
-            param_name = self._map_data_key_to_param(indicator_type, data_key)
-            # 型変換をなくし、Seriesを直接渡す
-            required_data[param_name] = df[actual_column]
-
-        # 必要に応じて入力データを正規化
-        if config.needs_normalization:
-            for key, data_series in required_data.items():
-                # Seriesからnumpy配列に変換して正規化し、再度Seriesに戻す
-                normalized_array = normalize_data_for_trig(data_series.to_numpy())
-                required_data[key] = pd.Series(
-                    normalized_array, index=data_series.index
-                )
-
-        # パラメータ名の変換（period -> length、ただし一部の指標は除外）
-        # MAX/MIN/SUM は data 引数名を期待
-        if indicator_type in ["MAX", "MIN", "SUM"]:
-            if "close" in required_data:
-                required_data = {**required_data}
-                required_data["data"] = required_data.pop("close")
-
-        # パラメータ正規化（period->length & デフォルト補完）
+        # パラメータ正規化
         from .parameter_normalizer import normalize_params
 
         converted_params = normalize_params(indicator_type, params, config)
 
-        # パラメータとデータを結合して関数を呼び出し
-        # 基本的な検証のみ実行（過度に厳格な検証を緩和）
-        if indicator_type in ["SMA", "EMA", "WMA"]:
-            length_val = converted_params.get("length", params.get("period"))
-            # 基本的な期間検証のみ
-            if isinstance(length_val, (int, np.integer)) and length_val <= 0:
-                raise PandasTAError(
-                    f"{indicator_type}: 期間は正の整数である必要があります: {length_val}"
-                )
-
-            # アダプタ関数のシグネチャに応じて余計な引数を落とす（互換性維持）
-            tmp_all_args = {**required_data, **converted_params}
-            sig = inspect.signature(indicator_func)
-            allowed = set(sig.parameters.keys())
-            filtered_args = {k: v for k, v in tmp_all_args.items() if k in allowed}
-            result = indicator_func(**filtered_args)
-            return result
-
+        # 関数呼び出し
         all_args = {**required_data, **converted_params}
+        return config.adapter_function(**all_args)
 
-        try:
-            # 互換性のため、関数シグネチャに存在しない引数は除去
-            sig = inspect.signature(indicator_func)
-            allowed = set(sig.parameters.keys())
-            filtered_args = {k: v for k, v in all_args.items() if k in allowed}
-            result = indicator_func(**filtered_args)
-            return result
-        except Exception as e:
-            logger.error(f"指標関数呼び出しエラー {indicator_type}: {e}", exc_info=True)
-            raise
-
-    def _resolve_column_name(
-        self, df: pd.DataFrame, data_key: str, indicator_type: Optional[str] = None
-    ) -> Optional[str]:
+    def _resolve_column_name(self, df: pd.DataFrame, data_key: str) -> Optional[str]:
         """
-        データフレームから適切なカラム名を解決
-
-        Args:
-            df: データフレーム
-            data_key: 探すカラム名（小文字）
-            indicator_type: 指標タイプ（オプション）
-
-        Returns:
-            実際のカラム名（見つからない場合はNone）
+        データフレームから適切なカラム名を解決（簡素化版）
         """
-        # 特別なマッピング（指標タイプを考慮）
-        special_mappings = {
-            "data0": "high",  # デフォルトで高値を使用
-            "data1": "low",  # デフォルトで安値を使用
+        # 特別なマッピング
+        key_mappings = {
+            "open_data": "open",
+            "data0": "high",
+            "data1": "low",
         }
 
-        # open_dataの特別な処理
-        if data_key == "open_data":
-            # open_dataは常に"open"カラムを参照する
-            data_key = "open"
+        actual_key = key_mappings.get(data_key, data_key)
 
-        if data_key in special_mappings:
-            data_key = special_mappings[data_key]
-
-        # 先頭大文字（例: Close）を優先してチェック
-        capitalized_key = data_key.capitalize()
-        if capitalized_key in df.columns:
-            return capitalized_key
-
-        # 全て大文字（例: CLOSE）をチェック
-        upper_key = data_key.upper()
-        if upper_key in df.columns:
-            return upper_key
-
-        # 小文字のカラム名（例: close）は許容しない（エッジケーステストの方針）
-        return None
-        # 見つからない場合はNone
-        return None
-
-        # 全て小文字でチェック
-        lower_key = data_key.lower()
-        if lower_key in df.columns:
-            return lower_key
+        # 大文字小文字のバリエーションをチェック
+        for variant in [
+            actual_key.capitalize(),
+            actual_key.upper(),
+            actual_key.lower(),
+        ]:
+            if variant in df.columns:
+                return variant
 
         return None
 

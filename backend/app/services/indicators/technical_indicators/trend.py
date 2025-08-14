@@ -1,132 +1,90 @@
 """
-トレンド系テクニカル指標（pandas-ta移行版）
+トレンド系テクニカル指標（簡素化版）
 
-このモジュールはpandas-taライブラリを使用し、
-backtesting.pyとの完全な互換性を提供します。
-numpy配列ベースのインターフェースを維持しています。
+pandas-taを直接活用し、冗長なラッパーを削除した効率的な実装。
+backtesting.pyとの互換性を保ちつつ、コードを大幅に簡素化。
 """
 
-from typing import Union
+from typing import Union, Tuple
 
 import numpy as np
 import pandas as pd
 import pandas_ta as ta
 
-from ..utils import (
-    PandasTAError,
-    handle_pandas_ta_errors,
-    ensure_series_minimal_conversion,
-    validate_series_data,
-    validate_indicator_parameters,
-)
-
 
 class TrendIndicators:
     """
-    トレンド系指標クラス（オートストラテジー最適化）
+    トレンド系指標クラス（簡素化版）
 
-    全ての指標はnumpy配列を直接処理し、Ta-libの性能を最大限活用します。
-    backtesting.pyでの使用に最適化されています。
+    pandas-taを直接活用し、不要なラッパーを削除。
     """
 
     @staticmethod
-    @handle_pandas_ta_errors
     def sma(data: Union[np.ndarray, pd.Series], length: int) -> np.ndarray:
         """単純移動平均"""
-        validate_indicator_parameters(length)
-        # 最小限の型変換でpandas.Seriesを確保
-        series = ensure_series_minimal_conversion(data)
-        # 型チェック: 数値に変換できない場合は明確にエラー
-        if not np.issubdtype(series.dtype, np.number):
-            raise PandasTAError(f"sma: 数値データが必要です dtype={series.dtype}")
-        # length=1 の場合はそのまま返す（TA-Libエラー回避）
+        if length <= 0:
+            raise ValueError(f"length must be positive: {length}")
+
+        series = pd.Series(data) if isinstance(data, np.ndarray) else data
         if length == 1:
-            return series.to_numpy()
-        # TA-Lib は length>=2 を要求するため length==1 は早期リターン済み。
-        # len(series) == length の場合でもそのまま length を渡して OK（NaN 含む可能性は許容）。
-        # データ長が期間より短い場合のみ厳密検証
-        if len(series) < length:
-            validate_series_data(series, length)
-        # pandasのロールング平均でNaN混入時でも妥当な出力を得る
-        result = series.rolling(window=length, min_periods=length).mean()
-        return result.to_numpy()
+            return series.values
+
+        result = series.rolling(window=length, min_periods=1).mean()
+        return result.values
 
     @staticmethod
-    @handle_pandas_ta_errors
     def ema(data: Union[np.ndarray, pd.Series], length: int) -> np.ndarray:
         """指数移動平均"""
-        validate_indicator_parameters(length)
-        # 最小限の型変換でpandas.Seriesを確保
-        series = ensure_series_minimal_conversion(data)
-        validate_series_data(series, length)
+        if length <= 0:
+            raise ValueError(f"length must be positive: {length}")
+
+        series = pd.Series(data) if isinstance(data, np.ndarray) else data
         result = ta.ema(series, length=length)
         return result.values
 
     @staticmethod
-    @handle_pandas_ta_errors
     def tema(data: Union[np.ndarray, pd.Series], length: int) -> np.ndarray:
-        """三重指数移動平均
-        注意: 一部のデータ・長さ設定で全NaNとなるケースがあるため、EMAにフォールバックする。
-        """
-        series = ensure_series_minimal_conversion(data)
-        validate_series_data(series, length)
+        """三重指数移動平均"""
+        series = pd.Series(data) if isinstance(data, np.ndarray) else data
         result = ta.tema(series, length=length)
-        values = result.values
-        # 全NaNの場合はEMAへフォールバックして安定化
-        if np.all(np.isnan(values)):
-            ema = ta.ema(series, length=length)
-            return ema.values
-        return values
+        # 全NaNの場合はEMAにフォールバック
+        if result.isna().all():
+            result = ta.ema(series, length=length)
+        return result.values
 
     @staticmethod
-    @handle_pandas_ta_errors
     def dema(data: Union[np.ndarray, pd.Series], length: int) -> np.ndarray:
         """二重指数移動平均"""
-        series = ensure_series_minimal_conversion(data)
-        validate_series_data(series, length)
-        result = ta.dema(series, length=length)
-        return result.values
+        series = pd.Series(data) if isinstance(data, np.ndarray) else data
+        return ta.dema(series, length=length).values
 
     @staticmethod
-    @handle_pandas_ta_errors
     def wma(data: Union[np.ndarray, pd.Series], length: int) -> np.ndarray:
         """加重移動平均"""
-        series = ensure_series_minimal_conversion(data)
-        validate_series_data(series, length)
-        result = ta.wma(series, length=length)
-        return result.values
+        series = pd.Series(data) if isinstance(data, np.ndarray) else data
+        return ta.wma(series, length=length).values
 
     @staticmethod
-    @handle_pandas_ta_errors
     def trima(data: Union[np.ndarray, pd.Series], length: int) -> np.ndarray:
         """三角移動平均"""
-        series = ensure_series_minimal_conversion(data)
-        validate_series_data(series, length)
-        result = ta.trima(series, length=length)
-        return result.values
+        series = pd.Series(data) if isinstance(data, np.ndarray) else data
+        return ta.trima(series, length=length).values
 
     @staticmethod
-    @handle_pandas_ta_errors
     def kama(data: Union[np.ndarray, pd.Series], length: int = 30) -> np.ndarray:
         """カウフマン適応移動平均"""
-        series = ensure_series_minimal_conversion(data)
-        validate_series_data(series, length)
-        result = ta.kama(series, length=length)
-        return result.values
+        series = pd.Series(data) if isinstance(data, np.ndarray) else data
+        return ta.kama(series, length=length).values
 
     @staticmethod
-    @handle_pandas_ta_errors
     def t3(
         data: Union[np.ndarray, pd.Series], length: int = 5, a: float = 0.7
     ) -> np.ndarray:
         """T3移動平均"""
-        series = ensure_series_minimal_conversion(data)
-        validate_series_data(series, length)
-        result = ta.t3(series, length=length, a=a)
-        return result.values
+        series = pd.Series(data) if isinstance(data, np.ndarray) else data
+        return ta.t3(series, length=length, a=a).values
 
     @staticmethod
-    @handle_pandas_ta_errors
     def sar(
         high: Union[np.ndarray, pd.Series],
         low: Union[np.ndarray, pd.Series],
@@ -134,19 +92,16 @@ class TrendIndicators:
         max_af: float = 0.2,
     ) -> np.ndarray:
         """パラボリックSAR"""
-        high_series = ensure_series_minimal_conversion(high)
-        low_series = ensure_series_minimal_conversion(low)
-
-        validate_series_data(high_series, 2)
-        validate_series_data(low_series, 2)
+        high_series = pd.Series(high) if isinstance(high, np.ndarray) else high
+        low_series = pd.Series(low) if isinstance(low, np.ndarray) else low
 
         result = ta.psar(high=high_series, low=low_series, af0=af, af=af, max_af=max_af)
-        return (
-            result[f"PSARl_{af}_{max_af}"].fillna(result[f"PSARs_{af}_{max_af}"]).values
-        )
+        # PSARl と PSARs を結合
+        psar_long = result[f"PSARl_{af}_{max_af}"]
+        psar_short = result[f"PSARs_{af}_{max_af}"]
+        return psar_long.fillna(psar_short).values
 
     @staticmethod
-    @handle_pandas_ta_errors
     def sarext(
         high: Union[np.ndarray, pd.Series],
         low: Union[np.ndarray, pd.Series],
@@ -159,14 +114,11 @@ class TrendIndicators:
         accelerationshort: float = 0.02,
         accelerationmaxshort: float = 0.2,
     ) -> np.ndarray:
-        """Extended Parabolic SAR (approximation using pandas-ta psar)"""
-        high_series = ensure_series_minimal_conversion(high)
-        low_series = ensure_series_minimal_conversion(low)
+        """Extended Parabolic SAR (pandas-ta psarで近似)"""
+        high_series = pd.Series(high) if isinstance(high, np.ndarray) else high
+        low_series = pd.Series(low) if isinstance(low, np.ndarray) else low
 
-        validate_series_data(high_series, 2)
-        validate_series_data(low_series, 2)
-
-        # Map extended parameters to pandas-ta psar arguments (approximate)
+        # 拡張パラメータをpandas-ta psarにマッピング（近似）
         result = ta.psar(
             high=high_series,
             low=low_series,
@@ -175,49 +127,39 @@ class TrendIndicators:
             max_af=accelerationmaxlong,
         )
 
-        af = accelerationlong
-        max_af = accelerationmaxlong
-        return (
-            result[f"PSARl_{af}_{max_af}"].fillna(result[f"PSARs_{af}_{max_af}"]).values
-        )
+        psar_long = result[f"PSARl_{accelerationlong}_{accelerationmaxlong}"]
+        psar_short = result[f"PSARs_{accelerationlong}_{accelerationmaxlong}"]
+        return psar_long.fillna(psar_short).values
 
     @staticmethod
-    @handle_pandas_ta_errors
     def ht_trendline(data: Union[np.ndarray, pd.Series]) -> np.ndarray:
         """Hilbert Transform - Instantaneous Trendline"""
-        series = ensure_series_minimal_conversion(data)
-        validate_series_data(series, 2)
+        series = pd.Series(data) if isinstance(data, np.ndarray) else data
 
-        # pandas-ta exposes Hilbert transform utilities; use ht_trendline if available
+        # pandas-taにht_trendlineがあれば使用、なければEMAで代替
         if hasattr(ta, "ht_trendline"):
-            result = ta.ht_trendline(series)
-            return result.values
-        # フォールバック: EMA(3)で代替して挙動を安定化（テスト互換）
-        return TrendIndicators.ema(series, length=3)
+            return ta.ht_trendline(series).values
+        else:
+            return TrendIndicators.ema(series, length=3)
 
     @staticmethod
-    def ma(data: np.ndarray, period: int, matype: int = 0) -> np.ndarray:
-        """Moving Average (移動平均 - タイプ指定可能) - pandas-ta版"""
-        # matypeに応じて適切な移動平均を選択
-        if matype == 0:  # SMA
-            return TrendIndicators.sma(data, period)
-        elif matype == 1:  # EMA
-            return TrendIndicators.ema(data, period)
-        elif matype == 2:  # WMA
-            return TrendIndicators.wma(data, period)
-        elif matype == 3:  # DEMA
-            return TrendIndicators.dema(data, period)
-        elif matype == 4:  # TEMA
-            return TrendIndicators.tema(data, period)
-        elif matype == 5:  # TRIMA
-            return TrendIndicators.trima(data, period)
-        elif matype == 6:  # KAMA
-            return TrendIndicators.kama(data, period)
-        elif matype == 8:  # T3
-            return TrendIndicators.t3(data, period)
-        else:
-            # デフォルトはSMA
-            return TrendIndicators.sma(data, period)
+    def ma(
+        data: Union[np.ndarray, pd.Series], period: int, matype: int = 0
+    ) -> np.ndarray:
+        """移動平均（タイプ指定可能）"""
+        ma_functions = {
+            0: TrendIndicators.sma,  # SMA
+            1: TrendIndicators.ema,  # EMA
+            2: TrendIndicators.wma,  # WMA
+            3: TrendIndicators.dema,  # DEMA
+            4: TrendIndicators.tema,  # TEMA
+            5: TrendIndicators.trima,  # TRIMA
+            6: TrendIndicators.kama,  # KAMA
+            8: TrendIndicators.t3,  # T3
+        }
+
+        ma_func = ma_functions.get(matype, TrendIndicators.sma)
+        return ma_func(data, period)
 
     @staticmethod
     def mavp(
@@ -227,113 +169,102 @@ class TrendIndicators:
         maxperiod: int = 30,
         matype: int = 0,
     ) -> np.ndarray:
-        """Moving Average with Variable Period (可変期間移動平均)"""
-        from ..utils import ensure_numpy_minimal_conversion, validate_input
+        """可変期間移動平均（カスタム実装）"""
+        data_array = np.array(data)
+        periods_array = np.array(periods)
 
-        data = ensure_numpy_minimal_conversion(data)
-        periods = ensure_numpy_minimal_conversion(periods)
-        if len(data) != len(periods):
-            raise PandasTAError(
-                f"データと期間の長さが一致しません。Data: {len(data)}, Periods: {len(periods)}"
+        if len(data_array) != len(periods_array):
+            raise ValueError(
+                f"データと期間の長さが一致しません。Data: {len(data_array)}, Periods: {len(periods_array)}"
             )
-        validate_input(data, minperiod)
-        # MAVP has no direct pandas-ta equivalent; raise error to flag manual handling
-        raise NotImplementedError(
-            "MAVP is not implemented in pandas-ta and requires custom implementation"
-        )
+
+        # pandas-taには直接的な実装がないため、カスタム実装
+        result = np.full_like(data_array, np.nan, dtype=float)
+
+        for i in range(len(data_array)):
+            period = int(np.clip(periods_array[i], minperiod, maxperiod))
+            start_idx = max(0, i - period + 1)
+
+            if i >= period - 1:
+                window_data = data_array[start_idx : i + 1]
+                if matype == 0:  # SMA
+                    result[i] = np.mean(window_data)
+                else:
+                    # 他のタイプは簡略化してSMAで代替
+                    result[i] = np.mean(window_data)
+
+        return result
 
     @staticmethod
-    @handle_pandas_ta_errors
     def midpoint(
         data: Union[np.ndarray, pd.Series],
-        length: int | None = None,
-        period: int | None = None,
+        length: int = None,
+        period: int = None,
     ) -> np.ndarray:
-        """MidPoint over period"""
-        series = ensure_series_minimal_conversion(data)
-        # period エイリアス対応
+        """期間内の中点"""
+        series = pd.Series(data) if isinstance(data, np.ndarray) else data
         length = period if period is not None else length
+
         if length is None:
-            raise PandasTAError("midpoint: length/period が指定されていません")
-        validate_series_data(series, length)
-        result = ta.midpoint(series, length=length)
-        return result.values
+            raise ValueError("length または period を指定してください")
+
+        return ta.midpoint(series, length=length).values
 
     @staticmethod
-    @handle_pandas_ta_errors
     def midprice(
         high: Union[np.ndarray, pd.Series],
         low: Union[np.ndarray, pd.Series],
-        length: int | None = None,
-        period: int | None = None,
+        length: int = None,
+        period: int = None,
     ) -> np.ndarray:
-        """Midpoint Price over period"""
-        high_series = ensure_series_minimal_conversion(high)
-        low_series = ensure_series_minimal_conversion(low)
-
-        # period エイリアス対応
+        """期間内の中値価格"""
+        high_series = pd.Series(high) if isinstance(high, np.ndarray) else high
+        low_series = pd.Series(low) if isinstance(low, np.ndarray) else low
         length = period if period is not None else length
+
         if length is None:
-            raise PandasTAError("midprice: length/period が指定されていません")
+            raise ValueError("length または period を指定してください")
 
-        validate_series_data(high_series, length)
-        validate_series_data(low_series, length)
-
-        result = ta.midprice(high=high_series, low=low_series, length=length)
-        return result.values
+        return ta.midprice(high=high_series, low=low_series, length=length).values
 
     @staticmethod
-    @handle_pandas_ta_errors
     def hma(data: Union[np.ndarray, pd.Series], length: int = 20) -> np.ndarray:
         """Hull Moving Average"""
-        series = ensure_series_minimal_conversion(data)
-        validate_series_data(series, length)
-        result = ta.hma(series, length=length)
-        return result.values
+        series = pd.Series(data) if isinstance(data, np.ndarray) else data
+        return ta.hma(series, length=length).values
 
     @staticmethod
-    @handle_pandas_ta_errors
     def zlma(data: Union[np.ndarray, pd.Series], length: int = 20) -> np.ndarray:
-        """Zero-Lag Exponential Moving Average (ZLMA/ZLEMA)"""
-        series = ensure_series_minimal_conversion(data)
-        validate_series_data(series, length)
-        # pandas-ta provides zlma. Some versions alias zlema -> zlma
+        """Zero-Lag Exponential Moving Average"""
+        series = pd.Series(data) if isinstance(data, np.ndarray) else data
+
         if hasattr(ta, "zlma"):
-            result = ta.zlma(series, length=length)
+            return ta.zlma(series, length=length).values
         else:
-            # Fallback: approximate with ema of ema difference
+            # フォールバック: EMAの差分で近似
             lag = int((length - 1) / 2)
             shifted = series.shift(lag)
             adjusted = series + (series - shifted)
-            result = ta.ema(adjusted, length=length)
-        return result.values if hasattr(result, "values") else result.to_numpy()
+            return ta.ema(adjusted, length=length).values
 
     @staticmethod
-    @handle_pandas_ta_errors
     def vwma(
         data: Union[np.ndarray, pd.Series],
         volume: Union[np.ndarray, pd.Series],
         length: int = 20,
     ) -> np.ndarray:
         """Volume Weighted Moving Average"""
-        price = ensure_series_minimal_conversion(data)
-        vol = ensure_series_minimal_conversion(volume)
-        validate_series_data(price, length)
-        validate_series_data(vol, length)
-        result = ta.vwma(price, volume=vol, length=length)
-        return result.values
+        price = pd.Series(data) if isinstance(data, np.ndarray) else data
+        vol = pd.Series(volume) if isinstance(volume, np.ndarray) else volume
+        return ta.vwma(price, volume=vol, length=length).values
 
     @staticmethod
-    @handle_pandas_ta_errors
     def swma(data: Union[np.ndarray, pd.Series], length: int = 10) -> np.ndarray:
         """Symmetric Weighted Moving Average"""
-        series = ensure_series_minimal_conversion(data)
-        validate_series_data(series, length)
-        result = ta.swma(series, length=length)
-        return result.values
+        series = pd.Series(data) if isinstance(data, np.ndarray) else data
+        return ta.swma(series, length=length).values
 
     @staticmethod
-    @handle_pandas_ta_errors
     def alma(
         data: Union[np.ndarray, pd.Series],
         length: int = 9,
@@ -341,22 +272,16 @@ class TrendIndicators:
         offset: float = 0.85,
     ) -> np.ndarray:
         """Arnaud Legoux Moving Average"""
-        series = ensure_series_minimal_conversion(data)
-        validate_series_data(series, length)
-        result = ta.alma(series, length=length, sigma=sigma, offset=offset)
-        return result.values
+        series = pd.Series(data) if isinstance(data, np.ndarray) else data
+        return ta.alma(series, length=length, sigma=sigma, offset=offset).values
 
     @staticmethod
-    @handle_pandas_ta_errors
     def rma(data: Union[np.ndarray, pd.Series], length: int = 14) -> np.ndarray:
         """Smoothed Moving Average (RMA)"""
-        series = ensure_series_minimal_conversion(data)
-        validate_series_data(series, length)
-        result = ta.rma(series, length=length)
-        return result.values
+        series = pd.Series(data) if isinstance(data, np.ndarray) else data
+        return ta.rma(series, length=length).values
 
     @staticmethod
-    @handle_pandas_ta_errors
     def ichimoku(
         high: Union[np.ndarray, pd.Series],
         low: Union[np.ndarray, pd.Series],
@@ -364,17 +289,13 @@ class TrendIndicators:
         tenkan: int = 9,
         kijun: int = 26,
         senkou: int = 52,
-    ) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
-        """Ichimoku Cloud: returns (conversion, base, span_a, span_b, lagging)
-        pandas-taの返却差に依存せず、標準定義に基づき自前で安定計算する。
-        """
-        h = ensure_series_minimal_conversion(high)
-        low_series = ensure_series_minimal_conversion(low)
-        c = ensure_series_minimal_conversion(close)
-        maxlen = max(tenkan, kijun, senkou)
-        validate_series_data(h, maxlen)
-        validate_series_data(low_series, maxlen)
-        validate_series_data(c, maxlen)
+    ) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+        """Ichimoku Cloud: (conversion, base, span_a, span_b, lagging)"""
+        h = pd.Series(high) if isinstance(high, np.ndarray) else high
+        low_series = pd.Series(low) if isinstance(low, np.ndarray) else low
+        c = pd.Series(close) if isinstance(close, np.ndarray) else close
+
+        # 標準定義に基づく計算
         conv = (h.rolling(tenkan).max() + low_series.rolling(tenkan).min()) / 2.0
         base = (h.rolling(kijun).max() + low_series.rolling(kijun).min()) / 2.0
         span_a = ((conv + base) / 2.0).shift(kijun)
@@ -382,32 +303,29 @@ class TrendIndicators:
             (h.rolling(senkou).max() + low_series.rolling(senkou).min()) / 2.0
         ).shift(kijun)
         lag = c.shift(-kijun)
+
         return (
-            conv.to_numpy(),
-            base.to_numpy(),
-            span_a.to_numpy(),
-            span_b.to_numpy(),
-            lag.to_numpy(),
+            conv.values,
+            base.values,
+            span_a.values,
+            span_b.values,
+            lag.values,
         )
 
-    # ---- Custom original indicators ----
+    # カスタム指標
     @staticmethod
     def sma_slope(data: Union[np.ndarray, pd.Series], length: int = 20) -> np.ndarray:
-        """Custom: slope of SMA over the last N periods (per-bar first difference)."""
-        s = ensure_series_minimal_conversion(data)
-        validate_series_data(s, length)
-        sma_vals = pd.Series(TrendIndicators.sma(s, length))
-        slope = sma_vals.diff()
-        return slope.to_numpy()
+        """SMAの傾き（前期間との差分）"""
+        series = pd.Series(data) if isinstance(data, np.ndarray) else data
+        sma_vals = pd.Series(TrendIndicators.sma(series, length))
+        return sma_vals.diff().values
 
     @staticmethod
     def price_ema_ratio(
         data: Union[np.ndarray, pd.Series], length: int = 20
     ) -> np.ndarray:
-        """Custom: (Close / EMA(length)) - 1"""
-        s = ensure_series_minimal_conversion(data)
-        validate_series_data(s, length)
-        ema_vals = TrendIndicators.ema(s, length)
-        ema_series = pd.Series(ema_vals, index=getattr(s, "index", None))
-        ratio = (pd.Series(s) / ema_series) - 1.0
-        return ratio.to_numpy()
+        """価格とEMAの比率 - 1"""
+        series = pd.Series(data) if isinstance(data, np.ndarray) else data
+        ema_vals = TrendIndicators.ema(series, length)
+        ema_series = pd.Series(ema_vals, index=series.index)
+        return ((series / ema_series) - 1.0).values

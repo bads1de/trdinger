@@ -1,8 +1,8 @@
 """
-データ変換ユーティリティ
+データ変換ユーティリティ（簡素化版）
 
-data_converter.py、data_utils.py、data_standardization.py を統合したモジュール。
-データ形式変換、型変換、標準化のロジックを統一的に提供します。
+pandas標準機能を活用し、冗長なカスタム実装を削除。
+必要最小限の変換ロジックのみを提供。
 """
 
 import logging
@@ -325,60 +325,46 @@ class DataSanitizer:
 
 def standardize_ohlcv_columns(df: pd.DataFrame) -> pd.DataFrame:
     """
-    OHLCV列名をbacktesting.py標準形式に統一
+    OHLCV列名をbacktesting.py標準形式に統一（簡素化版）
 
-    Args:
-        df: 元のOHLCVデータフレーム
-
-    Returns:
-        標準化されたOHLCVデータフレーム
-
-    Raises:
-        ValueError: 必要な列が見つからない場合
+    pandas標準のrename()を活用し、シンプルなマッピング処理。
     """
     if df.empty:
         return df
 
-    # 列名マッピング（小文字 → 大文字）
+    # 列名マッピング（大文字小文字を統一）
     column_mapping = {
-        "open": "Open",
-        "high": "High",
-        "low": "Low",
-        "close": "Close",
-        "volume": "Volume",
-        "o": "Open",
-        "h": "High",
-        "l": "Low",
-        "c": "Close",
-        "v": "Volume",
+        col: col.capitalize()
+        for col in df.columns
+        if col.lower()
+        in ["open", "high", "low", "close", "volume", "o", "h", "l", "c", "v"]
     }
 
-    # 現在の列名を確認
-    current_columns = df.columns.tolist()
+    # 短縮形の特別マッピング
+    short_mapping = {"o": "Open", "h": "High", "l": "Low", "c": "Close", "v": "Volume"}
+    column_mapping.update(
+        {
+            col: short_mapping[col.lower()]
+            for col in df.columns
+            if col.lower() in short_mapping
+        }
+    )
 
-    # マッピングを適用
-    rename_dict = {}
-    for old_col in current_columns:
-        if old_col.lower() in column_mapping:
-            rename_dict[old_col] = column_mapping[old_col.lower()]
+    # 列名変更
+    result_df = df.rename(columns=column_mapping)
 
-    # 列名を変更
-    standardized_df = df.rename(columns=rename_dict)
+    # 必要な列の存在確認
+    required_cols = ["Open", "High", "Low", "Close"]
+    missing_cols = [col for col in required_cols if col not in result_df.columns]
 
-    # 必要な列が存在するかチェック
-    missing_columns = []
-    for required_col in ["Open", "High", "Low", "Close"]:
-        if required_col not in standardized_df.columns:
-            missing_columns.append(required_col)
+    if missing_cols:
+        raise ValueError(f"必要な列が見つかりません: {missing_cols}")
 
-    if missing_columns:
-        raise ValueError(f"OHLCVデータに必要な列が見つかりません: {missing_columns}")
+    # Volumeがない場合はデフォルト値を設定
+    if "Volume" not in result_df.columns:
+        result_df["Volume"] = 1000
 
-    # Volumeが存在しない場合はデフォルト値を設定
-    if "Volume" not in standardized_df.columns:
-        standardized_df["Volume"] = 1000
-
-    return standardized_df
+    return result_df
 
 
 def ensure_series(
@@ -387,54 +373,25 @@ def ensure_series(
     name: Optional[str] = None,
 ) -> pd.Series:
     """
-    データをpandas.Seriesに変換
+    データをpandas.Seriesに変換（簡素化版）
 
-    Args:
-        data: 入力データ（pandas.Series, list, numpy.ndarray, backtesting._Array等）
-        raise_on_error: エラー時に例外を発生させるかどうか
-        name: 作成するSeriesの名前
-
-    Returns:
-        pandas.Series
-
-    Raises:
-        DataConversionError: サポートされていないデータ型の場合（raise_on_error=Trueの時）
+    pandas標準機能を活用し、複雑な分岐を削除。
     """
     try:
-        # 既にpandas.Seriesの場合
+        # pandas標準のSeries()コンストラクタで大部分をカバー
         if isinstance(data, pd.Series):
-            if name is not None and name != data.name:
-                result = data.copy()
-                result.name = name
-                return result
-            return data
+            return data.rename(name) if name is not None else data
 
-        # list, numpy.ndarray（valuesより先にチェック）
-        if isinstance(data, (list, np.ndarray)):
-            return pd.Series(data, name=name)
-
-        # backtesting.pyの_Arrayオブジェクト（_data属性を持つ）
+        # backtesting._Arrayの特殊ケースのみ個別処理
         if hasattr(data, "_data"):
             return pd.Series(data._data, name=name)
 
-        # valuesアトリビュートを持つオブジェクト（pandas.DataFrame等、ただし辞書は除外）
-        if hasattr(data, "values") and not isinstance(data, dict):
-            return pd.Series(data.values, name=name)
-
-        # その他のデータ型（スカラー値等）
-        if np.isscalar(data):
-            return pd.Series([data], name=name)
-
-        # サポートされていないデータ型
-        if raise_on_error:
-            raise DataConversionError(f"サポートされていないデータ型です: {type(data)}")
-        else:
-            logger.warning(f"サポートされていないデータ型: {type(data)}")
-            return pd.Series([], name=name)
+        # その他は全てpandas標準で処理
+        return pd.Series(data, name=name)
 
     except Exception as e:
         if raise_on_error:
-            raise DataConversionError(f"pandas.Seriesへの変換に失敗しました: {e}")
+            raise DataConversionError(f"pandas.Seriesへの変換に失敗: {e}")
         else:
             logger.warning(f"pandas.Seriesへの変換に失敗: {e}")
             return pd.Series([], name=name)
@@ -446,37 +403,19 @@ def ensure_numeric_series(
     name: Optional[str] = None,
 ) -> pd.Series:
     """
-    データを数値型のpandas.Seriesに変換
+    データを数値型のpandas.Seriesに変換（簡素化版）
 
-    Args:
-        data: 入力データ
-        raise_on_error: エラー時に例外を発生させるかどうか
-        name: 作成するSeriesの名前
-
-    Returns:
-        数値型のpandas.Series
-
-    Raises:
-        DataConversionError: 変換に失敗した場合（raise_on_error=Trueの時）
+    pandas標準のto_numeric()を直接活用。
     """
     try:
         series = ensure_series(data, raise_on_error=raise_on_error, name=name)
-
-        # 数値型に変換
-        numeric_series = pd.to_numeric(
-            series, errors="coerce" if not raise_on_error else "raise"
-        )
-
-        if raise_on_error and numeric_series.isna().any():
-            raise DataConversionError("数値に変換できない値が含まれています")
-
-        return numeric_series
+        return pd.to_numeric(series, errors="raise" if raise_on_error else "coerce")
 
     except Exception as e:
         if raise_on_error:
-            raise DataConversionError(f"数値型pandas.Seriesへの変換に失敗しました: {e}")
+            raise DataConversionError(f"数値型変換に失敗: {e}")
         else:
-            logger.warning(f"数値型pandas.Seriesへの変換に失敗: {e}")
+            logger.warning(f"数値型変換に失敗: {e}")
             return pd.Series([], dtype=float, name=name)
 
 
@@ -485,47 +424,30 @@ def ensure_array(
     raise_on_error: bool = True,
 ) -> np.ndarray:
     """
-    データをnumpy.ndarrayに変換
+    データをnumpy.ndarrayに変換（簡素化版）
 
-    Args:
-        data: 入力データ
-        raise_on_error: エラー時に例外を発生させるかどうか
-
-    Returns:
-        numpy.ndarray
-
-    Raises:
-        DataConversionError: 変換に失敗した場合（raise_on_error=Trueの時）
+    numpy標準のarray()コンストラクタを活用。
     """
     try:
-        # 既にnumpy.ndarrayの場合
         if isinstance(data, np.ndarray):
             return data
 
-        # pandas.Seriesの場合
+        # pandas.Seriesは.valuesで効率的に変換
         if isinstance(data, pd.Series):
             return data.values
 
-        # listの場合
-        if isinstance(data, list):
-            return np.array(data)
-
-        # backtesting.pyの_Arrayオブジェクト（_data属性を持つ）
+        # backtesting._Arrayの特殊ケース
         if hasattr(data, "_data"):
             return np.array(data._data)
 
-        # valuesアトリビュートを持つオブジェクト
-        if hasattr(data, "values"):
-            return np.array(data.values)
-
-        # その他のデータ型
+        # その他は全てnumpy標準で処理
         return np.array(data)
 
     except Exception as e:
         if raise_on_error:
-            raise DataConversionError(f"numpy.ndarrayへの変換に失敗しました: {e}")
+            raise DataConversionError(f"numpy.ndarray変換に失敗: {e}")
         else:
-            logger.warning(f"numpy.ndarrayへの変換に失敗: {e}")
+            logger.warning(f"numpy.ndarray変換に失敗: {e}")
             return np.array([])
 
 
@@ -534,47 +456,30 @@ def ensure_list(
     raise_on_error: bool = True,
 ) -> list:
     """
-    データをlistに変換
+    データをlistに変換（簡素化版）
 
-    Args:
-        data: 入力データ
-        raise_on_error: エラー時に例外を発生させるかどうか
-
-    Returns:
-        list
-
-    Raises:
-        DataConversionError: 変換に失敗した場合（raise_on_error=Trueの時）
+    Python標準のlist()コンストラクタを活用。
     """
     try:
-        # 既にlistの場合
         if isinstance(data, list):
             return data
 
-        # pandas.Seriesの場合
-        if isinstance(data, pd.Series):
+        # pandas/numpyは.tolist()で効率的に変換
+        if hasattr(data, "tolist"):
             return data.tolist()
 
-        # numpy.ndarrayの場合
-        if isinstance(data, np.ndarray):
-            return data.tolist()
-
-        # backtesting.pyの_Arrayオブジェクト（_data属性を持つ）
+        # backtesting._Arrayの特殊ケース
         if hasattr(data, "_data"):
             return list(data._data)
 
-        # valuesアトリビュートを持つオブジェクト
-        if hasattr(data, "values"):
-            return list(data.values)
-
-        # その他のデータ型
+        # その他は全てPython標準で処理
         return list(data)
 
     except Exception as e:
         if raise_on_error:
-            raise DataConversionError(f"listへの変換に失敗しました: {e}")
+            raise DataConversionError(f"list変換に失敗: {e}")
         else:
-            logger.warning(f"listへの変換に失敗: {e}")
+            logger.warning(f"list変換に失敗: {e}")
             return []
 
 

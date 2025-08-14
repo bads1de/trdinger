@@ -315,48 +315,26 @@ def normalize_data_for_trig(data: Union[np.ndarray, pd.Series]) -> np.ndarray:
 
 def ensure_series_minimal_conversion(data: Union[np.ndarray, pd.Series]) -> pd.Series:
     """
-    最小限の型変換でpandas.Seriesを確保（型変換最小化版）
+    最小限の型変換でpandas.Seriesを確保（簡素化版）
 
-    Args:
-        data: 入力データ
-
-    Returns:
-        pandas.Series
-
-    Note:
-        既にpandas.Seriesの場合は変換せずそのまま返します。
-        numpy配列の場合のみpandas.Seriesに変換します。
+    data_conversion.pyのensure_seriesと統一。
     """
-    if isinstance(data, pd.Series):
-        return data
-    elif isinstance(data, np.ndarray):
-        return pd.Series(data, dtype=np.float64)
-    else:
-        # その他の型（list等）の場合
-        return pd.Series(data, dtype=np.float64)
+    # data_conversion.pyのensure_seriesを使用
+    from ...utils.data_conversion import ensure_series
+
+    return ensure_series(data, raise_on_error=True)
 
 
 def ensure_numpy_minimal_conversion(data: Union[np.ndarray, pd.Series]) -> np.ndarray:
     """
-    最小限の型変換でnumpy配列を確保（型変換最小化版）
+    最小限の型変換でnumpy配列を確保（簡素化版）
 
-    Args:
-        data: 入力データ
-
-    Returns:
-        numpy配列
-
-    Note:
-        既にnumpy配列の場合は変換せずそのまま返します。
-        pandas.Seriesの場合のみnumpy配列に変換します。
+    data_conversion.pyのensure_arrayと統一。
     """
-    if isinstance(data, np.ndarray):
-        return data
-    elif isinstance(data, pd.Series):
-        return data.to_numpy()
-    else:
-        # その他の型（list等）の場合
-        return np.asarray(data, dtype=np.float64)
+    # data_conversion.pyのensure_arrayを使用
+    from ...utils.data_conversion import ensure_array
+
+    return ensure_array(data, raise_on_error=True)
 
 
 def format_indicator_result(
