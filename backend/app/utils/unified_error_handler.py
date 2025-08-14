@@ -119,9 +119,9 @@ class UnifiedErrorHandler:
             統一エラーレスポンス辞書
         """
         # delegate to shared response util to ensure consistent format
-        from .response import make_error_response
+        from .response import error_response
 
-        return make_error_response(
+        return error_response(
             message=message, error_code=error_code, details=details, context=context
         )
 

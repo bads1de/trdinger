@@ -17,7 +17,7 @@ from app.services.ml.ml_training_service import MLTrainingService
 from app.services.ml.orchestration.background_task_manager import (
     background_task_manager,
 )
-from app.utils.api_utils import APIResponseHelper
+from app.utils.response import api_response
 from app.utils.unified_error_handler import safe_ml_operation
 from database.repositories.fear_greed_repository import FearGreedIndexRepository
 from database.repositories.funding_rate_repository import FundingRateRepository
@@ -143,7 +143,7 @@ class MLTrainingOrchestrationService:
             # バックグラウンドタスクでトレーニング開始
             background_tasks.add_task(self._train_ml_model_background, config, db)
 
-            return APIResponseHelper.api_response(
+            return api_response(
                 success=True,
                 message="MLトレーニングを開始しました",
                 data={
@@ -178,7 +178,7 @@ class MLTrainingOrchestrationService:
             ml_orchestrator = MLOrchestrator()
             model_status = ml_orchestrator.get_model_status()
 
-            return APIResponseHelper.api_response(
+            return api_response(
                 success=True,
                 message="MLモデル情報を取得しました",
                 data={
@@ -220,7 +220,7 @@ class MLTrainingOrchestrationService:
                 }
             )
 
-            return APIResponseHelper.api_response(
+            return api_response(
                 success=True, message="MLトレーニングを停止しました"
             )
 

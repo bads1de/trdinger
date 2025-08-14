@@ -16,7 +16,7 @@ from app.services.ml.feature_engineering.automl_feature_analyzer import (
     AutoMLFeatureAnalyzer,
 )
 from app.services.ml.model_manager import model_manager
-from app.utils.api_utils import APIResponseHelper
+from app.utils.response import api_response
 
 logger = logging.getLogger(__name__)
 
@@ -140,7 +140,7 @@ class MLManagementOrchestrationService:
         try:
             os.remove(target_model["path"])
             logger.info(f"モデル削除完了: {decoded_model_id} -> {target_model['path']}")
-            return APIResponseHelper.api_response(
+            return api_response(
                 success=True, message="モデルが削除されました"
             )
         except Exception as e:

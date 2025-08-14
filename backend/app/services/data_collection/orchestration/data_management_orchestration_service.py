@@ -12,7 +12,7 @@ from typing import Any, Dict, Optional
 
 from sqlalchemy.orm import Session
 
-from app.utils.api_utils import APIResponseHelper
+from app.utils.response import api_response, error_response
 from database.connection import SessionLocal
 from database.models import (
     FearGreedIndexData,
@@ -128,7 +128,7 @@ class DataManagementOrchestrationService:
             )
 
             logger.info(f"全データリセット完了: {deleted_counts}")
-            return APIResponseHelper.api_response(
+            return api_response(
                 success=success,
                 message=message,
                 data=response_data,
@@ -136,14 +136,12 @@ class DataManagementOrchestrationService:
 
         except Exception as e:
             logger.error(f"全データリセットエラー: {e}", exc_info=True)
-            return APIResponseHelper.api_response(
-                success=False,
+            return error_response(
                 message=f"全データリセット中にエラーが発生しました: {str(e)}",
-                data={
+                details={
                     "deleted_counts": {},
                     "total_deleted": 0,
                     "errors": [str(e)],
-                    "timestamp": datetime.now().isoformat(),
                 },
             )
 
@@ -175,7 +173,7 @@ class DataManagementOrchestrationService:
             message = f"OHLCVデータを{deleted_count}件削除しました"
 
             logger.info(f"OHLCVデータリセット完了: {deleted_count}件")
-            return APIResponseHelper.api_response(
+            return api_response(
                 success=True,
                 message=message,
                 data=response_data,
@@ -183,14 +181,12 @@ class DataManagementOrchestrationService:
 
         except Exception as e:
             logger.error(f"OHLCVデータリセットエラー: {e}", exc_info=True)
-            return APIResponseHelper.api_response(
-                success=False,
+            return error_response(
                 message=f"OHLCVデータリセット中にエラーが発生しました: {str(e)}",
-                data={
+                details={
                     "deleted_count": 0,
                     "data_type": "ohlcv",
                     "error": str(e),
-                    "timestamp": datetime.now().isoformat(),
                 },
             )
 
@@ -222,7 +218,7 @@ class DataManagementOrchestrationService:
             message = f"ファンディングレートデータを{deleted_count}件削除しました"
 
             logger.info(f"ファンディングレートデータリセット完了: {deleted_count}件")
-            return APIResponseHelper.api_response(
+            return api_response(
                 success=True,
                 message=message,
                 data=response_data,
@@ -232,14 +228,12 @@ class DataManagementOrchestrationService:
             logger.error(
                 f"ファンディングレートデータリセットエラー: {e}", exc_info=True
             )
-            return APIResponseHelper.api_response(
-                success=False,
+            return error_response(
                 message=f"ファンディングレートデータリセット中にエラーが発生しました: {str(e)}",
-                data={
+                details={
                     "deleted_count": 0,
                     "data_type": "funding_rates",
                     "error": str(e),
-                    "timestamp": datetime.now().isoformat(),
                 },
             )
 
@@ -271,7 +265,7 @@ class DataManagementOrchestrationService:
             message = f"オープンインタレストデータを{deleted_count}件削除しました"
 
             logger.info(f"オープンインタレストデータリセット完了: {deleted_count}件")
-            return APIResponseHelper.api_response(
+            return api_response(
                 success=True,
                 message=message,
                 data=response_data,
@@ -281,14 +275,12 @@ class DataManagementOrchestrationService:
             logger.error(
                 f"オープンインタレストデータリセットエラー: {e}", exc_info=True
             )
-            return APIResponseHelper.api_response(
-                success=False,
+            return error_response(
                 message=f"オープンインタレストデータリセット中にエラーが発生しました: {str(e)}",
-                data={
+                details={
                     "deleted_count": 0,
                     "data_type": "open_interest",
                     "error": str(e),
-                    "timestamp": datetime.now().isoformat(),
                 },
             )
 
@@ -350,7 +342,7 @@ class DataManagementOrchestrationService:
             )
 
             logger.info(f"シンボル '{symbol}' データリセット完了: {deleted_counts}")
-            return APIResponseHelper.api_response(
+            return api_response(
                 success=success,
                 message=message,
                 data={
@@ -358,20 +350,17 @@ class DataManagementOrchestrationService:
                     "deleted_counts": deleted_counts,
                     "total_deleted": total_deleted,
                     "errors": errors,
-                    "timestamp": datetime.now().isoformat(),
                 },
             )
         except Exception as e:
             logger.error(f"シンボル別データリセットエラー: {e}", exc_info=True)
-            return APIResponseHelper.api_response(
-                success=False,
+            return error_response(
                 message=f"シンボル別データリセット中にエラーが発生しました: {str(e)}",
-                data={
+                details={
                     "symbol": symbol,
                     "deleted_counts": {},
                     "total_deleted": 0,
                     "errors": [str(e)],
-                    "timestamp": datetime.now().isoformat(),
                 },
             )
 
@@ -479,15 +468,14 @@ class DataManagementOrchestrationService:
                     },
                 }
 
-                return APIResponseHelper.api_response(
+                return api_response(
                     success=True,
                     data=response_data,
                     message="現在のデータ状況を取得しました",
                 )
         except Exception as e:
             logger.error(f"データステータス取得エラー: {e}", exc_info=True)
-            return APIResponseHelper.api_response(
-                success=False,
+            return error_response(
                 message=f"データステータス取得中にエラーが発生しました: {str(e)}",
-                data={"error": str(e)},
+                details={"error": str(e)},
             )

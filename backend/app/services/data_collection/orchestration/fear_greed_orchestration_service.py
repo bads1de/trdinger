@@ -14,7 +14,7 @@ from sqlalchemy.orm import Session
 from app.services.data_collection.fear_greed.fear_greed_service import (
     FearGreedIndexService,
 )
-from app.utils.api_utils import APIResponseHelper
+from app.utils.response import api_response
 from database.repositories.fear_greed_repository import FearGreedIndexRepository
 
 logger = logging.getLogger(__name__)
@@ -54,7 +54,7 @@ class FearGreedOrchestrationService:
                 ),
                 "current_time": datetime.now(timezone.utc).isoformat(),
             }
-            return APIResponseHelper.api_response(
+            return api_response(
                 success=True,
                 message="Fear & Greed Index データ状態を取得しました",
                 data=status_data,
@@ -75,7 +75,7 @@ class FearGreedOrchestrationService:
                 )
 
             if result["success"]:
-                return APIResponseHelper.api_response(
+                return api_response(
                     success=True,
                     message=result.get(
                         "message",
@@ -111,7 +111,7 @@ class FearGreedOrchestrationService:
             )
 
             if result["success"]:
-                return APIResponseHelper.api_response(
+                return api_response(
                     success=True,
                     message=result.get(
                         "message",
@@ -146,7 +146,7 @@ class FearGreedOrchestrationService:
             result["existing_data_range"] = data_range
 
             if result["success"]:
-                return APIResponseHelper.api_response(
+                return api_response(
                     success=True,
                     message=result.get(
                         "message",
@@ -182,7 +182,7 @@ class FearGreedOrchestrationService:
                 "days_kept": days_to_keep,
             }
 
-            return APIResponseHelper.api_response(
+            return api_response(
                 success=True,
                 message=f"{deleted_count}件の古いデータを削除しました。",
                 data=result,
@@ -231,7 +231,7 @@ class FearGreedOrchestrationService:
 
         result_data = [item.to_dict() for item in data]
 
-        return APIResponseHelper.api_response(
+        return api_response(
             success=True,
             message=f"Fear & Greed Index データを {len(result_data)} 件取得しました",
             data={
@@ -253,7 +253,7 @@ class FearGreedOrchestrationService:
 
         result_data = [item.to_dict() for item in data]
 
-        return APIResponseHelper.api_response(
+        return api_response(
             success=True,
             message=f"最新のFear & Greed Index データを {len(result_data)} 件取得しました",
             data={

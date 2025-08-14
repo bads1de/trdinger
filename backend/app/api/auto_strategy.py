@@ -15,7 +15,7 @@ from app.api.dependencies import (
 )
 from app.services.auto_strategy import AutoStrategyService
 from app.services.auto_strategy.models.ga_config import GAConfig
-from app.utils.api_utils import APIResponseHelper
+from app.utils.response import api_response, error_response
 from app.utils.unified_error_handler import UnifiedErrorHandler
 
 logger = logging.getLogger(__name__)
@@ -165,7 +165,7 @@ async def generate_strategy(
             )
             logger.info(f"戦略生成タスクをバックグラウンドで開始: {experiment_id}")
 
-            return APIResponseHelper.api_response(
+            return api_response(
                 success=True,
                 message="GA戦略生成を開始しました",
                 data={"experiment_id": experiment_id},
@@ -173,10 +173,9 @@ async def generate_strategy(
         except Exception as e:
             logger.error(f"戦略生成エラー: {e}", exc_info=True)
             # 詳細なエラー情報を返す（デバッグ用）
-            return APIResponseHelper.api_response(
-                success=False,
+            return error_response(
                 message=f"戦略生成に失敗しました: {str(e)}",
-                data={"error_type": type(e).__name__, "error_details": str(e)},
+                details={"error_type": type(e).__name__, "error_details": str(e)},
             )
 
     return await UnifiedErrorHandler.safe_execute_async(_generate_strategy)

@@ -12,7 +12,7 @@ from fastapi import BackgroundTasks
 from sqlalchemy.orm import Session
 
 from app.config.unified_config import unified_config
-from app.utils.api_utils import APIResponseHelper
+from app.utils.response import api_response
 from database.repositories.funding_rate_repository import FundingRateRepository
 from database.repositories.ohlcv_repository import OHLCVRepository
 from database.repositories.open_interest_repository import OpenInterestRepository
@@ -90,7 +90,7 @@ class DataCollectionOrchestrationService:
                 logger.info(
                     f"{normalized_symbol} {timeframe} のデータは既にデータベースに存在します。"
                 )
-                return APIResponseHelper.api_response(
+                return api_response(
                     success=True,
                     message=f"{normalized_symbol} {timeframe} のデータは既に存在します。新規収集は行いません。",
                     status="exists",
@@ -104,7 +104,7 @@ class DataCollectionOrchestrationService:
                 db,
             )
 
-            return APIResponseHelper.api_response(
+            return api_response(
                 success=True,
                 message=f"{normalized_symbol} {timeframe} の履歴データ収集を開始しました",
                 status="started",
@@ -185,7 +185,7 @@ class DataCollectionOrchestrationService:
                     "error": str(e),
                 }
 
-            return APIResponseHelper.api_response(
+            return api_response(
                 success=True,
                 message=f"{symbol} の一括差分更新が完了しました",
                 data=result,
@@ -217,7 +217,7 @@ class DataCollectionOrchestrationService:
                     self._collect_historical_background, "BTC/USDT:USDT", timeframe, db
                 )
 
-            return APIResponseHelper.api_response(
+            return api_response(
                 success=True,
                 message="ビットコインの全時間軸データ収集を開始しました",
                 data={"timeframes": timeframes},
@@ -267,7 +267,7 @@ class DataCollectionOrchestrationService:
                             db,
                         )
 
-            return APIResponseHelper.api_response(
+            return api_response(
                 success=True,
                 message=f"一括履歴データ収集を開始しました（{len(collection_tasks)}件のタスク）",
                 data={
@@ -329,7 +329,7 @@ class DataCollectionOrchestrationService:
                 )
                 logger.info(f"自動フェッチを開始: {normalized_symbol} {timeframe}")
 
-                return APIResponseHelper.api_response(
+                return api_response(
                     success=True,
                     message=f"{normalized_symbol} {timeframe} のデータが存在しないため、自動収集を開始しました。",
                     status="auto_fetch_started",
@@ -342,7 +342,7 @@ class DataCollectionOrchestrationService:
                 )
             else:
                 # フェッチを提案
-                return APIResponseHelper.api_response(
+                return api_response(
                     success=True,
                     message=f"{normalized_symbol} {timeframe} のデータが存在しません。新規収集が必要です。",
                     status="no_data",
@@ -362,7 +362,7 @@ class DataCollectionOrchestrationService:
         latest_timestamp = repository.get_latest_timestamp(normalized_symbol, timeframe)
         oldest_timestamp = repository.get_oldest_timestamp(normalized_symbol, timeframe)
 
-        return APIResponseHelper.api_response(
+        return api_response(
             success=True,
             message="データ収集状況を取得しました。",
             data={
@@ -417,7 +417,7 @@ class DataCollectionOrchestrationService:
                             db,
                         )
 
-            return APIResponseHelper.api_response(
+            return api_response(
                 success=True,
                 message=f"全データ一括収集を開始しました（{len(collection_tasks)}件のタスク）",
                 data={

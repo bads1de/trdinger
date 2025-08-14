@@ -321,9 +321,9 @@ class StrategyIntegrationService:
 
             logger.info(f"戦略取得完了: {len(result['strategies'])} 件")
 
-            from app.utils.api_utils import APIResponseHelper
+            from app.utils.response import api_response
 
-            return APIResponseHelper.api_response(
+            return api_response(
                 success=True,
                 data={
                     "strategies": result["strategies"],

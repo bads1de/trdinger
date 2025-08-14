@@ -11,7 +11,7 @@ from typing import Any, Dict, Optional
 from sqlalchemy.orm import Session
 
 from app.services.backtest.backtest_service import BacktestService
-from app.utils.api_utils import APIResponseHelper
+from app.utils.response import api_response
 from database.repositories.backtest_result_repository import BacktestResultRepository
 from database.repositories.ga_experiment_repository import GAExperimentRepository
 from database.repositories.generated_strategy_repository import (
@@ -124,7 +124,7 @@ class BacktestOrchestrationService:
                     "status_code": 404,
                 }
 
-            return APIResponseHelper.api_response(
+            return api_response(
                 success=True, message="バックテスト結果を削除しました"
             )
 
@@ -157,7 +157,7 @@ class BacktestOrchestrationService:
             # 3. バックテスト結果を削除
             backtest_count = backtest_repo.delete_all_backtest_results()
 
-            return APIResponseHelper.api_response(
+            return api_response(
                 success=True,
                 message="すべてのバックテスト関連データを削除しました",
                 data={

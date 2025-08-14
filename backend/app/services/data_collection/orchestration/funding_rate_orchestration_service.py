@@ -12,7 +12,7 @@ from typing import Any, Dict, Optional
 
 from sqlalchemy.orm import Session
 
-from app.utils.api_utils import APIResponseHelper
+from app.utils.response import api_response, error_response
 from database.connection import get_db
 from database.repositories.funding_rate_repository import FundingRateRepository
 
@@ -70,10 +70,9 @@ class FundingRateOrchestrationService:
 
         except Exception as e:
             logger.error(f"ファンディングレートデータ収集エラー: {e}", exc_info=True)
-            return APIResponseHelper.api_response(
-                success=False,
+            return error_response(
                 message=f"ファンディングレートデータ収集中にエラーが発生しました: {str(e)}",
-                data={
+                details={
                     "saved_count": 0,
                     "symbol": symbol,
                     "error": str(e),
@@ -115,7 +114,7 @@ class FundingRateOrchestrationService:
         )
 
         if result.get("success", False):
-            return APIResponseHelper.api_response(
+            return api_response(
                 success=True,
                 message=f"{result['saved_count']}件のファンディングレートデータを保存しました",
                 data={
@@ -126,10 +125,9 @@ class FundingRateOrchestrationService:
                 },
             )
         else:
-            return APIResponseHelper.api_response(
-                success=False,
+            return error_response(
                 message=f"ファンディングレートデータ収集に失敗しました: {result.get('error', 'Unknown error')}",
-                data={
+                details={
                     "saved_count": result.get("saved_count", 0),
                     "symbol": symbol,
                     "error": result.get("error"),
@@ -175,10 +173,9 @@ class FundingRateOrchestrationService:
 
         except Exception as e:
             logger.error(f"ファンディングレートデータ取得エラー: {e}", exc_info=True)
-            return APIResponseHelper.api_response(
-                success=False,
+            return error_response(
                 message=f"ファンディングレートデータ取得中にエラーが発生しました: {str(e)}",
-                data={
+                details={
                     "funding_rates": [],
                     "count": 0,
                     "symbol": symbol,
@@ -276,7 +273,7 @@ class FundingRateOrchestrationService:
                 }
             )
 
-        return APIResponseHelper.api_response(
+        return api_response(
             success=True,
             message=f"ファンディングレートデータを{len(funding_rates)}件取得しました",
             data={
@@ -315,10 +312,9 @@ class FundingRateOrchestrationService:
             logger.error(
                 f"ファンディングレートデータ状態取得エラー: {e}", exc_info=True
             )
-            return APIResponseHelper.api_response(
-                success=False,
+            return error_response(
                 message=f"データ状態取得中にエラーが発生しました: {str(e)}",
-                data={"error": str(e)},
+                details={"error": str(e)},
             )
 
     async def _get_funding_rate_status_with_session(
@@ -374,7 +370,7 @@ class FundingRateOrchestrationService:
                 "funding_timestamp": getattr(oldest_record, "funding_timestamp", None)
             }
 
-        return APIResponseHelper.api_response(
+        return api_response(
             success=True,
             message="ファンディングレートデータの状態を取得しました",
             data={
@@ -460,7 +456,7 @@ class FundingRateOrchestrationService:
             f"ファンディングレート一括収集完了: {successful_symbols_count}/{len(symbols)}成功"
         )
 
-        return APIResponseHelper.api_response(
+        return api_response(
             data={
                 "total_symbols": len(symbols),
                 "successful_symbols": successful_symbols_count,

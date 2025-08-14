@@ -8,7 +8,7 @@ from typing import Any, Dict, Optional
 
 from sqlalchemy.orm import Session
 
-from app.utils.api_utils import APIResponseHelper
+from app.utils.response import api_response
 from app.utils.data_conversion import OHLCVDataConverter
 from database.repositories.ohlcv_repository import OHLCVRepository
 
@@ -59,7 +59,7 @@ class MarketDataOrchestrationService:
 
         logger.info(f"OHLCVデータ取得成功: {len(ohlcv_data)}件")
 
-        return APIResponseHelper.api_response(
+        return api_response(
             success=True,
             data={"ohlcv_data": ohlcv_data, "symbol": symbol, "timeframe": timeframe},
             message=f"{symbol} の {timeframe} OHLCVデータを取得しました",

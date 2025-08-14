@@ -12,7 +12,7 @@ from typing import Any, Dict, List, Optional
 
 from sqlalchemy.orm import Session
 
-from app.utils.api_utils import APIResponseHelper
+from app.utils.response import api_response, error_response
 from database.repositories.open_interest_repository import OpenInterestRepository
 
 from ..bybit.open_interest_service import BybitOpenInterestService
@@ -76,7 +76,7 @@ class OpenInterestOrchestrationService:
             )
 
             if result.get("success", False):
-                return APIResponseHelper.api_response(
+                return api_response(
                     success=True,
                     message=f"{result['saved_count']}件のオープンインタレストデータを保存しました",
                     data={
@@ -87,10 +87,9 @@ class OpenInterestOrchestrationService:
                     },
                 )
             else:
-                return APIResponseHelper.api_response(
-                    success=False,
+                return error_response(
                     message=f"オープンインタレストデータ収集に失敗しました: {result.get('error', 'Unknown error')}",
-                    data={
+                    details={
                         "saved_count": result.get("saved_count", 0),
                         "symbol": symbol,
                         "error": result.get("error"),
@@ -99,10 +98,9 @@ class OpenInterestOrchestrationService:
 
         except Exception as e:
             logger.error(f"オープンインタレストデータ収集エラー: {e}", exc_info=True)
-            return APIResponseHelper.api_response(
-                success=False,
+            return error_response(
                 message=f"オープンインタレストデータ収集中にエラーが発生しました: {str(e)}",
-                data={
+                details={
                     "saved_count": 0,
                     "symbol": symbol,
                     "error": str(e),
@@ -163,7 +161,7 @@ class OpenInterestOrchestrationService:
             ]
 
             logger.info(f"オープンインタレストデータ取得成功: {len(data)}件")
-            return APIResponseHelper.api_response(
+            return api_response(
                 data={
                     "symbol": normalized_symbol,
                     "count": len(data),
@@ -174,10 +172,9 @@ class OpenInterestOrchestrationService:
             )
         except Exception as e:
             logger.error(f"オープンインタレストデータ取得エラー: {e}", exc_info=True)
-            return APIResponseHelper.api_response(
-                success=False,
+            return error_response(
                 message=f"オープンインタレストデータ取得中にエラーが発生しました: {str(e)}",
-                data={
+                details={
                     "symbol": symbol,
                     "count": 0,
                     "open_interest": [],
@@ -242,7 +239,7 @@ class OpenInterestOrchestrationService:
                 f"オープンインタレスト一括収集完了: {successful_symbols}/{len(symbols)}成功"
             )
 
-            return APIResponseHelper.api_response(
+            return api_response(
                 success=True,
                 message=f"オープンインタレスト一括収集完了: {successful_symbols}/{len(symbols)}成功",
                 data={
@@ -256,10 +253,9 @@ class OpenInterestOrchestrationService:
 
         except Exception as e:
             logger.error(f"オープンインタレスト一括収集エラー: {e}", exc_info=True)
-            return APIResponseHelper.api_response(
-                success=False,
+            return error_response(
                 message=f"一括収集中にエラーが発生しました: {str(e)}",
-                data={
+                details={
                     "total_saved": 0,
                     "successful_symbols": 0,
                     "failed_symbols": [],

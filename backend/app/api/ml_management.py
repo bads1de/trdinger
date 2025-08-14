@@ -14,7 +14,7 @@ from app.services.backtest.backtest_data_service import BacktestDataService
 from app.services.ml.orchestration.ml_management_orchestration_service import (
     MLManagementOrchestrationService,
 )
-from app.utils.api_utils import APIResponseHelper
+from app.utils.response import api_response, error_response
 from app.utils.unified_error_handler import UnifiedErrorHandler
 from database.connection import get_db
 from database.repositories.funding_rate_repository import FundingRateRepository
@@ -61,6 +61,7 @@ async def delete_all_models(
     Args:
         ml_service: ML管理サービス（依存性注入）
     """
+
     async def _delete_all_models():
         return await ml_service.delete_all_models()
 
@@ -80,6 +81,7 @@ async def delete_all_models_legacy(
     Args:
         ml_service: ML管理サービス（依存性注入）
     """
+
     async def _delete_all_models():
         return await ml_service.delete_all_models()
 
@@ -264,15 +266,13 @@ async def update_ml_config(
         result = await ml_service.update_ml_config(config_data)
 
         if result["success"]:
-            return APIResponseHelper.api_response(
+            return api_response(
                 success=True,
                 message=result["message"],
                 data=result.get("updated_config"),
             )
         else:
-            return APIResponseHelper.api_response(
-                success=False, message=result["message"]
-            )
+            return error_response(message=result["message"])
 
     return await UnifiedErrorHandler.safe_execute_async(_update_ml_config)
 
@@ -295,13 +295,11 @@ async def reset_ml_config(
         result = await ml_service.reset_ml_config()
 
         if result["success"]:
-            return APIResponseHelper.api_response(
+            return api_response(
                 success=True, message=result["message"], data=result.get("config")
             )
         else:
-            return APIResponseHelper.api_response(
-                success=False, message=result["message"]
-            )
+            return error_response(message=result["message"])
 
     return await UnifiedErrorHandler.safe_execute_async(_reset_ml_config)
 
