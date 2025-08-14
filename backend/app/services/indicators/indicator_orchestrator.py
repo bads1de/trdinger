@@ -121,6 +121,7 @@ class TechnicalIndicatorService:
         # 特別なマッピング
         key_mappings = {
             "open_data": "open",
+            "open_": "open",
             "data0": "high",
             "data1": "low",
         }
