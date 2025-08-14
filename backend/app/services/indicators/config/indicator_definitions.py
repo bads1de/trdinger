@@ -2029,12 +2029,6 @@ pvo_config.add_parameter(
     ParameterConfig(name="slowperiod", default_value=26, min_value=2, max_value=200)
 )
 
-pvo_config.add_parameter(
-    ParameterConfig(name="signal", default_value=9, min_value=2, max_value=100)
-)
-indicator_registry.register(pvo_config)
-
-
 cmf_cfg = IndicatorConfig(
     indicator_name="CMF",
     adapter_function=VolumeIndicators.cmf,

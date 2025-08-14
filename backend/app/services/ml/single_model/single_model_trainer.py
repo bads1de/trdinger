@@ -126,57 +126,57 @@ class SingleModelTrainer(BaseMLTrainer):
         """指定されたモデルタイプのインスタンスを作成"""
         try:
             if self.model_type == "lightgbm":
-                from ..models.lightgbm_wrapper import LightGBMModel
+                from ..models.lightgbm import LightGBMModel
 
                 return LightGBMModel(automl_config=self.automl_config)
 
             elif self.model_type == "xgboost":
-                from ..models.xgboost_wrapper import XGBoostModel
+                from ..models.xgboost import XGBoostModel
 
                 return XGBoostModel(automl_config=self.automl_config)
 
             elif self.model_type == "catboost":
-                from ..models.catboost_wrapper import CatBoostModel
+                from ..models.catboost import CatBoostModel
 
                 return CatBoostModel(automl_config=self.automl_config)
 
             elif self.model_type == "tabnet":
-                from ..models.tabnet_wrapper import TabNetModel
+                from ..models.tabnet import TabNetModel
 
                 return TabNetModel(automl_config=self.automl_config)
 
             elif self.model_type == "randomforest":
-                from ..models.randomforest_wrapper import RandomForestModel
+                from ..models.randomforest import RandomForestModel
 
                 return RandomForestModel(automl_config=self.automl_config)
 
             elif self.model_type == "extratrees":
-                from ..models.extratrees_wrapper import ExtraTreesModel
+                from ..models.extratrees import ExtraTreesModel
 
                 return ExtraTreesModel(automl_config=self.automl_config)
 
             elif self.model_type == "gradientboosting":
-                from ..models.gradientboosting_wrapper import GradientBoostingModel
+                from ..models.gradientboosting import GradientBoostingModel
 
                 return GradientBoostingModel(automl_config=self.automl_config)
 
             elif self.model_type == "adaboost":
-                from ..models.adaboost_wrapper import AdaBoostModel
+                from ..models.adaboost import AdaBoostModel
 
                 return AdaBoostModel(automl_config=self.automl_config)
 
             elif self.model_type == "ridge":
-                from ..models.ridge_wrapper import RidgeModel
+                from ..models.ridge import RidgeModel
 
                 return RidgeModel(automl_config=self.automl_config)
 
             elif self.model_type == "naivebayes":
-                from ..models.naivebayes_wrapper import NaiveBayesModel
+                from ..models.naivebayes import NaiveBayesModel
 
                 return NaiveBayesModel(automl_config=self.automl_config)
 
             elif self.model_type == "knn":
-                from ..models.knn_wrapper import KNNModel
+                from ..models.knn import KNNModel
 
                 return KNNModel(automl_config=self.automl_config)
 
