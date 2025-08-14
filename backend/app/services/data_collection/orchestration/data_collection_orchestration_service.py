@@ -432,19 +432,7 @@ class DataCollectionOrchestrationService:
             logger.error("全データ一括収集開始エラー", e)
             raise
 
-    def _normalize_symbol(self, symbol: str) -> str:
-        """
-        シンボルを正規化
-
-        Args:
-            symbol: 元のシンボル
-
-        Returns:
-            正規化されたシンボル
-        """
-        if ":" not in symbol:
-            return f"{symbol}:USDT"
-        return symbol
+    
 
     async def _collect_historical_background(
         self, symbol: str, timeframe: str, db: Session

@@ -123,7 +123,7 @@ for i, indicator_name in enumerate(sorted(all_indicators)):
             strategy_class = factory.create_strategy_class(strategy_gene)
             print(f"戦略クラス作成成功")
         except Exception as e:
-            print(f"❌ 戦略クラス作成失敗: {e}")
+            print(f"[ERROR] 戦略クラス作成失敗: {e}")
             results["strategy_creation_failed"].append({
                 "indicator": indicator_name,
                 "error": str(e)
@@ -149,21 +149,21 @@ for i, indicator_name in enumerate(sorted(all_indicators)):
                 indicator_registered = hasattr(strategy_instance, indicator_name)
             
             if indicator_registered:
-                print(f"✅ 指標登録成功")
+                print(f"[OK] 指標登録成功")
                 results["success"].append({
                     "indicator": indicator_name,
                     "result": result,
                     "indicator_registered": True
                 })
             else:
-                print(f"⚠️ 指標登録失敗")
+                print(f"[WARN] 指標登録失敗")
                 results["indicator_registration_failed"].append({
                     "indicator": indicator_name,
                     "result": result
                 })
                 
         except Exception as e:
-            print(f"❌ バックテスト実行失敗: {e}")
+            print(f"[ERROR] バックテスト実行失敗: {e}")
             results["backtest_failed"].append({
                 "indicator": indicator_name,
                 "error": str(e)
@@ -171,7 +171,7 @@ for i, indicator_name in enumerate(sorted(all_indicators)):
             continue
             
     except Exception as e:
-        print(f"❌ 全体的なエラー: {e}")
+        print(f"[ERROR] 全体的なエラー: {e}")
         results["failed"].append({
             "indicator": indicator_name,
             "error": str(e)
@@ -190,27 +190,27 @@ total_tested = len(results['success']) + len(results['indicator_registration_fai
 print(f"テスト総数: {total_tested}/{len(all_indicators)}")
 
 if results['success']:
-    print(f"\n✅ 完全成功した指標 ({len(results['success'])}個):")
+    print(f"\n[OK] 完全成功した指標 ({len(results['success'])}個):")
     for item in results['success']:
         print(f"  - {item['indicator']}")
 
 if results['indicator_registration_failed']:
-    print(f"\n⚠️ 指標登録失敗 ({len(results['indicator_registration_failed'])}個):")
+    print(f"\n[WARN] 指標登録失敗 ({len(results['indicator_registration_failed'])}個):")
     for item in results['indicator_registration_failed']:
         print(f"  - {item['indicator']}")
 
 if results['strategy_creation_failed']:
-    print(f"\n❌ 戦略作成失敗 ({len(results['strategy_creation_failed'])}個):")
+    print(f"\n[ERROR] 戦略作成失敗 ({len(results['strategy_creation_failed'])}個):")
     for item in results['strategy_creation_failed']:
         print(f"  - {item['indicator']}: {item['error']}")
 
 if results['backtest_failed']:
-    print(f"\n❌ バックテスト失敗 ({len(results['backtest_failed'])}個):")
+    print(f"\n[ERROR] バックテスト失敗 ({len(results['backtest_failed'])}個):")
     for item in results['backtest_failed']:
         print(f"  - {item['indicator']}: {item['error']}")
 
 if results['failed']:
-    print(f"\n❌ その他失敗 ({len(results['failed'])}個):")
+    print(f"\n[ERROR] その他失敗 ({len(results['failed'])}個):")
     for item in results['failed']:
         print(f"  - {item['indicator']}: {item['error']}")
 

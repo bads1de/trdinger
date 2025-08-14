@@ -71,14 +71,6 @@ class GAGenerationResponse(BaseModel):
     timestamp: str
 
 
-class GAProgressResponse(BaseModel):
-    """GA進捗レスポンス"""
-
-    success: bool
-    progress: Optional[Dict[str, Any]] = None
-    message: str
-
-
 class GAResultResponse(BaseModel):
     """GA結果レスポンス"""
 
@@ -86,16 +78,6 @@ class GAResultResponse(BaseModel):
     message: str
     data: Optional[Dict[str, Any]] = None
     timestamp: str
-
-
-class MultiObjectiveResultResponse(BaseModel):
-    """多目的最適化GA結果レスポンス"""
-
-    success: bool
-    result: Optional[Dict[str, Any]] = None
-    pareto_front: Optional[List[Dict[str, Any]]] = None
-    objectives: Optional[List[str]] = None
-    message: str
 
 
 class StrategyTestRequest(BaseModel):
