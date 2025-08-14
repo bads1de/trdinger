@@ -384,8 +384,8 @@ class TestSchemaBasedValidation:
         assert len(cleaned_df) <= len(invalid_ohlcv_data)
 
 
-class TestBackwardCompatibility:
-    """後方互換性テスト"""
+class TestModernAPIUsage:
+    """現代的なAPI使用テスト"""
 
     @pytest.fixture
     def sample_data(self):
@@ -398,36 +398,52 @@ class TestBackwardCompatibility:
             }
         )
 
-    def test_data_processor_deprecation_warnings(self, sample_data):
-        """DataProcessorの非推奨警告テスト"""
+    def test_optimized_pipeline_creation(self, sample_data):
+        """最適化されたパイプライン作成テスト"""
         processor = DataProcessor()
 
-        # 非推奨メソッドを使用して警告が出ることを確認
-        with warnings.catch_warnings(record=True) as w:
-            warnings.simplefilter("always")
+        # ML用パイプライン
+        ml_pipeline = processor.create_optimized_pipeline(for_ml=True)
+        assert ml_pipeline is not None
+        assert len(ml_pipeline.steps) > 0
 
-            # IQR外れ値除去（非推奨）
-            processor.create_preprocessing_pipeline(
-                outlier_method="iqr", remove_outliers=True
-            )
+        # 一般用パイプライン
+        general_pipeline = processor.create_optimized_pipeline(for_ml=False)
+        assert general_pipeline is not None
+        assert len(general_pipeline.steps) > 0
 
-            # 警告が出力されていることを確認
-            assert len(w) > 0
-            assert any("非推奨" in str(warning.message) for warning in w)
+    def test_efficient_data_processing(self, sample_data):
+        """効率的なデータ処理テスト"""
+        processor = DataProcessor()
 
-    def test_data_validator_deprecation_warnings(self, sample_data):
-        """DataValidatorの非推奨警告テスト"""
-        validator = DataValidator()
+        # 効率的な処理
+        result = processor.process_data_efficiently(sample_data)
 
-        with warnings.catch_warnings(record=True) as w:
-            warnings.simplefilter("always")
+        assert result is not None
+        assert len(result) == len(sample_data)
+        assert len(result.columns) >= len(sample_data.columns)
 
-            # 非推奨メソッドを使用（clean_dataframe は削除済のため validate のみ）
-            validator.validate_dataframe(sample_data)
+    def test_pipeline_based_preprocessing(self, sample_data):
+        """Pipelineベース前処理テスト"""
+        processor = DataProcessor()
 
-            # 警告が出力されていることを確認（少なくとも1つの非推奨警告）
-            assert len(w) >= 1
-            assert any("非推奨" in str(warning.message) for warning in w)
+        # Pipeline版前処理
+        result = processor.preprocess_with_pipeline(
+            sample_data,
+            pipeline_name="test_pipeline",
+            fit_pipeline=True,
+            numeric_strategy="median",
+            scaling_method="robust",
+            remove_outliers=True,
+        )
+
+        assert result is not None
+        assert len(result) == len(sample_data)
+
+        # パイプライン情報の取得
+        info = processor.get_pipeline_info("test_pipeline")
+        assert info["exists"] is True
+        assert len(info["steps"]) > 0
 
 
 if __name__ == "__main__":

@@ -1,8 +1,14 @@
 """
 データ処理ユーティリティ
 
-data_cleaning_utils.py と data_preprocessing.py を統合したモジュール。
-データ補間、クリーニング、前処理、最適化のロジックを統一的に提供します。
+scikit-learnの標準機能を最大限活用した効率的なデータ処理モジュール。
+Pipeline、ColumnTransformer、標準Transformerを使用した現代的な実装。
+
+推奨される使用方法:
+- 新しいコード: preprocess_with_pipeline(), create_optimized_pipeline()
+- 外れ値除去: OutlierRemovalTransformer, create_outlier_removal_pipeline()
+- カテゴリカル変数: CategoricalEncoderTransformer, create_categorical_encoding_pipeline()
+- 包括的前処理: create_comprehensive_preprocessing_pipeline()
 """
 
 import logging
@@ -337,51 +343,19 @@ class DataProcessor:
     """
     統合データ処理クラス
 
-    データクリーニング、前処理、補間、最適化を統一的に処理します。
+    scikit-learnの標準機能を活用した効率的なデータ処理を提供します。
     """
 
     def __init__(self):
         """初期化"""
-        self.imputers = {}  # カラムごとのimputer
-        self.scalers = {}  # カラムごとのscaler
         self.imputation_stats = {}  # 補完統計情報
-        self.preprocessing_pipeline = None  # Pipeline-based前処理パイプライン
         self.fitted_pipelines = {}  # 用途別のfittedパイプライン
-
-    def interpolate_oi_fr_data(self, df: pd.DataFrame) -> pd.DataFrame:
-        """
-        OI/FRデータの補間処理
-
-        Args:
-            df: 対象のDataFrame
-
-        Returns:
-            補間処理されたDataFrame
-        """
-        result_df = df.copy()
-
-        # 共通補間ヘルパーで OI / FR を処理（ffill → 統計補完）
-        target_cols = [
-            c for c in ["open_interest", "funding_rate"] if c in result_df.columns
-        ]
-        if target_cols:
-            result_df = self.interpolate_columns(
-                result_df,
-                columns=target_cols,
-                strategy="median",
-                forward_fill=True,
-                dtype="float64",
-                default_fill_values=None,
-                fit_if_needed=True,
-            )
-
-        return result_df
 
     def create_preprocessing_pipeline(
         self,
         numeric_strategy: str = "median",
         categorical_strategy: str = "most_frequent",
-        scaling_method: str = "robust",
+        scaling_method: Optional[str] = "robust",
         remove_outliers: bool = True,
         outlier_threshold: float = 3.0,
         outlier_method: str = "iqr",
@@ -389,12 +363,6 @@ class DataProcessor:
     ) -> Pipeline:
         """
         scikit-learnのPipelineとColumnTransformerを使った宣言的な前処理パイプライン作成
-
-        レポート3.6で指摘された問題を解決：
-        - 独立した前処理関数を統合
-        - 処理順序の明確化
-        - カラム管理の簡素化
-        - 宣言的で見通しの良い実装
 
         Args:
             numeric_strategy: 数値カラムの欠損値補完戦略
@@ -464,32 +432,35 @@ class DataProcessor:
             ("imputer", SimpleImputer(strategy=numeric_strategy))
         )
 
-        # 4. スケーリング（外れ値に強い変換への差し替えも可能）
-        if outlier_transform == "robust":
-            # 中央値/IQRで頑健にスケーリング
-            scaler = RobustScaler()
-        elif outlier_transform == "quantile":
-            from sklearn.preprocessing import QuantileTransformer
-
-            # ランク変換して外れ値の影響を緩和（正規分布にマップ）
-            scaler = QuantileTransformer(output_distribution="normal", random_state=42)
-        elif outlier_transform == "power":
-            from sklearn.preprocessing import PowerTransformer
-
-            # 歪度の補正（Yeo-Johnsonは負値対応）
-            scaler = PowerTransformer(method="yeo-johnson", standardize=True)
-        else:
-            # 既存のscaling_methodに従う
-            if scaling_method == "standard":
-                scaler = StandardScaler()
-            elif scaling_method == "robust":
+        # 4. スケーリング（オプション）
+        if scaling_method is not None:
+            if outlier_transform == "robust":
+                # 中央値/IQRで頑健にスケーリング
                 scaler = RobustScaler()
-            elif scaling_method == "minmax":
-                scaler = MinMaxScaler()
-            else:
-                scaler = StandardScaler()  # デフォルト
+            elif outlier_transform == "quantile":
+                from sklearn.preprocessing import QuantileTransformer
 
-        numeric_pipeline_steps.append(("scaler", scaler))
+                # ランク変換して外れ値の影響を緩和（正規分布にマップ）
+                scaler = QuantileTransformer(
+                    output_distribution="normal", random_state=42
+                )
+            elif outlier_transform == "power":
+                from sklearn.preprocessing import PowerTransformer
+
+                # 歪度の補正（Yeo-Johnsonは負値対応）
+                scaler = PowerTransformer(method="yeo-johnson", standardize=True)
+            else:
+                # 既存のscaling_methodに従う
+                if scaling_method == "standard":
+                    scaler = StandardScaler()
+                elif scaling_method == "robust":
+                    scaler = RobustScaler()
+                elif scaling_method == "minmax":
+                    scaler = MinMaxScaler()
+                else:
+                    scaler = StandardScaler()  # デフォルト
+
+            numeric_pipeline_steps.append(("scaler", scaler))
 
         # 数値パイプラインを作成
         numeric_pipeline = Pipeline(numeric_pipeline_steps)
@@ -543,6 +514,35 @@ class DataProcessor:
         """最終的なクリーンアップ"""
         # 残っているNaNを0で埋める
         return np.nan_to_num(X, nan=0.0, posinf=0.0, neginf=0.0)
+
+    def interpolate_oi_fr_data(self, df: pd.DataFrame) -> pd.DataFrame:
+        """
+        OI/FRデータの補間処理
+
+        Args:
+            df: 対象のDataFrame
+
+        Returns:
+            補間処理されたDataFrame
+        """
+        result_df = df.copy()
+
+        # 共通補間ヘルパーで OI / FR を処理（ffill → 統計補完）
+        target_cols = [
+            c for c in ["open_interest", "funding_rate"] if c in result_df.columns
+        ]
+        if target_cols:
+            result_df = self.interpolate_columns(
+                result_df,
+                columns=target_cols,
+                strategy="median",
+                forward_fill=True,
+                dtype="float64",
+                default_fill_values=None,
+                fit_if_needed=True,
+            )
+
+        return result_df
 
     def interpolate_fear_greed_data(self, df: pd.DataFrame) -> pd.DataFrame:
         """
@@ -755,280 +755,12 @@ class DataProcessor:
 
         return result_df
 
-    def transform_missing_values(
-        self,
-        df: pd.DataFrame,
-        strategy: str = "median",
-        columns: Optional[List[str]] = None,
-    ) -> pd.DataFrame:
-        """
-        欠損値を統計的手法で補完
-
-        Args:
-            df: 対象DataFrame
-            strategy: 補完戦略 ('mean', 'median', 'most_frequent', 'constant')
-            columns: 対象カラム（Noneの場合は数値カラム全て）
-
-        Returns:
-            補完されたDataFrame
-        """
-        if df is None or df.empty:
-            return df
-
-        result_df = df.copy()
-        target_columns = (
-            columns or result_df.select_dtypes(include=[np.number]).columns.tolist()
-        )
-
-        if not target_columns:
-            logger.warning("補完対象の数値カラムが見つかりません")
-            return result_df
-
-        try:
-            # カラムごとに個別のImputerを使用
-            for col in target_columns:
-                if col not in result_df.columns:
-                    continue
-
-                col_data = result_df[col]
-                missing_count = col_data.isna().sum()
-                valid_count = col_data.notna().sum()
-
-                if missing_count == 0:
-                    continue  # 欠損値がない場合はスキップ
-
-                if valid_count == 0:
-                    # 全て欠損値の場合はデフォルト値で埋める
-                    logger.warning(
-                        f"カラム {col}: 全ての値が欠損値のため、デフォルト値0で補完します"
-                    )
-                    result_df[col] = 0.0
-                    self.imputation_stats[col] = {
-                        "strategy": "default_zero",
-                        "missing_count": missing_count,
-                        "fill_value": 0.0,
-                    }
-                    continue
-
-                # カラム用のImputerを取得または作成
-                imputer_key = f"{col}_{strategy}"
-                if imputer_key not in self.imputers:
-                    self.imputers[imputer_key] = SimpleImputer(strategy=strategy)
-
-                # 2次元配列に変換してfit_transform
-                col_values = col_data.values.reshape(-1, 1)
-                imputed_values = self.imputers[imputer_key].fit_transform(col_values)
-                result_df[col] = imputed_values.flatten()
-
-                # 統計情報を記録
-                self.imputation_stats[col] = {
-                    "strategy": strategy,
-                    "missing_count": missing_count,
-                    "fill_value": (
-                        self.imputers[imputer_key].statistics_[0]
-                        if hasattr(self.imputers[imputer_key], "statistics_")
-                        else None
-                    ),
-                }
-
-            logger.info(f"欠損値補完完了: {len(target_columns)}カラム, 戦略={strategy}")
-            return result_df
-
-        except Exception as e:
-            logger.error(f"欠損値補完エラー: {e}")
-            raise UnifiedDataError(f"欠損値補完に失敗しました: {e}")
-
-    def _remove_outliers(
-        self,
-        df: pd.DataFrame,
-        columns: List[str],
-        threshold: float = 3.0,
-        method: str = "iqr",
-    ) -> pd.DataFrame:
-        """
-        外れ値を除去（最適化版）
-
-        Args:
-            df: 対象DataFrame
-            columns: 対象カラム
-            threshold: 閾値
-            method: 検出方法 ('iqr', 'zscore')
-
-        Returns:
-            外れ値除去後のDataFrame
-        """
-        result_df = df.copy()
-
-        # 存在するカラムのみをフィルタ
-        valid_columns = [col for col in columns if col in result_df.columns]
-        if not valid_columns:
-            return result_df
-
-        # 数値カラムのみを対象
-        numeric_columns = (
-            result_df[valid_columns].select_dtypes(include=[np.number]).columns.tolist()
-        )
-        if not numeric_columns:
-            return result_df
-
-        try:
-            if method == "iqr":
-                # ベクトル化されたIQR計算
-                Q1 = result_df[numeric_columns].quantile(0.25)
-                Q3 = result_df[numeric_columns].quantile(0.75)
-                IQR = Q3 - Q1
-                lower_bounds = Q1 - threshold * IQR
-                upper_bounds = Q3 + threshold * IQR
-
-                # 一括で外れ値マスクを計算
-                outlier_mask = (result_df[numeric_columns] < lower_bounds) | (
-                    result_df[numeric_columns] > upper_bounds
-                )
-
-            elif method == "zscore":
-                # ベクトル化されたZ-score計算
-                means = result_df[numeric_columns].mean()
-                stds = result_df[numeric_columns].std()
-                z_scores = np.abs((result_df[numeric_columns] - means) / stds)
-                outlier_mask = z_scores > threshold
-
-            else:
-                logger.warning(f"未知の外れ値検出方法: {method}")
-                return result_df
-
-            # 一括で外れ値をNaNに設定
-            total_outliers = 0
-            for col in numeric_columns:
-                if col in outlier_mask.columns:
-                    col_outliers = outlier_mask[col].sum()
-                    if col_outliers > 0:
-                        result_df.loc[outlier_mask[col], col] = np.nan
-                        total_outliers += col_outliers
-
-            if total_outliers > 0:
-                logger.info(
-                    f"外れ値除去完了: {total_outliers}個の外れ値を除去 ({method})"
-                )
-
-        except Exception as e:
-            logger.warning(f"外れ値除去でエラーが発生: {e}")
-            return df
-
-        return result_df
-
-    def _scale_features(
-        self,
-        df: pd.DataFrame,
-        columns: List[str],
-        method: str = "standard",
-    ) -> pd.DataFrame:
-        """
-        特徴量スケーリング
-
-        Args:
-            df: 対象DataFrame
-            columns: 対象カラム
-            method: スケーリング方法 ('standard', 'robust', 'minmax')
-
-        Returns:
-            スケーリング後のDataFrame
-        """
-        result_df = df.copy()
-
-        if method == "standard":
-            scaler = StandardScaler()
-        elif method == "robust":
-            scaler = RobustScaler()
-        elif method == "minmax":
-            scaler = MinMaxScaler()
-        else:
-            logger.warning(f"未知のスケーリング方法: {method}")
-            return result_df
-
-        try:
-            for col in columns:
-                if col not in result_df.columns:
-                    continue
-
-                col_data = result_df[col].values.reshape(-1, 1)
-                scaled_data = scaler.fit_transform(col_data)
-                result_df[col] = scaled_data.flatten()
-
-                # スケーラーを保存
-                self.scalers[col] = scaler
-
-            logger.info(f"特徴量スケーリング完了: {len(columns)}カラム, 方法={method}")
-            return result_df
-
-        except Exception as e:
-            logger.error(f"特徴量スケーリングエラー: {e}")
-            raise UnifiedDataError(f"特徴量スケーリングに失敗しました: {e}")
-
-    def preprocess_features(
-        self,
-        df: pd.DataFrame,
-        imputation_strategy: str = "median",
-        scale_features: bool = False,
-        remove_outliers: bool = True,
-        outlier_threshold: float = 3.0,
-        scaling_method: str = "standard",
-        outlier_method: str = "iqr",
-    ) -> pd.DataFrame:
-        """
-        特徴量の包括的前処理
-
-        Args:
-            df: 対象DataFrame
-            imputation_strategy: 欠損値補完戦略
-            scale_features: 特徴量スケーリングを行うか
-            remove_outliers: 外れ値除去を行うか
-            outlier_threshold: 外れ値の閾値
-            scaling_method: スケーリング方法
-            outlier_method: 外れ値検出方法
-
-        Returns:
-            前処理されたDataFrame
-        """
-        if df is None or df.empty:
-            return df
-
-        logger.info("特徴量の包括的前処理を開始")
-        result_df = df.copy()
-
-        # 1. 無限値をNaNに変換
-        result_df = result_df.replace([np.inf, -np.inf], np.nan)
-
-        # 2. カテゴリカル変数のエンコーディング
-        result_df = self._encode_categorical_variables(result_df)
-
-        # 3. 数値カラムを特定（カテゴリカル変数エンコーディング後）
-        numeric_columns = result_df.select_dtypes(include=[np.number]).columns.tolist()
-
-        # 4. 外れ値除去（オプション）
-        if remove_outliers:
-            result_df = self._remove_outliers(
-                result_df, numeric_columns, outlier_threshold, method=outlier_method
-            )
-
-        # 5. 欠損値補完
-        result_df = self.transform_missing_values(
-            result_df, strategy=imputation_strategy, columns=numeric_columns
-        )
-
-        # 6. 特徴量スケーリング（オプション）
-        if scale_features:
-            result_df = self._scale_features(
-                result_df, numeric_columns, method=scaling_method
-            )
-
-        logger.info("特徴量の包括的前処理が完了")
-        return result_df
-
     def _encode_categorical_variables(self, df: pd.DataFrame) -> pd.DataFrame:
         """
-        カテゴリカル変数を数値にエンコーディング（非推奨）
+        カテゴリカル変数を数値にエンコーディング
 
-        注意: この方法は非推奨です。代わりにCategoricalEncoderTransformerを使用してください。
+        CategoricalEncoderTransformerを使用した現代的な実装。
+        scikit-learnのPipelineパターンに従い、保守性と再利用性を向上。
 
         Args:
             df: 対象のDataFrame
@@ -1036,7 +768,6 @@ class DataProcessor:
         Returns:
             エンコーディング済みのDataFrame
         """
-        # 新しいTransformerベースのエンコーディングを使用する実装に置き換え
         try:
             result_df = df.copy()
 
@@ -1048,10 +779,10 @@ class DataProcessor:
                 return result_df
 
             logger.info(
-                f"カテゴリカル変数をエンコーディング (Transformer使用): {categorical_columns}"
+                f"カテゴリカル変数をエンコーディング (CategoricalEncoderTransformer使用): {categorical_columns}"
             )
 
-            # パイプラインを作成して適用
+            # CategoricalEncoderTransformerを使用したパイプラインを作成
             pipeline = create_categorical_encoding_pipeline(encoding_type="label")
             encoded = pipeline.fit_transform(result_df[categorical_columns])
 
@@ -1080,79 +811,14 @@ class DataProcessor:
             result_df = result_df.drop(columns=categorical_columns)
             result_df = pd.concat([result_df, encoded_df], axis=1)
 
-            logger.info("カテゴリカル変数のエンコーディングが完了 (Transformer使用)")
+            logger.info(
+                "カテゴリカル変数のエンコーディングが完了 (CategoricalEncoderTransformer使用)"
+            )
             return result_df
 
         except Exception as e:
             logger.error(f"カテゴリカル変数エンコーディングエラー: {e}")
             return df
-
-    def _encode_fear_greed_classification(
-        self, df: pd.DataFrame, col: str
-    ) -> pd.DataFrame:
-        """
-        Fear & Greed Classification の特別なエンコーディング
-
-        Args:
-            df: 対象のDataFrame
-            col: カラム名
-
-        Returns:
-            エンコーディング済みのDataFrame
-        """
-        result_df = df.copy()
-
-        # Fear & Greed Classification の標準的なマッピング
-        fg_mapping = {
-            "Extreme Fear": 0,
-            "Fear": 1,
-            "Neutral": 2,
-            "Greed": 3,
-            "Extreme Greed": 4,
-        }
-
-        # 欠損値を 'Neutral' で埋める
-        result_df[col] = result_df[col].fillna("Neutral")
-
-        # マッピングを適用
-        result_df[col + "_encoded"] = result_df[col].map(fg_mapping)
-
-        # マッピングできなかった値は 'Neutral' (2) にする
-        result_df[col + "_encoded"] = result_df[col + "_encoded"].fillna(2)
-
-        # 元のカラムを削除
-        result_df = result_df.drop(columns=[col])
-
-        # エンコード済みカラムの名前を元の名前に変更
-        result_df = result_df.rename(columns={col + "_encoded": col})
-
-        logger.info(f"Fear & Greed Classification エンコーディング完了: {fg_mapping}")
-        return result_df
-
-    def _encode_general_categorical(self, df: pd.DataFrame, col: str) -> pd.DataFrame:
-        """
-        一般的なカテゴリカル変数のエンコーディング
-
-        Args:
-            df: 対象のDataFrame
-            col: カラム名
-
-        Returns:
-            エンコーディング済みのDataFrame
-        """
-        from sklearn.preprocessing import LabelEncoder
-
-        result_df = df.copy()
-
-        # 欠損値を文字列で埋める
-        result_df[col] = result_df[col].fillna("Unknown")
-
-        # LabelEncoderを使用
-        le = LabelEncoder()
-        result_df[col] = le.fit_transform(result_df[col].astype(str))
-
-        logger.info(f"一般カテゴリカル変数エンコーディング完了: {col}")
-        return result_df
 
     def interpolate_columns(
         self,
@@ -1210,9 +876,39 @@ class DataProcessor:
 
         # 統計的補完を実行
         if fit_if_needed:
-            result_df = self.transform_missing_values(
-                result_df, strategy=strategy, columns=columns
-            )
+            # scikit-learn ColumnTransformerを使用した効率的な実装
+            from sklearn.compose import ColumnTransformer
+
+            target_columns = [col for col in columns if col in result_df.columns]
+
+            if target_columns:
+                # 有効なカラムのみを対象
+                valid_columns = [
+                    col
+                    for col in target_columns
+                    if col in result_df.columns and result_df[col].notna().sum() > 0
+                ]
+
+                if valid_columns:
+                    # ColumnTransformerで一括処理
+                    ct = ColumnTransformer(
+                        [("imputer", SimpleImputer(strategy=strategy), valid_columns)],
+                        remainder="passthrough",
+                        verbose_feature_names_out=False,
+                    )
+
+                    imputed_data = ct.fit_transform(result_df)
+
+                    # 特徴名を取得
+                    try:
+                        feature_names = ct.get_feature_names_out()
+                    except Exception:
+                        feature_names = result_df.columns
+
+                    # 結果をDataFrameに変換
+                    result_df = pd.DataFrame(
+                        imputed_data, columns=feature_names, index=df.index
+                    )
 
         # デフォルト値で最終補完
         for col in columns:
@@ -1249,15 +945,18 @@ class DataProcessor:
 
             # 2. 特徴量の前処理
             logger.info("特徴量の前処理を実行中...")
-            features_processed = self.preprocess_features(
+            features_processed = self.preprocess_with_pipeline(
                 features_df,
-                imputation_strategy=training_params.get(
-                    "imputation_strategy", "median"
+                pipeline_name="training_preprocess",
+                fit_pipeline=True,
+                numeric_strategy=training_params.get("imputation_strategy", "median"),
+                scaling_method=(
+                    training_params.get("scaling_method", "robust")
+                    if training_params.get("scale_features", True)
+                    else None
                 ),
-                scale_features=training_params.get("scale_features", True),
                 remove_outliers=training_params.get("remove_outliers", True),
                 outlier_threshold=training_params.get("outlier_threshold", 3.0),
-                scaling_method=training_params.get("scaling_method", "robust"),
                 outlier_method=training_params.get("outlier_method", "iqr"),
             )
 
@@ -1330,9 +1029,7 @@ class DataProcessor:
         **pipeline_params,
     ) -> pd.DataFrame:
         """
-        Pipelineベースの前処理実行
-
-        レポート3.6の改善：宣言的で見通しの良い前処理実装
+        Pipelineベースの前処理実行（推奨API）
 
         Args:
             df: 対象DataFrame
@@ -1390,9 +1087,7 @@ class DataProcessor:
 
         except Exception as e:
             logger.error(f"Pipeline前処理エラー: {e}")
-            # フォールバック：従来の方法
-            logger.warning("従来の前処理方法にフォールバック")
-            return self.preprocess_features(df, **pipeline_params)
+            raise
 
     def create_ml_preprocessing_pipeline(
         self,
@@ -1464,11 +1159,74 @@ class DataProcessor:
 
     def clear_cache(self):
         """キャッシュをクリア"""
-        self.imputers.clear()
-        self.scalers.clear()
         self.imputation_stats.clear()
         self.fitted_pipelines.clear()  # Pipelineキャッシュもクリア
         logger.info("DataProcessorのキャッシュをクリアしました")
+
+    # 推奨される新しいAPI
+    def create_optimized_pipeline(
+        self,
+        for_ml: bool = True,
+        include_feature_selection: bool = False,
+        n_features: Optional[int] = None,
+        **kwargs,
+    ) -> Pipeline:
+        """
+        最適化されたパイプラインを作成（推奨API）
+
+        Args:
+            for_ml: 機械学習用の最適化を行うか
+            include_feature_selection: 特徴選択を含めるか
+            n_features: 選択する特徴数
+            **kwargs: その他のパイプライン設定
+
+        Returns:
+            最適化されたPipeline
+        """
+        if for_ml:
+            return self.create_ml_preprocessing_pipeline(
+                feature_selection=include_feature_selection,
+                n_features=n_features,
+                **kwargs,
+            )
+        else:
+            return create_comprehensive_preprocessing_pipeline(**kwargs)
+
+    def process_data_efficiently(
+        self,
+        df: pd.DataFrame,
+        pipeline_name: str = "efficient_processing",
+        **pipeline_params,
+    ) -> pd.DataFrame:
+        """
+        効率的なデータ処理（推奨API）
+
+        scikit-learnの標準機能を最大限活用した高速処理。
+
+        Args:
+            df: 対象DataFrame
+            pipeline_name: パイプライン名
+            **pipeline_params: パイプライン設定
+
+        Returns:
+            処理されたDataFrame
+        """
+        logger.info("効率的なデータ処理を開始 (scikit-learn Pipeline使用)")
+
+        try:
+            # 最適化されたパイプラインを使用
+            result = self.preprocess_with_pipeline(
+                df, pipeline_name=pipeline_name, fit_pipeline=True, **pipeline_params
+            )
+
+            logger.info(
+                f"効率的なデータ処理完了: {len(result)}行, {len(result.columns)}列"
+            )
+            return result
+
+        except Exception as e:
+            logger.error(f"効率的なデータ処理エラー: {e}")
+            raise
 
 
 # グローバルインスタンス（後方互換性のため）
