@@ -1,7 +1,6 @@
 """
 バックテスト結果変換サービス
 
-backtesting.pyの結果をデータベース保存用形式に変換します。
 """
 
 import logging

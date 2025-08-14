@@ -143,18 +143,3 @@ class BybitFundingRateService(BybitService):
             fetch_all=fetch_all,
         )
 
-    async def _save_funding_rate_to_database(
-        self,
-        funding_history: List[Dict[str, Any]],
-        symbol: str,
-        repository: FundingRateRepository,
-    ) -> int:
-        """
-        ファンディングレートデータをデータベースに保存（内部メソッド）
-
-        注意: このメソッドは後方互換性のために残されています。
-        新しいコードでは基底クラスの_save_data_to_databaseを使用してください。
-        """
-        return await self._save_data_to_database(
-            funding_history, symbol, repository, self.config
-        )

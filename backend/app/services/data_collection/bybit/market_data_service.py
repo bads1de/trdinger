@@ -78,47 +78,6 @@ class BybitMarketDataService(BybitService):
 
         return ohlcv_data
 
-    async def fetch_and_save_ohlcv_data(
-        self,
-        symbol: str,
-        timeframe: str = "1h",
-        limit: int = 100,
-        repository: Optional[OHLCVRepository] = None,
-    ) -> dict:
-        """
-        OHLCVデータを取得してデータベースに保存します
-
-        Args:
-            symbol: 取引ペアシンボル（例: 'BTC/USDT'）
-            timeframe: 時間軸（例: '1h', '1d'）
-            limit: 取得するデータ数（1-1000）
-            repository: OHLCVリポジトリ（テスト用）
-
-        Returns:
-            保存結果を含む辞書
-        """
-        # OHLCVデータを取得
-        ohlcv_data = await self.fetch_ohlcv_data(symbol, timeframe, limit)
-
-        # データベースに保存
-        async def save_with_db(db, repository):
-            repo = repository or OHLCVRepository(db)
-            return await self._save_ohlcv_to_database(
-                ohlcv_data, symbol, timeframe, repo
-            )
-
-        saved_count = await self._execute_with_db_session(
-            func=save_with_db, repository=repository
-        )
-
-        return {
-            "symbol": symbol,
-            "timeframe": timeframe,
-            "fetched_count": len(ohlcv_data),
-            "saved_count": saved_count,
-            "success": True,
-        }
-
     async def _save_ohlcv_to_database(
         self,
         ohlcv_data: List[List],

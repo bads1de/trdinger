@@ -1,8 +1,6 @@
 """
 バックテスト実行サービス
 
-リファクタリング後のバックテスト実行機能を提供します。
-責任分離とSOLID原則に基づいた設計を実現します。
 """
 
 import logging
@@ -38,7 +36,7 @@ logger = logging.getLogger(__name__)
 class BacktestService:
     """
     リファクタリング後のバックテスト実行サービス
-    
+
     責任分離とSOLID原則に基づいて設計されたFacadeパターンの実装です。
     各専門サービスを統合して、シンプルなインターフェースを提供します。
     """
@@ -59,7 +57,7 @@ class BacktestService:
     def run_backtest(self, config: Dict[str, Any]) -> Dict[str, Any]:
         """
         バックテストを実行
-        
+
         リファクタリング後の実装では、各専門サービスに処理を委譲します。
 
         Args:
@@ -103,8 +101,12 @@ class BacktestService:
                 strategy_parameters = {}
             else:
                 # 通常のstrategy_configから戦略クラスを生成する場合
-                strategy_class = self._strategy_factory.create_strategy_class(config["strategy_config"])
-                strategy_parameters = self._strategy_factory.get_strategy_parameters(config["strategy_config"])
+                strategy_class = self._strategy_factory.create_strategy_class(
+                    config["strategy_config"]
+                )
+                strategy_parameters = self._strategy_factory.get_strategy_parameters(
+                    config["strategy_config"]
+                )
 
             # 6. バックテスト実行
             stats = self._executor.execute_backtest(
@@ -115,7 +117,7 @@ class BacktestService:
                 start_date=start_date,
                 end_date=end_date,
                 initial_capital=config["initial_capital"],
-                commission_rate=config["commission_rate"]
+                commission_rate=config["commission_rate"],
             )
 
             # 7. 結果をデータベース形式に変換
@@ -137,8 +139,12 @@ class BacktestService:
 
             return result
 
-        except (BacktestConfigValidationError, StrategyClassCreationError, 
-                BacktestExecutionError, BacktestResultConversionError) as e:
+        except (
+            BacktestConfigValidationError,
+            StrategyClassCreationError,
+            BacktestExecutionError,
+            BacktestResultConversionError,
+        ) as e:
             # 専用例外はそのまま再発生
             logger.error(f"バックテスト実行エラー: {e}")
             raise
@@ -155,31 +161,29 @@ class BacktestService:
                 oi_repo = OpenInterestRepository(db)
                 fr_repo = FundingRateRepository(db)
                 self.data_service = BacktestDataService(
-                    ohlcv_repo=ohlcv_repo,
-                    oi_repo=oi_repo,
-                    fr_repo=fr_repo
+                    ohlcv_repo=ohlcv_repo, oi_repo=oi_repo, fr_repo=fr_repo
                 )
             finally:
                 db.close()
-    
+
     def _ensure_executor_initialized(self) -> None:
         """実行エンジンの初期化を確保"""
         if self._executor is None:
             self._executor = BacktestExecutor(self.data_service)
-    
+
     def _normalize_date(self, date_value: Any) -> datetime:
         """日付値をdatetimeオブジェクトに正規化"""
         if isinstance(date_value, datetime):
             return date_value
         elif isinstance(date_value, str):
-            return datetime.fromisoformat(date_value.replace('Z', '+00:00'))
+            return datetime.fromisoformat(date_value.replace("Z", "+00:00"))
         else:
             raise ValueError(f"サポートされていない日付形式: {type(date_value)}")
 
     def get_supported_strategies(self) -> Dict[str, Any]:
         """
         サポートされている戦略一覧を取得
-        
+
         Returns:
             戦略一覧
         """

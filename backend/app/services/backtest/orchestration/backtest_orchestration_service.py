@@ -1,8 +1,6 @@
 """
 バックテスト統合管理サービス
 
-APIルーター内に散在していたバックテスト関連のビジネスロジックを統合管理します。
-責務の分離とSOLID原則に基づいた設計を実現します。
 """
 
 import logging
@@ -124,9 +122,7 @@ class BacktestOrchestrationService:
                     "status_code": 404,
                 }
 
-            return api_response(
-                success=True, message="バックテスト結果を削除しました"
-            )
+            return api_response(success=True, message="バックテスト結果を削除しました")
 
         except Exception as e:
             logger.error(f"バックテスト結果削除エラー (ID: {result_id}): {e}")

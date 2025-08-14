@@ -1,8 +1,6 @@
 """
 Auto Strategy 共通定数
 
-Auto Strategy全体で使用される定数を統一管理します。
-フロントエンドとバックエンドで共有される定数も含みます。
 """
 
 from typing import Dict, List

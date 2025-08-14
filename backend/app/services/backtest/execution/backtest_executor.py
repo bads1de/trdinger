@@ -1,7 +1,6 @@
 """
 バックテスト実行エンジン
 
-backtesting.pyライブラリを使用したバックテスト実行を担当します。
 """
 
 import logging

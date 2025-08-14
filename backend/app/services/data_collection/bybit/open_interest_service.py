@@ -123,18 +123,3 @@ class BybitOpenInterestService(BybitService):
             intervalTime=interval,
         )
 
-    async def _save_open_interest_to_database(
-        self,
-        open_interest_history: List[Dict[str, Any]],
-        symbol: str,
-        repository: OpenInterestRepository,
-    ) -> int:
-        """
-        オープンインタレストデータをデータベースに保存（内部メソッド）
-
-        注意: このメソッドは後方互換性のために残されています。
-        新しいコードでは基底クラスの_save_data_to_databaseを使用してください。
-        """
-        return await self._save_data_to_database(
-            open_interest_history, symbol, repository, self.config
-        )

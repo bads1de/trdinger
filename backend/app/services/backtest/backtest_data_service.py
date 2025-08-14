@@ -1,8 +1,6 @@
 """
-バックテスト用データサービス（リファクタリング後）
+バックテスト用データサービス
 
-リファクタリング後のバックテスト用データサービスです。
-責任分離とSOLID原則に基づいて設計されたFacadeパターンの実装です。
 """
 
 import logging
@@ -142,8 +140,3 @@ class BacktestDataService:
             データ概要の辞書
         """
         return self._integration_service.get_data_summary(df)
-
-
-
-
-
