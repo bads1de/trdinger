@@ -26,7 +26,6 @@ from .utils import (
     validate_series_data,
     validate_indicator_parameters,
     normalize_data_for_trig,
-    ensure_series_minimal_conversion,
     ensure_numpy_minimal_conversion,
 )
 
@@ -47,7 +46,6 @@ __all__ = [
     "validate_series_data",
     "validate_indicator_parameters",
     "normalize_data_for_trig",
-    "ensure_series_minimal_conversion",
     "ensure_numpy_minimal_conversion",
     # 既存クラス（互換性維持）
     "TechnicalIndicatorService",

@@ -49,14 +49,20 @@ def test_simplified_data_conversion():
     print("\n=== 簡素化されたデータ変換のテスト ===")
 
     try:
-        from app.utils.data_conversion import ensure_series, ensure_array, ensure_list
+        from app.utils.data_conversion import (
+            ensure_numeric_series,
+            ensure_array,
+            ensure_list,
+        )
 
         # テストデータ
         test_data = [1, 2, 3, 4, 5]
 
-        # ensure_seriesテスト
-        series_result = ensure_series(test_data)
-        print(f"ensure_series結果: {type(series_result)}, 値: {series_result.tolist()}")
+        # ensure_numeric_seriesテスト（数値Seriesへの変換）
+        series_result = ensure_numeric_series(test_data)
+        print(
+            f"ensure_numeric_series結果: {type(series_result)}, 値: {series_result.tolist()}"
+        )
 
         # ensure_arrayテスト
         array_result = ensure_array(test_data)

@@ -1,8 +1,6 @@
 #!/usr/bin/env python3
 """
 パターン認識指標の統一化テスト
-
-ensure_series_minimal_conversionの統一化が正常に動作するかテストします。
 """
 
 import numpy as np
@@ -73,50 +71,8 @@ def test_pattern_recognition_unified():
         traceback.print_exc()
 
 
-def test_ensure_series_compatibility():
-    """ensure_series_minimal_conversionの互換性テスト"""
-    print("\n=== ensure_series互換性テスト ===")
-
-    try:
-        from app.services.indicators.utils import ensure_series_minimal_conversion
-        from app.utils.data_conversion import ensure_series
-
-        # テストデータ
-        test_data = [1.0, 2.0, 3.0, 4.0, 5.0]
-        numpy_data = np.array(test_data)
-        series_data = pd.Series(test_data)
-
-        # 両方の関数で同じ結果が得られるかテスト
-        result1 = ensure_series_minimal_conversion(numpy_data)
-        result2 = ensure_series(numpy_data)
-
-        print(f"ensure_series_minimal_conversion結果: {type(result1)}")
-        print(f"ensure_series結果: {type(result2)}")
-
-        # 値が同じかチェック
-        np.testing.assert_array_equal(result1.values, result2.values)
-        print("✅ 両関数の結果が一致")
-
-        # pandas.Seriesの場合
-        result3 = ensure_series_minimal_conversion(series_data)
-        result4 = ensure_series(series_data)
-
-        np.testing.assert_array_equal(result3.values, result4.values)
-        print("✅ pandas.Series入力でも結果が一致")
-
-        print("✅ ensure_series互換性テスト成功")
-
-    except Exception as e:
-        print(f"❌ ensure_series互換性テストエラー: {e}")
-        import traceback
-
-        traceback.print_exc()
-
-
 if __name__ == "__main__":
     print("🔄 パターン認識指標の統一化テスト開始")
-
-    test_ensure_series_compatibility()
     test_pattern_recognition_unified()
 
     print("\n🎉 統一化テスト完了")

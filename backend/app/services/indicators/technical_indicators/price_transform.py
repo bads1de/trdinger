@@ -12,11 +12,7 @@ import numpy as np
 import pandas as pd
 import pandas_ta as ta
 
-from ..utils import (
-    handle_pandas_ta_errors,
-    ensure_series_minimal_conversion,
-    validate_series_data,
-)
+from ..utils import handle_pandas_ta_errors
 
 
 class PriceTransformIndicators:
@@ -36,15 +32,10 @@ class PriceTransformIndicators:
         close: Union[np.ndarray, pd.Series],
     ) -> np.ndarray:
         """平均価格"""
-        open_series = ensure_series_minimal_conversion(open_data)
-        high_series = ensure_series_minimal_conversion(high)
-        low_series = ensure_series_minimal_conversion(low)
-        close_series = ensure_series_minimal_conversion(close)
-
-        validate_series_data(open_series, 1)
-        validate_series_data(high_series, 1)
-        validate_series_data(low_series, 1)
-        validate_series_data(close_series, 1)
+        open_series = pd.Series(open_data) if isinstance(open_data, np.ndarray) else open_data
+        high_series = pd.Series(high) if isinstance(high, np.ndarray) else high
+        low_series = pd.Series(low) if isinstance(low, np.ndarray) else low
+        close_series = pd.Series(close) if isinstance(close, np.ndarray) else close
 
         # pandas-taの引数名はopen_の場合がある
         try:
@@ -63,11 +54,8 @@ class PriceTransformIndicators:
         high: Union[np.ndarray, pd.Series], low: Union[np.ndarray, pd.Series]
     ) -> np.ndarray:
         """中央値価格"""
-        high_series = ensure_series_minimal_conversion(high)
-        low_series = ensure_series_minimal_conversion(low)
-
-        validate_series_data(high_series, 1)
-        validate_series_data(low_series, 1)
+        high_series = pd.Series(high) if isinstance(high, np.ndarray) else high
+        low_series = pd.Series(low) if isinstance(low, np.ndarray) else low
 
         result = ta.hl2(high=high_series, low=low_series)
         return result.values
@@ -80,13 +68,9 @@ class PriceTransformIndicators:
         close: Union[np.ndarray, pd.Series],
     ) -> np.ndarray:
         """典型価格"""
-        high_series = ensure_series_minimal_conversion(high)
-        low_series = ensure_series_minimal_conversion(low)
-        close_series = ensure_series_minimal_conversion(close)
-
-        validate_series_data(high_series, 1)
-        validate_series_data(low_series, 1)
-        validate_series_data(close_series, 1)
+        high_series = pd.Series(high) if isinstance(high, np.ndarray) else high
+        low_series = pd.Series(low) if isinstance(low, np.ndarray) else low
+        close_series = pd.Series(close) if isinstance(close, np.ndarray) else close
 
         result = ta.hlc3(high=high_series, low=low_series, close=close_series)
         return result.values
@@ -99,13 +83,9 @@ class PriceTransformIndicators:
         close: Union[np.ndarray, pd.Series],
     ) -> np.ndarray:
         """加重終値価格"""
-        high_series = ensure_series_minimal_conversion(high)
-        low_series = ensure_series_minimal_conversion(low)
-        close_series = ensure_series_minimal_conversion(close)
-
-        validate_series_data(high_series, 1)
-        validate_series_data(low_series, 1)
-        validate_series_data(close_series, 1)
+        high_series = pd.Series(high) if isinstance(high, np.ndarray) else high
+        low_series = pd.Series(low) if isinstance(low, np.ndarray) else low
+        close_series = pd.Series(close) if isinstance(close, np.ndarray) else close
 
         result = ta.wcp(high=high_series, low=low_series, close=close_series)
         return result.values
@@ -121,15 +101,10 @@ class PriceTransformIndicators:
         """Heikin Ashi Close（平均足終値）
         pandas-ta の ha を用いてHAの終値のみ返す。
         """
-        open_series = ensure_series_minimal_conversion(open_data)
-        high_series = ensure_series_minimal_conversion(high)
-        low_series = ensure_series_minimal_conversion(low)
-        close_series = ensure_series_minimal_conversion(close)
-
-        validate_series_data(open_series, 1)
-        validate_series_data(high_series, 1)
-        validate_series_data(low_series, 1)
-        validate_series_data(close_series, 1)
+        open_series = pd.Series(open_data) if isinstance(open_data, np.ndarray) else open_data
+        high_series = pd.Series(high) if isinstance(high, np.ndarray) else high
+        low_series = pd.Series(low) if isinstance(low, np.ndarray) else low
+        close_series = pd.Series(close) if isinstance(close, np.ndarray) else close
 
         try:
             ha_df = ta.ha(
@@ -154,15 +129,10 @@ class PriceTransformIndicators:
         close: Union[np.ndarray, pd.Series],
     ) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
         """Heikin Ashi の OHLC をタプルで返す (open, high, low, close)"""
-        open_series = ensure_series_minimal_conversion(open_data)
-        high_series = ensure_series_minimal_conversion(high)
-        low_series = ensure_series_minimal_conversion(low)
-        close_series = ensure_series_minimal_conversion(close)
-
-        validate_series_data(open_series, 1)
-        validate_series_data(high_series, 1)
-        validate_series_data(low_series, 1)
-        validate_series_data(close_series, 1)
+        open_series = pd.Series(open_data) if isinstance(open_data, np.ndarray) else open_data
+        high_series = pd.Series(high) if isinstance(high, np.ndarray) else high
+        low_series = pd.Series(low) if isinstance(low, np.ndarray) else low
+        close_series = pd.Series(close) if isinstance(close, np.ndarray) else close
 
         try:
             ha_df = ta.ha(

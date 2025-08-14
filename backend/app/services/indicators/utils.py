@@ -292,19 +292,6 @@ def normalize_data_for_trig(data: Union[np.ndarray, pd.Series]) -> np.ndarray:
     # -1から1の範囲にクリップ
     return np.clip(array, -1.0, 1.0)
 
-
-def ensure_series_minimal_conversion(data: Union[np.ndarray, pd.Series]) -> pd.Series:
-    """
-    最小限の型変換でpandas.Seriesを確保（簡素化版）
-
-    data_conversion.pyのensure_seriesと統一。
-    """
-    # data_conversion.pyのensure_seriesを使用
-    from ...utils.data_conversion import ensure_series
-
-    return ensure_series(data, raise_on_error=True)
-
-
 def ensure_numpy_minimal_conversion(data: Union[np.ndarray, pd.Series]) -> np.ndarray:
     """
     最小限の型変換でnumpy配列を確保（簡素化版）

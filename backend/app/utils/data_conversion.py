@@ -366,37 +366,6 @@ def standardize_ohlcv_columns(df: pd.DataFrame) -> pd.DataFrame:
 
     return result_df
 
-
-def ensure_series(
-    data: Union[pd.Series, list, np.ndarray, Any],
-    raise_on_error: bool = True,
-    name: Optional[str] = None,
-) -> pd.Series:
-    """
-    データをpandas.Seriesに変換（簡素化版）
-
-    pandas標準機能を活用し、複雑な分岐を削除。
-    """
-    try:
-        # pandas標準のSeries()コンストラクタで大部分をカバー
-        if isinstance(data, pd.Series):
-            return data.rename(name) if name is not None else data
-
-        # backtesting._Arrayの特殊ケースのみ個別処理
-        if hasattr(data, "_data"):
-            return pd.Series(data._data, name=name)
-
-        # その他は全てpandas標準で処理
-        return pd.Series(data, name=name)
-
-    except Exception as e:
-        if raise_on_error:
-            raise DataConversionError(f"pandas.Seriesへの変換に失敗: {e}")
-        else:
-            logger.warning(f"pandas.Seriesへの変換に失敗: {e}")
-            return pd.Series([], name=name)
-
-
 def ensure_numeric_series(
     data: Union[pd.Series, list, np.ndarray, Any],
     raise_on_error: bool = True,
@@ -408,7 +377,16 @@ def ensure_numeric_series(
     pandas標準のto_numeric()を直接活用。
     """
     try:
-        series = ensure_series(data, raise_on_error=raise_on_error, name=name)
+        # pandas.Series の場合はそのまま（必要なら名称を変更）
+        if isinstance(data, pd.Series):
+            series = data.rename(name) if name is not None else data
+        # backtesting._Array の特殊ケース
+        elif hasattr(data, "_data"):
+            series = pd.Series(data._data, name=name)
+        # その他は pandas 標準で処理
+        else:
+            series = pd.Series(data, name=name)
+
         return pd.to_numeric(series, errors="raise" if raise_on_error else "coerce")
 
     except Exception as e:

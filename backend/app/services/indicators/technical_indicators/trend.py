@@ -11,6 +11,8 @@ import numpy as np
 import pandas as pd
 import pandas_ta as ta
 
+from ..utils import handle_pandas_ta_errors
+
 
 class TrendIndicators:
     """
@@ -20,6 +22,7 @@ class TrendIndicators:
     """
 
     @staticmethod
+    @handle_pandas_ta_errors
     def sma(data: Union[np.ndarray, pd.Series], length: int) -> np.ndarray:
         """単純移動平均（軽量エラーハンドリング付き）"""
         if length <= 0:
@@ -43,6 +46,7 @@ class TrendIndicators:
         return result.values
 
     @staticmethod
+    @handle_pandas_ta_errors
     def ema(data: Union[np.ndarray, pd.Series], length: int) -> np.ndarray:
         """指数移動平均"""
         if length <= 0:
@@ -53,6 +57,7 @@ class TrendIndicators:
         return result.values
 
     @staticmethod
+    @handle_pandas_ta_errors
     def tema(data: Union[np.ndarray, pd.Series], length: int) -> np.ndarray:
         """三重指数移動平均"""
         series = pd.Series(data) if isinstance(data, np.ndarray) else data
@@ -63,30 +68,35 @@ class TrendIndicators:
         return result.values
 
     @staticmethod
+    @handle_pandas_ta_errors
     def dema(data: Union[np.ndarray, pd.Series], length: int) -> np.ndarray:
         """二重指数移動平均"""
         series = pd.Series(data) if isinstance(data, np.ndarray) else data
         return ta.dema(series, length=length).values
 
     @staticmethod
+    @handle_pandas_ta_errors
     def wma(data: Union[np.ndarray, pd.Series], length: int) -> np.ndarray:
         """加重移動平均"""
         series = pd.Series(data) if isinstance(data, np.ndarray) else data
         return ta.wma(series, length=length).values
 
     @staticmethod
+    @handle_pandas_ta_errors
     def trima(data: Union[np.ndarray, pd.Series], length: int) -> np.ndarray:
         """三角移動平均"""
         series = pd.Series(data) if isinstance(data, np.ndarray) else data
         return ta.trima(series, length=length).values
 
     @staticmethod
+    @handle_pandas_ta_errors
     def kama(data: Union[np.ndarray, pd.Series], length: int = 30) -> np.ndarray:
         """カウフマン適応移動平均"""
         series = pd.Series(data) if isinstance(data, np.ndarray) else data
         return ta.kama(series, length=length).values
 
     @staticmethod
+    @handle_pandas_ta_errors
     def t3(
         data: Union[np.ndarray, pd.Series], length: int = 5, a: float = 0.7
     ) -> np.ndarray:
@@ -95,6 +105,7 @@ class TrendIndicators:
         return ta.t3(series, length=length, a=a).values
 
     @staticmethod
+    @handle_pandas_ta_errors
     def sar(
         high: Union[np.ndarray, pd.Series],
         low: Union[np.ndarray, pd.Series],
@@ -112,6 +123,7 @@ class TrendIndicators:
         return psar_long.fillna(psar_short).values
 
     @staticmethod
+    @handle_pandas_ta_errors
     def sarext(
         high: Union[np.ndarray, pd.Series],
         low: Union[np.ndarray, pd.Series],
@@ -142,6 +154,7 @@ class TrendIndicators:
         return psar_long.fillna(psar_short).values
 
     @staticmethod
+    @handle_pandas_ta_errors
     def ht_trendline(data: Union[np.ndarray, pd.Series]) -> np.ndarray:
         """Hilbert Transform - Instantaneous Trendline"""
         series = pd.Series(data) if isinstance(data, np.ndarray) else data
@@ -153,6 +166,7 @@ class TrendIndicators:
             return TrendIndicators.ema(series, length=3)
 
     @staticmethod
+    @handle_pandas_ta_errors
     def ma(
         data: Union[np.ndarray, pd.Series], period: int, matype: int = 0
     ) -> np.ndarray:
@@ -172,6 +186,7 @@ class TrendIndicators:
         return ma_func(data, period)
 
     @staticmethod
+    @handle_pandas_ta_errors
     def mavp(
         data: Union[np.ndarray, pd.Series],
         periods: Union[np.ndarray, pd.Series],
@@ -206,6 +221,7 @@ class TrendIndicators:
         return result
 
     @staticmethod
+    @handle_pandas_ta_errors
     def midpoint(
         data: Union[np.ndarray, pd.Series],
         length: int = None,
@@ -221,6 +237,7 @@ class TrendIndicators:
         return ta.midpoint(series, length=length).values
 
     @staticmethod
+    @handle_pandas_ta_errors
     def midprice(
         high: Union[np.ndarray, pd.Series],
         low: Union[np.ndarray, pd.Series],
@@ -238,12 +255,14 @@ class TrendIndicators:
         return ta.midprice(high=high_series, low=low_series, length=length).values
 
     @staticmethod
+    @handle_pandas_ta_errors
     def hma(data: Union[np.ndarray, pd.Series], length: int = 20) -> np.ndarray:
         """Hull Moving Average"""
         series = pd.Series(data) if isinstance(data, np.ndarray) else data
         return ta.hma(series, length=length).values
 
     @staticmethod
+    @handle_pandas_ta_errors
     def zlma(data: Union[np.ndarray, pd.Series], length: int = 20) -> np.ndarray:
         """Zero-Lag Exponential Moving Average"""
         series = pd.Series(data) if isinstance(data, np.ndarray) else data
@@ -258,6 +277,7 @@ class TrendIndicators:
             return ta.ema(adjusted, length=length).values
 
     @staticmethod
+    @handle_pandas_ta_errors
     def vwma(
         data: Union[np.ndarray, pd.Series],
         volume: Union[np.ndarray, pd.Series],
@@ -269,12 +289,14 @@ class TrendIndicators:
         return ta.vwma(price, volume=vol, length=length).values
 
     @staticmethod
+    @handle_pandas_ta_errors
     def swma(data: Union[np.ndarray, pd.Series], length: int = 10) -> np.ndarray:
         """Symmetric Weighted Moving Average"""
         series = pd.Series(data) if isinstance(data, np.ndarray) else data
         return ta.swma(series, length=length).values
 
     @staticmethod
+    @handle_pandas_ta_errors
     def alma(
         data: Union[np.ndarray, pd.Series],
         length: int = 9,
@@ -286,12 +308,14 @@ class TrendIndicators:
         return ta.alma(series, length=length, sigma=sigma, offset=offset).values
 
     @staticmethod
+    @handle_pandas_ta_errors
     def rma(data: Union[np.ndarray, pd.Series], length: int = 14) -> np.ndarray:
         """Smoothed Moving Average (RMA)"""
         series = pd.Series(data) if isinstance(data, np.ndarray) else data
         return ta.rma(series, length=length).values
 
     @staticmethod
+    @handle_pandas_ta_errors
     def ichimoku(
         high: Union[np.ndarray, pd.Series],
         low: Union[np.ndarray, pd.Series],
@@ -324,6 +348,7 @@ class TrendIndicators:
 
     # カスタム指標
     @staticmethod
+    @handle_pandas_ta_errors
     def sma_slope(data: Union[np.ndarray, pd.Series], length: int = 20) -> np.ndarray:
         """SMAの傾き（前期間との差分）"""
         series = pd.Series(data) if isinstance(data, np.ndarray) else data
@@ -331,6 +356,7 @@ class TrendIndicators:
         return sma_vals.diff().values
 
     @staticmethod
+    @handle_pandas_ta_errors
     def price_ema_ratio(
         data: Union[np.ndarray, pd.Series], length: int = 20
     ) -> np.ndarray:

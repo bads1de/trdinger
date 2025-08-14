@@ -12,11 +12,7 @@ import numpy as np
 import pandas as pd
 import pandas_ta as ta
 
-from ..utils import (
-    handle_pandas_ta_errors,
-    ensure_series_minimal_conversion,
-    validate_series_data,
-)
+from ..utils import handle_pandas_ta_errors
 
 
 class VolatilityIndicators:
@@ -36,13 +32,9 @@ class VolatilityIndicators:
         length: int = 14,
     ) -> np.ndarray:
         """平均真の値幅"""
-        high_series = ensure_series_minimal_conversion(high)
-        low_series = ensure_series_minimal_conversion(low)
-        close_series = ensure_series_minimal_conversion(close)
-
-        validate_series_data(high_series, length)
-        validate_series_data(low_series, length)
-        validate_series_data(close_series, length)
+        high_series = pd.Series(high) if isinstance(high, np.ndarray) else high
+        low_series = pd.Series(low) if isinstance(low, np.ndarray) else low
+        close_series = pd.Series(close) if isinstance(close, np.ndarray) else close
 
         result = ta.atr(
             high=high_series, low=low_series, close=close_series, length=length
@@ -58,13 +50,9 @@ class VolatilityIndicators:
         length: int = 14,
     ) -> np.ndarray:
         """正規化平均実効値幅"""
-        high_series = ensure_series_minimal_conversion(high)
-        low_series = ensure_series_minimal_conversion(low)
-        close_series = ensure_series_minimal_conversion(close)
-
-        validate_series_data(high_series, length)
-        validate_series_data(low_series, length)
-        validate_series_data(close_series, length)
+        high_series = pd.Series(high) if isinstance(high, np.ndarray) else high
+        low_series = pd.Series(low) if isinstance(low, np.ndarray) else low
+        close_series = pd.Series(close) if isinstance(close, np.ndarray) else close
 
         result = ta.natr(
             high=high_series, low=low_series, close=close_series, length=length
@@ -79,13 +67,9 @@ class VolatilityIndicators:
         close: Union[np.ndarray, pd.Series],
     ) -> np.ndarray:
         """真の値幅"""
-        high_series = ensure_series_minimal_conversion(high)
-        low_series = ensure_series_minimal_conversion(low)
-        close_series = ensure_series_minimal_conversion(close)
-
-        validate_series_data(high_series, 1)
-        validate_series_data(low_series, 1)
-        validate_series_data(close_series, 1)
+        high_series = pd.Series(high) if isinstance(high, np.ndarray) else high
+        low_series = pd.Series(low) if isinstance(low, np.ndarray) else low
+        close_series = pd.Series(close) if isinstance(close, np.ndarray) else close
 
         result = ta.true_range(high=high_series, low=low_series, close=close_series)
         return result.values
@@ -96,8 +80,7 @@ class VolatilityIndicators:
         data: Union[np.ndarray, pd.Series], length: int = 20, std: float = 2.0
     ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
         """ボリンジャーバンド"""
-        series = ensure_series_minimal_conversion(data)
-        validate_series_data(series, length)
+        series = pd.Series(data) if isinstance(data, np.ndarray) else data
         result = ta.bbands(series, length=length, std=std)
 
         # 列名を動的に取得（pandas-taのバージョンによって異なる可能性がある）
@@ -124,10 +107,9 @@ class VolatilityIndicators:
         scalar: float = 2.0,
     ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
         """Keltner Channels: returns (upper, middle, lower)"""
-        h = ensure_series_minimal_conversion(high)
-        low_series = ensure_series_minimal_conversion(low)
-        c = ensure_series_minimal_conversion(close)
-        validate_series_data(c, length)
+        h = pd.Series(high) if isinstance(high, np.ndarray) else high
+        low_series = pd.Series(low) if isinstance(low, np.ndarray) else low
+        c = pd.Series(close) if isinstance(close, np.ndarray) else close
         df = ta.kc(high=h, low=low_series, close=c, length=length, scalar=scalar)
         cols = list(df.columns)
         upper = df[next((c for c in cols if "KCu" in c), cols[0])].values
@@ -148,10 +130,8 @@ class VolatilityIndicators:
         length: int = 20,
     ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
         """Donchian Channels: returns (upper, middle, lower)"""
-        h = ensure_series_minimal_conversion(high)
-        low_series = ensure_series_minimal_conversion(low)
-        validate_series_data(h, length)
-        validate_series_data(low_series, length)
+        h = pd.Series(high) if isinstance(high, np.ndarray) else high
+        low_series = pd.Series(low) if isinstance(low, np.ndarray) else low
         df = ta.donchian(high=h, low=low_series, length=length)
         cols = list(df.columns)
         upper = df[
@@ -178,10 +158,9 @@ class VolatilityIndicators:
         multiplier: float = 3.0,
     ) -> Tuple[np.ndarray, np.ndarray]:
         """Supertrend: returns (supertrend, direction)"""
-        h = ensure_series_minimal_conversion(high)
-        low_series = ensure_series_minimal_conversion(low)
-        c = ensure_series_minimal_conversion(close)
-        validate_series_data(c, length)
+        h = pd.Series(high) if isinstance(high, np.ndarray) else high
+        low_series = pd.Series(low) if isinstance(low, np.ndarray) else low
+        c = pd.Series(close) if isinstance(close, np.ndarray) else close
         df = ta.supertrend(
             high=h, low=low_series, close=c, length=length, multiplier=multiplier
         )
