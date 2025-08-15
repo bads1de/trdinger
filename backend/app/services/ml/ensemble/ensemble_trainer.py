@@ -152,8 +152,6 @@ class EnsembleTrainer(BaseMLTrainer):
                     f"3クラス分類 (down, range, up) の確率が期待されます。"
                 )
 
-            return predictions
-
         except Exception as e:
             logger.error(f"アンサンブル予測エラー: {e}")
             raise UnifiedModelError(f"アンサンブル予測に失敗しました: {e}")

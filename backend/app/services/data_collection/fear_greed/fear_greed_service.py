@@ -38,6 +38,7 @@ class FearGreedIndexService:
 
     async def __aexit__(self, exc_type, exc_val, exc_tb):
         """非同期コンテキストマネージャーの終了"""
+        _ = exc_type, exc_val, exc_tb  # 未使用パラメータ
         if self.session:
             await self.session.close()
 

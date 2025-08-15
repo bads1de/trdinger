@@ -403,6 +403,7 @@ class UnifiedErrorHandler:
         """Unix系環境でのタイムアウト処理"""
 
         def timeout_handler(signum, frame):
+            _ = signum, frame  # 未使用パラメータ
             raise UnifiedTimeoutError(
                 f"Unix環境でのタイムアウト（{timeout_seconds}秒）"
             )

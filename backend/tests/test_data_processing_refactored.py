@@ -24,7 +24,6 @@ from app.utils.data_processing import (
 from app.utils.data_validation import (
     OHLCVDataModel,
     OHLCV_SCHEMA,
-    EXTENDED_MARKET_DATA_SCHEMA,
     validate_dataframe_with_schema,
     clean_dataframe_with_schema,
     DataValidator,  # 後方互換性テスト用

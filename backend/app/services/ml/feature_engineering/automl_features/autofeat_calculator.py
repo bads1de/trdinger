@@ -60,6 +60,7 @@ class AutoFeatCalculator:
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         """コンテキストマネージャーの終了時にリソースをクリーンアップ"""
+        _ = exc_type, exc_val, exc_tb  # 未使用パラメータ
         try:
             self.clear_model()
             self._force_garbage_collection()

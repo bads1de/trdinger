@@ -490,7 +490,7 @@ class BybitService(ABC):
             最新のタイムスタンプ（ミリ秒）
         """
 
-        async def get_timestamp(db, **inner_kwargs):
+        async def get_timestamp(db, **_):
             repo = repository_class(db)
             get_timestamp_method = getattr(repo, get_timestamp_method_name)
             latest_datetime = get_timestamp_method(symbol, **kwargs)

@@ -237,6 +237,7 @@ class FakeStrategy:
         **kwargs,
     ):
         """backtesting.pyのStrategy.I()メソッドをシミュレート"""
+        _ = name, plot, overlay, color, scatter  # 未使用パラメータ
         return func(*args, **kwargs)
 
 

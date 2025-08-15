@@ -353,11 +353,12 @@ class LightGBMModel:
         sklearn互換のパラメータ取得メソッド
 
         Args:
-            deep: 深いコピーを行うかどうか
+            deep: 深いコピーを行うかどうか（未使用）
 
         Returns:
             パラメータの辞書
         """
+        _ = deep  # 未使用パラメータ
         # 基本パラメータ
         params = {
             "automl_config": self.automl_config,

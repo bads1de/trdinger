@@ -4,7 +4,9 @@ import pytest
 from app.services.auto_strategy.engines.ga_engine import GeneticAlgorithmEngine
 from app.services.auto_strategy.models.ga_config import GAConfig
 from app.services.auto_strategy.factories.strategy_factory import StrategyFactory
-from app.services.auto_strategy.generators.random_gene_generator import RandomGeneGenerator
+from app.services.auto_strategy.generators.random_gene_generator import (
+    RandomGeneGenerator,
+)
 
 
 class DummyBacktestService:
@@ -45,21 +47,48 @@ def test_nsga2_uses_eaMuPlusLambda(monkeypatch, engine_fast):
     monkeypatch.setattr(
         engine_fast.individual_evaluator,
         "evaluate_individual",
-        lambda individual, config: (1.0,) if not config.enable_multi_objective else (1.0,),
+        lambda individual, config: (
+            (1.0,) if not config.enable_multi_objective else (1.0,)
+        ),
         raising=True,
     )
 
     # deap.algorithms.eaMuPlusLambda の呼び出しをフック
     import deap.algorithms as algorithms
 
-    def fake_eaMuPlusLambda(pop, toolbox, mu, lambda_, cxpb, mutpb, ngen, stats=None, halloffame=None, verbose=False):
+    def fake_eaMuPlusLambda(
+        pop,
+        toolbox,
+        mu,
+        lambda_,
+        cxpb,
+        mutpb,
+        ngen,
+        stats=None,
+        halloffame=None,
+        verbose=False,
+    ):
+        _ = (
+            toolbox,
+            mu,
+            lambda_,
+            cxpb,
+            mutpb,
+            ngen,
+            stats,
+            halloffame,
+            verbose,
+        )  # 未使用パラメータ
         called["count"] += 1
+
         # そのまま population, 空logbook 風のオブジェクトを返す
         class Log:
             def __init__(self):
                 self.select("gen")
+
             def select(self, *args, **kwargs):
                 return []
+
         return pop, Log()
 
     monkeypatch.setattr(algorithms, "eaMuPlusLambda", fake_eaMuPlusLambda, raising=True)
@@ -114,4 +143,3 @@ def test_selection_wrapper_applies_fitness_sharing(monkeypatch, engine_fast):
 
     # 初期化時と世代内で最低1回は呼ばれているはず
     assert applied["count"] >= 1, "フィットネス共有が適用されていません"
-

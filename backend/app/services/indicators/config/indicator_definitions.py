@@ -4,8 +4,6 @@
 各インジケーターの設定を定義し、レジストリに登録します。
 """
 
-from functools import partial
-
 from app.services.auto_strategy.services.ml_orchestrator import ml_orchestrator
 from app.services.indicators.technical_indicators.math_operators import (
     MathOperatorsIndicators,

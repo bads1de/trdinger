@@ -141,6 +141,14 @@ class TrendIndicators:
         low_series = pd.Series(low) if isinstance(low, np.ndarray) else low
 
         # 拡張パラメータをpandas-ta psarにマッピング（近似）
+        # startvalue, offsetonreverse, accelerationinitshort, accelerationshort, accelerationmaxshortは未使用
+        _ = (
+            startvalue,
+            offsetonreverse,
+            accelerationinitshort,
+            accelerationshort,
+            accelerationmaxshort,
+        )
         result = ta.psar(
             high=high_series,
             low=low_series,

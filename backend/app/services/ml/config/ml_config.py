@@ -57,6 +57,7 @@ class ModelConfig(BaseSettings):
 
     def model_post_init(self, __context: Any) -> None:
         """初期化後処理：ディレクトリ作成"""
+        _ = __context  # 未使用パラメータ
         os.makedirs(self.MODEL_SAVE_PATH, exist_ok=True)
 
 
@@ -116,6 +117,7 @@ class FeatureEngineeringConfig(BaseSettings):
 
     def model_post_init(self, __context: Any) -> None:
         """デフォルト値の設定"""
+        _ = __context  # 未使用パラメータ
         if self.DEFAULT_LOOKBACK_PERIODS is None:
             self.DEFAULT_LOOKBACK_PERIODS = {
                 "short_ma": 10,

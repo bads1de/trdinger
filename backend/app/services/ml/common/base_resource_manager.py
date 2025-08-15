@@ -42,6 +42,7 @@ class BaseResourceManager(ABC):
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         """コンテキストマネージャーの終了時に自動クリーンアップ"""
+        _ = exc_type, exc_val, exc_tb  # 未使用パラメータ
         try:
             self.cleanup_resources()
         except Exception as e:
@@ -241,6 +242,7 @@ class ResourceManagedOperation:
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         """操作終了時の自動クリーンアップ"""
+        _ = exc_type, exc_val, exc_tb  # 未使用パラメータ
         import time
 
         try:
