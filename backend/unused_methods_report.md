@@ -41,28 +41,6 @@
 - `app/api/ml_training.py:259` - `get_ml_model_info()`
 - `app/api/ml_training.py:273` - `stop_ml_training()`
 
-### Main App
-
-- `app/main.py:103` - `global_exception_handler()`
-- `app/main.py:116` - `health_check()`
-
-### Models
-
-- `app/services/auto_strategy/models/ga_config.py:373` - `apply_fitness_profile()`
-- `app/services/auto_strategy/models/gene_serialization.py:238` - `dict_to_condition()`
-- `app/services/auto_strategy/models/gene_serialization.py:426` - `json_to_strategy_gene()`
-- `app/services/auto_strategy/models/gene_serialization.py:457` - `serialize_for_database()`
-- `app/services/auto_strategy/models/gene_serialization.py:480` - `deserialize_from_database()`
-- `app/services/auto_strategy/models/gene_serialization.py:512` - `serialize_for_api()`
-- `app/services/auto_strategy/models/gene_serialization.py:555` - `validate_serialized_data()`
-- `app/services/auto_strategy/models/gene_strategy.py:62` - `normalize_parameters()`
-- `app/services/auto_strategy/models/gene_strategy.py:82` - `create_from_json_config()`
-- `app/services/auto_strategy/models/gene_strategy.py:210` - `encode_gene_to_list()`
-- `app/services/auto_strategy/models/gene_strategy.py:218` - `decode_list_to_gene()`
-- `app/services/auto_strategy/models/gene_tpsl.py:178` - `calculate_tpsl_values()`
-- `app/services/auto_strategy/models/gene_validation.py:189` - `_validate_dict_operand()`
-- `app/services/auto_strategy/models/gene_validation.py:557` - `get_validation_summary()`
-
 ### Utils
 
 - `app/services/auto_strategy/utils/auto_strategy_utils.py:194` - `denormalize_parameter()`
@@ -87,19 +65,6 @@
 - `app/services/auto_strategy/utils/operand_grouping.py:223` - `get_operands_by_group()`
 - `app/services/auto_strategy/utils/operand_grouping.py:238` - `get_group_statistics()`
 - `app/services/auto_strategy/utils/strategy_integration_service.py:86` - `get_all_strategies_for_stats()`
-
-## データ収集関連
-
-### Bybit Services
-
-- `app/services/data_collection/bybit/funding_rate_service.py:39` - `fetch_current_funding_rate()`
-- `app/services/data_collection/bybit/funding_rate_service.py:80` - `fetch_all_funding_rate_history()`
-- `app/services/data_collection/bybit/open_interest_service.py:26` - `fetch_current_open_interest()`
-- `app/services/data_collection/bybit/open_interest_service.py:58` - `fetch_all_open_interest_history()`
-
-## 指標関連
-
-### Indicator Config
 
 ### Technical Indicators
 
@@ -174,19 +139,6 @@
 - `app/services/ml/feature_engineering/optimized_crypto_features.py:36` - `create_optimized_features()`
 - `app/services/ml/feature_engineering/optimized_crypto_features.py:599` - `get_feature_groups()`
 - `app/services/ml/feature_engineering/optimized_crypto_features.py:603` - `get_top_features_by_stability()`
-
-### Orchestration
-
-## 最適化関連
-
-### Base Repository
-
-- `database/repositories/base_repository.py:246` - `_handle_delete_error()`
-- `database/repositories/base_repository.py:355` - `get_data_in_range()`
-- `database/repositories/base_repository.py:507` - `get_data_statistics()`
-- `database/repositories/base_repository.py:554` - `validate_records()`
-
-
 
 ## 統計情報
 
