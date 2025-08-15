@@ -185,34 +185,3 @@ class FearGreedIndexRepository(BaseRepository):
         )
         logger.info(f"古いFear & Greed Indexデータを {deleted_count} 件削除しました")
         return deleted_count
-
-    def get_fear_greed_dataframe(
-        self,
-        start_time: Optional[datetime] = None,
-        end_time: Optional[datetime] = None,
-        limit: Optional[int] = None,
-    ) -> pd.DataFrame:
-        """
-        Fear & Greed IndexデータをDataFrameとして取得
-
-        Args:
-            start_time: 開始時刻
-            end_time: 終了時刻
-            limit: 取得件数制限
-
-        Returns:
-            Fear & Greed IndexデータのDataFrame
-        """
-        records = self.get_fear_greed_data(start_time, end_time, limit)
-
-        column_mapping = {
-            "data_timestamp": "data_timestamp",
-            "value": "value",
-            "value_classification": "value_classification",
-        }
-
-        return self.to_dataframe(
-            records=records,
-            column_mapping=column_mapping,
-            index_column="data_timestamp",
-        )

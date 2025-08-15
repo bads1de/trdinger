@@ -63,12 +63,6 @@
 - `app/services/auto_strategy/models/gene_validation.py:189` - `_validate_dict_operand()`
 - `app/services/auto_strategy/models/gene_validation.py:557` - `get_validation_summary()`
 
-### Services
-
-- `app/services/auto_strategy/services/experiment_manager.py:128` - `test_strategy_generation()`
-- `app/services/auto_strategy/services/experiment_persistence_service.py:374` - `get_experiment_result()`
-
-
 ### Utils
 
 - `app/services/auto_strategy/utils/auto_strategy_utils.py:194` - `denormalize_parameter()`
@@ -192,9 +186,8 @@
 - `database/repositories/base_repository.py:507` - `get_data_statistics()`
 - `database/repositories/base_repository.py:554` - `validate_records()`
 
-### Fear Greed Repository
 
-- `database/repositories/fear_greed_repository.py:189` - `get_fear_greed_dataframe()`
+
 
 ### Funding Rate Repository
 
