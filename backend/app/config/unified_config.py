@@ -258,25 +258,7 @@ class UnifiedConfig(BaseSettings):
     ga: GAConfig = Field(default_factory=GAConfig)
     ml: MLConfig = Field(default_factory=MLConfig)
 
-    def validate_all(self) -> bool:
-        """全設定の妥当性を検証"""
-        try:
-            # 基本設定の検証
-            assert self.app.port > 0
-            assert self.database.port > 0
 
-            # 市場設定の検証
-            assert self.market.min_limit <= self.market.max_limit
-            assert self.market.default_limit >= self.market.min_limit
-            assert self.market.default_limit <= self.market.max_limit
-
-            # ML設定の検証
-            assert self.ml.data_processing.max_ohlcv_rows > 0
-            assert self.ml.data_processing.feature_calculation_timeout > 0
-
-            return True
-        except AssertionError:
-            return False
 
     class Config:
         env_nested_delimiter = "__"  # ネストされた環境変数をサポート

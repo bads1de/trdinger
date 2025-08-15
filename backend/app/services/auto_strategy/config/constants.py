@@ -316,28 +316,6 @@ def get_all_indicators() -> List[str]:
     return VALID_INDICATOR_TYPES + ML_INDICATOR_TYPES
 
 
-def get_indicator_categories() -> Dict[str, List[str]]:
-    """指標をカテゴリ別に分類"""
-    return {
-        "trend": ["SMA", "EMA", "WMA", "DEMA", "TEMA", "TRIMA", "KAMA", "MAMA", "T3"],
-        "momentum": [
-            "RSI",
-            "STOCH",
-            "STOCHF",
-            "STOCHRSI",
-            "MACD",
-            "MACDEXT",
-            "MACDFIX",
-        ],
-        "volatility": ["ATR", "NATR", "TRANGE", "BBANDS", "KELTNER", "DONCHIAN"],
-        "volume": ["AD", "ADOSC", "OBV"],
-        "cycle": ["HT_DCPERIOD", "HT_DCPHASE", "HT_PHASOR", "HT_SINE", "HT_TRENDMODE"],
-        "statistical": ["BETA", "CORREL", "LINEARREG", "STDDEV", "TSF", "VAR"],
-        "pattern": ["CDL_DOJI", "CDL_HAMMER", "CDL_HANGING_MAN", "CDL_SHOOTING_STAR"],
-        "ml": ML_INDICATOR_TYPES,
-    }
-
-
 def validate_symbol(symbol: str) -> bool:
     """シンボルの妥当性を検証"""
     return symbol in SUPPORTED_SYMBOLS
@@ -377,11 +355,6 @@ def get_all_indicator_ids() -> Dict[str, int]:
 def get_id_to_indicator_mapping(indicator_ids: Dict[str, int]) -> Dict[int, str]:
     """ID→指標の逆引きマッピングを取得"""
     return {v: k for k, v in indicator_ids.items()}
-
-
-def validate_indicator_type(indicator_type: str) -> bool:
-    """指標タイプの妥当性を検証"""
-    return indicator_type in get_all_indicators()
 
 
 # === インジケータ解決支援定数 ===

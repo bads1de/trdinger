@@ -121,27 +121,3 @@ class BaseConfig(ABC):
         except Exception as e:
             logger.error(f"JSON復元エラー: {e}", exc_info=True)
             raise ValueError(f"JSON からの復元に失敗しました: {e}")
-
-    def update_from_dict(self, data: Dict[str, Any]) -> None:
-        """既存の設定オブジェクトを辞書で更新"""
-        try:
-            field_names = {f.name for f in fields(self)}
-            for key, value in data.items():
-                if key in field_names:
-                    setattr(self, key, value)
-        except Exception as e:
-            logger.error(f"設定更新エラー: {e}", exc_info=True)
-            raise ValueError(f"設定の更新に失敗しました: {e}")
-
-    def get_summary(self) -> str:
-        """設定の概要を取得"""
-        try:
-            summary_parts = []
-            for field_info in fields(self):
-                if field_info.name not in ["validation_rules"]:  # 内部フィールドは除外
-                    value = getattr(self, field_info.name)
-                    summary_parts.append(f"{field_info.name}: {value}")
-            return ", ".join(summary_parts)
-        except Exception as e:
-            logger.error(f"設定概要生成エラー: {e}", exc_info=True)
-            return "設定概要の生成に失敗しました"

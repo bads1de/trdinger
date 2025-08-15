@@ -50,23 +50,6 @@
 - `app/main.py:103` - `global_exception_handler()`
 - `app/main.py:116` - `health_check()`
 
-### Unified Config
-
-- `app/config/unified_config.py:184` - `create_model_directory()`
-- `app/config/unified_config.py:261` - `validate_all()`
-
-## Auto Strategy サービス
-
-### Base Config
-
-- `app/services/auto_strategy/config/base_config.py:125` - `update_from_dict()`
-- `app/services/auto_strategy/config/base_config.py:136` - `get_summary()`
-
-### Constants
-
-- `app/services/auto_strategy/config/constants.py:319` - `get_indicator_categories()`
-- `app/services/auto_strategy/config/constants.py:382` - `validate_indicator_type()`
-
 ### Generators
 
 - `app/services/auto_strategy/generators/gene_factory.py:297` - `generate_population()`
