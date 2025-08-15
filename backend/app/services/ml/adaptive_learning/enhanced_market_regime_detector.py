@@ -493,21 +493,3 @@ class EnhancedMarketRegimeDetector:
         unique_regimes = len(set(recent_regimes))
 
         return max(0.0, 1.0 - (unique_regimes - 1) / 9.0)
-
-    def should_retrain_model(self, stability_threshold: float = 0.7) -> bool:
-        """モデル再学習が必要かを判定"""
-        if len(self.regime_history) < 5:
-            return False
-
-        stability = self.get_regime_stability()
-        recent_confidences = [r["confidence"] for r in self.regime_history[-5:]]
-        avg_confidence = np.mean(recent_confidences)
-
-        should_retrain = stability < stability_threshold or avg_confidence < 0.6
-
-        if should_retrain:
-            logger.info(
-                f"モデル再学習推奨: 安定性={stability:.2f}, 平均信頼度={avg_confidence:.2f}"
-            )
-
-        return should_retrain

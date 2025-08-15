@@ -409,22 +409,3 @@ class AdaptiveLearningService:
             }
 
         return adjustments
-
-    def get_adaptation_summary(self) -> Dict[str, Any]:
-        """適応処理の要約を取得"""
-        if not self.adaptation_history:
-            return {"status": "no_adaptations"}
-
-        recent_adaptations = self.adaptation_history[-10:]
-
-        return {
-            "current_regime": (
-                self.current_regime.value if self.current_regime else "unknown"
-            ),
-            "last_adaptation": recent_adaptations[-1].timestamp.isoformat(),
-            "total_adaptations": len(self.adaptation_history),
-            "recent_actions": [a.action_taken for a in recent_adaptations],
-            "model_updates": sum(1 for a in recent_adaptations if a.model_updated),
-            "average_confidence": np.mean([a.confidence for a in recent_adaptations]),
-            "regime_stability": self.regime_detector.get_regime_stability(),
-        }

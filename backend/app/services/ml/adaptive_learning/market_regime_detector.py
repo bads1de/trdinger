@@ -299,28 +299,3 @@ class MarketRegimeDetector:
         stability = recent_regimes.count(most_common) / len(recent_regimes)
 
         return stability
-
-    def should_retrain_model(self, stability_threshold: float = 0.7) -> bool:
-        """モデル再学習が必要かを判定"""
-        if len(self.regime_history) < 5:
-            return False
-
-        # レジーム安定性をチェック
-        stability = self.get_regime_stability()
-
-        # 最近のレジーム変化をチェック
-        recent_regimes = [r.regime for r in self.regime_history[-5:]]
-        regime_changes = len(set(recent_regimes))
-
-        # 再学習条件
-        should_retrain = (
-            stability < stability_threshold  # 不安定
-            or regime_changes >= 3  # 頻繁な変化
-        )
-
-        if should_retrain:
-            logger.info(
-                f"モデル再学習推奨: 安定性={stability:.2f}, 変化数={regime_changes}"
-            )
-
-        return should_retrain

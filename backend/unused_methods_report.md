@@ -193,10 +193,6 @@
 
 ### Adaptive Learning
 
-- `app/services/ml/adaptive_learning/adaptive_learning_service.py:413` - `get_adaptation_summary()`
-- `app/services/ml/adaptive_learning/enhanced_market_regime_detector.py:497` - `should_retrain_model()`
-- `app/services/ml/adaptive_learning/market_regime_detector.py:303` - `should_retrain_model()`
-
 ### Config
 
 - `app/services/ml/config/ml_config.py:58` - `model_post_init()`
