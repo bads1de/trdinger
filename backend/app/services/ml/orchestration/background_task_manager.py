@@ -158,10 +158,7 @@ class BackgroundTaskManager:
         finally:
             self.unregister_task(task_id, force_cleanup=True)
 
-    def get_active_tasks(self) -> Dict[str, Dict[str, Any]]:
-        """アクティブなタスクの一覧を取得"""
-        with self._lock:
-            return self._active_tasks.copy()
+
 
     def cleanup_all_tasks(self):
         """すべてのアクティブなタスクをクリーンアップ"""
@@ -173,11 +170,7 @@ class BackgroundTaskManager:
 
         logger.info(f"全バックグラウンドタスククリーンアップ完了: {len(task_ids)}個")
 
-    def shutdown(self):
-        """バックグラウンドタスクマネージャーをシャットダウン"""
-        self._shutdown_event.set()
-        self.cleanup_all_tasks()
-        logger.info("バックグラウンドタスクマネージャーシャットダウン完了")
+
 
     def _get_memory_usage(self) -> float:
         """現在のメモリ使用量を取得（MB単位）"""
@@ -192,21 +185,7 @@ class BackgroundTaskManager:
             logger.warning(f"メモリ使用量取得エラー: {e}")
             return 0.0
 
-    def get_memory_stats(self) -> Dict[str, Any]:
-        """メモリ統計を取得"""
-        current_memory = self._get_memory_usage()
 
-        with self._lock:
-            task_count = len(self._active_tasks)
-            total_resources = sum(
-                len(resources) for resources in self._task_resources.values()
-            )
-
-        return {
-            "current_memory_mb": current_memory,
-            "active_task_count": task_count,
-            "total_managed_resources": total_resources,
-        }
 
 
 # グローバルインスタンス

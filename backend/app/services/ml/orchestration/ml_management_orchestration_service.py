@@ -416,61 +416,8 @@ class MLManagementOrchestrationService:
         model_manager.cleanup_expired_models()
         return {"message": "古いモデルファイルが削除されました"}
 
-    async def get_models_list(self) -> Dict[str, Any]:
-        """
-        利用可能なモデル一覧を取得
-        """
-        try:
-            models = model_manager.list_models()
 
-            # モデル情報を整形
-            models_info = []
-            for model in models:
-                # メタデータを取得
-                try:
-                    model_data = model_manager.load_model(model["path"])
-                    metadata = model_data.get("metadata", {}) if model_data else {}
 
-                    model_info = {
-                        "name": model["name"],
-                        "path": model["path"],
-                        "size_mb": model["size_mb"],
-                        "modified_at": model["modified_at"].isoformat(),
-                        "model_type": metadata.get("model_type", "unknown"),
-                        "trainer_type": metadata.get("trainer_type", "unknown"),
-                        "feature_count": metadata.get("feature_count", 0),
-                        "has_feature_importance": bool(
-                            metadata.get("feature_importance")
-                        ),
-                        "feature_importance_count": len(
-                            metadata.get("feature_importance", {})
-                        ),
-                    }
-                    models_info.append(model_info)
-                except Exception as e:
-                    logger.warning(f"モデルメタデータ取得エラー {model['name']}: {e}")
-                    # メタデータ取得に失敗してもモデル情報は追加
-                    model_info = {
-                        "name": model["name"],
-                        "path": model["path"],
-                        "size_mb": model["size_mb"],
-                        "modified_at": model["modified_at"].isoformat(),
-                        "model_type": "unknown",
-                        "trainer_type": "unknown",
-                        "feature_count": 0,
-                        "has_feature_importance": False,
-                        "feature_importance_count": 0,
-                    }
-                    models_info.append(model_info)
-
-            # 最新順にソート
-            models_info.sort(key=lambda x: x["modified_at"], reverse=True)
-
-            return {"models": models_info, "total_count": len(models_info)}
-
-        except Exception as e:
-            logger.error(f"モデル一覧取得エラー: {e}")
-            return {"models": [], "total_count": 0, "error": str(e)}
 
     async def load_model(self, model_name: str) -> Dict[str, Any]:
         """

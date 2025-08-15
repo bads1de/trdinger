@@ -213,12 +213,7 @@
 
 ### Orchestration
 
-- `app/services/ml/orchestration/background_task_manager.py:161` - `get_active_tasks()`
-- `app/services/ml/orchestration/background_task_manager.py:176` - `shutdown()`
-- `app/services/ml/orchestration/background_task_manager.py:195` - `get_memory_stats()`
-- `app/services/ml/orchestration/ml_management_orchestration_service.py:419` - `get_models_list()`
-- `app/services/ml/orchestration/ml_training_orchestration_service.py:53` - `get_default_automl_config()`
-- `app/services/ml/orchestration/ml_training_orchestration_service.py:73` - `get_financial_optimized_automl_config()`
+
 
 ## 最適化関連
 

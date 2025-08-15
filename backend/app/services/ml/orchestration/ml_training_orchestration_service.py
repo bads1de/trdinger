@@ -50,45 +50,9 @@ class MLTrainingOrchestrationService:
     def __init__(self):
         """初期化"""
 
-    @staticmethod
-    def get_default_automl_config() -> Dict[str, Any]:
-        """デフォルトのAutoML設定を取得"""
-        return {
-            "tsfresh": {
-                "enabled": True,
-                "feature_selection": True,
-                "fdr_level": 0.05,
-                "feature_count_limit": 100,
-                "parallel_jobs": 2,
-            },
-            "autofeat": {
-                "enabled": True,
-                "max_features": 50,
-                "generations": 10,
-                "population_size": 30,
-                "tournament_size": 3,
-            },
-        }
 
-    @staticmethod
-    def get_financial_optimized_automl_config() -> Dict[str, Any]:
-        """金融データ最適化AutoML設定を取得"""
-        return {
-            "tsfresh": {
-                "enabled": True,
-                "feature_selection": True,
-                "fdr_level": 0.01,
-                "feature_count_limit": 200,
-                "parallel_jobs": 4,
-            },
-            "autofeat": {
-                "enabled": True,
-                "max_features": 100,
-                "generations": 20,
-                "population_size": 50,
-                "tournament_size": 3,
-            },
-        }
+
+
 
     def get_data_service(self, db: Session) -> BacktestDataService:
         """データサービスの依存性注入"""
