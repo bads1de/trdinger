@@ -105,17 +105,6 @@
 - `app/services/auto_strategy/utils/operand_grouping.py:238` - `get_group_statistics()`
 - `app/services/auto_strategy/utils/strategy_integration_service.py:86` - `get_all_strategies_for_stats()`
 
-## バックテスト関連
-
-### Data Services
-
-- `app/services/backtest/data/data_conversion_service.py:72` - `convert_open_interest_to_dataframe()`
-- `app/services/backtest/data/data_conversion_service.py:103` - `convert_funding_rate_to_dataframe()`
-- `app/services/backtest/data/data_conversion_service.py:134` - `convert_fear_greed_to_dataframe()`
-- `app/services/backtest/data/data_conversion_service.py:205` - `create_empty_dataframe()`
-- `app/services/backtest/data/data_conversion_service.py:222` - `validate_dataframe_structure()`
-- `app/services/backtest/data/data_retrieval_service.py:191` - `validate_repositories()`
-
 ## データ収集関連
 
 ### Bybit Services
@@ -215,13 +204,6 @@
 - `app/services/optimization/base_optimizer.py:131` - `_log_optimization_end()`
 - `app/services/optimization/base_optimizer.py:135` - `_create_optimization_result()`
 - `app/services/optimization/base_optimizer.py:168` - `get_method_name()`
-
-### Backtest Result Repository
-
-- `database/repositories/backtest_result_repository.py:299` - `get_backtest_results_by_strategy()`
-- `database/repositories/backtest_result_repository.py:327` - `get_backtest_results_by_symbol()`
-- `database/repositories/backtest_result_repository.py:380` - `get_performance_summary()`
-- `database/repositories/backtest_result_repository.py:426` - `cleanup_old_results()`
 
 ### Base Repository
 

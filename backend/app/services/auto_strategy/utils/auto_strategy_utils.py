@@ -191,53 +191,6 @@ class AutoStrategyUtils:
             except ZeroDivisionError:
                 return 0.0
 
-    @staticmethod
-    def denormalize_parameter(
-        normalized_val: float, min_val: float = 1, max_val: float = 200
-    ) -> int:
-        """
-        正規化されたパラメータを元の範囲に戻す（scikit-learn MinMaxScaler互換）
-
-        Args:
-            normalized_val: 正規化された値（0-1の範囲）
-            min_val: 元の最小値
-            max_val: 元の最大値
-
-        Returns:
-            元の範囲に戻された整数値
-        """
-        try:
-            from sklearn.preprocessing import MinMaxScaler
-            import numpy as np
-
-            # scikit-learnのMinMaxScalerを使用
-            scaler = MinMaxScaler(feature_range=(0, 1))
-
-            # 単一値の場合の処理
-            if min_val == max_val:
-                return int(min_val)
-
-            # 範囲を学習
-            range_values = np.array([[min_val], [max_val]])
-            scaler.fit(range_values)
-
-            # 逆変換
-            denormalized = scaler.inverse_transform([[normalized_val]])
-            value = denormalized[0, 0]
-
-            return int(max(min_val, min(max_val, int(value))))
-
-        except Exception as e:
-            logger.error(f"非正規化エラー: {e}")
-            # フォールバック: 手動実装
-            try:
-                if max_val == min_val:
-                    return int(min_val)
-                value = min_val + normalized_val * (max_val - min_val)
-                return int(max(min_val, min(max_val, int(value))))
-            except Exception:
-                return int(min_val)
-
     # === 検証ユーティリティ ===
 
     @staticmethod
@@ -318,11 +271,6 @@ class AutoStrategyUtils:
         except Exception as e:
             logger.error(f"設定マージエラー: {e}")
             return base_config
-
-    @staticmethod
-    def extract_config_subset(config: Dict, keys: List[str]) -> Dict:
-        """設定から指定キーのサブセットを抽出"""
-        return {key: config.get(key) for key in keys if key in config}
 
     # === ログ管理ユーティリティ ===
 
