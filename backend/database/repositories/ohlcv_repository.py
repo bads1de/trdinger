@@ -230,18 +230,6 @@ class OHLCVRepository(BaseRepository):
         """
         return DataValidator.sanitize_ohlcv_data(ohlcv_data)
 
-    def count_records(self, symbol: str, timeframe: str) -> int:
-        """
-        指定されたシンボルと時間軸のレコード数を取得
-
-        Args:
-            symbol: 取引ペア
-            timeframe: 時間軸
-
-        Returns:
-            レコード数
-        """
-        return self.get_data_count(symbol, timeframe)
 
     def clear_all_ohlcv_data(self) -> int:
         """
@@ -270,75 +258,8 @@ class OHLCVRepository(BaseRepository):
         )
         return deleted_count
 
-    def clear_ohlcv_data_by_timeframe(self, timeframe: str) -> int:
-        """
-        指定された時間足のOHLCVデータを削除
 
-        Args:
-            timeframe: 削除対象の時間足
 
-        Returns:
-            削除された件数
-        """
-        deleted_count = self._delete_records_by_filter("timeframe", timeframe)
-        logger.info(
-            f"時間足 '{timeframe}' のOHLCVデータを削除しました: {deleted_count}件"
-        )
-        return deleted_count
-
-    def clear_ohlcv_data_by_date_range(
-        self,
-        symbol: str,
-        timeframe: str,
-        start_time: Optional[datetime] = None,
-        end_time: Optional[datetime] = None,
-    ) -> int:
-        """
-        指定された期間のOHLCVデータを削除
-
-        Args:
-            symbol: 取引ペア
-            timeframe: 時間軸
-            start_time: 削除開始時刻
-            end_time: 削除終了時刻
-
-        Returns:
-            削除された件数
-        """
-        additional_filters = {"symbol": symbol, "timeframe": timeframe}
-        deleted_count = self.delete_by_date_range(
-            timestamp_column="timestamp",
-            start_time=start_time,
-            end_time=end_time,
-            additional_filters=additional_filters,
-        )
-        logger.info(
-            f"期間指定でOHLCVデータを削除しました ({symbol}, {timeframe}): {deleted_count}件"
-        )
-        return deleted_count
-
-    def get_available_timeframes(self, symbol: str) -> List[str]:
-        """
-        指定されたシンボルで利用可能な時間軸のリストを取得
-
-        Args:
-            symbol: 取引ペア
-
-        Returns:
-            利用可能な時間軸のリスト
-        """
-        try:
-            result = (
-                self.db.query(OHLCVData.timeframe)
-                .filter(OHLCVData.symbol == symbol)
-                .distinct()
-                .all()
-            )
-            return [row[0] for row in result]
-
-        except Exception as e:
-            logger.error(f"利用可能な時間軸の取得中にエラーが発生しました: {e}")
-            raise
 
     def get_available_symbols(self) -> List[str]:
         """

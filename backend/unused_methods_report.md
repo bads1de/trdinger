@@ -186,9 +186,6 @@
 - `database/repositories/base_repository.py:507` - `get_data_statistics()`
 - `database/repositories/base_repository.py:554` - `validate_records()`
 
-
-
-
 ### Funding Rate Repository
 
 - `database/repositories/funding_rate_repository.py:24` - `insert_funding_rate_data()`
@@ -210,19 +207,6 @@
 - `database/repositories/generated_strategy_repository.py:376` - `get_strategy_by_id()`
 - `database/repositories/generated_strategy_repository.py:397` - `get_generation_statistics()`
 - `database/repositories/generated_strategy_repository.py:437` - `delete_strategies_by_experiment()`
-
-### OHLCV Repository
-
-- `database/repositories/ohlcv_repository.py:233` - `count_records()`
-- `database/repositories/ohlcv_repository.py:273` - `clear_ohlcv_data_by_timeframe()`
-- `database/repositories/ohlcv_repository.py:289` - `clear_ohlcv_data_by_date_range()`
-- `database/repositories/ohlcv_repository.py:320` - `get_available_timeframes()`
-
-### Open Interest Repository
-
-- `database/repositories/open_interest_repository.py:24` - `insert_open_interest_data()`
-- `database/repositories/open_interest_repository.py:107` - `get_open_interest_count()`
-- `database/repositories/open_interest_repository.py:148` - `get_open_interest_dataframe()`
 
 ## 統計情報
 

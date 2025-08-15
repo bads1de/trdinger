@@ -104,17 +104,6 @@ class OpenInterestRepository(BaseRepository):
         """
         return super().get_oldest_timestamp("data_timestamp", {"symbol": symbol})
 
-    def get_open_interest_count(self, symbol: str) -> int:
-        """
-        指定されたシンボルのオープンインタレストデータ件数を取得
-
-        Args:
-            symbol: 取引ペア
-
-        Returns:
-            データ件数
-        """
-        return super().get_record_count({"symbol": symbol})
 
     def clear_all_open_interest_data(self) -> int:
         """
@@ -144,35 +133,3 @@ class OpenInterestRepository(BaseRepository):
             f"シンボル '{symbol}' のオープンインタレストデータを削除しました: {deleted_count}件"
         )
         return deleted_count
-
-    def get_open_interest_dataframe(
-        self,
-        symbol: str,
-        start_time: Optional[datetime] = None,
-        end_time: Optional[datetime] = None,
-        limit: Optional[int] = None,
-    ) -> pd.DataFrame:
-        """
-        オープンインタレストデータをDataFrameとして取得
-
-        Args:
-            symbol: 取引ペア
-            start_time: 開始時刻
-            end_time: 終了時刻
-            limit: 取得件数制限
-
-        Returns:
-            オープンインタレストデータのDataFrame
-        """
-        records = self.get_open_interest_data(symbol, start_time, end_time, limit)
-
-        column_mapping = {
-            "data_timestamp": "data_timestamp",
-            "open_interest_value": "open_interest_value",
-        }
-
-        return self.to_dataframe(
-            records=records,
-            column_mapping=column_mapping,
-            index_column="data_timestamp",
-        )
