@@ -290,6 +290,28 @@ class IndicatorConfigRegistry:
             return fallback_type
         return None
 
+    def generate_parameters_for_indicator(
+        self, indicator_type: str
+    ) -> Dict[str, Any]:
+        """
+        指標タイプに応じたパラメータを生成
+
+        IndicatorParameterManagerシステムを使用した統一されたパラメータ生成。
+        """
+        from app.services.indicators.parameter_manager import IndicatorParameterManager
+
+        try:
+            config = self.get_indicator_config(indicator_type)
+            if config:
+                manager = IndicatorParameterManager()
+                return manager.generate_parameters(indicator_type, config)
+            else:
+                logger.warning(f"指標 {indicator_type} の設定が見つかりません")
+                return {}
+        except Exception as e:
+            logger.error(f"指標 {indicator_type} のパラメータ生成に失敗: {e}")
+            return {}
+
     def generate_json_name(self, indicator_name: str) -> str:
         """JSON形式の名前を生成"""
         config = self.get_indicator_config(indicator_name)

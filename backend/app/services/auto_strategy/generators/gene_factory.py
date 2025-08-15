@@ -108,7 +108,7 @@ class RandomGeneGenerator(BaseGeneGenerator):
     def generate_indicators(self) -> List[IndicatorGene]:
         """ランダムに指標を生成"""
         try:
-            from ..utils.parameter_generators import generate_indicator_parameters
+            from app.services.indicators.config import indicator_registry
 
             indicators = []
             allowed_indicators = self.config.allowed_indicators or [
@@ -125,7 +125,9 @@ class RandomGeneGenerator(BaseGeneGenerator):
             selected_types = random.sample(allowed_indicators, num_indicators)
 
             for indicator_type in selected_types:
-                parameters = generate_indicator_parameters(indicator_type)
+                parameters = indicator_registry.generate_parameters_for_indicator(
+                    indicator_type
+                )
                 indicators.append(
                     IndicatorGene(
                         type=indicator_type, parameters=parameters, enabled=True

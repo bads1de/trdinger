@@ -17,9 +17,6 @@ from ..models.gene_serialization import GeneSerializer
 from ..models.gene_strategy import Condition, IndicatorGene, StrategyGene
 from ..models.gene_tpsl import TPSLGene, TPSLMethod, create_random_tpsl_gene
 from ..utils.operand_grouping import operand_grouping_system
-from ..utils.parameter_generators import (
-    generate_indicator_parameters,
-)
 from ..config.constants import OPERATORS, DATA_SOURCES
 from .smart_condition_generator import SmartConditionGenerator
 
@@ -355,7 +352,9 @@ class RandomGeneGenerator:
             try:
                 # 1本目
                 indicator_type = first_type
-                parameters = generate_indicator_parameters(indicator_type)
+                parameters = indicator_registry.generate_parameters_for_indicator(
+                    indicator_type
+                )
                 indicator_gene = IndicatorGene(
                     type=indicator_type, parameters=parameters, enabled=True
                 )
@@ -376,7 +375,9 @@ class RandomGeneGenerator:
                 try:
                     indicator_type = random.choice(self.available_indicators)
 
-                    parameters = generate_indicator_parameters(indicator_type)
+                    parameters = indicator_registry.generate_parameters_for_indicator(
+                        indicator_type
+                    )
 
                     # JSON形式対応のIndicatorGene作成
                     indicator_gene = IndicatorGene(
