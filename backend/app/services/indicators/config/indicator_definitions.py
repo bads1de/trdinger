@@ -4,6 +4,9 @@
 各インジケーターの設定を定義し、レジストリに登録します。
 """
 
+from functools import partial
+
+from app.services.auto_strategy.services.ml_orchestrator import ml_orchestrator
 from app.services.indicators.technical_indicators.math_operators import (
     MathOperatorsIndicators,
 )
@@ -1650,48 +1653,6 @@ def setup_pattern_recognition_indicators():
             indicator_registry.register(config)
 
 
-def setup_ml_indicators():
-    """ML予測確率指標の設定（存在する場合のみ登録）"""
-    try:
-        from app.services.indicators.technical_indicators.ml import MLIndicators  # type: ignore
-    except Exception:
-        # ML モジュールが存在しない場合はスキップ
-        return
-
-    # ML_UP_PROB
-    ml_up_prob_config = IndicatorConfig(
-        indicator_name="ML_UP_PROB",
-        adapter_function=MLIndicators.up_prob,
-        required_data=["close"],
-        result_type=IndicatorResultType.SINGLE,
-        scale_type=IndicatorScaleType.OSCILLATOR_0_1,
-        category="ml_prediction",
-    )
-    indicator_registry.register(ml_up_prob_config)
-
-    # ML_DOWN_PROB
-    ml_down_prob_config = IndicatorConfig(
-        indicator_name="ML_DOWN_PROB",
-        adapter_function=MLIndicators.down_prob,
-        required_data=["close"],
-        result_type=IndicatorResultType.SINGLE,
-        scale_type=IndicatorScaleType.OSCILLATOR_0_1,
-        category="ml_prediction",
-    )
-    indicator_registry.register(ml_down_prob_config)
-
-    # ML_RANGE_PROB
-    ml_range_prob_config = IndicatorConfig(
-        indicator_name="ML_RANGE_PROB",
-        adapter_function=MLIndicators.range_prob,
-        required_data=["close"],
-        result_type=IndicatorResultType.SINGLE,
-        scale_type=IndicatorScaleType.OSCILLATOR_0_1,
-        category="ml_prediction",
-    )
-    indicator_registry.register(ml_range_prob_config)
-
-
 def initialize_all_indicators():
     """全インジケーターの設定を初期化"""
     setup_momentum_indicators()
@@ -1704,7 +1665,6 @@ def initialize_all_indicators():
     setup_math_transform_indicators()
     setup_math_operators_indicators()
     setup_pattern_recognition_indicators()
-    setup_ml_indicators()
 
 
 # モジュール読み込み時に初期化
@@ -2115,9 +2075,3 @@ cmf_cfg.add_parameter(
     ParameterConfig(name="length", default_value=20, min_value=2, max_value=200)
 )
 indicator_registry.register(cmf_cfg)
-
-
-pvo_config.add_parameter(
-    ParameterConfig(name="signal", default_value=9, min_value=2, max_value=100)
-)
-indicator_registry.register(pvo_config)

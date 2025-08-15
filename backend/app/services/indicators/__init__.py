@@ -5,7 +5,6 @@
 新しいnumpy配列ベースのオートストラテジー最適化版も含みます。
 """
 
-# 既存のクラス（互換性維持）
 from .indicator_orchestrator import TechnicalIndicatorService
 
 from .technical_indicators.math_operators import MathOperatorsIndicators
@@ -20,13 +19,10 @@ from .technical_indicators.volume import VolumeIndicators
 from .utils import (
     PandasTAError,
     validate_input,
-    validate_series_data,
-    validate_indicator_parameters,
 )
 
 # 公開API
 __all__ = [
-    # 新しいnumpy配列ベース指標クラス
     "TrendIndicators",
     "MomentumIndicators",
     "VolatilityIndicators",
@@ -38,8 +34,5 @@ __all__ = [
     "PatternRecognitionIndicators",
     "PandasTAError",
     "validate_input",
-    "validate_series_data",
-    "validate_indicator_parameters",
-    # 既存クラス（互換性維持）
     "TechnicalIndicatorService",
 ]
