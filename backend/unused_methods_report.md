@@ -259,17 +259,10 @@
 
 ### Interfaces
 
-- `app/services/ml/interfaces/ml_prediction_interface.py:63` - `predict_probabilities()`
-- `app/services/ml/interfaces/ml_prediction_interface.py:109` - `update_predictions()`
 
-### Metadata
 
-- `app/services/ml/ml_metadata.py:208` - `mark_completed()`
 
-### Training Service
 
-- `app/services/ml/ml_training_service.py:349` - `get_latest_model_path()`
-- `app/services/ml/ml_training_service.py:353` - `list_available_models()`
 
 ### Model Manager
 

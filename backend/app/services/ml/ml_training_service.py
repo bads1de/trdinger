@@ -346,13 +346,7 @@ class MLTrainingService(BaseResourceManager):
         """
         return self.trainer.load_model(model_path)
 
-    def get_latest_model_path(self) -> Optional[str]:
-        """最新のモデルパスを取得"""
-        return model_manager.get_latest_model("*")
 
-    def list_available_models(self) -> list:
-        """利用可能なモデルの一覧を取得"""
-        return model_manager.list_models("*")
 
     def generate_signals(self, features: pd.DataFrame) -> Dict[str, float]:
         """

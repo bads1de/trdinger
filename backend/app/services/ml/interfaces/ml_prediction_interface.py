@@ -60,21 +60,7 @@ class MLPredictionInterface(Protocol):
         """
         ...
 
-    def predict_probabilities(self, features: pd.DataFrame) -> Dict[str, float]:
-        """
-        特徴量から予測確率を計算
-        
-        Args:
-            features: 特徴量データ
-        
-        Returns:
-            予測確率の辞書 {"up": float, "down": float, "range": float}
-        
-        Raises:
-            MLModelError: モデルが学習されていない場合
-            MLDataError: 特徴量データが無効な場合
-        """
-        ...
+
 
     def load_model(self, model_path: str) -> bool:
         """
@@ -106,17 +92,7 @@ class MLPredictionInterface(Protocol):
         """
         ...
 
-    def update_predictions(self, predictions: Dict[str, float]) -> None:
-        """
-        予測値を更新（外部から設定する場合）
-        
-        Args:
-            predictions: 予測確率の辞書 {"up": float, "down": float, "range": float}
-        
-        Raises:
-            MLValidationError: 予測値が無効な場合
-        """
-        ...
+
 
     def get_feature_importance(self, top_n: int = 10) -> Dict[str, float]:
         """

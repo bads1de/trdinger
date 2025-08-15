@@ -318,18 +318,7 @@ class MLOrchestrator(MLPredictionInterface):
 
         return status
 
-    def update_predictions(self, predictions: Dict[str, float]):
-        """
-        予測値を更新（外部から設定する場合）
 
-        Args:
-            predictions: 予測確率の辞書
-        """
-        try:
-            UnifiedErrorHandler.validate_predictions(predictions)
-            self._last_predictions = predictions
-        except MLValidationError as e:
-            logger.warning(f"無効な予測値形式: {e}")
 
     def get_feature_importance(self, top_n: int = 10) -> Dict[str, float]:
         """
@@ -402,17 +391,7 @@ class MLOrchestrator(MLPredictionInterface):
             logger.error(f"特徴量重要度取得エラー: {e}")
             return {}
 
-    def predict_probabilities(self, features: pd.DataFrame) -> Dict[str, float]:
-        """
-        特徴量から予測確率を計算（MLServiceInterface実装）
 
-        Args:
-            features: 特徴量データ
-
-        Returns:
-            予測確率の辞書 {"up": float, "down": float, "range": float}
-        """
-        return self._safe_ml_prediction(features)
 
     def _validate_input_data(self, df: pd.DataFrame):
         """入力データの検証"""
