@@ -748,38 +748,7 @@ class LabelGenerator:
             "description": f"動的ボラティリティベース（平均閾値±{avg_threshold*100:.2f}%）",
         }
 
-    def generate_labels_with_dynamic_threshold(
-        self,
-        price_data: pd.Series,
-        volatility_window: int = 24,
-        threshold_multiplier: float = 0.5,
-        min_threshold: float = 0.005,
-        max_threshold: float = 0.05,
-    ) -> Tuple[pd.Series, Dict[str, Any]]:
-        """
-        ボラティリティに基づく動的閾値でラベルを生成
 
-        改善計画で提案された動的閾値機能の実装。
-        市場のボラティリティに応じて適応的に閾値を調整する。
-
-        Args:
-            price_data: 価格データ（Close価格）
-            volatility_window: ボラティリティ計算ウィンドウ
-            threshold_multiplier: 閾値乗数
-            min_threshold: 最小閾値
-            max_threshold: 最大閾値
-
-        Returns:
-            ラベルSeries, 閾値情報の辞書
-        """
-        return self.generate_labels(
-            price_data,
-            method=ThresholdMethod.DYNAMIC_VOLATILITY,
-            volatility_window=volatility_window,
-            threshold_multiplier=threshold_multiplier,
-            min_threshold=min_threshold,
-            max_threshold=max_threshold,
-        )
 
     def _calculate_kbins_discretizer_thresholds(
         self,
@@ -858,29 +827,8 @@ class LabelGenerator:
                 price_change, target_distribution
             )
 
-    def generate_labels_with_kbins_discretizer(
-        self,
-        price_data: pd.Series,
-        strategy: str = "quantile",
-    ) -> Tuple[pd.Series, Dict[str, Any]]:
-        """
-        KBinsDiscretizerを使用したラベル生成
 
-        レポートで提案されたKBinsDiscretizerによる簡素化実装。
-        複雑な条件分岐を排除し、scikit-learnの標準機能を活用します。
 
-        Args:
-            price_data: 価格データ（Close価格）
-            strategy: 分割戦略 ('uniform', 'quantile', 'kmeans')
-
-        Returns:
-            ラベルSeries, 閾値情報の辞書
-        """
-        return self.generate_labels(
-            price_data,
-            method=ThresholdMethod.KBINS_DISCRETIZER,
-            strategy=strategy,
-        )
 
 
 # 関数ベースのユーティリティ（推奨アプローチ）

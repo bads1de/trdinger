@@ -187,27 +187,3 @@ class DataRetrievalService:
         except Exception as e:
             logger.warning(f"Fear & Greedデータ取得エラー: {e}")
             return []
-
-    def validate_repositories(self) -> bool:
-        """
-        リポジトリの初期化状態を検証
-
-        Returns:
-            すべてのリポジトリが初期化されている場合True
-        """
-        missing_repos = []
-
-        if self.ohlcv_repo is None:
-            missing_repos.append("OHLCV")
-        if self.oi_repo is None:
-            missing_repos.append("Open Interest")
-        if self.fr_repo is None:
-            missing_repos.append("Funding Rate")
-        if self.fear_greed_repo is None:
-            missing_repos.append("Fear & Greed")
-
-        if missing_repos:
-            logger.warning(f"未初期化のリポジトリ: {', '.join(missing_repos)}")
-            return False
-
-        return True

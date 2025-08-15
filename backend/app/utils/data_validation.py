@@ -30,26 +30,6 @@ class OHLCVDataModel(BaseModel):
     Close: float = Field(gt=0, description="終値（正の値）")
     Volume: float = Field(ge=0, description="出来高（非負の値）")
 
-    @validator("High")
-    def high_must_be_highest(cls, v, values):
-        """高値は他の価格より高いか等しい必要がある"""
-        if "Open" in values and v < values["Open"]:
-            raise ValueError("高値は始値以上である必要があります")
-        if "Low" in values and v < values["Low"]:
-            raise ValueError("高値は安値以上である必要があります")
-        if "Close" in values and v < values["Close"]:
-            raise ValueError("高値は終値以上である必要があります")
-        return v
-
-    @validator("Low")
-    def low_must_be_lowest(cls, v, values):
-        """安値は他の価格より低いか等しい必要がある"""
-        if "Open" in values and v > values["Open"]:
-            raise ValueError("安値は始値以下である必要があります")
-        if "Close" in values and v > values["Close"]:
-            raise ValueError("安値は終値以下である必要があります")
-        return v
-
 
 # Panderaスキーマ定義
 OHLCV_SCHEMA = DataFrameSchema(
@@ -193,30 +173,6 @@ class DataValidator:
     #  - rolling mean/std: series.rolling(window, min_periods=1).mean()/std()
     #  - normalization: (series - series.rolling(...).mean()) / series.rolling(...).std()
     # These helpers were removed to simplify the codebase and rely on pandas semantics.
-
-    @classmethod
-    def log_validation_results(
-        cls,
-        validation_results: Tuple[bool, Dict[str, List[str]]],
-        dataframe_name: str = "DataFrame",
-    ) -> None:
-        """
-        バリデーション結果をログ出力
-
-        Args:
-            validation_results: validate_dataframeの結果
-            dataframe_name: DataFrameの名前（ログ用）
-        """
-        is_valid, issues = validation_results
-
-        if is_valid:
-            logger.debug(f"{dataframe_name}: データは正常です")
-        else:
-            logger.warning(f"{dataframe_name}: データに問題があります")
-
-            for issue_type, columns in issues.items():
-                if columns:
-                    logger.warning(f"  {issue_type}: {columns}")
 
     @classmethod
     def validate_ohlcv_data(

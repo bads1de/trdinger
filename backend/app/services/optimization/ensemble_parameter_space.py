@@ -264,43 +264,7 @@ class EnsembleParameterSpace:
 
         return parameter_space
 
-    @classmethod
-    def suggest_optimized_parameters(
-        cls, trial: optuna.Trial, ensemble_method: str, enabled_models: List[str]
-    ) -> Dict[str, any]:
-        """
-        Optunaの高度な最適化機能を活用したパラメータ提案
 
-        Args:
-            trial: Optunaトライアルオブジェクト
-            ensemble_method: アンサンブル手法
-            enabled_models: 有効なベースモデルのリスト
-
-        Returns:
-            最適化されたパラメータの辞書
-        """
-        params = {}
-
-        # ベースモデルのパラメータを提案
-        if "lightgbm" in enabled_models:
-            params.update(cls._suggest_lightgbm_params(trial))
-
-        if "xgboost" in enabled_models:
-            params.update(cls._suggest_xgboost_params(trial))
-
-        if "randomforest" in enabled_models:
-            params.update(cls._suggest_randomforest_params(trial))
-
-        if "knn" in enabled_models:
-            params.update(cls._suggest_knn_params(trial))
-
-        # アンサンブル手法固有のパラメータを提案
-        if ensemble_method == "bagging":
-            params.update(cls._suggest_bagging_params(trial))
-        elif ensemble_method == "stacking":
-            params.update(cls._suggest_stacking_params(trial))
-
-        return params
 
     @staticmethod
     def _suggest_lightgbm_params(trial: optuna.Trial) -> Dict[str, any]:

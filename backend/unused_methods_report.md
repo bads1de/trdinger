@@ -258,25 +258,6 @@
 - `app/services/optimization/base_optimizer.py:135` - `_create_optimization_result()`
 - `app/services/optimization/base_optimizer.py:168` - `get_method_name()`
 
-### Ensemble Parameter Space
-
-- `app/services/optimization/ensemble_parameter_space.py:267` - `suggest_optimized_parameters()`
-
-## ユーティリティ関数
-
-### Data Validation
-
-- `app/utils/data_validation.py:33` - `high_must_be_highest()`
-- `app/utils/data_validation.py:44` - `low_must_be_lowest()`
-- `app/utils/data_validation.py:197` - `log_validation_results()`
-
-### Label Generation
-
-- `app/utils/label_generation.py:751` - `generate_labels_with_dynamic_threshold()`
-- `app/utils/label_generation.py:861` - `generate_labels_with_kbins_discretizer()`
-
-## データベースリポジトリ
-
 ### Backtest Result Repository
 
 - `database/repositories/backtest_result_repository.py:299` - `get_backtest_results_by_strategy()`
