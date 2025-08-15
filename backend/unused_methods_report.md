@@ -174,17 +174,6 @@
 
 ## ML 関連
 
-### Adaptive Learning
-
-### Config
-
-- `app/services/ml/config/ml_config.py:58` - `model_post_init()`
-- `app/services/ml/config/ml_config.py:118` - `model_post_init()`
-- `app/services/ml/config/ml_config.py:219` - `get_default_indicators()`
-- `app/services/ml/config/ml_config.py:398` - `get_default_stacking_config()`
-- `app/services/ml/config/ml_config.py:513` - `get_environment_info()`
-- `app/services/ml/config/ml_config_manager.py:44` - `get_config()`
-
 ### Feature Engineering
 
 - `app/services/ml/feature_engineering/advanced_features.py:402` - `clean_features()`
@@ -240,12 +229,6 @@
 - `app/services/ml/orchestration/ml_management_orchestration_service.py:419` - `get_models_list()`
 - `app/services/ml/orchestration/ml_training_orchestration_service.py:53` - `get_default_automl_config()`
 - `app/services/ml/orchestration/ml_training_orchestration_service.py:73` - `get_financial_optimized_automl_config()`
-
-### Validation
-
-- `app/services/ml/validation/time_series_cv.py:64` - `cross_validate()`
-- `app/services/ml/validation/time_series_cv.py:367` - `get_best_fold()`
-- `app/services/ml/validation/time_series_cv.py:375` - `plot_cv_scores()`
 
 ## 最適化関連
 

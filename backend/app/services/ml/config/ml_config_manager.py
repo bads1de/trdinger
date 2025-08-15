@@ -41,10 +41,6 @@ class MLConfigManager:
         if self.config_file_path.exists():
             self.load_config()
 
-    def get_config(self) -> MLConfig:
-        """現在のML設定を取得"""
-        return self._ml_config
-
     def get_config_dict(self) -> Dict[str, Any]:
         """
         設定を辞書形式で取得（Pydantic自動シリアライゼーション使用）
@@ -137,13 +133,13 @@ class MLConfigManager:
                 )
 
             # 現在の設定を取得
-            current_config = self.get_config_dict()
+            current_config = self._ml_config.to_dict()
 
             # 設定を更新
             updated_config = self._merge_config_updates(current_config, config_updates)
 
             # 更新された設定を適用
-            self._apply_config_dict(updated_config)
+            self._ml_config = MLConfig.from_dict(updated_config)
 
             # ファイルに保存
             if self.save_config():
@@ -449,16 +445,6 @@ class MLConfigManager:
                     errors.append(f"{key} は0.0から1.0の間の数値である必要があります")
 
         return errors
-
-    def _apply_config_dict(self, config_dict: Dict[str, Any]):
-        """
-        設定辞書をMLConfigオブジェクトに適用（統一的なデシリアライゼーション使用）
-
-        手動マッピングを削除し、MLConfig.from_dict()を活用して
-        保守性を向上させました。
-        """
-        # MLConfigの統一的なfrom_dictメソッドを使用
-        self._ml_config = MLConfig.from_dict(config_dict)
 
     def _merge_config_updates(
         self, current_config: Dict[str, Any], updates: Dict[str, Any]

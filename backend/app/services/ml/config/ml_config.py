@@ -55,11 +55,6 @@ class ModelConfig(BaseSettings):
 
     model_config = ConfigDict(env_prefix="ML_MODEL_")
 
-    def model_post_init(self, __context: Any) -> None:
-        """初期化後処理：ディレクトリ作成"""
-        _ = __context  # 未使用パラメータ
-        os.makedirs(self.MODEL_SAVE_PATH, exist_ok=True)
-
 
 class LightGBMConfig(BaseSettings):
     """LightGBM関連の設定"""
@@ -101,7 +96,15 @@ class FeatureEngineeringConfig(BaseSettings):
     """特徴量エンジニアリング関連の設定"""
 
     # 計算期間のデフォルト値
-    DEFAULT_LOOKBACK_PERIODS: Optional[Dict[str, int]] = Field(default=None)
+    DEFAULT_LOOKBACK_PERIODS: Optional[Dict[str, int]] = Field(
+        default_factory=lambda: {
+            "short_ma": 10,
+            "long_ma": 50,
+            "volatility": 20,
+            "momentum": 14,
+            "volume": 20,
+        }
+    )
 
     # キャッシュ設定
     CACHE_ENABLED: bool = Field(default=True)
@@ -109,32 +112,15 @@ class FeatureEngineeringConfig(BaseSettings):
     CACHE_TTL_SECONDS: int = Field(default=3600)
 
     # 特徴量計算設定
-    PRICE_FEATURE_PERIODS: Optional[List[int]] = Field(default=None)
-    VOLATILITY_PERIODS: Optional[List[int]] = Field(default=None)
-    VOLUME_PERIODS: Optional[List[int]] = Field(default=None)
+    PRICE_FEATURE_PERIODS: Optional[List[int]] = Field(
+        default_factory=lambda: [5, 10, 20, 50]
+    )
+    VOLATILITY_PERIODS: Optional[List[int]] = Field(
+        default_factory=lambda: [10, 20, 30]
+    )
+    VOLUME_PERIODS: Optional[List[int]] = Field(default_factory=lambda: [10, 20, 30])
 
     model_config = ConfigDict(env_prefix="ML_FEATURE_")
-
-    def model_post_init(self, __context: Any) -> None:
-        """デフォルト値の設定"""
-        _ = __context  # 未使用パラメータ
-        if self.DEFAULT_LOOKBACK_PERIODS is None:
-            self.DEFAULT_LOOKBACK_PERIODS = {
-                "short_ma": 10,
-                "long_ma": 50,
-                "volatility": 20,
-                "momentum": 14,
-                "volume": 20,
-            }
-
-        if self.PRICE_FEATURE_PERIODS is None:
-            self.PRICE_FEATURE_PERIODS = [5, 10, 20, 50]
-
-        if self.VOLATILITY_PERIODS is None:
-            self.VOLATILITY_PERIODS = [10, 20, 30]
-
-        if self.VOLUME_PERIODS is None:
-            self.VOLUME_PERIODS = [10, 20, 30]
 
 
 class TrainingConfig(BaseSettings):
@@ -214,16 +200,6 @@ class PredictionConfig(BaseSettings):
             "up": self.FALLBACK_UP_PROB,
             "down": self.FALLBACK_DOWN_PROB,
             "range": self.FALLBACK_RANGE_PROB,
-        }
-
-    def get_default_indicators(self, data_length: int) -> Dict[str, Any]:
-        """デフォルトのML指標を取得"""
-        import numpy as np
-
-        return {
-            "ML_UP_PROB": np.full(data_length, self.DEFAULT_UP_PROB),
-            "ML_DOWN_PROB": np.full(data_length, self.DEFAULT_DOWN_PROB),
-            "ML_RANGE_PROB": np.full(data_length, self.DEFAULT_RANGE_PROB),
         }
 
     def validate_predictions(self, predictions: Dict[str, float]) -> bool:
@@ -395,21 +371,6 @@ class EnsembleConfig(BaseSettings):
             },
         }
 
-    def get_default_stacking_config(self) -> Dict[str, Any]:
-        """デフォルトのスタッキング設定を取得（scikit-learn StackingClassifier対応）"""
-        return {
-            "method": "stacking",
-            "stacking_params": {
-                "base_models": self.STACKING_BASE_MODELS,
-                "meta_model": self.STACKING_META_MODEL,
-                "cv_folds": self.STACKING_CV_FOLDS,
-                "stack_method": self.STACKING_STACK_METHOD,
-                "n_jobs": self.STACKING_N_JOBS,
-                "passthrough": self.STACKING_PASSTHROUGH,
-                "random_state": 42,
-            },
-        }
-
 
 class MLConfig:
     """
@@ -509,17 +470,6 @@ class MLConfig:
 
         except Exception as e:
             logging.error(f"設定検証中にエラーが発生しました: {e}")
-
-    def get_environment_info(self) -> Dict[str, Any]:
-        """現在の環境設定情報を取得"""
-        return {
-            "debug_mode": self.data_processing.DEBUG_MODE,
-            "log_level": self.data_processing.LOG_LEVEL,
-            "max_ohlcv_rows": self.data_processing.MAX_OHLCV_ROWS,
-            "feature_timeout": self.data_processing.FEATURE_CALCULATION_TIMEOUT,
-            "default_predictions": self.prediction.get_default_predictions(),
-            "validation_enabled": self.prediction.validate_config(),
-        }
 
     def validate(self) -> bool:
         """設定の妥当性を検証"""
