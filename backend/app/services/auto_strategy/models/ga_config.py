@@ -370,33 +370,7 @@ class GAConfig(BaseConfig):
             objective_weights=data.get("objective_weights", [1.0]),
         )
 
-    def apply_fitness_profile(self, profile: str) -> None:
-        """フィットネス重み付けのプロファイルを適用（簡易版）"""
-        profiles = {
-            "risk_adjusted": {
-                "total_return": 0.2,
-                "sharpe_ratio": 0.45,
-                "max_drawdown": 0.25,
-                "win_rate": 0.05,
-                "balance_score": 0.05,
-            },
-            "growth": {
-                "total_return": 0.5,
-                "sharpe_ratio": 0.2,
-                "max_drawdown": 0.1,
-                "win_rate": 0.1,
-                "balance_score": 0.1,
-            },
-            "balanced": {
-                "total_return": 0.3,
-                "sharpe_ratio": 0.3,
-                "max_drawdown": 0.2,
-                "win_rate": 0.1,
-                "balance_score": 0.1,
-            },
-        }
-        if profile in profiles:
-            self.fitness_weights = profiles[profile].copy()
+    
 
     def get_default_values(self) -> Dict[str, Any]:
         """BaseConfig用のデフォルト値を取得"""

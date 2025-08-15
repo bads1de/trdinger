@@ -59,40 +59,9 @@ class IndicatorGene:
             # 設定モジュールが利用できない場合のフォールバック
             return {"indicator": self.type, "parameters": self.parameters}
 
-    def normalize_parameters(self) -> Dict[str, Any]:
-        """パラメータをJSON形式に正規化"""
-        try:
-            from app.services.indicators.config import indicator_registry
+    
 
-            config = indicator_registry.get_indicator_config(self.type)
-            if config:
-                # 設定に基づいてパラメータを正規化
-                normalized = {}
-                for param_name, param_config in config.parameters.items():
-                    value = self.parameters.get(param_name, param_config.default_value)
-                    normalized[param_name] = value
-                return normalized
-
-            # フォールバック: そのまま返す
-            return self.parameters.copy()
-
-        except ImportError:
-            return self.parameters.copy()
-
-    @classmethod
-    def create_from_json_config(
-        cls, json_config: Dict[str, Any], enabled: bool = True
-    ) -> "IndicatorGene":
-        """JSON形式の設定から指標遺伝子を作成"""
-        indicator_type = json_config.get("indicator", "")
-        parameters = json_config.get("parameters", {})
-
-        return cls(
-            type=indicator_type,
-            parameters=parameters,
-            enabled=enabled,
-            json_config=json_config,
-        )
+    
 
 
 @dataclass
@@ -207,17 +176,7 @@ class StrategyGene:
         return is_valid, errors
 
 
-def encode_gene_to_list(gene: StrategyGene) -> List[float]:
-    """戦略遺伝子をGA用数値リストにエンコード（リファクタリング改善）"""
-    from .gene_serialization import GeneSerializer
-
-    serializer = GeneSerializer()
-    return serializer.to_list(gene)
 
 
-def decode_list_to_gene(encoded: List[float]) -> StrategyGene:
-    """GA用数値リストから戦略遺伝子にデコード（リファクタリング改善）"""
-    from .gene_serialization import GeneSerializer
 
-    serializer = GeneSerializer()
-    return serializer.from_list(encoded, StrategyGene)
+
