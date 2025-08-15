@@ -164,8 +164,6 @@
 
 ### Indicator Config
 
-
-
 ### Technical Indicators
 
 - `app/services/indicators/technical_indicators/math_operators.py:57` - `div()`
@@ -207,21 +205,6 @@
 - `app/services/ml/config/ml_config.py:398` - `get_default_stacking_config()`
 - `app/services/ml/config/ml_config.py:513` - `get_environment_info()`
 - `app/services/ml/config/ml_config_manager.py:44` - `get_config()`
-
-### Ensemble
-
-- `app/services/ml/ensemble/stacking.py:305` - `get_base_model_predictions()`
-
-### Evaluation
-
-- `app/services/ml/evaluation/enhanced_metrics.py:781` - `generate_metrics_summary()`
-- `app/services/ml/evaluation/enhanced_metrics.py:811` - `save_metrics_report()`
-
-### Exceptions
-
-- `app/services/ml/exceptions.py:117` - `validate_data_format()`
-- `app/services/ml/exceptions.py:148` - `validate_model_parameters()`
-- `app/services/ml/exceptions.py:173` - `handle_ml_exception()`
 
 ### Feature Engineering
 

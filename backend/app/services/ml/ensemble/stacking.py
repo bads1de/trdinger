@@ -302,46 +302,7 @@ class StackingEnsemble(BaseEnsemble):
             logger.warning(f"特徴量重要度の取得でエラー: {e}")
             return {}
 
-    def get_base_model_predictions(self, X: pd.DataFrame) -> Dict[str, np.ndarray]:
-        """
-        各ベースモデルの予測を個別に取得
 
-        Args:
-            X: 特徴量DataFrame
-
-        Returns:
-            各ベースモデルの予測結果の辞書
-        """
-        if not self.is_fitted or self.stacking_classifier is None:
-            raise UnifiedModelError("モデルが学習されていません")
-
-        predictions = {}
-
-        try:
-            # ベースモデルの予測を取得
-            # StackingClassifierのestimators_は学習済みモデルのリスト
-            for i, estimator in enumerate(self.stacking_classifier.estimators_):
-                try:
-                    # ベースモデル名を取得（元の設定から）
-                    model_name = (
-                        self.base_models[i]
-                        if i < len(self.base_models)
-                        else f"model_{i}"
-                    )
-
-                    if hasattr(estimator, "predict_proba"):
-                        pred = estimator.predict_proba(X)
-                    else:
-                        pred = estimator.predict(X)
-                    predictions[model_name] = pred
-                except Exception as e:
-                    logger.warning(f"ベースモデル({i})の予測でエラー: {e}")
-                    continue
-
-        except Exception as e:
-            logger.error(f"ベースモデル予測の取得でエラー: {e}")
-
-        return predictions
 
     def save_models(self, model_path: str) -> bool:
         """

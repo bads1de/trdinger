@@ -778,46 +778,9 @@ class EnhancedMetricsCalculator:
 
         return sample_weights
 
-    def generate_metrics_summary(self, metrics: Dict[str, Any]) -> str:
-        """評価指標のサマリーを生成"""
-        summary_lines = []
-        summary_lines.append("📊 評価指標サマリー")
-        summary_lines.append("=" * 50)
 
-        # 主要指標
-        if "accuracy" in metrics:
-            summary_lines.append(f"精度 (Accuracy): {metrics['accuracy']:.4f}")
 
-        if "balanced_accuracy" in metrics:
-            summary_lines.append(f"バランス精度: {metrics['balanced_accuracy']:.4f}")
 
-        if "f1_score" in metrics:
-            summary_lines.append(f"F1スコア: {metrics['f1_score']:.4f}")
-
-        if "roc_auc" in metrics:
-            summary_lines.append(f"ROC-AUC: {metrics['roc_auc']:.4f}")
-
-        if "pr_auc" in metrics:
-            summary_lines.append(f"PR-AUC: {metrics['pr_auc']:.4f}")
-
-        # クラス不均衡情報
-        if "class_imbalance_ratio" in metrics:
-            summary_lines.append(
-                f"クラス不均衡比率: {metrics['class_imbalance_ratio']:.2f}"
-            )
-
-        return "\n".join(summary_lines)
-
-    def save_metrics_report(self, metrics: Dict[str, Any], filepath: str):
-        """評価指標レポートをファイルに保存"""
-        try:
-            import json
-
-            with open(filepath, "w", encoding="utf-8") as f:
-                json.dump(metrics, f, indent=2, ensure_ascii=False, default=str)
-            logger.info(f"評価指標レポートを保存: {filepath}")
-        except Exception as e:
-            logger.error(f"レポート保存エラー: {e}")
 
 
 # グローバルインスタンス（統合されたメトリクス計算器・収集器）
