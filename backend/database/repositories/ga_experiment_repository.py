@@ -63,52 +63,7 @@ class GAExperimentRepository(BaseRepository):
             logger.error(f"GA実験の作成中にエラーが発生しました: {e}")
             raise
 
-    def update_experiment_progress(
-        self,
-        experiment_id: int,
-        current_generation: int,
-        progress: float,
-        best_fitness: Optional[float] = None,
-    ) -> bool:
-        """
-        実験の進捗を更新
 
-        Args:
-            experiment_id: 実験ID
-            current_generation: 現在の世代数
-            progress: 進捗率（0.0-1.0）
-            best_fitness: 最高フィットネス
-
-        Returns:
-            更新成功フラグ
-        """
-        try:
-            # BaseRepositoryの汎用メソッドを使用して実験を取得
-            experiments = self.get_filtered_data(
-                filters={"id": experiment_id},
-                limit=1,
-            )
-
-            if not experiments:
-                logger.warning(f"指定されたIDの実験が見つかりません: {experiment_id}")
-                return False
-
-            experiment = experiments[0]
-            experiment.current_generation = current_generation
-            experiment.progress = progress
-
-            if best_fitness is not None:
-                experiment.best_fitness = best_fitness
-            self.db.commit()
-            logger.debug(
-                f"実験進捗を更新: {experiment_id} (世代: {current_generation}, 進捗: {progress:.2%})"
-            )
-            return True
-
-        except Exception as e:
-            self.db.rollback()
-            logger.error(f"実験進捗の更新中にエラーが発生しました: {e}")
-            return False
 
     def update_experiment_status(
         self, experiment_id: int, status: str, completed_at: Optional[datetime] = None
@@ -152,27 +107,7 @@ class GAExperimentRepository(BaseRepository):
             logger.error(f"実験ステータスの更新中にエラーが発生しました: {e}")
             return False
 
-    def get_experiment_by_id(self, experiment_id: int) -> Optional[GAExperiment]:
-        """
-        IDで実験を取得
 
-        Args:
-            experiment_id: 実験ID
-
-        Returns:
-            GA実験（存在しない場合はNone）
-        """
-        try:
-            # BaseRepositoryの汎用メソッドを使用
-            experiments = self.get_filtered_data(
-                filters={"id": experiment_id},
-                limit=1,
-            )
-            return experiments[0] if experiments else None
-
-        except Exception as e:
-            logger.error(f"実験の取得中にエラーが発生しました: {e}")
-            return None
 
     def get_experiments_by_status(
         self, status: str, limit: Optional[int] = None
@@ -263,56 +198,7 @@ class GAExperimentRepository(BaseRepository):
             logger.error(f"実験完了処理中にエラーが発生しました: {e}")
             return False
 
-    def get_experiment_statistics(self) -> Dict[str, Any]:
-        """
-        実験の統計情報を取得
 
-        Returns:
-            統計情報の辞書
-        """
-        try:
-            total_experiments = self.db.query(GAExperiment).count()
-
-            running_experiments = (
-                self.db.query(GAExperiment)
-                .filter(GAExperiment.status == "running")
-                .count()
-            )
-
-            completed_experiments = (
-                self.db.query(GAExperiment)
-                .filter(GAExperiment.status == "completed")
-                .count()
-            )
-
-            error_experiments = (
-                self.db.query(GAExperiment)
-                .filter(GAExperiment.status == "error")
-                .count()
-            )
-
-            # フィットネスの実験
-            best_experiment = (
-                self.db.query(GAExperiment)
-                .filter(GAExperiment.best_fitness.isnot(None))
-                .order_by(desc(GAExperiment.best_fitness))
-                .first()
-            )
-
-            return {
-                "total_experiments": total_experiments,
-                "running_experiments": running_experiments,
-                "completed_experiments": completed_experiments,
-                "error_experiments": error_experiments,
-                "best_fitness": (
-                    best_experiment.best_fitness if best_experiment else None
-                ),
-                "best_experiment_id": best_experiment.id if best_experiment else None,
-            }
-
-        except Exception as e:
-            logger.error(f"実験統計の取得中にエラーが発生しました: {e}")
-            return {}
 
     def delete_all_experiments(self) -> int:
         """

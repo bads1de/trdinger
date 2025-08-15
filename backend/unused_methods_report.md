@@ -193,12 +193,6 @@
 - `database/repositories/funding_rate_repository.py:146` - `clear_funding_rate_data_by_date_range()`
 - `database/repositories/funding_rate_repository.py:175` - `get_funding_rate_dataframe()`
 
-### GA Experiment Repository
-
-- `database/repositories/ga_experiment_repository.py:66` - `update_experiment_progress()`
-- `database/repositories/ga_experiment_repository.py:155` - `get_experiment_by_id()`
-- `database/repositories/ga_experiment_repository.py:266` - `get_experiment_statistics()`
-
 ### Generated Strategy Repository
 
 - `database/repositories/generated_strategy_repository.py:151` - `get_best_strategies()`
