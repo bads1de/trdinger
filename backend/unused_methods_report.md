@@ -186,21 +186,7 @@
 - `database/repositories/base_repository.py:507` - `get_data_statistics()`
 - `database/repositories/base_repository.py:554` - `validate_records()`
 
-### Funding Rate Repository
 
-- `database/repositories/funding_rate_repository.py:24` - `insert_funding_rate_data()`
-- `database/repositories/funding_rate_repository.py:105` - `get_funding_rate_count()`
-- `database/repositories/funding_rate_repository.py:146` - `clear_funding_rate_data_by_date_range()`
-- `database/repositories/funding_rate_repository.py:175` - `get_funding_rate_dataframe()`
-
-### Generated Strategy Repository
-
-- `database/repositories/generated_strategy_repository.py:151` - `get_best_strategies()`
-- `database/repositories/generated_strategy_repository.py:306` - `update_fitness_score()`
-- `database/repositories/generated_strategy_repository.py:341` - `update_backtest_result()`
-- `database/repositories/generated_strategy_repository.py:376` - `get_strategy_by_id()`
-- `database/repositories/generated_strategy_repository.py:397` - `get_generation_statistics()`
-- `database/repositories/generated_strategy_repository.py:437` - `delete_strategies_by_experiment()`
 
 ## 統計情報
 

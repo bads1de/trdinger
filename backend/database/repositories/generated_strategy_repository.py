@@ -148,34 +148,7 @@ class GeneratedStrategyRepository(BaseRepository):
             logger.error(f"実験IDによる戦略の取得中にエラーが発生しました: {e}")
             return []
 
-    def get_best_strategies(
-        self, experiment_id: Optional[int] = None, limit: int = 10
-    ) -> List[GeneratedStrategy]:
-        """
-        最高フィットネスの戦略を取得
 
-        Args:
-            experiment_id: 実験ID（指定時はその実験内のみ）
-            limit: 取得件数
-
-        Returns:
-            戦略のリスト
-        """
-        try:
-            query = self.db.query(GeneratedStrategy).filter(
-                GeneratedStrategy.fitness_score.isnot(None)
-            )
-
-            if experiment_id is not None:
-                query = query.filter(GeneratedStrategy.experiment_id == experiment_id)
-
-            return (
-                query.order_by(desc(GeneratedStrategy.fitness_score)).limit(limit).all()
-            )
-
-        except Exception as e:
-            logger.error(f"最高フィットネス戦略の取得中にエラーが発生しました: {e}")
-            return []
 
     def get_strategies_by_generation(
         self, experiment_id: int, generation: int
@@ -303,162 +276,15 @@ class GeneratedStrategyRepository(BaseRepository):
             logger.error(f"フィルタリング済み戦略の取得中にエラーが発生しました: {e}")
             return 0, []
 
-    def update_fitness_score(self, strategy_id: int, fitness_score: float) -> bool:
-        """
-        フィットネススコアを更新
 
-        Args:
-            strategy_id: 戦略ID
-            fitness_score: フィットネススコア
 
-        Returns:
-            更新成功フラグ
-        """
-        try:
-            strategy = (
-                self.db.query(GeneratedStrategy)
-                .filter(GeneratedStrategy.id == strategy_id)
-                .first()
-            )
 
-            if not strategy:
-                logger.warning(f"指定されたIDの戦略が見つかりません: {strategy_id}")
-                return False
 
-            strategy.fitness_score = fitness_score  # type: ignore
-            self.db.commit()
 
-            logger.debug(
-                f"フィットネススコアを更新: {strategy_id} -> {fitness_score:.4f}"
-            )
-            return True
 
-        except Exception as e:
-            self.db.rollback()
-            logger.error(f"フィットネススコアの更新中にエラーが発生しました: {e}")
-            return False
 
-    def update_backtest_result(self, strategy_id: int, backtest_result_id: int) -> bool:
-        """
-        バックテスト結果IDを更新
 
-        Args:
-            strategy_id: 戦略ID
-            backtest_result_id: バックテスト結果ID
 
-        Returns:
-            更新成功フラグ
-        """
-        try:
-            strategy = (
-                self.db.query(GeneratedStrategy)
-                .filter(GeneratedStrategy.id == strategy_id)
-                .first()
-            )
-
-            if not strategy:
-                logger.warning(f"指定されたIDの戦略が見つかりません: {strategy_id}")
-                return False
-
-            strategy.backtest_result_id = backtest_result_id  # type: ignore
-            self.db.commit()
-
-            logger.debug(
-                f"バックテスト結果IDを更新: {strategy_id} -> {backtest_result_id}"
-            )
-            return True
-
-        except Exception as e:
-            self.db.rollback()
-            logger.error(f"バックテスト結果IDの更新中にエラーが発生しました: {e}")
-            return False
-
-    def get_strategy_by_id(self, strategy_id: int) -> Optional[GeneratedStrategy]:
-        """
-        IDで戦略を取得
-
-        Args:
-            strategy_id: 戦略ID
-
-        Returns:
-            戦略（存在しない場合はNone）
-        """
-        try:
-            return (
-                self.db.query(GeneratedStrategy)
-                .filter(GeneratedStrategy.id == strategy_id)
-                .first()
-            )
-
-        except Exception as e:
-            logger.error(f"戦略の取得中にエラーが発生しました: {e}")
-            return None
-
-    def get_generation_statistics(
-        self, experiment_id: int, generation: int
-    ) -> Dict[str, Any]:
-        """
-        世代の統計情報を取得
-
-        Args:
-            experiment_id: 実験ID
-            generation: 世代数
-
-        Returns:
-            統計情報の辞書
-        """
-        try:
-            strategies = self.get_strategies_by_generation(experiment_id, generation)
-
-            # 世代が存在しない場合は空の辞書を返す
-            if not strategies:
-                return {}
-
-            fitness_scores = typing_cast(
-                List[float],
-                [s.fitness_score for s in strategies if s.fitness_score is not None],
-            )
-
-            if not fitness_scores:
-                return {"strategy_count": len(strategies)}
-
-            return {
-                "strategy_count": len(strategies),
-                "best_fitness": max(fitness_scores),
-                "worst_fitness": min(fitness_scores),
-                "average_fitness": sum(fitness_scores) / len(fitness_scores),
-                "fitness_scores": fitness_scores,
-            }
-
-        except Exception as e:
-            logger.error(f"世代統計の取得中にエラーが発生しました: {e}")
-            return {}
-
-    def delete_strategies_by_experiment(self, experiment_id: int) -> int:
-        """
-        実験に関連する戦略を削除
-
-        Args:
-            experiment_id: 実験ID
-
-        Returns:
-            削除された件数
-        """
-        try:
-            deleted_count = (
-                self.db.query(GeneratedStrategy)
-                .filter(GeneratedStrategy.experiment_id == experiment_id)
-                .delete()
-            )
-
-            self.db.commit()
-            logger.info(f"実験{experiment_id}の戦略を削除しました: {deleted_count} 件")
-            return deleted_count
-
-        except Exception as e:
-            self.db.rollback()
-            logger.error(f"戦略の削除中にエラーが発生しました: {e}")
-            return 0
 
     def delete_all_strategies(self) -> int:
         """
