@@ -50,16 +50,6 @@
 - `app/main.py:103` - `global_exception_handler()`
 - `app/main.py:116` - `health_check()`
 
-### Generators
-
-- `app/services/auto_strategy/generators/gene_factory.py:297` - `generate_population()`
-- `app/services/auto_strategy/generators/random_gene_generator.py:771` - `generate_population()`
-- `app/services/auto_strategy/generators/smart_condition_generator.py:1147` - `_ma_candidates()`
-- `app/services/auto_strategy/generators/smart_condition_generator.py:1160` - `_generate_ma_crossover()`
-- `app/services/auto_strategy/generators/smart_condition_generator.py:1207` - `_build_or_group_from_momentum()`
-- `app/services/auto_strategy/generators/strategy_factory.py:70` - `_check_params()`
-- `app/services/auto_strategy/generators/strategy_factory.py:347` - `_check_entry_conditions()`
-
 ### Models
 
 - `app/services/auto_strategy/models/ga_config.py:373` - `apply_fitness_profile()`

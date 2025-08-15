@@ -67,22 +67,6 @@ class StrategyFactory:
             # backtesting.pyがパラメータを認識できるようにクラス変数として定義
             strategy_gene = gene  # デフォルト値として元のgeneを設定
 
-            def _check_params(self, params):
-                # backtesting.pyの厳格なパラメータチェックを回避するため、
-                # 親の親である_Strategyのメソッドを模倣する。
-                # これにより、クラス変数として定義されていないパラメータも受け入れられる。
-                checked_params = dict(params)
-
-                # _get_params()のロジックを再実装して静的解析エラーを回避
-                defined_params = {}
-                for key, value in type(self).__dict__.items():
-                    if not key.startswith("_") and not callable(value):
-                        defined_params[key] = value
-
-                for key, value in defined_params.items():
-                    checked_params.setdefault(key, value)
-                return checked_params
-
             def __init__(self, broker=None, data=None, params=None):
                 logger.warning(
                     f"戦略__init__開始: broker={broker is not None}, data={data is not None}, params={params}"
@@ -343,12 +327,6 @@ class StrategyFactory:
                     )
                     # エラーを再発生させて上位で適切に処理
                     raise
-
-            def _check_entry_conditions(self) -> bool:
-                """エントリー条件をチェック（後方互換性のため保持）"""
-                return factory.condition_evaluator.evaluate_conditions(
-                    self.gene.entry_conditions, self
-                )
 
             def _check_long_entry_conditions(self) -> bool:
                 """ロングエントリー条件をチェック"""

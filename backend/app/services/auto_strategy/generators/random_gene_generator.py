@@ -768,41 +768,6 @@ class RandomGeneGenerator:
         else:
             return Condition(left_operand="close", operator="<", right_operand="SMA")
 
-    def generate_population(self, size: int) -> List[StrategyGene]:
-        """
-        ランダム個体群を生成
-
-        Args:
-            size: 個体群サイズ
-
-        Returns:
-            生成された戦略遺伝子のリスト
-        """
-        population = []
-
-        from ..utils.auto_strategy_utils import AutoStrategyUtils
-
-        for i in range(size):
-            try:
-                gene = self.generate_random_gene()
-                population.append(gene)
-
-                if (i + 1) % 10 == 0:
-                    # logger.info(f"{i + 1}/{size}個のランダム遺伝子を生成しました")
-                    pass
-
-            except Exception as e:
-                logger.error(f"遺伝子{i}の生成に失敗しました: {e}")
-                # フォールバックを追加
-                population.append(
-                    AutoStrategyUtils.create_default_strategy_gene(
-                        strategy_gene_class=StrategyGene
-                    )
-                )
-
-        # logger.info(f"{len(population)}個の遺伝子の個体群を生成しました")
-        return population
-
     def _generate_tpsl_gene(self) -> TPSLGene:
         """
         TP/SL遺伝子を生成（GA最適化対象）

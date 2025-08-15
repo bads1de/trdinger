@@ -293,27 +293,3 @@ class GeneGeneratorFactory:
         else:
             logger.warning(f"未知の生成器タイプ: {generator_type}, デフォルトを使用")
             return DefaultGeneGenerator(config)
-
-    @staticmethod
-    def generate_population(
-        generator_type: GeneratorType, config: GAConfig, population_size: int
-    ) -> List[StrategyGene]:
-        """個体群を生成"""
-        generator = GeneGeneratorFactory.create_generator(generator_type, config)
-        population = []
-
-        for i in range(population_size):
-            try:
-                gene = generator.generate_complete_gene()
-                population.append(gene)
-
-                if (i + 1) % 10 == 0:
-                    logger.info(f"{i + 1}/{population_size}個の遺伝子を生成しました")
-
-            except Exception as e:
-                logger.error(f"遺伝子{i}の生成に失敗しました: {e}")
-                # フォールバック
-                population.append(generator._create_fallback_gene())
-
-        logger.info(f"{len(population)}個の遺伝子の個体群を生成しました")
-        return population
