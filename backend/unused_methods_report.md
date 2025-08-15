@@ -253,24 +253,6 @@
 - `app/services/ml/feature_engineering/optimized_crypto_features.py:599` - `get_feature_groups()`
 - `app/services/ml/feature_engineering/optimized_crypto_features.py:603` - `get_top_features_by_stability()`
 
-### Feature Selection
-
-- `app/services/ml/feature_selection/feature_selector.py:507` - `get_feature_importance_ranking()`
-
-### Interfaces
-
-
-
-
-
-
-### Model Manager
-
-- `app/services/ml/model_manager.py:444` - `register_model()`
-- `app/services/ml/model_manager.py:513` - `load_model_enhanced()`
-- `app/services/ml/model_manager.py:536` - `get_best_model()`
-- `app/services/ml/model_manager.py:591` - `get_model_list_enhanced()`
-
 ### Orchestration
 
 - `app/services/ml/orchestration/background_task_manager.py:161` - `get_active_tasks()`

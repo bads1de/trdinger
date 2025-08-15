@@ -504,14 +504,6 @@ class FeatureSelector:
             logger.error(f"順列重要度選択エラー: {e}")
             return feature_names[:5], {"error": str(e)}
 
-    def get_feature_importance_ranking(self) -> Optional[pd.DataFrame]:
-        """特徴量重要度ランキングを取得"""
-        if not self.selection_results_:
-            return None
-
-        # 実装は省略（必要に応じて追加）
-        return None
-
 
 # グローバルインスタンス
 feature_selector = FeatureSelector()
