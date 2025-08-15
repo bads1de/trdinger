@@ -74,32 +74,6 @@ class UnifiedErrorHandler:
     # --- 統一エラーレスポンス生成 ---
 
     @staticmethod
-    def get_error_message(
-        error_template_key: str,
-        details: Optional[str] = None,
-        fallback_message: Optional[str] = None,
-    ) -> str:
-        """
-        統一エラーメッセージテンプレートからメッセージを生成
-
-        Args:
-            error_template_key: エラーテンプレートキー
-            details: エラー詳細
-            fallback_message: テンプレートが見つからない場合のフォールバックメッセージ
-
-        Returns:
-            統一されたエラーメッセージ
-        """
-        template = UnifiedErrorHandler.ERROR_TEMPLATES.get(
-            error_template_key, fallback_message or "エラーが発生しました"
-        )
-
-        if details and "{details}" in template:
-            return template.format(details=details)
-        else:
-            return template.replace(": {details}", "")
-
-    @staticmethod
     def create_error_response(
         message: str,
         error_code: Optional[str] = None,
@@ -161,62 +135,7 @@ class UnifiedErrorHandler:
             ),
         )
 
-    @staticmethod
-    def handle_validation_error(error: Exception, context: str = "") -> HTTPException:
-        """バリデーションエラーを処理"""
-        return UnifiedErrorHandler.handle_api_error(
-            error, context, status_code=400, error_code="VALIDATION_ERROR"
-        )
-
-    @staticmethod
-    def handle_database_error(error: Exception, context: str = "") -> HTTPException:
-        """データベースエラーを処理"""
-        return UnifiedErrorHandler.handle_api_error(
-            error, context, status_code=500, error_code="DATABASE_ERROR"
-        )
-
-    @staticmethod
-    def handle_external_api_error(error: Exception, context: str = "") -> HTTPException:
-        """外部APIエラーを処理"""
-        return UnifiedErrorHandler.handle_api_error(
-            error, context, status_code=502, error_code="EXTERNAL_API_ERROR"
-        )
-
     # --- ML エラーハンドリング ---
-
-    @staticmethod
-    def handle_data_error(
-        error: Exception, context: str, default_value: Any = None
-    ) -> Any:
-        """
-        データエラーの統一処理
-
-        Args:
-            error: 発生したエラー
-            context: エラーコンテキスト
-            default_value: デフォルト値
-
-        Returns:
-            デフォルト値またはエラー情報
-        """
-        logger.warning(f"データエラー in {context}: {error}")
-        return default_value or UnifiedErrorHandler.create_error_response(
-            message=str(error),
-            error_code="DATA_ERROR",
-            context=context,
-        )
-
-    @staticmethod
-    def handle_prediction_error(
-        error: Exception, context: str, default_value: Any = None
-    ) -> Any:
-        """予測エラーの統一処理"""
-        logger.error(f"予測エラー in {context}: {error}")
-        return default_value or UnifiedErrorHandler.create_error_response(
-            message=str(error),
-            error_code="PREDICTION_ERROR",
-            context=context,
-        )
 
     @staticmethod
     def handle_model_error(
@@ -231,24 +150,6 @@ class UnifiedErrorHandler:
             details={
                 "operation": operation,
                 "error_type": type(error).__name__,
-            },
-        )
-
-    @staticmethod
-    def handle_timeout_error(
-        error: Exception, context: str, timeout_seconds: float
-    ) -> Dict[str, Any]:
-        """タイムアウトエラーの統一処理"""
-        logger.error(
-            f"タイムアウトエラー in {context} after {timeout_seconds}s: {error}"
-        )
-        return UnifiedErrorHandler.create_error_response(
-            message=f"処理が{timeout_seconds}秒でタイムアウトしました",
-            error_code="TIMEOUT_ERROR",
-            context=context,
-            details={
-                "timeout_seconds": timeout_seconds,
-                "original_error": str(error),
             },
         )
 

@@ -48,15 +48,6 @@ class BaseResourceManager(ABC):
         except Exception as e:
             logger.error(f"コンテキストマネージャー終了時のクリーンアップエラー: {e}")
 
-    def set_cleanup_level(self, level: CleanupLevel):
-        """クリーンアップレベルを設定"""
-        self._cleanup_level = level
-
-    def add_cleanup_callback(self, callback: callable):
-        """クリーンアップ時に実行するコールバックを追加"""
-        if callable(callback):
-            self._cleanup_callbacks.append(callback)
-
     def cleanup_resources(self, level: Optional[CleanupLevel] = None) -> Dict[str, Any]:
         """
         リソースの統一クリーンアップ
@@ -205,10 +196,6 @@ class BaseResourceManager(ABC):
             logger.warning(f"メモリ使用量取得エラー: {e}")
             return 0.0
 
-    def is_cleaned_up(self) -> bool:
-        """クリーンアップ済みかどうかを確認"""
-        return self._is_cleaned_up
-
 
 class ResourceManagedOperation:
     """
@@ -264,22 +251,3 @@ class ResourceManagedOperation:
 
         except Exception as e:
             logger.error(f"{self.operation_name}終了時のクリーンアップエラー: {e}")
-
-
-@contextmanager
-def managed_ml_operation(
-    resource_manager: BaseResourceManager,
-    operation_name: str = "ML Operation",
-    cleanup_level: CleanupLevel = CleanupLevel.STANDARD,
-):
-    """
-    ML操作用のコンテキストマネージャー（関数形式）
-
-    使用例:
-        with managed_ml_operation(trainer, "モデル学習") as managed_trainer:
-            result = managed_trainer.train_model(data)
-    """
-    with ResourceManagedOperation(
-        resource_manager, operation_name, cleanup_level
-    ) as manager:
-        yield manager

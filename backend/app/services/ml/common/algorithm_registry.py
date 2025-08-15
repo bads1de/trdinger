@@ -163,57 +163,6 @@ class AlgorithmRegistry:
         """
         return algorithm_name in cls._SUPPORTED_ALGORITHMS
 
-    @classmethod
-    def get_supported_algorithms(cls) -> list:
-        """
-        サポートされているアルゴリズム名のリストを取得
-
-        Returns:
-            サポートされているアルゴリズム名のリスト
-        """
-        return sorted(cls._SUPPORTED_ALGORITHMS)
-
-    @classmethod
-    def get_algorithm_mapping(cls) -> Dict[str, str]:
-        """
-        クラス名からアルゴリズム名へのマッピング辞書を取得
-
-        Returns:
-            マッピング辞書のコピー
-        """
-        return cls._CLASS_TO_ALGORITHM_MAPPING.copy()
-
-    @classmethod
-    def add_algorithm_mapping(cls, class_name: str, algorithm_name: str) -> None:
-        """
-        新しいアルゴリズムマッピングを追加
-
-        Args:
-            class_name: クラス名
-            algorithm_name: アルゴリズム名
-        """
-        cls._CLASS_TO_ALGORITHM_MAPPING[class_name.lower()] = algorithm_name.lower()
-        cls._SUPPORTED_ALGORITHMS.add(algorithm_name.lower())
-        logger.info(
-            f"新しいアルゴリズムマッピングを追加: {class_name} -> {algorithm_name}"
-        )
-
-    @classmethod
-    def validate_algorithm_name(cls, algorithm_name: str) -> bool:
-        """
-        アルゴリズム名を検証
-
-        Args:
-            algorithm_name: 検証するアルゴリズム名
-
-        Returns:
-            有効なアルゴリズム名の場合はTrue
-        """
-        if not algorithm_name:
-            return False
-
-        return algorithm_name.lower() in cls._SUPPORTED_ALGORITHMS
-
 
 # グローバルインスタンスを作成
 algorithm_registry = AlgorithmRegistry()

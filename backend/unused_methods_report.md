@@ -1,0 +1,431 @@
+# 未使用メソッド・関数レポート (60%信頼度)
+
+## API 関数 (FastAPI エンドポイント)
+
+### Auto Strategy API
+
+- `app/api/auto_strategy.py:117` - `generate_strategy()`
+- `app/api/auto_strategy.py:216` - `get_experiment_results()`
+- `app/api/auto_strategy.py:284` - `get_config_presets()`
+
+### Data Collection API
+
+- `app/api/data_collection.py:65` - `update_bulk_incremental_data()`
+- `app/api/data_collection.py:90` - `collect_bitcoin_full_data()`
+- `app/api/data_collection.py:117` - `collect_bulk_historical_data()`
+- `app/api/data_collection.py:197` - `collect_all_data_bulk()`
+
+### Dependencies API
+
+- `app/api/dependencies.py:29` - `get_backtest_service()`
+- `app/api/dependencies.py:50` - `get_backtest_service_with_db()`
+- `app/api/dependencies.py:71` - `get_strategy_integration_service()`
+- `app/api/dependencies.py:84` - `get_market_data_orchestration_service()`
+
+### Funding Rates API
+
+- `app/api/funding_rates.py:24` - `get_funding_rates()`
+- `app/api/funding_rates.py:118` - `bulk_collect_funding_rates()`
+
+### ML Management API
+
+- `app/api/ml_management.py:29` - `get_models()`
+- `app/api/ml_management.py:72` - `delete_all_models_legacy()`
+- `app/api/ml_management.py:190` - `get_current_model()`
+- `app/api/ml_management.py:227` - `get_ml_config()`
+
+### ML Training API
+
+- `app/api/ml_training.py:194` - `start_ml_training()`
+- `app/api/ml_training.py:248` - `get_ml_training_status()`
+- `app/api/ml_training.py:259` - `get_ml_model_info()`
+- `app/api/ml_training.py:273` - `stop_ml_training()`
+
+### Open Interest API
+
+- `app/api/open_interest.py:101` - `bulk_collect_open_interest()`
+
+### Main App
+
+- `app/main.py:103` - `global_exception_handler()`
+- `app/main.py:116` - `health_check()`
+
+## 設定・バリデーション関連
+
+### Config Validators
+
+- `app/config/validators.py:45` - `validate_limit()`
+- `app/config/validators.py:134` - `validate_probability_range()`
+- `app/config/validators.py:164` - `validate_data_processing_config()`
+- `app/config/validators.py:214` - `validate_model_config()`
+- `app/config/validators.py:250` - `validate_connection_params()`
+- `app/config/validators.py:286` - `validate_server_config()`
+- `app/config/validators.py:314` - `validate_cors_origins()`
+
+### Unified Config
+
+- `app/config/unified_config.py:184` - `create_model_directory()`
+- `app/config/unified_config.py:261` - `validate_all()`
+
+## Auto Strategy サービス
+
+### Base Config
+
+- `app/services/auto_strategy/config/base_config.py:125` - `update_from_dict()`
+- `app/services/auto_strategy/config/base_config.py:136` - `get_summary()`
+
+### Constants
+
+- `app/services/auto_strategy/config/constants.py:319` - `get_indicator_categories()`
+- `app/services/auto_strategy/config/constants.py:382` - `validate_indicator_type()`
+
+### Generators
+
+- `app/services/auto_strategy/generators/gene_factory.py:297` - `generate_population()`
+- `app/services/auto_strategy/generators/random_gene_generator.py:771` - `generate_population()`
+- `app/services/auto_strategy/generators/smart_condition_generator.py:1147` - `_ma_candidates()`
+- `app/services/auto_strategy/generators/smart_condition_generator.py:1160` - `_generate_ma_crossover()`
+- `app/services/auto_strategy/generators/smart_condition_generator.py:1207` - `_build_or_group_from_momentum()`
+- `app/services/auto_strategy/generators/strategy_factory.py:70` - `_check_params()`
+- `app/services/auto_strategy/generators/strategy_factory.py:347` - `_check_entry_conditions()`
+
+### Models
+
+- `app/services/auto_strategy/models/ga_config.py:373` - `apply_fitness_profile()`
+- `app/services/auto_strategy/models/gene_serialization.py:238` - `dict_to_condition()`
+- `app/services/auto_strategy/models/gene_serialization.py:426` - `json_to_strategy_gene()`
+- `app/services/auto_strategy/models/gene_serialization.py:457` - `serialize_for_database()`
+- `app/services/auto_strategy/models/gene_serialization.py:480` - `deserialize_from_database()`
+- `app/services/auto_strategy/models/gene_serialization.py:512` - `serialize_for_api()`
+- `app/services/auto_strategy/models/gene_serialization.py:555` - `validate_serialized_data()`
+- `app/services/auto_strategy/models/gene_strategy.py:62` - `normalize_parameters()`
+- `app/services/auto_strategy/models/gene_strategy.py:82` - `create_from_json_config()`
+- `app/services/auto_strategy/models/gene_strategy.py:210` - `encode_gene_to_list()`
+- `app/services/auto_strategy/models/gene_strategy.py:218` - `decode_list_to_gene()`
+- `app/services/auto_strategy/models/gene_tpsl.py:178` - `calculate_tpsl_values()`
+- `app/services/auto_strategy/models/gene_validation.py:189` - `_validate_dict_operand()`
+- `app/services/auto_strategy/models/gene_validation.py:557` - `get_validation_summary()`
+
+### Services
+
+- `app/services/auto_strategy/services/experiment_manager.py:128` - `test_strategy_generation()`
+- `app/services/auto_strategy/services/experiment_persistence_service.py:374` - `get_experiment_result()`
+- `app/services/auto_strategy/services/ml_orchestrator.py:321` - `update_predictions()`
+- `app/services/auto_strategy/services/ml_orchestrator.py:405` - `predict_probabilities()`
+- `app/services/auto_strategy/services/ml_orchestrator.py:540` - `set_automl_enabled()`
+- `app/services/auto_strategy/services/ml_orchestrator.py:575` - `get_automl_status()`
+- `app/services/auto_strategy/services/position_sizing_service.py:591` - `get_calculation_history()`
+- `app/services/auto_strategy/services/position_sizing_service.py:599` - `get_cache_status()`
+- `app/services/auto_strategy/services/position_sizing_service.py:703` - `validate_position_size()`
+- `app/services/auto_strategy/services/position_sizing_service.py:743` - `get_recommended_method()`
+
+### Utils
+
+- `app/services/auto_strategy/utils/auto_strategy_utils.py:194` - `denormalize_parameter()`
+- `app/services/auto_strategy/utils/auto_strategy_utils.py:322` - `extract_config_subset()`
+- `app/services/auto_strategy/utils/common_utils.py:71` - `percentage_to_decimal()`
+- `app/services/auto_strategy/utils/common_utils.py:95` - `log_function_entry()`
+- `app/services/auto_strategy/utils/common_utils.py:102` - `log_function_exit()`
+- `app/services/auto_strategy/utils/common_utils.py:117` - `log_business_event()`
+- `app/services/auto_strategy/utils/common_utils.py:156` - `validate_positive_number()`
+- `app/services/auto_strategy/utils/common_utils.py:164` - `validate_list_not_empty()`
+- `app/services/auto_strategy/utils/common_utils.py:197` - `time_async_function()`
+- `app/services/auto_strategy/utils/common_utils.py:244` - `cleanup_expired()`
+- `app/services/auto_strategy/utils/data_coverage_analyzer.py:36` - `analyze_strategy_coverage()`
+- `app/services/auto_strategy/utils/data_coverage_analyzer.py:226` - `get_coverage_summary()`
+- `app/services/auto_strategy/utils/error_handling.py:87` - `handle_validation_error()`
+- `app/services/auto_strategy/utils/error_handling.py:170` - `retry_on_failure()`
+- `app/services/auto_strategy/utils/error_handling.py:213` - `validate_and_execute()`
+- `app/services/auto_strategy/utils/error_handling.py:269` - `add_error()`
+- `app/services/auto_strategy/utils/error_handling.py:274` - `add_warning()`
+- `app/services/auto_strategy/utils/error_handling.py:287` - `get_summary()`
+- `app/services/auto_strategy/utils/error_handling.py:304` - `error_boundary()`
+- `app/services/auto_strategy/utils/operand_grouping.py:223` - `get_operands_by_group()`
+- `app/services/auto_strategy/utils/operand_grouping.py:238` - `get_group_statistics()`
+- `app/services/auto_strategy/utils/strategy_integration_service.py:86` - `get_all_strategies_for_stats()`
+
+## バックテスト関連
+
+### Data Services
+
+- `app/services/backtest/data/data_conversion_service.py:72` - `convert_open_interest_to_dataframe()`
+- `app/services/backtest/data/data_conversion_service.py:103` - `convert_funding_rate_to_dataframe()`
+- `app/services/backtest/data/data_conversion_service.py:134` - `convert_fear_greed_to_dataframe()`
+- `app/services/backtest/data/data_conversion_service.py:205` - `create_empty_dataframe()`
+- `app/services/backtest/data/data_conversion_service.py:222` - `validate_dataframe_structure()`
+- `app/services/backtest/data/data_retrieval_service.py:191` - `validate_repositories()`
+
+## データ収集関連
+
+### Bybit Services
+
+- `app/services/data_collection/bybit/funding_rate_service.py:39` - `fetch_current_funding_rate()`
+- `app/services/data_collection/bybit/funding_rate_service.py:80` - `fetch_all_funding_rate_history()`
+- `app/services/data_collection/bybit/open_interest_service.py:26` - `fetch_current_open_interest()`
+- `app/services/data_collection/bybit/open_interest_service.py:58` - `fetch_all_open_interest_history()`
+
+### Fear & Greed Service
+
+- `app/services/data_collection/fear_greed/fear_greed_service.py:228` - `get_latest_data_info()`
+
+### Orchestration
+
+- `app/services/data_collection/orchestration/funding_rate_orchestration_service.py:289` - `get_funding_rate_status()`
+
+## 指標関連
+
+### Indicator Config
+
+- `app/services/indicators/config/indicator_config.py:95` - `get_parameter_default()`
+- `app/services/indicators/config/indicator_config.py:110` - `generate_random_parameters()`
+- `app/services/indicators/config/indicator_config.py:140` - `has_parameters()`
+- `app/services/indicators/config/indicator_config.py:279` - `is_indicator_supported()`
+- `app/services/indicators/config/indicator_config.py:283` - `resolve_indicator_type()`
+- `app/services/indicators/config/indicator_config.py:388` - `get_default_output_name()`
+
+### Technical Indicators
+
+- `app/services/indicators/technical_indicators/math_operators.py:57` - `div()`
+- `app/services/indicators/technical_indicators/math_operators.py:94` - `sum_values()`
+- `app/services/indicators/technical_indicators/math_transform.py:27` - `acos()`
+- `app/services/indicators/technical_indicators/math_transform.py:50` - `asin()`
+- `app/services/indicators/technical_indicators/math_transform.py:64` - `atan()`
+- `app/services/indicators/technical_indicators/math_transform.py:100` - `ln()`
+
+### Pattern Recognition
+
+- `app/services/indicators/technical_indicators/pattern_recognition.py:82` - `cdl_hanging_man()`
+- `app/services/indicators/technical_indicators/pattern_recognition.py:167` - `cdl_harami()`
+- `app/services/indicators/technical_indicators/pattern_recognition.py:195` - `cdl_piercing()`
+- `app/services/indicators/technical_indicators/pattern_recognition.py:223` - `cdl_dark_cloud_cover()`
+- `app/services/indicators/technical_indicators/pattern_recognition.py:309` - `cdl_three_black_crows()`
+- `app/services/indicators/technical_indicators/pattern_recognition.py:337` - `cdl_three_white_soldiers()`
+- `app/services/indicators/technical_indicators/pattern_recognition.py:366` - `cdl_marubozu()`
+- `app/services/indicators/technical_indicators/pattern_recognition.py:394` - `cdl_spinning_top()`
+- `app/services/indicators/technical_indicators/pattern_recognition.py:426` - `doji()`
+- `app/services/indicators/technical_indicators/pattern_recognition.py:431` - `hammer()`
+- `app/services/indicators/technical_indicators/pattern_recognition.py:436` - `engulfing_pattern()`
+- `app/services/indicators/technical_indicators/pattern_recognition.py:441` - `morning_star()`
+- `app/services/indicators/technical_indicators/pattern_recognition.py:446` - `evening_star()`
+
+## ML 関連
+
+### Adaptive Learning
+
+- `app/services/ml/adaptive_learning/adaptive_learning_service.py:413` - `get_adaptation_summary()`
+- `app/services/ml/adaptive_learning/enhanced_market_regime_detector.py:497` - `should_retrain_model()`
+- `app/services/ml/adaptive_learning/market_regime_detector.py:303` - `should_retrain_model()`
+
+### Config
+
+- `app/services/ml/config/ml_config.py:58` - `model_post_init()`
+- `app/services/ml/config/ml_config.py:118` - `model_post_init()`
+- `app/services/ml/config/ml_config.py:219` - `get_default_indicators()`
+- `app/services/ml/config/ml_config.py:398` - `get_default_stacking_config()`
+- `app/services/ml/config/ml_config.py:513` - `get_environment_info()`
+- `app/services/ml/config/ml_config_manager.py:44` - `get_config()`
+
+### Ensemble
+
+- `app/services/ml/ensemble/stacking.py:305` - `get_base_model_predictions()`
+
+### Evaluation
+
+- `app/services/ml/evaluation/enhanced_metrics.py:781` - `generate_metrics_summary()`
+- `app/services/ml/evaluation/enhanced_metrics.py:811` - `save_metrics_report()`
+
+### Exceptions
+
+- `app/services/ml/exceptions.py:117` - `validate_data_format()`
+- `app/services/ml/exceptions.py:148` - `validate_model_parameters()`
+- `app/services/ml/exceptions.py:173` - `handle_ml_exception()`
+
+### Feature Engineering
+
+- `app/services/ml/feature_engineering/advanced_features.py:402` - `clean_features()`
+- `app/services/ml/feature_engineering/automl_features/autofeat_calculator.py:458` - `_extract_selected_features()`
+- `app/services/ml/feature_engineering/automl_features/autofeat_calculator.py:504` - `_calculate_feature_scores()`
+- `app/services/ml/feature_engineering/automl_features/autofeat_calculator.py:559` - `get_generation_info()`
+- `app/services/ml/feature_engineering/automl_features/autofeat_calculator.py:563` - `get_feature_scores()`
+- `app/services/ml/feature_engineering/automl_features/autofeat_calculator.py:567` - `evaluate_selected_features()`
+- `app/services/ml/feature_engineering/automl_features/feature_selector.py:386` - `get_selection_summary()`
+- `app/services/ml/feature_engineering/automl_features/feature_selector.py:400` - `get_feature_scores()`
+- `app/services/ml/feature_engineering/automl_features/feature_selector.py:404` - `clear_history()`
+- `app/services/ml/feature_engineering/automl_features/feature_settings.py:238` - `get_profile()`
+- `app/services/ml/feature_engineering/automl_features/feature_settings.py:242` - `get_profiles_by_category()`
+- `app/services/ml/feature_engineering/automl_features/feature_settings.py:299` - `save_settings_to_file()`
+- `app/services/ml/feature_engineering/automl_features/feature_settings.py:304` - `load_settings_from_file()`
+- `app/services/ml/feature_engineering/automl_features/feature_settings.py:309` - `get_all_profile_names()`
+- `app/services/ml/feature_engineering/automl_features/feature_settings.py:313` - `get_profile_summary()`
+- `app/services/ml/feature_engineering/automl_features/memory_utils.py:42` - `calculate_optimal_batch_size()`
+- `app/services/ml/feature_engineering/automl_features/memory_utils.py:76` - `optimize_dataframe_dtypes()`
+- `app/services/ml/feature_engineering/automl_features/memory_utils.py:166` - `memory_monitor_decorator()`
+- `app/services/ml/feature_engineering/automl_features/memory_utils.py:185` - `check_memory_availability()`
+- `app/services/ml/feature_engineering/automl_features/memory_utils.py:233` - `get_memory_efficient_autofeat_config()`
+- `app/services/ml/feature_engineering/automl_features/memory_utils.py:294` - `cleanup_autofeat_memory()`
+- `app/services/ml/feature_engineering/automl_features/memory_utils.py:320` - `log_memory_usage()`
+- `app/services/ml/feature_engineering/automl_features/performance_optimizer.py:85` - `get_cached_features()`
+- `app/services/ml/feature_engineering/automl_features/performance_optimizer.py:93` - `cache_features()`
+- `app/services/ml/feature_engineering/automl_features/performance_optimizer.py:100` - `_cleanup_cache_if_needed()`
+- `app/services/ml/feature_engineering/automl_features/performance_optimizer.py:266` - `get_cache_stats()`
+- `app/services/ml/feature_engineering/automl_features/performance_optimizer.py:306` - `cleanup_autofeat_memory()`
+- `app/services/ml/feature_engineering/automl_features/performance_optimizer.py:406` - `get_memory_recommendations()`
+- `app/services/ml/feature_engineering/automl_features/performance_optimizer.py:550` - `memory_profiling_decorator()`
+- `app/services/ml/feature_engineering/automl_features/tsfresh_calculator.py:489` - `get_extraction_info()`
+- `app/services/ml/feature_engineering/automl_features/tsfresh_calculator.py:615` - `set_market_regime()`
+- `app/services/ml/feature_engineering/automl_features/tsfresh_calculator.py:620` - `get_regime_info()`
+- `app/services/ml/feature_engineering/base_feature_calculator.py:128` - `log_feature_calculation_start()`
+- `app/services/ml/feature_engineering/data_frequency_manager.py:46` - `get_target_frequency()`
+- `app/services/ml/feature_engineering/data_frequency_manager.py:315` - `validate_data_consistency()`
+- `app/services/ml/feature_engineering/enhanced_crypto_features.py:36` - `create_comprehensive_features()`
+- `app/services/ml/feature_engineering/enhanced_crypto_features.py:426` - `get_feature_groups()`
+- `app/services/ml/feature_engineering/enhanced_crypto_features.py:430` - `get_top_features_by_correlation()`
+- `app/services/ml/feature_engineering/feature_engineering_service.py:955` - `get_cache_info()`
+- `app/services/ml/feature_engineering/feature_engineering_service.py:1043` - `get_automl_config()`
+- `app/services/ml/feature_engineering/feature_engineering_service.py:1049` - `set_automl_config()`
+- `app/services/ml/feature_engineering/optimized_crypto_features.py:36` - `create_optimized_features()`
+- `app/services/ml/feature_engineering/optimized_crypto_features.py:599` - `get_feature_groups()`
+- `app/services/ml/feature_engineering/optimized_crypto_features.py:603` - `get_top_features_by_stability()`
+
+### Feature Selection
+
+- `app/services/ml/feature_selection/feature_selector.py:507` - `get_feature_importance_ranking()`
+
+### Interfaces
+
+- `app/services/ml/interfaces/ml_prediction_interface.py:63` - `predict_probabilities()`
+- `app/services/ml/interfaces/ml_prediction_interface.py:109` - `update_predictions()`
+
+### Metadata
+
+- `app/services/ml/ml_metadata.py:208` - `mark_completed()`
+
+### Training Service
+
+- `app/services/ml/ml_training_service.py:349` - `get_latest_model_path()`
+- `app/services/ml/ml_training_service.py:353` - `list_available_models()`
+
+### Model Manager
+
+- `app/services/ml/model_manager.py:444` - `register_model()`
+- `app/services/ml/model_manager.py:513` - `load_model_enhanced()`
+- `app/services/ml/model_manager.py:536` - `get_best_model()`
+- `app/services/ml/model_manager.py:591` - `get_model_list_enhanced()`
+
+### Orchestration
+
+- `app/services/ml/orchestration/background_task_manager.py:161` - `get_active_tasks()`
+- `app/services/ml/orchestration/background_task_manager.py:176` - `shutdown()`
+- `app/services/ml/orchestration/background_task_manager.py:195` - `get_memory_stats()`
+- `app/services/ml/orchestration/ml_management_orchestration_service.py:419` - `get_models_list()`
+- `app/services/ml/orchestration/ml_training_orchestration_service.py:53` - `get_default_automl_config()`
+- `app/services/ml/orchestration/ml_training_orchestration_service.py:73` - `get_financial_optimized_automl_config()`
+
+### Validation
+
+- `app/services/ml/validation/time_series_cv.py:64` - `cross_validate()`
+- `app/services/ml/validation/time_series_cv.py:367` - `get_best_fold()`
+- `app/services/ml/validation/time_series_cv.py:375` - `plot_cv_scores()`
+
+## 最適化関連
+
+### Base Optimizer
+
+- `app/services/optimization/base_optimizer.py:82` - `validate_parameter_space()`
+- `app/services/optimization/base_optimizer.py:114` - `validate_objective_function()`
+- `app/services/optimization/base_optimizer.py:127` - `_log_optimization_start()`
+- `app/services/optimization/base_optimizer.py:131` - `_log_optimization_end()`
+- `app/services/optimization/base_optimizer.py:135` - `_create_optimization_result()`
+- `app/services/optimization/base_optimizer.py:168` - `get_method_name()`
+
+### Ensemble Parameter Space
+
+- `app/services/optimization/ensemble_parameter_space.py:267` - `suggest_optimized_parameters()`
+
+## ユーティリティ関数
+
+### Data Conversion
+
+- `app/utils/data_conversion.py:262` - `validate_ohlcv_record()`
+
+### Data Validation
+
+- `app/utils/data_validation.py:33` - `high_must_be_highest()`
+- `app/utils/data_validation.py:44` - `low_must_be_lowest()`
+- `app/utils/data_validation.py:197` - `log_validation_results()`
+
+### Label Generation
+
+- `app/utils/label_generation.py:751` - `generate_labels_with_dynamic_threshold()`
+- `app/utils/label_generation.py:861` - `generate_labels_with_kbins_discretizer()`
+
+## データベースリポジトリ
+
+### Backtest Result Repository
+
+- `database/repositories/backtest_result_repository.py:299` - `get_backtest_results_by_strategy()`
+- `database/repositories/backtest_result_repository.py:327` - `get_backtest_results_by_symbol()`
+- `database/repositories/backtest_result_repository.py:380` - `get_performance_summary()`
+- `database/repositories/backtest_result_repository.py:426` - `cleanup_old_results()`
+
+### Base Repository
+
+- `database/repositories/base_repository.py:246` - `_handle_delete_error()`
+- `database/repositories/base_repository.py:355` - `get_data_in_range()`
+- `database/repositories/base_repository.py:507` - `get_data_statistics()`
+- `database/repositories/base_repository.py:554` - `validate_records()`
+
+### Fear Greed Repository
+
+- `database/repositories/fear_greed_repository.py:189` - `get_fear_greed_dataframe()`
+
+### Funding Rate Repository
+
+- `database/repositories/funding_rate_repository.py:24` - `insert_funding_rate_data()`
+- `database/repositories/funding_rate_repository.py:105` - `get_funding_rate_count()`
+- `database/repositories/funding_rate_repository.py:146` - `clear_funding_rate_data_by_date_range()`
+- `database/repositories/funding_rate_repository.py:175` - `get_funding_rate_dataframe()`
+
+### GA Experiment Repository
+
+- `database/repositories/ga_experiment_repository.py:66` - `update_experiment_progress()`
+- `database/repositories/ga_experiment_repository.py:155` - `get_experiment_by_id()`
+- `database/repositories/ga_experiment_repository.py:266` - `get_experiment_statistics()`
+
+### Generated Strategy Repository
+
+- `database/repositories/generated_strategy_repository.py:151` - `get_best_strategies()`
+- `database/repositories/generated_strategy_repository.py:306` - `update_fitness_score()`
+- `database/repositories/generated_strategy_repository.py:341` - `update_backtest_result()`
+- `database/repositories/generated_strategy_repository.py:376` - `get_strategy_by_id()`
+- `database/repositories/generated_strategy_repository.py:397` - `get_generation_statistics()`
+- `database/repositories/generated_strategy_repository.py:437` - `delete_strategies_by_experiment()`
+
+### OHLCV Repository
+
+- `database/repositories/ohlcv_repository.py:233` - `count_records()`
+- `database/repositories/ohlcv_repository.py:273` - `clear_ohlcv_data_by_timeframe()`
+- `database/repositories/ohlcv_repository.py:289` - `clear_ohlcv_data_by_date_range()`
+- `database/repositories/ohlcv_repository.py:320` - `get_available_timeframes()`
+
+### Open Interest Repository
+
+- `database/repositories/open_interest_repository.py:24` - `insert_open_interest_data()`
+- `database/repositories/open_interest_repository.py:107` - `get_open_interest_count()`
+- `database/repositories/open_interest_repository.py:148` - `get_open_interest_dataframe()`
+
+## 統計情報
+
+- **総未使用メソッド・関数数**: 約 200 個
+- **最も多いカテゴリ**: ML 関連 (約 80 個)
+- **API 関数**: 約 25 個
+- **データベースリポジトリ**: 約 30 個
+- **Auto Strategy 関連**: 約 50 個
+
+## 推奨事項
+
+1. **高優先度**: API エンドポイントの未使用関数は削除を検討
+2. **中優先度**: ユーティリティ関数やヘルパーメソッドは将来使用される可能性があるため慎重に判断
+3. **低優先度**: テスト関連のメソッドは開発中に使用される可能性があるため保持を推奨
+
+注意: 60%信頼度のため、実際の使用状況を確認してから削除することを強く推奨します。

@@ -279,8 +279,3 @@ def log_error(message: str, error: Optional[Exception] = None, **kwargs):
         ml_logger.log_error("error", error, context={"message": message}, **kwargs)
     else:
         ml_logger.log_operation("error", level="ERROR", message=message, **kwargs)
-
-
-def log_debug(message: str, **kwargs):
-    """デバッグログの出力"""
-    ml_logger.log_operation("debug", level="DEBUG", message=message, **kwargs)
