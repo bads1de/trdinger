@@ -9,7 +9,6 @@ import logging
 from dataclasses import dataclass, field
 from typing import Any, Callable, Dict, List, Optional
 
-from app.services.indicators import TechnicalIndicatorService
 from ..config.base_config import BaseConfig
 
 logger = logging.getLogger(__name__)
@@ -66,9 +65,7 @@ class GAConfig(BaseConfig):
     # 指標設定
     max_indicators: int = 3
     allowed_indicators: List[str] = field(
-        default_factory=lambda: list(
-            TechnicalIndicatorService().get_supported_indicators().keys()
-        )
+        default_factory=lambda: []
     )
 
     # 指標モード設定
@@ -246,6 +243,8 @@ class GAConfig(BaseConfig):
         if not self.allowed_indicators:
             errors.append("許可された指標リストが空です")
         else:
+            from app.services.indicators import TechnicalIndicatorService
+
             valid_indicators = set(
                 TechnicalIndicatorService().get_supported_indicators().keys()
             )
@@ -318,10 +317,14 @@ class GAConfig(BaseConfig):
     def from_dict(cls, data: Dict[str, Any]) -> "GAConfig":
         """辞書から復元"""
         # allowed_indicatorsが空の場合はデフォルトの指標リストを使用
+        from app.services.indicators import TechnicalIndicatorService
+
         indicator_service = TechnicalIndicatorService()
-        allowed_indicators = data.get("allowed_indicators") or list(
-            indicator_service.get_supported_indicators().keys()
-        )
+        allowed_indicators = data.get("allowed_indicators")
+        if not allowed_indicators:
+            allowed_indicators = list(
+                indicator_service.get_supported_indicators().keys()
+            )
 
         # デフォルト値を使用してフラットな構造で復元
         # fitness_weightsが指定されていない場合はデフォルト値を使用

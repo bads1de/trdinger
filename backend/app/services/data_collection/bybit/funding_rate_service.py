@@ -36,7 +36,22 @@ class BybitFundingRateService(BybitService):
         """
         super()._validate_parameters(symbol, limit)
 
+    async def fetch_current_funding_rate(self, symbol: str) -> Dict[str, Any]:
+        """
+        現在のファンディングレートを取得
 
+        Args:
+            symbol: 取引ペアシンボル（例: 'BTC/USDT'）
+
+        Returns:
+            現在のファンディングレートデータ
+        """
+        normalized_symbol = self.normalize_symbol(symbol)
+        return await self._handle_ccxt_errors(
+            f"現在のファンディングレート取得: {normalized_symbol}",
+            self.exchange.fetch_funding_rate,
+            normalized_symbol,
+        )
 
     async def fetch_funding_rate_history(
         self, symbol: str, limit: int = 100, since: Optional[int] = None
@@ -62,7 +77,30 @@ class BybitFundingRateService(BybitService):
             limit,
         )
 
+    async def fetch_all_funding_rate_history(self, symbol: str) -> List[Dict[str, Any]]:
+        """
+        全期間のファンディングレート履歴を取得
 
+        Args:
+            symbol: 取引ペアシンボル（例: 'BTC/USDT'）
+
+        Returns:
+            全期間のファンディングレート履歴データのリスト
+        """
+        normalized_symbol = self.normalize_symbol(symbol)
+        latest_timestamp = await self._get_latest_timestamp_from_db(
+            repository_class=self.config.repository_class,
+            get_timestamp_method_name=self.config.get_timestamp_method_name,
+            symbol=normalized_symbol,
+        )
+        return await self._fetch_paginated_data(
+            fetch_func=getattr(self.exchange, self.config.fetch_history_method_name),
+            symbol=normalized_symbol,
+            page_limit=self.config.page_limit,
+            max_pages=self.config.max_pages,
+            latest_existing_timestamp=latest_timestamp,
+            pagination_strategy=self.config.pagination_strategy,
+        )
 
     async def fetch_incremental_funding_rate_data(
         self,
@@ -105,3 +143,18 @@ class BybitFundingRateService(BybitService):
             fetch_all=fetch_all,
         )
 
+    async def _save_funding_rate_to_database(
+        self,
+        funding_history: List[Dict[str, Any]],
+        symbol: str,
+        repository: FundingRateRepository,
+    ) -> int:
+        """
+        ファンディングレートデータをデータベースに保存（内部メソッド）
+
+        注意: このメソッドは後方互換性のために残されています。
+        新しいコードでは基底クラスの_save_data_to_databaseを使用してください。
+        """
+        return await self._save_data_to_database(
+            funding_history, symbol, repository, self.config
+        )
