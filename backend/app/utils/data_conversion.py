@@ -259,69 +259,6 @@ class DataSanitizer:
             logger.error(f"OHLCVデータのサニタイズエラー: {e}")
             raise DataConversionError(f"OHLCVデータのサニタイズに失敗しました: {e}")
 
-    @staticmethod
-    def validate_ohlcv_record(record: Dict[str, Any]) -> bool:
-        """
-        単一のOHLCVレコードを検証
-
-        Args:
-            record: 検証するOHLCVレコード
-
-        Returns:
-            検証結果（True: 有効, False: 無効）
-        """
-        try:
-            # 必須フィールドの存在確認
-            required_fields = [
-                "symbol",
-                "timeframe",
-                "timestamp",
-                "open",
-                "high",
-                "low",
-                "close",
-                "volume",
-            ]
-            for field in required_fields:
-                if field not in record:
-                    logger.warning(f"必須フィールド '{field}' が見つかりません")
-                    return False
-
-            # 数値フィールドの検証
-            numeric_fields = ["open", "high", "low", "close", "volume"]
-            for field in numeric_fields:
-                try:
-                    float(record[field])
-                except (ValueError, TypeError):
-                    logger.warning(
-                        f"数値フィールド '{field}' が無効です: {record[field]}"
-                    )
-                    return False
-
-            # 価格の論理的整合性チェック
-            high = float(record["high"])
-            low = float(record["low"])
-            open_price = float(record["open"])
-            close = float(record["close"])
-
-            if high < low:
-                logger.warning(f"High ({high}) < Low ({low})")
-                return False
-
-            if high < open_price or high < close:
-                logger.warning("High価格が Open/Close より低い")
-                return False
-
-            if low > open_price or low > close:
-                logger.warning("Low価格が Open/Close より高い")
-                return False
-
-            return True
-
-        except Exception as e:
-            logger.error(f"OHLCVレコード検証エラー: {e}")
-            return False
-
 
 def standardize_ohlcv_columns(df: pd.DataFrame) -> pd.DataFrame:
     """
@@ -365,6 +302,7 @@ def standardize_ohlcv_columns(df: pd.DataFrame) -> pd.DataFrame:
         result_df["Volume"] = 1000
 
     return result_df
+
 
 def ensure_numeric_series(
     data: Union[pd.Series, list, np.ndarray, Any],

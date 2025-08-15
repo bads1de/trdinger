@@ -50,18 +50,6 @@
 - `app/main.py:103` - `global_exception_handler()`
 - `app/main.py:116` - `health_check()`
 
-## 設定・バリデーション関連
-
-### Config Validators
-
-- `app/config/validators.py:45` - `validate_limit()`
-- `app/config/validators.py:134` - `validate_probability_range()`
-- `app/config/validators.py:164` - `validate_data_processing_config()`
-- `app/config/validators.py:214` - `validate_model_config()`
-- `app/config/validators.py:250` - `validate_connection_params()`
-- `app/config/validators.py:286` - `validate_server_config()`
-- `app/config/validators.py:314` - `validate_cors_origins()`
-
 ### Unified Config
 
 - `app/config/unified_config.py:184` - `create_model_directory()`
@@ -343,10 +331,6 @@
 - `app/services/optimization/ensemble_parameter_space.py:267` - `suggest_optimized_parameters()`
 
 ## ユーティリティ関数
-
-### Data Conversion
-
-- `app/utils/data_conversion.py:262` - `validate_ohlcv_record()`
 
 ### Data Validation
 
