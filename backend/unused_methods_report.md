@@ -164,12 +164,7 @@
 
 ### Indicator Config
 
-- `app/services/indicators/config/indicator_config.py:95` - `get_parameter_default()`
-- `app/services/indicators/config/indicator_config.py:110` - `generate_random_parameters()`
-- `app/services/indicators/config/indicator_config.py:140` - `has_parameters()`
-- `app/services/indicators/config/indicator_config.py:279` - `is_indicator_supported()`
-- `app/services/indicators/config/indicator_config.py:283` - `resolve_indicator_type()`
-- `app/services/indicators/config/indicator_config.py:388` - `get_default_output_name()`
+
 
 ### Technical Indicators
 

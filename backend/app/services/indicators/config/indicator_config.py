@@ -92,11 +92,7 @@ class IndicatorConfig:
         """パラメータを追加"""
         self.parameters[param_config.name] = param_config
 
-    def get_parameter_default(self, param_name: str) -> Union[int, float, None]:
-        """パラメータのデフォルト値を取得"""
-        if param_name in self.parameters:
-            return self.parameters[param_name].default_value
-        return None
+
 
     def validate_parameters(self, params: Dict[str, Any]) -> bool:
         """パラメータの妥当性を検証"""
@@ -107,19 +103,7 @@ class IndicatorConfig:
                     return False
         return True
 
-    def generate_random_parameters(self) -> Dict[str, Any]:
-        """
-        ランダムなパラメータを生成
 
-        Returns:
-            生成されたパラメータ辞書
-        """
-        from app.services.indicators.parameter_manager import (
-            IndicatorParameterManager,
-        )
-
-        manager = IndicatorParameterManager()
-        return manager.generate_parameters(self.indicator_name, self)
 
     def get_parameter_ranges(self) -> Dict[str, Dict[str, Union[int, float]]]:
         """
@@ -137,9 +121,7 @@ class IndicatorConfig:
             }
         return ranges
 
-    def has_parameters(self) -> bool:
-        """パラメータが定義されているかチェック"""
-        return len(self.parameters) > 0
+
 
     def generate_json_name(self) -> str:
         """JSON形式のインジケーター名（=指標名）を生成"""
@@ -276,19 +258,9 @@ class IndicatorConfigRegistry:
         """登録済みの全指標名を返す（互換用エイリアス）"""
         return self.get_supported_indicator_names()
 
-    def is_indicator_supported(self, indicator_name: str) -> bool:
-        """指標が直接サポートされているかチェック (新規追加)"""
-        return indicator_name in self._configs
 
-    def resolve_indicator_type(self, indicator_type: str) -> Optional[str]:
-        """指標タイプを解決し、未対応の場合は代替指標を返す (新規追加)"""
-        if indicator_type in self._configs:
-            return indicator_type
-        elif indicator_type in self._fallback_indicators:
-            fallback_type = self._fallback_indicators[indicator_type]
-            logger.info(f"未対応指標 {indicator_type} を {fallback_type} で代替")
-            return fallback_type
-        return None
+
+
 
     def generate_parameters_for_indicator(
         self, indicator_type: str
@@ -385,19 +357,7 @@ class IndicatorConfigRegistry:
 
         return None
 
-    def get_default_output_name(self, indicator_name: str) -> Optional[str]:
-        """
-        デフォルト出力名を取得
 
-        Args:
-            indicator_name: 指標名
-
-        Returns:
-            デフォルト出力名、または None
-        """
-        config = self.get_indicator_config(indicator_name)
-        if config:
-            return config.default_output or config.indicator_name
         return None
 
 
