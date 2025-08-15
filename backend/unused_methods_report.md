@@ -125,14 +125,6 @@
 - `app/services/data_collection/bybit/open_interest_service.py:26` - `fetch_current_open_interest()`
 - `app/services/data_collection/bybit/open_interest_service.py:58` - `fetch_all_open_interest_history()`
 
-### Fear & Greed Service
-
-- `app/services/data_collection/fear_greed/fear_greed_service.py:228` - `get_latest_data_info()`
-
-### Orchestration
-
-- `app/services/data_collection/orchestration/funding_rate_orchestration_service.py:289` - `get_funding_rate_status()`
-
 ## 指標関連
 
 ### Indicator Config
@@ -212,8 +204,6 @@
 - `app/services/ml/feature_engineering/optimized_crypto_features.py:603` - `get_top_features_by_stability()`
 
 ### Orchestration
-
-
 
 ## 最適化関連
 

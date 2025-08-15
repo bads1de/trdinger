@@ -225,35 +225,6 @@ class FearGreedIndexService:
         logger.info(result["message"])
         return result
 
-    @unified_safe_operation(
-        default_return={
-            "success": False,
-            "error": "処理中にエラーが発生しました",
-        },
-        context="最新データ情報取得",
-        is_api_call=False,
-    )
-    async def get_latest_data_info(self, repository: FearGreedIndexRepository) -> dict:
-        """
-        最新のデータ情報を取得
-
-        Args:
-            repository: FearGreedIndexRepository
-
-        Returns:
-            最新データ情報
-        """
-        data_range = repository.get_data_range()
-        latest_timestamp = repository.get_latest_data_timestamp()
-
-        return {
-            "success": True,
-            "data_range": data_range,
-            "latest_timestamp": (
-                latest_timestamp.isoformat() if latest_timestamp else None
-            ),
-        }
-
     async def close(self):
         """リソースのクリーンアップ"""
         if self.session:
