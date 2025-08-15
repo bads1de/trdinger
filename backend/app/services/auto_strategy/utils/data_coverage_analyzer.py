@@ -33,72 +33,7 @@ class DataCoverageAnalyzer:
             # 40%未満は"very_poor"
         }
 
-    def analyze_strategy_coverage(
-        self, strategy_gene: StrategyGene, data: pd.DataFrame
-    ) -> Dict[str, Any]:
-        """戦略のデータカバレッジを分析
 
-        Args:
-            strategy_gene: 戦略遺伝子
-            data: バックテストデータ
-
-        Returns:
-            カバレッジ分析結果
-        """
-        try:
-            # 戦略で使用される特殊データソースを特定
-            used_special_sources = self._extract_special_data_sources(strategy_gene)
-
-            if not used_special_sources:
-                # 特殊データソースを使用していない場合はペナルティなし
-                return {
-                    "uses_special_data": False,
-                    "coverage_penalty": 0.0,
-                    "coverage_details": {},
-                    "overall_coverage_score": 1.0,
-                }
-
-            # 各特殊データソースのカバレッジを計算
-            coverage_details = {}
-            total_penalty = 0.0
-
-            for source in used_special_sources:
-                coverage_info = self._calculate_coverage(data, source)
-                coverage_details[source] = coverage_info
-
-                # ペナルティを計算
-                penalty = self._calculate_coverage_penalty(
-                    coverage_info["coverage_ratio"]
-                )
-                total_penalty += penalty
-
-            # 平均ペナルティを計算
-            avg_penalty = (
-                total_penalty / len(used_special_sources)
-                if used_special_sources
-                else 0.0
-            )
-
-            # 全体的なカバレッジスコアを計算
-            overall_score = max(0.0, 1.0 - avg_penalty)
-
-            return {
-                "uses_special_data": True,
-                "coverage_penalty": avg_penalty,
-                "coverage_details": coverage_details,
-                "overall_coverage_score": overall_score,
-                "used_special_sources": list(used_special_sources),
-            }
-
-        except Exception as e:
-            logger.error(f"データカバレッジ分析エラー: {e}")
-            return {
-                "uses_special_data": False,
-                "coverage_penalty": 0.0,
-                "coverage_details": {},
-                "overall_coverage_score": 1.0,
-                "error": str(e),
-            }
 
     def _extract_special_data_sources(self, strategy_gene: StrategyGene) -> set:
         """戦略で使用される特殊データソースを抽出
@@ -223,31 +158,7 @@ class DataCoverageAnalyzer:
         else:
             return 0.8  # 非常に重いペナルティ
 
-    def get_coverage_summary(self, analysis_result: Dict[str, Any]) -> str:
-        """カバレッジ分析結果のサマリーを生成
 
-        Args:
-            analysis_result: 分析結果
-
-        Returns:
-            サマリー文字列
-        """
-        if not analysis_result.get("uses_special_data", False):
-            return "特殊データソース（OI/FR）を使用していません"
-
-        details = analysis_result.get("coverage_details", {})
-        penalty = analysis_result.get("coverage_penalty", 0.0)
-
-        summary_parts = []
-        for source, info in details.items():
-            coverage_pct = info["coverage_ratio"] * 100
-            quality = info["quality"]
-            summary_parts.append(f"{source}: {coverage_pct:.1f}% ({quality})")
-
-        summary = ", ".join(summary_parts)
-        summary += f" | 総合ペナルティ: {penalty:.3f}"
-
-        return summary
 
 
 data_coverage_analyzer = DataCoverageAnalyzer()

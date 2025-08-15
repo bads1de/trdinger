@@ -68,45 +68,12 @@ class DataConverter:
 
         return symbol
 
-    @staticmethod
-    def percentage_to_decimal(percentage: Union[str, float]) -> float:
-        """パーセンテージを小数に変換"""
-        try:
-            if isinstance(percentage, str):
-                # "5%" -> 0.05
-                if percentage.endswith("%"):
-                    return float(percentage[:-1]) / 100.0
-                else:
-                    return float(percentage)
-            else:
-                # 100以上の場合はパーセンテージとして扱う
-                if percentage >= 1.0:
-                    return percentage / 100.0
-                else:
-                    return percentage
-        except (ValueError, TypeError):
-            logger.warning(f"パーセンテージ変換失敗: {percentage}")
-            return 0.0
 
 
 class LoggingUtils:
     """ログ出力ユーティリティ"""
 
-    @staticmethod
-    def log_function_entry(func_name: str, **kwargs):
-        """関数開始ログ"""
-        if logger.isEnabledFor(logging.DEBUG):
-            args_str = ", ".join([f"{k}={v}" for k, v in kwargs.items()])
-            logger.debug(f"[ENTRY] {func_name}({args_str})")
 
-    @staticmethod
-    def log_function_exit(
-        func_name: str, result: Any = None, duration: Optional[float] = None
-    ):
-        """関数終了ログ"""
-        if logger.isEnabledFor(logging.DEBUG):
-            duration_str = f" ({duration:.3f}s)" if duration else ""
-            logger.debug(f"[EXIT] {func_name}{duration_str}")
 
     @staticmethod
     def log_performance(operation: str, duration: float, **metrics):
@@ -114,11 +81,6 @@ class LoggingUtils:
         metrics_str = ", ".join([f"{k}={v}" for k, v in metrics.items()])
         logger.info(f"[PERF] {operation}: {duration:.3f}s, {metrics_str}")
 
-    @staticmethod
-    def log_business_event(event: str, **details):
-        """ビジネスイベントログ"""
-        details_str = ", ".join([f"{k}={v}" for k, v in details.items()])
-        logger.info(f"[EVENT] {event}: {details_str}")
 
 
 class ValidationUtils:
@@ -153,21 +115,7 @@ class ValidationUtils:
 
         return True, []
 
-    @staticmethod
-    def validate_positive_number(value: Union[int, float], name: str = "値") -> bool:
-        """正数バリデーション"""
-        if value <= 0:
-            logger.warning(f"{name}は正数である必要があります: {value}")
-            return False
-        return True
 
-    @staticmethod
-    def validate_list_not_empty(lst: List, name: str = "リスト") -> bool:
-        """空でないリストバリデーション"""
-        if not lst:
-            logger.warning(f"{name}が空です")
-            return False
-        return True
 
 
 class PerformanceUtils:
@@ -194,26 +142,6 @@ class PerformanceUtils:
 
         return wrapper
 
-    @staticmethod
-    async def time_async_function(func):
-        """非同期関数実行時間測定デコレータ"""
-        import time
-        from functools import wraps
-
-        @wraps(func)
-        async def wrapper(*args, **kwargs):
-            start_time = time.time()
-            try:
-                result = await func(*args, **kwargs)
-                duration = time.time() - start_time
-                LoggingUtils.log_performance(func.__name__, duration)
-                return result
-            except Exception:
-                duration = time.time() - start_time
-                LoggingUtils.log_performance(f"{func.__name__} (ERROR)", duration)
-                raise
-
-        return wrapper
 
 
 class CacheUtils:
@@ -241,20 +169,6 @@ class CacheUtils:
         else:
             cls._cache.clear()
 
-    @classmethod
-    def cleanup_expired(cls) -> None:
-        """期限切れキャッシュを削除"""
-        now = datetime.now()
-        expired_keys = []
-
-        for key, data in cls._cache.items():
-            if data.get("ttl"):
-                elapsed = (now - data["timestamp"]).total_seconds()
-                if elapsed > data["ttl"]:
-                    expired_keys.append(key)
-
-        for key in expired_keys:
-            del cls._cache[key]
 
 
 # 便利な関数のエイリアス（AutoStrategyErrorHandlerに統合）

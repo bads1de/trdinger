@@ -41,31 +41,6 @@
 - `app/api/ml_training.py:259` - `get_ml_model_info()`
 - `app/api/ml_training.py:273` - `stop_ml_training()`
 
-### Utils
-
-- `app/services/auto_strategy/utils/auto_strategy_utils.py:194` - `denormalize_parameter()`
-- `app/services/auto_strategy/utils/auto_strategy_utils.py:322` - `extract_config_subset()`
-- `app/services/auto_strategy/utils/common_utils.py:71` - `percentage_to_decimal()`
-- `app/services/auto_strategy/utils/common_utils.py:95` - `log_function_entry()`
-- `app/services/auto_strategy/utils/common_utils.py:102` - `log_function_exit()`
-- `app/services/auto_strategy/utils/common_utils.py:117` - `log_business_event()`
-- `app/services/auto_strategy/utils/common_utils.py:156` - `validate_positive_number()`
-- `app/services/auto_strategy/utils/common_utils.py:164` - `validate_list_not_empty()`
-- `app/services/auto_strategy/utils/common_utils.py:197` - `time_async_function()`
-- `app/services/auto_strategy/utils/common_utils.py:244` - `cleanup_expired()`
-- `app/services/auto_strategy/utils/data_coverage_analyzer.py:36` - `analyze_strategy_coverage()`
-- `app/services/auto_strategy/utils/data_coverage_analyzer.py:226` - `get_coverage_summary()`
-- `app/services/auto_strategy/utils/error_handling.py:87` - `handle_validation_error()`
-- `app/services/auto_strategy/utils/error_handling.py:170` - `retry_on_failure()`
-- `app/services/auto_strategy/utils/error_handling.py:213` - `validate_and_execute()`
-- `app/services/auto_strategy/utils/error_handling.py:269` - `add_error()`
-- `app/services/auto_strategy/utils/error_handling.py:274` - `add_warning()`
-- `app/services/auto_strategy/utils/error_handling.py:287` - `get_summary()`
-- `app/services/auto_strategy/utils/error_handling.py:304` - `error_boundary()`
-- `app/services/auto_strategy/utils/operand_grouping.py:223` - `get_operands_by_group()`
-- `app/services/auto_strategy/utils/operand_grouping.py:238` - `get_group_statistics()`
-- `app/services/auto_strategy/utils/strategy_integration_service.py:86` - `get_all_strategies_for_stats()`
-
 ### Technical Indicators
 
 - `app/services/indicators/technical_indicators/math_operators.py:57` - `div()`

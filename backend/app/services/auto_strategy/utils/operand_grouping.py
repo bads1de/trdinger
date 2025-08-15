@@ -220,33 +220,7 @@ class OperandGroupingSystem:
 
         return compatible
 
-    def get_operands_by_group(self, group: OperandGroup) -> List[str]:
-        """指定されたグループのオペランドリストを取得
 
-        Args:
-            group: 対象グループ
-
-        Returns:
-            グループに属するオペランドリスト
-        """
-        return [
-            operand
-            for operand, operand_group in self._group_mappings.items()
-            if operand_group == group
-        ]
-
-    def get_group_statistics(self) -> Dict[str, int]:
-        """各グループの統計情報を取得
-
-        Returns:
-            グループ別のオペランド数
-        """
-        stats = {}
-        for group in OperandGroup:
-            count = sum(1 for g in self._group_mappings.values() if g == group)
-            stats[group.value] = count
-
-        return stats
 
     def validate_condition(
         self, left_operand: str, right_operand: str

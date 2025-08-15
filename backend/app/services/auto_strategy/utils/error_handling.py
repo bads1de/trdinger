@@ -7,8 +7,8 @@ UnifiedErrorHandlerを基盤として、Auto Strategy専用のエラーハンド
 
 import logging
 import traceback
-from typing import Any, Callable, Dict, List, Optional, Tuple, TypeVar, Union
-from functools import wraps
+from typing import Any, Dict, List, Optional, TypeVar
+
 
 from app.utils.unified_error_handler import UnifiedErrorHandler
 
@@ -85,29 +85,6 @@ class AutoStrategyErrorHandler(UnifiedErrorHandler):
         )
 
     @staticmethod
-    def handle_validation_error(
-        error: Exception, context: str, validation_errors: Optional[List[str]] = None
-    ) -> Tuple[bool, List[str]]:
-        """
-        バリデーションエラーの標準的な処理
-
-        Args:
-            error: 発生したエラー
-            context: エラーのコンテキスト
-            validation_errors: 既存のバリデーションエラーリスト
-
-        Returns:
-            (False, error_messages)
-        """
-        error_msg = f"{context}でバリデーションエラーが発生: {error}"
-        logger.error(error_msg, exc_info=True)
-
-        errors = validation_errors or []
-        errors.append(f"バリデーション処理エラー: {error}")
-
-        return False, errors
-
-    @staticmethod
     def handle_system_error(
         error: Exception, context: str, include_traceback: bool = True
     ) -> Dict[str, Any]:
@@ -136,123 +113,6 @@ class AutoStrategyErrorHandler(UnifiedErrorHandler):
 
         return error_info
 
-    @staticmethod
-    def safe_execute(
-        func: Callable[..., T],
-        *args,
-        fallback_value: T = None,
-        context: str = "関数実行",
-        log_errors: bool = True,
-        **kwargs,
-    ) -> T:
-        """
-        安全な関数実行（後方互換性のため保持、UnifiedErrorHandlerに委譲）
-
-        Args:
-            func: 実行する関数
-            *args: 関数の引数
-            fallback_value: エラー時のフォールバック値
-            context: エラーのコンテキスト
-            log_errors: エラーをログ出力するか
-            **kwargs: 関数のキーワード引数
-
-        Returns:
-            関数の実行結果またはフォールバック値
-        """
-        # 直接実装（無限再帰を避けるため）
-        try:
-            return func(*args, **kwargs)
-        except Exception as e:
-            if log_errors:
-                logger.error(f"{context}でエラー: {e}", exc_info=True)
-            return fallback_value
-
-    @staticmethod
-    def retry_on_failure(
-        max_retries: int = 3,
-        delay: float = 0.1,
-        exceptions: Tuple[Exception, ...] = (Exception,),
-    ):
-        """
-        失敗時のリトライデコレータ
-
-        Args:
-            max_retries: 最大リトライ回数
-            delay: リトライ間隔（秒）
-            exceptions: リトライ対象の例外タイプ
-        """
-
-        def decorator(func: Callable[..., T]) -> Callable[..., T]:
-            @wraps(func)
-            def wrapper(*args, **kwargs) -> T:
-                import time
-
-                last_exception = None
-                for attempt in range(max_retries + 1):
-                    try:
-                        return func(*args, **kwargs)
-                    except exceptions as e:
-                        last_exception = e
-                        if attempt < max_retries:
-                            logger.warning(
-                                f"{func.__name__} 実行失敗 (試行 {attempt + 1}/{max_retries + 1}): {e}"
-                            )
-                            time.sleep(delay)
-                        else:
-                            logger.error(
-                                f"{func.__name__} 最大リトライ回数に到達: {e}",
-                                exc_info=True,
-                            )
-
-                raise last_exception
-
-            return wrapper
-
-        return decorator
-
-    @staticmethod
-    def validate_and_execute(
-        validation_func: Callable[..., Tuple[bool, List[str]]],
-        execution_func: Callable[..., T],
-        validation_args: Tuple = (),
-        execution_args: Tuple = (),
-        validation_kwargs: Dict = None,
-        execution_kwargs: Dict = None,
-        context: str = "バリデーション付き実行",
-    ) -> Tuple[bool, Union[T, List[str]]]:
-        """
-        バリデーション付きの安全な実行
-
-        Args:
-            validation_func: バリデーション関数
-            execution_func: 実行関数
-            validation_args: バリデーション関数の引数
-            execution_args: 実行関数の引数
-            validation_kwargs: バリデーション関数のキーワード引数
-            execution_kwargs: 実行関数のキーワード引数
-            context: エラーのコンテキスト
-
-        Returns:
-            (success, result_or_errors)
-        """
-        validation_kwargs = validation_kwargs or {}
-        execution_kwargs = execution_kwargs or {}
-
-        try:
-            # バリデーション実行
-            is_valid, errors = validation_func(*validation_args, **validation_kwargs)
-
-            if not is_valid:
-                return False, errors
-
-            # 実行
-            result = execution_func(*execution_args, **execution_kwargs)
-            return True, result
-
-        except Exception as e:
-            error_info = AutoStrategyErrorHandler.handle_system_error(e, context)
-            return False, [f"実行エラー: {error_info['error']}"]
-
 
 class ErrorContext:
     """
@@ -266,16 +126,6 @@ class ErrorContext:
         self.errors: List[str] = []
         self.warnings: List[str] = []
 
-    def add_error(self, error: str):
-        """エラーを追加"""
-        self.errors.append(error)
-        logger.error(f"[{self.context}] {error}")
-
-    def add_warning(self, warning: str):
-        """警告を追加"""
-        self.warnings.append(warning)
-        logger.warning(f"[{self.context}] {warning}")
-
     def has_errors(self) -> bool:
         """エラーがあるかどうか"""
         return len(self.errors) > 0
@@ -284,43 +134,7 @@ class ErrorContext:
         """警告があるかどうか"""
         return len(self.warnings) > 0
 
-    def get_summary(self) -> Dict[str, Any]:
-        """エラー・警告のサマリーを取得"""
-        return {
-            "context": self.context,
-            "error_count": len(self.errors),
-            "warning_count": len(self.warnings),
-            "errors": self.errors,
-            "warnings": self.warnings,
-            "has_issues": self.has_errors() or self.has_warnings(),
-        }
-
     def clear(self):
         """エラー・警告をクリア"""
         self.errors.clear()
         self.warnings.clear()
-
-
-def error_boundary(context: str, fallback_value: Any = None, log_level: str = "error"):
-    """
-    エラーバウンダリデコレータ
-
-    Args:
-        context: エラーのコンテキスト
-        fallback_value: エラー時のフォールバック値
-        log_level: ログレベル
-    """
-
-    def decorator(func: Callable[..., T]) -> Callable[..., T]:
-        @wraps(func)
-        def wrapper(*args, **kwargs) -> T:
-            try:
-                return func(*args, **kwargs)
-            except Exception as e:
-                return AutoStrategyErrorHandler.handle_calculation_error(
-                    e, f"{context} ({func.__name__})", fallback_value, log_level
-                )
-
-        return wrapper
-
-    return decorator
