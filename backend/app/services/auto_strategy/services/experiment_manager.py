@@ -125,53 +125,6 @@ class ExperimentManager:
         """
         return self.strategy_factory.validate_gene(gene)
 
-    def test_strategy_generation(
-        self, gene: StrategyGene, backtest_config: Dict[str, Any]
-    ) -> Dict[str, Any]:
-        """
-        単一戦略のテスト生成・実行
-
-        Args:
-            gene: テストする戦略遺伝子
-            backtest_config: バックテスト設定
-
-        Returns:
-            テスト結果
-        """
-        try:
-            # 戦略の妥当性チェック
-            is_valid, errors = self.validate_strategy_gene(gene)
-            if not is_valid:
-                return {"success": False, "errors": errors}
-
-            # 戦略クラスを生成
-            self.strategy_factory.create_strategy_class(gene)
-
-            # バックテスト実行
-            test_config = backtest_config.copy()
-            test_config["strategy_name"] = f"TEST_{gene.id}"
-            from app.services.auto_strategy.models.gene_serialization import (
-                GeneSerializer,
-            )
-
-            serializer = GeneSerializer()
-            test_config["strategy_config"] = {
-                "strategy_type": "GENERATED_TEST",
-                "parameters": {"strategy_gene": serializer.strategy_gene_to_dict(gene)},
-            }
-
-            result = self.backtest_service.run_backtest(test_config)
-
-            return {
-                "success": True,
-                "strategy_gene": serializer.strategy_gene_to_dict(gene),
-                "backtest_result": result,
-            }
-
-        except Exception as e:
-            logger.error(f"戦略テスト実行エラー: {e}")
-            return {"success": False, "error": str(e)}
-
     def _analyze_zero_trades_issue(self, experiment_id: str, result: Dict[str, Any]):
         """取引数0の問題を分析してログ出力"""
         try:

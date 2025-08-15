@@ -588,25 +588,13 @@ class PositionSizingService:
             timestamp=datetime.now(),
         )
 
-    def get_calculation_history(self, limit: int = 100) -> List[PositionSizingResult]:
-        """計算履歴の取得"""
-        return self._calculation_history[-limit:]
+
 
     def clear_cache(self):
         """キャッシュのクリア"""
         self._cache = None
 
-    def get_cache_status(self) -> Dict[str, Any]:
-        """キャッシュ状態の取得"""
-        if not self._cache:
-            return {"cached": False}
 
-        return {
-            "cached": True,
-            "last_updated": self._cache.last_updated.isoformat(),
-            "expired": self._cache.is_expired(),
-            "atr_symbols": list(self._cache.atr_values.keys()),
-        }
 
     # 以下、旧PositionSizingServiceから統合されたメソッド
 
@@ -699,80 +687,3 @@ class PositionSizingService:
             default_ratio = kwargs.get("fixed_ratio", 0.1)
             position_amount = account_balance * default_ratio
             return position_amount / current_price if current_price > 0 else 0
-
-    def validate_position_size(
-        self,
-        position_size: float,
-        account_balance: float,
-        current_price: float,
-        max_position_ratio: float = 0.5,
-    ) -> bool:
-        """
-        ポジションサイズの妥当性を検証
-
-        Args:
-            position_size: ポジションサイズ
-            account_balance: 口座残高
-            current_price: 現在価格
-            max_position_ratio: 最大ポジション比率
-
-        Returns:
-            妥当性（True/False）
-        """
-        try:
-            if position_size <= 0:
-                return False
-
-            position_value = position_size * current_price
-            position_ratio = position_value / account_balance
-
-            # 最大ポジション比率チェック
-            if position_ratio > max_position_ratio:
-                return False
-
-            # 最小ポジションサイズチェック（0.001単位以上）
-            if position_size < 0.001:
-                return False
-
-            return True
-
-        except Exception as e:
-            logger.error(f"ポジションサイズ検証エラー: {e}")
-            return False
-
-    def get_recommended_method(
-        self,
-        account_balance: float,
-        trade_history: Optional[List[Dict[str, Any]]] = None,
-        market_volatility: str = "medium",
-    ) -> str:
-        """
-        推奨計算方式を取得
-
-        Args:
-            account_balance: 口座残高
-            trade_history: 取引履歴
-            market_volatility: 市場ボラティリティ
-
-        Returns:
-            推奨方式名
-        """
-        try:
-            # 取引履歴が十分にある場合
-            if trade_history and len(trade_history) >= 50:
-                return "half_optimal_f"
-
-            # 高ボラティリティ市場の場合
-            if market_volatility == "high":
-                return "volatility_based"
-
-            # 小額口座の場合
-            if account_balance < 10000:
-                return "fixed_quantity"
-
-            # デフォルト
-            return "volatility_based"
-
-        except Exception as e:
-            logger.error(f"推奨方式取得エラー: {e}")
-            return "volatility_based"

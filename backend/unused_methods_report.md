@@ -41,10 +41,6 @@
 - `app/api/ml_training.py:259` - `get_ml_model_info()`
 - `app/api/ml_training.py:273` - `stop_ml_training()`
 
-### Open Interest API
-
-- `app/api/open_interest.py:101` - `bulk_collect_open_interest()`
-
 ### Main App
 
 - `app/main.py:103` - `global_exception_handler()`
@@ -71,14 +67,7 @@
 
 - `app/services/auto_strategy/services/experiment_manager.py:128` - `test_strategy_generation()`
 - `app/services/auto_strategy/services/experiment_persistence_service.py:374` - `get_experiment_result()`
-- `app/services/auto_strategy/services/ml_orchestrator.py:321` - `update_predictions()`
-- `app/services/auto_strategy/services/ml_orchestrator.py:405` - `predict_probabilities()`
-- `app/services/auto_strategy/services/ml_orchestrator.py:540` - `set_automl_enabled()`
-- `app/services/auto_strategy/services/ml_orchestrator.py:575` - `get_automl_status()`
-- `app/services/auto_strategy/services/position_sizing_service.py:591` - `get_calculation_history()`
-- `app/services/auto_strategy/services/position_sizing_service.py:599` - `get_cache_status()`
-- `app/services/auto_strategy/services/position_sizing_service.py:703` - `validate_position_size()`
-- `app/services/auto_strategy/services/position_sizing_service.py:743` - `get_recommended_method()`
+
 
 ### Utils
 
@@ -195,15 +184,6 @@
 ### Orchestration
 
 ## 最適化関連
-
-### Base Optimizer
-
-- `app/services/optimization/base_optimizer.py:82` - `validate_parameter_space()`
-- `app/services/optimization/base_optimizer.py:114` - `validate_objective_function()`
-- `app/services/optimization/base_optimizer.py:127` - `_log_optimization_start()`
-- `app/services/optimization/base_optimizer.py:131` - `_log_optimization_end()`
-- `app/services/optimization/base_optimizer.py:135` - `_create_optimization_result()`
-- `app/services/optimization/base_optimizer.py:168` - `get_method_name()`
 
 ### Base Repository
 

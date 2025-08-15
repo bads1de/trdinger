@@ -516,53 +516,9 @@ class MLOrchestrator(MLPredictionInterface):
             logger.error(f"ターゲット変数計算エラー: {e}")
             return None
 
-    def set_automl_enabled(
-        self, enabled: bool, automl_config: Optional[Dict[str, Any]] = None
-    ):
-        """AutoML機能の有効/無効を設定"""
-        try:
-            self.enable_automl = enabled
-            self.automl_config = automl_config
 
-            if enabled:
-                # AutoML設定を作成（from_dict に統一）
-                if automl_config:
-                    automl_config_obj = AutoMLConfig.from_dict(automl_config)
-                else:
-                    automl_config_obj = AutoMLConfig.get_financial_optimized_config()
 
-                # 既存のサービスをクリーンアップ
-                if hasattr(self.feature_service, "cleanup_resources"):
-                    self.feature_service.cleanup_resources()
 
-                self.feature_service = FeatureEngineeringService(
-                    automl_config=automl_config_obj
-                )
-                logger.debug("🤖 AutoML特徴量エンジニアリングを有効化しました")
-            else:
-                # 既存のサービスをクリーンアップ
-                if hasattr(self.feature_service, "cleanup_resources"):
-                    self.feature_service.cleanup_resources()
-
-                self.feature_service = FeatureEngineeringService()
-                logger.debug("📊 基本特徴量エンジニアリングに切り替えました")
-
-        except Exception as e:
-            logger.error(f"AutoML設定変更エラー: {e}")
-            raise
-
-    def get_automl_status(self) -> Dict[str, Any]:
-        """AutoML機能の状態を取得"""
-        return {
-            "enabled": self.enable_automl,
-            "service_type": type(self.feature_service).__name__,
-            "config": self.automl_config,
-            "available_features": (
-                self.feature_service.get_available_automl_features()
-                if hasattr(self.feature_service, "get_available_automl_features")
-                else {}
-            ),
-        }
 
     @safe_ml_operation(context="ML予測実行")
     def _safe_ml_prediction(self, features_df: pd.DataFrame) -> Dict[str, float]:
