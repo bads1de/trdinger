@@ -11,11 +11,9 @@ from typing import Any, Dict, List, Optional
 import numpy as np
 import pandas as pd
 from sklearn.ensemble import RandomForestClassifier
+
 from ....utils.unified_error_handler import UnifiedModelError
-from ..evaluation.enhanced_metrics import (
-    EnhancedMetricsCalculator,
-    MetricsConfig,
-)
+from ..common.evaluation_utils import evaluate_model_predictions
 
 logger = logging.getLogger(__name__)
 
@@ -95,21 +93,10 @@ class RandomForestModel:
             y_pred_proba_test = self.model.predict_proba(X_test)
 
             # 評価指標計算
-            config = MetricsConfig(
-                include_balanced_accuracy=True,
-                include_pr_auc=True,
-                include_roc_auc=True,
-                include_confusion_matrix=True,
-                include_classification_report=True,
-                average_method="weighted",
-                zero_division=0,
-            )
-            metrics_calculator = EnhancedMetricsCalculator(config)
-
-            train_metrics = metrics_calculator.calculate_comprehensive_metrics(
+            train_metrics = evaluate_model_predictions(
                 y_train, y_pred_train, y_pred_proba_train
             )
-            test_metrics = metrics_calculator.calculate_comprehensive_metrics(
+            test_metrics = evaluate_model_predictions(
                 y_test, y_pred_test, y_pred_proba_test
             )
 

@@ -164,31 +164,16 @@ class KNNModel:
             y_pred_proba_train = self.model.predict_proba(X_train)
             y_pred_proba_test = self.model.predict_proba(X_test)
 
-            # 統一された評価指標計算器を使用
-            from ..evaluation.enhanced_metrics import (
-                EnhancedMetricsCalculator,
-                MetricsConfig,
-            )
-
-            config = MetricsConfig(
-                include_balanced_accuracy=True,
-                include_pr_auc=True,
-                include_roc_auc=True,
-                include_confusion_matrix=True,
-                include_classification_report=True,
-                average_method="weighted",
-                zero_division=0,
-            )
-
-            metrics_calculator = EnhancedMetricsCalculator(config)
+            # 共通の評価関数を使用
+            from ..common.evaluation_utils import evaluate_model_predictions
 
             # 包括的な評価指標を計算（テストデータ）
-            test_metrics = metrics_calculator.calculate_comprehensive_metrics(
+            test_metrics = evaluate_model_predictions(
                 y_test, y_pred_test, y_pred_proba_test
             )
 
             # 包括的な評価指標を計算（学習データ）
-            train_metrics = metrics_calculator.calculate_comprehensive_metrics(
+            train_metrics = evaluate_model_predictions(
                 y_train, y_pred_train, y_pred_proba_train
             )
 

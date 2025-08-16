@@ -101,26 +101,10 @@ class XGBoostModel:
             else:
                 y_pred_class = (y_pred_proba > 0.5).astype(int)
 
-            # 統一された評価指標計算器を使用
-            from ..evaluation.enhanced_metrics import (
-                EnhancedMetricsCalculator,
-                MetricsConfig,
-            )
+            # 共通の評価関数を使用
+            from ..common.evaluation_utils import evaluate_model_predictions
 
-            config = MetricsConfig(
-                include_balanced_accuracy=True,
-                include_pr_auc=True,
-                include_roc_auc=True,
-                include_confusion_matrix=True,
-                include_classification_report=True,
-                average_method="weighted",
-                zero_division=0,
-            )
-
-            metrics_calculator = EnhancedMetricsCalculator(config)
-
-            # 包括的な評価指標を計算
-            detailed_metrics = metrics_calculator.calculate_comprehensive_metrics(
+            detailed_metrics = evaluate_model_predictions(
                 y_test, y_pred_class, y_pred_proba
             )
 

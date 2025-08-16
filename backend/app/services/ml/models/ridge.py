@@ -12,11 +12,8 @@ import numpy as np
 import pandas as pd
 from sklearn.linear_model import RidgeClassifier
 
-from ..evaluation.enhanced_metrics import (
-    EnhancedMetricsCalculator,
-    MetricsConfig,
-)
 from ....utils.unified_error_handler import UnifiedModelError
+from ..common.evaluation_utils import evaluate_model_predictions
 
 logger = logging.getLogger(__name__)
 
@@ -87,28 +84,15 @@ class RidgeModel:
             y_pred_train = self.model.predict(X_train)
             y_pred_test = self.model.predict(X_test)
 
-            # 統一された評価指標計算器を使用
-            config = MetricsConfig(
-                include_balanced_accuracy=True,
-                include_pr_auc=False,  # RidgeClassifierは確率予測をサポートしない
-                include_roc_auc=False,  # RidgeClassifierは確率予測をサポートしない
-                include_confusion_matrix=True,
-                include_classification_report=True,
-                average_method="weighted",
-                zero_division=0,
-            )
-
-            metrics_calculator = EnhancedMetricsCalculator(config)
-
-            # 包括的な評価指標を計算（テストデータ）
+            # 共通の評価関数を使用
             # RidgeClassifierは確率予測をサポートしないため、y_probaはNone
-            test_metrics = metrics_calculator.calculate_comprehensive_metrics(
-                y_test, y_pred_test, y_proba=None
+            test_metrics = evaluate_model_predictions(
+                y_test, y_pred_test, y_pred_proba=None
             )
 
             # 包括的な評価指標を計算（学習データ）
-            train_metrics = metrics_calculator.calculate_comprehensive_metrics(
-                y_train, y_pred_train, y_proba=None
+            train_metrics = evaluate_model_predictions(
+                y_train, y_pred_train, y_pred_proba=None
             )
 
             # クラス数を取得

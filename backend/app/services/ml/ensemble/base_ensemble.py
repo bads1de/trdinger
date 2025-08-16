@@ -224,33 +224,11 @@ class BaseEnsemble(ABC):
         Returns:
             評価指標の辞書
         """
-        from ..evaluation.enhanced_metrics import (
-            EnhancedMetricsCalculator,
-            MetricsConfig,
-        )
+        from ..common.evaluation_utils import evaluate_model_predictions
 
-        # 統一された評価指標計算器を使用
-        config = MetricsConfig(
-            include_balanced_accuracy=True,
-            include_pr_auc=True,
-            include_roc_auc=True,
-            include_confusion_matrix=True,
-            include_classification_report=True,
-            average_method="weighted",
-            zero_division=0,
-        )
+        result = evaluate_model_predictions(y_true, y_pred, y_pred_proba)
 
-        metrics_calculator = EnhancedMetricsCalculator(config)
-
-        # numpy配列に変換（pandas Seriesの場合）
-        y_true_array = y_true.values if hasattr(y_true, "values") else y_true
-
-        # 包括的な評価指標を計算
-        result = metrics_calculator.calculate_comprehensive_metrics(
-            y_true_array, y_pred, y_pred_proba
-        )
-
-        logger.info("✅ アンサンブル評価指標計算完了（EnhancedMetricsCalculator使用）")
+        logger.info("✅ アンサンブル評価指標計算完了（共通評価関数使用）")
 
         return result
 
