@@ -925,7 +925,7 @@ class DataProcessor:
 
         Args:
             features_df: 特徴量DataFrame
-            label_generator: ラベル生成器（LabelGeneratorWrapper）
+            label_generator: ラベル生成器（LabelGenerator）
             **training_params: 学習パラメータ
 
         Returns:
@@ -975,8 +975,68 @@ class DataProcessor:
             # 4. ラベル生成
             logger.info("ラベル生成を実行中...")
             try:
-                labels, threshold_info = label_generator.generate_dynamic_labels(
-                    price_data, **training_params
+                # LabelGeneratorを直接使用（動的ラベル生成）
+                from .label_generation import ThresholdMethod
+
+                # 閾値計算方法を決定
+                threshold_method_str = training_params.get(
+                    "threshold_method", "dynamic_volatility"
+                )
+
+                # 文字列からEnumに変換
+                method_mapping = {
+                    "fixed": ThresholdMethod.FIXED,
+                    "quantile": ThresholdMethod.QUANTILE,
+                    "std_deviation": ThresholdMethod.STD_DEVIATION,
+                    "adaptive": ThresholdMethod.ADAPTIVE,
+                    "dynamic_volatility": ThresholdMethod.DYNAMIC_VOLATILITY,
+                }
+
+                threshold_method = method_mapping.get(
+                    threshold_method_str, ThresholdMethod.STD_DEVIATION
+                )
+
+                # 目標分布を設定
+                target_distribution = training_params.get(
+                    "target_distribution", {"up": 0.33, "down": 0.33, "range": 0.34}
+                )
+
+                # 方法固有のパラメータを準備
+                method_params = {}
+
+                if threshold_method == ThresholdMethod.FIXED:
+                    method_params["threshold"] = training_params.get(
+                        "threshold_up", 0.02
+                    )
+                elif threshold_method == ThresholdMethod.STD_DEVIATION:
+                    method_params["std_multiplier"] = training_params.get(
+                        "std_multiplier", 0.25
+                    )
+                elif threshold_method == ThresholdMethod.DYNAMIC_VOLATILITY:
+                    method_params["volatility_window"] = training_params.get(
+                        "volatility_window", 24
+                    )
+                    method_params["threshold_multiplier"] = training_params.get(
+                        "threshold_multiplier", 0.5
+                    )
+                    method_params["min_threshold"] = training_params.get(
+                        "min_threshold", 0.005
+                    )
+                    method_params["max_threshold"] = training_params.get(
+                        "max_threshold", 0.05
+                    )
+                elif threshold_method in [
+                    ThresholdMethod.QUANTILE,
+                    ThresholdMethod.ADAPTIVE,
+                ]:
+                    method_params["target_distribution"] = target_distribution
+
+                # ラベルを生成
+                labels, threshold_info = label_generator.generate_labels(
+                    price_data,
+                    method=threshold_method,
+                    target_distribution=target_distribution,
+                    **method_params,
                 )
                 logger.info(f"ラベル生成完了: {len(labels)}行")
             except Exception as label_error:

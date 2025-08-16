@@ -33,21 +33,6 @@ from .model_manager import model_manager
 logger = logging.getLogger(__name__)
 
 
-class LabelGeneratorWrapper:
-    """
-    BaseMLTrainerの_generate_dynamic_labelsメソッドをラップするクラス
-
-    utils/data_processing.pyから呼び出すためのアダプター
-    """
-
-    def __init__(self, trainer):
-        self.trainer = trainer
-
-    def generate_dynamic_labels(self, price_data: pd.Series, **training_params):
-        """BaseMLTrainerの_generate_dynamic_labelsメソッドを呼び出し"""
-        return self.trainer._generate_dynamic_labels(price_data, **training_params)
-
-
 class BaseMLTrainer(BaseResourceManager, ABC):
     """
     ML学習基盤クラス
@@ -605,201 +590,13 @@ class BaseMLTrainer(BaseResourceManager, ABC):
         """
         AutoML特徴量生成用のターゲット変数を計算
 
-        Args:
-            ohlcv_data: OHLCVデータ
-
-        Returns:
-            ターゲット変数のSeries（計算できない場合はNone）
+        ラベル生成ロジックはlabel_generation.pyに移管されました。
         """
-        try:
-            if ohlcv_data.empty or "Close" not in ohlcv_data.columns:
-                logger.warning("ターゲット変数計算用のデータが不足しています")
-                return None
+        from ...utils.label_generation import calculate_target_for_automl
 
-            # 価格変化率を計算（次の期間の価格変化）
-            close_prices = ohlcv_data["Close"].copy()
-
-            # 将来の価格変化率を計算（24時間後の変化率）
-            prediction_horizon = getattr(self.config.training, "PREDICTION_HORIZON", 24)
-            future_returns = close_prices.pct_change(periods=prediction_horizon).shift(
-                -prediction_horizon
-            )
-
-            # 動的閾値を使用してクラス分類
-            from ...utils.label_generation import LabelGenerator, ThresholdMethod
-
-            label_generator = LabelGenerator()
-
-            # 設定から動的閾値パラメータを取得
-            label_method = getattr(
-                self.config.training, "LABEL_METHOD", "dynamic_volatility"
-            )
-
-            if label_method == "dynamic_volatility":
-                # 動的ボラティリティベースのラベル生成
-                labels, threshold_info = label_generator.generate_labels(
-                    ohlcv_data["Close"],
-                    method=ThresholdMethod.DYNAMIC_VOLATILITY,
-                    volatility_window=getattr(
-                        self.config.training, "VOLATILITY_WINDOW", 24
-                    ),
-                    threshold_multiplier=getattr(
-                        self.config.training, "THRESHOLD_MULTIPLIER", 0.5
-                    ),
-                    min_threshold=getattr(self.config.training, "MIN_THRESHOLD", 0.005),
-                    max_threshold=getattr(self.config.training, "MAX_THRESHOLD", 0.05),
-                )
-                target = labels
-            else:
-                # 従来の固定閾値（後方互換性）
-                threshold_up = getattr(self.config.training, "THRESHOLD_UP", 0.02)
-                threshold_down = getattr(self.config.training, "THRESHOLD_DOWN", -0.02)
-
-                # 3クラス分類：0=下落、1=横ばい、2=上昇
-                target = pd.Series(1, index=future_returns.index)  # デフォルトは横ばい
-                target[future_returns > threshold_up] = 2  # 上昇
-                target[future_returns < threshold_down] = 0  # 下落
-
-            # NaNを除去
-            target = target.dropna()
-
-            logger.info(f"AutoML用ターゲット変数を計算: {len(target)}サンプル")
-            logger.info(
-                f"クラス分布 - 下落: {(target == 0).sum()}, 横ばい: {(target == 1).sum()}, 上昇: {(target == 2).sum()}"
-            )
-
-            return target
-
-        except Exception as e:
-            logger.warning(f"AutoML用ターゲット変数計算エラー: {e}")
-            return None
+        return calculate_target_for_automl(ohlcv_data, self.config)
 
     # _get_fear_greed_data メソッドは FeatureEngineeringService に移動されました
-
-    def _generate_dynamic_labels(
-        self, price_data: pd.Series, **training_params
-    ) -> Tuple[pd.Series, Dict[str, Any]]:
-        """
-        動的ラベル生成
-
-        Args:
-            price_data: 価格データ（Close価格）
-            **training_params: 学習パラメータ
-
-        Returns:
-            ラベルSeries, 閾値情報の辞書
-        """
-        try:
-            # ラベル生成器を初期化
-            label_generator = LabelGenerator()
-
-            # 閾値計算方法を決定（デフォルトを動的ボラティリティベースに変更）
-            threshold_method_str = training_params.get(
-                "threshold_method",
-                getattr(self.config.training, "LABEL_METHOD", "dynamic_volatility"),
-            )
-
-            # 文字列からEnumに変換
-            method_mapping = {
-                "fixed": ThresholdMethod.FIXED,
-                "quantile": ThresholdMethod.QUANTILE,
-                "std_deviation": ThresholdMethod.STD_DEVIATION,
-                "adaptive": ThresholdMethod.ADAPTIVE,
-                "dynamic_volatility": ThresholdMethod.DYNAMIC_VOLATILITY,
-            }
-
-            threshold_method = method_mapping.get(
-                threshold_method_str, ThresholdMethod.STD_DEVIATION
-            )
-
-            # 目標分布を設定
-            target_distribution = training_params.get(
-                "target_distribution", {"up": 0.33, "down": 0.33, "range": 0.34}
-            )
-
-            # 方法固有のパラメータを準備
-            method_params = {}
-
-            if threshold_method == ThresholdMethod.FIXED:
-                method_params["threshold"] = training_params.get("threshold_up", 0.02)
-            elif threshold_method == ThresholdMethod.STD_DEVIATION:
-                method_params["std_multiplier"] = training_params.get(
-                    "std_multiplier", 0.25
-                )
-            elif threshold_method == ThresholdMethod.DYNAMIC_VOLATILITY:
-                # 設定から動的ボラティリティパラメータを取得
-                method_params["volatility_window"] = training_params.get(
-                    "volatility_window",
-                    getattr(self.config.training, "VOLATILITY_WINDOW", 24),
-                )
-                method_params["threshold_multiplier"] = training_params.get(
-                    "threshold_multiplier",
-                    getattr(self.config.training, "THRESHOLD_MULTIPLIER", 0.5),
-                )
-                method_params["min_threshold"] = training_params.get(
-                    "min_threshold",
-                    getattr(self.config.training, "MIN_THRESHOLD", 0.005),
-                )
-                method_params["max_threshold"] = training_params.get(
-                    "max_threshold",
-                    getattr(self.config.training, "MAX_THRESHOLD", 0.05),
-                )
-            elif threshold_method in [
-                ThresholdMethod.QUANTILE,
-                ThresholdMethod.ADAPTIVE,
-            ]:
-                method_params["target_distribution"] = target_distribution
-
-            # ラベルを生成
-            labels, threshold_info = label_generator.generate_labels(
-                price_data,
-                method=threshold_method,
-                target_distribution=target_distribution,
-                **method_params,
-            )
-
-            # ラベル分布を検証
-            validation_result = LabelGenerator.validate_label_distribution(labels)
-
-            if not validation_result["is_valid"]:
-                logger.warning("ラベル分布に問題があります:")
-                for error in validation_result["errors"]:
-                    logger.warning(f"  エラー: {error}")
-                for warning in validation_result["warnings"]:
-                    logger.warning(f"  警告: {warning}")
-
-                # 1クラスしかない場合は適応的方法にフォールバック
-                if labels.nunique() <= 1:
-                    logger.info("適応的閾値計算にフォールバック")
-                    labels, threshold_info = label_generator.generate_labels(
-                        price_data,
-                        method=ThresholdMethod.ADAPTIVE,
-                        target_distribution=target_distribution,
-                    )
-
-            return labels, threshold_info
-
-        except Exception as e:
-            logger.error(f"動的ラベル生成エラー: {e}")
-            # フォールバック：従来の固定閾値
-            logger.info("従来の固定閾値にフォールバック")
-            price_change = price_data.pct_change().shift(-1)
-            threshold_up = training_params.get("threshold_up", 0.02)
-            threshold_down = training_params.get("threshold_down", -0.02)
-
-            labels = pd.Series(1, index=price_change.index, dtype=int)
-            labels[price_change > threshold_up] = 2
-            labels[price_change < threshold_down] = 0
-            labels = labels.iloc[:-1]
-
-            threshold_info = {
-                "method": "fixed_fallback",
-                "threshold_up": threshold_up,
-                "threshold_down": threshold_down,
-                "description": f"フォールバック固定閾値±{threshold_up*100:.2f}%",
-            }
-
-            return labels, threshold_info
 
     def _prepare_training_data(
         self, features_df: pd.DataFrame, **training_params
@@ -810,8 +607,10 @@ class BaseMLTrainer(BaseResourceManager, ABC):
         責務分割により、具体的なデータ前処理ロジックは
         utils/data_processing.pyに移譲されました。
         """
-        # ラベル生成器を初期化
-        label_generator = LabelGeneratorWrapper(self)
+        # ラベル生成器を直接使用（LabelGeneratorWrapperは削除）
+        from ...utils.label_generation import LabelGenerator
+
+        label_generator = LabelGenerator()
 
         # データ前処理を委譲
         features_clean, labels_clean, threshold_info = (
