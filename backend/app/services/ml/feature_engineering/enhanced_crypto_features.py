@@ -33,47 +33,7 @@ class EnhancedCryptoFeatures:
             "temporal": [],
         }
 
-    def create_comprehensive_features(
-        self, df: pd.DataFrame, lookback_periods: Optional[Dict[str, int]] = None
-    ) -> pd.DataFrame:
-        """
-        包括的な特徴量を作成
-
-        Args:
-            df: 基本データ（OHLCV + OI + FR + FG）
-            lookback_periods: 計算期間の設定
-
-        Returns:
-            特徴量が追加されたDataFrame
-        """
-        if lookback_periods is None:
-            lookback_periods = {
-                "short": 4,  # 4時間
-                "medium": 24,  # 1日
-                "long": 168,  # 1週間
-            }
-
-        logger.info("包括的な特徴量作成を開始")
-        result_df = df.copy()
-
-        # データ品質チェック
-        result_df = self._ensure_data_quality(result_df)
-
-        # 各グループの特徴量を作成
-        result_df = self._create_price_features(result_df, lookback_periods)
-        result_df = self._create_volume_features(result_df, lookback_periods)
-        result_df = self._create_open_interest_features(result_df, lookback_periods)
-        result_df = self._create_funding_rate_features(result_df, lookback_periods)
-        result_df = self._create_fear_greed_features(result_df, lookback_periods)
-        result_df = self._create_technical_features(result_df, lookback_periods)
-        result_df = self._create_composite_features(result_df, lookback_periods)
-        result_df = self._create_temporal_features(result_df)
-
-        # 無限値とNaNの処理
-        result_df = self._clean_features(result_df)
-
-        logger.info(f"特徴量作成完了: {len(result_df.columns)}個の特徴量")
-        return result_df
+    
 
     def _ensure_data_quality(self, df: pd.DataFrame) -> pd.DataFrame:
         """データ品質を確保"""
@@ -423,40 +383,6 @@ class EnhancedCryptoFeatures:
 
         return result_df
 
-    def get_feature_groups(self) -> Dict[str, List[str]]:
-        """特徴量グループを取得"""
-        return self.feature_groups
+    
 
-    def get_top_features_by_correlation(
-        self, df: pd.DataFrame, target_col: str, top_n: int = 20
-    ) -> List[str]:
-        """
-        相関の高い特徴量を取得
-
-        Args:
-            df: 特徴量データ
-            target_col: ターゲット変数
-            top_n: 上位N個
-
-        Returns:
-            上位特徴量のリスト
-        """
-        if target_col not in df.columns:
-            logger.warning(f"ターゲット変数 {target_col} が見つかりません")
-            return []
-
-        # 数値カラムのみ
-        numeric_cols = df.select_dtypes(include=[np.number]).columns
-        feature_cols = [col for col in numeric_cols if col != target_col]
-
-        # 相関計算
-        correlations = []
-        for col in feature_cols:
-            corr = df[col].corr(df[target_col])
-            if not pd.isna(corr):
-                correlations.append((col, abs(corr)))
-
-        # 相関順にソート
-        correlations.sort(key=lambda x: x[1], reverse=True)
-
-        return [col for col, _ in correlations[:top_n]]
+    

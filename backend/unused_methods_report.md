@@ -96,14 +96,9 @@
 - `app/services/ml/feature_engineering/automl_features/tsfresh_calculator.py:615` - `set_market_regime()`
 - `app/services/ml/feature_engineering/automl_features/tsfresh_calculator.py:620` - `get_regime_info()`
 - `app/services/ml/feature_engineering/base_feature_calculator.py:128` - `log_feature_calculation_start()`
-- `app/services/ml/feature_engineering/data_frequency_manager.py:46` - `get_target_frequency()`
-- `app/services/ml/feature_engineering/data_frequency_manager.py:315` - `validate_data_consistency()`
-- `app/services/ml/feature_engineering/enhanced_crypto_features.py:36` - `create_comprehensive_features()`
-- `app/services/ml/feature_engineering/enhanced_crypto_features.py:426` - `get_feature_groups()`
-- `app/services/ml/feature_engineering/enhanced_crypto_features.py:430` - `get_top_features_by_correlation()`
-- `app/services/ml/feature_engineering/feature_engineering_service.py:955` - `get_cache_info()`
-- `app/services/ml/feature_engineering/feature_engineering_service.py:1043` - `get_automl_config()`
-- `app/services/ml/feature_engineering/feature_engineering_service.py:1049` - `set_automl_config()`
+
+
+
 
 
 ## 統計情報

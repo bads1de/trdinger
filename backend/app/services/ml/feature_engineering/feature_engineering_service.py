@@ -952,16 +952,7 @@ class FeatureEngineeringService:
             logger.error(f"建玉残高疑似特徴量生成エラー: {e}")
             return df
 
-    def get_cache_info(self) -> Dict[str, Any]:
-        """
-        キャッシュ情報を取得
-        """
-        return {
-            "cache_size": len(self.feature_cache),
-            "max_cache_size": self.max_cache_size,
-            "cache_ttl": self.cache_ttl,
-            "cache_keys": list(self.feature_cache.keys()),
-        }
+    
 
     def _select_top_features(
         self,
@@ -1040,20 +1031,9 @@ class FeatureEngineeringService:
             return {}
         return self.last_enhancement_stats.copy()
 
-    def get_automl_config(self) -> Dict[str, Any]:
-        """現在のAutoML設定を取得"""
-        if not self.automl_enabled:
-            return {}
-        return self.automl_config.to_dict()
+    
 
-    def set_automl_config(self, config: "AutoMLConfig"):
-        """AutoML設定を設定"""
-        if not self.automl_enabled:
-            logger.warning("AutoML機能が無効のため、設定変更をスキップします")
-            return
-
-        self.automl_config = config
-        self.tsfresh_calculator.config = config.tsfresh
+    
 
     def get_available_automl_features(self) -> Dict[str, List[str]]:
         """利用可能なAutoML特徴量のリストを取得"""
