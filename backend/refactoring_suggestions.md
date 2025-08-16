@@ -130,21 +130,6 @@ class BaseMLTrainer:
         # ...
 ```
 
-**実装例:**
-
-```python
-from sqlalchemy.inspection import inspect
-
-class SerializationMixin:
-    def to_dict(self):
-        """オブジェクトを辞書に変換する共通メソッド"""
-        return {c.key: getattr(self, c.key) for c in inspect(self).mapper.column_attrs}
-
-class OHLCVData(Base, SerializationMixin):
-    # ... カラム定義 ...
-    # to_dict() は不要になる
-```
-
 ## まとめ
 
 上記のリファクタリング案を適用することで、以下の効果が期待できます。
