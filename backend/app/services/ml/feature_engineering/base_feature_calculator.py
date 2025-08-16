@@ -125,15 +125,6 @@ class BaseFeatureCalculator(ABC):
         """
         pass
 
-    def log_feature_calculation_start(self, feature_type: str) -> None:
-        """
-        特徴量計算開始のログ出力
-
-        Args:
-            feature_type: 特徴量の種類
-        """
-        logger.debug(f"{feature_type}特徴量計算を開始します")
-
     def log_feature_calculation_complete(self, feature_type: str) -> None:
         """
         特徴量計算完了のログ出力

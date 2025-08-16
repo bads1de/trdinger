@@ -486,9 +486,7 @@ class TSFreshFeatureCalculator:
                 "TSF_count_above_mean",
             ]
 
-    def get_extraction_info(self) -> Dict[str, Any]:
-        """最後の抽出情報を取得"""
-        return self.last_extraction_info.copy()
+    
 
     def clear_cache(self):
         """キャッシュをクリア"""
@@ -612,25 +610,9 @@ class TSFreshFeatureCalculator:
             logger.error(f"適応設定取得エラー: {e}")
             return self._get_financial_feature_settings()
 
-    def set_market_regime(self, regime: MarketRegime):
-        """市場レジームを手動設定"""
-        self.current_market_regime = regime
-        logger.info(f"市場レジームを手動設定: {regime.value}")
+    
 
-    def get_regime_info(self) -> Dict[str, Any]:
-        """現在の市場レジーム情報を取得"""
-        return {
-            "current_regime": self.current_market_regime.value,
-            "suitable_profiles": self.feature_settings.get_market_regime_profiles(
-                self.current_market_regime
-            ),
-            "regime_description": {
-                MarketRegime.TRENDING: "明確なトレンドが存在する市場",
-                MarketRegime.RANGING: "レンジ相場、横ばい市場",
-                MarketRegime.VOLATILE: "高ボラティリティ市場",
-                MarketRegime.CALM: "低ボラティリティ、安定市場",
-            }.get(self.current_market_regime, "不明"),
-        }
+    
 
     def cleanup(self):
         """

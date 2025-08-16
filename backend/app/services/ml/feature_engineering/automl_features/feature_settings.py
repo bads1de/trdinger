@@ -235,16 +235,9 @@ class FinancialFeatureSettings:
 
         return profiles
 
-    def get_profile(self, profile_name: str) -> Optional[FeatureProfile]:
-        """特徴量プロファイルを取得"""
-        return self.profiles.get(profile_name)
+    
 
-    def get_profiles_by_category(self, category: FeatureCategory) -> List[FeatureProfile]:
-        """カテゴリ別の特徴量プロファイルを取得"""
-        return [
-            profile for profile in self.profiles.values()
-            if category in profile.categories
-        ]
+    
 
     def get_profiles_by_market_regime(self, regime: MarketRegime) -> List[FeatureProfile]:
         """市場レジーム別の特徴量プロファイルを取得"""
@@ -296,29 +289,10 @@ class FinancialFeatureSettings:
             max_features
         )
 
-    def save_settings_to_file(self, settings: Dict[str, Any], filepath: str):
-        """設定をファイルに保存"""
-        with open(filepath, 'w', encoding='utf-8') as f:
-            json.dump(settings, f, indent=2, ensure_ascii=False)
+    
 
-    def load_settings_from_file(self, filepath: str) -> Dict[str, Any]:
-        """ファイルから設定を読み込み"""
-        with open(filepath, 'r', encoding='utf-8') as f:
-            return json.load(f)
+    
 
-    def get_all_profile_names(self) -> List[str]:
-        """全プロファイル名を取得"""
-        return list(self.profiles.keys())
+    
 
-    def get_profile_summary(self) -> Dict[str, Dict[str, Any]]:
-        """プロファイル概要を取得"""
-        summary = {}
-        for name, profile in self.profiles.items():
-            summary[name] = {
-                "description": profile.description,
-                "categories": [cat.value for cat in profile.categories],
-                "market_regimes": [regime.value for regime in profile.market_regimes],
-                "computational_cost": profile.computational_cost,
-                "feature_count": profile.feature_count
-            }
-        return summary
+    

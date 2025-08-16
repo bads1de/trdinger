@@ -75,10 +75,7 @@
 - `app/services/ml/feature_engineering/automl_features/feature_selector.py:404` - `clear_history()`
 - `app/services/ml/feature_engineering/automl_features/feature_settings.py:238` - `get_profile()`
 - `app/services/ml/feature_engineering/automl_features/feature_settings.py:242` - `get_profiles_by_category()`
-- `app/services/ml/feature_engineering/automl_features/feature_settings.py:299` - `save_settings_to_file()`
-- `app/services/ml/feature_engineering/automl_features/feature_settings.py:304` - `load_settings_from_file()`
-- `app/services/ml/feature_engineering/automl_features/feature_settings.py:309` - `get_all_profile_names()`
-- `app/services/ml/feature_engineering/automl_features/feature_settings.py:313` - `get_profile_summary()`
+
 - `app/services/ml/feature_engineering/automl_features/memory_utils.py:42` - `calculate_optimal_batch_size()`
 - `app/services/ml/feature_engineering/automl_features/memory_utils.py:76` - `optimize_dataframe_dtypes()`
 - `app/services/ml/feature_engineering/automl_features/memory_utils.py:166` - `memory_monitor_decorator()`
@@ -92,13 +89,6 @@
 - `app/services/ml/feature_engineering/automl_features/performance_optimizer.py:266` - `get_cache_stats()`
 - `app/services/ml/feature_engineering/automl_features/performance_optimizer.py:306` - `cleanup_autofeat_memory()`
 - `app/services/ml/feature_engineering/automl_features/performance_optimizer.py:406` - `get_memory_recommendations()
-- `app/services/ml/feature_engineering/automl_features/tsfresh_calculator.py:489` - `get_extraction_info()`
-- `app/services/ml/feature_engineering/automl_features/tsfresh_calculator.py:615` - `set_market_regime()`
-- `app/services/ml/feature_engineering/automl_features/tsfresh_calculator.py:620` - `get_regime_info()`
-- `app/services/ml/feature_engineering/base_feature_calculator.py:128` - `log_feature_calculation_start()`
-
-
-
 
 
 ## 統計情報
