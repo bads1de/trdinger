@@ -68,15 +68,14 @@ async def delete_all_models(
     return await UnifiedErrorHandler.safe_execute_async(_delete_all_models)
 
 
-# 従来の /models/all パスも維持（互換性のため）
 @router.delete("/models/all")
-async def delete_all_models_legacy(
+async def delete_all_models(
     ml_service: MLManagementOrchestrationService = Depends(
         MLManagementOrchestrationService
     ),
 ):
     """
-    すべてのモデルを削除（レガシーパス）
+    すべてのモデルを削除
 
     Args:
         ml_service: ML管理サービス（依存性注入）
@@ -88,7 +87,6 @@ async def delete_all_models_legacy(
     return await UnifiedErrorHandler.safe_execute_async(_delete_all_models)
 
 
-# 個別削除エンドポイント（"all" を除外する制約付き）
 @router.delete("/models/{model_id}")
 async def delete_model(
     model_id: str,

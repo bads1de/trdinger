@@ -33,54 +33,7 @@ class OptimizedCryptoFeatures:
             "volatility_adjusted": [],
         }
 
-    def create_optimized_features(
-        self, df: pd.DataFrame, lookback_periods: Optional[Dict[str, int]] = None
-    ) -> pd.DataFrame:
-        """
-        最適化された特徴量を作成
-
-        Args:
-            df: 基本データ（OHLCV + OI + FR + FG）
-            lookback_periods: 計算期間の設定
-
-        Returns:
-            最適化された特徴量が追加されたDataFrame
-        """
-        if lookback_periods is None:
-            lookback_periods = {
-                "short": 4,
-                "medium": 24,
-                "long": 168,
-                "extra_long": 336,
-            }
-
-        logger.info("最適化された特徴量作成を開始")
-        result_df = df.copy()
-
-        # データ品質確保
-        result_df = self._ensure_data_quality(result_df)
-
-        # 各グループの最適化された特徴量を作成
-        result_df = self._create_stable_high_performers(result_df, lookback_periods)
-        result_df = self._create_enhanced_technical_features(
-            result_df, lookback_periods
-        )
-        result_df = self._create_robust_temporal_features(result_df)
-        result_df = self._create_advanced_composite_features(
-            result_df, lookback_periods
-        )
-        result_df = self._create_smoothed_market_features(result_df, lookback_periods)
-        result_df = self._create_regime_aware_features(result_df, lookback_periods)
-        result_df = self._create_cross_timeframe_features(result_df, lookback_periods)
-        result_df = self._create_volatility_adjusted_features(
-            result_df, lookback_periods
-        )
-
-        # 最終クリーンアップ
-        result_df = self._final_cleanup(result_df)
-
-        logger.info(f"最適化特徴量作成完了: {len(result_df.columns)}個の特徴量")
-        return result_df
+    
 
     def _ensure_data_quality(self, df: pd.DataFrame) -> pd.DataFrame:
         """データ品質を確保（改良版）"""
@@ -596,49 +549,6 @@ class OptimizedCryptoFeatures:
 
         return result_df
 
-    def get_feature_groups(self) -> Dict[str, List[str]]:
-        """特徴量グループを取得"""
-        return self.feature_groups
+    
 
-    def get_top_features_by_stability(
-        self, df: pd.DataFrame, target_col: str, top_n: int = 30
-    ) -> List[str]:
-        """
-        安定性の高い特徴量を取得
-
-        Args:
-            df: 特徴量データ
-            target_col: ターゲット変数
-            top_n: 上位N個
-
-        Returns:
-            安定性の高い特徴量のリスト
-        """
-        if target_col not in df.columns:
-            logger.warning(f"ターゲット変数 {target_col} が見つかりません")
-            return []
-
-        # 安定性の高い特徴量グループから優先的に選択
-        priority_groups = [
-            "stable_high_performers",
-            "enhanced_technical",
-            "robust_temporal",
-        ]
-
-        selected_features = []
-        for group in priority_groups:
-            group_features = self.feature_groups.get(group, [])
-            available_features = [f for f in group_features if f in df.columns]
-            selected_features.extend(available_features)
-
-        # 他のグループからも追加
-        for group, features in self.feature_groups.items():
-            if group not in priority_groups:
-                available_features = [
-                    f
-                    for f in features
-                    if f in df.columns and f not in selected_features
-                ]
-                selected_features.extend(available_features)
-
-        return selected_features[:top_n]
+    

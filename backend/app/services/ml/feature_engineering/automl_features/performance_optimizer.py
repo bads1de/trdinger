@@ -547,28 +547,7 @@ class PerformanceOptimizer:
             "min_usage_mb": min_usage,
         }
 
-    def memory_profiling_decorator(self, enable_detailed: bool = True):
-        """
-        メモリプロファイリングデコレータ
-
-        Args:
-            enable_detailed: 詳細プロファイリングを有効にするか
-        """
-
-        def decorator(func: Callable):
-            @functools.wraps(func)
-            def wrapper(*args, **kwargs):
-                if enable_detailed:
-                    profile_result = self.detailed_memory_profile(func, *args, **kwargs)
-                    logger.info(f"{func.__name__} メモリプロファイル: {profile_result}")
-                    return profile_result.get("result")
-                else:
-                    with self.monitor_memory_usage(func.__name__):
-                        return func(*args, **kwargs)
-
-            return wrapper
-
-        return decorator
+    
 
     def optimize_pandas_memory_usage(
         self, df: pd.DataFrame, aggressive: bool = False

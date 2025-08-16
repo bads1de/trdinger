@@ -15,12 +15,6 @@
 - `app/api/data_collection.py:117` - `collect_bulk_historical_data()`
 - `app/api/data_collection.py:197` - `collect_all_data_bulk()`
 
-### Dependencies API
-
-- `app/api/dependencies.py:29` - `get_backtest_service()`
-- `app/api/dependencies.py:50` - `get_backtest_service_with_db()`
-- `app/api/dependencies.py:71` - `get_strategy_integration_service()`
-- `app/api/dependencies.py:84` - `get_market_data_orchestration_service()`
 
 ### Funding Rates API
 
@@ -97,8 +91,7 @@
 - `app/services/ml/feature_engineering/automl_features/performance_optimizer.py:100` - `_cleanup_cache_if_needed()`
 - `app/services/ml/feature_engineering/automl_features/performance_optimizer.py:266` - `get_cache_stats()`
 - `app/services/ml/feature_engineering/automl_features/performance_optimizer.py:306` - `cleanup_autofeat_memory()`
-- `app/services/ml/feature_engineering/automl_features/performance_optimizer.py:406` - `get_memory_recommendations()`
-- `app/services/ml/feature_engineering/automl_features/performance_optimizer.py:550` - `memory_profiling_decorator()`
+- `app/services/ml/feature_engineering/automl_features/performance_optimizer.py:406` - `get_memory_recommendations()
 - `app/services/ml/feature_engineering/automl_features/tsfresh_calculator.py:489` - `get_extraction_info()`
 - `app/services/ml/feature_engineering/automl_features/tsfresh_calculator.py:615` - `set_market_regime()`
 - `app/services/ml/feature_engineering/automl_features/tsfresh_calculator.py:620` - `get_regime_info()`
@@ -111,9 +104,7 @@
 - `app/services/ml/feature_engineering/feature_engineering_service.py:955` - `get_cache_info()`
 - `app/services/ml/feature_engineering/feature_engineering_service.py:1043` - `get_automl_config()`
 - `app/services/ml/feature_engineering/feature_engineering_service.py:1049` - `set_automl_config()`
-- `app/services/ml/feature_engineering/optimized_crypto_features.py:36` - `create_optimized_features()`
-- `app/services/ml/feature_engineering/optimized_crypto_features.py:599` - `get_feature_groups()`
-- `app/services/ml/feature_engineering/optimized_crypto_features.py:603` - `get_top_features_by_stability()`
+
 
 ## 統計情報
 
