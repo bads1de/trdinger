@@ -167,32 +167,40 @@ class OpenInterestDataConverter:
 
         for oi_data in open_interest_data:
             # データタイムスタンプの処理
-            data_timestamp = oi_data.get("datetime")
-            if data_timestamp:
-                if isinstance(data_timestamp, str):
-                    data_timestamp = datetime.fromisoformat(
-                        data_timestamp.replace("Z", "+00:00")
-                    )
-                elif isinstance(data_timestamp, (int, float)):
+            data_timestamp = None
+            timestamp_value = oi_data.get("timestamp")
+
+            if timestamp_value:
+                if isinstance(timestamp_value, (int, float)):
                     data_timestamp = datetime.fromtimestamp(
-                        data_timestamp / 1000, tz=timezone.utc
+                        timestamp_value / 1000, tz=timezone.utc
+                    )
+                elif isinstance(timestamp_value, str):
+                    data_timestamp = datetime.fromisoformat(
+                        timestamp_value.replace("Z", "+00:00")
                     )
 
-            # オープンインタレスト値の取得
-            open_interest_value = oi_data.get("openInterestAmount") or oi_data.get(
-                "openInterest"
-            )
+            # オープンインタレスト値の処理（複数のフィールドを確認）
+            open_interest_value = None
 
-            # 値が取得できない場合はスキップ
+            # 可能性のあるフィールド名を順番に確認
+            for field_name in [
+                "openInterestAmount",
+                "openInterest",
+                "openInterestValue",
+            ]:
+                if field_name in oi_data:
+                    value = oi_data[field_name]
+                    if value is not None and value != 0:
+                        open_interest_value = value
+                        break
+
+            # 値が見つからない場合は警告を出してスキップ
             if open_interest_value is None:
                 logger.warning(
                     f"オープンインタレスト値が取得できませんでした: {oi_data}"
                 )
                 continue
-
-            logger.info(
-                f"オープンインタレストデータを変換中: {oi_data} -> value={open_interest_value}"
-            )
 
             db_record = {
                 "symbol": symbol,
@@ -208,6 +216,104 @@ class OpenInterestDataConverter:
 
 class DataSanitizer:
     """データ検証・サニタイズの共通ヘルパークラス（旧DataValidator）"""
+
+    @staticmethod
+    def validate_ohlcv_data(ohlcv_records: List[Dict[str, Any]]) -> bool:
+        """
+        OHLCVデータの検証
+
+        Args:
+            ohlcv_records: 検証するOHLCVデータのリスト
+
+        Returns:
+            データが有効な場合True、無効な場合False
+        """
+        if not ohlcv_records or not isinstance(ohlcv_records, list):
+            return False
+
+        try:
+            for record in ohlcv_records:
+                if not isinstance(record, dict):
+                    return False
+
+                # 必須フィールドの存在確認
+                required_fields = [
+                    "symbol",
+                    "timeframe",
+                    "timestamp",
+                    "open",
+                    "high",
+                    "low",
+                    "close",
+                    "volume",
+                ]
+                if not all(field in record for field in required_fields):
+                    return False
+
+                # 数値フィールドの検証
+                for field in ["open", "high", "low", "close", "volume"]:
+                    try:
+                        float(record[field])
+                    except (ValueError, TypeError):
+                        return False
+
+                # タイムスタンプの検証
+                timestamp = record["timestamp"]
+                if not isinstance(timestamp, (datetime, str, int, float)):
+                    return False
+
+            return True
+
+        except Exception as e:
+            logger.error(f"OHLCVデータ検証エラー: {e}")
+            return False
+
+    @staticmethod
+    def validate_fear_greed_data(fear_greed_records: List[Dict[str, Any]]) -> bool:
+        """
+        Fear & Greed Indexデータの検証
+
+        Args:
+            fear_greed_records: 検証するFear & Greed Indexデータのリスト
+
+        Returns:
+            データが有効な場合True、無効な場合False
+        """
+        if not fear_greed_records or not isinstance(fear_greed_records, list):
+            return False
+
+        try:
+            for record in fear_greed_records:
+                if not isinstance(record, dict):
+                    return False
+
+                # 必須フィールドの存在確認
+                required_fields = ["value", "value_classification", "data_timestamp"]
+                if not all(field in record for field in required_fields):
+                    return False
+
+                # 値の検証
+                try:
+                    value = int(record["value"])
+                    if not (0 <= value <= 100):
+                        return False
+                except (ValueError, TypeError):
+                    return False
+
+                # 分類の検証
+                if not isinstance(record["value_classification"], str):
+                    return False
+
+                # タイムスタンプの検証
+                timestamp = record["data_timestamp"]
+                if not isinstance(timestamp, (datetime, str, int, float)):
+                    return False
+
+            return True
+
+        except Exception as e:
+            logger.error(f"Fear & Greed Indexデータ検証エラー: {e}")
+            return False
 
     @staticmethod
     def sanitize_ohlcv_data(

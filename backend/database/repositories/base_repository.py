@@ -54,14 +54,22 @@ class BaseRepository(Generic[T]):
                 inserted_count = result.rowcount
             except AttributeError:
                 # PostgreSQL以外のDB用の代替処理
+                logger.info("PostgreSQL以外のDBを使用中、個別挿入処理を実行")
                 inserted_count = 0
-                for record in records:
+                for i, record in enumerate(records):
                     try:
+                        logger.debug(
+                            f"レコード {i+1}/{len(records)} を挿入中: {record}"
+                        )
                         result = self.db.execute(stmt, record)
                         if result.rowcount > 0:
                             inserted_count += 1
-                    except Exception:
+                            logger.debug(f"レコード {i+1} 挿入成功")
+                        else:
+                            logger.debug(f"レコード {i+1} 挿入失敗（rowcount=0）")
+                    except Exception as e:
                         # 重複エラーは無視
+                        logger.debug(f"レコード {i+1} 挿入エラー（無視）: {e}")
                         continue
 
             self.db.commit()

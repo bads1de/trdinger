@@ -346,9 +346,13 @@ class BybitService(ABC):
                     f"(累計: {len(all_data) + len(page_data)}件)"
                 )
 
-                # 共通の重複チェックと差分更新処理
+                # 共通の重複チェックと差分更新処理（オープンインタレスト用）
                 new_items = self._process_page_data(
-                    page_data, all_data, latest_existing_timestamp, page_count
+                    page_data,
+                    all_data,
+                    latest_existing_timestamp,
+                    page_count,
+                    "open_interest",
                 )
 
                 if new_items is None:  # 差分更新完了
@@ -381,6 +385,7 @@ class BybitService(ABC):
         all_data: List[Dict[str, Any]],
         latest_existing_timestamp: Optional[int],
         page_count: int,
+        data_type: str = "default",
     ) -> Optional[List[Dict[str, Any]]]:
         """
         ページデータの共通処理（重複チェック、差分更新）
@@ -390,6 +395,7 @@ class BybitService(ABC):
             all_data: これまでに取得した全データ
             latest_existing_timestamp: 既存データの最新タイムスタンプ
             page_count: 現在のページ番号
+            data_type: データタイプ（"open_interest", "funding_rate", "default"）
 
         Returns:
             新規データのリスト。差分更新完了の場合はNone
@@ -400,13 +406,22 @@ class BybitService(ABC):
             item for item in page_data if item["timestamp"] not in existing_timestamps
         ]
 
-        # 差分更新: 既存データより古いデータのみ追加
+        # 差分更新: データタイプに応じた条件で新規データをフィルタ
         if latest_existing_timestamp:
-            new_items = [
-                item
-                for item in new_items
-                if item["timestamp"] < latest_existing_timestamp
-            ]
+            if data_type == "open_interest":
+                # オープンインタレスト: 既存データより新しいデータのみ追加
+                new_items = [
+                    item
+                    for item in new_items
+                    if item["timestamp"] > latest_existing_timestamp
+                ]
+            else:
+                # その他のデータ: 既存データより古いデータのみ追加（従来の動作）
+                new_items = [
+                    item
+                    for item in new_items
+                    if item["timestamp"] < latest_existing_timestamp
+                ]
 
             if not new_items:
                 logger.info(f"ページ {page_count}: 既存データに到達。差分更新完了")
@@ -446,6 +461,10 @@ class BybitService(ABC):
         Returns:
             API用シンボル（例: "BTCUSDT"）
         """
+        # 入力の型を確認
+        if not isinstance(symbol, str):
+            symbol = str(symbol)
+
         # スラッシュを削除
         api_symbol = symbol.replace("/", "")
         # コロン以降を削除
@@ -542,14 +561,26 @@ class BybitService(ABC):
                 f"{config.log_prefix}差分データ収集開始: {normalized_symbol} (since: {latest_timestamp})"
             )
             # 最新タイムスタンプより新しいデータを取得
-            history_data = await self._handle_ccxt_errors(
-                f"{config.log_prefix}差分履歴取得",
-                fetch_history_method,
-                normalized_symbol,
-                latest_timestamp,
-                1000,
-                kwargs,
-            )
+            if config.fetch_history_method_name == "fetch_open_interest_history":
+                interval = kwargs.get("intervalTime", "1h")
+                history_data = await self._handle_ccxt_errors(
+                    f"{config.log_prefix}差分履歴取得",
+                    fetch_history_method,
+                    normalized_symbol,
+                    interval,  # timeframe
+                    latest_timestamp,
+                    1000,
+                    kwargs,
+                )
+            else:
+                history_data = await self._handle_ccxt_errors(
+                    f"{config.log_prefix}差分履歴取得",
+                    fetch_history_method,
+                    normalized_symbol,
+                    latest_timestamp,
+                    1000,
+                    kwargs,
+                )
 
             # 重複を避けるため、最新タイムスタンプより新しいデータのみフィルタ
             history_data = [
@@ -558,14 +589,26 @@ class BybitService(ABC):
         else:
             logger.info(f"{config.log_prefix}初回データ収集開始: {normalized_symbol}")
             # データがない場合は最新データを取得
-            history_data = await self._handle_ccxt_errors(
-                f"{config.log_prefix}初回履歴取得",
-                fetch_history_method,
-                normalized_symbol,
-                None,
-                config.default_limit,
-                kwargs,
-            )
+            if config.fetch_history_method_name == "fetch_open_interest_history":
+                interval = kwargs.get("intervalTime", "1h")
+                history_data = await self._handle_ccxt_errors(
+                    f"{config.log_prefix}初回履歴取得",
+                    fetch_history_method,
+                    normalized_symbol,
+                    interval,  # timeframe
+                    None,  # since
+                    config.default_limit,
+                    kwargs,
+                )
+            else:
+                history_data = await self._handle_ccxt_errors(
+                    f"{config.log_prefix}初回履歴取得",
+                    fetch_history_method,
+                    normalized_symbol,
+                    None,
+                    config.default_limit,
+                    kwargs,
+                )
 
         # データベースに保存
         async def save_with_db(db, repository):
@@ -635,14 +678,28 @@ class BybitService(ABC):
             fetch_history_method = getattr(
                 self.exchange, config.fetch_history_method_name
             )
-            history_data = await self._handle_ccxt_errors(
-                f"{config.log_prefix}履歴取得",
-                fetch_history_method,
-                normalized_symbol,
-                None,
-                limit or config.default_limit,
-                kwargs,
-            )
+
+            # オープンインタレストの場合はtimeframeパラメータが必要
+            if config.fetch_history_method_name == "fetch_open_interest_history":
+                interval = kwargs.get("intervalTime", "1h")
+                history_data = await self._handle_ccxt_errors(
+                    f"{config.log_prefix}履歴取得",
+                    fetch_history_method,
+                    normalized_symbol,
+                    interval,  # timeframe
+                    None,  # since
+                    limit or config.default_limit,
+                    kwargs,
+                )
+            else:
+                history_data = await self._handle_ccxt_errors(
+                    f"{config.log_prefix}履歴取得",
+                    fetch_history_method,
+                    normalized_symbol,
+                    None,
+                    limit or config.default_limit,
+                    kwargs,
+                )
 
         # データベースに保存
         async def save_with_db(db, repository):

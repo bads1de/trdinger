@@ -39,11 +39,11 @@ class BybitOpenInterestService(BybitService):
             f"オープンインタレスト履歴取得: {normalized_symbol}, limit={limit}",
             self.exchange.fetch_open_interest_history,
             normalized_symbol,
-            since=since,
-            limit=limit,
-            params={"intervalTime": interval},
+            interval,  # timeframeパラメータを追加
+            since,
+            limit,
+            {"intervalTime": interval},
         )
-
 
     async def fetch_incremental_open_interest_data(
         self,
@@ -90,4 +90,3 @@ class BybitOpenInterestService(BybitService):
             fetch_all=fetch_all,
             intervalTime=interval,
         )
-

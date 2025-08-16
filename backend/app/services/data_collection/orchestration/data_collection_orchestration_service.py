@@ -153,7 +153,7 @@ class DataCollectionOrchestrationService:
                 )
 
                 if fear_greed_result["success"]:
-                    result["fear_greed_index"] = {
+                    result["data"]["fear_greed_index"] = {
                         "success": True,
                         "inserted_count": fear_greed_result["data"].get(
                             "inserted_count", 0
@@ -166,7 +166,7 @@ class DataCollectionOrchestrationService:
                         f"Fear & Greed Index差分更新完了: {fear_greed_result['data'].get('inserted_count', 0)}件"
                     )
                 else:
-                    result["fear_greed_index"] = {
+                    result["data"]["fear_greed_index"] = {
                         "success": False,
                         "inserted_count": 0,
                         "error": fear_greed_result.get(
@@ -179,7 +179,7 @@ class DataCollectionOrchestrationService:
 
             except Exception as e:
                 logger.error(f"Fear & Greed Index差分更新エラー: {e}")
-                result["fear_greed_index"] = {
+                result["data"]["fear_greed_index"] = {
                     "success": False,
                     "inserted_count": 0,
                     "error": str(e),
@@ -188,7 +188,7 @@ class DataCollectionOrchestrationService:
             return api_response(
                 success=True,
                 message=f"{symbol} の一括差分更新が完了しました",
-                data=result,
+                data=result,  # result全体を返す（data構造を含む）
             )
 
         except Exception as e:
@@ -431,8 +431,6 @@ class DataCollectionOrchestrationService:
         except Exception as e:
             logger.error("全データ一括収集開始エラー", e)
             raise
-
-    
 
     async def _collect_historical_background(
         self, symbol: str, timeframe: str, db: Session

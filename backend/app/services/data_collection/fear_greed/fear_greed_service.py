@@ -62,13 +62,11 @@ class FearGreedIndexService:
             aiohttp.ClientError: HTTP通信エラーの場合
             ValueError: APIレスポンスが無効な場合
         """
-        return await UnifiedErrorHandler.safe_execute(
-            func=self._fetch_fear_greed_data_impl,
-            default_return=[],
-            error_message="Fear & Greed Index データ取得",
-            log_level="error",
-            is_api_call=False,
-        )(limit)
+        try:
+            return await self._fetch_fear_greed_data_impl(limit)
+        except Exception as e:
+            logger.error(f"Fear & Greed Index データ取得エラー: {e}")
+            return []
 
     async def _fetch_fear_greed_data_impl(self, limit: int) -> List[dict]:
         """Fear & Greed Index データ取得の実装"""
@@ -171,19 +169,17 @@ class FearGreedIndexService:
         Returns:
             処理結果を含む辞書
         """
-        return UnifiedErrorHandler.safe_execute(
-            func=lambda: self._fetch_and_save_fear_greed_data_impl(limit, repository),
-            default_return={
+        try:
+            return await self._fetch_and_save_fear_greed_data_impl(limit, repository)
+        except Exception as e:
+            logger.error(f"Fear & Greed Index データ取得・保存エラー: {e}")
+            return {
                 "success": False,
                 "fetched_count": 0,
                 "inserted_count": 0,
-                "error": "処理中にエラーが発生しました",
+                "error": str(e),
                 "message": "Fear & Greed Indexデータの取得・保存に失敗しました",
-            },
-            error_message="Fear & Greed Index データ取得・保存",
-            log_level="error",
-            is_api_call=False,
-        )
+            }
 
     async def _fetch_and_save_fear_greed_data_impl(
         self, limit: int, repository: FearGreedIndexRepository
