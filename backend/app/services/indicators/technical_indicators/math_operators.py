@@ -92,12 +92,19 @@ class MathOperatorsIndicators:
         return result
 
     @staticmethod
-    def sum_values(data: np.ndarray, period: int) -> np.ndarray:
+    def sum_values(
+        data: np.ndarray, length: int = None, period: int = None
+    ) -> np.ndarray:
         """Summation (合計)"""
-        data = validate_numpy_input(data, period)
+        # lengthまたはperiodのどちらでも対応
+        period_val = length if length is not None else period
+        if period_val is None:
+            period_val = 14  # デフォルト値
+
+        data = validate_numpy_input(data, period_val)
         result = np.full_like(data, np.nan)
 
-        for i in range(period - 1, len(data)):
-            result[i] = np.sum(data[i - period + 1 : i + 1])
+        for i in range(period_val - 1, len(data)):
+            result[i] = np.sum(data[i - period_val + 1 : i + 1])
 
         return result

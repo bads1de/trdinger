@@ -101,7 +101,16 @@ class TechnicalIndicatorService:
         # 従来のロジックを簡素化して維持
         required_data = {}
         for data_key in config.required_data:
-            column_name = self._resolve_column_name(df, data_key)
+            # param_mapを使用してデータキーをマッピング
+            if (
+                hasattr(config, "param_map")
+                and config.param_map
+                and data_key in config.param_map
+            ):
+                column_name = self._resolve_column_name(df, config.param_map[data_key])
+            else:
+                column_name = self._resolve_column_name(df, data_key)
+
             if column_name:
                 required_data[data_key] = df[column_name]
 

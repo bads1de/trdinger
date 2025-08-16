@@ -4,7 +4,7 @@
 各インジケーターの設定を定義し、レジストリに登録します。
 """
 
-from app.services.auto_strategy.services.ml_orchestrator import ml_orchestrator
+# from app.services.auto_strategy.services.ml_orchestrator import ml_orchestrator  # 循環インポート回避
 from app.services.indicators.technical_indicators.math_operators import (
     MathOperatorsIndicators,
 )
@@ -1649,6 +1649,241 @@ def setup_pattern_recognition_indicators():
                 category="pattern_recognition",
             )
             indicator_registry.register(config)
+
+
+def setup_math_operators_indicators():
+    """数学演算子系インジケーターの設定"""
+
+    # DIV - 除算
+    div_config = IndicatorConfig(
+        indicator_name="DIV",
+        adapter_function=MathOperatorsIndicators.div,
+        required_data=["data0", "data1"],
+        result_type=IndicatorResultType.SINGLE,
+        scale_type=IndicatorScaleType.MOMENTUM_ZERO_CENTERED,
+        category="math_operators",
+    )
+    indicator_registry.register(div_config)
+
+    # SUM_VALUES - 合計値
+    sum_values_config = IndicatorConfig(
+        indicator_name="SUM_VALUES",
+        adapter_function=MathOperatorsIndicators.sum_values,
+        required_data=["data"],
+        result_type=IndicatorResultType.SINGLE,
+        scale_type=IndicatorScaleType.PRICE_ABSOLUTE,
+        category="math_operators",
+    )
+    sum_values_config.add_parameter(
+        ParameterConfig(
+            name="length",
+            default_value=14,
+            min_value=2,
+            max_value=200,
+            description="合計期間",
+        )
+    )
+    sum_values_config.param_map = {"data": "close"}
+    indicator_registry.register(sum_values_config)
+
+
+def setup_math_transform_indicators():
+    """数学変換系インジケーターの設定"""
+
+    # ACOS - 逆余弦
+    acos_config = IndicatorConfig(
+        indicator_name="ACOS",
+        adapter_function=MathTransformIndicators.acos,
+        required_data=["data"],
+        result_type=IndicatorResultType.SINGLE,
+        scale_type=IndicatorScaleType.MOMENTUM_ZERO_CENTERED,
+        category="math_transform",
+    )
+    acos_config.param_map = {"data": "close"}
+    indicator_registry.register(acos_config)
+
+    # ASIN - 逆正弦
+    asin_config = IndicatorConfig(
+        indicator_name="ASIN",
+        adapter_function=MathTransformIndicators.asin,
+        required_data=["data"],
+        result_type=IndicatorResultType.SINGLE,
+        scale_type=IndicatorScaleType.MOMENTUM_ZERO_CENTERED,
+        category="math_transform",
+    )
+    asin_config.param_map = {"data": "close"}
+    indicator_registry.register(asin_config)
+
+    # ATAN - 逆正接
+    atan_config = IndicatorConfig(
+        indicator_name="ATAN",
+        adapter_function=MathTransformIndicators.atan,
+        required_data=["data"],
+        result_type=IndicatorResultType.SINGLE,
+        scale_type=IndicatorScaleType.MOMENTUM_ZERO_CENTERED,
+        category="math_transform",
+    )
+    atan_config.param_map = {"data": "close"}
+    indicator_registry.register(atan_config)
+
+    # LN - 自然対数
+    ln_config = IndicatorConfig(
+        indicator_name="LN",
+        adapter_function=MathTransformIndicators.ln,
+        required_data=["data"],
+        result_type=IndicatorResultType.SINGLE,
+        scale_type=IndicatorScaleType.MOMENTUM_ZERO_CENTERED,
+        category="math_transform",
+    )
+    ln_config.param_map = {"data": "close"}
+    indicator_registry.register(ln_config)
+
+
+def setup_pattern_recognition_indicators():
+    """パターン認識系インジケーターの設定"""
+
+    # CDL_HANGING_MAN - ハンギングマン
+    hanging_man_config = IndicatorConfig(
+        indicator_name="CDL_HANGING_MAN",
+        adapter_function=PatternRecognitionIndicators.cdl_hanging_man,
+        required_data=["open_data", "high", "low", "close"],
+        result_type=IndicatorResultType.SINGLE,
+        scale_type=IndicatorScaleType.PATTERN_BINARY,
+        category="pattern_recognition",
+    )
+    indicator_registry.register(hanging_man_config)
+
+    # CDL_HARAMI - はらみ足
+    harami_config = IndicatorConfig(
+        indicator_name="CDL_HARAMI",
+        adapter_function=PatternRecognitionIndicators.cdl_harami,
+        required_data=["open_data", "high", "low", "close"],
+        result_type=IndicatorResultType.SINGLE,
+        scale_type=IndicatorScaleType.PATTERN_BINARY,
+        category="pattern_recognition",
+    )
+    indicator_registry.register(harami_config)
+
+    # CDL_PIERCING - 明けの明星
+    piercing_config = IndicatorConfig(
+        indicator_name="CDL_PIERCING",
+        adapter_function=PatternRecognitionIndicators.cdl_piercing,
+        required_data=["open_data", "high", "low", "close"],
+        result_type=IndicatorResultType.SINGLE,
+        scale_type=IndicatorScaleType.PATTERN_BINARY,
+        category="pattern_recognition",
+    )
+    indicator_registry.register(piercing_config)
+
+    # CDL_DARK_CLOUD_COVER - 宵の明星
+    dark_cloud_config = IndicatorConfig(
+        indicator_name="CDL_DARK_CLOUD_COVER",
+        adapter_function=PatternRecognitionIndicators.cdl_dark_cloud_cover,
+        required_data=["open_data", "high", "low", "close"],
+        result_type=IndicatorResultType.SINGLE,
+        scale_type=IndicatorScaleType.PATTERN_BINARY,
+        category="pattern_recognition",
+    )
+    indicator_registry.register(dark_cloud_config)
+
+    # CDL_THREE_BLACK_CROWS - 三羽烏
+    three_black_crows_config = IndicatorConfig(
+        indicator_name="CDL_THREE_BLACK_CROWS",
+        adapter_function=PatternRecognitionIndicators.cdl_three_black_crows,
+        required_data=["open_data", "high", "low", "close"],
+        result_type=IndicatorResultType.SINGLE,
+        scale_type=IndicatorScaleType.PATTERN_BINARY,
+        category="pattern_recognition",
+    )
+    indicator_registry.register(three_black_crows_config)
+
+    # CDL_THREE_WHITE_SOLDIERS - 三兵
+    three_white_soldiers_config = IndicatorConfig(
+        indicator_name="CDL_THREE_WHITE_SOLDIERS",
+        adapter_function=PatternRecognitionIndicators.cdl_three_white_soldiers,
+        required_data=["open_data", "high", "low", "close"],
+        result_type=IndicatorResultType.SINGLE,
+        scale_type=IndicatorScaleType.PATTERN_BINARY,
+        category="pattern_recognition",
+    )
+    indicator_registry.register(three_white_soldiers_config)
+
+    # CDL_MARUBOZU - 丸坊主
+    marubozu_config = IndicatorConfig(
+        indicator_name="CDL_MARUBOZU",
+        adapter_function=PatternRecognitionIndicators.cdl_marubozu,
+        required_data=["open_data", "high", "low", "close"],
+        result_type=IndicatorResultType.SINGLE,
+        scale_type=IndicatorScaleType.PATTERN_BINARY,
+        category="pattern_recognition",
+    )
+    indicator_registry.register(marubozu_config)
+
+    # CDL_SPINNING_TOP - コマ
+    spinning_top_config = IndicatorConfig(
+        indicator_name="CDL_SPINNING_TOP",
+        adapter_function=PatternRecognitionIndicators.cdl_spinning_top,
+        required_data=["open_data", "high", "low", "close"],
+        result_type=IndicatorResultType.SINGLE,
+        scale_type=IndicatorScaleType.PATTERN_BINARY,
+        category="pattern_recognition",
+    )
+    indicator_registry.register(spinning_top_config)
+
+    # DOJI - 同事
+    doji_config = IndicatorConfig(
+        indicator_name="DOJI",
+        adapter_function=PatternRecognitionIndicators.doji,
+        required_data=["open_data", "high", "low", "close"],
+        result_type=IndicatorResultType.SINGLE,
+        scale_type=IndicatorScaleType.PATTERN_BINARY,
+        category="pattern_recognition",
+    )
+    indicator_registry.register(doji_config)
+
+    # HAMMER - ハンマー
+    hammer_config = IndicatorConfig(
+        indicator_name="HAMMER",
+        adapter_function=PatternRecognitionIndicators.hammer,
+        required_data=["open_data", "high", "low", "close"],
+        result_type=IndicatorResultType.SINGLE,
+        scale_type=IndicatorScaleType.PATTERN_BINARY,
+        category="pattern_recognition",
+    )
+    indicator_registry.register(hammer_config)
+
+    # ENGULFING_PATTERN - 包み足
+    engulfing_config = IndicatorConfig(
+        indicator_name="ENGULFING_PATTERN",
+        adapter_function=PatternRecognitionIndicators.engulfing_pattern,
+        required_data=["open_data", "high", "low", "close"],
+        result_type=IndicatorResultType.SINGLE,
+        scale_type=IndicatorScaleType.PATTERN_BINARY,
+        category="pattern_recognition",
+    )
+    indicator_registry.register(engulfing_config)
+
+    # MORNING_STAR - 明けの明星
+    morning_star_config = IndicatorConfig(
+        indicator_name="MORNING_STAR",
+        adapter_function=PatternRecognitionIndicators.morning_star,
+        required_data=["open_data", "high", "low", "close"],
+        result_type=IndicatorResultType.SINGLE,
+        scale_type=IndicatorScaleType.PATTERN_BINARY,
+        category="pattern_recognition",
+    )
+    indicator_registry.register(morning_star_config)
+
+    # EVENING_STAR - 宵の明星
+    evening_star_config = IndicatorConfig(
+        indicator_name="EVENING_STAR",
+        adapter_function=PatternRecognitionIndicators.evening_star,
+        required_data=["open_data", "high", "low", "close"],
+        result_type=IndicatorResultType.SINGLE,
+        scale_type=IndicatorScaleType.PATTERN_BINARY,
+        category="pattern_recognition",
+    )
+    indicator_registry.register(evening_star_config)
 
 
 def initialize_all_indicators():

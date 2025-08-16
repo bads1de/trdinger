@@ -24,6 +24,7 @@ class IndicatorScaleType(Enum):
     OPEN_INTEREST = "open_interest"  # オープンインタレスト
     VOLUME = "volume"  # 出来高
     PRICE_ABSOLUTE = "price_absolute"  # 絶対価格
+    PATTERN_BINARY = "pattern_binary"  # パターン認識バイナリ（0/1または-1/1）
 
 
 logger = logging.getLogger(__name__)
@@ -92,8 +93,6 @@ class IndicatorConfig:
         """パラメータを追加"""
         self.parameters[param_config.name] = param_config
 
-
-
     def validate_parameters(self, params: Dict[str, Any]) -> bool:
         """パラメータの妥当性を検証"""
         for param_name, value in params.items():
@@ -102,8 +101,6 @@ class IndicatorConfig:
                     logger.warning(f"Invalid parameter value: {param_name}={value}")
                     return False
         return True
-
-
 
     def get_parameter_ranges(self) -> Dict[str, Dict[str, Union[int, float]]]:
         """
@@ -120,8 +117,6 @@ class IndicatorConfig:
                 "default": param_config.default_value,
             }
         return ranges
-
-
 
     def generate_json_name(self) -> str:
         """JSON形式のインジケーター名（=指標名）を生成"""
@@ -258,13 +253,7 @@ class IndicatorConfigRegistry:
         """登録済みの全指標名を返す（互換用エイリアス）"""
         return self.get_supported_indicator_names()
 
-
-
-
-
-    def generate_parameters_for_indicator(
-        self, indicator_type: str
-    ) -> Dict[str, Any]:
+    def generate_parameters_for_indicator(self, indicator_type: str) -> Dict[str, Any]:
         """
         指標タイプに応じたパラメータを生成
 
@@ -356,7 +345,6 @@ class IndicatorConfigRegistry:
                 return config.output_names.index(name)
 
         return None
-
 
         return None
 
