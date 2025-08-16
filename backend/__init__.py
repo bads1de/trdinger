@@ -11,7 +11,7 @@ Pythonモジュールが含まれています。
 
 使用例:
     from app.services.backtest.backtest_service import BacktestService
-    from app.utils.data_conversion import standardize_ohlcv_columns
+
 
 作成者: Trdinger Development Team
 バージョン: 2.0.0 (backtesting.py統一版)

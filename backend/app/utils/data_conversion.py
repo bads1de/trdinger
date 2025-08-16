@@ -7,7 +7,7 @@ pandas標準機能を活用し、冗長なカスタム実装を削除。
 
 import logging
 from datetime import datetime, timezone
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Union
 
 import numpy as np
 import pandas as pd
@@ -258,113 +258,6 @@ class DataSanitizer:
         except Exception as e:
             logger.error(f"OHLCVデータのサニタイズエラー: {e}")
             raise DataConversionError(f"OHLCVデータのサニタイズに失敗しました: {e}")
-
-
-def standardize_ohlcv_columns(df: pd.DataFrame) -> pd.DataFrame:
-    """
-    OHLCV列名をbacktesting.py標準形式に統一（簡素化版）
-
-    pandas標準のrename()を活用し、シンプルなマッピング処理。
-    """
-    if df.empty:
-        return df
-
-    # 列名マッピング（大文字小文字を統一）
-    column_mapping = {
-        col: col.capitalize()
-        for col in df.columns
-        if col.lower()
-        in ["open", "high", "low", "close", "volume", "o", "h", "l", "c", "v"]
-    }
-
-    # 短縮形の特別マッピング
-    short_mapping = {"o": "Open", "h": "High", "l": "Low", "c": "Close", "v": "Volume"}
-    column_mapping.update(
-        {
-            col: short_mapping[col.lower()]
-            for col in df.columns
-            if col.lower() in short_mapping
-        }
-    )
-
-    # 列名変更
-    result_df = df.rename(columns=column_mapping)
-
-    # 必要な列の存在確認
-    required_cols = ["Open", "High", "Low", "Close"]
-    missing_cols = [col for col in required_cols if col not in result_df.columns]
-
-    if missing_cols:
-        raise ValueError(f"必要な列が見つかりません: {missing_cols}")
-
-    # Volumeがない場合はデフォルト値を設定
-    if "Volume" not in result_df.columns:
-        result_df["Volume"] = 1000
-
-    return result_df
-
-
-def ensure_numeric_series(
-    data: Union[pd.Series, list, np.ndarray, Any],
-    raise_on_error: bool = True,
-    name: Optional[str] = None,
-) -> pd.Series:
-    """
-    データを数値型のpandas.Seriesに変換（簡素化版）
-
-    pandas標準のto_numeric()を直接活用。
-    """
-    try:
-        # pandas.Series の場合はそのまま（必要なら名称を変更）
-        if isinstance(data, pd.Series):
-            series = data.rename(name) if name is not None else data
-        # backtesting._Array の特殊ケース
-        elif hasattr(data, "_data"):
-            series = pd.Series(data._data, name=name)
-        # その他は pandas 標準で処理
-        else:
-            series = pd.Series(data, name=name)
-
-        return pd.to_numeric(series, errors="raise" if raise_on_error else "coerce")
-
-    except Exception as e:
-        if raise_on_error:
-            raise DataConversionError(f"数値型変換に失敗: {e}")
-        else:
-            logger.warning(f"数値型変換に失敗: {e}")
-            return pd.Series([], dtype=float, name=name)
-
-
-def ensure_array(
-    data: Union[pd.Series, list, np.ndarray, Any],
-    raise_on_error: bool = True,
-) -> np.ndarray:
-    """
-    データをnumpy.ndarrayに変換（簡素化版）
-
-    numpy標準のarray()コンストラクタを活用。
-    """
-    try:
-        if isinstance(data, np.ndarray):
-            return data
-
-        # pandas.Seriesは.valuesで効率的に変換
-        if isinstance(data, pd.Series):
-            return data.values
-
-        # backtesting._Arrayの特殊ケース
-        if hasattr(data, "_data"):
-            return np.array(data._data)
-
-        # その他は全てnumpy標準で処理
-        return np.array(data)
-
-    except Exception as e:
-        if raise_on_error:
-            raise DataConversionError(f"numpy.ndarray変換に失敗: {e}")
-        else:
-            logger.warning(f"numpy.ndarray変換に失敗: {e}")
-            return np.array([])
 
 
 def ensure_list(
