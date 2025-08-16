@@ -399,42 +399,6 @@ class AdvancedFeatureEngineer:
 
         return data
 
-    def clean_features(self, data: pd.DataFrame) -> pd.DataFrame:
-        """特徴量のクリーニング"""
-        logger.info("🧹 特徴量クリーニング中...")
-
-        # 無限値を除去
-        data = data.replace([np.inf, -np.inf], np.nan)
-
-        # 欠損値を前方補完
-        data = data.fillna(method="ffill")
-
-        # 残った欠損値を中央値で補完
-        numeric_columns = data.select_dtypes(include=[np.number]).columns
-        data[numeric_columns] = data[numeric_columns].fillna(
-            data[numeric_columns].median()
-        )
-
-        # 異常値のクリッピング（99.5%ile）
-        for col in numeric_columns:
-            if col not in [
-                "Hour",
-                "DayOfWeek",
-                "DayOfMonth",
-                "Month",
-                "Is_Weekend",
-                "Is_Asian_Hours",
-                "Is_European_Hours",
-                "Is_American_Hours",
-            ]:
-                q_low = data[col].quantile(0.005)
-                q_high = data[col].quantile(0.995)
-                data[col] = data[col].clip(lower=q_low, upper=q_high)
-
-        logger.info(f"✅ 特徴量クリーニング完了: {data.shape[1]}個の特徴量")
-
-        return data
-
 
 # グローバルインスタンス
 advanced_feature_engineer = AdvancedFeatureEngineer()

@@ -82,59 +82,11 @@ class PerformanceOptimizer:
             logger.error(f"キャッシュキー生成エラー: {e}")
             return f"fallback_{int(time.time())}"
 
-    def get_cached_features(
-        self, data: pd.DataFrame, settings: Dict[str, Any]
-    ) -> Optional[pd.DataFrame]:
-        """キャッシュから特徴量を取得（無効化）"""
-        # キャッシュ機能を無効化して毎回新鮮な特徴量を生成
-        logger.debug("キャッシュ機能が無効化されています")
-        return None
+    
 
-    def cache_features(
-        self, data: pd.DataFrame, settings: Dict[str, Any], features: pd.DataFrame
-    ):
-        """特徴量をキャッシュに保存（無効化）"""
-        # キャッシュ保存を無効化して毎回新鮮な特徴量を生成
-        logger.debug("キャッシュ保存機能が無効化されています")
+    
 
-    def _cleanup_cache_if_needed(self):
-        """必要に応じてキャッシュをクリーンアップ"""
-        try:
-            # 現在のキャッシュサイズを計算
-            total_size = sum(info["file_size"] for info in self.cache_index.values())
-
-            max_size_bytes = self.max_cache_size_mb * 1024 * 1024
-
-            if total_size > max_size_bytes:
-                logger.info(
-                    f"キャッシュサイズ制限超過: {total_size / 1024 / 1024:.1f}MB"
-                )
-
-                # 最後にアクセスされた時間でソート
-                sorted_items = sorted(
-                    self.cache_index.items(), key=lambda x: x[1]["last_accessed"]
-                )
-
-                # 古いキャッシュから削除
-                removed_size = 0
-                for cache_key, info in sorted_items:
-                    if total_size - removed_size <= max_size_bytes * 0.8:  # 80%まで削減
-                        break
-
-                    cache_file = self.cache_dir / f"{cache_key}.pkl"
-                    if cache_file.exists():
-                        cache_file.unlink()
-
-                    removed_size += info["file_size"]
-                    del self.cache_index[cache_key]
-
-                logger.info(
-                    f"キャッシュクリーンアップ完了: {removed_size / 1024 / 1024:.1f}MB削除"
-                )
-                self._save_cache_index()
-
-        except Exception as e:
-            logger.error(f"キャッシュクリーンアップエラー: {e}")
+    
 
     def optimize_dataframe_memory(self, df: pd.DataFrame) -> pd.DataFrame:
         """DataFrameのメモリ使用量を最適化"""
@@ -263,23 +215,7 @@ class PerformanceOptimizer:
 
         return suggestions
 
-    def get_cache_stats(self) -> Dict[str, Any]:
-        """キャッシュ統計を取得"""
-        try:
-            total_files = len(self.cache_index)
-            total_size = sum(info["file_size"] for info in self.cache_index.values())
-            total_hits = sum(info["hit_count"] for info in self.cache_index.values())
-
-            return {
-                "total_files": total_files,
-                "total_size_mb": total_size / (1024**2),
-                "total_hits": total_hits,
-                "hit_rate": total_hits / max(total_files, 1),
-                "cache_dir": str(self.cache_dir),
-            }
-        except Exception as e:
-            logger.error(f"キャッシュ統計取得エラー: {e}")
-            return {}
+    
 
     def clear_cache(self):
         """キャッシュをクリア"""
@@ -303,32 +239,7 @@ class PerformanceOptimizer:
         except Exception as e:
             logger.error(f"ガベージコレクションエラー: {e}")
 
-    def cleanup_autofeat_memory(self, autofeat_model=None):
-        """AutoFeat特有のメモリクリーンアップ"""
-        try:
-            memory_before = self._get_memory_usage()
-
-            # AutoFeatモデルの詳細クリーンアップ
-            if autofeat_model is not None:
-                self._cleanup_autofeat_model(autofeat_model)
-
-            # NumPyキャッシュのクリア
-            self._clear_numpy_cache()
-
-            # Scikit-learnキャッシュのクリア
-            self._clear_sklearn_cache()
-
-            # 強制ガベージコレクション
-            self.force_garbage_collection()
-
-            memory_after = self._get_memory_usage()
-            memory_freed = memory_before - memory_after
-
-            if memory_freed > 1.0:  # 1MB以上解放された場合のみログ出力
-                logger.info(f"AutoFeatメモリクリーンアップ: {memory_freed:.2f}MB解放")
-
-        except Exception as e:
-            logger.error(f"AutoFeatメモリクリーンアップエラー: {e}")
+    
 
     def _cleanup_autofeat_model(self, autofeat_model):
         """AutoFeatモデルの詳細クリーンアップ"""
@@ -403,45 +314,7 @@ class PerformanceOptimizer:
 
         return memory_monitor()
 
-    def get_memory_recommendations(
-        self, data_size_mb: float, feature_count: int
-    ) -> Dict[str, Any]:
-        """メモリ使用量に基づく推奨設定を取得"""
-        recommendations = {
-            "use_batch_processing": False,
-            "batch_size": 5000,
-            "max_memory_gb": 4,
-            "enable_memory_monitoring": False,
-            "cleanup_frequency": "after_each_operation",
-        }
-
-        # データサイズに基づく推奨設定
-        if data_size_mb > 500:  # 500MB以上
-            recommendations.update(
-                {
-                    "use_batch_processing": True,
-                    "batch_size": 2000,
-                    "max_memory_gb": 2,
-                    "enable_memory_monitoring": True,
-                    "cleanup_frequency": "after_each_batch",
-                }
-            )
-        elif data_size_mb > 100:  # 100MB以上
-            recommendations.update(
-                {
-                    "use_batch_processing": True,
-                    "batch_size": 3000,
-                    "max_memory_gb": 3,
-                    "enable_memory_monitoring": True,
-                }
-            )
-
-        # 特徴量数に基づく調整
-        if feature_count > 1000:
-            recommendations["max_memory_gb"] = min(recommendations["max_memory_gb"], 2)
-            recommendations["enable_memory_monitoring"] = True
-
-        return recommendations
+    
 
     def detailed_memory_profile(
         self, func: Callable, *args, **kwargs

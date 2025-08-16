@@ -455,99 +455,9 @@ class AutoFeatCalculator:
             logger.error(f"データ前処理エラー: {e}")
             return pd.DataFrame(), pd.Series()
 
-    def _extract_selected_features(
-        self, original_df: pd.DataFrame, processed_df: pd.DataFrame
-    ) -> pd.DataFrame:
-        """選択された特徴量を抽出"""
-        try:
-            if self.autofeat_model is None:
-                return original_df
+    
 
-            # AutoFeatで生成された特徴量を取得
-            if hasattr(self.autofeat_model, "transform"):
-                # 変換された特徴量を取得
-                transformed_features = self.autofeat_model.transform(processed_df)
-
-                # 特徴量名を生成
-                feature_names = [
-                    f"AF_{i}" for i in range(transformed_features.shape[1])
-                ]
-
-                # DataFrameに変換
-                selected_df = pd.DataFrame(
-                    transformed_features,
-                    columns=feature_names,
-                    index=processed_df.index,
-                )
-
-                # 元のDataFrameのインデックスに合わせる
-                result_df = original_df.copy()
-                for col in selected_df.columns:
-                    if len(selected_df) == len(result_df):
-                        result_df[col] = selected_df[col].values
-                    else:
-                        # 長さが異なる場合は短い方に合わせる
-                        min_length = min(len(selected_df), len(result_df))
-                        result_df.loc[: min_length - 1, col] = (
-                            selected_df[col].iloc[:min_length].values
-                        )
-
-                return result_df
-            else:
-                logger.warning("AutoFeatモデルにtransformメソッドがありません")
-                return original_df
-
-        except Exception as e:
-            logger.error(f"特徴量抽出エラー: {e}")
-            return original_df
-
-    def _calculate_feature_scores(
-        self, features_df: pd.DataFrame, target: pd.Series, task_type: str
-    ) -> Dict[str, float]:
-        """特徴量スコアを計算"""
-        try:
-            scores = {}
-
-            # AutoFeat特徴量のみを対象とする
-            autofeat_columns = [
-                col for col in features_df.columns if col.startswith("AF_")
-            ]
-
-            if not autofeat_columns:
-                return scores
-
-            autofeat_features = features_df[autofeat_columns]
-
-            # 有効なデータのマスクを作成
-            valid_mask = target.notna() & autofeat_features.notna().all(axis=1)
-            valid_features = autofeat_features[valid_mask]
-            valid_target = target[valid_mask]
-
-            if len(valid_features) == 0:
-                return scores
-
-            # RandomForestで重要度を計算
-            if task_type.lower() == "classification":
-                from sklearn.ensemble import RandomForestClassifier
-
-                rf = RandomForestClassifier(n_estimators=50, random_state=42, n_jobs=1)
-            else:
-                rf = RandomForestRegressor(n_estimators=50, random_state=42, n_jobs=1)
-
-            with warnings.catch_warnings():
-                warnings.simplefilter("ignore")
-                rf.fit(valid_features, valid_target)
-
-            # 重要度をスコアとして保存
-            for i, col in enumerate(autofeat_columns):
-                if i < len(rf.feature_importances_):
-                    scores[col] = float(rf.feature_importances_[i])
-
-            return scores
-
-        except Exception as e:
-            logger.error(f"特徴量スコア計算エラー: {e}")
-            return {}
+    
 
     def get_feature_names(self) -> List[str]:
         """生成される特徴量名のリストを取得"""
@@ -556,73 +466,11 @@ class AutoFeatCalculator:
         else:
             return []
 
-    def get_generation_info(self) -> Dict[str, Any]:
-        """最後の生成情報を取得"""
-        return self.last_selection_info.copy()
+    
 
-    def get_feature_scores(self) -> Dict[str, float]:
-        """特徴量スコアを取得"""
-        return self.feature_scores.copy()
+    
 
-    def evaluate_selected_features(
-        self,
-        features_df: pd.DataFrame,
-        target: pd.Series,
-        task_type: str = "regression",
-    ) -> Dict[str, float]:
-        """選択された特徴量の性能を評価"""
-        try:
-            # AutoFeat特徴量のみを使用
-            autofeat_columns = [
-                col for col in features_df.columns if col.startswith("AF_")
-            ]
-
-            if not autofeat_columns:
-                return {"error": "AutoFeat特徴量が見つかりません"}
-
-            autofeat_features = features_df[autofeat_columns]
-
-            # 有効なデータのマスクを作成
-            valid_mask = target.notna() & autofeat_features.notna().all(axis=1)
-            valid_features = autofeat_features[valid_mask]
-            valid_target = target[valid_mask]
-
-            if len(valid_features) < 10:
-                return {"error": "評価に十分なデータがありません"}
-
-            # クロスバリデーションで性能を評価
-            if task_type.lower() == "classification":
-                from sklearn.ensemble import RandomForestClassifier
-
-                model = RandomForestClassifier(
-                    n_estimators=50, random_state=42, n_jobs=1
-                )
-                cv_scores = cross_val_score(
-                    model, valid_features, valid_target, cv=3, scoring="accuracy"
-                )
-
-                return {
-                    "cv_accuracy_mean": float(cv_scores.mean()),
-                    "cv_accuracy_std": float(cv_scores.std()),
-                    "feature_count": len(autofeat_columns),
-                }
-            else:
-                model = RandomForestRegressor(
-                    n_estimators=50, random_state=42, n_jobs=1
-                )
-                cv_scores = cross_val_score(
-                    model, valid_features, valid_target, cv=3, scoring="r2"
-                )
-
-                return {
-                    "cv_r2_mean": float(cv_scores.mean()),
-                    "cv_r2_std": float(cv_scores.std()),
-                    "feature_count": len(autofeat_columns),
-                }
-
-        except Exception as e:
-            logger.error(f"特徴量評価エラー: {e}")
-            return {"error": str(e)}
+    
 
     def clear_model(self):
         """モデルをクリア（メモリリーク防止のため徹底的にクリーンアップ）"""

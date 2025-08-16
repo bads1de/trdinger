@@ -60,36 +60,6 @@
 - `app/services/indicators/technical_indicators/pattern_recognition.py:441` - `morning_star()`
 - `app/services/indicators/technical_indicators/pattern_recognition.py:446` - `evening_star()`
 
-## ML 関連
-
-### Feature Engineering
-
-- `app/services/ml/feature_engineering/advanced_features.py:402` - `clean_features()`
-- `app/services/ml/feature_engineering/automl_features/autofeat_calculator.py:458` - `_extract_selected_features()`
-- `app/services/ml/feature_engineering/automl_features/autofeat_calculator.py:504` - `_calculate_feature_scores()`
-- `app/services/ml/feature_engineering/automl_features/autofeat_calculator.py:559` - `get_generation_info()`
-- `app/services/ml/feature_engineering/automl_features/autofeat_calculator.py:563` - `get_feature_scores()`
-- `app/services/ml/feature_engineering/automl_features/autofeat_calculator.py:567` - `evaluate_selected_features()`
-- `app/services/ml/feature_engineering/automl_features/feature_selector.py:386` - `get_selection_summary()`
-- `app/services/ml/feature_engineering/automl_features/feature_selector.py:400` - `get_feature_scores()`
-- `app/services/ml/feature_engineering/automl_features/feature_selector.py:404` - `clear_history()`
-- `app/services/ml/feature_engineering/automl_features/feature_settings.py:238` - `get_profile()`
-- `app/services/ml/feature_engineering/automl_features/feature_settings.py:242` - `get_profiles_by_category()`
-
-- `app/services/ml/feature_engineering/automl_features/memory_utils.py:42` - `calculate_optimal_batch_size()`
-- `app/services/ml/feature_engineering/automl_features/memory_utils.py:76` - `optimize_dataframe_dtypes()`
-- `app/services/ml/feature_engineering/automl_features/memory_utils.py:166` - `memory_monitor_decorator()`
-- `app/services/ml/feature_engineering/automl_features/memory_utils.py:185` - `check_memory_availability()`
-- `app/services/ml/feature_engineering/automl_features/memory_utils.py:233` - `get_memory_efficient_autofeat_config()`
-- `app/services/ml/feature_engineering/automl_features/memory_utils.py:294` - `cleanup_autofeat_memory()`
-- `app/services/ml/feature_engineering/automl_features/memory_utils.py:320` - `log_memory_usage()`
-- `app/services/ml/feature_engineering/automl_features/performance_optimizer.py:85` - `get_cached_features()`
-- `app/services/ml/feature_engineering/automl_features/performance_optimizer.py:93` - `cache_features()`
-- `app/services/ml/feature_engineering/automl_features/performance_optimizer.py:100` - `_cleanup_cache_if_needed()`
-- `app/services/ml/feature_engineering/automl_features/performance_optimizer.py:266` - `get_cache_stats()`
-- `app/services/ml/feature_engineering/automl_features/performance_optimizer.py:306` - `cleanup_autofeat_memory()`
-- `app/services/ml/feature_engineering/automl_features/performance_optimizer.py:406` - `get_memory_recommendations()
-
 
 ## 統計情報
 

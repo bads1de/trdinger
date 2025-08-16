@@ -383,27 +383,8 @@ class AdvancedFeatureSelector:
                 "error": str(e),
             }
 
-    def get_selection_summary(self) -> Dict[str, Any]:
-        """選択履歴のサマリーを取得"""
-        if not self.selection_history:
-            return {"message": "選択履歴がありません"}
+    
 
-        latest = self.selection_history[-1]
-        return {
-            "total_selections": len(self.selection_history),
-            "latest_selection": latest,
-            "average_reduction_ratio": np.mean(
-                [h.get("reduction_ratio", 0) for h in self.selection_history]
-            ),
-        }
+    
 
-    def get_feature_scores(self) -> Dict[str, float]:
-        """特徴量スコアを取得"""
-        return self.feature_scores.copy()
-
-    def clear_history(self):
-        """選択履歴をクリア"""
-        self.selection_history.clear()
-        self.feature_scores.clear()
-        self.correlation_matrix = None
-        logger.debug("特徴量選択履歴をクリアしました")
+    
