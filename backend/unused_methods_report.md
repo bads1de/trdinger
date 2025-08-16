@@ -2,25 +2,6 @@
 
 ## API 関数 (FastAPI エンドポイント)
 
-### Auto Strategy API
-
-- `app/api/auto_strategy.py:117` - `generate_strategy()`
-- `app/api/auto_strategy.py:216` - `get_experiment_results()`
-- `app/api/auto_strategy.py:284` - `get_config_presets()`
-
-### Data Collection API
-
-- `app/api/data_collection.py:65` - `update_bulk_incremental_data()`
-- `app/api/data_collection.py:90` - `collect_bitcoin_full_data()`
-- `app/api/data_collection.py:117` - `collect_bulk_historical_data()`
-- `app/api/data_collection.py:197` - `collect_all_data_bulk()`
-
-
-### Funding Rates API
-
-- `app/api/funding_rates.py:24` - `get_funding_rates()`
-- `app/api/funding_rates.py:118` - `bulk_collect_funding_rates()`
-
 ### ML Management API
 
 - `app/api/ml_management.py:29` - `get_models()`

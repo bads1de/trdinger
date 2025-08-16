@@ -213,34 +213,6 @@ async def stop_experiment(
     return await UnifiedErrorHandler.safe_execute_async(_stop_experiment)
 
 
-@router.get("/experiments/{experiment_id}/results", response_model=GAResultResponse)
-async def get_experiment_results(
-    experiment_id: str,
-    auto_strategy_service: AutoStrategyService = Depends(get_auto_strategy_service),
-):
-    """
-    実験結果を取得
-
-    指定された実験IDの結果を取得します。
-    多目的最適化の場合はパレート最適解も含まれます。
-    """
-
-    async def _get_experiment_results():
-        result = auto_strategy_service.get_experiment_status(experiment_id)
-
-        if result is None or result.get("status") == "error":
-            from fastapi import HTTPException
-
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"実験 {experiment_id} が見つかりません",
-            )
-
-        return result
-
-    return await UnifiedErrorHandler.safe_execute_async(_get_experiment_results)
-
-
 @router.post("/test-strategy", response_model=StrategyTestResponse)
 async def test_strategy(
     request: StrategyTestRequest,
@@ -281,20 +253,4 @@ async def get_default_config():
     return await UnifiedErrorHandler.safe_execute_async(_get_default_config)
 
 
-@router.get("/config/presets", response_model=PresetsResponse)
-async def get_config_presets():
-    """
-    GA設定プリセットを取得
 
-    用途別のGA設定プリセット（高速、標準、徹底）を返します。
-    """
-
-    async def _get_config_presets():
-        presets = {
-            "fast": GAConfig.create_fast().to_dict(),
-            "default": GAConfig.create_default().to_dict(),
-            "thorough": GAConfig.create_thorough().to_dict(),
-        }
-        return PresetsResponse(presets=presets)
-
-    return await UnifiedErrorHandler.safe_execute_async(_get_config_presets)

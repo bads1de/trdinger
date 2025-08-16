@@ -87,33 +87,6 @@ async def update_bulk_incremental_data(
     return await UnifiedErrorHandler.safe_execute_async(_execute)
 
 
-@router.post("/bitcoin-full")
-async def collect_bitcoin_full_data(
-    background_tasks: BackgroundTasks,
-    db: Session = Depends(get_db),
-    orchestration_service: DataCollectionOrchestrationService = Depends(
-        DataCollectionOrchestrationService
-    ),
-) -> Dict:
-    """
-    ビットコインの全時間軸データを収集（ベータ版機能）
-
-    Args:
-        background_tasks: バックグラウンドタスク
-        db: データベースセッション
-
-    Returns:
-        収集開始レスポンス
-    """
-
-    async def _execute():
-        return await orchestration_service.start_bitcoin_full_data_collection(
-            background_tasks, db
-        )
-
-    return await UnifiedErrorHandler.safe_execute_async(_execute)
-
-
 @router.post("/bulk-historical")
 async def collect_bulk_historical_data(
     background_tasks: BackgroundTasks,
