@@ -17,6 +17,22 @@ from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from .connection import Base
 
+from datetime import datetime
+
+class ToDictMixin:
+    """Mixin to provide a generic to_dict implementation for declarative models."""
+    def to_dict(self):
+        result: dict = {}
+        # Iterate SQLAlchemy columns and serialize values
+        for column in self.__table__.columns:
+            val = getattr(self, column.name)
+            # datetime -> ISO format
+            if isinstance(val, datetime):
+                result[column.name] = val.isoformat()
+            else:
+                result[column.name] = val
+        return result
+
 
 class OHLCVData(Base):
     """
@@ -132,7 +148,7 @@ class FundingRateData(Base):
         )
 
 
-class OpenInterestData(Base):
+class OpenInterestData(ToDictMixin, Base):
     """
     オープンインタレスト（建玉残高）データテーブル
 
@@ -179,30 +195,10 @@ class OpenInterestData(Base):
             f"open_interest_value={self.open_interest_value})>"
         )
 
-    def to_dict(self):
-        """辞書形式に変換"""
-        return {
-            "id": self.id,
-            "symbol": self.symbol,
-            "open_interest_value": self.open_interest_value,
-            "data_timestamp": (
-                self.data_timestamp.isoformat()
-                if self.data_timestamp is not None
-                else None
-            ),
-            "timestamp": (
-                self.timestamp.isoformat() if self.timestamp is not None else None
-            ),
-            "created_at": (
-                self.created_at.isoformat() if self.created_at is not None else None
-            ),
-            "updated_at": (
-                self.updated_at.isoformat() if self.updated_at is not None else None
-            ),
-        }
+    # uses ToDictMixin.to_dict
 
 
-class FearGreedIndexData(Base):
+class FearGreedIndexData(ToDictMixin, Base):
     """
     Fear & Greed Index データテーブル
 
@@ -264,29 +260,19 @@ class FearGreedIndexData(Base):
         return self.timestamp
 
     def to_dict(self):
-        """辞書形式に変換"""
-        return {
-            "id": self.id,
-            "value": self.value,
-            "value_classification": self.value_classification,
-            "data_timestamp": (
-                self.data_timestamp_utc.isoformat()
-                if self.data_timestamp is not None
-                else None
-            ),
-            "timestamp": (
-                self.timestamp_utc.isoformat() if self.timestamp is not None else None
-            ),
-            "created_at": (
-                self.created_at.isoformat() if self.created_at is not None else None
-            ),
-            "updated_at": (
-                self.updated_at.isoformat() if self.updated_at is not None else None
-            ),
-        }
+        """辞書形式に変換（UTC保証プロパティを優先）"""
+        d = super().to_dict()
+        # Override timestamp fields with UTC-aware properties
+        d["data_timestamp"] = (
+            self.data_timestamp_utc.isoformat() if self.data_timestamp is not None else None
+        )
+        d["timestamp"] = (
+            self.timestamp_utc.isoformat() if self.timestamp is not None else None
+        )
+        return d
 
 
-class BacktestResult(Base):
+class BacktestResult(ToDictMixin, Base):
     """
     バックテスト結果テーブル
 
@@ -359,42 +345,17 @@ class BacktestResult(Base):
         )
 
     def to_dict(self):
-        """辞書形式に変換"""
-        performance_metrics = self.performance_metrics or {}
-        return {
-            "id": self.id,
-            "strategy_name": self.strategy_name,
-            "symbol": self.symbol,
-            "timeframe": self.timeframe,
-            "start_date": (
-                self.start_date.isoformat() if self.start_date is not None else None
-            ),
-            "end_date": (
-                self.end_date.isoformat() if self.end_date is not None else None
-            ),
-            "initial_capital": self.initial_capital,
-            "commission_rate": self.commission_rate,
-            "config_json": self.config_json,
-            "performance_metrics": performance_metrics,
-            "equity_curve": self.equity_curve,
-            "trade_history": self.trade_history,
-            "execution_time": self.execution_time,
-            "status": self.status,
-            "error_message": self.error_message,
-            "created_at": (
-                self.created_at.isoformat() if self.created_at is not None else None
-            ),
-            "updated_at": (
-                self.updated_at.isoformat() if self.updated_at is not None else None
-            ),
-            # 個別のパフォーマンス指標（後方互換性のため）
-            "total_return": performance_metrics.get("total_return", 0.0),
-            "sharpe_ratio": performance_metrics.get("sharpe_ratio", 0.0),
-            "max_drawdown": performance_metrics.get("max_drawdown", 0.0),
-            "total_trades": performance_metrics.get("total_trades", 0),
-            "win_rate": performance_metrics.get("win_rate", 0.0),
-            "profit_factor": performance_metrics.get("profit_factor", 0.0),
-        }
+        """辞書形式に変換（追加の集計メトリクスを付与）"""
+        d = super().to_dict()
+        performance_metrics = d.get("performance_metrics") or {}
+        # 保守性のため個別メトリクスをトップレベルに追加（後方互換性）
+        d.setdefault("total_return", performance_metrics.get("total_return", 0.0))
+        d.setdefault("sharpe_ratio", performance_metrics.get("sharpe_ratio", 0.0))
+        d.setdefault("max_drawdown", performance_metrics.get("max_drawdown", 0.0))
+        d.setdefault("total_trades", performance_metrics.get("total_trades", 0))
+        d.setdefault("win_rate", performance_metrics.get("win_rate", 0.0))
+        d.setdefault("profit_factor", performance_metrics.get("profit_factor", 0.0))
+        return d
 
 
 class GAExperiment(Base):
@@ -448,7 +409,7 @@ class GAExperiment(Base):
         )
 
 
-class GeneratedStrategy(Base):
+class GeneratedStrategy(ToDictMixin, Base):
     """
     生成された戦略テーブル
 
@@ -509,23 +470,4 @@ class GeneratedStrategy(Base):
 
     def to_dict(self):
         """辞書形式に変換"""
-        return {
-            "id": self.id,
-            "strategy_name": self.strategy_name,
-            "symbol": self.symbol,
-            "timeframe": self.timeframe,
-            "start_date": (
-                self.start_date.isoformat() if self.start_date is not None else None
-            ),
-            "end_date": (
-                self.end_date.isoformat() if self.end_date is not None else None
-            ),
-            "initial_capital": self.initial_capital,
-            "config_json": self.config_json,
-            "performance_metrics": self.performance_metrics,
-            "equity_curve": self.equity_curve,
-            "trade_history": self.trade_history,
-            "created_at": (
-                self.created_at.isoformat() if self.created_at is not None else None
-            ),
-        }
+        return super().to_dict()

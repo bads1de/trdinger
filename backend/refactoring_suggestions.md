@@ -2,17 +2,18 @@
 
 このドキュメントでは、`backend`ディレクトリ内のコードにおける重複や冗長な箇所を指摘し、具体的なリファクタリング案を提案します。リファクタリングにより、コードの保守性、可読性、再利用性を向上させることを目的とします。
 
-## 1. API層 (`app/api/`) のリファクタリング
+## 1. API 層 (`app/api/`) のリファクタリング
 
-### 1.1. APIレスポンス生成の共通化
+### 1.1. API レスポンス生成の共通化
 
 **現状の問題点:**
-各APIエンドポイントで、`api_response`や`error_response`のようなカスタム関数や、FastAPIの`JSONResponse`を直接使用しており、レスポンス形式に一貫性がありません。また、成功・失敗時のロジックが各所に散在しています。
+各 API エンドポイントで、`api_response`や`error_response`のようなカスタム関数や、FastAPI の`JSONResponse`を直接使用しており、レスポンス形式に一貫性がありません。また、成功・失敗時のロジックが各所に散在しています。
 
 **リファクタリング案:**
-`app.utils.response.py` にあるユーティリティを拡張し、FastAPIのレスポンスを返す共通のラッパー関数を作成します。これにより、レスポンス形式を統一し、エラーハンドリングを簡素化できます。
+`app.utils.response.py` にあるユーティリティを拡張し、FastAPI のレスポンスを返す共通のラッパー関数を作成します。これにより、レスポンス形式を統一し、エラーハンドリングを簡素化できます。
 
 **実装例 (`app/utils/response.py`):**
+
 ```python
 from fastapi.responses import JSONResponse
 from fastapi import status
@@ -54,6 +55,7 @@ def server_error_response(message: str = "Internal Server Error", details: Any =
 デコレーターを作成して、このパターンを抽象化します。
 
 **実装例（デコレーター）:**
+
 ```python
 from functools import wraps
 from app.utils.unified_error_handler import UnifiedErrorHandler
@@ -76,8 +78,6 @@ async def get_data_status(db: Session = Depends(get_db)):
     return await service.get_data_status(db_session=db)
 ```
 
-
-
 ## 2. サービス層 (`app/services/`) のリファクタリング
 
 ### 2.1. データ収集オーケストレーションサービスの統合
@@ -89,6 +89,7 @@ async def get_data_status(db: Session = Depends(get_db)):
 単一の `DataOrchestrationService` に統合し、各データソースの収集・管理ロジックをメソッドとして提供します。
 
 **実装例:**
+
 ```python
 class DataOrchestrationService:
     def __init__(self, db: Session):
@@ -103,7 +104,7 @@ class DataOrchestrationService:
         # ... FR収集ロジック ...
 ```
 
-### 2.2. MLモデルラッパーの評価ロジック共通化
+### 2.2. ML モデルラッパーの評価ロジック共通化
 
 **現状の問題点:**
 `app/services/ml/models` 内の各モデルラッパー（`lightgbm.py`, `xgboost.py`など）の `_train_model_impl` メソッド内で、評価指標を計算するコードが重複しています。
@@ -112,6 +113,7 @@ class DataOrchestrationService:
 `BaseEnsemble` または `BaseMLTrainer` に評価ロジックを計算する共通メソッドを実装し、各モデルラッパーから呼び出すようにします。`EnhancedMetricsCalculator` を活用して、評価指標の計算を一元化します。
 
 **実装例 (`BaseMLTrainer`):**
+
 ```python
 from app.services.ml.evaluation.enhanced_metrics import EnhancedMetricsCalculator, MetricsConfig
 
@@ -128,25 +130,8 @@ class BaseMLTrainer:
         # ...
 ```
 
-### 2.3. ラベル生成ロジックの移管
-
-**現状の問題点:**
-`BaseMLTrainer` 内に `_generate_dynamic_labels` や `_calculate_target_for_automl` といったラベル生成ロジックが含まれています。これはトレーナーの責務（モデルの学習）を超えており、`app/utils/label_generation.py` の責務と重複しています。
-
-**リファクタリング案:**
-これらのラベル生成ロジックを `label_generation.py` に移管し、`BaseMLTrainer` からはそれを呼び出すだけにします。これにより、ラベル生成のロジックが一元管理され、再利用性が向上します。
-
-## 3. データベース層 (`database/`) のリファクタリング
-
-### 3.1. モデルのシリアライズ処理の共通化
-
-**現状の問題点:**
-`database/models.py` 内の各モデルクラス（`OHLCVData`, `BacktestResult`など）に、インスタンスを辞書に変換する `to_dict()` メソッドが個別に実装されており、コードが重複しています。
-
-**リファクタリング案:**
-`Base` を継承する共通のMixinクラスを作成し、`to_dict()` メソッドをそこで一度だけ定義します。各モデルクラスはこのMixinを継承することで、`to_dict()` メソッドを再利用できます。
-
 **実装例:**
+
 ```python
 from sqlalchemy.inspection import inspect
 
@@ -167,4 +152,4 @@ class OHLCVData(Base, SerializationMixin):
 - **保守性の向上:** コードの重複が削減され、ロジックの変更が容易になります。
 - **可読性の向上:** 各クラス・モジュールの責務が明確になり、コードが理解しやすくなります。
 - **再利用性の向上:** 共通化されたコンポーネント（レスポンス生成、エラーハンドリング、評価指標計算など）は、他の部分でも再利用可能です。
-- **一貫性の確保:** APIレスポンスやエラー処理の形式が統一され、フロントエンドとの連携がスムーズになります。
+- **一貫性の確保:** API レスポンスやエラー処理の形式が統一され、フロントエンドとの連携がスムーズになります。
