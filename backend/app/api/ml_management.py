@@ -48,26 +48,6 @@ async def get_models(
     return await UnifiedErrorHandler.safe_execute_async(_get_models)
 
 
-# 全削除エンドポイント（パス競合を避けるため別パスを使用）
-@router.delete("/models-all")
-async def delete_all_models(
-    ml_service: MLManagementOrchestrationService = Depends(
-        MLManagementOrchestrationService
-    ),
-):
-    """
-    すべてのモデルを削除
-
-    Args:
-        ml_service: ML管理サービス（依存性注入）
-    """
-
-    async def _delete_all_models():
-        return await ml_service.delete_all_models()
-
-    return await UnifiedErrorHandler.safe_execute_async(_delete_all_models)
-
-
 @router.delete("/models/all")
 async def delete_all_models(
     ml_service: MLManagementOrchestrationService = Depends(
@@ -101,17 +81,6 @@ async def delete_model(
         model_id: モデルID（ファイル名）
         ml_service: ML管理サービス（依存性注入）
     """
-    # "all" が渡された場合は全削除メソッドにリダイレクト
-    if model_id.lower() == "all":
-        logger.info(
-            "🗑️ model_id='all' が検出されました。全削除メソッドにリダイレクトします"
-        )
-
-        async def _delete_all_models():
-            return await ml_service.delete_all_models()
-
-        return await UnifiedErrorHandler.safe_execute_async(_delete_all_models)
-
     logger.info(
         f"🗑️ 個別モデル削除エンドポイントが呼び出されました: model_id={model_id}"
     )
