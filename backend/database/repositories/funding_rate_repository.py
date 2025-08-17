@@ -3,7 +3,7 @@
 """
 
 from typing import List, Optional
-from datetime import datetime
+from datetime import datetime, timezone
 from sqlalchemy.orm import Session
 import pandas as pd
 import logging
@@ -22,28 +22,83 @@ class FundingRateRepository(BaseRepository):
         super().__init__(db, FundingRateData)
 
     def insert_funding_rate_data(self, funding_rate_records: List[dict]) -> int:
-        """
-        ファンディングレートデータを一括挿入
-
-        Args:
-            funding_rate_records: ファンディングレートデータのリスト
-
-        Returns:
-            挿入された件数
-        """
         if not funding_rate_records:
             logger.warning("挿入するファンディングレートデータがありません")
             return 0
 
-        try:
-            # 重複処理付き一括挿入
-            inserted_count = self.bulk_insert_with_conflict_handling(
-                funding_rate_records, ["symbol", "funding_timestamp"]
-            )
+        processed_records = []
+        for record in funding_rate_records:
+            # --- 1. データ抽出 ---
+            # Noneとの比較を明示的に行い、0.0がスキップされないようにする
+            info = record.get("info", {})
 
+            rate = record.get("funding_rate")
+            if rate is None:
+                rate = record.get("fundingRate")
+            if rate is None:
+                rate = info.get("fundingRate")
+
+            funding_ts = record.get("funding_timestamp")
+            if funding_ts is None:
+                funding_ts = record.get("fundingTimestamp")
+            if funding_ts is None:
+                funding_ts = info.get("fundingRateTimestamp")
+            if funding_ts is None:
+                funding_ts = record.get("timestamp")  # 最終フォールバック
+
+            ts = record.get("timestamp")
+
+            # --- 2. スキーマに基づく検証 ---
+            if (
+                "symbol" not in record
+                or rate is None
+                or funding_ts is None
+                or ts is None
+            ):
+                logger.debug(f"必須項目が不足しているためレコードをスキップ: {record}")
+                continue
+
+            # --- 3. データ変換と構築 ---
+            try:
+                new_record = {
+                    "symbol": record.get("symbol"),
+                    "funding_rate": float(rate),
+                    "mark_price": record.get("mark_price") or info.get("markPrice"),
+                    "index_price": record.get("index_price") or info.get("indexPrice"),
+                }
+
+                # タイムスタンプをdatetimeオブジェクトに変換
+                new_record["funding_timestamp"] = datetime.fromtimestamp(
+                    float(funding_ts) / 1000, tz=timezone.utc
+                )
+                new_record["timestamp"] = datetime.fromtimestamp(
+                    float(ts) / 1000, tz=timezone.utc
+                )
+
+                next_ts = record.get("next_funding_timestamp") or info.get(
+                    "nextFundingTime"
+                )
+                if next_ts is not None:
+                    new_record["next_funding_timestamp"] = datetime.fromtimestamp(
+                        float(next_ts) / 1000, tz=timezone.utc
+                    )
+
+                processed_records.append(new_record)
+
+            except (ValueError, TypeError) as e:
+                logger.warning(f"レコードの変換に失敗しました（スキップ）: {record}, エラー: {e}")
+                continue
+
+        if not processed_records:
+            logger.warning("処理後に有効なレコードがありませんでした。")
+            return 0
+
+        try:
+            inserted_count = self.bulk_insert_with_conflict_handling(
+                processed_records, ["symbol", "funding_timestamp"]
+            )
             logger.info(f"ファンディングレートデータを {inserted_count} 件挿入しました")
             return inserted_count
-
         except Exception as e:
             logger.error(f"ファンディングレートデータ挿入エラー: {e}")
             raise

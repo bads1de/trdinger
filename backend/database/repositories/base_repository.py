@@ -51,7 +51,7 @@ class BaseRepository(Generic[T]):
                 # PostgreSQL用の重複処理
                 stmt = stmt.on_conflict_do_nothing(index_elements=conflict_columns)
                 result = self.db.execute(stmt, records)
-                inserted_count = result.rowcount
+                inserted_count = getattr(result, "rowcount", 0)
             except AttributeError:
                 # PostgreSQL以外のDB用の代替処理
                 logger.info("PostgreSQL以外のDBを使用中、個別挿入処理を実行")
@@ -62,11 +62,12 @@ class BaseRepository(Generic[T]):
                             f"レコード {i+1}/{len(records)} を挿入中: {record}"
                         )
                         result = self.db.execute(stmt, record)
-                        if result.rowcount > 0:
+                        # ドライバによってrowcountがない場合があるため、フォールバックを用意
+                        if getattr(result, "rowcount", 0) > 0:
                             inserted_count += 1
                             logger.debug(f"レコード {i+1} 挿入成功")
                         else:
-                            logger.debug(f"レコード {i+1} 挿入失敗（rowcount=0）")
+                            logger.debug(f"レコード {i+1} 挿入失敗（挿入件数0）")
                     except Exception as e:
                         # 重複エラーは無視
                         logger.debug(f"レコード {i+1} 挿入エラー（無視）: {e}")
@@ -223,7 +224,7 @@ class BaseRepository(Generic[T]):
             # SQLAlchemy 2.0の標準的なdelete文を使用
             stmt = delete(self.model_class)
             result = self.db.execute(stmt)
-            deleted_count = result.rowcount
+            deleted_count = getattr(result, "rowcount", 0)
             self.db.commit()
             return deleted_count
         except Exception as e:
@@ -241,7 +242,7 @@ class BaseRepository(Generic[T]):
                 getattr(self.model_class, filter_column) == filter_value
             )
             result = self.db.execute(stmt)
-            deleted_count = result.rowcount
+            deleted_count = getattr(result, "rowcount", 0)
             self.db.commit()
             return deleted_count
         except Exception as e:
@@ -476,7 +477,7 @@ class BaseRepository(Generic[T]):
                     stmt = stmt.where(getattr(self.model_class, column) == value)
 
             result = self.db.execute(stmt)
-            deleted_count = result.rowcount
+            deleted_count = getattr(result, "rowcount", 0)
             self.db.commit()
 
             logger.info(
