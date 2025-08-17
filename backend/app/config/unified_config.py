@@ -181,12 +181,6 @@ class MLModelConfig(BaseSettings):
     max_model_versions: int = Field(default=10)
     model_retention_days: int = Field(default=30)
 
-    @model_validator(mode="after")
-    def create_model_directory(self):
-        """初期化後処理：ディレクトリ作成"""
-        os.makedirs(self.model_save_path, exist_ok=True)
-        return self
-
     class Config:
         env_prefix = "ML_MODEL_"
         extra = "ignore"
