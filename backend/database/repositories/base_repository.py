@@ -58,12 +58,10 @@ class BaseRepository(Generic[T]):
                 inserted_count = 0
                 for i, record in enumerate(records):
                     try:
-                        logger.debug(
-                            f"レコード {i+1}/{len(records)} を挿入中: {record}"
-                        )
                         result = self.db.execute(stmt, record)
                         # ドライバによってrowcountがない場合があるため、フォールバックを用意
-                        if getattr(result, "rowcount", 0) > 0:
+                        # rowcountが-1を返すドライバもあるため、0でないことをもって成功とみなす
+                        if getattr(result, "rowcount", 0) != 0:
                             inserted_count += 1
                             logger.debug(f"レコード {i+1} 挿入成功")
                         else:
