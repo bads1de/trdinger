@@ -23,7 +23,8 @@ import pandas as pd
 
 from .config import ml_config
 
-from ...utils.unified_error_handler import UnifiedModelError, safe_ml_operation
+from .exceptions import MLModelError
+from ...utils.unified_error_handler import safe_ml_operation
 
 logger = logging.getLogger(__name__)
 

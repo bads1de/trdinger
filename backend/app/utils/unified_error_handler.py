@@ -497,8 +497,10 @@ timeout_decorator = unified_timeout_decorator
 safe_ml_operation = unified_safe_operation
 ml_operation_context = unified_operation_context
 
-# 例外クラスのエイリアス
-MLTimeoutError = UnifiedTimeoutError
-MLValidationError = UnifiedValidationError
-MLDataError = UnifiedDataError
-MLModelError = UnifiedModelError
+# ML例外クラスのインポート
+from app.services.ml.exceptions import (
+    MLTimeoutError,
+    MLValidationError,
+    MLDataError,
+    MLModelError,
+)

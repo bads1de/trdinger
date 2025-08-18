@@ -18,9 +18,11 @@ from sklearn.preprocessing import StandardScaler
 from .ml_metadata import ModelMetadata
 from ...utils.data_processing import data_processor as data_preprocessor
 from ...utils.label_generation import LabelGenerator, ThresholdMethod
+from .exceptions import (
+    MLDataError,
+    MLModelError,
+)
 from ...utils.unified_error_handler import (
-    UnifiedDataError,
-    UnifiedModelError,
     ml_operation_context,
     safe_ml_operation,
 )
@@ -944,7 +946,7 @@ class BaseMLTrainer(BaseResourceManager, ABC):
         self.feature_columns = model_data.get("feature_columns")
 
         if self.model is None:
-            raise UnifiedModelError("モデルデータにモデルが含まれていません")
+            raise MLModelError("モデルデータにモデルが含まれていません")
 
         self.is_trained = True
         return True

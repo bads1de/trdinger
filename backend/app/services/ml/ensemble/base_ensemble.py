@@ -11,7 +11,7 @@ from typing import Any, Dict, List, Optional
 import numpy as np
 import pandas as pd
 
-from ....utils.unified_error_handler import UnifiedModelError
+from ..exceptions import MLModelError
 
 logger = logging.getLogger(__name__)
 
@@ -193,7 +193,7 @@ class BaseEnsemble(ABC):
 
                 return KNNModel(automl_config=self.automl_config)
             except ImportError:
-                raise UnifiedModelError("KNNモデルラッパーのインポートに失敗しました")
+                raise MLModelError("KNNモデルラッパーのインポートに失敗しました")
         elif model_type.lower() == "logistic_regression":
             # scikit-learnのLogisticRegressionを直接使用
             from sklearn.linear_model import LogisticRegression
@@ -205,7 +205,7 @@ class BaseEnsemble(ABC):
                 verbose=0,  # ログ抑制
             )
         else:
-            raise UnifiedModelError(f"サポートされていないモデルタイプ: {model_type}")
+            raise MLModelError(f"サポートされていないモデルタイプ: {model_type}")
 
     def _evaluate_predictions(
         self,

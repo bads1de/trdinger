@@ -12,7 +12,7 @@ from pathlib import Path
 from typing import Any, Dict, List
 
 from app.services.ml.config.ml_config import MLConfig
-from app.utils.unified_error_handler import UnifiedValidationError
+from app.services.ml.exceptions import MLValidationError
 
 logger = logging.getLogger(__name__)
 
@@ -128,7 +128,7 @@ class MLConfigManager:
             # バリデーション
             validation_errors = self.validate_config_updates(config_updates)
             if validation_errors:
-                raise UnifiedValidationError(
+                raise MLValidationError(
                     f"設定バリデーションエラー: {validation_errors}"
                 )
 

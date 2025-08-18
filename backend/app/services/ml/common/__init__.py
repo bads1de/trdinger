@@ -4,11 +4,16 @@ ML共通モジュール
 ML関連サービスで共通して使用される機能を提供します。
 """
 
-from ....utils.unified_error_handler import (  # 標準エイリアス
+# ML例外クラスを直接インポート
+from ..exceptions import (
     MLDataError,
     MLModelError,
     MLTimeoutError,
     MLValidationError,
+)
+
+# 統一エラーハンドリング機能をインポート
+from ....utils.unified_error_handler import (
     UnifiedDataError,
     UnifiedErrorHandler,
     UnifiedModelError,

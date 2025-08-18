@@ -11,7 +11,7 @@ from typing import Any, Dict, Optional
 import numpy as np
 import pandas as pd
 
-from ....utils.unified_error_handler import UnifiedModelError
+from ..exceptions import MLModelError
 from ..base_ml_trainer import BaseMLTrainer
 
 logger = logging.getLogger(__name__)
@@ -58,7 +58,7 @@ class SingleModelTrainer(BaseMLTrainer):
             "knn",
         ]
         if self.model_type not in supported_models:
-            raise UnifiedModelError(
+            raise MLModelError(
                 f"サポートされていないモデルタイプ: {self.model_type}. "
                 f"サポートされているモデル: {supported_models}"
             )
@@ -118,7 +118,7 @@ class SingleModelTrainer(BaseMLTrainer):
 
         except Exception as e:
             logger.error(f"❌ {self.model_type.upper()}モデルの学習に失敗: {e}")
-            raise UnifiedModelError(
+            raise MLModelError(
                 f"{self.model_type.upper()}モデルの学習に失敗しました: {e}"
             )
 
@@ -181,11 +181,11 @@ class SingleModelTrainer(BaseMLTrainer):
                 return KNNModel(automl_config=self.automl_config)
 
             else:
-                raise UnifiedModelError(f"未対応のモデルタイプ: {self.model_type}")
+                raise MLModelError(f"未対応のモデルタイプ: {self.model_type}")
 
         except ImportError as e:
             logger.error(f"{self.model_type.upper()}の依存関係が不足しています: {e}")
-            raise UnifiedModelError(
+            raise MLModelError(
                 f"{self.model_type.upper()}の依存関係がインストールされていません。"
                 f"必要なライブラリをインストールしてください。"
             )
@@ -240,7 +240,7 @@ class SingleModelTrainer(BaseMLTrainer):
             保存されたモデルのパス
         """
         if self.single_model is None or not self.single_model.is_trained:
-            raise UnifiedModelError("保存する学習済みモデルがありません")
+            raise MLModelError("保存する学習済みモデルがありません")
 
         try:
             from ..model_manager import model_manager
@@ -316,7 +316,7 @@ class SingleModelTrainer(BaseMLTrainer):
 
         except Exception as e:
             logger.error(f"単一モデル保存エラー: {e}")
-            raise UnifiedModelError(f"単一モデルの保存に失敗しました: {e}")
+            raise MLModelError(f"単一モデルの保存に失敗しました: {e}")
 
     def load_model(self, model_path: str) -> bool:
         """
