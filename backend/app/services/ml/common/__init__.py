@@ -13,12 +13,12 @@ from ..exceptions import (
 )
 
 # 統一エラーハンドリング機能をインポート
-from ....utils.unified_error_handler import (
-    UnifiedDataError,
-    UnifiedErrorHandler,
-    UnifiedModelError,
-    UnifiedTimeoutError,
-    UnifiedValidationError,
+from ....utils.error_handler import (
+    DataError,
+    ErrorHandler,
+    ModelError,
+    TimeoutError,
+    ValidationError,
     ml_operation_context,
     safe_ml_operation,
     timeout_decorator,
@@ -55,14 +55,14 @@ from ..evaluation.enhanced_metrics import (
 
 __all__ = [
     # Unified Error handling
-    "UnifiedErrorHandler",
+    "ErrorHandler",
     "unified_safe_operation",
     "unified_timeout_decorator",
     "unified_operation_context",
-    "UnifiedTimeoutError",
-    "UnifiedValidationError",
-    "UnifiedDataError",
-    "UnifiedModelError",
+    "TimeoutError",
+    "ValidationError",
+    "DataError",
+    "ModelError",
     # Standard aliases
     "safe_ml_operation",
     "timeout_decorator",

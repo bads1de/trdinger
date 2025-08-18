@@ -1,7 +1,7 @@
 """
 統一エラーハンドリング（Auto Strategy専用）
 
-UnifiedErrorHandlerを基盤として、Auto Strategy専用のエラーハンドリング機能を提供します。
+ErrorHandlerを基盤として、Auto Strategy専用のエラーハンドリング機能を提供します。
 既存のAutoStrategyErrorHandlerとcommon_utils.ErrorHandlerを統合し、一貫したエラー処理を実現します。
 """
 
@@ -10,18 +10,18 @@ import traceback
 from typing import Any, Dict, List, Optional, TypeVar
 
 
-from app.utils.unified_error_handler import UnifiedErrorHandler
+from app.utils.error_handler import ErrorHandler
 
 logger = logging.getLogger(__name__)
 
 T = TypeVar("T")
 
 
-class AutoStrategyErrorHandler(UnifiedErrorHandler):
+class AutoStrategyErrorHandler(ErrorHandler):
     """
     Auto-Strategy用エラーハンドラークラス
 
-    UnifiedErrorHandlerを継承し、Auto Strategy専用のエラーハンドリング機能を追加します。
+    ErrorHandlerを継承し、Auto Strategy専用のエラーハンドリング機能を追加します。
     """
 
     # === Auto Strategy専用エラーハンドリング ===
@@ -76,7 +76,7 @@ class AutoStrategyErrorHandler(UnifiedErrorHandler):
         Returns:
             フォールバック値
         """
-        # UnifiedErrorHandlerの機能を活用
+        # ErrorHandlerの機能を活用
         return AutoStrategyErrorHandler.safe_execute(
             lambda: None,
             error_message=f"{context}でエラーが発生: {error}",

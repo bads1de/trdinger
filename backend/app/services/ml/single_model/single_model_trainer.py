@@ -201,7 +201,7 @@ class SingleModelTrainer(BaseMLTrainer):
             予測確率の配列 [下落確率, レンジ確率, 上昇確率]
         """
         if self.single_model is None or not self.single_model.is_trained:
-            raise UnifiedModelError("学習済み単一モデルがありません")
+            raise ModelError("学習済み単一モデルがありません")
 
         try:
             # 特徴量の順序を学習時と合わせる
@@ -215,14 +215,14 @@ class SingleModelTrainer(BaseMLTrainer):
             if predictions.ndim == 2 and predictions.shape[1] == 3:
                 return predictions
             else:
-                raise UnifiedModelError(
+                raise ModelError(
                     f"予期しない予測確率の形状: {predictions.shape}. "
                     f"3クラス分類 (down, range, up) の確率が期待されます。"
                 )
 
         except Exception as e:
             logger.error(f"{self.model_type.upper()}モデルの予測エラー: {e}")
-            raise UnifiedModelError(
+            raise ModelError(
                 f"{self.model_type.upper()}モデルの予測に失敗しました: {e}"
             )
 

@@ -10,6 +10,8 @@ from typing import Optional
 
 import ccxt
 
+from app.utils.error_handler import ErrorHandler
+
 from database.repositories.funding_rate_repository import FundingRateRepository
 from database.repositories.ohlcv_repository import OHLCVRepository
 from database.repositories.open_interest_repository import OpenInterestRepository
@@ -116,10 +118,7 @@ class HistoricalDataService:
             logger.error(f"パラメータ検証エラー: {e}")
             raise
         except Exception as e:
-            logger.error(f"予期しない履歴データ収集エラー: {e}", exc_info=True)
-            raise RuntimeError(
-                f"履歴データ収集中に予期しないエラーが発生しました: {e}"
-            ) from e
+            ErrorHandler.handle_model_error(e, context="fetch_historical_data")
 
     async def collect_bulk_incremental_data(
         self,

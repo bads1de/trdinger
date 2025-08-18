@@ -102,7 +102,7 @@ class BaseEnsemble(ABC):
 
                 return LightGBMModel(automl_config=self.automl_config)
             except ImportError:
-                raise UnifiedModelError(
+                raise ModelError(
                     "LightGBMモデルラッパーのインポートに失敗しました"
                 )
         elif model_type.lower() == "xgboost":
@@ -111,7 +111,7 @@ class BaseEnsemble(ABC):
 
                 return XGBoostModel(automl_config=self.automl_config)
             except ImportError:
-                raise UnifiedModelError(
+                raise ModelError(
                     "XGBoostモデルラッパーのインポートに失敗しました"
                 )
         elif model_type.lower() == "catboost":
@@ -120,7 +120,7 @@ class BaseEnsemble(ABC):
 
                 return CatBoostModel(automl_config=self.automl_config)
             except ImportError:
-                raise UnifiedModelError(
+                raise ModelError(
                     "CatBoostモデルラッパーのインポートに失敗しました"
                 )
         elif model_type.lower() == "tabnet":
@@ -129,7 +129,7 @@ class BaseEnsemble(ABC):
 
                 return TabNetModel(automl_config=self.automl_config)
             except ImportError:
-                raise UnifiedModelError(
+                raise ModelError(
                     "TabNetモデルラッパーのインポートに失敗しました"
                 )
         elif (
@@ -159,7 +159,7 @@ class BaseEnsemble(ABC):
 
                 return ExtraTreesModel(automl_config=self.automl_config)
             except ImportError:
-                raise UnifiedModelError(
+                raise ModelError(
                     "ExtraTreesモデルラッパーのインポートに失敗しました"
                 )
         elif model_type.lower() == "adaboost":
@@ -168,7 +168,7 @@ class BaseEnsemble(ABC):
 
                 return AdaBoostModel(automl_config=self.automl_config)
             except ImportError:
-                raise UnifiedModelError(
+                raise ModelError(
                     "AdaBoostモデルラッパーのインポートに失敗しました"
                 )
         elif model_type.lower() == "ridge":
@@ -177,14 +177,14 @@ class BaseEnsemble(ABC):
 
                 return RidgeModel(automl_config=self.automl_config)
             except ImportError:
-                raise UnifiedModelError("Ridgeモデルラッパーのインポートに失敗しました")
+                raise ModelError("Ridgeモデルラッパーのインポートに失敗しました")
         elif model_type.lower() == "naivebayes":
             try:
                 from ..models.naivebayes_wrapper import NaiveBayesModel
 
                 return NaiveBayesModel(automl_config=self.automl_config)
             except ImportError:
-                raise UnifiedModelError(
+                raise ModelError(
                     "NaiveBayesモデルラッパーのインポートに失敗しました"
                 )
         elif model_type.lower() == "knn":

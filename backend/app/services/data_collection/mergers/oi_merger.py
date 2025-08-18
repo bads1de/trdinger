@@ -5,6 +5,7 @@ Open Interest データのマージロジックを提供します。
 """
 
 import logging
+from app.utils.error_handler import ErrorHandler
 from datetime import datetime
 from typing import List
 
@@ -77,7 +78,7 @@ class OIMerger:
                 df["open_interest"] = pd.NA
 
         except Exception as e:
-            logger.warning(f"Open Interestデータのマージ中にエラーが発生しました: {e}")
+            ErrorHandler.handle_model_error(e, context="merge_oi_data")
             df["open_interest"] = pd.NA
 
         return df

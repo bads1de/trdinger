@@ -11,7 +11,7 @@ from typing import List
 import numpy as np
 import pandas as pd
 
-from ....utils.unified_error_handler import safe_ml_operation
+from ....utils.error_handler import safe_ml_operation
 
 logger = logging.getLogger(__name__)
 

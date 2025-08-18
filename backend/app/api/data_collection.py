@@ -14,7 +14,7 @@ from sqlalchemy.orm import Session
 from app.services.data_collection.orchestration.data_collection_orchestration_service import (
     DataCollectionOrchestrationService,
 )
-from app.utils.unified_error_handler import UnifiedErrorHandler
+from app.utils.error_handler import ErrorHandler
 from database.connection import ensure_db_initialized, get_db
 
 logger = logging.getLogger(__name__)
@@ -59,7 +59,7 @@ async def collect_historical_data(
             symbol, timeframe, background_tasks, db
         )
 
-    return await UnifiedErrorHandler.safe_execute_async(_execute)
+    return await ErrorHandler.safe_execute_async(_execute)
 
 
 @router.post("/bulk-incremental-update")
@@ -84,7 +84,7 @@ async def update_bulk_incremental_data(
         orchestration_service = DataCollectionOrchestrationService()
         return await orchestration_service.execute_bulk_incremental_update(symbol, db)
 
-    return await UnifiedErrorHandler.safe_execute_async(_execute)
+    return await ErrorHandler.safe_execute_async(_execute)
 
 
 @router.post("/bulk-historical")
@@ -120,7 +120,7 @@ async def collect_bulk_historical_data(
             background_tasks, db
         )
 
-    return await UnifiedErrorHandler.safe_execute_async(_execute)
+    return await ErrorHandler.safe_execute_async(_execute)
 
 
 @router.get("/status/{symbol:path}/{timeframe}")
@@ -164,7 +164,7 @@ async def get_collection_status(
             db=db,
         )
 
-    return await UnifiedErrorHandler.safe_execute_async(_get_collection_status)
+    return await ErrorHandler.safe_execute_async(_get_collection_status)
 
 
 @router.post("/all/bulk-collect")
@@ -200,4 +200,4 @@ async def collect_all_data_bulk(
             background_tasks, db
         )
 
-    return await UnifiedErrorHandler.safe_execute_async(_execute)
+    return await ErrorHandler.safe_execute_async(_execute)

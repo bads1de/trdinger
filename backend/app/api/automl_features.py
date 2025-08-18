@@ -20,7 +20,7 @@ from app.services.ml.feature_engineering.automl_features.automl_config import (
 from app.services.ml.feature_engineering.feature_engineering_service import (
     FeatureEngineeringService,
 )
-from app.utils.unified_error_handler import UnifiedErrorHandler
+from app.utils.error_handler import ErrorHandler
 
 logger = logging.getLogger(__name__)
 
@@ -143,7 +143,7 @@ async def generate_features(
             feature_names=feature_names,
         )
 
-    return await UnifiedErrorHandler.safe_execute_async(
+    return await ErrorHandler.safe_execute_async(
         _generate, message="特徴量生成に失敗しました"
     )
 
@@ -200,7 +200,7 @@ async def validate_config(
                 warnings=[],
             )
 
-    return await UnifiedErrorHandler.safe_execute_async(
+    return await ErrorHandler.safe_execute_async(
         _validate, message="設定検証に失敗しました"
     )
 
@@ -218,7 +218,7 @@ async def get_default_config():
         default_config = AutoMLConfig.get_financial_optimized_config()
         return {"success": True, "config": default_config.to_dict()}
 
-    return await UnifiedErrorHandler.safe_execute_async(
+    return await ErrorHandler.safe_execute_async(
         _get_config, message="デフォルト設定取得に失敗しました"
     )
 
@@ -240,6 +240,6 @@ async def clear_cache(
         service.clear_automl_cache()
         return {"success": True, "message": "AutoMLキャッシュをクリアしました"}
 
-    return await UnifiedErrorHandler.safe_execute_async(
+    return await ErrorHandler.safe_execute_async(
         _clear, message="キャッシュクリアに失敗しました"
     )

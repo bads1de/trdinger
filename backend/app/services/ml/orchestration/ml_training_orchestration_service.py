@@ -18,7 +18,7 @@ from app.services.ml.orchestration.background_task_manager import (
     background_task_manager,
 )
 from app.utils.response import api_response
-from app.utils.unified_error_handler import safe_ml_operation
+from app.utils.error_handler import safe_ml_operation
 from database.repositories.fear_greed_repository import FearGreedIndexRepository
 from database.repositories.funding_rate_repository import FundingRateRepository
 from database.repositories.ohlcv_repository import OHLCVRepository

@@ -15,7 +15,7 @@ from sqlalchemy.orm import Session
 from app.services.backtest.orchestration.backtest_orchestration_service import (
     BacktestOrchestrationService,
 )
-from app.utils.unified_error_handler import UnifiedErrorHandler
+from app.utils.error_handler import ErrorHandler
 from database.connection import get_db
 
 router = APIRouter(prefix="/api/backtest", tags=["backtest"])
@@ -96,7 +96,7 @@ async def get_backtest_results(
             strategy_name=strategy_name,
         )
 
-    return await UnifiedErrorHandler.safe_execute_async(_get_results)
+    return await ErrorHandler.safe_execute_async(_get_results)
 
 
 @router.delete("/results-all")
@@ -120,7 +120,7 @@ async def delete_all_backtest_results(
     async def _delete_all_results():
         return await orchestration_service.delete_all_backtest_results(db=db)
 
-    return await UnifiedErrorHandler.safe_execute_async(_delete_all_results)
+    return await ErrorHandler.safe_execute_async(_delete_all_results)
 
 
 @router.get("/results/{result_id}", response_model=BacktestResponse)
@@ -157,7 +157,7 @@ async def get_backtest_result_by_id(
 
         return result
 
-    return await UnifiedErrorHandler.safe_execute_async(_get_by_id)
+    return await ErrorHandler.safe_execute_async(_get_by_id)
 
 
 @router.delete("/results/{result_id}")
@@ -194,7 +194,7 @@ async def delete_backtest_result(
 
         return result
 
-    return await UnifiedErrorHandler.safe_execute_async(_delete_result)
+    return await ErrorHandler.safe_execute_async(_delete_result)
 
 
 @router.get("/strategies")
@@ -216,4 +216,4 @@ async def get_supported_strategies(
     async def _get_strategies():
         return await orchestration_service.get_supported_strategies()
 
-    return await UnifiedErrorHandler.safe_execute_async(_get_strategies)
+    return await ErrorHandler.safe_execute_async(_get_strategies)

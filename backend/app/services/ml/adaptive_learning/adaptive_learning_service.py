@@ -31,7 +31,7 @@ except Exception:
     _ENHANCED_AVAILABLE = False
 
 from ..ml_training_service import MLTrainingService
-from ....utils.unified_error_handler import safe_ml_operation
+from ....utils.error_handler import safe_ml_operation
 
 logger = logging.getLogger(__name__)
 

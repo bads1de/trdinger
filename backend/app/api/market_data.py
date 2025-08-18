@@ -16,7 +16,7 @@ from app.config.unified_config import unified_config
 from app.services.data_collection.orchestration.market_data_orchestration_service import (
     MarketDataOrchestrationService,
 )
-from app.utils.unified_error_handler import UnifiedErrorHandler
+from app.utils.error_handler import ErrorHandler
 from database.connection import get_db
 
 logger = logging.getLogger(__name__)
@@ -71,6 +71,6 @@ async def get_ohlcv_data(
             end_date=end_date,
         )
 
-    return await UnifiedErrorHandler.safe_execute_async(
+    return await ErrorHandler.safe_execute_async(
         _get_ohlcv, message="OHLCVデータ取得エラー"
     )

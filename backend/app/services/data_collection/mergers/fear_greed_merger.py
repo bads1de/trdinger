@@ -5,6 +5,7 @@ Fear & Greed Index データのマージロジックを提供します。
 """
 
 import logging
+from app.utils.error_handler import ErrorHandler
 from datetime import datetime
 from typing import List
 
@@ -94,7 +95,7 @@ class FearGreedMerger:
                 df["fear_greed_classification"] = pd.NA
 
         except Exception as e:
-            logger.warning(f"Fear & Greedデータのマージ中にエラーが発生しました: {e}")
+            ErrorHandler.handle_model_error(e, context="merge_fear_greed_data")
             df["fear_greed_value"] = pd.NA
             df["fear_greed_classification"] = pd.NA
 

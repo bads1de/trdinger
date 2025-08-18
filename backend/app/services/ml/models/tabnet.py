@@ -11,7 +11,7 @@ from typing import Any, Dict, Optional
 import numpy as np
 import pandas as pd
 
-from ....utils.unified_error_handler import UnifiedModelError
+from ....utils.error_handler import ModelError
 
 logger = logging.getLogger(__name__)
 
@@ -204,10 +204,10 @@ class TabNetModel:
             logger.error(
                 "pytorch-tabnetがインストールされていません。pip install pytorch-tabnetを実行してください。"
             )
-            raise UnifiedModelError("pytorch-tabnetがインストールされていません")
+            raise ModelError("pytorch-tabnetがインストールされていません")
         except Exception as e:
             logger.error(f"TabNetモデル学習エラー: {e}")
-            raise UnifiedModelError(f"TabNetモデル学習に失敗しました: {e}")
+            raise ModelError(f"TabNetモデル学習に失敗しました: {e}")
 
     def predict(self, X: pd.DataFrame) -> np.ndarray:
         """
@@ -220,7 +220,7 @@ class TabNetModel:
             予測確率
         """
         if not self.is_trained or self.model is None:
-            raise UnifiedModelError("学習済みモデルがありません")
+            raise ModelError("学習済みモデルがありません")
 
         try:
             # データを numpy 配列に変換
@@ -228,7 +228,7 @@ class TabNetModel:
             predictions = self.model.predict_proba(X_np)
             return predictions
         except Exception as e:
-            raise UnifiedModelError(f"TabNet予測エラー: {e}")
+            raise ModelError(f"TabNet予測エラー: {e}")
 
     def predict_proba(self, X: pd.DataFrame) -> np.ndarray:
         """

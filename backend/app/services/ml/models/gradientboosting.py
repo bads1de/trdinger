@@ -12,7 +12,7 @@ import numpy as np
 import pandas as pd
 from sklearn.ensemble import GradientBoostingClassifier
 
-from ....utils.unified_error_handler import UnifiedModelError
+from ....utils.error_handler import ModelError
 
 logger = logging.getLogger(__name__)
 
@@ -144,7 +144,7 @@ class GradientBoostingModel:
 
         except Exception as e:
             logger.error(f"❌ GradientBoosting学習エラー: {e}")
-            raise UnifiedModelError(f"GradientBoosting学習に失敗しました: {e}")
+            raise ModelError(f"GradientBoosting学習に失敗しました: {e}")
 
     def predict(self, X: pd.DataFrame) -> np.ndarray:
         """
@@ -157,7 +157,7 @@ class GradientBoostingModel:
             予測結果
         """
         if not self.is_trained or self.model is None:
-            raise UnifiedModelError("モデルが学習されていません")
+            raise ModelError("モデルが学習されていません")
 
         try:
             # 特徴量の順序を確認
@@ -169,7 +169,7 @@ class GradientBoostingModel:
 
         except Exception as e:
             logger.error(f"GradientBoosting予測エラー: {e}")
-            raise UnifiedModelError(f"予測に失敗しました: {e}")
+            raise ModelError(f"予測に失敗しました: {e}")
 
     def predict_proba(self, X: pd.DataFrame) -> np.ndarray:
         """
@@ -182,7 +182,7 @@ class GradientBoostingModel:
             予測確率の配列
         """
         if not self.is_trained or self.model is None:
-            raise UnifiedModelError("モデルが学習されていません")
+            raise ModelError("モデルが学習されていません")
 
         try:
             # 特徴量の順序を確認
@@ -194,7 +194,7 @@ class GradientBoostingModel:
 
         except Exception as e:
             logger.error(f"GradientBoosting確率予測エラー: {e}")
-            raise UnifiedModelError(f"確率予測に失敗しました: {e}")
+            raise ModelError(f"確率予測に失敗しました: {e}")
 
     @property
     def feature_columns(self) -> List[str]:
@@ -214,10 +214,10 @@ class GradientBoostingModel:
             特徴量重要度の辞書
         """
         if not self.is_trained or self.model is None:
-            raise UnifiedModelError("モデルが学習されていません")
+            raise ModelError("モデルが学習されていません")
 
         if not self.feature_columns:
-            raise UnifiedModelError("特徴量カラムが設定されていません")
+            raise ModelError("特徴量カラムが設定されていません")
 
         return dict(zip(self.feature_columns, self.model.feature_importances_))
 

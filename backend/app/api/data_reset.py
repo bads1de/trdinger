@@ -13,7 +13,7 @@ from sqlalchemy.orm import Session
 from app.services.data_collection.orchestration.data_management_orchestration_service import (
     DataManagementOrchestrationService,
 )
-from app.utils.unified_error_handler import UnifiedErrorHandler
+from app.utils.error_handler import ErrorHandler
 from database.connection import get_db
 
 logger = logging.getLogger(__name__)
@@ -34,7 +34,7 @@ async def reset_all_data(db: Session = Depends(get_db)) -> Dict[str, Any]:
         orchestration_service = DataManagementOrchestrationService()
         return await orchestration_service.reset_all_data(db_session=db)
 
-    return await UnifiedErrorHandler.safe_execute_async(
+    return await ErrorHandler.safe_execute_async(
         _reset_all_data, message="全データのリセット中にエラーが発生しました"
     )
 
@@ -52,7 +52,7 @@ async def reset_ohlcv_data(db: Session = Depends(get_db)) -> Dict[str, Any]:
         orchestration_service = DataManagementOrchestrationService()
         return await orchestration_service.reset_ohlcv_data(db_session=db)
 
-    return await UnifiedErrorHandler.safe_execute_async(
+    return await ErrorHandler.safe_execute_async(
         _reset_ohlcv_data, message="OHLCVデータのリセット中にエラーが発生しました"
     )
 
@@ -70,7 +70,7 @@ async def reset_funding_rate_data(db: Session = Depends(get_db)) -> Dict[str, An
         orchestration_service = DataManagementOrchestrationService()
         return await orchestration_service.reset_funding_rate_data(db_session=db)
 
-    return await UnifiedErrorHandler.safe_execute_async(
+    return await ErrorHandler.safe_execute_async(
         _reset_funding_rate_data,
         message="ファンディングレートデータのリセット中にエラーが発生しました",
     )
@@ -89,7 +89,7 @@ async def reset_open_interest_data(db: Session = Depends(get_db)) -> Dict[str, A
         orchestration_service = DataManagementOrchestrationService()
         return await orchestration_service.reset_open_interest_data(db_session=db)
 
-    return await UnifiedErrorHandler.safe_execute_async(
+    return await ErrorHandler.safe_execute_async(
         _reset_open_interest,
         message="オープンインタレストデータのリセット中にエラーが発生しました",
     )
@@ -115,7 +115,7 @@ async def reset_data_by_symbol(
             symbol=symbol, db_session=db
         )
 
-    return await UnifiedErrorHandler.safe_execute_async(
+    return await ErrorHandler.safe_execute_async(
         _reset_by_symbol, message="シンボル別データのリセット中にエラーが発生しました"
     )
 
@@ -133,6 +133,6 @@ async def get_data_status(db: Session = Depends(get_db)) -> Dict[str, Any]:
         orchestration_service = DataManagementOrchestrationService()
         return await orchestration_service.get_data_status(db_session=db)
 
-    return await UnifiedErrorHandler.safe_execute_async(
+    return await ErrorHandler.safe_execute_async(
         _get_status, message="データステータスの取得中にエラーが発生しました"
     )

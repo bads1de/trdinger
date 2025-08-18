@@ -47,6 +47,12 @@ class MLModelError(MLBaseError):
         super().__init__(message, "ML_MODEL_ERROR")
 
 
+class ModelError(MLBaseError):
+    """モデル関連の汎用エラー"""
+    def __init__(self, message: str, model_info: dict = None):
+        super().__init__(message, model_info)
+
+
 class MLTrainingError(MLBaseError):
     """MLトレーニング関連のエラー
     

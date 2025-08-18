@@ -14,7 +14,7 @@ import pandas as pd
 from sklearn.ensemble import StackingClassifier
 from sklearn.model_selection import StratifiedKFold
 
-from ....utils.unified_error_handler import UnifiedModelError
+from ....utils.error_handler import ModelError
 from .base_ensemble import BaseEnsemble
 
 logger = logging.getLogger(__name__)
@@ -106,7 +106,7 @@ class StackingEnsemble(BaseEnsemble):
                 logger.info(f"ベースモデル作成完了: {[name for name, _ in estimators]}")
             except Exception as e:
                 logger.error(f"ベースモデル作成エラー: {e}")
-                raise UnifiedModelError(f"ベースモデルの作成に失敗しました: {e}")
+                raise ModelError(f"ベースモデルの作成に失敗しました: {e}")
 
             # メタモデルを作成
             try:
@@ -114,7 +114,7 @@ class StackingEnsemble(BaseEnsemble):
                 logger.info(f"メタモデル作成完了: {self.meta_model}")
             except Exception as e:
                 logger.error(f"メタモデル作成エラー: {e}")
-                raise UnifiedModelError(
+                raise ModelError(
                     f"メタモデル({self.meta_model})の作成に失敗しました: {e}"
                 )
 
@@ -166,7 +166,7 @@ class StackingEnsemble(BaseEnsemble):
 
         except Exception as e:
             logger.error(f"スタッキングアンサンブル学習エラー: {e}")
-            raise UnifiedModelError(f"スタッキングアンサンブル学習に失敗しました: {e}")
+            raise ModelError(f"スタッキングアンサンブル学習に失敗しました: {e}")
 
     def predict(self, X: pd.DataFrame) -> np.ndarray:
         """
@@ -179,7 +179,7 @@ class StackingEnsemble(BaseEnsemble):
             予測結果
         """
         if not self.is_fitted or self.stacking_classifier is None:
-            raise UnifiedModelError("モデルが学習されていません")
+            raise ModelError("モデルが学習されていません")
 
         return self.stacking_classifier.predict(X)
 
@@ -194,7 +194,7 @@ class StackingEnsemble(BaseEnsemble):
             予測確率の配列
         """
         if not self.is_fitted or self.stacking_classifier is None:
-            raise UnifiedModelError("モデルが学習されていません")
+            raise ModelError("モデルが学習されていません")
 
         return self.stacking_classifier.predict_proba(X)
 
@@ -217,7 +217,7 @@ class StackingEnsemble(BaseEnsemble):
                 continue
 
         if not estimators:
-            raise UnifiedModelError("有効なベースモデルが作成できませんでした")
+            raise ModelError("有効なベースモデルが作成できませんでした")
 
         return estimators
 

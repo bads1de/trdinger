@@ -12,10 +12,9 @@ from typing import List, Optional
 import aiohttp
 
 from app.utils.data_conversion import DataSanitizer
-from app.utils.unified_error_handler import (
-    UnifiedDataError,
-    UnifiedErrorHandler,
-    unified_safe_operation,
+from app.utils.error_handler import (
+    DataError,
+    ErrorHandler,
 )
 from database.repositories.fear_greed_repository import FearGreedIndexRepository
 
@@ -65,7 +64,7 @@ class FearGreedIndexService:
         try:
             return await self._fetch_fear_greed_data_impl(limit)
         except Exception as e:
-            logger.error(f"Fear & Greed Index データ取得エラー: {e}")
+            ErrorHandler.handle_model_error(e, context="fetch_fear_greed_index")
             return []
 
     async def _fetch_fear_greed_data_impl(self, limit: int) -> List[dict]:
@@ -79,7 +78,7 @@ class FearGreedIndexService:
 
         async with session.get(self.api_url, params=params) as response:
             if response.status != 200:
-                raise UnifiedDataError(
+                raise DataError(
                     f"API request failed with status {response.status}: {await response.text()}"
                 )
 
@@ -87,19 +86,19 @@ class FearGreedIndexService:
 
             # レスポンス構造の検証
             if not isinstance(data, dict):
-                raise UnifiedDataError("APIレスポンスが辞書形式ではありません")
+                raise DataError("APIレスポンスが辞書形式ではありません")
 
             if "data" not in data:
-                raise UnifiedDataError("APIレスポンスに'data'フィールドがありません")
+                raise DataError("APIレスポンスに'data'フィールドがありません")
 
             if not isinstance(data["data"], list):
-                raise UnifiedDataError(
+                raise DataError(
                     "APIレスポンスの'data'フィールドがリスト形式ではありません"
                 )
 
             # メタデータのエラーチェック
             if "metadata" in data and data["metadata"].get("error"):
-                raise UnifiedDataError(f"API error: {data['metadata']['error']}")
+                raise DataError(f"API error: {data['metadata']['error']}")
 
             raw_data = data["data"]
             logger.info(f"Fear & Greed Index データを {len(raw_data)} 件取得しました")
@@ -199,7 +198,7 @@ class FearGreedIndexService:
 
         # データ検証
         if not DataSanitizer.validate_fear_greed_data(fear_greed_data):
-            raise UnifiedDataError("取得したFear & Greed Indexデータが無効です")
+            raise DataError("取得したFear & Greed Indexデータが無効です")
 
         # データベースに保存
         if repository:

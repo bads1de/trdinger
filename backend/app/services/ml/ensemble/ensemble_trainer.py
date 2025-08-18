@@ -11,7 +11,7 @@ from typing import Any, Dict, Optional
 import numpy as np
 import pandas as pd
 
-from ....utils.unified_error_handler import UnifiedModelError
+from ....utils.error_handler import ModelError
 from ..base_ml_trainer import BaseMLTrainer
 from .bagging import BaggingEnsemble
 from .stacking import StackingEnsemble
@@ -132,7 +132,7 @@ class EnsembleTrainer(BaseMLTrainer):
             予測確率の配列 [下落確率, レンジ確率, 上昇確率]
         """
         if self.ensemble_model is None or not self.ensemble_model.is_fitted:
-            raise UnifiedModelError("学習済みアンサンブルモデルがありません")
+            raise ModelError("学習済みアンサンブルモデルがありません")
 
         try:
             # アンサンブルモデルは主にLightGBMベースなのでスケーリング不要
@@ -147,14 +147,14 @@ class EnsembleTrainer(BaseMLTrainer):
                 return predictions
             else:
                 # 予期しない形状の場合はエラー
-                raise UnifiedModelError(
+                raise ModelError(
                     f"予期しない予測確率の形状: {predictions.shape}. "
                     f"3クラス分類 (down, range, up) の確率が期待されます。"
                 )
 
         except Exception as e:
             logger.error(f"アンサンブル予測エラー: {e}")
-            raise UnifiedModelError(f"アンサンブル予測に失敗しました: {e}")
+            raise ModelError(f"アンサンブル予測に失敗しました: {e}")
 
     def _train_model_impl(
         self,
@@ -240,7 +240,7 @@ class EnsembleTrainer(BaseMLTrainer):
                 )
 
             else:
-                raise UnifiedModelError(
+                raise ModelError(
                     f"サポートされていないアンサンブル手法: {self.ensemble_method}"
                 )
 
@@ -260,7 +260,7 @@ class EnsembleTrainer(BaseMLTrainer):
                 logger.info("アンサンブルモデルの学習が完了")
             except Exception as e:
                 logger.error(f"アンサンブルモデル学習エラー: {e}")
-                raise UnifiedModelError(f"アンサンブルモデルの学習に失敗しました: {e}")
+                raise ModelError(f"アンサンブルモデルの学習に失敗しました: {e}")
 
             # 予測と評価
             y_pred_proba = self.ensemble_model.predict_proba(X_test)
@@ -348,7 +348,7 @@ class EnsembleTrainer(BaseMLTrainer):
 
         except Exception as e:
             logger.error(f"アンサンブルモデル学習エラー: {e}")
-            raise UnifiedModelError(f"アンサンブルモデル学習に失敗しました: {e}")
+            raise ModelError(f"アンサンブルモデル学習に失敗しました: {e}")
 
     def save_model(
         self, model_name: str, metadata: Optional[Dict[str, Any]] = None
@@ -364,14 +364,14 @@ class EnsembleTrainer(BaseMLTrainer):
             保存されたモデルのパス
         """
         if self.ensemble_model is None:
-            raise UnifiedModelError("アンサンブルモデルが初期化されていません")
+            raise ModelError("アンサンブルモデルが初期化されていません")
         if not self.is_trained:
-            raise UnifiedModelError("アンサンブルモデルが学習されていません")
+            raise ModelError("アンサンブルモデルが学習されていません")
         if (
             not hasattr(self.ensemble_model, "is_fitted")
             or not self.ensemble_model.is_fitted
         ):
-            raise UnifiedModelError("アンサンブルモデルの学習が完了していません")
+            raise ModelError("アンサンブルモデルの学習が完了していません")
 
         try:
             from ..model_manager import model_manager
@@ -448,13 +448,13 @@ class EnsembleTrainer(BaseMLTrainer):
                 )
                 return model_path
             else:
-                raise UnifiedModelError(
+                raise ModelError(
                     f"アンサンブルモデルが保存可能な形式ではありません。base_models数: {len(self.ensemble_model.base_models)}"
                 )
 
         except Exception as e:
             logger.error(f"アンサンブルモデル保存エラー: {e}")
-            raise UnifiedModelError(f"アンサンブルモデルの保存に失敗しました: {e}")
+            raise ModelError(f"アンサンブルモデルの保存に失敗しました: {e}")
 
     def load_model(self, model_path: str) -> bool:
         """
@@ -511,7 +511,7 @@ class EnsembleTrainer(BaseMLTrainer):
                     config=stacking_config, automl_config=self.automl_config
                 )
             else:
-                raise UnifiedModelError(
+                raise ModelError(
                     f"サポートされていないアンサンブル手法: {self.ensemble_method}"
                 )
 

@@ -23,23 +23,23 @@ logger = logging.getLogger(__name__)
 T = TypeVar("T")
 
 
-class UnifiedTimeoutError(Exception):
+class TimeoutError(Exception):
     """統一タイムアウトエラー"""
 
 
-class UnifiedValidationError(Exception):
+class ValidationError(Exception):
     """統一バリデーションエラー"""
 
 
-class UnifiedDataError(Exception):
+class DataError(Exception):
     """統一データエラー"""
 
 
-class UnifiedModelError(Exception):
+class ModelError(Exception):
     """統一モデルエラー"""
 
 
-class UnifiedErrorHandler:
+class ErrorHandler:
     """
     統一エラーハンドリングクラス
 
@@ -128,7 +128,7 @@ class UnifiedErrorHandler:
 
         return HTTPException(
             status_code=status_code,
-            detail=UnifiedErrorHandler.create_error_response(
+            detail=ErrorHandler.create_error_response(
                 message=str(error),
                 error_code=error_code,
                 context=context,
@@ -143,7 +143,7 @@ class UnifiedErrorHandler:
     ) -> Dict[str, Any]:
         """モデルエラーの統一処理"""
         logger.error(f"モデルエラー in {context} during {operation}: {error}")
-        return UnifiedErrorHandler.create_error_response(
+        return ErrorHandler.create_error_response(
             message=str(error),
             error_code="MODEL_ERROR",
             context=context,
@@ -207,7 +207,7 @@ class UnifiedErrorHandler:
         except Exception as e:
             if is_api_call:
                 # API関連のエラーとして処理
-                raise UnifiedErrorHandler.handle_api_error(
+                raise ErrorHandler.handle_api_error(
                     e,
                     context=error_message,
                     status_code=api_status_code,
@@ -265,20 +265,20 @@ class UnifiedErrorHandler:
             関数の実行結果
 
         Raises:
-            UnifiedTimeoutError: タイムアウト時
+            TimeoutError: タイムアウト時
         """
         try:
             if platform.system() == "Windows":
-                return UnifiedErrorHandler._handle_timeout_windows(
+                return ErrorHandler._handle_timeout_windows(
                     func, timeout_seconds, *args, **kwargs
                 )
             else:
-                return UnifiedErrorHandler._handle_timeout_unix(
+                return ErrorHandler._handle_timeout_unix(
                     func, timeout_seconds, *args, **kwargs
                 )
         except Exception as e:
             if "timeout" in str(e).lower():
-                raise UnifiedTimeoutError(
+                raise TimeoutError(
                     f"処理がタイムアウトしました（{timeout_seconds}秒）: {e}"
                 )
             raise
@@ -293,7 +293,7 @@ class UnifiedErrorHandler:
             try:
                 return future.result(timeout=timeout_seconds)
             except concurrent.futures.TimeoutError:
-                raise UnifiedTimeoutError(
+                raise TimeoutError(
                     f"Windows環境でのタイムアウト（{timeout_seconds}秒）"
                 )
 
@@ -305,7 +305,7 @@ class UnifiedErrorHandler:
 
         def timeout_handler(signum, frame):
             _ = signum, frame  # 未使用パラメータ
-            raise UnifiedTimeoutError(
+            raise TimeoutError(
                 f"Unix環境でのタイムアウト（{timeout_seconds}秒）"
             )
 
@@ -358,7 +358,7 @@ class UnifiedErrorHandler:
             return is_valid
 
         except Exception as e:
-            UnifiedErrorHandler.handle_model_error(
+            ErrorHandler.handle_model_error(
                 e, context, operation="validate_predictions"
             )
             return False
@@ -405,31 +405,27 @@ class UnifiedErrorHandler:
 
             return True
         except Exception as e:
-            UnifiedErrorHandler.handle_model_error(
-                e, context, operation="validate_dataframe"
-            )
+            ErrorHandler.handle_model_error(e, context, operation="validate_dataframe")
             return False
 
 
 # --- デコレータとコンテキストマネージャー ---
 
 
-def unified_timeout_decorator(timeout_seconds: int):
+def timeout_decorator(timeout_seconds: int):
     """統一タイムアウト処理のデコレータ"""
 
     def decorator(func):
         @functools.wraps(func)
         def wrapper(*args, **kwargs):
-            return UnifiedErrorHandler.handle_timeout(
-                func, timeout_seconds, *args, **kwargs
-            )
+            return ErrorHandler.handle_timeout(func, timeout_seconds, *args, **kwargs)
 
         return wrapper
 
     return decorator
 
 
-def unified_safe_operation(
+def safe_operation(
     default_return: Any = None,
     error_handler: Optional[Callable] = None,
     context: str = "統一操作",
@@ -451,7 +447,7 @@ def unified_safe_operation(
                     return error_handler(e, context)
                 else:
                     if is_api_call:
-                        raise UnifiedErrorHandler.handle_api_error(e, context)
+                        raise ErrorHandler.handle_api_error(e, context)
                     else:
                         logger.error(f"エラー in {context}: {e}")
                         return default_return
@@ -462,7 +458,7 @@ def unified_safe_operation(
 
 
 @contextmanager
-def unified_operation_context(operation_name: str, log_memory: bool = False):
+def operation_context(operation_name: str, log_memory: bool = False):
     """統一操作のコンテキストマネージャー"""
     start_time = time.time()
 
@@ -488,19 +484,8 @@ def unified_operation_context(operation_name: str, log_memory: bool = False):
             pass
 
 
-# --- 標準エイリアス（統一後のインターフェース） ---
-
 # 標準的なエイリアス
-handle_api_exception = UnifiedErrorHandler.safe_execute_async
-safe_execute = UnifiedErrorHandler.safe_execute
-timeout_decorator = unified_timeout_decorator
-safe_ml_operation = unified_safe_operation
-ml_operation_context = unified_operation_context
-
-# ML例外クラスのインポート
-from app.services.ml.exceptions import (
-    MLTimeoutError,
-    MLValidationError,
-    MLDataError,
-    MLModelError,
-)
+handle_api_exception = ErrorHandler.safe_execute_async
+safe_execute = ErrorHandler.safe_execute
+safe_ml_operation = safe_operation
+ml_operation_context = operation_context

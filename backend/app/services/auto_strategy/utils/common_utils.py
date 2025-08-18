@@ -7,7 +7,7 @@ auto_strategy全体で使用される共通機能を提供します。
 import logging
 from typing import Any, Dict, List, Optional, Union
 from datetime import datetime
-from .error_handling import AutoStrategyErrorHandler
+from .error_handling import ErrorHandler
 
 logger = logging.getLogger(__name__)
 
@@ -173,7 +173,7 @@ class CacheUtils:
 
 # 便利な関数のエイリアス（AutoStrategyErrorHandlerに統合）
 safe_execute = AutoStrategyErrorHandler.safe_execute
-# safe_execute_async は UnifiedErrorHandler から利用可能
+# safe_execute_async は ErrorHandler から利用可能
 ensure_float = DataConverter.ensure_float
 ensure_int = DataConverter.ensure_int
 ensure_list = DataConverter.ensure_list

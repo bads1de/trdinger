@@ -12,7 +12,7 @@ import numpy as np
 import pandas as pd
 from sklearn.linear_model import RidgeClassifier
 
-from ....utils.unified_error_handler import UnifiedModelError
+from ....utils.error_handler import ModelError
 from ..common.evaluation_utils import evaluate_model_predictions
 
 logger = logging.getLogger(__name__)
@@ -159,7 +159,7 @@ class RidgeModel:
 
         except Exception as e:
             logger.error(f"❌ Ridge学習エラー: {e}")
-            raise UnifiedModelError(f"Ridge学習に失敗しました: {e}")
+            raise ModelError(f"Ridge学習に失敗しました: {e}")
 
     def predict(self, X: pd.DataFrame) -> np.ndarray:
         """
@@ -172,7 +172,7 @@ class RidgeModel:
             予測結果
         """
         if not self.is_trained or self.model is None:
-            raise UnifiedModelError("モデルが学習されていません")
+            raise ModelError("モデルが学習されていません")
 
         try:
             # 特徴量の順序を確認
@@ -184,7 +184,7 @@ class RidgeModel:
 
         except Exception as e:
             logger.error(f"Ridge予測エラー: {e}")
-            raise UnifiedModelError(f"予測に失敗しました: {e}")
+            raise ModelError(f"予測に失敗しました: {e}")
 
     def predict_proba(self, X: pd.DataFrame) -> np.ndarray:
         """
@@ -197,9 +197,9 @@ class RidgeModel:
             予測確率の配列
 
         Raises:
-            UnifiedModelError: RidgeClassifierは確率予測に対応していない
+            ModelError: RidgeClassifierは確率予測に対応していない
         """
-        raise UnifiedModelError(
+        raise MLModelError(
             "RidgeClassifierは確率予測（predict_proba）に対応していません"
         )
 
@@ -221,10 +221,10 @@ class RidgeModel:
             特徴量重要度の辞書
         """
         if not self.is_trained or self.model is None:
-            raise UnifiedModelError("モデルが学習されていません")
+            raise ModelError("モデルが学習されていません")
 
         if not self.feature_columns:
-            raise UnifiedModelError("特徴量カラムが設定されていません")
+            raise ModelError("特徴量カラムが設定されていません")
 
         if hasattr(self.model, "coef_"):
             if len(self.model.coef_.shape) > 1:

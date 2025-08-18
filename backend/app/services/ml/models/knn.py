@@ -13,7 +13,7 @@ import pandas as pd
 from sklearn.neighbors import KNeighborsClassifier, NearestNeighbors
 
 
-from ....utils.unified_error_handler import UnifiedModelError
+from ....utils.error_handler import ModelError
 
 logger = logging.getLogger(__name__)
 
@@ -122,7 +122,7 @@ class KNNModel:
 
         except Exception as e:
             logger.error(f"sklearn互換fit実行エラー: {e}")
-            raise UnifiedModelError(f"KNNモデルのfit実行に失敗しました: {e}")
+            raise ModelError(f"KNNモデルのfit実行に失敗しました: {e}")
 
     def _train_model_impl(
         self,
@@ -233,7 +233,7 @@ class KNNModel:
 
         except Exception as e:
             logger.error(f"❌ KNN学習エラー: {e}")
-            raise UnifiedModelError(f"KNN学習に失敗しました: {e}")
+            raise ModelError(f"KNN学習に失敗しました: {e}")
 
     def predict(self, X) -> np.ndarray:
         """
@@ -246,7 +246,7 @@ class KNNModel:
             予測結果
         """
         if not self.is_trained or self.model is None:
-            raise UnifiedModelError("モデルが学習されていません")
+            raise ModelError("モデルが学習されていません")
 
         try:
             # numpy配列をDataFrameに変換
@@ -267,7 +267,7 @@ class KNNModel:
 
         except Exception as e:
             logger.error(f"KNN予測エラー: {e}")
-            raise UnifiedModelError(f"予測に失敗しました: {e}")
+            raise ModelError(f"予測に失敗しました: {e}")
 
     def predict_proba(self, X) -> np.ndarray:
         """
@@ -280,7 +280,7 @@ class KNNModel:
             予測確率の配列
         """
         if not self.is_trained or self.model is None:
-            raise UnifiedModelError("モデルが学習されていません")
+            raise ModelError("モデルが学習されていません")
 
         try:
             # numpy配列をDataFrameに変換
@@ -301,7 +301,7 @@ class KNNModel:
 
         except Exception as e:
             logger.error(f"KNN確率予測エラー: {e}")
-            raise UnifiedModelError(f"確率予測に失敗しました: {e}")
+            raise ModelError(f"確率予測に失敗しました: {e}")
 
     @property
     def feature_columns(self) -> List[str]:
@@ -321,10 +321,10 @@ class KNNModel:
             特徴量重要度の辞書
         """
         if not self.is_trained or self.model is None:
-            raise UnifiedModelError("モデルが学習されていません")
+            raise ModelError("モデルが学習されていません")
 
         if not self.feature_columns:
-            raise UnifiedModelError("特徴量カラムが設定されていません")
+            raise ModelError("特徴量カラムが設定されていません")
 
         # 学習データから距離ベースの重要度を計算
         if hasattr(self.model, "_fit_X"):

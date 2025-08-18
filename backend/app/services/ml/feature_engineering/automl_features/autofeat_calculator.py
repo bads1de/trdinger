@@ -18,7 +18,7 @@ from sklearn.ensemble import RandomForestRegressor
 from sklearn.model_selection import cross_val_score
 
 from .....utils.data_processing import data_processor as data_preprocessor
-from .....utils.unified_error_handler import safe_ml_operation
+from .....utils.error_handler import safe_ml_operation
 from .automl_config import AutoFeatConfig
 from .performance_optimizer import PerformanceOptimizer
 

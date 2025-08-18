@@ -12,7 +12,7 @@ import lightgbm as lgb
 import numpy as np
 import pandas as pd
 
-from ....utils.unified_error_handler import UnifiedModelError
+from ....utils.error_handler import ModelError
 
 logger = logging.getLogger(__name__)
 
@@ -102,7 +102,7 @@ class LightGBMModel:
 
         except Exception as e:
             logger.error(f"sklearn互換fit実行エラー: {e}")
-            raise UnifiedModelError(f"LightGBMモデルのfit実行に失敗しました: {e}")
+            raise ModelError(f"LightGBMモデルのfit実行に失敗しました: {e}")
 
     def _train_model_impl(
         self,
@@ -213,7 +213,7 @@ class LightGBMModel:
 
         except Exception as e:
             logger.error(f"LightGBMモデル学習エラー: {e}")
-            raise UnifiedModelError(f"LightGBMモデル学習に失敗しました: {e}")
+            raise ModelError(f"LightGBMモデル学習に失敗しました: {e}")
 
     def get_feature_importance(self, top_n: int = 10) -> Dict[str, float]:
         """
@@ -264,7 +264,7 @@ class LightGBMModel:
             予測クラス
         """
         if not self.is_trained or self.model is None:
-            raise UnifiedModelError("学習済みモデルがありません")
+            raise ModelError("学習済みモデルがありません")
 
         try:
             # numpy配列をDataFrameに変換
@@ -293,7 +293,7 @@ class LightGBMModel:
 
         except Exception as e:
             logger.error(f"予測実行エラー: {e}")
-            raise UnifiedModelError(f"予測実行に失敗しました: {e}")
+            raise ModelError(f"予測実行に失敗しました: {e}")
 
     def predict_proba(self, X) -> np.ndarray:
         """
@@ -306,7 +306,7 @@ class LightGBMModel:
             予測確率
         """
         if not self.is_trained or self.model is None:
-            raise UnifiedModelError("学習済みモデルがありません")
+            raise ModelError("学習済みモデルがありません")
 
         try:
             # numpy配列をDataFrameに変換
@@ -330,4 +330,4 @@ class LightGBMModel:
 
         except Exception as e:
             logger.error(f"予測確率取得エラー: {e}")
-            raise UnifiedModelError(f"予測確率取得に失敗しました: {e}")
+            raise ModelError(f"予測確率取得に失敗しました: {e}")

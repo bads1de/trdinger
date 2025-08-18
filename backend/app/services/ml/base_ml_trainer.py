@@ -19,8 +19,8 @@ from .ml_metadata import ModelMetadata
 from ...utils.data_processing import data_processor as data_preprocessor
 from ...utils.label_generation import LabelGenerator, ThresholdMethod
 from .exceptions import (
-    MLDataError,
     MLModelError,
+    ModelError,
 )
 from ...utils.unified_error_handler import (
     ml_operation_context,
@@ -128,8 +128,8 @@ class BaseMLTrainer(BaseResourceManager, ABC):
             学習結果の辞書
 
         Raises:
-            UnifiedDataError: データが無効な場合
-            UnifiedModelError: 学習に失敗した場合
+            DataError: データが無効な場合
+            ModelError: 学習に失敗した場合
         """
         with ml_operation_context("MLモデル学習"):
             # 1. 入力データの検証
@@ -251,7 +251,7 @@ class BaseMLTrainer(BaseResourceManager, ABC):
             評価結果の辞書
         """
         if not self.is_trained:
-            raise UnifiedModelError("評価対象の学習済みモデルがありません")
+            raise ModelError("評価対象の学習済みモデルがありません")
 
         # 特徴量を計算
         features_df = self._calculate_features(
@@ -526,17 +526,17 @@ class BaseMLTrainer(BaseResourceManager, ABC):
     def _validate_training_data(self, training_data: pd.DataFrame) -> None:
         """入力データの検証"""
         if training_data is None or training_data.empty:
-            raise UnifiedDataError("学習データが空です")
+            raise DataError("学習データが空です")
 
         required_columns = ["Open", "High", "Low", "Close", "Volume"]
         missing_columns = [
             col for col in required_columns if col not in training_data.columns
         ]
         if missing_columns:
-            raise UnifiedDataError(f"必要なカラムが不足しています: {missing_columns}")
+            raise DataError(f"必要なカラムが不足しています: {missing_columns}")
 
         if len(training_data) < 100:
-            raise UnifiedDataError("学習データが不足しています（最低100行必要）")
+            raise DataError("学習データが不足しています（最低100行必要）")
 
     def _calculate_features(
         self,
@@ -800,7 +800,7 @@ class BaseMLTrainer(BaseResourceManager, ABC):
     ) -> Optional[str]:
         """モデルを保存"""
         if not self.is_trained:
-            raise UnifiedModelError("学習済みモデルがありません")
+            raise ModelError("学習済みモデルがありません")
 
         # アンサンブルトレーナーが存在する場合は、そちらに委譲
         if hasattr(self, "_ensemble_trainer") and self._ensemble_trainer:

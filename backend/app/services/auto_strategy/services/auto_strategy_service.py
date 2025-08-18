@@ -12,6 +12,7 @@ from fastapi import BackgroundTasks
 from app.services.backtest.backtest_data_service import BacktestDataService
 from app.services.backtest.backtest_service import BacktestService
 from database.connection import SessionLocal
+from app.utils.error_handler import ErrorHandler
 
 from .experiment_manager import ExperimentManager
 from ..models.ga_config import GAConfig
@@ -118,7 +119,7 @@ class AutoStrategyService:
             if not is_valid:
                 raise ValueError(f"無効なGA設定です: {', '.join(errors)}")
         except Exception as e:
-            raise ValueError(f"GA設定の構築または検証に失敗しました: {e}")
+            raise ErrorHandler.handle_api_error(e, context="create_strategy")
 
         # 2. バックテスト設定のシンボル正規化
         backtest_config = backtest_config_dict.copy()

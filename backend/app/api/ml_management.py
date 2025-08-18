@@ -15,7 +15,7 @@ from app.services.ml.orchestration.ml_management_orchestration_service import (
     MLManagementOrchestrationService,
 )
 from app.utils.response import api_response, error_response
-from app.utils.unified_error_handler import UnifiedErrorHandler
+from app.utils.error_handler import ErrorHandler
 from database.connection import get_db
 from database.repositories.funding_rate_repository import FundingRateRepository
 from database.repositories.ohlcv_repository import OHLCVRepository
@@ -45,7 +45,7 @@ async def get_models(
     async def _get_models():
         return await ml_service.get_formatted_models()
 
-    return await UnifiedErrorHandler.safe_execute_async(_get_models)
+    return await ErrorHandler.safe_execute_async(_get_models)
 
 
 @router.delete("/models/all")
@@ -64,7 +64,7 @@ async def delete_all_models(
     async def _delete_all_models():
         return await ml_service.delete_all_models()
 
-    return await UnifiedErrorHandler.safe_execute_async(_delete_all_models)
+    return await ErrorHandler.safe_execute_async(_delete_all_models)
 
 
 @router.delete("/models/{model_id}")
@@ -88,7 +88,7 @@ async def delete_model(
     async def _delete_model():
         return await ml_service.delete_model(model_id)
 
-    return await UnifiedErrorHandler.safe_execute_async(_delete_model)
+    return await ErrorHandler.safe_execute_async(_delete_model)
 
 
 @router.get("/status")
@@ -110,7 +110,7 @@ async def get_ml_status(
     async def _get_ml_status():
         return await ml_service.get_ml_status()
 
-    return await UnifiedErrorHandler.safe_execute_async(_get_ml_status)
+    return await ErrorHandler.safe_execute_async(_get_ml_status)
 
 
 @router.get("/feature-importance")
@@ -131,7 +131,7 @@ async def get_feature_importance(
     async def _get_feature_importance():
         return await ml_service.get_feature_importance(top_n)
 
-    return await UnifiedErrorHandler.safe_execute_async(_get_feature_importance)
+    return await ErrorHandler.safe_execute_async(_get_feature_importance)
 
 
 @router.post("/models/{model_name}/load")
@@ -151,7 +151,7 @@ async def load_model(
     async def _load_model():
         return await ml_service.load_model(model_name)
 
-    return await UnifiedErrorHandler.safe_execute_async(_load_model)
+    return await ErrorHandler.safe_execute_async(_load_model)
 
 
 @router.get("/models/current")
@@ -167,7 +167,7 @@ async def get_current_model(
     async def _get_current_model():
         return await ml_service.get_current_model_info()
 
-    return await UnifiedErrorHandler.safe_execute_async(_get_current_model)
+    return await ErrorHandler.safe_execute_async(_get_current_model)
 
 
 @router.get("/automl-feature-analysis")
@@ -188,7 +188,7 @@ async def get_automl_feature_analysis(
     async def _get_automl_feature_analysis():
         return await ml_service.get_automl_feature_analysis(top_n)
 
-    return await UnifiedErrorHandler.safe_execute_async(_get_automl_feature_analysis)
+    return await ErrorHandler.safe_execute_async(_get_automl_feature_analysis)
 
 
 @router.get("/config")
@@ -210,7 +210,7 @@ async def get_ml_config(
     async def _get_ml_config():
         return ml_service.get_ml_config_dict()
 
-    return await UnifiedErrorHandler.safe_execute_async(_get_ml_config)
+    return await ErrorHandler.safe_execute_async(_get_ml_config)
 
 
 @router.put("/config")
@@ -241,7 +241,7 @@ async def update_ml_config(
         else:
             return error_response(message=result["message"])
 
-    return await UnifiedErrorHandler.safe_execute_async(_update_ml_config)
+    return await ErrorHandler.safe_execute_async(_update_ml_config)
 
 
 @router.post("/config/reset")
@@ -268,7 +268,7 @@ async def reset_ml_config(
         else:
             return error_response(message=result["message"])
 
-    return await UnifiedErrorHandler.safe_execute_async(_reset_ml_config)
+    return await ErrorHandler.safe_execute_async(_reset_ml_config)
 
 
 @router.post("/models/cleanup")
@@ -287,7 +287,7 @@ async def cleanup_old_models(
     async def _cleanup_old_models():
         return await ml_service.cleanup_old_models()
 
-    return await UnifiedErrorHandler.safe_execute_async(_cleanup_old_models)
+    return await ErrorHandler.safe_execute_async(_cleanup_old_models)
 
 
 def get_data_service(db: Session = Depends(get_db)) -> BacktestDataService:

@@ -14,7 +14,7 @@ from sqlalchemy.orm import Session
 from app.services.data_collection.orchestration.fear_greed_orchestration_service import (
     FearGreedOrchestrationService,
 )
-from app.utils.unified_error_handler import UnifiedErrorHandler
+from app.utils.error_handler import ErrorHandler
 from database.connection import get_db
 
 logger = logging.getLogger(__name__)
@@ -49,7 +49,7 @@ async def get_fear_greed_data(
             db=db, start_date=start_date, end_date=end_date, limit=limit
         )
 
-    return await UnifiedErrorHandler.safe_execute_async(_get_fear_greed_data)
+    return await ErrorHandler.safe_execute_async(_get_fear_greed_data)
 
 
 @router.get("/latest")
@@ -73,7 +73,7 @@ async def get_latest_fear_greed_data(
     async def _get_latest_data():
         return await service.get_latest_fear_greed_data(db=db, limit=limit)
 
-    return await UnifiedErrorHandler.safe_execute_async(_get_latest_data)
+    return await ErrorHandler.safe_execute_async(_get_latest_data)
 
 
 @router.get("/status")
@@ -94,7 +94,7 @@ async def get_fear_greed_data_status(
         orchestration_service = FearGreedOrchestrationService()
         return await orchestration_service.get_fear_greed_data_status(db)
 
-    return await UnifiedErrorHandler.safe_execute_async(_execute)
+    return await ErrorHandler.safe_execute_async(_execute)
 
 
 @router.post("/collect")
@@ -120,7 +120,7 @@ async def collect_fear_greed_data(
     async def _execute():
         return await orchestration_service.collect_fear_greed_data(limit, db)
 
-    return await UnifiedErrorHandler.safe_execute_async(_execute)
+    return await ErrorHandler.safe_execute_async(_execute)
 
 
 @router.post("/collect-incremental")
@@ -142,7 +142,7 @@ async def collect_incremental_fear_greed_data(
         orchestration_service = FearGreedOrchestrationService()
         return await orchestration_service.collect_incremental_fear_greed_data(db)
 
-    return await UnifiedErrorHandler.safe_execute_async(_execute)
+    return await ErrorHandler.safe_execute_async(_execute)
 
 
 @router.post("/collect-historical")
@@ -165,7 +165,7 @@ async def collect_historical_fear_greed_data(
         orchestration_service = FearGreedOrchestrationService()
         return await orchestration_service.collect_historical_fear_greed_data(limit, db)
 
-    return await UnifiedErrorHandler.safe_execute_async(_execute)
+    return await ErrorHandler.safe_execute_async(_execute)
 
 
 @router.delete("/cleanup")
@@ -188,4 +188,4 @@ async def cleanup_old_fear_greed_data(
         orchestration_service = FearGreedOrchestrationService()
         return await orchestration_service.cleanup_old_fear_greed_data(days_to_keep, db)
 
-    return await UnifiedErrorHandler.safe_execute_async(_execute)
+    return await ErrorHandler.safe_execute_async(_execute)

@@ -12,7 +12,7 @@ import numpy as np
 import pandas as pd
 import xgboost as xgb
 
-from ....utils.unified_error_handler import UnifiedModelError
+from ....utils.error_handler import ModelError
 
 logger = logging.getLogger(__name__)
 
@@ -150,10 +150,10 @@ class XGBoostModel:
             logger.error(
                 "XGBoostがインストールされていません。pip install xgboostを実行してください。"
             )
-            raise UnifiedModelError("XGBoostがインストールされていません")
+            raise ModelError("XGBoostがインストールされていません")
         except Exception as e:
             logger.error(f"XGBoostモデル学習エラー: {e}")
-            raise UnifiedModelError(f"XGBoostモデル学習に失敗しました: {e}")
+            raise ModelError(f"XGBoostモデル学習に失敗しました: {e}")
 
     def predict(self, X: pd.DataFrame) -> np.ndarray:
         """
@@ -166,7 +166,7 @@ class XGBoostModel:
             予測確率
         """
         if not self.is_trained or self.model is None:
-            raise UnifiedModelError("学習済みモデルがありません")
+            raise ModelError("学習済みモデルがありません")
 
         dtest = xgb.DMatrix(X)
         predictions = self.model.predict(dtest)

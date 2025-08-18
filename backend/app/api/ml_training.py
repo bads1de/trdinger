@@ -15,7 +15,7 @@ from app.api.automl_features import AutoMLConfigModel
 from app.services.ml.orchestration.ml_training_orchestration_service import (
     MLTrainingOrchestrationService,
 )
-from app.utils.unified_error_handler import UnifiedErrorHandler
+from app.utils.error_handler import ErrorHandler
 from database.connection import get_db
 
 logger = logging.getLogger(__name__)
@@ -242,7 +242,7 @@ async def start_ml_training(
             config=config, background_tasks=background_tasks, db=db
         )
 
-    return await UnifiedErrorHandler.safe_execute_async(_start_training)
+    return await ErrorHandler.safe_execute_async(_start_training)
 
 
 @router.get("/training/status", response_model=MLStatusResponse)
@@ -267,7 +267,7 @@ async def get_ml_model_info():
         orchestration_service = MLTrainingOrchestrationService()
         return await orchestration_service.get_model_info()
 
-    return await UnifiedErrorHandler.safe_execute_async(_get_model_info)
+    return await ErrorHandler.safe_execute_async(_get_model_info)
 
 
 @router.post("/stop")
@@ -281,4 +281,4 @@ async def stop_ml_training():
         orchestration_service = MLTrainingOrchestrationService()
         return await orchestration_service.stop_training()
 
-    return await UnifiedErrorHandler.safe_execute_async(_stop_training)
+    return await ErrorHandler.safe_execute_async(_stop_training)

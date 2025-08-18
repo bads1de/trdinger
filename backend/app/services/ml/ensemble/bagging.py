@@ -14,7 +14,7 @@ import pandas as pd
 from sklearn.ensemble import BaggingClassifier
 
 
-from ....utils.unified_error_handler import UnifiedModelError
+from ....utils.error_handler import ModelError
 from .base_ensemble import BaseEnsemble
 
 logger = logging.getLogger(__name__)
@@ -101,7 +101,7 @@ class BaggingEnsemble(BaseEnsemble):
                 logger.info(f"ベースモデル作成完了: {self.base_model_type}")
             except Exception as e:
                 logger.error(f"ベースモデル作成エラー: {e}")
-                raise UnifiedModelError(
+                raise ModelError(
                     f"ベースモデル({self.base_model_type})の作成に失敗しました: {e}"
                 )
 
@@ -119,7 +119,7 @@ class BaggingEnsemble(BaseEnsemble):
                 logger.info("BaggingClassifier初期化完了")
             except Exception as e:
                 logger.error(f"BaggingClassifier初期化エラー: {e}")
-                raise UnifiedModelError(f"BaggingClassifierの初期化に失敗しました: {e}")
+                raise ModelError(f"BaggingClassifierの初期化に失敗しました: {e}")
 
             # モデルを学習
             logger.info(
@@ -136,7 +136,7 @@ class BaggingEnsemble(BaseEnsemble):
                 logger.info("BaggingClassifier学習完了")
             except Exception as e:
                 logger.error(f"BaggingClassifier学習エラー: {e}")
-                raise UnifiedModelError(f"BaggingClassifierの学習に失敗しました: {e}")
+                raise ModelError(f"BaggingClassifierの学習に失敗しました: {e}")
 
             # アンサンブル全体の評価
             ensemble_result = self._evaluate_ensemble(X_test, y_test)
@@ -160,7 +160,7 @@ class BaggingEnsemble(BaseEnsemble):
 
         except Exception as e:
             logger.error(f"バギングアンサンブル学習エラー: {e}")
-            raise UnifiedModelError(f"バギングアンサンブル学習に失敗しました: {e}")
+            raise ModelError(f"バギングアンサンブル学習に失敗しました: {e}")
 
     def predict(self, X: pd.DataFrame) -> np.ndarray:
         """
@@ -173,7 +173,7 @@ class BaggingEnsemble(BaseEnsemble):
             予測結果
         """
         if not self.is_fitted or self.bagging_classifier is None:
-            raise UnifiedModelError("モデルが学習されていません")
+            raise ModelError("モデルが学習されていません")
 
         return self.bagging_classifier.predict(X)
 
@@ -188,7 +188,7 @@ class BaggingEnsemble(BaseEnsemble):
             予測確率の配列
         """
         if not self.is_fitted or self.bagging_classifier is None:
-            raise UnifiedModelError("モデルが学習されていません")
+            raise ModelError("モデルが学習されていません")
 
         return self.bagging_classifier.predict_proba(X)
 

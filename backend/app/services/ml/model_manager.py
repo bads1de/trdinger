@@ -23,8 +23,8 @@ import pandas as pd
 
 from .config import ml_config
 
-from .exceptions import MLModelError
-from ...utils.unified_error_handler import safe_ml_operation
+from .exceptions import MLModelError, ModelError
+from ...utils.error_handler import safe_ml_operation
 
 logger = logging.getLogger(__name__)
 
@@ -161,11 +161,11 @@ class ModelManager:
             保存されたモデルのパス
 
         Raises:
-            UnifiedModelError: モデル保存に失敗した場合
+            ModelError: モデル保存に失敗した場合
         """
         try:
             if model is None:
-                raise UnifiedModelError("保存するモデルがNullです")
+                raise ModelError("保存するモデルがNullです")
 
             # アルゴリズム名を取得
             algorithm_name = self._extract_algorithm_name(model, metadata)
@@ -226,7 +226,7 @@ class ModelManager:
 
         except Exception as e:
             logger.error(f"モデル保存エラー: {e}")
-            raise UnifiedModelError(f"モデル保存に失敗しました: {e}")
+            raise ModelError(f"モデル保存に失敗しました: {e}")
 
     @safe_ml_operation(
         default_return=None, context="モデル読み込みでエラーが発生しました"
@@ -242,11 +242,11 @@ class ModelManager:
             読み込まれたモデルデータ
 
         Raises:
-            UnifiedModelError: モデル読み込みに失敗した場合
+            ModelError: モデル読み込みに失敗した場合
         """
         try:
             if not os.path.exists(model_path):
-                raise UnifiedModelError(f"モデルファイルが見つかりません: {model_path}")
+                raise ModelError(f"モデルファイルが見つかりません: {model_path}")
 
             # モデルデータを読み込み
             from sklearn.exceptions import InconsistentVersionWarning
@@ -269,7 +269,7 @@ class ModelManager:
 
             # 必要なキーが存在しない場合のデフォルト値設定
             if "model" not in model_data:
-                raise UnifiedModelError("モデルデータに'model'キーが見つかりません")
+                raise ModelError("モデルデータに'model'キーが見つかりません")
 
             model_data.setdefault("scaler", None)
             model_data.setdefault("feature_columns", None)
@@ -279,7 +279,7 @@ class ModelManager:
 
         except Exception as e:
             logger.error(f"モデル読み込みエラー: {e}")
-            raise UnifiedModelError(f"モデル読み込みに失敗しました: {e}")
+            raise ModelError(f"モデル読み込みに失敗しました: {e}")
 
     def get_latest_model(self, model_name_pattern: str = "*") -> Optional[str]:
         """

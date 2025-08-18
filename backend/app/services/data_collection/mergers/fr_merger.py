@@ -12,6 +12,7 @@ import pandas as pd
 
 from database.models import FundingRateData
 from database.repositories.funding_rate_repository import FundingRateRepository
+from app.utils.error_handler import ErrorHandler
 
 logger = logging.getLogger(__name__)
 
@@ -77,8 +78,7 @@ class FRMerger:
                 df["funding_rate"] = pd.NA
 
         except Exception as e:
-            logger.warning(f"Funding Rateデータのマージ中にエラーが発生しました: {e}")
-            df["funding_rate"] = pd.NA
+            ErrorHandler.handle_model_error(e, context="merge_fr_data")
 
         return df
 

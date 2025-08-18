@@ -16,7 +16,7 @@ from app.api.dependencies import (
 from app.services.auto_strategy import AutoStrategyService
 from app.services.auto_strategy.models.ga_config import GAConfig
 from app.utils.response import api_response, error_response
-from app.utils.unified_error_handler import UnifiedErrorHandler
+from app.utils.error_handler import ErrorHandler
 
 logger = logging.getLogger(__name__)
 
@@ -160,7 +160,7 @@ async def generate_strategy(
                 details={"error_type": type(e).__name__, "error_details": str(e)},
             )
 
-    return await UnifiedErrorHandler.safe_execute_async(_generate_strategy)
+    return await ErrorHandler.safe_execute_async(_generate_strategy)
 
 
 @router.get("/experiments", response_model=ListExperimentsResponse)
@@ -177,7 +177,7 @@ async def list_experiments(
         experiments = auto_strategy_service.list_experiments()
         return ListExperimentsResponse(experiments=experiments)
 
-    return await UnifiedErrorHandler.safe_execute_async(_list_experiments)
+    return await ErrorHandler.safe_execute_async(_list_experiments)
 
 
 @router.post(
@@ -210,7 +210,7 @@ async def stop_experiment(
                 detail=str(e),
             )
 
-    return await UnifiedErrorHandler.safe_execute_async(_stop_experiment)
+    return await ErrorHandler.safe_execute_async(_stop_experiment)
 
 
 @router.post("/test-strategy", response_model=StrategyTestResponse)
@@ -235,7 +235,7 @@ async def test_strategy(
             message=result["message"],
         )
 
-    return await UnifiedErrorHandler.safe_execute_async(_test_strategy)
+    return await ErrorHandler.safe_execute_async(_test_strategy)
 
 
 @router.get("/config/default", response_model=DefaultConfigResponse)
@@ -250,7 +250,7 @@ async def get_default_config():
         default_config = GAConfig.create_default()
         return DefaultConfigResponse(config=default_config.to_dict())
 
-    return await UnifiedErrorHandler.safe_execute_async(_get_default_config)
+    return await ErrorHandler.safe_execute_async(_get_default_config)
 
 
 

@@ -11,9 +11,9 @@ from typing import Any, Callable, Dict, List, Optional
 
 import ccxt
 
-from app.utils.unified_error_handler import (
-    UnifiedDataError,
-    UnifiedErrorHandler,
+from app.utils.error_handler import (
+    DataError,
+    ErrorHandler,
 )
 from database.connection import get_db
 
@@ -119,7 +119,7 @@ class BybitService(ABC):
             ccxt.NetworkError: ネットワークエラーの場合
             ccxt.ExchangeError: 取引所エラーの場合
         """
-        return await UnifiedErrorHandler.safe_execute(
+        return await ErrorHandler.safe_execute(
             func=lambda: self._handle_ccxt_errors_impl(
                 operation_name, func, *args, **kwargs
             ),
@@ -152,16 +152,16 @@ class BybitService(ABC):
 
         except ccxt.BadSymbol as e:
             logger.error(f"無効なシンボル: {e}")
-            raise UnifiedDataError(f"無効なシンボル: {e}") from e
+            raise DataError(f"無効なシンボル: {e}") from e
         except ccxt.NetworkError as e:
             logger.error(f"ネットワークエラー: {e}")
-            raise UnifiedDataError(f"ネットワークエラー: {e}") from e
+            raise DataError(f"ネットワークエラー: {e}") from e
         except ccxt.ExchangeError as e:
             logger.error(f"取引所エラー: {e}")
-            raise UnifiedDataError(f"取引所エラー: {e}") from e
+            raise DataError(f"取引所エラー: {e}") from e
         except Exception as e:
             logger.error(f"予期しないエラー: {e}")
-            raise UnifiedDataError(
+            raise DataError(
                 f"{operation_name}中にエラーが発生しました: {e}"
             ) from e
 

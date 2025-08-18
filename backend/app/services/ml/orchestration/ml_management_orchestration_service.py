@@ -17,6 +17,7 @@ from app.services.ml.feature_engineering.automl_feature_analyzer import (
 )
 from app.services.ml.model_manager import model_manager
 from app.utils.response import api_response
+from app.utils.error_handler import ErrorHandler
 
 logger = logging.getLogger(__name__)
 
@@ -457,7 +458,7 @@ class MLManagementOrchestrationService:
                 }
 
         except Exception as e:
-            logger.error(f"モデル読み込みエラー: {e}")
+            ErrorHandler.handle_model_error(e, context="load_model")
             return {"success": False, "error": str(e)}
 
     async def get_current_model_info(self) -> Dict[str, Any]:

@@ -13,7 +13,7 @@ from sqlalchemy.orm import Session
 from app.services.data_collection.orchestration.funding_rate_orchestration_service import (
     FundingRateOrchestrationService,
 )
-from app.utils.unified_error_handler import UnifiedErrorHandler
+from app.utils.error_handler import ErrorHandler
 from database.connection import ensure_db_initialized, get_db
 
 logger = logging.getLogger(__name__)
@@ -69,7 +69,7 @@ async def get_funding_rates(
             },
         }
 
-    return await UnifiedErrorHandler.safe_execute_async(
+    return await ErrorHandler.safe_execute_async(
         _get_funding_rates_data, message="ファンディングレートデータ取得エラー"
     )
 
@@ -118,7 +118,7 @@ async def collect_funding_rate_data(
             db_session=db,
         )
 
-    return await UnifiedErrorHandler.safe_execute_async(
+    return await ErrorHandler.safe_execute_async(
         _collect_rates, message="ファンディングレートデータ収集エラー"
     )
 
@@ -159,6 +159,6 @@ async def bulk_collect_funding_rates(
             symbols=symbols, db_session=db
         )
 
-    return await UnifiedErrorHandler.safe_execute_async(
+    return await ErrorHandler.safe_execute_async(
         _bulk_collect, message="ファンディングレート一括収集エラー"
     )

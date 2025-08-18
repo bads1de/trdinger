@@ -14,7 +14,7 @@ from app.api.dependencies import get_strategy_integration_service_with_db
 from app.services.auto_strategy.utils.strategy_integration_service import (
     StrategyIntegrationService,
 )
-from app.utils.unified_error_handler import UnifiedErrorHandler
+from app.utils.error_handler import ErrorHandler
 
 logger = logging.getLogger(__name__)
 
@@ -93,4 +93,4 @@ async def get_strategies(
             sort_order=sort_order,
         )
 
-    return await UnifiedErrorHandler.safe_execute_async(_get_strategies)
+    return await ErrorHandler.safe_execute_async(_get_strategies)

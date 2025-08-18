@@ -31,11 +31,10 @@ from app.services.ml.exceptions import (
     MLDataError,
     MLValidationError,
 )
-from app.utils.unified_error_handler import (
-    UnifiedErrorHandler,
+from app.utils.error_handler import (
+    ErrorHandler,
+    ml_operation_context,
     safe_ml_operation,
-    unified_operation_context,
-    unified_timeout_decorator,
 )
 from database.connection import get_db
 from database.repositories.funding_rate_repository import FundingRateRepository
@@ -398,7 +397,7 @@ class MLOrchestrator(MLPredictionInterface):
     def _validate_input_data(self, df: pd.DataFrame):
         """入力データの検証"""
         required_columns = ["open", "high", "low", "close", "volume"]
-        UnifiedErrorHandler.validate_dataframe(
+        ErrorHandler.validate_dataframe(
             df, required_columns=required_columns, min_rows=1
         )
 
@@ -529,7 +528,7 @@ class MLOrchestrator(MLPredictionInterface):
         predictions = self.ml_training_service.generate_signals(features_df)
 
         # 予測値の妥当性チェック
-        if not UnifiedErrorHandler.validate_predictions(predictions):
+        if not ErrorHandler.validate_predictions(predictions):
             raise MLDataError("予測値のバリデーションに失敗しました")
 
         self._last_predictions = predictions

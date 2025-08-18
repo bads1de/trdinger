@@ -14,7 +14,7 @@ import pandas as pd
 from tsfresh import extract_features
 from tsfresh.utilities.dataframe_functions import impute
 
-from .....utils.unified_error_handler import safe_ml_operation
+from .....utils.error_handler import safe_ml_operation
 from .automl_config import TSFreshConfig
 from .feature_selector import AdvancedFeatureSelector
 from .feature_settings import FinancialFeatureSettings, MarketRegime

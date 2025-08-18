@@ -18,7 +18,7 @@ import pandas as pd
 from ....utils.data_processing import data_processor as data_preprocessor
 
 # DataValidator の deprecated メソッドは段階的に除去済み。必要な処理はローカルで実装します。
-from ....utils.unified_error_handler import safe_ml_operation
+from ....utils.error_handler import safe_ml_operation
 from .data_frequency_manager import DataFrequencyManager
 from .fear_greed_features import FearGreedFeatureCalculator
 from .interaction_features import InteractionFeatureCalculator

@@ -166,14 +166,6 @@ class DataValidator:
     def __init__(self):
         """初期化"""
 
-    # Deprecated safe_* helper methods removed.
-    # Use pandas built-in operations instead, e.g.:
-    #  - division: (a / b).replace([np.inf, -np.inf], np.nan).fillna(default)
-    #  - pct_change: series.pct_change().replace([np.inf, -np.inf], np.nan).fillna(0)
-    #  - rolling mean/std: series.rolling(window, min_periods=1).mean()/std()
-    #  - normalization: (series - series.rolling(...).mean()) / series.rolling(...).std()
-    # These helpers were removed to simplify the codebase and rely on pandas semantics.
-
     @classmethod
     def validate_ohlcv_data(
         cls, df: pd.DataFrame, strict_mode: bool = False

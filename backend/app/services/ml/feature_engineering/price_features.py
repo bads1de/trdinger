@@ -12,7 +12,7 @@ import numpy as np
 import pandas as pd
 
 
-from ....utils.unified_error_handler import safe_ml_operation
+from ....utils.error_handler import safe_ml_operation
 from .base_feature_calculator import BaseFeatureCalculator
 
 logger = logging.getLogger(__name__)
