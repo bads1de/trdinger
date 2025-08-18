@@ -20,6 +20,17 @@ class GeneratedStrategyRepository(BaseRepository):
 
     def __init__(self, db: Session):
         super().__init__(db, GeneratedStrategy)
+        
+    def to_dict(self, model_instance: GeneratedStrategy) -> dict:
+        """生成戦略を辞書に変換
+        
+        Args:
+            model_instance: 変換するモデルインスタンス
+            
+        Returns:
+            変換された辞書
+        """
+        return super().to_dict(model_instance)
 
     def save_strategy(
         self,

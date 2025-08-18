@@ -20,6 +20,17 @@ class OpenInterestRepository(BaseRepository):
 
     def __init__(self, db: Session):
         super().__init__(db, OpenInterestData)
+        
+    def to_dict(self, model_instance: OpenInterestData) -> dict:
+        """オープンインタレストデータを辞書に変換
+        
+        Args:
+            model_instance: 変換するモデルインスタンス
+            
+        Returns:
+            変換された辞書
+        """
+        return super().to_dict(model_instance)
 
     def insert_open_interest_data(self, open_interest_records: List[dict]) -> int:
         """

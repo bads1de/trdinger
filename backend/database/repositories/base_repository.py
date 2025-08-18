@@ -21,6 +21,40 @@ class BaseRepository(Generic[T]):
     def __init__(self, db: Session, model_class: Type[T]):
         self.db = db
         self.model_class = model_class
+        
+    def to_dict(self, model_instance: T) -> dict:
+        """モデルインスタンスを辞書に変換
+        
+        Args:
+            model_instance: 変換するモデルインスタンス
+            
+        Returns:
+            変換された辞書
+        """
+        result: dict = {}
+        # SQLAlchemyカラムを反復処理して値をシリアライズ
+        for column in model_instance.__table__.columns:
+            val = getattr(model_instance, column.name)
+            # datetime -> ISO形式
+            if isinstance(val, datetime):
+                result[column.name] = val.isoformat()
+            else:
+                result[column.name] = val
+        return result
+    
+    def to_pydantic_model(self, model_instance: T, pydantic_model_class: Type) -> Any:
+        """モデルインスタンスをPydanticモデルに変換
+        
+        Args:
+            model_instance: 変換するモデルインスタンス
+            pydantic_model_class: 変換先のPydanticモデルクラス
+            
+        Returns:
+            変換されたPydanticモデルインスタンス
+        """
+        # 辞書に変換してからPydanticモデルを作成
+        data_dict = self.to_dict(model_instance)
+        return pydantic_model_class(**data_dict)
 
     def bulk_insert_with_conflict_handling(
         self, records: List[Dict[str, Any]], conflict_columns: List[str]

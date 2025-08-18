@@ -19,20 +19,6 @@ from .connection import Base
 
 from datetime import datetime
 
-class ToDictMixin:
-    """Mixin to provide a generic to_dict implementation for declarative models."""
-    def to_dict(self):
-        result: dict = {}
-        # Iterate SQLAlchemy columns and serialize values
-        for column in self.__table__.columns:
-            val = getattr(self, column.name)
-            # datetime -> ISO format
-            if isinstance(val, datetime):
-                result[column.name] = val.isoformat()
-            else:
-                result[column.name] = val
-        return result
-
 
 class OHLCVData(Base):
     """
@@ -148,7 +134,7 @@ class FundingRateData(Base):
         )
 
 
-class OpenInterestData(ToDictMixin, Base):
+class OpenInterestData(Base):
     """
     オープンインタレスト（建玉残高）データテーブル
 
@@ -198,7 +184,7 @@ class OpenInterestData(ToDictMixin, Base):
     # uses ToDictMixin.to_dict
 
 
-class FearGreedIndexData(ToDictMixin, Base):
+class FearGreedIndexData(Base):
     """
     Fear & Greed Index データテーブル
 
@@ -259,20 +245,10 @@ class FearGreedIndexData(ToDictMixin, Base):
             return self.timestamp.replace(tzinfo=timezone.utc)
         return self.timestamp
 
-    def to_dict(self):
-        """辞書形式に変換（UTC保証プロパティを優先）"""
-        d = super().to_dict()
-        # Override timestamp fields with UTC-aware properties
-        d["data_timestamp"] = (
-            self.data_timestamp_utc.isoformat() if self.data_timestamp is not None else None
-        )
-        d["timestamp"] = (
-            self.timestamp_utc.isoformat() if self.timestamp is not None else None
-        )
-        return d
+    # to_dictメソッドを削除し、リポジトリ層でデータ変換を行うように変更
 
 
-class BacktestResult(ToDictMixin, Base):
+class BacktestResult(Base):
     """
     バックテスト結果テーブル
 
@@ -344,18 +320,7 @@ class BacktestResult(ToDictMixin, Base):
             f"created_at='{self.created_at}')>"
         )
 
-    def to_dict(self):
-        """辞書形式に変換（追加の集計メトリクスを付与）"""
-        d = super().to_dict()
-        performance_metrics = d.get("performance_metrics") or {}
-        # 保守性のため個別メトリクスをトップレベルに追加（後方互換性）
-        d.setdefault("total_return", performance_metrics.get("total_return", 0.0))
-        d.setdefault("sharpe_ratio", performance_metrics.get("sharpe_ratio", 0.0))
-        d.setdefault("max_drawdown", performance_metrics.get("max_drawdown", 0.0))
-        d.setdefault("total_trades", performance_metrics.get("total_trades", 0))
-        d.setdefault("win_rate", performance_metrics.get("win_rate", 0.0))
-        d.setdefault("profit_factor", performance_metrics.get("profit_factor", 0.0))
-        return d
+    # to_dictメソッドを削除し、リポジトリ層でデータ変換を行うように変更
 
 
 class GAExperiment(Base):
@@ -409,7 +374,7 @@ class GAExperiment(Base):
         )
 
 
-class GeneratedStrategy(ToDictMixin, Base):
+class GeneratedStrategy(Base):
     """
     生成された戦略テーブル
 
@@ -468,6 +433,4 @@ class GeneratedStrategy(ToDictMixin, Base):
             f"fitness={fitness_str})>"
         )
 
-    def to_dict(self):
-        """辞書形式に変換"""
-        return super().to_dict()
+    # to_dictメソッドを削除し、リポジトリ層でデータ変換を行うように変更

@@ -23,6 +23,26 @@ class BacktestResultRepository(BaseRepository):
 
     def __init__(self, db: Session):
         super().__init__(db, BacktestResult)
+        
+    def to_dict(self, model_instance: BacktestResult) -> dict:
+        """バックテスト結果を辞書に変換
+        
+        Args:
+            model_instance: 変換するモデルインスタンス
+            
+        Returns:
+            変換された辞書
+        """
+        d = super().to_dict(model_instance)
+        performance_metrics = d.get("performance_metrics") or {}
+        # 保守性のため個別メトリクスをトップレベルに追加（後方互換性）
+        d.setdefault("total_return", performance_metrics.get("total_return", 0.0))
+        d.setdefault("sharpe_ratio", performance_metrics.get("sharpe_ratio", 0.0))
+        d.setdefault("max_drawdown", performance_metrics.get("max_drawdown", 0.0))
+        d.setdefault("total_trades", performance_metrics.get("total_trades", 0))
+        d.setdefault("win_rate", performance_metrics.get("win_rate", 0.0))
+        d.setdefault("profit_factor", performance_metrics.get("profit_factor", 0.0))
+        return d
 
     def _to_json_safe(self, obj: Any) -> Any:
         """JSONにシリアライズ可能な形へ再帰的に変換"""
