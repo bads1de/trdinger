@@ -1,14 +1,15 @@
 import React, { useState, useMemo } from "react";
 import { useAlgorithms, Algorithm } from "../../hooks/useAlgorithms";
 
-// shadcn/ui components
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-} from "@/components/ui/card";
+/**
+ * アルゴリズム選択コンポーネント
+ *
+ * ユーザーがアルゴリズムを選択できるコンポーネントです。
+ * アルゴリズムのフィルタリング、検索、推奨アルゴリズムの表示などをサポートします。
+ *
+ */
+
+import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -26,9 +27,7 @@ import {
   SelectItem,
 } from "@/components/ui/select";
 
-// lucide-react icons
 import {
-  ChevronDown,
   CheckCircle,
   AlertTriangle,
   Info,

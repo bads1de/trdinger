@@ -10,13 +10,10 @@ import LoadingSpinner from "@/components/common/LoadingSpinner";
 import ErrorDisplay from "@/components/common/ErrorDisplay";
 import {
   Bot,
-  BarChart3,
   TrendingUp,
   Brain,
-  Zap,
   RefreshCw,
   Info,
-  PieChart,
   Activity,
 } from "lucide-react";
 import {
@@ -30,7 +27,6 @@ import {
   PieChart as RechartsPieChart,
   Pie,
   Cell,
-  Legend,
 } from "recharts";
 
 interface AutoMLFeatureAnalysisProps {
@@ -81,7 +77,10 @@ export default function AutoMLFeatureAnalysis({
   autoRefreshInterval,
   className = "",
 }: AutoMLFeatureAnalysisProps) {
-  const { data, loading, error, refetch } = useAutoMLFeatureAnalysis(topN, autoRefreshInterval);
+  const { data, loading, error, refetch } = useAutoMLFeatureAnalysis(
+    topN,
+    autoRefreshInterval
+  );
 
   // タイプ別統計をチャート用データに変換
   const typeChartData = data?.type_statistics
@@ -213,7 +212,9 @@ export default function AutoMLFeatureAnalysis({
                     <div>
                       <p className="text-sm text-gray-400">AutoML貢献度</p>
                       <p className="text-lg font-bold text-white">
-                        {(data?.automl_impact?.automl_importance_ratio ?? 0).toFixed(1)}
+                        {(
+                          data?.automl_impact?.automl_importance_ratio ?? 0
+                        ).toFixed(1)}
                         %
                       </p>
                     </div>

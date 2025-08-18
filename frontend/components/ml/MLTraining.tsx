@@ -32,13 +32,10 @@ import DataPreprocessingSettings, {
   defaultDataPreprocessingConfig,
 } from "./DataPreprocessingSettings";
 import EnsembleSettings, { EnsembleSettingsConfig } from "./EnsembleSettings";
-import SingleModelSettings, {
-  SingleModelSettingsConfig,
-} from "./SingleModelSettings";
+import { SingleModelSettingsConfig } from "./SingleModelSettings";
 import {
   AutoMLFeatureConfig,
   getDefaultAutoMLConfig,
-  SingleModelConfig,
 } from "@/hooks/useMLTraining";
 import { StopTrainingDialog } from "@/components/common/ConfirmDialog";
 

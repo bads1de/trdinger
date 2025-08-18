@@ -1,9 +1,10 @@
 import React from "react";
 import { Button, ButtonProps } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import LoadingSpinner from "./LoadingSpinner"; // Import LoadingSpinner
+import LoadingSpinner from "./LoadingSpinner";
 
-interface ActionButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
+interface ActionButtonProps
+  extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: "primary" | "secondary" | "success" | "warning" | "danger";
   size?: "sm" | "md" | "lg";
   icon?: React.ReactNode;

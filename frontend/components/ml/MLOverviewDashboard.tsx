@@ -1,11 +1,8 @@
 "use client";
 
 import React, { useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import LoadingSpinner from "@/components/common/LoadingSpinner";
-import ErrorDisplay from "@/components/common/ErrorDisplay";
 import FeatureImportanceChart from "./FeatureImportanceChart";
 import AutoMLFeatureAnalysis from "./AutoMLFeatureAnalysis";
 import ModelInfoCard from "./ModelInfoCard";
@@ -19,11 +16,9 @@ import {
   BarChart3,
   RefreshCw,
   Activity,
-  AlertTriangle,
 } from "lucide-react";
 
 interface MLOverviewDashboardProps {
-  /** カスタムクラス名 */
   className?: string;
 }
 

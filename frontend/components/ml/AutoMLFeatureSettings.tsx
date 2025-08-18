@@ -19,7 +19,6 @@ import { Progress } from "@/components/ui/progress";
 import {
   Bot,
   Zap,
-  Brain,
   TrendingUp,
   BarChart3,
   Clock,
