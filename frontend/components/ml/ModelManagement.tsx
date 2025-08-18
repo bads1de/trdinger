@@ -11,7 +11,6 @@ import {
   Download,
   RefreshCw,
   CheckCircle,
-  Clock,
   BarChart3,
   HardDrive,
   Calendar,
@@ -107,7 +106,9 @@ const ModelCard: React.FC<{
             {model.model_type.toUpperCase()}
           </Badge>
           <Badge className={getTrainerTypeColor(model.trainer_type)}>
-            {model.trainer_type === "single_model" ? "単一モデル" : "アンサンブル"}
+            {model.trainer_type === "single_model"
+              ? "単一モデル"
+              : "アンサンブル"}
           </Badge>
         </div>
 
@@ -143,15 +144,11 @@ const ModelCard: React.FC<{
   );
 };
 
-export default function ModelManagement({ className = "" }: ModelManagementProps) {
-  const {
-    models,
-    currentModel,
-    loading,
-    error,
-    loadModel,
-    refreshModels,
-  } = useModelManagement();
+export default function ModelManagement({
+  className = "",
+}: ModelManagementProps) {
+  const { models, currentModel, loading, error, loadModel, refreshModels } =
+    useModelManagement();
 
   useEffect(() => {
     refreshModels();
@@ -236,9 +233,11 @@ export default function ModelManagement({ className = "" }: ModelManagementProps
                 key={model.path}
                 model={model}
                 isCurrentModel={
-                  currentModel?.loaded &&
-                  currentModel.trainer_type === model.trainer_type &&
-                  currentModel.model_type === model.model_type
+                  currentModel
+                    ? currentModel.loaded &&
+                      currentModel.trainer_type === model.trainer_type &&
+                      currentModel.model_type === model.model_type
+                    : false
                 }
                 onLoad={loadModel}
                 loading={loading}

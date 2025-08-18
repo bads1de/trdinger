@@ -3,7 +3,6 @@ export { default as CollapsibleJson } from "./CollapsibleJson";
 export { default as DataResetPanel } from "./DataResetPanel";
 export * from "./Icons";
 export * from "./InputField";
-export { default as Modal } from "./Modal";
 export * from "./SelectField";
 export { default as TabButton } from "./TabButton";
 export * from "./TableColumns";

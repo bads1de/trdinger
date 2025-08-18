@@ -12,19 +12,6 @@ import {
 import DataResetPanel from "@/components/common/DataResetPanel";
 
 import { TradingPair, TimeFrame } from "@/types/market-data";
-import {
-  AllDataCollectionResult,
-  BulkOHLCVCollectionResult,
-} from "@/types/data-collection";
-import {
-  BulkFundingRateCollectionResult,
-  FundingRateCollectionResult,
-} from "@/types/funding-rate";
-import {
-  BulkOpenInterestCollectionResult,
-  OpenInterestCollectionResult,
-} from "@/types/open-interest";
-import { FearGreedCollectionResult } from "@/hooks/useFearGreedData";
 
 interface DataControlsProps {
   symbols: TradingPair[];

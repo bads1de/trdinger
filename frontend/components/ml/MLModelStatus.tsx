@@ -103,7 +103,7 @@ export default function MLModelStatus() {
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <div className="text-center">
                 <div className="text-2xl font-bold text-green-600">
-                  {(modelStatus.model_info.accuracy * 100).toFixed(1)}%
+                  {(modelStatus.model_info?.accuracy ?? 0 * 100).toFixed(1)}%
                 </div>
                 <div className="text-sm text-gray-600">精度</div>
               </div>
@@ -115,14 +115,14 @@ export default function MLModelStatus() {
               </div>
               <div className="text-center">
                 <div className="text-2xl font-bold text-purple-600">
-                  {modelStatus.model_info.training_samples.toLocaleString()}
+                  {modelStatus.model_info?.training_samples?.toLocaleString()}
                 </div>
                 <div className="text-sm text-gray-600">学習サンプル</div>
               </div>
               <div className="text-center">
                 <div className="text-sm text-gray-600">
                   {new Date(
-                    modelStatus.model_info.last_updated
+                    modelStatus.model_info?.last_updated ?? new Date()
                   ).toLocaleDateString("ja-JP")}
                 </div>
                 <div className="text-sm text-gray-600">最終更新</div>
