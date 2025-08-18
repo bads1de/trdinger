@@ -1,9 +1,9 @@
 import pytest
 from deap import tools
 
-from app.services.auto_strategy.engines.ga_engine import GeneticAlgorithmEngine
+from app.services.auto_strategy.core.ga_engine import GeneticAlgorithmEngine
 from app.services.auto_strategy.models.ga_config import GAConfig
-from app.services.auto_strategy.factories.strategy_factory import StrategyFactory
+from app.services.backtest.factories.strategy_class_factory import StrategyClassFactory
 from app.services.auto_strategy.generators.random_gene_generator import (
     RandomGeneGenerator,
 )
@@ -28,7 +28,7 @@ def engine_fast():
     cfg = GAConfig.create_fast()
     backtest = DummyBacktestService()
     engine = GeneticAlgorithmEngine(
-        backtest, StrategyFactory(), RandomGeneGenerator(cfg)
+        backtest, StrategyClassFactory(), RandomGeneGenerator(cfg)
     )
     return engine
 

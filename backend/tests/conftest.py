@@ -57,3 +57,40 @@ def known_price_changes() -> pd.DataFrame:
     ]
     dates = pd.date_range("2023-01-01", periods=len(prices), freq="1H")
     return pd.DataFrame({"timestamp": dates, "Close": prices}).set_index("timestamp")
+
+
+@pytest.fixture
+def market_condition_data_factory():
+    """
+    特定の市場状況（急騰、急落、レンジ）の合成OHLCVデータを生成する
+    データサービスオブジェクトのファクトリを返すフィクスチャ。
+    """
+    def _factory(kind: str, bars: int = 400):
+        idx = pd.date_range("2024-01-01", periods=bars, freq="1H")
+        if kind == "spike_up":
+            base = np.linspace(100, 105, bars)
+            base[bars // 2] += 30
+        elif kind == "spike_down":
+            base = np.linspace(105, 100, bars)
+            base[bars // 2] -= 30
+        else:  # range
+            base = 150 + 2 * np.sin(np.linspace(0, 10 * np.pi, bars))
+        
+        open_ = np.concatenate([[base[0]], base[:-1]])
+        high = np.maximum(open_, base) * 1.003
+        low = np.minimum(open_, base) * 0.997
+        vol = np.full(bars, 1000)
+        df = pd.DataFrame(
+            {"Open": open_, "High": high, "Low": low, "Close": base, "Volume": vol},
+            index=idx,
+        )
+
+        class _DS:
+            def get_data_for_backtest(
+                self, symbol=None, timeframe=None, start_date=None, end_date=None
+            ):
+                return df
+        
+        return _DS()
+
+    return _factory

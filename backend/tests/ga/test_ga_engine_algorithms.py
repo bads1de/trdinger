@@ -1,9 +1,9 @@
 import types
 import pytest
 
-from app.services.auto_strategy.engines.ga_engine import GeneticAlgorithmEngine
+from app.services.auto_strategy.core.ga_engine import GeneticAlgorithmEngine
 from app.services.auto_strategy.models.ga_config import GAConfig
-from app.services.auto_strategy.factories.strategy_factory import StrategyFactory
+from app.services.backtest.factories.strategy_class_factory import StrategyClassFactory
 from app.services.auto_strategy.generators.random_gene_generator import (
     RandomGeneGenerator,
 )
@@ -30,7 +30,7 @@ class DummyBacktestService:
 @pytest.fixture
 def engine_fast():
     backtest = DummyBacktestService()
-    strategy_factory = StrategyFactory()
+    strategy_factory = StrategyClassFactory()
     config = GAConfig.create_fast()
     gene_gen = RandomGeneGenerator(config)
     engine = GeneticAlgorithmEngine(backtest, strategy_factory, gene_gen)

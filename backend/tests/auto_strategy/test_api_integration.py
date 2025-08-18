@@ -10,8 +10,8 @@ from fastapi.testclient import TestClient
 from fastapi import BackgroundTasks
 
 from app.main import app
-from app.services.auto_strategy.core.unified_auto_strategy_service import (
-    UnifiedAutoStrategyService,
+from app.services.auto_strategy.services.auto_strategy_service import (
+    AutoStrategyService,
 )
 
 
@@ -26,7 +26,7 @@ class TestAutoStrategyAPI:
     @pytest.fixture
     def mock_service(self):
         """モックサービス"""
-        service = Mock(spec=UnifiedAutoStrategyService)
+        service = Mock(spec=AutoStrategyService)
         service.get_default_config.return_value = {
             "population_size": 10,
             "generations": 5,
@@ -195,9 +195,9 @@ class TestAutoStrategyAPI:
         """サービス依存性注入テスト"""
         # 実際のサービスが注入されることを確認
         with patch(
-            "app.api.dependencies.UnifiedAutoStrategyService"
+            "app.api.dependencies.AutoStrategyService"
         ) as mock_service_class:
-            mock_instance = Mock(spec=UnifiedAutoStrategyService)
+            mock_instance = Mock(spec=AutoStrategyService)
             mock_instance.get_default_config.return_value = {"test": "config"}
             mock_service_class.return_value = mock_instance
 
@@ -227,7 +227,7 @@ class TestBackwardCompatibility:
 
         for endpoint in endpoints_to_test:
             with patch("app.api.dependencies.get_auto_strategy_service") as mock_dep:
-                mock_service = Mock(spec=UnifiedAutoStrategyService)
+                mock_service = Mock(spec=AutoStrategyService)
                 mock_service.get_default_config.return_value = {}
                 mock_service.get_presets.return_value = {}
                 mock_service.list_experiments.return_value = []
@@ -246,12 +246,12 @@ class TestBackwardCompatibility:
             from app.services.auto_strategy import StrategyGene
             from app.services.auto_strategy import GAConfig
 
-            # AutoStrategyServiceが実際にはUnifiedAutoStrategyServiceであることを確認
+            # AutoStrategyServiceが実際にはAutoStrategyServiceであることを確認
             from app.services.auto_strategy.core.unified_auto_strategy_service import (
-                UnifiedAutoStrategyService,
+                AutoStrategyService,
             )
 
-            assert AutoStrategyService == UnifiedAutoStrategyService
+            assert AutoStrategyService == AutoStrategyService
 
         except ImportError as e:
             pytest.fail(f"インポート互換性が破綻しています: {e}")
@@ -268,7 +268,7 @@ class TestErrorHandling:
     def test_service_initialization_error(self, client):
         """サービス初期化エラーのハンドリングテスト"""
         with patch(
-            "app.api.dependencies.UnifiedAutoStrategyService",
+            "app.api.dependencies.AutoStrategyService",
             side_effect=Exception("初期化エラー"),
         ):
             response = client.get("/api/auto-strategy/config/default")
@@ -278,7 +278,7 @@ class TestErrorHandling:
 
     def test_invalid_experiment_id(self, client):
         """無効な実験IDのハンドリングテスト"""
-        mock_service = Mock(spec=UnifiedAutoStrategyService)
+        mock_service = Mock(spec=AutoStrategyService)
         mock_service.get_experiment_status.return_value = {
             "status": "error",
             "message": "実験が見つかりません",

@@ -12,7 +12,7 @@ if _BACKEND_DIR not in sys.path:
 
 from app.services.auto_strategy.generators.random_gene_generator import RandomGeneGenerator
 from app.services.auto_strategy.models.ga_config import GAConfig
-from app.services.auto_strategy.factories.strategy_factory import StrategyFactory
+from app.services.backtest.factories.strategy_class_factory import StrategyClassFactory
 from app.services.backtest.execution.backtest_executor import BacktestExecutor
 
 
@@ -38,7 +38,7 @@ def test_aggressive_profile_trade_count_ge_100():
 
     data_service = _SyntheticDataService()
     executor = BacktestExecutor(data_service)
-    factory = StrategyFactory()
+    factory = StrategyClassFactory()
 
     ga_cfg = GAConfig(
         indicator_mode="technical_only",

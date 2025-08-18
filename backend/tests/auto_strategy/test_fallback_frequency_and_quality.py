@@ -5,7 +5,7 @@ from app.services.auto_strategy.models.ga_config import GAConfig
 from app.services.auto_strategy.generators.random_gene_generator import (
     RandomGeneGenerator,
 )
-from app.services.auto_strategy.utils.auto_strategy_utils import AutoStrategyUtils
+
 
 
 def test_fallback_strategy_generation_is_rare():

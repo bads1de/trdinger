@@ -12,7 +12,7 @@ from app.services.auto_strategy.generators.random_gene_generator import (
     RandomGeneGenerator,
 )
 from app.services.auto_strategy.models.ga_config import GAConfig
-from app.services.auto_strategy.factories.strategy_factory import StrategyFactory
+from app.services.backtest.factories.strategy_class_factory import StrategyClassFactory
 from app.services.backtest.execution.backtest_executor import BacktestExecutor
 from database.repositories.ohlcv_repository import OHLCVRepository
 
@@ -93,7 +93,7 @@ def test_db_backtest_one_year_smoke():
     engine = create_engine(f"sqlite:///{DB_PATH}")
     data_service = _DBDataService(engine)
     executor = BacktestExecutor(data_service)
-    strategy_factory = StrategyFactory()
+    strategy_factory = StrategyClassFactory()
 
     # シンボル探索（優先順位: BTC/USDT -> BTC:USDT -> BTCUSDT -> DB先頭）
     symbols = _discover_symbols(engine, limit=10)

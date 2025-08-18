@@ -2,7 +2,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from app.services.auto_strategy.factories.strategy_factory import StrategyFactory
+from app.services.backtest.factories.strategy_class_factory import StrategyClassFactory
 from app.services.auto_strategy.models.gene_strategy import StrategyGene, Condition
 from app.services.auto_strategy.models.gene_tpsl import TPSLGene, TPSLMethod
 from app.services.auto_strategy.models.gene_position_sizing import (
@@ -57,7 +57,7 @@ def test_stagewise_flow_logs_smoke(caplog):
         method=PositionSizingMethod.FIXED_RATIO, fixed_ratio=0.1
     )
 
-    cls = StrategyFactory().create_strategy_class(gene)
+    cls = StrategyClassFactory().create_strategy_class(gene)
 
     stats = BacktestExecutor(_DataService()).execute_backtest(
         strategy_class=cls,

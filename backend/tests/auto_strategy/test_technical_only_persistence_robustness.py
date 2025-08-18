@@ -8,7 +8,7 @@ from sqlalchemy.orm import sessionmaker
 
 from app.services.auto_strategy.generators.random_gene_generator import RandomGeneGenerator
 from app.services.auto_strategy.models.ga_config import GAConfig
-from app.services.auto_strategy.factories.strategy_factory import StrategyFactory
+from app.services.backtest.factories.strategy_class_factory import StrategyClassFactory
 from app.services.backtest.execution.backtest_executor import BacktestExecutor
 from app.services.backtest.conversion.backtest_result_converter import BacktestResultConverter
 from database.models import Base
@@ -48,7 +48,7 @@ def test_technical_only_backtest_and_persistence_runs_60_times():
     Base.metadata.create_all(engine)
 
     converter = BacktestResultConverter()
-    strategy_factory = StrategyFactory()
+    strategy_factory = StrategyClassFactory()
 
     # 60回実行
     for i, seed in enumerate(range(2000, 2060), start=1):

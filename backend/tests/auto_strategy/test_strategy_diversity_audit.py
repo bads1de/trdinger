@@ -14,7 +14,7 @@ from app.services.auto_strategy.generators.random_gene_generator import (
 from app.services.auto_strategy.models.gene_tpsl import TPSLMethod
 from app.services.auto_strategy.models.gene_position_sizing import PositionSizingMethod
 from app.services.auto_strategy.models.ga_config import GAConfig
-from app.services.auto_strategy.factories.strategy_factory import StrategyFactory
+from app.services.backtest.factories.strategy_class_factory import StrategyClassFactory
 from app.services.backtest.execution.backtest_executor import BacktestExecutor
 from app.services.backtest.conversion.backtest_result_converter import (
     BacktestResultConverter,
@@ -59,7 +59,7 @@ def test_strategy_diversity_audit():
     Base.metadata.create_all(engine)
 
     converter = BacktestResultConverter()
-    strategy_factory = StrategyFactory()
+    strategy_factory = StrategyClassFactory()
 
     timeframes = ["15m", "30m", "1h", "4h", "1d"]
 

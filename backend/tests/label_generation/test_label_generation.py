@@ -11,6 +11,7 @@ import logging
 from collections import Counter
 import sys
 import os
+import pytest
 
 # プロジェクトルートをパスに追加
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -431,18 +432,25 @@ class TestLabelGeneration:
             target_column="Close",
         )
 
-    def test_quantile_without_explicit_thresholds_aligns_with_kbins(
-        self, sample_price_data
+    @pytest.mark.parametrize(
+        "method, method_name",
+        [
+            (ThresholdMethod.QUANTILE, "QUANTILE"),
+            (ThresholdMethod.PERCENTILE, "PERCENTILE"),
+        ],
+    )
+    def test_quantile_aliases_align_with_kbins(
+        self, sample_price_data, method, method_name
     ):
-        """明示的な分位指定なしのQUANTILEはKBins(quantile)と分布が近いことを検証"""
-        logger.info("=== QUANTILE(implicit)->KBins(quantile)の整合性テスト ===")
+        f"""{method_name}（エイリアス）の暗黙分位がKBins(quantile)と分布整合すること"""
+        logger.info(f"=== {method_name}(implicit)->KBins(quantile)整合性テスト ===")
         lg = LabelGenerator()
         data = sample_price_data.copy()
 
-        # 1) QUANTILE（threshold_up/down未指定、target_distributionのみ）
-        quantile_labels = lg.generate_labels(
+        # 1) エイリアスメソッド（threshold_up/down未指定）
+        alias_labels = lg.generate_labels(
             data,
-            method=ThresholdMethod.QUANTILE,
+            method=method,
             target_column="Close",
         )
 
@@ -457,22 +465,19 @@ class TestLabelGeneration:
         # 分布差を許容値以内に
         from collections import Counter
 
-        qc = Counter(quantile_labels)
-        kc = Counter(kbins_labels)
-        total_q = len(quantile_labels)
-        total_k = len(kbins_labels)
+        alias_c = Counter(alias_labels)
+        kbins_c = Counter(kbins_labels)
+        total_alias = len(alias_labels)
+        total_kbins = len(kbins_labels)
 
         def ratio(c, t, k):
             return (c.get(k, 0) / t) if t > 0 else 0.0
 
         for k in [0, 1, 2]:
-            diff = abs(ratio(qc, total_q, k) - ratio(kc, total_k, k))
+            diff = abs(ratio(alias_c, total_alias, k) - ratio(kbins_c, total_kbins, k))
             assert diff <= 0.1, f"クラス{k}の分布差が大きすぎます: {diff:.3f}"
 
-        logger.info("✅ QUANTILEとKBins(quantile)の分布整合性テスト完了")
-
-        # ここでは分布整合性のみを確認するため、他手法比較は実施しない
-        logger.info("✅ 異なる手法との比較は別テストで実施済み")
+        logger.info(f"✅ {method_name}とKBins(quantile)の分布整合性テスト完了")
 
     def test_kbins_discretizer_quantile(self, sample_price_data):
         """KBinsDiscretizer(quantile)の分布とラベル妥当性を検証"""
@@ -544,41 +549,4 @@ class TestLabelGeneration:
         ), f"クラスが十分に分割されていません: {counts}"
         logger.info("✅ KBinsDiscretizer(kmeans) テスト完了")
 
-    def test_percentile_without_explicit_thresholds_aligns_with_kbins(
-        self, sample_price_data
-    ):
-        """PERCENTILE（QUANTILEのエイリアス）の暗黙分位がKBins(quantile)と分布整合すること"""
-        logger.info("=== PERCENTILE(implicit)->KBins(quantile)整合性テスト ===")
-        lg = LabelGenerator()
-        data = sample_price_data.copy()
-
-        # 1) PERCENTILE（threshold_up/down未指定）
-        percentile_labels = lg.generate_labels(
-            data,
-            method=ThresholdMethod.PERCENTILE,
-            target_column="Close",
-        )
-
-        # 2) KBINS_DISCRETIZER（quantile）
-        kbins_labels = lg.generate_labels(
-            data,
-            method=ThresholdMethod.KBINS_DISCRETIZER,
-            strategy="quantile",
-            target_column="Close",
-        )
-
-        from collections import Counter
-
-        pc = Counter(percentile_labels)
-        kc = Counter(kbins_labels)
-        total_p = len(percentile_labels)
-        total_k = len(kbins_labels)
-
-        def ratio(c, t, k):
-            return (c.get(k, 0) / t) if t > 0 else 0.0
-
-        for k in [0, 1, 2]:
-            diff = abs(ratio(pc, total_p, k) - ratio(kc, total_k, k))
-            assert diff <= 0.1, f"クラス{k}の分布差が大きすぎます: {diff:.3f}"
-
-        logger.info("✅ PERCENTILEとKBins(quantile)の分布整合性テスト完了")
+    

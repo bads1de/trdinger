@@ -7,7 +7,7 @@ from app.services.auto_strategy.generators.random_gene_generator import (
     RandomGeneGenerator,
 )
 from app.services.auto_strategy.models.ga_config import GAConfig
-from app.services.auto_strategy.factories.strategy_factory import StrategyFactory
+from app.services.backtest.factories.strategy_class_factory import StrategyClassFactory
 from app.services.backtest.execution.backtest_executor import BacktestExecutor
 from app.services.indicators.config import indicator_registry
 
@@ -38,7 +38,7 @@ def test_diversity_and_success_rate_across_timeframes():
 
     data_service = _WavyData(bars=600)
     executor = BacktestExecutor(data_service)
-    factory = StrategyFactory()
+    factory = StrategyClassFactory()
 
     overall_categories = set()
     any_short_trade = False

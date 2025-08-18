@@ -8,7 +8,7 @@ from app.services.auto_strategy.generators.random_gene_generator import (
     RandomGeneGenerator,
 )
 from app.services.auto_strategy.models.ga_config import GAConfig
-from app.services.auto_strategy.factories.strategy_factory import StrategyFactory
+from app.services.backtest.factories.strategy_class_factory import StrategyClassFactory
 
 
 def test_quality_selector_filters_and_ranks():
@@ -35,7 +35,7 @@ def test_quality_selector_filters_and_ranks():
             )
 
     executor = BacktestExecutor(_DS())
-    factory = StrategyFactory()
+    factory = StrategyClassFactory()
 
     stats_list = []
     for seed in [100, 101, 102, 103, 104, 105, 106, 107, 108, 109]:

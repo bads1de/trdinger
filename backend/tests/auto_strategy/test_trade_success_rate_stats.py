@@ -5,7 +5,7 @@ from datetime import datetime, timedelta
 
 from app.services.auto_strategy.generators.random_gene_generator import RandomGeneGenerator
 from app.services.auto_strategy.models.ga_config import GAConfig
-from app.services.auto_strategy.factories.strategy_factory import StrategyFactory
+from app.services.backtest.factories.strategy_class_factory import StrategyClassFactory
 from app.services.backtest.execution.backtest_executor import BacktestExecutor
 
 
@@ -35,7 +35,7 @@ def test_technical_only_success_rate_at_least_70_percent():
 
     data_service = _SimpleData(bars=500)
     executor = BacktestExecutor(data_service)
-    factory = StrategyFactory()
+    factory = StrategyClassFactory()
 
     total = 0
     positive = 0

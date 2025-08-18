@@ -15,7 +15,7 @@ from app.services.auto_strategy.models.condition_group import ConditionGroup
 from app.services.auto_strategy.services.indicator_service import (
     IndicatorCalculator,
 )
-from app.services.auto_strategy.evaluators.condition_evaluator import ConditionEvaluator
+from app.services.auto_strategy.core.condition_evaluator import ConditionEvaluator
 
 
 class _FakeData:

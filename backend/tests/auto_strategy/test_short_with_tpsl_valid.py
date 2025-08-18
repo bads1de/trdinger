@@ -2,7 +2,7 @@ from datetime import datetime, timedelta
 import numpy as np
 import pandas as pd
 
-from app.services.auto_strategy.factories.strategy_factory import StrategyFactory
+from app.services.backtest.factories.strategy_class_factory import StrategyClassFactory
 from app.services.auto_strategy.models.gene_strategy import StrategyGene, Condition as ConditionGene, IndicatorGene
 from app.services.auto_strategy.models.gene_tpsl import TPSLGene, TPSLMethod
 from app.services.auto_strategy.models.gene_position_sizing import PositionSizingGene, PositionSizingMethod
@@ -37,7 +37,7 @@ def test_short_entry_with_tpsl_executes():
     # 固定比率で十分な枚数を持つ
     gene.position_sizing_gene = PositionSizingGene(method=PositionSizingMethod.FIXED_RATIO, fixed_ratio=0.2)
 
-    strategy_class = StrategyFactory().create_strategy_class(gene)
+    strategy_class = StrategyClassFactory().create_strategy_class(gene)
 
     data_service = _DowntrendData(bars=300)
     start = datetime(2024, 1, 1)

@@ -3,7 +3,7 @@ import pandas as pd
 import pytest
 
 from app.services.auto_strategy.services.indicator_service import IndicatorCalculator
-from app.services.auto_strategy.evaluators.condition_evaluator import ConditionEvaluator
+from app.services.auto_strategy.core.condition_evaluator import ConditionEvaluator
 from app.services.auto_strategy.models.gene_strategy import Condition, IndicatorGene
 from app.services.auto_strategy.generators.smart_condition_generator import (
     SmartConditionGenerator,

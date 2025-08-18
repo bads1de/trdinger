@@ -9,7 +9,7 @@ from app.services.auto_strategy.generators.random_gene_generator import (
     RandomGeneGenerator,
 )
 from app.services.auto_strategy.models.ga_config import GAConfig
-from app.services.auto_strategy.evaluators.condition_evaluator import ConditionEvaluator
+from app.services.auto_strategy.core.condition_evaluator import ConditionEvaluator
 from app.services.auto_strategy.services.indicator_service import (
     IndicatorCalculator,
 )
