@@ -26,6 +26,76 @@ from database.repositories.ohlcv_repository import OHLCVRepository
 from database.repositories.open_interest_repository import OpenInterestRepository
 
 
+def get_backtest_service(db: Session = Depends(get_db)) -> BacktestService:
+    """
+    BacktestServiceのインスタンスを取得
+
+    Args:
+        db: データベースセッション（依存性注入）
+
+    Returns:
+        BacktestServiceインスタンス
+    """
+    ohlcv_repo = OHLCVRepository(db)
+    oi_repo = OpenInterestRepository(db)
+    fr_repo = FundingRateRepository(db)
+
+    data_service = BacktestDataService(
+        ohlcv_repo=ohlcv_repo, oi_repo=oi_repo, fr_repo=fr_repo
+    )
+
+    return BacktestService(data_service)
+
+
+def get_backtest_service_with_db(db: Session) -> BacktestService:
+    """
+    データベースセッション付きのBacktestServiceを取得
+
+    Args:
+        db: データベースセッション
+
+    Returns:
+        BacktestServiceインスタンス
+    """
+    ohlcv_repo = OHLCVRepository(db)
+    oi_repo = OpenInterestRepository(db)
+    fr_repo = FundingRateRepository(db)
+
+    data_service = BacktestDataService(
+        ohlcv_repo=ohlcv_repo, oi_repo=oi_repo, fr_repo=fr_repo
+    )
+
+    return BacktestService(data_service)
+
+
+def get_strategy_integration_service(db: Session) -> StrategyIntegrationService:
+    """
+    StrategyIntegrationServiceのインスタンスを取得
+
+    Args:
+        db: データベースセッション
+
+    Returns:
+        StrategyIntegrationServiceインスタンス
+    """
+    return StrategyIntegrationService(db)
+
+
+def get_market_data_orchestration_service(
+    db: Session = Depends(get_db),
+) -> MarketDataOrchestrationService:
+    """
+    MarketDataOrchestrationServiceのインスタンスを取得
+
+    Args:
+        db: データベースセッション
+
+    Returns:
+        MarketDataOrchestrationServiceインスタンス
+    """
+    return MarketDataOrchestrationService(db)
+
+
 def get_auto_strategy_service() -> AutoStrategyService:
     """
     AutoStrategyServiceのインスタンスを取得（依存性注入用）

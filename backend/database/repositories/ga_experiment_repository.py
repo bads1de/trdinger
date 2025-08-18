@@ -7,7 +7,6 @@ GA実験リポジトリ
 from typing import List, Optional, Dict, Any, cast
 from datetime import datetime
 from sqlalchemy.orm import Session
-from sqlalchemy import desc
 import logging
 
 from .base_repository import BaseRepository
@@ -63,8 +62,6 @@ class GAExperimentRepository(BaseRepository):
             logger.error(f"GA実験の作成中にエラーが発生しました: {e}")
             raise
 
-
-
     def update_experiment_status(
         self, experiment_id: int, status: str, completed_at: Optional[datetime] = None
     ) -> bool:
@@ -106,8 +103,6 @@ class GAExperimentRepository(BaseRepository):
             self.db.rollback()
             logger.error(f"実験ステータスの更新中にエラーが発生しました: {e}")
             return False
-
-
 
     def get_experiments_by_status(
         self, status: str, limit: Optional[int] = None
@@ -197,8 +192,6 @@ class GAExperimentRepository(BaseRepository):
             self.db.rollback()
             logger.error(f"実験完了処理中にエラーが発生しました: {e}")
             return False
-
-
 
     def delete_all_experiments(self) -> int:
         """

@@ -432,5 +432,3 @@ class GeneratedStrategy(Base):
             f"generation={self.generation}, "
             f"fitness={fitness_str})>"
         )
-
-    # to_dictメソッドを削除し、リポジトリ層でデータ変換を行うように変更

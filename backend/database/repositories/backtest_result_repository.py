@@ -4,11 +4,10 @@
 """
 
 from typing import List, Optional, Dict, Any
-from datetime import datetime, timedelta, date, time
+from datetime import datetime, date, time
 import logging
 from decimal import Decimal
 from sqlalchemy.orm import Session
-from sqlalchemy import desc, select, func, delete
 import numpy as np
 import pandas as pd
 
@@ -23,13 +22,13 @@ class BacktestResultRepository(BaseRepository):
 
     def __init__(self, db: Session):
         super().__init__(db, BacktestResult)
-        
+
     def to_dict(self, model_instance: BacktestResult) -> dict:
         """バックテスト結果を辞書に変換
-        
+
         Args:
             model_instance: 変換するモデルインスタンス
-            
+
         Returns:
             変換された辞書
         """

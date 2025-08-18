@@ -20,13 +20,13 @@ class GeneratedStrategyRepository(BaseRepository):
 
     def __init__(self, db: Session):
         super().__init__(db, GeneratedStrategy)
-        
+
     def to_dict(self, model_instance: GeneratedStrategy) -> dict:
         """生成戦略を辞書に変換
-        
+
         Args:
             model_instance: 変換するモデルインスタンス
-            
+
         Returns:
             変換された辞書
         """
@@ -159,8 +159,6 @@ class GeneratedStrategyRepository(BaseRepository):
             logger.error(f"実験IDによる戦略の取得中にエラーが発生しました: {e}")
             return []
 
-
-
     def get_strategies_by_generation(
         self, experiment_id: int, generation: int
     ) -> List[GeneratedStrategy]:
@@ -286,16 +284,6 @@ class GeneratedStrategyRepository(BaseRepository):
         except Exception as e:
             logger.error(f"フィルタリング済み戦略の取得中にエラーが発生しました: {e}")
             return 0, []
-
-
-
-
-
-
-
-
-
-
 
     def delete_all_strategies(self) -> int:
         """

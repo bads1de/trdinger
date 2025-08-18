@@ -5,7 +5,6 @@ Fear & Greed Index データのリポジトリクラス
 from typing import List, Optional
 from datetime import datetime
 from sqlalchemy.orm import Session
-import pandas as pd
 import logging
 
 from .base_repository import BaseRepository
@@ -20,23 +19,27 @@ class FearGreedIndexRepository(BaseRepository):
 
     def __init__(self, db: Session):
         super().__init__(db, FearGreedIndexData)
-        
+
     def to_dict(self, model_instance: FearGreedIndexData) -> dict:
         """Fear & Greed Index データを辞書に変換
-        
+
         Args:
             model_instance: 変換するモデルインスタンス
-            
+
         Returns:
             変換された辞書
         """
         d = super().to_dict(model_instance)
         # UTC保証プロパティを優先
         d["data_timestamp"] = (
-            model_instance.data_timestamp_utc.isoformat() if model_instance.data_timestamp is not None else None
+            model_instance.data_timestamp_utc.isoformat()
+            if model_instance.data_timestamp is not None
+            else None
         )
         d["timestamp"] = (
-            model_instance.timestamp_utc.isoformat() if model_instance.timestamp is not None else None
+            model_instance.timestamp_utc.isoformat()
+            if model_instance.timestamp is not None
+            else None
         )
         return d
 
