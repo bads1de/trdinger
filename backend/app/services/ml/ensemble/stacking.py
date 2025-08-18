@@ -302,8 +302,6 @@ class StackingEnsemble(BaseEnsemble):
             logger.warning(f"特徴量重要度の取得でエラー: {e}")
             return {}
 
-
-
     def save_models(self, model_path: str) -> bool:
         """
         スタッキングアンサンブルモデルを保存

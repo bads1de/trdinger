@@ -7,12 +7,12 @@
 
 import logging
 
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Tuple
 
 import pandas as pd
 import pandera as pa
 from pandera import Column, DataFrameSchema, Check
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field
 
 logger = logging.getLogger(__name__)
 

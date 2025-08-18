@@ -17,7 +17,6 @@ from sklearn.preprocessing import StandardScaler
 
 from .ml_metadata import ModelMetadata
 from ...utils.data_processing import data_processor as data_preprocessor
-from ...utils.label_generation import LabelGenerator, ThresholdMethod
 from .exceptions import (
     MLModelError,
     ModelError,

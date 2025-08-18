@@ -8,7 +8,7 @@ SOLID原則に従い、各設定カテゴリを明確に分離し、責任を明
 import os
 from typing import Any, Dict, List, Optional
 
-from pydantic import Field, model_validator
+from pydantic import Field
 from pydantic_settings import BaseSettings
 
 
@@ -251,8 +251,6 @@ class UnifiedConfig(BaseSettings):
     market: MarketConfig = Field(default_factory=MarketConfig)
     ga: GAConfig = Field(default_factory=GAConfig)
     ml: MLConfig = Field(default_factory=MLConfig)
-
-
 
     class Config:
         env_nested_delimiter = "__"  # ネストされた環境変数をサポート
