@@ -402,7 +402,7 @@ class MLTrainingOrchestrationService:
             self._cleanup_tsfresh_resources()
             self._cleanup_enhanced_feature_service()
             self._cleanup_ml_training_service()
-            self._cleanup_data_preprocessor()
+            self._cleanup_data_processor()
 
             # 強制ガベージコレクション
             import gc
@@ -519,17 +519,17 @@ class MLTrainingOrchestrationService:
         except Exception as e:
             logger.warning(f"MLTrainingServiceクリーンアップエラー: {e}")
 
-    def _cleanup_data_preprocessor(self):
-        """DataPreprocessor関連リソースのクリーンアップ"""
+    def _cleanup_data_processor(self):
+        """DataProcessor関連リソースのクリーンアップ"""
         try:
-            # グローバルDataPreprocessorインスタンスのクリーンアップ
-            from app.utils.data_processing import data_processor as data_preprocessor
+            # グローバルDataProcessorインスタンスのクリーンアップ
+            from app.utils.data_processing import data_processor
 
-            if hasattr(data_preprocessor, "clear_cache"):
-                data_preprocessor.clear_cache()
+            if hasattr(data_processor, "clear_cache"):
+                data_processor.clear_cache()
 
         except Exception as e:
-            logger.warning(f"DataPreprocessorクリーンアップエラー: {e}")
+            logger.warning(f"DataProcessorクリーンアップエラー: {e}")
 
     @safe_ml_operation(context="MLトレーニング実行")
     def _execute_ml_training_with_error_handling(

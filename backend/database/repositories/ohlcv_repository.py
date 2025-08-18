@@ -10,7 +10,7 @@ import logging
 
 from .base_repository import BaseRepository
 from database.models import OHLCVData
-from app.utils.data_conversion import DataSanitizer as DataValidator
+from app.utils.data_conversion import DataSanitizer
 
 
 logger = logging.getLogger(__name__)
@@ -228,7 +228,7 @@ class OHLCVRepository(BaseRepository):
         Returns:
             サニタイズされたOHLCVデータのリスト
         """
-        return DataValidator.sanitize_ohlcv_data(ohlcv_data)
+        return DataSanitizer.sanitize_ohlcv_data(ohlcv_data)
 
 
     def clear_all_ohlcv_data(self) -> int:

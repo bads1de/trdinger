@@ -1289,9 +1289,5 @@ class DataProcessor:
             raise
 
 
-# グローバルインスタンス（後方互換性のため）
+# グローバルインスタンス
 data_processor = DataProcessor()
-
-# 後方互換性のためのエイリアス
-DataCleaner = DataProcessor
-data_preprocessor = data_processor
