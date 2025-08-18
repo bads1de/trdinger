@@ -1,9 +1,13 @@
 """
 価格変換系テクニカル指標
 
-このモジュールはpandas-taライブラリを使用し、
-backtesting.pyとの完全な互換性を提供します。
-numpy配列ベースのインターフェースを維持しています。
+登録してあるテクニカルの一覧:
+- AvgPrice (Average Price)
+- MedPrice (Median Price)
+- TypPrice (Typical Price)
+- WclPrice (Weighted Close Price)
+- HA_Close (Heikin Ashi Close)
+- HA_OHLC (Heikin Ashi OHLC)
 """
 
 from typing import Union
@@ -17,10 +21,7 @@ from ..utils import handle_pandas_ta_errors
 
 class PriceTransformIndicators:
     """
-    価格変換系指標クラス（オートストラテジー最適化）
-
-    全ての指標はnumpy配列を直接処理し、pandas-taの性能を最大限活用します。
-    backtesting.pyでの使用に最適化されています。
+    価格変換系指標クラス
     """
 
     @staticmethod
@@ -32,7 +33,9 @@ class PriceTransformIndicators:
         close: Union[np.ndarray, pd.Series],
     ) -> np.ndarray:
         """平均価格"""
-        open_series = pd.Series(open_data) if isinstance(open_data, np.ndarray) else open_data
+        open_series = (
+            pd.Series(open_data) if isinstance(open_data, np.ndarray) else open_data
+        )
         high_series = pd.Series(high) if isinstance(high, np.ndarray) else high
         low_series = pd.Series(low) if isinstance(low, np.ndarray) else low
         close_series = pd.Series(close) if isinstance(close, np.ndarray) else close
@@ -101,7 +104,9 @@ class PriceTransformIndicators:
         """Heikin Ashi Close（平均足終値）
         pandas-ta の ha を用いてHAの終値のみ返す。
         """
-        open_series = pd.Series(open_data) if isinstance(open_data, np.ndarray) else open_data
+        open_series = (
+            pd.Series(open_data) if isinstance(open_data, np.ndarray) else open_data
+        )
         high_series = pd.Series(high) if isinstance(high, np.ndarray) else high
         low_series = pd.Series(low) if isinstance(low, np.ndarray) else low
         close_series = pd.Series(close) if isinstance(close, np.ndarray) else close
@@ -129,7 +134,9 @@ class PriceTransformIndicators:
         close: Union[np.ndarray, pd.Series],
     ) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
         """Heikin Ashi の OHLC をタプルで返す (open, high, low, close)"""
-        open_series = pd.Series(open_data) if isinstance(open_data, np.ndarray) else open_data
+        open_series = (
+            pd.Series(open_data) if isinstance(open_data, np.ndarray) else open_data
+        )
         high_series = pd.Series(high) if isinstance(high, np.ndarray) else high
         low_series = pd.Series(low) if isinstance(low, np.ndarray) else low
         close_series = pd.Series(close) if isinstance(close, np.ndarray) else close

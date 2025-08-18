@@ -1,9 +1,14 @@
 """
-出来高系テクニカル指標（pandas-ta移行版）
+出来高系テクニカル指標
 
-このモジュールはpandas-taライブラリを使用し、
-backtesting.pyとの完全な互換性を提供します。
-numpy配列ベースのインターフェースを維持しています。
+登録してあるテクニカルの一覧:
+- AD (Accumulation/Distribution Line)
+- OBV (On-Balance Volume)
+- VWAP (Volume Weighted Average Price)
+- MFI (Money Flow Index)
+- EOM (Ease of Movement)
+- NVI (Negative Volume Index)
+- PVI (Positive Volume Index)
 """
 
 from typing import Union
@@ -17,10 +22,7 @@ from ..utils import handle_pandas_ta_errors
 
 class VolumeIndicators:
     """
-    出来高系指標クラス（オートストラテジー最適化）
-
-    全ての指標はnumpy配列を直接処理し、性能を最大限活用します。
-    backtesting.pyでの使用に最適化されています。
+    出来高系指標クラス
     """
 
     @staticmethod

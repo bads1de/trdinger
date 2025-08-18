@@ -1,9 +1,14 @@
 """
-ボラティリティ系テクニカル指標（pandas-ta移行版）
+ボラティリティ系テクニカル指標
 
-このモジュールはpandas-taライブラリを使用し、
-backtesting.pyとの完全な互換性を提供します。
-numpy配列ベースのインターフェースを維持しています。
+登録してあるテクニカルの一覧:
+- ATR (Average True Range)
+- NATR (Normalized Average True Range)
+- True Range
+- Bollinger Bands
+- Keltner Channels
+- Donchian Channels
+- Supertrend
 """
 
 from typing import Tuple, Union
@@ -17,10 +22,7 @@ from ..utils import handle_pandas_ta_errors
 
 class VolatilityIndicators:
     """
-    ボラティリティ系指標クラス（オートストラテジー最適化）
-
-    全ての指標はnumpy配列を直接処理し、性能を最大限活用します。
-    backtesting.pyでの使用に最適化されています。
+    ボラティリティ系指標クラス
     """
 
     @staticmethod

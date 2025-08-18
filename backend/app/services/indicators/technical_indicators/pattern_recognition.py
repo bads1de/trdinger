@@ -1,8 +1,21 @@
 """
-パターン認識系テクニカル指標（修正版）
+パターン認識系テクニカル指標
 
-pandas-taのcdl_pattern関数を使用した正しい実装。
-軽量エラーハンドリングで品質とパフォーマンスを両立。
+実装されている指標:
+- cdl_doji
+- cdl_hammer
+- cdl_hanging_man
+- cdl_shooting_star
+- cdl_engulfing
+- cdl_harami
+- cdl_piercing
+- cdl_dark_cloud_cover
+- cdl_morning_star
+- cdl_evening_star
+- cdl_three_black_crows
+- cdl_three_white_soldiers
+- cdl_marubozu
+- cdl_spinning_top
 """
 
 from typing import Union
@@ -16,9 +29,7 @@ from ..utils import handle_pandas_ta_errors
 
 class PatternRecognitionIndicators:
     """
-    パターン認識系指標クラス（修正版）
-
-    pandas-taのcdl_pattern関数を使用して効率的に実装。
+    パターン認識系指標クラス
     """
 
     @staticmethod
@@ -227,7 +238,7 @@ class PatternRecognitionIndicators:
         low: Union[np.ndarray, pd.Series],
         close: Union[np.ndarray, pd.Series],
     ) -> np.ndarray:
-        """Dark Cloud Cover（軽量実装）"""
+        """Dark Cloud Cover"""
         open_series = (
             pd.Series(open_data) if isinstance(open_data, np.ndarray) else open_data
         )

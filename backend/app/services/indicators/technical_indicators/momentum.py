@@ -1,7 +1,19 @@
 """
-モメンタム系テクニカル指標（簡素化版）
+モメンタム系テクニカル指標
 
-pandas-taを直接活用し、冗長なラッパーを削除した効率的な実装。
+登録してあるテクニカルの一覧:
+- RSI (Relative Strength Index)
+- MACD (Moving Average Convergence Divergence)
+- Stochastic Oscillator
+- Williams %R
+- CCI (Commodity Channel Index)
+- ROC (Rate of Change)
+- Momentum
+- ADX (Average Directional Index)
+- Aroon
+- MFI (Money Flow Index)
+- APO (Absolute Price Oscillator)
+- AO (Awesome Oscillator)
 """
 
 from typing import Tuple, Union
@@ -13,9 +25,7 @@ import pandas_ta as ta
 
 class MomentumIndicators:
     """
-    モメンタム系指標クラス（簡素化版）
-
-    pandas-taを直接活用し、不要なラッパーを削除。
+    モメンタム系指標クラス
     """
 
     @staticmethod

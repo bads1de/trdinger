@@ -1,9 +1,14 @@
 """
-数学演算子系テクニカル指標（NumPy標準関数版）
+数学演算子系テクニカル指標
 
-このモジュールはNumPy標準関数を使用し、
-backtesting.pyとの完全な互換性を提供します。
-数学演算子関数をNumPy標準関数で置き換えています。
+実装されている指標:
+- add
+- sub
+- mult
+- div
+- max_value
+- min_value
+- sum_values
 """
 
 import logging
@@ -18,10 +23,7 @@ logger = logging.getLogger(__name__)
 
 class MathOperatorsIndicators:
     """
-    数学演算子系指標クラス（NumPy標準関数版）
-
-    全ての指標はNumPy標準関数を使用し、依存を排除しています。
-    backtesting.pyでの使用に最適化されています。
+    数学演算子系指標クラス
     """
 
     @staticmethod

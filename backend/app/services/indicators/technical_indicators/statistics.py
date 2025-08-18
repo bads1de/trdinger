@@ -1,9 +1,16 @@
 """
-統計系テクニカル指標（NumPy標準関数版）
+統計系テクニカル指標
 
-このモジュールはNumPy標準関数を使用し、
-backtesting.pyとの完全な互換性を提供します。
-統計関数をNumPy標準関数で置き換えています。
+登録してあるテクニカルの一覧:
+- Beta
+- Correl (Pearson's Correlation Coefficient)
+- LinearReg (Linear Regression)
+- LinearReg_Angle (Linear Regression Angle)
+- LinearReg_Intercept (Linear Regression Intercept)
+- LinearReg_Slope (Linear Regression Slope)
+- StdDev (Standard Deviation)
+- TSF (Time Series Forecast)
+- Var (Variance)
 """
 
 import logging
@@ -18,10 +25,7 @@ logger = logging.getLogger(__name__)
 
 class StatisticsIndicators:
     """
-    統計系指標クラス（NumPy標準関数版）
-
-    全ての指標はNumPy標準関数を使用し、依存を排除しています。
-    backtesting.pyでの使用に最適化されています。
+    統計系指標クラス
     """
 
     @staticmethod
@@ -82,7 +86,9 @@ class StatisticsIndicators:
         return result
 
     @staticmethod
-    def linearreg_angle(data: Union[np.ndarray, pd.Series], period: int = 14) -> np.ndarray:
+    def linearreg_angle(
+        data: Union[np.ndarray, pd.Series], period: int = 14
+    ) -> np.ndarray:
         """Linear Regression Angle (線形回帰角度)"""
         data = validate_numpy_input(data, period)
         result = np.full_like(data, np.nan)
@@ -98,7 +104,9 @@ class StatisticsIndicators:
         return result
 
     @staticmethod
-    def linearreg_intercept(data: Union[np.ndarray, pd.Series], period: int = 14) -> np.ndarray:
+    def linearreg_intercept(
+        data: Union[np.ndarray, pd.Series], period: int = 14
+    ) -> np.ndarray:
         """Linear Regression Intercept (線形回帰切片)"""
         data = validate_numpy_input(data, period)
         result = np.full_like(data, np.nan)
@@ -114,7 +122,9 @@ class StatisticsIndicators:
         return result
 
     @staticmethod
-    def linearreg_slope(data: Union[np.ndarray, pd.Series], period: int = 14) -> np.ndarray:
+    def linearreg_slope(
+        data: Union[np.ndarray, pd.Series], period: int = 14
+    ) -> np.ndarray:
         """Linear Regression Slope (線形回帰傾き)"""
         data = validate_numpy_input(data, period)
         result = np.full_like(data, np.nan)
@@ -130,7 +140,9 @@ class StatisticsIndicators:
         return result
 
     @staticmethod
-    def stddev(data: Union[np.ndarray, pd.Series], period: int = 5, nbdev: float = 1.0) -> np.ndarray:
+    def stddev(
+        data: Union[np.ndarray, pd.Series], period: int = 5, nbdev: float = 1.0
+    ) -> np.ndarray:
         """Standard Deviation (標準偏差)"""
         data = validate_numpy_input(data, period)
         result = np.full_like(data, np.nan)
@@ -158,7 +170,9 @@ class StatisticsIndicators:
         return result
 
     @staticmethod
-    def var(data: Union[np.ndarray, pd.Series], period: int = 5, nbdev: float = 1.0) -> np.ndarray:
+    def var(
+        data: Union[np.ndarray, pd.Series], period: int = 5, nbdev: float = 1.0
+    ) -> np.ndarray:
         """Variance (分散)"""
         data = validate_numpy_input(data, period)
         result = np.full_like(data, np.nan)

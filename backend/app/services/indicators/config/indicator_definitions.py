@@ -4,7 +4,6 @@
 各インジケーターの設定を定義し、レジストリに登録します。
 """
 
-# from app.services.auto_strategy.services.ml_orchestrator import ml_orchestrator  # 循環インポート回避
 from app.services.indicators.technical_indicators.math_operators import (
     MathOperatorsIndicators,
 )

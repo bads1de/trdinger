@@ -1,8 +1,31 @@
 """
-トレンド系テクニカル指標（簡素化版）
+トレンド系テクニカル指標
 
-pandas-taを直接活用し、冗長なラッパーを削除した効率的な実装。
-backtesting.pyとの互換性を保ちつつ、コードを大幅に簡素化。
+登録してあるテクニカルの一覧:
+- SMA (Simple Moving Average)
+- EMA (Exponential Moving Average)
+- TEMA (Triple Exponential Moving Average)
+- DEMA (Double Exponential Moving Average)
+- WMA (Weighted Moving Average)
+- TRIMA (Triangular Moving Average)
+- KAMA (Kaufman's Adaptive Moving Average)
+- T3 (Tillson's T3 Moving Average)
+- SAR (Parabolic SAR)
+- SAREXT (Extended Parabolic SAR)
+- HT_TRENDLINE (Hilbert Transform - Instantaneous Trendline)
+- MA (Moving Average with Type)
+- MAVP (Moving Average Variable Period)
+- MIDPOINT (MidPoint over period)
+- MIDPRICE (MidPrice over period)
+- HMA (Hull Moving Average)
+- ZLMA (Zero Lag Moving Average)
+- VWMA (Volume Weighted Moving Average)
+- SWMA (Symmetric Weighted Moving Average)
+- ALMA (Arnaud Legoux Moving Average)
+- RMA (Smoothed Moving Average)
+- Ichimoku Cloud
+- SMA_SLOPE (SMA Slope)
+- PRICE_EMA_RATIO (Price to EMA Ratio)
 """
 
 from typing import Union, Tuple
@@ -16,9 +39,7 @@ from ..utils import handle_pandas_ta_errors
 
 class TrendIndicators:
     """
-    トレンド系指標クラス（簡素化版）
-
-    pandas-taを直接活用し、不要なラッパーを削除。
+    トレンド系指標クラス
     """
 
     @staticmethod

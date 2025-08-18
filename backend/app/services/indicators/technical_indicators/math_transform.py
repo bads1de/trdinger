@@ -1,9 +1,22 @@
 """
-数学変換系テクニカル指標（NumPy標準関数版）
+数学変換系テクニカル指標
 
-このモジュールはNumPy標準関数を使用し、
-backtesting.pyとの完全な互換性を提供します。
-数学変換関数をNumPy標準関数で置き換えています。
+実装されている指標:
+- acos
+- asin
+- atan
+- ceil
+- cos
+- cosh
+- exp
+- floor
+- ln
+- log10
+- sin
+- sinh
+- sqrt
+- tan
+- tanh
 """
 
 import logging
