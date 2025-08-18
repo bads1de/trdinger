@@ -1,39 +1,40 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo } from "react";
+import { useAlgorithms, Algorithm } from "../../hooks/useAlgorithms";
+
+// shadcn/ui components
 import {
-  Box,
   Card,
   CardContent,
-  Typography,
-  Grid,
-  Chip,
-  TextField,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
-  Accordion,
-  AccordionSummary,
-  AccordionDetails,
-  List,
-  ListItem,
-  ListItemText,
-  ListItemIcon,
-  Tooltip,
-  Alert,
-  CircularProgress,
-  Badge,
-} from '@mui/material';
+  CardHeader,
+  CardTitle,
+  CardDescription,
+} from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
-  ExpandMore as ExpandMoreIcon,
-  CheckCircle as CheckCircleIcon,
-  Warning as WarningIcon,
-  Info as InfoIcon,
-  Speed as SpeedIcon,
-  Accuracy as AccuracyIcon,
-  Memory as MemoryIcon,
-  TrendingUp as TrendingUpIcon,
-} from '@mui/icons-material';
-import { useAlgorithms, Algorithm } from '../../hooks/useAlgorithms';
+  Accordion,
+  AccordionItem,
+  AccordionTrigger,
+  AccordionContent,
+} from "@/components/ui/accordion";
+import {
+  Select,
+  SelectTrigger,
+  SelectValue,
+  SelectContent,
+  SelectItem,
+} from "@/components/ui/select";
+
+// lucide-react icons
+import {
+  ChevronDown,
+  CheckCircle,
+  AlertTriangle,
+  Info,
+  Gauge,
+  TrendingUp,
+} from "lucide-react";
 
 interface AlgorithmSelectorProps {
   selectedAlgorithms?: string[];
@@ -41,7 +42,7 @@ interface AlgorithmSelectorProps {
   maxSelection?: number;
   showRecommendations?: boolean;
   requirements?: {
-    dataSize?: 'small' | 'medium' | 'large';
+    dataSize?: "small" | "medium" | "large";
     needsProbability?: boolean;
     needsFeatureImportance?: boolean;
     needsSpeed?: boolean;
@@ -70,21 +71,21 @@ const AlgorithmSelector: React.FC<AlgorithmSelectorProps> = ({
     getTypeLabel,
   } = useAlgorithms();
 
-  const [searchQuery, setSearchQuery] = useState('');
-  const [filterType, setFilterType] = useState<string>('all');
-  const [filterCapability, setFilterCapability] = useState<string>('all');
+  const [searchQuery, setSearchQuery] = useState("");
+  const [filterType, setFilterType] = useState<string>("all");
+  const [filterCapability, setFilterCapability] = useState<string>("all");
 
   // フィルタリングされたアルゴリズム
   const filteredAlgorithms = useMemo(() => {
     let filtered = searchAlgorithms(searchQuery);
 
-    if (filterType !== 'all') {
-      filtered = filtered.filter(algo => algo.type === filterType);
+    if (filterType !== "all") {
+      filtered = filtered.filter((algo) => algo.type === filterType);
     }
 
-    if (filterCapability !== 'all') {
-      filtered = filtered.filter(algo => 
-        algo.capabilities.includes(filterCapability)
+    if (filterCapability !== "all") {
+      filtered = filtered.filter((algo) =>
+        algo.capabilities.includes(filterCapability as any)
       );
     }
 
@@ -105,7 +106,9 @@ const AlgorithmSelector: React.FC<AlgorithmSelectorProps> = ({
     let newSelection: string[];
 
     if (isSelected) {
-      newSelection = selectedAlgorithms.filter(name => name !== algorithmName);
+      newSelection = selectedAlgorithms.filter(
+        (name) => name !== algorithmName
+      );
     } else {
       if (selectedAlgorithms.length >= maxSelection) {
         return; // 最大選択数に達している
@@ -117,129 +120,115 @@ const AlgorithmSelector: React.FC<AlgorithmSelectorProps> = ({
   };
 
   // アルゴリズムカードコンポーネント
-  const AlgorithmCard: React.FC<{ algorithm: Algorithm; isRecommended?: boolean }> = ({ 
-    algorithm, 
-    isRecommended = false 
-  }) => {
+  const AlgorithmCard: React.FC<{
+    algorithm: Algorithm;
+    isRecommended?: boolean;
+  }> = ({ algorithm, isRecommended = false }) => {
     const isSelected = selectedAlgorithms.includes(algorithm.name);
     const canSelect = !isSelected && selectedAlgorithms.length < maxSelection;
 
     return (
       <Card
-        sx={{
-          cursor: onSelectionChange ? 'pointer' : 'default',
-          border: isSelected ? 2 : 1,
-          borderColor: isSelected ? 'primary.main' : 'divider',
-          backgroundColor: isSelected ? 'primary.50' : 'background.paper',
-          position: 'relative',
-          '&:hover': onSelectionChange ? {
-            borderColor: 'primary.main',
-            boxShadow: 2,
-          } : {},
-        }}
-        onClick={() => onSelectionChange && canSelect && handleAlgorithmToggle(algorithm.name)}
+        className={`relative ${onSelectionChange ? "cursor-pointer" : ""} ${
+          isSelected
+            ? "border-2 border-primary bg-primary/10"
+            : "border border-border"
+        } ${onSelectionChange ? "hover:border-primary hover:shadow-md" : ""}`}
+        onClick={() =>
+          onSelectionChange &&
+          canSelect &&
+          handleAlgorithmToggle(algorithm.name)
+        }
       >
         {isRecommended && (
-          <Chip
-            label="推奨"
-            color="secondary"
-            size="small"
-            sx={{ position: 'absolute', top: 8, right: 8, zIndex: 1 }}
-          />
+          <Badge variant="secondary" className="absolute top-2 right-2 z-10">
+            推奨
+          </Badge>
         )}
-        
+
         <CardContent>
-          <Box display="flex" alignItems="center" mb={1}>
-            {isSelected && <CheckCircleIcon color="primary" sx={{ mr: 1 }} />}
-            <Typography variant="h6" component="h3">
-              {algorithm.display_name}
-            </Typography>
-          </Box>
+          <div className="flex items-center mb-2">
+            {isSelected && (
+              <CheckCircle className="mr-2 text-primary h-5 w-5" />
+            )}
+            <h3 className="text-lg font-semibold">{algorithm.display_name}</h3>
+          </div>
 
-          <Typography variant="body2" color="text.secondary" mb={2}>
+          <p className="text-sm text-muted-foreground mb-4">
             {algorithm.description}
-          </Typography>
+          </p>
 
-          <Box mb={2}>
-            <Chip
-              label={getTypeLabel(algorithm.type)}
-              size="small"
-              variant="outlined"
-              sx={{ mr: 1, mb: 1 }}
-            />
+          <div className="mb-4 flex flex-wrap gap-1">
+            <Badge variant="outline" className="mr-1 mb-1">
+              {getTypeLabel(algorithm.type)}
+            </Badge>
             {algorithm.has_probability_prediction && (
-              <Chip
-                label="確率予測"
-                size="small"
-                color="info"
-                sx={{ mr: 1, mb: 1 }}
-              />
+              <Badge variant="secondary" className="mr-1 mb-1">
+                確率予測
+              </Badge>
             )}
             {algorithm.has_feature_importance && (
-              <Chip
-                label="特徴量重要度"
-                size="small"
-                color="success"
-                sx={{ mr: 1, mb: 1 }}
-              />
+              <Badge variant="success" className="mr-1 mb-1">
+                特徴量重要度
+              </Badge>
             )}
-          </Box>
+          </div>
 
-          <Accordion>
-            <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-              <Typography variant="body2">詳細情報</Typography>
-            </AccordionSummary>
-            <AccordionDetails>
-              <Box>
-                <Typography variant="subtitle2" color="success.main" gutterBottom>
-                  長所:
-                </Typography>
-                <List dense>
-                  {algorithm.pros.map((pro, index) => (
-                    <ListItem key={index} sx={{ py: 0 }}>
-                      <ListItemIcon sx={{ minWidth: 20 }}>
-                        <CheckCircleIcon fontSize="small" color="success" />
-                      </ListItemIcon>
-                      <ListItemText primary={pro} />
-                    </ListItem>
-                  ))}
-                </List>
+          <Accordion type="single" collapsible>
+            <AccordionItem value="details">
+              <AccordionTrigger className="text-sm">詳細情報</AccordionTrigger>
+              <AccordionContent>
+                <div className="space-y-4">
+                  <div>
+                    <h4 className="text-sm font-semibold text-green-600 mb-1">
+                      長所:
+                    </h4>
+                    <ul className="space-y-1">
+                      {algorithm.pros.map((pro, index) => (
+                        <li key={index} className="flex items-start py-0.5">
+                          <CheckCircle className="h-4 w-4 text-green-600 mr-2 mt-0.5 flex-shrink-0" />
+                          <span className="text-sm">{pro}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
 
-                <Typography variant="subtitle2" color="warning.main" gutterBottom mt={1}>
-                  短所:
-                </Typography>
-                <List dense>
-                  {algorithm.cons.map((con, index) => (
-                    <ListItem key={index} sx={{ py: 0 }}>
-                      <ListItemIcon sx={{ minWidth: 20 }}>
-                        <WarningIcon fontSize="small" color="warning" />
-                      </ListItemIcon>
-                      <ListItemText primary={con} />
-                    </ListItem>
-                  ))}
-                </List>
+                  <div>
+                    <h4 className="text-sm font-semibold text-yellow-600 mb-1">
+                      短所:
+                    </h4>
+                    <ul className="space-y-1">
+                      {algorithm.cons.map((con, index) => (
+                        <li key={index} className="flex items-start py-0.5">
+                          <AlertTriangle className="h-4 w-4 text-yellow-600 mr-2 mt-0.5 flex-shrink-0" />
+                          <span className="text-sm">{con}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
 
-                <Typography variant="subtitle2" color="info.main" gutterBottom mt={1}>
-                  適用場面:
-                </Typography>
-                <List dense>
-                  {algorithm.best_for.map((use, index) => (
-                    <ListItem key={index} sx={{ py: 0 }}>
-                      <ListItemIcon sx={{ minWidth: 20 }}>
-                        <InfoIcon fontSize="small" color="info" />
-                      </ListItemIcon>
-                      <ListItemText primary={use} />
-                    </ListItem>
-                  ))}
-                </List>
+                  <div>
+                    <h4 className="text-sm font-semibold text-blue-600 mb-1">
+                      適用場面:
+                    </h4>
+                    <ul className="space-y-1">
+                      {algorithm.best_for.map((use, index) => (
+                        <li key={index} className="flex items-start py-0.5">
+                          <Info className="h-4 w-4 text-blue-600 mr-2 mt-0.5 flex-shrink-0" />
+                          <span className="text-sm">{use}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
 
-                {algorithm.note && (
-                  <Alert severity="warning" sx={{ mt: 1 }}>
-                    {algorithm.note}
-                  </Alert>
-                )}
-              </Box>
-            </AccordionDetails>
+                  {algorithm.note && (
+                    <Alert className="mt-2 bg-yellow-50 border-yellow-200">
+                      <AlertDescription>{algorithm.note}</AlertDescription>
+                    </Alert>
+                  )}
+                </div>
+              </AccordionContent>
+            </AccordionItem>
           </Accordion>
         </CardContent>
       </Card>
@@ -248,147 +237,159 @@ const AlgorithmSelector: React.FC<AlgorithmSelectorProps> = ({
 
   if (isLoading) {
     return (
-      <Box display="flex" justifyContent="center" p={4}>
-        <CircularProgress />
-      </Box>
+      <div className="flex justify-center items-center p-6">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      </div>
     );
   }
 
   if (error) {
     return (
-      <Alert severity="error" sx={{ m: 2 }}>
-        {error}
+      <Alert variant="destructive" className="m-2">
+        <AlertDescription>{error}</AlertDescription>
       </Alert>
     );
   }
 
   return (
-    <Box>
+    <div>
       {/* 統計情報 */}
       {statistics && (
-        <Box mb={3}>
-          <Typography variant="h6" gutterBottom>
+        <div className="mb-6">
+          <h3 className="text-lg font-semibold mb-2">
             利用可能なアルゴリズム ({statistics.total}個)
-          </Typography>
-          <Box display="flex" gap={1} flexWrap="wrap">
-            <Chip
-              icon={<TrendingUpIcon />}
-              label={`確率予測対応: ${statistics.probabilityCount}個`}
-              variant="outlined"
-              color="info"
-            />
-            <Chip
-              icon={<AccuracyIcon />}
-              label={`特徴量重要度: ${statistics.featureImportanceCount}個`}
-              variant="outlined"
-              color="success"
-            />
-          </Box>
-        </Box>
+          </h3>
+          <div className="flex flex-wrap gap-2">
+            <Badge variant="outline" className="flex items-center gap-1">
+              <TrendingUp className="h-3.5 w-3.5" />
+              確率予測対応: {statistics.probabilityCount}個
+            </Badge>
+            <Badge variant="outline" className="flex items-center gap-1">
+              <Gauge className="h-3.5 w-3.5" />
+              特徴量重要度: {statistics.featureImportanceCount}個
+            </Badge>
+          </div>
+        </div>
       )}
 
       {/* 選択状況 */}
       {onSelectionChange && (
-        <Box mb={3}>
-          <Typography variant="subtitle1" gutterBottom>
+        <div className="mb-6">
+          <h4 className="text-base font-medium mb-2">
             選択済み: {selectedAlgorithms.length} / {maxSelection}
-          </Typography>
-          <Box display="flex" gap={1} flexWrap="wrap">
-            {selectedAlgorithms.map(name => (
-              <Chip
+          </h4>
+          <div className="flex flex-wrap gap-2">
+            {selectedAlgorithms.map((name) => (
+              <Badge
                 key={name}
-                label={algorithms.find(a => a.name === name)?.display_name || name}
-                onDelete={() => handleAlgorithmToggle(name)}
-                color="primary"
-              />
+                variant="secondary"
+                className="flex items-center gap-1 cursor-pointer"
+                onClick={() => handleAlgorithmToggle(name)}
+              >
+                {algorithms.find((a) => a.name === name)?.display_name || name}
+                <button className="ml-1 h-3.5 w-3.5 rounded-full">
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="14"
+                    height="14"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <path d="M18 6 6 18" />
+                    <path d="m6 6 12 12" />
+                  </svg>
+                </button>
+              </Badge>
             ))}
-          </Box>
-        </Box>
+          </div>
+        </div>
       )}
 
       {/* フィルター */}
-      <Box mb={3}>
-        <Grid container spacing={2}>
-          <Grid item xs={12} md={4}>
-            <TextField
-              fullWidth
-              label="検索"
+      <div className="mb-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div>
+            <Input
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="アルゴリズム名、説明で検索..."
             />
-          </Grid>
-          <Grid item xs={12} md={4}>
-            <FormControl fullWidth>
-              <InputLabel>タイプ</InputLabel>
-              <Select
-                value={filterType}
-                onChange={(e) => setFilterType(e.target.value)}
-                label="タイプ"
-              >
-                <MenuItem value="all">すべて</MenuItem>
+          </div>
+          <div>
+            <Select
+              value={filterType}
+              onValueChange={(value) => setFilterType(value)}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="タイプ" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">すべて</SelectItem>
                 {statistics?.byType.map(({ type, count }) => (
-                  <MenuItem key={type} value={type}>
+                  <SelectItem key={type} value={type}>
                     {type} ({count})
-                  </MenuItem>
+                  </SelectItem>
                 ))}
-              </Select>
-            </FormControl>
-          </Grid>
-          <Grid item xs={12} md={4}>
-            <FormControl fullWidth>
-              <InputLabel>機能</InputLabel>
-              <Select
-                value={filterCapability}
-                onChange={(e) => setFilterCapability(e.target.value)}
-                label="機能"
-              >
-                <MenuItem value="all">すべて</MenuItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div>
+            <Select
+              value={filterCapability}
+              onValueChange={(value) => setFilterCapability(value)}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="機能" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">すべて</SelectItem>
                 {statistics?.byCapability.map(({ capability, count }) => (
-                  <MenuItem key={capability} value={capability}>
+                  <SelectItem key={capability} value={capability}>
                     {capability} ({count})
-                  </MenuItem>
+                  </SelectItem>
                 ))}
-              </Select>
-            </FormControl>
-          </Grid>
-        </Grid>
-      </Box>
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+      </div>
 
       {/* 推奨アルゴリズム */}
       {showRecommendations && recommendedAlgorithms.length > 0 && (
-        <Box mb={4}>
-          <Typography variant="h6" gutterBottom>
-            推奨アルゴリズム
-          </Typography>
-          <Grid container spacing={2}>
-            {recommendedAlgorithms.slice(0, 3).map(algorithm => (
-              <Grid item xs={12} md={4} key={algorithm.name}>
+        <div className="mb-8">
+          <h3 className="text-lg font-semibold mb-4">推奨アルゴリズム</h3>
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+            {recommendedAlgorithms.slice(0, 3).map((algorithm) => (
+              <div key={algorithm.name}>
                 <AlgorithmCard algorithm={algorithm} isRecommended />
-              </Grid>
+              </div>
             ))}
-          </Grid>
-        </Box>
+          </div>
+        </div>
       )}
 
       {/* アルゴリズム一覧 */}
-      <Typography variant="h6" gutterBottom>
-        全アルゴリズム
-      </Typography>
-      <Grid container spacing={2}>
-        {filteredAlgorithms.map(algorithm => (
-          <Grid item xs={12} md={6} lg={4} key={algorithm.name}>
+      <h3 className="text-lg font-semibold mb-4">全アルゴリズム</h3>
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+        {filteredAlgorithms.map((algorithm) => (
+          <div key={algorithm.name}>
             <AlgorithmCard algorithm={algorithm} />
-          </Grid>
+          </div>
         ))}
-      </Grid>
+      </div>
 
       {filteredAlgorithms.length === 0 && (
-        <Alert severity="info" sx={{ mt: 2 }}>
-          条件に一致するアルゴリズムが見つかりませんでした。
+        <Alert className="mt-4">
+          <AlertDescription>
+            条件に一致するアルゴリズムが見つかりませんでした。
+          </AlertDescription>
         </Alert>
       )}
-    </Box>
+    </div>
   );
 };
 
