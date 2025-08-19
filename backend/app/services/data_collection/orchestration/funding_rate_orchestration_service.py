@@ -7,7 +7,7 @@
 
 import logging
 from typing import List, Optional
-import pandas as pd
+
 
 from fastapi import Depends
 from sqlalchemy.orm import Session
@@ -96,12 +96,16 @@ class FundingRateOrchestrationService:
             )
 
         if not rates_data:
-            logger.warning(f"{symbol}のファンディングレートデータが見つかりませんでした")
+            logger.warning(
+                f"{symbol}のファンディングレートデータが見つかりませんでした"
+            )
             return {"status": "success", "message": "データなし", "count": 0}
 
         funding_rate_repo = FundingRateRepository(db_session)
         inserted_count = funding_rate_repo.insert_funding_rate_data(rates_data)
-        logger.info(f"{symbol}のファンディングレートデータ{inserted_count}件を保存しました")
+        logger.info(
+            f"{symbol}のファンディングレートデータ{inserted_count}件を保存しました"
+        )
         return {
             "status": "success",
             "message": "データ収集完了",

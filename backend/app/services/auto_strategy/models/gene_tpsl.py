@@ -8,7 +8,7 @@ TP/SL設定をGA最適化対象として表現するための遺伝子モデル�
 import random
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List
 
 
 class TPSLMethod(Enum):
@@ -174,8 +174,6 @@ class TPSLGene:
                 errors.append("method_weights sum should be close to 1.0")
 
         return len(errors) == 0, errors
-
-    
 
 
 def create_random_tpsl_gene() -> TPSLGene:

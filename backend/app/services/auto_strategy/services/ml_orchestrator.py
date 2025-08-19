@@ -33,8 +33,9 @@ from app.services.ml.exceptions import (
 )
 from app.utils.error_handler import (
     ErrorHandler,
-    ml_operation_context,
     safe_ml_operation,
+    timeout_decorator,
+    operation_context,
 )
 from database.connection import get_db
 from database.repositories.funding_rate_repository import FundingRateRepository
@@ -115,7 +116,7 @@ class MLOrchestrator(MLPredictionInterface):
             )
         return self._backtest_data_service
 
-    @unified_timeout_decorator(
+    @timeout_decorator(
         timeout_seconds=ml_config.data_processing.FEATURE_CALCULATION_TIMEOUT
     )
     def calculate_ml_indicators(
@@ -135,7 +136,7 @@ class MLOrchestrator(MLPredictionInterface):
         Returns:
             ML指標の辞書 {"ML_UP_PROB": array, "ML_DOWN_PROB": array, "ML_RANGE_PROB": array}
         """
-        with unified_operation_context("ML指標計算"):
+        with operation_context("ML指標計算"):
             try:
                 # データサイズ制限
                 df = self._limit_data_size(df)
@@ -319,8 +320,6 @@ class MLOrchestrator(MLPredictionInterface):
 
         return status
 
-
-
     def get_feature_importance(self, top_n: int = 10) -> Dict[str, float]:
         """
         特徴量重要度を取得
@@ -391,8 +390,6 @@ class MLOrchestrator(MLPredictionInterface):
         except Exception as e:
             logger.error(f"特徴量重要度取得エラー: {e}")
             return {}
-
-
 
     def _validate_input_data(self, df: pd.DataFrame):
         """入力データの検証"""
@@ -516,10 +513,6 @@ class MLOrchestrator(MLPredictionInterface):
         except Exception as e:
             logger.error(f"ターゲット変数計算エラー: {e}")
             return None
-
-
-
-
 
     @safe_ml_operation(context="ML予測実行")
     def _safe_ml_prediction(self, features_df: pd.DataFrame) -> Dict[str, float]:

@@ -331,7 +331,7 @@ def get_all_indicator_ids() -> Dict[str, int]:
     全指標のIDマッピングを取得（統合版）
 
     テクニカル指標とML指標を統合したIDマッピングを提供します。
-    auto_strategy_utils.py と gene_utils.py の重複機能を統合しています。
+    gene_utils.py との重複機能を統合しています。
     """
     try:
         from app.services.indicators import TechnicalIndicatorService

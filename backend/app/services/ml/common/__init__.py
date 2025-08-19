@@ -22,9 +22,7 @@ from ....utils.error_handler import (
     ml_operation_context,
     safe_ml_operation,
     timeout_decorator,
-    unified_operation_context,
-    unified_safe_operation,
-    unified_timeout_decorator,
+    safe_operation,
 )
 
 from .logger import (
@@ -56,9 +54,9 @@ from ..evaluation.enhanced_metrics import (
 __all__ = [
     # Unified Error handling
     "ErrorHandler",
-    "unified_safe_operation",
-    "unified_timeout_decorator",
-    "unified_operation_context",
+    "safe_operation",
+    "timeout_decorator",
+    "operation_context",
     "TimeoutError",
     "ValidationError",
     "DataError",
@@ -93,4 +91,3 @@ __all__ = [
     "ModelEvaluationMetrics",
     "get_metrics_summary",
 ]
-

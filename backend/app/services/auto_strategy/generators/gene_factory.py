@@ -95,10 +95,16 @@ class BaseGeneGenerator(ABC):
 
     def _create_fallback_gene(self) -> StrategyGene:
         """フォールバック遺伝子を作成"""
-        from ..utils.auto_strategy_utils import AutoStrategyUtils
-
-        return AutoStrategyUtils.create_default_strategy_gene(
-            strategy_gene_class=StrategyGene
+        return StrategyGene(
+            indicators=[IndicatorGene(type="SMA", parameters={"period": 20}, enabled=True)],
+            entry_conditions=[],
+            exit_conditions=[],
+            long_entry_conditions=[],
+            short_entry_conditions=[],
+            risk_management={}, # デフォルト値
+            tpsl_gene=TPSLGene(take_profit_ratio=0.01, stop_loss_ratio=0.005), # デフォルト値
+            position_sizing_gene=PositionSizingGene(sizing_type="fixed", fixed_amount=1000), # デフォルト値
+            metadata={"generated_by": "Fallback"}
         )
 
 

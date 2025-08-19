@@ -7,10 +7,10 @@ GeneEncoder、GeneDecoder、GeneSerializerの機能を統合しています。
 
 import json
 import logging
-from typing import Any, Dict, List, Optional, Type
+from typing import Any, Dict, List, Optional
 
 
-from .gene_strategy import Condition, IndicatorGene, StrategyGene
+from .gene_strategy import IndicatorGene
 from .gene_tpsl import TPSLGene, TPSLMethod
 from .gene_position_sizing import PositionSizingGene, PositionSizingMethod
 from ..config.constants import (
@@ -329,12 +329,6 @@ class GeneSerializer:
             logger.error(f"戦略遺伝子JSON変換エラー: {e}")
             raise ValueError(f"戦略遺伝子のJSON変換に失敗: {e}")
 
-    
-
-    
-
-    
-
     def _get_current_timestamp(self) -> str:
         """現在のタイムスタンプを取得"""
         try:
@@ -344,8 +338,6 @@ class GeneSerializer:
         except Exception as e:
             logger.error(f"タイムスタンプ取得エラー: {e}")
             return ""
-
-    
 
     # 以下、旧GeneEncoderから統合されたメソッド
 

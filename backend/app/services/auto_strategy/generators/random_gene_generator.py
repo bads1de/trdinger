@@ -15,6 +15,7 @@ from app.services.indicators.config.indicator_config import IndicatorScaleType
 from ..models.ga_config import GAConfig
 from ..models.gene_serialization import GeneSerializer
 from ..models.gene_strategy import Condition, IndicatorGene, StrategyGene
+from ..models.gene_position_sizing import PositionSizingGene
 from ..models.gene_tpsl import TPSLGene, TPSLMethod, create_random_tpsl_gene
 from ..utils.operand_grouping import operand_grouping_system
 from ..config.constants import OPERATORS, DATA_SOURCES
@@ -176,10 +177,23 @@ class RandomGeneGenerator:
             logger.error(f"ランダム戦略遺伝子生成失敗: {e}", exc_info=True)
             # フォールバック: 最小限の遺伝子を生成
             # logger.info("フォールバック戦略遺伝子を生成")
-            from ..utils.auto_strategy_utils import AutoStrategyUtils
 
-            return AutoStrategyUtils.create_default_strategy_gene(
-                strategy_gene_class=StrategyGene
+            return StrategyGene(
+                indicators=[
+                    IndicatorGene(type="SMA", parameters={"period": 20}, enabled=True)
+                ],
+                entry_conditions=[],
+                exit_conditions=[],
+                long_entry_conditions=[],
+                short_entry_conditions=[],
+                risk_management={},  # デフォルト値
+                tpsl_gene=TPSLGene(
+                    take_profit_ratio=0.01, stop_loss_ratio=0.005
+                ),  # デフォルト値
+                position_sizing_gene=PositionSizingGene(
+                    sizing_type="fixed", fixed_amount=1000
+                ),  # デフォルト値
+                metadata={"generated_by": "Fallback"},
             )
 
     def _setup_indicators_by_mode(self, config: GAConfig) -> List[str]:
@@ -316,7 +330,7 @@ class RandomGeneGenerator:
                     ]
                     self._coverage_idx += 1
             except Exception:
-                coverage_pick = None
+                pass
 
             # curated での厳選は allowed 指定がない場合のみ適用
             try:

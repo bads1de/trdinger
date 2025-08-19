@@ -7,7 +7,11 @@ auto_strategy全体で使用される共通機能を提供します。
 import logging
 from typing import Any, Dict, List, Optional, Union
 from datetime import datetime
-from .error_handling import ErrorHandler
+
+from backend.app.services.auto_strategy.utils.error_handling import (
+    AutoStrategyErrorHandler,
+)
+
 
 logger = logging.getLogger(__name__)
 
@@ -69,18 +73,14 @@ class DataConverter:
         return symbol
 
 
-
 class LoggingUtils:
     """ログ出力ユーティリティ"""
-
-
 
     @staticmethod
     def log_performance(operation: str, duration: float, **metrics):
         """パフォーマンスログ"""
         metrics_str = ", ".join([f"{k}={v}" for k, v in metrics.items()])
         logger.info(f"[PERF] {operation}: {duration:.3f}s, {metrics_str}")
-
 
 
 class ValidationUtils:
@@ -116,8 +116,6 @@ class ValidationUtils:
         return True, []
 
 
-
-
 class PerformanceUtils:
     """パフォーマンス測定ユーティリティ"""
 
@@ -141,7 +139,6 @@ class PerformanceUtils:
                 raise
 
         return wrapper
-
 
 
 class CacheUtils:
@@ -170,10 +167,7 @@ class CacheUtils:
             cls._cache.clear()
 
 
-
-# 便利な関数のエイリアス（AutoStrategyErrorHandlerに統合）
 safe_execute = AutoStrategyErrorHandler.safe_execute
-# safe_execute_async は ErrorHandler から利用可能
 ensure_float = DataConverter.ensure_float
 ensure_int = DataConverter.ensure_int
 ensure_list = DataConverter.ensure_list

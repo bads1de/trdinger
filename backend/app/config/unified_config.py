@@ -5,7 +5,6 @@
 SOLID原則に従い、各設定カテゴリを明確に分離し、責任を明確化します。
 """
 
-import os
 from typing import Any, Dict, List, Optional
 
 from pydantic import Field

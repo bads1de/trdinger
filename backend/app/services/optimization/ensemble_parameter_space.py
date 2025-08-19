@@ -5,7 +5,7 @@
 パラメータ空間を定義します。Optunaの高度な最適化機能を活用。
 """
 
-from typing import Dict, List
+from typing import Dict
 import optuna
 
 from .optuna_optimizer import ParameterSpace
@@ -263,8 +263,6 @@ class EnsembleParameterSpace:
             parameter_space.update(self.get_stacking_parameter_space())
 
         return parameter_space
-
-
 
     @staticmethod
     def _suggest_lightgbm_params(trial: optuna.Trial) -> Dict[str, any]:
