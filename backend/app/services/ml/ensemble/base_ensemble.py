@@ -98,28 +98,28 @@ class BaseEnsemble(ABC):
         """
         if model_type.lower() == "lightgbm":
             try:
-                from ..models.lightgbm_wrapper import LightGBMModel
+                from ..models.lightgbm import LightGBMModel
 
                 return LightGBMModel(automl_config=self.automl_config)
             except ImportError:
                 raise ModelError("LightGBMモデルラッパーのインポートに失敗しました")
         elif model_type.lower() == "xgboost":
             try:
-                from ..models.xgboost_wrapper import XGBoostModel
+                from ..models.xgboost import XGBoostModel
 
                 return XGBoostModel(automl_config=self.automl_config)
             except ImportError:
                 raise ModelError("XGBoostモデルラッパーのインポートに失敗しました")
         elif model_type.lower() == "catboost":
             try:
-                from ..models.catboost_wrapper import CatBoostModel
+                from ..models.catboost import CatBoostModel
 
                 return CatBoostModel(automl_config=self.automl_config)
             except ImportError:
                 raise ModelError("CatBoostモデルラッパーのインポートに失敗しました")
         elif model_type.lower() == "tabnet":
             try:
-                from ..models.tabnet_wrapper import TabNetModel
+                from ..models.tabnet import TabNetModel
 
                 return TabNetModel(automl_config=self.automl_config)
             except ImportError:
@@ -147,35 +147,35 @@ class BaseEnsemble(ABC):
             )
         elif model_type.lower() == "extratrees":
             try:
-                from ..models.extratrees_wrapper import ExtraTreesModel
+                from ..models.extratrees import ExtraTreesModel
 
                 return ExtraTreesModel(automl_config=self.automl_config)
             except ImportError:
                 raise ModelError("ExtraTreesモデルラッパーのインポートに失敗しました")
         elif model_type.lower() == "adaboost":
             try:
-                from ..models.adaboost_wrapper import AdaBoostModel
+                from ..models.adaboost import AdaBoostModel
 
                 return AdaBoostModel(automl_config=self.automl_config)
             except ImportError:
                 raise ModelError("AdaBoostモデルラッパーのインポートに失敗しました")
         elif model_type.lower() == "ridge":
             try:
-                from ..models.ridge_wrapper import RidgeModel
+                from ..models.ridge import RidgeModel
 
                 return RidgeModel(automl_config=self.automl_config)
             except ImportError:
                 raise ModelError("Ridgeモデルラッパーのインポートに失敗しました")
         elif model_type.lower() == "naivebayes":
             try:
-                from ..models.naivebayes_wrapper import NaiveBayesModel
+                from ..models.naivebayes import NaiveBayesModel
 
                 return NaiveBayesModel(automl_config=self.automl_config)
             except ImportError:
                 raise ModelError("NaiveBayesモデルラッパーのインポートに失敗しました")
         elif model_type.lower() == "knn":
             try:
-                from ..models.knn_wrapper import KNNModel
+                from ..models.knn import KNNModel
 
                 return KNNModel(automl_config=self.automl_config)
             except ImportError:

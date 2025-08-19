@@ -7,7 +7,7 @@ OHLCV、OI、FR、FGデータの期間不一致を適切に処理し、
 """
 
 import logging
-from typing import Dict, List, Optional
+from typing import Dict
 
 import numpy as np
 import pandas as pd
@@ -32,8 +32,6 @@ class EnhancedCryptoFeatures:
             "composite": [],
             "temporal": [],
         }
-
-    
 
     def _ensure_data_quality(self, df: pd.DataFrame) -> pd.DataFrame:
         """データ品質を確保"""
@@ -382,7 +380,3 @@ class EnhancedCryptoFeatures:
         )
 
         return result_df
-
-    
-
-    

@@ -7,7 +7,7 @@ TSFresh特徴量計算クラス
 
 import logging
 import warnings
-from typing import Any, Dict, List, Optional
+from typing import Dict, List, Optional
 
 import numpy as np
 import pandas as pd
@@ -486,8 +486,6 @@ class TSFreshFeatureCalculator:
                 "TSF_count_above_mean",
             ]
 
-    
-
     def clear_cache(self):
         """キャッシュをクリア"""
         self.feature_cache.clear()
@@ -543,6 +541,7 @@ class TSFreshFeatureCalculator:
             elif performance_mode == "financial_optimized":
                 # 金融最適化設定を取得（デフォルトでTRENDINGレジームを使用）
                 from .feature_settings import MarketRegime
+
                 return self.feature_settings.get_optimized_settings_for_regime(
                     MarketRegime.TRENDING, max_computational_cost=8, max_features=80
                 )
@@ -551,7 +550,9 @@ class TSFreshFeatureCalculator:
                 # get_market_regime_profilesメソッドが存在しない場合のフォールバック
                 try:
                     # get_profiles_by_market_regimeメソッドを使用
-                    suitable_profiles = self.feature_settings.get_profiles_by_market_regime(regime)
+                    suitable_profiles = (
+                        self.feature_settings.get_profiles_by_market_regime(regime)
+                    )
                     # プロファイル名のリストを取得
                     suitable_profiles = [profile.name for profile in suitable_profiles]
                 except AttributeError:
@@ -593,7 +594,9 @@ class TSFreshFeatureCalculator:
                     try:
                         # create_custom_settingsメソッドを使用
                         return self.feature_settings.create_custom_settings(
-                            selected_profiles, max_computational_cost=10, max_features=100
+                            selected_profiles,
+                            max_computational_cost=10,
+                            max_features=100,
                         )
                     except AttributeError:
                         logger.warning(
@@ -609,10 +612,6 @@ class TSFreshFeatureCalculator:
         except Exception as e:
             logger.error(f"適応設定取得エラー: {e}")
             return self._get_financial_feature_settings()
-
-    
-
-    
 
     def cleanup(self):
         """

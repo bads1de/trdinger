@@ -9,7 +9,6 @@ import logging
 import warnings
 from typing import Any, Dict, List, Optional, Tuple
 
-import numpy as np
 import pandas as pd
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.feature_selection import f_regression, mutual_info_regression
@@ -382,9 +381,3 @@ class AdvancedFeatureSelector:
                 "selected": 0,
                 "error": str(e),
             }
-
-    
-
-    
-
-    

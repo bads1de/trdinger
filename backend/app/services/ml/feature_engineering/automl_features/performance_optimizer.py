@@ -4,7 +4,6 @@
 並列処理、キャッシュ、メモリ最適化を実装します。
 """
 
-import functools
 import gc
 import hashlib
 import logging
@@ -13,7 +12,7 @@ import time
 import tracemalloc
 from contextlib import contextmanager
 from pathlib import Path
-from typing import Any, Callable, Dict, Optional
+from typing import Any, Callable, Dict
 
 import numpy as np
 import pandas as pd
@@ -81,12 +80,6 @@ class PerformanceOptimizer:
         except Exception as e:
             logger.error(f"キャッシュキー生成エラー: {e}")
             return f"fallback_{int(time.time())}"
-
-    
-
-    
-
-    
 
     def optimize_dataframe_memory(self, df: pd.DataFrame) -> pd.DataFrame:
         """DataFrameのメモリ使用量を最適化"""
@@ -215,8 +208,6 @@ class PerformanceOptimizer:
 
         return suggestions
 
-    
-
     def clear_cache(self):
         """キャッシュをクリア"""
         try:
@@ -238,8 +229,6 @@ class PerformanceOptimizer:
             logger.debug(f"ガベージコレクション実行: {collected}オブジェクト回収")
         except Exception as e:
             logger.error(f"ガベージコレクションエラー: {e}")
-
-    
 
     def _cleanup_autofeat_model(self, autofeat_model):
         """AutoFeatモデルの詳細クリーンアップ"""
@@ -313,8 +302,6 @@ class PerformanceOptimizer:
                     )
 
         return memory_monitor()
-
-    
 
     def detailed_memory_profile(
         self, func: Callable, *args, **kwargs
@@ -419,8 +406,6 @@ class PerformanceOptimizer:
             "max_usage_mb": max_usage,
             "min_usage_mb": min_usage,
         }
-
-    
 
     def optimize_pandas_memory_usage(
         self, df: pd.DataFrame, aggressive: bool = False

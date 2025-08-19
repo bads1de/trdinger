@@ -21,7 +21,8 @@ from .exceptions import (
     MLModelError,
     ModelError,
 )
-from ...utils.unified_error_handler import (
+from ...utils.error_handler import (
+    DataError,
     ml_operation_context,
     safe_ml_operation,
 )

@@ -17,7 +17,7 @@ import pandas as pd
 
 from ....utils.data_processing import data_processor as data_preprocessor
 
-# DataValidator の deprecated メソッドは段階的に除去済み。必要な処理はローカルで実装します。
+
 from ....utils.error_handler import safe_ml_operation
 from .data_frequency_manager import DataFrequencyManager
 from .fear_greed_features import FearGreedFeatureCalculator
@@ -952,8 +952,6 @@ class FeatureEngineeringService:
             logger.error(f"建玉残高疑似特徴量生成エラー: {e}")
             return df
 
-    
-
     def _select_top_features(
         self,
         df: pd.DataFrame,
@@ -1030,10 +1028,6 @@ class FeatureEngineeringService:
         if not self.automl_enabled or not hasattr(self, "last_enhancement_stats"):
             return {}
         return self.last_enhancement_stats.copy()
-
-    
-
-    
 
     def get_available_automl_features(self) -> Dict[str, List[str]]:
         """利用可能なAutoML特徴量のリストを取得"""

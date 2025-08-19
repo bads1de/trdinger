@@ -14,8 +14,6 @@ from typing import Any, Dict, List, Optional, Tuple
 import numpy as np
 import pandas as pd
 from autofeat import AutoFeatClassifier, AutoFeatRegressor
-from sklearn.ensemble import RandomForestRegressor
-from sklearn.model_selection import cross_val_score
 
 from .....utils.data_processing import data_processor as data_preprocessor
 from .....utils.error_handler import safe_ml_operation
@@ -455,22 +453,12 @@ class AutoFeatCalculator:
             logger.error(f"データ前処理エラー: {e}")
             return pd.DataFrame(), pd.Series()
 
-    
-
-    
-
     def get_feature_names(self) -> List[str]:
         """生成される特徴量名のリストを取得"""
         if self.selected_features:
             return [name for name in self.selected_features if name.startswith("AF_")]
         else:
             return []
-
-    
-
-    
-
-    
 
     def clear_model(self):
         """モデルをクリア（メモリリーク防止のため徹底的にクリーンアップ）"""

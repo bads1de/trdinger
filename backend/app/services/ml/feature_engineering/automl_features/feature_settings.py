@@ -4,14 +4,14 @@
 金融データに特化した高度な特徴量設定を管理します。
 """
 
-import json
 from dataclasses import dataclass
 from enum import Enum
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List
 
 
 class FeatureCategory(Enum):
     """特徴量カテゴリ"""
+
     STATISTICAL = "statistical"
     TEMPORAL = "temporal"
     FREQUENCY = "frequency"
@@ -24,6 +24,7 @@ class FeatureCategory(Enum):
 
 class MarketRegime(Enum):
     """市場レジーム"""
+
     TRENDING = "trending"
     RANGING = "ranging"
     VOLATILE = "volatile"
@@ -33,6 +34,7 @@ class MarketRegime(Enum):
 @dataclass
 class FeatureProfile:
     """特徴量プロファイル"""
+
     name: str
     description: str
     categories: List[FeatureCategory]
@@ -58,19 +60,24 @@ class FinancialFeatureSettings:
             name="基本統計",
             description="平均、標準偏差、歪度、尖度などの基本統計量",
             categories=[FeatureCategory.STATISTICAL],
-            market_regimes=[MarketRegime.TRENDING, MarketRegime.RANGING, MarketRegime.VOLATILE, MarketRegime.CALM],
+            market_regimes=[
+                MarketRegime.TRENDING,
+                MarketRegime.RANGING,
+                MarketRegime.VOLATILE,
+                MarketRegime.CALM,
+            ],
             computational_cost=2,
             feature_count=8,
             settings={
-                'mean': None,
-                'median': None,
-                'std': None,
-                'var': None,
-                'skewness': None,
-                'kurtosis': None,
-                'minimum': None,
-                'maximum': None,
-            }
+                "mean": None,
+                "median": None,
+                "std": None,
+                "var": None,
+                "skewness": None,
+                "kurtosis": None,
+                "minimum": None,
+                "maximum": None,
+            },
         )
 
         # 高度統計プロファイル
@@ -82,19 +89,23 @@ class FinancialFeatureSettings:
             computational_cost=3,
             feature_count=12,
             settings={
-                'quantile': [
-                    {'q': 0.05}, {'q': 0.1}, {'q': 0.25}, 
-                    {'q': 0.75}, {'q': 0.9}, {'q': 0.95}
+                "quantile": [
+                    {"q": 0.05},
+                    {"q": 0.1},
+                    {"q": 0.25},
+                    {"q": 0.75},
+                    {"q": 0.9},
+                    {"q": 0.95},
                 ],
-                'range_count': [
-                    {'min': -2, 'max': 2},
-                    {'min': -1, 'max': 1},
-                    {'min': -0.5, 'max': 0.5}
+                "range_count": [
+                    {"min": -2, "max": 2},
+                    {"min": -1, "max": 1},
+                    {"min": -0.5, "max": 0.5},
                 ],
-                'count_above_mean': None,
-                'count_below_mean': None,
-                'ratio_beyond_r_sigma': [{'r': 1}, {'r': 2}, {'r': 3}],
-            }
+                "count_above_mean": None,
+                "count_below_mean": None,
+                "ratio_beyond_r_sigma": [{"r": 1}, {"r": 2}, {"r": 3}],
+            },
         )
 
         # 時系列プロファイル
@@ -106,12 +117,12 @@ class FinancialFeatureSettings:
             computational_cost=4,
             feature_count=15,
             settings={
-                'autocorrelation': [{'lag': i} for i in [1, 2, 3, 5, 10, 20, 50]],
-                'partial_autocorrelation': [{'lag': i} for i in [1, 2, 3, 5, 10]],
-                'c3': [{'lag': i} for i in [1, 2, 3]],
-                'cid_ce': [{'normalize': True}, {'normalize': False}],
-                'symmetry_looking': [{'r': 0.1}, {'r': 0.2}],
-            }
+                "autocorrelation": [{"lag": i} for i in [1, 2, 3, 5, 10, 20, 50]],
+                "partial_autocorrelation": [{"lag": i} for i in [1, 2, 3, 5, 10]],
+                "c3": [{"lag": i} for i in [1, 2, 3]],
+                "cid_ce": [{"normalize": True}, {"normalize": False}],
+                "symmetry_looking": [{"r": 0.1}, {"r": 0.2}],
+            },
         )
 
         # 周波数領域プロファイル
@@ -123,19 +134,16 @@ class FinancialFeatureSettings:
             computational_cost=6,
             feature_count=20,
             settings={
-                'fft_coefficient': [
-                    {'coeff': i, 'attr': 'real'} for i in range(10)
-                ] + [
-                    {'coeff': i, 'attr': 'imag'} for i in range(10)
+                "fft_coefficient": [{"coeff": i, "attr": "real"} for i in range(10)]
+                + [{"coeff": i, "attr": "imag"} for i in range(10)],
+                "fft_aggregated": [
+                    {"aggtype": "centroid"},
+                    {"aggtype": "variance"},
+                    {"aggtype": "skew"},
+                    {"aggtype": "kurtosis"},
                 ],
-                'fft_aggregated': [
-                    {'aggtype': 'centroid'},
-                    {'aggtype': 'variance'},
-                    {'aggtype': 'skew'},
-                    {'aggtype': 'kurtosis'}
-                ],
-                'spkt_welch_density': [{'coeff': i} for i in range(5)],
-            }
+                "spkt_welch_density": [{"coeff": i} for i in range(5)],
+            },
         )
 
         # エントロピープロファイル
@@ -147,13 +155,13 @@ class FinancialFeatureSettings:
             computational_cost=8,
             feature_count=10,
             settings={
-                'sample_entropy': None,
-                'approximate_entropy': [{'m': 2, 'r': 0.1}, {'m': 2, 'r': 0.2}],
-                'permutation_entropy': [{'order': 3}, {'order': 4}],
-                'svd_entropy': [{'order': 3}, {'order': 4}],
-                'lempel_ziv_complexity': [{'bins': 10}, {'bins': 20}],
-                'fourier_entropy': [{'bins': 10}, {'bins': 20}],
-            }
+                "sample_entropy": None,
+                "approximate_entropy": [{"m": 2, "r": 0.1}, {"m": 2, "r": 0.2}],
+                "permutation_entropy": [{"order": 3}, {"order": 4}],
+                "svd_entropy": [{"order": 3}, {"order": 4}],
+                "lempel_ziv_complexity": [{"bins": 10}, {"bins": 20}],
+                "fourier_entropy": [{"bins": 10}, {"bins": 20}],
+            },
         )
 
         # トレンドプロファイル
@@ -165,26 +173,23 @@ class FinancialFeatureSettings:
             computational_cost=4,
             feature_count=12,
             settings={
-                'linear_trend': [
-                    {'attr': 'slope'}, 
-                    {'attr': 'intercept'},
-                    {'attr': 'rvalue'},
-                    {'attr': 'pvalue'},
-                    {'attr': 'stderr'}
+                "linear_trend": [
+                    {"attr": "slope"},
+                    {"attr": "intercept"},
+                    {"attr": "rvalue"},
+                    {"attr": "pvalue"},
+                    {"attr": "stderr"},
                 ],
-                'agg_linear_trend': [
-                    {'attr': 'slope', 'chunk_len': 5, 'f_agg': 'mean'},
-                    {'attr': 'slope', 'chunk_len': 10, 'f_agg': 'mean'},
-                    {'attr': 'slope', 'chunk_len': 5, 'f_agg': 'std'},
-                    {'attr': 'slope', 'chunk_len': 10, 'f_agg': 'std'},
-                    {'attr': 'intercept', 'chunk_len': 5, 'f_agg': 'mean'},
-                    {'attr': 'intercept', 'chunk_len': 10, 'f_agg': 'mean'},
+                "agg_linear_trend": [
+                    {"attr": "slope", "chunk_len": 5, "f_agg": "mean"},
+                    {"attr": "slope", "chunk_len": 10, "f_agg": "mean"},
+                    {"attr": "slope", "chunk_len": 5, "f_agg": "std"},
+                    {"attr": "slope", "chunk_len": 10, "f_agg": "std"},
+                    {"attr": "intercept", "chunk_len": 5, "f_agg": "mean"},
+                    {"attr": "intercept", "chunk_len": 10, "f_agg": "mean"},
                 ],
-                'augmented_dickey_fuller': [
-                    {'attr': 'teststat'},
-                    {'attr': 'pvalue'}
-                ],
-            }
+                "augmented_dickey_fuller": [{"attr": "teststat"}, {"attr": "pvalue"}],
+            },
         )
 
         # 極値プロファイル
@@ -196,16 +201,16 @@ class FinancialFeatureSettings:
             computational_cost=5,
             feature_count=15,
             settings={
-                'number_peaks': [{'n': 1}, {'n': 3}, {'n': 5}, {'n': 10}],
-                'number_cwt_peaks': [{'n': 1}, {'n': 3}, {'n': 5}],
-                'peak_to_peak_distance': None,
-                'abs_energy': None,
-                'mean_abs_change': None,
-                'mean_change': None,
-                'mean_second_derivative_central': None,
-                'median_change': None,
-                'variation_coefficient': None,
-            }
+                "number_peaks": [{"n": 1}, {"n": 3}, {"n": 5}, {"n": 10}],
+                "number_cwt_peaks": [{"n": 1}, {"n": 3}, {"n": 5}],
+                "peak_to_peak_distance": None,
+                "abs_energy": None,
+                "mean_abs_change": None,
+                "mean_change": None,
+                "mean_second_derivative_central": None,
+                "median_change": None,
+                "variation_coefficient": None,
+            },
         )
 
         # 変化点プロファイル
@@ -217,32 +222,31 @@ class FinancialFeatureSettings:
             computational_cost=6,
             feature_count=10,
             settings={
-                'change_quantiles': [
-                    {'ql': 0.0, 'qh': 0.2, 'isabs': False},
-                    {'ql': 0.0, 'qh': 0.4, 'isabs': False},
-                    {'ql': 0.6, 'qh': 1.0, 'isabs': False},
-                    {'ql': 0.8, 'qh': 1.0, 'isabs': False},
-                    {'ql': 0.0, 'qh': 0.2, 'isabs': True},
-                    {'ql': 0.8, 'qh': 1.0, 'isabs': True},
+                "change_quantiles": [
+                    {"ql": 0.0, "qh": 0.2, "isabs": False},
+                    {"ql": 0.0, "qh": 0.4, "isabs": False},
+                    {"ql": 0.6, "qh": 1.0, "isabs": False},
+                    {"ql": 0.8, "qh": 1.0, "isabs": False},
+                    {"ql": 0.0, "qh": 0.2, "isabs": True},
+                    {"ql": 0.8, "qh": 1.0, "isabs": True},
                 ],
-                'ratio_value_number_to_time_series_length': None,
-                'first_location_of_maximum': None,
-                'first_location_of_minimum': None,
-                'last_location_of_maximum': None,
-                'last_location_of_minimum': None,
-            }
+                "ratio_value_number_to_time_series_length": None,
+                "first_location_of_maximum": None,
+                "first_location_of_minimum": None,
+                "last_location_of_maximum": None,
+                "last_location_of_minimum": None,
+            },
         )
 
         return profiles
 
-    
-
-    
-
-    def get_profiles_by_market_regime(self, regime: MarketRegime) -> List[FeatureProfile]:
+    def get_profiles_by_market_regime(
+        self, regime: MarketRegime
+    ) -> List[FeatureProfile]:
         """市場レジーム別の特徴量プロファイルを取得"""
         return [
-            profile for profile in self.profiles.values()
+            profile
+            for profile in self.profiles.values()
             if regime in profile.market_regimes
         ]
 
@@ -250,7 +254,7 @@ class FinancialFeatureSettings:
         self,
         profile_names: List[str],
         max_computational_cost: int = 10,
-        max_features: int = 100
+        max_features: int = 100,
     ) -> Dict[str, Any]:
         """カスタム特徴量設定を作成"""
         combined_settings = {}
@@ -260,13 +264,15 @@ class FinancialFeatureSettings:
         # 計算コストと特徴量数でソート
         sorted_profiles = sorted(
             [self.profiles[name] for name in profile_names if name in self.profiles],
-            key=lambda p: (p.computational_cost, p.feature_count)
+            key=lambda p: (p.computational_cost, p.feature_count),
         )
 
         for profile in sorted_profiles:
-            if (total_cost + profile.computational_cost <= max_computational_cost and
-                total_features + profile.feature_count <= max_features):
-                
+            if (
+                total_cost + profile.computational_cost <= max_computational_cost
+                and total_features + profile.feature_count <= max_features
+            ):
+
                 combined_settings.update(profile.settings)
                 total_cost += profile.computational_cost
                 total_features += profile.feature_count
@@ -277,22 +283,12 @@ class FinancialFeatureSettings:
         self,
         regime: MarketRegime,
         max_computational_cost: int = 8,
-        max_features: int = 80
+        max_features: int = 80,
     ) -> Dict[str, Any]:
         """市場レジーム最適化設定を取得"""
         suitable_profiles = self.get_profiles_by_market_regime(regime)
         profile_names = [profile.name for profile in suitable_profiles]
-        
+
         return self.create_custom_settings(
-            profile_names,
-            max_computational_cost,
-            max_features
+            profile_names, max_computational_cost, max_features
         )
-
-    
-
-    
-
-    
-
-    

@@ -10,8 +10,6 @@ from typing import Dict
 import numpy as np
 import pandas as pd
 
-# DataValidator の非推奨メソッドは pandas 標準 API に置換済み
-
 logger = logging.getLogger(__name__)
 
 
