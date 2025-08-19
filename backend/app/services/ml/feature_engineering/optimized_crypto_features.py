@@ -9,7 +9,7 @@
 """
 
 import logging
-from typing import Dict, List, Optional
+from typing import Dict
 
 import numpy as np
 import pandas as pd
@@ -32,8 +32,6 @@ class OptimizedCryptoFeatures:
             "cross_timeframe": [],
             "volatility_adjusted": [],
         }
-
-    
 
     def _ensure_data_quality(self, df: pd.DataFrame) -> pd.DataFrame:
         """データ品質を確保（改良版）"""
@@ -548,7 +546,3 @@ class OptimizedCryptoFeatures:
                 result_df[col] = result_df[col].fillna(median_val)
 
         return result_df
-
-    
-
-    

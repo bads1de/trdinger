@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class OptimizationResult:
-    """最適化結果（簡素化版）"""
+    """最適化結果"""
 
     best_params: Dict[str, Any]
     best_score: float
@@ -27,7 +27,7 @@ class OptimizationResult:
 
 @dataclass
 class ParameterSpace:
-    """パラメータ空間の定義（簡素化版）"""
+    """パラメータ空間の定義"""
 
     type: str  # "real", "integer", "categorical"
     low: Optional[float] = None

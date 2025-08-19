@@ -18,7 +18,6 @@ from ..optimization.optuna_optimizer import OptunaOptimizer, ParameterSpace
 from .base_ml_trainer import BaseMLTrainer
 from .common.base_resource_manager import BaseResourceManager, CleanupLevel
 from .config import ml_config
-from .model_manager import model_manager
 from .single_model.single_model_trainer import SingleModelTrainer
 from .ensemble.ensemble_trainer import EnsembleTrainer
 
@@ -345,8 +344,6 @@ class MLTrainingService(BaseResourceManager):
             読み込み成功フラグ
         """
         return self.trainer.load_model(model_path)
-
-
 
     def generate_signals(self, features: pd.DataFrame) -> Dict[str, float]:
         """
