@@ -14,6 +14,7 @@ from sqlalchemy.orm import Session
 from app.services.data_collection.orchestration.data_collection_orchestration_service import (
     DataCollectionOrchestrationService,
 )
+from app.api.dependencies import get_data_collection_orchestration_service
 from app.utils.error_handler import ErrorHandler
 from database.connection import ensure_db_initialized, get_db
 
@@ -29,7 +30,7 @@ async def collect_historical_data(
     timeframe: str = "1h",
     db: Session = Depends(get_db),
     orchestration_service: DataCollectionOrchestrationService = Depends(
-        DataCollectionOrchestrationService
+        get_data_collection_orchestration_service
     ),
 ) -> Dict:
     """
@@ -64,7 +65,11 @@ async def collect_historical_data(
 
 @router.post("/bulk-incremental-update")
 async def update_bulk_incremental_data(
-    symbol: str = "BTC/USDT:USDT", db: Session = Depends(get_db)
+    symbol: str = "BTC/USDT:USDT",
+    db: Session = Depends(get_db),
+    orchestration_service: DataCollectionOrchestrationService = Depends(
+        get_data_collection_orchestration_service
+    ),
 ) -> Dict:
     """
     一括差分データを更新（OHLCV、FR、OI）
@@ -80,8 +85,7 @@ async def update_bulk_incremental_data(
     """
 
     async def _execute():
-
-        orchestration_service = DataCollectionOrchestrationService()
+ 
         return await orchestration_service.execute_bulk_incremental_update(symbol, db)
 
     return await ErrorHandler.safe_execute_async(_execute)
@@ -92,7 +96,7 @@ async def collect_bulk_historical_data(
     background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
     orchestration_service: DataCollectionOrchestrationService = Depends(
-        DataCollectionOrchestrationService
+        get_data_collection_orchestration_service
     ),
 ) -> Dict:
     """
@@ -130,6 +134,9 @@ async def get_collection_status(
     background_tasks: BackgroundTasks,
     auto_fetch: bool = False,
     db: Session = Depends(get_db),
+    orchestration_service: DataCollectionOrchestrationService = Depends(
+        get_data_collection_orchestration_service
+    ),
 ) -> Dict:
     """
     データ収集状況を確認
@@ -155,8 +162,7 @@ async def get_collection_status(
                 status_code=500, detail="データベースの初期化に失敗しました"
             )
 
-        service = DataCollectionOrchestrationService()
-        return await service.get_collection_status(
+        return await orchestration_service.get_collection_status(
             symbol=symbol,
             timeframe=timeframe,
             background_tasks=background_tasks,
@@ -172,7 +178,7 @@ async def collect_all_data_bulk(
     background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
     orchestration_service: DataCollectionOrchestrationService = Depends(
-        DataCollectionOrchestrationService
+        get_data_collection_orchestration_service
     ),
 ) -> Dict:
     """

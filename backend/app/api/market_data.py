@@ -16,6 +16,7 @@ from app.config.unified_config import unified_config
 from app.services.data_collection.orchestration.market_data_orchestration_service import (
     MarketDataOrchestrationService,
 )
+from app.api.dependencies import get_market_data_orchestration_service
 from app.utils.error_handler import ErrorHandler
 from database.connection import get_db
 
@@ -61,8 +62,7 @@ async def get_ohlcv_data(
         HTTPException: パラメータが無効な場合やデータベースエラーが発生した場合
     """
 
-    async def _get_ohlcv():
-        service = MarketDataOrchestrationService(db)
+    async def _get_ohlcv(service: MarketDataOrchestrationService = Depends(get_market_data_orchestration_service)):
         return await service.get_ohlcv_data(
             symbol=symbol,
             timeframe=timeframe,

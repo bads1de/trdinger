@@ -14,6 +14,7 @@ from app.services.backtest.backtest_data_service import BacktestDataService
 from app.services.ml.orchestration.ml_management_orchestration_service import (
     MLManagementOrchestrationService,
 )
+from app.api.dependencies import get_ml_management_orchestration_service
 from app.utils.response import api_response, error_response
 from app.utils.error_handler import ErrorHandler
 from database.connection import get_db
@@ -29,7 +30,7 @@ router = APIRouter(prefix="/api/ml", tags=["ml_management"])
 @router.get("/models")
 async def get_models(
     ml_service: MLManagementOrchestrationService = Depends(
-        MLManagementOrchestrationService
+        get_ml_management_orchestration_service
     ),
 ):
     """
@@ -51,7 +52,7 @@ async def get_models(
 @router.delete("/models/all")
 async def delete_all_models(
     ml_service: MLManagementOrchestrationService = Depends(
-        MLManagementOrchestrationService
+        get_ml_management_orchestration_service
     ),
 ):
     """
@@ -71,7 +72,7 @@ async def delete_all_models(
 async def delete_model(
     model_id: str,
     ml_service: MLManagementOrchestrationService = Depends(
-        MLManagementOrchestrationService
+        get_ml_management_orchestration_service
     ),
 ):
     """
@@ -94,7 +95,7 @@ async def delete_model(
 @router.get("/status")
 async def get_ml_status(
     ml_service: MLManagementOrchestrationService = Depends(
-        MLManagementOrchestrationService
+        get_ml_management_orchestration_service
     ),
 ):
     """
@@ -117,7 +118,7 @@ async def get_ml_status(
 async def get_feature_importance(
     top_n: int = 10,
     ml_service: MLManagementOrchestrationService = Depends(
-        MLManagementOrchestrationService
+        get_ml_management_orchestration_service
     ),
 ):
     """
@@ -138,7 +139,7 @@ async def get_feature_importance(
 async def load_model(
     model_name: str,
     ml_service: MLManagementOrchestrationService = Depends(
-        MLManagementOrchestrationService
+        get_ml_management_orchestration_service
     ),
 ):
     """
@@ -157,7 +158,7 @@ async def load_model(
 @router.get("/models/current")
 async def get_current_model(
     ml_service: MLManagementOrchestrationService = Depends(
-        MLManagementOrchestrationService
+        get_ml_management_orchestration_service
     ),
 ):
     """
@@ -174,7 +175,7 @@ async def get_current_model(
 async def get_automl_feature_analysis(
     top_n: int = 20,
     ml_service: MLManagementOrchestrationService = Depends(
-        MLManagementOrchestrationService
+        get_ml_management_orchestration_service
     ),
 ):
     """
@@ -194,7 +195,7 @@ async def get_automl_feature_analysis(
 @router.get("/config")
 async def get_ml_config(
     ml_service: MLManagementOrchestrationService = Depends(
-        MLManagementOrchestrationService
+        get_ml_management_orchestration_service
     ),
 ):
     """
@@ -217,7 +218,7 @@ async def get_ml_config(
 async def update_ml_config(
     config_data: Dict[str, Any],
     ml_service: MLManagementOrchestrationService = Depends(
-        MLManagementOrchestrationService
+        get_ml_management_orchestration_service
     ),
 ):
     """
@@ -247,7 +248,7 @@ async def update_ml_config(
 @router.post("/config/reset")
 async def reset_ml_config(
     ml_service: MLManagementOrchestrationService = Depends(
-        MLManagementOrchestrationService
+        get_ml_management_orchestration_service
     ),
 ):
     """
@@ -274,7 +275,7 @@ async def reset_ml_config(
 @router.post("/models/cleanup")
 async def cleanup_old_models(
     ml_service: MLManagementOrchestrationService = Depends(
-        MLManagementOrchestrationService
+        get_ml_management_orchestration_service
     ),
 ):
     """

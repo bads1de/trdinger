@@ -13,6 +13,7 @@ from sqlalchemy.orm import Session
 from app.services.data_collection.orchestration.funding_rate_orchestration_service import (
     FundingRateOrchestrationService,
 )
+from app.api.dependencies import get_funding_rate_orchestration_service
 from app.utils.error_handler import ErrorHandler
 from database.connection import ensure_db_initialized, get_db
 
@@ -28,7 +29,7 @@ async def get_funding_rates(
     start_date: Optional[str] = Query(None, description="開始日時（ISO形式）"),
     end_date: Optional[str] = Query(None, description="終了日時（ISO形式）"),
     orchestration_service: FundingRateOrchestrationService = Depends(
-        FundingRateOrchestrationService
+        get_funding_rate_orchestration_service
     ),
     db: Session = Depends(get_db),
 ):
@@ -82,7 +83,7 @@ async def collect_funding_rate_data(
     ),
     fetch_all: bool = Query(False, description="全期間のデータを取得するかどうか"),
     orchestration_service: FundingRateOrchestrationService = Depends(
-        FundingRateOrchestrationService
+        get_funding_rate_orchestration_service
     ),
     db: Session = Depends(get_db),
 ):
@@ -126,7 +127,7 @@ async def collect_funding_rate_data(
 @router.post("/bulk-collect")
 async def bulk_collect_funding_rates(
     orchestration_service: FundingRateOrchestrationService = Depends(
-        FundingRateOrchestrationService
+        get_funding_rate_orchestration_service
     ),
     db: Session = Depends(get_db),
 ):

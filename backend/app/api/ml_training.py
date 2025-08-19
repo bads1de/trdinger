@@ -15,6 +15,7 @@ from app.api.automl_features import AutoMLConfigModel
 from app.services.ml.orchestration.ml_training_orchestration_service import (
     MLTrainingOrchestrationService,
 )
+from app.api.dependencies import get_ml_training_orchestration_service
 from app.utils.error_handler import ErrorHandler
 from database.connection import get_db
 
@@ -196,6 +197,9 @@ async def start_ml_training(
     config: MLTrainingConfig,
     background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
+    orchestration_service: MLTrainingOrchestrationService = Depends(
+        get_ml_training_orchestration_service
+    ),
 ):
     """
     アンサンブル学習によるMLモデルのトレーニングを開始
@@ -236,8 +240,6 @@ async def start_ml_training(
         logger.info(f"📋 単一モデル設定辞書: {single_dict}")
 
     async def _start_training():
-        # サーバ側でのアルゴリズム一覧取得・検証は廃止（フロントの定数で管理）
-        orchestration_service = MLTrainingOrchestrationService()
         return await orchestration_service.start_training(
             config=config, background_tasks=background_tasks, db=db
         )
@@ -246,39 +248,45 @@ async def start_ml_training(
 
 
 @router.get("/training/status", response_model=MLStatusResponse)
-async def get_ml_training_status():
+async def get_ml_training_status(
+    orchestration_service: MLTrainingOrchestrationService = Depends(
+        get_ml_training_orchestration_service
+    ),
+):
     """
     MLトレーニングの状態を取得
     """
-
-    orchestration_service = MLTrainingOrchestrationService()
     status = await orchestration_service.get_training_status()
     return MLStatusResponse(**status)
 
 
 @router.get("/model-info")
-async def get_ml_model_info():
+async def get_ml_model_info(
+    orchestration_service: MLTrainingOrchestrationService = Depends(
+        get_ml_training_orchestration_service
+    ),
+):
     """
     現在のMLモデル情報を取得
     """
-
+ 
     async def _get_model_info():
-
-        orchestration_service = MLTrainingOrchestrationService()
         return await orchestration_service.get_model_info()
-
+ 
     return await ErrorHandler.safe_execute_async(_get_model_info)
 
 
 @router.post("/stop")
-async def stop_ml_training():
+async def stop_ml_training(
+    orchestration_service: MLTrainingOrchestrationService = Depends(
+        get_ml_training_orchestration_service
+    ),
+):
     """
     MLトレーニングを停止
     """
-
+ 
     async def _stop_training():
-
-        orchestration_service = MLTrainingOrchestrationService()
         return await orchestration_service.stop_training()
-
+ 
     return await ErrorHandler.safe_execute_async(_stop_training)

@@ -14,6 +14,7 @@ from sqlalchemy.orm import Session
 from app.services.data_collection.orchestration.open_interest_orchestration_service import (
     OpenInterestOrchestrationService,
 )
+from app.api.dependencies import get_open_interest_orchestration_service
 from app.utils.error_handler import ErrorHandler
 from database.connection import ensure_db_initialized, get_db
 
@@ -29,7 +30,7 @@ async def get_open_interest_data(
     end_date: Optional[str] = Query(None, description="終了日時（ISO形式）"),
     limit: Optional[int] = Query(1000, description="取得件数制限（最大1000）"),
     orchestration_service: OpenInterestOrchestrationService = Depends(
-        OpenInterestOrchestrationService
+        get_open_interest_orchestration_service
     ),
     db: Session = Depends(get_db),
 ):
@@ -59,7 +60,7 @@ async def collect_open_interest_data(
     ),
     fetch_all: bool = Query(False, description="全期間のデータを取得するかどうか"),
     orchestration_service: OpenInterestOrchestrationService = Depends(
-        OpenInterestOrchestrationService
+        get_open_interest_orchestration_service
     ),
     db: Session = Depends(get_db),
 ):
@@ -101,7 +102,7 @@ async def collect_open_interest_data(
 @router.post("/bulk-collect")
 async def bulk_collect_open_interest(
     orchestration_service: OpenInterestOrchestrationService = Depends(
-        OpenInterestOrchestrationService
+        get_open_interest_orchestration_service
     ),
     db: Session = Depends(get_db),
 ):

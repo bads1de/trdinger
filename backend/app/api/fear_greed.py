@@ -14,6 +14,7 @@ from sqlalchemy.orm import Session
 from app.services.data_collection.orchestration.fear_greed_orchestration_service import (
     FearGreedOrchestrationService,
 )
+from app.api.dependencies import get_fear_greed_orchestration_service
 from app.utils.error_handler import ErrorHandler
 from database.connection import get_db
 
@@ -28,7 +29,9 @@ async def get_fear_greed_data(
     end_date: Optional[str] = Query(None, description="終了日時 (ISO format)"),
     limit: Optional[int] = Query(30, description="取得件数制限"),
     db: Session = Depends(get_db),
-    service: FearGreedOrchestrationService = Depends(FearGreedOrchestrationService),
+    service: FearGreedOrchestrationService = Depends(
+        get_fear_greed_orchestration_service
+    ),
 ) -> Dict:
     """
     Fear & Greed Index データを取得
@@ -56,7 +59,9 @@ async def get_fear_greed_data(
 async def get_latest_fear_greed_data(
     limit: int = Query(30, description="取得件数制限"),
     db: Session = Depends(get_db),
-    service: FearGreedOrchestrationService = Depends(FearGreedOrchestrationService),
+    service: FearGreedOrchestrationService = Depends(
+        get_fear_greed_orchestration_service
+    ),
 ) -> Dict:
     """
     最新のFear & Greed Index データを取得
@@ -79,6 +84,9 @@ async def get_latest_fear_greed_data(
 @router.get("/status")
 async def get_fear_greed_data_status(
     db: Session = Depends(get_db),
+    orchestration_service: FearGreedOrchestrationService = Depends(
+        get_fear_greed_orchestration_service
+    ),
 ) -> Dict:
     """
     Fear & Greed Index データの状態を取得
@@ -91,7 +99,6 @@ async def get_fear_greed_data_status(
     """
 
     async def _execute():
-        orchestration_service = FearGreedOrchestrationService()
         return await orchestration_service.get_fear_greed_data_status(db)
 
     return await ErrorHandler.safe_execute_async(_execute)
@@ -102,7 +109,7 @@ async def collect_fear_greed_data(
     limit: int = Query(30, description="取得するデータ数"),
     db: Session = Depends(get_db),
     orchestration_service: FearGreedOrchestrationService = Depends(
-        FearGreedOrchestrationService
+        get_fear_greed_orchestration_service
     ),
 ) -> Dict:
     """
@@ -126,6 +133,9 @@ async def collect_fear_greed_data(
 @router.post("/collect-incremental")
 async def collect_incremental_fear_greed_data(
     db: Session = Depends(get_db),
+    orchestration_service: FearGreedOrchestrationService = Depends(
+        get_fear_greed_orchestration_service
+    ),
 ) -> Dict:
     """
     Fear & Greed Index の差分データを収集
@@ -138,8 +148,6 @@ async def collect_incremental_fear_greed_data(
     """
 
     async def _execute():
-
-        orchestration_service = FearGreedOrchestrationService()
         return await orchestration_service.collect_incremental_fear_greed_data(db)
 
     return await ErrorHandler.safe_execute_async(_execute)
@@ -149,6 +157,9 @@ async def collect_incremental_fear_greed_data(
 async def collect_historical_fear_greed_data(
     limit: int = Query(1000, description="取得するデータ数の上限"),
     db: Session = Depends(get_db),
+    orchestration_service: FearGreedOrchestrationService = Depends(
+        get_fear_greed_orchestration_service
+    ),
 ) -> Dict:
     """
     Fear & Greed Index の履歴データを収集
@@ -162,7 +173,6 @@ async def collect_historical_fear_greed_data(
     """
 
     async def _execute():
-        orchestration_service = FearGreedOrchestrationService()
         return await orchestration_service.collect_historical_fear_greed_data(limit, db)
 
     return await ErrorHandler.safe_execute_async(_execute)
@@ -172,6 +182,9 @@ async def collect_historical_fear_greed_data(
 async def cleanup_old_fear_greed_data(
     days_to_keep: int = Query(365, description="保持する日数"),
     db: Session = Depends(get_db),
+    orchestration_service: FearGreedOrchestrationService = Depends(
+        get_fear_greed_orchestration_service
+    ),
 ) -> Dict:
     """
     古いFear & Greed Index データをクリーンアップ
@@ -185,7 +198,6 @@ async def cleanup_old_fear_greed_data(
     """
 
     async def _execute():
-        orchestration_service = FearGreedOrchestrationService()
         return await orchestration_service.cleanup_old_fear_greed_data(days_to_keep, db)
 
     return await ErrorHandler.safe_execute_async(_execute)

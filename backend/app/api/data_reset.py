@@ -13,6 +13,7 @@ from sqlalchemy.orm import Session
 from app.services.data_collection.orchestration.data_management_orchestration_service import (
     DataManagementOrchestrationService,
 )
+from app.api.dependencies import get_data_management_orchestration_service
 from app.utils.error_handler import ErrorHandler
 from database.connection import get_db
 
@@ -22,7 +23,12 @@ router = APIRouter(prefix="/api/data-reset", tags=["data-reset"])
 
 
 @router.delete("/all")
-async def reset_all_data(db: Session = Depends(get_db)) -> Dict[str, Any]:
+async def reset_all_data(
+    db: Session = Depends(get_db),
+    orchestration_service: DataManagementOrchestrationService = Depends(
+        get_data_management_orchestration_service
+    ),
+) -> Dict[str, Any]:
     """
     全てのデータ（OHLCV、ファンディングレート、オープンインタレスト）をリセット
 
@@ -31,7 +37,6 @@ async def reset_all_data(db: Session = Depends(get_db)) -> Dict[str, Any]:
     """
 
     async def _reset_all_data():
-        orchestration_service = DataManagementOrchestrationService()
         return await orchestration_service.reset_all_data(db_session=db)
 
     return await ErrorHandler.safe_execute_async(
@@ -40,7 +45,12 @@ async def reset_all_data(db: Session = Depends(get_db)) -> Dict[str, Any]:
 
 
 @router.delete("/ohlcv")
-async def reset_ohlcv_data(db: Session = Depends(get_db)) -> Dict[str, Any]:
+async def reset_ohlcv_data(
+    db: Session = Depends(get_db),
+    orchestration_service: DataManagementOrchestrationService = Depends(
+        get_data_management_orchestration_service
+    ),
+) -> Dict[str, Any]:
     """
     OHLCVデータのみをリセット
 
@@ -49,7 +59,6 @@ async def reset_ohlcv_data(db: Session = Depends(get_db)) -> Dict[str, Any]:
     """
 
     async def _reset_ohlcv_data():
-        orchestration_service = DataManagementOrchestrationService()
         return await orchestration_service.reset_ohlcv_data(db_session=db)
 
     return await ErrorHandler.safe_execute_async(
@@ -58,7 +67,12 @@ async def reset_ohlcv_data(db: Session = Depends(get_db)) -> Dict[str, Any]:
 
 
 @router.delete("/funding-rates")
-async def reset_funding_rate_data(db: Session = Depends(get_db)) -> Dict[str, Any]:
+async def reset_funding_rate_data(
+    db: Session = Depends(get_db),
+    orchestration_service: DataManagementOrchestrationService = Depends(
+        get_data_management_orchestration_service
+    ),
+) -> Dict[str, Any]:
     """
     ファンディングレートデータのみをリセット
 
@@ -67,7 +81,6 @@ async def reset_funding_rate_data(db: Session = Depends(get_db)) -> Dict[str, An
     """
 
     async def _reset_funding_rate_data():
-        orchestration_service = DataManagementOrchestrationService()
         return await orchestration_service.reset_funding_rate_data(db_session=db)
 
     return await ErrorHandler.safe_execute_async(
@@ -77,7 +90,12 @@ async def reset_funding_rate_data(db: Session = Depends(get_db)) -> Dict[str, An
 
 
 @router.delete("/open-interest")
-async def reset_open_interest_data(db: Session = Depends(get_db)) -> Dict[str, Any]:
+async def reset_open_interest_data(
+    db: Session = Depends(get_db),
+    orchestration_service: DataManagementOrchestrationService = Depends(
+        get_data_management_orchestration_service
+    ),
+) -> Dict[str, Any]:
     """
     オープンインタレストデータのみをリセット
 
@@ -86,7 +104,6 @@ async def reset_open_interest_data(db: Session = Depends(get_db)) -> Dict[str, A
     """
 
     async def _reset_open_interest():
-        orchestration_service = DataManagementOrchestrationService()
         return await orchestration_service.reset_open_interest_data(db_session=db)
 
     return await ErrorHandler.safe_execute_async(
@@ -97,7 +114,11 @@ async def reset_open_interest_data(db: Session = Depends(get_db)) -> Dict[str, A
 
 @router.delete("/symbol/{symbol}")
 async def reset_data_by_symbol(
-    symbol: str, db: Session = Depends(get_db)
+    symbol: str,
+    db: Session = Depends(get_db),
+    orchestration_service: DataManagementOrchestrationService = Depends(
+        get_data_management_orchestration_service
+    ),
 ) -> Dict[str, Any]:
     """
     特定シンボルの全データ（OHLCV、ファンディングレート、オープンインタレスト）をリセット
@@ -110,7 +131,6 @@ async def reset_data_by_symbol(
     """
 
     async def _reset_by_symbol():
-        orchestration_service = DataManagementOrchestrationService()
         return await orchestration_service.reset_data_by_symbol(
             symbol=symbol, db_session=db
         )
@@ -121,7 +141,12 @@ async def reset_data_by_symbol(
 
 
 @router.get("/status")
-async def get_data_status(db: Session = Depends(get_db)) -> Dict[str, Any]:
+async def get_data_status(
+    db: Session = Depends(get_db),
+    orchestration_service: DataManagementOrchestrationService = Depends(
+        get_data_management_orchestration_service
+    ),
+) -> Dict[str, Any]:
     """
     現在のデータ状況を取得（詳細版）
 
@@ -130,7 +155,6 @@ async def get_data_status(db: Session = Depends(get_db)) -> Dict[str, Any]:
     """
 
     async def _get_status():
-        orchestration_service = DataManagementOrchestrationService()
         return await orchestration_service.get_data_status(db_session=db)
 
     return await ErrorHandler.safe_execute_async(
