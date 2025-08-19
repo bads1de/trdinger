@@ -7,7 +7,7 @@ MLモデルのアルゴリズム名を一元管理するクラスを提供しま
 """
 
 import logging
-from typing import Dict
+
 
 logger = logging.getLogger(__name__)
 

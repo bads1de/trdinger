@@ -31,7 +31,6 @@ from sklearn.ensemble import IsolationForest
 from sklearn.neighbors import LocalOutlierFactor
 from sklearn.base import BaseEstimator, TransformerMixin
 
-from .error_handler import DataError
 
 logger = logging.getLogger(__name__)
 

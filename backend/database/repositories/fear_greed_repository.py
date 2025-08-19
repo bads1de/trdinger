@@ -9,7 +9,7 @@ import logging
 
 from .base_repository import BaseRepository
 from database.models import FearGreedIndexData
-from app.utils.data_conversion import DataSanitizer as DataValidator
+from app.utils.data_conversion import DataSanitizer
 
 logger = logging.getLogger(__name__)
 
@@ -58,7 +58,7 @@ class FearGreedIndexRepository(BaseRepository):
 
         try:
             # データの検証
-            if not DataValidator.validate_fear_greed_data(records):
+            if not DataSanitizer.validate_fear_greed_data(records):
                 raise ValueError(
                     "挿入しようとしているFear & Greed Indexデータに無効なものが含まれています。"
                 )

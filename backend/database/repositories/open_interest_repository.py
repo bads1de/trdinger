@@ -5,7 +5,6 @@
 from typing import List, Optional
 from datetime import datetime
 from sqlalchemy.orm import Session
-import pandas as pd
 import logging
 
 from .base_repository import BaseRepository
@@ -20,13 +19,13 @@ class OpenInterestRepository(BaseRepository):
 
     def __init__(self, db: Session):
         super().__init__(db, OpenInterestData)
-        
+
     def to_dict(self, model_instance: OpenInterestData) -> dict:
         """オープンインタレストデータを辞書に変換
-        
+
         Args:
             model_instance: 変換するモデルインスタンス
-            
+
         Returns:
             変換された辞書
         """
@@ -114,7 +113,6 @@ class OpenInterestRepository(BaseRepository):
             最古のデータタイムスタンプ（データがない場合はNone）
         """
         return super().get_oldest_timestamp("data_timestamp", {"symbol": symbol})
-
 
     def clear_all_open_interest_data(self) -> int:
         """

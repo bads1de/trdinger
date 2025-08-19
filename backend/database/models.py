@@ -17,8 +17,6 @@ from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from .connection import Base
 
-from datetime import datetime
-
 
 class OHLCVData(Base):
     """

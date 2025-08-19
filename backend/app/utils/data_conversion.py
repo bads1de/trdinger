@@ -396,7 +396,3 @@ def ensure_list(
         else:
             logger.warning(f"list変換に失敗: {e}")
             return []
-
-
-# 後方互換性のためのエイリアス
-DataValidator = DataSanitizer

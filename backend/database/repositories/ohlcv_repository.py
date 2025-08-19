@@ -37,7 +37,7 @@ class OHLCVRepository(BaseRepository):
 
         try:
             # データの検証
-            if not DataValidator.validate_ohlcv_data(ohlcv_records):
+            if not DataSanitizer.validate_ohlcv_data(ohlcv_records):
                 raise ValueError(
                     "挿入しようとしているOHLCVデータに無効なものが含まれています。"
                 )
@@ -206,17 +206,7 @@ class OHLCVRepository(BaseRepository):
             index_column="timestamp",
         )
 
-    def validate_ohlcv_data(self, ohlcv_data: List[dict]) -> bool:
-        """
-        OHLCV データの妥当性を検証
 
-        Args:
-            ohlcv_data: 検証するOHLCVデータのリスト
-
-        Returns:
-            有効な場合True、無効な場合False
-        """
-        return DataValidator.validate_ohlcv_data(ohlcv_data)
 
     def sanitize_ohlcv_data(self, ohlcv_data: List[dict]) -> List[dict]:
         """
@@ -229,7 +219,6 @@ class OHLCVRepository(BaseRepository):
             サニタイズされたOHLCVデータのリスト
         """
         return DataSanitizer.sanitize_ohlcv_data(ohlcv_data)
-
 
     def clear_all_ohlcv_data(self) -> int:
         """
@@ -257,9 +246,6 @@ class OHLCVRepository(BaseRepository):
             f"シンボル '{symbol}' のOHLCVデータを削除しました: {deleted_count}件"
         )
         return deleted_count
-
-
-
 
     def get_available_symbols(self) -> List[str]:
         """
