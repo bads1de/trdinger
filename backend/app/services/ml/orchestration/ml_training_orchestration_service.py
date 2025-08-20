@@ -1,8 +1,7 @@
 """
 MLトレーニング統合管理サービス
-
 APIルーター内に散在していたMLトレーニング関連のビジネスロジックを統合管理します。
-責務の分離とSOLID原則に基づいた設計を実現します。
+
 """
 
 import logging
@@ -49,10 +48,6 @@ class MLTrainingOrchestrationService:
 
     def __init__(self):
         """初期化"""
-
-
-
-
 
     def get_data_service(self, db: Session) -> BacktestDataService:
         """データサービスの依存性注入"""
@@ -184,9 +179,7 @@ class MLTrainingOrchestrationService:
                 }
             )
 
-            return api_response(
-                success=True, message="MLトレーニングを停止しました"
-            )
+            return api_response(success=True, message="MLトレーニングを停止しました")
 
         except ValueError as e:
             logger.error(f"MLトレーニング停止エラー: {e}")

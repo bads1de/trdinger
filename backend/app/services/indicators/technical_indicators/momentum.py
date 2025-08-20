@@ -614,14 +614,12 @@ class MomentumIndicators:
 
     @staticmethod
     def pvo(
-        close: Union[np.ndarray, pd.Series],
         volume: Union[np.ndarray, pd.Series],
         fast: int = 12,
         slow: int = 26,
         signal: int = 9,
     ) -> Tuple[np.ndarray, np.ndarray]:
         """Price Volume Oscillator"""
-        close_series = pd.Series(close) if isinstance(close, np.ndarray) else close
         volume_series = pd.Series(volume) if isinstance(volume, np.ndarray) else volume
 
         # PVOの簡易実装（ボリュームのMACD）

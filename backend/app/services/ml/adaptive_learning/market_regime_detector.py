@@ -16,15 +16,7 @@ import numpy as np
 import pandas as pd
 from sklearn.cluster import DBSCAN, KMeans
 from sklearn.preprocessing import StandardScaler
-
-
-try:
-    from hmmlearn import hmm
-    HMM_AVAILABLE = True
-except Exception:
-    hmm = None
-    HMM_AVAILABLE = False
-
+from hmmlearn import hmm
 
 logger = logging.getLogger(__name__)
 
@@ -556,10 +548,6 @@ class MarketRegimeDetector:
 
     def _hmm_detection(self, data: pd.DataFrame) -> RegimeDetectionResult:
         """HMMによるレジーム検出"""
-        if not HMM_AVAILABLE:
-            logger.warning("HMMライブラリが利用できません。デフォルト結果を返します。")
-            return self._create_default_result()
-
         try:
             returns = data["Close"].pct_change().dropna().iloc[-self.lookback_period :]
 
@@ -637,14 +625,9 @@ class MarketRegimeDetector:
             results.append((kmeans_result, 0.4))  # 重み
             results.append((dbscan_result, 0.3))
 
-            # HMMが利用可能な場合は追加
-            if HMM_AVAILABLE:
-                hmm_result = self._hmm_detection(data)
-                results.append((hmm_result, 0.3))
-            else:
-                # ルールベースをフォールバック
-                rule_result = self._rule_based_detection(data)
-                results.append((rule_result, 0.3))
+            # HMMの結果を追加
+            hmm_result = self._hmm_detection(data)
+            results.append((hmm_result, 0.3))
 
             # 投票による最終判定
             regime_votes = {}
