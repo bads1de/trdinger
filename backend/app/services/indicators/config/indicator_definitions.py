@@ -52,7 +52,7 @@ def setup_momentum_indicators():
     )
     rsi_config.add_parameter(
         ParameterConfig(
-            name="period",
+            name="length",
             default_value=14,
             min_value=2,
             max_value=100,
@@ -254,7 +254,7 @@ def setup_momentum_indicators():
     )
     cci_config.add_parameter(
         ParameterConfig(
-            name="period",
+            name="length",
             default_value=14,
             min_value=5,
             max_value=50,
@@ -274,7 +274,7 @@ def setup_momentum_indicators():
     )
     adx_config.add_parameter(
         ParameterConfig(
-            name="period",
+            name="length",
             default_value=14,
             min_value=2,
             max_value=100,
@@ -294,7 +294,7 @@ def setup_momentum_indicators():
     )
     mfi_config.add_parameter(
         ParameterConfig(
-            name="period",
+            name="length",
             default_value=14,
             min_value=2,
             max_value=100,
@@ -314,7 +314,7 @@ def setup_momentum_indicators():
     )
     willr_config.add_parameter(
         ParameterConfig(
-            name="period",
+            name="length",
             default_value=14,
             min_value=2,
             max_value=100,
@@ -334,7 +334,7 @@ def setup_momentum_indicators():
     )
     aroon_config.add_parameter(
         ParameterConfig(
-            name="period",
+            name="length",
             default_value=14,
             min_value=2,
             max_value=100,
@@ -354,7 +354,7 @@ def setup_momentum_indicators():
     )
     aroonosc_config.add_parameter(
         ParameterConfig(
-            name="period",
+            name="length",
             default_value=14,
             min_value=2,
             max_value=100,
@@ -374,7 +374,7 @@ def setup_momentum_indicators():
     )
     dx_config.add_parameter(
         ParameterConfig(
-            name="period",
+            name="length",
             default_value=14,
             min_value=2,
             max_value=100,
@@ -472,7 +472,7 @@ def setup_momentum_indicators():
     )
     roc_config.add_parameter(
         ParameterConfig(
-            name="period",
+            name="length",
             default_value=10,
             min_value=1,
             max_value=100,
@@ -521,7 +521,7 @@ def setup_momentum_indicators():
     )
     trix_config.add_parameter(
         ParameterConfig(
-            name="period",
+            name="length",
             default_value=30,
             min_value=1,
             max_value=100,
@@ -628,7 +628,7 @@ def setup_momentum_indicators():
     )
     adxr_config.add_parameter(
         ParameterConfig(
-            name="period",
+            name="length",
             default_value=14,
             min_value=2,
             max_value=100,
@@ -780,7 +780,7 @@ def setup_momentum_indicators():
     )
     rocp_config.add_parameter(
         ParameterConfig(
-            name="period",
+            name="length",
             default_value=10,
             min_value=1,
             max_value=100,
@@ -800,7 +800,7 @@ def setup_momentum_indicators():
     )
     rocr_config.add_parameter(
         ParameterConfig(
-            name="period",
+            name="length",
             default_value=10,
             min_value=1,
             max_value=100,
@@ -820,7 +820,7 @@ def setup_momentum_indicators():
     )
     rocr100_config.add_parameter(
         ParameterConfig(
-            name="period",
+            name="length",
             default_value=10,
             min_value=1,
             max_value=100,
@@ -840,7 +840,7 @@ def setup_momentum_indicators():
     )
     plus_dm_config.add_parameter(
         ParameterConfig(
-            name="period",
+            name="length",
             default_value=14,
             min_value=2,
             max_value=100,
@@ -860,7 +860,7 @@ def setup_momentum_indicators():
     )
     minus_dm_config.add_parameter(
         ParameterConfig(
-            name="period",
+            name="length",
             default_value=14,
             min_value=2,
             max_value=100,
@@ -884,7 +884,7 @@ def setup_trend_indicators():
     )
     sma_config.add_parameter(
         ParameterConfig(
-            name="period",
+            name="length",
             default_value=14,
             min_value=2,
             max_value=200,
@@ -904,7 +904,7 @@ def setup_trend_indicators():
     )
     ema_config.add_parameter(
         ParameterConfig(
-            name="period",
+            name="length",
             default_value=14,
             min_value=2,
             max_value=200,
@@ -924,7 +924,7 @@ def setup_trend_indicators():
     )
     wma_config.add_parameter(
         ParameterConfig(
-            name="period",
+            name="length",
             default_value=14,
             min_value=2,
             max_value=200,
@@ -944,7 +944,7 @@ def setup_trend_indicators():
     )
     trima_config.add_parameter(
         ParameterConfig(
-            name="period",
+            name="length",
             default_value=14,
             min_value=2,
             max_value=200,
@@ -964,7 +964,7 @@ def setup_trend_indicators():
     )
     kama_config.add_parameter(
         ParameterConfig(
-            name="period",
+            name="length",
             default_value=30,
             min_value=2,
             max_value=200,
@@ -1024,7 +1024,7 @@ def setup_trend_indicators():
     )
     ma_config.add_parameter(
         ParameterConfig(
-            name="period",
+            name="length",
             default_value=30,
             min_value=2,
             max_value=200,
@@ -1053,7 +1053,7 @@ def setup_trend_indicators():
     )
     midpoint_config.add_parameter(
         ParameterConfig(
-            name="period",
+            name="length",
             default_value=14,
             min_value=2,
             max_value=100,
@@ -1073,7 +1073,7 @@ def setup_trend_indicators():
     )
     midprice_config.add_parameter(
         ParameterConfig(
-            name="period",
+            name="length",
             default_value=14,
             min_value=2,
             max_value=100,
@@ -1310,7 +1310,7 @@ def setup_statistics_indicators():
     )
     beta_config.add_parameter(
         ParameterConfig(
-            name="period",
+            name="length",
             default_value=5,
             min_value=2,
             max_value=100,
@@ -1330,7 +1330,7 @@ def setup_statistics_indicators():
     )
     correl_config.add_parameter(
         ParameterConfig(
-            name="period",
+            name="length",
             default_value=30,
             min_value=2,
             max_value=200,
@@ -1350,7 +1350,7 @@ def setup_statistics_indicators():
     )
     linearreg_config.add_parameter(
         ParameterConfig(
-            name="period",
+            name="length",
             default_value=14,
             min_value=2,
             max_value=100,
@@ -1370,7 +1370,7 @@ def setup_statistics_indicators():
     )
     stddev_config.add_parameter(
         ParameterConfig(
-            name="period",
+            name="length",
             default_value=5,
             min_value=2,
             max_value=100,
@@ -1399,7 +1399,7 @@ def setup_statistics_indicators():
     )
     tsf_config.add_parameter(
         ParameterConfig(
-            name="period",
+            name="length",
             default_value=14,
             min_value=2,
             max_value=100,
@@ -1419,7 +1419,7 @@ def setup_statistics_indicators():
     )
     var_config.add_parameter(
         ParameterConfig(
-            name="period",
+            name="length",
             default_value=5,
             min_value=2,
             max_value=100,
@@ -1448,7 +1448,7 @@ def setup_statistics_indicators():
     )
     linearreg_angle_config.add_parameter(
         ParameterConfig(
-            name="period",
+            name="length",
             default_value=14,
             min_value=2,
             max_value=100,
@@ -1468,7 +1468,7 @@ def setup_statistics_indicators():
     )
     linearreg_intercept_config.add_parameter(
         ParameterConfig(
-            name="period",
+            name="length",
             default_value=14,
             min_value=2,
             max_value=100,
@@ -1793,10 +1793,10 @@ vwma_config = IndicatorConfig(
     category="trend",
 )
 vwma_config.add_parameter(
-    ParameterConfig(name="period", default_value=20, min_value=2, max_value=200)
+    ParameterConfig(name="length", default_value=20, min_value=2, max_value=200)
 )
 indicator_registry.register(vwma_config)
-vwma_config.param_map = {"close": "data", "volume": "volume"}
+vwma_config.param_map = {"close": "data", "volume": "volume", "period": "length"}
 
 swma_config = IndicatorConfig(
     indicator_name="SWMA",
@@ -1866,7 +1866,7 @@ kc_config = IndicatorConfig(
     category="volatility",
 )
 kc_config.add_parameter(
-    ParameterConfig(name="period", default_value=20, min_value=2, max_value=200)
+    ParameterConfig(name="length", default_value=20, min_value=2, max_value=200)
 )
 kc_config.add_parameter(
     ParameterConfig(name="scalar", default_value=2.0, min_value=0.5, max_value=5.0)
@@ -1959,7 +1959,7 @@ rvi_config = IndicatorConfig(
     category="momentum",
 )
 rvi_config.add_parameter(
-    ParameterConfig(name="period", default_value=10, min_value=2, max_value=200)
+    ParameterConfig(name="length", default_value=10, min_value=2, max_value=200)
 )
 indicator_registry.register(rvi_config)
 

@@ -58,7 +58,9 @@ class MathOperatorsIndicators:
 
     @staticmethod
     def div(
-        data0: Union[np.ndarray, pd.Series], data1: Union[np.ndarray, pd.Series]
+        data0: Union[np.ndarray, pd.Series],
+        data1: Union[np.ndarray, pd.Series],
+        length: int = None
     ) -> np.ndarray:
         """Vector Arithmetic Division (ベクトル算術除算)"""
         data0 = validate_numpy_input(data0)
@@ -68,6 +70,9 @@ class MathOperatorsIndicators:
         # ゼロ除算の警告
         if np.any(data1 == 0):
             logger.warning("DIV: ゼロ除算が発生する可能性があります")
+
+        # length パラメータは使用しないが、互換性のため受け入れる
+        _ = length
 
         return np.divide(data0, data1)
 

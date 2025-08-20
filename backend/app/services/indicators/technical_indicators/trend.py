@@ -308,11 +308,18 @@ class TrendIndicators:
     @staticmethod
     @handle_pandas_ta_errors
     def vwma(
-        data: Union[np.ndarray, pd.Series],
-        volume: Union[np.ndarray, pd.Series],
+        data: Union[np.ndarray, pd.Series] = None,
+        volume: Union[np.ndarray, pd.Series] = None,
         length: int = 20,
+        close: Union[np.ndarray, pd.Series] = None,
     ) -> np.ndarray:
         """Volume Weighted Moving Average"""
+        # dataが提供されない場合はcloseを使用
+        if data is None and close is not None:
+            data = close
+        elif data is None:
+            raise ValueError("Either 'data' or 'close' must be provided")
+
         price = pd.Series(data) if isinstance(data, np.ndarray) else data
         vol = pd.Series(volume) if isinstance(volume, np.ndarray) else volume
         return ta.vwma(price, volume=vol, length=length).values

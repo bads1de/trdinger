@@ -12,9 +12,9 @@ OPERATORS = [
     ">=",
     "<=",
     "==",
-    "!=",  # 基本比較演算子
+    "!=",
     "above",
-    "below",  # フロントエンド用演算子
+    "below",
 ]
 
 # === データソース定数 ===
@@ -30,7 +30,7 @@ DATA_SOURCES = [
 
 # === 取引ペア定数 ===
 SUPPORTED_SYMBOLS = [
-    "BTC/USDT:USDT",  # Bitcoin USDT無期限先物
+    "BTC/USDT:USDT",
 ]
 
 DEFAULT_SYMBOL = "BTC/USDT:USDT"

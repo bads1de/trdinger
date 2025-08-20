@@ -121,8 +121,18 @@ class MomentumIndicators:
         ).values
 
     @staticmethod
-    def roc(data: Union[np.ndarray, pd.Series], length: int = 10) -> np.ndarray:
+    def roc(
+        data: Union[np.ndarray, pd.Series],
+        length: int = 10,
+        close: Union[np.ndarray, pd.Series] = None
+    ) -> np.ndarray:
         """変化率"""
+        # dataが提供されない場合はcloseを使用
+        if data is None and close is not None:
+            data = close
+        elif data is None:
+            raise ValueError("Either 'data' or 'close' must be provided")
+
         series = pd.Series(data) if isinstance(data, np.ndarray) else data
         return ta.roc(series, length=length).values
 

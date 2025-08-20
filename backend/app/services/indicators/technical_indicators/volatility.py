@@ -107,11 +107,16 @@ class VolatilityIndicators:
         close: Union[np.ndarray, pd.Series],
         length: int = 20,
         scalar: float = 2.0,
+        std_dev: float = None,
     ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
         """Keltner Channels: returns (upper, middle, lower)"""
         h = pd.Series(high) if isinstance(high, np.ndarray) else high
         low_series = pd.Series(low) if isinstance(low, np.ndarray) else low
         c = pd.Series(close) if isinstance(close, np.ndarray) else close
+
+        # std_dev パラメータは使用しないが、互換性のため受け入れる
+        _ = std_dev
+
         df = ta.kc(high=h, low=low_series, close=c, length=length, scalar=scalar)
         cols = list(df.columns)
         upper = df[next((c for c in cols if "KCu" in c), cols[0])].values
