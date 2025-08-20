@@ -8,6 +8,7 @@ from typing import List
 
 import pandas as pd
 
+from app.utils.error_handler import safe_operation
 from database.models import (
     OHLCVData,
 )
@@ -26,6 +27,7 @@ class DataConversionService:
     データベースモデルからpandas.DataFrameへの変換を専門に担当します。
     """
 
+    @safe_operation(context="OHLCV DataFrame変換", is_api_call=False, default_return=pd.DataFrame())
     def convert_ohlcv_to_dataframe(self, ohlcv_data: List[OHLCVData]) -> pd.DataFrame:
         """
         OHLCVDataリストをpandas.DataFrameに変換
@@ -40,32 +42,28 @@ class DataConversionService:
             DataConversionError: 変換に失敗した場合
         """
         if not ohlcv_data:
-            raise DataConversionError("OHLCVデータが空です")
+            return pd.DataFrame()
 
-        try:
-            # 効率的にDataFrameを作成
-            data = {
-                "Open": [float(r.open) for r in ohlcv_data],
-                "High": [float(r.high) for r in ohlcv_data],
-                "Low": [float(r.low) for r in ohlcv_data],
-                "Close": [float(r.close) for r in ohlcv_data],
-                "Volume": [float(r.volume) for r in ohlcv_data],
-            }
+        # 効率的にDataFrameを作成
+        data = {
+            "Open": [float(r.open) for r in ohlcv_data],
+            "High": [float(r.high) for r in ohlcv_data],
+            "Low": [float(r.low) for r in ohlcv_data],
+            "Close": [float(r.close) for r in ohlcv_data],
+            "Volume": [float(r.volume) for r in ohlcv_data],
+        }
 
-            df = pd.DataFrame(data)
+        df = pd.DataFrame(data)
 
-            # インデックスをdatetimeに設定
-            df.index = pd.DatetimeIndex([r.timestamp for r in ohlcv_data])
+        # インデックスをdatetimeに設定
+        df.index = pd.DatetimeIndex([r.timestamp for r in ohlcv_data])
 
-            # データ型を最適化
-            df = self._optimize_ohlcv_dtypes(df)
+        # データ型を最適化
+        df = self._optimize_ohlcv_dtypes(df)
 
-            return df
+        return df
 
-        except Exception as e:
-            logger.error(f"OHLCV DataFrame変換エラー: {e}")
-            raise DataConversionError(f"OHLCVデータの変換に失敗しました: {e}")
-
+    @safe_operation(context="OHLCVデータ型最適化", is_api_call=False)
     def _optimize_ohlcv_dtypes(self, df: pd.DataFrame) -> pd.DataFrame:
         """
         OHLCVデータのデータ型を最適化
@@ -76,20 +74,15 @@ class DataConversionService:
         Returns:
             最適化されたDataFrame
         """
-        try:
-            # 価格データは高精度が必要なのでfloat64を維持
-            for col in ["Open", "High", "Low", "Close"]:
-                if col in df.columns:
-                    df[col] = df[col].astype("float64")
+        # 価格データは高精度が必要なのでfloat64を維持
+        for col in ["Open", "High", "Low", "Close"]:
+            if col in df.columns:
+                df[col] = df[col].astype("float64")
 
-            # ボリュームは整数でも可
-            if "Volume" in df.columns:
-                df["Volume"] = df["Volume"].astype(
-                    "float64"
-                )  # 小数点以下がある場合を考慮
+        # ボリュームは整数でも可
+        if "Volume" in df.columns:
+            df["Volume"] = df["Volume"].astype(
+                "float64"
+            )  # 小数点以下がある場合を考慮
 
-            return df
-
-        except Exception as e:
-            logger.warning(f"データ型最適化エラー: {e}")
-            return df
+        return df

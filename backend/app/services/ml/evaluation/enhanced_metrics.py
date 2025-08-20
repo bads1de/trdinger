@@ -31,6 +31,8 @@ from sklearn.metrics import (
     multilabel_confusion_matrix,
 )
 
+from app.utils.error_handler import safe_operation
+
 logger = logging.getLogger(__name__)
 
 
@@ -111,6 +113,7 @@ class EnhancedMetricsCalculator:
         self._operation_counts: Dict[str, int] = defaultdict(int)
         self._lock = threading.Lock()
 
+    @safe_operation(context="包括的な評価指標計算", is_api_call=False, default_return={})
     def calculate_comprehensive_metrics(
         self,
         y_true: np.ndarray,
@@ -134,45 +137,40 @@ class EnhancedMetricsCalculator:
 
         metrics = {}
 
-        try:
-            # 基本的な精度指標
-            metrics.update(self._calculate_basic_metrics(y_true, y_pred))
+        # 基本的な精度指標
+        metrics.update(self._calculate_basic_metrics(y_true, y_pred))
 
-            # 不均衡データ対応指標
-            if self.config.include_balanced_accuracy:
-                metrics.update(self._calculate_balanced_metrics(y_true, y_pred))
+        # 不均衡データ対応指標
+        if self.config.include_balanced_accuracy:
+            metrics.update(self._calculate_balanced_metrics(y_true, y_pred))
 
-            # 確率ベース指標
-            if y_proba is not None:
-                metrics.update(self._calculate_probability_metrics(y_true, y_proba))
+        # 確率ベース指標
+        if y_proba is not None:
+            metrics.update(self._calculate_probability_metrics(y_true, y_proba))
 
-            # 混同行列
-            if self.config.include_confusion_matrix:
-                metrics.update(
-                    self._calculate_confusion_matrix_metrics(
-                        y_true, y_pred, class_names
-                    )
-                )
-
-            # 分類レポート
-            if self.config.include_classification_report:
-                metrics.update(
-                    self._calculate_classification_report(y_true, y_pred, class_names)
-                )
-
-            # クラス別詳細指標
+        # 混同行列
+        if self.config.include_confusion_matrix:
             metrics.update(
-                self._calculate_per_class_metrics(y_true, y_pred, class_names)
+                self._calculate_confusion_matrix_metrics(
+                    y_true, y_pred, class_names
+                )
             )
 
-            # データ分布情報
-            metrics.update(self._calculate_distribution_metrics(y_true, y_pred))
+        # 分類レポート
+        if self.config.include_classification_report:
+            metrics.update(
+                self._calculate_classification_report(y_true, y_pred, class_names)
+            )
 
-            logger.info("✅ 評価指標計算完了")
+        # クラス別詳細指標
+        metrics.update(
+            self._calculate_per_class_metrics(y_true, y_pred, class_names)
+        )
 
-        except Exception as e:
-            logger.error(f"評価指標計算エラー: {e}")
-            metrics["error"] = str(e)
+        # データ分布情報
+        metrics.update(self._calculate_distribution_metrics(y_true, y_pred))
+
+        logger.info("✅ 評価指標計算完了")
 
         return metrics
 
@@ -305,6 +303,7 @@ class EnhancedMetricsCalculator:
             )
             self._model_evaluation_metrics.append(model_eval_metric)
 
+    @safe_operation(context="統合メトリクス評価", is_api_call=False, default_return={})
     def evaluate_and_record_model(
         self,
         model_name: str,
@@ -336,61 +335,50 @@ class EnhancedMetricsCalculator:
         Returns:
             評価結果の辞書
         """
-        try:
-            logger.info(f"📊 統合メトリクス評価開始: {model_name} ({model_type})")
+        logger.info(f"📊 統合メトリクス評価開始: {model_name} ({model_type})")
 
-            # 包括的な評価を実行
-            evaluation_metrics = self.calculate_comprehensive_metrics(
-                y_true=y_true,
-                y_pred=y_pred,
-                y_proba=y_proba,
-                class_names=class_names,
+        # 包括的な評価を実行
+        evaluation_metrics = self.calculate_comprehensive_metrics(
+            y_true=y_true,
+            y_pred=y_pred,
+            y_proba=y_proba,
+            class_names=class_names,
+        )
+
+        # パフォーマンス情報を追加
+        if training_time is not None:
+            evaluation_metrics["training_time"] = training_time
+            # パフォーマンスメトリクスとしても記録
+            self.record_performance(
+                operation=f"model_training_{model_type}",
+                duration_ms=training_time * 1000,  # 秒をミリ秒に変換
+                memory_mb=memory_usage or 0.0,
+                success=True,
             )
 
-            # パフォーマンス情報を追加
-            if training_time is not None:
-                evaluation_metrics["training_time"] = training_time
-                # パフォーマンスメトリクスとしても記録
-                self.record_performance(
-                    operation=f"model_training_{model_type}",
-                    duration_ms=training_time * 1000,  # 秒をミリ秒に変換
-                    memory_mb=memory_usage or 0.0,
-                    success=True,
-                )
+        if memory_usage is not None:
+            evaluation_metrics["memory_usage"] = memory_usage
 
-            if memory_usage is not None:
-                evaluation_metrics["memory_usage"] = memory_usage
+        # モデル評価結果を記録
+        self.record_model_evaluation_metrics(
+            model_name=model_name,
+            model_type=model_type,
+            evaluation_metrics=evaluation_metrics,
+            dataset_info=dataset_info,
+            training_params=training_params,
+        )
 
-            # モデル評価結果を記録
-            self.record_model_evaluation_metrics(
-                model_name=model_name,
-                model_type=model_type,
-                evaluation_metrics=evaluation_metrics,
-                dataset_info=dataset_info,
-                training_params=training_params,
-            )
+        # 主要メトリクスをログ出力
+        accuracy = evaluation_metrics.get("accuracy", 0.0)
+        f1_score = evaluation_metrics.get("f1_score", 0.0)
+        balanced_accuracy = evaluation_metrics.get("balanced_accuracy", 0.0)
 
-            # 主要メトリクスをログ出力
-            accuracy = evaluation_metrics.get("accuracy", 0.0)
-            f1_score = evaluation_metrics.get("f1_score", 0.0)
-            balanced_accuracy = evaluation_metrics.get("balanced_accuracy", 0.0)
+        logger.info(
+            f"✅ モデル評価完了: {model_name} - "
+            f"精度={accuracy:.4f}, F1={f1_score:.4f}, バランス精度={balanced_accuracy:.4f}"
+        )
 
-            logger.info(
-                f"✅ モデル評価完了: {model_name} - "
-                f"精度={accuracy:.4f}, F1={f1_score:.4f}, バランス精度={balanced_accuracy:.4f}"
-            )
-
-            return evaluation_metrics
-
-        except Exception as e:
-            logger.error(f"❌ 統合メトリクス評価エラー: {model_name} - {e}")
-            # エラーを記録
-            self.record_error(
-                operation=f"model_evaluation_{model_type}",
-                error_type=type(e).__name__,
-                error_message=str(e),
-            )
-            raise
+        return evaluation_metrics
 
     def _calculate_basic_metrics(
         self, y_true: np.ndarray, y_pred: np.ndarray
