@@ -57,7 +57,10 @@ class GeneratedStrategyRepository(BaseRepository):
         Returns:
             保存された戦略
         """
-        try:
+        from app.utils.error_handler import safe_operation
+
+        @safe_operation(context="戦略保存", is_api_call=False)
+        def _save_strategy():
             # 遺伝子データの整合性を確保
             validated_gene_data = self._validate_gene_data(gene_data)
 
@@ -77,10 +80,7 @@ class GeneratedStrategyRepository(BaseRepository):
 
             return strategy
 
-        except Exception as e:
-            self.db.rollback()
-            logger.error(f"戦略の保存中にエラーが発生しました: {e}")
-            raise
+        return _save_strategy()
 
     def save_strategies_batch(
         self, strategies_data: List[Dict[str, Any]]
@@ -94,7 +94,10 @@ class GeneratedStrategyRepository(BaseRepository):
         Returns:
             保存された戦略のリスト
         """
-        try:
+        from app.utils.error_handler import safe_operation
+
+        @safe_operation(context="戦略一括保存", is_api_call=False)
+        def _save_strategies_batch():
             strategies = []
             for data in strategies_data:
                 # 遺伝子データの整合性を確保
@@ -120,10 +123,7 @@ class GeneratedStrategyRepository(BaseRepository):
             logger.info(f"戦略を一括保存しました: {len(strategies)} 件")
             return strategies
 
-        except Exception as e:
-            self.db.rollback()
-            logger.error(f"戦略の一括保存中にエラーが発生しました: {e}")
-            raise
+        return _save_strategies_batch()
 
     def get_strategies_by_experiment(
         self,
@@ -142,7 +142,10 @@ class GeneratedStrategyRepository(BaseRepository):
         Returns:
             戦略のリスト
         """
-        try:
+        from app.utils.error_handler import safe_operation
+
+        @safe_operation(context="実験別戦略取得", is_api_call=False, default_return=[])
+        def _get_strategies_by_experiment():
             filters = {"experiment_id": experiment_id}
             if generation is not None:
                 filters["generation"] = generation
@@ -155,9 +158,7 @@ class GeneratedStrategyRepository(BaseRepository):
                 limit=limit,
             )
 
-        except Exception as e:
-            logger.error(f"実験IDによる戦略の取得中にエラーが発生しました: {e}")
-            return []
+        return _get_strategies_by_experiment()
 
     def get_strategies_by_generation(
         self, experiment_id: int, generation: int
@@ -172,7 +173,10 @@ class GeneratedStrategyRepository(BaseRepository):
         Returns:
             戦略のリスト
         """
-        try:
+        from app.utils.error_handler import safe_operation
+
+        @safe_operation(context="世代別戦略取得", is_api_call=False, default_return=[])
+        def _get_strategies_by_generation():
             # BaseRepositoryの汎用メソッドを使用
             return self.get_filtered_data(
                 filters={"experiment_id": experiment_id, "generation": generation},
@@ -180,9 +184,7 @@ class GeneratedStrategyRepository(BaseRepository):
                 order_asc=False,
             )
 
-        except Exception as e:
-            logger.error(f"世代による戦略の取得中にエラーが発生しました: {e}")
-            return []
+        return _get_strategies_by_generation()
 
     def get_strategies_with_backtest_results(
         self, limit: int = 50, offset: int = 0, experiment_id: Optional[int] = None
@@ -198,7 +200,10 @@ class GeneratedStrategyRepository(BaseRepository):
         Returns:
             バックテスト結果を持つ戦略のリスト
         """
-        try:
+        from app.utils.error_handler import safe_operation
+
+        @safe_operation(context="バックテスト結果付き戦略取得", is_api_call=False, default_return=[])
+        def _get_strategies_with_backtest_results():
             query = self.db.query(GeneratedStrategy).join(
                 GeneratedStrategy.backtest_result
             )
@@ -212,11 +217,7 @@ class GeneratedStrategyRepository(BaseRepository):
 
             return query.offset(offset).limit(limit).all()
 
-        except Exception as e:
-            logger.error(
-                f"バックテスト結果を持つ戦略の取得中にエラーが発生しました: {e}"
-            )
-            return []
+        return _get_strategies_with_backtest_results()
 
     def get_filtered_and_sorted_strategies(
         self,
@@ -232,8 +233,10 @@ class GeneratedStrategyRepository(BaseRepository):
         フィルタリングとソートを適用して戦略を取得
         """
         from database.models import BacktestResult
+        from app.utils.error_handler import safe_operation
 
-        try:
+        @safe_operation(context="フィルタリング戦略取得", is_api_call=False, default_return=(0, []))
+        def _get_filtered_and_sorted_strategies():
             query = self.db.query(GeneratedStrategy).join(
                 GeneratedStrategy.backtest_result
             )
@@ -281,9 +284,7 @@ class GeneratedStrategyRepository(BaseRepository):
 
             return total_count, strategies
 
-        except Exception as e:
-            logger.error(f"フィルタリング済み戦略の取得中にエラーが発生しました: {e}")
-            return 0, []
+        return _get_filtered_and_sorted_strategies()
 
     def delete_all_strategies(self) -> int:
         """
@@ -292,15 +293,16 @@ class GeneratedStrategyRepository(BaseRepository):
         Returns:
             削除された件数
         """
-        try:
+        from app.utils.error_handler import safe_operation
+
+        @safe_operation(context="全戦略削除", is_api_call=False)
+        def _delete_all_strategies():
             deleted_count = self.db.query(GeneratedStrategy).delete()
             self.db.commit()
             logger.info(f"すべての生成された戦略を削除しました: {deleted_count} 件")
             return deleted_count
-        except Exception as e:
-            self.db.rollback()
-            logger.error(f"すべての生成された戦略の削除中にエラーが発生しました: {e}")
-            raise
+
+        return _delete_all_strategies()
 
     def _validate_gene_data(self, gene_data: Dict[str, Any]) -> Dict[str, Any]:
         """

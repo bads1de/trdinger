@@ -45,7 +45,10 @@ class OpenInterestRepository(BaseRepository):
             logger.warning("挿入するオープンインタレストデータがありません。")
             return 0
 
-        try:
+        from app.utils.error_handler import safe_operation
+
+        @safe_operation(context="オープンインタレストデータ挿入", is_api_call=False)
+        def _insert_data():
             # 重複処理付き一括挿入
             inserted_count = self.bulk_insert_with_conflict_handling(
                 open_interest_records, ["symbol", "data_timestamp"]
@@ -54,11 +57,7 @@ class OpenInterestRepository(BaseRepository):
             logger.info(f"オープンインタレストデータを {inserted_count} 件挿入しました")
             return inserted_count
 
-        except Exception as e:
-            logger.error(
-                f"オープンインタレストデータの挿入中にエラーが発生しました: {e}"
-            )
-            raise
+        return _insert_data()
 
     def get_open_interest_data(
         self,

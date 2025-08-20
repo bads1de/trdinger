@@ -56,7 +56,10 @@ class FearGreedIndexRepository(BaseRepository):
         if not records:
             return 0
 
-        try:
+        from app.utils.error_handler import safe_operation
+
+        @safe_operation(context="Fear & Greedデータ挿入", is_api_call=False)
+        def _insert_data():
             # データの検証
             if not DataSanitizer.validate_fear_greed_data(records):
                 raise ValueError(
@@ -71,11 +74,7 @@ class FearGreedIndexRepository(BaseRepository):
             logger.info(f"Fear & Greed Index データを {inserted_count} 件挿入しました")
             return inserted_count
 
-        except Exception as e:
-            logger.error(
-                f"Fear & Greed Index データの挿入中にエラーが発生しました: {e}"
-            )
-            raise
+        return _insert_data()
 
     def get_fear_greed_data(
         self,
@@ -127,12 +126,13 @@ class FearGreedIndexRepository(BaseRepository):
         Returns:
             最新のデータタイムスタンプ
         """
-        try:
+        from app.utils.error_handler import safe_operation
+
+        @safe_operation(context="最新データタイムスタンプ取得", is_api_call=False)
+        def _get_latest_timestamp():
             return self.get_latest_timestamp("data_timestamp")
 
-        except Exception as e:
-            logger.error(f"最新データタイムスタンプの取得中にエラーが発生しました: {e}")
-            raise
+        return _get_latest_timestamp()
 
     def get_data_count(self) -> int:
         """
@@ -141,12 +141,13 @@ class FearGreedIndexRepository(BaseRepository):
         Returns:
             データ件数
         """
-        try:
+        from app.utils.error_handler import safe_operation
+
+        @safe_operation(context="データ件数取得", is_api_call=False)
+        def _get_data_count():
             return self.db.query(FearGreedIndexData).count()
 
-        except Exception as e:
-            logger.error(f"データ件数の取得中にエラーが発生しました: {e}")
-            raise
+        return _get_data_count()
 
     def get_data_range(self) -> dict:
         """
@@ -155,7 +156,10 @@ class FearGreedIndexRepository(BaseRepository):
         Returns:
             データ範囲情報（最古・最新のタイムスタンプ、件数）
         """
-        try:
+        from app.utils.error_handler import safe_operation
+
+        @safe_operation(context="データ範囲情報取得", is_api_call=False)
+        def _get_data_range():
             from sqlalchemy import func
             from datetime import timezone
 
@@ -187,9 +191,7 @@ class FearGreedIndexRepository(BaseRepository):
                 "total_count": result.count or 0,
             }
 
-        except Exception as e:
-            logger.error(f"データ範囲情報の取得中にエラーが発生しました: {e}")
-            raise
+        return _get_data_range()
 
     def delete_old_data(self, before_date: datetime) -> int:
         """

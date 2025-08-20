@@ -35,7 +35,10 @@ class OHLCVRepository(BaseRepository):
         if not ohlcv_records:
             return 0
 
-        try:
+        from app.utils.error_handler import safe_operation
+
+        @safe_operation(context="OHLCVデータ挿入", is_api_call=False)
+        def _insert_data():
             # データの検証
             if not DataSanitizer.validate_ohlcv_data(ohlcv_records):
                 raise ValueError(
@@ -50,9 +53,7 @@ class OHLCVRepository(BaseRepository):
             logger.info(f"OHLCV データを {inserted_count} 件挿入しました")
             return inserted_count
 
-        except Exception as e:
-            logger.error(f"OHLCVデータの挿入中にエラーが発生しました: {e}")
-            raise
+        return _insert_data()
 
     def get_ohlcv_data(
         self,

@@ -40,7 +40,10 @@ class GAExperimentRepository(BaseRepository):
         Returns:
             作成されたGA実験
         """
-        try:
+        from app.utils.error_handler import safe_operation
+
+        @safe_operation(context="GA実験作成", is_api_call=False)
+        def _create_experiment():
             experiment = GAExperiment(
                 name=name,
                 config=config,
@@ -57,10 +60,7 @@ class GAExperimentRepository(BaseRepository):
             logger.info(f"GA実験を作成しました: {experiment.id} ({name})")
             return experiment
 
-        except Exception as e:
-            self.db.rollback()
-            logger.error(f"GA実験の作成中にエラーが発生しました: {e}")
-            raise
+        return _create_experiment()
 
     def update_experiment_status(
         self, experiment_id: int, status: str, completed_at: Optional[datetime] = None
@@ -76,7 +76,10 @@ class GAExperimentRepository(BaseRepository):
         Returns:
             更新成功フラグ
         """
-        try:
+        from app.utils.error_handler import safe_operation
+
+        @safe_operation(context="実験ステータス更新", is_api_call=False, default_return=False)
+        def _update_experiment_status():
             # BaseRepositoryの汎用メソッドを使用して実験を取得
             experiments = self.get_filtered_data(
                 filters={"id": experiment_id},
@@ -99,10 +102,7 @@ class GAExperimentRepository(BaseRepository):
             logger.info(f"実験ステータスを更新: {experiment_id} -> {status}")
             return True
 
-        except Exception as e:
-            self.db.rollback()
-            logger.error(f"実験ステータスの更新中にエラーが発生しました: {e}")
-            return False
+        return _update_experiment_status()
 
     def get_experiments_by_status(
         self, status: str, limit: Optional[int] = None
@@ -117,7 +117,10 @@ class GAExperimentRepository(BaseRepository):
         Returns:
             GA実験のリスト
         """
-        try:
+        from app.utils.error_handler import safe_operation
+
+        @safe_operation(context="ステータス別実験取得", is_api_call=False, default_return=[])
+        def _get_experiments_by_status():
             # BaseRepositoryの汎用メソッドを使用
             return self.get_filtered_data(
                 filters={"status": status},
@@ -126,9 +129,7 @@ class GAExperimentRepository(BaseRepository):
                 limit=limit,
             )
 
-        except Exception as e:
-            logger.error(f"ステータスによる実験の取得中にエラーが発生しました: {e}")
-            return []
+        return _get_experiments_by_status()
 
     def get_recent_experiments(self, limit: int = 10) -> List[GAExperiment]:
         """
@@ -140,16 +141,17 @@ class GAExperimentRepository(BaseRepository):
         Returns:
             GA実験のリスト
         """
-        try:
+        from app.utils.error_handler import safe_operation
+
+        @safe_operation(context="最近実験取得", is_api_call=False, default_return=[])
+        def _get_recent_experiments():
             # BaseRepositoryの汎用メソッドを使用
             return self.get_latest_records(
                 timestamp_column="created_at",
                 limit=limit,
             )
 
-        except Exception as e:
-            logger.error(f"最近の実験の取得中にエラーが発生しました: {e}")
-            return []
+        return _get_recent_experiments()
 
     def complete_experiment(
         self, experiment_id: int, best_fitness: float, final_generation: int
@@ -165,7 +167,10 @@ class GAExperimentRepository(BaseRepository):
         Returns:
             完了処理成功フラグ
         """
-        try:
+        from app.utils.error_handler import safe_operation
+
+        @safe_operation(context="実験完了処理", is_api_call=False, default_return=False)
+        def _complete_experiment():
             experiment = (
                 self.db.query(GAExperiment)
                 .filter(GAExperiment.id == experiment_id)
@@ -188,10 +193,7 @@ class GAExperimentRepository(BaseRepository):
             )
             return True
 
-        except Exception as e:
-            self.db.rollback()
-            logger.error(f"実験完了処理中にエラーが発生しました: {e}")
-            return False
+        return _complete_experiment()
 
     def delete_all_experiments(self) -> int:
         """
@@ -200,12 +202,13 @@ class GAExperimentRepository(BaseRepository):
         Returns:
             削除された件数
         """
-        try:
+        from app.utils.error_handler import safe_operation
+
+        @safe_operation(context="全GA実験削除", is_api_call=False)
+        def _delete_all_experiments():
             deleted_count = self.db.query(GAExperiment).delete()
             self.db.commit()
             logger.info(f"すべてのGA実験を削除しました: {deleted_count} 件")
             return deleted_count
-        except Exception as e:
-            self.db.rollback()
-            logger.error(f"すべてのGA実験の削除中にエラーが発生しました: {e}")
-            raise
+
+        return _delete_all_experiments()

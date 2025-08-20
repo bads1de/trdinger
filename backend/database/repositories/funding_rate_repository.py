@@ -93,15 +93,17 @@ class FundingRateRepository(BaseRepository):
             logger.warning("処理後に有効なレコードがありませんでした。")
             return 0
 
-        try:
+        from app.utils.error_handler import safe_operation
+
+        @safe_operation(context="ファンディングレートデータ挿入", is_api_call=False)
+        def _insert_data():
             inserted_count = self.bulk_insert_with_conflict_handling(
                 processed_records, ["symbol", "funding_timestamp"]
             )
             logger.info(f"ファンディングレートデータを {inserted_count} 件挿入しました")
             return inserted_count
-        except Exception as e:
-            logger.error(f"ファンディングレートデータ挿入エラー: {e}")
-            raise
+
+        return _insert_data()
 
     def get_funding_rate_data(
         self,

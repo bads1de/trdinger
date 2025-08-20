@@ -74,7 +74,14 @@ class DataRetrievalService:
         if self.ohlcv_repo is None:
             raise DataRetrievalError("OHLCVRepositoryが初期化されていません")
 
-        try:
+        from app.utils.error_handler import safe_operation
+
+        @safe_operation(
+            context="OHLCVデータ取得",
+            is_api_call=False,
+            default_return=DataRetrievalError("OHLCVデータの取得に失敗しました"),
+        )
+        def _get_ohlcv_data():
             data = self.ohlcv_repo.get_ohlcv_data(
                 symbol=symbol,
                 timeframe=timeframe,
@@ -90,9 +97,7 @@ class DataRetrievalService:
             logger.debug(f"OHLCVデータ取得完了: {len(data)}件")
             return data
 
-        except Exception as e:
-            logger.error(f"OHLCVデータ取得エラー: {e}")
-            raise DataRetrievalError(f"OHLCVデータの取得に失敗しました: {e}")
+        return _get_ohlcv_data()
 
     def get_open_interest_data(
         self, symbol: str, start_date: datetime, end_date: datetime
@@ -112,7 +117,12 @@ class DataRetrievalService:
             logger.warning("Open InterestRepositoryが初期化されていません")
             return []
 
-        try:
+        from app.utils.error_handler import safe_operation
+
+        @safe_operation(
+            context="Open Interestデータ取得", is_api_call=False, default_return=[]
+        )
+        def _get_open_interest_data():
             data = self.oi_repo.get_open_interest_data(
                 symbol=symbol,
                 start_time=start_date,
@@ -122,9 +132,7 @@ class DataRetrievalService:
             logger.debug(f"Open Interestデータ取得完了: {len(data)}件")
             return data
 
-        except Exception as e:
-            logger.warning(f"Open Interestデータ取得エラー: {e}")
-            return []
+        return _get_open_interest_data()
 
     def get_funding_rate_data(
         self, symbol: str, start_date: datetime, end_date: datetime
@@ -144,7 +152,12 @@ class DataRetrievalService:
             logger.warning("Funding RateRepositoryが初期化されていません")
             return []
 
-        try:
+        from app.utils.error_handler import safe_operation
+
+        @safe_operation(
+            context="Funding Rateデータ取得", is_api_call=False, default_return=[]
+        )
+        def _get_funding_rate_data():
             data = self.fr_repo.get_funding_rate_data(
                 symbol=symbol,
                 start_time=start_date,
@@ -154,9 +167,7 @@ class DataRetrievalService:
             logger.debug(f"Funding Rateデータ取得完了: {len(data)}件")
             return data
 
-        except Exception as e:
-            logger.warning(f"Funding Rateデータ取得エラー: {e}")
-            return []
+        return _get_funding_rate_data()
 
     def get_fear_greed_data(
         self, start_date: datetime, end_date: datetime
@@ -175,7 +186,12 @@ class DataRetrievalService:
             logger.warning("Fear & GreedRepositoryが初期化されていません")
             return []
 
-        try:
+        from app.utils.error_handler import safe_operation
+
+        @safe_operation(
+            context="Fear & Greedデータ取得", is_api_call=False, default_return=[]
+        )
+        def _get_fear_greed_data():
             data = self.fear_greed_repo.get_fear_greed_data(
                 start_time=start_date,
                 end_time=end_date,
@@ -184,6 +200,4 @@ class DataRetrievalService:
             logger.debug(f"Fear & Greedデータ取得完了: {len(data)}件")
             return data
 
-        except Exception as e:
-            logger.warning(f"Fear & Greedデータ取得エラー: {e}")
-            return []
+        return _get_fear_greed_data()

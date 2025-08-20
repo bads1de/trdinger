@@ -109,10 +109,15 @@ class BaseRepository(Generic[T]):
             logger.info(f"一括挿入完了: {inserted_count}/{len(records)}件挿入")
             return inserted_count
 
-        except Exception as e:
-            self.db.rollback()
-            logger.error(f"データベースへのデータ挿入中にエラーが発生しました: {e}")
-            raise
+        except Exception:
+            from app.utils.error_handler import safe_operation
+
+            @safe_operation(context="データ挿入", is_api_call=False)
+            def _handle_bulk_insert_error():
+                self.db.rollback()
+                raise
+
+            _handle_bulk_insert_error()
 
     def get_latest_timestamp(
         self, timestamp_column: str, filter_conditions: Optional[Dict[str, Any]] = None
@@ -143,9 +148,14 @@ class BaseRepository(Generic[T]):
 
             return result
 
-        except Exception as e:
-            logger.error(f"最新タイムスタンプの取得中にエラーが発生しました: {e}")
-            raise
+        except Exception:
+            from app.utils.error_handler import safe_operation
+
+            @safe_operation(context="最新タイムスタンプ取得", is_api_call=False)
+            def _handle_latest_timestamp_error():
+                raise
+
+            _handle_latest_timestamp_error()
 
     def get_oldest_timestamp(
         self, timestamp_column: str, filter_conditions: Optional[Dict[str, Any]] = None
@@ -202,9 +212,14 @@ class BaseRepository(Generic[T]):
 
             return self.db.scalar(stmt) or 0
 
-        except Exception as e:
-            logger.error(f"レコード数の取得中にエラーが発生しました: {e}")
-            raise
+        except Exception:
+            from app.utils.error_handler import safe_operation
+
+            @safe_operation(context="レコード数取得", is_api_call=False)
+            def _handle_record_count_error():
+                raise
+
+            _handle_record_count_error()
 
     def get_date_range(
         self, timestamp_column: str, filter_conditions: Optional[Dict[str, Any]] = None
@@ -469,9 +484,14 @@ class BaseRepository(Generic[T]):
 
             return df
 
-        except Exception as e:
-            logger.error(f"DataFrame変換エラー ({self.model_class.__name__}): {e}")
-            raise
+        except Exception:
+            from app.utils.error_handler import safe_operation
+
+            @safe_operation(context="DataFrame変換", is_api_call=False)
+            def _handle_dataframe_error():
+                raise
+
+            _handle_dataframe_error()
 
     def delete_by_date_range(
         self,

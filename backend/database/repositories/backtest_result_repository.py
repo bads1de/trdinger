@@ -145,7 +145,10 @@ class BacktestResultRepository(BaseRepository):
         Returns:
             保存されたバックテスト結果（ID付き）
         """
-        try:
+        from app.utils.error_handler import safe_operation
+
+        @safe_operation(context="バックテスト結果保存", is_api_call=False)
+        def _save_result():
             log_data = {
                 k: v
                 for k, v in result_data.items()
@@ -164,10 +167,7 @@ class BacktestResultRepository(BaseRepository):
             logger.info(f"バックテスト結果を保存しました (ID: {backtest_result.id})")
             return backtest_result.to_dict()
 
-        except Exception as e:
-            self.db.rollback()
-            logger.error(f"バックテスト結果の保存に失敗しました: {e}", exc_info=True)
-            raise Exception(f"バックテスト結果の保存に失敗しました: {str(e)}")
+        return _save_result()
 
     def get_backtest_results(
         self,
@@ -188,7 +188,10 @@ class BacktestResultRepository(BaseRepository):
         Returns:
             バックテスト結果のリスト
         """
-        try:
+        from app.utils.error_handler import safe_operation
+
+        @safe_operation(context="バックテスト結果一覧取得", is_api_call=False)
+        def _get_results():
             # フィルター条件を構築
             filters = {}
             if symbol:
@@ -208,8 +211,7 @@ class BacktestResultRepository(BaseRepository):
             # 辞書形式に変換
             return [result.to_dict() for result in results]
 
-        except Exception as e:
-            raise Exception(f"バックテスト結果の取得に失敗しました: {str(e)}")
+        return _get_results()
 
     def get_backtest_result_by_id(self, result_id: int) -> Optional[Dict[str, Any]]:
         """
@@ -221,7 +223,10 @@ class BacktestResultRepository(BaseRepository):
         Returns:
             バックテスト結果、見つからない場合はNone
         """
-        try:
+        from app.utils.error_handler import safe_operation
+
+        @safe_operation(context="ID指定バックテスト結果取得", is_api_call=False)
+        def _get_result_by_id():
             # BaseRepositoryの汎用メソッドを使用
             results = self.get_filtered_data(
                 filters={"id": result_id},
@@ -234,10 +239,7 @@ class BacktestResultRepository(BaseRepository):
                 return result.to_dict()
             return None
 
-        except Exception as e:
-            raise Exception(
-                f"ID指定によるバックテスト結果の取得に失敗しました: {str(e)}"
-            )
+        return _get_result_by_id()
 
     def delete_backtest_result(self, result_id: int) -> bool:
         """
@@ -249,7 +251,10 @@ class BacktestResultRepository(BaseRepository):
         Returns:
             削除成功時True、見つからない場合False
         """
-        try:
+        from app.utils.error_handler import safe_operation
+
+        @safe_operation(context="バックテスト結果削除", is_api_call=False)
+        def _delete_result():
             result = (
                 self.db.query(BacktestResult)
                 .filter(BacktestResult.id == result_id)
@@ -262,11 +267,7 @@ class BacktestResultRepository(BaseRepository):
                 return True
             return False
 
-        except Exception as e:
-            self.db.rollback()
-            # 削除中にエラーが発生した場合、トランザクションをロールバックしてデータベースの状態を
-            # 変更前の状態に戻します。これにより、部分的な削除を防ぎ、データの一貫性を保ちます。
-            raise Exception(f"バックテスト結果の削除に失敗しました: {str(e)}")
+        return _delete_result()
 
     def delete_all_backtest_results(self) -> int:
         """
@@ -275,16 +276,15 @@ class BacktestResultRepository(BaseRepository):
         Returns:
             削除された件数
         """
-        try:
+        from app.utils.error_handler import safe_operation
+
+        @safe_operation(context="全バックテスト結果削除", is_api_call=False)
+        def _delete_all_results():
             deleted_count = self.db.query(BacktestResult).delete()
             self.db.commit()
             return deleted_count
 
-        except Exception as e:
-            self.db.rollback()
-            # すべての削除中にエラーが発生した場合、トランザクションをロールバックします。
-            # これにより、データベースの部分的な変更を防ぎ、整合性を維持します。
-            raise Exception(f"すべてのバックテスト結果の削除に失敗しました: {str(e)}")
+        return _delete_all_results()
 
     def count_backtest_results(
         self, symbol: Optional[str] = None, strategy_name: Optional[str] = None
@@ -299,7 +299,10 @@ class BacktestResultRepository(BaseRepository):
         Returns:
             バックテスト結果の総数
         """
-        try:
+        from app.utils.error_handler import safe_operation
+
+        @safe_operation(context="バックテスト結果総数取得", is_api_call=False)
+        def _count_results():
             query = self.db.query(BacktestResult)
 
             # フィルター適用
@@ -312,8 +315,7 @@ class BacktestResultRepository(BaseRepository):
 
             return query.count()
 
-        except Exception as e:
-            raise Exception(f"バックテスト結果の総数取得に失敗しました: {str(e)}")
+        return _count_results()
 
     def get_recent_backtest_results(self, limit: int = 10) -> List[Dict[str, Any]]:
         """
@@ -328,7 +330,10 @@ class BacktestResultRepository(BaseRepository):
         Returns:
             バックテスト結果のリスト
         """
-        try:
+        from app.utils.error_handler import safe_operation
+
+        @safe_operation(context="最近バックテスト結果取得", is_api_call=False)
+        def _get_recent_results():
             # BaseRepositoryの汎用メソッドを使用
             results = self.get_latest_records(
                 timestamp_column="created_at",
@@ -337,5 +342,4 @@ class BacktestResultRepository(BaseRepository):
             # 取得した結果を辞書形式のリストに変換して返します。
             return [result.to_dict() for result in results]
 
-        except Exception as e:
-            raise Exception(f"最近のバックテスト結果の取得に失敗しました: {str(e)}")
+        return _get_recent_results()
