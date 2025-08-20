@@ -18,6 +18,7 @@ from ..config.constants import (
     get_id_to_indicator_mapping,
 )
 from ..utils.common_utils import GeneUtils
+import uuid
 
 logger = logging.getLogger(__name__)
 
@@ -683,3 +684,144 @@ class GeneSerializer:
         except Exception as e:
             logger.error(f"ポジションサイジング遺伝子デコードエラー: {e}")
             return None
+
+    def dict_to_strategy_gene(self, data: Dict[str, Any], strategy_gene_class):
+        """
+        辞書形式から戦略遺伝子を復元
+
+        Args:
+            data: 辞書形式の戦略遺伝子データ
+            strategy_gene_class: StrategyGeneクラス
+
+        Returns:
+            戦略遺伝子オブジェクト
+        """
+        try:
+            # 指標遺伝子の復元
+            indicators = [
+                self.dict_to_indicator_gene(ind_data)
+                for ind_data in data.get("indicators", [])
+            ]
+
+            # 条件の復元
+            from .condition_group import ConditionGroup
+
+            def parse_condition_or_group(cond_data):
+                if isinstance(cond_data, dict) and cond_data.get("type") == "OR_GROUP":
+                    conditions = [
+                        parse_condition_or_group(c)
+                        for c in cond_data.get("conditions", [])
+                    ]
+                    return ConditionGroup(conditions=conditions)
+                else:
+                    return self.dict_to_condition(cond_data)
+
+            entry_conditions = [
+                parse_condition_or_group(cond_data)
+                for cond_data in data.get("entry_conditions", [])
+            ]
+
+            long_entry_conditions = [
+                parse_condition_or_group(cond_data)
+                for cond_data in data.get("long_entry_conditions", [])
+            ]
+
+            short_entry_conditions = [
+                parse_condition_or_group(cond_data)
+                for cond_data in data.get("short_entry_conditions", [])
+            ]
+
+            exit_conditions = [
+                parse_condition_or_group(cond_data)
+                for cond_data in data.get("exit_conditions", [])
+            ]
+
+            # リスク管理設定
+            risk_management = data.get("risk_management", {})
+
+            # TP/SL遺伝子の復元
+            tpsl_gene = None
+            if "tpsl_gene" in data and data["tpsl_gene"]:
+                tpsl_gene = self.dict_to_tpsl_gene(data["tpsl_gene"])
+
+            # ポジションサイジング遺伝子の復元
+            position_sizing_gene = None
+            if "position_sizing_gene" in data and data["position_sizing_gene"]:
+                position_sizing_gene = self.dict_to_position_sizing_gene(
+                    data["position_sizing_gene"]
+                )
+
+            # メタデータ
+            metadata = data.get("metadata", {})
+
+            # 後方互換性のための処理
+            if not long_entry_conditions and entry_conditions:
+                long_entry_conditions = entry_conditions
+            if not short_entry_conditions and entry_conditions:
+                short_entry_conditions = entry_conditions
+
+            return strategy_gene_class(
+                id=data.get("id", str(uuid.uuid4())),
+                indicators=indicators,
+                entry_conditions=entry_conditions,
+                long_entry_conditions=long_entry_conditions,
+                short_entry_conditions=short_entry_conditions,
+                exit_conditions=exit_conditions,
+                risk_management=risk_management,
+                tpsl_gene=tpsl_gene,
+                position_sizing_gene=position_sizing_gene,
+                metadata=metadata,
+            )
+
+        except Exception as e:
+            logger.error(f"戦略遺伝子辞書復元エラー: {e}")
+            # エラー時はデフォルト戦略遺伝子を返す
+            return GeneUtils.create_default_strategy_gene(strategy_gene_class)
+
+    def dict_to_condition(self, data: Dict[str, Any]):
+        """
+        辞書形式から条件を復元
+
+        Args:
+            data: 辞書形式の条件データ
+
+        Returns:
+            条件オブジェクト
+        """
+        try:
+            from .gene_strategy import Condition
+
+            return Condition(
+                left_operand=data["left_operand"],
+                operator=data["operator"],
+                right_operand=data["right_operand"],
+            )
+
+        except Exception as e:
+            logger.error(f"条件辞書復元エラー: {e}")
+            raise ValueError(f"条件の復元に失敗: {e}")
+
+    def decode_list_to_strategy_gene(self, encoded: List[float], strategy_gene_class):
+        """
+        数値リストから戦略遺伝子にデコード（旧GeneDecoder.decode_list_to_strategy_gene）
+
+        Args:
+            encoded: エンコードされた数値リスト
+            strategy_gene_class: StrategyGeneクラス
+
+        Returns:
+            デコードされた戦略遺伝子オブジェクト
+        """
+        return self.from_list(encoded, strategy_gene_class)
+
+    def encode_strategy_gene_to_list(self, strategy_gene):
+        """
+        戦略遺伝子を数値リストにエンコード（旧GeneEncoder.encode_strategy_gene_to_list）
+
+        Args:
+            strategy_gene: 戦略遺伝子オブジェクト
+
+        Returns:
+            エンコードされた数値リスト
+        """
+        return self.to_list(strategy_gene)

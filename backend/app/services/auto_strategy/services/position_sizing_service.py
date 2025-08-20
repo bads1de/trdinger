@@ -286,7 +286,7 @@ class PositionSizingService:
                 details.update(simplified_result.get("details", {}))
             else:
                 # フォールバック
-                position_size = account_balance * gene.fixed_ratio
+                position_amount = account_balance * gene.fixed_ratio
                 if current_price > 0:
                     position_size = position_amount / current_price
                 else:

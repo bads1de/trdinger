@@ -23,6 +23,7 @@ classifiers = [
 dependencies = [
     # データ分析・数値計算
     "pandas",
+    "pandas_ta",
     "numpy",
 
     # 暗号通貨取引所ライブラリ
@@ -85,36 +86,6 @@ dev = [
     "mypy",
 ]
 
-[tool.pytest.ini_options]
-testpaths = ["tests"]
-pythonpath = "."
-python_files = ["test_*.py"]
-python_classes = ["Test*"]
-python_functions = ["test_*"]
-addopts = [
-    "-v",
-    "--tb=short",
-    "--strict-markers",
-    "--strict-config",
-    "--color=yes",
-    "--durations=10",
-]
-markers = [
-    "unit: Unit tests",
-    "integration: Integration tests",
-    "slow: Slow tests (may take more than 10 seconds)",
-    "backtest: Backtest related tests",
-    "performance: Performance tests",
-    "error_handling: Error handling tests",
-    "edge_cases: Edge case tests",
-    "accuracy: Accuracy and precision tests",
-    "strategy_switching: Strategy switching tests",
-]
-filterwarnings = [
-    "ignore::DeprecationWarning",
-    "ignore::PendingDeprecationWarning",
-    "ignore::UserWarning:backtesting.*",
-]
 
 [tool.black]
 line-length = 88
@@ -139,6 +110,9 @@ profile = "black"
 multi_line_output = 3
 line_length = 88
 known_first_party = ["app", "backtest", "scripts"]
+
+[tool.setuptools]
+packages = ["app"]
 
 [tool.mypy]
 python_version = "3.10"

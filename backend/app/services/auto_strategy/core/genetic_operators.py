@@ -32,10 +32,10 @@ def _convert_to_strategy_gene(individual_or_gene) -> StrategyGene:
     # DEAPのIndividualオブジェクト（リスト）の場合はデコード
     if isinstance(individual_or_gene, list):
         try:
-            from ..models.gene_serialization import GeneDecoder
+            from ..models.gene_serialization import GeneSerializer
 
-            gene_decoder = GeneDecoder()
-            return gene_decoder.decode_list_to_strategy_gene(
+            gene_serializer = GeneSerializer()
+            return gene_serializer.decode_list_to_strategy_gene(
                 individual_or_gene, StrategyGene
             )
         except Exception as e:
@@ -60,10 +60,10 @@ def _convert_to_individual(strategy_gene: StrategyGene, individual_class=None):
         return strategy_gene
 
     try:
-        from ..models.gene_serialization import GeneEncoder
+        from ..models.gene_serialization import GeneSerializer
 
-        gene_encoder = GeneEncoder()
-        encoded_gene = gene_encoder.encode_strategy_gene_to_list(strategy_gene)
+        gene_serializer = GeneSerializer()
+        encoded_gene = gene_serializer.encode_strategy_gene_to_list(strategy_gene)
         return individual_class(encoded_gene)
     except Exception as e:
         logger.error(f"StrategyGene→Individual変換エラー: {e}")

@@ -169,6 +169,21 @@ class StrategyGene:
             and len(self.short_entry_conditions) > 0
         )
 
+    @property
+    def method(self):
+        """
+        ポジションサイジングメソッドを取得（後方互換性のため）
+
+        Returns:
+            PositionSizingMethod: ポジションサイジングメソッド
+        """
+        if self.position_sizing_gene and hasattr(self.position_sizing_gene, 'method'):
+            return self.position_sizing_gene.method
+        else:
+            # デフォルト値を返す
+            from .gene_position_sizing import PositionSizingMethod
+            return PositionSizingMethod.FIXED_RATIO
+
     def validate(self):
         """戦略遺伝子の妥当性を検証し、(is_valid, errors) を返す"""
         validator = GeneValidator()

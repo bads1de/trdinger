@@ -10,7 +10,7 @@ import logging
 from typing import Optional
 
 from fastapi import APIRouter, Depends, Query
-from sqlalchemy.orm import Session
+
 
 from app.config.unified_config import unified_config
 from app.services.data_collection.orchestration.market_data_orchestration_service import (
@@ -18,7 +18,7 @@ from app.services.data_collection.orchestration.market_data_orchestration_servic
 )
 from app.api.dependencies import get_market_data_orchestration_service
 from app.utils.error_handler import ErrorHandler
-from database.connection import get_db
+
 
 logger = logging.getLogger(__name__)
 
@@ -40,7 +40,9 @@ async def get_ohlcv_data(
     ),
     start_date: Optional[str] = Query(None, description="開始日時（ISO形式）"),
     end_date: Optional[str] = Query(None, description="終了日時（ISO形式）"),
-    service: MarketDataOrchestrationService = Depends(get_market_data_orchestration_service),
+    service: MarketDataOrchestrationService = Depends(
+        get_market_data_orchestration_service
+    ),
 ):
     """
     OHLCVデータを取得します

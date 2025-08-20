@@ -137,8 +137,6 @@ class StrategyFactory:
                 try:
                     # リスク管理設定を取得
                     risk_management = self.gene.risk_management
-                    stop_loss_pct = risk_management.get("stop_loss")
-                    take_profit_pct = risk_management.get("take_profit")
 
                     # デバッグログ: 取引量設定の詳細
                     current_price = self.data.Close[-1]
