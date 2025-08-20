@@ -47,6 +47,7 @@ from app.services.backtest.conversion.backtest_result_converter import (
     BacktestResultConverter,
 )
 from app.services.indicators.config import indicator_registry
+from tests.common.test_stubs import _SyntheticDataService
 
 
 def _make_one_year_hourly_data(start: datetime, bars: int = 24 * 365) -> pd.DataFrame:
@@ -90,12 +91,7 @@ def evaluate_strategies(n: int = 250, seed: int = 42) -> Dict[str, Any]:
     np.random.seed(seed)
 
     # 合成データサービスとして BacktestExecutor に渡すための簡易クラス
-    class _SyntheticDataService:
-        def get_data_for_backtest(self, symbol, timeframe, start_date, end_date):
-            bars = int((end_date - start_date).total_seconds() // 3600) + 1
-            return _make_one_year_hourly_data(start_date, bars)
-
-    data_service = _SyntheticDataService()
+    data_service = _SyntheticDataService(data_generator_func=_make_one_year_hourly_data)
     executor = BacktestExecutor(data_service)
     factory = StrategyFactory()
     converter = BacktestResultConverter()

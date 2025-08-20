@@ -14,6 +14,8 @@ from typing import Any, Dict, List, Optional
 import numpy as np
 import pandas as pd
 
+from app.config.unified_config import unified_config
+
 logger = logging.getLogger(__name__)
 
 
@@ -212,9 +214,10 @@ class PositionSizingService:
 
         # ATR値の確保
         if "atr" not in enhanced_data and "atr_pct" not in enhanced_data:
-            # デフォルトATR値を設定（現在価格の2%）
-            enhanced_data["atr"] = current_price * 0.02
-            enhanced_data["atr_pct"] = 0.02
+            # デフォルトATR値を設定（現在価格の設定値%）
+            default_atr_pct = unified_config.auto_strategy.default_atr_multiplier
+            enhanced_data["atr"] = current_price * default_atr_pct
+            enhanced_data["atr_pct"] = default_atr_pct
             enhanced_data["atr_source"] = "default"
 
         # ボラティリティメトリクスの追加
@@ -238,9 +241,9 @@ class PositionSizingService:
             # データ不足時は簡易版オプティマルF計算を試行
             try:
                 # 統計的仮定値を使用した簡易計算
-                assumed_win_rate = 0.55
-                assumed_avg_win = 0.02
-                assumed_avg_loss = 0.015
+                assumed_win_rate = unified_config.auto_strategy.assumed_win_rate
+                assumed_avg_win = unified_config.auto_strategy.assumed_avg_win
+                assumed_avg_loss = unified_config.auto_strategy.assumed_avg_loss
 
                 optimal_f = (
                     assumed_win_rate * assumed_avg_win
@@ -352,11 +355,12 @@ class PositionSizingService:
                 else:
                     # 無効な損益データの場合、ボラティリティベース方式を試行
                     try:
+                        fallback_atr_multiplier = unified_config.auto_strategy.fallback_atr_multiplier
                         volatility_result = self._calculate_volatility_based_enhanced(
                             gene,
                             account_balance,
                             current_price,
-                            {"atr": current_price * 0.04},
+                            {"atr": current_price * fallback_atr_multiplier},
                         )
                         position_size = volatility_result["position_size"]
                         warnings.append(
@@ -634,7 +638,7 @@ class PositionSizingService:
         self, account_balance: float, current_price: float
     ) -> PositionSizingResult:
         """フォールバック計算（固定比率）"""
-        default_ratio = 0.1
+        default_ratio = unified_config.auto_strategy.default_position_ratio
         position_amount = account_balance * default_ratio
         position_size = position_amount / current_price if current_price > 0 else 0.001
 
@@ -684,6 +688,6 @@ class PositionSizingService:
         except Exception as e:
             logger.error(f"簡易ポジションサイズ計算エラー: {e}")
             # フォールバック: 固定比率
-            default_ratio = kwargs.get("fixed_ratio", 0.1)
+            default_ratio = kwargs.get("fixed_ratio", unified_config.auto_strategy.default_position_ratio)
             position_amount = account_balance * default_ratio
             return position_amount / current_price if current_price > 0 else 0

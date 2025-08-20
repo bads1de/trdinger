@@ -11,6 +11,8 @@ from typing import Any, Dict, Tuple
 
 import numpy as np
 
+from app.config.unified_config import unified_config
+
 
 logger = logging.getLogger(__name__)
 
@@ -29,16 +31,16 @@ class VolatilityRegime(Enum):
 class VolatilityConfig:
     """ボラティリティベース計算の設定"""
 
-    atr_period: int = 14  # ATR計算期間
-    atr_multiplier_sl: float = 2.0  # SL用ATR倍率
-    atr_multiplier_tp: float = 3.0  # TP用ATR倍率
+    atr_period: int = unified_config.auto_strategy.atr_period  # ATR計算期間
+    atr_multiplier_sl: float = unified_config.auto_strategy.atr_multiplier_sl  # SL用ATR倍率
+    atr_multiplier_tp: float = unified_config.auto_strategy.atr_multiplier_tp  # TP用ATR倍率
     volatility_sensitivity: str = "medium"  # 感度設定
     adaptive_multiplier: bool = True  # 適応的倍率調整
-    min_sl_pct: float = 0.005  # 最小SL（0.5%）
-    max_sl_pct: float = 0.1  # 最大SL（10%）
-    min_tp_pct: float = 0.01  # 最小TP（1%）
-    max_tp_pct: float = 0.2  # 最大TP（20%）
-    regime_lookback: int = 50  # ボラティリティレジーム判定期間
+    min_sl_pct: float = unified_config.auto_strategy.min_sl_pct  # 最小SL（0.5%）
+    max_sl_pct: float = unified_config.auto_strategy.max_sl_pct  # 最大SL（10%）
+    min_tp_pct: float = unified_config.auto_strategy.min_tp_pct  # 最小TP（1%）
+    max_tp_pct: float = unified_config.auto_strategy.max_tp_pct  # 最大TP（20%）
+    regime_lookback: int = unified_config.auto_strategy.regime_lookback  # ボラティリティレジーム判定期間
 
 
 @dataclass
@@ -219,14 +221,14 @@ class VolatilityBasedGenerator:
                 atr_pct = atr_value / current_price
                 return atr_value, atr_pct
 
-            estimated_atr_pct = 0.02
+            estimated_atr_pct = unified_config.auto_strategy.estimated_atr_pct
             estimated_atr_value = estimated_atr_pct * current_price
             logger.warning("ATR計算用データ不足、推定値を使用")
             return estimated_atr_value, estimated_atr_pct
 
         except Exception as e:
             logger.error(f"ATR取得/計算エラー: {e}")
-            fallback_atr_pct = 0.02
+            fallback_atr_pct = unified_config.auto_strategy.estimated_atr_pct
             return fallback_atr_pct * current_price, fallback_atr_pct
 
     def _calculate_atr(
@@ -275,18 +277,23 @@ class VolatilityBasedGenerator:
                 atr_mean = np.mean(atr_history)
                 atr_std = np.std(atr_history)
             else:
-                atr_mean = 0.02
-                atr_std = 0.01
+                atr_mean = unified_config.auto_strategy.default_atr_mean
+                atr_std = unified_config.auto_strategy.default_atr_std
 
             z_score = (current_atr_pct - atr_mean) / atr_std if atr_std > 0 else 0
 
-            if z_score < -1.5:
+            # ボラティリティレジームの閾値を設定値から取得
+            very_low_threshold = unified_config.auto_strategy.very_low_threshold
+            low_threshold = unified_config.auto_strategy.low_threshold
+            high_threshold = unified_config.auto_strategy.high_threshold
+
+            if z_score < very_low_threshold:
                 return VolatilityRegime.VERY_LOW
-            elif z_score < -0.5:
+            elif z_score < low_threshold:
                 return VolatilityRegime.LOW
             elif z_score < 0.5:
                 return VolatilityRegime.NORMAL
-            elif z_score < 1.5:
+            elif z_score < high_threshold:
                 return VolatilityRegime.HIGH
             else:
                 return VolatilityRegime.VERY_HIGH
@@ -352,16 +359,16 @@ class VolatilityBasedGenerator:
         self, config: VolatilityConfig, current_price: float
     ) -> VolatilityResult:
         """フォールバック結果を生成"""
-        fallback_atr_pct = 0.02
+        fallback_atr_pct = unified_config.auto_strategy.estimated_atr_pct
         fallback_atr_value = fallback_atr_pct * current_price
 
         return VolatilityResult(
-            stop_loss_pct=fallback_atr_pct * 2.0,
-            take_profit_pct=fallback_atr_pct * 3.0,
+            stop_loss_pct=fallback_atr_pct * unified_config.auto_strategy.atr_multiplier_sl,
+            take_profit_pct=fallback_atr_pct * unified_config.auto_strategy.atr_multiplier_tp,
             atr_value=fallback_atr_value,
             atr_pct=fallback_atr_pct,
             volatility_regime=VolatilityRegime.NORMAL,
-            multipliers_used={"sl_multiplier": 2.0, "tp_multiplier": 3.0},
+            multipliers_used={"sl_multiplier": unified_config.auto_strategy.atr_multiplier_sl, "tp_multiplier": unified_config.auto_strategy.atr_multiplier_tp},
             confidence_score=0.3,
             metadata={"fallback": True},
         )

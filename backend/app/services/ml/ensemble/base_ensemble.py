@@ -12,6 +12,7 @@ import numpy as np
 import pandas as pd
 
 from ..exceptions import MLModelError
+from app.config.unified_config import unified_config
 
 logger = logging.getLogger(__name__)
 
@@ -130,7 +131,12 @@ class BaseEnsemble(ABC):
         ):
             from sklearn.ensemble import RandomForestClassifier
 
-            return RandomForestClassifier(n_estimators=100, random_state=42, n_jobs=-1)
+            return RandomForestClassifier(
+                n_estimators=unified_config.ml.training.rf_n_estimators,
+                max_depth=unified_config.ml.training.rf_max_depth,
+                random_state=unified_config.ml.training.random_state,
+                n_jobs=-1
+            )
         elif (
             model_type.lower() == "gradient_boosting"
             or model_type.lower() == "gradientboosting"
@@ -138,11 +144,11 @@ class BaseEnsemble(ABC):
             from sklearn.ensemble import GradientBoostingClassifier
 
             return GradientBoostingClassifier(
-                n_estimators=50,  # 100→50に軽量化
-                learning_rate=0.2,  # 0.1→0.2に高速化
-                max_depth=3,
-                subsample=0.8,  # サブサンプリングで高速化
-                random_state=42,
+                n_estimators=unified_config.ml.training.gb_n_estimators,
+                learning_rate=unified_config.ml.training.gb_learning_rate,
+                max_depth=unified_config.ml.training.gb_max_depth,
+                subsample=unified_config.ml.training.gb_subsample,
+                random_state=unified_config.ml.training.random_state,
                 verbose=0,  # ログ抑制
             )
         elif model_type.lower() == "extratrees":
@@ -185,8 +191,8 @@ class BaseEnsemble(ABC):
             from sklearn.linear_model import LogisticRegression
 
             return LogisticRegression(
-                random_state=42,
-                max_iter=1000,  # 収束を確実にするため
+                random_state=unified_config.ml.training.random_state,
+                max_iter=unified_config.ml.training.lr_max_iter,
                 solver="lbfgs",  # 多クラス分類に適したソルバー
                 verbose=0,  # ログ抑制
             )

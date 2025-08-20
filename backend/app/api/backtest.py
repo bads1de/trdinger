@@ -18,6 +18,7 @@ from app.services.backtest.orchestration.backtest_orchestration_service import (
 from app.api.dependencies import get_backtest_orchestration_service
 from app.utils.error_handler import ErrorHandler
 from database.connection import get_db
+from app.config.unified_config import unified_config
 
 router = APIRouter(prefix="/api/backtest", tags=["backtest"])
 
@@ -41,7 +42,7 @@ class BacktestRequest(BaseModel):
     start_date: datetime = Field(..., description="開始日時")
     end_date: datetime = Field(..., description="終了日時")
     initial_capital: float = Field(..., gt=0, description="初期資金")
-    commission_rate: float = Field(default=0.00055, ge=0, le=1, description="手数料率")
+    commission_rate: float = Field(default=unified_config.backtest.default_commission_rate, ge=0, le=1, description="手数料率")
     strategy_config: StrategyConfig = Field(..., description="戦略設定")
 
 
@@ -64,7 +65,7 @@ class BacktestResultsResponse(BaseModel):
 
 @router.get("/results", response_model=BacktestResultsResponse)
 async def get_backtest_results(
-    limit: int = Query(50, ge=1, le=100, description="取得件数"),
+    limit: int = Query(unified_config.backtest.default_results_limit, ge=1, le=unified_config.backtest.max_results_limit, description="取得件数"),
     offset: int = Query(0, ge=0, description="オフセット"),
     symbol: Optional[str] = Query(None, description="取引ペアフィルター"),
     strategy_name: Optional[str] = Query(None, description="戦略名フィルター"),

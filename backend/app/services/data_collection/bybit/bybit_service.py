@@ -16,6 +16,7 @@ from app.utils.error_handler import (
     ErrorHandler,
 )
 from database.connection import get_db
+from app.config.unified_config import unified_config
 
 logger = logging.getLogger(__name__)
 
@@ -82,8 +83,9 @@ class BybitService(ABC):
             ValueError: limitが無効な場合
         """
         if limit is not None:
-            if not isinstance(limit, int) or limit <= 0 or limit > 1000:
-                raise ValueError("limitは1から1000の間の整数である必要があります")
+            max_limit = unified_config.data_collection.max_limit
+            if not isinstance(limit, int) or limit <= 0 or limit > max_limit:
+                raise ValueError(f"limitは1から{max_limit}の間の整数である必要があります")
 
     def _validate_parameters(self, symbol: str, limit: Optional[int] = None) -> None:
         """
@@ -169,8 +171,8 @@ class BybitService(ABC):
         self,
         fetch_func: Callable,
         symbol: str,
-        page_limit: int = 200,
-        max_pages: int = 50,
+        page_limit: Optional[int] = None,
+        max_pages: Optional[int] = None,
         latest_existing_timestamp: Optional[int] = None,
         pagination_strategy: str = "until",
         **fetch_kwargs,
@@ -190,6 +192,12 @@ class BybitService(ABC):
         Returns:
             全期間のデータリスト
         """
+        # デフォルト値の設定
+        if page_limit is None:
+            page_limit = unified_config.data_collection.bybit_page_limit
+        if max_pages is None:
+            max_pages = unified_config.data_collection.bybit_max_pages
+
         logger.info(f"全期間データ取得開始: {symbol} (strategy: {pagination_strategy})")
 
         if pagination_strategy == "until":
@@ -208,6 +216,7 @@ class BybitService(ABC):
                 page_limit,
                 max_pages,
                 latest_existing_timestamp,
+                interval=fetch_kwargs.get("intervalTime", "1h"),
                 **fetch_kwargs,
             )
         else:
@@ -569,7 +578,7 @@ class BybitService(ABC):
                     normalized_symbol,
                     interval,  # timeframe
                     latest_timestamp,
-                    1000,
+                    unified_config.data_collection.max_limit,
                     kwargs,
                 )
             else:

@@ -13,32 +13,9 @@ from app.services.backtest.execution.backtest_executor import BacktestExecutor
 from app.services.backtest.conversion.backtest_result_converter import BacktestResultConverter
 from database.models import Base
 from database.repositories.backtest_result_repository import BacktestResultRepository
+from tests.common.test_stubs import _SyntheticBacktestDataService
 
 
-class _SyntheticBacktestDataService:
-    """バックテスト用の合成データを提供する軽量スタブ"""
-
-    def __init__(self, n=300, seed=0):
-        self.n = n
-        self.seed = seed
-
-    def get_data_for_backtest(self, symbol: str, timeframe: str, start_date: datetime, end_date: datetime) -> pd.DataFrame:
-        rng = np.random.default_rng(self.seed)
-        idx = pd.date_range(start=start_date, end=end_date, periods=self.n)
-        base = 50000.0
-        # ランダムウォークにボラティリティを加味
-        returns = rng.normal(0, 0.01, size=self.n)
-        prices = [base]
-        for r in returns[1:]:
-            prices.append(max(1000.0, prices[-1] * (1 + r)))
-        close = np.array(prices)
-        high = close * (1 + np.abs(rng.normal(0, 0.004, size=self.n)))
-        low = close * (1 - np.abs(rng.normal(0, 0.004, size=self.n)))
-        open_ = np.roll(close, 1)
-        open_[0] = close[0]
-        vol = rng.integers(100, 10000, size=self.n)
-        df = pd.DataFrame({"Open": open_, "High": high, "Low": low, "Close": close, "Volume": vol}, index=idx)
-        return df
 
 
 def test_technical_only_backtest_and_persistence_runs_60_times():

@@ -7,24 +7,9 @@ from app.services.backtest.factories.strategy_class_factory import StrategyClass
 from app.services.auto_strategy.generators.random_gene_generator import (
     RandomGeneGenerator,
 )
+from tests.common.test_stubs import DummyBacktestService
 
 
-class DummyBacktestService:
-    def __init__(self):
-        pass
-
-    def run_backtest(self, config):
-        # できるだけ軽量なダミー結果
-        return {
-            "performance_metrics": {
-                "total_return": 0.1,
-                "sharpe_ratio": 1.2,
-                "max_drawdown": 0.2,
-                "win_rate": 0.55,
-                "total_trades": 20,
-            },
-            "trade_history": [],
-        }
 
 
 @pytest.fixture

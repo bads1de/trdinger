@@ -21,35 +21,9 @@ from app.services.backtest.conversion.backtest_result_converter import (
 )
 from database.models import Base
 from database.repositories.backtest_result_repository import BacktestResultRepository
+from tests.common.test_stubs import _SyntheticBacktestDataService
 
 
-class _SyntheticBacktestDataService:
-    def __init__(self, n=600, seed=0):
-        self.n = n
-        self.seed = seed
-
-    def get_data_for_backtest(
-        self, symbol: str, timeframe: str, start_date: datetime, end_date: datetime
-    ) -> pd.DataFrame:
-        rng = np.random.default_rng(self.seed)
-        periods = self.n
-        idx = pd.date_range(start=start_date, end=end_date, periods=periods)
-        base = 30000.0
-        returns = rng.normal(0, 0.008, size=periods)
-        prices = [base]
-        for r in returns[1:]:
-            prices.append(max(500.0, prices[-1] * (1 + r)))
-        close = np.array(prices)
-        high = close * (1 + np.abs(rng.normal(0, 0.004, size=periods)))
-        low = close * (1 - np.abs(rng.normal(0, 0.004, size=periods)))
-        open_ = np.roll(close, 1)
-        open_[0] = close[0]
-        vol = rng.integers(10, 10000, size=periods)
-        df = pd.DataFrame(
-            {"Open": open_, "High": high, "Low": low, "Close": close, "Volume": vol},
-            index=idx,
-        )
-        return df
 
 
 def test_strategy_diversity_audit():
@@ -120,7 +94,7 @@ def test_strategy_diversity_audit():
                 end_date = start_date + timedelta(days=5 * 365)
                 n = 5 * 365
 
-            data_service = _SyntheticBacktestDataService(n=n, seed=seed)
+            data_service = _SyntheticBacktestDataService(n=n, seed=seed, base_price=30000.0)
             executor = BacktestExecutor(data_service)
 
             # バックテスト実行

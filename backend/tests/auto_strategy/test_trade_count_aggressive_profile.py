@@ -14,6 +14,7 @@ from app.services.auto_strategy.generators.random_gene_generator import RandomGe
 from app.services.auto_strategy.models.ga_config import GAConfig
 from app.services.backtest.factories.strategy_class_factory import StrategyClassFactory
 from app.services.backtest.execution.backtest_executor import BacktestExecutor
+from tests.common.test_stubs import _SyntheticDataService
 
 
 def _make_hourly_data(start: datetime, bars: int) -> pd.DataFrame:
@@ -31,11 +32,6 @@ def _make_hourly_data(start: datetime, bars: int) -> pd.DataFrame:
 
 
 def test_aggressive_profile_trade_count_ge_100():
-    class _SyntheticDataService:
-        def get_data_for_backtest(self, symbol, timeframe, start_date, end_date):
-            bars = int((end_date - start_date).total_seconds() // 3600) + 1
-            return _make_hourly_data(start_date, bars)
-
     data_service = _SyntheticDataService()
     executor = BacktestExecutor(data_service)
     factory = StrategyClassFactory()

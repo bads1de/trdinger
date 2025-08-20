@@ -15,6 +15,7 @@ from app.services.auto_strategy.utils.strategy_integration_service import (
     StrategyIntegrationService,
 )
 from app.utils.error_handler import ErrorHandler
+from app.config.unified_config import unified_config
 
 logger = logging.getLogger(__name__)
 
@@ -48,7 +49,7 @@ class StrategyStatsResponse(BaseModel):
 
 @router.get("/", response_model=StrategiesResponse)
 async def get_strategies(
-    limit: int = Query(20, ge=1, le=100, description="取得件数制限"),
+    limit: int = Query(unified_config.auto_strategy.default_strategies_limit, ge=1, le=unified_config.auto_strategy.max_strategies_limit, description="取得件数制限"),
     offset: int = Query(0, ge=0, description="オフセット"),
     category: Optional[str] = Query(None, description="カテゴリフィルター"),
     risk_level: Optional[str] = Query(None, description="リスクレベルフィルター"),

@@ -5,6 +5,7 @@ from typing import List, Optional, Literal
 
 from app.services.auto_strategy.models.gene_strategy import IndicatorGene
 from app.services.indicators.config import indicator_registry
+from app.config.unified_config import unified_config
 
 
 Profile = Literal["aggressive", "normal", "conservative"]
@@ -30,44 +31,47 @@ class ThresholdPolicy:
     必要に応じて項目を追加可能。
     """
 
-    DEFAULTS = {
-        "aggressive": Thresholds(
-            rsi_long_lt=51,
-            rsi_short_gt=49,
-            adx_trend_min=15,
-            mfi_long_lt=48,
-            mfi_short_gt=52,
-            cci_abs_limit=120,
-            willr_long_lt=52,  # -100〜0 を 0〜100 に線形変換した閾値相当
-            willr_short_gt=48,
-            ultosc_long_gt=52,
-            ultosc_short_lt=48,
-        ),
-        "normal": Thresholds(
-            rsi_long_lt=54,
-            rsi_short_gt=46,
-            adx_trend_min=18,
-            mfi_long_lt=45,
-            mfi_short_gt=55,
-            cci_abs_limit=100,
-            willr_long_lt=55,
-            willr_short_gt=45,
-            ultosc_long_gt=55,
-            ultosc_short_lt=45,
-        ),
-        "conservative": Thresholds(
-            rsi_long_lt=57,
-            rsi_short_gt=43,
-            adx_trend_min=22,
-            mfi_long_lt=42,
-            mfi_short_gt=58,
-            cci_abs_limit=80,
-            willr_long_lt=58,
-            willr_short_gt=42,
-            ultosc_long_gt=58,
-            ultosc_short_lt=42,
-        ),
-    }
+    @property
+    def DEFAULTS(self):
+        """設定値から動的に閾値を生成"""
+        return {
+            "aggressive": Thresholds(
+                rsi_long_lt=unified_config.indicators.rsi_long_lt_aggressive,
+                rsi_short_gt=unified_config.indicators.rsi_short_gt_aggressive,
+                adx_trend_min=unified_config.indicators.adx_trend_min_aggressive,
+                mfi_long_lt=unified_config.indicators.mfi_long_lt_aggressive,
+                mfi_short_gt=unified_config.indicators.mfi_short_gt_aggressive,
+                cci_abs_limit=unified_config.indicators.cci_abs_limit_aggressive,
+                willr_long_lt=unified_config.indicators.willr_long_lt_aggressive,
+                willr_short_gt=unified_config.indicators.willr_short_gt_aggressive,
+                ultosc_long_gt=unified_config.indicators.ultosc_long_gt_aggressive,
+                ultosc_short_lt=unified_config.indicators.ultosc_short_lt_aggressive,
+            ),
+            "normal": Thresholds(
+                rsi_long_lt=unified_config.indicators.rsi_long_lt_normal,
+                rsi_short_gt=unified_config.indicators.rsi_short_gt_normal,
+                adx_trend_min=unified_config.indicators.adx_trend_min_normal,
+                mfi_long_lt=unified_config.indicators.mfi_long_lt_normal,
+                mfi_short_gt=unified_config.indicators.mfi_short_gt_normal,
+                cci_abs_limit=unified_config.indicators.cci_abs_limit_normal,
+                willr_long_lt=unified_config.indicators.willr_long_lt_normal,
+                willr_short_gt=unified_config.indicators.willr_short_gt_normal,
+                ultosc_long_gt=unified_config.indicators.ultosc_long_gt_normal,
+                ultosc_short_lt=unified_config.indicators.ultosc_short_lt_normal,
+            ),
+            "conservative": Thresholds(
+                rsi_long_lt=unified_config.indicators.rsi_long_lt_conservative,
+                rsi_short_gt=unified_config.indicators.rsi_short_gt_conservative,
+                adx_trend_min=unified_config.indicators.adx_trend_min_conservative,
+                mfi_long_lt=unified_config.indicators.mfi_long_lt_conservative,
+                mfi_short_gt=unified_config.indicators.mfi_short_gt_conservative,
+                cci_abs_limit=unified_config.indicators.cci_abs_limit_conservative,
+                willr_long_lt=unified_config.indicators.willr_long_lt_conservative,
+                willr_short_gt=unified_config.indicators.willr_short_gt_conservative,
+                ultosc_long_gt=unified_config.indicators.ultosc_long_gt_conservative,
+                ultosc_short_lt=unified_config.indicators.ultosc_short_lt_conservative,
+            ),
+        }
 
     @classmethod
     def get(cls, profile: Optional[Profile]) -> Thresholds:

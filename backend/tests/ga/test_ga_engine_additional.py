@@ -7,26 +7,15 @@ from app.services.backtest.factories.strategy_class_factory import StrategyClass
 from app.services.auto_strategy.generators.random_gene_generator import (
     RandomGeneGenerator,
 )
+from tests.common.test_stubs import DummyBacktestService
 
 
-class DummyBacktestService:
-    def run_backtest(self, config):
-        return {
-            "performance_metrics": {
-                "total_return": 0.05,
-                "sharpe_ratio": 0.8,
-                "max_drawdown": 0.25,
-                "win_rate": 0.52,
-                "total_trades": 10,
-            },
-            "trade_history": [],
-        }
 
 
 @pytest.fixture
 def engine_fast():
     cfg = GAConfig.create_fast()
-    backtest = DummyBacktestService()
+    backtest = DummyBacktestService(total_return=0.05, sharpe_ratio=0.8, max_drawdown=0.25, win_rate=0.52, total_trades=10)
     engine = GeneticAlgorithmEngine(
         backtest, StrategyClassFactory(), RandomGeneGenerator(cfg)
     )
