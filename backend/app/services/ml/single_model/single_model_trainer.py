@@ -11,7 +11,7 @@ from typing import Any, Dict, Optional
 import numpy as np
 import pandas as pd
 
-from ..exceptions import MLModelError, ModelError
+from ..exceptions import MLModelError
 from ..base_ml_trainer import BaseMLTrainer
 
 logger = logging.getLogger(__name__)
@@ -201,7 +201,7 @@ class SingleModelTrainer(BaseMLTrainer):
             予測確率の配列 [下落確率, レンジ確率, 上昇確率]
         """
         if self.single_model is None or not self.single_model.is_trained:
-            raise ModelError("学習済み単一モデルがありません")
+            raise MLModelError("学習済み単一モデルがありません")
 
         try:
             # 特徴量の順序を学習時と合わせる
@@ -215,14 +215,14 @@ class SingleModelTrainer(BaseMLTrainer):
             if predictions.ndim == 2 and predictions.shape[1] == 3:
                 return predictions
             else:
-                raise ModelError(
+                raise MLModelError(
                     f"予期しない予測確率の形状: {predictions.shape}. "
                     f"3クラス分類 (down, range, up) の確率が期待されます。"
                 )
 
         except Exception as e:
             logger.error(f"{self.model_type.upper()}モデルの予測エラー: {e}")
-            raise ModelError(
+            raise MLModelError(
                 f"{self.model_type.upper()}モデルの予測に失敗しました: {e}"
             )
 

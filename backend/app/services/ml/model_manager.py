@@ -7,7 +7,7 @@
 """
 
 import glob
-import hashlib
+
 import logging
 import os
 import warnings
@@ -19,11 +19,11 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 import joblib
-import pandas as pd
+
 
 from .config import ml_config
 
-from .exceptions import ModelError
+from .exceptions import MLModelError
 from ...utils.error_handler import safe_ml_operation
 
 logger = logging.getLogger(__name__)
@@ -165,7 +165,7 @@ class ModelManager:
         """
         try:
             if model is None:
-                raise ModelError("保存するモデルがNullです")
+                raise MLModelError("保存するモデルがNullです")
 
             # アルゴリズム名を取得
             algorithm_name = self._extract_algorithm_name(model, metadata)
@@ -226,7 +226,7 @@ class ModelManager:
 
         except Exception as e:
             logger.error(f"モデル保存エラー: {e}")
-            raise ModelError(f"モデル保存に失敗しました: {e}")
+            raise MLModelError(f"モデル保存に失敗しました: {e}")
 
     @safe_ml_operation(
         default_return=None, context="モデル読み込みでエラーが発生しました"
@@ -246,7 +246,7 @@ class ModelManager:
         """
         try:
             if not os.path.exists(model_path):
-                raise ModelError(f"モデルファイルが見つかりません: {model_path}")
+                raise MLModelError(f"モデルファイルが見つかりません: {model_path}")
 
             # モデルデータを読み込み
             from sklearn.exceptions import InconsistentVersionWarning
@@ -269,7 +269,7 @@ class ModelManager:
 
             # 必要なキーが存在しない場合のデフォルト値設定
             if "model" not in model_data:
-                raise ModelError("モデルデータに'model'キーが見つかりません")
+                raise MLModelError("モデルデータに'model'キーが見つかりません")
 
             model_data.setdefault("scaler", None)
             model_data.setdefault("feature_columns", None)
@@ -279,7 +279,7 @@ class ModelManager:
 
         except Exception as e:
             logger.error(f"モデル読み込みエラー: {e}")
-            raise ModelError(f"モデル読み込みに失敗しました: {e}")
+            raise MLModelError(f"モデル読み込みに失敗しました: {e}")
 
     def get_latest_model(self, model_name_pattern: str = "*") -> Optional[str]:
         """
@@ -437,23 +437,6 @@ class ModelManager:
 
         except Exception as e:
             logger.error(f"モデルクリーンアップエラー: {e}")
-
-    # ========================================
-    # 拡張API（新機能）
-    # ========================================
-
-    # ========================================
-    # ヘルパーメソッド
-    # ========================================
-
-    def _calculate_data_hash(self, data: pd.DataFrame) -> str:
-        """データハッシュを計算"""
-        try:
-            data_str = data.to_string()
-            return hashlib.md5(data_str.encode()).hexdigest()
-        except Exception:
-            # DataFrame でない/シリアライズ失敗などの場合のフォールバック
-            return "unknown"
 
 
 # グローバルインスタンス

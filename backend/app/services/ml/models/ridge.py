@@ -199,9 +199,7 @@ class RidgeModel:
         Raises:
             ModelError: RidgeClassifierは確率予測に対応していない
         """
-        raise MLModelError(
-            "RidgeClassifierは確率予測（predict_proba）に対応していません"
-        )
+        raise ModelError("RidgeClassifierは確率予測（predict_proba）に対応していません")
 
     @property
     def feature_columns(self) -> List[str]:

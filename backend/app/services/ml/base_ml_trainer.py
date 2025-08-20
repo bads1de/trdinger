@@ -17,10 +17,7 @@ from sklearn.preprocessing import StandardScaler
 
 from .ml_metadata import ModelMetadata
 from ...utils.data_processing import data_processor as data_preprocessor
-from .exceptions import (
-    MLModelError,
-    ModelError,
-)
+from .exceptions import MLModelError
 from ...utils.error_handler import (
     DataError,
     ml_operation_context,
@@ -251,7 +248,7 @@ class BaseMLTrainer(BaseResourceManager, ABC):
             評価結果の辞書
         """
         if not self.is_trained:
-            raise ModelError("評価対象の学習済みモデルがありません")
+            raise MLModelError("評価対象の学習済みモデルがありません")
 
         # 特徴量を計算
         features_df = self._calculate_features(
@@ -800,7 +797,7 @@ class BaseMLTrainer(BaseResourceManager, ABC):
     ) -> Optional[str]:
         """モデルを保存"""
         if not self.is_trained:
-            raise ModelError("学習済みモデルがありません")
+            raise MLModelError("学習済みモデルがありません")
 
         # アンサンブルトレーナーが存在する場合は、そちらに委譲
         if hasattr(self, "_ensemble_trainer") and self._ensemble_trainer:

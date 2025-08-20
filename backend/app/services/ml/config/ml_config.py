@@ -16,11 +16,11 @@ from pydantic_settings import BaseSettings
 class DataProcessingConfig(BaseSettings):
     """データ処理関連の設定"""
 
-    # データ制限（大幅に緩和）
+    # データ制限
     MAX_OHLCV_ROWS: int = Field(default=1000000, description="100万行まで")
     MAX_FEATURE_ROWS: int = Field(default=1000000, description="100万行まで")
 
-    # タイムアウト設定（大幅に緩和）
+    # タイムアウト設定
     FEATURE_CALCULATION_TIMEOUT: int = Field(default=3600, description="1時間")
     MODEL_TRAINING_TIMEOUT: int = Field(default=7200, description="2時間")
     MODEL_PREDICTION_TIMEOUT: int = Field(default=10)
