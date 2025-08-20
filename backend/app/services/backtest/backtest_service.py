@@ -35,10 +35,7 @@ logger = logging.getLogger(__name__)
 
 class BacktestService:
     """
-    リファクタリング後のバックテスト実行サービス
-
-    責任分離とSOLID原則に基づいて設計されたFacadeパターンの実装です。
-    各専門サービスを統合して、シンプルなインターフェースを提供します。
+    バックテスト実行サービス
     """
 
     def __init__(self, data_service: Optional[BacktestDataService] = None):
@@ -84,10 +81,10 @@ class BacktestService:
             # 1. 設定の検証
             self._validator.validate_config(config)
 
-            # 2. データサービスの初期化（必要に応じて）
+            # 2. データサービスの初期化
             self._ensure_data_service_initialized()
 
-            # 3. 実行エンジンの初期化（必要に応じて）
+            # 3. 実行エンジンの初期化
             self._ensure_executor_initialized()
 
             # 4. 日付の正規化
