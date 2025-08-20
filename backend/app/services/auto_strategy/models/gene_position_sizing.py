@@ -52,7 +52,7 @@ class PositionSizingGene:
 
     # 共通パラメータ
     min_position_size: float = 0.01  # 最小ポジションサイズ
-    max_position_size: float = float("inf")  # 最大ポジションサイズ（無制限）
+    max_position_size: float = 9999.0  # 最大ポジションサイズ（デフォルト値）
     enabled: bool = True  # 有効フラグ
     priority: float = 1.0  # 優先度（0.5-1.5）
 
@@ -87,8 +87,8 @@ class PositionSizingGene:
             fixed_quantity=data.get("fixed_quantity", 1.0),
             min_position_size=data.get("min_position_size", 0.01),
             max_position_size=data.get(
-                "max_position_size", float("inf")
-            ),  # クラス定義と一致させる
+                "max_position_size", 50.0
+            ),  # デフォルト値を有限値に変更
             enabled=data.get("enabled", True),
             priority=data.get("priority", 1.0),
         )
@@ -381,8 +381,8 @@ class PositionSizingGene:
             return self.min_position_size
 
     def _apply_size_limits(self, position_size: float) -> float:
-        """ポジションサイズに制限を適用（最小値のみ）"""
-        return max(self.min_position_size, position_size)
+        """ポジションサイズに制限を適用（最小値と最大値）"""
+        return max(self.min_position_size, min(self.max_position_size, position_size))
 
 
 def create_random_position_sizing_gene(config=None) -> PositionSizingGene:
@@ -446,7 +446,7 @@ def create_random_position_sizing_gene(config=None) -> PositionSizingGene:
         fixed_ratio=random.uniform(fixed_ratio_range[0], fixed_ratio_range[1]),
         fixed_quantity=random.uniform(fixed_quantity_range[0], fixed_quantity_range[1]),
         min_position_size=random.uniform(0.01, 0.05),
-        max_position_size=float("inf"),  # 資金管理で制御するため無制限
+        max_position_size=random.uniform(max_position_range[0], max_position_range[1]),
         enabled=True,
         priority=random.uniform(0.5, 1.5),
     )

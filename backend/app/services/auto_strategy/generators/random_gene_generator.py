@@ -322,15 +322,16 @@ class RandomGeneGenerator:
                 # VALID_INDICATOR_TYPESに含まれる指標のみに絞り込み
                 curated = {ind for ind in curated if ind in VALID_INDICATOR_TYPES}
             # カバレッジモード: allowed 指定時は1つは巡回候補を確実に含める
-            coverage_pick = None
+            # store coverage pick on the instance so other methods can access it
+            self._coverage_pick = None
             try:
                 if self._coverage_cycle:
-                    coverage_pick = self._coverage_cycle[
+                    self._coverage_pick = self._coverage_cycle[
                         self._coverage_idx % len(self._coverage_cycle)
                     ]
                     self._coverage_idx += 1
             except Exception:
-                pass
+                self._coverage_pick = None
 
             # curated での厳選は allowed 指定がない場合のみ適用
             try:
@@ -347,8 +348,8 @@ class RandomGeneGenerator:
     def _generate_random_indicators(self) -> List[IndicatorGene]:
         """ランダムな指標リストを生成"""
         try:
-            # coverage_pick は上位で準備済み
-            coverage_pick = locals().get("coverage_pick", None)
+            # coverage_pick は上位で準備済み（インスタンス属性から取得）
+            coverage_pick = getattr(self, "_coverage_pick", None)
 
             num_indicators = random.randint(self.min_indicators, self.max_indicators)
             indicators = []

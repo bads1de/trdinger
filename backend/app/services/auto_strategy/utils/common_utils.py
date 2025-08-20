@@ -167,6 +167,75 @@ class CacheUtils:
             cls._cache.clear()
 
 
+class GeneUtils:
+    """遺伝子関連ユーティリティ"""
+
+    @staticmethod
+    def normalize_parameter(value: float, min_val: float = 1, max_val: float = 200) -> float:
+        """期間パラメータを正規化"""
+        return max(0.0, min(1.0, (value - min_val) / (max_val - min_val)))
+
+    @staticmethod
+    def create_default_strategy_gene(strategy_gene_class):
+        """デフォルトの戦略遺伝子を作成"""
+        try:
+            # 動的インポートを避けるため、引数として渡すか、呼び出し側でインポートする
+            # ここでは基本的な構造のみを提供
+            from backend.app.services.auto_strategy.models.gene_strategy import Condition, IndicatorGene
+
+            # デフォルト指標
+            indicators = [
+                IndicatorGene(
+                    type="SMA",
+                    parameters={"period": 20},
+                    enabled=True
+                )
+            ]
+
+            # デフォルト条件
+            long_entry_conditions = [
+                Condition(left_operand="close", operator=">", right_operand="open")
+            ]
+            short_entry_conditions = [
+                Condition(left_operand="close", operator="<", right_operand="open")
+            ]
+            exit_conditions = [
+                Condition(left_operand="close", operator="==", right_operand="open")
+            ]
+            entry_conditions = long_entry_conditions
+
+            # デフォルトリスク管理
+            risk_management = {
+                "stop_loss": 0.03,
+                "take_profit": 0.15,
+                "position_size": 0.1,
+            }
+
+            # メタデータ
+            metadata = {
+                "generated_by": "create_default_strategy_gene",
+                "source": "fallback",
+                "indicators_count": len(indicators),
+                "tpsl_gene_included": False,
+                "position_sizing_gene_included": False,
+            }
+
+            return strategy_gene_class(
+                indicators=indicators,
+                entry_conditions=entry_conditions,
+                long_entry_conditions=long_entry_conditions,
+                short_entry_conditions=short_entry_conditions,
+                exit_conditions=exit_conditions,
+                risk_management=risk_management,
+                tpsl_gene=None,
+                position_sizing_gene=None,
+                metadata=metadata,
+            )
+        except Exception as inner_e:
+            logger.error(f"デフォルト戦略遺伝子作成エラー: {inner_e}")
+            raise ValueError(f"デフォルト戦略遺伝子の作成に失敗: {inner_e}")
+
+
 safe_execute = AutoStrategyErrorHandler.safe_execute
 ensure_float = DataConverter.ensure_float
 ensure_int = DataConverter.ensure_int
@@ -176,3 +245,7 @@ normalize_symbol = DataConverter.normalize_symbol
 validate_range = ValidationUtils.validate_range
 validate_required_fields = ValidationUtils.validate_required_fields
 time_function = PerformanceUtils.time_function
+
+# GeneUtilsの便利関数
+normalize_parameter = GeneUtils.normalize_parameter
+create_default_strategy_gene = GeneUtils.create_default_strategy_gene

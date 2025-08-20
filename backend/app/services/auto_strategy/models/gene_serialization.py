@@ -17,6 +17,7 @@ from ..config.constants import (
     get_all_indicator_ids,
     get_id_to_indicator_mapping,
 )
+from ..utils.common_utils import GeneUtils
 
 logger = logging.getLogger(__name__)
 
@@ -373,9 +374,7 @@ class GeneSerializer:
                     indicator = strategy_gene.indicators[i]
                     indicator_id = self.indicator_ids.get(indicator.type, 0)
                     # パラメータを正規化（期間の場合は1-200を0-1に変換）
-                    from ..utils.auto_strategy_utils import AutoStrategyUtils
-
-                    param_val = AutoStrategyUtils.normalize_parameter(
+                    param_val = GeneUtils.normalize_parameter(
                         indicator.parameters.get("period", 20)
                     )
                 else:
@@ -559,11 +558,7 @@ class GeneSerializer:
 
         except Exception as e:
             logger.error(f"戦略遺伝子デコードエラー: {e}")
-            from ..utils.auto_strategy_utils import AutoStrategyUtils
-
-            return AutoStrategyUtils.create_default_strategy_gene(
-                strategy_gene_class=strategy_gene_class
-            )
+            return GeneUtils.create_default_strategy_gene(strategy_gene_class)
 
     def _generate_indicator_parameters(
         self, indicator_type: str, param_val: float
