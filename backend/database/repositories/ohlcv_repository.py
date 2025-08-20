@@ -10,7 +10,7 @@ import logging
 
 from .base_repository import BaseRepository
 from database.models import OHLCVData
-from app.utils.data_conversion import DataSanitizer
+from app.utils.data_validation import DataValidator
 
 
 logger = logging.getLogger(__name__)
@@ -40,7 +40,7 @@ class OHLCVRepository(BaseRepository):
         @safe_operation(context="OHLCVデータ挿入", is_api_call=False)
         def _insert_data():
             # データの検証
-            if not DataSanitizer.validate_ohlcv_data(ohlcv_records):
+            if not DataValidator.validate_ohlcv_records_simple(ohlcv_records):
                 raise ValueError(
                     "挿入しようとしているOHLCVデータに無効なものが含まれています。"
                 )
@@ -219,7 +219,7 @@ class OHLCVRepository(BaseRepository):
         Returns:
             サニタイズされたOHLCVデータのリスト
         """
-        return DataSanitizer.sanitize_ohlcv_data(ohlcv_data)
+        return DataValidator.sanitize_ohlcv_data(ohlcv_data)
 
     def clear_all_ohlcv_data(self) -> int:
         """

@@ -11,7 +11,7 @@ from typing import List, Optional
 
 import aiohttp
 
-from app.utils.data_conversion import DataSanitizer
+from app.utils.data_validation import DataValidator
 from app.utils.error_handler import (
     DataError,
     ErrorHandler,
@@ -197,7 +197,7 @@ class FearGreedIndexService:
             }
 
         # データ検証
-        if not DataSanitizer.validate_fear_greed_data(fear_greed_data):
+        if not DataValidator.validate_fear_greed_data(fear_greed_data):
             raise DataError("取得したFear & Greed Indexデータが無効です")
 
         # データベースに保存

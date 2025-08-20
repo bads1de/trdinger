@@ -23,7 +23,7 @@ from app.api.ml_management import router as ml_management_router
 from app.api.ml_training import router as ml_training_router
 from app.api.open_interest import router as open_interest_router
 from app.api.strategies import router as strategies_router
-from app.config import settings
+from app.config.unified_config import settings
 from app.utils.duplicate_filter_handler import DuplicateFilter
 
 
