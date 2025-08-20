@@ -15,20 +15,8 @@ from .market_regime_detector import (
     MarketRegimeDetector,
     MarketRegime,
     RegimeDetectionResult,
+    RegimeDetectionMethod,
 )
-
-# 強化版レジーム検出器（KMeans/DBSCAN/HMM）のオプション導入
-try:
-    from .enhanced_market_regime_detector import (
-        EnhancedMarketRegimeDetector,
-        RegimeDetectionMethod,
-    )
-
-    _ENHANCED_AVAILABLE = True
-except Exception:
-    EnhancedMarketRegimeDetector = None  # type: ignore
-    RegimeDetectionMethod = None  # type: ignore
-    _ENHANCED_AVAILABLE = False
 
 from ..ml_training_service import MLTrainingService
 from ....utils.error_handler import safe_ml_operation
@@ -47,8 +35,7 @@ class AdaptiveLearningConfig:
     performance_threshold: float = 0.6
     regime_change_sensitivity: float = 0.8
 
-    # 強化版レジーム検出器の使用可否と検出手法（デフォルトON）
-    use_enhanced_regime_detector: bool = True
+    # 統合レジーム検出器の検出手法（デフォルト: アンサンブル）
     # 'rule_based' | 'kmeans' | 'dbscan' | 'hmm' | 'ensemble'
     detection_method: str = "ensemble"
 
@@ -88,34 +75,26 @@ class AdaptiveLearningService:
         self.config = config or AdaptiveLearningConfig()
         self.ml_service = ml_service or MLTrainingService()
 
-        # レジーム検出器の選択（強化版が有効かつ利用可能なら置き換え）
-        if (
-            getattr(self.config, "use_enhanced_regime_detector", False)
-            and _ENHANCED_AVAILABLE
-        ):
-            method_str = str(
-                getattr(self.config, "detection_method", "ensemble")
-            ).lower()
-            try:
-                method_map = {
-                    "rule_based": RegimeDetectionMethod.RULE_BASED,
-                    "kmeans": RegimeDetectionMethod.KMEANS,
-                    "dbscan": RegimeDetectionMethod.DBSCAN,
-                    "hmm": RegimeDetectionMethod.HMM,
-                    "ensemble": RegimeDetectionMethod.ENSEMBLE,
-                }
-                method_enum = method_map.get(method_str, RegimeDetectionMethod.ENSEMBLE)
-            except Exception:
-                method_enum = RegimeDetectionMethod.ENSEMBLE  # type: ignore
+        # 統合済みレジーム検出器の初期化
+        method_str = str(
+            getattr(self.config, "detection_method", "ensemble")
+        ).lower()
+        try:
+            method_map = {
+                "rule_based": RegimeDetectionMethod.RULE_BASED,
+                "kmeans": RegimeDetectionMethod.KMEANS,
+                "dbscan": RegimeDetectionMethod.DBSCAN,
+                "hmm": RegimeDetectionMethod.HMM,
+                "ensemble": RegimeDetectionMethod.ENSEMBLE,
+            }
+            detection_method = method_map.get(method_str, RegimeDetectionMethod.ENSEMBLE)
+        except Exception:
+            detection_method = RegimeDetectionMethod.ENSEMBLE
 
-            self.regime_detector = EnhancedMarketRegimeDetector(  # type: ignore
-                lookback_period=self.config.regime_detection_window,
-                detection_method=method_enum,
-            )
-        else:
-            self.regime_detector = MarketRegimeDetector(
-                lookback_period=self.config.regime_detection_window
-            )
+        self.regime_detector = MarketRegimeDetector(
+            lookback_period=self.config.regime_detection_window,
+            detection_method=detection_method,
+        )
 
         self.last_retrain_time: Optional[datetime] = None
         self.current_regime: Optional[MarketRegime] = None
@@ -145,21 +124,6 @@ class AdaptiveLearningService:
 
             # 1. 市場レジーム検出
             regime_result = self.regime_detector.detect_regime(market_data)
-
-            # 強化版が返すdict形式に対応し、既存のRegimeDetectionResultに正規化
-            if isinstance(regime_result, dict):
-                regime_str = str(regime_result.get("regime", "ranging"))
-                try:
-                    regime_enum = MarketRegime(regime_str)
-                except Exception:
-                    regime_enum = MarketRegime.RANGING
-                confidence = float(regime_result.get("confidence", 0.5))
-                regime_result = RegimeDetectionResult(
-                    regime=regime_enum,
-                    confidence=confidence,
-                    indicators={},
-                    timestamp=datetime.now(),
-                )
 
             # 2. レジーム変化の判定
             regime_changed = self._detect_regime_change(regime_result)
