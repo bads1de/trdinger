@@ -9,6 +9,8 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from typing import Any, Callable, Dict, List, Optional
 
+from app.utils.error_handler import safe_operation
+
 logger = logging.getLogger(__name__)
 
 
@@ -79,6 +81,7 @@ class BaseOptimizer(ABC):
             RuntimeError: 最適化に失敗した場合
         """
 
+    @safe_operation(context="パラメータ空間検証", is_api_call=False)
     def validate_parameter_space(self, parameter_space: Dict[str, ParameterSpace]) -> None:
         """
         パラメータ空間の妥当性を検証
@@ -111,6 +114,7 @@ class BaseOptimizer(ABC):
             else:
                 raise ValueError(f"パラメータ '{param_name}': 未対応の型 '{param_config.type}'")
 
+    @safe_operation(context="目的関数検証", is_api_call=False)
     def validate_objective_function(self, objective_function: Callable[[Dict[str, Any]], float]) -> None:
         """
         目的関数の妥当性を検証

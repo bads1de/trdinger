@@ -12,6 +12,7 @@ from fastapi import BackgroundTasks
 from sqlalchemy.orm import Session
 
 from app.config.unified_config import unified_config
+from app.utils.error_handler import safe_operation
 from app.utils.response import api_response
 from database.repositories.funding_rate_repository import FundingRateRepository
 from database.repositories.ohlcv_repository import OHLCVRepository
@@ -34,6 +35,7 @@ class DataCollectionOrchestrationService:
         """初期化"""
         self.historical_service = HistoricalDataService()
 
+    @safe_operation(context="シンボル・時間軸バリデーション", is_api_call=False)
     def validate_symbol_and_timeframe(self, symbol: str, timeframe: str) -> str:
         """
         シンボルと時間軸のバリデーション
@@ -59,6 +61,7 @@ class DataCollectionOrchestrationService:
 
         return normalized_symbol
 
+    @safe_operation(context="履歴データ収集開始", is_api_call=True)
     async def start_historical_data_collection(
         self,
         symbol: str,
@@ -78,41 +81,36 @@ class DataCollectionOrchestrationService:
         Returns:
             収集開始結果
         """
-        try:
-            # シンボルと時間軸のバリデーション
-            normalized_symbol = self.validate_symbol_and_timeframe(symbol, timeframe)
+        # シンボルと時間軸のバリデーション
+        normalized_symbol = self.validate_symbol_and_timeframe(symbol, timeframe)
 
-            # データ存在チェック
-            repository = OHLCVRepository(db)
-            data_exists = repository.get_data_count(normalized_symbol, timeframe) > 0
+        # データ存在チェック
+        repository = OHLCVRepository(db)
+        data_exists = repository.get_data_count(normalized_symbol, timeframe) > 0
 
-            if data_exists:
-                logger.info(
-                    f"{normalized_symbol} {timeframe} のデータは既にデータベースに存在します。"
-                )
-                return api_response(
-                    success=True,
-                    message=f"{normalized_symbol} {timeframe} のデータは既に存在します。新規収集は行いません。",
-                    status="exists",
-                )
-
-            # バックグラウンドタスクとして実行
-            background_tasks.add_task(
-                self._collect_historical_background,
-                normalized_symbol,
-                timeframe,
-                db,
+        if data_exists:
+            logger.info(
+                f"{normalized_symbol} {timeframe} のデータは既にデータベースに存在します。"
             )
-
             return api_response(
                 success=True,
-                message=f"{normalized_symbol} {timeframe} の履歴データ収集を開始しました",
-                status="started",
+                message=f"{normalized_symbol} {timeframe} のデータは既に存在します。新規収集は行いません。",
+                status="exists",
             )
 
-        except Exception as e:
-            logger.error("履歴データ収集開始エラー", e)
-            raise
+        # バックグラウンドタスクとして実行
+        background_tasks.add_task(
+            self._collect_historical_background,
+            normalized_symbol,
+            timeframe,
+            db,
+        )
+
+        return api_response(
+            success=True,
+            message=f"{normalized_symbol} {timeframe} の履歴データ収集を開始しました",
+            status="started",
+        )
 
     async def execute_bulk_incremental_update(
         self, symbol: str, db: Session
@@ -282,6 +280,7 @@ class DataCollectionOrchestrationService:
             logger.error("一括履歴データ収集開始エラー", e)
             raise
 
+    @safe_operation(context="データ収集状況確認", is_api_call=True)
     async def get_collection_status(
         self,
         symbol: str,

@@ -11,6 +11,8 @@ from typing import Any, Callable, Dict, Optional
 
 import optuna
 
+from app.utils.error_handler import safe_operation
+
 logger = logging.getLogger(__name__)
 
 
@@ -46,6 +48,7 @@ class OptunaOptimizer:
         """初期化"""
         self.study: Optional[optuna.Study] = None
 
+    @safe_operation(context="Optuna最適化", is_api_call=False)
     def optimize(
         self,
         objective_function: Callable[[Dict[str, Any]], float],
@@ -104,27 +107,24 @@ class OptunaOptimizer:
         )
         return result
 
+    @safe_operation(context="Optunaリソースクリーンアップ", is_api_call=False)
     def cleanup(self):
         """
         Optunaリソースのクリーンアップ
         メモリーリーク防止のため、最適化完了後に呼び出す
         """
         if self.study is not None:
-            try:
-                # Studyの内部データをクリア
-                if hasattr(self.study, "trials"):
-                    self.study.trials.clear()
+            # Studyの内部データをクリア
+            if hasattr(self.study, "trials"):
+                self.study.trials.clear()
 
-                # Studyオブジェクト自体をクリア
-                self.study = None
+            # Studyオブジェクト自体をクリア
+            self.study = None
 
-                # 強制ガベージコレクション
-                import gc
+            # 強制ガベージコレクション
+            import gc
 
-                gc.collect()
-
-            except Exception as e:
-                logger.error(f"OptunaOptimizer クリーンアップエラー: {e}")
+            gc.collect()
 
     def __del__(self):
         """デストラクタでクリーンアップを確実に実行"""
@@ -168,6 +168,7 @@ class OptunaOptimizer:
         }
 
     @staticmethod
+    @safe_operation(context="アンサンブルパラメータ空間取得", is_api_call=False)
     def get_ensemble_parameter_space(
         ensemble_method: str, enabled_models: list
     ) -> Dict[str, ParameterSpace]:
