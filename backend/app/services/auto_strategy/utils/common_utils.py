@@ -8,8 +8,8 @@ import logging
 from typing import Any, Dict, List, Optional, Union
 from datetime import datetime
 
-from backend.app.services.auto_strategy.utils.error_handling import (
-    AutoStrategyErrorHandler,
+from app.utils.error_handler import (
+    ErrorHandler,
 )
 
 
@@ -181,7 +181,7 @@ class GeneUtils:
         try:
             # 動的インポートを避けるため、引数として渡すか、呼び出し側でインポートする
             # ここでは基本的な構造のみを提供
-            from backend.app.services.auto_strategy.models.gene_strategy import Condition, IndicatorGene
+            from ..models.gene_strategy import Condition, IndicatorGene
 
             # デフォルト指標
             indicators = [
@@ -236,7 +236,7 @@ class GeneUtils:
             raise ValueError(f"デフォルト戦略遺伝子の作成に失敗: {inner_e}")
 
 
-safe_execute = AutoStrategyErrorHandler.safe_execute
+safe_execute = ErrorHandler.safe_execute
 ensure_float = DataConverter.ensure_float
 ensure_int = DataConverter.ensure_int
 ensure_list = DataConverter.ensure_list

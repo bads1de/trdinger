@@ -50,7 +50,10 @@ class ExperimentManager:
             ga_config: GA設定
             backtest_config: バックテスト設定
         """
-        try:
+        from app.utils.error_handler import safe_operation
+
+        @safe_operation(context=f"GA実験実行 ({experiment_id})", is_api_call=False)
+        def _run_experiment():
             # バックテスト設定に実験IDを追加
             backtest_config["experiment_id"] = experiment_id
 
@@ -75,6 +78,8 @@ class ExperimentManager:
             # 取引数0の問題を分析
             self._analyze_zero_trades_issue(experiment_id, result)
 
+        try:
+            _run_experiment()
         except Exception as e:
             logger.error(f"GA実験の実行中にエラーが発生しました ({experiment_id}): {e}")
 
@@ -98,7 +103,14 @@ class ExperimentManager:
 
     def stop_experiment(self, experiment_id: str) -> bool:
         """実験を停止"""
-        try:
+        from app.utils.error_handler import safe_operation
+
+        @safe_operation(
+            context=f"GA実験停止 ({experiment_id})",
+            is_api_call=False,
+            default_return=False,
+        )
+        def _stop_experiment():
             # GA実行を停止
             if self.ga_engine:
                 self.ga_engine.stop_evolution()
@@ -109,9 +121,7 @@ class ExperimentManager:
             logger.info(f"実験停止: {experiment_id}")
             return True
 
-        except Exception as e:
-            logger.error(f"GA実験の停止中にエラーが発生しました: {e}")
-            return False
+        return _stop_experiment()
 
     def validate_strategy_gene(self, gene: StrategyGene) -> tuple[bool, List[str]]:
         """
@@ -127,7 +137,10 @@ class ExperimentManager:
 
     def _analyze_zero_trades_issue(self, experiment_id: str, result: Dict[str, Any]):
         """取引数0の問題を分析してログ出力"""
-        try:
+        from app.utils.error_handler import safe_operation
+
+        @safe_operation(context=f"取引数0分析 ({experiment_id})", is_api_call=False)
+        def _analyze_zero_trades():
             best_strategy = result.get("best_strategy")
             if not best_strategy:
                 logger.warning(f"実験 {experiment_id}: ベスト戦略が見つかりません")
@@ -177,16 +190,18 @@ class ExperimentManager:
             finally:
                 db.close()
 
-        except Exception as e:
-            logger.warning(
-                f"取引数0の分析処理中にエラーが発生しました: {e}", exc_info=True
-            )
+        _analyze_zero_trades()
 
     def _analyze_strategy_gene_for_zero_trades(
         self, strategy_gene_dict: Dict[str, Any], result_id: str
     ):
         """戦略遺伝子を分析して取引数0の原因を特定"""
-        try:
+        from app.utils.error_handler import safe_operation
+
+        @safe_operation(
+            context=f"戦略遺伝子分析 (結果ID: {result_id})", is_api_call=False
+        )
+        def _analyze_strategy_gene():
             logger.info(f"      📊 戦略分析 (結果ID: {result_id}):")
 
             # インジケーター分析
@@ -253,5 +268,4 @@ class ExperimentManager:
             risk_management = strategy_gene_dict.get("risk_management", {})
             logger.info(f"        リスク管理設定: {risk_management}")
 
-        except Exception as e:
-            logger.error(f"戦略遺伝子分析エラー: {e}")
+        _analyze_strategy_gene()

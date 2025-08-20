@@ -58,7 +58,10 @@ class ExperimentPersistenceService:
         Returns:
             実験ID（入力されたものと同じ）
         """
-        try:
+        from app.utils.error_handler import safe_operation
+
+        @safe_operation(context="実験作成", is_api_call=False)
+        def _create_experiment():
             with self.db_session_factory() as db:
                 ga_experiment_repo = GAExperimentRepository(db)
                 config_data = {
@@ -77,9 +80,8 @@ class ExperimentPersistenceService:
                 )
                 # フロントエンドで生成されたUUIDを返す
                 return experiment_id
-        except Exception as e:
-            logger.error(f"実験作成エラー: {e}")
-            raise
+
+        return _create_experiment()
 
     def save_experiment_result(
         self,
@@ -89,7 +91,10 @@ class ExperimentPersistenceService:
         backtest_config: Dict[str, Any],
     ):
         """実験結果をデータベースに保存"""
-        try:
+        from app.utils.error_handler import safe_operation
+
+        @safe_operation(context="実験結果保存", is_api_call=False)
+        def _save_experiment_result():
             experiment_info = self.get_experiment_info(experiment_id)
             if not experiment_info:
                 logger.error(f"実験情報が見つかりません: {experiment_id}")
@@ -114,10 +119,7 @@ class ExperimentPersistenceService:
 
             logger.info(f"実験結果保存完了: {experiment_id}")
 
-        except Exception as e:
-            logger.error(
-                f"GA実験結果の保存中にエラーが発生しました: {e}", exc_info=True
-            )
+        _save_experiment_result()
 
     def _save_best_strategy_and_run_detailed_backtest(
         self,
@@ -159,7 +161,10 @@ class ExperimentPersistenceService:
 
         logger.info(f"最良戦略を保存しました: DB ID {best_strategy_record.id}")
 
-        try:
+        from app.utils.error_handler import safe_operation
+
+        @safe_operation(context="最良戦略の詳細バックテスト", is_api_call=False)
+        def _save_detailed_backtest():
             logger.info("最良戦略の詳細バックテストと結果保存を開始...")
             detailed_backtest_config = self._prepare_detailed_backtest_config(
                 best_strategy, experiment_info, backtest_config
@@ -182,10 +187,7 @@ class ExperimentPersistenceService:
                 f"最良戦略のバックテスト結果を保存しました: ID {saved_backtest_result.get('id')}"
             )
 
-        except Exception as e:
-            logger.error(
-                f"最良戦略の詳細バックテスト結果の保存中にエラー: {e}", exc_info=True
-            )
+        _save_detailed_backtest()
 
     def _prepare_detailed_backtest_config(
         self,
@@ -329,7 +331,10 @@ class ExperimentPersistenceService:
 
     def complete_experiment(self, experiment_id: str):
         """実験を完了状態にする"""
-        try:
+        from app.utils.error_handler import safe_operation
+
+        @safe_operation(context="実験完了処理", is_api_call=False)
+        def _complete_experiment():
             experiment_info = self.get_experiment_info(experiment_id)
             if not experiment_info:
                 logger.error(f"実験情報が見つかりません: {experiment_id}")
@@ -340,12 +345,15 @@ class ExperimentPersistenceService:
                 ga_experiment_repo.update_experiment_status(
                     db_experiment_id, "completed"
                 )
-        except Exception as e:
-            logger.error(f"実験完了処理エラー: {e}")
+
+        _complete_experiment()
 
     def fail_experiment(self, experiment_id: str):
         """実験を失敗状態にする"""
-        try:
+        from app.utils.error_handler import safe_operation
+
+        @safe_operation(context="実験失敗処理", is_api_call=False)
+        def _fail_experiment():
             experiment_info = self.get_experiment_info(experiment_id)
             if not experiment_info:
                 logger.error(f"実験情報が見つかりません: {experiment_id}")
@@ -354,12 +362,15 @@ class ExperimentPersistenceService:
                 ga_experiment_repo = GAExperimentRepository(db)
                 db_experiment_id = experiment_info["db_id"]
                 ga_experiment_repo.update_experiment_status(db_experiment_id, "failed")
-        except Exception as e:
-            logger.error(f"実験失敗処理エラー: {e}")
+
+        _fail_experiment()
 
     def stop_experiment(self, experiment_id: str):
         """実験を停止状態にする"""
-        try:
+        from app.utils.error_handler import safe_operation
+
+        @safe_operation(context="実験停止処理", is_api_call=False)
+        def _stop_experiment():
             experiment_info = self.get_experiment_info(experiment_id)
             if not experiment_info:
                 logger.error(f"実験情報が見つかりません: {experiment_id}")
@@ -368,13 +379,16 @@ class ExperimentPersistenceService:
                 ga_experiment_repo = GAExperimentRepository(db)
                 db_experiment_id = experiment_info["db_id"]
                 ga_experiment_repo.update_experiment_status(db_experiment_id, "stopped")
-        except Exception as e:
-            logger.error(f"実験停止処理エラー: {e}")
+
+        _stop_experiment()
 
 
     def list_experiments(self) -> List[Dict[str, Any]]:
         """実験一覧を取得"""
-        try:
+        from app.utils.error_handler import safe_operation
+
+        @safe_operation(context="実験一覧取得", is_api_call=False, default_return=[])
+        def _list_experiments():
             with self.db_session_factory() as db:
                 ga_experiment_repo = GAExperimentRepository(db)
                 experiments = ga_experiment_repo.get_recent_experiments(limit=100)
@@ -397,13 +411,15 @@ class ExperimentPersistenceService:
                     }
                     for exp in experiments
                 ]
-        except Exception as e:
-            logger.error(f"実験一覧取得エラー: {e}")
-            return []
+
+        return _list_experiments()
 
     def get_experiment_info(self, experiment_id: str) -> Optional[Dict[str, Any]]:
         """実験情報を取得"""
-        try:
+        from app.utils.error_handler import safe_operation
+
+        @safe_operation(context="実験情報取得", is_api_call=False, default_return=None)
+        def _get_experiment_info():
             with self.db_session_factory() as db:
                 ga_experiment_repo = GAExperimentRepository(db)
                 experiments = ga_experiment_repo.get_recent_experiments(limit=100)
@@ -432,6 +448,5 @@ class ExperimentPersistenceService:
                         }
                 logger.warning(f"実験が見つかりません: {experiment_id}")
                 return None
-        except Exception as e:
-            logger.error(f"実験情報取得エラー: {e}")
-            return None
+
+        return _get_experiment_info()

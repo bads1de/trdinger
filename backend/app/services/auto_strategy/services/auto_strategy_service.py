@@ -12,7 +12,7 @@ from fastapi import BackgroundTasks
 from app.services.backtest.backtest_data_service import BacktestDataService
 from app.services.backtest.backtest_service import BacktestService
 from database.connection import SessionLocal
-from app.utils.error_handler import ErrorHandler
+
 
 from .experiment_manager import ExperimentManager
 from ..models.ga_config import GAConfig
@@ -54,7 +54,10 @@ class AutoStrategyService:
 
         必要最小限のサービス初期化を行います。
         """
-        try:
+        from app.utils.error_handler import safe_operation
+
+        @safe_operation(context="サービス初期化", is_api_call=False)
+        def _init_services_impl():
             # データベースリポジトリの初期化
             with self.db_session_factory() as db:
                 from database.repositories.funding_rate_repository import (
@@ -85,9 +88,7 @@ class AutoStrategyService:
                 self.backtest_service, self.persistence_service
             )
 
-        except Exception as e:
-            logger.error(f"サービス初期化エラー: {e}")
-            raise
+        _init_services_impl()
 
     def start_strategy_generation(
         self,
@@ -113,13 +114,17 @@ class AutoStrategyService:
         logger.info(f"戦略生成開始: {experiment_name}")
 
         # 1. GA設定の構築と検証
-        try:
+        from app.utils.error_handler import safe_operation
+
+        @safe_operation(context="GA設定構築と検証", is_api_call=True)
+        def _validate_ga_config():
             ga_config = GAConfig.from_dict(ga_config_dict)
             is_valid, errors = ga_config.validate()
             if not is_valid:
                 raise ValueError(f"無効なGA設定です: {', '.join(errors)}")
-        except Exception as e:
-            raise ErrorHandler.handle_api_error(e, context="create_strategy")
+            return ga_config
+
+        ga_config = _validate_ga_config()
 
         # 2. バックテスト設定のシンボル正規化
         backtest_config = backtest_config_dict.copy()
@@ -160,11 +165,13 @@ class AutoStrategyService:
         Returns:
             実験一覧のリスト
         """
-        try:
+        from app.utils.error_handler import safe_operation
+
+        @safe_operation(context="実験一覧取得", is_api_call=False, default_return=[])
+        def _list_experiments():
             return self.persistence_service.list_experiments()
-        except Exception as e:
-            logger.error(f"実験一覧取得エラー: {e}")
-            return []
+
+        return _list_experiments()
 
     def get_experiment_status(self, experiment_id: str) -> Dict[str, Any]:
         """
@@ -176,7 +183,14 @@ class AutoStrategyService:
         Returns:
             実験ステータス情報
         """
-        try:
+        from app.utils.error_handler import safe_operation
+
+        @safe_operation(
+            context="実験ステータス取得",
+            is_api_call=False,
+            default_return={"status": "error", "message": "不明なエラー"},
+        )
+        def _get_experiment_status():
             # get_experiment_infoメソッドを使用
             experiment_info = self.persistence_service.get_experiment_info(
                 experiment_id
@@ -190,9 +204,8 @@ class AutoStrategyService:
                 }
             else:
                 return {"status": "not_found", "message": "実験が見つかりません"}
-        except Exception as e:
-            logger.error(f"実験ステータス取得エラー: {e}")
-            return {"status": "error", "message": str(e)}
+
+        return _get_experiment_status()
 
     def stop_experiment(self, experiment_id: str) -> Dict[str, Any]:
         """
@@ -204,7 +217,17 @@ class AutoStrategyService:
         Returns:
             停止結果
         """
-        try:
+        from app.utils.error_handler import safe_operation
+
+        @safe_operation(
+            context="実験停止",
+            is_api_call=False,
+            default_return={
+                "success": False,
+                "message": "実験停止でエラーが発生しました",
+            },
+        )
+        def _stop_experiment():
             if self.experiment_manager:
                 return self.experiment_manager.stop_experiment(experiment_id)
             else:
@@ -212,9 +235,8 @@ class AutoStrategyService:
                     "success": False,
                     "message": "実験管理マネージャーが初期化されていません",
                 }
-        except Exception as e:
-            logger.error(f"実験停止エラー: {e}")
-            return {"success": False, "message": str(e)}
+
+        return _stop_experiment()
 
     def get_default_config(self) -> Dict[str, Any]:
         """
@@ -223,11 +245,15 @@ class AutoStrategyService:
         Returns:
             デフォルト設定
         """
-        try:
+        from app.utils.error_handler import safe_operation
+
+        @safe_operation(
+            context="デフォルト設定取得", is_api_call=False, default_return={}
+        )
+        def _get_default_config():
             return GAConfig().to_dict()
-        except Exception as e:
-            logger.error(f"デフォルト設定取得エラー: {e}")
-            return {}
+
+        return _get_default_config()
 
     def get_presets(self) -> Dict[str, Any]:
         """
@@ -236,11 +262,13 @@ class AutoStrategyService:
         Returns:
             プリセット設定
         """
-        try:
+        from app.utils.error_handler import safe_operation
+
+        @safe_operation(context="プリセット取得", is_api_call=False, default_return={})
+        def _get_presets():
             return GAConfig.get_presets()
-        except Exception as e:
-            logger.error(f"プリセット取得エラー: {e}")
-            return {}
+
+        return _get_presets()
 
     async def test_strategy(self, request) -> Dict[str, Any]:
         """
@@ -254,7 +282,18 @@ class AutoStrategyService:
         Returns:
             テスト結果
         """
-        try:
+        from app.utils.error_handler import safe_operation
+
+        @safe_operation(
+            context="戦略テスト",
+            is_api_call=False,
+            default_return={
+                "success": False,
+                "errors": ["戦略テストでエラーが発生しました"],
+                "message": "戦略テストに失敗しました",
+            },
+        )
+        def _test_strategy():
             logger.info("戦略テスト開始")
 
             # 戦略遺伝子の復元
@@ -281,10 +320,4 @@ class AutoStrategyService:
                 "message": "戦略テストが正常に完了しました",
             }
 
-        except Exception as e:
-            logger.error(f"戦略テストエラー: {e}", exc_info=True)
-            return {
-                "success": False,
-                "errors": [str(e)],
-                "message": f"戦略テストに失敗しました: {str(e)}",
-            }
+        return _test_strategy()

@@ -87,7 +87,12 @@ class PositionSizingService:
         Returns:
             計算結果
         """
-        try:
+        from app.utils.error_handler import safe_operation
+
+        @safe_operation(context="ポジションサイズ計算", is_api_call=False, default_return=self._create_error_result(
+            "計算処理でエラーが発生しました", gene.method.value if gene and hasattr(gene, "method") else "unknown"
+        ))
+        def _calculate_position_size():
             start_time = datetime.now()
             warnings = []
 
@@ -171,11 +176,7 @@ class PositionSizingService:
 
             return final_result
 
-        except Exception as e:
-            self.logger.error(f"ポジションサイズ計算エラー: {e}", exc_info=True)
-            return self._create_error_result(
-                str(e), gene.method.value if gene else "unknown"
-            )
+        return _calculate_position_size()
 
     def _validate_inputs(
         self, gene, account_balance: float, current_price: float
@@ -239,7 +240,14 @@ class PositionSizingService:
 
         if not trade_history or len(trade_history) < 10:
             # データ不足時は簡易版オプティマルF計算を試行
-            try:
+            from app.utils.error_handler import safe_operation
+
+            @safe_operation(context="簡易オプティマルF計算", is_api_call=False, default_return={
+                "position_size": 0,
+                "warnings": ["簡易計算失敗"],
+                "details": {"fallback_reason": "simplified_calculation_failed"}
+            })
+            def _simplified_optimal_f():
                 # 統計的仮定値を使用した簡易計算
                 assumed_win_rate = unified_config.auto_strategy.assumed_win_rate
                 assumed_avg_win = unified_config.auto_strategy.assumed_avg_win
@@ -256,9 +264,11 @@ class PositionSizingService:
                     position_size = position_amount / current_price
                 else:
                     position_size = 0
-                warnings.append("取引履歴が不足、簡易版オプティマルF計算を使用")
-                details.update(
-                    {
+
+                return {
+                    "position_size": position_size,
+                    "warnings": ["取引履歴が不足、簡易版オプティマルF計算を使用"],
+                    "details": {
                         "fallback_reason": "insufficient_trade_history_simplified",
                         "trade_count": len(trade_history) if trade_history else 0,
                         "assumed_win_rate": assumed_win_rate,
@@ -267,41 +277,28 @@ class PositionSizingService:
                         "calculated_optimal_f": optimal_f,
                         "half_optimal_f": half_optimal_f,
                     }
+                }
+
+            simplified_result = _simplified_optimal_f()
+            if isinstance(simplified_result, dict):
+                position_size = simplified_result.get("position_size", 0)
+                warnings.extend(simplified_result.get("warnings", []))
+                details.update(simplified_result.get("details", {}))
+            else:
+                # フォールバック
+                position_size = account_balance * gene.fixed_ratio
+                if current_price > 0:
+                    position_size = position_amount / current_price
+                else:
+                    position_size = 0
+                warnings.append("取引履歴が不足、固定比率にフォールバック")
+                details.update(
+                    {
+                        "fallback_reason": "insufficient_trade_history_to_fixed",
+                        "trade_count": len(trade_history) if trade_history else 0,
+                        "fallback_ratio": gene.fixed_ratio,
+                    }
                 )
-            except Exception:
-                # 簡易計算も失敗した場合はボラティリティベースを試行
-                try:
-                    volatility_result = self._calculate_volatility_based_enhanced(
-                        gene,
-                        account_balance,
-                        current_price,
-                        {"atr": current_price * 0.04},
-                    )
-                    position_size = volatility_result["position_size"]
-                    warnings.append(
-                        "取引履歴不足、ボラティリティベース方式にフォールバック"
-                    )
-                    details.update(
-                        {
-                            "fallback_reason": "insufficient_trade_history_to_volatility",
-                            "trade_count": len(trade_history) if trade_history else 0,
-                        }
-                    )
-                except Exception:
-                    # 最終フォールバック：固定比率
-                    position_amount = account_balance * gene.fixed_ratio
-                    if current_price > 0:
-                        position_size = position_amount / current_price
-                    else:
-                        position_size = 0
-                    warnings.append("取引履歴が不足、固定比率にフォールバック")
-                    details.update(
-                        {
-                            "fallback_reason": "insufficient_trade_history_to_fixed",
-                            "trade_count": len(trade_history) if trade_history else 0,
-                            "fallback_ratio": gene.fixed_ratio,
-                        }
-                    )
         else:
             # 過去データの分析
             recent_trades = trade_history[-gene.lookback_period :]
@@ -354,7 +351,17 @@ class PositionSizingService:
                     )
                 else:
                     # 無効な損益データの場合、ボラティリティベース方式を試行
-                    try:
+                    from app.utils.error_handler import safe_operation
+
+                    @safe_operation(context="ボラティリティベースフォールバック", is_api_call=False, default_return={
+                        "position_size": account_balance * gene.fixed_ratio / current_price if current_price > 0 else 0,
+                        "warnings": ["無効な損益データ、固定比率にフォールバック"],
+                        "details": {
+                            "fallback_reason": "invalid_pnl_data_to_fixed",
+                            "fallback_ratio": gene.fixed_ratio,
+                        }
+                    })
+                    def _volatility_fallback():
                         fallback_atr_multiplier = unified_config.auto_strategy.fallback_atr_multiplier
                         volatility_result = self._calculate_volatility_based_enhanced(
                             gene,
@@ -362,30 +369,22 @@ class PositionSizingService:
                             current_price,
                             {"atr": current_price * fallback_atr_multiplier},
                         )
-                        position_size = volatility_result["position_size"]
-                        warnings.append(
-                            "無効な損益データ、ボラティリティベース方式にフォールバック"
-                        )
-                        details.update(
-                            {
+                        return {
+                            "position_size": volatility_result["position_size"],
+                            "warnings": ["無効な損益データ、ボラティリティベース方式にフォールバック"],
+                            "details": {
                                 "fallback_reason": "invalid_pnl_data_to_volatility",
                                 "fallback_method": "volatility_based",
                             }
-                        )
-                    except Exception:
-                        # ボラティリティベースも失敗した場合のみ固定比率
-                        position_amount = account_balance * gene.fixed_ratio
-                        if current_price > 0:
-                            position_size = position_amount / current_price
-                        else:
-                            position_size = 0
-                        warnings.append("無効な損益データ、固定比率にフォールバック")
-                        details.update(
-                            {
-                                "fallback_reason": "invalid_pnl_data_to_fixed",
-                                "fallback_ratio": gene.fixed_ratio,
-                            }
-                        )
+                        }
+
+                    fallback_result = _volatility_fallback()
+                    if isinstance(fallback_result, dict):
+                        position_size = fallback_result.get("position_size", 0)
+                        warnings.extend(fallback_result.get("warnings", []))
+                        details.update(fallback_result.get("details", {}))
+                    else:
+                        position_size = fallback_result
 
         # サイズ制限の適用（最小値のみ、資金管理で上限は制御）
         position_size = max(gene.min_position_size, position_size)
@@ -516,7 +515,16 @@ class PositionSizingService:
         market_data: Dict[str, Any],
     ) -> Dict[str, float]:
         """リスクメトリクスの計算"""
-        try:
+        from app.utils.error_handler import safe_operation
+
+        @safe_operation(context="リスクメトリクス計算", is_api_call=False, default_return={
+            "position_value": 0.0,
+            "position_ratio": 0.0,
+            "potential_loss_1atr": 0.0,
+            "potential_loss_ratio": 0.0,
+            "atr_used": 0.0,
+        })
+        def _calculate_risk_metrics_impl():
             # 基本メトリクス
             position_value = position_size * current_price
             position_ratio = (
@@ -537,15 +545,8 @@ class PositionSizingService:
                 "potential_loss_ratio": potential_loss_ratio,
                 "atr_used": atr_pct,
             }
-        except Exception as e:
-            self.logger.error(f"リスクメトリクス計算エラー: {e}")
-            return {
-                "position_value": 0.0,
-                "position_ratio": 0.0,
-                "potential_loss_1atr": 0.0,
-                "potential_loss_ratio": 0.0,
-                "atr_used": 0.0,
-            }
+
+        return _calculate_risk_metrics_impl()
 
     def _calculate_confidence_score(
         self,
@@ -554,7 +555,10 @@ class PositionSizingService:
         trade_history: Optional[List[Dict[str, Any]]],
     ) -> float:
         """信頼度スコアの計算"""
-        try:
+        from app.utils.error_handler import safe_operation
+
+        @safe_operation(context="信頼度スコア計算", is_api_call=False, default_return=0.5)
+        def _calculate_confidence_score_impl():
             score = 0.5  # ベーススコア
 
             # データ品質による調整
@@ -575,8 +579,8 @@ class PositionSizingService:
                 score += 0.1
 
             return min(1.0, max(0.0, score))
-        except Exception:
-            return 0.5
+
+        return _calculate_confidence_score_impl()
 
     def _create_error_result(
         self, error_message: str, method: str
@@ -675,7 +679,10 @@ class PositionSizingService:
         Returns:
             ポジションサイズ（数量）
         """
-        try:
+        from app.utils.error_handler import safe_operation
+
+        @safe_operation(context="簡易ポジションサイズ計算", is_api_call=False, default_return=0.0)
+        def _calculate_position_size_simple():
             gene = self._create_default_gene(method=method, **kwargs)
             result = self.calculate_position_size(
                 gene=gene,
@@ -685,9 +692,4 @@ class PositionSizingService:
             )
             return result.position_size
 
-        except Exception as e:
-            logger.error(f"簡易ポジションサイズ計算エラー: {e}")
-            # フォールバック: 固定比率
-            default_ratio = kwargs.get("fixed_ratio", unified_config.auto_strategy.default_position_ratio)
-            position_amount = account_balance * default_ratio
-            return position_amount / current_price if current_price > 0 else 0
+        return _calculate_position_size_simple()

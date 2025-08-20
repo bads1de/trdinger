@@ -240,7 +240,10 @@ class MLOrchestrator(MLPredictionInterface):
         Returns:
             読み込み成功フラグ
         """
-        try:
+        from app.utils.error_handler import safe_operation
+
+        @safe_operation(context=f"MLモデル読み込み ({model_path})", is_api_call=False, default_return=False)
+        def _load_model():
             success = self.ml_training_service.load_model(model_path)
             if success:
                 self.is_model_loaded = True
@@ -249,9 +252,7 @@ class MLOrchestrator(MLPredictionInterface):
                 logger.warning(f"MLモデル読み込み失敗: {model_path}")
             return success
 
-        except Exception as e:
-            logger.error(f"MLモデル読み込みエラー: {e}")
-            return False
+        return _load_model()
 
     def get_model_status(self) -> Dict[str, Any]:
         """
@@ -275,7 +276,10 @@ class MLOrchestrator(MLPredictionInterface):
         }
 
         # 最新のモデルファイルから性能指標を取得
-        try:
+        from app.utils.error_handler import safe_operation
+
+        @safe_operation(context="性能指標取得", is_api_call=False)
+        def _get_performance_metrics():
             latest_model = model_manager.get_latest_model("*")
             if latest_model:
                 # ModelManagerから直接メタデータを取得
@@ -311,13 +315,8 @@ class MLOrchestrator(MLPredictionInterface):
                         "training_time": metadata.get("training_time", 0.0),
                     }
                     status["performance_metrics"] = performance_metrics
-                else:
-                    pass
-            else:
-                pass
-        except Exception as e:
-            logger.error(f"性能指標取得エラー: {e}")
 
+        _get_performance_metrics()
         return status
 
     def get_feature_importance(self, top_n: int = 10) -> Dict[str, float]:
@@ -439,8 +438,10 @@ class MLOrchestrator(MLPredictionInterface):
         open_interest_data: Optional[pd.DataFrame] = None,
     ) -> Optional[pd.DataFrame]:
         """特徴量を計算（AutoML統合版）"""
-        try:
+        from app.utils.error_handler import safe_operation
 
+        @safe_operation(context="特徴量計算", is_api_call=False, default_return=None)
+        def _calculate_features_impl():
             # 特徴量計算用にカラム名を大文字に変換
             df_for_features = df.copy()
             column_mapping = {
@@ -483,9 +484,8 @@ class MLOrchestrator(MLPredictionInterface):
                 logger.warning("特徴量計算結果がNone")
 
             return features_df
-        except Exception as e:
-            logger.error(f"特徴量計算エラー: {e}")
-            return None
+
+        return _calculate_features_impl()
 
     def _calculate_target_for_automl(self, df: pd.DataFrame) -> Optional[pd.Series]:
         """AutoML特徴量生成用のターゲット変数を計算"""

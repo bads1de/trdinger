@@ -94,7 +94,10 @@ class TPSLService:
         Returns:
             (SL価格, TP価格)のタプル
         """
-        try:
+        from app.utils.error_handler import safe_operation
+
+        @safe_operation(context="TP/SL価格計算", is_api_call=False, default_return=self._calculate_fallback(current_price, position_direction))
+        def _calculate_tpsl_prices():
             # TP/SL遺伝子が利用可能な場合（GA最適化対象）
             if tpsl_gene and hasattr(tpsl_gene, "enabled") and tpsl_gene.enabled:
                 return self._calculate_from_gene(
@@ -110,10 +113,7 @@ class TPSLService:
                 position_direction=position_direction,
             )
 
-        except Exception as e:
-            logger.error(f"TP/SL価格計算エラー: {e}")
-            # フォールバック: 基本計算
-            return self._calculate_fallback(current_price, position_direction)
+        return _calculate_tpsl_prices()
 
     def _make_prices(
         self,
@@ -123,7 +123,10 @@ class TPSLService:
         position_direction: float,
     ) -> Tuple[Optional[float], Optional[float]]:
         """割合からSL/TP価格を生成（共通ユーティリティ）"""
-        try:
+        from app.utils.error_handler import safe_operation
+
+        @safe_operation(context="価格生成", is_api_call=False, default_return=(None, None))
+        def _make_prices_impl():
             sl_price: Optional[float] = None
             tp_price: Optional[float] = None
 
@@ -146,9 +149,8 @@ class TPSLService:
                         tp_price = current_price * (1 - take_profit_pct)
 
             return sl_price, tp_price
-        except Exception as e:
-            logger.error(f"価格生成エラー: {e}")
-            return None, None
+
+        return _make_prices_impl()
 
     def _calculate_from_gene(
         self,
@@ -158,7 +160,10 @@ class TPSLService:
         position_direction: float,
     ) -> Tuple[Optional[float], Optional[float]]:
         """TP/SL遺伝子からTP/SL価格を計算"""
-        try:
+        from app.utils.error_handler import safe_operation
+
+        @safe_operation(context="遺伝子ベースTP/SL計算", is_api_call=False, default_return=self._calculate_fallback(current_price, position_direction))
+        def _calculate_from_gene():
             if tpsl_gene.method == TPSLMethod.FIXED_PERCENTAGE:
                 return self._calculate_fixed_percentage(
                     current_price, tpsl_gene, position_direction
@@ -189,9 +194,7 @@ class TPSLService:
                 logger.warning(f"未知のTP/SL方式: {tpsl_gene.method}")
                 return self._calculate_fallback(current_price, position_direction)
 
-        except Exception as e:
-            logger.error(f"遺伝子ベースTP/SL計算エラー: {e}")
-            return self._calculate_fallback(current_price, position_direction)
+        return _calculate_from_gene()
 
     def _calculate_fixed_percentage(
         self,
@@ -354,7 +357,12 @@ class TPSLService:
         Returns:
             (SL価格, TP価格)のタプル
         """
-        try:
+        from app.utils.error_handler import safe_operation
+
+        @safe_operation(context="基本TP/SL価格計算", is_api_call=False, default_return=self._calculate_simple_tpsl_prices(
+            current_price, stop_loss_pct, take_profit_pct, position_direction
+        ))
+        def _calculate_basic_tpsl_prices():
             # 高度なTP/SL計算方式が使用されているかチェック
             if self._is_advanced_tpsl_used(risk_management):
                 return self._calculate_advanced_tpsl_prices(
@@ -370,12 +378,7 @@ class TPSLService:
                     current_price, stop_loss_pct, take_profit_pct, position_direction
                 )
 
-        except Exception as e:
-            logger.error(f"基本TP/SL価格計算エラー: {e}")
-            # フォールバック: 基本的な計算方式
-            return self._calculate_simple_tpsl_prices(
-                current_price, stop_loss_pct, take_profit_pct, position_direction
-            )
+        return _calculate_basic_tpsl_prices()
 
     def _calculate_simple_tpsl_prices(
         self,

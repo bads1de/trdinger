@@ -78,42 +78,6 @@ logger.info(f"処理完了: {experiment_id}")
 - 構造化ログ出力の標準化
 - ログメッセージの定数化
 
-## 4. 新たに特定されたリファクタリングポイント
-
-### 4.1 API エンドポイントの DELETE パターン統一
-
-**問題**: DELETE エンドポイントで `ErrorHandler.safe_execute_async` の重複使用
-
-**影響**: 56 箇所で同じエラーハンドリングパターンが繰り返されている
-
-**推奨解決策**:
-
-- カスタムデコレータを作成して共通処理を抽出
-- API レスポンスの標準化
-
-```python
-def api_endpoint(func):
-    """APIエンドポイント用の共通処理デコレータ"""
-    async def wrapper(*args, **kwargs):
-        try:
-            return await func(*args, **kwargs)
-        except HTTPException:
-            raise
-        except Exception as e:
-            logger.error(f"APIエラー: {e}", exc_info=True)
-            return api_response(success=False, message=str(e))
-    return wrapper
-```
-
-### 4.2 インポート文の共通化
-
-**問題**: Repository 関連のインポートが 47 箇所で重複
-
-**推奨解決策**:
-
-- `database/__init__.py` に共通インポートを追加
-- `from database import repositories` で一括インポート可能に
-
 ### 4.3 セキュリティ設定の改善
 
 **問題**: 設定ファイルにデフォルトパスワードとシークレットキーが含まれる

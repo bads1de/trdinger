@@ -45,7 +45,10 @@ class IndicatorCalculator:
         Returns:
             計算結果（numpy配列）
         """
-        try:
+        from app.utils.error_handler import safe_operation
+
+        @safe_operation(context=f"指標計算 ({indicator_type})", is_api_call=False)
+        def _calculate_indicator():
             # backtesting.pyのデータオブジェクトをDataFrameに変換
             df = data.df
 
@@ -86,79 +89,7 @@ class IndicatorCalculator:
             )
             return result
 
-        except Exception as e:
-            logger.error(f"指標計算エラー {indicator_type}: {e}", exc_info=True)
-
-            # 基本的な移動平均指標の場合はフォールバック処理を試行
-            if indicator_type in ["SMA", "EMA", "WMA"] and "period" in parameters:
-                try:
-                    logger.warning(
-                        f"フォールバック処理を試行: {indicator_type}, パラメータ: {parameters}"
-                    )
-                    period = parameters["period"]
-
-                    # 期間の妥当性チェック
-                    if not isinstance(period, (int, float)) or period <= 0:
-                        logger.error(f"無効な期間: {period}")
-                        raise ValueError(f"無効な期間: {period}")
-
-                    period = int(period)
-                    close_data = df["Close"].values
-
-                    # データ長の妥当性チェック
-                    if len(close_data) < period:
-                        logger.error(
-                            f"データ長({len(close_data)})が期間({period})より短い"
-                        )
-                        raise ValueError(
-                            f"データ長({len(close_data)})が期間({period})より短い"
-                        )
-
-                    if indicator_type == "SMA":
-                        # 簡易SMA計算
-                        result = np.convolve(
-                            close_data, np.ones(period) / period, mode="valid"
-                        )
-                        # 元の長さに合わせてNaNでパディング
-                        padded_result = np.full(len(close_data), np.nan)
-                        padded_result[period - 1 :] = result
-                        logger.info(
-                            f"フォールバックSMA計算成功: 期間={period}, 結果長={len(padded_result)}"
-                        )
-                        return padded_result
-                    elif indicator_type == "EMA":
-                        # 簡易EMA計算
-                        alpha = 2.0 / (period + 1)
-                        result = np.full(len(close_data), np.nan)
-                        result[0] = close_data[0]
-                        for i in range(1, len(close_data)):
-                            if not np.isnan(result[i - 1]):
-                                result[i] = (
-                                    alpha * close_data[i] + (1 - alpha) * result[i - 1]
-                                )
-                        logger.info(
-                            f"フォールバックEMA計算成功: 期間={period}, 結果長={len(result)}"
-                        )
-                        return result
-                    elif indicator_type == "WMA":
-                        # 簡易WMA計算（重み付き移動平均）
-                        weights = np.arange(1, period + 1)
-                        weights = weights / weights.sum()
-                        result = np.convolve(close_data, weights[::-1], mode="valid")
-                        padded_result = np.full(len(close_data), np.nan)
-                        padded_result[period - 1 :] = result
-                        logger.info(
-                            f"フォールバックWMA計算成功: 期間={period}, 結果長={len(padded_result)}"
-                        )
-                        return padded_result
-
-                except Exception as fallback_error:
-                    logger.error(
-                        f"フォールバック処理も失敗 {indicator_type}: {fallback_error}"
-                    )
-
-            # エラーを再発生させて上位で適切に処理
-            raise
+        return _calculate_indicator()
 
     def init_indicator(self, indicator_gene: IndicatorGene, strategy_instance):
         """
@@ -168,7 +99,10 @@ class IndicatorCalculator:
             indicator_gene: 指標遺伝子
             strategy_instance: 戦略インスタンス
         """
-        try:
+        from app.utils.error_handler import safe_operation
+
+        @safe_operation(context=f"指標初期化 ({indicator_gene.type})", is_api_call=False)
+        def _init_indicator():
             logger.warning(
                 f"指標初期化開始: {indicator_gene.type}, パラメータ: {indicator_gene.parameters}"
             )
@@ -307,7 +241,4 @@ class IndicatorCalculator:
                 logger.error(f"指標計算結果がNullです: {indicator_gene.type}")
                 raise ValueError(f"指標計算に失敗しました: {indicator_gene.type}")
 
-        except Exception as e:
-            logger.error(f"指標初期化エラー {indicator_gene.type}: {e}", exc_info=True)
-            # エラーを再発生させて上位で適切に処理
-            raise
+        _init_indicator()
