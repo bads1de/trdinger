@@ -276,7 +276,7 @@ def get_backtest_orchestration_service(
             BacktestOrchestrationService,
         )
 
-        return BacktestOrchestrationService(db)
+        return BacktestOrchestrationService()
     except Exception as e:
         import logging
 

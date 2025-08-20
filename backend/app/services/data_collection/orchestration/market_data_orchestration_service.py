@@ -28,9 +28,6 @@ class MarketDataOrchestrationService:
         start_date: Optional[str] = None,
         end_date: Optional[str] = None,
     ) -> Dict[str, Any]:
-        logger.info(
-            f"OHLCVデータ取得リクエスト: symbol={symbol}, timeframe={timeframe}, limit={limit}"
-        )
 
         start_time = None
         end_time = None
@@ -57,7 +54,7 @@ class MarketDataOrchestrationService:
 
         ohlcv_data = OHLCVDataConverter.db_to_api_format(ohlcv_records)
 
-        logger.info(f"OHLCVデータ取得成功: {len(ohlcv_data)}件")
+        logger.debug(f"OHLCVデータ取得成功: {len(ohlcv_data)}件")
 
         return api_response(
             success=True,
