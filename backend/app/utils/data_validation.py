@@ -15,6 +15,10 @@ import pandera as pa
 from pandera import Column, DataFrameSchema, Check
 from pydantic import BaseModel, Field
 
+# 警告を抑制
+import os
+os.environ['DISABLE_PANDERA_IMPORT_WARNING'] = 'True'
+
 logger = logging.getLogger(__name__)
 
 

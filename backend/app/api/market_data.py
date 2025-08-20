@@ -40,7 +40,7 @@ async def get_ohlcv_data(
     ),
     start_date: Optional[str] = Query(None, description="開始日時（ISO形式）"),
     end_date: Optional[str] = Query(None, description="終了日時（ISO形式）"),
-    db: Session = Depends(get_db),
+    service: MarketDataOrchestrationService = Depends(get_market_data_orchestration_service),
 ):
     """
     OHLCVデータを取得します
@@ -53,7 +53,7 @@ async def get_ohlcv_data(
         limit: 取得するデータ数（1-1000）
         start_date: 開始日時（ISO形式）
         end_date: 終了日時（ISO形式）
-        db: データベースセッション
+        service: 市場データオーケストレーションサービス
 
     Returns:
         OHLCVデータを含むJSONレスポンス
@@ -62,7 +62,7 @@ async def get_ohlcv_data(
         HTTPException: パラメータが無効な場合やデータベースエラーが発生した場合
     """
 
-    async def _get_ohlcv(service: MarketDataOrchestrationService = Depends(get_market_data_orchestration_service)):
+    async def _get_ohlcv():
         return await service.get_ohlcv_data(
             symbol=symbol,
             timeframe=timeframe,

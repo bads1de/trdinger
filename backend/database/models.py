@@ -243,7 +243,34 @@ class FearGreedIndexData(Base):
             return self.timestamp.replace(tzinfo=timezone.utc)
         return self.timestamp
 
-    # to_dictメソッドを削除し、リポジトリ層でデータ変換を行うように変更
+    def to_dict(self) -> dict:
+        """
+        FearGreedIndexDataを辞書に変換
+
+        Returns:
+            辞書形式のデータ
+        """
+        return {
+            "id": self.id,
+            "value": self.value,
+            "value_classification": self.value_classification,
+            "data_timestamp": (
+                self.data_timestamp_utc.isoformat()
+                if self.data_timestamp is not None
+                else None
+            ),
+            "timestamp": (
+                self.timestamp_utc.isoformat()
+                if self.timestamp is not None
+                else None
+            ),
+            "created_at": (
+                self.created_at.isoformat() if self.created_at is not None else None
+            ),
+            "updated_at": (
+                self.updated_at.isoformat() if self.updated_at is not None else None
+            ),
+        }
 
 
 class BacktestResult(Base):
