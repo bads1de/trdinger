@@ -165,7 +165,7 @@ class BacktestResultRepository(BaseRepository):
             self.db.refresh(backtest_result)
 
             logger.info(f"バックテスト結果を保存しました (ID: {backtest_result.id})")
-            return backtest_result.to_dict()
+            return self.to_dict(backtest_result)
 
         return _save_result()
 
@@ -209,7 +209,7 @@ class BacktestResultRepository(BaseRepository):
             )
 
             # 辞書形式に変換
-            return [result.to_dict() for result in results]
+            return [self.to_dict(result) for result in results]
 
         return _get_results()
 
@@ -236,7 +236,7 @@ class BacktestResultRepository(BaseRepository):
                 # BaseRepositoryのget_filtered_dataは適切な型を返すため、
                 # キャストは不要です。
                 result = results[0]
-                return result.to_dict()
+                return self.to_dict(result)
             return None
 
         return _get_result_by_id()
@@ -340,6 +340,6 @@ class BacktestResultRepository(BaseRepository):
                 limit=limit,
             )
             # 取得した結果を辞書形式のリストに変換して返します。
-            return [result.to_dict() for result in results]
+            return [self.to_dict(result) for result in results]
 
         return _get_recent_results()
