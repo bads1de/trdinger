@@ -7,8 +7,6 @@
 
 from .indicator_orchestrator import TechnicalIndicatorService
 
-from .technical_indicators.math_operators import MathOperatorsIndicators
-from .technical_indicators.math_transform import MathTransformIndicators
 from .technical_indicators.momentum import MomentumIndicators
 from .technical_indicators.pattern_recognition import PatternRecognitionIndicators
 from .technical_indicators.price_transform import PriceTransformIndicators
@@ -29,8 +27,6 @@ __all__ = [
     "VolumeIndicators",
     "PriceTransformIndicators",
     "StatisticsIndicators",
-    "MathTransformIndicators",
-    "MathOperatorsIndicators",
     "PatternRecognitionIndicators",
     "PandasTAError",
     "validate_input",

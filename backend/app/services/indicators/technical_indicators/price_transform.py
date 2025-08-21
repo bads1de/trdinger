@@ -94,7 +94,6 @@ class PriceTransformIndicators:
         return result.values
 
     @staticmethod
-    @handle_pandas_ta_errors
     def ha_close(
         open_data: Union[np.ndarray, pd.Series],
         high: Union[np.ndarray, pd.Series],
@@ -102,7 +101,7 @@ class PriceTransformIndicators:
         close: Union[np.ndarray, pd.Series],
     ) -> np.ndarray:
         """Heikin Ashi Close（平均足終値）
-        pandas-ta の ha を用いてHAの終値のみ返す。
+        直接計算によりpandasの警告を回避。
         """
         open_series = (
             pd.Series(open_data) if isinstance(open_data, np.ndarray) else open_data
@@ -111,29 +110,22 @@ class PriceTransformIndicators:
         low_series = pd.Series(low) if isinstance(low, np.ndarray) else low
         close_series = pd.Series(close) if isinstance(close, np.ndarray) else close
 
-        try:
-            ha_df = ta.ha(
-                open=open_series, high=high_series, low=low_series, close=close_series
-            )
-        except TypeError:
-            ha_df = ta.ha(
-                open_=open_series, high=high_series, low=low_series, close=close_series
-            )
+        # Heikin-Ashiの計算式:
+        # HA_Close = (Open + High + Low + Close) / 4
+        ha_close = (open_series + high_series + low_series + close_series) / 4.0
 
-        # 列名はバージョンにより異なり得るため末尾一致で選択
-        close_col = [c for c in ha_df.columns if str(c).lower().endswith("close")]
-        col = close_col[0] if close_col else ha_df.columns[-1]
-        return ha_df[col].values
+        return ha_close.values
 
     @staticmethod
-    @handle_pandas_ta_errors
     def ha_ohlc(
         open_data: Union[np.ndarray, pd.Series],
         high: Union[np.ndarray, pd.Series],
         low: Union[np.ndarray, pd.Series],
         close: Union[np.ndarray, pd.Series],
     ) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
-        """Heikin Ashi の OHLC をタプルで返す (open, high, low, close)"""
+        """Heikin Ashi の OHLC をタプルで返す (open, high, low, close)
+        直接計算によりpandasの警告を回避。
+        """
         open_series = (
             pd.Series(open_data) if isinstance(open_data, np.ndarray) else open_data
         )
@@ -141,24 +133,23 @@ class PriceTransformIndicators:
         low_series = pd.Series(low) if isinstance(low, np.ndarray) else low
         close_series = pd.Series(close) if isinstance(close, np.ndarray) else close
 
-        try:
-            ha_df = ta.ha(
-                open=open_series, high=high_series, low=low_series, close=close_series
-            )
-        except TypeError:
-            ha_df = ta.ha(
-                open_=open_series, high=high_series, low=low_series, close=close_series
-            )
+        # Heikin-Ashiの計算式:
+        # HA_Close = (Open + High + Low + Close) / 4
+        ha_close = (open_series + high_series + low_series + close_series) / 4.0
 
-        # 列並びを open, high, low, close 順に選択
-        def pick_col(suffix: str):
-            candidates = [c for c in ha_df.columns if str(c).lower().endswith(suffix)]
-            return (
-                ha_df[candidates[0]].values if candidates else ha_df.iloc[:, 0].values
-            )
+        # HA_Open = (前のHA_Open + 前のHA_Close) / 2
+        # 最初の値は元のOpenを使用
+        ha_open = pd.Series(index=open_series.index, dtype=float)
+        ha_open.iloc[0] = open_series.iloc[0]  # 最初の値は元のOpen
 
-        ha_open = pick_col("open")
-        ha_high = pick_col("high")
-        ha_low = pick_col("low")
-        ha_close = pick_col("close")
-        return ha_open, ha_high, ha_low, ha_close
+        # 2番目以降のHA_Openを計算
+        for i in range(1, len(ha_open)):
+            ha_open.iloc[i] = (ha_open.iloc[i-1] + ha_close.iloc[i-1]) / 2.0
+
+        # HA_High = max(High, HA_Open, HA_Close)
+        ha_high = pd.concat([high_series, ha_open, ha_close], axis=1).max(axis=1)
+
+        # HA_Low = min(Low, HA_Open, HA_Close)
+        ha_low = pd.concat([low_series, ha_open, ha_close], axis=1).min(axis=1)
+
+        return ha_open.values, ha_high.values, ha_low.values, ha_close.values

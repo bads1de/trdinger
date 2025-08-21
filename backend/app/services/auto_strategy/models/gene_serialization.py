@@ -697,6 +697,11 @@ class GeneSerializer:
             戦略遺伝子オブジェクト
         """
         try:
+            # 入力データがNoneまたは空でないことを確認
+            if not data:
+                logger.warning("戦略遺伝子データが空です。デフォルト戦略遺伝子を返します。")
+                return GeneUtils.create_default_strategy_gene(strategy_gene_class)
+
             # 指標遺伝子の復元
             indicators = [
                 self.dict_to_indicator_gene(ind_data)

@@ -70,10 +70,13 @@ class IndicatorCalculator:
             if missing_columns:
                 logger.warning(f"不足しているカラム: {missing_columns}")
 
-            # パラメータマッピング（period -> length）
+            # パラメータマッピング（period -> length または tclength）
             mapped_parameters = parameters.copy()
-            if "period" in mapped_parameters and "length" not in mapped_parameters:
-                mapped_parameters["length"] = mapped_parameters["period"]
+            if "period" in mapped_parameters:
+                if "length" not in mapped_parameters:
+                    mapped_parameters["length"] = mapped_parameters["period"]
+                if "tclength" not in mapped_parameters:
+                    mapped_parameters["tclength"] = mapped_parameters["period"]
 
             logger.warning(
                 f"指標計算開始: {indicator_type}, 元パラメータ: {parameters}, マップ後: {mapped_parameters}"

@@ -94,7 +94,6 @@ class DataRetrievalService:
                     f"{symbol} {timeframe}のOHLCVデータが見つかりませんでした"
                 )
 
-            logger.debug(f"OHLCVデータ取得完了: {len(data)}件")
             return data
 
         return _get_ohlcv_data()

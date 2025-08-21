@@ -63,7 +63,11 @@ class DataIntegrationService:
         ):
             self.fear_greed_merger = FearGreedMerger(retrieval_service.fear_greed_repo)
 
-    @safe_operation(context="バックテスト用DataFrame作成", is_api_call=False, default_return=pd.DataFrame())
+    @safe_operation(
+        context="バックテスト用DataFrame作成",
+        is_api_call=False,
+        default_return=pd.DataFrame(),
+    )
     def create_backtest_dataframe(
         self,
         symbol: str,
@@ -94,9 +98,7 @@ class DataIntegrationService:
 
         # 2. 追加データを統合
         if include_oi:
-            df = self._integrate_open_interest_data(
-                df, symbol, start_date, end_date
-            )
+            df = self._integrate_open_interest_data(df, symbol, start_date, end_date)
         else:
             df["open_interest"] = 0.0
 
@@ -111,10 +113,13 @@ class DataIntegrationService:
         # 3. データクリーニングと最適化
         df = self._clean_and_optimize_dataframe(df, include_fear_greed)
 
-        logger.info(f"データ統合完了: {len(df)}行, カラム: {list(df.columns)}")
         return df
 
-    @safe_operation(context="ML訓練用DataFrame作成", is_api_call=False, default_return=pd.DataFrame())
+    @safe_operation(
+        context="ML訓練用DataFrame作成",
+        is_api_call=False,
+        default_return=pd.DataFrame(),
+    )
     def create_ml_training_dataframe(
         self,
         symbol: str,
@@ -193,7 +198,11 @@ class DataIntegrationService:
 
         return df
 
-    @safe_operation(context="データクリーニングと最適化", is_api_call=False, default_return=pd.DataFrame())
+    @safe_operation(
+        context="データクリーニングと最適化",
+        is_api_call=False,
+        default_return=pd.DataFrame(),
+    )
     def _clean_and_optimize_dataframe(
         self, df: pd.DataFrame, include_fear_greed: bool = False
     ) -> pd.DataFrame:
@@ -210,9 +219,7 @@ class DataIntegrationService:
         ]
 
         if include_fear_greed:
-            required_columns.extend(
-                ["fear_greed_value", "fear_greed_classification"]
-            )
+            required_columns.extend(["fear_greed_value", "fear_greed_classification"])
 
         # データクリーニングと検証
         data_processor = DataProcessor()

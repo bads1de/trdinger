@@ -119,9 +119,9 @@ class GeneticAlgorithmEngine:
                 tf = backtest_config.get("timeframe")
                 sym = backtest_config.get("symbol")
                 if hasattr(self.gene_generator, "smart_condition_generator"):
-                    self.gene_generator.smart_condition_generator.set_context(
-                        timeframe=tf, symbol=sym
-                    )
+                    smart_gen = getattr(self.gene_generator, "smart_condition_generator")
+                    if smart_gen and hasattr(smart_gen, "set_context"):
+                        smart_gen.set_context(timeframe=tf, symbol=sym)
             except Exception:
                 pass
 

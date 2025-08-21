@@ -141,9 +141,7 @@ class MLManagementOrchestrationService:
         try:
             os.remove(target_model["path"])
             logger.info(f"モデル削除完了: {decoded_model_id} -> {target_model['path']}")
-            return api_response(
-                success=True, message="モデルが削除されました"
-            )
+            return api_response(success=True, message="モデルが削除されました")
         except Exception as e:
             logger.error(f"モデルファイル削除エラー: {e}")
             raise HTTPException(
@@ -351,7 +349,6 @@ class MLManagementOrchestrationService:
 
         else:
             # モデルが見つからない場合のデフォルト情報
-            logger.debug("📊 ML Status API - モデルファイルが見つかりません")
             status["model_info"] = {
                 "accuracy": 0.0,
                 "model_type": "No Model",
@@ -416,9 +413,6 @@ class MLManagementOrchestrationService:
         """
         model_manager.cleanup_expired_models()
         return {"message": "古いモデルファイルが削除されました"}
-
-
-
 
     async def load_model(self, model_name: str) -> Dict[str, Any]:
         """

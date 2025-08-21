@@ -589,7 +589,6 @@ class DataProcessor:
         Returns:
             補間処理されたDataFrame
         """
-        logger.info("データ補間処理を開始")
 
         result_df = df.copy()
 

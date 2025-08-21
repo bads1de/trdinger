@@ -29,8 +29,6 @@ class IndicatorType(Enum):
     VOLATILITY = "volatility"  # ボラティリティ系
 
     STATISTICS = "statistics"  # 統計系
-    MATH_TRANSFORM = "math_transform"  # 数学変換系
-    MATH_OPERATORS = "math_operators"  # 数学演算子系
     PATTERN_RECOGNITION = "pattern_recognition"  # パターン認識系
 
 
@@ -155,115 +153,6 @@ INDICATOR_CHARACTERISTICS = {
         "type": IndicatorType.STATISTICS,
         "range": (0, None),  # 常に正値
         "volatility_measure": True,
-    },
-    # 数学変換系インジケータ（三角関数）
-    "ACOS": {
-        "type": IndicatorType.MATH_TRANSFORM,
-        "range": (0, 3.14159),  # アークコサイン範囲
-        "math_function": True,
-    },
-    "ASIN": {
-        "type": IndicatorType.MATH_TRANSFORM,
-        "range": (-1.5708, 1.5708),  # アークサイン範囲
-        "math_function": True,
-        "zero_cross": True,
-    },
-    "ATAN": {
-        "type": IndicatorType.MATH_TRANSFORM,
-        "range": (-1.5708, 1.5708),  # アークタンジェント範囲
-        "math_function": True,
-        "zero_cross": True,
-    },
-    "COS": {
-        "type": IndicatorType.MATH_TRANSFORM,
-        "range": (-1, 1),  # コサイン範囲
-        "math_function": True,
-        "zero_cross": True,
-    },
-    "SIN": {
-        "type": IndicatorType.MATH_TRANSFORM,
-        "range": (-1, 1),  # サイン範囲
-        "math_function": True,
-        "zero_cross": True,
-    },
-    "TAN": {
-        "type": IndicatorType.MATH_TRANSFORM,
-        "range": None,  # タンジェントは無限大になる可能性
-        "math_function": True,
-        "zero_cross": True,
-    },
-    # 数学変換系インジケータ（その他の数学関数）
-    "CEIL": {
-        "type": IndicatorType.MATH_TRANSFORM,
-        "range": None,  # 入力依存
-        "math_function": True,
-        "price_comparison": True,
-    },
-    "FLOOR": {
-        "type": IndicatorType.MATH_TRANSFORM,
-        "range": None,  # 入力依存
-        "math_function": True,
-        "price_comparison": True,
-    },
-    "SQRT": {
-        "type": IndicatorType.MATH_TRANSFORM,
-        "range": (0, None),  # 常に正値
-        "math_function": True,
-    },
-    "LN": {
-        "type": IndicatorType.MATH_TRANSFORM,
-        "range": None,  # 自然対数
-        "math_function": True,
-        "zero_cross": True,
-    },
-    "LOG10": {
-        "type": IndicatorType.MATH_TRANSFORM,
-        "range": None,  # 常用対数
-        "math_function": True,
-        "zero_cross": True,
-    },
-    "EXP": {
-        "type": IndicatorType.MATH_TRANSFORM,
-        "range": (0, None),  # 指数関数は常に正値
-        "math_function": True,
-    },
-    # 数学演算子系インジケータ
-    "ADD": {
-        "type": IndicatorType.MATH_OPERATORS,
-        "range": None,  # 入力依存
-        "math_operator": True,
-        "requires_two_inputs": True,
-    },
-    "SUB": {
-        "type": IndicatorType.MATH_OPERATORS,
-        "range": None,  # 入力依存
-        "math_operator": True,
-        "requires_two_inputs": True,
-        "zero_cross": True,
-    },
-    "MULT": {
-        "type": IndicatorType.MATH_OPERATORS,
-        "range": None,  # 入力依存
-        "math_operator": True,
-        "requires_two_inputs": True,
-    },
-    "DIV": {
-        "type": IndicatorType.MATH_OPERATORS,
-        "range": None,  # 入力依存
-        "math_operator": True,
-        "requires_two_inputs": True,
-    },
-    "MAX": {
-        "type": IndicatorType.MATH_OPERATORS,
-        "range": None,  # 入力依存
-        "math_operator": True,
-        "requires_two_inputs": True,
-    },
-    "MIN": {
-        "type": IndicatorType.MATH_OPERATORS,
-        "range": None,  # 入力依存
-        "math_operator": True,
-        "requires_two_inputs": True,
     },
     # パターン認識系インジケータ
     "CDL_DOJI": {
@@ -667,7 +556,8 @@ class SmartConditionGenerator:
 
                 # レジーム切替（オプトイン: context.regime_gating=True のときのみ）
                 try:
-                    if getattr(self, "context", None) and self.context.get(
+                    context = getattr(self, "context", None)
+                    if context and isinstance(context, dict) and context.get(
                         "regime_gating"
                     ):
                         present = {ind.type for ind in indicators if ind.enabled}
@@ -867,8 +757,6 @@ class SmartConditionGenerator:
             IndicatorType.TREND: [],
             IndicatorType.VOLATILITY: [],
             IndicatorType.STATISTICS: [],
-            IndicatorType.MATH_TRANSFORM: [],
-            IndicatorType.MATH_OPERATORS: [],
             IndicatorType.PATTERN_RECOGNITION: [],
         }
         for ind in indicators:
@@ -887,10 +775,6 @@ class SmartConditionGenerator:
                         categorized[IndicatorType.VOLATILITY].append(ind)
                     elif cat == "statistics":
                         categorized[IndicatorType.STATISTICS].append(ind)
-                    elif cat == "math_transform":
-                        categorized[IndicatorType.MATH_TRANSFORM].append(ind)
-                    elif cat == "math_operators":
-                        categorized[IndicatorType.MATH_OPERATORS].append(ind)
                     elif cat == "pattern_recognition":
                         categorized[IndicatorType.PATTERN_RECOGNITION].append(ind)
                     else:
@@ -937,11 +821,8 @@ class SmartConditionGenerator:
 
         # 0-100オシレーター系（RSI/MFI/STOCH/KDJ/QQE/ADX等）
         if scale == IndicatorScaleType.OSCILLATOR_0_100:
-            profile = (
-                (self.context or {}).get("threshold_profile", "normal")
-                if hasattr(self, "context")
-                else "normal"
-            )
+            context = getattr(self, "context", None)
+            profile = context.get("threshold_profile", "normal") if context and isinstance(context, dict) else "normal"
             if name in {"RSI", "STOCH", "STOCHRSI", "KDJ", "QQE", "MFI"}:
                 # プロファイルごとの閾値は ThresholdPolicy に一元化
                 policy = ThresholdPolicy.get(profile)
@@ -971,11 +852,8 @@ class SmartConditionGenerator:
 
         # ±100系（CCI/WILLR/AROONOSC等）
         if scale == IndicatorScaleType.OSCILLATOR_PLUS_MINUS_100:
-            profile = (
-                (self.context or {}).get("threshold_profile", "normal")
-                if hasattr(self, "context")
-                else "normal"
-            )
+            context = getattr(self, "context", None)
+            profile = context.get("threshold_profile", "normal") if context and isinstance(context, dict) else "normal"
             if name == "CCI":
                 # 方向性のある強めのしきい値（ポリシー化）
                 lim = ThresholdPolicy.get(profile).cci_abs_limit or 100
@@ -1005,14 +883,8 @@ class SmartConditionGenerator:
 
         # ゼロセンター系（MACD/PPO/APO/TRIX/TSIなど）
         if scale == IndicatorScaleType.MOMENTUM_ZERO_CENTERED:
-            thr = (
-                -0.0
-                if (
-                    hasattr(self, "context")
-                    and (self.context or {}).get("threshold_profile") == "aggressive"
-                )
-                else 0
-            )
+            context = getattr(self, "context", None)
+            thr = -0.0 if context and isinstance(context, dict) and context.get("threshold_profile") == "aggressive" else 0
             return [
                 Condition(left_operand=name, operator=">", right_operand=float(thr))
             ]
@@ -1024,14 +896,8 @@ class SmartConditionGenerator:
             return []
 
         # フォールバック
-        thr = (
-            -0.0
-            if (
-                hasattr(self, "context")
-                and (self.context or {}).get("threshold_profile") == "aggressive"
-            )
-            else 0
-        )
+        context = getattr(self, "context", None)
+        thr = -0.0 if context and isinstance(context, dict) and context.get("threshold_profile") == "aggressive" else 0
         return [Condition(left_operand=name, operator=">", right_operand=float(thr))]
 
     def _generic_short_conditions(self, ind: IndicatorGene) -> List[Condition]:
@@ -1063,11 +929,8 @@ class SmartConditionGenerator:
 
         # 0-100オシレーター系
         if scale == IndicatorScaleType.OSCILLATOR_0_100:
-            profile = (
-                (self.context or {}).get("threshold_profile", "normal")
-                if hasattr(self, "context")
-                else "normal"
-            )
+            context = getattr(self, "context", None)
+            profile = context.get("threshold_profile", "normal") if context and isinstance(context, dict) else "normal"
             if name in {"RSI", "STOCH", "STOCHRSI", "KDJ", "QQE", "MFI"}:
                 p = ThresholdPolicy.get(profile)
                 thr = (
@@ -1141,7 +1004,6 @@ class SmartConditionGenerator:
             return []
 
         # フォールバック
-        thr = 0.0
         return [Condition(left_operand=name, operator="<", right_operand=float(thr))]
 
     def _generate_different_indicators_strategy(
@@ -1412,11 +1274,8 @@ class SmartConditionGenerator:
 
         if indicator.type == "RSI":
             # RSI: 時間軸依存閾値（例: 15m/1h/4hで 55/60/65 を中心にゾーン化）
-            tf = (
-                (self.context or {}).get("timeframe")
-                if hasattr(self, "context")
-                else None
-            )
+            context = getattr(self, "context", None)
+            tf = context.get("timeframe") if context and isinstance(context, dict) else None
             if tf in ("15m", "15min", "15"):
                 base = 55
             elif tf in ("1h", "60"):
