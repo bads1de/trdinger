@@ -60,16 +60,6 @@ class TestDataCollectionIntegration:
     ):
         """ファンディングレートのみの一括差分更新をテスト"""
 
-        # モックファンディングレート履歴データ
-        mock_funding_history = [
-            {
-                "symbol": "BTC/USDT:USDT",
-                "fundingRate": 0.0001,
-                "datetime": "2025-08-17T00:00:00.000Z",
-                "timestamp": 1723852800000,
-            }
-        ]
-
         with patch(
             "database.repositories.ohlcv_repository.OHLCVRepository",
             return_value=mock_repositories["ohlcv"],

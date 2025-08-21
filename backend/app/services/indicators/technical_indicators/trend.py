@@ -97,15 +97,35 @@ class TrendIndicators:
 
     @staticmethod
     @handle_pandas_ta_errors
-    def wma(data: Union[np.ndarray, pd.Series], length: int) -> np.ndarray:
+    def wma(
+        data: Union[np.ndarray, pd.Series] = None,
+        length: int = 14,
+        close: Union[np.ndarray, pd.Series] = None
+    ) -> np.ndarray:
         """加重移動平均"""
+        # dataが提供されない場合はcloseを使用
+        if data is None and close is not None:
+            data = close
+        elif data is None:
+            raise ValueError("Either 'data' or 'close' must be provided")
+
         series = pd.Series(data) if isinstance(data, np.ndarray) else data
         return ta.wma(series, length=length).values
 
     @staticmethod
     @handle_pandas_ta_errors
-    def trima(data: Union[np.ndarray, pd.Series], length: int) -> np.ndarray:
+    def trima(
+        data: Union[np.ndarray, pd.Series] = None,
+        length: int = 14,
+        close: Union[np.ndarray, pd.Series] = None
+    ) -> np.ndarray:
         """三角移動平均"""
+        # dataが提供されない場合はcloseを使用
+        if data is None and close is not None:
+            data = close
+        elif data is None:
+            raise ValueError("Either 'data' or 'close' must be provided")
+
         series = pd.Series(data) if isinstance(data, np.ndarray) else data
         return ta.trima(series, length=length).values
 
@@ -197,18 +217,27 @@ class TrendIndicators:
     @staticmethod
     @handle_pandas_ta_errors
     def ma(
-        data: Union[np.ndarray, pd.Series], period: int, matype: int = 0
+        data: Union[np.ndarray, pd.Series] = None,
+        period: int = 30,
+        matype: int = 0,
+        close: Union[np.ndarray, pd.Series] = None
     ) -> np.ndarray:
         """移動平均（タイプ指定可能）"""
+        # dataが提供されない場合はcloseを使用
+        if data is None and close is not None:
+            data = close
+        elif data is None:
+            raise ValueError("Either 'data' or 'close' must be provided")
+
         ma_functions = {
             0: TrendIndicators.sma,  # SMA
             1: TrendIndicators.ema,  # EMA
             2: TrendIndicators.wma,  # WMA
-            3: TrendIndicators.dema,  # DEMA
-            4: TrendIndicators.tema,  # TEMA
-            5: TrendIndicators.trima,  # TRIMA
+            3: TrendIndicators.dema, # DEMA
+            4: TrendIndicators.tema, # TEMA
+            5: TrendIndicators.trima, # TRIMA
             6: TrendIndicators.kama,  # KAMA
-            8: TrendIndicators.t3,  # T3
+            8: TrendIndicators.t3,   # T3
         }
 
         ma_func = ma_functions.get(matype, TrendIndicators.sma)
@@ -322,7 +351,27 @@ class TrendIndicators:
 
         price = pd.Series(data) if isinstance(data, np.ndarray) else data
         vol = pd.Series(volume) if isinstance(volume, np.ndarray) else volume
-        return ta.vwma(price, volume=vol, length=length).values
+
+        try:
+            result = ta.vwma(price, volume=vol, length=length)
+            if result is not None:
+                return result.values
+        except Exception:
+            pass
+
+        # フォールバック: カスタム実装
+        if len(price) < length:
+            # データが不十分な場合はNaNで埋める
+            return np.full(len(price), np.nan)
+
+        # VWMAの手動計算
+        vwma_values = np.full(len(price), np.nan)
+        for i in range(length - 1, len(price)):
+            window_price = price.iloc[i - length + 1:i + 1]
+            window_vol = vol.iloc[i - length + 1:i + 1]
+            vwma_values[i] = np.average(window_price, weights=window_vol)
+
+        return vwma_values
 
     @staticmethod
     @handle_pandas_ta_errors
@@ -348,7 +397,28 @@ class TrendIndicators:
     def rma(data: Union[np.ndarray, pd.Series], length: int = 14) -> np.ndarray:
         """Smoothed Moving Average (RMA)"""
         series = pd.Series(data) if isinstance(data, np.ndarray) else data
-        return ta.rma(series, length=length).values
+
+        try:
+            result = ta.rma(series, length=length)
+            if result is not None:
+                return result.values
+        except Exception:
+            pass
+
+        # フォールバック: カスタム実装 (RMA = EMA with alpha = 1/length)
+        if len(series) < length:
+            # データが不十分な場合はNaNで埋める
+            return np.full(len(series), np.nan)
+
+        # RMAの手動計算（EMAと同様）
+        alpha = 1.0 / length
+        rma_values = np.full(len(series), np.nan)
+        rma_values[length - 1] = series.iloc[:length].mean()  # 初期値はSMA
+
+        for i in range(length, len(series)):
+            rma_values[i] = alpha * series.iloc[i] + (1 - alpha) * rma_values[i - 1]
+
+        return rma_values
 
     @staticmethod
     @handle_pandas_ta_errors

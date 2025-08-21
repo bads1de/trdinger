@@ -201,7 +201,7 @@ class TestAutoStrategyAPI:
             mock_instance.get_default_config.return_value = {"test": "config"}
             mock_service_class.return_value = mock_instance
 
-            response = client.get("/api/auto-strategy/config/default")
+            client.get("/api/auto-strategy/config/default")
 
             # サービスが正しく呼び出されることを確認
             mock_service_class.assert_called_once()

@@ -143,6 +143,7 @@ def setup_momentum_indicators():
             description="Slow %D期間",
         )
     )
+    stoch_config.param_map = {"fastk_period": "k", "slowk_period": "smooth_k", "slowd_period": "d"}
     indicator_registry.register(stoch_config)
 
     # AO
@@ -183,8 +184,9 @@ def setup_momentum_indicators():
         category="momentum",
     )
     rvi_config.add_parameter(
-        ParameterConfig(name="period", default_value=10, min_value=2, max_value=200)
+        ParameterConfig(name="length", default_value=10, min_value=2, max_value=200)
     )
+    rvi_config.param_map = {"open": "open_", "length": "length"}
     indicator_registry.register(rvi_config)
 
     # QQE
@@ -225,11 +227,12 @@ def setup_momentum_indicators():
     kst_config = IndicatorConfig(
         indicator_name="KST",
         adapter_function=MomentumIndicators.kst,
-        required_data=["close"],
+        required_data=[],  # data will be passed as parameter
         result_type=IndicatorResultType.COMPLEX,
         scale_type=IndicatorScaleType.OSCILLATOR_PLUS_MINUS_100,
         category="momentum",
     )
+    kst_config.param_map = {"close": "data"}
     indicator_registry.register(kst_config)
 
     # STC
@@ -241,6 +244,7 @@ def setup_momentum_indicators():
         scale_type=IndicatorScaleType.OSCILLATOR_0_100,
         category="momentum",
     )
+    stc_config.param_map = {"data": "close"}
     indicator_registry.register(stc_config)
 
     # CCI
@@ -459,6 +463,7 @@ def setup_momentum_indicators():
             description="移動平均タイプ",
         )
     )
+    ppo_config.param_map = {"data": "close", "fastperiod": "fast", "slowperiod": "slow", "matype": "signal"}
     indicator_registry.register(ppo_config)
 
     # ROC
@@ -479,6 +484,7 @@ def setup_momentum_indicators():
             description="ROC計算期間",
         )
     )
+    roc_config.param_map = {"data": "close"}
     indicator_registry.register(roc_config)
 
     # STOCHF
@@ -508,6 +514,7 @@ def setup_momentum_indicators():
             description="FastD期間",
         )
     )
+    stochf_config.param_map = {"fastk_period": "k", "fastd_period": "d"}
     indicator_registry.register(stochf_config)
 
     # TRIX
@@ -541,29 +548,29 @@ def setup_momentum_indicators():
     )
     ultosc_config.add_parameter(
         ParameterConfig(
-            name="timeperiod1",
+            name="fast",
             default_value=7,
             min_value=1,
             max_value=100,
-            description="期間1",
+            description="高速期間",
         )
     )
     ultosc_config.add_parameter(
         ParameterConfig(
-            name="timeperiod2",
+            name="medium",
             default_value=14,
             min_value=1,
             max_value=100,
-            description="期間2",
+            description="中間期間",
         )
     )
     ultosc_config.add_parameter(
         ParameterConfig(
-            name="timeperiod3",
+            name="slow",
             default_value=28,
             min_value=1,
             max_value=100,
-            description="期間3",
+            description="低速期間",
         )
     )
     indicator_registry.register(ultosc_config)
@@ -572,11 +579,12 @@ def setup_momentum_indicators():
     bop_config = IndicatorConfig(
         indicator_name="BOP",
         adapter_function=MomentumIndicators.bop,
-        required_data=["open_data", "high", "low", "close"],
+        required_data=["open", "high", "low", "close"],
         result_type=IndicatorResultType.SINGLE,
         scale_type=IndicatorScaleType.MOMENTUM_ZERO_CENTERED,
         category="momentum",
     )
+    bop_config.param_map = {"open": "open_"}
     indicator_registry.register(bop_config)
 
     # APO
@@ -767,6 +775,13 @@ def setup_momentum_indicators():
             description="FastD MA型",
         )
     )
+    stochrsi_config.param_map = {
+        "data": "close",
+        "period": "length",
+        "fastk_period": "k",
+        "fastd_period": "d",
+        "fastd_matype": None  # 無視するパラメータ
+    }
     indicator_registry.register(stochrsi_config)
 
     # ROCP
@@ -787,6 +802,7 @@ def setup_momentum_indicators():
             description="ROCP計算期間",
         )
     )
+    rocp_config.param_map = {"data": "close"}
     indicator_registry.register(rocp_config)
 
     # ROCR
@@ -807,6 +823,7 @@ def setup_momentum_indicators():
             description="ROCR計算期間",
         )
     )
+    rocr_config.param_map = {"data": "close", "period": "length"}
     indicator_registry.register(rocr_config)
 
     # ROCR100
@@ -827,6 +844,7 @@ def setup_momentum_indicators():
             description="ROCR100計算期間",
         )
     )
+    rocr100_config.param_map = {"data": "close"}
     indicator_registry.register(rocr100_config)
 
     # PLUS_DM
@@ -891,6 +909,7 @@ def setup_trend_indicators():
             description="移動平均期間",
         )
     )
+    sma_config.param_map = {"data": "close"}
     indicator_registry.register(sma_config)
 
     # EMA
@@ -911,6 +930,7 @@ def setup_trend_indicators():
             description="移動平均期間",
         )
     )
+    ema_config.param_map = {"data": "close"}
     indicator_registry.register(ema_config)
 
     # WMA
@@ -931,6 +951,7 @@ def setup_trend_indicators():
             description="加重移動平均期間",
         )
     )
+    wma_config.param_map = {"data": "close", "length": "length"}
     indicator_registry.register(wma_config)
 
     # TRIMA
@@ -951,6 +972,7 @@ def setup_trend_indicators():
             description="三角移動平均期間",
         )
     )
+    trima_config.param_map = {"data": "close", "length": "length"}
     indicator_registry.register(trima_config)
 
     # KAMA
@@ -1024,7 +1046,7 @@ def setup_trend_indicators():
     )
     ma_config.add_parameter(
         ParameterConfig(
-            name="length",
+            name="period",
             default_value=30,
             min_value=2,
             max_value=200,
@@ -1040,6 +1062,7 @@ def setup_trend_indicators():
             description="移動平均タイプ",
         )
     )
+    ma_config.param_map = {"data": "close", "period": "period", "matype": "matype"}
     indicator_registry.register(ma_config)
 
     # MIDPOINT
@@ -1053,7 +1076,7 @@ def setup_trend_indicators():
     )
     midpoint_config.add_parameter(
         ParameterConfig(
-            name="length",
+            name="period",
             default_value=14,
             min_value=2,
             max_value=100,
@@ -1073,13 +1096,14 @@ def setup_trend_indicators():
     )
     midprice_config.add_parameter(
         ParameterConfig(
-            name="length",
+            name="period",
             default_value=14,
             min_value=2,
             max_value=100,
             description="中値価格期間",
         )
     )
+    midprice_config.param_map = {"high": "high", "low": "low", "period": "period"}
     indicator_registry.register(midprice_config)
 
 
@@ -1121,7 +1145,7 @@ def setup_volatility_indicators():
     )
     bb_config.add_parameter(
         ParameterConfig(
-            name="period",
+            name="length",
             default_value=20,
             min_value=2,
             max_value=100,
@@ -1130,13 +1154,14 @@ def setup_volatility_indicators():
     )
     bb_config.add_parameter(
         ParameterConfig(
-            name="std_dev",
+            name="std",
             default_value=2.0,
             min_value=0.5,
             max_value=5.0,
             description="標準偏差の倍数",
         )
     )
+    bb_config.param_map = {"data": "close", "length": "length", "std": "std"}
     indicator_registry.register(bb_config)
 
     # NATR
@@ -1238,6 +1263,7 @@ def setup_price_transform_indicators():
         scale_type=IndicatorScaleType.PRICE_ABSOLUTE,
         category="price_transform",
     )
+    avgprice_config.param_map = {"open": "open_data", "high": "high", "low": "low", "close": "close"}
     indicator_registry.register(avgprice_config)
 
     # MEDPRICE
@@ -1317,6 +1343,7 @@ def setup_statistics_indicators():
             description="BETA計算期間",
         )
     )
+    beta_config.param_map = {"length": "period"}
     indicator_registry.register(beta_config)
 
     # CORREL
@@ -1330,13 +1357,14 @@ def setup_statistics_indicators():
     )
     correl_config.add_parameter(
         ParameterConfig(
-            name="length",
+            name="period",
             default_value=30,
             min_value=2,
             max_value=200,
             description="相関係数計算期間",
         )
     )
+    correl_config.param_map = {"data0": "high", "data1": "low", "period": "period"}
     indicator_registry.register(correl_config)
 
     # LINEARREG
@@ -1357,6 +1385,7 @@ def setup_statistics_indicators():
             description="線形回帰期間",
         )
     )
+    linearreg_config.param_map = {"close": "data", "length": "period"}
     indicator_registry.register(linearreg_config)
 
     # STDDEV
@@ -1386,6 +1415,7 @@ def setup_statistics_indicators():
             description="偏差数",
         )
     )
+    stddev_config.param_map = {"close": "data", "length": "period", "nbdev": "nbdev"}
     indicator_registry.register(stddev_config)
 
     # TSF
@@ -1406,6 +1436,7 @@ def setup_statistics_indicators():
             description="時系列予測期間",
         )
     )
+    tsf_config.param_map = {"close": "data", "length": "period"}
     indicator_registry.register(tsf_config)
 
     # VAR
@@ -1435,6 +1466,7 @@ def setup_statistics_indicators():
             description="偏差数",
         )
     )
+    var_config.param_map = {"close": "data", "nbdev": "nbdev"}
     indicator_registry.register(var_config)
 
     # LINEARREG_ANGLE
@@ -1455,6 +1487,7 @@ def setup_statistics_indicators():
             description="線形回帰角度期間",
         )
     )
+    linearreg_angle_config.param_map = {"close": "data", "length": "period"}
     indicator_registry.register(linearreg_angle_config)
 
     # LINEARREG_INTERCEPT
@@ -1475,6 +1508,7 @@ def setup_statistics_indicators():
             description="線形回帰切片期間",
         )
     )
+    linearreg_intercept_config.param_map = {"close": "data", "length": "period"}
     indicator_registry.register(linearreg_intercept_config)
 
     # LINEARREG_SLOPE
@@ -1495,6 +1529,7 @@ def setup_statistics_indicators():
             description="線形回帰傾き期間",
         )
     )
+    linearreg_slope_config.param_map = {"close": "data", "period": "period"}
     indicator_registry.register(linearreg_slope_config)
 
 
@@ -1536,7 +1571,7 @@ def setup_math_operators_indicators():
             description="合計期間",
         )
     )
-    sum_values_config.param_map = {"data": "close"}
+    sum_values_config.param_map = {"close": "data"}
     indicator_registry.register(sum_values_config)
 
 
@@ -1547,48 +1582,48 @@ def setup_math_transform_indicators():
     acos_config = IndicatorConfig(
         indicator_name="ACOS",
         adapter_function=MathTransformIndicators.acos,
-        required_data=["data"],
+        required_data=["close"],
         result_type=IndicatorResultType.SINGLE,
         scale_type=IndicatorScaleType.MOMENTUM_ZERO_CENTERED,
         category="math_transform",
     )
-    acos_config.param_map = {"data": "close"}
+    acos_config.param_map = {"close": "data"}
     indicator_registry.register(acos_config)
 
     # ASIN - 逆正弦
     asin_config = IndicatorConfig(
         indicator_name="ASIN",
         adapter_function=MathTransformIndicators.asin,
-        required_data=["data"],
+        required_data=["close"],
         result_type=IndicatorResultType.SINGLE,
         scale_type=IndicatorScaleType.MOMENTUM_ZERO_CENTERED,
         category="math_transform",
     )
-    asin_config.param_map = {"data": "close"}
+    asin_config.param_map = {"close": "data"}
     indicator_registry.register(asin_config)
 
     # ATAN - 逆正接
     atan_config = IndicatorConfig(
         indicator_name="ATAN",
         adapter_function=MathTransformIndicators.atan,
-        required_data=["data"],
+        required_data=["close"],
         result_type=IndicatorResultType.SINGLE,
         scale_type=IndicatorScaleType.MOMENTUM_ZERO_CENTERED,
         category="math_transform",
     )
-    atan_config.param_map = {"data": "close"}
+    atan_config.param_map = {"close": "data"}
     indicator_registry.register(atan_config)
 
     # LN - 自然対数
     ln_config = IndicatorConfig(
         indicator_name="LN",
         adapter_function=MathTransformIndicators.ln,
-        required_data=["data"],
+        required_data=["close"],
         result_type=IndicatorResultType.SINGLE,
         scale_type=IndicatorScaleType.MOMENTUM_ZERO_CENTERED,
         category="math_transform",
     )
-    ln_config.param_map = {"data": "close"}
+    ln_config.param_map = {"close": "data"}
     indicator_registry.register(ln_config)
 
 
@@ -1796,7 +1831,7 @@ vwma_config.add_parameter(
     ParameterConfig(name="length", default_value=20, min_value=2, max_value=200)
 )
 indicator_registry.register(vwma_config)
-vwma_config.param_map = {"close": "data", "volume": "volume", "period": "length"}
+vwma_config.param_map = {"close": "close", "volume": "volume", "length": "length"}
 
 swma_config = IndicatorConfig(
     indicator_name="SWMA",
@@ -1809,6 +1844,7 @@ swma_config = IndicatorConfig(
 swma_config.add_parameter(
     ParameterConfig(name="period", default_value=10, min_value=2, max_value=200)
 )
+swma_config.param_map = {"close": "data"}
 indicator_registry.register(swma_config)
 
 alma_config = IndicatorConfig(
@@ -1822,6 +1858,7 @@ alma_config = IndicatorConfig(
 alma_config.add_parameter(
     ParameterConfig(name="period", default_value=9, min_value=2, max_value=200)
 )
+alma_config.param_map = {"close": "data", "period": "length"}
 indicator_registry.register(alma_config)
 
 rma_config = IndicatorConfig(
@@ -1953,7 +1990,7 @@ indicator_registry.register(tsi_config)
 rvi_config = IndicatorConfig(
     indicator_name="RVI",
     adapter_function=MomentumIndicators.rvi,
-    required_data=["open_", "high", "low", "close"],
+    required_data=["open", "high", "low", "close"],
     result_type=IndicatorResultType.SINGLE,
     scale_type=IndicatorScaleType.OSCILLATOR_0_100,
     category="momentum",
@@ -1966,7 +2003,7 @@ indicator_registry.register(rvi_config)
 pvo_config = IndicatorConfig(
     indicator_name="PVO",
     adapter_function=MomentumIndicators.pvo,
-    required_data=["close", "volume"],
+    required_data=["volume"],
     result_type=IndicatorResultType.COMPLEX,
     scale_type=IndicatorScaleType.MOMENTUM_ZERO_CENTERED,
     category="volume",
@@ -1982,6 +2019,7 @@ pvo_config.add_parameter(
 pvo_config.add_parameter(
     ParameterConfig(name="signal", default_value=9, min_value=2, max_value=100)
 )
+pvo_config.param_map = {"volume": "volume", "fast": "fast", "slow": "slow", "signal": "signal"}
 indicator_registry.register(pvo_config)
 
 cfo_config = IndicatorConfig(
@@ -2040,7 +2078,7 @@ indicator_registry.register(price_ema_ratio_config)
 rsi_ema_cross_config = IndicatorConfig(
     indicator_name="RSI_EMA_CROSS",
     adapter_function=MomentumIndicators.rsi_ema_cross,
-    required_data=["close"],
+    required_data=[],  # data will be passed as parameter
     result_type=IndicatorResultType.COMPLEX,
     scale_type=IndicatorScaleType.OSCILLATOR_0_100,
     category="momentum",
@@ -2051,6 +2089,7 @@ rsi_ema_cross_config.add_parameter(
 rsi_ema_cross_config.add_parameter(
     ParameterConfig(name="ema_length", default_value=9, min_value=2, max_value=200)
 )
+rsi_ema_cross_config.param_map = {"close": "data"}
 indicator_registry.register(rsi_ema_cross_config)
 
 # Additional momentum registrations
@@ -2094,6 +2133,7 @@ chop_cfg = IndicatorConfig(
 chop_cfg.add_parameter(
     ParameterConfig(name="length", default_value=14, min_value=2, max_value=200)
 )
+chop_cfg.param_map = {"high": "high", "low": "low", "close": "close", "length": "length"}
 indicator_registry.register(chop_cfg)
 
 vi_cfg = IndicatorConfig(
@@ -2107,6 +2147,7 @@ vi_cfg = IndicatorConfig(
 vi_cfg.add_parameter(
     ParameterConfig(name="length", default_value=14, min_value=2, max_value=200)
 )
+vi_cfg.param_map = {"high": "high", "low": "low", "close": "close", "length": "length"}
 indicator_registry.register(vi_cfg)
 
 # Additional volume registrations

@@ -186,20 +186,124 @@ def normalize_params(indicator_type: str, params: Dict[str, Any], config: Indica
 
     - period -> length 変換
     - 必須 length のデフォルト補完
+    - SAR, VWMA, RMA 固有のパラメータマッピング
     """
     converted_params: Dict[str, Any] = {}
+
+    # SAR の特殊処理
+    if indicator_type == "SAR":
+        # acceleration -> af, maximum -> max_af のマッピング
+        # 予期しないパラメータ（lengthなど）を除外
+        for key, value in params.items():
+            if key == "acceleration":
+                converted_params["af"] = value
+            elif key == "maximum":
+                converted_params["max_af"] = value
+            # length や他の予期しないパラメータは無視
+        return converted_params
+
+    # VWMA の特殊処理
+    elif indicator_type == "VWMA":
+        # param_map を使用: close -> data, volume -> volume, period -> length
+        for key, value in params.items():
+            if hasattr(config, 'param_map') and config.param_map:
+                if key in config.param_map:
+                    converted_params[config.param_map[key]] = value
+                else:
+                    converted_params[key] = value
+            else:
+                # fallback: period -> length
+                if key == "period":
+                    converted_params["length"] = value
+                else:
+                    converted_params[key] = value
+        return converted_params
+
+    # RMA の特殊処理
+    elif indicator_type == "RMA":
+        # period -> length, close -> data
+        for key, value in params.items():
+            if key == "period":
+                converted_params["length"] = value
+            elif key == "close":
+                converted_params["data"] = value
+            else:
+                converted_params[key] = value
+        return converted_params
+
+    # STC の特殊処理
+    elif indicator_type == "STC":
+        # close -> data
+        for key, value in params.items():
+            if key == "close":
+                converted_params["data"] = value
+            else:
+                converted_params[key] = value
+        return converted_params
+
+    # ATAN の特殊処理
+    elif indicator_type == "ATAN":
+        # param_map = {"data": "close"} なので、入力の "close" を "data" に変換
+        for key, value in params.items():
+            if hasattr(config, 'param_map') and config.param_map:
+                # param_map の逆マッピングを行う
+                reverse_map = {v: k for k, v in config.param_map.items()}
+                if key in reverse_map:
+                    converted_params[reverse_map[key]] = value
+                else:
+                    converted_params[key] = value
+            else:
+                converted_params[key] = value
+        return converted_params
+
+    # RSI_EMA_CROSS の特殊処理
+    elif indicator_type == "RSI_EMA_CROSS":
+        # close -> data, rsi_length -> rsi_length, ema_length -> ema_length
+        for key, value in params.items():
+            if key == "close":
+                converted_params["data"] = value
+            else:
+                converted_params[key] = value
+        return converted_params
+
     # period -> length 変換（例外指標はここで外すことも可能）
-    period_based = {"MA", "MAVP", "MAX", "MIN", "SUM", "BETA", "CORREL", "LINEARREG", "LINEARREG_SLOPE", "STDDEV", "VAR"}
+    period_based = {"MA", "MAVP", "MAX", "MIN", "SUM", "BETA", "CORREL", "LINEARREG", "LINEARREG_SLOPE", "STDDEV", "VAR", "SAR"}
+    # 特定の指標は period -> length 変換をしない
+    no_length_indicators = {"SAR", "WCLPRICE", "OBV", "VWAP", "AD", "ADOSC"}
+
     for key, value in params.items():
-        if key == "period" and indicator_type not in period_based:
+        if key == "period" and indicator_type not in period_based and indicator_type not in no_length_indicators:
             converted_params["length"] = value
         else:
             converted_params[key] = value
 
-    # length 必須のアダプタにデフォルト補完
+    # length 必須のアダプタにデフォルト補完（数学変換系は除外）
     try:
         sig = inspect.signature(config.adapter_function)
-        if "length" in sig.parameters and "length" not in converted_params:
+        # MathTransformIndicatorsの関数かどうかをチェック
+        is_math_transform = (
+            hasattr(config.adapter_function, '__qualname__') and
+            config.adapter_function.__qualname__.startswith('MathTransformIndicators.')
+        )
+
+        # PriceTransformIndicatorsの関数かどうかをチェック
+        is_price_transform = (
+            hasattr(config.adapter_function, '__qualname__') and
+            config.adapter_function.__qualname__.startswith('PriceTransformIndicators.')
+        )
+
+        # 特定の指標は length パラメータを追加しない
+        no_length_indicators = {"SAR", "WCLPRICE", "OBV", "VWAP", "AD", "ADOSC"}
+
+        # SAR には length パラメータを追加しない（af, max_af のみを使用）
+        if indicator_type == "SAR":
+            pass  # SAR には length を追加しない
+        elif indicator_type in no_length_indicators:
+            pass  # これらの指標には length を追加しない
+        elif ("length" in sig.parameters and
+              "length" not in converted_params and
+              not is_math_transform and
+              not is_price_transform):
             default_len = params.get("period")
             if default_len is None and config.parameters:
                 if "period" in config.parameters:

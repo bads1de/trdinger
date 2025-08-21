@@ -15,7 +15,6 @@ from app.services.auto_strategy.utils.metrics import (
 
 
 def test_quality_selection_thresholds_and_scoring():
-    rng = random.Random(123)
     np.random.seed(123)
 
     configs = [

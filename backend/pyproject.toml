@@ -26,6 +26,7 @@ dependencies = [
     "pandas_ta",
     "numpy",
     "psutil",
+    "pandera",
 
     # 暗号通貨取引所ライブラリ
     "ccxt==4.1.64",
@@ -73,6 +74,9 @@ dependencies = [
     "tsfresh>=0.20.0",
     "autofeat>=2.1.0",
     "dask>=2023.10.0",
+
+    # メモリ管理ライブラリ
+    "memory_profiler>=0.61.0",
 ]
 
 [project.optional-dependencies]

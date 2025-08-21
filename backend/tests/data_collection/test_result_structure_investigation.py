@@ -89,7 +89,7 @@ class TestResultStructureInvestigation:
             # 結果全体をJSONで出力（デバッグ用）
             try:
                 result_json = json.dumps(result, indent=2, default=str)
-                print(f"\n=== 結果全体（JSON） ===")
+                print("\n=== 結果全体（JSON） ===")
                 print(result_json)
             except Exception as e:
                 print(f"JSON変換エラー: {e}")
@@ -156,7 +156,7 @@ class TestResultStructureInvestigation:
                         # 結果全体をJSONで出力（デバッグ用）
                         try:
                             result_json = json.dumps(result, indent=2, default=str)
-                            print(f"\n=== 統合サービス結果全体（JSON） ===")
+                            print("\n=== 統合サービス結果全体（JSON） ===")
                             print(result_json)
                         except Exception as e:
                             print(f"JSON変換エラー: {e}")
@@ -202,7 +202,7 @@ class TestResultStructureInvestigation:
         # 結果全体をJSONで出力
         try:
             response_json = json.dumps(response, indent=2, default=str)
-            print(f"\n=== api_response結果全体（JSON） ===")
+            print("\n=== api_response結果全体（JSON） ===")
             print(response_json)
         except Exception as e:
             print(f"JSON変換エラー: {e}")

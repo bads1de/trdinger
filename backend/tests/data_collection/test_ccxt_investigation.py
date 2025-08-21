@@ -165,7 +165,7 @@ class TestCCXTInvestigation:
                 print(f"✅ 履歴サービスでファンディングレート処理: {fr_data}")
                 assert fr_data["success"] is True
             else:
-                print(f"❌ 履歴サービスでファンディングレートが処理されていない")
+                print("❌ 履歴サービスでファンディングレートが処理されていない")
                 print(f"Available data keys: {list(result['data'].keys())}")
 
         except Exception as e:
@@ -193,7 +193,7 @@ class TestCCXTInvestigation:
             )
 
             logger.info(f"現在のファンディングレート: {current_rate}")
-            print(f"✅ CCXT現在ファンディングレート取得成功")
+            print("✅ CCXT現在ファンディングレート取得成功")
 
             # 履歴データを取得
             history = await asyncio.get_event_loop().run_in_executor(

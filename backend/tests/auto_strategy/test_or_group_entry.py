@@ -31,7 +31,6 @@ def test_or_group_improves_entry_opportunity():
     factory = StrategyClassFactory()
 
     seeds = [321, 654, 987]
-    more_trades = 0
 
     for sd in seeds:
         random.seed(sd)

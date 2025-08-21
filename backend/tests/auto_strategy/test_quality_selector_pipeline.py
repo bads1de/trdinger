@@ -12,7 +12,6 @@ from app.services.backtest.factories.strategy_class_factory import StrategyClass
 
 
 def test_quality_selector_filters_and_ranks():
-    rng = random.Random(777)
     np.random.seed(777)
 
     start = datetime(2024, 1, 1)

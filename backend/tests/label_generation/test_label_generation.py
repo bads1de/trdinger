@@ -407,8 +407,8 @@ class TestLabelGeneration:
         label_generator = LabelGenerator()
         data = sample_price_data.copy()
 
-        # 各手法でラベル生成
-        fixed_labels = label_generator.generate_labels(
+        # 各手法でラベル生成（実際のテストは別途実施）
+        label_generator.generate_labels(
             data,
             threshold_up=0.02,
             threshold_down=-0.02,
@@ -416,7 +416,7 @@ class TestLabelGeneration:
             target_column="Close",
         )
 
-        percentile_labels = label_generator.generate_labels(
+        label_generator.generate_labels(
             data,
             threshold_up=0.8,
             threshold_down=0.2,
@@ -424,7 +424,7 @@ class TestLabelGeneration:
             target_column="Close",
         )
 
-        adaptive_labels = label_generator.generate_labels(
+        label_generator.generate_labels(
             data,
             threshold_up=1.5,
             threshold_down=-1.5,
