@@ -16,6 +16,39 @@ from app.services.indicators.config.indicator_config import (
 
 logger = logging.getLogger(__name__)
 
+# Constants
+DEFAULT_LENGTH = 14
+NO_LENGTH_INDICATORS = {
+    "SAR",
+    "WCLPRICE",
+    "OBV",
+    "VWAP",
+    "AD",
+    "ADOSC",
+    "AO",
+    "ICHIMOKU",
+    "PPO",
+    "APO",
+    "ULTOSC",
+    "BOP",
+    "CDL_PIERCING",
+    "CDL_HAMMER",
+    "CDL_HANGING_MAN",
+    "CDL_HARAMI",
+    "CDL_DARK_CLOUD_COVER",
+    "CDL_THREE_BLACK_CROWS",
+    "CDL_THREE_WHITE_SOLDIERS",
+    "CDL_MARUBOZU",
+    "CDL_SPINNING_TOP",
+    "CDL_SHOOTING_STAR",
+    "CDL_ENGULFING",
+    "CDL_MORNING_STAR",
+    "CDL_EVENING_STAR",
+    "CDL_DOJI",
+    "RSI_EMA_CROSS",
+    "NVI",
+}
+
 
 class ParameterGenerationError(Exception):
     """パラメータ生成エラー"""
@@ -272,43 +305,11 @@ def normalize_params(
         "VAR",
         "SAR",
     }
-    # 特定の指標は period -> length 変換をしない
-    no_length_indicators = {
-        "SAR",
-        "WCLPRICE",
-        "OBV",
-        "VWAP",
-        "AD",
-        "ADOSC",
-        "AO",
-        "ICHIMOKU",
-        "PPO",
-        "APO",
-        "ULTOSC",
-        "BOP",
-        "CDL_PIERCING",
-        "CDL_HAMMER",
-        "CDL_HANGING_MAN",
-        "CDL_HARAMI",
-        "CDL_DARK_CLOUD_COVER",
-        "CDL_THREE_BLACK_CROWS",
-        "CDL_THREE_WHITE_SOLDIERS",
-        "CDL_MARUBOZU",
-        "CDL_SPINNING_TOP",
-        "CDL_SHOOTING_STAR",
-        "CDL_ENGULFING",
-        "CDL_MORNING_STAR",
-        "CDL_EVENING_STAR",
-        "CDL_DOJI",
-        "RSI_EMA_CROSS",
-        "NVI",
-    }
-
     for key, value in params.items():
         if (
             key == "period"
             and indicator_type not in period_based
-            and indicator_type not in no_length_indicators
+            and indicator_type not in NO_LENGTH_INDICATORS
         ):
             converted_params["length"] = value
         else:
@@ -325,42 +326,10 @@ def normalize_params(
             "PriceTransformIndicators."
         )
 
-        # 特定の指標は length パラメータを追加しない
-        no_length_indicators = {
-            "SAR",
-            "WCLPRICE",
-            "OBV",
-            "VWAP",
-            "AD",
-            "ADOSC",
-            "AO",
-            "ICHIMOKU",
-            "PPO",
-            "APO",
-            "ULTOSC",
-            "BOP",
-            "CDL_PIERCING",
-            "CDL_HAMMER",
-            "CDL_HANGING_MAN",
-            "CDL_HARAMI",
-            "CDL_DARK_CLOUD_COVER",
-            "CDL_THREE_BLACK_CROWS",
-            "CDL_THREE_WHITE_SOLDIERS",
-            "CDL_MARUBOZU",
-            "CDL_SPINNING_TOP",
-            "CDL_SHOOTING_STAR",
-            "CDL_ENGULFING",
-            "CDL_MORNING_STAR",
-            "CDL_EVENING_STAR",
-            "CDL_DOJI",
-            "RSI_EMA_CROSS",
-            "NVI",
-        }
-
         # SAR には length パラメータを追加しない（af, max_af のみを使用）
         if indicator_type == "SAR":
             pass  # SAR には length を追加しない
-        elif indicator_type in no_length_indicators:
+        elif indicator_type in NO_LENGTH_INDICATORS:
             pass  # これらの指標には length を追加しない
         elif indicator_type.startswith("CDL_") and "length" not in converted_params:
             pass  # すべてのパターン認識指標には length を追加しない
@@ -375,7 +344,7 @@ def normalize_params(
                     default_len = config.parameters["period"].default_value
                 elif "length" in config.parameters:
                     default_len = config.parameters["length"].default_value
-            converted_params["length"] = default_len if default_len is not None else 14
+            converted_params["length"] = default_len if default_len is not None else DEFAULT_LENGTH
     except Exception:
         pass
 

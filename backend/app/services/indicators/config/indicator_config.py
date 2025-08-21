@@ -248,11 +248,6 @@ class IndicatorConfigRegistry:
         """サポートされている指標の名前のリストを取得 (新規追加)"""
         return list(self._configs.keys())
 
-    # 互換メソッド（既存テスト向け）
-    def get_all_indicator_names(self) -> List[str]:
-        """登録済みの全指標名を返す（互換用エイリアス）"""
-        return self.get_supported_indicator_names()
-
     def generate_parameters_for_indicator(self, indicator_type: str) -> Dict[str, Any]:
         """
         指標タイプに応じたパラメータを生成
@@ -281,8 +276,6 @@ class IndicatorConfigRegistry:
 
         # 設定が見つからない場合のフォールバック
         return indicator_name
-
-
 
 
 # グローバルレジストリインスタンス

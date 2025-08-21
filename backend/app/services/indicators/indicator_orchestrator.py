@@ -15,6 +15,19 @@ from .config import IndicatorConfig, indicator_registry
 
 logger = logging.getLogger(__name__)
 
+# Constants
+SUPPORTED_DIRECT_INDICATORS = {"SMA", "EMA", "WMA", "RSI", "MACD", "BBANDS"}
+POSITIONAL_DATA_FUNCTIONS = {
+    "rsi", "sma", "ema", "wma", "sar", "roc", "stoch", "bbands",
+    "macd", "dpo", "rmi", "kama", "trima", "wma", "ma", "midpoint",
+    "midprice", "ht_trendline", "adosc", "ha_close", "ha_ohlc", "correl",
+    "linearreg", "stddev", "tsf", "var", "linearreg_angle", "linearreg_intercept",
+    "linearreg_slope", "hma", "zlma", "swma", "alma", "rma", "tsi",
+    "pvo", "cfo", "cti", "sma_slope", "price_ema_ratio", "beta", "belta",
+    "qqe", "smi", "trix", "apo", "macdext", "macdfix", "WMA", "TRIMA",
+    "MA", "chop", "vortex"
+}
+
 
 class TechnicalIndicatorService:
     """テクニカル指標統合サービス"""
@@ -39,11 +52,11 @@ class TechnicalIndicatorService:
         pandas-taを直接使用し、複雑なマッピング処理を削除。
         """
         try:
-            # 基本的なパラメータ検証
-            if indicator_type in ["SMA", "EMA", "WMA", "RSI"]:
+            # Basic parameter validation
+            if indicator_type in SUPPORTED_DIRECT_INDICATORS:
                 length = params.get("length", params.get("period", 14))
                 if length <= 0:
-                    raise ValueError(f"{indicator_type}: 期間は正の値が必要: {length}")
+                    raise ValueError(f"{indicator_type}: period must be positive: {length}")
 
             # pandas-taを直接使用
             if indicator_type == "RSI":
@@ -134,12 +147,7 @@ class TechnicalIndicatorService:
             if column_name:
                 required_data[data_key] = df[column_name]
 
-        # パラメータ正規化
-        from .parameter_manager import normalize_params
-
-        converted_params = normalize_params(indicator_type, params, config)
-
-        # パラメータ正規化
+        # Parameter normalization
         from .parameter_manager import normalize_params
 
         converted_params = normalize_params(indicator_type, params, config)
@@ -166,14 +174,14 @@ class TechnicalIndicatorService:
 
             # param_map に data -> close のマッピングがある場合の特別処理
             # この場合、required_data から close を取得して data として渡す
-            if 'data' in config.param_map and config.param_map['data'] == 'close':
+            if "data" in config.param_map and config.param_map["data"] == "close":
                 # required_data から close データを data として使用
-                if 'close' in required_data:
+                if "close" in required_data:
                     # close データを data として mapped_params に追加
-                    mapped_params['data'] = required_data['close']
+                    mapped_params["data"] = required_data["close"]
                     # close を required_data から削除して重複を防ぐ
-                    if 'close' in required_data:
-                        del required_data['close']
+                    if "close" in required_data:
+                        del required_data["close"]
                 converted_params = mapped_params
 
         # デバッグ: all_argsの内容を確認
@@ -181,25 +189,13 @@ class TechnicalIndicatorService:
 
         # 関数シグネチャを動的に検査して呼び出し方を決定
         import inspect
+
         sig = inspect.signature(config.adapter_function)
         valid_params = set(sig.parameters.keys())
 
-        # 位置引数を必要とする関数の判定
-        # 最初の数パラメータがデータ系列で、残りがキーワード引数の関数
-        positional_data_funcs = {
-            'rsi', 'sma', 'ema', 'wma', 'sar', 'roc', 'stoch', 'bbands',
-            'macd', 'dpo', 'rmi', 'kama', 'trima', 'wma', 'ma',
-            'midpoint', 'midprice', 'ht_trendline', 'adosc',
-            'ha_close', 'ha_ohlc', 'correl', 'linearreg', 'stddev',
-            'tsf', 'var', 'linearreg_angle', 'linearreg_intercept',
-            'linearreg_slope',
-            'hma', 'zlma', 'swma', 'alma', 'rma', 'tsi', 'pvo', 'cfo',
-            'cti', 'sma_slope', 'price_ema_ratio', 'beta', 'belta',
-            'qqe', 'smi', 'trix', 'apo', 'macdext', 'macdfix', 'WMA', 'TRIMA', 'MA',
-            'chop', 'vortex'
-        }
-
-        if indicator_type.lower() in positional_data_funcs:
+        # Functions that require positional arguments
+        # First few parameters are data series, rest are keyword arguments
+        if indicator_type.lower() in POSITIONAL_DATA_FUNCTIONS:
             # 位置引数を必要とする関数の場合
             # 必要なデータを順序通りに位置引数として渡す
             positional_args = []
@@ -224,19 +220,19 @@ class TechnicalIndicatorService:
                     # 無効なパラメータは除外（何もしない）
                 # config.parameters に含まれるパラメータは除外（何もしない）
 
-            print(f"DEBUG {indicator_type}: Using positional args, pos_args={len(positional_args)}, kwargs={keyword_args}")
+            logger.debug(f"Using positional args for {indicator_type}: {len(positional_args)} args")
             return config.adapter_function(*positional_args, **keyword_args)
 
-        # dataパラメータが含まれており、closeパラメータが含まれていない場合
-        # 最初の位置引数として渡す（一部の関数が期待する形式）
-        elif 'data' in all_args and 'close' not in all_args:
-            # dataを位置引数として渡し、他の引数をキーワード引数として渡す
-            data_arg = all_args.pop('data')
-            print(f"DEBUG {indicator_type}: Using positional arg, data_arg shape={getattr(data_arg, 'shape', 'N/A')}")
+        # If data parameter is included but close is not
+        # Pass data as first positional argument (format expected by some functions)
+        elif "data" in all_args and "close" not in all_args:
+            # Pass data as positional argument and others as keyword arguments
+            data_arg = all_args.pop("data")
+            logger.debug(f"Using positional arg for {indicator_type}: shape={getattr(data_arg, 'shape', 'N/A')}")
             return config.adapter_function(data_arg, **all_args)
 
-        # 通常のキーワード引数呼び出し
-        print(f"DEBUG {indicator_type}: Using keyword args")
+        # Normal keyword argument call
+        logger.debug(f"Using keyword args for {indicator_type}")
         return config.adapter_function(**all_args)
 
     def _resolve_column_name(self, df: pd.DataFrame, data_key: str) -> Optional[str]:
