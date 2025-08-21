@@ -15,7 +15,7 @@ from app.services.data_collection.orchestration.funding_rate_orchestration_servi
 )
 from app.api.dependencies import get_funding_rate_orchestration_service
 from app.utils.error_handler import ErrorHandler
-from database.connection import ensure_db_initialized, get_db
+from database.connection import init_db, get_db
 
 logger = logging.getLogger(__name__)
 
@@ -106,7 +106,7 @@ async def collect_funding_rate_data(
     """
 
     async def _collect_rates():
-        if not ensure_db_initialized():
+        if not init_db():
             logger.error("データベースの初期化に失敗しました")
             raise HTTPException(
                 status_code=500, detail="データベースの初期化に失敗しました"
@@ -148,7 +148,7 @@ async def bulk_collect_funding_rates(
     """
 
     async def _bulk_collect():
-        if not ensure_db_initialized():
+        if not init_db():
             logger.error("データベースの初期化に失敗しました")
             raise Exception("データベースの初期化に失敗しました")
 

@@ -16,7 +16,7 @@ from app.services.data_collection.orchestration.data_collection_orchestration_se
 )
 from app.api.dependencies import get_data_collection_orchestration_service
 from app.utils.error_handler import ErrorHandler
-from database.connection import ensure_db_initialized, get_db
+from database.connection import init_db, get_db
 
 logger = logging.getLogger(__name__)
 
@@ -48,7 +48,7 @@ async def collect_historical_data(
 
     async def _execute():
         # データベース初期化確認
-        if not ensure_db_initialized():
+        if not init_db():
             logger.error("データベースの初期化に失敗しました")
             from fastapi import HTTPException
 
@@ -114,7 +114,7 @@ async def collect_bulk_historical_data(
 
     async def _execute():
         # データベース初期化確認
-        if not ensure_db_initialized():
+        if not init_db():
             logger.error("データベースの初期化に失敗しました")
             raise HTTPException(
                 status_code=500, detail="データベースの初期化に失敗しました"
@@ -154,7 +154,7 @@ async def get_collection_status(
 
     async def _get_collection_status():
         # データベース初期化確認
-        if not ensure_db_initialized():
+        if not init_db():
             logger.error("データベースの初期化に失敗しました", exc_info=True)
             from fastapi import HTTPException
 
@@ -196,7 +196,7 @@ async def collect_all_data_bulk(
 
     async def _execute():
         # データベース初期化確認
-        if not ensure_db_initialized():
+        if not init_db():
             logger.error("データベースの初期化に失敗しました")
             raise HTTPException(
                 status_code=500, detail="データベースの初期化に失敗しました"

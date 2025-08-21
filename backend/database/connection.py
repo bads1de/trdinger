@@ -49,15 +49,38 @@ def get_db():
 
 def init_db():
     """
-    データベースを初期化
+    データベースが初期化されていることを保証
+    初期化されていない場合は自動的に初期化を実行
+    接続テストも含む
+
+    Returns:
+        bool: 初期化成功の場合True
     """
     try:
-        # テーブルを作成
+        # 接続テスト
+        if not test_connection():
+            logger.error("データベース接続に失敗しました")
+            return False
+
+        # 初期化チェック
+        if check_db_initialized():
+            return True
+
+        # 初期化実行
+        logger.info("データベースを自動初期化します")
         Base.metadata.create_all(bind=engine)
-        logger.info("データベースの初期化が完了しました")
+
+        # 初期化確認
+        if check_db_initialized():
+            logger.info("データベースの自動初期化が完了しました")
+            return True
+        else:
+            logger.error("データベースの自動初期化に失敗しました")
+            return False
+
     except Exception as e:
-        logger.error(f"データベース初期化エラー: {e}")
-        raise
+        logger.error(f"データベース初期化保証エラー: {e}")
+        return False
 
 
 def test_connection():
@@ -111,39 +134,4 @@ def check_db_initialized():
 
     except Exception as e:
         logger.error(f"データベース初期化チェックエラー: {e}")
-        return False
-
-
-def ensure_db_initialized():
-    """
-    データベースが初期化されていることを保証
-    初期化されていない場合は自動的に初期化を実行
-
-    Returns:
-        bool: 初期化成功の場合True
-    """
-    try:
-        # 接続テスト
-        if not test_connection():
-            logger.error("データベース接続に失敗しました")
-            return False
-
-        # 初期化チェック
-        if check_db_initialized():
-            return True
-
-        # 初期化実行
-        logger.info("データベースを自動初期化します")
-        init_db()
-
-        # 初期化確認
-        if check_db_initialized():
-            logger.info("データベースの自動初期化が完了しました")
-            return True
-        else:
-            logger.error("データベースの自動初期化に失敗しました")
-            return False
-
-    except Exception as e:
-        logger.error(f"データベース初期化保証エラー: {e}")
         return False

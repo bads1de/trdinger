@@ -16,7 +16,7 @@ from app.services.data_collection.orchestration.open_interest_orchestration_serv
 )
 from app.api.dependencies import get_open_interest_orchestration_service
 from app.utils.error_handler import ErrorHandler
-from database.connection import ensure_db_initialized, get_db
+from database.connection import init_db, get_db
 
 logger = logging.getLogger(__name__)
 
@@ -83,7 +83,7 @@ async def collect_open_interest_data(
     """
 
     async def _collect_open_interest():
-        if not ensure_db_initialized():
+        if not init_db():
             logger.error("データベースの初期化に失敗しました")
             raise Exception("データベースの初期化に失敗しました")
 
@@ -123,7 +123,7 @@ async def bulk_collect_open_interest(
     """
 
     async def _bulk_collect():
-        if not ensure_db_initialized():
+        if not init_db():
             logger.error("データベースの初期化に失敗しました")
             raise Exception("データベースの初期化に失敗しました")
 

@@ -10,7 +10,6 @@ from backend.database.connection import (
     init_db,
     test_connection,
     check_db_initialized,
-    ensure_db_initialized,
 )
 from backend.database.models import OHLCVData # check_db_initializedで参照されるため
 
@@ -90,26 +89,26 @@ class TestConnectionFunctions:
         assert not inspector.has_table(OHLCVData.__tablename__)
         assert check_db_initialized() is False
 
-    def test_ensure_db_initialized_already_initialized(self, test_engine, monkeypatch):
-        """ensure_db_initialized: 既に初期化済みの場合のテスト"""
+    def test_init_db_already_initialized(self, test_engine, monkeypatch):
+        """init_db: 既に初期化済みの場合のテスト"""
         monkeypatch.setattr("backend.database.connection.engine", test_engine)
         monkeypatch.setattr("backend.database.connection.DATABASE_URL", "sqlite:///:memory:")
         Base.metadata.create_all(bind=test_engine) # 事前にテーブルを作成
-        assert ensure_db_initialized() is True
+        assert init_db() is True
 
-    def test_ensure_db_initialized_not_initialized(self, test_engine, monkeypatch):
-        """ensure_db_initialized: 未初期化の場合に初期化されるテスト"""
+    def test_init_db_not_initialized(self, test_engine, monkeypatch):
+        """init_db: 未初期化の場合に初期化されるテスト"""
         monkeypatch.setattr("backend.database.connection.engine", test_engine)
         monkeypatch.setattr("backend.database.connection.DATABASE_URL", "sqlite:///:memory:")
         # テーブルは作成しない
         inspector = inspect(test_engine)
         assert not inspector.has_table(OHLCVData.__tablename__)
-        assert ensure_db_initialized() is True
+        assert init_db() is True
         # 初期化されたことを確認
         assert inspector.has_table(OHLCVData.__tablename__)
 
-    def test_ensure_db_initialized_connection_failure(self, monkeypatch):
-        """ensure_db_initialized: 接続失敗の場合のテスト"""
+    def test_init_db_connection_failure(self, monkeypatch):
+        """init_db: 接続失敗の場合のテスト"""
         mock_test_connection = Mock(return_value=False)
         monkeypatch.setattr("backend.database.connection.test_connection", mock_test_connection)
-        assert ensure_db_initialized() is False
+        assert init_db() is False
