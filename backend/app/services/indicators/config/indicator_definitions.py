@@ -714,8 +714,8 @@ def setup_momentum_indicators():
     stochrsi_config.param_map = {
         "data": "close",
         "period": "length",
-        "fastk_period": "k_period",
-        "fastd_period": "d_period",
+        "fastk_period": "k",
+        "fastd_period": "d",
         "fastd_matype": None  # 無視するパラメータ
     }
     indicator_registry.register(stochrsi_config)

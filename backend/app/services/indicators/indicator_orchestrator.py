@@ -62,6 +62,39 @@ PANDAS_TA_CONFIG = {
         "return_cols": ["Upper", "Middle", "Lower"],
         "default_values": {"length": 20, "std": 2.0},
     },
+    # 価格変換系指標 - パラメータ不要
+    "TYPPRICE": {
+        "function": "hlc3",
+        "params": {},  # パラメータなし
+        "data_columns": ["High", "Low", "Close"],
+        "returns": "single",
+        "default_values": {},
+        "multi_column": True,
+    },
+    "AVGPRICE": {
+        "function": "ohlc4",
+        "params": {},  # パラメータなし
+        "data_columns": ["Open", "High", "Low", "Close"],
+        "returns": "single",
+        "default_values": {},
+        "multi_column": True,
+    },
+    "MEDPRICE": {
+        "function": "hl2",
+        "params": {},  # パラメータなし
+        "data_columns": ["High", "Low"],
+        "returns": "single",
+        "default_values": {},
+        "multi_column": True,
+    },
+    "WCLPRICE": {
+        "function": "wcp",
+        "params": {},  # パラメータなし
+        "data_columns": ["High", "Low", "Close"],
+        "returns": "single",
+        "default_values": {},
+        "multi_column": True,
+    },
 }
 
 POSITIONAL_DATA_FUNCTIONS = {
@@ -195,7 +228,7 @@ class TechnicalIndicatorService:
                 if value is not None:
                     normalized_params[param_name] = value
 
-            # パラメータバリデーション
+            # パラメータバリデーション（lengthパラメータがある場合のみ）
             if "length" in normalized_params and normalized_params["length"] <= 0:
                 raise ValueError(
                     f"{indicator_type}: period must be positive: {normalized_params['length']}"
@@ -207,9 +240,37 @@ class TechnicalIndicatorService:
                 return None
 
             func = getattr(ta, config["function"])
-            data_series = df[config["data_column"]]
-
-            result = func(data_series, **normalized_params)
+            
+            # 複数カラムを使用する価格変換系指標の処理
+            if config.get("multi_column", False):
+                # data_columns からデータを取得
+                data_args = {}
+                for column in config["data_columns"]:
+                    if column in df.columns:
+                        # 正確なカラム名でマッピング
+                        if column == "Open":
+                            data_args["open"] = df[column]
+                        elif column == "High":
+                            data_args["high"] = df[column]
+                        elif column == "Low":
+                            data_args["low"] = df[column]
+                        elif column == "Close":
+                            data_args["close"] = df[column]
+                
+                # pandas-taの関数によっては異なる引数名を使用する場合があるため、エラーハンドリングを追加
+                try:
+                    result = func(**data_args, **normalized_params)
+                except TypeError as e:
+                    # open引数がopen_である場合の処理
+                    if "open" in data_args and ("unexpected keyword argument 'open'" in str(e) or "missing 1 required positional argument: 'open_'" in str(e)):
+                        data_args["open_"] = data_args.pop("open")
+                        result = func(**data_args, **normalized_params)
+                    else:
+                        raise
+            else:
+                # 単一カラムを使用する指標の処理
+                data_series = df[config["data_column"]]
+                result = func(data_series, **normalized_params)
 
             # 戻り値処理
             if config["returns"] == "single":

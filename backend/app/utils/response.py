@@ -1,10 +1,28 @@
 from datetime import datetime
 from typing import Any, Dict, Optional
 
+
 def now_iso() -> str:
     return datetime.now().isoformat()
 
-def error_response(message: str, error_code: Optional[str] = None, details: Optional[Dict[str, Any]] = None, context: Optional[str] = None) -> Dict[str, Any]:
+
+def error_response(
+    message: str,
+    error_code: Optional[str] = None,
+    details: Optional[Dict[str, Any]] = None,
+    context: Optional[str] = None,
+) -> Dict[str, Any]:
+    """
+    エラーレスポンスを生成
+
+    message: エラーメッセージ
+    error_code: エラーコード
+    details: エラー詳細
+    context: エラーコンテキスト
+
+    Returns:
+        生成されたエラーレスポンス
+    """
     response: Dict[str, Any] = {
         "success": False,
         "message": message,
@@ -17,6 +35,7 @@ def error_response(message: str, error_code: Optional[str] = None, details: Opti
     if context:
         response["context"] = context
     return response
+
 
 def api_response(
     success: bool,

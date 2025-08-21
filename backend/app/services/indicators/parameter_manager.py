@@ -47,6 +47,12 @@ NO_LENGTH_INDICATORS = {
     "CDL_DOJI",
     "RSI_EMA_CROSS",
     "NVI",
+    # 価格変換系指標 - lengthパラメータが不要
+    "TYPPRICE",
+    "AVGPRICE",
+    "MEDPRICE",
+    "HA_CLOSE",
+    "HA_OHLC",
 }
 
 
