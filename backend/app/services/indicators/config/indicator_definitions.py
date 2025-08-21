@@ -35,67 +35,7 @@ from .indicator_config import (
 def setup_momentum_indicators():
     """モメンタム系インジケーターの設定（オートストラテジー最適化版）"""
 
-    # RSI
-    rsi_config = IndicatorConfig(
-        indicator_name="RSI",
-        adapter_function=MomentumIndicators.rsi,
-        required_data=["close"],
-        result_type=IndicatorResultType.SINGLE,
-        scale_type=IndicatorScaleType.OSCILLATOR_0_100,
-        category="momentum",
-    )
-    rsi_config.add_parameter(
-        ParameterConfig(
-            name="length",
-            default_value=14,
-            min_value=2,
-            max_value=100,
-            description="RSI計算期間",
-        )
-    )
-    indicator_registry.register(rsi_config)
 
-    # MACD
-    macd_config = IndicatorConfig(
-        indicator_name="MACD",
-        adapter_function=MomentumIndicators.macd,
-        required_data=["close"],
-        result_type=IndicatorResultType.COMPLEX,
-        result_handler="macd_handler",
-        scale_type=IndicatorScaleType.MOMENTUM_ZERO_CENTERED,
-        category="momentum",
-        output_names=["MACD_0", "MACD_1", "MACD_2"],  # MACD, Signal, Histogram
-        default_output="MACD_0",
-        aliases=["MACD"],
-    )
-    macd_config.add_parameter(
-        ParameterConfig(
-            name="fast_period",
-            default_value=12,
-            min_value=2,
-            max_value=50,
-            description="短期期間",
-        )
-    )
-    macd_config.add_parameter(
-        ParameterConfig(
-            name="slow_period",
-            default_value=26,
-            min_value=10,
-            max_value=100,
-            description="長期期間",
-        )
-    )
-    macd_config.add_parameter(
-        ParameterConfig(
-            name="signal_period",
-            default_value=9,
-            min_value=2,
-            max_value=50,
-            description="シグナル期間",
-        )
-    )
-    indicator_registry.register(macd_config)
 
     # STOCH
     stoch_config = IndicatorConfig(
@@ -887,47 +827,6 @@ def setup_momentum_indicators():
 def setup_trend_indicators():
     """トレンド系インジケーターの設定（オートストラテジー最適化版）"""
 
-    # SMA
-    sma_config = IndicatorConfig(
-        indicator_name="SMA",
-        adapter_function=TrendIndicators.sma,
-        required_data=["close"],
-        result_type=IndicatorResultType.SINGLE,
-        scale_type=IndicatorScaleType.PRICE_RATIO,
-        category="trend",
-    )
-    sma_config.add_parameter(
-        ParameterConfig(
-            name="length",
-            default_value=14,
-            min_value=2,
-            max_value=200,
-            description="移動平均期間",
-        )
-    )
-    sma_config.param_map = {"data": "close"}
-    indicator_registry.register(sma_config)
-
-    # EMA
-    ema_config = IndicatorConfig(
-        indicator_name="EMA",
-        adapter_function=TrendIndicators.ema,
-        required_data=["close"],
-        result_type=IndicatorResultType.SINGLE,
-        scale_type=IndicatorScaleType.PRICE_RATIO,
-        category="trend",
-    )
-    ema_config.add_parameter(
-        ParameterConfig(
-            name="length",
-            default_value=14,
-            min_value=2,
-            max_value=200,
-            description="移動平均期間",
-        )
-    )
-    ema_config.param_map = {"data": "close"}
-    indicator_registry.register(ema_config)
 
     # WMA
     wma_config = IndicatorConfig(
@@ -1128,39 +1027,6 @@ def setup_volatility_indicators():
     atr_config.param_map = {"period": "length"}
     indicator_registry.register(atr_config)
 
-    # Bollinger Bands
-    bb_config = IndicatorConfig(
-        indicator_name="BB",
-        adapter_function=VolatilityIndicators.bbands,
-        required_data=["close"],
-        result_type=IndicatorResultType.COMPLEX,
-        result_handler="bb_handler",
-        scale_type=IndicatorScaleType.PRICE_RATIO,
-        category="volatility",
-        output_names=["BB_0", "BB_1", "BB_2"],  # Upper, Middle, Lower
-        default_output="BB_1",  # Middle band
-        aliases=["BB", "BBANDS", "BB_Middle"],
-    )
-    bb_config.add_parameter(
-        ParameterConfig(
-            name="length",
-            default_value=20,
-            min_value=2,
-            max_value=100,
-            description="移動平均期間",
-        )
-    )
-    bb_config.add_parameter(
-        ParameterConfig(
-            name="std",
-            default_value=2.0,
-            min_value=0.5,
-            max_value=5.0,
-            description="標準偏差の倍数",
-        )
-    )
-    bb_config.param_map = {"data": "close", "length": "length", "std": "std"}
-    indicator_registry.register(bb_config)
 
     # NATR
     natr_config = IndicatorConfig(

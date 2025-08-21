@@ -62,7 +62,7 @@ def validate_input(data: Union[np.ndarray, pd.Series], period: int) -> None:
 
 def handle_pandas_ta_errors(func):
     """
-    pandas-taエラーハンドリングデコレーター（簡素化版）
+    pandas-taエラーハンドリングデコレーター
 
     重要な異常ケースのみをチェックし、パフォーマンスを重視。
     """
