@@ -16,16 +16,108 @@ from .config import IndicatorConfig, indicator_registry
 logger = logging.getLogger(__name__)
 
 # Constants
-SUPPORTED_DIRECT_INDICATORS = {"SMA", "EMA", "WMA", "RSI", "MACD", "BBANDS"}
+# pandas-ta動的処理設定
+PANDAS_TA_CONFIG = {
+    "RSI": {
+        "function": "rsi",
+        "params": {"length": ["length", "period"]},
+        "data_column": "Close",
+        "returns": "single",
+        "default_values": {"length": 14},
+    },
+    "SMA": {
+        "function": "sma",
+        "params": {"length": ["length", "period"]},
+        "data_column": "Close",
+        "returns": "single",
+        "default_values": {"length": 20},
+    },
+    "EMA": {
+        "function": "ema",
+        "params": {"length": ["length", "period"]},
+        "data_column": "Close",
+        "returns": "single",
+        "default_values": {"length": 20},
+    },
+    "WMA": {
+        "function": "wma",
+        "params": {"length": ["length", "period"]},
+        "data_column": "Close",
+        "returns": "single",
+        "default_values": {"length": 20},
+    },
+    "MACD": {
+        "function": "macd",
+        "params": {"fast": ["fast"], "slow": ["slow"], "signal": ["signal"]},
+        "data_column": "Close",
+        "returns": "multiple",
+        "return_cols": ["MACD", "Signal", "Histogram"],
+        "default_values": {"fast": 12, "slow": 26, "signal": 9},
+    },
+    "BBANDS": {
+        "function": "bbands",
+        "params": {"length": ["length", "period"], "std": ["std"]},
+        "data_column": "Close",
+        "returns": "multiple",
+        "return_cols": ["Upper", "Middle", "Lower"],
+        "default_values": {"length": 20, "std": 2.0},
+    },
+}
+
 POSITIONAL_DATA_FUNCTIONS = {
-    "rsi", "sma", "ema", "wma", "sar", "roc", "stoch", "bbands",
-    "macd", "dpo", "rmi", "kama", "trima", "wma", "ma", "midpoint",
-    "midprice", "ht_trendline", "adosc", "ha_close", "ha_ohlc", "correl",
-    "linearreg", "stddev", "tsf", "var", "linearreg_angle", "linearreg_intercept",
-    "linearreg_slope", "hma", "zlma", "swma", "alma", "rma", "tsi",
-    "pvo", "cfo", "cti", "sma_slope", "price_ema_ratio", "beta", "belta",
-    "qqe", "smi", "trix", "apo", "macdext", "macdfix", "WMA", "TRIMA",
-    "MA", "chop", "vortex"
+    "rsi",
+    "sma",
+    "ema",
+    "wma",
+    "sar",
+    "roc",
+    "stoch",
+    "bbands",
+    "macd",
+    "dpo",
+    "rmi",
+    "kama",
+    "trima",
+    "wma",
+    "ma",
+    "midpoint",
+    "midprice",
+    "ht_trendline",
+    "adosc",
+    "ha_close",
+    "ha_ohlc",
+    "correl",
+    "linearreg",
+    "stddev",
+    "tsf",
+    "var",
+    "linearreg_angle",
+    "linearreg_intercept",
+    "linearreg_slope",
+    "hma",
+    "zlma",
+    "swma",
+    "alma",
+    "rma",
+    "tsi",
+    "pvo",
+    "cfo",
+    "cti",
+    "sma_slope",
+    "price_ema_ratio",
+    "beta",
+    "belta",
+    "qqe",
+    "smi",
+    "trix",
+    "apo",
+    "macdext",
+    "macdfix",
+    "WMA",
+    "TRIMA",
+    "MA",
+    "chop",
+    "vortex",
 }
 
 
@@ -49,50 +141,15 @@ class TechnicalIndicatorService:
         """
         指定された指標を計算
 
-        pandas-taを直接使用し、複雑なマッピング処理を削除。
+        pandas-taを動的に使用し、設定ベースの効率的な実装。
         """
         try:
-            # Basic parameter validation
-            if indicator_type in SUPPORTED_DIRECT_INDICATORS:
-                length = params.get("length", params.get("period", 14))
-                if length <= 0:
-                    raise ValueError(f"{indicator_type}: period must be positive: {length}")
+            # 1. pandas-ta動的処理を試行
+            result = self._calculate_with_pandas_ta(df, indicator_type, params)
+            if result is not None:
+                return result
 
-            # pandas-taを直接使用
-            if indicator_type == "RSI":
-                length = params.get("length", params.get("period", 14))
-                return ta.rsi(df["Close"], length=length).values
-
-            elif indicator_type == "SMA":
-                length = params.get("length", params.get("period", 20))
-                return ta.sma(df["Close"], length=length).values
-
-            elif indicator_type == "EMA":
-                length = params.get("length", params.get("period", 20))
-                return ta.ema(df["Close"], length=length).values
-
-            elif indicator_type == "MACD":
-                fast = params.get("fast", 12)
-                slow = params.get("slow", 26)
-                signal = params.get("signal", 9)
-                result = ta.macd(df["Close"], fast=fast, slow=slow, signal=signal)
-                return (
-                    result.iloc[:, 0].values,  # MACD
-                    result.iloc[:, 1].values,  # Signal
-                    result.iloc[:, 2].values,  # Histogram
-                )
-
-            elif indicator_type == "BBANDS":
-                length = params.get("length", params.get("period", 20))
-                std = params.get("std", 2.0)
-                result = ta.bbands(df["Close"], length=length, std=std)
-                return (
-                    result.iloc[:, 0].values,  # Upper
-                    result.iloc[:, 1].values,  # Middle
-                    result.iloc[:, 2].values,  # Lower
-                )
-
-            # その他の指標は従来の方法で処理
+            # 2. 既存のアダプター方式にフォールバック
             config = self._get_indicator_config(indicator_type)
             if config.adapter_function:
                 return self._calculate_with_adapter(df, indicator_type, params, config)
@@ -102,6 +159,74 @@ class TechnicalIndicatorService:
         except Exception as e:
             logger.error(f"指標計算エラー {indicator_type}: {e}")
             raise
+
+    def _calculate_with_pandas_ta(
+        self, df: pd.DataFrame, indicator_type: str, params: Dict[str, Any]
+    ) -> Union[np.ndarray, tuple, None]:
+        """
+        pandas-taを使用した動的な指標計算
+
+        Args:
+            df: OHLCV価格データ
+            indicator_type: 指標タイプ
+            params: パラメータ辞書
+
+        Returns:
+            計算結果（対応していない場合はNone）
+        """
+        config = PANDAS_TA_CONFIG.get(indicator_type)
+        if not config:
+            return None  # フォールバック
+
+        try:
+            # パラメータ正規化
+            normalized_params = {}
+            for param_name, param_aliases in config["params"].items():
+                value = None
+                for alias in param_aliases:
+                    if alias in params:
+                        value = params[alias]
+                        break
+
+                # 値が見つからない場合はデフォルト値を使用
+                if value is None:
+                    value = config["default_values"].get(param_name)
+
+                if value is not None:
+                    normalized_params[param_name] = value
+
+            # パラメータバリデーション
+            if "length" in normalized_params and normalized_params["length"] <= 0:
+                raise ValueError(
+                    f"{indicator_type}: period must be positive: {normalized_params['length']}"
+                )
+
+            # pandas-ta関数取得と実行
+            if not hasattr(ta, config["function"]):
+                logger.warning(f"pandas-ta function '{config['function']}' not found")
+                return None
+
+            func = getattr(ta, config["function"])
+            data_series = df[config["data_column"]]
+
+            result = func(data_series, **normalized_params)
+
+            # 戻り値処理
+            if config["returns"] == "single":
+                return result.values
+            else:  # multiple
+                if result is None or result.empty:
+                    raise ValueError(
+                        f"pandas-ta function returned empty result for {indicator_type}"
+                    )
+                return tuple(
+                    result.iloc[:, i].values
+                    for i in range(min(len(config["return_cols"]), result.shape[1]))
+                )
+
+        except Exception as e:
+            logger.warning(f"pandas-ta計算失敗 {indicator_type}: {e}")
+            return None  # フォールバックさせる
 
     def _calculate_with_adapter(
         self,
@@ -220,7 +345,9 @@ class TechnicalIndicatorService:
                     # 無効なパラメータは除外（何もしない）
                 # config.parameters に含まれるパラメータは除外（何もしない）
 
-            logger.debug(f"Using positional args for {indicator_type}: {len(positional_args)} args")
+            logger.debug(
+                f"Using positional args for {indicator_type}: {len(positional_args)} args"
+            )
             return config.adapter_function(*positional_args, **keyword_args)
 
         # If data parameter is included but close is not
@@ -228,7 +355,9 @@ class TechnicalIndicatorService:
         elif "data" in all_args and "close" not in all_args:
             # Pass data as positional argument and others as keyword arguments
             data_arg = all_args.pop("data")
-            logger.debug(f"Using positional arg for {indicator_type}: shape={getattr(data_arg, 'shape', 'N/A')}")
+            logger.debug(
+                f"Using positional arg for {indicator_type}: shape={getattr(data_arg, 'shape', 'N/A')}"
+            )
             return config.adapter_function(data_arg, **all_args)
 
         # Normal keyword argument call
