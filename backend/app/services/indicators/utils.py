@@ -105,7 +105,7 @@ def handle_pandas_ta_errors(func):
 def validate_numpy_input(
     data: Union[np.ndarray, pd.Series, list, float, int], min_length: int = 1
 ) -> np.ndarray:
-    """入力データの検証とnumpy配列への変換（pandas.Series対応版＋スカラー許容）"""
+    """入力データの検証とnumpy配列への変換"""
     # pandas.Seriesの場合はnumpy配列に変換
     if isinstance(data, pd.Series):
         data = data.to_numpy()

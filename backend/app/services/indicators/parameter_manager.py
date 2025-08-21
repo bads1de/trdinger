@@ -21,7 +21,6 @@ class ParameterGenerationError(Exception):
     """パラメータ生成エラー"""
 
 
-
 @dataclass
 class ParameterRange:
     """パラメータ範囲情報"""
@@ -180,7 +179,9 @@ class IndicatorParameterManager:
         return params
 
 
-def normalize_params(indicator_type: str, params: Dict[str, Any], config: IndicatorConfig) -> Dict[str, Any]:
+def normalize_params(
+    indicator_type: str, params: Dict[str, Any], config: IndicatorConfig
+) -> Dict[str, Any]:
     """
     指標パラメータ正規化ユーティリティ
 
@@ -206,7 +207,7 @@ def normalize_params(indicator_type: str, params: Dict[str, Any], config: Indica
     elif indicator_type == "VWMA":
         # param_map を使用: close -> data, volume -> volume, period -> length
         for key, value in params.items():
-            if hasattr(config, 'param_map') and config.param_map:
+            if hasattr(config, "param_map") and config.param_map:
                 # param_mapの値にキーが含まれているかチェック
                 if key in config.param_map.values():
                     converted_params[key] = value
@@ -245,20 +246,6 @@ def normalize_params(indicator_type: str, params: Dict[str, Any], config: Indica
                 converted_params[key] = value
         return converted_params
 
-    # ATAN の特殊処理
-    elif indicator_type == "ATAN":
-        # param_map = {"data": "close"} なので、入力の "close" を "data" に変換
-        for key, value in params.items():
-            if hasattr(config, 'param_map') and config.param_map:
-                # param_map の逆マッピングを行う
-                reverse_map = {v: k for k, v in config.param_map.items()}
-                if key in reverse_map:
-                    converted_params[reverse_map[key]] = value
-                else:
-                    converted_params[key] = value
-            else:
-                converted_params[key] = value
-        return converted_params
 
     # RSI_EMA_CROSS の特殊処理
     elif indicator_type == "RSI_EMA_CROSS":
@@ -271,44 +258,103 @@ def normalize_params(indicator_type: str, params: Dict[str, Any], config: Indica
         return converted_params
 
     # period -> length 変換（例外指標はここで外すことも可能）
-    period_based = {"MA", "MAVP", "MAX", "MIN", "SUM", "BETA", "CORREL", "LINEARREG", "LINEARREG_SLOPE", "STDDEV", "VAR", "SAR"}
+    period_based = {
+        "MA",
+        "MAVP",
+        "MAX",
+        "MIN",
+        "SUM",
+        "BETA",
+        "CORREL",
+        "LINEARREG",
+        "LINEARREG_SLOPE",
+        "STDDEV",
+        "VAR",
+        "SAR",
+    }
     # 特定の指標は period -> length 変換をしない
     no_length_indicators = {
-        "SAR", "WCLPRICE", "OBV", "VWAP", "AD", "ADOSC", "AO", "ICHIMOKU", "PPO", "APO", "ULTOSC", "BOP",
-        "CDL_PIERCING", "CDL_HAMMER", "CDL_HANGING_MAN", "CDL_HARAMI", "CDL_DARK_CLOUD_COVER",
-        "CDL_THREE_BLACK_CROWS", "CDL_THREE_WHITE_SOLDIERS", "CDL_MARUBOZU",
-        "CDL_SPINNING_TOP", "CDL_SHOOTING_STAR", "CDL_ENGULFING",
-        "CDL_MORNING_STAR", "CDL_EVENING_STAR", "CDL_DOJI", "RSI_EMA_CROSS", "NVI"
+        "SAR",
+        "WCLPRICE",
+        "OBV",
+        "VWAP",
+        "AD",
+        "ADOSC",
+        "AO",
+        "ICHIMOKU",
+        "PPO",
+        "APO",
+        "ULTOSC",
+        "BOP",
+        "CDL_PIERCING",
+        "CDL_HAMMER",
+        "CDL_HANGING_MAN",
+        "CDL_HARAMI",
+        "CDL_DARK_CLOUD_COVER",
+        "CDL_THREE_BLACK_CROWS",
+        "CDL_THREE_WHITE_SOLDIERS",
+        "CDL_MARUBOZU",
+        "CDL_SPINNING_TOP",
+        "CDL_SHOOTING_STAR",
+        "CDL_ENGULFING",
+        "CDL_MORNING_STAR",
+        "CDL_EVENING_STAR",
+        "CDL_DOJI",
+        "RSI_EMA_CROSS",
+        "NVI",
     }
 
     for key, value in params.items():
-        if key == "period" and indicator_type not in period_based and indicator_type not in no_length_indicators:
+        if (
+            key == "period"
+            and indicator_type not in period_based
+            and indicator_type not in no_length_indicators
+        ):
             converted_params["length"] = value
         else:
             converted_params[key] = value
 
-    # length 必須のアダプタにデフォルト補完（数学変換系は除外）
+    # length 必須のアダプタにデフォルト補完
     try:
         sig = inspect.signature(config.adapter_function)
-        # MathTransformIndicatorsの関数かどうかをチェック
-        is_math_transform = (
-            hasattr(config.adapter_function, '__qualname__') and
-            config.adapter_function.__qualname__.startswith('MathTransformIndicators.')
-        )
 
         # PriceTransformIndicatorsの関数かどうかをチェック
-        is_price_transform = (
-            hasattr(config.adapter_function, '__qualname__') and
-            config.adapter_function.__qualname__.startswith('PriceTransformIndicators.')
+        is_price_transform = hasattr(
+            config.adapter_function, "__qualname__"
+        ) and config.adapter_function.__qualname__.startswith(
+            "PriceTransformIndicators."
         )
 
         # 特定の指標は length パラメータを追加しない
         no_length_indicators = {
-            "SAR", "WCLPRICE", "OBV", "VWAP", "AD", "ADOSC", "AO", "ICHIMOKU", "PPO", "APO", "ULTOSC", "BOP",
-            "CDL_PIERCING", "CDL_HAMMER", "CDL_HANGING_MAN", "CDL_HARAMI", "CDL_DARK_CLOUD_COVER",
-            "CDL_THREE_BLACK_CROWS", "CDL_THREE_WHITE_SOLDIERS", "CDL_MARUBOZU",
-            "CDL_SPINNING_TOP", "CDL_SHOOTING_STAR", "CDL_ENGULFING",
-            "CDL_MORNING_STAR", "CDL_EVENING_STAR", "CDL_DOJI", "RSI_EMA_CROSS", "NVI"
+            "SAR",
+            "WCLPRICE",
+            "OBV",
+            "VWAP",
+            "AD",
+            "ADOSC",
+            "AO",
+            "ICHIMOKU",
+            "PPO",
+            "APO",
+            "ULTOSC",
+            "BOP",
+            "CDL_PIERCING",
+            "CDL_HAMMER",
+            "CDL_HANGING_MAN",
+            "CDL_HARAMI",
+            "CDL_DARK_CLOUD_COVER",
+            "CDL_THREE_BLACK_CROWS",
+            "CDL_THREE_WHITE_SOLDIERS",
+            "CDL_MARUBOZU",
+            "CDL_SPINNING_TOP",
+            "CDL_SHOOTING_STAR",
+            "CDL_ENGULFING",
+            "CDL_MORNING_STAR",
+            "CDL_EVENING_STAR",
+            "CDL_DOJI",
+            "RSI_EMA_CROSS",
+            "NVI",
         }
 
         # SAR には length パラメータを追加しない（af, max_af のみを使用）
@@ -316,13 +362,13 @@ def normalize_params(indicator_type: str, params: Dict[str, Any], config: Indica
             pass  # SAR には length を追加しない
         elif indicator_type in no_length_indicators:
             pass  # これらの指標には length を追加しない
-        elif (indicator_type.startswith("CDL_") and
-              "length" not in converted_params):
+        elif indicator_type.startswith("CDL_") and "length" not in converted_params:
             pass  # すべてのパターン認識指標には length を追加しない
-        elif ("length" in sig.parameters and
-              "length" not in converted_params and
-              not is_math_transform and
-              not is_price_transform):
+        elif (
+            "length" in sig.parameters
+            and "length" not in converted_params
+            and not is_price_transform
+        ):
             default_len = params.get("period")
             if default_len is None and config.parameters:
                 if "period" in config.parameters:

@@ -182,7 +182,7 @@ class TechnicalIndicatorService:
         # 関数シグネチャを動的に検査して呼び出し方を決定
         import inspect
         sig = inspect.signature(config.adapter_function)
-        sig_params = list(sig.parameters.keys())
+        valid_params = set(sig.parameters.keys())
 
         # 位置引数を必要とする関数の判定
         # 最初の数パラメータがデータ系列で、残りがキーワード引数の関数
@@ -192,7 +192,7 @@ class TechnicalIndicatorService:
             'midpoint', 'midprice', 'ht_trendline', 'adosc',
             'ha_close', 'ha_ohlc', 'correl', 'linearreg', 'stddev',
             'tsf', 'var', 'linearreg_angle', 'linearreg_intercept',
-            'linearreg_slope', 'acos', 'asin', 'atan', 'ln', 'sum_values',
+            'linearreg_slope',
             'hma', 'zlma', 'swma', 'alma', 'rma', 'tsi', 'pvo', 'cfo',
             'cti', 'sma_slope', 'price_ema_ratio', 'beta', 'belta',
             'qqe', 'smi', 'trix', 'apo', 'macdext', 'macdfix', 'WMA', 'TRIMA', 'MA',
@@ -214,14 +214,7 @@ class TechnicalIndicatorService:
             # 残りのパラメータをキーワード引数として渡す
             # ただし、すでに位置引数として渡されたパラメータは除外
             # 関数シグネチャのチェックを追加して予期しないパラメータを除外
-            import inspect
-            sig = inspect.signature(config.adapter_function)
-            valid_params = set(sig.parameters.keys())
-
-            # 関数シグネチャのチェックを追加して予期しないパラメータを除外
-            import inspect
-            sig = inspect.signature(config.adapter_function)
-            valid_params = set(sig.parameters.keys())
+            # valid_params は既に上で定義済み
 
             keyword_args = {}
             for k, v in all_args.items():
