@@ -22,6 +22,8 @@ import numpy as np
 import pandas as pd
 import pandas_ta as ta
 
+from ..utils import handle_pandas_ta_errors
+
 
 class MomentumIndicators:
     """
@@ -124,7 +126,7 @@ class MomentumIndicators:
     def roc(
         data: Union[np.ndarray, pd.Series],
         length: int = 10,
-        close: Union[np.ndarray, pd.Series] = None
+        close: Union[np.ndarray, pd.Series] = None,
     ) -> np.ndarray:
         """変化率"""
         # dataが提供されない場合はcloseを使用
@@ -192,6 +194,43 @@ class MomentumIndicators:
             close=close_series,
             volume=volume_series,
             length=length,
+        ).values
+
+    @staticmethod
+    def apo(
+        data: Union[np.ndarray, pd.Series], fast: int = 12, slow: int = 26
+    ) -> np.ndarray:
+        """絶対価格オシレーター"""
+        series = pd.Series(data) if isinstance(data, np.ndarray) else data
+        return ta.apo(series, fast=fast, slow=slow).values
+
+    @staticmethod
+    def cmo(data: Union[np.ndarray, pd.Series], length: int = 14) -> np.ndarray:
+        """チャンデモメンタムオシレーター"""
+        series = pd.Series(data) if isinstance(data, np.ndarray) else data
+        return ta.cmo(series, length=length).values
+
+    @staticmethod
+    def uo(
+        high: Union[np.ndarray, pd.Series],
+        low: Union[np.ndarray, pd.Series],
+        close: Union[np.ndarray, pd.Series],
+        fast: int = 7,
+        medium: int = 14,
+        slow: int = 28,
+    ) -> np.ndarray:
+        """アルティメットオシレーター"""
+        high_series = pd.Series(high) if isinstance(high, np.ndarray) else high
+        low_series = pd.Series(low) if isinstance(low, np.ndarray) else low
+        close_series = pd.Series(close) if isinstance(close, np.ndarray) else close
+        
+        return ta.uo(
+            high=high_series, 
+            low=low_series, 
+            close=close_series, 
+            fast=fast, 
+            medium=medium, 
+            slow=slow
         ).values
 
     @staticmethod
@@ -279,12 +318,14 @@ class MomentumIndicators:
     def stochrsi(
         data: Union[np.ndarray, pd.Series],
         length: int = 14,
-        k: int = 5,
-        d: int = 3,
+        k_period: int = 5,
+        d_period: int = 3,
     ) -> Tuple[np.ndarray, np.ndarray]:
         """ストキャスティクスRSI"""
         series = pd.Series(data) if isinstance(data, np.ndarray) else data
-        result = ta.stochrsi(series, length=length, k_period=k, d_period=d)
+        result = ta.stochrsi(
+            series, length=length, k_period=k_period, d_period=d_period
+        )
         return result.iloc[:, 0].values, result.iloc[:, 1].values
 
     @staticmethod
@@ -403,7 +444,9 @@ class MomentumIndicators:
         series = pd.Series(data) if isinstance(data, np.ndarray) else data
 
         try:
-            result = ta.stc(series, tclength=tclength, fast=fast, slow=slow, factor=factor)
+            result = ta.stc(
+                series, tclength=tclength, fast=fast, slow=slow, factor=factor
+            )
             if result is not None:
                 return result.values
         except Exception:
@@ -682,7 +725,7 @@ class MomentumIndicators:
         # RSIの簡易計算
         rsi_values = np.full(n, np.nan)
         for i in range(rsi_length - 1, n):
-            window = series.iloc[i - rsi_length + 1:i + 1]
+            window = series.iloc[i - rsi_length + 1 : i + 1]
             gains = window.diff()[1:]
             avg_gain = gains[gains > 0].mean() if len(gains[gains > 0]) > 0 else 0
             avg_loss = -gains[gains < 0].mean() if len(gains[gains < 0]) > 0 else 0
@@ -694,7 +737,9 @@ class MomentumIndicators:
 
         # EMAの簡易計算
         ema_values = np.full(n, np.nan)
-        ema_values[ema_length - 1] = rsi_values[rsi_length - 1:rsi_length + ema_length - 1].mean()
+        ema_values[ema_length - 1] = rsi_values[
+            rsi_length - 1 : rsi_length + ema_length - 1
+        ].mean()
         alpha = 2.0 / (ema_length + 1)
 
         for i in range(ema_length, n):
@@ -758,7 +803,7 @@ class MomentumIndicators:
         data: Union[np.ndarray, pd.Series] = None,
         length: int = 20,
         mom: int = 20,
-        close: Union[np.ndarray, pd.Series] = None
+        close: Union[np.ndarray, pd.Series] = None,
     ) -> np.ndarray:
         """Relative Momentum Index"""
         # dataが提供されない場合はcloseを使用
@@ -775,7 +820,7 @@ class MomentumIndicators:
     def dpo(
         data: Union[np.ndarray, pd.Series] = None,
         length: int = 20,
-        close: Union[np.ndarray, pd.Series] = None
+        close: Union[np.ndarray, pd.Series] = None,
     ) -> np.ndarray:
         """Detrended Price Oscillator"""
         # dataが提供されない場合はcloseを使用
@@ -821,3 +866,4 @@ class MomentumIndicators:
             high=high_series, low=low_series, close=close_series, length=length
         )
         return result.iloc[:, 0].values, result.iloc[:, 1].values
+

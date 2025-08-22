@@ -121,30 +121,30 @@ class VolumeIndicators:
         low_series = pd.Series(low) if isinstance(low, np.ndarray) else low
         c = pd.Series(close) if isinstance(close, np.ndarray) else close
         v = pd.Series(volume) if isinstance(volume, np.ndarray) else volume
-        
+
         # pandas-taのVWAP関数は時系列インデックスが必要なため、独自実装を使用
         try:
             # pandas-taのVWAPを試行（時系列インデックスがある場合）
-            if hasattr(h.index, 'to_period'):
+            if hasattr(h.index, "to_period"):
                 df = ta.vwap(high=h, low=low_series, close=c, volume=v, anchor=anchor)
                 return df.values if hasattr(df, "values") else np.asarray(df)
         except Exception:
             pass
-        
+
         # フォールバック: 独自VWAP実装
         # 典型価格 = (H + L + C) / 3
         typical_price = (h + low_series + c) / 3
-        
+
         # VWAP = Σ(典型価格 × 出来高) / Σ(出来高)
         # 累積で計算
         cumulative_pv = (typical_price * v).cumsum()
         cumulative_volume = v.cumsum()
-        
+
         # ゼロ除算を避ける
-        vwap = np.where(cumulative_volume != 0, 
-                       cumulative_pv / cumulative_volume, 
-                       typical_price)
-        
+        vwap = np.where(
+            cumulative_volume != 0, cumulative_pv / cumulative_volume, typical_price
+        )
+
         return np.asarray(vwap)
 
     @staticmethod

@@ -458,3 +458,13 @@ class PatternRecognitionIndicators:
     def evening_star(*args, **kwargs):
         """Evening Starのエイリアス"""
         return PatternRecognitionIndicators.cdl_evening_star(*args, **kwargs)
+
+    @staticmethod
+    def morning_star(*args, **kwargs):
+        """Morning Starのエイリアス"""
+        return PatternRecognitionIndicators.cdl_morning_star(*args, **kwargs)
+
+    @staticmethod
+    def evening_star(*args, **kwargs):
+        """Evening Starのエイリアス"""
+        return PatternRecognitionIndicators.cdl_evening_star(*args, **kwargs)

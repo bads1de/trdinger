@@ -240,7 +240,7 @@ class TechnicalIndicatorService:
                 return None
 
             func = getattr(ta, config["function"])
-            
+
             # 複数カラムを使用する価格変換系指標の処理
             if config.get("multi_column", False):
                 # data_columns からデータを取得
@@ -256,13 +256,16 @@ class TechnicalIndicatorService:
                             data_args["low"] = df[column]
                         elif column == "Close":
                             data_args["close"] = df[column]
-                
+
                 # pandas-taの関数によっては異なる引数名を使用する場合があるため、エラーハンドリングを追加
                 try:
                     result = func(**data_args, **normalized_params)
                 except TypeError as e:
                     # open引数がopen_である場合の処理
-                    if "open" in data_args and ("unexpected keyword argument 'open'" in str(e) or "missing 1 required positional argument: 'open_'" in str(e)):
+                    if "open" in data_args and (
+                        "unexpected keyword argument 'open'" in str(e)
+                        or "missing 1 required positional argument: 'open_'" in str(e)
+                    ):
                         data_args["open_"] = data_args.pop("open")
                         result = func(**data_args, **normalized_params)
                     else:

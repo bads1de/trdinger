@@ -557,8 +557,10 @@ class SmartConditionGenerator:
                 # レジーム切替（オプトイン: context.regime_gating=True のときのみ）
                 try:
                     context = getattr(self, "context", None)
-                    if context and isinstance(context, dict) and context.get(
-                        "regime_gating"
+                    if (
+                        context
+                        and isinstance(context, dict)
+                        and context.get("regime_gating")
                     ):
                         present = {ind.type for ind in indicators if ind.enabled}
                         # トレンドゲート: ADX>25（あれば） + CHOP<50（あれば）
@@ -822,7 +824,11 @@ class SmartConditionGenerator:
         # 0-100オシレーター系（RSI/MFI/STOCH/KDJ/QQE/ADX等）
         if scale == IndicatorScaleType.OSCILLATOR_0_100:
             context = getattr(self, "context", None)
-            profile = context.get("threshold_profile", "normal") if context and isinstance(context, dict) else "normal"
+            profile = (
+                context.get("threshold_profile", "normal")
+                if context and isinstance(context, dict)
+                else "normal"
+            )
             if name in {"RSI", "STOCH", "STOCHRSI", "KDJ", "QQE", "MFI"}:
                 # プロファイルごとの閾値は ThresholdPolicy に一元化
                 policy = ThresholdPolicy.get(profile)
@@ -853,7 +859,11 @@ class SmartConditionGenerator:
         # ±100系（CCI/WILLR/AROONOSC等）
         if scale == IndicatorScaleType.OSCILLATOR_PLUS_MINUS_100:
             context = getattr(self, "context", None)
-            profile = context.get("threshold_profile", "normal") if context and isinstance(context, dict) else "normal"
+            profile = (
+                context.get("threshold_profile", "normal")
+                if context and isinstance(context, dict)
+                else "normal"
+            )
             if name == "CCI":
                 # 方向性のある強めのしきい値（ポリシー化）
                 lim = ThresholdPolicy.get(profile).cci_abs_limit or 100
@@ -884,7 +894,13 @@ class SmartConditionGenerator:
         # ゼロセンター系（MACD/PPO/APO/TRIX/TSIなど）
         if scale == IndicatorScaleType.MOMENTUM_ZERO_CENTERED:
             context = getattr(self, "context", None)
-            thr = -0.0 if context and isinstance(context, dict) and context.get("threshold_profile") == "aggressive" else 0
+            thr = (
+                -0.0
+                if context
+                and isinstance(context, dict)
+                and context.get("threshold_profile") == "aggressive"
+                else 0
+            )
             return [
                 Condition(left_operand=name, operator=">", right_operand=float(thr))
             ]
@@ -897,7 +913,13 @@ class SmartConditionGenerator:
 
         # フォールバック
         context = getattr(self, "context", None)
-        thr = -0.0 if context and isinstance(context, dict) and context.get("threshold_profile") == "aggressive" else 0
+        thr = (
+            -0.0
+            if context
+            and isinstance(context, dict)
+            and context.get("threshold_profile") == "aggressive"
+            else 0
+        )
         return [Condition(left_operand=name, operator=">", right_operand=float(thr))]
 
     def _generic_short_conditions(self, ind: IndicatorGene) -> List[Condition]:
@@ -930,7 +952,11 @@ class SmartConditionGenerator:
         # 0-100オシレーター系
         if scale == IndicatorScaleType.OSCILLATOR_0_100:
             context = getattr(self, "context", None)
-            profile = context.get("threshold_profile", "normal") if context and isinstance(context, dict) else "normal"
+            profile = (
+                context.get("threshold_profile", "normal")
+                if context and isinstance(context, dict)
+                else "normal"
+            )
             if name in {"RSI", "STOCH", "STOCHRSI", "KDJ", "QQE", "MFI"}:
                 p = ThresholdPolicy.get(profile)
                 thr = (
@@ -1004,6 +1030,7 @@ class SmartConditionGenerator:
             return []
 
         # フォールバック
+        thr = 0.0  # デフォルト閾値を設定
         return [Condition(left_operand=name, operator="<", right_operand=float(thr))]
 
     def _generate_different_indicators_strategy(
@@ -1275,7 +1302,11 @@ class SmartConditionGenerator:
         if indicator.type == "RSI":
             # RSI: 時間軸依存閾値（例: 15m/1h/4hで 55/60/65 を中心にゾーン化）
             context = getattr(self, "context", None)
-            tf = context.get("timeframe") if context and isinstance(context, dict) else None
+            tf = (
+                context.get("timeframe")
+                if context and isinstance(context, dict)
+                else None
+            )
             if tf in ("15m", "15min", "15"):
                 base = 55
             elif tf in ("1h", "60"):

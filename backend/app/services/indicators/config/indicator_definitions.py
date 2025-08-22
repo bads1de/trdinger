@@ -16,6 +16,12 @@ from app.services.indicators.technical_indicators.price_transform import (
 from app.services.indicators.technical_indicators.statistics import (
     StatisticsIndicators,
 )
+from app.services.indicators.technical_indicators.math import (
+    MathIndicators,
+)
+from app.services.indicators.technical_indicators.hilbert_transform import (
+    HilbertTransformIndicators,
+)
 from app.services.indicators.technical_indicators.trend import TrendIndicators
 from app.services.indicators.technical_indicators.volatility import (
     VolatilityIndicators,
@@ -34,8 +40,6 @@ from .indicator_config import (
 
 def setup_momentum_indicators():
     """モメンタム系インジケーターの設定（オートストラテジー最適化版）"""
-
-
 
     # STOCH
     stoch_config = IndicatorConfig(
@@ -77,7 +81,11 @@ def setup_momentum_indicators():
             description="Slow %D期間",
         )
     )
-    stoch_config.param_map = {"fastk_period": "k", "slowk_period": "smooth_k", "slowd_period": "d"}
+    stoch_config.param_map = {
+        "fastk_period": "k",
+        "slowk_period": "smooth_k",
+        "slowd_period": "d",
+    }
     indicator_registry.register(stoch_config)
 
     # AO
@@ -192,14 +200,115 @@ def setup_momentum_indicators():
     )
     cci_config.add_parameter(
         ParameterConfig(
-            name="length",
+            name="period",
             default_value=14,
             min_value=5,
             max_value=50,
             description="CCI計算期間",
         )
     )
+    cci_config.param_map = {"period": "length"}
     indicator_registry.register(cci_config)
+    # CMO
+    cmo_config = IndicatorConfig(
+        indicator_name="CMO",
+        adapter_function=MomentumIndicators.cmo,
+        required_data=["close"],
+        result_type=IndicatorResultType.SINGLE,
+        scale_type=IndicatorScaleType.OSCILLATOR_PLUS_MINUS_100,
+        category="momentum",
+    )
+    cmo_config.add_parameter(
+        ParameterConfig(
+            name="period",
+            default_value=14,
+            min_value=5,
+            max_value=50,
+            description="CMO計算期間",
+        )
+    )
+    cmo_config.param_map = {"close": "data", "period": "length"}
+    indicator_registry.register(cmo_config)
+
+    # UO (Ultimate Oscillator)
+    uo_config = IndicatorConfig(
+        indicator_name="UO",
+        adapter_function=MomentumIndicators.uo,
+        required_data=["high", "low", "close"],
+        result_type=IndicatorResultType.SINGLE,
+        scale_type=IndicatorScaleType.OSCILLATOR_0_100,
+        category="momentum",
+    )
+    uo_config.add_parameter(
+        ParameterConfig(
+            name="fast",
+            default_value=7,
+            min_value=2,
+            max_value=20,
+            description="UO高速期間",
+        )
+    )
+    uo_config.add_parameter(
+        ParameterConfig(
+            name="medium",
+            default_value=14,
+            min_value=5,
+            max_value=50,
+            description="UO中速期間",
+        )
+    )
+    uo_config.add_parameter(
+        ParameterConfig(
+            name="slow",
+            default_value=28,
+            min_value=10,
+            max_value=100,
+            description="UO低速期間",
+        )
+    )
+    indicator_registry.register(uo_config)
+
+    # MOM (Momentum)
+    mom_config = IndicatorConfig(
+        indicator_name="MOM",
+        adapter_function=MomentumIndicators.mom,
+        required_data=["close"],
+        result_type=IndicatorResultType.SINGLE,
+        scale_type=IndicatorScaleType.MOMENTUM_ZERO_CENTERED,
+        category="momentum",
+    )
+    mom_config.add_parameter(
+        ParameterConfig(
+            name="period",
+            default_value=10,
+            min_value=2,
+            max_value=50,
+            description="モメンタム計算期間",
+        )
+    )
+    mom_config.param_map = {"close": "data", "period": "length"}
+    indicator_registry.register(mom_config)
+
+    # RVGI (Relative Vigor Index)
+    rvgi_config = IndicatorConfig(
+        indicator_name="RVGI",
+        adapter_function=MomentumIndicators.rvgi,
+        required_data=["open", "high", "low", "close"],
+        result_type=IndicatorResultType.SINGLE,
+        scale_type=IndicatorScaleType.MOMENTUM_ZERO_CENTERED,
+        category="momentum",
+    )
+    rvgi_config.add_parameter(
+        ParameterConfig(
+            name="period",
+            default_value=10,
+            min_value=2,
+            max_value=50,
+            description="RVGI計算期間",
+        )
+    )
+    rvgi_config.param_map = {"open": "open_", "period": "length"}
+    indicator_registry.register(rvgi_config)
 
     # ADX
     adx_config = IndicatorConfig(
@@ -399,7 +508,12 @@ def setup_momentum_indicators():
             description="移動平均タイプ",
         )
     )
-    ppo_config.param_map = {"data": "close", "fastperiod": "fast", "slowperiod": "slow", "matype": "signal"}
+    ppo_config.param_map = {
+        "data": "close",
+        "fastperiod": "fast",
+        "slowperiod": "slow",
+        "matype": "signal",
+    }
     indicator_registry.register(ppo_config)
 
     # ROC
@@ -714,9 +828,9 @@ def setup_momentum_indicators():
     stochrsi_config.param_map = {
         "data": "close",
         "period": "length",
-        "fastk_period": "k",
-        "fastd_period": "d",
-        "fastd_matype": None  # 無視するパラメータ
+        "fastk_period": "k_period",
+        "fastd_period": "d_period",
+        "fastd_matype": None,  # 無視するパラメータ
     }
     indicator_registry.register(stochrsi_config)
 
@@ -827,7 +941,6 @@ def setup_momentum_indicators():
 def setup_trend_indicators():
     """トレンド系インジケーターの設定（オートストラテジー最適化版）"""
 
-
     # WMA
     wma_config = IndicatorConfig(
         indicator_name="WMA",
@@ -848,6 +961,78 @@ def setup_trend_indicators():
     )
     wma_config.param_map = {"data": "close", "length": "length"}
     indicator_registry.register(wma_config)
+
+    # DEMA
+    dema_config = IndicatorConfig(
+        indicator_name="DEMA",
+        adapter_function=TrendIndicators.dema,
+        required_data=["close"],
+        result_type=IndicatorResultType.SINGLE,
+        scale_type=IndicatorScaleType.PRICE_RATIO,
+        category="trend",
+    )
+    dema_config.add_parameter(
+        ParameterConfig(
+            name="period",
+            default_value=14,
+            min_value=2,
+            max_value=200,
+            description="二重指数移動平均期間",
+        )
+    )
+    dema_config.param_map = {"close": "data", "period": "length"}
+    indicator_registry.register(dema_config)
+
+    # TEMA
+    tema_config = IndicatorConfig(
+        indicator_name="TEMA",
+        adapter_function=TrendIndicators.tema,
+        required_data=["close"],
+        result_type=IndicatorResultType.SINGLE,
+        scale_type=IndicatorScaleType.PRICE_RATIO,
+        category="trend",
+    )
+    tema_config.add_parameter(
+        ParameterConfig(
+            name="period",
+            default_value=14,
+            min_value=2,
+            max_value=200,
+            description="三重指数移動平均期間",
+        )
+    )
+    tema_config.param_map = {"close": "data", "period": "length"}
+    indicator_registry.register(tema_config)
+
+    # T3
+    t3_config = IndicatorConfig(
+        indicator_name="T3",
+        adapter_function=TrendIndicators.t3,
+        required_data=["close"],
+        result_type=IndicatorResultType.SINGLE,
+        scale_type=IndicatorScaleType.PRICE_RATIO,
+        category="trend",
+    )
+    t3_config.add_parameter(
+        ParameterConfig(
+            name="period",
+            default_value=5,
+            min_value=2,
+            max_value=50,
+            description="T3移動平均期間",
+        )
+    )
+    t3_config.add_parameter(
+        ParameterConfig(
+            name="a",
+            default_value=0.7,
+            min_value=0.1,
+            max_value=1.0,
+            description="T3スムージングファクター",
+        )
+    )
+    t3_config.param_map = {"close": "data", "period": "length", "a": "a"}
+    indicator_registry.register(t3_config)
 
     # TRIMA
     trima_config = IndicatorConfig(
@@ -1027,7 +1212,6 @@ def setup_volatility_indicators():
     atr_config.param_map = {"period": "length"}
     indicator_registry.register(atr_config)
 
-
     # NATR
     natr_config = IndicatorConfig(
         indicator_name="NATR",
@@ -1059,6 +1243,38 @@ def setup_volatility_indicators():
         category="volatility",
     )
     indicator_registry.register(trange_config)
+
+    # BB (Bollinger Bands)
+    bb_config = IndicatorConfig(
+        indicator_name="BB",
+        adapter_function=VolatilityIndicators.bbands,
+        required_data=["close"],
+        result_type=IndicatorResultType.COMPLEX,
+        scale_type=IndicatorScaleType.PRICE_RATIO,
+        category="volatility",
+        output_names=["BB_Upper", "BB_Middle", "BB_Lower"],
+        default_output="BB_Middle",
+    )
+    bb_config.add_parameter(
+        ParameterConfig(
+            name="period",
+            default_value=20,
+            min_value=5,
+            max_value=100,
+            description="ボリンジャーバンド期間",
+        )
+    )
+    bb_config.add_parameter(
+        ParameterConfig(
+            name="std",
+            default_value=2.0,
+            min_value=0.5,
+            max_value=5.0,
+            description="標準偏差倍数",
+        )
+    )
+    bb_config.param_map = {"close": "data", "period": "length", "std": "std"}
+    indicator_registry.register(bb_config)
 
 
 def setup_volume_indicators():
@@ -1128,7 +1344,12 @@ def setup_price_transform_indicators():
         scale_type=IndicatorScaleType.PRICE_ABSOLUTE,
         category="price_transform",
     )
-    avgprice_config.param_map = {"open": "open_data", "high": "high", "low": "low", "close": "close"}
+    avgprice_config.param_map = {
+        "open": "open_data",
+        "high": "high",
+        "low": "low",
+        "close": "close",
+    }
     indicator_registry.register(avgprice_config)
 
     # MEDPRICE
@@ -1398,14 +1619,6 @@ def setup_statistics_indicators():
     indicator_registry.register(linearreg_slope_config)
 
 
-
-
-
-
-
-
-
-
 def setup_pattern_recognition_indicators():
     """パターン認識系インジケーターの設定"""
 
@@ -1419,6 +1632,17 @@ def setup_pattern_recognition_indicators():
         category="pattern_recognition",
     )
     indicator_registry.register(hanging_man_config)
+
+    # CDL_SHOOTING_STAR - 流れ星
+    shooting_star_config = IndicatorConfig(
+        indicator_name="CDL_SHOOTING_STAR",
+        adapter_function=PatternRecognitionIndicators.cdl_shooting_star,
+        required_data=["open_data", "high", "low", "close"],
+        result_type=IndicatorResultType.SINGLE,
+        scale_type=IndicatorScaleType.PATTERN_BINARY,
+        category="pattern_recognition",
+    )
+    indicator_registry.register(shooting_star_config)
 
     # CDL_HARAMI - はらみ足
     harami_config = IndicatorConfig(
@@ -1534,23 +1758,417 @@ def setup_pattern_recognition_indicators():
     morning_star_config = IndicatorConfig(
         indicator_name="MORNING_STAR",
         adapter_function=PatternRecognitionIndicators.morning_star,
-        required_data=["open_data", "high", "low", "close"],
+        required_data=["open", "high", "low", "close"],
         result_type=IndicatorResultType.SINGLE,
         scale_type=IndicatorScaleType.PATTERN_BINARY,
         category="pattern_recognition",
     )
+    morning_star_config.param_map = {"open": "open_data"}
     indicator_registry.register(morning_star_config)
 
     # EVENING_STAR - 宵の明星
     evening_star_config = IndicatorConfig(
         indicator_name="EVENING_STAR",
         adapter_function=PatternRecognitionIndicators.evening_star,
-        required_data=["open_data", "high", "low", "close"],
+        required_data=["open", "high", "low", "close"],
         result_type=IndicatorResultType.SINGLE,
         scale_type=IndicatorScaleType.PATTERN_BINARY,
         category="pattern_recognition",
     )
+    evening_star_config.param_map = {"open": "open_data"}
     indicator_registry.register(evening_star_config)
+    # CDL_ENGULFING - 包み足
+    engulfing_config = IndicatorConfig(
+        indicator_name="CDL_ENGULFING",
+        adapter_function=PatternRecognitionIndicators.cdl_engulfing,
+        required_data=["open", "high", "low", "close"],
+        result_type=IndicatorResultType.SINGLE,
+        scale_type=IndicatorScaleType.PATTERN_BINARY,
+        category="pattern_recognition",
+    )
+    engulfing_config.param_map = {"open": "open_data"}
+    indicator_registry.register(engulfing_config)
+
+    # CDL_HAMMER - ハンマー
+    hammer_config = IndicatorConfig(
+        indicator_name="CDL_HAMMER",
+        adapter_function=PatternRecognitionIndicators.cdl_hammer,
+        required_data=["open", "high", "low", "close"],
+        result_type=IndicatorResultType.SINGLE,
+        scale_type=IndicatorScaleType.PATTERN_BINARY,
+        category="pattern_recognition",
+    )
+    hammer_config.param_map = {"open": "open_data"}
+    indicator_registry.register(hammer_config)
+
+    # CDL_MORNING_STAR - 明けの明星
+    morning_star_cdl_config = IndicatorConfig(
+        indicator_name="CDL_MORNING_STAR",
+        adapter_function=PatternRecognitionIndicators.cdl_morning_star,
+        required_data=["open", "high", "low", "close"],
+        result_type=IndicatorResultType.SINGLE,
+        scale_type=IndicatorScaleType.PATTERN_BINARY,
+        category="pattern_recognition",
+    )
+    morning_star_cdl_config.param_map = {"open": "open_data"}
+    indicator_registry.register(morning_star_cdl_config)
+
+    # CDL_EVENING_STAR - 宵の明星
+    evening_star_cdl_config = IndicatorConfig(
+        indicator_name="CDL_EVENING_STAR",
+        adapter_function=PatternRecognitionIndicators.cdl_evening_star,
+        required_data=["open", "high", "low", "close"],
+        result_type=IndicatorResultType.SINGLE,
+        scale_type=IndicatorScaleType.PATTERN_BINARY,
+        category="pattern_recognition",
+    )
+    evening_star_cdl_config.param_map = {"open": "open_data"}
+    indicator_registry.register(evening_star_cdl_config)
+
+
+def setup_math_indicators():
+    """数学系インジケーターの設定"""
+    
+    # 三角関数
+    acos_config = IndicatorConfig(
+        indicator_name="ACOS",
+        adapter_function=MathIndicators.acos,
+        required_data=["close"],
+        result_type=IndicatorResultType.SINGLE,
+        scale_type=IndicatorScaleType.MOMENTUM_ZERO_CENTERED,
+        category="math",
+    )
+    acos_config.param_map = {"close": "data"}
+    indicator_registry.register(acos_config)
+    
+    asin_config = IndicatorConfig(
+        indicator_name="ASIN",
+        adapter_function=MathIndicators.asin,
+        required_data=["close"],
+        result_type=IndicatorResultType.SINGLE,
+        scale_type=IndicatorScaleType.MOMENTUM_ZERO_CENTERED,
+        category="math",
+    )
+    asin_config.param_map = {"close": "data"}
+    indicator_registry.register(asin_config)
+    
+    atan_config = IndicatorConfig(
+        indicator_name="ATAN",
+        adapter_function=MathIndicators.atan,
+        required_data=["close"],
+        result_type=IndicatorResultType.SINGLE,
+        scale_type=IndicatorScaleType.MOMENTUM_ZERO_CENTERED,
+        category="math",
+    )
+    atan_config.param_map = {"close": "data"}
+    indicator_registry.register(atan_config)
+    
+    cos_config = IndicatorConfig(
+        indicator_name="COS",
+        adapter_function=MathIndicators.cos,
+        required_data=["close"],
+        result_type=IndicatorResultType.SINGLE,
+        scale_type=IndicatorScaleType.MOMENTUM_ZERO_CENTERED,
+        category="math",
+    )
+    cos_config.param_map = {"close": "data"}
+    indicator_registry.register(cos_config)
+    
+    cosh_config = IndicatorConfig(
+        indicator_name="COSH",
+        adapter_function=MathIndicators.cosh,
+        required_data=["close"],
+        result_type=IndicatorResultType.SINGLE,
+        scale_type=IndicatorScaleType.MOMENTUM_ZERO_CENTERED,
+        category="math",
+    )
+    cosh_config.param_map = {"close": "data"}
+    indicator_registry.register(cosh_config)
+    
+    sin_config = IndicatorConfig(
+        indicator_name="SIN",
+        adapter_function=MathIndicators.sin,
+        required_data=["close"],
+        result_type=IndicatorResultType.SINGLE,
+        scale_type=IndicatorScaleType.MOMENTUM_ZERO_CENTERED,
+        category="math",
+    )
+    sin_config.param_map = {"close": "data"}
+    indicator_registry.register(sin_config)
+    
+    sinh_config = IndicatorConfig(
+        indicator_name="SINH",
+        adapter_function=MathIndicators.sinh,
+        required_data=["close"],
+        result_type=IndicatorResultType.SINGLE,
+        scale_type=IndicatorScaleType.MOMENTUM_ZERO_CENTERED,
+        category="math",
+    )
+    sinh_config.param_map = {"close": "data"}
+    indicator_registry.register(sinh_config)
+    
+    tan_config = IndicatorConfig(
+        indicator_name="TAN",
+        adapter_function=MathIndicators.tan,
+        required_data=["close"],
+        result_type=IndicatorResultType.SINGLE,
+        scale_type=IndicatorScaleType.MOMENTUM_ZERO_CENTERED,
+        category="math",
+    )
+    tan_config.param_map = {"close": "data"}
+    indicator_registry.register(tan_config)
+    
+    tanh_config = IndicatorConfig(
+        indicator_name="TANH",
+        adapter_function=MathIndicators.tanh,
+        required_data=["close"],
+        result_type=IndicatorResultType.SINGLE,
+        scale_type=IndicatorScaleType.MOMENTUM_ZERO_CENTERED,
+        category="math",
+    )
+    tanh_config.param_map = {"close": "data"}
+    indicator_registry.register(tanh_config)
+    
+    # その他数学関数
+    sqrt_config = IndicatorConfig(
+        indicator_name="SQRT",
+        adapter_function=MathIndicators.sqrt,
+        required_data=["close"],
+        result_type=IndicatorResultType.SINGLE,
+        scale_type=IndicatorScaleType.PRICE_RATIO,
+        category="math",
+    )
+    sqrt_config.param_map = {"close": "data"}
+    indicator_registry.register(sqrt_config)
+    
+    exp_config = IndicatorConfig(
+        indicator_name="EXP",
+        adapter_function=MathIndicators.exp,
+        required_data=["close"],
+        result_type=IndicatorResultType.SINGLE,
+        scale_type=IndicatorScaleType.PRICE_RATIO,
+        category="math",
+    )
+    exp_config.param_map = {"close": "data"}
+    indicator_registry.register(exp_config)
+    
+    ln_config = IndicatorConfig(
+        indicator_name="LN",
+        adapter_function=MathIndicators.ln,
+        required_data=["close"],
+        result_type=IndicatorResultType.SINGLE,
+        scale_type=IndicatorScaleType.PRICE_RATIO,
+        category="math",
+    )
+    ln_config.param_map = {"close": "data"}
+    indicator_registry.register(ln_config)
+    
+    log10_config = IndicatorConfig(
+        indicator_name="LOG10",
+        adapter_function=MathIndicators.log10,
+        required_data=["close"],
+        result_type=IndicatorResultType.SINGLE,
+        scale_type=IndicatorScaleType.PRICE_RATIO,
+        category="math",
+    )
+    log10_config.param_map = {"close": "data"}
+    indicator_registry.register(log10_config)
+    
+    ceil_config = IndicatorConfig(
+        indicator_name="CEIL",
+        adapter_function=MathIndicators.ceil,
+        required_data=["close"],
+        result_type=IndicatorResultType.SINGLE,
+        scale_type=IndicatorScaleType.PRICE_ABSOLUTE,
+        category="math",
+    )
+    ceil_config.param_map = {"close": "data"}
+    indicator_registry.register(ceil_config)
+    
+    floor_config = IndicatorConfig(
+        indicator_name="FLOOR",
+        adapter_function=MathIndicators.floor,
+        required_data=["close"],
+        result_type=IndicatorResultType.SINGLE,
+        scale_type=IndicatorScaleType.PRICE_ABSOLUTE,
+        category="math",
+    )
+    floor_config.param_map = {"close": "data"}
+    indicator_registry.register(floor_config)
+    
+    # 数学演算子
+    add_config = IndicatorConfig(
+        indicator_name="ADD",
+        adapter_function=MathIndicators.add,
+        required_data=["close", "high"],  # 2つのデータが必要
+        result_type=IndicatorResultType.SINGLE,
+        scale_type=IndicatorScaleType.PRICE_ABSOLUTE,
+        category="math",
+    )
+    add_config.param_map = {"close": "data1", "high": "data2"}
+    indicator_registry.register(add_config)
+    
+    sub_config = IndicatorConfig(
+        indicator_name="SUB",
+        adapter_function=MathIndicators.sub,
+        required_data=["close", "high"],
+        result_type=IndicatorResultType.SINGLE,
+        scale_type=IndicatorScaleType.PRICE_ABSOLUTE,
+        category="math",
+    )
+    sub_config.param_map = {"close": "data1", "high": "data2"}
+    indicator_registry.register(sub_config)
+    
+    mult_config = IndicatorConfig(
+        indicator_name="MULT",
+        adapter_function=MathIndicators.mult,
+        required_data=["close", "high"],
+        result_type=IndicatorResultType.SINGLE,
+        scale_type=IndicatorScaleType.PRICE_ABSOLUTE,
+        category="math",
+    )
+    mult_config.param_map = {"close": "data1", "high": "data2"}
+    indicator_registry.register(mult_config)
+    
+    div_config = IndicatorConfig(
+        indicator_name="DIV",
+        adapter_function=MathIndicators.div,
+        required_data=["close", "high"],
+        result_type=IndicatorResultType.SINGLE,
+        scale_type=IndicatorScaleType.PRICE_RATIO,
+        category="math",
+    )
+    div_config.param_map = {"close": "data1", "high": "data2"}
+    indicator_registry.register(div_config)
+    
+    # 統計系
+    max_config = IndicatorConfig(
+        indicator_name="MAX",
+        adapter_function=MathIndicators.max_value,
+        required_data=["close"],
+        result_type=IndicatorResultType.SINGLE,
+        scale_type=IndicatorScaleType.PRICE_ABSOLUTE,
+        category="math",
+    )
+    max_config.add_parameter(
+        ParameterConfig(
+            name="period",
+            default_value=14,
+            min_value=2,
+            max_value=100,
+            description="最大値計算期間",
+        )
+    )
+    max_config.param_map = {"close": "data", "period": "period"}
+    indicator_registry.register(max_config)
+    
+    min_config = IndicatorConfig(
+        indicator_name="MIN",
+        adapter_function=MathIndicators.min_value,
+        required_data=["close"],
+        result_type=IndicatorResultType.SINGLE,
+        scale_type=IndicatorScaleType.PRICE_ABSOLUTE,
+        category="math",
+    )
+    min_config.add_parameter(
+        ParameterConfig(
+            name="period",
+            default_value=14,
+            min_value=2,
+            max_value=100,
+            description="最小値計算期間",
+        )
+    )
+    min_config.param_map = {"close": "data", "period": "period"}
+    indicator_registry.register(min_config)
+    
+    sum_config = IndicatorConfig(
+        indicator_name="SUM",
+        adapter_function=MathIndicators.sum_value,
+        required_data=["close"],
+        result_type=IndicatorResultType.SINGLE,
+        scale_type=IndicatorScaleType.PRICE_ABSOLUTE,
+        category="math",
+    )
+    sum_config.add_parameter(
+        ParameterConfig(
+            name="period",
+            default_value=14,
+            min_value=2,
+            max_value=100,
+            description="合計値計算期間",
+        )
+    )
+    sum_config.param_map = {"close": "data", "period": "period"}
+    indicator_registry.register(sum_config)
+
+
+def setup_hilbert_transform_indicators():
+    """Hilbert Transform系インジケーターの設定"""
+    
+    # HT_DCPERIOD
+    ht_dcperiod_config = IndicatorConfig(
+        indicator_name="HT_DCPERIOD",
+        adapter_function=HilbertTransformIndicators.ht_dcperiod,
+        required_data=["close"],
+        result_type=IndicatorResultType.SINGLE,
+        scale_type=IndicatorScaleType.PRICE_RATIO,
+        category="hilbert_transform",
+    )
+    ht_dcperiod_config.param_map = {"close": "data"}
+    indicator_registry.register(ht_dcperiod_config)
+    
+    # HT_DCPHASE
+    ht_dcphase_config = IndicatorConfig(
+        indicator_name="HT_DCPHASE",
+        adapter_function=HilbertTransformIndicators.ht_dcphase,
+        required_data=["close"],
+        result_type=IndicatorResultType.SINGLE,
+        scale_type=IndicatorScaleType.MOMENTUM_ZERO_CENTERED,
+        category="hilbert_transform",
+    )
+    ht_dcphase_config.param_map = {"close": "data"}
+    indicator_registry.register(ht_dcphase_config)
+    
+    # HT_PHASOR
+    ht_phasor_config = IndicatorConfig(
+        indicator_name="HT_PHASOR",
+        adapter_function=HilbertTransformIndicators.ht_phasor,
+        required_data=["close"],
+        result_type=IndicatorResultType.COMPLEX,
+        scale_type=IndicatorScaleType.MOMENTUM_ZERO_CENTERED,
+        category="hilbert_transform",
+        output_names=["HT_PHASOR_0", "HT_PHASOR_1"],
+        default_output="HT_PHASOR_0",
+    )
+    ht_phasor_config.param_map = {"close": "data"}
+    indicator_registry.register(ht_phasor_config)
+    
+    # HT_SINE
+    ht_sine_config = IndicatorConfig(
+        indicator_name="HT_SINE",
+        adapter_function=HilbertTransformIndicators.ht_sine,
+        required_data=["close"],
+        result_type=IndicatorResultType.COMPLEX,
+        scale_type=IndicatorScaleType.MOMENTUM_ZERO_CENTERED,
+        category="hilbert_transform",
+        output_names=["HT_SINE_0", "HT_SINE_1"],
+        default_output="HT_SINE_0",
+    )
+    ht_sine_config.param_map = {"close": "data"}
+    indicator_registry.register(ht_sine_config)
+    
+    # HT_TRENDMODE
+    ht_trendmode_config = IndicatorConfig(
+        indicator_name="HT_TRENDMODE",
+        adapter_function=HilbertTransformIndicators.ht_trendmode,
+        required_data=["close"],
+        result_type=IndicatorResultType.SINGLE,
+        scale_type=IndicatorScaleType.PATTERN_BINARY,
+        category="hilbert_transform",
+    )
+    ht_trendmode_config.param_map = {"close": "data"}
+    indicator_registry.register(ht_trendmode_config)
 
 
 def initialize_all_indicators():
@@ -1563,6 +2181,8 @@ def initialize_all_indicators():
 
     setup_statistics_indicators()
     setup_pattern_recognition_indicators()
+    setup_math_indicators()
+    setup_hilbert_transform_indicators()
 
 
 # モジュール読み込み時に初期化
@@ -1800,7 +2420,12 @@ pvo_config.add_parameter(
 pvo_config.add_parameter(
     ParameterConfig(name="signal", default_value=9, min_value=2, max_value=100)
 )
-pvo_config.param_map = {"volume": "volume", "fast": "fast", "slow": "slow", "signal": "signal"}
+pvo_config.param_map = {
+    "volume": "volume",
+    "fast": "fast",
+    "slow": "slow",
+    "signal": "signal",
+}
 indicator_registry.register(pvo_config)
 
 cfo_config = IndicatorConfig(
@@ -1860,6 +2485,126 @@ price_ema_ratio_config.add_parameter(
 price_ema_ratio_config.param_map = {"period": "length"}
 indicator_registry.register(price_ema_ratio_config)
 
+# MAMA
+mama_config = IndicatorConfig(
+    indicator_name="MAMA",
+    adapter_function=TrendIndicators.mama,
+    required_data=["close"],
+    result_type=IndicatorResultType.COMPLEX,
+    scale_type=IndicatorScaleType.PRICE_RATIO,
+    category="trend",
+    output_names=["MAMA_0", "MAMA_1"],
+    default_output="MAMA_0",
+)
+mama_config.add_parameter(
+    ParameterConfig(
+        name="fastlimit",
+        default_value=0.5,
+        min_value=0.01,
+        max_value=0.99,
+        description="MAMA高速制限",
+    )
+)
+mama_config.add_parameter(
+    ParameterConfig(
+        name="slowlimit",
+        default_value=0.05,
+        min_value=0.01,
+        max_value=0.99,
+        description="MAMA低速制限",
+    )
+)
+mama_config.param_map = {"close": "data", "fastlimit": "fastlimit", "slowlimit": "slowlimit"}
+indicator_registry.register(mama_config)
+
+# MAXINDEX
+maxindex_config = IndicatorConfig(
+    indicator_name="MAXINDEX",
+    adapter_function=TrendIndicators.maxindex,
+    required_data=["close"],
+    result_type=IndicatorResultType.SINGLE,
+    scale_type=IndicatorScaleType.PRICE_ABSOLUTE,
+    category="statistics",
+)
+maxindex_config.add_parameter(
+    ParameterConfig(
+        name="period",
+        default_value=14,
+        min_value=2,
+        max_value=100,
+        description="最大値インデックス期間",
+    )
+)
+maxindex_config.param_map = {"close": "data", "period": "period"}
+indicator_registry.register(maxindex_config)
+
+# MININDEX
+minindex_config = IndicatorConfig(
+    indicator_name="MININDEX",
+    adapter_function=TrendIndicators.minindex,
+    required_data=["close"],
+    result_type=IndicatorResultType.SINGLE,
+    scale_type=IndicatorScaleType.PRICE_ABSOLUTE,
+    category="statistics",
+)
+minindex_config.add_parameter(
+    ParameterConfig(
+        name="period",
+        default_value=14,
+        min_value=2,
+        max_value=100,
+        description="最小値インデックス期間",
+    )
+)
+minindex_config.param_map = {"close": "data", "period": "period"}
+indicator_registry.register(minindex_config)
+
+# MINMAX
+minmax_config = IndicatorConfig(
+    indicator_name="MINMAX",
+    adapter_function=TrendIndicators.minmax,
+    required_data=["close"],
+    result_type=IndicatorResultType.COMPLEX,
+    scale_type=IndicatorScaleType.PRICE_ABSOLUTE,
+    category="statistics",
+    output_names=["MINMAX_MIN", "MINMAX_MAX"],
+    default_output="MINMAX_MIN",
+)
+minmax_config.add_parameter(
+    ParameterConfig(
+        name="period",
+        default_value=14,
+        min_value=2,
+        max_value=100,
+        description="最小最大期間",
+    )
+)
+minmax_config.param_map = {"close": "data", "period": "period"}
+indicator_registry.register(minmax_config)
+
+# MINMAXINDEX
+minmaxindex_config = IndicatorConfig(
+    indicator_name="MINMAXINDEX",
+    adapter_function=TrendIndicators.minmaxindex,
+    required_data=["close"],
+    result_type=IndicatorResultType.COMPLEX,
+    scale_type=IndicatorScaleType.PRICE_ABSOLUTE,
+    category="statistics",
+    output_names=["MINMAXINDEX_MIN", "MINMAXINDEX_MAX"],
+    default_output="MINMAXINDEX_MIN",
+)
+minmaxindex_config.add_parameter(
+    ParameterConfig(
+        name="period",
+        default_value=14,
+        min_value=2,
+        max_value=100,
+        description="最小最大インデックス期間",
+    )
+)
+minmaxindex_config.param_map = {"close": "data", "period": "period"}
+indicator_registry.register(minmaxindex_config)
+
 rsi_ema_cross_config = IndicatorConfig(
     indicator_name="RSI_EMA_CROSS",
     adapter_function=MomentumIndicators.rsi_ema_cross,
@@ -1918,7 +2663,12 @@ chop_cfg = IndicatorConfig(
 chop_cfg.add_parameter(
     ParameterConfig(name="length", default_value=14, min_value=2, max_value=200)
 )
-chop_cfg.param_map = {"high": "high", "low": "low", "close": "close", "length": "length"}
+chop_cfg.param_map = {
+    "high": "high",
+    "low": "low",
+    "close": "close",
+    "length": "length",
+}
 indicator_registry.register(chop_cfg)
 
 vi_cfg = IndicatorConfig(

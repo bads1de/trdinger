@@ -70,12 +70,13 @@ class IndicatorCalculator:
             if missing_columns:
                 logger.warning(f"不足しているカラム: {missing_columns}")
 
-            # パラメータマッピング（period -> length または tclength）
+            # パラメータマッピング（period -> length）
             mapped_parameters = parameters.copy()
             if "period" in mapped_parameters:
                 if "length" not in mapped_parameters:
                     mapped_parameters["length"] = mapped_parameters["period"]
-                if "tclength" not in mapped_parameters:
+                # tclengthはSTCインジケータ専用パラメータなのでSTCのみに追加
+                if indicator_type == "STC" and "tclength" not in mapped_parameters:
                     mapped_parameters["tclength"] = mapped_parameters["period"]
 
             logger.warning(
@@ -104,7 +105,9 @@ class IndicatorCalculator:
         """
         from app.utils.error_handler import safe_operation
 
-        @safe_operation(context=f"指標初期化 ({indicator_gene.type})", is_api_call=False)
+        @safe_operation(
+            context=f"指標初期化 ({indicator_gene.type})", is_api_call=False
+        )
         def _init_indicator():
             logger.warning(
                 f"指標初期化開始: {indicator_gene.type}, パラメータ: {indicator_gene.parameters}"

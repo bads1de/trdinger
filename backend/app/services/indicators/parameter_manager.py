@@ -23,7 +23,7 @@ NO_LENGTH_INDICATORS = {
     "WCLPRICE",
     "OBV",
     "VWAP",
-    "AD",
+    "AD",  # ボリューム系指標 - periodパラメータ不要
     "ADOSC",
     "AO",
     "ICHIMOKU",
@@ -31,6 +31,8 @@ NO_LENGTH_INDICATORS = {
     "APO",
     "ULTOSC",
     "BOP",
+    "STC",  # tclengthパラメータ専用 - lengthパラメータ不要
+    "KDJ",  # k, dパラメータ専用 - lengthパラメータ不要
     "CDL_PIERCING",
     "CDL_HAMMER",
     "CDL_HANGING_MAN",
@@ -45,14 +47,44 @@ NO_LENGTH_INDICATORS = {
     "CDL_MORNING_STAR",
     "CDL_EVENING_STAR",
     "CDL_DOJI",
+    # エイリアス名も追加
+    "HAMMER",
+    "ENGULFING_PATTERN",
+    "MORNING_STAR",
+    "EVENING_STAR",
     "RSI_EMA_CROSS",
     "NVI",
+    "PVI",  # ボリューム系指標 - periodパラメータ不要
+    "PVT",  # ボリューム系指標 - periodパラメータ不要
+    "CMF",  # ボリューム系指標 - periodパラメータ不要
+    "EOM",  # ボリューム系指標 - lengthパラメータあるが特殊処理
+    "KVO",  # ボリューム系指標 - fast/slowパラメータ専用
     # 価格変換系指標 - lengthパラメータが不要
     "TYPPRICE",
     "AVGPRICE",
     "MEDPRICE",
     "HA_CLOSE",
     "HA_OHLC",
+    # ストキャスティクス系指標 - lengthパラメータ不要（k, d, smooth_kを使用）
+    "STOCH",
+    "STOCHF",
+    "STOCHRSI",  # length, k_period, d_periodパラメータを使用 - 自動length追加を防ぐ
+    # KST指標 - r1, r2, r3, r4, n1, n2, n3, n4, signalパラメータを使用
+    "KST",
+    # 特殊パラメータ指標群（length/period不要）
+    "SMI",  # fast, slow, signalパラメータを使用
+    "UO",  # Ultimate Oscillator - fast, medium, slowパラメータを使用
+    "PVO",  # fast, slow, signalパラメータを使用
+    "MAMA",  # 特殊パラメータを使用（fastlimit, slowlimit）
+    # ボラティリティ系指標（パラメータ不要）
+    "TRANGE",  # True Range - パラメータ不要
+    "BB",  # Bollinger Bands - periodとstdパラメータを使用
+    # 数学系指標（基本的にパラメータ不要、データ変換のみ）
+    "ACOS", "ASIN", "ATAN", "COS", "COSH", "SIN", "SINH", "TAN", "TANH",
+    "SQRT", "EXP", "LN", "LOG10", "CEIL", "FLOOR",
+    "ADD", "SUB", "MULT", "DIV",
+    # Hilbert Transform系指標（パラメータ不要）
+    "HT_DCPERIOD", "HT_DCPHASE", "HT_PHASOR", "HT_SINE", "HT_TRENDMODE",
 }
 
 
@@ -285,6 +317,22 @@ def normalize_params(
                 converted_params[key] = value
         return converted_params
 
+    # NVI, PVI, PVT, AD の特殊処理（ボリューム系指標でパラメータ不要）
+    elif indicator_type in {"NVI", "PVI", "PVT", "AD"}:
+        # これらの指標はパラメータを一切受け取らない
+        # period や length などのパラメータを除外
+        for key, value in params.items():
+            if key not in {"period", "length"}:
+                converted_params[key] = value
+        return converted_params
+
+    # NO_LENGTH_INDICATORS の包括的特殊処理
+    elif indicator_type in NO_LENGTH_INDICATORS:
+        # これらの指標は period や length パラメータを受け取らない
+        for key, value in params.items():
+            if key not in {"period", "length"}:
+                converted_params[key] = value
+        return converted_params
 
     # RSI_EMA_CROSS の特殊処理
     elif indicator_type == "RSI_EMA_CROSS":
@@ -300,9 +348,6 @@ def normalize_params(
     period_based = {
         "MA",
         "MAVP",
-        "MAX",
-        "MIN",
-        "SUM",
         "BETA",
         "CORREL",
         "LINEARREG",
@@ -310,11 +355,31 @@ def normalize_params(
         "STDDEV",
         "VAR",
         "SAR",
+        "RSI",  # period -> length 変換が必要
+        # モメンタム系指標のperiod -> length変換
+        "ADX",
+        "ADXR",
+        "AROON",
+        "AROONOSC",
+        "CCI",
+        "DX",
+        "MFI",
+        "WILLR",
+        "MINUS_DM",
+        "PLUS_DM",
+        "ROCP",
+        "ROCR100",
+        "RVI",
+        # ボラティリティ系指標
+        "KELTNER",
+        # ボリューム系指標（例外）
+        "EOM",
+        "KVO",
     }
     for key, value in params.items():
         if (
             key == "period"
-            and indicator_type not in period_based
+            and indicator_type in period_based
             and indicator_type not in NO_LENGTH_INDICATORS
         ):
             converted_params["length"] = value
@@ -350,7 +415,9 @@ def normalize_params(
                     default_len = config.parameters["period"].default_value
                 elif "length" in config.parameters:
                     default_len = config.parameters["length"].default_value
-            converted_params["length"] = default_len if default_len is not None else DEFAULT_LENGTH
+            converted_params["length"] = (
+                default_len if default_len is not None else DEFAULT_LENGTH
+            )
     except Exception:
         pass
 

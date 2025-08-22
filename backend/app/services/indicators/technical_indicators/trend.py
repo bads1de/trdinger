@@ -471,3 +471,55 @@ class TrendIndicators:
         ema_vals = TrendIndicators.ema(series, length)
         ema_series = pd.Series(ema_vals, index=series.index)
         return ((series / ema_series) - 1.0).values
+
+    @staticmethod
+    @handle_pandas_ta_errors
+    def mama(
+        data: Union[np.ndarray, pd.Series], 
+        fastlimit: float = 0.5, 
+        slowlimit: float = 0.05
+    ) -> Tuple[np.ndarray, np.ndarray]:
+        """MESA Adaptive Moving Average"""
+        series = pd.Series(data) if isinstance(data, np.ndarray) else data
+        
+        # pandas-taにmamaがあるか確認
+        if hasattr(ta, 'mama'):
+            result = ta.mama(series, fastlimit=fastlimit, slowlimit=slowlimit)
+            return result.iloc[:, 0].values, result.iloc[:, 1].values
+        else:
+            # フォールバック: EMAで代替
+            mama_values = ta.ema(series, length=20).values
+            fama_values = ta.ema(series, length=40).values
+            return mama_values, fama_values
+
+    @staticmethod
+    @handle_pandas_ta_errors
+    def maxindex(data: Union[np.ndarray, pd.Series], period: int = 14) -> np.ndarray:
+        """最大値のインデックス"""
+        series = pd.Series(data) if isinstance(data, np.ndarray) else data
+        return series.rolling(window=period).apply(lambda x: x.argmax(), raw=False).values
+
+    @staticmethod
+    @handle_pandas_ta_errors
+    def minindex(data: Union[np.ndarray, pd.Series], period: int = 14) -> np.ndarray:
+        """最小値のインデックス"""
+        series = pd.Series(data) if isinstance(data, np.ndarray) else data
+        return series.rolling(window=period).apply(lambda x: x.argmin(), raw=False).values
+
+    @staticmethod
+    @handle_pandas_ta_errors
+    def minmax(data: Union[np.ndarray, pd.Series], period: int = 14) -> Tuple[np.ndarray, np.ndarray]:
+        """最小値と最大値"""
+        series = pd.Series(data) if isinstance(data, np.ndarray) else data
+        min_vals = series.rolling(window=period).min().values
+        max_vals = series.rolling(window=period).max().values
+        return min_vals, max_vals
+
+    @staticmethod
+    @handle_pandas_ta_errors
+    def minmaxindex(data: Union[np.ndarray, pd.Series], period: int = 14) -> Tuple[np.ndarray, np.ndarray]:
+        """最小値と最大値のインデックス"""
+        series = pd.Series(data) if isinstance(data, np.ndarray) else data
+        min_idx = series.rolling(window=period).apply(lambda x: x.argmin(), raw=False).values
+        max_idx = series.rolling(window=period).apply(lambda x: x.argmax(), raw=False).values
+        return min_idx, max_idx
