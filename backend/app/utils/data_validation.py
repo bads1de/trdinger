@@ -11,13 +11,9 @@ from datetime import datetime, timezone
 from typing import Any, Dict, List, Tuple
 
 import pandas as pd
-import pandera as pa
-from pandera import Column, DataFrameSchema, Check
+import numpy as np
+from typing import Optional, Dict as TypingDict
 from pydantic import BaseModel, Field
-
-# 警告を抑制
-import os
-os.environ['DISABLE_PANDERA_IMPORT_WARNING'] = 'True'
 
 logger = logging.getLogger(__name__)
 
@@ -36,125 +32,187 @@ class OHLCVDataModel(BaseModel):
     Volume: float = Field(ge=0, description="出来高（非負の値）")
 
 
-# Panderaスキーマ定義
-OHLCV_SCHEMA = DataFrameSchema(
-    {
-        "Open": Column(
-            float,
-            checks=[
-                Check.greater_than(0),
-                Check.less_than(1e6),  # 異常に大きな値を除外
-            ],
-        ),
-        "High": Column(float, checks=[Check.greater_than(0), Check.less_than(1e6)]),
-        "Low": Column(float, checks=[Check.greater_than(0), Check.less_than(1e6)]),
-        "Close": Column(float, checks=[Check.greater_than(0), Check.less_than(1e6)]),
-        "Volume": Column(
-            float, checks=[Check.greater_than_or_equal_to(0), Check.less_than(1e12)]
-        ),
-    },
-    index=pa.Index("datetime64[ns]", name="timestamp"),
-)
+# バリデーション設定
+OHLCV_VALIDATION_CONFIG = {
+    "Open": {"min": 0, "max": 1e6, "required": True},
+    "High": {"min": 0, "max": 1e6, "required": True},
+    "Low": {"min": 0, "max": 1e6, "required": True},
+    "Close": {"min": 0, "max": 1e6, "required": True},
+    "Volume": {"min": 0, "max": 1e12, "required": True},
+}
 
-EXTENDED_MARKET_DATA_SCHEMA = DataFrameSchema(
-    {
-        "Open": Column(float, checks=[Check.greater_than(0)]),
-        "High": Column(float, checks=[Check.greater_than(0)]),
-        "Low": Column(float, checks=[Check.greater_than(0)]),
-        "Close": Column(float, checks=[Check.greater_than(0)]),
-        "Volume": Column(float, checks=[Check.greater_than_or_equal_to(0)]),
-        "open_interest": Column(
-            float, checks=[Check.greater_than_or_equal_to(0)], nullable=True
-        ),
-        "funding_rate": Column(
-            float,
-            checks=[
-                Check.greater_than(-1),  # -100%以上
-                Check.less_than(1),  # 100%未満
-            ],
-            nullable=True,
-        ),
-        "fear_greed_value": Column(
-            float,
-            checks=[
-                Check.greater_than_or_equal_to(0),
-                Check.less_than_or_equal_to(100),
-            ],
-            nullable=True,
-        ),
-        "fear_greed_classification": Column(str, nullable=True),
-    },
-    index=pa.Index("datetime64[ns]", name="timestamp"),
-)
+EXTENDED_MARKET_DATA_VALIDATION_CONFIG = {
+    "Open": {"min": 0, "required": True},
+    "High": {"min": 0, "required": True},
+    "Low": {"min": 0, "required": True},
+    "Close": {"min": 0, "required": True},
+    "Volume": {"min": 0, "required": True},
+    "open_interest": {"min": 0, "required": False},
+    "funding_rate": {"min": -1, "max": 1, "required": False},
+    "fear_greed_value": {"min": 0, "max": 100, "required": False},
+    "fear_greed_classification": {"type": "str", "required": False},
+}
 
 
-def validate_dataframe_with_schema(
-    df: pd.DataFrame, schema: DataFrameSchema, lazy: bool = True
+def validate_dataframe_with_config(
+    df: pd.DataFrame, config: TypingDict[str, TypingDict[str, Any]], lazy: bool = True
 ) -> Tuple[bool, List[str]]:
     """
-    Panderaスキーマを使用したDataFrameバリデーション（推奨アプローチ）
+    設定ベースのDataFrameバリデーション（Pandera非依存）
 
     Args:
         df: 検証対象のDataFrame
-        schema: Panderaスキーマ
-        lazy: 遅延評価（全エラーを収集）
+        config: バリデーション設定
 
     Returns:
         (検証成功フラグ, エラーメッセージリスト)
     """
     try:
-        schema.validate(df, lazy=lazy)
-        return True, []
-    except pa.errors.SchemaErrors as e:
         error_messages = []
-        for error in e.schema_errors:
-            error_messages.append(str(error))
-        return False, error_messages
+
+        # 必須カラムの存在確認
+        for col_name, col_config in config.items():
+            if col_config.get("required", True) and col_name not in df.columns:
+                error_messages.append(f"必須カラム '{col_name}' が存在しません")
+
+        if error_messages:
+            return False, error_messages
+
+        # 各カラムの値検証
+        for col_name, col_config in config.items():
+            if col_name not in df.columns:
+                continue
+
+            col_data = df[col_name]
+
+            # 型チェック
+            if col_config.get("type") == "str":
+                if not pd.api.types.is_string_dtype(col_data):
+                    error_messages.append(f"'{col_name}' は文字列型である必要があります")
+                continue
+
+            # 数値チェック
+            if not pd.api.types.is_numeric_dtype(col_data):
+                error_messages.append(f"'{col_name}' は数値型である必要があります")
+                continue
+
+            # NaNチェック（必須カラムの場合）
+            if col_config.get("required", True):
+                nan_count = col_data.isna().sum()
+                if nan_count > 0:
+                    error_messages.append(f"'{col_name}' にNaN値が{nan_count}個含まれています")
+
+            # 範囲チェック
+            if "min" in col_config:
+                min_violations = (col_data < col_config["min"]).sum()
+                if min_violations > 0:
+                    error_messages.append(f"'{col_name}' に最小値違反が{min_violations}個あります（最小: {col_config['min']}）")
+
+            if "max" in col_config:
+                max_violations = (col_data > col_config["max"]).sum()
+                if max_violations > 0:
+                    error_messages.append(f"'{col_name}' に最大値違反が{max_violations}個あります（最大: {col_config['max']}）")
+
+        return len(error_messages) == 0, error_messages
+
     except Exception as e:
         return False, [f"予期しないエラー: {str(e)}"]
 
 
-def clean_dataframe_with_schema(
-    df: pd.DataFrame, schema: DataFrameSchema, drop_invalid_rows: bool = True
+def clean_dataframe_with_config(
+    df: pd.DataFrame, config: TypingDict[str, TypingDict[str, Any]], drop_invalid_rows: bool = True
 ) -> pd.DataFrame:
     """
-    スキーマに基づくDataFrameクリーニング（推奨アプローチ）
+    設定ベースのDataFrameクリーニング（Pandera非依存）
 
     Args:
         df: クリーニング対象のDataFrame
-        schema: Panderaスキーマ
+        config: バリデーション設定
         drop_invalid_rows: 無効な行を削除するか
 
     Returns:
         クリーニング済みのDataFrame
     """
     try:
-        # スキーマに基づく型変換とバリデーション
-        cleaned_df = schema.validate(df, lazy=False)
-        return cleaned_df
-    except pa.errors.SchemaError as e:
-        logger.warning(f"スキーマエラー: {e}")
-        if drop_invalid_rows:
-            # 無効な行を特定して削除
-            try:
-                # 各行を個別に検証
-                valid_rows = []
-                for idx, row in df.iterrows():
-                    try:
-                        schema.validate(pd.DataFrame([row]), lazy=False)
-                        valid_rows.append(idx)
-                    except Exception:
-                        # 個別行の検証で予期しない例外が出ても次行へ
-                        continue
+        cleaned_df = df.copy()
 
-                cleaned_df = df.loc[valid_rows]
-                logger.info(f"無効な行を削除: {len(df) - len(cleaned_df)}行")
-                return cleaned_df
-            except Exception as inner_e:
-                logger.error(f"行削除中にエラー: {inner_e}")
-                return df
-        else:
-            return df
+        # 各カラムのクリーニング
+        for col_name, col_config in config.items():
+            if col_name not in cleaned_df.columns:
+                if col_config.get("required", True):
+                    logger.warning(f"必須カラム '{col_name}' が存在しません")
+                continue
+
+            col_data = cleaned_df[col_name]
+
+            # 型変換
+            if col_config.get("type") == "str":
+                cleaned_df[col_name] = col_data.astype(str)
+            else:
+                # 数値型に変換（エラーの場合はNaN）
+                cleaned_df[col_name] = pd.to_numeric(col_data, errors='coerce')
+
+            # 範囲外の値をクリップ
+            if "min" in col_config:
+                cleaned_df[col_name] = np.where(
+                    cleaned_df[col_name] < col_config["min"],
+                    col_config["min"],
+                    cleaned_df[col_name]
+                )
+
+            if "max" in col_config:
+                cleaned_df[col_name] = np.where(
+                    cleaned_df[col_name] > col_config["max"],
+                    col_config["max"],
+                    cleaned_df[col_name]
+                )
+
+        # 無効な行の削除
+        if drop_invalid_rows:
+            # 必須カラムのNaNを含む行を削除
+            valid_mask = pd.Series([True] * len(cleaned_df))
+
+            for col_name, col_config in config.items():
+                if col_config.get("required", True) and col_name in cleaned_df.columns:
+                    valid_mask &= ~cleaned_df[col_name].isna()
+
+            original_len = len(cleaned_df)
+            cleaned_df = cleaned_df[valid_mask].reset_index(drop=True)
+
+            if len(cleaned_df) < original_len:
+                logger.info(f"無効な行を削除: {original_len - len(cleaned_df)}行")
+
+        return cleaned_df
+
+    except Exception as e:
+        logger.error(f"DataFrameクリーニングエラー: {e}")
+        return df
+
+
+# 後方互換性のためのラッパー関数
+def validate_dataframe_with_schema(
+    df: pd.DataFrame, schema: TypingDict[str, TypingDict[str, Any]], lazy: bool = True
+) -> Tuple[bool, List[str]]:
+    """
+    後方互換性のためのラッパー関数
+    Panderaスキーマの代わりにバリデーション設定を使用
+    """
+    return validate_dataframe_with_config(df, schema, lazy)
+
+
+def clean_dataframe_with_schema(
+    df: pd.DataFrame, schema: TypingDict[str, TypingDict[str, Any]], drop_invalid_rows: bool = True
+) -> pd.DataFrame:
+    """
+    後方互換性のためのラッパー関数
+    Panderaスキーマの代わりにバリデーション設定を使用
+    """
+    return clean_dataframe_with_config(df, schema, drop_invalid_rows)
+
+
+# 互換性維持のための定数
+OHLCV_SCHEMA = OHLCV_VALIDATION_CONFIG
+EXTENDED_MARKET_DATA_SCHEMA = EXTENDED_MARKET_DATA_VALIDATION_CONFIG
 
 
 class DataValidator:
