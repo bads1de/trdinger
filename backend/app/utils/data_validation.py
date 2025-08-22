@@ -12,7 +12,7 @@ from typing import Any, Dict, List, Tuple
 
 import pandas as pd
 import numpy as np
-from typing import Optional, Dict as TypingDict
+from typing import Dict as TypingDict
 from pydantic import BaseModel, Field
 
 logger = logging.getLogger(__name__)
@@ -88,7 +88,9 @@ def validate_dataframe_with_config(
             # 型チェック
             if col_config.get("type") == "str":
                 if not pd.api.types.is_string_dtype(col_data):
-                    error_messages.append(f"'{col_name}' は文字列型である必要があります")
+                    error_messages.append(
+                        f"'{col_name}' は文字列型である必要があります"
+                    )
                 continue
 
             # 数値チェック
@@ -100,18 +102,24 @@ def validate_dataframe_with_config(
             if col_config.get("required", True):
                 nan_count = col_data.isna().sum()
                 if nan_count > 0:
-                    error_messages.append(f"'{col_name}' にNaN値が{nan_count}個含まれています")
+                    error_messages.append(
+                        f"'{col_name}' にNaN値が{nan_count}個含まれています"
+                    )
 
             # 範囲チェック
             if "min" in col_config:
                 min_violations = (col_data < col_config["min"]).sum()
                 if min_violations > 0:
-                    error_messages.append(f"'{col_name}' に最小値違反が{min_violations}個あります（最小: {col_config['min']}）")
+                    error_messages.append(
+                        f"'{col_name}' に最小値違反が{min_violations}個あります（最小: {col_config['min']}）"
+                    )
 
             if "max" in col_config:
                 max_violations = (col_data > col_config["max"]).sum()
                 if max_violations > 0:
-                    error_messages.append(f"'{col_name}' に最大値違反が{max_violations}個あります（最大: {col_config['max']}）")
+                    error_messages.append(
+                        f"'{col_name}' に最大値違反が{max_violations}個あります（最大: {col_config['max']}）"
+                    )
 
         return len(error_messages) == 0, error_messages
 
@@ -120,7 +128,9 @@ def validate_dataframe_with_config(
 
 
 def clean_dataframe_with_config(
-    df: pd.DataFrame, config: TypingDict[str, TypingDict[str, Any]], drop_invalid_rows: bool = True
+    df: pd.DataFrame,
+    config: TypingDict[str, TypingDict[str, Any]],
+    drop_invalid_rows: bool = True,
 ) -> pd.DataFrame:
     """
     設定ベースのDataFrameクリーニング（Pandera非依存）
@@ -150,21 +160,21 @@ def clean_dataframe_with_config(
                 cleaned_df[col_name] = col_data.astype(str)
             else:
                 # 数値型に変換（エラーの場合はNaN）
-                cleaned_df[col_name] = pd.to_numeric(col_data, errors='coerce')
+                cleaned_df[col_name] = pd.to_numeric(col_data, errors="coerce")
 
             # 範囲外の値をクリップ
             if "min" in col_config:
                 cleaned_df[col_name] = np.where(
                     cleaned_df[col_name] < col_config["min"],
                     col_config["min"],
-                    cleaned_df[col_name]
+                    cleaned_df[col_name],
                 )
 
             if "max" in col_config:
                 cleaned_df[col_name] = np.where(
                     cleaned_df[col_name] > col_config["max"],
                     col_config["max"],
-                    cleaned_df[col_name]
+                    cleaned_df[col_name],
                 )
 
         # 無効な行の削除
@@ -201,7 +211,9 @@ def validate_dataframe_with_schema(
 
 
 def clean_dataframe_with_schema(
-    df: pd.DataFrame, schema: TypingDict[str, TypingDict[str, Any]], drop_invalid_rows: bool = True
+    df: pd.DataFrame,
+    schema: TypingDict[str, TypingDict[str, Any]],
+    drop_invalid_rows: bool = True,
 ) -> pd.DataFrame:
     """
     後方互換性のためのラッパー関数
@@ -362,9 +374,7 @@ class DataValidator:
         return validation_result
 
     @classmethod
-    def validate_ohlcv_records_simple(
-        cls, ohlcv_records: List[Dict[str, Any]]
-    ) -> bool:
+    def validate_ohlcv_records_simple(cls, ohlcv_records: List[Dict[str, Any]]) -> bool:
         """
         OHLCVデータの検証（シンプル版 - DataSanitizer からの移行）
 

@@ -23,7 +23,7 @@ NO_LENGTH_INDICATORS = {
     "WCLPRICE",
     "OBV",
     "VWAP",
-    "AD",  # ボリューム系指標 - periodパラメータ不要
+    "AD",
     "ADOSC",
     "AO",
     "ICHIMOKU",
@@ -31,8 +31,8 @@ NO_LENGTH_INDICATORS = {
     "APO",
     "ULTOSC",
     "BOP",
-    "STC",  # tclengthパラメータ専用 - lengthパラメータ不要
-    "KDJ",  # k, dパラメータ専用 - lengthパラメータ不要
+    "STC",
+    "KDJ",
     "CDL_PIERCING",
     "CDL_HAMMER",
     "CDL_HANGING_MAN",
@@ -47,39 +47,32 @@ NO_LENGTH_INDICATORS = {
     "CDL_MORNING_STAR",
     "CDL_EVENING_STAR",
     "CDL_DOJI",
-    # エイリアス名も追加
     "HAMMER",
     "ENGULFING_PATTERN",
     "MORNING_STAR",
     "EVENING_STAR",
     "RSI_EMA_CROSS",
     "NVI",
-    "PVI",  # ボリューム系指標 - periodパラメータ不要
-    "PVT",  # ボリューム系指標 - periodパラメータ不要
-    "CMF",  # ボリューム系指標 - periodパラメータ不要
-    "EOM",  # ボリューム系指標 - lengthパラメータあるが特殊処理
-    "KVO",  # ボリューム系指標 - fast/slowパラメータ専用
-    # 価格変換系指標 - lengthパラメータが不要
+    "PVI",
+    "PVT",
+    "CMF",
+    "EOM",
+    "KVO",
     "TYPPRICE",
     "AVGPRICE",
     "MEDPRICE",
     "HA_CLOSE",
     "HA_OHLC",
-    # ストキャスティクス系指標 - lengthパラメータ不要（k, d, smooth_kを使用）
     "STOCH",
     "STOCHF",
-    "STOCHRSI",  # length, k_period, d_periodパラメータを使用 - 自動length追加を防ぐ
-    # KST指標 - r1, r2, r3, r4, n1, n2, n3, n4, signalパラメータを使用
+    "STOCHRSI",
     "KST",
-    # 特殊パラメータ指標群（length/period不要）
-    "SMI",  # fast, slow, signalパラメータを使用
-    "UO",  # Ultimate Oscillator - fast, medium, slowパラメータを使用
-    "PVO",  # fast, slow, signalパラメータを使用
-    "MAMA",  # 特殊パラメータを使用（fastlimit, slowlimit）
-    # ボラティリティ系指標（パラメータ不要）
-    "TRANGE",  # True Range - パラメータ不要
-    "BB",  # Bollinger Bands - periodとstdパラメータを使用
-    # 数学系指標（基本的にパラメータ不要、データ変換のみ）
+    "SMI",
+    "UO",
+    "PVO",
+    "MAMA",
+    "TRANGE",
+    "BB",
     "ACOS",
     "ASIN",
     "ATAN",
@@ -99,7 +92,6 @@ NO_LENGTH_INDICATORS = {
     "SUB",
     "MULT",
     "DIV",
-    # Hilbert Transform系指標（パラメータ不要）
     "HT_DCPERIOD",
     "HT_DCPHASE",
     "HT_PHASOR",
@@ -278,68 +270,74 @@ def normalize_params(
 
     - period -> length 変換
     - 必須 length のデフォルト補完
-    - SAR, VWMA, RMA 固有のパラメータマッピング
+    - 各指標固有のパラメータマッピング
     """
     converted_params: Dict[str, Any] = {}
 
-    # SAR の特殊処理
-    if indicator_type == "SAR":
-        # acceleration -> af, maximum -> max_af のマッピング
-        # 予期しないパラメータ（lengthなど）を除外
-        for key, value in params.items():
-            if key == "acceleration":
-                converted_params["af"] = value
-            elif key == "maximum":
-                converted_params["max_af"] = value
-            # length や他の予期しないパラメータは無視
-        return converted_params
+    # 特殊処理が必要な指標の変換ルールを定義
+    special_conversions = {
+        # SAR: acceleration -> af, maximum -> max_af, 予期しないパラメータを除外
+        "SAR": {
+            "param_map": {"acceleration": "af", "maximum": "max_af"},
+            "exclude_params": {"period", "length"},
+            "include_all_mapped": False,
+        },
+        # VWMA: period -> length, close -> data (param_mapがあれば優先)
+        "VWMA": {
+            "param_map": {"period": "length", "close": "data"},
+            "fallback_map": {"period": "length"},
+            "use_config_param_map": True,
+        },
+        # RMA: period -> length, close -> data
+        "RMA": {
+            "param_map": {"period": "length", "close": "data"},
+        },
+        # STC: close -> data
+        "STC": {
+            "param_map": {"close": "data"},
+        },
+        # RSI_EMA_CROSS: close -> data
+        "RSI_EMA_CROSS": {
+            "param_map": {"close": "data"},
+        },
+    }
 
-    # VWMA の特殊処理
-    elif indicator_type == "VWMA":
-        # param_map を使用: close -> data, volume -> volume, period -> length
+    # 特殊処理が必要な指標の場合
+    if indicator_type in special_conversions:
+        conversion_rule = special_conversions[indicator_type]
+
         for key, value in params.items():
-            if hasattr(config, "param_map") and config.param_map:
-                # param_mapの値にキーが含まれているかチェック
+            # 除外パラメータはスキップ
+            if (
+                "exclude_params" in conversion_rule
+                and key in conversion_rule["exclude_params"]
+            ):
+                continue
+
+            # パラメータマッピングの適用
+            if "param_map" in conversion_rule and key in conversion_rule["param_map"]:
+                converted_params[conversion_rule["param_map"][key]] = value
+            elif (
+                "use_config_param_map" in conversion_rule
+                and hasattr(config, "param_map")
+                and config.param_map
+            ):
+                # config.param_map の値にキーが含まれているかチェック
                 if key in config.param_map.values():
                     converted_params[key] = value
-                # period -> length の変換
-                elif key == "period":
-                    converted_params["length"] = value
-                else:
+                elif key in conversion_rule.get("fallback_map", {}):
+                    converted_params[conversion_rule["fallback_map"][key]] = value
+                elif conversion_rule.get("include_all_mapped", True):
                     converted_params[key] = value
             else:
-                # fallback: period -> length
-                if key == "period":
-                    converted_params["length"] = value
-                else:
-                    converted_params[key] = value
-        return converted_params
-
-    # RMA の特殊処理
-    elif indicator_type == "RMA":
-        # period -> length, close -> data
-        for key, value in params.items():
-            if key == "period":
-                converted_params["length"] = value
-            elif key == "close":
-                converted_params["data"] = value
-            else:
+                # マッピングルールがない場合はそのまま
                 converted_params[key] = value
+
         return converted_params
 
-    # STC の特殊処理
-    elif indicator_type == "STC":
-        # close -> data
-        for key, value in params.items():
-            if key == "close":
-                converted_params["data"] = value
-            else:
-                converted_params[key] = value
-        return converted_params
-
-    # NVI, PVI, PVT, AD の特殊処理（ボリューム系指標でパラメータ不要）
-    elif indicator_type in {"NVI", "PVI", "PVT", "AD"}:
-        # これらの指標はパラメータを一切受け取らない
+    # パラメータを一切受け取らない指標（ボリューム系指標）
+    volume_indicators = {"NVI", "PVI", "PVT", "AD"}
+    if indicator_type in volume_indicators:
         # period や length などのパラメータを除外
         for key, value in params.items():
             if key not in {"period", "length"}:
@@ -347,25 +345,15 @@ def normalize_params(
         return converted_params
 
     # NO_LENGTH_INDICATORS の包括的特殊処理
-    elif indicator_type in NO_LENGTH_INDICATORS:
+    if indicator_type in NO_LENGTH_INDICATORS:
         # これらの指標は period や length パラメータを受け取らない
         for key, value in params.items():
             if key not in {"period", "length"}:
                 converted_params[key] = value
         return converted_params
 
-    # RSI_EMA_CROSS の特殊処理
-    elif indicator_type == "RSI_EMA_CROSS":
-        # close -> data, rsi_length -> rsi_length, ema_length -> ema_length
-        for key, value in params.items():
-            if key == "close":
-                converted_params["data"] = value
-            else:
-                converted_params[key] = value
-        return converted_params
-
-    # period -> length 変換（例外指標はここで外すことも可能）
-    period_based = {
+    # period -> length 変換（lengthが必要な指標のみ）
+    period_to_length_indicators = {
         "MA",
         "MAVP",
         "BETA",
@@ -374,9 +362,7 @@ def normalize_params(
         "LINEARREG_SLOPE",
         "STDDEV",
         "VAR",
-        "SAR",
-        "RSI",  # period -> length 変換が必要
-        # モメンタム系指標のperiod -> length変換
+        "RSI",
         "ADX",
         "ADXR",
         "AROON",
@@ -390,16 +376,12 @@ def normalize_params(
         "ROCP",
         "ROCR100",
         "RVI",
-        # ボラティリティ系指標
         "KELTNER",
-        # ボリューム系指標（例外）
-        "EOM",
-        "KVO",
     }
     for key, value in params.items():
         if (
             key == "period"
-            and indicator_type in period_based
+            and indicator_type in period_to_length_indicators
             and indicator_type not in NO_LENGTH_INDICATORS
         ):
             converted_params["length"] = value
@@ -417,6 +399,7 @@ def normalize_params(
             "PriceTransformIndicators."
         )
 
+        # length パラメータの追加は明示的に必要な指標のみに制限
         # SAR には length パラメータを追加しない（af, max_af のみを使用）
         if indicator_type == "SAR":
             pass  # SAR には length を追加しない
@@ -428,7 +411,9 @@ def normalize_params(
             "length" in sig.parameters
             and "length" not in converted_params
             and not is_price_transform
+            and indicator_type in period_to_length_indicators
         ):
+            # period_to_length_indicators に含まれる指標のみ length を自動追加
             default_len = params.get("period")
             if default_len is None and config.parameters:
                 if "period" in config.parameters:
