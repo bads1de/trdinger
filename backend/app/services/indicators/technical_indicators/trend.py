@@ -100,7 +100,7 @@ class TrendIndicators:
     def wma(
         data: Union[np.ndarray, pd.Series] = None,
         length: int = 14,
-        close: Union[np.ndarray, pd.Series] = None
+        close: Union[np.ndarray, pd.Series] = None,
     ) -> np.ndarray:
         """加重移動平均"""
         # dataが提供されない場合はcloseを使用
@@ -117,7 +117,7 @@ class TrendIndicators:
     def trima(
         data: Union[np.ndarray, pd.Series] = None,
         length: int = 14,
-        close: Union[np.ndarray, pd.Series] = None
+        close: Union[np.ndarray, pd.Series] = None,
     ) -> np.ndarray:
         """三角移動平均"""
         # dataが提供されない場合はcloseを使用
@@ -220,7 +220,7 @@ class TrendIndicators:
         data: Union[np.ndarray, pd.Series] = None,
         period: int = 30,
         matype: int = 0,
-        close: Union[np.ndarray, pd.Series] = None
+        close: Union[np.ndarray, pd.Series] = None,
     ) -> np.ndarray:
         """移動平均（タイプ指定可能）"""
         # dataが提供されない場合はcloseを使用
@@ -233,11 +233,11 @@ class TrendIndicators:
             0: TrendIndicators.sma,  # SMA
             1: TrendIndicators.ema,  # EMA
             2: TrendIndicators.wma,  # WMA
-            3: TrendIndicators.dema, # DEMA
-            4: TrendIndicators.tema, # TEMA
-            5: TrendIndicators.trima, # TRIMA
+            3: TrendIndicators.dema,  # DEMA
+            4: TrendIndicators.tema,  # TEMA
+            5: TrendIndicators.trima,  # TRIMA
             6: TrendIndicators.kama,  # KAMA
-            8: TrendIndicators.t3,   # T3
+            8: TrendIndicators.t3,  # T3
         }
 
         ma_func = ma_functions.get(matype, TrendIndicators.sma)
@@ -367,8 +367,8 @@ class TrendIndicators:
         # VWMAの手動計算
         vwma_values = np.full(len(price), np.nan)
         for i in range(length - 1, len(price)):
-            window_price = price.iloc[i - length + 1:i + 1]
-            window_vol = vol.iloc[i - length + 1:i + 1]
+            window_price = price.iloc[i - length + 1 : i + 1]
+            window_vol = vol.iloc[i - length + 1 : i + 1]
             vwma_values[i] = np.average(window_price, weights=window_vol)
 
         return vwma_values
@@ -475,15 +475,15 @@ class TrendIndicators:
     @staticmethod
     @handle_pandas_ta_errors
     def mama(
-        data: Union[np.ndarray, pd.Series], 
-        fastlimit: float = 0.5, 
-        slowlimit: float = 0.05
+        data: Union[np.ndarray, pd.Series],
+        fastlimit: float = 0.5,
+        slowlimit: float = 0.05,
     ) -> Tuple[np.ndarray, np.ndarray]:
         """MESA Adaptive Moving Average"""
         series = pd.Series(data) if isinstance(data, np.ndarray) else data
-        
+
         # pandas-taにmamaがあるか確認
-        if hasattr(ta, 'mama'):
+        if hasattr(ta, "mama"):
             result = ta.mama(series, fastlimit=fastlimit, slowlimit=slowlimit)
             return result.iloc[:, 0].values, result.iloc[:, 1].values
         else:
@@ -497,18 +497,24 @@ class TrendIndicators:
     def maxindex(data: Union[np.ndarray, pd.Series], period: int = 14) -> np.ndarray:
         """最大値のインデックス"""
         series = pd.Series(data) if isinstance(data, np.ndarray) else data
-        return series.rolling(window=period).apply(lambda x: x.argmax(), raw=False).values
+        return (
+            series.rolling(window=period).apply(lambda x: x.argmax(), raw=False).values
+        )
 
     @staticmethod
     @handle_pandas_ta_errors
     def minindex(data: Union[np.ndarray, pd.Series], period: int = 14) -> np.ndarray:
         """最小値のインデックス"""
         series = pd.Series(data) if isinstance(data, np.ndarray) else data
-        return series.rolling(window=period).apply(lambda x: x.argmin(), raw=False).values
+        return (
+            series.rolling(window=period).apply(lambda x: x.argmin(), raw=False).values
+        )
 
     @staticmethod
     @handle_pandas_ta_errors
-    def minmax(data: Union[np.ndarray, pd.Series], period: int = 14) -> Tuple[np.ndarray, np.ndarray]:
+    def minmax(
+        data: Union[np.ndarray, pd.Series], period: int = 14
+    ) -> Tuple[np.ndarray, np.ndarray]:
         """最小値と最大値"""
         series = pd.Series(data) if isinstance(data, np.ndarray) else data
         min_vals = series.rolling(window=period).min().values
@@ -517,9 +523,15 @@ class TrendIndicators:
 
     @staticmethod
     @handle_pandas_ta_errors
-    def minmaxindex(data: Union[np.ndarray, pd.Series], period: int = 14) -> Tuple[np.ndarray, np.ndarray]:
+    def minmaxindex(
+        data: Union[np.ndarray, pd.Series], period: int = 14
+    ) -> Tuple[np.ndarray, np.ndarray]:
         """最小値と最大値のインデックス"""
         series = pd.Series(data) if isinstance(data, np.ndarray) else data
-        min_idx = series.rolling(window=period).apply(lambda x: x.argmin(), raw=False).values
-        max_idx = series.rolling(window=period).apply(lambda x: x.argmax(), raw=False).values
+        min_idx = (
+            series.rolling(window=period).apply(lambda x: x.argmin(), raw=False).values
+        )
+        max_idx = (
+            series.rolling(window=period).apply(lambda x: x.argmax(), raw=False).values
+        )
         return min_idx, max_idx

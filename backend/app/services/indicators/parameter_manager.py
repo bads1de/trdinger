@@ -80,11 +80,31 @@ NO_LENGTH_INDICATORS = {
     "TRANGE",  # True Range - パラメータ不要
     "BB",  # Bollinger Bands - periodとstdパラメータを使用
     # 数学系指標（基本的にパラメータ不要、データ変換のみ）
-    "ACOS", "ASIN", "ATAN", "COS", "COSH", "SIN", "SINH", "TAN", "TANH",
-    "SQRT", "EXP", "LN", "LOG10", "CEIL", "FLOOR",
-    "ADD", "SUB", "MULT", "DIV",
+    "ACOS",
+    "ASIN",
+    "ATAN",
+    "COS",
+    "COSH",
+    "SIN",
+    "SINH",
+    "TAN",
+    "TANH",
+    "SQRT",
+    "EXP",
+    "LN",
+    "LOG10",
+    "CEIL",
+    "FLOOR",
+    "ADD",
+    "SUB",
+    "MULT",
+    "DIV",
     # Hilbert Transform系指標（パラメータ不要）
-    "HT_DCPERIOD", "HT_DCPHASE", "HT_PHASOR", "HT_SINE", "HT_TRENDMODE",
+    "HT_DCPERIOD",
+    "HT_DCPHASE",
+    "HT_PHASOR",
+    "HT_SINE",
+    "HT_TRENDMODE",
 }
 
 

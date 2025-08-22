@@ -114,7 +114,9 @@ class MathIndicators:
         """平方根"""
         data_series = pd.Series(data) if isinstance(data, np.ndarray) else data
         # 非負の値のみに制限
-        non_negative_data = np.where(data_series.values >= 0, data_series.values, np.nan)
+        non_negative_data = np.where(
+            data_series.values >= 0, data_series.values, np.nan
+        )
         return np.sqrt(non_negative_data)
 
     @staticmethod
@@ -134,7 +136,9 @@ class MathIndicators:
     # 数学演算子
     @staticmethod
     @handle_pandas_ta_errors
-    def add(data1: Union[np.ndarray, pd.Series], data2: Union[np.ndarray, pd.Series]) -> np.ndarray:
+    def add(
+        data1: Union[np.ndarray, pd.Series], data2: Union[np.ndarray, pd.Series]
+    ) -> np.ndarray:
         """加算"""
         data1_series = pd.Series(data1) if isinstance(data1, np.ndarray) else data1
         data2_series = pd.Series(data2) if isinstance(data2, np.ndarray) else data2
@@ -142,7 +146,9 @@ class MathIndicators:
 
     @staticmethod
     @handle_pandas_ta_errors
-    def sub(data1: Union[np.ndarray, pd.Series], data2: Union[np.ndarray, pd.Series]) -> np.ndarray:
+    def sub(
+        data1: Union[np.ndarray, pd.Series], data2: Union[np.ndarray, pd.Series]
+    ) -> np.ndarray:
         """減算"""
         data1_series = pd.Series(data1) if isinstance(data1, np.ndarray) else data1
         data2_series = pd.Series(data2) if isinstance(data2, np.ndarray) else data2
@@ -150,7 +156,9 @@ class MathIndicators:
 
     @staticmethod
     @handle_pandas_ta_errors
-    def mult(data1: Union[np.ndarray, pd.Series], data2: Union[np.ndarray, pd.Series]) -> np.ndarray:
+    def mult(
+        data1: Union[np.ndarray, pd.Series], data2: Union[np.ndarray, pd.Series]
+    ) -> np.ndarray:
         """乗算"""
         data1_series = pd.Series(data1) if isinstance(data1, np.ndarray) else data1
         data2_series = pd.Series(data2) if isinstance(data2, np.ndarray) else data2
@@ -158,7 +166,9 @@ class MathIndicators:
 
     @staticmethod
     @handle_pandas_ta_errors
-    def div(data1: Union[np.ndarray, pd.Series], data2: Union[np.ndarray, pd.Series]) -> np.ndarray:
+    def div(
+        data1: Union[np.ndarray, pd.Series], data2: Union[np.ndarray, pd.Series]
+    ) -> np.ndarray:
         """除算"""
         data1_series = pd.Series(data1) if isinstance(data1, np.ndarray) else data1
         data2_series = pd.Series(data2) if isinstance(data2, np.ndarray) else data2

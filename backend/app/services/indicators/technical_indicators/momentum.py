@@ -223,14 +223,14 @@ class MomentumIndicators:
         high_series = pd.Series(high) if isinstance(high, np.ndarray) else high
         low_series = pd.Series(low) if isinstance(low, np.ndarray) else low
         close_series = pd.Series(close) if isinstance(close, np.ndarray) else close
-        
+
         return ta.uo(
-            high=high_series, 
-            low=low_series, 
-            close=close_series, 
-            fast=fast, 
-            medium=medium, 
-            slow=slow
+            high=high_series,
+            low=low_series,
+            close=close_series,
+            fast=fast,
+            medium=medium,
+            slow=slow,
         ).values
 
     @staticmethod
@@ -866,4 +866,3 @@ class MomentumIndicators:
             high=high_series, low=low_series, close=close_series, length=length
         )
         return result.iloc[:, 0].values, result.iloc[:, 1].values
-

@@ -23,7 +23,7 @@ class HilbertTransformIndicators:
         """Hilbert Transform - Dominant Cycle Period"""
         series = pd.Series(data) if isinstance(data, np.ndarray) else data
         # pandas-taにht_dcperiodがない場合は簡易実装
-        if hasattr(ta, 'ht_dcperiod'):
+        if hasattr(ta, "ht_dcperiod"):
             return ta.ht_dcperiod(series).values
         else:
             # フォールバック: 固定値を返す
@@ -35,7 +35,7 @@ class HilbertTransformIndicators:
         """Hilbert Transform - Dominant Cycle Phase"""
         series = pd.Series(data) if isinstance(data, np.ndarray) else data
         # pandas-taにht_dcphaseがない場合は簡易実装
-        if hasattr(ta, 'ht_dcphase'):
+        if hasattr(ta, "ht_dcphase"):
             return ta.ht_dcphase(series).values
         else:
             # フォールバック: サイン波を返す
@@ -47,7 +47,7 @@ class HilbertTransformIndicators:
         """Hilbert Transform - Phasor Components"""
         series = pd.Series(data) if isinstance(data, np.ndarray) else data
         # pandas-taにht_phasorがない場合は簡易実装
-        if hasattr(ta, 'ht_phasor'):
+        if hasattr(ta, "ht_phasor"):
             result = ta.ht_phasor(series)
             return result.iloc[:, 0].values, result.iloc[:, 1].values
         else:
@@ -63,14 +63,14 @@ class HilbertTransformIndicators:
         """Hilbert Transform - SineWave"""
         series = pd.Series(data) if isinstance(data, np.ndarray) else data
         # pandas-taにht_sineがない場合は簡易実装
-        if hasattr(ta, 'ht_sine'):
+        if hasattr(ta, "ht_sine"):
             result = ta.ht_sine(series)
             return result.iloc[:, 0].values, result.iloc[:, 1].values
         else:
             # フォールバック: サイン・コサイン波を返す
             phase = np.arange(len(series)) * 2 * np.pi / 20
             sine = np.sin(phase) * 0.5
-            leadsine = np.sin(phase + np.pi/4) * 0.5
+            leadsine = np.sin(phase + np.pi / 4) * 0.5
             return sine, leadsine
 
     @staticmethod
@@ -79,7 +79,7 @@ class HilbertTransformIndicators:
         """Hilbert Transform - Trend vs Cycle Mode"""
         series = pd.Series(data) if isinstance(data, np.ndarray) else data
         # pandas-taにht_trendmodeがない場合は簡易実装
-        if hasattr(ta, 'ht_trendmode'):
+        if hasattr(ta, "ht_trendmode"):
             return ta.ht_trendmode(series).values
         else:
             # フォールバック: 移動平均の傾きベースでトレンドモードを判定

@@ -7,7 +7,7 @@ VALID_INDICATOR_TYPESの全指標をテストして問題を特定します。
 
 import sys
 import os
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "backend")))
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 import pandas as pd
 import numpy as np

@@ -1828,7 +1828,7 @@ def setup_pattern_recognition_indicators():
 
 def setup_math_indicators():
     """数学系インジケーターの設定"""
-    
+
     # 三角関数
     acos_config = IndicatorConfig(
         indicator_name="ACOS",
@@ -1840,7 +1840,7 @@ def setup_math_indicators():
     )
     acos_config.param_map = {"close": "data"}
     indicator_registry.register(acos_config)
-    
+
     asin_config = IndicatorConfig(
         indicator_name="ASIN",
         adapter_function=MathIndicators.asin,
@@ -1851,7 +1851,7 @@ def setup_math_indicators():
     )
     asin_config.param_map = {"close": "data"}
     indicator_registry.register(asin_config)
-    
+
     atan_config = IndicatorConfig(
         indicator_name="ATAN",
         adapter_function=MathIndicators.atan,
@@ -1862,7 +1862,7 @@ def setup_math_indicators():
     )
     atan_config.param_map = {"close": "data"}
     indicator_registry.register(atan_config)
-    
+
     cos_config = IndicatorConfig(
         indicator_name="COS",
         adapter_function=MathIndicators.cos,
@@ -1873,7 +1873,7 @@ def setup_math_indicators():
     )
     cos_config.param_map = {"close": "data"}
     indicator_registry.register(cos_config)
-    
+
     cosh_config = IndicatorConfig(
         indicator_name="COSH",
         adapter_function=MathIndicators.cosh,
@@ -1884,7 +1884,7 @@ def setup_math_indicators():
     )
     cosh_config.param_map = {"close": "data"}
     indicator_registry.register(cosh_config)
-    
+
     sin_config = IndicatorConfig(
         indicator_name="SIN",
         adapter_function=MathIndicators.sin,
@@ -1895,7 +1895,7 @@ def setup_math_indicators():
     )
     sin_config.param_map = {"close": "data"}
     indicator_registry.register(sin_config)
-    
+
     sinh_config = IndicatorConfig(
         indicator_name="SINH",
         adapter_function=MathIndicators.sinh,
@@ -1906,7 +1906,7 @@ def setup_math_indicators():
     )
     sinh_config.param_map = {"close": "data"}
     indicator_registry.register(sinh_config)
-    
+
     tan_config = IndicatorConfig(
         indicator_name="TAN",
         adapter_function=MathIndicators.tan,
@@ -1917,7 +1917,7 @@ def setup_math_indicators():
     )
     tan_config.param_map = {"close": "data"}
     indicator_registry.register(tan_config)
-    
+
     tanh_config = IndicatorConfig(
         indicator_name="TANH",
         adapter_function=MathIndicators.tanh,
@@ -1928,7 +1928,7 @@ def setup_math_indicators():
     )
     tanh_config.param_map = {"close": "data"}
     indicator_registry.register(tanh_config)
-    
+
     # その他数学関数
     sqrt_config = IndicatorConfig(
         indicator_name="SQRT",
@@ -1940,7 +1940,7 @@ def setup_math_indicators():
     )
     sqrt_config.param_map = {"close": "data"}
     indicator_registry.register(sqrt_config)
-    
+
     exp_config = IndicatorConfig(
         indicator_name="EXP",
         adapter_function=MathIndicators.exp,
@@ -1951,7 +1951,7 @@ def setup_math_indicators():
     )
     exp_config.param_map = {"close": "data"}
     indicator_registry.register(exp_config)
-    
+
     ln_config = IndicatorConfig(
         indicator_name="LN",
         adapter_function=MathIndicators.ln,
@@ -1962,7 +1962,7 @@ def setup_math_indicators():
     )
     ln_config.param_map = {"close": "data"}
     indicator_registry.register(ln_config)
-    
+
     log10_config = IndicatorConfig(
         indicator_name="LOG10",
         adapter_function=MathIndicators.log10,
@@ -1973,7 +1973,7 @@ def setup_math_indicators():
     )
     log10_config.param_map = {"close": "data"}
     indicator_registry.register(log10_config)
-    
+
     ceil_config = IndicatorConfig(
         indicator_name="CEIL",
         adapter_function=MathIndicators.ceil,
@@ -1984,7 +1984,7 @@ def setup_math_indicators():
     )
     ceil_config.param_map = {"close": "data"}
     indicator_registry.register(ceil_config)
-    
+
     floor_config = IndicatorConfig(
         indicator_name="FLOOR",
         adapter_function=MathIndicators.floor,
@@ -1995,7 +1995,7 @@ def setup_math_indicators():
     )
     floor_config.param_map = {"close": "data"}
     indicator_registry.register(floor_config)
-    
+
     # 数学演算子
     add_config = IndicatorConfig(
         indicator_name="ADD",
@@ -2007,7 +2007,7 @@ def setup_math_indicators():
     )
     add_config.param_map = {"close": "data1", "high": "data2"}
     indicator_registry.register(add_config)
-    
+
     sub_config = IndicatorConfig(
         indicator_name="SUB",
         adapter_function=MathIndicators.sub,
@@ -2018,7 +2018,7 @@ def setup_math_indicators():
     )
     sub_config.param_map = {"close": "data1", "high": "data2"}
     indicator_registry.register(sub_config)
-    
+
     mult_config = IndicatorConfig(
         indicator_name="MULT",
         adapter_function=MathIndicators.mult,
@@ -2029,7 +2029,7 @@ def setup_math_indicators():
     )
     mult_config.param_map = {"close": "data1", "high": "data2"}
     indicator_registry.register(mult_config)
-    
+
     div_config = IndicatorConfig(
         indicator_name="DIV",
         adapter_function=MathIndicators.div,
@@ -2040,7 +2040,7 @@ def setup_math_indicators():
     )
     div_config.param_map = {"close": "data1", "high": "data2"}
     indicator_registry.register(div_config)
-    
+
     # 統計系
     max_config = IndicatorConfig(
         indicator_name="MAX",
@@ -2061,7 +2061,7 @@ def setup_math_indicators():
     )
     max_config.param_map = {"close": "data", "period": "period"}
     indicator_registry.register(max_config)
-    
+
     min_config = IndicatorConfig(
         indicator_name="MIN",
         adapter_function=MathIndicators.min_value,
@@ -2081,7 +2081,7 @@ def setup_math_indicators():
     )
     min_config.param_map = {"close": "data", "period": "period"}
     indicator_registry.register(min_config)
-    
+
     sum_config = IndicatorConfig(
         indicator_name="SUM",
         adapter_function=MathIndicators.sum_value,
@@ -2105,7 +2105,7 @@ def setup_math_indicators():
 
 def setup_hilbert_transform_indicators():
     """Hilbert Transform系インジケーターの設定"""
-    
+
     # HT_DCPERIOD
     ht_dcperiod_config = IndicatorConfig(
         indicator_name="HT_DCPERIOD",
@@ -2117,7 +2117,7 @@ def setup_hilbert_transform_indicators():
     )
     ht_dcperiod_config.param_map = {"close": "data"}
     indicator_registry.register(ht_dcperiod_config)
-    
+
     # HT_DCPHASE
     ht_dcphase_config = IndicatorConfig(
         indicator_name="HT_DCPHASE",
@@ -2129,7 +2129,7 @@ def setup_hilbert_transform_indicators():
     )
     ht_dcphase_config.param_map = {"close": "data"}
     indicator_registry.register(ht_dcphase_config)
-    
+
     # HT_PHASOR
     ht_phasor_config = IndicatorConfig(
         indicator_name="HT_PHASOR",
@@ -2143,7 +2143,7 @@ def setup_hilbert_transform_indicators():
     )
     ht_phasor_config.param_map = {"close": "data"}
     indicator_registry.register(ht_phasor_config)
-    
+
     # HT_SINE
     ht_sine_config = IndicatorConfig(
         indicator_name="HT_SINE",
@@ -2157,7 +2157,7 @@ def setup_hilbert_transform_indicators():
     )
     ht_sine_config.param_map = {"close": "data"}
     indicator_registry.register(ht_sine_config)
-    
+
     # HT_TRENDMODE
     ht_trendmode_config = IndicatorConfig(
         indicator_name="HT_TRENDMODE",
@@ -2514,7 +2514,11 @@ mama_config.add_parameter(
         description="MAMA低速制限",
     )
 )
-mama_config.param_map = {"close": "data", "fastlimit": "fastlimit", "slowlimit": "slowlimit"}
+mama_config.param_map = {
+    "close": "data",
+    "fastlimit": "fastlimit",
+    "slowlimit": "slowlimit",
+}
 indicator_registry.register(mama_config)
 
 # MAXINDEX
