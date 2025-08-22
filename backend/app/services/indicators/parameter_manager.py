@@ -65,7 +65,6 @@ NO_LENGTH_INDICATORS = {
     "HA_OHLC",
     "STOCH",
     "STOCHF",
-    "STOCHRSI",
     "KST",
     "SMI",
     "UO",
@@ -352,38 +351,10 @@ def normalize_params(
                 converted_params[key] = value
         return converted_params
 
-    # period -> length 変換（lengthが必要な指標のみ）
-    period_to_length_indicators = {
-        "MA",
-        "MAVP",
-        "BETA",
-        "CORREL",
-        "LINEARREG",
-        "LINEARREG_SLOPE",
-        "STDDEV",
-        "VAR",
-        "RSI",
-        "ADX",
-        "ADXR",
-        "AROON",
-        "AROONOSC",
-        "CCI",
-        "DX",
-        "MFI",
-        "WILLR",
-        "MINUS_DM",
-        "PLUS_DM",
-        "ROCP",
-        "ROCR100",
-        "RVI",
-        "KELTNER",
-    }
+    # すべての指標がlengthパラメータを使用するため、変換は不要
+    # ただし、互換性のためperiodパラメータが提供された場合はlengthに変換
     for key, value in params.items():
-        if (
-            key == "period"
-            and indicator_type in period_to_length_indicators
-            and indicator_type not in NO_LENGTH_INDICATORS
-        ):
+        if key == "period":
             converted_params["length"] = value
         else:
             converted_params[key] = value
@@ -411,7 +382,6 @@ def normalize_params(
             "length" in sig.parameters
             and "length" not in converted_params
             and not is_price_transform
-            and indicator_type in period_to_length_indicators
         ):
             # period_to_length_indicators に含まれる指標のみ length を自動追加
             default_len = params.get("period")

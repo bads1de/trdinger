@@ -1426,7 +1426,7 @@ def setup_statistics_indicators():
             description="BETA計算期間",
         )
     )
-    beta_config.param_map = {"length": "period"}
+    beta_config.param_map = {"length": "length"}
     indicator_registry.register(beta_config)
 
     # CORREL
@@ -1447,7 +1447,7 @@ def setup_statistics_indicators():
             description="相関係数計算期間",
         )
     )
-    correl_config.param_map = {"data0": "high", "data1": "low", "period": "period"}
+    correl_config.param_map = {"data0": "high", "data1": "low", "period": "length"}
     indicator_registry.register(correl_config)
 
     # LINEARREG
@@ -1468,7 +1468,7 @@ def setup_statistics_indicators():
             description="線形回帰期間",
         )
     )
-    linearreg_config.param_map = {"close": "data", "length": "period"}
+    linearreg_config.param_map = {"close": "data", "length": "length"}
     indicator_registry.register(linearreg_config)
 
     # STDDEV
@@ -1498,7 +1498,7 @@ def setup_statistics_indicators():
             description="偏差数",
         )
     )
-    stddev_config.param_map = {"close": "data", "length": "period", "nbdev": "nbdev"}
+    stddev_config.param_map = {"close": "data", "length": "length", "nbdev": "nbdev"}
     indicator_registry.register(stddev_config)
 
     # TSF
@@ -1519,7 +1519,7 @@ def setup_statistics_indicators():
             description="時系列予測期間",
         )
     )
-    tsf_config.param_map = {"close": "data", "length": "period"}
+    tsf_config.param_map = {"close": "data", "length": "length"}
     indicator_registry.register(tsf_config)
 
     # VAR
@@ -1570,7 +1570,7 @@ def setup_statistics_indicators():
             description="線形回帰角度期間",
         )
     )
-    linearreg_angle_config.param_map = {"close": "data", "length": "period"}
+    linearreg_angle_config.param_map = {"close": "data", "length": "length"}
     indicator_registry.register(linearreg_angle_config)
 
     # LINEARREG_INTERCEPT
@@ -1591,7 +1591,7 @@ def setup_statistics_indicators():
             description="線形回帰切片期間",
         )
     )
-    linearreg_intercept_config.param_map = {"close": "data", "length": "period"}
+    linearreg_intercept_config.param_map = {"close": "data", "length": "length"}
     indicator_registry.register(linearreg_intercept_config)
 
     # LINEARREG_SLOPE
@@ -1612,7 +1612,7 @@ def setup_statistics_indicators():
             description="線形回帰傾き期間",
         )
     )
-    linearreg_slope_config.param_map = {"close": "data", "period": "period"}
+    linearreg_slope_config.param_map = {"close": "data", "period": "length"}
     indicator_registry.register(linearreg_slope_config)
 
 
@@ -2260,7 +2260,7 @@ maxindex_config.add_parameter(
         description="最大値インデックス期間",
     )
 )
-maxindex_config.param_map = {"close": "data", "period": "period"}
+maxindex_config.param_map = {"close": "data", "period": "length"}
 indicator_registry.register(maxindex_config)
 
 # MININDEX
@@ -2281,7 +2281,7 @@ minindex_config.add_parameter(
         description="最小値インデックス期間",
     )
 )
-minindex_config.param_map = {"close": "data", "period": "period"}
+minindex_config.param_map = {"close": "data", "period": "length"}
 indicator_registry.register(minindex_config)
 
 # MINMAX
@@ -2304,7 +2304,7 @@ minmax_config.add_parameter(
         description="最小最大期間",
     )
 )
-minmax_config.param_map = {"close": "data", "period": "period"}
+minmax_config.param_map = {"close": "data", "period": "length"}
 indicator_registry.register(minmax_config)
 
 # MINMAXINDEX
@@ -2327,7 +2327,7 @@ minmaxindex_config.add_parameter(
         description="最小最大インデックス期間",
     )
 )
-minmaxindex_config.param_map = {"close": "data", "period": "period"}
+minmaxindex_config.param_map = {"close": "data", "period": "length"}
 indicator_registry.register(minmaxindex_config)
 
 rsi_ema_cross_config = IndicatorConfig(
@@ -2344,7 +2344,7 @@ rsi_ema_cross_config.add_parameter(
 rsi_ema_cross_config.add_parameter(
     ParameterConfig(name="ema_length", default_value=9, min_value=2, max_value=200)
 )
-rsi_ema_cross_config.param_map = {"close": "data", "period": "rsi_length"}
+rsi_ema_cross_config.param_map = {"close": "data"}
 indicator_registry.register(rsi_ema_cross_config)
 
 # Additional momentum registrations
