@@ -78,6 +78,8 @@ class IndicatorCalculator:
                 # tclengthはSTCインジケータ専用パラメータなのでSTCのみに追加
                 if indicator_type == "STC" and "tclength" not in mapped_parameters:
                     mapped_parameters["tclength"] = mapped_parameters["period"]
+                    # STCの場合、periodパラメータを削除（余分なパラメータを渡さないため）
+                    del mapped_parameters["period"]
 
             logger.warning(
                 f"指標計算開始: {indicator_type}, 元パラメータ: {parameters}, マップ後: {mapped_parameters}"

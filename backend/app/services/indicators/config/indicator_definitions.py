@@ -216,7 +216,7 @@ def setup_momentum_indicators():
             description="STCスムージングファクター",
         )
     )
-    stc_config.param_map = {"data": "close"}
+    stc_config.param_map = {"data": "close", "length": "tclength"}
     indicator_registry.register(stc_config)
 
     # RSI (Relative Strength Index)

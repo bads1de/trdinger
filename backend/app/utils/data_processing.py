@@ -598,7 +598,7 @@ class DataProcessor:
         # Fear & Greedデータの補間
         result_df = self.interpolate_fear_greed_data(result_df)
 
-        logger.info("データ補間処理が完了")
+        # logger.info("データ補間処理が完了")
         return result_df
 
     def optimize_dtypes(self, df: pd.DataFrame) -> pd.DataFrame:

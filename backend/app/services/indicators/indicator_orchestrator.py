@@ -374,9 +374,9 @@ class TechnicalIndicatorService:
                     # 無効なパラメータは除外（何もしない）
                 # config.parameters に含まれるパラメータは除外（何もしない）
 
-            logger.debug(
-                f"Using positional args for {indicator_type}: {len(positional_args)} args"
-            )
+            # logger.debug(
+            #     f"Using positional args for {indicator_type}: {len(positional_args)} args"
+            # )
             return config.adapter_function(*positional_args, **keyword_args)
 
         # If data parameter is included but close is not
@@ -384,9 +384,9 @@ class TechnicalIndicatorService:
         elif "data" in all_args and "close" not in all_args:
             # Pass data as positional argument and others as keyword arguments
             data_arg = all_args.pop("data")
-            logger.debug(
-                f"Using positional arg for {indicator_type}: shape={getattr(data_arg, 'shape', 'N/A')}"
-            )
+            # logger.debug(
+            #     f"Using positional arg for {indicator_type}: shape={getattr(data_arg, 'shape', 'N/A')}"
+            # )
             return config.adapter_function(data_arg, **all_args)
 
         # Normal keyword argument call
