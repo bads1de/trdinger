@@ -22,8 +22,6 @@ import numpy as np
 import pandas as pd
 import pandas_ta as ta
 
-from ..utils import handle_pandas_ta_errors
-
 
 class MomentumIndicators:
     """
@@ -196,19 +194,7 @@ class MomentumIndicators:
             length=length,
         ).values
 
-    @staticmethod
-    def apo(
-        data: Union[np.ndarray, pd.Series], fast: int = 12, slow: int = 26
-    ) -> np.ndarray:
-        """絶対価格オシレーター"""
-        series = pd.Series(data) if isinstance(data, np.ndarray) else data
-        return ta.apo(series, fast=fast, slow=slow).values
 
-    @staticmethod
-    def cmo(data: Union[np.ndarray, pd.Series], length: int = 14) -> np.ndarray:
-        """チャンデモメンタムオシレーター"""
-        series = pd.Series(data) if isinstance(data, np.ndarray) else data
-        return ta.cmo(series, length=length).values
 
     @staticmethod
     def uo(
