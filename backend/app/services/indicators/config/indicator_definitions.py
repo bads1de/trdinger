@@ -180,8 +180,106 @@ def setup_momentum_indicators():
         scale_type=IndicatorScaleType.OSCILLATOR_0_100,
         category="momentum",
     )
-    stc_config.param_map = {"data": "close", "period": "tclength"}
+    stc_config.add_parameter(
+        ParameterConfig(
+            name="tclength",
+            default_value=10,
+            min_value=2,
+            max_value=100,
+            description="STCシグナルライン長",
+        )
+    )
+    stc_config.add_parameter(
+        ParameterConfig(
+            name="fast",
+            default_value=23,
+            min_value=2,
+            max_value=100,
+            description="STC高速期間",
+        )
+    )
+    stc_config.add_parameter(
+        ParameterConfig(
+            name="slow",
+            default_value=50,
+            min_value=5,
+            max_value=200,
+            description="STC低速期間",
+        )
+    )
+    stc_config.add_parameter(
+        ParameterConfig(
+            name="factor",
+            default_value=0.5,
+            min_value=0.1,
+            max_value=1.0,
+            description="STCスムージングファクター",
+        )
+    )
+    stc_config.param_map = {"data": "close"}
     indicator_registry.register(stc_config)
+
+    # RSI (Relative Strength Index)
+    rsi_config = IndicatorConfig(
+        indicator_name="RSI",
+        adapter_function=MomentumIndicators.rsi,
+        required_data=["close"],
+        result_type=IndicatorResultType.SINGLE,
+        scale_type=IndicatorScaleType.OSCILLATOR_0_100,
+        category="momentum",
+    )
+    rsi_config.add_parameter(
+        ParameterConfig(
+            name="length",
+            default_value=14,
+            min_value=2,
+            max_value=100,
+            description="RSI計算期間",
+        )
+    )
+    rsi_config.param_map = {"data": "data"}
+    indicator_registry.register(rsi_config)
+
+    # MACD (Moving Average Convergence Divergence)
+    macd_config = IndicatorConfig(
+        indicator_name="MACD",
+        adapter_function=MomentumIndicators.macd,
+        required_data=["close"],
+        result_type=IndicatorResultType.COMPLEX,
+        scale_type=IndicatorScaleType.MOMENTUM_ZERO_CENTERED,
+        category="momentum",
+        output_names=["MACD_0", "MACD_1", "MACD_2"],
+        default_output="MACD_0",
+    )
+    macd_config.add_parameter(
+        ParameterConfig(
+            name="fast",
+            default_value=12,
+            min_value=2,
+            max_value=100,
+            description="高速移動平均期間",
+        )
+    )
+    macd_config.add_parameter(
+        ParameterConfig(
+            name="slow",
+            default_value=26,
+            min_value=5,
+            max_value=200,
+            description="低速移動平均期間",
+        )
+    )
+    macd_config.add_parameter(
+        ParameterConfig(
+            name="signal",
+            default_value=9,
+            min_value=2,
+            max_value=50,
+            description="シグナル線期間",
+        )
+    )
+    macd_config.param_map = {"data": "data"}
+    indicator_registry.register(macd_config)
 
     # CCI
     cci_config = IndicatorConfig(
@@ -935,7 +1033,49 @@ def setup_momentum_indicators():
 def setup_trend_indicators():
     """トレンド系インジケーターの設定（オートストラテジー最適化版）"""
 
-    # WMA
+    # SMA (Simple Moving Average) - 明示的実装
+    sma_config = IndicatorConfig(
+        indicator_name="SMA",
+        adapter_function=TrendIndicators.sma,
+        required_data=["close"],
+        result_type=IndicatorResultType.SINGLE,
+        scale_type=IndicatorScaleType.PRICE_RATIO,
+        category="trend",
+    )
+    sma_config.add_parameter(
+        ParameterConfig(
+            name="length",
+            default_value=20,
+            min_value=2,
+            max_value=200,
+            description="SMA計算期間",
+        )
+    )
+    sma_config.param_map = {"data": "data", "length": "length"}
+    indicator_registry.register(sma_config)
+
+    # EMA (Exponential Moving Average) - 明示的実装
+    ema_config = IndicatorConfig(
+        indicator_name="EMA",
+        adapter_function=TrendIndicators.ema,
+        required_data=["close"],
+        result_type=IndicatorResultType.SINGLE,
+        scale_type=IndicatorScaleType.PRICE_RATIO,
+        category="trend",
+    )
+    ema_config.add_parameter(
+        ParameterConfig(
+            name="length",
+            default_value=20,
+            min_value=2,
+            max_value=200,
+            description="EMA計算期間",
+        )
+    )
+    ema_config.param_map = {"data": "data", "length": "length"}
+    indicator_registry.register(ema_config)
+
+    # WMA (Weighted Moving Average)
     wma_config = IndicatorConfig(
         indicator_name="WMA",
         adapter_function=TrendIndicators.wma,
@@ -1324,9 +1464,6 @@ def setup_volume_indicators():
         )
     )
     indicator_registry.register(adosc_config)
-
-
-# Price transform indicators removed - no longer used in technical analysis
 
 
 def setup_statistics_indicators():
@@ -1745,8 +1882,6 @@ def setup_pattern_recognition_indicators():
     )
     evening_star_cdl_config.param_map = {"open": "open_data"}
     indicator_registry.register(evening_star_cdl_config)
-
-
 
 
 def setup_hilbert_transform_indicators():
