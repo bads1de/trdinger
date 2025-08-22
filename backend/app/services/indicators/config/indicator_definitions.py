@@ -10,9 +10,6 @@ from app.services.indicators.technical_indicators.momentum import (
 from app.services.indicators.technical_indicators.pattern_recognition import (
     PatternRecognitionIndicators,
 )
-from app.services.indicators.technical_indicators.price_transform import (
-    PriceTransformIndicators,
-)
 from app.services.indicators.technical_indicators.statistics import (
     StatisticsIndicators,
 )
@@ -1329,80 +1326,7 @@ def setup_volume_indicators():
     indicator_registry.register(adosc_config)
 
 
-def setup_price_transform_indicators():
-    """価格変換系インジケーターの設定"""
-
-    # AVGPRICE
-    avgprice_config = IndicatorConfig(
-        indicator_name="AVGPRICE",
-        adapter_function=PriceTransformIndicators.avgprice,
-        required_data=["open", "high", "low", "close"],
-        result_type=IndicatorResultType.SINGLE,
-        scale_type=IndicatorScaleType.PRICE_ABSOLUTE,
-        category="price_transform",
-    )
-    avgprice_config.param_map = {
-        "open": "open_data",
-        "high": "high",
-        "low": "low",
-        "close": "close",
-    }
-    indicator_registry.register(avgprice_config)
-
-    # MEDPRICE
-    medprice_config = IndicatorConfig(
-        indicator_name="MEDPRICE",
-        adapter_function=PriceTransformIndicators.medprice,
-        required_data=["high", "low"],
-        result_type=IndicatorResultType.SINGLE,
-        scale_type=IndicatorScaleType.PRICE_ABSOLUTE,
-        category="price_transform",
-    )
-    indicator_registry.register(medprice_config)
-
-    # TYPPRICE
-    typprice_config = IndicatorConfig(
-        indicator_name="TYPPRICE",
-        adapter_function=PriceTransformIndicators.typprice,
-        required_data=["high", "low", "close"],
-        result_type=IndicatorResultType.SINGLE,
-        scale_type=IndicatorScaleType.PRICE_ABSOLUTE,
-        category="price_transform",
-    )
-    indicator_registry.register(typprice_config)
-
-    # WCLPRICE
-    wclprice_config = IndicatorConfig(
-        indicator_name="WCLPRICE",
-        adapter_function=PriceTransformIndicators.wclprice,
-        required_data=["high", "low", "close"],
-        result_type=IndicatorResultType.SINGLE,
-        scale_type=IndicatorScaleType.PRICE_ABSOLUTE,
-        category="price_transform",
-    )
-    indicator_registry.register(wclprice_config)
-
-    # HA_CLOSE (Heikin Ashi Close)
-    ha_close_config = IndicatorConfig(
-        indicator_name="HA_CLOSE",
-        adapter_function=PriceTransformIndicators.ha_close,
-        required_data=["open", "high", "low", "close"],
-        result_type=IndicatorResultType.SINGLE,
-        scale_type=IndicatorScaleType.PRICE_ABSOLUTE,
-        category="price_transform",
-    )
-    indicator_registry.register(ha_close_config)
-
-    # HA_OHLC (Heikin Ashi OHLC)
-    ha_ohlc_config = IndicatorConfig(
-        indicator_name="HA_OHLC",
-        adapter_function=PriceTransformIndicators.ha_ohlc,
-        required_data=["open", "high", "low", "close"],
-        result_type=IndicatorResultType.COMPLEX,
-        scale_type=IndicatorScaleType.PRICE_ABSOLUTE,
-        category="price_transform",
-    )
-    indicator_registry.register(ha_ohlc_config)
+# Price transform indicators removed - no longer used in technical analysis
 
 
 def setup_statistics_indicators():
@@ -1899,7 +1823,6 @@ def initialize_all_indicators():
     setup_trend_indicators()
     setup_volatility_indicators()
     setup_volume_indicators()
-    setup_price_transform_indicators()
 
     setup_statistics_indicators()
     setup_pattern_recognition_indicators()

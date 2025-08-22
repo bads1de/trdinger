@@ -167,13 +167,6 @@ VALID_INDICATOR_TYPES = [
     "STDDEV",
     "TSF",
     "VAR",
-    # 価格変換系指標
-    "AVGPRICE",
-    "MEDPRICE",
-    "TYPPRICE",
-    "WCLPRICE",
-    "HA_CLOSE",
-    "HA_OHLC",
     # パターン認識系指標
     "CDL_DOJI",
     "CDL_HAMMER",

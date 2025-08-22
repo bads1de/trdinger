@@ -20,7 +20,6 @@ logger = logging.getLogger(__name__)
 DEFAULT_LENGTH = 14
 NO_LENGTH_INDICATORS = {
     "SAR",
-    "WCLPRICE",
     "OBV",
     "VWAP",
     "AD",
@@ -58,11 +57,6 @@ NO_LENGTH_INDICATORS = {
     "CMF",
     "EOM",
     "KVO",
-    "TYPPRICE",
-    "AVGPRICE",
-    "MEDPRICE",
-    "HA_CLOSE",
-    "HA_OHLC",
     "STOCH",
     "STOCHF",
     "KST",
@@ -363,12 +357,6 @@ def normalize_params(
     try:
         sig = inspect.signature(config.adapter_function)
 
-        # PriceTransformIndicatorsの関数かどうかをチェック
-        is_price_transform = hasattr(
-            config.adapter_function, "__qualname__"
-        ) and config.adapter_function.__qualname__.startswith(
-            "PriceTransformIndicators."
-        )
 
         # length パラメータの追加は明示的に必要な指標のみに制限
         # SAR には length パラメータを追加しない（af, max_af のみを使用）
@@ -381,7 +369,6 @@ def normalize_params(
         elif (
             "length" in sig.parameters
             and "length" not in converted_params
-            and not is_price_transform
         ):
             # period_to_length_indicators に含まれる指標のみ length を自動追加
             default_len = params.get("period")

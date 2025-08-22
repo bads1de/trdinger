@@ -62,39 +62,6 @@ PANDAS_TA_CONFIG = {
         "return_cols": ["Upper", "Middle", "Lower"],
         "default_values": {"length": 20, "std": 2.0},
     },
-    # 価格変換系指標 - パラメータ不要
-    "TYPPRICE": {
-        "function": "hlc3",
-        "params": {},  # パラメータなし
-        "data_columns": ["High", "Low", "Close"],
-        "returns": "single",
-        "default_values": {},
-        "multi_column": True,
-    },
-    "AVGPRICE": {
-        "function": "ohlc4",
-        "params": {},  # パラメータなし
-        "data_columns": ["Open", "High", "Low", "Close"],
-        "returns": "single",
-        "default_values": {},
-        "multi_column": True,
-    },
-    "MEDPRICE": {
-        "function": "hl2",
-        "params": {},  # パラメータなし
-        "data_columns": ["High", "Low"],
-        "returns": "single",
-        "default_values": {},
-        "multi_column": True,
-    },
-    "WCLPRICE": {
-        "function": "wcp",
-        "params": {},  # パラメータなし
-        "data_columns": ["High", "Low", "Close"],
-        "returns": "single",
-        "default_values": {},
-        "multi_column": True,
-    },
 }
 
 POSITIONAL_DATA_FUNCTIONS = {
@@ -117,8 +84,6 @@ POSITIONAL_DATA_FUNCTIONS = {
     "midprice",
     "ht_trendline",
     "adosc",
-    "ha_close",
-    "ha_ohlc",
     "correl",
     "linearreg",
     "stddev",

@@ -225,10 +225,6 @@ class IndicatorConfigRegistry:
             "VWAP": "OBV",
             "PVT": "OBV",
             "EMV": "OBV",
-            "AVGPRICE": "SMA",
-            "MEDPRICE": "SMA",
-            "TYPPRICE": "SMA",
-            "WCLPRICE": "SMA",
             "PSAR": "SMA",
         }
 
