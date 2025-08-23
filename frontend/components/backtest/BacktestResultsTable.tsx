@@ -54,34 +54,34 @@ export default function BacktestResultsTable({
       <table className="min-w-full divide-y divide-secondary-700">
         <thead className="bg-secondary-800">
           <tr>
-            <th className="px-6 py-3 text-left text-xs font-medium text-secondary-300 uppercase tracking-wider">
+            <th className="px-6 py-3 text-left text-xs font-medium text-secondary-300 uppercase tracking-wider whitespace-nowrap">
               戦略名
             </th>
-            <th className="px-6 py-3 text-left text-xs font-medium text-secondary-300 uppercase tracking-wider">
+            <th className="px-6 py-3 text-left text-xs font-medium text-secondary-300 uppercase tracking-wider whitespace-nowrap">
               シンボル
             </th>
-            <th className="px-6 py-3 text-left text-xs font-medium text-secondary-300 uppercase tracking-wider">
+            <th className="px-6 py-3 text-left text-xs font-medium text-secondary-300 uppercase tracking-wider whitespace-nowrap">
               時間軸
             </th>
-            <th className="px-6 py-3 text-left text-xs font-medium text-secondary-300 uppercase tracking-wider">
+            <th className="px-6 py-3 text-left text-xs font-medium text-secondary-300 uppercase tracking-wider whitespace-nowrap">
               総リターン
             </th>
-            <th className="px-6 py-3 text-left text-xs font-medium text-secondary-300 uppercase tracking-wider">
-              シャープレシオ
+            <th className="px-6 py-3 text-left text-xs font-medium text-secondary-300 uppercase tracking-wider whitespace-nowrap">
+              SR
             </th>
-            <th className="px-6 py-3 text-left text-xs font-medium text-secondary-300 uppercase tracking-wider">
-              最大DD
+            <th className="px-6 py-3 text-left text-xs font-medium text-secondary-300 uppercase tracking-wider whitespace-nowrap">
+              DD
             </th>
-            <th className="px-6 py-3 text-left text-xs font-medium text-secondary-300 uppercase tracking-wider">
+            <th className="px-6 py-3 text-left text-xs font-medium text-secondary-300 uppercase tracking-wider whitespace-nowrap">
               勝率
             </th>
-            <th className="px-6 py-3 text-left text-xs font-medium text-secondary-300 uppercase tracking-wider">
+            <th className="px-6 py-3 text-left text-xs font-medium text-secondary-300 uppercase tracking-wider whitespace-nowrap">
               取引数
             </th>
-            <th className="px-6 py-3 text-left text-xs font-medium text-secondary-400 uppercase tracking-wider">
+            <th className="px-6 py-3 text-left text-xs font-medium text-secondary-400 uppercase tracking-wider whitespace-nowrap">
               実行日時
             </th>
-            <th className="px-6 py-3 text-left text-xs font-medium text-secondary-300 uppercase tracking-wider">
+            <th className="px-6 py-3 text-left text-xs font-medium text-secondary-300 uppercase tracking-wider whitespace-nowrap">
               操作
             </th>
           </tr>
