@@ -80,8 +80,13 @@ export const useBacktestResults = () => {
     { limit: 20, offset: 0 },
     {
       transform: (response: any) => {
-        setTotal(response.total || 0);
-        return response.results || [];
+        // backend returns { success: bool, data: { results: [...], total: N }, ... }
+        const data = response?.data ?? response;
+        // debug: log raw response for troubleshooting
+        // eslint-disable-next-line no-console
+        console.debug("useBacktestResults: raw response", response);
+        setTotal(data?.total || 0);
+        return data?.results || [];
       },
       errorMessage: "バックテスト結果の取得に失敗しました",
     }

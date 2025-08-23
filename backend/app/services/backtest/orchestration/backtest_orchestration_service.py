@@ -53,7 +53,15 @@ class BacktestOrchestrationService:
         """
         from app.utils.error_handler import safe_operation
 
-        @safe_operation(context="バックテスト結果取得", is_api_call=True, default_return=api_response(success=False, error="バックテスト結果取得でエラーが発生しました", status_code=500))
+        @safe_operation(
+            context="バックテスト結果取得",
+            is_api_call=True,
+            default_return=api_response(
+                success=False,
+                error="バックテスト結果取得でエラーが発生しました",
+                status_code=500,
+            ),
+        )
         def _get_backtest_results():
             backtest_repo = BacktestResultRepository(db)
 
@@ -65,9 +73,11 @@ class BacktestOrchestrationService:
                 symbol=symbol, strategy_name=strategy_name
             )
 
-            return api_response(
-                success=True, data={"results": results, "total": total}
-            )
+            return {
+                "success": True,
+                "results": results,
+                "total": total,
+            }
 
         return _get_backtest_results()
 
@@ -86,7 +96,15 @@ class BacktestOrchestrationService:
         """
         from app.utils.error_handler import safe_operation
 
-        @safe_operation(context=f"バックテスト結果取得 (ID: {result_id})", is_api_call=True, default_return=api_response(success=False, error="バックテスト結果取得でエラーが発生しました", status_code=500))
+        @safe_operation(
+            context=f"バックテスト結果取得 (ID: {result_id})",
+            is_api_call=True,
+            default_return=api_response(
+                success=False,
+                error="バックテスト結果取得でエラーが発生しました",
+                status_code=500,
+            ),
+        )
         def _get_backtest_result_by_id():
             backtest_repo = BacktestResultRepository(db)
             result = backtest_repo.get_backtest_result_by_id(result_id)
@@ -115,7 +133,15 @@ class BacktestOrchestrationService:
         """
         from app.utils.error_handler import safe_operation
 
-        @safe_operation(context=f"バックテスト結果削除 (ID: {result_id})", is_api_call=True, default_return=api_response(success=False, error="バックテスト結果削除でエラーが発生しました", status_code=500))
+        @safe_operation(
+            context=f"バックテスト結果削除 (ID: {result_id})",
+            is_api_call=True,
+            default_return=api_response(
+                success=False,
+                error="バックテスト結果削除でエラーが発生しました",
+                status_code=500,
+            ),
+        )
         def _delete_backtest_result():
             backtest_repo = BacktestResultRepository(db)
             success = backtest_repo.delete_backtest_result(result_id)
@@ -141,7 +167,15 @@ class BacktestOrchestrationService:
         """
         from app.utils.error_handler import safe_operation
 
-        @safe_operation(context="全バックテスト結果削除", is_api_call=True, default_return=api_response(success=False, error="全バックテスト結果削除でエラーが発生しました", status_code=500))
+        @safe_operation(
+            context="全バックテスト結果削除",
+            is_api_call=True,
+            default_return=api_response(
+                success=False,
+                error="全バックテスト結果削除でエラーが発生しました",
+                status_code=500,
+            ),
+        )
         def _delete_all_backtest_results():
             backtest_repo = BacktestResultRepository(db)
             ga_experiment_repo = GAExperimentRepository(db)
@@ -178,7 +212,15 @@ class BacktestOrchestrationService:
         """
         from app.utils.error_handler import safe_operation
 
-        @safe_operation(context="サポート戦略取得", is_api_call=True, default_return=api_response(success=False, error="サポート戦略取得でエラーが発生しました", status_code=500))
+        @safe_operation(
+            context="サポート戦略取得",
+            is_api_call=True,
+            default_return=api_response(
+                success=False,
+                error="サポート戦略取得でエラーが発生しました",
+                status_code=500,
+            ),
+        )
         def _get_supported_strategies():
             backtest_service = BacktestService()
             strategies = backtest_service.get_supported_strategies()
@@ -199,7 +241,15 @@ class BacktestOrchestrationService:
         """
         from app.utils.error_handler import safe_operation
 
-        @safe_operation(context="バックテスト実行", is_api_call=True, default_return=api_response(success=False, error="バックテスト実行でエラーが発生しました", status_code=500))
+        @safe_operation(
+            context="バックテスト実行",
+            is_api_call=True,
+            default_return=api_response(
+                success=False,
+                error="バックテスト実行でエラーが発生しました",
+                status_code=500,
+            ),
+        )
         def _execute_backtest():
             backtest_service = BacktestService()
             result = backtest_service.execute_and_save_backtest(request, db)

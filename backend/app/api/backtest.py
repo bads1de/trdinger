@@ -100,13 +100,17 @@ async def get_backtest_results(
     """
 
     async def _get_results():
-        return await orchestration_service.get_backtest_results(
+        # orchestration_service returns api_response with data field: {"results": [...], "total": N}
+        resp = await orchestration_service.get_backtest_results(
             db=db,
             limit=limit,
             offset=offset,
             symbol=symbol,
             strategy_name=strategy_name,
         )
+
+        # orchestration_service now returns normalized response with top-level `results` and `total`
+        return resp
 
     return await ErrorHandler.safe_execute_async(_get_results)
 
