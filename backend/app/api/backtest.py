@@ -42,7 +42,12 @@ class BacktestRequest(BaseModel):
     start_date: datetime = Field(..., description="開始日時")
     end_date: datetime = Field(..., description="終了日時")
     initial_capital: float = Field(..., gt=0, description="初期資金")
-    commission_rate: float = Field(default=unified_config.backtest.default_commission_rate, ge=0, le=1, description="手数料率")
+    commission_rate: float = Field(
+        default=unified_config.backtest.default_commission_rate,
+        ge=0,
+        le=1,
+        description="手数料率",
+    )
     strategy_config: StrategyConfig = Field(..., description="戦略設定")
 
 
@@ -65,7 +70,12 @@ class BacktestResultsResponse(BaseModel):
 
 @router.get("/results", response_model=BacktestResultsResponse)
 async def get_backtest_results(
-    limit: int = Query(unified_config.backtest.default_results_limit, ge=1, le=unified_config.backtest.max_results_limit, description="取得件数"),
+    limit: int = Query(
+        unified_config.backtest.default_results_limit,
+        ge=1,
+        le=unified_config.backtest.max_results_limit,
+        description="取得件数",
+    ),
     offset: int = Query(0, ge=0, description="オフセット"),
     symbol: Optional[str] = Query(None, description="取引ペアフィルター"),
     strategy_name: Optional[str] = Query(None, description="戦略名フィルター"),
@@ -125,7 +135,7 @@ async def delete_all_backtest_results(
     return await ErrorHandler.safe_execute_async(_delete_all_results)
 
 
-@router.get("/results/{result_id}", response_model=BacktestResponse)
+@router.get("/results/{result_id}/", response_model=BacktestResponse)
 async def get_backtest_result_by_id(
     result_id: int,
     db: Session = Depends(get_db),
@@ -162,7 +172,7 @@ async def get_backtest_result_by_id(
     return await ErrorHandler.safe_execute_async(_get_by_id)
 
 
-@router.delete("/results/{result_id}")
+@router.delete("/results/{result_id}/")
 async def delete_backtest_result(
     result_id: int,
     db: Session = Depends(get_db),

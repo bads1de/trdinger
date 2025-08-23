@@ -76,7 +76,7 @@ export const useBacktestResults = () => {
     error,
     refetch: loadResults,
   } = useParameterizedDataFetching<BacktestResult, BacktestResultsParams>(
-    "/api/backtest/results/",
+    "/api/backtest/results",
     { limit: 20, offset: 0 },
     {
       transform: (response: any) => {
@@ -96,7 +96,7 @@ export const useBacktestResults = () => {
   };
 
   const handleDeleteResult = async (result: BacktestResult) => {
-    await deleteResultApi(`/api/backtest/results/${result.id}`, {
+    await deleteResultApi(`/api/backtest/results/${result.id}/`, {
       method: "DELETE",
       confirmMessage: `バックテスト結果「${result.strategy_name}」を削除しますか？\nこの操作は取り消せません。`,
       onSuccess: () => {
