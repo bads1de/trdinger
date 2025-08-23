@@ -299,7 +299,6 @@ class GeneratedStrategyRepository(BaseRepository):
         def _delete_all_strategies():
             deleted_count = self.db.query(GeneratedStrategy).delete()
             self.db.commit()
-            logger.info(f"すべての生成された戦略を削除しました: {deleted_count} 件")
             return deleted_count
 
         return _delete_all_strategies()

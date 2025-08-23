@@ -208,7 +208,6 @@ class GAExperimentRepository(BaseRepository):
         def _delete_all_experiments():
             deleted_count = self.db.query(GAExperiment).delete()
             self.db.commit()
-            logger.info(f"すべてのGA実験を削除しました: {deleted_count} 件")
             return deleted_count
 
         return _delete_all_experiments()
