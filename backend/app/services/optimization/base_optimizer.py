@@ -101,9 +101,15 @@ class BaseOptimizer(ABC):
 
             # 型固有のバリデーション
             if param_config.type == "real":
+                # __post_init__で既にNoneチェック済みだが、型チェックのためにアサーションを追加
+                assert param_config.low is not None and param_config.high is not None, \
+                    f"パラメータ '{param_name}': lowとhighが設定されていません"
                 if param_config.low >= param_config.high:
                     raise ValueError(f"パラメータ '{param_name}': lowはhighより小さい必要があります")
             elif param_config.type == "integer":
+                # __post_init__で既にNoneチェック済みだが、型チェックのためにアサーションを追加
+                assert param_config.low is not None and param_config.high is not None, \
+                    f"パラメータ '{param_name}': lowとhighが設定されていません"
                 if param_config.low >= param_config.high:
                     raise ValueError(f"パラメータ '{param_name}': lowはhighより小さい必要があります")
                 if not isinstance(param_config.low, int) or not isinstance(param_config.high, int):

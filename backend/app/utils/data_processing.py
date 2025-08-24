@@ -12,7 +12,7 @@ Pipeline、ColumnTransformer、標準Transformerを使用した現代的な実�
 """
 
 import logging
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple, Union
 
 import numpy as np
 import pandas as pd
@@ -42,7 +42,7 @@ class OutlierRemovalTransformer(BaseEstimator, TransformerMixin):
     IsolationForestやLocalOutlierFactorを活用し、Pipeline内で使用可能。
     """
 
-    def __init__(self, method="isolation_forest", contamination=0.1, **kwargs):
+    def __init__(self, method: str = "isolation_forest", contamination: float = 0.1, **kwargs: Any) -> None:
         """
         Args:
             method: 外れ値検出方法 ('isolation_forest', 'local_outlier_factor')
@@ -59,7 +59,7 @@ class OutlierRemovalTransformer(BaseEstimator, TransformerMixin):
         """外れ値検出器をフィット"""
         if self.method == "isolation_forest":
             self.detector = IsolationForest(
-                contamination=self.contamination, random_state=42, **self.kwargs
+                contamination=float(self.contamination), random_state=42, **self.kwargs
             )
             self.detector.fit(X)
             # 外れ値マスクを計算（-1が外れ値、1が正常値）
@@ -68,7 +68,7 @@ class OutlierRemovalTransformer(BaseEstimator, TransformerMixin):
 
         elif self.method == "local_outlier_factor":
             self.detector = LocalOutlierFactor(
-                contamination=self.contamination, **self.kwargs
+                contamination=float(self.contamination), **self.kwargs
             )
             # LOFは fit_predict を使用
             predictions = self.detector.fit_predict(X)
@@ -858,11 +858,17 @@ class DataProcessor:
 
                 # 数値型を想定する場合は to_numeric で強制変換
                 if dtype is not None:
-                    series = pd.to_numeric(series, errors="coerce")
                     try:
-                        series = series.astype(dtype)
-                    except Exception:
-                        pass
+                        # pd.to_numericで安全に数値変換を試行
+                        series = pd.to_numeric(series, errors="coerce")
+
+                        # 数値型の場合は指定されたdtypeに変換
+                        if pd.api.types.is_numeric_dtype(series):
+                            series = series.astype(dtype)
+                    except Exception as e:
+                        logger.warning(f"データ型変換でエラーが発生 ({dtype}): {e}")
+                        # エラーの場合はpd.to_numericで数値型に変換
+                        series = pd.to_numeric(series, errors="coerce")
 
                 # 前方補完
                 if forward_fill:
@@ -1165,6 +1171,7 @@ class DataProcessor:
             ML用前処理パイプライン
         """
         from sklearn.feature_selection import SelectKBest, f_regression
+        from sklearn.base import BaseEstimator, TransformerMixin
 
         # 基本的な前処理パイプライン
         base_pipeline = self.create_preprocessing_pipeline(
@@ -1173,11 +1180,12 @@ class DataProcessor:
             outlier_method="iqr",
         )
 
+        # Pipeline stepsリストを作成
         steps = [("base_preprocessing", base_pipeline)]
 
         # 特徴選択（オプション）
         if feature_selection and n_features:
-            steps.append(
+            steps.append(  # type: ignore
                 (
                     "feature_selection",
                     SelectKBest(score_func=f_regression, k=n_features),

@@ -228,7 +228,7 @@ class FearGreedIndexData(Base):
     @property
     def data_timestamp_utc(self):
         """タイムゾーン情報を保証したdata_timestampを返す"""
-        if self.data_timestamp and self.data_timestamp.tzinfo is None:
+        if self.data_timestamp is not None and self.data_timestamp.tzinfo is None:
             from datetime import timezone
 
             return self.data_timestamp.replace(tzinfo=timezone.utc)
@@ -237,7 +237,7 @@ class FearGreedIndexData(Base):
     @property
     def timestamp_utc(self):
         """タイムゾーン情報を保証したtimestampを返す"""
-        if self.timestamp and self.timestamp.tzinfo is None:
+        if self.timestamp is not None and self.timestamp.tzinfo is None:
             from datetime import timezone
 
             return self.timestamp.replace(tzinfo=timezone.utc)

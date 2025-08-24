@@ -298,8 +298,11 @@ def get_funding_rate_orchestration_service(
         from app.services.data_collection.orchestration.funding_rate_orchestration_service import (
             FundingRateOrchestrationService,
         )
+        from app.services.data_collection.bybit.funding_rate_service import (
+            BybitFundingRateService,
+        )
 
-        return FundingRateOrchestrationService(db)
+        return FundingRateOrchestrationService(BybitFundingRateService())
     except Exception as e:
         import logging
 

@@ -5,7 +5,7 @@
 パラメータ空間を定義します。Optunaの高度な最適化機能を活用。
 """
 
-from typing import Dict
+from typing import Any, Dict
 import optuna
 
 from .optuna_optimizer import ParameterSpace
@@ -208,7 +208,7 @@ class EnsembleParameterSpace:
 
     @classmethod
     def get_ensemble_parameter_space(
-        self, ensemble_method: str, enabled_models: list
+        cls, ensemble_method: str, enabled_models: list
     ) -> Dict[str, ParameterSpace]:
         """
         アンサンブル手法と有効なモデルに基づいてパラメータ空間を構築
@@ -224,48 +224,48 @@ class EnsembleParameterSpace:
 
         # ベースモデルのパラメータ空間を追加
         if "lightgbm" in enabled_models:
-            parameter_space.update(self.get_lightgbm_parameter_space())
+            parameter_space.update(cls.get_lightgbm_parameter_space())
 
         if "xgboost" in enabled_models:
-            parameter_space.update(self.get_xgboost_parameter_space())
+            parameter_space.update(cls.get_xgboost_parameter_space())
 
         if "randomforest" in enabled_models:
-            parameter_space.update(self.get_randomforest_parameter_space())
+            parameter_space.update(cls.get_randomforest_parameter_space())
 
         if "catboost" in enabled_models:
-            parameter_space.update(self.get_catboost_parameter_space())
+            parameter_space.update(cls.get_catboost_parameter_space())
 
         if "tabnet" in enabled_models:
-            parameter_space.update(self.get_tabnet_parameter_space())
+            parameter_space.update(cls.get_tabnet_parameter_space())
 
         if "adaboost" in enabled_models:
-            parameter_space.update(self.get_adaboost_parameter_space())
+            parameter_space.update(cls.get_adaboost_parameter_space())
 
         if "extratrees" in enabled_models:
-            parameter_space.update(self.get_extratrees_parameter_space())
+            parameter_space.update(cls.get_extratrees_parameter_space())
 
         if "gradientboosting" in enabled_models:
-            parameter_space.update(self.get_gradientboosting_parameter_space())
+            parameter_space.update(cls.get_gradientboosting_parameter_space())
 
         if "knn" in enabled_models:
-            parameter_space.update(self.get_knn_parameter_space())
+            parameter_space.update(cls.get_knn_parameter_space())
 
         if "ridge" in enabled_models:
-            parameter_space.update(self.get_ridge_parameter_space())
+            parameter_space.update(cls.get_ridge_parameter_space())
 
         if "naivebayes" in enabled_models:
-            parameter_space.update(self.get_naivebayes_parameter_space())
+            parameter_space.update(cls.get_naivebayes_parameter_space())
 
         # アンサンブル手法固有のパラメータを追加
         if ensemble_method == "bagging":
-            parameter_space.update(self.get_bagging_parameter_space())
+            parameter_space.update(cls.get_bagging_parameter_space())
         elif ensemble_method == "stacking":
-            parameter_space.update(self.get_stacking_parameter_space())
+            parameter_space.update(cls.get_stacking_parameter_space())
 
         return parameter_space
 
     @staticmethod
-    def _suggest_lightgbm_params(trial: optuna.Trial) -> Dict[str, any]:
+    def _suggest_lightgbm_params(trial: optuna.Trial) -> Dict[str, Any]:
         """LightGBMパラメータの提案"""
         return {
             "lgb_num_leaves": trial.suggest_int("lgb_num_leaves", 10, 100),
@@ -285,7 +285,7 @@ class EnsembleParameterSpace:
         }
 
     @staticmethod
-    def _suggest_xgboost_params(trial: optuna.Trial) -> Dict[str, any]:
+    def _suggest_xgboost_params(trial: optuna.Trial) -> Dict[str, Any]:
         """XGBoostパラメータの提案"""
         return {
             "xgb_max_depth": trial.suggest_int("xgb_max_depth", 3, 15),
@@ -303,7 +303,7 @@ class EnsembleParameterSpace:
         }
 
     @staticmethod
-    def _suggest_randomforest_params(trial: optuna.Trial) -> Dict[str, any]:
+    def _suggest_randomforest_params(trial: optuna.Trial) -> Dict[str, Any]:
         """RandomForestパラメータの提案"""
         return {
             "rf_n_estimators": trial.suggest_int("rf_n_estimators", 50, 300),
@@ -317,7 +317,7 @@ class EnsembleParameterSpace:
         }
 
     @staticmethod
-    def _suggest_knn_params(trial: optuna.Trial) -> Dict[str, any]:
+    def _suggest_knn_params(trial: optuna.Trial) -> Dict[str, Any]:
         """KNNパラメータの提案（最適化された距離計算）"""
         return {
             "knn_n_neighbors": trial.suggest_int("knn_n_neighbors", 3, 20),
@@ -335,7 +335,7 @@ class EnsembleParameterSpace:
         }
 
     @staticmethod
-    def _suggest_bagging_params(trial: optuna.Trial) -> Dict[str, any]:
+    def _suggest_bagging_params(trial: optuna.Trial) -> Dict[str, Any]:
         """バギングパラメータの提案"""
         return {
             "bagging_n_estimators": trial.suggest_int("bagging_n_estimators", 3, 10),
@@ -346,7 +346,7 @@ class EnsembleParameterSpace:
         }
 
     @staticmethod
-    def _suggest_stacking_params(trial: optuna.Trial) -> Dict[str, any]:
+    def _suggest_stacking_params(trial: optuna.Trial) -> Dict[str, Any]:
         """スタッキングパラメータの提案"""
         return {
             "stacking_meta_C": trial.suggest_float(

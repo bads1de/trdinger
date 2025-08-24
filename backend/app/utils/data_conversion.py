@@ -224,18 +224,24 @@ def ensure_list(
     データをlistに変換（簡素化版）
 
     Python標準のlist()コンストラクタを活用。
+    pandas/numpyオブジェクトはtolist()で効率的に変換。
+    backtesting.lib._Arrayなどの特殊な配列型にも対応。
     """
     try:
         if isinstance(data, list):
             return data
 
-        # pandas/numpyは.tolist()で効率的に変換
+        # pandas/numpyおよびbacktesting.lib._Arrayはtolist()で効率的に変換
         if hasattr(data, "tolist"):
             return data.tolist()
 
-        # backtesting._Arrayの特殊ケース
-        if hasattr(data, "_data"):
-            return list(data._data)
+        # numpy互換のdata属性がある場合
+        if hasattr(data, "data"):
+            try:
+                return list(data.data)
+            except (AttributeError, TypeError):
+                # data属性がリストに変換できない場合
+                pass
 
         # その他は全てPython標準で処理
         return list(data)

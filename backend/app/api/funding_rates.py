@@ -56,7 +56,7 @@ async def get_funding_rates(
     async def _get_funding_rates_data():
         funding_rates = await orchestration_service.get_funding_rate_data(
             symbol=symbol,
-            limit=limit,
+            limit=limit or 100,
             start_date=start_date,
             end_date=end_date,
             db_session=db,
@@ -114,7 +114,7 @@ async def collect_funding_rate_data(
 
         return await orchestration_service.collect_funding_rate_data(
             symbol=symbol,
-            limit=limit,
+            limit=limit or 100,
             fetch_all=fetch_all,
             db_session=db,
         )

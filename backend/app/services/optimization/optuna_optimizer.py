@@ -93,10 +93,20 @@ class OptunaOptimizer:
         optimization_time = (end_time - start_time).total_seconds()
 
         # 結果を作成
+        if self.study is None or len(self.study.trials) == 0:
+            raise RuntimeError("最適化が実行されていないか、試行がありません")
+
         best_trial = self.study.best_trial
+        if best_trial is None:
+            raise RuntimeError("最適な試行が見つかりません")
+
+        best_score = best_trial.value if best_trial.value is not None else 0.0
+        if best_trial.value is None:
+            logger.warning("ベスト試行の値がNoneです。デフォルト値0.0を使用します")
+
         result = OptimizationResult(
             best_params=best_trial.params,
-            best_score=best_trial.value,
+            best_score=best_score,
             total_evaluations=len(self.study.trials),
             optimization_time=optimization_time,
             study=self.study,
@@ -141,14 +151,17 @@ class OptunaOptimizer:
 
         for param_name, param_config in parameter_space.items():
             if param_config.type == "real":
+                assert param_config.low is not None and param_config.high is not None
                 params[param_name] = trial.suggest_float(
                     param_name, param_config.low, param_config.high
                 )
             elif param_config.type == "integer":
+                assert param_config.low is not None and param_config.high is not None
                 params[param_name] = trial.suggest_int(
-                    param_name, param_config.low, param_config.high
+                    param_name, int(param_config.low), int(param_config.high)
                 )
             elif param_config.type == "categorical":
+                assert param_config.categories is not None
                 params[param_name] = trial.suggest_categorical(
                     param_name, param_config.categories
                 )

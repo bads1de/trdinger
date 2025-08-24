@@ -144,7 +144,7 @@ def clean_dataframe_with_config(
         クリーニング済みのDataFrame
     """
     try:
-        cleaned_df = df.copy()
+        cleaned_df: pd.DataFrame = df.copy()
 
         # 各カラムのクリーニング
         for col_name, col_config in config.items():
@@ -157,37 +157,40 @@ def clean_dataframe_with_config(
 
             # 型変換
             if col_config.get("type") == "str":
-                cleaned_df[col_name] = col_data.astype(str)
+                cleaned_df.loc[:, col_name] = col_data.astype(str)
             else:
                 # 数値型に変換（エラーの場合はNaN）
-                cleaned_df[col_name] = pd.to_numeric(col_data, errors="coerce")
+                numeric_data = pd.to_numeric(col_data, errors="coerce")
+                cleaned_df.loc[:, col_name] = numeric_data
 
             # 範囲外の値をクリップ
             if "min" in col_config:
-                cleaned_df[col_name] = np.where(
-                    cleaned_df[col_name] < col_config["min"],
-                    col_config["min"],
+                min_val = col_config["min"]
+                cleaned_df.loc[:, col_name] = np.where(
+                    cleaned_df[col_name] < min_val,
+                    min_val,
                     cleaned_df[col_name],
                 )
 
             if "max" in col_config:
-                cleaned_df[col_name] = np.where(
-                    cleaned_df[col_name] > col_config["max"],
-                    col_config["max"],
+                max_val = col_config["max"]
+                cleaned_df.loc[:, col_name] = np.where(
+                    cleaned_df[col_name] > max_val,
+                    max_val,
                     cleaned_df[col_name],
                 )
 
         # 無効な行の削除
         if drop_invalid_rows:
             # 必須カラムのNaNを含む行を削除
-            valid_mask = pd.Series([True] * len(cleaned_df))
+            valid_mask: pd.Series = pd.Series([True] * len(cleaned_df))
 
             for col_name, col_config in config.items():
                 if col_config.get("required", True) and col_name in cleaned_df.columns:
                     valid_mask &= ~cleaned_df[col_name].isna()
 
             original_len = len(cleaned_df)
-            cleaned_df = cleaned_df[valid_mask].reset_index(drop=True)
+            cleaned_df = cleaned_df.loc[valid_mask].reset_index(drop=True)
 
             if len(cleaned_df) < original_len:
                 logger.info(f"無効な行を削除: {original_len - len(cleaned_df)}行")
