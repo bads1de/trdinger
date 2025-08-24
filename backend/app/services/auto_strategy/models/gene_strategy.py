@@ -7,7 +7,10 @@
 
 import logging
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional, Union, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from .condition_group import ConditionGroup
 
 from .gene_position_sizing import PositionSizingGene
 from .gene_tpsl import TPSLGene
@@ -117,8 +120,8 @@ class StrategyGene:
     exit_conditions: List[Condition] = field(default_factory=list)
 
     # ロング・ショート分離条件（新機能）
-    long_entry_conditions: List[Condition] = field(default_factory=list)
-    short_entry_conditions: List[Condition] = field(default_factory=list)
+    long_entry_conditions: List[Union[Condition, "ConditionGroup"]] = field(default_factory=list)
+    short_entry_conditions: List[Union[Condition, "ConditionGroup"]] = field(default_factory=list)
 
     risk_management: Dict[str, Any] = field(default_factory=dict)
     tpsl_gene: Optional[TPSLGene] = None  # TP/SL遺伝子（GA最適化対象）
@@ -133,7 +136,7 @@ class StrategyGene:
         # 既存のentry_conditionsを使用（後方互換性）
         # ただし、long_entry_conditionsやshort_entry_conditionsは変更しない
 
-    def get_effective_long_conditions(self) -> List[Condition]:
+    def get_effective_long_conditions(self) -> List[Union[Condition, "ConditionGroup"]]:
         """有効なロング条件を取得（後方互換性を考慮）"""
         # 明示的にlong_entry_conditionsが設定されていて、かつ空でない場合
         if self.long_entry_conditions:
@@ -145,7 +148,7 @@ class StrategyGene:
         else:
             return []
 
-    def get_effective_short_conditions(self) -> List[Condition]:
+    def get_effective_short_conditions(self) -> List[Union[Condition, "ConditionGroup"]]:
         """有効なショート条件を取得（後方互換性を考慮）"""
         # 明示的にshort_entry_conditionsが設定されていて、かつ空でない場合
         if self.short_entry_conditions:

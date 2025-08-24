@@ -229,7 +229,18 @@ class AutoStrategyService:
         )
         def _stop_experiment():
             if self.experiment_manager:
-                return self.experiment_manager.stop_experiment(experiment_id)
+                # ExperimentManager.stop_experiment()はboolを返すので、Dict形式に変換
+                stop_result = self.experiment_manager.stop_experiment(experiment_id)
+                if stop_result:
+                    return {
+                        "success": True,
+                        "message": "実験が正常に停止されました",
+                    }
+                else:
+                    return {
+                        "success": False,
+                        "message": "実験の停止に失敗しました",
+                    }
             else:
                 return {
                     "success": False,
@@ -266,7 +277,12 @@ class AutoStrategyService:
 
         @safe_operation(context="プリセット取得", is_api_call=False, default_return={})
         def _get_presets():
-            return GAConfig.get_presets()
+            return {
+                "default": GAConfig.create_default().to_dict(),
+                "fast": GAConfig.create_fast().to_dict(),
+                "thorough": GAConfig.create_thorough().to_dict(),
+                "multi_objective": GAConfig.create_multi_objective().to_dict(),
+            }
 
         return _get_presets()
 
@@ -298,8 +314,10 @@ class AutoStrategyService:
 
             # 戦略遺伝子の復元
             from ..models.gene_serialization import GeneSerializer
+            from ..models.gene_strategy import StrategyGene
 
-            strategy_gene = GeneSerializer.from_dict(request.strategy_gene)
+            gene_serializer = GeneSerializer()
+            strategy_gene = gene_serializer.dict_to_strategy_gene(request.strategy_gene, StrategyGene)
 
             # バックテスト設定の正規化
             backtest_config = request.backtest_config.copy()
@@ -308,10 +326,21 @@ class AutoStrategyService:
                 normalized_symbol = f"{original_symbol}:USDT"
                 backtest_config["symbol"] = normalized_symbol
 
+            # 戦略遺伝子からバックテスト設定を作成
+            from ..generators.strategy_factory import StrategyFactory
+
+            strategy_factory = StrategyFactory()
+            strategy_class = strategy_factory.create_strategy_class(strategy_gene)
+
+            backtest_full_config = {
+                **backtest_config,
+                "strategy_name": f"test_strategy_{strategy_gene.id[:8]}",
+                "strategy_class": strategy_class,
+                "strategy_config": strategy_gene.to_dict(),
+            }
+
             # バックテスト実行
-            result = self.backtest_service.run_backtest_with_gene(
-                strategy_gene, backtest_config
-            )
+            result = self.backtest_service.run_backtest(backtest_full_config)
 
             logger.info("戦略テスト完了")
             return {

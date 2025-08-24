@@ -5,6 +5,7 @@ GA実行時の各種パラメータを単一のクラスで管理します。
 BaseConfigを継承し、統一された設定管理機能を提供します。
 """
 
+import json
 import logging
 from dataclasses import dataclass, field
 from typing import Any, Callable, Dict, List, Optional
@@ -398,7 +399,12 @@ class GAConfig(BaseConfig):
     @classmethod
     def from_json(cls, json_str: str) -> "GAConfig":
         """JSON文字列から復元（BaseConfigの機能を活用）"""
-        return super().from_json(json_str)
+        try:
+            data = json.loads(json_str)
+            return cls.from_dict(data)
+        except Exception as e:
+            logger.error(f"JSON復元エラー: {e}", exc_info=True)
+            raise ValueError(f"JSON からの復元に失敗しました: {e}")
 
     @classmethod
     def create_default(cls) -> "GAConfig":
@@ -431,7 +437,7 @@ class GAConfig(BaseConfig):
 
     @classmethod
     def create_multi_objective(
-        cls, objectives: List[str] = None, weights: List[float] = None
+        cls, objectives: Optional[List[str]] = None, weights: Optional[List[float]] = None
     ) -> "GAConfig":
         """
         多目的最適化用設定を作成

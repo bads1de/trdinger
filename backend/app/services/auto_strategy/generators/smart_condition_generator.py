@@ -1,12 +1,13 @@
 import logging
 import random
 from enum import Enum
-from typing import List, Tuple
+from typing import List, Tuple, Union
 from app.services.indicators.config import indicator_registry
 from app.services.indicators.config.indicator_config import IndicatorScaleType
 from app.services.auto_strategy.core.indicator_policies import ThresholdPolicy
 
 from ..models.gene_strategy import Condition, IndicatorGene
+from ..models.condition_group import ConditionGroup
 
 
 logger = logging.getLogger(__name__)
@@ -346,9 +347,11 @@ class SmartConditionGenerator:
         except Exception:
             pass
 
-    def generate_balanced_conditions(
-        self, indicators: List[IndicatorGene]
-    ) -> Tuple[List[Condition], List[Condition], List[Condition]]:
+    def generate_balanced_conditions(self, indicators: List[IndicatorGene]) -> Tuple[
+        List[Union[Condition, ConditionGroup]],
+        List[Union[Condition, ConditionGroup]],
+        List[Condition],
+    ]:
         """
         バランスの取れたロング・ショート条件を生成
 
@@ -605,7 +608,12 @@ class SmartConditionGenerator:
                     Condition(left_operand="close", operator="<", right_operand="open")
                 ]
 
-            return longs, shorts, exits
+            # 型を明示的に変換して返す
+            long_conditions: List[Union[Condition, ConditionGroup]] = list(longs)
+            short_conditions: List[Union[Condition, ConditionGroup]] = list(shorts)
+            exit_conditions: List[Condition] = list(exits)
+
+            return long_conditions, short_conditions, exit_conditions
 
         except Exception as e:
             self.logger.error(f"スマート条件生成エラー: {e}")
@@ -736,17 +744,21 @@ class SmartConditionGenerator:
 
     def _generate_fallback_conditions(
         self,
-    ) -> Tuple[List[Condition], List[Condition], List[Condition]]:
+    ) -> Tuple[
+        List[Union[Condition, ConditionGroup]],
+        List[Union[Condition, ConditionGroup]],
+        List[Condition],
+    ]:
         """
         フォールバック条件を生成
 
         Returns:
             (long_entry_conditions, short_entry_conditions, exit_conditions)のタプル
         """
-        long_conditions = [
+        long_conditions: List[Union[Condition, ConditionGroup]] = [
             Condition(left_operand="close", operator=">", right_operand="open")
         ]
-        short_conditions = [
+        short_conditions: List[Union[Condition, ConditionGroup]] = [
             Condition(left_operand="close", operator="<", right_operand="open")
         ]
         exit_conditions: List[Condition] = []
@@ -1035,7 +1047,11 @@ class SmartConditionGenerator:
 
     def _generate_different_indicators_strategy(
         self, indicators: List[IndicatorGene]
-    ) -> Tuple[List[Condition], List[Condition], List[Condition]]:
+    ) -> Tuple[
+        List[Union[Condition, ConditionGroup]],
+        List[Union[Condition, ConditionGroup]],
+        List[Condition],
+    ]:
         """
         異なる指標の組み合わせ戦略
 
@@ -1050,8 +1066,8 @@ class SmartConditionGenerator:
             indicators_by_type = self._dynamic_classify(indicators)
 
             # トレンド系 + モメンタム系の組み合わせを優先
-            long_conditions = []
-            short_conditions = []
+            long_conditions: List[Union[Condition, ConditionGroup]] = []
+            short_conditions: List[Union[Condition, ConditionGroup]] = []
 
             # ML指標とテクニカル指標の混合戦略
             ml_indicators = [
@@ -1194,9 +1210,12 @@ class SmartConditionGenerator:
                 )
 
             # 成立性を下支えするため、各サイドに価格 vs トレンド系の条件を最低1つ保証
-            def _ensure_price_vs_trend(side_conds: List[Condition], prefer: str):
+            def _ensure_price_vs_trend(
+                side_conds: List[Union[Condition, ConditionGroup]], prefer: str
+            ):
                 has_price_vs_trend = any(
-                    isinstance(c.right_operand, str)
+                    isinstance(c, Condition)  # 明示的にCondition型をチェック
+                    and isinstance(c.right_operand, str)
                     and c.left_operand in ("close", "open")
                     and c.right_operand in ("SMA", "EMA", "WMA", "TRIMA", "KAMA")
                     for c in side_conds
@@ -1270,7 +1289,14 @@ class SmartConditionGenerator:
                         )
                     ]
 
-            return long_conditions, short_conditions, []
+            # 型を明示的に変換して返す
+            long_result: List[Union[Condition, ConditionGroup]] = list(long_conditions)
+            short_result: List[Union[Condition, ConditionGroup]] = list(
+                short_conditions
+            )
+            exit_result: List[Condition] = []
+
+            return long_result, short_result, exit_result
 
         except Exception as e:
             self.logger.error(f"異なる指標組み合わせ戦略エラー: {e}")
@@ -1412,7 +1438,11 @@ class SmartConditionGenerator:
 
     def _generate_time_separation_strategy(
         self, indicators: List[IndicatorGene]
-    ) -> Tuple[List[Condition], List[Condition], List[Condition]]:
+    ) -> Tuple[
+        List[Union[Condition, ConditionGroup]],
+        List[Union[Condition, ConditionGroup]],
+        List[Condition],
+    ]:
         """
         時間軸分離戦略（同じ指標の異なる期間を使用）
 
@@ -1498,7 +1528,11 @@ class SmartConditionGenerator:
 
     def _generate_indicator_characteristics_strategy(
         self, indicators: List[IndicatorGene]
-    ) -> Tuple[List[Condition], List[Condition], List[Condition]]:
+    ) -> Tuple[
+        List[Union[Condition, ConditionGroup]],
+        List[Union[Condition, ConditionGroup]],
+        List[Condition],
+    ]:
         """
         指標特性活用戦略（ボリンジャーバンドの正しい実装など）
 
@@ -1644,7 +1678,11 @@ class SmartConditionGenerator:
 
     def _generate_complex_conditions_strategy(
         self, indicators: List[IndicatorGene]
-    ) -> Tuple[List[Condition], List[Condition], List[Condition]]:
+    ) -> Tuple[
+        List[Union[Condition, ConditionGroup]],
+        List[Union[Condition, ConditionGroup]],
+        List[Condition],
+    ]:
         """
         複合条件戦略（複数の条件を組み合わせて確率を高める）
 

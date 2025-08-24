@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import List
+from typing import List, cast
 
 from app.services.auto_strategy.models.condition_group import ConditionGroup
 from app.services.auto_strategy.models.gene_strategy import Condition
@@ -16,7 +16,7 @@ class ConditionAssembly:
 
     @staticmethod
     def ensure_or_with_fallback(
-        conds: List[Condition], side: str, indicators
+        conds: List[Condition | ConditionGroup], side: str, indicators
     ) -> List[Condition | ConditionGroup]:
         # フォールバック
         trend_name = PriceTrendPolicy.pick_trend_name(indicators)
@@ -30,19 +30,19 @@ class ConditionAssembly:
         # 平坦化（既に OR グループがある場合は中身だけ取り出す）
         flat: List[Condition] = []
         for c in conds:
-            if hasattr(c, "conditions") and isinstance(getattr(c, "conditions"), list):
+            if isinstance(c, ConditionGroup):
                 flat.extend(c.conditions)
             else:
                 flat.append(c)
         # フォールバックの重複チェック
         exists = any(
-            getattr(x, "left_operand", None) == fallback.left_operand
-            and getattr(x, "operator", None) == fallback.operator
-            and getattr(x, "right_operand", None) == fallback.right_operand
+            x.left_operand == fallback.left_operand
+            and x.operator == fallback.operator
+            and x.right_operand == fallback.right_operand
             for x in flat
         )
         if len(flat) == 1:
-            return flat if exists else flat + [fallback]
+            return cast(List[Condition | ConditionGroup], flat if exists else flat + [fallback])
         top_level: List[Condition | ConditionGroup] = [ConditionGroup(conditions=flat)]
         # 存在していてもトップレベルに1本は追加して可視化と成立性の底上げを図る
         top_level.append(fallback)

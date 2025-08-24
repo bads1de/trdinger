@@ -1059,6 +1059,108 @@ class FeatureEngineeringService:
         except Exception as e:
             logger.error(f"AutoMLキャッシュクリアエラー: {e}")
 
+    def validate_automl_config(self, config_dict: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        AutoML設定を検証
+
+        Args:
+            config_dict: AutoML設定辞書
+
+        Returns:
+            Dict[str, Any]: 検証結果
+                - valid: bool - 設定が有効かどうか
+                - errors: List[str] - エラーメッセージのリスト
+                - warnings: List[str] - 警告メッセージのリスト
+        """
+        try:
+            errors = []
+            warnings = []
+
+            # 必須キーのチェック
+            if not isinstance(config_dict, dict):
+                errors.append("設定は辞書形式である必要があります")
+                return {
+                    "valid": False,
+                    "errors": errors,
+                    "warnings": warnings
+                }
+
+            # AutoMLConfigオブジェクトの作成を試行
+            try:
+                config = AutoMLConfig.from_dict(config_dict)
+            except Exception as e:
+                errors.append(f"AutoML設定の解析に失敗しました: {str(e)}")
+                return {
+                    "valid": False,
+                    "errors": errors,
+                    "warnings": warnings
+                }
+
+            # TSFresh設定の検証
+            if hasattr(config, 'tsfresh'):
+                tsfresh_config = config.tsfresh
+
+                # TSFreshが有効な場合のチェック
+                if tsfresh_config.enabled:
+                    if not (0.001 <= tsfresh_config.fdr_level <= 1.0):
+                        errors.append("TSFreshのFDRレベルは0.001から1.0の範囲である必要があります")
+
+                    if not (10 <= tsfresh_config.feature_count_limit <= 500):
+                        errors.append("TSFreshの特徴量数制限は10から500の範囲である必要があります")
+
+                    if not (1 <= tsfresh_config.parallel_jobs <= 8):
+                        errors.append("TSFreshの並列ジョブ数は1から8の範囲である必要があります")
+
+                    valid_modes = ["fast", "balanced", "financial_optimized", "comprehensive"]
+                    if tsfresh_config.performance_mode not in valid_modes:
+                        errors.append(f"TSFreshのパフォーマンスモードは{valid_modes}のいずれかである必要があります")
+
+            # AutoFeat設定の検証
+            if hasattr(config, 'autofeat'):
+                autofeat_config = config.autofeat
+
+                # AutoFeatが有効な場合のチェック
+                if autofeat_config.enabled:
+                    if not (10 <= autofeat_config.max_features <= 200):
+                        errors.append("AutoFeatの最大特徴量数は10から200の範囲である必要があります")
+
+                    if not (5 <= autofeat_config.generations <= 50):
+                        errors.append("AutoFeatの世代数は5から50の範囲である必要があります")
+
+                    if not (20 <= autofeat_config.population_size <= 200):
+                        errors.append("AutoFeatの集団サイズは20から200の範囲である必要があります")
+
+                    if not (2 <= autofeat_config.tournament_size <= 10):
+                        errors.append("AutoFeatのトーナメントサイズは2から10の範囲である必要があります")
+
+                    # メモリ使用量の警告
+                    if autofeat_config.max_gb > 4.0:
+                        warnings.append("AutoFeatのメモリ使用量が4GBを超えています。メモリ不足の可能性があります")
+
+            # AutoML機能が利用可能かチェック
+            if not AUTOML_AVAILABLE and (config.tsfresh.enabled or config.autofeat.enabled):
+                warnings.append("AutoML機能が利用できません。必要なライブラリがインストールされていない可能性があります")
+
+            # 設定の整合性チェック
+            if config.tsfresh.enabled and config.autofeat.enabled:
+                total_features = config.tsfresh.feature_count_limit + config.autofeat.max_features
+                if total_features > 300:
+                    warnings.append(f"TSFreshとAutoFeatの合計特徴量数({total_features}個)が300個を超えています。メモリ使用量に注意してください")
+
+            return {
+                "valid": len(errors) == 0,
+                "errors": errors,
+                "warnings": warnings
+            }
+
+        except Exception as e:
+            logger.error(f"AutoML設定検証エラー: {e}")
+            return {
+                "valid": False,
+                "errors": [f"設定検証中に予期しないエラーが発生しました: {str(e)}"],
+                "warnings": []
+            }
+
     def cleanup_resources(self):
         """リソースの完全クリーンアップ"""
         try:

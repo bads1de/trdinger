@@ -7,6 +7,7 @@ import logging
 import re
 from typing import Any, Dict, List, Optional
 
+
 from sqlalchemy.orm import Session
 
 from app.services.auto_strategy.models.gene_serialization import GeneSerializer
@@ -178,7 +179,7 @@ class ExperimentPersistenceService:
                 detailed_backtest_config,
                 experiment_id,
                 db_experiment_id,
-                best_fitness,
+                fitness_score,
             )
             saved_backtest_result = backtest_result_repo.save_backtest_result(
                 backtest_result_data
@@ -274,16 +275,17 @@ class ExperimentPersistenceService:
         generated_strategy_repo = GeneratedStrategyRepository(db)
 
         strategies_data = []
+        fitness_scores = result.get("fitness_scores", [])
         for i, strategy in enumerate(all_strategies[:100]):  # 上位100件に制限
             if strategy.id != best_strategy.id:
+                # fitness_scoresの範囲内にあるかチェック
+                fitness_score = fitness_scores[i] if i < len(fitness_scores) else 0.0
                 strategies_data.append(
                     {
                         "experiment_id": db_experiment_id,
                         "gene_data": serializer.strategy_gene_to_dict(strategy),
                         "generation": ga_config.generations,
-                        "fitness_score": result.get(
-                            "fitness_scores", [0.0] * len(all_strategies)
-                        )[i],
+                        "fitness_score": fitness_score,
                     }
                 )
 
@@ -382,7 +384,6 @@ class ExperimentPersistenceService:
 
         _stop_experiment()
 
-
     def list_experiments(self) -> List[Dict[str, Any]]:
         """実験一覧を取得"""
         from app.utils.error_handler import safe_operation
@@ -429,15 +430,39 @@ class ExperimentPersistenceService:
                         cfg = exp.config or {}
                     except Exception:
                         cfg = {}
-                    if (
-                        cfg.get("experiment_id") == experiment_id
-                        or (
-                            hasattr(exp, "name")
-                            and exp.name is not None
-                            and exp.name == experiment_id
-                        )
-                        or str(exp.id) == experiment_id
-                    ):
+                    if cfg.get("experiment_id") == experiment_id:
+                        pass
+                    elif hasattr(exp, "name"):
+                        try:
+                            if exp.name is not None:
+                                try:
+                                    if str(exp.name) == experiment_id:
+                                        pass
+                                    else:
+                                        if str(exp.id) == experiment_id:
+                                            pass
+                                        else:
+                                            continue
+                                except Exception:
+                                    if str(exp.id) == experiment_id:
+                                        pass
+                                    else:
+                                        continue
+                            else:
+                                if str(exp.id) == experiment_id:
+                                    pass
+                                else:
+                                    continue
+                        except Exception:
+                            if str(exp.id) == experiment_id:
+                                pass
+                            else:
+                                continue
+                    else:
+                        if str(exp.id) == experiment_id:
+                            pass
+                        else:
+                            continue
                         return {
                             "db_id": exp.id,
                             "name": exp.name,

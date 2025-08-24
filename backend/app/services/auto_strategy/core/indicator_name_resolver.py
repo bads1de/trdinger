@@ -9,7 +9,7 @@ IndicatorNameResolver
 from __future__ import annotations
 
 import logging
-from typing import Tuple
+from typing import Tuple, Optional
 import numpy as np
 
 
@@ -87,7 +87,7 @@ class IndicatorNameResolver:
     @classmethod
     def _resolve_indicator_name_dynamically(
         cls, operand: str, strategy_instance
-    ) -> str:
+    ) -> Optional[str]:
         """
         動的指標名解決（簡素化版）
 

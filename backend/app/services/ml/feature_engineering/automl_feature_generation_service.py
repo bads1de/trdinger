@@ -280,3 +280,27 @@ class AutoMLFeatureGenerationService:
             処理時間（秒）
         """
         return stats.get("total_time", 0.0)
+
+    def validate_automl_config(self, config_dict: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        AutoML設定を検証
+
+        Args:
+            config_dict: AutoML設定辞書
+
+        Returns:
+            Dict[str, Any]: 検証結果
+                - valid: bool - 設定が有効かどうか
+                - errors: List[str] - エラーメッセージのリスト
+                - warnings: List[str] - 警告メッセージのリスト
+        """
+        return self.feature_service.validate_automl_config(config_dict)
+
+    def clear_automl_cache(self):
+        """
+        AutoMLキャッシュをクリア
+
+        Returns:
+            None
+        """
+        self.feature_service.clear_automl_cache()

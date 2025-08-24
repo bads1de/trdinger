@@ -17,9 +17,6 @@ from app.services.ml.feature_engineering.automl_feature_generation_service impor
 from app.services.ml.feature_engineering.automl_features.automl_config import (
     AutoMLConfig,
 )
-from app.services.ml.feature_engineering.feature_engineering_service import (
-    FeatureEngineeringService,
-)
 from app.utils.error_handler import ErrorHandler
 
 logger = logging.getLogger(__name__)
@@ -151,8 +148,8 @@ async def generate_features(
 @router.post("/validate-config", response_model=ConfigValidationResponse)
 async def validate_config(
     request: Request,
-    service: FeatureEngineeringService = Depends(
-        FeatureEngineeringService
+    service: AutoMLFeatureGenerationService = Depends(
+        get_automl_feature_generation_service
     ),
 ):
     """
@@ -225,8 +222,8 @@ async def get_default_config():
 
 @router.post("/clear-cache")
 async def clear_cache(
-    service: FeatureEngineeringService = Depends(
-        FeatureEngineeringService
+    service: AutoMLFeatureGenerationService = Depends(
+        get_automl_feature_generation_service
     ),
 ):
     """

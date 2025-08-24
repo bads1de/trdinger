@@ -241,7 +241,7 @@ class GeneticAlgorithmEngine:
 
             # 統計情報の記録用
             logbook = tools.Logbook()
-            logbook.header = ["gen", "nevals"] + (stats.fields if stats else [])
+            # Logbookのheaderはrecord()で自動設定されるため、直接代入しない
 
             # 初期個体群の評価
             fitnesses = toolbox.map(toolbox.evaluate, population)
@@ -265,7 +265,8 @@ class GeneticAlgorithmEngine:
                 original_select = toolbox.select
 
                 def _select_with_sharing(pop, k):
-                    pop = self.fitness_sharing.apply_fitness_sharing(pop)
+                    if self.fitness_sharing is not None:
+                        pop = self.fitness_sharing.apply_fitness_sharing(pop)
                     return original_select(pop, k)
 
                 toolbox.select = _select_with_sharing  # type: ignore

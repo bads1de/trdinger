@@ -4,8 +4,9 @@
 StrategyGeneから動的にbacktesting.py互換のStrategy継承クラスを生成します。
 """
 
+from backend.app.services.auto_strategy.models.gene_strategy import Condition
 import logging
-from typing import Tuple, Type
+from typing import List, Tuple, Type, Union, cast
 
 from backtesting import Strategy
 
@@ -14,6 +15,7 @@ from ..services.position_sizing_service import PositionSizingService
 from ..services.tpsl_service import TPSLService
 from ..core.condition_evaluator import ConditionEvaluator
 from ..models.gene_strategy import IndicatorGene, StrategyGene
+from ..models.condition_group import ConditionGroup
 
 logger = logging.getLogger(__name__)
 
@@ -328,12 +330,19 @@ class StrategyFactory:
 
             def _check_long_entry_conditions(self) -> bool:
                 """ロングエントリー条件をチェック"""
-                long_conditions = self.gene.get_effective_long_conditions()
+                long_conditions = cast(
+                    List[Union[Condition, ConditionGroup]],
+                    self.gene.get_effective_long_conditions(),
+                )
                 if not long_conditions:
                     # 条件が空の場合は、entry_conditionsを使用
                     if self.gene.entry_conditions:
+                        entry_conditions = cast(
+                            List[Union[Condition, ConditionGroup]],
+                            self.gene.entry_conditions,
+                        )
                         return factory.condition_evaluator.evaluate_conditions(
-                            self.gene.entry_conditions, self
+                            entry_conditions, self
                         )
                     return False
                 return factory.condition_evaluator.evaluate_conditions(
@@ -342,7 +351,10 @@ class StrategyFactory:
 
             def _check_short_entry_conditions(self) -> bool:
                 """ショートエントリー条件をチェック"""
-                short_conditions = self.gene.get_effective_short_conditions()
+                short_conditions = cast(
+                    List[Union[Condition, ConditionGroup]],
+                    self.gene.get_effective_short_conditions(),
+                )
 
                 # デバッグログ: ショート条件の詳細
                 if hasattr(self, "_debug_counter") and self._debug_counter % 100 == 0:
@@ -356,8 +368,12 @@ class StrategyFactory:
                 if not short_conditions:
                     # ショート条件が空の場合は、entry_conditionsを使用
                     if self.gene.entry_conditions:
+                        entry_conditions = cast(
+                            List[Union[Condition, ConditionGroup]],
+                            self.gene.entry_conditions,
+                        )
                         return factory.condition_evaluator.evaluate_conditions(
-                            self.gene.entry_conditions, self
+                            entry_conditions, self
                         )
                     return False
 
@@ -377,8 +393,11 @@ class StrategyFactory:
                 if self.gene.tpsl_gene and self.gene.tpsl_gene.enabled:
                     return False
 
+                exit_conditions = cast(
+                    List[Union[Condition, ConditionGroup]], self.gene.exit_conditions
+                )
                 return factory.condition_evaluator.evaluate_conditions(
-                    self.gene.exit_conditions, self
+                    exit_conditions, self
                 )
 
         # クラス名を設定

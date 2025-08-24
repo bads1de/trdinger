@@ -9,6 +9,7 @@ MLPredictionInterfaceを実装し、統一されたML予測APIを提供します
 """
 
 import logging
+from datetime import datetime
 from typing import Any, Dict, Optional
 
 import numpy as np
@@ -503,10 +504,11 @@ class MLOrchestrator(MLPredictionInterface):
 
             # 統計的手法で欠損値を補完
             target_df = pd.DataFrame({"target": target})
-            target_df = data_preprocessor.transform_missing_values(
-                target_df, strategy="median"
+            target_df = data_preprocessor.interpolate_columns(
+                target_df, columns=["target"], strategy="median"
             )
-            target = target_df["target"]
+            # interpolate_columnsはDataFrameを返すので、Seriesとして抽出
+            target = pd.Series(target_df["target"])
 
             return target
 
@@ -612,6 +614,41 @@ class MLOrchestrator(MLPredictionInterface):
             start_date = df.index.min()
             end_date = df.index.max()
 
+            # datetime型への変換とNaTチェック
+            try:
+                if start_date is None:
+                    logger.warning("start_dateがNoneです")
+                    return None
+                if end_date is None:
+                    logger.warning("end_dateがNoneです")
+                    return None
+
+                # NaTチェック（pd.NaTとの比較）
+                if start_date is pd.NaT:
+                    logger.warning("start_dateがNaTです")
+                    return None
+                if end_date is pd.NaT:
+                    logger.warning("end_dateがNaTです")
+                    return None
+
+                # pd.Timestampの場合はdatetime型に変換
+                if isinstance(start_date, pd.Timestamp):
+                    start_date = start_date.to_pydatetime()
+                if isinstance(end_date, pd.Timestamp):
+                    end_date = end_date.to_pydatetime()
+
+                # 最終的な型チェック
+                if not isinstance(start_date, datetime):
+                    logger.warning(f"start_dateの型が不正です: {type(start_date)}")
+                    return None
+                if not isinstance(end_date, datetime):
+                    logger.warning(f"end_dateの型が不正です: {type(end_date)}")
+                    return None
+
+            except Exception as e:
+                logger.warning(f"datetime変換エラー: {e}")
+                return None
+
             # シンボルとタイムフレームを動的に推定
             symbol = self._infer_symbol_from_data(df)
             timeframe = self._infer_timeframe_from_data(df)
@@ -659,16 +696,16 @@ class MLOrchestrator(MLPredictionInterface):
             (funding_rate_data, open_interest_data)のタプル
         """
         try:
-            funding_rate_data = None
-            open_interest_data = None
+            funding_rate_data: Optional[pd.DataFrame] = None
+            open_interest_data: Optional[pd.DataFrame] = None
 
             # ファンディングレートデータを抽出
             if "funding_rate" in enhanced_df.columns:
-                funding_rate_data = enhanced_df[["funding_rate"]].copy()
+                funding_rate_data = pd.DataFrame(enhanced_df["funding_rate"])
 
             # 建玉残高データを抽出
             if "open_interest" in enhanced_df.columns:
-                open_interest_data = enhanced_df[["open_interest"]].copy()
+                open_interest_data = pd.DataFrame(enhanced_df["open_interest"])
 
             return funding_rate_data, open_interest_data
 

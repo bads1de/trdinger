@@ -381,8 +381,19 @@ class StatisticalTPSLGenerator:
                     quality_factors.append(0.9)
 
             # 最終信頼度
-            final_confidence = base_confidence * np.prod(quality_factors)
-            return max(0.1, min(1.0, final_confidence))
+            if quality_factors:
+                # NumPy に依存せずに積を計算
+                product = 1.0
+                for factor in quality_factors:
+                    product *= factor
+                final_confidence = base_confidence * product
+            else:
+                final_confidence = base_confidence
+
+            # NaN/inf をチェックし、float にキャスト
+            if np.isnan(final_confidence) or np.isinf(final_confidence):
+                return 0.5
+            return float(max(0.1, min(1.0, final_confidence)))
 
         except Exception as e:
             self.logger.error(f"信頼度計算エラー: {e}")

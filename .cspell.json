@@ -1,0 +1,22 @@
+{
+  "version": "0.2",
+  "language": "en",
+  "words": [
+    "automl",
+    "AutoML",
+    "tsfresh",
+    "autofeat",
+    "ohlcv",
+    "dataframe",
+    "numpy",
+    "pandas",
+    "sklearn",
+    "xgboost",
+    "lightgbm",
+    "catboost",
+    "tabnet",
+    "backtest",
+    "backtesting"
+  ],
+  "import": ["@cspell/dict-data-science", "@cspell/dict-python"]
+}

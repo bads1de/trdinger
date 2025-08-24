@@ -253,11 +253,12 @@ class VolatilityBasedGenerator:
                 high=high_series, low=low_series, close=close_series, length=period
             )
 
-            valid_atr_values = atr_values.dropna()
-            if len(valid_atr_values) > 0:
-                return float(valid_atr_values.iloc[-1])
+            if atr_values is not None:
+                valid_atr_values = atr_values.dropna()
+                if len(valid_atr_values) > 0:
+                    return float(valid_atr_values.iloc[-1])
 
-            logger.warning("ATR計算結果がすべてnanでした。")
+            logger.warning("ATR計算結果がNoneまたは無効でした。")
             return 0.02 * close[-1]
 
         except Exception as e:
