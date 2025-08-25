@@ -8,7 +8,7 @@ Pipeline、ColumnTransformer、標準Transformerを使用した現代的な実�
 - 新しいコード: preprocess_with_pipeline(), create_optimized_pipeline()
 - 外れ値除去: OutlierRemovalTransformer, create_outlier_removal_pipeline()
 - カテゴリカル変数: CategoricalEncoderTransformer, create_categorical_encoding_pipeline()
-- 包括的前処理: create_comprehensive_preprocessing_pipeline()
+- 包括の前処理: create_comprehensive_preprocessing_pipeline()
 """
 
 import logging
@@ -42,7 +42,12 @@ class OutlierRemovalTransformer(BaseEstimator, TransformerMixin):
     IsolationForestやLocalOutlierFactorを活用し、Pipeline内で使用可能。
     """
 
-    def __init__(self, method: str = "isolation_forest", contamination: float = 0.1, **kwargs: Any) -> None:
+    def __init__(
+        self,
+        method: str = "isolation_forest",
+        contamination: float = 0.1,
+        **kwargs: Any,
+    ) -> None:
         """
         Args:
             method: 外れ値検出方法 ('isolation_forest', 'local_outlier_factor')
@@ -59,7 +64,7 @@ class OutlierRemovalTransformer(BaseEstimator, TransformerMixin):
         """外れ値検出器をフィット"""
         if self.method == "isolation_forest":
             self.detector = IsolationForest(
-                contamination=float(self.contamination), random_state=42, **self.kwargs
+                contamination=str(self.contamination), random_state=42, **self.kwargs
             )
             self.detector.fit(X)
             # 外れ値マスクを計算（-1が外れ値、1が正常値）
@@ -68,7 +73,7 @@ class OutlierRemovalTransformer(BaseEstimator, TransformerMixin):
 
         elif self.method == "local_outlier_factor":
             self.detector = LocalOutlierFactor(
-                contamination=float(self.contamination), **self.kwargs
+                contamination=str(self.contamination), **self.kwargs
             )
             # LOFは fit_predict を使用
             predictions = self.detector.fit_predict(X)
@@ -92,21 +97,23 @@ class OutlierRemovalTransformer(BaseEstimator, TransformerMixin):
             outlier_mask = predictions == -1
         elif self.method == "local_outlier_factor":
             # LOFは学習データでのみ外れ値マスクを使用
-            if hasattr(self, "outlier_mask_") and len(X_transformed) == len(
-                self.outlier_mask_
+            if (
+                hasattr(self, "outlier_mask_")
+                and self.outlier_mask_ is not None
+                and len(X_transformed) == len(self.outlier_mask_)
             ):
                 outlier_mask = self.outlier_mask_
             else:
                 # 新しいデータの場合は変換しない
                 return X_transformed
 
-        # 外れ値をNaNに置き換え
-        if isinstance(X_transformed, pd.DataFrame):
-            X_transformed.loc[outlier_mask] = np.nan
-        else:
-            X_transformed[outlier_mask] = np.nan
+            # 外れ値をNaNに置き換え
+            if isinstance(X_transformed, pd.DataFrame):
+                X_transformed.loc[outlier_mask] = np.nan
+            else:
+                X_transformed[outlier_mask] = np.nan
 
-        return X_transformed
+            return X_transformed
 
 
 class CategoricalEncoderTransformer(BaseEstimator, TransformerMixin):
@@ -180,13 +187,21 @@ class CategoricalEncoderTransformer(BaseEstimator, TransformerMixin):
                         )
                         X_transformed[col] = encoder.transform(data)
                     elif self.encoding_type == "onehot":
-                        encoded = encoder.transform(data.values.reshape(-1, 1))
+                        # 确保data.values具有reshape方法
+                        data_values = (
+                            data.values if hasattr(data, "values") else np.array(data)
+                        )
+                        # 总是转换为numpy数组以确保reshape方法可用
+                        data_array = np.array(data_values)
+                        encoded = encoder.transform(data_array.reshape(-1, 1))
                         # OneHotの結果を元のDataFrameに統合
                         feature_names = [
                             f"{col}_{cls}" for cls in encoder.categories_[0]
                         ]
                         encoded_df = pd.DataFrame(
-                            encoded, columns=feature_names, index=X_transformed.index
+                            encoded,
+                            columns=pd.Index(feature_names),
+                            index=X_transformed.index,
                         )
                         X_transformed = X_transformed.drop(columns=[col])
                         X_transformed = pd.concat([X_transformed, encoded_df], axis=1)
@@ -802,7 +817,7 @@ class DataProcessor:
                     feature_names = [f"cat_{i}" for i in range(encoded.shape[1])]
 
                 encoded_df = pd.DataFrame(
-                    encoded, columns=feature_names, index=result_df.index
+                    encoded, columns=pd.Index(feature_names), index=result_df.index
                 )
 
             # 元のカテゴリカルカラムを削除して結合
@@ -863,16 +878,25 @@ class DataProcessor:
                         series = pd.to_numeric(series, errors="coerce")
 
                         # 数値型の場合は指定されたdtypeに変換
-                        if pd.api.types.is_numeric_dtype(series):
-                            series = series.astype(dtype)
+                        if pd.api.types.is_numeric_dtype(series) and hasattr(
+                            series, "astype"
+                        ):
+                            # 确保series是pandas Series类型
+                            if isinstance(series, (pd.Series, np.ndarray)):
+                                series = series.astype(dtype)
                     except Exception as e:
                         logger.warning(f"データ型変換でエラーが発生 ({dtype}): {e}")
                         # エラーの場合はpd.to_numericで数値型に変換
                         series = pd.to_numeric(series, errors="coerce")
 
                 # 前方補完
-                if forward_fill:
-                    series = series.ffill()
+                if forward_fill and hasattr(series, "ffill"):
+                    # 确保series是pandas Series类型
+                    if isinstance(series, (pd.Series, pd.DataFrame)):
+                        series = series.ffill()
+                    elif isinstance(series, np.ndarray):
+                        # 对于numpy数组使用pad方法
+                        series = pd.Series(series).ffill().values
 
                 result_df[col] = series
             except Exception as e:
@@ -1134,6 +1158,11 @@ class DataProcessor:
             # カラム名を生成
             try:
                 feature_names = fitted_pipeline.get_feature_names_out()
+                # feature_namesがNoneまたは空の場合は自動生成
+                if feature_names is None or len(feature_names) == 0:
+                    feature_names = [
+                        f"feature_{i}" for i in range(transformed_data.shape[1])
+                    ]
             except Exception:
                 # feature名が取得できない場合は自動生成
                 feature_names = [
@@ -1141,7 +1170,7 @@ class DataProcessor:
                 ]
 
             result_df = pd.DataFrame(
-                transformed_data, index=df.index, columns=feature_names
+                transformed_data, index=df.index, columns=pd.Index(feature_names)
             )
 
             logger.info(
@@ -1171,7 +1200,7 @@ class DataProcessor:
             ML用前処理パイプライン
         """
         from sklearn.feature_selection import SelectKBest, f_regression
-        from sklearn.base import BaseEstimator, TransformerMixin
+        from sklearn.base import BaseEstimator
 
         # 基本的な前処理パイプライン
         base_pipeline = self.create_preprocessing_pipeline(
@@ -1181,11 +1210,13 @@ class DataProcessor:
         )
 
         # Pipeline stepsリストを作成
-        steps = [("base_preprocessing", base_pipeline)]
+        steps: List[Tuple[str, Union[Pipeline, BaseEstimator]]] = [
+            ("base_preprocessing", base_pipeline)
+        ]
 
         # 特徴選択（オプション）
-        if feature_selection and n_features:
-            steps.append(  # type: ignore
+        if feature_selection and n_features is not None and n_features > 0:
+            steps.append(
                 (
                     "feature_selection",
                     SelectKBest(score_func=f_regression, k=n_features),

@@ -8,7 +8,7 @@ pandasの強力なインデックス操作機能（align, reindex, intersection�
 
 import logging
 import pandas as pd
-from typing import Dict, Tuple, Any, Union, Literal
+from typing import Dict, Tuple, Any, Union, Literal, Callable, cast
 
 logger = logging.getLogger(__name__)
 
@@ -40,7 +40,7 @@ def align_data(
     logger.info(f"インデックス整合開始: 特徴量{len(features)}行, ラベル{len(labels)}行")
 
     # pandasのjoin方法にマッピング
-    join_mapping = {
+    join_mapping: Dict[str, Literal["inner", "left", "right", "outer"]] = {
         "intersection": "inner",
         "features_priority": "left",
         "labels_priority": "right",
@@ -56,6 +56,9 @@ def align_data(
 
     # pandasのalignを使用してインデックス整合
     aligned_features, aligned_labels = features.align(labels, join=join_method, axis=0)
+    # 型アノテーションのために明示的に型を指定
+    aligned_features = cast(pd.DataFrame, aligned_features)
+    aligned_labels = cast(pd.Series, aligned_labels)
 
     # NaN値を含む行を除去（全てのjoin方法で実行）
     # 特徴量にNaNがある行を特定
@@ -79,7 +82,7 @@ def align_data(
         f"(整合率: {alignment_ratio*100:.1f}%)"
     )
 
-    return aligned_features, aligned_labels
+    return cast(Tuple[pd.DataFrame, pd.Series], (aligned_features, aligned_labels))
 
 
 def validate_alignment(
@@ -136,7 +139,7 @@ def validate_alignment(
 
 
 def preserve_index_during_processing(
-    data: pd.DataFrame, processing_func: callable, *args, **kwargs
+    data: pd.DataFrame, processing_func: Callable[..., pd.DataFrame], *args, **kwargs
 ) -> pd.DataFrame:
     """
     処理中にインデックスを保持
