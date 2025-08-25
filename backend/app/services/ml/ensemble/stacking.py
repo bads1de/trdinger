@@ -42,7 +42,7 @@ class StackingEnsemble(BaseEnsemble):
 
         # スタッキング固有の設定
         self.base_models = config.get("base_models", ["lightgbm", "random_forest"])
-        self.meta_model = config.get("meta_model", "logistic_regression")
+        self.meta_model: str = config.get("meta_model", "logistic_regression") or "logistic_regression"
         self.cv_folds = config.get("cv_folds", 5)
         self.stack_method = config.get("stack_method", "predict_proba")
         self.random_state = config.get("random_state", 42)
@@ -280,12 +280,12 @@ class StackingEnsemble(BaseEnsemble):
 
             if hasattr(final_estimator, "feature_importances_"):
                 # Tree-based models
-                importances = final_estimator.feature_importances_
+                importances = final_estimator.feature_importances_  # type: ignore
                 feature_names = [f"meta_feature_{i}" for i in range(len(importances))]
                 return dict(zip(feature_names, importances))
             elif hasattr(final_estimator, "coef_"):
                 # Linear models
-                coef = final_estimator.coef_
+                coef = final_estimator.coef_  # type: ignore
                 if coef.ndim > 1:
                     coef = np.abs(coef).mean(axis=0)
                 else:
@@ -302,29 +302,36 @@ class StackingEnsemble(BaseEnsemble):
             logger.warning(f"特徴量重要度の取得でエラー: {e}")
             return {}
 
-    def save_models(self, model_path: str) -> bool:
+    def save_models(self, base_path: str) -> List[str]:
         """
         スタッキングアンサンブルモデルを保存
 
         Args:
-            model_path: モデル保存パス
+            base_path: モデル保存ベースパス
 
         Returns:
-            保存成功フラグ
+            保存されたファイルパスのリスト
         """
+        saved_paths = []
+
         if not self.is_fitted or self.stacking_classifier is None:
             logger.warning("学習済みモデルがないため保存をスキップします")
-            return False
+            return saved_paths
 
         try:
             import joblib
             import os
+            from datetime import datetime
+
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            model_path = f"{base_path}_stacking_classifier_{timestamp}.pkl"
 
             # ディレクトリを作成
             os.makedirs(os.path.dirname(model_path), exist_ok=True)
 
             # StackingClassifierを保存
             joblib.dump(self.stacking_classifier, model_path)
+            saved_paths.append(model_path)
 
             # メタデータを保存
             metadata = {
@@ -338,19 +345,21 @@ class StackingEnsemble(BaseEnsemble):
             }
 
             metadata_path = model_path.replace(".pkl", "_metadata.json")
-            import json
 
+            import json
             with open(metadata_path, "w", encoding="utf-8") as f:
                 json.dump(metadata, f, ensure_ascii=False, indent=2)
 
+            saved_paths.append(metadata_path)
+
             logger.info(f"スタッキングアンサンブルモデルを保存しました: {model_path}")
-            return True
+            return saved_paths
 
         except Exception as e:
             logger.error(f"モデル保存エラー: {e}")
-            return False
+            return saved_paths
 
-    def load_models(self, model_path: str) -> bool:
+    def load_models(self, base_path: str) -> bool:
         """
         スタッキングアンサンブルモデルを読み込み
 
@@ -364,10 +373,17 @@ class StackingEnsemble(BaseEnsemble):
             import joblib
             import os
             import json
+            import glob
 
-            if not os.path.exists(model_path):
-                logger.warning(f"モデルファイルが見つかりません: {model_path}")
+            # 最新のモデルファイルを探す
+            pattern = f"{base_path}_stacking_classifier_*.pkl"
+            model_files = glob.glob(pattern)
+
+            if not model_files:
+                logger.warning(f"モデルファイルが見つかりません: {pattern}")
                 return False
+
+            model_path = sorted(model_files)[-1]  # 最新のファイルを選択
 
             # StackingClassifierを読み込み
             self.stacking_classifier = joblib.load(model_path)

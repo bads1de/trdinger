@@ -46,7 +46,7 @@ class MetricsConfig:
     include_confusion_matrix: bool = True
     include_classification_report: bool = True
     average_method: str = "weighted"  # 'macro', 'micro', 'weighted'
-    zero_division: int = 0
+    zero_division: str = "warn"
 
 
 @dataclass
@@ -94,7 +94,7 @@ class EnhancedMetricsCalculator:
     また、システム全体のメトリクス収集・管理機能も統合しています。
     """
 
-    def __init__(self, config: MetricsConfig = None, max_history: int = 1000):
+    def __init__(self, config: MetricsConfig | None = None, max_history: int = 1000):
         """
         初期化
 
@@ -690,24 +690,36 @@ class EnhancedMetricsCalculator:
 
         try:
             # クラス別の精密度、再現率、F1スコア
-            precision, recall, f1, support = precision_recall_fscore_support(
-                y_true, y_pred, average=None, zero_division=self.config.zero_division
+            # typing.castを使って型を明示的に指定し、型チェッカーのエラーを解決
+            from typing import cast
+            precision, recall, f1_score, support = cast(
+                tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray],
+                precision_recall_fscore_support(
+                    y_true, y_pred, average=None, zero_division=self.config.zero_division
+                )
             )
+
+            # 各変数を明示的にnumpy配列として扱う
+            precision_array: np.ndarray = precision
+            recall_array: np.ndarray = recall
+            f1_array: np.ndarray = f1_score  # f1 -> f1_score でスペルチェック問題を解決
+            support_array: np.ndarray = support
 
             classes = np.unique(y_true)
             per_class_metrics = {}
 
             for i, class_label in enumerate(classes):
-                class_name = (
-                    class_names[i]
-                    if class_names and i < len(class_names)
-                    else f"class_{class_label}"
-                )
+                # class_namesの型を明示的にチェック
+                if class_names is not None and i < len(class_names):
+                    class_name = class_names[i]
+                else:
+                    class_name = f"class_{class_label}"
+
                 per_class_metrics[class_name] = {
-                    "precision": float(precision[i]),
-                    "recall": float(recall[i]),
-                    "f1_score": float(f1[i]),
-                    "support": int(support[i]),
+                    "precision": float(precision_array[i]),
+                    "recall": float(recall_array[i]),
+                    "f1_score": float(f1_array[i]),  # f1 -> f1_array に修正
+                    "support": int(support_array[i]),
                 }
 
             metrics["per_class_metrics"] = per_class_metrics

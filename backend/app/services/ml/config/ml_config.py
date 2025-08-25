@@ -9,8 +9,8 @@ import logging
 import os
 from typing import Any, Dict, List, Optional
 
-from pydantic import ConfigDict, Field
-from pydantic_settings import BaseSettings
+from pydantic import Field
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class DataProcessingConfig(BaseSettings):
@@ -35,7 +35,7 @@ class DataProcessingConfig(BaseSettings):
     # ログレベル
     LOG_LEVEL: str = Field(default="INFO")
 
-    model_config = ConfigDict(env_prefix="ML_DATA_PROCESSING_")
+    model_config = SettingsConfigDict(env_prefix="ML_DATA_PROCESSING_")
 
 
 class ModelConfig(BaseSettings):
@@ -53,7 +53,7 @@ class ModelConfig(BaseSettings):
     MAX_MODEL_VERSIONS: int = Field(default=10)
     MODEL_RETENTION_DAYS: int = Field(default=30)
 
-    model_config = ConfigDict(env_prefix="ML_MODEL_")
+    model_config = SettingsConfigDict(env_prefix="ML_MODEL_")
 
 
 class LightGBMConfig(BaseSettings):
@@ -80,7 +80,7 @@ class LightGBMConfig(BaseSettings):
     # その他
     RANDOM_STATE: int = Field(default=42)
 
-    model_config = ConfigDict(env_prefix="ML_LIGHTGBM_")
+    model_config = SettingsConfigDict(env_prefix="ML_LIGHTGBM_")
 
     def to_dict(self) -> Dict[str, Any]:
         """
@@ -120,7 +120,7 @@ class FeatureEngineeringConfig(BaseSettings):
     )
     VOLUME_PERIODS: Optional[List[int]] = Field(default_factory=lambda: [10, 20, 30])
 
-    model_config = ConfigDict(env_prefix="ML_FEATURE_")
+    model_config = SettingsConfigDict(env_prefix="ML_FEATURE_")
 
 
 class TrainingConfig(BaseSettings):
@@ -156,7 +156,7 @@ class TrainingConfig(BaseSettings):
     PERFORMANCE_THRESHOLD: float = Field(default=0.05)
     VALIDATION_SPLIT: float = Field(default=0.2)
 
-    model_config = ConfigDict(env_prefix="ML_TRAINING_")
+    model_config = SettingsConfigDict(env_prefix="ML_TRAINING_")
 
 
 class PredictionConfig(BaseSettings):
@@ -184,7 +184,7 @@ class PredictionConfig(BaseSettings):
     # データサイズ制限
     DEFAULT_INDICATOR_LENGTH: int = Field(default=100)
 
-    model_config = ConfigDict(env_prefix="ML_PREDICTION_")
+    model_config = SettingsConfigDict(env_prefix="ML_PREDICTION_")
 
     def get_default_predictions(self) -> Dict[str, float]:
         """デフォルトの予測値を取得"""
@@ -292,7 +292,7 @@ class RetrainingConfig(BaseSettings):
     PERFORMANCE_DEGRADATION_THRESHOLD: float = Field(default=0.05)
     DATA_DRIFT_THRESHOLD: float = Field(default=0.1)
 
-    model_config = ConfigDict(env_prefix="ML_RETRAINING_")
+    model_config = SettingsConfigDict(env_prefix="ML_RETRAINING_")
 
 
 class EnsembleConfig(BaseSettings):
@@ -346,7 +346,7 @@ class EnsembleConfig(BaseSettings):
     OPTIMIZATION_N_ESTIMATORS_RANGE: List[int] = Field(default=[3, 10])
     OPTIMIZATION_BOOTSTRAP_FRACTION_RANGE: List[float] = Field(default=[0.6, 0.9])
 
-    model_config = ConfigDict(env_prefix="ML_ENSEMBLE_")
+    model_config = SettingsConfigDict(env_prefix="ML_ENSEMBLE_")
 
     def to_dict(self) -> Dict[str, Any]:
         """辞書形式に変換"""

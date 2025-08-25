@@ -49,7 +49,7 @@ class AdaptationResult:
     confidence: float
     model_updated: bool
     performance_improvement: Optional[float] = None
-    timestamp: datetime = None
+    timestamp: Optional[datetime] = None
 
 
 class AdaptiveLearningService:
@@ -269,7 +269,7 @@ class AdaptiveLearningService:
         current_accuracy = current_performance.get("accuracy", 0)
 
         # 閾値以下または大幅な劣化
-        return (
+        return bool(
             current_accuracy < self.config.performance_threshold
             or current_accuracy < avg_accuracy * 0.9
         )
@@ -294,7 +294,7 @@ class AdaptiveLearningService:
             # ML学習サービスを使用して再学習
             # 注意: 実際の実装では適切なデータ分割と評価が必要
             result = self.ml_service.train_model(
-                data=recent_data, training_params=training_params
+                training_data=recent_data, training_params=training_params
             )
 
             if result and result.get("success", False):

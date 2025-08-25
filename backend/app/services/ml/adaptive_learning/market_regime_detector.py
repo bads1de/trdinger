@@ -9,7 +9,7 @@ import logging
 import warnings
 from datetime import datetime, timedelta
 from enum import Enum
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple, cast, Union
 from dataclasses import dataclass
 
 import numpy as np
@@ -122,7 +122,7 @@ class MarketRegimeDetector:
                     confidence=0.5,
                     indicators={},
                     timestamp=datetime.now(),
-                    method="default"
+                    method="default",
                 )
 
             # 検出方法に応じて処理
@@ -146,7 +146,9 @@ class MarketRegimeDetector:
             if len(self.regime_history) > 1000:
                 self.regime_history = self.regime_history[-500:]
 
-            logger.info(f"市場レジーム検出: {result.regime.value} (信頼度: {result.confidence:.2f}, 手法: {result.method})")
+            logger.info(
+                f"市場レジーム検出: {result.regime.value} (信頼度: {result.confidence:.2f}, 手法: {result.method})"
+            )
             return result
 
         except Exception as e:
@@ -156,7 +158,7 @@ class MarketRegimeDetector:
                 confidence=0.0,
                 indicators={},
                 timestamp=datetime.now(),
-                method="error"
+                method="error",
             )
 
     def _rule_based_detection(self, data: pd.DataFrame) -> RegimeDetectionResult:
@@ -173,7 +175,7 @@ class MarketRegimeDetector:
                 confidence=confidence,
                 indicators=indicators,
                 timestamp=datetime.now(),
-                method="rule_based"
+                method="rule_based",
             )
 
         except Exception as e:
@@ -183,7 +185,7 @@ class MarketRegimeDetector:
                 confidence=0.0,
                 indicators={},
                 timestamp=datetime.now(),
-                method="rule_based"
+                method="rule_based",
             )
 
     def _calculate_regime_indicators(self, data: pd.DataFrame) -> Dict[str, float]:
@@ -309,7 +311,7 @@ class MarketRegimeDetector:
             )
 
             # 最高スコアのレジームを選択
-            best_regime = max(scores, key=scores.get)
+            best_regime = max(scores.items(), key=lambda x: x[1])[0]
             max_score = scores[best_regime]
 
             # 信頼度を計算（0-1の範囲に正規化）
@@ -329,14 +331,21 @@ class MarketRegimeDetector:
         """ATR（Average True Range）を計算（pandas-ta使用）"""
         import pandas_ta as ta
 
-        atr = ta.atr(high=high, low=low, close=close, length=period)
+        atr = cast(
+            Union[pd.Series, pd.DataFrame, None],
+            ta.atr(high=high, low=low, close=close, length=period),
+        )
+        if atr is None or not hasattr(atr, "iloc"):
+            return 0.0
         return float(atr.iloc[-1])
 
     def _calculate_rsi(self, close: pd.Series, period: int = 14) -> float:
         """RSI（Relative Strength Index）を計算（pandas-ta使用）"""
         import pandas_ta as ta
 
-        rsi = ta.rsi(close, length=period)
+        rsi: Union[pd.Series, pd.DataFrame, None] = ta.rsi(close, length=period)
+        if rsi is None or not hasattr(rsi, "iloc"):
+            return 50.0
         return float(rsi.iloc[-1])
 
     def _calculate_bollinger_bands(
@@ -346,6 +355,12 @@ class MarketRegimeDetector:
         import pandas_ta as ta
 
         bb_result = ta.bbands(close, length=period, std=std_dev)
+
+        if bb_result is None:
+            # ta.bbandsがNoneを返す場合のフォールバック
+            current_price = float(close.iloc[-1])
+            return current_price, current_price
+
         upper = bb_result[f"BBU_{period}_{std_dev}"].iloc[-1]
         lower = bb_result[f"BBL_{period}_{std_dev}"].iloc[-1]
         return float(upper), float(lower)
@@ -426,12 +441,17 @@ class MarketRegimeDetector:
             features_array = np.array(features)
 
             # 特徴量の正規化
+            features_scaled: np.ndarray
             if len(self.feature_history) == 0:
                 # 初回は現在のデータで正規化
-                features_scaled = self.scaler.fit_transform(features_array)
+                features_scaled = cast(
+                    np.ndarray, self.scaler.fit_transform(features_array)
+                )
             else:
                 # 既存のスケーラーを使用
-                features_scaled = self.scaler.transform(features_array)
+                features_scaled = cast(
+                    np.ndarray, self.scaler.transform(features_array)
+                )
 
             return features_scaled
 
@@ -448,7 +468,7 @@ class MarketRegimeDetector:
 
             if self.kmeans_model is None:
                 self.kmeans_model = KMeans(
-                    n_clusters=self.n_clusters, random_state=42, n_init=10
+                    n_clusters=self.n_clusters, random_state=42, n_init="auto"  # type: ignore
                 )
 
             # 十分なデータがある場合のみ学習
@@ -458,7 +478,7 @@ class MarketRegimeDetector:
                     self.kmeans_model.fit(features)
 
             # 最新の特徴量でクラスタを予測
-            cluster = self.kmeans_model.predict([features[-1]])[0]
+            cluster: int = cast(int, self.kmeans_model.predict([features[-1]])[0])
 
             # クラスタからレジームにマッピング
             regime_mapping = {
@@ -468,7 +488,7 @@ class MarketRegimeDetector:
                 3: MarketRegime.VOLATILE,
             }
 
-            regime = regime_mapping.get(cluster, MarketRegime.RANGING)
+            regime = regime_mapping.get(int(cluster), MarketRegime.RANGING)
 
             # 信頼度計算（クラスタ中心からの距離ベース）
             distances = self.kmeans_model.transform([features[-1]])[0]
@@ -484,7 +504,7 @@ class MarketRegimeDetector:
                 indicators={},
                 timestamp=datetime.now(),
                 method="kmeans",
-                cluster=int(cluster)
+                cluster=int(cluster),
             )
 
         except Exception as e:
@@ -539,7 +559,7 @@ class MarketRegimeDetector:
                 indicators={},
                 timestamp=datetime.now(),
                 method="dbscan",
-                cluster=int(latest_cluster)
+                cluster=int(latest_cluster),
             )
 
         except Exception as e:
@@ -576,7 +596,27 @@ class MarketRegimeDetector:
 
             # 状態からレジームにマッピング
             state_means = self.hmm_model.means_.flatten()
-            state_vars = np.diag(self.hmm_model.covars_[latest_state])
+
+            # covars_ の安全なアクセス（Noneチェックと範囲チェック）
+            if (
+                self.hmm_model is not None
+                and hasattr(self.hmm_model, "covars_")
+                and self.hmm_model.covars_ is not None
+                and 0 <= latest_state < len(self.hmm_model.covars_)
+            ):
+                covar_matrix = self.hmm_model.covars_[latest_state]
+                if hasattr(covar_matrix, "ndim") and covar_matrix.ndim == 2:
+                    state_vars = np.diag(covar_matrix)
+                else:
+                    state_vars = (
+                        np.array([covar_matrix])
+                        if hasattr(covar_matrix, "ndim") and covar_matrix.ndim == 0
+                        else np.diag(covar_matrix)
+                    )
+            else:
+                # フォールバック: デフォルトのボラティリティを使用
+                logger.warning(f"covars_ のアクセスに失敗、latest_state={latest_state}")
+                state_vars = np.array([0.02])  # デフォルトボラティリティ
 
             mean_return = state_means[latest_state]
             volatility = np.sqrt(state_vars[0]) if len(state_vars) > 0 else 0.02
@@ -602,7 +642,7 @@ class MarketRegimeDetector:
                 indicators={},
                 timestamp=datetime.now(),
                 method="hmm",
-                cluster=int(latest_state)
+                cluster=int(latest_state),
             )
 
         except Exception as e:
@@ -643,7 +683,7 @@ class MarketRegimeDetector:
                 total_confidence += confidence * weight
 
             # 最高得票のレジームを選択
-            final_regime = max(regime_votes, key=regime_votes.get)
+            final_regime = max(regime_votes.items(), key=lambda x: x[1])[0]
             final_confidence = (
                 regime_votes[final_regime] / len(results) if len(results) > 0 else 0.5
             )
@@ -655,7 +695,7 @@ class MarketRegimeDetector:
                 indicators={},
                 timestamp=datetime.now(),
                 method="ensemble",
-                votes=regime_votes
+                votes=regime_votes,
             )
 
         except Exception as e:
@@ -669,7 +709,7 @@ class MarketRegimeDetector:
             confidence=0.5,
             indicators={},
             timestamp=datetime.now(),
-            method="default"
+            method="default",
         )
 
     def get_regime_stability(self, window: int = 10) -> float:

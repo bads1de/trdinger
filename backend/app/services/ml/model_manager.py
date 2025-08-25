@@ -62,7 +62,7 @@ class ModelManager:
     メタデータ管理などの高機能も提供します。
     """
 
-    def __init__(self, monitoring_config: PerformanceMonitoringConfig = None):
+    def __init__(self, monitoring_config: Optional[PerformanceMonitoringConfig] = None):
         """
         初期化
 

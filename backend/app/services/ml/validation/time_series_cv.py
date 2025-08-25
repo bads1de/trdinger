@@ -51,7 +51,7 @@ class TimeSeriesCrossValidator:
     堅牢なクロスバリデーションを提供します。
     """
 
-    def __init__(self, config: CVConfig = None):
+    def __init__(self, config: "Optional[CVConfig]" = None):
         """
         初期化
 
@@ -193,7 +193,7 @@ class TimeSeriesCrossValidator:
 
             if any(metric in scoring for metric in ["precision", "recall", "f1"]):
                 precision, recall, f1, _ = precision_recall_fscore_support(
-                    y_true, y_pred, average="weighted", zero_division=0
+                    y_true, y_pred, average="weighted", zero_division=0  # type: ignore
                 )
                 if "precision" in scoring:
                     scores["precision"] = precision
@@ -242,3 +242,91 @@ class TimeSeriesCrossValidator:
                 aggregated[f"{metric}_max"] = np.max(values)
 
         return aggregated
+
+    def validate_model(
+        self,
+        model,
+        X: pd.DataFrame,
+        y: pd.Series,
+        scoring: List[str] = None,
+        return_predictions: bool = False,
+    ) -> Dict[str, Any]:
+        """
+        モデルをクロスバリデーションで評価
+
+        Args:
+            model: 評価するモデル
+            X: 特徴量データ
+            y: ターゲットデータ
+            scoring: 評価指標のリスト
+            return_predictions: 予測結果を返すかどうか
+
+        Returns:
+            評価結果の辞書
+        """
+        if scoring is None:
+            scoring = ["accuracy", "precision", "recall", "f1"]
+
+        self._validate_data(X, y)
+
+        splitter = self._create_splitter()
+        scores = {metric: [] for metric in scoring}
+        fold_results = []
+        predictions = [] if return_predictions else None
+
+        for fold, (train_idx, test_idx) in enumerate(splitter.split(X)):
+            try:
+                # データ分割
+                X_train, X_test = X.iloc[train_idx], X.iloc[test_idx]
+                y_train, y_test = y.iloc[train_idx], y.iloc[test_idx]
+
+                # モデル学習
+                model.fit(X_train, y_train)
+
+                # 予測
+                y_pred = model.predict(X_test)
+                y_proba = getattr(model, 'predict_proba', lambda x: None)(X_test)
+
+                # 評価指標計算
+                fold_scores = self._calculate_scores(y_test, y_pred, y_proba, scoring)
+
+                # 結果保存
+                fold_result = {
+                    "fold": fold,
+                    "train_size": len(train_idx),
+                    "test_size": len(test_idx),
+                    **fold_scores,
+                }
+                fold_results.append(fold_result)
+
+                for metric in scoring:
+                    if metric in fold_scores:
+                        scores[metric].append(fold_scores[metric])
+
+                if return_predictions:
+                    predictions.extend(
+                        [
+                            {
+                                "fold": fold,
+                                "index": idx,
+                                "true": true_val,
+                                "pred": pred_val,
+                                "proba": proba_val.tolist() if proba_val is not None else None,
+                            }
+                            for idx, (true_val, pred_val, proba_val) in zip(
+                                test_idx,
+                                zip(y_test, y_pred, y_proba if y_proba is not None else [None] * len(y_test))
+                            )
+                        ]
+                    )
+
+            except Exception as e:
+                logger.error(f"フォールド {fold} の評価でエラーが発生: {e}")
+                continue
+
+        result = self._aggregate_results(scores, fold_results)
+
+        if return_predictions:
+            result["predictions"] = predictions
+
+        return result

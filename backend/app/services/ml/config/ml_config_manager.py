@@ -460,6 +460,15 @@ class MLConfigManager:
 
         return merged
 
+    def _apply_config_dict(self, config_dict: Dict[str, Any]) -> None:
+        """
+        辞書から設定を適用
+
+        Args:
+            config_dict: 適用する設定辞書
+        """
+        self._ml_config = MLConfig.from_dict(config_dict)
+
 
 # グローバルインスタンス
 ml_config_manager = MLConfigManager()

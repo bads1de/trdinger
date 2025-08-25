@@ -9,7 +9,7 @@ import gc
 import logging
 from abc import ABC, abstractmethod
 from enum import Enum
-from typing import Any, Dict, List, Optional
+from typing import Any, Callable, Dict, List, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -32,7 +32,7 @@ class BaseResourceManager(ABC):
 
     def __init__(self):
         self._cleanup_level = CleanupLevel.STANDARD
-        self._cleanup_callbacks: List[callable] = []
+        self._cleanup_callbacks: List[Callable[[], None]] = []
         self._is_cleaned_up = False
 
     def __enter__(self):

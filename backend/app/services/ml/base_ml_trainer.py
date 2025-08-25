@@ -850,6 +850,20 @@ class BaseMLTrainer(BaseResourceManager, ABC):
 
         return result
 
+    def get_model_info(self) -> Dict[str, Any]:
+        """
+        モデル情報を取得
+
+        Returns:
+            モデル情報の辞書
+        """
+        return {
+            "model_type": self.__class__.__name__,
+            "is_trained": self.is_trained,
+            "trainer_type": getattr(self, "trainer_type", "unknown"),
+            "feature_count": len(self.feature_columns) if self.feature_columns else 0,
+        }
+
     def get_feature_importance(self, top_n: int = 10) -> Dict[str, float]:
         """
         特徴量重要度を取得
