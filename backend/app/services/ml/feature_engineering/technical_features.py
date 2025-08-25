@@ -79,11 +79,17 @@ class TechnicalFeatureCalculator(BaseFeatureCalculator):
             ma_long = ta.sma(result_df["Close"], length=long_ma)
 
             # Trend_Strength = (MA_short - MA_long) / MA_long
-            result_df["Trend_Strength"] = (
-                ((ma_short - ma_long) / ma_long)
-                .replace([np.inf, -np.inf], np.nan)
-                .fillna(0.0)
-            )
+            if (
+                ma_short is not None
+                and ma_long is not None
+                and isinstance(ma_short, pd.Series)
+                and isinstance(ma_long, pd.Series)
+            ):
+                result_df["Trend_Strength"] = self.safe_ratio_calculation(
+                    ma_short - ma_long, ma_long
+                )
+            else:
+                result_df["Trend_Strength"] = 0.0
 
             # レンジ相場判定（pandas-ta MAX/MIN使用）
             volatility_period = lookback_periods.get("volatility", 20)
@@ -92,10 +98,8 @@ class TechnicalFeatureCalculator(BaseFeatureCalculator):
             high_20 = high_vals.rolling(window=volatility_period).max()
             low_20 = low_vals.rolling(window=volatility_period).min()
 
-            result_df["Range_Bound_Ratio"] = (
-                ((result_df["Close"] - low_20) / (high_20 - low_20))
-                .replace([np.inf, -np.inf], np.nan)
-                .fillna(0.5)
+            result_df["Range_Bound_Ratio"] = self.safe_ratio_calculation(
+                result_df["Close"] - low_20, high_20 - low_20, fill_value=0.5
             )
 
             # ブレイクアウト強度（直前の高値・安値を使用）
@@ -170,13 +174,21 @@ class TechnicalFeatureCalculator(BaseFeatureCalculator):
 
             # RSI（pandas-ta使用）
             rsi_values = ta.rsi(result_df["Close"], length=14)
-            result_df["RSI"] = rsi_values.fillna(50.0)
+            if rsi_values is not None:
+                result_df["RSI"] = rsi_values.fillna(50.0)
+            else:
+                result_df["RSI"] = 50.0
 
             # MACD（pandas-ta使用）
             macd_result = ta.macd(result_df["Close"], fast=12, slow=26, signal=9)
-            result_df["MACD"] = macd_result["MACD_12_26_9"].fillna(0.0)
-            result_df["MACD_Signal"] = macd_result["MACDs_12_26_9"].fillna(0.0)
-            result_df["MACD_Histogram"] = macd_result["MACDh_12_26_9"].fillna(0.0)
+            if macd_result is not None:
+                result_df["MACD"] = macd_result["MACD_12_26_9"].fillna(0.0)
+                result_df["MACD_Signal"] = macd_result["MACDs_12_26_9"].fillna(0.0)
+                result_df["MACD_Histogram"] = macd_result["MACDh_12_26_9"].fillna(0.0)
+            else:
+                result_df["MACD"] = 0.0
+                result_df["MACD_Signal"] = 0.0
+                result_df["MACD_Histogram"] = 0.0
 
             # ストキャスティクス（pandas-ta使用）
             stoch_result = ta.stoch(
@@ -187,8 +199,12 @@ class TechnicalFeatureCalculator(BaseFeatureCalculator):
                 d=3,
                 smooth_k=3,
             )
-            result_df["Stochastic_K"] = stoch_result["STOCHk_14_3_3"].fillna(50.0)
-            result_df["Stochastic_D"] = stoch_result["STOCHd_14_3_3"].fillna(50.0)
+            if stoch_result is not None:
+                result_df["Stochastic_K"] = stoch_result["STOCHk_14_3_3"].fillna(50.0)
+                result_df["Stochastic_D"] = stoch_result["STOCHd_14_3_3"].fillna(50.0)
+            else:
+                result_df["Stochastic_K"] = 50.0
+                result_df["Stochastic_D"] = 50.0
 
             # ウィリアムズ%R（pandas-ta使用）
             willr_values = ta.willr(
@@ -197,7 +213,10 @@ class TechnicalFeatureCalculator(BaseFeatureCalculator):
                 close=result_df["Close"],
                 length=14,
             )
-            result_df["Williams_R"] = willr_values.fillna(-50.0)
+            if willr_values is not None:
+                result_df["Williams_R"] = willr_values.fillna(-50.0)
+            else:
+                result_df["Williams_R"] = -50.0
 
             # CCI（Commodity Channel Index）（pandas-ta使用）
             cci_values = ta.cci(
@@ -206,15 +225,24 @@ class TechnicalFeatureCalculator(BaseFeatureCalculator):
                 close=result_df["Close"],
                 length=20,
             )
-            result_df["CCI"] = cci_values.fillna(0.0)
+            if cci_values is not None:
+                result_df["CCI"] = cci_values.fillna(0.0)
+            else:
+                result_df["CCI"] = 0.0
 
             # ROC（Rate of Change）（pandas-ta使用）
             roc_values = ta.roc(result_df["Close"], length=12)
-            result_df["ROC"] = roc_values.fillna(0.0)
+            if roc_values is not None:
+                result_df["ROC"] = roc_values.fillna(0.0)
+            else:
+                result_df["ROC"] = 0.0
 
             # モメンタム（pandas-ta使用）
             momentum_values = ta.mom(result_df["Close"], length=10)
-            result_df["Momentum"] = momentum_values.fillna(0.0)
+            if momentum_values is not None:
+                result_df["Momentum"] = momentum_values.fillna(0.0)
+            else:
+                result_df["Momentum"] = 0.0
 
             logger.debug("モメンタム特徴量計算完了")
             return result_df
@@ -253,14 +281,16 @@ class TechnicalFeatureCalculator(BaseFeatureCalculator):
             rsi_trend = ta.linreg(rsi, length=10, slope=True)
 
             # ベアダイバージェンス（価格上昇、RSI下降）
-            result_df["Bear_Divergence"] = ((price_trend > 0) & (rsi_trend < 0)).astype(
-                int
-            )
+            if price_trend is not None and rsi_trend is not None:
+                result_df["Bear_Divergence"] = ((price_trend > 0) & (rsi_trend < 0)).astype(int)
+            else:
+                result_df["Bear_Divergence"] = 0
 
             # ブルダイバージェンス（価格下降、RSI上昇）
-            result_df["Bull_Divergence"] = ((price_trend < 0) & (rsi_trend > 0)).astype(
-                int
-            )
+            if price_trend is not None and rsi_trend is not None:
+                result_df["Bull_Divergence"] = ((price_trend < 0) & (rsi_trend > 0)).astype(int)
+            else:
+                result_df["Bull_Divergence"] = 0
 
             # サポート・レジスタンス距離
             period = lookback_periods.get("volatility", 20)
@@ -314,11 +344,38 @@ class TechnicalFeatureCalculator(BaseFeatureCalculator):
             logger.error(f"パターン認識特徴量計算エラー: {e}")
             return df
 
-    def _calculate_rsi(self, df: pd.DataFrame, period: int = 14) -> pd.Series:
+    def safe_ratio_calculation(self, numerator: pd.Series | Any, denominator: pd.Series | Any, fill_value: float = 0.0) -> pd.Series:
+        """
+        ゼロ除算を防ぐための安全な比率計算
+
+        Args:
+            numerator: 分子
+            denominator: 分母
+            fill_value: ゼロ除算時の埋め値
+
+        Returns:
+            計算結果のSeries
+        """
+        if (
+            denominator is None
+            or numerator is None
+            or not isinstance(numerator, pd.Series)
+            or not isinstance(denominator, pd.Series)
+        ):
+            length = len(numerator) if isinstance(numerator, pd.Series) else 0
+            return pd.Series([fill_value] * length)
+
+        # ゼロ除算を防ぐ
+        ratio = numerator / denominator.replace(0, np.nan)
+        return ratio.replace([np.inf, -np.inf], np.nan).fillna(fill_value)
+
+    def _calculate_rsi(self, df: pd.DataFrame, period: int = 14) -> pd.Series | Any:
         """RSIを計算（内部使用）- pandas-ta使用"""
         import pandas_ta as ta
 
         rsi_values = ta.rsi(df["Close"], length=period)
+        if rsi_values is None or not isinstance(rsi_values, pd.Series):
+            return pd.Series([50.0] * len(df))
         return rsi_values.fillna(50.0)
 
     def get_feature_names(self) -> list:

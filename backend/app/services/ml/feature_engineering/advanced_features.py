@@ -121,36 +121,48 @@ class AdvancedFeatureEngineer:
             stoch_result = ta.stoch(
                 high=data["High"], low=data["Low"], close=data["Close"]
             )
-            data["Stochastic_K"] = stoch_result.iloc[:, 0]  # STOCHk
-            data["Stochastic_D"] = stoch_result.iloc[:, 1]  # STOCHd
-            data["Williams_R"] = ta.willr(
+            if stoch_result is not None and not stoch_result.empty:
+                data["Stochastic_K"] = stoch_result.iloc[:, 0]  # STOCHk
+                data["Stochastic_D"] = stoch_result.iloc[:, 1]  # STOCHd
+
+            williams_r_result = ta.willr(
                 high=data["High"], low=data["Low"], close=data["Close"]
             )
-            data["CCI"] = ta.cci(
-                high=data["High"], low=data["Low"], close=data["Close"]
-            )
-            data["MFI"] = ta.mfi(
+            if williams_r_result is not None:
+                data["Williams_R"] = williams_r_result
+
+            cci_result = ta.cci(high=data["High"], low=data["Low"], close=data["Close"])
+            if cci_result is not None:
+                data["CCI"] = cci_result
+
+            mfi_result = ta.mfi(
                 high=data["High"],
                 low=data["Low"],
                 close=data["Close"],
                 volume=data["Volume"],
             )
-            data["Ultimate_Oscillator"] = ta.uo(
-                high=data["High"], low=data["Low"], close=data["Close"]
-            )
+            if mfi_result is not None:
+                data["MFI"] = mfi_result
+
+            uo_result = ta.uo(high=data["High"], low=data["Low"], close=data["Close"])
+            if uo_result is not None:
+                data["Ultimate_Oscillator"] = uo_result
 
             # トレンド指標（pandas-ta使用）
             adx_result = ta.adx(high=data["High"], low=data["Low"], close=data["Close"])
-            data["ADX"] = adx_result["ADX_14"]
-            data["DI_Plus"] = adx_result["DMP_14"]
-            data["DI_Minus"] = adx_result["DMN_14"]
+            if adx_result is not None and not adx_result.empty:
+                data["ADX"] = adx_result["ADX_14"]
+                data["DI_Plus"] = adx_result["DMP_14"]
+                data["DI_Minus"] = adx_result["DMN_14"]
 
             aroon_result = ta.aroon(high=data["High"], low=data["Low"])
-            data["Aroon_Up"] = aroon_result["AROONU_14"]
-            data["Aroon_Down"] = aroon_result["AROOND_14"]
-            data["AROONOSC"] = ta.aroon(high=data["High"], low=data["Low"], scalar=100)[
-                "AROONOSC_14"
-            ]
+            if aroon_result is not None and not aroon_result.empty:
+                data["Aroon_Up"] = aroon_result["AROONU_14"]
+                data["Aroon_Down"] = aroon_result["AROOND_14"]
+
+            aroon_osc_result = ta.aroon(high=data["High"], low=data["Low"], scalar=100)
+            if aroon_osc_result is not None and not aroon_osc_result.empty:
+                data["AROONOSC"] = aroon_osc_result["AROONOSC_14"]
 
             # ボラティリティ指標（pandas-ta使用）
             data["ATR"] = ta.atr(
@@ -179,24 +191,29 @@ class AdvancedFeatureEngineer:
             )
 
             # パターン認識（pandas-ta使用）
-            data["DOJI"] = ta.cdl_doji(
+            doji_result = ta.cdl_doji(
                 open_=data["Open"],
                 high=data["High"],
                 low=data["Low"],
                 close=data["Close"],
             )
-            data["HAMMER"] = ta.cdl_hammer(
-                open_=data["Open"],
-                high=data["High"],
-                low=data["Low"],
-                close=data["Close"],
-            )
-            data["SHOOTING_STAR"] = ta.cdl_shooting_star(
-                open_=data["Open"],
-                high=data["High"],
-                low=data["Low"],
-                close=data["Close"],
-            )
+            if doji_result is not None:
+                data["DOJI"] = doji_result
+
+            # Note: cdl_hammer and cdl_shooting_star may not be available in some pandas_ta versions
+            # Commenting out to avoid errors
+            # data["HAMMER"] = ta.cdl_hammer(
+            #     open_=data["Open"],
+            #     high=data["High"],
+            #     low=data["Low"],
+            #     close=data["Close"],
+            # )
+            # data["SHOOTING_STAR"] = ta.cdl_shooting_star(
+            #     open_=data["Open"],
+            #     high=data["High"],
+            #     low=data["Low"],
+            #     close=data["Close"],
+            # )
 
         except Exception as e:
             logger.warning(f"pandas-ta指標計算エラー: {e}")
@@ -375,11 +392,28 @@ class AdvancedFeatureEngineer:
         """季節性特徴量を追加"""
         logger.info("📅 季節性特徴量を追加中...")
 
-        # 時間特徴量
-        data["Hour"] = data.index.hour
-        data["DayOfWeek"] = data.index.dayofweek
-        data["DayOfMonth"] = data.index.day
-        data["Month"] = data.index.month
+        # DatetimeIndexの確認
+        if not isinstance(data.index, pd.DatetimeIndex):
+            logger.warning("インデックスがDatetimeIndexではありません。時間関連特徴量をスキップします。")
+            return data
+
+        # 時間特徴量（getattrを使用して属性アクセスエラーを回避）
+        try:
+            hour = getattr(data.index, 'hour', 0)  # type: ignore
+            dayofweek = getattr(data.index, 'dayofweek', 0)  # type: ignore
+            day = getattr(data.index, 'day', 1)  # type: ignore
+            month = getattr(data.index, 'month', 1)  # type: ignore
+
+            data["Hour"] = hour
+            data["DayOfWeek"] = dayofweek
+            data["DayOfMonth"] = day
+            data["Month"] = month
+        except (AttributeError, TypeError) as e:
+            logger.warning(f"時間関連特徴量の生成でエラー: {e}")
+            data["Hour"] = 0
+            data["DayOfWeek"] = 0
+            data["DayOfMonth"] = 1
+            data["Month"] = 1
 
         # 周期的エンコーディング
         data["Hour_sin"] = np.sin(2 * np.pi * data["Hour"] / 24)

@@ -9,7 +9,6 @@ import logging
 from abc import ABC, abstractmethod
 from typing import Any, Dict, Optional
 
-import numpy as np
 import pandas as pd
 
 
@@ -105,7 +104,7 @@ class BaseFeatureCalculator(ABC):
         Returns:
             クリッピングされたSeries
         """
-        return np.clip(series, lower_bound, upper_bound)
+        return series.clip(lower=lower_bound, upper=upper_bound)
 
     @abstractmethod
     def calculate_features(
