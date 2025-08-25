@@ -37,7 +37,8 @@ class RidgeModel:
         """
         self.model = None
         self.is_trained = False
-        self.feature_columns = None
+        self._feature_columns: Optional[List[str]] = None
+        self.scaler = None
         self.automl_config = automl_config
 
         # デフォルトパラメータ
@@ -84,6 +85,10 @@ class RidgeModel:
             y_pred_train = self.model.predict(X_train)
             y_pred_test = self.model.predict(X_test)
 
+            # 型を明示的に np.ndarray に変換
+            y_pred_train = np.array(y_pred_train, dtype=np.int_)
+            y_pred_test = np.array(y_pred_test, dtype=np.int_)
+
             # 共通の評価関数を使用
             # RidgeClassifierは確率予測をサポートしないため、y_probaはNone
             test_metrics = evaluate_model_predictions(
@@ -117,9 +122,6 @@ class RidgeModel:
                 feature_importance = {}
 
             self.is_trained = True
-
-            # クラス数を取得
-            n_classes = len(np.unique(y_train))
 
             results = {
                 "algorithm": self.ALGORITHM_NAME,
@@ -177,10 +179,10 @@ class RidgeModel:
         try:
             # 特徴量の順序を確認
             if self.feature_columns:
-                X = X[self.feature_columns]
+                X = pd.DataFrame(X[self.feature_columns])
 
             predictions = self.model.predict(X)
-            return predictions
+            return np.asarray(predictions)  # type: ignore
 
         except Exception as e:
             logger.error(f"Ridge予測エラー: {e}")
@@ -202,12 +204,12 @@ class RidgeModel:
         raise ModelError("RidgeClassifierは確率予測（predict_proba）に対応していません")
 
     @property
-    def feature_columns(self) -> List[str]:
+    def feature_columns(self) -> Optional[List[str]]:
         """特徴量カラム名のリストを取得"""
         return self._feature_columns
 
     @feature_columns.setter
-    def feature_columns(self, columns: List[str]):
+    def feature_columns(self, columns: Optional[List[str]]):
         """特徴量カラム名のリストを設定"""
         self._feature_columns = columns
 

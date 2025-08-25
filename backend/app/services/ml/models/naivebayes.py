@@ -36,6 +36,7 @@ class NaiveBayesModel:
         self.model = None
         self.is_trained = False
         self.feature_columns = None
+        self.scaler = None
         self.automl_config = automl_config
 
         # デフォルトパラメータ

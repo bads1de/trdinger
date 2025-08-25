@@ -6,7 +6,7 @@ LightGBM、XGBoost、CatBoost、TabNetをサポートします。
 """
 
 import logging
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, cast
 
 import numpy as np
 import pandas as pd
@@ -206,7 +206,7 @@ class SingleModelTrainer(BaseMLTrainer):
         try:
             # 特徴量の順序を学習時と合わせる
             if self.feature_columns:
-                features_df = features_df[self.feature_columns]
+                features_df = cast(pd.DataFrame, features_df.loc[:, self.feature_columns])
 
             # 単一モデルで予測確率を取得
             predictions = self.single_model.predict_proba(features_df)
@@ -311,8 +311,11 @@ class SingleModelTrainer(BaseMLTrainer):
                 feature_columns=self.feature_columns,
             )
 
+            if model_path is None:
+                raise MLModelError("モデルの保存に失敗しました")
+
             logger.info(f"単一モデル保存完了: {model_path}")
-            return model_path
+            return cast(str, model_path)
 
         except Exception as e:
             logger.error(f"単一モデル保存エラー: {e}")
@@ -335,17 +338,20 @@ class SingleModelTrainer(BaseMLTrainer):
             # モデルを読み込み
             from ..model_manager import model_manager
 
-            success = model_manager.load_model(
-                model_path=model_path, model_instance=self.single_model
-            )
+            model_data = model_manager.load_model(model_path)
 
-            if success:
+            if model_data is not None:
+                # モデルデータをsingle_modelに設定
+                self.single_model.model = model_data.get("model")
+                self.single_model.scaler = model_data.get("scaler")
+                self.feature_columns = model_data.get("feature_columns")
+
                 self.is_trained = True
                 logger.info(f"単一モデル読み込み完了: model_type={self.model_type}")
+                return True
             else:
                 logger.error("単一モデルの読み込みに失敗")
-
-            return success
+                return False
 
         except Exception as e:
             logger.error(f"単一モデル読み込みエラー: {e}")
@@ -434,7 +440,10 @@ class SingleModelTrainer(BaseMLTrainer):
         try:
             # 単一モデルから特徴量重要度を取得
             if hasattr(self.single_model, "get_feature_importance"):
-                return self.single_model.get_feature_importance(top_n)
+                try:
+                    return self.single_model.get_feature_importance()
+                except TypeError:
+                    return self.single_model.get_feature_importance()
             else:
                 logger.warning(
                     f"{self.model_type}モデルは特徴量重要度をサポートしていません"

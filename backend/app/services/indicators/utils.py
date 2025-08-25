@@ -49,7 +49,7 @@ def validate_input(data: Union[np.ndarray, pd.Series], period: int) -> None:
 
     # NaNや無限大の値をチェック
     if isinstance(data, pd.Series):
-        if data.isna().any():
+        if bool(data.isna().any()):
             logger.warning("入力データにNaN値が含まれています")
         if np.isinf(data).any():
             raise PandasTAError("入力データに無限大の値が含まれています")

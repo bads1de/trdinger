@@ -8,6 +8,8 @@ OHLCV、ファンディングレート（FR）、建玉残高（OI）データ�
 AutoML機能も統合され、オプションで拡張特徴量計算が可能です。
 """
 
+# cSpell:ignore automl tsfresh
+
 import logging
 import time
 from datetime import datetime
@@ -26,8 +28,16 @@ from .market_data_features import MarketDataFeatureCalculator
 from .price_features import PriceFeatureCalculator
 from .technical_features import TechnicalFeatureCalculator
 from .temporal_features import TemporalFeatureCalculator
+from database.repositories.fear_greed_repository import FearGreedIndexRepository
 
 # AutoML関連のインポート（オプション）
+AutoFeatCalculator = None
+AutoMLConfig = None
+PerformanceOptimizer = None
+TSFreshFeatureCalculator = None
+EnhancedCryptoFeatures = None
+OptimizedCryptoFeatures = None
+
 try:
     from .automl_features.autofeat_calculator import AutoFeatCalculator
     from .automl_features.automl_config import AutoMLConfig
@@ -52,7 +62,7 @@ class FeatureEngineeringService:
     AutoML機能もオプションで利用可能です。
     """
 
-    def __init__(self, automl_config: Optional["AutoMLConfig"] = None):
+    def __init__(self, automl_config: Optional[Any] = None):
         """
         初期化
 
@@ -77,24 +87,50 @@ class FeatureEngineeringService:
         # AutoML機能の初期化（オプション）
         self.automl_enabled = automl_config is not None and AUTOML_AVAILABLE
         if self.automl_enabled:
-            self.automl_config = (
-                automl_config or AutoMLConfig.get_financial_optimized_config()
-            )
+            # AutoMLConfigが利用可能な場合のみ使用
+            if AUTOML_AVAILABLE and AutoMLConfig is not None:
+                self.automl_config = (
+                    automl_config or AutoMLConfig.get_financial_optimized_config()
+                )
+            else:
+                self.automl_config = None
 
             # AutoML特徴量計算クラス
-            self.tsfresh_calculator = TSFreshFeatureCalculator(
-                self.automl_config.tsfresh
-            )
-            self.autofeat_calculator = AutoFeatCalculator(self.automl_config.autofeat)
+            if (self.automl_config is not None and
+                hasattr(self.automl_config, 'tsfresh') and
+                self.automl_config.tsfresh is not None and
+                TSFreshFeatureCalculator is not None):
+                self.tsfresh_calculator = TSFreshFeatureCalculator(
+                    self.automl_config.tsfresh
+                )
+            else:
+                self.tsfresh_calculator = None
+
+            if (self.automl_config is not None and
+                hasattr(self.automl_config, 'autofeat') and
+                self.automl_config.autofeat is not None and
+                AutoFeatCalculator is not None):
+                self.autofeat_calculator = AutoFeatCalculator(self.automl_config.autofeat)
+            else:
+                self.autofeat_calculator = None
 
             # パフォーマンス最適化クラス
-            self.performance_optimizer = PerformanceOptimizer()
+            if self.automl_config is not None and PerformanceOptimizer is not None:
+                self.performance_optimizer = PerformanceOptimizer()
+            else:
+                self.performance_optimizer = None
 
             # 暗号通貨特化特徴量エンジニアリング
-            self.crypto_features = EnhancedCryptoFeatures()
+            if self.automl_config is not None and EnhancedCryptoFeatures is not None:
+                self.crypto_features = EnhancedCryptoFeatures()
+            else:
+                self.crypto_features = None
 
             # 最適化された特徴量エンジニアリング
-            self.optimized_features = OptimizedCryptoFeatures()
+            if self.automl_config is not None and OptimizedCryptoFeatures is not None:
+                self.optimized_features = OptimizedCryptoFeatures()
+            else:
+                self.optimized_features = None
 
             # 統計情報
             self.last_enhancement_stats = {}
@@ -210,7 +246,7 @@ class FeatureEngineeringService:
 
             # Fear & Greed データを自動取得（必要に応じて）
             if auto_fetch_fear_greed and fear_greed_data is None:
-                fear_greed_data = self._get_fear_greed_data(ohlcv_data)
+                fear_greed_data = self._get_fear_greed_data(ohlcv_data, db_session=None)
 
             # データ型を最適化
             result_df = self._optimize_dtypes(result_df)
@@ -383,13 +419,12 @@ class FeatureEngineeringService:
 
             # 高品質なデータ前処理を実行（スケーリング有効化、IQRベース外れ値検出）
             logger.info("統計的手法による特徴量前処理を実行中...")
-            result_df = data_preprocessor.preprocess_features(
+            result_df = data_preprocessor.preprocess_with_pipeline(
                 result_df,
-                imputation_strategy="median",
-                scale_features=True,  # 特徴量スケーリングを有効化
+                numeric_strategy="median",
+                scaling_method="robust",  # ロバストスケーリングを使用
                 remove_outliers=True,
                 outlier_threshold=3.0,
-                scaling_method="robust",  # ロバストスケーリングを使用
                 outlier_method="iqr",  # IQRベースの外れ値検出を使用
             )
 
@@ -467,13 +502,21 @@ class FeatureEngineeringService:
             )
 
             # ステップ2: TSFresh特徴量を追加 + 特徴量選択
-            if self.automl_config.tsfresh.enabled:
+            if (self.automl_config is not None and
+                hasattr(self.automl_config, 'tsfresh') and
+                self.automl_config.tsfresh is not None and
+                hasattr(self.automl_config.tsfresh, 'enabled') and
+                self.automl_config.tsfresh.enabled):
                 result_df = self._step2_tsfresh_features(
                     result_df, target, max_features_per_step
                 )
 
             # ステップ3: AutoFeat特徴量を追加 + 特徴量選択
-            if self.automl_config.autofeat.enabled:
+            if (self.automl_config is not None and
+                hasattr(self.automl_config, 'autofeat') and
+                self.automl_config.autofeat is not None and
+                hasattr(self.automl_config.autofeat, 'enabled') and
+                self.automl_config.autofeat.enabled):
                 result_df = self._step3_autofeat_features(
                     result_df, target, max_features_per_step
                 )
@@ -486,15 +529,15 @@ class FeatureEngineeringService:
 
             # 統計情報を更新
             total_time = time.time() - start_time
-            self.last_enhancement_stats.update(
-                {
-                    "total_features": final_feature_count,
-                    "total_time": total_time,
-                    "data_rows": len(result_df),
-                    "automl_config_used": self.automl_config.to_dict(),
-                    "processing_method": "step_by_step",
-                }
-            )
+            stats_update = {
+                "total_features": final_feature_count,
+                "total_time": total_time,
+                "data_rows": len(result_df),
+                "processing_method": "step_by_step",
+            }
+            if self.automl_config is not None and hasattr(self.automl_config, 'to_dict'):
+                stats_update["automl_config_used"] = self.automl_config.to_dict()
+            self.last_enhancement_stats.update(stats_update)
 
             return result_df
 
@@ -570,10 +613,20 @@ class FeatureEngineeringService:
         initial_feature_count = len(df.columns)
 
         # TSFresh特徴量を計算
+        if self.tsfresh_calculator is None:
+            logger.warning("TSFresh calculator is not available")
+            return df
+
+        tsfresh_config = None
+        if (self.automl_config is not None and
+            hasattr(self.automl_config, 'tsfresh') and
+            self.automl_config.tsfresh is not None):
+            tsfresh_config = self.automl_config.tsfresh.feature_selection
+
         result_df = self.tsfresh_calculator.calculate_tsfresh_features(
             df=df,
             target=target,
-            feature_selection=self.automl_config.tsfresh.feature_selection,
+            feature_selection=tsfresh_config,
         )
 
         # 特徴量数が制限を超えている場合は選択を実行
@@ -616,11 +669,22 @@ class FeatureEngineeringService:
         initial_feature_count = len(df.columns)
 
         # AutoFeat特徴量を計算
+        if self.autofeat_calculator is None:
+            logger.warning("AutoFeat calculator is not available")
+            return df
+
+        autofeat_max_features = None
+        if (self.automl_config is not None and
+            hasattr(self.automl_config, 'autofeat') and
+            self.automl_config.autofeat is not None and
+            hasattr(self.automl_config.autofeat, 'max_features')):
+            autofeat_max_features = self.automl_config.autofeat.max_features
+
         result_df, generation_info = self.autofeat_calculator.generate_features(
             df=df,
             target=target,
             task_type="regression",
-            max_features=self.automl_config.autofeat.max_features,
+            max_features=autofeat_max_features,
         )
 
         # 特徴量数が制限を超えている場合は選択を実行
@@ -745,7 +809,7 @@ class FeatureEngineeringService:
         except Exception as e:
             logger.warning(f"キャッシュ保存エラー: {e}")
 
-    def _get_fear_greed_data(self, ohlcv_data: pd.DataFrame) -> Optional[pd.DataFrame]:
+    def _get_fear_greed_data(self, ohlcv_data: pd.DataFrame, db_session=None) -> Optional[pd.DataFrame]:
         """
         Fear & Greed Index データを取得
 
@@ -753,32 +817,85 @@ class FeatureEngineeringService:
 
         Args:
             ohlcv_data: OHLCV価格データ
+            db_session: データベースセッション（オプション）
 
         Returns:
             Fear & Greed Index データ（取得できない場合はNone）
         """
         try:
-            from ...data_collection.fear_greed.fear_greed_service import (
-                FearGreedIndexService,
-            )
-
-            fear_greed_service = FearGreedIndexService()
-
             # データの期間を取得
             start_date = ohlcv_data.index.min()
             end_date = ohlcv_data.index.max()
 
-            # Fear & Greed データを取得
-            fear_greed_data = fear_greed_service.get_fear_greed_data(
-                start_date=start_date, end_date=end_date
+            if db_session is None:
+                logger.warning("データベースセッションが提供されていないため、Fear & Greedデータを取得できません")
+                return None
+
+            # pandas TimestampをPython datetimeに変換
+            try:
+                start_datetime = None
+                end_datetime = None
+
+                # start_dateの変換
+                if isinstance(start_date, pd.Timestamp):
+                    if pd.isna(start_date):
+                        start_datetime = None
+                    else:
+                        start_datetime = start_date.to_pydatetime()
+                elif isinstance(start_date, datetime):
+                    start_datetime = start_date
+                elif start_date is None:
+                    start_datetime = None
+                else:
+                    start_datetime = None
+
+                # end_dateの変換
+                if isinstance(end_date, pd.Timestamp):
+                    if pd.isna(end_date):
+                        end_datetime = None
+                    else:
+                        end_datetime = end_date.to_pydatetime()
+                elif isinstance(end_date, datetime):
+                    end_datetime = end_date
+                elif end_date is None:
+                    end_datetime = None
+                else:
+                    end_datetime = None
+            except Exception as e:
+                logger.warning(f"日時変換エラー: {e}")
+                start_datetime = None
+                end_datetime = None
+
+            # リポジトリを使用してデータを取得
+            fear_greed_repo = FearGreedIndexRepository(db_session)
+            fear_greed_records = fear_greed_repo.get_fear_greed_data(
+                start_time=start_datetime, end_time=end_datetime
             )
 
-            if fear_greed_data is not None and not fear_greed_data.empty:
-                logger.info(f"Fear & Greed データを取得: {len(fear_greed_data)}件")
-                return fear_greed_data
-            else:
-                logger.warning("Fear & Greed データの取得に失敗")
+            if not fear_greed_records:
+                logger.warning("Fear & Greed データが見つかりません")
                 return None
+
+            # モデルインスタンスをDataFrameに変換
+            fear_greed_data = []
+            for record in fear_greed_records:
+                fear_greed_data.append({
+                    'value': record.value,
+                    'value_classification': record.value_classification,
+                    'data_timestamp': record.data_timestamp,
+                    'timestamp': record.timestamp
+                })
+
+            df = pd.DataFrame(fear_greed_data)
+
+            # タイムスタンプをインデックスに設定
+            if not df.empty:
+                df['data_timestamp'] = pd.to_datetime(df['data_timestamp'])
+                df.set_index('data_timestamp', inplace=True)
+                df.sort_index(inplace=True)
+
+            logger.info(f"Fear & Greed データを取得: {len(df)}件")
+            return df
 
         except Exception as e:
             logger.warning(f"Fear & Greed データ取得エラー: {e}")
@@ -846,6 +963,8 @@ class FeatureEngineeringService:
 
             # 疑似ファンディングレート（価格勢いベース）
             pseudo_fr = returns.rolling(8).mean() * 0.1
+            # 明示的にpandas Seriesであることを保証
+            pseudo_fr = pd.Series(pseudo_fr, index=result_df.index)
 
             # FR特徴量を生成
             result_df["FR_MA_24"] = pseudo_fr.rolling(24).mean()
@@ -899,6 +1018,8 @@ class FeatureEngineeringService:
 
             # ボリュームベースの疑似建玉残高
             pseudo_oi = result_df["Volume"].rolling(24).mean() * 10
+            # 明示的にpandas Seriesであることを保証
+            pseudo_oi = pd.Series(pseudo_oi, index=result_df.index)
 
             # OI特徴量を生成
             result_df["OI_Change_Rate"] = pseudo_oi.pct_change()
@@ -997,26 +1118,28 @@ class FeatureEngineeringService:
 
         try:
             # TSFresh設定の更新
-            if "tsfresh" in config_dict:
+            if "tsfresh" in config_dict and self.automl_config is not None:
                 tsfresh_config = config_dict["tsfresh"]
-                if isinstance(tsfresh_config, dict):
+                if isinstance(tsfresh_config, dict) and hasattr(self.automl_config, 'tsfresh') and self.automl_config.tsfresh is not None:
                     for key, value in tsfresh_config.items():
                         if hasattr(self.automl_config.tsfresh, key):
                             setattr(self.automl_config.tsfresh, key, value)
 
                     # TSFreshCalculatorの設定も更新
-                    self.tsfresh_calculator.config = self.automl_config.tsfresh
+                    if self.tsfresh_calculator is not None and hasattr(self.tsfresh_calculator, 'config'):
+                        self.tsfresh_calculator.config = self.automl_config.tsfresh
 
             # AutoFeat設定の更新
-            if "autofeat" in config_dict:
+            if "autofeat" in config_dict and self.automl_config is not None:
                 autofeat_config = config_dict["autofeat"]
-                if isinstance(autofeat_config, dict):
+                if isinstance(autofeat_config, dict) and hasattr(self.automl_config, 'autofeat') and self.automl_config.autofeat is not None:
                     for key, value in autofeat_config.items():
                         if hasattr(self.automl_config.autofeat, key):
                             setattr(self.automl_config.autofeat, key, value)
 
                     # AutoFeatCalculatorの設定も更新
-                    self.autofeat_calculator.config = self.automl_config.autofeat
+                    if self.autofeat_calculator is not None and hasattr(self.autofeat_calculator, 'config'):
+                        self.autofeat_calculator.config = self.automl_config.autofeat
 
             logger.info("AutoML設定を更新しました")
 
@@ -1035,8 +1158,8 @@ class FeatureEngineeringService:
             return {}
 
         return {
-            "tsfresh": self.tsfresh_calculator.get_feature_names(),
-            "autofeat": self.autofeat_calculator.get_feature_names(),
+            "tsfresh": self.tsfresh_calculator.get_feature_names() if self.tsfresh_calculator else [],
+            "autofeat": self.autofeat_calculator.get_feature_names() if self.autofeat_calculator else [],
         }
 
     def clear_automl_cache(self):
@@ -1045,8 +1168,10 @@ class FeatureEngineeringService:
             return
 
         try:
-            self.tsfresh_calculator.clear_cache()
-            self.autofeat_calculator.clear_model()
+            if self.tsfresh_calculator:
+                self.tsfresh_calculator.clear_cache()
+            if self.autofeat_calculator:
+                self.autofeat_calculator.clear_model()
 
             # 強制ガベージコレクション
             import gc
@@ -1086,10 +1211,18 @@ class FeatureEngineeringService:
                 }
 
             # AutoMLConfigオブジェクトの作成を試行
-            try:
-                config = AutoMLConfig.from_dict(config_dict)
-            except Exception as e:
-                errors.append(f"AutoML設定の解析に失敗しました: {str(e)}")
+            if AutoMLConfig is not None:
+                try:
+                    config = AutoMLConfig.from_dict(config_dict)
+                except Exception as e:
+                    errors.append(f"AutoML設定の解析に失敗しました: {str(e)}")
+                    return {
+                        "valid": False,
+                        "errors": errors,
+                        "warnings": warnings
+                    }
+            else:
+                errors.append("AutoML機能が利用できません")
                 return {
                     "valid": False,
                     "errors": errors,
@@ -1178,14 +1311,14 @@ class FeatureEngineeringService:
                     self.last_enhancement_stats.clear()
 
                 # 各計算機のリソースを個別にクリーンアップ
-                if hasattr(self.tsfresh_calculator, "cleanup"):
+                if self.tsfresh_calculator and hasattr(self.tsfresh_calculator, "cleanup"):
                     self.tsfresh_calculator.cleanup()
 
-                if hasattr(self.autofeat_calculator, "cleanup"):
+                if self.autofeat_calculator and hasattr(self.autofeat_calculator, "cleanup"):
                     self.autofeat_calculator.cleanup()
 
                 # パフォーマンス最適化クラスのクリーンアップ
-                if hasattr(self.performance_optimizer, "cleanup"):
+                if self.performance_optimizer and hasattr(self.performance_optimizer, "cleanup"):
                     self.performance_optimizer.cleanup()
 
             logger.info("FeatureEngineeringServiceのリソースクリーンアップ完了")

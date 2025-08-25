@@ -38,6 +38,7 @@ class AdaBoostModel:
         self.model = None
         self.is_trained = False
         self._feature_columns = None
+        self.scaler = None
         self.automl_config = automl_config
 
         # ベース推定器

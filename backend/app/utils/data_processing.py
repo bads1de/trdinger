@@ -682,7 +682,7 @@ class DataProcessor:
         # 価格の論理的整合性チェック
         for idx in df.index:
             row = df.loc[idx]
-            if pd.isna(row[["Open", "High", "Low", "Close"]]).any():
+            if bool(pd.isna(row[["Open", "High", "Low", "Close"]]).any()):
                 continue
 
             high = row["High"]

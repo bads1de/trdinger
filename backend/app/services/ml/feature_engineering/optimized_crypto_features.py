@@ -81,9 +81,10 @@ class OptimizedCryptoFeatures:
         result_df = df.copy()
 
         # 1. 週末効果（最高安定性）
-        result_df["is_weekend_enhanced"] = (df.index.dayofweek >= 5).astype(int)
+        dayofweek_series = df.index.to_series().dt.dayofweek
+        result_df["is_weekend_enhanced"] = (dayofweek_series >= 5).astype(int)
         result_df["weekend_proximity"] = (
-            np.minimum(df.index.dayofweek, 7 - df.index.dayofweek) / 7.0
+            np.minimum(dayofweek_series, 7 - dayofweek_series) / 7.0
         )
 
         # 2. VWAP系特徴量（高安定性）（pandas-ta使用）
@@ -100,8 +101,11 @@ class OptimizedCryptoFeatures:
             ).fillna(df["Close"])
 
             # スムージング適用
-            vwap_smooth = ta.sma(vwap, length=3).fillna(vwap)
-            result_df[f"vwap_smooth_{period}h"] = vwap_smooth
+            vwap_smooth = ta.sma(vwap, length=3)
+            # pandas-ta returns numpy array, convert to pandas Series and handle NaN
+            if isinstance(vwap_smooth, np.ndarray):
+                vwap_smooth = pd.Series(vwap_smooth, index=df.index)
+            result_df[f"vwap_smooth_{period}h"] = pd.Series(vwap_smooth, index=df.index).fillna(vwap)
 
             # 価格との関係（ロバスト版）
             price_vwap_ratio = df["Close"] / vwap_smooth
@@ -123,8 +127,8 @@ class OptimizedCryptoFeatures:
             result_df[f"bb_position_robust_{period}"] = bb_position.clip(0, 1)
 
         # 4. 曜日効果（改良版）
-        result_df["day_of_week_sin"] = np.sin(2 * np.pi * df.index.dayofweek / 7)
-        result_df["day_of_week_cos"] = np.cos(2 * np.pi * df.index.dayofweek / 7)
+        result_df["day_of_week_sin"] = np.sin(2 * np.pi * dayofweek_series / 7)
+        result_df["day_of_week_cos"] = np.cos(2 * np.pi * dayofweek_series / 7)
 
         self.feature_groups["stable_high_performers"].extend(
             [
@@ -162,11 +166,12 @@ class OptimizedCryptoFeatures:
             rsi = 100 - (100 / (1 + rs))
 
             # スムージング
-            rsi_smooth = rsi.rolling(3).mean()
+            rsi_series = pd.Series(rsi, index=df.index)
+            rsi_smooth = rsi_series.rolling(3).mean()
             result_df[f"rsi_adaptive_{period}"] = rsi_smooth
 
             # RSIの勢い
-            result_df[f"rsi_momentum_{period}"] = rsi_smooth.diff(4)
+            result_df[f"rsi_momentum_{period}"] = rsi_series.diff(4)
 
         # 2. 改良MACD
         ema12 = df["Close"].ewm(span=12).mean()
@@ -216,29 +221,52 @@ class OptimizedCryptoFeatures:
         """ロバストな時間関連特徴量"""
         result_df = df.copy()
 
+        # DatetimeIndexの確認と変換
+        if not isinstance(result_df.index, pd.DatetimeIndex):
+            try:
+                result_df.index = pd.to_datetime(result_df.index)
+                logger.info("インデックスをDatetimeIndexに変換しました")
+            except Exception as e:
+                logger.error(f"DatetimeIndexへの変換に失敗しました: {e}")
+                # デフォルト値で特徴量を作成
+                result_df["hour_sin"] = 0.0
+                result_df["hour_cos"] = 1.0
+                result_df["asia_trading_intensity"] = 0.5
+                result_df["europe_trading_intensity"] = 0.5
+                result_df["us_trading_intensity"] = 0.5
+                result_df["month_progress"] = 0.5
+                result_df["month_end_proximity"] = 0.5
+                result_df["year_progress"] = 0.5
+                result_df["quarter_sin"] = 0.0
+                result_df["quarter_cos"] = 1.0
+                return result_df
+
         # 1. 時間帯の改良（連続値化）
-        result_df["hour_sin"] = np.sin(2 * np.pi * df.index.hour / 24)
-        result_df["hour_cos"] = np.cos(2 * np.pi * df.index.hour / 24)
+        hour_series = result_df.index.to_series().dt.hour
+        result_df["hour_sin"] = np.sin(2 * np.pi * hour_series / 24)
+        result_df["hour_cos"] = np.cos(2 * np.pi * hour_series / 24)
 
         # 2. 地域別取引時間（重み付き）
-        asia_weight = np.exp(-(((df.index.hour - 4) % 24 - 12) ** 2) / 32)
-        europe_weight = np.exp(-(((df.index.hour - 12) % 24 - 12) ** 2) / 32)
-        us_weight = np.exp(-(((df.index.hour - 20) % 24 - 12) ** 2) / 32)
+        asia_weight = np.exp(-(((hour_series - 4) % 24 - 12) ** 2) / 32)
+        europe_weight = np.exp(-(((hour_series - 12) % 24 - 12) ** 2) / 32)
+        us_weight = np.exp(-(((hour_series - 20) % 24 - 12) ** 2) / 32)
 
         result_df["asia_trading_intensity"] = asia_weight
         result_df["europe_trading_intensity"] = europe_weight
         result_df["us_trading_intensity"] = us_weight
 
         # 3. 月内効果（改良版）
-        result_df["month_progress"] = df.index.day / 31.0
+        day_series = result_df.index.to_series().dt.day
+        result_df["month_progress"] = day_series / 31.0
         result_df["month_end_proximity"] = (
-            np.minimum(df.index.day, 32 - df.index.day) / 15.0
+            np.minimum(day_series, 32 - day_series) / 15.0
         )
 
         # 4. 季節性効果
-        result_df["year_progress"] = df.index.dayofyear / 365.0
-        result_df["quarter_sin"] = np.sin(2 * np.pi * df.index.quarter / 4)
-        result_df["quarter_cos"] = np.cos(2 * np.pi * df.index.quarter / 4)
+        result_df["year_progress"] = result_df.index.to_series().dt.dayofyear / 365.0
+        quarter_series = result_df.index.to_series().dt.quarter
+        result_df["quarter_sin"] = np.sin(2 * np.pi * quarter_series / 4)
+        result_df["quarter_cos"] = np.cos(2 * np.pi * quarter_series / 4)
 
         self.feature_groups["robust_temporal"].extend(
             [
@@ -337,7 +365,8 @@ class OptimizedCryptoFeatures:
 
         # 2. ノイズ除去された価格特徴量
         # Hodrick-Prescott フィルターの簡易版
-        price_smooth = df["Close"].rolling(5, center=True).mean().fillna(df["Close"])
+        price_rolling = df["Close"].rolling(5, center=True).mean()
+        price_smooth = pd.Series(price_rolling, index=df.index).fillna(df["Close"])
         result_df["price_denoised"] = price_smooth
         result_df["price_noise"] = df["Close"] - price_smooth
 
@@ -538,10 +567,10 @@ class OptimizedCryptoFeatures:
         # 数値カラムのNaN補完（ロバスト版）
         numeric_cols = result_df.select_dtypes(include=[np.number]).columns
         for col in numeric_cols:
-            if result_df[col].isna().any():
+            if bool(result_df[col].isna().any()):
                 # 中央値で補完
                 median_val = result_df[col].median()
-                if pd.isna(median_val):
+                if bool(pd.isna(median_val)):
                     median_val = 0
                 result_df[col] = result_df[col].fillna(median_val)
 

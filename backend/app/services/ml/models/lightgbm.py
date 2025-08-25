@@ -49,6 +49,7 @@ class LightGBMModel:
         self.model = None
         self.is_trained = False
         self.feature_columns = None
+        self.scaler = None
         self.automl_config = automl_config
         self.classes_ = None  # sklearn互換性のため
 
