@@ -236,14 +236,13 @@ class AutoFeatCalculator:
                 # AutoFeatモデルを初期化（最適化された設定を使用）
                 with self._memory_managed_operation("AutoFeatモデル初期化"):
                     # メモリ制限をさらに厳しく設定（データサイズに基づく）
+                    # AutoFeatのmax_gbパラメータはGB単位の整数またはNoneを期待
                     if data_size_mb < 1:
-                        actual_max_gb = 0.05  # 50MB
+                        actual_max_gb = 1  # 1GB (小さいデータでも最低1GB)
                     elif data_size_mb < 10:
-                        actual_max_gb = 0.1  # 100MB
+                        actual_max_gb = 1  # 1GB
                     else:
-                        actual_max_gb = min(
-                            optimized_config.max_gb, 0.2
-                        )  # 最大でも200MB
+                        actual_max_gb = max(1, int(optimized_config.max_gb))  # 最低1GB
 
                     if task_type.lower() == "classification":
                         self.autofeat_model = AutoFeatClassifier(
@@ -284,24 +283,27 @@ class AutoFeatCalculator:
                         )
 
                         # AutoFeatの推奨方法：fit_transformを使用（メモリ効率が良い）
+                        # AutoFeatはtargetとしてnumpy arrayまたはDataFrameを期待
+                        target_array = np.asarray(processed_target)
                         transformed_df = self.autofeat_model.fit_transform(
-                            processed_df, processed_target
+                            processed_df, target_array
                         )
 
+                        # 結果がDataFrameであることを確認
+                        if not isinstance(transformed_df, pd.DataFrame):
+                            logger.error(f"AutoFeatが予期しない型を返しました: {type(transformed_df)}")
+                            return df, {"error": "AutoFeat returned unexpected type"}
+
                         # AutoFeatの内部状態をログ出力
-                        if hasattr(self.autofeat_model, "feateng_cols_"):
-                            feateng_count = (
-                                len(self.autofeat_model.feateng_cols_)
-                                if self.autofeat_model.feateng_cols_
-                                else 0
-                            )
+                        # AutoFeatモデルの属性に安全にアクセス
+                        feateng_cols = getattr(self.autofeat_model, "feateng_cols_", None)
+                        if feateng_cols is not None:
+                            feateng_count = len(feateng_cols)
                             logger.info(f"AutoFeat生成特徴量列: {feateng_count}個")
-                        if hasattr(self.autofeat_model, "featsel_"):
-                            featsel_count = (
-                                len(self.autofeat_model.featsel_)
-                                if self.autofeat_model.featsel_
-                                else 0
-                            )
+
+                        featsel = getattr(self.autofeat_model, "featsel_", None)
+                        if featsel is not None:
+                            featsel_count = len(featsel)
                             logger.info(f"AutoFeat選択特徴量: {featsel_count}個")
 
                 logger.info(f"変換後データ形状: {transformed_df.shape}")
@@ -312,10 +314,13 @@ class AutoFeatCalculator:
                 result_df = df.copy()
 
                 # 元データのNaN値を統計的手法で処理
-                if result_df.isnull().any().any():
+                if result_df.isnull().sum().sum() > 0:
                     logger.info("元データのNaN値を統計的手法で補完します")
-                    result_df = data_preprocessor.transform_missing_values(
-                        result_df, strategy="median"
+                    result_df = data_preprocessor.interpolate_columns(
+                        result_df,
+                        columns=list(result_df.columns),
+                        strategy="median",
+                        forward_fill=True
                     )
 
                 # インデックスを統一（長さ不一致問題を防ぐ）
@@ -408,45 +413,70 @@ class AutoFeatCalculator:
             processed_target = target_reset[valid_mask].copy()
 
             # 最終的なNaNチェックと統計的補完
-            if processed_df.isnull().any().any():
-                logger.warning(
-                    "前処理後にもNaN値が残っています。統計的手法で補完します。"
-                )
-                processed_df = data_preprocessor.transform_missing_values(
-                    processed_df, strategy="median"
-                )
+            # DataFrameの型を明示的に確認して処理
+            if isinstance(processed_df, pd.DataFrame):
+                # NaN値のチェックをより安全に行う - 直接NaN数をカウント
+                nan_count = processed_df.isna().sum().sum()
+                if nan_count > 0:
+                    logger.warning(
+                        f"前処理後にも{nan_count}個のNaN値が残っています。統計的手法で補完します。"
+                    )
+                    processed_df = data_preprocessor.interpolate_columns(
+                        processed_df,
+                        columns=list(processed_df.columns),
+                        strategy="median",
+                        forward_fill=True
+                    )
 
-            if processed_target.isnull().any():
-                logger.warning(
-                    "ターゲット変数にNaN値があります。統計的手法で補完します。"
-                )
-                target_df = pd.DataFrame({"target": processed_target})
-                target_df = data_preprocessor.transform_missing_values(
-                    target_df, strategy="median"
-                )
-                processed_target = target_df["target"]
+            if isinstance(processed_target, pd.Series):
+                # ターゲット変数のNaNチェック - 直接NaN数をカウント
+                nan_count = processed_target.isna().sum()
+                if nan_count > 0:
+                    logger.warning(
+                        f"ターゲット変数に{nan_count}個のNaN値があります。統計的手法で補完します。"
+                    )
+                    target_df = pd.DataFrame({"target": processed_target})
+                    target_df = data_preprocessor.interpolate_columns(
+                        target_df,
+                        columns=["target"],
+                        strategy="median",
+                        forward_fill=True
+                    )
+                    processed_target = target_df["target"]
 
             # 定数列を除去
             constant_columns = []
-            for col in processed_df.columns:
-                if processed_df[col].nunique() <= 1:
-                    constant_columns.append(col)
+            if isinstance(processed_df, pd.DataFrame):
+                for col in processed_df.columns:
+                    if processed_df[col].nunique() <= 1:
+                        constant_columns.append(col)
 
-            if constant_columns:
-                processed_df = processed_df.drop(columns=constant_columns)
-                logger.info(f"定数列を除去: {len(constant_columns)}個")
+                if constant_columns:
+                    processed_df = processed_df.drop(columns=constant_columns)
+                    logger.info(f"定数列を除去: {len(constant_columns)}個")
 
-            # 特徴量数を制限（AutoFeatの制限対応）
-            if len(processed_df.columns) > 100:
-                # 分散の大きい特徴量を優先的に選択
-                feature_variances = processed_df.var().sort_values(ascending=False)
-                selected_cols = feature_variances.head(100).index
-                processed_df = processed_df[selected_cols]
-                logger.info("特徴量数を100個に制限しました")
+                # 特徴量数を制限（AutoFeatの制限対応）
+                if len(processed_df.columns) > 100:
+                    # 分散の大きい特徴量を優先的に選択
+                    variances = processed_df.var()
+                    if isinstance(variances, pd.Series):
+                        feature_variances = variances.sort_values(ascending=False)
+                        selected_cols = feature_variances.head(100).index
+                        processed_df = processed_df[selected_cols]
+                        logger.info("特徴量数を100個に制限しました")
 
-            logger.info(
-                f"前処理完了: {len(processed_df)}行, {len(processed_df.columns)}列"
-            )
+                logger.info(
+                    f"前処理完了: {len(processed_df)}行, {len(processed_df.columns)}列"
+                )
+
+            # 戻り値の型を明示的に保証
+            if not isinstance(processed_df, pd.DataFrame):
+                logger.error("processed_dfがDataFrameではありません")
+                processed_df = pd.DataFrame()
+            if not isinstance(processed_target, pd.Series):
+                logger.error("processed_targetがSeriesではありません")
+                processed_target = pd.Series()
+
             return processed_df, processed_target
 
         except Exception as e:
@@ -503,8 +533,8 @@ class AutoFeatCalculator:
             # パフォーマンス最適化ツールもクリア
             if hasattr(self, "performance_optimizer") and self.performance_optimizer:
                 try:
-                    if hasattr(self.performance_optimizer, "clear"):
-                        self.performance_optimizer.clear()
+                    if hasattr(self.performance_optimizer, "cleanup"):
+                        self.performance_optimizer.cleanup()
                 except Exception as perf_error:
                     logger.error(
                         f"パフォーマンス最適化ツールクリア中にエラー: {perf_error}"
@@ -542,7 +572,7 @@ class AutoFeatCalculator:
             np.random.seed(int(time.time()) % 2147483647)
 
             # AutoFeatモデルを初期化（バッチ処理用の厳しい制限）
-            batch_max_gb = min(optimized_config.max_gb, 0.2)  # バッチ処理では0.2GB以下
+            batch_max_gb = max(1, int(optimized_config.max_gb))  # バッチ処理では1GB以上
             autofeat_model = AutoFeatRegressor(
                 feateng_steps=1,  # バッチ処理では常に1ステップ
                 max_gb=batch_max_gb,
@@ -557,16 +587,19 @@ class AutoFeatCalculator:
                 warnings.simplefilter("ignore")
 
                 # AutoFeatの推奨方法：fit_transformを使用（メモリ効率が良い）
-                transformed_df = autofeat_model.fit_transform(df, target)
+                transformed_df = autofeat_model.fit_transform(df, target)  # type: ignore
+
+                # 結果がDataFrameであることを確認
+                if not isinstance(transformed_df, pd.DataFrame):
+                    logger.error(f"AutoFeatバッチ処理が予期しない型を返しました: {type(transformed_df)}")
+                    return df, {"error": "AutoFeat returned unexpected type"}
 
                 # 結果をDataFrameに変換
                 result_df = df.copy()
 
                 # インデックスを統一
-                if hasattr(transformed_df, "index"):
-                    transformed_df = transformed_df.reset_index(drop=True)
-                if hasattr(result_df, "index"):
-                    result_df = result_df.reset_index(drop=True)
+                transformed_df = transformed_df.reset_index(drop=True)
+                result_df = result_df.reset_index(drop=True)
 
                 # 新しい特徴量を追加
                 for i, col_name in enumerate(transformed_df.columns):

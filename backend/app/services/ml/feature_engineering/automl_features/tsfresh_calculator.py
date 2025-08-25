@@ -142,6 +142,11 @@ class TSFreshFeatureCalculator:
                     disable_progressbar=True,
                 )
 
+                # 結果がDataFrameであることを確認
+                if not isinstance(extracted_features, pd.DataFrame):
+                    logger.error(f"TSFreshが予期しない型を返しました: {type(extracted_features)}")
+                    return df
+
                 # キャッシュ保存を無効化（毎回新鮮な特徴量生成のため）
                 logger.debug("キャッシュ保存をスキップしました")
 
@@ -200,18 +205,21 @@ class TSFreshFeatureCalculator:
                 result_features = extracted_features
 
             # 特徴量数制限
-            if len(result_features.columns) > self.config.feature_count_limit:
+            if isinstance(result_features, pd.DataFrame) and len(result_features.columns) > self.config.feature_count_limit:
                 logger.info(
                     f"特徴量数を{self.config.feature_count_limit}個に制限します"
                 )
                 # 分散の大きい特徴量を優先的に選択
-                feature_variances = result_features.var().sort_values(ascending=False)
+                feature_variances = result_features.var().sort_values(ascending=False)  # type: ignore
                 selected_cols = feature_variances.head(
                     self.config.feature_count_limit
                 ).index
-                result_features = result_features[selected_cols]
+                result_features = result_features.loc[:, selected_cols]
 
             # 元のDataFrameに結合
+            if not isinstance(result_features, pd.DataFrame):
+                logger.error(f"特徴量がDataFrameではありません: {type(result_features)}")
+                return df
             result_df = self._merge_features_with_original(df, result_features)
 
             # 抽出情報を保存
@@ -247,7 +255,7 @@ class TSFreshFeatureCalculator:
             for col in available_columns:
                 series_data = df[col].dropna()
                 for i, (timestamp, value) in enumerate(series_data.items()):
-                    if pd.notna(value) and np.isfinite(value):
+                    if pd.notna(value).any() if isinstance(value, (pd.Series, np.ndarray)) else (pd.notna(value) and np.isfinite(value)):
                         ts_data.append({"id": col, "time": i, "value": float(value)})
 
             result_df = pd.DataFrame(ts_data)
@@ -381,7 +389,7 @@ class TSFreshFeatureCalculator:
                 logger.warning("有効なターゲット変数が見つかりません")
                 return None
 
-            return target_aligned
+            return target_aligned  # type: ignore
 
         except Exception as e:
             logger.error(f"ターゲット変数の調整エラー: {e}")
@@ -535,9 +543,20 @@ class TSFreshFeatureCalculator:
 
             # パフォーマンスモードに応じた設定選択
             if performance_mode == "fast":
-                return self.feature_settings.get_lightweight_settings()
+                # 軽量設定として基本プロファイルのみを使用
+                return self.feature_settings.create_custom_settings(
+                    ["basic_stats"],
+                    max_computational_cost=5,
+                    max_features=20,
+                )
             elif performance_mode == "comprehensive":
-                return self.feature_settings.get_comprehensive_settings()
+                # すべての利用可能なプロファイルを使用して包括的な設定を作成
+                all_profiles = list(self.feature_settings.profiles.keys())
+                return self.feature_settings.create_custom_settings(
+                    all_profiles,
+                    max_computational_cost=20,  # より高い計算コストを許容
+                    max_features=200,  # より多くの特徴量を許容
+                )
             elif performance_mode == "financial_optimized":
                 # 金融最適化設定を取得（デフォルトでTRENDINGレジームを使用）
                 from .feature_settings import MarketRegime

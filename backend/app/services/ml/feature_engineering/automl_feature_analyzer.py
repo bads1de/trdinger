@@ -7,9 +7,17 @@ AutoML生成特徴量の重要度分析と可視化機能を提供します。
 import logging
 import re
 from dataclasses import dataclass
-from typing import Any, Dict, List
+from typing import Any, Dict, List, TypedDict
 
 import numpy as np
+
+
+class FeaturePatternConfig(TypedDict):
+    """特徴量パターン設定の型定義"""
+
+    prefix: str
+    patterns: List[str]
+
 
 logger = logging.getLogger(__name__)
 
@@ -34,13 +42,15 @@ class AutoMLFeatureAnalyzer:
 
     def __init__(self):
         """初期化"""
-        self.feature_patterns = self._initialize_feature_patterns()
+        self.feature_patterns: Dict[str, FeaturePatternConfig] = (
+            self._initialize_feature_patterns()
+        )
         self.category_descriptions = self._initialize_category_descriptions()
 
-    def _initialize_feature_patterns(self) -> Dict[str, Dict[str, str]]:
+    def _initialize_feature_patterns(self) -> Dict[str, FeaturePatternConfig]:
         """特徴量パターンを初期化"""
         return {
-            "tsfresh": {
+            "tsfresh": {  # TSFresh: Time Series Feature extraction library
                 "prefix": "TS_",
                 "patterns": [
                     r".*__mean$",
@@ -55,7 +65,7 @@ class AutoMLFeatureAnalyzer:
                     r".*__agg_linear_trend__.*",
                 ],
             },
-            "autofeat": {
+            "autofeat": {  # AutoFeat: Automated Feature Engineering library
                 "prefix": "AF_",
                 "patterns": [
                     r"^AF_.*",

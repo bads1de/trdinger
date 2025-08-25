@@ -52,6 +52,12 @@ class AdvancedFeatureSelector:
                 "importance_based",
             ]
 
+        # パラメータの検証
+        if max_features <= 0:
+            raise ValueError(f"max_features must be positive, got {max_features}")
+        if len(features.columns) == 0:
+            raise ValueError("features DataFrame is empty")
+
         logger.info(
             f"包括的特徴量選択を開始: {len(features.columns)}個 → {max_features}個"
         )
@@ -68,7 +74,7 @@ class AdvancedFeatureSelector:
         # 1. 統計的検定による選択
         if "statistical_test" in selection_methods:
             current_features, step_info = self._statistical_test_selection(
-                current_features, target, max_features * 2
+                current_features, target, int(float(max_features) * 2.0)
             )
             selection_info["selection_steps"].append(step_info)
 
@@ -82,7 +88,7 @@ class AdvancedFeatureSelector:
         # 3. 相互情報量による選択
         if "mutual_information" in selection_methods:
             current_features, step_info = self._mutual_information_selection(
-                current_features, target, max_features * 1.5
+                current_features, target, int(float(max_features) * 1.5)
             )
             selection_info["selection_steps"].append(step_info)
 
@@ -95,7 +101,8 @@ class AdvancedFeatureSelector:
 
         selection_info["final_count"] = len(current_features.columns)
         selection_info["reduction_ratio"] = (
-            1 - selection_info["final_count"] / selection_info["original_count"]
+            0.0 if selection_info["original_count"] == 0
+            else 1 - selection_info["final_count"] / selection_info["original_count"]
         )
 
         # 選択履歴を保存
@@ -114,6 +121,8 @@ class AdvancedFeatureSelector:
     ) -> Tuple[pd.DataFrame, Dict[str, Any]]:
         """統計的検定による特徴量選択"""
         try:
+            if max_features <= 0:
+                raise ValueError(f"max_features must be positive, got {max_features}")
             logger.info("統計的検定による特徴量選択を実行中...")
 
             # インデックスを統一してから有効なデータのマスクを作成
@@ -147,16 +156,15 @@ class AdvancedFeatureSelector:
             )
 
             # p値が有効な特徴量のみを選択
-            valid_scores = feature_scores[
-                (feature_scores["p_value"].notna())
-                & (feature_scores["p_value"] < 0.05)  # 5%有意水準
-            ].sort_values("f_score", ascending=False)
+            mask = (feature_scores["p_value"].notna()) & (feature_scores["p_value"] < 0.05)
+            filtered_scores = feature_scores.loc[mask].copy()
+            valid_scores = filtered_scores.sort_values("f_score", ascending=False)
 
             # 上位特徴量を選択
             selected_count = min(len(valid_scores), max_features)
             selected_features = valid_scores.head(selected_count)["feature"].tolist()
 
-            result_features = features[selected_features]
+            result_features = features.loc[:, selected_features].copy()
 
             step_info = {
                 "method": "statistical_test",
@@ -217,7 +225,13 @@ class AdvancedFeatureSelector:
                     and feature2 not in removed_features
                 ):
                     # ターゲットとの相関が低い方を除去
-                    if target_corr.get(feature1, 0) < target_corr.get(feature2, 0):
+                    corr1 = target_corr.get(feature1, 0.0)
+                    corr2 = target_corr.get(feature2, 0.0)
+                    if corr1 is None:
+                        corr1 = 0.0
+                    if corr2 is None:
+                        corr2 = 0.0
+                    if corr1 < corr2:
                         removed_features.add(feature1)
                     else:
                         removed_features.add(feature2)
@@ -226,7 +240,7 @@ class AdvancedFeatureSelector:
             selected_features = [
                 col for col in features.columns if col not in removed_features
             ]
-            result_features = features[selected_features]
+            result_features = features.loc[:, selected_features].copy()
 
             step_info = {
                 "method": "correlation_filter",
@@ -238,7 +252,7 @@ class AdvancedFeatureSelector:
             }
 
             logger.info(f"相関フィルタリング完了: {len(removed_features)}個除去")
-            return result_features, step_info
+            return result_features, step_info  # type: ignore
 
         except Exception as e:
             logger.error(f"相関フィルタリングエラー: {e}")
@@ -253,6 +267,8 @@ class AdvancedFeatureSelector:
     ) -> Tuple[pd.DataFrame, Dict[str, Any]]:
         """相互情報量による特徴量選択"""
         try:
+            if max_features <= 0:
+                raise ValueError(f"max_features must be positive, got {max_features}")
             logger.info("相互情報量による特徴量選択を実行中...")
 
             # インデックスを統一してから有効なデータのマスクを作成
@@ -287,7 +303,7 @@ class AdvancedFeatureSelector:
             selected_count = min(len(feature_scores), int(max_features))
             selected_features = feature_scores.head(selected_count)["feature"].tolist()
 
-            result_features = features[selected_features]
+            result_features = features.loc[:, selected_features].copy()
 
             step_info = {
                 "method": "mutual_information",
@@ -297,7 +313,7 @@ class AdvancedFeatureSelector:
             }
 
             logger.info(f"相互情報量選択完了: {len(selected_features)}個選択")
-            return result_features, step_info
+            return result_features, step_info  # type: ignore
 
         except Exception as e:
             logger.error(f"相互情報量選択エラー: {e}")
@@ -312,6 +328,8 @@ class AdvancedFeatureSelector:
     ) -> Tuple[pd.DataFrame, Dict[str, Any]]:
         """重要度ベース特徴量選択"""
         try:
+            if max_features <= 0:
+                raise ValueError(f"max_features must be positive, got {max_features}")
             logger.info("重要度ベース特徴量選択を実行中...")
 
             # インデックスを統一してから有効なデータのマスクを作成
@@ -356,7 +374,7 @@ class AdvancedFeatureSelector:
                 "feature"
             ].tolist()
 
-            result_features = features[selected_features]
+            result_features = features.loc[:, selected_features].copy()
 
             # 重要度スコアを保存
             self.feature_scores = dict(
@@ -372,7 +390,7 @@ class AdvancedFeatureSelector:
             }
 
             logger.info(f"重要度ベース選択完了: {len(selected_features)}個選択")
-            return result_features, step_info
+            return result_features, step_info  # type: ignore
 
         except Exception as e:
             logger.error(f"重要度ベース選択エラー: {e}")

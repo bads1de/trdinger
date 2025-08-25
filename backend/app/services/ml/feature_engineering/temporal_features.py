@@ -94,19 +94,19 @@ class TemporalFeatureCalculator:
             result_df.index = pd.to_datetime(result_df.index)
 
         # 時間（0-23）
-        result_df["Hour_of_Day"] = result_df.index.hour
+        result_df["Hour_of_Day"] = result_df.index.to_series().dt.hour
 
         # 曜日（0=月曜日, 6=日曜日）
-        result_df["Day_of_Week"] = result_df.index.dayofweek
+        result_df["Day_of_Week"] = result_df.index.to_series().dt.dayofweek
 
         # 週末フラグ（土日）
-        result_df["Is_Weekend"] = result_df.index.dayofweek.isin([5, 6])
+        result_df["Is_Weekend"] = result_df.index.to_series().dt.dayofweek.isin([5, 6])
 
         # 月曜効果
-        result_df["Is_Monday"] = result_df.index.dayofweek == 0
+        result_df["Is_Monday"] = result_df.index.to_series().dt.dayofweek == 0
 
         # 金曜効果
-        result_df["Is_Friday"] = result_df.index.dayofweek == 4
+        result_df["Is_Friday"] = result_df.index.to_series().dt.dayofweek == 4
 
         return result_df
 
@@ -118,7 +118,7 @@ class TemporalFeatureCalculator:
         if not isinstance(result_df.index, pd.DatetimeIndex):
             result_df.index = pd.to_datetime(result_df.index)
 
-        hour = result_df.index.hour
+        hour = result_df.index.to_series().dt.hour
 
         # Asia Session (UTC 0:00-9:00)
         result_df["Asia_Session"] = (hour >= 0) & (hour < 9)
@@ -140,12 +140,12 @@ class TemporalFeatureCalculator:
             result_df.index = pd.to_datetime(result_df.index)
 
         # 時間の周期的エンコーディング（24時間周期）
-        hour_angle = 2 * np.pi * result_df.index.hour / 24
+        hour_angle = 2 * np.pi * result_df.index.to_series().dt.hour / 24
         result_df["Hour_Sin"] = np.sin(hour_angle)
         result_df["Hour_Cos"] = np.cos(hour_angle)
 
         # 曜日の周期的エンコーディング（7日周期）
-        day_angle = 2 * np.pi * result_df.index.dayofweek / 7
+        day_angle = 2 * np.pi * result_df.index.to_series().dt.dayofweek / 7
         result_df["Day_Sin"] = np.sin(day_angle)
         result_df["Day_Cos"] = np.cos(day_angle)
 
@@ -159,7 +159,7 @@ class TemporalFeatureCalculator:
         if not isinstance(result_df.index, pd.DatetimeIndex):
             result_df.index = pd.to_datetime(result_df.index)
 
-        hour = result_df.index.hour
+        hour = result_df.index.to_series().dt.hour
 
         # Asia-Europe overlap (UTC 7:00-9:00)
         result_df["Session_Overlap_Asia_Europe"] = (hour >= 7) & (hour < 9)

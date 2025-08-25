@@ -71,8 +71,12 @@ class DataFrequencyManager:
             if len(time_diffs) == 0:
                 return "1h"
 
-            # 最頻値を取得
-            median_diff = time_diffs.median()
+            # TimedeltaIndexをSeriesに変換してmedianを計算
+            time_diffs_series = pd.Series(time_diffs)
+            median_diff = time_diffs_series.median()
+            if str(median_diff) == 'NaT':
+                return "1h"
+            median_diff = pd.Timedelta(median_diff)
             diff_minutes = median_diff.total_seconds() / 60
 
             # 時間間隔をtimeframeにマッピング
