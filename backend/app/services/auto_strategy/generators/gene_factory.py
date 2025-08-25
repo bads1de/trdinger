@@ -81,8 +81,8 @@ class BaseGeneGenerator(ABC):
                 indicators=indicators,
                 entry_conditions=entry_conditions,  # 後方互換性
                 exit_conditions=[],  # 空のリスト（TP/SLで管理）
-                long_entry_conditions=long_entry_conditions,
-                short_entry_conditions=short_entry_conditions,
+                long_entry_conditions=list(long_entry_conditions),  # 型を明示的に変換
+                short_entry_conditions=list(short_entry_conditions),  # 型を明示的に変換
                 risk_management=risk_management,
                 tpsl_gene=tpsl_gene,
                 position_sizing_gene=position_sizing_gene,
@@ -96,15 +96,19 @@ class BaseGeneGenerator(ABC):
     def _create_fallback_gene(self) -> StrategyGene:
         """フォールバック遺伝子を作成"""
         return StrategyGene(
-            indicators=[IndicatorGene(type="SMA", parameters={"period": 20}, enabled=True)],
+            indicators=[
+                IndicatorGene(type="SMA", parameters={"period": 20}, enabled=True)
+            ],
             entry_conditions=[],
             exit_conditions=[],
             long_entry_conditions=[],
             short_entry_conditions=[],
-            risk_management={}, # デフォルト値
-            tpsl_gene=TPSLGene(take_profit_ratio=0.01, stop_loss_ratio=0.005), # デフォルト値
-            position_sizing_gene=PositionSizingGene(sizing_type="fixed", fixed_amount=1000), # デフォルト値
-            metadata={"generated_by": "Fallback"}
+            risk_management={},  # デフォルト値
+            tpsl_gene=create_random_tpsl_gene(),  # ランダム生成を使用
+            position_sizing_gene=create_random_position_sizing_gene(
+                self.config
+            ),  # ランダム生成を使用
+            metadata={"generated_by": "Fallback"},
         )
 
 
@@ -222,8 +226,9 @@ class SmartGeneGenerator(BaseGeneGenerator):
     def generate_indicators(self) -> List[IndicatorGene]:
         """スマートに指標を生成"""
         try:
-            smart_gen = self._get_smart_generator()
-            return smart_gen._generate_indicators(self.config)
+            # ランダム生成を使用（SmartConditionGeneratorは条件生成に特化）
+            random_gen = RandomGeneGenerator(self.config)
+            return random_gen.generate_indicators()
         except Exception as e:
             logger.error(f"スマート指標生成エラー: {e}")
             # フォールバック: ランダム生成
@@ -238,11 +243,29 @@ class SmartGeneGenerator(BaseGeneGenerator):
             smart_gen = self._get_smart_generator()
             smart_gen.indicators = indicators
             long_conditions, short_conditions, exit_conditions = (
-                smart_gen.generate_conditions(indicators)
+                smart_gen.generate_balanced_conditions(indicators)
             )
 
             # 後方互換性のためのエントリー条件
             entry_conditions = long_conditions[:1] if long_conditions else []
+
+            # List[Union[Condition, ConditionGroup]] を List[Condition] に変換
+            # ConditionGroupは無視し、Conditionのみを抽出
+            from ..models.condition_group import ConditionGroup
+
+            def extract_conditions(conditions):
+                result = []
+                for cond in conditions:
+                    if isinstance(cond, Condition):
+                        result.append(cond)
+                    elif isinstance(cond, ConditionGroup):
+                        # ConditionGroup内のConditionをすべて抽出
+                        result.extend(cond.conditions)
+                return result
+
+            entry_conditions = extract_conditions(entry_conditions)
+            long_conditions = extract_conditions(long_conditions)
+            short_conditions = extract_conditions(short_conditions)
 
             return entry_conditions, long_conditions, short_conditions
 

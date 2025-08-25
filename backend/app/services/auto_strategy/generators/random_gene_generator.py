@@ -15,7 +15,7 @@ from app.services.indicators.config.indicator_config import IndicatorScaleType
 from ..models.ga_config import GAConfig
 from ..models.gene_serialization import GeneSerializer
 from ..models.gene_strategy import Condition, IndicatorGene, StrategyGene
-from ..models.gene_position_sizing import PositionSizingGene
+from ..models.gene_position_sizing import PositionSizingGene, PositionSizingMethod
 from ..models.gene_tpsl import TPSLGene, TPSLMethod, create_random_tpsl_gene
 from ..utils.operand_grouping import operand_grouping_system
 from ..config.constants import OPERATORS, DATA_SOURCES
@@ -188,10 +188,11 @@ class RandomGeneGenerator:
                 short_entry_conditions=[],
                 risk_management={},  # デフォルト値
                 tpsl_gene=TPSLGene(
-                    take_profit_ratio=0.01, stop_loss_ratio=0.005
+                    take_profit_pct=0.01, stop_loss_pct=0.005
                 ),  # デフォルト値
                 position_sizing_gene=PositionSizingGene(
-                    sizing_type="fixed", fixed_amount=1000
+                    method=PositionSizingMethod.FIXED_QUANTITY,
+                    fixed_quantity=1000
                 ),  # デフォルト値
                 metadata={"generated_by": "Fallback"},
             )
@@ -278,49 +279,50 @@ class RandomGeneGenerator:
             pass
         # テクニカルオンリー時のデフォルト候補を厳選して成立性を底上げ（allowed_indicators 指定時は尊重）
         if indicator_mode == "technical_only":
+            # デフォルトのcuratedセットを事前に定義
+            from ..config.constants import VALID_INDICATOR_TYPES
+
+            curated = {
+                "SMA",
+                "EMA",
+                "WMA",
+                "MACD",
+                "MACDFIX",
+                "MACDEXT",
+                "RSI",
+                "STOCH",
+                "STOCHRSI",
+                "CCI",
+                "ADX",
+                "MFI",
+                "ATR",
+                "BBANDS",
+                "KAMA",
+                "T3",
+                "TRIMA",
+                "PPO",
+                "APO",
+                "ROC",
+                "TRIX",
+                "UO",
+                "CMO",
+                "DX",
+                "MINUS_DI",
+                "PLUS_DI",
+                "WILLR",
+                "AROON",
+                "AROONOSC",
+                "BOP",
+                "MOM",
+            }
+            # VALID_INDICATOR_TYPESに含まれる指標のみに絞り込み
+            curated = {ind for ind in curated if ind in VALID_INDICATOR_TYPES}
+
             try:
                 allowed = set(getattr(config, "allowed_indicators", []) or [])
             except Exception:
                 allowed = set()
-            if not allowed:
-                # VALID_INDICATOR_TYPESに含まれる安全な指標のみを使用
-                from ..config.constants import VALID_INDICATOR_TYPES
 
-                curated = {
-                    "SMA",
-                    "EMA",
-                    "WMA",
-                    "MACD",
-                    "MACDFIX",
-                    "MACDEXT",
-                    "RSI",
-                    "STOCH",
-                    "STOCHRSI",
-                    "CCI",
-                    "ADX",
-                    "MFI",
-                    "ATR",
-                    "BBANDS",
-                    "KAMA",
-                    "T3",
-                    "TRIMA",
-                    "PPO",
-                    "APO",
-                    "ROC",
-                    "TRIX",
-                    "UO",
-                    "CMO",
-                    "DX",
-                    "MINUS_DI",
-                    "PLUS_DI",
-                    "WILLR",
-                    "AROON",
-                    "AROONOSC",
-                    "BOP",
-                    "MOM",
-                }
-                # VALID_INDICATOR_TYPESに含まれる指標のみに絞り込み
-                curated = {ind for ind in curated if ind in VALID_INDICATOR_TYPES}
             # カバレッジモード: allowed 指定時は1つは巡回候補を確実に含める
             # store coverage pick on the instance so other methods can access it
             self._coverage_pick = None
@@ -334,11 +336,7 @@ class RandomGeneGenerator:
                 self._coverage_pick = None
 
             # curated での厳選は allowed 指定がない場合のみ適用
-            try:
-                allowed = set(getattr(config, "allowed_indicators", []) or [])
-            except Exception:
-                allowed = set()
-            if not allowed and indicator_mode == "technical_only":
+            if not allowed:
                 available_indicators = [
                     ind for ind in available_indicators if ind in curated
                 ]
