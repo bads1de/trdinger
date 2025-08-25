@@ -2,7 +2,7 @@
 基底リポジトリクラス
 """
 
-from typing import List, Optional, Type, Dict, Any, TypeVar, Generic, Callable
+from typing import List, Optional, Type, Dict, Any, TypeVar, Generic, Callable, cast
 from datetime import datetime, timezone
 from sqlalchemy.orm import Session
 from sqlalchemy import func, select, insert, delete, asc, desc
@@ -21,19 +21,21 @@ class BaseRepository(Generic[T]):
     def __init__(self, db: Session, model_class: Type[T]):
         self.db = db
         self.model_class = model_class
-        
+
     def to_dict(self, model_instance: T) -> dict:
         """モデルインスタンスを辞書に変換
-        
+
         Args:
             model_instance: 変換するモデルインスタンス
-            
+
         Returns:
             変換された辞書
         """
         result: dict = {}
         # SQLAlchemyカラムを反復処理して値をシリアライズ
-        for column in model_instance.__table__.columns:
+        # 型チェッカーにSQLAlchemyモデルであることを伝える
+        model = cast(Any, model_instance)
+        for column in model.__table__.columns:
             val = getattr(model_instance, column.name)
             # datetime -> ISO形式
             if isinstance(val, datetime):
@@ -41,14 +43,14 @@ class BaseRepository(Generic[T]):
             else:
                 result[column.name] = val
         return result
-    
+
     def to_pydantic_model(self, model_instance: T, pydantic_model_class: Type) -> Any:
         """モデルインスタンスをPydanticモデルに変換
-        
+
         Args:
             model_instance: 変換するモデルインスタンス
             pydantic_model_class: 変換先のPydanticモデルクラス
-            
+
         Returns:
             変換されたPydanticモデルインスタンス
         """
@@ -83,7 +85,7 @@ class BaseRepository(Generic[T]):
             # その他のDBの場合は個別に処理（簡易実装）
             try:
                 # PostgreSQL用の重複処理
-                stmt = stmt.on_conflict_do_nothing(index_elements=conflict_columns)
+                stmt = stmt.on_conflict_do_nothing(index_elements=conflict_columns)  # type: ignore
                 result = self.db.execute(stmt, records)
                 inserted_count = getattr(result, "rowcount", 0)
             except AttributeError:
@@ -459,7 +461,7 @@ class BaseRepository(Generic[T]):
         if not records:
             # 空のDataFrameを返す
             columns = list(column_mapping.values()) if column_mapping else []
-            return pd.DataFrame(columns=columns)
+            return pd.DataFrame(columns=columns)  # type: ignore
 
         try:
             data = []
@@ -471,7 +473,9 @@ class BaseRepository(Generic[T]):
                         row_data[df_column] = getattr(record, model_attr, None)
                 else:
                     # マッピングが指定されていない場合、全属性を使用
-                    for column in self.model_class.__table__.columns:
+                    # 型チェッカーにSQLAlchemyモデルであることを伝える
+                    model_class = cast(Any, self.model_class)
+                    for column in model_class.__table__.columns:
                         row_data[column.name] = getattr(record, column.name, None)
 
                 data.append(row_data)
@@ -584,11 +588,13 @@ class BaseRepository(Generic[T]):
             # SQLAlchemy 2.0の標準的なselect文を使用
             timestamp_attr = getattr(self.model_class, timestamp_column)
 
+            # 型チェッカーにSQLAlchemyモデルであることを伝える
+            model_class = cast(Any, self.model_class)
             stmt = select(
-                func.count(self.model_class.id).label("total_count"),
+                func.count(model_class.id).label("total_count"),
                 func.min(timestamp_attr).label("oldest_timestamp"),
                 func.max(timestamp_attr).label("newest_timestamp"),
-            ).select_from(self.model_class)
+            ).select_from(model_class)
 
             # フィルター適用
             if filters:
@@ -597,15 +603,20 @@ class BaseRepository(Generic[T]):
 
             result = self.db.execute(stmt).first()
 
+            total_count = getattr(result, "total_count", 0) or 0
+            oldest_timestamp = getattr(result, "oldest_timestamp", None)
+            newest_timestamp = getattr(result, "newest_timestamp", None)
+            date_range_days = (
+                (newest_timestamp - oldest_timestamp).days
+                if oldest_timestamp and newest_timestamp
+                else 0
+            )
+
             return {
-                "total_count": result.total_count or 0,
-                "oldest_timestamp": result.oldest_timestamp,
-                "newest_timestamp": result.newest_timestamp,
-                "date_range_days": (
-                    (result.newest_timestamp - result.oldest_timestamp).days
-                    if result.oldest_timestamp and result.newest_timestamp
-                    else 0
-                ),
+                "total_count": total_count,
+                "oldest_timestamp": oldest_timestamp,
+                "newest_timestamp": newest_timestamp,
+                "date_range_days": date_range_days,
             }
 
         except Exception as e:

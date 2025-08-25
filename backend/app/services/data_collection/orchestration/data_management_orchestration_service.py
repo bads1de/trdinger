@@ -397,8 +397,14 @@ class DataManagementOrchestrationService:
                 ohlcv_details = {}
                 for tf in timeframes:
                     count = ohlcv_repo.get_data_count(symbol, tf)
-                    latest = ohlcv_repo.get_latest_timestamp(symbol, tf)
-                    oldest = ohlcv_repo.get_oldest_timestamp(symbol, tf)
+                    latest = ohlcv_repo.get_latest_timestamp(
+                        timestamp_column="timestamp",
+                        filter_conditions={"symbol": symbol, "timeframe": tf}
+                    )
+                    oldest = ohlcv_repo.get_oldest_timestamp(
+                        timestamp_column="timestamp",
+                        filter_conditions={"symbol": symbol, "timeframe": tf}
+                    )
 
                     ohlcv_details[tf] = {
                         "count": count,

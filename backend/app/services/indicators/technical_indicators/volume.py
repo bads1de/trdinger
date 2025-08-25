@@ -45,7 +45,7 @@ class VolumeIndicators:
             close=close_series,
             volume=volume_series,
         )
-        return result.values
+        return result.values if result is not None and hasattr(result, "values") else np.asarray(result) if result is not None else np.array([])
 
     @staticmethod
     @handle_pandas_ta_errors
@@ -71,7 +71,7 @@ class VolumeIndicators:
             fast=fast,
             slow=slow,
         )
-        return result.values
+        return result.values if result is not None and hasattr(result, "values") else np.asarray(result) if result is not None else np.array([])
 
     @staticmethod
     @handle_pandas_ta_errors
@@ -83,7 +83,7 @@ class VolumeIndicators:
         volume_series = pd.Series(volume) if isinstance(volume, np.ndarray) else volume
 
         result = ta.obv(close=close_series, volume=volume_series)
-        return result.values
+        return result.values if result is not None and hasattr(result, "values") else np.asarray(result) if result is not None else np.array([])
 
     @staticmethod
     @handle_pandas_ta_errors
@@ -94,7 +94,7 @@ class VolumeIndicators:
         c = pd.Series(close) if isinstance(close, np.ndarray) else close
         v = pd.Series(volume) if isinstance(volume, np.ndarray) else volume
         df = ta.nvi(close=c, volume=v)
-        return df.values if hasattr(df, "values") else np.asarray(df)
+        return np.asarray(df) if df is not None else np.array([])
 
     @staticmethod
     @handle_pandas_ta_errors
@@ -105,7 +105,7 @@ class VolumeIndicators:
         c = pd.Series(close) if isinstance(close, np.ndarray) else close
         v = pd.Series(volume) if isinstance(volume, np.ndarray) else volume
         df = ta.pvi(close=c, volume=v)
-        return df.values if hasattr(df, "values") else np.asarray(df)
+        return np.asarray(df) if df is not None else np.array([])
 
     @staticmethod
     @handle_pandas_ta_errors
@@ -127,7 +127,7 @@ class VolumeIndicators:
             # pandas-taのVWAPを試行（時系列インデックスがある場合）
             if hasattr(h.index, "to_period"):
                 df = ta.vwap(high=h, low=low_series, close=c, volume=v, anchor=anchor)
-                return df.values if hasattr(df, "values") else np.asarray(df)
+                return np.asarray(df) if df is not None else np.array([])
         except Exception:
             pass
 
@@ -162,7 +162,7 @@ class VolumeIndicators:
         c = pd.Series(close) if isinstance(close, np.ndarray) else close
         v = pd.Series(volume) if isinstance(volume, np.ndarray) else volume
         df = ta.eom(high=h, low=low_series, close=c, volume=v, length=length)
-        return df.values if hasattr(df, "values") else np.asarray(df)
+        return np.asarray(df) if df is not None else np.array([])
 
     @staticmethod
     @handle_pandas_ta_errors
@@ -180,7 +180,7 @@ class VolumeIndicators:
         c = pd.Series(close) if isinstance(close, np.ndarray) else close
         v = pd.Series(volume) if isinstance(volume, np.ndarray) else volume
         df = ta.kvo(high=h, low=low_series, close=c, volume=v, fast=fast, slow=slow)
-        return df.values if hasattr(df, "values") else np.asarray(df)
+        return np.asarray(df) if df is not None else np.array([])
 
     @staticmethod
     @handle_pandas_ta_errors
@@ -191,7 +191,7 @@ class VolumeIndicators:
         c = pd.Series(close) if isinstance(close, np.ndarray) else close
         v = pd.Series(volume) if isinstance(volume, np.ndarray) else volume
         df = ta.pvt(close=c, volume=v)
-        return df.values if hasattr(df, "values") else np.asarray(df)
+        return np.asarray(df) if df is not None else np.array([])
 
     @staticmethod
     @handle_pandas_ta_errors
@@ -208,4 +208,4 @@ class VolumeIndicators:
         c = pd.Series(close) if isinstance(close, np.ndarray) else close
         v = pd.Series(volume) if isinstance(volume, np.ndarray) else volume
         df = ta.cmf(high=h, low=low_series, close=c, volume=v, length=length)
-        return df.values if hasattr(df, "values") else np.asarray(df)
+        return np.asarray(df) if df is not None else np.array([])

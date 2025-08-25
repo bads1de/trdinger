@@ -11,7 +11,7 @@
 - Supertrend
 """
 
-from typing import Tuple, Union
+from typing import Tuple, Union, Optional
 
 import numpy as np
 import pandas as pd
@@ -41,7 +41,10 @@ class VolatilityIndicators:
         result = ta.atr(
             high=high_series, low=low_series, close=close_series, length=length
         )
-        return result.values
+        if result is None:
+            return np.full(len(high_series), np.nan)
+        assert result is not None  # for type checker
+        return result.to_numpy()
 
     @staticmethod
     @handle_pandas_ta_errors
@@ -59,7 +62,10 @@ class VolatilityIndicators:
         result = ta.natr(
             high=high_series, low=low_series, close=close_series, length=length
         )
-        return result.values
+        if result is None:
+            return np.full(len(high_series), np.nan)
+        assert result is not None  # for type checker
+        return result.to_numpy()
 
     @staticmethod
     @handle_pandas_ta_errors
@@ -74,7 +80,10 @@ class VolatilityIndicators:
         close_series = pd.Series(close) if isinstance(close, np.ndarray) else close
 
         result = ta.true_range(high=high_series, low=low_series, close=close_series)
-        return result.values
+        if result is None:
+            return np.full(len(high_series), np.nan)
+        assert result is not None  # for type checker
+        return result.to_numpy()
 
     @staticmethod
     @handle_pandas_ta_errors
@@ -85,6 +94,15 @@ class VolatilityIndicators:
         series = pd.Series(data) if isinstance(data, np.ndarray) else data
         result = ta.bbands(series, length=length, std=std)
 
+        if result is None:
+            # ta.bbandsがNoneを返す場合のフォールバック
+            return (
+                np.full(len(series), np.nan),
+                np.full(len(series), np.nan),
+                np.full(len(series), np.nan),
+            )
+
+        assert result is not None  # for type checker
         # 列名を動的に取得（pandas-taのバージョンによって異なる可能性がある）
         columns = result.columns.tolist()
 
@@ -94,9 +112,9 @@ class VolatilityIndicators:
         lower_col = [col for col in columns if "BBL" in col][0]
 
         return (
-            result[upper_col].values,
-            result[middle_col].values,
-            result[lower_col].values,
+            result[upper_col].to_numpy(),
+            result[middle_col].to_numpy(),
+            result[lower_col].to_numpy(),
         )
 
     @staticmethod
@@ -107,7 +125,7 @@ class VolatilityIndicators:
         close: Union[np.ndarray, pd.Series],
         length: int = 20,
         scalar: float = 2.0,
-        std_dev: float = None,
+        std_dev: Optional[float] = None,
     ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
         """Keltner Channels: returns (upper, middle, lower)"""
         h = pd.Series(high) if isinstance(high, np.ndarray) else high
@@ -118,15 +136,23 @@ class VolatilityIndicators:
         _ = std_dev
 
         df = ta.kc(high=h, low=low_series, close=c, length=length, scalar=scalar)
+        if df is None:
+            # ta.kcがNoneを返す場合のフォールバック
+            upper = np.full(len(c), np.nan)
+            middle = np.full(len(c), np.nan)
+            lower = np.full(len(c), np.nan)
+            return upper, middle, lower
+
+        assert df is not None  # for type checker
         cols = list(df.columns)
-        upper = df[next((c for c in cols if "KCu" in c), cols[0])].values
+        upper = df[next((c for c in cols if "KCu" in c), cols[0])].to_numpy()
         middle = df[
             next(
                 (c for c in cols if "KCe" in c or "KCM" in c or "mid" in c.lower()),
                 cols[1 if len(cols) > 1 else 0],
             )
-        ].values
-        lower = df[next((c for c in cols if "KCl" in c), cols[-1])].values
+        ].to_numpy()
+        lower = df[next((c for c in cols if "KCl" in c), cols[-1])].to_numpy()
         return upper, middle, lower
 
     @staticmethod
@@ -140,19 +166,27 @@ class VolatilityIndicators:
         h = pd.Series(high) if isinstance(high, np.ndarray) else high
         low_series = pd.Series(low) if isinstance(low, np.ndarray) else low
         df = ta.donchian(high=h, low=low_series, length=length)
+        if df is None:
+            # ta.donchianがNoneを返す場合のフォールバック
+            upper = np.full(len(h), np.nan)
+            middle = np.full(len(h), np.nan)
+            lower = np.full(len(h), np.nan)
+            return upper, middle, lower
+
+        assert df is not None  # for type checker
         cols = list(df.columns)
         upper = df[
             next((c for c in cols if "DCHU" in c or "upper" in c.lower()), cols[0])
-        ].values
+        ].to_numpy()
         middle = df[
             next(
                 (c for c in cols if "DCHM" in c or "mid" in c.lower()),
                 cols[1 if len(cols) > 1 else 0],
             )
-        ].values
+        ].to_numpy()
         lower = df[
             next((c for c in cols if "DCHL" in c or "lower" in c.lower()), cols[-1])
-        ].values
+        ].to_numpy()
         return upper, middle, lower
 
     @staticmethod
@@ -171,6 +205,13 @@ class VolatilityIndicators:
         df = ta.supertrend(
             high=h, low=low_series, close=c, length=length, multiplier=multiplier
         )
+        if df is None:
+            # ta.supertrendがNoneを返す場合のフォールバック
+            st = np.full(len(c), np.nan)
+            direction = np.full(len(c), np.nan)
+            return st, direction
+
+        assert df is not None  # for type checker
         cols = list(df.columns)
         st_col = next(
             (c for c in cols if "SUPERT_" in c.upper() or "supertrend" in c.lower()),
@@ -180,7 +221,7 @@ class VolatilityIndicators:
             (c for c in cols if "SUPERTd_" in c.upper() or "direction" in c.lower()),
             None,
         )
-        st = df[st_col].values
+        st = df[st_col].to_numpy()
         if dir_col is None:
             direction = np.where(c.to_numpy() >= st, 1.0, -1.0)
         else:

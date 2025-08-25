@@ -51,10 +51,10 @@ class FRMerger:
 
             if fr_data:
                 fr_df = self._convert_fr_to_dataframe(fr_data)
-                # logger.info(
-                #     f"FR DataFrame: {len(fr_df)}行, "
-                #     f"期間: {fr_df.index.min()} - {fr_df.index.max()}"
-                # )
+                logger.info(
+                    f"FR DataFrame: {len(fr_df)}行, "
+                    f"期間: {fr_df.index.min()} - {fr_df.index.max()}"
+                )
 
                 # toleranceを設定（8時間以内のデータのみ使用）
                 tolerance = int(pd.Timedelta(hours=8).total_seconds())
@@ -68,10 +68,10 @@ class FRMerger:
                 )
 
                 valid_fr_count = df["funding_rate"].notna().sum()
-                # logger.info(
-                #     f"FRデータマージ完了: {valid_fr_count}/{len(df)}行に値あり "
-                #     f"({valid_fr_count/len(df)*100:.1f}%)"
-                # )
+                logger.info(
+                    f"FRデータマージ完了: {valid_fr_count}/{len(df)}行に値あり "
+                    f"({valid_fr_count/len(df)*100:.1f}%)"
+                )
             else:
                 logger.warning(
                     f"シンボル {symbol} のFunding Rateデータが見つかりませんでした。"

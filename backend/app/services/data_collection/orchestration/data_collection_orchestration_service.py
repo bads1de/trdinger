@@ -358,8 +358,14 @@ class DataCollectionOrchestrationService:
                 )
 
         # 最新・最古タイムスタンプを取得
-        latest_timestamp = repository.get_latest_timestamp(normalized_symbol, timeframe)
-        oldest_timestamp = repository.get_oldest_timestamp(normalized_symbol, timeframe)
+        latest_timestamp = repository.get_latest_timestamp(
+            timestamp_column="timestamp",
+            filter_conditions={"symbol": normalized_symbol, "timeframe": timeframe}
+        )
+        oldest_timestamp = repository.get_oldest_timestamp(
+            timestamp_column="timestamp",
+            filter_conditions={"symbol": normalized_symbol, "timeframe": timeframe}
+        )
 
         return api_response(
             success=True,

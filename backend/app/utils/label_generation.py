@@ -69,7 +69,7 @@ class PriceChangeTransformer(BaseEstimator, TransformerMixin):
         price_change = price_series.pct_change(periods=self.periods).dropna()
 
         # 2次元配列として返す（scikit-learn要件）
-        return price_change.values.reshape(-1, 1)
+        return np.asarray(price_change.values).reshape(-1, 1)
 
 
 class SimpleLabelGenerator:
@@ -111,7 +111,7 @@ class SimpleLabelGenerator:
                         n_bins=self.n_bins,
                         encode=self.encode,
                         strategy=self.strategy,
-                        subsample=None,  # 全データを使用
+                        # subsample=None,  # 全データを使用
                     ),
                 ),
             ]
@@ -151,7 +151,7 @@ class SimpleLabelGenerator:
         Returns:
             ラベルSeries
         """
-        if not self._is_fitted:
+        if not self._is_fitted or self.pipeline is None:
             raise ValueError("fit()を先に実行してください")
 
         # 変換実行
@@ -201,10 +201,12 @@ class SimpleLabelGenerator:
         total_count = len(labels)
 
         # KBinsDiscretizerの境界値を取得
-        discretizer = self.pipeline.named_steps["discretizer"]
-        bin_edges = (
-            discretizer.bin_edges_[0] if hasattr(discretizer, "bin_edges_") else None
-        )
+        bin_edges = None
+        if self.pipeline is not None:
+            discretizer = self.pipeline.named_steps["discretizer"]
+            bin_edges = (
+                discretizer.bin_edges_[0] if hasattr(discretizer, "bin_edges_") else None
+            )
 
         return {
             "method": "kbins_discretizer",
@@ -213,13 +215,9 @@ class SimpleLabelGenerator:
             "down_count": label_counts.get(0, 0),
             "range_count": label_counts.get(1, 0),
             "up_count": label_counts.get(2, 0),
-            "down_ratio": (
-                label_counts.get(0, 0) / total_count if total_count > 0 else 0
-            ),
-            "range_ratio": (
-                label_counts.get(1, 0) / total_count if total_count > 0 else 0
-            ),
-            "up_ratio": label_counts.get(2, 0) / total_count if total_count > 0 else 0,
+            "down_ratio": float(label_counts.get(0, 0) or 0) / float(total_count or 1) if total_count > 0 else 0.0,
+            "range_ratio": float(label_counts.get(1, 0) or 0) / float(total_count or 1) if total_count > 0 else 0.0,
+            "up_ratio": float(label_counts.get(2, 0) or 0) / float(total_count or 1) if total_count > 0 else 0.0,
             "total_count": total_count,
             "bin_edges": bin_edges.tolist() if bin_edges is not None else None,
             "threshold_down": (
@@ -269,9 +267,9 @@ class LabelGenerator:
             if isinstance(price_data, pd.DataFrame):
                 if not target_column or target_column not in price_data.columns:
                     raise ValueError("target_column が必要です")
-                series_input = price_data[target_column]
+                series_input = price_data[target_column]  # type: ignore[assignment]
             else:
-                series_input = price_data
+                series_input = price_data  # type: ignore[assignment]
 
             # 価格変化率を計算
             # - Series入力: 次期変化率（forward）で学習用に整合
@@ -283,14 +281,14 @@ class LabelGenerator:
 
             # NaNを除去
             valid_mask = price_change.notna()
-            price_change_clean = price_change[valid_mask]
+            price_change_clean = price_change[valid_mask]  # type: ignore[assignment]
 
             if len(price_change_clean) == 0:
                 raise ValueError("有効な価格変化率データがありません")
 
             # 閾値を計算
             threshold_info = self._calculate_thresholds(
-                price_change_clean, method, target_distribution, **kwargs
+                price_change_clean, method, target_distribution, **kwargs  # type: ignore[arg-type]
             )
 
             threshold_up = threshold_info["threshold_up"]
@@ -314,9 +312,15 @@ class LabelGenerator:
                 "down_count": label_counts.get(0, 0),
                 "range_count": label_counts.get(1, 0),
                 "up_count": label_counts.get(2, 0),
-                "down_ratio": label_counts.get(0, 0) / total_count,
-                "range_ratio": label_counts.get(1, 0) / total_count,
-                "up_ratio": label_counts.get(2, 0) / total_count,
+                "down_ratio": (
+                    label_counts.get(0, 0) / total_count if total_count > 0 else 0
+                ),
+                "range_ratio": (
+                    label_counts.get(1, 0) / total_count if total_count > 0 else 0
+                ),
+                "up_ratio": (
+                    label_counts.get(2, 0) / total_count if total_count > 0 else 0
+                ),
                 "total_count": total_count,
             }
 
@@ -559,7 +563,7 @@ class LabelGenerator:
             ]
         )
 
-        best_method = None
+        best_method: Optional[ThresholdMethod] = None
         best_score = float("inf")
         best_info: Optional[Dict[str, Any]] = None
 
@@ -586,9 +590,9 @@ class LabelGenerator:
                 total_count = len(price_change)
 
                 actual_distribution = {
-                    "up": up_count / total_count,
-                    "down": down_count / total_count,
-                    "range": range_count / total_count,
+                    "up": up_count / total_count if total_count > 0 else 0,
+                    "down": down_count / total_count if total_count > 0 else 0,
+                    "range": range_count / total_count if total_count > 0 else 0,
                 }
 
                 # 目標分布との差を計算（スコアが小さいほど良い）
@@ -618,7 +622,8 @@ class LabelGenerator:
             return self._calculate_std_thresholds(price_change, std_multiplier=0.25)
 
         best_info["method"] = "adaptive"
-        best_info["best_underlying_method"] = best_method.value
+        if best_method is not None:
+            best_info["best_underlying_method"] = best_method.value
         best_info["description"] = f"適応的閾値（最適方法: {best_info['description']}）"
 
         return best_info
@@ -650,7 +655,7 @@ class LabelGenerator:
 
         for label in [0, 1, 2]:  # 下落、レンジ、上昇
             count = label_counts.get(label, 0)
-            ratio = count / total_count if total_count > 0 else 0
+            ratio = count / total_count if total_count > 0 and count is not None else 0
 
             class_name = ["down", "range", "up"][label]
             validation_result["distribution"][class_name] = {
@@ -776,14 +781,14 @@ class LabelGenerator:
             if len(price_change_clean) == 0:
                 raise ValueError("有効な価格変化率データがありません")
 
-            X = price_change_clean.values.reshape(-1, 1)
+            X = np.asarray(price_change_clean.values).reshape(-1, 1)
 
             # KBinsDiscretizerで3つのビンに分割
             discretizer = KBinsDiscretizer(
                 n_bins=3,
                 encode="ordinal",
                 strategy=strategy,
-                subsample=None,  # 全データを使用
+                # subsample=None,  # 全データを使用
             )
 
             # フィットして境界値を取得
@@ -801,9 +806,9 @@ class LabelGenerator:
             total_count = len(price_change_clean)
 
             actual_distribution = {
-                "up": up_count / total_count,
-                "down": down_count / total_count,
-                "range": range_count / total_count,
+                "up": up_count / total_count if total_count > 0 else 0,
+                "down": down_count / total_count if total_count > 0 else 0,
+                "range": range_count / total_count if total_count > 0 else 0,
             }
 
             return {
@@ -847,7 +852,7 @@ def create_label_pipeline(
             (
                 "discretizer",
                 KBinsDiscretizer(
-                    n_bins=n_bins, encode=encode, strategy=strategy, subsample=None
+                    n_bins=n_bins, encode=encode, strategy=strategy,  # subsample=None
                 ),
             ),
         ]
@@ -913,7 +918,7 @@ def calculate_target_for_automl(
                 max_threshold = getattr(config.training, "MAX_THRESHOLD", 0.05)
 
             labels, threshold_info = label_generator.generate_labels(
-                ohlcv_data["Close"],
+                ohlcv_data["Close"],  # type: ignore[arg-type]
                 method=ThresholdMethod.DYNAMIC_VOLATILITY,
                 volatility_window=volatility_window,
                 threshold_multiplier=threshold_multiplier,
@@ -973,7 +978,7 @@ def generate_labels_with_pipeline(
     pipeline = create_label_pipeline(n_bins=n_bins, strategy=strategy)
 
     # フィットと変換
-    labels_array = pipeline.fit_transform(price_data)
+    labels_array = pipeline.fit_transform(price_data)  # type: ignore[arg-type]
 
     # 価格変化率のインデックスを取得
     price_change_index = price_data.pct_change().dropna().index
@@ -998,9 +1003,9 @@ def generate_labels_with_pipeline(
         "down_count": label_counts.get(0, 0),
         "range_count": label_counts.get(1, 0),
         "up_count": label_counts.get(2, 0),
-        "down_ratio": label_counts.get(0, 0) / total_count if total_count > 0 else 0,
-        "range_ratio": label_counts.get(1, 0) / total_count if total_count > 0 else 0,
-        "up_ratio": label_counts.get(2, 0) / total_count if total_count > 0 else 0,
+        "down_ratio": float(label_counts.get(0, 0) or 0) / float(total_count or 1) if total_count > 0 else 0.0,
+        "range_ratio": float(label_counts.get(1, 0) or 0) / float(total_count or 1) if total_count > 0 else 0.0,
+        "up_ratio": float(label_counts.get(2, 0) or 0) / float(total_count or 1) if total_count > 0 else 0.0,
         "total_count": total_count,
         "bin_edges": bin_edges.tolist() if bin_edges is not None else None,
         "threshold_down": (

@@ -72,7 +72,10 @@ class HistoricalDataService:
                     break
 
                 # 最初のデータは重複している可能性があるので、最新のタイムスタンプと比較
-                latest_db_ts = repository.get_latest_timestamp(symbol, timeframe)
+                latest_db_ts = repository.get_latest_timestamp(
+                    timestamp_column="timestamp",
+                    filter_conditions={"symbol": symbol, "timeframe": timeframe}
+                )
                 if latest_db_ts:
                     historical_data = [
                         d
@@ -170,7 +173,10 @@ class HistoricalDataService:
                     logger.info(f"OHLCV差分データ収集開始: {symbol} {tf}")
 
                     # 最新タイムスタンプを取得
-                    latest_timestamp = ohlcv_repository.get_latest_timestamp(symbol, tf)
+                    latest_timestamp = ohlcv_repository.get_latest_timestamp(
+                        timestamp_column="timestamp",
+                        filter_conditions={"symbol": symbol, "timeframe": tf}
+                    )
                     since_ms = (
                         int(latest_timestamp.timestamp() * 1000)
                         if latest_timestamp

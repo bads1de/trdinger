@@ -2,7 +2,7 @@
 Fear & Greed Index データのリポジトリクラス
 """
 
-from typing import List, Optional
+from typing import List, Optional, Dict, Any
 from datetime import datetime
 from sqlalchemy.orm import Session
 import logging
@@ -193,19 +193,27 @@ class FearGreedIndexRepository(BaseRepository):
 
         return _get_data_range()
 
-    def delete_old_data(self, before_date: datetime) -> int:
+    def delete_old_data(
+        self,
+        timestamp_column: str,
+        before_date: datetime,
+        additional_filters: Optional[Dict[str, Any]] = None,
+    ) -> int:
         """
         指定日時より古いデータを削除
 
         Args:
+            timestamp_column: タイムスタンプカラム名
             before_date: この日時より古いデータを削除
+            additional_filters: 追加フィルター条件
 
         Returns:
             削除された件数
         """
         deleted_count = super().delete_old_data(
-            timestamp_column="data_timestamp",
+            timestamp_column=timestamp_column,
             before_date=before_date,
+            additional_filters=additional_filters,
         )
         logger.info(f"古いFear & Greed Indexデータを {deleted_count} 件削除しました")
         return deleted_count

@@ -173,7 +173,11 @@ class FearGreedOrchestrationService:
             from datetime import timedelta
 
             cutoff_date = datetime.now(timezone.utc) - timedelta(days=days_to_keep)
-            deleted_count = repository.delete_old_data(cutoff_date)
+            deleted_count = repository.delete_old_data(
+                timestamp_column="data_timestamp",
+                before_date=cutoff_date,
+                additional_filters=None,
+            )
 
             result = {
                 "success": True,

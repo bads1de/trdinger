@@ -2,7 +2,7 @@
 OHLCV データのリポジトリクラス
 """
 
-from typing import List, Optional
+from typing import List, Optional, Dict, Any
 from datetime import datetime
 from sqlalchemy.orm import Session
 import pandas as pd
@@ -111,35 +111,47 @@ class OHLCVRepository(BaseRepository):
             limit=limit,
         )
 
-    def get_latest_timestamp(self, symbol: str, timeframe: str) -> Optional[datetime]:
+    def get_latest_timestamp(
+        self,
+        timestamp_column: str,
+        filter_conditions: Optional[Dict[str, Any]] = None
+    ) -> Optional[datetime]:
         """
-        指定されたシンボルと時間軸の最新タイムスタンプを取得
+        最新タイムスタンプを取得（BaseRepositoryのメソッドをオーバーライド）
 
         Args:
-            symbol: 取引ペア
-            timeframe: 時間軸
+            timestamp_column: タイムスタンプカラム名
+            filter_conditions: フィルター条件
 
         Returns:
             最新のタイムスタンプ、データが存在しない場合はNone
         """
-        return super().get_latest_timestamp(
-            "timestamp", {"symbol": symbol, "timeframe": timeframe}
-        )
+        # OHLCVデータの場合は常にtimestampカラムを使用
+        if timestamp_column != "timestamp":
+            logger.warning(f"OHLCVデータではtimestampカラムを使用してください: {timestamp_column}")
 
-    def get_oldest_timestamp(self, symbol: str, timeframe: str) -> Optional[datetime]:
+        return super().get_latest_timestamp(timestamp_column, filter_conditions)
+
+    def get_oldest_timestamp(
+        self,
+        timestamp_column: str,
+        filter_conditions: Optional[Dict[str, Any]] = None
+    ) -> Optional[datetime]:
         """
-        指定されたシンボルと時間軸の最古タイムスタンプを取得
+        最古タイムスタンプを取得（BaseRepositoryのメソッドをオーバーライド）
 
         Args:
-            symbol: 取引ペア
-            timeframe: 時間軸
+            timestamp_column: タイムスタンプカラム名
+            filter_conditions: フィルター条件
 
         Returns:
             最古のタイムスタンプ、データが存在しない場合はNone
         """
-        return super().get_oldest_timestamp(
-            "timestamp", {"symbol": symbol, "timeframe": timeframe}
-        )
+        # OHLCVデータの場合は常にtimestampカラムを使用
+        if timestamp_column != "timestamp":
+            logger.warning(f"OHLCVデータではtimestampカラムを使用してください: {timestamp_column}")
+
+        return super().get_oldest_timestamp(timestamp_column, filter_conditions)
 
     def get_data_count(self, symbol: str, timeframe: str) -> int:
         """
@@ -154,20 +166,26 @@ class OHLCVRepository(BaseRepository):
         """
         return super().get_record_count({"symbol": symbol, "timeframe": timeframe})
 
-    def get_date_range(self, symbol: str, timeframe: str):
+    def get_date_range(
+        self,
+        timestamp_column: str,
+        filter_conditions: Optional[Dict[str, Any]] = None
+    ):
         """
-        指定されたシンボルと時間軸のデータ期間を取得
+        データ期間を取得（BaseRepositoryのメソッドをオーバーライド）
 
         Args:
-            symbol: 取引ペア
-            timeframe: 時間軸
+            timestamp_column: タイムスタンプカラム名
+            filter_conditions: フィルター条件
 
         Returns:
             (最古のタイムスタンプ, 最新のタイムスタンプ)
         """
-        return super().get_date_range(
-            "timestamp", {"symbol": symbol, "timeframe": timeframe}
-        )
+        # OHLCVデータの場合は常にtimestampカラムを使用
+        if timestamp_column != "timestamp":
+            logger.warning(f"OHLCVデータではtimestampカラムを使用してください: {timestamp_column}")
+
+        return super().get_date_range(timestamp_column, filter_conditions)
 
     def get_ohlcv_dataframe(
         self,
@@ -248,11 +266,14 @@ class OHLCVRepository(BaseRepository):
         )
         return deleted_count
 
-    def get_available_symbols(self) -> List[str]:
+    def get_available_symbols(self, symbol_column: str = "symbol") -> List[str]:
         """
-        利用可能なシンボルのリストを取得
+        利用可能なシンボルのリストを取得（BaseRepositoryのメソッドをオーバーライド）
+
+        Args:
+            symbol_column: シンボルカラム名
 
         Returns:
             利用可能なシンボルのリスト
         """
-        return super().get_available_symbols("symbol")
+        return super().get_available_symbols(symbol_column)
