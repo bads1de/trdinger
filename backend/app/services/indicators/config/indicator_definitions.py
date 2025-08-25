@@ -1051,7 +1051,7 @@ def setup_trend_indicators():
             description="SMA計算期間",
         )
     )
-    sma_config.param_map = {"data": "data", "length": "length"}
+    sma_config.param_map = {"close": "data", "length": "length"}
     indicator_registry.register(sma_config)
 
     # EMA (Exponential Moving Average) - 明示的実装
@@ -1072,7 +1072,7 @@ def setup_trend_indicators():
             description="EMA計算期間",
         )
     )
-    ema_config.param_map = {"data": "data", "length": "length"}
+    ema_config.param_map = {"close": "data", "length": "length"}
     indicator_registry.register(ema_config)
 
     # WMA (Weighted Moving Average)
@@ -1378,18 +1378,18 @@ def setup_volatility_indicators():
     )
     indicator_registry.register(trange_config)
 
-    # BB (Bollinger Bands)
-    bb_config = IndicatorConfig(
-        indicator_name="BB",
+    # BBANDS (Bollinger Bands)
+    bbands_config = IndicatorConfig(
+        indicator_name="BBANDS",
         adapter_function=VolatilityIndicators.bbands,
         required_data=["close"],
         result_type=IndicatorResultType.COMPLEX,
         scale_type=IndicatorScaleType.PRICE_RATIO,
         category="volatility",
-        output_names=["BB_Upper", "BB_Middle", "BB_Lower"],
-        default_output="BB_Middle",
+        output_names=["BBANDS_Upper", "BBANDS_Middle", "BBANDS_Lower"],
+        default_output="BBANDS_Middle",
     )
-    bb_config.add_parameter(
+    bbands_config.add_parameter(
         ParameterConfig(
             name="period",
             default_value=20,
@@ -1398,7 +1398,7 @@ def setup_volatility_indicators():
             description="ボリンジャーバンド期間",
         )
     )
-    bb_config.add_parameter(
+    bbands_config.add_parameter(
         ParameterConfig(
             name="std",
             default_value=2.0,
@@ -1407,8 +1407,8 @@ def setup_volatility_indicators():
             description="標準偏差倍数",
         )
     )
-    bb_config.param_map = {"close": "data", "period": "length", "std": "std"}
-    indicator_registry.register(bb_config)
+    bbands_config.param_map = {"close": "data", "period": "length", "std": "std"}
+    indicator_registry.register(bbands_config)
 
     # ABERRATION
     aberration_config = IndicatorConfig(
@@ -1459,9 +1459,11 @@ def setup_volatility_indicators():
         indicator_name="HWC",
         adapter_function=VolatilityIndicators.hwc,
         required_data=["close"],
-        result_type=IndicatorResultType.SINGLE,
+        result_type=IndicatorResultType.COMPLEX,
         scale_type=IndicatorScaleType.PRICE_ABSOLUTE,
         category="volatility",
+        output_names=["HWC_Upper", "HWC_Middle", "HWC_Lower"],
+        default_output="HWC_Middle",
     )
     hwc_config.add_parameter(
         ParameterConfig(
@@ -1484,13 +1486,31 @@ def setup_volatility_indicators():
     hwc_config.add_parameter(
         ParameterConfig(
             name="nc",
-            default_value=3,
-            min_value=1,
-            max_value=10,
+            default_value=3.0,
+            min_value=1.0,
+            max_value=10.0,
             description="HWCチャンネル係数",
         )
     )
-    hwc_config.param_map = {"close": "data", "na": "na", "nb": "nb", "nc": "nc"}
+    hwc_config.add_parameter(
+        ParameterConfig(
+            name="nd",
+            default_value=0.3,
+            min_value=0.01,
+            max_value=1.0,
+            description="HWCチャンネル方程式パラメータ",
+        )
+    )
+    hwc_config.add_parameter(
+        ParameterConfig(
+            name="scalar",
+            default_value=2.0,
+            min_value=0.1,
+            max_value=5.0,
+            description="HWCチャンネル幅乗数",
+        )
+    )
+    hwc_config.param_map = {"close": "close", "na": "na", "nb": "nb", "nc": "nc", "nd": "nd", "scalar": "scalar"}
     indicator_registry.register(hwc_config)
 
     # MASSI
@@ -1527,7 +1547,7 @@ def setup_volatility_indicators():
     pdist_config = IndicatorConfig(
         indicator_name="PDIST",
         adapter_function=VolatilityIndicators.pdist,
-        required_data=["high", "low", "close"],
+        required_data=["open", "high", "low", "close"],
         result_type=IndicatorResultType.SINGLE,
         scale_type=IndicatorScaleType.PRICE_RATIO,
         category="volatility",
@@ -1548,7 +1568,7 @@ def setup_volatility_indicators():
     thermo_config = IndicatorConfig(
         indicator_name="THERMO",
         adapter_function=VolatilityIndicators.thermo,
-        required_data=["high", "low", "close"],
+        required_data=["high", "low"],
         result_type=IndicatorResultType.COMPLEX,
         scale_type=IndicatorScaleType.PRICE_ABSOLUTE,
         category="volatility",
@@ -2873,7 +2893,7 @@ aobv_config.add_parameter(
     ParameterConfig(name="min_lookback", default_value=2, min_value=1, max_value=10)
 )
 aobv_config.add_parameter(
-    ParameterConfig(name="mamode", default_value="ema", min_value="sma", max_value="ema")
+    ParameterConfig(name="mamode", default_value="ema")
 )
 indicator_registry.register(aobv_config)
 
@@ -2890,7 +2910,7 @@ efi_config.add_parameter(
     ParameterConfig(name="length", default_value=13, min_value=2, max_value=100)
 )
 efi_config.add_parameter(
-    ParameterConfig(name="mamode", default_value="ema", min_value="sma", max_value="ema")
+    ParameterConfig(name="mamode", default_value="ema")
 )
 efi_config.add_parameter(
     ParameterConfig(name="drift", default_value=1, min_value=1, max_value=10)

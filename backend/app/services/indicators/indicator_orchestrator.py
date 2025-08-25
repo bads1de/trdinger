@@ -25,20 +25,6 @@ PANDAS_TA_CONFIG = {
         "returns": "single",
         "default_values": {"length": 14},
     },
-    "SMA": {
-        "function": "sma",
-        "params": {"length": ["length", "period"]},
-        "data_column": "Close",
-        "returns": "single",
-        "default_values": {"length": 20},
-    },
-    "EMA": {
-        "function": "ema",
-        "params": {"length": ["length", "period"]},
-        "data_column": "Close",
-        "returns": "single",
-        "default_values": {"length": 20},
-    },
     "WMA": {
         "function": "wma",
         "params": {"length": ["length", "period"]},
@@ -54,20 +40,10 @@ PANDAS_TA_CONFIG = {
         "return_cols": ["MACD", "Signal", "Histogram"],
         "default_values": {"fast": 12, "slow": 26, "signal": 9},
     },
-    "BBANDS": {
-        "function": "bbands",
-        "params": {"length": ["length", "period"], "std": ["std"]},
-        "data_column": "Close",
-        "returns": "multiple",
-        "return_cols": ["Upper", "Middle", "Lower"],
-        "default_values": {"length": 20, "std": 2.0},
-    },
 }
 
 POSITIONAL_DATA_FUNCTIONS = {
     "rsi",
-    "sma",
-    "ema",
     "wma",
     "sar",
     "roc",
@@ -116,6 +92,7 @@ POSITIONAL_DATA_FUNCTIONS = {
     "MA",
     "chop",
     "vortex",
+    "BBANDS",
 }
 
 

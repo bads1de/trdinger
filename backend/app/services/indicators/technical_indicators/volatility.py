@@ -293,17 +293,17 @@ class VolatilityIndicators:
     @staticmethod
     @handle_pandas_ta_errors
     def hwc(
-        high: Union[np.ndarray, pd.Series],
-        low: Union[np.ndarray, pd.Series],
         close: Union[np.ndarray, pd.Series],
-        length: int = 20,
+        na: float = 0.2,
+        nb: float = 0.1,
+        nc: float = 3.0,
+        nd: float = 0.3,
+        scalar: float = 2.0,
     ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
         """Holt-Winter Channel: returns (upper, middle, lower)"""
-        high_series = pd.Series(high) if isinstance(high, np.ndarray) else high
-        low_series = pd.Series(low) if isinstance(low, np.ndarray) else low
         close_series = pd.Series(close) if isinstance(close, np.ndarray) else close
 
-        result = ta.hwc(high=high_series, low=low_series, close=close_series, length=length)
+        result = ta.hwc(close=close_series, na=na, nb=nb, nc=nc, nd=nd, scalar=scalar)
         if result is None:
             # ta.hwcがNoneを返す場合のフォールバック
             upper = np.full(len(close_series), np.nan)

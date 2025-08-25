@@ -48,7 +48,10 @@ class MomentumIndicators:
             raise ValueError(f"length must be positive: {length}")
 
         series = pd.Series(data) if isinstance(data, np.ndarray) else data
-        return ta.rsi(series, length=length).values
+        result = ta.rsi(series, length=length)
+        if result is None:
+            return np.full(len(series), np.nan)
+        return result.values
 
     @staticmethod
     def macd(
@@ -99,6 +102,9 @@ class MomentumIndicators:
             smooth_k=smooth_k,
         )
 
+        if result is None or result.empty:
+            n = len(high_series)
+            return np.full(n, np.nan), np.full(n, np.nan)
         return (result.iloc[:, 0].values, result.iloc[:, 1].values)
 
     @staticmethod
@@ -113,9 +119,12 @@ class MomentumIndicators:
         low_series = pd.Series(low) if isinstance(low, np.ndarray) else low
         close_series = pd.Series(close) if isinstance(close, np.ndarray) else close
 
-        return ta.willr(
+        result = ta.willr(
             high=high_series, low=low_series, close=close_series, length=length
-        ).values
+        )
+        if result is None:
+            return np.full(len(high_series), np.nan)
+        return result.values
 
     @staticmethod
     def cci(
@@ -147,13 +156,19 @@ class MomentumIndicators:
             raise ValueError("Either 'data' or 'close' must be provided")
 
         series = pd.Series(data) if isinstance(data, np.ndarray) else data
-        return ta.roc(series, length=length).values
+        result = ta.roc(series, length=length)
+        if result is None or result.empty:
+            return np.full(len(series), np.nan)
+        return result.values
 
     @staticmethod
     def mom(data: Union[np.ndarray, pd.Series], length: int = 10) -> np.ndarray:
         """モメンタム"""
         series = pd.Series(data) if isinstance(data, np.ndarray) else data
-        return ta.mom(series, length=length).values
+        result = ta.mom(series, length=length)
+        if result is None or result.empty:
+            return np.full(len(series), np.nan)
+        return result.values
 
     @staticmethod
     def adx(
@@ -271,25 +286,31 @@ class MomentumIndicators:
 
     # 後方互換性のためのエイリアス
     @staticmethod
-    def macdext(*args, **kwargs):
+    def macdext(data: Union[np.ndarray, pd.Series], fast: int = 12, slow: int = 26, signal: int = 9):
         """MACD拡張版（標準MACDで代替）"""
-        return MomentumIndicators.macd(*args, **kwargs)
+        return MomentumIndicators.macd(data, fast=fast, slow=slow, signal=signal)
 
     @staticmethod
-    def macdfix(*args, **kwargs):
+    def macdfix(data: Union[np.ndarray, pd.Series], fast: int = 12, slow: int = 26, signal: int = 9):
         """MACD固定版（標準MACDで代替）"""
-        return MomentumIndicators.macd(*args, **kwargs)
+        return MomentumIndicators.macd(data, fast=fast, slow=slow, signal=signal)
 
     @staticmethod
-    def stochf(*args, **kwargs):
+    def stochf(high: Union[np.ndarray, pd.Series], low: Union[np.ndarray, pd.Series], close: Union[np.ndarray, pd.Series], k: int = 14, d: int = 3, smooth_k: int = 3):
         """高速ストキャスティクス（標準ストキャスティクスで代替）"""
-        return MomentumIndicators.stoch(*args, **kwargs)
+        return MomentumIndicators.stoch(high, low, close, k=k, d=d, smooth_k=smooth_k)
 
     @staticmethod
     def cmo(data: Union[np.ndarray, pd.Series], length: int = 14) -> np.ndarray:
         """チェンジモメンタムオシレーター"""
         series = pd.Series(data) if isinstance(data, np.ndarray) else data
-        return ta.cmo(series, length=length).values
+        try:
+            result = ta.cmo(series, length=length)
+            if result is None or (hasattr(result, 'empty') and result.empty):
+                return np.full(len(series), np.nan)
+            return result.values
+        except (AttributeError, TypeError):
+            return np.full(len(series), np.nan)
 
     @staticmethod
     def trix(data: Union[np.ndarray, pd.Series], length: int = 30) -> np.ndarray:
@@ -992,7 +1013,14 @@ class MomentumIndicators:
         close_series = pd.Series(close) if isinstance(close, np.ndarray) else close
         open_series = pd.Series(open_) if isinstance(open_, np.ndarray) and open_ is not None else open_
 
-        return ta.psl(close=close_series, open_=open_series, length=length).values
+        result = ta.psl(close=close_series, open_=open_series, length=length)
+        if result is None or result.empty:
+            # フォールバック: 簡易実装 (close > openの割合)
+            if open_series is not None:
+                return ((close_series > open_series).rolling(length).mean() * 100).values
+            else:
+                return np.full(len(close_series), np.nan)
+        return result.values
 
     @staticmethod
     def rsx(data: Union[np.ndarray, pd.Series], length: int = 14) -> np.ndarray:
