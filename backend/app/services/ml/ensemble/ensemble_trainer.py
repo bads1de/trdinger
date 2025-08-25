@@ -286,7 +286,7 @@ class EnsembleTrainer(BaseMLTrainer):
                 include_confusion_matrix=True,
                 include_classification_report=True,
                 average_method="weighted",
-                zero_division=0,
+                zero_division='0',
             )
 
             metrics_calculator = EnhancedMetricsCalculator(config)
@@ -298,7 +298,7 @@ class EnsembleTrainer(BaseMLTrainer):
             from sklearn.metrics import classification_report
 
             class_report = classification_report(
-                y_test, y_pred, output_dict=True, zero_division=0
+                y_test, y_pred, output_dict=True, zero_division='0'
             )
 
             # 特徴量重要度
@@ -313,11 +313,16 @@ class EnsembleTrainer(BaseMLTrainer):
 
             # AutoML特徴量分析
             automl_feature_analysis = None
-            if self.use_automl and hasattr(self, "automl_analyzer"):
+            if self.use_automl and hasattr(self, "feature_service"):
                 try:
-                    automl_feature_analysis = self.automl_analyzer.analyze_features(
-                        X_train, y_train
-                    )
+                    # 安全にメソッドを呼び出し
+                    analyze_method = getattr(self.feature_service, "analyze_features", None)
+                    if analyze_method is not None and callable(analyze_method):
+                        automl_feature_analysis = analyze_method(X_train, y_train)
+                    else:
+                        logger.debug("analyze_featuresメソッドが利用できません")
+                except AttributeError:
+                    logger.debug("FeatureEngineeringServiceにanalyze_featuresメソッドがありません")
                 except Exception as e:
                     logger.warning(f"AutoML特徴量分析でエラー: {e}")
 
@@ -423,6 +428,9 @@ class EnsembleTrainer(BaseMLTrainer):
                     feature_columns=self.feature_columns,
                 )
 
+                if model_path is None:
+                    raise ModelError("モデル保存に失敗しました")
+
                 logger.info(
                     f"アンサンブル最高性能モデル保存完了: {model_path} (アルゴリズム: {algorithm_name})"
                 )
@@ -442,6 +450,9 @@ class EnsembleTrainer(BaseMLTrainer):
                     scaler=self.scaler,
                     feature_columns=self.feature_columns,
                 )
+
+                if model_path is None:
+                    raise ModelError("モデル保存に失敗しました")
 
                 logger.info(
                     f"バギングアンサンブルモデル保存完了: {model_path} (アルゴリズム: {algorithm_name})"
@@ -542,11 +553,6 @@ class EnsembleTrainer(BaseMLTrainer):
             # アンサンブルモデルのクリーンアップ
             if self.ensemble_model is not None:
                 try:
-                    if hasattr(self.ensemble_model, "cleanup_resources"):
-                        self.ensemble_model.cleanup_resources()
-                    elif hasattr(self.ensemble_model, "cleanup"):
-                        self.ensemble_model.cleanup()
-
                     # アンサンブルモデル自体をクリア
                     self.ensemble_model = None
                     logger.debug("アンサンブルモデルをクリアしました")

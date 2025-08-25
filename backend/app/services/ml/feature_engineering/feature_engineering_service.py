@@ -1294,6 +1294,52 @@ class FeatureEngineeringService:
                 "warnings": []
             }
 
+    def analyze_features(self, features_df: pd.DataFrame, target: pd.Series) -> Optional[Dict[str, Any]]:
+        """
+        特徴量を分析（AutoML特徴量分析）
+
+        Args:
+            features_df: 特徴量DataFrame
+            target: ターゲット変数
+
+        Returns:
+            特徴量分析結果の辞書（AutoMLが無効の場合はNone）
+        """
+        if not self.automl_enabled:
+            logger.info("AutoML機能が無効のため、特徴量分析をスキップします")
+            return None
+
+        try:
+            logger.info("特徴量分析を開始")
+
+            # AutoMLFeatureAnalyzerのインポートと初期化
+            from .automl_feature_analyzer import AutoMLFeatureAnalyzer
+            analyzer = AutoMLFeatureAnalyzer()
+
+            # 特徴量重要度を計算するためのモデル学習（簡易版）
+            from sklearn.ensemble import RandomForestClassifier
+            from sklearn.model_selection import cross_val_predict
+
+            # 欠損値処理
+            features_clean = features_df.fillna(features_df.median())
+
+            # 特徴量重要度の推定
+            model = RandomForestClassifier(n_estimators=100, random_state=42, n_jobs=-1)
+            model.fit(features_clean, target)
+
+            # 特徴量重要度を取得
+            feature_importance = dict(zip(features_df.columns, model.feature_importances_))
+
+            # AutoMLFeatureAnalyzerで分析
+            analysis_result = analyzer.analyze_feature_importance(feature_importance)
+
+            logger.info("特徴量分析が完了")
+            return analysis_result
+
+        except Exception as e:
+            logger.error(f"特徴量分析エラー: {e}")
+            return None
+
     def cleanup_resources(self):
         """リソースの完全クリーンアップ"""
         try:

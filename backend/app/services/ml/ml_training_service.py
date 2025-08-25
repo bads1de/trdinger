@@ -7,7 +7,7 @@ MLモデルの学習・評価・保存を取り扱うサービス層です。
 """
 
 import logging
-from typing import Any, Callable, Dict, Optional
+from typing import Any, Callable, Dict, List, Optional
 
 import numpy as np
 import pandas as pd
@@ -151,7 +151,7 @@ class MLTrainingService(BaseResourceManager):
             )
 
     @staticmethod
-    def get_available_single_models() -> list:
+    def get_available_single_models() -> List[str]:
         """利用可能な単一モデルのリストを取得"""
         return SingleModelTrainer.get_available_models()
 
@@ -369,8 +369,8 @@ class MLTrainingService(BaseResourceManager):
                     "特徴量カラムが設定されていません。利用可能な全カラムを使用します。"
                 )
                 # 統計的手法で欠損値を補完
-                features_selected = data_preprocessor.transform_missing_values(
-                    features, strategy="median"
+                features_selected = data_preprocessor.interpolate_columns(
+                    features, columns=list(features.columns), strategy="median"
                 )
             else:
                 # 特徴量を選択・整形
@@ -396,15 +396,15 @@ class MLTrainingService(BaseResourceManager):
                 else:
                     # 利用可能な特徴量のみを使用し、統計的手法で欠損値を補完
                     features_subset = features[available_columns]
-                    features_selected = data_preprocessor.transform_missing_values(
-                        features_subset, strategy="median"
+                    features_selected = data_preprocessor.interpolate_columns(
+                        features_subset, columns=list(features_subset.columns), strategy="median"
                     )
 
                     # 不足している特徴量を一度にまとめて追加（DataFrame断片化を防ぐ）
                     if missing_columns:
                         # 不足特徴量のDataFrameを作成
                         missing_features_df = pd.DataFrame(
-                            0.0, index=features_selected.index, columns=missing_columns
+                            0.0, index=features_selected.index, columns=pd.Index(missing_columns)
                         )
                         # pd.concatで一度に結合（断片化を防ぐ）
                         features_selected = pd.concat(
@@ -425,12 +425,20 @@ class MLTrainingService(BaseResourceManager):
 
             # 予測（LightGBMモデルの場合）
             # best_iteration属性の存在を確認してから使用
-            if hasattr(self.trainer.model, "best_iteration"):
-                predictions = np.array(
-                    self.trainer.model.predict(
-                        features_scaled, num_iteration=self.trainer.model.best_iteration
-                    )
-                )
+            if hasattr(self.trainer.model, "best_iteration") and hasattr(self.trainer.model, "predict"):
+                try:
+                    best_iter = getattr(self.trainer.model, "best_iteration", None)
+                    if best_iter is not None:
+                        predictions = np.array(
+                            self.trainer.model.predict(
+                                features_scaled, num_iteration=best_iter
+                            )
+                        )
+                    else:
+                        predictions = np.array(self.trainer.model.predict(features_scaled))
+                except TypeError:
+                    # num_iterationパラメータがサポートされていない場合
+                    predictions = np.array(self.trainer.model.predict(features_scaled))
             else:
                 predictions = np.array(self.trainer.model.predict(features_scaled))
 
@@ -468,7 +476,7 @@ class MLTrainingService(BaseResourceManager):
         open_interest_data: Optional[pd.DataFrame] = None,
         save_model: bool = True,
         model_name: Optional[str] = None,
-        optimization_settings: OptimizationSettings = None,
+        optimization_settings: Optional[OptimizationSettings] = None,
         trainer: Optional[Any] = None,  # カスタムトレーナーを受け取る
         **training_params,
     ) -> Dict[str, Any]:
@@ -490,6 +498,10 @@ class MLTrainingService(BaseResourceManager):
         """
         optimizer = None
         try:
+            # optimization_settingsがNoneでないことを確認
+            if optimization_settings is None:
+                raise ValueError("optimization_settingsがNoneです")
+
             # 使用するトレーナーを決定
             effective_trainer = trainer if trainer is not None else self.trainer
 
@@ -750,12 +762,6 @@ class MLTrainingService(BaseResourceManager):
                 if hasattr(self.trainer, "cleanup_resources"):
                     self.trainer.cleanup_resources(level)
                     logger.debug("トレーナーをクリーンアップしました")
-
-            # 最適化器のクリーンアップ
-            if hasattr(self, "optimizer") and self.optimizer:
-                if hasattr(self.optimizer, "cleanup"):
-                    self.optimizer.cleanup()
-                    logger.debug("最適化器をクリーンアップしました")
 
         except Exception as e:
             logger.warning(f"MLTrainingServiceモデルクリーンアップエラー: {e}")

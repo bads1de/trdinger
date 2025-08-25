@@ -37,7 +37,7 @@ class RandomForestModel:
         """
         self.model = None
         self.is_trained = False
-        self.feature_columns = None
+        self._feature_columns = None
         self.scaler = None
         self.automl_config = automl_config
 
@@ -95,10 +95,10 @@ class RandomForestModel:
 
             # 評価指標計算
             train_metrics = evaluate_model_predictions(
-                y_train, y_pred_train, y_pred_proba_train
+                y_train, y_pred_train, np.array(y_pred_proba_train)
             )
             test_metrics = evaluate_model_predictions(
-                y_test, y_pred_test, y_pred_proba_test
+                y_test, y_pred_test, np.array(y_pred_proba_test)
             )
 
             # 特徴量重要度
@@ -154,7 +154,7 @@ class RandomForestModel:
         try:
             # 特徴量の順序を確認
             if self.feature_columns:
-                X = X[self.feature_columns]
+                X = pd.DataFrame(X[self.feature_columns])
 
             predictions = self.model.predict(X)
             return predictions
@@ -179,22 +179,22 @@ class RandomForestModel:
         try:
             # 特徴量の順序を確認
             if self.feature_columns:
-                X = X[self.feature_columns]
+                X = pd.DataFrame(X[self.feature_columns])
 
             probabilities = self.model.predict_proba(X)
-            return probabilities
+            return np.array(probabilities)
 
         except Exception as e:
             logger.error(f"RandomForest確率予測エラー: {e}")
             raise ModelError(f"確率予測に失敗しました: {e}")
 
     @property
-    def feature_columns(self) -> List[str]:
+    def feature_columns(self) -> Optional[List[str]]:
         """特徴量カラム名のリストを取得"""
         return self._feature_columns
 
     @feature_columns.setter
-    def feature_columns(self, columns: List[str]):
+    def feature_columns(self, columns: Optional[List[str]]):
         """特徴量カラム名のリストを設定"""
         self._feature_columns = columns
 

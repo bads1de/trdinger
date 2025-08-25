@@ -6,7 +6,7 @@ scikit-learnのExtraTreesClassifierを使用してアンサンブル専用に最
 """
 
 import logging
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, cast
 
 import numpy as np
 import pandas as pd
@@ -90,8 +90,8 @@ class ExtraTreesModel:
             y_pred_test = self.model.predict(X_test)
 
             # 確率予測（ExtraTreesは確率予測をサポート）
-            y_pred_proba_train = self.model.predict_proba(X_train)
-            y_pred_proba_test = self.model.predict_proba(X_test)
+            y_pred_proba_train = cast(np.ndarray, self.model.predict_proba(X_train))
+            y_pred_proba_test = cast(np.ndarray, self.model.predict_proba(X_test))
 
             # 共通の評価関数を使用
             from ..common.evaluation_utils import evaluate_model_predictions
@@ -174,7 +174,7 @@ class ExtraTreesModel:
         try:
             # 特徴量の順序を確認
             if self.feature_columns:
-                X = X[self.feature_columns]
+                X = cast(pd.DataFrame, X[self.feature_columns])
 
             predictions = self.model.predict(X)
             return predictions
@@ -199,9 +199,9 @@ class ExtraTreesModel:
         try:
             # 特徴量の順序を確認
             if self.feature_columns:
-                X = X[self.feature_columns]
+                X = cast(pd.DataFrame, X[self.feature_columns])
 
-            probabilities = self.model.predict_proba(X)
+            probabilities = cast(np.ndarray, self.model.predict_proba(X))
             return probabilities
 
         except Exception as e:
@@ -211,6 +211,8 @@ class ExtraTreesModel:
     @property
     def feature_columns(self) -> List[str]:
         """特徴量カラム名のリストを取得"""
+        if self._feature_columns is None:
+            return []
         return self._feature_columns
 
     @feature_columns.setter

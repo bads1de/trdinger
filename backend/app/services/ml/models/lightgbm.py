@@ -6,7 +6,7 @@ LightGBMTrainerの機能を簡略化してアンサンブル専用に最適化�
 """
 
 import logging
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional, Union, cast
 
 import lightgbm as lgb
 import numpy as np
@@ -48,7 +48,7 @@ class LightGBMModel:
         """
         self.model = None
         self.is_trained = False
-        self.feature_columns = None
+        self.feature_columns: Optional[List[str]] = None
         self.scaler = None
         self.automl_config = automl_config
         self.classes_ = None  # sklearn互換性のため
@@ -62,7 +62,7 @@ class LightGBMModel:
         for key, value in kwargs.items():
             setattr(self, key, value)
 
-    def fit(self, X, y) -> "LightGBMModel":
+    def fit(self, X: Union[pd.DataFrame, np.ndarray], y: Union[pd.Series, np.ndarray]) -> "LightGBMModel":
         """
         sklearn互換のfitメソッド
 
@@ -77,11 +77,10 @@ class LightGBMModel:
             # numpy配列をDataFrameに変換
             if not isinstance(X, pd.DataFrame):
                 if hasattr(self, "feature_columns") and self.feature_columns:
-                    X = pd.DataFrame(X, columns=self.feature_columns)
+                    X = pd.DataFrame(X, columns=cast(Any, self.feature_columns))
                 else:
-                    X = pd.DataFrame(
-                        X, columns=[f"feature_{i}" for i in range(X.shape[1])]
-                    )
+                    columns = [f"feature_{i}" for i in range(X.shape[1])]
+                    X = pd.DataFrame(X, columns=cast(Any, columns))
 
             if not isinstance(y, pd.Series):
                 y = pd.Series(y)
@@ -89,9 +88,18 @@ class LightGBMModel:
             # データを80:20で分割（バリデーション用）
             from sklearn.model_selection import train_test_split
 
+            # stratifyパラメータは分類タスクでのみ使用可能
+            stratify_param = y if len(np.unique(y)) < 20 else None
+
             X_train, X_val, y_train, y_val = train_test_split(
-                X, y, test_size=0.2, random_state=42, stratify=y
+                X, y, test_size=0.2, random_state=42, stratify=stratify_param
             )
+
+            # 明示的な型キャストを追加
+            X_train = cast(pd.DataFrame, X_train)
+            X_val = cast(pd.DataFrame, X_val)
+            y_train = cast(pd.Series, y_train)
+            y_val = cast(pd.Series, y_val)
 
             # 内部の学習メソッドを呼び出し
             self._train_model_impl(X_train, X_val, y_train, y_val)
@@ -165,9 +173,9 @@ class LightGBMModel:
             )
 
             # 予測と評価
-            y_pred_proba = self.model.predict(
+            y_pred_proba = cast(np.ndarray, self.model.predict(
                 X_test, num_iteration=self.model.best_iteration
-            )
+            ))
 
             if num_classes > 2:
                 y_pred_class = np.argmax(y_pred_proba, axis=1)
@@ -183,7 +191,7 @@ class LightGBMModel:
 
             # 特徴量重要度を計算
             feature_importance = {}
-            if self.model and hasattr(self.model, "feature_importance"):
+            if self.model and hasattr(self.model, "feature_importance") and self.feature_columns:
                 importance_scores = self.model.feature_importance(
                     importance_type="gain"
                 )
@@ -205,7 +213,7 @@ class LightGBMModel:
                 "best_iteration": self.model.best_iteration,
                 "train_samples": len(X_train),
                 "test_samples": len(X_test),
-                "feature_count": len(self.feature_columns),
+                "feature_count": len(self.feature_columns) if self.feature_columns else 0,
                 "feature_importance": feature_importance,  # 特徴量重要度を追加
                 **detailed_metrics,  # 詳細な評価指標を追加
             }
@@ -254,7 +262,7 @@ class LightGBMModel:
             logger.error(f"特徴量重要度取得エラー: {e}")
             return {}
 
-    def predict(self, X) -> np.ndarray:
+    def predict(self, X: Union[pd.DataFrame, np.ndarray]) -> np.ndarray:
         """
         sklearn互換の予測メソッド（クラス予測）
 
@@ -271,16 +279,16 @@ class LightGBMModel:
             # numpy配列をDataFrameに変換
             if not isinstance(X, pd.DataFrame):
                 if hasattr(self, "feature_columns") and self.feature_columns:
-                    X = pd.DataFrame(X, columns=self.feature_columns)
+                    X = pd.DataFrame(X, columns=cast(Any, self.feature_columns))
                 else:
                     X = pd.DataFrame(
-                        X, columns=[f"feature_{i}" for i in range(X.shape[1])]
+                        X, columns=cast(Any, [f"feature_{i}" for i in range(X.shape[1])])
                     )
 
             # 予測確率を取得
-            predictions_proba = self.model.predict(
+            predictions_proba = cast(np.ndarray, self.model.predict(
                 X, num_iteration=self.model.best_iteration
-            )
+            ))
 
             # クラス数を判定
             if predictions_proba.ndim == 1:
@@ -296,7 +304,7 @@ class LightGBMModel:
             logger.error(f"予測実行エラー: {e}")
             raise ModelError(f"予測実行に失敗しました: {e}")
 
-    def predict_proba(self, X) -> np.ndarray:
+    def predict_proba(self, X: Union[pd.DataFrame, np.ndarray]) -> np.ndarray:
         """
         予測確率を取得
 
@@ -313,18 +321,18 @@ class LightGBMModel:
             # numpy配列をDataFrameに変換
             if not isinstance(X, pd.DataFrame):
                 if hasattr(self, "feature_columns") and self.feature_columns:
-                    X = pd.DataFrame(X, columns=self.feature_columns)
+                    X = pd.DataFrame(X, columns=cast(Any, self.feature_columns))
                 else:
                     X = pd.DataFrame(
-                        X, columns=[f"feature_{i}" for i in range(X.shape[1])]
+                        X, columns=cast(Any, [f"feature_{i}" for i in range(X.shape[1])])
                     )
 
-            predictions = self.model.predict(X, num_iteration=self.model.best_iteration)
+            predictions = cast(np.ndarray, self.model.predict(X, num_iteration=self.model.best_iteration))
 
             # 二値分類の場合、確率を[1-p, p]の形式に変換
             if predictions.ndim == 1:
                 predictions_proba = np.column_stack([1 - predictions, predictions])
-                return predictions_proba
+                return cast(np.ndarray, predictions_proba)
             else:
                 # 多クラス分類の場合はそのまま返す
                 return predictions

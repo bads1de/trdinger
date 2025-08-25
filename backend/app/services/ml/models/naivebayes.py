@@ -33,9 +33,9 @@ class NaiveBayesModel:
         Args:
             automl_config: AutoML設定（現在は未使用）
         """
-        self.model = None
+        self.model: Optional[GaussianNB] = None
         self.is_trained = False
-        self.feature_columns = None
+        self._feature_columns: List[str] = []
         self.scaler = None
         self.automl_config = automl_config
 
@@ -116,8 +116,8 @@ class NaiveBayesModel:
 
             results = {
                 "algorithm": self.ALGORITHM_NAME,
-                "var_smoothing": self.model.var_smoothing,
-                "n_classes": len(self.model.classes_),
+                "var_smoothing": self.model.var_smoothing if self.model is not None else 0.0,
+                "n_classes": len(self.model.classes_) if self.model is not None and hasattr(self.model, 'classes_') else 0,  # type: ignore
                 "feature_count": len(self.feature_columns),
                 "train_samples": len(X_train),
                 "test_samples": len(X_test),
@@ -171,8 +171,8 @@ class NaiveBayesModel:
 
         try:
             # 特徴量の順序を確認
-            if self.feature_columns:
-                X = X[self.feature_columns]
+            if self.feature_columns and len(self.feature_columns) > 0:
+                X = X[self.feature_columns]  # type: ignore
 
             predictions = self.model.predict(X)
             return predictions
@@ -196,8 +196,8 @@ class NaiveBayesModel:
 
         try:
             # 特徴量の順序を確認
-            if self.feature_columns:
-                X = X[self.feature_columns]
+            if self.feature_columns and len(self.feature_columns) > 0:
+                X = X[self.feature_columns]  # type: ignore
 
             probabilities = self.model.predict_proba(X)
             return probabilities
@@ -226,7 +226,7 @@ class NaiveBayesModel:
         if not self.is_trained or self.model is None:
             raise ModelError("モデルが学習されていません")
 
-        if not self.feature_columns:
+        if not self.feature_columns or len(self.feature_columns) == 0:
             raise ModelError("特徴量カラムが設定されていません")
 
         if hasattr(self.model, "theta_"):
@@ -251,8 +251,8 @@ class NaiveBayesModel:
         return {
             "algorithm": self.ALGORITHM_NAME,
             "var_smoothing": self.model.var_smoothing,
-            "n_classes": len(self.model.classes_),
-            "classes": self.model.classes_.tolist(),
+            "n_classes": len(self.model.classes_),  # type: ignore
+            "classes": self.model.classes_.tolist(),  # type: ignore
             "feature_count": len(self.feature_columns) if self.feature_columns else 0,
             "status": "trained",
         }

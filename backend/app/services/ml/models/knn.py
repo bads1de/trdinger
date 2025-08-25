@@ -54,7 +54,7 @@ class KNNModel:
         """
         self.model = None
         self.is_trained = False
-        self.feature_columns = None
+        self._feature_columns = []  # プライベート属性を直接初期化
         self.scaler = None
         self.automl_config = automl_config
         self.classes_ = None  # sklearn互換性のため
@@ -97,10 +97,10 @@ class KNNModel:
             # numpy配列をDataFrameに変換
             if not isinstance(X, pd.DataFrame):
                 if hasattr(self, "feature_columns") and self.feature_columns:
-                    X = pd.DataFrame(X, columns=self.feature_columns)
+                    X = pd.DataFrame(X, columns=self.feature_columns)  # type: ignore[arg-type]
                 else:
                     X = pd.DataFrame(
-                        X, columns=[f"feature_{i}" for i in range(X.shape[1])]
+                        X, columns=[f"feature_{i}" for i in range(X.shape[1])]  # type: ignore[arg-type]
                     )
 
             if not isinstance(y, pd.Series):
@@ -170,23 +170,24 @@ class KNNModel:
 
             # 包括的な評価指標を計算（テストデータ）
             test_metrics = evaluate_model_predictions(
-                y_test, y_pred_test, y_pred_proba_test
+                y_test, y_pred_test, y_pred_proba_test  # type: ignore[arg-type]
             )
 
             # 包括的な評価指標を計算（学習データ）
             train_metrics = evaluate_model_predictions(
-                y_train, y_pred_train, y_pred_proba_train
+                y_train, y_pred_train, y_pred_proba_train  # type: ignore[arg-type]
             )
 
             # 特徴量重要度（KNNでは直接的な重要度なし）
             # 各特徴量の分散を重要度として近似
             feature_variance = X_train.var()
-            total_variance = feature_variance.sum()
             feature_importance = {}
-            if total_variance > 0:
-                feature_importance = dict(
-                    zip(self.feature_columns, feature_variance / total_variance)
-                )
+            if isinstance(feature_variance, pd.Series):
+                total_variance = feature_variance.sum()  # type: ignore[attr-defined]
+                if total_variance > 0:
+                    feature_importance = dict(
+                        zip(self.feature_columns, feature_variance / total_variance)
+                    )
 
             self.is_trained = True
 
@@ -253,10 +254,10 @@ class KNNModel:
             # numpy配列をDataFrameに変換
             if not isinstance(X, pd.DataFrame):
                 if hasattr(self, "feature_columns") and self.feature_columns:
-                    X = pd.DataFrame(X, columns=self.feature_columns)
+                    X = pd.DataFrame(X, columns=list(self.feature_columns))  # type: ignore[arg-type]
                 else:
                     X = pd.DataFrame(
-                        X, columns=[f"feature_{i}" for i in range(X.shape[1])]
+                        X, columns=[f"feature_{i}" for i in range(X.shape[1])]  # type: ignore[arg-type]
                     )
 
             # 特徴量の順序を確認
@@ -287,10 +288,10 @@ class KNNModel:
             # numpy配列をDataFrameに変換
             if not isinstance(X, pd.DataFrame):
                 if hasattr(self, "feature_columns") and self.feature_columns:
-                    X = pd.DataFrame(X, columns=self.feature_columns)
+                    X = pd.DataFrame(X, columns=self.feature_columns)  # type: ignore
                 else:
                     X = pd.DataFrame(
-                        X, columns=[f"feature_{i}" for i in range(X.shape[1])]
+                        X, columns=[f"feature_{i}" for i in range(X.shape[1])]  # type: ignore
                     )
 
             # 特徴量の順序を確認
@@ -298,7 +299,7 @@ class KNNModel:
                 X = X[self.feature_columns]
 
             probabilities = self.model.predict_proba(X)
-            return probabilities
+            return probabilities  # type: ignore[return-value]
 
         except Exception as e:
             logger.error(f"KNN確率予測エラー: {e}")
@@ -329,7 +330,7 @@ class KNNModel:
 
         # 学習データから距離ベースの重要度を計算
         if hasattr(self.model, "_fit_X"):
-            X_train = pd.DataFrame(self.model._fit_X, columns=self.feature_columns)
+            X_train = pd.DataFrame(self.model._fit_X, columns=self.feature_columns)  # type: ignore[arg-type]
 
             # 各特徴量の分散を重要度として使用（改良版）
             feature_variance = X_train.var()
@@ -365,7 +366,10 @@ class KNNModel:
                         )
                         feature_importance[col] = importance
                     else:
-                        feature_importance[col] = feature_variance.iloc[i]
+                        if isinstance(feature_variance, pd.Series):
+                            feature_importance[col] = feature_variance.iloc[i]  # type: ignore
+                        else:
+                            feature_importance[col] = float(feature_variance)
 
                 # 正規化
                 total_importance = sum(feature_importance.values())
@@ -377,11 +381,14 @@ class KNNModel:
             except Exception as e:
                 logger.warning(f"距離ベース重要度計算でエラー: {e}")
                 # フォールバック：分散ベースの重要度
-                total_variance = feature_variance.sum()
-                if total_variance > 0:
-                    return dict(
-                        zip(self.feature_columns, feature_variance / total_variance)
-                    )
+                if isinstance(feature_variance, pd.Series):
+                    total_variance = feature_variance.sum()  # type: ignore
+                    if total_variance > 0:
+                        return dict(
+                            zip(self.feature_columns, feature_variance / total_variance)
+                        )
+
+        return {}
 
         return {}
 

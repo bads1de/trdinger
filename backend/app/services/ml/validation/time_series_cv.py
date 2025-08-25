@@ -248,7 +248,7 @@ class TimeSeriesCrossValidator:
         model,
         X: pd.DataFrame,
         y: pd.Series,
-        scoring: List[str] = None,
+        scoring: Optional[List[str]] = None,
         return_predictions: bool = False,
     ) -> Dict[str, Any]:
         """
@@ -272,7 +272,7 @@ class TimeSeriesCrossValidator:
         splitter = self._create_splitter()
         scores = {metric: [] for metric in scoring}
         fold_results = []
-        predictions = [] if return_predictions else None
+        predictions: List[Dict[str, Any]] = []
 
         for fold, (train_idx, test_idx) in enumerate(splitter.split(X)):
             try:

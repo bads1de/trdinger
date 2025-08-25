@@ -6,7 +6,7 @@ scikit-learnのGradientBoostingClassifierを使用してアンサンブル専用
 """
 
 import logging
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, cast
 
 import numpy as np
 import pandas as pd
@@ -34,9 +34,9 @@ class GradientBoostingModel:
         Args:
             automl_config: AutoML設定（現在は未使用）
         """
-        self.model = None
+        self.model: Optional[GradientBoostingClassifier] = None
         self.is_trained = False
-        self.feature_columns = None
+        self._feature_columns: Optional[List[str]] = None
         self.scaler = None
         self.automl_config = automl_config
 
@@ -83,25 +83,29 @@ class GradientBoostingModel:
             # 学習実行
             self.model.fit(X_train, y_train)
 
+            # モデルが正常に設定されていることを確認
+            assert self.model is not None, "Model should be initialized after fit"
+            model: GradientBoostingClassifier = self.model
+
             # 予測
-            y_pred_train = self.model.predict(X_train)
-            y_pred_test = self.model.predict(X_test)
+            y_pred_train = model.predict(X_train)
+            y_pred_test = model.predict(X_test)
 
             # 確率予測（GradientBoostingは確率予測をサポート）
-            y_pred_proba_train = self.model.predict_proba(X_train)
-            y_pred_proba_test = self.model.predict_proba(X_test)
+            y_pred_proba_train = model.predict_proba(X_train)
+            y_pred_proba_test = model.predict_proba(X_test)
 
             # 共通の評価関数を使用
             from ..common.evaluation_utils import evaluate_model_predictions
 
             # 包括的な評価指標を計算（テストデータ）
             test_metrics = evaluate_model_predictions(
-                y_test, y_pred_test, y_pred_proba_test
+                y_test, cast(np.ndarray, y_pred_test), cast(np.ndarray, y_pred_proba_test)
             )
 
             # 包括的な評価指標を計算（学習データ）
             train_metrics = evaluate_model_predictions(
-                y_train, y_pred_train, y_pred_proba_train
+                y_train, cast(np.ndarray, y_pred_train), cast(np.ndarray, y_pred_proba_train)
             )
 
             # クラス数を取得
@@ -109,7 +113,7 @@ class GradientBoostingModel:
 
             # 特徴量重要度
             feature_importance = dict(
-                zip(self.feature_columns, self.model.feature_importances_)
+                zip(self.feature_columns, model.feature_importances_)
             )
 
             self.is_trained = True
@@ -163,10 +167,10 @@ class GradientBoostingModel:
         try:
             # 特徴量の順序を確認
             if self.feature_columns:
-                X = X[self.feature_columns]
+                X = pd.DataFrame(X[self.feature_columns])
 
             predictions = self.model.predict(X)
-            return predictions
+            return predictions  # type: ignore
 
         except Exception as e:
             logger.error(f"GradientBoosting予測エラー: {e}")
@@ -188,22 +192,22 @@ class GradientBoostingModel:
         try:
             # 特徴量の順序を確認
             if self.feature_columns:
-                X = X[self.feature_columns]
+                X = pd.DataFrame(X[self.feature_columns])
 
             probabilities = self.model.predict_proba(X)
-            return probabilities
+            return probabilities  # type: ignore
 
         except Exception as e:
             logger.error(f"GradientBoosting確率予測エラー: {e}")
             raise ModelError(f"確率予測に失敗しました: {e}")
 
     @property
-    def feature_columns(self) -> List[str]:
+    def feature_columns(self) -> Optional[List[str]]:
         """特徴量カラム名のリストを取得"""
         return self._feature_columns
 
     @feature_columns.setter
-    def feature_columns(self, columns: List[str]):
+    def feature_columns(self, columns: Optional[List[str]]):
         """特徴量カラム名のリストを設定"""
         self._feature_columns = columns
 
@@ -220,7 +224,8 @@ class GradientBoostingModel:
         if not self.feature_columns:
             raise ModelError("特徴量カラムが設定されていません")
 
-        return dict(zip(self.feature_columns, self.model.feature_importances_))
+        model: GradientBoostingClassifier = self.model
+        return dict(zip(self.feature_columns, model.feature_importances_))
 
     def get_model_info(self) -> Dict[str, Any]:
         """
@@ -232,14 +237,15 @@ class GradientBoostingModel:
         if not self.is_trained or self.model is None:
             return {"status": "not_trained"}
 
+        model: GradientBoostingClassifier = self.model
         return {
             "algorithm": self.ALGORITHM_NAME,
-            "n_estimators": self.model.n_estimators,
-            "max_depth": self.model.max_depth,
-            "learning_rate": self.model.learning_rate,
-            "subsample": self.model.subsample,
-            "min_samples_split": self.model.min_samples_split,
-            "min_samples_leaf": self.model.min_samples_leaf,
+            "n_estimators": model.n_estimators,
+            "max_depth": model.max_depth,
+            "learning_rate": model.learning_rate,
+            "subsample": model.subsample,
+            "min_samples_split": model.min_samples_split,
+            "min_samples_leaf": model.min_samples_leaf,
             "feature_count": len(self.feature_columns) if self.feature_columns else 0,
             "status": "trained",
         }
