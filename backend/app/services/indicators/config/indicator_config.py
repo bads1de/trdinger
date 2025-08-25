@@ -73,7 +73,7 @@ class IndicatorConfig:
     result_handler: Optional[str] = None  # 複数値結果の処理ハンドラー
 
     # データキー→関数引数名マッピング（オーバーライド用。未設定なら従来マッピングを使用）
-    param_map: Dict[str, str] = field(default_factory=dict)
+    param_map: Dict[str, Optional[str]] = field(default_factory=dict)
 
     # メタデータ（遺伝子生成用）
     scale_type: Optional[IndicatorScaleType] = None  # スケールタイプ

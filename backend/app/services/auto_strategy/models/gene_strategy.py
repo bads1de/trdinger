@@ -92,7 +92,7 @@ class Condition:
     def validate(self) -> bool:
         """条件の妥当性を検証"""
         validator = GeneValidator()
-        return validator.validate_condition(self)
+        return validator.validate_condition(self)[0]
 
     def _is_indicator_name(self, name: str) -> bool:
         """指標名かどうかを判定"""
@@ -144,7 +144,8 @@ class StrategyGene:
         # entry_conditionsがある場合は後方互換性で使用（long_entry_conditionsが空でも）
         elif self.entry_conditions:
             # 後方互換性：既存のentry_conditionsをロング条件として扱う
-            return self.entry_conditions
+            # List[Condition] を List[Union[Condition, "ConditionGroup"]] に変換
+            return list(self.entry_conditions)  # type: ignore
         else:
             return []
 
@@ -156,7 +157,8 @@ class StrategyGene:
         # entry_conditionsがある場合は後方互換性で使用（short_entry_conditionsが空でも）
         elif self.entry_conditions and not self.long_entry_conditions:
             # long_entry_conditionsが設定されていない場合のみ、entry_conditionsをショート条件としても使用
-            return self.entry_conditions
+            # List[Condition] を List[Union[Condition, "ConditionGroup"]] に変換
+            return list(self.entry_conditions)  # type: ignore
         else:
             return []
 

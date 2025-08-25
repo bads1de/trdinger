@@ -79,11 +79,11 @@ class OHLCVDataConverter:
                     int(
                         record.timestamp.timestamp() * 1000
                     ),  # タイムスタンプ（ミリ秒）
-                    record.open,
-                    record.high,
-                    record.low,
-                    record.close,
-                    record.volume,
+                    float(record.open),
+                    float(record.high),
+                    float(record.low),
+                    float(record.close),
+                    float(record.volume),
                 ]
             )
 

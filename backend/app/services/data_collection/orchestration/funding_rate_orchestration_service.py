@@ -7,6 +7,7 @@
 
 import logging
 from typing import List, Optional
+from datetime import datetime
 
 
 from fastapi import Depends
@@ -38,6 +39,25 @@ class FundingRateOrchestrationService:
         """
         self.bybit_service = bybit_service
 
+    def _parse_datetime(self, date_str: Optional[str]) -> Optional[datetime]:
+        """
+        文字列の日付をdatetimeオブジェクトに変換する
+
+        Args:
+            date_str: 日付文字列（ISO形式、例: "2023-01-01T00:00:00"）
+
+        Returns:
+            datetimeオブジェクト、またはNone
+        """
+        if not date_str:
+            return None
+        try:
+            # ISO形式の日付文字列をパース（例: "2023-01-01T00:00:00"）
+            return datetime.fromisoformat(date_str.replace('Z', '+00:00'))
+        except ValueError as e:
+            logger.error(f"日付文字列のパースに失敗しました: {date_str}, エラー: {e}")
+            return None
+
     async def get_funding_rate_data(
         self,
         symbol: str,
@@ -60,12 +80,17 @@ class FundingRateOrchestrationService:
             ファンディングレートデータのリスト
         """
         logger.info(f"{symbol}のファンディングレートデータを{limit}件取得します")
+
+        # 文字列の日付をdatetimeオブジェクトに変換
+        start_datetime = self._parse_datetime(start_date)
+        end_datetime = self._parse_datetime(end_date)
+
         funding_rate_repo = FundingRateRepository(db_session)
         return funding_rate_repo.get_funding_rate_data(
             symbol=symbol,
             limit=limit,
-            start_time=start_date,
-            end_time=end_date,
+            start_time=start_datetime,
+            end_time=end_datetime,
         )
 
     async def collect_funding_rate_data(

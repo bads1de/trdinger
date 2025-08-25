@@ -246,21 +246,28 @@ class DataIntegrationService:
         if df.empty:
             return {"error": "データがありません"}
 
+        # 安全に日付を取得
+        start_date_val: pd.Timestamp = pd.to_datetime(df.index.min(), errors='coerce')  # type: ignore
+        start_date = start_date_val.isoformat() if pd.notna(start_date_val) else None
+
+        end_date_val: pd.Timestamp = pd.to_datetime(df.index.max(), errors='coerce')  # type: ignore
+        end_date = end_date_val.isoformat() if pd.notna(end_date_val) else None
+
         summary = {
             "total_records": len(df),
-            "start_date": df.index.min().isoformat(),
-            "end_date": df.index.max().isoformat(),
+            "start_date": start_date,
+            "end_date": end_date,
             "columns": list(df.columns),
             "price_range": {
-                "min": float(df["Low"].min()),
-                "max": float(df["High"].max()),
-                "first_close": float(df["Close"].iloc[0]),
-                "last_close": float(df["Close"].iloc[-1]),
+                "min": float(df["Low"].min()) if not df.empty else None,
+                "max": float(df["High"].max()) if not df.empty else None,
+                "first_close": float(df["Close"].iloc[0]) if not df.empty else None,
+                "last_close": float(df["Close"].iloc[-1]) if not df.empty else None,
             },
             "volume_stats": {
-                "total": float(df["Volume"].sum()),
-                "average": float(df["Volume"].mean()),
-                "max": float(df["Volume"].max()),
+                "total": float(df["Volume"].sum()) if not df.empty else 0.0,
+                "average": float(df["Volume"].mean()) if not df.empty else 0.0,
+                "max": float(df["Volume"].max()) if not df.empty else 0.0,
             },
         }
 

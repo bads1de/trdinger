@@ -165,11 +165,11 @@ class AutoMLFeatureGenerationService:
                     data.append(
                         {
                             "timestamp": record.timestamp,
-                            "Open": float(record.open),
-                            "High": float(record.high),
-                            "Low": float(record.low),
-                            "Close": float(record.close),
-                            "Volume": float(record.volume),
+                            "Open": float(record.open) if hasattr(record, 'open') and record.open is not None else 0.0,
+                            "High": float(record.high) if hasattr(record, 'high') and record.high is not None else 0.0,
+                            "Low": float(record.low) if hasattr(record, 'low') and record.low is not None else 0.0,
+                            "Close": float(record.close) if hasattr(record, 'close') and record.close is not None else 0.0,
+                            "Volume": float(record.volume) if hasattr(record, 'volume') and record.volume is not None else 0.0,
                         }
                     )
                 df = pd.DataFrame(data)

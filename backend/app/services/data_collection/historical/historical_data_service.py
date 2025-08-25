@@ -119,6 +119,7 @@ class HistoricalDataService:
             raise
         except Exception as e:
             ErrorHandler.handle_model_error(e, context="fetch_historical_data")
+            return 0
 
     async def collect_bulk_incremental_data(
         self,

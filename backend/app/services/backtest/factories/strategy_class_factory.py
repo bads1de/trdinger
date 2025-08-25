@@ -118,7 +118,7 @@ class StrategyClassFactory:
         if "strategy_gene" in parameters:
             return parameters["strategy_gene"]
 
-        return None
+        return {}
 
     def get_strategy_parameters(
         self, strategy_config: Dict[str, Any]

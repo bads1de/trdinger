@@ -57,13 +57,14 @@ class OIMerger:
                 # )
 
                 # toleranceを設定（1日以内のデータのみ使用）
+                tolerance = int(pd.Timedelta(days=1).total_seconds())
                 df = pd.merge_asof(
                     df.sort_index(),
                     oi_df.sort_index(),
                     left_index=True,
                     right_index=True,
                     direction="backward",
-                    tolerance=pd.Timedelta(days=1),
+                    tolerance=tolerance,
                 )
 
                 valid_oi_count = df["open_interest"].notna().sum()

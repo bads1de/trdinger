@@ -66,22 +66,23 @@ class DataRetrievalService:
             end_date: 終了日時
 
         Returns:
-            OHLCVデータのリスト
-
-        Raises:
-            DataRetrievalError: データ取得に失敗した場合
+            OHLCVデータのリスト。リポジトリが初期化されていない場合は空のリストを返します。
         """
         if self.ohlcv_repo is None:
-            raise DataRetrievalError("OHLCVRepositoryが初期化されていません")
+            logger.warning("OHLCVRepositoryが初期化されていません")
+            return []
 
         from app.utils.error_handler import safe_operation
 
         @safe_operation(
             context="OHLCVデータ取得",
             is_api_call=False,
-            default_return=DataRetrievalError("OHLCVデータの取得に失敗しました"),
+            default_return=[],  # Return empty list instead of exception for consistency
         )
         def _get_ohlcv_data():
+            # Type assertion to help type checker understand ohlcv_repo is not None
+            assert self.ohlcv_repo is not None, "OHLCVRepositoryが初期化されていません"
+
             data = self.ohlcv_repo.get_ohlcv_data(
                 symbol=symbol,
                 timeframe=timeframe,
@@ -122,6 +123,9 @@ class DataRetrievalService:
             context="Open Interestデータ取得", is_api_call=False, default_return=[]
         )
         def _get_open_interest_data():
+            # Type assertion to help type checker understand oi_repo is not None
+            assert self.oi_repo is not None, "Open InterestRepositoryが初期化されていません"
+
             data = self.oi_repo.get_open_interest_data(
                 symbol=symbol,
                 start_time=start_date,
@@ -157,6 +161,9 @@ class DataRetrievalService:
             context="Funding Rateデータ取得", is_api_call=False, default_return=[]
         )
         def _get_funding_rate_data():
+            # Type assertion to help type checker understand fr_repo is not None
+            assert self.fr_repo is not None, "Funding RateRepositoryが初期化されていません"
+
             data = self.fr_repo.get_funding_rate_data(
                 symbol=symbol,
                 start_time=start_date,
@@ -191,6 +198,9 @@ class DataRetrievalService:
             context="Fear & Greedデータ取得", is_api_call=False, default_return=[]
         )
         def _get_fear_greed_data():
+            # Type assertion to help type checker understand fear_greed_repo is not None
+            assert self.fear_greed_repo is not None, "Fear & GreedRepositoryが初期化されていません"
+
             data = self.fear_greed_repo.get_fear_greed_data(
                 start_time=start_date,
                 end_time=end_date,

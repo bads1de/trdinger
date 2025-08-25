@@ -181,7 +181,7 @@ class FearGreedIndexService:
             }
 
     async def _fetch_and_save_fear_greed_data_impl(
-        self, limit: int, repository: FearGreedIndexRepository
+        self, limit: int, repository: Optional[FearGreedIndexRepository]
     ) -> dict:
         """Fear & Greed Index データ取得・保存の実装"""
         # データ取得

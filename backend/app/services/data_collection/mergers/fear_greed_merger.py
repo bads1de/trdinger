@@ -7,7 +7,7 @@ Fear & Greed Index データのマージロジックを提供します。
 import logging
 from app.utils.error_handler import ErrorHandler
 from datetime import datetime
-from typing import List
+from typing import List, cast
 
 import pandas as pd
 
@@ -68,7 +68,10 @@ class FearGreedMerger:
                     )
 
                 # toleranceを設定（詳細ログ時は3日、通常時は制限なし）
-                tolerance = pd.Timedelta(days=3) if detailed_logging else None
+                if detailed_logging:
+                    tolerance = cast(pd.Timedelta, pd.Timedelta(days=3))
+                else:
+                    tolerance = None
 
                 df = pd.merge_asof(
                     df.sort_index(),

@@ -106,6 +106,8 @@ class BacktestService:
                 )
 
             # 6. バックテスト実行
+            if self._executor is None:
+                raise BacktestExecutionError("実行エンジンが初期化されていません")
             stats = self._executor.execute_backtest(
                 strategy_class=strategy_class,
                 strategy_parameters=strategy_parameters,
@@ -152,21 +154,37 @@ class BacktestService:
     def _ensure_data_service_initialized(self) -> None:
         """データサービスの初期化を確保"""
         if self.data_service is None:
-            db = next(get_db())
+            db = None
             try:
+                db = next(get_db())
                 ohlcv_repo = OHLCVRepository(db)
                 oi_repo = OpenInterestRepository(db)
                 fr_repo = FundingRateRepository(db)
                 self.data_service = BacktestDataService(
                     ohlcv_repo=ohlcv_repo, oi_repo=oi_repo, fr_repo=fr_repo
                 )
+                logger.info("バックテストデータサービスを初期化しました")
+            except Exception as e:
+                logger.error(f"バックテストデータサービスの初期化に失敗しました: {e}")
+                raise BacktestExecutionError(f"データサービスの初期化に失敗しました: {e}")
             finally:
-                db.close()
+                if db is not None:
+                    db.close()
 
     def _ensure_executor_initialized(self) -> None:
         """実行エンジンの初期化を確保"""
         if self._executor is None:
-            self._executor = BacktestExecutor(self.data_service)
+            if self.data_service is None:
+                raise BacktestExecutionError(
+                    "データサービスが初期化されていません。バックテストを実行できません。"
+                )
+
+            try:
+                self._executor = BacktestExecutor(self.data_service)
+                logger.info("バックテスト実行エンジンを初期化しました")
+            except Exception as e:
+                logger.error(f"バックテスト実行エンジンの初期化に失敗しました: {e}")
+                raise BacktestExecutionError(f"実行エンジンの初期化に失敗しました: {e}")
 
     def _normalize_date(self, date_value: Any) -> datetime:
         """日付値をdatetimeオブジェクトに正規化"""
@@ -185,6 +203,8 @@ class BacktestService:
             戦略一覧
         """
         self._ensure_executor_initialized()
+        if self._executor is None:
+            raise BacktestExecutionError("実行エンジンが初期化されていません")
         return self._executor.get_supported_strategies()
 
     def execute_and_save_backtest(self, request, db_session: Session) -> Dict[str, Any]:

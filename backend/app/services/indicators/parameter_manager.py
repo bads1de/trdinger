@@ -355,7 +355,10 @@ def normalize_params(
 
     # length 必須のアダプタにデフォルト補完
     try:
-        sig = inspect.signature(config.adapter_function)
+        if config.adapter_function is not None:
+            sig = inspect.signature(config.adapter_function)
+        else:
+            sig = None
 
 
         # length パラメータの追加は明示的に必要な指標のみに制限
@@ -366,10 +369,7 @@ def normalize_params(
             pass  # これらの指標には length を追加しない
         elif indicator_type.startswith("CDL_") and "length" not in converted_params:
             pass  # すべてのパターン認識指標には length を追加しない
-        elif (
-            "length" in sig.parameters
-            and "length" not in converted_params
-        ):
+        elif sig is not None and "length" in sig.parameters and "length" not in converted_params:
             # period_to_length_indicators に含まれる指標のみ length を自動追加
             default_len = params.get("period")
             if default_len is None and config.parameters:

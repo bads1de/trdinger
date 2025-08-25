@@ -265,6 +265,13 @@ class TechnicalIndicatorService:
         config: IndicatorConfig,
     ):
         """アダプター関数を使用した指標計算（後方互換性用）"""
+        # アダプター関数がNoneでないことを確認
+        if not config.adapter_function:
+            raise ValueError(f"Adapter function is not available for indicator {indicator_type}")
+
+        # 型チェックのため、adapter_functionがNoneでないことを確認した後の参照
+        adapter_function = config.adapter_function
+
         # 従来のロジックを簡素化して維持
         required_data = {}
 
@@ -344,7 +351,7 @@ class TechnicalIndicatorService:
         # 関数シグネチャを動的に検査して呼び出し方を決定
         import inspect
 
-        sig = inspect.signature(config.adapter_function)
+        sig = inspect.signature(adapter_function)
         valid_params = set(sig.parameters.keys())
 
         # Functions that require positional arguments
@@ -377,7 +384,7 @@ class TechnicalIndicatorService:
             # logger.debug(
             #     f"Using positional args for {indicator_type}: {len(positional_args)} args"
             # )
-            return config.adapter_function(*positional_args, **keyword_args)
+            return adapter_function(*positional_args, **keyword_args)
 
         # If data parameter is included but close is not
         # Pass data as first positional argument (format expected by some functions)
@@ -387,11 +394,11 @@ class TechnicalIndicatorService:
             # logger.debug(
             #     f"Using positional arg for {indicator_type}: shape={getattr(data_arg, 'shape', 'N/A')}"
             # )
-            return config.adapter_function(data_arg, **all_args)
+            return adapter_function(data_arg, **all_args)
 
         # Normal keyword argument call
         logger.debug(f"Using keyword args for {indicator_type}")
-        return config.adapter_function(**all_args)
+        return adapter_function(**all_args)
 
     def _resolve_column_name(self, df: pd.DataFrame, data_key: str) -> Optional[str]:
         """

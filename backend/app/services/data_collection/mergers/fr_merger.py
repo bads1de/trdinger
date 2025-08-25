@@ -57,13 +57,14 @@ class FRMerger:
                 # )
 
                 # toleranceを設定（8時間以内のデータのみ使用）
+                tolerance = int(pd.Timedelta(hours=8).total_seconds())
                 df = pd.merge_asof(
                     df.sort_index(),
                     fr_df.sort_index(),
                     left_index=True,
                     right_index=True,
                     direction="backward",
-                    tolerance=pd.Timedelta(hours=8),
+                    tolerance=tolerance,
                 )
 
                 valid_fr_count = df["funding_rate"].notna().sum()
