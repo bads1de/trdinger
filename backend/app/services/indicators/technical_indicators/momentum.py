@@ -14,6 +14,19 @@
 - MFI (Money Flow Index)
 - APO (Absolute Price Oscillator)
 - AO (Awesome Oscillator)
+- BIAS (Bias)
+- BRAR (BRAR Index)
+- CG (Center of Gravity)
+- COPPOCK (Coppock Curve)
+- ER (Efficiency Ratio)
+- ERI (Elder Ray Index)
+- FISHER (Fisher Transform)
+- INERTIA (Inertia)
+- PGO (Pretty Good Oscillator)
+- PSL (Psychological Line)
+- RSX (RSX)
+- SQUEEZE (Squeeze)
+- SQUEEZE_PRO (Squeeze Pro)
 """
 
 from typing import Tuple, Union
@@ -852,3 +865,205 @@ class MomentumIndicators:
             high=high_series, low=low_series, close=close_series, length=length
         )
         return result.iloc[:, 0].values, result.iloc[:, 1].values
+
+    @staticmethod
+    def bias(data: Union[np.ndarray, pd.Series], length: int = 26) -> np.ndarray:
+        """Bias"""
+        series = pd.Series(data) if isinstance(data, np.ndarray) else data
+        return ta.bias(series, length=length).values
+
+    @staticmethod
+    def brar(
+        open_: Union[np.ndarray, pd.Series],
+        high: Union[np.ndarray, pd.Series],
+        low: Union[np.ndarray, pd.Series],
+        close: Union[np.ndarray, pd.Series],
+        length: int = 26,
+    ) -> np.ndarray:
+        """BRAR Index"""
+        open_series = pd.Series(open_) if isinstance(open_, np.ndarray) else open_
+        high_series = pd.Series(high) if isinstance(high, np.ndarray) else high
+        low_series = pd.Series(low) if isinstance(low, np.ndarray) else low
+        close_series = pd.Series(close) if isinstance(close, np.ndarray) else close
+
+        result = ta.brar(
+            open_=open_series,
+            high=high_series,
+            low=low_series,
+            close=close_series,
+            length=length,
+        )
+        return result.values
+
+    @staticmethod
+    def cg(data: Union[np.ndarray, pd.Series], length: int = 10) -> np.ndarray:
+        """Center of Gravity"""
+        series = pd.Series(data) if isinstance(data, np.ndarray) else data
+        return ta.cg(series, length=length).values
+
+    @staticmethod
+    def coppock(
+        data: Union[np.ndarray, pd.Series], length: int = 10, fast: int = 11, slow: int = 14
+    ) -> np.ndarray:
+        """Coppock Curve"""
+        series = pd.Series(data) if isinstance(data, np.ndarray) else data
+        return ta.coppock(series, length=length, fast=fast, slow=slow).values
+
+    @staticmethod
+    def er(data: Union[np.ndarray, pd.Series], length: int = 10) -> np.ndarray:
+        """Efficiency Ratio"""
+        series = pd.Series(data) if isinstance(data, np.ndarray) else data
+        return ta.er(series, length=length).values
+
+    @staticmethod
+    def eri(
+        high: Union[np.ndarray, pd.Series],
+        low: Union[np.ndarray, pd.Series],
+        close: Union[np.ndarray, pd.Series],
+        length: int = 13,
+    ) -> np.ndarray:
+        """Elder Ray Index"""
+        high_series = pd.Series(high) if isinstance(high, np.ndarray) else high
+        low_series = pd.Series(low) if isinstance(low, np.ndarray) else low
+        close_series = pd.Series(close) if isinstance(close, np.ndarray) else close
+
+        result = ta.eri(high=high_series, low=low_series, close=close_series, length=length)
+        return result.values
+
+    @staticmethod
+    def fisher(
+        high: Union[np.ndarray, pd.Series],
+        low: Union[np.ndarray, pd.Series],
+        length: int = 9,
+        signal: int = 1,
+    ) -> Tuple[np.ndarray, np.ndarray]:
+        """Fisher Transform"""
+        high_series = pd.Series(high) if isinstance(high, np.ndarray) else high
+        low_series = pd.Series(low) if isinstance(low, np.ndarray) else low
+
+        result = ta.fisher(high=high_series, low=low_series, length=length, signal=signal)
+        return result.iloc[:, 0].values, result.iloc[:, 1].values
+
+    @staticmethod
+    def inertia(
+        close: Union[np.ndarray, pd.Series],
+        high: Union[np.ndarray, pd.Series] = None,
+        low: Union[np.ndarray, pd.Series] = None,
+        length: int = 20,
+        rvi_length: int = 14,
+    ) -> np.ndarray:
+        """Inertia"""
+        close_series = pd.Series(close) if isinstance(close, np.ndarray) else close
+        high_series = pd.Series(high) if isinstance(high, np.ndarray) and high is not None else high
+        low_series = pd.Series(low) if isinstance(low, np.ndarray) and low is not None else low
+
+        result = ta.inertia(
+            close=close_series,
+            high=high_series,
+            low=low_series,
+            length=length,
+            rvi_length=rvi_length,
+        )
+        return result.values
+
+    @staticmethod
+    def pgo(
+        high: Union[np.ndarray, pd.Series],
+        low: Union[np.ndarray, pd.Series],
+        close: Union[np.ndarray, pd.Series],
+        length: int = 14,
+    ) -> np.ndarray:
+        """Pretty Good Oscillator"""
+        high_series = pd.Series(high) if isinstance(high, np.ndarray) else high
+        low_series = pd.Series(low) if isinstance(low, np.ndarray) else low
+        close_series = pd.Series(close) if isinstance(close, np.ndarray) else close
+
+        return ta.pgo(
+            high=high_series, low=low_series, close=close_series, length=length
+        ).values
+
+    @staticmethod
+    def psl(
+        close: Union[np.ndarray, pd.Series],
+        open_: Union[np.ndarray, pd.Series] = None,
+        length: int = 12,
+    ) -> np.ndarray:
+        """Psychological Line"""
+        close_series = pd.Series(close) if isinstance(close, np.ndarray) else close
+        open_series = pd.Series(open_) if isinstance(open_, np.ndarray) and open_ is not None else open_
+
+        return ta.psl(close=close_series, open_=open_series, length=length).values
+
+    @staticmethod
+    def rsx(data: Union[np.ndarray, pd.Series], length: int = 14) -> np.ndarray:
+        """RSX"""
+        series = pd.Series(data) if isinstance(data, np.ndarray) else data
+        return ta.rsx(series, length=length).values
+
+    @staticmethod
+    def squeeze(
+        high: Union[np.ndarray, pd.Series],
+        low: Union[np.ndarray, pd.Series],
+        close: Union[np.ndarray, pd.Series],
+        bb_length: int = 20,
+        bb_std: float = 2.0,
+        kc_length: int = 20,
+        kc_scalar: float = 1.5,
+        mom_length: int = 12,
+        mom_smooth: int = 6,
+        use_tr: bool = True,
+    ) -> np.ndarray:
+        """Squeeze"""
+        high_series = pd.Series(high) if isinstance(high, np.ndarray) else high
+        low_series = pd.Series(low) if isinstance(low, np.ndarray) else low
+        close_series = pd.Series(close) if isinstance(close, np.ndarray) else close
+
+        result = ta.squeeze(
+            high=high_series,
+            low=low_series,
+            close=close_series,
+            bb_length=bb_length,
+            bb_std=bb_std,
+            kc_length=kc_length,
+            kc_scalar=kc_scalar,
+            mom_length=mom_length,
+            mom_smooth=mom_smooth,
+            use_tr=use_tr,
+        )
+        return result.values
+
+    @staticmethod
+    def squeeze_pro(
+        high: Union[np.ndarray, pd.Series],
+        low: Union[np.ndarray, pd.Series],
+        close: Union[np.ndarray, pd.Series],
+        bb_length: int = 20,
+        bb_std: float = 2.0,
+        kc_length: int = 20,
+        kc_scalar_wide: float = 2.0,
+        kc_scalar_normal: float = 1.5,
+        kc_scalar_narrow: float = 1.0,
+        mom_length: int = 12,
+        mom_smooth: int = 6,
+        use_tr: bool = True,
+    ) -> np.ndarray:
+        """Squeeze Pro"""
+        high_series = pd.Series(high) if isinstance(high, np.ndarray) else high
+        low_series = pd.Series(low) if isinstance(low, np.ndarray) else low
+        close_series = pd.Series(close) if isinstance(close, np.ndarray) else close
+
+        result = ta.squeeze_pro(
+            high=high_series,
+            low=low_series,
+            close=close_series,
+            bb_length=bb_length,
+            bb_std=bb_std,
+            kc_length=kc_length,
+            kc_scalar_wide=kc_scalar_wide,
+            kc_scalar_normal=kc_scalar_normal,
+            kc_scalar_narrow=kc_scalar_narrow,
+            mom_length=mom_length,
+            mom_smooth=mom_smooth,
+            use_tr=use_tr,
+        )
+        return result.values

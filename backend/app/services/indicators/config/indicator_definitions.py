@@ -1410,6 +1410,184 @@ def setup_volatility_indicators():
     bb_config.param_map = {"close": "data", "period": "length", "std": "std"}
     indicator_registry.register(bb_config)
 
+    # ABERRATION
+    aberration_config = IndicatorConfig(
+        indicator_name="ABERRATION",
+        adapter_function=VolatilityIndicators.aberration,
+        required_data=["high", "low", "close"],
+        result_type=IndicatorResultType.SINGLE,
+        scale_type=IndicatorScaleType.PRICE_ABSOLUTE,
+        category="volatility",
+    )
+    aberration_config.add_parameter(
+        ParameterConfig(
+            name="length",
+            default_value=5,
+            min_value=2,
+            max_value=100,
+            description="ABERRATION計算期間",
+        )
+    )
+    aberration_config.param_map = {"length": "length"}
+    indicator_registry.register(aberration_config)
+
+    # ACCBANDS
+    accbands_config = IndicatorConfig(
+        indicator_name="ACCBANDS",
+        adapter_function=VolatilityIndicators.accbands,
+        required_data=["high", "low", "close"],
+        result_type=IndicatorResultType.COMPLEX,
+        scale_type=IndicatorScaleType.PRICE_ABSOLUTE,
+        category="volatility",
+        output_names=["ACCBANDS_Upper", "ACCBANDS_Middle", "ACCBANDS_Lower"],
+        default_output="ACCBANDS_Middle",
+    )
+    accbands_config.add_parameter(
+        ParameterConfig(
+            name="length",
+            default_value=20,
+            min_value=2,
+            max_value=100,
+            description="ACCBANDS計算期間",
+        )
+    )
+    accbands_config.param_map = {"length": "length"}
+    indicator_registry.register(accbands_config)
+
+    # HWC
+    hwc_config = IndicatorConfig(
+        indicator_name="HWC",
+        adapter_function=VolatilityIndicators.hwc,
+        required_data=["close"],
+        result_type=IndicatorResultType.SINGLE,
+        scale_type=IndicatorScaleType.PRICE_ABSOLUTE,
+        category="volatility",
+    )
+    hwc_config.add_parameter(
+        ParameterConfig(
+            name="na",
+            default_value=0.2,
+            min_value=0.01,
+            max_value=1.0,
+            description="HWCノイズ除去係数",
+        )
+    )
+    hwc_config.add_parameter(
+        ParameterConfig(
+            name="nb",
+            default_value=0.1,
+            min_value=0.01,
+            max_value=1.0,
+            description="HWCバンド幅係数",
+        )
+    )
+    hwc_config.add_parameter(
+        ParameterConfig(
+            name="nc",
+            default_value=3,
+            min_value=1,
+            max_value=10,
+            description="HWCチャンネル係数",
+        )
+    )
+    hwc_config.param_map = {"close": "data", "na": "na", "nb": "nb", "nc": "nc"}
+    indicator_registry.register(hwc_config)
+
+    # MASSI
+    massi_config = IndicatorConfig(
+        indicator_name="MASSI",
+        adapter_function=VolatilityIndicators.massi,
+        required_data=["high", "low"],
+        result_type=IndicatorResultType.SINGLE,
+        scale_type=IndicatorScaleType.OSCILLATOR_0_100,
+        category="volatility",
+    )
+    massi_config.add_parameter(
+        ParameterConfig(
+            name="fast",
+            default_value=9,
+            min_value=2,
+            max_value=50,
+            description="MASSI高速期間",
+        )
+    )
+    massi_config.add_parameter(
+        ParameterConfig(
+            name="slow",
+            default_value=25,
+            min_value=5,
+            max_value=100,
+            description="MASSI低速期間",
+        )
+    )
+    massi_config.param_map = {"fast": "fast", "slow": "slow"}
+    indicator_registry.register(massi_config)
+
+    # PDIST
+    pdist_config = IndicatorConfig(
+        indicator_name="PDIST",
+        adapter_function=VolatilityIndicators.pdist,
+        required_data=["high", "low", "close"],
+        result_type=IndicatorResultType.SINGLE,
+        scale_type=IndicatorScaleType.PRICE_RATIO,
+        category="volatility",
+    )
+    pdist_config.add_parameter(
+        ParameterConfig(
+            name="length",
+            default_value=21,
+            min_value=2,
+            max_value=100,
+            description="PDIST計算期間",
+        )
+    )
+    pdist_config.param_map = {"length": "length"}
+    indicator_registry.register(pdist_config)
+
+    # THERMO
+    thermo_config = IndicatorConfig(
+        indicator_name="THERMO",
+        adapter_function=VolatilityIndicators.thermo,
+        required_data=["high", "low", "close"],
+        result_type=IndicatorResultType.COMPLEX,
+        scale_type=IndicatorScaleType.PRICE_ABSOLUTE,
+        category="volatility",
+        output_names=["THERMO_Long", "THERMO_Short"],
+        default_output="THERMO_Long",
+    )
+    thermo_config.add_parameter(
+        ParameterConfig(
+            name="length",
+            default_value=20,
+            min_value=2,
+            max_value=100,
+            description="THERMO計算期間",
+        )
+    )
+    thermo_config.param_map = {"length": "length"}
+    indicator_registry.register(thermo_config)
+
+    # UI
+    ui_config = IndicatorConfig(
+        indicator_name="UI",
+        adapter_function=VolatilityIndicators.ui,
+        required_data=["close"],
+        result_type=IndicatorResultType.SINGLE,
+        scale_type=IndicatorScaleType.OSCILLATOR_0_100,
+        category="volatility",
+    )
+    ui_config.add_parameter(
+        ParameterConfig(
+            name="length",
+            default_value=14,
+            min_value=2,
+            max_value=100,
+            description="UI計算期間",
+        )
+    )
+    ui_config.param_map = {"close": "data", "length": "length"}
+    indicator_registry.register(ui_config)
+
 
 def setup_volume_indicators():
     """出来高系インジケーターの設定"""
@@ -1464,6 +1642,29 @@ def setup_volume_indicators():
         )
     )
     indicator_registry.register(adosc_config)
+
+    # VP (Volume Price Confirmation)
+    vp_config = IndicatorConfig(
+        indicator_name="VP",
+        adapter_function=VolumeIndicators.vp,
+        required_data=["close", "volume"],
+        result_type=IndicatorResultType.COMPLEX,
+        scale_type=IndicatorScaleType.VOLUME,
+        category="volume",
+        output_names=["VP_LOW", "VP_MEAN", "VP_HIGH", "VP_POS_VOL", "VP_NEG_VOL", "VP_TOTAL_VOL"],
+        default_output="VP_TOTAL_VOL",
+    )
+    vp_config.add_parameter(
+        ParameterConfig(
+            name="width",
+            default_value=10,
+            min_value=2,
+            max_value=50,
+            description="VP価格範囲数",
+        )
+    )
+    vp_config.param_map = {"period": "width"}
+    indicator_registry.register(vp_config)
 
 
 def setup_statistics_indicators():
@@ -1612,6 +1813,129 @@ def setup_statistics_indicators():
     )
     var_config.param_map = {"close": "data", "nbdev": "nbdev"}
     indicator_registry.register(var_config)
+
+    # ENTROPY
+    entropy_config = IndicatorConfig(
+        indicator_name="ENTROPY",
+        adapter_function=StatisticsIndicators.entropy,
+        required_data=["close"],
+        result_type=IndicatorResultType.SINGLE,
+        scale_type=IndicatorScaleType.PRICE_RATIO,
+        category="statistics",
+    )
+    entropy_config.add_parameter(
+        ParameterConfig(name="length", default_value=10, min_value=2, max_value=100)
+    )
+    entropy_config.param_map = {"close": "data", "length": "length"}
+    indicator_registry.register(entropy_config)
+
+    # KURTOSIS
+    kurtosis_config = IndicatorConfig(
+        indicator_name="KURTOSIS",
+        adapter_function=StatisticsIndicators.kurtosis,
+        required_data=["close"],
+        result_type=IndicatorResultType.SINGLE,
+        scale_type=IndicatorScaleType.MOMENTUM_ZERO_CENTERED,
+        category="statistics",
+    )
+    kurtosis_config.add_parameter(
+        ParameterConfig(name="length", default_value=30, min_value=4, max_value=200)
+    )
+    kurtosis_config.param_map = {"close": "data", "length": "length"}
+    indicator_registry.register(kurtosis_config)
+
+    # MAD (Mean Absolute Deviation)
+    mad_config = IndicatorConfig(
+        indicator_name="MAD",
+        adapter_function=StatisticsIndicators.mad,
+        required_data=["close"],
+        result_type=IndicatorResultType.SINGLE,
+        scale_type=IndicatorScaleType.PRICE_ABSOLUTE,
+        category="statistics",
+    )
+    mad_config.add_parameter(
+        ParameterConfig(name="length", default_value=10, min_value=2, max_value=100)
+    )
+    mad_config.param_map = {"close": "data", "length": "length"}
+    indicator_registry.register(mad_config)
+
+    # MEDIAN
+    median_config = IndicatorConfig(
+        indicator_name="MEDIAN",
+        adapter_function=StatisticsIndicators.median,
+        required_data=["close"],
+        result_type=IndicatorResultType.SINGLE,
+        scale_type=IndicatorScaleType.PRICE_ABSOLUTE,
+        category="statistics",
+    )
+    median_config.add_parameter(
+        ParameterConfig(name="length", default_value=30, min_value=2, max_value=200)
+    )
+    median_config.param_map = {"close": "data", "length": "length"}
+    indicator_registry.register(median_config)
+
+    # QUANTILE
+    quantile_config = IndicatorConfig(
+        indicator_name="QUANTILE",
+        adapter_function=StatisticsIndicators.quantile,
+        required_data=["close"],
+        result_type=IndicatorResultType.SINGLE,
+        scale_type=IndicatorScaleType.PRICE_ABSOLUTE,
+        category="statistics",
+    )
+    quantile_config.add_parameter(
+        ParameterConfig(name="length", default_value=30, min_value=2, max_value=200)
+    )
+    quantile_config.add_parameter(
+        ParameterConfig(name="q", default_value=0.5, min_value=0.0, max_value=1.0)
+    )
+    quantile_config.param_map = {"close": "data", "length": "length", "q": "q"}
+    indicator_registry.register(quantile_config)
+
+    # SKEW
+    skew_config = IndicatorConfig(
+        indicator_name="SKEW",
+        adapter_function=StatisticsIndicators.skew,
+        required_data=["close"],
+        result_type=IndicatorResultType.SINGLE,
+        scale_type=IndicatorScaleType.MOMENTUM_ZERO_CENTERED,
+        category="statistics",
+    )
+    skew_config.add_parameter(
+        ParameterConfig(name="length", default_value=30, min_value=3, max_value=200)
+    )
+    skew_config.param_map = {"close": "data", "length": "length"}
+    indicator_registry.register(skew_config)
+
+    # TOS_STDEVALL
+    tos_stdevall_config = IndicatorConfig(
+        indicator_name="TOS_STDEVALL",
+        adapter_function=StatisticsIndicators.tos_stdevall,
+        required_data=["close"],
+        result_type=IndicatorResultType.SINGLE,
+        scale_type=IndicatorScaleType.PRICE_ABSOLUTE,
+        category="statistics",
+    )
+    tos_stdevall_config.add_parameter(
+        ParameterConfig(name="length", default_value=30, min_value=2, max_value=200)
+    )
+    tos_stdevall_config.param_map = {"close": "data", "length": "length"}
+    indicator_registry.register(tos_stdevall_config)
+
+    # ZSCORE
+    zscore_config = IndicatorConfig(
+        indicator_name="ZSCORE",
+        adapter_function=StatisticsIndicators.zscore,
+        required_data=["close"],
+        result_type=IndicatorResultType.SINGLE,
+        scale_type=IndicatorScaleType.MOMENTUM_ZERO_CENTERED,
+        category="statistics",
+    )
+    zscore_config.add_parameter(
+        ParameterConfig(name="length", default_value=30, min_value=2, max_value=200)
+    )
+    zscore_config.param_map = {"close": "data", "length": "length"}
+    indicator_registry.register(zscore_config)
 
     # LINEARREG_ANGLE
     linearreg_angle_config = IndicatorConfig(
@@ -2480,6 +2804,12 @@ eom_cfg = IndicatorConfig(
 eom_cfg.add_parameter(
     ParameterConfig(name="length", default_value=14, min_value=2, max_value=200)
 )
+eom_cfg.add_parameter(
+    ParameterConfig(name="divisor", default_value=100000000, min_value=1, max_value=1000000000)
+)
+eom_cfg.add_parameter(
+    ParameterConfig(name="drift", default_value=1, min_value=1, max_value=10)
+)
 indicator_registry.register(eom_cfg)
 
 kvo_cfg = IndicatorConfig(
@@ -2520,3 +2850,265 @@ cmf_cfg.add_parameter(
     ParameterConfig(name="length", default_value=20, min_value=2, max_value=200)
 )
 indicator_registry.register(cmf_cfg)
+
+# AOBV (Archer On-Balance Volume)
+aobv_config = IndicatorConfig(
+    indicator_name="AOBV",
+    adapter_function=VolumeIndicators.aobv,
+    required_data=["close", "volume"],
+    result_type=IndicatorResultType.SINGLE,
+    scale_type=IndicatorScaleType.VOLUME,
+    category="volume",
+)
+aobv_config.add_parameter(
+    ParameterConfig(name="fast", default_value=5, min_value=2, max_value=50)
+)
+aobv_config.add_parameter(
+    ParameterConfig(name="slow", default_value=10, min_value=2, max_value=100)
+)
+aobv_config.add_parameter(
+    ParameterConfig(name="max_lookback", default_value=2, min_value=1, max_value=10)
+)
+aobv_config.add_parameter(
+    ParameterConfig(name="min_lookback", default_value=2, min_value=1, max_value=10)
+)
+aobv_config.add_parameter(
+    ParameterConfig(name="mamode", default_value="ema", min_value="sma", max_value="ema")
+)
+indicator_registry.register(aobv_config)
+
+# EFI (Elder's Force Index)
+efi_config = IndicatorConfig(
+    indicator_name="EFI",
+    adapter_function=VolumeIndicators.efi,
+    required_data=["close", "volume"],
+    result_type=IndicatorResultType.SINGLE,
+    scale_type=IndicatorScaleType.MOMENTUM_ZERO_CENTERED,
+    category="volume",
+)
+efi_config.add_parameter(
+    ParameterConfig(name="length", default_value=13, min_value=2, max_value=100)
+)
+efi_config.add_parameter(
+    ParameterConfig(name="mamode", default_value="ema", min_value="sma", max_value="ema")
+)
+efi_config.add_parameter(
+    ParameterConfig(name="drift", default_value=1, min_value=1, max_value=10)
+)
+indicator_registry.register(efi_config)
+
+# PVOL (Price-Volume)
+pvol_config = IndicatorConfig(
+    indicator_name="PVOL",
+    adapter_function=VolumeIndicators.pvol,
+    required_data=["close", "volume"],
+    result_type=IndicatorResultType.SINGLE,
+    scale_type=IndicatorScaleType.VOLUME,
+    category="volume",
+)
+pvol_config.add_parameter(
+    ParameterConfig(name="signed", default_value=True, min_value=False, max_value=True)
+)
+indicator_registry.register(pvol_config)
+
+# PVR (Price Volume Rank)
+pvr_config = IndicatorConfig(
+    indicator_name="PVR",
+    adapter_function=VolumeIndicators.pvr,
+    required_data=["close", "volume"],
+    result_type=IndicatorResultType.SINGLE,
+    scale_type=IndicatorScaleType.OSCILLATOR_0_100,
+    category="volume",
+)
+indicator_registry.register(pvr_config)
+
+# Additional trend indicators
+# FWMA (Fibonacci's Weighted Moving Average)
+fwma_config = IndicatorConfig(
+    indicator_name="FWMA",
+    adapter_function=TrendIndicators.fwma,
+    required_data=["close"],
+    result_type=IndicatorResultType.SINGLE,
+    scale_type=IndicatorScaleType.PRICE_RATIO,
+    category="trend",
+)
+fwma_config.add_parameter(
+    ParameterConfig(name="length", default_value=10, min_value=2, max_value=200)
+)
+fwma_config.param_map = {"close": "data", "length": "length"}
+indicator_registry.register(fwma_config)
+
+# HILO (Gann High-Low Activator)
+hilo_config = IndicatorConfig(
+    indicator_name="HILO",
+    adapter_function=TrendIndicators.hilo,
+    required_data=["high", "low"],
+    result_type=IndicatorResultType.SINGLE,
+    scale_type=IndicatorScaleType.PRICE_ABSOLUTE,
+    category="trend",
+)
+hilo_config.add_parameter(
+    ParameterConfig(name="length", default_value=14, min_value=2, max_value=200)
+)
+hilo_config.param_map = {"length": "length"}
+indicator_registry.register(hilo_config)
+
+# HL2 (High-Low Average)
+hl2_config = IndicatorConfig(
+    indicator_name="HL2",
+    adapter_function=TrendIndicators.hl2,
+    required_data=["high", "low"],
+    result_type=IndicatorResultType.SINGLE,
+    scale_type=IndicatorScaleType.PRICE_ABSOLUTE,
+    category="trend",
+)
+indicator_registry.register(hl2_config)
+
+# HLC3 (High-Low-Close Average)
+hlc3_config = IndicatorConfig(
+    indicator_name="HLC3",
+    adapter_function=TrendIndicators.hlc3,
+    required_data=["high", "low", "close"],
+    result_type=IndicatorResultType.SINGLE,
+    scale_type=IndicatorScaleType.PRICE_ABSOLUTE,
+    category="trend",
+)
+indicator_registry.register(hlc3_config)
+
+# HWMA (Holt-Winter Moving Average)
+hwma_config = IndicatorConfig(
+    indicator_name="HWMA",
+    adapter_function=TrendIndicators.hwma,
+    required_data=["close"],
+    result_type=IndicatorResultType.SINGLE,
+    scale_type=IndicatorScaleType.PRICE_RATIO,
+    category="trend",
+)
+hwma_config.add_parameter(
+    ParameterConfig(name="length", default_value=10, min_value=2, max_value=200)
+)
+hwma_config.param_map = {"close": "data", "length": "length"}
+indicator_registry.register(hwma_config)
+
+# JMA (Jurik Moving Average)
+jma_config = IndicatorConfig(
+    indicator_name="JMA",
+    adapter_function=TrendIndicators.jma,
+    required_data=["close"],
+    result_type=IndicatorResultType.SINGLE,
+    scale_type=IndicatorScaleType.PRICE_RATIO,
+    category="trend",
+)
+jma_config.add_parameter(
+    ParameterConfig(name="length", default_value=7, min_value=2, max_value=50)
+)
+jma_config.add_parameter(
+    ParameterConfig(name="phase", default_value=0.0, min_value=-100.0, max_value=100.0)
+)
+jma_config.add_parameter(
+    ParameterConfig(name="power", default_value=2.0, min_value=1.0, max_value=10.0)
+)
+jma_config.param_map = {"close": "data", "length": "length", "phase": "phase", "power": "power"}
+indicator_registry.register(jma_config)
+
+# MCGD (McGinley Dynamic)
+mcgd_config = IndicatorConfig(
+    indicator_name="MCGD",
+    adapter_function=TrendIndicators.mcgd,
+    required_data=["close"],
+    result_type=IndicatorResultType.SINGLE,
+    scale_type=IndicatorScaleType.PRICE_RATIO,
+    category="trend",
+)
+mcgd_config.add_parameter(
+    ParameterConfig(name="length", default_value=10, min_value=2, max_value=200)
+)
+mcgd_config.param_map = {"close": "data", "length": "length"}
+indicator_registry.register(mcgd_config)
+
+# OHLC4 (Open-High-Low-Close Average)
+ohlc4_config = IndicatorConfig(
+    indicator_name="OHLC4",
+    adapter_function=TrendIndicators.ohlc4,
+    required_data=["open", "high", "low", "close"],
+    result_type=IndicatorResultType.SINGLE,
+    scale_type=IndicatorScaleType.PRICE_ABSOLUTE,
+    category="trend",
+)
+ohlc4_config.param_map = {"open": "open_", "high": "high", "low": "low", "close": "close"}
+indicator_registry.register(ohlc4_config)
+
+# PWMA (Pascal's Weighted Moving Average)
+pwma_config = IndicatorConfig(
+    indicator_name="PWMA",
+    adapter_function=TrendIndicators.pwma,
+    required_data=["close"],
+    result_type=IndicatorResultType.SINGLE,
+    scale_type=IndicatorScaleType.PRICE_RATIO,
+    category="trend",
+)
+pwma_config.add_parameter(
+    ParameterConfig(name="length", default_value=10, min_value=2, max_value=200)
+)
+pwma_config.param_map = {"close": "data", "length": "length"}
+indicator_registry.register(pwma_config)
+
+# SINWMA (Sine Weighted Moving Average)
+sinwma_config = IndicatorConfig(
+    indicator_name="SINWMA",
+    adapter_function=TrendIndicators.sinwma,
+    required_data=["close"],
+    result_type=IndicatorResultType.SINGLE,
+    scale_type=IndicatorScaleType.PRICE_RATIO,
+    category="trend",
+)
+sinwma_config.add_parameter(
+    ParameterConfig(name="length", default_value=10, min_value=2, max_value=200)
+)
+sinwma_config.param_map = {"close": "data", "length": "length"}
+indicator_registry.register(sinwma_config)
+
+# SSF (Ehler's Super Smoother Filter)
+ssf_config = IndicatorConfig(
+    indicator_name="SSF",
+    adapter_function=TrendIndicators.ssf,
+    required_data=["close"],
+    result_type=IndicatorResultType.SINGLE,
+    scale_type=IndicatorScaleType.PRICE_RATIO,
+    category="trend",
+)
+ssf_config.add_parameter(
+    ParameterConfig(name="length", default_value=10, min_value=2, max_value=200)
+)
+ssf_config.param_map = {"close": "data", "length": "length"}
+indicator_registry.register(ssf_config)
+
+# VIDYA (Variable Index Dynamic Average)
+vidya_config = IndicatorConfig(
+    indicator_name="VIDYA",
+    adapter_function=TrendIndicators.vidya,
+    required_data=["close"],
+    result_type=IndicatorResultType.SINGLE,
+    scale_type=IndicatorScaleType.PRICE_RATIO,
+    category="trend",
+)
+vidya_config.add_parameter(
+    ParameterConfig(name="length", default_value=14, min_value=2, max_value=200)
+)
+vidya_config.add_parameter(
+    ParameterConfig(name="adjust", default_value=True, min_value=False, max_value=True)
+)
+vidya_config.param_map = {"close": "data", "length": "length", "adjust": "adjust"}
+indicator_registry.register(vidya_config)
+
+# WCP (Weighted Closing Price)
+wcp_config = IndicatorConfig(
+    indicator_name="WCP",
+    adapter_function=TrendIndicators.wcp,
+    required_data=["close"],
+    result_type=IndicatorResultType.SINGLE,
+    scale_type=IndicatorScaleType.PRICE_ABSOLUTE,
+    category="trend",
+)
+wcp_config.param_map = {"close": "data"}
+indicator_registry.register(wcp_config)

@@ -26,6 +26,19 @@
 - Ichimoku Cloud
 - SMA_SLOPE (SMA Slope)
 - PRICE_EMA_RATIO (Price to EMA Ratio)
+- FWMA (Fibonacci's Weighted Moving Average)
+- HILO (Gann High-Low Activator)
+- HL2 (High-Low Average)
+- HLC3 (High-Low-Close Average)
+- HWMA (Holt-Winter Moving Average)
+- JMA (Jurik Moving Average)
+- MCGD (McGinley Dynamic)
+- OHLC4 (Open-High-Low-Close Average)
+- PWMA (Pascal's Weighted Moving Average)
+- SINWMA (Sine Weighted Moving Average)
+- SSF (Ehler's Super Smoother Filter)
+- VIDYA (Variable Index Dynamic Average)
+- WCP (Weighted Closing Price)
 """
 
 from typing import Union, Tuple
@@ -531,3 +544,109 @@ class TrendIndicators:
             series.rolling(window=length).apply(lambda x: x.argmax(), raw=False).values
         )
         return min_idx, max_idx
+
+    @staticmethod
+    @handle_pandas_ta_errors
+    def fwma(data: Union[np.ndarray, pd.Series], length: int = 10) -> np.ndarray:
+        """Fibonacci's Weighted Moving Average"""
+        series = pd.Series(data) if isinstance(data, np.ndarray) else data
+        return ta.fwma(series, length=length).values
+
+    @staticmethod
+    @handle_pandas_ta_errors
+    def hilo(high: Union[np.ndarray, pd.Series], low: Union[np.ndarray, pd.Series], length: int = 14) -> np.ndarray:
+        """Gann High-Low Activator"""
+        high_series = pd.Series(high) if isinstance(high, np.ndarray) else high
+        low_series = pd.Series(low) if isinstance(low, np.ndarray) else low
+        result = ta.hilo(high=high_series, low=low_series, length=length)
+        return result.values if result is not None else np.full(len(high_series), np.nan)
+
+    @staticmethod
+    @handle_pandas_ta_errors
+    def hl2(high: Union[np.ndarray, pd.Series], low: Union[np.ndarray, pd.Series]) -> np.ndarray:
+        """High-Low Average"""
+        high_series = pd.Series(high) if isinstance(high, np.ndarray) else high
+        low_series = pd.Series(low) if isinstance(low, np.ndarray) else low
+        return ((high_series + low_series) / 2).values
+
+    @staticmethod
+    @handle_pandas_ta_errors
+    def hlc3(high: Union[np.ndarray, pd.Series], low: Union[np.ndarray, pd.Series], close: Union[np.ndarray, pd.Series]) -> np.ndarray:
+        """High-Low-Close Average"""
+        high_series = pd.Series(high) if isinstance(high, np.ndarray) else high
+        low_series = pd.Series(low) if isinstance(low, np.ndarray) else low
+        close_series = pd.Series(close) if isinstance(close, np.ndarray) else close
+        return ((high_series + low_series + close_series) / 3).values
+
+    @staticmethod
+    @handle_pandas_ta_errors
+    def hwma(data: Union[np.ndarray, pd.Series], length: int = 10) -> np.ndarray:
+        """Holt-Winter Moving Average"""
+        series = pd.Series(data) if isinstance(data, np.ndarray) else data
+        result = ta.hwma(series, length=length)
+        return result.values if result is not None else np.full(len(series), np.nan)
+
+    @staticmethod
+    @handle_pandas_ta_errors
+    def jma(data: Union[np.ndarray, pd.Series], length: int = 7, phase: float = 0.0, power: float = 2.0) -> np.ndarray:
+        """Jurik Moving Average"""
+        series = pd.Series(data) if isinstance(data, np.ndarray) else data
+        result = ta.jma(series, length=length, phase=phase, power=power)
+        return result.values if result is not None else np.full(len(series), np.nan)
+
+    @staticmethod
+    @handle_pandas_ta_errors
+    def mcgd(data: Union[np.ndarray, pd.Series], length: int = 10) -> np.ndarray:
+        """McGinley Dynamic"""
+        series = pd.Series(data) if isinstance(data, np.ndarray) else data
+        result = ta.mcgd(series, length=length)
+        return result.values if result is not None else np.full(len(series), np.nan)
+
+    @staticmethod
+    @handle_pandas_ta_errors
+    def ohlc4(open_: Union[np.ndarray, pd.Series], high: Union[np.ndarray, pd.Series], low: Union[np.ndarray, pd.Series], close: Union[np.ndarray, pd.Series]) -> np.ndarray:
+        """Open-High-Low-Close Average"""
+        open_series = pd.Series(open_) if isinstance(open_, np.ndarray) else open_
+        high_series = pd.Series(high) if isinstance(high, np.ndarray) else high
+        low_series = pd.Series(low) if isinstance(low, np.ndarray) else low
+        close_series = pd.Series(close) if isinstance(close, np.ndarray) else close
+        return ((open_series + high_series + low_series + close_series) / 4).values
+
+    @staticmethod
+    @handle_pandas_ta_errors
+    def pwma(data: Union[np.ndarray, pd.Series], length: int = 10) -> np.ndarray:
+        """Pascal's Weighted Moving Average"""
+        series = pd.Series(data) if isinstance(data, np.ndarray) else data
+        result = ta.pwma(series, length=length)
+        return result.values if result is not None else np.full(len(series), np.nan)
+
+    @staticmethod
+    @handle_pandas_ta_errors
+    def sinwma(data: Union[np.ndarray, pd.Series], length: int = 10) -> np.ndarray:
+        """Sine Weighted Moving Average"""
+        series = pd.Series(data) if isinstance(data, np.ndarray) else data
+        result = ta.sinwma(series, length=length)
+        return result.values if result is not None else np.full(len(series), np.nan)
+
+    @staticmethod
+    @handle_pandas_ta_errors
+    def ssf(data: Union[np.ndarray, pd.Series], length: int = 10) -> np.ndarray:
+        """Ehler's Super Smoother Filter"""
+        series = pd.Series(data) if isinstance(data, np.ndarray) else data
+        result = ta.ssf(series, length=length)
+        return result.values if result is not None else np.full(len(series), np.nan)
+
+    @staticmethod
+    @handle_pandas_ta_errors
+    def vidya(data: Union[np.ndarray, pd.Series], length: int = 14, adjust: bool = True) -> np.ndarray:
+        """Variable Index Dynamic Average"""
+        series = pd.Series(data) if isinstance(data, np.ndarray) else data
+        result = ta.vidya(series, length=length, adjust=adjust)
+        return result.values if result is not None else np.full(len(series), np.nan)
+
+    @staticmethod
+    @handle_pandas_ta_errors
+    def wcp(data: Union[np.ndarray, pd.Series]) -> np.ndarray:
+        """Weighted Closing Price"""
+        series = pd.Series(data) if isinstance(data, np.ndarray) else data
+        return series.values  # WCP is essentially the close price itself

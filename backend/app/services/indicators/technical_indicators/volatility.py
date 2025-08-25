@@ -9,6 +9,13 @@
 - Keltner Channels
 - Donchian Channels
 - Supertrend
+- Aberration
+- Acceleration Bands
+- Holt-Winter Channel
+- Mass Index
+- Price Distance
+- Elder's Thermometer
+- Ulcer Index
 """
 
 from typing import Tuple, Union, Optional
@@ -229,3 +236,157 @@ class VolatilityIndicators:
             if np.all(np.isnan(direction)):
                 direction = np.where(c.to_numpy() >= st, 1.0, -1.0)
         return st, direction
+
+    @staticmethod
+    @handle_pandas_ta_errors
+    def aberration(
+        high: Union[np.ndarray, pd.Series],
+        low: Union[np.ndarray, pd.Series],
+        close: Union[np.ndarray, pd.Series],
+        length: int = 5,
+    ) -> np.ndarray:
+        """Aberration"""
+        high_series = pd.Series(high) if isinstance(high, np.ndarray) else high
+        low_series = pd.Series(low) if isinstance(low, np.ndarray) else low
+        close_series = pd.Series(close) if isinstance(close, np.ndarray) else close
+
+        result = ta.aberration(
+            high=high_series, low=low_series, close=close_series, length=length
+        )
+        if result is None:
+            return np.full(len(high_series), np.nan)
+        return result.to_numpy()
+
+    @staticmethod
+    @handle_pandas_ta_errors
+    def accbands(
+        high: Union[np.ndarray, pd.Series],
+        low: Union[np.ndarray, pd.Series],
+        close: Union[np.ndarray, pd.Series],
+        length: int = 20,
+    ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+        """Acceleration Bands: returns (upper, middle, lower)"""
+        high_series = pd.Series(high) if isinstance(high, np.ndarray) else high
+        low_series = pd.Series(low) if isinstance(low, np.ndarray) else low
+        close_series = pd.Series(close) if isinstance(close, np.ndarray) else close
+
+        result = ta.accbands(high=high_series, low=low_series, close=close_series, length=length)
+        if result is None:
+            # ta.accbandsがNoneを返す場合のフォールバック
+            upper = np.full(len(close_series), np.nan)
+            middle = np.full(len(close_series), np.nan)
+            lower = np.full(len(close_series), np.nan)
+            return upper, middle, lower
+
+        assert result is not None  # for type checker
+        cols = list(result.columns)
+        upper = result[next((c for c in cols if "ACCBU" in c or "upper" in c.lower()), cols[0])].to_numpy()
+        middle = result[
+            next(
+                (c for c in cols if "ACCBM" in c or "mid" in c.lower()),
+                cols[1 if len(cols) > 1 else 0],
+            )
+        ].to_numpy()
+        lower = result[next((c for c in cols if "ACCBL" in c or "lower" in c.lower()), cols[-1])].to_numpy()
+        return upper, middle, lower
+
+    @staticmethod
+    @handle_pandas_ta_errors
+    def hwc(
+        high: Union[np.ndarray, pd.Series],
+        low: Union[np.ndarray, pd.Series],
+        close: Union[np.ndarray, pd.Series],
+        length: int = 20,
+    ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+        """Holt-Winter Channel: returns (upper, middle, lower)"""
+        high_series = pd.Series(high) if isinstance(high, np.ndarray) else high
+        low_series = pd.Series(low) if isinstance(low, np.ndarray) else low
+        close_series = pd.Series(close) if isinstance(close, np.ndarray) else close
+
+        result = ta.hwc(high=high_series, low=low_series, close=close_series, length=length)
+        if result is None:
+            # ta.hwcがNoneを返す場合のフォールバック
+            upper = np.full(len(close_series), np.nan)
+            middle = np.full(len(close_series), np.nan)
+            lower = np.full(len(close_series), np.nan)
+            return upper, middle, lower
+
+        assert result is not None  # for type checker
+        cols = list(result.columns)
+        upper = result[next((c for c in cols if "HWU" in c or "upper" in c.lower()), cols[0])].to_numpy()
+        middle = result[
+            next(
+                (c for c in cols if "HWM" in c or "mid" in c.lower()),
+                cols[1 if len(cols) > 1 else 0],
+            )
+        ].to_numpy()
+        lower = result[next((c for c in cols if "HWL" in c or "lower" in c.lower()), cols[-1])].to_numpy()
+        return upper, middle, lower
+
+    @staticmethod
+    @handle_pandas_ta_errors
+    def massi(
+        high: Union[np.ndarray, pd.Series],
+        low: Union[np.ndarray, pd.Series],
+        length: int = 25,
+        fast: int = 9,
+        slow: int = 25,
+    ) -> np.ndarray:
+        """Mass Index"""
+        high_series = pd.Series(high) if isinstance(high, np.ndarray) else high
+        low_series = pd.Series(low) if isinstance(low, np.ndarray) else low
+
+        result = ta.massi(high=high_series, low=low_series, length=length, fast=fast, slow=slow)
+        if result is None:
+            return np.full(len(high_series), np.nan)
+        return result.to_numpy()
+
+    @staticmethod
+    @handle_pandas_ta_errors
+    def pdist(
+        open: Union[np.ndarray, pd.Series],
+        high: Union[np.ndarray, pd.Series],
+        low: Union[np.ndarray, pd.Series],
+        close: Union[np.ndarray, pd.Series],
+        length: int = 10,
+    ) -> np.ndarray:
+        """Price Distance"""
+        open_series = pd.Series(open) if isinstance(open, np.ndarray) else open
+        high_series = pd.Series(high) if isinstance(high, np.ndarray) else high
+        low_series = pd.Series(low) if isinstance(low, np.ndarray) else low
+        close_series = pd.Series(close) if isinstance(close, np.ndarray) else close
+
+        result = ta.pdist(open_=open_series, high=high_series, low=low_series, close=close_series, length=length)
+        if result is None:
+            return np.full(len(close_series), np.nan)
+        return result.to_numpy()
+
+    @staticmethod
+    @handle_pandas_ta_errors
+    def thermo(
+        high: Union[np.ndarray, pd.Series],
+        low: Union[np.ndarray, pd.Series],
+        length: int = 25,
+        long_length: int = 14,
+    ) -> np.ndarray:
+        """Elder's Thermometer"""
+        high_series = pd.Series(high) if isinstance(high, np.ndarray) else high
+        low_series = pd.Series(low) if isinstance(low, np.ndarray) else low
+
+        result = ta.thermo(high=high_series, low=low_series, length=length, long_length=long_length)
+        if result is None:
+            return np.full(len(high_series), np.nan)
+        return result.to_numpy()
+
+    @staticmethod
+    @handle_pandas_ta_errors
+    def ui(
+        data: Union[np.ndarray, pd.Series], length: int = 14
+    ) -> np.ndarray:
+        """Ulcer Index"""
+        series = pd.Series(data) if isinstance(data, np.ndarray) else data
+
+        result = ta.ui(series, length=length)
+        if result is None:
+            return np.full(len(series), np.nan)
+        return result.to_numpy()

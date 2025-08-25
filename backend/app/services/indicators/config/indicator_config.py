@@ -42,16 +42,34 @@ class ParameterConfig:
     """パラメータ設定"""
 
     name: str  # パラメータ名（例：period, fast_period）
-    default_value: Union[int, float]  # デフォルト値
-    min_value: Optional[Union[int, float]] = None  # 最小値
-    max_value: Optional[Union[int, float]] = None  # 最大値
+    default_value: Union[int, float, str, bool]  # デフォルト値
+    min_value: Optional[Union[int, float, str, bool]] = None  # 最小値
+    max_value: Optional[Union[int, float, str, bool]] = None  # 最大値
     description: Optional[str] = None  # パラメータの説明
 
-    def validate_value(self, value: Union[int, float]) -> bool:
+    def __init__(
+        self,
+        name: str,
+        default_value: Union[int, float, str, bool],
+        min_value: Optional[Union[int, float, str, bool]] = None,
+        max_value: Optional[Union[int, float, str, bool]] = None,
+        description: Optional[str] = None
+    ) -> None:
+        self.name = name
+        self.default_value = default_value
+        self.min_value = min_value
+        self.max_value = max_value
+        self.description = description
+
+    def validate_value(self, value: Union[int, float, str, bool]) -> bool:
         """値の妥当性を検証"""
-        if self.min_value is not None and value < self.min_value:
+        # 数値型でない場合は検証をスキップ
+        if not isinstance(value, (int, float)):
+            return True
+
+        if self.min_value is not None and isinstance(self.min_value, (int, float)) and value < self.min_value:
             return False
-        if self.max_value is not None and value > self.max_value:
+        if self.max_value is not None and isinstance(self.max_value, (int, float)) and value > self.max_value:
             return False
         return True
 
@@ -102,7 +120,7 @@ class IndicatorConfig:
                     return False
         return True
 
-    def get_parameter_ranges(self) -> Dict[str, Dict[str, Union[int, float]]]:
+    def get_parameter_ranges(self) -> Dict[str, Dict[str, Union[int, float, str, bool]]]:
         """
         パラメータの範囲情報を取得
 
