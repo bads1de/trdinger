@@ -65,12 +65,10 @@ class GAConfig(BaseConfig):
 
     # 指標設定
     max_indicators: int = 3
-    allowed_indicators: List[str] = field(
-        default_factory=lambda: []
-    )
+    allowed_indicators: List[str] = field(default_factory=lambda: [])
 
     # 指標モード設定
-    indicator_mode: str = "mixed"  # "technical_only", "ml_only", "mixed"
+    indicator_mode: str = "technical_only"  # "technical_only", "ml_only"
     enable_ml_indicators: bool = True  # 後方互換性のため保持
 
     # パラメータ範囲設定
@@ -374,8 +372,6 @@ class GAConfig(BaseConfig):
             objective_weights=data.get("objective_weights", [1.0]),
         )
 
-    
-
     def get_default_values(self) -> Dict[str, Any]:
         """BaseConfig用のデフォルト値を取得"""
         return {
@@ -437,7 +433,9 @@ class GAConfig(BaseConfig):
 
     @classmethod
     def create_multi_objective(
-        cls, objectives: Optional[List[str]] = None, weights: Optional[List[float]] = None
+        cls,
+        objectives: Optional[List[str]] = None,
+        weights: Optional[List[float]] = None,
     ) -> "GAConfig":
         """
         多目的最適化用設定を作成

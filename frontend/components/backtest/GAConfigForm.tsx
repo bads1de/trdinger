@@ -19,7 +19,6 @@ import { ObjectiveSelection } from "./optimization/ObjectiveSelection";
 
 // 指標モードの選択肢
 const INDICATOR_MODE_OPTIONS = [
-  { value: "mixed", label: "混合 (テクニカル + ML)" },
   { value: "technical_only", label: "テクニカルオンリー" },
   { value: "ml_only", label: "MLオンリー" },
 ];

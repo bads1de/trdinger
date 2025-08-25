@@ -191,8 +191,7 @@ class RandomGeneGenerator:
                     take_profit_pct=0.01, stop_loss_pct=0.005
                 ),  # デフォルト値
                 position_sizing_gene=PositionSizingGene(
-                    method=PositionSizingMethod.FIXED_QUANTITY,
-                    fixed_quantity=1000
+                    method=PositionSizingMethod.FIXED_QUANTITY, fixed_quantity=1000
                 ),  # デフォルト値
                 metadata={"generated_by": "Fallback"},
             )
@@ -216,7 +215,7 @@ class RandomGeneGenerator:
         ml_indicators = ["ML_UP_PROB", "ML_DOWN_PROB", "ML_RANGE_PROB"]
 
         # 指標モードに応じて選択
-        indicator_mode = getattr(config, "indicator_mode", "mixed")
+        indicator_mode = getattr(config, "indicator_mode", "technical_only")
 
         if indicator_mode == "technical_only":
             # テクニカル指標のみ
@@ -225,17 +224,10 @@ class RandomGeneGenerator:
                 f"指標モード: テクニカルオンリー ({len(available_indicators)}個の指標)"
             )
 
-        elif indicator_mode == "ml_only":
+        else:  # ml_only
             # ML指標のみ
             available_indicators = ml_indicators
             logger.info(f"指標モード: MLオンリー ({len(available_indicators)}個の指標)")
-
-        else:  # mixed または未設定
-            # 両方使用（デフォルト）
-            available_indicators = technical_indicators + ml_indicators
-            logger.info(
-                f"指標モード: 混合 (テクニカル: {len(technical_indicators)}, ML: {len(ml_indicators)})"
-            )
 
         # allowed_indicators によりさらに絞り込み（安全性と一貫性のため）
         try:
