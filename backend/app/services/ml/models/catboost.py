@@ -59,7 +59,7 @@ class CatBoostModel:
             学習結果
         """
         try:
-            from catboost import CatBoostClassifier
+            from catboost import CatBoostClassifier  # type: ignore
 
             # 特徴量カラムを保存
             self.feature_columns = X_train.columns.tolist()

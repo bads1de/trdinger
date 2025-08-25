@@ -114,12 +114,13 @@ class FearGreedFeatureCalculator:
         )
 
         # Fear & Greed 移動平均（短期・長期）
-        result_df["FG_MA_7"] = (
-            merged_df["value"].rolling(window=7, min_periods=1).mean().fillna(0.0)
-        )
-        result_df["FG_MA_30"] = (
-            merged_df["value"].rolling(window=30, min_periods=1).mean().fillna(0.0)
-        )
+        value_series = pd.Series(merged_df["value"])
+        result_df["FG_MA_7"] = pd.Series(
+            value_series.rolling(window=7, min_periods=1).mean()
+        ).fillna(0.0)
+        result_df["FG_MA_30"] = pd.Series(
+            value_series.rolling(window=30, min_periods=1).mean()
+        ).fillna(0.0)
 
         # Fear & Greed 正規化値（0-1スケール）
         result_df["FG_Normalized"] = merged_df["value"] / 100.0

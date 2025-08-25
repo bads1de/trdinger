@@ -143,8 +143,8 @@ class InteractionFeatureCalculator:
         if atr_column and "Price_Momentum_14" in df.columns:
             try:
                 # データ型を確認して安全に変換
-                atr_values = self._safe_numeric_conversion(df[atr_column])
-                momentum_values = self._safe_numeric_conversion(df["Price_Momentum_14"])
+                atr_values = self._safe_numeric_conversion(pd.Series(df[atr_column]))
+                momentum_values = self._safe_numeric_conversion(pd.Series(df["Price_Momentum_14"]))
 
                 if atr_values is not None and momentum_values is not None:
                     interaction = atr_values * momentum_values
@@ -157,8 +157,8 @@ class InteractionFeatureCalculator:
         # Volatility_Spike × Price_Change_5
         if "Volatility_Spike" in df.columns and "Price_Change_5" in df.columns:
             try:
-                volatility_spike = self._safe_numeric_conversion(df["Volatility_Spike"])
-                price_change = self._safe_numeric_conversion(df["Price_Change_5"])
+                volatility_spike = self._safe_numeric_conversion(pd.Series(df["Volatility_Spike"]))
+                price_change = self._safe_numeric_conversion(pd.Series(df["Price_Change_5"]))
 
                 if volatility_spike is not None and price_change is not None:
                     interaction = volatility_spike * price_change
@@ -177,8 +177,8 @@ class InteractionFeatureCalculator:
         # Volume_Ratio × Trend_Strength
         if "Volume_Ratio" in df.columns and "Trend_Strength" in df.columns:
             try:
-                volume_ratio = self._safe_numeric_conversion(df["Volume_Ratio"])
-                trend_strength = self._safe_numeric_conversion(df["Trend_Strength"])
+                volume_ratio = self._safe_numeric_conversion(pd.Series(df["Volume_Ratio"]))
+                trend_strength = self._safe_numeric_conversion(pd.Series(df["Trend_Strength"]))
 
                 if volume_ratio is not None and trend_strength is not None:
                     interaction = volume_ratio * trend_strength
@@ -191,9 +191,9 @@ class InteractionFeatureCalculator:
         # Volume_Spike × Breakout_Strength
         if "Volume_Spike" in df.columns and "Breakout_Strength" in df.columns:
             try:
-                volume_spike = self._safe_numeric_conversion(df["Volume_Spike"])
+                volume_spike = self._safe_numeric_conversion(pd.Series(df["Volume_Spike"]))
                 breakout_strength = self._safe_numeric_conversion(
-                    df["Breakout_Strength"]
+                    pd.Series(df["Breakout_Strength"])
                 )
 
                 if volume_spike is not None and breakout_strength is not None:
@@ -213,8 +213,8 @@ class InteractionFeatureCalculator:
         # FR_Normalized × (RSI - 50)
         if "FR_Normalized" in df.columns and "RSI" in df.columns:
             try:
-                fr_normalized = self._safe_numeric_conversion(df["FR_Normalized"])
-                rsi_values = self._safe_numeric_conversion(df["RSI"])
+                fr_normalized = self._safe_numeric_conversion(pd.Series(df["FR_Normalized"]))
+                rsi_values = self._safe_numeric_conversion(pd.Series(df["RSI"]))
 
                 if fr_normalized is not None and rsi_values is not None:
                     rsi_centered = rsi_values - 50
@@ -228,8 +228,8 @@ class InteractionFeatureCalculator:
         # FR_Extreme_High × (RSI > 70)（実際の特徴量名に合わせて修正）
         if "FR_Extreme_High" in df.columns and "RSI" in df.columns:
             try:
-                fr_extreme_high = self._safe_numeric_conversion(df["FR_Extreme_High"])
-                rsi_values = self._safe_numeric_conversion(df["RSI"])
+                fr_extreme_high = self._safe_numeric_conversion(pd.Series(df["FR_Extreme_High"]))
+                rsi_values = self._safe_numeric_conversion(pd.Series(df["RSI"]))
 
                 if fr_extreme_high is not None and rsi_values is not None:
                     interaction = fr_extreme_high * (rsi_values > 70).astype(float)
@@ -240,8 +240,8 @@ class InteractionFeatureCalculator:
         # FR_Extreme_Low × (RSI < 30)（実際の特徴量名に合わせて修正）
         if "FR_Extreme_Low" in df.columns and "RSI" in df.columns:
             try:
-                fr_extreme_low = self._safe_numeric_conversion(df["FR_Extreme_Low"])
-                rsi_values = self._safe_numeric_conversion(df["RSI"])
+                fr_extreme_low = self._safe_numeric_conversion(pd.Series(df["FR_Extreme_Low"]))
+                rsi_values = self._safe_numeric_conversion(pd.Series(df["RSI"]))
 
                 if fr_extreme_low is not None and rsi_values is not None:
                     interaction = fr_extreme_low * (rsi_values < 30).astype(float)
@@ -258,8 +258,8 @@ class InteractionFeatureCalculator:
         # OI_Change_Rate × Price_Change_5
         if "OI_Change_Rate" in df.columns and "Price_Change_5" in df.columns:
             try:
-                oi_change = self._safe_numeric_conversion(df["OI_Change_Rate"])
-                price_change = self._safe_numeric_conversion(df["Price_Change_5"])
+                oi_change = self._safe_numeric_conversion(pd.Series(df["OI_Change_Rate"]))
+                price_change = self._safe_numeric_conversion(pd.Series(df["Price_Change_5"]))
 
                 if oi_change is not None and price_change is not None:
                     interaction = oi_change * price_change
@@ -272,8 +272,8 @@ class InteractionFeatureCalculator:
         # OI_Trend × Price_Momentum_14
         if "OI_Trend" in df.columns and "Price_Momentum_14" in df.columns:
             try:
-                oi_trend = self._safe_numeric_conversion(df["OI_Trend"])
-                momentum = self._safe_numeric_conversion(df["Price_Momentum_14"])
+                oi_trend = self._safe_numeric_conversion(pd.Series(df["OI_Trend"]))
+                momentum = self._safe_numeric_conversion(pd.Series(df["Price_Momentum_14"]))
 
                 if oi_trend is not None and momentum is not None:
                     interaction = oi_trend * momentum
@@ -288,7 +288,7 @@ class InteractionFeatureCalculator:
 
         return result_df
 
-    def _safe_numeric_conversion(self, series: pd.Series) -> pd.Series:
+    def _safe_numeric_conversion(self, series: pd.Series) -> pd.Series | None:
         """
         安全な数値変換を実行
 
@@ -302,7 +302,7 @@ class InteractionFeatureCalculator:
             # データ型をチェック
             if series.dtype == "object":
                 # object型の場合は数値変換を試行
-                series = pd.to_numeric(series, errors="coerce")
+                series = pd.Series(pd.to_numeric(series, errors="coerce"))
 
             # 無限大値をNaNに置換
             series = series.replace([np.inf, -np.inf], np.nan)

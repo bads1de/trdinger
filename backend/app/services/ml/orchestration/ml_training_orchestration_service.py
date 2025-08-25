@@ -448,18 +448,6 @@ class MLTrainingOrchestrationService:
     def _cleanup_tsfresh_resources(self):
         """TSFresh関連リソースのクリーンアップ"""
         try:
-
-            # TSFreshの内部キャッシュをクリア
-            try:
-                from tsfresh.utilities.dataframe_functions import clear_cache
-
-                clear_cache()
-                logger.debug("TSFreshキャッシュクリア完了")
-            except ImportError:
-                logger.debug("TSFreshキャッシュクリア機能が利用できません")
-            except Exception as e:
-                logger.warning(f"TSFreshキャッシュクリアエラー: {e}")
-
             # TSFreshの一時ファイルをクリーンアップ
             import os
             import tempfile

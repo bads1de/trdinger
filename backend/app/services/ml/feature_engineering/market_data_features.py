@@ -56,7 +56,7 @@ class MarketDataFeatureCalculator(BaseFeatureCalculator):
             )
 
         if funding_rate_data is not None and open_interest_data is not None:
-            result_df = self.calculate_combined_features(
+            result_df = self.calculate_composite_features(
                 result_df, funding_rate_data, open_interest_data, lookback_periods
             )
 
@@ -104,18 +104,18 @@ class MarketDataFeatureCalculator(BaseFeatureCalculator):
             merged_df[fr_column] = merged_df[fr_column].ffill()
 
             # ファンディングレート移動平均（pandas rolling を使用）
-            result_df["FR_MA_24"] = (
+            fr_ma_24 = (
                 merged_df[fr_column]
                 .rolling(window=24, min_periods=1)
                 .mean()
-                .fillna(0.0)
             )
-            result_df["FR_MA_168"] = (
+            result_df["FR_MA_24"] = pd.Series(fr_ma_24).fillna(0.0)
+            fr_ma_168 = (
                 merged_df[fr_column]
                 .rolling(window=168, min_periods=1)
                 .mean()
-                .fillna(0.0)
             )
+            result_df["FR_MA_168"] = pd.Series(fr_ma_168).fillna(0.0)
 
             # ファンディングレート変化（安全な計算）
             result_df["FR_Change"] = merged_df[fr_column].diff().fillna(0.0)
@@ -253,18 +253,18 @@ class MarketDataFeatureCalculator(BaseFeatureCalculator):
             ].fillna(merged_df[oi_column])
 
             # 建玉残高移動平均
-            result_df["OI_MA_24"] = (
+            oi_ma_24 = (
                 merged_df[oi_column]
                 .rolling(window=24, min_periods=1)
                 .mean()
-                .fillna(0.0)
             )
-            result_df["OI_MA_168"] = (
+            result_df["OI_MA_24"] = pd.Series(oi_ma_24).fillna(0.0)
+            oi_ma_168 = (
                 merged_df[oi_column]
                 .rolling(window=168, min_periods=1)
                 .mean()
-                .fillna(0.0)
             )
+            result_df["OI_MA_168"] = pd.Series(oi_ma_168).fillna(0.0)
 
             # 建玉残高トレンド（安全な計算）
             result_df["OI_Trend"] = (

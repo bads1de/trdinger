@@ -54,7 +54,7 @@ class EnhancedCryptoFeatures:
 
         # 統計的手法による補完
         optional_columns = ["open_interest", "funding_rate", "fear_greed_value"]
-        result_df = data_preprocessor.transform_missing_values(
+        result_df = data_preprocessor.interpolate_columns(
             result_df, strategy="median", columns=optional_columns
         )
 
@@ -131,9 +131,9 @@ class EnhancedCryptoFeatures:
             result_df[f"price_vs_vwap_{period}h"] = (df["Close"] - vwap) / vwap
 
         # 出来高プロファイル
-        result_df["volume_price_trend"] = (
-            df["Volume"].rolling(24).corr(df["Close"].rolling(24).mean())
-        )
+        close_rolling_mean = df["Close"].rolling(24).mean()
+        volume_rolling = df["Volume"].rolling(24)
+        result_df["volume_price_trend"] = volume_rolling.corr(close_rolling_mean).fillna(0.0)  # type: ignore
 
         self.feature_groups["volume"].extend(
             [col for col in result_df.columns if col.startswith(("volume_", "vwap_"))]
@@ -257,30 +257,44 @@ class EnhancedCryptoFeatures:
         import pandas_ta as ta
 
         for period in [14, 24]:
-            result_df[f"rsi_{period}"] = ta.rsi(df["Close"], length=period).fillna(50.0)
+            rsi_result = ta.rsi(df["Close"], length=period)
+            if rsi_result is not None:
+                result_df[f"rsi_{period}"] = rsi_result.fillna(50.0)
+            else:
+                result_df[f"rsi_{period}"] = 50.0
 
         # ボリンジャーバンド（pandas-ta使用）
         for period in [20, 48]:
             bb_result = ta.bbands(df["Close"], length=period, std=2)
-            result_df[f"bb_upper_{period}"] = bb_result[f"BBU_{period}_2.0"].fillna(
-                df["Close"]
-            )
-            result_df[f"bb_lower_{period}"] = bb_result[f"BBL_{period}_2.0"].fillna(
-                df["Close"]
-            )
-            # BB Position計算
-            bb_width = result_df[f"bb_upper_{period}"] - result_df[f"bb_lower_{period}"]
-            result_df[f"bb_position_{period}"] = (
-                ((df["Close"] - result_df[f"bb_lower_{period}"]) / (bb_width + 1e-10))
-                .clip(0, 1)
-                .fillna(0.5)
-            )
+            if bb_result is not None:
+                result_df[f"bb_upper_{period}"] = bb_result[f"BBU_{period}_2.0"].fillna(
+                    df["Close"]
+                )
+                result_df[f"bb_lower_{period}"] = bb_result[f"BBL_{period}_2.0"].fillna(
+                    df["Close"]
+                )
+                # BB Position計算
+                bb_width = result_df[f"bb_upper_{period}"] - result_df[f"bb_lower_{period}"]
+                result_df[f"bb_position_{period}"] = (
+                    ((df["Close"] - result_df[f"bb_lower_{period}"]) / (bb_width + 1e-10))
+                    .clip(0, 1)
+                    .fillna(0.5)
+                )
+            else:
+                result_df[f"bb_upper_{period}"] = df["Close"]
+                result_df[f"bb_lower_{period}"] = df["Close"]
+                result_df[f"bb_position_{period}"] = 0.5
 
         # MACD（pandas-ta使用）
         macd_result = ta.macd(df["Close"], fast=12, slow=26, signal=9)
-        result_df["macd"] = macd_result["MACD_12_26_9"].fillna(0.0)
-        result_df["macd_signal"] = macd_result["MACDs_12_26_9"].fillna(0.0)
-        result_df["macd_histogram"] = macd_result["MACDh_12_26_9"].fillna(0.0)
+        if macd_result is not None:
+            result_df["macd"] = macd_result["MACD_12_26_9"].fillna(0.0)
+            result_df["macd_signal"] = macd_result["MACDs_12_26_9"].fillna(0.0)
+            result_df["macd_histogram"] = macd_result["MACDh_12_26_9"].fillna(0.0)
+        else:
+            result_df["macd"] = 0.0
+            result_df["macd_signal"] = 0.0
+            result_df["macd_histogram"] = 0.0
 
         self.feature_groups["technical"].extend(
             [
@@ -334,25 +348,45 @@ class EnhancedCryptoFeatures:
         """時間関連特徴量"""
         result_df = df.copy()
 
+        # DatetimeIndexの確認
+        if not isinstance(result_df.index, pd.DatetimeIndex):
+            logger.warning("インデックスがDatetimeIndexではありません。時間関連特徴量をスキップします。")
+            return result_df
+
         # 時間帯
-        result_df["hour"] = result_df.index.hour
-        result_df["day_of_week"] = result_df.index.dayofweek
-        result_df["is_weekend"] = (result_df.index.dayofweek >= 5).astype(int)
+        try:
+            hour = getattr(result_df.index, 'hour', 0)  # type: ignore
+            dayofweek = getattr(result_df.index, 'dayofweek', 0)  # type: ignore
+            day = getattr(result_df.index, 'day', 15)  # type: ignore
 
-        # 地域別取引時間
-        result_df["asia_hours"] = (
-            (result_df["hour"] >= 0) & (result_df["hour"] < 8)
-        ).astype(int)
-        result_df["europe_hours"] = (
-            (result_df["hour"] >= 8) & (result_df["hour"] < 16)
-        ).astype(int)
-        result_df["us_hours"] = (
-            (result_df["hour"] >= 16) & (result_df["hour"] < 24)
-        ).astype(int)
+            result_df["hour"] = hour
+            result_df["day_of_week"] = dayofweek
+            result_df["is_weekend"] = (pd.Series(dayofweek) >= 5).astype(int)
 
-        # 月末・月初効果
-        result_df["month_end"] = (result_df.index.day >= 28).astype(int)
-        result_df["month_start"] = (result_df.index.day <= 3).astype(int)
+            # 地域別取引時間
+            result_df["asia_hours"] = (
+                (pd.Series(hour) >= 0) & (pd.Series(hour) < 8)
+            ).astype(int)
+            result_df["europe_hours"] = (
+                (pd.Series(hour) >= 8) & (pd.Series(hour) < 16)
+            ).astype(int)
+            result_df["us_hours"] = (
+                (pd.Series(hour) >= 16) & (pd.Series(hour) < 24)
+            ).astype(int)
+
+            # 月末・月初効果
+            result_df["month_end"] = (pd.Series(day) >= 28).astype(int)
+            result_df["month_start"] = (pd.Series(day) <= 3).astype(int)
+        except (AttributeError, TypeError) as e:
+            logger.warning(f"時間関連特徴量の生成でエラー: {e}")
+            result_df["hour"] = 0
+            result_df["day_of_week"] = 0
+            result_df["is_weekend"] = 0
+            result_df["asia_hours"] = 0
+            result_df["europe_hours"] = 0
+            result_df["us_hours"] = 0
+            result_df["month_end"] = 0
+            result_df["month_start"] = 0
 
         self.feature_groups["temporal"].extend(
             [
@@ -375,7 +409,7 @@ class EnhancedCryptoFeatures:
 
         # 統計的手法による数値カラムの補完
         numeric_cols = result_df.select_dtypes(include=[np.number]).columns.tolist()
-        result_df = data_preprocessor.transform_missing_values(
+        result_df = data_preprocessor.interpolate_columns(
             result_df, strategy="median", columns=numeric_cols
         )
 

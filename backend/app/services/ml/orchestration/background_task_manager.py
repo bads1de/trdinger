@@ -9,7 +9,7 @@ import logging
 import threading
 import time
 from contextlib import contextmanager
-from typing import Any, Dict, List, Optional
+from typing import Any, Callable, Dict, List, Optional
 from uuid import uuid4
 
 logger = logging.getLogger(__name__)
@@ -25,7 +25,7 @@ class BackgroundTaskManager:
     def __init__(self):
         self._active_tasks: Dict[str, Dict[str, Any]] = {}
         self._task_resources: Dict[str, List[Any]] = {}
-        self._cleanup_callbacks: Dict[str, List[callable]] = {}
+        self._cleanup_callbacks: Dict[str, List[Callable[[], None]]] = {}
         self._lock = threading.Lock()
         self._shutdown_event = threading.Event()
 
@@ -34,7 +34,7 @@ class BackgroundTaskManager:
         task_id: Optional[str] = None,
         task_name: str = "Unknown Task",
         resources: Optional[List[Any]] = None,
-        cleanup_callbacks: Optional[List[callable]] = None,
+        cleanup_callbacks: Optional[List[Callable[[], None]]] = None,
     ) -> str:
         """
         バックグラウンドタスクを登録
@@ -137,7 +137,7 @@ class BackgroundTaskManager:
         self,
         task_name: str,
         resources: Optional[List[Any]] = None,
-        cleanup_callbacks: Optional[List[callable]] = None,
+        cleanup_callbacks: Optional[List[Callable[[], None]]] = None,
     ):
         """
         管理されたバックグラウンドタスクのコンテキストマネージャー
