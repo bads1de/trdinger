@@ -445,7 +445,7 @@ class ExperimentPersistenceService:
                         logger.warning(f"実験config解析エラー: {e}")
 
                     # 次に名前で照合
-                    if hasattr(exp, "name") and exp.name and str(exp.name) == experiment_id:
+                    if hasattr(exp, "name") and exp.name is not None and str(exp.name) == experiment_id:
                         logger.info(f"実験名一致で見つかりました: {experiment_id} -> DB ID: {exp.id}")
                         return {
                             "db_id": exp.id,

@@ -10,6 +10,8 @@ from enum import Enum
 from typing import Any, Dict, Tuple
 
 import numpy as np
+import pandas as pd
+import pandas_ta as ta
 
 from app.config.unified_config import unified_config
 
@@ -236,9 +238,6 @@ class VolatilityBasedGenerator:
     ) -> float:
         """ATRを計算 (pandas-ta使用)"""
         try:
-            import pandas_ta as ta
-            import pandas as pd
-
             if len(high) < period:
                 logger.warning(
                     f"ATR計算のためのデータが不足しています: {len(high)} < {period}"
@@ -254,7 +253,7 @@ class VolatilityBasedGenerator:
             )
 
             if atr_values is not None:
-                valid_atr_values = atr_values.dropna()
+                valid_atr_values = pd.Series(atr_values).dropna()
                 if len(valid_atr_values) > 0:
                     return float(valid_atr_values.iloc[-1])
 

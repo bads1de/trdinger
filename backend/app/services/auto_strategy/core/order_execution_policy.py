@@ -22,11 +22,8 @@ class OrderExecutionPolicy:
         if size == 0:
             return 0.0
 
-        abs_size = abs(size)
-        sign = 1.0 if size > 0 else -1.0
-
         # 小数点サイズも許可（暗号通貨では一般的）
-        if abs_size < 0.001:  # 最小取引サイズ
+        if abs(size) < 0.001:  # 最小取引サイズ
             return 0.0
 
         # サイズをそのまま返す（整数に丸めない）

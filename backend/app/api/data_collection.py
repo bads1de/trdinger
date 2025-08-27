@@ -6,7 +6,7 @@
 """
 
 import logging
-from typing import Dict
+from typing import Dict, Optional
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 from sqlalchemy.orm import Session
@@ -29,7 +29,7 @@ async def collect_historical_data(
     symbol: str = "BTC/USDT",
     timeframe: str = "1h",
     force_update: bool = False,
-    start_date: str = None,
+    start_date: Optional[str] = None,
     db: Session = Depends(get_db),
     orchestration_service: DataCollectionOrchestrationService = Depends(
         get_data_collection_orchestration_service
@@ -161,8 +161,6 @@ async def get_collection_status(
         # データベース初期化確認
         if not init_db():
             logger.error("データベースの初期化に失敗しました", exc_info=True)
-            from fastapi import HTTPException
-
             raise HTTPException(
                 status_code=500, detail="データベースの初期化に失敗しました"
             )
@@ -182,7 +180,7 @@ async def get_collection_status(
 async def collect_all_data_bulk(
     background_tasks: BackgroundTasks,
     force_update: bool = False,
-    start_date: str = None,
+    start_date: Optional[str] = None,
     db: Session = Depends(get_db),
     orchestration_service: DataCollectionOrchestrationService = Depends(
         get_data_collection_orchestration_service
