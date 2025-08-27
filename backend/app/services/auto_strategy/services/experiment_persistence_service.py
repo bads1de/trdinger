@@ -424,45 +424,29 @@ class ExperimentPersistenceService:
             with self.db_session_factory() as db:
                 ga_experiment_repo = GAExperimentRepository(db)
                 experiments = ga_experiment_repo.get_recent_experiments(limit=100)
+
+                logger.info(f"実験検索開始: {experiment_id}, 総実験数: {len(experiments)}")
+
                 for exp in experiments:
-                    # UUID一致（configに保存したexperiment_id）や名称/ID一致で照合
+                    # まずconfig内のexperiment_idで照合
                     try:
                         cfg = exp.config or {}
-                    except Exception:
-                        cfg = {}
-                    if cfg.get("experiment_id") == experiment_id:
-                        pass
-                    elif hasattr(exp, "name"):
-                        try:
-                            if exp.name is not None:
-                                try:
-                                    if str(exp.name) == experiment_id:
-                                        pass
-                                    else:
-                                        if str(exp.id) == experiment_id:
-                                            pass
-                                        else:
-                                            continue
-                                except Exception:
-                                    if str(exp.id) == experiment_id:
-                                        pass
-                                    else:
-                                        continue
-                            else:
-                                if str(exp.id) == experiment_id:
-                                    pass
-                                else:
-                                    continue
-                        except Exception:
-                            if str(exp.id) == experiment_id:
-                                pass
-                            else:
-                                continue
-                    else:
-                        if str(exp.id) == experiment_id:
-                            pass
-                        else:
-                            continue
+                        if cfg.get("experiment_id") == experiment_id:
+                            logger.info(f"実験ID一致で見つかりました: {experiment_id} -> DB ID: {exp.id}")
+                            return {
+                                "db_id": exp.id,
+                                "name": exp.name,
+                                "status": exp.status,
+                                "config": exp.config,
+                                "created_at": exp.created_at,
+                                "completed_at": exp.completed_at,
+                            }
+                    except Exception as e:
+                        logger.warning(f"実験config解析エラー: {e}")
+
+                    # 次に名前で照合
+                    if hasattr(exp, "name") and exp.name and str(exp.name) == experiment_id:
+                        logger.info(f"実験名一致で見つかりました: {experiment_id} -> DB ID: {exp.id}")
                         return {
                             "db_id": exp.id,
                             "name": exp.name,
@@ -471,6 +455,19 @@ class ExperimentPersistenceService:
                             "created_at": exp.created_at,
                             "completed_at": exp.completed_at,
                         }
+
+                    # 最後にDB IDで照合
+                    if str(exp.id) == experiment_id:
+                        logger.info(f"DB ID一致で見つかりました: {experiment_id} -> DB ID: {exp.id}")
+                        return {
+                            "db_id": exp.id,
+                            "name": exp.name,
+                            "status": exp.status,
+                            "config": exp.config,
+                            "created_at": exp.created_at,
+                            "completed_at": exp.completed_at,
+                        }
+
                 logger.warning(f"実験が見つかりません: {experiment_id}")
                 return None
 

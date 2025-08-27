@@ -28,6 +28,8 @@ async def collect_historical_data(
     background_tasks: BackgroundTasks,
     symbol: str = "BTC/USDT",
     timeframe: str = "1h",
+    force_update: bool = False,
+    start_date: str = None,
     db: Session = Depends(get_db),
     orchestration_service: DataCollectionOrchestrationService = Depends(
         get_data_collection_orchestration_service
@@ -35,11 +37,12 @@ async def collect_historical_data(
 ) -> Dict:
     """
     履歴データを包括的に収集
-    データベースにデータが存在しない場合のみ新規収集を行います。
 
     Args:
         symbol: 取引ペア（デフォルト: BTC/USDT）
         timeframe: 時間軸（デフォルト: 1h）
+        force_update: 強制更新（データが存在しても上書き）
+        start_date: 開始日付（YYYY-MM-DD形式、指定しない場合は2020-03-25）
         db: データベースセッション
 
     Returns:
@@ -57,7 +60,7 @@ async def collect_historical_data(
             )
 
         return await orchestration_service.start_historical_data_collection(
-            symbol, timeframe, background_tasks, db
+            symbol, timeframe, background_tasks, db, force_update, start_date
         )
 
     return await ErrorHandler.safe_execute_async(_execute)
@@ -94,6 +97,8 @@ async def update_bulk_incremental_data(
 @router.post("/bulk-historical")
 async def collect_bulk_historical_data(
     background_tasks: BackgroundTasks,
+    force_update: bool = True,
+    start_date: str = "2020-03-25",
     db: Session = Depends(get_db),
     orchestration_service: DataCollectionOrchestrationService = Depends(
         get_data_collection_orchestration_service
@@ -102,10 +107,10 @@ async def collect_bulk_historical_data(
     """
     全ての取引ペアと全ての時間軸でOHLCVデータを一括収集
 
-    既存データをチェックし、データが存在しない組み合わせのみ収集を実行します。
-
     Args:
         background_tasks: バックグラウンドタスク
+        force_update: 強制更新（データが存在しても上書き）
+        start_date: 開始日付（YYYY-MM-DD形式、指定しない場合は2020-03-25）
         db: データベースセッション
 
     Returns:
@@ -121,7 +126,7 @@ async def collect_bulk_historical_data(
             )
 
         return await orchestration_service.start_bulk_historical_data_collection(
-            background_tasks, db
+            background_tasks, db, force_update, start_date
         )
 
     return await ErrorHandler.safe_execute_async(_execute)
@@ -176,6 +181,8 @@ async def get_collection_status(
 @router.post("/all/bulk-collect")
 async def collect_all_data_bulk(
     background_tasks: BackgroundTasks,
+    force_update: bool = False,
+    start_date: str = None,
     db: Session = Depends(get_db),
     orchestration_service: DataCollectionOrchestrationService = Depends(
         get_data_collection_orchestration_service
@@ -184,10 +191,10 @@ async def collect_all_data_bulk(
     """
     全データ（OHLCV・Funding Rate・Open Interest）を一括収集
 
-    既存データをチェックし、データが存在しない組み合わせのみ収集を実行します。
-
     Args:
         background_tasks: バックグラウンドタスク
+        force_update: 強制更新（データが存在しても上書き）
+        start_date: 開始日付（YYYY-MM-DD形式、指定しない場合は2020-03-25）
         db: データベースセッション
 
     Returns:
@@ -202,8 +209,10 @@ async def collect_all_data_bulk(
                 status_code=500, detail="データベースの初期化に失敗しました"
             )
 
-        return await orchestration_service.start_all_data_bulk_collection(
-            background_tasks, db
+        # 全データ一括収集サービスにも上書きオプションを追加する必要があるため、
+        # 一旦はbulk-historicalを使用する
+        return await orchestration_service.start_bulk_historical_data_collection(
+            background_tasks, db, force_update, start_date
         )
 
     return await ErrorHandler.safe_execute_async(_execute)

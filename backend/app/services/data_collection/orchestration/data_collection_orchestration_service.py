@@ -6,7 +6,7 @@ APIルーター内に散在していたデータ収集関連のビジネスロ�
 """
 
 import logging
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 
 from fastapi import BackgroundTasks
 from sqlalchemy.orm import Session
@@ -68,6 +68,8 @@ class DataCollectionOrchestrationService:
         timeframe: str,
         background_tasks: BackgroundTasks,
         db: Session,
+        force_update: bool = False,
+        start_date: Optional[str] = None,
     ) -> Dict[str, Any]:
         """
         履歴データ収集を開始
@@ -77,6 +79,8 @@ class DataCollectionOrchestrationService:
             timeframe: 時間軸
             background_tasks: バックグラウンドタスク
             db: データベースセッション
+            force_update: 強制更新（データが存在しても上書き）
+            start_date: 開始日付（YYYY-MM-DD形式、指定しない場合は2020-03-25）
 
         Returns:
             収集開始結果
@@ -88,7 +92,7 @@ class DataCollectionOrchestrationService:
         repository = OHLCVRepository(db)
         data_exists = repository.get_data_count(normalized_symbol, timeframe) > 0
 
-        if data_exists:
+        if data_exists and not force_update:
             logger.info(
                 f"{normalized_symbol} {timeframe} のデータは既にデータベースに存在します。"
             )
@@ -98,17 +102,30 @@ class DataCollectionOrchestrationService:
                 status="exists",
             )
 
+        if data_exists and force_update:
+            logger.info(f"{normalized_symbol} {timeframe} のデータを強制更新します。")
+            # 既存データを削除
+            deleted_count = repository.clear_ohlcv_data_by_symbol_and_timeframe(
+                normalized_symbol, timeframe
+            )
+            logger.info(f"既存データを{deleted_count}件削除しました。")
+
         # バックグラウンドタスクとして実行
         background_tasks.add_task(
             self._collect_historical_background,
             normalized_symbol,
             timeframe,
             db,
+            start_date,
         )
+
+        status_message = f"{normalized_symbol} {timeframe} の履歴データ収集を開始しました"
+        if force_update:
+            status_message += "（強制更新モード）"
 
         return api_response(
             success=True,
-            message=f"{normalized_symbol} {timeframe} の履歴データ収集を開始しました",
+            message=status_message,
             status="started",
         )
 
@@ -230,7 +247,7 @@ class DataCollectionOrchestrationService:
             raise
 
     async def start_bulk_historical_data_collection(
-        self, background_tasks: BackgroundTasks, db: Session
+        self, background_tasks: BackgroundTasks, db: Session, force_update: bool = False, start_date: Optional[str] = None
     ) -> Dict[str, Any]:
         """
         全ての取引ペアと全ての時間軸でOHLCVデータを一括収集
@@ -238,6 +255,8 @@ class DataCollectionOrchestrationService:
         Args:
             background_tasks: バックグラウンドタスク
             db: データベースセッション
+            force_update: 強制更新（データが存在しても上書き）
+            start_date: 開始日付（YYYY-MM-DD形式、指定しない場合は2020-03-25）
 
         Returns:
             収集開始レスポンス
@@ -256,22 +275,38 @@ class DataCollectionOrchestrationService:
             for symbol in symbols:
                 for timeframe in timeframes:
                     data_count = repository.get_data_count(symbol, timeframe)
-                    if data_count == 0:
+
+                    # データが存在しない場合、または強制更新が指定されている場合に収集を実行
+                    should_collect = data_count == 0 or force_update
+
+                    if should_collect:
+                        if force_update and data_count > 0:
+                            # 強制更新の場合は既存データを削除
+                            deleted_count = repository.clear_ohlcv_data_by_symbol_and_timeframe(symbol, timeframe)
+                            logger.info(f"強制更新のため {symbol} {timeframe} の既存データを{deleted_count}件削除しました")
+
                         collection_tasks.append((symbol, timeframe))
                         background_tasks.add_task(
                             self._collect_historical_background,
                             symbol,
                             timeframe,
                             db,
+                            start_date,
                         )
+
+            status_message = f"一括履歴データ収集を開始しました（{len(collection_tasks)}件のタスク）"
+            if force_update:
+                status_message += "（強制更新モード）"
 
             return api_response(
                 success=True,
-                message=f"一括履歴データ収集を開始しました（{len(collection_tasks)}件のタスク）",
+                message=status_message,
                 data={
                     "symbols": symbols,
                     "timeframes": timeframes,
                     "collection_tasks": len(collection_tasks),
+                    "force_update": force_update,
+                    "start_date": start_date or "2020-03-25",
                 },
                 status="started",
             )
@@ -438,15 +473,18 @@ class DataCollectionOrchestrationService:
             raise
 
     async def _collect_historical_background(
-        self, symbol: str, timeframe: str, db: Session
+        self, symbol: str, timeframe: str, db: Session, start_date: Optional[str] = None
     ):
-        """バックグラウンドでの履歴データ収集"""
+        """バックグラウンドでの履歴データ収集（ページネーションで全期間取得）"""
         try:
             logger.info(f"履歴データ収集開始: {symbol} {timeframe}")
 
             repository = OHLCVRepository(db)
-            result = await self.historical_service.collect_historical_data(
-                symbol, timeframe, repository
+
+            logger.info(f"ページネーションで全期間データを取得します")
+
+            result = await self.historical_service.collect_historical_data_with_start_date(
+                symbol, timeframe, repository, None  # since_timestamp は使用せずページネーションで全データ取得
             )
 
             if result is not None and result >= 0:

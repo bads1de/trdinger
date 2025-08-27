@@ -19,8 +19,9 @@ import { ObjectiveSelection } from "./optimization/ObjectiveSelection";
 
 // 指標モードの選択肢
 const INDICATOR_MODE_OPTIONS = [
-  { value: "technical_only", label: "テクニカルオンリー" },
-  { value: "ml_only", label: "MLオンリー" },
+  { value: "technical_only", label: "TA" },
+  { value: "ml_only", label: "ML" },
+  { value: "mixed", label: "混合" },
 ];
 
 interface GAConfigFormProps {
@@ -69,7 +70,7 @@ const GAConfigForm: React.FC<GAConfigFormProps> = ({
         max_indicators: initialConfig.ga_config?.max_indicators || 5,
         allowed_indicators: initialConfig.ga_config?.allowed_indicators || [],
         // 指標モード設定
-        indicator_mode: initialConfig.ga_config?.indicator_mode || "mixed",
+        indicator_mode: initialConfig.ga_config?.indicator_mode || "technical_only",
         fitness_weights: initialConfig.ga_config?.fitness_weights || {
           total_return: 0.3,
           sharpe_ratio: 0.4,
@@ -225,16 +226,16 @@ const GAConfigForm: React.FC<GAConfigFormProps> = ({
           </h4>
           <div className="text-sm text-purple-200 space-y-1">
             <div>
-              <strong className="text-purple-100">混合 (推奨):</strong>{" "}
-              テクニカル指標とML予測指標の両方を使用
-            </div>
-            <div>
-              <strong className="text-purple-100">テクニカルオンリー:</strong>{" "}
+              <strong className="text-purple-100">TA:</strong>{" "}
               従来のテクニカル指標のみを使用
             </div>
             <div>
-              <strong className="text-purple-100">MLオンリー:</strong>{" "}
+              <strong className="text-purple-100">ML:</strong>{" "}
               ML予測指標のみを使用
+            </div>
+            <div>
+              <strong className="text-purple-100">混合:</strong>{" "}
+              テクニカル指標とML予測指標を組み合わせ
             </div>
           </div>
         </div>

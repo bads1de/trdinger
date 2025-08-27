@@ -171,15 +171,18 @@ class DataIntegrationService:
 
         return df
 
-    @safe_operation(context="Funding Rateデータ統合", is_api_call=False)
     def _integrate_funding_rate_data(
         self, df: pd.DataFrame, symbol: str, start_date: datetime, end_date: datetime
     ) -> pd.DataFrame:
         """Funding Rateデータを統合"""
-        if self.fr_merger:
-            df = self.fr_merger.merge_fr_data(df, symbol, start_date, end_date)
-        else:
-            df["funding_rate"] = pd.NA
+        try:
+            if self.fr_merger:
+                df = self.fr_merger.merge_fr_data(df, symbol, start_date, end_date)
+            else:
+                df["funding_rate"] = 0.0
+        except Exception as e:
+            logger.error(f"Funding Rateデータ統合エラー: {e}")
+            df["funding_rate"] = 0.0
 
         return df
 

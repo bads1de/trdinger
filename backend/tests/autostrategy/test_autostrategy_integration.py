@@ -18,7 +18,7 @@ class TestAutoStrategyIntegration:
         assert service is not None
 
         # オートストラテジーで使用される主要インジケータ
-        key_indicators = ['RSI', 'SMA', 'EMA', 'MACD', 'BB', 'STC', 'ADX', 'CCI', 'ATR', 'MFI']
+        key_indicators = ['RSI', 'SMA', 'EMA', 'MACD', 'BBANDS', 'STC', 'ADX', 'CCI', 'ATR', 'MFI']
 
         supported = service.get_supported_indicators()
         assert len(supported) > 100, f"サポートインジケータが不足: {len(supported)}個"
@@ -61,7 +61,7 @@ class TestAutoStrategyIntegration:
             ('SMA', {'length': 20}, 'single'),
             ('EMA', {'length': 20}, 'single'),
             ('MACD', {'fast': 12, 'slow': 26, 'signal': 9}, 'complex'),
-            ('BB', {'period': 20, 'std': 2.0}, 'complex'),
+            ('BBANDS', {'length': 20, 'std': 2.0}, 'complex'),
             ('STC', {'tclength': 10, 'fast': 23, 'slow': 50, 'factor': 0.5}, 'single'),
             ('ADX', {'length': 14}, 'single'),
             ('CCI', {'period': 14}, 'single'),
@@ -98,8 +98,7 @@ class TestAutoStrategyIntegration:
                 print(f"❌ {indicator_name}: 例外発生 - {str(e)}")
 
         # 結果のサマリー
-        print("
-=== オートストラテジー用インジケータ計算結果 ===")
+        print("\n=== オートストラテジー用インジケータ計算結果 ===")
         print(f"成功: {len(successful_calculations)}個")
         print(f"失敗: {len(failed_calculations)}個")
         print(f"総計: {len(test_cases)}個")
@@ -154,8 +153,7 @@ class TestAutoStrategyIntegration:
                 failed_params.append(indicator_name)
                 print(f"❌ {indicator_name}: パラメータ生成エラー - {str(e)}")
 
-        print("
-=== パラメータ生成結果 ===")
+        print("\n=== パラメータ生成結果 ===")
         print(f"成功: {len(successful_params)}個")
         print(f"失敗: {len(failed_params)}個")
         print(f"総計: {len(test_indicators)}個")
@@ -186,7 +184,7 @@ class TestAutoStrategyIntegration:
         print(f"互換インジケータ: {len(compatible_indicators)}個")
 
         # 主要インジケータが互換性があることを確認
-        key_indicators = ['RSI', 'SMA', 'EMA', 'MACD', 'BB', 'STC', 'ADX', 'CCI', 'ATR', 'MFI']
+        key_indicators = ['RSI', 'SMA', 'EMA', 'MACD', 'BBANDS', 'STC', 'ADX', 'CCI', 'ATR', 'MFI']
         compatible_key_indicators = [ind for ind in key_indicators if ind in compatible_indicators]
 
         print(f"互換性のある主要インジケータ: {compatible_key_indicators}")

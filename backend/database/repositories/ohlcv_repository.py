@@ -266,6 +266,41 @@ class OHLCVRepository(BaseRepository):
         )
         return deleted_count
 
+    def clear_ohlcv_data_by_symbol_and_timeframe(self, symbol: str, timeframe: str) -> int:
+        """
+        指定されたシンボルと時間軸のOHLCVデータを削除
+
+        Args:
+            symbol: 削除対象のシンボル
+            timeframe: 削除対象の時間軸
+
+        Returns:
+            削除された件数
+        """
+        from sqlalchemy import delete
+
+        try:
+            # SQLAlchemy 2.0の標準的なdelete文を使用
+            stmt = delete(self.model_class).where(
+                self.model_class.symbol == symbol,
+                self.model_class.timeframe == timeframe
+            )
+            result = self.db.execute(stmt)
+            deleted_count = getattr(result, "rowcount", 0)
+            self.db.commit()
+
+            logger.info(
+                f"シンボル '{symbol}' 時間軸 '{timeframe}' のOHLCVデータを削除しました: {deleted_count}件"
+            )
+            return deleted_count
+
+        except Exception as e:
+            self.db.rollback()
+            logger.error(
+                f"シンボル '{symbol}' 時間軸 '{timeframe}' のOHLCVデータ削除エラー: {e}"
+            )
+            raise
+
     def get_available_symbols(self, symbol_column: str = "symbol") -> List[str]:
         """
         利用可能なシンボルのリストを取得（BaseRepositoryのメソッドをオーバーライド）

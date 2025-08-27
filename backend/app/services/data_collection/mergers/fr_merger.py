@@ -57,7 +57,7 @@ class FRMerger:
                 )
 
                 # toleranceを設定（8時間以内のデータのみ使用）
-                tolerance = int(pd.Timedelta(hours=8).total_seconds())
+                tolerance = pd.Timedelta(hours=8)
                 df = pd.merge_asof(
                     df.sort_index(),
                     fr_df.sort_index(),
@@ -76,10 +76,11 @@ class FRMerger:
                 logger.warning(
                     f"シンボル {symbol} のFunding Rateデータが見つかりませんでした。"
                 )
-                df["funding_rate"] = pd.NA
+                df["funding_rate"] = 0.0
 
         except Exception as e:
             ErrorHandler.handle_model_error(e, context="merge_fr_data")
+            df["funding_rate"] = 0.0
 
         return df
 

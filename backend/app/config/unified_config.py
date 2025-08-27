@@ -142,7 +142,7 @@ class DataCollectionConfig(BaseSettings):
     # Bybit API設定
     bybit_timeout: int = Field(default=30, description="APIタイムアウト（秒）")
     bybit_page_limit: int = Field(default=200, description="ページング時の制限")
-    bybit_max_pages: int = Field(default=50, description="最大ページ数")
+    bybit_max_pages: int = Field(default=500, description="最大ページ数（2020年からのデータを取得可能に拡張）")
 
     # メモリ管理
     memory_warning_threshold: int = Field(default=8000, description="メモリ警告閾値")

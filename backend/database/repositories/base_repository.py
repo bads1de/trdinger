@@ -78,34 +78,21 @@ class BaseRepository(Generic[T]):
         try:
             logger.info(f"一括挿入開始: {len(records)}件のデータを処理")
 
-            # SQLAlchemy 2.0の標準的なinsert文を使用
-            stmt = insert(self.model_class)
+            # データベースの種類を検出
+            db_type = self.db.bind.engine.dialect.name.lower()
 
-            # PostgreSQLの場合はon_conflict_do_nothingを使用
-            # その他のDBの場合は個別に処理（簡易実装）
-            try:
-                # PostgreSQL用の重複処理
-                stmt = stmt.on_conflict_do_nothing(index_elements=conflict_columns)  # type: ignore
-                result = self.db.execute(stmt, records)
-                inserted_count = getattr(result, "rowcount", 0)
-            except AttributeError:
-                # PostgreSQL以外のDB用の代替処理
-                logger.info("PostgreSQL以外のDBを使用中、個別挿入処理を実行")
-                inserted_count = 0
-                for i, record in enumerate(records):
-                    try:
-                        result = self.db.execute(stmt, record)
-                        # ドライバによってrowcountがない場合があるため、フォールバックを用意
-                        # rowcountが-1を返すドライバもあるため、0でないことをもって成功とみなす
-                        if getattr(result, "rowcount", 0) != 0:
-                            inserted_count += 1
-                            logger.debug(f"レコード {i+1} 挿入成功")
-                        else:
-                            logger.debug(f"レコード {i+1} 挿入失敗（挿入件数0）")
-                    except Exception as e:
-                        # 重複エラーは無視
-                        logger.debug(f"レコード {i+1} 挿入エラー（無視）: {e}")
-                        continue
+            if db_type == "sqlite":
+                # SQLiteの場合はINSERT OR IGNOREを使用
+                logger.info("SQLiteを使用中、INSERT OR IGNOREを実行")
+                inserted_count = self._bulk_insert_sqlite_ignore(records)
+            elif db_type == "postgresql":
+                # PostgreSQLの場合はon_conflict_do_nothingを使用
+                logger.info("PostgreSQLを使用中、on_conflict_do_nothingを実行")
+                inserted_count = self._bulk_insert_postgresql_ignore(records, conflict_columns)
+            else:
+                # その他のDBの場合は個別挿入処理
+                logger.info(f"{db_type}を使用中、個別挿入処理を実行")
+                inserted_count = self._bulk_insert_individual(records)
 
             self.db.commit()
             logger.info(f"一括挿入完了: {inserted_count}/{len(records)}件挿入")
@@ -120,6 +107,78 @@ class BaseRepository(Generic[T]):
                 raise
 
             _handle_bulk_insert_error()
+
+    def _bulk_insert_sqlite_ignore(self, records: List[Dict[str, Any]]) -> int:
+        """
+        SQLite用のINSERT OR IGNORE一括挿入
+        """
+        from sqlalchemy import text
+
+        if not records:
+            return 0
+
+        # INSERT OR IGNORE文を構築
+        table_name = self.model_class.__tablename__
+        columns = list(records[0].keys())
+
+        # プレースホルダを生成
+        placeholders = ", ".join([f":{col}" for col in columns])
+        columns_str = ", ".join(columns)
+
+        sql = f"INSERT OR IGNORE INTO {table_name} ({columns_str}) VALUES ({placeholders})"
+
+        inserted_count = 0
+        for record in records:
+            try:
+                result = self.db.execute(text(sql), record)
+                if getattr(result, "rowcount", 0) > 0:
+                    inserted_count += 1
+            except Exception as e:
+                logger.debug(f"レコード挿入エラー（無視）: {e}")
+                continue
+
+        return inserted_count
+
+    def _bulk_insert_postgresql_ignore(self, records: List[Dict[str, Any]], conflict_columns: List[str]) -> int:
+        """
+        PostgreSQL用のon_conflict_do_nothing一括挿入
+        """
+        from sqlalchemy import insert
+
+        try:
+            stmt = insert(self.model_class).on_conflict_do_nothing(index_elements=conflict_columns)
+            result = self.db.execute(stmt, records)
+            return getattr(result, "rowcount", 0)
+        except AttributeError:
+            # on_conflict_do_nothingがサポートされていない場合のフォールバック
+            logger.warning("on_conflict_do_nothingがサポートされていません、個別挿入にフォールバック")
+            return self._bulk_insert_individual(records)
+
+    def _bulk_insert_individual(self, records: List[Dict[str, Any]]) -> int:
+        """
+        個別挿入処理（重複エラーを無視）
+        """
+        from sqlalchemy import insert
+
+        stmt = insert(self.model_class)
+        inserted_count = 0
+
+        for i, record in enumerate(records):
+            try:
+                result = self.db.execute(stmt, record)
+                # ドライバによってrowcountがない場合があるため、フォールバックを用意
+                # rowcountが-1を返すドライバもあるため、0でないことをもって成功とみなす
+                if getattr(result, "rowcount", 0) != 0:
+                    inserted_count += 1
+                    logger.debug(f"レコード {i+1} 挿入成功")
+                else:
+                    logger.debug(f"レコード {i+1} 挿入失敗（挿入件数0）")
+            except Exception as e:
+                # 重複エラーは無視
+                logger.debug(f"レコード {i+1} 挿入エラー（無視）: {e}")
+                continue
+
+        return inserted_count
 
     def get_latest_timestamp(
         self, timestamp_column: str, filter_conditions: Optional[Dict[str, Any]] = None

@@ -776,8 +776,9 @@ class SmartConditionGenerator:
         for ind in indicators:
             if not ind.enabled:
                 continue
-            cfg = indicator_registry.get_indicator_config(ind.type)
-            if cfg and getattr(cfg, "category", None):
+            name = ind.type
+            cfg = indicator_registry.get_indicator_config(name)
+            if cfg and hasattr(cfg, "category") and getattr(cfg, "category", None):
                 try:
                     # config.category は str のはず
                     cat = getattr(cfg, "category")
@@ -1472,7 +1473,12 @@ class SmartConditionGenerator:
                 ):
                     # 短期と長期の指標を選択
                     sorted_indicators = sorted(
-                        indicator_list, key=lambda x: x.parameters.get("period", 14)
+                        indicator_list,
+                        key=lambda x: (
+                            getattr(x, "parameters", {}).get("period", 14)
+                            if isinstance(getattr(x, "parameters", {}), dict)
+                            else 14
+                        ),
                     )
                     short_term = sorted_indicators[0]
                     long_term = sorted_indicators[-1]
@@ -1480,10 +1486,8 @@ class SmartConditionGenerator:
                     # 短期・長期組み合わせ条件を生成
                     if indicator_type == "RSI":
                         # 短期RSI売られすぎ + 長期RSI上昇トレンド
-                        short_name = f"{short_term.type}_{short_term.parameters.get('period', 7)}"
-                        long_name = (
-                            f"{long_term.type}_{long_term.parameters.get('period', 21)}"
-                        )
+                        short_name = f"{short_term.type}_{getattr(short_term, 'parameters', {}).get('period', 7) if isinstance(getattr(short_term, 'parameters', {}), dict) else 7}"
+                        long_name = f"{long_term.type}_{getattr(long_term, 'parameters', {}).get('period', 21) if isinstance(getattr(long_term, 'parameters', {}), dict) else 21}"
 
                         long_conditions.extend(
                             [
@@ -1604,7 +1608,11 @@ class SmartConditionGenerator:
             ]
             if bb_indicators and not ml_indicators:  # ML指標がない場合のみ
                 bb_indicator = bb_indicators[0]
-                period = bb_indicator.parameters.get("period", 20)
+                period = (
+                    getattr(bb_indicator, "parameters", {}).get("period", 20)
+                    if isinstance(getattr(bb_indicator, "parameters", {}), dict)
+                    else 20
+                )
 
                 # ボリンジャーバンドの3つの値を活用（計画書の設計通り）
                 bb_upper = f"BB_Upper_{period}"
@@ -1640,7 +1648,11 @@ class SmartConditionGenerator:
             ]
             if adx_indicators and not bb_indicators:
                 adx_indicator = adx_indicators[0]
-                period = adx_indicator.parameters.get("period", 14)
+                period = (
+                    getattr(adx_indicator, "parameters", {}).get("period", 14)
+                    if isinstance(getattr(adx_indicator, "parameters", {}), dict)
+                    else 14
+                )
                 adx_name = f"ADX_{period}"
 
                 # ADX + 価格方向の組み合わせ（計画書の設計通り）

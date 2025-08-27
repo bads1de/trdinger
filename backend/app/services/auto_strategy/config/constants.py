@@ -76,6 +76,11 @@ VALID_INDICATOR_TYPES = [
     "PVI",
     "PVT",
     "VWAP",
+    "VP",    # Volume Price Confirmation
+    "PVOL",  # Price-Volume indicator
+    "PVR",   # Price Volume Rank indicator
+    "EFI",   # Elder's Force Index
+    "AOBV",  # Archer On-Balance Volume
     # 数学演算子
     "ADD",
     "DIV",
@@ -149,6 +154,19 @@ VALID_INDICATOR_TYPES = [
     "PRICE_EMA_RATIO",
     "SMA_SLOPE",
     "VWMA",
+    "FWMA",  # Fibonacci's Weighted Moving Average
+    "HILO",  # Gann High-Low Activator
+    "HL2",   # High-Low Average
+    "HLC3",  # High-Low-Close Average
+    "HWMA",  # Holt-Winter Moving Average
+    "JMA",   # Jurik Moving Average
+    "MCGD",  # McGinley Dynamic
+    "OHLC4", # Open-High-Low-Close Average
+    "PWMA",  # Pascal's Weighted Moving Average
+    "SINWMA", # Sine Weighted Moving Average
+    "SSF",   # Ehler's Super Smoother Filter
+    "VIDYA", # Variable Index Dynamic Average
+    "WCP",   # Weighted Closing Price
     # ボラティリティ系指標
     "ATR",
     "NATR",
@@ -157,6 +175,12 @@ VALID_INDICATOR_TYPES = [
     "DONCHIAN",
     "KELTNER",
     "SUPERTREND",
+    "ABERRATION",  # Aberration
+    "ACCBANDS",    # Acceleration Bands
+    "HWC",         # Hull-Wilder Channels
+    "MASSI",       # Mass Index
+    "PDIST",       # Price Distance
+    "THERMO",      # Thermometer
     # 統計系指標
     "BETA",
     "CORREL",
@@ -167,6 +191,18 @@ VALID_INDICATOR_TYPES = [
     "STDDEV",
     "TSF",
     "VAR",
+    "ZSCORE",      # Z-Score
+    "ENTROPY",     # Entropy
+    "KURTOSIS",    # Kurtosis
+    "MAD",         # Mean Absolute Deviation
+    "MEDIAN",      # Median
+    "QUANTILE",    # Quantile
+    "SKEW",        # Skewness
+    "TOS_STDEVALL", # Standard Deviation All
+    "MAXINDEX",    # Max Index
+    "MININDEX",    # Min Index
+    "MINMAX",      # Min Max
+    "MINMAXINDEX", # Min Max Index
     # パターン認識系指標
     "CDL_DOJI",
     "CDL_HAMMER",
@@ -186,8 +222,16 @@ VALID_INDICATOR_TYPES = [
     "ENGULFING_PATTERN",
     "MORNING_STAR",
     "EVENING_STAR",
+    # Hilbert Transform系指標
+    "HT_DCPERIOD",
+    "HT_DCPHASE",
+    "HT_PHASOR",
+    "HT_SINE",
+    "HT_TRENDMODE",
     # 複合指標
     "ICHIMOKU",
+    # UI indicator (Volatility)
+    "UI",
     # 従来の指標（互換性維持）
     "BBANDS",  # BBの別名
     "CMO",  # 未実装だが互換性維持
@@ -197,15 +241,6 @@ VALID_INDICATOR_TYPES = [
     "T3",  # 未実装だが互換性維持
     "UO",  # 未実装だが互換性維持
     "MOM",  # 未実装だが互換性維持
-    "MAXINDEX",  # 未実装だが互換性維持
-    "MININDEX",  # 未実装だが互換性維持
-    "MINMAX",  # 未実装だが互換性維持
-    "MINMAXINDEX",  # 未実装だが互換性維持
-    "HT_DCPERIOD",  # 未実装だが互換性維持
-    "HT_DCPHASE",  # 未実装だが互換性維持
-    "HT_PHASOR",  # 未実装だが互換性維持
-    "HT_SINE",  # 未実装だが互換性維持
-    "HT_TRENDMODE",  # 未実装だが互換性維持
 ]
 
 # === ML指標定数 ===

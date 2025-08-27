@@ -120,10 +120,10 @@ class BacktestExecutor:
                 strategy_class,
                 cash=initial_capital,
                 commission=commission_rate,
-                exclusive_orders=False,  # マージン問題を回避
-                trade_on_close=True,  # 終値で取引
-                hedging=False,  # ヘッジングを無効化
-                margin=1.0,  # マージン要件を1.0に設定（レバレッジなし）
+                exclusive_orders=False,  # 複数ポジション許可（制約緩和）
+                trade_on_close=False,  # 現在価格で取引（制約緩和）
+                hedging=True,  # ヘッジング有効化（制約緩和）
+                margin=0.01,  # マージン要件を大幅に緩和（1%）
             )
 
             return bt

@@ -21,32 +21,44 @@ class OrderExecutionPolicy:
     def adjust_position_size_for_backtesting(size: float) -> float:
         if size == 0:
             return 0.0
+
         abs_size = abs(size)
         sign = 1.0 if size > 0 else -1.0
-        if abs_size < 1:
-            return size if abs_size > 0 else 0.0
-        rounded = round(abs_size)
-        if rounded == 0:
-            rounded = 1
-        return sign * float(rounded)
+
+        # 小数点サイズも許可（暗号通貨では一般的）
+        if abs_size < 0.001:  # 最小取引サイズ
+            return 0.0
+
+        # サイズをそのまま返す（整数に丸めない）
+        return size
 
     @staticmethod
     def ensure_affordable_size(adjusted_size: float, ctx: ExecutionContext) -> float:
         abs_size = abs(adjusted_size)
         if abs_size == 0:
             return 0.0
+
+        # より安全なポジションサイズ計算
+        # 利用可能資金の最大80%まで使用（証拠金不足を防ぐため）
+        max_cash_usage = ctx.available_cash * 0.8
+
         if abs_size < 1:
+            # 相対サイズ（資金の割合）
             required_cash = ctx.available_cash * abs_size
+            if required_cash > max_cash_usage:
+                # 最大使用可能な割合に調整
+                safe_ratio = max_cash_usage / ctx.available_cash
+                return (adjusted_size / abs_size) * safe_ratio
         else:
+            # 絶対サイズ（単位数）
             required_cash = abs_size * ctx.current_price
-        if adjusted_size != 0 and required_cash > ctx.available_cash * 0.99:
-            if abs_size < 1:
-                return (adjusted_size / abs_size) * 0.99
-            else:
-                max_units = int((ctx.available_cash * 0.99) // ctx.current_price)
-                if max_units <= 0:
-                    return 0.99 if adjusted_size > 0 else -0.99
-                return (1.0 if adjusted_size > 0 else -1.0) * float(max_units)
+            if required_cash > max_cash_usage:
+                # 購入可能な最大単位数に調整
+                max_units = max_cash_usage / ctx.current_price
+                if max_units < 0.001:  # 最小取引サイズ
+                    return 0.0  # 取引不可
+                return (1.0 if adjusted_size > 0 else -1.0) * max_units
+
         return adjusted_size
 
     @staticmethod

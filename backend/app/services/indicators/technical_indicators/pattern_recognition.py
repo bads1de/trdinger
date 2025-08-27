@@ -27,6 +27,15 @@ import pandas_ta as ta
 from ..utils import handle_pandas_ta_errors
 
 
+# TA-Libの利用可能性チェック
+TA_LIB_AVAILABLE = False
+try:
+    import talib
+    TA_LIB_AVAILABLE = True
+except ImportError:
+    TA_LIB_AVAILABLE = False
+
+
 class PatternRecognitionIndicators:
     """
     パターン認識系指標クラス
@@ -162,6 +171,9 @@ class PatternRecognitionIndicators:
         low_series = pd.Series(low) if isinstance(low, np.ndarray) else low
         close_series = pd.Series(close) if isinstance(close, np.ndarray) else close
 
+        if not TA_LIB_AVAILABLE:
+            return np.zeros(len(open_series))
+
         result = ta.cdl_pattern(
             open_=open_series,
             high=high_series,
@@ -189,6 +201,9 @@ class PatternRecognitionIndicators:
         high_series = pd.Series(high) if isinstance(high, np.ndarray) else high
         low_series = pd.Series(low) if isinstance(low, np.ndarray) else low
         close_series = pd.Series(close) if isinstance(close, np.ndarray) else close
+
+        if not TA_LIB_AVAILABLE:
+            return np.zeros(len(open_series))
 
         result = ta.cdl_pattern(
             open_=open_series,
@@ -332,6 +347,9 @@ class PatternRecognitionIndicators:
         low_series = pd.Series(low) if isinstance(low, np.ndarray) else low
         close_series = pd.Series(close) if isinstance(close, np.ndarray) else close
 
+        if not TA_LIB_AVAILABLE:
+            return np.zeros(len(open_series))
+
         result = ta.cdl_pattern(
             open_=open_series,
             high=high_series,
@@ -359,6 +377,9 @@ class PatternRecognitionIndicators:
         high_series = pd.Series(high) if isinstance(high, np.ndarray) else high
         low_series = pd.Series(low) if isinstance(low, np.ndarray) else low
         close_series = pd.Series(close) if isinstance(close, np.ndarray) else close
+
+        if not TA_LIB_AVAILABLE:
+            return np.zeros(len(open_series))
 
         result = ta.cdl_pattern(
             open_=open_series,

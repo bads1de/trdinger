@@ -47,6 +47,11 @@ class GeneValidator:
             if not isinstance(indicator_gene.parameters, dict):
                 return False
 
+            # タイポ修正: 'UI' を 'UO' にマッピング
+            if indicator_gene.type.upper() == "UI":
+                indicator_gene.type = "UO"
+                logger.warning(f"指標タイプ 'UI' を 'UO' に修正しました")
+
             # 有効な指標タイプの確認
             if indicator_gene.type not in self.valid_indicator_types:
                 return False
@@ -278,6 +283,10 @@ class GeneValidator:
 
             # 前後の空白を除去
             name = name.strip()
+
+            # タイポ修正: 'UI' を 'UO' にマッピング（Ultimate Oscillator）
+            if name.upper() == "UI":
+                name = "UO"
 
             # 基本的な指標タイプの確認
             if name in self.valid_indicator_types:

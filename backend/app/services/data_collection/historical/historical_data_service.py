@@ -121,6 +121,113 @@ class HistoricalDataService:
             logger.error(f"パラメータ検証エラー: {e}")
             raise
         except Exception as e:
+            ErrorHandler.handle_model_error(e, context="collect_historical_data")
+            return 0
+
+    async def collect_historical_data_with_start_date(
+        self,
+        symbol: str = "BTC/USDT",
+        timeframe: str = "1h",
+        repository: Optional[OHLCVRepository] = None,
+        since_timestamp: Optional[int] = None,
+    ) -> int:
+        """
+        ページネーションで全期間の履歴データを包括的に収集
+
+        Args:
+            symbol: 取引ペアシンボル
+            timeframe: 時間軸
+            repository: OHLCVリポジトリ
+            since_timestamp: 開始タイムスタンプ（ミリ秒）- 使用しない（ページネーション用）
+
+        Returns:
+            保存された件数
+
+        Raises:
+            ValueError: パラメータが無効な場合
+            ccxt.NetworkError: ネットワークエラーの場合
+            ccxt.ExchangeError: 取引所エラーの場合
+            RuntimeError: その他の予期せぬエラー
+        """
+        if not repository:
+            raise ValueError("リポジトリが必要です")
+
+        try:
+            logger.info(f"ページネーションで全期間データ収集開始: {symbol} {timeframe}")
+
+            total_saved = 0
+            total_fetched = 0
+            max_limit = 1000
+            end_timestamp = None
+
+            # ページネーションで全期間データを取得
+            for i in range(500):  # 最大500ページまで（設定で拡張済み）
+                await asyncio.sleep(self.request_delay)
+
+                params = {}
+                if end_timestamp:
+                    params["end"] = end_timestamp
+
+                historical_data = await self.market_service.fetch_ohlcv_data(
+                    symbol, timeframe, limit=max_limit, params=params
+                )
+
+                if not historical_data:
+                    logger.info(f"全期間データ取得完了: バッチ{i+1}でデータ終了")
+                    break
+
+                # データベースの最新データと比較して重複を避ける
+                latest_db_ts = repository.get_latest_timestamp(
+                    timestamp_column="timestamp",
+                    filter_conditions={"symbol": symbol, "timeframe": timeframe}
+                )
+                if latest_db_ts:
+                    historical_data = [
+                        d
+                        for d in historical_data
+                        if d[0] < latest_db_ts.timestamp() * 1000
+                    ]
+
+                if not historical_data:
+                    logger.info(f"全期間データ取得完了: バッチ{i+1}で重複データのみ")
+                    break
+
+                saved_count = await self.market_service._save_ohlcv_to_database(
+                    historical_data, symbol, timeframe, repository
+                )
+                total_saved += saved_count
+                total_fetched += len(historical_data)
+
+                # 次のページの開始位置を設定（最も古いデータのタイムスタンプ）
+                end_timestamp = historical_data[0][0] - 1
+
+                logger.info(
+                    f"バッチ {i+1}: {len(historical_data)}件取得 (次のend: {end_timestamp})"
+                )
+
+                # 取得件数が最大件数未満の場合は最後のページ
+                if len(historical_data) < max_limit:
+                    logger.info("全期間データ取得完了: 最終バッチ")
+                    break
+
+            logger.info(
+                f"ページネーション全期間データ収集完了: 取得{total_fetched}件, 保存{total_saved}件"
+            )
+            return total_saved
+
+        except ccxt.BadSymbol as e:
+            logger.error(f"無効なシンボルによる履歴データ収集エラー: {symbol} - {e}")
+            raise
+        except ccxt.NetworkError as e:
+            logger.error(f"ネットワークエラーによる履歴データ収集エラー: {e}")
+            raise
+        except ccxt.ExchangeError as e:
+            logger.error(f"取引所エラーによる履歴データ収集エラー: {e}")
+            raise
+        except ValueError as e:
+            logger.error(f"パラメータ検証エラー: {e}")
+            raise
+        except Exception as e:
             ErrorHandler.handle_model_error(e, context="fetch_historical_data")
             return 0
 

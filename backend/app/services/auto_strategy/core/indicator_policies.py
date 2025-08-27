@@ -77,7 +77,8 @@ class ThresholdPolicy:
     def get(cls, profile: Optional[Profile]) -> Thresholds:
         if profile is None:
             profile = "normal"  # type: ignore
-        return cls.DEFAULTS.get(profile, cls.DEFAULTS["normal"])  # type: ignore
+        defaults = cls().DEFAULTS  # Create instance to access property
+        return defaults.get(profile, defaults["normal"])  # type: ignore
 
 
 TREND_PREF = (

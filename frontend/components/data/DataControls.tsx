@@ -157,6 +157,14 @@ const DataControls: React.FC<DataControlsProps> = ({
                             ).toLocaleDateString("ja-JP")}
                           </div>
                         )}
+                        {details.oldest_timestamp && (
+                          <div className="text-xs text-secondary-500 dark:text-secondary-500">
+                            最古:{" "}
+                            {new Date(
+                              details.oldest_timestamp
+                            ).toLocaleDateString("ja-JP")}
+                          </div>
+                        )}
                       </div>
                     )
                   )}

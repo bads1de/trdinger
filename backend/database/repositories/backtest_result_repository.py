@@ -41,6 +41,7 @@ class BacktestResultRepository(BaseRepository):
         d.setdefault("total_trades", performance_metrics.get("total_trades", 0))
         d.setdefault("win_rate", performance_metrics.get("win_rate", 0.0))
         d.setdefault("profit_factor", performance_metrics.get("profit_factor", 0.0))
+        d.setdefault("final_balance", performance_metrics.get("final_balance", 0.0))
         return d
 
     def _to_json_safe(self, obj: Any) -> Any:

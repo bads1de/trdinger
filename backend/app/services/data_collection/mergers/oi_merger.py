@@ -57,7 +57,7 @@ class OIMerger:
                 # )
 
                 # toleranceを設定（1日以内のデータのみ使用）
-                tolerance = int(pd.Timedelta(days=1).total_seconds())
+                tolerance = pd.Timedelta(days=1)
                 df = pd.merge_asof(
                     df.sort_index(),
                     oi_df.sort_index(),
@@ -76,11 +76,11 @@ class OIMerger:
                 logger.warning(
                     f"シンボル {symbol} のOpen Interestデータが見つかりませんでした。"
                 )
-                df["open_interest"] = pd.NA
+                df["open_interest"] = 0.0
 
         except Exception as e:
             ErrorHandler.handle_model_error(e, context="merge_oi_data")
-            df["open_interest"] = pd.NA
+            df["open_interest"] = 0.0
 
         return df
 

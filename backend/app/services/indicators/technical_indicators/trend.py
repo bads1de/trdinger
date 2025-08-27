@@ -599,8 +599,19 @@ class TrendIndicators:
     def mcgd(data: Union[np.ndarray, pd.Series], length: int = 10) -> np.ndarray:
         """McGinley Dynamic"""
         series = pd.Series(data) if isinstance(data, np.ndarray) else data
-        result = ta.mcgd(series, length=length)
-        return result.values if result is not None else np.full(len(series), np.nan)
+        if len(series) < length:
+            return np.full(len(series), np.nan)
+
+        mcgd_values = np.full(len(series), np.nan)
+        mcgd_values[length - 1] = series.iloc[:length].mean()  # 初期値はSMA
+
+        k = 0.6  # 調整係数
+
+        for i in range(length, len(series)):
+            ratio = series.iloc[i] / mcgd_values[i-1] if mcgd_values[i-1] != 0 else 1
+            mcgd_values[i] = mcgd_values[i-1] + (series.iloc[i] - mcgd_values[i-1]) / (k * length * (ratio ** 4))
+
+        return mcgd_values
 
     @staticmethod
     @handle_pandas_ta_errors

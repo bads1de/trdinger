@@ -67,12 +67,11 @@ class TestAllIndicatorsAutoStrategy:
                 print(f"❌ {indicator_name}: 例外発生 - {str(e)}")
 
         # 結果のサマリー
-        print("
-=== 全インジケータテスト結果 ===")
+        print("\n=== 全インジケータテスト結果 ===")
         print(f"✅ 成功: {len(successful_indicators)}個")
         print(f"❌ 失敗: {len(failed_indicators)}個")
         print(f"総計: {len(supported_indicators)}個")
-        print(".1f"
+        print(".1f")
         # 成功率が一定以上であることを確認
         success_rate = len(successful_indicators) / len(supported_indicators)
         assert success_rate > 0.8, ".1f"
@@ -84,14 +83,14 @@ class TestAllIndicatorsAutoStrategy:
                 assert key_indicator in successful_indicators, f"主要インジケータ{key_indicator}が失敗しました"
 
         if failed_indicators:
-            print("
-失敗したインジケータ:"            for failed_indicator in failed_indicators[:10]:  # 最初の10個のみ表示
+            print("\n失敗したインジケータ:")
+            for failed_indicator in failed_indicators[:10]:  # 最初の10個のみ表示
                 print(f"  - {failed_indicator}: {error_details.get(failed_indicator, '不明なエラー')}")
             if len(failed_indicators) > 10:
                 print(f"  ... さらに{len(failed_indicators) - 10}個")
 
-        print("
-成功したインジケータ一覧:"        for success_indicator in successful_indicators[:20]:  # 最初の20個のみ表示
+        print("\n成功したインジケータ一覧:")
+        for success_indicator in successful_indicators[:20]:  # 最初の20個のみ表示
             print(f"  - {success_indicator}")
         if len(successful_indicators) > 20:
             print(f"  ... さらに{len(successful_indicators) - 20}個")
@@ -127,8 +126,7 @@ class TestAllIndicatorsAutoStrategy:
                 failed_params.append(indicator_name)
                 print(f"❌ {indicator_name}: パラメータ生成エラー - {str(e)}")
 
-        print("
-=== パラメータ生成結果 ===")
+        print("\n=== パラメータ生成結果 ===")
         print(f"✅ 成功: {len(successful_params)}個")
         print(f"❌ 失敗: {len(failed_params)}個")
         print(f"総計: {len(param_indicators)}個")

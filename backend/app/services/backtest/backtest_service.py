@@ -46,6 +46,7 @@ class BacktestService:
             data_service: データ変換サービス（テスト時にモックを注入可能）
         """
         self.data_service = data_service
+        self._db_session = None  # DBセッション保持用
         self._validator = BacktestConfigValidator()
         self._strategy_factory = StrategyClassFactory()
         self._result_converter = BacktestResultConverter()
@@ -154,12 +155,12 @@ class BacktestService:
     def _ensure_data_service_initialized(self) -> None:
         """データサービスの初期化を確保"""
         if self.data_service is None:
-            db = None
+            # 新しいDBセッションを作成し、保持する
+            self._db_session = next(get_db())
             try:
-                db = next(get_db())
-                ohlcv_repo = OHLCVRepository(db)
-                oi_repo = OpenInterestRepository(db)
-                fr_repo = FundingRateRepository(db)
+                ohlcv_repo = OHLCVRepository(self._db_session)
+                oi_repo = OpenInterestRepository(self._db_session)
+                fr_repo = FundingRateRepository(self._db_session)
                 self.data_service = BacktestDataService(
                     ohlcv_repo=ohlcv_repo, oi_repo=oi_repo, fr_repo=fr_repo
                 )
@@ -167,9 +168,6 @@ class BacktestService:
             except Exception as e:
                 logger.error(f"バックテストデータサービスの初期化に失敗しました: {e}")
                 raise BacktestExecutionError(f"データサービスの初期化に失敗しました: {e}")
-            finally:
-                if db is not None:
-                    db.close()
 
     def _ensure_executor_initialized(self) -> None:
         """実行エンジンの初期化を確保"""
@@ -206,6 +204,13 @@ class BacktestService:
         if self._executor is None:
             raise BacktestExecutionError("実行エンジンが初期化されていません")
         return self._executor.get_supported_strategies()
+
+    def cleanup(self) -> None:
+        """リソースのクリーンアップ"""
+        if self._db_session is not None:
+            self._db_session.close()
+            self._db_session = None
+            logger.info("DBセッションをクリーンアップしました")
 
     def execute_and_save_backtest(self, request, db_session: Session) -> Dict[str, Any]:
         """
