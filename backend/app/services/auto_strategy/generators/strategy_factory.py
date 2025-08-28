@@ -104,7 +104,7 @@ class StrategyFactory:
             def init(self):
                 """指標の初期化"""
                 logger.warning("🚀 init()メソッド実行開始！")
-                logger.warning("戦略遺伝子確認: {self.strategy_gene}")
+                logger.warning(f"戦略遺伝子確認: {self.strategy_gene}")
                 logger.warning(
                     f"戦略遺伝子指標数: {len(self.strategy_gene.indicators) if hasattr(self.strategy_gene, 'indicators') else 'なし'}"
                 )
@@ -130,174 +130,10 @@ class StrategyFactory:
                             )
 
                     logger.warning("戦略初期化完了")
-                except Exception:
-                    logger.error("戦略初期化エラー: {e}", exc_info=True)
+                except Exception as e:
+                    logger.error(f"戦略初期化エラー: {e}", exc_info=True)
                     raise
 
-            def next(self):
-                """売買ロジック"""
-                try:
-                    # リスク管理設定を取得
-                    risk_management = self.gene.risk_management
-
-                    # デバッグログ: 取引量設定の詳細
-                    current_price = self.data.Close[-1]
-                    current_equity = getattr(self, "equity", "N/A")
-
-                    # ロング・ショートエントリー条件チェック
-                    long_entry_result = self._check_long_entry_conditions()
-                    short_entry_result = self._check_short_entry_conditions()
-
-                    # デバッグログ: ロング・ショート条件の評価結果
-                    if hasattr(self, "_debug_counter"):
-                        self._debug_counter += 1
-                    else:
-                        self._debug_counter = 1
-
-                    # より頻繁にログを出力（取引実行の問題を調査）
-                    if self._debug_counter % 50 == 0:
-                        logger.info(
-                            f"[DEBUG] ロング条件: {long_entry_result}, ショート条件: {short_entry_result}"
-                        )
-                        logger.info(
-                            f"[DEBUG] ロング条件数: {len(self.gene.get_effective_long_conditions())}"
-                        )
-                        logger.info(
-                            f"[DEBUG] ショート条件数: {len(self.gene.get_effective_short_conditions())}"
-                        )
-                        logger.info(
-                            f"[DEBUG] 現在価格: {current_price}, 資産: {current_equity}"
-                        )
-
-                        # 条件の詳細をログ出力
-                        if long_entry_result or short_entry_result:
-                            logger.info(f"[DEBUG] 取引条件が満たされました！")
-                        else:
-                            logger.info(f"[DEBUG] 取引条件が満たされていません")
-
-                    if not self.position and (long_entry_result or short_entry_result):
-                        # backtesting.pyのマージン問題を回避するため、非常に小さな固定サイズを使用
-                        current_price = self.data.Close[-1]
-
-                        # 現在の資産を取得
-                        current_equity = getattr(self, "equity", 100000.0)
-                        available_cash = getattr(self, "cash", current_equity)
-
-                        # ポジション方向を決定
-                        if long_entry_result and short_entry_result:
-                            # 両方の条件が満たされた場合はランダムに選択（より公平）
-                            import random
-
-                            position_direction = random.choice([1.0, -1.0])
-                        elif long_entry_result:
-                            position_direction = 1.0  # ロング
-                        elif short_entry_result:
-                            position_direction = -1.0  # ショート
-                        else:
-                            # どちらの条件も満たされない場合はエントリーしない
-                            position_direction = None
-
-                        # デバッグログ: ポジション方向決定
-                        if self._debug_counter % 100 == 0:
-                            logger.debug(
-                                f"[DEBUG] ポジション方向: {position_direction} (ロング={long_entry_result}, ショート={short_entry_result})"
-                            )
-
-                        # ポリシーに委譲
-                        if position_direction is None:
-                            return
-                        from ..core.order_execution_policy import (
-                            OrderExecutionPolicy,
-                        )
-
-                        sl_price, tp_price = OrderExecutionPolicy.compute_tpsl_prices(
-                            factory,
-                            current_price,
-                            risk_management,
-                            gene,
-                            position_direction,
-                        )
-
-                        # 固定サイズを使用（ポジションサイズ計算エラーを回避）
-                        calculated_size = 0.001  # 固定の小さなサイズ
-                        final_size = calculated_size * position_direction
-
-                        if self._debug_counter % 100 == 0:
-                            logger.debug(
-                                f"[DEBUG] 計算サイズ: {calculated_size}, 最終サイズ: {final_size}"
-                            )
-
-                        # より直接的な取引実行（証拠金不足を回避）
-                        logger.info(
-                            f"[DEBUG] 取引実行開始: position_direction={position_direction}"
-                        )
-                        try:
-                            # 現実的なサイズで取引を試行
-                            trade_size = 0.01  # 0.01 BTC（約1100円相当）
-                            logger.info(f"[DEBUG] 取引サイズ決定: {trade_size}")
-
-                            if position_direction > 0:
-                                # ロング
-                                logger.info(
-                                    f"[DEBUG] ロング取引実行開始: size={trade_size}"
-                                )
-                                if self.gene.tpsl_gene and self.gene.tpsl_gene.enabled:
-                                    self.buy(size=trade_size, sl=sl_price, tp=tp_price)
-                                    logger.info(
-                                        f"[DEBUG] ロング取引実行完了（SL/TP付き）: size={trade_size}"
-                                    )
-                                else:
-                                    self.buy(size=trade_size)
-                                    logger.info(
-                                        f"[DEBUG] ロング取引実行完了: size={trade_size}"
-                                    )
-                            else:
-                                # ショート
-                                logger.info(
-                                    f"[DEBUG] ショート取引実行開始: size={trade_size}"
-                                )
-                                if self.gene.tpsl_gene and self.gene.tpsl_gene.enabled:
-                                    self.sell(size=trade_size, sl=sl_price, tp=tp_price)
-                                    logger.info(
-                                        f"[DEBUG] ショート取引実行完了（SL/TP付き）: size={trade_size}"
-                                    )
-                                else:
-                                    self.sell(size=trade_size)
-                                    logger.info(
-                                        f"[DEBUG] ショート取引実行完了: size={trade_size}"
-                                    )
-                        except Exception as e:
-                            logger.error(f"[DEBUG] 取引実行エラー: {e}")
-                            # フォールバック: さらに小さなサイズで再試行
-                            try:
-                                fallback_size = 0.00001  # さらに小さなサイズ
-                                logger.info(
-                                    f"[DEBUG] フォールバック取引開始: size={fallback_size}"
-                                )
-                                if position_direction > 0:
-                                    self.buy(size=fallback_size)
-                                    logger.info(
-                                        f"[DEBUG] フォールバックロング取引実行完了: size={fallback_size}"
-                                    )
-                                else:
-                                    self.sell(size=fallback_size)
-                                    logger.info(
-                                        f"[DEBUG] フォールバックショート取引実行完了: size={fallback_size}"
-                                    )
-                            except Exception as e2:
-                                logger.error(
-                                    f"[DEBUG] フォールバック取引もエラー: {e2}"
-                                )
-                    # イグジット条件チェック（TP/SL遺伝子が存在しない場合のみ）
-                    elif self.position:
-                        # TP/SL遺伝子が存在する場合はイグジット条件をスキップ
-                        if not self.gene.tpsl_gene or not self.gene.tpsl_gene.enabled:
-                            exit_result = self._check_exit_conditions()
-                            if exit_result:
-                                self.position.close()
-
-                except Exception as e:
-                    logger.error(f"売買ロジックエラー: {e}", exc_info=True)
 
             def _init_indicator(self, indicator_gene: IndicatorGene):
                 """単一指標の初期化（統合版）"""
@@ -382,7 +218,9 @@ class StrategyFactory:
                 if hasattr(self, "_debug_counter") and self._debug_counter % 50 == 0:
                     logger.info(f"[DEBUG] ロング条件数: {len(long_conditions)}")
                     for i, cond in enumerate(long_conditions):
-                        if hasattr(cond, "left_operand"):
+                        if isinstance(cond, ConditionGroup):
+                            logger.info(f"[DEBUG] ロング条件{i}: グループ条件({len(cond.conditions)}個)")
+                        elif hasattr(cond, "left_operand") and hasattr(cond, "operator"):
                             logger.info(
                                 f"[DEBUG] ロング条件{i}: {cond.left_operand} {cond.operator} {cond.right_operand}"
                             )
@@ -421,7 +259,9 @@ class StrategyFactory:
                                 f"[DEBUG] entry_conditions使用: {len(entry_conditions)}件"
                             )
                             for i, cond in enumerate(entry_conditions):
-                                if hasattr(cond, "left_operand"):
+                                if isinstance(cond, ConditionGroup):
+                                    logger.info(f"[DEBUG] entry条件{i}: グループ条件({len(cond.conditions)}個)")
+                                elif hasattr(cond, "left_operand") and hasattr(cond, "operator"):
                                     logger.info(
                                         f"[DEBUG] entry条件{i}: {cond.left_operand} {cond.operator} {cond.right_operand}"
                                     )
@@ -469,7 +309,9 @@ class StrategyFactory:
                 if hasattr(self, "_debug_counter") and self._debug_counter % 50 == 0:
                     logger.info(f"[DEBUG] ショート条件数: {len(short_conditions)}")
                     for i, cond in enumerate(short_conditions):
-                        if hasattr(cond, "left_operand"):
+                        if isinstance(cond, ConditionGroup):
+                            logger.info(f"[DEBUG] ショート条件{i}: グループ条件({len(cond.conditions)}個)")
+                        elif hasattr(cond, "left_operand") and hasattr(cond, "operator"):
                             logger.info(
                                 f"[DEBUG] ショート条件{i}: {cond.left_operand} {cond.operator} {cond.right_operand}"
                             )
@@ -638,7 +480,7 @@ class StrategyFactory:
                             # 取引実行
                             if long_signal:
                                 logger.info(
-                                    f"[DEBUG] 取引実行開始: position_direction=1.0"
+                                    f"[DEBUG] 取引実行開始: position_direction={1.0}"
                                 )
                                 logger.info(f"[DEBUG] 取引サイズ決定: {position_size}")
                                 logger.info(
@@ -660,7 +502,7 @@ class StrategyFactory:
 
                             elif short_signal:
                                 logger.info(
-                                    f"[DEBUG] 取引実行開始: position_direction=-1.0"
+                                    f"[DEBUG] 取引実行開始: position_direction={-1.0}"
                                 )
                                 logger.info(f"[DEBUG] 取引サイズ決定: {position_size}")
                                 logger.info(
@@ -705,9 +547,12 @@ class StrategyFactory:
 
         return GeneratedStrategy
 
-    def _calculate_position_size(self) -> float:
+    def _calculate_position_size(self, gene: StrategyGene) -> float:
         """
         ポジションサイズを計算
+
+        Args:
+            gene: 戦略遺伝子
 
         Returns:
             float: ポジションサイズ（0.001-0.2の範囲）
@@ -717,9 +562,8 @@ class StrategyFactory:
 
         # ポジションサイジング遺伝子が有効な場合
         if (
-            hasattr(self, "gene")
-            and self.gene.position_sizing_gene
-            and self.gene.position_sizing_gene.enabled
+            gene.position_sizing_gene
+            and gene.position_sizing_gene.enabled
         ):
             # 遺伝子に基づいてサイズを計算（実装は後で拡張）
             pos = default_size

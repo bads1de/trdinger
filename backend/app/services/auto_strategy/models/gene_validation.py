@@ -50,7 +50,7 @@ class GeneValidator:
             # タイポ修正: 'UI' を 'UO' にマッピング
             if indicator_gene.type.upper() == "UI":
                 indicator_gene.type = "UO"
-                logger.warning(f"指標タイプ 'UI' を 'UO' に修正しました")
+                logger.warning("指標タイプ 'UI' を 'UO' に修正しました")
 
             # 有効な指標タイプの確認
             if indicator_gene.type not in self.valid_indicator_types:
