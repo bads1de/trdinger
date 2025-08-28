@@ -400,23 +400,36 @@ class StrategyFactory:
                 )
 
             def _calculate_position_size(self) -> float:
-                """ポジションサイズを計算"""
-                # デフォルトのポジションサイズ
-                default_size = 0.01
+                """ポジションサイズを計算（PositionSizingService使用）"""
+                try:
+                    # PositionSizingGeneが有効な場合
+                    if (
+                        hasattr(self, "gene")
+                        and self.gene.position_sizing_gene
+                        and self.gene.position_sizing_gene.enabled
+                    ):
+                        # 現在の市場データ（該当するものがなければデフォルト値を使用）
+                        current_price = self.data.Close[-1] if hasattr(self, 'data') and len(self.data.Close) > 0 else 50000.0
+                        account_balance = getattr(self, 'equity', 100000.0)  # デフォルト口座残高
 
-                # ポジションサイジング遺伝子が有効な場合
-                if (
-                    hasattr(self, "gene")
-                    and self.gene.position_sizing_gene
-                    and self.gene.position_sizing_gene.enabled
-                ):
-                    # 遺伝子に基づいてサイズを計算（実装は後で拡張）
-                    pos = default_size
-                else:
-                    pos = default_size
+                        # PositionSizingServiceを使用して計算
+                        result = factory.position_sizing_service.calculate_position_size(
+                            gene=self.gene.position_sizing_gene,
+                            account_balance=account_balance,
+                            current_price=current_price,
+                        )
 
-                # 安全な範囲に制限
-                return max(0.001, min(0.2, float(pos)))
+                        # 結果を返却（安全範囲に制限）
+                        position_size = result.position_size
+                        return max(0.001, min(0.2, float(position_size)))
+                    else:
+                        # デフォルトサイズを使用
+                        return 0.01
+
+                except Exception as e:
+                    logger.warning(f"ポジションサイズ計算エラー、フォールバック使用: {e}")
+                    # エラー時はデフォルトサイズを使用
+                    return 0.01
 
             def next(self):
                 """各バーでの戦略実行"""
@@ -557,28 +570,6 @@ class StrategyFactory:
 
         return GeneratedStrategy
 
-    def _calculate_position_size(self, gene: StrategyGene) -> float:
-        """
-        ポジションサイズを計算
-
-        Args:
-            gene: 戦略遺伝子
-
-        Returns:
-            float: ポジションサイズ（0.001-0.2の範囲）
-        """
-        # デフォルトのポジションサイズ
-        default_size = 0.01
-
-        # ポジションサイジング遺伝子が有効な場合
-        if gene.position_sizing_gene and gene.position_sizing_gene.enabled:
-            # 遺伝子に基づいてサイズを計算（実装は後で拡張）
-            pos = default_size
-        else:
-            pos = default_size
-
-        # 安全な範囲に制限
-        return max(0.001, min(0.2, float(pos)))
 
     def validate_gene(self, gene: StrategyGene) -> Tuple[bool, list]:
         """

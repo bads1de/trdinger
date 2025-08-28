@@ -12,6 +12,8 @@ from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any, Dict, List, Optional, Tuple, Union, TYPE_CHECKING
 
+from ..utils.common_utils import BaseGene
+
 logger = logging.getLogger(__name__)
 
 
@@ -138,11 +140,12 @@ class IndicatorGene:
 
 
 @dataclass
-class PositionSizingGene:
+class PositionSizingGene(BaseGene):
     """
     ポジションサイジング遺伝子
 
     GA最適化対象としてのポジションサイジング設定を表現します。
+    BaseGeneを継承して共通機能を活用します。
     """
 
     method: PositionSizingMethod = PositionSizingMethod.VOLATILITY_BASED
@@ -158,44 +161,8 @@ class PositionSizingGene:
     enabled: bool = True
     priority: float = 1.0
 
-    def to_dict(self) -> Dict[str, Any]:
-        """辞書形式に変換"""
-        return {
-            "method": self.method.value,
-            "lookback_period": self.lookback_period,
-            "optimal_f_multiplier": self.optimal_f_multiplier,
-            "atr_period": self.atr_period,
-            "atr_multiplier": self.atr_multiplier,
-            "risk_per_trade": self.risk_per_trade,
-            "fixed_ratio": self.fixed_ratio,
-            "fixed_quantity": self.fixed_quantity,
-            "min_position_size": self.min_position_size,
-            "max_position_size": self.max_position_size,
-            "enabled": self.enabled,
-            "priority": self.priority,
-        }
-
-    @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> "PositionSizingGene":
-        """辞書形式から遺伝子を復元"""
-        return cls(
-            method=PositionSizingMethod(data.get("method", "fixed_ratio")),
-            lookback_period=data.get("lookback_period", 100),
-            optimal_f_multiplier=data.get("optimal_f_multiplier", 0.5),
-            atr_period=data.get("atr_period", 14),
-            atr_multiplier=data.get("atr_multiplier", 2.0),
-            risk_per_trade=data.get("risk_per_trade", 0.02),
-            fixed_ratio=data.get("fixed_ratio", 0.1),
-            fixed_quantity=data.get("fixed_quantity", 1.0),
-            min_position_size=data.get("min_position_size", 0.01),
-            max_position_size=data.get("max_position_size", 50.0),
-            enabled=data.get("enabled", True),
-            priority=data.get("priority", 1.0),
-        )
-
-    def validate(self) -> Tuple[bool, List[str]]:
-        """遺伝子の妥当性を検証"""
-        errors = []
+    def _validate_parameters(self, errors: List[str]) -> None:
+        """パラメータ固有の検証を実装"""
         try:
             from ..config.constants import POSITION_SIZING_LIMITS
 
@@ -205,22 +172,30 @@ class PositionSizingGene:
                     f"lookback_periodは{lb_min}-{lb_max}の範囲である必要があります"
                 )
 
-            # 他の検証も同様に実装...
+            # 他のパラメータ検証も実装可能
+            self._validate_range(self.risk_per_trade, 0.001, 0.1, "risk_per_trade", errors)
+            self._validate_range(self.fixed_ratio, 0.001, 1.0, "fixed_ratio", errors)
+            self._validate_range(self.atr_multiplier, 0.1, 5.0, "atr_multiplier", errors)
 
         except ImportError:
             # 定数が利用できない場合の基本検証
             if not (50 <= self.lookback_period <= 200):
                 errors.append("lookback_periodは50-200の範囲である必要があります")
 
-        return len(errors) == 0, errors
+            # 基本的な範囲検証
+            if not (0.001 <= self.risk_per_trade <= 0.1):
+                errors.append("risk_per_tradeは0.001-0.1の範囲である必要があります")
+            if not (0.001 <= self.fixed_ratio <= 1.0):
+                errors.append("fixed_ratioは0.001-1.0の範囲である必要があります")
 
 
 @dataclass
-class TPSLGene:
+class TPSLGene(BaseGene):
     """
     TP/SL遺伝子
 
     GA最適化対象としてのTP/SL設定を表現します。
+    BaseGeneを継承して共通機能を活用します。
     """
 
     method: TPSLMethod = TPSLMethod.RISK_REWARD_RATIO
@@ -244,54 +219,8 @@ class TPSLGene:
     enabled: bool = True
     priority: float = 1.0
 
-    def to_dict(self) -> Dict[str, Any]:
-        """遺伝子を辞書形式に変換"""
-        return {
-            "method": self.method.value,
-            "stop_loss_pct": round(self.stop_loss_pct, 4),
-            "take_profit_pct": round(self.take_profit_pct, 4),
-            "risk_reward_ratio": round(self.risk_reward_ratio, 3),
-            "base_stop_loss": round(self.base_stop_loss, 4),
-            "atr_multiplier_sl": round(self.atr_multiplier_sl, 3),
-            "atr_multiplier_tp": round(self.atr_multiplier_tp, 3),
-            "atr_period": self.atr_period,
-            "lookback_period": self.lookback_period,
-            "confidence_threshold": round(self.confidence_threshold, 3),
-            "method_weights": {k: round(v, 3) for k, v in self.method_weights.items()},
-            "enabled": self.enabled,
-            "priority": round(self.priority, 2),
-        }
-
-    @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> "TPSLGene":
-        """辞書形式から遺伝子を復元"""
-        return cls(
-            method=TPSLMethod(data.get("method", "risk_reward_ratio")),
-            stop_loss_pct=data.get("stop_loss_pct", 0.03),
-            take_profit_pct=data.get("take_profit_pct", 0.06),
-            risk_reward_ratio=data.get("risk_reward_ratio", 2.0),
-            base_stop_loss=data.get("base_stop_loss", 0.03),
-            atr_multiplier_sl=data.get("atr_multiplier_sl", 2.0),
-            atr_multiplier_tp=data.get("atr_multiplier_tp", 3.0),
-            atr_period=data.get("atr_period", 14),
-            lookback_period=data.get("lookback_period", 100),
-            confidence_threshold=data.get("confidence_threshold", 0.7),
-            method_weights=data.get(
-                "method_weights",
-                {
-                    "fixed": 0.25,
-                    "risk_reward": 0.35,
-                    "volatility": 0.25,
-                    "statistical": 0.15,
-                },
-            ),
-            enabled=data.get("enabled", True),
-            priority=data.get("priority", 1.0),
-        )
-
-    def validate(self) -> Tuple[bool, List[str]]:
-        """遺伝子の妥当性を検証"""
-        errors = []
+    def _validate_parameters(self, errors: List[str]) -> None:
+        """パラメータ固有の検証を実装"""
         try:
             from ..config.constants import TPSL_LIMITS
 
@@ -301,14 +230,30 @@ class TPSLGene:
                     f"stop_loss_pct must be between {sl_min*100:.1f}% and {sl_max*100:.0f}%"
                 )
 
-            # 他の検証も同様に実装...
+            tp_min, tp_max = TPSL_LIMITS["take_profit_pct"]
+            if not (tp_min <= self.take_profit_pct <= tp_max):
+                errors.append(
+                    f"take_profit_pct must be between {tp_min*100:.1f}% and {tp_max*100:.0f}%"
+                )
+
+            # 他のパラメータ検証
+            self._validate_range(self.risk_reward_ratio, 1.0, 10.0, "risk_reward_ratio", errors)
+            self._validate_range(self.confidence_threshold, 0.0, 1.0, "confidence_threshold", errors)
+            self._validate_range(self.atr_multiplier_sl, 0.1, 5.0, "atr_multiplier_sl", errors)
+            self._validate_range(self.atr_multiplier_tp, 0.1, 10.0, "atr_multiplier_tp", errors)
+
+            # method_weightsの検証
+            total_weight = sum(self.method_weights.values())
+            if not (0.99 <= total_weight <= 1.01):  # 浮動小数点誤差考慮
+                errors.append("method_weightsの合計は1.0である必要があります")
 
         except ImportError:
             # 定数が利用できない場合の基本検証
             if not (0.005 <= self.stop_loss_pct <= 0.15):
                 errors.append("stop_loss_pct must be between 0.5% and 15%")
 
-        return len(errors) == 0, errors
+            if not (0.01 <= self.take_profit_pct <= 0.3):
+                errors.append("take_profit_pct must be between 1% and 30%")
 
 
 @dataclass
@@ -778,99 +723,69 @@ def create_random_tpsl_gene() -> TPSLGene:
 def crossover_position_sizing_genes(
     parent1: PositionSizingGene, parent2: PositionSizingGene
 ) -> Tuple[PositionSizingGene, PositionSizingGene]:
-    """ポジションサイジング遺伝子の交叉"""
-    child1_method = random.choice([parent1.method, parent2.method])
-    child2_method = random.choice([parent1.method, parent2.method])
+    """ポジションサイジング遺伝子の交叉（ジェネリック関数使用）"""
+    from ..utils.common_utils import GeneticUtils
 
-    child1 = PositionSizingGene(
-        method=child1_method,
-        lookback_period=random.choice(
-            [parent1.lookback_period, parent2.lookback_period]
-        ),
-        optimal_f_multiplier=(
-            parent1.optimal_f_multiplier + parent2.optimal_f_multiplier
-        )
-        / 2,
-        atr_period=random.choice([parent1.atr_period, parent2.atr_period]),
-        atr_multiplier=(parent1.atr_multiplier + parent2.atr_multiplier) / 2,
-        risk_per_trade=(parent1.risk_per_trade + parent2.risk_per_trade) / 2,
-        fixed_ratio=(parent1.fixed_ratio + parent2.fixed_ratio) / 2,
-        fixed_quantity=(parent1.fixed_quantity + parent2.fixed_quantity) / 2,
-        min_position_size=(parent1.min_position_size + parent2.min_position_size) / 2,
-        max_position_size=(parent1.max_position_size + parent2.max_position_size) / 2,
-        enabled=random.choice([parent1.enabled, parent2.enabled]),
-        priority=(parent1.priority + parent2.priority) / 2,
+    # フィールドのカテゴリ分け
+    numeric_fields = [
+        "optimal_f_multiplier", "atr_multiplier", "risk_per_trade",
+        "fixed_ratio", "fixed_quantity", "min_position_size",
+        "max_position_size", "priority", "lookback_period", "atr_period"
+    ]
+    enum_fields = ["method"]
+    choice_fields = ["enabled"]
+
+    return GeneticUtils.crossover_generic_genes(
+        parent1_gene=parent1,
+        parent2_gene=parent2,
+        gene_class=PositionSizingGene,
+        numeric_fields=numeric_fields,
+        enum_fields=enum_fields,
+        choice_fields=choice_fields
     )
-
-    child2 = PositionSizingGene(
-        method=child2_method,
-        lookback_period=random.choice(
-            [parent2.lookback_period, parent1.lookback_period]
-        ),
-        optimal_f_multiplier=(
-            parent2.optimal_f_multiplier + parent1.optimal_f_multiplier
-        )
-        / 2,
-        atr_period=random.choice([parent2.atr_period, parent1.atr_period]),
-        atr_multiplier=(parent2.atr_multiplier + parent1.atr_multiplier) / 2,
-        risk_per_trade=(parent2.risk_per_trade + parent1.risk_per_trade) / 2,
-        fixed_ratio=(parent2.fixed_ratio + parent1.fixed_ratio) / 2,
-        fixed_quantity=(parent2.fixed_quantity + parent1.fixed_quantity) / 2,
-        min_position_size=(parent2.min_position_size + parent1.min_position_size) / 2,
-        max_position_size=(parent2.max_position_size + parent1.max_position_size) / 2,
-        enabled=random.choice([parent2.enabled, parent1.enabled]),
-        priority=(parent2.priority + parent1.priority) / 2,
-    )
-
-    return child1, child2
 
 
 def crossover_tpsl_genes(
     parent1: TPSLGene, parent2: TPSLGene
 ) -> Tuple[TPSLGene, TPSLGene]:
-    """TP/SL遺伝子の交叉"""
-    if random.random() < 0.5:
-        child1_method = parent2.method
-        child2_method = parent1.method
-    else:
-        child1_method = parent1.method
-        child2_method = parent2.method
+    """TP/SL遺伝子の交叉（ジェネリック関数使用）"""
+    from ..utils.common_utils import GeneticUtils
 
-    child1 = TPSLGene(
-        method=child1_method,
-        stop_loss_pct=(parent1.stop_loss_pct + parent2.stop_loss_pct) / 2,
-        take_profit_pct=(parent1.take_profit_pct + parent2.take_profit_pct) / 2,
-        risk_reward_ratio=(parent1.risk_reward_ratio + parent2.risk_reward_ratio) / 2,
-        base_stop_loss=(parent1.base_stop_loss + parent2.base_stop_loss) / 2,
-        atr_multiplier_sl=(parent1.atr_multiplier_sl + parent2.atr_multiplier_sl) / 2,
-        atr_multiplier_tp=(parent1.atr_multiplier_tp + parent2.atr_multiplier_tp) / 2,
-        atr_period=random.choice([parent1.atr_period, parent2.atr_period]),
-        lookback_period=random.choice(
-            [parent1.lookback_period, parent2.lookback_period]
-        ),
-        confidence_threshold=(
-            parent1.confidence_threshold + parent2.confidence_threshold
-        )
-        / 2,
+    # 基本フィールドのカテゴリ分け
+    numeric_fields = [
+        "stop_loss_pct", "take_profit_pct", "risk_reward_ratio",
+        "base_stop_loss", "atr_multiplier_sl", "atr_multiplier_tp",
+        "confidence_threshold", "priority", "lookback_period", "atr_period"
+    ]
+    enum_fields = ["method"]
+    choice_fields = ["enabled"]
+
+    # ジェネリック交叉を実行
+    child1, child2 = GeneticUtils.crossover_generic_genes(
+        parent1_gene=parent1,
+        parent2_gene=parent2,
+        gene_class=TPSLGene,
+        numeric_fields=numeric_fields,
+        enum_fields=enum_fields,
+        choice_fields=choice_fields
     )
 
-    child2 = TPSLGene(
-        method=child2_method,
-        stop_loss_pct=(parent2.stop_loss_pct + parent1.stop_loss_pct) / 2,
-        take_profit_pct=(parent2.take_profit_pct + parent1.take_profit_pct) / 2,
-        risk_reward_ratio=(parent2.risk_reward_ratio + parent1.risk_reward_ratio) / 2,
-        base_stop_loss=(parent2.base_stop_loss + parent1.base_stop_loss) / 2,
-        atr_multiplier_sl=(parent2.atr_multiplier_sl + parent1.atr_multiplier_sl) / 2,
-        atr_multiplier_tp=(parent2.atr_multiplier_tp + parent1.atr_multiplier_tp) / 2,
-        atr_period=random.choice([parent2.atr_period, parent1.atr_period]),
-        lookback_period=random.choice(
-            [parent2.lookback_period, parent1.lookback_period]
-        ),
-        confidence_threshold=(
-            parent2.confidence_threshold + parent1.confidence_threshold
-        )
-        / 2,
-    )
+    # method_weightsの特殊処理
+    # 辞書の各キーにたいして比率の平均を取る
+    all_keys = set(parent1.method_weights.keys()) | set(parent2.method_weights.keys())
+    for key in all_keys:
+        if key in parent1.method_weights and key in parent2.method_weights:
+            # 両方にある場合、平均を取る
+            child1.method_weights[key] = (parent1.method_weights[key] + parent2.method_weights[key]) / 2
+            child2.method_weights[key] = (parent1.method_weights[key] + parent2.method_weights[key]) / 2
+        else:
+            # 片方しかない場合、そのまま継承
+            if key in parent1.method_weights:
+                child1.method_weights[key] = parent1.method_weights[key]
+                child2.method_weights[key] = parent1.method_weights[key]
+            else:
+                child1.method_weights[key] = parent2.method_weights[key]
+                child2.method_weights[key] = parent2.method_weights[key]
 
     return child1, child2
 
@@ -878,38 +793,91 @@ def crossover_tpsl_genes(
 def mutate_position_sizing_gene(
     gene: PositionSizingGene, mutation_rate: float = 0.1
 ) -> PositionSizingGene:
-    """ポジションサイジング遺伝子の突然変異"""
-    mutated = PositionSizingGene(**gene.to_dict())
+    """ポジションサイジング遺伝子の突然変異（ジェネリック関数使用）"""
+    from ..utils.common_utils import GeneticUtils
 
-    if random.random() < mutation_rate:
-        mutated.method = random.choice(list(PositionSizingMethod))
+    # フィールドルール定義
+    numeric_fields = [
+        "lookback_period", "optimal_f_multiplier", "atr_multiplier",
+        "risk_per_trade", "fixed_ratio", "fixed_quantity",
+        "min_position_size", "max_position_size", "priority", "atr_period"
+    ]
 
-    if random.random() < mutation_rate:
-        mutated.lookback_period = max(
-            50, min(200, int(mutated.lookback_period * random.uniform(0.8, 1.2)))
-        )
+    enum_fields = ["method"]  # Enumは自動的に検出される
 
-    if random.random() < mutation_rate:
-        mutated.optimal_f_multiplier = max(
-            0.25, min(0.75, mutated.optimal_f_multiplier * random.uniform(0.8, 1.2))
-        )
+    # 各フィールドの許容範囲
+    numeric_ranges = {
+        "lookback_period": (50, 200),
+        "optimal_f_multiplier": (0.25, 0.75),
+        "atr_multiplier": (0.1, 5.0),
+        "risk_per_trade": (0.001, 0.1),
+        "fixed_ratio": (0.001, 1.0),
+        "fixed_quantity": (0.1, 10.0),
+        "min_position_size": (0.001, 0.1),
+        "max_position_size": (5.0, 50.0),
+        "priority": (0.5, 1.5),
+        "atr_period": (10, 30),
+    }
 
-    # 他のパラメータも同様に突然変異...
-
-    return mutated
+    return GeneticUtils.mutate_generic_gene(
+        gene=gene,
+        gene_class=PositionSizingGene,
+        mutation_rate=mutation_rate,
+        numeric_fields=numeric_fields,
+        enum_fields=enum_fields,
+        numeric_ranges=numeric_ranges
+    )
 
 
 def mutate_tpsl_gene(gene: TPSLGene, mutation_rate: float = 0.1) -> TPSLGene:
-    """TP/SL遺伝子の突然変異"""
-    mutated = TPSLGene(**gene.to_dict())
+    """TP/SL遺伝子の突然変異（ジェネリック関数使用）"""
+    from ..utils.common_utils import GeneticUtils
 
+    # 基本フィールド
+    numeric_fields = [
+        "stop_loss_pct", "take_profit_pct", "risk_reward_ratio",
+        "base_stop_loss", "atr_multiplier_sl", "atr_multiplier_tp",
+        "confidence_threshold", "priority", "lookback_period", "atr_period"
+    ]
+
+    enum_fields = ["method"]
+
+    # 各フィールドの許容範囲
+    numeric_ranges = {
+        "stop_loss_pct": (0.005, 0.15),      # 0.5%-15%
+        "take_profit_pct": (0.01, 0.3),      # 1%-30%
+        "risk_reward_ratio": (1.0, 10.0),    # 1:10まで
+        "base_stop_loss": (0.01, 0.06),
+        "atr_multiplier_sl": (0.5, 3.0),
+        "atr_multiplier_tp": (1.0, 5.0),
+        "confidence_threshold": (0.1, 0.9),
+        "priority": (0.5, 1.5),
+        "lookback_period": (50, 200),
+        "atr_period": (10, 30),
+    }
+
+    # ジェネリック突然変異を実行
+    mutated_gene = GeneticUtils.mutate_generic_gene(
+        gene=gene,
+        gene_class=TPSLGene,
+        mutation_rate=mutation_rate,
+        numeric_fields=numeric_fields,
+        enum_fields=enum_fields,
+        numeric_ranges=numeric_ranges
+    )
+
+    # method_weightsの突然変異（辞書フィールドの特殊処理）
     if random.random() < mutation_rate:
-        mutated.method = random.choice(list(TPSLMethod))
+        # method_weightsを乱数で調整
+        for key in mutated_gene.method_weights:
+            current_weight = mutated_gene.method_weights[key]
+            # 現在の値を中心とした範囲で変動
+            mutated_gene.method_weights[key] = current_weight * random.uniform(0.8, 1.2)
 
-    if random.random() < mutation_rate:
-        mutated.stop_loss_pct *= random.uniform(0.8, 1.2)
-        mutated.stop_loss_pct = max(0.005, min(mutated.stop_loss_pct, 0.15))
+        # 合計が1.0になるよう正規化
+        total_weight = sum(mutated_gene.method_weights.values())
+        if total_weight > 0:
+            for key in mutated_gene.method_weights:
+                mutated_gene.method_weights[key] /= total_weight
 
-    # 他のパラメータも同様に突然変異...
-
-    return mutated
+    return mutated_gene

@@ -14,6 +14,7 @@ import pandas as pd
 import pandas_ta as ta
 
 from app.config.unified_config import unified_config
+from ..config.constants import GA_PARAMETER_RANGES
 
 
 logger = logging.getLogger(__name__)
@@ -33,9 +34,9 @@ class VolatilityRegime(Enum):
 class VolatilityConfig:
     """ボラティリティベース計算の設定"""
 
-    atr_period: int = unified_config.auto_strategy.atr_period  # ATR計算期間
-    atr_multiplier_sl: float = unified_config.auto_strategy.atr_multiplier_sl  # SL用ATR倍率
-    atr_multiplier_tp: float = unified_config.auto_strategy.atr_multiplier_tp  # TP用ATR倍率
+    atr_period: int = GA_PARAMETER_RANGES.get("period", [14, 200])[0]  # ATR計算期間（14日相当）
+    atr_multiplier_sl: float = 1.0  # SL用ATR倍率（デフォルト1.0）
+    atr_multiplier_tp: float = 2.0  # TP用ATR倍率（デフォルト2.0）
     volatility_sensitivity: str = "medium"  # 感度設定
     adaptive_multiplier: bool = True  # 適応的倍率調整
     min_sl_pct: float = unified_config.auto_strategy.min_sl_pct  # 最小SL（0.5%）

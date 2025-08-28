@@ -198,14 +198,12 @@ def crossover_strategy_genes(
             child1_position_sizing = ps_gene2
             child2_position_sizing = copy.deepcopy(ps_gene2)
 
-        # メタデータの継承
-        child1_metadata = strategy_parent1.metadata.copy()
-        child1_metadata["crossover_parent1"] = strategy_parent1.id
-        child1_metadata["crossover_parent2"] = strategy_parent2.id
+        # メタデータの交叉（共通ユーティリティ使用）
+        from ..utils.common_utils import prepare_crossover_metadata
 
-        child2_metadata = strategy_parent2.metadata.copy()
-        child2_metadata["crossover_parent1"] = strategy_parent1.id
-        child2_metadata["crossover_parent2"] = strategy_parent2.id
+        child1_metadata, child2_metadata = prepare_crossover_metadata(
+            strategy_parent1, strategy_parent2
+        )
 
         # ロング・ショート条件の交叉
         if random.random() < 0.5:

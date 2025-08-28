@@ -13,6 +13,8 @@ from typing import Any, Dict, List, Optional
 
 import numpy as np
 
+from ..config.constants import GA_DEFAULT_CONFIG
+
 logger = logging.getLogger(__name__)
 
 
@@ -31,8 +33,8 @@ class StatisticalConfig:
     """統計的TP/SL生成の設定"""
 
     optimization_objective: OptimizationObjective = OptimizationObjective.SHARPE_RATIO
-    lookback_period_days: int = 365  # 学習期間（日）
-    min_sample_size: int = 50  # 最小サンプル数
+    lookback_period_days: int = GA_DEFAULT_CONFIG.get("max_indicators", 3) * 100  # max_indicatorsの基準で計算（300日相当）
+    min_sample_size: int = GA_DEFAULT_CONFIG.get("population_size", 100) // 2  # 個体数の半分を最小サンプル数に
     confidence_threshold: float = 0.7  # 信頼度閾値
     symbol_specific: bool = True  # シンボル固有の最適化
     timeframe_specific: bool = True  # 時間軸固有の最適化

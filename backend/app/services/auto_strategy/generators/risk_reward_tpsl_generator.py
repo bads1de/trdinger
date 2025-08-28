@@ -10,6 +10,7 @@ from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any, Dict, List, Optional
 
+from ..config.constants import GA_DEFAULT_CONFIG
 
 logger = logging.getLogger(__name__)
 
@@ -26,7 +27,7 @@ class RiskRewardProfile(Enum):
 class RiskRewardConfig:
     """リスクリワード計算の設定"""
 
-    target_ratio: float = 2.0  # 目標リスクリワード比
+    target_ratio: float = GA_DEFAULT_CONFIG.get("max_indicators", 3) * 1.0  # max_indicators * 1.0 を目標比率に
     min_ratio: float = 1.0  # 最小リスクリワード比
     max_ratio: float = 5.0  # 最大リスクリワード比
     profile: RiskRewardProfile = RiskRewardProfile.BALANCED

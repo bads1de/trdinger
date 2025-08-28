@@ -435,3 +435,100 @@ POSITION_SIZING_LIMITS = {
     "fixed_quantity": (0.01, 1000.0),
     "min_position_size": (0.001, 1.0),
 }
+
+# === GA Config デフォルト定数（一元管理用） ===
+
+# GA基本設定
+GA_DEFAULT_CONFIG = {
+    "population_size": 100,  # より実用的、デフォルトをGA_DEFAULT_SETTINGSに合わせる
+    "generations": 50,
+    "crossover_rate": 0.8,
+    "mutation_rate": 0.1,
+    "elite_size": 10,
+    "max_indicators": 3,
+}
+
+# フィットネス設定
+DEFAULT_FITNESS_WEIGHTS = {
+    "total_return": 0.25,
+    "sharpe_ratio": 0.35,
+    "max_drawdown": 0.2,
+    "win_rate": 0.1,
+    "balance_score": 0.1,
+}
+
+DEFAULT_FITNESS_CONSTRAINTS = {
+    "min_trades": 10,
+    "max_drawdown_limit": 0.3,
+    "min_sharpe_ratio": 1.0,
+}
+
+# GA目的設定
+DEFAULT_GA_OBJECTIVES = ["total_return"]
+DEFAULT_GA_OBJECTIVE_WEIGHTS = [1.0]  # 最大化
+
+# パラメータ範囲定義
+GA_PARAMETER_RANGES = {
+    # 基本パラメータ
+    "period": [5, 200],
+    "fast_period": [5, 20],
+    "slow_period": [20, 50],
+    "signal_period": [5, 15],
+    # 特殊パラメータ
+    "std_dev": [1.5, 2.5],
+    "k_period": [10, 20],
+    "d_period": [3, 7],
+    "slowing": [1, 5],
+    # 閾値パラメータ
+    "overbought": [70, 90],
+    "oversold": [10, 30],
+}
+
+GA_THRESHOLD_RANGES = {
+    "oscillator_0_100": [20, 80],
+    "oscillator_plus_minus_100": [-100, 100],
+    "momentum_zero_centered": [-0.5, 0.5],
+    "funding_rate": [0.0001, 0.0005, 0.001, -0.0001, -0.0005, -0.001],
+    "open_interest": [1000000, 5000000, 10000000, 50000000],
+    "price_ratio": [0.95, 1.05],
+}
+
+# TP/SL関連設定
+GA_DEFAULT_TPSL_METHOD_CONSTRAINTS = [
+    "fixed_percentage",
+    "risk_reward_ratio",
+    "volatility_based",
+    "statistical",
+    "adaptive",
+]
+
+GA_TPSL_SL_RANGE = [0.01, 0.08]  # SL範囲（1%-8%）
+GA_TPSL_TP_RANGE = [0.02, 0.20]  # TP範囲（2%-20%）
+GA_TPSL_RR_RANGE = [1.2, 4.0]   # リスクリワード比範囲
+GA_TPSL_ATR_MULTIPLIER_RANGE = [1.0, 4.0]  # ATR倍率範囲
+
+# ポジションサイジング関連設定
+GA_DEFAULT_POSITION_SIZING_METHOD_CONSTRAINTS = [
+    "half_optimal_f",
+    "volatility_based",
+    "fixed_ratio",
+    "fixed_quantity",
+]
+
+GA_POSITION_SIZING_LOOKBACK_RANGE = [50, 200]  # ハーフオプティマルF用ルックバック期間
+GA_POSITION_SIZING_OPTIMAL_F_MULTIPLIER_RANGE = [0.25, 0.75]  # オプティマルF倍率範囲
+GA_POSITION_SIZING_ATR_PERIOD_RANGE = [10, 30]  # ATR計算期間範囲
+GA_POSITION_SIZING_ATR_MULTIPLIER_RANGE = [1.0, 4.0]  # ポジションサイジング用ATR倍率範囲
+GA_POSITION_SIZING_RISK_PER_TRADE_RANGE = [0.01, 0.05]  # 1取引あたりのリスク範囲（1%-5%）
+GA_POSITION_SIZING_FIXED_RATIO_RANGE = [0.05, 0.3]  # 固定比率範囲（5%-30%）
+GA_POSITION_SIZING_FIXED_QUANTITY_RANGE = [0.1, 5.0]  # 固定枚数範囲
+GA_POSITION_SIZING_MIN_SIZE_RANGE = [0.01, 0.1]  # 最小ポジションサイズ範囲
+GA_POSITION_SIZING_MAX_SIZE_RANGE = [5.0, 50.0]  # 最大ポジションサイズ範囲（BTCトレードに適した範囲に拡大）
+GA_POSITION_SIZING_PRIORITY_RANGE = [0.5, 1.5]  # 優先度範囲
+
+# フィットネス共有設定
+GA_DEFAULT_FITNESS_SHARING = {
+    "enable_fitness_sharing": True,
+    "sharing_radius": 0.1,
+    "sharing_alpha": 1.0,
+}
