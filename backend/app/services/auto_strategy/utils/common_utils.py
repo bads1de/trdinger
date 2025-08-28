@@ -342,10 +342,10 @@ class GeneticUtils:
         parent1_gene,
         parent2_gene,
         gene_class,
-        numeric_fields: List[str] = None,
-        enum_fields: List[str] = None,
-        choice_fields: List[str] = None,
-        list_fields: List[str] = None
+        numeric_fields: Optional[List[str]] = None,
+        enum_fields: Optional[List[str]] = None,
+        choice_fields: Optional[List[str]] = None,
+        list_fields: Optional[List[str]] = None
     ):
         """
         ジェネリック遺伝子交叉関数
@@ -419,9 +419,9 @@ class GeneticUtils:
         gene,
         gene_class,
         mutation_rate: float = 0.1,
-        numeric_fields: List[str] = None,
-        enum_fields: List[str] = None,
-        numeric_ranges: Dict[str, Tuple[float, float]] = None
+        numeric_fields: Optional[List[str]] = None,
+        enum_fields: Optional[List[str]] = None,
+        numeric_ranges: Optional[Dict[str, Tuple[float, float]]] = None
     ):
         """
         ジェネリック遺伝子突然変異関数

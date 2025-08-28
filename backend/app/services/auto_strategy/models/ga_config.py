@@ -16,6 +16,7 @@ from ..config.constants import (
     DEFAULT_FITNESS_CONSTRAINTS,
     DEFAULT_GA_OBJECTIVES,
     DEFAULT_GA_OBJECTIVE_WEIGHTS,
+    GA_DEFAULT_CONFIG,
     GA_PARAMETER_RANGES,
     GA_THRESHOLD_RANGES,
     GA_DEFAULT_TPSL_METHOD_CONSTRAINTS,
@@ -104,8 +105,6 @@ class GAConfig(BaseConfig):
     numeric_threshold_probability: float = 0.8
     min_compatibility_score: float = 0.8
     strict_compatibility_score: float = 0.9
-
-    # position_size_range: 削除（Position Sizingシステムにより不要）
 
     # TP/SL GA最適化範囲設定（ユーザー設定ではなくGA制約）
     tpsl_method_constraints: List[str] = field(
@@ -360,13 +359,21 @@ class GAConfig(BaseConfig):
 
     def get_default_values(self) -> Dict[str, Any]:
         """BaseConfig用のデフォルト値を取得"""
-        default_values = GA_DEFAULT_CONFIG.copy()
-        default_values.update({
+        # クラスフィールドのデフォルト値を使用
+        default_values = {
+            "population_size": self.__class__.population_size,
+            "generations": self.__class__.generations,
+            "crossover_rate": self.__class__.crossover_rate,
+            "mutation_rate": self.__class__.mutation_rate,
+            "elite_size": self.__class__.elite_size,
+            "fitness_weights": self.__class__.fitness_weights,
+            "primary_metric": self.__class__.primary_metric,
+            "max_indicators": self.__class__.max_indicators,
             "min_indicators": 1,
             "min_conditions": 1,
             "max_conditions": 3,
             "enabled": True,
-        })
+        }
         return default_values
 
     # BaseConfigのメソッドをオーバーライド（既存機能を保持）

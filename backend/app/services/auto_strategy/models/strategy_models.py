@@ -10,7 +10,7 @@ import logging
 import random
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any, Dict, List, Optional, Tuple, Union, TYPE_CHECKING
+from typing import Any, Dict, List, Optional, Tuple, Union
 
 from ..utils.common_utils import BaseGene
 
@@ -161,6 +161,77 @@ class PositionSizingGene(BaseGene):
     enabled: bool = True
     priority: float = 1.0
 
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> "PositionSizingGene":
+        """辞書形式からPositionSizingGeneを復元"""
+        try:
+            # PositionSizingMethod enumの特別処理
+            init_params = {}
+
+            # methodフィールドの処理
+            if "method" in data:
+                method_value = data["method"]
+                if isinstance(method_value, str):
+                    try:
+                        init_params["method"] = PositionSizingMethod(method_value)
+                    except ValueError:
+                        # 無効な値の場合はデフォルトを使用
+                        init_params["method"] = PositionSizingMethod.VOLATILITY_BASED
+                else:
+                    init_params["method"] = method_value
+
+            # その他のフィールド
+            numeric_fields = [
+                "optimal_f_multiplier",
+                "atr_multiplier",
+                "risk_per_trade",
+                "fixed_ratio",
+                "fixed_quantity",
+                "min_position_size",
+                "max_position_size",
+                "priority",
+            ]
+            int_fields = ["lookback_period", "atr_period"]
+            bool_fields = ["enabled"]
+
+            for field in numeric_fields:
+                if field in data:
+                    try:
+                        init_params[field] = float(data[field])
+                    except (ValueError, TypeError):
+                        pass
+
+            for field in int_fields:
+                if field in data:
+                    try:
+                        init_params[field] = int(data[field])
+                    except (ValueError, TypeError):
+                        pass
+
+            for field in bool_fields:
+                if field in data:
+                    init_params[field] = bool(data[field])
+
+            return cls(**init_params)
+
+        except Exception as e:
+            logger.error(f"PositionSizingGene.from_dictエラー: {e}")
+            # エラー時はデフォルト値を返す
+            return cls(
+                method=PositionSizingMethod.VOLATILITY_BASED,
+                lookback_period=100,
+                optimal_f_multiplier=0.5,
+                atr_period=14,
+                atr_multiplier=2.0,
+                risk_per_trade=0.02,
+                fixed_ratio=0.1,
+                fixed_quantity=1.0,
+                min_position_size=0.01,
+                max_position_size=9999.0,
+                enabled=True,
+                priority=1.0,
+            )
+
     def _validate_parameters(self, errors: List[str]) -> None:
         """パラメータ固有の検証を実装"""
         try:
@@ -173,9 +244,13 @@ class PositionSizingGene(BaseGene):
                 )
 
             # 他のパラメータ検証も実装可能
-            self._validate_range(self.risk_per_trade, 0.001, 0.1, "risk_per_trade", errors)
+            self._validate_range(
+                self.risk_per_trade, 0.001, 0.1, "risk_per_trade", errors
+            )
             self._validate_range(self.fixed_ratio, 0.001, 1.0, "fixed_ratio", errors)
-            self._validate_range(self.atr_multiplier, 0.1, 5.0, "atr_multiplier", errors)
+            self._validate_range(
+                self.atr_multiplier, 0.1, 5.0, "atr_multiplier", errors
+            )
 
         except ImportError:
             # 定数が利用できない場合の基本検証
@@ -219,6 +294,82 @@ class TPSLGene(BaseGene):
     enabled: bool = True
     priority: float = 1.0
 
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> "TPSLGene":
+        """辞書形式からTPSLGeneを復元"""
+        try:
+            # TPSLMethod enumの特別処理
+            init_params = {}
+
+            # methodフィールドの処理
+            if "method" in data:
+                method_value = data["method"]
+                if isinstance(method_value, str):
+                    try:
+                        init_params["method"] = TPSLMethod(method_value)
+                    except ValueError:
+                        # 無効な値の場合はデフォルトを使用
+                        init_params["method"] = TPSLMethod.RISK_REWARD_RATIO
+                else:
+                    init_params["method"] = method_value
+
+            # その他のフィールド
+            numeric_fields = [
+                "stop_loss_pct",
+                "take_profit_pct",
+                "risk_reward_ratio",
+                "base_stop_loss",
+                "atr_multiplier_sl",
+                "atr_multiplier_tp",
+                "confidence_threshold",
+                "priority",
+            ]
+            int_fields = ["atr_period", "lookback_period"]
+            bool_fields = ["enabled"]
+            dict_fields = ["method_weights"]
+
+            for field in numeric_fields:
+                if field in data:
+                    try:
+                        init_params[field] = float(data[field])
+                    except (ValueError, TypeError):
+                        pass
+
+            for field in int_fields:
+                if field in data:
+                    try:
+                        init_params[field] = int(data[field])
+                    except (ValueError, TypeError):
+                        pass
+
+            for field in bool_fields:
+                if field in data:
+                    init_params[field] = bool(data[field])
+
+            for field in dict_fields:
+                if field in data and isinstance(data[field], dict):
+                    init_params[field] = data[field]
+
+            return cls(**init_params)
+
+        except Exception as e:
+            logger.error(f"TPSLGene.from_dictエラー: {e}")
+            # エラー時はデフォルト値を返す
+            return cls(
+                method=TPSLMethod.RISK_REWARD_RATIO,
+                stop_loss_pct=0.03,
+                take_profit_pct=0.06,
+                risk_reward_ratio=2.0,
+                base_stop_loss=0.03,
+                atr_multiplier_sl=2.0,
+                atr_multiplier_tp=3.0,
+                atr_period=14,
+                lookback_period=100,
+                confidence_threshold=0.7,
+                enabled=True,
+                priority=1.0,
+            )
+
     def _validate_parameters(self, errors: List[str]) -> None:
         """パラメータ固有の検証を実装"""
         try:
@@ -237,10 +388,18 @@ class TPSLGene(BaseGene):
                 )
 
             # 他のパラメータ検証
-            self._validate_range(self.risk_reward_ratio, 1.0, 10.0, "risk_reward_ratio", errors)
-            self._validate_range(self.confidence_threshold, 0.0, 1.0, "confidence_threshold", errors)
-            self._validate_range(self.atr_multiplier_sl, 0.1, 5.0, "atr_multiplier_sl", errors)
-            self._validate_range(self.atr_multiplier_tp, 0.1, 10.0, "atr_multiplier_tp", errors)
+            self._validate_range(
+                self.risk_reward_ratio, 1.0, 10.0, "risk_reward_ratio", errors
+            )
+            self._validate_range(
+                self.confidence_threshold, 0.0, 1.0, "confidence_threshold", errors
+            )
+            self._validate_range(
+                self.atr_multiplier_sl, 0.1, 5.0, "atr_multiplier_sl", errors
+            )
+            self._validate_range(
+                self.atr_multiplier_tp, 0.1, 10.0, "atr_multiplier_tp", errors
+            )
 
             # method_weightsの検証
             total_weight = sum(self.method_weights.values())
@@ -728,9 +887,16 @@ def crossover_position_sizing_genes(
 
     # フィールドのカテゴリ分け
     numeric_fields = [
-        "optimal_f_multiplier", "atr_multiplier", "risk_per_trade",
-        "fixed_ratio", "fixed_quantity", "min_position_size",
-        "max_position_size", "priority", "lookback_period", "atr_period"
+        "optimal_f_multiplier",
+        "atr_multiplier",
+        "risk_per_trade",
+        "fixed_ratio",
+        "fixed_quantity",
+        "min_position_size",
+        "max_position_size",
+        "priority",
+        "lookback_period",
+        "atr_period",
     ]
     enum_fields = ["method"]
     choice_fields = ["enabled"]
@@ -741,7 +907,7 @@ def crossover_position_sizing_genes(
         gene_class=PositionSizingGene,
         numeric_fields=numeric_fields,
         enum_fields=enum_fields,
-        choice_fields=choice_fields
+        choice_fields=choice_fields,
     )
 
 
@@ -753,9 +919,16 @@ def crossover_tpsl_genes(
 
     # 基本フィールドのカテゴリ分け
     numeric_fields = [
-        "stop_loss_pct", "take_profit_pct", "risk_reward_ratio",
-        "base_stop_loss", "atr_multiplier_sl", "atr_multiplier_tp",
-        "confidence_threshold", "priority", "lookback_period", "atr_period"
+        "stop_loss_pct",
+        "take_profit_pct",
+        "risk_reward_ratio",
+        "base_stop_loss",
+        "atr_multiplier_sl",
+        "atr_multiplier_tp",
+        "confidence_threshold",
+        "priority",
+        "lookback_period",
+        "atr_period",
     ]
     enum_fields = ["method"]
     choice_fields = ["enabled"]
@@ -767,7 +940,7 @@ def crossover_tpsl_genes(
         gene_class=TPSLGene,
         numeric_fields=numeric_fields,
         enum_fields=enum_fields,
-        choice_fields=choice_fields
+        choice_fields=choice_fields,
     )
 
     # method_weightsの特殊処理
@@ -776,8 +949,12 @@ def crossover_tpsl_genes(
     for key in all_keys:
         if key in parent1.method_weights and key in parent2.method_weights:
             # 両方にある場合、平均を取る
-            child1.method_weights[key] = (parent1.method_weights[key] + parent2.method_weights[key]) / 2
-            child2.method_weights[key] = (parent1.method_weights[key] + parent2.method_weights[key]) / 2
+            child1.method_weights[key] = (
+                parent1.method_weights[key] + parent2.method_weights[key]
+            ) / 2
+            child2.method_weights[key] = (
+                parent1.method_weights[key] + parent2.method_weights[key]
+            ) / 2
         else:
             # 片方しかない場合、そのまま継承
             if key in parent1.method_weights:
@@ -798,9 +975,16 @@ def mutate_position_sizing_gene(
 
     # フィールドルール定義
     numeric_fields = [
-        "lookback_period", "optimal_f_multiplier", "atr_multiplier",
-        "risk_per_trade", "fixed_ratio", "fixed_quantity",
-        "min_position_size", "max_position_size", "priority", "atr_period"
+        "lookback_period",
+        "optimal_f_multiplier",
+        "atr_multiplier",
+        "risk_per_trade",
+        "fixed_ratio",
+        "fixed_quantity",
+        "min_position_size",
+        "max_position_size",
+        "priority",
+        "atr_period",
     ]
 
     enum_fields = ["method"]  # Enumは自動的に検出される
@@ -825,7 +1009,7 @@ def mutate_position_sizing_gene(
         mutation_rate=mutation_rate,
         numeric_fields=numeric_fields,
         enum_fields=enum_fields,
-        numeric_ranges=numeric_ranges
+        numeric_ranges=numeric_ranges,
     )
 
 
@@ -835,18 +1019,25 @@ def mutate_tpsl_gene(gene: TPSLGene, mutation_rate: float = 0.1) -> TPSLGene:
 
     # 基本フィールド
     numeric_fields = [
-        "stop_loss_pct", "take_profit_pct", "risk_reward_ratio",
-        "base_stop_loss", "atr_multiplier_sl", "atr_multiplier_tp",
-        "confidence_threshold", "priority", "lookback_period", "atr_period"
+        "stop_loss_pct",
+        "take_profit_pct",
+        "risk_reward_ratio",
+        "base_stop_loss",
+        "atr_multiplier_sl",
+        "atr_multiplier_tp",
+        "confidence_threshold",
+        "priority",
+        "lookback_period",
+        "atr_period",
     ]
 
     enum_fields = ["method"]
 
     # 各フィールドの許容範囲
     numeric_ranges = {
-        "stop_loss_pct": (0.005, 0.15),      # 0.5%-15%
-        "take_profit_pct": (0.01, 0.3),      # 1%-30%
-        "risk_reward_ratio": (1.0, 10.0),    # 1:10まで
+        "stop_loss_pct": (0.005, 0.15),  # 0.5%-15%
+        "take_profit_pct": (0.01, 0.3),  # 1%-30%
+        "risk_reward_ratio": (1.0, 10.0),  # 1:10まで
         "base_stop_loss": (0.01, 0.06),
         "atr_multiplier_sl": (0.5, 3.0),
         "atr_multiplier_tp": (1.0, 5.0),
@@ -863,7 +1054,7 @@ def mutate_tpsl_gene(gene: TPSLGene, mutation_rate: float = 0.1) -> TPSLGene:
         mutation_rate=mutation_rate,
         numeric_fields=numeric_fields,
         enum_fields=enum_fields,
-        numeric_ranges=numeric_ranges
+        numeric_ranges=numeric_ranges,
     )
 
     # method_weightsの突然変異（辞書フィールドの特殊処理）
