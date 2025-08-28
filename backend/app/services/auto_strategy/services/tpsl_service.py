@@ -20,7 +20,7 @@ from ..generators.risk_reward_tpsl_generator import (
     RiskRewardTPSLGenerator,
     RiskRewardConfig,
 )
-from ..models.gene_tpsl import TPSLGene, TPSLMethod
+from ..models.strategy_models import TPSLGene, TPSLMethod
 
 logger = logging.getLogger(__name__)
 
@@ -96,7 +96,11 @@ class TPSLService:
         """
         from app.utils.error_handler import safe_operation
 
-        @safe_operation(context="TP/SL価格計算", is_api_call=False, default_return=self._calculate_fallback(current_price, position_direction))
+        @safe_operation(
+            context="TP/SL価格計算",
+            is_api_call=False,
+            default_return=self._calculate_fallback(current_price, position_direction),
+        )
         def _calculate_tpsl_prices():
             # TP/SL遺伝子が利用可能な場合（GA最適化対象）
             if tpsl_gene and hasattr(tpsl_gene, "enabled") and tpsl_gene.enabled:
@@ -125,7 +129,9 @@ class TPSLService:
         """割合からSL/TP価格を生成（共通ユーティリティ）"""
         from app.utils.error_handler import safe_operation
 
-        @safe_operation(context="価格生成", is_api_call=False, default_return=(None, None))
+        @safe_operation(
+            context="価格生成", is_api_call=False, default_return=(None, None)
+        )
         def _make_prices_impl():
             sl_price: Optional[float] = None
             tp_price: Optional[float] = None
@@ -162,7 +168,11 @@ class TPSLService:
         """TP/SL遺伝子からTP/SL価格を計算"""
         from app.utils.error_handler import safe_operation
 
-        @safe_operation(context="遺伝子ベースTP/SL計算", is_api_call=False, default_return=self._calculate_fallback(current_price, position_direction))
+        @safe_operation(
+            context="遺伝子ベースTP/SL計算",
+            is_api_call=False,
+            default_return=self._calculate_fallback(current_price, position_direction),
+        )
         def _calculate_from_gene():
             if tpsl_gene.method == TPSLMethod.FIXED_PERCENTAGE:
                 return self._calculate_fixed_percentage(
@@ -359,9 +369,13 @@ class TPSLService:
         """
         from app.utils.error_handler import safe_operation
 
-        @safe_operation(context="基本TP/SL価格計算", is_api_call=False, default_return=self._calculate_simple_tpsl_prices(
-            current_price, stop_loss_pct, take_profit_pct, position_direction
-        ))
+        @safe_operation(
+            context="基本TP/SL価格計算",
+            is_api_call=False,
+            default_return=self._calculate_simple_tpsl_prices(
+                current_price, stop_loss_pct, take_profit_pct, position_direction
+            ),
+        )
         def _calculate_basic_tpsl_prices():
             # 高度なTP/SL計算方式が使用されているかチェック
             if self._is_advanced_tpsl_used(risk_management):

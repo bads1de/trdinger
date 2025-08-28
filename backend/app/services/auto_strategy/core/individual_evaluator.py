@@ -44,7 +44,7 @@ class IndividualEvaluator:
         try:
             # 遺伝子デコード（リファクタリング改善）
             from ..models.gene_serialization import GeneSerializer
-            from ..models.gene_strategy import StrategyGene
+            from ..models.strategy_models import StrategyGene
 
             gene_serializer = GeneSerializer()
             gene = gene_serializer.from_list(individual, StrategyGene)

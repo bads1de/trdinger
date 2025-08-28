@@ -171,7 +171,9 @@ class GeneUtils:
     """遺伝子関連ユーティリティ"""
 
     @staticmethod
-    def normalize_parameter(value: float, min_val: float = 1, max_val: float = 200) -> float:
+    def normalize_parameter(
+        value: float, min_val: float = 1, max_val: float = 200
+    ) -> float:
         """期間パラメータを正規化"""
         return max(0.0, min(1.0, (value - min_val) / (max_val - min_val)))
 
@@ -181,15 +183,11 @@ class GeneUtils:
         try:
             # 動的インポートを避けるため、引数として渡すか、呼び出し側でインポートする
             # ここでは基本的な構造のみを提供
-            from ..models.gene_strategy import Condition, IndicatorGene
+            from ..models.strategy_models import Condition, IndicatorGene
 
             # デフォルト指標
             indicators = [
-                IndicatorGene(
-                    type="SMA",
-                    parameters={"period": 20},
-                    enabled=True
-                )
+                IndicatorGene(type="SMA", parameters={"period": 20}, enabled=True)
             ]
 
             # デフォルト条件

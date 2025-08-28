@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import List, Optional, Literal
 
-from app.services.auto_strategy.models.gene_strategy import IndicatorGene
+from app.services.auto_strategy.models.strategy_models import IndicatorGene
 from app.services.indicators.config import indicator_registry
 from app.config.unified_config import unified_config
 

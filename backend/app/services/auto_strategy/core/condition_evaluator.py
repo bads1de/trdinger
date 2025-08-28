@@ -9,8 +9,7 @@ from typing import Any, Dict, List, Union
 
 import numpy as np
 
-from ..models.gene_strategy import Condition
-from ..models.condition_group import ConditionGroup
+from ..models.strategy_models import Condition, ConditionGroup
 
 logger = logging.getLogger(__name__)
 

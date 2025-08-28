@@ -93,7 +93,7 @@ class StrategyClassFactory:
 
         try:
             # 戦略遺伝子を復元
-            from app.services.auto_strategy.models.gene_strategy import StrategyGene
+            from app.services.auto_strategy.models.strategy_models import StrategyGene
 
             serializer = GeneSerializer()
             gene = serializer.dict_to_strategy_gene(gene_data, StrategyGene)

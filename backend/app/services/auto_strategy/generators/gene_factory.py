@@ -11,10 +11,14 @@ from enum import Enum
 from typing import Dict, List
 
 from ..models.ga_config import GAConfig
-from ..models.gene_strategy import Condition, IndicatorGene, StrategyGene
-from ..models.gene_tpsl import TPSLGene, create_random_tpsl_gene
-from ..models.gene_position_sizing import (
+from ..models.strategy_models import (
+    Condition,
+    IndicatorGene,
+    StrategyGene,
+    TPSLGene,
+    create_random_tpsl_gene,
     PositionSizingGene,
+    PositionSizingMethod,
     create_random_position_sizing_gene,
 )
 
@@ -251,7 +255,7 @@ class SmartGeneGenerator(BaseGeneGenerator):
 
             # List[Union[Condition, ConditionGroup]] を List[Condition] に変換
             # ConditionGroupは無視し、Conditionのみを抽出
-            from ..models.condition_group import ConditionGroup
+            from ..models.strategy_models import ConditionGroup
 
             def extract_conditions(conditions):
                 result = []

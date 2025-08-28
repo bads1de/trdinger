@@ -11,7 +11,7 @@ import numpy as np
 
 from app.services.indicators import TechnicalIndicatorService
 
-from ..models.gene_strategy import IndicatorGene
+from ..models.strategy_models import IndicatorGene
 from .ml_orchestrator import MLOrchestrator
 
 logger = logging.getLogger(__name__)

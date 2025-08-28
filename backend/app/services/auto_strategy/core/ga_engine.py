@@ -119,7 +119,9 @@ class GeneticAlgorithmEngine:
                 tf = backtest_config.get("timeframe")
                 sym = backtest_config.get("symbol")
                 if hasattr(self.gene_generator, "smart_condition_generator"):
-                    smart_gen = getattr(self.gene_generator, "smart_condition_generator")
+                    smart_gen = getattr(
+                        self.gene_generator, "smart_condition_generator"
+                    )
                     if smart_gen and hasattr(smart_gen, "set_context"):
                         smart_gen.set_context(timeframe=tf, symbol=sym)
             except Exception:
@@ -160,7 +162,7 @@ class GeneticAlgorithmEngine:
 
                 # 遺伝子デコード（リファクタリング改善）
                 from ..models.gene_serialization import GeneSerializer
-                from ..models.gene_strategy import StrategyGene
+                from ..models.strategy_models import StrategyGene
 
                 gene_serializer = GeneSerializer()
                 best_strategies = []
@@ -177,7 +179,7 @@ class GeneticAlgorithmEngine:
 
                 # 遺伝子デコード（リファクタリング改善）
                 from ..models.gene_serialization import GeneSerializer
-                from ..models.gene_strategy import StrategyGene
+                from ..models.strategy_models import StrategyGene
 
                 gene_serializer = GeneSerializer()
                 best_gene = gene_serializer.from_list(best_individual, StrategyGene)

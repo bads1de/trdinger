@@ -2,8 +2,7 @@ from __future__ import annotations
 
 from typing import List, cast
 
-from app.services.auto_strategy.models.condition_group import ConditionGroup
-from app.services.auto_strategy.models.gene_strategy import Condition
+from app.services.auto_strategy.models.strategy_models import ConditionGroup, Condition
 from .indicator_policies import PriceTrendPolicy
 
 
@@ -42,7 +41,9 @@ class ConditionAssembly:
             for x in flat
         )
         if len(flat) == 1:
-            return cast(List[Condition | ConditionGroup], flat if exists else flat + [fallback])
+            return cast(
+                List[Condition | ConditionGroup], flat if exists else flat + [fallback]
+            )
         top_level: List[Condition | ConditionGroup] = [ConditionGroup(conditions=flat)]
         # 存在していてもトップレベルに1本は追加して可視化と成立性の底上げを図る
         top_level.append(fallback)

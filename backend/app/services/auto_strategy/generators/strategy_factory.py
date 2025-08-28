@@ -4,7 +4,7 @@
 StrategyGeneから動的にbacktesting.py互換のStrategy継承クラスを生成します。
 """
 
-from ..models.gene_strategy import Condition
+from ..models.strategy_models import Condition
 import logging
 from typing import List, Tuple, Type, Union, cast
 
@@ -14,8 +14,7 @@ from ..services.indicator_service import IndicatorCalculator
 from ..services.position_sizing_service import PositionSizingService
 from ..services.tpsl_service import TPSLService
 from ..core.condition_evaluator import ConditionEvaluator
-from ..models.gene_strategy import IndicatorGene, StrategyGene
-from ..models.condition_group import ConditionGroup
+from ..models.strategy_models import IndicatorGene, StrategyGene, ConditionGroup
 
 logger = logging.getLogger(__name__)
 
@@ -134,7 +133,6 @@ class StrategyFactory:
                     logger.error(f"戦略初期化エラー: {e}", exc_info=True)
                     raise
 
-
             def _init_indicator(self, indicator_gene: IndicatorGene):
                 """単一指標の初期化（統合版）"""
                 try:
@@ -160,7 +158,7 @@ class StrategyFactory:
                         # フォールバック: SMA/RSIの最小構成でリカバーを試みる
                         fb = None
                         if indicator_gene.type not in ("SMA", "RSI"):
-                            from ..models.gene_strategy import IndicatorGene as IG
+                            from ..models.strategy_models import IndicatorGene as IG
 
                             period = indicator_gene.parameters.get("period", 14)
                             if period <= 0:
@@ -188,7 +186,7 @@ class StrategyFactory:
 
                         # 最後の手段: RSI(14)
                         try:
-                            from ..models.gene_strategy import IndicatorGene as IG
+                            from ..models.strategy_models import IndicatorGene as IG
 
                             fb2 = IG(
                                 type="RSI", parameters={"period": 14}, enabled=True
@@ -219,8 +217,12 @@ class StrategyFactory:
                     logger.info(f"[DEBUG] ロング条件数: {len(long_conditions)}")
                     for i, cond in enumerate(long_conditions):
                         if isinstance(cond, ConditionGroup):
-                            logger.info(f"[DEBUG] ロング条件{i}: グループ条件({len(cond.conditions)}個)")
-                        elif hasattr(cond, "left_operand") and hasattr(cond, "operator"):
+                            logger.info(
+                                f"[DEBUG] ロング条件{i}: グループ条件({len(cond.conditions)}個)"
+                            )
+                        elif hasattr(cond, "left_operand") and hasattr(
+                            cond, "operator"
+                        ):
                             logger.info(
                                 f"[DEBUG] ロング条件{i}: {cond.left_operand} {cond.operator} {cond.right_operand}"
                             )
@@ -260,8 +262,12 @@ class StrategyFactory:
                             )
                             for i, cond in enumerate(entry_conditions):
                                 if isinstance(cond, ConditionGroup):
-                                    logger.info(f"[DEBUG] entry条件{i}: グループ条件({len(cond.conditions)}個)")
-                                elif hasattr(cond, "left_operand") and hasattr(cond, "operator"):
+                                    logger.info(
+                                        f"[DEBUG] entry条件{i}: グループ条件({len(cond.conditions)}個)"
+                                    )
+                                elif hasattr(cond, "left_operand") and hasattr(
+                                    cond, "operator"
+                                ):
                                     logger.info(
                                         f"[DEBUG] entry条件{i}: {cond.left_operand} {cond.operator} {cond.right_operand}"
                                     )
@@ -310,8 +316,12 @@ class StrategyFactory:
                     logger.info(f"[DEBUG] ショート条件数: {len(short_conditions)}")
                     for i, cond in enumerate(short_conditions):
                         if isinstance(cond, ConditionGroup):
-                            logger.info(f"[DEBUG] ショート条件{i}: グループ条件({len(cond.conditions)}個)")
-                        elif hasattr(cond, "left_operand") and hasattr(cond, "operator"):
+                            logger.info(
+                                f"[DEBUG] ショート条件{i}: グループ条件({len(cond.conditions)}個)"
+                            )
+                        elif hasattr(cond, "left_operand") and hasattr(
+                            cond, "operator"
+                        ):
                             logger.info(
                                 f"[DEBUG] ショート条件{i}: {cond.left_operand} {cond.operator} {cond.right_operand}"
                             )
@@ -561,10 +571,7 @@ class StrategyFactory:
         default_size = 0.01
 
         # ポジションサイジング遺伝子が有効な場合
-        if (
-            gene.position_sizing_gene
-            and gene.position_sizing_gene.enabled
-        ):
+        if gene.position_sizing_gene and gene.position_sizing_gene.enabled:
             # 遺伝子に基づいてサイズを計算（実装は後で拡張）
             pos = default_size
         else:

@@ -19,7 +19,7 @@ from database.repositories.generated_strategy_repository import (
 )
 
 from ..models.ga_config import GAConfig
-from ..models.gene_strategy import StrategyGene
+from ..models.strategy_models import StrategyGene
 
 logger = logging.getLogger(__name__)
 
@@ -425,14 +425,18 @@ class ExperimentPersistenceService:
                 ga_experiment_repo = GAExperimentRepository(db)
                 experiments = ga_experiment_repo.get_recent_experiments(limit=100)
 
-                logger.info(f"実験検索開始: {experiment_id}, 総実験数: {len(experiments)}")
+                logger.info(
+                    f"実験検索開始: {experiment_id}, 総実験数: {len(experiments)}"
+                )
 
                 for exp in experiments:
                     # まずconfig内のexperiment_idで照合
                     try:
                         cfg = exp.config or {}
                         if cfg.get("experiment_id") == experiment_id:
-                            logger.info(f"実験ID一致で見つかりました: {experiment_id} -> DB ID: {exp.id}")
+                            logger.info(
+                                f"実験ID一致で見つかりました: {experiment_id} -> DB ID: {exp.id}"
+                            )
                             return {
                                 "db_id": exp.id,
                                 "name": exp.name,
@@ -445,8 +449,14 @@ class ExperimentPersistenceService:
                         logger.warning(f"実験config解析エラー: {e}")
 
                     # 次に名前で照合
-                    if hasattr(exp, "name") and exp.name is not None and str(exp.name) == experiment_id:
-                        logger.info(f"実験名一致で見つかりました: {experiment_id} -> DB ID: {exp.id}")
+                    if (
+                        hasattr(exp, "name")
+                        and exp.name is not None
+                        and str(exp.name) == experiment_id
+                    ):
+                        logger.info(
+                            f"実験名一致で見つかりました: {experiment_id} -> DB ID: {exp.id}"
+                        )
                         return {
                             "db_id": exp.id,
                             "name": exp.name,
@@ -458,7 +468,9 @@ class ExperimentPersistenceService:
 
                     # 最後にDB IDで照合
                     if str(exp.id) == experiment_id:
-                        logger.info(f"DB ID一致で見つかりました: {experiment_id} -> DB ID: {exp.id}")
+                        logger.info(
+                            f"DB ID一致で見つかりました: {experiment_id} -> DB ID: {exp.id}"
+                        )
                         return {
                             "db_id": exp.id,
                             "name": exp.name,

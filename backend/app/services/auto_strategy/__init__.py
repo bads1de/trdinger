@@ -5,7 +5,7 @@
 """
 
 from .models.ga_config import GAConfig
-from .models.gene_strategy import StrategyGene
+from .models.strategy_models import StrategyGene
 from .services.auto_strategy_service import AutoStrategyService
 
 __all__ = [

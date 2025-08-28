@@ -9,7 +9,7 @@ from typing import Any, Dict
 
 import pandas as pd
 
-from ..models.gene_strategy import Condition, StrategyGene
+from ..models.strategy_models import Condition, StrategyGene
 
 logger = logging.getLogger(__name__)
 
@@ -32,8 +32,6 @@ class DataCoverageAnalyzer:
             "poor": 0.40,  # 40%以上のカバレッジ
             # 40%未満は"very_poor"
         }
-
-
 
     def _extract_special_data_sources(self, strategy_gene: StrategyGene) -> set:
         """戦略で使用される特殊データソースを抽出
@@ -157,8 +155,6 @@ class DataCoverageAnalyzer:
             return 0.5  # 重いペナルティ
         else:
             return 0.8  # 非常に重いペナルティ
-
-
 
 
 data_coverage_analyzer = DataCoverageAnalyzer()

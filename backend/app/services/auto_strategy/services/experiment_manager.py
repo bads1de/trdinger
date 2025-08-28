@@ -15,7 +15,7 @@ from ..core.ga_engine import GeneticAlgorithmEngine
 from ..generators.strategy_factory import StrategyFactory
 from ..generators.random_gene_generator import RandomGeneGenerator
 from ..models.ga_config import GAConfig
-from ..models.gene_strategy import StrategyGene
+from ..models.strategy_models import StrategyGene
 from .experiment_persistence_service import ExperimentPersistenceService
 
 logger = logging.getLogger(__name__)

@@ -14,9 +14,16 @@ from app.services.indicators.config import indicator_registry
 from app.services.indicators.config.indicator_config import IndicatorScaleType
 from ..models.ga_config import GAConfig
 from ..models.gene_serialization import GeneSerializer
-from ..models.gene_strategy import Condition, IndicatorGene, StrategyGene
-from ..models.gene_position_sizing import PositionSizingGene, PositionSizingMethod
-from ..models.gene_tpsl import TPSLGene, TPSLMethod, create_random_tpsl_gene
+from ..models.strategy_models import (
+    Condition,
+    IndicatorGene,
+    StrategyGene,
+    PositionSizingGene,
+    PositionSizingMethod,
+    TPSLGene,
+    TPSLMethod,
+    create_random_tpsl_gene,
+)
 from ..utils.operand_grouping import operand_grouping_system
 from ..config.constants import OPERATORS, DATA_SOURCES
 from .smart_condition_generator import SmartConditionGenerator
@@ -748,13 +755,13 @@ class RandomGeneGenerator:
     def _generate_position_sizing_gene(self):
         """ポジションサイジング遺伝子を生成"""
         try:
-            from ..models.gene_position_sizing import create_random_position_sizing_gene
+            from ..models.strategy_models import create_random_position_sizing_gene
 
             return create_random_position_sizing_gene(self.config)
         except Exception as e:
             logger.error(f"ポジションサイジング遺伝子生成失敗: {e}")
             # フォールバック: デフォルト遺伝子を返す
-            from ..models.gene_position_sizing import (
+            from ..models.strategy_models import (
                 PositionSizingGene,
                 PositionSizingMethod,
             )

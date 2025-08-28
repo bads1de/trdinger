@@ -5,7 +5,7 @@
 """
 
 from .ga_config import GAConfig
-from .gene_strategy import Condition, IndicatorGene, StrategyGene
+from .strategy_models import Condition, IndicatorGene, StrategyGene
 
 __all__ = [
     "StrategyGene",

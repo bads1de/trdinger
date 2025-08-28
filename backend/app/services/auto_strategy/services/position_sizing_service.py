@@ -89,9 +89,14 @@ class PositionSizingService:
         """
         from app.utils.error_handler import safe_operation
 
-        @safe_operation(context="ポジションサイズ計算", is_api_call=False, default_return=self._create_error_result(
-            "計算処理でエラーが発生しました", gene.method.value if gene and hasattr(gene, "method") else "unknown"
-        ))
+        @safe_operation(
+            context="ポジションサイズ計算",
+            is_api_call=False,
+            default_return=self._create_error_result(
+                "計算処理でエラーが発生しました",
+                gene.method.value if gene and hasattr(gene, "method") else "unknown",
+            ),
+        )
         def _calculate_position_size():
             start_time = datetime.now()
             warnings = []
@@ -242,11 +247,15 @@ class PositionSizingService:
             # データ不足時は簡易版オプティマルF計算を試行
             from app.utils.error_handler import safe_operation
 
-            @safe_operation(context="簡易オプティマルF計算", is_api_call=False, default_return={
-                "position_size": 0,
-                "warnings": ["簡易計算失敗"],
-                "details": {"fallback_reason": "simplified_calculation_failed"}
-            })
+            @safe_operation(
+                context="簡易オプティマルF計算",
+                is_api_call=False,
+                default_return={
+                    "position_size": 0,
+                    "warnings": ["簡易計算失敗"],
+                    "details": {"fallback_reason": "simplified_calculation_failed"},
+                },
+            )
             def _simplified_optimal_f():
                 # 統計的仮定値を使用した簡易計算
                 assumed_win_rate = unified_config.auto_strategy.assumed_win_rate
@@ -276,7 +285,7 @@ class PositionSizingService:
                         "assumed_avg_loss": assumed_avg_loss,
                         "calculated_optimal_f": optimal_f,
                         "half_optimal_f": half_optimal_f,
-                    }
+                    },
                 }
 
             simplified_result = _simplified_optimal_f()
@@ -353,16 +362,26 @@ class PositionSizingService:
                     # 無効な損益データの場合、ボラティリティベース方式を試行
                     from app.utils.error_handler import safe_operation
 
-                    @safe_operation(context="ボラティリティベースフォールバック", is_api_call=False, default_return={
-                        "position_size": account_balance * gene.fixed_ratio / current_price if current_price > 0 else 0,
-                        "warnings": ["無効な損益データ、固定比率にフォールバック"],
-                        "details": {
-                            "fallback_reason": "invalid_pnl_data_to_fixed",
-                            "fallback_ratio": gene.fixed_ratio,
-                        }
-                    })
+                    @safe_operation(
+                        context="ボラティリティベースフォールバック",
+                        is_api_call=False,
+                        default_return={
+                            "position_size": (
+                                account_balance * gene.fixed_ratio / current_price
+                                if current_price > 0
+                                else 0
+                            ),
+                            "warnings": ["無効な損益データ、固定比率にフォールバック"],
+                            "details": {
+                                "fallback_reason": "invalid_pnl_data_to_fixed",
+                                "fallback_ratio": gene.fixed_ratio,
+                            },
+                        },
+                    )
                     def _volatility_fallback():
-                        fallback_atr_multiplier = unified_config.auto_strategy.fallback_atr_multiplier
+                        fallback_atr_multiplier = (
+                            unified_config.auto_strategy.fallback_atr_multiplier
+                        )
                         volatility_result = self._calculate_volatility_based_enhanced(
                             gene,
                             account_balance,
@@ -371,11 +390,13 @@ class PositionSizingService:
                         )
                         return {
                             "position_size": volatility_result["position_size"],
-                            "warnings": ["無効な損益データ、ボラティリティベース方式にフォールバック"],
+                            "warnings": [
+                                "無効な損益データ、ボラティリティベース方式にフォールバック"
+                            ],
                             "details": {
                                 "fallback_reason": "invalid_pnl_data_to_volatility",
                                 "fallback_method": "volatility_based",
-                            }
+                            },
                         }
 
                     fallback_result = _volatility_fallback()
@@ -517,13 +538,17 @@ class PositionSizingService:
         """リスクメトリクスの計算"""
         from app.utils.error_handler import safe_operation
 
-        @safe_operation(context="リスクメトリクス計算", is_api_call=False, default_return={
-            "position_value": 0.0,
-            "position_ratio": 0.0,
-            "potential_loss_1atr": 0.0,
-            "potential_loss_ratio": 0.0,
-            "atr_used": 0.0,
-        })
+        @safe_operation(
+            context="リスクメトリクス計算",
+            is_api_call=False,
+            default_return={
+                "position_value": 0.0,
+                "position_ratio": 0.0,
+                "potential_loss_1atr": 0.0,
+                "potential_loss_ratio": 0.0,
+                "atr_used": 0.0,
+            },
+        )
         def _calculate_risk_metrics_impl():
             # 基本メトリクス
             position_value = position_size * current_price
@@ -557,7 +582,9 @@ class PositionSizingService:
         """信頼度スコアの計算"""
         from app.utils.error_handler import safe_operation
 
-        @safe_operation(context="信頼度スコア計算", is_api_call=False, default_return=0.5)
+        @safe_operation(
+            context="信頼度スコア計算", is_api_call=False, default_return=0.5
+        )
         def _calculate_confidence_score_impl():
             score = 0.5  # ベーススコア
 
@@ -596,19 +623,15 @@ class PositionSizingService:
             timestamp=datetime.now(),
         )
 
-
-
     def clear_cache(self):
         """キャッシュのクリア"""
         self._cache = None
-
-
 
     # 以下、旧PositionSizingServiceから統合されたメソッド
 
     def _create_default_gene(self, **kwargs):
         """デフォルト遺伝子を作成"""
-        from ..models.gene_position_sizing import (
+        from ..models.strategy_models import (
             PositionSizingGene,
             PositionSizingMethod,
         )
@@ -681,7 +704,9 @@ class PositionSizingService:
         """
         from app.utils.error_handler import safe_operation
 
-        @safe_operation(context="簡易ポジションサイズ計算", is_api_call=False, default_return=0.0)
+        @safe_operation(
+            context="簡易ポジションサイズ計算", is_api_call=False, default_return=0.0
+        )
         def _calculate_position_size_simple():
             gene = self._create_default_gene(method=method, **kwargs)
             result = self.calculate_position_size(

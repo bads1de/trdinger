@@ -314,10 +314,12 @@ class AutoStrategyService:
 
             # 戦略遺伝子の復元
             from ..models.gene_serialization import GeneSerializer
-            from ..models.gene_strategy import StrategyGene
+            from ..models.strategy_models import StrategyGene
 
             gene_serializer = GeneSerializer()
-            strategy_gene = gene_serializer.dict_to_strategy_gene(request.strategy_gene, StrategyGene)
+            strategy_gene = gene_serializer.dict_to_strategy_gene(
+                request.strategy_gene, StrategyGene
+            )
 
             # バックテスト設定の正規化
             backtest_config = request.backtest_config.copy()

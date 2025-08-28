@@ -6,8 +6,7 @@ from app.services.indicators.config import indicator_registry
 from app.services.indicators.config.indicator_config import IndicatorScaleType
 from app.services.auto_strategy.core.indicator_policies import ThresholdPolicy
 
-from ..models.gene_strategy import Condition, IndicatorGene
-from ..models.condition_group import ConditionGroup
+from ..models.strategy_models import Condition, IndicatorGene, ConditionGroup
 
 
 logger = logging.getLogger(__name__)
@@ -499,7 +498,7 @@ class SmartConditionGenerator:
             try:
 
                 def _has_price_vs_trend(conds):
-                    from app.services.auto_strategy.models.condition_group import (
+                    from app.services.auto_strategy.models.strategy_models import (
                         ConditionGroup as _CG,
                     )
 
@@ -544,7 +543,7 @@ class SmartConditionGenerator:
 
             # OR条件グループを追加して A AND (B OR C) の形を試みる
             try:
-                from app.services.auto_strategy.models.condition_group import (
+                from app.services.auto_strategy.models.strategy_models import (
                     ConditionGroup as _CG,
                 )
 
@@ -670,7 +669,7 @@ class SmartConditionGenerator:
                 selected = []
 
             if selected:
-                from app.services.auto_strategy.models.condition_group import (
+                from app.services.auto_strategy.models.strategy_models import (
                     ConditionGroup,
                 )
 
