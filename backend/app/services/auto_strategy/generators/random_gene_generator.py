@@ -24,6 +24,8 @@ from ..models.strategy_models import (
     TPSLMethod,
     create_random_tpsl_gene,
 )
+from abc import ABC, abstractmethod
+from typing import Dict, List
 from ..utils.operand_grouping import operand_grouping_system
 from ..config.constants import OPERATORS, DATA_SOURCES
 from .smart_condition_generator import SmartConditionGenerator
@@ -53,6 +55,8 @@ class RandomGeneGenerator:
             smart_context: スマート条件生成のコンテキスト（timeframe/symbol/threshold_profile/regime_gating）
         """
         self.config = config
+        self.enable_smart_generation = enable_smart_generation
+        self.smart_context = smart_context or {}
         self.serializer = GeneSerializer(
             enable_smart_generation
         )  # GeneSerializerのインスタンスを作成
@@ -858,3 +862,4 @@ class RandomGeneGenerator:
                 base_stop_loss=0.03,
                 enabled=True,
             )
+

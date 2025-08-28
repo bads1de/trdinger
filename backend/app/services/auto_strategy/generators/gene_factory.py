@@ -5,7 +5,6 @@
 """
 
 import logging
-import random
 from abc import ABC, abstractmethod
 from enum import Enum
 from typing import Dict, List
@@ -18,9 +17,9 @@ from ..models.strategy_models import (
     TPSLGene,
     create_random_tpsl_gene,
     PositionSizingGene,
-    PositionSizingMethod,
     create_random_position_sizing_gene,
 )
+from .random_gene_generator import RandomGeneGenerator
 
 logger = logging.getLogger(__name__)
 
@@ -116,98 +115,7 @@ class BaseGeneGenerator(ABC):
         )
 
 
-class RandomGeneGenerator(BaseGeneGenerator):
-    """ランダム遺伝子生成器"""
-
-    def generate_indicators(self) -> List[IndicatorGene]:
-        """ランダムに指標を生成"""
-        try:
-            from app.services.indicators.config import indicator_registry
-
-            indicators = []
-            allowed_indicators = self.config.allowed_indicators or [
-                "SMA",
-                "EMA",
-                "RSI",
-                "MACD",
-                "BB",
-            ]
-            num_indicators = min(
-                random.randint(2, self.config.max_indicators), len(allowed_indicators)
-            )
-
-            selected_types = random.sample(allowed_indicators, num_indicators)
-
-            for indicator_type in selected_types:
-                parameters = indicator_registry.generate_parameters_for_indicator(
-                    indicator_type
-                )
-                indicators.append(
-                    IndicatorGene(
-                        type=indicator_type, parameters=parameters, enabled=True
-                    )
-                )
-
-            return indicators
-
-        except Exception as e:
-            logger.error(f"ランダム指標生成エラー: {e}")
-            return [
-                IndicatorGene(type="SMA", parameters={"period": 20}, enabled=True),
-                IndicatorGene(type="RSI", parameters={"period": 14}, enabled=True),
-            ]
-
-    def generate_conditions(
-        self, indicators: List[IndicatorGene]
-    ) -> tuple[List[Condition], List[Condition], List[Condition]]:
-        """ランダムに条件を生成"""
-        try:
-
-            # 基本的なランダム条件生成
-            entry_conditions = []
-            long_conditions = []
-            short_conditions = []
-
-            # エントリー条件（後方互換性）
-            if indicators:
-                indicator = random.choice(indicators)
-                entry_conditions.append(
-                    Condition(
-                        left_operand=indicator.type,
-                        operator=random.choice([">", "<", ">=", "<="]),
-                        right_operand=random.uniform(20, 80),
-                    )
-                )
-
-            # ロング条件
-            for _ in range(random.randint(1, 3)):
-                if indicators:
-                    indicator = random.choice(indicators)
-                    long_conditions.append(
-                        Condition(
-                            left_operand=indicator.type,
-                            operator=random.choice([">", ">="]),
-                            right_operand=random.uniform(30, 70),
-                        )
-                    )
-
-            # ショート条件
-            for _ in range(random.randint(1, 3)):
-                if indicators:
-                    indicator = random.choice(indicators)
-                    short_conditions.append(
-                        Condition(
-                            left_operand=indicator.type,
-                            operator=random.choice(["<", "<="]),
-                            right_operand=random.uniform(30, 70),
-                        )
-                    )
-
-            return entry_conditions, long_conditions, short_conditions
-
-        except Exception as e:
-            logger.error(f"ランダム条件生成エラー: {e}")
-            return [], [], []
+# RandomGeneGeneratorはrandom_gene_generator.pyで定義されたものを使用
 
 
 class SmartGeneGenerator(BaseGeneGenerator):
@@ -231,13 +139,13 @@ class SmartGeneGenerator(BaseGeneGenerator):
         """スマートに指標を生成"""
         try:
             # ランダム生成を使用（SmartConditionGeneratorは条件生成に特化）
-            random_gen = RandomGeneGenerator(self.config)
-            return random_gen.generate_indicators()
+            random_gen = RandomGeneGenerator(self.config, enable_smart_generation=False)
+            return random_gen._generate_random_indicators()
         except Exception as e:
             logger.error(f"スマート指標生成エラー: {e}")
             # フォールバック: ランダム生成
-            random_gen = RandomGeneGenerator(self.config)
-            return random_gen.generate_indicators()
+            random_gen = RandomGeneGenerator(self.config, enable_smart_generation=False)
+            return random_gen._generate_random_indicators()
 
     def generate_conditions(
         self, indicators: List[IndicatorGene]
@@ -276,8 +184,18 @@ class SmartGeneGenerator(BaseGeneGenerator):
         except Exception as e:
             logger.error(f"スマート条件生成エラー: {e}")
             # フォールバック: ランダム生成
-            random_gen = RandomGeneGenerator(self.config)
-            return random_gen.generate_conditions(indicators)
+            # 注意: ランダムジェネレータの条件生成メソッドに合わせた呼び方
+            fallback_entry = [
+                Condition(left_operand="close", operator=">", right_operand="SMA")
+            ]
+            fallback_long = [
+                Condition(left_operand="RSI", operator="<", right_operand=30),
+                Condition(left_operand="close", operator=">", right_operand="SMA"),
+            ]
+            fallback_short = [
+                Condition(left_operand="RSI", operator=">", right_operand=70)
+            ]
+            return fallback_entry, fallback_long, fallback_short
 
 
 class DefaultGeneGenerator(BaseGeneGenerator):
@@ -313,11 +231,10 @@ class GeneGeneratorFactory:
     """遺伝子生成器ファクトリー"""
 
     @staticmethod
-    def create_generator(
-        generator_type: GeneratorType, config: GAConfig
-    ) -> BaseGeneGenerator:
+    def create_generator(generator_type: GeneratorType, config: GAConfig):
         """生成器タイプに応じた生成器を作成"""
         if generator_type == GeneratorType.RANDOM:
+            # 実際のRandomGeneGeneratorを使用（型チェックなし）
             return RandomGeneGenerator(config)
         elif generator_type == GeneratorType.SMART:
             return SmartGeneGenerator(config)
