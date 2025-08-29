@@ -5,6 +5,25 @@ Auto Strategy 共通定数
 
 from typing import Dict, List
 
+# === 指標タイプ定義 ===
+from enum import Enum
+
+class IndicatorType(str, Enum):
+    """指標分類"""
+    MOMENTUM = "momentum"  # モメンタム系
+    TREND = "trend"  # トレンド系
+    VOLATILITY = "volatility"  # ボラティリティ系
+    STATISTICS = "statistics"  # 統計系
+    PATTERN_RECOGNITION = "pattern_recognition"  # パターン認識系
+
+# 戦略タイプ定義
+class StrategyType(str, Enum):
+    """戦略タイプ"""
+    DIFFERENT_INDICATORS = "different_indicators"  # 異なる指標の組み合わせ
+    TIME_SEPARATION = "time_separation"  # 時間軸分離
+    COMPLEX_CONDITIONS = "complex_conditions"  # 複合条件
+    INDICATOR_CHARACTERISTICS = "indicator_characteristics"  # 指標特性活用
+
 # === 演算子定数 ===
 OPERATORS = [
     ">",
@@ -461,6 +480,240 @@ DEFAULT_FITNESS_CONSTRAINTS = {
     "min_trades": 10,
     "max_drawdown_limit": 0.3,
     "min_sharpe_ratio": 1.0,
+}
+
+# === 技術指標特性データベース ===
+# smart_condition_generator.pyから移行した指標特性定義
+INDICATOR_CHARACTERISTICS = {
+    "RSI": {
+        "type": "momentum",
+        "range": (0, 100),
+        "long_zones": [(0, 30), (40, 60)],
+        "short_zones": [(40, 60), (70, 100)],
+        "neutral_zone": (40, 60),
+        "oversold_threshold": 30,
+        "overbought_threshold": 70,
+    },
+    "STOCH": {
+        "type": "momentum",
+        "range": (0, 100),
+        "long_zones": [(0, 20), (40, 60)],
+        "short_zones": [(40, 60), (80, 100)],
+        "neutral_zone": (40, 60),
+        "oversold_threshold": 20,
+        "overbought_threshold": 80,
+    },
+    "CCI": {
+        "type": "momentum",
+        "range": (-200, 200),
+        "long_zones": [(-200, -100), (-50, 50)],
+        "short_zones": [(-50, 50), (100, 200)],
+        "neutral_zone": (-50, 50),
+        "oversold_threshold": -100,
+        "overbought_threshold": 100,
+    },
+    "MACD": {
+        "type": "momentum",
+        "range": None,  # 価格依存
+        "zero_cross": True,
+        "signal_line": True,
+    },
+    "MACDEXT": {
+        "type": "momentum",
+        "range": None,  # 価格依存
+        "zero_cross": True,
+        "signal_line": True,
+    },
+    "SMA": {
+        "type": "trend",
+        "price_comparison": True,
+        "trend_following": True,
+    },
+    "EMA": {
+        "type": "trend",
+        "price_comparison": True,
+        "trend_following": True,
+    },
+    "MAMA": {"type": "trend", "price_comparison": True, "adaptive": True},
+    "ADX": {
+        "type": "trend",
+        "range": (0, 100),
+        "trend_strength": True,
+        "no_direction": True,  # 方向性を示さない
+        "strong_trend_threshold": 25,
+    },
+    "BB": {
+        "type": "volatility",
+        "components": ["upper", "middle", "lower"],
+        "mean_reversion": True,
+        "breakout_strategy": True,
+    },
+    "BBANDS": {
+        "type": "volatility",
+        "components": ["upper", "middle", "lower"],
+        "mean_reversion": True,
+        "breakout_strategy": True,
+    },
+    "ATR": {
+        "type": "volatility",
+        "range": (0, None),
+        "volatility_measure": True,
+    },
+    "BETA": {
+        "type": "statistics",
+        "range": (-2, 2),  # 一般的なベータ値範囲
+        "correlation_measure": True,
+        "zero_cross": True,
+    },
+    "CORREL": {
+        "type": "statistics",
+        "range": (-1, 1),  # 相関係数
+        "correlation_measure": True,
+        "zero_cross": True,
+    },
+    "LINEARREG": {
+        "type": "statistics",
+        "range": None,  # 価格依存
+        "price_comparison": True,
+        "trend_following": True,
+    },
+    "LINEARREG_ANGLE": {
+        "type": "statistics",
+        "range": (-90, 90),  # 角度
+        "zero_cross": True,
+        "trend_strength": True,
+    },
+    "LINEARREG_INTERCEPT": {
+        "type": "statistics",
+        "range": None,  # 価格依存
+        "price_comparison": True,
+    },
+    "LINEARREG_SLOPE": {
+        "type": "statistics",
+        "range": None,  # 価格変化率依存
+        "zero_cross": True,
+        "trend_strength": True,
+    },
+    "STDDEV": {
+        "type": "statistics",
+        "range": (0, None),  # 常に正値
+        "volatility_measure": True,
+    },
+    "TSF": {
+        "type": "statistics",
+        "range": None,  # 価格依存
+        "price_comparison": True,
+        "trend_following": True,
+    },
+    "VAR": {
+        "type": "statistics",
+        "range": (0, None),  # 常に正値
+        "volatility_measure": True,
+    },
+    "CDL_DOJI": {
+        "type": "pattern_recognition",
+        "range": (-100, 100),  # パターン強度
+        "pattern_recognition": True,
+        "binary_like": True,
+        "reversal_pattern": True,
+    },
+    "ML_UP_PROB": {
+        "type": "pattern_recognition",
+        "range": (0, 1),  # 確率値
+        "ml_prediction": True,
+        "long_zones": [(0.6, 1.0)],
+        "short_zones": [(0, 0.4)],
+        "neutral_zone": (0.4, 0.6),
+        "high_confidence_threshold": 0.7,
+    },
+    "ML_DOWN_PROB": {
+        "type": "pattern_recognition",
+        "range": (0, 1),  # 確率値
+        "ml_prediction": True,
+        "long_zones": [(0, 0.4)],
+        "short_zones": [(0.6, 1.0)],
+        "neutral_zone": (0.4, 0.6),
+        "high_confidence_threshold": 0.7,
+    },
+    "ML_RANGE_PROB": {
+        "type": "pattern_recognition",
+        "range": (0, 1),  # 確率値
+        "ml_prediction": True,
+        "long_zones": [(0, 0.3)],
+        "short_zones": [(0, 0.3)],
+        "neutral_zone": (0.7, 1.0),
+        "high_confidence_threshold": 0.8,
+    },
+    "CDL_HAMMER": {
+        "type": "pattern_recognition",
+        "range": (-100, 100),
+        "pattern_recognition": True,
+        "binary_like": True,
+        "reversal_pattern": True,
+        "bullish_pattern": True,
+    },
+    "CDL_HANGING_MAN": {
+        "type": "pattern_recognition",
+        "range": (-100, 100),
+        "pattern_recognition": True,
+        "binary_like": True,
+        "reversal_pattern": True,
+        "bearish_pattern": True,
+    },
+    "CDL_SHOOTING_STAR": {
+        "type": "pattern_recognition",
+        "range": (-100, 100),
+        "pattern_recognition": True,
+        "binary_like": True,
+        "reversal_pattern": True,
+        "bearish_pattern": True,
+    },
+    "CDL_ENGULFING": {
+        "type": "pattern_recognition",
+        "range": (-100, 100),
+        "pattern_recognition": True,
+        "binary_like": True,
+        "reversal_pattern": True,
+    },
+    "CDL_HARAMI": {
+        "type": "pattern_recognition",
+        "range": (-100, 100),
+        "pattern_recognition": True,
+        "binary_like": True,
+        "reversal_pattern": True,
+    },
+    "CDL_PIERCING": {
+        "type": "pattern_recognition",
+        "range": (-100, 100),
+        "pattern_recognition": True,
+        "binary_like": True,
+        "reversal_pattern": True,
+        "bullish_pattern": True,
+    },
+    "CDL_THREE_BLACK_CROWS": {
+        "type": "pattern_recognition",
+        "range": (-100, 100),
+        "pattern_recognition": True,
+        "binary_like": True,
+        "continuation_pattern": True,
+        "bearish_pattern": True,
+    },
+    "CDL_THREE_WHITE_SOLDIERS": {
+        "type": "pattern_recognition",
+        "range": (-100, 100),
+        "pattern_recognition": True,
+        "binary_like": True,
+        "continuation_pattern": True,
+        "bullish_pattern": True,
+    },
+    "CDL_DARK_CLOUD_COVER": {
+        "type": "pattern_recognition",
+        "range": (-100, 100),
+        "pattern_recognition": True,
+        "binary_like": True,
+        "reversal_pattern": True,
+        "bearish_pattern": True,
+    },
 }
 
 # GA目的設定
