@@ -67,7 +67,7 @@
 
 #### 🎛️ 条件生成統合
 
-- [ ] `UnifiedConditionGenerator` クラス作成
+- [ ] `ConditionGenerator` クラス作成
 
   - 統合メソッド:
     - `_generic_long/short_conditions()` (基礎条件ロジック)

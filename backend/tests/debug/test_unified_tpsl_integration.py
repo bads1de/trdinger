@@ -20,7 +20,7 @@ class TestUnifiedTPSLIntegration:
     def test_unified_tpsl_generator_can_be_imported(self):
         """UnifiedTPSLGeneratorが正しくimportできることを確認"""
         try:
-            from app.services.auto_strategy.generators.unified_tpsl_generator import UnifiedTPSLGenerator
+            from app.services.auto_strategy.generators.tpsl_generator import UnifiedTPSLGenerator
             assert True, "UnifiedTPSLGeneratorのimportに成功"
         except ImportError:
             pytest.fail("UnifiedTPSLGeneratorのimportに失敗 - Phase 2-1cで実装予定")
@@ -28,7 +28,7 @@ class TestUnifiedTPSLIntegration:
     def test_unified_result_class_structure(self):
         """統合されたResultクラスの構造を確認"""
         try:
-            from app.services.auto_strategy.generators.unified_tpsl_generator import TPSLResult as UnifiedTPSLResult
+            from app.services.auto_strategy.generators.tpsl_generator import TPSLResult as UnifiedTPSLResult
 
             # 必須フィールドを確認
             required_fields = [
@@ -53,7 +53,7 @@ class TestUnifiedTPSLIntegration:
     def test_strategy_pattern_implementation(self):
         """戦略パターンが正しく実装されていることを確認"""
         try:
-            from app.services.auto_strategy.generators.unified_tpsl_generator import (
+            from app.services.auto_strategy.generators.tpsl_generator import (
                 RiskRewardStrategy,
                 StatisticalStrategy,
                 VolatilityStrategy
@@ -130,7 +130,7 @@ class TestUnifiedTPSLIntegration:
     def test_different_methods_produce_valid_results(self, method_name, expected_sl, expected_tp, expected_confidence):
         """各手法が妥当な結果を生成することを確認"""
         try:
-            from app.services.auto_strategy.generators.unified_tpsl_generator import UnifiedTPSLGenerator
+            from app.services.auto_strategy.generators.tpsl_generator import UnifiedTPSLGenerator
 
             generator = UnifiedTPSLGenerator()
 
@@ -160,7 +160,7 @@ class TestUnifiedTPSLIntegration:
     def test_error_handling_robustness(self):
         """エラー発生時の堅牢性を確認"""
         try:
-            from app.services.auto_strategy.generators.unified_tpsl_generator import UnifiedTPSLGenerator
+            from app.services.auto_strategy.generators.tpsl_generator import UnifiedTPSLGenerator
 
             generator = UnifiedTPSLGenerator()
 
@@ -202,7 +202,7 @@ class TestUnifiedTPSLIntegration:
         start_time = time.time()
 
         try:
-            from app.services.auto_strategy.generators.unified_tpsl_generator import UnifiedTPSLGenerator
+            from app.services.auto_strategy.generators.tpsl_generator import UnifiedTPSLGenerator
 
             generator = UnifiedTPSLGenerator()
 

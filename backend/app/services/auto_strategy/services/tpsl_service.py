@@ -8,7 +8,7 @@ import logging
 import math
 from typing import Any, Dict, Optional, Tuple
 
-from ..generators.unified_tpsl_generator import UnifiedTPSLGenerator
+from ..generators.tpsl_generator import UnifiedTPSLGenerator
 from ..models.strategy_models import TPSLGene, TPSLMethod
 
 logger = logging.getLogger(__name__)

@@ -9,8 +9,8 @@ from .gene_factory import GeneGeneratorFactory
 from .random_gene_generator import RandomGeneGenerator
 from .smart_condition_generator import SmartConditionGenerator
 
-# 統合 TPSL ジェネレーター (RiskReward, Statistical, Volatility ジェネレーターを統合)
-from .unified_tpsl_generator import UnifiedTPSLGenerator
+# TPSL ジェネレーター (RiskReward, Statistical, Volatility ジェネレーターを統合)
+from .tpsl_generator import UnifiedTPSLGenerator
 
 # factories からの統合
 from .strategy_factory import StrategyFactory

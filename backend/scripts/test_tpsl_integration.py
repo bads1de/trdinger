@@ -107,7 +107,7 @@ def test_tpsl_integration_manual() -> Dict[str, Any]:
     Returns:
         TPSL結果を含むテスト結果辞書
     """
-    from app.services.auto_strategy.generators.unified_tpsl_generator import UnifiedTPSLGenerator
+    from app.services.auto_strategy.generators.tpsl_generator import UnifiedTPSLGenerator
 
     logger.info("TPSL統合手動テストを開始")
 
