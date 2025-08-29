@@ -175,10 +175,10 @@ class UnifiedTPSLGenerator:
 
 1. **TPSL 統合** (5 日)
 
-   - [ ] `unified_tpsl_generator.py`作成
-   - [ ] 3 つのジェネレータを統合
-   - [ ] 基底クラス作成
-   - [ ] TPSLService 更新
+   - [x] `unified_tpsl_generator.py`作成
+   - [x] 3 つのジェネレータを統合
+   - [x] 基底クラス作成
+   - [x] TPSLService 更新
 
 2. **SmartGenerator 分割** (5 日)
 
