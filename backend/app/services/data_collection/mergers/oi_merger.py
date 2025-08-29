@@ -68,10 +68,10 @@ class OIMerger:
                 )
 
                 valid_oi_count = df["open_interest"].notna().sum()
-                logger.info(
-                    f"OIデータマージ完了: {valid_oi_count}/{len(df)}行に値あり "
-                    f"({valid_oi_count/len(df)*100:.1f}%)"
-                )
+                # logger.info(
+                #     f"OIデータマージ完了: {valid_oi_count}/{len(df)}行に値あり "
+                #     f"({valid_oi_count/len(df)*100:.1f}%)"
+                # )
             else:
                 logger.warning(
                     f"シンボル {symbol} のOpen Interestデータが見つかりませんでした。"

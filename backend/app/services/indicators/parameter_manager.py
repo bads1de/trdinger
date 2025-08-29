@@ -90,6 +90,7 @@ NO_LENGTH_INDICATORS = {
     "HT_PHASOR",
     "HT_SINE",
     "HT_TRENDMODE",
+    "WCP",
 }
 
 
@@ -101,9 +102,9 @@ class ParameterGenerationError(Exception):
 class ParameterRange:
     """パラメータ範囲情報"""
 
-    min: Union[int, float]
-    max: Union[int, float]
-    default: Union[int, float]
+    min_value: Union[int, float]
+    max_value: Union[int, float]
+    default_value: Union[int, float]
 
 
 class IndicatorParameterManager:
@@ -225,9 +226,9 @@ class IndicatorParameterManager:
         ranges = {}
         for param_name, param_config in config.parameters.items():
             ranges[param_name] = {
-                "min": param_config.min_value,
-                "max": param_config.max_value,
-                "default": param_config.default_value,
+                "min_value": param_config.min_value,
+                "max_value": param_config.max_value,
+                "default_value": param_config.default_value,
             }
         return ranges
 

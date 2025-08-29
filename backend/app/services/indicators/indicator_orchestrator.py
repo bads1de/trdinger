@@ -380,7 +380,7 @@ class TechnicalIndicatorService:
             return adapter_function(data_arg, **all_args)
 
         # Normal keyword argument call
-        logger.debug(f"Using keyword args for {indicator_type}")
+        # logger.debug(f"Using keyword args for {indicator_type}")
         return adapter_function(**all_args)
 
     def _resolve_column_name(self, df: pd.DataFrame, data_key: str) -> Optional[str]:

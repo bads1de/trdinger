@@ -229,14 +229,7 @@ class TradingSettings(BaseConfig):
 
         return errors
 
-    @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> "TradingSettings":
-        """辞書からTradingSettingsを作成"""
-        instance = cls()
-        for key, value in data.items():
-            if hasattr(instance, key):
-                setattr(instance, key, value)
-        return instance
+    # from_dictメソッドを削除 - BaseConfigの統一実装を使用
 
 
 @dataclass
@@ -294,14 +287,7 @@ class IndicatorSettings(BaseConfig):
         """特定の指標の特性を取得"""
         return self.indicator_characteristics.get(indicator)
 
-    @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> "IndicatorSettings":
-        """辞書からIndicatorSettingsを作成"""
-        instance = cls()
-        for key, value in data.items():
-            if hasattr(instance, key):
-                setattr(instance, key, value)
-        return instance
+    # from_dictメソッドを削除 - BaseConfigの統一実装を使用
 
 
 @dataclass
@@ -394,14 +380,7 @@ class GASettings(BaseConfig):
 
         return errors
 
-    @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> "GASettings":
-        """辞書からGASettingsを作成"""
-        instance = cls()
-        for key, value in data.items():
-            if hasattr(instance, key):
-                setattr(instance, key, value)
-        return instance
+    # from_dictメソッドを削除 - BaseConfigの統一実装を使用
 
 
 @dataclass
@@ -445,14 +424,7 @@ class TPSLSettings(BaseConfig):
             return self.limits[param_name]
         raise ValueError(f"不明なパラメータ: {param_name}")
 
-    @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> "TPSLSettings":
-        """辞書からTPSLSettingsを作成"""
-        instance = cls()
-        for key, value in data.items():
-            if hasattr(instance, key):
-                setattr(instance, key, value)
-        return instance
+    # from_dictメソッドを削除 - BaseConfigの統一実装を使用
 
 
 @dataclass
@@ -520,14 +492,7 @@ class PositionSizingSettings(BaseConfig):
             "limits": POSITION_SIZING_LIMITS.copy(),
         }
 
-    @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> "PositionSizingSettings":
-        """辞書からPositionSizingSettingsを作成"""
-        instance = cls()
-        for key, value in data.items():
-            if hasattr(instance, key):
-                setattr(instance, key, value)
-        return instance
+    # from_dictメソッドを削除 - BaseConfigの統一実装を使用
 
 
 @dataclass
@@ -1039,77 +1004,73 @@ class GAConfig(BaseConfig):
 
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "GAConfig":
-        """辞書から復元"""
-        # allowed_indicatorsが空の場合はデフォルトの指標リストを使用
-        try:
-            from app.services.indicators import TechnicalIndicatorService
+        """辞書から復元（BaseConfig統一化バージョン）"""
+        # GA特有のデータ前処理
+        processed_data = cls._preprocess_ga_dict(data)
 
-            indicator_service = TechnicalIndicatorService()
-            allowed_indicators = data.get("allowed_indicators")
-            if not allowed_indicators:
-                allowed_indicators = list(
+        # BaseConfigの標準from_dict処理を使用
+        return super().from_dict(processed_data)
+
+    @classmethod
+    def _preprocess_ga_dict(cls, data: Dict[str, Any]) -> Dict[str, Any]:
+        """GAConfig特有のデータの前処理"""
+        # allowed_indicatorsが空の場合はデフォルトの指標リストを使用
+        if not data.get("allowed_indicators"):
+            try:
+                from app.services.indicators import TechnicalIndicatorService
+
+                indicator_service = TechnicalIndicatorService()
+                data["allowed_indicators"] = list(
                     indicator_service.get_supported_indicators().keys()
                 )
-        except Exception:
-            # インポートできない場合はデフォルトを使用
-            logger.warning("指標サービスの取得が失敗しました")
-            allowed_indicators = []
+            except Exception:
+                # インポートできない場合はデフォルトを使用
+                logger.warning("指標サービスの取得が失敗しました")
+                data["allowed_indicators"] = []
 
-        # デフォルト値を使用してフラットな構造で復元
         # fitness_weightsが指定されていない場合はデフォルト値を使用
-        fitness_weights = data.get("fitness_weights")
-        if not fitness_weights:  # 空の辞書やNoneの場合
-            fitness_weights = DEFAULT_FITNESS_WEIGHTS
+        if not data.get("fitness_weights"):  # 空の辞書やNoneの場合
+            data["fitness_weights"] = DEFAULT_FITNESS_WEIGHTS
 
-        return cls(
-            population_size=data.get(
-                "population_size", GA_DEFAULT_CONFIG["population_size"]
-            ),
-            generations=data.get("generations", GA_DEFAULT_CONFIG["generations"]),
-            crossover_rate=data.get(
-                "crossover_rate", GA_DEFAULT_CONFIG["crossover_rate"]
-            ),
-            mutation_rate=data.get("mutation_rate", GA_DEFAULT_CONFIG["mutation_rate"]),
-            elite_size=data.get("elite_size", GA_DEFAULT_CONFIG.get("elite_size", 10)),
-            fitness_weights=fitness_weights,
-            primary_metric=data.get("primary_metric", "sharpe_ratio"),
-            fitness_constraints=data.get(
-                "fitness_constraints", DEFAULT_FITNESS_CONSTRAINTS
-            ),
-            max_indicators=data.get(
-                "max_indicators", GA_DEFAULT_CONFIG["max_indicators"]
-            ),
-            allowed_indicators=allowed_indicators,
-            parameter_ranges=data.get("parameter_ranges", GA_PARAMETER_RANGES),
-            threshold_ranges=data.get("threshold_ranges", GA_THRESHOLD_RANGES),
-            min_indicators=data.get("min_indicators", 1),
-            min_conditions=data.get("min_conditions", 1),
-            max_conditions=data.get("max_conditions", 3),
-            parallel_processes=data.get("parallel_processes"),
-            random_state=data.get("random_state"),
-            log_level=data.get("log_level", "ERROR"),
-            save_intermediate_results=data.get("save_intermediate_results", True),
+        # 他のデフォルト値も設定（既存のget()ロジックを維持）
+        defaults = {
+            "population_size": GA_DEFAULT_CONFIG["population_size"],
+            "generations": GA_DEFAULT_CONFIG["generations"],
+            "crossover_rate": GA_DEFAULT_CONFIG["crossover_rate"],
+            "mutation_rate": GA_DEFAULT_CONFIG["mutation_rate"],
+            "elite_size": GA_DEFAULT_CONFIG.get("elite_size", 10),
+            "primary_metric": "sharpe_ratio",
+            "fitness_constraints": DEFAULT_FITNESS_CONSTRAINTS,
+            "max_indicators": GA_DEFAULT_CONFIG["max_indicators"],
+            "parameter_ranges": GA_PARAMETER_RANGES,
+            "threshold_ranges": GA_THRESHOLD_RANGES,
+            "min_indicators": 1,
+            "min_conditions": 1,
+            "max_conditions": 3,
+            "log_level": "ERROR",
+            "save_intermediate_results": True,
             # フィットネス共有設定
-            enable_fitness_sharing=data.get(
-                "enable_fitness_sharing",
-                GA_DEFAULT_FITNESS_SHARING["enable_fitness_sharing"],
-            ),
-            sharing_radius=data.get(
-                "sharing_radius", GA_DEFAULT_FITNESS_SHARING["sharing_radius"]
-            ),
-            sharing_alpha=data.get(
-                "sharing_alpha", GA_DEFAULT_FITNESS_SHARING["sharing_alpha"]
-            ),
+            "enable_fitness_sharing": GA_DEFAULT_FITNESS_SHARING["enable_fitness_sharing"],
+            "sharing_radius": GA_DEFAULT_FITNESS_SHARING["sharing_radius"],
+            "sharing_alpha": GA_DEFAULT_FITNESS_SHARING["sharing_alpha"],
             # 指標モード設定
-            indicator_mode=data.get("indicator_mode", "mixed"),
-            enable_ml_indicators=data.get("enable_ml_indicators", True),
+            "indicator_mode": "mixed",
+            "enable_ml_indicators": True,
             # 多目的最適化設定
-            enable_multi_objective=data.get("enable_multi_objective", False),
-            objectives=data.get("objectives", DEFAULT_GA_OBJECTIVES),
-            objective_weights=data.get(
-                "objective_weights", DEFAULT_GA_OBJECTIVE_WEIGHTS
-            ),
-        )
+            "enable_multi_objective": False,
+            "objectives": DEFAULT_GA_OBJECTIVES,
+            "objective_weights": DEFAULT_GA_OBJECTIVE_WEIGHTS,
+            # 実行設定
+            "parallel_processes": None,
+            "random_state": None,
+        }
+
+        # デフォルト値をマージ
+        for key, default_value in defaults.items():
+            if data.get(key) is None:  # 明示的にNoneが設定されている場合のみ
+                data[key] = default_value
+
+        return data
 
     def apply_auto_strategy_config(self, config: AutoStrategyConfig) -> None:
         """
