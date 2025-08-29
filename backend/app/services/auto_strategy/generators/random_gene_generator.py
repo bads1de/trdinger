@@ -7,7 +7,7 @@ OI/FRデータを含む多様な戦略遺伝子をランダムに生成します
 
 import logging
 import random
-from typing import Dict, List
+from typing import Dict, List, Union, cast
 
 from app.services.indicators import TechnicalIndicatorService
 from app.services.indicators.config import indicator_registry
@@ -16,6 +16,7 @@ from ..config import GAConfig
 from ..models.gene_serialization import GeneSerializer
 from ..models.strategy_models import (
     Condition,
+    ConditionGroup,
     IndicatorGene,
     StrategyGene,
     PositionSizingGene,
@@ -28,6 +29,7 @@ from ..models.strategy_models import (
 from ..utils.operand_grouping import operand_grouping_system
 from ..config.constants import OPERATORS, DATA_SOURCES
 from .smart_condition_generator import SmartConditionGenerator
+from ..core.indicator_policies import PriceTrendPolicy
 
 logger = logging.getLogger(__name__)
 
@@ -111,6 +113,49 @@ class RandomGeneGenerator:
         # 利用可能な演算子
         self.available_operators = OPERATORS
 
+    def _ensure_or_with_fallback(
+        self, conds: List[Union[Condition, ConditionGroup]], side: str, indicators
+    ) -> List[Union[Condition, ConditionGroup]]:
+        """
+        条件の正規化/組立ヘルパー：
+        - フォールバック（価格 vs トレンド or open）の注入
+        - 1件なら素条件のまま、2件以上なら OR グルーピング
+        """
+        # フォールバック
+        trend_name = PriceTrendPolicy.pick_trend_name(indicators)
+        fallback = Condition(
+            left_operand="close",
+            operator=">" if side == "long" else "<",
+            right_operand=trend_name or "open",
+        )
+        if not conds:
+            return [fallback]
+        # 平坦化（既に OR グループがある場合は中身だけ取り出す）
+        flat: List[Condition] = []
+        for c in conds:
+            if isinstance(c, ConditionGroup):
+                flat.extend(c.conditions)
+            else:
+                flat.append(c)
+        # フォールバックの重複チェック
+        exists = any(
+            x.left_operand == fallback.left_operand
+            and x.operator == fallback.operator
+            and x.right_operand == fallback.right_operand
+            for x in flat
+        )
+        if len(flat) == 1:
+            return cast(
+                List[Union[Condition, ConditionGroup]],
+                flat if exists else flat + [fallback],
+            )
+        top_level: List[Union[Condition, ConditionGroup]] = [
+            ConditionGroup(conditions=flat)
+        ]
+        # 存在していてもトップレベルに1本は追加して可視化と成立性の底上げを図る
+        top_level.append(fallback)
+        return top_level
+
     def generate_random_gene(self) -> StrategyGene:
         """
         ランダムな戦略遺伝子を生成
@@ -149,14 +194,10 @@ class RandomGeneGenerator:
             )
 
             # 条件の成立性を底上げ：OR 正規化と価格vsトレンド(or open)フォールバックをコアに委譲
-            from app.services.auto_strategy.core.condition_assembly import (
-                ConditionAssembly,
-            )
-
-            long_entry_conditions = ConditionAssembly.ensure_or_with_fallback(
+            long_entry_conditions = self._ensure_or_with_fallback(
                 long_entry_conditions, "long", indicators
             )
-            short_entry_conditions = ConditionAssembly.ensure_or_with_fallback(
+            short_entry_conditions = self._ensure_or_with_fallback(
                 short_entry_conditions, "short", indicators
             )
 
