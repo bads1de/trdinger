@@ -9,12 +9,13 @@ PositionSizingCalculatorServiceとPositionSizingServiceの機能を統合して�
 import logging
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Callable
 
 import numpy as np
 import pandas as pd
 
 from app.config.unified_config import unified_config
+from app.utils.error_handler import safe_operation
 
 logger = logging.getLogger(__name__)
 
@@ -62,6 +63,49 @@ class PositionSizingService:
         self._cache: Optional[MarketDataCache] = None
         self._calculation_history: List[PositionSizingResult] = []
 
+    def _apply_size_limits_and_finalize(
+        self,
+        position_size: float,
+        details: Dict[str, Any],
+        warnings: List[str],
+        gene
+    ) -> Dict[str, Any]:
+        """統一された最終処理（共通重複コード除去）"""
+        position_size = max(gene.min_position_size, position_size)
+        details["final_position_size"] = position_size
+
+        return {
+            "position_size": position_size,
+            "details": details,
+            "warnings": warnings,
+        }
+
+    def _safe_calculate_with_price_check(
+        self,
+        calculator_fn: Callable[[], float],
+        current_price: float,
+        fallback_value: float = 0,
+        warning_msg: str = "現在価格が無効",
+        warnings_list: Optional[List[str]] = None
+    ) -> float:
+        """価格チェック共通処理（共通重複コード除去）"""
+        if current_price > 0:
+            return calculator_fn()
+        else:
+            if warnings_list is not None:
+                warnings_list.append(warning_msg)
+            return fallback_value
+
+    def _create_calculation_result(
+        self,
+        position_size: float,
+        details: Dict[str, Any],
+        warnings: List[str],
+        gene
+    ) -> Dict[str, Any]:
+        """計算結果の統一作成（結果構造重複除去）"""
+        return self._apply_size_limits_and_finalize(position_size, details, warnings, gene)
+
     def calculate_position_size(
         self,
         gene,
@@ -87,8 +131,6 @@ class PositionSizingService:
         Returns:
             計算結果
         """
-        from app.utils.error_handler import safe_operation
-
         @safe_operation(
             context="ポジションサイズ計算",
             is_api_call=False,
@@ -99,7 +141,7 @@ class PositionSizingService:
         )
         def _calculate_position_size():
             start_time = datetime.now()
-            warnings = []
+            warnings: List[str] = []
 
             # 入力値の検証
             validation_result = self._validate_inputs(
@@ -241,12 +283,10 @@ class PositionSizingService:
     ) -> Dict[str, Any]:
         """ハーフオプティマルF方式の拡張計算"""
         details: Dict[str, Any] = {"method": "half_optimal_f"}
-        warnings = []
+        warnings: List[str] = []
 
         if not trade_history or len(trade_history) < 10:
             # データ不足時は簡易版オプティマルF計算を試行
-            from app.utils.error_handler import safe_operation
-
             @safe_operation(
                 context="簡易オプティマルF計算",
                 is_api_call=False,
@@ -296,11 +336,10 @@ class PositionSizingService:
             else:
                 # フォールバック
                 position_amount = account_balance * gene.fixed_ratio
-                if current_price > 0:
-                    position_size = position_amount / current_price
-                else:
-                    position_size = 0
-                warnings.append("取引履歴が不足、固定比率にフォールバック")
+                position_size = self._safe_calculate_with_price_check(
+                    lambda: position_amount / current_price,
+                    current_price, 0, "取引履歴が不足、固定比率にフォールバック", warnings
+                )
                 details.update(
                     {
                         "fallback_reason": "insufficient_trade_history_to_fixed",
@@ -317,11 +356,10 @@ class PositionSizingService:
 
             if len(recent_trades) == 0 or len(wins) == 0 or len(losses) == 0:
                 position_amount = account_balance * gene.fixed_ratio
-                if current_price > 0:
-                    position_size = position_amount / current_price
-                else:
-                    position_size = 0
-                warnings.append("有効な取引データなし、固定比率にフォールバック")
+                position_size = self._safe_calculate_with_price_check(
+                    lambda: position_amount / current_price,
+                    current_price, 0, "有効な取引データなし、固定比率にフォールバック", warnings
+                )
                 details.update(
                     {
                         "fallback_reason": "no_valid_trades",
@@ -342,10 +380,10 @@ class PositionSizingService:
 
                     # 口座残高に対する比率として適用
                     position_amount = account_balance * half_optimal_f
-                    if current_price > 0:
-                        position_size = position_amount / current_price
-                    else:
-                        position_size = 0
+                    position_size = self._safe_calculate_with_price_check(
+                        lambda: position_amount / current_price,
+                        current_price, 0, "現在価格が無効", warnings
+                    )
 
                     details.update(
                         {
@@ -360,8 +398,6 @@ class PositionSizingService:
                     )
                 else:
                     # 無効な損益データの場合、ボラティリティベース方式を試行
-                    from app.utils.error_handler import safe_operation
-
                     @safe_operation(
                         context="ボラティリティベースフォールバック",
                         is_api_call=False,
@@ -407,15 +443,8 @@ class PositionSizingService:
                     else:
                         position_size = fallback_result
 
-        # サイズ制限の適用（最小値のみ、資金管理で上限は制御）
-        position_size = max(gene.min_position_size, position_size)
-        details["final_position_size"] = position_size
-
-        return {
-            "position_size": position_size,
-            "details": details,
-            "warnings": warnings,
-        }
+        # 統一された最終処理（重複コード除去）
+        return self._apply_size_limits_and_finalize(position_size, details, warnings, gene)
 
     def _calculate_volatility_based_enhanced(
         self,
@@ -443,11 +472,7 @@ class PositionSizingService:
             position_size = gene.min_position_size
             warnings.append("ボラティリティが0、最小サイズを使用")
 
-        # サイズ制限の適用
-        position_size = max(
-            gene.min_position_size, min(position_size, gene.max_position_size)
-        )
-
+        # 詳細情報の更新
         details.update(
             {
                 "atr_value": atr_value,
@@ -456,16 +481,13 @@ class PositionSizingService:
                 "risk_per_trade": gene.risk_per_trade,
                 "risk_amount": risk_amount,
                 "volatility_factor": volatility_factor,
-                "final_position_size": position_size,
                 "atr_source": market_data.get("atr_source", "provided"),
             }
         )
 
-        return {
-            "position_size": position_size,
-            "details": details,
-            "warnings": warnings,
-        }
+        # 最大サイズ制限適用 + 統一された最終処理
+        position_size = min(position_size, gene.max_position_size)
+        return self._apply_size_limits_and_finalize(position_size, details, warnings, gene)
 
     def _calculate_fixed_ratio_enhanced(
         self,
@@ -478,28 +500,22 @@ class PositionSizingService:
 
         # ポジションサイズの計算
         position_amount = account_balance * gene.fixed_ratio
-        if current_price > 0:
-            position_size = position_amount / current_price
-        else:
-            position_size = 0
+        position_size = self._safe_calculate_with_price_check(
+            lambda: position_amount / current_price,
+            current_price, 0, "現在価格が無効", None
+        )
 
-        # サイズ制限の適用（最小値のみ）
-        position_size = max(gene.min_position_size, position_size)
-
+        # 詳細情報の更新
         details.update(
             {
                 "fixed_ratio": gene.fixed_ratio,
                 "account_balance": account_balance,
                 "calculated_amount": position_amount,
-                "final_position_size": position_size,
             }
         )
 
-        return {
-            "position_size": position_size,
-            "details": details,
-            "warnings": [],
-        }
+        # 統一された最終処理（重複コード除去）
+        return self._apply_size_limits_and_finalize(position_size, details, [], gene)
 
     def _calculate_fixed_quantity_enhanced(
         self,
@@ -512,21 +528,11 @@ class PositionSizingService:
         # ポジションサイズの計算
         position_size = gene.fixed_quantity
 
-        # サイズ制限の適用（最小値のみ）
-        position_size = max(gene.min_position_size, position_size)
+        # 詳細情報の更新
+        details.update({"fixed_quantity": gene.fixed_quantity})
 
-        details.update(
-            {
-                "fixed_quantity": gene.fixed_quantity,
-                "final_position_size": position_size,
-            }
-        )
-
-        return {
-            "position_size": position_size,
-            "details": details,
-            "warnings": [],
-        }
+        # 統一された最終処理（重複コード除去）
+        return self._apply_size_limits_and_finalize(position_size, details, [], gene)
 
     def _calculate_risk_metrics(
         self,
@@ -536,8 +542,6 @@ class PositionSizingService:
         market_data: Dict[str, Any],
     ) -> Dict[str, float]:
         """リスクメトリクスの計算"""
-        from app.utils.error_handler import safe_operation
-
         @safe_operation(
             context="リスクメトリクス計算",
             is_api_call=False,
@@ -580,8 +584,6 @@ class PositionSizingService:
         trade_history: Optional[List[Dict[str, Any]]],
     ) -> float:
         """信頼度スコアの計算"""
-        from app.utils.error_handler import safe_operation
-
         @safe_operation(
             context="信頼度スコア計算", is_api_call=False, default_return=0.5
         )
@@ -702,8 +704,6 @@ class PositionSizingService:
         Returns:
             ポジションサイズ（数量）
         """
-        from app.utils.error_handler import safe_operation
-
         @safe_operation(
             context="簡易ポジションサイズ計算", is_api_call=False, default_return=0.0
         )

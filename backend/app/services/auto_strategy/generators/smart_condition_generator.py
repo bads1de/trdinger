@@ -1,16 +1,14 @@
 import logging
 import random
 from typing import List, Tuple, Union
-from app.services.indicators.config import indicator_registry
-from app.services.indicators.config.indicator_config import IndicatorScaleType
-from app.services.auto_strategy.core.indicator_policies import ThresholdPolicy
 from app.services.auto_strategy.config.constants import (
     INDICATOR_CHARACTERISTICS,
     IndicatorType,
-    StrategyType
+    StrategyType,
 )
 
 from ..models.strategy_models import Condition, IndicatorGene, ConditionGroup
+from .condition_generator import ConditionGenerator  # Phase 1.3: 条件生成統合
 
 
 logger = logging.getLogger(__name__)
@@ -65,6 +63,12 @@ class SmartConditionGenerator:
         """
         self.enable_smart_generation = enable_smart_generation
         self.logger = logger
+
+        # Phase 1.3: ConditionGenerator統合
+        # 条件生成ロジックを一元化
+        self.condition_generator = ConditionGenerator()
+        self.condition_generator.indicators = None  # 後で設定
+
         # 生成時の相場・実行コンテキスト（timeframeやsymbol）
         # regime_gating: レジーム条件をAND前置するか（デフォルトは無効化して約定性を優先）
         # threshold_profile: 'aggressive' | 'normal' | 'conservative' で閾値チューニング
@@ -97,6 +101,15 @@ class SmartConditionGenerator:
                 if threshold_profile not in ("aggressive", "normal", "conservative"):
                     threshold_profile = "normal"
                 self.context["threshold_profile"] = threshold_profile
+
+            # Phase 1.3: ConditionGeneratorのコンテキストも同期
+            # 統合された条件生成に反映
+            self.condition_generator.set_context(
+                timeframe=timeframe,
+                symbol=symbol,
+                regime_gating=regime_gating,
+                threshold_profile=threshold_profile,
+            )
         except Exception:
             pass
 
@@ -517,287 +530,15 @@ class SmartConditionGenerator:
         exit_conditions: List[Condition] = []
         return long_conditions, short_conditions, exit_conditions
 
-    def _dynamic_classify(self, indicators: List[IndicatorGene]) -> dict:
-        """レジストリ情報に基づいて指標を動的に分類（未特性化を拾う）"""
-        categorized = {
-            IndicatorType.MOMENTUM: [],
-            IndicatorType.TREND: [],
-            IndicatorType.VOLATILITY: [],
-            IndicatorType.STATISTICS: [],
-            IndicatorType.PATTERN_RECOGNITION: [],
-        }
-        for ind in indicators:
-            if not ind.enabled:
-                continue
-            name = ind.type
-            cfg = indicator_registry.get_indicator_config(name)
-            if cfg and hasattr(cfg, "category") and getattr(cfg, "category", None):
-                try:
-                    # config.category は str のはず
-                    cat = getattr(cfg, "category")
-                    if cat == "momentum":
-                        categorized[IndicatorType.MOMENTUM].append(ind)
-                    elif cat == "trend":
-                        categorized[IndicatorType.TREND].append(ind)
-                    elif cat == "volatility":
-                        categorized[IndicatorType.VOLATILITY].append(ind)
-                    elif cat == "statistics":
-                        categorized[IndicatorType.STATISTICS].append(ind)
-                    elif cat == "pattern_recognition":
-                        categorized[IndicatorType.PATTERN_RECOGNITION].append(ind)
-                    else:
-                        # 未知カテゴリは一旦トレンドに寄せる（価格系多めのため）
-                        categorized[IndicatorType.TREND].append(ind)
-                except Exception:
-                    categorized[IndicatorType.TREND].append(ind)
-            else:
-                # INDICATOR_CHARACTERISTICS にあれば既存分類
-                if ind.type in INDICATOR_CHARACTERISTICS:
-                    char = INDICATOR_CHARACTERISTICS[ind.type]
-                    categorized[char["type"]].append(ind)
-                else:
-                    # それでも分類不可ならトレンドへ
-                    categorized[IndicatorType.TREND].append(ind)
-        return categorized
+    # 削除されたメソッド: _dynamic_classify は ConditionGenerator._dynamic_classify を利用するように変更済み
 
     def _generic_long_conditions(self, ind: IndicatorGene) -> List[Condition]:
-        """レジストリのスケール/特性ベースで汎用ロング条件を生成（閾値拡充）"""
-        name = ind.type
-        cfg = indicator_registry.get_indicator_config(name)
-        scale = getattr(cfg, "scale_type", None) if cfg else None
-
-        # 価格系は素直に価格比較（VALID_INDICATOR_TYPESに含まれる指標のみ）
-        if name in (
-            "SMA",
-            "EMA",
-            "WMA",
-            "KAMA",
-            "T3",
-            "TRIMA",
-            "MIDPOINT",
-        ):
-            # 右オペランドは gene に含まれるトレンド名に限定。無ければ 'open' に退避
-            trend_names_in_gene = [
-                ind.type
-                for ind in (self.indicators or [])
-                if getattr(ind, "enabled", True)
-            ]
-            right_name = name if name in trend_names_in_gene else "open"
-            return [
-                Condition(left_operand="close", operator=">", right_operand=right_name)
-            ]
-
-        # 0-100オシレーター系（RSI/MFI/STOCH/KDJ/QQE/ADX等）
-        if scale == IndicatorScaleType.OSCILLATOR_0_100:
-            context = getattr(self, "context", None)
-            profile = (
-                context.get("threshold_profile", "normal")
-                if context and isinstance(context, dict)
-                else "normal"
-            )
-            if name in {"RSI", "STOCH", "STOCHRSI", "KDJ", "QQE", "MFI"}:
-                # プロファイルごとの閾値は ThresholdPolicy に一元化
-                policy = ThresholdPolicy.get(profile)
-                thr = (
-                    policy.rsi_long_lt
-                    if name != "MFI"
-                    else (policy.mfi_long_lt or policy.rsi_long_lt)
-                )
-                return [
-                    Condition(left_operand=name, operator=">", right_operand=float(thr))
-                ]
-            if name == "ADX":
-                # ADXは方向ではなくトレンド強度 → フィルタとして利用
-                thr = ThresholdPolicy.get(profile).adx_trend_min
-                return [
-                    Condition(left_operand=name, operator=">", right_operand=float(thr))
-                ]
-            # デフォルト
-            thr = (
-                48
-                if profile == "aggressive"
-                else (52 if profile == "conservative" else 50)
-            )
-            return [
-                Condition(left_operand=name, operator=">", right_operand=float(thr))
-            ]
-
-        # ±100系（CCI/WILLR/AROONOSC等）
-        if scale == IndicatorScaleType.OSCILLATOR_PLUS_MINUS_100:
-            context = getattr(self, "context", None)
-            profile = (
-                context.get("threshold_profile", "normal")
-                if context and isinstance(context, dict)
-                else "normal"
-            )
-            if name == "CCI":
-                # 方向性のある強めのしきい値（ポリシー化）
-                lim = ThresholdPolicy.get(profile).cci_abs_limit or 100
-                return [
-                    Condition(
-                        left_operand=name,
-                        operator=">",
-                        right_operand=float(-lim / 20.0),
-                    )
-                ]
-            if name == "WILLR":
-                # -100..0（-50の上は相対的に強め）→ ポリシー化
-                p = ThresholdPolicy.get(profile)
-                thr = -p.willr_long_lt if p.willr_long_lt is not None else -50
-                return [
-                    Condition(left_operand=name, operator=">", right_operand=float(thr))
-                ]
-            # AO, AROONOSC 等はゼロ上
-            thr = (
-                -2
-                if profile == "aggressive"
-                else (2 if profile == "conservative" else 0)
-            )
-            return [
-                Condition(left_operand=name, operator=">", right_operand=float(thr))
-            ]
-
-        # ゼロセンター系（MACD/PPO/APO/TRIX/TSIなど）
-        if scale == IndicatorScaleType.MOMENTUM_ZERO_CENTERED:
-            context = getattr(self, "context", None)
-            thr = (
-                -0.0
-                if context
-                and isinstance(context, dict)
-                and context.get("threshold_profile") == "aggressive"
-                else 0
-            )
-            return [
-                Condition(left_operand=name, operator=">", right_operand=float(thr))
-            ]
-
-        # 比率/絶対価格
-        # 注意: PRICE_RATIO/PRICE_ABSOLUTE の中でもトレンド系以外（ATR/TRANGE/STDDEV等）は価格との直接比較は不適切
-        # ここでは汎用生成を行わずスキップし、他のロジック（価格vsトレンド補完等）に委ねる
-        if scale in {IndicatorScaleType.PRICE_RATIO, IndicatorScaleType.PRICE_ABSOLUTE}:
-            return []
-
-        # フォールバック
-        context = getattr(self, "context", None)
-        thr = (
-            -0.0
-            if context
-            and isinstance(context, dict)
-            and context.get("threshold_profile") == "aggressive"
-            else 0
-        )
-        return [Condition(left_operand=name, operator=">", right_operand=float(thr))]
+        """Phase 1.3: 統合された汎用ロング条件生成 - ConditionGenerator委譲"""
+        return self.condition_generator._generic_long_conditions(ind)
 
     def _generic_short_conditions(self, ind: IndicatorGene) -> List[Condition]:
-        """レジストリのスケール/特性ベースで汎用ショート条件を生成（閾値拡充）"""
-        name = ind.type
-        cfg = indicator_registry.get_indicator_config(name)
-        scale = getattr(cfg, "scale_type", None) if cfg else None
-
-        # 価格系は素直に価格比較
-        if name in (
-            "SMA",
-            "EMA",
-            "WMA",
-            "KAMA",
-            "T3",
-            "TRIMA",
-            "MIDPOINT",
-        ):
-            # 右オペランドは gene に含まれるトレンド名に限定。無ければ 'open' に退避
-            trend_names_in_gene = [
-                ind.type
-                for ind in (self.indicators or [])
-                if getattr(ind, "enabled", True)
-            ]
-            right_name = name if name in trend_names_in_gene else "open"
-            return [
-                Condition(left_operand="close", operator="<", right_operand=right_name)
-            ]
-
-        # 0-100オシレーター系
-        if scale == IndicatorScaleType.OSCILLATOR_0_100:
-            context = getattr(self, "context", None)
-            profile = (
-                context.get("threshold_profile", "normal")
-                if context and isinstance(context, dict)
-                else "normal"
-            )
-            if name in {"RSI", "STOCH", "STOCHRSI", "KDJ", "QQE", "MFI"}:
-                p = ThresholdPolicy.get(profile)
-                thr = (
-                    p.rsi_short_gt
-                    if name != "MFI"
-                    else (p.mfi_short_gt or p.rsi_short_gt)
-                )
-                return [
-                    Condition(left_operand=name, operator="<", right_operand=float(thr))
-                ]
-            if name == "ADX":
-                # トレンド強度フィルタ（方向性は持たない）
-                thr = float(100 - ThresholdPolicy.get(profile).adx_trend_min)
-                return [
-                    Condition(left_operand=name, operator="<", right_operand=float(thr))
-                ]
-            thr = (
-                52
-                if profile == "aggressive"
-                else (48 if profile == "conservative" else 50)
-            )
-            return [
-                Condition(left_operand=name, operator="<", right_operand=float(thr))
-            ]
-
-        # ±100系
-        if scale == IndicatorScaleType.OSCILLATOR_PLUS_MINUS_100:
-            profile = (
-                (self.context or {}).get("threshold_profile", "normal")
-                if hasattr(self, "context")
-                else "normal"
-            )
-            if name == "CCI":
-                thr = (
-                    5
-                    if profile == "aggressive"
-                    else (-5 if profile == "conservative" else 0)
-                )
-                return [
-                    Condition(left_operand=name, operator="<", right_operand=float(thr))
-                ]
-            if name == "WILLR":
-                thr = (
-                    -40
-                    if profile == "aggressive"
-                    else (-60 if profile == "conservative" else -50)
-                )
-                return [
-                    Condition(left_operand=name, operator="<", right_operand=float(thr))
-                ]
-            thr = (
-                2
-                if profile == "aggressive"
-                else (-2 if profile == "conservative" else 0)
-            )
-            return [
-                Condition(left_operand=name, operator="<", right_operand=float(thr))
-            ]
-
-        # ゼロセンター系
-        if scale == IndicatorScaleType.MOMENTUM_ZERO_CENTERED:
-            thr = 0.0
-            return [
-                Condition(left_operand=name, operator="<", right_operand=float(thr))
-            ]
-
-        # 比率/絶対価格
-        # 注意: PRICE_RATIO/PRICE_ABSOLUTE の中でもトレンド系以外（ATR/TRANGE/STDDEV等）は価格との直接比較は不適切
-        # ここでは汎用生成を行わずスキップ
-        if scale in {IndicatorScaleType.PRICE_RATIO, IndicatorScaleType.PRICE_ABSOLUTE}:
-            return []
-
-        # フォールバック
-        thr = 0.0  # デフォルト閾値を設定
-        return [Condition(left_operand=name, operator="<", right_operand=float(thr))]
+        """Phase 1.3: 統合された汎用ショート条件生成 - ConditionGenerator委譲"""
+        return self.condition_generator._generic_short_conditions(ind)
 
     def _generate_different_indicators_strategy(
         self, indicators: List[IndicatorGene]
@@ -816,8 +557,9 @@ class SmartConditionGenerator:
             (long_entry_conditions, short_entry_conditions, exit_conditions)のタプル
         """
         try:
+            # Phase 1.3: ConditionGeneratorを活用（統合された動的分類）
             # 指標をタイプ別に分類（未特性化はレジストリから動的分類）
-            indicators_by_type = self._dynamic_classify(indicators)
+            indicators_by_type = self.condition_generator._dynamic_classify(indicators)
 
             # トレンド系 + モメンタム系の組み合わせを優先
             long_conditions: List[Union[Condition, ConditionGroup]] = []
@@ -1059,270 +801,50 @@ class SmartConditionGenerator:
     def _create_trend_long_conditions(
         self, indicator: IndicatorGene
     ) -> List[Condition]:
-        """トレンド系指標のロング条件を生成"""
-        # テスト互換性: 素名優先
-        indicator_name = indicator.type
-
-        if indicator.type in ["SMA", "EMA", "WMA", "TRIMA"]:
-            return [
-                Condition(
-                    left_operand="close", operator=">", right_operand=indicator_name
-                )
-            ]
-        else:
-            return []
+        """Phase 1.3: 統合されたトレンド系ロング条件生成 - ConditionGenerator委譲"""
+        return self.condition_generator._create_trend_long_conditions(indicator)
 
     def _create_trend_short_conditions(
         self, indicator: IndicatorGene
     ) -> List[Condition]:
-        """トレンド系指標のショート条件を生成"""
-        # テスト互換性: 素名優先
-        indicator_name = indicator.type
-
-        if indicator.type in ["SMA", "EMA", "WMA", "TRIMA"]:
-            return [
-                Condition(
-                    left_operand="close", operator="<", right_operand=indicator_name
-                )
-            ]
-        else:
-            return []
+        """Phase 1.3: 統合されたトレンド系ショート条件生成 - ConditionGenerator委譲"""
+        return self.condition_generator._create_trend_short_conditions(indicator)
 
     def _create_momentum_long_conditions(
         self, indicator: IndicatorGene
     ) -> List[Condition]:
-        """モメンタム系指標のロング条件を生成"""
-        # テスト互換性: レジストリ由来の素名を優先（RSI_14 -> RSI）
-        indicator_name = indicator.type
-
-        if indicator.type == "RSI":
-            # RSI: 時間軸依存閾値（例: 15m/1h/4hで 55/60/65 を中心にゾーン化）
-            context = getattr(self, "context", None)
-            tf = (
-                context.get("timeframe")
-                if context and isinstance(context, dict)
-                else None
-            )
-            if tf in ("15m", "15min", "15"):
-                base = 55
-            elif tf in ("1h", "60"):
-                base = 60
-            elif tf in ("4h", "240"):
-                base = 65
-            else:
-                base = 60
-            # ロングは売られすぎ or 中立下限割れからの回復狙い
-            return [
-                Condition(
-                    left_operand=indicator_name,
-                    operator="<",
-                    right_operand=max(25, base - 25),
-                )
-            ]
-        elif indicator.type == "STOCH":
-            # STOCH: %K/%D クロス + ゾーン（20/80）
-            # 評価器側の簡便性のため、%K(=STOCH_0), %D(=STOCH_1) 名で扱う
-            return [
-                # ゾーン条件（売られすぎ）
-                Condition(left_operand="STOCH_0", operator="<", right_operand=20),
-            ]
-        elif indicator.type == "CCI":
-            # CCI: 売られすぎ領域でロング
-            threshold = random.uniform(-150, -80)
-            return [
-                Condition(
-                    left_operand=indicator_name, operator="<", right_operand=threshold
-                )
-            ]
-        elif indicator.type in {"MACD", "MACDEXT"}:
-            # MACD/MACDEXT: ゼロライン or シグナルクロスのハイブリッド
-            # 評価器では *_0=メイン, *_1=シグナル
-            return [
-                Condition(
-                    left_operand=(
-                        "MACD_0" if indicator.type == "MACD" else "MACDEXT_0"
-                    ),
-                    operator=">",
-                    right_operand=0,
-                )
-            ]
-        else:
-            return []
+        """Phase 1.3: 統合されたモメンタム系ロング条件生成 - ConditionGenerator委譲"""
+        return self.condition_generator._create_momentum_long_conditions(indicator)
 
     def _create_momentum_short_conditions(
         self, indicator: IndicatorGene
     ) -> List[Condition]:
-        """モメンタム系指標のショート条件を生成"""
-        # テスト互換性: レジストリ由来の素名を優先（RSI_14 -> RSI）
-        indicator_name = indicator.type
-
-        if indicator.type == "RSI":
-            # RSI: 時間軸依存閾値（例: 15m/1h/4hで 55/60/65 を中心にゾーン化）
-            context = getattr(self, "context", None)
-            tf = (
-                context.get("timeframe")
-                if context and isinstance(context, dict)
-                else None
-            )
-            if tf in ("15m", "15min", "15"):
-                base = 55
-            elif tf in ("1h", "60"):
-                base = 60
-            elif tf in ("4h", "240"):
-                base = 65
-            else:
-                base = 60
-            # ショートは買われすぎ or 中立上限超えからの下降狙い
-            return [
-                Condition(
-                    left_operand=indicator_name,
-                    operator=">",
-                    right_operand=min(75, base + 25),
-                )
-            ]
-        elif indicator.type == "STOCH":
-            # STOCH: %K/%D クロス + ゾーン（20/80）
-            # 評価器側の簡便性のため、%K(=STOCH_0), %D(=STOCH_1) 名で扱う
-            return [
-                # ゾーン条件（買われすぎ）
-                Condition(left_operand="STOCH_0", operator=">", right_operand=80),
-            ]
-        elif indicator.type == "CCI":
-            # CCI: 買われすぎ領域でショート
-            threshold = random.uniform(80, 150)
-            return [
-                Condition(
-                    left_operand=indicator_name, operator=">", right_operand=threshold
-                )
-            ]
-        elif indicator.type in {"MACD", "MACDEXT"}:
-            # MACD/MACDEXT: ゼロライン or シグナルクロスのハイブリッド
-            # 評価器では *_0=メイン, *_1=シグナル
-            return [
-                Condition(
-                    left_operand=(
-                        "MACD_0" if indicator.type == "MACD" else "MACDEXT_0"
-                    ),
-                    operator="<",
-                    right_operand=0,
-                )
-            ]
-        else:
-            return []
+        """Phase 1.3: 統合されたモメンタム系ショート条件生成 - ConditionGenerator委譲"""
+        return self.condition_generator._create_momentum_short_conditions(indicator)
 
     def _create_statistics_long_conditions(
         self, indicator: IndicatorGene
     ) -> List[Condition]:
-        """統計系指標のロング条件を生成"""
-        # テスト互換性: 指標は素名で参照
-        indicator_name = indicator.type
-
-        if indicator.type == "CORREL":
-            # 正の相関でロング
-            threshold = random.uniform(0.3, 0.7)
-            return [
-                Condition(
-                    left_operand=indicator_name, operator=">", right_operand=threshold
-                )
-            ]
-        elif indicator.type == "LINEARREG_ANGLE":
-            # 上昇角度でロング
-            threshold = random.uniform(10, 45)
-            return [
-                Condition(
-                    left_operand=indicator_name, operator=">", right_operand=threshold
-                )
-            ]
-        elif indicator.type == "LINEARREG_SLOPE":
-            # 正の傾きでロング
-            return [
-                Condition(left_operand=indicator_name, operator=">", right_operand=0)
-            ]
-        elif indicator.type in ["LINEARREG", "TSF"]:
-            # 価格が回帰線より上でロング
-            return [
-                Condition(
-                    left_operand="close", operator=">", right_operand=indicator_name
-                )
-            ]
-        else:
-            return []
+        """Phase 1.3: 統合された統計系ロング条件生成 - ConditionGenerator委譲"""
+        return self.condition_generator._create_statistics_long_conditions(indicator)
 
     def _create_statistics_short_conditions(
         self, indicator: IndicatorGene
     ) -> List[Condition]:
-        """統計系指標のショート条件を生成"""
-        # テスト互換性: 指標は素名で参照
-        indicator_name = indicator.type
-
-        if indicator.type == "CORREL":
-            # 負の相関でショート
-            threshold = random.uniform(-0.7, -0.3)
-            return [
-                Condition(
-                    left_operand=indicator_name, operator="<", right_operand=threshold
-                )
-            ]
-        elif indicator.type == "LINEARREG_ANGLE":
-            # 下降角度でショート
-            threshold = random.uniform(-45, -10)
-            return [
-                Condition(
-                    left_operand=indicator_name, operator="<", right_operand=threshold
-                )
-            ]
-        elif indicator.type == "LINEARREG_SLOPE":
-            # 負の傾きでショート
-            return [
-                Condition(left_operand=indicator_name, operator="<", right_operand=0)
-            ]
-        elif indicator.type in ["LINEARREG", "TSF"]:
-            # 価格が回帰線より下でショート
-            return [
-                Condition(
-                    left_operand="close", operator="<", right_operand=indicator_name
-                )
-            ]
-        else:
-            return []
+        """Phase 1.3: 統合された統計系ショート条件生成 - ConditionGenerator委譲"""
+        return self.condition_generator._create_statistics_short_conditions(indicator)
 
     def _create_pattern_long_conditions(
         self, indicator: IndicatorGene
     ) -> List[Condition]:
-        """パターン認識系指標のロング条件を生成"""
-        indicator_name = f"{indicator.type}"
-
-        if indicator.type in ["CDL_HAMMER", "CDL_PIERCING", "CDL_THREE_WHITE_SOLDIERS"]:
-            # 強気パターンでロング
-            return [
-                Condition(left_operand=indicator_name, operator=">", right_operand=0)
-            ]
-        elif indicator.type == "CDL_DOJI":
-            # ドージパターンは反転の可能性（文脈依存）
-            return [
-                Condition(left_operand=indicator_name, operator="!=", right_operand=0)
-            ]
-        else:
-            return []
+        """Phase 1.3: 統合されたパターン認識系ロング条件生成 - ConditionGenerator委譲"""
+        return self.condition_generator._create_pattern_long_conditions(indicator)
 
     def _create_pattern_short_conditions(
         self, indicator: IndicatorGene
     ) -> List[Condition]:
-        """パターン認識系指標のショート条件を生成"""
-        indicator_name = f"{indicator.type}"
-
-        if indicator.type in ["CDL_HANGING_MAN", "CDL_DARK_CLOUD_COVER", "CDL_THREE_BLACK_CROWS"]:
-            # 弱気パターンでショート
-            return [
-                Condition(left_operand=indicator_name, operator="<", right_operand=0)
-            ]
-        elif indicator.type == "CDL_DOJI":
-            # ドージパターンは反転の可能性（文脈依存）
-            return [
-                Condition(left_operand=indicator_name, operator="!=", right_operand=0)
-            ]
-        else:
-            return []
+        """Phase 1.3: 統合されたパターン認識系ショート条件生成 - ConditionGenerator委譲"""
+        return self.condition_generator._create_pattern_short_conditions(indicator)
 
     def _generate_time_separation_strategy(
         self, indicators: List[IndicatorGene]
@@ -1614,7 +1136,9 @@ class SmartConditionGenerator:
                         short_conds = self._create_trend_short_conditions(indicator)
                     elif indicator_type == IndicatorType.STATISTICS:
                         long_conds = self._create_statistics_long_conditions(indicator)
-                        short_conds = self._create_statistics_short_conditions(indicator)
+                        short_conds = self._create_statistics_short_conditions(
+                            indicator
+                        )
                     elif indicator_type == IndicatorType.PATTERN_RECOGNITION:
                         long_conds = self._create_pattern_long_conditions(indicator)
                         short_conds = self._create_pattern_short_conditions(indicator)
