@@ -14,7 +14,7 @@ from app.api.dependencies import (
     get_auto_strategy_service,
 )
 from app.services.auto_strategy import AutoStrategyService
-from app.services.auto_strategy.models.ga_config import GAConfig
+from app.services.auto_strategy.config.auto_strategy_config import GAConfig
 from app.utils.response import api_response, error_response
 from app.utils.error_handler import ErrorHandler
 

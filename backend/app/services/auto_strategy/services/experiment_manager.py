@@ -14,7 +14,7 @@ from database.repositories.backtest_result_repository import BacktestResultRepos
 from ..core.ga_engine import GeneticAlgorithmEngine
 from ..generators.strategy_factory import StrategyFactory
 from ..generators.random_gene_generator import RandomGeneGenerator
-from ..models.ga_config import GAConfig
+from ..config import GAConfig
 from ..models.strategy_models import StrategyGene
 from .experiment_persistence_service import ExperimentPersistenceService
 

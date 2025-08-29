@@ -43,8 +43,8 @@ class RiskRewardStrategy(TPSLStrategy):
 
     def generate(self, **kwargs) -> TPSLResult:
         # 簡単な実装 - 後で詳細化
-        stop_loss_pct = kwargs.get('stop_loss_pct', 0.03)
-        target_ratio = kwargs.get('target_ratio', 2.0)
+        stop_loss_pct = kwargs.get("stop_loss_pct", 0.03)
+        target_ratio = kwargs.get("target_ratio", 2.0)
 
         take_profit_pct = stop_loss_pct * target_ratio
 
@@ -53,7 +53,7 @@ class RiskRewardStrategy(TPSLStrategy):
             take_profit_pct=take_profit_pct,
             method_used="risk_reward",
             confidence_score=0.8,
-            expected_performance={"risk_reward_ratio": target_ratio}
+            expected_performance={"risk_reward_ratio": target_ratio},
         )
 
 
@@ -67,7 +67,7 @@ class StatisticalStrategy(TPSLStrategy):
             take_profit_pct=0.06,
             method_used="statistical",
             confidence_score=0.7,
-            expected_performance={"sharpe_ratio": 0.5}
+            expected_performance={"sharpe_ratio": 0.5},
         )
 
 
@@ -76,14 +76,14 @@ class VolatilityStrategy(TPSLStrategy):
 
     def generate(self, **kwargs) -> TPSLResult:
         # 簡単な実装 - 後で詳細化
-        base_atr_pct = kwargs.get('base_atr_pct', 0.02)
+        base_atr_pct = kwargs.get("base_atr_pct", 0.02)
 
         return TPSLResult(
             stop_loss_pct=base_atr_pct * 1.5,
             take_profit_pct=base_atr_pct * 3.0,
             method_used="volatility",
             confidence_score=0.9,
-            expected_performance={"volatility_adjustment": "applied"}
+            expected_performance={"volatility_adjustment": "applied"},
         )
 
 
@@ -92,17 +92,16 @@ class AdaptiveStrategy(TPSLStrategy):
 
     def generate(self, **kwargs) -> TPSLResult:
         # 市場条件に基づいて適切な戦略を選択
-        from ..models.strategy_models import TPSLGene
 
-        tpsl_gene = kwargs.get('tpsl_gene')
-        if tpsl_gene and hasattr(tpsl_gene, 'method'):
+        tpsl_gene = kwargs.get("tpsl_gene")
+        if tpsl_gene and hasattr(tpsl_gene, "method"):
             # TPSLGeneのmethodに基づいて選択
             method = tpsl_gene.method
-            if method.name == 'VOLATILITY_BASED':
+            if method.name == "VOLATILITY_BASED":
                 return VolatilityStrategy().generate(**kwargs)
-            elif method.name == 'RISK_REWARD_RATIO':
+            elif method.name == "RISK_REWARD_RATIO":
                 return RiskRewardStrategy().generate(**kwargs)
-            elif method.name == 'STATISTICAL':
+            elif method.name == "STATISTICAL":
                 return StatisticalStrategy().generate(**kwargs)
             else:
                 return FixedPercentageStrategy().generate(**kwargs)
@@ -115,15 +114,15 @@ class FixedPercentageStrategy(TPSLStrategy):
     """固定パーセンテージ戦略"""
 
     def generate(self, **kwargs) -> TPSLResult:
-        stop_loss_pct = kwargs.get('stop_loss_pct', 0.03)
-        take_profit_pct = kwargs.get('take_profit_pct', 0.06)
+        stop_loss_pct = kwargs.get("stop_loss_pct", 0.03)
+        take_profit_pct = kwargs.get("take_profit_pct", 0.06)
 
         return TPSLResult(
             stop_loss_pct=stop_loss_pct,
             take_profit_pct=take_profit_pct,
             method_used="fixed_percentage",
             confidence_score=0.95,
-            expected_performance={"type": "fixed"}
+            expected_performance={"type": "fixed"},
         )
 
 
@@ -178,7 +177,9 @@ class UnifiedTPSLGenerator:
         else:
             raise ValueError(f"Unknown TPSL method: {method}")
 
-    def generate_adaptive_tpsl(self, market_conditions: Dict[str, Any], **kwargs) -> TPSLResult:
+    def generate_adaptive_tpsl(
+        self, market_conditions: Dict[str, Any], **kwargs
+    ) -> TPSLResult:
         """
         市場条件に基づいて自動的に最適な手法を選択してTP/SLを生成
 
@@ -190,14 +191,14 @@ class UnifiedTPSLGenerator:
             TPSLResult: 生成されたTP/SL結果
         """
         # 簡易的な手法選択ロジック
-        volatility = market_conditions.get('volatility', 'normal')
-        trend = market_conditions.get('trend', 'neutral')
+        volatility = market_conditions.get("volatility", "normal")
+        trend = market_conditions.get("trend", "neutral")
 
-        if volatility == 'high':
+        if volatility == "high":
             method = "volatility"
-        elif trend in ['strong_up', 'strong_down']:
+        elif trend in ["strong_up", "strong_down"]:
             method = "risk_reward"
-        elif market_conditions.get('historical_data_available', False):
+        elif market_conditions.get("historical_data_available", False):
             method = "statistical"
         else:
             method = "fixed_percentage"

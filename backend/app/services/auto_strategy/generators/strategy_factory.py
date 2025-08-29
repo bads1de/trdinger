@@ -8,9 +8,6 @@ from ..models.strategy_models import Condition
 import logging
 from typing import List, Tuple, Type, Union, cast
 import os
-from ..models.strategy_models import Condition
-import logging
-from typing import List, Tuple, Type, Union, cast
 
 from backtesting import Strategy
 
@@ -19,7 +16,7 @@ from ..services.position_sizing_service import PositionSizingService
 from ..services.tpsl_service import TPSLService
 from ..core.condition_evaluator import ConditionEvaluator
 from ..models.strategy_models import IndicatorGene, StrategyGene, ConditionGroup
-from ..utils.decorators import auto_strategy_operation
+
 
 logger = logging.getLogger(__name__)
 
@@ -35,18 +32,13 @@ def _debug_log(message: str, level: str = "debug", force: bool = False):
     """
     # 環境変数でデバッグログを制御
     debug_enabled = force or (
-        hasattr(logging, '_debug_strategy_factory') or
-        os.getenv('AUTO_STRATEGY_DEBUG', '').lower() in ('true', '1')
+        hasattr(logging, "_debug_strategy_factory")
+        or os.getenv("AUTO_STRATEGY_DEBUG", "").lower() in ("true", "1")
     )
 
     if debug_enabled:
         log_func = getattr(logger, level, logger.debug)
         log_func(f"🏭 [StrategyFactory] {message}")
-
-
-# 環境変数でデバッグフラグを設定
-if os.getenv('AUTO_STRATEGY_DEBUG', '').lower() in ('true', '1'):
-    logging._debug_strategy_factory = True
 
 
 class StrategyFactory:
@@ -135,7 +127,9 @@ class StrategyFactory:
 
                 try:
                     # 各指標を初期化
-                    enabled_indicators = [ind for ind in self.strategy_gene.indicators if ind.enabled]
+                    enabled_indicators = [
+                        ind for ind in self.strategy_gene.indicators if ind.enabled
+                    ]
                     _debug_log(f"有効な指標数: {len(enabled_indicators)}")
 
                     for indicator_gene in enabled_indicators:
@@ -168,10 +162,14 @@ class StrategyFactory:
 
                             try:
                                 fb = IG(
-                                    type="SMA", parameters={"period": period}, enabled=True
+                                    type="SMA",
+                                    parameters={"period": period},
+                                    enabled=True,
                                 )
                                 factory.indicator_calculator.init_indicator(fb, self)
-                                _debug_log(f"フォールバック適用: {indicator_gene.type} -> SMA({period})")
+                                _debug_log(
+                                    f"フォールバック適用: {indicator_gene.type} -> SMA({period})"
+                                )
                                 return
                             except Exception as fb_e:
                                 logger.warning(f"フォールバック失敗: {fb_e}")
@@ -179,6 +177,7 @@ class StrategyFactory:
                             # 最後の手段: RSI(14)
                             try:
                                 from ..models.strategy_models import IndicatorGene as IG
+
                                 fb2 = IG(
                                     type="RSI", parameters={"period": 14}, enabled=True
                                 )
@@ -268,14 +267,22 @@ class StrategyFactory:
                         and self.gene.position_sizing_gene.enabled
                     ):
                         # 現在の市場データ（該当するものがなければデフォルト値を使用）
-                        current_price = self.data.Close[-1] if hasattr(self, 'data') and len(self.data.Close) > 0 else 50000.0
-                        account_balance = getattr(self, 'equity', 100000.0)  # デフォルト口座残高
+                        current_price = (
+                            self.data.Close[-1]
+                            if hasattr(self, "data") and len(self.data.Close) > 0
+                            else 50000.0
+                        )
+                        account_balance = getattr(
+                            self, "equity", 100000.0
+                        )  # デフォルト口座残高
 
                         # PositionSizingServiceを使用して計算
-                        result = factory.position_sizing_service.calculate_position_size(
-                            gene=self.gene.position_sizing_gene,
-                            account_balance=account_balance,
-                            current_price=current_price,
+                        result = (
+                            factory.position_sizing_service.calculate_position_size(
+                                gene=self.gene.position_sizing_gene,
+                                account_balance=account_balance,
+                                current_price=current_price,
+                            )
                         )
 
                         # 結果を返却（安全範囲に制限）
@@ -286,7 +293,9 @@ class StrategyFactory:
                         return 0.01
 
                 except Exception as e:
-                    logger.warning(f"ポジションサイズ計算エラー、フォールバック使用: {e}")
+                    logger.warning(
+                        f"ポジションサイズ計算エラー、フォールバック使用: {e}"
+                    )
                     # エラー時はデフォルトサイズを使用
                     return 0.01
 
@@ -326,13 +335,17 @@ class StrategyFactory:
                             # 取引実行
                             if long_signal:
                                 if sl_price and tp_price:
-                                    self.buy(size=position_size, sl=sl_price, tp=tp_price)
+                                    self.buy(
+                                        size=position_size, sl=sl_price, tp=tp_price
+                                    )
                                 else:
                                     self.buy(size=position_size)
 
                             elif short_signal:
                                 if sl_price and tp_price:
-                                    self.sell(size=position_size, sl=sl_price, tp=tp_price)
+                                    self.sell(
+                                        size=position_size, sl=sl_price, tp=tp_price
+                                    )
                                 else:
                                     self.sell(size=position_size)
 
@@ -345,6 +358,7 @@ class StrategyFactory:
                     # デバッグ時はスタックトレースも出力
                     if logging.getLogger().isEnabledFor(logging.DEBUG):
                         import traceback
+
                         traceback.print_exc()
 
         # クラス名を設定
@@ -356,7 +370,6 @@ class StrategyFactory:
         logger.info(f"戦略クラス生成成功: {GeneratedStrategy.__name__}")
 
         return GeneratedStrategy
-
 
     def validate_gene(self, gene: StrategyGene) -> Tuple[bool, list]:
         """

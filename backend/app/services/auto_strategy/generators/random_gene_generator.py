@@ -12,7 +12,7 @@ from typing import Dict, List
 from app.services.indicators import TechnicalIndicatorService
 from app.services.indicators.config import indicator_registry
 from app.services.indicators.config.indicator_config import IndicatorScaleType
-from ..models.ga_config import GAConfig
+from ..config import GAConfig
 from ..models.gene_serialization import GeneSerializer
 from ..models.strategy_models import (
     Condition,
@@ -24,8 +24,7 @@ from ..models.strategy_models import (
     TPSLMethod,
     create_random_tpsl_gene,
 )
-from abc import ABC, abstractmethod
-from typing import Dict, List
+
 from ..utils.operand_grouping import operand_grouping_system
 from ..config.constants import OPERATORS, DATA_SOURCES
 from .smart_condition_generator import SmartConditionGenerator
@@ -862,4 +861,3 @@ class RandomGeneGenerator:
                 base_stop_loss=0.03,
                 enabled=True,
             )
-

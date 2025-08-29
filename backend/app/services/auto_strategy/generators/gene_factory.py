@@ -9,7 +9,7 @@ from abc import ABC, abstractmethod
 from enum import Enum
 from typing import Dict, List
 
-from ..models.ga_config import GAConfig
+from ..config.auto_strategy_config import GAConfig
 from ..models.strategy_models import (
     Condition,
     IndicatorGene,

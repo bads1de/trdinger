@@ -15,8 +15,9 @@ from database.connection import SessionLocal
 from ..utils.common_utils import normalize_symbol
 
 from .experiment_manager import ExperimentManager
-from ..models.ga_config import GAConfig
+from ..config.auto_strategy_config import GAConfig
 from .experiment_persistence_service import ExperimentPersistenceService
+from ..config import AutoStrategyConfig
 
 logger = logging.getLogger(__name__)
 
@@ -248,7 +249,7 @@ class AutoStrategyService:
 
     def get_default_config(self) -> Dict[str, Any]:
         """
-        デフォルト設定を取得
+        デフォルト設定を取得（AutoStrategyConfig統合版）
 
         Returns:
             デフォルト設定
@@ -259,13 +260,16 @@ class AutoStrategyService:
             context="デフォルト設定取得", is_api_call=False, default_return={}
         )
         def _get_default_config():
-            return GAConfig().to_dict()
+            # AutoStrategyConfigからデフォルトGA設定を作成
+            auto_config = AutoStrategyConfig.get_default_config()
+            ga_config = GAConfig.from_auto_strategy_config(auto_config)
+            return ga_config.to_dict()
 
         return _get_default_config()
 
     def get_presets(self) -> Dict[str, Any]:
         """
-        プリセット設定を取得
+        プリセット設定を取得（AutoStrategyConfig統合版）
 
         Returns:
             プリセット設定
@@ -274,12 +278,44 @@ class AutoStrategyService:
 
         @safe_operation(context="プリセット取得", is_api_call=False, default_return={})
         def _get_presets():
-            return {
-                "default": GAConfig.create_default().to_dict(),
-                "fast": GAConfig.create_fast().to_dict(),
-                "thorough": GAConfig.create_thorough().to_dict(),
-                "multi_objective": GAConfig.create_multi_objective().to_dict(),
-            }
+            # AutoStrategyConfigから各プリセットを作成
+            auto_config = AutoStrategyConfig.get_default_config()
+
+            presets = {}
+
+            # defaultプリセット
+            ga_base = GAConfig.from_auto_strategy_config(auto_config)
+            presets["default"] = ga_base.to_dict()
+
+            # fastプリセット
+            ga_fast = GAConfig.from_auto_strategy_config(auto_config)
+            ga_fast.population_size = 10
+            ga_fast.generations = 5
+            ga_fast.elite_size = 2
+            ga_fast.max_indicators = 3
+            presets["fast"] = ga_fast.to_dict()
+
+            # thoroughプリセット
+            ga_thorough = GAConfig.from_auto_strategy_config(auto_config)
+            ga_thorough.population_size = 200
+            ga_thorough.generations = 100
+            ga_thorough.crossover_rate = 0.85
+            ga_thorough.mutation_rate = 0.05
+            ga_thorough.elite_size = 20
+            ga_thorough.max_indicators = 5
+            presets["thorough"] = ga_thorough.to_dict()
+
+            # multi_objectiveプリセット
+            ga_multi = GAConfig.from_auto_strategy_config(auto_config)
+            ga_multi.population_size = 50
+            ga_multi.generations = 30
+            ga_multi.enable_multi_objective = True
+            ga_multi.objectives = ["total_return", "max_drawdown"]
+            ga_multi.objective_weights = [1.0, -1.0]
+            ga_multi.max_indicators = 3
+            presets["multi_objective"] = ga_multi.to_dict()
+
+            return presets
 
         return _get_presets()
 

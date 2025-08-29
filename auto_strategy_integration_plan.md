@@ -189,9 +189,9 @@ class UnifiedTPSLGenerator:
 
 3. **設定管理統一** (3 日)
 
-   - [ ] `auto_strategy_config.py`作成
-   - [ ] 構造化設定実装
-   - [ ] 全設定の移行
+   - [x] `auto_strategy_config.py`作成
+   - [x] 構造化設定実装
+   - [x] 全設定の移行
 
 4. **Utils ディレクトリ整備** (3 日)
    - [ ] utility_risk_management と strategy_integration_service の統合

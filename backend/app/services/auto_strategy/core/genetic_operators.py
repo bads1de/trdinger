@@ -329,7 +329,7 @@ def mutate_strategy_gene(
             if len(mutated.indicators) < max_indicators and random.random() < 0.5:
                 # 新しい指標を追加
                 from ..generators.random_gene_generator import RandomGeneGenerator
-                from ..models.ga_config import GAConfig
+                from ..config.auto_strategy_config import GAConfig
 
                 generator = RandomGeneGenerator(GAConfig())
                 new_indicators = generator._generate_random_indicators()

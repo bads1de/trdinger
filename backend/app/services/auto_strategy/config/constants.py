@@ -453,6 +453,7 @@ POSITION_SIZING_LIMITS = {
     "fixed_ratio": (0.01, 10.0),
     "fixed_quantity": (0.01, 1000.0),
     "min_position_size": (0.001, 1.0),
+    "max_position_size": (0.001, 1.0),  # GA_MAX_SIZE_RANGEに一致
 }
 
 # === GA Config デフォルト定数（一元管理用） ===
@@ -776,7 +777,7 @@ GA_POSITION_SIZING_RISK_PER_TRADE_RANGE = [0.01, 0.05]  # 1取引あたりのリ
 GA_POSITION_SIZING_FIXED_RATIO_RANGE = [0.05, 0.3]  # 固定比率範囲（5%-30%）
 GA_POSITION_SIZING_FIXED_QUANTITY_RANGE = [0.1, 5.0]  # 固定枚数範囲
 GA_POSITION_SIZING_MIN_SIZE_RANGE = [0.01, 0.1]  # 最小ポジションサイズ範囲
-GA_POSITION_SIZING_MAX_SIZE_RANGE = [5.0, 50.0]  # 最大ポジションサイズ範囲（BTCトレードに適した範囲に拡大）
+GA_POSITION_SIZING_MAX_SIZE_RANGE = [0.001, 1.0]  # 最大ポジションサイズ範囲（システム全体のmax_position_sizeに一致）
 GA_POSITION_SIZING_PRIORITY_RANGE = [0.5, 1.5]  # 優先度範囲
 
 # フィットネス共有設定

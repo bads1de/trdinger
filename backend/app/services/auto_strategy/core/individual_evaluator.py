@@ -9,7 +9,7 @@ from typing import Any, Dict
 
 from app.services.backtest.backtest_service import BacktestService
 
-from ..models.ga_config import GAConfig
+from ..config.auto_strategy_config import GAConfig
 
 logger = logging.getLogger(__name__)
 

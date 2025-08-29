@@ -137,7 +137,7 @@ def create_new_autostrategy_experiment():
         experiment_id = f"complete_test_{int(time.time())}"
 
         # GAConfig.create_fast()を使って正しい設定を取得
-        from app.services.auto_strategy.models.ga_config import GAConfig
+        from app.services.auto_strategy.config.auto_strategy_config import GAConfig
         ga_config_obj = GAConfig.create_fast()
         ga_config_obj.indicator_mode = 'technical_only'  # テクニカル指標のみに設定
         ga_config_obj.enable_multi_objective = False
