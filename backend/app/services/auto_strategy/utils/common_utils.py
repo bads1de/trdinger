@@ -6,7 +6,7 @@ auto_strategy全体で使用される共通機能を提供します。
 
 import logging
 import random
-from typing import Any, Dict, List, Optional, Union, Tuple
+from typing import Any, Dict, List, Optional, Union, Tuple, TYPE_CHECKING, Self
 from datetime import datetime
 from dataclasses import dataclass
 from abc import ABC, abstractmethod
@@ -63,7 +63,7 @@ class BaseGene(ABC):
         return result
 
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> "BaseGene":
+    def from_dict(cls, data: Dict[str, Any]) -> Self:
         """辞書形式からオブジェクトを復元"""
         init_params = {}
 

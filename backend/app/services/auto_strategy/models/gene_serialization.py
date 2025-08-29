@@ -7,7 +7,10 @@ GeneEncoder、GeneDecoder、GeneSerializerの機能を統合しています。
 
 import json
 import logging
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from .strategy_models import Condition
 
 
 from .strategy_models import (
@@ -227,7 +230,7 @@ class GeneSerializer:
 
             from .strategy_models import TPSLGene
 
-            return TPSLGene.from_dict(data)
+            return TPSLGene.from_dict(data)  # type: ignore[cSpell] # TPSL is a valid trading acronym
 
         except Exception as e:
             logger.error(f"TP/SL遺伝子復元エラー: {e}")
@@ -255,7 +258,7 @@ class GeneSerializer:
             logger.error(f"ポジションサイジング遺伝子辞書変換エラー: {e}")
             raise ValueError(f"ポジションサイジング遺伝子の辞書変換に失敗: {e}")
 
-    def dict_to_position_sizing_gene(self, data: Dict[str, Any]):
+    def dict_to_position_sizing_gene(self, data: Dict[str, Any]) -> Optional["PositionSizingGene"]:
         """
         辞書形式からポジションサイジング遺伝子を復元
 
@@ -788,7 +791,7 @@ class GeneSerializer:
             # エラー時はデフォルト戦略遺伝子を返す
             return GeneUtils.create_default_strategy_gene(strategy_gene_class)
 
-    def dict_to_condition(self, data: Dict[str, Any]):
+    def dict_to_condition(self, data: Dict[str, Any]) -> "Condition":
         """
         辞書形式から条件を復元
 

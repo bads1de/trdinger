@@ -7,7 +7,7 @@ StrategyGeneから動的にbacktesting.py互換のStrategy継承クラスを生�
 from ..models.strategy_models import Condition
 import logging
 from typing import List, Tuple, Type, Union, cast
-import os
+
 
 from backtesting import Strategy
 
@@ -19,26 +19,6 @@ from ..models.strategy_models import IndicatorGene, StrategyGene, ConditionGroup
 
 
 logger = logging.getLogger(__name__)
-
-
-def _debug_log(message: str, level: str = "debug", force: bool = False):
-    """
-    条件付きデバッグログ出力ヘルパー
-
-    Args:
-        message: ログメッセージ
-        level: ログレベル ('debug', 'info', 'warning')
-        force: 強制出力する場合True
-    """
-    # 環境変数でデバッグログを制御
-    debug_enabled = force or (
-        hasattr(logging, "_debug_strategy_factory")
-        or os.getenv("AUTO_STRATEGY_DEBUG", "").lower() in ("true", "1")
-    )
-
-    if debug_enabled:
-        log_func = getattr(logger, level, logger.debug)
-        log_func(f"🏭 [StrategyFactory] {message}")
 
 
 class StrategyFactory:
@@ -68,20 +48,24 @@ class StrategyFactory:
         Raises:
             ValueError: 遺伝子が無効な場合
         """
-        _debug_log(f"戦略クラス作成開始: 指標数={len(gene.indicators)}")
-        _debug_log(f"戦略遺伝子詳細: {[ind.type for ind in gene.indicators]}")
+        logger.debug(
+            f"🏭 [StrategyFactory] 戦略クラス作成開始: 指標数={len(gene.indicators)}"
+        )
+        logger.debug(
+            f"🏭 [StrategyFactory] 戦略遺伝子詳細: {[ind.type for ind in gene.indicators]}"
+        )
 
         # 遺伝子の妥当性検証
         is_valid, errors = gene.validate()
         if not is_valid:
             raise ValueError(f"Invalid strategy gene: {', '.join(errors)}")
 
-        _debug_log("戦略遺伝子検証成功")
+        logger.debug("🏭 [StrategyFactory] 戦略遺伝子検証成功")
 
         # ファクトリー参照を保存
         factory = self
 
-        _debug_log("動的クラス生成開始")
+        logger.debug("🏭 [StrategyFactory] 動的クラス生成開始")
 
         # 動的クラス生成
         class GeneratedStrategy(Strategy):
@@ -91,8 +75,8 @@ class StrategyFactory:
             strategy_gene = gene  # デフォルト値として元のgeneを設定
 
             def __init__(self, broker=None, data=None, params=None):
-                _debug_log(
-                    f"戦略初期化: broker={broker is not None}, data={data is not None}"
+                logger.debug(
+                    f"🏭 [StrategyFactory] 戦略初期化: broker={broker is not None}, data={data is not None}"
                 )
 
                 # paramsがNoneの場合は空辞書を設定
@@ -106,15 +90,15 @@ class StrategyFactory:
                 if params and "strategy_gene" in params:
                     self.strategy_gene = params["strategy_gene"]
                     self.gene = params["strategy_gene"]
-                    _debug_log(
-                        f"戦略遺伝子をparamsから設定: {self.strategy_gene.indicators[0].type if self.strategy_gene.indicators else 'なし'}"
+                    logger.debug(
+                        f"🏭 [StrategyFactory] 戦略遺伝子をparamsから設定: {self.strategy_gene.indicators[0].type if self.strategy_gene.indicators else 'なし'}"
                     )
                 else:
                     # デフォルトとして元のgeneを使用
                     self.strategy_gene = gene
                     self.gene = gene
-                    _debug_log(
-                        f"戦略遺伝子をデフォルトから設定: {gene.indicators[0].type if gene.indicators else 'なし'}"
+                    logger.debug(
+                        f"🏭 [StrategyFactory] 戦略遺伝子をデフォルトから設定: {gene.indicators[0].type if gene.indicators else 'なし'}"
                     )
 
                 self.indicators = {}
@@ -122,20 +106,24 @@ class StrategyFactory:
 
             def init(self):
                 """指標の初期化"""
-                _debug_log("戦略初期化開始")
-                _debug_log(f"指標数: {len(self.strategy_gene.indicators)}")
+                logger.debug("🏭 [StrategyFactory] 戦略初期化開始")
+                logger.debug(
+                    f"🏭 [StrategyFactory] 指標数: {len(self.strategy_gene.indicators)}"
+                )
 
                 try:
                     # 各指標を初期化
                     enabled_indicators = [
                         ind for ind in self.strategy_gene.indicators if ind.enabled
                     ]
-                    _debug_log(f"有効な指標数: {len(enabled_indicators)}")
+                    logger.debug(
+                        f"🏭 [StrategyFactory] 有効な指標数: {len(enabled_indicators)}"
+                    )
 
                     for indicator_gene in enabled_indicators:
                         self._init_indicator(indicator_gene)
 
-                    _debug_log("戦略初期化完了")
+                    logger.debug("🏭 [StrategyFactory] 戦略初期化完了")
                 except Exception as e:
                     logger.error(f"戦略初期化エラー: {e}", exc_info=True)
                     raise
@@ -167,8 +155,8 @@ class StrategyFactory:
                                     enabled=True,
                                 )
                                 factory.indicator_calculator.init_indicator(fb, self)
-                                _debug_log(
-                                    f"フォールバック適用: {indicator_gene.type} -> SMA({period})"
+                                logger.debug(
+                                    f"🏭 [StrategyFactory] フォールバック適用: {indicator_gene.type} -> SMA({period})"
                                 )
                                 return
                             except Exception as fb_e:
@@ -182,7 +170,9 @@ class StrategyFactory:
                                     type="RSI", parameters={"period": 14}, enabled=True
                                 )
                                 factory.indicator_calculator.init_indicator(fb2, self)
-                                _debug_log("最終フォールバック適用: RSI(14)")
+                                logger.debug(
+                                    "🏭 [StrategyFactory] 最終フォールバック適用: RSI(14)"
+                                )
                                 return
                             except Exception as fb2_e:
                                 logger.error(f"最終フォールバック失敗: {fb2_e}")
@@ -366,7 +356,9 @@ class StrategyFactory:
         GeneratedStrategy.__name__ = f"GS_{short_id}"
         GeneratedStrategy.__qualname__ = GeneratedStrategy.__name__
 
-        _debug_log(f"戦略クラス作成完了: {GeneratedStrategy.__name__}")
+        logger.debug(
+            f"🏭 [StrategyFactory] 戦略クラス作成完了: {GeneratedStrategy.__name__}"
+        )
         logger.info(f"戦略クラス生成成功: {GeneratedStrategy.__name__}")
 
         return GeneratedStrategy
