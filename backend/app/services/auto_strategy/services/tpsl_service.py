@@ -8,18 +8,7 @@ import logging
 import math
 from typing import Any, Dict, Optional, Tuple
 
-from ..generators.statistical_tpsl_generator import (
-    StatisticalTPSLGenerator,
-    StatisticalConfig,
-)
-from ..generators.volatility_tpsl_generator import (
-    VolatilityBasedGenerator,
-    VolatilityConfig,
-)
-from ..generators.risk_reward_tpsl_generator import (
-    RiskRewardTPSLGenerator,
-    RiskRewardConfig,
-)
+from ..generators.unified_tpsl_generator import UnifiedTPSLGenerator
 from ..models.strategy_models import TPSLGene, TPSLMethod
 
 logger = logging.getLogger(__name__)
@@ -63,11 +52,14 @@ class TPSLService:
 
     def __init__(self):
         """初期化"""
-        # 後方互換のため: 旧属性名を維持しつつ、新ジェネレーターに委譲
-        self.risk_reward_generator = RiskRewardTPSLGenerator()
-        self.risk_reward_calculator = self.risk_reward_generator
-        self.statistical_generator = StatisticalTPSLGenerator()
-        self.volatility_generator = VolatilityBasedGenerator()
+        # 統合ジェネレーターを使用
+        self.unified_generator = UnifiedTPSLGenerator()
+
+        # 後方互換のため: 旧属性名を維持しつつ、統合ジェネレーターに委譲
+        self.risk_reward_generator = None  # 非推奨
+        self.risk_reward_calculator = None  # 非推奨
+        self.statistical_generator = None   # 非推奨
+        self.volatility_generator = None    # 非推奨
 
     def calculate_tpsl_prices(
         self,
@@ -228,14 +220,15 @@ class TPSLService:
     ) -> Tuple[Optional[float], Optional[float]]:
         """リスクリワード比方式"""
         try:
-            config = RiskRewardConfig(target_ratio=tpsl_gene.risk_reward_ratio)
-            result = self.risk_reward_generator.generate_risk_reward_tpsl(
-                stop_loss_pct=tpsl_gene.base_stop_loss, config=config
+            result = self.unified_generator.generate_tpsl(
+                "risk_reward_ratio",
+                stop_loss_pct=tpsl_gene.base_stop_loss,
+                target_ratio=tpsl_gene.risk_reward_ratio
             )
 
             return self._make_prices(
                 current_price,
-                tpsl_gene.base_stop_loss,
+                result.stop_loss_pct,
                 result.take_profit_pct,
                 position_direction,
             )
@@ -255,14 +248,13 @@ class TPSLService:
     ) -> Tuple[Optional[float], Optional[float]]:
         """ボラティリティベース方式"""
         try:
-            config = VolatilityConfig(
+            result = self.unified_generator.generate_tpsl(
+                "volatility_based",
                 atr_period=tpsl_gene.atr_period,
                 atr_multiplier_sl=tpsl_gene.atr_multiplier_sl,
                 atr_multiplier_tp=tpsl_gene.atr_multiplier_tp,
-            )
-
-            result = self.volatility_generator.generate_volatility_based_tpsl(
-                market_data or {}, config, current_price
+                market_data=market_data or {},
+                current_price=current_price
             )
 
             return self._make_prices(
@@ -287,13 +279,11 @@ class TPSLService:
     ) -> Tuple[Optional[float], Optional[float]]:
         """統計的方式"""
         try:
-            config = StatisticalConfig(
+            result = self.unified_generator.generate_tpsl(
+                "statistical",
                 lookback_period_days=tpsl_gene.lookback_period,
                 confidence_threshold=tpsl_gene.confidence_threshold,
-            )
-
-            result = self.statistical_generator.generate_statistical_tpsl(
-                config, market_conditions=market_data
+                market_conditions=market_data
             )
 
             return self._make_prices(
@@ -316,12 +306,20 @@ class TPSLService:
         market_data: Optional[Dict[str, Any]],
         position_direction: float,
     ) -> Tuple[Optional[float], Optional[float]]:
-        """適応的方式（複数方式の組み合わせ）"""
+        """適応的方式（統合ジェネレーターの自動選択を使用）"""
         try:
-            # 複数の方式を組み合わせて最適な値を選択
-            # 現在は簡易実装として、ボラティリティベースを使用
-            return self._calculate_volatility_based(
-                current_price, tpsl_gene, market_data, position_direction
+            result = self.unified_generator.generate_tpsl(
+                "adaptive",
+                tpsl_gene=tpsl_gene,
+                market_data=market_data or {},
+                current_price=current_price
+            )
+
+            return self._make_prices(
+                current_price,
+                result.stop_loss_pct,
+                result.take_profit_pct,
+                position_direction,
             )
 
         except Exception as e:
