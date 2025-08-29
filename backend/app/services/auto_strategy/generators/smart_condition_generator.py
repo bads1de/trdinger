@@ -8,7 +8,7 @@ from app.services.auto_strategy.config.constants import (
 )
 
 from ..models.strategy_models import Condition, IndicatorGene, ConditionGroup
-from .condition_generator import ConditionGenerator  # Phase 1.3: 条件生成統合
+from .condition_generator import ConditionGenerator
 
 
 logger = logging.getLogger(__name__)
@@ -529,8 +529,6 @@ class SmartConditionGenerator:
         ]
         exit_conditions: List[Condition] = []
         return long_conditions, short_conditions, exit_conditions
-
-    # 削除されたメソッド: _dynamic_classify は ConditionGenerator._dynamic_classify を利用するように変更済み
 
     def _generic_long_conditions(self, ind: IndicatorGene) -> List[Condition]:
         """Phase 1.3: 統合された汎用ロング条件生成 - ConditionGenerator委譲"""

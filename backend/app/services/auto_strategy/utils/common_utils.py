@@ -6,7 +6,9 @@ auto_strategy全体で使用される共通機能を提供します。
 
 import logging
 import random
-from typing import Any, Dict, List, Optional, Union, Tuple, TYPE_CHECKING, Self
+import yaml
+from pathlib import Path
+from typing import Any, Dict, List, Optional, Union, Tuple
 from datetime import datetime
 from dataclasses import dataclass
 from abc import ABC, abstractmethod
@@ -63,7 +65,7 @@ class BaseGene(ABC):
         return result
 
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> Self:
+    def from_dict(cls, data: Dict[str, Any]) -> Any:
         """辞書形式からオブジェクトを復元"""
         init_params = {}
 
@@ -480,6 +482,216 @@ class GeneticUtils:
                     mutated_params[field] = random.choice(list(enum_class))
 
         return gene_class(**mutated_params)
+
+class YamlLoadUtils:
+    """YAMLローディングユーティリティ"""
+
+    @staticmethod
+    def load_yaml_config(config_path: Union[str, Path], fallback: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+        """YAML設定ファイルを安全に読み込み
+
+        Args:
+            config_path: YAMLファイルのパス
+            fallback: 読み込み失敗時のフォールバックデータ
+
+        Returns:
+            読み込んだ設定データ
+        """
+        if fallback is None:
+            fallback = {"indicators": {}}
+
+        try:
+            path = Path(config_path) if isinstance(config_path, str) else config_path
+
+            if not path.exists():
+                logger.warning(f"YAML設定ファイルが見つかりません: {path}")
+                return fallback
+
+            with open(path, 'r', encoding='utf-8') as f:
+                config = yaml.safe_load(f)
+
+            if config is None:
+                logger.warning(f"YAML設定ファイルが空です: {path}")
+                return fallback
+
+            # 基本構造の検証
+            if not isinstance(config, dict):
+                logger.error(f"無効なYAML構造: {path}")
+                return fallback
+
+            return config
+
+        except yaml.YAMLError as e:
+            logger.error(f"YAML構文エラー: {path}, {e}")
+            return fallback
+        except Exception as e:
+            logger.error(f"YAML読み込みエラー: {path}, {e}")
+            return fallback
+
+    @staticmethod
+    def validate_yaml_config(config: Dict[str, Any]) -> tuple[bool, List[str]]:
+        """YAML設定データの妥当性を検証
+
+        Args:
+            config: 検証対象の設定データ
+
+        Returns:
+            (妥当性, エラーメッセージリスト) のタプル
+        """
+        errors = []
+
+        try:
+            # indicators セクションの存在確認
+            if "indicators" not in config:
+                errors.append("indicatorsセクションが必須です")
+
+            indicators = config.get("indicators", {})
+
+            # 各indicatorの構造検証
+            for indicator_name, indicator_config in indicators.items():
+                if not isinstance(indicator_config, dict):
+                    errors.append(f"indicator {indicator_name}: 辞書形式である必要があります")
+                    continue
+
+                # 必須フィールドチェック
+                required_fields = ["type", "scale_type", "thresholds", "conditions"]
+                for field in required_fields:
+                    if field not in indicator_config:
+                        errors.append(f"indicator {indicator_name}: {field}フィールドが必須です")
+
+                # conditionsの検証
+                conditions = indicator_config.get("conditions", {})
+                if isinstance(conditions, dict):
+                    for side in ["long", "short"]:
+                        if side not in conditions:
+                            continue  # オプション
+                        condition_template = conditions[side]
+                        if not isinstance(condition_template, str):
+                            errors.append(f"indicator {indicator_name}: {side}条件は文字列テンプレートである必要があります")
+
+        except Exception as e:
+            errors.append(f"設定検証エラー: {e}")
+
+        return len(errors) == 0, errors
+
+    @staticmethod
+    def get_indicator_config(yaml_config: Dict[str, Any], indicator_name: str) -> Optional[Dict[str, Any]]:
+        """YAML設定から特定のindicator設定を取得
+
+        Args:
+            yaml_config: YAML設定データ
+            indicator_name: 取得対象のindicator名
+
+        Returns:
+            indicator設定
+        """
+        indicators = yaml_config.get("indicators", {})
+        return indicators.get(indicator_name)
+
+    @staticmethod
+    def get_all_indicator_names(yaml_config: Dict[str, Any]) -> List[str]:
+        """YAML設定に含まれる全indicator名を取得
+
+        Args:
+            yaml_config: YAML設定データ
+
+        Returns:
+            indicator名リスト
+        """
+        indicators = yaml_config.get("indicators", {})
+        return list(indicators.keys())
+
+
+class YamlTestUtils:
+    """YAML条件生成テストユーティリティ"""
+
+    @staticmethod
+    def test_yaml_based_conditions(
+        yaml_config: Dict[str, Any],
+        condition_generator_class,
+        test_indicators: Optional[List[str]] = None
+    ) -> Dict[str, Any]:
+        """YAMLベースの条件生成をテスト
+
+        Args:
+            yaml_config: YAML設定データ
+            condition_generator_class: テスト対象の条件generatorクラス
+            test_indicators: テスト対象のindicators（指定なしの場合は全て）
+
+        Returns:
+            テスト結果
+        """
+        result = {
+            "success": False,
+            "tested_indicators": [],
+            "errors": [],
+            "summary": {}
+        }
+
+        try:
+            # ConditionGeneratorの作成
+            generator = condition_generator_class()
+            generator.yaml_config = yaml_config  # YAML設定をセット
+
+            # テスト対象のindicators決定
+            if test_indicators:
+                indicators_to_test = test_indicators
+            else:
+                indicators_to_test = YamlLoadUtils.get_all_indicator_names(yaml_config)
+
+            # 各indicatorでテスト実行
+            successful_tests = 0
+            total_tests = 0
+
+            for indicator_name in indicators_to_test:
+                try:
+                    # Mock IndicatorGene作成
+                    mock_indicator = MockIndicatorGene(indicator_name, enabled=True)
+
+                    # YAML設定取得
+                    config = YamlLoadUtils.get_indicator_config(yaml_config, indicator_name)
+                    if not config:
+                        result["errors"].append(f"YAML設定なし: {indicator_name}")
+                        continue
+
+                    # 条件生成テスト
+                    long_conditions = generator._generate_yaml_based_conditions(mock_indicator, "long")
+                    short_conditions = generator._generate_yaml_based_conditions(mock_indicator, "short")
+
+                    result["tested_indicators"].append({
+                        "name": indicator_name,
+                        "long_conditions_count": len(long_conditions),
+                        "short_conditions_count": len(short_conditions),
+                        "type": config.get("type", "unknown")
+                    })
+
+                    successful_tests += 1
+                    total_tests += 1
+
+                except Exception as e:
+                    result["errors"].append(f"{indicator_name} テスト失敗: {e}")
+                    total_tests += 1
+
+            result["success"] = successful_tests == total_tests and total_tests > 0
+            result["summary"] = {
+                "total_tested": total_tests,
+                "successful": successful_tests,
+                "success_rate": successful_tests / total_tests if total_tests > 0 else 0.0
+            }
+
+        except Exception as e:
+            result["errors"].append(f"全体テスト失敗: {e}")
+
+        return result
+
+
+class MockIndicatorGene:
+    """テスト用のモックIndicatorGene"""
+    def __init__(self, type: str, enabled: bool = True, parameters: Dict[str, Any] = None):
+        self.type = type
+        self.enabled = enabled
+        self.parameters = parameters or {}
+
 
 class GeneUtils:
     """遺伝子関連ユーティリティ"""

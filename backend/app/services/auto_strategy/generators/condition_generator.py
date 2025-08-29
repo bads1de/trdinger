@@ -1,14 +1,15 @@
 """
-条件生成統合ジェネレーター - Phase 1.3 リファクタリング
+条件生成統合ジェネレーター
 
-SmartConditionGeneratorから条件生成ロジックを分離・統合
-設計目標: -900行削減、12重複統合、デプロイ効率化
 """
 
 import logging
 import copy
 import random
-from typing import List, Dict, Any, Union
+import os
+from pathlib import Path
+from typing import List, Dict, Any, Union, Optional
+import yaml
 from app.services.indicators.config import indicator_registry
 from app.services.indicators.config.indicator_config import IndicatorScaleType
 from app.services.auto_strategy.core.indicator_policies import ThresholdPolicy
@@ -20,6 +21,10 @@ from app.services.auto_strategy.models.strategy_models import (
     Condition,
     IndicatorGene,
     ConditionGroup,
+)
+from app.services.auto_strategy.utils.common_utils import (
+    YamlLoadUtils,
+    YamlTestUtils,
 )
 
 
@@ -34,11 +39,14 @@ class ConditionGenerator:
     1. SmartConditionGeneratorから条件生成メソッドを抽出
     2. 統合メソッドで重複排除
     3. 新機能apply_threshold_context()でprofile/threshold統合
+    4. YAML設定ファイルからの条件生成統合
     """
 
     def __init__(self):
         """初期化"""
         self.logger = logger
+        # YAML設定を読み込み
+        self.yaml_config = self._load_yaml_config()
         # 条件生成コンテキスト（threshold profileと統合）
         self.context: Dict[str, Any] = {
             "timeframe": None,
@@ -48,6 +56,37 @@ class ConditionGenerator:
         }
         # 生成時のgene比較に使用
         self.indicators: List[IndicatorGene] | None = None
+
+    def _load_yaml_config(self) -> Dict[str, Any]:
+        """技術指標のYAML設定を読み込み"""
+        config_path = (
+            Path(__file__).parent.parent / "config" / "technical_indicators_config.yaml"
+        )
+        # YamlLoadUtilsを使用して読み込み
+        config = YamlLoadUtils.load_yaml_config(config_path)
+
+        # 設定検証
+        is_valid, errors = YamlLoadUtils.validate_yaml_config(config)
+        if not is_valid:
+            logger.error(f"YAML設定検証エラー: {errors}")
+            # 検証エラーがあっても基本構造は維持
+
+        return config
+
+    def test_yaml_conditions(self, test_indicators: Optional[List[str]] = None) -> Dict[str, Any]:
+        """YAMLベースの条件生成をテスト
+
+        Args:
+            test_indicators: テスト対象の指標（指定なしの場合は全て）
+
+        Returns:
+            テスト結果の辞書
+        """
+        return YamlTestUtils.test_yaml_based_conditions(
+            yaml_config=self.yaml_config,
+            condition_generator_class=ConditionGenerator,
+            test_indicators=test_indicators
+        )
 
     def set_context(
         self,
@@ -174,6 +213,12 @@ class ConditionGenerator:
                     Condition(left_operand="close", operator="<", right_operand="open")
                 )
 
+            # Noneチェック
+            if long_conditions is None:
+                long_conditions = []
+            if short_conditions is None:
+                short_conditions = []
+
             result = {
                 "long_conditions": long_conditions,
                 "short_conditions": short_conditions,
@@ -187,9 +232,66 @@ class ConditionGenerator:
                 assert original_context is not None
                 self.context = original_context
 
+    def _get_indicator_config_from_yaml(
+        self, indicator_name: str
+    ) -> Optional[Dict[str, Any]]:
+        """YAMLから指標設定を取得"""
+        indicators_config = self.yaml_config.get("indicators", {})
+        return indicators_config.get(indicator_name)
+
+    def _get_threshold_from_yaml(self, config: Dict[str, Any], side: str) -> Any:
+        """YAMLから適切な閾値を取得"""
+        if not config:
+            return None
+
+        profile = self.context.get("threshold_profile", "normal")
+        thresholds = config.get("thresholds", {})
+
+        if thresholds is None:
+            thresholds = {}
+
+        # 特定のprofileがある場合
+        if profile in thresholds:
+            threshold_config = thresholds[profile]
+            if side == "long" and "long_lt" in threshold_config:
+                return threshold_config["long_lt"]
+            elif side == "short" and "short_gt" in threshold_config:
+                return threshold_config["short_gt"]
+            elif side == "long" and "long_gt" in threshold_config:
+                return threshold_config["long_gt"]
+
+        # 全profile共通の閾値
+        if "all" in thresholds:
+            all_config = thresholds["all"]
+            if side == "long" and "pos_threshold" in all_config:
+                return all_config["pos_threshold"]
+            elif side == "short" and "neg_threshold" in all_config:
+                return all_config["neg_threshold"]
+            elif side == "long" and "long_gt" in all_config:
+                return all_config["long_gt"]
+            elif side == "short" and "short_lt" in all_config:
+                return all_config["short_lt"]
+
+        return None
+
     def _get_indicator_type(self, indicator: IndicatorGene) -> IndicatorType:
         """指標のタイプを安全に取得"""
         try:
+            # YAML設定からタイプを取得
+            config = self._get_indicator_config_from_yaml(indicator.type)
+            if config and "type" in config:
+                type_str = config["type"]
+                if type_str == "momentum":
+                    return IndicatorType.MOMENTUM
+                elif type_str == "trend":
+                    return IndicatorType.TREND
+                elif type_str == "statistics":
+                    return IndicatorType.STATISTICS
+                elif type_str == "pattern_recognition":
+                    return IndicatorType.PATTERN_RECOGNITION
+                elif type_str == "volatility":
+                    return IndicatorType.VOLATILITY
+
             # レジストリ情報から分類
             cfg = indicator_registry.get_indicator_config(indicator.type)
             if cfg and hasattr(cfg, "category") and getattr(cfg, "category", None):
@@ -213,394 +315,215 @@ class ConditionGenerator:
 
     # ===== 統合メソッド実装 =====
 
-    def _generic_long_conditions(self, ind: IndicatorGene) -> List[Condition]:
-        """基盤条件ロジック: ロング条件生成"""
+    def _generate_yaml_based_conditions(
+        self, ind: IndicatorGene, side: str
+    ) -> List[Condition]:
+        """YAML設定に基づく条件生成"""
         name = ind.type
+        config = self._get_indicator_config_from_yaml(name)
+
+        if not config:
+            return self._generate_fallback_conditions(name, side)
+
+        conditions_config = config.get("conditions", {})
+        threshold_value = self._get_threshold_from_yaml(config, side)
+
+        # 条件テンプレート
+        template = conditions_config.get(side)
+        if not template or template == "null":
+            return []
+
+        # テンプレートのパースと適用
+        left_operand = name  # デフォルト
+        operator = ">"
+        right_operand = 0
+
+        if template == "{left_operand} < {threshold}":
+            operator = "<"
+            right_operand = threshold_value
+        elif template == "{left_operand} > {threshold}":
+            operator = ">"
+            right_operand = threshold_value
+        elif template == "{left_operand}_0 < {threshold}":
+            left_operand = f"{name}_0"
+            operator = "<"
+            right_operand = threshold_value
+        elif template == "{left_operand}_0 > {threshold}":
+            left_operand = f"{name}_0"
+            operator = ">"
+            right_operand = threshold_value
+        elif template == "{left_operand}_2 < {threshold}":
+            left_operand = f"{name}_2"
+            operator = "<"
+            right_operand = threshold_value
+        elif template == "close > {left_operand}":
+            left_operand = "close"
+            operator = ">"
+            right_operand = name
+        elif template == "close < {left_operand}":
+            left_operand = "close"
+            operator = "<"
+            right_operand = name
+        elif template == "close > {left_operand}_lower":
+            left_operand = "close"
+            operator = ">"
+            right_operand = f"{name}_lower"
+        elif template == "close < {left_operand}_upper":
+            left_operand = "close"
+            operator = "<"
+            right_operand = f"{name}_upper"
+        elif template == "{left_operand} > {long_threshold}":
+            operator = ">"
+            # longThresholdの取得ロジックが必要
+            config_thresholds = config.get("thresholds", {}).get(
+                self.context.get("threshold_profile", "normal"), {}
+            )
+            abs_limit = config_thresholds.get("abs_limit", 100)
+            right_operand = -abs_limit / 20.0
+        elif template == "{left_operand} < {short_threshold}":
+            operator = "<"
+            config_thresholds = config.get("thresholds", {}).get(
+                self.context.get("threshold_profile", "normal"), {}
+            )
+            abs_limit = config_thresholds.get("abs_limit", 100)
+            right_operand = abs_limit / 20.0
+        elif template == "{left_operand} != 0":
+            operator = "!="
+            right_operand = 0
+        elif template == "{left_operand} > 0":
+            operator = ">"
+            right_operand = 0
+        elif template == "{left_operand} < 0":
+            operator = "<"
+            right_operand = 0
+        elif template == "{left_operand} > {pos_threshold}":
+            operator = ">"
+            right_operand = threshold_value if threshold_value is not None else 0.3
+        elif template == "{left_operand} < {neg_threshold}":
+            operator = "<"
+            right_operand = threshold_value if threshold_value is not None else -0.7
+
+        # None のチェック
+        right_operand = 0 if right_operand is None else right_operand
+
+        return [
+            Condition(
+                left_operand=left_operand,
+                operator=operator,
+                right_operand=right_operand,
+            )
+        ]
+
+    def _generate_fallback_conditions(self, name: str, side: str) -> List[Condition]:
+        """YAMLがない場合のフォールバック条件生成"""
+        # 既存のロジックを維持
         cfg = indicator_registry.get_indicator_config(name)
         scale = getattr(cfg, "scale_type", None) if cfg else None
 
-        # 価格系指標（統一処理）
-        if name in (
-            "SMA",
-            "EMA",
-            "WMA",
-            "KAMA",
-            "T3",
-            "TRIMA",
-            "MIDPOINT",
-        ):
-            trend_names_in_gene = [
-                ind.type
-                for ind in (self.indicators or [])
-                if getattr(ind, "enabled", True)
-            ]
-            right_name = name if name in trend_names_in_gene else "open"
-            return [
-                Condition(left_operand="close", operator=">", right_operand=right_name)
-            ]
+        profile = self.context.get("threshold_profile", "normal")
 
-        # オシレーター系指標
-        if scale == IndicatorScaleType.OSCILLATOR_0_100:
-            profile = self.context.get("threshold_profile", "normal")
-            if name in {"RSI", "STOCH", "STOCHRSI", "KDJ", "QQE", "MFI"}:
-                policy = ThresholdPolicy.get(profile)
-                thr = (
-                    policy.rsi_long_lt
-                    if name != "MFI"
-                    else (policy.mfi_long_lt or policy.rsi_long_lt)
-                )
-                return [
-                    Condition(left_operand=name, operator="<", right_operand=float(thr))
-                ]
-            elif name == "ADX":
-                thr = ThresholdPolicy.get(profile).adx_trend_min
-                return [
-                    Condition(left_operand=name, operator=">", right_operand=float(thr))
-                ]
-            else:
-                thr = (
-                    48
-                    if profile == "aggressive"
-                    else (52 if profile == "conservative" else 50)
-                )
-                return [
-                    Condition(left_operand=name, operator="<", right_operand=float(thr))
-                ]
+        if side == "long":
+            thr = -0.0 if profile == "aggressive" else 0
+        else:
+            thr = 0.0 if profile == "aggressive" else 0
+            if side == "short":
+                thr = float(thr)
 
-        # ±100オシレーター系
-        if scale == IndicatorScaleType.OSCILLATOR_PLUS_MINUS_100:
-            profile = self.context.get("threshold_profile", "normal")
-            if name == "CCI":
-                lim = ThresholdPolicy.get(profile).cci_abs_limit or 100
-                return [
-                    Condition(
-                        left_operand=name,
-                        operator=">",
-                        right_operand=float(-lim / 20.0),
-                    )
-                ]
-            elif name == "WILLR":
-                p = ThresholdPolicy.get(profile)
-                thr = -p.willr_long_lt if p.willr_long_lt is not None else -50
-                return [
-                    Condition(left_operand=name, operator=">", right_operand=float(thr))
-                ]
-            else:
-                thr = (
-                    -2
-                    if profile == "aggressive"
-                    else (2 if profile == "conservative" else 0)
-                )
-                return [
-                    Condition(left_operand=name, operator=">", right_operand=float(thr))
-                ]
+        return [
+            Condition(
+                left_operand=name,
+                operator=">" if side == "long" else "<",
+                right_operand=thr,
+            )
+        ]
 
-        # ゼロ中心系
-        if scale == IndicatorScaleType.MOMENTUM_ZERO_CENTERED:
-            thr = -0.0 if self.context.get("threshold_profile") == "aggressive" else 0
-            return [
-                Condition(left_operand=name, operator=">", right_operand=float(thr))
-            ]
-
-        # 比率・絶対価格系（トレンド系以外スキップ）
-        if scale in {IndicatorScaleType.PRICE_RATIO, IndicatorScaleType.PRICE_ABSOLUTE}:
-            return []
-
-        # フォールバック
-        thr = -0.0 if self.context.get("threshold_profile") == "aggressive" else 0
-        return [Condition(left_operand=name, operator=">", right_operand=float(thr))]
+    def _generic_long_conditions(self, ind: IndicatorGene) -> List[Condition]:
+        """YAMLベースの基盤条件ロジック: ロング条件生成"""
+        return self._generate_yaml_based_conditions(ind, "long")
 
     def _generic_short_conditions(self, ind: IndicatorGene) -> List[Condition]:
-        """基盤条件ロジック: ショート条件生成"""
-        name = ind.type
-        cfg = indicator_registry.get_indicator_config(name)
-        scale = getattr(cfg, "scale_type", None) if cfg else None
-
-        # 価格系指標
-        if name in (
-            "SMA",
-            "EMA",
-            "WMA",
-            "KAMA",
-            "T3",
-            "TRIMA",
-            "MIDPOINT",
-        ):
-            trend_names_in_gene = [
-                ind.type
-                for ind in (self.indicators or [])
-                if getattr(ind, "enabled", True)
-            ]
-            right_name = name if name in trend_names_in_gene else "open"
-            return [
-                Condition(left_operand="close", operator="<", right_operand=right_name)
-            ]
-
-        # 0-100オシレーター系
-        if scale == IndicatorScaleType.OSCILLATOR_0_100:
-            profile = self.context.get("threshold_profile", "normal")
-            if name in {"RSI", "STOCH", "STOCHRSI", "KDJ", "QQE", "MFI"}:
-                p = ThresholdPolicy.get(profile)
-                thr = (
-                    p.rsi_short_gt
-                    if name != "MFI"
-                    else (p.mfi_short_gt or p.rsi_short_gt)
-                )
-                return [
-                    Condition(left_operand=name, operator=">", right_operand=float(thr))
-                ]
-            elif name == "ADX":
-                thr = float(100 - ThresholdPolicy.get(profile).adx_trend_min)
-                return [
-                    Condition(left_operand=name, operator=">", right_operand=float(thr))
-                ]
-            else:
-                thr = (
-                    52
-                    if profile == "aggressive"
-                    else (48 if profile == "conservative" else 50)
-                )
-                return [
-                    Condition(left_operand=name, operator=">", right_operand=float(thr))
-                ]
-
-        # ±100オシレーター系
-        if scale == IndicatorScaleType.OSCILLATOR_PLUS_MINUS_100:
-            profile = self.context.get("threshold_profile", "normal")
-            if name == "CCI":
-                thr = (
-                    5
-                    if profile == "aggressive"
-                    else (-5 if profile == "conservative" else 0)
-                )
-                return [
-                    Condition(left_operand=name, operator="<", right_operand=float(thr))
-                ]
-            elif name == "WILLR":
-                thr = (
-                    -40
-                    if profile == "aggressive"
-                    else (-60 if profile == "conservative" else -50)
-                )
-                return [
-                    Condition(left_operand=name, operator="<", right_operand=float(thr))
-                ]
-            else:
-                thr = (
-                    2
-                    if profile == "aggressive"
-                    else (-2 if profile == "conservative" else 0)
-                )
-                return [
-                    Condition(left_operand=name, operator="<", right_operand=float(thr))
-                ]
-
-        # ゼロ中心系
-        if scale == IndicatorScaleType.MOMENTUM_ZERO_CENTERED:
-            return [Condition(left_operand=name, operator="<", right_operand=0.0)]
-
-        # 比率・絶対価格系（スキップ）
-        if scale in {IndicatorScaleType.PRICE_RATIO, IndicatorScaleType.PRICE_ABSOLUTE}:
-            return []
-
-        # フォールバック
-        return [Condition(left_operand=name, operator="<", right_operand=0.0)]
+        """YAMLベースの基盤条件ロジック: ショート条件生成"""
+        return self._generate_yaml_based_conditions(ind, "short")
 
     def _create_trend_long_conditions(
         self, indicator: IndicatorGene
     ) -> List[Condition]:
-        """トレンド系ロング条件ロジック"""
-        if indicator.type in ["SMA", "EMA", "WMA", "TRIMA"]:
-            return [
-                Condition(
-                    left_operand="close",
-                    operator=">",
-                    right_operand=indicator.type,  # 素名使用
-                )
-            ]
-        return []
+        """YAMLベーストレンド系ロング条件ロジック"""
+        return self._generate_yaml_based_conditions(indicator, "long")
 
     def _create_trend_short_conditions(
         self, indicator: IndicatorGene
     ) -> List[Condition]:
-        """トレンド系ショート条件ロジック"""
-        if indicator.type in ["SMA", "EMA", "WMA", "TRIMA"]:
-            return [
-                Condition(
-                    left_operand="close",
-                    operator="<",
-                    right_operand=indicator.type,  # 素名使用
-                )
-            ]
-        return []
+        """YAMLベーストレンド系ショート条件ロジック"""
+        return self._generate_yaml_based_conditions(indicator, "short")
 
     def _create_momentum_long_conditions(
         self, indicator: IndicatorGene
     ) -> List[Condition]:
-        """モメンタム系ロング条件ロジック"""
+        """YAMLベースモメンタム系ロング条件ロジック"""
+        # RSIの場合は特殊ロジックを適用（timeframe依存）
         if indicator.type == "RSI":
             tf = self.context.get("timeframe", "")
             if tf in ("15m", "15min", "15"):
-                base = 55
+                threshold = 30
             elif tf in ("1h", "60"):
-                base = 60
+                threshold = 35
             elif tf in ("4h", "240"):
-                base = 65
+                threshold = 40
             else:
-                base = 60
+                threshold = 35
+
             return [
                 Condition(
-                    left_operand=indicator.type,
-                    operator="<",
-                    right_operand=max(25, base - 25),  # 売られすぎ判定
+                    left_operand=indicator.type, operator="<", right_operand=threshold
                 )
             ]
-        elif indicator.type == "STOCH":
-            return [Condition(left_operand="STOCH_0", operator="<", right_operand=20)]
-        elif indicator.type == "CCI":
-            return [
-                Condition(
-                    left_operand=indicator.type,
-                    operator="<",
-                    right_operand=random.uniform(-150, -80),
-                )
-            ]
-        elif indicator.type in {"MACD", "MACDEXT"}:
-            return [
-                Condition(
-                    left_operand=(
-                        "MACD_0" if indicator.type == "MACD" else "MACDEXT_0"
-                    ),
-                    operator=">",
-                    right_operand=0,
-                )
-            ]
-        return []
+
+        # 他のインジケーターはYAML設定を使用
+        return self._generate_yaml_based_conditions(indicator, "long")
 
     def _create_momentum_short_conditions(
         self, indicator: IndicatorGene
     ) -> List[Condition]:
-        """モメンタム系ショート条件ロジック"""
+        """YAMLベースモメンタム系ショート条件ロジック"""
+        # RSIの場合は特殊ロジックを適用（timeframe依存）
         if indicator.type == "RSI":
             tf = self.context.get("timeframe", "")
             if tf in ("15m", "15min", "15"):
-                base = 55
+                threshold = 70
             elif tf in ("1h", "60"):
-                base = 60
+                threshold = 65
             elif tf in ("4h", "240"):
-                base = 65
+                threshold = 60
             else:
-                base = 60
+                threshold = 65
+
             return [
                 Condition(
-                    left_operand=indicator.type,
-                    operator=">",
-                    right_operand=min(75, base + 25),  # 買われすぎ判定
+                    left_operand=indicator.type, operator=">", right_operand=threshold
                 )
             ]
-        elif indicator.type == "STOCH":
-            return [Condition(left_operand="STOCH_0", operator=">", right_operand=80)]
-        elif indicator.type == "CCI":
-            return [
-                Condition(
-                    left_operand=indicator.type,
-                    operator=">",
-                    right_operand=random.uniform(80, 150),
-                )
-            ]
-        elif indicator.type in {"MACD", "MACDEXT"}:
-            return [
-                Condition(
-                    left_operand=(
-                        "MACD_0" if indicator.type == "MACD" else "MACDEXT_0"
-                    ),
-                    operator="<",
-                    right_operand=0,
-                )
-            ]
-        return []
+
+        # 他のインジケーターはYAML設定を使用
+        return self._generate_yaml_based_conditions(indicator, "short")
 
     def _create_statistics_long_conditions(
         self, indicator: IndicatorGene
     ) -> List[Condition]:
-        """統計系ロング条件ロジック"""
-        if indicator.type == "CORREL":
-            return [
-                Condition(
-                    left_operand=indicator.type,
-                    operator=">",
-                    right_operand=random.uniform(0.3, 0.7),
-                )
-            ]
-        elif indicator.type == "LINEARREG_ANGLE":
-            return [
-                Condition(
-                    left_operand=indicator.type,
-                    operator=">",
-                    right_operand=random.uniform(10, 45),
-                )
-            ]
-        elif indicator.type == "LINEARREG_SLOPE":
-            return [
-                Condition(left_operand=indicator.type, operator=">", right_operand=0)
-            ]
-        elif indicator.type in ["LINEARREG", "TSF"]:
-            return [
-                Condition(
-                    left_operand="close", operator=">", right_operand=indicator.type
-                )
-            ]
-        return []
+        """YAMLベース統計系ロング条件ロジック"""
+        return self._generate_yaml_based_conditions(indicator, "long")
 
     def _create_statistics_short_conditions(
         self, indicator: IndicatorGene
     ) -> List[Condition]:
-        """統計系ショート条件ロジック"""
-        if indicator.type == "CORREL":
-            return [
-                Condition(
-                    left_operand=indicator.type,
-                    operator="<",
-                    right_operand=random.uniform(-0.7, -0.3),
-                )
-            ]
-        elif indicator.type == "LINEARREG_ANGLE":
-            return [
-                Condition(
-                    left_operand=indicator.type,
-                    operator="<",
-                    right_operand=random.uniform(-45, -10),
-                )
-            ]
-        elif indicator.type == "LINEARREG_SLOPE":
-            return [
-                Condition(left_operand=indicator.type, operator="<", right_operand=0)
-            ]
-        elif indicator.type in ["LINEARREG", "TSF"]:
-            return [
-                Condition(
-                    left_operand="close", operator="<", right_operand=indicator.type
-                )
-            ]
-        return []
+        """YAMLベース統計系ショート条件ロジック"""
+        return self._generate_yaml_based_conditions(indicator, "short")
 
     def _create_pattern_long_conditions(
         self, indicator: IndicatorGene
     ) -> List[Condition]:
-        """パターン認識系ロング条件ロジック"""
-        if indicator.type in ["CDL_HAMMER", "CDL_PIERCING", "CDL_THREE_WHITE_SOLDIERS"]:
-            return [
-                Condition(
-                    left_operand=f"{indicator.type}", operator=">", right_operand=0
-                )
-            ]
-        elif indicator.type == "CDL_DOJI":
-            return [
-                Condition(
-                    left_operand=f"{indicator.type}", operator="!=", right_operand=0
-                )
-            ]
-        return []
+        """YAMLベースパターン認識系ロング条件ロジック"""
+        return self._generate_yaml_based_conditions(indicator, "long")
 
     def _create_pattern_short_conditions(
         self, indicator: IndicatorGene
