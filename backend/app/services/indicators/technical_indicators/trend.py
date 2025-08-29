@@ -554,11 +554,17 @@ class TrendIndicators:
 
     @staticmethod
     @handle_pandas_ta_errors
-    def hilo(high: Union[np.ndarray, pd.Series], low: Union[np.ndarray, pd.Series], length: int = 14) -> np.ndarray:
+    def hilo(high: Union[np.ndarray, pd.Series], low: Union[np.ndarray, pd.Series], close: Union[np.ndarray, pd.Series] = None, high_length=None, low_length=None, length: int = 14, **kwargs) -> np.ndarray:
         """Gann High-Low Activator"""
         high_series = pd.Series(high) if isinstance(high, np.ndarray) else high
         low_series = pd.Series(low) if isinstance(low, np.ndarray) else low
-        result = ta.hilo(high=high_series, low=low_series, length=length)
+        close_series = pd.Series(close) if isinstance(close, np.ndarray) else close
+
+        # Use high_length and low_length if provided, otherwise use length for both
+        hl = high_length if high_length is not None else length
+        ll = low_length if low_length is not None else length
+
+        result = ta.hilo(high=high_series, low=low_series, close=close_series, high_length=hl, low_length=ll)
         return result.values if result is not None else np.full(len(high_series), np.nan)
 
     @staticmethod

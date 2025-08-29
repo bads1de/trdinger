@@ -1318,6 +1318,22 @@ class SmartConditionGenerator:
         else:
             return []
 
+    def _create_trend_short_conditions(
+        self, indicator: IndicatorGene
+    ) -> List[Condition]:
+        """トレンド系指標のショート条件を生成"""
+        # テスト互換性: 素名優先
+        indicator_name = indicator.type
+
+        if indicator.type in ["SMA", "EMA", "WMA", "TRIMA"]:
+            return [
+                Condition(
+                    left_operand="close", operator="<", right_operand=indicator_name
+                )
+            ]
+        else:
+            return []
+
     def _create_momentum_long_conditions(
         self, indicator: IndicatorGene
     ) -> List[Condition]:
@@ -1379,6 +1395,67 @@ class SmartConditionGenerator:
         else:
             return []
 
+    def _create_momentum_short_conditions(
+        self, indicator: IndicatorGene
+    ) -> List[Condition]:
+        """モメンタム系指標のショート条件を生成"""
+        # テスト互換性: レジストリ由来の素名を優先（RSI_14 -> RSI）
+        indicator_name = indicator.type
+
+        if indicator.type == "RSI":
+            # RSI: 時間軸依存閾値（例: 15m/1h/4hで 55/60/65 を中心にゾーン化）
+            context = getattr(self, "context", None)
+            tf = (
+                context.get("timeframe")
+                if context and isinstance(context, dict)
+                else None
+            )
+            if tf in ("15m", "15min", "15"):
+                base = 55
+            elif tf in ("1h", "60"):
+                base = 60
+            elif tf in ("4h", "240"):
+                base = 65
+            else:
+                base = 60
+            # ショートは買われすぎ or 中立上限超えからの下降狙い
+            return [
+                Condition(
+                    left_operand=indicator_name,
+                    operator=">",
+                    right_operand=min(75, base + 25),
+                )
+            ]
+        elif indicator.type == "STOCH":
+            # STOCH: %K/%D クロス + ゾーン（20/80）
+            # 評価器側の簡便性のため、%K(=STOCH_0), %D(=STOCH_1) 名で扱う
+            return [
+                # ゾーン条件（買われすぎ）
+                Condition(left_operand="STOCH_0", operator=">", right_operand=80),
+            ]
+        elif indicator.type == "CCI":
+            # CCI: 買われすぎ領域でショート
+            threshold = random.uniform(80, 150)
+            return [
+                Condition(
+                    left_operand=indicator_name, operator=">", right_operand=threshold
+                )
+            ]
+        elif indicator.type in {"MACD", "MACDEXT"}:
+            # MACD/MACDEXT: ゼロライン or シグナルクロスのハイブリッド
+            # 評価器では *_0=メイン, *_1=シグナル
+            return [
+                Condition(
+                    left_operand=(
+                        "MACD_0" if indicator.type == "MACD" else "MACDEXT_0"
+                    ),
+                    operator="<",
+                    right_operand=0,
+                )
+            ]
+        else:
+            return []
+
     def _create_statistics_long_conditions(
         self, indicator: IndicatorGene
     ) -> List[Condition]:
@@ -1417,6 +1494,44 @@ class SmartConditionGenerator:
         else:
             return []
 
+    def _create_statistics_short_conditions(
+        self, indicator: IndicatorGene
+    ) -> List[Condition]:
+        """統計系指標のショート条件を生成"""
+        # テスト互換性: 指標は素名で参照
+        indicator_name = indicator.type
+
+        if indicator.type == "CORREL":
+            # 負の相関でショート
+            threshold = random.uniform(-0.7, -0.3)
+            return [
+                Condition(
+                    left_operand=indicator_name, operator="<", right_operand=threshold
+                )
+            ]
+        elif indicator.type == "LINEARREG_ANGLE":
+            # 下降角度でショート
+            threshold = random.uniform(-45, -10)
+            return [
+                Condition(
+                    left_operand=indicator_name, operator="<", right_operand=threshold
+                )
+            ]
+        elif indicator.type == "LINEARREG_SLOPE":
+            # 負の傾きでショート
+            return [
+                Condition(left_operand=indicator_name, operator="<", right_operand=0)
+            ]
+        elif indicator.type in ["LINEARREG", "TSF"]:
+            # 価格が回帰線より下でショート
+            return [
+                Condition(
+                    left_operand="close", operator="<", right_operand=indicator_name
+                )
+            ]
+        else:
+            return []
+
     def _create_pattern_long_conditions(
         self, indicator: IndicatorGene
     ) -> List[Condition]:
@@ -1427,6 +1542,25 @@ class SmartConditionGenerator:
             # 強気パターンでロング
             return [
                 Condition(left_operand=indicator_name, operator=">", right_operand=0)
+            ]
+        elif indicator.type == "CDL_DOJI":
+            # ドージパターンは反転の可能性（文脈依存）
+            return [
+                Condition(left_operand=indicator_name, operator="!=", right_operand=0)
+            ]
+        else:
+            return []
+
+    def _create_pattern_short_conditions(
+        self, indicator: IndicatorGene
+    ) -> List[Condition]:
+        """パターン認識系指標のショート条件を生成"""
+        indicator_name = f"{indicator.type}"
+
+        if indicator.type in ["CDL_HANGING_MAN", "CDL_DARK_CLOUD_COVER", "CDL_THREE_BLACK_CROWS"]:
+            # 弱気パターンでショート
+            return [
+                Condition(left_operand=indicator_name, operator="<", right_operand=0)
             ]
         elif indicator.type == "CDL_DOJI":
             # ドージパターンは反転の可能性（文脈依存）
@@ -1708,7 +1842,7 @@ class SmartConditionGenerator:
             long_conditions = []
             short_conditions = []
 
-            for indicator in indicators[:2]:  # 最大2つの指標を使用
+            for indicator in indicators[:3]:  # 最大3つの指標を使用してバランスを改善
                 if not indicator.enabled:
                     continue
 
@@ -1717,37 +1851,30 @@ class SmartConditionGenerator:
                     char = INDICATOR_CHARACTERISTICS[indicator.type]
                     indicator_type = char["type"]
 
-                    long_conds = []
-
-                    # インジケータタイプに応じて適切な条件生成メソッドを呼び出し（ロング条件のみ）
+                    # インジケータタイプに応じて適切な条件生成メソッドを呼び出し
                     if indicator_type == IndicatorType.MOMENTUM:
                         long_conds = self._create_momentum_long_conditions(indicator)
+                        short_conds = self._create_momentum_short_conditions(indicator)
                     elif indicator_type == IndicatorType.TREND:
                         long_conds = self._create_trend_long_conditions(indicator)
-
+                        short_conds = self._create_trend_short_conditions(indicator)
                     elif indicator_type == IndicatorType.STATISTICS:
                         long_conds = self._create_statistics_long_conditions(indicator)
+                        short_conds = self._create_statistics_short_conditions(indicator)
                     elif indicator_type == IndicatorType.PATTERN_RECOGNITION:
                         long_conds = self._create_pattern_long_conditions(indicator)
+                        short_conds = self._create_pattern_short_conditions(indicator)
+                    else:
+                        # 未知の指標タイプの場合は汎用条件を使用
+                        long_conds = self._generic_long_conditions(indicator)
+                        short_conds = self._generic_short_conditions(indicator)
 
                     if long_conds:
                         long_conditions.extend(long_conds)
 
-                    # 基本的なショート条件を生成
-                    if (
-                        indicator_type == IndicatorType.MOMENTUM
-                        and indicator.type == "RSI"
-                    ):
-                        # テスト互換性: 素名で参照
-                        indicator_name = indicator.type
-                        threshold = random.uniform(65, 85)
-                        short_conditions.append(
-                            Condition(
-                                left_operand=indicator_name,
-                                operator=">",
-                                right_operand=threshold,
-                            )
-                        )
+                    # ショート条件も同様に生成（全ての指標タイプに対応）
+                    if short_conds:
+                        short_conditions.extend(short_conds)
 
             # 条件が空の場合は汎用条件で補完（AND増加で厳しくならないよう空の場合のみ）
             if not long_conditions:

@@ -1661,6 +1661,11 @@ def setup_volume_indicators():
             description="低速期間",
         )
     )
+    # パラメータマッピング: pandas-taのADOSC関数では"fast"和"slow"を使用
+    adosc_config.param_map = {
+        "fastperiod": "fast",
+        "slowperiod": "slow",
+    }
     indicator_registry.register(adosc_config)
 
     # VP (Volume Price Confirmation)
@@ -2830,6 +2835,10 @@ eom_cfg.add_parameter(
 eom_cfg.add_parameter(
     ParameterConfig(name="drift", default_value=1, min_value=1, max_value=10)
 )
+eom_cfg.param_map = {
+    "divisor": "divisor",
+    "drift": "drift",
+}
 indicator_registry.register(eom_cfg)
 
 kvo_cfg = IndicatorConfig(
@@ -2841,11 +2850,15 @@ kvo_cfg = IndicatorConfig(
     category="volume",
 )
 kvo_cfg.add_parameter(
-    ParameterConfig(name="fast", default_value=34, min_value=2, max_value=100)
+    ParameterConfig(name="fast", default_value=10, min_value=2, max_value=100)
 )
 kvo_cfg.add_parameter(
-    ParameterConfig(name="slow", default_value=55, min_value=2, max_value=200)
+    ParameterConfig(name="slow", default_value=20, min_value=2, max_value=200)
 )
+kvo_cfg.param_map = {
+    "fast": "fast",
+    "slow": "slow",
+}
 indicator_registry.register(kvo_cfg)
 
 pvt_cfg = IndicatorConfig(
@@ -2869,6 +2882,9 @@ cmf_cfg = IndicatorConfig(
 cmf_cfg.add_parameter(
     ParameterConfig(name="length", default_value=20, min_value=2, max_value=200)
 )
+cmf_cfg.param_map = {
+    "length": "length",
+}
 indicator_registry.register(cmf_cfg)
 
 # AOBV (Archer On-Balance Volume)
@@ -2929,6 +2945,13 @@ pvol_config = IndicatorConfig(
 pvol_config.add_parameter(
     ParameterConfig(name="signed", default_value=True, min_value=False, max_value=True)
 )
+# PVOL指標のパラメータマッピング（lengthパラメータ拒否）
+pvol_config.param_map = {
+    "signed": "signed",
+    # periodパラメータを無効化（lengthへ変換させない）
+    "period": None,
+    "length": None,
+}
 indicator_registry.register(pvol_config)
 
 # PVR (Price Volume Rank)
@@ -2962,15 +2985,38 @@ indicator_registry.register(fwma_config)
 hilo_config = IndicatorConfig(
     indicator_name="HILO",
     adapter_function=TrendIndicators.hilo,
-    required_data=["high", "low"],
-    result_type=IndicatorResultType.SINGLE,
+    required_data=["high", "low", "close"],
+    result_type=IndicatorResultType.COMPLEX,
     scale_type=IndicatorScaleType.PRICE_ABSOLUTE,
     category="trend",
+    output_names=["HILO_0", "HILO_1", "HILO_2"],
+    default_output="HILO_0",
 )
 hilo_config.add_parameter(
-    ParameterConfig(name="length", default_value=14, min_value=2, max_value=200)
+    ParameterConfig(
+        name="high_length",
+        default_value=13,
+        min_value=2,
+        max_value=100,
+        description="High period length",
+    )
 )
-hilo_config.param_map = {"length": "length"}
+hilo_config.add_parameter(
+    ParameterConfig(
+        name="low_length",
+        default_value=21,
+        min_value=2,
+        max_value=100,
+        description="Low period length",
+    )
+)
+hilo_config.param_map = {
+    "high_length": "high_length",
+    "low_length": "low_length",
+    "high": "high",
+    "low": "low",
+    "close": "close"
+}
 indicator_registry.register(hilo_config)
 
 # HL2 (High-Low Average)

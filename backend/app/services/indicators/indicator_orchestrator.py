@@ -93,6 +93,12 @@ POSITIONAL_DATA_FUNCTIONS = {
     "chop",
     "vortex",
     "BBANDS",
+    "hilo",  # HILO指標を位置引数関数に追加
+    # Volume indicators that need positional arguments
+    "ad",     # Accumulation/Distribution
+    "eom",    # Ease of Movement
+    "kvo",    # Klinger Volume Oscillator
+    "cmf",    # Chaikin Money Flow
 }
 
 
