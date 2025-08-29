@@ -8,39 +8,12 @@ import logging
 import math
 from typing import Any, Dict, Optional, Tuple
 
+from dataclasses import dataclass, field
+
 from ..generators.tpsl_generator import UnifiedTPSLGenerator
-from ..models.strategy_models import TPSLGene, TPSLMethod
+from ..models.strategy_models import TPSLGene, TPSLMethod, TPSLResult
 
 logger = logging.getLogger(__name__)
-
-
-class TPSLResult:
-    """TP/SL計算結果"""
-
-    def __init__(
-        self,
-        stop_loss_pct: float,
-        take_profit_pct: float,
-        method: TPSLMethod,
-        confidence_score: float = 0.0,
-        metadata: Optional[Dict[str, Any]] = None,
-    ):
-        self.stop_loss_pct = stop_loss_pct
-        self.take_profit_pct = take_profit_pct
-        self.method = method
-        self.confidence_score = confidence_score
-        self.metadata = metadata or {}
-
-    def to_dict(self) -> Dict[str, Any]:
-        """辞書形式に変換"""
-        return {
-            "stop_loss_pct": self.stop_loss_pct,
-            "take_profit_pct": self.take_profit_pct,
-            # TPSLMethod 以外（文字列など）が来ても安全に文字列へ
-            "method": getattr(self.method, "value", self.method),
-            "confidence_score": self.confidence_score,
-            "metadata": self.metadata,
-        }
 
 
 class TPSLService:

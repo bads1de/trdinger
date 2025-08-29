@@ -4,30 +4,11 @@
 """
 
 import logging
-from dataclasses import dataclass
 from typing import Any, Dict, Optional
 
-from ..models.strategy_models import TPSLMethod
+from ..models.strategy_models import TPSLMethod, TPSLResult
 
 logger = logging.getLogger(__name__)
-
-
-@dataclass
-class TPSLResult:
-    """統合TP/SL計算結果"""
-
-    stop_loss_pct: float
-    take_profit_pct: float
-    method_used: str
-    confidence_score: float = 0.0
-    expected_performance: Optional[Dict[str, Any]] = None
-    metadata: Optional[Dict[str, Any]] = None
-
-    def __post_init__(self):
-        if self.expected_performance is None:
-            self.expected_performance = {}
-        if self.metadata is None:
-            self.metadata = {}
 
 
 class TPSLStrategy:
