@@ -11,6 +11,8 @@
     "skipLibCheck": true,
     // 厳格な型チェックを有効化（コード品質向上）
     "strict": true,
+    // ファイル名の大文字小文字の一貫性を強制（Windowsなどのcase-insensitiveファイルシステムで問題を防く）
+    "forceConsistentCasingInFileNames": true,
     // JavaScriptファイルを出力しない（Next.jsがビルドを担当）
     "noEmit": true,
     // ESモジュールとCommonJSの相互運用性を有効化

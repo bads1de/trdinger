@@ -16,6 +16,7 @@ class OperandGroup(Enum):
     """オペランドのスケールグループ"""
 
     PRICE_BASED = "price_based"  # 価格ベース（価格と同じスケール）
+    PRICE_RATIO = "price_ratio"  # 価格比率（正規化指標）
     PERCENTAGE_0_100 = "percentage_0_100"  # 0-100%オシレーター
     PERCENTAGE_NEG100_100 = "percentage_neg100_100"  # ±100オシレーター
     ZERO_CENTERED = "zero_centered"  # ゼロ中心の変化率・モメンタム
@@ -121,8 +122,9 @@ class OperandGroupingSystem:
         for group in OperandGroup:
             matrix[(group, group)] = 1.0
 
-        # 価格ベースとATRは高い互換性（どちらも価格スケール）
-        matrix[(OperandGroup.PRICE_BASED, OperandGroup.PRICE_BASED)] = 1.0
+        # 価格ベースと価格比率は高い互換性（どちらも価格関連スケール）
+        matrix[(OperandGroup.PRICE_BASED, OperandGroup.PRICE_RATIO)] = 0.8
+        matrix[(OperandGroup.PRICE_RATIO, OperandGroup.PRICE_BASED)] = 0.8
 
         # 0-100%オシレーター同士は高い互換性
         matrix[(OperandGroup.PERCENTAGE_0_100, OperandGroup.PERCENTAGE_0_100)] = 1.0

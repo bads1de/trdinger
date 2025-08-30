@@ -25,8 +25,8 @@ class Thresholds:
     ultosc_short_lt: int | None = None
     roc_long_lt: int | None = None
     roc_short_gt: int | None = None
-    mom_long_lt: int | None = None
-    mom_short_gt: int | None = None
+    mom_long_lt: float | None = None
+    mom_short_gt: float | None = None
     stoch_long_lt: int | None = None
     stoch_short_gt: int | None = None
     cmo_long_lt: int | None = None
@@ -145,7 +145,6 @@ TREND_PREF = (
     "WMA",
     "RMA",
     "HT_TRENDLINE",
-    # 新しく追加されたトレンド指標
     "FWMA",
     "SWMA",
     "VIDYA",
