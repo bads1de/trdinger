@@ -346,7 +346,7 @@ class AutoStrategyService:
             logger.info("戦略テスト開始")
 
             # 戦略遺伝子の復元
-            from ..models.gene_serialization import GeneSerializer
+            from ..serializers.gene_serialization import GeneSerializer
             from ..models.strategy_models import StrategyGene
 
             gene_serializer = GeneSerializer()

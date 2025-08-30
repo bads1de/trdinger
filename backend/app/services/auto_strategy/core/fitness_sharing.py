@@ -8,7 +8,7 @@
 import logging
 from typing import Any, Dict, List
 
-from ..models.gene_serialization import GeneSerializer
+from ..serializers.gene_serialization import GeneSerializer
 from ..models.strategy_models import StrategyGene
 
 logger = logging.getLogger(__name__)

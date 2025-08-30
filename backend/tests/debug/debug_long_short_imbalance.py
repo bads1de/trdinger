@@ -16,7 +16,7 @@ project_root = Path(__file__).parent.parent.parent
 sys.path.insert(0, str(project_root))
 
 from app.services.auto_strategy.models.strategy_models import StrategyGene
-from app.services.auto_strategy.generators.smart_condition_generator import SmartConditionGenerator
+from app.services.auto_strategy.generators.condition_generator import ConditionGenerator
 from app.services.auto_strategy.models.strategy_models import IndicatorGene
 
 # ロギング設定
@@ -152,7 +152,7 @@ def debug_condition_generation_internals():
 
             try:
                 # 戦略タイプを直接指定して条件生成（テスト用）
-                from app.services.auto_strategy.generators.smart_condition_generator import StrategyType
+                from app.services.auto_strategy.config.constants import StrategyType
 
                 if hasattr(StrategyType, strategy_type):
                     st = getattr(StrategyType, strategy_type)

@@ -5,7 +5,7 @@ sys.path.append('./backend')
 sys.path.append('./')
 
 try:
-    from app.services.auto_strategy.generators.smart_condition_generator import SmartConditionGenerator
+    from app.services.auto_strategy.generators.condition_generator import ConditionGenerator
     print("Import successful - Using SmartConditionGenerator!")
 except Exception as e:
     print(f"Import failed: {e}")

@@ -16,7 +16,7 @@ from app.services.auto_strategy.config.constants import (
     StrategyType
 )
 from app.services.auto_strategy.utils.decorators import auto_strategy_operation
-from app.services.auto_strategy.generators.smart_condition_generator import SmartConditionGenerator
+from app.services.auto_strategy.generators.condition_generator import ConditionGenerator
 
 
 class TestPhase1Integration:
@@ -124,7 +124,7 @@ class TestPhase1Integration:
         assert callable(_debug_log)
 
         # 要件4: 後方互換性の維持
-        from app.services.auto_strategy.generators.smart_condition_generator import SmartConditionGenerator
+        from app.services.auto_strategy.generators.condition_generator import ConditionGenerator
         generator = SmartConditionGenerator()
         assert generator is not None
 

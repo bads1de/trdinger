@@ -15,7 +15,7 @@ from typing import Dict, Any
 project_root = Path(__file__).parent.parent.parent
 sys.path.insert(0, str(project_root))
 
-from app.services.auto_strategy.generators.smart_condition_generator import SmartConditionGenerator
+from app.services.auto_strategy.generators.condition_generator import ConditionGenerator
 from app.services.auto_strategy.models.strategy_models import StrategyGene, IndicatorGene
 from app.services.auto_strategy.config.auto_strategy_config import GAConfig
 from app.services.auto_strategy.core.ga_engine import GeneticAlgorithmEngine

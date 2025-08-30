@@ -7,7 +7,7 @@ factories/ の機能を統合しています。
 
 from .gene_factory import GeneGeneratorFactory
 from .random_gene_generator import RandomGeneGenerator
-from .smart_condition_generator import SmartConditionGenerator
+from .condition_generator import ConditionGenerator
 # ConditionGenerator is now integrated into SmartConditionGenerator for backward compatibility
 ConditionGenerator = SmartConditionGenerator
 

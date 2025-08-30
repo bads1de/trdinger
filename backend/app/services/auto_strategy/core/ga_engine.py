@@ -19,7 +19,6 @@ from ..config.auto_strategy_config import GAConfig
 from .genetic_operators import crossover_strategy_genes, mutate_strategy_gene
 from .deap_setup import DEAPSetup
 from .fitness_sharing import FitnessSharing
-from .individual_creator import IndividualCreator
 from .individual_evaluator import IndividualEvaluator
 
 logger = logging.getLogger(__name__)
@@ -57,7 +56,7 @@ class GeneticAlgorithmEngine:
         # 分離されたコンポーネント
         self.deap_setup = DEAPSetup()
         self.individual_evaluator = IndividualEvaluator(backtest_service)
-        self.individual_creator = None  # setup_deap時に初期化
+        self.individual_class = None  # setup_deap時に設定
         self.fitness_sharing = None  # setup_deap時に初期化
 
     def setup_deap(self, config: GAConfig):
@@ -67,22 +66,17 @@ class GeneticAlgorithmEngine:
         Args:
             config: GA設定
         """
-        # 個体生成器を初期化
-        self.individual_creator = IndividualCreator(
-            self.gene_generator, None  # 個体クラスはDEAPSetupで設定される
-        )
-
-        # DEAP環境をセットアップ
+        # DEAP環境をセットアップ（個体生成メソッドで統合）
         self.deap_setup.setup_deap(
             config,
-            self.individual_creator.create_individual,
+            self._create_individual,
             self.individual_evaluator.evaluate_individual,
             crossover_strategy_genes,
             mutate_strategy_gene,
         )
 
-        # 個体生成器に個体クラスを設定
-        self.individual_creator.Individual = self.deap_setup.get_individual_class()
+        # 個体クラスを取得（個体生成時に使用）
+        self.individual_class = self.deap_setup.get_individual_class()
 
         # フィットネス共有の初期化
         if config.enable_fitness_sharing:
@@ -161,7 +155,7 @@ class GeneticAlgorithmEngine:
                 )
 
                 # 遺伝子デコード（リファクタリング改善）
-                from ..models.gene_serialization import GeneSerializer
+                from ..serializers.gene_serialization import GeneSerializer
                 from ..models.strategy_models import StrategyGene
 
                 gene_serializer = GeneSerializer()
@@ -178,7 +172,7 @@ class GeneticAlgorithmEngine:
                 best_individual = tools.selBest(population, 1)[0]
 
                 # 遺伝子デコード（リファクタリング改善）
-                from ..models.gene_serialization import GeneSerializer
+                from ..serializers.gene_serialization import GeneSerializer
                 from ..models.strategy_models import StrategyGene
 
                 gene_serializer = GeneSerializer()
@@ -294,4 +288,30 @@ class GeneticAlgorithmEngine:
 
         except Exception as e:
             logger.error(f"NSGA-II進化実行エラー: {e}")
+            raise
+
+    def _create_individual(self):
+        """
+        個体生成（統合版IndividualCreator）
+
+        Returns:
+            Individualオブジェクト
+        """
+        try:
+            # RandomGeneGeneratorを使用して遺伝子を生成
+            gene = self.gene_generator.generate_random_gene()
+
+            # 遺伝子をエンコード（リファクタリング改善）
+            from ..serializers.gene_serialization import GeneSerializer
+
+            gene_serializer = GeneSerializer()
+            encoded_gene = gene_serializer.to_list(gene)
+
+            if not self.individual_class:
+                raise TypeError("個体クラス 'Individual' が初期化されていません。")
+            return self.individual_class(encoded_gene)
+
+        except Exception as e:
+            logger.error(f"個体生成中に致命的なエラーが発生しました: {e}")
+            # 遺伝子生成はGAの根幹部分であり、失敗した場合は例外をスローして処理を停止するのが安全
             raise

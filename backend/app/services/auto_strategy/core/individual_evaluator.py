@@ -43,7 +43,7 @@ class IndividualEvaluator:
         """
         try:
             # 遺伝子デコード（リファクタリング改善）
-            from ..models.gene_serialization import GeneSerializer
+            from ..serializers.gene_serialization import GeneSerializer
             from ..models.strategy_models import StrategyGene
 
             gene_serializer = GeneSerializer()
@@ -57,7 +57,7 @@ class IndividualEvaluator:
             )
 
             # 戦略設定を追加（test_strategy_generationと同じ形式）
-            from app.services.auto_strategy.models.gene_serialization import (
+            from app.services.auto_strategy.serializers.gene_serialization import (
                 GeneSerializer,
             )
 

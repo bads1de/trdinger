@@ -1,7 +1,6 @@
 import logging
 import random
 import copy
-import os
 from pathlib import Path
 from typing import List, Tuple, Union, Dict, Any, Optional
 from app.services.auto_strategy.config.constants import (
@@ -9,7 +8,6 @@ from app.services.auto_strategy.config.constants import (
     IndicatorType,
     StrategyType,
 )
-import yaml
 from app.services.indicators.config import indicator_registry
 from app.services.auto_strategy.utils.common_utils import (
     YamlLoadUtils,
@@ -22,7 +20,7 @@ from ..models.strategy_models import Condition, IndicatorGene, ConditionGroup
 logger = logging.getLogger(__name__)
 
 
-class SmartConditionGenerator:
+class ConditionGenerator:
     """
     責務を集約したロング・ショート条件生成器
 
@@ -159,7 +157,6 @@ class SmartConditionGenerator:
             self.logger.error(f"スマート条件生成エラー: {e}")
             return self._generate_fallback_conditions()
 
-
     def _select_strategy_type(self, indicators: List[IndicatorGene]) -> StrategyType:
         """
         簡素化された戦略タイプ選択
@@ -178,7 +175,9 @@ class SmartConditionGenerator:
 
             # テクニカル指標の数分析
             technical_indices = [
-                ind for ind in indicators if ind.enabled and not ind.type.startswith("ML_")
+                ind
+                for ind in indicators
+                if ind.enabled and not ind.type.startswith("ML_")
             ]
 
             # ML指標とテクニカル指標の混合の場合は組み合わせ戦略
@@ -234,16 +233,12 @@ class SmartConditionGenerator:
         if config:
             threshold = self._get_threshold_from_yaml(config, "long")
             if threshold is not None:
-                return [Condition(
-                    left_operand=ind.type,
-                    operator=">",
-                    right_operand=threshold
-                )]
-        return [Condition(
-            left_operand=ind.type,
-            operator=">",
-            right_operand=0
-        )]
+                return [
+                    Condition(
+                        left_operand=ind.type, operator=">", right_operand=threshold
+                    )
+                ]
+        return [Condition(left_operand=ind.type, operator=">", right_operand=0)]
 
     def _generic_short_conditions(self, ind: IndicatorGene) -> List[Condition]:
         """統合された汎用ショート条件生成"""
@@ -251,16 +246,12 @@ class SmartConditionGenerator:
         if config:
             threshold = self._get_threshold_from_yaml(config, "short")
             if threshold is not None:
-                return [Condition(
-                    left_operand=ind.type,
-                    operator="<",
-                    right_operand=threshold
-                )]
-        return [Condition(
-            left_operand=ind.type,
-            operator="<",
-            right_operand=0
-        )]
+                return [
+                    Condition(
+                        left_operand=ind.type, operator="<", right_operand=threshold
+                    )
+                ]
+        return [Condition(left_operand=ind.type, operator="<", right_operand=0)]
 
     def _generate_different_indicators_strategy(
         self, indicators: List[IndicatorGene]
@@ -279,7 +270,6 @@ class SmartConditionGenerator:
             (long_entry_conditions, short_entry_conditions, exit_conditions)のタプル
         """
         try:
-            # Phase 1.3: ConditionGeneratorを活用（統合された動的分類）
             # 指標をタイプ別に分類（未特性化はレジストリから動的分類）
             indicators_by_type = self._dynamic_classify(indicators)
 
@@ -290,11 +280,6 @@ class SmartConditionGenerator:
             # ML指標とテクニカル指標の混合戦略
             ml_indicators = [
                 ind for ind in indicators if ind.enabled and ind.type.startswith("ML_")
-            ]
-            technical_indicators = [
-                ind
-                for ind in indicators
-                if ind.enabled and not ind.type.startswith("ML_")
             ]
 
             # 簡素化: 利用可能な指標タイプから1つずつ条件を生成
@@ -349,9 +334,13 @@ class SmartConditionGenerator:
 
             # 最低条件数の保証（簡素化）
             if not long_conditions:
-                long_conditions = [Condition(left_operand="close", operator=">", right_operand="open")]
+                long_conditions = [
+                    Condition(left_operand="close", operator=">", right_operand="open")
+                ]
             if not short_conditions:
-                short_conditions = [Condition(left_operand="close", operator="<", right_operand="open")]
+                short_conditions = [
+                    Condition(left_operand="close", operator="<", right_operand="open")
+                ]
 
             # 型を明示的に変換して返す
             long_result: List[Union[Condition, ConditionGroup]] = list(long_conditions)
@@ -374,11 +363,13 @@ class SmartConditionGenerator:
         if config:
             threshold = self._get_threshold_from_yaml(config, side)
             if threshold is not None:
-                return [Condition(
-                    left_operand=indicator.type,
-                    operator=">" if side == "long" else "<",
-                    right_operand=threshold
-                )]
+                return [
+                    Condition(
+                        left_operand=indicator.type,
+                        operator=">" if side == "long" else "<",
+                        right_operand=threshold,
+                    )
+                ]
 
         # RSI特別処理
         if indicator.type == "RSI":
@@ -391,66 +382,91 @@ class SmartConditionGenerator:
                 threshold = 40 if side == "long" else 60
             else:
                 threshold = 35 if side == "long" else 65
-            return [Condition(
-                left_operand=indicator.type,
-                operator="<" if side == "long" else ">",
-                right_operand=threshold
-            )]
+            return [
+                Condition(
+                    left_operand=indicator.type,
+                    operator="<" if side == "long" else ">",
+                    right_operand=threshold,
+                )
+            ]
 
         # パターンの場合
         if "CDL_" in indicator.type:
-            if indicator.type in ["CDL_HANGING_MAN", "CDL_DARK_CLOUD_COVER", "CDL_THREE_BLACK_CROWS"]:
-                return [Condition(
-                    left_operand=indicator.type,
-                    operator="<" if side == "long" else ">",
-                    right_operand=0
-                )]
+            if indicator.type in [
+                "CDL_HANGING_MAN",
+                "CDL_DARK_CLOUD_COVER",
+                "CDL_THREE_BLACK_CROWS",
+            ]:
+                return [
+                    Condition(
+                        left_operand=indicator.type,
+                        operator="<" if side == "long" else ">",
+                        right_operand=0,
+                    )
+                ]
             else:
-                return [Condition(
-                    left_operand=indicator.type,
-                    operator="!=",
-                    right_operand=0
-                )]
+                return [
+                    Condition(
+                        left_operand=indicator.type, operator="!=", right_operand=0
+                    )
+                ]
 
         # デフォルト
-        return [Condition(
-            left_operand=indicator.type,
-            operator=">" if side == "long" else "<",
-            right_operand=0
-        )]
+        return [
+            Condition(
+                left_operand=indicator.type,
+                operator=">" if side == "long" else "<",
+                right_operand=0,
+            )
+        ]
 
-    def _create_trend_long_conditions(self, indicator: IndicatorGene) -> List[Condition]:
+    def _create_trend_long_conditions(
+        self, indicator: IndicatorGene
+    ) -> List[Condition]:
         """統合されたトレンド系ロング条件生成"""
         return self._create_type_based_conditions(indicator, "long")
 
-    def _create_trend_short_conditions(self, indicator: IndicatorGene) -> List[Condition]:
+    def _create_trend_short_conditions(
+        self, indicator: IndicatorGene
+    ) -> List[Condition]:
         """統合されたトレンド系ショート条件生成"""
         return self._create_type_based_conditions(indicator, "short")
 
-    def _create_momentum_long_conditions(self, indicator: IndicatorGene) -> List[Condition]:
+    def _create_momentum_long_conditions(
+        self, indicator: IndicatorGene
+    ) -> List[Condition]:
         """統合されたモメンタム系ロング条件生成"""
         return self._create_type_based_conditions(indicator, "long")
 
-    def _create_momentum_short_conditions(self, indicator: IndicatorGene) -> List[Condition]:
+    def _create_momentum_short_conditions(
+        self, indicator: IndicatorGene
+    ) -> List[Condition]:
         """統合されたモメンタム系ショート条件生成"""
         return self._create_type_based_conditions(indicator, "short")
 
-    def _create_statistics_long_conditions(self, indicator: IndicatorGene) -> List[Condition]:
+    def _create_statistics_long_conditions(
+        self, indicator: IndicatorGene
+    ) -> List[Condition]:
         """統合された統計系ロング条件生成"""
         return self._create_type_based_conditions(indicator, "long")
 
-    def _create_statistics_short_conditions(self, indicator: IndicatorGene) -> List[Condition]:
+    def _create_statistics_short_conditions(
+        self, indicator: IndicatorGene
+    ) -> List[Condition]:
         """統合された統計系ショート条件生成"""
         return self._create_type_based_conditions(indicator, "short")
 
-    def _create_pattern_long_conditions(self, indicator: IndicatorGene) -> List[Condition]:
+    def _create_pattern_long_conditions(
+        self, indicator: IndicatorGene
+    ) -> List[Condition]:
         """統合されたパターン認識系ロング条件生成"""
         return self._create_type_based_conditions(indicator, "long")
 
-    def _create_pattern_short_conditions(self, indicator: IndicatorGene) -> List[Condition]:
+    def _create_pattern_short_conditions(
+        self, indicator: IndicatorGene
+    ) -> List[Condition]:
         """統合されたパターン認識系ショート条件生成"""
         return self._create_type_based_conditions(indicator, "short")
-
 
     def _generate_indicator_characteristics_strategy(
         self, indicators: List[IndicatorGene]
@@ -481,11 +497,15 @@ class SmartConditionGenerator:
 
                 # 複数のML指標があれば基本的な対向条件も追加
                 if len(ml_indicators) >= 2:
-                    short_conditions.extend([
-                        Condition(
-                            left_operand="ML_DOWN_PROB", operator=">", right_operand=0.6
-                        )
-                    ])
+                    short_conditions.extend(
+                        [
+                            Condition(
+                                left_operand="ML_DOWN_PROB",
+                                operator=">",
+                                right_operand=0.6,
+                            )
+                        ]
+                    )
 
             # 条件が空の場合はフォールバック
             if not long_conditions:
@@ -628,9 +648,13 @@ class SmartConditionGenerator:
 
         if profile in thresholds and thresholds[profile]:
             profile_config = thresholds[profile]
-            if side == "long" and ("long_gt" in profile_config or "long_lt" in profile_config):
+            if side == "long" and (
+                "long_gt" in profile_config or "long_lt" in profile_config
+            ):
                 return profile_config.get("long_gt", profile_config.get("long_lt"))
-            elif side == "short" and ("short_lt" in profile_config or "short_gt" in profile_config):
+            elif side == "short" and (
+                "short_lt" in profile_config or "short_gt" in profile_config
+            ):
                 return profile_config.get("short_lt", profile_config.get("short_gt"))
 
         if "all" in thresholds and thresholds["all"]:
@@ -755,25 +779,45 @@ class SmartConditionGenerator:
 
                 indicator_type = self._get_indicator_type(indicator)
                 if indicator_type == IndicatorType.MOMENTUM:
-                    long_conditions.extend(self._create_momentum_long_conditions(indicator))
-                    short_conditions.extend(self._create_momentum_short_conditions(indicator))
+                    long_conditions.extend(
+                        self._create_momentum_long_conditions(indicator)
+                    )
+                    short_conditions.extend(
+                        self._create_momentum_short_conditions(indicator)
+                    )
                 elif indicator_type == IndicatorType.TREND:
-                    long_conditions.extend(self._create_trend_long_conditions(indicator))
-                    short_conditions.extend(self._create_trend_short_conditions(indicator))
+                    long_conditions.extend(
+                        self._create_trend_long_conditions(indicator)
+                    )
+                    short_conditions.extend(
+                        self._create_trend_short_conditions(indicator)
+                    )
                 elif indicator_type == IndicatorType.STATISTICS:
-                    long_conditions.extend(self._create_statistics_long_conditions(indicator))
-                    short_conditions.extend(self._create_statistics_short_conditions(indicator))
+                    long_conditions.extend(
+                        self._create_statistics_long_conditions(indicator)
+                    )
+                    short_conditions.extend(
+                        self._create_statistics_short_conditions(indicator)
+                    )
                 elif indicator_type == IndicatorType.PATTERN_RECOGNITION:
-                    long_conditions.extend(self._create_pattern_long_conditions(indicator))
-                    short_conditions.extend(self._create_pattern_short_conditions(indicator))
+                    long_conditions.extend(
+                        self._create_pattern_long_conditions(indicator)
+                    )
+                    short_conditions.extend(
+                        self._create_pattern_short_conditions(indicator)
+                    )
                 else:
                     long_conditions.extend(self._generic_long_conditions(indicator))
                     short_conditions.extend(self._generic_short_conditions(indicator))
 
             if not long_conditions:
-                long_conditions = [Condition(left_operand="close", operator=">", right_operand="open")]
+                long_conditions = [
+                    Condition(left_operand="close", operator=">", right_operand="open")
+                ]
             if not short_conditions:
-                short_conditions = [Condition(left_operand="close", operator="<", right_operand="open")]
+                short_conditions = [
+                    Condition(left_operand="close", operator="<", right_operand="open")
+                ]
 
             if long_conditions is None:
                 long_conditions = []
@@ -792,13 +836,15 @@ class SmartConditionGenerator:
             if original_context is not None:
                 self.context = original_context
 
-    def test_yaml_conditions(self, test_indicators: Optional[List[str]] = None) -> Dict[str, Any]:
+    def test_yaml_conditions(
+        self, test_indicators: Optional[List[str]] = None
+    ) -> Dict[str, Any]:
         """YAMLベースの条件生成テスト"""
         try:
             return YamlTestUtils.test_yaml_based_conditions(
                 yaml_config=self.yaml_config,
-                condition_generator_class=SmartConditionGenerator,
-                test_indicators=test_indicators
+                condition_generator_class=ConditionGenerator,
+                test_indicators=test_indicators,
             )
         except Exception as e:
             self.logger.error(f"YAMLテストエラー: {e}")

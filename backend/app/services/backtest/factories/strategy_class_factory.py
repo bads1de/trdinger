@@ -76,7 +76,7 @@ class StrategyClassFactory:
             from app.services.auto_strategy.generators.strategy_factory import (
                 StrategyFactory,
             )
-            from app.services.auto_strategy.models.gene_serialization import (
+            from app.services.auto_strategy.serializers.gene_serialization import (
                 GeneSerializer,
             )
         except ImportError as e:

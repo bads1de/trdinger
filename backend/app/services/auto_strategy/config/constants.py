@@ -484,7 +484,7 @@ DEFAULT_FITNESS_CONSTRAINTS = {
 }
 
 # === 技術指標特性データベース ===
-# smart_condition_generator.pyから移行した指標特性定義
+# condition_generator.pyから移行した指標特性定義
 INDICATOR_CHARACTERISTICS = {
     "RSI": {
         "type": "momentum",

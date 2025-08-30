@@ -351,11 +351,11 @@ class GeneSerializer:
 
     @property
     def smart_condition_generator(self):
-        """SmartConditionGeneratorの遅延初期化"""
+        """ConditionGeneratorの遅延初期化"""
         if self._smart_condition_generator is None and self.enable_smart_generation:
-            from ..generators.smart_condition_generator import SmartConditionGenerator
+            from ..generators.condition_generator import ConditionGenerator
 
-            self._smart_condition_generator = SmartConditionGenerator(True)
+            self._smart_condition_generator = ConditionGenerator(True)
         return self._smart_condition_generator
 
     def to_list(self, strategy_gene) -> List[float]:

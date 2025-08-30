@@ -522,10 +522,10 @@ class YamlLoadUtils:
             return config
 
         except yaml.YAMLError as e:
-            logger.error(f"YAML構文エラー: {path}, {e}")
+            logger.error(f"YAML構文エラー: {config_path}, {e}")
             return fallback
         except Exception as e:
-            logger.error(f"YAML読み込みエラー: {path}, {e}")
+            logger.error(f"YAML読み込みエラー: {config_path}, {e}")
             return fallback
 
     @staticmethod
@@ -687,7 +687,7 @@ class YamlTestUtils:
 
 class MockIndicatorGene:
     """テスト用のモックIndicatorGene"""
-    def __init__(self, type: str, enabled: bool = True, parameters: Dict[str, Any] = None):
+    def __init__(self, type: str, enabled: bool = True, parameters: Optional[Dict[str, Any]] = None):
         self.type = type
         self.enabled = enabled
         self.parameters = parameters or {}

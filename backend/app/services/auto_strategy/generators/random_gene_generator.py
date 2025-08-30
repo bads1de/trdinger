@@ -13,7 +13,7 @@ from app.services.indicators import TechnicalIndicatorService
 from app.services.indicators.config import indicator_registry
 from app.services.indicators.config.indicator_config import IndicatorScaleType
 from ..config import GAConfig
-from ..models.gene_serialization import GeneSerializer
+from ..serializers.gene_serialization import GeneSerializer
 from ..models.strategy_models import (
     Condition,
     ConditionGroup,
@@ -28,7 +28,7 @@ from ..models.strategy_models import (
 
 from ..utils.operand_grouping import operand_grouping_system
 from ..config.constants import OPERATORS, DATA_SOURCES
-from .smart_condition_generator import SmartConditionGenerator
+from .condition_generator import ConditionGenerator
 from ..core.indicator_policies import PriceTrendPolicy
 
 logger = logging.getLogger(__name__)
@@ -61,7 +61,7 @@ class RandomGeneGenerator:
         self.serializer = GeneSerializer(
             enable_smart_generation
         )  # GeneSerializerのインスタンスを作成
-        self.smart_condition_generator = SmartConditionGenerator(
+        self.smart_condition_generator = ConditionGenerator(
             enable_smart_generation
         )
         # コンテキストがあれば適用

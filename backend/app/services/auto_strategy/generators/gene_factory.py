@@ -128,7 +128,7 @@ class SmartGeneGenerator(BaseGeneGenerator):
     def _get_smart_generator(self):
         """SmartConditionGeneratorを遅延初期化"""
         if self._smart_generator is None:
-            from ..generators.smart_condition_generator import SmartConditionGenerator
+            from ..generators.condition_generator import ConditionGenerator
 
             self._smart_generator = SmartConditionGenerator(
                 enable_smart_generation=True

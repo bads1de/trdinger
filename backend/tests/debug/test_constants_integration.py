@@ -17,7 +17,7 @@ from app.services.auto_strategy.config.constants import (
     TPSL_LIMITS,
     POSITION_SIZING_LIMITS
 )
-from app.services.auto_strategy.generators.smart_condition_generator import SmartConditionGenerator
+from app.services.auto_strategy.generators.condition_generator import ConditionGenerator
 
 
 class TestConstantsIntegration:
@@ -89,13 +89,13 @@ class TestConstantsIntegration:
 
     def test_no_duplicate_indicator_characteristics(self):
         """INDICATOR_CHARACTERISTICSが重複定義されていないことを確認"""
-        # constants.pyとsmart_condition_generator.pyの両方で定義されていないことを確認
+        # constants.pyとcondition_generator.pyの両方で定義されていないことを確認
         try:
-            from backend.app.services.auto_strategy.generators.smart_condition_generator import INDICATOR_CHARACTERISTICS as SC_INDICATOR_CHARACTERISTICS
+            from backend.app.services.auto_strategy.generators.condition_generator import INDICATOR_CHARACTERISTICS as CG_INDICATOR_CHARACTERISTICS
             # 両方が存在する場合、エラーを発生させる
-            pytest.fail("INDICATOR_CHARACTERISTICSがsmart_condition_generator.pyでも定義されています。constants.pyへの統合が必要です。")
+            pytest.fail("INDICATOR_CHARACTERISTICSがcondition_generator.pyでも定義されています。constants.pyへの統合が必要です。")
         except ImportError:
-            # smart_condition_generator.pyから直接importできない場合、定数統合が完了していると判断
+            # condition_generator.pyから直接importできない場合、定数統合が完了していると判断
             pass
 
     def test_valid_indicator_types_consistent(self):
