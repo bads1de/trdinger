@@ -10,10 +10,10 @@ import logging
 from typing import Any, Dict, List, Optional, TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from .strategy_models import Condition
+    from ..models.strategy_models import Condition
 
 
-from .strategy_models import (
+from ..models.strategy_models import (
     IndicatorGene,
     TPSLGene,
     TPSLMethod,
@@ -143,7 +143,7 @@ class GeneSerializer:
         try:
             # IndicatorGeneクラスを動的にインポート
             # IndicatorGeneクラスを動的にインポート
-            from .strategy_models import IndicatorGene
+            from ..models.strategy_models import IndicatorGene
 
             return IndicatorGene(
                 type=data["type"],
@@ -179,7 +179,7 @@ class GeneSerializer:
     def condition_or_group_to_dict(self, obj) -> Dict[str, Any]:
         """Condition または ConditionGroup を辞書に変換"""
         try:
-            from .strategy_models import ConditionGroup, Condition
+            from ..models.strategy_models import ConditionGroup, Condition
 
             if isinstance(obj, ConditionGroup):
                 return {
@@ -228,7 +228,7 @@ class GeneSerializer:
             if data is None:
                 return None
 
-            from .strategy_models import TPSLGene
+            from ..models.strategy_models import TPSLGene
 
             return TPSLGene.from_dict(data)  # type: ignore[cSpell] # TPSL is a valid trading acronym
 
@@ -273,7 +273,7 @@ class GeneSerializer:
                 return None
 
             # PositionSizingGeneクラスを動的にインポート
-            from .strategy_models import PositionSizingGene
+            from ..models.strategy_models import PositionSizingGene
 
             return PositionSizingGene.from_dict(data)
 
@@ -460,7 +460,7 @@ class GeneSerializer:
                         parameters = self._generate_indicator_parameters(
                             indicator_type, param_val
                         )
-                        from .strategy_models import IndicatorGene
+                        from ..models.strategy_models import IndicatorGene
 
                         indicators.append(
                             IndicatorGene(
@@ -480,7 +480,7 @@ class GeneSerializer:
                     )
                 else:
                     # SmartConditionGeneratorが無効な場合のフォールバック
-                    from .strategy_models import Condition
+                    from ..models.strategy_models import Condition
 
                     long_entry_conditions = [
                         Condition(
@@ -501,7 +501,7 @@ class GeneSerializer:
                 entry_conditions = long_entry_conditions
             else:
                 # フォールバック条件
-                from .strategy_models import Condition
+                from ..models.strategy_models import Condition
 
                 long_entry_conditions = [
                     Condition(left_operand="close", operator=">", right_operand="open")
@@ -717,7 +717,7 @@ class GeneSerializer:
             ]
 
             # 条件の復元
-            from .strategy_models import ConditionGroup
+            from ..models.strategy_models import ConditionGroup
 
             def parse_condition_or_group(cond_data):
                 if isinstance(cond_data, dict) and cond_data.get("type") == "OR_GROUP":
@@ -802,7 +802,7 @@ class GeneSerializer:
             条件オブジェクト
         """
         try:
-            from .strategy_models import Condition
+            from ..models.strategy_models import Condition
 
             return Condition(
                 left_operand=data["left_operand"],

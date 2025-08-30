@@ -1,5 +1,5 @@
 """
-指標計算器（サービス統合版）
+指標計算器
 
 テクニカル指標の計算を担当します。
 """
@@ -70,13 +70,10 @@ class IndicatorCalculator:
             if missing_columns:
                 logger.warning(f"不足しているカラム: {missing_columns}")
 
-            logger.warning(
-                f"指標計算開始: {indicator_type}, パラメータ: {parameters}"
-            )
+            logger.warning(f"指標計算開始: {indicator_type}, パラメータ: {parameters}")
 
             # パラメータマッピングをTechnicalIndicatorServiceに任せる
             mapped_parameters = parameters.copy()
-
 
             # TechnicalIndicatorServiceを使用して計算
             result = self.technical_indicator_service.calculate_indicator(
