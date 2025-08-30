@@ -38,6 +38,7 @@ def _convert_to_strategy_gene(individual_or_gene) -> StrategyGene:
             return gene_serializer.decode_list_to_strategy_gene(
                 individual_or_gene, StrategyGene
             )
+
         except Exception as e:
             logger.error(f"Individual→StrategyGene変換エラー: {e}")
             raise
