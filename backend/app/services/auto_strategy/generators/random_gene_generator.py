@@ -297,7 +297,7 @@ class RandomGeneGenerator:
 
             experimental = indicator_registry.experimental_indicators
         except Exception:
-            experimental = {"RMI", "DPO", "CHOP", "VORTEX", "EOM", "KVO", "PVT", "CMF"}
+            experimental = {"RMI", "DPO", "VORTEX", "EOM", "KVO", "PVT", "CMF"}
         try:
             allowed = set(getattr(self.config, "allowed_indicators", []) or [])
             if not allowed:
@@ -308,18 +308,6 @@ class RandomGeneGenerator:
             available_indicators = [
                 ind for ind in available_indicators if ind not in experimental
             ]
-        # レジーム判定に利用するCHOPは有用だが、allowed 指定時は尊重する
-        try:
-            ind_mode = getattr(self.config, "indicator_mode", "mixed")
-            allowed = set(getattr(self.config, "allowed_indicators", []) or [])
-            if (
-                ind_mode == "technical_only"
-                and not allowed
-                and "CHOP" not in available_indicators
-            ):
-                available_indicators.append("CHOP")
-        except Exception:
-            pass
         # テクニカルオンリー時のデフォルト候補を厳選して成立性を底上げ（allowed_indicators 指定時は尊重）
         if indicator_mode == "technical_only":
             # デフォルトのcuratedセットを事前に定義

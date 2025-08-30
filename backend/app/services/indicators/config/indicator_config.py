@@ -186,7 +186,6 @@ class IndicatorConfigRegistry:
         self.experimental_indicators = {
             "RMI",
             "DPO",
-            "CHOP",
             "VORTEX",
             "EOM",
             "KVO",
