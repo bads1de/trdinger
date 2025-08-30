@@ -70,20 +70,13 @@ class IndicatorCalculator:
             if missing_columns:
                 logger.warning(f"不足しているカラム: {missing_columns}")
 
-            # パラメータマッピング（period -> length）
-            mapped_parameters = parameters.copy()
-            if "period" in mapped_parameters:
-                if "length" not in mapped_parameters:
-                    mapped_parameters["length"] = mapped_parameters["period"]
-                # tclengthはSTCインジケータ専用パラメータなのでSTCのみに追加
-                if indicator_type == "STC" and "tclength" not in mapped_parameters:
-                    mapped_parameters["tclength"] = mapped_parameters["period"]
-                    # STCの場合、periodパラメータを削除（余分なパラメータを渡さないため）
-                    del mapped_parameters["period"]
-
             logger.warning(
-                f"指標計算開始: {indicator_type}, 元パラメータ: {parameters}, マップ後: {mapped_parameters}"
+                f"指標計算開始: {indicator_type}, パラメータ: {parameters}"
             )
+
+            # パラメータマッピングをTechnicalIndicatorServiceに任せる
+            mapped_parameters = parameters.copy()
+
 
             # TechnicalIndicatorServiceを使用して計算
             result = self.technical_indicator_service.calculate_indicator(
