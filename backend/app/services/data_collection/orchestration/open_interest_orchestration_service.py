@@ -13,6 +13,7 @@ from sqlalchemy.orm import Session
 
 from app.utils.response import api_response, error_response
 from database.repositories.open_interest_repository import OpenInterestRepository
+from app.services.symbol.normalization_service import SymbolNormalizationService
 
 from ..bybit.open_interest_service import BybitOpenInterestService
 
@@ -140,7 +141,7 @@ class OpenInterestOrchestrationService:
                 if end_date
                 else None
             )
-            normalized_symbol = service.normalize_symbol(symbol)
+            normalized_symbol = SymbolNormalizationService.normalize_symbol(symbol, "bybit")
 
             records = repository.get_open_interest_data(
                 symbol=normalized_symbol,

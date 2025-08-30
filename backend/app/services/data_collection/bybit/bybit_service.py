@@ -17,6 +17,7 @@ from app.utils.error_handler import (
 )
 from database.connection import get_db
 from app.config.unified_config import unified_config
+from app.services.symbol.normalization_service import SymbolNormalizationService
 
 logger = logging.getLogger(__name__)
 
@@ -36,28 +37,7 @@ class BybitService(ABC):
             }
         )
 
-    def normalize_symbol(self, symbol: str) -> str:
-        """
-        シンボルを正規化（無期限契約形式に変換）
-
-        Args:
-            symbol: 入力シンボル（例: 'BTC/USDT' または 'BTC/USDT:USDT'）
-
-        Returns:
-            正規化されたシンボル（例: 'BTC/USDT:USDT'）
-        """
-        # 既に無期限契約形式の場合はそのまま返す
-        if ":" in symbol:
-            return symbol
-
-        # スポット形式を無期限契約形式に変換
-        if symbol.endswith("/USDT"):
-            return f"{symbol}:USDT"
-        elif symbol.endswith("/USD"):
-            return f"{symbol}:USD"
-        else:
-            # デフォルトはUSDT無期限契約
-            return f"{symbol}:USDT"
+    # normalize_symbol method removed - using SymbolNormalizationService instead
 
     def _validate_symbol(self, symbol: str) -> None:
         """
@@ -553,7 +533,7 @@ class BybitService(ABC):
         Returns:
             差分更新結果を含む辞書
         """
-        normalized_symbol = self.normalize_symbol(symbol)
+        normalized_symbol = SymbolNormalizationService.normalize_symbol(symbol, provider="bybit")
 
         # データベースから最新タイムスタンプを取得
         latest_timestamp = await self._get_latest_timestamp_from_db(
@@ -660,7 +640,7 @@ class BybitService(ABC):
         Returns:
             取得・保存結果を含む辞書
         """
-        normalized_symbol = self.normalize_symbol(symbol)
+        normalized_symbol = SymbolNormalizationService.normalize_symbol(symbol, provider="bybit")
 
         if fetch_all:
             # 全期間データを取得
@@ -753,7 +733,7 @@ class BybitService(ABC):
         converter_method = getattr(
             config.data_converter_class, config.converter_method_name
         )
-        records = converter_method(history_data, self.normalize_symbol(symbol))
+        records = converter_method(history_data, SymbolNormalizationService.normalize_symbol(symbol, provider="bybit"))
 
         logger.info(f"データ変換完了: {len(records)}件のレコードをDB挿入開始...")
 

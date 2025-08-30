@@ -9,6 +9,7 @@ from typing import Any, Dict, List, Optional
 from app.config.unified_config import unified_config
 from app.utils.data_conversion import OHLCVDataConverter
 from database.repositories.ohlcv_repository import OHLCVRepository
+from app.services.symbol.normalization_service import SymbolNormalizationService
 
 from .bybit_service import BybitService
 
@@ -60,7 +61,7 @@ class BybitMarketDataService(BybitService):
         self._validate_timeframe(timeframe)
 
         # シンボルの正規化
-        normalized_symbol = self.normalize_symbol(symbol)
+        normalized_symbol = SymbolNormalizationService.normalize_symbol(symbol, "bybit")
 
         # 基底クラスの共通エラーハンドリングを使用
         ohlcv_data = await self._handle_ccxt_errors(

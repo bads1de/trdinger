@@ -16,6 +16,7 @@ from abc import ABC, abstractmethod
 from app.utils.error_handler import (
     ErrorHandler,
 )
+from app.services.symbol.normalization_service import SymbolNormalizationService
 
 
 logger = logging.getLogger(__name__)
@@ -181,15 +182,9 @@ class DataConverter:
             return default
 
     @staticmethod
-    def normalize_symbol(symbol: Optional[str]) -> str:
-        """シンボルを正規化"""
-        if not symbol:
-            return "BTC:USDT"
-
-        if ":" not in symbol:
-            return f"{symbol}:USDT"
-
-        return symbol
+    def normalize_symbol(symbol: Optional[str], provider: str = "generic") -> str:
+        """シンボルを正規化（統一サービス経由）"""
+        return SymbolNormalizationService.normalize_symbol(symbol, provider)
 
 
 class LoggingUtils:
