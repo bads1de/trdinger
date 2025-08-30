@@ -61,9 +61,7 @@ class RandomGeneGenerator:
         self.serializer = GeneSerializer(
             enable_smart_generation
         )  # GeneSerializerのインスタンスを作成
-        self.smart_condition_generator = ConditionGenerator(
-            enable_smart_generation
-        )
+        self.smart_condition_generator = ConditionGenerator(enable_smart_generation)
         # コンテキストがあれば適用
         try:
             smart_context = smart_context or {}
@@ -573,7 +571,27 @@ class RandomGeneGenerator:
                         # period が必要なものにのみデフォルトperiodを与える（SMA/EMA 等）
                         default_params = (
                             {"period": random.choice([10, 14, 20, 30, 50])}
-                            if chosen in ("SMA", "EMA", "WMA", "TRIMA", "KAMA", "T3", "ALMA", "HMA", "RMA", "SWMA", "ZLMA", "VWMA", "FWMA", "HWMA", "JMA", "MCGD", "VIDYA", "WCP")
+                            if chosen
+                            in (
+                                "SMA",
+                                "EMA",
+                                "WMA",
+                                "TRIMA",
+                                "KAMA",
+                                "T3",
+                                "ALMA",
+                                "HMA",
+                                "RMA",
+                                "SWMA",
+                                "ZLMA",
+                                "VWMA",
+                                "FWMA",
+                                "HWMA",
+                                "JMA",
+                                "MCGD",
+                                "VIDYA",
+                                "WCP",
+                            )
                             else {}
                         )
                         indicators.append(
@@ -628,7 +646,16 @@ class RandomGeneGenerator:
                                 if _is_ma(ind.type) and isinstance(ind.parameters, dict)
                             )
                             # テスト互換性のため SMA/EMA/MAMA/MA を優先
-                            preferred = {"SMA", "EMA", "MAMA", "MA", "HMA", "ALMA", "VIDYA", "JMA"}
+                            preferred = {
+                                "SMA",
+                                "EMA",
+                                "MAMA",
+                                "MA",
+                                "HMA",
+                                "ALMA",
+                                "VIDYA",
+                                "JMA",
+                            }
                             pref_pool = [
                                 n for n in ma_pool if n in preferred
                             ] or ma_pool
@@ -657,7 +684,10 @@ class RandomGeneGenerator:
             except Exception:
                 # レジストリ取得が失敗しても安全にSMAを追加（ただしavailable_indicatorsにSMAが含まれる場合のみ）
                 if (
-                    any(ind.type in ("SMA", "EMA", "MAMA", "MA", "HMA", "ALMA", "VIDYA") for ind in indicators)
+                    any(
+                        ind.type in ("SMA", "EMA", "MAMA", "MA", "HMA", "ALMA", "VIDYA")
+                        for ind in indicators
+                    )
                     or "SMA" not in self.available_indicators
                 ):
                     pass
@@ -926,6 +956,7 @@ class RandomGeneGenerator:
         else:
             return Condition(left_operand="close", operator="<", right_operand="SMA")
 
+    # cSpell: ignore tpsl
     def _generate_tpsl_gene(self) -> TPSLGene:
         """
         TP/SL遺伝子を生成（GA最適化対象）
@@ -946,23 +977,34 @@ class RandomGeneGenerator:
                         [TPSLMethod(m) for m in allowed_methods]
                     )
 
-            if hasattr(self.config, "tpsl_sl_range"):
-                # SL範囲制約
+            if (
+                hasattr(self.config, "tpsl_sl_range")
+                and self.config.tpsl_sl_range is not None
+            ):
                 sl_min, sl_max = self.config.tpsl_sl_range
                 tpsl_gene.stop_loss_pct = random.uniform(sl_min, sl_max)
                 tpsl_gene.base_stop_loss = random.uniform(sl_min, sl_max)
 
-            if hasattr(self.config, "tpsl_tp_range"):
+            if (
+                hasattr(self.config, "tpsl_tp_range")
+                and self.config.tpsl_tp_range is not None
+            ):
                 # TP範囲制約
                 tp_min, tp_max = self.config.tpsl_tp_range
                 tpsl_gene.take_profit_pct = random.uniform(tp_min, tp_max)
 
-            if hasattr(self.config, "tpsl_rr_range"):
+            if (
+                hasattr(self.config, "tpsl_rr_range")
+                and self.config.tpsl_rr_range is not None
+            ):
                 # リスクリワード比範囲制約
                 rr_min, rr_max = self.config.tpsl_rr_range
                 tpsl_gene.risk_reward_ratio = random.uniform(rr_min, rr_max)
 
-            if hasattr(self.config, "tpsl_atr_multiplier_range"):
+            if (
+                hasattr(self.config, "tpsl_atr_multiplier_range")
+                and self.config.tpsl_atr_multiplier_range is not None
+            ):
                 # ATR倍率範囲制約
                 atr_min, atr_max = self.config.tpsl_atr_multiplier_range
                 tpsl_gene.atr_multiplier_sl = random.uniform(atr_min, atr_max)

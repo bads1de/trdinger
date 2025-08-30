@@ -764,6 +764,13 @@ class GAConfig(BaseConfig):
     min_compatibility_score: float = 0.8
     strict_compatibility_score: float = 0.9
 
+    # TPSL関連設定拡張
+    tpsl_method_constraints: Optional[List[str]] = None
+    tpsl_sl_range: Optional[List[float]] = None
+    tpsl_tp_range: Optional[List[float]] = None
+    tpsl_rr_range: Optional[List[float]] = None
+    tpsl_atr_multiplier_range: Optional[List[float]] = None
+
     def get_ga_settings(self) -> GASettings:
         """関連するGASettingsを取得"""
         if self.auto_strategy_config:
@@ -900,6 +907,12 @@ class GAConfig(BaseConfig):
             # 指標モード設定
             "indicator_mode": self.indicator_mode,
             "enable_ml_indicators": self.enable_ml_indicators,
+            # TPSL設定
+            "tpsl_method_constraints": self.tpsl_method_constraints,
+            "tpsl_sl_range": self.tpsl_sl_range,
+            "tpsl_tp_range": self.tpsl_tp_range,
+            "tpsl_rr_range": self.tpsl_rr_range,
+            "tpsl_atr_multiplier_range": self.tpsl_atr_multiplier_range,
         }
 
     @classmethod
@@ -965,6 +978,12 @@ class GAConfig(BaseConfig):
             # 実行設定
             "parallel_processes": None,
             "random_state": None,
+            # TPSL設定デフォルト
+            "tpsl_method_constraints": data.get("tpsl_method_constraints", GA_DEFAULT_TPSL_METHOD_CONSTRAINTS),
+            "tpsl_sl_range": data.get("tpsl_sl_range", GA_TPSL_SL_RANGE),
+            "tpsl_tp_range": data.get("tpsl_tp_range", GA_TPSL_TP_RANGE),
+            "tpsl_rr_range": data.get("tpsl_rr_range", GA_TPSL_RR_RANGE),
+            "tpsl_atr_multiplier_range": data.get("tpsl_atr_multiplier_range", GA_TPSL_ATR_MULTIPLIER_RANGE),
         }
 
         # デフォルト値をマージ
@@ -1013,6 +1032,27 @@ class GAConfig(BaseConfig):
         # パラメータ範囲
         self.parameter_ranges = ga_config.parameter_ranges.copy()
         self.threshold_ranges = ga_config.threshold_ranges.copy()
+
+        # TPSL設定を適用
+        if self.tpsl_method_constraints is None:
+            from ..config.constants import GA_DEFAULT_TPSL_METHOD_CONSTRAINTS
+            self.tpsl_method_constraints = GA_DEFAULT_TPSL_METHOD_CONSTRAINTS.copy()
+
+        if self.tpsl_sl_range is None:
+            from ..config.constants import GA_TPSL_SL_RANGE
+            self.tpsl_sl_range = GA_TPSL_SL_RANGE.copy()
+
+        if self.tpsl_tp_range is None:
+            from ..config.constants import GA_TPSL_TP_RANGE
+            self.tpsl_tp_range = GA_TPSL_TP_RANGE.copy()
+
+        if self.tpsl_rr_range is None:
+            from ..config.constants import GA_TPSL_RR_RANGE
+            self.tpsl_rr_range = GA_TPSL_RR_RANGE.copy()
+
+        if self.tpsl_atr_multiplier_range is None:
+            from ..config.constants import GA_TPSL_ATR_MULTIPLIER_RANGE
+            self.tpsl_atr_multiplier_range = GA_TPSL_ATR_MULTIPLIER_RANGE.copy()
 
         # 許可指標リスト
         if not self.allowed_indicators:
