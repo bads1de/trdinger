@@ -8,10 +8,8 @@ import logging
 import math
 from typing import Any, Dict, Optional, Tuple
 
-from dataclasses import dataclass, field
-
-from ..generators.tpsl_generator import UnifiedTPSLGenerator
-from ..models.strategy_models import TPSLGene, TPSLMethod, TPSLResult
+from .generator import UnifiedTPSLGenerator
+from ..models.strategy_models import TPSLGene, TPSLMethod
 
 logger = logging.getLogger(__name__)
 
@@ -31,8 +29,8 @@ class TPSLService:
         # 後方互換のため: 旧属性名を維持しつつ、統合ジェネレーターに委譲
         self.risk_reward_generator = None  # 非推奨
         self.risk_reward_calculator = None  # 非推奨
-        self.statistical_generator = None   # 非推奨
-        self.volatility_generator = None    # 非推奨
+        self.statistical_generator = None  # 非推奨
+        self.volatility_generator = None  # 非推奨
 
     def calculate_tpsl_prices(
         self,
@@ -196,7 +194,7 @@ class TPSLService:
             result = self.unified_generator.generate_tpsl(
                 "risk_reward_ratio",
                 stop_loss_pct=tpsl_gene.base_stop_loss,
-                target_ratio=tpsl_gene.risk_reward_ratio
+                target_ratio=tpsl_gene.risk_reward_ratio,
             )
 
             return self._make_prices(
@@ -227,7 +225,7 @@ class TPSLService:
                 atr_multiplier_sl=tpsl_gene.atr_multiplier_sl,
                 atr_multiplier_tp=tpsl_gene.atr_multiplier_tp,
                 market_data=market_data or {},
-                current_price=current_price
+                current_price=current_price,
             )
 
             return self._make_prices(
@@ -256,7 +254,7 @@ class TPSLService:
                 "statistical",
                 lookback_period_days=tpsl_gene.lookback_period,
                 confidence_threshold=tpsl_gene.confidence_threshold,
-                market_conditions=market_data
+                market_conditions=market_data,
             )
 
             return self._make_prices(
@@ -285,7 +283,7 @@ class TPSLService:
                 "adaptive",
                 tpsl_gene=tpsl_gene,
                 market_data=market_data or {},
-                current_price=current_price
+                current_price=current_price,
             )
 
             return self._make_prices(

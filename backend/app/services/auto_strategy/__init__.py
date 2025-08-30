@@ -7,9 +7,14 @@
 from .config.auto_strategy_config import GAConfig
 from .models.strategy_models import StrategyGene
 from .services.auto_strategy_service import AutoStrategyService
+from .tpsl import TPSLService, UnifiedTPSLGenerator
+from .positions import PositionSizingService
 
 __all__ = [
     "AutoStrategyService",
     "StrategyGene",
     "GAConfig",
+    "TPSLService",
+    "UnifiedTPSLGenerator",
+    "PositionSizingService",
 ]

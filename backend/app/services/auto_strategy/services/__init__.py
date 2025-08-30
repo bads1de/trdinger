@@ -7,8 +7,8 @@ managers/, persistence/ の機能を統合しています。
 
 from .auto_strategy_service import AutoStrategyService
 from .ml_orchestrator import MLOrchestrator
-from .position_sizing_service import PositionSizingService
-from .tpsl_service import TPSLService
+from ..positions.position_sizing_service import PositionSizingService
+from ..tpsl.tpsl_service import TPSLService
 
 # managers からの統合
 from .experiment_manager import ExperimentManager

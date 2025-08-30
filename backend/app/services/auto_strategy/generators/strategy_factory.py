@@ -12,8 +12,8 @@ from typing import List, Tuple, Type, Union, cast
 from backtesting import Strategy
 
 from ..services.indicator_service import IndicatorCalculator
-from ..services.position_sizing_service import PositionSizingService
-from ..services.tpsl_service import TPSLService
+from ..positions.position_sizing_service import PositionSizingService
+from ..tpsl.tpsl_service import TPSLService
 from ..core.condition_evaluator import ConditionEvaluator
 from ..models.strategy_models import IndicatorGene, StrategyGene, ConditionGroup
 

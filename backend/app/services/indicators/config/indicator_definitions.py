@@ -2751,7 +2751,11 @@ rsi_ema_cross_config.add_parameter(
 rsi_ema_cross_config.add_parameter(
     ParameterConfig(name="ema_length", default_value=9, min_value=2, max_value=200)
 )
-rsi_ema_cross_config.param_map = {"close": "data"}
+rsi_ema_cross_config.param_map = {
+    "close": "data",
+    "rsi_length": "rsi_length",
+    "ema_length": "ema_length"
+}
 indicator_registry.register(rsi_ema_cross_config)
 
 # Additional momentum registrations

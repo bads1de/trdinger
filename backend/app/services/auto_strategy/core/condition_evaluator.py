@@ -132,11 +132,33 @@ class ConditionEvaluator:
             logger.error(f"条件評価エラー: {e}")
             return False
 
+    def _get_final_value(self, value) -> float:
+        """配列/シーケンスから末尾の有限値を取得（pandas-ta対応）"""
+        try:
+            # numpy配列またはシーケンスの場合
+            if hasattr(value, '__getitem__') and not isinstance(value, (str, bytes)):
+                import numpy as np
+                arr = np.asarray(value, dtype=float)
+                # 末尾から有限値を検索
+                for v in arr[::-1]:
+                    if np.isfinite(v):
+                        return float(v)
+                return 0.0
+            # スカラー値の場合
+            import numpy as np
+            val = float(value)
+            return val if np.isfinite(val) else 0.0
+        except Exception:
+            try:
+                return float(value)
+            except Exception:
+                return 0.0
+
     def get_condition_value(
         self, operand: Union[Dict[str, Any], str, int, float], strategy_instance
     ) -> float:
         """
-        条件オペランドから値を取得
+        条件オペランドから値を取得（pandas-ta統合済み）
 
         Args:
             operand: オペランド（辞書、文字列、数値）
@@ -145,36 +167,28 @@ class ConditionEvaluator:
         Returns:
             オペランドの値（末尾の有限値を優先して返す）
         """
-
-        # 値の末尾有限値取得は IndicatorNameResolver に集約
-
         try:
-            # dictオペランドの処理は Resolver に完全委譲
-            if isinstance(operand, dict):
-                indicator_name = operand.get("indicator")
-                if indicator_name:
-                    from ..core.indicator_name_resolver import IndicatorNameResolver
-
-                    resolved, value = IndicatorNameResolver.try_resolve_value(
-                        indicator_name, strategy_instance
-                    )
-                    if resolved:
-                        return value
-
-            # 数値はそのまま
+            # 数値はそのまま返す
             if isinstance(operand, (int, float)):
                 return float(operand)
 
-            # 文字列はResolverへ
-            if isinstance(operand, str):
-                from ..core.indicator_name_resolver import IndicatorNameResolver
+            # dictオペランドの処理
+            if isinstance(operand, dict):
+                indicator_name = operand.get("indicator")
+                if indicator_name:
+                    # pandas-ta直接アクセス
+                    if hasattr(strategy_instance, indicator_name):
+                        value = getattr(strategy_instance, indicator_name)
+                        return self._get_final_value(value)
 
-                resolved, value = IndicatorNameResolver.try_resolve_value(
-                    operand, strategy_instance
-                )
-                if resolved:
-                    return value
-                # 未解決の場合のみ警告
+            # 文字列オペランドの処理
+            if isinstance(operand, str):
+                # pandas-taの標準指標名で直接アクセス
+                if hasattr(strategy_instance, operand):
+                    value = getattr(strategy_instance, operand)
+                    return self._get_final_value(value)
+
+                # 未解決の場合の警告
                 logger.warning(
                     f"未対応のオペランド: {operand} (利用可能な属性: "
                     f"{[attr for attr in dir(strategy_instance) if not attr.startswith('_')]})"
@@ -185,4 +199,4 @@ class ConditionEvaluator:
             return 0.0
         except Exception as e:
             logger.error(f"オペランド値取得エラー: {e}")
-            return -1  # エラーを示す値
+            return 0.0

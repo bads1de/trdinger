@@ -723,7 +723,7 @@ class MomentumIndicators:
 
     @staticmethod
     def rsi_ema_cross(
-        data: Union[np.ndarray, pd.Series], rsi_length: int = 14, ema_length: int = 9
+        data: Union[np.ndarray, pd.Series], rsi_length: int = 14, ema_length: int = 9, **kwargs
     ) -> Tuple[np.ndarray, np.ndarray]:
         """RSI EMAクロス"""
         series = pd.Series(data) if isinstance(data, np.ndarray) else data

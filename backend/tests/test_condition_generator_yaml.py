@@ -5,8 +5,8 @@ sys.path.append('./backend')
 sys.path.append('./')
 
 try:
-    from app.services.auto_strategy.generators.condition_generator import ConditionGenerator
-    print("Import successful!")
+    from app.services.auto_strategy.generators.smart_condition_generator import SmartConditionGenerator
+    print("Import successful - Using SmartConditionGenerator!")
 except Exception as e:
     print(f"Import failed: {e}")
     sys.exit(1)
@@ -20,7 +20,7 @@ class MockIndicatorGene:
 def test_yaml_conditions():
     print("Testing YAML-based condition generation...")
 
-    gen = ConditionGenerator()
+    gen = SmartConditionGenerator()
 
     # Test with some common indicators
     indicators = [
