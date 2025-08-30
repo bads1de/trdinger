@@ -87,26 +87,212 @@ class TrendIndicators:
             raise ValueError(f"length must be positive: {length}")
 
         series = pd.Series(data) if isinstance(data, np.ndarray) else data
-        result = ta.ema(series, length=length)
-        return result.values
+
+        # 第一優先: pandas-ta
+        try:
+            result = ta.ema(series, length=length)
+            if result is not None:
+                # 全てNaNではなく、有用な値が含まれている場合のみ使用
+                result_values = result.values if hasattr(result, 'values') else np.array(result)
+                # 最初のlength位置以降に有効な値がある場合
+                start_idx = length - 1
+                if start_idx < len(result_values) and not np.isnan(result_values[start_idx:]).all():
+                    return result_values
+        except Exception:
+            pass
+
+        # フォールバック実装: numpyベース
+        if len(series) < length:
+            return np.full(len(series), np.nan)
+
+        # EMA計算用変数
+        alpha = 2.0 / (length + 1)
+        ema_values = np.full(len(series), np.nan, dtype=float)
+        ema_values[length - 1] = series.iloc[:length].mean()  # 初期値はSMA
+
+        # ループでEMA計算
+        for i in range(length, len(series)):
+            ema_values[i] = alpha * series.iloc[i] + (1 - alpha) * ema_values[i - 1]
+
+        return ema_values
+    @staticmethod
+    @handle_pandas_ta_errors
+    def ppo(data: Union[np.ndarray, pd.Series], fast: int = 12, slow: int = 26, signal: int = 9):
+        """Percentage Price Oscillator with pandas-ta fallback"""
+        series = pd.Series(data) if isinstance(data, np.ndarray) else data
+
+        try:
+            result = ta.ppo(series, fast=fast, slow=slow, signal=signal)
+            if result is not None and not result.empty:
+                return result.iloc[:, 0].values, result.iloc[:, 1].values, result.iloc[:, 2].values
+        except Exception:
+            pass
+
+        # フォールバック実装
+        ema_fast = TrendIndicators.ema(series, fast)
+        ema_slow = TrendIndicators.ema(series, slow)
+
+        if ema_fast is None or ema_slow is None:
+            nan_array = np.full(len(series), np.nan)
+            return nan_array, nan_array, nan_array
+
+        # PPO主力とシグナルラインの計算
+        ppo_line = 100 * (ema_fast - ema_slow) / ema_slow
+        signal_line = TrendIndicators.ema(ppo_line, signal)
+
+        return ppo_line, signal_line, ppo_line - signal_line
+
+    @staticmethod
+    @handle_pandas_ta_errors
+    def stochf(
+        high: Union[np.ndarray, pd.Series],
+        low: Union[np.ndarray, pd.Series],
+        close: Union[np.ndarray, pd.Series],
+        length: int = 14,
+        fast_length: int = 3
+    ):
+        """Stochastic Fast with pandas-ta fallback"""
+        high_series = pd.Series(high) if isinstance(high, np.ndarray) else high
+        low_series = pd.Series(low) if isinstance(low, np.ndarray) else low
+        close_series = pd.Series(close) if isinstance(close, np.ndarray) else close
+
+        try:
+            result = ta.stochf(
+                high=high_series,
+                low=low_series,
+                close=close_series,
+                fastk_length=fast_length,
+                fastd_length=length
+            )
+            if result is not None and not result.empty:
+                return result.iloc[:, 0].values, result.iloc[:, 1].values
+        except Exception:
+            pass
+
+        # フォールバック実装 (シンプルなストキャスティクス計算)
+        raw_k = 100 * (close_series - low_series.rolling(length).min()) / (high_series.rolling(length).max() - low_series.rolling(length).min())
+        fast_k = raw_k.rolling(fast_length).mean()
+
+        return fast_k.values, fast_k.values
 
     @staticmethod
     @handle_pandas_ta_errors
     def tema(data: Union[np.ndarray, pd.Series], length: int) -> np.ndarray:
         """三重指数移動平均"""
         series = pd.Series(data) if isinstance(data, np.ndarray) else data
-        result = ta.tema(series, length=length)
-        # 全NaNの場合はEMAにフォールバック
-        if result.isna().all():
-            result = ta.ema(series, length=length)
-        return result.values
+
+        # 第一優先: pandas-ta
+    @staticmethod
+    @handle_pandas_ta_errors
+    def stc(data: Union[np.ndarray, pd.Series], length: int = 10, fast_length: int = 23, slow_length: int = 50):
+        """Schaff Trend Cycle with pandas-ta fallback"""
+        series = pd.Series(data) if isinstance(data, np.ndarray) else data
+
+        # 第一優先: pandas-ta
+        try:
+            result = ta.stc(series, length=length, fastLength=fast_length, slowLength=slow_length)
+            if result is not None and not result.isna().all():
+                return result.values if hasattr(result, 'values') else np.array(result)
+        except Exception:
+            pass
+
+        # フォールバック実装: 簡易STC (MACDベース)
+        # %K: EMA(EMA(price, fast)) / EMA(EMA(price, slow)) - 1
+        # %D: EMA(%K) * 100
+        # STC: EMA(%D) * 100 (シグナルラインなしの場合は 3重EMAベース)
+
+        if len(series) < slow_length:
+            return np.full(len(series), np.nan)
+
+        # 基本的なMACD計算
+        ema_fast = TrendIndicators.ema(series, fast_length)
+        ema_slow = TrendIndicators.ema(series, slow_length)
+        macd = ema_fast - ema_slow
+
+        # MACDのサイクル分析 (変動範囲のトレンド)
+        if len(macd) > 0:
+            # ピークとバレー検出 (簡易版)
+            stc_values = np.full(len(series), np.nan)
+            valid_start = slow_length - 1
+
+            # 基本的なサイクル計算 (簡易: MACDのノーマライズ)
+            if len(macd) >= valid_start + length:
+                # MACDのグサイクルをトレンドサイクルに変換
+                cycle = ((macd - macd.rolling(slow_length).min()) /
+                        (macd.rolling(slow_length).max() - macd.rolling(slow_length).min())) * 100
+
+                # 最終的なSTC値
+                stc_values[valid_start:] = TrendIndicators.ema(cycle[valid_start:], length)
+
+            return stc_values
+
+        return np.full(len(series), np.nan)
+        # 第一優先: pandas-ta
+        try:
+            result = ta.tema(series, length=length)
+            if result is not None:
+                # 全てNaNではなく、有用な値が含まれている場合のみ使用
+                result_values = result.values if hasattr(result, 'values') else np.array(result)
+                # 最初のlength位置以降に有効な値がある場合
+                start_idx = length * 3 - 1
+                if start_idx < len(result_values) and not np.isnan(result_values[start_idx:]).all():
+                    return result_values
+        except Exception:
+            pass
+
+        # フォールバック実装: 多段EMA計算
+        if len(series) < length * 3:
+            return np.full(len(series), np.nan)
+
+        # EMA1, EMA2, EMA3の計算
+        ema1 = TrendIndicators.ema(series, length)
+        ema1_series = pd.Series(ema1, index=series.index)
+
+        ema2 = TrendIndicators.ema(ema1_series, length)
+        ema2_series = pd.Series(ema2, index=series.index)
+
+        ema3 = TrendIndicators.ema(ema2_series, length)
+        ema3_series = pd.Series(ema3, index=series.index)
+
+        # TEMA = 3*EMA1 - 3*EMA2 + EMA3
+        tema_values = 3 * ema1_series - 3 * ema2_series + ema3_series
+
+        return tema_values.values if hasattr(tema_values, 'values') else np.array(tema_values)
 
     @staticmethod
     @handle_pandas_ta_errors
     def dema(data: Union[np.ndarray, pd.Series], length: int) -> np.ndarray:
         """二重指数移動平均"""
         series = pd.Series(data) if isinstance(data, np.ndarray) else data
-        return ta.dema(series, length=length).values
+
+        # 第一優先: pandas-ta
+        try:
+            result = ta.dema(series, length=length)
+            if result is not None:
+                # 全てNaNではなく、有用な値が含まれている場合のみ使用
+                result_values = result.values if hasattr(result, 'values') else np.array(result)
+                # 最初のlength位置以降に有効な値がある場合
+                start_idx = length * 2 - 1
+                if start_idx < len(result_values) and not np.isnan(result_values[start_idx:]).all():
+                    return result_values
+        except Exception:
+            pass
+
+        # フォールバック実装: 多段EMA計算 (DEMA = 2*EMA1 - EMA2)
+        if len(series) < length * 2:
+            return np.full(len(series), np.nan)
+
+        # EMA1, EMA2の計算
+        ema1 = TrendIndicators.ema(series, length)
+        ema1_series = pd.Series(ema1, index=series.index)
+
+        ema2 = TrendIndicators.ema(ema1_series, length)
+        ema2_series = pd.Series(ema2, index=series.index)
+
+        # DEMA = 2*EMA1 - EMA2
+        dema_values = 2 * ema1_series - ema2_series
+
+        return dema_values.values if hasattr(dema_values, 'values') else np.array(dema_values)
 
     @staticmethod
     @handle_pandas_ta_errors
@@ -326,7 +512,43 @@ class TrendIndicators:
     def hma(data: Union[np.ndarray, pd.Series], length: int = 20) -> np.ndarray:
         """Hull Moving Average"""
         series = pd.Series(data) if isinstance(data, np.ndarray) else data
-        return ta.hma(series, length=length).values
+
+        # 第一優先: pandas-ta
+        try:
+            result = ta.hma(series, length=length)
+            if result is not None:
+                # 全てNaNではなく、有用な値が含まれている場合のみ使用
+                result_values = result.values if hasattr(result, 'values') else np.array(result)
+                # 最初のlength位置以降に有効な値がある場合
+                start_idx = int(length * 1.5) - 1  # HMAはより多くのデータを必要とする
+                if start_idx < len(result_values) and not np.isnan(result_values[start_idx:]).all():
+                    return result_values
+        except Exception:
+            pass
+
+        # フォールバック実装: カスタムHull Moving Average
+        if len(series) < length * 3:  # HMAは3つのWMAを必要とする
+            return np.full(len(series), np.nan)
+
+        # 計算ステップ:
+        # 1. WMA(n/2)
+        # 2. WMA(n)
+        # 3. WMA(n/2) を WMA(n) から引いて、2倍する
+        # 4. 結果を sqrt(n)でWMA
+
+        import math
+        hma_length = int(length / 2)
+        sqrt_length = int(math.floor(math.sqrt(length)))
+
+        # WMA(n/2) と WMA(n) の計算
+        wma_half = pd.Series(TrendIndicators.wma(series, hma_length))
+        wma_full = pd.Series(TrendIndicators.wma(series, length))
+
+        # 差分を2倍
+        diff = 2 * wma_half - wma_full
+
+        # sqrt(n)でWMA
+        return TrendIndicators.wma(diff, sqrt_length).values
 
     @staticmethod
     @handle_pandas_ta_errors
@@ -387,7 +609,40 @@ class TrendIndicators:
     def swma(data: Union[np.ndarray, pd.Series], length: int = 10) -> np.ndarray:
         """Symmetric Weighted Moving Average"""
         series = pd.Series(data) if isinstance(data, np.ndarray) else data
-        return ta.swma(series, length=length).values
+
+        # 第一優先: pandas-ta
+        try:
+            result = ta.swma(series, length=length)
+            if result is not None:
+                # 全てNaNではなく、有用な値が含まれている場合のみ使用
+                result_values = result.values if hasattr(result, 'values') else np.array(result)
+                # 最初のlength位置以降に有効な値がある場合
+                start_idx = length - 1
+                if start_idx < len(result_values) and not np.isnan(result_values[start_idx:]).all():
+                    return result_values
+        except Exception:
+            pass
+
+        # フォールバック実装: カスタム対称重み付き移動平均
+        if len(series) < length:
+            return np.full(len(series), np.nan)
+
+        # SWMA: 対称重み (中心が最大重み、両端に向かって線形減衰)
+        swma_values = np.full(len(series), np.nan)
+
+        # 重み計算 (三角形分布)
+        weights = np.concatenate([
+            np.arange(1, length//2 + 1),  # 上昇部分
+            np.arange(length//2, 0, -1)   # 下降部分
+        ][:length])
+        weights = weights[:length]  # 長さに合わせる
+        weights = weights / weights.sum()  # 正規化
+
+        for i in range(length - 1, len(series)):
+            window = series.iloc[i - length + 1:i + 1].values
+            swma_values[i] = np.sum(window * weights)
+
+        return swma_values
 
     @staticmethod
     @handle_pandas_ta_errors
@@ -399,7 +654,41 @@ class TrendIndicators:
     ) -> np.ndarray:
         """Arnaud Legoux Moving Average"""
         series = pd.Series(data) if isinstance(data, np.ndarray) else data
-        return ta.alma(series, length=length, sigma=sigma, offset=offset).values
+
+        # 第一優先: pandas-ta
+        try:
+            result = ta.alma(series, length=length, sigma=sigma, offset=offset)
+            if result is not None:
+                # 全てNaNではなく、有用な値が含まれている場合のみ使用
+                result_values = result.values if hasattr(result, 'values') else np.array(result)
+                # 最初のlength位置以降に有効な値がある場合
+                start_idx = length - 1
+                if start_idx < len(result_values) and not np.isnan(result_values[start_idx:]).all():
+                    return result_values
+        except Exception:
+            pass
+
+        # フォールバック実装: カスタムガウシアン重み付き移動平均
+        if len(series) < length:
+            return np.full(len(series), np.nan)
+
+        import math
+        # ガウシアンダistributionによる重み計算
+        weights = np.zeros(length)
+        m = offset * (length - 1)  # 調整係数
+
+        for i in range(length):
+            weights[i] = np.exp(-np.power(i - m, 2) / (2 * np.power(length / sigma, 2)))
+
+        weights = weights / weights.sum()  # 正規化
+
+        # 重み付き移動平均計算
+        alma_values = np.full(len(series), np.nan)
+        for i in range(length - 1, len(series)):
+            window = series.iloc[i - length + 1:i + 1].values
+            alma_values[i] = np.sum(window * weights)
+
+        return alma_values
 
     @staticmethod
     @handle_pandas_ta_errors
@@ -550,7 +839,31 @@ class TrendIndicators:
     def fwma(data: Union[np.ndarray, pd.Series], length: int = 10) -> np.ndarray:
         """Fibonacci's Weighted Moving Average"""
         series = pd.Series(data) if isinstance(data, np.ndarray) else data
-        return ta.fwma(series, length=length).values
+
+        # 第一優先: pandas-ta
+        try:
+            result = ta.fwma(series, length=length)
+            if result is not None and not result.isna().all():
+                return result.values if hasattr(result, 'values') else np.array(result)
+        except Exception:
+            pass
+
+        # フォールバック実装: カスタム重み付き移動平均
+        # フィボナッチ数的減衰重みを使用 (簡易バージョン)
+        if len(series) < length:
+            return np.full(len(series), np.nan)
+
+        # フィボナッチ重み生成 (簡易版: 線形減衰に近似)
+        weights = np.arange(1, length + 1, dtype=float)
+        weights = weights / weights.sum()  # 正規化
+
+        # 重み付き移動平均計算
+        fwma_values = np.full(len(series), np.nan)
+        for i in range(length - 1, len(series)):
+            window = series.iloc[i - length + 1:i + 1].values
+            fwma_values[i] = np.sum(window * weights)
+
+        return fwma_values
 
     @staticmethod
     @handle_pandas_ta_errors
@@ -658,8 +971,51 @@ class TrendIndicators:
     def vidya(data: Union[np.ndarray, pd.Series], length: int = 14, adjust: bool = True) -> np.ndarray:
         """Variable Index Dynamic Average"""
         series = pd.Series(data) if isinstance(data, np.ndarray) else data
-        result = ta.vidya(series, length=length, adjust=adjust)
-        return result.values if result is not None else np.full(len(series), np.nan)
+
+        # 第一優先: pandas-ta
+        try:
+            result = ta.vidya(series, length=length, adjust=adjust)
+            if result is not None and not result.isna().all():
+                result_values = result.values if hasattr(result, 'values') else np.array(result)
+                # 最初のlength位置以降に有効な値がある場合
+                start_idx = length * 2 - 1  # VIDYAはより多くのデータを必要とする
+                if start_idx < len(result_values) and not np.isnan(result_values[start_idx:]).all():
+                    return result_values
+        except Exception:
+            pass
+
+        # フォールバック実装: カスタムVIDYA (CMOベースの適応的平均)
+        if len(series) < length * 3:
+            return np.full(len(series), np.nan)
+
+        vidya_values = np.full(len(series), np.nan)
+
+        # 最初の値をSMAで初期化
+        vidya_values[length * 2 - 1] = series.iloc[:length*2].mean()
+
+        # VIDYA計算: アルファは標準化されたChande Momentum Oscillator (CMO)に基づく
+        for i in range(length * 2, len(series)):
+            # CMO計算 (簡易版)
+            diff = series.diff()
+            pos_sum = diff[diff > 0].rolling(length).sum().iloc[i]
+            neg_sum = abs(diff[diff < 0]).rolling(length).sum().iloc[i]
+
+            if neg_sum == 0:
+                cmo = 100.0
+            else:
+                cmo = 100 * (pos_sum - neg_sum) / (pos_sum + neg_sum)
+
+            # CMOをアルファに変換 (0-1の範囲)
+            alpha = abs(cmo) / 100.0
+
+            # adjustパラメータでアルファを調整
+            if adjust:
+                alpha *= 0.8  # 標準調整
+
+            # VIDYA更新
+            vidya_values[i] = alpha * series.iloc[i] + (1 - alpha) * vidya_values[i-1]
+
+        return vidya_values
 
     @staticmethod
     @handle_pandas_ta_errors

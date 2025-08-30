@@ -267,6 +267,86 @@ class IndicatorConfig(BaseSettings):
     ultosc_long_gt_conservative: int = Field(default=58)
     ultosc_short_lt_conservative: int = Field(default=42)
 
+    # ROC 閾値（プロファイル別）
+    roc_long_lt_aggressive: int = Field(default=-5)
+    roc_short_gt_aggressive: int = Field(default=5)
+    roc_long_lt_normal: int = Field(default=-2)
+    roc_short_gt_normal: int = Field(default=2)
+    roc_long_lt_conservative: int = Field(default=-1)
+    roc_short_gt_conservative: int = Field(default=1)
+
+    # MOM 閾値（プロファイル別）
+    mom_long_lt_aggressive: float = Field(default=-0.5)
+    mom_short_gt_aggressive: float = Field(default=0.5)
+    mom_long_lt_normal: float = Field(default=-0.2)
+    mom_short_gt_normal: float = Field(default=0.2)
+    mom_long_lt_conservative: float = Field(default=-0.1)
+    mom_short_gt_conservative: float = Field(default=0.1)
+
+    # STOCH 閾値（プロファイル別）
+    stoch_long_lt_aggressive: int = Field(default=25)
+    stoch_short_gt_aggressive: int = Field(default=75)
+    stoch_long_lt_normal: int = Field(default=30)
+    stoch_short_gt_normal: int = Field(default=70)
+    stoch_long_lt_conservative: int = Field(default=35)
+    stoch_short_gt_conservative: int = Field(default=65)
+
+    # CMO 閾値（プロファイル別）
+    cmo_long_lt_aggressive: int = Field(default=-30)
+    cmo_short_gt_aggressive: int = Field(default=30)
+    cmo_long_lt_normal: int = Field(default=-20)
+    cmo_short_gt_normal: int = Field(default=20)
+    cmo_long_lt_conservative: int = Field(default=-10)
+    cmo_short_gt_conservative: int = Field(default=10)
+
+    # TRIX 閾値（プロファイル別）
+    trix_long_lt_aggressive: float = Field(default=-0.005)
+    trix_short_gt_aggressive: float = Field(default=0.005)
+    trix_long_lt_normal: float = Field(default=0.000)
+    trix_short_gt_normal: float = Field(default=0.000)
+    trix_long_lt_conservative: float = Field(default=0.002)
+    trix_short_gt_conservative: float = Field(default=-0.002)
+
+    # BOP 閾値（プロファイル別）
+    bop_long_gt_aggressive: float = Field(default=-0.1)
+    bop_short_lt_aggressive: float = Field(default=0.1)
+    bop_long_gt_normal: float = Field(default=-0.05)
+    bop_short_lt_normal: float = Field(default=0.05)
+    bop_long_gt_conservative: float = Field(default=-0.02)
+    bop_short_lt_conservative: float = Field(default=0.02)
+
+    # APO 閾値（プロファイル別）
+    apo_long_gt_aggressive: float = Field(default=-1.0)
+    apo_short_lt_aggressive: float = Field(default=1.0)
+    apo_long_gt_normal: float = Field(default=-0.5)
+    apo_short_lt_normal: float = Field(default=0.5)
+    apo_long_gt_conservative: float = Field(default=-0.2)
+    apo_short_lt_conservative: float = Field(default=0.2)
+
+    # FWMA 閾値（プロファイル別）
+    fwma_long_gt_aggressive: float = Field(default=0.5)
+    fwma_short_lt_aggressive: float = Field(default=-0.5)
+    fwma_long_gt_normal: float = Field(default=0.2)
+    fwma_short_lt_normal: float = Field(default=-0.2)
+    fwma_long_gt_conservative: float = Field(default=0.1)
+    fwma_short_lt_conservative: float = Field(default=-0.1)
+
+    # SWMA 閾値（プロファイル別）
+    swma_long_gt_aggressive: float = Field(default=0.5)
+    swma_short_lt_aggressive: float = Field(default=-0.5)
+    swma_long_gt_normal: float = Field(default=0.2)
+    swma_short_lt_normal: float = Field(default=-0.2)
+    swma_long_gt_conservative: float = Field(default=0.1)
+    swma_short_lt_conservative: float = Field(default=-0.1)
+
+    # VIDYA 閾値（プロファイル別）
+    vidya_long_gt_aggressive: float = Field(default=0.5)
+    vidya_short_lt_aggressive: float = Field(default=-0.5)
+    vidya_long_gt_normal: float = Field(default=0.2)
+    vidya_short_lt_normal: float = Field(default=-0.2)
+    vidya_long_gt_conservative: float = Field(default=0.1)
+    vidya_short_lt_conservative: float = Field(default=-0.1)
+
     class Config:
         env_prefix = "INDICATOR_"
         extra = "ignore"

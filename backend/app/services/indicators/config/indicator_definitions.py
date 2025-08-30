@@ -1388,6 +1388,7 @@ def setup_volatility_indicators():
         category="volatility",
         output_names=["BBANDS_Upper", "BBANDS_Middle", "BBANDS_Lower"],
         default_output="BBANDS_Middle",
+        aliases=["BB"],
     )
     bbands_config.add_parameter(
         ParameterConfig(
@@ -1430,6 +1431,38 @@ def setup_volatility_indicators():
     )
     aberration_config.param_map = {"length": "length"}
     indicator_registry.register(aberration_config)
+
+    # BB - BBANDSのエイリアスとして別途登録
+    bb_config = IndicatorConfig(
+        indicator_name="BB",
+        adapter_function=VolatilityIndicators.bbands,
+        required_data=["close"],
+        result_type=IndicatorResultType.COMPLEX,
+        scale_type=IndicatorScaleType.PRICE_RATIO,
+        category="volatility",
+        output_names=["BBANDS_Upper", "BBANDS_Middle", "BBANDS_Lower"],
+        default_output="BBANDS_Middle",
+    )
+    bb_config.add_parameter(
+        ParameterConfig(
+            name="period",
+            default_value=20,
+            min_value=5,
+            max_value=100,
+            description="ボリンジャーバンド期間",
+        )
+    )
+    bb_config.add_parameter(
+        ParameterConfig(
+            name="std",
+            default_value=2.0,
+            min_value=0.5,
+            max_value=5.0,
+            description="標準偏差倍数",
+        )
+    )
+    bb_config.param_map = {"close": "data", "period": "length", "std": "std"}
+    indicator_registry.register(bb_config)
 
     # ACCBANDS
     accbands_config = IndicatorConfig(

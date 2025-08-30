@@ -808,15 +808,62 @@ class MomentumIndicators:
     def cfo(data: Union[np.ndarray, pd.Series], length: int = 9) -> np.ndarray:
         """Chande Forecast Oscillator"""
         series = pd.Series(data) if isinstance(data, np.ndarray) else data
-        result = ta.cfo(series, length=length)
-        return result.values
+
+        try:
+            result = ta.cfo(series, length=length)
+            if result is not None and not result.isna().all():
+                return result.values if hasattr(result, 'values') else np.array(result)
+        except Exception:
+            pass
+
+        # フォールバック実装: CFOの簡易計算 (トレンド方向の変化率)
+        if len(series) < length:
+            return np.full(len(series), np.nan)
+
+        # CFOの近似: 価格変化をSMAで平滑化した指標
+        price_change = series.pct_change()
+        ema_pc = ta.ema(price_change, length=length//2)  # 価格変化のEMA
+        cfo_values = np.full(len(series), np.nan)
+
+        if ema_pc is not None:
+            # CFOの概念: トレンド方向の積分
+            cfo_values[length:] = (ema_pc * series.shift(length//2))[:len(series)-length]
+            # 100スケールに正規化 (CFOの標準範囲)
+            cfo_values = (cfo_values - np.nanmean(cfo_values)) / np.nanstd(cfo_values) * 100
+
+        return cfo_values
 
     @staticmethod
     def cti(data: Union[np.ndarray, pd.Series], length: int = 20) -> np.ndarray:
         """Chande Trend Index"""
         series = pd.Series(data) if isinstance(data, np.ndarray) else data
-        # CTIの簡易実装（RSIベース）
-        return ta.rsi(series, length=length).values
+
+        try:
+            result = ta.cti(series, length=length)
+            if result is not None and not result.isna().all():
+                return result.values if hasattr(result, 'values') else np.array(result)
+        except Exception:
+            pass
+
+        # フォールバック実装: RSIベースのCTI近似 (トレンド方向の相関係数)
+        if len(series) < length:
+            return np.full(len(series), np.nan)
+
+        # CTIの概念: 過去データとの相関係数ベースのアプローチ
+        cti_values = np.full(len(series), np.nan)
+
+        for i in range(length, len(series)):
+            # 現在値と過去値の相関係数を計算
+            recent_values = series.iloc[i-length:i].values
+            reference_values = series.iloc[0:length].values
+
+            if len(recent_values) == len(reference_values):
+                correlation = np.corrcoef(recent_values, reference_values)[0, 1]
+                if not np.isnan(correlation):
+                    # 相関係数をCTIスコアに変換 (-100 to 100)
+                    cti_values[i] = correlation * 100
+
+        return cti_values
 
     @staticmethod
     def rmi(

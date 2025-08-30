@@ -728,6 +728,25 @@ INDICATOR_CHARACTERISTICS = {
         "reversal_pattern": True,
         "bearish_pattern": True,
     },
+    "FWMA": {
+        "type": "trend",
+        "price_comparison": True,
+        "trend_following": True,
+        "weighted_average": True,  # フィボナッチ重み付き移動平均
+    },
+    "SWMA": {
+        "type": "trend",
+        "price_comparison": True,
+        "trend_following": True,
+        "symmetric_weighting": True,  # 対称重み付き移動平均
+    },
+    "VIDYA": {
+        "type": "trend",
+        "price_comparison": True,
+        "trend_following": True,
+        "adaptive_smoothing": True,  # 適応的スムージング
+        "volatility_adaptive": True,  # ボラティリティ適応型
+    },
 }
 
 # GA目的設定

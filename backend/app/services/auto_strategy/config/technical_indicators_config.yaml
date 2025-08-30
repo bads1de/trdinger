@@ -85,6 +85,96 @@ indicators:
       long: "{left_operand} < {threshold}"
       short: "{left_operand} > {threshold}"
 
+  CMO:
+    type: momentum
+    scale_type: oscillator_plus_minus_100
+    thresholds:
+      aggressive:
+        long_lt: -50
+        short_gt: 50
+      normal:
+        long_lt: -40
+        short_gt: 40
+      conservative:
+        long_lt: -30
+        short_gt: 30
+    conditions:
+      long: "{left_operand} > {threshold}"
+      short: "{left_operand} < {threshold}"
+
+  TRIX:
+    type: momentum
+    scale_type: oscillator_plus_minus_100
+    thresholds:
+      aggressive:
+        long_lt: -0.5
+        short_gt: 0.5
+      normal:
+        long_lt: 0
+        short_gt: 0
+      conservative:
+        long_lt: 0.5
+        short_gt: -0.5
+    conditions:
+      long: "{left_operand} > {threshold}"
+      short: "{left_operand} < {threshold}"
+
+  ULTOSC:
+    type: momentum
+    scale_type: oscillator_0_100
+    thresholds:
+      aggressive:
+        long_lt: 30
+        short_gt: 70
+      normal:
+        long_lt: 40
+        short_gt: 60
+      conservative:
+        long_lt: 50
+        short_gt: 50
+    conditions:
+      long: "{left_operand} < {threshold}"
+      short: "{left_operand} > {threshold}"
+
+  BOP:
+    type: momentum
+    scale_type: momentum_zero_centered
+    thresholds:
+      all:
+        long_gt: 0
+        short_lt: 0
+    conditions:
+      long: "{left_operand} > {threshold}"
+      short: "{left_operand} < {threshold}"
+
+  APO:
+    type: momentum
+    scale_type: momentum_zero_centered
+    thresholds:
+      all:
+        long_gt: 0
+        short_lt: 0
+    conditions:
+      long: "{left_operand} > {threshold}"
+      short: "{left_operand} < {threshold}"
+
+  PPO:
+    type: momentum
+    scale_type: oscillator_plus_minus_100
+    thresholds:
+      aggressive:
+        long_lt: -1.5
+        short_gt: 1.5
+      normal:
+        long_lt: 0
+        short_gt: 0
+      conservative:
+        long_lt: 1.0
+        short_gt: -1.0
+    conditions:
+      long: "{left_operand}_0 > {threshold}"
+      short: "{left_operand}_0 < {threshold}"
+
   MFI:
     type: momentum
     scale_type: oscillator_0_100

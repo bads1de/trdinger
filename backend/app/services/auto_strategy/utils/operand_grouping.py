@@ -50,13 +50,34 @@ class OperandGroupingSystem:
             "RSI": OperandGroup.PERCENTAGE_0_100,
             "STOCH": OperandGroup.PERCENTAGE_0_100,
             "ADX": OperandGroup.PERCENTAGE_0_100,
+            "MFI": OperandGroup.PERCENTAGE_0_100,
+            "ULTOSC": OperandGroup.PERCENTAGE_0_100,
+            "QQE": OperandGroup.PERCENTAGE_0_100,
+            "DX": OperandGroup.PERCENTAGE_0_100,
+            "PLUS_DI": OperandGroup.PERCENTAGE_0_100,
+            "MINUS_DI": OperandGroup.PERCENTAGE_0_100,
+            "ADXR": OperandGroup.PERCENTAGE_0_100,
             # ±100オシレーター
             "CCI": OperandGroup.PERCENTAGE_NEG100_100,
+            "CMO": OperandGroup.PERCENTAGE_NEG100_100,
+            "AROONOSC": OperandGroup.PERCENTAGE_NEG100_100,
             # ゼロ中心の変化率・モメンタム指標
             "MACD": OperandGroup.ZERO_CENTERED,
             "MACD_0": OperandGroup.ZERO_CENTERED,  # MACDメインライン
             "MACD_1": OperandGroup.ZERO_CENTERED,  # MACDシグナルライン
             "MACD_2": OperandGroup.ZERO_CENTERED,  # MACDヒストグラム
+            "ROC": OperandGroup.ZERO_CENTERED,
+            "MOM": OperandGroup.ZERO_CENTERED,
+            "ROCP": OperandGroup.ZERO_CENTERED,
+            "ROCR": OperandGroup.ZERO_CENTERED,
+            "ROCR100": OperandGroup.ZERO_CENTERED,
+            "TRIX": OperandGroup.ZERO_CENTERED,
+            "WILLR": OperandGroup.ZERO_CENTERED,
+            "T3": OperandGroup.ZERO_CENTERED,
+            "APO": OperandGroup.ZERO_CENTERED,
+            "PPO": OperandGroup.ZERO_CENTERED,
+            "TSI": OperandGroup.ZERO_CENTERED,
+            "BOP": OperandGroup.ZERO_CENTERED,
             # ボリンジャーバンドの複数出力
             "BB_0": OperandGroup.PRICE_BASED,  # 上限バンド
             "BB_1": OperandGroup.PRICE_BASED,  # 中央線（SMA）
@@ -64,8 +85,18 @@ class OperandGroupingSystem:
             # ストキャスティクスの複数出力
             "STOCH_0": OperandGroup.PERCENTAGE_0_100,  # %K
             "STOCH_1": OperandGroup.PERCENTAGE_0_100,  # %D
+            "STOCHRSI_0": OperandGroup.PERCENTAGE_0_100,  # RSI %K
+            "STOCHRSI_1": OperandGroup.PERCENTAGE_0_100,  # RSI %D
+            "KDJ_2": OperandGroup.PERCENTAGE_0_100,  # KDJ J値
+            # ティッカー・オシレーター系の複数出力
+            "SMI_0": OperandGroup.PERCENTAGE_0_100,  # SMI
+            "SMI_1": OperandGroup.PERCENTAGE_0_100,  # SMI信号
+            "PVO_0": OperandGroup.ZERO_CENTERED,  # PVO
+            "PVO_1": OperandGroup.ZERO_CENTERED,  # PVO信号
             # 特殊スケール
             "ATR": OperandGroup.PRICE_BASED,  # 価格の絶対値なので価格ベース
+            "NATR": OperandGroup.PRICE_RATIO,  # 正規化ATRは比率
+            "TRANGE": OperandGroup.PRICE_BASED,  # 真の値幅
             "OBV": OperandGroup.ZERO_CENTERED,  # 累積出来高、ゼロ中心的
             "volume": OperandGroup.SPECIAL_SCALE,  # 出来高は独特のスケール
             "OpenInterest": OperandGroup.SPECIAL_SCALE,
@@ -141,12 +172,12 @@ class OperandGroupingSystem:
         # 0-100%オシレーターのパターン
         if any(
             pattern in operand_upper
-            for pattern in ["RSI", "STOCH", "ADX", "WILLR", "MFI", "ULTOSC"]
+            for pattern in ["RSI", "STOCH", "ADX", "WILLR", "MFI", "ULTOSC", "QQE", "DX", "PLUS_DI", "MINUS_DI", "ADXR"]
         ):
             return OperandGroup.PERCENTAGE_0_100
 
         # ±100オシレーターのパターン
-        if any(pattern in operand_upper for pattern in ["CCI", "CMO", "AROONOSC"]):
+        if any(pattern in operand_upper for pattern in ["CCI", "CMO", "AROONOSC", "TRIX"]):
             return OperandGroup.PERCENTAGE_NEG100_100
 
         # ゼロ中心のパターン
@@ -163,6 +194,44 @@ class OperandGroupingSystem:
                 "ROCP",
                 "ROCR",
                 "OBV",
+                "ROC",
+                "STOCHRSI",
+                "SMI",
+                "PVO",
+                "CFO",
+                "CTI",
+                "RMI",
+                "DPO",
+                "CHOP",
+                "VORTEX",
+                "TSI",
+                "KST",
+                "STC",
+                "COPPOCK",
+                "ER",
+                "ERI",
+                "INERTIA",
+                "PGO",
+                "PSL",
+                "RSX",
+                "SQUEEZE",
+                "SQUEEZE_PRO",
+                "BIAS",
+                "BRAR",
+                "CG",
+                "FISHER",
+                "INERTIA",
+                "PVOL",
+                "PVR",
+                "EOM",
+                "KVO",
+                "PVT",
+                "CMF",
+                "NVI",
+                "PVI",
+                "AOBV",
+                "EFI",
+                "RVI",
             ]
         ):
             return OperandGroup.ZERO_CENTERED

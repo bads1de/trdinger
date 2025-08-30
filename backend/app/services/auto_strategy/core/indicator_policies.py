@@ -23,6 +23,20 @@ class Thresholds:
     willr_short_gt: int | None = None
     ultosc_long_gt: int | None = None
     ultosc_short_lt: int | None = None
+    roc_long_lt: int | None = None
+    roc_short_gt: int | None = None
+    mom_long_lt: int | None = None
+    mom_short_gt: int | None = None
+    stoch_long_lt: int | None = None
+    stoch_short_gt: int | None = None
+    cmo_long_lt: int | None = None
+    cmo_short_gt: int | None = None
+    trix_long_lt: float | None = None
+    trix_short_gt: float | None = None
+    bop_long_gt: float | None = None
+    bop_short_lt: float | None = None
+    apo_long_gt: float | None = None
+    apo_short_lt: float | None = None
 
 
 class ThresholdPolicy:
@@ -46,6 +60,20 @@ class ThresholdPolicy:
                 willr_short_gt=unified_config.indicators.willr_short_gt_aggressive,
                 ultosc_long_gt=unified_config.indicators.ultosc_long_gt_aggressive,
                 ultosc_short_lt=unified_config.indicators.ultosc_short_lt_aggressive,
+                roc_long_lt=unified_config.indicators.roc_long_lt_aggressive,
+                roc_short_gt=unified_config.indicators.roc_short_gt_aggressive,
+                mom_long_lt=unified_config.indicators.mom_long_lt_aggressive,
+                mom_short_gt=unified_config.indicators.mom_short_gt_aggressive,
+                stoch_long_lt=unified_config.indicators.stoch_long_lt_aggressive,
+                stoch_short_gt=unified_config.indicators.stoch_short_gt_aggressive,
+                cmo_long_lt=unified_config.indicators.cmo_long_lt_aggressive,
+                cmo_short_gt=unified_config.indicators.cmo_short_gt_aggressive,
+                trix_long_lt=unified_config.indicators.trix_long_lt_aggressive,
+                trix_short_gt=unified_config.indicators.trix_short_gt_aggressive,
+                bop_long_gt=unified_config.indicators.bop_long_gt_aggressive,
+                bop_short_lt=unified_config.indicators.bop_short_lt_aggressive,
+                apo_long_gt=unified_config.indicators.apo_long_gt_aggressive,
+                apo_short_lt=unified_config.indicators.apo_short_lt_aggressive,
             ),
             "normal": Thresholds(
                 rsi_long_lt=unified_config.indicators.rsi_long_lt_normal,
@@ -58,6 +86,20 @@ class ThresholdPolicy:
                 willr_short_gt=unified_config.indicators.willr_short_gt_normal,
                 ultosc_long_gt=unified_config.indicators.ultosc_long_gt_normal,
                 ultosc_short_lt=unified_config.indicators.ultosc_short_lt_normal,
+                roc_long_lt=unified_config.indicators.roc_long_lt_normal,
+                roc_short_gt=unified_config.indicators.roc_short_gt_normal,
+                mom_long_lt=unified_config.indicators.mom_long_lt_normal,
+                mom_short_gt=unified_config.indicators.mom_short_gt_normal,
+                stoch_long_lt=unified_config.indicators.stoch_long_lt_normal,
+                stoch_short_gt=unified_config.indicators.stoch_short_gt_normal,
+                cmo_long_lt=unified_config.indicators.cmo_long_lt_normal,
+                cmo_short_gt=unified_config.indicators.cmo_short_gt_normal,
+                trix_long_lt=unified_config.indicators.trix_long_lt_normal,
+                trix_short_gt=unified_config.indicators.trix_short_gt_normal,
+                bop_long_gt=unified_config.indicators.bop_long_gt_normal,
+                bop_short_lt=unified_config.indicators.bop_short_lt_normal,
+                apo_long_gt=unified_config.indicators.apo_long_gt_normal,
+                apo_short_lt=unified_config.indicators.apo_short_lt_normal,
             ),
             "conservative": Thresholds(
                 rsi_long_lt=unified_config.indicators.rsi_long_lt_conservative,
@@ -70,6 +112,20 @@ class ThresholdPolicy:
                 willr_short_gt=unified_config.indicators.willr_short_gt_conservative,
                 ultosc_long_gt=unified_config.indicators.ultosc_long_gt_conservative,
                 ultosc_short_lt=unified_config.indicators.ultosc_short_lt_conservative,
+                roc_long_lt=unified_config.indicators.roc_long_lt_conservative,
+                roc_short_gt=unified_config.indicators.roc_short_gt_conservative,
+                mom_long_lt=unified_config.indicators.mom_long_lt_conservative,
+                mom_short_gt=unified_config.indicators.mom_short_gt_conservative,
+                stoch_long_lt=unified_config.indicators.stoch_long_lt_conservative,
+                stoch_short_gt=unified_config.indicators.stoch_short_gt_conservative,
+                cmo_long_lt=unified_config.indicators.cmo_long_lt_conservative,
+                cmo_short_gt=unified_config.indicators.cmo_short_gt_conservative,
+                trix_long_lt=unified_config.indicators.trix_long_lt_conservative,
+                trix_short_gt=unified_config.indicators.trix_short_gt_conservative,
+                bop_long_gt=unified_config.indicators.bop_long_gt_conservative,
+                bop_short_lt=unified_config.indicators.bop_short_lt_conservative,
+                apo_long_gt=unified_config.indicators.apo_long_gt_conservative,
+                apo_short_lt=unified_config.indicators.apo_short_lt_conservative,
             ),
         }
 
@@ -89,6 +145,10 @@ TREND_PREF = (
     "WMA",
     "RMA",
     "HT_TRENDLINE",
+    # 新しく追加されたトレンド指標
+    "FWMA",
+    "SWMA",
+    "VIDYA",
 )  # MAMA除外: 条件右オペランド未サポート
 
 
