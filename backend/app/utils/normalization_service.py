@@ -6,7 +6,7 @@
 """
 
 import logging
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional
 
 from app.config.unified_config import unified_config
 
@@ -101,7 +101,7 @@ class SymbolNormalizationService:
         return normalized_symbol
 
     @staticmethod
-    def _apply_provider_normalization(symbol: str, provider_config: Dict[str, any]) -> str:
+    def _apply_provider_normalization(symbol: str, provider_config: Dict[str, Any]) -> str:
         """
         プロバイダー固有の正規化処理
 
@@ -146,7 +146,7 @@ class SymbolNormalizationService:
             return False
 
         # 基本形式チェック（アルファベット、数字、-、/、: のみ許可）
-        allowed_chars = set('ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-/:/:_')
+        allowed_chars = set('ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-/:')
         return all(c in allowed_chars for c in symbol.upper())
 
     @staticmethod

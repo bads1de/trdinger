@@ -354,39 +354,15 @@ class GeneValidator:
 
     def __init__(self):
         """初期化"""
-        try:
-            from ..config.constants import (
-                OPERATORS,
-                DATA_SOURCES,
-                VALID_INDICATOR_TYPES,
-            )
+        from ..config.constants import (
+            OPERATORS,
+            DATA_SOURCES,
+            VALID_INDICATOR_TYPES,
+        )
 
-            self.valid_indicator_types = VALID_INDICATOR_TYPES
-            self.valid_operators = OPERATORS
-            self.valid_data_sources = DATA_SOURCES
-        except ImportError:
-            # フォールバック値
-            self.valid_indicator_types = [
-                "SMA",
-                "EMA",
-                "RSI",
-                "MACD",
-                "BB",
-                "STOCH",
-                "ADX",
-                "CCI",
-                "MFI",
-                "WILLR",
-                "ROC",
-                "TSI",
-                "UO",
-                "AO",
-                "KAMA",
-                "TEMA",
-                "TRIMA",
-            ]
-            self.valid_operators = [">", "<", ">=", "<=", "==", "!=", "above", "below"]
-            self.valid_data_sources = ["open", "high", "low", "close", "volume"]
+        self.valid_indicator_types = VALID_INDICATOR_TYPES
+        self.valid_operators = OPERATORS
+        self.valid_data_sources = DATA_SOURCES
 
     def validate_indicator_gene(self, indicator_gene) -> bool:
         """指標遺伝子の妥当性を検証"""

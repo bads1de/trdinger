@@ -11,7 +11,7 @@ from typing import Any, Dict, List, Optional
 from app.services.data_collection.bybit.bybit_service import BybitService
 from app.services.data_collection.bybit.data_config import get_open_interest_config
 from database.repositories.open_interest_repository import OpenInterestRepository
-from app.services.symbol.normalization_service import SymbolNormalizationService
+from app.utils.normalization_service import SymbolNormalizationService
 
 logger = logging.getLogger(__name__)
 

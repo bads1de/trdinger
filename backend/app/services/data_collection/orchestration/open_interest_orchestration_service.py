@@ -13,7 +13,7 @@ from sqlalchemy.orm import Session
 
 from app.utils.response import api_response, error_response
 from database.repositories.open_interest_repository import OpenInterestRepository
-from app.services.symbol.normalization_service import SymbolNormalizationService
+from app.utils.normalization_service import SymbolNormalizationService
 
 from ..bybit.open_interest_service import BybitOpenInterestService
 

@@ -8,7 +8,7 @@
 import logging
 from typing import Dict, List
 
-from app.services.symbol.normalization_service import SymbolNormalizationService
+from app.utils.normalization_service import SymbolNormalizationService
 
 logger = logging.getLogger(__name__)
 

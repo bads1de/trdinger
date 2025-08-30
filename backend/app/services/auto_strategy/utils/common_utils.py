@@ -16,7 +16,7 @@ from abc import ABC, abstractmethod
 from app.utils.error_handler import (
     ErrorHandler,
 )
-from app.services.symbol.normalization_service import SymbolNormalizationService
+from app.utils.normalization_service import SymbolNormalizationService
 
 
 logger = logging.getLogger(__name__)
@@ -100,8 +100,6 @@ class BaseGene(ABC):
                     # その他の型
                     else:
                         init_params[param_name] = value
-                else:
-                    logger.debug(f"パラメータ {param_name} がデータに存在しないためスキップ")
 
         return cls(**init_params)
 

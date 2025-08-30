@@ -9,7 +9,7 @@ from typing import Any, Dict, List, Optional
 from app.config.unified_config import unified_config
 from app.utils.data_conversion import OHLCVDataConverter
 from database.repositories.ohlcv_repository import OHLCVRepository
-from app.services.symbol.normalization_service import SymbolNormalizationService
+from app.utils.normalization_service import SymbolNormalizationService
 
 from .bybit_service import BybitService
 

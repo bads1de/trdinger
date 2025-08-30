@@ -12,7 +12,7 @@ from fastapi import BackgroundTasks
 from app.services.backtest.backtest_data_service import BacktestDataService
 from app.services.backtest.backtest_service import BacktestService
 from database.connection import SessionLocal
-from app.services.symbol.normalization_service import (
+from app.utils.normalization_service import (
     normalize_symbol as normalize_symbol_unified,
 )
 

@@ -41,13 +41,7 @@ def auto_strategy_operation(
         @functools.wraps(func)
         def wrapper(*args, **kwargs) -> T:
             try:
-                if enable_debug_logging:
-                    logger.debug(f"🏭 {context}開始: {func.__name__}")
-
                 result = func(*args, **kwargs)
-
-                if enable_debug_logging:
-                    logger.debug(f"✅ {context}完了: {func.__name__}")
 
                 return result
 
@@ -141,12 +135,11 @@ def with_metrics_tracking(operation_name: str, track_memory: bool = False):
                         psutil_module.Process(os_module.getpid()).memory_info().rss
                     )
                     memory_usage = end_memory - start_memory
-                    logger.debug(
-                        f"📊 {operation_name} - 実行時間: {duration:.3f}s, "
-                        f"メモリ使用量: {memory_usage / 1024 / 1024:.2f}MB"
+                    logger.info(
+                        f"{operation_name} completed in {duration:.4f}s with memory change: {memory_usage / 1024:.1f} KB"
                     )
                 else:
-                    logger.debug(f"📊 {operation_name} - 実行時間: {duration:.3f}s")
+                    logger.info(f"{operation_name} completed in {duration:.4f}s")
 
         return wrapper
 

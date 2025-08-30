@@ -26,6 +26,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class ExecutionContext:
     """実行時の文脈（ポジションサイズ計算用）"""
+
     current_price: float
     current_equity: float
     available_cash: float
@@ -58,24 +59,14 @@ class StrategyFactory:
         Raises:
             ValueError: 遺伝子が無効な場合
         """
-        logger.debug(
-            f"🏭 [StrategyFactory] 戦略クラス作成開始: 指標数={len(gene.indicators)}"
-        )
-        logger.debug(
-            f"🏭 [StrategyFactory] 戦略遺伝子詳細: {[ind.type for ind in gene.indicators]}"
-        )
 
         # 遺伝子の妥当性検証
         is_valid, errors = gene.validate()
         if not is_valid:
             raise ValueError(f"Invalid strategy gene: {', '.join(errors)}")
 
-        logger.debug("🏭 [StrategyFactory] 戦略遺伝子検証成功")
-
         # ファクトリー参照を保存
         factory = self
-
-        logger.debug("🏭 [StrategyFactory] 動的クラス生成開始")
 
         # 動的クラス生成
         class GeneratedStrategy(Strategy):
@@ -85,9 +76,6 @@ class StrategyFactory:
             strategy_gene = gene  # デフォルト値として元のgeneを設定
 
             def __init__(self, broker=None, data=None, params=None):
-                logger.debug(
-                    f"🏭 [StrategyFactory] 戦略初期化: broker={broker is not None}, data={data is not None}"
-                )
 
                 # paramsがNoneの場合は空辞書を設定
                 if params is None:
@@ -100,40 +88,26 @@ class StrategyFactory:
                 if params and "strategy_gene" in params:
                     self.strategy_gene = params["strategy_gene"]
                     self.gene = params["strategy_gene"]
-                    logger.debug(
-                        f"🏭 [StrategyFactory] 戦略遺伝子をparamsから設定: {self.strategy_gene.indicators[0].type if self.strategy_gene.indicators else 'なし'}"
-                    )
                 else:
                     # デフォルトとして元のgeneを使用
                     self.strategy_gene = gene
                     self.gene = gene
-                    logger.debug(
-                        f"🏭 [StrategyFactory] 戦略遺伝子をデフォルトから設定: {gene.indicators[0].type if gene.indicators else 'なし'}"
-                    )
 
                 self.indicators = {}
                 self.factory = factory  # ファクトリーへの参照
 
             def init(self):
                 """指標の初期化"""
-                logger.debug("🏭 [StrategyFactory] 戦略初期化開始")
-                logger.debug(
-                    f"🏭 [StrategyFactory] 指標数: {len(self.strategy_gene.indicators)}"
-                )
 
                 try:
                     # 各指標を初期化
                     enabled_indicators = [
                         ind for ind in self.strategy_gene.indicators if ind.enabled
                     ]
-                    logger.debug(
-                        f"🏭 [StrategyFactory] 有効な指標数: {len(enabled_indicators)}"
-                    )
 
                     for indicator_gene in enabled_indicators:
                         self._init_indicator(indicator_gene)
 
-                    logger.debug("🏭 [StrategyFactory] 戦略初期化完了")
                 except Exception as e:
                     logger.error(f"戦略初期化エラー: {e}", exc_info=True)
                     raise
@@ -165,9 +139,6 @@ class StrategyFactory:
                                     enabled=True,
                                 )
                                 factory.indicator_calculator.init_indicator(fb, self)
-                                logger.debug(
-                                    f"🏭 [StrategyFactory] フォールバック適用: {indicator_gene.type} -> SMA({period})"
-                                )
                                 return
                             except Exception as fb_e:
                                 logger.warning(f"フォールバック失敗: {fb_e}")
@@ -180,9 +151,6 @@ class StrategyFactory:
                                     type="RSI", parameters={"period": 14}, enabled=True
                                 )
                                 factory.indicator_calculator.init_indicator(fb2, self)
-                                logger.debug(
-                                    "🏭 [StrategyFactory] 最終フォールバック適用: RSI(14)"
-                                )
                                 return
                             except Exception as fb2_e:
                                 logger.error(f"最終フォールバック失敗: {fb2_e}")
@@ -355,20 +323,12 @@ class StrategyFactory:
 
                 except Exception as e:
                     logger.error(f"戦略実行エラー: {e}")
-                    # デバッグ時はスタックトレースも出力
-                    if logging.getLogger().isEnabledFor(logging.DEBUG):
-                        import traceback
-
-                        traceback.print_exc()
 
         # クラス名を設定
         short_id = str(gene.id).split("-")[0] if gene.id else "Unknown"
         GeneratedStrategy.__name__ = f"GS_{short_id}"
         GeneratedStrategy.__qualname__ = GeneratedStrategy.__name__
 
-        logger.debug(
-            f"🏭 [StrategyFactory] 戦略クラス作成完了: {GeneratedStrategy.__name__}"
-        )
         logger.info(f"戦略クラス生成成功: {GeneratedStrategy.__name__}")
 
         return GeneratedStrategy
@@ -403,7 +363,9 @@ class StrategyFactory:
         return size
 
     @staticmethod
-    def ensure_affordable_size(adjusted_size: float, execution_ctx: ExecutionContext) -> float:
+    def ensure_affordable_size(
+        adjusted_size: float, execution_ctx: ExecutionContext
+    ) -> float:
         """購入可能性チェック（OrderExecutionPolicy統合）"""
         abs_size = abs(adjusted_size)
         if abs_size == 0:
@@ -433,7 +395,9 @@ class StrategyFactory:
         return adjusted_size
 
     @staticmethod
-    def compute_tpsl_prices(factory, current_price: float, risk_management, gene, position_direction: float) -> Tuple[Optional[float], Optional[float]]:
+    def compute_tpsl_prices(
+        factory, current_price: float, risk_management, gene, position_direction: float
+    ) -> Tuple[Optional[float], Optional[float]]:
         """TP/SL価格計算（OrderExecutionPolicy統合）"""
         stop_loss_pct = risk_management.get("stop_loss")
         take_profit_pct = risk_management.get("take_profit")

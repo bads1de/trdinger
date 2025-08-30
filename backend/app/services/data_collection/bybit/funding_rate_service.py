@@ -11,7 +11,7 @@ from typing import Any, Dict, List, Optional
 from app.services.data_collection.bybit.bybit_service import BybitService
 from app.services.data_collection.bybit.data_config import get_funding_rate_config
 from database.repositories.funding_rate_repository import FundingRateRepository
-from app.services.symbol.normalization_service import SymbolNormalizationService
+from app.utils.normalization_service import SymbolNormalizationService
 
 logger = logging.getLogger(__name__)
 

@@ -17,7 +17,7 @@ from app.utils.error_handler import (
 )
 from database.connection import get_db
 from app.config.unified_config import unified_config
-from app.services.symbol.normalization_service import SymbolNormalizationService
+from app.utils.normalization_service import SymbolNormalizationService
 
 logger = logging.getLogger(__name__)
 
