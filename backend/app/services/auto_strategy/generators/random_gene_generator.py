@@ -357,6 +357,107 @@ class RandomGeneGenerator:
                 "AROONOSC",
                 "BOP",
                 "MOM",
+                # 新しいモメンタム系
+                "QQE",
+                "RVI",
+                "TSI",
+                "ULTOSC",
+                "CHOP",
+                "DPO",
+                "RMI",
+                "CTI",
+                "CFO",
+                "VORTEX",
+                "KST",
+                "STOCHF",
+                "STC",
+                "SMI",
+                "RVGI",
+                "ROCR",
+                # 新しいトレンド系
+                "HI",
+                "HT_TRENDLINE",
+                "SAR",
+                "HILO",
+                "VLMA",
+                "VIDYA",
+                "JMA",
+                "HWMA",
+                "HLC3",
+                "HL2",
+                "FWMA",
+                "SINWMA",
+                "PWMA",
+                "OHLC4",
+                "MCGD",
+                "SSF",
+                "VWMA",
+                "SWMA",
+                "ZLMA",
+                "ALMA",
+                "HMA",
+                "RMA",
+                # 新しいボラティリティ系
+                "DONCHIAN",
+                "KELTNER",
+                "SUPERTREND",
+                "NATR",
+                "TRANGE",
+                "ACCBANDS",
+                "ABERRATION",
+                "HWC",
+                "MASSI",
+                "PDIST",
+                "THERMO",
+                # 新しいボリューム系
+                "PVO",
+                "ADOSC",
+                "EOM",
+                "AOBV",
+                "EFI",
+                "KVO",
+                "PVT",
+                "PVR",
+                "PVOL",
+                "VP",
+                "CMF",
+                "NVI",
+                "PVI",
+                "AD",
+                "OBV",
+                "VWAP",
+                # 新しい統計系
+                "BETA",
+                "CORREL",
+                "STDDEV",
+                "VAR",
+                "MAD",
+                "ZSCORE",
+                "TSF",
+                "LINEARREG",
+                "LINEARREG_ANGLE",
+                "LINEARREG_INTERCEPT",
+                "LINEARREG_SLOPE",
+                "ENTROPY",
+                "KURTOSIS",
+                "MEDIAN",
+                "QUANTILE",
+                "SKEW",
+                "MAXINDEX",
+                "MININDEX",
+                "MINMAX",
+                "MINMAXINDEX",
+                # 新しいパターン認識系
+                "CDL_DOJI",
+                "CDL_HAMMER",
+                "CDL_HANGING_MAN",
+                "CDL_SHOOTING_STAR",
+                "CDL_ENGULFING",
+                "CDL_HARAMI",
+                "CDL_PIERCING",
+                "CDL_THREE_BLACK_CROWS",
+                "CDL_THREE_WHITE_SOLDIERS",
+                "CDL_DARK_CLOUD_COVER",
             }
             # VALID_INDICATOR_TYPESに含まれる指標のみに絞り込み
             curated = {ind for ind in curated if ind in VALID_INDICATOR_TYPES}
@@ -484,7 +585,7 @@ class RandomGeneGenerator:
                         # period が必要なものにのみデフォルトperiodを与える（SMA/EMA 等）
                         default_params = (
                             {"period": random.choice([10, 14, 20, 30, 50])}
-                            if chosen in ("SMA", "EMA", "WMA", "TRIMA", "KAMA", "T3")
+                            if chosen in ("SMA", "EMA", "WMA", "TRIMA", "KAMA", "T3", "ALMA", "HMA", "RMA", "SWMA", "ZLMA", "VWMA", "FWMA", "HWMA", "JMA", "MCGD", "VIDYA", "WCP")
                             else {}
                         )
                         indicators.append(
@@ -510,6 +611,19 @@ class RandomGeneGenerator:
                             "TRIMA",
                             "KAMA",
                             "T3",
+                            "ALMA",
+                            "HMA",
+                            "RMA",
+                            "SWMA",
+                            "ZLMA",
+                            "MA",
+                            "VWMA",
+                            "FWMA",
+                            "HWMA",
+                            "JMA",
+                            "MCGD",
+                            "VIDYA",
+                            "WCP",
                         }
 
                     ma_count = sum(1 for ind in indicators if _is_ma(ind.type))
@@ -526,7 +640,7 @@ class RandomGeneGenerator:
                                 if _is_ma(ind.type) and isinstance(ind.parameters, dict)
                             )
                             # テスト互換性のため SMA/EMA/MAMA/MA を優先
-                            preferred = {"SMA", "EMA", "MAMA", "MA"}
+                            preferred = {"SMA", "EMA", "MAMA", "MA", "HMA", "ALMA", "VIDYA", "JMA"}
                             pref_pool = [
                                 n for n in ma_pool if n in preferred
                             ] or ma_pool
@@ -555,7 +669,7 @@ class RandomGeneGenerator:
             except Exception:
                 # レジストリ取得が失敗しても安全にSMAを追加（ただしavailable_indicatorsにSMAが含まれる場合のみ）
                 if (
-                    any(ind.type in ("SMA", "EMA", "MAMA", "MA") for ind in indicators)
+                    any(ind.type in ("SMA", "EMA", "MAMA", "MA", "HMA", "ALMA", "VIDYA") for ind in indicators)
                     or "SMA" not in self.available_indicators
                 ):
                     pass

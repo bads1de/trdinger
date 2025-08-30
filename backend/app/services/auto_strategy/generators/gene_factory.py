@@ -130,7 +130,7 @@ class SmartGeneGenerator(BaseGeneGenerator):
         if self._smart_generator is None:
             from ..generators.condition_generator import ConditionGenerator
 
-            self._smart_generator = SmartConditionGenerator(
+            self._smart_generator = ConditionGenerator(
                 enable_smart_generation=True
             )
         return self._smart_generator

@@ -429,6 +429,19 @@ BASIC_MA_INDICATORS: List[str] = [
     "TRIMA",
     "KAMA",
     "T3",
+    "ALMA",
+    "HMA",
+    "RMA",
+    "SWMA",
+    "ZLMA",
+    "MA",
+    "VWMA",
+    "FWMA",
+    "HWMA",
+    "JMA",
+    "MCGD",
+    "VIDYA",
+    "WCP",
 ]
 
 

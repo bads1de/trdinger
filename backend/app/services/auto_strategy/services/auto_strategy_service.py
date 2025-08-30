@@ -15,9 +15,8 @@ from database.connection import SessionLocal
 from ..utils.common_utils import normalize_symbol
 
 from .experiment_manager import ExperimentManager
-from ..config.auto_strategy_config import GAConfig
+from ..config import GAConfig, get_default_config
 from .experiment_persistence_service import ExperimentPersistenceService
-from ..config import AutoStrategyConfig
 
 logger = logging.getLogger(__name__)
 
@@ -129,7 +128,7 @@ class AutoStrategyService:
 
         # 2. バックテスト設定のシンボル正規化
         backtest_config = backtest_config_dict.copy()
-        backtest_config["symbol"] = normalize_symbol(backtest_config.get("symbol"))
+        backtest_config["symbol"] = normalize_symbol(backtest_config.get("symbol"))  # cspell:ignore backtest
 
         # 3. 実験を作成（統合版）
         # フロントエンドから送信されたexperiment_idを使用
@@ -261,7 +260,7 @@ class AutoStrategyService:
         )
         def _get_default_config():
             # AutoStrategyConfigからデフォルトGA設定を作成
-            auto_config = AutoStrategyConfig.get_default_config()
+            auto_config = get_default_config()
             ga_config = GAConfig.from_auto_strategy_config(auto_config)
             return ga_config.to_dict()
 
@@ -279,7 +278,7 @@ class AutoStrategyService:
         @safe_operation(context="プリセット取得", is_api_call=False, default_return={})
         def _get_presets():
             # AutoStrategyConfigから各プリセットを作成
-            auto_config = AutoStrategyConfig.get_default_config()
+            auto_config = get_default_config()
 
             presets = {}
 
@@ -356,7 +355,7 @@ class AutoStrategyService:
 
             # バックテスト設定の正規化
             backtest_config = request.backtest_config.copy()
-            backtest_config["symbol"] = normalize_symbol(backtest_config.get("symbol"))
+            backtest_config["symbol"] = normalize_symbol(backtest_config.get("symbol"))  # cspell:ignore backtest
 
             # 戦略遺伝子からバックテスト設定を作成
             from ..generators.strategy_factory import StrategyFactory

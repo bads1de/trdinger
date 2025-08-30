@@ -181,7 +181,7 @@ class DataConverter:
             return default
 
     @staticmethod
-    def normalize_symbol(symbol: str) -> str:
+    def normalize_symbol(symbol: Optional[str]) -> str:
         """シンボルを正規化"""
         if not symbol:
             return "BTC:USDT"
