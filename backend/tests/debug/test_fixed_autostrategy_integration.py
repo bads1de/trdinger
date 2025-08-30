@@ -35,7 +35,7 @@ def test_strategy_condition_balance():
     """戦略条件バランスのテスト（修正済み）"""
     logger.info("=== 戦略条件バランステスト開始 ===")
 
-    generator = SmartConditionGenerator()
+    generator = ConditionGenerator()
 
     # さまざまな指標パターンをテスト
     test_cases = [
@@ -183,7 +183,7 @@ def test_actual_strategy_execution():
     logger.info("\n=== 実際の戦略実行テスト開始 ===")
 
     try:
-        generator = SmartConditionGenerator()
+        generator = ConditionGenerator()
 
         # テスト用指標セット
         indicators = [

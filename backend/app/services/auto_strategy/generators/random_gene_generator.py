@@ -27,7 +27,15 @@ from ..models.strategy_models import (
 )
 
 from ..utils.operand_grouping import operand_grouping_system
-from ..config.constants import OPERATORS, DATA_SOURCES
+from ..config.constants import (
+    OPERATORS,
+    DATA_SOURCES,
+    VALID_INDICATOR_TYPES,
+    CURATED_TECHNICAL_INDICATORS,
+    MOVING_AVERAGE_INDICATORS,
+    PREFERRED_MA_INDICATORS,
+    MA_INDICATORS_NEEDING_PERIOD
+)
 from .condition_generator import ConditionGenerator
 from ..core.indicator_policies import PriceTrendPolicy
 
@@ -52,7 +60,7 @@ class RandomGeneGenerator:
 
         Args:
             config: GA設定オブジェクト
-            enable_smart_generation: SmartConditionGeneratorを使用するか
+            enable_smart_generation: ConditionGeneratorを使用するか
             smart_context: スマート条件生成のコンテキスト（timeframe/symbol/threshold_profile/regime_gating）
         """
         self.config = config
@@ -305,143 +313,8 @@ class RandomGeneGenerator:
             ]
         # テクニカルオンリー時のデフォルト候補を厳選して成立性を底上げ（allowed_indicators 指定時は尊重）
         if indicator_mode == "technical_only":
-            # デフォルトのcuratedセットを事前に定義
-            from ..config.constants import VALID_INDICATOR_TYPES
-
-            curated = {
-                "SMA",
-                "EMA",
-                "WMA",
-                "MACD",
-                "MACDFIX",
-                "MACDEXT",
-                "RSI",
-                "STOCH",
-                "STOCHRSI",
-                "CCI",
-                "ADX",
-                "MFI",
-                "ATR",
-                "BBANDS",
-                "KAMA",
-                "T3",
-                "TRIMA",
-                "PPO",
-                "APO",
-                "ROC",
-                "TRIX",
-                "UO",
-                "CMO",
-                "DX",
-                "MINUS_DI",
-                "PLUS_DI",
-                "WILLR",
-                "AROON",
-                "AROONOSC",
-                "BOP",
-                "MOM",
-                # 新しいモメンタム系
-                "QQE",
-                "RVI",
-                "TSI",
-                "ULTOSC",
-                "CHOP",
-                "DPO",
-                "RMI",
-                "CTI",
-                "CFO",
-                "VORTEX",
-                "KST",
-                "STOCHF",
-                "STC",
-                "SMI",
-                "RVGI",
-                "ROCR",
-                # 新しいトレンド系
-                "HI",
-                "HT_TRENDLINE",
-                "SAR",
-                "HILO",
-                "VLMA",
-                "VIDYA",
-                "JMA",
-                "HWMA",
-                "HLC3",
-                "HL2",
-                "FWMA",
-                "SINWMA",
-                "PWMA",
-                "OHLC4",
-                "MCGD",
-                "SSF",
-                "VWMA",
-                "SWMA",
-                "ZLMA",
-                "ALMA",
-                "HMA",
-                "RMA",
-                # 新しいボラティリティ系
-                "DONCHIAN",
-                "KELTNER",
-                "SUPERTREND",
-                "NATR",
-                "TRANGE",
-                "ACCBANDS",
-                "ABERRATION",
-                "HWC",
-                "MASSI",
-                "PDIST",
-                "THERMO",
-                # 新しいボリューム系
-                "PVO",
-                "ADOSC",
-                "EOM",
-                "AOBV",
-                "EFI",
-                "KVO",
-                "PVT",
-                "PVR",
-                "PVOL",
-                "VP",
-                "CMF",
-                "NVI",
-                "PVI",
-                "AD",
-                "OBV",
-                "VWAP",
-                # 新しい統計系
-                "BETA",
-                "CORREL",
-                "STDDEV",
-                "VAR",
-                "MAD",
-                "ZSCORE",
-                "TSF",
-                "LINEARREG",
-                "LINEARREG_ANGLE",
-                "LINEARREG_INTERCEPT",
-                "LINEARREG_SLOPE",
-                "ENTROPY",
-                "KURTOSIS",
-                "MEDIAN",
-                "QUANTILE",
-                "SKEW",
-                "MAXINDEX",
-                "MININDEX",
-                "MINMAX",
-                "MINMAXINDEX",
-                # 新しいパターン認識系
-                "CDL_DOJI",
-                "CDL_HAMMER",
-                "CDL_HANGING_MAN",
-                "CDL_SHOOTING_STAR",
-                "CDL_ENGULFING",
-                "CDL_HARAMI",
-                "CDL_PIERCING",
-                "CDL_THREE_BLACK_CROWS",
-                "CDL_THREE_WHITE_SOLDIERS",
-                "CDL_DARK_CLOUD_COVER",
-            }
+            # ### 成立性が高い指標のみを使用し、可読性を向上
+            curated = CURATED_TECHNICAL_INDICATORS
             # VALID_INDICATOR_TYPESに含まれる指標のみに絞り込み
             curated = {ind for ind in curated if ind in VALID_INDICATOR_TYPES}
 
@@ -568,27 +441,7 @@ class RandomGeneGenerator:
                         # period が必要なものにのみデフォルトperiodを与える（SMA/EMA 等）
                         default_params = (
                             {"period": random.choice([10, 14, 20, 30, 50])}
-                            if chosen
-                            in (
-                                "SMA",
-                                "EMA",
-                                "WMA",
-                                "TRIMA",
-                                "KAMA",
-                                "T3",
-                                "ALMA",
-                                "HMA",
-                                "RMA",
-                                "SWMA",
-                                "ZLMA",
-                                "VWMA",
-                                "FWMA",
-                                "HWMA",
-                                "JMA",
-                                "MCGD",
-                                "VIDYA",
-                                "WCP",
-                            )
+                            if chosen in MA_INDICATORS_NEEDING_PERIOD
                             else {}
                         )
                         indicators.append(
@@ -607,27 +460,7 @@ class RandomGeneGenerator:
 
                     def _is_ma(name: str) -> bool:
                         # VALID_INDICATOR_TYPESに含まれる移動平均系指標のみ
-                        return name in {
-                            "SMA",
-                            "EMA",
-                            "WMA",
-                            "TRIMA",
-                            "KAMA",
-                            "T3",
-                            "ALMA",
-                            "HMA",
-                            "RMA",
-                            "SWMA",
-                            "ZLMA",
-                            "MA",
-                            "VWMA",
-                            "FWMA",
-                            "HWMA",
-                            "JMA",
-                            "MCGD",
-                            "VIDYA",
-                            "WCP",
-                        }
+                        return name in MOVING_AVERAGE_INDICATORS
 
                     ma_count = sum(1 for ind in indicators if _is_ma(ind.type))
                     if ma_count < 2:
@@ -642,17 +475,8 @@ class RandomGeneGenerator:
                                 for ind in indicators
                                 if _is_ma(ind.type) and isinstance(ind.parameters, dict)
                             )
-                            # テスト互換性のため SMA/EMA/MAMA/MA を優先
-                            preferred = {
-                                "SMA",
-                                "EMA",
-                                "MAMA",
-                                "MA",
-                                "HMA",
-                                "ALMA",
-                                "VIDYA",
-                                "JMA",
-                            }
+                            # テスト互換性のため優先的なMA指標を使用
+                            preferred = PREFERRED_MA_INDICATORS
                             pref_pool = [
                                 n for n in ma_pool if n in preferred
                             ] or ma_pool
@@ -752,7 +576,6 @@ class RandomGeneGenerator:
 
         グループ化システムを考慮した重み付き選択を行います。
         """
-        from ..config.constants import VALID_INDICATOR_TYPES
 
         choices = []
 

@@ -126,7 +126,7 @@ class SmartGeneGenerator(BaseGeneGenerator):
         self._smart_generator = None
 
     def _get_smart_generator(self):
-        """SmartConditionGeneratorを遅延初期化"""
+        """ConditionGeneratorを遅延初期化"""
         if self._smart_generator is None:
             from ..generators.condition_generator import ConditionGenerator
 
@@ -138,7 +138,7 @@ class SmartGeneGenerator(BaseGeneGenerator):
     def generate_indicators(self) -> List[IndicatorGene]:
         """スマートに指標を生成"""
         try:
-            # ランダム生成を使用（SmartConditionGeneratorは条件生成に特化）
+            # ランダム生成を使用（ConditionGeneratorは条件生成に特化）
             random_gen = RandomGeneGenerator(self.config, enable_smart_generation=False)
             return random_gen._generate_random_indicators()
         except Exception as e:

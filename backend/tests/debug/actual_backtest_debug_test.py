@@ -235,7 +235,7 @@ def create_test_strategy(indicator_combination: List[str]) -> StrategyGene:
             ))
 
     # Smart条件生成器で条件を作成
-    generator = SmartConditionGenerator()
+    generator = ConditionGenerator()
     long_conds, short_conds, exit_conds = generator.generate_balanced_conditions(indicators)
 
     return StrategyGene(

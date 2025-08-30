@@ -65,7 +65,7 @@ def test_strategy_conditions_with_real_data():
     evaluator = ConditionEvaluator()
 
     # テスト戦略生成器
-    generator = SmartConditionGenerator()
+    generator = ConditionGenerator()
 
     # テスト指標組み合わせ
     test_cases = [
@@ -221,7 +221,7 @@ def run_real_world_scenario_tests():
         ("高ボラティリティ相場", lambda x: 50000 * np.exp(np.random.normal(0, 0.005, len(x)).cumsum())),
     ]
 
-    generator = SmartConditionGenerator()
+    generator = ConditionGenerator()
 
     # 固定指標セット
     test_indicators = [

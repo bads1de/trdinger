@@ -43,12 +43,12 @@ class GeneSerializer:
         初期化
 
         Args:
-            enable_smart_generation: SmartConditionGeneratorを使用するか
+            enable_smart_generation: ConditionGeneratorを使用するか
         """
         self.indicator_ids = get_all_indicator_ids()
         self.id_to_indicator = get_id_to_indicator_mapping(self.indicator_ids)
 
-        # SmartConditionGeneratorの遅延インポート（循環インポート回避）
+        # ConditionGeneratorの遅延インポート（循環インポート回避）
         self.enable_smart_generation = enable_smart_generation
         self._smart_condition_generator = None
 
@@ -470,7 +470,7 @@ class GeneSerializer:
                             )
                         )
 
-            # 条件部分をデコード（SmartConditionGeneratorを使用）
+            # 条件部分をデコード（ConditionGeneratorを使用）
             if indicators:
                 if self.smart_condition_generator:
                     long_entry_conditions, short_entry_conditions, exit_conditions = (
@@ -479,7 +479,7 @@ class GeneSerializer:
                         )
                     )
                 else:
-                    # SmartConditionGeneratorが無効な場合のフォールバック
+                    # ConditionGeneratorが無効な場合のフォールバック
                     from ..models.strategy_models import Condition
 
                     long_entry_conditions = [

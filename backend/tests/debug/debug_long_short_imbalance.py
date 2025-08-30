@@ -45,7 +45,7 @@ def analyze_strategy_balance():
 
     try:
         # スマート条件生成器を作成
-        generator = SmartConditionGenerator()
+        generator = ConditionGenerator()
 
         # テスト指標を作成
         test_indicators = create_test_indicators()
@@ -135,7 +135,7 @@ def debug_condition_generation_internals():
     logger.info("\n=== 条件生成内部ロジックデバッグ ===")
 
     try:
-        generator = SmartConditionGenerator()
+        generator = ConditionGenerator()
         test_indicators = create_test_indicators()
 
         logger.info("各戦略タイプによる条件生成をテスト:")
@@ -182,7 +182,7 @@ def generate_strategy_gene_test():
     logger.info("\n=== StrategyGene統合テスト ===")
 
     try:
-        generator = SmartConditionGenerator()
+        generator = ConditionGenerator()
         test_indicators = create_test_indicators()
 
         # 条件生成

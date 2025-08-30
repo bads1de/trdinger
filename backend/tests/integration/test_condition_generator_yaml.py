@@ -6,7 +6,7 @@ sys.path.append('./')
 
 try:
     from app.services.auto_strategy.generators.condition_generator import ConditionGenerator
-    print("Import successful - Using SmartConditionGenerator!")
+    print("Import successful - Using ConditionGenerator!")
 except Exception as e:
     print(f"Import failed: {e}")
     sys.exit(1)
@@ -20,7 +20,7 @@ class MockIndicatorGene:
 def test_yaml_conditions():
     print("Testing YAML-based condition generation...")
 
-    gen = SmartConditionGenerator()
+    gen = ConditionGenerator()
 
     # Test with some common indicators
     indicators = [

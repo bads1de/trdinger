@@ -35,7 +35,7 @@ class AutoStrategyService:
         初期化
 
         Args:
-            enable_smart_generation: SmartConditionGeneratorを使用するか
+            enable_smart_generation: ConditionGeneratorを使用するか
         """
         # データベースセッションファクトリ
         self.db_session_factory = SessionLocal

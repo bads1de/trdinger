@@ -35,7 +35,7 @@ class TestPhase1Integration:
 
     def test_smart_condition_generator_uses_integrated_constants(self):
         """SmartConditionGeneratorが統合された定数を使用していることを確認"""
-        generator = SmartConditionGenerator()
+        generator = ConditionGenerator()
 
         # テスト用の指標遺伝子を作成
         from app.services.auto_strategy.models.strategy_models import IndicatorGene
@@ -125,7 +125,7 @@ class TestPhase1Integration:
 
         # 要件4: 後方互換性の維持
         from app.services.auto_strategy.generators.condition_generator import ConditionGenerator
-        generator = SmartConditionGenerator()
+        generator = ConditionGenerator()
         assert generator is not None
 
     def test_performance_improvement_indicators(self):

@@ -71,10 +71,10 @@ SUPPORTED_TIMEFRAMES = [
 DEFAULT_TIMEFRAME = "1h"
 
 # === テクニカル指標定数 ===
-# indicator_registryに登録されているすべてのテクニカル指標を含む完全なリスト
-# カテゴリ別で分類して整理
-VALID_INDICATOR_TYPES = [
-    # === ボリューム系指標 ===
+# カテゴリ別に分割した指標リスト
+
+# ボリューム系指標
+VOLUME_INDICATORS = [
     "AD",  # 累積/配分線 (Accumulation/Distribution)
     "ADOSC",  # チャイキン・オシレーター (Chaikin A/D Oscillator)
     "OBV",  # 残高売買高 (On-Balance Volume)
@@ -90,7 +90,10 @@ VALID_INDICATOR_TYPES = [
     "PVR",  # 価格・出来高ランク指標 (Price Volume Rank indicator)
     "EFI",  # エルダーの力指数 (Elder's Force Index)
     "AOBV",  # アーチャー・オンバランス・ボリューム (Archer On-Balance Volume)
-    # === 数学演算子 ===
+]
+
+# 数学演算子
+MATH_OPERATORS = [
     "ADD",  # 加算 (Addition)
     "DIV",  # 除算 (Division)
     "MULT",  # 乗算 (Multiplication)
@@ -98,7 +101,10 @@ VALID_INDICATOR_TYPES = [
     "MAX",  # 最大値 (Maximum)
     "MIN",  # 最小値 (Minimum)
     "SUM",  # 合計 (Sum)
-    # === モメンタム系指標 ===
+]
+
+# モメンタム系指標
+MOMENTUM_INDICATORS = [
     "ADX",  # 平均方向性指数 (Average Directional Index)
     "ADXR",  # ADX評価値 (Average Directional Index Rating)
     "AO",  # オーサム・オシレーター (Awesome Oscillator)
@@ -144,7 +150,12 @@ VALID_INDICATOR_TYPES = [
     "KDJ",  # KDJ指標 (KDJ)
     "KST",  # ノウ・シュア・シング (Know Sure Thing)
     "PVO",  # パーセンテージ・ボリューム・オシレーター (Percentage Volume Oscillator)
-    # === トレンド系指標 ===
+    "CMO",  # チェンド・モメンタム・オシレーター (Chande Momentum Oscillator)
+    "MOM",  # モメンタム (Momentum)
+]
+
+# トレンド系指標
+TREND_INDICATORS = [
     "SMA",  # 単純移動平均線 (Simple Moving Average)
     "EMA",  # 指数移動平均線 (Exponential Moving Average)
     "WMA",  # 加重移動平均線 (Weighted Moving Average)
@@ -180,7 +191,10 @@ VALID_INDICATOR_TYPES = [
     "SSF",  # エーラー・スーパー・スムーサー (Ehler's Super Smoother Filter)
     "VIDYA",  # 可変指数動的平均線 (Variable Index Dynamic Average)
     "WCP",  # 加重終値価格 (Weighted Closing Price)
-    # === ボラティリティ系指標 ===
+]
+
+# ボラティリティ系指標
+VOLATILITY_INDICATORS = [
     "ATR",  # 平均真ボラティリティ範囲 (Average True Range)
     "NATR",  # 正規化平均真ボラティリティ範囲 (Normalized Average True Range)
     "TRANGE",  # 真ボラティリティ範囲 (True Range)
@@ -194,7 +208,12 @@ VALID_INDICATOR_TYPES = [
     "MASSI",  # マス指数 (Mass Index)
     "PDIST",  # プライス・ディスタンス (Price Distance)
     "THERMO",  # サーモメーター (Thermostat)
-    # === 統計系指標 ===
+    "BBANDS",  # ボリンジャーバンド（BBの別名）
+    "UO",  # アルティメイト・オシレーター (Ultimate Oscillator)
+]
+
+# 統計系指標
+STATISTICS_INDICATORS = [
     "BETA",  # ベータ係数 (Beta)
     "CORREL",  # 相関係数 (Correlation)
     "LINEARREG",  # 線形回帰 (Linear Regression)
@@ -216,7 +235,10 @@ VALID_INDICATOR_TYPES = [
     "MININDEX",  # 最小値インデックス (Min Index)
     "MINMAX",  # 最小最大値 (Min Max)
     "MINMAXINDEX",  # 最小最大値インデックス (Min Max Index)
-    # === パターン認識系指標 ===
+]
+
+# パターン認識系指標
+PATTERN_RECOGNITION_INDICATORS = [
     "CDL_DOJI",  # 同時線パターン (Doji)
     "CDL_HAMMER",  # 強気転換のハンマーパターン (Hammer)
     "CDL_HANGING_MAN",  # 弱気転換の首吊り人形パターン (Hanging Man)
@@ -235,26 +257,83 @@ VALID_INDICATOR_TYPES = [
     "ENGULFING_PATTERN",  # 包み線パターン (Engulfing Pattern)
     "MORNING_STAR",  # 強気転換の朝の明星パターン (Morning Star)
     "EVENING_STAR",  # 弱気転換の夕方の明星パターン (Evening Star)
-    # === Hilbert Transform系指標 ===
+]
+
+# Hilbert Transform系指標
+HILBERT_TRANSFORM_INDICATORS = [
     "HT_DCPERIOD",  # ヒルベルト変換周期スイング連続時間 (Hilbert Transform Dominant Cycle Period)
     "HT_DCPHASE",  # ヒルベルト変換周期位相 (Hilbert Transform Dominant Cycle Phase)
     "HT_PHASOR",  # ヒルベルト変換フェイサー (Hilbert Transform Phasor)
     "HT_SINE",  # ヒルベルト変換正弦波 (Hilbert Transform Sine Wave)
     "HT_TRENDMODE",  # ヒルベルト変換トレンドモード (Hilbert Transform Trendline)
-    # === 複合指標 ===
-    "ICHIMOKU",  # 一目均衡表 (Ichimoku Kinko Hyo)
-    # UI indicator (Volatility)
-    "UI",  # Ulcer指数 (Ulcer Index)
-    # === 従来の指標（互換性維持） ===
-    "BBANDS",  # ボリンジャーバンド（BBの別名）
-    "CMO",  # チェンド・モメンタム・オシレーター (Chande Momentum Oscillator)
-    "DEMA",  # 二重指数移動平均線 (Double Exponential Moving Average)
-    "TEMA",  # 三重指数移動平均線 (Triple Exponential Moving Average)
-    "MAMA",  # MESA適応移動平均線 (MESA Adaptive Moving Average)
-    "T3",  # T3移動平均線 (Tillson's T3 Moving Average)
-    "UO",  # アルティメイト・オシレーター (Ultimate Oscillator)
-    "MOM",  # モメンタム (Momentum)
 ]
+
+# 複合指標
+COMPOSITE_INDICATORS = [
+    "ICHIMOKU",  # 一目均衡表 (Ichimoku Kinko Hyo)
+    "UI",  # Ulcer指数 (Ulcer Index)
+]
+
+# 全テクニカル指標（indicator_registryに登録されているもの）
+VALID_INDICATOR_TYPES = (
+    VOLUME_INDICATORS
+    + MATH_OPERATORS
+    + MOMENTUM_INDICATORS
+    + TREND_INDICATORS
+    + VOLATILITY_INDICATORS
+    + STATISTICS_INDICATORS
+    + PATTERN_RECOGNITION_INDICATORS
+    + HILBERT_TRANSFORM_INDICATORS
+    + COMPOSITE_INDICATORS
+)
+
+# テクニカルオンリー時のおすすめ指標セット（成立性が高い指標を厳選）
+CURATED_TECHNICAL_INDICATORS = {
+    # モメンタム系（オシレーター）
+    "MACD", "MACDFIX", "MACDEXT", "RSI", "STOCH", "STOCHRSI",
+    "CCI", "ADX", "MFI", "WILLR", "AROON", "AROONOSC", "BOP",
+    "MOM", "ROC", "TRIX", "TSI", "ULTOSC", "CMO", "DX", "MINUS_DI", "PLUS_DI",
+    "CFO", "CHOP", "CTI", "DPO", "RMI", "RVI", "RVGI", "SMI", "STC",
+    "QQE", "VORTEX", "PVO",
+
+    # トレンド系（移動平均等）
+    "SMA", "EMA", "WMA", "TRIMA", "KAMA", "TEMA", "DEMA", "ALMA",
+    "T3", "HMA", "RMA", "SWMA", "ZLMA", "VWMA", "FWMA", "HWMA",
+    "JMA", "MCGD", "VIDYA", "SAR", "HT_TRENDLINE",
+
+    # ボラティリティ系
+    "ATR", "BBANDS", "DONCHIAN", "KELTNER", "SUPERTREND", "NATR", "TRANGE",
+    "ACCBANDS", "ABERRATION", "HWC", "MASSI", "PDIST", "THERMO",
+
+    # 統計系
+    "BETA", "CORREL", "STDDEV", "VAR", "LINEARREG", "LINEARREG_ANGLE",
+    "LINEARREG_INTERCEPT", "LINEARREG_SLOPE", "TSF", "ZSCORE", "MEDIAN",
+    "QUANTILE", "ENTROPY", "KURTOSIS", "MAD", "SKEW",
+
+    # パターン認識系
+    "CDL_DOJI", "CDL_HAMMER", "CDL_HANGING_MAN", "CDL_SHOOTING_STAR",
+    "CDL_ENGULFING", "CDL_HARAMI", "CDL_PIERCING", "CDL_THREE_BLACK_CROWS",
+    "CDL_THREE_WHITE_SOLDIERS", "CDL_DARK_CLOUD_COVER",
+}
+
+# 移動平均系指標の定数
+MOVING_AVERAGE_INDICATORS = {
+    "SMA", "EMA", "WMA", "TRIMA", "KAMA", "TEMA", "DEMA", "ALMA",
+    "T3", "MAMA", "HMA", "RMA", "SWMA", "ZLMA", "MA", "VWMA",
+    "FWMA", "HWMA", "JMA", "MCGD", "VIDYA", "WCP"
+}
+
+# 優先的な移動平均指標（MA系を2本以上生成する場合の候補）
+PREFERRED_MA_INDICATORS = {
+    "SMA", "EMA", "MAMA", "MA", "HMA", "ALMA", "VIDYA", "JMA"
+}
+
+# periodパラメータが必要な移動平均指標
+MA_INDICATORS_NEEDING_PERIOD = {
+    "SMA", "EMA", "WMA", "TRIMA", "KAMA", "TEMA", "DEMA", "ALMA",
+    "T3", "HMA", "RMA", "SWMA", "ZLMA", "VWMA", "FWMA", "HWMA",
+    "JMA", "MCGD", "VIDYA", "WCP"
+}
 
 # === ML指標定数 ===
 ML_INDICATOR_TYPES = [

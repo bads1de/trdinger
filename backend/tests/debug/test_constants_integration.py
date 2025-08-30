@@ -66,7 +66,7 @@ class TestConstantsIntegration:
 
     def test_smart_condition_generator_uses_constants(self):
         """SmartConditionGeneratorがconstants経由で定数を使用していることを確認"""
-        generator = SmartConditionGenerator()
+        generator = ConditionGenerator()
 
         # generatorがINDICATOR_CHARACTERISTICSにアクセスできることを確認
         # 実際の使用は内部メソッドで使用されていることをテスト
@@ -85,7 +85,7 @@ class TestConstantsIntegration:
             assert isinstance(shorts, list)
             assert isinstance(exits, list)
         except Exception as e:
-            pytest.fail(f"定数統合後にSmartConditionGeneratorがエラーを起こしました: {e}")
+            pytest.fail(f"定数統合後にConditionGeneratorがエラーを起こしました: {e}")
 
     def test_no_duplicate_indicator_characteristics(self):
         """INDICATOR_CHARACTERISTICSが重複定義されていないことを確認"""

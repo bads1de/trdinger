@@ -228,7 +228,3 @@ def get_index_statistics(features: pd.DataFrame, labels: pd.Series) -> Dict[str,
         ),
         "coverage_in_labels": len(common_index) / len(labels) if len(labels) > 0 else 0,
     }
-
-
-# MLWorkflowIndexManager は削除されました。
-# 後方互換性の必要がある場合は新しい関数群（align_data, validate_alignment など）を使用してください。
