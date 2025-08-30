@@ -8,21 +8,26 @@ from typing import Dict, List
 # === 指標タイプ定義 ===
 from enum import Enum
 
+
 class IndicatorType(str, Enum):
     """指標分類"""
+
     MOMENTUM = "momentum"  # モメンタム系
     TREND = "trend"  # トレンド系
     VOLATILITY = "volatility"  # ボラティリティ系
     STATISTICS = "statistics"  # 統計系
     PATTERN_RECOGNITION = "pattern_recognition"  # パターン認識系
 
+
 # 戦略タイプ定義
 class StrategyType(str, Enum):
     """戦略タイプ"""
+
     DIFFERENT_INDICATORS = "different_indicators"  # 異なる指標の組み合わせ
     TIME_SEPARATION = "time_separation"  # 時間軸分離
     COMPLEX_CONDITIONS = "complex_conditions"  # 複合条件
     INDICATOR_CHARACTERISTICS = "indicator_characteristics"  # 指標特性活用
+
 
 # === 演算子定数 ===
 OPERATORS = [
@@ -66,207 +71,196 @@ SUPPORTED_TIMEFRAMES = [
 DEFAULT_TIMEFRAME = "1h"
 
 # === テクニカル指標定数 ===
-# indicator_registryに登録されているすべての指標を含む完全なリスト
+# indicator_registryに登録されているすべてのテクニカル指標を含む完全なリスト
+# カテゴリ別で分類して整理
 VALID_INDICATOR_TYPES = [
-    # 数学変換系指標
-    "ACOS",
-    "ASIN",
-    "ATAN",
-    "CEIL",
-    "COS",
-    "COSH",
-    "EXP",
-    "FLOOR",
-    "LN",
-    "LOG10",
-    "SIN",
-    "SINH",
-    "SQRT",
-    "TAN",
-    "TANH",
-    # ボリューム系指標
-    "AD",
-    "ADOSC",
-    "OBV",
-    "EOM",
-    "KVO",
-    "CMF",
-    "NVI",
-    "PVI",
-    "PVT",
-    "VWAP",
-    "VP",    # Volume Price Confirmation
-    "PVOL",  # Price-Volume indicator
-    "PVR",   # Price Volume Rank indicator
-    "EFI",   # Elder's Force Index
-    "AOBV",  # Archer On-Balance Volume
-    # 数学演算子
-    "ADD",
-    "DIV",
-    "MULT",
-    "SUB",
-    "MAX",
-    "MIN",
-    "SUM",
-    # モメンタム系指標
-    "ADX",
-    "ADXR",
-    "AO",
-    "APO",
-    "AROON",
-    "AROONOSC",
-    "BOP",
-    "CCI",
-    "CFO",
-    "CHOP",
-    "CTI",
-    "DPO",
-    "DX",
-    "MFI",
-    "MINUS_DI",
-    "MINUS_DM",
-    "PLUS_DI",
-    "PLUS_DM",
-    "PPO",
-    "QQE",
-    "RMI",
-    "ROC",
-    "ROCP",
-    "ROCR",
-    "ROCR100",
-    "RSI",
-    "RSI_EMA_CROSS",
-    "RVGI",
-    "RVI",
-    "SMI",
-    "STC",
-    "STOCH",
-    "STOCHF",
-    "STOCHRSI",
-    "TRIX",
-    "TSI",
-    "ULTOSC",
-    "VORTEX",
-    "WILLR",
-    "MACD",
-    "MACDEXT",
-    "MACDFIX",
-    "KDJ",
-    "KST",
-    "PVO",
-    # トレンド系指標
-    "SMA",
-    "EMA",
-    "WMA",
-    "TRIMA",
-    "KAMA",
-    "ALMA",
-    "HMA",
-    "RMA",
-    "SWMA",
-    "ZLMA",
-    "MA",
-    "MIDPOINT",
-    "MIDPRICE",
-    "SAR",
-    "HT_TRENDLINE",
-    "PRICE_EMA_RATIO",
-    "SMA_SLOPE",
-    "VWMA",
-    "FWMA",  # Fibonacci's Weighted Moving Average
-    "HILO",  # Gann High-Low Activator
-    "HL2",   # High-Low Average
-    "HLC3",  # High-Low-Close Average
-    "HWMA",  # Holt-Winter Moving Average
-    "JMA",   # Jurik Moving Average
-    "MCGD",  # McGinley Dynamic
-    "OHLC4", # Open-High-Low-Close Average
-    "PWMA",  # Pascal's Weighted Moving Average
-    "SINWMA", # Sine Weighted Moving Average
-    "SSF",   # Ehler's Super Smoother Filter
-    "VIDYA", # Variable Index Dynamic Average
-    "WCP",   # Weighted Closing Price
-    # ボラティリティ系指標
-    "ATR",
-    "NATR",
-    "TRANGE",
-    "BB",
-    "DONCHIAN",
-    "KELTNER",
-    "SUPERTREND",
-    "ABERRATION",  # Aberration
-    "ACCBANDS",    # Acceleration Bands
-    "HWC",         # Hull-Wilder Channels
-    "MASSI",       # Mass Index
-    "PDIST",       # Price Distance
-    "THERMO",      # Thermometer
-    # 統計系指標
-    "BETA",
-    "CORREL",
-    "LINEARREG",
-    "LINEARREG_ANGLE",
-    "LINEARREG_INTERCEPT",
-    "LINEARREG_SLOPE",
-    "STDDEV",
-    "TSF",
-    "VAR",
-    "ZSCORE",      # Z-Score
-    "ENTROPY",     # Entropy
-    "KURTOSIS",    # Kurtosis
-    "MAD",         # Mean Absolute Deviation
-    "MEDIAN",      # Median
-    "QUANTILE",    # Quantile
-    "SKEW",        # Skewness
-    "TOS_STDEVALL", # Standard Deviation All
-    "MAXINDEX",    # Max Index
-    "MININDEX",    # Min Index
-    "MINMAX",      # Min Max
-    "MINMAXINDEX", # Min Max Index
-    # パターン認識系指標
-    "CDL_DOJI",
-    "CDL_HAMMER",
-    "CDL_HANGING_MAN",
-    "CDL_SHOOTING_STAR",
-    "CDL_ENGULFING",
-    "CDL_HARAMI",
-    "CDL_PIERCING",
-    "CDL_THREE_BLACK_CROWS",
-    "CDL_THREE_WHITE_SOLDIERS",
-    "CDL_DARK_CLOUD_COVER",
-    "CDL_SPINNING_TOP",
-    "CDL_MARUBOZU",
-    "CDL_MORNING_STAR",
-    "CDL_EVENING_STAR",
-    "HAMMER",
-    "ENGULFING_PATTERN",
-    "MORNING_STAR",
-    "EVENING_STAR",
-    # Hilbert Transform系指標
-    "HT_DCPERIOD",
-    "HT_DCPHASE",
-    "HT_PHASOR",
-    "HT_SINE",
-    "HT_TRENDMODE",
-    # 複合指標
-    "ICHIMOKU",
+    # === ボリューム系指標 ===
+    "AD",  # 累積/配分線 (Accumulation/Distribution)
+    "ADOSC",  # チャイキン・オシレーター (Chaikin A/D Oscillator)
+    "OBV",  # 残高売買高 (On-Balance Volume)
+    "EOM",  # 動きやすさ (Ease of Movement)
+    "KVO",  # クリンガー・ボリューム・オシレーター (Klinger Volume Oscillator)
+    "CMF",  # チャイキン・マネーフロー (Chaikin Money Flow)
+    "NVI",  # ネガティブ・ボリューム・インデックス (Negative Volume Index)
+    "PVI",  # ポジティブ・ボリューム・インデックス (Positive Volume Index)
+    "PVT",  # 価格・出来高・トレンド (Price Volume Trend)
+    "VWAP",  # 出来高加重平均価格 (Volume Weighted Average Price)
+    "VP",  # 出来高価格確認 (Volume Price Confirmation)
+    "PVOL",  # 価格・出来高指標 (Price-Volume indicator)
+    "PVR",  # 価格・出来高ランク指標 (Price Volume Rank indicator)
+    "EFI",  # エルダーの力指数 (Elder's Force Index)
+    "AOBV",  # アーチャー・オンバランス・ボリューム (Archer On-Balance Volume)
+    # === 数学演算子 ===
+    "ADD",  # 加算 (Addition)
+    "DIV",  # 除算 (Division)
+    "MULT",  # 乗算 (Multiplication)
+    "SUB",  # 減算 (Subtraction)
+    "MAX",  # 最大値 (Maximum)
+    "MIN",  # 最小値 (Minimum)
+    "SUM",  # 合計 (Sum)
+    # === モメンタム系指標 ===
+    "ADX",  # 平均方向性指数 (Average Directional Index)
+    "ADXR",  # ADX評価値 (Average Directional Index Rating)
+    "AO",  # オーサム・オシレーター (Awesome Oscillator)
+    "APO",  # アブソリュート・プライス・オシレーター (Absolute Price Oscillator)
+    "AROON",  # アローンツールシステム (Aroon System)
+    "AROONOSC",  # アローン・オシレーター (Aroon Oscillator)
+    "BOP",  # バランス・オブ・パワー (Balance Of Power)
+    "CCI",  # 商品チャネル指数 (Commodity Channel Index)
+    "CFO",  # チャンド予測オシレーター (Chande Forecast Oscillator)
+    "CHOP",  # チョピネス指数 (Choppiness Index)
+    "CTI",  # チャンド・トレンド指数 (Chande Trend Index)
+    "DPO",  # デトレンド価格オシレーター (Detrended Price Oscillator)
+    "DX",  # 方向性指数 (Directional Movement Index)
+    "MFI",  # マネー・フロウ指数 (Money Flow Index)
+    "MINUS_DI",  # マイナスマイナス方向性指数 (Minus Directional Indicator)
+    "MINUS_DM",  # マイナスマイナス方向性変動 (Minus Directional Movement)
+    "PLUS_DI",  # プラス方向性指数 (Plus Directional Indicator)
+    "PLUS_DM",  # プラス方向性変動 (Plus Directional Movement)
+    "PPO",  # パーセンテージ・プライス・オシレーター (Percentage Price Oscillator)
+    "QQE",  # 定性的定量推定 (Qualitative Quantitative Estimation)
+    "RMI",  # 相対モメンタム指数 (Relative Momentum Index)
+    "ROC",  # 変化率 (Rate of Change)
+    "ROCP",  # 変化率率 (Rate of Change Percentage)
+    "ROCR",  # 変化率比率 (Rate of Change Ratio)
+    "ROCR100",  # 変化率比率100スケール (Rate of Change Ratio 100 Scale)
+    "RSI",  # 相対力指数 (Relative Strength Index)
+    "RSI_EMA_CROSS",  # RSIとEMAのクロス (RSI EMA Cross)
+    "RVGI",  # 相対ボラティリティ指数 (Relative Vigor Index)
+    "RVI",  # 相対ボラティリティ指数 (Relative Volatility Index)
+    "SMI",  # ストキャスティック・モメンタム指数 (Stochastic Momentum Index)
+    "STC",  # シャフト・トレンド・サイクル (Schaff Trend Cycle)
+    "STOCH",  # ストキャスティクス・オシレーター (Stochastic Oscillator)
+    "STOCHF",  # 高速ストキャスティクス (Stochastic Fast)
+    "STOCHRSI",  # ストキャスティックRSI (Stochastic RSI)
+    "TRIX",  # TRIX (Triple Exponential Average)
+    "TSI",  # 真実の強さ指数 (True Strength Index)
+    "ULTOSC",  # アルティメイト・オシレーター (Ultimate Oscillator)
+    "VORTEX",  # ボルテックス指標 (Vortex Indicator)
+    "WILLR",  # ウィリアムズ・パーセントレンジ (Williams Percent Range)
+    "MACD",  # MACD (Moving Average Convergence Divergence)
+    "MACDEXT",  # MACD拡張 (MACD Extended)
+    "MACDFIX",  # MACD固定 (MACD Fixed)
+    "KDJ",  # KDJ指標 (KDJ)
+    "KST",  # ノウ・シュア・シング (Know Sure Thing)
+    "PVO",  # パーセンテージ・ボリューム・オシレーター (Percentage Volume Oscillator)
+    # === トレンド系指標 ===
+    "SMA",  # 単純移動平均線 (Simple Moving Average)
+    "EMA",  # 指数移動平均線 (Exponential Moving Average)
+    "WMA",  # 加重移動平均線 (Weighted Moving Average)
+    "TRIMA",  # 三角移動平均線 (Triangular Moving Average)
+    "KAMA",  # カフマン適応移動平均線 (Kaufman's Adaptive Moving Average)
+    "TEMA",  # 三重指数移動平均線 (Triple Exponential Moving Average)
+    "DEMA",  # 二重指数移動平均線 (Double Exponential Moving Average)
+    "ALMA",  # アルノー・ルグー移動平均線 (Arnaud Legoux Moving Average)
+    "T3",  # T3移動平均線 (Tillson's T3 Moving Average)
+    "MAMA",  # MESA適応移動平均線 (MESA Adaptive Moving Average)
+    "HMA",  # ハル移動平均線 (Hull Moving Average)
+    "RMA",  # 平滑化移動平均線 (Smoothed Moving Average)
+    "SWMA",  # 対称加重移動平均線 (Symmetric Weighted Moving Average)
+    "ZLMA",  # ゼロラグ指数移動平均線 (Zero Lag Exponential Moving Average)
+    "MA",  # 移動平均線 (Moving Average)
+    "MIDPOINT",  # 期間中間点 (MidPoint over period)
+    "MIDPRICE",  # 期間中間価格 (MidPrice over period)
+    "SAR",  # パラボリックSAR (Parabolic SAR)
+    "HT_TRENDLINE",  # ヒルベルト変換即時トレンドライン (Hilbert Transform Instantaneous Trendline)
+    "PRICE_EMA_RATIO",  # 価格-EMA比率 (Price to EMA Ratio)
+    "SMA_SLOPE",  # SMA勾配 (SMA Slope)
+    "VWMA",  # 出来高加重移動平均線 (Volume Weighted Moving Average)
+    "FWMA",  # フィボナッチ加重移動平均線 (Fibonacci's Weighted Moving Average)
+    "HILO",  # ギャン高郭安アクティベーター (Gann High-Low Activator)
+    "HL2",  # 高安平均 (High-Low Average)
+    "HLC3",  # 高安終値平均 (High-Low-Close Average)
+    "HWMA",  # ホルト-ウィンターモデル移動平均線 (Holt-Winter Moving Average)
+    "JMA",  # ジュリック移動平均線 (Jurik Moving Average)
+    "MCGD",  # マクギリー動的指数 (McGinley Dynamic)
+    "OHLC4",  # 四本値平均 (Open-High-Low-Close Average)
+    "PWMA",  # パスカル加重移動平均線 (Pascal's Weighted Moving Average)
+    "SINWMA",  # 正弦加重移動平均線 (Sine Weighted Moving Average)
+    "SSF",  # エーラー・スーパー・スムーサー (Ehler's Super Smoother Filter)
+    "VIDYA",  # 可変指数動的平均線 (Variable Index Dynamic Average)
+    "WCP",  # 加重終値価格 (Weighted Closing Price)
+    # === ボラティリティ系指標 ===
+    "ATR",  # 平均真ボラティリティ範囲 (Average True Range)
+    "NATR",  # 正規化平均真ボラティリティ範囲 (Normalized Average True Range)
+    "TRANGE",  # 真ボラティリティ範囲 (True Range)
+    "BB",  # ボリンジャーバンド (Bollinger Bands)
+    "DONCHIAN",  # ドンチャンチャネル (Donchian Channel)
+    "KELTNER",  # ケルトナチャネル (Keltner Channel)
+    "SUPERTREND",  # スーパートレンド (SuperTrend)
+    "ABERRATION",  # アベレーション (Aberration)
+    "ACCBANDS",  # アクセレレーションバンド (Acceleration Bands)
+    "HWC",  # ハル・ウィリアムズ・チャネル (Hull-Wilder Channels)
+    "MASSI",  # マス指数 (Mass Index)
+    "PDIST",  # プライス・ディスタンス (Price Distance)
+    "THERMO",  # サーモメーター (Thermostat)
+    # === 統計系指標 ===
+    "BETA",  # ベータ係数 (Beta)
+    "CORREL",  # 相関係数 (Correlation)
+    "LINEARREG",  # 線形回帰 (Linear Regression)
+    "LINEARREG_ANGLE",  # 線形回帰角度 (Linear Regression Angle)
+    "LINEARREG_INTERCEPT",  # 線形回帰切片 (Linear Regression Intercept)
+    "LINEARREG_SLOPE",  # 線形回帰傾き (Linear Regression Slope)
+    "STDDEV",  # 標準偏差 (Standard Deviation)
+    "TSF",  # 時系列予測 (Time Series Forecast)
+    "VAR",  # 分散 (Variance)
+    "ZSCORE",  # Zスコア (Z-Score)
+    "ENTROPY",  # エントロピー (Entropy)
+    "KURTOSIS",  # 歪度 (Kurtosis)
+    "MAD",  # 平均絶対偏差 (Mean Absolute Deviation)
+    "MEDIAN",  # 中央値 (Median)
+    "QUANTILE",  # 分位数 (Quantile)
+    "SKEW",  # 歪度 (Skewness)
+    "TOS_STDEVALL",  # 全標準偏差 (Standard Deviation All)
+    "MAXINDEX",  # 最大値インデックス (Max Index)
+    "MININDEX",  # 最小値インデックス (Min Index)
+    "MINMAX",  # 最小最大値 (Min Max)
+    "MINMAXINDEX",  # 最小最大値インデックス (Min Max Index)
+    # === パターン認識系指標 ===
+    "CDL_DOJI",  # 同時線パターン (Doji)
+    "CDL_HAMMER",  # 強気転換のハンマーパターン (Hammer)
+    "CDL_HANGING_MAN",  # 弱気転換の首吊り人形パターン (Hanging Man)
+    "CDL_SHOOTING_STAR",  # 弱気転換の流れ星パターン (Shooting Star)
+    "CDL_ENGULFING",  # 包み線パターン (Engulfing)
+    "CDL_HARAMI",  # はらみ線パターン (Harami)
+    "CDL_PIERCING",  # 強気転換の切り込み線パターン (Piercing)
+    "CDL_THREE_BLACK_CROWS",  # 弱気継続の三羽烏パターン (Three Black Crows)
+    "CDL_THREE_WHITE_SOLDIERS",  # 強気継続の三羽白兵パターン (Three White Soldiers)
+    "CDL_DARK_CLOUD_COVER",  # 弱気転換の暗雲圧力パターン (Dark Cloud Cover)
+    "CDL_SPINNING_TOP",  # 不確実を示す回転相場パターン (Spinning Top)
+    "CDL_MARUBOZU",  # 力強い単独線パターン (Marubozu)
+    "CDL_MORNING_STAR",  # 強気転換の明けの明星パターン (Morning Star)
+    "CDL_EVENING_STAR",  # 弱気転換の宵の明星パターン (Evening Star)
+    "HAMMER",  # 強気転換パターン (Hammer)
+    "ENGULFING_PATTERN",  # 包み線パターン (Engulfing Pattern)
+    "MORNING_STAR",  # 強気転換の朝の明星パターン (Morning Star)
+    "EVENING_STAR",  # 弱気転換の夕方の明星パターン (Evening Star)
+    # === Hilbert Transform系指標 ===
+    "HT_DCPERIOD",  # ヒルベルト変換周期スイング連続時間 (Hilbert Transform Dominant Cycle Period)
+    "HT_DCPHASE",  # ヒルベルト変換周期位相 (Hilbert Transform Dominant Cycle Phase)
+    "HT_PHASOR",  # ヒルベルト変換フェイサー (Hilbert Transform Phasor)
+    "HT_SINE",  # ヒルベルト変換正弦波 (Hilbert Transform Sine Wave)
+    "HT_TRENDMODE",  # ヒルベルト変換トレンドモード (Hilbert Transform Trendline)
+    # === 複合指標 ===
+    "ICHIMOKU",  # 一目均衡表 (Ichimoku Kinko Hyo)
     # UI indicator (Volatility)
-    "UI",
-    # 従来の指標（互換性維持）
-    "BBANDS",  # BBの別名
-    "CMO",  # 未実装だが互換性維持
-    "DEMA",  # 未実装だが互換性維持
-    "TEMA",  # 未実装だが互換性維持
-    "MAMA",  # 未実装だが互換性維持
-    "T3",  # 未実装だが互換性維持
-    "UO",  # 未実装だが互換性維持
-    "MOM",  # 未実装だが互換性維持
+    "UI",  # Ulcer指数 (Ulcer Index)
+    # === 従来の指標（互換性維持） ===
+    "BBANDS",  # ボリンジャーバンド（BBの別名）
+    "CMO",  # チェンド・モメンタム・オシレーター (Chande Momentum Oscillator)
+    "DEMA",  # 二重指数移動平均線 (Double Exponential Moving Average)
+    "TEMA",  # 三重指数移動平均線 (Triple Exponential Moving Average)
+    "MAMA",  # MESA適応移動平均線 (MESA Adaptive Moving Average)
+    "T3",  # T3移動平均線 (Tillson's T3 Moving Average)
+    "UO",  # アルティメイト・オシレーター (Ultimate Oscillator)
+    "MOM",  # モメンタム (Momentum)
 ]
 
 # === ML指標定数 ===
 ML_INDICATOR_TYPES = [
-    "ML_UP_PROB",
-    "ML_DOWN_PROB",
-    "ML_RANGE_PROB",
+    "ML_UP_PROB",  # 機械学習上昇確率 (Machine Learning Up Probability)
+    "ML_DOWN_PROB",  # 機械学習下落確率 (Machine Learning Down Probability)
+    "ML_RANGE_PROB",  # 機械学習レンジ確率 (Machine Learning Range Probability)
 ]
 
 # === TP/SL関連定数 ===
@@ -412,14 +406,6 @@ def get_id_to_indicator_mapping(indicator_ids: Dict[str, int]) -> Dict[int, str]
     return {v: k for k, v in indicator_ids.items()}
 
 
-# === インジケータ解決支援定数 ===
-# 複数出力インジケータのデフォルト解決マッピング（例: MACD -> MACD_0）
-MULTI_OUTPUT_DEFAULT_MAPPING: Dict[str, str] = {
-    "AROON": "AROON_0",
-    "MACD": "MACD_0",
-    "STOCH": "STOCH_0",
-    "BBANDS": "BBANDS_1",  # Middle をデフォルト
-}
 
 # 基本的な移動平均インジケータ名のリスト（存在チェックなどに使用）
 BASIC_MA_INDICATORS: List[str] = [
@@ -790,7 +776,7 @@ GA_DEFAULT_TPSL_METHOD_CONSTRAINTS = [
 
 GA_TPSL_SL_RANGE = [0.01, 0.08]  # SL範囲（1%-8%）
 GA_TPSL_TP_RANGE = [0.02, 0.20]  # TP範囲（2%-20%）
-GA_TPSL_RR_RANGE = [1.2, 4.0]   # リスクリワード比範囲
+GA_TPSL_RR_RANGE = [1.2, 4.0]  # リスクリワード比範囲
 GA_TPSL_ATR_MULTIPLIER_RANGE = [1.0, 4.0]  # ATR倍率範囲
 
 # ポジションサイジング関連設定
@@ -804,12 +790,21 @@ GA_DEFAULT_POSITION_SIZING_METHOD_CONSTRAINTS = [
 GA_POSITION_SIZING_LOOKBACK_RANGE = [50, 200]  # ハーフオプティマルF用ルックバック期間
 GA_POSITION_SIZING_OPTIMAL_F_MULTIPLIER_RANGE = [0.25, 0.75]  # オプティマルF倍率範囲
 GA_POSITION_SIZING_ATR_PERIOD_RANGE = [10, 30]  # ATR計算期間範囲
-GA_POSITION_SIZING_ATR_MULTIPLIER_RANGE = [1.0, 4.0]  # ポジションサイジング用ATR倍率範囲
-GA_POSITION_SIZING_RISK_PER_TRADE_RANGE = [0.01, 0.05]  # 1取引あたりのリスク範囲（1%-5%）
+GA_POSITION_SIZING_ATR_MULTIPLIER_RANGE = [
+    1.0,
+    4.0,
+]  # ポジションサイジング用ATR倍率範囲
+GA_POSITION_SIZING_RISK_PER_TRADE_RANGE = [
+    0.01,
+    0.05,
+]  # 1取引あたりのリスク範囲（1%-5%）
 GA_POSITION_SIZING_FIXED_RATIO_RANGE = [0.05, 0.3]  # 固定比率範囲（5%-30%）
 GA_POSITION_SIZING_FIXED_QUANTITY_RANGE = [0.1, 5.0]  # 固定枚数範囲
 GA_POSITION_SIZING_MIN_SIZE_RANGE = [0.01, 0.1]  # 最小ポジションサイズ範囲
-GA_POSITION_SIZING_MAX_SIZE_RANGE = [0.001, 1.0]  # 最大ポジションサイズ範囲（システム全体のmax_position_sizeに一致）
+GA_POSITION_SIZING_MAX_SIZE_RANGE = [
+    0.001,
+    1.0,
+]  # 最大ポジションサイズ範囲（システム全体のmax_position_sizeに一致）
 GA_POSITION_SIZING_PRIORITY_RANGE = [0.5, 1.5]  # 優先度範囲
 
 # フィットネス共有設定

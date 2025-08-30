@@ -95,10 +95,10 @@ POSITIONAL_DATA_FUNCTIONS = {
     "BBANDS",
     "hilo",  # HILO指標を位置引数関数に追加
     # Volume indicators that need positional arguments
-    "ad",     # Accumulation/Distribution
-    "eom",    # Ease of Movement
-    "kvo",    # Klinger Volume Oscillator
-    "cmf",    # Chaikin Money Flow
+    "ad",  # Accumulation/Distribution
+    "eom",  # Ease of Movement
+    "kvo",  # Klinger Volume Oscillator
+    "cmf",  # Chaikin Money Flow
 }
 
 
@@ -250,7 +250,9 @@ class TechnicalIndicatorService:
         """アダプター関数を使用した指標計算（後方互換性用）"""
         # アダプター関数がNoneでないことを確認
         if not config.adapter_function:
-            raise ValueError(f"Adapter function is not available for indicator {indicator_type}")
+            raise ValueError(
+                f"Adapter function is not available for indicator {indicator_type}"
+            )
 
         # 型チェックのため、adapter_functionがNoneでないことを確認した後の参照
         adapter_function = config.adapter_function
@@ -291,7 +293,8 @@ class TechnicalIndicatorService:
             if column_name:
                 required_data[data_key] = df[column_name]
 
-        # Parameter normalization
+        # パラメータ正規化
+
         from .parameter_manager import normalize_params
 
         converted_params = normalize_params(indicator_type, params, config)
@@ -337,8 +340,8 @@ class TechnicalIndicatorService:
         sig = inspect.signature(adapter_function)
         valid_params = set(sig.parameters.keys())
 
-        # Functions that require positional arguments
-        # First few parameters are data series, rest are keyword arguments
+        # 位置引数を必要とする関数
+        # 先頭のパラメータはデータ系列、残りはキーワード引数
         if indicator_type.lower() in POSITIONAL_DATA_FUNCTIONS:
             # 位置引数を必要とする関数の場合
             # 必要なデータを順序通りに位置引数として渡す
@@ -364,23 +367,22 @@ class TechnicalIndicatorService:
                     # 無効なパラメータは除外（何もしない）
                 # config.parameters に含まれるパラメータは除外（何もしない）
 
-            # logger.debug(
-            #     f"Using positional args for {indicator_type}: {len(positional_args)} args"
-            # )
             return adapter_function(*positional_args, **keyword_args)
 
-        # If data parameter is included but close is not
+        # dataパラメータが含まれているがcloseが含まれていない場合
+        # dataを最初の位置引数として渡す（一部の関数で期待される形式）
+        elif "data" in all_args and "close" not in all_args:
+            # dataを位置引数として渡し、他のパラメータをキーワード引数として渡す
+            data_arg = all_args.pop("data")
+            return adapter_function(data_arg, **all_args)
+
         # Pass data as first positional argument (format expected by some functions)
         elif "data" in all_args and "close" not in all_args:
             # Pass data as positional argument and others as keyword arguments
             data_arg = all_args.pop("data")
-            # logger.debug(
-            #     f"Using positional arg for {indicator_type}: shape={getattr(data_arg, 'shape', 'N/A')}"
-            # )
             return adapter_function(data_arg, **all_args)
 
-        # Normal keyword argument call
-        # logger.debug(f"Using keyword args for {indicator_type}")
+        # 通常のキーワード引数呼び出し
         return adapter_function(**all_args)
 
     def _resolve_column_name(self, df: pd.DataFrame, data_key: str) -> Optional[str]:

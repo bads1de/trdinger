@@ -85,7 +85,7 @@ def create_simple_strategy():
 
         class SimpleStrategy(Strategy):
             def init(self):
-                # シンプルな移動平均クロス戦略
+                # 単純移動平均クロス戦略
                 self.sma_short = self.I(lambda: pd.Series(self.data.Close).rolling(5).mean())
                 self.sma_long = self.I(lambda: pd.Series(self.data.Close).rolling(20).mean())
 
@@ -110,10 +110,7 @@ def create_simple_strategy():
                         print(f"SELL SIGNAL at {self.data.Close[-1]:.2f}")
                         self.position.close()
 
-                # 損失が大きい場合も手仕舞い（ストップロス）- 一旦コメントアウト
-                # if self.position and (self.data.Close[-1] / self.position.entry_price - 1) < -0.05:
-                #     print(f"STOP LOSS at {self.data.Close[-1]:.2f}")
-                #     self.position.close()
+                # 損失が大きい場合も手仕舞い（ストップロス）
 
         return SimpleStrategy
 

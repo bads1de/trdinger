@@ -12,20 +12,7 @@
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import {
-  Home,
-  BarChart3,
-  Brain,
-  Database,
-  TrendingUp,
-  Settings,
-  Bell,
-  Wifi,
-  WifiOff,
-  User,
-  ChevronDown,
-  Activity,
-} from "lucide-react";
+import { Home, BarChart3, Brain, Database, TrendingUp } from "lucide-react";
 
 import {
   Sidebar,
@@ -42,8 +29,6 @@ import {
   SidebarRail,
 } from "@/components/ui/sidebar";
 import { Badge } from "@/components/ui/badge";
-
-
 
 interface NavItem {
   href: string;
@@ -85,8 +70,6 @@ const navItems: NavItem[] = [
   },
 ];
 
-
-
 /**
  * アクティブページかどうかを判定
  */
@@ -96,9 +79,6 @@ const isActivePage = (href: string, pathname: string): boolean => {
   }
   return pathname.startsWith(href);
 };
-
-
-
 
 /**
  * サイドバーナビゲーションコンポーネント

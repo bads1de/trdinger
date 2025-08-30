@@ -70,12 +70,6 @@ class IndividualEvaluator:
             # strategy_nameフィールドを追加
             backtest_config["strategy_name"] = f"GA_Individual_{gene.id[:8]}"
 
-            # デバッグログ: 取引量設定を確認
-            # risk_management = gene.risk_management
-            # position_size = risk_management.get("position_size", 0.1)
-            # logger.debug(
-            #     f"GA個体評価 - position_size: {position_size}, gene_id: {gene.id}"
-            # )
 
             result = self.backtest_service.run_backtest(backtest_config)
 

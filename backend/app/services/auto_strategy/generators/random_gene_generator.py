@@ -217,9 +217,6 @@ class RandomGeneGenerator:
                 metadata={"generated_by": "RandomGeneGenerator"},
             )
 
-            # logger.info(
-            #     f"ランダム戦略遺伝子生成成功: 指標={len(indicators)}, エントリー={len(entry_conditions)}, エグジット={len(exit_conditions)}"
-            # )
             return gene
 
         except Exception as e:
@@ -1030,9 +1027,6 @@ class RandomGeneGenerator:
             except Exception:
                 pass
 
-            # logger.debug(
-            #     f"TP/SL遺伝子生成: メソッド={tpsl_gene.method.value}, SL={tpsl_gene.stop_loss_pct:.3f}"
-            # )
             return tpsl_gene
 
         except Exception as e:

@@ -343,9 +343,20 @@ class MarketRegimeDetector:
         """RSI（Relative Strength Index）を計算（pandas-ta使用）"""
         import pandas_ta as ta
 
-        rsi: Union[pd.Series, pd.DataFrame, None] = ta.rsi(close, length=period)
+        rsi_raw = ta.rsi(close, length=period)  # type: ignore
+
+        if rsi_raw is None:
+            return 50.0
+
+        # numpy ndarray を pandas Series に変換
+        if isinstance(rsi_raw, np.ndarray):
+            rsi = pd.Series(rsi_raw, index=close.index[-len(rsi_raw):])
+        else:
+            rsi = rsi_raw
+
         if rsi is None or not hasattr(rsi, "iloc"):
             return 50.0
+
         return float(rsi.iloc[-1])
 
     def _calculate_bollinger_bands(
