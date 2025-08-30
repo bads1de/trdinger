@@ -9,7 +9,7 @@ import json
 import logging
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field, fields
-from typing import Any, Callable, Dict, List, Optional, Tuple
+from typing import Any, Callable, Dict, List, Optional, Tuple, cast
 
 from .constants import (
     # 取引設定
@@ -74,6 +74,30 @@ class BaseConfig(ABC):
     def get_default_values(self) -> Dict[str, Any]:
         """デフォルト値を取得"""
         pass
+
+    @classmethod
+    def get_default_values_from_fields(cls) -> Dict[str, Any]:
+        """
+        フィールド定義に基づいてデフォルト値を自動生成
+
+        このメソッドはリフレクションを使って各フィールドのデフォルト値を収集します。
+        複雑なデフォルト値（field(default_factory=...)）も処理できます。
+        """
+        defaults = {}
+        for field_info in fields(cls):
+            if field_info.default is not field_info.default_factory:  # sentinel以外
+                defaults[field_info.name] = field_info.default
+            elif field_info.default_factory is not None:
+                try:
+                    # default_factoryがcallableの場合呼び出し
+                    if callable(field_info.default_factory):
+                        defaults[field_info.name] = field_info.default_factory()
+                    else:
+                        defaults[field_info.name] = field_info.default_factory
+                except Exception as e:
+                    logger.warning(f"デフォルト値生成失敗: {field_info.name}, {e}")
+                    defaults[field_info.name] = None
+        return defaults
 
     def validate(self) -> Tuple[bool, List[str]]:
         """共通検証ロジック"""
@@ -195,17 +219,11 @@ class TradingSettings(BaseConfig):
     min_position_size: float = CONSTRAINTS["min_position_size"]
 
     def get_default_values(self) -> Dict[str, Any]:
-        """デフォルト値を取得"""
-        return {
-            "default_symbol": DEFAULT_SYMBOL,
-            "default_timeframe": DEFAULT_TIMEFRAME,
-            "supported_symbols": SUPPORTED_SYMBOLS.copy(),
-            "supported_timeframes": SUPPORTED_TIMEFRAMES.copy(),
-            "min_trades": CONSTRAINTS["min_trades"],
-            "max_drawdown_limit": CONSTRAINTS["max_drawdown_limit"],
-            "max_position_size": CONSTRAINTS["max_position_size"],
-            "min_position_size": CONSTRAINTS["min_position_size"],
-        }
+        """デフォルト値を取得（自動生成を利用）"""
+        # フィールドから自動生成したデフォルト値を取得
+        defaults = self.get_default_values_from_fields()
+        # 必要に応じてカスタマイズ（外部定数など）
+        return defaults
 
     def _custom_validation(self) -> List[str]:
         """カスタム検証"""
@@ -263,20 +281,11 @@ class IndicatorSettings(BaseConfig):
     )
 
     def get_default_values(self) -> Dict[str, Any]:
-        """デフォルト値を取得"""
-        return {
-            "valid_indicator_types": VALID_INDICATOR_TYPES.copy(),
-            "ml_indicator_types": ML_INDICATOR_TYPES.copy(),
-            "indicator_characteristics": INDICATOR_CHARACTERISTICS.copy(),
-            "operators": OPERATORS.copy(),
-            "data_sources": DATA_SOURCES.copy(),
-            "multi_output_mappings": {
-                "AROON": "AROON_0",
-                "MACD": "MACD_0",
-                "STOCH": "STOCH_0",
-                "BBANDS": "BBANDS_1",
-            },
-        }
+        """デフォルト値を取得（自動生成を利用）"""
+        # フィールドから自動生成したデフォルト値を取得
+        defaults = self.get_default_values_from_fields()
+        # 必要に応じてカスタマイズ（外部定数など）
+        return defaults
 
     def get_all_indicators(self) -> List[str]:
         """全指標タイプを取得"""
@@ -285,8 +294,6 @@ class IndicatorSettings(BaseConfig):
     def get_indicator_characteristics(self, indicator: str) -> Optional[Dict[str, Any]]:
         """特定の指標の特性を取得"""
         return self.indicator_characteristics.get(indicator)
-
-    # from_dictメソッドを削除 - BaseConfigの統一実装を使用
 
 
 @dataclass
@@ -337,26 +344,11 @@ class GASettings(BaseConfig):
     )
 
     def get_default_values(self) -> Dict[str, Any]:
-        """デフォルト値を取得"""
-        return {
-            "population_size": GA_DEFAULT_CONFIG["population_size"],
-            "generations": GA_DEFAULT_CONFIG["generations"],
-            "crossover_rate": GA_DEFAULT_CONFIG["crossover_rate"],
-            "mutation_rate": GA_DEFAULT_CONFIG["mutation_rate"],
-            "elite_size": GA_DEFAULT_CONFIG["elite_size"],
-            "max_indicators": GA_DEFAULT_CONFIG["max_indicators"],
-            "min_indicators": 1,
-            "min_conditions": 1,
-            "max_conditions": 3,
-            "parameter_ranges": GA_PARAMETER_RANGES.copy(),
-            "threshold_ranges": GA_THRESHOLD_RANGES.copy(),
-            "fitness_weights": DEFAULT_FITNESS_WEIGHTS.copy(),
-            "fitness_constraints": DEFAULT_FITNESS_CONSTRAINTS.copy(),
-            "fitness_sharing": GA_DEFAULT_FITNESS_SHARING.copy(),
-            "enable_multi_objective": False,
-            "ga_objectives": DEFAULT_GA_OBJECTIVES.copy(),
-            "ga_objective_weights": DEFAULT_GA_OBJECTIVE_WEIGHTS.copy(),
-        }
+        """デフォルト値を取得（自動生成を利用）"""
+        # フィールドから自動生成したデフォルト値を取得
+        defaults = self.get_default_values_from_fields()
+        # 必要に応じてカスタマイズ（外部定数など）
+        return defaults
 
     def _custom_validation(self) -> List[str]:
         """カスタム検証"""
@@ -406,16 +398,11 @@ class TPSLSettings(BaseConfig):
     )
 
     def get_default_values(self) -> Dict[str, Any]:
-        """デフォルト値を取得"""
-        return {
-            "methods": TPSL_METHODS.copy(),
-            "default_tpsl_methods": GA_DEFAULT_TPSL_METHOD_CONSTRAINTS.copy(),
-            "sl_range": GA_TPSL_SL_RANGE.copy(),
-            "tp_range": GA_TPSL_TP_RANGE.copy(),
-            "rr_range": GA_TPSL_RR_RANGE.copy(),
-            "atr_multiplier_range": GA_TPSL_ATR_MULTIPLIER_RANGE.copy(),
-            "limits": TPSL_LIMITS.copy(),
-        }
+        """デフォルト値を取得（自動生成を利用）"""
+        # フィールドから自動生成したデフォルト値を取得
+        defaults = self.get_default_values_from_fields()
+        # 必要に応じてカスタマイズ（外部定数など）
+        return defaults
 
     def get_limits_for_param(self, param_name: str) -> Tuple[float, float]:
         """指定されたパラメータの制限を取得"""
@@ -474,22 +461,11 @@ class PositionSizingSettings(BaseConfig):
     )
 
     def get_default_values(self) -> Dict[str, Any]:
-        """デフォルト値を取得"""
-        return {
-            "methods": POSITION_SIZING_METHODS.copy(),
-            "default_methods": GA_DEFAULT_POSITION_SIZING_METHOD_CONSTRAINTS.copy(),
-            "lookback_range": GA_POSITION_SIZING_LOOKBACK_RANGE.copy(),
-            "optimal_f_multiplier_range": GA_POSITION_SIZING_OPTIMAL_F_MULTIPLIER_RANGE.copy(),
-            "atr_period_range": GA_POSITION_SIZING_ATR_PERIOD_RANGE.copy(),
-            "atr_multiplier_range": GA_POSITION_SIZING_ATR_MULTIPLIER_RANGE.copy(),
-            "risk_per_trade_range": GA_POSITION_SIZING_RISK_PER_TRADE_RANGE.copy(),
-            "fixed_ratio_range": GA_POSITION_SIZING_FIXED_RATIO_RANGE.copy(),
-            "fixed_quantity_range": GA_POSITION_SIZING_FIXED_QUANTITY_RANGE.copy(),
-            "min_size_range": GA_POSITION_SIZING_MIN_SIZE_RANGE.copy(),
-            "max_size_range": GA_POSITION_SIZING_MAX_SIZE_RANGE.copy(),
-            "priority_range": GA_POSITION_SIZING_PRIORITY_RANGE.copy(),
-            "limits": POSITION_SIZING_LIMITS.copy(),
-        }
+        """デフォルト値を取得（自動生成を利用）"""
+        # フィールドから自動生成したデフォルト値を取得
+        defaults = self.get_default_values_from_fields()
+        # 必要に応じてカスタマイズ（外部定数など）
+        return defaults
 
     # from_dictメソッドを削除 - BaseConfigの統一実装を使用
 
@@ -523,32 +499,35 @@ class AutoStrategyConfig:
     )
 
     # 設定検証ルール
-    validation_rules: Dict[str, Any] = field(default_factory=lambda: {
-        "required_fields": [],
-        "ranges": {
-            "cache_ttl_hours": [1, 168],  # 1時間から1週間
-        },
-        "types": {
-            "enable_caching": bool,
-            "enable_async_processing": bool,
-            "log_level": str,
-        },
-    })
+    validation_rules: Dict[str, Any] = field(
+        default_factory=lambda: {
+            "required_fields": [],
+            "ranges": {
+                "cache_ttl_hours": [1, 168],  # 1時間から1週間
+            },
+            "types": {
+                "enable_caching": bool,
+                "enable_async_processing": bool,
+                "log_level": str,
+            },
+        }
+    )
 
     def get_default_values(self) -> Dict[str, Any]:
-        """デフォルト値を取得"""
+        """デフォルト値を取得（サブコンポーネント付き）"""
+        # 自動生成したデフォルト値にサブコンポーネントを統合
         return {
-            "trading": TradingSettings().get_default_values(),
-            "indicators": IndicatorSettings().get_default_values(),
-            "ga": GASettings().get_default_values(),
-            "tpsl": TPSLSettings().get_default_values(),
-            "position_sizing": PositionSizingSettings().get_default_values(),
             "enable_caching": True,
             "cache_ttl_hours": 24,
             "enable_async_processing": False,
             "log_level": "WARNING",
             "error_codes": ERROR_CODES.copy(),
             "threshold_ranges": THRESHOLD_RANGES.copy(),
+            "trading": TradingSettings().get_default_values(),
+            "indicators": IndicatorSettings().get_default_values(),
+            "ga": GASettings().get_default_values(),
+            "tpsl": TPSLSettings().get_default_values(),
+            "position_sizing": PositionSizingSettings().get_default_values(),
         }
 
     def validate(self) -> Tuple[bool, List[str]]:
@@ -567,8 +546,12 @@ class AutoStrategyConfig:
             for field_name, (min_val, max_val) in range_rules.items():
                 if hasattr(self, field_name):
                     value = getattr(self, field_name)
-                    if isinstance(value, (int, float)) and not (min_val <= value <= max_val):
-                        errors.append(f"'{field_name}' は {min_val} から {max_val} の範囲で設定してください")
+                    if isinstance(value, (int, float)) and not (
+                        min_val <= value <= max_val
+                    ):
+                        errors.append(
+                            f"'{field_name}' は {min_val} から {max_val} の範囲で設定してください"
+                        )
 
             # 型チェック
             type_rules = self.validation_rules.get("types", {})
@@ -576,7 +559,9 @@ class AutoStrategyConfig:
                 if hasattr(self, field_name):
                     value = getattr(self, field_name)
                     if value is not None and not isinstance(value, expected_type):
-                        errors.append(f"'{field_name}' は {expected_type.__name__} 型である必要があります")
+                        errors.append(
+                            f"'{field_name}' は {expected_type.__name__} 型である必要があります"
+                        )
 
             # カスタム検証
             custom_errors = self._custom_validation()
@@ -667,12 +652,12 @@ class AutoStrategyConfig:
             tpsl_data = data.get("tpsl", {})
             position_sizing_data = data.get("position_sizing", {})
 
-            # 各設定グループのインスタンス化
-            trading = TradingSettings.from_dict(trading_data)
-            indicators = IndicatorSettings.from_dict(indicators_data)
-            ga = GASettings.from_dict(ga_data)
-            tpsl = TPSLSettings.from_dict(tpsl_data)
-            position_sizing = PositionSizingSettings.from_dict(position_sizing_data)
+            # 各設定グループのインスタンス化（適切な型にキャスト）
+            trading = cast(TradingSettings, TradingSettings.from_dict(trading_data) if trading_data else TradingSettings())
+            indicators = cast(IndicatorSettings, IndicatorSettings.from_dict(indicators_data) if indicators_data else IndicatorSettings())
+            ga = cast(GASettings, GASettings.from_dict(ga_data) if ga_data else GASettings())
+            tpsl = cast(TPSLSettings, TPSLSettings.from_dict(tpsl_data) if tpsl_data else TPSLSettings())
+            position_sizing = cast(PositionSizingSettings, PositionSizingSettings.from_dict(position_sizing_data) if position_sizing_data else PositionSizingSettings())
 
             # メイン設定の作成
             instance = cls(
@@ -743,9 +728,10 @@ def validate_config_file(filepath: str) -> Tuple[bool, Dict[str, List[str]]]:
 @dataclass
 class GAConfig(BaseConfig):
     """
-    遺伝的アルゴリズム設定
+    実行時GA設定クラス
 
-    GA実行時の全パラメータをフラットな構造で管理します。
+    GA実行時のフラット設定を管理する。
+    重複を避けるため、GASettingsから動的なプロパティアクセスを使用。
 
     Args:
         auto_strategy_config: AutoStrategyConfigインスタンス（オプション）
@@ -755,54 +741,22 @@ class GAConfig(BaseConfig):
     # 参照設定（AutoStrategyConfig統合用）
     auto_strategy_config: Optional[AutoStrategyConfig] = None
 
-    # 進化アルゴリズム設定
-    population_size: int = GA_DEFAULT_CONFIG["population_size"]
-    generations: int = GA_DEFAULT_CONFIG["generations"]
-    crossover_rate: float = GA_DEFAULT_CONFIG["crossover_rate"]
-    mutation_rate: float = GA_DEFAULT_CONFIG["mutation_rate"]
-    elite_size: int = GA_DEFAULT_CONFIG["elite_size"]
-    max_indicators: int = GA_DEFAULT_CONFIG["max_indicators"]
-
-    # 評価設定（単一目的最適化用、後方互換性のため保持）
-    fitness_weights: Dict[str, float] = field(
-        default_factory=lambda: DEFAULT_FITNESS_WEIGHTS.copy()
-    )
+    # 評価設定拡張（単一目的最適化用）
     primary_metric: str = "sharpe_ratio"
-    fitness_constraints: Dict[str, float] = field(
-        default_factory=lambda: DEFAULT_FITNESS_CONSTRAINTS.copy()
-    )
 
-    # 多目的最適化設定
-    enable_multi_objective: bool = False  # 多目的最適化を有効にするかどうか
-    objectives: List[str] = field(
-        default_factory=lambda: DEFAULT_GA_OBJECTIVES.copy()  # デフォルトは単一目的
-    )  # 最適化する目的のリスト
-    objective_weights: List[float] = field(
-        default_factory=lambda: DEFAULT_GA_OBJECTIVE_WEIGHTS.copy()  # デフォルトは最大化
-    )  # 各目的の重み（1.0=最大化、-1.0=最小化）
+    # 実行時設定
+    parallel_processes: Optional[int] = None
+    random_state: Optional[int] = None
+    log_level: str = "ERROR"
+    save_intermediate_results: bool = True
+    progress_callback: Optional[Callable[["GAProgress"], None]] = None
 
-    # フィットネス共有設定
-    enable_fitness_sharing: bool = GA_DEFAULT_FITNESS_SHARING["enable_fitness_sharing"]
-    sharing_radius: float = GA_DEFAULT_FITNESS_SHARING["sharing_radius"]
-    sharing_alpha: float = GA_DEFAULT_FITNESS_SHARING["sharing_alpha"]
-
-    # 指標設定
+    # 指標設定拡張
     allowed_indicators: List[str] = field(default_factory=list)
-    indicator_mode: str = "technical_only"  # "technical_only", "ml_only"
-    enable_ml_indicators: bool = True  # 後方互換性のため保持
+    indicator_mode: str = "technical_only"
+    enable_ml_indicators: bool = True
 
-    # パラメータ範囲設定
-    parameter_ranges: Dict[str, List[float]] = field(
-        default_factory=lambda: GA_PARAMETER_RANGES.copy()
-    )
-    threshold_ranges: Dict[str, List] = field(
-        default_factory=lambda: GA_THRESHOLD_RANGES.copy()
-    )
-
-    # 遺伝子生成設定
-    min_indicators: int = 1
-    min_conditions: int = 1
-    max_conditions: int = 3
+    # 遺伝子生成設定拡張
     price_data_weight: int = 3
     volume_data_weight: int = 1
     oi_fr_data_weight: int = 1
@@ -810,64 +764,11 @@ class GAConfig(BaseConfig):
     min_compatibility_score: float = 0.8
     strict_compatibility_score: float = 0.9
 
-    # TP/SL GA最適化範囲設定（ユーザー設定ではなくGA制約）
-    tpsl_method_constraints: List[str] = field(
-        default_factory=lambda: GA_DEFAULT_TPSL_METHOD_CONSTRAINTS.copy()
-    )  # GA最適化で使用可能なTP/SLメソッド
-    tpsl_sl_range: List[float] = field(
-        default_factory=lambda: GA_TPSL_SL_RANGE.copy()
-    )  # SL範囲（1%-8%）
-    tpsl_tp_range: List[float] = field(
-        default_factory=lambda: GA_TPSL_TP_RANGE.copy()
-    )  # TP範囲（2%-20%）
-    tpsl_rr_range: List[float] = field(
-        default_factory=lambda: GA_TPSL_RR_RANGE.copy()
-    )  # リスクリワード比範囲
-    tpsl_atr_multiplier_range: List[float] = field(
-        default_factory=lambda: GA_TPSL_ATR_MULTIPLIER_RANGE.copy()
-    )  # ATR倍率範囲
-
-    # ポジションサイジング GA最適化範囲設定
-    position_sizing_method_constraints: List[str] = field(
-        default_factory=lambda: GA_DEFAULT_POSITION_SIZING_METHOD_CONSTRAINTS.copy()
-    )  # GA最適化で使用可能なポジションサイジングメソッド
-    position_sizing_lookback_range: List[int] = field(
-        default_factory=lambda: GA_POSITION_SIZING_LOOKBACK_RANGE.copy()
-    )  # ハーフオプティマルF用ルックバック期間
-    position_sizing_optimal_f_multiplier_range: List[float] = field(
-        default_factory=lambda: GA_POSITION_SIZING_OPTIMAL_F_MULTIPLIER_RANGE.copy()
-    )  # オプティマルF倍率範囲
-    position_sizing_atr_period_range: List[int] = field(
-        default_factory=lambda: GA_POSITION_SIZING_ATR_PERIOD_RANGE.copy()
-    )  # ATR計算期間範囲
-    position_sizing_atr_multiplier_range: List[float] = field(
-        default_factory=lambda: GA_POSITION_SIZING_ATR_MULTIPLIER_RANGE.copy()
-    )  # ポジションサイジング用ATR倍率範囲
-    position_sizing_risk_per_trade_range: List[float] = field(
-        default_factory=lambda: GA_POSITION_SIZING_RISK_PER_TRADE_RANGE.copy()
-    )  # 1取引あたりのリスク範囲（1%-5%）
-    position_sizing_fixed_ratio_range: List[float] = field(
-        default_factory=lambda: GA_POSITION_SIZING_FIXED_RATIO_RANGE.copy()
-    )  # 固定比率範囲（5%-30%）
-    position_sizing_fixed_quantity_range: List[float] = field(
-        default_factory=lambda: GA_POSITION_SIZING_FIXED_QUANTITY_RANGE.copy()
-    )  # 固定枚数範囲
-    position_sizing_min_size_range: List[float] = field(
-        default_factory=lambda: GA_POSITION_SIZING_MIN_SIZE_RANGE.copy()
-    )  # 最小ポジションサイズ範囲
-    position_sizing_max_size_range: List[float] = field(
-        default_factory=lambda: GA_POSITION_SIZING_MAX_SIZE_RANGE.copy()
-    )  # 最大ポジションサイズ範囲（BTCトレードに適した範囲に拡大）
-    position_sizing_priority_range: List[float] = field(
-        default_factory=lambda: GA_POSITION_SIZING_PRIORITY_RANGE.copy()
-    )  # 優先度範囲
-
-    # 実行設定
-    parallel_processes: Optional[int] = None
-    random_state: Optional[int] = None
-    log_level: str = "ERROR"  # エラーログのみ出力
-    save_intermediate_results: bool = True
-    progress_callback: Optional[Callable[["GAProgress"], None]] = None
+    def get_ga_settings(self) -> GASettings:
+        """関連するGASettingsを取得"""
+        if self.auto_strategy_config:
+            return self.auto_strategy_config.ga
+        return GASettings()
 
     def validate(self) -> tuple[bool, List[str]]:
         """
@@ -1008,7 +909,7 @@ class GAConfig(BaseConfig):
         processed_data = cls._preprocess_ga_dict(data)
 
         # BaseConfigの標準from_dict処理を使用
-        return super().from_dict(processed_data)
+        return cast(GAConfig, super().from_dict(processed_data))
 
     @classmethod
     def _preprocess_ga_dict(cls, data: Dict[str, Any]) -> Dict[str, Any]:
@@ -1049,7 +950,9 @@ class GAConfig(BaseConfig):
             "log_level": "ERROR",
             "save_intermediate_results": True,
             # フィットネス共有設定
-            "enable_fitness_sharing": GA_DEFAULT_FITNESS_SHARING["enable_fitness_sharing"],
+            "enable_fitness_sharing": GA_DEFAULT_FITNESS_SHARING[
+                "enable_fitness_sharing"
+            ],
             "sharing_radius": GA_DEFAULT_FITNESS_SHARING["sharing_radius"],
             "sharing_alpha": GA_DEFAULT_FITNESS_SHARING["sharing_alpha"],
             # 指標モード設定
@@ -1140,21 +1043,19 @@ class GAConfig(BaseConfig):
         return instance
 
     def get_default_values(self) -> Dict[str, Any]:
-        """BaseConfig用のデフォルト値を取得"""
-        return {
-            "population_size": self.__class__.population_size,
-            "generations": self.__class__.generations,
-            "crossover_rate": self.__class__.crossover_rate,
-            "mutation_rate": self.__class__.mutation_rate,
-            "elite_size": self.__class__.elite_size,
-            "fitness_weights": self.__class__.fitness_weights,
-            "primary_metric": self.__class__.primary_metric,
-            "max_indicators": self.__class__.max_indicators,
-            "min_indicators": 1,
-            "min_conditions": 1,
-            "max_conditions": 3,
-            "enabled": True,
+        """BaseConfig用のデフォルト値を取得（自動生成を利用）"""
+        # フィールドから自動生成したデフォルト値を取得
+        defaults = self.get_default_values_from_fields()
+        # GASettingsの設定も取得して統合
+        ga_settings = self.get_ga_settings()
+        ga_defaults = ga_settings.get_default_values()
+        # 統合（GAConfig特有のフィールドを追加）
+        integrated_defaults = {
+            **defaults,
+            **ga_defaults,
+            "primary_metric": self.primary_metric,
         }
+        return integrated_defaults
 
     # BaseConfigのメソッドをオーバーライド（既存機能を保持）
     def to_json(self) -> str:
@@ -1178,27 +1079,28 @@ class GAConfig(BaseConfig):
 
     @classmethod
     def create_fast(cls) -> "GAConfig":
-        """高速実行用設定を作成（オートストラテジー用デフォルト）"""
-        return cls(
-            population_size=10,
-            generations=5,
-            elite_size=2,
-            max_indicators=3,
-        )
+        """高速実行用設定を作成"""
+        config = cls()
+        config.get_ga_settings().population_size = 10
+        config.get_ga_settings().generations = 5
+        config.get_ga_settings().elite_size = 2
+        config.get_ga_settings().max_indicators = 3
+        return config
 
     @classmethod
     def create_thorough(cls) -> "GAConfig":
         """徹底的な探索用設定を作成"""
-        return cls(
-            population_size=200,
-            generations=100,
-            crossover_rate=0.85,
-            mutation_rate=0.05,
-            elite_size=20,
-            max_indicators=5,
-            log_level="INFO",
-            save_intermediate_results=True,
-        )
+        config = cls()
+        ga_settings = config.get_ga_settings()
+        ga_settings.population_size = 200
+        ga_settings.generations = 100
+        ga_settings.crossover_rate = 0.85
+        ga_settings.mutation_rate = 0.05
+        ga_settings.elite_size = 20
+        ga_settings.max_indicators = 5
+        config.log_level = "INFO"
+        config.save_intermediate_results = True
+        return config
 
     @classmethod
     def create_multi_objective(
@@ -1218,16 +1120,17 @@ class GAConfig(BaseConfig):
         if weights is None:
             weights = [1.0, -1.0]  # total_return最大化、max_drawdown最小化
 
-        return cls(
-            population_size=50,  # 多目的最適化では少し大きめの個体数
-            generations=30,
-            enable_multi_objective=True,
-            objectives=objectives,
-            objective_weights=weights,
-            max_indicators=3,
-            log_level="INFO",
-            save_intermediate_results=True,
-        )
+        config = cls()
+        ga_settings = config.get_ga_settings()
+        ga_settings.population_size = 50
+        ga_settings.generations = 30
+        ga_settings.enable_multi_objective = True
+        ga_settings.ga_objectives = objectives.copy()
+        ga_settings.ga_objective_weights = weights.copy()
+        ga_settings.max_indicators = 3
+        config.log_level = "INFO"
+        config.save_intermediate_results = True
+        return config
 
 
 @dataclass
