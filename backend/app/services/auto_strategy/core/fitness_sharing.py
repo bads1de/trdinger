@@ -314,6 +314,6 @@ class FitnessSharing:
             共有値
         """
         if similarity <= self.sharing_radius:
-            return 1.0  # Full sharing within the radius
+            return 1.0  # 半径内では完全共有
         else:
-            return 0.0  # No sharing outside the radius
+            return 0.0  # 半径外では共有なし

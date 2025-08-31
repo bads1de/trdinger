@@ -225,8 +225,6 @@ class TPSLGene(BaseGene):
     enabled: bool = True
     priority: float = 1.0
 
-    # from_dictメソッドを削除 - BaseGeneの統一実装を使用
-
     def _validate_parameters(self, errors: List[str]) -> None:
         """パラメータ固有の検証を実装"""
         try:
@@ -671,6 +669,7 @@ class TPSLResult:
 
     TPSLGeneratorとTPSLServiceでの計算結果を統一して表現します。
     """
+
     stop_loss_pct: float
     take_profit_pct: float
     method_used: str
@@ -857,7 +856,7 @@ def mutate_position_sizing_gene(
         "atr_period",
     ]
 
-    enum_fields = ["method"]  # Enumは自動的に検出される
+    enum_fields = ["method"]
 
     # 各フィールドの許容範囲
     numeric_ranges = {

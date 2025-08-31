@@ -230,28 +230,36 @@ class ConditionGenerator:
 
     def _generic_long_conditions(self, ind: IndicatorGene) -> List[Condition]:
         """統合された汎用ロング条件生成"""
+        self.logger.debug(f"Generating long conditions for {ind.type}")
         config = self._get_indicator_config_from_yaml(ind.type)
+        self.logger.debug(f"Config for {ind.type}: {config}")
         if config:
             threshold = self._get_threshold_from_yaml(config, "long")
             if threshold is not None:
+                self.logger.debug(f"Using threshold {threshold} for {ind.type}")
                 return [
                     Condition(
                         left_operand=ind.type, operator=">", right_operand=threshold
                     )
                 ]
+        self.logger.warning(f"No threshold found for {ind.type}, using 0 as fallback")
         return [Condition(left_operand=ind.type, operator=">", right_operand=0)]
 
     def _generic_short_conditions(self, ind: IndicatorGene) -> List[Condition]:
         """統合された汎用ショート条件生成"""
+        self.logger.debug(f"Generating short conditions for {ind.type}")
         config = self._get_indicator_config_from_yaml(ind.type)
+        self.logger.debug(f"Config for {ind.type}: {config}")
         if config:
             threshold = self._get_threshold_from_yaml(config, "short")
             if threshold is not None:
+                self.logger.debug(f"Using threshold {threshold} for {ind.type}")
                 return [
                     Condition(
                         left_operand=ind.type, operator="<", right_operand=threshold
                     )
                 ]
+        self.logger.warning(f"No threshold found for {ind.type}, using 0 as fallback")
         return [Condition(left_operand=ind.type, operator="<", right_operand=0)]
 
     def _generate_different_indicators_strategy(
@@ -667,38 +675,59 @@ class ConditionGenerator:
         self, indicator_name: str
     ) -> Optional[Dict[str, Any]]:
         """YAMLから指標設定を取得"""
+        self.logger.debug(f"Looking for indicator config: {indicator_name}")
         indicators_config = self.yaml_config.get("indicators", {})
-        return indicators_config.get(indicator_name)
+        self.logger.debug(f"Indicators config keys: {list(indicators_config.keys())}")
+        config = indicators_config.get(indicator_name)
+        if config is None:
+            self.logger.warning(f"No config found for indicator: {indicator_name}")
+        else:
+            self.logger.debug(f"Found config for {indicator_name}: {config}")
+        return config
 
     def _get_threshold_from_yaml(self, config: Dict[str, Any], side: str) -> Any:
         """YAMLから閾値取得"""
         if not config:
+            self.logger.debug("YAML config is None")
             return None
 
         thresholds = config.get("thresholds", {})
         if not thresholds:
+            self.logger.debug("thresholds not found in config")
             return None
 
         profile = self.context.get("threshold_profile", "normal")
+        self.logger.debug(f"Using profile: {profile}, side: {side}")
 
         if profile in thresholds and thresholds[profile]:
             profile_config = thresholds[profile]
+            self.logger.debug(f"Found profile_config: {profile_config}")
             if side == "long" and (
                 "long_gt" in profile_config or "long_lt" in profile_config
             ):
-                return profile_config.get("long_gt", profile_config.get("long_lt"))
+                threshold = profile_config.get("long_gt", profile_config.get("long_lt"))
+                self.logger.debug(f"Long threshold: {threshold}")
+                return threshold
             elif side == "short" and (
                 "short_lt" in profile_config or "short_gt" in profile_config
             ):
-                return profile_config.get("short_lt", profile_config.get("short_gt"))
+                threshold = profile_config.get("short_lt", profile_config.get("short_gt"))
+                self.logger.debug(f"Short threshold: {threshold}")
+                return threshold
 
         if "all" in thresholds and thresholds["all"]:
             all_config = thresholds["all"]
+            self.logger.debug(f"Using 'all' config: {all_config}")
             if side == "long":
-                return all_config.get("pos_threshold")
+                threshold = all_config.get("pos_threshold")
+                self.logger.debug(f"Long threshold from all: {threshold}")
+                return threshold
             else:
-                return all_config.get("neg_threshold")
+                threshold = all_config.get("neg_threshold")
+                self.logger.debug(f"Short threshold from all: {threshold}")
+                return threshold
 
+        self.logger.debug("No threshold found")
         return None
 
     def _get_indicator_type(self, indicator: IndicatorGene) -> IndicatorType:
